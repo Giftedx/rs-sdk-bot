@@ -1,5 +1,9 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>RuneLite — Swarm</title>
+<meta name="description" content="Watch a bot team play live on the rs-sdk demo world in 3D, with its hiscores, skills and gear.">
+<meta property="og:title" content="RuneLite — Swarm">
+<meta property="og:description" content="Watch a bot team play live on the rs-sdk demo world in 3D, with its hiscores, skills and gear.">
+<meta name="theme-color" content="#1e1e1e">
 <link rel="icon" type="image/png" href="/client-assets/runelite.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap">
 <style>
@@ -275,7 +279,7 @@ function showViewerStatus(){
   const text=viewerStatusText(VIEWER,mode),notice=$('#viewer-status');
   $('#map-h').textContent=text;$('#map-h').title=text;
   // An unavailable viewer is a header note, not a box over the map: the 2D map is the view then.
-  notice.hidden=!['checking','loading'].includes(VIEWER.state);notice.textContent=text;
+  notice.hidden=!['checking','loading'].includes(VIEWER.state);notice.textContent=window.atlasOperator?.()===false?'Loading the world…':text;
   $('#mw').classList.toggle('loading3d',mode==='3d'&&VIEWER.state!=='ready');
   $('#b3').textContent=['checking','loading'].includes(VIEWER.state)?'3D…':'3D';
 }

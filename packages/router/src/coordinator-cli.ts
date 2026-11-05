@@ -294,28 +294,46 @@ export function waitForWork(timeoutMs=1000,directory=coordinationDir){
   try{watcher=watch(directory,{recursive:true},(_,file)=>{if(/(?:receipt\.json|proposal\.json|planner-error\.json|\.request\.json|plan-request|restart)$/.test(String(file)))done();});}catch{/* bounded fallback also observes stop files */}
  });
 }
+type CoordinatorOwner={pid:number;nonce:string};
+export async function claimCoordinatorState(nonce:string,directory=coordinationDir,
+ held=(owner:CoordinatorOwner)=>owner.pid!==process.pid&&(processMatches(owner.pid,owner.nonce)||existsPid(owner.pid))){
+ const lease=join(directory,'owner.json');
+ const activeOwner=():CoordinatorOwner|null=>{
+  if(!existsSync(lease))return null;
+  const owner:CoordinatorOwner=json(lease);
+  return held(owner)?owner:null;
+ };
+ // The predecessor can still save the queue while its reload successor waits.
+ const deadline=Date.now()+60000;
+ while(nonce.startsWith('reload-')&&activeOwner()&&Date.now()<deadline)await Bun.sleep(1000);
+ const rejectActiveOwner=()=>{
+  const owner=activeOwner();if(owner)throw Error('coordinator already owned by PID '+owner.pid);
+ };
+ rejectActiveOwner();
+ return withPlanWrite(()=>{
+  rejectActiveOwner();
+  const state=loadState(directory);
+  atomicJson(lease,{pid:process.pid,nonce,at:Date.now()});
+  return state;
+ },directory);
+}
 async function main(){
  const mode=process.argv[2]??'--status',arg=process.argv[3];
  if(mode==='--worker'||mode==='--planner'){if(!arg)throw Error('run identity required');await child(mode,arg);return;}
- const state=loadState();
- if(mode==='--status'){console.log(JSON.stringify(state,null,2));return;}
- if(mode==='--submit'){
-  if(!arg)throw Error('proposal file required');const request=json(arg),requests=join(coordinationDir,'requests');mkdirSync(requests,{recursive:true});
-  atomicJson(join(requests,randomUUID()+'.request.json'),request);console.log('Submitted to shared queue');return;
+ if(mode!=='--run'&&mode!=='--once'){
+  const state=loadState();
+  if(mode==='--status'){console.log(JSON.stringify(state,null,2));return;}
+  if(mode==='--submit'){
+   if(!arg)throw Error('proposal file required');const request=json(arg),requests=join(coordinationDir,'requests');mkdirSync(requests,{recursive:true});
+   atomicJson(join(requests,randomUUID()+'.request.json'),request);console.log('Submitted to shared queue');return;
+  }
+  if(mode==='--plan'){writeFileSync(planRequest,'refresh priorities from observed state');console.log('Planning requested');return;}
+  if(mode==='--restart'){writeFileSync(restart,'reload coordinator; preserve owned children');console.log('Coordinator reload requested');return;}
+  if(mode==='--stop'){writeFileSync(stop,'owner pause '+new Date().toISOString());console.log('Coordinator stop requested');return;}
+  throw Error('Use --run, --once, --status or --stop');
  }
- if(mode==='--plan'){writeFileSync(planRequest,'refresh priorities from observed state');console.log('Planning requested');return;}
- if(mode==='--restart'){writeFileSync(restart,'reload coordinator; preserve owned children');console.log('Coordinator reload requested');return;}
- if(mode==='--stop'){writeFileSync(stop,'owner pause '+new Date().toISOString());console.log('Coordinator stop requested');return;}
- if(mode!=='--run'&&mode!=='--once')throw Error('Use --run, --once, --status or --stop');
  const config=readPlan().coordination;if(!config?.enabled)throw Error('swarm.json coordination.enabled required');
- const lease=join(coordinationDir,'owner.json');
- if(existsSync(lease)){
-  const owner=json(lease),held=()=>owner.pid!==process.pid&&(processMatches(owner.pid,owner.nonce)||existsPid(owner.pid));
-  // A reload successor starts while its predecessor finishes the current loop.
-  for(let waited=0;held()&&arg?.startsWith('reload-')&&waited<60000;waited+=1000)await Bun.sleep(1000);
-  if(held())throw Error('coordinator already owned by PID '+owner.pid);
- }
- const nonce=arg??randomUUID();atomicJson(lease,{pid:process.pid,nonce,at:Date.now()});
+ const nonce=arg??randomUUID(),state=await claimCoordinatorState(nonce);
  if(existsSync(stop)||existsSync(join(projectRoot,'.practice/stop-swarm')))throw Error('coordinator or swarm is paused; resume only under owner authority');
  if(!state.tasks.length){addTasks(state,config.bootstrap??[]);saveState(state);}
  event('coordinator-started',{pid:process.pid,nonce});
