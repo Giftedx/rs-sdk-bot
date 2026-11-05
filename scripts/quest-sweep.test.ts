@@ -379,9 +379,11 @@ test('plant tiles come from the knowledge and rank by distance',async()=>{
 
 test('the way down from an upstairs shop is the nearest descending transport, and the tile beneath when there is none',async()=>{
  const {wayDown}=await import('./quest-sweep');
- const {getWorld}=await import('../packages/core/src/bot');
- const transports=(await getWorld()).navigationGraph?.().transports??[];
- // Hudo's counter on the Grand Tree's first floor: the ladder at 2466,3495, not the wall beneath.
+ const t=(name:string,from:{x:number;z:number;level:number},to:{x:number;z:number;level:number})=>({locName:name,option:'op1',from,to,exact:false,src:'',toSrc:'',handler:''}) as any;
+ // Hudo's counter on the Grand Tree's first floor: the ladder at 2466,3495 (knowledge/transports.json), not the wall
+ // beneath; a ladder up, one on another floor and one 100 tiles away do not count.
+ const transports=[t('ladder',{x:2466,z:3495,level:1},{x:2466,z:3495,level:0}),t('grandtree_laddermiddle',{x:2466,z:3495,level:1},{x:2466,z:3495,level:2}),
+  t('ladder',{x:2466,z:3495,level:2},{x:2466,z:3495,level:1}),t('stairs',{x:2549,z:3508,level:1},{x:2549,z:3508,level:0})];
  expect(wayDown(transports,{x:2449,z:3508,level:1})).toEqual({x:2466,z:3495,level:0});
  expect(wayDown([],{x:2449,z:3508,level:1})).toEqual({x:2449,z:3508,level:0});
 });
