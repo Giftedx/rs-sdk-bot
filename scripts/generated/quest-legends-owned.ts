@@ -344,7 +344,21 @@ export async function runLegends(raw:Session,o:LegendsOrder,requested:()=>boolea
   }
   await surface();
  }
- async function descend(first:boolean){await walk(2763,9312);await paid('charge-orb magical trial',{567:-1,557:-30,564:-3},async()=>{guard();spellOnNativeLoc(s.client,2762,9313,locId('lgmagictrialgateclosed'),componentId('magic:charge_earth_orb'));},[],80);if(!near(2763,9320,1))throw Error('Legends orb trial actual landing absent');await walk(2759,9328);if(first)await paid('tie owned rope',{954:-1},()=>useLoc(954,'lg_winchdown_norope',2759,9329));else await step('find own tied rope',()=>interact('lg_winchdown_norope',2759,9329),()=>!!sdk.getState()?.nearbyLocs.some(t=>t.id===locId('lg_winchdown_rope')));if(first)await paid('drink bravery',{[I.bravery]:-1,229:1},()=>held(I.bravery),[/Yes, I'll bravely drink/i]);await upkeep();await step('descend owned rope',()=>interact('lg_winchdown_rope',2759,9329),()=>near(2377,4712,1),[/Yes, I'll shimmy down/i],70);await upkeep();}
+ async function descend(first:boolean){
+  stageName = 'magical trial gate approach';
+  await walk(2763, 9312, 0);
+  const gate = l('lgmagictrialgateclosed', 2762, 9313);
+  const spell = componentId('magic:earth_orb');
+  const mark = pageMark();
+  await paid('charge-orb magical trial', {567: -1, 557: -30, 564: -3}, async () => {
+   guard();
+   spellOnNativeLoc(s.client, gate.x, gate.z, gate.id, spell);
+  }, [], 80);
+  const landed = () => near(2763, 9320, 0) && sawSince(mark, /large gaping hole/i) && !q!.dialogOpen();
+  if (!await q!.converse([], () => fatal() || landed(), 40) || fatal() || !landed()) {
+   throw Error('Legends orb trial landing and dialogue unobserved');
+  }
+  await walk(2759,9328);if(first)await paid('tie owned rope',{954:-1},()=>useLoc(954,'lg_winchdown_norope',2759,9329));else await step('find own tied rope',()=>interact('lg_winchdown_norope',2759,9329),()=>!!sdk.getState()?.nearbyLocs.some(t=>t.id===locId('lg_winchdown_rope')));if(first)await paid('drink bravery',{[I.bravery]:-1,229:1},()=>held(I.bravery),[/Yes, I'll bravely drink/i]);await upkeep();await step('descend owned rope',()=>interact('lg_winchdown_rope',2759,9329),()=>near(2377,4712,1),[/Yes, I'll shimmy down/i],70);await upkeep();}
  async function lowerPath(){for(const [name,x,z,after]of[['rocky_ledge',2377,4717,{x:2376,z:4717}],['rocky_ledge1',2377,4728,{x:2378,z:4728}],['rocky_ledge2',2382,4729,{x:2382,z:4728}],['viycaves_climbrock1',2387,4728,{x:2388,z:4728}],['viycaves_climbrock2',2390,4724,{x:2390,z:4723}],['viycaves_climbrock3',2390,4718,{x:2390,z:4717}]] as const){await walk(x,z,1);await upkeep();await trials(name,()=>interact(name,x,z),()=>near(after.x,after.z,0),/slip and fall|near fall|nasty fall|nervous/i,[/Yes, I can think of nothing more exciting/i,/Yes, I want to climb/i],65);}}
  async function barrier(){await walk(2421,4691);await step('heart-authorized barrier',()=>interact('legendsquest_force_barrier',2421,4690),()=>near(2421,4690,0));}
  async function boulder(push:boolean,first=false){await walk(push?2395:2394,4679,0);const n=sdk.getState()?.nearbyNpcs.find(n=>n.id===npcId('boulder_legends'));if(!n)throw Error('Legends observed source boulder absent');const send=()=>s.direct({type:'interactNpc',npcIndex:n.index,optionIndex:1,reason:'Legends source quest'});if(first){await paid('spirit dark dagger',{[I.dagger]:1},send,[/Er... me/i,/Yes, I need it for my quest/i,/What can I do about/i,/I'll do what I must/i],130);return;}if(push){await step('push source boulder',send,()=>!!sdk.getState()?.nearbyLocs.some(t=>t.id===locId('lgwaterpool')),[],30);return;}await send();if(!await q!.converse([],()=>!!sdk.getState()?.nearbyNpcs.some(n=>n.id===npcId('echned_zekin')),50))throw Error('Legends source spirit absent');}
