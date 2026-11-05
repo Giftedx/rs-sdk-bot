@@ -214,11 +214,49 @@ export async function runLegends(raw:Session,o:LegendsOrder,requested:()=>boolea
   await bank({...basic(),[I.germ]:seeds},[I.map,I.bull,I.book,I.force,I.pure,I.blessed]);await jungle();if(!has(I.pure))await fill();await walk(2778,2916);const soil={x:2778,z:2916};for(let attempt=0;attempt<seeds&&!has(I.totem);attempt++){const before=count(I.germ),plantMark=pageMark();await step('plant owned Yommi',()=>useLoc(I.germ,'fertilesoil',soil.x,soil.z),()=>count(I.germ)===before-1,[],15);if(!sdk.getState()?.nearbyLocs.some(t=>t.id===locId('yommitree_sapling')&&t.x===soil.x&&t.z===soil.z)){await waitTicks(s,3);if(!sdk.getState()?.nearbyLocs.some(t=>t.id===locId('yommitree_sapling')&&t.x===soil.x&&t.z===soil.z)){if(!sawSince(plantMark,/planted the seed incorrectly.*withers and dies/i))throw Error('Legends paid Yommi plant outcome unknown');continue;}}await paid('water owned Yommi',{[I.pure]:-1,[I.blessed]:1},()=>useLoc(I.pure,'yommitree_sapling',soil.x,soil.z),[],12);for(const [from,to]of[['yommitree_adult','yommitree_felled'],['yommitree_felled','yommitree_trimmed'],['yommitree_trimmed','yommitree_totem']]){await wait(()=>!!sdk.getState()?.nearbyLocs.some(t=>t.id===locId(from!)&&t.x===soil.x&&t.z===soil.z),8);await step('carve owned Yommi '+to,()=>useLoc(1359,from!,soil.x,soil.z),()=>!!sdk.getState()?.nearbyLocs.some(t=>t.id===locId(to!)&&t.x===soil.x&&t.z===soil.z),[],12);}await paid('take owned Yommi totem',{[I.totem]:1},()=>interact('yommitree_totem',soil.x,soil.z));}if(!has(I.totem))throw Error('Legends owned Yommi seed budget exhausted');
   await upkeep();await walk(2852,2918);await step('challenge final Nezikchened',()=>useLoc(I.totem,'lg_ord_totem_pole',2852,2917),()=>!!sdk.getState()?.nearbyNpcs.some(n=>n.id===npcId('nezikchened')),[],100);await combat('nezikchened',{x:2852,z:2918},()=>false,/final killing blow to the foul demon/i);await paid('replace corrupted totem',{[I.totem]:-1},()=>useLoc(I.totem,'lg_ord_totem_pole',2852,2917));if(!has(I.gift))await gujuo([/Ok thanks/i],()=>has(I.gift));
   await bank({...basic(),[I.map]:1,[I.gift]:1});await move(2729,3348);await step('guild return gate',()=>interact('legendsguildgatel',2728,3349),()=>pos().worldZ>=3350);await walk(2725,3367);await paid('return map and gilded totem',{[I.map]:-1,[I.gift]:-1},()=>q!.talkTo(q!.npc(/^Radimus Erkle$/i)),[],130);await walk(2727,3374);const tutor=q.npc(/^Radimus Erkle$/i);if(!tutor)throw Error('Legends hall tutor absent');await q.talkTo(tutor);await q.converse([/Yes, I'll train now/i],()=>sdk.getDialog()?.options.some(op=>/\* Attack \*/.test(op.text))??false,60);for(const skill of o.training){const before=sdk.getSkillXp(skill)??0;if(!await q.converse(legendsTrainingOptions(skill),()=>sdk.getSkillXp(skill)!-before===7650*o.xpRate,90))throw Error('Legends training exact public XP missing '+skill);}await q.converse([],()=>flag(s)==='complete',60);if(flag(s)!=='complete')throw Error('Legends public green completion flag absent');
- }catch(error){failure=String(error);}finally{working=false;if(!fatal()&&!uncertain&&!prayerUnknown){try{await prayer(false);await bank({});}catch(error){failure ||= 'Legends cleanup '+String(error);}}q?.dispose();offPages();}
+ }catch(error){failure=String(error);}finally{working=false;if(!fatal()&&!uncertain&&!prayerUnknown){try{await prayer(false);await bank({});}catch(error){failure += (failure ? '; ' : '') + 'Legends cleanup '+String(error);}}q?.dispose();offPages();}
  const gearSame=JSON.stringify(sdk.getEquipment().map(i=>({id:i.id,count:i.count,slot:i.slot})))===JSON.stringify(gear),controls=sdk.getState()?.combatStyle?.currentStyle===style.currentStyle&&sdk.getState()?.autoRetaliateEnabled===retaliate&&sdk.getPrayerState()?.activePrayers.every(v=>!v)===true;return{ok:!failure&&flag(s)==='complete'&&gearSame&&controls,failure,stage:stageName,ticks:s.tick()-context.start,food,doses:potions.doses,receipts,gearSame,controls,quest:flag(s),baseline,finalAssets:allAssets(),uncertain,prayerUnknown};
 
- async function enterTrials(first:boolean){await walk(2794,9339);await trials('bookcase crevice',()=>interact('shaman_bookcase',2795,9339,2),()=>pos().worldX>=2799,/get stuck/i,[/Yes please/i]);await walk(2809,9333);await trials('Thieving trial',()=>interact('lglockpickgatebottoml',2810,9332,2),()=>pos().worldZ<9332,/fail to pick/i);for(const [name,z]of[['mine_test_boulder1',9327],['mine_test_boulder2',9323],['mine_test_boulder3',9319]] as const){await walk(2809,z+1);await trials('Mining trial '+z,()=>interact(name,2809,z),()=>pos().worldZ<z,/only succeed in scratching/i);}await walk(2809,9315);await trials('Strength trial',()=>interact('lgstrengthtrialgatel',2810,9314),()=>pos().worldZ<9314,/run out of steam/i,[/Yes, I'm very strong/i]);await walk(2779,9306);if(first){for(const rune of[566,558,557,563,563])await paid('SMELL rune '+rune,{[rune]:-1},()=>useLoc(rune,'lgancientwalldoor',2779,9305),[/Yes, I'll go through/i]);}else await step('known SMELL doorway',()=>interact('lgancientwalldoor',2779,9305),()=>near(2774,9301,1));}
- async function leaveTrials(){await walk(2776,9302);await step('leave gem cavern',()=>interact('lgancientwalldoor',2776,9303),()=>near(2780,9306));await walk(2790,9295);await step('jump crumbled wall',()=>interact('crumbled_wall',2789,9295,2),()=>pos().worldZ>=9296);await walk(2809,9313);await trials('return strength trial',()=>interact('lgstrengthtrialgatel',2810,9314),()=>pos().worldZ>9314,/run out of steam/i,[/Yes, I'm very strong/i]);for(const [name,z]of[['mine_test_boulder3',9319],['mine_test_boulder2',9323],['mine_test_boulder1',9327]] as const){await walk(2809,z-1);await trials('return mining '+z,()=>interact(name,2809,z),()=>pos().worldZ>z,/only succeed in scratching/i);}await walk(2809,9331);await step('return lockpick gate',()=>interact('lglockpickgatebottoml',2810,9332,2),()=>pos().worldZ>9332);await walk(2799,9340);await step('return bookcase crevice',()=>interact('shaman_cave_crevice',2799,9341,2),()=>pos().worldX<=2795,[/Yes please/i]);}
+ async function enterTrials(first: boolean) {
+  await walk(2794, 9339);
+  await trials('bookcase crevice', () => interact('shaman_bookcase', 2795, 9339, 2), () => pos().worldX >= 2799, /get stuck/i, [/Yes please/i]);
+  await walk(2809, 9333);
+  await trials('Thieving trial', () => interact('lglockpickgatebottoml', 2810, 9332, 2), () => pos().worldZ < 9332, /fail to pick/i);
+  for (const [name, z] of [['mine_test_boulder1', 9327], ['mine_test_boulder2', 9323], ['mine_test_boulder3', 9319]] as const) {
+   await walk(2809, z + 1);
+   await trials('Mining trial ' + z, () => interact(name, 2809, z), () => pos().worldZ < z, /only succeed in scratching/i);
+  }
+  await walk(2809, 9315);
+  await trials('Strength trial', () => interact('lgstrengthtrialgatel', 2810, 9314), () => pos().worldZ < 9314, /run out of steam/i, [/Yes, I'm very strong/i, /Yes, I'll try to push through/i]);
+  stageName = 'approach south crumbled wall';
+  await walk(2790, 9295, 0);
+  await step('jump north crumbled wall', () => interact('crumbled_wall', 2789, 9295, 2), () => near(2789, 9296, 0));
+  await walk(2779, 9306);
+  if (first) {
+   for (const rune of [566, 558, 557, 563, 563]) {
+    await paid('SMELL rune ' + rune, { [rune]: -1 }, () => useLoc(rune, 'lgancientwalldoor', 2779, 9305), [/Yes, I'll go through/i]);
+   }
+  } else {
+   await step('known SMELL doorway', () => interact('lgancientwalldoor', 2779, 9305), () => near(2774, 9301, 1));
+  }
+ }
+ async function leaveTrials() {
+  await walk(2776, 9302);
+  await step('leave gem cavern', () => interact('lgancientwalldoor', 2776, 9303), () => near(2780, 9306));
+  stageName = 'approach north crumbled wall';
+  await walk(2789, 9296, 0);
+  await step('jump south crumbled wall', () => interact('crumbled_wall', 2789, 9295, 2), () => near(2790, 9295, 0));
+  await walk(2809, 9313);
+  await trials('return strength trial', () => interact('lgstrengthtrialgatel', 2810, 9314), () => pos().worldZ > 9314, /run out of steam/i, [/Yes, I'm very strong/i]);
+  for (const [name, z] of [['mine_test_boulder3', 9319], ['mine_test_boulder2', 9323], ['mine_test_boulder1', 9327]] as const) {
+   await walk(2809, z - 1);
+   await trials('return mining ' + z, () => interact(name, 2809, z), () => pos().worldZ > z, /only succeed in scratching/i, [/Yes, I'll try to climb out/i]);
+  }
+  await walk(2809, 9331);
+  await step('return lockpick gate', () => interact('lglockpickgatebottoml', 2810, 9332, 1), () => pos().worldZ > 9332);
+  await walk(2799, 9340);
+  await step('return bookcase crevice', () => interact('shaman_cave_crevice', 2799, 9341, 2), () => pos().worldX <= 2795, [/Yes please/i]);
+ }
  async function descend(first:boolean){await walk(2763,9312);await paid('charge-orb magical trial',{567:-1,557:-30,564:-3},async()=>{guard();spellOnNativeLoc(s.client,2762,9313,locId('lgmagictrialgateclosed'),componentId('magic:charge_earth_orb'));},[],80);if(!near(2763,9320,1))throw Error('Legends orb trial actual landing absent');await walk(2759,9328);if(first)await paid('tie owned rope',{954:-1},()=>useLoc(954,'lg_winchdown_norope',2759,9329));else await step('find own tied rope',()=>interact('lg_winchdown_norope',2759,9329),()=>!!sdk.getState()?.nearbyLocs.some(t=>t.id===locId('lg_winchdown_rope')));if(first)await paid('drink bravery',{[I.bravery]:-1,229:1},()=>held(I.bravery),[/Yes, I'll bravely drink/i]);await upkeep();await step('descend owned rope',()=>interact('lg_winchdown_rope',2759,9329),()=>near(2377,4712,1),[/Yes, I'll shimmy down/i],70);await upkeep();}
  async function lowerPath(){for(const [name,x,z,after]of[['rocky_ledge',2377,4717,{x:2376,z:4717}],['rocky_ledge1',2377,4728,{x:2378,z:4728}],['rocky_ledge2',2382,4729,{x:2382,z:4728}],['viycaves_climbrock1',2387,4728,{x:2388,z:4728}],['viycaves_climbrock2',2390,4724,{x:2390,z:4723}],['viycaves_climbrock3',2390,4718,{x:2390,z:4717}]] as const){await walk(x,z,1);await upkeep();await trials(name,()=>interact(name,x,z),()=>near(after.x,after.z,0),/slip and fall|near fall|nasty fall|nervous/i,[/Yes, I can think of nothing more exciting/i,/Yes, I want to climb/i],65);}}
  async function barrier(){await walk(2421,4691);await step('heart-authorized barrier',()=>interact('legendsquest_force_barrier',2421,4690),()=>near(2421,4690,0));}
