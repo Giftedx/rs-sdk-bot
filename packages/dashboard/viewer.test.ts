@@ -221,3 +221,14 @@ test('opponent information: the followed player\'s target after a hit, renamed w
  expect(opp()[1]).toEqual({kind:'player',name:'⟦MAIN⟧',hp:[5,10]});expect(JSON.stringify(b.messages)).not.toContain('HiddenActor');
  socket.message({t:'tick',k:5,p:[{i:8,fe:-1}]});expect(opp()[2]).toBeNull();
 });
+
+test('the roster reaches the page live, with the hidden account as the mark only',async()=>{
+ const b=browser();class Socket {listeners=new Map<string,Function[]>();constructor(..._args:any[]){}addEventListener(t:string,fn:Function){this.listeners.set(t,[...(this.listeners.get(t)||[]),fn]);}message(m:any){for(const f of this.listeners.get('message')||[])f({data:JSON.stringify(m)});}}
+ b.host.WebSocket=Socket;installViewerBridge(b.host);const socket=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');
+ socket.message({t:'roster',p:[[7,'HiddenActor',3200,3200,0,126],[8,'Worker',3201,3201,0,50]]});expect(b.messages.some(m=>m.data.atlasRoster)).toBe(false);
+ await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();
+ socket.message({t:'roster',p:[[7,'HiddenActor',3200,3200,0,126],[8,'Worker',3201,3201,0,50],[9,'Bad',null,3,0,1]]});
+ const rosters=b.messages.filter(m=>m.data.atlasRoster);expect(rosters).toHaveLength(1);
+ expect(rosters[0]!.data.atlasRoster.players).toEqual([['⟦MAIN⟧',3200,3200,0,126],['Worker',3201,3201,0,50]]);
+ expect(JSON.stringify(rosters)).not.toContain('HiddenActor');
+});

@@ -72,3 +72,38 @@ test('an upstream player service failure is not cached as an unranked player for
  const lookup=new Function('fetch','Bun',`const lookups=new Map(),roster=new Map(),DEMO='https://example.test',ONLINE_MS=30000,SKILL_BOARDS=[];let lookupChain=Promise.resolve();const hiscoreRows=()=>[{board:'Mining'}],wornOf=async()=>null;${code};return lookupPlayer;`)(async()=>++calls===1?new Response('unavailable',{status:503}):new Response('player rows'),{sleep:async()=>{}});
  expect(await lookup('Worker')).toBeNull();expect((await lookup('Worker')).rows).toEqual([{board:'Mining'}]);expect(calls).toBe(2);
 });
+
+test('a fresh live roster overrules the published snapshot, and a stale one does not',()=>{
+ const code=html.slice(html.indexOf('function withLiveRoster('),html.indexOf('window.atlasLiveRoster='));
+ const withLiveRoster=new Function('const LIVE_ROSTER_MS=30000;'+code+';return withLiveRoster;')();
+ const state={world:{players:9},worldPlayers:9,roster:[],bots:[
+  {name:'Gone',operation:'observed',inWorld:true,fresh:true,pos:{x:1,z:1,level:0}},
+  {name:'Back',operation:'offline',inWorld:false,fresh:false},
+  {name:'Failed',operation:'failed',inWorld:false},
+  {name:'Practice',operation:'observed',practice:true,inWorld:true}]};
+ const live={at:1000,players:[['back',3200,3200,0,50],['Stranger',1,2,0,3]]};
+ const out=withLiveRoster(state,live,2000),by=(n:string)=>out.bots.find((b:any)=>b.name===n);
+ expect(by('Gone')).toMatchObject({inWorld:false,fresh:false,operation:'offline',live:null,pos:{x:1,z:1,level:0}});
+ expect(by('Back')).toMatchObject({inWorld:true,operation:'observed',pos:{x:3200,z:3200,level:0}});
+ expect(by('Failed').operation).toBe('failed');expect(by('Practice').inWorld).toBe(true);
+ expect(out.worldPlayers).toBe(2);expect(out.world.players).toBe(2);expect(out.roster).toBe(live.players);
+ expect(state.bots[0]!.inWorld).toBe(true);
+ expect(withLiveRoster(state,live,31001)).toBe(state);expect(withLiveRoster(state,null,2000)).toBe(state);
+});
+
+test('a follow is asked again once the feed has the account, and only once',()=>{
+ const code=html.slice(html.indexOf('function liveRosterIn('),html.indexOf('window.atlasRosterIn='));
+ const sent:any[]=[];const frame={contentWindow:{postMessage:(m:any)=>sent.push(m)}};
+ const run=new Function('$','window',`let LIVE_ROSTER=null,followedLive=null,rswFor=null,sel='Worker';const mode='3d',VIEWER={state:'ready',origin:'o'};${code};return liveRosterIn;`)(()=>frame,{});
+ run({players:[['Other',1,2,0,3]]});expect(sent).toEqual([]);
+ run({players:[['Worker',1,2,0,3]]});run({players:[['Worker',1,3,0,3]]});expect(sent).toEqual([{follow:'Worker'}]);
+ run({players:[]});run({players:[['worker',1,2,0,3]]});expect(sent).toHaveLength(2);
+});
+
+test('fleet filters count each account once and the total level leaves out unnamed skills',()=>{
+ const ops=readFileSync(new URL('./operations.js',import.meta.url),'utf8');
+ expect(ops).toContain("['held','Offline',bots().filter(b=>b.operation!=='observed'&&!issues().includes(b)).length]");
+ const line=ops.slice(ops.indexOf('const totalLevel='),ops.indexOf('\n',ops.indexOf('const totalLevel=')));
+ const total=new Function(line+';return totalLevel;')();
+ expect(total({skills:[{name:'Attack',level:99},{name:'Stat18',level:1},{name:'Overall',level:100}]})).toBe(99);
+});
