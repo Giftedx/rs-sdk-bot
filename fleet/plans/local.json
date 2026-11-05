@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793895259958,
+ "at": 1793901342474,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -509,7 +509,7 @@
     "CAP": "18000",
     "COORDINATOR_RUN_ID": "task-6d83a7f7-505c-4d59-ab88-0a98a0e6121f"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-herbs-mightyrod-giant-kills [task-6d83a7f7-505c-4d59-ab88-0a98a0e6121f]",
    "role": "combat"
