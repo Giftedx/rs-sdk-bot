@@ -119,7 +119,11 @@ export function installViewerBridge(host:any) {
                 this.addEventListener('message',(event:any)=>{
                     if(typeof event.data!=='string'||event.data.length>2_000_000)return;
                     let message:any;try{message=JSON.parse(event.data);}catch{return;}
-                    if(message.t==='roster'&&Array.isArray(message.p))for(const p of message.p)if(Array.isArray(p)&&typeof p[0]==='number'&&typeof p[1]==='string')names.set(p[0],p[1]);
+                    if(message.t==='roster'&&Array.isArray(message.p)){
+                        for(const p of message.p)if(Array.isArray(p)&&typeof p[0]==='number'&&typeof p[1]==='string')names.set(p[0],p[1]);
+                        // The page's own data can be minutes old; each roster is the full list of players online now.
+                        if(privacyReady&&renderReady&&!failed&&host.parent!==host)host.parent.postMessage({atlasRoster:{players:message.p.filter((p:any)=>Array.isArray(p)&&typeof p[1]==='string'&&[p[2],p[3],p[4],p[5]].every(Number.isFinite)).map((p:any)=>[hiddenHashes.has(fnv(p[1].toLowerCase()))?'⟦MAIN⟧':mask(p[1]),p[2],p[3],p[4],p[5]])}},host.location.origin);
+                    }
                     if(message.t==='tick'){
                         if(message.reset){faces.clear();npcs.clear();playerHp.clear();}
                         for(const r of Array.isArray(message.p)?message.p:[]){if(typeof r?.i!=='number')continue;if(r.f){faces.delete(r.i);playerHp.delete(r.i);}if(typeof r.fe==='number')r.fe<0?faces.delete(r.i):faces.set(r.i,r.fe);const h=hp(r.hp);if(h)playerHp.set(r.i,h);}

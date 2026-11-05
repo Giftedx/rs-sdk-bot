@@ -1,6 +1,8 @@
 // Keeps a live bot run going: restarts it when it ends without "RESULT ok", stops for good on a stop file, a death
 // no progress or too many failures in a row. Live runs were lost to tick caps, a stop-and-restart by hand, and
-// Claude Code ending background jobs. Each restart logs in again, so it costs a few playtime ticks.
+// Claude Code ending background jobs. Each restart logs in again, so it costs a few playtime ticks. A run the game
+// connection ended after real work (a gateway drain hours into a standing job) restarts the failure streak, so only
+// failures with no work between them add up to gave-up.
 // CLI: bun packages/practice/src/supervise.ts <bot> <script> [maxRestarts=20] [scriptArgs...] (env passes through)
 
 import {assertWorkerRelease,isWorkerReleaseHold} from '../../core/src/worker-release';
@@ -58,6 +60,14 @@ export function isTransportStall(result: string): boolean {
     return /^RESULT fail\b/.test(result) && /tick stream stalled: no new game tick for \d+ms/.test(result);
 }
 
+// Real work in a run: the LEDGER line every worker prints at finish (packages/core/src/ledger.ts) with at least
+// PROGRESS_TICKS game ticks. A failed login or a session dropped at once prints none, so a dead server still gives up.
+export const PROGRESS_TICKS = 300;
+export function madeProgress(stdout: string): boolean {
+    const m = stdout.split(/\r?\n/).filter(l => /^LEDGER ticks=\d+/.test(l)).at(-1)?.match(/^LEDGER ticks=(\d+)/);
+    return !!m && Number(m[1]) >= PROGRESS_TICKS;
+}
+
 export function isEntryRefusal(result: string): boolean {
     return /^RESULT fail\b/.test(result) && /\bticks=0\b/.test(result) && !/died=true/.test(result);
 }
@@ -79,7 +89,9 @@ export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 's
         // A worker that refuses before it acts (no game ticks) changed nothing: the account is free for its next job.
         if (isEntryRefusal(result)) return { reason: 'refused', runs };
         if (!isTransportStall(result) && (isNoProgressFailure(result) || isPrerequisiteFailure(result))) return { reason: 'blocked', runs };
-        if (++fails > d.maxRestarts) return { reason: 'gave-up', runs };
+        // A run with real work behind it is one failure, not one more: the streak toward gave-up restarts at it.
+        fails = madeProgress(r.stdout) ? 1 : fails + 1;
+        if (fails > d.maxRestarts) return { reason: 'gave-up', runs };
         await d.pause(10_000);
     }
 }

@@ -275,10 +275,11 @@ try {
         // 16. The talisman points toward the Draugen's butterfly (viking_sigil.rs2:192-237); within 3 tiles the Draugen
         // (level 69) appears; dead, it charges the talisman. Sigli takes it.
         // The Butterfly NPC near the bot is not the one the talisman tracks (proof trial 1: it sat on the bot's tile),
-        // so only the talisman's direction is used: hops of 14 tiles, halved each time the direction turns back.
+        // so only the talisman's direction is used. Its 8 directions give the sign of each axis, so each axis has its own
+        // hop: 14 tiles, halved when that axis turns back, doubled when it holds (the butterfly moves), 2 when it reads level.
         const dr = () => (q.st()?.nearbyNpcs ?? []).find((n: any) => n.id === DRAUGEN);
-        let seen = false, hop = 14, prev: [number, number] | undefined;
-        for (let i = 0; i < 120 && !q.has(ITEM.talisman); i++) {
+        let seen = false, hop = [14, 14], prev: [number, number] | undefined, stuck = 0;
+        for (let i = 0; i < 300 && !q.has(ITEM.talisman); i++) {
             await q.guard('draugen');
             const d = dr();
             if (d) {
@@ -293,19 +294,23 @@ try {
             await q.waitUntil(() => msgs(/talisman guides you|draugen is here|moved elsewhere/i) > m0 || !!dr(), 4);
             await q.waitTicks(1);
             const m = (q.st()?.gameMessages ?? []).filter((g: any) => g.type === 0).map((g: any) => g.text).reverse().find((t: string) => /talisman guides you|draugen is here/i.test(t)) ?? '';
-            console.log(`DRAUGEN ${q.T()} ${x()},${z()} hop=${hop} ${m}`);
+            console.log(`DRAUGEN ${q.T()} ${x()},${z()} hop=${hop.join('/')} ${m}`);
             if (/draugen is here/i.test(m) || dr()) { await q.waitUntil(() => !!dr(), 5); continue; }
-            if (/moved elsewhere/i.test(lastMsg())) { hop = 14; prev = undefined; }
+            if (/moved elsewhere/i.test(lastMsg())) { hop = [14, 14]; prev = undefined; }
             const g = m.match(/guides you ([a-z-]+)/i)?.[1]?.toLowerCase();
             const v = g ? DIRS[g] : undefined;
             if (!v) { await q.waitTicks(2); continue; }
-            if (prev && prev[0] * v[0] + prev[1] * v[1] < 0) hop = Math.max(2, Math.floor(hop / 2));
+            hop = hop.map((h, a) => { const s = (prev?.[a] ?? 0) * v[a]!; return v[a] === 0 ? 2 : s < 0 ? Math.max(2, h >> 1) : s > 0 ? Math.min(14, h * 2) : h; });
             prev = v;
             // The client routes round water and trees (no fail on a blocked goal).
-            const hx = x() + v[0] * hop, hz = z() + v[1] * hop;
+            const hx = x() + v[0] * hop[0]!, hz = z() + v[1] * hop[1]!, from0 = `${x()},${z()}`;
             await q.s.direct({ type: 'walkTo', x: hx, z: hz, running: true, reason: 'SDK' });
             let still = 0, at0 = '';
             await q.waitUntil(() => { const at = `${x()},${z()}`; still = at === at0 ? still + 1 : 0; at0 = at; return q.near(hx, hz, 1) || still >= 3 || !!dr(); }, 30);
+            // A click into the cliffs ends where it began (proof run: 100 hunts in the pocket at 2642,3586), so the bot
+            // walks a planned route to open ground.
+            stuck = `${x()},${z()}` === from0 ? stuck + 1 : 0;
+            if (stuck >= 2 && !dr()) { await q.walk('draugen open ground', [{ x: 2660, z: 3620, tol: 4 }]); stuck = 0; hop = [14, 14]; prev = undefined; }
         }
         if (!q.has(ITEM.talisman)) await q.fail(`draugen seen=${seen}`);
         q.milestone('draugen');
@@ -338,10 +343,20 @@ try {
         await q.step('play', () => invOp(ITEM.lyreEnchanted, /play/i), () => msgs(/completed the bard's trial/i) > 0, 40, 3);
         await closeDlg();
         q.milestone('olaf');
+        // The stage (2655-2662,3682-3685) has no way down to the hall: its only exit is the backstage door, free from inside
+        // (viking_olaf.rs2:492-497). The planner treats that door as open, so the bot leaves by name before it walks on.
+        await q.walk('to backstage out', [{ x: LOC.backstage.x - 1, z: LOC.backstage.z, tol: 0 }]);
+        await op('backstage door out', LOC.backstage, /open/i, () => x() >= LOC.backstage.x, 10);
+        await closeDlg();
     }
     if (from('peer')) {
         // 19. Peer: "Ask about becoming a Fremennik", "Yes", "Yes": the riddle set and everything banked
         // (viking_peer.rs2:18-45,160-215).
+        // Peer banks the food and Koschei's first 3 forms cost up to 45 hp; only form 4 ends in the trial's safe death.
+        for (let i = 0; i < 4 && q.hp() < 80 && q.has(385); i++) {
+            await q.s.direct({ type: 'useInventoryItem', slot: q.slot(385)!, optionIndex: 1, reason: 'SDK' });
+            await q.waitTicks(3);
+        }
         await talk('peer start', 'peer', [BECOME, YES], () => (q.inv().length === 0) && !(q.st()?.equipment ?? []).some((e: any) => e?.id > 0));
         q.milestone('banked');
         // 20. The door: "Read the riddle"; the lock set from A A A A; "You have solved the riddle!".

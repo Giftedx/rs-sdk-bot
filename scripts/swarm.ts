@@ -32,7 +32,7 @@ import { createHash } from 'node:crypto';
 import { readLogoutProof, listAttempts, verifyLegacyLogout, type LegacyLogoutClaim, type LegacyLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 import { mergedPlan, readCoordinatorJobs, emptyCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
-import { loadOwners, mySide, sideOf, type Owner } from '../packages/core/src/fleet';
+import { leaseHeldElsewhere, loadOwners, mySide, readLease, sideOf, thisHost, type Owner } from '../packages/core/src/fleet';
 
 export type Job = { account?: string; accounts?: string[]; host?: boolean; orchestrate?:boolean; args?:string[]; maxRestarts?:number; script: string; role?: string; goal?: string; env?: Record<string, string>; envByAccount?: Record<string, Record<string, string>>; enabled: boolean; repeat?: boolean; note?: string; whenCargoFrom?: string[]; demandNear?: {x:number;z:number;radius:number};whenFoodLowFrom?:string[];foodLowBelow?:number;foodSourceAccount?:string;foodSourceAccounts?:string[];sourceFoodMinimum?:number };
 type Plan = { maxBots: number; minFreeGB: number; jobs: Job[] };
@@ -505,6 +505,10 @@ if (import.meta.main) {
     const logDir = join(prac, 'swarm-logs');
     mkdirSync(logDir, { recursive: true });
     if (process.env.DEMO_OK !== '1') { console.log('swarm: set DEMO_OK=1 (live server)'); process.exit(2); }
+    // One controller per side across machines: another machine's fresh lease (scripts/fleet-sync.ts publishes it from the
+    // running controller's heartbeat) means its swarm runs this side's accounts; a second controller would log them in twice.
+    const held = leaseHeldElsewhere(readLease(side), thisHost());
+    if (held) { console.log(`swarm: the ${side} side's jobs run on ${held.host} (lease ${Math.round((Date.now() - held.at) / 60_000)} min old, controller pid ${held.pid}); not starting a second controller`); process.exit(2); }
 
     const runs = new Map<string, Run>();
     const recoveryDispatch=createRecoveryDispatch({base:root,server:LIVE_SERVER});

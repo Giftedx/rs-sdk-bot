@@ -494,13 +494,15 @@ Rejected: `babaali131718-spec/rs2b0t-quest-forge` (no license, only an HTML page
 
 ### 9.2 Quest coverage the toolkit closes
 
-The toolkit holds four quests our folders lacked: Tai Bwo Wannai Trio (`qp/south/`), Watch Tower (`qp/west/`), Hero's Quest (`qp/spine/`, two accounts) and Legends' Quest (`legends/`, sim only, not run live by its authors). `quest-tbwt.ts`, `quest-itwatchtower.ts` and `quest-hero.ts` are ported. Legends' Quest has no port.
+The toolkit holds four quests our folders lacked: Tai Bwo Wannai Trio (`qp/south/`), Watch Tower (`qp/west/`), Hero's Quest (`qp/spine/`, two accounts) and Legends' Quest (`legends/`, sim only, not run live by its authors). `quest-tbwt.ts`, `quest-itwatchtower.ts`, `quest-hero.ts` and `quest-legends.ts` are ported.
 
 **Claim:** `quest-tbwt.ts` completes Tai Bwo Wannai Trio in 1,462, 1,483 and 1,469 ticks (3 of 3, MEASURED practice). Conditions: preset `quest_tbwt` (every skill 99), the practice server, `0e2ea7d1`. Evidence: `.practice/tbwt-port/run4.log`, `run5.log` (`RESULT ok qp=2`, "Congratulations! Quest complete!"). The toolkit reports 1,468-1,509 ticks in its lockstep sim at agility 60 and magic 50. Gap: not run live; at agility below 99 the log bridge and the stones drop the bot more often.
 
 **Claim:** `quest-itwatchtower.ts` completes Watch Tower in 1,953, 1,998 and 1,970 ticks (3 of 3, MEASURED practice). Conditions: preset `quest_itwatchtower` (every skill 99, rune set with the anti-dragon shield, jangerberries and 2 ropes in the kit), the practice server, `f141e461`. Evidence: `.practice/watchtower-port/proof-1.log`, `proof-2.log`, `proof-3.log` (`RESULT ok qp=4`, "Congratulations! Quest complete!"; lowest hitpoints 72, no food eaten). Gap: not run live; not run at the quest's minimum levels; the shield and combat 126 stand in for their Protect from Magic and pinning-ogre handling, so a weaker account needs both checked.
 
 **Claim:** `quest-hero.ts` completes Hero's Quest on both accounts in one process: Black Arm 1,641, 1,643 and 1,645 ticks, Phoenix 1,532, 1,580 and 1,535 ticks (3 of 3, MEASURED practice). Conditions: presets `quest_hero` and `quest_hero_helper` (every skill 99, nothing worn, both outside the guild door, the toolkit kit with 6 lobsters), the practice server, `ad432a5d`. Evidence: `.practice/hero-port/proof-1.log`, `proof-2.log`, `proof-3.log` (`RESULT ok qp=1 ... mainDone=true helperDone=true`; no food eaten; lowest hitpoints 43, at the Ice Queen, in one run). The toolkit reports 1,745-1,803 ticks in its lockstep sim. Gap: not run live; not run at the quest's minimum levels; magic 99 stands in for their 150-cast rune stock and retries; the Phoenix side needs a second account with 55 QP in the Phoenix Gang.
+
+**Claim:** `quest-legends.ts` completes Legends' Quest from the guild gate in 3,996, 3,878 and 4,221 ticks (3 of 3, MEASURED practice). Conditions: preset `quest_legends` (every skill 99, combat rune set worn, the carry kit with 4 sharks), helpers `quest_legends_kit_b` and `quest_legends_kit_c` at the meeting tile 2816,2947, the practice server, `16161109`. Evidence: `.practice/legends-port/proof-1.log`, `proof-2.log`, `proof-3.log` (`RESULT ok qp=4`, "Congratulations! Quest complete!"; lowest hitpoints 69, no food eaten). The toolkit reports 3,883-4,305 ticks in its lockstep sim and never ran it live. Each training pick gives 191,250 XP. Gap: not run live; not run at the quest's minimum levels, where the map, forge, trial and planting rolls fail often and the source's spare gold bars and Re-get seed recovery are needed (the port carries 2 bars and fails if every seed withers); the helpers start at the meeting tile with the kits, so a live run must stage them there.
 
 ### 9.3 Protocol rules from the toolkit guide that our docs do not state
 
@@ -528,7 +530,7 @@ Do not copy: CraziedAres says Withdraw-All shifts later bank slots, but `Invento
 
 ### 9.5 Quest failures closed with toolkit routes
 
-Each quest failed the full practice batch. Conditions: the quest's preset (every skill 99), practice server. Evidence: `.practice/tbwt-port/proof-<quest>.log`. Gap: not run live.
+Each quest failed the full practice batch. Conditions: the quest's preset (every skill 99), practice server. Evidence: `.practice/tbwt-port/proof-<quest>.log`; Troll Stronghold, Underground Pass, Throne of Miscellania and The Fremennik Trials `.practice/fix-b/dbg-<script>proof*.log`. Gap: not run live.
 
 | Quest | Cause | Fix | Ticks, 3 of 3 |
 |---|---|---|---|
@@ -536,8 +538,22 @@ Each quest failed the full practice batch. Conditions: the quest's preset (every
 | Biohazard | The bot stayed inside Elena's house, whose door shuts behind it | Leave by the door, then sail to Port Sarim (ships keep the sample; 60 coins) | 1,389, 1,300, 1,279 |
 | Family Crest | Three crossings planned as open: the double gate at 3105,9944, Chronozon's gate at 3089,9945, Varrock's east gate at 3264,3405 | Op each gate; short legs round the rock | 1,097, 1,039, 1,058 |
 | The Tourist Trap | The curtain at 3291,3031 closes Siad's building from the south; the anvil loop could click during the 8-tick forge | Open the curtain from 3291,3030 both ways; wait for the roll; 5 bars | 1,187, 1,215, 1,226 |
+| Troll Stronghold | `fight` lost its target: the route from the stronghold door to the west hall goes by 2839,10057, 29 tiles from the generals and outside the 15-tile NPC list | Walk to the hall (2826,10086) before the fight; walk back to it when no general is listed | 865, 920, 885 |
+| Underground Pass | The brew hut door (loc 1530, south wall of 2325,9801) planned as open; an NPC can leave the list for a tick, so `kill` left Holthion alive at 34 of 87 damage | Op the door from 2325,9801; a kill with a drop ends on the drop | 2,595, 2,638, 2,655 |
+| Throne of Miscellania | The weed spot 2523,3851 is outside the castle wall, every herb has no route, and each refused click costs about a minute; 3 shut doors planned as open: Sigrid 2615,3870, Brand 2506,3851 and 2504,3853 | Weed from 2527,3852 inside the fence; op each door by tile | 1,354, 1,356, 1,359 |
+| The Fremennik Trials | The stage has no way down to the hall, and its backstage door planned as open; the Draugen hunt spent its 120 hunts in the cliff pocket at 2642,3586 or at a 2-tile hop; Koschei's third form killed the bot from an entry of 46 hp or less | Leave by the backstage door; one hop per axis, a planned walk out of a pocket; eat to 80 hp before Peer banks the food | 2,668, 2,613, 2,841 |
+| Priest in Peril | The SDK sends nothing for a target with no route, so `talk` saw no refusal and never opened the door; the temple's west door shuts the bot in | `talk` reads the `reachable` flag; open the door to leave | 882, 828, 852 |
+| Horror from the Deep | The pipe's north stand is in the yard past the outpost gate; a message from the previous wall item skipped a slot | Go through the gate; count each item | 690, 643, 629 |
+| The Grand Tree | With one far goal off Hazelmere's island the bot paced 2670-2673,3089-3091 until the prayer ran out and the spiders killed it | Leave by the north pier in short legs (evidence: `.practice/fix-a/proof-grandtree.log`) | 1,794, 1,698, 1,702 |
+| Tree Gnome Village | The walk planner closes the battlefield for a weak account (`packages/core/src/danger.ts`) and stopped at 2458,3325 | Client-routed hops by 2492,3254 and 2483,3263 under Protect from Melee (evidence: `.practice/fix-a/proof-tree.log`) | 679, 700, 714 |
 
 The anvil cause is inferred: 2 of 3 runs failed before the change and 3 of 3 passed after it, with two more bars in the same change. The Clock Tower failure (`walk to trough`) is not addressed here.
+
+Two quests pass 2 of 3 and are not closed. Evidence: `.practice/fix-a/proof-mm.log`, `.practice/fix-a/proof-zombiequeen.log`.
+
+- Monkey Madness: 4,971 and 4,432 ticks. The third run failed `zooknock: no enchanted bar` at 2805,9143: Zooknock's pages shut after the mould, so the bar step never ran. The cause of the shut page is not known. A talk about the amulet can run the same check again (not tested).
+- Shilo Village: 2,484 and 2,557 ticks. The second run failed `walk to cairn rocks` at 2910,2992 after a fall on the waterfall path. The cause is not known.
+
 
 ### 9.6 Rival repos and published scripts
 
@@ -652,3 +668,36 @@ Do not copy: GoonMachine King of the Hill formations (replaced by Lava Maze runi
 Nothing useful: jrpii/rs-sdk-temporal-planning (two toy tasks, no costs), msalmeida-boomer/runescaper, Dexploarer, saimdlx, nymph-ai, AuburyEssentian, Kimmo3223, Wgelyjr (5x server), jamie-legg, dlhg, maxwelllord/AgentPairRSBench, danmarkmann/runebench, skiller185 (README only), tristinhill26-bit, abuaboud/MoRS (modern OSRS), RecoX/aobench, skulltrick/lclite, DataHoarder6/2004lite, owendirk/runelite-bot-sdk, nrylov/rs2011-ts, rbriphy, halogod35, reclear-io/llmref.
 
 Two-rat flinch is rejected: both rats are penned at x 3014-3020, z 3282-3296, and no tile in their range is multiway (`research/gathering-tricks.md`).
+
+Full quest sweep on master, one run each: 43 of 56 passed (`.practice/quest-sweep-all/results.jsonl`). Scorpion Catcher's dragon-room death came from the danger guard: Black Demon spawns near 2860,9776 close the only corridor (x 2877-2879, z 9769-9788) to the secret wall, so planned walks paced at 2893,9796. Client-routed clicks do not use the guard, and Scorpion Catcher now passes on practice: 884, 860, 897 ticks. Check other "corridor exhausted" failures against the raw plan and the guarded plan.
+
+### 9.11 Last flagged sources
+
+Read: GoonMachine `ba76979e`, ken12321 `d93b1087`, Acquiredl `de4da876`, 274bot `1aa74601`, rs2b0t `8b7db422` (all MIT). 21 items were already held.
+
+| Claim | Source | Check | Decision |
+|---|---|---|---|
+| A PvP death leaves a 1 HP death mark for 1,000 ticks, and it survives logout | GoonMachine `owner-context.md` | Confirmed: `pvp_death_mark.rs2`, `pvp.constant:3` | add to the Lava Maze option in `research/boards-special.md` |
+| Each imp colour bead drops at 5/128 | Acquiredl run log | Confirmed: `imp.rs2`. ESTIMATE 53 kills for all four | supply note; `quest-imp.ts` takes beads from a helper |
+| A PvP death keeps one unit of a stack: 1 of 25 arrows in one probe | GoonMachine `ab-results-b.md` | Not checked in `death.rs2` | no consumer |
+
+Nothing useful: 274bot `paths/289` for the three failing quests, `guild-funnel.md` beyond its market snapshot, ken12321 `bots/_shared/`. Do not copy: ken12321's "29x XP" (willow is 675 tenths, so 25x holds), GoonMachine's "no Grand Exchange".
+
+Upstream and LostCity bug trackers were not audited. `research/rs-sdk-item-dup.md` says upstream `main` equals our pin, but the pin `db0cc51e` is 5 commits behind, and the live server's commit is not known.
+
+### 9.12 RuneBench and the rune.fast data
+
+Raw copies are in `.practice/rival-archive/` (67 files, untracked). rune.fast has no license, so facts only. Gains are ESTIMATES. Both top items are being measured on practice.
+
+| Claim | Source | Check | Our number | Decision |
+|---|---|---|---|---|
+| Ranged about 55 to 99 in 1,814 ticks, about 523 XP per tick, with a cannon at the Wilderness poison spiders (3286-3289,3809-3812) | `data/route-log.json`, `data/attempts-timeline.json` | Confirmed: 62 spawns in `m51_59.jm2`, multiway; the cannon roll uses the melee attack roll (`cannon_fire.rs2:116`), so Attack matters | 67-84 XP per tick on troopers; segment 24 is 6,535 against their 3,099 | measure; ESTIMATE about -3,400 on Overall |
+| Anvil cycle of 32 ticks for 5 adamant platebodies | `route-log.json` S25a | Their live log | 37 ticks; Smithing 1,312 against #1 at 1,281 | measure; ESTIMATE about 1,137 |
+| A knife gate: count on-time actions out of 20 per band, fall back to plain cutting below 14.5, but keep the knife in bone-burying bands | `data/tricks.json` | Not checked | `woodcutting.ts` has no gate | candidate |
+| 249 sub-step timings; Monkey Madness jail2 489, dungeon1 444, disguise 400, dungeon2 365, demon 355, return 306 | `route-log.json` | Their log | Monkey Madness 5,501 against 4,113 | time `quest-mm.ts` per step; ESTIMATE up to 900 ticks |
+| Their client ledger reads 35,225; about 550 of the 562 extra ticks are an abandoned body before death | `attempts-timeline.json` | Their log | the plan targets under 35,787 | a clean rerun by them lands near 35,225 |
+| `%ownedmcannon` stays set after a lost cannon, so setup is refused | `attempts-timeline.json` | Confirmed: `cannon_setup.rs2` | no check in the cannon script | add the check |
+| Hiscore rank uses raw ticks; the display is ticks times the current tick length | Upstream | Confirmed: `server/engine/src/util/Playtime.ts:20-23` | `leader-forensics.md` fact 6 is open | close that item |
+| Hard leather bodies have no delay: 875 XP at 25x, level 28 | RuneBench crafting run | Confirmed: `leather.rs2:116-133` | no row | cheaper supply fallback than gems for levels 28-55 |
+
+RuneBench rates are 15-second peaks on an 8x server and do not compare directly. No skill method beat a row of ours. Team results are not public. Their other failure causes: poison during a long carrier wait with no death check, a single Search click with no resend, a hand-off one slot short for unequipping, helpers expiring on a long wait, and a Protect prayer off for 12 ticks.

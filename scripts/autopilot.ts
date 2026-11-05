@@ -15,7 +15,7 @@ import { join, resolve } from 'node:path';
 import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { swarmWroteStop } from './swarm';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
-import { accountFrom, assess, catalogue, finishedTrainers, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, type Assignment } from '../packages/planner/src/autopilot';
+import { CLAIM_MAX_AGE_MS, accountFrom, assess, catalogue, finishedTrainers, freshest, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, type Assignment } from '../packages/planner/src/autopilot';
 import { mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import type { Order, Receipt } from './fleet-trade';
 import { liveHelperStatuses, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
@@ -23,7 +23,7 @@ import { haggisActivities, haggisTravel, loadSnapshot, suppliesFor, TRICKS } fro
 import { tickWaste, wasteShare } from './tick-waste';
 
 const root = resolve(import.meta.dir, '..'), prac = join(root, '.practice');
-const CLAIM_MAX_AGE_MS = 2 * 3600_000, PASS_EVERY_MS = 10 * 60_000, TRAINER_POLL_MS = 30_000;
+const PASS_EVERY_MS = 10 * 60_000, TRAINER_POLL_MS = 30_000;
 type State = { assigned: Record<string, { template: string; offset: number; at: number }>; retired: Record<string, string> };
 
 const readJson = (f: string, fallback: any) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return fallback; } };
@@ -121,21 +121,23 @@ export function pass(planFile: string, dry: boolean): string[] {
     }
 
     const listed = listedNames;
+    // An account's freshest observation: its status file, or its row in this side's published fleet snapshot (a fresh
+    // cloud container has no status files, and a Thieving 99 account must not plan as a level-1 start).
     const statusDir = join(prac, 'status'), statusFiles = existsSync(statusDir) ? readdirSync(statusDir) : [];
-    const accounts = plannableAccounts(swarm.jobs, side, listed.filter(n => owners.get(n.toLowerCase())?.side === side), paused).map(n => {
+    const published: any[] = readJson(join(FLEET_DIR(), 'snapshots', `${side}.json`), { accounts: [] }).accounts ?? [];
+    const observed = (n: string) => {
         const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
-        return accountFrom(n, side, f ? readJson(join(statusDir, f), null) : null, id => byId.get(id));
-    });
+        return freshest(f ? readJson(join(statusDir, f), null) : null, published.find(r => String(r?.name).toLowerCase() === n.toLowerCase()));
+    };
+    const accounts = plannableAccounts(swarm.jobs, side, listed.filter(n => owners.get(n.toLowerCase())?.side === side), paused).map(n => accountFrom(n, side, observed(n), id => byId.get(id)));
     // Coin donors: this side's accounts with no enabled swarm or coordinator job, no stop file and no open order, as
     // their last status reports them. The fleet agent runs a trade only for such accounts.
     const fleetDir = FLEET_DIR(), now = Date.now();
     const orders: Order[] = existsSync(join(fleetDir, 'orders')) ? readdirSync(join(fleetDir, 'orders')).filter(f => f.endsWith('.json')).map(f => readJson(join(fleetDir, 'orders', f), null)).filter(o => typeof o?.id === 'string' && Number.isSafeInteger(o?.end)) : [];
     const receipts: Receipt[] = existsSync(join(fleetDir, 'receipts')) ? readdirSync(join(fleetDir, 'receipts')).filter(f => f.endsWith('.json')).map(f => readJson(join(fleetDir, 'receipts', f), null)).filter(Boolean) : [];
     const open = inOpenOrder(orders, receipts, now), busy = enabledAccounts(withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs));
-    const donors = listed.filter(n => owners.get(n.toLowerCase())?.side === side && n.toLowerCase() !== 'haggis' && ![busy, paused, open].some(s => s.has(n.toLowerCase()))).map(n => {
-        const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
-        return { name: n, coins: accountFrom(n, side, f ? readJson(join(statusDir, f), null) : null, id => byId.get(id)).items.coin ?? 0 };
-    }).filter(d => d.coins > 0);
+    const donors = listed.filter(n => owners.get(n.toLowerCase())?.side === side && n.toLowerCase() !== 'haggis' && ![busy, paused, open].some(s => s.has(n.toLowerCase())))
+        .map(n => ({ name: n, coins: accountFrom(n, side, observed(n), id => byId.get(id)).items.coin ?? 0 })).filter(d => d.coins > 0);
     const planned = plan({ side, accounts, owners, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: { 'catherby:lobster': 3 }, unfundable: busy, donors });
     const funding = fundOrders(planned, open, (from, to, coins) => coinOrder(from, to, coins, owners.get(to.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev', now));
     const out = funding.assignments;

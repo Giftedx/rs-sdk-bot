@@ -361,14 +361,35 @@ void refreshPrs();
 const roster = new Map<string, { name: string; x: number; z: number; level: number; combat: number; seen: number }>();
 const firstSeen = new Map<string, number>();
 const world = { players: 0, tick: 0, tickAt: 0, tickMs: 400, connected: false, rev: 0 };
+// The feed sends a roster every few seconds. A half-open socket reports no close, so silence is the only sign of it.
+const FEED_SILENCE_MS = 60_000;
+let feedSocket: WebSocket | null = null, feedHeardAt = 0;
+function dropFeed(ws: WebSocket) {
+    if (feedSocket !== ws) return;
+    feedSocket = null;
+    world.connected = false;
+    // The roster stays: the feed closes often, and each entry already expires 30 s after it was last seen.
+    try { ws.close(); } catch { /* already closed */ }
+    setTimeout(connectFeed, 1000);
+}
+setInterval(() => {
+    if (feedSocket && Date.now() - feedHeardAt > FEED_SILENCE_MS) {
+        console.error(`world feed silent for ${FEED_SILENCE_MS / 1000} s: reconnecting`);
+        dropFeed(feedSocket);
+    }
+}, 15_000);
 function connectFeed() {
     try {
         const ws = new WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');
+        feedSocket = ws;
+        feedHeardAt = Date.now();
         ws.onopen = () => { world.connected = true; ws.send(JSON.stringify({ t: 'roster', on: true })); };
         ws.onmessage = e => {
             try {
+                if (feedSocket !== ws) return;
                 const m = JSON.parse(String(e.data));
                 const now = Date.now();
+                feedHeardAt = now;
                 if (m.t === 'hello') { world.players = m.players ?? world.players; world.tick = m.tick ?? world.tick; world.tickAt = now; world.tickMs = m.tickMs ?? 400; world.rev = m.rev ?? 0; }
                 if (m.t !== 'roster') return;
                 if (!Array.isArray(m.p) || !m.p.every((p:any)=>Array.isArray(p)&&p.length>=6&&typeof p[1]==='string'&&[p[2],p[3],p[4],p[5]].every(Number.isFinite))) return;
@@ -387,8 +408,8 @@ function connectFeed() {
                 console.error(`world feed message failed: ${String(err)}`);
             }
         };
-        ws.onclose = () => { world.connected = false; setTimeout(connectFeed, 5000); };
-        ws.onerror = () => ws.close();
+        ws.onclose = () => dropFeed(ws);
+        ws.onerror = () => dropFeed(ws);
     } catch { setTimeout(connectFeed, 5000); }
 }
 connectFeed();

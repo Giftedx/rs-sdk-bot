@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { assertSideOwns, listedAccounts, loadOwners, sideOf } from '../src/fleet';
+import { LEASE_MAX_AGE_MS, assertSideOwns, leaseHeldElsewhere, listedAccounts, loadOwners, nextLease, readLease, sideOf } from '../src/fleet';
 
 const file = (accounts: unknown) => { const f = join(mkdtempSync(join(tmpdir(), 'fleet-')), 'owners.json'); writeFileSync(f, JSON.stringify({ accounts })); return f; };
 const owners = loadOwners(file({ Haggis: { side: 'local', server: 'rs-sdk-demo.fly.dev' }, CloudOne: { side: 'cloud', server: 'rs-sdk-demo.fly.dev' }, Prac: { side: 'cloud', server: 'localhost:8888' } }));
@@ -46,4 +46,23 @@ test('FLEET_SIDE must be a short lower-case name; unset is local', async () => {
 test('a bad owners entry is refused', () => {
     expect(() => loadOwners(file({ 'bad name!': { side: 'local', server: 'x' } }))).toThrow();
     expect(() => loadOwners(file({ Ok: { side: 'Moon Base!', server: 'x' } }))).toThrow();
+});
+
+test("one controller per side: another machine's fresh lease holds it; a lapsed lease or this machine's own does not", () => {
+    const lease = { side: 'claude-cloud', host: 'box-a', pid: 7, at: 1_000_000 };
+    expect(leaseHeldElsewhere(lease, 'box-b', 1_000_000 + 60_000)).toEqual(lease);
+    expect(leaseHeldElsewhere(lease, 'box-a', 1_000_000 + 60_000)).toBeNull();
+    expect(leaseHeldElsewhere(lease, 'box-b', 1_000_000 + LEASE_MAX_AGE_MS)).toBeNull();
+    expect(leaseHeldElsewhere(null, 'box-b')).toBeNull();
+    // A sync publishes this machine's heartbeat unless another machine's lease is fresh; no controller here publishes nothing.
+    const mine = { side: 'claude-cloud', host: 'box-b', pid: 9, at: 1_000_000 + 60_000 };
+    expect(nextLease(lease, mine, 1_000_000 + 60_000)).toBeNull();
+    expect(nextLease(lease, mine, 1_000_000 + LEASE_MAX_AGE_MS)).toEqual(mine);
+    expect(nextLease({ ...lease, host: 'box-b' }, mine, 1_000_000 + 60_000)).toEqual(mine);
+    expect(nextLease(null, mine, 1_000_000 + 60_000)).toEqual(mine);
+    expect(nextLease(lease, null, 1_000_000 + 60_000)).toBeNull();
+    const dir = mkdtempSync(join(tmpdir(), 'lease-')); mkdirSync(join(dir, 'leases'));
+    writeFileSync(join(dir, 'leases', 'claude-cloud.json'), JSON.stringify(lease));
+    expect(readLease('claude-cloud', dir)).toEqual(lease);
+    expect(readLease('cloud', dir)).toBeNull();
 });
