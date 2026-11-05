@@ -7302,7 +7302,7 @@
   {
     "name": "chaosaltar",
     "decision": "blocked",
-    "behaviour": "Wilderness Chaos altar bone offering, bone-yard gathering, PK/world-hop survival and Chaos Fanatic reset",
+    "behaviour": "Bank dragon bones and a burning amulet, teleport to the Wilderness, offer the bones at the Chaos Altar and reset by dying to an NPC.",
     "localConsumers": [
       "scripts/train-prayer.ts"
     ],
@@ -7346,6 +7346,16 @@
         "path": "src/main/java/net/runelite/client/plugins/microbot/chaosaltar/ChaosAltarScript.java",
         "line": 115,
         "claim": "Rs2Walker.walkTo(2979, 3845, 0);"
+      },
+      {
+        "path": "src/main/java/net/runelite/client/plugins/microbot/chaosaltar/ChaosAltarScript.java",
+        "line": 233,
+        "claim": "The worker withdraws banked dragon bones when the pack contains none."
+      },
+      {
+        "path": "src/main/java/net/runelite/client/plugins/microbot/chaosaltar/ChaosAltarConfig.java",
+        "line": 32,
+        "claim": "Bone-yard mode is declared in configuration. The module has no reference to this setting or f2pHop outside the configuration file."
       }
     ],
     "serverEvidence": [
@@ -7353,17 +7363,27 @@
         "path": "research/microbot-server-search-a.ndjson",
         "line": 64,
         "claim": "Exact donor mechanism/content search returned zero lines for \\[oplocu,chaos_altar\\]|chaos_fanatic|burning_amulet"
+      },
+      {
+        "path": "vendor/rs-sdk/server/content/scripts/skill_prayer/configs/altars.loc",
+        "line": 30,
+        "claim": "The Native Chaos altar is in prayer_altar and exposes Pray-at."
+      },
+      {
+        "path": "vendor/rs-sdk/server/content/scripts/skill_prayer/scripts/altar.rs2",
+        "line": 1,
+        "claim": "Pray-at restores Prayer points. The Native altar has no bone-use trigger."
       }
     ],
     "blockers": [
-      "Native ordinary bury worker does not implement Wilderness bone-offering retention/bonus altar or Chaos Fanatic reset. Required altar offer handler must be established separately. Donor behaviour references: src/main/java/net/runelite/client/plugins/microbot/chaosaltar/ChaosAltarScript.java:33, src/main/java/net/runelite/client/plugins/microbot/chaosaltar/ChaosAltarScript.java:34. Native search receipt: research/microbot-server-search-a.ndjson:54"
+      "The pinned Native Chaos altar restores Prayer and has no bone offering, retention or offering XP. The burning-amulet transport and Chaos Fanatic reset are absent. Banked bone burial remains available through the existing Prayer worker."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/chaosaltar/ChaosAltarScript.java",
         "decision": "blocked",
         "consumer": "scripts/train-prayer.ts",
-        "gap": "Native ordinary bury worker does not implement Wilderness bone-offering retention/bonus altar or Chaos Fanatic reset. Required altar offer handler must be established separately."
+        "gap": "The pinned Native Chaos altar restores Prayer and has no bone offering, retention or offering XP. The burning-amulet transport and Chaos Fanatic reset are absent. Banked bone burial remains available through the existing Prayer worker."
       }
     ],
     "variants": [
