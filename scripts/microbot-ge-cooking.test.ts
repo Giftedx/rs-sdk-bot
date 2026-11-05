@@ -66,3 +66,13 @@ test('does not replay a cooking batch whose settlement failed', async () => {
  expect(result).toMatchObject({ok: false, completed: 1, fires: 0, failure: 'unobserved effect'});
  expect(calls).toBe(1);
 });
+
+test('refuses an unavailable Cooking level before burning owned logs', async () => {
+ const f = fixture();
+ const underlevel = {...order, recipe: 'cooking_generic_lobster'};
+ f.raw.sdk.getSkill = skill => ({level: skill === 'Cooking' ? 39 : 99}) as ReturnType<typeof f.raw.sdk.getSkill>;
+ const result = await runGeCooking(f.raw, underlevel, () => false, f.deps);
+ expect(result).toMatchObject({ok: false, completed: 0, fires: 0, failure: 'Cooking level insufficient'});
+ expect(f.burns()).toBe(0);
+ expect(f.jobs).toHaveLength(0);
+});

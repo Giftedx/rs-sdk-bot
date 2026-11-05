@@ -30,15 +30,17 @@ function cookingJob(order: GeCookingOrder): BankJob {
 
 export function validateGeCookingOrder(order: GeCookingOrder) {
  validateBankJob(cookingJob(order));
+ const recipe = cookingRecipes().recipes.find(recipe => recipe.name === order.recipe && recipe.fire);
  if (!Object.hasOwn(LOGS, order.log) || !Number.isSafeInteger(order.maximumFires) ||
   order.maximumFires < 0 || order.maximumFires > 1000 || order.target > 1000 || order.batch > 28 ||
-  !cookingRecipes().recipes.some(recipe => recipe.name === order.recipe && recipe.fire)) {
+  !recipe) {
   throw Error('GE cooking requires a finite Native fire recipe and owned fire budget');
  }
+ return recipe;
 }
 
 export async function runGeCooking(raw: Session, order: GeCookingOrder, stop = () => false, deps: CookingDeps = defaults) {
- validateGeCookingOrder(order);
+ const recipe = validateGeCookingOrder(order);
  const job = cookingJob(order);
  const owner = actionSessionOwner(raw, stop);
  const start = raw.tick();
@@ -55,6 +57,7 @@ export async function runGeCooking(raw: Session, order: GeCookingOrder, stop = (
  let completed = 0, fires = 0, trips = 0, failure = '';
  try {
   if (!atBank()) throw Error('GE cooking requires the observed Varrock bank at entry');
+  if ((raw.sdk.getSkill('Cooking')?.level ?? 0) < recipe.level) throw Error('Cooking level insufficient');
   while (completed < order.target) {
    if (owner.stopped() || remaining() <= order.returnTicks) throw Error('GE cooking stopped or return budget reached');
    let fire = observedFire();
