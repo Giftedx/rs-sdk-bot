@@ -10,7 +10,7 @@ import {accountDir,beginSessionAttempt} from '../../core/src/session-lifecycle';
 import {afterStalledConnection,observePartialOwner,waitOwnerAuthLogout} from '../src/session-recovery-proof';
 import {recoveryCloseModal} from '../../core/src/session-recovery';
 import type {Session} from '../../core/src/inprocess';
-import {recoveryCapability,verifyCompletedRouterPins,fleetHandoff,publishControlFile,observeRecoveryBoundary,recoveryAuthorityInputs,type RecoveryBoundary} from '../src/session-recovery-proof';
+import {recoveryCapability,verifyCompletedRouterPins,fleetHandoff,publishControlFile,observeRecoveryBoundary,recoveryAuthorityInputs,recoveryMemoryGate,RECOVERY_MEMORY_WAIT_MS,type RecoveryBoundary} from '../src/session-recovery-proof';
 import {FLEET_HEARTBEAT_MAX_MS,NATIVE_RECOVERY_CHECKS,RECOVERY_BINDING_MS,assertFleetResolved,verifyNativeRecoveryProof,launchPermittedRecovery,waitForRecoveryChildBinding,recoveryPermitPaths,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {createRecoveryDispatch} from '../../core/src/session-recovery-dispatch';
@@ -295,6 +295,29 @@ test('native pre-child observation separates actual memory, capacity, release an
    writeFileSync(channel+'.processing',raw);d.handle(raw);expect(events.length).toBe(fault==='authority'?4:2);
   }finally{if(pin===undefined)delete process.env.WORKER_RELEASE;else process.env.WORKER_RELEASE=pin;rmSync(base,{recursive:true,force:true});}
  }
+});
+
+test('low memory delays the recovery request until admission allows one start, and an expired wait sends no request',async()=>{
+ const base=mkdtempSync(join(tmpdir(),'recovery-memory-wait-')),events:string[]=[];
+ const r:ControlledRecoveryRequest={schema:'session-recovery/1',kind:'session-recovery',account:'Rod',server:'localhost:8890',runId:'native-memory-wait',nonce:'one',endedAt:100,source:'a'.repeat(64),
+  qualification:{delivery:{path:'unit-only',sha256:'0'.repeat(64)},proof:{path:'unit-only',sha256:'0'.repeat(64)}}};
+ const input=(freeGB:number,running=0)=>({account:r.account,active:[],running,external:0,pending:0,freeGB,minFreeGB:FREE_FLOOR_GB,maxBots:17});
+ try{
+  mkdirSync(join(base,'.practice/coordinator'),{recursive:true});
+  const free=[FREE_FLOOR_GB,FREE_FLOOR_GB,PRACTICE_STARTUP_GB],read=()=>{events.push('poll');return input(free.shift()!);};
+  const d=createRecoveryDispatch({base,server:r.server,nativeFixture:true,admit:()=>{admitRecovery(input(PRACTICE_STARTUP_GB),()=>{});events.push('admitted');},
+   launch:()=>{events.push('launched');return {child:{pid:process.pid},completion:new Promise<never>(()=>{})};}});
+  await recoveryMemoryGate(1000,1)(read);
+  const raw=JSON.stringify(r);writeFileSync(join(base,'.practice/swarm-repair.json.processing'),raw);d.handle(raw);
+  expect(events).toEqual(['poll','poll','poll','admitted','launched']);expect(d.active?.account).toBe('Rod');
+  // Non-memory refusals stay with admitRecovery, and later requests share the expired budget.
+  await recoveryMemoryGate(0,1)(()=>input(PRACTICE_STARTUP_GB,18));
+  const expired=recoveryMemoryGate(5,1);let polls=0;const low=()=>{polls++;return input(FREE_FLOOR_GB);};
+  await expect(expired(low)).rejects.toThrow(/memory wait expired.*no request submitted/);
+  polls=0;await expect(expired(low)).rejects.toThrow(/memory wait expired/);expect(polls).toBe(1);
+  expect(RECOVERY_MEMORY_WAIT_MS).toBeLessThan(300000);
+  expect(readFileSync(join(import.meta.dir,'../src/session-recovery-proof.ts'),'utf8')).toContain('await recoveryMemory(f.name);await beforeSubmit(r);');
+ }finally{rmSync(base,{recursive:true,force:true});}
 });
 
 test('boundary wrapper preserves exact return and thrown objects, redacts unknown errors and tolerates a failed observer',()=>{
@@ -891,16 +914,33 @@ test('native recovery uses the current delivery identity with the shark default'
  const text=readFileSync(join(import.meta.dir,'../src/session-recovery-proof.ts'),'utf8');expect(text).toContain('process.env.DELIVERY_ID??deliveryTask?.id');
  expect(CHECK_CASES.completed).toEqual(['completed','completed-held-producer','completed-refusals']);
 });
-test('completed router pins fail closed if either actual integration file drifts',()=>{
+test('completed router pins capture both current integration files without a saved report',()=>{
  const base=mkdtempSync(join(tmpdir(),'completed-router-pins-'));
  const files=['packages/router/src/coordinator-live.ts','packages/router/test/coordinator-recovery.test.ts'];
  try{
   for(const path of files){mkdirSync(join(base,path,'..'),{recursive:true});writeFileSync(join(base,path),'pinned '+path);}
-  mkdirSync(join(base,'.practice/supervision-session-admission-20261029'),{recursive:true});
   const pins=files.map(path=>({path,sha256:createHash('sha256').update(readFileSync(join(base,path))).digest('hex')}));
-  writeFileSync(join(base,'.practice/supervision-session-admission-20261029/result.json'),JSON.stringify({routerCompletedAccountIntegration:{files:pins}}));
   expect(verifyCompletedRouterPins(base)).toEqual(pins);
-  for(const path of files){const before=readFileSync(join(base,path));writeFileSync(join(base,path),'changed');expect(()=>verifyCompletedRouterPins(base)).toThrow('integration drift');writeFileSync(join(base,path),before);}
+  rmSync(join(base,files[0]!));
+  expect(()=>verifyCompletedRouterPins(base)).toThrow();
+ }finally{rmSync(base,{recursive:true,force:true});}
+});
+
+test('changed router files do not fail at proof start against a stale saved report',()=>{
+ const base=mkdtempSync(join(tmpdir(),'completed-router-start-'));
+ const files=['packages/router/src/coordinator-live.ts','packages/router/test/coordinator-recovery.test.ts'];
+ try{
+  for(const path of files){mkdirSync(join(base,path,'..'),{recursive:true});writeFileSync(join(base,path),'pinned '+path);}
+  const pins=files.map(path=>({path,sha256:createHash('sha256').update(readFileSync(join(base,path))).digest('hex')}));
+  mkdirSync(join(base,'.practice/supervision-session-admission-20261029'),{recursive:true});
+  writeFileSync(join(base,'.practice/supervision-session-admission-20261029/result.json'),JSON.stringify({routerCompletedAccountIntegration:{files:pins}}));
+  for(const path of files){
+   const before=readFileSync(join(base,path));writeFileSync(join(base,path),'changed '+path);
+   const current=verifyCompletedRouterPins(base);
+   expect(current).toEqual(files.map(path=>({path,sha256:createHash('sha256').update(readFileSync(join(base,path))).digest('hex')})));
+   expect(current).not.toEqual(pins);
+   writeFileSync(join(base,path),before);
+  }
  }finally{rmSync(base,{recursive:true,force:true});}
 });
 test('a timer-only fleet snapshot stays stale at a late handoff; a fresh owned handoff resolves without hiding real ownership',()=>{
