@@ -919,7 +919,7 @@ function race() {
             qpEnd: { realistic: re.qp, floor: fl.qp },
             last: lastB ? { board: lastB.label, finish: lastB.real.finish, slack: lastB.real.slack, activity: lastAct?.label ?? null } : null,
             at: Date.now(), source: 'research/hiscores-live.json', sourceAt: Date.parse(JSON.parse(readFileSync(LIVE_HISCORES,'utf8')).takenAt)||0,
-            options: 'Planner CLI scenario a. Travel on. Relaxed scheduling deadlines: ' + (re.boards.filter(b => b.sacrificed).map(b => b.id).join(', ') || 'none'),
+            options: 'Planner CLI scenario a. Travel on. Supplies require acquisition. Relaxed scheduling deadlines: ' + (re.boards.filter(b => b.sacrificed).map(b => b.id).join(', ') || 'none'),
         };
         raceCache = { key, value };
         const last = gapHistory[gapHistory.length - 1];
