@@ -81,7 +81,9 @@ try {
             await q.climb('recover castle stairs down', stairs(/climb-down/i), /climb-down/i, levelIs(0));
         }
         // A quest item in the bank counts as held for the server (obj_gettotal): Sedridor and the Duke then re-issue
-        // nothing and Sedridor sends the bot "to get them from the bank". Take the quest's items out first.
+        // nothing and Sedridor sends the bot "to get them from the bank". Take the quest's items out first; a run
+        // resumed in the tower basement climbs out before the walk (walkPath takes no ladder).
+        await leaveSedridor('recover bank');
         const bank = nearestBankTile({ x: q.pos()?.worldX ?? 0, z: q.pos()?.worldZ ?? 0 }, Object.values((travel as unknown as { banks: Record<string, { x: number; z: number; level: number }> }).banks));
         await q.walk('recover to bank', [{ x: bank.x, z: bank.z, tol: 3 }]);
         const opened: any = await q.s.bot.openBank();
