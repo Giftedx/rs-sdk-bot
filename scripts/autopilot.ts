@@ -15,6 +15,7 @@ import { join, resolve } from 'node:path';
 import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { swarmWroteStop } from './swarm';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
+import { matchingJobLines } from '../packages/core/src/job-log';
 import { CLAIM_MAX_AGE_MS, accountFrom, assess, catalogue, finishedTrainers, freshest, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, type Assignment } from '../packages/planner/src/autopilot';
 import { mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import type { Order, Receipt } from './fleet-trade';
@@ -29,11 +30,15 @@ type State = { assigned: Record<string, { template: string; offset: number; at: 
 const readJson = (f: string, fallback: any) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return fallback; } };
 const loadState = (side: string): State => ({ assigned: {}, retired: {}, ...readJson(join(prac, 'autopilot', `${side}.json`), {}) });
 const writeAtomic = (f: string, text: string) => { writeFileSync(`${f}.tmp`, text); renameSync(`${f}.tmp`, f); };
-function readFrom(file: string, offset: number): string[] {
+export function readJobResultLines(file: string, offset: number, job: Parameters<typeof matchingJobLines>[1]): string[] {
     if (!existsSync(file)) return [];
     const size = statSync(file).size, start = offset <= size ? offset : 0, buf = Buffer.alloc(Math.min(size - start, 4_000_000));
-    const fd = openSync(file, 'r'); try { readSync(fd, buf, 0, buf.length, size - buf.length); } finally { closeSync(fd); }
-    return buf.toString('latin1').split(/\r?\n/);
+    const fd = openSync(file, 'r');
+    let read: number;
+    try { read = readSync(fd, buf, 0, buf.length, size - buf.length); } finally { closeSync(fd); }
+    const lines = buf.subarray(0, read).toString('utf8').split(/\r?\n/);
+    lines.pop(); // A supervisor can still be writing the final line.
+    return matchingJobLines(lines, job);
 }
 
 function routeBill(items: any[]): BillRow[] {
@@ -106,7 +111,7 @@ export function pass(planFile: string, dry: boolean): string[] {
     for (const j of swarm.jobs.filter(mineMarked)) {
         const a = state.assigned[j.account];
         if (!a || a.template !== j.template) continue;
-        const r = assess(readFrom(join(prac, 'swarm-logs', `${j.account}.log`), a.offset));
+        const r = assess(readJobResultLines(join(prac, 'swarm-logs', `${j.account}.log`), a.offset, j));
         if (r.retire) { state.retired[pairKey(j.account, j.template)] = r.reason; log.push(`AUTOPILOT retire ${j.account} ${j.template}: ${r.reason}`); }
     }
 
@@ -179,7 +184,7 @@ export function pass(planFile: string, dry: boolean): string[] {
 export function trainersDone(planFile: string): string[] {
     const side = mySide(), swarm = readJson(planFile, null), state = loadState(side);
     if (!swarm || !Array.isArray(swarm.jobs)) return [];
-    return finishedTrainers(swarm.jobs, side, state.assigned, catalogue(), (a, offset) => readFrom(join(prac, 'swarm-logs', `${a}.log`), offset))
+    return finishedTrainers(swarm.jobs, side, state.assigned, catalogue(), (a, offset, job) => readJobResultLines(join(prac, 'swarm-logs', `${a}.log`), offset, job))
         .map(a => `${a}:${state.assigned[a]!.template}:${state.assigned[a]!.offset}`);
 }
 
