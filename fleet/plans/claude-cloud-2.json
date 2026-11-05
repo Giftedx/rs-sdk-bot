@@ -1,5 +1,66 @@
 {
  "side": "claude-cloud-2",
- "at": 1793865732669,
- "jobs": []
+ "at": 1793867348778,
+ "jobs": [
+  {
+   "account": "Deeppockets",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
+   "env": {
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
+   "autopilot": "claude-cloud-2",
+   "resources": [
+    "knight:2652,3318"
+   ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
+   "env": {
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
+   "autopilot": "claude-cloud-2",
+   "resources": [
+    "knight:2669,3298"
+   ]
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
+   "env": {
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
+   "autopilot": "claude-cloud-2",
+   "resources": [
+    "knight:2671,3313"
+   ]
+  }
+ ]
 }
