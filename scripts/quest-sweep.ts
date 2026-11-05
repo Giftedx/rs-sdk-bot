@@ -129,7 +129,7 @@ export const QUEST_PICKUPS:Record<string,Item[]>={hunt:[{id:1963,count:10},{id:4
 // Fishing Contest wants Fishing 10 (hemenster_fishing.rs2:70). An account short of it nets shrimps first, at the
 // nearest Net spot (Catherby beach beside Harry's shop, where the rod and bait come from): 250 XP a catch at 25x, five
 // catches from level 1. The net is a tool of the bank pass; the catches take pack slots until the quest.
-export const NET=303,RAW_SHRIMPS=317,RAW_ANCHOVIES=321,CATHERBY_BEACH:Tile={x:2838,z:3431,level:0},TRAIN_TICKS=600;
+export const NET=303,RAW_SHRIMPS=317,RAW_ANCHOVIES=321,CATHERBY_BEACH:Tile={x:2838,z:3431,level:0},TRAIN_TICKS=900;
 export const questSkillTraining=(quest:string,level:(skill:string)=>number):{skill:'Fishing';level:number;tools:Item[];pickups:Item[]}|null=>
  quest==='fishingcompo'&&level('Fishing')<10?{skill:'Fishing',level:10,tools:[{id:NET,count:1}],pickups:[{id:RAW_SHRIMPS,count:6}]}:null;
 async function trainFishing(s:Session,world:World,level:number):Promise<string|null>{
@@ -138,15 +138,18 @@ async function trainFishing(s:Session,world:World,level:number):Promise<string|n
  const spot=()=>(st()?.nearbyNpcs??[]).filter((n:any)=>/^fishing spot$/i.test(n.name)&&n.optionsWithIndex?.some((o:any)=>/^net$/i.test(o.text))).sort((a:any,b:any)=>a.distance-b.distance)[0];
  if(!(st()?.inventory??[]).some((i:any)=>i.id===NET))return `fishing training needs a small net (${NET}) in the pack`;
  if(!spot()){const w=await walkFar(s,world,CATHERBY_BEACH,100);if(!w.ok)return `fishing spot walk failed: ${w.reason} ${w.detail}`;}
+ // Each level gained opens the level-up dialogue, which stops the fishing until it is clicked away.
+ const dialog=()=>{const d:any=s.sdk.getDialog();return !!d?.isOpen&&!d.isWaiting;};
  const t0=s.tick(),from=lvl();let casts=0;
  while(lvl()<level&&s.tick()-t0<TRAIN_TICKS){
+  if(dialog()){await s.sdk.sendClickDialog(0);await waitTicks(s,1);continue;}
   const n=spot();
   if(!n){await waitTicks(s,5);continue;}
   if((st()?.inventory?.length??0)>=28)return `fishing training: pack full at Fishing ${lvl()}`;
   const before=caught();
   await s.direct({type:'interactNpc',npcIndex:n.index,optionIndex:n.optionsWithIndex.find((o:any)=>/^net$/i.test(o.text))!.opIndex,reason:'SDK'});
   casts++;
-  await waitUntil(s,()=>caught()>before||lvl()>=level,{timeoutTicks:30});
+  await waitUntil(s,()=>caught()>before||lvl()>=level||dialog(),{timeoutTicks:30});
  }
  console.log(`QUEST_SWEEP_TRAIN ${JSON.stringify({skill:'Fishing',from,to:lvl(),target:level,casts,caught:caught(),ticks:s.tick()-t0})}`);
  return lvl()>=level?null:`Fishing ${lvl()} of ${level} after ${s.tick()-t0} ticks`;
