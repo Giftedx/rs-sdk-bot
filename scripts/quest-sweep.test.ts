@@ -433,6 +433,16 @@ test('a kill series keeps to dense spawn clusters',async()=>{
  expect(near(3259,3338,goblins)).toBe(true);expect(near(3259,3338,dense)).toBe(false);expect(near(3311,3375,dense)).toBe(false);
 });
 
+test('a cabbage is picked from a field nearer than any seller',async()=>{
+ const {gatherPlan,PICK_SOURCES}=await import('../packages/core/src/gather');
+ const {locsByDistance}=await import('../packages/core/src/spawn-index');
+ expect(PICK_SOURCES[1965]?.loc).toBe(1161);
+ // From the Falador east bank a cabbage field lies within 100 tiles; Hudo's shop in the Grand Tree is 470 away.
+ const falador={x:3013,z:3355,level:0};
+ expect(Math.max(Math.abs(locsByDistance(1161,falador)[0]!.x-falador.x),Math.abs(locsByDistance(1161,falador)[0]!.z-falador.z))).toBeLessThan(100);
+ expect(gatherPlan([{id:1965,count:1}],falador,()=>[],()=>470).gathers).toEqual([{id:1965,count:1,how:'pick'}]);
+});
+
 test('the tool plan keeps the quest its own runes beside the casts',async()=>{
  const {toolPlan}=await import('./quest-sweep');
  const need=new Map([[556,3]]),tools=[{id:556,count:714}];

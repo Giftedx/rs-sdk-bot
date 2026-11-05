@@ -23,7 +23,9 @@ export const LOC_SOURCES:Record<number,{tile:Tile;open:RegExp;take:RegExp}>={155
 export type Gather={id:number;count:number;how:'spawn'|'milk'|'loc'|'kill'|'pick'|'npc'|'combine';kit?:'ranged'|'magic'};
 // A plant picked for its item: onions are loc 3366 with the Pick option (general_use/scripts/pickables.rs2:31-39; the
 // plant stands again 50 ticks after a pick).
-export const PICK_SOURCES:Record<number,{loc:number;option:RegExp}>={1957:{loc:3366,option:/^pick$/i}};
+// The five pickable plants (general_use/scripts/pickables.rs2; tiles in knowledge/pickables.json): a cabbage from the
+// fields beside Falador or Draynor is nearer than any cabbage shop.
+export const PICK_SOURCES:Record<number,{loc:number;option:RegExp}>={1957:{loc:3366,option:/^pick$/i},1965:{loc:1161,option:/^pick$/i},1942:{loc:312,option:/^pick$/i},1947:{loc:313,option:/^pick$/i},1779:{loc:2646,option:/^pick$/i}};
 // An item an NPC hands over in dialogue for ingredients and coins: Aggie in Draynor makes red dye from 3 redberries,
 // yellow from 2 onions and blue from 2 woad leaves, 5 coins each (area_draynor/scripts/aggie.rs2:71-115); Wyson the
 // gardener in Falador park sells 2 woad leaves for 20 coins (area_falador/scripts/wyson_the_gardener.rs2:26-35).
