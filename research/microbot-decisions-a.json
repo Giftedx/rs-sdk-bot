@@ -5508,9 +5508,9 @@
     ],
     "proof": {
       "level": "Source/native contract review, focused unit checks and bounded native execution for the exact linked configurations; no outside-demand, profit or live-repeat release.",
-      "evidence": ".practice/microbot-ports/ge-trip-native-1793593287177/proof.json",
-      "savedBankAudit": ".practice/microbot-ports/ge-trip-native-1793593287177/saved-bank-audit.json",
-      "sourceCheck": ".practice/microbot-ports/ge-trip-native-1793593287177/runtime-check.json",
+      "evidence": ".practice/microbot-ports/ge-trip-native-1793860131244/proof.json",
+      "savedBankAudit": ".practice/microbot-ports/ge-trip-native-1793860131244/saved-bank-audit.json",
+      "sourceCheck": ".practice/microbot-ports/ge-trip-native-1793860131244/runtime-check.json",
       "currentAdapter": "scripts/microbot-ge-plan.ts",
       "focusedChecks": "Plan/seller/bank-trip regressions25 tests168 assertions; default bank-trip behaviour remains covered.",
       "currentSourceSha256": {
@@ -5523,10 +5523,10 @@
         "scope": "Four bounded native cases pass: malformed durable identity after actual CLI login returns expected code1, logs out, preserves exact saved assets/skills and the journal, and releases its actor lock; Finish lists an owned lot3, leaves2 unfilled items plus114 coins as resting escrow after1 fill, and fresh replay changes no offer; explicit continuation cancels/collects then relists only2 remaining units, completing3 sales for gross321/tax15/net306. The full actual CLI sells1 for gross119/tax5/net114; original-stop case submits nothing. Exact independent CRC seller/buyer logs,coins,gold,HP50,empty packs/gear and logout checks pass. Runtime11483 and worker307 entries unchanged. Native owned matching proves these execution mechanics, not outside demand, profitable price advice or live release."
       },
       "defaultNative": {
-        "evidence": ".practice/microbot-ports/ge-trip-native-1793593287177/proof.json",
-        "savedBankAudit": ".practice/microbot-ports/ge-trip-native-1793593287177/saved-bank-audit.json",
-        "sourceCheck": ".practice/microbot-ports/ge-trip-native-1793593287177/runtime-check.json",
-        "scope": "Default finite-lot adapter passes native partial lost-placement/cancel/collect recovery (lot3 fills2, gross202/tax10/net192, seller bank207 coins/3 Logs) and full actual CLI (lot1 fills1, gross101/tax5/net96, seller bank111 coins/2 Logs). Owned counterparty exact CRC bank assets, unrelated gold, empty packs/gear, logout and no repeated market/withdraw replay pass;11410 runtime/306 worker entries unchanged. Partial settlement is banked with targetMet=false."
+        "evidence": ".practice/microbot-ports/ge-trip-native-1793860131244/proof.json",
+        "savedBankAudit": ".practice/microbot-ports/ge-trip-native-1793860131244/saved-bank-audit.json",
+        "sourceCheck": ".practice/microbot-ports/ge-trip-native-1793860131244/runtime-check.json",
+        "scope": "Default finite-lot adapter passes native partial lost-placement/cancel/collect recovery (lot3 fills2, gross202/tax10/net192, seller bank207 coins/3 Logs) and full actual CLI (lot1 fills1, gross101/tax5/net96, seller bank111 coins/2 Logs). Owned counterparty exact CRC bank assets, unrelated gold, empty packs/gear, logout and no repeated market/withdraw replay pass;11550 runtime/360 worker entries unchanged. Partial settlement is banked with targetMet=false."
       },
       "bankWideSelection": {
         "consumer": "scripts/microbot-bank-seller.ts",

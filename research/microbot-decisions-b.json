@@ -25278,27 +25278,27 @@
       },
       "scriptCount": 1,
       "sourceFileCount": 16,
-      "nativePractice": "Default finite-lot adapter passes native partial lost-placement/cancel/collect recovery (lot3 fills2, gross202/tax10/net192, seller bank207 coins/3 Logs) and full actual CLI (lot1 fills1, gross101/tax5/net96, seller bank111 coins/2 Logs). Owned counterparty exact CRC bank assets, unrelated gold, empty packs/gear, logout and no repeated market/withdraw replay pass;11410 runtime/306 worker entries unchanged. Partial settlement is banked with targetMet=false.",
+      "nativePractice": "Default finite-lot adapter passes native partial lost-placement/cancel/collect recovery (lot3 fills2, gross202/tax10/net192, seller bank207 coins/3 Logs) and full actual CLI (lot1 fills1, gross101/tax5/net96, seller bank111 coins/2 Logs). Owned counterparty exact CRC bank assets, unrelated gold, empty packs/gear, logout and no repeated market/withdraw replay pass;11550 runtime/360 worker entries unchanged. Partial settlement is banked with targetMet=false.",
       "unit": "New bank adapter focused result:4 tests pass,43 assertions. Cases cover deferred unknown escrow,in-place recovery without another withdrawal,partial targetMet=false,settled replay without market/withdraw calls,changed-asset rejection,unsubmitted abort and corrupt/missing-parent rejection.",
-      "savedBankAudit": ".practice/microbot-ports/ge-trip-native-1793593287177/saved-bank-audit.json",
+      "savedBankAudit": ".practice/microbot-ports/ge-trip-native-1793860131244/saved-bank-audit.json",
       "sourceBinding": {
-        "manifest": ".practice/microbot-ports/ge-trip-native-1793593287177/source.json",
-        "check": ".practice/microbot-ports/ge-trip-native-1793593287177/runtime-check.json",
-        "runtimeEntries": 11410,
-        "workerEntries": 306,
+        "manifest": ".practice/microbot-ports/ge-trip-native-1793860131244/source.json",
+        "check": ".practice/microbot-ports/ge-trip-native-1793860131244/runtime-check.json",
+        "runtimeEntries": 11550,
+        "workerEntries": 360,
         "changed": [],
         "workerChanged": []
       },
-      "consumerScope": "Finite bank-to-GE-to-bank surplus adapter reuses the staged seller and shared bank profile for one declared lot per goal. It persists parent intent and initial all-assets/gear ledger before staging, records settled/aborted outcome before return, and recovers attempted/open/cancelling/collecting escrow in place with cancel=true and fatal-only cleanup guards before bank movement or new withdrawals. Unknown escrow defers bank recovery; prepared/no-placement intents abort unsubmitted on recovery/stop/deadline and return owned stock. Settled replay places and withdraws nothing, then audits fresh final-bank assets against initial stock plus filled/net deltas. Price/floor, bank reserve, deadline, fill wait, cap, actor lock, original-life/HP and audit budgets bound the lot. Partial/unfilled finite closure can report ok=true only when settled and banked, with targetMet=false; it does not mean every unit sold. Missing/corrupt/conflicting journals stop before market actions. Finite partial-recovery and full actual CLI bank trips pass with exact saved assets and logout in .practice/microbot-ports/ge-trip-native-1793593287177/proof.json; this is not a live or profit qualification.",
+      "consumerScope": "Finite bank-to-GE-to-bank surplus adapter reuses the staged seller and shared bank profile for one declared lot per goal. It persists parent intent and initial all-assets/gear ledger before staging, records settled/aborted outcome before return, and recovers attempted/open/cancelling/collecting escrow in place with cancel=true and fatal-only cleanup guards before bank movement or new withdrawals. Unknown escrow defers bank recovery; prepared/no-placement intents abort unsubmitted on recovery/stop/deadline and return owned stock. Settled replay places and withdraws nothing, then audits fresh final-bank assets against initial stock plus filled/net deltas. Price/floor, bank reserve, deadline, fill wait, cap, actor lock, original-life/HP and audit budgets bound the lot. Partial/unfilled finite closure can report ok=true only when settled and banked, with targetMet=false; it does not mean every unit sold. Missing/corrupt/conflicting journals stop before market actions. Finite partial-recovery and full actual CLI bank trips pass with exact saved assets and logout in .practice/microbot-ports/ge-trip-native-1793860131244/proof.json; this is not a live or profit qualification.",
       "bankAdapter": {
         "consumer": "scripts/microbot-ge-trip.ts",
         "level": "Finite native partial-recovery and full actual CLI bank trips pass; no live or profitable-trading release.",
         "preparedFixture": ".practice/microbot-ports/ge-trip-native.ts",
         "fixtureStatus": "Both native cases pass with exact saved bank assets, empty packs and owned-partner logout. Partial three-log lot fills two for192 net with one initial withdrawal across three sessions; full CLI lot fills one for96 net. Settled replays forbid market and withdrawal calls.",
-        "receipt": ".practice/microbot-ports/ge-trip-native-1793593287177/proof.json",
-        "savedBankAudit": ".practice/microbot-ports/ge-trip-native-1793593287177/saved-bank-audit.json",
-        "sourceCheck": ".practice/microbot-ports/ge-trip-native-1793593287177/runtime-check.json",
-        "conditions": "Members practice,150ms ticks,XP rate1, declared fixed owned lots and resting owned buy offers;11410 runtime and306 worker dependency files unchanged during the check."
+        "receipt": ".practice/microbot-ports/ge-trip-native-1793860131244/proof.json",
+        "savedBankAudit": ".practice/microbot-ports/ge-trip-native-1793860131244/saved-bank-audit.json",
+        "sourceCheck": ".practice/microbot-ports/ge-trip-native-1793860131244/runtime-check.json",
+        "conditions": "Members practice,150ms ticks,XP rate1, declared fixed owned lots and resting owned buy offers;11550 runtime and360 worker dependency files unchanged during the check."
       },
       "stagedPractice": "Staged seller consumer native engine proof .practice/microbot-ports/ge-native-1793563522538/proof.json: lot3 fills2 against an older101 bid,gross202,tax10,net192 and unsold1 returns. The fixture stages and banks the owned assets: seller207coins/3logs,buyer798coins/2logs. Lost SDK placement/observation/cancel/collection responses reconcile across logout/relogin; settled staged replay sends no new sale/credit. The staged seller CLI full lot1 at101 gives96net; fixture banking yields seller111coins/2reserved logs,buyer899coins/1log. Both cases retain unrelated gold bars and clean logout. This receipt qualifies neither scripts/microbot-ge-trip.ts nor the separate buy-owned CLI; the SDK buyer is the owned fixture counterparty.",
       "stagedSourceBinding": {
@@ -25323,10 +25323,10 @@
         "scope": "Four bounded native cases pass: malformed durable identity after actual CLI login returns expected code1, logs out, preserves exact saved assets/skills and the journal, and releases its actor lock; Finish lists an owned lot3, leaves2 unfilled items plus114 coins as resting escrow after1 fill, and fresh replay changes no offer; explicit continuation cancels/collects then relists only2 remaining units, completing3 sales for gross321/tax15/net306. The full actual CLI sells1 for gross119/tax5/net114; original-stop case submits nothing. Exact independent CRC seller/buyer logs,coins,gold,HP50,empty packs/gear and logout checks pass. Runtime11483 and worker307 entries unchanged. Native owned matching proves these execution mechanics, not outside demand, profitable price advice or live release."
       },
       "defaultNative": {
-        "evidence": ".practice/microbot-ports/ge-trip-native-1793593287177/proof.json",
-        "savedBankAudit": ".practice/microbot-ports/ge-trip-native-1793593287177/saved-bank-audit.json",
-        "sourceCheck": ".practice/microbot-ports/ge-trip-native-1793593287177/runtime-check.json",
-        "scope": "Default finite-lot adapter passes native partial lost-placement/cancel/collect recovery (lot3 fills2, gross202/tax10/net192, seller bank207 coins/3 Logs) and full actual CLI (lot1 fills1, gross101/tax5/net96, seller bank111 coins/2 Logs). Owned counterparty exact CRC bank assets, unrelated gold, empty packs/gear, logout and no repeated market/withdraw replay pass;11410 runtime/306 worker entries unchanged. Partial settlement is banked with targetMet=false."
+        "evidence": ".practice/microbot-ports/ge-trip-native-1793860131244/proof.json",
+        "savedBankAudit": ".practice/microbot-ports/ge-trip-native-1793860131244/saved-bank-audit.json",
+        "sourceCheck": ".practice/microbot-ports/ge-trip-native-1793860131244/runtime-check.json",
+        "scope": "Default finite-lot adapter passes native partial lost-placement/cancel/collect recovery (lot3 fills2, gross202/tax10/net192, seller bank207 coins/3 Logs) and full actual CLI (lot1 fills1, gross101/tax5/net96, seller bank111 coins/2 Logs). Owned counterparty exact CRC bank assets, unrelated gold, empty packs/gear, logout and no repeated market/withdraw replay pass;11550 runtime/360 worker entries unchanged. Partial settlement is banked with targetMet=false."
       },
       "buyListNative": {
         "evidence": ".practice/microbot-ports/ge-buy-list-native-1793595608342/proof.json",
