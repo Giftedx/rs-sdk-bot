@@ -10,6 +10,17 @@ test('a fault names the failed proof cases from either report shape',()=>{
  expect(faultOf('practice','bot log\n'+cases+'\n','')).toBe('practice: vial-shortfall');
  expect(faultOf('practice',results,'')).toBe('practice: a,z');
 });
+test('a fault names the false predicates of a checks report',()=>{
+ const report=JSON.stringify({ok:false,scope:'practice',checks:{'short.missing':false,uniqueAccounts:true,'rerun.sameAccount':false},magic:{varrock:5}});
+ expect(faultOf('native',report,'')).toBe('native: rerun.sameAccount,short.missing');
+});
+test('a fault names the failed bun tests, not the test file heading',()=>{
+ const run=(name:string)=>`\na.test.ts:\n1 | code\nerror: expect(received).toBe(expected)\n(fail) ${name} [0.23ms]\n\n 1 pass\n 1 fail\n`;
+ expect(faultOf('unit','',run('bad one'))).toBe('unit: bad one');
+ expect(faultOf('unit','',run('bad one'))).not.toBe(faultOf('unit','',run('bad two')));
+ expect(faultOf('unit','','\nb.test.ts:\nerror: Cannot find module x\n')).toBe('unit: error: Cannot find module x');
+ expect(faultOf('unit','','\nb.test.ts:\n')).toBeNull();
+});
 test('a fault falls back to the first error line with its numbers removed',()=>{
  expect(faultOf('native','','\nError: fallback: saved state unobserved \n at x')).toBe('native: Error: fallback: saved state unobserved');
  expect(faultOf('native','','Error: failed at tick 1234 run deadbeef01')).toBe(faultOf('native','','Error: failed at tick 987 run 0123abcd45'));
