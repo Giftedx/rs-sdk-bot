@@ -180,6 +180,17 @@ function openDeliveryPrs(){
   for(const pr of conflicts)event('delivery-pr-conflict',{task:pr.taskId,branch:pr.branch,error:pr.lastError});
  }).catch(error=>event('delivery-pr-failed',String(error))).finally(()=>{deliveryPrs=undefined;});
 }
+export function plannerDue(state: CoordinatorState, now: number, intervalMs: number, requested: boolean): boolean {
+ if (state.planner) return false;
+ const newReceipt = state.plannerReceiptSequence === undefined
+  ? state.tasks.some(r => r.receipt && r.receipt.at > state.lastPlanAt)
+  : (state.latestReceiptSequence ?? 0) > state.plannerReceiptSequence;
+ const actionable = requested || newReceipt;
+ const elapsed = now - state.lastPlanAt;
+ return elapsed > (actionable ? 1000 : 30000)
+  && (actionable || state.lastPlanReason.startsWith('planner failed:') || elapsed > Math.max(intervalMs, IDLE_PLAN_MS));
+}
+
 async function tick(state:CoordinatorState,config:any){
  recoverPlanWrite();
  openDeliveryPrs();
@@ -249,15 +260,12 @@ async function tick(state:CoordinatorState,config:any){
   }
   launchTask(state,task.id);
  }
- const pending=state.tasks.some(r=>r.status==='pending'),failure=state.tasks.some(r=>r.status==='failed'&&(r.receipt?.at??0)>state.lastPlanAt);
- const newOutcome=state.tasks.some(r=>r.receipt&&r.receipt.at>state.lastPlanAt);
- const actionable=existsSync(planRequest)||newOutcome||failure;
- // Without a new receipt, failure or request the planner only rechecks every IDLE_PLAN_MS: 1,491 of 1,603
- // plans on a 30 s timer proposed no work (research/bot-host.md "Isolated build workspaces").
- if(!state.planner&&(actionable||state.lastPlanReason.startsWith('planner failed:')||Date.now()-state.lastPlanAt>Math.max(config.plannerIntervalMs??0,IDLE_PLAN_MS))&&Date.now()-state.lastPlanAt>(actionable?1000:30000)){
+ if(plannerDue(state,Date.now(),config.plannerIntervalMs??0,existsSync(planRequest))){
   if(existsSync(planRequest))unlinkSync(planRequest);
   const agent=state.tasks.some(r=>r.status==='running'&&r.agent==='codex'&&r.spec.kind==='build')?'claude':'codex';
   const runId='plan-'+randomUUID(),dir=runDirectory(runId);atomicJson(join(dir,'input.json'),{statePath:join(coordinationDir,'state.json'),agent,timeoutMs:config.modelTimeoutMs??600000});
+  // Snapshot the receipts available when the planner starts. Receipts settled during its call trigger the next pass.
+  state.plannerReceiptSequence=state.latestReceiptSequence??0;
   state.planner={runId,agent,startedAt:Date.now()};saveState(state);state.planner.pid=spawn('--planner',runId,dir);event('planner-started',{runId,pid:state.planner.pid,agent});
  }
  const archived=archiveFinishedTasks(state);if(archived)event('tasks-archived',{count:archived,remaining:state.tasks.length});
