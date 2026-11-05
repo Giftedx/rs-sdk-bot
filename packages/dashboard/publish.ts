@@ -30,14 +30,17 @@ const writeAtomic=(f:string,data:string|Uint8Array)=>{mkdirSync(resolve(f,'..'),
 // A git push on a dead socket can hold for ten minutes or more, and every later publication waits behind it. A normal
 // push takes about 15 s. The kill takes the whole tree: git's transport helpers hold the output pipes open.
 const RUN_LIMIT_MS=120_000,CLONE_LIMIT_MS=600_000;
-const killTree=(pid:number)=>{if(process.platform==='win32')Bun.spawnSync(['taskkill','/PID',String(pid),'/T','/F'],{stdout:'ignore',stderr:'ignore',windowsHide:true});else{try{process.kill(pid,'SIGKILL');}catch{/* gone */}}};
+const killTree=(pid:number)=>{if(process.platform==='win32')Bun.spawnSync(['taskkill','/PID',String(pid),'/T','/F'],{stdout:'ignore',stderr:'ignore',windowsHide:true});else{try{process.kill(-pid,'SIGKILL');}catch{/* gone */}}};
 export async function run(cmd:string[],cwd=root,limitMs=RUN_LIMIT_MS):Promise<{ok:boolean;out:string}>{
- const p=Bun.spawn(cmd,{cwd,stdout:'pipe',stderr:'pipe',windowsHide:true});
- let timedOut=false;
- const timer=setTimeout(()=>{timedOut=true;killTree(p.pid);},limitMs);
- const [stdout,stderr,code]=await Promise.all([new Response(p.stdout).text(),new Response(p.stderr).text(),p.exited]);
+ // Off Windows the child leads its own process group, so one signal reaches its descendants.
+ const p=Bun.spawn(cmd,{cwd,stdout:'pipe',stderr:'pipe',windowsHide:true,detached:process.platform!=='win32'});
+ let timer:ReturnType<typeof setTimeout>|undefined;
+ const deadline=new Promise<null>(done=>{timer=setTimeout(()=>{killTree(p.pid);done(null);},limitMs);});
+ // The race returns at the limit even if a surviving descendant still holds the pipes.
+ const result=await Promise.race([Promise.all([new Response(p.stdout).text(),new Response(p.stderr).text(),p.exited]),deadline]);
  clearTimeout(timer);
- if(timedOut)return {ok:false,out:`${cmd.slice(0,2).join(' ')} stopped after ${Math.round(limitMs/1000)} s`};
+ if(!result)return {ok:false,out:`${cmd.slice(0,2).join(' ')} stopped after ${Math.round(limitMs/1000)} s`};
+ const [stdout,stderr,code]=result;
  return {ok:code===0,out:`${stdout}${code===0?'':stderr}`.trim()};
 }
 const gh=(...args:string[])=>run(['gh',...args]);
