@@ -1,7 +1,8 @@
 // Shares fleet state between the two machines through git, on the fleet-data branch in its own worktree
 // (.practice/fleet-data), never in the code checkout: pulls the other side's orders, receipts and snapshot, writes
 // this side's bank snapshot (fleet/snapshots/<side>.json: name, server, bank, pack, worn, skill levels and completed quests of
-// this side's listed accounts from .practice/status, never practice bots or credentials), this side's claim
+// this side's listed accounts from .practice/status, never practice bots or credentials; an account with no local status,
+// or an older one, keeps its published row, so a fresh cloud container does not erase what the side last saw), this side's claim
 // (fleet/claims/<side>.json: the knight spots, pens and shops the enabled jobs of this side's plan hold, SWARM_PLAN or
 // swarm.json merged with the coordinator's jobs, so other sides' planners stay off them) and this side's live
 // assignments (fleet/plans/<side>.json: the same merged plan, as scripts/swarm.ts runs it, so other machines and audits
@@ -10,19 +11,33 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { FLEET_WORKTREE, loadOwners, mySide } from '../packages/core/src/fleet';
-import { claimFor } from '../packages/planner/src/autopilot';
+import { CLAIM_MAX_AGE_MS, claimFor } from '../packages/planner/src/autopilot';
 import { mergeJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 
 const root = resolve(import.meta.dir, '..');
 const BRANCH = 'fleet-data';
 const rows = (r: any[] | undefined) => (r ?? []).map((i: any) => ({ id: i.baseId ?? i.id, name: i.name, count: i.count }));
-export function snapshot(statuses: readonly any[], side = mySide(), owners = loadOwners(), now = Date.now()) {
-    return { side, at: now, accounts: statuses.filter(s => typeof s?.name === 'string' && owners.get(s.name.toLowerCase())?.side === side && owners.get(s.name.toLowerCase())?.server === String(s.server).toLowerCase()).map(s => ({
-        name: s.name, server: s.server, at: s.at, bank: rows(s.bank), inventory: rows(s.inventory), equipment: rows(s.equipment),
-        skills: (s.skills ?? []).map((k: any) => ({ name: k.name, level: k.level })),
-        // No field when the journal was never read, so readers see unknown and not zero completed.
-        ...(Array.isArray(s.quests) && s.quests.some((q: any) => q.state !== 'unknown') ? { quests: s.quests.filter((q: any) => q.state === 'complete').map((q: any) => q.name) } : {}),
-    })) };
+// `prior` is the side's published snapshot rows: a row stays when its account has no local status or a staler one.
+export function snapshot(statuses: readonly any[], side = mySide(), owners = loadOwners(), now = Date.now(), prior: readonly any[] = []) {
+    const mine = (s: any) => typeof s?.name === 'string' && owners.get(s.name.toLowerCase())?.side === side && owners.get(s.name.toLowerCase())?.server === String(s.server).toLowerCase();
+    const by = new Map<string, any>(prior.filter(mine).map(r => [r.name.toLowerCase(), r]));
+    for (const s of statuses.filter(mine)) {
+        const kept = by.get(s.name.toLowerCase());
+        if (kept && Number.isFinite(kept.at) && !(Number(s.at) >= kept.at)) continue;
+        by.set(s.name.toLowerCase(), {
+            name: s.name, server: s.server, at: s.at, bank: rows(s.bank), inventory: rows(s.inventory), equipment: rows(s.equipment),
+            skills: (s.skills ?? []).map((k: any) => ({ name: k.name, level: k.level })),
+            // No field when the journal was never read, so readers see unknown and not zero completed.
+            ...(Array.isArray(s.quests) && s.quests.some((q: any) => q.state !== 'unknown') ? { quests: s.quests.filter((q: any) => q.state === 'complete').map((q: any) => q.name) } : {}),
+        });
+    }
+    return { side, at: now, accounts: [...by.values()].sort((a, b) => a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1) };
+}
+// A session whose plan has no jobs has nothing to publish: it keeps this side's claim and plan while the published claim
+// is fresh and holds resources, since another session of the same side (a fresh cloud container beside the one that runs
+// the swarm) wrote them from the jobs it runs. A claim older than CLAIM_MAX_AGE_MS has aged out anyway.
+export function keepPublished(jobs: readonly any[], published: { at?: number; resources?: unknown[] } | null | undefined, now = Date.now()): boolean {
+    return jobs.length === 0 && !!published && Array.isArray(published.resources) && published.resources.length > 0 && Number.isFinite(published.at) && now - published.at! < CLAIM_MAX_AGE_MS;
 }
 // The jobs of this side's own accounts, without the main account and without job notes. The swarm plan file stays
 // uncommitted while it runs; this copy is what other sides read.
@@ -55,21 +70,24 @@ export function runSync(push = true): string {
     if (hasRemote) { const pull = git(dir, 'pull', '--rebase', 'origin', BRANCH); if (!pull.ok) throw Error(`pull: ${pull.out}`); }
     const statusDir = join(root, '.practice', 'status');
     const statuses = existsSync(statusDir) ? readdirSync(statusDir).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(statusDir, f), 'utf8'))]; } catch { return []; } }) : [];
-    const owners = loadOwners(join(dir, 'fleet', 'owners.json')), snap = snapshot(statuses, mySide(), owners);
+    const owners = loadOwners(join(dir, 'fleet', 'owners.json'));
     mkdirSync(join(dir, 'fleet', 'snapshots'), { recursive: true });
+    const file = join(dir, 'fleet', 'snapshots', `${mySide()}.json`);
+    const prior: any[] = (() => { try { const a = JSON.parse(readFileSync(file, 'utf8')).accounts; return Array.isArray(a) ? a : []; } catch { return []; } })();
+    const snap = snapshot(statuses, mySide(), owners, Date.now(), prior);
     // Write only when an account changed: the time stamp alone makes no commit.
-    const file = join(dir, 'fleet', 'snapshots', `${snap.side}.json`);
-    const prior = (() => { try { return JSON.stringify(JSON.parse(readFileSync(file, 'utf8')).accounts); } catch { return ''; } })();
-    if (prior !== JSON.stringify(snap.accounts)) writeFileSync(file, JSON.stringify(snap) + '\n');
+    if (JSON.stringify(prior) !== JSON.stringify(snap.accounts)) writeFileSync(file, JSON.stringify(snap) + '\n');
     // The claim's time stamp is its freshness, so every sync rewrites it. An unreadable plan writes nothing: the old
     // claim ages out instead of releasing spots the plan may still hold.
     const planFile = resolve(process.env.SWARM_PLAN ?? join(root, 'swarm.json'));
     const jobs = (() => { try { const p = JSON.parse(readFileSync(planFile, 'utf8')); return Array.isArray(p.jobs) ? p.jobs as any[] : null; } catch { return null; } })();
     let claim: ReturnType<typeof claimFor> | null = null;
-    if (jobs) {
+    const claimFile = join(dir, 'fleet', 'claims', `${snap.side}.json`);
+    const publishedClaim = (() => { try { return JSON.parse(readFileSync(claimFile, 'utf8')); } catch { return null; } })();
+    if (jobs && !keepPublished(mergeJobs(jobs, readCoordinatorJobs(root).jobs), publishedClaim)) {
         const merged = mergeJobs(jobs, readCoordinatorJobs(root).jobs);
         claim = claimFor(merged, snap.side, a => owners.get(a.toLowerCase())?.side ?? 'local');
-        mkdirSync(join(dir, 'fleet', 'claims'), { recursive: true }); writeFileSync(join(dir, 'fleet', 'claims', `${snap.side}.json`), JSON.stringify(claim) + '\n');
+        mkdirSync(join(dir, 'fleet', 'claims'), { recursive: true }); writeFileSync(claimFile, JSON.stringify(claim) + '\n');
         const view = planView(merged, snap.side, owners);
         mkdirSync(join(dir, 'fleet', 'plans'), { recursive: true });
         const out = join(dir, 'fleet', 'plans', `${snap.side}.json`);
