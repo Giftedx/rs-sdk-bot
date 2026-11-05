@@ -794,6 +794,7 @@ test('a quest keeps its own items and every untradeable item out of the unneeded
  expect(keepsItem('sheep',995,tradeable)).toBe(false);
  // Sheep Herder's banked suit, prod and feed come back out for a resumed run: Orbon sells his suit at stage 1 only.
  for(const id of [278,279,284,285])expect(keepsItem('sheepherder',id,tradeable)).toBe(true);
+ for(const id of [431,432,433])expect(keepsItem('hunt',id,tradeable)).toBe(true);
  expect(keepsItem('sheep',284,tradeable)).toBe(false);
 });
 
