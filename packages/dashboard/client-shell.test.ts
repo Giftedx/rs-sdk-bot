@@ -105,11 +105,23 @@ test('unknown quest flags stay separate from observed started quests',()=>{
  expect(questPanel(bot,'unknown')).toContain('data-quest="Unobserved quest"');
 });
 
+test('a visitor reads job names as words and does not see housekeeping runs',()=>{
+ const start=shell.indexOf('  window.atlasHousekeeping='),code=shell.slice(start,shell.indexOf('\n',shell.indexOf('  window.atlasJobName=')));
+ const w:any={};new Function('window',code)(w);
+ expect(w.atlasJobName('death-plateau-bread')).toBe('death plateau bread');
+ expect(w.atlasJobName('feathers at the chicken pen 3017,3295')).toBe('feathers at the chicken pen');
+ expect(w.atlasJobName('Grand Exchange trade')).toBe('Grand Exchange trade');
+ for(const job of ['read-bank','recover-oreelse-mithril-qualified-entry','chain-herblore-order-mightyrod'])expect(w.atlasHousekeeping(job)).toBe(true);
+ expect(w.atlasHousekeeping('fire and earth runes from Betty')).toBe(false);
+});
+
 test('friends use world presence rather than the age of the last status file',()=>{
  const code=shell.slice(shell.indexOf("    if(selectedTab==='friends')"),shell.indexOf("    if(selectedTab==='settings')"));
- const html=new Function('S','E','safeName',`const selectedTab='friends';let html='';${code};return html;`)({bots:[{name:'Offline',fresh:true,inWorld:false},{name:'Online',fresh:false,inWorld:true}]},String,String);
+ const friends=(owner:boolean)=>new Function('S','E','safeName','window',`const selectedTab='friends';let html='';${code};return html;`)({bots:[{name:'Offline',fresh:true,inWorld:false},{name:'Online',fresh:false,inWorld:true}]},String,String,{atlasOperator:()=>owner});
+ const html=friends(true);
  expect(html).toContain('<span>Offline</span><span class="friend-off">Offline</span>');
  expect(html).toContain('<span>Online</span><span class="friend-on">local</span>');
+ expect(friends(false)).toContain('<span>Online</span><span class="friend-on">Online</span>');
  expect(html.indexOf('data-friend="Online"')).toBeLessThan(html.indexOf('data-friend="Offline"'));
 });
 
