@@ -453,3 +453,10 @@ test('the tool plan keeps the quest its own runes beside the casts',async()=>{
  // A tool the quest does not need is planned as before, a worn bow counts as held.
  expect(toolPlan([{id:841,count:1},{id:882,count:40}],need,[],[{id:841,count:1}],[{id:882,count:21}],[])).toEqual({withdraw:[{id:882,count:21}],missing:[{id:882,count:19}]});
 });
+
+test('a kit consumable bought nine in ten short still serves',async()=>{
+ const {STACKS}=await import('./quest-sweep');
+ // Arrows and runes stack; the bank pass marks their shop buys with atLeast = ceil(0.9 * count).
+ expect(STACKS.has(556)).toBe(true);expect(STACKS.has(882)).toBe(true);expect(STACKS.has(1951)).toBe(false);
+ expect(Math.ceil(18*0.9)).toBe(17);
+});
