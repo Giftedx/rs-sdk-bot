@@ -81,7 +81,7 @@ try {
         await q.walk('to bank for slots', [{ x: bank.x, z: bank.z, tol: 3 }]);
         const opened: any = await q.s.bot.openBank();
         if (!opened?.success) await q.fail('bank for slots did not open');
-        for (const d of surplus()) { const item = q.inv().find((i: any) => i.id === d.id); if (item) await q.s.bot.depositItem(item, 1); await q.waitTicks(1); }
+        for (const d of surplus()) { const item = q.inv().find((i: any) => i.id === d.id); if (item) await q.s.bot.depositItem(item, d.count); await q.waitTicks(1); }
         await q.s.bot.closeBank();
         console.log(`NOTE tribal totem freed slots: ${28 - q.inv().length} free`);
         if (surplus().length) await q.fail(`pack full: ${q.inv().length} of 28 slots after banking`);
