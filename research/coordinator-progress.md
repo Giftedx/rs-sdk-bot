@@ -37,6 +37,8 @@ Source -> local consumer -> reuse -> check: the build workspace's recorded SHA-2
 
 Source -> local consumer -> reuse -> check: the coordinator's retired-job release and the swarm's single-account job shape -> assignment overlay -> park the unused participants as disabled single assignments after the existing release checks pass -> tests verify the swarm parser and owner shadowing. The read-only replay in `.practice/parked-assignments/replay.json` compares existing and normalized overlays using the same owner and coordinator inputs.
 
+Source -> local consumer -> reuse -> check: the progress export's matched useful live receipt rule -> planner progress, focus release and expansion -> share one check for a successful gameplay effect with its own task and run identity -> fixtures reject recovery, refused, crossed and future receipts. The replay in `.practice/useful-live-receipts/replay.json` compares both counts in a retained 15-minute window and shows the expansion result under stated hypothetical headroom.
+
 ## Planner rounds and dead tasks
 
 Over 7 days the coordinator started 1,117 planning rounds. Each round has a prompt of about 150 KB and a median length of 130 s. In the 48 hours to the same point, 86 of 178 accepted rounds added no task. A success whose consumer was already queued started 252 rounds in the 7 days, and 192 of those added no task. A replay of the receipts gives 1,119 rounds under the old trigger and 727 under `plannerDue` with the 5-minute gap. Conditions: `.practice/coordinator/events.jsonl` and `state.json`, plan length fixed at 130 s. Gap: the replay counts rounds. It does not measure how much later a repair starts.

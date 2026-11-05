@@ -30,6 +30,13 @@ export interface TaskRecord {
  receiptSequence?:number;
  agent?:'codex'|'claude';
 }
+/** A settled gameplay effect, distinct from a recovery login or native proof. */
+export function usefulLiveReceipt(record:TaskRecord,now:number):Receipt|undefined{
+ const receipt=record.receipt;
+ if(record.spec.kind==='run'&&!record.spec.sessionRecovery&&record.status==='succeeded'&&record.runId
+  &&receipt?.taskId===record.spec.id&&receipt.runId===record.runId&&receipt.ok===true
+  &&receipt.output?.ok===true&&receipt.output.evidence==='live'&&Number.isFinite(receipt.at)&&receipt.at>0&&receipt.at<=now)return receipt;
+}
 export interface CoordinatorState {
  version:1;sequence:number;tasks:TaskRecord[];
  goals:{id:GoalId;lastStartedAt:number;lastSucceededAt:number;completedTasks:number}[];
