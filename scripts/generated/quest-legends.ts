@@ -263,7 +263,8 @@ try {
         // An idle helper trips the 900-tick no-progress stop, so it logs out here.
         await h.dispose();
         helpers.splice(helpers.indexOf(h), 1);
-        await settle([h.s], true, 'kit traded', { log: () => undefined });
+        const lines: string[] = [];
+        if (!(await settle([h.s], true, 'kit traded', { log: l => lines.push(l) }))) await q.fail(`kit ${who}: helper logout not confirmed: ${lines.filter(l => /LOGOUT|WARN/.test(l)).join(' / ')}`);
         q.milestone(`kit ${who}`);
     };
 
