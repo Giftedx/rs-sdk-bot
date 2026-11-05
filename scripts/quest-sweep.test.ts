@@ -764,6 +764,13 @@ test('garlic comes from the Draynor cupboard when the only seller is far away',(
  expect(gatherPlan([{id:1550,count:1}],at,()=>[],()=>600).gathers).toEqual([{id:1550,count:1,how:'loc'}]);
 });
 
+test('Fishing Contest trains Fishing 10 with a small net; other quests and Fishing 10 train nothing',async()=>{
+ const {questSkillTraining,NET}=await import('./quest-sweep');
+ expect(questSkillTraining('fishingcompo',()=>1)).toMatchObject({skill:'Fishing',level:10,tools:[{id:NET,count:1}]});
+ expect(questSkillTraining('fishingcompo',()=>10)).toBeNull();
+ expect(questSkillTraining('imp',()=>1)).toBeNull();
+});
+
 test("Pirate's Treasure needs no bananas from the sweep: the script picks them on Karamja, and the bank pass keeps their slots",async()=>{
  const {QUEST_PICKUPS,slotsFor}=await import('./quest-sweep');
  const hunt=needs(presetFor('hunt')),hazeel=needs(presetFor('hazeelcult'));
