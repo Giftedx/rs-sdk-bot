@@ -1,12 +1,12 @@
 {
  "side": "claude-cloud",
- "at": 1793865864827,
+ "at": 1793866178088,
  "jobs": [
   {
    "account": "UnderMyKilt",
    "script": "scripts/ranged-train.ts",
    "args": [
-    "97",
+    "98",
     "30000"
    ],
    "env": {
@@ -21,7 +21,7 @@
    },
    "enabled": true,
    "repeat": true,
-   "goal": "Ranged fleet best: 95 to 97 (376 chicken kills fit one run of 50 trips x 8), then 98, 99",
+   "goal": "Ranged fleet best: 97 to 98, then 99 (cap 35000)",
    "role": "ranged"
   },
   {
