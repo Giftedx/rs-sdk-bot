@@ -526,7 +526,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     $('#rsw').contentWindow?.postMessage({warm:places.slice(0,12)},location.origin);
   }
   // The tour moves the camera to the next account in the world every 45 s. Any choice of account or camera ends it.
-  function tourStep(){if(document.hidden||mode!=='3d'||VIEWER.state!=='ready')return;touring=true;focusStep(1);touring=false;}
+  function tourStep(){if(globalThis.atlasFollowOther){tourSet(false);return;}if(document.hidden||mode!=='3d'||VIEWER.state!=='ready')return;touring=true;focusStep(1);touring=false;}
   function tourSet(on){clearInterval(tourTimer);tourTimer=on?setInterval(tourStep,TOUR_MS):null;focusRowsHtml='';if(on)tourStep();}
   function focusStep(step){const live=focusLive();if(!live.length)return;const i=live.findIndex(b=>b.name===(focusTarget()||sel));pick(live[i<0?(step>0?0:live.length-1):(i+step+live.length)%live.length].name);}
   function focusChoose(name){focusOpen(false);focusNow.focus({preventScroll:true});if(name)pick(name);else{tourSet(false);const from=focusTarget();focusFree();if(from)focusSay('Free camera',1400);}}
@@ -625,6 +625,6 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(F_KEYS[e.key]&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();e.stopPropagation();selectedTab=F_KEYS[e.key];hud.classList.remove('game-panel-hidden');gamePanel();}
     if(e.key==='/'&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();e.stopPropagation();showPlugin('fleet');($('#op-fleet-search')||$('#search'))?.focus();}
   },true);
-  window.atlasClient={follow:name=>previousPick(name),openPlugin:showPlugin,openBank,selectedPlugin:()=>selectedPlugin,gameTab:id=>{selectedTab=id;hud.classList.remove('game-panel-hidden');gamePanel();}};
+  window.atlasClient={follow:name=>{tourSet(false);previousPick(name);},openPlugin:showPlugin,openBank,selectedPlugin:()=>selectedPlugin,gameTab:id=>{selectedTab=id;hud.classList.remove('game-panel-hidden');gamePanel();}};
   app.classList.remove('focus-map','right-hidden','left-hidden');showPlugin('fleet');renderChat();if(S)refresh();
 })();

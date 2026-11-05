@@ -58,6 +58,14 @@ test('the tour steps through the switcher only while the 3D view is ready and sh
  expect(run('2d','ready',false)).toEqual([]);expect(run('3d','loading',false)).toEqual([]);expect(run('3d','ready',true)).toEqual([]);
 });
 
+test('a choice made in the 3D view ends the tour',()=>{
+ expect(shell).toContain('window.atlasClient={follow:name=>{tourSet(false);previousPick(name);},');
+ const code=shell.slice(shell.indexOf('  function tourStep(){'),shell.indexOf('  function tourSet('));
+ const ended:boolean[]=[],steps:number[]=[];(globalThis as any).atlasFollowOther='Someone';
+ try{new Function('mode','VIEWER','document','focusStep','tourSet','let touring=false;'+code+';tourStep();')('3d',{state:'ready'},{hidden:false},(n:number)=>steps.push(n),(on:boolean)=>ended.push(on));}finally{delete (globalThis as any).atlasFollowOther;}
+ expect(ended).toEqual([false]);expect(steps).toEqual([]);
+});
+
 test('an open bank redraws newer observations and closes when its account changes',()=>{
  const code=shell.slice(shell.indexOf('  function openBank(){'),shell.indexOf('  // Orbs as RuneLite'));
  let current:any={name:'Worker',bankAt:1,bank:[{name:'Coins',count:10}]},removed=false;
