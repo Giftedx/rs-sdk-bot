@@ -48,7 +48,22 @@ test('a switch shows a flight, also from free camera, or that the account is not
 
 test('the switcher is the only follow control left on the page',()=>{
  const page=['client-shell.js','map-shell.js','operations.js','index.html'].map(f=>readFileSync(new URL('./'+f,import.meta.url),'utf8')).join('\n');
- for(const gone of ['atlas-locate',"'locate'",'data-act="follow"','data-world-go','id="bt"','TOUR','client-account','dblclick'])expect(page).not.toContain(gone);
+ for(const gone of ['atlas-locate',"'locate'",'data-act="follow"','data-world-go','id="bt"','TOUR_AT','client-account','dblclick'])expect(page).not.toContain(gone);
+});
+
+test('the tour steps through the switcher only while the 3D view is ready and shown',()=>{
+ const code=shell.slice(shell.indexOf('  function tourStep(){'),shell.indexOf('  function tourSet('));
+ const run=(mode:string,state:string,hidden:boolean)=>{const steps:number[]=[];new Function('mode','VIEWER','document','focusStep','let touring=false;'+code+';tourStep();')(mode,{state},{hidden},(n:number)=>steps.push(n));return steps;};
+ expect(run('3d','ready',false)).toEqual([1]);
+ expect(run('2d','ready',false)).toEqual([]);expect(run('3d','loading',false)).toEqual([]);expect(run('3d','ready',true)).toEqual([]);
+});
+
+test('a choice made in the 3D view ends the tour',()=>{
+ expect(shell).toContain('window.atlasClient={follow:name=>{tourSet(false);previousPick(name);},');
+ const code=shell.slice(shell.indexOf('  function tourStep(){'),shell.indexOf('  function tourSet('));
+ const ended:boolean[]=[],steps:number[]=[];(globalThis as any).atlasFollowOther='Someone';
+ try{new Function('mode','VIEWER','document','focusStep','tourSet','let touring=false;'+code+';tourStep();')('3d',{state:'ready'},{hidden:false},(n:number)=>steps.push(n),(on:boolean)=>ended.push(on));}finally{delete (globalThis as any).atlasFollowOther;}
+ expect(ended).toEqual([false]);expect(steps).toEqual([]);
 });
 
 test('an open bank redraws newer observations and closes when its account changes',()=>{
