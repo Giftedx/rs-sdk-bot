@@ -249,4 +249,7 @@ test('the edible part of a preset\'s needs is reserved for the eaters',async()=>
  expect(reservedEdible(new Map([[1963,10],[1005,1]]))).toEqual({1963:10});
  expect(reservedEdible(new Map([[333,5],[995,100]]))).toEqual({333:5});
  expect(reservedEdible(new Map())).toEqual({});
+ // Black Knight's Fortress carries a cabbage to eat nowhere but the hole: the preset's own needs reserve it.
+ const {PRESETS}=await import('../packages/practice/src/presets');
+ expect(reservedEdible(needs(PRESETS.quest_blackknight!))).toEqual({1965:1});
 });
