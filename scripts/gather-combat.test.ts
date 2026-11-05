@@ -234,3 +234,7 @@ test('low HP with no food retreats and banks; a changed life stops without anoth
         if(injury==='death'){expect(r.died).toBe(true);expect(r.lifeId).toBe(2);}else{expect(r.stop).toBe('low-hp');expect(r.preserved).toBe(true);expect(r.foodAccounted).toBe(false);}
     }finally{f.dispose();}}
 });
+
+test('generic combat rejects invalid finite caps before opening an account',()=>{
+ for(const cap of ['0','-1','NaN','1.5']){const name='cap'+crypto.randomUUID().slice(0,8),r=Bun.spawnSync([process.execPath,'--smol',resolve(import.meta.dir,'gather-combat.ts'),name,cap,'druid'],{windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:10000}),text=r.stdout.toString()+r.stderr.toString();expect(r.exitCode).toBe(1);expect(text).toContain('finite positive CAP required');expect(text).not.toContain('bot.env');expect(text).not.toContain('START combat');}
+});

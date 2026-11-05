@@ -5603,7 +5603,8 @@
       "scripts/microbot-c-spell-loc.ts",
       "scripts/microbot-c-player-monitor.ts",
       "scripts/microbot-magic-items.ts",
-      "scripts/microbot-orb-trip.ts"
+      "scripts/microbot-orb-trip.ts",
+      "scripts/microbot-edgeville-travel.ts"
     ],
     "sourceEvidence": [
       {

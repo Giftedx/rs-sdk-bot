@@ -6,6 +6,7 @@ import{combatPotionPolicy,createCombatPotions,combatPotionSession,combatPotionRe
 import{combatAlchPolicy}from'./microbot-combat-alch';
 import {depositObserved} from '../packages/core/src/deposit';
 import{createCombatLoot,telegrabPolicy}from'./microbot-telegrab';
+import{createEdgevilleTravel}from'./microbot-edgeville-travel';
 import type { Session } from '../packages/core/src/inprocess';
 import {existsSync} from 'node:fs';
 import {resolve} from 'node:path';
@@ -282,6 +283,7 @@ const CONFIGS: Record<string, {
 
 if(TARGET_KEY!=='cow'&&!Object.prototype.hasOwnProperty.call(CONFIGS,TARGET_KEY))
     await finish([],false,`no combat progress: unsupported target ${TARGET_KEY}`);
+if(!Number.isSafeInteger(CAP)||CAP<1)await finish([],false,'no combat progress: finite positive CAP required');
 const potionPolicy=combatPotionPolicy();if(potionPolicy&&(!Number.isSafeInteger(CAP)||CAP<=200))throw Error('combat potion job reserves200ticks for owned bank return');
 const alch=combatAlchPolicy();if(alch&&TARGET_KEY==='cow')throw Error('owned alchemy hook requires generic combat loot path');
 const baseConf = CONFIGS[TARGET_KEY] ?? CONFIGS.druid!,conf=alch?.route?{...baseConf,spot:alch.route.site,bankSpot:alch.route.bank}:baseConf;
@@ -295,6 +297,7 @@ if (!botName) {
 
 const cowStop=cowStopControl(TARGET_KEY,()=>existsSync(resolve(import.meta.dir,'../.practice',`stop-${botName}`)),!!potionPolicy);
 let s = await openBot(botName,cowStop.options).catch(e => finish([], false, `login: ${String(e)}`));
+const dungeonTravel=TARGET_KEY!=='cow'&&!alch?.route?createEdgevilleTravel(s):undefined;
 const potionScope=potionPolicy&&TARGET_KEY!=='cow'?combatPotionSession(s,cowStop.stop,CAP):undefined;if(potionScope)s=potionScope;
 if(TARGET_KEY==='cow'){
     try{const r=await runCows(s,{cap:CAP,maximum:Number(process.env.MAX_KILLS??5),trainSkill:process.env.TRAIN_SKILL,targetLevel:process.env.TARGET_LEVEL===undefined?undefined:Number(process.env.TARGET_LEVEL),bankProfile:process.env.COW_BANK_PROFILE,foodMode:process.env.COW_FOOD_MODE,potions:potionPolicy,diagnostics:process.env.COW_DIAGNOSTICS==='1',stop:cowStop.stop});console.log(`COW_RESULT ${JSON.stringify(r)}`);await finish([s],r.ok&&cowStop.reason()!=='died',`mode=cow ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
@@ -314,12 +317,13 @@ try {
 
     const counters = () => `kills=${kills} looted=${itemsLooted} bankTrips=${bankTrips} walkTicks=${walkTicks} hp=${hp()}`;
 
-    const walk = async (x: number, z: number, tol = 2): Promise<boolean> => {
+    const travelStop=()=>over()||!recoveringPotions&&cowStop.stop();
+    const ground = async (x: number, z: number, tol = 2): Promise<boolean> => {
         const a = s.tick();
-        for (let i = 0; i < 3 && !over(); i++) {
+        for (let i = 0; i < 3 && !travelStop(); i++) {
             const p = pos();
             if (p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol) break;
-            const r = await walkPath(await sessionWalker(s), [{ x, z, tol }], { stop: over });
+            const r = await walkPath(await sessionWalker(s), [{ x, z, tol }], { stop: travelStop });
             if (!r.ok) {
                 console.log(`WALK fail ${r.detail} ticks=${r.ticks}`);
                 await waitTicks(s, 1);
@@ -329,6 +333,8 @@ try {
         const p = pos();
         return !!p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol;
     };
+
+    const walk=async(x:number,z:number,tol=2)=>dungeonTravel?dungeonTravel.walk(s,TARGET_KEY as 'druid'|'giant',{x,z,level:0},ground,travelStop,tol):ground(x,z,tol);
 
     const bank = async () => {
         const arrived=await walk(conf.bankSpot.x, conf.bankSpot.z, 2);if(potions&&!arrived)throw Error('combat potion bank return unavailable');

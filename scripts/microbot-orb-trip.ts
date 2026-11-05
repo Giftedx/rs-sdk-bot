@@ -6,7 +6,6 @@ import type{NearbyPlayer}from'../vendor/rs-sdk/sdk/types';
 import{loadTravel}from'../packages/core/src/travel';
 import{elementalRuneCost}from'./microbot-magic-items';
 import {interactionApproach} from '../packages/core/src/world';
-import {ClientProt} from '../vendor/rs-sdk/server/webclient/src/io/ClientProt';
 import type {Session} from '../packages/core/src/inprocess';
 import type {OrbKind,orbRecipes} from './microbot-c-orbs';
 import {walkPath,walkRoute,sessionWalker,applyKnownDoorBlocks} from '../packages/core/src/walk';
@@ -15,11 +14,8 @@ import {depositObserved} from '../packages/core/src/deposit';
 import {withdrawFireOwned} from './gather-fire-giants';
 import {withDoorPolicy} from '../packages/core/src/door-policy';
 import {nativeTeleport,runTeleportMagic,teleportReceipt} from './microbot-magic-teleport';
-// Use the core native reach-rule endpoint for floor trapdoors, then emit the ordinary packet without rerouting.
-export function installOrbFloorBridge(client:unknown,approach:{x:number;z:number}){
- const c=client as any;if(!c||typeof c.executeBotAction!=='function')throw Error('orb native floor executor absent');const original=c.executeBotAction;
- const bridge=function(this:unknown,a:any){if(a?.type!=='orbFloorLoc')return original.call(c,a);if(a.x!==3097||a.z!==3468||![1568,1570].includes(a.locId)||!c.isInGame()||!c.localPlayer)throw Error('orb native floor target invalid');const at=c.toSceneTile(a.x,a.z),from=c.toSceneTile(approach.x,approach.z),info=at&&c.locSceneInfo(at.x,at.z,a.locId);if(!at||!from||Math.max(Math.abs(approach.x-a.x),Math.abs(approach.z-a.z))>1||info?.shape!==22||c.localPlayer.routeX[0]!==from.x||c.localPlayer.routeZ[0]!==from.z)throw Error('orb native floor needs observed exact tile');c.writeOpcode(ClientProt.OPLOC1);c.out.p2(a.x);c.out.p2(a.z);c.out.p2(a.locId);return{success:true};};c.executeBotAction=bridge;return()=>{if(c.executeBotAction===bridge)c.executeBotAction=original;};
-}
+import{installOrbFloorBridge}from'./microbot-edgeville-travel';
+export{installOrbFloorBridge}from'./microbot-edgeville-travel';
 export const orbSites={air:{x:3088,z:3569},earth:{x:3086,z:9932},water:{x:2844,z:3422},fire:{x:2819,z:9828}};
 export const orbInteractions={earth:{shape:10,angle:0,width:3,height:3,src:'maps/m48_155.jm2'},air:{shape:10,angle:1,width:1,height:1,src:'maps/m48_55.jm2'},water:{shape:11,angle:1,width:2,height:2,src:'maps/m44_53.jm2'},fire:{shape:11,angle:3,width:2,height:2,src:'maps/m44_153.jm2'}} as const;
 export type OrbPlayerPolicy={radius:number;unknownAppearance:'escape'|'ignore'};
