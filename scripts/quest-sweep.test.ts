@@ -313,6 +313,12 @@ test('a bow and arrows let the Ranged level count against an animal, and the pla
  expect(killStyle(2136,6,97)).toBe('ranged');       // bear, Ranged 97 with a kit
  expect(killStyle(2134,6,97)).toBe('melee');        // a giant rat dies to anyone
  expect(killStyle(2136,22,97)).toBe('melee');       // melee first when it suffices
+ // A series of goblin kills for their mail takes the bow when Ranged beats Attack, and melee without a kit.
+ expect(killStyle(288,6,97)).toBe('ranged');expect(killStyle(288,6,1)).toBe('melee');expect(killStyle(288,40,30)).toBe('melee');
+ const {arrowsFor,killAttempts:attempts}=await import('../packages/core/src/gather');
+ expect(arrowsFor(288,3)).toBe(2*attempts(288,3));expect(arrowsFor(2136,1)).toBe(6);
+ // The arrow kind owned in the greatest number: UnderMyKilt's 21 bronze over 19 iron.
+ expect(rangedKit([{id:841,count:1},{id:884,count:19},{id:882,count:21}])).toEqual({bow:841,arrows:882});
  expect(rangedKit([{id:841,count:1},{id:884,count:19}])).toEqual({bow:841,arrows:884});
  expect(rangedKit([{id:841,count:1},{id:882,count:3}])).toBeNull();   // too few arrows
  expect(rangedKit([{id:884,count:50}])).toBeNull();                   // no bow

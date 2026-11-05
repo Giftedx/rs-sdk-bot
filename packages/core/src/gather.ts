@@ -39,9 +39,11 @@ export const NPC_SOURCES:Record<number,NpcSource>={
 export const COMBINE_SOURCES:Record<number,[number,number]>={1769:[1763,1765]};
 // A bow and arrows the account owns: shortbow or longbow, bronze, iron or steel arrows (the kinds the fleet's banks hold).
 export const BOWS=[841,839,843,845],ARROWS=[884,886,882],ARROWS_PER_KILL=6;
+// The arrows are the kind owned in the greatest number (UnderMyKilt: 21 bronze, 19 iron): the shortfall for a long kill
+// series is bought, and bronze arrows are the kind most shops sell.
 export function rangedKit(owned:readonly Item[]):{bow:number;arrows:number}|null{
- const has=(id:number,n=1)=>owned.filter(i=>i.id===id).reduce((c,i)=>c+i.count,0)>=n;
- const bow=BOWS.find(id=>has(id)),arrows=ARROWS.find(id=>has(id,ARROWS_PER_KILL));
+ const have=(id:number)=>owned.filter(i=>i.id===id).reduce((c,i)=>c+i.count,0);
+ const bow=BOWS.find(id=>have(id)>=1),arrows=[...ARROWS].filter(id=>have(id)>=ARROWS_PER_KILL).sort((a,b)=>have(b)-have(a))[0];
  return bow!==undefined&&arrows!==undefined?{bow,arrows}:null;
 }
 export const CLUSTER=20;
@@ -59,12 +61,19 @@ export const KILL_SOURCES:Record<number,{npcs:number[];name:string;combat:number
 export const killAttempts=(id:number,count:number)=>Math.ceil(count/(KILL_SOURCES[id]?.chance??1)*1.5)+3;
 export const EASY_KILL=6;
 // The style that beats the animal: melee below the Attack level, else a bow below the Ranged level (ranged is 1 without a kit).
+// A drop by chance means a series of kills (3 goblin mails: 77 goblins expected), so the stronger style: at Attack 6 with
+// bare hands, 15 goblins took 60 of an 81-hitpoint account's hitpoints and the fight was abandoned.
 export function killStyle(id:number,attack:number,ranged=1):'melee'|'ranged'|null{
- const c=KILL_SOURCES[id]?.combat;
- if(c===undefined)return null;
+ const src=KILL_SOURCES[id];
+ if(!src)return null;
+ const c=src.combat;
+ if(src.chance<1&&ranged>attack&&c<ranged)return 'ranged';
  if(c<=EASY_KILL||c<attack)return 'melee';
  return c<ranged?'ranged':null;
 }
+// Arrows for the kills: ARROWS_PER_KILL for each drop that comes every kill (a bear's 27 hitpoints), two for each attempt
+// of a series of kills whose animal dies to one arrow (a goblin's 5).
+export const arrowsFor=(id:number,count:number)=>(KILL_SOURCES[id]?.chance??1)<1?2*killAttempts(id,count):ARROWS_PER_KILL*count;
 export const canKill=(id:number,attack:number,ranged=1)=>killStyle(id,attack,ranged)!==null;
 let npcRows:{id:number;spawns?:Tile[]}[]|undefined;
 const npcSpawns=(ids:readonly number[]):Tile[]=>(npcRows??=JSON.parse(readFileSync(resolve(import.meta.dir,'../../../knowledge/npcs.json'),'utf8')) as {id:number;spawns?:Tile[]}[]).filter(n=>ids.includes(n.id)).flatMap(n=>n.spawns??[]);
@@ -186,7 +195,8 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
       await waitUntil(s,()=>!(st()?.player?.combat?.inCombat),{timeoutTicks:40});
       return `kill of ${npc.name} abandoned at ${hp()?.level} of ${hp()?.baseLevel} hitpoints`;
      }
-     if(!await waitUntil(s,()=>!!drop(),{timeoutTicks:10}))continue;
+     // The drop lands as the animal dies; a kill without one (123 of 128 goblins) moves on after three ticks.
+     if(!await waitUntil(s,()=>!!drop(),{timeoutTicks:3}))continue;
      await s.bot.pickupItem(drop());
      console.log(`QUEST_SWEEP_KILL ${JSON.stringify({item:g.id,npc:npc.name,at:{x:npc.x,z:npc.z},held:held(g.id)})}`);
     }else if(g.how==='milk'){

@@ -13,7 +13,7 @@ import type {World,Transport} from '../packages/core/src/world';
 import {loadTravel} from '../packages/core/src/travel';
 import {sellersByDistance,shopSellers} from '../packages/core/src/shop-index';
 import {spawnsByDistance} from '../packages/core/src/spawn-index';
-import {gatherPlan,gatherItems,rangedKit,ARROWS_PER_KILL} from '../packages/core/src/gather';
+import {gatherPlan,gatherItems,rangedKit,arrowsFor} from '../packages/core/src/gather';
 import {questFlags} from '../packages/core/src/quest-status';
 import {PRESETS,type SaveConfig} from '../packages/practice/src/presets';
 import travel from '../packages/planner/src/haggis-travel.json';
@@ -402,6 +402,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
  // An edible quest ingredient (Family Crest's cooked fish, The Knight's Sword's redberry pie) is reserved, never eaten.
  }},{food:[...questFoodDefinitions().keys()],eatAt:eatAtFor(maxHp()),reserved:reservedEdible(need)});
  void s.ended.then(()=>sustain.stop());
+ sustain.aborted.addEventListener('abort',()=>console.log(`QUEST_SWEEP_SUSTAIN_FAIL ${JSON.stringify({failure:sustain.failure(),hp:st()?.player?.hp,at:at(s)})}`));
  const danger=()=>{const p=st()?.player;return!!p&&(p.combat?.inCombat||p.hp<=eatAtFor(maxHp()));};
  if(danger())console.log(`QUEST_SWEEP_DANGER ${JSON.stringify({hp:st()?.player?.hp,inCombat:st()?.player?.combat?.inCombat,at:{x:st()?.player?.worldX,z:st()?.player?.worldZ,level:st()?.player?.level}})}`);
  // The skull basement has no walk out that the world router plans: take its door, corridor and ladder first.
@@ -481,7 +482,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
   const owned=[...pack(),...rows(),...worn()];
   const kit=rangedKit(owned);
   const gather=gatherPlan(p.missing,here(),spawnsByDistance,sellerAt,undefined,skill('Attack'),kit?skill('Ranged'):1);
-  if(kit&&gather.gathers.some(g=>g.kit==='ranged'))gather.tools.push({id:kit.bow,count:1},{id:kit.arrows,count:ARROWS_PER_KILL*gather.gathers.filter(g=>g.kit==='ranged').reduce((n,g)=>n+g.count,0)});
+  if(kit&&gather.gathers.some(g=>g.kit==='ranged'))gather.tools.push({id:kit.bow,count:1},{id:kit.arrows,count:gather.gathers.filter(g=>g.kit==='ranged').reduce((n,g)=>n+arrowsFor(g.id,g.count),0)});
   // A tool already worn (the bow, the arrows) counts as held; the gather's tools are kept by the deposit pass.
   const tools=plan(new Map(gather.tools.map(t=>[t.id,t.count])),[...pack(),...worn()],rows());
   p.withdraw.push(...tools.withdraw);
