@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793860850330,
+ "at": 1793861465282,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -466,15 +466,17 @@
   },
   {
    "account": "Wandwaver",
-   "script": "scripts/session-check.ts",
-   "args": [],
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "blackknight"
+   ],
    "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-8630246c-9fe5-4930-b4d3-ee226b7ac4f9"
+    "CAP": "6000",
+    "COORDINATOR_RUN_ID": "task-8837ab05-57ef-4995-aa9d-879df09fd838"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
-   "goal": "run-recovery-wandwaver-blackknight [task-8630246c-9fe5-4930-b4d3-ee226b7ac4f9]",
+   "goal": "run-blackknight-wandwaver-released [task-8837ab05-57ef-4995-aa9d-879df09fd838]",
    "role": "supply"
   }
  ]
