@@ -385,10 +385,42 @@ export async function runLegends(raw:Session,o:LegendsOrder,requested:()=>boolea
    throw Error('Legends orb trial landing and dialogue unobserved');
   }
   await walk(2759,9328);if(first)await paid('tie owned rope',{954:-1},()=>useLoc(954,'lg_winchdown_norope',2759,9329));else await step('find own tied rope',()=>interact('lg_winchdown_norope',2759,9329),()=>!!sdk.getState()?.nearbyLocs.some(t=>t.id===locId('lg_winchdown_rope')));if(first)await paid('drink bravery',{[I.bravery]:-1,229:1},()=>held(I.bravery),[/Yes, I'll bravely drink/i]);await upkeep();await step('descend owned rope',()=>interact('lg_winchdown_rope',2759,9329),()=>near(2377,4712,1),[/Yes, I'll shimmy down/i],70);await upkeep();}
- async function lowerPath(){for(const [name,x,z,after]of[['rocky_ledge',2377,4717,{x:2376,z:4717}],['rocky_ledge1',2377,4728,{x:2378,z:4728}],['rocky_ledge2',2382,4729,{x:2382,z:4728}],['viycaves_climbrock1',2387,4728,{x:2388,z:4728}],['viycaves_climbrock2',2390,4724,{x:2390,z:4723}],['viycaves_climbrock3',2390,4718,{x:2390,z:4717}]] as const){await walk(x,z,1);await upkeep();await trials(name,()=>interact(name,x,z),()=>near(after.x,after.z,0),/slip and fall|near fall|nasty fall|nervous/i,[/Yes, I can think of nothing more exciting/i,/Yes, I want to climb/i],65);}}
+ async function lowerPath() {
+  // Native chooses the direction from the side of the loc at interaction time.
+  // Use the same approach tiles as the staged Legends route.
+  for (const [name, x, z, standX, standZ, landX, landZ] of [
+   ['rocky_ledge', 2377, 4717, 2378, 4717, 2376, 4717],
+   ['rocky_ledge1', 2377, 4728, 2377, 4727, 2378, 4728],
+   ['rocky_ledge2', 2382, 4729, 2382, 4730, 2382, 4728],
+   ['viycaves_climbrock1', 2387, 4728, 2387, 4727, 2388, 4728],
+   ['viycaves_climbrock2', 2390, 4724, 2390, 4725, 2390, 4723],
+   ['viycaves_climbrock3', 2390, 4718, 2390, 4719, 2390, 4717],
+  ] as const) {
+   await upkeep();
+   await trials(name, () => interact(name, x, z), () => near(landX, landZ, 0),
+    /slip and fall|near fall|nasty fall|nervous/i, [/Yes, I can think of nothing more exciting/i, /Yes, I want to climb/i],
+    65, () => walk(standX, standZ, 0));
+  }
+ }
  async function barrier(){await walk(2421,4691);await step('heart-authorized barrier',()=>interact('legendsquest_force_barrier',2421,4690),()=>near(2421,4690,0));}
  async function boulder(push:boolean,first=false){await walk(push?2395:2394,4679,0);const n=sdk.getState()?.nearbyNpcs.find(n=>n.id===npcId('boulder_legends'));if(!n)throw Error('Legends observed source boulder absent');const send=()=>s.direct({type:'interactNpc',npcIndex:n.index,optionIndex:1,reason:'Legends source quest'});if(first){await paid('spirit dark dagger',{[I.dagger]:1},send,[/Er... me/i,/Yes, I need it for my quest/i,/What can I do about/i,/I'll do what I must/i],130);return;}if(push){await step('push source boulder',send,()=>!!sdk.getState()?.nearbyLocs.some(t=>t.id===locId('lgwaterpool')),[],30);return;}await send();if(!await q!.converse([],()=>!!sdk.getState()?.nearbyNpcs.some(n=>n.id===npcId('echned_zekin')),50))throw Error('Legends source spirit absent');}
- async function leaveLower(){await walk(2421,4690);await step('return heart barrier',()=>interact('legendsquest_force_barrier',2421,4690),()=>near(2421,4691,0));for(const [name,x,z]of[['viycaves_climbrock3',2390,4718],['viycaves_climbrock2',2390,4724],['viycaves_climbrock1',2387,4728],['rocky_ledge2',2382,4729],['rocky_ledge1',2377,4728],['rocky_ledge',2377,4717]] as const){await walk(x,z,1);const p={x:pos().worldX,z:pos().worldZ};await step('return '+name,()=>interact(name,x,z),()=>!near(p.x,p.z,0),[/Yes, I want to climb/i,/Yes, I can think/i],65);await upkeep();}await walk(2377,4712);await step('climb own lower rope',()=>interact('lgclimbrope_viyeldicaves',2377,4711),()=>near(2760,9328));await walk(2763,9318);await step('return magical trial portal',()=>interact('lgmagictrialgateclosed',2762,9317),()=>near(2763,9312,0));}
+ async function leaveLower() {
+  await walk(2421, 4690, 0);
+  await step('return heart barrier', () => interact('legendsquest_force_barrier', 2421, 4690), () => near(2421, 4691, 0));
+  for (const [name, x, z, standX, standZ, landX, landZ] of [
+   ['viycaves_climbrock3', 2390, 4718, 2390, 4717, 2390, 4719],
+   ['viycaves_climbrock2', 2390, 4724, 2390, 4723, 2390, 4725],
+   ['viycaves_climbrock1', 2387, 4728, 2388, 4728, 2387, 4727],
+   ['rocky_ledge2', 2382, 4729, 2382, 4728, 2382, 4730],
+   ['rocky_ledge1', 2377, 4728, 2378, 4728, 2377, 4727],
+   ['rocky_ledge', 2377, 4717, 2376, 4717, 2378, 4717],
+  ] as const) {
+   await walk(standX, standZ, 0);
+   await step('return ' + name, () => interact(name, x, z), () => near(landX, landZ, 0), [], 65);
+   await upkeep();
+  }
+  await walk(2377,4712);await step('climb own lower rope',()=>interact('lgclimbrope_viyeldicaves',2377,4711),()=>near(2760,9328));await walk(2763,9318);await step('return magical trial portal',()=>interact('lgmagictrialgateclosed',2762,9317),()=>near(2763,9312,0));
+ }
 }
 
 if(import.meta.main){const path=process.argv[2];if(!path)throw Error('usage: quest-legends-owned.ts <explicit-order.json>');const order=JSON.parse(readFileSync(path,'utf8')) as LegendsOrder;validateLegendsOrder(order);let stopped=false;const s=await openBot(order.account,{onStop:async()=>{stopped=true;}}),owns=legendsLoginOwner(s);let ok=false,detail='';try{const result=await runLegends(s,order,()=>stopped);console.log('LEGENDS '+JSON.stringify(result));ok=result.ok;detail=JSON.stringify(result);}catch(error){detail=String(error);}if(!await finishLegendsOwned(s,owns,ok,detail))process.exitCode=1;}
