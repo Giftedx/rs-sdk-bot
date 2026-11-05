@@ -296,7 +296,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(typeof MAPI!=='undefined'&&MAPI){const ppt=window.atlasMapPx||1/m.scale,sw=W/PX*ppt,sh=H/PX*ppt,sx=(cx-m.x0+0.5)*ppt-sw/2,sy=(m.z0+m.h*m.scale-cz-0.5)*ppt-sh/2;g.imageSmoothingEnabled=!p||!!window.atlasMapPx;g.drawImage(MAPI,sx,sy,sw,sh,0,0,W,H);}
     if(p&&window.atlasSquare){const half=W/PX/2;for(let mx=Math.floor((cx-half)/64);mx<=Math.floor((cx+half)/64);mx++)for(let mz=Math.floor((cz-half)/64);mz<=Math.floor((cz+half)/64);mz++){const img=window.atlasSquare(mx,mz);if(img)g.drawImage(img,W/2+(mx*64-cx-0.5)*PX,H/2-(mz*64+64-cz-0.5)*PX,64*PX,64*PX);}}
     const fleetNames=new Set(markers.bots.map(o=>o.name.toLowerCase())),dot=(x,y,s,col)=>{g.fillStyle='#000';g.fillRect(x-s/2-0.5,y-s/2+0.5,s+1,s+1);g.fillStyle=col;g.fillRect(x-s/2,y-s/2,s,s);};for(const [n,qx,qz] of markers.roster){if(fleetNames.has(String(n).toLowerCase()))continue;const x=W/2+(qx-cx)*PX,y=H/2-(qz-cz)*PX;if(x<-4||y<-4||x>W+4||y>H+4)continue;dot(x,y,2,'#fff');}
-    for(const o of markers.bots){const q=o.live||o.pos;if(!q||q.z>6400||o===b)continue;const x=W/2+(q.x-cx)*PX,y=H/2-(q.z-cz)*PX;if(x<0||y<0||x>W||y>H)continue;const[cl]=st(o);dot(x,y,3,cl==='on'?'#2bff2b':'#3d8a33');}
+    for(const o of markers.bots){const q=o.live||o.pos;if(!q||(q.z>6400)!==(cz>6400)||o===b)continue;const x=W/2+(q.x-cx)*PX,y=H/2-(q.z-cz)*PX;if(x<0||y<0||x>W||y>H)continue;const[cl]=st(o);dot(x,y,3,cl==='on'?'#2bff2b':'#3d8a33');}
     if(p){g.fillStyle='#000';g.fillRect(W/2-2.5,H/2-2.5,5,5);g.fillStyle='#fff';g.fillRect(W/2-2,H/2-2,4,4);}g.restore();}
   // A click on the minimap in 2D moves the camera to that tile (free camera); in 3D the view itself moves the camera.
   hud.querySelector('.game-minimap canvas')?.addEventListener('click',e=>{if(typeof mode!=='undefined'&&mode==='3d'){toast('In 3D, drag the view to move the camera.');return;}const r=e.currentTarget.getBoundingClientRect(),W=e.currentTarget.width,H=e.currentTarget.height,mx=(e.clientX-r.left)*W/r.width-W/2,my=(e.clientY-r.top)*H/r.height-H/2;window.atlasCamera.goto(Math.round(miniView.cx+mx/miniView.PX),Math.round(miniView.cz-my/miniView.PX));});
@@ -392,10 +392,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // Map squares (map-squares/<mx>_<mz>.png, 4 px a tile): loaded as the view needs them, drawn when ready.
   const squares=new Map(),squareRetryAt=new Map();
   window.atlasSquare=(mx,mz)=>{
-    // The export covers the surface only: an underground square (z 6400 and up) has no file to ask for.
-    if(mz>=100)return null;
     const key=mx+'_'+mz;if(Date.now()<(squareRetryAt.get(key)||0))return null;let img=squares.get(key);
-    if(!img){img=new Image();img.onload=()=>{squareRetryAt.delete(key);if(typeof drawMap==='function')drawMap();minimap();};img.onerror=()=>{squares.delete(key);squareRetryAt.set(key,Date.now()+30000);};img.src='/map-squares/'+key+'.png';squares.set(key,img);}
+    if(!img){img=new Image();img.onload=()=>{squareRetryAt.delete(key);if(typeof drawMap==='function')drawMap();minimap();};img.onerror=()=>{squares.delete(key);squareRetryAt.set(key,Date.now()+(mz>57?600000:30000));/* North of the surface export most missing files mean no map data, so those retry rarely. */};img.src='/map-squares/'+key+'.png';squares.set(key,img);}
     return img.complete&&img.naturalWidth?img:null;
   };
   // The 2D camera, the game's view: it follows the watched account at FOLLOW_PX a tile and flies to a new target;
