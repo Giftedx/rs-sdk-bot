@@ -77,6 +77,11 @@ export function rangedKit(owned:readonly Item[]):{bow:number;arrows:number}|null
  return bow!==undefined&&arrows!==undefined?{bow,arrows}:null;
 }
 export const CLUSTER=20;
+// Spawn tiles with at least `min` of their list within CLUSTER tiles. A series of kills for a drop by chance wants a dense
+// cluster (Lumbridge's 20 goblin tiles, Port Sarim's 12, the Goblin Village's 21), not a lone pair east of Varrock, where
+// a series waited out its budget on one goblin at a time.
+export const SERIES_CLUSTER=4;
+export const denseSpawns=(tiles:readonly Tile[],min=SERIES_CLUSTER):Tile[]=>tiles.filter(t=>tiles.filter(u=>u.level===t.level&&Math.max(Math.abs(u.x-t.x),Math.abs(u.z-t.z))<=CLUSTER).length>=min);
 // Meats no shop sells drop from animals on death, every kill (drop tables/scripts/cow.rs2, chicken.rs2, giant_rat.rs2,
 // bear.rs2 `always` rows); goblin mail drops from a goblin on 5 of 128 rolls (goblin.rs2:19,53; 10 of 128 for the Goblin
 // Village ones, :75,119). The account kills the nearest one and takes the drop. NPC ids and spawns come from
@@ -155,7 +160,7 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
  const st=()=>s.sdk.getState() as any,held=(id:number)=>count((st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count})),id);
  const here=():Tile=>{const p=st()?.player;return{x:p?.worldX??0,z:p?.worldZ??0,level:p?.level??0};};
  for(const g of gathers){
-  const target=held(g.id)+g.count,sources=(g.how==='milk'?nearest(cows(),here()):g.how==='loc'?[LOC_SOURCES[g.id]!.tile]:g.how==='kill'?nearest(killSpawns(g.id),here()):g.how==='pick'?locsByDistance(PICK_SOURCES[g.id]!.loc,here()):g.how==='npc'?[NPC_SOURCES[g.id]!.tile]:g.how==='combine'?[here()]:spawnsByDistance(g.id,here())).slice(0,6);
+  const target=held(g.id)+g.count,sources=(g.how==='milk'?nearest(cows(),here()):g.how==='loc'?[LOC_SOURCES[g.id]!.tile]:g.how==='kill'?nearest((KILL_SOURCES[g.id]?.chance??1)<1?denseSpawns(killSpawns(g.id)):killSpawns(g.id),here()):g.how==='pick'?locsByDistance(PICK_SOURCES[g.id]!.loc,here()):g.how==='npc'?[NPC_SOURCES[g.id]!.tile]:g.how==='combine'?[here()]:spawnsByDistance(g.id,here())).slice(0,6);
   // Spawns lie in clusters (three egg spawns within 4 tiles beyond White Wolf Mountain): one with no route rules out
   // the rest of its cluster, so the walk moves on to the next place rather than searching the same ground again.
   const unreachable:Tile[]=[];
@@ -167,8 +172,9 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
    if(!walked.ok){unreachable.push(at);continue;}
    // A kill series at one source is summed when the source is left: kills, drops, and the ticks it stood with no free
    // animal in sight, so a run that ends short says whether the animals or the budget ran out.
-   const tally={kills:0,drops:0,idle:0,start:s.tick()};
-   for(let tries=0;tries<(g.how==='kill'?killAttempts(g.id,g.count):g.count+3)&&held(g.id)<target;tries++){
+   // A kill's attempt budget counts fights begun, not waits for a free animal or refused clicks; 400 rounds bound the rest.
+   const tally={kills:0,drops:0,idle:0,fights:0,start:s.tick()};
+   for(let tries=0;tries<400&&(g.how==='kill'?tally.fights<killAttempts(g.id,g.count):tries<g.count+3)&&held(g.id)<target;tries++){
     const before=held(g.id);
     if(g.how==='combine'){
      const [a,b]=COMBINE_SOURCES[g.id]!,inv=st()?.inventory??[],ia=inv.find((i:any)=>i.id===a),ib=inv.find((i:any)=>i.id===b);
@@ -236,6 +242,7 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
      const cast=()=>s.direct({type:'spellOnNpc',npcIndex:npc.index,spellComponent:componentId(spell!.component),reason:'SDK'});
      const r:any=spell?await cast():await s.bot.attack(npc);
      if(!r?.success){await waitTicks(s,2);continue;}
+     tally.fights++;
      const gone=()=>!(st()?.nearbyNpcs??[]).some((n:any)=>n.index===npc.index);
      const drop=()=>{const now=new Map<string,number>();for(const i of lying())now.set(`${i.x},${i.z}`,(now.get(`${i.x},${i.z}`)??0)+1);return lying().find((i:any)=>(now.get(`${i.x},${i.z}`)??0)>(seen.get(`${i.x},${i.z}`)??0));};
      // A fight that reaches the hitpoint floor is abandoned: the bot walks away and the sweep fails short of the item.
@@ -273,7 +280,7 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
     }
     await waitUntil(s,()=>held(g.id)>before,{timeoutTicks:15});
    }
-   if(g.how==='kill')console.log(`QUEST_SWEEP_KILLS ${JSON.stringify({item:g.id,at,kills:tally.kills,drops:tally.drops,idle:tally.idle,ticks:s.tick()-tally.start,held:held(g.id),target})}`);
+   if(g.how==='kill')console.log(`QUEST_SWEEP_KILLS ${JSON.stringify({item:g.id,at,fights:tally.fights,kills:tally.kills,drops:tally.drops,idle:tally.idle,ticks:s.tick()-tally.start,held:held(g.id),target})}`);
   }
   // The route search plans from the ground floor: come down from an upstairs source.
   for(let i=0;i<3&&here().level>0;i++){

@@ -423,3 +423,12 @@ test('a strike spell kit is the strongest strike the runes allow, and the highes
  const plan=gatherPlan([{id:288,count:3}],{x:3014,z:3204,level:0},()=>[],()=>Infinity,undefined,69,1,undefined,99,1);
  expect(plan.gathers).toEqual([{id:288,count:3,how:'kill',kit:'magic'}]);
 });
+
+test('a kill series keeps to dense spawn clusters',async()=>{
+ const {denseSpawns,killSpawns}=await import('../packages/core/src/gather');
+ const goblins=killSpawns(288),dense=denseSpawns(goblins);
+ const near=(x:number,z:number,list:readonly {x:number;z:number}[])=>list.some(t=>Math.max(Math.abs(t.x-x),Math.abs(t.z-z))<=5);
+ // Lumbridge, Port Sarim and the Goblin Village stay; the lone goblins east of Varrock go.
+ expect(near(3250,3240,dense)).toBe(true);expect(near(3004,3201,dense)).toBe(true);expect(near(2955,3500,dense)).toBe(true);
+ expect(near(3259,3338,goblins)).toBe(true);expect(near(3259,3338,dense)).toBe(false);expect(near(3311,3375,dense)).toBe(false);
+});
