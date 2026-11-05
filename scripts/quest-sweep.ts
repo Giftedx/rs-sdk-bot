@@ -210,7 +210,10 @@ async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number)
   const r=at(s).level===0&&t.level===0?await walkCorridor(await sessionWalker(s),[[t.x,t.z,3]]):{ok:false};
   return r.ok?{ok:true}:router(t);
  };
- if(eastOfArdougne(at(s),to)){const r=await crossEast(s,world);if(!r.ok)return r;}
+ // A far walk that starts upstairs (Hudo's shop on the Grand Tree's first floor, bound for Port Sarim) first comes down to
+ // the ground beneath: the boats and hubs are ground legs, and asked from the first floor the world router found no route.
+ if(at(s).level!==0&&cheb(at(s),to)>MAX_HOP){const r=await router({x:at(s).x,z:at(s).z,level:0});if(!r.ok)return r;}
+ if(eastOfArdougne(at(s),to)){const r=await crossEast(s,world,to);if(!r.ok)return r;}
  // An upstairs target (Morgan's garlic cupboard in Draynor) is approached by the hubs toward the ground beneath it;
  // only the last leg, with its stairs, is the world router's.
  const beneath={x:to.x,z:to.z,level:0};
@@ -228,7 +231,9 @@ async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number)
 // Port Sarim, with the Karamja and Port Sarim corridors between: no hub lies within a hop of Ardougne to the east, and
 // the world router's search for the land way round idles out the budget. Two fares of 30 coins.
 export const eastOfArdougne=(from:Tile,to:Tile)=>from.level===0&&from.x<2800&&from.z>=3270&&to.x>=2950;
-async function crossEast(s:Session,world:World):Promise<Walked>{
+// The Port Sarim landing: a target in the town itself (Wydin's shop, 3014,3204) needs no walk north past the jail.
+export const SARIM_LANDING:Tile={x:3029,z:3217,level:0};
+async function crossEast(s:Session,world:World,to:Tile):Promise<Walked>{
  if(count(s.sdk.getState()?.inventory??[],COINS)<60)return{ok:false,reason:'precondition',detail:'missing 995:60 for safe boat route'};
  const walk=(to:Tile)=>goTo(s,world,to,accountOf(s),{legTimeoutTicks:150,planBudgetMs:SWEEP_PLAN_BUDGET_MS});
  const corridor=async(points:readonly Pt[]):Promise<Walked>=>{
@@ -247,10 +252,10 @@ async function crossEast(s:Session,world:World):Promise<Walked>{
   console.log(`QUEST_SWEEP_BOAT ${JSON.stringify({id,coins:t.coins})}`);
   return{ok:true};
  };
- for(const leg of [()=>sail('npc:captain_barnaby:brimhaven@2679,3275'),()=>corridor(KARAMJA),()=>sail('npc:customs_officer:port-sarim@2953,3147'),()=>corridor(SARIM_NORTH)]){
+ for(const leg of [()=>sail('npc:captain_barnaby:brimhaven@2679,3275'),()=>corridor(KARAMJA),()=>sail('npc:customs_officer:port-sarim@2953,3147')]){
   const r=await leg();if(!r.ok)return r;
  }
- return{ok:true};
+ return cheb(to,SARIM_LANDING)<=60?{ok:true}:corridor(SARIM_NORTH);
 }
 async function reachStart(s:Session,world:World,start:Tile){
  const r=await walkFar(s,world,start);
