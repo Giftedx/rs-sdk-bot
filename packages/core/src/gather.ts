@@ -105,7 +105,9 @@ export const sharedDrops=(gathers:readonly Gather[],g:Gather,held:(id:number)=>n
 export const killAttempts=(id:number,count:number)=>Math.ceil(count/(KILL_SOURCES[id]?.chance??1)*1.5)+3;
 export const EASY_KILL=6;
 // The style that beats the animal. An easy animal that drops every kill (a chicken, a rat) dies to bare hands and costs
-// no arrows or runes. Otherwise the highest level that beats the animal's combat level wins: melee by the Attack level,
+// no arrows or runes, but only for an account with no kit: a wielded bow fires an arrow and a wielded staff with
+// autocast casts on every attack, so with a kit the kill is the kit's and its ammunition is budgeted (a staff account's
+// bare-hand rat spent the mind runes its bear needed). Otherwise the highest level that beats the animal's combat level wins: melee by the Attack level,
 // the bow by Ranged, the strike spell by Magic (Ranged and Magic are 1 without a kit). The sweep's melee is bare-handed,
 // so it also needs a Strength level at or above the animal's combat level: an Attack level in the sixties with Strength
 // near 1 does not beat a bear or a series of goblins. A drop by chance (goblin mail) is a series of kills and takes the
@@ -115,7 +117,7 @@ export function killStyle(id:number,attack:number,ranged=1,magic=1,strength=atta
  const src=KILL_SOURCES[id];
  if(!src)return null;
  const c=src.combat;
- if(c<=EASY_KILL&&src.chance===1)return 'melee';
+ if(c<=EASY_KILL&&src.chance===1&&ranged<=1&&magic<=1)return 'melee';
  const styles:[KillStyle,number][]=[['melee',c<attack&&strength>=c?attack:0],['ranged',c<ranged?ranged:0],['magic',c<magic?magic:0]];
  const best=styles.filter(([,level])=>level>0).sort((a,b)=>b[1]-a[1])[0];
  return best?best[0]:null;

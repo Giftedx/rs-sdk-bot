@@ -944,7 +944,8 @@ test('a bow and arrows let the Ranged level count against an animal, and the pla
  const {killStyle,rangedKit,BOWS,ARROWS_PER_KILL}=await import('../packages/core/src/gather');
  expect(killStyle(2136,6,1)).toBeNull();            // bear, Attack 6, no kit
  expect(killStyle(2136,6,97)).toBe('ranged');       // bear, Ranged 97 with a kit
- expect(killStyle(2134,6,97)).toBe('melee');        // a giant rat dies to anyone
+ expect(killStyle(2134,6,97)).toBe('ranged');       // a giant rat dies to anyone, but a bow account's bow fires anyway: its arrows are budgeted
+ expect(killStyle(2134,6,1)).toBe('melee');         // bare hands with no kit
  expect(killStyle(2136,22,97)).toBe('ranged');      // the bow when Ranged is the higher level: melee is bare-handed
  expect(killStyle(2136,68,97)).toBe('ranged');      // UnderMyKilt live: Attack 68, Ranged 97, a bow in the bank
  expect(killStyle(2136,70,40)).toBe('melee');       // melee when Attack is the higher level and beats the animal
@@ -1043,10 +1044,11 @@ test('a strike spell kit is the strongest strike the runes allow, and the highes
  expect(magicKit([{id:556,count:500},{id:558,count:500}],99)?.component).toBe('magic:wind_strike');
  expect(magicKit([{id:556,count:5},{id:558,count:5}],99)).toBeNull();
  expect(magicKit(monty,12)?.component).toBe('magic:wind_strike');
- // Attack 69 with Strength 1 and Ranged 1 does not beat a goblin series bare-handed; Magic 99 does. A rat stays melee.
+ // Attack 69 with Strength 1 and Ranged 1 does not beat a goblin series bare-handed; Magic 99 does. A rat is the staff's
+ // kill too: a wielded staff with autocast casts on every attack, so its runes are budgeted.
  expect(killStyle(288,69,1,1,1)).toBeNull();
  expect(killStyle(288,69,1,99,1)).toBe('magic');
- expect(killStyle(2134,69,1,99,1)).toBe('melee');
+ expect(killStyle(2134,69,1,99,1)).toBe('magic');expect(killStyle(2134,69,1,1,1)).toBe('melee');
  expect(killStyle(2136,68,97,99,68)).toBe('magic');
  expect(killStyle(2136,68,97,1,68)).toBe('ranged');
  // Casts: the combat level over the max hit at three in five, plus one: two Fire Strikes or six Wind Strikes a goblin.
