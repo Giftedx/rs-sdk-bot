@@ -1,20 +1,7 @@
 import { test, expect } from 'bun:test';
-import { mergeSnapshot, planView, snapshot } from './fleet-sync';
+import { keepPublished, planView, snapshot } from './fleet-sync';
+import { CLAIM_MAX_AGE_MS } from '../packages/planner/src/autopilot';
 import { mergeJobs } from '../packages/core/src/coordinator-jobs';
-
-test('a sync replaces a snapshot row only with a newer status of that account and keeps the rows it has no status for', () => {
-    const server = 'rs-sdk-demo.fly.dev';
-    const owners = new Map([['quickhandjob', { side: 'claude-cloud', server }], ['trousersnake', { side: 'claude-cloud', server }], ['gone', { side: 'local', server }]]) as any;
-    const row = (name: string, at: number, coins: number) => ({ name, server, at, bank: [{ id: 995, name: 'Coins', count: coins }], inventory: [], equipment: [], skills: [{ name: 'Thieving', level: 99 }] });
-    const stored = [row('Quickhandjob', 200, 220_357), row('TrouserSnake', 200, 88_276), row('Gone', 200, 1)];
-    // A fresh container with no status files: every stored row of this side stays; the account handed to another side goes.
-    const empty = mergeSnapshot(snapshot([], 'claude-cloud', owners, 300), stored, owners);
-    expect(empty).toEqual({ side: 'claude-cloud', at: 300, accounts: [stored[0], stored[1]] });
-    // A newer status replaces its row; an older one (a stale file) does not; the other row stays.
-    const status = (name: string, at: number, coins: number) => ({ ...row(name, at, coins), bank: [{ baseId: 995, name: 'Coins', count: coins }], skills: [{ name: 'Thieving', level: 99, xp: 1 }] });
-    const merged = mergeSnapshot(snapshot([status('Quickhandjob', 500, 230_000), status('TrouserSnake', 100, 1)], 'claude-cloud', owners, 600), stored, owners);
-    expect(merged.accounts).toEqual([row('Quickhandjob', 500, 230_000), stored[1]]);
-});
 
 test('a coordinator job takes its account in the view, as the swarm runs it', () => {
     const owners = new Map([['oreelse', { side: 'local', server: 'rs-sdk-demo.fly.dev' }]]) as any;
@@ -37,4 +24,26 @@ test('the plan view holds only this side\'s jobs, never the main account or job 
         { account: 'OreElse', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2671,3313' }, enabled: true, standing: true },
         { accounts: ['OreElse', 'Shaftsinker'], script: 'scripts/quest-chain.ts', enabled: false },
     ] });
+});
+
+test('the snapshot keeps a published row for an account with no local status or a staler one, never another side\'s row', () => {
+    const owners = new Map([['quickhandjob', { side: 'claude-cloud', server: 'rs-sdk-demo.fly.dev' }], ['trousersnake', { side: 'claude-cloud', server: 'rs-sdk-demo.fly.dev' }], ['bigchopper', { side: 'local', server: 'rs-sdk-demo.fly.dev' }]]) as any;
+    const row = (name: string, at: number, level: number) => ({ name, server: 'rs-sdk-demo.fly.dev', at, bank: [], inventory: [], equipment: [], skills: [{ name: 'Thieving', level }] });
+    const prior = [row('TrouserSnake', 100, 99), row('Quickhandjob', 100, 99), row('Bigchopper', 100, 50)];
+    // A fresh container: no status files. Both rows of this side stay; the local side's row is not this side's to publish.
+    expect(snapshot([], 'claude-cloud', owners, 5, prior).accounts.map(a => [a.name, a.skills[0]!.level])).toEqual([['TrouserSnake', 99], ['Quickhandjob', 99]]);
+    // A newer status replaces its row; an older one (a stale file copied in) does not.
+    const status = (name: string, at: number, level: number) => ({ name, server: 'rs-sdk-demo.fly.dev', at, skills: [{ name: 'Thieving', level }], bank: [{ id: 995, name: 'Coins', count: 7 }] });
+    const next = snapshot([status('Quickhandjob', 200, 99), status('TrouserSnake', 50, 1)], 'claude-cloud', owners, 5, prior).accounts;
+    expect(next.map(a => [a.name, a.at, a.skills[0]!.level])).toEqual([['TrouserSnake', 100, 99], ['Quickhandjob', 200, 99]]);
+    expect(next[1]!.bank).toEqual([{ id: 995, name: 'Coins', count: 7 }]);
+});
+
+test('an empty plan keeps a fresh published claim that holds resources; a planned job, a stale or empty claim does not', () => {
+    const fresh = { side: 'claude-cloud', at: 1_000_000, resources: ['knight:2669,3298'] };
+    expect(keepPublished([], fresh, 1_000_000 + 60_000)).toBe(true);
+    expect(keepPublished([{ account: 'Quickhandjob', script: 'scripts/goldfarm.ts', enabled: true }], fresh, 1_000_000 + 60_000)).toBe(false);
+    expect(keepPublished([], { ...fresh, resources: [] }, 1_000_000 + 60_000)).toBe(false);
+    expect(keepPublished([], fresh, 1_000_000 + CLAIM_MAX_AGE_MS)).toBe(false);
+    expect(keepPublished([], null)).toBe(false);
 });
