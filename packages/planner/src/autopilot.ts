@@ -209,6 +209,9 @@ export function jobResources(job: { script?: string; args?: string[]; env?: Reco
             out.push(`knight:${KNIGHT_SPOTS.reduce((b, s) => cheb(s, x, z) < cheb(b, x, z) ? s : b)}`);
         }
         if (file === 'scripts/gather-feathers.ts') out.push(`pen:${env.PEN ?? '3229,3298'}`);
+        // Ranged training kills the Lumbridge pen's chickens (scripts/ranged-train.ts OUT ends at 3233,3297), so it holds
+        // that pen like a feather job does: two sides must not farm one pen.
+        if (file === 'scripts/ranged-train.ts') out.push('pen:3229,3298');
         if (file === 'scripts/shop-buyer.ts' && args[0]) out.push(`shop:${args[0]}`);
         if (file === 'scripts/gather-fish.ts' && (args[0] ?? 'cage') === 'cage') out.push('catherby:lobster');
     }
