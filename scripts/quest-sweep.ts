@@ -288,7 +288,7 @@ async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<s
    console.log(`QUEST_SWEEP_BUY ${JSON.stringify({item:b.id,name:b.name,count:b.count,npc:c.npc,before:had0,after:held(b.id),coins:held(COINS)})}`);
    await s.bot.closeShop();
   }
-  if(!tried)return `shop walk to ${b.npc} at ${b.tile.x},${b.tile.z} and ${b.alts?.length??0} more failed: ${walked.reason} ${walked.detail}`;
+  if(!tried)return `shop walk to ${b.npc} at ${b.tile.x},${b.tile.z} and ${b.alts?.length??0} more failed: ${walked.reason?`${walked.reason} ${walked.detail}`:`no seller within ${FAR_SELLER} tiles`}`;
   if(held(b.id)<target)return `bought ${held(b.id)-before} of ${b.count} ${b.name} from ${tried} sellers`;
  }
  return null;
