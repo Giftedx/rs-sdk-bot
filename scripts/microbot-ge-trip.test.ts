@@ -22,3 +22,16 @@ test('missing/corrupt parent and conflicting terminal journal reject before sess
 test('lot and terminal audit enforce floor,reserve,cumulative native tax and exact unrelated assets',()=>{
  const r=request();for(const change of [{quantity:25},{price:99},{reserve:-1},{fillWait:201},{cap:499}])expect(()=>validateGETrip({...r,...change})).toThrow();expect(geTripAudit({1511:5,995:15},{1511:3,995:207},r,{filled:2,gross:202,tax:10,net:192,unsubmitted:false})).toBe(true);expect(geTripAudit({1511:5,995:15},{1511:3,995:208},r,{filled:2,gross:202,tax:10,net:192,unsubmitted:false})).toBe(false);expect(()=>geOutcome({phase:'settled',request:geSaleRequest(r),progress:{filled:2,gross:202,tax:9},claim:{items:1,coins:193}}as any)).toThrow();
 });
+
+test('failed recovery deposit keeps settled intent until actual sale outputs are banked',async()=>{
+ for(const id of[995,1511]){
+  const f=fixture();await runGETrip(f.s,f.r,()=>false,f.deps);
+  const runner=f.deps.bankRunner;let failDeposit=true;
+  f.deps.bankRunner=async(...args:any[])=>{const result=await runner(...args);if(failDeposit){f.bank[id]=(f.bank[id]??0)-1;f.pack[id]=(f.pack[id]??0)+1;return{...result,ok:false,failure:'deposit refused'};}return result;};
+  const failed=await runGETrip(f.s,f.r,()=>true,f.deps);
+  expect(failed.ok).toBe(false);expect(failed.banked).toBe(false);expect(failed.failure).toContain('outputs not banked');
+  expect(JSON.parse(readFileSync(f.paths.parent,'utf8')).phase).toBe('settled');expect(f.counts().saleCalls).toBe(2);
+  failDeposit=false;const recovered=await runGETrip(f.s,f.r,()=>true,f.deps);
+  expect(recovered.ok).toBe(true);expect(recovered.banked).toBe(true);expect(f.counts().saleCalls).toBe(2);expect(f.bank).toEqual({1511:3,995:207,2357:1});
+ }
+});
