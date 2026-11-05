@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793849294887,
+ "at": 1793849903009,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -481,15 +481,15 @@
    "account": "Wandwaver",
    "script": "scripts/quest-sweep.ts",
    "args": [
-    "hunt"
+    "rj"
    ],
    "env": {
     "CAP": "6000",
-    "COORDINATOR_RUN_ID": "task-08167739-d3a9-4bd6-a698-3e93fe1c7029"
+    "COORDINATOR_RUN_ID": "task-f018ecdf-b6c4-44fe-a936-d393be652f6c"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
-   "goal": "run-hunt-wandwaver-exact-end-repair [task-08167739-d3a9-4bd6-a698-3e93fe1c7029]",
+   "goal": "run-rj-wandwaver-fortress-qp [task-f018ecdf-b6c4-44fe-a936-d393be652f6c]",
    "role": "supply"
   }
  ]
