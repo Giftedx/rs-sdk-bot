@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {initialState,addTasks,startTask,finishTask,chooseTask,refreshQualifications,qualificationDemand,buildWorkOrder,fleetExpansion,activeBuildFocus,preparedNativeDelivery,type CoordTask} from '../src/coordinator';
+import {initialState,addTasks,startTask,finishTask,chooseTask,refreshQualifications,qualificationDemand,buildWorkOrder,fleetExpansion,activeBuildFocus,preparedNativeDelivery,compactState,ARCHIVE_AFTER_MS,type CoordTask} from '../src/coordinator';
 import {acceptProposal,gameCoverage,GAME_SKILLS,plannerPrompt,queueFacts} from '../src/coordinator-planner';
 import {buildBrief} from '../src/author';
 import {nativeDispatchReady} from '../src/coordinator-cli';
@@ -65,6 +65,17 @@ test('planner cannot pile another numbered build onto an existing open capabilit
 test('an isolated producer build is rejected until a finite live consumer is included',()=>{
  const s=initialState();expect(()=>acceptProposal(s,{reason:'proof only',capabilities:[],tasks:[task('build',{kind:'build'})]})).toThrow('finite live consumer');expect(s.tasks).toHaveLength(0);
  acceptProposal(s,{reason:'whole outcome',capabilities:[],tasks:[task('build',{kind:'build'}),run('consumer',['build'])]});expect(s.tasks).toHaveLength(2);
+});
+
+test('an archived build ID cannot borrow a consumer through a settled proof',()=>{
+ const s=initialState(),build=task('reused-build',{kind:'build'});
+ addTasks(s,[build,task('past-proof',{dependsOn:[build.id]}),task('newer-build',{kind:'build'}),run('old-consumer',['past-proof'])],0);
+ complete(s,build.id,true,2);complete(s,'past-proof',true,4);complete(s,'newer-build',true,6);
+ expect(compactState(s,ARCHIVE_AFTER_MS+10).map(r=>r.spec.id)).toContain(build.id);
+ const proposal={reason:'Build using an available ID',capabilities:[],tasks:[build]},before=JSON.stringify(s);
+ expect(()=>acceptProposal(s,proposal)).toThrow('finite live consumer');
+ expect(JSON.stringify(s)).toBe(before);
+ expect(acceptProposal(s,{...proposal,tasks:[build,task('fresh-proof',{dependsOn:[build.id]}),run('new-consumer',['fresh-proof'])]})).toBe(3);
 });
 
 test('archived prerequisites of finished work do not crash admission of an unrelated finite build',()=>{
