@@ -1,5 +1,5 @@
 import{test,expect}from'bun:test';
-import{isSavedProofVerifier,withNativeStartup,nativeDeferralEvidence,NATIVE_STARTUP_GB,SOURCE_STARTUP_GB}from'../src/delivery-cli';
+import{deliveryTask,isSavedProofVerifier,withNativeStartup,nativeDeferralEvidence,NATIVE_STARTUP_GB,SOURCE_STARTUP_GB}from'../src/delivery-cli';
 import{FREE_FLOOR_GB,PRACTICE_RESERVE_GB}from'../../core/src/memory';
 import{mkdtempSync,writeFileSync,readdirSync}from'node:fs';
 import{tmpdir}from'node:os';
@@ -67,4 +67,13 @@ test('an expired practice queue wait preserves the host-deferral path without ru
  for(const other of ['Error: check timed out','Error: practice turn owner stopped; no child started','worker says practice turn wait expired']){
   expect(nativeDeferralEvidence(other)).toEqual({});
  }
+});
+
+test('the declared Iron saved consumer bypasses only the practice turn',()=>{
+ const task=deliveryTask('iron-progress-order');
+ const saved=task.checks.find(c=>c.phase==='consumer')!;
+ expect(isSavedProofVerifier(saved)).toBe(true);
+ expect(isSavedProofVerifier(task.checks.find(c=>c.phase==='practice')!)).toBe(false);
+ expect(isSavedProofVerifier({...saved,command:saved.command.slice(0,2)})).toBe(false);
+ expect(isSavedProofVerifier({...saved,command:[...saved.command,'--run']})).toBe(false);
 });

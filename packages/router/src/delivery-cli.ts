@@ -21,6 +21,7 @@ export function nativeDeferralEvidence(reason:string):{hostDeferred?:boolean}{
 // These exact consumer invocations only validate saved files in DELIVERY_DIR.
 const savedProofScripts=new Map([
  ['cow-progress-order-saved',['packages/practice/src/cow-progress-order-proof.ts','packages/practice/src/cow-progress-isolated-proof.ts']],
+ ['iron-progress-order-saved',['packages/practice/src/iron-progress-order-proof.ts']],
  ['quest-sweep-saved',['packages/practice/src/quest-sweep-proof.ts']],
  ['session-recovery-only-verified',['scripts/session-check.ts']],
 ]);
