@@ -198,3 +198,24 @@ test('a far start walks hub to hub in hops of at most 150 tiles that each bring 
  // A goal on another level gets no ground hubs.
  expect(hopsTo(sarim,{x:3209,z:3222,level:1})).toEqual([]);
 });
+
+test('an account left underground heads for the bank above it, and the sweep eats from 60 percent of its hitpoints',async()=>{
+ const {nearestBanks,surfaceOf,eatAtFor}=await import('./quest-sweep');
+ expect(surfaceOf({x:3120,z:9567,level:0})).toEqual({x:3120,z:3167,level:0});
+ expect(surfaceOf({x:3120,z:3167,level:0})).toEqual({x:3120,z:3167,level:0});
+ // The skull basement under the Wizards' Tower: Draynor, not Seers' Village.
+ expect((nearestBanks({x:3120,z:9567,level:0})[0] as {site?:string})?.site).toBe('bank:draynor-bank:0');
+ expect(eatAtFor(37)).toBe(22);expect(eatAtFor(99)).toBe(59);expect(eatAtFor(10)).toBe(10);
+});
+
+test('a seller across the water ranks behind one on the same landmass, and swordfish is food the deposit plan keeps',async()=>{
+ const {sellersByTravel,travelDistance,SEA,depositPlan,isEdible}=await import('./quest-sweep');
+ const alKharid={x:3269,z:3167,level:0},hamab={x:2781,z:2793,level:0},kortan={x:2615,z:3292,level:0};
+ expect(travelDistance(alKharid,hamab)).toBe(488+SEA);
+ expect(travelDistance(alKharid,kortan)).toBe(654);
+ expect(sellersByTravel([{npc:'Hamab',tile:hamab},{npc:'Kortan',tile:kortan}],alKharid).map(s=>s.npc)).toEqual(['Kortan','Hamab']);
+ expect(isEdible(373)).toBe(true);expect(isEdible(1895)).toBe(true);expect(isEdible(1387)).toBe(false);
+ // TheFullMonty's pack: the staff, pots and talisman go; the allowance keeps five swordfish and three of four cake slices.
+ const pack=[{id:995,count:17400},{id:1387,count:1},{id:1931,count:1},{id:1931,count:1},{id:1931,count:1},{id:1438,count:1},...Array.from({length:5},()=>({id:373,count:1})),...Array.from({length:4},()=>({id:1895,count:1}))];
+ expect(depositPlan(pack,28,()=>false)).toEqual([{id:1387,count:-1},{id:1931,count:-1},{id:1438,count:-1},{id:1895,count:1}]);
+});

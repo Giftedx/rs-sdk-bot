@@ -40,15 +40,15 @@ const nearest=(tiles:readonly Tile[],at:Tile)=>tiles.filter(t=>t.level===at.leve
 
 // Walk to each source, nearest first, and take the item until the pack holds the planned count. A ground spawn is
 // waited on for its respawn; a source out of reach gives way to the next.
-export async function gatherItems(s:Session,world:World,gathers:readonly Gather[]):Promise<string|null>{
+export async function gatherItems(s:Session,world:World,gathers:readonly Gather[],walk:(to:Tile)=>Promise<{ok:boolean;reason?:string;detail?:string}>=(to)=>goTo(s,world,to,accountOf(s),{legTimeoutTicks:100})):Promise<string|null>{
  const st=()=>s.sdk.getState() as any,held=(id:number)=>count((st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count})),id);
  const here=():Tile=>{const p=st()?.player;return{x:p?.worldX??0,z:p?.worldZ??0,level:p?.level??0};};
  for(const g of gathers){
   const target=held(g.id)+g.count,sources=(g.how==='milk'?nearest(cows(),here()):g.how==='loc'?[LOC_SOURCES[g.id]!.tile]:spawnsByDistance(g.id,here())).slice(0,6);
   for(const at of sources){
    if(held(g.id)>=target)break;
-   const walked=await goTo(s,world,at,accountOf(s),{legTimeoutTicks:100});
-   console.log(`QUEST_SWEEP_GATHER_WALK ${JSON.stringify({item:g.id,how:g.how,to:at,ok:walked.ok,detail:"detail" in walked?walked.detail:undefined})}`);
+   const walked=await walk(at);
+   console.log(`QUEST_SWEEP_GATHER_WALK ${JSON.stringify({item:g.id,how:g.how,to:at,ok:walked.ok,detail:walked.detail})}`);
    if(!walked.ok)continue;
    for(let tries=0;tries<g.count+3&&held(g.id)<target;tries++){
     const before=held(g.id);
