@@ -14,7 +14,7 @@ import {runBotName} from './prove';
 import {killTree} from './proc';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {readPracticeSave,waitPracticeSave,setPracticeSkills} from '../../../scripts/measure/fleet-player-save';
-import {magicXpForLevel,TELE_RUNE_IDS,teleportEffect,TELEPORTS,type RuneCounts} from '../../../scripts/magic-order';
+import {magicXpForLevel,CAST_SITE,TELE_RUNE_IDS,teleportEffect,TELEPORTS,type RuneCounts} from '../../../scripts/magic-order';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 
 type Save=ReturnType<typeof readPracticeSave>;
@@ -40,8 +40,11 @@ export const FIXTURES={
  // consume_effect_stat deletes the selected slot. Unstackable trout each need their own slot.
  varrock:{position:{x:3185,z:3436,level:0},skills:{Magic:31},inventory:[{id:TROUT,count:1},{id:TROUT,count:1},{id:TROUT,count:1},{id:1351,count:1}],
   bank:[{id:AIR,count:25},{id:557,count:4},{id:563,count:5},{id:COINS,count:14911},{id:1511,count:5}]},
+ // One bounded high-level cast, buying its missing mind rune. No laws or nature runes.
+ fallback:{position:{x:3092,z:3242,level:0},skills:{Magic:70},inventory:[{id:TROUT,count:1},{id:TROUT,count:1},{id:TROUT,count:1},{id:1351,count:1}],
+  bank:[{id:AIR,count:2},{id:COINS,count:1300},{id:1511,count:5},{id:557,count:4}]},
  // Draynor bank with no mind runes, used with RUNE_BUDGET=0.
- short:{position:{x:3092,z:3243,level:0},inventory:[{id:TROUT,count:1},{id:TROUT,count:1}],bank:[{id:AIR,count:10},{id:COINS,count:300}]},
+ short:{position:{x:3092,z:3242,level:0},skills:{Magic:70},inventory:[{id:TROUT,count:1},{id:TROUT,count:1}],bank:[{id:AIR,count:10},{id:COINS,count:300}]},
 } satisfies Record<string,SaveConfig>;
 type Fixture=keyof typeof FIXTURES;
 type Mode='progress'|'refusal';
@@ -49,7 +52,8 @@ export const CASES=[
  {label:'varrock',fixture:'varrock',mode:'progress',env:{TARGET_LEVEL:'37',MAX_CASTS:'5',RUNE_BUDGET:'1000',CASH_RESERVE:'10000'}},
  // The same saved account at its target refuses before any action.
  {label:'rerun',fixture:'varrock',mode:'refusal',env:{TARGET_LEVEL:'37',MAX_CASTS:'5',RUNE_BUDGET:'1000',CASH_RESERVE:'10000'}},
- {label:'short',fixture:'short',mode:'refusal',env:{TARGET_LEVEL:'12',RUNE_BUDGET:'0',CASH_RESERVE:'0'}},
+ {label:'fallback',fixture:'fallback',mode:'progress',env:{TARGET_LEVEL:'71',MAX_CASTS:'1',RUNE_BUDGET:'300',CASH_RESERVE:'1000'}},
+ {label:'short',fixture:'short',mode:'refusal',env:{TARGET_LEVEL:'75',RUNE_BUDGET:'0',CASH_RESERVE:'0'}},
 ] as const satisfies readonly {label:string;fixture:Fixture;mode:Mode;env:Record<string,string>}[];
 const CHILD_ENV={RANDOM_EVENTS:'0',MAX_CASTS:'200',CAP:'1500'};
 
@@ -134,9 +138,22 @@ export function segmentChecks(before:Save,after:Save,log:string){
 }
 const resultOf=(log:string)=>lines(log,'MAGIC_ORDER_RESULT');
 const loggedOut=(log:string)=>/^LOGOUT logged-out$/m.test(log)&&/^RESULT (ok|fail) /m.test(log);
+export function fallbackChecks(before:Save,after:Save,log:string){
+ const seg=segmentChecks(before,after,log),r=resultOf(log)[0],casts=lines(log,'MAGIC_ORDER_CAST');
+ return{
+  windStrike:r?.teleportRunesUsed===undefined&&r?.casts===1&&casts.length===1&&/^(man|woman|mugger)$/i.test(casts[0]?.target?.name??'')
+   &&r?.runesUsed?.air===1&&r?.runesUsed?.mind===1,
+  castSite:casts.length===1&&casts[0]?.position?.level===0
+   &&Math.max(Math.abs(casts[0].position.x-CAST_SITE.x),Math.abs(casts[0].position.z-CAST_SITE.z))<=8,
+  purchase:seg.purchases.length===1&&seg.bought.air===0&&seg.bought.mind===1&&seg.spent>0,
+  xp:r?.magicXpGained===after.skills[6]!.xp-before.skills[6]!.xp&&r.magicXpGained>=5.5*CONFIG.xpRate,
+  otherRunes:Object.values(TELE_RUNE_IDS).filter(id=>id!==AIR&&id!==MIND).every(id=>total(before,id)===total(after,id)),
+  equipment:JSON.stringify(before.inventories[94])===JSON.stringify(after.inventories[94]),
+ };
+}
 export function progressChecks(before:Save,after:Save,log:string,child:Child,target:number,budget:number,reserve:number):Record<string,boolean>{
  const seg=segmentChecks(before,after,log),results=resultOf(log),r=results[0];
- if(before.skills[6]!.level>=25){
+ if(total(before,TELE_RUNE_IDS.law)>0){
   const casts=lines(log,'MAGIC_ORDER_CAST'),spell=TELEPORTS.find(t=>t.name==='lumbridge')!;
   const costs={air:3,mind:0,earth:1,water:0,fire:0,law:1} satisfies RuneCounts;
   const used=Object.fromEntries(Object.entries(costs).map(([k,n])=>[k,n*5]));
@@ -190,7 +207,9 @@ export function fixtureChecks(save:Save,fixture:Fixture){
  const food=(save.inventories[93]??[]).filter(i=>i.id===TROUT);
  return save.position.x===f.position.x&&save.position.z===f.position.z&&save.position.level===0&&save.skills[3]!.level===10
   &&food.length===f.inventory.filter(i=>i.id===TROUT).length&&food.every(i=>i.count===1)
-  &&save.skills[6]!.level===(fixture==='varrock'?31:1)&&(fixture!=='varrock'||save.skills[6]!.rawExperience===81250)
+  &&save.skills[6]!.level===(fixture==='varrock'?31:70)&&(fixture!=='varrock'||save.skills[6]!.rawExperience===81250)
+  &&(fixture!=='fallback'||save.skills[6]!.rawExperience===(magicXpForLevel(71)-1)*10)
+  &&(fixture==='varrock'||total(save,TELE_RUNE_IDS.law)===0&&total(save,561)===0&&total(save,MIND)===0)
   &&f.bank.every(i=>bank(i.id)===i.count)&&bank(COINS)>0;
 }
 type CaseRecord={label:string;name:string;fixture:Fixture;mode:Mode;env:Record<string,string>;child:Child;saveMatched:boolean;elapsedMs:number};
@@ -210,9 +229,14 @@ export function verify(directory:string,now=Date.now(),source:unknown=sources())
  };
  const add=(prefix:string,values:Record<string,boolean>)=>{for(const [k,v] of Object.entries(values))checks[`${prefix}.${k}`]=v;};
  const env=(label:string)=>{const e=rec(label).env;return{target:Number(e.TARGET_LEVEL),budget:Number(e.RUNE_BUDGET),reserve:Number(e.CASH_RESERVE)};};
- const v=read('varrock'),q=read('rerun'),c=read('short');
+ const v=read('varrock'),q=read('rerun'),c=read('short'),f=read('fallback');
  checks['varrock.fixture']=fixtureChecks(v.before,'varrock');
  checks['short.fixture']=fixtureChecks(c.before,'short');
+ checks['fallback.fixture']=fixtureChecks(f.before,'fallback');
+ {const e=env('fallback');add('fallback',progressChecks(f.before,f.after,f.log,rec('fallback').child,e.target,e.budget,e.reserve));
+  checks['fallback.saveMatched']=rec('fallback').saveMatched===true;
+  add('fallback',fallbackChecks(f.before,f.after,f.log));
+ }
  {const e=env('varrock');add('varrock',progressChecks(v.before,v.after,v.log,rec('varrock').child,e.target,e.budget,e.reserve));
   checks['varrock.saveMatched']=rec('varrock').saveMatched===true;}
  add('rerun',refusalChecks(q.before,q.after,q.log,rec('rerun').child,'already at target'));
@@ -221,10 +245,10 @@ export function verify(directory:string,now=Date.now(),source:unknown=sources())
  checks['rerun.fromVarrockSave']=sha(join(directory,'rerun-before.sav'))===sha(join(directory,'varrock-after.sav'))&&q.before.skills[6]!.level>=env('rerun').target;
  add('short',refusalChecks(c.before,c.after,c.log,rec('short').child,'short runes'));
  checks['short.missing']=resultOf(c.log)[0]?.missing?.mind===1&&resultOf(c.log)[0]?.missing?.air===0;
- checks.uniqueAccounts=rec('varrock').name!==rec('short').name;
+ checks.uniqueAccounts=new Set(['varrock','fallback','short'].map(label=>rec(label).name)).size===3;
  const report={ok:Object.values(checks).every(Boolean),at:now,
   scope:'One native 150ms/25x practice run of scripts/magic-order.ts on fresh fixtures. No live, unattended or speed claim.',checks,
-  magic:{varrock:v.after.skills[6]!.level}};
+  magic:{varrock:v.after.skills[6]!.level,fallback:f.after.skills[6]!.level}};
  writeFileSync(join(directory,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
  return report;
 }
@@ -258,8 +282,9 @@ async function run(directory:string){
    const created=await createBot(name);
    writeFileSync(created.envPath,magicProofAccountEnv(readFileSync(created.envPath,'utf8'),endpoints));
    const a={name,path:await applyPreset(name,FIXTURES[fixture])};
-   if(fixture==='varrock'){
-    const skills=readPracticeSave(a.path).skills.map(s=>({level:s.level,xp:s.xp}));skills[6]={level:31,xp:8125};setPracticeSkills(a.path,skills);
+   if(fixture==='varrock'||fixture==='fallback'){
+    const skills=readPracticeSave(a.path).skills.map(s=>({level:s.level,xp:s.xp}));
+    skills[6]=fixture==='varrock'?{level:31,xp:8125}:{level:70,xp:magicXpForLevel(71)-1};setPracticeSkills(a.path,skills);
    }
    const stamp=statSync(a.path).mtimeMs;
    const auth=await child(directory,'auth-'+fixture,magicRegistrationArgs(name,endpoints),{},endpoints);

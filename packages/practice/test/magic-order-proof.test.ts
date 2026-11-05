@@ -1,8 +1,9 @@
 import {test,expect} from 'bun:test';
-import {totals,lines,unrelatedKept,segmentChecks,progressChecks,refusalChecks,fixtureChecks,
+import {totals,lines,unrelatedKept,segmentChecks,progressChecks,fallbackChecks,refusalChecks,fixtureChecks,
  FIXTURES,CASES,ADMISSION,magicProofEndpoints,selectMagicProofEndpoints,magicProofAccountEnv,startMagicProofStack,magicChildConfiguration,magicRegistrationArgs,magicSavedEndpoints} from '../src/magic-order-proof';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import type {readPracticeSave} from '../../../scripts/measure/fleet-player-save';
+import {magicXpForLevel} from '../../../scripts/magic-order';
 
 test('owned magic endpoints reach the stack, new profiles, registration and every worker child',async()=>{
  const checked:number[]=[],samples=[0,0.01];
@@ -100,6 +101,26 @@ test('the connected teleport proof reconciles five casts and rejects false landi
 const cast=(n:number,purchased=false)=>Array.from({length:n},(_,i)=>'MAGIC_ORDER_CAST '+JSON.stringify({cast:i+1,purchased})).join('\n');
 const purchase=(p:Record<string,unknown>)=>'MAGIC_ORDER_PURCHASE '+JSON.stringify({rune:'Mind rune',packBefore:{air:38,mind:0,coins:300},...p});
 
+test('high-level fallback proof requires a Wind Strike, paid rune, saved XP and retained assets',()=>{
+ const f=FIXTURES.fallback,xp=magicXpForLevel(71)-1;
+ const b=save({at:f.position,pack:f.inventory,bank:f.bank,magic:{level:70,xp}});
+ const a=save({pack:f.inventory,bank:f.bank.map(i=>({...i,count:i.count-(i.id===AIR?1:i.id===COINS?4:0)})),magic:{level:71,xp:xp+137.5}});
+ const log=[purchase({requested:1,bought:1,spent:4,packBefore:{air:2,mind:0,coins:300}}),
+  'MAGIC_ORDER_CAST '+JSON.stringify({cast:1,position:{x:3223,z:3400,level:0},target:{name:'Man'}}),
+  result({casts:1,coinsSpent:4,bought:{air:0,mind:1},runesUsed:{air:1,mind:1},magicXpGained:137.5}),logout].join('\n');
+ expect(fixtureChecks(b,'fallback')).toBe(true);
+ expect(Object.values(progressChecks(b,a,log,ok,71,300,1000)).every(Boolean)).toBe(true);
+ expect(Object.values(fallbackChecks(b,a,log)).every(Boolean)).toBe(true);
+ expect(fallbackChecks(b,a,log.replace('"Man"','"Guard"')).windStrike).toBe(false);
+ expect(fallbackChecks(b,a,log.replace('"x":3223','"x":3092')).castSite).toBe(false);
+ expect(fallbackChecks(b,a,log.replace('"magicXpGained":137.5','"magicXpGained":138')).xp).toBe(false);
+ expect(fallbackChecks(b,a,log.replace('"bought":1','"bought":2')).purchase).toBe(false);
+ const lost=structuredClone(a);lost.inventories[95]!.find(i=>i.id===557)!.count--;
+ expect(fallbackChecks(b,lost,log).otherRunes).toBe(false);
+ expect(progressChecks(b,a,log.replace('LOGOUT logged-out','LOGOUT timeout'),ok,71,300,1000).logout).toBe(false);
+ expect(fixtureChecks({...b,skills:a.skills},'fallback')).toBe(false);
+});
+
 test('fixtures match the work order shapes',()=>{
  expect(FIXTURES.varrock.position).toEqual({x:3185,z:3436,level:0});
  expect(FIXTURES.varrock.bank).toContainEqual({id:AIR,count:25});
@@ -108,8 +129,8 @@ test('fixtures match the work order shapes',()=>{
  expect(FIXTURES.varrock.bank).toContainEqual({id:563,count:5});
  expect(FIXTURES.short.bank.some(i=>i.id===MIND)).toBe(false);
  for(const f of Object.values(FIXTURES)){expect(f.bank.some(i=>i.id===COINS&&i.count>0)).toBe(true);expect(f.inventory.some(i=>i.id===TROUT)).toBe(true);}
- expect(CASES.map(c=>c.label)).toEqual(['varrock','rerun','short']);
- expect(CASES.map(c=>c.mode)).toEqual(['progress','refusal','refusal']);
+ expect(CASES.map(c=>c.label)).toEqual(['varrock','rerun','fallback','short']);
+ expect(CASES.map(c=>c.mode)).toEqual(['progress','refusal','progress','refusal']);
  // The rerun repeats the varrock account and target, so it starts at the target.
  expect(CASES[1].fixture).toBe('varrock');expect(CASES[1].env.TARGET_LEVEL).toBe(CASES[0].env.TARGET_LEVEL);
  expect(CASES[0].env.TARGET_LEVEL).toBe('37');
@@ -127,7 +148,7 @@ test('fixture checks read the saved shape',()=>{
 test('food fixtures prevent the item333 3->0 debit from one pinned slot deletion',()=>{
  // consume_effect_stat uses inv_delslot(inv, last_slot), not a quantity debit.
  for(const fixture of ['varrock','short'] as const){
-  const f=FIXTURES[fixture],before=save({at:f.position,pack:f.inventory,bank:f.bank,magic:fixture==='varrock'?{xp:8125,level:31}:undefined});
+  const f=FIXTURES[fixture],before=save({at:f.position,pack:f.inventory,bank:f.bank,magic:fixture==='varrock'?{xp:8125,level:31}:{xp:magicXpForLevel(70),level:70}});
   const food=before.inventories[93]!.filter(i=>i.id===TROUT);
   expect(food.map(i=>i.count)).toEqual(Array(fixture==='varrock'?3:2).fill(1));
   expect(fixtureChecks(before,fixture)).toBe(true);

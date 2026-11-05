@@ -83,12 +83,16 @@ type Tile={x:number;z:number};
 export const BANKS={draynor:{x:3092,z:3243},varrockWest:{x:3185,z:3436},varrockEast:{x:3253,z:3420}} as const;
 // The banks the Falador and Camelot teleport cleanup ends at (the walks in the cleanup below).
 export const CLEANUP_BANKS={falador:{x:2946,z:3370},seers:{x:2725,z:3491}} as const;
-// research/route-danger.ts: Varrock East bank -> 3244,3407 and Varrock West bank -> 3244,3407 pass 0 aggressive
-// spawns (margin 3). The shop door 3253,3398 passes 7 tiles from the mugger at 3249,3391 (reach 8). The mugger
-// (all.npc: strength 5, strengthbonus -21) and the men and women here hit at most 1, so an HP10 account survives
-// inside the food and hurt floors below.
-export const CAST_SITE={x:3244,z:3407,tol:2};
-export const TARGET_AREA={x0:3228,x1:3250,z0:3393,z1:3415};
+// research/route-danger.ts: Varrock East bank -> 3223,3400 and Varrock West bank -> 3223,3400 pass 0 aggressive
+// spawns (margin 3). The shop door 3253,3398 -> 3223,3400 passes 1 tile from the mugger at 3249,3391 (reach 8). The
+// mugger (all.npc: strength 5, strengthbonus -21) and the men and women here hit at most 1, so an HP10 account
+// survives inside the food and hurt floors below.
+// The client routes only through open doors, and a reachable:false target sends no packet. m50_53.jm2 spawns the Man
+// at 3223,3398 and the Woman at 3223,3401 on open floor. Each respawns in 50 ticks and wanders 5 tiles, inside
+// x 3218-3228, z 3393-3402, so the area holds both with a margin of 2. The men at 3237,3406 and 3238,3406 are behind
+// the doors at 3235,3406 and 3241,3406, and the man at 3245,3395 is behind the doors at 3244,3396 and 3248,3396.
+export const CAST_SITE={x:3223,z:3400,tol:2};
+export const TARGET_AREA={x0:3216,x1:3230,z0:3391,z1:3404};
 export const TARGET_NAMES=/^(man|woman|mugger)$/i;
 // A struck mugger retaliates, so it is a target only when no free man or woman is in the area.
 export const PREFERRED_TARGETS=/^(man|woman)$/i;
@@ -388,7 +392,6 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
   const allowance0=spendAllowance(o.budget,0,owned.coins,o.reserve);
   console.log('MAGIC_ORDER_ENTRY '+JSON.stringify({tick:s.tick(),region,position:at(),hp:hp(),magic:{level:level(),xp:xp0},owned,
    pack:{air:pack(AIR),mind:pack(MIND),coins:pack(COINS)},bank:{air:banked(AIR),mind:banked(MIND),coins:banked(COINS)},allowance:allowance0,airCost}));
-  if(level()>=25){
    // UPDATE_PID reports account membership, not map_members. It only admits a bounded
    // candidate attempt. Debit, XP and destination must still prove the spell actually ran.
    let members=(s.client as {membersAccount?:number}|undefined)?.membersAccount===1;
@@ -397,7 +400,8 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
    // Keep the highest funded method; only consider a shop-funded candidate when no owned cast is possible.
    const first=selectTeleport(availableLevel,o.target,totalRunes,worn(),members)
     ??(allowance0>0?TELEPORTS.find(t=>availableLevel>=t.level&&(!t.members||members)&&totalRunes.law>=teleportCosts(t,worn(),members).law):undefined);
-   if(!first){r.stop='short teleport runes';await closeBank();return r;}
+  // Without a funded teleport, use the same bounded Wind Strike path at every Magic level.
+  if(first){
    const missing=teleportShortfall(magicXp(),o.target,o.maxCasts,first,teleportCosts(first,worn(),members),totalRunes);
    const shopNeeded=allowance0>0&&SHOP_RUNES.some(k=>missing[k]>0);
    r.teleportRunesUsed=runeCounts(()=>0);r.teleportRunesBought=runeCounts(()=>0);moved=true;
@@ -534,7 +538,16 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
    if(state()?.dialog?.isOpen)await s.direct({type:'closeModal',reason:'SDK'});
    const combat=pos()?.combat,engaged=combat?.targetType==='npc'?combat.targetIndex:-1;
    const target=pickTarget((state()?.nearbyNpcs??[]) as Npc[],engaged,new Set(avoid.keys()),(s.client as {selfSlot?:number})?.selfSlot);
-   if(!target){if(++idle>=CAST.targetWaitTicks)throw Object.assign(Error('combat stall: no safe target near the cast site'),{stop:'combat stall'});await waitTicks(s,1);return;}
+   if(!target){
+    if(++idle>=CAST.targetWaitTicks){
+     console.log('MAGIC_ORDER_TARGET_STALL '+JSON.stringify({tick:s.tick(),position:at(),idle,engaged,
+      ownPlayer:(s.client as {selfSlot?:number})?.selfSlot??null,avoid:[...avoid.keys()],area:TARGET_AREA,
+      nearbyNpcs:(state()?.nearbyNpcs??[]).map(n=>({index:n.index,name:n.name,x:n.x,z:n.z,hp:n.hp,
+       inCombat:n.inCombat,reachable:n.reachable??null,optionsWithIndex:n.optionsWithIndex??null}))}));
+     throw Object.assign(Error('combat stall: no safe target near the cast site'),{stop:'combat stall'});
+    }
+    await waitTicks(s,1);return;
+   }
    idle=0;
    if(await fed())return;
    const before={air:pack(AIR),mind:pack(MIND),xp:magicXp()},hp0=hpXp();
@@ -546,7 +559,7 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
    if(effect==='cast'){
     const gain={magic:Math.round((after.xp-before.xp)*10)/10,hp:Math.round((hpXp()-hp0)*10)/10};
     casts.push(gain);r.casts++;r.runesUsed.air+=airCost;r.runesUsed.mind++;misses=0;lastCast=s.tick();
-    console.log('MAGIC_ORDER_CAST '+JSON.stringify({tick:s.tick(),cast:r.casts,target:{index:target.index,name:target.name},gain,
+    console.log('MAGIC_ORDER_CAST '+JSON.stringify({tick:s.tick(),cast:r.casts,position:at(),target:{index:target.index,name:target.name},gain,
      magic:{level:level(),xp:after.xp},pack:{air:after.air,mind:after.mind},hp:hp(),purchased:r.bought.air+r.bought.mind>0}));
     return;
    }

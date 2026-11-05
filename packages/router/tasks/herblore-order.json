@@ -1,0 +1,46 @@
+{
+  "id": "herblore-order",
+  "goal": "skills",
+  "entry": "scripts/brew-potions.ts",
+  "files": [
+    "scripts/brew-potions.ts",
+    "scripts/brew-potions.test.ts",
+    "packages/practice/src/herblore-order-proof.ts",
+    "packages/practice/test/herblore-order-proof.test.ts"
+  ],
+  "consumer": "Run scripts/brew-potions.ts Mightyrod 6000 with TARGET_LEVEL 50. Clean owned Herb199, mix with owned Vial of water227, finish Attack potions with eye of newt, bank output, reconcile assets and confirm logout. Local and fleet Herblore best rises 46->50. Next goal: the next Herblore band by the best owned herb.",
+  "checks": [
+    {
+      "id": "herblore-order-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/brew-potions.test.ts",
+        "packages/practice/test/herblore-order-proof.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "herblore-order-practice",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/herblore-order-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "herblore-order-saved",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/herblore-order-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
+  ]
+}

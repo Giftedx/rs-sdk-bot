@@ -7,7 +7,7 @@ import {freemem} from 'node:os';
 import {capabilityRevision} from '../../core/src/worker-release';
 import {killTree} from '../../practice/src/proc';
 import {recoverProofLock,withPracticeTurn} from '../../practice/src/proof-lock';
-import {deliver,validateDelivery,type DeliveryTask} from './delivery';
+import {deliver,validateDelivery,type DeliveryTask,type DeliveryCheck} from './delivery';
 
 const root=resolve(import.meta.dir,'../../..');
 // Source preparation keeps an estimated 3 GiB reserve over the free-memory floor (packages/core/src/memory.ts).
@@ -16,6 +16,17 @@ import {SOURCE_STARTUP_GB,PRACTICE_STARTUP_GB as NATIVE_STARTUP_GB} from '../../
 export {SOURCE_STARTUP_GB,NATIVE_STARTUP_GB};
 export function nativeDeferralEvidence(reason:string):{hostDeferred?:boolean}{
  return /^(?:Error: )?HOST_DEFERRED_NATIVE_HEADROOM:/.test(reason)?{hostDeferred:true}:{};
+}
+// These exact consumer invocations only validate saved files in DELIVERY_DIR.
+const savedProofScripts=new Map([
+ ['cow-progress-order-saved',['packages/practice/src/cow-progress-order-proof.ts','packages/practice/src/cow-progress-isolated-proof.ts']],
+ ['quest-sweep-saved',['packages/practice/src/quest-sweep-proof.ts']],
+ ['session-recovery-only-verified',['scripts/session-check.ts']],
+]);
+export function isSavedProofVerifier(check:DeliveryCheck):boolean{
+ const [bun,script,flag]=check.command;
+ return check.phase==='consumer'&&check.command.length===3&&bun==='bun'&&flag==='--verify'
+  &&script!==undefined&&savedProofScripts.get(check.id)?.includes(script)===true;
 }
 type NativeAdmissionDeps={now:()=>number;freeGB:()=>number;stopped:()=>boolean;sleep:(ms:number)=>Promise<void>;progress:(value:{state:string;at:number;freeGB:number;requiredGB:number;deadline:number})=>void};
 export async function withNativeStartup<T>(start:()=>Promise<T>,deps:NativeAdmissionDeps,waitMs=900000):Promise<T>{
@@ -93,8 +104,13 @@ async function runTask(task:DeliveryTask,diagnosticCheck?:string){
             return{exitCode,timedOut,detail:JSON.stringify({stdout:out,stderr:err})};
             };
             if(check.phase==='regression')return start();
+            const stopped=()=>existsSync(join(root,'.practice/stop-coordinator'))||existsSync(join(root,'.practice/stop-swarm'));
+            if(isSavedProofVerifier(check)){
+                if(stopped())throw Error('owner stopped before saved proof verification');
+                return start();
+            }
             return withPracticeTurn(join(root,'.practice/delivery-native.lock'),()=>withNativeStartup(start,{now:Date.now,freeGB:()=>freemem()/2**30,
-                stopped:()=>existsSync(join(root,'.practice/stop-coordinator'))||existsSync(join(root,'.practice/stop-swarm')),
+                stopped,
                 sleep:ms=>Bun.sleep(ms),progress:admission=>{
                     writeFileSync(join(directory,'admission.json'),JSON.stringify({...admission,check:check.id},null,2));
                     appendFileSync(join(directory,'admission.jsonl'),JSON.stringify({...admission,check:check.id})+'\n');
