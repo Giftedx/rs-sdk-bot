@@ -1,12 +1,16 @@
 // Combat Monster Gatherer: fights Chaos Druids (herbs, runes) or Hill Giants (big bones, limpwurt) and banks drops.
-// Usage: bun scripts/gather-combat.ts <bot> [CAP ticks, default 15000] [TARGET: druid | giant]
-// Environment: DEMO_OK=1 for live server.
-import { openBot, finish, countItems } from '../packages/core/src/bot';
+// Usage: bun scripts/gather-combat.ts <bot> [CAP ticks, default 15000] [TARGET: druid | giant | cow]
+// Environment: DEMO_OK=1 for live server. TARGET=giant with TRAIN_SKILL and TARGET_LEVEL trains one combat skill
+// with the wielded weapon to a finite level (GIANT_FOOD sharks carried, default 5); without them giant keeps the
+// legacy gatherer. GIANT_KILLS overrides the level goal with a finite credited kill count.
+import { openBot, finish, countItems, getWorld, accountOf } from '../packages/core/src/bot';
+import {startQuestSustain} from './quest-sustain';
+import {ownedLoadout,fireWeaponSlot} from '../packages/planner/src/owned-loadout';
 import type { Session } from '../packages/core/src/inprocess';
 import {existsSync} from 'node:fs';
 import {resolve} from 'node:path';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
-import { walkPath, sessionWalker, expandPath, type PathDeps, type PathPoint, type PathTile } from '../packages/core/src/walk';
+import { goTo, walkPath, sessionWalker, expandPath, type PathDeps, type PathPoint, type PathTile } from '../packages/core/src/walk';
 
 // Local bear spawn clusters from rev289 maps / cow-path-probe.json. Expand by7:
 // actual Bear105 wander4 + hunt1 + size2 footprint1 + one tile margin.
@@ -55,9 +59,9 @@ export function guardCowWalker(base:PathDeps,safety:()=>string|null){
 
 // The cow loop owns stop/death cleanup on every bank profile. Without onStop,
 // core finish closes the session while the bank retreat is still running.
-export function cowStopControl(target:string,stopFile:()=>boolean){
+export function cowStopControl(target:string,stopFile:()=>boolean,owned=target==='cow'){
     let reason:string|undefined;
-    const options=target==='cow'?{onStop:async(_s:unknown,why:string)=>{if(reason===undefined){reason=why;console.log(`COW_STOP_OWNER ${why}`);}}}:{};
+    const options=owned?{onStop:async(_s:unknown,why:string)=>{if(reason===undefined){reason=why;console.log(`COW_STOP_OWNER ${why}`);}}}:{};
     return {options,stop:()=>reason!==undefined||stopFile(),reason:()=>reason};
 }
 export const cowCredit=(gone:boolean,selectedXp:number,newDrops:readonly number[])=>gone&&selectedXp>0&&newDrops.length===3&&newDrops.every(n=>n>=1);
@@ -248,11 +252,190 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
     return {ok:!failure&&!died&&!ended&&(targetMet||partial)&&preserved&&foodAccounted,creditedKills,banked,trainSkill:training.skill,targetLevel:training.targetLevel??null,startLevel,finalLevel:level(),selectedXp:selectedXp()-initialSelectedXp,attackXp:xp()-initialXp,damageXp,eaten,initialFood:initialFood??null,finalFood:finalFood??null,foodAccounted,bankTrips,hpMin,died,lifeId:state()?.player?.lifeId,respawns:state()?.player?.respawnCount,ticks:s.tick()-start,preserved,targetMet,partial,stop,failure:failure||(!targetMet&&!partial?'no cow progress: bounded target unmet':'-'),diagnostics:failure||o.diagnostics?diagnostics:[],bankProfile:profile.north?'north':'south',foodMode:profile.foodBanked?'banked':'held',healthCutoff,walkTicks,walkedTiles,detourTiles,doorInteractions,houseInteractions,maxPackSlots,bankDistances,walkLegs};
 }
 
-if(import.meta.main){
-const TARGET_KEY = (process.argv[4] ?? process.env.TARGET ?? 'druid').toLowerCase();
-const CAP = Number(process.argv[3] ?? process.env.CAP ?? 15000);
+// Surface Giant117 camp and its reachable Ardougne south bank.
+export const GIANT={npc:117,food:385,bigBones:532,limpwurt:225,bank:{x:2655,z:3283},spot:{x:2545,z:3144},room:[2537,3136,2556,3155]} as const;
+export const GIANT_HERBS:readonly number[]=[199,201,203,205,207,209,211,213,215,217,219];
+const GIANT_DROPS:readonly number[]=[GIANT.bigBones,GIANT.limpwurt,...GIANT_HERBS];
+// Reuse counted owned-loadout selection with level-gated metal blades.
+// Preference follows tier then the shared scimitar/sword/longsword order.
+// An observed wield still decides access for special swords.
+export function selectGiantWeapon(stock:readonly {id:number;count:number}[],attack:number|null){
+    const slot=fireWeaponSlot(attack);
+    const known=attack!==null&&Number.isSafeInteger(attack)&&attack>=1&&attack<=99;
+    const metals=[{level:40,ids:[1333,1289,1303]},{level:30,ids:[1331,1287,1301]},
+        {level:20,ids:[1329,1285,1299]},{level:10,ids:[1327,1283,1297]},
+        {level:5,ids:[1325,1281,1295]},{level:1,ids:[1323,1279,1293,1321,1277,1291]}];
+    const options=metals.flatMap((tier,index)=>tier.ids.map((id,offset)=>({id,count:1,preference:index*10+offset,equippable:known?attack!>=tier.level:null})));
+    slot.options=[...options,{id:35,count:1,preference:31,equippable:known?true:null},
+        {id:2402,count:1,preference:43,equippable:known?true:null}];
+    const choice=ownedLoadout([slot],stock);
+    return choice.state==='ready'?choice.selected[0]!.id:0;
+}
+const inBox=(b:readonly number[],x:number,z:number)=>x>=b[0]!&&x<=b[2]!&&z>=b[1]!&&z<=b[3]!;
+export function giantTraining(skill?:string,targetLevel?:number){
+    if(!skill||!['Attack','Strength','Defence','Hitpoints'].includes(skill))throw new Error('giant TRAIN_SKILL must be Attack, Strength, Defence or Hitpoints');
+    if(targetLevel===undefined||!Number.isSafeInteger(targetLevel)||targetLevel<2||targetLevel>99)throw new Error('giant TARGET_LEVEL must be2..99');
+    return {skill,targetLevel};
+}
+type StyleTab={known:boolean;weaponName:string;currentStyle:number;styles:readonly {index:number;name:string;trainsSkills:readonly string[]}[]};
+// The wielded weapon's own tab decides the index: Strength is1 on a sword, scimitar or 2h; controlled never counts.
+export function giantStyle(tab:StyleTab|undefined,skill:string){
+    if(!tab?.known)throw new Error('giant prerequisite: wielded weapon combat styles unknown');
+    const style=skill==='Hitpoints'?(tab.styles.find(s=>s.index===tab.currentStyle)??tab.styles[0]):tab.styles.find(s=>s.trainsSkills.length===1&&s.trainsSkills[0]===skill);
+    if(!style)throw new Error(`giant prerequisite: ${tab.weaponName} has no style that trains only ${skill}`);
+    return {index:style.index,name:style.name,weapon:tab.weaponName};
+}
+export const giantCredit=(gone:boolean,selectedXp:number,newBigBones:number)=>gone&&selectedXp>0&&newBigBones>=1;
+export function giantKillLimit(value?:string|number){
+    if(value===undefined)return undefined;
+    const maximum=Number(value);
+    if(!Number.isSafeInteger(maximum)||maximum<1)throw new Error('giant GIANT_KILLS must be a positive safe integer');
+    return maximum;
+}
+export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targetLevel?:number;maximum?:number;food?:number;eatAt?:number;noProgress?:number;stop?:()=>boolean;walk?:(x:number,z:number,tol:number,signal?:AbortSignal)=>Promise<boolean>}){
+    const maximum=giantKillLimit(o.maximum);
+    const training=giantTraining(o.trainSkill,o.targetLevel);
+    if(!Number.isSafeInteger(o.cap)||o.cap<1)throw new Error('giant needs positive CAP');
+    const carry=o.food??5;if(!Number.isSafeInteger(carry)||carry<1||carry>20)throw new Error('giant GIANT_FOOD must be1..20');
+    const inv=()=>s.sdk.getInventory(),state=()=>s.sdk.getState();
+    const count=(items:readonly {id:number;count:number}[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
+    const held=(id:number)=>count(inv(),id),hp=()=>s.sdk.getSkill('Hitpoints')?.level??0;
+    // Base level is the trained level: client and engine share the level/10 XP curve (Player.ts levelExperience).
+    // The current level can be drained or boosted and restores without XP, so it never counts as training.
+    const selectedXp=()=>s.sdk.getSkillXp(training.skill)??0,level=()=>s.sdk.getSkill(training.skill)?.baseLevel??0;
+    if(!await waitUntil(s,()=>hp()>0&&level()>0&&!!state()?.player&&!!state()?.combatStyle?.known,{timeoutTicks:15}))throw new Error('giant prerequisite: synced HP, skill and combat styles');
+    const eatAt=o.eatAt??Math.max(10,Math.ceil((s.sdk.getSkill('Hitpoints')?.baseLevel??0)/2));
+    const start=s.tick(),p0=state()!.player!,initialSelectedXp=selectedXp(),startLevel=level();
+    const goalReached=()=>maximum===undefined?level()>=training.targetLevel:creditedKills>=maximum;
+    const near=(x:number,z:number,tol:number)=>{const p=state()?.player;return !!p&&p.level===0&&Math.max(Math.abs(p.worldX-x),Math.abs(p.worldZ-z))<=tol;};
+    let style:ReturnType<typeof giantStyle>|undefined;
+    const allKit=()=>[...inv(),...(state()?.equipment??[])];
+    let ended=false,died=false,hpMin=hp(),creditedKills=0,limpwurt=0,eaten=0,bankTrips=0,failure='',stop='cap',lastProgress=start,bankFood=0;
+    void s.ended.then(()=>{ended=true;});
+    const observeLife=()=>{const p=state()?.player;hpMin=Math.min(hpMin,hp());if(hp()<=0||p?.isDead||(p?.respawnCount??0)>(p0.respawnCount??0)||p?.lifeId!==p0.lifeId)died=true;};
+    const off=s.onTick(observeLife);
+    const over=()=>{observeLife();return ended||died||!!o.stop?.()||s.tick()-start>=o.cap;};
+    const eat=async()=>{
+        const food=inv().find(i=>i.id===GIANT.food);if(!food)return false;
+        const before=held(GIANT.food),beforeHp=hp();await s.bot.eatFood(food);
+        // SDK eat can finish on inventory debit before the HP packet arrives.
+        const healed=await waitUntil(s,()=>held(GIANT.food)<before&&hp()>beforeHp||over(),{timeoutTicks:6});
+        eaten+=Math.max(0,before-held(GIANT.food));
+        if(!healed||held(GIANT.food)>=before||hp()<=beforeHp)throw new Error('no giant progress: shark did not heal');
+        return true;
+    };
+    // A stop or the cap cancels only the walk out to the camp: the retreat to the bank always runs.
+    const walk=async(x:number,z:number,tol:number,outbound=false)=>{
+        const sustain=startQuestSustain({...s,direct:async a=>await s.direct(a) as {success:boolean;message?:string}},
+            {food:[GIANT.food],eatAt,onConsumed:()=>eaten++});
+        const cancel=new AbortController(),offTick=outbound?s.onTick(()=>{if(over())cancel.abort('stop requested');}):undefined;
+        const signal=outbound?AbortSignal.any([sustain.aborted,cancel.signal]):sustain.aborted;
+        try{
+            const ok=o.walk?await o.walk(x,z,tol,signal):
+                (await goTo(s,await getWorld(),{x,z,level:0},accountOf(s),{maxRetriesPerLeg:2,legTimeoutTicks:150,signal})).ok;
+            await sustain.settle();
+            if(sustain.failure())throw new Error(sustain.failure()!);
+            return ok&&near(x,z,tol);
+        }finally{offTick?.();await sustain.settle();}
+    };
+    const enter=async()=>{
+        const arrived=await walk(GIANT.spot.x,GIANT.spot.z,3,true);
+        if(over())return;
+        if(!arrived||!near(GIANT.spot.x,GIANT.spot.z,3))throw new Error('no giant progress: surface camp arrival unobserved');
+    };
+    const leave=async()=>{
+        if(!await walk(GIANT.bank.x,GIANT.bank.z,3)||!near(GIANT.bank.x,GIANT.bank.z,3))throw new Error('no giant progress: bank retreat failed');
+    };
+    const open=async()=>{if(state()?.bank?.isOpen&&s.bankObservation?.())return;const gen=s.bankObservation?.()?.generation??0;
+        if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>!!state()?.bank?.isOpen&&(s.bankObservation?.()?.generation??0)>gen,{timeoutTicks:20}))throw new Error('no giant progress: bank readiness unknown');bankTrips++;};
+    const bankCount=(id:number)=>count(s.bankObservation?.()?.items??[],id);
+    const deposit=async()=>{for(const id of GIANT_DROPS){const item=inv().find(i=>i.id===id);if(!item)continue;const before=bankCount(id),amount=held(id);
+        if(!(await s.bot.depositItem(item,-1)).success||!await waitUntil(s,()=>held(id)===0&&bankCount(id)===before+amount,{timeoutTicks:20}))throw new Error('no giant progress: deposit failed');}};
+    const restock=async()=>{
+        const take=Math.min(carry-held(GIANT.food),bankCount(GIANT.food),28-inv().length);
+        if(take>0){const row=state()?.bank?.items.find(i=>i.id===GIANT.food),before=held(GIANT.food);
+            if(!row||!(await s.bot.withdrawItem(row,take,{asNote:false})).success||!await waitUntil(s,()=>held(GIANT.food)===before+take,{timeoutTicks:20}))throw new Error('no giant progress: shark withdraw failed');}
+        bankFood=bankCount(GIANT.food);
+    };
+    const ownedFood=()=>s.bankObservation?.()?held(GIANT.food)+bankCount(GIANT.food):undefined;
+    const baseline:Record<number,number>={},picked:Record<number,number>={};let initialFood:number|undefined,initialAssets:Map<number,number>|undefined;
+    const assetTotals=()=>{const m=new Map<number,number>();for(const i of [...(s.bankObservation?.()?.items??[]),...allKit()])m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
+    const trip=async()=>{await leave();await open();await deposit();await restock();await s.bot.closeBank();if(over())return;await enter();lastProgress=s.tick();};
+    try{
+        if(!near(GIANT.bank.x,GIANT.bank.z,6))await leave();
+        await open();initialAssets=assetTotals();for(const id of GIANT_DROPS){baseline[id]=bankCount(id)+held(id);picked[id]=0;}initialFood=ownedFood();if(initialFood!==undefined)initialFood+=eaten;
+        await deposit();
+        if(!goalReached()&&!over()){
+            await restock();
+            const weapon=selectGiantWeapon([...(s.bankObservation?.()?.items??[]),...allKit()],s.sdk.getSkill('Attack')?.baseLevel??null);
+            if(!weapon)throw new Error('giant prerequisite: no owned equippable melee weapon');
+            if(!allKit().some(i=>i.id===weapon)){
+                const row=state()?.bank?.items.find(i=>i.id===weapon),before=bankCount(weapon);
+                if(!row||!(await s.bot.withdrawItem(row,1,{asNote:false})).success||!await waitUntil(s,()=>held(weapon)===1&&bankCount(weapon)===before-1,{timeoutTicks:20}))throw new Error('giant prerequisite: weapon withdrawal unobserved');
+            }
+            await s.bot.closeBank();
+            if(!state()?.equipment?.some(i=>i.slot===3&&i.id===weapon)){
+                const item=inv().find(i=>i.id===weapon);
+                if(!item||!(await s.bot.equipItem(item)).success||!await waitUntil(s,()=>!!state()?.equipment?.some(i=>i.slot===3&&i.id===weapon),{timeoutTicks:10}))throw new Error('giant prerequisite: melee weapon equip unobserved');
+            }
+            if(!await waitUntil(s,()=>!!state()?.combatStyle?.known&&state()?.combatStyle?.weaponName===state()?.equipment?.find(i=>i.slot===3)?.name,{timeoutTicks:10}))throw new Error('giant prerequisite: equipped combat styles unknown');
+            const selectedStyle=giantStyle(state()?.combatStyle,training.skill);style=selectedStyle;
+            if(held(GIANT.food)<1)throw new Error('giant prerequisite: no owned shark');
+            if(!(await s.sdk.sendSetCombatStyle(selectedStyle.index)).success||!await waitUntil(s,()=>{const c=state()?.combatStyle;return !!c?.known&&c.currentStyle===selectedStyle.index&&c.weaponName===selectedStyle.weapon;},{timeoutTicks:10}))
+                throw new Error('no giant progress: selected combat style unobserved');
+            if(hp()<=eatAt&&!await eat())throw new Error('giant prerequisite: no carried shark before transit');
+            await enter();
+        }
+        lastProgress=s.tick(); // Transit is bounded by CAP, not the target-wait window.
+        const retry=new Map<number,number>();
+        while(!goalReached()&&!over()){
+            if(hp()<=eatAt&&!await eat()){if(bankFood<1){stop='low-hp';throw new Error('no giant progress: low HP and no owned shark');}await trip();continue;}
+            if(28-inv().length<2){await trip();continue;}
+            if(s.tick()-lastProgress>=(o.noProgress??200))throw new Error('no giant progress: target/loot timeout');
+            const target=state()?.nearbyNpcs.find(n=>n.id===GIANT.npc&&inBox(GIANT.room,n.tileX??n.x,n.tileZ??n.z)&&!n.inCombat&&n.reachable!==false
+                &&(n.hp==null||n.maxHp==null||n.hp>=n.maxHp)&&(retry.get(n.index)??0)<=s.tick());
+            if(!target){await waitTicks(s,1);continue;}
+            const beforeXp=selectedXp(),groundBefore=cowGroundCounts(state()?.groundItems??[]);
+            if(!(await s.bot.attack(target)).success){retry.set(target.index,s.tick()+20);await waitTicks(s,1);continue;}
+            let x=target.tileX??target.x,z=target.tileZ??target.z,observedXp=beforeXp,gone=false;lastProgress=s.tick();
+            const fresh=(id:number)=>count((state()?.groundItems??[]).filter(i=>i.x===x&&i.z===z),id)-(groundBefore.get(`${id}:${x}:${z}`)??0);
+            while(!over()){
+                if(hp()<=eatAt&&!await eat()){stop='low-hp';throw new Error('no giant progress: low HP in combat and no carried shark');}
+                const current=state()?.nearbyNpcs.find(n=>n.index===target.index);
+                if(current){x=current.tileX??current.x;z=current.tileZ??current.z;}else gone=true;
+                // Own selected-skill XP is productive combat progress; dispatch success is not.
+                if(selectedXp()>observedXp){observedXp=selectedXp();lastProgress=s.tick();}
+                if(giantCredit(gone,selectedXp()-beforeXp,fresh(GIANT.bigBones)))break;
+                if(s.tick()-lastProgress>=(o.noProgress??200))throw new Error('no giant progress: target/loot timeout');await waitTicks(s,1);
+            }
+            if(over())break;
+            const roots=fresh(GIANT.limpwurt)>0;
+            for(const id of GIANT_DROPS.filter(id=>fresh(id)>0)){
+                const amount=fresh(id),item=state()?.groundItems.find(i=>i.id===id&&i.x===x&&i.z===z),before=held(id);
+                if(!item||!(await s.bot.pickupItem(item)).success||!await waitUntil(s,()=>held(id)===before+amount,{timeoutTicks:10}))throw new Error('no giant progress: credited loot pickup mismatch');
+                picked[id]=(picked[id]??0)+amount;
+            }
+            creditedKills++;if(roots)limpwurt++;lastProgress=s.tick();
+            console.log(`MILESTONE giant credited=${creditedKills} trainSkill=${training.skill} selectedXp=${selectedXp()-initialSelectedXp} level=${level()} HP=${hp()} sharks=${held(GIANT.food)} limpwurt=${limpwurt}`);
+        }
+        stop=goalReached()?(maximum===undefined?'target-level':'max-kills'):died?'died':o.stop?.()?'stop-file':'cap';
+    }catch(e){failure=String(e);if(stop==='cap'&&o.stop?.())stop='stop-file';}
+    finally{if(!died&&!ended)try{if(!near(GIANT.bank.x,GIANT.bank.z,6))await leave();await open();await deposit();}catch(e){failure=[failure,String(e)].filter(Boolean).join('; ');}off();}
+    const banked={bigBones:bankCount(GIANT.bigBones)-(baseline[GIANT.bigBones]??bankCount(GIANT.bigBones)),limpwurt:bankCount(GIANT.limpwurt)-(baseline[GIANT.limpwurt]??bankCount(GIANT.limpwurt))};
+    const bankedHerbs=Object.fromEntries(GIANT_HERBS.map(id=>[id,bankCount(id)-(baseline[id]??bankCount(id))]));
+    const bankedAll=banked.bigBones===creditedKills&&banked.limpwurt===limpwurt&&GIANT_DROPS.every(id=>bankCount(id)-(baseline[id]??bankCount(id))===(picked[id]??0));
+    const finalAssets=assetTotals();
+    const preserved=initialAssets!==undefined&&[...new Set([...initialAssets.keys(),...finalAssets.keys()])].every(id=>GIANT_DROPS.includes(id)||id===GIANT.food||(finalAssets.get(id)??0)===(initialAssets!.get(id)??0))&&GIANT_DROPS.every(id=>held(id)===0);
+    // Owned sharks in pack and bank change only by observed eating.
+    const finalFood=ownedFood(),foodAccounted=initialFood!==undefined&&finalFood===initialFood-eaten;
+    const targetMet=goalReached()&&bankedAll;
+    const partial=!targetMet&&creditedKills>0&&stop==='cap'&&bankedAll&&!failure&&!died&&!ended&&preserved&&foodAccounted;
+    return {ok:!failure&&!died&&!ended&&(targetMet||partial)&&preserved&&foodAccounted,creditedKills,banked,bankedHerbs,limpwurt,trainSkill:training.skill,targetLevel:training.targetLevel,
+        style,startLevel,finalLevel:level(),selectedXp:selectedXp()-initialSelectedXp,eatAt,eaten,initialFood:initialFood??null,finalFood:finalFood??null,foodAccounted,bankTrips,hpMin,died,
+        lifeId:state()?.player?.lifeId,respawns:state()?.player?.respawnCount,ticks:s.tick()-start,preserved,targetMet,partial,stop,failure:failure||(!targetMet&&!partial?'no giant progress: bounded target unmet':'-')};
+}
 
-const CONFIGS: Record<string, {
+export const CONFIGS: Record<string, {
     npc: RegExp;
     spot: { x: number; z: number };
     bankSpot: { x: number; z: number };
@@ -265,12 +448,16 @@ const CONFIGS: Record<string, {
         drops: /(herb|nature rune|law rune|vial of water)/i,
     },
     giant: {
-        npc: /^hill giant$/i,
-        spot: { x: 3117, z: 9850 }, // Edgeville Dungeon Hill Giants
-        bankSpot: { x: 3092, z: 3496 }, // Edgeville Bank
-        drops: /(big bones|limpwurt root|iron arrow|nature rune)/i,
+        npc: /^(?:hill )?giant$/i,
+        spot: { x: 2545, z: 3144 }, // Surface Giant117 camp
+        bankSpot: { x: 2655, z: 3283 }, // Ardougne south bank
+        drops: /(big bones|limpwurt root|iron arrow|nature rune|herb)/i,
     },
 };
+
+if(import.meta.main){
+const TARGET_KEY = (process.argv[4] ?? process.env.TARGET ?? 'druid').toLowerCase();
+const CAP = Number(process.argv[3] ?? process.env.CAP ?? 15000);
 
 if(TARGET_KEY!=='cow'&&!Object.prototype.hasOwnProperty.call(CONFIGS,TARGET_KEY))
     await finish([],false,`no combat progress: unsupported target ${TARGET_KEY}`);
@@ -278,12 +465,23 @@ const conf = CONFIGS[TARGET_KEY] ?? CONFIGS.druid!;
 const botName = process.argv[2];
 
 if (!botName) {
-    console.error('Usage: bun scripts/gather-combat.ts <botName> [CAP] [TARGET: druid | giant]');
+    console.error('Usage: bun scripts/gather-combat.ts <botName> [CAP] [TARGET: druid | giant | cow]');
     process.exit(1);
 }
 
-const cowStop=cowStopControl(TARGET_KEY,()=>existsSync(resolve(import.meta.dir,'../.practice',`stop-${botName}`)));
+// Finite giant training is opt-in; TARGET=giant alone keeps the legacy gatherer below.
+const giantTrained=TARGET_KEY==='giant'&&(process.env.TRAIN_SKILL!==undefined||process.env.TARGET_LEVEL!==undefined||process.env.GIANT_KILLS!==undefined);
+let giantMaximum:number|undefined;
+if(giantTrained){try{giantMaximum=giantKillLimit(process.env.GIANT_KILLS);}catch(e){await finish([],false,String(e));}}
+const giantSkill=process.env.TRAIN_SKILL??(giantMaximum===undefined?undefined:'Hitpoints');
+const giantLevel=process.env.TARGET_LEVEL===undefined?(giantMaximum===undefined?undefined:99):Number(process.env.TARGET_LEVEL);
+if(giantTrained){try{giantTraining(giantSkill,giantLevel);}catch(e){await finish([],false,String(e));}}
+const cowStop=cowStopControl(TARGET_KEY,()=>existsSync(resolve(import.meta.dir,'../.practice',`stop-${botName}`)),TARGET_KEY==='cow'||giantTrained);
 const s = await openBot(botName,cowStop.options).catch(e => finish([], false, `login: ${String(e)}`));
+if(giantTrained){
+    try{const r=await runGiants(s,{cap:CAP,trainSkill:giantSkill,targetLevel:giantLevel,maximum:giantMaximum,food:process.env.GIANT_FOOD===undefined?undefined:Number(process.env.GIANT_FOOD),stop:cowStop.stop});console.log(`GIANT_RESULT ${JSON.stringify(r)}`);await finish([s],r.ok&&cowStop.reason()!=='died',`mode=giant ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
+    catch(e){await finish([s],false,String(e));}
+}
 if(TARGET_KEY==='cow'){
     try{const r=await runCows(s,{cap:CAP,maximum:Number(process.env.MAX_KILLS??5),trainSkill:process.env.TRAIN_SKILL,targetLevel:process.env.TARGET_LEVEL===undefined?undefined:Number(process.env.TARGET_LEVEL),bankProfile:process.env.COW_BANK_PROFILE,foodMode:process.env.COW_FOOD_MODE,diagnostics:process.env.COW_DIAGNOSTICS==='1',stop:cowStop.stop});console.log(`COW_RESULT ${JSON.stringify(r)}`);await finish([s],r.ok&&cowStop.reason()!=='died',`mode=cow ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
     catch(e){await finish([s],false,String(e));}
