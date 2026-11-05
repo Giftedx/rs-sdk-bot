@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793903171691,
+ "at": 1793904387378,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -128,22 +128,6 @@
    "repeat": false,
    "goal": "quests in one host: runemysteries, murder, sheep, cook, rj",
    "role": "quests"
-  },
-  {
-   "account": "Magicwanda",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/goldfarm.ts KNIGHT_SPOT=2669,3298"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "RUN": "2"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "Thieving 55, then coins from Ardougne knights",
-   "role": "supply"
   },
   {
    "account": "PickpockDick",
@@ -297,27 +281,6 @@
    "role": "firemaking"
   },
   {
-   "account": "Shaftmaker",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ORDER_KEY": "shaftmaker-magic75-nature34",
-    "ITEM_ID": "561",
-    "QUANTITY": "34",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "350",
-    "CASH_RESERVE": "14000",
-    "ORDER_MS": "900000",
-    "FILL_WAIT_TICKS": "50",
-    "CAP": "2400",
-    "COORDINATOR_RUN_ID": "task-36060dfb-8e00-423d-a467-2926c47156b1"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-shaftmaker-magic75-nature34 [task-36060dfb-8e00-423d-a467-2926c47156b1]",
-   "role": "firemaking"
-  },
-  {
    "accounts": [
     "Shaftsinker"
    ],
@@ -417,23 +380,6 @@
    "role": "supply"
   },
   {
-   "account": "Mightyrod",
-   "script": "scripts/brew-potions.ts",
-   "args": [
-    "6000",
-    "strength"
-   ],
-   "env": {
-    "TARGET_LEVEL": "57",
-    "CAP": "6000",
-    "COORDINATOR_RUN_ID": "task-43b3bb73-f882-4001-a645-a8f2a4e0a7bc"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "chain-herblore-order-mightyrod-herblore57 [task-43b3bb73-f882-4001-a645-a8f2a4e0a7bc]",
-   "role": "combat"
-  },
-  {
    "account": "Pocketrocket",
    "script": "scripts/session-check.ts",
    "args": [],
@@ -487,6 +433,36 @@
    "repeat": true,
    "goal": "Thieving 55, then coins from Ardougne knights",
    "role": "supply"
+  },
+  {
+   "accounts": [
+    "Magicwanda",
+    "Shaftmaker"
+   ],
+   "script": "scripts/coin-courier.ts",
+   "args": [
+    "20000"
+   ],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-74bea06a-6cbb-4d85-b1f2-d8dcaea64d13"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-courier-shaftmaker-recovered-band78 [task-74bea06a-6cbb-4d85-b1f2-d8dcaea64d13]",
+   "role": "supply"
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/quest-chain.ts",
+   "args": [
+    "runemysteries,murder,blackknight,vampire,priest,junglepotion,sheep,fishingcompo,druid,arrav,seaslug,haunted,demon,dig,drunkmonk,elemental,death,grandtree"
+   ],
+   "enabled": false,
+   "standing": true,
+   "repeat": false,
+   "goal": "quests: runemysteries, murder, blackknight, vampire, priest, junglepotion, sheep, fishingcompo, druid, arrav, seaslug, haunted, demon, dig, drunkmonk, elemental, death, grandtree",
+   "role": "combat"
   }
  ]
 }
