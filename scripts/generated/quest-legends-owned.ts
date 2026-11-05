@@ -185,34 +185,38 @@ export async function runLegends(raw:Session,o:LegendsOrder,requested:()=>boolea
   await reachClearing();
   const present = () => !!sdk.getState()?.nearbyNpcs.some(n => n.id === npcId('gujuo'));
   const retreat = async () => {
-   gujuoSpot = 1 - gujuoSpot;
-   await reachClearing();
-   await upkeep();
    const pursuitCleared = async () => {
     await waitUntil(s, () => fatal() || gujuoClearingQuiet(), { timeoutTicks: 16 });
     guard();
     return gujuoClearingQuiet();
    };
-   if (!await pursuitCleared()) {
-    // Jungle savages can follow across both Gujuo clearings. The map route spans their leash.
-    const east = { x: 2910, z: 2916 }, west = { x: 2791, z: 2917 };
-    const escape = gujuoSpot === 1 ? [east, west] : [west, east];
-    for (const tile of escape) {
-     await walk(tile.x, tile.z, 0);
-     await upkeep();
-     if (await pursuitCleared()) break;
-    }
-    if (!gujuoClearingQuiet()) throw Error('Legends wildlife pursuit did not clear on the map route');
+   // A pursuer can leave the visible scene and reacquire the actor at the next clearing.
+   for (let escapeAttempt = 0; escapeAttempt < 3; escapeAttempt++) {
+    gujuoSpot = 1 - gujuoSpot;
     await reachClearing();
     await upkeep();
-    await wait(gujuoClearingQuiet, 16);
+    if (!await pursuitCleared()) {
+     // Jungle savages can follow across both Gujuo clearings. The map route spans their leash.
+     const east = { x: 2910, z: 2916 }, west = { x: 2791, z: 2917 };
+     const escape = gujuoSpot === 1 ? [east, west] : [west, east];
+     for (const tile of escape) {
+      await walk(tile.x, tile.z, 0);
+      await upkeep();
+      if (await pursuitCleared()) break;
+     }
+     if (!gujuoClearingQuiet()) continue;
+     await reachClearing();
+     await upkeep();
+     if (!await pursuitCleared()) continue;
+    }
+    const lastHit = sdk.getState()?.player?.combat?.lastDamageTick;
+    if (lastHit === undefined) continue;
+    const interrupted = await waitUntil(s, () => fatal() || !gujuoClearingQuiet() ||
+     sdk.getState()?.player?.combat?.lastDamageTick !== lastHit, { timeoutTicks: 8 });
+    guard();
+    if (!interrupted && gujuoClearingQuiet() && sdk.getState()?.player?.combat?.lastDamageTick === lastHit) return;
    }
-   const lastHit = sdk.getState()?.player?.combat?.lastDamageTick;
-   await waitTicks(s, 8);
-   guard();
-   if (lastHit === undefined || !gujuoClearingQuiet() || sdk.getState()?.player?.combat?.lastDamageTick !== lastHit) {
-    throw Error('Legends could not shake hostile wildlife before retrying Gujuo');
-   }
+   throw Error('Legends could not shake hostile wildlife before retrying Gujuo');
   };
   for (let trial = 0; trial < o.maximumTrials; trial++) {
    started = s.tick();
