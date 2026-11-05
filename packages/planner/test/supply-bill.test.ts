@@ -24,6 +24,15 @@ test('the shortfall subtracts stock across helpers and lists the holders', () =>
     expect(bill[1]).toMatchObject({ short: 1, ids: [] });
 });
 
+test('independently observed bank and carried counts do not add the same base item twice', () => {
+    const catalog=[{id:53,name:'Headless arrow'}];
+    const rows=supplyBill([{item:'headless arrows',count:15}],catalog,[
+        {name:'Moved',inventory:[{id:53,count:8}],equipment:[{id:53,count:2}],bank:[{id:54,baseId:53,count:9}]},
+        {name:'Separate',bank:[{id:53,count:4}]},
+    ]);
+    expect(rows[0]).toMatchObject({owned:14,short:1,holders:[{account:'Moved',count:10},{account:'Separate',count:4}]});
+});
+
 test('plain and noted demand draw from one base stock pool', () => {
     const catalog=[{id:1995,name:'Unfermented wine'}];
     const rows=supplyBill([

@@ -10,7 +10,7 @@ import {projectRoot,atomicJson,capabilitySource} from './coordinator-store';
 import {diskFreeGB,heldRuns,type HeldRuns} from './coordinator-decisions';
 import {PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {readMergedPlan} from '../../core/src/coordinator-jobs';
-import {liveHelperStatuses,overallSupplyDemand,supplyBill} from '../../planner/src/supply-bill';
+import {liveHelperStatuses,observedStock,overallSupplyDemand,supplyBill} from '../../planner/src/supply-bill';
 
 export function parseModelObject(text:string):any{
  const trimmed=text.trim(),fence=trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
@@ -167,8 +167,7 @@ export function supplyBillSummary({base=projectRoot,now=Date.now(),fleetDir,side
 export function assetSummary(statuses:readonly any[]){
  const names=new Map((JSON.parse(readFileSync(join(projectRoot,'knowledge/items.json'),'utf8')) as any[]).map(i=>[i.id,i.name]));
  return statuses.filter(s=>typeof s?.name==='string'&&/^[A-Z]/.test(s.name)&&s.server==='rs-sdk-demo.fly.dev').map(s=>{
-  const sums=new Map<number,number>();
-  for(const r of [...(s.inventory??[]),...(s.equipment??[]),...(s.bank??[])]){const id=r.baseId??r.id;sums.set(id,(sums.get(id)??0)+(r.count??0));}
+  const sums=observedStock(s);
   const coins=sums.get(995)??0;sums.delete(995);
   const stacks=[...sums].filter(([,n])=>n>=50).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([id,n])=>`${names.get(id)??id} ${n}`);
   return{account:s.name,coins,at:s.pos?`${s.pos.x},${s.pos.z}`:null,stacks};
