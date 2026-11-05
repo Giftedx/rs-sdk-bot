@@ -186,7 +186,7 @@ test('queue groups failed roots across branches and distinguishes work waiting o
  const facts = queueFacts(state);
  expect(facts.dependencyReadiness).toEqual({ready:1, waiting:1, blocked:3});
  expect(facts.rootBlockers).toEqual([
-  {id:'failed-build', status:'failed', runId:'failed-build', pendingTasks:3, pendingRuns:1},
+  {id:'failed-build', status:'failed', runId:'failed-build', replacement:undefined, pendingTasks:3, pendingRuns:1},
  ]);
  expect(chooseTask(state, 4)?.id).toBe('independent');
 });
