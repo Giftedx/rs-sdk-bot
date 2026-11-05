@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793906212744,
+ "at": 1793908646130,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -454,24 +454,6 @@
    "role": "supply"
   },
   {
-   "accounts": [
-    "Magicwanda",
-    "Shaftmaker"
-   ],
-   "script": "scripts/coin-courier.ts",
-   "args": [
-    "20000"
-   ],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-74bea06a-6cbb-4d85-b1f2-d8dcaea64d13"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-courier-shaftmaker-recovered-band78 [task-74bea06a-6cbb-4d85-b1f2-d8dcaea64d13]",
-   "role": "supply"
-  },
-  {
    "account": "Mightyrod",
    "script": "scripts/quest-chain.ts",
    "args": [
@@ -482,6 +464,26 @@
    "repeat": false,
    "goal": "quests: runemysteries, murder, blackknight, vampire, priest, junglepotion, sheep, fishingcompo, druid, arrav, seaslug, haunted, demon, dig, drunkmonk, elemental, death, grandtree",
    "role": "combat"
+  },
+  {
+   "accounts": [
+    "Magicwanda",
+    "Shaftmaker"
+   ],
+   "script": "scripts/coin-courier.ts",
+   "args": [
+    "20120",
+    "--timeout-ms=600000"
+   ],
+   "env": {
+    "CAP": "1600",
+    "STALL_TICKS": "0",
+    "COORDINATOR_RUN_ID": "task-6bac26fb-c35e-400b-9d88-330f648abc89"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-courier-colocated-magic-bankroll [task-6bac26fb-c35e-400b-9d88-330f648abc89]",
+   "role": "supply"
   }
  ]
 }
