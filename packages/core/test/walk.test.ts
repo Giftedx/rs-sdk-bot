@@ -215,3 +215,21 @@ test('a scripted gate two tiles from its recorded entrance is clicked, its dialo
     expect(g.calls).toContain('dialog 2');
     expect(g.calls).toContain('walk 2459,3385');
 });
+
+test('a short passage on one floor ends on its landing, not within 8 tiles of it', async () => {
+    // treedoorl 1967 at 2464,3492 from inside the Grand Tree (2464,3493) to the landing 2465,3490: a click that moves nothing fails the leg.
+    const door = { id: 1967, name: 'Door', x: 2464, z: 3492, level: 0, optionsWithIndex: [{ text: 'Open', opIndex: 1 }] };
+    const travel = { id: 'loc:treedoorl', kind: 'passage', name: 'treedoorl op1', from: { x: 2464, z: 3493, level: 0 }, to: { x: 2465, z: 3490, level: 0 }, coins: 0, needs: [], runes: [],
+        run: { how: 'loc', loc: 'treedoorl', op: 1, option: null, id: 1967, at: { x: 2464, z: 3492, level: 0 } }, cost: 5 } as any;
+    const leg = { kind: 'travel', travel, at: travel.from, to: travel.to } as any;
+    const stuck = fakeGame({ x: 2464, z: 3493, level: 0, nearbyLocs: [door] });
+    const r1 = await walkRoute(stuck as any, [leg], { maxRetriesPerLeg: 1, legTimeoutTicks: 150 });
+    stuck.stop();
+    expect(r1).toMatchObject({ ok: false, reason: 'timeout' });
+    expect(stuck.calls).toContain('direct interact 2464,3492 op1');
+    const g = fakeGame({ x: 2464, z: 3493, level: 0, nearbyLocs: [door] });
+    g.quirks.onDirectLoc = () => { g.state.player.worldX = 2465; g.state.player.worldZ = 3490; };
+    const r2 = await walkRoute(g as any, [leg], { maxRetriesPerLeg: 1, legTimeoutTicks: 150 });
+    g.stop();
+    expect(r2.ok).toBe(true);
+});

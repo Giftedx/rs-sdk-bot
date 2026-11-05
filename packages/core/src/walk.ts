@@ -138,7 +138,12 @@ async function travelLeg(s: Walker, leg: Extract<Leg, { kind: 'travel' }>, opts:
             .sort((x: any, y: any) => (x.distance ?? 0) - (y.distance ?? 0))[0];
         if (!loc) return fail('precondition', `no ${run.loc} in sight`);
         await b.direct({ type: 'interactLoc', x: loc.x, z: loc.z, locId: loc.id, optionIndex: run.op, reason: 'SDK' });
-        await answer(arrived, 20);
+        // A short passage on one floor (the Grand Tree door moves the player two tiles) ends on its landing: within 8
+        // tiles of it the player already stood, on the wrong side.
+        const short = !!t.from && t.from.level === t.to.level && cheb(t.from, { worldX: t.to.x, worldZ: t.to.z }) <= 8;
+        const landed = () => { const p = here(); return !!p && p.level === t.to.level && cheb(t.to, { worldX: p.x, worldZ: p.z }) <= 1; };
+        await answer(short ? landed : arrived, 20);
+        if (short && !landed()) return fail('timeout', `not through ${run.loc} to ${t.to.x},${t.to.z} (at ${JSON.stringify(here())})`);
     }
     return arrived() ? { ok: true, ticks: s.tick() - start } : fail('timeout', `not at ${t.to.x},${t.to.z},${t.to.level} (at ${JSON.stringify(here())})`);
 }
