@@ -29,14 +29,17 @@ export function rangedKit(owned:readonly Item[]):{bow:number;arrows:number}|null
 }
 export const CLUSTER=20;
 // Meats no shop sells drop from animals on death, every kill (drop tables/scripts/cow.rs2, chicken.rs2, giant_rat.rs2,
-// bear.rs2 `always` rows); goblin mail drops from goblins while Goblin Diplomacy asks for it (goblin.rs2:53,119). The
-// account kills the nearest one and takes the drop. NPC ids and spawns come from knowledge/npcs.json.
-// `combat` is the strongest of the animal's forms. An account fights one only below its Attack level, or at combat 6 or
-// less (a chicken, cow or giant rat dies to anyone): a dark bear (19) killed an 81-hitpoint, Attack 6 account on practice.
-export const KILL_SOURCES:Record<number,{npcs:number[];name:string;combat:number}>={
- 2132:{npcs:[81],name:'cow',combat:2},2138:{npcs:[41,1017],name:'chicken',combat:1},2134:{npcs:[86,87,950],name:'giant rat',combat:6},
- 2136:{npcs:[105,106],name:'bear',combat:21},288:{npcs:[100,101,298,299],name:'goblin',combat:5},
+// bear.rs2 `always` rows); goblin mail drops from a goblin on 5 of 128 rolls (goblin.rs2:19,53; 10 of 128 for the Goblin
+// Village ones, :75,119). The account kills the nearest one and takes the drop. NPC ids and spawns come from
+// knowledge/npcs.json. `combat` is the strongest of the animal's forms. An account fights one only below its Attack level,
+// or at combat 6 or less (a chicken, cow or giant rat dies to anyone): a dark bear (19) killed an 81-hitpoint, Attack 6
+// account on practice. `chance` is the drop's share of kills; the attempt budget follows it.
+export const KILL_SOURCES:Record<number,{npcs:number[];name:string;combat:number;chance:number}>={
+ 2132:{npcs:[81],name:'cow',combat:2,chance:1},2138:{npcs:[41,1017],name:'chicken',combat:1,chance:1},2134:{npcs:[86,87,950],name:'giant rat',combat:6,chance:1},
+ 2136:{npcs:[105,106],name:'bear',combat:21,chance:1},288:{npcs:[100,101,298,299],name:'goblin',combat:5,chance:5/128},
 };
+// Kills allowed for `count` drops: half again the expected number, plus three misses.
+export const killAttempts=(id:number,count:number)=>Math.ceil(count/(KILL_SOURCES[id]?.chance??1)*1.5)+3;
 export const EASY_KILL=6;
 // The style that beats the animal: melee below the Attack level, else a bow below the Ranged level (ranged is 1 without a kit).
 export function killStyle(id:number,attack:number,ranged=1):'melee'|'ranged'|null{
@@ -86,7 +89,7 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
    const walked=await walk(at);
    console.log(`QUEST_SWEEP_GATHER_WALK ${JSON.stringify({item:g.id,how:g.how,to:at,ok:walked.ok,detail:walked.detail})}`);
    if(!walked.ok){unreachable.push(at);continue;}
-   for(let tries=0;tries<(g.how==='kill'?g.count*3:g.count)+3&&held(g.id)<target;tries++){
+   for(let tries=0;tries<(g.how==='kill'?killAttempts(g.id,g.count):g.count+3)&&held(g.id)<target;tries++){
     const before=held(g.id);
     if(g.how==='kill'){
      // The nearest free one in sight; its drop lands on its tile when it dies, and another player's kill drops nothing for us.

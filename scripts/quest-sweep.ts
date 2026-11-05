@@ -442,12 +442,15 @@ export async function sweep(account:string,quest:string,fresh?:string){
   const skill=(name:string)=>st()?.skills?.find((k:any)=>k.name===name)?.baseLevel??1;
   // A bow and arrows owned (pack, bank or worn) let the Ranged level count against an animal; the kit is withdrawn
   // with the gather's tools and wielded before the kill (UnderMyKilt: Ranged 97, Attack 6, a shortbow and iron arrows).
-  const owned=[...pack(),...rows(),...s.sdk.getEquipment().map((i:any)=>({id:i.id,count:i.count}))];
+  const worn=():Item[]=>s.sdk.getEquipment().map((i:any)=>({id:i.id,count:i.count}));
+  const owned=[...pack(),...rows(),...worn()];
   const kit=rangedKit(owned);
   const gather=gatherPlan(p.missing,here(),spawnsByDistance,sellerAt,undefined,skill('Attack'),kit?skill('Ranged'):1);
   if(kit&&gather.gathers.some(g=>g.kit==='ranged'))gather.tools.push({id:kit.bow,count:1},{id:kit.arrows,count:ARROWS_PER_KILL*gather.gathers.filter(g=>g.kit==='ranged').reduce((n,g)=>n+g.count,0)});
-  const tools=plan(new Map(gather.tools.map(t=>[t.id,t.count])),pack(),rows());
+  // A tool already worn (the bow, the arrows) counts as held; the gather's tools are kept by the deposit pass.
+  const tools=plan(new Map(gather.tools.map(t=>[t.id,t.count])),[...pack(),...worn()],rows());
   p.withdraw.push(...tools.withdraw);
+  const toolIds=new Set(gather.tools.map(t=>t.id));
   const shop=shops([...p.missing.filter(m=>!gather.gathers.some(g=>g.id===m.id)),...tools.missing]);
   if(gather.gathers.length)console.log(`QUEST_SWEEP_GATHER_PLAN ${JSON.stringify(gather)}`);
   if(shop.unsold.length){await s.bot.closeBank();return fail('missing '+shop.unsold.map(i=>`${i.id}:${i.count}`).join(',')+(shop.buys.length?' (unsold; others in shops)':''));}
@@ -459,7 +462,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
   }
   // Free the slots the withdrawals, the shop purchases and the gathered items need, plus the pickups: whole kinds the
   // quest does not use first, one deposit per kind, then food beyond the allowance.
-  const keep=(id:number)=>need.has(id)||keepsItem(quest,id,id=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable);
+  const keep=(id:number)=>need.has(id)||toolIds.has(id)||keepsItem(quest,id,id=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable);
   const slots=slotNeed(slotsFor([...p.withdraw,...shop.buys.map(b=>({id:b.id,count:b.count})),...gather.gathers.map(g=>({id:g.id,count:g.count}))],pack()),staysCount(pack(),keep));
   for(const d of depositPlan(pack(),slots,keep)){
    const item=(st()?.inventory??[]).find((i:any)=>i.id===d.id);

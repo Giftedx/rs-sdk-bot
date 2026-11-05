@@ -294,6 +294,10 @@ test('a bow and arrows let the Ranged level count against an animal, and the pla
  expect(rangedKit([{id:841,count:1},{id:882,count:3}])).toBeNull();   // too few arrows
  expect(rangedKit([{id:884,count:50}])).toBeNull();                   // no bow
  expect(BOWS).toContain(841);expect(ARROWS_PER_KILL).toBeGreaterThan(0);
+ // Every-kill drops get a few misses' worth of attempts; goblin mail at 5 in 128 gets half again its expected kills.
+ const {killAttempts}=await import('../packages/core/src/gather');
+ expect(killAttempts(2132,1)).toBe(5);
+ expect(killAttempts(288,3)).toBe(Math.ceil(3/(5/128)*1.5)+3);
  const bearSpawn=(id:number)=>id===2136?[{x:2500,z:3160,level:0}]:[];
  const lumbridge={x:3222,z:3218,level:0};
  expect(gatherPlan([{id:2136,count:1}],lumbridge,()=>[],()=>Infinity,bearSpawn,6,97).gathers).toEqual([{id:2136,count:1,how:'kill',kit:'ranged'}]);
