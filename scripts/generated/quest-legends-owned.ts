@@ -309,16 +309,21 @@ export async function runLegends(raw:Session,o:LegendsOrder,requested:()=>boolea
   await leaveStrengthCorridor();
  }
  async function leaveStrengthCorridor() {
-  stageName = 'return strength gate approach';
-  await walk(2809, 9313);
-  await trials('return strength trial', () => interact('lgstrengthtrialgatel', 2810, 9314), () => pos().worldZ > 9314, /run out of steam/i, [/Yes, I'm very strong/i]);
+  // Native's outward double door lands on the chosen leaf, not the tile beyond it.
+  if (!near(2810, 9314, 0)) {
+   stageName = 'return strength gate approach';
+   await walk(2809, 9313);
+   if (pos().worldZ >= 9314) throw Error('Legends return Strength gate south stand unobserved');
+   await trials('return strength trial', () => interact('lgstrengthtrialgatel', 2810, 9314), () => near(2810, 9314, 0), /run out of steam/i, [/Yes, I'm very strong/i, /Yes, I'll try to push through/i]);
+  }
   caveReturn = 'none';
   for (const [name, z] of [['mine_test_boulder3', 9319], ['mine_test_boulder2', 9323], ['mine_test_boulder1', 9327]] as const) {
    await walk(2809, z - 1);
    await trials('return mining ' + z, () => interact(name, 2809, z), () => pos().worldZ > z, /only succeed in scratching/i, [/Yes, I'll try to climb out/i]);
   }
   await walk(2809, 9331);
-  await step('return lockpick gate', () => interact('lglockpickgatebottoml', 2810, 9332, 1), () => pos().worldZ > 9332);
+  if (pos().worldZ >= 9332) throw Error('Legends return lock gate south stand unobserved');
+  await step('return lockpick gate', () => interact('lglockpickgatebottoml', 2810, 9332, 1), () => near(2810, 9332, 0));
   await walk(2799, 9340);
   await step('return bookcase crevice', () => interact('shaman_cave_crevice', 2799, 9341, 2), () => pos().worldX <= 2795, [/Yes please/i]);
   caveReturn = 'shaman';
@@ -326,7 +331,7 @@ export async function runLegends(raw:Session,o:LegendsOrder,requested:()=>boolea
  async function escapeKnownCave() {
   const p = pos();
   if (p.level !== 0 || p.worldZ < 9000) return;
-  if (caveReturn === 'strength' && p.worldX >= 2790 && p.worldX <= 2811 && p.worldZ >= 9295 && p.worldZ < 9314) {
+  if (caveReturn === 'strength' && p.worldX >= 2790 && p.worldX <= 2811 && p.worldZ >= 9295 && (p.worldZ < 9314 || near(2810, 9314, 0))) {
    await leaveStrengthCorridor();
   }
   const exit = pos();
