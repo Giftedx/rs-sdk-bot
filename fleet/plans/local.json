@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793849903009,
+ "at": 1793852334853,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -485,11 +485,11 @@
    ],
    "env": {
     "CAP": "6000",
-    "COORDINATOR_RUN_ID": "task-f018ecdf-b6c4-44fe-a936-d393be652f6c"
+    "COORDINATOR_RUN_ID": "task-98d22b73-f4b3-4334-938e-d43d9a2cec01"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "run-rj-wandwaver-fortress-qp [task-f018ecdf-b6c4-44fe-a936-d393be652f6c]",
+   "goal": "run-rj-wandwaver-exact-letter [task-98d22b73-f4b3-4334-938e-d43d9a2cec01]",
    "role": "supply"
   }
  ]
