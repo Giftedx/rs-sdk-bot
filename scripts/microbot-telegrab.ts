@@ -49,5 +49,5 @@ export function createCombatLoot(s:Session,policy?:TelegrabPolicy,alchPolicy?:Pr
   if(!await waitUntil(s,()=>alch.stopped()||paid(),{timeoutTicks:8})||alch.stopped()||!paid())throw Error('owned pickup whole-pack receipt unconfirmed; no alchemy');
   const alched=await alch.afterPickup(item);alchPickupBlocked=false;return{...reply,success:true,acquired:item.count,alched};
  };
- return{pickup,get casts(){return casts;},runesUsed,alch};
+ return{pickup,get blocked(){return blocked||alchPickupBlocked||!!alch?.blocked;},get casts(){return casts;},runesUsed,alch};
 }
