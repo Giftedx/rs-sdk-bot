@@ -6,6 +6,7 @@
 // configs/sheepherder_area.dbrow (pen 2595-2609,3351-3364; gate zone 2592-2594,3360-3363).
 import { openQuest } from './quest-lib';
 import { loadPathfinding } from '../../packages/core/src/pathcache';
+import { questFlags } from '../../packages/core/src/quest-status';
 
 const HALGRIVE = { x: 2617, z: 3299 };
 const ORBON = { x: 2614, z: 3306 };
@@ -64,29 +65,55 @@ try {
     const sheep = (n: number): any => (q.st()?.nearbyNpcs ?? []).filter((m: any) => m.name === `Diseased sheep ${n}` && !banned.has(m.index)).sort((a: any, b: any) => a.distance - b.distance)[0];
     const prod = (m: any) => q.s.direct({ type: 'interactNpc', npcIndex: m.index, optionIndex: m.optionsWithIndex?.find((o: any) => /prod/i.test(o.text))?.opIndex ?? 1, reason: 'SDK' });
 
+    const held = (id: number) => q.has(id) || worn(id);
+    const suited = () => held(ITEM.jacket) && held(ITEM.trousers);
     if (process.env.SH_FROM !== 'herd') {
-        // 1. Halgrive: "What's wrong?", "I can do that for you." gives the poisoned feed and sets 1.
-        await q.talk('halgrive 1', /^councillor halgrive$/i, [/what's wrong/i, /i can do that for you/i], () => q.has(ITEM.feed) && q.sawText(/discoloured wool/i), HALGRIVE, 80);
-        q.milestone(1);
-        // 2. Orbon: "Ok, I'll take it." sells the suit for 100 coins and sets 2; both pieces worn.
-        await q.walk('to orbon', [{ x: ORBON.x, z: ORBON.z - 1, tol: 2 }]);
-        await q.talk('orbon', /^doctor orbon$/i, [/i'll take it/i], () => q.has(ITEM.jacket) && q.has(ITEM.trousers), ORBON, 40);
-        await wear(ITEM.jacket);
-        await wear(ITEM.trousers);
-        q.milestone(2);
+        // The quest varps are not sent, so a started quest (the journal flag) is resumed from Halgrive's own branch
+        // (councillor_halgrive.rs2): "more protective clothing" names stage 1, "managed to find and dispose" stage 2, and
+        // either hands over feed when the pack holds none; with every sheep burned he queues the completion instead.
+        if (questFlags((q.s as any).client)?.find(f => /^sheep herder$/i.test(f.name))?.state === 'started') {
+            await q.walk('to halgrive', [{ x: HALGRIVE.x, z: HALGRIVE.z + 1, tol: 2 }]);
+            await q.talk('halgrive resume', /^councillor halgrive$/i, [], () => questDone || q.sawText(/protective clothing|find and dispose/i), HALGRIVE, 60, true);
+            await q.converse([], () => !q.dialogOpen(), 10);
+            if (!questDone) {
+                const stage = q.sawText(/more protective clothing/i) ? 1 : 2;
+                console.log(`NOTE sheep herder resumed at stage ${stage}: feed ${q.has(ITEM.feed)}, suit ${suited()}, prod ${held(ITEM.prod)}`);
+                if (!q.has(ITEM.feed)) await q.fail('resume: Halgrive handed over no poisoned feed');
+                // Orbon sells his one suit at stage 1 only (doctor_orbon.rs2); past that the suit comes from the bank pass.
+                if (!suited() && stage === 2) await q.fail('resume: plague suit not held at stage 2 and Orbon sells none; bank it');
+            }
+            q.milestone(1);
+        } else {
+            // 1. Halgrive: "What's wrong?", "I can do that for you." gives the poisoned feed and sets 1.
+            await q.talk('halgrive 1', /^councillor halgrive$/i, [/what's wrong/i, /i can do that for you/i], () => q.has(ITEM.feed) && q.sawText(/discoloured wool/i), HALGRIVE, 80);
+            q.milestone(1);
+        }
+        if (!questDone) {
+            // 2. Orbon: "Ok, I'll take it." sells the suit for 100 coins and sets 2; both pieces worn.
+            if (!suited()) {
+                await q.walk('to orbon', [{ x: ORBON.x, z: ORBON.z - 1, tol: 2 }]);
+                await q.talk('orbon', /^doctor orbon$/i, [/i'll take it/i], () => q.has(ITEM.jacket) && q.has(ITEM.trousers), ORBON, 40);
+            }
+            if (!worn(ITEM.jacket)) await wear(ITEM.jacket);
+            if (!worn(ITEM.trousers)) await wear(ITEM.trousers);
+            q.milestone(2);
 
-        // 3. The cattle prod lies inside the pen: in, pick it up, out, wield it.
-        await q.walk('to pen gate', [{ x: 2593, z: 3361, tol: 0 }]);
-        await gateIn();
-        await pickup('cattle prod', ITEM.prod);
-        await gateOut();
-        await wear(ITEM.prod);
-        q.milestone('prod');
+            // 3. The cattle prod lies inside the pen: in, pick it up, out, wield it.
+            if (!held(ITEM.prod)) {
+                await q.walk('to pen gate', [{ x: 2593, z: 3361, tol: 0 }]);
+                await gateIn();
+                await pickup('cattle prod', ITEM.prod);
+                await gateOut();
+            }
+            if (!worn(ITEM.prod)) await wear(ITEM.prod);
+            q.milestone('prod');
+        }
     }
 
-    // 4. Herd the 4 sheep into the gate zone, nearest first; one more prod there makes the sheep jump the gate.
+    // 4. Herd the 4 sheep into the gate zone, nearest first; one more prod there makes the sheep jump the gate. A
+    // burned sheep's bits are set again by its furnace, so a resume herds all four.
     const jumps = () => q.msgCount(/obligingly jumps over the gate/i);
-    const left = new Set([1, 2, 3, 4]);
+    const left = new Set(questDone ? [] : [1, 2, 3, 4]);
     while (left.size) {
         const n = [...left].sort((a, b) => q.cheb(SPAWN[a]!.x, SPAWN[a]!.z) - q.cheb(SPAWN[b]!.x, SPAWN[b]!.z))[0]!;
         // Sheep 1 grazes south of the pen; the walk round the pen's east side is given as waypoints.
@@ -157,10 +184,12 @@ try {
     }
 
     // 6. Out, back to Halgrive, who queues the completion.
-    await gateOut();
-    await q.walk('to halgrive', [{ x: HALGRIVE.x, z: HALGRIVE.z + 1, tol: 2 }]);
-    await q.talk('halgrive 2', /^councillor halgrive$/i, [], () => questDone, HALGRIVE, 60, true);
-    await q.converse([], () => !q.dialogOpen(), 10);
+    if (!questDone) {
+        await gateOut();
+        await q.walk('to halgrive', [{ x: HALGRIVE.x, z: HALGRIVE.z + 1, tol: 2 }]);
+        await q.talk('halgrive 2', /^councillor halgrive$/i, [], () => questDone, HALGRIVE, 60, true);
+        await q.converse([], () => !q.dialogOpen(), 10);
+    }
     q.milestone(3);
     off();
     await q.end(questDone, 'qp=4');
