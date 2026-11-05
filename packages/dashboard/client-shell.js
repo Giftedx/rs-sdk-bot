@@ -393,7 +393,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const squares=new Map(),squareRetryAt=new Map();
   window.atlasSquare=(mx,mz)=>{
     const key=mx+'_'+mz;if(Date.now()<(squareRetryAt.get(key)||0))return null;let img=squares.get(key);
-    if(!img){img=new Image();img.onload=()=>{squareRetryAt.delete(key);if(typeof drawMap==='function')drawMap();minimap();};img.onerror=()=>{squares.delete(key);squareRetryAt.set(key,mz>57?Infinity:Date.now()+30000);/* North of the surface export a missing file means no map data, so one failed load is final. */};img.src='/map-squares/'+key+'.png';squares.set(key,img);}
+    if(!img){img=new Image();img.onload=()=>{squareRetryAt.delete(key);if(typeof drawMap==='function')drawMap();minimap();};img.onerror=()=>{squares.delete(key);squareRetryAt.set(key,Date.now()+(mz>57?600000:30000));/* North of the surface export most missing files mean no map data, so those retry rarely. */};img.src='/map-squares/'+key+'.png';squares.set(key,img);}
     return img.complete&&img.naturalWidth?img:null;
   };
   // The 2D camera, the game's view: it follows the watched account at FOLLOW_PX a tile and flies to a new target;
