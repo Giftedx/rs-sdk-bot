@@ -274,9 +274,16 @@ try {
         q.milestone(100);
         // The patrolling guards throw a club at a player on or ahead of their path; the knock-out puts the bot at
         // 2849,10080 (quest_eadgar.rs2:510-590), so the walk and the crate are tried again from there.
+        // After a knock-out the SDK walker can leave by this door and stop at 2856,10070, south of the crate's wall,
+        // where neither walk reaches the crate. The door opens freely once unlocked (quest_eadgar.rs2:492-493).
+        const outsideStore = () => z() < 10074 || (x() >= 2867 && z() < STORE_DOOR.z);
         for (let i = 0; i < 12 && !q.has(ITEM.goutweed); i++) {
             await q.guard('crate');
             if (q.dialogOpen()) await closeDlg();
+            if (outsideStore()) {
+                await q.walk('back to store door', [{ x: STORE_DOOR.x, z: STORE_DOOR.z - 1, tol: 0 }]);
+                await op('store door back', STORE_DOOR, () => z() >= STORE_DOOR.z);
+            }
             if (!(x() === CRATE.x && z() === CRATE.z + 1)) {
                 // From the door tile a client-routed click does not move the bot (trial u1: 300 ticks; trial st2: 25),
                 // so even tries use the SDK walker and odd tries the click.

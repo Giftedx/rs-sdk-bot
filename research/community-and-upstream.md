@@ -546,13 +546,14 @@ Each quest failed the full practice batch. Conditions: the quest's preset (every
 | Horror from the Deep | The pipe's north stand is in the yard past the outpost gate; a message from the previous wall item skipped a slot | Go through the gate; count each item | 690, 643, 629 |
 | The Grand Tree | With one far goal off Hazelmere's island the bot paced 2670-2673,3089-3091 until the prayer ran out and the spiders killed it | Leave by the north pier in short legs (evidence: `.practice/fix-a/proof-grandtree.log`) | 1,794, 1,698, 1,702 |
 | Tree Gnome Village | The walk planner closes the battlefield for a weak account (`packages/core/src/danger.ts`) and stopped at 2458,3325 | Client-routed hops by 2492,3254 and 2483,3263 under Protect from Melee (evidence: `.practice/fix-a/proof-tree.log`) | 679, 700, 714 |
+| Monkey Madness | A hit on the mould page ended the use-on-Zooknock script before the bar check; the cage test counted 2606,3275 as inside, so `minder out` kept talking; a shut panel drops every puzzle click | Ask about the amulet to run the check again; use the minder's own cage zones; open the panel again when the board does not move (evidence: `.practice/fix-d/final-quest-mm.log`) | 4,593, 4,634, 4,543 |
+| Shilo Village | A fall on the waterfall path lands on the north bank, which no walk leaves for Cairn Isle | Wait out the fall, then cross the stepping stones (evidence: `.practice/fix-d/proof-quest-zombiequeen.log`) | 2,639, 2,594, 2,661 |
+| Dwarf Cannon | The shed door and Nulodion's door are quest doors that no planned walk opens | Op each door by hand, Nulodion's from the porch at 3015,3453 (evidence: `.practice/fix-d/proof-dwarfcannon.log`) | 728, 780, 753 |
+| Eadgar's Ruse | After a knock-out the SDK walker left by the store door and stopped at 2856,10070, where no walk reaches the crate | Go back through the door, then try the crate again (evidence: `.practice/fix-d/proof-quest-eadgar.log`) | 1,971, 1,915, 2,094 |
 
 The anvil cause is inferred: 2 of 3 runs failed before the change and 3 of 3 passed after it, with two more bars in the same change. The Clock Tower failure (`walk to trough`) is not addressed here.
 
-Two quests pass 2 of 3 and are not closed. Evidence: `.practice/fix-a/proof-mm.log`, `.practice/fix-a/proof-zombiequeen.log`.
-
-- Monkey Madness: 4,971 and 4,432 ticks. The third run failed `zooknock: no enchanted bar` at 2805,9143: Zooknock's pages shut after the mould, so the bar step never ran. The cause of the shut page is not known. A talk about the amulet can run the same check again (not tested).
-- Shilo Village: 2,484 and 2,557 ticks. The second run failed `walk to cairn rocks` at 2910,2992 after a fall on the waterfall path. The cause is not known.
+Forced checks ran each recovery path on practice with a temporary script copy, because the failing events are rare: a closed mould page (`.practice/fix-d/force-tmpforce-mm.log`, bar received), a start outside the store door (`force-tmpforce-eadgar.log`, goutweed taken), and Agility 1 at the waterfall (`force-tmpforce-zq.log`, 3 falls, all reached the cairn rocks). The 3 of 3 runs for Monkey Madness, Shilo Village and Eadgar's Ruse did not themselves meet these events. The shut panel cause in Monkey Madness is inferred from the server's modal check: one run stalled, and no later run repeated it, so the panel reopening has not run.
 
 
 ### 9.6 Rival repos and published scripts

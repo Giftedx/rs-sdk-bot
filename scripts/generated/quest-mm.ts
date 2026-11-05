@@ -313,6 +313,9 @@ try {
             if (slid()) break;
             const now = board();
             if (now && now.join() !== sim.join()) console.log(`WARN puzzle drift after round ${round}: ${now.join(',')}`);
+            // The server drops a click unless the panel is the open modal (OpHeldHandler.ts:54). A board that did not move
+            // means the panel shut, so the bot opens it again; the board keeps its place (mm_puzzle.rs2 mm_open_puzzle).
+            if (now && now.join() === b.join()) { const p = q.findLoc(l => /control panel|panel/i.test(l.name) && near3(l, PANEL, 3)); if (p) { await q.opLoc(p, 1); await q.waitTicks(3); } }
         }
         console.log(`PUZZLE moves=${moves} ticks=${q.T() - t0}`);
         await q.waitUntil(() => q.near(HANGAR_ON.x, HANGAR_ON.z, 10), 40);
@@ -689,6 +692,14 @@ try {
         await giveZooknock('gold bar', ITEM.goldBar, () => true);
         await giveZooknock('mould', ITEM.mould, () => q.has(ITEM.encBar));
         await giveZooknock('bones', ITEM.bones, () => true);
+        // A hit on the mould page ends the use-on-Zooknock script after he keeps the mould but before
+        // mm_zooknock_amulet_check. Asking about the amulet runs that check again (:259-261, all three parts are his);
+        // his pages then end in a choice menu.
+        for (let i = 0; i < 6 && !q.has(ITEM.encBar); i++) {
+            await clearPests('zooknock bar', 2);
+            await talk1('zooknock bar', /^zooknock$/i, [/need for the monkey amulet/i], () => q.has(ITEM.encBar), 60, ZOOKNOCK, 1, false);
+        }
+        if (q.has(ITEM.encBar)) { let shutBar = 0; await converse1([/be back later/i], () => { shutBar = q.dialogOpen() ? 0 : shutBar + 1; return shutBar >= 3; }, 20); }
         if (!q.has(ITEM.encBar) || !q.has(ITEM.mould)) await q.fail('zooknock: no enchanted bar');
         await ms(100);
     }
@@ -1026,7 +1037,8 @@ try {
         await q.dash('to hall door', 2802, 2759, 0, 10);
         await talk1('elder leave', elder2, [/leave now/i], () => !inThrone() && !q.dialogOpen(), 20, undefined, 3);
     };
-    const inCage = (): boolean => { const p = q.pos(); return !!p && p.worldX >= 2598 && p.worldX <= 2606 && p.worldZ >= 3274 && p.worldZ <= 3282; };
+    // The minder's cage zones (mm_monkey_minder.rs2:7). He drops the bot on any walkable tile within 5 of him, and 2606,3275 is outside them.
+    const inCage = (): boolean => { const p = q.pos(); if (!p) return false; const cx = p.worldX, cz = p.worldZ; return (cx >= 2598 && cx <= 2600 && cz >= 3274 && cz <= 3278) || (cx >= 2600 && cx <= 2604 && cz >= 3276 && cz <= 3282) || (cx >= 2605 && cx <= 2606 && cz >= 3276 && cz <= 3281); };
     const spirit = async (label: string, at: { x: number; z: number }, pats: RegExp[], land: { x: number; z: number }): Promise<void> => {
         await walk(`to ${label}`, [{ x: at.x, z: at.z - 2, tol: 2 }]);
         for (let i = 0; i < 3 && !q.near(land.x, land.z, 8); i++) {
