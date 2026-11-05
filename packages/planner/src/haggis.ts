@@ -302,6 +302,20 @@ export function schedule(boards: Board[], allActivities: Activity[], opts: Sched
     return scheduleRoute(boards, allActivities, { ...opts, force: { ...opts.force, ...route } });
 }
 
+// Candidate from the deadline search in research/haggis-run.md. Relaxed deadlines
+// affect placement only. The result still scores each board against its record.
+const OVERALL_RELAXED_DEADLINES: ReadonlySet<BoardId> = new Set([
+    'crafting', 'herblore', 'hitpoints', 'magic', 'runecraft', 'woodcutting',
+]);
+
+export function scheduleOverall(boards: Board[], activities: Activity[], opts: ScheduleOptions): ScheduleResult {
+    const baseline = schedule(boards, activities, opts);
+    if (opts.sacrificed !== undefined) return baseline;
+    const candidate = schedule(boards, activities, { ...opts, sacrificed: OVERALL_RELAXED_DEADLINES });
+    if (candidate.overallFinish !== null && candidate.overallFinish < (baseline.overallFinish ?? Infinity)) return candidate;
+    return baseline;
+}
+
 // Schedule with opts.force where given and the raw-tick choice for the other variant groups.
 function scheduleRoute(boards: Board[], allActivities: Activity[], opts: ScheduleOptions): ScheduleResult {
     const sacrificed = opts.sacrificed ?? new Set<BoardId>();

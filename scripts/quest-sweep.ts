@@ -65,7 +65,10 @@ export function toolPlan(tools:readonly Item[],need:ReadonlyMap<number,number>,p
 // A quest's own items: never deposited as unneeded, and withdrawn when the bank holds them, since the server counts
 // them in the bank (obj_gettotal) and then neither re-issues nor accepts them (sedridor.rs2, duke_horacio.rs2, aubury.rs2).
 // An untradeable item is kept the same way: quest and reward items are the untradeable ones a pack carries.
-export const QUEST_KEEP:Record<string,number[]>={runemysteries:[1438,290,291],totem:[1858,1857]};
+// Murder Mystery's evidence (quest_murder.rs2 obj_gettotal: the dagger, the six suspects' items, the threads, flypaper,
+// the pungent pot and the prints): the server counts them in the bank and refuses a second pickup.
+export const QUEST_KEEP:Record<string,number[]>={runemysteries:[1438,290,291],totem:[1858,1857],
+ murder:[1796,1797,1798,1799,1800,1801,1802,1803,1804,1805,1806,1807,1808,1809,1810,1811,1812,1813,1814,1815,1816,1817,1818,1819,1820,1821,1822]};
 export function keepsItem(quest:string,id:number,tradeable:(id:number)=>boolean|undefined):boolean{
  return (QUEST_KEEP[quest]??[]).includes(id)||tradeable(id)===false;
 }
@@ -286,7 +289,8 @@ async function reachStart(s:Session,world:World,start:Tile){
 
 // Missing quest items a shop sells: the nearest seller of each (shop-index.ts), and the coins to take for them
 // (3 times the item's base cost, plus 100). Items no shop sells stay missing.
-export type Buy={id:number;count:number;name:string;npcId:number;npc:string;tile:Tile;alts?:{npc:string;npcId:number;tile:Tile}[]};
+// `atLeast`: the smallest purchase that still serves (a kit consumable estimated with a margin); the full count otherwise.
+export type Buy={id:number;count:number;name:string;npcId:number;npc:string;tile:Tile;alts?:{npc:string;npcId:number;tile:Tile}[];atLeast?:number};
 export function shopPlan(missing:readonly Item[],at:Tile,item:(id:number)=>{debugname:string;name:string;cost:number}|undefined,
  seller:(debugname:string,at:Tile)=>{npc:string;npcId:number;tile:Tile}|null,alts:(debugname:string,at:Tile)=>{npc:string;npcId:number;tile:Tile}[]=()=>[]){
  const buys:Buy[]=[],unsold:Item[]=[];let coins=0;
@@ -345,7 +349,7 @@ async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<s
    await s.bot.closeShop();
   }
   if(!tried)return `shop walk to ${b.npc} at ${b.tile.x},${b.tile.z} and ${b.alts?.length??0} more failed: ${walked.reason?`${walked.reason} ${walked.detail}`:`no seller within ${FAR_SELLER} tiles`}`;
-  if(held(b.id)<target)return `bought ${held(b.id)-before} of ${b.count} ${b.name} from ${tried} sellers`;
+  if(held(b.id)-before<(b.atLeast??b.count))return `bought ${held(b.id)-before} of ${b.count} ${b.name} from ${tried} sellers`;
  }
  return null;
 }
@@ -520,6 +524,10 @@ export async function sweep(account:string,quest:string,fresh?:string){
   p.withdraw.push(...tools.withdraw);
   const toolIds=new Set(gather.tools.map(t=>t.id));
   const shop=shops([...gather.still,...tools.missing]);
+  // A kit consumable (arrows, runes) is estimated with a margin: nine in ten of the shortfall from the shops serve, where
+  // 17 of 18 air runes from three sellers ended a run whose casts were budgeted at three a goblin.
+  const consumable=new Set(tools.missing.filter(t=>STACKS.has(t.id)).map(t=>t.id));
+  for(const b of shop.buys)if(consumable.has(b.id))b.atLeast=Math.ceil(b.count*0.9);
   if(gather.gathers.length)console.log(`QUEST_SWEEP_GATHER_PLAN ${JSON.stringify(gather)}`);
   if(shop.unsold.length){await s.bot.closeBank();return fail('missing '+shop.unsold.map(i=>`${i.id}:${i.count}`).join(',')+(shop.buys.length?' (unsold; others in shops)':''));}
   // Recipes paid in dialogue (Aggie's dyes, Wyson's woad leaves) take their coins out with the shop money, and so do the

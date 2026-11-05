@@ -33,6 +33,8 @@ Source -> local consumer -> reuse -> check: the coordinator's live acceptance id
 
 Source -> local consumer -> reuse -> check: the build workspace's recorded SHA-256 base and publish's preflight -> staged delivery merge -> recover a missing base from main only while its bytes match the recorded hash -> a carried build fixture publishes and stages both the original and changed bytes. A run's pre-author copy may already contain carried edits, so it cannot stand in for the original base without a hash match.
 
+Source -> local consumer -> reuse -> check: the coordinator's retired-job release and the swarm's single-account job shape -> assignment overlay -> park the unused participants as disabled single assignments after the existing release checks pass -> tests verify the swarm parser and owner shadowing. The read-only replay in `.practice/parked-assignments/replay.json` compares existing and normalized overlays using the same owner and coordinator inputs.
+
 ## Planner rounds and dead tasks
 
 Over 7 days the coordinator started 1,117 planning rounds. Each round has a prompt of about 150 KB and a median length of 130 s. In the 48 hours to the same point, 86 of 178 accepted rounds added no task. A success whose consumer was already queued started 252 rounds in the 7 days, and 192 of those added no task. A replay of the receipts gives 1,119 rounds under the old trigger and 727 under `plannerDue` with the 5-minute gap. Conditions: `.practice/coordinator/events.jsonl` and `state.json`, plan length fixed at 130 s. Gap: the replay counts rounds. It does not measure how much later a repair starts.

@@ -13,7 +13,7 @@ import {processMatches,safeKill,safeKillOne} from '../../practice/src/proc';
 import {acceptStatus,boundedWorkerEndMessage,type CoordTask} from './coordinator';
 import {projectRoot,coordinationDir,atomicJson,spawnDetached,withPlanWrite} from './coordinator-store';
 import {RECOVERY_SCHEMA,assertNoRecoveryLease,recoveredSessionForRun,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
-import {COORDINATOR_JOBS_FILE,readCoordinatorJobs,writeCoordinatorJobs,mergedPlan,jobAccounts,shadowAssignments,type CoordinatorJobs} from '../../core/src/coordinator-jobs';
+import {COORDINATOR_JOBS_FILE,readCoordinatorJobs,writeCoordinatorJobs,mergedPlan,jobAccounts,parkedCoordinatorAccounts,shadowAssignments,type CoordinatorJobs} from '../../core/src/coordinator-jobs';
 import {readLogoutProof} from '../../core/src/session-lifecycle';
 
 // A controller that wrote .practice/swarm-state.json under this pid and nonce within this window is the saved
@@ -201,8 +201,8 @@ export function releaseCompletedOwnJobs(own:CoordinatorJobs,accounts:readonly st
   const names=jobAccounts(job),remaining=names.filter(n=>!wanted.has(n.toLowerCase()));
   if(remaining.length===names.length||!completed(job,names))return[job];
   if(!remaining.length)return[];
-  const {account:_account,orchestrate:_orchestrate,...rest}=job;
-  return[{...rest,accounts:remaining,enabled:false}];
+  if(job.host)return[{...job,accounts:remaining,enabled:false}];
+  return parkedCoordinatorAccounts(job,remaining);
  });
  return{...own,jobs};
 }
