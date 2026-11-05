@@ -76,8 +76,18 @@ export const KEEP_FOOD=8;
 let edible:Set<number>|undefined;
 export const isEdible=(id:number)=>FOOD.has(id)||(edible??=new Set(questFoodDefinitions().keys())).has(id);
 // Slots a quest script fills on its own, undeclared by its preset: what it picks up and is handed (Murder Mystery takes
-// the dagger, flypaper, a suspect's item and its dust and print, and a full pack fails its first pickup).
-export const QUEST_PICKUP_SLOTS=8;
+// the dagger, flypaper, a suspect's item and its dust and print, and a full pack fails its first pickup). The reserve
+// gives way to the supplies down to MIN_PICKUP_SLOTS, before the food allowance does: Demon Slayer's 25 bones and two
+// rune stacks beside the coins leave nothing else.
+export const QUEST_PICKUP_SLOTS=8,MIN_PICKUP_SLOTS=2;
+// What the pack keeps whatever the plan: coins, the quest's and the preset's own items, and rune stacks.
+export const staysCount=(pack:readonly Item[],keep:(id:number)=>boolean)=>pack.filter(i=>i.id===COINS||keep(i.id)||(STACKS.has(i.id)&&isEdible(i.id))).length;
+// The slots the bank pass frees: the supplies plus as much pickup reserve as leaves the food allowance room, at least
+// MIN_PICKUP_SLOTS, never beyond what the pack can hold next to what stays.
+export function slotNeed(supplies:number,stays:number):number{
+ const room=28-supplies-stays,reserve=Math.max(MIN_PICKUP_SLOTS,Math.min(QUEST_PICKUP_SLOTS,room-KEEP_FOOD));
+ return Math.min(28-stays,supplies+reserve);
+}
 export function depositPlan(pack:readonly Item[],need:number,keep:(id:number)=>boolean):Item[]{
  let free=28-pack.length;
  const out:Item[]=[];
@@ -86,8 +96,8 @@ export function depositPlan(pack:readonly Item[],need:number,keep:(id:number)=>b
   if(id===COINS||isEdible(id)||keep(id))continue;
   out.push({id,count:-1});free+=pack.filter(i=>i.id===id).length;
  }
- // The allowance gives way to the supplies: 20 balls of wool, the coins and the pickup reserve leave one slot for food.
- let allowance=Math.max(0,Math.min(KEEP_FOOD,28-need));
+ // The allowance gives way to the supplies: 25 bones, two rune stacks and the coins leave no slot for food.
+ let allowance=Math.max(0,Math.min(KEEP_FOOD,28-need-staysCount(pack,keep)));
  for(const id of [...new Set(pack.filter(i=>isEdible(i.id)&&!STACKS.has(i.id)&&!keep(i.id)).map(i=>i.id))]){
   if(free>=need)break;
   const held=pack.filter(i=>i.id===id).length,kept=Math.min(held,allowance);allowance-=kept;
@@ -439,8 +449,9 @@ export async function sweep(account:string,quest:string,fresh?:string){
   }
   // Free the slots the withdrawals, the shop purchases and the gathered items need, plus the pickups: whole kinds the
   // quest does not use first, one deposit per kind, then food beyond the allowance.
-  const slots=Math.min(27,slotsFor([...p.withdraw,...shop.buys.map(b=>({id:b.id,count:b.count})),...gather.gathers.map(g=>({id:g.id,count:g.count}))],pack())+QUEST_PICKUP_SLOTS);
-  for(const d of depositPlan(pack(),slots,id=>need.has(id)||keepsItem(quest,id,id=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable))){
+  const keep=(id:number)=>need.has(id)||keepsItem(quest,id,id=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable);
+  const slots=slotNeed(slotsFor([...p.withdraw,...shop.buys.map(b=>({id:b.id,count:b.count})),...gather.gathers.map(g=>({id:g.id,count:g.count}))],pack()),staysCount(pack(),keep));
+  for(const d of depositPlan(pack(),slots,keep)){
    const item=(st()?.inventory??[]).find((i:any)=>i.id===d.id);
    if(!item)continue;
    const r:any=await s.bot.depositItem(item,d.count);
