@@ -260,6 +260,8 @@ test('a far walk from the Ardougne side to anywhere east of x 2950 crosses by th
  expect(eastOfArdougne(ardougne,{x:2684,z:3318,level:0})).toBe(false);  // Ardougne itself
  expect(eastOfArdougne({x:3092,z:3243,level:0},{x:3222,z:3218,level:0})).toBe(false); // Draynor to Lumbridge
  expect(eastOfArdougne({x:2655,z:3283,level:1},{x:3222,z:3218,level:0})).toBe(false); // from upstairs: climb down first
+});
+
 test('the edible part of a preset\'s needs is reserved for the eaters',async()=>{
  const {reservedEdible}=await import('./quest-sweep');
  // Pirate's Treasure: 10 bananas (edible) and a white apron; Family Crest: 5 cooked trout.
