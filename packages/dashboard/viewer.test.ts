@@ -245,6 +245,14 @@ test('opponent information: the followed player\'s target after a hit, renamed w
  socket.message({t:'tick',k:5,p:[{i:8,fe:-1}]});expect(opp()[2]).toBeNull();
 });
 
+test('a roster held past the 30 s limit is dropped at the ready state',async()=>{
+ const b=browser();class Socket {listeners=new Map<string,Function[]>();constructor(..._args:any[]){}addEventListener(t:string,fn:Function){this.listeners.set(t,[...(this.listeners.get(t)||[]),fn]);}message(m:any){for(const f of this.listeners.get('message')||[])f({data:JSON.stringify(m),origin:'wss://x'});}}
+ b.host.WebSocket=Socket;installViewerBridge(b.host);const socket=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');
+ socket.message({t:'roster',p:[[8,'Worker',3201,3201,0,50]]});
+ const now=Date.now;Date.now=()=>now()+30_001;
+ try{await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();}finally{Date.now=now;}
+ expect(b.states().at(-1).state).toBe('ready');expect(b.messages.some(m=>m.data.atlasRoster)).toBe(false);
+});
 test('the roster reaches the page live, with the hidden account as the mark only',async()=>{
  const b=browser();class Socket {listeners=new Map<string,Function[]>();constructor(..._args:any[]){}addEventListener(t:string,fn:Function){this.listeners.set(t,[...(this.listeners.get(t)||[]),fn]);}message(m:any){for(const f of this.listeners.get('message')||[])f({data:JSON.stringify(m)});}}
  b.host.WebSocket=Socket;installViewerBridge(b.host);const socket=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');
