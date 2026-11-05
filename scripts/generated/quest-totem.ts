@@ -29,7 +29,9 @@ const BARNABY = { x: 2679, z: 3275 };
 const BRIM_DECK = { x: 2775, z: 3234 };                    // 1_43_50_23_34 (captain_barnaby.rs2:2)
 const ITEM = { label: 1858, totem: 1857 };
 
-const q = await openQuest({ cap: 2500 });
+// Food: sharks, swordfish, lobsters, salmon and trout, whatever the pack holds (an account at Hitpoints 17 fell to 8 on
+// the mansion stairs trap with sharks it never ate under the library's lobster-only default).
+const q = await openQuest({ cap: 2500, food: [385, 373, 379, 329, 333] });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
