@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793901342474,
+ "at": 1793902562654,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -497,21 +497,19 @@
   },
   {
    "account": "Mightyrod",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/brew-potions.ts",
    "args": [
-    "18000",
-    "giant"
+    "6000",
+    "strength"
    ],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "TARGET_LEVEL": "99",
-    "GIANT_KILLS": "700",
-    "CAP": "18000",
-    "COORDINATOR_RUN_ID": "task-6d83a7f7-505c-4d59-ab88-0a98a0e6121f"
+    "TARGET_LEVEL": "57",
+    "CAP": "6000",
+    "COORDINATOR_RUN_ID": "task-43b3bb73-f882-4001-a645-a8f2a4e0a7bc"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "run-herbs-mightyrod-giant-kills [task-6d83a7f7-505c-4d59-ab88-0a98a0e6121f]",
+   "goal": "chain-herblore-order-mightyrod-herblore57 [task-43b3bb73-f882-4001-a645-a8f2a4e0a7bc]",
    "role": "combat"
   }
  ]
