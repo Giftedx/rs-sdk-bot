@@ -39,7 +39,7 @@ Over 7 days the coordinator started 1,117 planning rounds. Each round has a prom
 
 All 64 pending tasks in `state.json` depended on a failed task, and none could start. The queue section of the prompt falls from 64 KB to 26 KB when the 37 tasks with a root older than 24 hours retire. Gap: the replay ran on a copy of the state. The first live retirement is not observed.
 
-Of 536 finished runs in 7 days, 336 failed, for 12.4 hours of run time. The worker refused 43 of them at start because the newest review of the capability rejected its source. Those runs now wait in the queue. A retry system for `live admission waiting: memory` has no value: the 23 such failures in the record have no consumer.
+Of 536 finished runs in 7 days, 336 failed, for 12.4 hours of run time. The worker refused 43 of them at start because the newest review of the capability rejected its source. A run held by a rejected review waits in the queue and starts when a repair changes the owned files. A retry system for `live admission waiting: memory` has no value: the 23 such failures in the record have no consumer.
 
 A full disk on the checkout's volume stopped the coordinator for about 35 hours, with 4,059 ENOSPC events. `DISK_FLOOR_GB` is 2 GiB by judgement. No measurement sets that number.
 
