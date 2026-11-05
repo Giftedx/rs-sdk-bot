@@ -6,6 +6,8 @@ import type {PathDeps,PathPoint,PathResult} from '../packages/core/src/walk';
 
 // Retained bank-stage.log: goTo reported "no route to 2850,3175,0" after Brimhaven. The courier walks that tile
 // as a tolerance-5 pass-by point of one walkPath call.
+});
+
 test('the Karamja corridor keeps courier waypoint tolerances and resumes from the unpassed point',async()=>{
  let pos={x:2800,z:3200,level:0};
  const calls:PathPoint[][]=[];
@@ -260,4 +262,34 @@ test('a far walk from the Ardougne side to anywhere east of x 2950 crosses by th
  expect(eastOfArdougne(ardougne,{x:2684,z:3318,level:0})).toBe(false);  // Ardougne itself
  expect(eastOfArdougne({x:3092,z:3243,level:0},{x:3222,z:3218,level:0})).toBe(false); // Draynor to Lumbridge
  expect(eastOfArdougne({x:2655,z:3283,level:1},{x:3222,z:3218,level:0})).toBe(false); // from upstairs: climb down first
+});
+
+test('a meat no shop sells is a kill from its animal; an item with no source stays missing',async()=>{
+ const {killSpawns,KILL_SOURCES}=await import('../packages/core/src/gather');
+ const lumbridge={x:3222,z:3218,level:0};
+ const plan=gatherPlan([{id:2132,count:1},{id:2134,count:1},{id:1759,count:3}],lumbridge,()=>[],()=>Infinity,id=>id===2132?[{x:3200,z:3260,level:0}]:[]);
+ expect(plan.gathers).toEqual([{id:2132,count:1,how:'kill'}]);
+ expect(plan.still).toEqual([{id:2134,count:1},{id:1759,count:3}]);
+ // A shop that sells the item wins over the kill when it is nearer; Rufus 850 tiles away loses to the cows at 42.
+ expect(gatherPlan([{id:2132,count:1}],lumbridge,()=>[],()=>30,id=>[{x:3200,z:3260,level:0}]).gathers).toEqual([]);
+ expect(gatherPlan([{id:2132,count:1}],lumbridge,()=>[],()=>850,id=>[{x:3200,z:3260,level:0}]).gathers).toEqual([{id:2132,count:1,how:'kill'}]);
+ // Cows, chickens, giant rats, bears and goblins have spawns in the knowledge.
+ for(const id of Object.keys(KILL_SOURCES).map(Number))expect(killSpawns(id).length).toBeGreaterThan(0);
+ // A bear (combat 21) is a kill only above Attack 21; a giant rat (6) dies to anyone.
+ const bearSpawn=(id:number)=>id===2136||id===2134?[{x:2500,z:3160,level:0}]:[];
+ expect(gatherPlan([{id:2136,count:1},{id:2134,count:1}],lumbridge,()=>[],()=>Infinity,bearSpawn,6)).toMatchObject({gathers:[{id:2134,how:'kill'}],still:[{id:2136,count:1}]});
+ expect(gatherPlan([{id:2136,count:1}],lumbridge,()=>[],()=>Infinity,bearSpawn,21).still).toEqual([{id:2136,count:1}]);
+ expect(gatherPlan([{id:2136,count:1}],lumbridge,()=>[],()=>Infinity,bearSpawn,22).gathers).toEqual([{id:2136,count:1,how:'kill'}]);
+});
+
+test('a spawn on another floor is found, after a nearer one on the same floor',async()=>{
+ const {spawnsByDistance,LEVEL_STEP}=await import('../packages/core/src/spawn-index');
+ const list=new Map([[272,[{x:3108,z:3356,level:1}]],[273,[{x:3097,z:3366,level:0},{x:3100,z:3350,level:1}]]]);
+ const manor={x:3100,z:3350,level:0};
+ expect(spawnsByDistance(272,manor,list)).toEqual([{x:3108,z:3356,level:1}]);
+ expect(spawnsByDistance(273,manor,list).map(t=>t.level)).toEqual([0,1]);
+ // From upstairs the same-floor spawn comes first unless the ground one is more than LEVEL_STEP tiles nearer.
+ expect(spawnsByDistance(273,{...manor,level:1},list).map(t=>t.level)).toEqual([1,0]);
+ const far=new Map([[275,[{x:3097,z:3366,level:0},{x:3097+LEVEL_STEP+1,z:3366,level:1}]]]);
+ expect(spawnsByDistance(275,{x:3097,z:3366,level:1},far).map(t=>t.level)).toEqual([0,1]);
 });

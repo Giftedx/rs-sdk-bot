@@ -29,8 +29,11 @@ export function objSpawns(): Map<number, Tile[]> {
     return index;
 }
 
-// Spawn tiles of `id` on `at`'s level, nearest first by straight-line distance (the route search judges the walk).
+// Spawn tiles of `id`, nearest first by straight-line distance with LEVEL_STEP tiles for each floor between (the route
+// search judges the walk, and the far walk takes the hubs toward the ground beneath an upstairs spawn). Ernest the
+// Chicken's fish food lies upstairs in Draynor Manor (3108,3356,1) and nowhere on the ground.
+export const LEVEL_STEP = 40;
 export function spawnsByDistance(id: number, at: Tile, list = objSpawns()): Tile[] {
-    const d = (t: Tile) => Math.max(Math.abs(t.x - at.x), Math.abs(t.z - at.z));
-    return (list.get(id) ?? []).filter(t => t.level === at.level).sort((a, b) => d(a) - d(b));
+    const d = (t: Tile) => Math.max(Math.abs(t.x - at.x), Math.abs(t.z - at.z)) + LEVEL_STEP * Math.abs(t.level - at.level);
+    return [...(list.get(id) ?? [])].sort((a, b) => d(a) - d(b));
 }
