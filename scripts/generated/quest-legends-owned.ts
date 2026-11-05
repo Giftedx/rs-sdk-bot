@@ -59,11 +59,16 @@ export async function legendsMapAttempt(io:{pack:()=>Record<number,number>;saw:(
   }
   return current;
  };
- const failure=()=>io.saw(/make a mess but are able to rescue|snap your stick|paper is totally ruined|destroying them both/i);
+ // The client can enumerate wrapped object-box lines in reverse display order.
+ const ruinedPaper = () => io.saw(/(?=.*the paper is totally)(?=.*ruined\.)/i);
+ const brokenCharcoal = () => io.saw(/snap your stick/i);
+ const ruinedBoth = () => io.saw(/destroying them both|you fall over, landing on/i);
+ const failure = () => io.saw(/make a mess but are able/i) || ruinedPaper() || brokenCharcoal() || ruinedBoth();
  // Native closes the section page, delays, then pauses on completion before converting the notes.
  await io.step(io.send,()=>success()?io.saw(/Mapping the Kharazi Jungle \*\*\*/i)&&legendsMapEffect(before,mappingStock(),complete):failure());
  if(success()){if(!legendsMapEffect(before,mappingStock(),complete))throw Error('Legends mapping stock conversion differs');return true;}
- const paper=io.saw(/paper is totally ruined|destroying them both/i)?-1:0,charcoal=io.saw(/snap your stick|destroying them both/i)?-1:0;
+ const paper = ruinedPaper() || ruinedBoth() ? -1 : 0;
+ const charcoal = brokenCharcoal() || ruinedBoth() ? -1 : 0;
  if(!failure()||!legendsPackEffect(before,mappingStock(),{[obj('papyrus')]:paper,[obj('charcoal')]:charcoal}))throw Error('Legends map outcome unknown');
  return false;
 }

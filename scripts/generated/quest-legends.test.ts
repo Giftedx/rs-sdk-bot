@@ -116,3 +116,22 @@ test('Gujuo blessing accepts both Native prompts and declines the retry after on
  expect(result).toBe(false);
  expect(sends).toBe(1);
 });
+
+
+test('mapping reconciles the wrapped Native ruined-paper page before another attempt', async () => {
+ for (const debit of [0, 1, 2]) {
+  let stock = {714: 1, 970: 4, 973: 3};
+  let page = '';
+  const outcome = legendsMapAttempt({
+   pack: () => stock,
+   saw: re => re.test(page),
+   send: async () => {
+    page = 'ruined. You make a mess of the map, the paper is totally Click here to continue';
+    stock = {...stock, 970: stock[970] - debit};
+   },
+   step: async (send, done) => { await send(); expect(done()).toBe(true); },
+  }, true);
+  if (debit === 1) expect(await outcome).toBe(false);
+  else await expect(outcome).rejects.toThrow('map outcome unknown');
+ }
+});
