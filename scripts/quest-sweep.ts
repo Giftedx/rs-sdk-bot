@@ -313,8 +313,14 @@ async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<s
    tried++;
    const npc=(st()?.nearbyNpcs??[]).filter((n:any)=>n.id===c.npcId).sort((x:any,y:any)=>x.distance-y.distance)[0];
    if(!npc)return `${c.npc} not in sight at ${c.tile.x},${c.tile.z}`;
-   if(!(await s.bot.openShop(npc)).success)return `${c.npc} shop did not open`;
-   await waitUntil(s,()=>!!st()?.shop?.isOpen,{timeoutTicks:10});
+   // A shut shop door leaves the keeper unroutable (the client reports cant_reach and sends nothing): TrouserSnake stood on
+   // Wydin's tile and the shop did not open. Open the nearest door once and ask again, as ranged-train does at Lowe's.
+   const opened=async()=>(await s.bot.openShop(npc)).success&&await waitUntil(s,()=>!!st()?.shop?.isOpen,{timeoutTicks:10});
+   if(!await opened()){
+    const door=(await s.bot.openDoor(/door/i)).success;
+    console.log(`QUEST_SWEEP_SHOP_DOOR ${JSON.stringify({npc:c.npc,at:here(),door})}`);
+    if(!door||!await opened())return `${c.npc} shop did not open`;
+   }
    // Another bot may have emptied the shelf: buy what is there, wait for the restock, buy the rest. Small shops
    // restock one item per 100 ticks (wydinstore: 3 flour), so the last seller waits up to 12 x 50 ticks; an earlier
    // one waits 3 rounds before the next seller is tried.
