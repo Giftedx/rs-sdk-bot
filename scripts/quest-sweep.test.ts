@@ -260,3 +260,14 @@ test('a meat no shop sells is a kill from its animal; an item with no source sta
  expect(gatherPlan([{id:2136,count:1}],lumbridge,()=>[],()=>Infinity,bearSpawn,21).still).toEqual([{id:2136,count:1}]);
  expect(gatherPlan([{id:2136,count:1}],lumbridge,()=>[],()=>Infinity,bearSpawn,22).gathers).toEqual([{id:2136,count:1,how:'kill'}]);
 });
+
+test('a spawn on another floor is found, after a nearer one on the same floor',async()=>{
+ const {spawnsByDistance,LEVEL_STEP}=await import('../packages/core/src/spawn-index');
+ const list=new Map([[272,[{x:3108,z:3356,level:1}]],[273,[{x:3097,z:3366,level:0},{x:3100,z:3350,level:1}]]]);
+ const manor={x:3100,z:3350,level:0};
+ expect(spawnsByDistance(272,manor,list)).toEqual([{x:3108,z:3356,level:1}]);
+ expect(spawnsByDistance(273,manor,list).map(t=>t.level)).toEqual([0,1]);
+ // From upstairs the same-floor spawn comes first unless the ground one is more than LEVEL_STEP tiles nearer.
+ expect(spawnsByDistance(273,{...manor,level:1},list).map(t=>t.level)).toEqual([1,0]);
+ expect(spawnsByDistance(273,{x:3097,z:3366+LEVEL_STEP+20,level:1},list).map(t=>t.level)).toEqual([0,1]);
+});
