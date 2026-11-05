@@ -442,3 +442,14 @@ test('a cabbage is picked from a field nearer than any seller',async()=>{
  expect(Math.max(Math.abs(locsByDistance(1161,falador)[0]!.x-falador.x),Math.abs(locsByDistance(1161,falador)[0]!.z-falador.z))).toBeLessThan(100);
  expect(gatherPlan([{id:1965,count:1}],falador,()=>[],()=>470).gathers).toEqual([{id:1965,count:1,how:'pick'}]);
 });
+
+test('the tool plan keeps the quest its own runes beside the casts',async()=>{
+ const {toolPlan}=await import('./quest-sweep');
+ const need=new Map([[556,3]]),tools=[{id:556,count:714}];
+ // The quest plan takes its 3 air from a bank of 714: the casts get the other 711 and 3 are short for the shop plan.
+ expect(toolPlan(tools,need,[],[],[{id:556,count:714}],[{id:556,count:3}])).toEqual({withdraw:[{id:556,count:711}],missing:[{id:556,count:3}]});
+ // The quest's 3 air already in the pack are not the casts': all 714 come out of the bank.
+ expect(toolPlan(tools,need,[{id:556,count:3}],[],[{id:556,count:714}],[])).toEqual({withdraw:[{id:556,count:714}],missing:[]});
+ // A tool the quest does not need is planned as before, a worn bow counts as held.
+ expect(toolPlan([{id:841,count:1},{id:882,count:40}],need,[],[{id:841,count:1}],[{id:882,count:21}],[])).toEqual({withdraw:[{id:882,count:21}],missing:[{id:882,count:19}]});
+});

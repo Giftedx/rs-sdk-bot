@@ -53,6 +53,15 @@ export function plan(need:ReadonlyMap<number,number>,pack:readonly Item[],bank:r
  }
  return{withdraw,missing};
 }
+// The gather's tools, planned after the quest plan's withdrawals: a rune the quest itself needs (Goblin Diplomacy's 3 air
+// beside the casts' hundreds) is wanted on top of the quest's count, the quest's withdrawals count as held, and the bank
+// is read less them. Otherwise both plans take the same bank stock and the second withdrawal fails, or the quest's runes
+// in the pack count toward the casts.
+export function toolPlan(tools:readonly Item[],need:ReadonlyMap<number,number>,pack:readonly Item[],worn:readonly Item[],bank:readonly Item[],questWithdraw:readonly Item[]){
+ const want=new Map(tools.map(t=>[t.id,t.count+(need.get(t.id)??0)]));
+ const taken=(id:number)=>count(questWithdraw,id);
+ return plan(want,[...pack,...questWithdraw,...worn],bank.map(i=>({id:i.id,count:i.count-taken(i.id)})).filter(i=>i.count>0));
+}
 // A quest's own items: never deposited as unneeded, and withdrawn when the bank holds them, since the server counts
 // them in the bank (obj_gettotal) and then neither re-issues nor accepts them (sedridor.rs2, duke_horacio.rs2, aubury.rs2).
 // An untradeable item is kept the same way: quest and reward items are the untradeable ones a pack carries.
@@ -507,7 +516,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
    for(const [id,n] of Object.entries(mkit.runes))gather.tools.push({id:Number(id),count:n*casts});
   }
   // A tool already worn (the bow, the arrows) counts as held; the gather's tools are kept by the deposit pass.
-  const tools=plan(new Map(gather.tools.map(t=>[t.id,t.count])),[...pack(),...worn()],rows());
+  const tools=toolPlan(gather.tools,need,pack(),worn(),rows(),p.withdraw);
   p.withdraw.push(...tools.withdraw);
   const toolIds=new Set(gather.tools.map(t=>t.id));
   const shop=shops([...gather.still,...tools.missing]);

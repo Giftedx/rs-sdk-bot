@@ -1,5 +1,6 @@
 import { test, expect } from 'bun:test';
 import { idsFor, supplyBill, liveHelperStatuses } from '../src/supply-bill';
+import {unitValue} from '../src/autopilot';
 
 const items = [{ id: 536, name: 'Dragon bones' }, { id: 99, name: 'Unfinished potion', debugname: 'ranarrvial' }, { id: 109, name: 'Unfinished potion', debugname: 'dwarfweedvial' }, { id: 2970, name: 'Mort myre fungi' }];
 
@@ -15,6 +16,30 @@ test('the shortfall subtracts stock across helpers and lists the holders', () =>
         [{ name: 'A', bank: [{ id: 536, count: 300 }] }, { name: 'B', inventory: [{ id: 536, count: 100 }] }]);
     expect(bill[0]).toMatchObject({ need: 560, owned: 400, short: 160, holders: [{ account: 'A', count: 300 }, { account: 'B', count: 100 }] });
     expect(bill[1]).toMatchObject({ short: 1, ids: [] });
+});
+
+test('plain and noted demand draw from one base stock pool', () => {
+    const catalog=[{id:1995,name:'Unfermented wine'}];
+    const rows=supplyBill([
+        {item:'unfermented wine (noted)',count:600},
+        {item:'unfermented wine',count:600},
+    ],catalog,[{name:'Holder',bank:[{id:1996,baseId:1995,count:600}]}]);
+    expect(rows).toEqual([{
+        item:'unfermented wine (noted)',aliases:['unfermented wine'],need:1200,owned:600,short:600,ids:[1995],
+        holders:[{account:'Holder',count:600}],
+    }]);
+});
+
+test('overlapping name matches require exact IDs before stock can cover either demand', () => {
+    const rows=supplyBill([{item:'part',count:1},{item:'parts',count:1}],
+        [{id:1,name:'Part'},{id:2,name:'Parts'}],[{name:'Holder',bank:[{id:1,count:1}]}]);
+    expect(rows.map(r=>[r.owned,r.short,r.ids])).toEqual([[0,1,[]],[0,1,[]]]);
+});
+
+test('the shortfall premium still applies to a merged item alias', () => {
+    const rows=supplyBill([{item:'mort myre fungus',count:1},{item:'mort myre fungi',count:1}],items,[]);
+    expect(rows).toHaveLength(1);
+    expect(unitValue('mort myre fungi',rows,{'mort myre fungi':10})).toBe(20);
 });
 
 test('the bill counts the other fleet side’s snapshot, not this side’s own', async () => {
