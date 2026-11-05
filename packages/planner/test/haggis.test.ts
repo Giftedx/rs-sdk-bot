@@ -324,6 +324,22 @@ test('the Overall plan uses the faster order and keeps actual skill record deadl
     expect(scheduleOverall(boards, acts, opposite)).toEqual(schedule(boards, acts, opposite));
 });
 
+test('the Overall plan tries prerequisites first when deadlines tie', () => {
+    const boards = [clock('cooking', 1000), clock('fletching', 1000), clock('smithing', 1000), clock('overall', 1000)];
+    const startXp = Object.fromEntries(['attack', 'defence', 'strength', 'hitpoints', 'ranged', 'prayer', 'magic',
+        'woodcutting', 'fishing', 'firemaking', 'crafting', 'mining', 'herblore', 'agility', 'thieving', 'runecraft'].map(s => [s, XP99]));
+    const acts = [job('smith', 'smithing', 10, { at: 'b' }), job('cook', 'cooking', 10, { at: 'a' }),
+        job('fletch', 'fletching', 10, { at: 'b', requires: ['cook'] })];
+    const options = { ...opts, startXp, travel: { ...travelModel(), start: 'a' } };
+    const baseline = schedule(boards, acts, options);
+    const overall = scheduleOverall(boards, acts, options);
+    expect(baseline.order.map(p => p.id)).toEqual(['smith', 'cook', 'fletch']);
+    expect(overall.order.map(p => p.id)).toEqual(['cook', 'smith', 'fletch']);
+    expect(overall.overallFinish!).toBeLessThan(baseline.overallFinish!);
+    const opposite = { ...options, travel: { ...options.travel, start: 'b' } };
+    expect(scheduleOverall(boards, acts, opposite)).toEqual(schedule(boards, acts, opposite));
+});
+
 test('travel: the walk between two places is added before the second activity', () => {
     const boards = [clock('cooking', 1000), clock('fletching', 1000)];
     const acts = [job('cook', 'cooking', 10, { at: 'a' }), job('fletch', 'fletching', 20, { at: 'b', requires: ['cook'] })];

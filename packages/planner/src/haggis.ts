@@ -311,16 +311,29 @@ const OVERALL_RELAXED_DEADLINES: ReadonlySet<BoardId> = new Set([
 export function scheduleOverall(boards: Board[], activities: Activity[], opts: ScheduleOptions): ScheduleResult {
     const baseline = schedule(boards, activities, opts);
     if (opts.sacrificed !== undefined) return baseline;
-    const candidate = schedule(boards, activities, { ...opts, sacrificed: OVERALL_RELAXED_DEADLINES });
-    if (candidate.overallFinish !== null && candidate.overallFinish < (baseline.overallFinish ?? Infinity)) return candidate;
-    return baseline;
+    const relaxed = schedule(boards, activities, { ...opts, sacrificed: OVERALL_RELAXED_DEADLINES });
+    const finish = (plan: ScheduleResult) => plan.overallFinish ?? Infinity;
+    const useRelaxed = finish(relaxed) < finish(baseline);
+    const best = useRelaxed ? relaxed : baseline;
+    if (!opts.travel) return best;
+    // Try one more order on the selected route. Grouping newly unlocked work can avoid a return trip.
+    const prerequisiteFirst = scheduleRoute(boards, activities, {
+        ...opts, force: { ...opts.force, ...best.route }, sacrificed: useRelaxed ? OVERALL_RELAXED_DEADLINES : undefined,
+    }, true);
+    return finish(prerequisiteFirst) < finish(best) ? prerequisiteFirst : best;
 }
 
 // Schedule with opts.force where given and the raw-tick choice for the other variant groups.
-function scheduleRoute(boards: Board[], allActivities: Activity[], opts: ScheduleOptions): ScheduleResult {
+function scheduleRoute(boards: Board[], allActivities: Activity[], opts: ScheduleOptions, prerequisiteFirst = false): ScheduleResult {
     const sacrificed = opts.sacrificed ?? new Set<BoardId>();
     const activities = chooseVariants(allActivities, opts);
     const ids = new Set(activities.map(a => a.id));
+    const dependants = new Map<string, number>();
+    if (prerequisiteFirst) {
+        for (const a of activities) for (const id of new Set(a.requires)) {
+            dependants.set(id, (dependants.get(id) ?? 0) + 1);
+        }
+    }
     const overall = boards.find(b => b.id === 'overall');
     const overallDeadline = overall && overall.rule.kind === 'clock' ? overall.rule.deadline : Infinity;
     const dl = new Map<BoardId, number>(boards.map(b => [b.id, boardDeadline(b, sacrificed, overallDeadline)]));
@@ -405,7 +418,9 @@ function scheduleRoute(boards: Board[], allActivities: Activity[], opts: Schedul
             for (const a of pending) blocked.push(a.id);
             break;
         }
-        ready.sort((x, y) => eff.get(x.id)! - eff.get(y.id)! || activities.indexOf(x) - activities.indexOf(y));
+        ready.sort((x, y) => eff.get(x.id)! - eff.get(y.id)!
+            || (prerequisiteFirst ? (dependants.get(y.id) ?? 0) - (dependants.get(x.id) ?? 0) : 0)
+            || activities.indexOf(x) - activities.indexOf(y));
         const a = ready[0]!;
         pending.splice(pending.indexOf(a), 1);
 
