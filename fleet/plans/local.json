@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793844432327,
+ "at": 1793849294887,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -485,11 +485,11 @@
    ],
    "env": {
     "CAP": "6000",
-    "COORDINATOR_RUN_ID": "task-5abe6192-403e-4aba-b8b1-43db920f96d8"
+    "COORDINATOR_RUN_ID": "task-08167739-d3a9-4bd6-a698-3e93fe1c7029"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "run-hunt-wandwaver-owned-spade [task-5abe6192-403e-4aba-b8b1-43db920f96d8]",
+   "goal": "run-hunt-wandwaver-exact-end-repair [task-08167739-d3a9-4bd6-a698-3e93fe1c7029]",
    "role": "supply"
   }
  ]
