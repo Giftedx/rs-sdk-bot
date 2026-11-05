@@ -6,7 +6,7 @@ import {existsSync} from 'node:fs';
 import {freemem} from 'node:os';
 import {capabilityRevision} from '../../core/src/worker-release';
 import {killTree} from '../../practice/src/proc';
-import {recoverProofLock,withPracticeTurn} from '../../practice/src/proof-lock';
+import {PRACTICE_TURN_WAIT_EXPIRED,recoverProofLock,withPracticeTurn} from '../../practice/src/proof-lock';
 import {deliver,validateDelivery,type DeliveryTask,type DeliveryCheck} from './delivery';
 
 const root=resolve(import.meta.dir,'../../..');
@@ -15,7 +15,8 @@ const root=resolve(import.meta.dir,'../../..');
 import {SOURCE_STARTUP_GB,PRACTICE_STARTUP_GB as NATIVE_STARTUP_GB} from '../../core/src/memory';
 export {SOURCE_STARTUP_GB,NATIVE_STARTUP_GB};
 export function nativeDeferralEvidence(reason:string):{hostDeferred?:boolean}{
- return /^(?:Error: )?HOST_DEFERRED_NATIVE_HEADROOM:/.test(reason)?{hostDeferred:true}:{};
+ const message=reason.replace(/^Error: /,'');
+ return message.startsWith('HOST_DEFERRED_NATIVE_HEADROOM:')||message===PRACTICE_TURN_WAIT_EXPIRED?{hostDeferred:true}:{};
 }
 // These exact consumer invocations only validate saved files in DELIVERY_DIR.
 const savedProofScripts=new Map([
@@ -127,7 +128,7 @@ async function runTask(task:DeliveryTask,diagnosticCheck?:string){
                     writeFileSync(join(directory,'admission.json'),JSON.stringify({...admission,check:check.id},null,2));
                     appendFileSync(join(directory,'admission.jsonl'),JSON.stringify({...admission,check:check.id})+'\n');
                     console.log('DELIVERY_ADMISSION '+JSON.stringify({...admission,check:check.id}));
-                }}));
+                }}),{stopped});
         },
     },diagnosticCheck);
     const report={...result,...nativeDeferralEvidence(result.reason),id:task.id,goal:task.goal,at:Date.now(),runtimeRevision:runtimeRevision(task),directory,files:task.files.map(path=>{

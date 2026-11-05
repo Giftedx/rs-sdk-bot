@@ -1,6 +1,10 @@
 import{test,expect}from'bun:test';
 import{isSavedProofVerifier,withNativeStartup,nativeDeferralEvidence,NATIVE_STARTUP_GB,SOURCE_STARTUP_GB}from'../src/delivery-cli';
 import{FREE_FLOOR_GB,PRACTICE_RESERVE_GB}from'../../core/src/memory';
+import{mkdtempSync,writeFileSync,readdirSync}from'node:fs';
+import{tmpdir}from'node:os';
+import{join}from'node:path';
+import{withPracticeTurn}from'../../practice/src/proof-lock';
 
 function fixture(){let now=0,free=NATIVE_STARTUP_GB-1,stopped=false,starts=0;const observations:any[]=[];
  const deps={now:()=>now,freeGB:()=>free,stopped:()=>stopped,sleep:async(ms:number)=>{now+=ms;},progress:(v:any):void=>{observations.push(v);}};
@@ -49,5 +53,18 @@ test('only audited saved-result commands can run without a practice turn',()=>{
   expect(isSavedProofVerifier({...check,command:['bun',script!]})).toBe(false);
   expect(isSavedProofVerifier({...check,command:[...check.command,'--extra']})).toBe(false);
   expect(isSavedProofVerifier({...check,command:['bun','scripts/other.ts','--verify']})).toBe(false);
+ }
+});
+
+test('an expired practice queue wait preserves the host-deferral path without running a check',async()=>{
+ const f=fixture(),file=join(mkdtempSync(join(tmpdir(),'native-turn-defer-')),'turn.lock');
+ writeFileSync(file,JSON.stringify({pid:999999,at:0}));
+ let reason='';
+ try{await withPracticeTurn(file,f.start,{alive:()=>true,waitMs:0});}catch(error){reason=String(error);}
+ expect(nativeDeferralEvidence(reason)).toEqual({hostDeferred:true});
+ expect(f.starts()).toBe(0);
+ expect(readdirSync(file+'.queue')).toEqual([]);
+ for(const other of ['Error: check timed out','Error: practice turn owner stopped; no child started','worker says practice turn wait expired']){
+  expect(nativeDeferralEvidence(other)).toEqual({});
  }
 });

@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {mkdtempSync,writeFileSync,existsSync} from 'node:fs';
+import {mkdtempSync,writeFileSync,existsSync,readFileSync,readdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {withPracticeTurn} from '../src/proof-lock';
@@ -31,4 +31,16 @@ test('a holder that asks again waits behind a check that queued while it ran',as
  const quick=withPracticeTurn(file,async()=>{order.push('quick');},d);
  await Promise.all([first,quick]);
  expect(order).toEqual(['long-1','quick','long-2']);
+});
+
+test('an owner stop withdraws a waiting ticket without touching the holder',async()=>{
+ const file=join(mkdtempSync(join(tmpdir(),'turn-')),'turn.lock'),owner=JSON.stringify({pid:999999,at:0});
+ writeFileSync(file,owner);
+ let stopped=false,starts=0;
+ await expect(withPracticeTurn(file,async()=>++starts,{
+  ...deps(()=>true),stopped:()=>stopped,sleep:async()=>{stopped=true;},
+ })).rejects.toThrow('practice turn owner stopped');
+ expect(starts).toBe(0);
+ expect(readFileSync(file,'utf8')).toBe(owner);
+ expect(readdirSync(file+'.queue')).toEqual([]);
 });
