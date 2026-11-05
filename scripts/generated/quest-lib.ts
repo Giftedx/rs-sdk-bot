@@ -130,9 +130,8 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     const T = (): number => s.tick() - t0;
     const stats = { died: false, hpMin: hp(), eats: 0, walkTicks: 0, retries: 0 };
     // The tick of the last teleport click or routed walk: a jump that lands by Lumbridge within TELEPORT_TICKS of it,
-    // or during a routed walk, is the Lumbridge teleport, not a respawn (Pirate's Treasure's Varrock step, uncastable
-    // for want of a fire rune, walked by the router, which cast Lumbridge Teleport; the run read the landing as a death
-    // at full hitpoints). A death still shows as isDead, a respawn count or a new life id.
+    // or during a routed walk, is the Lumbridge teleport (the router casts the teleports the account can), not a
+    // respawn. A death shows as isDead, a respawn count or a new life id.
     let lastCastAt = -TELEPORT_TICKS, routing = false;
     let last = p0;
     const jumps: string[] = [];
