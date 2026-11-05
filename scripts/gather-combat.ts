@@ -65,6 +65,14 @@ export function cowStopControl(target:string,stopFile:()=>boolean,ownedRecovery=
     const options=target==='cow'||ownedRecovery?{onStop:async(_s:unknown,why:string)=>{if(reason===undefined){reason=why;console.log(`${target==='cow'?'COW':'COMBAT'}_STOP_OWNER ${why}`);}}}:{};
     return {options,stop:()=>reason!==undefined||stopFile(),reason:()=>reason};
 }
+export async function bankCombatLoot(s:Session,drops:RegExp,extraIds:readonly number[]=[]){
+    const generation=s.bankObservation?.()?.generation??-1;
+    if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>!!s.sdk.getState()?.bank.isOpen&&(s.bankObservation?.()?.generation??-1)>generation,{timeoutTicks:12}))throw Error('combat fresh bank unavailable');
+    const matches=new RegExp(drops.source,drops.flags.replace(/[gy]/g,''));
+    const ids=new Set([...s.sdk.getInventory().filter(i=>matches.test(i.name)).map(i=>i.id),...extraIds]);
+    for(const id of ids){const row=s.sdk.getInventory().find(i=>i.id===id);if(row)await depositObserved(s,row);}
+    if(s.sdk.getInventory().some(i=>matches.test(i.name)||extraIds.includes(i.id)))throw Error('combat outputs not banked');
+}
 export function genericCombatNpc<T extends {id:number;distance:number;reachable?:boolean;inCombat?:boolean;targetIndex?:number}>(target:string,npcs:readonly T[]):T|undefined{
     const id=target==='giant'?117:target==='druid'?181:undefined;
     return npcs.filter(n=>n.id===id&&n.reachable===true&&n.inCombat===false&&n.targetIndex===-1&&Number.isFinite(n.distance)&&n.distance>=0&&n.distance<=15).sort((a,b)=>a.distance-b.distance)[0];
@@ -340,19 +348,8 @@ try {
     const walk=async(x:number,z:number,tol=2)=>dungeonTravel?dungeonTravel.walk(s,TARGET_KEY as 'druid'|'giant',{x,z,level:0},ground,travelStop,tol):ground(x,z,tol);
 
     const bank = async () => {
-        const arrived=await walk(conf.bankSpot.x, conf.bankSpot.z, 2);if(potions&&!arrived)throw Error('combat potion bank return unavailable');
-        const b = await s.bot.openBank();
-        if (!b.success) {
-            await waitTicks(s, 2);
-            return;
-        }
-
-        // Deposit all looted items
-        await s.bot.depositItem(conf.drops, -1);
-        if(alch){const coin=s.sdk.getInventory().find(i=>i.id===995);if(coin)await depositObserved(s,coin);}
-        await waitTicks(s, 1);
-
-        if(potions)for(const id of potions.depositIds){const row=s.sdk.getInventory().find(i=>i.id===id);if(row)await depositObserved(s,row);}
+        if(!await walk(conf.bankSpot.x,conf.bankSpot.z,2))throw Error('combat bank return unavailable');
+        await bankCombatLoot(s,conf.drops,[...alch?[995]:[],...potions?.depositIds??[]]);
 
         // Ensure we have food in inventory (e.g. 5 lobsters)
         if (countItems(s, /lobster|swordfish|trout/i) < 3) {
