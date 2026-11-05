@@ -209,6 +209,10 @@ test('an empty-result live row is closed only when its own producer lifecycle sh
   const done=start('Done',11);done.record('ended','logged-out');
   const later=start('Later',12);const newer=start('Later',13);newer.record('ended','logged-out');
   const dead=start('Dead',14),live=start('Live',15),fresh=start('Fresh',16),gone=start('Gone',17);start('Gone',18);
+  // The live deadlock: a worker killed mid-session (attempt 19, pid dead) and a later login the gate refused (attempt
+  // 20, pid dead, held): nothing alive owns the account. A held later attempt whose owner runs (pid 15) still holds.
+  const killed=start('Killed',19);start('Killed',20);
+  const retried=start('Retried',21);start('Retried',15);
   const now=1_000_000_000_000,old=now-LOST_SESSION_DROP_MS,row=(a:{account:string;attemptId:string},at=old)=>({name:a.account,server,result:'',at,workRevision:pin,sessionAttemptId:a.attemptId});
   const alive=(pid:number)=>pid===15,closed=(r:any)=>closedSessionRow(r,server,{root},alive,now);
   expect(closed(row(done))).toBe(true);        // its own attempt confirmed logout
@@ -216,7 +220,12 @@ test('an empty-result live row is closed only when its own producer lifecycle sh
   expect(closed(row(dead))).toBe(true);        // owner gone and past the server's lost-session drop
   expect(closed(row(live))).toBe(false);       // owner alive
   expect(closed(row(fresh,now-LOST_SESSION_DROP_MS+1))).toBe(false); // owner gone, inside the drop window
-  expect(closed(row(gone))).toBe(false);       // a newer held attempt is not this row
+  expect(closed(row(gone))).toBe(true);        // a newer held attempt with a gone owner, past the drop
+  expect(closed(row(gone,now-LOST_SESSION_DROP_MS+1))).toBe(false); // inside the drop window
+  expect(closed(row(killed))).toBe(true);      // killed worker, refused retry, both owners gone
+  expect(closed(row(retried))).toBe(false);    // the retry's owner still runs
+  expect(()=>assertCompatibleWorkers(pin,server,[row(killed)],now,closed)).not.toThrow();
+  expect(()=>assertCompatibleWorkers(pin,server,[row(retried)],now,closed)).toThrow('peer state unknown');
   expect(closed({...row(dead),sessionAttemptId:undefined})).toBe(false);
   expect(closed({...row(done),name:'Nobody'})).toBe(false);
   expect(()=>assertCompatibleWorkers(pin,server,[row(done),row(dead)],now,closed)).not.toThrow();

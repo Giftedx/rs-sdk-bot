@@ -274,23 +274,30 @@ export function assertLiveWorkerRelease(server:string,env:Record<string,string|u
 // The server drops a session whose client is gone after 200 s.
 export const LOST_SESSION_DROP_MS=200_000;
 // A live status row without a result is a closed session only when the account's own producer lifecycle says so:
-// its newest attempt (the row's attempt or a later one) confirmed logout, or the row's own attempt is still the newest,
-// its owner process is gone (including a PID reused by a different script) and the row is older than the server's
-// lost-session drop. An unreadable command line or missing producer script cannot prove a live PID changed owner.
+// its newest attempt (the row's attempt or a later one) confirmed logout, or the row is older than the server's
+// lost-session drop and every attempt from the row's own onward has a gone owner (a dead process, or a PID reused by a
+// different script). A worker killed mid-session leaves its row unfinished and its attempt held; a later login the
+// release gate refused leaves a newer held attempt with no live owner either, and neither ever confirms logout, while
+// the server dropped the session 200 s after its client went. A held attempt whose owner still runs holds the row.
+// An unreadable command line or missing producer script cannot prove a live PID changed owner.
 export function closedSessionRow(row:any,server:string,opts:{root?:string;commandLine?:(pid:number)=>string|null}={},alive:(pid:number)=>boolean=pidAlive,now=Date.now()):boolean {
     if(typeof row?.name!=='string'||typeof row.sessionAttemptId!=='string'||!row.sessionAttemptId)return false;
     let latest:LogoutProof;try{latest=readLogoutProof(row.name,server,opts);}catch{return false;}
     if(latest.state==='confirmed')return latest.attemptId>=row.sessionAttemptId;
-    if(latest.state!=='held'||latest.attemptId!==row.sessionAttemptId||!Number.isFinite(row.at)||now-row.at<LOST_SESSION_DROP_MS)return false;
+    if(latest.state!=='held'||latest.attemptId<row.sessionAttemptId||!Number.isFinite(row.at)||now-row.at<LOST_SESSION_DROP_MS)return false;
     try{
-        const owner=listAttempts(row.name,server,opts).find(a=>a.attemptId===latest.attemptId)?.receipt?.owner,pid=owner?.pid;
-        if(!Number.isSafeInteger(pid)||!pid||pid<1)return false;
-        if(!alive(pid))return true;
-        if(typeof owner?.script!=='string'||!owner.script.endsWith('.ts'))return false;
-        const line=(opts.commandLine??commandLine)(pid);
-        if(!line?.trim())return false;
+        const attempts=listAttempts(row.name,server,opts).filter(a=>a.attemptId>=row.sessionAttemptId);
+        if(!attempts.some(a=>a.attemptId===row.sessionAttemptId))return false;
         const normalize=(s:string)=>s.replaceAll('\\','/').toLowerCase();
-        return !normalize(line).includes(normalize(owner.script));
+        for(const a of attempts){
+            const owner=a.receipt?.owner,pid=owner?.pid;
+            if(!Number.isSafeInteger(pid)||!pid||pid<1)return false;
+            if(!alive(pid))continue;
+            if(typeof owner?.script!=='string'||!owner.script.endsWith('.ts'))return false;
+            const line=(opts.commandLine??commandLine)(pid);
+            if(!line?.trim()||normalize(line).includes(normalize(owner.script)))return false;
+        }
+        return true;
     }catch{return false;}
 }
 function pidAlive(pid:number):boolean{try{process.kill(pid,0);return true;}catch(e){return (e as NodeJS.ErrnoException).code!=='ESRCH';}}
