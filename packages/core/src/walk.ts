@@ -13,6 +13,7 @@ import {planTripOffThread} from './route-plan';
 import {readFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {bankStock,planTrip,takeItems,type TripPlan} from './trip';
+import {travelAllowed} from './travel';
 import {refreshGuildEvidence} from './guild-observation';
 
 export interface Walker extends TickSource {
@@ -98,6 +99,9 @@ async function travelLeg(s: Walker, leg: Extract<Leg, { kind: 'travel' }>, opts:
         await answer(() => arrived() || (!!run.deck && onDeck()), 60);
         if (run.deck && onDeck()) { const off = await disembark(b, { stop }); if (!off.ok) return fail('timeout', off.detail); }
     } else if (run.how === 'spell') {
+        // The plan admitted the spell on the account as it stood when the route was planned; a cast on the way can have
+        // spent the runes since, and the server refuses a short cast with a message the walker does not read.
+        if (!travelAllowed(t, accountForSdk(s.sdk))) return fail('precondition', `cannot cast now (needs ${t.runes.map(r => `${r.count} ${r.item}`).join(', ')})`);
         await b.direct({ type: 'clickComponent', componentId: componentId(run.component), reason: 'SDK' });
         await answer(arrived, 12);
     } else if (run.how === 'rub') {
@@ -306,13 +310,24 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
     if (!r) return { ok: false, reason: 'precondition', detail: `no route${why==='budget'?` (search over ${budgetMs} ms)`:''} to ${to.x},${to.z},${to.level}`, ticks: 0 };
     // Actor prerequisites are synchronous query masks, not long-lived refusal
     // walls: gear/stat changes and allowed exits must be re-evaluated.
-    const first = await walkRoute(s, r.legs, opts);
+    let first = await walkRoute(s, r.legs, opts);
+    // A spell leg that failed (the runes gone, a cast the server did not take) is not tried again: the route is planned
+    // once more for the account without its law runes, so the walk goes by foot and boat from where it stands.
+    if (!first.ok && first.reason !== 'aborted' && r.legs.some(l => l.kind === 'travel' && l.travel.kind === 'spell')) {
+        const q = s.sdk.getState()?.player, at = q ? { x: q.worldX, z: q.worldZ, level: q.level } : from;
+        const d = world.route(at, to, withoutSpells(acct), { deadline: performance.now() + budgetMs });
+        console.log(`WALK_REPLAN_NO_SPELLS ${JSON.stringify({ from: at, to, failed: first.detail, ok: d.ok, reason: d.ok ? undefined : d.reason })}`);
+        if (d.ok) first = await walkRoute(s, d.legs, opts);
+    }
     if (!first.ok || !r.bank) return first;
     const took = await takeItems(banker, r.bank.coins, r.bank.items, n => waitTicks(s, n));
     if (!took.ok) return { ok: false, reason: 'precondition', detail: `bank stop at ${r.bank.at.x},${r.bank.at.z}: ${took.detail}`, ticks: s.tick() - started };
     const rest = await walkRoute(s, r.bank.then, opts);
     return rest.ok ? { ok: true, ticks: s.tick() - started } : rest;
 }
+
+// The account with no law rune: no teleport spell is castable, so a route planned for it keeps to the ground.
+export const withoutSpells = (a: Account): Account => ({ ...a, items: a.items.filter(i => i !== 'lawrune'), counts: { ...a.counts, lawrune: 0 } });
 
 // ---- walkPath: walk through points the way a player clicks ahead on the minimap ----
 // bot.walkTo clicks each path corner and waits until the bot is within 2 tiles of it. The bot then takes 1 step
