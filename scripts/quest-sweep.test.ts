@@ -164,6 +164,9 @@ test('a quest keeps its own items and every untradeable item out of the unneeded
  expect(keepsItem('murder',1813,tradeable)).toBe(true);expect(keepsItem('murder',1796,tradeable)).toBe(true);expect(keepsItem('cook',1813,tradeable)).toBe(tradeable(1813)===false);
  expect(keepsItem('sheep',1438,tradeable)).toBe(false);
  expect(keepsItem('sheep',995,tradeable)).toBe(false);
+ // Sheep Herder's banked suit, prod and feed come back out for a resumed run: Orbon sells his suit at stage 1 only.
+ for(const id of [278,279,284,285])expect(keepsItem('sheepherder',id,tradeable)).toBe(true);
+ expect(keepsItem('sheep',284,tradeable)).toBe(false);
 });
 
 test('withdrawal slots count a stack once and nothing for a stack the pack already holds; deposits free whole kinds and spare coins, food and quest items',async()=>{

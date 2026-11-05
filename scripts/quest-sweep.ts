@@ -67,8 +67,11 @@ export function toolPlan(tools:readonly Item[],need:ReadonlyMap<number,number>,p
 // An untradeable item is kept the same way: quest and reward items are the untradeable ones a pack carries.
 // Murder Mystery's evidence (quest_murder.rs2 obj_gettotal: the dagger, the six suspects' items, the threads, flypaper,
 // the pungent pot and the prints): the server counts them in the bank and refuses a second pickup.
+// Sheep Herder's prod, poisoned feed, plague suit and sheep bones: Orbon sells his one suit at stage 1 only
+// (doctor_orbon.rs2), so a resumed run takes the banked suit.
 export const QUEST_KEEP:Record<string,number[]>={runemysteries:[1438,290,291],totem:[1858,1857],
- murder:[1796,1797,1798,1799,1800,1801,1802,1803,1804,1805,1806,1807,1808,1809,1810,1811,1812,1813,1814,1815,1816,1817,1818,1819,1820,1821,1822]};
+ murder:[1796,1797,1798,1799,1800,1801,1802,1803,1804,1805,1806,1807,1808,1809,1810,1811,1812,1813,1814,1815,1816,1817,1818,1819,1820,1821,1822],
+ sheepherder:[278,279,284,285,280,281,282,283]};
 export function keepsItem(quest:string,id:number,tradeable:(id:number)=>boolean|undefined):boolean{
  return (QUEST_KEEP[quest]??[]).includes(id)||tradeable(id)===false;
 }
