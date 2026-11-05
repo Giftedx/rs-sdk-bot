@@ -125,10 +125,10 @@ export function jobFor(x: Assignment, side: string) {
 // Accounts whose planner trainer has reached its target: the job's template trains, the state still assigns that
 // template, and the job's log since the assignment holds an ok RESULT. The daemon re-plans these accounts at once.
 export function finishedTrainers(jobs: readonly any[], side: string, assigned: Readonly<Record<string, { template: string; offset: number }>>, templates: readonly Template[],
-    linesSince: (account: string, offset: number) => readonly string[]): string[] {
+    linesSince: (account: string, offset: number, job: any) => readonly string[]): string[] {
     const trains = new Set(templates.filter(t => t.trains).map(t => t.id));
     return jobs.filter(j => j?.autopilot === side && typeof j.account === 'string' && trains.has(j.template) && assigned[j.account]?.template === j.template
-        && assess(linesSince(j.account, assigned[j.account]!.offset)).ok > 0).map(j => j.account);
+        && assess(linesSince(j.account, assigned[j.account]!.offset, j)).ok > 0).map(j => j.account);
 }
 
 // Retirement from a job's own log lines (since the autopilot assigned it): the last RETIRE_FAILS RESULTs all fail with

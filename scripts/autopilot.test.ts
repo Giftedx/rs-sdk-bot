@@ -1,7 +1,11 @@
 import { expect, test } from 'bun:test';
+import { appendFileSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { jobLogStart } from '../packages/core/src/job-log';
 import { catalogue, finishedTrainers, jobFor, mergeJobs, plan, plannableAccounts, reservedResources, type Acct, type Inputs } from '../packages/planner/src/autopilot';
 import { missionSignature, startable } from './swarm';
-import { coinOrder, fundOrders, inOpenOrder, planningOwnership } from './autopilot';
+import { coinOrder, fundOrders, inOpenOrder, planningOwnership, readJobResultLines } from './autopilot';
 
 const side = 'claude-cloud';
 const inputs = (a: Acct): Inputs => ({ side, accounts: [a], owners: new Map([[a.name.toLowerCase(), { side }]]), bill: [], templates: catalogue(), prices: {} });
@@ -88,6 +92,33 @@ test('the controller\'s stop file goes only once the account is offline: no stat
     expect(stopClearable({ at: now - 5_000, result: 'fail stop file ticks=55' }, now)).toBe(true);
     expect(stopClearable({ at: now - OFFLINE_STATUS_MS - 1 }, now)).toBe(true);
     expect(stopClearable({ at: now - 5_000 }, now)).toBe(false);
+});
+
+test('trainer polling supplies the actual standing job to the result reader', () => {
+    const template = catalogue().find(t => t.id === 'thieving55')!;
+    const trainer = jobFor({account:'Trainer',template,value:1,resources:[],reason:'train'},side);
+    const assigned = {Trainer:{template:template.id,offset:0}};
+    const results = finishedTrainers([trainer],side,assigned,catalogue(),
+        (...args: unknown[]) => args[2] === trainer ? ['RESULT ok'] : []);
+    expect(results).toEqual(['Trainer']);
+});
+
+test('Autopilot only reads complete results written by the matching standing job', () => {
+    const template = catalogue().find(t => t.id === 'thieving55')!;
+    const trainer = jobFor({account:'Trainer',template,value:1,resources:[],reason:'train'},side);
+    const coordinator = {...trainer, autopilot:undefined, template:undefined};
+    const otherStanding = {...trainer, env:{...trainer.env, CAP:'different'}};
+    const log = join(mkdtempSync(join(tmpdir(),'autopilot-job-log-')),'account.log');
+    const past = 'RESULT ok legacy\n';
+    writeFileSync(log, past + jobLogStart(coordinator) + 'RESULT fail coordinator\nRESULT ok coordinator\n'
+        + jobLogStart(otherStanding) + 'RESULT fail different arguments\n'
+        + jobLogStart(trainer) + 'RESULT fail own attempt\nRESULT ok own attempt');
+    const assigned = {Trainer:{template:template.id,offset:Buffer.byteLength(past)}};
+    const poll = () => finishedTrainers([trainer],side,assigned,catalogue(),(_a,offset,job)=>readJobResultLines(log,offset,job));
+    expect(readJobResultLines(log,0,trainer).filter(l=>l.startsWith('RESULT'))).toEqual(['RESULT fail own attempt']);
+    expect(poll()).toEqual([]);
+    appendFileSync(log,'\n');
+    expect(poll()).toEqual(['Trainer']);
 });
 
 test('coordinator ownership preserves a standing job and excludes held funding parties until release', () => {
