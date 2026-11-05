@@ -41,8 +41,9 @@ export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:
   if(m.id===MILK&&sold===Infinity){gathers.push({...m,how:'milk'});tools.push({id:BUCKET,count:m.count});}
   else if(spot&&d(spot)<sold)gathers.push({...m,how:'spawn'});
   else if(LOC_SOURCES[m.id]&&d(LOC_SOURCES[m.id]!.tile)<sold)gathers.push({...m,how:'loc'});
-  // A drop is taken only where no shop sells the item: Rufus in Canifis sells the meats, but behind Priest in Peril.
-  else if(sold===Infinity&&kills(m.id).some(t=>t.level===at.level))gathers.push({...m,how:'kill'});
+  // A kill wins over a shop when its animal is nearer, as a spawn does: Rufus in Canifis sells every meat, 850 tiles
+  // from Ardougne and behind Priest in Peril, while cows graze beside the Ardougne banks.
+  else if(kills(m.id).some(t=>t.level===at.level&&d(t)<sold))gathers.push({...m,how:'kill'});
   else still.push(m);
  }
  return{gathers,still,tools};
