@@ -83,6 +83,7 @@ try {
         const t = trees()[0];
         if (!t) { if (empty.size) { empty.clear(); await q.waitTicks(20); } else await q.walk('to trees', [{ x: 2925, z: 3160, tol: 3 }]); continue; }
         const n = q.cnt(ITEM.banana);
+        if ((q.st()?.inventory?.length ?? 0) >= 28) await q.fail(`bananas: pack full at ${n} of 10`);
         await q.opLoc(t, 1);
         if (!await q.waitUntil(() => q.cnt(ITEM.banana) > n, 6)) empty.add(`${t.x},${t.z}`);
     }

@@ -123,6 +123,9 @@ export const reservedEdible=(need:ReadonlyMap<number,number>):Record<number,numb
 // gives way to the supplies down to MIN_PICKUP_SLOTS, before the food allowance does: Demon Slayer's 25 bones and two
 // rune stacks beside the coins leave nothing else.
 export const QUEST_PICKUP_SLOTS=8,MIN_PICKUP_SLOTS=2;
+// What a quest picks up on its way beyond the pickup reserve, counted with the supplies: Pirate's Treasure holds ten
+// bananas off the plantation and Zambo's rum at once before the crate takes them.
+export const QUEST_PICKUPS:Record<string,Item[]>={hunt:[{id:1963,count:10},{id:431,count:1}]};
 // What the pack keeps whatever the plan: coins, the quest's and the preset's own items, and rune stacks.
 export const staysCount=(pack:readonly Item[],keep:(id:number)=>boolean)=>pack.filter(i=>i.id===COINS||keep(i.id)||(STACKS.has(i.id)&&isEdible(i.id))).length;
 // The slots the bank pass frees: the supplies plus as much pickup reserve as leaves the food allowance room, at least
@@ -960,7 +963,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
   // Free the slots the withdrawals, the shop purchases and the gathered items need, plus the pickups: whole kinds the
   // quest does not use first, one deposit per kind, then food beyond the allowance.
   const keep=(id:number)=>need.has(id)||toolIds.has(id)||keepsItem(quest,id,id=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable);
-  const slots=slotNeed(slotsFor([...p.withdraw,...shop.buys.map(b=>({id:b.id,count:b.count})),...gather.gathers.map(g=>({id:g.id,count:g.count})),...(manorFood?[{id:MANOR_FOOD.id,count:1}]:[]),...(heckelDust?[{id:1975,count:1}]:[])],pack()),staysCount(pack(),keep));
+  const slots=slotNeed(slotsFor([...p.withdraw,...shop.buys.map(b=>({id:b.id,count:b.count})),...gather.gathers.map(g=>({id:g.id,count:g.count})),...(manorFood?[{id:MANOR_FOOD.id,count:1}]:[]),...(heckelDust?[{id:1975,count:1}]:[]),...(QUEST_PICKUPS[quest]??[])],pack()),staysCount(pack(),keep));
   for(const d of depositPlan(pack(),slots,keep)){
    const item=(st()?.inventory??[]).find((i:any)=>i.id===d.id);
    if(!item)continue;
