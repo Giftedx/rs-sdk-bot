@@ -264,7 +264,12 @@ const catalogItem=(id:number)=>(itemCatalog??=new Map((JSON.parse(readFileSync(r
 // Walk to each seller, open its shop and buy. Ok when the pack holds the bought counts.
 async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<string|null>{
  const st=()=>s.sdk.getState() as any,held=(id:number)=>count((st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count})),id);
- for(const b of buys){
+ // Purchases go nearest seller first from wherever the bot stands (onions from Hudo in the Gnome Stronghold before
+ // redberries from Wydin in Port Sarim, from Ardougne), so a walk east by boat is not followed by a walk back west.
+ const here=():Tile=>{const q=st()?.player;return{x:q?.worldX??0,z:q?.worldZ??0,level:q?.level??0};};
+ const left=[...buys];
+ while(left.length){
+  const b=left.sort((x,y)=>travelDistance(here(),x.tile)-travelDistance(here(),y.tile)).shift()!;
   // The nearest seller may be out of reach (a quest area, deadly ground) or short (Kortan holds 14 balls of wool, the
   // quest wants 20): the next sellers take over, nearest first, for the rest.
   const before=held(b.id),target=before+b.count,sellers=[b,...(b.alts??[])];
@@ -272,7 +277,6 @@ async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<s
   for(const [k,c] of sellers.entries()){
    if(held(b.id)>=target)break;
    // A seller across the sea or the map is not worth the search: the sweep fails fast and the shortfall is acquisition work.
-   const here=():Tile=>{const q=st()?.player;return{x:q?.worldX??0,z:q?.worldZ??0,level:q?.level??0};};
    if(travelDistance(here(),c.tile)>FAR_SELLER){console.log(`QUEST_SWEEP_SELLER_FAR ${JSON.stringify({npc:c.npc,tile:c.tile,from:here()})}`);continue;}
    walked=await walkFar(s,world,c.tile,100);
    if(!walked.ok)continue;
@@ -455,9 +459,11 @@ export async function sweep(account:string,quest:string,fresh?:string){
   const tools=plan(new Map(gather.tools.map(t=>[t.id,t.count])),[...pack(),...worn()],rows());
   p.withdraw.push(...tools.withdraw);
   const toolIds=new Set(gather.tools.map(t=>t.id));
-  const shop=shops([...p.missing.filter(m=>!gather.gathers.some(g=>g.id===m.id)),...tools.missing]);
+  const shop=shops([...gather.still,...tools.missing]);
   if(gather.gathers.length)console.log(`QUEST_SWEEP_GATHER_PLAN ${JSON.stringify(gather)}`);
   if(shop.unsold.length){await s.bot.closeBank();return fail('missing '+shop.unsold.map(i=>`${i.id}:${i.count}`).join(',')+(shop.buys.length?' (unsold; others in shops)':''));}
+  // Recipes paid in dialogue (Aggie's dyes, Wyson's woad leaves) take their coins out with the shop money.
+  shop.coins+=gather.coins;
   if(shop.coins){
    const take=Math.max(0,shop.coins-count(pack(),COINS)-(p.withdraw.find(w=>w.id===COINS)?.count??0));
    if(count(rows(),COINS)<take){await s.bot.closeBank();return fail(`missing ${COINS}:${take} to buy ${shop.buys.map(b=>b.id).join(',')}`);}

@@ -335,3 +335,34 @@ test('a spawn across the Karamja water ranks a sea farther',async()=>{
  expect(spawnsByDistance(1917,{x:2940,z:3150,level:0},list2)[0]).toEqual({x:2800,z:3180,level:0});
  expect(SEA).toBe(1000);
 });
+
+test('a dye is a recipe: its ingredients are planned first, its dialogue step follows, and its coins are counted',async()=>{
+ const {NPC_SOURCES,COMBINE_SOURCES,PICK_SOURCES}=await import('../packages/core/src/gather');
+ const draynor={x:3092,z:3243,level:0};
+ const spawns=(id:number)=>id===1951?[{x:3267,z:3371,level:0}]:[];           // redberries lie near Varrock
+ const seller=(id:number)=>id===1957?300:Infinity;                           // onions from Hudo's shop
+ const plan=gatherPlan([{id:1769,count:1},{id:1767,count:1}],draynor,spawns,seller,()=>[],6,1,()=>[]);
+ expect(plan.gathers).toEqual([
+  {id:1951,count:3,how:'spawn'},          // red dye's berries
+  {id:1763,count:1,how:'npc'},            // red dye at Aggie
+  {id:1765,count:1,how:'npc'},            // yellow dye at Aggie (onions come from the shop)
+  {id:1769,count:1,how:'combine'},        // orange = red on yellow
+  {id:1793,count:2,how:'npc'},            // 2 woad leaves from Wyson
+  {id:1767,count:1,how:'npc'},            // blue dye at Aggie
+ ]);
+ expect(plan.still).toEqual([{id:1957,count:2}]);
+ expect(plan.coins).toBe(5+5+20+5);
+ expect(NPC_SOURCES[1763]!.needs).toEqual([{id:1951,count:3}]);expect(COMBINE_SOURCES[1769]).toEqual([1763,1765]);expect(PICK_SOURCES[1957]!.loc).toBe(3366);
+ // A plant nearer than any seller is picked.
+ const picked=gatherPlan([{id:1957,count:2}],{x:2600,z:3000,level:0},()=>[],()=>Infinity,()=>[],6,1,()=>[{x:2581,z:2968,level:0}]);
+ expect(picked.gathers).toEqual([{id:1957,count:2,how:'pick'}]);
+});
+
+test('the loc index reads a map square\'s LOC section',async()=>{
+ const {parseLocSpawns,locsByDistance}=await import('../packages/core/src/spawn-index');
+ const text='==== MAP ====\n0 0 0: 1\n==== LOC ====\n0 21 40: 3366 10 0\n0 23 37: 3366 10 2\n1 5 5: 1161 10 0\n==== NPC ====\n0 1 1: 1\n';
+ const m=parseLocSpawns('m40_46.jm2',text);
+ expect(m.get(3366)).toEqual([{x:2581,z:2984,level:0},{x:2583,z:2981,level:0}]);
+ expect(m.get(1161)).toEqual([{x:2565,z:2949,level:1}]);
+ expect(locsByDistance(3366,{x:2584,z:2980,level:0},m)[0]).toEqual({x:2583,z:2981,level:0});
+});

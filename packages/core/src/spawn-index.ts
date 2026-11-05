@@ -21,6 +21,35 @@ export function parseObjSpawns(file: string, text: string, out = new Map<number,
     return out;
 }
 
+// Where a loc stands: the LOC section of each map square file, `<level> <localX> <localZ>: <loc id> <shape> <angle>`.
+// Pickable plants (an onion is loc 3366) are locs, not ground items.
+export function parseLocSpawns(file: string, text: string, out = new Map<number, Tile[]>()): Map<number, Tile[]> {
+    const square = file.match(/^m(\d+)_(\d+)\.jm2$/);
+    const at = text.indexOf('==== LOC');
+    if (!square || at < 0) return out;
+    const baseX = Number(square[1]) * 64, baseZ = Number(square[2]) * 64;
+    for (const line of text.slice(at).split(/\r?\n/).slice(1)) {
+        if (line.startsWith('====')) break;
+        const m = line.match(/^(\d+) (\d+) (\d+): (\d+)/);
+        if (!m) continue;
+        const id = Number(m[4]), tile = { x: baseX + Number(m[2]), z: baseZ + Number(m[3]), level: Number(m[1]) };
+        out.set(id, [...(out.get(id) ?? []), tile]);
+    }
+    return out;
+}
+let locIndex: Map<number, Tile[]> | undefined;
+export function locSpawns(): Map<number, Tile[]> {
+    if (locIndex) return locIndex;
+    locIndex = new Map();
+    for (const f of readdirSync(maps)) if (f.endsWith('.jm2')) parseLocSpawns(f, readFileSync(join(maps, f), 'utf8'), locIndex);
+    return locIndex;
+}
+export const rank = (list: Tile[], at: Tile): Tile[] => {
+    const d = (t: Tile) => Math.max(Math.abs(t.x - at.x), Math.abs(t.z - at.z)) + LEVEL_STEP * Math.abs(t.level - at.level) + (onKaramja(t) !== onKaramja(at) ? SEA : 0);
+    return [...list].sort((a, b) => d(a) - d(b));
+};
+export const locsByDistance = (locId: number, at: Tile, list = locSpawns()): Tile[] => rank(list.get(locId) ?? [], at);
+
 let index: Map<number, Tile[]> | undefined;
 export function objSpawns(): Map<number, Tile[]> {
     if (index) return index;
@@ -37,7 +66,4 @@ export const LEVEL_STEP = 40;
 // bot standing by the Musa Point beer spawn saw the Falador hammer spawn nearer than Ardougne's, by straight line.
 export const SEA = 1000;
 export const onKaramja = (p: { x: number; z: number }): boolean => p.z <= 3260 && p.x >= 2690 && p.x <= 2960;
-export function spawnsByDistance(id: number, at: Tile, list = objSpawns()): Tile[] {
-    const d = (t: Tile) => Math.max(Math.abs(t.x - at.x), Math.abs(t.z - at.z)) + LEVEL_STEP * Math.abs(t.level - at.level) + (onKaramja(t) !== onKaramja(at) ? SEA : 0);
-    return [...(list.get(id) ?? [])].sort((a, b) => d(a) - d(b));
-}
+export function spawnsByDistance(id: number, at: Tile, list = objSpawns()): Tile[] { return rank(list.get(id) ?? [], at); }
