@@ -669,4 +669,35 @@ Nothing useful: jrpii/rs-sdk-temporal-planning (two toy tasks, no costs), msalme
 
 Two-rat flinch is rejected: both rats are penned at x 3014-3020, z 3282-3296, and no tile in their range is multiway (`research/gathering-tricks.md`).
 
-Full quest sweep on master, one run each: 43 of 56 passed (`.practice/quest-sweep-all/results.jsonl`). Scorpion Catcher still fails: it passes the outpost yard, then paces at 2893,9796 and dies to dragon fire, with or without waypoints. Cause not found. The walker changes are not the cause of the Priest, Horror and Scorpion failures: all three failed on the commit before them too.
+Full quest sweep on master, one run each: 43 of 56 passed (`.practice/quest-sweep-all/results.jsonl`). Scorpion Catcher's dragon-room death came from the danger guard: Black Demon spawns near 2860,9776 close the only corridor (x 2877-2879, z 9769-9788) to the secret wall, so planned walks paced at 2893,9796. Client-routed clicks do not use the guard, and Scorpion Catcher now passes on practice: 884, 860, 897 ticks. Check other "corridor exhausted" failures against the raw plan and the guarded plan.
+
+### 9.11 Last flagged sources
+
+Read: GoonMachine `ba76979e`, ken12321 `d93b1087`, Acquiredl `de4da876`, 274bot `1aa74601`, rs2b0t `8b7db422` (all MIT). 21 items were already held.
+
+| Claim | Source | Check | Decision |
+|---|---|---|---|
+| A PvP death leaves a 1 HP death mark for 1,000 ticks, and it survives logout | GoonMachine `owner-context.md` | Confirmed: `pvp_death_mark.rs2`, `pvp.constant:3` | add to the Lava Maze option in `research/boards-special.md` |
+| Each imp colour bead drops at 5/128 | Acquiredl run log | Confirmed: `imp.rs2`. ESTIMATE 53 kills for all four | supply note; `quest-imp.ts` takes beads from a helper |
+| A PvP death keeps one unit of a stack: 1 of 25 arrows in one probe | GoonMachine `ab-results-b.md` | Not checked in `death.rs2` | no consumer |
+
+Nothing useful: 274bot `paths/289` for the three failing quests, `guild-funnel.md` beyond its market snapshot, ken12321 `bots/_shared/`. Do not copy: ken12321's "29x XP" (willow is 675 tenths, so 25x holds), GoonMachine's "no Grand Exchange".
+
+Upstream and LostCity bug trackers were not audited. `research/rs-sdk-item-dup.md` says upstream `main` equals our pin, but the pin `db0cc51e` is 5 commits behind, and the live server's commit is not known.
+
+### 9.12 RuneBench and the rune.fast data
+
+Raw copies are in `.practice/rival-archive/` (67 files, untracked). rune.fast has no license, so facts only. Gains are ESTIMATES. Both top items are being measured on practice.
+
+| Claim | Source | Check | Our number | Decision |
+|---|---|---|---|---|
+| Ranged about 55 to 99 in 1,814 ticks, about 523 XP per tick, with a cannon at the Wilderness poison spiders (3286-3289,3809-3812) | `data/route-log.json`, `data/attempts-timeline.json` | Confirmed: 62 spawns in `m51_59.jm2`, multiway; the cannon roll uses the melee attack roll (`cannon_fire.rs2:116`), so Attack matters | 67-84 XP per tick on troopers; segment 24 is 6,535 against their 3,099 | measure; ESTIMATE about -3,400 on Overall |
+| Anvil cycle of 32 ticks for 5 adamant platebodies | `route-log.json` S25a | Their live log | 37 ticks; Smithing 1,312 against #1 at 1,281 | measure; ESTIMATE about 1,137 |
+| A knife gate: count on-time actions out of 20 per band, fall back to plain cutting below 14.5, but keep the knife in bone-burying bands | `data/tricks.json` | Not checked | `woodcutting.ts` has no gate | candidate |
+| 249 sub-step timings; Monkey Madness jail2 489, dungeon1 444, disguise 400, dungeon2 365, demon 355, return 306 | `route-log.json` | Their log | Monkey Madness 5,501 against 4,113 | time `quest-mm.ts` per step; ESTIMATE up to 900 ticks |
+| Their client ledger reads 35,225; about 550 of the 562 extra ticks are an abandoned body before death | `attempts-timeline.json` | Their log | the plan targets under 35,787 | a clean rerun by them lands near 35,225 |
+| `%ownedmcannon` stays set after a lost cannon, so setup is refused | `attempts-timeline.json` | Confirmed: `cannon_setup.rs2` | no check in the cannon script | add the check |
+| Hiscore rank uses raw ticks; the display is ticks times the current tick length | Upstream | Confirmed: `server/engine/src/util/Playtime.ts:20-23` | `leader-forensics.md` fact 6 is open | close that item |
+| Hard leather bodies have no delay: 875 XP at 25x, level 28 | RuneBench crafting run | Confirmed: `leather.rs2:116-133` | no row | cheaper supply fallback than gems for levels 28-55 |
+
+RuneBench rates are 15-second peaks on an 8x server and do not compare directly. No skill method beat a row of ours. Team results are not public. Their other failure causes: poison during a long carrier wait with no death check, a single Search click with no resend, a hand-off one slot short for unequipping, helpers expiring on a long wait, and a Protect prayer off for 12 ticks.
