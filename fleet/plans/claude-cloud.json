@@ -1,5 +1,74 @@
 {
  "side": "claude-cloud",
- "at": 1793855452323,
- "jobs": []
+ "at": 1793855615827,
+ "jobs": [
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/ranged-train.ts",
+   "args": [
+    "95",
+    "40000"
+   ],
+   "env": {
+    "FOOD": "2",
+    "BUY_ARROW_ID": "884",
+    "BUY_ARROWS": "200",
+    "MAX_SPEND": "3000",
+    "AMMO": "100",
+    "MIN_ARROWS": "40",
+    "KILLS_PER_TRIP": "8",
+    "MAX_TRIPS": "50"
+   },
+   "enabled": true,
+   "repeat": true,
+   "goal": "Ranged board gap: Ranged 90 to 95 (fleet best, ours)",
+   "role": "ranged"
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/ranged-train.ts",
+   "args": [
+    "95",
+    "40000"
+   ],
+   "env": {
+    "FOOD": "3",
+    "BUY_ARROW_ID": "884",
+    "BUY_ARROWS": "200",
+    "MAX_SPEND": "3000",
+    "AMMO": "100",
+    "MIN_ARROWS": "40",
+    "KILLS_PER_TRIP": "8",
+    "MAX_TRIPS": "50"
+   },
+   "enabled": true,
+   "repeat": true,
+   "goal": "Ranged board gap: Ranged 90 to 95",
+   "role": "ranged"
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/quest-chain.ts",
+   "args": [
+    "murder,fluffs,runemysteries"
+   ],
+   "env": {},
+   "enabled": false,
+   "repeat": false,
+   "goal": "Quest Points: no-item quests after Magic 99",
+   "role": "quest"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/quest-chain.ts",
+   "args": [
+    "sheepherder,totem,runemysteries"
+   ],
+   "env": {},
+   "enabled": false,
+   "repeat": false,
+   "goal": "Quest Points chain 2: no-item or shop-item quests with little combat (QP 8 after chain 1)",
+   "role": "quest"
+  }
+ ]
 }
