@@ -60,6 +60,12 @@ try {
         if (!done()) await q.fail(`kill ${label}`);
     };
     const toTrapdoor = async (label: string): Promise<void> => {
+        // Inside the temple the only way out is the west door, which the planner treats as open.
+        if (x() >= 3409 && x() <= 3420 && (q.pos()?.worldZ ?? 0) >= 3480 && (q.pos()?.worldZ ?? 0) <= 3500) {
+            await q.walk(`${label} temple door`, [{ x: TEMPLE_DOOR.x + 1, z: TEMPLE_DOOR.z, tol: 1 }]);
+            await q.step(`${label} temple door out`, () => { const d = q.locAt(TEMPLE_DOOR.x, TEMPLE_DOOR.z) ?? TEMPLE_DOOR; return q.opLoc(d, q.opIndex(d, /^open$/i)); }, () => x() <= TEMPLE_DOOR.x || !q.shutAt(TEMPLE_DOOR.x, TEMPLE_DOOR.z), 8, 5);
+            await q.dash(`${label} out of temple`, TEMPLE_DOOR.x - 2, TEMPLE_DOOR.z, 1, 8);
+        }
         await q.walk(`${label} to trapdoor`, [...(x() < 3290 ? EAST : []), { x: NORTH_TRAPDOOR.x, z: NORTH_TRAPDOOR.z - 1, tol: 1 }]);
         await q.climb(`${label} trapdoor`, () => q.locAt(NORTH_TRAPDOOR.x, NORTH_TRAPDOOR.z) ?? NORTH_TRAPDOOR, /climb-down|^open$/i, under, 6);
     };
