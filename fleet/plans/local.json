@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793865728340,
+ "at": 1793881878911,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -410,8 +410,7 @@
   },
   {
    "accounts": [
-    "Shaftsinker",
-    "OreElse"
+    "Shaftsinker"
    ],
    "script": "scripts/handoff-inputs.ts",
    "args": [
@@ -452,6 +451,21 @@
    ]
   },
   {
+   "account": "Wandwaver",
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "blackknight"
+   ],
+   "env": {
+    "CAP": "6000",
+    "COORDINATOR_RUN_ID": "task-230debbe-273c-476f-a7e9-00361daa209a"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-blackknight-wandwaver-finish [task-230debbe-273c-476f-a7e9-00361daa209a]",
+   "role": "supply"
+  },
+  {
    "account": "CoinCock",
    "script": "scripts/quest-sweep.ts",
    "args": [
@@ -459,27 +473,27 @@
    ],
    "env": {
     "CAP": "6000",
-    "COORDINATOR_RUN_ID": "task-6af75f5d-7e34-4b6a-9c3a-4ceb02e2e95c"
+    "COORDINATOR_RUN_ID": "task-eafc3d9f-b90e-448f-af7f-7dc25480a27b"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "run-elena-coincock-released [task-6af75f5d-7e34-4b6a-9c3a-4ceb02e2e95c]",
+   "goal": "run-elena-coincock-heckel-dust [task-eafc3d9f-b90e-448f-af7f-7dc25480a27b]",
    "role": "supply"
   },
   {
-   "account": "Wandwaver",
+   "account": "OreElse",
    "script": "scripts/quest-sweep.ts",
    "args": [
-    "prince"
+    "itgronigen"
    ],
    "env": {
     "CAP": "6000",
-    "COORDINATOR_RUN_ID": "task-615edacc-bed8-440f-8ff9-933548f01e1e"
+    "COORDINATOR_RUN_ID": "task-4bdac771-2481-434a-b8a1-4e6677707fe5"
    },
    "enabled": false,
    "repeat": false,
-   "goal": "run-prince-wandwaver-released [task-615edacc-bed8-440f-8ff9-933548f01e1e]",
-   "role": "supply"
+   "goal": "run-observatory-oreelse-first-live [task-4bdac771-2481-434a-b8a1-4e6677707fe5]",
+   "role": "smithing"
   }
  ]
 }
