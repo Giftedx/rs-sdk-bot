@@ -2323,6 +2323,15 @@
               ],
               "scope": "Upstream staged CLI workers and owned API workers have distinct entry contracts. Captured Native receipts bind their recorded source and starting conditions. Full owned Legends acceptance remains open. Live, repeat and lower-level conditions remain unqualified.",
               "legendsComponents": {
+                "stage22ToCompletion": {
+                  "evidence": ".practice/microbot-ports/legends-suffix-native-1793896617962/result.json",
+                  "sourceCheck": ".practice/microbot-ports/legends-suffix-native-1793896617962/source-check.json",
+                  "compiledCheck": ".practice/microbot-ports/legends-suffix-native-1793896617962/compiled-cache-ready-check.json",
+                  "sourceSha256": "c5cf577fb37d3d6b06bb87acc5b94ff6552730f73a184246601b18aad2958f01",
+                  "fixtureWorkerSha256": "90e685e468d3c91083fbbe3d4ccbe294b3105022351fb31d3efd0958156b1366",
+                  "checkpointSha256": "4e509034ec514e85320e38012b3d940d7cf1f5611c3f7188eec81564556ec9a9",
+                  "scope": "Captured stage-22 save after the second demon with the exact prior fare total. The production suffix reaches stage 75 and four quest points in 2942 ticks. It collects sacred water, plants and carves Yommi, defeats the final demon, restores Prayer controls, returns the map and gilded totem, earns four Herblore rewards and logs out at the bank. Native practice starts at stage 22."
+                },
                 "lowerCaveLedges": {
                   "evidence": ".practice/microbot-ports/legends-lower-cave-native-1793879435919/result.json",
                   "sourceCheck": ".practice/microbot-ports/legends-lower-cave-native-1793879435919/source-check.json",
