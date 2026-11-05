@@ -538,6 +538,8 @@ Each quest failed the full practice batch. Conditions: the quest's preset (every
 | Biohazard | The bot stayed inside Elena's house, whose door shuts behind it | Leave by the door, then sail to Port Sarim (ships keep the sample; 60 coins) | 1,389, 1,300, 1,279 |
 | Family Crest | Three crossings planned as open: the double gate at 3105,9944, Chronozon's gate at 3089,9945, Varrock's east gate at 3264,3405 | Op each gate; short legs round the rock | 1,097, 1,039, 1,058 |
 | The Tourist Trap | The curtain at 3291,3031 closes Siad's building from the south; the anvil loop could click during the 8-tick forge | Open the curtain from 3291,3030 both ways; wait for the roll; 5 bars | 1,187, 1,215, 1,226 |
+| Priest in Peril | The SDK sends nothing for a target with no route, so `talk` saw no refusal and never opened the door; the temple's west door shuts the bot in | `talk` reads the `reachable` flag; open the door to leave | 882, 828, 852 |
+| Horror from the Deep | The pipe's north stand is in the yard past the outpost gate; a message from the previous wall item skipped a slot | Go through the gate; count each item | 690, 643, 629 |
 
 The anvil cause is inferred: 2 of 3 runs failed before the change and 3 of 3 passed after it, with two more bars in the same change. The Clock Tower failure (`walk to trough`) is not addressed here.
 
@@ -654,3 +656,5 @@ Do not copy: GoonMachine King of the Hill formations (replaced by Lava Maze runi
 Nothing useful: jrpii/rs-sdk-temporal-planning (two toy tasks, no costs), msalmeida-boomer/runescaper, Dexploarer, saimdlx, nymph-ai, AuburyEssentian, Kimmo3223, Wgelyjr (5x server), jamie-legg, dlhg, maxwelllord/AgentPairRSBench, danmarkmann/runebench, skiller185 (README only), tristinhill26-bit, abuaboud/MoRS (modern OSRS), RecoX/aobench, skulltrick/lclite, DataHoarder6/2004lite, owendirk/runelite-bot-sdk, nrylov/rs2011-ts, rbriphy, halogod35, reclear-io/llmref.
 
 Two-rat flinch is rejected: both rats are penned at x 3014-3020, z 3282-3296, and no tile in their range is multiway (`research/gathering-tricks.md`).
+
+Full quest sweep on master, one run each: 43 of 56 passed (`.practice/quest-sweep-all/results.jsonl`). Scorpion Catcher still fails: it passes the outpost yard, then paces at 2893,9796 and dies to dragon fire, with or without waypoints. Cause not found. The walker changes are not the cause of the Priest, Horror and Scorpion failures: all three failed on the commit before them too.
