@@ -433,13 +433,18 @@ export async function sweep(account:string,quest:string,fresh?:string){
  }
  const here=():Tile=>{const p=st()?.player;return p?{x:p.worldX,z:p.worldZ,level:p.level}:{x:0,z:0,level:-1};};
  const world=await getWorld();
- // The world walker plans from the ground floor: an account left upstairs (Hazeel Cult ends there) climbs down first.
- for(let i=0;i<3&&(st()?.player?.level??0)>0;i++){
-  const down=(st()?.nearbyLocs??[]).filter((l:any)=>(l.optionsWithIndex??[]).some((o:any)=>/climb-down/i.test(o.text))).sort((a:any,b:any)=>a.distance-b.distance)[0];
-  if(!down)return fail(`no way down from level ${st()?.player?.level}`);
-  const level=st()?.player?.level??0,op=down.optionsWithIndex.find((o:any)=>/climb-down/i.test(o.text))?.opIndex??1;
+ // The world walker plans from the ground floor: an account left upstairs (Hazeel Cult ends there, Ernest the Chicken on
+ // Draynor Manor's top floor) takes the nearest way down a floor at a time by the route graph; a Climb-down loc in view is
+ // the fallback (the manor's top-floor stairs were out of view and the sweep failed with no way down).
+ for(let i=0;i<4&&(st()?.player?.level??0)>0;i++){
+  const level=st()?.player?.level??0,down=wayDown(world.navigationGraph?.().transports??[],here());
+  console.log(`QUEST_SWEEP_DOWN ${JSON.stringify({from:here(),to:down})}`);
+  const r=await goTo(s,world,down,accountOf(s),{legTimeoutTicks:150,planBudgetMs:SWEEP_PLAN_BUDGET_MS});
+  if(r.ok&&(st()?.player?.level??level)<level)continue;
+  const loc=(st()?.nearbyLocs??[]).filter((l:any)=>(l.optionsWithIndex??[]).some((o:any)=>/climb-down/i.test(o.text))).sort((a:any,b:any)=>a.distance-b.distance)[0];
+  if(!loc)return fail(`no way down from level ${st()?.player?.level}${r.ok?'':`: ${r.reason} ${r.detail}`}`);
   // bot.interactLoc opens a shut door on the way (Juliet's room door stands between her and the stairs).
-  await s.bot.interactLoc(down,op);
+  await s.bot.interactLoc(loc,loc.optionsWithIndex.find((o:any)=>/climb-down/i.test(o.text))?.opIndex??1);
   await waitUntil(s,()=>(st()?.player?.level??level)<level,{timeoutTicks:30});
  }
  const pack=():Item[]=>(st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count}));
