@@ -368,9 +368,9 @@ function dropFeed(ws: WebSocket) {
     if (feedSocket !== ws) return;
     feedSocket = null;
     world.connected = false;
-    roster.clear();
+    // The roster stays: the feed closes often, and each entry already expires 30 s after it was last seen.
     try { ws.close(); } catch { /* already closed */ }
-    setTimeout(connectFeed, 5000);
+    setTimeout(connectFeed, 1000);
 }
 setInterval(() => {
     if (feedSocket && Date.now() - feedHeardAt > FEED_SILENCE_MS) {
