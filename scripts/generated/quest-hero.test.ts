@@ -95,3 +95,11 @@ test('repeat Grip lure uses the observed open cabinet after its first closed tra
 test('Grip lure refuses missing or ambiguous observed cabinet before input',async()=>{
  for(const locs of[[],[{id:2635,x:2774,z:3196,level:0}],[{id:2635,x:2775,z:3196,level:0},{id:2636,x:2775,z:3196,level:0}]]){let inputs=0;const s:any={client:{npc:{7:{}}},sdk:{getState:()=>({nearbyNpcs:[{id:792,index:7,x:2774,z:3192,hp:25}],nearbyLocs:locs})}},q:any={walk:async()=>{},dialogOpen:()=>false,opLoc:async()=>{inputs++;}};await expect(heroesLureGrip(s,q,()=>{})).rejects.toThrow('unique observed Grip cabinet');expect(inputs).toBe(0);}
 });
+
+test('observed blocked Grip lure may retry an unpaid closed-dialog cycle on the same NPC',async()=>{
+ const n:any={id:792,index:7,x:2774,z:3192,hp:17},cabinet:any={id:2635,x:2775,z:3196,level:0};let attempts=0;const s:any={client:{npc:{7:{}}},sdk:{getState:()=>({nearbyNpcs:[n],nearbyLocs:[cabinet]})}},q:any={walk:async()=>{},opLoc:async()=>{attempts++;cabinet.id=2636;Object.assign(n,{x:2777,z:attempts===1?3197:3198});},dialogOpen:()=>false,sawText:()=>true,converse:async(_:any,done:any)=>{if(attempts===1){Object.assign(n,{x:2774,z:3192});return false;}return done();}};
+ await heroesLureGrip(s,q,()=>{});expect(attempts).toBe(2);expect(n.hp).toBe(17);
+});
+test('unresolved Grip dialog refuses relure and all closed-dialog retries remain finite',async()=>{
+ for(const open of[true,false]){let attempts=0;const n:any={id:792,index:7,x:2774,z:3192,hp:25},s:any={client:{npc:{7:{}}},sdk:{getState:()=>({nearbyNpcs:[n],nearbyLocs:[{id:2636,x:2775,z:3196,level:0}]})}},q:any={walk:async()=>{},opLoc:async()=>{attempts++;},dialogOpen:()=>open,sawText:()=>true,converse:async()=>false};await expect(heroesLureGrip(s,q,()=>{})).rejects.toThrow();expect(attempts).toBe(open?1:8);}
+});
