@@ -19,9 +19,10 @@ test('the status row is written on the clock while no game tick arrives, so the 
         const later = JSON.parse(readFileSync(file, 'utf8'));
         expect(later.at).toBeGreaterThan(first.at);
         expect(later.tick).toBe(531);
-        // The gate reads the row within 30 s of its last write as a known peer on the current release.
-        expect(() => assertCompatibleWorkers(process.env.WORKER_RELEASE!, 'localhost:8888', [later], later.at + 1_000)).not.toThrow();
+        // The gate reads an unfinished row within 30 s of its last write as a known peer on the current release (the
+        // row's result is cleared here: another test in this process may have noted a RESULT line).
+        expect(() => assertCompatibleWorkers(process.env.WORKER_RELEASE!, 'localhost:8888', [{ ...later, result: '' }], later.at + 1_000)).not.toThrow();
         // Without the clock a 60-second hold would read as unknown.
-        expect(() => assertCompatibleWorkers(process.env.WORKER_RELEASE!, 'localhost:8888', [first], first.at + 60_000)).toThrow(/peer state unknown/);
+        expect(() => assertCompatibleWorkers(process.env.WORKER_RELEASE!, 'localhost:8888', [{ ...first, result: '' }], first.at + 60_000)).toThrow(/peer state unknown/);
     } finally { status.stop(); rmSync(file, { force: true }); rmSync(file + '.tmp', { force: true }); }
 });
