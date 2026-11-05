@@ -180,10 +180,14 @@ test('withdrawal slots count a stack once and nothing for a stack the pack alrea
  // A pack of 27 sharks and coins: only food can go, and only as much as the slots need.
  const sharks=[{id:995,count:30},...Array.from({length:27},()=>({id:385,count:1}))];
  expect(depositPlan(sharks,3,keep)).toEqual([{id:385,count:3}]);
- // The allowance holds eight food units back whatever the need.
- expect(depositPlan(sharks,28,keep)).toEqual([{id:385,count:19}]);
+ // The allowance holds eight food units back while the need leaves room; a need of 28 leaves none.
+ expect(depositPlan(sharks,20,keep)).toEqual([{id:385,count:19}]);
+ expect(depositPlan(sharks,28,keep)).toEqual([{id:385,count:27}]);
  // Three pots of flour plus the pickup reserve: a full pack of sharks banks eleven and keeps sixteen.
  expect(depositPlan(sharks,slotsFor([{id:1933,count:3}],sharks)+QUEST_PICKUP_SLOTS,keep)).toEqual([{id:385,count:11}]);
+ // Twenty balls of wool plus the reserve want 27 slots: the allowance gives way and one shark stays.
+ const nine=[{id:995,count:30},...Array.from({length:9},()=>({id:385,count:1}))];
+ expect(depositPlan(nine,Math.min(27,20+QUEST_PICKUP_SLOTS),keep)).toEqual([{id:385,count:8}]);
 });
 
 test('a far start walks hub to hub in hops of at most 150 tiles that each bring the goal nearer; a near start has no hops',async()=>{
@@ -217,5 +221,5 @@ test('a seller across the water ranks behind one on the same landmass, and sword
  expect(isEdible(373)).toBe(true);expect(isEdible(1895)).toBe(true);expect(isEdible(1387)).toBe(false);
  // TheFullMonty's pack: the staff, pots and talisman go; the allowance keeps five swordfish and three of four cake slices.
  const pack=[{id:995,count:17400},{id:1387,count:1},{id:1931,count:1},{id:1931,count:1},{id:1931,count:1},{id:1438,count:1},...Array.from({length:5},()=>({id:373,count:1})),...Array.from({length:4},()=>({id:1895,count:1}))];
- expect(depositPlan(pack,28,()=>false)).toEqual([{id:1387,count:-1},{id:1931,count:-1},{id:1438,count:-1},{id:1895,count:1}]);
+ expect(depositPlan(pack,20,()=>false)).toEqual([{id:1387,count:-1},{id:1931,count:-1},{id:1438,count:-1},{id:1895,count:1}]);
 });

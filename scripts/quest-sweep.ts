@@ -84,7 +84,8 @@ export function depositPlan(pack:readonly Item[],need:number,keep:(id:number)=>b
   if(id===COINS||isEdible(id)||keep(id))continue;
   out.push({id,count:-1});free+=pack.filter(i=>i.id===id).length;
  }
- let allowance=KEEP_FOOD;
+ // The allowance gives way to the supplies: 20 balls of wool, the coins and the pickup reserve leave one slot for food.
+ let allowance=Math.max(0,Math.min(KEEP_FOOD,28-need));
  for(const id of [...new Set(pack.filter(i=>isEdible(i.id)&&!STACKS.has(i.id)).map(i=>i.id))]){
   if(free>=need)break;
   const held=pack.filter(i=>i.id===id).length,kept=Math.min(held,allowance);allowance-=kept;
@@ -124,6 +125,8 @@ export function eatAtFor(maxHp:number):number{return Math.max(10,Math.floor(maxH
 // crow flies) ranks behind one on the same landmass (Kortan in Ardougne, 654), since the world router's search for the
 // crossing idles hundreds of ticks.
 export const SEA=1000;
+// The farthest seller a sweep walks to: Al Kharid to Ardougne is 654 tiles; a crossing costs SEA on top.
+export const FAR_SELLER=800;
 export function travelDistance(from:Tile,to:Tile):number{return cheb(from,to)+(onKaramja(from)!==onKaramja(to)?SEA:0);}
 export function sellersByTravel<S extends {tile:Tile}>(sellers:readonly S[],at:Tile):S[]{
  return [...sellers].sort((a,b)=>travelDistance(at,a.tile)-travelDistance(at,b.tile));
@@ -245,6 +248,9 @@ async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<s
   let walked:{ok:boolean;reason?:string;detail?:string}={ok:false},tried=0;
   for(const [k,c] of sellers.entries()){
    if(held(b.id)>=target)break;
+   // A seller across the sea or the map is not worth the search: the sweep fails fast and the shortfall is acquisition work.
+   const here=():Tile=>{const q=st()?.player;return{x:q?.worldX??0,z:q?.worldZ??0,level:q?.level??0};};
+   if(travelDistance(here(),c.tile)>FAR_SELLER){console.log(`QUEST_SWEEP_SELLER_FAR ${JSON.stringify({npc:c.npc,tile:c.tile,from:here()})}`);continue;}
    walked=await walkFar(s,world,c.tile,100);
    if(!walked.ok)continue;
    tried++;
@@ -426,7 +432,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
   }
   // Free the slots the withdrawals, the shop purchases and the gathered items need, plus the pickups: whole kinds the
   // quest does not use first, one deposit per kind, then food beyond the allowance.
-  const slots=slotsFor([...p.withdraw,...shop.buys.map(b=>({id:b.id,count:b.count})),...gather.gathers.map(g=>({id:g.id,count:g.count}))],pack())+QUEST_PICKUP_SLOTS;
+  const slots=Math.min(27,slotsFor([...p.withdraw,...shop.buys.map(b=>({id:b.id,count:b.count})),...gather.gathers.map(g=>({id:g.id,count:g.count}))],pack())+QUEST_PICKUP_SLOTS);
   for(const d of depositPlan(pack(),slots,id=>need.has(id)||keepsItem(quest,id,id=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable))){
    const item=(st()?.inventory??[]).find((i:any)=>i.id===d.id);
    if(!item)continue;
