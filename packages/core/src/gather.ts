@@ -76,12 +76,17 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
     const before=held(g.id);
     if(g.how==='kill'){
      // The nearest free one in sight; its drop lands on its tile when it dies, and another player's kill drops nothing for us.
-     const ids=KILL_SOURCES[g.id]!.npcs;
+     const ids=KILL_SOURCES[g.id]!.npcs,lying=()=>(st()?.groundItems??[]).filter((i:any)=>i.id===g.id&&i.distance<=12).sort((a:any,b:any)=>a.distance-b.distance);
+     // A drop already on the ground (an earlier kill, another player's) is taken before the next fight, so the fight's
+     // own wait ends only on a drop that was not there when it began.
+     if(lying()[0]){await s.bot.pickupItem(lying()[0]);await waitUntil(s,()=>held(g.id)>before,{timeoutTicks:15});continue;}
      const npc=(st()?.nearbyNpcs??[]).filter((n:any)=>ids.includes(n.id)&&!n.inCombat&&n.distance<=15).sort((a:any,b:any)=>a.distance-b.distance)[0];
      if(!npc){if(!await waitUntil(s,()=>(st()?.nearbyNpcs??[]).some((n:any)=>ids.includes(n.id)&&!n.inCombat&&n.distance<=15),{timeoutTicks:30}))break;continue;}
+     const seen=new Map<string,number>();for(const i of lying())seen.set(`${i.x},${i.z}`,(seen.get(`${i.x},${i.z}`)??0)+1);
      const r:any=await s.bot.attack(npc);
      if(!r?.success){await waitTicks(s,2);continue;}
-     const gone=()=>!(st()?.nearbyNpcs??[]).some((n:any)=>n.index===npc.index),drop=()=>(st()?.groundItems??[]).filter((i:any)=>i.id===g.id&&i.distance<=12).sort((a:any,b:any)=>a.distance-b.distance)[0];
+     const gone=()=>!(st()?.nearbyNpcs??[]).some((n:any)=>n.index===npc.index);
+     const drop=()=>{const now=new Map<string,number>();for(const i of lying())now.set(`${i.x},${i.z}`,(now.get(`${i.x},${i.z}`)??0)+1);return lying().find((i:any)=>(now.get(`${i.x},${i.z}`)??0)>(seen.get(`${i.x},${i.z}`)??0));};
      // A fight that reaches the hitpoint floor is abandoned: the bot walks away and the sweep fails short of the item.
      const hp=()=>st()?.skills?.find((k:any)=>k.name==='Hitpoints'),floor=Math.max(5,Math.ceil((hp()?.baseLevel??10)*0.25)),low=()=>(hp()?.level??99)<=floor;
      await waitUntil(s,()=>gone()||!!drop()||low(),{timeoutTicks:150});
