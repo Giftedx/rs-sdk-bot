@@ -163,3 +163,17 @@ test('a quest keeps its own items and every untradeable item out of the unneeded
  expect(keepsItem('sheep',1438,tradeable)).toBe(false);
  expect(keepsItem('sheep',995,tradeable)).toBe(false);
 });
+
+test('withdrawal slots count a stack once and nothing for a stack the pack already holds; deposits free whole kinds and spare coins, food and quest items',async()=>{
+ const {slotsFor,depositPlan}=await import('./quest-sweep');
+ const pack=[{id:995,count:500},...Array.from({length:5},()=>({id:385,count:1})),{id:1351,count:1},{id:590,count:1},{id:1438,count:1}];
+ expect(slotsFor([{id:995,count:190}],pack)).toBe(0);
+ expect(slotsFor([{id:563,count:1},{id:556,count:5}],pack)).toBe(2);
+ expect(slotsFor([{id:1933,count:3},{id:995,count:190}],pack)).toBe(3);
+ const keep=(id:number)=>id===1438;
+ expect(depositPlan(pack,3,keep)).toEqual([]);
+ const full=[{id:995,count:500},...Array.from({length:20},()=>({id:385,count:1})),...Array.from({length:6},()=>({id:1351,count:1})),{id:1438,count:1}];
+ expect(full.length).toBe(28);
+ expect(depositPlan(full,3,keep)).toEqual([1351]);
+ expect(depositPlan(full,10,keep)).toEqual([1351]);
+});

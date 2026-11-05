@@ -56,6 +56,26 @@ export const QUEST_KEEP:Record<string,number[]>={runemysteries:[1438,290,291],to
 export function keepsItem(quest:string,id:number,tradeable:(id:number)=>boolean|undefined):boolean{
  return (QUEST_KEEP[quest]??[]).includes(id)||tradeable(id)===false;
 }
+// Pack slots a withdrawal list needs: a stack (coins, runes, anything the pack already holds as a stack) takes one slot
+// whatever its count; everything else one slot per unit.
+export const STACKS=new Set([COINS,554,555,556,557,558,559,560,561,562,563,564,565,566]);
+export function slotsFor(withdraw:readonly Item[],pack:readonly Item[]):number{
+ const stack=(id:number)=>STACKS.has(id)||pack.some(i=>i.id===id&&i.count>1);
+ return withdraw.reduce((n,w)=>n+(stack(w.id)?(pack.some(i=>i.id===w.id)?0:1):w.count),0);
+}
+// The ids to deposit, whole stacks each, so the pack has `need` free slots: never coins, food or runes (the quest eats and
+// teleports with them), the quest's own items, or what the preset needs. One deposit per id: depositing one unit of a
+// kind banks the whole kind, and a second deposit of the same kind from a stale slot waits out its timeout.
+export function depositPlan(pack:readonly Item[],need:number,keep:(id:number)=>boolean):number[]{
+ let free=28-pack.length;
+ const out:number[]=[];
+ for(const id of [...new Set(pack.map(i=>i.id))]){
+  if(free>=need)break;
+  if(id===COINS||FOOD.has(id)||keep(id))continue;
+  out.push(id);free+=pack.filter(i=>i.id===id).length;
+ }
+ return out;
+}
 export function nearestBanks(at:Tile):Tile[]{
  return BANKS.filter(b=>b.level===at.level).sort((a,b)=>Math.max(Math.abs(a.x-at.x),Math.abs(a.z-at.z))-Math.max(Math.abs(b.x-at.x),Math.abs(b.z-at.z)));
 }
@@ -310,9 +330,14 @@ export async function sweep(account:string,quest:string,fresh?:string){
    if(take>0){const c=p.withdraw.find(w=>w.id===COINS);if(c)c.count+=take;else p.withdraw.push({id:COINS,count:take});}
    console.log(`QUEST_SWEEP_SHOP_PLAN ${JSON.stringify({buys:shop.buys,coins:shop.coins})}`);
   }
-  // Free the slots the withdrawals need: bank every pack item the quest does not use.
-  const slots=p.withdraw.reduce((n,i)=>n+i.count,0);
-  if(28-(st()?.inventory?.length??0)<slots)for(const i of [...(st()?.inventory??[])])if(!need.has(i.id)&&!keepsItem(quest,i.id,id=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable))await s.bot.depositItem(i,-1);
+  // Free the slots the withdrawals need: bank whole kinds the quest does not use, one deposit per kind.
+  const slots=slotsFor(p.withdraw,pack());
+  for(const id of depositPlan(pack(),slots,id=>need.has(id)||keepsItem(quest,id,id=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable))){
+   const item=(st()?.inventory??[]).find((i:any)=>i.id===id);
+   if(!item)continue;
+   const r:any=await s.bot.depositItem(item,-1);
+   console.log(`QUEST_SWEEP_DEPOSIT ${JSON.stringify({id,success:r?.success,message:r?.message,free:28-(st()?.inventory?.length??0)})}`);
+  }
   for(const w of p.withdraw){
    const row=(st()?.bank?.items??[]).find((i:any)=>i.id===w.id);
    const before=count(pack(),w.id),bankBefore=count(rows(),w.id);
