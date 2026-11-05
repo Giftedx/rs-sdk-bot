@@ -165,7 +165,7 @@ test('a quest keeps its own items and every untradeable item out of the unneeded
 });
 
 test('withdrawal slots count a stack once and nothing for a stack the pack already holds; deposits free whole kinds and spare coins, food and quest items',async()=>{
- const {slotsFor,depositPlan,QUEST_PICKUP_SLOTS}=await import('./quest-sweep');
+ const {slotsFor,depositPlan,QUEST_PICKUP_SLOTS,slotNeed}=await import('./quest-sweep');
  const pack=[{id:995,count:500},...Array.from({length:5},()=>({id:385,count:1})),{id:1351,count:1},{id:590,count:1},{id:1438,count:1}];
  expect(slotsFor([{id:995,count:190}],pack)).toBe(0);
  expect(slotsFor([{id:563,count:1},{id:556,count:5}],pack)).toBe(2);
@@ -180,17 +180,24 @@ test('withdrawal slots count a stack once and nothing for a stack the pack alrea
  // A pack of 27 sharks and coins: only food can go, and only as much as the slots need.
  const sharks=[{id:995,count:30},...Array.from({length:27},()=>({id:385,count:1}))];
  expect(depositPlan(sharks,3,keep)).toEqual([{id:385,count:3}]);
- // The allowance holds eight food units back while the need leaves room; a need of 28 leaves none.
- expect(depositPlan(sharks,20,keep)).toEqual([{id:385,count:19}]);
+ // The allowance holds food back while the need and the coins leave room (seven units at a need of 20); a need of 28 leaves none.
+ expect(depositPlan(sharks,20,keep)).toEqual([{id:385,count:20}]);
  expect(depositPlan(sharks,28,keep)).toEqual([{id:385,count:27}]);
  // Three pots of flour plus the pickup reserve: a full pack of sharks banks eleven and keeps sixteen.
  expect(depositPlan(sharks,slotsFor([{id:1933,count:3}],sharks)+QUEST_PICKUP_SLOTS,keep)).toEqual([{id:385,count:11}]);
  // An edible quest ingredient the preset needs (Family Crest's cooked fish, 5) is kept whatever the pressure.
  const fishy=[{id:995,count:30},...Array.from({length:5},()=>({id:333,count:1})),...Array.from({length:22},()=>({id:385,count:1}))];
- expect(depositPlan(fishy,27,id=>id===333)).toEqual([{id:385,count:21}]);
- // Twenty balls of wool plus the reserve want 27 slots: the allowance gives way and one shark stays.
+ expect(depositPlan(fishy,27,id=>id===333)).toEqual([{id:385,count:22}]);
+ // Twenty balls of wool beside the coins: the reserve gives way to two slots and five sharks stay.
  const nine=[{id:995,count:30},...Array.from({length:9},()=>({id:385,count:1}))];
- expect(depositPlan(nine,Math.min(27,20+QUEST_PICKUP_SLOTS),keep)).toEqual([{id:385,count:8}]);
+ expect(slotNeed(20,1)).toBe(22);
+ expect(depositPlan(nine,slotNeed(20,1),keep)).toEqual([{id:385,count:4}]);
+ // Demon Slayer's 25 bones and two rune stacks beside the coins: 27 slots, no food, the reserve floor cannot fit.
+ const cakes=[{id:995,count:21000},...Array.from({length:7},()=>({id:1895,count:1}))];
+ expect(slotNeed(27,1)).toBe(27);
+ expect(depositPlan(cakes,slotNeed(27,1),keep)).toEqual([{id:1895,count:7}]);
+ // Three pots of flour beside the coins keep the whole reserve and allowance.
+ expect(slotNeed(3,1)).toBe(11);
 });
 
 test('a far start walks hub to hub in hops of at most 150 tiles that each bring the goal nearer; a near start has no hops',async()=>{
@@ -222,9 +229,9 @@ test('a seller across the water ranks behind one on the same landmass, and sword
  expect(travelDistance(alKharid,kortan)).toBe(654);
  expect(sellersByTravel([{npc:'Hamab',tile:hamab},{npc:'Kortan',tile:kortan}],alKharid).map(s=>s.npc)).toEqual(['Kortan','Hamab']);
  expect(isEdible(373)).toBe(true);expect(isEdible(1895)).toBe(true);expect(isEdible(1387)).toBe(false);
- // TheFullMonty's pack: the staff, pots and talisman go; the allowance keeps five swordfish and three of four cake slices.
+ // TheFullMonty's pack: the staff, pots and talisman go; the allowance keeps five swordfish and two of four cake slices.
  const pack=[{id:995,count:17400},{id:1387,count:1},{id:1931,count:1},{id:1931,count:1},{id:1931,count:1},{id:1438,count:1},...Array.from({length:5},()=>({id:373,count:1})),...Array.from({length:4},()=>({id:1895,count:1}))];
- expect(depositPlan(pack,20,()=>false)).toEqual([{id:1387,count:-1},{id:1931,count:-1},{id:1438,count:-1},{id:1895,count:1}]);
+ expect(depositPlan(pack,20,()=>false)).toEqual([{id:1387,count:-1},{id:1931,count:-1},{id:1438,count:-1},{id:1895,count:2}]);
 });
 
 test('a preset\'s trout and bread are optional food, its bananas and ale are quest items',async()=>{
