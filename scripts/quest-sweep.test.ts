@@ -251,3 +251,13 @@ test('the hub chain toward an upstairs target is the chain toward the ground ben
  expect(hops.length).toBeGreaterThan(1);
  expect(hops.every(h=>h.level===0)).toBe(true);
 });
+
+test('a far walk from the Ardougne side to anywhere east of x 2950 crosses by the boats, whatever the floor',async()=>{
+ const {eastOfArdougne}=await import('./quest-sweep');
+ const ardougne={x:2655,z:3283,level:0};
+ expect(eastOfArdougne(ardougne,{x:3108,z:3356,level:1})).toBe(true);   // Draynor Manor upstairs
+ expect(eastOfArdougne(ardougne,{x:3190,z:3272,level:0})).toBe(true);   // Fred's farm
+ expect(eastOfArdougne(ardougne,{x:2684,z:3318,level:0})).toBe(false);  // Ardougne itself
+ expect(eastOfArdougne({x:3092,z:3243,level:0},{x:3222,z:3218,level:0})).toBe(false); // Draynor to Lumbridge
+ expect(eastOfArdougne({x:2655,z:3283,level:1},{x:3222,z:3218,level:0})).toBe(false); // from upstairs: climb down first
+});

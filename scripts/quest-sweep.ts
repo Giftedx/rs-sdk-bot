@@ -200,6 +200,7 @@ export async function walkFar(s:Session,world:World,to:Tile,legTimeoutTicks=150)
   const r=at().level===0&&t.level===0?await walkCorridor(await sessionWalker(s),[[t.x,t.z,3]]):{ok:false};
   return r.ok?{ok:true}:router(t);
  };
+ if(eastOfArdougne(at(),to)){const r=await crossEast(s,world);if(!r.ok)return r;}
  // An upstairs target (Morgan's garlic cupboard in Draynor) is approached by the hubs toward the ground beneath it;
  // only the last leg, with its stairs, is the world router's.
  for(const hop of at().level===0?hopsTo(at(),{x:to.x,z:to.z,level:0}):[]){
@@ -208,34 +209,35 @@ export async function walkFar(s:Session,world:World,to:Tile,legTimeoutTicks=150)
  }
  return to.level===0&&at().level===0&&cheb(at(),to)>30?ground(to):router(to);
 }
-async function reachStart(s:Session,world:World,start:Tile){
- const p=s.sdk.getState()?.player;
- const walk=async(to:Tile)=>{
-  const r=await goTo(s,world,to,accountOf(s),{legTimeoutTicks:150});
-  if(!r.ok)throw Error(`start walk failed to ${JSON.stringify(to)}: ${r.reason} ${r.detail}`);
- };
- const corridor=async(points:readonly Pt[])=>{
+// From the Ardougne side (x under 2800, z 3270 and up) to anywhere east of x 2950 the way is the two boats, Brimhaven and
+// Port Sarim, with the Karamja and Port Sarim corridors between: no hub lies within a hop of Ardougne to the east, and
+// the world router's search for the land way round idles out the budget. Two fares of 30 coins.
+export const eastOfArdougne=(from:Tile,to:Tile)=>from.level===0&&from.x<2800&&from.z>=3270&&to.x>=2950;
+async function crossEast(s:Session,world:World):Promise<Walked>{
+ if(count(s.sdk.getState()?.inventory??[],COINS)<60)return{ok:false,reason:'precondition',detail:'missing 995:60 for safe boat route'};
+ const walk=(to:Tile)=>goTo(s,world,to,accountOf(s),{legTimeoutTicks:150,planBudgetMs:SWEEP_PLAN_BUDGET_MS});
+ const corridor=async(points:readonly Pt[]):Promise<Walked>=>{
   const r=await walkCorridor(await sessionWalker(s),points);
-  if(!r.ok)throw Error(`corridor walk failed to ${points[points.length-1]!.join(',')} at ${JSON.stringify(r.at)}`);
+  return r.ok?{ok:true}:{ok:false,reason:'corridor',detail:`corridor walk failed to ${points[points.length-1]!.join(',')} at ${JSON.stringify(r.at)}`};
  };
- if(p?.level===0&&p.worldX<2800&&p.worldZ>=3270&&start.level===0&&start.x>=2950){
-  if(count(s.sdk.getState()?.inventory??[],COINS)<60)throw Error('missing 995:60 for safe boat route');
-  const sail=async(id:string)=>{
-   const t=loadTravel().find(t=>t.id===id);
-   if(!t?.from)throw Error(`safe boat route unavailable: ${id}`);
-   // KARAMJA ends within 4 tiles of 2956,3146, so within 7 of the customs officer at 2953,3147. The travel leg
-   // only needs the NPC in view; goTo has no Karamja route there.
-   const q=s.sdk.getState()?.player;
-   if(!q||q.level!==t.from.level||Math.max(Math.abs(q.worldX-t.from.x),Math.abs(q.worldZ-t.from.z))>8)await walk(t.from);
-   const r=await walkRoute(s,[{kind:'travel',travel:t,at:t.from,to:t.to}],{maxRetriesPerLeg:1,legTimeoutTicks:150});
-   if(!r.ok)throw Error(`safe boat route failed: ${r.reason} ${r.detail}`);
-   console.log(`QUEST_SWEEP_BOAT ${JSON.stringify({id,coins:t.coins})}`);
-  };
-  await sail('npc:captain_barnaby:brimhaven@2679,3275');
-  await corridor(KARAMJA);
-  await sail('npc:customs_officer:port-sarim@2953,3147');
-  await corridor(SARIM_NORTH);
+ const sail=async(id:string):Promise<Walked>=>{
+  const t=loadTravel().find(t=>t.id===id);
+  if(!t?.from)return{ok:false,reason:'precondition',detail:`safe boat route unavailable: ${id}`};
+  // KARAMJA ends within 4 tiles of 2956,3146, so within 7 of the customs officer at 2953,3147. The travel leg
+  // only needs the NPC in view; goTo has no Karamja route there.
+  const q=s.sdk.getState()?.player;
+  if(!q||q.level!==t.from.level||Math.max(Math.abs(q.worldX-t.from.x),Math.abs(q.worldZ-t.from.z))>8){const w=await walk(t.from);if(!w.ok)return w;}
+  const r=await walkRoute(s,[{kind:'travel',travel:t,at:t.from,to:t.to}],{maxRetriesPerLeg:1,legTimeoutTicks:150});
+  if(!r.ok)return{ok:false,reason:r.reason,detail:`safe boat route failed: ${r.detail}`};
+  console.log(`QUEST_SWEEP_BOAT ${JSON.stringify({id,coins:t.coins})}`);
+  return{ok:true};
+ };
+ for(const leg of [()=>sail('npc:captain_barnaby:brimhaven@2679,3275'),()=>corridor(KARAMJA),()=>sail('npc:customs_officer:port-sarim@2953,3147'),()=>corridor(SARIM_NORTH)]){
+  const r=await leg();if(!r.ok)return r;
  }
+ return{ok:true};
+}
+async function reachStart(s:Session,world:World,start:Tile){
  const r=await walkFar(s,world,start);
  if(!r.ok)throw Error(`start walk failed to ${JSON.stringify(start)}: ${r.reason} ${r.detail}`);
 }
