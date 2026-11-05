@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793843824660,
+ "at": 1793844432327,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -487,7 +487,7 @@
     "CAP": "6000",
     "COORDINATOR_RUN_ID": "task-5abe6192-403e-4aba-b8b1-43db920f96d8"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-hunt-wandwaver-owned-spade [task-5abe6192-403e-4aba-b8b1-43db920f96d8]",
    "role": "supply"
