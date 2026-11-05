@@ -432,3 +432,14 @@ test('a kill series keeps to dense spawn clusters',async()=>{
  expect(near(3250,3240,dense)).toBe(true);expect(near(3004,3201,dense)).toBe(true);expect(near(2955,3500,dense)).toBe(true);
  expect(near(3259,3338,goblins)).toBe(true);expect(near(3259,3338,dense)).toBe(false);expect(near(3311,3375,dense)).toBe(false);
 });
+
+test('the tool plan keeps the quest its own runes beside the casts',async()=>{
+ const {toolPlan}=await import('./quest-sweep');
+ const need=new Map([[556,3]]),tools=[{id:556,count:714}];
+ // The quest plan takes its 3 air from a bank of 714: the casts get the other 711 and 3 are short for the shop plan.
+ expect(toolPlan(tools,need,[],[],[{id:556,count:714}],[{id:556,count:3}])).toEqual({withdraw:[{id:556,count:711}],missing:[{id:556,count:3}]});
+ // The quest's 3 air already in the pack are not the casts': all 714 come out of the bank.
+ expect(toolPlan(tools,need,[{id:556,count:3}],[],[{id:556,count:714}],[])).toEqual({withdraw:[{id:556,count:714}],missing:[]});
+ // A tool the quest does not need is planned as before, a worn bow counts as held.
+ expect(toolPlan([{id:841,count:1},{id:882,count:40}],need,[],[{id:841,count:1}],[{id:882,count:21}],[])).toEqual({withdraw:[{id:882,count:21}],missing:[{id:882,count:19}]});
+});
