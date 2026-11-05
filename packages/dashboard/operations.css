@@ -119,3 +119,4 @@ button.op-kpi:hover{filter:brightness(1.15)}
 @media(prefers-reduced-motion:reduce){.op-palette,.op-palette-overlay{animation:none}.client-plugin *,.client-rail *{transition:none!important}}
 @media(max-width:740px){.client-rail button{height:38px;min-height:38px}.op-button,.client-plugin-body .op-button{min-height:36px}.op-filter button{min-height:34px}}
 .op-count{margin-left:6px;font-size:10.5px;font-weight:600;opacity:.65}.op-filter button.active .op-count{opacity:1}
+.ge-prices{flex-wrap:wrap;gap:0 10px}
