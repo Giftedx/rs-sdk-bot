@@ -213,7 +213,8 @@ test('an empty-result live row is closed only when its own producer lifecycle sh
   // 20, pid dead, held): nothing alive owns the account. A held later attempt whose owner runs (pid 15) still holds.
   const killed=start('Killed',19);start('Killed',20);
   const retried=start('Retried',21);start('Retried',15);
-  const now=1_000_000_000_000,old=now-LOST_SESSION_DROP_MS,row=(a:{account:string;attemptId:string},at=old)=>({name:a.account,server,result:'',at,workRevision:pin,sessionAttemptId:a.attemptId});
+  // The fixtures' receipts are written now; the gate judges them LOST_SESSION_DROP_MS later, when their drop has passed.
+  const now=Date.now()+LOST_SESSION_DROP_MS,old=now-LOST_SESSION_DROP_MS,row=(a:{account:string;attemptId:string},at=old)=>({name:a.account,server,result:'',at,workRevision:pin,sessionAttemptId:a.attemptId});
   const alive=(pid:number)=>pid===15,closed=(r:any)=>closedSessionRow(r,server,{root},alive,now);
   expect(closed(row(done))).toBe(true);        // its own attempt confirmed logout
   expect(closed(row(later))).toBe(true);       // a newer attempt confirmed logout
@@ -224,6 +225,8 @@ test('an empty-result live row is closed only when its own producer lifecycle sh
   expect(closed(row(gone,now-LOST_SESSION_DROP_MS+1))).toBe(false); // inside the drop window
   expect(closed(row(killed))).toBe(true);      // killed worker, refused retry, both owners gone
   expect(closed(row(retried))).toBe(false);    // the retry's owner still runs
+  // The retry's receipt is younger than the drop: its session may still stand on the server.
+  expect(closedSessionRow(row(killed),server,{root},alive,now-1)).toBe(false);
   expect(()=>assertCompatibleWorkers(pin,server,[row(killed)],now,closed)).not.toThrow();
   expect(()=>assertCompatibleWorkers(pin,server,[row(retried)],now,closed)).toThrow('peer state unknown');
   expect(closed({...row(dead),sessionAttemptId:undefined})).toBe(false);
