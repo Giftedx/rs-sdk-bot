@@ -135,7 +135,9 @@ export const questSkillTraining=(quest:string,level:(skill:string)=>number):{ski
 async function trainFishing(s:Session,world:World,level:number):Promise<string|null>{
  const st=()=>s.sdk.getState() as any,lvl=()=>st()?.skills?.find((k:any)=>k.name==='Fishing')?.baseLevel??1;
  const caught=()=>count((st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count})),RAW_SHRIMPS)+count((st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count})),RAW_ANCHOVIES);
- const spot=()=>(st()?.nearbyNpcs??[]).filter((n:any)=>/^fishing spot$/i.test(n.name)&&n.optionsWithIndex?.some((o:any)=>/^net$/i.test(o.text))).sort((a:any,b:any)=>a.distance-b.distance)[0];
+ // The small-net spot offers Net and Bait (0_44_53_fish 320); the Net and Harpoon spot beside it (memberfish 322) wants a
+ // big net and answers a small one with a message box that stops the action.
+ const spot=()=>(st()?.nearbyNpcs??[]).filter((n:any)=>/^fishing spot$/i.test(n.name)&&n.optionsWithIndex?.some((o:any)=>/^net$/i.test(o.text))&&n.optionsWithIndex?.some((o:any)=>/^bait$/i.test(o.text))).sort((a:any,b:any)=>a.distance-b.distance)[0];
  if(!(st()?.inventory??[]).some((i:any)=>i.id===NET))return `fishing training needs a small net (${NET}) in the pack`;
  if(!spot()){const w=await walkFar(s,world,CATHERBY_BEACH,100);if(!w.ok)return `fishing spot walk failed: ${w.reason} ${w.detail}`;}
  // Each level gained opens the level-up dialogue, which stops the fishing until it is clicked away.
