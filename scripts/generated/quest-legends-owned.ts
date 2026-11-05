@@ -144,38 +144,45 @@ export async function runLegends(raw:Session,o:LegendsOrder,requested:()=>boolea
  const crossing=async(north:boolean)=>{const end=north?2942:2934,direction=north?1:-1;if(north)await walk(2864,2934,0);else{await move(2864,2942);await walk(2864,2942,0);}for(let n=0;n<10;n++){guard();const p={x:pos().worldX,z:pos().worldZ};if(north?p.z>=end:p.z<=end)return;const path=sdk.findPath(2864,end);if(path.success&&path.reachedDestination){await walk(2864,end,0);return;}const candidate=legendsJungleTarget(sdk.getState()?.nearbyLocs??[],p,direction);if(!candidate)throw Error('Legends observed Native jungle crossing target absent');const mark=cursor(s);await step(north?'cut north Native jungle':'cut south Native jungle',()=>q!.opLoc(candidate,1),()=>((pos().worldZ-p.z)*direction>0)||fresh(s,mark,/This way is blocked off/),[],60);if((pos().worldZ-p.z)*direction<=0)throw Error('Legends Native jungle crossing refused');await upkeep();}throw Error('Legends bounded Native jungle crossing exhausted');};
  const jungle=()=>crossing(false);
 
+ let gujuoSpot = 0;
+ const gujuoWildlife = new Set(['oomlie_bird', 'jungle_savage', 'jungle_wolf'].map(npcId));
+ const gujuoClearingQuiet = () => {
+  const state = sdk.getState();
+  const selfSlot = (s.client as { selfSlot?: number }).selfSlot;
+  if (!state?.player || typeof selfSlot !== 'number' || !Number.isSafeInteger(selfSlot) || selfSlot < 0) return false;
+  return !state.nearbyNpcs.some(npc => gujuoWildlife.has(npc.id) && npc.targetIndex === 32768 + selfSlot);
+ };
  const summon = async () => {
-  let spot = 0;
-  const reachClearing = () => walk(GUJUO_SPOTS[spot]!.x, GUJUO_SPOTS[spot]!.z, 0);
+  const reachClearing = () => walk(GUJUO_SPOTS[gujuoSpot]!.x, GUJUO_SPOTS[gujuoSpot]!.z, 0);
   await reachClearing();
   const present = () => !!sdk.getState()?.nearbyNpcs.some(n => n.id === npcId('gujuo'));
   const retreat = async () => {
-   spot = 1 - spot;
+   gujuoSpot = 1 - gujuoSpot;
    await reachClearing();
    await upkeep();
-   const ownTarget = 32768 + (s.client as any).selfSlot;
-   const clear = () => {
-    const state = sdk.getState();
-    return !!state?.player && !state.nearbyNpcs.some(npc => npc.targetIndex === ownTarget);
-   };
-   await wait(clear, 16);
+   await wait(gujuoClearingQuiet, 16);
    const lastHit = sdk.getState()?.player?.combat?.lastDamageTick;
    await waitTicks(s, 8);
    guard();
-   if (lastHit === undefined || !clear() || sdk.getState()?.player?.combat?.lastDamageTick !== lastHit) {
+   if (lastHit === undefined || !gujuoClearingQuiet() || sdk.getState()?.player?.combat?.lastDamageTick !== lastHit) {
     throw Error('Legends could not shake hostile wildlife before retrying Gujuo');
    }
   };
   for (let trial = 0; trial < o.maximumTrials; trial++) {
    started = s.tick();
    guard();
+   if (!gujuoClearingQuiet()) { await retreat(); continue; }
    if (present()) return;
    const mark = cursor(s);
-   if (await legendsSummonAttempt({
+   const summoned = await legendsSummonAttempt({
     present, retreat, saw: pattern => fresh(s, mark, pattern), send: () => held(I.bull),
     step: (send, done) => step('summon Gujuo', send, done, [], 18),
     cooldown: async () => { await waitTicks(s, 8); guard(); },
-   })) return;
+   });
+   if (summoned) {
+    if (gujuoClearingQuiet()) return;
+    await retreat();
+   }
   }
   throw Error('Legends finite Gujuo summon budget exhausted');
  };
@@ -195,7 +202,7 @@ export async function runLegends(raw:Session,o:LegendsOrder,requested:()=>boolea
   await crossing(true);await walk(2867,2942);const forester=sdk.getState()?.nearbyNpcs.find(n=>/Jungle forester/i.test(n.name));if(!forester)throw Error('Legends native forester absent');await paid('forester map copy',{[I.bull]:1},()=>q!.useOnNpc(I.map,forester),[/Yes, go ahead make a copy/i]);await bank({...basic()},[I.map,I.bull]);
   await jungle();await gujuo([/hoping to attract/i,/develop friendly relations/i,/get your people together/i,/What can we do instead/i,/How do we make/i,/I will release Ungadulu/i],()=>q!.sawText(/release Ungadulu|find.*cave|good luck/i));await cave();await step('Ungadulu pure-water clue',()=>interact('lqfirewall_straight',2790,9333,2),()=>q!.sawText(/from the above lands/i),[/Who are you/i,/Where do I get pure water/i]);await exitCave();await gujuo([/Ungadulu looks a little strange/i,/pure water to douse/i,/What kind of a vessel/i,/Ok thanks for your help/i],()=>has(I.picture));
   await bank({...basic(),2347:1,2357:6},[I.map,I.bull,I.picture]);await move(3187,3425);for(let n=0;n<o.maximumTrials&&!has(I.bowl);n++){const before=pack(s),mark=cursor(s);await step('forge gold bowl',()=>useLoc(2357,'anvil',3188,3426),()=>has(I.bowl)||fresh(s,mark,/make a mistake forging/),[/^Yes$/]);const lost=(before[2357]??0)-count(2357);if(has(I.bowl)){if(!legendsPackEffect(before,pack(s),{2357:-2,[I.bowl]:1}))throw Error('Legends forged bowl whole-pack differs');}else if(![1,2].includes(lost)||!legendsPackEffect(before,pack(s),{2357:-lost}))throw Error('Legends forge failure debit unknown');}if(!has(I.bowl))throw Error('Legends finite forge budget exhausted');
-  await bank({...basic(),[I.bowl]:1},[I.map,I.bull,I.picture]);await jungle();for(let n=0;n<o.maximumTrials&&!has(I.blessed);n++){await upkeep();started=s.tick();await summon();const native=q.npc(/^Gujuo$/i);if(!native)throw Error('Legends bowl blessing native absent');const mark=pageMark();await legendsBlessBowlAttempt({pack:()=>pack(s),prayer:()=>sdk.getSkill('Prayer')?.level??0,sawFailure:()=>sawSince(mark,/not able to go into a deep enough trance/i),send:()=>q!.useOnNpc(I.bowl,native),step:(send,done,choices)=>step('one bowl blessing attempt',send,done,choices,100)});}if(!has(I.blessed))throw Error('Legends bounded bowl blessing failed');
+  await bank({...basic(),[I.bowl]:1},[I.map,I.bull,I.picture]);await jungle();for(let n=0;n<o.maximumTrials&&!has(I.blessed);n++){await upkeep();started=s.tick();await summon();const native=q.npc(/^Gujuo$/i);if(!native)throw Error('Legends bowl blessing native absent');const mark=pageMark();await legendsBlessBowlAttempt({pack:()=>pack(s),prayer:()=>sdk.getSkill('Prayer')?.level??0,sawFailure:()=>sawSince(mark,/not able to go into a deep enough trance/i),send:async()=>{if(!gujuoClearingQuiet())throw Error('Legends wildlife targets the bowl bearer');if(!q!.dialogOpen())await q!.useOnNpc(I.bowl,native);},step:(send,done,choices)=>step('one bowl blessing attempt',send,done,choices,100)});}if(!has(I.blessed))throw Error('Legends bounded bowl blessing failed');
   await surface();await bank({...basic(),385:2,2434:1,1265:1,1523:1,566:1,558:1,557:1,563:2,1609:1,1611:1,1613:1,1607:1,1601:1,1603:1,1605:1},[I.map,I.bull,I.blessed]);await jungle();await cave();
   // The first traversal pays SMELL and the seven gems once; later traversals use the observed doors.
   await enterTrials(true);if(sdk.getState()?.groundItems.some(g=>g.id===I.book))throw Error('Legends preexisting Book of Binding pile ambiguous');for(const [item,x,z]of[[1609,2764,9309],[1611,2771,9303],[1613,2772,9295],[1607,2781,9291],[1601,2774,9287],[1603,2767,9289],[1605,2757,9297]]){await walk(x!,z!,1);await paid('bind gem '+item,{[item!]:-1},()=>useLoc(item!,'lg_gemplacerock',x!,z!));}await walk(2765,9297,1);await wait(()=>!!sdk.getState()?.groundItems.some(g=>g.id===I.book),60);const books=sdk.getState()!.groundItems.filter(g=>g.id===I.book);if(books.length!==1||books[0]!.count!==1||sdk.getState()!.nearbyPlayers.length)throw Error('Legends fresh Book of Binding ownership ambiguous');const book=books[0]!;await paid('owned Book of Binding',{[I.book]:1},()=>s.direct({type:'pickupItem',x:book.x,z:book.z,itemId:I.book,reason:'fresh seven-gem quest reward'}));
