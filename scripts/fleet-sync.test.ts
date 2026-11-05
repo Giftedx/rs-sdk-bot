@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { planView } from './fleet-sync';
+import { blankCheckout, planView } from './fleet-sync';
 import { mergeJobs } from '../packages/core/src/coordinator-jobs';
 
 test('a coordinator job takes its account in the view, as the swarm runs it', () => {
@@ -23,4 +23,13 @@ test('the plan view holds only this side\'s jobs, never the main account or job 
         { account: 'OreElse', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2671,3313' }, enabled: true, standing: true },
         { accounts: ['OreElse', 'Shaftsinker'], script: 'scripts/quest-chain.ts', enabled: false },
     ] });
+});
+
+test('a blank checkout keeps the branch\'s plan: no accounts known, no jobs of its own, jobs still recorded', () => {
+    expect(blankCheckout([], [], [{ account: 'Quickhandjob' }])).toBe(true);
+    expect(blankCheckout([], null, [{ account: 'Quickhandjob' }])).toBe(true);
+    expect(blankCheckout([{ name: 'Quickhandjob' }], [], [{ account: 'Quickhandjob' }])).toBe(false);
+    expect(blankCheckout([], [{ account: 'Quickhandjob', enabled: false }], [{ account: 'Quickhandjob' }])).toBe(false);
+    expect(blankCheckout([], [], [])).toBe(false);
+    expect(blankCheckout([], [], null)).toBe(false);
 });

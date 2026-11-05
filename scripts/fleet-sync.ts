@@ -6,6 +6,9 @@
 // swarm.json merged with the coordinator's jobs, so other sides' planners stay off them) and this side's live
 // assignments (fleet/plans/<side>.json: the same merged plan, as scripts/swarm.ts runs it, so other machines and audits
 // see what runs), commits fleet/ and pushes.
+// A blank checkout (no status for any of this side's accounts and a plan that names none of them) publishes nothing
+// while the branch holds a plan for this side with jobs: a fresh container must not release the spots a running
+// checkout of the same side still holds.
 // Usage: bun scripts/fleet-sync.ts [--no-push]
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -32,6 +35,11 @@ export function planView(jobs: readonly any[], side = mySide(), owners = loadOwn
     const own = jobs.filter(j => j?.role !== 'main' && names(j).length > 0 && names(j).every(n => owners.get(n.toLowerCase())?.side === side));
     return { side, at: now, jobs: own.map(j => Object.fromEntries(PLAN_FIELDS.filter(k => j[k] !== undefined).map(k => [k, j[k]]))) };
 }
+// True when this checkout knows nothing about its side while the branch still records jobs for it.
+export function blankCheckout(snapAccounts: readonly unknown[], viewJobs: readonly unknown[] | null, remoteJobs: readonly unknown[] | null): boolean {
+    return snapAccounts.length === 0 && (viewJobs?.length ?? 0) === 0 && (remoteJobs?.length ?? 0) > 0;
+}
+const readJobs = (file: string): any[] | null => { try { const p = JSON.parse(readFileSync(file, 'utf8')); return Array.isArray(p.jobs) ? p.jobs as any[] : null; } catch { return null; } };
 const git = (cwd: string, ...args: string[]) => {
     const p = Bun.spawnSync(['git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
     return { ok: p.exitCode === 0, out: `${p.stdout.toString()}${p.stderr.toString()}`.trim() };
@@ -56,23 +64,23 @@ export function runSync(push = true): string {
     const statusDir = join(root, '.practice', 'status');
     const statuses = existsSync(statusDir) ? readdirSync(statusDir).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(statusDir, f), 'utf8'))]; } catch { return []; } }) : [];
     const owners = loadOwners(join(dir, 'fleet', 'owners.json')), snap = snapshot(statuses, mySide(), owners);
-    mkdirSync(join(dir, 'fleet', 'snapshots'), { recursive: true });
+    const planFile = resolve(process.env.SWARM_PLAN ?? join(root, 'swarm.json'));
+    const jobs = readJobs(planFile);
+    const merged = jobs ? mergeJobs(jobs, readCoordinatorJobs(root).jobs) : null;
+    const view = merged ? planView(merged, snap.side, owners) : null;
+    const out = join(dir, 'fleet', 'plans', `${snap.side}.json`);
+    if (blankCheckout(snap.accounts, view?.jobs ?? null, readJobs(out))) return `side=${snap.side} blank checkout: kept the branch's plan and claim, nothing written`;
     // Write only when an account changed: the time stamp alone makes no commit.
     const file = join(dir, 'fleet', 'snapshots', `${snap.side}.json`);
     const prior = (() => { try { return JSON.stringify(JSON.parse(readFileSync(file, 'utf8')).accounts); } catch { return ''; } })();
     if (prior !== JSON.stringify(snap.accounts)) writeFileSync(file, JSON.stringify(snap) + '\n');
     // The claim's time stamp is its freshness, so every sync rewrites it. An unreadable plan writes nothing: the old
     // claim ages out instead of releasing spots the plan may still hold.
-    const planFile = resolve(process.env.SWARM_PLAN ?? join(root, 'swarm.json'));
-    const jobs = (() => { try { const p = JSON.parse(readFileSync(planFile, 'utf8')); return Array.isArray(p.jobs) ? p.jobs as any[] : null; } catch { return null; } })();
     let claim: ReturnType<typeof claimFor> | null = null;
-    if (jobs) {
-        const merged = mergeJobs(jobs, readCoordinatorJobs(root).jobs);
+    if (merged && view) {
         claim = claimFor(merged, snap.side, a => owners.get(a.toLowerCase())?.side ?? 'local');
         mkdirSync(join(dir, 'fleet', 'claims'), { recursive: true }); writeFileSync(join(dir, 'fleet', 'claims', `${snap.side}.json`), JSON.stringify(claim) + '\n');
-        const view = planView(merged, snap.side, owners);
         mkdirSync(join(dir, 'fleet', 'plans'), { recursive: true });
-        const out = join(dir, 'fleet', 'plans', `${snap.side}.json`);
         const was = (() => { try { return JSON.stringify(JSON.parse(readFileSync(out, 'utf8')).jobs); } catch { return ''; } })();
         if (was !== JSON.stringify(view.jobs)) writeFileSync(out, JSON.stringify(view, null, 1) + '\n');
     }
