@@ -20,7 +20,7 @@ export const MILK=1927,BUCKET=1925,COW=81;
 // Garlic: the cupboard upstairs in Morgan's house, Draynor (general_use/scripts/cupboards.rs2:34, loc 2612 shut,
 // 2613 open: Open, then Search). The only shops are the Greengrocers on Miscellania and in Rellekka.
 export const LOC_SOURCES:Record<number,{tile:Tile;open:RegExp;take:RegExp}>={1550:{tile:{x:3096,z:3268,level:1},open:/^open$/i,take:/^search$/i}};
-export type Gather={id:number;count:number;how:'spawn'|'milk'|'loc'|'kill'|'pick'|'npc'|'combine';kit?:'ranged'|'magic'};
+export type Gather={id:number;count:number;how:'spawn'|'milk'|'loc'|'kill'|'pick'|'npc'|'combine'|'use';kit?:'ranged'|'magic'};
 // A plant picked for its item: onions are loc 3366 with the Pick option (general_use/scripts/pickables.rs2:31-39; the
 // plant stands again 50 ticks after a pick).
 // The five pickable plants (general_use/scripts/pickables.rs2; tiles in knowledge/pickables.json): a cabbage from the
@@ -40,6 +40,12 @@ export const NPC_SOURCES:Record<number,NpcSource>={
 };
 // Two items used on each other: orange dye is red on yellow (skill_crafting/scripts/dye_mixing.rs2).
 export const COMBINE_SOURCES:Record<number,[number,number]>={1769:[1763,1765]};
+// An item taken from a loc by using items on it in turn, each use consumed: a bucket of wax from a Catherby beehive
+// (area_seers/scripts/bees.rs2: insect repellent clears the bees, then an empty bucket takes the wax; a bucket on a
+// hive with bees stings). The uses are gathered first, as a recipe's ingredients are.
+export const USE_SOURCES:Record<number,{name:string;tiles:Tile[];uses:number[];option:RegExp}>={
+ 30:{name:'beehive',option:/take-from/i,uses:[28,1925],tiles:[{x:2755,z:3440,level:0},{x:2755,z:3443,level:0},{x:2755,z:3447,level:0},{x:2758,z:3440,level:0},{x:2758,z:3447,level:0},{x:2759,z:3444,level:0},{x:2762,z:3440,level:0},{x:2762,z:3443,level:0}]},
+};
 // A bow and arrows the account owns: shortbow or longbow, bronze, iron or steel arrows (the kinds the fleet's banks hold).
 export const BOWS=[841,839,843,845],ARROWS=[884,886,882],ARROWS_PER_KILL=6;
 // The strike spells (skill_combat/configs/magic/magic_combat_spells.dbrow): level, runes per cast and max hit. A worn
@@ -96,6 +102,8 @@ export const KILL_SOURCES:Record<number,{npcs:number[];name:string;combat:number
  // Imp Catcher's beads (imp.rs2:10-19): one roll of 128 a kill, five faces each for black, red, white and yellow.
  1470:{npcs:[708],name:'imp',combat:2,chance:5/128},1472:{npcs:[708],name:'imp',combat:2,chance:5/128},
  1474:{npcs:[708],name:'imp',combat:2,chance:5/128},1476:{npcs:[708],name:'imp',combat:2,chance:5/128},
+ // Bat bones from a giant bat every kill (all.npc [bat] death_drop); they roost around Keep Le Faye and Hemenster.
+ 530:{npcs:[78],name:'giant bat',combat:27,chance:1},
 };
 // The drops a kill series takes: its own item and every later kill item of the same animal still short (the four
 // beads fall from the same imps, so a red bead lying by a black-bead kill is picked up, not killed for again).
@@ -154,6 +162,10 @@ export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:
    for(const id of COMBINE_SOURCES[m.id]!)place({id,count:m.count},depth+1);
    gathers.push({...m,how:'combine'});
   }
+  else if(USE_SOURCES[m.id]&&depth<4&&nearest(USE_SOURCES[m.id]!.tiles,at).some(t=>d(t)<sold)){
+   for(const id of USE_SOURCES[m.id]!.uses)place({id,count:m.count},depth+1);
+   gathers.push({...m,how:'use'});
+  }
   else still.push(m);
  };
  for(const m of missing)place(m,0);
@@ -171,7 +183,7 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
  // Each gather's target is fixed before any runs: a bead taken during another colour's series counts toward its own.
  const targets=new Map(gathers.map(g=>[g.id,held(g.id)+g.count]));
  for(const g of gathers){
-  const target=targets.get(g.id)!,sources=(g.how==='milk'?nearest(cows(),here()):g.how==='loc'?[LOC_SOURCES[g.id]!.tile]:g.how==='kill'?nearest((KILL_SOURCES[g.id]?.chance??1)<1?denseSpawns(killSpawns(g.id)):killSpawns(g.id),here()):g.how==='pick'?locsByDistance(PICK_SOURCES[g.id]!.loc,here()):g.how==='npc'?[NPC_SOURCES[g.id]!.tile]:g.how==='combine'?[here()]:spawnsByDistance(g.id,here())).slice(0,6);
+  const target=targets.get(g.id)!,sources=(g.how==='milk'?nearest(cows(),here()):g.how==='loc'?[LOC_SOURCES[g.id]!.tile]:g.how==='kill'?nearest((KILL_SOURCES[g.id]?.chance??1)<1?denseSpawns(killSpawns(g.id)):killSpawns(g.id),here()):g.how==='pick'?locsByDistance(PICK_SOURCES[g.id]!.loc,here()):g.how==='npc'?[NPC_SOURCES[g.id]!.tile]:g.how==='use'?nearest(USE_SOURCES[g.id]!.tiles,here()):g.how==='combine'?[here()]:spawnsByDistance(g.id,here())).slice(0,6);
   // Spawns lie in clusters (three egg spawns within 4 tiles beyond White Wolf Mountain): one with no route rules out
   // the rest of its cluster, so the walk moves on to the next place rather than searching the same ground again.
   const unreachable:Tile[]=[];
@@ -187,7 +199,20 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
    const tally={kills:0,drops:0,idle:0,fights:0,start:s.tick()};
    for(let tries=0;tries<400&&(g.how==='kill'?tally.fights<killAttempts(g.id,g.count):tries<g.count+3)&&held(g.id)<target;tries++){
     const before=held(g.id);
-    if(g.how==='combine'){
+    if(g.how==='use'){
+     const src=USE_SOURCES[g.id]!,loc=()=>(st()?.nearbyLocs??[]).find((l:any)=>l.x===at.x&&l.z===at.z&&src.option.test((l.optionsWithIndex??[]).map((o:any)=>o.text).join('|')));
+     const l0=loc();if(!l0)break;
+     for(const id of src.uses){
+      const item=(st()?.inventory??[]).find((i:any)=>i.id===id);
+      if(!item)return `${src.name} needs ${id} in the pack`;
+      const r:any=await s.bot.useItemOnLoc(item,l0);
+      if(!r?.success){console.log(`QUEST_SWEEP_USE ${JSON.stringify({item:g.id,use:id,at,message:r?.message})}`);await waitTicks(s,2);continue;}
+      // Each use answers with message boxes; they are clicked away before the next use.
+      for(let t=0;t<12;t++){await waitTicks(s,1);const dlg:any=s.sdk.getDialog();if(dlg?.isOpen&&!dlg.isWaiting)await s.sdk.sendClickDialog(0);else if(t>=3)break;}
+     }
+     await waitUntil(s,()=>held(g.id)>before,{timeoutTicks:10});
+     console.log(`QUEST_SWEEP_USE ${JSON.stringify({item:g.id,at,held:held(g.id),target})}`);
+    }else if(g.how==='combine'){
      const [a,b]=COMBINE_SOURCES[g.id]!,inv=st()?.inventory??[],ia=inv.find((i:any)=>i.id===a),ib=inv.find((i:any)=>i.id===b);
      if(!ia||!ib)return `combining ${g.id} needs ${a} and ${b} in the pack`;
      await s.direct({type:'useItemOnItem',sourceSlot:ia.slot,targetSlot:ib.slot,reason:'SDK'});
