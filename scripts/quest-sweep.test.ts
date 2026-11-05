@@ -387,3 +387,14 @@ test('the way down from an upstairs shop is the nearest descending transport, an
  expect(wayDown(transports,{x:2449,z:3508,level:1})).toEqual({x:2466,z:3495,level:0});
  expect(wayDown([],{x:2449,z:3508,level:1})).toEqual({x:2449,z:3508,level:0});
 });
+
+test('arrows stack in the slot count, and a destination east of Ardougne adds the boat fares to the coin budget',async()=>{
+ const {slotsFor,fares,BOAT_FARES}=await import('./quest-sweep');
+ // 238 bronze arrows with none in the pack: one slot; a pack stack of them: none.
+ expect(slotsFor([{id:882,count:238}],[])).toBe(1);
+ expect(slotsFor([{id:882,count:217}],[{id:882,count:21}])).toBe(0);
+ const ardougne={x:2655,z:3283,level:0},wyson={x:3027,z:3379,level:0},aggie={x:3086,z:3259,level:0},hudo={x:2448,z:3509,level:1};
+ expect(fares(ardougne,[wyson,aggie])).toBe(BOAT_FARES);
+ expect(fares(ardougne,[hudo])).toBe(0);
+ expect(fares({x:3092,z:3243,level:0},[wyson,aggie])).toBe(0);
+});

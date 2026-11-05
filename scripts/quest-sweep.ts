@@ -13,7 +13,7 @@ import type {World,Transport} from '../packages/core/src/world';
 import {loadTravel} from '../packages/core/src/travel';
 import {sellersByDistance,shopSellers} from '../packages/core/src/shop-index';
 import {spawnsByDistance} from '../packages/core/src/spawn-index';
-import {gatherPlan,gatherItems,rangedKit,arrowsFor} from '../packages/core/src/gather';
+import {gatherPlan,gatherItems,rangedKit,arrowsFor,ARROWS,NPC_SOURCES} from '../packages/core/src/gather';
 import {questFlags} from '../packages/core/src/quest-status';
 import {PRESETS,type SaveConfig} from '../packages/practice/src/presets';
 import travel from '../packages/planner/src/haggis-travel.json';
@@ -62,7 +62,8 @@ export function keepsItem(quest:string,id:number,tradeable:(id:number)=>boolean|
 }
 // Pack slots a withdrawal list needs: a stack (coins, runes, anything the pack already holds as a stack) takes one slot
 // whatever its count; everything else one slot per unit.
-export const STACKS=new Set([COINS,554,555,556,557,558,559,560,561,562,563,564,565,566]);
+// Coins, runes and arrows stack: 238 bronze arrows for a goblin series take one slot, not 238.
+export const STACKS=new Set([COINS,554,555,556,557,558,559,560,561,562,563,564,565,566,...ARROWS]);
 export function slotsFor(withdraw:readonly Item[],pack:readonly Item[]):number{
  const stack=(id:number)=>STACKS.has(id)||pack.some(i=>i.id===id&&i.count>1);
  return withdraw.reduce((n,w)=>n+(stack(w.id)?(pack.some(i=>i.id===w.id)?0:1):w.count),0);
@@ -241,10 +242,12 @@ export function wayDown(transports:readonly Transport[],at:Tile):Tile{
 // Port Sarim, with the Karamja and Port Sarim corridors between: no hub lies within a hop of Ardougne to the east, and
 // the world router's search for the land way round idles out the budget. Two fares of 30 coins.
 export const eastOfArdougne=(from:Tile,to:Tile)=>from.level===0&&from.x<2800&&from.z>=3270&&to.x>=2950;
+export const BOAT_FARES=60;
+export const fares=(from:Tile,targets:readonly Tile[])=>targets.some(t=>eastOfArdougne(from,t))?BOAT_FARES:0;
 // The Port Sarim landing: a target in the town itself (Wydin's shop, 3014,3204) needs no walk north past the jail.
 export const SARIM_LANDING:Tile={x:3029,z:3217,level:0};
 async function crossEast(s:Session,world:World,to:Tile):Promise<Walked>{
- if(count(s.sdk.getState()?.inventory??[],COINS)<60)return{ok:false,reason:'precondition',detail:'missing 995:60 for safe boat route'};
+ if(count(s.sdk.getState()?.inventory??[],COINS)<BOAT_FARES)return{ok:false,reason:'precondition',detail:`missing 995:${BOAT_FARES} for safe boat route`};
  const walk=(to:Tile)=>goTo(s,world,to,accountOf(s),{legTimeoutTicks:150,planBudgetMs:SWEEP_PLAN_BUDGET_MS});
  const corridor=async(points:readonly Pt[]):Promise<Walked>=>{
   const r=await walkCorridor(await sessionWalker(s),points);
@@ -495,8 +498,10 @@ export async function sweep(account:string,quest:string,fresh?:string){
   const shop=shops([...gather.still,...tools.missing]);
   if(gather.gathers.length)console.log(`QUEST_SWEEP_GATHER_PLAN ${JSON.stringify(gather)}`);
   if(shop.unsold.length){await s.bot.closeBank();return fail('missing '+shop.unsold.map(i=>`${i.id}:${i.count}`).join(',')+(shop.buys.length?' (unsold; others in shops)':''));}
-  // Recipes paid in dialogue (Aggie's dyes, Wyson's woad leaves) take their coins out with the shop money.
-  shop.coins+=gather.coins;
+  // Recipes paid in dialogue (Aggie's dyes, Wyson's woad leaves) take their coins out with the shop money, and so do the
+  // two boat fares when a destination lies east of Ardougne: a plan of Wyson's woad and Aggie's blue dye alone budgets 25
+  // coins, and crossEast refuses the crossing below 60.
+  shop.coins+=gather.coins+fares(here(),[...shop.buys.map(b=>b.tile),preset.position,...gather.gathers.flatMap(g=>g.how==='npc'&&NPC_SOURCES[g.id]?[NPC_SOURCES[g.id]!.tile]:[])]);
   if(shop.coins){
    const take=Math.max(0,shop.coins-count(pack(),COINS)-(p.withdraw.find(w=>w.id===COINS)?.count??0));
    if(count(rows(),COINS)<take){await s.bot.closeBank();return fail(`missing ${COINS}:${take} to buy ${shop.buys.map(b=>b.id).join(',')}`);}
