@@ -345,9 +345,10 @@ export function orphanedSessionEnds(accounts: readonly string[], ended: Readonly
         const receipt = producer(a, p.attemptId);
         if (!receipt || !Number.isSafeInteger(receipt.pid) || receipt.pid < 1 || !Number.isFinite(receipt.createdAt) || !Number.isFinite(receipt.updatedAt) || alive(receipt.pid)) continue;
         const prior = [...ended].find(([name]) => name.toLowerCase() === key);
-        // An older orphan end yields to a later update. Any other end yields only to an attempt that started after it,
-        // because that end cannot describe this attempt.
-        if (prior && (prior[1].reason.startsWith('exit orphaned: attempt ') ? receipt.updatedAt : receipt.createdAt) <= prior[1].at) continue;
+        // An older orphan end yields to a later update. A successful end yields to an attempt that started after it: that
+        // end cannot describe the attempt and holds nothing. Every other end stays, because a repair reads its reason.
+        const orphan = prior?.[1].reason.startsWith('exit orphaned: attempt ');
+        if (prior && !(orphan ? receipt.updatedAt > prior[1].at : successfulEnd(prior[1].reason) && receipt.createdAt > prior[1].at)) continue;
         out.push([prior?.[0] ?? a, `exit orphaned: attempt ${p.attemptId} owner ${receipt.pid} gone`]);
     }
     return out;

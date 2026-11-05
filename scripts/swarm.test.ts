@@ -606,18 +606,20 @@ test('a held session whose owner pid is gone gets an end record; live, busy or a
         (_a, id) => pids[id] ? { pid: pids[id]!, createdAt: 1, updatedAt: 2 } : undefined, pid => pid === 12);
     expect(out).toEqual([['Dead', 'exit orphaned: attempt id-Dead owner 11 gone']]);
 });
-test('the orphan scan replaces a non-orphan end only for an attempt that started after it', async () => {
+test('the orphan scan replaces only a successful end, and only for an attempt that started after it', async () => {
     const { orphanedSessionEnds } = await import('./swarm');
     const ended = new Map([
         ['Retired', { at: 100, reason: 'done after 1 runs' }],
-        ['SameSession', { at: 100, reason: 'stopped after 1 runs' }],
+        ['SameSession', { at: 100, reason: 'done after 1 runs' }],
+        ['Died', { at: 100, reason: 'died during cows' }],
+        ['Stopped', { at: 100, reason: 'stopped after 1 runs' }],
     ]);
     const held = (account: string) => ({
         state: 'held' as const, account, server: 's', domain: 'live' as const,
         attemptId: 'new-' + account, reason: 'session active or outcome unknown',
     });
-    const producer = (account: string) => ({ pid: 11, createdAt: account === 'Retired' ? 150 : 90, updatedAt: 200 });
-    const out = orphanedSessionEnds(['Retired', 'SameSession'], ended, [], held, producer, () => false);
+    const producer = (account: string) => ({ pid: 11, createdAt: account === 'SameSession' ? 90 : 150, updatedAt: 200 });
+    const out = orphanedSessionEnds(['Retired', 'SameSession', 'Died', 'Stopped'], ended, [], held, producer, () => false);
     expect(out).toEqual([['Retired', 'exit orphaned: attempt new-Retired owner 11 gone']]);
 });
 
