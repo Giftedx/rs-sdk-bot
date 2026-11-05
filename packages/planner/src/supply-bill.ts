@@ -4,7 +4,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { FLEET_DIR, mySide } from '../../core/src/fleet';
 import { join, resolve } from 'node:path';
-import { haggisActivities, haggisTravel, loadSnapshot, suppliesFor, TRICKS } from './haggis';
+import { haggisActivities, haggisTravel, loadSnapshot, overallRequirementsFor, schedule, TRICKS } from './haggis';
 
 const root = resolve(import.meta.dir, '../../..');
 export type BillRow = { item: string; need: number; owned: number; short: number; ids: number[]; holders: { account: string; count: number }[] };
@@ -45,11 +45,14 @@ export function liveHelperStatuses(base = root, fleetDir = join(FLEET_DIR(), 'sn
 
 if (import.meta.main) {
     const snapshot = process.argv[2] ?? join(root, 'research/hiscores-live.json');
-    const supplies = suppliesFor(haggisActivities(), { mode: 'realistic', tricks: new Set(TRICKS), travel: haggisTravel() } as any, loadSnapshot(snapshot));
+    const activities = haggisActivities(), boards = loadSnapshot(snapshot);
+    const options = { mode: 'realistic' as const, tricks: new Set(TRICKS), travel: haggisTravel() };
+    const plan = schedule(boards, activities, options);
+    const { supplies } = overallRequirementsFor(activities, options, plan);
     const items = JSON.parse(readFileSync(join(root, 'knowledge/items.json'), 'utf8'));
     const bill = supplyBill(supplies, items, liveHelperStatuses());
     const dir = join(root, '.practice/coordinator'); if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, 'supply-bill.json'), JSON.stringify({ at: Date.now(), snapshot, rows: bill }, null, 1) + '\n');
+    writeFileSync(join(dir, 'supply-bill.json'), JSON.stringify({ at: Date.now(), snapshot, scope: 'overall', overallFinish: plan.overallFinish, rows: bill }, null, 1) + '\n');
     const covered = bill.filter(r => r.short === 0).length, unmapped = bill.filter(r => !r.ids.length).length;
     console.log(`Route supplies ${bill.length}: covered ${covered}, short ${bill.length - covered} (${unmapped} not matched to an item id)\n`);
     console.log('| Supply | Need | Owned | Short | Top holders |\n|---|---|---|---|---|');

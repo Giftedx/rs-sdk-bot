@@ -1,7 +1,7 @@
 import {existsSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {createHash} from 'node:crypto';
-import {haggisActivities,haggisTravel,loadSnapshot,goalRequirementsFor} from '../packages/planner/src/haggis';
+import {haggisActivities,haggisTravel,loadSnapshot,overallRequirementsFor,schedule,TRICKS} from '../packages/planner/src/haggis';
 import {supplyRoute,routeGateRequirements,type SupplyRouteRequest} from '../packages/planner/src/supply-route';
 import type {TravelModel} from '../packages/planner/src/travel';
 import {FLEET} from './fleet';
@@ -152,8 +152,9 @@ if(import.meta.main){
  const root=resolve(import.meta.dir,'..'),snapshot=resolve(process.argv[2]??join(root,'research/hiscores-live.json'));
  const out=resolve(process.argv[3]??join(root,'.practice/joined-plan/preparation.json'));
  if(out===join(root,'.practice/haggis-supplies.json')||out===join(root,'.practice/haggis-go.json'))throw Error('Advisory output cannot replace a launch gate');
- const opts={mode:'realistic' as const,tricks:new Set<never>(),travel:haggisTravel()};
- const goals=goalRequirementsFor(haggisActivities(),opts,loadSnapshot(snapshot));
+ const opts={mode:'realistic' as const,tricks:new Set(TRICKS),travel:haggisTravel()};
+ const activities=haggisActivities(),planResult=schedule(loadSnapshot(snapshot),activities,opts);
+ const goals=overallRequirementsFor(activities,opts,planResult);
  const requirements=goals.supplies;
  const plan=JSON.parse(readFileSync(join(root,'swarm.json'),'utf8')) as {jobs:GearJob[]};
  const names=[...new Set([...FLEET.filter(a=>a.role!=='main'&&a.server==='rs-sdk-demo.fly.dev').map(a=>a.name),...plan.jobs.filter(j=>j.role!=='main').flatMap(gearJobAccounts)])];
@@ -173,7 +174,7 @@ if(import.meta.main){
  const requestPath=process.argv[4]?resolve(process.argv[4]):null;
  const request=requestPath?JSON.parse(readFileSync(requestPath,'utf8')):null;
  const route=request?preparationRoute(stock,opts.travel,request.item,request):null;
- const report={...stock,gear:preparationGear(plan.jobs,statuses,names,Date.now(),[],orderJournals),orderSources,unlocks:goals.unlocks,route,routeSource:requestPath?{path:requestPath,sha256:hash(requestPath)}:null,issues,sources,snapshot:{path:snapshot,sha256:hash(snapshot)},sourceHashes:Object.fromEntries(['scripts/preparation-report.ts','scripts/preparation-route-state.ts','scripts/goal-readiness.ts','scripts/buy-owned-ge-item.ts','knowledge/items.json','packages/planner/src/requirements.ts','packages/planner/src/owned-loadout.ts','packages/planner/src/market-progress.ts','packages/planner/src/transport-requirements.ts','packages/core/src/status.ts','packages/core/src/quest-status.ts','scripts/fleet.ts','swarm.json','packages/planner/src/haggis.ts','packages/planner/src/supply-route.ts','packages/planner/src/travel.ts','packages/planner/src/haggis-boards.json','packages/planner/src/haggis-travel.json'].map(p=>[p,hash(join(root,p))]))};
+ const report={...stock,scope:'Advisory Overall route supplies. No reservations or delivery acceptance.',overallFinish:planResult.overallFinish,gear:preparationGear(plan.jobs,statuses,names,Date.now(),[],orderJournals),orderSources,unlocks:goals.unlocks,route,routeSource:requestPath?{path:requestPath,sha256:hash(requestPath)}:null,issues,sources,snapshot:{path:snapshot,sha256:hash(snapshot)},sourceHashes:Object.fromEntries(['scripts/preparation-report.ts','scripts/preparation-route-state.ts','scripts/goal-readiness.ts','scripts/buy-owned-ge-item.ts','knowledge/items.json','packages/planner/src/requirements.ts','packages/planner/src/owned-loadout.ts','packages/planner/src/market-progress.ts','packages/planner/src/transport-requirements.ts','packages/core/src/status.ts','packages/core/src/quest-status.ts','scripts/fleet.ts','swarm.json','packages/planner/src/haggis.ts','packages/planner/src/supply-route.ts','packages/planner/src/travel.ts','packages/planner/src/haggis-boards.json','packages/planner/src/haggis-travel.json'].map(p=>[p,hash(join(root,p))]))};
  mkdirSync(resolve(out,'..'),{recursive:true});writeFileSync(out,JSON.stringify(report,null,2)+'\n');
  console.log(JSON.stringify({output:out,requirements:report.items.length,coveredByRecentBanks:report.items.filter(i=>i.shortfall===0).length,unknownBanks:report.banks.filter(b=>b.state==='unknown').length,staged:false}));
 }
