@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1793866178088,
+ "at": 1793868756152,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -60,15 +60,16 @@
   },
   {
    "account": "Quickhandjob",
-   "script": "scripts/quest-chain.ts",
-   "args": [
-    "sheepherder,totem,runemysteries"
-   ],
-   "env": {},
-   "enabled": false,
-   "repeat": false,
-   "goal": "Quest Points chain 2: no-item or shop-item quests with little combat (QP 8 after chain 1)",
-   "role": "quest"
+   "script": "scripts/goldfarm-stable.ts",
+   "args": [],
+   "env": {
+    "TICKS": "3000",
+    "BANK_AT": "25000"
+   },
+   "enabled": true,
+   "repeat": true,
+   "goal": "Wealth: pickpocket Ardougne knights at Thieving 99 (~18.8 coins/tick model), bank coins at the south bank",
+   "role": "thieving"
   }
  ]
 }
