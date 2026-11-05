@@ -6,8 +6,6 @@ import type {PathDeps,PathPoint,PathResult} from '../packages/core/src/walk';
 
 // Retained bank-stage.log: goTo reported "no route to 2850,3175,0" after Brimhaven. The courier walks that tile
 // as a tolerance-5 pass-by point of one walkPath call.
-});
-
 test('the Karamja corridor keeps courier waypoint tolerances and resumes from the unpassed point',async()=>{
  let pos={x:2800,z:3200,level:0};
  const calls:PathPoint[][]=[];
@@ -254,6 +252,8 @@ test('the edible part of a preset\'s needs is reserved for the eaters',async()=>
  // Black Knight's Fortress carries a cabbage to eat nowhere but the hole: the preset's own needs reserve it.
  const {PRESETS}=await import('../packages/practice/src/presets');
  expect(reservedEdible(needs(PRESETS.quest_blackknight!))).toEqual({1965:1});
+});
+
 test('a meat no shop sells is a kill from its animal; an item with no source stays missing',async()=>{
  const {killSpawns,KILL_SOURCES}=await import('../packages/core/src/gather');
  const lumbridge={x:3222,z:3218,level:0};
