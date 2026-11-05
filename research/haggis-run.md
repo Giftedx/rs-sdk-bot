@@ -178,6 +178,8 @@ Tick = Haggis playtime. "Walk" rows are travel legs (`walk A -> B` in `--order`)
 
 Source -> local consumer -> reuse -> check: the scheduler's existing deadline relaxation and route search -> the Overall planner, supply bill and launch check -> compare the usual order with a six-board relaxation and retain the earlier Overall finish -> a fixture checks both start locations and keeps the actual skill record deadlines. The bounded search in `.practice/hiscore-target/priority-beam.json` evaluates 999 deadline sets against a hashed snapshot and route model. The selected order is a model result.
 
+Source -> local consumer -> adapt -> check: the scheduler's prerequisite graph and travel model -> the Overall planner, supply bill and launch check -> try ready prerequisites with more direct dependants first when deadlines tie, and keep a strictly earlier finish -> a fixture checks a shorter trip and an equal-cost fallback. The hashed replay in `.practice/overall-travel-order/verified.json` finds 229 fewer travel and Overall ticks in each of six model cases. Route variants, supplies, quest points, blocked rows and record deadlines match. The nearest-activity order in `.practice/overall-travel-order/prototype.json` takes 415 more realistic ticks and stays out of the planner. The comparison uses the model's travel legs and needs a route rehearsal for game timing.
+
 - Each row of `haggis-boards.json` has `at` (a place, `anywhere`, or `bank` = the nearest bank), and may have
   `endAt`, `via` and `bankTrips`. The scheduler adds the walk from the player's place to the next row.
 - Leg price: world.json `nearest.bank` run ticks (UberMouse, MIT, format 21) where the place has a site; else a
