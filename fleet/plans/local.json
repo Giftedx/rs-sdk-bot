@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793852334853,
+ "at": 1793852943800,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -384,27 +384,6 @@
    "role": "supply"
   },
   {
-   "account": "OreElse",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ORDER_KEY": "oreelse-death-bread10",
-    "ITEM_ID": "2309",
-    "QUANTITY": "10",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "300",
-    "CASH_RESERVE": "50000",
-    "ORDER_MS": "600000",
-    "FILL_WAIT_TICKS": "50",
-    "CAP": "2400",
-    "COORDINATOR_RUN_ID": "task-b9e59b8c-7aad-40d9-b6a8-e8ce20664596"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-oreelse-death-bread10 [task-b9e59b8c-7aad-40d9-b6a8-e8ce20664596]",
-   "role": "smithing"
-  },
-  {
    "account": "Bigchopper",
    "script": "scripts/buy-owned-ge-item.ts",
    "args": [],
@@ -462,35 +441,49 @@
    "role": "combat"
   },
   {
-   "account": "Shaftsinker",
-   "script": "scripts/rune-bank-craft.ts",
-   "args": [
-    "--rune-opening"
-   ],
+   "account": "Wandwaver",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
    "env": {
-    "CAP": "2800",
-    "RUNE_STAGE_PURPOSE": "fresh",
-    "COORDINATOR_RUN_ID": "task-bb70f314-0705-45d9-b21b-474ed4ad33c0"
+    "ORDER_KEY": "wandwaver-blackknight-lobsters8",
+    "ITEM_ID": "379",
+    "QUANTITY": "8",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "500",
+    "CASH_RESERVE": "175000",
+    "ORDER_MS": "600000",
+    "FILL_WAIT_TICKS": "200",
+    "CAP": "2400",
+    "COORDINATOR_RUN_ID": "task-de955176-b9f9-409b-864b-809b8ffdff4e"
    },
    "enabled": false,
    "repeat": false,
-   "goal": "ready99-opening [task-bb70f314-0705-45d9-b21b-474ed4ad33c0]",
-   "role": "runecraft"
+   "goal": "run-ge-wandwaver-fortress-lobsters8 [task-de955176-b9f9-409b-864b-809b8ffdff4e]",
+   "role": "supply"
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/quest-sweep.ts",
+   "accounts": [
+    "Shaftsinker",
+    "OreElse"
+   ],
+   "script": "scripts/handoff-inputs.ts",
    "args": [
-    "rj"
+    "6:Clay",
+    "--bank-x=3185",
+    "--bank-z=3436",
+    "--request-ms=180000",
+    "--timeout-ms=600000",
+    "--grace-ms=45000"
    ],
    "env": {
-    "CAP": "6000",
-    "COORDINATOR_RUN_ID": "task-98d22b73-f4b3-4334-938e-d43d9a2cec01"
+    "HANDOFF_ORDER": "doric-oreelse-clay-six-owned",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-7ec9ad9b-a1a0-4aec-8155-40b002ba7125"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
-   "goal": "run-rj-wandwaver-exact-letter [task-98d22b73-f4b3-4334-938e-d43d9a2cec01]",
-   "role": "supply"
+   "goal": "run-handoff-doric-clay-oreelse-repair [task-7ec9ad9b-a1a0-4aec-8155-40b002ba7125]",
+   "role": "runecraft"
   }
  ]
 }
