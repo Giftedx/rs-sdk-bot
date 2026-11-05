@@ -8,6 +8,10 @@ export interface TickSource {
     // Resolves when the session ends. No ticks come after that, so every wait must also end then.
     ended?: Promise<{ reason: string }>;
 }
+// A wait on an ended session resolves after one tick's length on a timer, never as a microtask: a script loop that
+// only awaits waits would otherwise spin on resolved promises, starve every timer, and block its own settle and exit.
+export const ENDED_WAIT_MS = 600;
+const afterEnd = (s: TickSource, fn: () => void): void => { void s.ended?.then(() => { setTimeout(fn, ENDED_WAIT_MS); }); };
 
 export function waitTicks(s: TickSource, n: number, opts: { idleMs?: number } = {}): Promise<void> {
     if (executionContext.getStore()?.signal.aborted) return new Promise(() => {});
@@ -19,7 +23,7 @@ export function waitTicks(s: TickSource, n: number, opts: { idleMs?: number } = 
         const off = watchTickStream(s, () => {
             if (!done && --left <= 0) finish();
         }, reject, opts.idleMs);
-        void s.ended?.then(finish);
+        afterEnd(s, finish);
         return () => { done = true; off(); };
     });
 }
@@ -51,7 +55,7 @@ export function waitUntil(s: TickSource, pred: (st: any) => boolean, opts: { tim
             }
         }, reject, opts.idleMs);
         opts.signal?.addEventListener('abort', onAbort, { once: true });
-        void s.ended?.then(() => finish(false));
+        afterEnd(s, () => finish(false));
         return cleanup;
     });
 }
