@@ -511,6 +511,10 @@ if (import.meta.main) {
     const logDir = join(prac, 'swarm-logs');
     mkdirSync(logDir, { recursive: true });
     if (process.env.DEMO_OK !== '1') { console.log('swarm: set DEMO_OK=1 (live server)'); process.exit(2); }
+    if (coordinatorOwner) {
+        try { assertWorkerRelease({ ...process.env, WORKER_ENTRY: '' }, root); }
+        catch (error) { console.log('swarm: ' + String(error)); process.exit(2); }
+    }
     // One controller per side across machines: another machine's fresh lease (scripts/fleet-sync.ts publishes it from the
     // running controller's heartbeat) means its swarm runs this side's accounts; a second controller would log them in twice.
     const held = leaseHeldElsewhere(readLease(side), thisHost());
