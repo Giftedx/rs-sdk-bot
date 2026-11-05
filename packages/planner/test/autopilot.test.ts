@@ -218,6 +218,22 @@ test('the claim lists every spot, pen and shop the enabled jobs of this side hol
     expect(claimFor([], side, () => side, 5).resources).toEqual([]);
 });
 
+test('a marked reservation opts its account in, and planning replaces it with an enabled job', () => {
+    const jobs = [
+        { account: 'Magicwanda', script: '', enabled: true, autopilot: 'local' },
+        { account: 'Pocketpython', script: 'scripts/goldfarm.ts', enabled: false, env: { KNIGHT_SPOT: '2582,3297' } },
+        { account: 'Moneyshot', script: 'scripts/goldfarm.ts', enabled: true, env: { KNIGHT_SPOT: '2652,3318' } },
+    ];
+    expect(plannableAccounts(jobs, 'local', ['Magicwanda', 'Pocketpython', 'Moneyshot', 'Wandwaver'], new Set())).toEqual(['Magicwanda', 'Wandwaver']);
+    expect(reservedResources(jobs, 'local', new Set())).toEqual({ 'knight:2652,3318': 1 });
+    const t = catalogue().find(x => x.id === 'goldfarm@2669,3298')!;
+    const { jobs: next, fresh } = mergeJobs(jobs, 'local', [{ account: 'Magicwanda', template: t, value: 10, resources: ['knight:2669,3298'], reason: 'best' }]);
+    expect(fresh).toEqual(['Magicwanda']);
+    const made = next.find(j => j.account === 'Magicwanda')!;
+    expect(made.enabled).toBe(true); expect(made.script).toBe('scripts/goldfarm.ts'); expect(made.env.KNIGHT_SPOT).toBe('2669,3298');
+    expect(next.filter(j => j.account === 'Magicwanda')).toHaveLength(1);
+});
+
 test('the freshest observation wins by its time stamp; nothing observed is null', () => {
     const status = { at: 10, skills: [{ name: 'Thieving', level: 1 }] }, snapshotRow = { at: 20, skills: [{ name: 'Thieving', level: 99 }] };
     expect(freshest(status, snapshotRow)).toBe(snapshotRow);
