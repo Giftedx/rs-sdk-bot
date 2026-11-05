@@ -224,7 +224,7 @@ async function tick(state:CoordinatorState,config:any){
   const pending=state.planner,dir=runDirectory(pending.runId),proposal=join(dir,'proposal.json'),error=join(dir,'planner-error.json');
   if(existsSync(proposal)||existsSync(error)||(!existsPid(pending.pid!)&&!processMatches(pending.pid!,pending.runId))){
    let accepted=false;
-   try{if(!existsSync(proposal))throw Error(existsSync(error)?json(error).error:'planner ended without proposal');const count=acceptProposal(state,json(proposal));accepted=true;event('plan-accepted',{count,reason:state.lastPlanReason});}
+   try{if(!existsSync(proposal))throw Error(existsSync(error)?json(error).error:'planner ended without proposal');const count=acceptProposal(state,json(proposal),projectRoot,'model');accepted=true;event('plan-accepted',{count,reason:state.lastPlanReason});}
    catch(e){state.lastPlanReason='planner failed: '+String(e);event('plan-failed',String(e));}
    finishPlan(state,Date.now(),accepted);saveState(state);
   }
