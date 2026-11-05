@@ -122,7 +122,7 @@ export function supplyBillSummary({base=projectRoot,now=Date.now(),fleetDir,side
 }={}){
  try{
   const bill=JSON.parse(readFileSync(join(base,'.practice/coordinator/supply-bill.json'),'utf8'));
-  const demands=bill.rows.map((row:{item:string;need:number})=>({item:row.item,count:row.need}));
+  const demands=bill.rows.map((row:{item:string;need:number;aliases?:string[]})=>({item:row.item,count:row.need,aliases:row.aliases}));
   const items=JSON.parse(readFileSync(join(base,'knowledge/items.json'),'utf8'));
   const statuses=liveHelperStatuses(base,fleetDir,side).filter(s=>!s.practice);
   // Use the same five-minute window as the preparation report. A fresh status does not make an older bank recent.
@@ -142,7 +142,7 @@ export function supplyBillSummary({base=projectRoot,now=Date.now(),fleetDir,side
    const freshByAccount=new Map(current.holders.map(h=>[h.account,h.count]));
    const holders=row.holders.map(h=>({account:h.account,count:h.count-(freshByAccount.get(h.account)??0)}))
     .filter(h=>h.count>0).sort((a,b)=>b.count-a.count).slice(0,2);
-   return [{item:row.item,need:row.need,recent:current.owned,toVerify,holders}];
+   return [{item:row.item,need:row.need,recent:current.owned,toVerify,holders,...(row.aliases?{aliases:row.aliases}:{})}];
   });
   return {
    at:bill.at,
@@ -154,7 +154,7 @@ export function supplyBillSummary({base=projectRoot,now=Date.now(),fleetDir,side
    verificationNeeded:verify.length,
    verify:verify.sort((a,b)=>b.toVerify-a.toVerify).slice(0,25),
    short:observed.filter(r=>r.ids.length>0&&r.short>0).sort((a,b)=>b.short-a.short).slice(0,25)
-    .map(r=>({item:r.item,need:r.need,short:r.short,holders:r.holders.slice(0,2)})),
+    .map(r=>({item:r.item,need:r.need,short:r.short,holders:r.holders.slice(0,2),...(r.aliases?{aliases:r.aliases}:{})})),
   };
  }catch{return null;}
 }
@@ -205,7 +205,7 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'For an existing capability whose owned files or entry cannot support the real consumer, return capabilityUpdates:[{expectedSource:<capabilitySources[id]>,definition:<complete DeliveryTask>}] with a same-capability build task and explicit replacements for old pending builds. One update per proposal; no running owner may hold that capability. The daemon preserves the old definition. Expand the existing module scope instead of duplicating it under a new capability name. Entry must be an actual account-parameterized live worker; local --save fixtures and privileged practice commands belong in checks. Native proof must invoke that worker CLI, not only helper functions. Every new/progress build must include a finite live consumer with useful acceptance, inputs and a next goal; never stop at stock or qualification.',
   'THIN ACCEPTANCE (owner order): a consumer and its checks hold only the script contract acceptance bar: unit tests, one practice run of the real CLI showing the useful effect, assets reconciled, a clear refusal and logout. Never add interruption/resume, reseed, independent recompute, raw-file binding or failure-window scenarios, and never widen an existing consumer. A live failure gets the smallest fix of the exact failed step plus one regression test.',
   'FLEET SIDES (world.scoreboard.fleetSkills, world.scoreboard.fleet): this side ('+(world.scoreboard?.fleet?.side??'local')+') plans only its own accounts, but the board counts the best account of any side (local, Codex cloud, Claude cloud). Each row gives the fleet best of a skill, the side and account that hold it, and the best of this side (local). bestLive and progress count this side only. For ordinary helper batches, do not queue work on a skill where otherSideLeads is true (another side leads this side by more than '+FLEET_BAND+' levels) unless the planned local account ends above that fleet best; a run that stays under it does not raise the board. Prefer skills this side leads or no side has trained for helper batches. The fresh completion account and scored main/specialist routes follow their own required progression and clocks. Name the fleet best and its side in why when a task targets a skill another side holds.',
-  'SUPPLY BILL (world.supplyBill): Use scope overall to plan supplies through the last 99. If scope is unknown, refresh the bill before assigning work from it. recentlyCovered counts route lines covered by recent observations, before reservations or delivery. Verify entries are last-seen stock that could cover a gap: confirm the named holder and available quantity before assigning a consumer or buying replacements. Short entries show the gap even if all last-seen holdings are still available. Unmapped entries need a pinned item ID. Prioritize the largest confirmed shortfalls. Give each supply job a finite count and a named consumer. Helper levels count only when they unlock a shortfall method, a quest, an item or a specialist win.',
+  'SUPPLY BILL (world.supplyBill): Use scope overall to plan supplies through the last 99. If scope is unknown, refresh the bill before assigning work from it. recentlyCovered counts route lines covered by recent observations, before reservations or delivery. Verify entries are last-seen stock that could cover a gap: confirm the named holder and available quantity before assigning a consumer or buying replacements. Short entries show the gap even if all last-seen holdings are still available. Aliases on a row draw from the same base stock pool. Check item form at handoff. Unmapped entries need a pinned item ID. Prioritize the largest confirmed shortfalls. Give each supply job a finite count and a named consumer. Helper levels count only when they unlock a shortfall method, a quest, an item or a specialist win.',
   'METHOD LADDER (owner order): a worker uses the best method the current level of the account and owned items allow and switches at once when a better one unlocks (Runecraft altars by level and owned talisman, Agility courses, bows and arrows by Ranged level, logs by Firemaking level, monsters by combat). XP is 25x, so a level band takes minutes. Ordinary helper batches target the next unlock. Completion and scored routes may span a qualified method-switching ladder; never target a distant level on a weak method. Never gather or make stock the banks already hold in quantity (world.assets); spend it.',
   'MEMORY GATES: a proof imports FREE_FLOOR_GB and PRACTICE_STARTUP_GB from packages/core/src/memory.ts and takes the practice turn through delivery; it never hardcodes a free-memory number (a hardcoded 12 GiB gate failed the Firemaking and Magic builds on a machine with 5 to 10 GB available).',
   'FAST LANE: when a qualified capability needs only a different account, quest or argument, queue the run; do not queue a build. A failed live step that the runtime already handles (for example the quest talk door rule) gets a fresh qualify and a retry run, not a build.',
