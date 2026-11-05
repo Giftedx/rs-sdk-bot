@@ -1,6 +1,6 @@
 // Run several quests on one account, one after another, with scripts/quest-sweep.ts (each run takes the quest's
 // pack from the bank, walks to its start and logs out). A quest the status file shows complete is skipped. A failed
-// quest is logged and the chain goes on to the next; a death ends the chain. Prints QUEST_CHAIN per quest and RESULT.
+// quest is logged and the chain goes on to the next. A stop, death or disconnect ends the chain.
 // Usage: bun scripts/quest-chain.ts <account> <quest,quest,...>   e.g. bun scripts/quest-chain.ts Bigchopper cook,sheep
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -55,25 +55,47 @@ export function questsLeft(quests: string[], statusQuests: { name: string; state
     return quests.filter(q => !done.has((QUEST_NAMES[q] ?? q).toLowerCase()));
 }
 
+export async function runQuestChain(quests: string[], deps: {
+    status: () => { quests?: Parameters<typeof questsLeft>[1]; skills?: Parameters<typeof questShortfall>[1] };
+    stopped: () => boolean;
+    run: (quest: string) => Promise<string>;
+    log: (line: string) => void;
+}): Promise<string> {
+    const done: string[] = [], failed: string[] = [];
+    const summary = (prefix: string) => `${prefix} quest-chain done=${done.join(',') || '-'} failed=${failed.join(',') || '-'}`;
+    for (const q of quests) {
+        if (deps.stopped()) return summary('RESULT fail stop file');
+        const status = deps.status();
+        if (!questsLeft([q], status.quests).length) continue;
+        const short = questShortfall(q, status.skills);
+        if (short.length) { deps.log(`QUEST_CHAIN ${q} skip needs ${short.join(', ')}`); continue; }
+        const result = await deps.run(q);
+        const died = questDied(result);
+        const ok = !died && result.startsWith('RESULT ok');
+        (ok ? done : failed).push(q);
+        deps.log(`QUEST_CHAIN ${q} ${ok ? 'ok' : 'fail'} ${result.slice(0, 200)}`);
+        if (died) return summary(`RESULT fail died during ${q}`);
+        if (deps.stopped() || /^RESULT fail (?:stop file\b|quest-sweep \S+ Error: worker finished: stop file$)/.test(result)) {
+            return summary('RESULT fail stop file');
+        }
+        if (/^RESULT fail session ended\b/.test(result)) return summary(result.slice(0, 200));
+    }
+    if (deps.stopped()) return summary('RESULT fail stop file');
+    return summary(done.length ? 'RESULT ok' : 'RESULT fail');
+}
+
 if (import.meta.main) {
     // The list may arrive as one comma-joined argument or, from a host job (--args a,b), as several.
     const [account, ...rest] = process.argv.slice(2), list = rest.join(",");
     if (!account || !list) { console.log('RESULT fail usage: quest-chain.ts <account> <quest,quest,...>'); process.exit(2); }
     const status = () => { try { return JSON.parse(readFileSync(join(root, '.practice/status', `${account}.json`), 'utf8')); } catch { return {}; } };
-    const done: string[] = [], failed: string[] = [];
-    for (const q of questsLeft(list.split(','), status().quests)) {
-        if (!questsLeft([q], status().quests).length) continue;
-        const short = questShortfall(q, status().skills);
-        if (short.length) { console.log(`QUEST_CHAIN ${q} skip needs ${short.join(', ')}`); continue; }
-        const result = hosted() ? await inProcess(account, q) : await subprocess(account, q);
-        const ok = result.startsWith('RESULT ok');
-        (ok ? done : failed).push(q);
-        console.log(`QUEST_CHAIN ${q} ${ok ? 'ok' : 'fail'} ${result.slice(0, 200)}`);
-        if (questDied(result)) { console.log(`RESULT fail died during ${q} done=${done.join(',')} failed=${failed.join(',')}`); process.exit(1); }
-        if (existsStop(account)) break;
-    }
-    console.log(`RESULT ${done.length ? 'ok' : 'fail'} quest-chain done=${done.join(',') || '-'} failed=${failed.join(',') || '-'}`);
-    process.exit(done.length ? 0 : 1);
+    const result = await runQuestChain(list.split(','), {
+        status, stopped: () => existsStop(account),
+        run: q => hosted() ? inProcess(account, q) : subprocess(account, q),
+        log: line => console.log(line),
+    });
+    console.log(result);
+    process.exit(result.startsWith('RESULT ok') ? 0 : 1);
 }
 // In a bot host (packages/core/src/host.ts) many accounts share this process: the quest runs here, and finish()
 // reports through bot.ts finishHooks instead of exiting. Alone, each quest runs in its own process.
