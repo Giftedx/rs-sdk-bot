@@ -7,6 +7,7 @@ import {atomicJson} from '../src/coordinator-store';
 import {installJob,releaseCompletedOwnJobs} from '../src/coordinator-live';
 import {readCoordinatorJobs,readMergedPlan,writeCoordinatorJobs} from '../../core/src/coordinator-jobs';
 import type {CoordTask} from '../src/coordinator';
+import {parseJob} from '../../../scripts/swarm';
 
 const server='rs-sdk-demo.fly.dev';
 const handoff={accounts:['BowBeforeMe','Shaftmaker'],orchestrate:true,script:'handoff.ts',enabled:false,repeat:false,coordinatorOwner:'coordinator',coordinatorTask:'run-handoff',env:{COORDINATOR_RUN_ID:'run-1'}};
@@ -26,7 +27,8 @@ test('a completed composed job releases the run account; the unused partner stay
  const f=fixture();
  f.install();
  const jobs=readCoordinatorJobs(f.base).jobs;
- expect(jobs[0]).toEqual({accounts:['BowBeforeMe'],script:'handoff.ts',enabled:false,repeat:false,coordinatorOwner:'coordinator',coordinatorTask:'run-handoff',env:{COORDINATOR_RUN_ID:'run-1'}});
+ expect(jobs[0]).toEqual({account:'BowBeforeMe',script:'handoff.ts',enabled:false,repeat:false,coordinatorOwner:'coordinator',coordinatorTask:'run-handoff',env:{COORDINATOR_RUN_ID:'run-1'}});
+ expect(parseJob(jobs[0])).toMatchObject({accounts:['BowBeforeMe'],host:false});
  expect(jobs[1]).toMatchObject({account:'Shaftmaker',script:'magic.ts',enabled:true,coordinatorTask:'run-magic',env:{COORDINATOR_RUN_ID:'run-2'}});
  expect(readMergedPlan(f.base).jobs.find((j:any)=>j.script==='bow.ts')).toBeUndefined();
 });
@@ -36,7 +38,7 @@ test('a failed but settled composed job releases its run account; a missing rece
  atomicJson(join(released.prac,'coordinator/runs/run-1/receipt.json'),{taskId:'run-handoff',runId:'run-1',ok:false,at:1});
  released.install();
  const jobs=readCoordinatorJobs(released.base).jobs;
- expect(jobs[0]).toEqual({accounts:['BowBeforeMe'],script:'handoff.ts',enabled:false,repeat:false,coordinatorOwner:'coordinator',coordinatorTask:'run-handoff',env:{COORDINATOR_RUN_ID:'run-1'}});
+ expect(jobs[0]).toEqual({account:'BowBeforeMe',script:'handoff.ts',enabled:false,repeat:false,coordinatorOwner:'coordinator',coordinatorTask:'run-handoff',env:{COORDINATOR_RUN_ID:'run-1'}});
  expect(jobs[1]).toMatchObject({account:'Shaftmaker',script:'magic.ts',enabled:true,coordinatorTask:'run-magic',env:{COORDINATOR_RUN_ID:'run-2'}});
  const missing=fixture();
  rmSync(join(missing.prac,'coordinator/runs/run-1/receipt.json'));

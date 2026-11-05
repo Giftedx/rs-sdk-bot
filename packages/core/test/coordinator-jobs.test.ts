@@ -29,6 +29,20 @@ test('later coordinator jobs shadow earlier ones, so a reinstalled account appea
     const merged = mergeJobs(owner, [first, second]);
     expect(merged.filter(j => j.account === 'Rod')).toEqual([second]);
 });
+test('a legacy retired cohort keeps each participant parked as a valid single assignment', () => {
+    const hold = { accounts: ['A', 'B'], script: 'handoff.ts', enabled: false, coordinatorOwner: 'coordinator',
+        coordinatorTask: 'handoff', env: { COORDINATOR_RUN_ID: 'task-1' } };
+    const replacement = { account: 'B', script: 'next.ts', enabled: true, coordinatorOwner: 'coordinator' };
+    const jobs = mergeJobs(owner, [hold, replacement]);
+    expect(jobs.find(j => j.host)).toMatchObject({ accounts: ['C'] });
+    expect(jobs.filter(j => j.script === 'handoff.ts')).toEqual([{
+        account: 'A', script: 'handoff.ts', enabled: false, coordinatorOwner: 'coordinator',
+        coordinatorTask: 'handoff', env: { COORDINATOR_RUN_ID: 'task-1' },
+    }]);
+    expect(jobs.filter(j => j.account === 'B')).toEqual([replacement]);
+    const enabled = { ...hold, enabled: true };
+    expect(mergeJobs(owner, [enabled]).at(-1)).toBe(enabled);
+});
 test('the plan keeps owner limits; a granted expansion applies only while the owner maxBots it was granted over stands', () => {
     const plan = { maxBots: 17, minFreeGB: 4, jobs: owner, coordination: { enabled: true, maxLive: 17, directive: 'go' } };
     const overlay = { ...emptyCoordinatorJobs(), coordination: { focusCapability: 'wine-order', focusSince: 5, lastExpansionAt: 9 }, expansion: { maxBots: 21, over: 17 } };
