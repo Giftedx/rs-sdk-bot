@@ -1,13 +1,15 @@
 > Current authority: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. See [AGENTS.md](../AGENTS.md).
 
-> Current target check: [all 24 boards refreshed](../.practice/joined-plan/targets-20261026-093155/comparison.json); timed leaders unchanged, realistic model 44,866 versus 35,916. Value-board targets and tie limits are in [boards-special](boards-special.md). No feasible route has been proved for the 24-board goal; the goal is unchanged. Quest Points has a playtime deadline. Use the [current plan](../docs/plans/joined-plan.md) for the current gap and next experiment.
+> The [current plan](../docs/plans/joined-plan.md) owns the Overall gap. The snapshot covers 21 time-ranked boards, including Quest Points. See [boards-special](boards-special.md) for value-board targets and tie limits.
 
 # Haggis run: 24-board schedule
 
 Model: `packages/planner/src/haggis.ts` with travel (`packages/planner/src/travel.ts`). Inputs:
 `packages/planner/src/haggis-boards.json` (each number has `evidence` and `source`; each row has a place) and the leg
-cache `packages/planner/src/haggis-travel.json`. Deadlines: `research/hiscores-live.json` ), row 1 of each board. Reprint every table here with
-`bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --order --supplies --evidence --levers --travel`.
+cache `packages/planner/src/haggis-travel.json`. Deadlines come from row 1 of each board in `research/hiscores-live.json`. Reprint the schedule with
+`bun packages/planner/src/haggis-cli.ts --order --supplies --evidence --levers --travel`.
+
+Source -> local consumer -> reuse -> check: the pinned server's exact tick titles and the existing scout parser -> the planner's shared record snapshot -> require a readable leader in the declared tick units on every timed board before replacing the file -> parser fixtures reject wrong units and missing leaders. Capture with `bun packages/planner/src/scout-cli.ts --out=research/hiscores-live.json`. The saved comparison in `.practice/hiscore-target/compare.json` binds both route estimates to their snapshot hashes.
 
 ## Verdict
 
