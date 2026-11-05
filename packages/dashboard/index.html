@@ -287,10 +287,18 @@ function setMode(m,preserve=false){
   $('#mw').classList.toggle('d2',m==='2d');$('#b3').classList.toggle('on',m==='3d');$('#b2').classList.toggle('on',m==='2d');$('#legend').style.display=m==='2d'?'flex':'none';
   showViewerStatus();if(S){syncWorld();drawMap();}
 }
+// A failed 3D view tries again after each of these waits. Each wait ends only while the page is in view.
+const VIEWER_RETRY_MS=[5000,30000,120000];let VIEWER_RETRIES=0,VIEWER_RETRY_TIMER,VIEWER_RETRY_DUE=false;
+function retryViewer(){VIEWER_RETRY_DUE=true;if(document.hidden)return;VIEWER_RETRY_DUE=false;if(VIEWER.state==='unavailable'&&mode==='2d')request3D();}
 function viewerUnavailable(reason){
-  clearTimeout(VIEWER_TIMER);VIEWER={...VIEWER,state:'unavailable',detail:String(reason||'viewer did not become ready').slice(0,180),feed:null};
+  const retry=VIEWER_RETRIES<VIEWER_RETRY_MS.length&&!S?.bots?.find(b=>b.name===sel)?.practice;
+  clearTimeout(VIEWER_TIMER);clearTimeout(VIEWER_RETRY_TIMER);VIEWER_RETRY_DUE=false;VIEWER={...VIEWER,state:'unavailable',detail:(String(reason||'viewer did not become ready').slice(0,180))+(retry?' · trying again':''),feed:null};
   $('#rsw').removeAttribute('src');rswFor=null;setMode('2d',true);
+  if(retry)VIEWER_RETRY_TIMER=setTimeout(retryViewer,VIEWER_RETRY_MS[VIEWER_RETRIES++]);
 }
+// A hidden page draws no frames, so its time does not count against the scene.
+function armViewerTimer(request){clearTimeout(VIEWER_TIMER);VIEWER_TIMER=setTimeout(()=>{if(request!==VIEWER_REQUEST||VIEWER.state!=='loading')return;if(document.hidden)armViewerTimer(request);else viewerUnavailable('scene readiness timed out');},45000);}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)return;if(VIEWER.state==='loading')armViewerTimer(VIEWER_REQUEST);if(VIEWER_RETRY_DUE)retryViewer();});
 async function request3D(){
   if(S?.bots?.find(b=>b.name===sel)?.practice){viewerUnavailable('Practice observations use the 2D map. The 3D viewer shows the live world.');return;}
   const request=++VIEWER_REQUEST;clearTimeout(VIEWER_TIMER);VIEWER={...VIEWER,state:'checking',detail:'',feed:null};showViewerStatus();
@@ -302,7 +310,7 @@ async function request3D(){
     const url=viewerFrameUrl(health.url,document.baseURI);
     VIEWER={state:'loading',detail:'Loading 3D scene… waiting for rendering and private-name protection.',origin:url.origin,url:url.href,feed:null};
     $('#rsw').removeAttribute('src');rswFor=null;
-    VIEWER_TIMER=setTimeout(()=>{if(request===VIEWER_REQUEST&&VIEWER.state==='loading')viewerUnavailable('scene readiness timed out');},45000);
+    armViewerTimer(request);
     setMode('3d',true);
   }catch(e){if(request===VIEWER_REQUEST)viewerUnavailable(e.message||'viewer health check failed');}
 }
@@ -315,7 +323,7 @@ window.addEventListener('message',e=>{
   const v=viewerMessage(e,frame,VIEWER.origin);
   if(v&&mode==='3d'){
     if(v.state==='error'){viewerUnavailable(v.detail||'viewer reported an error');return;}
-    if(viewerCanReveal(v)){clearTimeout(VIEWER_TIMER);const first=VIEWER.state!=='ready',target=window.atlasFollowOther||(!window.atlasFreeCamera&&sel);VIEWER={...VIEWER,state:'ready',detail:'',feed:typeof v.feedConnected==='boolean'?v.feedConnected:null};if(window.atlasFreeCamera&&!window.atlasFollowOther&&(first||!sel))frame?.postMessage({atlasFreeCamera:true},VIEWER.origin);else if(first&&target)frame?.postMessage({follow:target},VIEWER.origin);}
+    if(viewerCanReveal(v)){clearTimeout(VIEWER_TIMER);VIEWER_RETRIES=0;const first=VIEWER.state!=='ready',target=window.atlasFollowOther||(!window.atlasFreeCamera&&sel);VIEWER={...VIEWER,state:'ready',detail:'',feed:typeof v.feedConnected==='boolean'?v.feedConnected:null};if(window.atlasFreeCamera&&!window.atlasFollowOther&&(first||!sel))frame?.postMessage({atlasFreeCamera:true},VIEWER.origin);else if(first&&target)frame?.postMessage({follow:target},VIEWER.origin);}
     else if(VIEWER.state==='loading'&&typeof v.detail==='string')VIEWER.detail=v.detail.slice(0,180);
     showViewerStatus();
   }

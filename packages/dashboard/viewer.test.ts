@@ -250,8 +250,10 @@ test('the roster reaches the page live, with the hidden account as the mark only
  b.host.WebSocket=Socket;installViewerBridge(b.host);const socket=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');
  socket.message({t:'roster',p:[[7,'HiddenActor',3200,3200,0,126],[8,'Worker',3201,3201,0,50]]});expect(b.messages.some(m=>m.data.atlasRoster)).toBe(false);
  await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();
+ // The roster that arrived during the load reaches the page at the ready state.
+ expect(b.messages.filter(m=>m.data.atlasRoster)).toHaveLength(1);
  socket.message({t:'roster',p:[[7,'HiddenActor',3200,3200,0,126],[8,'Worker',3201,3201,0,50],[9,'Bad',null,3,0,1]]});
- const rosters=b.messages.filter(m=>m.data.atlasRoster);expect(rosters).toHaveLength(1);
- expect(rosters[0]!.data.atlasRoster.players).toEqual([['⟦MAIN⟧',3200,3200,0,126],['Worker',3201,3201,0,50]]);
+ const rosters=b.messages.filter(m=>m.data.atlasRoster);expect(rosters).toHaveLength(2);
+ for(const r of rosters)expect(r.data.atlasRoster.players).toEqual([['⟦MAIN⟧',3200,3200,0,126],['Worker',3201,3201,0,50]]);
  expect(JSON.stringify(rosters)).not.toContain('HiddenActor');
 });
