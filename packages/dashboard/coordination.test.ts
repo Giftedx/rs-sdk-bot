@@ -15,5 +15,5 @@ test('camera destinations use the pinned viewer URL interface and reject invalid
  expect(url.searchParams.get('cx')).toBe('3212');expect(url.searchParams.get('cz')).toBe('3410');expect(url.searchParams.get('cy')).toBe('38');
  expect(url.searchParams.get('v')).toBe('1');expect(url.searchParams.get('p')).toBe('-300');
  for(const pos of [null,{x:NaN,z:1},{x:-1,z:1},{x:1,z:20000}])expect(camera(new URL('http://localhost/viewer/'),pos).search).toBe('');
- expect(html).toContain('viewerCameraUrl(viewerFrameUrl(VIEWER.url,location.origin),window.atlasDestination)');
+ expect(html).toContain('viewerCameraUrl(viewerFrameUrl(VIEWER.url,location.origin),window.atlasDestination||(window.atlasFreeCamera?null:b?.live||b?.pos))');
 });
