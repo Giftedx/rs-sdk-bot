@@ -1,12 +1,12 @@
 // Shared helpers for the short-quest scripts (scripts/generated/quest-*.ts). The helpers are the ones proved in
 // dwarfcannon.ts and waterfall.ts: walkPath first (it opens doors; SDK collision treats doors as open), clicks sent
 // again when the server drops them inside a p_delay, one dialog page per tick, MILESTONE / WARN lines, a death check.
-import { openBot, finish } from '../../packages/core/src/bot';
+import { openBot, finish, getWorld, accountOf } from '../../packages/core/src/bot';
 import type { Session } from '../../packages/core/src/inprocess';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { startQuestSustain, selectQuestFood, questFoodDefinitions } from '../quest-sustain';
 import { walkQuestCorridor } from '../quest-walk';
-import { sessionWalker, walkPath, type PathPoint } from '../../packages/core/src/walk';
+import { sessionWalker, walkPath, goTo, type PathPoint } from '../../packages/core/src/walk';
 import { componentId } from '../../packages/core/src/logout';
 import { ClientProt } from '../../vendor/rs-sdk/server/webclient/src/io/ClientProt';
 import { readFileSync } from 'node:fs';
@@ -330,6 +330,11 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     const canCast = (comp: string): boolean => castable(comp, cnt, s.sdk.getEquipment().map((i: any) => i.id), magic());
     const teleport = async (label: string, comp: string, x: number, z: number): Promise<void> => {
         if (!canCast(comp)) {
+            // The world router first: it knows the ladders and doors between an upstairs end (the Black Knights' Fortress's
+            // first floor, 3029,3505) and the ground, which a one-floor corridor and a Climb-down loc in view do not.
+            const routed = await goTo(s, await getWorld(), { x, z, level: 0 }, accountOf(s), { legTimeoutTicks: 150, planBudgetMs: 15_000 });
+            console.log(`QUEST_TELEPORT_WALK ${JSON.stringify({ label, to: { x, z }, ok: routed.ok, reason: routed.ok ? undefined : routed.reason, at: pos() && { x: pos()!.worldX, z: pos()!.worldZ, level: pos()!.level } })}`);
+            if (routed.ok && near(x, z, 6)) return;
             // walkPath keeps to one floor: from upstairs (Juliet's room, 3158,3425,1) take the nearest way down first.
             for (let i = 0; i < 3 && lvl() > 0; i++) {
                 const from = lvl();
