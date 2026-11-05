@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793889786459,
+ "at": 1793892218741,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -483,20 +483,20 @@
    "script": "scripts/buy-owned-ge-item.ts",
    "args": [],
    "env": {
-    "ORDER_KEY": "oreelse-observatory-molten-glass",
+    "ORDER_KEY": "oreelse-observatory-glass-r20",
     "ITEM_ID": "1775",
     "QUANTITY": "1",
     "EXPECTED_OWNED": "0",
     "LIMIT_PRICE": "500",
-    "CASH_RESERVE": "50000",
+    "CASH_RESERVE": "20000",
     "ORDER_MS": "600000",
     "FILL_WAIT_TICKS": "50",
     "CAP": "2400",
-    "COORDINATOR_RUN_ID": "task-7dc3c549-68e9-41d5-9420-5dd4caad677c"
+    "COORDINATOR_RUN_ID": "task-40e208fd-e9ef-478d-9c2f-b217b529e727"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "run-ge-oreelse-observatory-glass [task-7dc3c549-68e9-41d5-9420-5dd4caad677c]",
+   "goal": "run-ge-oreelse-glass-reserve20k [task-40e208fd-e9ef-478d-9c2f-b217b529e727]",
    "role": "smithing"
   }
  ]
