@@ -19,7 +19,7 @@ import { CLAIM_MAX_AGE_MS, accountFrom, assess, catalogue, finishedTrainers, fre
 import { mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import type { Order, Receipt } from './fleet-trade';
 import { liveHelperStatuses, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
-import { haggisActivities, haggisTravel, loadSnapshot, suppliesFor, TRICKS } from '../packages/planner/src/haggis';
+import { haggisActivities, haggisTravel, loadSnapshot, overallRequirementsFor, schedule, TRICKS } from '../packages/planner/src/haggis';
 import { tickWaste, wasteShare } from './tick-waste';
 
 const root = resolve(import.meta.dir, '..'), prac = join(root, '.practice');
@@ -38,11 +38,15 @@ function readFrom(file: string, offset: number): string[] {
 
 function routeBill(items: any[]): BillRow[] {
     try {
-        const supplies = suppliesFor(haggisActivities(), { mode: 'realistic', tricks: new Set(TRICKS), travel: haggisTravel() } as any, loadSnapshot(join(root, 'research/hiscores-live.json')));
+        const activities = haggisActivities(), boards = loadSnapshot(join(root, 'research/hiscores-live.json'));
+        const options = { mode: 'realistic' as const, tricks: new Set(TRICKS), travel: haggisTravel() };
+        const { supplies } = overallRequirementsFor(activities, options, schedule(boards, activities, options));
         return supplyBill(supplies, items, liveHelperStatuses());
     } catch (e) {
-        console.log(`AUTOPILOT bill from the last saved supply bill: ${String(e).slice(0, 120)}`);
-        return readJson(join(prac, 'coordinator/supply-bill.json'), { rows: [] }).rows;
+        const bill = readJson(join(prac, 'coordinator/supply-bill.json'), null);
+        const scoped = bill?.scope === 'overall' && Array.isArray(bill.rows);
+        console.log(`AUTOPILOT ${scoped ? 'uses saved Overall supply bill' : 'has no Overall supply bill'}: ${String(e).slice(0, 120)}`);
+        return scoped ? bill.rows : [];
     }
 }
 

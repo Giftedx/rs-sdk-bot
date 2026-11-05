@@ -23,7 +23,7 @@ import {loadContentTable,readWorn} from './appearance';
 import {createOperatorControl} from './operator-control';
 import { xpForLevel } from '../planner/src/curve';
 import { isLocalServer } from '../core/src/localserver';
-import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, schedule, suppliesFor, TRICKS } from '../planner/src/haggis';
+import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, schedule, overallRequirementsFor, TRICKS } from '../planner/src/haggis';
 
 const root = resolve(import.meta.dir, '..', '..');
 const operatorControl=createOperatorControl({root,readOnly:process.env.DASH_READ_ONLY==='1'});
@@ -912,7 +912,8 @@ function race() {
         const lastAct = lastB ? [...re.order].reverse().find(p => live.find(a => a.id === p.id)?.serves.includes(lastB.id as any)) : null;
         const n = (l: typeof rows, k: 'real' | 'floor') => l.filter(r => r[k].status === 'WIN').length;
         const value = {
-            supplies: suppliesFor(acts, {travel, mode:'realistic', tricks:new Set(TRICKS)}, boards),
+            supplies: re.overallFinish === null ? null : overallRequirementsFor(acts, {travel, mode:'realistic', tricks:new Set(TRICKS)}, re)
+                .supplies.map(({item,count}) => ({item,count})),
             rows, unmeasured: (readFileSync(BOARDS_FILE, 'utf8').match(/"evidence":\s*"(ESTIMATE|CODE-READ)"/g) ?? []).length,
             wins: n(rows, 'real'), floorWins: n(rows, 'floor'), gap: overall?.real.slack ?? null, floorGap: overall?.floor.slack ?? null,
             qpEnd: { realistic: re.qp, floor: fl.qp },
