@@ -127,21 +127,26 @@ export function finishedTrainers(jobs: readonly any[], side: string, assigned: R
 }
 
 // Retirement from a job's own log lines (since the autopilot assigned it): the last RETIRE_FAILS RESULTs all fail, a
-// RESULT reports a death, or the last LEDGER spent WASTE_LIMIT or more of its ticks idle or walking.
+// RESULT reports a death, or the last LEDGER spent WASTE_LIMIT or more of its ticks idle or walking. A run the server
+// or the relayed gateway dropped (`RESULT fail session ended: disconnected`; the cloud proxy's 1012 `server_draining`
+// closes) says nothing about the job: its supervisor logs the account back in and the next run banks the carried pack,
+// so such a result is counted as a drain, never as a failure.
 export const RETIRE_FAILS = 2, WASTE_LIMIT = 0.9;
-export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number } {
+export const DRAIN_RESULT = /^RESULT fail session ended: disconnected\b/;
+export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number; drains: number } {
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
-    const results = clean.filter(l => /^RESULT (ok|fail)\b/.test(l));
+    const drains = clean.filter(l => DRAIN_RESULT.test(l)).length;
+    const results = clean.filter(l => /^RESULT (ok|fail)\b/.test(l) && !DRAIN_RESULT.test(l));
     const ok = results.filter(l => l.startsWith('RESULT ok')).length, fail = results.length - ok;
     // goldfarm and thieving60 print died=false on a healthy run: only a bare word or a field that is not false counts.
     const died = results.find(l => /\b(?:died|death)\b(?!=)|\b(?:died|death)=(?!false\b)/i.test(l));
-    if (died) return { retire: true, reason: `death: ${died.slice(0, 120)}`, ok, fail };
+    if (died) return { retire: true, reason: `death: ${died.slice(0, 120)}`, ok, fail, drains };
     const tail = results.slice(-RETIRE_FAILS);
-    if (tail.length === RETIRE_FAILS && tail.every(l => l.startsWith('RESULT fail'))) return { retire: true, reason: `${RETIRE_FAILS} fail RESULTs: ${tail.at(-1)!.slice(0, 120)}`, ok, fail };
+    if (tail.length === RETIRE_FAILS && tail.every(l => l.startsWith('RESULT fail'))) return { retire: true, reason: `${RETIRE_FAILS} fail RESULTs: ${tail.at(-1)!.slice(0, 120)}`, ok, fail, drains };
     const ledger = clean.filter(l => l.startsWith('LEDGER ')).at(-1)?.match(/^LEDGER ticks=(\d+).* move=(\d+).* idle=(\d+)/);
     if (ledger && +ledger[1]! >= 300 && (+ledger[2]! + +ledger[3]!) / +ledger[1]! >= WASTE_LIMIT)
-        return { retire: true, reason: `tick waste ${(100 * (+ledger[2]! + +ledger[3]!) / +ledger[1]!).toFixed(0)}% idle+move`, ok, fail };
-    return { retire: false, reason: '', ok, fail };
+        return { retire: true, reason: `tick waste ${(100 * (+ledger[2]! + +ledger[3]!) / +ledger[1]!).toFixed(0)}% idle+move`, ok, fail, drains };
+    return { retire: false, reason: '', ok, fail, drains };
 }
 
 // Thieving success at a knight of Ardougne (pickpocket.dbrow: 50..240 of 256 from level 1 to 99), scaled from the

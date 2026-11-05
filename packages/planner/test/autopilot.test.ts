@@ -214,3 +214,10 @@ test('the claim lists every spot, pen and shop the enabled jobs of this side hol
     expect(claim).toEqual({ side, at: 1234, resources: ['knight:2582,3297', 'knight:2653,3300', 'pen:3017,3288'] });
     expect(claimFor([], side, () => side, 5).resources).toEqual([]);
 });
+
+test('a run the gateway dropped is a drain, not a failure: two drains keep the job, two real fails after them retire it', () => {
+    const drain = 'RESULT fail session ended: disconnected';
+    expect(assess([drain, drain])).toMatchObject({ retire: false, ok: 0, fail: 0, drains: 2 });
+    expect(assess(['RESULT fail no chickens', drain, 'RESULT fail no chickens'])).toMatchObject({ retire: true, fail: 2, drains: 1 });
+    expect(assess(['RESULT fail no chickens', drain, 'RESULT ok feathers=30 gained=30'])).toMatchObject({ retire: false, ok: 1, fail: 1, drains: 1 });
+});
