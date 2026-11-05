@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793852943800,
+ "at": 1793853553679,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -240,25 +240,6 @@
    "role": "supply"
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
-   "autopilot": "local",
-   "resources": [
-    "knight:2652,3318"
-   ]
-  },
-  {
    "account": "Billionaire",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -484,6 +465,25 @@
    "repeat": false,
    "goal": "run-handoff-doric-clay-oreelse-repair [task-7ec9ad9b-a1a0-4aec-8155-40b002ba7125]",
    "role": "runecraft"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "local",
+   "resources": [
+    "knight:2652,3318"
+   ]
   }
  ]
 }
