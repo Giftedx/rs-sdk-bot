@@ -278,6 +278,13 @@ Recommendation: use the host. 4 bots in one host cost about one bot process plus
   moved yet (owner switch: the proposed `swarm.json` host jobs are in the PR that added section 3d).
 - Live runs not done (practice only).
 
+
+## Tick waste attribution
+
+A tick ledger can use a nearby result only within its supervisor job. A ledger with no result before the next job marker stays unknown and does not affect another family's Autopilot waste rate.
+
+Source -> local consumer -> reuse -> check: swarm job markers and worker ledger lines -> the existing tick-waste report and Autopilot scoring -> stop attribution at a marker and normalize only ledger or result candidates -> a boundary regression and three matched scans of the same local log set. The scans compare 54 files totaling 103,319,274 bytes on Bun 1.3.14 with identical legacy results. Raw elapsed times are in `.practice/tick-waste-job-boundary/timing.json`. This measures report time. It does not measure game ticks saved.
+
 ## Repeated route search
 
 `world.ts` and `leg-cache.ts` -> bot and route-worker planning -> numeric lower-bound storage, per-query tile keys, explicit generator cleanup and complete opened-danger cache scopes -> 20 exact golden route regressions and three matched warm-cache measurements. Walk-cache loading retains a null-prototype object without an entries array and duplicate Map.
