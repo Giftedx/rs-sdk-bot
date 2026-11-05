@@ -207,6 +207,29 @@ test('native Stop cannot echo a stale follow URL back into the account picker',a
  }
 });
 
+test('a page follow change cannot be undone by the old name still in the viewer URL',async()=>{
+ const b=browser();let relay:any;const listeners:any[]=[];
+ b.host.location.href+='&follow=Worker';b.host.setInterval=(fn:any)=>{relay=fn;};
+ b.host.addEventListener=(t:string,fn:any)=>{if(t==='message')listeners.push(fn);};
+ installViewerBridge(b.host);await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();relay();
+ const before=b.messages.filter(m=>m.data.atlasFollow).length;
+ for(const f of listeners)f({origin:'http://localhost:3102',source:b.host.parent,data:{follow:'Other'}});
+ relay();relay();expect(b.messages.filter(m=>m.data.atlasFollow)).toHaveLength(before);
+ b.host.location.href=b.host.location.href.replace('follow=Worker','follow=Other');relay();relay();
+ expect(b.messages.filter(m=>m.data.atlasFollow)).toHaveLength(before);
+ b.host.location.href=b.host.location.href.replace('follow=Other','follow=Third');relay();
+ expect(b.messages.at(-1)!.data).toEqual({atlasFollow:'Third'});
+});
+
+test('the [ and ] keys step through the page accounts, not the viewer roster',()=>{
+ const b=browser();let key:any;
+ b.host.addEventListener=(t:string,fn:any,capture?:boolean)=>{if(t==='keydown'&&capture)key=fn;};
+ installViewerBridge(b.host);let stopped=0;
+ const press=(k:string)=>key({key:k,stopImmediatePropagation:()=>stopped++,preventDefault:()=>{}});
+ press(']');press('[');press('w');
+ expect(b.messages.filter(m=>m.data.atlasStep).map(m=>m.data.atlasStep)).toEqual([1,-1]);expect(stopped).toBe(2);
+});
+
 test('opponent information: the followed player\'s target after a hit, renamed when hidden, cleared when it stops facing',async()=>{
  const b=browser();class Socket {listeners=new Map<string,Function[]>();constructor(..._args:any[]){}addEventListener(t:string,fn:Function){this.listeners.set(t,[...(this.listeners.get(t)||[]),fn]);}message(m:any){for(const f of this.listeners.get('message')||[])f({data:JSON.stringify(m)});}}
  b.host.WebSocket=Socket;installViewerBridge(b.host);b.host.location.href+='&follow=Worker';const socket=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');

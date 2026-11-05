@@ -219,3 +219,21 @@ test('Runite inspector uses the known value-board record despite display-name di
     run({boards:[{board:'Runite',top:{name:'Leader',value:42}}],race:{rows:[{label:'Lava Maze Runite',rule:{kind:'value'}}]}},'Lava Maze Runite',(s:string)=>s.replace('Lava Maze ',''),()=>[],(r:string[])=>rows=r,(label:string,value:unknown)=>label+': '+value,String,()=>'? ',String,String);
     expect(rows).toContain('Record holder: Leader');expect(rows).toContain('Record time / value: 42');
 });
+
+function picked(bots:any[],state:any={}){
+ const code=html.slice(html.indexOf('function pick(n){'),html.indexOf('\n',html.indexOf('function pick(n){')));
+ const sent:any[]=[],window:any={atlasDestination:{x:1,z:2},atlasFollowOther:'Stranger',...state};
+ const run=new Function('S','window','$','render',`let sel='Old',picked=false,view='',detailPage=1,rswFor='Old';const mode='3d',VIEWER={origin:'http://viewer'};${code};return n=>{pick(n);return {sel,rswFor};};`)({bots},window,()=>({contentWindow:{postMessage:(m:any)=>sent.push(m)}}),()=>{});
+ return {run,sent,window};
+}
+
+test('pick follows an account in the world even when it was the last one chosen',()=>{
+ const p=picked([{name:'Old',inWorld:true}],{atlasFreeCamera:true});
+ expect(p.run('Old')).toEqual({sel:'Old',rswFor:null});
+ expect(p.window.atlasFreeCamera).toBe(false);expect(p.window.atlasFollowOther).toBeNull();expect(p.window.atlasDestination).toBeNull();expect(p.sent).toEqual([]);
+});
+
+test('pick releases the camera for an account that is not in the world, with no viewer reload',()=>{
+ const p=picked([{name:'Away',inWorld:false,pos:{x:3200,z:3200}}]);
+ expect(p.run('Away').sel).toBe('Away');expect(p.window.atlasFreeCamera).toBe(true);expect(p.sent).toEqual([{atlasFreeCamera:true}]);
+});
