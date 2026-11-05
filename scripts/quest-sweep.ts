@@ -126,6 +126,31 @@ export const QUEST_PICKUP_SLOTS=8,MIN_PICKUP_SLOTS=2;
 // What a quest picks up on its way beyond the pickup reserve, counted with the supplies: Pirate's Treasure holds ten
 // bananas off the plantation and Zambo's rum at once before the crate takes them.
 export const QUEST_PICKUPS:Record<string,Item[]>={hunt:[{id:1963,count:10},{id:431,count:1}]};
+// Fishing Contest wants Fishing 10 (hemenster_fishing.rs2:70). An account short of it nets shrimps first, at the
+// nearest Net spot (Catherby beach beside Harry's shop, where the rod and bait come from): 250 XP a catch at 25x, five
+// catches from level 1. The net is a tool of the bank pass; the catches take pack slots until the quest.
+export const NET=303,RAW_SHRIMPS=317,RAW_ANCHOVIES=321,CATHERBY_BEACH:Tile={x:2838,z:3431,level:0},TRAIN_TICKS=600;
+export const questSkillTraining=(quest:string,level:(skill:string)=>number):{skill:'Fishing';level:number;tools:Item[];pickups:Item[]}|null=>
+ quest==='fishingcompo'&&level('Fishing')<10?{skill:'Fishing',level:10,tools:[{id:NET,count:1}],pickups:[{id:RAW_SHRIMPS,count:6}]}:null;
+async function trainFishing(s:Session,world:World,level:number):Promise<string|null>{
+ const st=()=>s.sdk.getState() as any,lvl=()=>st()?.skills?.find((k:any)=>k.name==='Fishing')?.baseLevel??1;
+ const caught=()=>count((st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count})),RAW_SHRIMPS)+count((st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count})),RAW_ANCHOVIES);
+ const spot=()=>(st()?.nearbyNpcs??[]).filter((n:any)=>/^fishing spot$/i.test(n.name)&&n.optionsWithIndex?.some((o:any)=>/^net$/i.test(o.text))).sort((a:any,b:any)=>a.distance-b.distance)[0];
+ if(!(st()?.inventory??[]).some((i:any)=>i.id===NET))return `fishing training needs a small net (${NET}) in the pack`;
+ if(!spot()){const w=await walkFar(s,world,CATHERBY_BEACH,100);if(!w.ok)return `fishing spot walk failed: ${w.reason} ${w.detail}`;}
+ const t0=s.tick(),from=lvl();let casts=0;
+ while(lvl()<level&&s.tick()-t0<TRAIN_TICKS){
+  const n=spot();
+  if(!n){await waitTicks(s,5);continue;}
+  if((st()?.inventory?.length??0)>=28)return `fishing training: pack full at Fishing ${lvl()}`;
+  const before=caught();
+  await s.direct({type:'interactNpc',npcIndex:n.index,optionIndex:n.optionsWithIndex.find((o:any)=>/^net$/i.test(o.text))!.opIndex,reason:'SDK'});
+  casts++;
+  await waitUntil(s,()=>caught()>before||lvl()>=level,{timeoutTicks:30});
+ }
+ console.log(`QUEST_SWEEP_TRAIN ${JSON.stringify({skill:'Fishing',from,to:lvl(),target:level,casts,caught:caught(),ticks:s.tick()-t0})}`);
+ return lvl()>=level?null:`Fishing ${lvl()} of ${level} after ${s.tick()-t0} ticks`;
+}
 // What the pack keeps whatever the plan: coins, the quest's and the preset's own items, and rune stacks.
 export const staysCount=(pack:readonly Item[],keep:(id:number)=>boolean)=>pack.filter(i=>i.id===COINS||keep(i.id)||(STACKS.has(i.id)&&isEdible(i.id))).length;
 // The slots the bank pass frees: the supplies plus as much pickup reserve as leaves the food allowance room, at least
@@ -928,6 +953,9 @@ export async function sweep(account:string,quest:string,fresh?:string){
    if(mkit.staff!==undefined)gather.tools.push({id:mkit.staff,count:1});
    for(const [id,n] of Object.entries(mkit.runes))gather.tools.push({id:Number(id),count:n*casts});
   }
+  // A skill the quest wants and the account lacks is trained after the gathers; its tool joins the gather's tools.
+  const training=questSkillTraining(quest,skill);
+  if(training)gather.tools.push(...training.tools);
   // A tool already worn (the bow, the arrows) counts as held; the gather's tools are kept by the deposit pass.
   const tools=toolPlan(gather.tools,need,pack(),worn(),rows(),p.withdraw);
   p.withdraw.push(...tools.withdraw);
@@ -963,7 +991,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
   // Free the slots the withdrawals, the shop purchases and the gathered items need, plus the pickups: whole kinds the
   // quest does not use first, one deposit per kind, then food beyond the allowance.
   const keep=(id:number)=>need.has(id)||toolIds.has(id)||keepsItem(quest,id,id=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable);
-  const slots=slotNeed(slotsFor([...p.withdraw,...shop.buys.map(b=>({id:b.id,count:b.count})),...gather.gathers.map(g=>({id:g.id,count:g.count})),...(manorFood?[{id:MANOR_FOOD.id,count:1}]:[]),...(heckelDust?[{id:1975,count:1}]:[]),...(QUEST_PICKUPS[quest]??[])],pack()),staysCount(pack(),keep));
+  const slots=slotNeed(slotsFor([...p.withdraw,...shop.buys.map(b=>({id:b.id,count:b.count})),...gather.gathers.map(g=>({id:g.id,count:g.count})),...(manorFood?[{id:MANOR_FOOD.id,count:1}]:[]),...(heckelDust?[{id:1975,count:1}]:[]),...(QUEST_PICKUPS[quest]??[]),...(training?.pickups??[])],pack()),staysCount(pack(),keep));
   for(const d of depositPlan(pack(),slots,keep)){
    const item=(st()?.inventory??[]).find((i:any)=>i.id===d.id);
    if(!item)continue;
@@ -990,6 +1018,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
   if(heckelDust){const dust=await fetchHeckelDust(heckelIO(s,world));if(!dust.ok)return fail(dust.detail!);}
   if(manorFood){const food=await fetchManorFishFood(manorIO(s,world),preset.position);if(!food.ok)return fail(food.detail!);}
   if(gather.gathers.length){const why=await gatherItems(s,world,gather.gathers,(to)=>walkFar(s,world,to,100));if(why)return fail(why);}
+  if(training){const why=await trainFishing(s,world,training.level);if(why)return fail(why);}
   const left=plan(need,pack(),[]).missing;
   if(left.length)return fail('withdraw short '+left.map(i=>`${i.id}:${i.count}`).join(','));
  }
