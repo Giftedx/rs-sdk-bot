@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793915354646,
+ "at": 1793917181500,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -146,6 +146,23 @@
    "role": "quests"
   },
   {
+   "account": "OreElse",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/walk-to.ts 3269 3167",
+    "scripts/smelt-bars.ts 3000 bronze MAX_MAKE=13",
+    "scripts/smelt-bars.ts 3000 iron"
+   ],
+   "env": {
+    "ROUNDS": "0"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": false,
+   "goal": "Smithing from banked ore: 1630 bronze and 571 iron at Al Kharid",
+   "role": "smithing"
+  },
+  {
    "account": "PickpockDick",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -227,6 +244,22 @@
    "standing": true,
    "repeat": true,
    "goal": "fire and earth runes from Betty",
+   "role": "supply"
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
+    "scripts/goldfarm.ts KNIGHT_SPOT=2652,3318"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Thieving 55, then coins from Ardougne knights",
    "role": "supply"
   },
   {
@@ -464,32 +497,6 @@
    "repeat": false,
    "goal": "run-ge-magicwanda-main-mithril280 [task-2973321d-a062-4e45-bdb5-5c9b021a9a89]",
    "role": "supply"
-  },
-  {
-   "account": "Ballspinner",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-9b4664d5-abfb-4686-ba2c-70b6e8de0482"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "recover-bank-audit-ballspinner-5 [task-9b4664d5-abfb-4686-ba2c-70b6e8de0482]",
-   "role": "supply"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-85ee0127-591a-4aea-a135-8fb6b18efa71"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "recover-oreelse-mithril-qualified-entry [task-85ee0127-591a-4aea-a135-8fb6b18efa71]",
-   "role": "smithing"
   }
  ]
 }
