@@ -14,6 +14,23 @@ test('an exact repair and raw evidence reach the author brief, not only a generi
  const brief=buildBrief({id:'repair',goal:'Generic buy goal\n'+work,preset:''},'scripts/example.ts');
  expect(brief).toContain(t.why);expect(brief).toContain('requires generated fleet practice save');expect(brief).toContain('/owned/run');
 });
+
+test('a long model observation reaches the build without changing manual proposal validation',()=>{
+ const s=initialState(),evidence='Measured entry and route observations. '.repeat(16)+'Final raw evidence path: route.json.';
+ const build=task('repair',{kind:'build',newEvidence:evidence});
+ const proposal={reason:'Repair the exact blocked route',capabilities:[],tasks:[build,run('consumer',['repair'])]};
+ expect(()=>acceptProposal(s,proposal)).toThrow('invalid new evidence');
+ expect(s.tasks).toEqual([]);
+ expect(acceptProposal(s,proposal,undefined,'model')).toBe(2);
+ const saved=s.tasks[0]!.spec;
+ expect(saved.newEvidence?.length).toBeLessThanOrEqual(500);
+ expect(buildWorkOrder(saved,{},'/owned/run')).toContain(evidence);
+ expect(build.newEvidence).toBe(evidence);
+ const invalid={...proposal,tasks:[{...run('unsafe'),newEvidence:evidence}]};
+ expect(()=>acceptProposal(initialState(),invalid,undefined,'model')).toThrow('invalid new evidence');
+ const missingConsumer={...proposal,tasks:[build]};
+ expect(()=>acceptProposal(initialState(),missingConsumer,undefined,'model')).toThrow('finite live consumer');
+});
 test('a new source replaces failed refresh edges without erasing failures or build prerequisites',()=>{
  const s=initialState();addTasks(s,[task('refresh-quest-order-old'),task('actual-build',{kind:'build'}),run('consumer',['refresh-quest-order-old','actual-build'])],0);
  complete(s,'refresh-quest-order-old',false,2);refreshQualifications(s,{'quest-order':'newsource'});

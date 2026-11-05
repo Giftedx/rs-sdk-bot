@@ -41,6 +41,8 @@ Source -> local consumer -> reuse -> check: the progress export's matched useful
 
 ## Planner rounds and dead tasks
 
+Source -> local consumer -> reuse -> check: the bounded build evidence field and full work order -> model proposal intake -> retain a short excerpt and put the whole observation in the work order before normal validation -> a fixture checks raw evidence preservation, strict manual intake, and the finite consumer requirement. The five captured proposals in `.practice/preserve-planner-evidence/replay.json` reach later validation on the copied queue and remain rejected for missing consumers or an existing build. No proposal reaches live dispatch in the replay.
+
 Source -> local consumer -> reuse -> check: the shared practice turn observation and native dispatch flag -> coordinator dispatch -> keep standalone qualifications and prepared retries queued behind a present holder or live ticket -> fixtures check occupied, clear and already-dispatched qualification states, with independent work eligible. The read-only replay in `.practice/defer-native-dispatch/replay.json` replays the recorded Magic qualification start from a copied queue. The slot owner still admits the actual check.
 
 Source -> local consumer -> reuse -> check: the native holder file and ticket names -> planner capacity -> count waiters with present PIDs and report the oldest wait, with unknown input separate -> a fixture checks absent, held, stale and invalid records without changing them. The read-only probe in `.practice/planner-native-queue-facts/probe.json` observes a present holder and a live ticket and checks the normal prompt. PID presence does not establish process identity or grant admission.

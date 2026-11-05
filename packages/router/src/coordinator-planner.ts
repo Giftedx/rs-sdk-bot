@@ -2,7 +2,7 @@ import {readFileSync,existsSync,readdirSync,writeFileSync,mkdirSync} from 'node:
 import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
 import {join} from 'node:path';
-import {GOALS,addTasks,heldBuilds,provisionRefs,replaceTasks,usefulLiveReceipt,type CoordinatorState,type CoordTask} from './coordinator';
+import {GOALS,NEW_EVIDENCE_MAX,addTasks,heldBuilds,provisionRefs,replaceTasks,usefulLiveReceipt,type CoordinatorState,type CoordTask} from './coordinator';
 import {runModel,type ModelWorker} from './model-worker';
 import {validateDelivery,type DeliveryTask} from './delivery';
 import {freshScoreboard} from './coverage';
@@ -216,7 +216,7 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'FAST LANE: when a qualified capability needs only a different account, quest or argument, queue the run; do not queue a build. A failed live step that the runtime already handles (for example the quest talk door rule) gets a fresh qualify and a retry run, not a build.',
   'ASSETS (world.assets): last-seen coins and large stacks. Check status and bankAt before spending or staging them. Turn confirmed stock into scoreboard progress before buying or gathering more: banked logs to Firemaking, rune essence to Runecraft, bows, shafts and arrows to Ranged, ores to Smithing, coins to GE and shop purchases (runes, bones, arrows, best-in-slot gear the account can wear now). Move coins and items to the account that will use them with the courier and trade workers.',
   'NO DIARY (AGENTS.md): write why, reason and capability consumer text as the current work order and current facts only. No dates, no was/now, no history of earlier attempts or builds; cite the failed runId or evidence path instead. Git and runs/<runId>/ hold the history.',
-  'Task schema: {id,goal,kind,dependsOn,priority,estimatedMs,why,capability?,account?,accountFrom?,participants?,args?,acceptIndex?,role?,env?,accept?,timeoutMs?,launch?,agent?,newEvidence?}. IDs lower-case letters/digits/hyphens. priority1..100 is impact, estimatedMs is an estimate of total work incl. preparation/recovery. Priority orders the queue, so spread it: 90 and over only for the main run critical path or a chain with waiting consumers, 50 to 89 for a whole band or quest, under 50 for the rest. newEvidence is 1 to 500 characters. Explain the next consumer in why.',
+  'Task schema: {id,goal,kind,dependsOn,priority,estimatedMs,why,capability?,account?,accountFrom?,participants?,args?,acceptIndex?,role?,env?,accept?,timeoutMs?,launch?,agent?,newEvidence?}. IDs lower-case letters/digits/hyphens. priority1..100 is impact, estimatedMs is an estimate of total work incl. preparation/recovery. Priority orders the queue, so spread it: 90 and over only for the main run critical path or a chain with waiting consumers, 50 to 89 for a whole band or quest, under 50 for the rest. newEvidence is 1 to '+NEW_EVIDENCE_MAX+' characters. Put longer observations and the next consumer in why.',
   'Kinds: review is a read-only cross-model source review of an existing delivered capability and can overlap independent authors. agent optionally selects codex or claude; the dispatcher balances builds and uses the other agent for review. qualify runs an existing capability native delivery. build authors named files, runs native delivery and a fresh reviewer. provision creates/registers one ordinary missing role. run installs a finite assignment in swarm.json, then checks fresh matched live status. Never set repeat:true yourself.',
   'For composed jobs use participants:[account or @provision-task-ID,...], at least2; args are passed after all account names. acceptIndex selects whose effects are checked (default0). No account/accountFrom with participants. Normal scripts use args too. '+
   'Each run must depend on a successful build/qualify of the SAME capability. Native tests do not prove live output. accept is {skills:{Skill:level},bank:{itemId:quantity},counters:{counter:minimum},quests:[questName]}; require a real useful effect, not login. Use only documented worker env controls and finite caps. accountFrom resolves the output of a provision task. No env passwords, release pins or HAGGIS_RUN.',
@@ -239,8 +239,14 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'Task specs above are brief (work order why clipped to 200 characters, receipts to 240). Full specs and receipts: .practice/coordinator/state.json. Read the full why of any task you replace, repair or depend on.',
  ].join('\n');
 }
-export function acceptProposal(state:CoordinatorState,raw:any,base=projectRoot){
+export function acceptProposal(state:CoordinatorState,raw:any,base=projectRoot,source:'manual'|'model'='manual'){
  if(!raw||typeof raw.reason!=='string'||!Array.isArray(raw.tasks)||!Array.isArray(raw.capabilities)||raw.tasks.length>12)throw Error('invalid planner proposal');
+ const tasks:CoordTask[]=source==='model'?raw.tasks.map((task:CoordTask)=>{
+  const evidence=task?.newEvidence;
+  if(task?.kind!=='build'||typeof task.why!=='string'||!task.why.trim()||typeof evidence!=='string'||evidence.length<=NEW_EVIDENCE_MAX||!evidence.trim())return task;
+  const excerpt=evidence.trim().slice(0,NEW_EVIDENCE_MAX-1);
+  return {...task,newEvidence:excerpt+'…',why:task.why.includes(evidence)?task.why:task.why+'\n\nNew evidence\n'+evidence};
+ }):raw.tasks;
  const definitions=raw.capabilities as DeliveryTask[];
  if(new Set(definitions.map(d=>d.id)).size!==definitions.length)throw Error('duplicate proposed capability');
  const scope=(d:DeliveryTask)=>{validateDelivery(d);if(d.files.some(f=>! /^(scripts|packages\/(core|practice|planner))\//.test(f)))throw Error('capability scope must contain gameplay source/tests only');};
@@ -251,13 +257,13 @@ export function acceptProposal(state:CoordinatorState,raw:any,base=projectRoot){
   scope(update.definition);const id=update.definition.id,file=join(base,'packages/router/tasks',id+'.json');
   if(!/^[a-f0-9]{64}$/.test(update.expectedSource)||!existsSync(file)||createHash('sha256').update(readFileSync(file)).digest('hex')!==update.expectedSource)throw Error('capability definition changed; re-read before update');
   if(state.tasks.some(r=>r.status==='running'&&r.spec.capability===id))throw Error('capability update waits for its current owner');
-  if(!raw.tasks.some((t:CoordTask)=>t.kind==='build'&&t.capability===id))throw Error('capability update requires its own build and fresh delivery');
+  if(!tasks.some(t=>t.kind==='build'&&t.capability===id))throw Error('capability update requires its own build and fresh delivery');
  }
  const known=new Set([...readdirSync(join(base,'packages/router/tasks')).map(f=>f.replace(/\.json$/,'')),...definitions.map(d=>d.id)]);
- for(const t of raw.tasks as CoordTask[])if(t.kind!=='provision'&&!known.has(t.capability!))throw Error('unknown capability: '+t.capability);
+ for(const t of tasks)if(t.kind!=='provision'&&!known.has(t.capability!))throw Error('unknown capability: '+t.capability);
  // Validate the whole graph before writing any definition or changing state.
- const candidate=structuredClone(state);addTasks(candidate,raw.tasks);
- for(const t of raw.tasks as CoordTask[])if(t.kind==='build'){
+ const candidate=structuredClone(state);addTasks(candidate,tasks);
+ for(const t of tasks)if(t.kind==='build'){
   const open=state.tasks.filter(r=>['pending','running'].includes(r.status)&&r.spec.kind==='build'&&r.spec.capability===t.capability);
   const blocking=open.filter(r=>r.status==='running'||!raw.replacements?.some((p:any)=>p.from===r.spec.id&&p.to===t.id));
   if(blocking.length)throw Error('replace existing build instead of duplicating it: '+t.capability+'; open builds: '+blocking.map(r=>r.spec.id+' ('+r.status+')').join(', ')+'. A pending build needs replacements:[{from:<open id>,to:"'+t.id+'"}]. A running build must finish first.');
@@ -282,11 +288,11 @@ export function acceptProposal(state:CoordinatorState,raw:any,base=projectRoot){
  // A changed contract must be built before any old consumer can request its
  // new (possibly not-yet-created) files or use its old qualification.
  for(const update of updates){
-  const build=(raw.tasks as CoordTask[]).find(t=>t.kind==='build'&&t.capability===update.definition.id)!;
+  const build=tasks.find(t=>t.kind==='build'&&t.capability===update.definition.id)!;
   for(const r of candidate.tasks.filter(r=>r.status==='pending'&&r.spec.kind==='run'&&r.spec.capability===update.definition.id))r.spec.dependsOn=[...new Set([...r.spec.dependsOn,build.id])];
  }
  replaceTasks(candidate,[]); // Validate cycles introduced by promotion edges too.
- for(const build of (raw.tasks as CoordTask[]).filter(t=>t.kind==='build')){
+ for(const build of tasks.filter(t=>t.kind==='build')){
   const reaches=(id:string):boolean=>id===build.id||(candidate.tasks.find(r=>r.spec.id===id)?.spec.dependsOn.some(reaches)??false);
   if(!candidate.tasks.some(r=>r.status==='pending'&&r.spec.kind==='run'&&reaches(r.spec.id)))throw Error('build requires a finite live consumer dependency: '+build.id);
  }
@@ -298,7 +304,7 @@ export function acceptProposal(state:CoordinatorState,raw:any,base=projectRoot){
   writeFileSync(join(history,update.definition.id+'-'+update.expectedSource+'.json'),bytes);
   atomicJson(file,update.definition);
  }
- Object.assign(state,candidate);state.lastPlanReason=raw.reason;return raw.tasks.length;
+ Object.assign(state,candidate);state.lastPlanReason=raw.reason;return tasks.length;
 }
 export async function runPlannerModel(agent:ModelWorker,prompt:string,timeoutMs:number,run:typeof runModel=runModel,now:()=>number=Date.now){
  const start=now(),first=await run(agent,prompt,timeoutMs,true),attempts=[{agent,...first}];

@@ -115,6 +115,7 @@ const TASK_ID=/^[-a-z0-9]+$/;
 export function provisionRefs(task:CoordTask):string[]{
  return [...(task.accountFrom?[task.accountFrom]:[]),...(task.participants??[]).filter(n=>n.startsWith('@')).map(n=>n.slice(1))];
 }
+export const NEW_EVIDENCE_MAX=500;
 export function validateTask(t:CoordTask){
  if(t.agent!==undefined&&!['codex','claude'].includes(t.agent))throw Error('invalid worker agent');
  if(t.resumeSource!==undefined&&(t.kind!=='build'||typeof t.resumeSource!=='string'||!/^[a-f0-9]{64}$/.test(t.resumeSource)))throw Error('invalid prepared source continuation');
@@ -134,7 +135,7 @@ export function validateTask(t:CoordTask){
  if(t.participants!==undefined&&(!Array.isArray(t.participants)||!t.participants.length||t.participants.some(n=>typeof n!=='string'||!(n.startsWith('@')?TASK_ID.test(n.slice(1)):ACCOUNT.test(n)))
   ||new Set(t.participants.map(n=>n.toLowerCase())).size!==t.participants.length))throw Error('invalid participants');
  if(t.replayAllow!==undefined&&(t.kind!=='build'||!Array.isArray(t.replayAllow)||t.replayAllow.length>16||t.replayAllow.some(a=>typeof a!=='string'||!/^[A-Za-z]{1,40}$/.test(a))))throw Error('invalid replay allowance');
- if(t.newEvidence!==undefined&&(t.kind!=='build'||typeof t.newEvidence!=='string'||!t.newEvidence.trim()||t.newEvidence.length>500))throw Error('invalid new evidence: newEvidence is 1 to 500 characters');
+ if(t.newEvidence!==undefined&&(t.kind!=='build'||typeof t.newEvidence!=='string'||!t.newEvidence.trim()||t.newEvidence.length>NEW_EVIDENCE_MAX))throw Error('invalid new evidence: newEvidence is 1 to '+NEW_EVIDENCE_MAX+' characters');
  if(t.args!==undefined&&(!Array.isArray(t.args)||t.args.some(a=>typeof a!=='string'||a.includes('\0'))))throw Error('invalid task args');
  if(t.acceptIndex!==undefined&&(!Number.isSafeInteger(t.acceptIndex)||t.acceptIndex<0||t.acceptIndex>=(t.participants?.length??1)))throw Error('invalid acceptance participant index');
  if(t.kind==='run'){
