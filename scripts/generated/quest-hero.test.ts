@@ -78,7 +78,7 @@ test('paired phase reports the first causal failure after waiting for the cancel
 
 test('Grip lure approaches from the key handoff before binding the newly visible original NPC',async()=>{
  const n:any={id:792,index:7,x:2774,z:3192,hp:25},npcs:any[]=[],native={};let walks=0,cabinets=0;
- const s:any={client:{npc:{7:native}},sdk:{getState:()=>({nearbyNpcs:npcs,nearbyLocs:[{id:2635,x:2775,z:3196,level:0}]})}},q:any={walk:async(label:string,points:any[])=>{walks++;expect(points).toEqual([{x:2777,z:3196,tol:0}]);npcs.push(n);},opLoc:async()=>{cabinets++;Object.assign(n,{x:2777,z:3198});},dialogOpen:()=>false,sawText:()=>true,converse:async(_:any,done:any)=>done()};
+ const s:any={client:{npc:{7:native}},sdk:{getState:()=>({nearbyNpcs:npcs,nearbyLocs:[{id:2635,x:2775,z:3196,level:0}]})}},q:any={walk:async(label:string,points:any[])=>{walks++;expect(points).toEqual([{x:2775,z:3197,tol:0}]);npcs.push(n);},opLoc:async()=>{cabinets++;Object.assign(n,{x:2777,z:3198});},dialogOpen:()=>false,sawText:()=>true,converse:async(_:any,done:any)=>done()};
  await heroesLureGrip(s,q,()=>{});expect(walks).toBe(1);expect(cabinets).toBe(1);
 });
 test('missing or ambiguous Grip after approach refuses the cabinet input',async()=>{
