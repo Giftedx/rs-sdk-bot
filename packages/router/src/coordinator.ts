@@ -26,12 +26,16 @@ export interface Receipt {taskId:string;runId:string;ok:boolean;at:number;output
 export interface TaskRecord {
  spec:CoordTask;status:'pending'|'running'|'succeeded'|'failed'|'superseded';createdAt:number;attempts:number;supersededBy?:string;
  runId?:string;startedAt?:number;pid?:number;receipt?:Receipt;
+ /** latestReceiptSequence when this receipt settled: a value above plannerReceiptSequence is an outcome no plan saw. */
+ receiptSequence?:number;
  agent?:'codex'|'claude';
 }
 export interface CoordinatorState {
  version:1;sequence:number;tasks:TaskRecord[];
  goals:{id:GoalId;lastStartedAt:number;lastSucceededAt:number;completedTasks:number}[];
  planner?:{runId:string;startedAt:number;pid?:number;agent?:'codex'|'claude'};lastPlanAt:number;lastPlanReason:string;
+ /** Failed planning rounds in a row (planRetryMs, coordinator-decisions.ts). */
+ planFailures?:number;
  latestReceiptSequence?:number; plannerReceiptSequence?:number;
 }
 export function fleetExpansion(s:{limit:number;demand:number;freeGB:number;reserveGB:number;cpu:number|null;tickMs:number|null;stalled:boolean;usefulResults:number;now:number;lastExpandedAt:number;step?:number}){
@@ -123,7 +127,7 @@ export function validateTask(t:CoordTask){
  if(t.participants!==undefined&&(!Array.isArray(t.participants)||!t.participants.length||t.participants.some(n=>typeof n!=='string'||!(n.startsWith('@')?TASK_ID.test(n.slice(1)):ACCOUNT.test(n)))
   ||new Set(t.participants.map(n=>n.toLowerCase())).size!==t.participants.length))throw Error('invalid participants');
  if(t.replayAllow!==undefined&&(t.kind!=='build'||!Array.isArray(t.replayAllow)||t.replayAllow.length>16||t.replayAllow.some(a=>typeof a!=='string'||!/^[A-Za-z]{1,40}$/.test(a))))throw Error('invalid replay allowance');
- if(t.newEvidence!==undefined&&(t.kind!=='build'||typeof t.newEvidence!=='string'||!t.newEvidence.trim()||t.newEvidence.length>500))throw Error('invalid new evidence');
+ if(t.newEvidence!==undefined&&(t.kind!=='build'||typeof t.newEvidence!=='string'||!t.newEvidence.trim()||t.newEvidence.length>500))throw Error('invalid new evidence: newEvidence is 1 to 500 characters');
  if(t.args!==undefined&&(!Array.isArray(t.args)||t.args.some(a=>typeof a!=='string'||a.includes('\0'))))throw Error('invalid task args');
  if(t.acceptIndex!==undefined&&(!Number.isSafeInteger(t.acceptIndex)||t.acceptIndex<0||t.acceptIndex>=(t.participants?.length??1)))throw Error('invalid acceptance participant index');
  if(t.kind==='run'){
@@ -221,7 +225,7 @@ export function buildOverlap(capability:string,busy:readonly string[],ownedFiles
 }
 // isolatedBuilds: builds author and prove in their own workspace (build-workspace.ts), so builds and live runs overlap.
 // Only a publish into the main checkout needs a drained fleet: publishPending holds new live starts until it lands.
-export function chooseTask(state:CoordinatorState,now:number,resources:{sourceReady?:boolean;nativeReady?:boolean;liveLimit?:number;developmentLimit?:number;preferLive?:boolean;focusCapability?:string;isolatedBuilds?:boolean;publishPending?:boolean;publishing?:string;ownedFiles?:(capability:string)=>readonly string[]}={}):CoordTask|null{
+export function chooseTask(state:CoordinatorState,now:number,resources:{sourceReady?:boolean;nativeReady?:boolean;liveLimit?:number;developmentLimit?:number;preferLive?:boolean;focusCapability?:string;isolatedBuilds?:boolean;publishPending?:boolean;publishing?:string;ownedFiles?:(capability:string)=>readonly string[];runHeld?:(task:CoordTask)=>boolean}={}):CoordTask|null{
  const records=new Map(state.tasks.map(r=>[r.spec.id,r])),running=state.tasks.filter(r=>r.status==='running');
  const busyBuilds=[...new Set([...running.filter(r=>r.spec.kind==='build'&&r.spec.capability).map(r=>r.spec.capability!),...(resources.publishing?[resources.publishing]:[])])];
  const focusCaps=new Set<string>(),visited=new Set<string>();
@@ -270,6 +274,7 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
    else if(buildWaiting&&!resources.preferLive&&!productionWindow.has(r.spec.id)||running.some(a=>a.spec.kind==='build'))return false;
    const names=boundAccounts(r.spec,state);
    if(!names?.length||names.some(n=>activeNames.has(n.toLowerCase())))return false;
+   if(resources.runHeld?.(r.spec))return false;
   }
   return true;
  });
@@ -324,7 +329,7 @@ export function finishTask(state:CoordinatorState,receipt:Receipt):boolean{
  // A build that delivered before review queues that review now (model-worker.ts reviewGate).
  if(receipt.ok&&record.spec.kind==='build'&&receipt.output?.review?.deferred===true&&!state.tasks.some(r=>r.spec.id===record.spec.id+'-review'))
   addTasks(state,[deferredReviewTask(record.spec,receipt.output.agent??record.agent,String(receipt.output.review.reason??''))],receipt.at);
- state.latestReceiptSequence=++state.sequence;
+ record.receiptSequence=state.latestReceiptSequence=++state.sequence;
  return true;
 }
 type LiveStatusContext={account:string;goal:string;source:string;startedAt:number;now:number;runId?:string};

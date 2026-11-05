@@ -32,3 +32,15 @@ A bounded worker failure receipt keeps the supervisor's terminal reason and the 
 Source -> local consumer -> reuse -> check: the coordinator's live acceptance identity check and Luna's settled job evidence pattern -> the failure receipt and planner -> reuse the identity check for a bounded diagnostic -> a regression covers the matching failure, another run, an older source and a later observation. The diagnostic does not count as acceptance or authorize a retry.
 
 Source -> local consumer -> reuse -> check: the build workspace's recorded SHA-256 base and publish's preflight -> staged delivery merge -> recover a missing base from main only while its bytes match the recorded hash -> a carried build fixture publishes and stages both the original and changed bytes. A run's pre-author copy may already contain carried edits, so it cannot stand in for the original base without a hash match.
+
+## Planner rounds and dead tasks
+
+Over 7 days the coordinator started 1,117 planning rounds. Each round has a prompt of about 150 KB and a median length of 130 s. In the 48 hours to the same point, 86 of 178 accepted rounds added no task. A success whose consumer was already queued started 252 rounds in the 7 days, and 192 of those added no task. A replay of the receipts gives 1,119 rounds under the old trigger and 727 under `plannerDue` with the 5-minute gap. Conditions: `.practice/coordinator/events.jsonl` and `state.json`, plan length fixed at 130 s. Gap: the replay counts rounds. It does not measure how much later a repair starts.
+
+All 64 pending tasks in `state.json` depended on a failed task, and none could start. The queue section of the prompt falls from 64 KB to 26 KB when the 37 tasks with a root older than 24 hours retire. Gap: the replay ran on a copy of the state. The first live retirement is not observed.
+
+Of 536 finished runs in 7 days, 336 failed, for 12.4 hours of run time. The worker refused 43 of them at start because the newest review of the capability rejected its source. Those runs now wait in the queue. A retry system for `live admission waiting: memory` has no value: the 23 such failures in the record have no consumer.
+
+A full disk on the checkout's volume stopped the coordinator for about 35 hours, with 4,059 ENOSPC events. `DISK_FLOOR_GB` is 2 GiB by judgement. No measurement sets that number.
+
+`packages/router/test/coordinator-composed-recovery.test.ts` reads the free memory of the host. It fails with `live admission waiting: memory` when RAM is low, on master and on this change.

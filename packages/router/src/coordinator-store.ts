@@ -1,7 +1,7 @@
 import {existsSync,readFileSync,writeFileSync,renameSync,mkdirSync,copyFileSync,linkSync,unlinkSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {spawn} from 'node:child_process';
-import {randomUUID} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import {openSync,closeSync} from 'node:fs';
 import {initialState,GOALS,validateTask,type CoordinatorState} from './coordinator';
 
@@ -40,6 +40,10 @@ export function saveState(state:CoordinatorState,directory=coordinationDir):bool
  const file=join(directory,'state.json'),bytes=JSON.stringify(state,null,2);
  if(savedBytes.get(file)===bytes&&existsSync(file))return false;
  if(existsSync(file))copyFileSync(file,file+'.previous');atomicText(file,bytes);savedBytes.set(file,bytes);return true;
+}
+/** Hash of a capability's owned files: the source a review verdict names. */
+export function capabilitySource(files:readonly string[],root=projectRoot){
+ return createHash('sha256').update(JSON.stringify(files.map(file=>[file,readFileSync(join(root,file),'utf8')]))).digest('hex');
 }
 export function runDirectory(runId:string,directory=coordinationDir){
  if(!/^[-a-z0-9]+$/.test(runId))throw Error('invalid run identity');const path=join(directory,'runs',runId);mkdirSync(path,{recursive:true});return path;
