@@ -1,5 +1,5 @@
 import{test,expect}from'bun:test';
-import{withNativeStartup,nativeDeferralEvidence,NATIVE_STARTUP_GB,SOURCE_STARTUP_GB}from'../src/delivery-cli';
+import{isSavedProofVerifier,withNativeStartup,nativeDeferralEvidence,NATIVE_STARTUP_GB,SOURCE_STARTUP_GB}from'../src/delivery-cli';
 import{FREE_FLOOR_GB,PRACTICE_RESERVE_GB}from'../../core/src/memory';
 
 function fixture(){let now=0,free=NATIVE_STARTUP_GB-1,stopped=false,starts=0;const observations:any[]=[];
@@ -32,4 +32,22 @@ test('the real admission timeout produces host-deferral report fields; other err
  const f=fixture();let reason='';try{await withNativeStartup(f.start,f.deps,1000);}catch(error){reason=String(error);}
  expect(nativeDeferralEvidence(reason)).toEqual({hostDeferred:true});expect(f.starts()).toBe(0);
  for(const other of ['check failed','Error: native admission owner stopped; no child started','child stdout HOST_DEFERRED_NATIVE_HEADROOM: text'])expect(nativeDeferralEvidence(other)).toEqual({});
+});
+
+test('only audited saved-result commands can run without a practice turn',()=>{
+ const checks=[
+  ['cow-progress-order-saved','packages/practice/src/cow-progress-order-proof.ts'],
+  ['cow-progress-order-saved','packages/practice/src/cow-progress-isolated-proof.ts'],
+  ['quest-sweep-saved','packages/practice/src/quest-sweep-proof.ts'],
+  ['session-recovery-only-verified','scripts/session-check.ts'],
+ ];
+ for(const [id,script] of checks){
+  const check={id:id!,phase:'consumer' as const,command:['bun',script!,'--verify'],timeoutMs:30000};
+  expect(isSavedProofVerifier(check)).toBe(true);
+  expect(isSavedProofVerifier({...check,phase:'practice'})).toBe(false);
+  expect(isSavedProofVerifier({...check,id:'other-consumer'})).toBe(false);
+  expect(isSavedProofVerifier({...check,command:['bun',script!]})).toBe(false);
+  expect(isSavedProofVerifier({...check,command:[...check.command,'--extra']})).toBe(false);
+  expect(isSavedProofVerifier({...check,command:['bun','scripts/other.ts','--verify']})).toBe(false);
+ }
 });
