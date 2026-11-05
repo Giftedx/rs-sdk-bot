@@ -42,3 +42,16 @@ test('lazy measured routes agree with an independent complete-graph relaxation o
   expect(actual.ok&&actual.cost).toBe(dist.get(id(goal))??Infinity);
  }
 });
+
+test('a sided passage starts on the far side of its loc from each landing, so the door works both ways',async()=>{
+ const {passageStart,shortcutTravel}=await import('../src/travel');
+ // treedoorl 1967 at 2464,3492: the south landing 2465,3490 is entered from the north, the north landing from the south.
+ const rec=(to:Tile)=>({kind:'passage',locName:'treedoorl',id:1967,option:'op1',from:{x:2464,z:3492,level:0},to,exact:false,side:['coordz(coord)<coordz(loc_coord)']});
+ expect(passageStart(rec({x:2465,z:3494,level:0}))).toEqual({x:2463,z:3490,level:0});
+ expect(passageStart(rec({x:2465,z:3490,level:0}))).toEqual({x:2463,z:3494,level:0});
+ expect(passageStart({...rec({x:2465,z:3494,level:0}),side:undefined})).toEqual({x:2464,z:3492,level:0});
+ const edges=shortcutTravel([rec({x:2465,z:3494,level:0}),rec({x:2465,z:3490,level:0})] as any);
+ expect(edges.map(e=>[e.from,e.to])).toEqual([[{x:2463,z:3490,level:0},{x:2465,z:3494,level:0}],[{x:2463,z:3494,level:0},{x:2465,z:3490,level:0}]]);
+ // The click still targets the loc tile.
+ expect(edges.map(e=>(e.run as any).at)).toEqual([{x:2464,z:3492,level:0},{x:2464,z:3492,level:0}]);
+});
