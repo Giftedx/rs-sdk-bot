@@ -1,3 +1,4 @@
+import{legendsBlessBowlAttempt}from'./quest-legends-owned';
 import{legendsSummonAttempt}from'./quest-legends-owned';
 import{legendsSurfaceJourney,legendsNextFare}from'./quest-legends-owned';
 import{legendsJungleTarget}from'./quest-legends-owned';
@@ -90,4 +91,28 @@ test('mapping settles an observed Kings messenger grant during the receipt tail'
   else await expect(outcome).rejects.toThrow('mapping stock conversion differs');
   expect(stock[3206]).toBe(variant === 'extra-letter' ? 2 : 1);
  }
+});
+
+
+test('Gujuo blessing accepts both Native prompts and declines the retry after one five-point loss', async () => {
+ let failed = false, prayer = 99, sends = 0;
+ const result = await legendsBlessBowlAttempt({
+  pack: () => ({721: 1}), prayer: () => prayer, sawFailure: () => failed,
+  send: async () => { sends++; },
+  step: async (send, done, choices) => {
+   await send();
+   expect(done()).toBe(false);
+   for (const prompt of ["Yes, I'd like you to bless my gold bowl.", "Yes, I'd like to bless my gold bowl."]) {
+    expect(choices.some(choice => choice.test(prompt))).toBe(true);
+   }
+   expect(choices.some(choice => choice.test("No thanks, I'll wait."))).toBe(false);
+   failed = true;
+   prayer -= 5;
+   expect(done()).toBe(true);
+   expect(choices.some(choice => choice.test("Yes, I'd like to bless my gold bowl."))).toBe(false);
+   expect(choices.some(choice => choice.test("No thanks, I'll wait."))).toBe(true);
+  },
+ });
+ expect(result).toBe(false);
+ expect(sends).toBe(1);
 });
