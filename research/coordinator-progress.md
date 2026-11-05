@@ -41,6 +41,8 @@ Source -> local consumer -> reuse -> check: the progress export's matched useful
 
 ## Planner rounds and dead tasks
 
+Source -> local consumer -> reuse -> check: the exact saved-verifier command list and the ammo, Druidic Ritual, Magic, Prayer, Cook's Assistant and Ranged verifier branches -> their delivery consumers -> keep the readback outside the practice queue -> tests bind the exception to the task definitions and reject the gameplay commands and changed arguments. In `.practice/audited-saved-verifiers/smoke.json`, each declared command refuses a missing native artifact. The verifier branches keep their existing acceptance checks.
+
 Source -> local consumer -> reuse -> check: the exact saved-verifier command list and the Iron verifier's saved-file path -> Iron delivery -> run only the declared consumer command outside the native queue -> admission fixtures keep the native run and altered arguments under the practice gate. The replay in `.practice/finite-consumer-path/iron-verifier-summary.json` verifies nine native cases and 162 checks on copied evidence in 1,087 ms without starting game services. The verifier still checks evidence freshness, source and file hashes.
 
 Source -> local consumer -> reuse -> check: the queue's pending tasks and archive boundary -> proposal validation -> traverse pending dependencies once from finite live runs -> a fixture archives a build ID and checks that its settled proof cannot give a new build a consumer. In `.practice/finite-consumer-path/replay.json`, four archived build specs pass the old check through settled records and fail the pending-path check on a copy of the live queue. The replay submits no work.
