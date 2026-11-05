@@ -237,7 +237,11 @@ export async function runLegends(raw:Session,o:LegendsOrder,requested:()=>boolea
  let caveReturn: 'none' | 'shaman' | 'strength' = 'none';
  const cave = async () => {
   await walk(2781, 2934);
-  await trials('Shaman cave entrance', () => interact('lgshamancaverock1', 2781, 2936), () => pos().worldZ > 9000, /fail|stuck|too small|bang|hurt/i, [/Yes, I'll crawl through/i]);
+  const crawlMark = cursor(s);
+  // Native emits the exhaustion line at the end of a failed crawl, just before its damage settles.
+  await trials('Shaman cave entrance', () => interact('lgshamancaverock1', 2781, 2936),
+   () => near(2773, 9341, 0) && fresh(s, crawlMark, /After some time, you find a small cave opening/i),
+   /^And you're totally exhausted from the ordeal\.$/i, [/Yes, I'll crawl through/i]);
   caveReturn = 'shaman';
   await walk(2790, 9334);
  };
