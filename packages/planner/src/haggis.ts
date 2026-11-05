@@ -302,6 +302,20 @@ export function schedule(boards: Board[], allActivities: Activity[], opts: Sched
     return scheduleRoute(boards, allActivities, { ...opts, force: { ...opts.force, ...route } });
 }
 
+// Candidate from the deadline search in research/haggis-run.md. Relaxed deadlines
+// affect placement only. The result still scores each board against its record.
+const OVERALL_RELAXED_DEADLINES: ReadonlySet<BoardId> = new Set([
+    'crafting', 'herblore', 'hitpoints', 'magic', 'runecraft', 'woodcutting',
+]);
+
+export function scheduleOverall(boards: Board[], activities: Activity[], opts: ScheduleOptions): ScheduleResult {
+    const baseline = schedule(boards, activities, opts);
+    if (opts.sacrificed !== undefined) return baseline;
+    const candidate = schedule(boards, activities, { ...opts, sacrificed: OVERALL_RELAXED_DEADLINES });
+    if (candidate.overallFinish !== null && candidate.overallFinish < (baseline.overallFinish ?? Infinity)) return candidate;
+    return baseline;
+}
+
 // Schedule with opts.force where given and the raw-tick choice for the other variant groups.
 function scheduleRoute(boards: Board[], allActivities: Activity[], opts: ScheduleOptions): ScheduleResult {
     const sacrificed = opts.sacrificed ?? new Set<BoardId>();
@@ -733,6 +747,14 @@ export const SCENARIOS: { id: string; label: string; tricks: Trick[] }[] = [
 // one schedule() uses (chooseRoute); without, the raw-tick choice. An item made by a row of the route is left out.
 export function suppliesFor(activities: Activity[], opts: ScheduleOptions, boards?: Board[]): Supply[] {
     return goalRequirementsFor(activities, opts, boards).supplies.map(({item,count})=>({item,count}));
+}
+
+// Stage the rows that begin before the last 99, including a row that still runs at that tick.
+export function overallRequirementsFor(activities: Activity[], opts: ScheduleOptions, plan: Pick<ScheduleResult, 'overallFinish' | 'order' | 'route'>) {
+    const finish = plan.overallFinish;
+    if (finish === null || !Number.isFinite(finish) || finish < 0) throw Error('Overall has no modeled finish');
+    const started = new Set(plan.order.filter(row => row.start < finish).map(row => row.id));
+    return goalRequirementsFor(activities.filter(a => started.has(a.id)), { ...opts, force: { ...opts.force, ...plan.route } });
 }
 
 // Keep shared unlocks once, but add consumables across consumers. These are requirements,

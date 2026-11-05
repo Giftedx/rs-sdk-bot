@@ -4,7 +4,7 @@
 // route after the bank uses.
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import type { Account, Leg, Tile, World } from './world';
+import type { Account, Leg, RouteOptions, Tile, World } from './world';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 export const BANK_STOP_COST = 10; // estimate in ticks: open the bank, withdraw, close
@@ -35,8 +35,8 @@ export function knownBanks(): Tile[] {
         .map(b => ({ x: b.x, z: b.z, level: b.level }));
 }
 
-export function planTrip(world: World, from: Tile, to: Tile, acct: Account, stock: BankStock | undefined, bankTiles: Tile[] = knownBanks(), nearest = 3): TripPlan | null {
-    const direct = world.route(from, to, acct);
+export function planTrip(world: World, from: Tile, to: Tile, acct: Account, stock: BankStock | undefined, bankTiles: Tile[] = knownBanks(), nearest = 3, routeOpts?: RouteOptions): TripPlan | null {
+    const direct = world.route(from, to, acct, routeOpts);
     let best: TripPlan | null = direct.ok ? { cost: direct.cost, legs: direct.legs } : null;
     const held = acct.coins ?? 0, take = Math.min(stock?.coins ?? 0, Math.max(0, TRIP_COINS - held));
     const banked = Object.entries(stock?.items ?? {}).filter(([, n]) => n > 0);
@@ -45,9 +45,9 @@ export function planTrip(world: World, from: Tile, to: Tile, acct: Account, stoc
     for (const [i, n] of banked) counts[i] = (counts[i] ?? 0) + Math.min(n, BANK_ITEM_CAP);
     const richer: Account = { ...acct, coins: held + take, counts, items: [...new Set([...acct.items, ...banked.map(([i]) => i)])] };
     for (const bank of [...bankTiles].filter(b => b.level === from.level).sort((a, b) => cheb(a, from) - cheb(b, from)).slice(0, nearest)) {
-        const there = world.route(from, bank, acct);
+        const there = world.route(from, bank, acct, routeOpts);
         if (!there.ok || (best && there.cost + BANK_STOP_COST >= best.cost)) continue;
-        const on = world.route(bank, to, richer);
+        const on = world.route(bank, to, richer, routeOpts);
         if (!on.ok) continue;
         const cost = there.cost + BANK_STOP_COST + on.cost;
         if (!best || cost < best.cost) {

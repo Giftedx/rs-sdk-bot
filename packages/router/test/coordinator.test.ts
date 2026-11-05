@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {GOALS,initialState,addTasks,chooseTask,startTask,finishTask,acceptStatus,boundAccounts,failedBuildStreak,activeBuildFocus,repeatedBuildFault,heldBuilds,validateTask,BUILD_HOLD_MS,type CoordTask} from '../src/coordinator';
+import {GOALS,initialState,addTasks,chooseTask,startTask,finishTask,acceptStatus,boundedWorkerEndMessage,boundAccounts,failedBuildStreak,activeBuildFocus,repeatedBuildFault,heldBuilds,validateTask,BUILD_HOLD_MS,type CoordTask} from '../src/coordinator';
 const task=(id:string,extra:Partial<CoordTask>={}):CoordTask=>({id,goal:'skills',kind:'qualify',capability:'wine-order',dependsOn:[],priority:5,estimatedMs:1000,why:'Close a useful consumer dependency',...extra});
 test('all owner goals survive and a dependency chain advances without another prompt',()=>{
  const s=initialState();expect(s.goals.map(g=>g.id)).toEqual([...GOALS]);
@@ -161,4 +161,16 @@ test('new evidence passes the first hold only',()=>{
  expect(chooseTask(s,32)).toBeNull();
  expect(()=>validateTask(task('q',{newEvidence:'x'}))).toThrow('invalid new evidence');
  expect(()=>validateTask(build('b',{newEvidence:' '}))).toThrow('invalid new evidence');
+});
+
+test('worker end evidence names only the result from that live attempt', () => {
+ const ctx={account:'Helper1',goal:'goal',source:'pin',startedAt:100,now:120,runId:'this-run'};
+ const end={reason:'gave-up after 1 runs',at:115};
+ const status={name:'Helper1',server:'rs-sdk-demo.fly.dev',workRevision:'pin',coordinatorRunId:'this-run',
+  started:101,at:110,result:'fail missing coins for the fare'};
+ const generic='bounded worker ended: gave-up after 1 runs';
+ expect(boundedWorkerEndMessage(end,status,ctx)).toBe(generic+' | worker result: fail missing coins for the fare');
+ for(const patch of [{coordinatorRunId:'other-run'},{workRevision:'old'},{practice:true},{at:116},{started:99},{result:null}]){
+  expect(boundedWorkerEndMessage(end,{...status,...patch},ctx)).toBe(generic);
+ }
 });

@@ -1,16 +1,19 @@
 // Shared helpers for the short-quest scripts (scripts/generated/quest-*.ts). The helpers are the ones proved in
 // dwarfcannon.ts and waterfall.ts: walkPath first (it opens doors; SDK collision treats doors as open), clicks sent
 // again when the server drops them inside a p_delay, one dialog page per tick, MILESTONE / WARN lines, a death check.
-import { openBot, finish } from '../../packages/core/src/bot';
+import { openBot, finish, getWorld, accountOf } from '../../packages/core/src/bot';
 import type { Session } from '../../packages/core/src/inprocess';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
-import { startQuestSustain } from '../quest-sustain';
+import { startQuestSustain, selectQuestFood, questFoodDefinitions } from '../quest-sustain';
 import { walkQuestCorridor } from '../quest-walk';
-import { sessionWalker, walkPath, type PathPoint } from '../../packages/core/src/walk';
+import { sessionWalker, walkPath, goTo, type PathPoint } from '../../packages/core/src/walk';
 import { componentId } from '../../packages/core/src/logout';
 import { ClientProt } from '../../vendor/rs-sdk/server/webclient/src/io/ClientProt';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
+import { castable } from '../teleport-runes';
+import { needs, reservedEdible } from '../quest-sweep';
+import { PRESETS } from '../../packages/practice/src/presets';
 // Root interface ids of every interface interface_chat/scripts/chat.rs2 sets text on, from content/pack/interface.pack.
 const CHAT_NAMES = /^(chat[1-4]|npcchat[1-4]|message[1-5]|multi[2-5]|multiobj[2-4]|multiobj3_close|objbox[1-4]|doubleobjbox|inter_213|skill_multi[2-5])$/;
 const CHAT_ROOTS = new Set(readFileSync(join(import.meta.dir, '..', '..', 'vendor', 'rs-sdk', 'server', 'content', 'pack', 'interface.pack'), 'utf8')
@@ -32,7 +35,10 @@ export const SKILLS = ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged', '
 export async function openQuest(opts: { session?: Session; stop?:()=>boolean; cap?: number; eatAt?: number; food?: number[]; reservedFood?: Readonly<Record<number,number>>|(()=>Readonly<Record<number,number>>); trace?: boolean; lumbridgeOk?: boolean; name?: string; others?: () => Session[] } = {}) {
     const CAP = opts.cap ?? 3000;
     const EAT_AT = opts.eatAt ?? 40;
-    const FOOD = opts.food ?? [379];
+    // Without a list of its own a quest eats anything that heals: a live account carries swordfish, cake slices or
+    // trout, not the lobsters a preset does. quest-sweep marks the preset's edible ingredients on the session
+    // (questReserved), and a script's reservedFood adds its own; neither is eaten.
+    const FOOD = opts.food ?? [...questFoodDefinitions().keys()];
     const TRACE = opts.trace ?? process.env.Q_TRACE === '1';
     // quest-sweep.ts stages items and travel in its own login, then hands that session over here.
     const s: Session = opts.session ?? (globalThis as { QUEST_SESSION?: Session }).QUEST_SESSION ?? await openBot(opts.name ?? process.argv[2]!);
@@ -117,7 +123,8 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         const reply=await s.direct(action);
         if(!reply||typeof reply!=='object'||!('success' in reply)||typeof reply.success!=='boolean')throw Error('quest consume reply unknown');
         return{success:reply.success,message:'message' in reply?String(reply.message):undefined};
-    }},{food:FOOD,eatAt:EAT_AT,reserved:opts.reservedFood,onConsumed:()=>{stats.eats++;}});
+    }},{food:FOOD,eatAt:EAT_AT,reserved:()=>reservedNow(),onConsumed:()=>{stats.eats++;}});
+    let lastHp = hp();
     const off = s.onTick(() => {
         const p = pos();
         const h = hp();
@@ -125,6 +132,9 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
             stats.hpMin = h;
             if (h <= 50) console.log(`WARN hp ${h} at ${T()} ${p?.worldX},${p?.worldZ},${p?.level}`);
         }
+        if (h > 0 && h < lastHp) lastHitAt = T();
+        lastHp = h;
+        if (h > 0 && h <= RETREAT_AT && !retreating && !foodLeft()) { retreating = true; console.log(`WARN retreat: hp ${h} of ${maxHp()}, no food, at ${T()}`); }
         if (p?.isDead || (p && p.respawnCount > respawn0) || (p && life0 !== undefined && p.lifeId !== life0)) stats.died = true;
         if (p && last && Math.max(Math.abs(p.worldX - last.worldX), Math.abs(p.worldZ - last.worldZ)) > 20) {
             jumps.push(`${T()}:${last.worldX},${last.worldZ}->${p.worldX},${p.worldZ},${p.level}`);
@@ -151,9 +161,38 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     const all = (): Session[] => [s, ...(opts.others?.() ?? []).filter(o => o !== s)];
     const dispose = async () => { await sustain.settle(); off(); };
     const fail = async (why: string): Promise<never> => { await dispose(); const message=`${why} ${sustain.failure()??''} xp=${gains()} ${detail()}`; if(opts.session)throw Error(message); return finish(all(), false, message); };
+    // A fight the account cannot win ends the quest before it ends the account: at the hitpoint floor (a quarter of the
+    // base level, at least 5) with no food left to eat, the bot walks RETREAT_TILES away from whatever hits it, waits for
+    // the server's 16 ticks after combat (logout.rs2 p_preventlogout), and the run fails with the retreat. Demon Slayer on
+    // an 81-hitpoint, Attack 6 account went from 81 to 0 over 300 ticks at Delrith with no food and no such rule.
+    const maxHp = (): number => s.sdk.getSkill('Hitpoints')?.baseLevel ?? 10;
+    const RETREAT_AT = Math.max(5, Math.ceil(maxHp() * 0.25)), RETREAT_TILES = 30, COMBAT_LOGOUT_TICKS = 17;
+    // A quest started on its own (bun scripts/generated/quest-<name>.ts <account>) reserves its preset's edible
+    // ingredients itself (Black Knight's Fortress' cabbage): quest-sweep's handover marks the same on the session.
+    const scriptQuest = basename(process.argv[1] ?? '').match(/^quest-([a-z0-9]+)\.ts$/)?.[1];
+    const presetReserved: Readonly<Record<number, number>> = scriptQuest && PRESETS[`quest_${scriptQuest}`] ? reservedEdible(needs(PRESETS[`quest_${scriptQuest}`]!)) : {};
+    const reservedNow = (): Readonly<Record<number, number>> => ({ ...presetReserved, ...((s as { questReserved?: Record<number, number> }).questReserved ?? {}), ...((typeof opts.reservedFood === 'function' ? opts.reservedFood() : opts.reservedFood) ?? {}) });
+    // Food is what the eater would eat: the quest's food list and its later forms, beyond the reserved counts. A shrimp in
+    // the pack of a lobster-only quest is not food and does not hold the retreat back.
+    const foodLeft = (): boolean => !!selectQuestFood(st(), { food: FOOD, eatAt: Number.MAX_SAFE_INTEGER, reserved: reservedNow() });
+    let retreating = false, lastHitAt = -1;
+    const retreat = async (label: string): Promise<never> => {
+        const p = pos(), npcs: any[] = st()?.nearbyNpcs ?? [];
+        const foe = npcs.filter(n => n.combatTargetType === 'player' || n.inCombat).sort((a, b) => a.distance - b.distance)[0] ?? npcs.sort((a, b) => a.distance - b.distance)[0];
+        let dx = foe ? Math.sign(p.worldX - foe.x) : 1, dz = foe ? Math.sign(p.worldZ - foe.z) : 0;
+        if (!dx && !dz) dx = 1;
+        const to = { x: p.worldX + dx * RETREAT_TILES, z: p.worldZ + dz * RETREAT_TILES };
+        console.log(`RETREAT hp ${hp()} of ${maxHp()} at ${T()} ${p.worldX},${p.worldZ},${p.level} foe=${foe ? `${foe.name}@${foe.x},${foe.z}` : '-'} to=${to.x},${to.z}`);
+        for (let i = 0; i < 3 && !stats.died; i++) {
+            await s.direct({ type: 'walkTo', x: to.x, z: to.z, running: true, reason: 'SDK' });
+            if (await waitUntil(s, () => stats.died || (!pos()?.combat?.inCombat && T() - lastHitAt > COMBAT_LOGOUT_TICKS), { timeoutTicks: 40 })) break;
+        }
+        return fail(`retreat during ${label}: hp ${hp()} of ${maxHp()}, no food`);
+    };
     const guard = async (label: string): Promise<void> => {
         if(opts.stop?.())await fail(`stopped during ${label}`);
         if (stats.died) await fail(`died during ${label}`);
+        if (retreating) await retreat(label);
         if (sustain.failure()) await fail(`${sustain.failure()} during ${label}`);
         if (T() > CAP) await fail(`tick cap during ${label}`);
     };
@@ -177,7 +216,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
             if (ok()) return;
             if (i > 0) stats.retries++;
             await send();
-            await waitUntil(s, () => ok() || stats.died || !!sustain.failure(), { timeoutTicks: ticks });
+            await waitUntil(s, () => ok() || stats.died || retreating || !!sustain.failure(), { timeoutTicks: ticks });
             await guard(label);
             if (ok()) return;
             const d: any = s.sdk.getDialog();
@@ -222,7 +261,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     // log: walkPath's input and re-plan lines and each attempt's result, for a walk under diagnosis.
     const walk = async (label: string, pts: PathPoint[], log?: (line: string) => void): Promise<void> => {
         await guard(label);
-        const result=await walkQuestCorridor({tick:()=>s.tick(),stop:()=>stats.died||!!sustain.failure(),
+        const result=await walkQuestCorridor({tick:()=>s.tick(),stop:()=>stats.died||retreating||!!sustain.failure(),
             near:(point,tolerance)=>near(point.x,point.z,tolerance),walk:(points,options)=>walkPath(walker,points,log?{...options,log}:options),
             onAttempt:(attempt,result)=>{stats.walkTicks+=result.ticks;if(attempt>0)stats.retries++;log?.(`attempt ${attempt} ${JSON.stringify(result)}`);},
         },pts,t0+CAP);
@@ -284,9 +323,26 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
             return opLoc(k, opIndex(k, re));
         }, arrived, 15, tries);
     };
-    // Without a law rune in the pack (every teleport here costs one) the bot walks to the same spot instead.
+    // Every rune the spell costs, or a worn staff for it, and the spell's Magic level (scripts/teleport-runes.ts); short
+    // of any, the bot walks to the same spot instead. Monk's Friend leaves 8 law runes beside 1 air: Lumbridge still
+    // needs 3 air, and Magic 31, which UnderMyKilt and TrouserSnake (Magic 1) lack.
+    const magic = (): number => s.sdk.getState()?.skills?.find((k: any) => k.name === 'Magic')?.level ?? 1;
+    const canCast = (comp: string): boolean => castable(comp, cnt, s.sdk.getEquipment().map((i: any) => i.id), magic());
     const teleport = async (label: string, comp: string, x: number, z: number): Promise<void> => {
-        if (cnt(563) < 1) {
+        if (!canCast(comp)) {
+            // The world router first: it knows the ladders and doors between an upstairs end (the Black Knights' Fortress's
+            // first floor, 3029,3505) and the ground, which a one-floor corridor and a Climb-down loc in view do not.
+            // The route runs under the quest's own guards: a death, the retreat threshold, an eater failure or the tick
+            // cap abort it, and guard() then acts on them as after any walk.
+            await guard(label);
+            const ac = new AbortController();
+            const stopOff = s.onTick(() => { if (stats.died || retreating || sustain.failure() || T() > CAP) ac.abort('quest guard'); });
+            let routed: { ok: boolean; reason?: string };
+            try { routed = await goTo(s, await getWorld(), { x, z, level: 0 }, accountOf(s), { legTimeoutTicks: 150, planBudgetMs: 15_000, signal: ac.signal }); }
+            finally { stopOff(); }
+            console.log(`QUEST_TELEPORT_WALK ${JSON.stringify({ label, to: { x, z }, ok: routed.ok, reason: routed.ok ? undefined : routed.reason, at: pos() && { x: pos()!.worldX, z: pos()!.worldZ, level: pos()!.level } })}`);
+            await guard(label);
+            if (routed.ok && near(x, z, 6)) return;
             // walkPath keeps to one floor: from upstairs (Juliet's room, 3158,3425,1) take the nearest way down first.
             for (let i = 0; i < 3 && lvl() > 0; i++) {
                 const from = lvl();
@@ -317,8 +373,8 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     return {
         s, st, pos, inv, hp, xp, cnt, has, slot, cheb, near, lvl, dialogOpen, sawText, msgCount, T, stats, milestone, dispose,
         blockDoor, guard, fail, end, gains, detail, opLoc, locs, findLoc, locAt, opIndex, npc, talkTo, useOnLoc, useOnNpc, useOnItem,
-        step, converse, walk, talk, climb, teleport, openDoor, shutAt, dash,
-        waitTicks: async (n: number) => { const until=s.tick()+n;if(n>0)await waitUntil(s,()=>s.tick()>=until||stats.died||T()>CAP,{timeoutTicks:n,signal:sustain.aborted});await guard('wait'); },
-        waitUntil: async (f: () => boolean, ticks: number) => {const reached=await waitUntil(s, () => f() || stats.died||T()>CAP, { timeoutTicks: ticks,signal:sustain.aborted });await guard('wait condition');return reached;},
+        step, converse, walk, talk, climb, teleport, canCast, openDoor, shutAt, dash,
+        waitTicks: async (n: number) => { const until=s.tick()+n;if(n>0)await waitUntil(s,()=>s.tick()>=until||stats.died||retreating||T()>CAP,{timeoutTicks:n,signal:sustain.aborted});await guard('wait'); },
+        waitUntil: async (f: () => boolean, ticks: number) => {const reached=await waitUntil(s, () => f() || stats.died||retreating||T()>CAP, { timeoutTicks: ticks,signal:sustain.aborted });await guard('wait condition');return reached;},
     };
 }

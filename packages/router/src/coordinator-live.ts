@@ -10,10 +10,10 @@ import {evaluateLaunch} from '../../../scripts/haggis-gate';
 import {capabilityRevision,launchRevision,workerEntries} from '../../core/src/worker-release';
 import {importClosure} from './delivery-cli';
 import {processMatches,safeKill,safeKillOne} from '../../practice/src/proc';
-import {acceptStatus,type CoordTask} from './coordinator';
+import {acceptStatus,boundedWorkerEndMessage,type CoordTask} from './coordinator';
 import {projectRoot,coordinationDir,atomicJson,spawnDetached,withPlanWrite} from './coordinator-store';
 import {RECOVERY_SCHEMA,assertNoRecoveryLease,recoveredSessionForRun,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
-import {COORDINATOR_JOBS_FILE,readCoordinatorJobs,writeCoordinatorJobs,mergedPlan,jobAccounts,shadowAssignments,type CoordinatorJobs} from '../../core/src/coordinator-jobs';
+import {COORDINATOR_JOBS_FILE,readCoordinatorJobs,writeCoordinatorJobs,mergedPlan,jobAccounts,parkedCoordinatorAccounts,shadowAssignments,type CoordinatorJobs} from '../../core/src/coordinator-jobs';
 import {readLogoutProof} from '../../core/src/session-lifecycle';
 
 // A controller that wrote .practice/swarm-state.json under this pid and nonce within this window is the saved
@@ -201,8 +201,8 @@ export function releaseCompletedOwnJobs(own:CoordinatorJobs,accounts:readonly st
   const names=jobAccounts(job),remaining=names.filter(n=>!wanted.has(n.toLowerCase()));
   if(remaining.length===names.length||!completed(job,names))return[job];
   if(!remaining.length)return[];
-  const {account:_account,orchestrate:_orchestrate,...rest}=job;
-  return[{...rest,accounts:remaining,enabled:false}];
+  if(job.host)return[{...job,accounts:remaining,enabled:false}];
+  return parkedCoordinatorAccounts(job,remaining);
  });
  return{...own,jobs};
 }
@@ -488,8 +488,12 @@ export async function runLiveTask(task:CoordTask,dependencies:Record<string,any>
   while(Date.now()<deadline){
    if(existsSync(join(projectRoot,'.practice/stop-coordinator')))throw Error('coordinator stopped');
    const end=loadEnded(join(projectRoot,'.practice/swarm-deaths.json')).get(target);
-   if(end&&end.at>=installed.installedAt&&!/^done(?:\s|$)/.test(end.reason))throw Error('bounded worker ended: '+end.reason);
    const file=join(projectRoot,'.practice/status',target+'.json');
+   if(end&&end.at>=installed.installedAt&&!/^done(?:\s|$)/.test(end.reason)){
+    let status:unknown;
+    try{status=JSON.parse(readFileSync(file,'utf8'));}catch{/* A missing observation leaves the supervisor reason intact. */}
+    throw Error(boundedWorkerEndMessage(end,status,{account:target,goal:installed.goal,source,startedAt:installed.installedAt,now:Date.now(),runId}));
+   }
    if(existsSync(file)){
     const status=JSON.parse(readFileSync(file,'utf8'));
     if(status.coordinatorRunId===runId&&status.at>=installed.installedAt&&status.result){

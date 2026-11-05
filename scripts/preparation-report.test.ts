@@ -1,7 +1,22 @@
 import {expect,test} from 'bun:test';
 import {preparationRoute,reconcilePreparation} from './preparation-report';
+import {questDefinitions} from '../packages/core/src/quest-status';
 const now=1_000_000;
 const bank=(name:string,items:any[],age=100)=>({name,server:'rs-sdk-demo.fly.dev',bankAt:now-age,bank:items});
+test('preparation unlocks distinguish unobserved containers from observed empty ones',()=>{
+ const quest=questDefinitions().find(q=>q.name==='Rune Mysteries Quest')!;
+ const pick={id:1267,name:'Iron pickaxe',count:1};
+ const base={...bank('A',[],10),at:now-10,questsAt:now-10,quests:[{...quest,state:'complete'}],
+  inventory:[],equipment:[] as (typeof pick)[],equipmentObserved:true as boolean|undefined};
+ const tools=(patch:Partial<typeof base>)=>reconcilePreparation([],[{...base,...patch}],['A'],now).readiness[0]!.goals['essence-tools']?.state;
+ expect(tools({})).toBe(false);
+ expect(tools({equipmentObserved:false})).toBeNull();
+ expect(tools({equipmentObserved:undefined,equipment:[pick]})).toBeNull();
+ expect(tools({equipment:[pick]})).toBe(true);
+ expect(tools({equipmentObserved:false,bank:[pick]})).toBe(true);
+ expect(tools({bankAt:now-5,bank:[pick]})).toBeNull();
+ expect(tools({questsAt:now-5,bank:[pick]})).toBeNull();
+});
 test('shared consumers cannot count the same stock twice',()=>{
  const r=reconcilePreparation([{item:'feathers',count:6,consumers:['quest']},{item:'Feather',count:6,consumers:['gear']}],[bank('A',[{id:314,name:'Feather',count:10}])],['A'],now);
  expect(r.items).toHaveLength(1);

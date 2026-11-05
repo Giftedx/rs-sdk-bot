@@ -80,8 +80,18 @@ export function formatLedger(sum: ReturnType<typeof summarize>): string {
 // A session is stalled when its last `window` ticks hold no xp, no inventory change and no dialog: walking,
 // waiting or animating that long without gaining anything is a loop (a bank trip that cannot take food, a
 // chop with no logs), not work. bot.ts stops such a session.
+// A journey counts too: a tile FAR_WALK or more from the tile at the window's start is travel (quest-sweep walks
+// Port Sarim to the Sinclair Mansion in about 1,200 ticks with nothing else changing), while pacing near one tile is not.
+export const FAR_WALK = 20;
+const tile = (at: string): [number, number] | null => { const m = at.match(/^(-?\d+),(-?\d+)$/); return m ? [Number(m[1]), Number(m[2])] : null; };
 export function stalled(rows: readonly TickRow[], window: number): boolean {
     if (window <= 0 || rows.length < window) return false;
-    for (let i = rows.length - window; i < rows.length; i++) { const k = rows[i]!.kind; if (k === 'xp' || k === 'inventory' || k === 'dialog') return false; }
+    const start = tile(rows[rows.length - window]!.at);
+    for (let i = rows.length - window; i < rows.length; i++) {
+        const r = rows[i]!;
+        if (r.kind === 'xp' || r.kind === 'inventory' || r.kind === 'dialog') return false;
+        const t = start && tile(r.at);
+        if (t && Math.max(Math.abs(t[0] - start![0]), Math.abs(t[1] - start![1])) >= FAR_WALK) return false;
+    }
     return true;
 }

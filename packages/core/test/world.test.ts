@@ -117,3 +117,11 @@ test('generated Ardougne side-locked pair blocks the Catherby leg before the bui
     expect(blocked).toContainEqual({ x: 2674, z: 3304, level: 0 });
     expect(blocked).toContainEqual({ x: 2674, z: 3305, level: 0 });
 });
+
+test('a route search past its deadline stops with reason budget; without a deadline it finds the route', () => {
+    const w = createWorld({ transports: [stairA], doors: [], pathLength: flat });
+    const from = { x: 0, z: 0, level: 0 }, to = { x: 12, z: 5, level: 1 };
+    expect(w.route(from, to, acct(), { deadline: performance.now() - 1 })).toEqual({ ok: false, reason: 'budget' });
+    expect(w.route(from, to, acct(), { deadline: performance.now() + 60_000 }).ok).toBe(true);
+    expect(w.route(from, to, acct()).ok).toBe(true);
+});

@@ -23,7 +23,7 @@ import {loadContentTable,readWorn} from './appearance';
 import {createOperatorControl} from './operator-control';
 import { xpForLevel } from '../planner/src/curve';
 import { isLocalServer } from '../core/src/localserver';
-import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, schedule, suppliesFor, TRICKS } from '../planner/src/haggis';
+import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, scheduleOverall, overallRequirementsFor, TRICKS } from '../planner/src/haggis';
 
 const root = resolve(import.meta.dir, '..', '..');
 const operatorControl=createOperatorControl({root,readOnly:process.env.DASH_READ_ONLY==='1'});
@@ -891,7 +891,7 @@ function race() {
     try {
         const boards = loadSnapshot(LIVE_HISCORES);
         const acts = haggisActivities(), travel = haggisTravel();
-        const run = (mode: 'floor' | 'realistic') => schedule(boards, acts, { travel, mode, tricks: new Set(TRICKS) });
+        const run = (mode: 'floor' | 'realistic') => scheduleOverall(boards, acts, { travel, mode, tricks: new Set(TRICKS) });
         const fl = run('floor'), re = run('realistic');
         // Evidence of the inputs behind each board: the activities (levers applied) that serve it. Overall: all of them.
         const live = applyLevers(acts, {});
@@ -912,13 +912,14 @@ function race() {
         const lastAct = lastB ? [...re.order].reverse().find(p => live.find(a => a.id === p.id)?.serves.includes(lastB.id as any)) : null;
         const n = (l: typeof rows, k: 'real' | 'floor') => l.filter(r => r[k].status === 'WIN').length;
         const value = {
-            supplies: suppliesFor(acts, {travel, mode:'realistic', tricks:new Set(TRICKS)}, boards),
+            supplies: re.overallFinish === null ? null : overallRequirementsFor(acts, {travel, mode:'realistic', tricks:new Set(TRICKS)}, re)
+                .supplies.map(({item,count}) => ({item,count})),
             rows, unmeasured: (readFileSync(BOARDS_FILE, 'utf8').match(/"evidence":\s*"(ESTIMATE|CODE-READ)"/g) ?? []).length,
             wins: n(rows, 'real'), floorWins: n(rows, 'floor'), gap: overall?.real.slack ?? null, floorGap: overall?.floor.slack ?? null,
             qpEnd: { realistic: re.qp, floor: fl.qp },
             last: lastB ? { board: lastB.label, finish: lastB.real.finish, slack: lastB.real.slack, activity: lastAct?.label ?? null } : null,
             at: Date.now(), source: 'research/hiscores-live.json', sourceAt: Date.parse(JSON.parse(readFileSync(LIVE_HISCORES,'utf8')).takenAt)||0,
-            options: 'planner CLI scenario a: all techniques eligible, travel on; supplies require acquisition',
+            options: 'Planner CLI scenario a. Travel on. Supplies require acquisition. Relaxed scheduling deadlines: ' + (re.boards.filter(b => b.sacrificed).map(b => b.id).join(', ') || 'none'),
         };
         raceCache = { key, value };
         const last = gapHistory[gapHistory.length - 1];

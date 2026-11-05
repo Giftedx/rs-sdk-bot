@@ -2,9 +2,10 @@ import {existsSync,readFileSync,writeFileSync,appendFileSync,unlinkSync,watch,mk
 import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {freemem,cpus} from 'node:os';
-import {addTasks,chooseTask,startTask,finishTask,refreshQualifications,qualificationDemand,boundAccounts,fleetExpansion,activeBuildFocus,failedBuildStreak,heldBuilds,compactState,FOCUS_FAILURE_LIMIT,type CoordinatorState} from './coordinator';
+import {addTasks,chooseTask,startTask,finishTask,refreshQualifications,qualificationDemand,boundAccounts,fleetExpansion,activeBuildFocus,failedBuildStreak,heldBuilds,compactState,FOCUS_FAILURE_LIMIT,type CoordinatorState,type CoordTask} from './coordinator';
 import {buildFault} from './build-fault';
-import {projectRoot,coordinationDir,loadState,saveState,runDirectory,atomicJson,atomicText,event,spawnDetached,recoverPlanWrite,withPlanWrite} from './coordinator-store';
+import {projectRoot,coordinationDir,loadState,saveState,runDirectory,atomicJson,atomicText,event,spawnDetached,recoverPlanWrite,withPlanWrite,capabilitySource} from './coordinator-store';
+import {DISK_FLOOR_GB,diskFreeGB,finishPlan,plannerDue,retireDeadTasks,reviewHold} from './coordinator-decisions';
 import {planWork,acceptProposal} from './coordinator-planner';
 import {executeTask} from './coordinator-worker';
 import {deliveryTask,deliveryFingerprint,SOURCE_STARTUP_GB,NATIVE_STARTUP_GB} from './delivery-cli';
@@ -49,7 +50,6 @@ export function migrateCoordinatorJobs(base=projectRoot){
 const stop=join(projectRoot,'.practice/stop-coordinator');
 const restart=join(coordinationDir,'restart');
 const planRequest=join(coordinationDir,'plan-request');
-const IDLE_PLAN_MS=30*60*1000;
 const sourceErrors=new Map<string,string>();
 const cpuTotals=()=>cpus().reduce((s,c)=>({idle:s.idle+c.times.idle,total:s.total+Object.values(c.times).reduce((a,b)=>a+b,0)}),{idle:0,total:0});
 let previousCpu=cpuTotals();
@@ -151,14 +151,20 @@ function clearFocus(capability:string){
 const RULE_RECHECK_MS=5*60*1000;
 // The rule reads the fleet best from the scoreboard file; it rebuilds the scoreboard only when the file is older than this.
 const RULE_BOARD_MAX_AGE_MS=60*60*1000;
-let rulePass={at:0,receipts:-1};
+type RulePass={at:number;receiptSequence:number};
+let rulePass:RulePass={at:0,receiptSequence:-1};
+let lowDisk=false;
+
+export function rulePassDue(state:Pick<CoordinatorState,'latestReceiptSequence'>,previous:RulePass,now:number):boolean{
+ return (state.latestReceiptSequence??0)!==previous.receiptSequence||now-previous.at>=RULE_RECHECK_MS;
+}
 let unlocks:((skill:string)=>number[])|undefined;
 // A skipped chain is reported once per reason, not on every pass.
 const ruleSkips=new Set<string>();
 function runRules(state:CoordinatorState,liveLimit:number){
- const receipts=state.tasks.filter(r=>r.receipt).length,now=Date.now();
- if(receipts===rulePass.receipts&&now-rulePass.at<RULE_RECHECK_MS)return;
- rulePass={at:now,receipts};
+ const now=Date.now();
+ if(!rulePassDue(state,rulePass,now))return;
+ rulePass={at:now,receiptSequence:state.latestReceiptSequence??0};
  try{
   let board:any;try{board=freshScoreboard(projectRoot,RULE_BOARD_MAX_AGE_MS);}catch{board=null;}
   const fleetSkills:any[]|undefined=Array.isArray(board?.fleetSkills)?board.fleetSkills:undefined;
@@ -210,11 +216,14 @@ async function tick(state:CoordinatorState,config:any){
  if(state.planner){
   const pending=state.planner,dir=runDirectory(pending.runId),proposal=join(dir,'proposal.json'),error=join(dir,'planner-error.json');
   if(existsSync(proposal)||existsSync(error)||(!existsPid(pending.pid!)&&!processMatches(pending.pid!,pending.runId))){
-   try{if(!existsSync(proposal))throw Error(existsSync(error)?json(error).error:'planner ended without proposal');const count=acceptProposal(state,json(proposal));event('plan-accepted',{count,reason:state.lastPlanReason});}
+   let accepted=false;
+   try{if(!existsSync(proposal))throw Error(existsSync(error)?json(error).error:'planner ended without proposal');const count=acceptProposal(state,json(proposal));accepted=true;event('plan-accepted',{count,reason:state.lastPlanReason});}
    catch(e){state.lastPlanReason='planner failed: '+String(e);event('plan-failed',String(e));}
-   state.lastPlanAt=Date.now();delete state.planner;saveState(state);
+   finishPlan(state,Date.now(),accepted);saveState(state);
   }
  }
+ const retired=retireDeadTasks(state,Date.now());
+ if(retired.length){saveState(state);event('tasks-retired',{count:retired.length,tasks:retired});}
  // Model/native capacity is independent from finite live account jobs.
  if(config.focusCapability&&state.tasks.some(r=>r.spec.capability===config.focusCapability&&r.spec.kind==='run'&&r.status==='succeeded'&&r.receipt?.output?.evidence==='live'&&r.receipt.at>=(config.focusSince??0))){
   await withPlanWrite(()=>{clearFocus(config.focusCapability);delete config.focusCapability;delete config.focusSince;event('fleet-focus-delivered',{evidence:'live'});});
@@ -236,10 +245,20 @@ async function tick(state:CoordinatorState,config:any){
  }
  for(const held of heldBuilds(state,Date.now())){const key='hold:'+held.capability,seen=held.fault+'@'+held.at;if(sourceErrors.get(key)!==seen){event('build-held',held);sourceErrors.set(key,seen);}}
  const owned=new Map<string,readonly string[]>(),ownedFiles=(cap:string)=>{if(!owned.has(cap))owned.set(cap,deliveryTask(cap).files);return owned.get(cap)!;};
- for(let dispatch=0;dispatch<developmentLimit+liveLimit;dispatch++){
+ // A rejected review holds its capability's runs in the queue until a repair changes the owned files. The worker repeats
+ // the check at start (coordinator-worker.ts), so a read error here holds nothing.
+ const reviewHolds=new Map<string,boolean>(),runHeld=(task:CoordTask)=>{
+  const cap=task.capability!;if(reviewHolds.has(cap))return reviewHolds.get(cap)!;
+  let held=false;try{held=reviewHold(state,cap,()=>capabilitySource(ownedFiles(cap)))!==null;}catch{/* the worker reports an unreadable source */}
+  reviewHolds.set(cap,held);return held;
+ };
+ // Running tasks finish. A full disk stops the whole loop, so new work stops first.
+ const diskGB=diskFreeGB(projectRoot),diskLow=diskGB!==null&&diskGB<DISK_FLOOR_GB;
+ if(diskLow!==lowDisk){lowDisk=diskLow;event(diskLow?'disk-low':'disk-recovered',{freeGB:diskGB,floorGB:DISK_FLOOR_GB});}
+ for(let dispatch=0;!diskLow&&dispatch<developmentLimit+liveLimit;dispatch++){
   const freeGB=freemem()/2**30,request=join(coordinationDir,'publish-request.json');
   let publishing:string|undefined;try{publishing=existsSync(request)?json(request).capability:undefined;}catch{/* a request being written */}
-  const task=chooseTask(state,Date.now(),{sourceReady:freeGB>=SOURCE_STARTUP_GB,nativeReady:freeGB>=NATIVE_STARTUP_GB,developmentLimit,liveLimit:liveBlocked?0:liveLimit,preferLive:config.preferLive===true,focusCapability:config.focusCapability,isolatedBuilds:true,publishPending:existsSync(request),publishing,ownedFiles});
+  const task=chooseTask(state,Date.now(),{sourceReady:freeGB>=SOURCE_STARTUP_GB,nativeReady:freeGB>=NATIVE_STARTUP_GB,developmentLimit,liveLimit:liveBlocked?0:liveLimit,preferLive:config.preferLive===true,focusCapability:config.focusCapability,isolatedBuilds:true,publishPending:existsSync(request),publishing,ownedFiles,runHeld});
   if(!task)break;
   // The single dispatcher prepares the controller before parallel live children
   // can race to create it. Controller startup does not log accounts in.
@@ -249,16 +268,14 @@ async function tick(state:CoordinatorState,config:any){
   }
   launchTask(state,task.id);
  }
- const pending=state.tasks.some(r=>r.status==='pending'),failure=state.tasks.some(r=>r.status==='failed'&&(r.receipt?.at??0)>state.lastPlanAt);
- const newOutcome=state.tasks.some(r=>r.receipt&&r.receipt.at>state.lastPlanAt);
- const actionable=existsSync(planRequest)||newOutcome||failure;
- // Without a new receipt, failure or request the planner only rechecks every IDLE_PLAN_MS: 1,491 of 1,603
- // plans on a 30 s timer proposed no work (research/bot-host.md "Isolated build workspaces").
- if(!state.planner&&(actionable||state.lastPlanReason.startsWith('planner failed:')||Date.now()-state.lastPlanAt>Math.max(config.plannerIntervalMs??0,IDLE_PLAN_MS))&&Date.now()-state.lastPlanAt>(actionable?1000:30000)){
+ const planReason=diskLow?null:plannerDue(state,Date.now(),config.plannerIntervalMs??0,existsSync(planRequest));
+ if(planReason){
   if(existsSync(planRequest))unlinkSync(planRequest);
   const agent=state.tasks.some(r=>r.status==='running'&&r.agent==='codex'&&r.spec.kind==='build')?'claude':'codex';
   const runId='plan-'+randomUUID(),dir=runDirectory(runId);atomicJson(join(dir,'input.json'),{statePath:join(coordinationDir,'state.json'),agent,timeoutMs:config.modelTimeoutMs??600000});
-  state.planner={runId,agent,startedAt:Date.now()};saveState(state);state.planner.pid=spawn('--planner',runId,dir);event('planner-started',{runId,pid:state.planner.pid,agent});
+  // Snapshot the receipts available when the planner starts. Receipts settled during its call trigger the next pass.
+  state.plannerReceiptSequence=state.latestReceiptSequence??0;
+  state.planner={runId,agent,startedAt:Date.now()};saveState(state);state.planner.pid=spawn('--planner',runId,dir);event('planner-started',{runId,pid:state.planner.pid,agent,reason:planReason});
  }
  const archived=archiveFinishedTasks(state);if(archived)event('tasks-archived',{count:archived,remaining:state.tasks.length});
  saveState(state);

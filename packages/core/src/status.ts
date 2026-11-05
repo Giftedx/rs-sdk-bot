@@ -229,5 +229,11 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
     write();
     let n = 0;
     const off = s.onTick(() => { observeBank(); observeQuests(); if (++n % 5 === 0) write(); });
-    return { stop: () => { write(); off(); } };
+    // The row is also written on the clock, for the session's whole life: a session whose tick stream has frozen (a
+    // hung quest script, a stalled client) otherwise stops refreshing `at`, and the release gate (worker-release.ts
+    // assertCompatibleWorkers) then reads an unfinished row older than 30 s as an unknown peer and refuses every other
+    // login on the side. The row's `tick` still shows the stall.
+    const beat = setInterval(write, statusHeartbeatMs());
+    return { stop: () => { clearInterval(beat); write(); off(); } };
 }
+export const statusHeartbeatMs = () => Math.max(20, Number(process.env.STATUS_HEARTBEAT_MS ?? 5_000));

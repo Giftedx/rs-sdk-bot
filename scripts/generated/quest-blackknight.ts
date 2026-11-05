@@ -115,6 +115,19 @@ try {
     q.milestone(3);
 
     // 8. Falador teleport, the castle stairs to level 2, Sir Amik queues the completion (sir_amik_varze.rs2:67-74).
+    // Without the runes the walk out is the way in reversed (the fortress's secret walls and guarded doors are not in the
+    // route graph): the secret wall north, the hall ladder down, the banquet hall door west, the guards' door south.
+    if (!q.canCast('magic:falador_teleport')) {
+        await q.step('secret wall back', () => q.opLoc(L.secret1), () => z() >= 3510, 12, 4);
+        await q.walk('to hall ladder top', [{ x: 3022, z: 3517, tol: 0 }]);
+        await climb('hall ladder down', { id: 1749, x: 3022, z: 3518 }, lvlIs(0));
+        await q.step('door2 out', () => q.opLoc(L.door2), () => q.dialogOpen() || x() <= 3019, 12, 4);
+        if (q.dialogOpen()) await q.converse([], () => x() <= 3019 && !q.dialogOpen(), 20);
+        // The guards' door opens from inside without moving the bot; the step through follows while it stands open.
+        await q.step('door1 out', () => q.opLoc(L.door1), () => z() <= 3513 || !q.shutAt(3016, 3514), 12, 4);
+        if (z() > 3513) await q.dash('out of the gate', 3016, 3512, 1);
+        console.log(`NOTE outside ${where()} ${q.T()}`);
+    }
     await q.teleport('falador teleport 2', 'magic:falador_teleport', 2965, 3378);
     await q.walk('to castle stairs', [{ x: 2955, z: 3337, tol: 1 }]);
     await climb('castle stairs 0', L.stairs0, lvlIs(1));

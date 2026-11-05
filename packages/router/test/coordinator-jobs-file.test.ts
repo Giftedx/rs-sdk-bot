@@ -2,10 +2,11 @@ import {test,expect} from 'bun:test';
 import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {migrateCoordinatorJobs,currentRevision,REVISION_FRESH_MS} from '../src/coordinator-cli';
+import {migrateCoordinatorJobs,currentRevision,REVISION_FRESH_MS,rulePassDue} from '../src/coordinator-cli';
+import {PLAN_GAP_MS,plannerDue} from '../src/coordinator-decisions';
 import {disableOwnJob,ensureSwarm,controllerStateFresh,CONTROLLER_STATE_FRESH_MS} from '../src/coordinator-live';
 import {atomicJson,saveState,loadState} from '../src/coordinator-store';
-import {initialState,addTasks} from '../src/coordinator';
+import {initialState,addTasks,startTask,finishTask,type CoordTask} from '../src/coordinator';
 import {readCoordinatorJobs,readMergedPlan,writeCoordinatorJobs,coordinatorJobsPath} from '../../core/src/coordinator-jobs';
 
 const owner=[{account:'Haggis',script:'',goal:'main simultaneous24 fresh clock',enabled:false},{accounts:['A','B'],host:true,script:'host.ts',enabled:true,standing:true}];
@@ -138,4 +139,54 @@ test('a replacement plan ignores archived dependencies of finished tasks but sti
  expect(state.tasks.find(r=>r.spec.id==='waiter')!.spec.dependsOn).toEqual(['new-run']);
  state.tasks.push(record('broken','pending',now,{kind:'run',capability:'fish-order',dependsOn:['archived-build']}));
  expect(()=>replaceTasks(state,[])).toThrow('missing replacement dependency');
+});
+
+test('a late receipt triggers a new planning pass even with an older timestamp', () => {
+ const state = initialState();
+ addTasks(state, [
+  {id:'older',kind:'qualify',goal:'quests',capability:'quest-order',dependsOn:[],priority:1,estimatedMs:1000,why:'Prove a quest worker'},
+  {id:'newer',kind:'qualify',goal:'quests',capability:'quest-order',dependsOn:[],priority:1,estimatedMs:1000,why:'Prove a quest worker'},
+ ], 0);
+ startTask(state, 'older', 1000, 'older');
+ startTask(state, 'newer', 2000, 'newer');
+ expect(finishTask(state, {taskId:'newer',runId:'newer',ok:true,at:4000,output:null})).toBe(true);
+ const firstReceiptSequence = state.latestReceiptSequence;
+ expect(firstReceiptSequence).toBe(state.sequence);
+ state.plannerReceiptSequence = firstReceiptSequence;
+ state.planner = {runId:'planner', startedAt:5000};
+ expect(plannerDue(state, 7000, 0, false)).toBeNull();
+ expect(finishTask(state, {taskId:'older',runId:'older',ok:false,at:3000,output:null})).toBe(true);
+ expect(state.latestReceiptSequence).toBe(state.sequence);
+ expect(state.latestReceiptSequence!).toBeGreaterThan(firstReceiptSequence!);
+ expect(plannerDue(state, 7000, 0, false)).toBeNull();
+ delete state.planner;
+ state.lastPlanAt = 7000;
+ expect(plannerDue(state, 7000 + PLAN_GAP_MS - 1, 0, false)).toBeNull();
+ expect(plannerDue(state, 7000 + PLAN_GAP_MS, 0, false)).toBe('outcome');
+ state.plannerReceiptSequence = state.latestReceiptSequence;
+ expect(plannerDue(state, 7000 + PLAN_GAP_MS, 0, false)).toBeNull();
+ expect(plannerDue(state, 9000, 0, true)).toBe('request');
+});
+
+test('rules notice a new receipt even when archive and settlement leave the same count', () => {
+ const state=initialState();
+ const spec=(id:string):CoordTask=>({id,kind:'qualify',goal:'quests',capability:'quest-order',dependsOn:[],
+  priority:1,estimatedMs:1000,why:'Prove the quest worker'});
+ const settle=(id:string,at:number)=>{
+  addTasks(state,[spec(id)],at-2);
+  startTask(state,id,at-1,id);
+  expect(finishTask(state,{taskId:id,runId:id,ok:true,at,output:null})).toBe(true);
+ };
+ settle('old-proof',2);
+ settle('recent-proof',4);
+ const previous={at:10,receiptSequence:state.latestReceiptSequence!};
+ expect(rulePassDue(state,previous,10)).toBe(false);
+ expect(compactState(state,10,1).map(r=>r.spec.id)).toEqual(['old-proof']);
+ expect(rulePassDue(state,previous,10)).toBe(false);
+ settle('fresh-proof',12);
+ expect(state.tasks.filter(r=>r.receipt)).toHaveLength(2);
+ expect(rulePassDue(state,previous,12)).toBe(true);
+ const current={at:12,receiptSequence:state.latestReceiptSequence!};
+ expect(rulePassDue(state,current,300011)).toBe(false);
+ expect(rulePassDue(state,current,300012)).toBe(true);
 });

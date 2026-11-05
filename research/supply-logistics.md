@@ -4,6 +4,22 @@
 
 **New consumer enrolment:** wait for fresh `waiting-for-food`, bank observation from this run and bank-distance ≤3 before adding courier demand. Fresh bank data alone races receiver readiness (zero-transfer failure: `.practice/fleet-expansion/first-delivery-attempt.json`). Two live deliveries after the wait each reconciled160 sender debit=recipient credit; pilots returned to bank. `.practice/fleet-expansion/attach-ready.ts` checks enrolment; it is not a general runtime readiness fix. Promote the Thieving55-qualified earner after clean bootstrap handover; bootstrap60 timed out live and is failed. Food purchase cost is unknown.
 
+
+The coordinator plans Overall supplies from the route bill's demand and the latest available helper observations. A recent balance uses the status time for pack and worn items, and the original bank observation time for bank items. The planner lists older or undated holdings for verification, observed shortfalls separately, and unresolved item names separately. Neither a recent balance nor a route bill assigns or reserves stock.
+
+Source -> local consumer -> adapt -> check: the bank observation time in status, the preparation report's five-minute window, and Microbot's bank freshness pattern in the project use map -> the coordinator's supply summary -> preserve bank time through fleet sync and keep unverified holdings visible -> a planner test reads local and published snapshots with recent, stale and absent bank times. A read-only live-data comparison is in `.practice/planner-supply-freshness/summary.json`. A verified balance still needs a transfer and consumer receipt.
+
+Source -> local consumer -> reuse -> check: the status producer's equipment observation flag, the route preparation reader, and Iron Compass's explicit requirement facts in the project use map -> preparation unlock facts -> leave unobserved equipment unknown and reject bank or journal evidence dated after its status row -> the preparation fixture checks observed empty equipment, unknown equipment, a known bank alternative and date order. The read-only replay in `.practice/goal-readiness-observations/replay.json` compares retained status rows at their observation times and at replay time.
+
+
+The Overall supply bill, Autopilot demand, preparation report, dashboard and launch manifest use the route rows that start before the modeled last 99. The full route remains available for later quest, gear and bank goals. If the model has no Overall finish, it cannot produce an Overall supply bill.
+
+Source -> local consumer -> reuse -> check: the route scheduler's selected variants and last-99 tick, plus the launch gate's start-time boundary -> all Overall supply consumers -> apply the existing requirement tally to the scheduled prefix -> test a row that straddles the finish, a later producer and an unchosen variant. The isolated bill and preparation runs are compared in `.practice/overall-route-supply-scope/scope-proof.json`. The comparison proves bill scope on the modeled route. It does not establish staged items or launch readiness.
+
+The supply bill adds demands with the same resolved base item IDs before checking stock. It preserves the alternate labels for planning and reports partly overlapping matches as unresolved. A combined count covers base stock. The handoff still needs to verify the form each consumer needs.
+
+Source -> local consumer -> adapt -> check: the planner's pinned item resolver and the shared-stock accounting pattern in Iron Compass from the project use map -> supply bill, coordinator and Autopilot -> combine demand before assigning a stock balance -> regressions for 1,200 units of demand against 600 owned, an overlapping match, and a cached bill round trip. These checks do not reserve or transfer stock.
+
 ## Market policy (current)
 
 Owner decision: use GE for progression and wealth whenever it beats other sources. Account ownership and evidence requirements still apply.

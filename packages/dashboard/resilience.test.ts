@@ -14,7 +14,7 @@ test('stream loss and collector errors reach the visible title indicator without
 
 test('a chosen account cannot be replaced by another account when its snapshot disappears',()=>{
  const code=html.slice(html.indexOf('function render(){'),html.indexOf(" $('#pause').textContent"));
- const choose=new Function('S','window','picked','sel',`const TOUR=false,liveBots=()=>S.bots;${code}};render();return sel;`);
+ const choose=new Function('S','window','picked','sel',`const liveBots=()=>S.bots;${code}};render();return sel;`);
  const state={bots:[{name:'Other',operation:'observed'}]};
  expect(choose(state,{},true,'Chosen')).toBe('Chosen');
  expect(choose(state,{},false,null)).toBe('Other');

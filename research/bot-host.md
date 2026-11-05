@@ -2,6 +2,8 @@
 
 Evidence: MEASURED practice (local server, 150 ms tick) + CODE-READ. Boards: infra (all).
 
+Source -> local consumer -> reuse -> check: the rollout's heartbeat, lease and launch fingerprint -> side progress export -> compare the fresh heartbeat with its saved lease and the cached disk fingerprint -> fixtures cover matching, drift, stale data and mismatched lease fields. The read-only export in `.practice/live-release-audit/export-check.json` shows the reported and disk releases without publishing the lease nonce or changing the controller.
+
 ## Isolated build workspaces
 
 Claim: a global build fence starves live work, and isolated build workspaces remove the fence. Evidence (`.practice/coordinator/state.json`, about 35 h of fenced operation): builds ran 21.7 h (117 builds: 17 succeeded, 71 failed), live runs 3.2 h (13 succeeded); `coordinator.ts` blocked every run while a build ran and every build while a run ran, and the worker held the build lock through authoring, native proof and review. A capability focus held all development for 11.2 h (shark), 6.6 h (rune) and 5.4 h (agility) through repeated failed builds; 1,491 of 1,603 planner cycles proposed no work.
@@ -277,6 +279,13 @@ Recommendation: use the host. 4 bots in one host cost about one bot process plus
 - Swarm host jobs exist (section 3c) with per-account env and chain steps (section 3d); the live farmers are not
   moved yet (owner switch: the proposed `swarm.json` host jobs are in the PR that added section 3d).
 - Live runs not done (practice only).
+
+
+## Tick waste attribution
+
+A tick ledger can use a nearby result only within its supervisor job. A ledger with no result before the next job marker stays unknown and does not affect another family's Autopilot waste rate.
+
+Source -> local consumer -> reuse -> check: swarm job markers and worker ledger lines -> the existing tick-waste report and Autopilot scoring -> stop attribution at a marker and normalize only ledger or result candidates -> a boundary regression and three matched scans of the same local log set. The scans compare 54 files totaling 103,319,274 bytes on Bun 1.3.14 with identical legacy results. Raw elapsed times are in `.practice/tick-waste-job-boundary/timing.json`. This measures report time. It does not measure game ticks saved.
 
 ## Repeated route search
 

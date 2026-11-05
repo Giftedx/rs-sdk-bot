@@ -29,6 +29,7 @@ export function snapshot(statuses: readonly any[], side = mySide(), owners = loa
         if (kept && Number.isFinite(kept.at) && !(Number(s.at) >= kept.at)) continue;
         by.set(s.name.toLowerCase(), {
             name: s.name, server: s.server, at: s.at, bank: rows(s.bank), inventory: rows(s.inventory), equipment: rows(s.equipment),
+            ...(Array.isArray(s.bank) && Number.isFinite(s.bankAt) && s.bankAt > 0 && s.bankAt <= s.at ? { bankAt: s.bankAt } : {}),
             skills: (s.skills ?? []).map((k: any) => ({ name: k.name, level: k.level })),
             // No field when the journal was never read, so readers see unknown and not zero completed.
             ...(Array.isArray(s.quests) && s.quests.some((q: any) => q.state !== 'unknown') ? { quests: s.quests.filter((q: any) => q.state === 'complete').map((q: any) => q.name) } : {}),

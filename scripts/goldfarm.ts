@@ -125,6 +125,10 @@ try {
     try { lastStealAt = JSON.parse(readFileSync(stealFile, 'utf8')).at ?? 0; } catch { /* no theft recorded */ }
     const saveSteal = () => { lastStealAt = Date.now(); try { mkdirSync(dirname(stealFile), { recursive: true }); writeFileSync(stealFile, JSON.stringify({ at: lastStealAt })); } catch { /* best effort */ } };
     let hpMin = hp(), died = false, bankEmpty = false, warned = false, lastFail = '';
+    // A dropped session freezes s.tick(), so now() never reaches TICKS: without this the loop spins on the dead
+    // session at full CPU, finish() never prints RESULT, and the stale status row blocks every login on the side.
+    let ended = '';
+    void s.ended.then(e => { ended = e.reason || 'ended'; });
     let last = pos();
     const off = s.onTick(() => {
         const p = pos();
@@ -401,7 +405,7 @@ try {
     }
 
     let nextMark = 1000;
-    while (now() < TICKS && !died) {
+    while (now() < TICKS && !died && !ended) {
         if (existsSync(stopFile)) await end(false, 'stop file');
         if (now() >= nextMark) { console.log(`MILESTONE t=${now()} banked=${banked} packCoins=${coins()} bigFood=${bigFood()} food=${food()} picks=${picks} fails=${fails} eaten=${eaten}`); nextMark += 1000; }
         if (randomEventsOf(s)?.busy()) { idleTicks++; await waitTicks(s, 1); continue; }
@@ -438,6 +442,6 @@ try {
         if (hp() <= DMG) { idleTicks++; await waitTicks(s, 1); continue; }
         await steal();
     }
-    await end(!died, died ? 'died' : 'ticks');
+    await end(!died && !ended, died ? 'died' : ended ? `session ended: ${ended}` : 'ticks');
 } catch (e) { await finish([s], false, String(e)); }
 }

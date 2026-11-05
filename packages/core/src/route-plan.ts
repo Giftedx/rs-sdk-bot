@@ -25,12 +25,12 @@ function start(): BunWorker {
     return worker = w;
 }
 
-export function planTripOffThread(from: Tile, to: Tile, acct: Account, stock?: BankStock): Promise<TripPlan | null> {
+export function planTripOffThread(from: Tile, to: Tile, acct: Account, stock?: BankStock, budgetMs?: number): Promise<TripPlan | null> {
     if (idle) { clearTimeout(idle); idle = null; }
     const w = start(), id = ++next;
     w.ref();
     return new Promise((resolve, reject) => {
         pending.set(id, { resolve, reject });
-        w.postMessage({ id, from, to, acct: JSON.parse(JSON.stringify(acct)), stock });
+        w.postMessage({ id, from, to, acct: JSON.parse(JSON.stringify(acct)), stock, budgetMs });
     });
 }

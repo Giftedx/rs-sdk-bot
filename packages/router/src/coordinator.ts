@@ -26,12 +26,17 @@ export interface Receipt {taskId:string;runId:string;ok:boolean;at:number;output
 export interface TaskRecord {
  spec:CoordTask;status:'pending'|'running'|'succeeded'|'failed'|'superseded';createdAt:number;attempts:number;supersededBy?:string;
  runId?:string;startedAt?:number;pid?:number;receipt?:Receipt;
+ /** latestReceiptSequence when this receipt settled: a value above plannerReceiptSequence is an outcome no plan saw. */
+ receiptSequence?:number;
  agent?:'codex'|'claude';
 }
 export interface CoordinatorState {
  version:1;sequence:number;tasks:TaskRecord[];
  goals:{id:GoalId;lastStartedAt:number;lastSucceededAt:number;completedTasks:number}[];
  planner?:{runId:string;startedAt:number;pid?:number;agent?:'codex'|'claude'};lastPlanAt:number;lastPlanReason:string;
+ /** Failed planning rounds in a row (planRetryMs, coordinator-decisions.ts). */
+ planFailures?:number;
+ latestReceiptSequence?:number; plannerReceiptSequence?:number;
 }
 export function fleetExpansion(s:{limit:number;demand:number;freeGB:number;reserveGB:number;cpu:number|null;tickMs:number|null;stalled:boolean;usefulResults:number;now:number;lastExpandedAt:number;step?:number}){
  if(!Number.isSafeInteger(s.limit)||s.limit<1||!Number.isSafeInteger(s.demand)||s.demand<=s.limit||s.stalled||s.usefulResults<2
@@ -53,8 +58,18 @@ export function replaceTasks(state:CoordinatorState,replacements:{from:string;to
  const done=new Set<string>(),active=new Set<string>();
  // Only open tasks run again, so only their dependencies must exist. compactState keeps the newest finished task of each
  // capability and kind, and that task's own dependencies may be archived.
- const open=(id:string)=>['pending','running'].includes(records.get(id)!.status);
- const visit=(id:string)=>{if(active.has(id))throw Error('replacement dependency cycle: '+id);if(done.has(id))return;if(!open(id)){done.add(id);return;}active.add(id);for(const dep of records.get(id)!.spec.dependsOn){if(!records.has(dep))throw Error('missing replacement dependency');visit(dep);}active.delete(id);done.add(id);};
+ const visit = (id: string) => {
+  if (active.has(id)) throw Error('replacement dependency cycle: ' + id);
+  if (done.has(id)) return;
+  const record = records.get(id);
+  if (!record) throw Error('missing replacement dependency');
+  if (record.status === 'pending' || record.status === 'running') {
+   active.add(id);
+   for (const dep of [...record.spec.dependsOn, ...provisionRefs(record.spec)]) visit(dep);
+   active.delete(id);
+  }
+  done.add(id);
+ };
  for(const r of state.tasks)visit(r.spec.id);
 }
 
@@ -90,7 +105,7 @@ export function initialState():CoordinatorState{
 }
 const ACCOUNT=/^[A-Za-z0-9_ -]{1,12}$/;
 const TASK_ID=/^[-a-z0-9]+$/;
-function provisionRefs(task:CoordTask):string[]{
+export function provisionRefs(task:CoordTask):string[]{
  return [...(task.accountFrom?[task.accountFrom]:[]),...(task.participants??[]).filter(n=>n.startsWith('@')).map(n=>n.slice(1))];
 }
 export function validateTask(t:CoordTask){
@@ -112,7 +127,7 @@ export function validateTask(t:CoordTask){
  if(t.participants!==undefined&&(!Array.isArray(t.participants)||!t.participants.length||t.participants.some(n=>typeof n!=='string'||!(n.startsWith('@')?TASK_ID.test(n.slice(1)):ACCOUNT.test(n)))
   ||new Set(t.participants.map(n=>n.toLowerCase())).size!==t.participants.length))throw Error('invalid participants');
  if(t.replayAllow!==undefined&&(t.kind!=='build'||!Array.isArray(t.replayAllow)||t.replayAllow.length>16||t.replayAllow.some(a=>typeof a!=='string'||!/^[A-Za-z]{1,40}$/.test(a))))throw Error('invalid replay allowance');
- if(t.newEvidence!==undefined&&(t.kind!=='build'||typeof t.newEvidence!=='string'||!t.newEvidence.trim()||t.newEvidence.length>500))throw Error('invalid new evidence');
+ if(t.newEvidence!==undefined&&(t.kind!=='build'||typeof t.newEvidence!=='string'||!t.newEvidence.trim()||t.newEvidence.length>500))throw Error('invalid new evidence: newEvidence is 1 to 500 characters');
  if(t.args!==undefined&&(!Array.isArray(t.args)||t.args.some(a=>typeof a!=='string'||a.includes('\0'))))throw Error('invalid task args');
  if(t.acceptIndex!==undefined&&(!Number.isSafeInteger(t.acceptIndex)||t.acceptIndex<0||t.acceptIndex>=(t.participants?.length??1)))throw Error('invalid acceptance participant index');
  if(t.kind==='run'){
@@ -210,7 +225,7 @@ export function buildOverlap(capability:string,busy:readonly string[],ownedFiles
 }
 // isolatedBuilds: builds author and prove in their own workspace (build-workspace.ts), so builds and live runs overlap.
 // Only a publish into the main checkout needs a drained fleet: publishPending holds new live starts until it lands.
-export function chooseTask(state:CoordinatorState,now:number,resources:{sourceReady?:boolean;nativeReady?:boolean;liveLimit?:number;developmentLimit?:number;preferLive?:boolean;focusCapability?:string;isolatedBuilds?:boolean;publishPending?:boolean;publishing?:string;ownedFiles?:(capability:string)=>readonly string[]}={}):CoordTask|null{
+export function chooseTask(state:CoordinatorState,now:number,resources:{sourceReady?:boolean;nativeReady?:boolean;liveLimit?:number;developmentLimit?:number;preferLive?:boolean;focusCapability?:string;isolatedBuilds?:boolean;publishPending?:boolean;publishing?:string;ownedFiles?:(capability:string)=>readonly string[];runHeld?:(task:CoordTask)=>boolean}={}):CoordTask|null{
  const records=new Map(state.tasks.map(r=>[r.spec.id,r])),running=state.tasks.filter(r=>r.status==='running');
  const busyBuilds=[...new Set([...running.filter(r=>r.spec.kind==='build'&&r.spec.capability).map(r=>r.spec.capability!),...(resources.publishing?[resources.publishing]:[])])];
  const focusCaps=new Set<string>(),visited=new Set<string>();
@@ -259,6 +274,7 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
    else if(buildWaiting&&!resources.preferLive&&!productionWindow.has(r.spec.id)||running.some(a=>a.spec.kind==='build'))return false;
    const names=boundAccounts(r.spec,state);
    if(!names?.length||names.some(n=>activeNames.has(n.toLowerCase())))return false;
+   if(resources.runHeld?.(r.spec))return false;
   }
   return true;
  });
@@ -313,12 +329,28 @@ export function finishTask(state:CoordinatorState,receipt:Receipt):boolean{
  // A build that delivered before review queues that review now (model-worker.ts reviewGate).
  if(receipt.ok&&record.spec.kind==='build'&&receipt.output?.review?.deferred===true&&!state.tasks.some(r=>r.spec.id===record.spec.id+'-review'))
   addTasks(state,[deferredReviewTask(record.spec,receipt.output.agent??record.agent,String(receipt.output.review.reason??''))],receipt.at);
- state.sequence++;return true;
+ record.receiptSequence=state.latestReceiptSequence=++state.sequence;
+ return true;
 }
-export function acceptStatus(task:CoordTask,s:any,ctx:{account:string;goal:string;source:string;startedAt:number;now:number;runId?:string}):boolean{
- if(!s||s.name?.toLowerCase()!==ctx.account.toLowerCase()||s.server!=='rs-sdk-demo.fly.dev'||s.practice
-  ||(ctx.runId?s.coordinatorRunId!==ctx.runId:s.goal!==ctx.goal)||s.workRevision!==ctx.source||!Number.isFinite(s.at)||s.at<ctx.startedAt||s.at>ctx.now||ctx.now-s.at>300000
-  ||!Number.isFinite(s.started)||s.started<ctx.startedAt||!/^ok(?:\s|$)/.test(s.result??''))return false;
+type LiveStatusContext={account:string;goal:string;source:string;startedAt:number;now:number;runId?:string};
+
+function matchesLiveStatus(s:any,ctx:LiveStatusContext):boolean{
+ return typeof s?.name==='string'&&s.name.toLowerCase()===ctx.account.toLowerCase()
+  &&s.server==='rs-sdk-demo.fly.dev'&&!s.practice
+  &&(ctx.runId?s.coordinatorRunId===ctx.runId:s.goal===ctx.goal)&&s.workRevision===ctx.source
+  &&Number.isFinite(s.at)&&s.at>=ctx.startedAt&&s.at<=ctx.now&&ctx.now-s.at<=300000
+  &&Number.isFinite(s.started)&&s.started>=ctx.startedAt;
+}
+
+export function boundedWorkerEndMessage(end:{at:number;reason:string},status:any,ctx:LiveStatusContext):string{
+ const message='bounded worker ended: '+end.reason;
+ if(!ctx.runId||!matchesLiveStatus(status,ctx)||status.at>end.at||typeof status.result!=='string')return message;
+ const result=status.result.split(/\r?\n/,1)[0]!.slice(0,160);
+ return /^(?:ok|fail)(?:\s|$)/.test(result)?message+' | worker result: '+result:message;
+}
+
+export function acceptStatus(task:CoordTask,s:any,ctx:LiveStatusContext):boolean{
+ if(!matchesLiveStatus(s,ctx)||!/^ok(?:\s|$)/.test(s.result??''))return false;
  for(const [name,n]of Object.entries(task.accept?.skills??{}))if(!s.skills?.some((v:any)=>v.name===name&&Number.isFinite(v.level)&&v.level>=n))return false;
  for(const [id,n]of Object.entries(task.accept?.bank??{})){
   if(!Number.isFinite(s.bankAt)||s.bankAt<ctx.startedAt||s.bankAt>s.at||!Array.isArray(s.bank))return false;

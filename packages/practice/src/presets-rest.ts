@@ -46,6 +46,12 @@ export const REST_PRESETS: Record<string, SaveConfig> = {
         position: { x: 3092, z: 3243, level: 0 }, skills: { Hitpoints: 37, Magic: 99, Thieving: 99 }, varps: { ...DONE, 200: stage }, coins: 90,
         inventory: Array.from({ length: 4 }, () => ({ id: 379, count: 1 })),
     } satisfies SaveConfig])),
+    // Tribal Totem with a full pack at the Ardougne south bank, as Quickhandjob stood live: 27 sharks and coins fill
+    // all 28 slots, so the depot label would drop under the bot. Started, Hitpoints 17, no Plague City, no runes.
+    quest_totem_fullpack: {
+        position: { x: 2655, z: 3283, level: 0 }, skills: { Hitpoints: 17, Magic: 29, Thieving: 99 }, varps: { ...DONE, 200: 1 }, coins: 60,
+        inventory: Array.from({ length: 27 }, () => ({ id: 385, count: 1 })),
+    } satisfies SaveConfig,
     ...Object.fromEntries([1, 2].map(stage => [`quest_totem_boat${stage}`, {
         position: { x: 2791, z: 3183, level: 0 }, skills: { Hitpoints: 17, Magic: 29, Thieving: 99 }, varps: { ...DONE, 200: stage }, coins: 60,
         inventory: Array.from({ length: 4 }, () => ({ id: 379, count: 1 })),

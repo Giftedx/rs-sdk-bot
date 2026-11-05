@@ -23,6 +23,11 @@ export type DoorBlock=Tile&{whenAxis?:boolean;angle?:number;shape?:number;blockr
 
 // Walk cost on one level, or null when the path cannot end within `tol` tiles of `to`. `blocked` are door
 // tiles to keep shut. Stair and ladder tiles are objects, not floor, so they are reached from next to them.
+// A search stops at its deadline (performance.now() ms) with reason 'budget': a cold search for a crossing the account
+// cannot make, or a far shore, otherwise measures paths for hundreds of ticks while the bot stands still (938 ticks for
+// Al Kharid to Tai Bwo Wannai on practice). The caller then tries its next source or fails fast.
+export type RouteOptions = { deadline?: number };
+export const ROUTE_BUDGET_MS = 45_000;
 export type PathLength = ((from: Tile, to: Tile, blocked: DoorBlock[], tol: number,interaction?:InteractionTarget) => number | null)&{withPolicy?<T>(blocked:DoorBlock[],query:()=>T):T;withDanger?<T>(acct:Account,from:Tile,to:Tile,query:()=>T):T;walkable?(t:Tile):boolean;areaOf?(t:Tile):number};
 
 const PORTAL_TOL = 2; // stairs can be 2x2 or larger
@@ -30,7 +35,7 @@ const GOAL_TOL = 1;
 
 export interface World {
     navigationGraph?(): {transports: readonly Transport[]; travel: readonly Travel[]};
-    route(from: Tile, to: Tile, acct: Account): { ok: true; legs: Leg[]; cost: number } | { ok: false; reason: 'no_route' };
+    route(from: Tile, to: Tile, acct: Account, opts?: RouteOptions): { ok: true; legs: Leg[]; cost: number } | { ok: false; reason: 'no_route' | 'budget' };
     // Set on the shared world (bot.ts getWorld): goTo plans in route-worker.ts so a long search never blocks the client.
     offThread?: boolean;
     // Door tiles this account cannot pass (doorBlocks), for the walker to block in the SDK pathfinder too.
@@ -314,7 +319,8 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; tr
     return {
         navigationGraph: () => ({transports,travel}),
         blockedDoors: acct => doors.filter(d => doorBlocks(d, acct)).map(doorBlock),
-        route(from, to, acct) {
+        route(from, to, acct, routeOpts) {
+            const deadline=routeOpts?.deadline??Infinity;
             const tileKeys=new WeakMap<Tile,string>();
             const key=(tile:Tile)=>{let value=tileKeys.get(tile);if(value===undefined){value=`${tile.x},${tile.z},${tile.level}`;tileKeys.set(tile,value);}return value;};
             const blocked = doors.filter(d => doorBlocks(d, acct)).map(doorBlock);
@@ -407,6 +413,7 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; tr
             }
             const forward=run(false),backward=run(true);
             try { for(;;){
+                if(performance.now()>deadline)return {ok:false,reason:'budget'};
                 const a=forward.next();if(a.done)return a.value;
                 const b=backward.next();if(b.done)return b.value;
             } } finally { forward.return({ok:false,reason:'no_route'}); backward.return({ok:false,reason:'no_route'}); cache.clear(); }

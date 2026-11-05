@@ -2,13 +2,15 @@ import {readFileSync,existsSync,readdirSync,writeFileSync,mkdirSync} from 'node:
 import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
 import {join} from 'node:path';
-import {GOALS,addTasks,heldBuilds,replaceTasks,type CoordinatorState,type CoordTask} from './coordinator';
+import {GOALS,addTasks,heldBuilds,provisionRefs,replaceTasks,type CoordinatorState,type CoordTask} from './coordinator';
 import {runModel,type ModelWorker} from './model-worker';
 import {validateDelivery,type DeliveryTask} from './delivery';
 import {freshScoreboard} from './coverage';
-import {projectRoot,atomicJson} from './coordinator-store';
+import {projectRoot,atomicJson,capabilitySource} from './coordinator-store';
+import {diskFreeGB,heldRuns,type HeldRuns} from './coordinator-decisions';
 import {PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {readMergedPlan} from '../../core/src/coordinator-jobs';
+import {liveHelperStatuses,supplyBill} from '../../planner/src/supply-bill';
 
 export function parseModelObject(text:string):any{
  const trimmed=text.trim(),fence=trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
@@ -25,25 +27,73 @@ export function gameCoverage(methods:any[],quests:any[],statuses:any[],protected
   otherGoals:['wealth and market logistics','quest access and travel unlocks','equipment and combat','items and collection','specialist records','main Overall record'],
   unknown:'Catalogue extraction is incomplete. Zero methods means inspect pinned content, not unavailable. Presence, native proof, live pilot and repeat qualification are separate states.'};
 }
-export function queueFacts(state:CoordinatorState){
+export function queueFacts(state:CoordinatorState,held:readonly HeldRuns[]=[]){
  const records=new Map(state.tasks.map(r=>[r.spec.id,r]));
  const active=state.tasks.filter(r=>r.status==='pending'||r.status==='running');
+ const dependencies = new Map(active.map(({spec}) => [
+  spec.id, [...new Set([...spec.dependsOn, ...provisionRefs(spec)])],
+ ]));
  const seen=new Set<string>();
  const shared=new Map<string,number>();
- for(const {spec} of active)for(const id of spec.dependsOn){
+ for(const ids of dependencies.values())for(const id of ids){
   if(seen.has(id)&&!shared.has(id))shared.set(id,shared.size);
   seen.add(id);
  }
+
+ const rootsByTask = new Map<string, Set<string>>();
+ function terminalRoots(id: string): Set<string> {
+  const cached = rootsByTask.get(id);
+  if (cached) return cached;
+  const roots = new Set<string>();
+  rootsByTask.set(id, roots);
+  const record = records.get(id);
+  if (!record || record.status === 'failed' || record.status === 'superseded') {
+   roots.add(id);
+  } else {
+   for (const dep of dependencies.get(id) ?? []) {
+    for (const root of terminalRoots(dep)) roots.add(root);
+   }
+  }
+  return roots;
+ }
+
+ const dependencyReadiness = {ready: 0, waiting: 0, blocked: 0};
+ const rootCounts = new Map<string, {pendingTasks: number; pendingRuns: number}>();
+ const blocked = [];
+ for (const {spec, status} of active) {
+  if (status !== 'pending') continue;
+  const unmet = dependencies.get(spec.id)!.filter(id => records.get(id)?.status !== 'succeeded');
+  const roots = terminalRoots(spec.id);
+  dependencyReadiness[roots.size ? 'blocked' : unmet.length ? 'waiting' : 'ready']++;
+  for (const id of roots) {
+   const count = rootCounts.get(id) ?? {pendingTasks: 0, pendingRuns: 0};
+   count.pendingTasks++;
+   if (spec.kind === 'run') count.pendingRuns++;
+   rootCounts.set(id, count);
+  }
+  if (unmet.length) blocked.push({id: spec.id, goal: spec.goal, capability: spec.capability,
+   dependencies: unmet.map(id => ({
+    id, status: records.get(id)?.status ?? 'missing', replacement: records.get(id)?.supersededBy,
+   })),
+  });
+ }
+
+ const rootBlockers = [...rootCounts].map(([id, count]) => {
+  const record = records.get(id);
+  return {id, status: record?.status ?? 'missing', runId: record?.runId, replacement: record?.supersededBy, ...count};
+ }).sort((a, b) => b.pendingRuns - a.pendingRuns || b.pendingTasks - a.pendingTasks || a.id.localeCompare(b.id));
+
  return{lastUsefulLiveAt:Math.max(0,...state.tasks.filter(r=>r.spec.kind==='run'&&r.status==='succeeded').map(r=>r.receipt?.at??0)),
-  blocked:state.tasks.filter(r=>r.status==='pending').map(r=>({id:r.spec.id,goal:r.spec.goal,capability:r.spec.capability,
-   dependencies:r.spec.dependsOn.filter(id=>records.get(id)?.status!=='succeeded').map(id=>({id,status:records.get(id)?.status??'missing',replacement:records.get(id)?.supersededBy}))})).filter(r=>r.dependencies.length),
+  dependencyReadiness, rootBlockers, blocked,
   heldBuilds:heldBuilds(state,Date.now()),
+  heldRuns:held.map(h=>({...h,reason:clip(h.reason,240)})),
   sharedDependencyIds:[...shared.keys()],
   active:active.map(({spec,status})=>{
    const {dependsOn,...task}=briefSpec(spec);
-   return{spec:task,status,dependencyRefs:dependsOn.map((id:string)=>shared.get(id)??id)};
+   return{spec:task,status,dependencyRefs:dependencies.get(spec.id)!.map(id=>shared.get(id)??id)};
   })};
 }
+
 // The prompt carries each task's decision fields and the start of its work order; the full spec, receipts and logs stay
 // in .practice/coordinator/state.json and runs/<runId>/ (full specs made the prompt 450,000 characters; research/bot-host.md "Isolated build workspaces").
 const clip=(text:unknown,n:number)=>typeof text==='string'&&text.length>n?text.slice(0,n)+'...':text;
@@ -66,13 +116,49 @@ export function readWorld(){
  const coverage=gameCoverage(JSON.parse(readFileSync(join(projectRoot,'knowledge/skills.json'),'utf8')),JSON.parse(readFileSync(join(projectRoot,'knowledge/quests.json'),'utf8')),statuses,protectedNames,scripts.sort());
  let scoreboard:any=null;try{scoreboard=scoreboardSummary(freshScoreboard(projectRoot));}catch(error){scoreboard={error:String(error)};}
  let stall:any=null;try{const f=join(projectRoot,'.practice/coordinator/stall.json');if(existsSync(f))stall=JSON.parse(readFileSync(f,'utf8'));}catch{/* no stall note */}
- return{at:Date.now(),scoreboard,stall,assets:assetSummary(statuses),supplyBill:supplyBillSummary(),executionDirective:plan.coordination?.directive??'',deliveryFocus:plan.coordination?.focusCapability??null,capacity:{maxBots:plan.maxBots,minFreeGB:plan.minFreeGB,freeGB:freemem()/2**30,nativeStartupGB:PRACTICE_STARTUP_GB,maxLive:plan.coordination?.maxLive??plan.maxBots,preferLive:plan.coordination?.preferLive===true},protectedNames,jobs:plan.jobs,statuses,ended,capabilities,capabilitySources,coverage};
+ return{at:Date.now(),scoreboard,stall,assets:assetSummary(statuses),supplyBill:supplyBillSummary(),executionDirective:plan.coordination?.directive??'',deliveryFocus:plan.coordination?.focusCapability??null,capacity:{maxBots:plan.maxBots,minFreeGB:plan.minFreeGB,freeGB:freemem()/2**30,nativeStartupGB:PRACTICE_STARTUP_GB,diskFreeGB:diskFreeGB(projectRoot),maxLive:plan.coordination?.maxLive??plan.maxBots,preferLive:plan.coordination?.preferLive===true},protectedNames,jobs:plan.jobs,statuses,ended,capabilities,capabilitySources,coverage};
 }
-// The Overall route's largest shortfalls (packages/planner/src/supply-bill.ts writes the file).
-export function supplyBillSummary(){
- try{const b=JSON.parse(readFileSync(join(projectRoot,'.practice/coordinator/supply-bill.json'),'utf8'));
-  return{at:b.at,short:b.rows.filter((r:any)=>r.short>0).sort((a:any,c:any)=>c.short-a.short).slice(0,25).map((r:any)=>({item:r.item,need:r.need,short:r.short,holders:r.holders.slice(0,2)}))};}
- catch{return null;}
+// Reprice the saved route demand against one set of current observations. The bill's write time does not refresh its stock.
+export function supplyBillSummary({base=projectRoot,now=Date.now(),fleetDir,side}:{
+ base?:string; now?:number; fleetDir?:string; side?:string;
+}={}){
+ try{
+  const bill=JSON.parse(readFileSync(join(base,'.practice/coordinator/supply-bill.json'),'utf8'));
+  const demands=bill.rows.map((row:{item:string;need:number;aliases?:string[]})=>({item:row.item,count:row.need,aliases:row.aliases}));
+  const items=JSON.parse(readFileSync(join(base,'knowledge/items.json'),'utf8'));
+  const statuses=liveHelperStatuses(base,fleetDir,side).filter(s=>!s.practice);
+  // Use the same five-minute window as the preparation report. A fresh status does not make an older bank recent.
+  const isRecent=(at:unknown)=>typeof at==='number'&&at>0&&at<=now&&now-at<=300_000;
+  const recentStatuses=statuses.map(s=>({
+   ...s,
+   inventory:isRecent(s.at)?s.inventory:[],
+   equipment:isRecent(s.at)?s.equipment:[],
+   bank:isRecent(s.at)&&isRecent(s.bankAt)&&s.bankAt<=s.at?s.bank:[],
+  }));
+  const observed=supplyBill(demands,items,statuses);
+  const recent=supplyBill(demands,items,recentStatuses);
+  const verify=observed.flatMap((row,index)=>{
+   const current=recent[index]!;
+   const toVerify=Math.min(row.need,row.owned)-current.owned;
+   if(toVerify<=0)return [];
+   const freshByAccount=new Map(current.holders.map(h=>[h.account,h.count]));
+   const holders=row.holders.map(h=>({account:h.account,count:h.count-(freshByAccount.get(h.account)??0)}))
+    .filter(h=>h.count>0).sort((a,b)=>b.count-a.count).slice(0,2);
+   return [{item:row.item,need:row.need,recent:current.owned,toVerify,holders,...(row.aliases?{aliases:row.aliases}:{})}];
+  });
+  return {
+   at:bill.at,
+   scope:bill.scope==='overall'?'overall':'unknown',
+   overallFinish:bill.scope==='overall'?bill.overallFinish:null,
+   observedAt:now,
+   recentlyCovered:recent.filter(r=>r.ids.length>0&&r.short===0).length,
+   unmapped:observed.filter(r=>!r.ids.length).map(r=>r.item),
+   verificationNeeded:verify.length,
+   verify:verify.sort((a,b)=>b.toVerify-a.toVerify).slice(0,25),
+   short:observed.filter(r=>r.ids.length>0&&r.short>0).sort((a,b)=>b.short-a.short).slice(0,25)
+    .map(r=>({item:r.item,need:r.need,short:r.short,holders:r.holders.slice(0,2),...(r.aliases?{aliases:r.aliases}:{})})),
+  };
+ }catch{return null;}
 }
 // Coins and the large stacks each named account holds (inventory, worn and last seen bank), so plans spend and
 // convert owned stock: logs to Firemaking, essence to Runecraft, bows and shafts to Ranged, coins to GE and shop buys.
@@ -105,7 +191,7 @@ export function fleetLeads(rows:any[],side:string){
   return{skill:r.skill,best:r.best,side:r.side,account:r.account,local:mine,otherSideLeads:r.side!==side&&r.best-(mine?.level??1)>FLEET_BAND};
  });
 }
-export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof readWorld>,worldFile=''){
+export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof readWorld>,worldFile='',held:readonly HeldRuns[]=[]){
  const compact={...world,coverage:{...world.coverage,quests:undefined,scriptCandidates:world.coverage.scriptCandidates.length},statuses:world.statuses.map((s:any)=>({name:s.name,at:s.at,result:clip(s.result,160),goal:clip(s.goal,120),skills:Object.fromEntries((s.skills??[]).filter((v:any)=>v.level>1).map((v:any)=>[v.name,v.level])),bankAt:s.bankAt})),jobs:world.jobs.map((j:any)=>({account:j.account,accounts:j.accounts,script:j.script,goal:j.goal,enabled:j.enabled})),capabilities:world.capabilities.map((d:any)=>({id:d.id,entry:d.entry,goal:d.goal}))};
  return[
   'You are the autonomous director of this RuneScape project, working with Codex and Claude through one claimed task queue. Return ONLY a JSON object {reason:string,tasks:CoordTask[],capabilities:DeliveryTask[]}. Both tasks and capabilities must be JSON arrays, including when empty: {"reason":"No new work","tasks":[],"capabilities":[]}. Never use {} or null for either collection; capabilities is not a map of existing definitions.',
@@ -121,13 +207,13 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'For an existing capability whose owned files or entry cannot support the real consumer, return capabilityUpdates:[{expectedSource:<capabilitySources[id]>,definition:<complete DeliveryTask>}] with a same-capability build task and explicit replacements for old pending builds. One update per proposal; no running owner may hold that capability. The daemon preserves the old definition. Expand the existing module scope instead of duplicating it under a new capability name. Entry must be an actual account-parameterized live worker; local --save fixtures and privileged practice commands belong in checks. Native proof must invoke that worker CLI, not only helper functions. Every new/progress build must include a finite live consumer with useful acceptance, inputs and a next goal; never stop at stock or qualification.',
   'THIN ACCEPTANCE (owner order): a consumer and its checks hold only the script contract acceptance bar: unit tests, one practice run of the real CLI showing the useful effect, assets reconciled, a clear refusal and logout. Never add interruption/resume, reseed, independent recompute, raw-file binding or failure-window scenarios, and never widen an existing consumer. A live failure gets the smallest fix of the exact failed step plus one regression test.',
   'FLEET SIDES (world.scoreboard.fleetSkills, world.scoreboard.fleet): this side ('+(world.scoreboard?.fleet?.side??'local')+') plans only its own accounts, but the board counts the best account of any side (local, Codex cloud, Claude cloud). Each row gives the fleet best of a skill, the side and account that hold it, and the best of this side (local). bestLive and progress count this side only. For ordinary helper batches, do not queue work on a skill where otherSideLeads is true (another side leads this side by more than '+FLEET_BAND+' levels) unless the planned local account ends above that fleet best; a run that stays under it does not raise the board. Prefer skills this side leads or no side has trained for helper batches. The fresh completion account and scored main/specialist routes follow their own required progression and clocks. Name the fleet best and its side in why when a task targets a skill another side holds.',
-  'SUPPLY BILL (world.supplyBill): the route supplies Haggis needs minus owned stock. Helper work makes, buys or moves the largest shortfalls first, each run with a finite count; helper levels count only when they unlock a shortfall method, a quest, an item or a specialist win.',
+  'SUPPLY BILL (world.supplyBill): Use scope overall to plan supplies through the last 99. If scope is unknown, refresh the bill before assigning work from it. recentlyCovered counts route lines covered by recent observations, before reservations or delivery. Verify entries are last-seen stock that could cover a gap: confirm the named holder and available quantity before assigning a consumer or buying replacements. Short entries show the gap even if all last-seen holdings are still available. Aliases on a row draw from the same base stock pool. Check item form at handoff. Unmapped entries need a pinned item ID. Prioritize the largest confirmed shortfalls. Give each supply job a finite count and a named consumer. Helper levels count only when they unlock a shortfall method, a quest, an item or a specialist win.',
   'METHOD LADDER (owner order): a worker uses the best method the current level of the account and owned items allow and switches at once when a better one unlocks (Runecraft altars by level and owned talisman, Agility courses, bows and arrows by Ranged level, logs by Firemaking level, monsters by combat). XP is 25x, so a level band takes minutes. Ordinary helper batches target the next unlock. Completion and scored routes may span a qualified method-switching ladder; never target a distant level on a weak method. Never gather or make stock the banks already hold in quantity (world.assets); spend it.',
   'MEMORY GATES: a proof imports FREE_FLOOR_GB and PRACTICE_STARTUP_GB from packages/core/src/memory.ts and takes the practice turn through delivery; it never hardcodes a free-memory number (a hardcoded 12 GiB gate failed the Firemaking and Magic builds on a machine with 5 to 10 GB available).',
   'FAST LANE: when a qualified capability needs only a different account, quest or argument, queue the run; do not queue a build. A failed live step that the runtime already handles (for example the quest talk door rule) gets a fresh qualify and a retry run, not a build.',
-  'ASSETS (world.assets): the coins and large stacks of every account. Turn owned stock into scoreboard progress before buying or gathering more: banked logs to Firemaking, rune essence to Runecraft, bows, shafts and arrows to Ranged, ores to Smithing, coins to GE and shop purchases (runes, bones, arrows, best-in-slot gear the account can wear now). Move coins and items to the account that will use them with the courier and trade workers.',
+  'ASSETS (world.assets): last-seen coins and large stacks. Check status and bankAt before spending or staging them. Turn confirmed stock into scoreboard progress before buying or gathering more: banked logs to Firemaking, rune essence to Runecraft, bows, shafts and arrows to Ranged, ores to Smithing, coins to GE and shop purchases (runes, bones, arrows, best-in-slot gear the account can wear now). Move coins and items to the account that will use them with the courier and trade workers.',
   'NO DIARY (AGENTS.md): write why, reason and capability consumer text as the current work order and current facts only. No dates, no was/now, no history of earlier attempts or builds; cite the failed runId or evidence path instead. Git and runs/<runId>/ hold the history.',
-  'Task schema: {id,goal,kind,dependsOn,priority,estimatedMs,why,capability?,account?,accountFrom?,participants?,args?,acceptIndex?,role?,env?,accept?,timeoutMs?,launch?,agent?}. IDs lower-case letters/digits/hyphens. priority1..100 is impact, estimatedMs is an estimate of total work incl. preparation/recovery. Explain the next consumer in why.',
+  'Task schema: {id,goal,kind,dependsOn,priority,estimatedMs,why,capability?,account?,accountFrom?,participants?,args?,acceptIndex?,role?,env?,accept?,timeoutMs?,launch?,agent?,newEvidence?}. IDs lower-case letters/digits/hyphens. priority1..100 is impact, estimatedMs is an estimate of total work incl. preparation/recovery. Priority orders the queue, so spread it: 90 and over only for the main run critical path or a chain with waiting consumers, 50 to 89 for a whole band or quest, under 50 for the rest. newEvidence is 1 to 500 characters. Explain the next consumer in why.',
   'Kinds: review is a read-only cross-model source review of an existing delivered capability and can overlap independent authors. agent optionally selects codex or claude; the dispatcher balances builds and uses the other agent for review. qualify runs an existing capability native delivery. build authors named files, runs native delivery and a fresh reviewer. provision creates/registers one ordinary missing role. run installs a finite assignment in swarm.json, then checks fresh matched live status. Never set repeat:true yourself.',
   'For composed jobs use participants:[account or @provision-task-ID,...], at least2; args are passed after all account names. acceptIndex selects whose effects are checked (default0). No account/accountFrom with participants. Normal scripts use args too. '+
   'Each run must depend on a successful build/qualify of the SAME capability. Native tests do not prove live output. accept is {skills:{Skill:level},bank:{itemId:quantity},counters:{counter:minimum},quests:[questName]}; require a real useful effect, not login. Use only documented worker env controls and finite caps. accountFrom resolves the output of a provision task. No env passwords, release pins or HAGGIS_RUN.',
@@ -136,11 +222,15 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'Use all game data, not just today\'s prototype. Entry points: knowledge/ (inspect filenames), knowledge/drops.json, packages/planner/src/{requirements,haggis,production-batch}.ts, research/INDEX.md and project-use-map.md. Unknown observations stay unknown. Supply qty, access, skills, location and clock constraints need producer tasks. Fresh accounts are for a missing role or measured bottleneck; reuse trained idle helpers first.',
   'Return at most12 tasks per proposal. Keep independent goal lanes eligible. Do not fill slots with surplus earning. If work is genuinely waiting, return tasks:[] and explain the missing event. No human confirmation is required within current authority.',
   'heldBuilds in the active queue names capabilities whose last builds failed with one fault. Their builds wait 24 hours from the last failure. Do not propose another author pass for the same fault. Plan other lanes. Only a build with a new observation, stated in newEvidence, passes the first hold.',
+  'heldRuns in the active queue names runs that wait because the newest review of their capability rejected its current source. They start by themselves when a repair build changes the owned files. Queue that repair or cancel them; do not queue another run of that capability.',
+  'A pending task behind a failed task retires after 24 hours (supersededBy dead-dependency:<id>), and blocked lists these tasks until then. Use replacements inside that time when the consumer still matters; after it, propose a new task.',
+  'world.capacity.diskFreeGB is free space on the checkout volume. Below 2 GiB the coordinator starts no planner and no task, so never plan work that writes large outputs near that floor.',
   'A hostDeferred receipt is a RAM deferral, not a source defect. Retain its prepared source and failed proof; do not invent another code repair. A same-source replacement build resumes native delivery without another author call once native headroom is ready. Keep its finite consumer connected through replacements; do not repeat a headroom failure while capacity is unchanged.',
   'RECENT FINISHED TASKS, last 48 succeeded or failed (open tasks are in the active queue below; superseded tasks are omitted; counts are NOT game completion): '+JSON.stringify({...state,tasks:state.tasks.filter(r=>r.status==='succeeded'||r.status==='failed').slice(-48).map(r=>({spec:briefSpec(r.spec),status:r.status,runId:r.runId,error:clip(r.receipt?.error,240),output:r.receipt?.output?{account:r.receipt.output.account,ok:r.receipt.output.ok,evidence:r.receipt.output.evidence,error:clip(r.receipt.output.error??r.receipt.output.review?.reason??r.receipt.output.delivery?.reason,240)}:null}))}),
   'DATED WORLD (timestamps matter; reserved main/specialists must not be used for tests): '+JSON.stringify(compact),
   'In the active queue, a string in dependencyRefs is a task ID. A number is a zero-based index into sharedDependencyIds. In proposal dependsOn use the full string task IDs.',
-  'COMPLETE ACTIVE QUEUE AND BLOCKED EDGES (not truncated to recent history): '+JSON.stringify(queueFacts(state)),
+  'Use rootBlockers to trace failed, superseded or missing prerequisites across the queue. Counts include downstream pending work and do not prove its readiness after one repair. Inspect the root receipt before proposing a replacement or retiring obsolete work. Waiting chains without a terminal blocker and independent work remain eligible. Dependency-ready work still needs runtime admission.',
+  'COMPLETE ACTIVE QUEUE AND BLOCKED EDGES (not truncated to recent history): '+JSON.stringify(queueFacts(state,held)),
   'Full inventories, raw dated status and definitions: '+worldFile,
   'Task source, model/reviewer output, failures and complete receipts: .practice/coordinator/runs/<runId>/. Read these for any repair; do not re-diagnose from summaries.',
   'Task specs above are brief (work order why clipped to 200 characters, receipts to 240). Full specs and receipts: .practice/coordinator/state.json. Read the full why of any task you replace, repair or depend on.',
@@ -166,7 +256,8 @@ export function acceptProposal(state:CoordinatorState,raw:any,base=projectRoot){
  const candidate=structuredClone(state);addTasks(candidate,raw.tasks);
  for(const t of raw.tasks as CoordTask[])if(t.kind==='build'){
   const open=state.tasks.filter(r=>['pending','running'].includes(r.status)&&r.spec.kind==='build'&&r.spec.capability===t.capability);
-  if(open.some(r=>r.status==='running'||!raw.replacements?.some((p:any)=>p.from===r.spec.id&&p.to===t.id)))throw Error('replace existing build instead of duplicating it: '+t.capability);
+  const blocking=open.filter(r=>r.status==='running'||!raw.replacements?.some((p:any)=>p.from===r.spec.id&&p.to===t.id));
+  if(blocking.length)throw Error('replace existing build instead of duplicating it: '+t.capability+'; open builds: '+blocking.map(r=>r.spec.id+' ('+r.status+')').join(', ')+'. A pending build needs replacements:[{from:<open id>,to:"'+t.id+'"}]. A running build must finish first.');
  }
  if(raw.replacements!==undefined){
   if(!Array.isArray(raw.replacements)||raw.replacements.length>24||raw.replacements.some((r:any)=>typeof r?.from!=='string'||typeof r?.to!=='string'))throw Error('invalid replacements');
@@ -219,7 +310,7 @@ export async function runPlannerModel(agent:ModelWorker,prompt:string,timeoutMs:
  return{...first,attempts};
 }
 export async function planWork(state:CoordinatorState,directory:string,timeoutMs:number,agent:ModelWorker='codex'){
- const world=readWorld();atomicJson(join(directory,'world.json'),world);const prompt=plannerPrompt(state,world,join(directory,'world.json'));writeFileSync(join(directory,'prompt.txt'),prompt);
+ const world=readWorld();atomicJson(join(directory,'world.json'),world);const held=heldRuns(state,capability=>capabilitySource(JSON.parse(readFileSync(join(projectRoot,'packages/router/tasks',capability+'.json'),'utf8')).files)),prompt=plannerPrompt(state,world,join(directory,'world.json'),held);writeFileSync(join(directory,'prompt.txt'),prompt);
  const result=await runPlannerModel(agent,prompt,timeoutMs);atomicJson(join(directory,'model.json'),result);
  if(!result.ok)throw Error('subscription planner unavailable: '+result.text.slice(-400));
  return parseModelObject(result.text);

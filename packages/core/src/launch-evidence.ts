@@ -36,11 +36,19 @@ type Read=(ref:any,json?:boolean)=>any;
 export function validateSupplies(s:any,context:string,requirements:{item:string;count:number}[],catalog:any[],owned:string[],now:number,read:Read){
  need(s?.version===2&&s.context===context&&fresh(s.at,now,3600000),'Missing, stale or mismatched staging manifest');
  need(Array.isArray(s.allocations)&&s.allocations.length>0&&requirements.length>0,'No item allocations');
+ // Several route stages can draw from one base stock pool. Compare allocations to the sum for that pool.
+ const demand=new Map<string,number>();
+ for(const r of requirements){
+  need(typeof r.item==='string'&&qty(r.count),'Invalid supply requirement');
+  const item=key(r.item),total=(demand.get(item)??0)+r.count;
+  need(item&&qty(total),'Invalid supply requirement total');
+  demand.set(item,total);
+ }
  let expiresAt=s.at+3600000;
  const owners=new Set(owned.map(n=>n.toLowerCase())),totals=new Map<string,number>(),stock=new Map<string,number>(),deliveries=new Map<string,number>();
  for(const a of s.allocations){
   need(typeof a.item==='string'&&qty(a.count)&&Number.isSafeInteger(a.itemId)&&a.itemId>=0,'Invalid allocation');
-  need(requirements.some(r=>key(r.item)===key(a.item)),'Unexpected supply');
+  need(demand.has(key(a.item)),'Unexpected supply');
   need(catalog.some(i=>i.id===a.itemId&&key(i.name)===key(a.item)),'Unresolved supply item ID: '+a.item);
   need(typeof a.holder==='string'&&owners.has(a.holder.toLowerCase())&&a.recipient==='haggis','Unowned holder or wrong recipient');
   const b=read(a.bank),d=read(a.delivery);
@@ -55,7 +63,7 @@ export function validateSupplies(s:any,context:string,requirements:{item:string;
   need(stock.get(sk)!<=count(b.bank)&&deliveries.get(dk)!<=count(d.items),'Stock or delivery double-counted/short');
   totals.set(key(a.item),(totals.get(key(a.item))??0)+a.count);
  }
- for(const r of requirements)need(qty(r.count)&&totals.get(key(r.item))===r.count,'Missing or excess reservation: '+r.item);
+ for(const [item,count] of demand)need(totals.get(item)===count,'Missing or excess reservation: '+item);
  return expiresAt;
 }
 export function validateRehearsals(runs:any[],context:string,expected:Record<string,number>,now:number,read:Read){

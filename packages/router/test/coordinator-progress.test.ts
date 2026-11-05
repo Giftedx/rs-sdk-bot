@@ -63,6 +63,29 @@ test('replacement cycles, identity swaps and successful-work replacements fail a
  addTasks(s,[task('verified',{kind:'build'}),task('replacement',{kind:'build'})],0);complete(s,'verified',true,2);
  expect(()=>acceptProposal(s,{reason:'bad',capabilities:[],tasks:[],replacements:[{from:'verified',to:'replacement'}]})).toThrow('replacement');
 });
+test('a replacement cannot strand the queue in a cycle through account provisioning', () => {
+ const bindings: Partial<CoordTask>[] = [
+  {accountFrom:'register'},
+  {participants:['@register','Partner']},
+ ];
+ for (const binding of bindings) {
+  const state = initialState();
+  addTasks(state, [
+   task('original-proof'),
+   task('register', {kind:'provision', role:'quests', dependsOn:['original-proof']}),
+   {...run('quest'), account:undefined, ...binding},
+  ], 0);
+  const before = JSON.stringify(state);
+  expect(() => acceptProposal(state, {
+   reason:'Replace the original proof',
+   capabilities:[],
+   tasks:[task('replacement-proof', {dependsOn:['quest']})],
+   replacements:[{from:'original-proof', to:'replacement-proof'}],
+  })).toThrow('replacement dependency cycle');
+  expect(JSON.stringify(state)).toBe(before);
+  expect(chooseTask(state, 1)?.id).toBe('original-proof');
+ }
+});
 test('a freshly qualified finite live consumer gets one turn before an unrelated build, then builders drain it',()=>{
  const s=initialState();addTasks(s,[task('proof'),run('use-proof',['proof']),task('build',{kind:'build',priority:100})],0);
  complete(s,'proof',true,10,{delivery:{ok:true}});expect(chooseTask(s,11)?.id).toBe('use-proof');
@@ -170,6 +193,43 @@ test('whole-game view includes all19 skills, catalogue gaps and all active queue
  const s=initialState();addTasks(s,[task('bad'),run('waiting',['bad'])]);complete(s,'bad',false,2);
  expect(queueFacts(s).blocked[0]!.dependencies).toEqual([{id:'bad',status:'failed',replacement:undefined}]);expect(queueFacts(s).lastUsefulLiveAt).toBe(0);
 });
+test('queue groups failed roots across branches and distinguishes work waiting on a running task', () => {
+ const state = initialState();
+ addTasks(state, [
+  task('failed-build', {kind:'build'}),
+  task('left-proof', {dependsOn:['failed-build']}),
+  task('right-proof', {dependsOn:['failed-build']}),
+  run('quest', ['left-proof','right-proof']),
+  task('running-proof'),
+  run('wait-for-proof', ['running-proof']),
+  run('independent'),
+ ], 0);
+ complete(state, 'failed-build', false, 2);
+ startTask(state, 'running-proof', 3, 'in-flight');
+ const facts = queueFacts(state);
+ expect(facts.dependencyReadiness).toEqual({ready:1, waiting:1, blocked:3});
+ expect(facts.rootBlockers).toEqual([
+  {id:'failed-build', status:'failed', runId:'failed-build', replacement:undefined, pendingTasks:3, pendingRuns:1},
+ ]);
+ expect(chooseTask(state, 4)?.id).toBe('independent');
+});
+
+test('queue includes provision dependencies that are not in dependsOn', () => {
+ const state = initialState();
+ addTasks(state, [
+  task('register', {kind:'provision',role:'quest'}),
+  task('another-registration', {kind:'provision',role:'quest'}),
+  {...run('one-account'), account:undefined, accountFrom:'register'},
+  {...run('two-accounts'), account:undefined, participants:['@register','@another-registration']},
+ ], 0);
+ complete(state, 'register', false, 2);
+ complete(state, 'another-registration', true, 4, {account:'Partner'});
+ const facts = queueFacts(state);
+ expect(facts.dependencyReadiness).toEqual({ready:0, waiting:0, blocked:2});
+ expect(facts.rootBlockers[0]).toMatchObject({id:'register', pendingTasks:2, pendingRuns:2});
+ expect(facts.blocked.map(row=>row.dependencies.map(d=>d.id))).toEqual([['register'],['register']]);
+});
+
 test('planner prompt lists a shared prerequisite once and preserves the active dependency order',()=>{
  const shared='qualify-quest-order-with-current-source';
  const state=initialState();
@@ -179,7 +239,7 @@ test('planner prompt lists a shared prerequisite once and preserves the active d
  complete(state,'failed-proof',false,6);
  const world:Parameters<typeof plannerPrompt>[1]={
   at:0,scoreboard:null,stall:null,assets:[],supplyBill:null,executionDirective:'',deliveryFocus:null,
-  capacity:{maxBots:0,minFreeGB:0,freeGB:0,nativeStartupGB:0,maxLive:0,preferLive:false},
+  capacity:{maxBots:0,minFreeGB:0,freeGB:0,nativeStartupGB:0,diskFreeGB:100,maxLive:0,preferLive:false},
   protectedNames:[],jobs:[],statuses:[],ended:{},capabilities:[],capabilitySources:{},coverage:gameCoverage([],[],[],[],[])
  };
  const prompt=plannerPrompt(state,world);
