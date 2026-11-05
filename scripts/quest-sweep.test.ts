@@ -242,3 +242,11 @@ test('a preset\'s trout and bread are optional food, its bananas and ale are que
  const hunt={inventory:[...Array(10).fill({id:1963,count:1})]} as any;
  expect(needs(hunt).get(1963)).toBe(10);
 });
+
+test('the edible part of a preset\'s needs is reserved for the eaters',async()=>{
+ const {reservedEdible}=await import('./quest-sweep');
+ // Pirate's Treasure: 10 bananas (edible) and a white apron; Family Crest: 5 cooked trout.
+ expect(reservedEdible(new Map([[1963,10],[1005,1]]))).toEqual({1963:10});
+ expect(reservedEdible(new Map([[333,5],[995,100]]))).toEqual({333:5});
+ expect(reservedEdible(new Map())).toEqual({});
+});

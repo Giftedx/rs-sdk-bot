@@ -75,6 +75,9 @@ export const KEEP_FOOD=8;
 // deposit plan protects and the sweep's eater eats (an account arrives with swordfish and cake slices, not lobsters).
 let edible:Set<number>|undefined;
 export const isEdible=(id:number)=>FOOD.has(id)||(edible??=new Set(questFoodDefinitions().keys())).has(id);
+// The preset's edible ingredients (Family Crest's cooked fish, Pirate's Treasure's bananas): the sweep's eater and, after
+// the handover, the quest's own eater leave them alone.
+export const reservedEdible=(need:ReadonlyMap<number,number>):Record<number,number>=>Object.fromEntries([...need].filter(([id])=>isEdible(id)));
 // Slots a quest script fills on its own, undeclared by its preset: what it picks up and is handed (Murder Mystery takes
 // the dagger, flypaper, a suspect's item and its dust and print, and a full pack fails its first pickup). The reserve
 // gives way to the supplies down to MIN_PICKUP_SLOTS, before the food allowance does: Demon Slayer's 25 bones and two
@@ -362,7 +365,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
  const sustain=startQuestSustain({sdk:s.sdk,tick:()=>s.tick(),onTick:cb=>s.onTick(cb),ended:s.ended,direct:async action=>{
   const reply:any=await s.direct(action);return{success:!!reply?.success,message:reply?.message===undefined?undefined:String(reply.message)};
  // An edible quest ingredient (Family Crest's cooked fish, The Knight's Sword's redberry pie) is reserved, never eaten.
- }},{food:[...questFoodDefinitions().keys()],eatAt:eatAtFor(maxHp()),reserved:Object.fromEntries([...need].filter(([id])=>isEdible(id)))});
+ }},{food:[...questFoodDefinitions().keys()],eatAt:eatAtFor(maxHp()),reserved:reservedEdible(need)});
  void s.ended.then(()=>sustain.stop());
  const danger=()=>{const p=st()?.player;return!!p&&(p.combat?.inCombat||p.hp<=eatAtFor(maxHp()));};
  if(danger())console.log(`QUEST_SWEEP_DANGER ${JSON.stringify({hp:st()?.player?.hp,inCombat:st()?.player?.combat?.inCombat,at:{x:st()?.player?.worldX,z:st()?.player?.worldZ,level:st()?.player?.level}})}`);
@@ -383,7 +386,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
  const retained=()=>quest==='priest'&&retainedGhostSkull(ghostState(),st()?.inventory??[],s.sdk.getEquipment());
  const returnSkull=async()=>{
   console.log('QUEST_SWEEP_RETAINED_SKULL '+JSON.stringify({state:ghostState(),position:st()?.player&&{x:st()!.player!.worldX,z:st()!.player!.worldZ,level:st()!.player!.level}}));
-  observeQuestFlags(s);sustain.stop();handed=true;await handOver(s,script,fresh);return;
+  observeQuestFlags(s);sustain.stop();handed=true;(s as {questReserved?:Record<number,number>}).questReserved=reservedEdible(need);await handOver(s,script,fresh);return;
  };
  if(quest==='priest'){
   await waitUntil(s,()=>ghostState()!=='unknown',{timeoutTicks:20});
@@ -481,7 +484,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
  observeQuestFlags(s);
  sustain.stop();
  handed=true;
- await handOver(s,script,fresh);
+ (s as {questReserved?:Record<number,number>}).questReserved=reservedEdible(need);await handOver(s,script,fresh);
  } catch(error) {
   if(handed)throw error;
   return fail(String(error));
