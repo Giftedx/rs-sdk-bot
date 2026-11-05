@@ -20,6 +20,22 @@ export function idsFor(item: string, items: readonly { id: number; name: string;
     return items.filter(i => forms.has(String(i.name).toLowerCase())).map(i => i.id);
 }
 
+type StockRow = { id: number; baseId?: number; count?: number };
+// Pack and equipment come from one status. The last bank snapshot can contain the same units before a withdrawal.
+export function observedStock(status: { inventory?: StockRow[]; equipment?: StockRow[]; bank?: StockRow[] }): Map<number, number> {
+    const counts = (items: readonly StockRow[]) => {
+        const totals = new Map<number, number>();
+        for (const item of items) {
+            const id = item.baseId ?? item.id;
+            totals.set(id, (totals.get(id) ?? 0) + (item.count ?? 0));
+        }
+        return totals;
+    };
+    const held = counts([...(status.inventory ?? []), ...(status.equipment ?? [])]);
+    for (const [id, count] of counts(status.bank ?? [])) held.set(id, Math.max(held.get(id) ?? 0, count));
+    return held;
+}
+
 export function supplyBill(
     supplies: readonly { item: string; count: number; itemId?: number; aliases?: readonly string[] }[],
     items: readonly { id: number; name: string; debugname?: string }[],
@@ -58,9 +74,9 @@ export function supplyBill(
 
     for (const status of statuses) {
         const holdings = new Map<BillRow, number>();
-        for (const item of [...(status.inventory ?? []), ...(status.equipment ?? []), ...(status.bank ?? [])]) {
-            const row = byId.get(item.baseId ?? item.id);
-            if (row) holdings.set(row, (holdings.get(row) ?? 0) + (item.count ?? 0));
+        for (const [id, count] of observedStock(status)) {
+            const row = byId.get(id);
+            if (row) holdings.set(row, (holdings.get(row) ?? 0) + count);
         }
         for (const [row, count] of holdings) {
             if (count <= 0) continue;
