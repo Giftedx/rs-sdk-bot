@@ -315,7 +315,7 @@ window.addEventListener('message',e=>{
   const v=viewerMessage(e,frame,VIEWER.origin);
   if(v&&mode==='3d'){
     if(v.state==='error'){viewerUnavailable(v.detail||'viewer reported an error');return;}
-    if(viewerCanReveal(v)){clearTimeout(VIEWER_TIMER);const first=VIEWER.state!=='ready',target=window.atlasFollowOther||(!window.atlasFreeCamera&&sel);VIEWER={...VIEWER,state:'ready',detail:'',feed:typeof v.feedConnected==='boolean'?v.feedConnected:null};if(window.atlasFreeCamera&&!sel&&!window.atlasFollowOther)frame?.postMessage({atlasFreeCamera:true},VIEWER.origin);else if(first&&target)frame?.postMessage({follow:target},VIEWER.origin);}
+    if(viewerCanReveal(v)){clearTimeout(VIEWER_TIMER);const first=VIEWER.state!=='ready',target=window.atlasFollowOther||(!window.atlasFreeCamera&&sel);VIEWER={...VIEWER,state:'ready',detail:'',feed:typeof v.feedConnected==='boolean'?v.feedConnected:null};if(window.atlasFreeCamera&&!window.atlasFollowOther&&(first||!sel))frame?.postMessage({atlasFreeCamera:true},VIEWER.origin);else if(first&&target)frame?.postMessage({follow:target},VIEWER.origin);}
     else if(VIEWER.state==='loading'&&typeof v.detail==='string')VIEWER.detail=v.detail.slice(0,180);
     showViewerStatus();
   }

@@ -2,11 +2,23 @@ import {test,expect} from 'bun:test';
 import {readFileSync} from 'node:fs';
 const html=readFileSync(process.env.DASH_PAGE || new URL('./index.html',import.meta.url),'utf8');
 
-test('Free camera intent is replayed when the 3D frame becomes ready',()=>{
+function viewerReady(state:any,selected:string|null){
  const code=html.slice(html.indexOf("window.addEventListener('message',e=>{"),html.indexOf('function syncWorld(){'));
- const sent:any[]=[];let handler:any;const frame={postMessage:(m:any)=>sent.push(m)},window:any={atlasFreeCamera:true,addEventListener:(_t:string,f:any)=>handler=f};
- new Function('window','$','viewerMessage','viewerCanReveal',`let VIEWER={origin:'http://test',state:'loading'},VIEWER_TIMER,sel=null;const mode='3d',showViewerStatus=()=>{},viewerUnavailable=()=>{};${code}`)(window,()=>({contentWindow:frame}),()=>({state:'ready',privacyReady:true,renderReady:true}),()=>true);
- handler({source:frame,origin:'http://test',data:{}});expect(sent).toEqual([{atlasFreeCamera:true}]);
+ const sent:any[]=[];let handler:any;const frame={postMessage:(m:any)=>sent.push(m)},window:any={...state,addEventListener:(_t:string,f:any)=>handler=f};
+ new Function('window','$','viewerMessage','viewerCanReveal','sel',`let VIEWER={origin:'http://test',state:'loading'},VIEWER_TIMER;const mode='3d',showViewerStatus=()=>{},viewerUnavailable=()=>{};${code}`)(window,()=>({contentWindow:frame}),()=>({state:'ready',privacyReady:true,renderReady:true}),()=>true,selected);
+ return {sent,ready:()=>handler({source:frame,origin:'http://test',data:{}})};
+}
+
+test('Free camera intent is replayed when the 3D frame becomes ready',()=>{
+ const v=viewerReady({atlasFreeCamera:true},null);v.ready();expect(v.sent).toEqual([{atlasFreeCamera:true}]);
+});
+
+test('a release for an offline account is replayed once when the 3D frame becomes ready',()=>{
+ const v=viewerReady({atlasFreeCamera:true},'Away');v.ready();v.ready();expect(v.sent).toEqual([{atlasFreeCamera:true}]);
+});
+
+test('a follow chosen during loading is replayed once when the 3D frame becomes ready',()=>{
+ const v=viewerReady({},'Worker');v.ready();v.ready();expect(v.sent).toEqual([{follow:'Worker'}]);
 });
 
 test('a chosen camera destination stays labelled as the destination, not the selected account position',()=>{
