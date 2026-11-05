@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1793840544348,
+ "at": 1793842956376,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -28,8 +28,8 @@
    "account": "TrouserSnake",
    "script": "scripts/ranged-train.ts",
    "args": [
-    "90",
-    "35000"
+    "95",
+    "40000"
    ],
    "env": {
     "FOOD": "3",
@@ -43,7 +43,7 @@
    },
    "enabled": true,
    "repeat": true,
-   "goal": "Ranged board gap: Ranged 85 to 90 (~200 chicken kills at ~12k XP per level)",
+   "goal": "Ranged board gap: Ranged 90 to 95",
    "role": "ranged"
   },
   {
@@ -53,7 +53,7 @@
     "runemysteries,murder,cog,hazeelcult,sheepherder,totem,sheep"
    ],
    "env": {},
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "Quest Points: no-item quests after Magic 99",
    "role": "quest"
@@ -65,7 +65,7 @@
     "murder,cog,hazeelcult,sheepherder,totem"
    ],
    "env": {},
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "Quest Points chain 2: no-item or shop-item quests with little combat (QP 8 after chain 1)",
    "role": "quest"
