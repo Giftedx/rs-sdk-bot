@@ -7,7 +7,7 @@ import { join, resolve } from 'node:path';
 import { haggisActivities, haggisTravel, loadSnapshot, overallRequirementsFor, scheduleOverall, TRICKS } from './haggis';
 
 const root = resolve(import.meta.dir, '../../..');
-export type BillRow = { item: string; need: number; owned: number; short: number; ids: number[]; holders: { account: string; count: number }[]; aliases?: string[] };
+export type BillRow = { item: string; itemId?: number; need: number; owned: number; short: number; ids: number[]; holders: { account: string; count: number }[]; aliases?: string[] };
 
 // Item ids whose name matches a bill line: exact name, or the singular of a plural line ("dragon bones" -> "Dragon bones").
 // The pinned names differ for two families: every unfinished potion is "Unfinished potion" (debugname <herb>vial), and
@@ -21,15 +21,18 @@ export function idsFor(item: string, items: readonly { id: number; name: string;
 }
 
 export function supplyBill(
-    supplies: readonly { item: string; count: number; aliases?: readonly string[] }[],
+    supplies: readonly { item: string; count: number; itemId?: number; aliases?: readonly string[] }[],
     items: readonly { id: number; name: string; debugname?: string }[],
     statuses: readonly any[],
 ): BillRow[] {
     const pools = new Map<string, BillRow>();
-    for (const {item, count, aliases} of supplies) {
-        const ids = [...new Set(idsFor(item, items))].sort((a, b) => a - b);
+    for (const {item, count, itemId, aliases} of supplies) {
+        const ids = itemId === undefined
+            ? [...new Set(idsFor(item, items))].sort((a, b) => a - b)
+            : items.some(i => i.id === itemId) ? [itemId] : [];
         const key = ids.length ? ids.join(',') : 'unmapped:' + item;
         const row: BillRow = pools.get(key) ?? {item, need: 0, owned: 0, short: 0, ids, holders: []};
+        if (itemId !== undefined) row.itemId = itemId;
         row.need += count;
         const otherNames = [...new Set([...(row.aliases ?? []), item, ...(aliases ?? [])])].filter(name => name !== row.item);
         if (otherNames.length) row.aliases = otherNames;

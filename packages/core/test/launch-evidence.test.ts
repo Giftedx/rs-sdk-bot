@@ -13,6 +13,19 @@ test('staging requires observed bank stock and delivered quantities, not a flag'
  const s=supplies();s.allocations.push({...s.allocations[0]!});
  expect(()=>validateSupplies(s,context,requirements,catalog,owned,now,read)).toThrow();
 });
+test('explicit kit IDs reject other colours with the same catalog name',()=>{
+ const kit=[{item:'black dragonhide body',itemId:2503,count:1}];
+ const variants=[{id:2503,name:'Dragonhide body'},{id:2501,name:'Dragonhide body'}];
+ const manifest=(id:number)=>{
+  const s=supplies(),stock=[{id,count:1}];
+  refs.set('bank',{...bank,bank:stock});
+  refs.set('delivery',{...delivery,after:stock,items:stock});
+  s.allocations=[{...s.allocations[0]!,item:kit[0]!.item,itemId:id,count:1}];
+  return s;
+ };
+ expect(()=>validateSupplies(manifest(2503),context,kit,variants,owned,now,read)).not.toThrow();
+ expect(()=>validateSupplies(manifest(2501),context,kit,variants,owned,now,read)).toThrow('Unexpected supply');
+});
 test('staging reserves the total when noted and plain requirements draw from the same base stock', () => {
  const wine=[{item:'Unfermented wine',count:600},{item:'Unfermented wine (noted)',count:600}];
  const wineCatalog=[{id:1995,name:'Unfermented wine'}];

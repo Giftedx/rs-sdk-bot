@@ -87,3 +87,16 @@ test('a cached bill and a legacy bill report the same shortage for shared base s
   }]);
  }
 });
+
+test('the planner keeps an exact kit ID when repricing a saved bill', () => {
+ const base=mkdtempSync(join(tmpdir(),'planner-exact-kit-')),now=1_000_000,fleetDir=join(base,'snapshots');
+ const items=[{id:2503,name:'Dragonhide body'},{id:2501,name:'Dragonhide body'}];
+ for(const dir of ['knowledge','.practice/coordinator','.practice/status','snapshots'])mkdirSync(join(base,dir),{recursive:true});
+ writeFileSync(join(base,'knowledge/items.json'),JSON.stringify(items));
+ const rows=supplyBill([{item:'black dragonhide body',itemId:2503,count:1}],items,[]);
+ writeFileSync(join(base,'.practice/coordinator/supply-bill.json'),JSON.stringify({at:now,rows}));
+ writeFileSync(join(base,'.practice/status/Helper.json'),JSON.stringify({name:'Helper',server:'rs-sdk-demo.fly.dev',at:now,bankAt:now,bank:[{id:2501,count:4}]}));
+ const summary=supplyBillSummary({base,now,fleetDir,side:'local'});
+ expect(summary?.unmapped).toEqual([]);
+ expect(summary?.short).toEqual([{item:'black dragonhide body',itemId:2503,need:1,short:1,holders:[]}]);
+});

@@ -8,6 +8,8 @@ The exporter and tests live under router tooling, outside the gameplay worker fi
 
 Source -> local consumer -> adapt -> check: the repository's LF checkout rule and the existing three-way merge -> delivery PR application -> compare the three text inputs with LF line endings -> a Windows fixture keeps an unrelated master edit and the staged build edit. The saved snapshot replay in `.practice/delivery-root-blockers/merge-replay.json` separates clean courier and magic merges from overlapping rune edits and a combat snapshot with a missing base. The replay leaves the delivery records and live checkout untouched.
 
+Source -> local consumer -> reuse -> check: the staged base and build snapshots and the existing delivery queue -> recheck legacy text conflicts once when every input exists and at least one uses CRLF -> fixtures verify a clean recheck, a true conflict, a missing base and an LF-only request. The scratch queue replay in `.practice/delivery-root-blockers/processor-replay.json` uses the recorded prerequisites and simulates branch pushes and PR creation.
+
 The planner queue separates dependency-ready tasks, chains waiting on open work, and chains blocked by failed, `superseded` or missing prerequisites. Root counts include downstream pending tasks and finite runs. A task can have more than one root, so those counts do not predict how many runs one repair releases.
 
 Source -> local consumer -> adapt -> check: the coordinator's explicit and account-provision dependencies, plus the reason-path pattern in the project use map -> the existing planner prompt -> count each terminal root once per affected task and include its run ID -> queue tests for two branches sharing a failed root, a failed implicit provision, waiting on an active proof, and independent work. The read-only queue sample in `.practice/planner-root-blockers/queue-summary.json` binds the counts to the observed state by hash. Model decisions and live throughput need separate evidence.
@@ -34,6 +36,8 @@ Source -> local consumer -> reuse -> check: the coordinator's live acceptance id
 Source -> local consumer -> reuse -> check: the build workspace's recorded SHA-256 base and publish's preflight -> staged delivery merge -> recover a missing base from main only while its bytes match the recorded hash -> a carried build fixture publishes and stages both the original and changed bytes. A run's pre-author copy may already contain carried edits, so it cannot stand in for the original base without a hash match.
 
 Source -> local consumer -> reuse -> check: the coordinator's retired-job release and the swarm's single-account job shape -> assignment overlay -> park the unused participants as disabled single assignments after the existing release checks pass -> tests verify the swarm parser and owner shadowing. The read-only replay in `.practice/parked-assignments/replay.json` compares existing and normalized overlays using the same owner and coordinator inputs.
+
+Source -> local consumer -> reuse -> check: the progress export's matched useful live receipt rule -> planner progress, focus release and expansion -> share one check for a successful gameplay effect with its own task and run identity -> fixtures reject recovery, refused, crossed and future receipts. The replay in `.practice/useful-live-receipts/replay.json` compares both counts in a retained 15-minute window and shows the expansion result under stated hypothetical headroom.
 
 ## Planner rounds and dead tasks
 

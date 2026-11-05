@@ -2614,7 +2614,23 @@
    "source": "research/combat-measure.md section 6: side XP = measured Defence and Hitpoints per Ranged XP per band (Defence 0.167 / 0.191 / 0.177, Hitpoints 0.110 / 0.126 / 0.117), XP-weighted; longrange splits the bow's XP 2 Ranged + 2 Defence per damage (combat.rs2:157-159). Rapid gives 384.2 realistic with no Defence and made Overall later (section 6). Below Ranged 40 (1.6% of the XP) a lower bow is needed; not measured",
    "supplies": [
     {
-     "item": "cannon (base, stand, barrels, furnace)",
+     "item": "cannon base",
+     "itemId": 6,
+     "count": 1
+    },
+    {
+     "item": "cannon stand",
+     "itemId": 8,
+     "count": 1
+    },
+    {
+     "item": "cannon barrels",
+     "itemId": 10,
+     "count": 1
+    },
+    {
+     "item": "cannon furnace",
+     "itemId": 12,
      "count": 1
     },
     {
@@ -2637,7 +2653,23 @@
      "count": 1
     },
     {
-     "item": "black d'hide body, chaps, vambraces; coif",
+     "item": "black dragonhide body",
+     "itemId": 2503,
+     "count": 1
+    },
+    {
+     "item": "black dragonhide chaps",
+     "itemId": 2497,
+     "count": 1
+    },
+    {
+     "item": "black dragon vambraces",
+     "itemId": 2491,
+     "count": 1
+    },
+    {
+     "item": "coif",
+     "itemId": 1169,
      "count": 1
     }
    ],
