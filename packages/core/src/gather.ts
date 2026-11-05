@@ -96,14 +96,16 @@ export const denseSpawns=(tiles:readonly Tile[],min=SERIES_CLUSTER):Tile[]=>tile
 // knowledge/npcs.json. `combat` is the strongest of the animal's forms. An account fights one only below its Attack level,
 // or at combat 6 or less (a chicken, cow or giant rat dies to anyone): a dark bear (19) killed an 81-hitpoint, Attack 6
 // account on practice. `chance` is the drop's share of kills; the attempt budget follows it.
-export const KILL_SOURCES:Record<number,{npcs:number[];name:string;combat:number;chance:number}>={
+// `arrows`: the arrows a kill of this animal takes when ARROWS_PER_KILL is too few (a giant bat has 32 hitpoints and
+// flees when hurt, so many shots miss or fall short).
+export const KILL_SOURCES:Record<number,{npcs:number[];name:string;combat:number;chance:number;arrows?:number}>={
  2132:{npcs:[81],name:'cow',combat:2,chance:1},2138:{npcs:[41,1017],name:'chicken',combat:1,chance:1},2134:{npcs:[86,87,950],name:'giant rat',combat:6,chance:1},
  2136:{npcs:[105,106],name:'bear',combat:21,chance:1},288:{npcs:[100,101,298,299],name:'goblin',combat:5,chance:5/128},
  // Imp Catcher's beads (imp.rs2:10-19): one roll of 128 a kill, five faces each for black, red, white and yellow.
  1470:{npcs:[708],name:'imp',combat:2,chance:5/128},1472:{npcs:[708],name:'imp',combat:2,chance:5/128},
  1474:{npcs:[708],name:'imp',combat:2,chance:5/128},1476:{npcs:[708],name:'imp',combat:2,chance:5/128},
  // Bat bones from a giant bat every kill (all.npc [bat] death_drop); they roost around Keep Le Faye and Hemenster.
- 530:{npcs:[78],name:'giant bat',combat:27,chance:1},
+ 530:{npcs:[78],name:'giant bat',combat:27,chance:1,arrows:15},
 };
 // The drops a kill series takes: its own item and every later kill item of the same animal still short (the four
 // beads fall from the same imps, so a red bead lying by a black-bead kill is picked up, not killed for again).
@@ -130,7 +132,7 @@ export function killStyle(id:number,attack:number,ranged=1,magic=1,strength=atta
 }
 // Arrows for the kills: ARROWS_PER_KILL for each drop that comes every kill (a bear's 27 hitpoints), two for each attempt
 // of a series of kills whose animal dies to one arrow (a goblin's 5).
-export const arrowsFor=(id:number,count:number)=>(KILL_SOURCES[id]?.chance??1)<1?2*killAttempts(id,count):ARROWS_PER_KILL*count;
+export const arrowsFor=(id:number,count:number)=>(KILL_SOURCES[id]?.chance??1)<1?2*killAttempts(id,count):(KILL_SOURCES[id]?.arrows??ARROWS_PER_KILL)*count;
 export const canKill=(id:number,attack:number,ranged=1,magic=1,strength=attack)=>killStyle(id,attack,ranged,magic,strength)!==null;
 let npcRows:{id:number;spawns?:Tile[]}[]|undefined;
 const npcSpawns=(ids:readonly number[]):Tile[]=>(npcRows??=JSON.parse(readFileSync(resolve(import.meta.dir,'../../../knowledge/npcs.json'),'utf8')) as {id:number;spawns?:Tile[]}[]).filter(n=>ids.includes(n.id)).flatMap(n=>n.spawns??[]);

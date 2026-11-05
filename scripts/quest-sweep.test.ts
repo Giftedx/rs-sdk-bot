@@ -785,6 +785,9 @@ test("Merlin's Crystal: the wax comes off a Catherby beehive after its repellent
  // The repellent and the bucket are spawns in Catherby, gathered before the hive; the bat falls to the bow.
  expect(r.gathers.map(g=>`${g.id}:${g.how}`)).toEqual(['28:spawn','1925:spawn','30:use','530:kill']);
  expect(r.gathers.find(g=>g.id===530)?.kit).toBe('ranged');expect(r.still).toEqual([]);
+ // A giant bat takes fifteen arrows a kill (six ran out on practice); a bear keeps the six.
+ const {arrowsFor}=await import('../packages/core/src/gather');
+ expect(arrowsFor(530,1)).toBe(15);expect(arrowsFor(2136,1)).toBe(6);
 });
 
 test("Pirate's Treasure needs no bananas from the sweep: the script picks them on Karamja, and the bank pass keeps their slots",async()=>{
