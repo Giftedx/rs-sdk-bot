@@ -1,5 +1,5 @@
 import {expect,test} from 'bun:test';
-import {selectQuestFood,startQuestSustain,questFoodDefinitions} from './quest-sustain';
+import {selectQuestFood,startQuestSustain,questFoodDefinitions,defaultEatAt} from './quest-sustain';
 import {waitUntil} from '../packages/core/src/ticks';
 
 const item=(id:number,slot=0,count=1,op=1)=>({id,slot,count,optionsWithIndex:[{text:'Eat',opIndex:op}]});
@@ -67,4 +67,13 @@ test('a new life cannot spend food before the quest death watcher runs',async()=
  const g=game({...snapshot(8),player:{lifeId:1,respawnCount:0}} as any);const e=startQuestSustain(g.s,policy);
  g.set({...snapshot(8),player:{lifeId:2,respawnCount:1}} as any);await g.step();
  expect(g.sent.length).toBe(0);expect(e.failure()).toContain('life changed');expect(e.aborted.aborted).toBe(true);
+});
+
+test('the default eat level follows the maximum, so a low account fights on through small hits',()=>{
+ expect([17,40,66,67,99].map(defaultEatAt)).toEqual([10,24,39,40,40]);
+ const state=(level:number)=>({skills:[{name:'Hitpoints',level,baseLevel:40}],inventory:[{id:379,slot:0,optionsWithIndex:[{text:'Eat',opIndex:1}]}]});
+ expect(selectQuestFood(state(39),{food:[379],eatAt:defaultEatAt})).toBeNull();
+ expect(selectQuestFood(state(25),{food:[379],eatAt:defaultEatAt})).toBeNull();
+ expect(selectQuestFood(state(24),{food:[379],eatAt:defaultEatAt})?.item.id).toBe(379);
+ expect(selectQuestFood(state(39),{food:[379],eatAt:40})?.item.id).toBe(379);
 });

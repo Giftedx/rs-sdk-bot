@@ -4,7 +4,7 @@
 import { openBot, finish, getWorld, accountOf } from '../../packages/core/src/bot';
 import type { Session } from '../../packages/core/src/inprocess';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
-import { startQuestSustain, selectQuestFood, questFoodDefinitions } from '../quest-sustain';
+import { startQuestSustain, selectQuestFood, questFoodDefinitions, defaultEatAt } from '../quest-sustain';
 import { walkQuestCorridor } from '../quest-walk';
 import { sessionWalker, walkPath, goTo, type PathPoint } from '../../packages/core/src/walk';
 import { componentId } from '../../packages/core/src/logout';
@@ -52,7 +52,7 @@ export const SKILLS = ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged', '
 // and end() log them out too.
 export async function openQuest(opts: { session?: Session; stop?:()=>boolean; cap?: number; eatAt?: number; food?: number[]; reservedFood?: Readonly<Record<number,number>>|(()=>Readonly<Record<number,number>>); trace?: boolean; lumbridgeOk?: boolean; name?: string; others?: () => Session[] } = {}) {
     const CAP = opts.cap ?? 3000;
-    const EAT_AT = opts.eatAt ?? 40;
+    const EAT_AT = opts.eatAt ?? defaultEatAt;
     // Without a list of its own a quest eats anything that heals: a live account carries swordfish, cake slices or
     // trout, not the lobsters a preset does. quest-sweep marks the preset's edible ingredients on the session
     // (questReserved), and a script's reservedFood adds its own; neither is eaten.
