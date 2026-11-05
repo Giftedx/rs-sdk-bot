@@ -111,12 +111,19 @@ export async function runNativeClueStep(s:Session,clueId:number,cap:number,stop:
   if(s.sdk.getInventory().length>19)throw Error('native clue step requires nine free inventory slots');
   if(step.tools.some(id=>count(before,id)<1))throw Error('native clue requires staged tools/key: '+step.tools.join(','));
   if(step.point){
-   if(walk){if(!await walk(step.point,over))throw Error('native clue route refused');}
-   else{
-    const ac=new AbortController(),off=s.onTick(()=>{if(over())ac.abort();});
-    try{const result=await goTo(s,await getWorld(),step.point,accountOf(s),{signal:ac.signal,legTimeoutTicks:Math.min(60,cap)});if(!result.ok)throw Error('native clue route '+result.detail);}finally{off();}
+   const point=step.point;
+   const distance=()=>{
+    const p=s.sdk.getState()?.player;
+    return p?.level===point.level?Math.max(Math.abs(p.worldX-point.x),Math.abs(p.worldZ-point.z)):Infinity;
+   };
+   if(distance()!==0){
+    if(walk){if(!await walk(point,over))throw Error('native clue route refused');}
+    else{
+     const ac=new AbortController(),off=s.onTick(()=>{if(over())ac.abort();});
+     try{const result=await goTo(s,await getWorld(),point,accountOf(s),{signal:ac.signal,legTimeoutTicks:Math.min(60,cap)});if(!result.ok)throw Error('native clue route '+result.detail);}finally{off();}
+    }
    }
-   const p=s.sdk.getState()?.player;if(!p||p.level!==step.point.level||Math.max(Math.abs(p.worldX-step.point.x),Math.abs(p.worldZ-step.point.z))>2)throw Error('native clue destination unobserved');
+   if(distance()>2)throw Error('native clue destination unobserved');
   }
   let sent=false,openedAt:number|undefined,challengeReady=step.challengeItem!==undefined&&count(before,step.challengeItem)>0,answered=false;
   while(!over()){

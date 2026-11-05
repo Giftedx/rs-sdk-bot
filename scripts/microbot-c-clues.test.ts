@@ -24,8 +24,8 @@ test('dig step requires selected clue debit and exact mapped casket credit',()=>
  expect(clueEffect(r,[{id:r.id,count:1}],[{id:995,count:100}],true).ok).toBe(false);
  expect(clueEffect(r,[{id:r.id,count:1}],[{id:r.id,count:1},{id:r.casket!,count:1}],false).ok).toBe(false);
 });
-test('finite staged dig records one exact native clue-to-casket conversion',async()=>{
+test('finite staged dig skips routing from the exact tile and records one conversion',async()=>{
  const r=nativeClueSteps().find(v=>v.name==='trail_clue_easy_map001')!,items:any[]=[{id:r.id,count:1,slot:0},{id:r.tools[0],count:1,slot:1}];let tick=0;
  const s:any={tick:()=>tick,onTick:(cb:()=>void)=>{let active=true;const next=()=>queueMicrotask(()=>{if(active){tick++;cb();next();}});next();return()=>{active=false;};},sdk:{getSkill:()=>({level:10}),getInventory:()=>items,getDialog:()=>null,getState:()=>({player:{lifeId:1,worldX:r.point!.x,worldZ:r.point!.z,level:r.point!.level},gameMessages:[]}),sendUseItem:async(slot:number,op:number)=>{expect([slot,op]).toEqual([1,1]);items[0]={id:r.casket,count:1,slot:0};}}};
- expect(await runNativeClueStep(s,r.id,20,()=>false,async()=>true)).toMatchObject({ok:true,kind:'dig',preserved:true,effect:{outcome:'casket'}});
+ expect(await runNativeClueStep(s,r.id,20,()=>false,async()=>{throw Error("already at the dig tile");})).toMatchObject({ok:true,kind:'dig',preserved:true,effect:{outcome:'casket'}});
 });
