@@ -147,6 +147,18 @@
   "Ballspinner": {
    "side": "local",
    "server": "rs-sdk-demo.fly.dev"
+  },
+  "Deeppockets": {
+   "side": "claude-cloud-2",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Fatstack": {
+   "side": "claude-cloud-2",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Fingerblastr": {
+   "side": "claude-cloud-2",
+   "server": "rs-sdk-demo.fly.dev"
   }
  }
 }
