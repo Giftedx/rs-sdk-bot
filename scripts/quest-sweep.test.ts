@@ -254,4 +254,9 @@ test('a meat no shop sells is a kill from its animal; an item with no source sta
  expect(gatherPlan([{id:2132,count:1}],lumbridge,()=>[],()=>850,id=>[{x:3200,z:3260,level:0}]).gathers).toEqual([{id:2132,count:1,how:'kill'}]);
  // Cows, chickens, giant rats, bears and goblins have spawns in the knowledge.
  for(const id of Object.keys(KILL_SOURCES).map(Number))expect(killSpawns(id).length).toBeGreaterThan(0);
+ // A bear (combat 21) is a kill only above Attack 21; a giant rat (6) dies to anyone.
+ const bearSpawn=(id:number)=>id===2136||id===2134?[{x:2500,z:3160,level:0}]:[];
+ expect(gatherPlan([{id:2136,count:1},{id:2134,count:1}],lumbridge,()=>[],()=>Infinity,bearSpawn,6)).toMatchObject({gathers:[{id:2134,how:'kill'}],still:[{id:2136,count:1}]});
+ expect(gatherPlan([{id:2136,count:1}],lumbridge,()=>[],()=>Infinity,bearSpawn,21).still).toEqual([{id:2136,count:1}]);
+ expect(gatherPlan([{id:2136,count:1}],lumbridge,()=>[],()=>Infinity,bearSpawn,22).gathers).toEqual([{id:2136,count:1,how:'kill'}]);
 });

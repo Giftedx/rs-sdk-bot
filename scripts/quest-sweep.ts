@@ -436,7 +436,8 @@ export async function sweep(account:string,quest:string,fresh?:string){
   const shops=(items:readonly Item[])=>shopPlan(items,here(),catalogItem,(d,at)=>ranked(d,at)[0]??null,ranked);
   // What no shop sells is gathered after the shops; a gather tool comes from the bank or a shop.
   const sellerAt=(id:number)=>{const it=catalogItem(id),n=it&&id!==COINS?ranked(it.debugname,here())[0]:null;return n?travelDistance(here(),n.tile):Infinity;};
-  const gather=gatherPlan(p.missing,here(),spawnsByDistance,sellerAt),tools=plan(new Map(gather.tools.map(t=>[t.id,t.count])),pack(),rows());
+  const attack=st()?.skills?.find((k:any)=>k.name==='Attack')?.baseLevel??1;
+  const gather=gatherPlan(p.missing,here(),spawnsByDistance,sellerAt,undefined,attack),tools=plan(new Map(gather.tools.map(t=>[t.id,t.count])),pack(),rows());
   p.withdraw.push(...tools.withdraw);
   const shop=shops([...p.missing.filter(m=>!gather.gathers.some(g=>g.id===m.id)),...tools.missing]);
   if(gather.gathers.length)console.log(`QUEST_SWEEP_GATHER_PLAN ${JSON.stringify(gather)}`);

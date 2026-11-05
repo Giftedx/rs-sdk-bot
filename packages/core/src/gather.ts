@@ -24,16 +24,20 @@ export const CLUSTER=20;
 // Meats no shop sells drop from animals on death, every kill (drop tables/scripts/cow.rs2, chicken.rs2, giant_rat.rs2,
 // bear.rs2 `always` rows); goblin mail drops from goblins while Goblin Diplomacy asks for it (goblin.rs2:53,119). The
 // account kills the nearest one and takes the drop. NPC ids and spawns come from knowledge/npcs.json.
-export const KILL_SOURCES:Record<number,{npcs:number[];name:string}>={
- 2132:{npcs:[81],name:'cow'},2138:{npcs:[41,1017],name:'chicken'},2134:{npcs:[86,87,950],name:'giant rat'},
- 2136:{npcs:[105,106],name:'bear'},288:{npcs:[100,101,298,299],name:'goblin'},
+// `combat` is the strongest of the animal's forms. An account fights one only below its Attack level, or at combat 6 or
+// less (a chicken, cow or giant rat dies to anyone): a dark bear (19) killed an 81-hitpoint, Attack 6 account on practice.
+export const KILL_SOURCES:Record<number,{npcs:number[];name:string;combat:number}>={
+ 2132:{npcs:[81],name:'cow',combat:2},2138:{npcs:[41,1017],name:'chicken',combat:1},2134:{npcs:[86,87,950],name:'giant rat',combat:6},
+ 2136:{npcs:[105,106],name:'bear',combat:21},288:{npcs:[100,101,298,299],name:'goblin',combat:5},
 };
+export const EASY_KILL=6;
+export const canKill=(id:number,attack:number)=>!!KILL_SOURCES[id]&&(KILL_SOURCES[id]!.combat<=EASY_KILL||KILL_SOURCES[id]!.combat<attack);
 let npcRows:{id:number;spawns?:Tile[]}[]|undefined;
 const npcSpawns=(ids:readonly number[]):Tile[]=>(npcRows??=JSON.parse(readFileSync(resolve(import.meta.dir,'../../../knowledge/npcs.json'),'utf8')) as {id:number;spawns?:Tile[]}[]).filter(n=>ids.includes(n.id)).flatMap(n=>n.spawns??[]);
 export const killSpawns=(id:number):Tile[]=>KILL_SOURCES[id]?npcSpawns(KILL_SOURCES[id]!.npcs):[];
 // A spawn wins over a shop when it is nearer: eggs lie by Lumbridge, while the only egg seller is in Rellekka.
 // `seller` gives the straight-line distance to the nearest seller (Infinity when no shop sells the item).
-export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:Tile)=>Tile[]=spawnsByDistance,seller:(id:number)=>number=()=>Infinity,kills:(id:number)=>Tile[]=killSpawns){
+export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:Tile)=>Tile[]=spawnsByDistance,seller:(id:number)=>number=()=>Infinity,kills:(id:number)=>Tile[]=killSpawns,attack=99){
  const gathers:Gather[]=[],still:Item[]=[],tools:Item[]=[];
  const d=(t:Tile)=>Math.max(Math.abs(t.x-at.x),Math.abs(t.z-at.z));
  for(const m of missing){
@@ -43,7 +47,7 @@ export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:
   else if(LOC_SOURCES[m.id]&&d(LOC_SOURCES[m.id]!.tile)<sold)gathers.push({...m,how:'loc'});
   // A kill wins over a shop when its animal is nearer, as a spawn does: Rufus in Canifis sells every meat, 850 tiles
   // from Ardougne and behind Priest in Peril, while cows graze beside the Ardougne banks.
-  else if(kills(m.id).some(t=>t.level===at.level&&d(t)<sold))gathers.push({...m,how:'kill'});
+  else if(canKill(m.id,attack)&&kills(m.id).some(t=>t.level===at.level&&d(t)<sold))gathers.push({...m,how:'kill'});
   else still.push(m);
  }
  return{gathers,still,tools};
@@ -78,7 +82,15 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
      const r:any=await s.bot.attack(npc);
      if(!r?.success){await waitTicks(s,2);continue;}
      const gone=()=>!(st()?.nearbyNpcs??[]).some((n:any)=>n.index===npc.index),drop=()=>(st()?.groundItems??[]).filter((i:any)=>i.id===g.id&&i.distance<=12).sort((a:any,b:any)=>a.distance-b.distance)[0];
-     await waitUntil(s,()=>gone()||!!drop(),{timeoutTicks:150});
+     // A fight that reaches the hitpoint floor is abandoned: the bot walks away and the sweep fails short of the item.
+     const hp=()=>st()?.skills?.find((k:any)=>k.name==='Hitpoints'),floor=Math.max(5,Math.ceil((hp()?.baseLevel??10)*0.25)),low=()=>(hp()?.level??99)<=floor;
+     await waitUntil(s,()=>gone()||!!drop()||low(),{timeoutTicks:150});
+     if(low()){
+      const p=here(),dx=Math.sign(p.x-npc.x)||1,dz=Math.sign(p.z-npc.z);
+      await s.direct({type:'walkTo',x:p.x+dx*20,z:p.z+dz*20,running:true,reason:'SDK'});
+      await waitUntil(s,()=>!(st()?.player?.combat?.inCombat),{timeoutTicks:40});
+      return `kill of ${npc.name} abandoned at ${hp()?.level} of ${hp()?.baseLevel} hitpoints`;
+     }
      if(!await waitUntil(s,()=>!!drop(),{timeoutTicks:10}))continue;
      await s.bot.pickupItem(drop());
      console.log(`QUEST_SWEEP_KILL ${JSON.stringify({item:g.id,npc:npc.name,at:{x:npc.x,z:npc.z},held:held(g.id)})}`);
