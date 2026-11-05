@@ -25,6 +25,8 @@ export type Inputs = {
     side: string; accounts: readonly Acct[]; owners: ReadonlyMap<string, { side: string }>; bill: readonly BillRow[];
     templates: readonly Template[]; prices: Readonly<Record<string, number>>; waste?: Readonly<Record<string, number>>;
     taken?: Readonly<Record<string, number>>; retired?: ReadonlySet<string>; capacity?: Readonly<Record<string, number>>;
+    // The template each account holds now, by lower-case name: on a value tie the account keeps it.
+    current?: ReadonlyMap<string, string>;
     // Accounts of this side free to trade now (no enabled swarm job), with their coins. Each keeps FUND_RESERVE.
     donors?: readonly { name: string; coins: number }[];
     // Lower-case names of accounts with an enabled job. Funding one would remove its running job, and the stop file
@@ -84,7 +86,10 @@ export function plan(inp: Inputs): Assignment[] {
             if (value > 0) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+'), coins: coinShort(a, t.needs) });
         }
     }
-    cands.sort((x, y) => y.value - x.value || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id));
+    // On a value tie an account keeps the template it holds: a level change must not move it to another spot of the
+    // same worth, which would replace a running job with a fresh one that changes nothing useful.
+    const keeps = (c: Cand) => inp.current?.get(c.account.toLowerCase()) === c.template.id ? 1 : 0;
+    cands.sort((x, y) => y.value - x.value || keeps(y) - keeps(x) || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id));
     const used = new Map(Object.entries(inp.taken ?? {})), done = new Map<string, Assignment>();
     // Donor coins above the reserve, spent as funded candidates take them; a funded account gives nothing.
     // A donor that gives stays free this pass, so the fleet agent can log it in for the trade.
@@ -209,6 +214,9 @@ export function jobResources(job: { script?: string; args?: string[]; env?: Reco
             out.push(`knight:${KNIGHT_SPOTS.reduce((b, s) => cheb(s, x, z) < cheb(b, x, z) ? s : b)}`);
         }
         if (file === 'scripts/gather-feathers.ts') out.push(`pen:${env.PEN ?? '3229,3298'}`);
+        // Ranged training kills the Lumbridge pen's chickens (scripts/ranged-train.ts OUT ends at 3233,3297), so it holds
+        // that pen like a feather job does: two sides must not farm one pen.
+        if (file === 'scripts/ranged-train.ts') out.push('pen:3229,3298');
         if (file === 'scripts/shop-buyer.ts' && args[0]) out.push(`shop:${args[0]}`);
         if (file === 'scripts/gather-fish.ts' && (args[0] ?? 'cage') === 'cage') out.push('catherby:lobster');
     }
@@ -260,12 +268,15 @@ export function reservedResources(jobs: readonly any[], side: string, paused: Re
 }
 
 // This side's fleet claim (fleet/claims/<side>.json on the fleet-data branch): every exclusive resource an enabled job
-// of this side's own accounts holds, planner-made or hand-made, from the plan the swarm runs. scripts/fleet-sync.ts
-// writes it on every sync, so it never depends on the planner running; scripts/autopilot.ts on every side ignores a
-// claim older than CLAIM_MAX_AGE_MS, so a side that stops syncing releases its spots.
+// of this side's own accounts holds, planner-made or hand-made, from the plan the swarm runs, when one of the job's
+// accounts is `active` (scripts/fleet-sync.ts: seen in the world within CLAIM_MAX_AGE_MS). A plan with more enabled
+// jobs than the swarm admits parks some for days; a parked job's spot is free for the other sides, and when the job
+// does start, the planner that took the spot sees this side's claim on its next pass and moves its account. fleet-sync
+// writes the claim on every sync, so it never depends on the planner running; scripts/autopilot.ts on every side
+// ignores a claim older than CLAIM_MAX_AGE_MS, so a side that stops syncing releases its spots.
 export const CLAIM_MAX_AGE_MS = 2 * 3600_000;
-export function claimFor(jobs: readonly any[], side: string, sideOf: (account: string) => string, now = Date.now()): { side: string; at: number; resources: string[] } {
-    const held = jobs.filter(j => j?.enabled !== false && jobNames(j).length > 0 && jobNames(j).every(a => sideOf(a) === side)).flatMap(jobResources);
+export function claimFor(jobs: readonly any[], side: string, sideOf: (account: string) => string, now = Date.now(), active: (account: string) => boolean = () => true): { side: string; at: number; resources: string[] } {
+    const held = jobs.filter(j => j?.enabled !== false && jobNames(j).length > 0 && jobNames(j).every(a => sideOf(a) === side) && jobNames(j).some(active)).flatMap(jobResources);
     return { side, at: now, resources: [...new Set(held)].sort() };
 }
 

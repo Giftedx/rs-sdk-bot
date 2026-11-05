@@ -1,15 +1,23 @@
 import {test,expect} from 'bun:test';
 import type {PathPoint} from '../packages/core/src/walk';
-import {runeMysteriesWalk,runeMysteriesStartProblem,walkRuneMysteries,exitRuneTower,runeMysteriesDecision} from './rune-mysteries-route';
+import {runeMysteriesWalk,runeMysteriesStartProblem,walkRuneMysteries,exitRuneTower,runeMysteriesDecision,sedridorOutcome} from './rune-mysteries-route';
 
 test('starting talisman is not completion; package handoff interruption resumes notes',()=>{
  expect(runeMysteriesDecision('started',[1438])).toBe('talisman');
  expect(runeMysteriesDecision('not started',[1438])).toBe('duke');
  expect(runeMysteriesDecision('unknown',[1438])).toBe('observe');
  expect(runeMysteriesDecision('started',[290])).toBe('package');
- expect(runeMysteriesDecision('started',[])).toBe('recover-notes');
+ expect(runeMysteriesDecision('started',[])).toBe('sedridor');
  expect(runeMysteriesDecision('started',[291])).toBe('notes');
  expect(runeMysteriesDecision('complete',[])).toBe('complete');
+});
+test('Sedridor names the stage of a started quest with no items: package in hand, notes at Aubury, talisman at the Duke',()=>{
+ const saw=(...texts:string[])=>(re:RegExp)=>texts.some(t=>re.test(t));
+ expect(sedridorOutcome(true,saw())).toBe('package');
+ expect(sedridorOutcome(false,saw('I think perhaps you should go and speak to him again then, adventurer.'))).toBe('aubury');
+ expect(sedridorOutcome(false,saw('I suggest you go and speak to Aubury once more, with luck he will have made copies of his research.'))).toBe('aubury');
+ expect(sedridorOutcome(false,saw('Hmmm? You are a very odd person. Come back again when you have found it.'))).toBe('duke');
+ expect(sedridorOutcome(false,saw('Welcome adventurer, to the world renowned Wizards\' Tower.'))).toBe('unknown');
 });
 test('any combat level may start; below 13 the walk goes straight to the target',async()=>{
  for(const combat of [undefined,3,12,13])expect(runeMysteriesStartProblem(combat)).toBeNull();
