@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793826782568,
+ "at": 1793843216200,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -18,22 +18,6 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
-   "role": "supply"
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
-    "scripts/goldfarm.ts KNIGHT_SPOT=2669,3298"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "Thieving 55, then coins from Ardougne knights",
    "role": "supply"
   },
   {
@@ -492,6 +476,21 @@
    "repeat": false,
    "goal": "ready99-opening [task-bb70f314-0705-45d9-b21b-474ed4ad33c0]",
    "role": "runecraft"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "totem"
+   ],
+   "env": {
+    "CAP": "6000",
+    "COORDINATOR_RUN_ID": "task-bea5917b-1843-4a83-b479-0f221de36633"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-totem-wandwaver-started-cakes [task-bea5917b-1843-4a83-b479-0f221de36633]",
+   "role": "supply"
   }
  ]
 }
