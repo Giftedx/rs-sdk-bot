@@ -81,6 +81,8 @@ export function supplyPlan(herbs:number,vials:number,eyes:number,coins:number,vi
 }
 // Eyes come first: the run starts near Betty, and the vial trip ends at Ardougne South bank,
 // where no eye seller leg moved. A trip starts only when the next potion lacks a supply.
+// The loop brews one potion at a time, so the owned secondaries limit the batch: buying vials past them strands coins.
+export const workingBatch=(herbs:number,unf:number,secondaries:number)=>Math.min(27,herbs+unf,secondaries);
 export function supplyPurchases(o:{batch:number;make:number;vials:number;eyes:number;buyEyes:boolean}):[227|221,number][]{
  if(!(o.make>0&&o.vials<1)&&!(o.buyEyes&&o.eyes<1))return [];
  return ([[221,o.buyEyes?Math.max(0,o.batch-o.eyes):0],[227,Math.max(0,o.make-o.vials)]] as [227|221,number][]).filter(([,n])=>n>0);
@@ -177,11 +179,11 @@ export async function brew(s:Session,o:ReturnType<typeof options>){
   while(level()<o.target){
    check();const r=selectRecipe(level(),totals(),o.recipe),all=totals();
    const herbs=(all[r.dirty]??0)+(all[r.clean]??0),unf=all[r.unf]??0;
-   const batch=Math.min(27,herbs+unf),make=Math.max(0,batch-Math.min(batch,unf));
+   const secondaries=r.sec===221||o.recipe==='unf'?27:all[r.sec]??0,batch=workingBatch(herbs,unf,secondaries),make=Math.max(0,batch-Math.min(batch,unf));
    const purchases=supplyPurchases({batch,make,vials:all[227]??0,eyes:all[221]??0,buyEyes:r.sec===221&&o.recipe!=='unf'});
    // The whole shortfall is priced before the first purchase, so a refusal leaves assets unchanged.
    if(purchases.length)supplyPlan(make,all[227]??0,r.sec===221?Math.max(0,(all[221]??0)-Math.min(unf,batch)):make,all[995]??0,o.vialBudget-(spent[227]??0),o.secondaryBudget-(spent[221]??0));
-   if((all[r.sec]??0)<batch&&r.sec!==221&&o.recipe!=='unf')throw Error(`secondary missing ${r.sec}`);
+   if(secondaries<1)throw Error(`secondary missing ${r.sec}`);
    for(const [id,n] of purchases)await buy(id,n);
    // Each completed potion is banked before checking the next recipe and target.
    const current=totals();let input=r.unf;
