@@ -25,6 +25,8 @@ export type Inputs = {
     side: string; accounts: readonly Acct[]; owners: ReadonlyMap<string, { side: string }>; bill: readonly BillRow[];
     templates: readonly Template[]; prices: Readonly<Record<string, number>>; waste?: Readonly<Record<string, number>>;
     taken?: Readonly<Record<string, number>>; retired?: ReadonlySet<string>; capacity?: Readonly<Record<string, number>>;
+    // The template each account holds now, by lower-case name: on a value tie the account keeps it.
+    current?: ReadonlyMap<string, string>;
     // Accounts of this side free to trade now (no enabled swarm job), with their coins. Each keeps FUND_RESERVE.
     donors?: readonly { name: string; coins: number }[];
     // Lower-case names of accounts with an enabled job. Funding one would remove its running job, and the stop file
@@ -84,7 +86,10 @@ export function plan(inp: Inputs): Assignment[] {
             if (value > 0) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+'), coins: coinShort(a, t.needs) });
         }
     }
-    cands.sort((x, y) => y.value - x.value || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id));
+    // On a value tie an account keeps the template it holds: a level change must not move it to another spot of the
+    // same worth, which would replace a running job with a fresh one that changes nothing useful.
+    const keeps = (c: Cand) => inp.current?.get(c.account.toLowerCase()) === c.template.id ? 1 : 0;
+    cands.sort((x, y) => y.value - x.value || keeps(y) - keeps(x) || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id));
     const used = new Map(Object.entries(inp.taken ?? {})), done = new Map<string, Assignment>();
     // Donor coins above the reserve, spent as funded candidates take them; a funded account gives nothing.
     // A donor that gives stays free this pass, so the fleet agent can log it in for the trade.
