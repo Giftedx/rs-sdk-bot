@@ -164,9 +164,15 @@ async function reachStart(s:Session,world:World,start:Tile){
   await sail('npc:customs_officer:port-sarim@2953,3147');
   await corridor(SARIM_NORTH);
  }
+ // A ground hop walks on rs-sdk collision first (walkPath plans a 450-tile leg in a few ticks; the world router's search
+ // for Falador to Catherby alone idled 920 ticks on practice), and takes the world router only when that walk fails.
  const at=():Tile=>{const q=s.sdk.getState()?.player;return{x:q?.worldX??0,z:q?.worldZ??0,level:q?.level??0};};
- for(const hop of hopsTo(at(),start)){console.log(`QUEST_SWEEP_HOP ${JSON.stringify({from:at(),to:hop})}`);await walk(hop);}
- await walk(start);
+ const ground=async(to:Tile)=>{
+  const r=at().level===0&&to.level===0?await walkCorridor(await sessionWalker(s),[[to.x,to.z,3]]):{ok:false};
+  if(!r.ok)await walk(to);
+ };
+ for(const hop of hopsTo(at(),start)){console.log(`QUEST_SWEEP_HOP ${JSON.stringify({from:at(),to:hop})}`);await ground(hop);}
+ if(start.level===0&&at().level===0&&cheb(at(),start)>30)await ground(start);else await walk(start);
 }
 
 // Missing quest items a shop sells: the nearest seller of each (shop-index.ts), and the coins to take for them
