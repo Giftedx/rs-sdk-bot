@@ -2,7 +2,8 @@ import {test,expect} from 'bun:test';
 import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {migrateCoordinatorJobs,currentRevision,REVISION_FRESH_MS,plannerDue,rulePassDue} from '../src/coordinator-cli';
+import {migrateCoordinatorJobs,currentRevision,REVISION_FRESH_MS,rulePassDue} from '../src/coordinator-cli';
+import {PLAN_GAP_MS,plannerDue} from '../src/coordinator-decisions';
 import {disableOwnJob,ensureSwarm,controllerStateFresh,CONTROLLER_STATE_FRESH_MS} from '../src/coordinator-live';
 import {atomicJson,saveState,loadState} from '../src/coordinator-store';
 import {initialState,addTasks,startTask,finishTask,type CoordTask} from '../src/coordinator';
@@ -153,18 +154,18 @@ test('a late receipt triggers a new planning pass even with an older timestamp',
  expect(firstReceiptSequence).toBe(state.sequence);
  state.plannerReceiptSequence = firstReceiptSequence;
  state.planner = {runId:'planner', startedAt:5000};
- expect(plannerDue(state, 7000, 0, false)).toBe(false);
+ expect(plannerDue(state, 7000, 0, false)).toBeNull();
  expect(finishTask(state, {taskId:'older',runId:'older',ok:false,at:3000,output:null})).toBe(true);
  expect(state.latestReceiptSequence).toBe(state.sequence);
  expect(state.latestReceiptSequence!).toBeGreaterThan(firstReceiptSequence!);
- expect(plannerDue(state, 7000, 0, false)).toBe(false);
+ expect(plannerDue(state, 7000, 0, false)).toBeNull();
  delete state.planner;
  state.lastPlanAt = 7000;
- expect(plannerDue(state, 7500, 0, false)).toBe(false);
- expect(plannerDue(state, 8001, 0, false)).toBe(true);
+ expect(plannerDue(state, 7000 + PLAN_GAP_MS - 1, 0, false)).toBeNull();
+ expect(plannerDue(state, 7000 + PLAN_GAP_MS, 0, false)).toBe('outcome');
  state.plannerReceiptSequence = state.latestReceiptSequence;
- expect(plannerDue(state, 9000, 0, false)).toBe(false);
- expect(plannerDue(state, 9000, 0, true)).toBe(true);
+ expect(plannerDue(state, 7000 + PLAN_GAP_MS, 0, false)).toBeNull();
+ expect(plannerDue(state, 9000, 0, true)).toBe('request');
 });
 
 test('rules notice a new receipt even when archive and settlement leave the same count', () => {
