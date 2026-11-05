@@ -2,7 +2,7 @@ import { test, expect } from 'bun:test';
 import { domainOf } from '../../knowledge/src/actions';
 import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { named, questScript, questJournalNames, questStages, itemsHeld, skillBands, domainStages, firedActions, sideSnapshots, fleetSkills, practicePasses } from '../src/coverage';
+import { named, questScript, questJournalNames, questStages, itemsHeld, skillBands, domainStages, firedActions, sideSnapshots, fleetSkills, practicePasses, ownedNames } from '../src/coverage';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -116,6 +116,13 @@ test('an unmapped journal label cannot imply a folder completion', () => {
     const result = questStages([{ quests: [{ name: 'quest_cook', state: 'complete' }] }], new Set(), new Set(),
         [{ folder: 'quest_cook', varp: 'cookquest', name: "Cook's Assistant", questPoints: 1 }]);
     expect(result.folders[0]!.stage).toBe('none');
+});
+
+test('owned names come from the verified-login registry, never the main account; a machine without one owns none', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'owned-'));
+    expect(ownedNames(join(dir, 'owned-accounts.json'))).toEqual(new Set());
+    writeFileSync(join(dir, 'owned-accounts.json'), JSON.stringify({ Haggis: { server: 'rs-sdk-demo.fly.dev', at: 1 }, undermykilt: { server: 'rs-sdk-demo.fly.dev', at: 1 } }));
+    expect(ownedNames(join(dir, 'owned-accounts.json'))).toEqual(new Set(['undermykilt']));
 });
 
 test('items and skill bands come from owned live statuses', () => {
