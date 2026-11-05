@@ -31,7 +31,8 @@ export function snapshot(statuses: readonly any[], side = mySide(), owners = loa
             ...(Array.isArray(s.quests) && s.quests.some((q: any) => q.state !== 'unknown') ? { quests: s.quests.filter((q: any) => q.state === 'complete').map((q: any) => q.name) } : {}),
         });
     }
-    return { side, at: now, accounts: [...by.values()].sort((a, b) => a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1) };
+    // Published rows keep their order and a replaced row its place; new accounts follow in status order.
+    return { side, at: now, accounts: [...by.values()] };
 }
 // A session whose plan has no jobs has nothing to publish: it keeps this side's claim and plan while the published claim
 // is fresh and holds resources, since another session of the same side (a fresh cloud container beside the one that runs
