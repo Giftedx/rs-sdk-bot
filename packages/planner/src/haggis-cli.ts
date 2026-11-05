@@ -6,7 +6,7 @@ import { MEASURED_LEGS, RUN_TICKS_PER_TILE, START_TICKS } from './travel';
 
 const args = process.argv.slice(2);
 const root = resolve(import.meta.dir, '..', '..', '..');
-const snap = args.find(a => !a.startsWith('--')) ?? join(root, 'research', 'hiscores-2026-10-22.json');
+const snap = args.find(a => !a.startsWith('--')) ?? join(root, 'research', 'hiscores-live.json');
 const boards = loadSnapshot(snap);
 const activities = haggisActivities();
 // Travel legs are on unless --no-travel (to compare with the model before travel).
