@@ -20,6 +20,8 @@ Gaps:
 
 **Pack verification:** this fork appends booth5116, teller1596 and varp1000. Removing only those extensions reproduces all three canonical CRCs; six other config CRCs already match (`.practice/mm-exit/cache/audit.json`). `PackShared.ts` now checks the exact fork CRCs; verification stays enabled. Strict `tools/pack/Build.ts` advances to a separate interface checksum failure, changing no cached bytes (`cache/build-proof.json`, verified backup `cache/before-pack/`). Full rebuild remains unproved; retain frozen practice startup until the interface difference is explained and the complete build passes. Never replace an unexplained checksum with the observed value.
 
+Source -> local consumer -> reuse -> check: the cached launch fingerprint, worker release guard and controller acknowledgement -> coordinator rollout -> recheck disk source at stop, spawn and admission while the build fence holds, and verify the controller's pin before its first tick -> fixture source changes during stop and acknowledgement, plus a real CLI refusal with a wrong pin and an empty plan. The startup evidence is in `.practice/live-release-audit/startup-refusal.json`.
+
 ## Summary
 
 - One bot process costs about 520-650 MB RSS. About 470 MB of that is static data that every bot process loads
