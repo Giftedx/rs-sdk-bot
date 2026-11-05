@@ -12,6 +12,10 @@ Source -> local consumer -> adapt -> check: the coordinator's explicit and accou
 
 Source -> local consumer -> reuse -> check: the coordinator's sequence at worker settlement -> the planner trigger -> keep a receipt watermark at planner launch and a separate completion time for cooldowns -> test a late receipt with an older producer timestamp while the planner runs. The event sample in `.practice/planner-root-blockers/receipt-window.json` counts overlap and the time to the next plan. It does not identify why each plan starts.
 
+Autopilot keeps the standing assignment for an account shadowed by the coordinator, including a parked coordinator job. That account is ineligible for reassignment, coin funding and trainer polling while the overlay holds it.
+
+Source -> local consumer -> reuse -> check: the coordinator job overlay and Luna's stable job ownership pattern in the project use map -> Autopilot -> preserve standing job bytes and exclude held accounts before planning or funding -> a release fixture and an isolated CLI pass preserve the held job and its assignment history while placing a free account. The CLI proof is in `.practice/autopilot-coordinator-ownership/cli-proof.json`. A live handoff needs separate evidence.
+
 The swarm writes a hashed job marker at each supervisor start. Autopilot reads complete result lines from matching marked runs. A finite coordinator job, a standing job with different arguments, or old unmarked output does not count as evidence to retire a standing job or advance its trainer.
 
 Source -> local consumer -> reuse -> check: the swarm's mission signature and Luna's stable job identity pattern in the project use map -> the Autopilot result reader -> mark the existing log with a hash of the mission and planner assignment -> a mixed log fixture verifies legacy, foreign, matching and incomplete results. The dry CLI output in `.practice/autopilot-job-log-identity` distinguishes coordinator failures from standing failures. The periodic pass still reads skill observations when a log has no matching marker.

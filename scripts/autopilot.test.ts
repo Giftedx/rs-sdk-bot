@@ -3,9 +3,9 @@ import { appendFileSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { jobLogStart } from '../packages/core/src/job-log';
-import { catalogue, finishedTrainers, jobFor, mergeJobs, plan, type Acct, type Inputs } from '../packages/planner/src/autopilot';
+import { catalogue, finishedTrainers, jobFor, mergeJobs, plan, plannableAccounts, reservedResources, type Acct, type Inputs } from '../packages/planner/src/autopilot';
 import { missionSignature, startable } from './swarm';
-import { coinOrder, fundOrders, inOpenOrder, readJobResultLines } from './autopilot';
+import { coinOrder, fundOrders, inOpenOrder, planningOwnership, readJobResultLines } from './autopilot';
 
 const side = 'claude-cloud';
 const inputs = (a: Acct): Inputs => ({ side, accounts: [a], owners: new Map([[a.name.toLowerCase(), { side }]]), bill: [], templates: catalogue(), prices: {} });
@@ -119,4 +119,21 @@ test('Autopilot only reads complete results written by the matching standing job
     expect(poll()).toEqual([]);
     appendFileSync(log,'\n');
     expect(poll()).toEqual(['Trainer']);
+});
+
+test('coordinator ownership preserves a standing job and excludes held funding parties until release', () => {
+    const standing = {account:'Held',autopilot:side,enabled:true,repeat:true,script:'scripts/goldfarm.ts',
+        template:'test',resources:['knight:2671,3313']};
+    const ownerJobs = [standing];
+    const overlays = [{accounts:['HELD','Donor'],enabled:false,script:'scripts/chain.ts',coordinatorOwner:'coordinator'}];
+    const paused = new Set(['paused']);
+    const ownership = planningOwnership(ownerJobs, overlays, paused);
+    expect(ownership.held).toEqual(new Set(['held','donor']));
+    expect(ownership.busy.has('donor')).toBe(true);
+    expect(plannableAccounts(ownerJobs,side,['Held','Donor','Paused','Free'],ownership.keep)).toEqual(['Free']);
+    expect(mergeJobs(ownerJobs,side,[],ownership.keep).jobs).toEqual([standing]);
+    expect(reservedResources(ownerJobs,side,ownership.keep)).toEqual({'knight:2671,3313':1});
+    const released=planningOwnership(ownerJobs,[],paused);
+    expect(plannableAccounts(ownerJobs,side,['Held','Donor'],released.keep)).toEqual(['Held','Donor']);
+    expect(released.busy.has('donor')).toBe(false);
 });
