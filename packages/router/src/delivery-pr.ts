@@ -16,6 +16,7 @@ export interface DeliveryPr{
  // Earlier deliveries that this build's source already held when it started; the PR opens after they merge.
  prerequisites:string[];
  createdAt:number;attempts:number;nextAt:number;state:'pending'|'opened'|'empty'|'conflict';url?:string;lastError?:string;
+ mergeVersion?:number;
 }
 export type Run=(cmd:string[],cwd:string)=>Promise<{code:number;stdout:string;stderr:string}>;
 
@@ -28,6 +29,7 @@ export const retryDelayMs=(attempts:number)=>Math.min(60,2**attempts)*60000;
 export const PREREQUISITE_WAIT_MS=5*60000;
 class DeliveryWait extends Error{}
 class DeliveryConflict extends Error{}
+const MERGE_VERSION=1;
 
 const COMMAND_MS=120000;
 export const spawnRun:Run=async(cmd,cwd)=>{
@@ -145,16 +147,30 @@ export async function openDeliveryPr(pr:DeliveryPr,mainRoot:string,run:Run=spawn
  }finally{rmSync(work,{recursive:true,force:true});}
 }
 
+// Only retry conflicts from before LF normalization with complete snapshots and CRLF evidence.
+function legacyLineEndingConflict(pr:DeliveryPr):boolean{
+ if(typeof pr.base!=='string'||typeof pr.snapshot!=='string'||!Array.isArray(pr.files)||!pr.files.length||!pr.files.every(committable))return false;
+ const inputs=pr.files.flatMap(f=>[join(pr.base,f),join(pr.snapshot,f)]);
+ try{return inputs.every(f=>existsSync(f))&&inputs.some(f=>readFileSync(f,'utf8').includes('\r\n'));}
+ catch{return false;}
+}
+
 // Opens every staged delivery that is due, oldest first. A failure stays pending with a later retry time; a wait for a
 // prerequisite checks again later without counting as a failure; a conflict with master stops for the owner.
 export async function processDeliveryPrs(coordinationDir:string,mainRoot:string,run:Run=spawnRun,now=Date.now(),parent=tmpdir()){
  const dir=deliveryPrDir(coordinationDir),opened:DeliveryPr[]=[],failed:DeliveryPr[]=[],waiting:DeliveryPr[]=[],conflicts:DeliveryPr[]=[];
  for(let pr of readRecords(dir).sort((a,b)=>a.createdAt-b.createdAt||a.taskId.localeCompare(b.taskId))){
-  if(pr.state!=='pending'||pr.nextAt>now)continue;
+  if(pr.nextAt>now)continue;
+  if(pr.state==='conflict'&&pr.mergeVersion===undefined&&pr.lastError?.startsWith('delivery conflicts with origin/master: ')){
+   pr={...pr,mergeVersion:MERGE_VERSION};
+   if(!legacyLineEndingConflict(pr)){atomicJson(join(dir,pr.taskId+'.json'),pr);continue;}
+   pr.state='pending';
+  }
+  if(pr.state!=='pending')continue;
   try{const out=await openDeliveryPr(pr,mainRoot,run,parent,dir);pr={...pr,state:out.state,url:out.url,attempts:pr.attempts+1};delete pr.lastError;opened.push(pr);}
   catch(error){
    if(error instanceof DeliveryWait){pr={...pr,lastError:error.message,nextAt:now+PREREQUISITE_WAIT_MS};waiting.push(pr);}
-   else if(error instanceof DeliveryConflict){pr={...pr,state:'conflict',attempts:pr.attempts+1,lastError:error.message};conflicts.push(pr);}
+   else if(error instanceof DeliveryConflict){pr={...pr,state:'conflict',mergeVersion:MERGE_VERSION,attempts:pr.attempts+1,lastError:error.message};conflicts.push(pr);}
    else{pr={...pr,attempts:pr.attempts+1,lastError:String(error),nextAt:now+retryDelayMs(pr.attempts+1)};failed.push(pr);}
   }
   atomicJson(join(dir,pr.taskId+'.json'),pr);

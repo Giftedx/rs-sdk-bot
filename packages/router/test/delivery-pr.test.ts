@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,unlinkSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {stageDeliveryPr,processDeliveryPrs,committable,deliveryPrDir,retryDelayMs,PREREQUISITE_WAIT_MS,deliverySourceSet,type Run} from '../src/delivery-pr';
@@ -69,6 +69,31 @@ test('a Windows delivery keeps unrelated master edits when the snapshots use CRL
  expect(out.conflicts).toEqual([]);
  expect(out.opened.map(p=>p.taskId)).toEqual(['build-windows']);
  expect(git.committed[FILE]).toBe(lines('A','b','C'));
+});
+
+test('legacy line-ending conflicts retry through the normal merge, with complete bases only',async()=>{
+ for(const scenario of ['clean','overlap','missing-base','lf-only']){
+  const s=setup(),eol=scenario==='lf-only'?'\n':'\r\n';
+  writeFileSync(join(s.main,FILE),['a','b','c',''].join(eol));
+  const root=s.build('iron-progress-order',['a','b','C',''].join(eol));
+  const pr=stage(s,root,'build-one')!;
+  const lastError='delivery conflicts with origin/master: '+FILE;
+  writeFileSync(join(deliveryPrDir(s.coord),'build-one.json'),JSON.stringify({...pr,state:'conflict',lastError}));
+  if(scenario==='missing-base')unlinkSync(join(pr.base,FILE));
+  const git=stub({master:scenario==='overlap'?lines('a','b','master edit'):lines('A','b','c')});
+  const out=await processDeliveryPrs(s.coord,s.main,git.run,1000,s.base);
+  if(scenario==='clean'){
+   expect(out.opened.map(p=>p.taskId)).toEqual(['build-one']);
+   expect(git.committed[FILE]).toBe(lines('A','b','C'));
+  }else{
+   expect(out.opened).toEqual([]);
+   if(scenario==='overlap')expect(out.conflicts[0]?.lastError).toContain('master lines 3-3');
+   else expect(git.calls).toEqual([]);
+  }
+  const next=stub();
+  await processDeliveryPrs(s.coord,s.main,next.run,1000+PREREQUISITE_WAIT_MS,s.base);
+  expect(next.calls).toEqual([]);
+ }
 });
 
 test('a build that started on an earlier unmerged delivery opens its PR after that delivery merges',async()=>{
