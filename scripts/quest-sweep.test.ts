@@ -439,6 +439,22 @@ test('a kill series keeps to dense spawn clusters',async()=>{
  expect(near(3259,3338,goblins)).toBe(true);expect(near(3259,3338,dense)).toBe(false);expect(near(3311,3375,dense)).toBe(false);
 });
 
+test('an imp series takes every bead colour still short, and a kill of another animal takes only its own drop',async()=>{
+ const {sharedDrops,KILL_SOURCES,killAttempts,denseSpawns,killSpawns}=await import('../packages/core/src/gather');
+ // The four beads (imp.rs2) come from the same imps: a red bead lying by a black-bead kill is picked up.
+ for(const id of [1470,1472,1474,1476]){expect(KILL_SOURCES[id]?.npcs).toEqual([708]);expect(KILL_SOURCES[id]?.chance).toBeCloseTo(5/128);}
+ expect(killAttempts(1470,1)).toBe(42);
+ const gathers=[{id:1470,count:1,how:'kill' as const},{id:1472,count:1,how:'kill' as const},{id:1474,count:1,how:'kill' as const},{id:288,count:1,how:'kill' as const}];
+ const targets=new Map(gathers.map(g=>[g.id,g.count]));
+ const held=(id:number)=>id===1474?1:0;
+ expect(sharedDrops(gathers,gathers[0]!,held,targets)).toEqual([1470,1472]);   // white already held, goblin mail is another animal
+ expect(sharedDrops(gathers,gathers[1]!,held,targets)).toEqual([1472,1470]);
+ expect(sharedDrops(gathers,gathers[3]!,held,targets)).toEqual([288]);
+ // Imps cluster north of Yanille and on Karamja.
+ const dense=denseSpawns(killSpawns(1470));
+ expect(dense.some(t=>Math.max(Math.abs(t.x-2605),Math.abs(t.z-3125))<=20)).toBe(true);
+});
+
 test('a cabbage is picked from a field nearer than any seller',async()=>{
  const {gatherPlan,PICK_SOURCES}=await import('../packages/core/src/gather');
  const {locsByDistance}=await import('../packages/core/src/spawn-index');

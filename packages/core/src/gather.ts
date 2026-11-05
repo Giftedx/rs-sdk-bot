@@ -93,7 +93,14 @@ export const denseSpawns=(tiles:readonly Tile[],min=SERIES_CLUSTER):Tile[]=>tile
 export const KILL_SOURCES:Record<number,{npcs:number[];name:string;combat:number;chance:number}>={
  2132:{npcs:[81],name:'cow',combat:2,chance:1},2138:{npcs:[41,1017],name:'chicken',combat:1,chance:1},2134:{npcs:[86,87,950],name:'giant rat',combat:6,chance:1},
  2136:{npcs:[105,106],name:'bear',combat:21,chance:1},288:{npcs:[100,101,298,299],name:'goblin',combat:5,chance:5/128},
+ // Imp Catcher's beads (imp.rs2:10-19): one roll of 128 a kill, five faces each for black, red, white and yellow.
+ 1470:{npcs:[708],name:'imp',combat:2,chance:5/128},1472:{npcs:[708],name:'imp',combat:2,chance:5/128},
+ 1474:{npcs:[708],name:'imp',combat:2,chance:5/128},1476:{npcs:[708],name:'imp',combat:2,chance:5/128},
 };
+// The drops a kill series takes: its own item and every later kill item of the same animal still short (the four
+// beads fall from the same imps, so a red bead lying by a black-bead kill is picked up, not killed for again).
+export const sharedDrops=(gathers:readonly Gather[],g:Gather,held:(id:number)=>number,targets:ReadonlyMap<number,number>):number[]=>
+ [g.id,...gathers.filter(o=>o!==g&&o.how==='kill'&&KILL_SOURCES[o.id]?.npcs.some(n=>KILL_SOURCES[g.id]?.npcs.includes(n))&&held(o.id)<(targets.get(o.id)??held(o.id)+o.count)).map(o=>o.id)];
 // Kills allowed for `count` drops: half again the expected number, plus three misses.
 export const killAttempts=(id:number,count:number)=>Math.ceil(count/(KILL_SOURCES[id]?.chance??1)*1.5)+3;
 export const EASY_KILL=6;
@@ -161,8 +168,10 @@ const nearest=(tiles:readonly Tile[],at:Tile)=>tiles.filter(t=>t.level===at.leve
 export async function gatherItems(s:Session,world:World,gathers:readonly Gather[],walk:(to:Tile)=>Promise<{ok:boolean;reason?:string;detail?:string}>=(to)=>goTo(s,world,to,accountOf(s),{legTimeoutTicks:100})):Promise<string|null>{
  const st=()=>s.sdk.getState() as any,held=(id:number)=>count((st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count})),id);
  const here=():Tile=>{const p=st()?.player;return{x:p?.worldX??0,z:p?.worldZ??0,level:p?.level??0};};
+ // Each gather's target is fixed before any runs: a bead taken during another colour's series counts toward its own.
+ const targets=new Map(gathers.map(g=>[g.id,held(g.id)+g.count]));
  for(const g of gathers){
-  const target=held(g.id)+g.count,sources=(g.how==='milk'?nearest(cows(),here()):g.how==='loc'?[LOC_SOURCES[g.id]!.tile]:g.how==='kill'?nearest((KILL_SOURCES[g.id]?.chance??1)<1?denseSpawns(killSpawns(g.id)):killSpawns(g.id),here()):g.how==='pick'?locsByDistance(PICK_SOURCES[g.id]!.loc,here()):g.how==='npc'?[NPC_SOURCES[g.id]!.tile]:g.how==='combine'?[here()]:spawnsByDistance(g.id,here())).slice(0,6);
+  const target=targets.get(g.id)!,sources=(g.how==='milk'?nearest(cows(),here()):g.how==='loc'?[LOC_SOURCES[g.id]!.tile]:g.how==='kill'?nearest((KILL_SOURCES[g.id]?.chance??1)<1?denseSpawns(killSpawns(g.id)):killSpawns(g.id),here()):g.how==='pick'?locsByDistance(PICK_SOURCES[g.id]!.loc,here()):g.how==='npc'?[NPC_SOURCES[g.id]!.tile]:g.how==='combine'?[here()]:spawnsByDistance(g.id,here())).slice(0,6);
   // Spawns lie in clusters (three egg spawns within 4 tiles beyond White Wolf Mountain): one with no route rules out
   // the rest of its cluster, so the walk moves on to the next place rather than searching the same ground again.
   const unreachable:Tile[]=[];
@@ -215,10 +224,11 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
      console.log(`QUEST_SWEEP_NPC ${JSON.stringify({item:g.id,npc:r.name,held:held(g.id),coins:have(995)})}`);
     }else if(g.how==='kill'){
      // The nearest free one in sight; its drop lands on its tile when it dies, and another player's kill drops nothing for us.
-     const ids=KILL_SOURCES[g.id]!.npcs,lying=()=>(st()?.groundItems??[]).filter((i:any)=>i.id===g.id&&i.distance<=12).sort((a:any,b:any)=>a.distance-b.distance);
+     const ids=KILL_SOURCES[g.id]!.npcs,wanted=sharedDrops(gathers,g,held,targets),heldAll=()=>wanted.reduce((n,id)=>n+held(id),0);
+     const lying=()=>(st()?.groundItems??[]).filter((i:any)=>wanted.includes(i.id)&&i.distance<=12).sort((a:any,b:any)=>a.distance-b.distance);
      // A drop already on the ground (an earlier kill, another player's) is taken before the next fight, so the fight's
      // own wait ends only on a drop that was not there when it began.
-     if(lying()[0]){await s.bot.pickupItem(lying()[0]);await waitUntil(s,()=>held(g.id)>before,{timeoutTicks:15});continue;}
+     if(lying()[0]){const was=heldAll();await s.bot.pickupItem(lying()[0]);await waitUntil(s,()=>heldAll()>was,{timeoutTicks:15});continue;}
      const npc=(st()?.nearbyNpcs??[]).filter((n:any)=>ids.includes(n.id)&&!n.inCombat&&n.distance<=15).sort((a:any,b:any)=>a.distance-b.distance)[0];
      // A source that has given a kill is worth its respawn (goblins return within about 50 ticks); one that shows no free
      // animal at all is left after 30.
@@ -265,8 +275,9 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
      if(gone())tally.kills++;
      if(!await waitUntil(s,()=>!!drop(),{timeoutTicks:3}))continue;
      tally.drops++;
-     await s.bot.pickupItem(drop());
-     console.log(`QUEST_SWEEP_KILL ${JSON.stringify({item:g.id,npc:npc.name,at:{x:npc.x,z:npc.z},held:held(g.id)})}`);
+     const got=drop();
+     await s.bot.pickupItem(got);
+     console.log(`QUEST_SWEEP_KILL ${JSON.stringify({item:g.id,drop:got.id,npc:npc.name,at:{x:npc.x,z:npc.z},held:held(g.id)})}`);
     }else if(g.how==='milk'){
      if(!await waitUntil(s,()=>(st()?.nearbyNpcs??[]).some((n:any)=>n.id===COW),{timeoutTicks:20}))break;
      const cow=(st()?.nearbyNpcs??[]).filter((n:any)=>n.id===COW).sort((a:any,b:any)=>a.distance-b.distance)[0],bucket=(st()?.inventory??[]).find((i:any)=>i.id===BUCKET);
