@@ -4,6 +4,11 @@
 
 **New consumer enrolment:** wait for fresh `waiting-for-food`, bank observation from this run and bank-distance ≤3 before adding courier demand. Fresh bank data alone races receiver readiness (zero-transfer failure: `.practice/fleet-expansion/first-delivery-attempt.json`). Two live deliveries after the wait each reconciled160 sender debit=recipient credit; pilots returned to bank. `.practice/fleet-expansion/attach-ready.ts` checks enrolment; it is not a general runtime readiness fix. Promote the Thieving55-qualified earner after clean bootstrap handover; bootstrap60 timed out live and is failed. Food purchase cost is unknown.
 
+
+The coordinator plans Overall supplies from the route bill's demand and the latest available helper observations. A recent balance uses the status time for pack and worn items, and the original bank observation time for bank items. The planner lists older or undated holdings for verification, observed shortfalls separately, and unresolved item names separately. Neither a recent balance nor a route bill assigns or reserves stock.
+
+Source -> local consumer -> adapt -> check: the bank observation time in status, the preparation report's five-minute window, and Microbot's bank freshness pattern in the project use map -> the coordinator's supply summary -> preserve bank time through fleet sync and keep unverified holdings visible -> a planner test reads local and published snapshots with recent, stale and absent bank times. A read-only live-data comparison is in `.practice/planner-supply-freshness/summary.json`. A verified balance still needs a transfer and consumer receipt.
+
 ## Market policy (current)
 
 Owner decision: use GE for progression and wealth whenever it beats other sources. Account ownership and evidence requirements still apply.

@@ -9,6 +9,7 @@ import {freshScoreboard} from './coverage';
 import {projectRoot,atomicJson} from './coordinator-store';
 import {PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {readMergedPlan} from '../../core/src/coordinator-jobs';
+import {liveHelperStatuses,supplyBill} from '../../planner/src/supply-bill';
 
 export function parseModelObject(text:string):any{
  const trimmed=text.trim(),fence=trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
@@ -115,11 +116,45 @@ export function readWorld(){
  let stall:any=null;try{const f=join(projectRoot,'.practice/coordinator/stall.json');if(existsSync(f))stall=JSON.parse(readFileSync(f,'utf8'));}catch{/* no stall note */}
  return{at:Date.now(),scoreboard,stall,assets:assetSummary(statuses),supplyBill:supplyBillSummary(),executionDirective:plan.coordination?.directive??'',deliveryFocus:plan.coordination?.focusCapability??null,capacity:{maxBots:plan.maxBots,minFreeGB:plan.minFreeGB,freeGB:freemem()/2**30,nativeStartupGB:PRACTICE_STARTUP_GB,maxLive:plan.coordination?.maxLive??plan.maxBots,preferLive:plan.coordination?.preferLive===true},protectedNames,jobs:plan.jobs,statuses,ended,capabilities,capabilitySources,coverage};
 }
-// The Overall route's largest shortfalls (packages/planner/src/supply-bill.ts writes the file).
-export function supplyBillSummary(){
- try{const b=JSON.parse(readFileSync(join(projectRoot,'.practice/coordinator/supply-bill.json'),'utf8'));
-  return{at:b.at,short:b.rows.filter((r:any)=>r.short>0).sort((a:any,c:any)=>c.short-a.short).slice(0,25).map((r:any)=>({item:r.item,need:r.need,short:r.short,holders:r.holders.slice(0,2)}))};}
- catch{return null;}
+// Reprice the saved route demand against one set of current observations. The bill's write time does not refresh its stock.
+export function supplyBillSummary({base=projectRoot,now=Date.now(),fleetDir,side}:{
+ base?:string; now?:number; fleetDir?:string; side?:string;
+}={}){
+ try{
+  const bill=JSON.parse(readFileSync(join(base,'.practice/coordinator/supply-bill.json'),'utf8'));
+  const demands=bill.rows.map((row:{item:string;need:number})=>({item:row.item,count:row.need}));
+  const items=JSON.parse(readFileSync(join(base,'knowledge/items.json'),'utf8'));
+  const statuses=liveHelperStatuses(base,fleetDir,side).filter(s=>!s.practice);
+  // Use the same five-minute window as the preparation report. A fresh status does not make an older bank recent.
+  const isRecent=(at:unknown)=>typeof at==='number'&&at>0&&at<=now&&now-at<=300_000;
+  const recentStatuses=statuses.map(s=>({
+   ...s,
+   inventory:isRecent(s.at)?s.inventory:[],
+   equipment:isRecent(s.at)?s.equipment:[],
+   bank:isRecent(s.at)&&isRecent(s.bankAt)&&s.bankAt<=s.at?s.bank:[],
+  }));
+  const observed=supplyBill(demands,items,statuses);
+  const recent=supplyBill(demands,items,recentStatuses);
+  const verify=observed.flatMap((row,index)=>{
+   const current=recent[index]!;
+   const toVerify=Math.min(row.need,row.owned)-current.owned;
+   if(toVerify<=0)return [];
+   const freshByAccount=new Map(current.holders.map(h=>[h.account,h.count]));
+   const holders=row.holders.map(h=>({account:h.account,count:h.count-(freshByAccount.get(h.account)??0)}))
+    .filter(h=>h.count>0).sort((a,b)=>b.count-a.count).slice(0,2);
+   return [{item:row.item,need:row.need,recent:current.owned,toVerify,holders}];
+  });
+  return {
+   at:bill.at,
+   observedAt:now,
+   recentlyCovered:recent.filter(r=>r.ids.length>0&&r.short===0).length,
+   unmapped:observed.filter(r=>!r.ids.length).map(r=>r.item),
+   verificationNeeded:verify.length,
+   verify:verify.sort((a,b)=>b.toVerify-a.toVerify).slice(0,25),
+   short:observed.filter(r=>r.ids.length>0&&r.short>0).sort((a,b)=>b.short-a.short).slice(0,25)
+    .map(r=>({item:r.item,need:r.need,short:r.short,holders:r.holders.slice(0,2)})),
+  };
+ }catch{return null;}
 }
 // Coins and the large stacks each named account holds (inventory, worn and last seen bank), so plans spend and
 // convert owned stock: logs to Firemaking, essence to Runecraft, bows and shafts to Ranged, coins to GE and shop buys.
@@ -168,11 +203,11 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'For an existing capability whose owned files or entry cannot support the real consumer, return capabilityUpdates:[{expectedSource:<capabilitySources[id]>,definition:<complete DeliveryTask>}] with a same-capability build task and explicit replacements for old pending builds. One update per proposal; no running owner may hold that capability. The daemon preserves the old definition. Expand the existing module scope instead of duplicating it under a new capability name. Entry must be an actual account-parameterized live worker; local --save fixtures and privileged practice commands belong in checks. Native proof must invoke that worker CLI, not only helper functions. Every new/progress build must include a finite live consumer with useful acceptance, inputs and a next goal; never stop at stock or qualification.',
   'THIN ACCEPTANCE (owner order): a consumer and its checks hold only the script contract acceptance bar: unit tests, one practice run of the real CLI showing the useful effect, assets reconciled, a clear refusal and logout. Never add interruption/resume, reseed, independent recompute, raw-file binding or failure-window scenarios, and never widen an existing consumer. A live failure gets the smallest fix of the exact failed step plus one regression test.',
   'FLEET SIDES (world.scoreboard.fleetSkills, world.scoreboard.fleet): this side ('+(world.scoreboard?.fleet?.side??'local')+') plans only its own accounts, but the board counts the best account of any side (local, Codex cloud, Claude cloud). Each row gives the fleet best of a skill, the side and account that hold it, and the best of this side (local). bestLive and progress count this side only. For ordinary helper batches, do not queue work on a skill where otherSideLeads is true (another side leads this side by more than '+FLEET_BAND+' levels) unless the planned local account ends above that fleet best; a run that stays under it does not raise the board. Prefer skills this side leads or no side has trained for helper batches. The fresh completion account and scored main/specialist routes follow their own required progression and clocks. Name the fleet best and its side in why when a task targets a skill another side holds.',
-  'SUPPLY BILL (world.supplyBill): the route supplies Haggis needs minus owned stock. Helper work makes, buys or moves the largest shortfalls first, each run with a finite count; helper levels count only when they unlock a shortfall method, a quest, an item or a specialist win.',
+  'SUPPLY BILL (world.supplyBill): recentlyCovered counts route lines covered by recent observations, before reservations or delivery. Verify entries are last-seen stock that could cover a gap: confirm the named holder and available quantity before assigning a consumer or buying replacements. Short entries show the gap even if all last-seen holdings are still available. Unmapped entries need a pinned item ID. Prioritize the largest confirmed shortfalls. Give each supply job a finite count and a named consumer. Helper levels count only when they unlock a shortfall method, a quest, an item or a specialist win.',
   'METHOD LADDER (owner order): a worker uses the best method the current level of the account and owned items allow and switches at once when a better one unlocks (Runecraft altars by level and owned talisman, Agility courses, bows and arrows by Ranged level, logs by Firemaking level, monsters by combat). XP is 25x, so a level band takes minutes. Ordinary helper batches target the next unlock. Completion and scored routes may span a qualified method-switching ladder; never target a distant level on a weak method. Never gather or make stock the banks already hold in quantity (world.assets); spend it.',
   'MEMORY GATES: a proof imports FREE_FLOOR_GB and PRACTICE_STARTUP_GB from packages/core/src/memory.ts and takes the practice turn through delivery; it never hardcodes a free-memory number (a hardcoded 12 GiB gate failed the Firemaking and Magic builds on a machine with 5 to 10 GB available).',
   'FAST LANE: when a qualified capability needs only a different account, quest or argument, queue the run; do not queue a build. A failed live step that the runtime already handles (for example the quest talk door rule) gets a fresh qualify and a retry run, not a build.',
-  'ASSETS (world.assets): the coins and large stacks of every account. Turn owned stock into scoreboard progress before buying or gathering more: banked logs to Firemaking, rune essence to Runecraft, bows, shafts and arrows to Ranged, ores to Smithing, coins to GE and shop purchases (runes, bones, arrows, best-in-slot gear the account can wear now). Move coins and items to the account that will use them with the courier and trade workers.',
+  'ASSETS (world.assets): last-seen coins and large stacks. Check status and bankAt before spending or staging them. Turn confirmed stock into scoreboard progress before buying or gathering more: banked logs to Firemaking, rune essence to Runecraft, bows, shafts and arrows to Ranged, ores to Smithing, coins to GE and shop purchases (runes, bones, arrows, best-in-slot gear the account can wear now). Move coins and items to the account that will use them with the courier and trade workers.',
   'NO DIARY (AGENTS.md): write why, reason and capability consumer text as the current work order and current facts only. No dates, no was/now, no history of earlier attempts or builds; cite the failed runId or evidence path instead. Git and runs/<runId>/ hold the history.',
   'Task schema: {id,goal,kind,dependsOn,priority,estimatedMs,why,capability?,account?,accountFrom?,participants?,args?,acceptIndex?,role?,env?,accept?,timeoutMs?,launch?,agent?}. IDs lower-case letters/digits/hyphens. priority1..100 is impact, estimatedMs is an estimate of total work incl. preparation/recovery. Explain the next consumer in why.',
   'Kinds: review is a read-only cross-model source review of an existing delivered capability and can overlap independent authors. agent optionally selects codex or claude; the dispatcher balances builds and uses the other agent for review. qualify runs an existing capability native delivery. build authors named files, runs native delivery and a fresh reviewer. provision creates/registers one ordinary missing role. run installs a finite assignment in swarm.json, then checks fresh matched live status. Never set repeat:true yourself.',
