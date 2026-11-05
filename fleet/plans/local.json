@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793843216200,
+ "at": 1793843824660,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -481,15 +481,15 @@
    "account": "Wandwaver",
    "script": "scripts/quest-sweep.ts",
    "args": [
-    "totem"
+    "hunt"
    ],
    "env": {
     "CAP": "6000",
-    "COORDINATOR_RUN_ID": "task-bea5917b-1843-4a83-b479-0f221de36633"
+    "COORDINATOR_RUN_ID": "task-5abe6192-403e-4aba-b8b1-43db920f96d8"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "run-totem-wandwaver-started-cakes [task-bea5917b-1843-4a83-b479-0f221de36633]",
+   "goal": "run-hunt-wandwaver-owned-spade [task-5abe6192-403e-4aba-b8b1-43db920f96d8]",
    "role": "supply"
   }
  ]
