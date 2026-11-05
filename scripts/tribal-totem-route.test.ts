@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {totemStartsAtKangai,totemTravel,onKaramja,TOTEM_FARE} from './tribal-totem-route';
+import {totemStartsAtKangai,totemTravel,onKaramja,TOTEM_FARE,surplusForSlots} from './tribal-totem-route';
 
 test('Kangai Mau is skipped once the quest is started; an unread journal still tries him',()=>{
     expect(totemStartsAtKangai('not started')).toBe(true);
@@ -33,4 +33,18 @@ test('from the mainland: a started quest walks to the depot with one fare; a fre
     expect(totemTravel({...base,coins:29})).toMatchObject({how:'missing'});
     expect(totemTravel({...base,started:false,coins:90})).toEqual({how:'sail-to-kangai'});
     expect(totemTravel({...base,started:false,coins:89})).toMatchObject({how:'missing'});
+});
+
+test('a full pack banks other items first, then food beyond eight, never coins or quest items; a pack with room banks nothing',()=>{
+    const keep=new Set([1858,1857]);
+    const full=[{id:995,count:30},...Array.from({length:20},()=>({id:385,count:1})),{id:1858,count:1},{id:1351,count:1},{id:590,count:1},...Array.from({length:4},()=>({id:379,count:1}))];
+    expect(full.length).toBe(28);
+    const plan=surplusForSlots(full,2,keep);
+    expect(plan).toEqual([{id:1351,count:1},{id:590,count:1}]);
+    const sharks=[{id:995,count:30},...Array.from({length:27},()=>({id:385,count:1}))];
+    const p2=surplusForSlots(sharks,2,keep);
+    expect(p2).toEqual([{id:385,count:1},{id:385,count:1}]);
+    expect(surplusForSlots(sharks.slice(0,26),2,keep)).toEqual([]);
+    // Food is kept down to eight: a pack of coins and 27 food frees at most 19 slots.
+    expect(surplusForSlots(sharks,25,keep).length).toBe(19);
 });
