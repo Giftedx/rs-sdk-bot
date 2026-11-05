@@ -13,7 +13,7 @@ import { loadTravel } from '../../packages/core/src/travel';
 import { walkRoute } from '../../packages/core/src/walk';
 import { BARNABY_BRIMHAVEN, CUSTOMS_OFFICER_ARDOUGNE, onKaramja, surplusForSlots, totemStartsAtKangai, totemTravel } from '../tribal-totem-route';
 import { nearestBankTile } from '../rune-mysteries-route';
-import travel from '../../packages/planner/src/haggis-travel.json';
+import travelData from '../../packages/planner/src/haggis-travel.json';
 
 const KANGAI = { x: 2791, z: 3182 };
 const HORNCRATE = { id: 2707, x: 2650, z: 3273 };
@@ -73,7 +73,7 @@ try {
     // the surplus first at the nearest bank (the Ardougne south bank from the depot), then take anything already dropped.
     const surplus = () => surplusForSlots(q.inv().filter((i: any) => i.count > 0).map((i: any) => ({ id: i.id, count: i.count })), 2, new Set([ITEM.label, ITEM.totem]));
     if (surplus().length) {
-        const bank = nearestBankTile({ x: q.pos()?.worldX ?? 0, z: q.pos()?.worldZ ?? 0 }, Object.values((travel as unknown as { banks: Record<string, { x: number; z: number; level: number }> }).banks));
+        const bank = nearestBankTile({ x: q.pos()?.worldX ?? 0, z: q.pos()?.worldZ ?? 0 }, Object.values((travelData as unknown as { banks: Record<string, { x: number; z: number; level: number }> }).banks));
         await q.walk('to bank for slots', [{ x: bank.x, z: bank.z, tol: 3 }]);
         const opened: any = await q.s.bot.openBank();
         if (!opened?.success) await q.fail('bank for slots did not open');
