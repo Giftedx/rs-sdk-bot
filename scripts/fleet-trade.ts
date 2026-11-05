@@ -83,10 +83,16 @@ if (import.meta.main) {
             receipt(gave === order.count, gave, `${account} gave ${gave} ${order.item} to ${partner}`);
             await finish([s], gave === order.count, `fleet-trade ${order.id} gave=${gave}/${order.count}`);
         } else {
-            while (left() > 0 && held() < before + order.count) {
+            // The donor may arrive late. Trade requests are not player input, so step one tile off the meeting tile and
+            // back each round to beat the idle logout (about 900 ticks), and stop once the session ends.
+            let ended = false;
+            void s.ended.then(() => { ended = true; });
+            for (let round = 0; !ended && left() > 0 && held() < before + order.count; round++) {
                 await s.bot.trade(exactItem(partner), { accept: offer => offer.length === 1 && item.test(offer[0]!.name) && offer[0]!.count === order.count, requestTimeout: 30_000, timeout: 60_000 });
-                await waitUntil(s, () => held() >= before + order.count, { timeoutTicks: 10 });
+                await waitUntil(s, () => held() >= before + order.count || ended, { timeoutTicks: 10 });
+                if (!ended && held() < before + order.count) await s.bot.walkTo(tile.x + (round % 2 === 0 ? 1 : 0), tile.z, 0);
             }
+            if (ended && held() < before + order.count) throw Error(`session ended while waiting for ${partner}`);
             const got = held() - before;
             if (got > 0) {
                 if ((await s.bot.openBank()).success && await waitUntil(s, () => !!s.bankObservation?.(), { timeoutTicks: 20 })) {
