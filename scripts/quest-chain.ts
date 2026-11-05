@@ -25,7 +25,7 @@ export const QUEST_NAMES: Record<string, string> = {
     druidspirit: "Nature Spirit", eadgar: "Eadgar's Ruse", elena: "Plague City", grail: "Holy Grail",
     hauntedmine: "Haunted Mine", hero: "Hero's Quest", horror: "Horror from the Deep", hunt: "Pirate's Treasure",
     ikov: "Temple of Ikov", itgronigen: "Observatory Quest", itwatchtower: "Watch Tower",
-    misc: "Throne of Miscellania", mm: "Monkey Madness", mortton: "Shades of Mortton",
+    legends: "Legends Quest", misc: "Throne of Miscellania", mm: "Monkey Madness", mortton: "Shades of Mortton",
     priestperil: "Priest in Peril", regicide: "Regicide", routequest: "In Search of the Myreque",
     tbwt: "Tai Bwo Wannai Trio", totem: "Tribal Totem", troll: "Troll Stronghold", trolllove: "Troll Romance",
     upass: "Underground Pass", viking: "The Fremennik Trials", zanaris: "Lost City", zombiequeen: "Shilo Village",
