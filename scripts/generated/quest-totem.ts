@@ -11,7 +11,7 @@ import { componentId } from '../../packages/core/src/logout';
 import { questFlags } from '../../packages/core/src/quest-status';
 import { loadTravel } from '../../packages/core/src/travel';
 import { walkRoute } from '../../packages/core/src/walk';
-import { CUSTOMS_OFFICER_ARDOUGNE, totemStartsAtKangai, totemTravel } from '../tribal-totem-route';
+import { BARNABY_BRIMHAVEN, CUSTOMS_OFFICER_ARDOUGNE, onKaramja, totemStartsAtKangai, totemTravel } from '../tribal-totem-route';
 
 const KANGAI = { x: 2791, z: 3182 };
 const HORNCRATE = { id: 2707, x: 2650, z: 3273 };
@@ -39,25 +39,34 @@ try {
     await q.waitUntil(() => flag('Tribal Totem') !== 'unknown', 15);
     console.log(`NOTE tribal totem journal ${flag('Tribal Totem')}, plague city ${flag('Plague City')}`);
 
+    // A boat leg from the travel data (scripts/quest-sweep.ts sails the same way): walk to the sailor, pay, land.
+    const sail = async (label: string, id: string): Promise<void> => {
+        const leg = loadTravel().find(t => t.id === id);
+        if (!leg?.from) await q.fail(`travel leg ${id} unavailable`);
+        await q.walk(`to ${label}`, [{ x: leg!.from!.x, z: leg!.from!.z, tol: 3 }]);
+        const r = await walkRoute(q.s as any, [{ kind: 'travel', travel: leg!, at: leg!.from!, to: leg!.to }], { maxRetriesPerLeg: 1, legTimeoutTicks: 150 });
+        if (!r.ok || !q.near(leg!.to.x, leg!.to.z, 8)) await q.fail(`boat ${label}: ${r.ok ? 'arrival unobserved' : `${r.reason} ${r.detail}`}`);
+    };
+
+    // Where the bot stands decides the travel: quest-sweep stages it at Kangai Mau in Brimhaven; a direct run may start
+    // anywhere on the mainland, where a started quest goes straight to the Ardougne depot.
+    const p0 = q.pos(), karamja = onKaramja({ x: p0?.worldX ?? 0, z: p0?.worldZ ?? 0 });
+    let travel = totemTravel({ karamja, started: !totemStartsAtKangai(flag('Tribal Totem')), plagueCity: flag('Plague City'), magic: q.s.sdk.getSkill('Magic')?.level ?? 1, law: q.cnt(563), water: q.cnt(555), coins: q.cnt(995) });
+    console.log(`NOTE tribal totem ${karamja ? 'on karamja' : 'on the mainland'}, to ardougne by ${travel.how}`);
+    if (travel.how === 'missing') await q.fail(travel.detail);
+    if (travel.how === 'sail-to-kangai') { await sail('barnaby to brimhaven', BARNABY_BRIMHAVEN); travel = { how: 'boat' }; }
+
     // 1. Kangai Mau: "I'm in search of adventure!", "Ok, I will get it back." sets 1.
     if (totemStartsAtKangai(flag('Tribal Totem'))) {
         await q.talk('kangai 1', /^kangai mau$/i, [/in search of adventure/i, /ok, i will get it back/i], () => q.sawText(/best of luck with that/i) || q.sawText(/have you got our totem back/i), KANGAI, 60);
     }
     q.milestone(1);
 
-    // 2. To Ardougne: the teleport when the account can cast it, else the customs officer's boat (30 coins, lands on the
-    // Ardougne dock); the RPDT depot: the label from the horn crate onto the teleport crate (2), the employee (3).
-    const travel = totemTravel({ plagueCity: flag('Plague City'), magic: q.s.sdk.getSkill('Magic')?.level ?? 1, law: q.cnt(563), water: q.cnt(555), coins: q.cnt(995) });
-    console.log(`NOTE tribal totem to ardougne by ${travel.how}`);
-    if (travel.how === 'missing') await q.fail(travel.detail);
+    // 2. To Ardougne: the teleport when the account can cast it, the customs officer's boat from Brimhaven (30 coins,
+    // lands on the Ardougne dock), or a walk from the mainland; the RPDT depot: the label from the horn crate onto the
+    // teleport crate (2), the employee (3).
     if (travel.how === 'teleport') await q.teleport('ardougne teleport', 'magic:ardougne_teleport', 2661, 3301);
-    else {
-        const leg = loadTravel().find(t => t.id === CUSTOMS_OFFICER_ARDOUGNE);
-        if (!leg?.from) await q.fail(`travel leg ${CUSTOMS_OFFICER_ARDOUGNE} unavailable`);
-        await q.walk('to customs officer', [{ x: leg!.from!.x, z: leg!.from!.z, tol: 3 }]);
-        const r = await walkRoute(q.s as any, [{ kind: 'travel', travel: leg!, at: leg!.from!, to: leg!.to }], { maxRetriesPerLeg: 1, legTimeoutTicks: 150 });
-        if (!r.ok || !q.near(leg!.to.x, leg!.to.z, 8)) await q.fail(`boat to ardougne: ${r.ok ? 'arrival unobserved' : `${r.reason} ${r.detail}`}`);
-    }
+    else if (travel.how === 'boat') await sail('customs officer to ardougne', CUSTOMS_OFFICER_ARDOUGNE);
     await q.walk('to depot', [{ x: 2649, z: 3272, tol: 1 }]);
     await q.step('take label', () => q.opLoc(q.locAt(HORNCRATE.x, HORNCRATE.z) ?? HORNCRATE, 2), () => q.has(ITEM.label), 10, 4);
     await q.converse([], () => !q.dialogOpen(), 6);
