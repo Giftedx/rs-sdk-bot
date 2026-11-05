@@ -176,3 +176,18 @@ test('a refusal before any game tick frees the account instead of holding it', a
     const r = await supervise({ run: async () => ({ exitCode: 1, stdout: shark }), stopped: () => false, maxRestarts: 20, pause: async () => {} } as any);
     expect(r).toEqual({ reason: 'refused', runs: 1 });
 });
+
+test('a run the connection ended after real work restarts the streak toward gave-up; failures without work still add up', async () => {
+    const drained = out(['START 1 1 0', 'LEDGER ticks=1200 xp=9000 inventory=0 move=100 anim=800 dialog=0 stun=0 idle=300 idlePct=25.0 ', 'RESULT fail session ended: disconnected'], 1);
+    const dead = out(['login: Error: Unable to connect'], 1);
+    const brief = out(['LEDGER ticks=40 xp=0 inventory=0 move=10 anim=0 dialog=0 stun=0 idle=30 idlePct=75.0 ', 'RESULT fail session ended: disconnected'], 1);
+    let n = 0;
+    const runs = [dead, dead, drained, dead, dead, drained, dead, brief, dead];
+    const r = await supervise({ run: () => runs[n++]!(), stopped: () => false, pause: async () => {}, maxRestarts: 3 });
+    expect(r.reason).toBe('gave-up');
+    expect(n).toBe(9);
+    // Productive runs alone never give up: a stop file ends them.
+    let m = 0;
+    const s = await supervise({ run: () => { m++; return drained(); }, stopped: () => m >= 6, pause: async () => {}, maxRestarts: 1 });
+    expect(s).toEqual({ reason: 'stopped', runs: 6 });
+});

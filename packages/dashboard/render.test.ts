@@ -2,11 +2,23 @@ import {test,expect} from 'bun:test';
 import {readFileSync} from 'node:fs';
 const html=readFileSync(process.env.DASH_PAGE || new URL('./index.html',import.meta.url),'utf8');
 
-test('Free camera intent is replayed when the 3D frame becomes ready',()=>{
+function viewerReady(state:any,selected:string|null){
  const code=html.slice(html.indexOf("window.addEventListener('message',e=>{"),html.indexOf('function syncWorld(){'));
- const sent:any[]=[];let handler:any;const frame={postMessage:(m:any)=>sent.push(m)},window:any={atlasFreeCamera:true,addEventListener:(_t:string,f:any)=>handler=f};
- new Function('window','$','viewerMessage','viewerCanReveal',`let VIEWER={origin:'http://test',state:'loading'},VIEWER_TIMER,sel=null;const mode='3d',showViewerStatus=()=>{},viewerUnavailable=()=>{};${code}`)(window,()=>({contentWindow:frame}),()=>({state:'ready',privacyReady:true,renderReady:true}),()=>true);
- handler({source:frame,origin:'http://test',data:{}});expect(sent).toEqual([{atlasFreeCamera:true}]);
+ const sent:any[]=[];let handler:any;const frame={postMessage:(m:any)=>sent.push(m)},window:any={...state,addEventListener:(_t:string,f:any)=>handler=f};
+ new Function('window','$','viewerMessage','viewerCanReveal','sel',`let VIEWER={origin:'http://test',state:'loading'},VIEWER_TIMER;const mode='3d',showViewerStatus=()=>{},viewerUnavailable=()=>{};${code}`)(window,()=>({contentWindow:frame}),()=>({state:'ready',privacyReady:true,renderReady:true}),()=>true,selected);
+ return {sent,ready:()=>handler({source:frame,origin:'http://test',data:{}})};
+}
+
+test('Free camera intent is replayed when the 3D frame becomes ready',()=>{
+ const v=viewerReady({atlasFreeCamera:true},null);v.ready();expect(v.sent).toEqual([{atlasFreeCamera:true}]);
+});
+
+test('a release for an offline account is replayed once when the 3D frame becomes ready',()=>{
+ const v=viewerReady({atlasFreeCamera:true},'Away');v.ready();v.ready();expect(v.sent).toEqual([{atlasFreeCamera:true}]);
+});
+
+test('a follow chosen during loading is replayed once when the 3D frame becomes ready',()=>{
+ const v=viewerReady({},'Worker');v.ready();v.ready();expect(v.sent).toEqual([{follow:'Worker'}]);
 });
 
 test('a chosen camera destination stays labelled as the destination, not the selected account position',()=>{
@@ -218,4 +230,22 @@ test('Runite inspector uses the known value-board record despite display-name di
     const run=new Function('S','chosenBoard','boardKey','specialistRows','pagedRows','row','E','age','nf','sgn',source+';boardView();');
     run({boards:[{board:'Runite',top:{name:'Leader',value:42}}],race:{rows:[{label:'Lava Maze Runite',rule:{kind:'value'}}]}},'Lava Maze Runite',(s:string)=>s.replace('Lava Maze ',''),()=>[],(r:string[])=>rows=r,(label:string,value:unknown)=>label+': '+value,String,()=>'? ',String,String);
     expect(rows).toContain('Record holder: Leader');expect(rows).toContain('Record time / value: 42');
+});
+
+function picked(bots:any[],state:any={}){
+ const code=html.slice(html.indexOf('function pick(n){'),html.indexOf('\n',html.indexOf('function pick(n){')));
+ const sent:any[]=[],window:any={atlasDestination:{x:1,z:2},atlasFollowOther:'Stranger',...state};
+ const run=new Function('S','window','$','render',`let sel='Old',picked=false,view='',detailPage=1,rswFor='Old';const mode='3d',VIEWER={origin:'http://viewer'};${code};return n=>{pick(n);return {sel,rswFor};};`)({bots},window,()=>({contentWindow:{postMessage:(m:any)=>sent.push(m)}}),()=>{});
+ return {run,sent,window};
+}
+
+test('pick follows an account in the world even when it was the last one chosen',()=>{
+ const p=picked([{name:'Old',inWorld:true}],{atlasFreeCamera:true});
+ expect(p.run('Old')).toEqual({sel:'Old',rswFor:null});
+ expect(p.window.atlasFreeCamera).toBe(false);expect(p.window.atlasFollowOther).toBeNull();expect(p.window.atlasDestination).toBeNull();expect(p.sent).toEqual([]);
+});
+
+test('pick releases the camera for an account that is not in the world, with no viewer reload',()=>{
+ const p=picked([{name:'Away',inWorld:false,pos:{x:3200,z:3200}}]);
+ expect(p.run('Away').sel).toBe('Away');expect(p.window.atlasFreeCamera).toBe(true);expect(p.sent).toEqual([{atlasFreeCamera:true}]);
 });

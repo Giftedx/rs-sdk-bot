@@ -10,9 +10,10 @@
 // --daemon: a pass every 10 minutes, and one within TRAINER_POLL_MS of a planner trainer's ok RESULT (its target level
 // is met and its job does not repeat, so the account would otherwise sit ended until the timer).
 // Run beside DEMO_OK=1 bun scripts/swarm.ts and bun scripts/fleet-agent.ts --daemon, with FLEET_SIDE set.
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync, openSync, readSync, closeSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync, openSync, readSync, closeSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
+import { swarmWroteStop } from './swarm';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { CLAIM_MAX_AGE_MS, accountFrom, assess, catalogue, finishedTrainers, freshest, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, type Assignment } from '../packages/planner/src/autopilot';
 import { mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
@@ -73,6 +74,20 @@ export function fundOrders(out: readonly Assignment[], open: ReadonlySet<string>
     return { assignments, orders, log };
 }
 
+// Stop files by account name: the owner's pause the account; the controller's own (scripts/swarm.ts SWARM_STOP) only
+// mark a job that left the plan, so the planner may give that account a job and remove the file.
+export function pauses(stops: ReadonlyMap<string, string>): { paused: Set<string>; swarmStopped: Set<string> } {
+    const paused = new Set<string>(), swarmStopped = new Set<string>();
+    for (const [n, t] of stops) (swarmWroteStop(t) ? swarmStopped : paused).add(n.toLowerCase());
+    return { paused, swarmStopped };
+}
+// An account is offline, so the controller's stop file may go: no status row, a RESULT in it, or a row older than the
+// 30 s a live session refreshes within (scripts/swarm.ts statusAge). A live row without a result is a run still ending.
+export const OFFLINE_STATUS_MS = 30_000;
+export function stopClearable(status: any, now: number): boolean {
+    return !status || !!status.result || !(Number.isFinite(status.at) && now - status.at < OFFLINE_STATUS_MS);
+}
+
 export function pass(planFile: string, dry: boolean): string[] {
     const side = mySide(), owners = loadOwners(), swarm = readJson(planFile, null);
     if (!swarm || !Array.isArray(swarm.jobs)) throw Error(`autopilot: ${planFile} has no jobs list`);
@@ -93,7 +108,10 @@ export function pass(planFile: string, dry: boolean): string[] {
 
     // Resources other jobs hold: this file's other jobs (paused planner jobs included), and other sides' fresh claims.
     const listedNames = Object.keys(readJson(join(FLEET_DIR(), 'owners.json'), { accounts: {} }).accounts ?? {});
-    const paused = new Set(listedNames.filter(n => existsSync(join(prac, `stop-${n}`))).map(n => n.toLowerCase()));
+    // An owner's stop file pauses its account. One the controller wrote itself (a job that left the plan, stop-swarm)
+    // does not: that account is planned again, and the file goes with the job that replaces it (below).
+    const stopText = (n: string): string | undefined => { try { return readFileSync(join(prac, `stop-${n}`), 'utf8'); } catch { return undefined; } };
+    const { paused, swarmStopped } = pauses(new Map(listedNames.flatMap(n => { const t = stopText(n); return t === undefined ? [] : [[n, t] as const]; })));
     const taken = reservedResources(swarm.jobs, side, paused);
     const claimDir = join(FLEET_DIR(), 'claims');
     if (existsSync(claimDir)) for (const f of readdirSync(claimDir).filter(f => f.endsWith('.json'))) {
@@ -120,7 +138,7 @@ export function pass(planFile: string, dry: boolean): string[] {
     const open = inOpenOrder(orders, receipts, now), busy = enabledAccounts(withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs));
     const donors = listed.filter(n => owners.get(n.toLowerCase())?.side === side && n.toLowerCase() !== 'haggis' && ![busy, paused, open].some(s => s.has(n.toLowerCase())))
         .map(n => ({ name: n, coins: accountFrom(n, side, observed(n), id => byId.get(id)).items.coin ?? 0 })).filter(d => d.coins > 0);
-    const planned = plan({ side, accounts, owners, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: { 'catherby:lobster': 3 }, unfundable: busy, donors });
+    const planned = plan({ side, accounts, owners, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: { 'catherby:lobster': 3 }, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])) });
     const funding = fundOrders(planned, open, (from, to, coins) => coinOrder(from, to, coins, owners.get(to.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev', now));
     const out = funding.assignments;
     log.push(...funding.log);
@@ -136,6 +154,15 @@ export function pass(planFile: string, dry: boolean): string[] {
     }
     if (dry) return [...log, 'AUTOPILOT dry run: nothing written'];
     writeAtomic(planFile, JSON.stringify({ ...swarm, jobs }, null, 2) + '\n');
+    // The controller's own stop file goes once this pass hands the account work (a job, or a coin order the fleet agent
+    // will log it in for) and the account is offline: a run still ending on that file must find it.
+    const handed = new Set([...fresh, ...funding.orders.flatMap(o => [o.from, o.to])].map(a => a.toLowerCase()));
+    for (const n of listedNames) if (handed.has(n.toLowerCase()) && swarmStopped.has(n.toLowerCase())) {
+        const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
+        if (!stopClearable(f ? readJson(join(statusDir, f), null) : null, now)) { log.push(`AUTOPILOT hold ${n}: its last run is still ending on the controller's stop file`); continue; }
+        rmSync(join(prac, `stop-${n}`), { force: true });
+        log.push(`AUTOPILOT clear ${n}: the controller's stop file from its removed job`);
+    }
     mkdirSync(join(prac, 'autopilot'), { recursive: true });
     writeAtomic(stateFile, JSON.stringify(state, null, 1) + '\n');
     if (funding.orders.length) mkdirSync(join(fleetDir, 'orders'), { recursive: true });

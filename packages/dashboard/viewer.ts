@@ -119,7 +119,11 @@ export function installViewerBridge(host:any) {
                 this.addEventListener('message',(event:any)=>{
                     if(typeof event.data!=='string'||event.data.length>2_000_000)return;
                     let message:any;try{message=JSON.parse(event.data);}catch{return;}
-                    if(message.t==='roster'&&Array.isArray(message.p))for(const p of message.p)if(Array.isArray(p)&&typeof p[0]==='number'&&typeof p[1]==='string')names.set(p[0],p[1]);
+                    if(message.t==='roster'&&Array.isArray(message.p)){
+                        for(const p of message.p)if(Array.isArray(p)&&typeof p[0]==='number'&&typeof p[1]==='string')names.set(p[0],p[1]);
+                        // The page's own data can be minutes old; each roster is the full list of players online now.
+                        if(privacyReady&&renderReady&&!failed&&host.parent!==host)host.parent.postMessage({atlasRoster:{players:message.p.filter((p:any)=>Array.isArray(p)&&typeof p[1]==='string'&&[p[2],p[3],p[4],p[5]].every(Number.isFinite)).map((p:any)=>[hiddenHashes.has(fnv(p[1].toLowerCase()))?'⟦MAIN⟧':mask(p[1]),p[2],p[3],p[4],p[5]])}},host.location.origin);
+                    }
                     if(message.t==='tick'){
                         if(message.reset){faces.clear();npcs.clear();playerHp.clear();}
                         for(const r of Array.isArray(message.p)?message.p:[]){if(typeof r?.i!=='number')continue;if(r.f){faces.delete(r.i);playerHp.delete(r.i);}if(typeof r.fe==='number')r.fe<0?faces.delete(r.i):faces.set(r.i,r.fe);const h=hp(r.hp);if(h)playerHp.set(r.i,h);}
@@ -149,6 +153,7 @@ export function installViewerBridge(host:any) {
     };
     // The page's minimap stands in for the viewer's own (hidden by client-viewer.css): its compass and world-map buttons
     // press the viewer's, which stay in the page for this.
+    let pageFollow='',pageFollowPolls=0;
     const releaseFollow=()=>{
         const button=host.document?.querySelector('.live-follow button');if(!button)return false;
         button.click();freeCameraPolls=0;
@@ -162,9 +167,15 @@ export function installViewerBridge(host:any) {
         if(event.origin!==host.location.origin||event.source!==host.parent||!event.data||typeof event.data!=='object')return;
         if(event.data.atlasCompass===true)host.document?.querySelector('.minimap-container .compass')?.click();
         if(event.data.atlasOpenWorldMap===true)host.document?.querySelector('.minimap-container .worldmap-icon')?.click();
-        if(typeof event.data.follow==='string'){freeCameraPolls=0;publishedFollow=null;}
+        if(typeof event.data.follow==='string'){freeCameraPolls=0;publishedFollow=null;pageFollow=event.data.follow.toLowerCase();pageFollowPolls=20;}
         if(event.data.atlasFreeCamera===true){freeCameraPolls=10;releaseFollow();}
     });
+    // The page owns the account order: [ and ] step through its accounts, not through every online player.
+    host.addEventListener('keydown',(event:any)=>{
+        if(event.key!=='['&&event.key!==']')return;
+        event.stopImmediatePropagation();event.preventDefault();
+        if(host.parent!==host)host.parent.postMessage({atlasStep:event.key===']'?1:-1},host.location.origin);
+    },true);
     host.addEventListener('error',()=>fail('The 3D viewer reported an error; use the 2D map.'));
     host.addEventListener('unhandledrejection',(event:any)=>{if(event.reason?.name!=='AbortError')fail('The 3D viewer could not finish loading; use the 2D map.');});
     // The pinned viewer publishes its current follow target in its URL. Relay
@@ -183,6 +194,11 @@ export function installViewerBridge(host:any) {
         const params=new host.URL(host.location.href).searchParams,cx=Number(params.get('cx')),cz=Number(params.get('cz')),yaw=Number(params.get('y'));
         if(params.has('cx')&&Number.isFinite(cx)&&Number.isFinite(cz)&&Number.isFinite(yaw)){const key=cx+','+cz+','+yaw;if(key!==publishedCamera){publishedCamera=key;host.parent.postMessage({atlasCamera3d:{x:cx,z:cz,yaw:yaw&2047}},host.location.origin);}}
         const follow=params.get('follow');
+        // The viewer writes its URL late. Until the URL names the page's choice, the old name there is not a new follow.
+        if(pageFollowPolls){
+            if(follow?.toLowerCase()===pageFollow){pageFollowPolls=0;publishedFollow=follow;return;}
+            if(--pageFollowPolls)return;
+        }
         if(!follow||follow===publishedFollow||!/^[A-Za-z0-9_ -]{1,12}$/.test(follow))return;
         publishedFollow=follow;
         host.parent.postMessage({atlasFollow:hiddenNames.has(follow.toLowerCase())?'⟦MAIN⟧':follow},host.location.origin);

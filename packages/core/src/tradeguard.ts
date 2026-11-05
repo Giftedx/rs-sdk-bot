@@ -5,6 +5,7 @@ import { listedAccounts } from './fleet';
 const root = resolve(import.meta.dir, '../../..');
 const verifiedFile = join(root, '.practice/owned-accounts.json');
 const cached = new Map<string, { at:number; version:number; names:Set<string> }>();
+const OWNED_CACHE_MS = 5 * 60_000;
 
 // Called only after successful game authentication. This proves control, unlike a locally created bot.env.
 export function recordOwnedAccount(name: string, server: string): void {
@@ -21,7 +22,9 @@ export function ownedAccounts(server: string): Set<string> {
     let version=0;
     try { version=statSync(verifiedFile).mtimeMs; } catch { /* no verified registry yet */ }
     const hit=cached.get(server);
-    if(hit && hit.version===version && Date.now()-hit.at<5000) return new Set(hit.names);
+    // The scan below blocks the event loop for about 1 s, which is a whole trade at 150 ms ticks. Every verified login
+    // changes `version`, so only a status file written with no login can wait the full cache time.
+    if(hit && hit.version===version && Date.now()-hit.at<OWNED_CACHE_MS) return new Set(hit.names);
     const dir = resolve(import.meta.dir, '../../../vendor/rs-sdk/bots');
     const names = new Set<string>();
     let verified: Record<string,{server:string}>={};

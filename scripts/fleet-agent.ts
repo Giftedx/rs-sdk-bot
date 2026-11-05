@@ -1,5 +1,6 @@
 // This machine's fleet agent. Every CYCLE minutes (1 when one of its orders opens within LEAD minutes) it syncs fleet
-// data through git (scripts/fleet-sync.ts runSync) and starts scripts/fleet-trade.ts for each open order that names
+// data through git (scripts/fleet-sync.ts, run as a child process: the agent runs for days, so a sync uses the code on
+// disk, never the module this process loaded at start) and starts scripts/fleet-trade.ts for each open order that names
 // one of this side's accounts, then syncs again so the receipt reaches the other machine. An account with an
 // enabled swarm job is skipped: the swarm and the agent must never both log one account in. One instance per
 // machine (.practice/fleet-agent.lock holds its process id).
@@ -9,7 +10,7 @@ import { join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 import { FLEET_DIR, mySide, sideOf, loadOwners } from '../packages/core/src/fleet';
 import { pickOrder, validOrder, type Order, type Receipt } from './fleet-trade';
-import { runSync } from './fleet-sync';
+import { lastResult } from '../packages/core/src/run-child';
 import { mergeJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import {capabilityRevision} from '../packages/core/src/worker-release';
 
@@ -48,6 +49,12 @@ export function tradeEnvironment(dir:string,env:Record<string,string|undefined>=
     return {...env,FLEET_DIR:dir,WORKER_RELEASE:release,WORKER_ENTRY:TRADE_SCRIPT};
 }
 
+// The sync child's own RESULT line; a child that printed none reports its exit code.
+export function syncResult(out: string, exitCode: number | null): string {
+    const line = lastResult(out);
+    return line === 'RESULT fail no result' ? `RESULT fail fleet-sync exit ${exitCode}` : line;
+}
+
 const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } };
 
 if (import.meta.main) {
@@ -63,7 +70,10 @@ if (import.meta.main) {
     const release = () => { try { if (readFileSync(lock, 'utf8') === String(process.pid)) rmSync(lock); } catch { /* gone */ } };
     process.on('exit', release); process.on('SIGINT', () => process.exit(0)); process.on('SIGTERM', () => process.exit(0));
     const running = new Set<string>(), once = process.argv.includes('--once');
-    const sync = () => { try { console.log(`FLEET_AGENT sync ${runSync()} at ${new Date().toISOString()}`); } catch (e) { console.log(`FLEET_AGENT sync failed: ${String(e)}`); } };
+    const sync = () => {
+        const p = Bun.spawnSync(['bun', 'scripts/fleet-sync.ts'], { cwd: root, windowsHide: true, env: process.env, stdout: 'pipe', stderr: 'pipe' });
+        console.log(`FLEET_AGENT sync ${syncResult(`${p.stdout.toString()}${p.stderr.toString()}`, p.exitCode)} at ${new Date().toISOString()}`);
+    };
     for (;;) {
         sync();
         const dir = FLEET_DIR(), now = Date.now();

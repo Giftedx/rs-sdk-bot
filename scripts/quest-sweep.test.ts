@@ -176,3 +176,12 @@ test('mandatory stock failure, API throws and unknown results settle the origina
 test('original owner is pinned before world/loadout awaits and foreign continuations cannot send or settle',async()=>{for(const mode of ['owner-world','owner-stage','client-world','life-world','sdk-reconnect','transit-owner']){const f=apiSweepFixture(mode);await sweep('SweepOwned','tbwt',undefined,apiOptions,f.deps);expect(f.stats()).toMatchObject({runs:0,sends:0});expect(f.finished).toHaveLength(0);if(!['owner-stage','sdk-reconnect','transit-owner'].includes(mode))expect(f.stats().stages).toBe(0);}});
 
 test('known partial Shilo gates return under protection despite ordinary stop; unknown crossing and foreign ownership defer',async()=>{for(const mode of ['transit-wood','transit-metal','transit-deadline']){const f=apiSweepFixture(mode);await sweep('SweepOwned','tbwt',undefined,apiOptions,f.deps);expect(f.goals.some(g=>g.cleanup)).toBe(true);expect(f.finished).toHaveLength(1);expect(f.finished[0].ok).toBe(false);expect(f.s.sdk.getState().prayers.activePrayers[14]).toBe(false);expect(f.stats().runs).toBe(0);}for(const mode of ['transit-pending','transit-partial-owner']){const f=apiSweepFixture(mode);const result:any=await sweep('SweepOwned','tbwt',undefined,apiOptions,f.deps);expect(result.recoveryDeferred).toBe(true);expect(f.goals.some(g=>g.cleanup)).toBe(false);expect(f.finished).toHaveLength(0);expect(f.stats().runs).toBe(0);}});
+test('a quest keeps its own items and every untradeable item out of the unneeded deposit',async()=>{
+ const {keepsItem}=await import('./quest-sweep');
+ const tradeable=(id:number)=>id===1438?true:id===291?false:undefined;
+ expect(keepsItem('runemysteries',1438,tradeable)).toBe(true);
+ expect(keepsItem('runemysteries',291,tradeable)).toBe(true);
+ expect(keepsItem('sheep',291,tradeable)).toBe(true);
+ expect(keepsItem('sheep',1438,tradeable)).toBe(false);
+ expect(keepsItem('sheep',995,tradeable)).toBe(false);
+});

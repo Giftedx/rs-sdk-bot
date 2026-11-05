@@ -22,7 +22,7 @@ test('the live minimap excludes practice markers',()=>{
 });
 
 test('practice selection cannot open or retain the live-only 3D viewer',async()=>{
- const request=html.slice(html.indexOf('async function request3D(){'),html.indexOf("$('#bt').onclick"));
+ const request=html.slice(html.indexOf('async function request3D(){'),html.indexOf("$('#b3').onclick"));
  let calls=0;const reasons:string[]=[];
  const run=new Function('S','sel','fetch','viewerUnavailable',`let VIEWER_REQUEST=0,VIEWER_TIMER,VIEWER;const showViewerStatus=()=>{};${request};return request3D;`)({bots},'Practice',async()=>{calls++;return Response.json({available:false,reason:'upstream'});},(s:string)=>reasons.push(s));
  await run();expect(calls).toBe(0);expect(reasons[0]).toContain('Practice');

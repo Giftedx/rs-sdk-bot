@@ -25,6 +25,8 @@ export type Inputs = {
     side: string; accounts: readonly Acct[]; owners: ReadonlyMap<string, { side: string }>; bill: readonly BillRow[];
     templates: readonly Template[]; prices: Readonly<Record<string, number>>; waste?: Readonly<Record<string, number>>;
     taken?: Readonly<Record<string, number>>; retired?: ReadonlySet<string>; capacity?: Readonly<Record<string, number>>;
+    // The template each account holds now, by lower-case name: on a value tie the account keeps it.
+    current?: ReadonlyMap<string, string>;
     // Accounts of this side free to trade now (no enabled swarm job), with their coins. Each keeps FUND_RESERVE.
     donors?: readonly { name: string; coins: number }[];
     // Lower-case names of accounts with an enabled job. Funding one would remove its running job, and the stop file
@@ -84,7 +86,10 @@ export function plan(inp: Inputs): Assignment[] {
             if (value > 0) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+'), coins: coinShort(a, t.needs) });
         }
     }
-    cands.sort((x, y) => y.value - x.value || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id));
+    // On a value tie an account keeps the template it holds: a level change must not move it to another spot of the
+    // same worth, which would replace a running job with a fresh one that changes nothing useful.
+    const keeps = (c: Cand) => inp.current?.get(c.account.toLowerCase()) === c.template.id ? 1 : 0;
+    cands.sort((x, y) => y.value - x.value || keeps(y) - keeps(x) || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id));
     const used = new Map(Object.entries(inp.taken ?? {})), done = new Map<string, Assignment>();
     // Donor coins above the reserve, spent as funded candidates take them; a funded account gives nothing.
     // A donor that gives stays free this pass, so the fleet agent can log it in for the trade.
@@ -126,22 +131,30 @@ export function finishedTrainers(jobs: readonly any[], side: string, assigned: R
         && assess(linesSince(j.account, assigned[j.account]!.offset)).ok > 0).map(j => j.account);
 }
 
-// Retirement from a job's own log lines (since the autopilot assigned it): the last RETIRE_FAILS RESULTs all fail, a
-// RESULT reports a death, or the last LEDGER spent WASTE_LIMIT or more of its ticks idle or walking.
+// Retirement from a job's own log lines (since the autopilot assigned it): the last RETIRE_FAILS RESULTs all fail with
+// no progress, a RESULT reports a death, or the last LEDGER spent WASTE_LIMIT or more of its ticks idle or walking.
+// A trainer that hits its tick cap short of the target ends fail with the XP it gained (scripts/generated/thieving60.ts
+// prints xp=<gain>), so the supervisor runs it again; such a fail is progress and does not count toward retirement.
+// A run the server or the relayed gateway dropped (`RESULT fail session ended: disconnected`; the cloud proxy's 1012
+// `server_draining` closes) says nothing about the job: its supervisor logs the account back in and the next run banks
+// the carried pack, so such a result is counted as a drain, never as a failure.
 export const RETIRE_FAILS = 2, WASTE_LIMIT = 0.9;
-export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number } {
+export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked)=[1-9]\d*\b/.test(result);
+export const DRAIN_RESULT = /^RESULT fail session ended: disconnected\b/;
+export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number; drains: number } {
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
-    const results = clean.filter(l => /^RESULT (ok|fail)\b/.test(l));
+    const drains = clean.filter(l => DRAIN_RESULT.test(l)).length;
+    const results = clean.filter(l => /^RESULT (ok|fail)\b/.test(l) && !DRAIN_RESULT.test(l));
     const ok = results.filter(l => l.startsWith('RESULT ok')).length, fail = results.length - ok;
     // goldfarm and thieving60 print died=false on a healthy run: only a bare word or a field that is not false counts.
     const died = results.find(l => /\b(?:died|death)\b(?!=)|\b(?:died|death)=(?!false\b)/i.test(l));
-    if (died) return { retire: true, reason: `death: ${died.slice(0, 120)}`, ok, fail };
+    if (died) return { retire: true, reason: `death: ${died.slice(0, 120)}`, ok, fail, drains };
     const tail = results.slice(-RETIRE_FAILS);
-    if (tail.length === RETIRE_FAILS && tail.every(l => l.startsWith('RESULT fail'))) return { retire: true, reason: `${RETIRE_FAILS} fail RESULTs: ${tail.at(-1)!.slice(0, 120)}`, ok, fail };
+    if (tail.length === RETIRE_FAILS && tail.every(l => l.startsWith('RESULT fail') && !progressed(l))) return { retire: true, reason: `${RETIRE_FAILS} fail RESULTs: ${tail.at(-1)!.slice(0, 120)}`, ok, fail, drains };
     const ledger = clean.filter(l => l.startsWith('LEDGER ')).at(-1)?.match(/^LEDGER ticks=(\d+).* move=(\d+).* idle=(\d+)/);
     if (ledger && +ledger[1]! >= 300 && (+ledger[2]! + +ledger[3]!) / +ledger[1]! >= WASTE_LIMIT)
-        return { retire: true, reason: `tick waste ${(100 * (+ledger[2]! + +ledger[3]!) / +ledger[1]!).toFixed(0)}% idle+move`, ok, fail };
-    return { retire: false, reason: '', ok, fail };
+        return { retire: true, reason: `tick waste ${(100 * (+ledger[2]! + +ledger[3]!) / +ledger[1]!).toFixed(0)}% idle+move`, ok, fail, drains };
+    return { retire: false, reason: '', ok, fail, drains };
 }
 
 // Thieving success at a knight of Ardougne (pickpocket.dbrow: 50..240 of 256 from level 1 to 99), scaled from the
@@ -201,6 +214,9 @@ export function jobResources(job: { script?: string; args?: string[]; env?: Reco
             out.push(`knight:${KNIGHT_SPOTS.reduce((b, s) => cheb(s, x, z) < cheb(b, x, z) ? s : b)}`);
         }
         if (file === 'scripts/gather-feathers.ts') out.push(`pen:${env.PEN ?? '3229,3298'}`);
+        // Ranged training kills the Lumbridge pen's chickens (scripts/ranged-train.ts OUT ends at 3233,3297), so it holds
+        // that pen like a feather job does: two sides must not farm one pen.
+        if (file === 'scripts/ranged-train.ts') out.push('pen:3229,3298');
         if (file === 'scripts/shop-buyer.ts' && args[0]) out.push(`shop:${args[0]}`);
         if (file === 'scripts/gather-fish.ts' && (args[0] ?? 'cage') === 'cage') out.push('catherby:lobster');
     }
@@ -252,12 +268,15 @@ export function reservedResources(jobs: readonly any[], side: string, paused: Re
 }
 
 // This side's fleet claim (fleet/claims/<side>.json on the fleet-data branch): every exclusive resource an enabled job
-// of this side's own accounts holds, planner-made or hand-made, from the plan the swarm runs. scripts/fleet-sync.ts
-// writes it on every sync, so it never depends on the planner running; scripts/autopilot.ts on every side ignores a
-// claim older than CLAIM_MAX_AGE_MS, so a side that stops syncing releases its spots.
+// of this side's own accounts holds, planner-made or hand-made, from the plan the swarm runs, when one of the job's
+// accounts is `active` (scripts/fleet-sync.ts: seen in the world within CLAIM_MAX_AGE_MS). A plan with more enabled
+// jobs than the swarm admits parks some for days; a parked job's spot is free for the other sides, and when the job
+// does start, the planner that took the spot sees this side's claim on its next pass and moves its account. fleet-sync
+// writes the claim on every sync, so it never depends on the planner running; scripts/autopilot.ts on every side
+// ignores a claim older than CLAIM_MAX_AGE_MS, so a side that stops syncing releases its spots.
 export const CLAIM_MAX_AGE_MS = 2 * 3600_000;
-export function claimFor(jobs: readonly any[], side: string, sideOf: (account: string) => string, now = Date.now()): { side: string; at: number; resources: string[] } {
-    const held = jobs.filter(j => j?.enabled !== false && jobNames(j).length > 0 && jobNames(j).every(a => sideOf(a) === side)).flatMap(jobResources);
+export function claimFor(jobs: readonly any[], side: string, sideOf: (account: string) => string, now = Date.now(), active: (account: string) => boolean = () => true): { side: string; at: number; resources: string[] } {
+    const held = jobs.filter(j => j?.enabled !== false && jobNames(j).length > 0 && jobNames(j).every(a => sideOf(a) === side) && jobNames(j).some(active)).flatMap(jobResources);
     return { side, at: now, resources: [...new Set(held)].sort() };
 }
 

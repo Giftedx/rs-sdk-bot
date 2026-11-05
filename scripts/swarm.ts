@@ -32,7 +32,7 @@ import { createHash } from 'node:crypto';
 import { readLogoutProof, listAttempts, verifyLegacyLogout, type LegacyLogoutClaim, type LegacyLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 import { mergedPlan, readCoordinatorJobs, emptyCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
-import { loadOwners, mySide, sideOf, type Owner } from '../packages/core/src/fleet';
+import { leaseHeldElsewhere, loadOwners, mySide, readLease, sideOf, thisHost, type Owner } from '../packages/core/src/fleet';
 
 export type Job = { account?: string; accounts?: string[]; host?: boolean; orchestrate?:boolean; args?:string[]; maxRestarts?:number; script: string; role?: string; goal?: string; env?: Record<string, string>; envByAccount?: Record<string, Record<string, string>>; enabled: boolean; repeat?: boolean; note?: string; whenCargoFrom?: string[]; demandNear?: {x:number;z:number;radius:number};whenFoodLowFrom?:string[];foodLowBelow?:number;foodSourceAccount?:string;foodSourceAccounts?:string[];sourceFoodMinimum?:number };
 type Plan = { maxBots: number; minFreeGB: number; jobs: Job[] };
@@ -209,6 +209,21 @@ export type EndRecord = { at: number; reason: string; revision?: string };
 // These failures need a fix before another login. "repeat" does not clear them.
 export function persistentEnd(reason: string): boolean {
     return /^(?:died|blocked|gave-up)(?:\b|$)/.test(reason);
+}
+// The stop files this controller writes itself: a run whose job left the plan, stop-swarm, a job turned off. They are
+// not an owner's pause: the planner (scripts/autopilot.ts) plans such an account again and removes the file with the
+// job that replaces it. A stop file with any other text is the owner's and holds the account.
+export const SWARM_STOP = { removed: 'swarm plan removed or stopped', all: 'swarm stopped', job: 'swarm', recovery: 'swarm recovery stopped', inherited: 'inherited recovery stopped' } as const;
+export function swarmWroteStop(text: string | undefined): boolean {
+    return text !== undefined && (Object.values(SWARM_STOP) as string[]).includes(text.trim());
+}
+// The ends a standing job retries by itself once the account is offline: a block or give-up, a stop that a stop file
+// caused (the account's own RESULT says so; an owner's file still blocks the start, the controller's own is gone), or a
+// process the controller lost track of (its own restart). A supervisor also ends `stopped` on `RESULT fail no food`,
+// which only a resupply repairs, so that stop is not retried. A death waits for a person; done is not a pause.
+export function standingRetryable(reason: string, result?: string): boolean {
+    if (/^stopped after \d+ runs$/.test(reason)) return typeof result === 'string' && /^(?:RESULT )?fail stop file\b/.test(result);
+    return /^(?:blocked|gave-up)\b|^exit unknown$/.test(reason);
 }
 export function endedForGood(end: { reason: string } | undefined, repeat: boolean | undefined): boolean {
     return !!end && (!repeat || !successfulEnd(end.reason));
@@ -490,6 +505,10 @@ if (import.meta.main) {
     const logDir = join(prac, 'swarm-logs');
     mkdirSync(logDir, { recursive: true });
     if (process.env.DEMO_OK !== '1') { console.log('swarm: set DEMO_OK=1 (live server)'); process.exit(2); }
+    // One controller per side across machines: another machine's fresh lease (scripts/fleet-sync.ts publishes it from the
+    // running controller's heartbeat) means its swarm runs this side's accounts; a second controller would log them in twice.
+    const held = leaseHeldElsewhere(readLease(side), thisHost());
+    if (held) { console.log(`swarm: the ${side} side's jobs run on ${held.host} (lease ${Math.round((Date.now() - held.at) / 60_000)} min old, controller pid ${held.pid}); not starting a second controller`); process.exit(2); }
 
     const runs = new Map<string, Run>();
     const recoveryDispatch=createRecoveryDispatch({base:root,server:LIVE_SERVER});
@@ -616,8 +635,8 @@ if (import.meta.main) {
         if(!Array.isArray(plan.jobs)||!Number.isFinite(plan.maxBots)||plan.maxBots<1||!Number.isFinite(plan.minFreeGB)) { console.log('SWARM bad plan shape'); return; }
         const stopAll = existsSync(join(prac, 'stop-swarm'));
         inheritedRecoveries=heldRecoveryOwners(root,recoveryDispatch.active?[recoveryDispatch.active.account]:[]);
-        if(stopAll&&recoveryDispatch.active)writeFileSync(stopFile(recoveryDispatch.active.account),'swarm recovery stopped');
-        if(stopAll)for(const held of inheritedRecoveries)writeFileSync(stopFile(held.account),'inherited recovery stopped');
+        if(stopAll&&recoveryDispatch.active)writeFileSync(stopFile(recoveryDispatch.active.account),SWARM_STOP.recovery);
+        if(stopAll)for(const held of inheritedRecoveries)writeFileSync(stopFile(held.account),SWARM_STOP.inherited);
         const planned=plan.jobs.flatMap(j=>{ const p=parseJob(j); return 'error' in p?[]:[p]; });
         const accountEnabled = enabledByAccount(planned);
         if (Date.now() - orphanScanAt >= 60_000) {
@@ -634,7 +653,7 @@ if (import.meta.main) {
         // A replacement host/account configuration waits for its current owner;
         // changing the run key must neither stop it nor permit a second login.
         for(const r of runs.values()) if(!overlappingRun(planned,r.accounts)||stopAll)
-            for(const a of r.accounts) writeFileSync(stopFile(a),'swarm plan removed or stopped');
+            for(const a of r.accounts) writeFileSync(stopFile(a),SWARM_STOP.removed);
         const statuses: unknown[] = [];
         try {
             for (const file of readdirSync(join(prac, 'status'))) if (file.endsWith('.json')) {
@@ -706,7 +725,7 @@ if (import.meta.main) {
                 continue;
             }
             for (const a of p.accounts) observeEnabled([a], accountEnabled.get(a.toLowerCase()) === true, previousEnabled, pendingResume);
-            if(stopAll) for(const a of p.accounts) writeFileSync(stopFile(a),'swarm stopped');
+            if(stopAll) for(const a of p.accounts) writeFileSync(stopFile(a),SWARM_STOP.all);
             const r = overlappingRun(runs.values(), p.accounts);
             if (!stopAll && endStateOk && applyResume(p.accounts, !!r, ended, pendingResume, a => rmSync(stopFile(a), {force:true})))
                 persistEnded(deathsFile, ended);
@@ -718,19 +737,21 @@ if (import.meta.main) {
                 for (const a of p.accounts) {
                     if (!r.accounts.some(name => name.toLowerCase() === a.toLowerCase())) st[a] = 'waiting: current mission still running';
                     else if (ended.has(a) && ended.get(a)!.at >= r.started) st[a] = `ended: ${ended.get(a)!.reason}`;
-                    else if (stop) { writeFileSync(stopFile(a), 'swarm'); st[a] = 'stopping'; }
+                    else if (stop) { writeFileSync(stopFile(a), SWARM_STOP.job); st[a] = 'stopping'; }
                     else st[a] = pendingResume.has(a.toLowerCase()) ? 'stopping; resume queued'
                         : r.revision !== missionSignature(job) ? 'running; updated mission queued' : 'running';
                 }
             } else if (!job.enabled || stopAll) for (const a of p.accounts) st[a] = 'disabled';
             else if (!endStateOk) for (const a of p.accounts) st[a] = 'paused: repair or source ownership unresolved';
             else {
-                // A standing owner job retries a blocked or gave-up end by itself once the account's live status shows
-                // a finished session unchanged for BOOTSTRAP_STATUS_AGE_MS. A death still waits for a person.
+                // A standing owner job retries a blocked, gave-up, stopped or lost end (standingRetryable) by itself once the
+                // account's live status shows a finished session unchanged for BOOTSTRAP_STATUS_AGE_MS. A death still waits
+                // for a person; an owner's stop file still blocks the start below.
                 if ((job as Job & {standing?:boolean}).standing) for (const a of p.accounts) {
                     const key = [...ended.keys()].find(n => n.toLowerCase() === a.toLowerCase()), end = key ? ended.get(key) : undefined;
-                    if (!end || !/^(?:blocked|gave-up)\b/.test(end.reason)) continue;
+                    if (!end) continue;
                     let s: any; try { s = JSON.parse(readFileSync(join(prac, 'status', `${a}.json`), 'utf8')); } catch { continue; }
+                    if (!standingRetryable(end.reason, s?.result)) continue;
                     // A host-run account writes no status result; its confirmed producer logout (2 min old) shows it offline.
                     let settled = false;
                     try { const lp = readLogoutProof(a, LIVE_SERVER); settled = lp.state === 'confirmed' && Date.now() - lp.loggedOutAt >= 120_000; } catch { /* unreadable: use the status rule */ }

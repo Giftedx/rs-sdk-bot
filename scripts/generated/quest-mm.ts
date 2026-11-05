@@ -10,6 +10,7 @@
 import { openQuest } from './quest-lib';
 import { componentId } from '../../packages/core/src/logout';
 import { solve, solved, applyClick } from './mm-puzzle';
+import { selectQuestFood } from '../quest-sustain';
 
 const ITEM = {
     seal: 4004, orders: 4005, dentures: 4006, encBar: 4007, mould: 4020, amulet: 4021, amuletUnstrung: 4022,
@@ -39,8 +40,20 @@ if (process.env.MM_LOG) {
     const log0 = console.log.bind(console);
     console.log = (...a: unknown[]) => { log0(...a); try { appendFileSync(process.env.MM_LOG!, a.map(String).join(' ') + '\n'); } catch { /* the log is a debug aid */ } };
 }
-const q = await openQuest({ cap: Number(process.env.MM_CAP ?? 9000), eatAt: 22, food: [ITEM.food] });
+// The shared eater stops the run on a bite the server drops, and a knockout's p_delay drops one (mm_jail.rs2:3-15, a shark
+// at 20 HP on the jail lane), so eatAt 0 turns it off and the tick below eats at 22.
+const q = await openQuest({ cap: Number(process.env.MM_CAP ?? 9000), eatAt: 0, food: [ITEM.food] });
 try {
+    let eatCool = 0, sharks = -1;
+    q.s.onTick(() => {
+        if (sharks >= 0 && q.cnt(ITEM.food) < sharks) q.stats.eats++;
+        sharks = -1;
+        if (eatCool > 0) { eatCool--; return; }
+        const c = selectQuestFood(q.st(), { food: [ITEM.food], eatAt: 22 });
+        if (!c) return;
+        eatCool = 2; sharks = q.cnt(ITEM.food);
+        void q.s.direct({ type: 'useInventoryItem', slot: c.item.slot, optionIndex: c.opIndex, reason: 'SDK' });
+    });
     // STATUS every 100 ticks: HP, prayer points, the active prayer, potions and sharks left.
     q.s.onTick(() => {
         if (q.T() % 100 !== 0) return;
@@ -214,6 +227,10 @@ try {
     // 30. Back by the Gandius glider; Narnode writes the orders (mm_narnode.rs2:143-202).
     if (FROM < 30) {
         await setPfm(true);
+        // The yard fence has one way out: the gate op moves the player to 2944,3041 (open_shipyard_gate, quest_grandtree.rs2:130-135).
+        // The planner takes the fence for open and stops at 2958,3015, inside it.
+        await walk('to shipyard gate inside', [{ x: SHIP_GATE.x + 1, z: SHIP_GATE.z, tol: 1 }]);
+        await q.step('shipyard gate out', () => { const g = q.findLoc(l => /gate/i.test(l.name) && near3(l, SHIP_GATE, 1)); return g ? q.opLoc(g, q.opIndex(g, /open/i)) : q.waitTicks(1); }, () => (q.pos()?.worldX ?? 9999) < SHIP_GATE.x, 10, 4);
         await walk('to gandius pilot', [{ x: GANDIUS_PILOT.x, z: GANDIUS_PILOT.z - 2, tol: 2 }]);
         await setPfm(false);
         await glide('tree', GANDIUS_PILOT, GLIDER_TREE, PILOT, 3);
@@ -296,6 +313,9 @@ try {
             if (slid()) break;
             const now = board();
             if (now && now.join() !== sim.join()) console.log(`WARN puzzle drift after round ${round}: ${now.join(',')}`);
+            // The server drops a click unless the panel is the open modal (OpHeldHandler.ts:54). A board that did not move
+            // means the panel shut, so the bot opens it again; the board keeps its place (mm_puzzle.rs2 mm_open_puzzle).
+            if (now && now.join() === b.join()) { const p = q.findLoc(l => /control panel|panel/i.test(l.name) && near3(l, PANEL, 3)); if (p) { await q.opLoc(p, 1); await q.waitTicks(3); } }
         }
         console.log(`PUZZLE moves=${moves} ticks=${q.T() - t0}`);
         await q.waitUntil(() => q.near(HANGAR_ON.x, HANGAR_ON.z, 10), 40);
@@ -570,7 +590,12 @@ try {
         // A guard call in the warehouse means the jail: lock, walk back, try again (up to 3 times).
         for (let wh = 0; ; wh++) {
           try {
-        await walkAtoll('to denture crate', [{ x: 2806, z: 2767, tol: 1 }, { x: 2784, z: 2764, tol: 1 }, ...inWh], [{ x: 2779, z: 2764, tol: 1 }, ...inWh]);
+        // The warehouse's south door (mm_bamboo_door_secure 2764,2764) needs an op from 2764,2763: with the door in the
+        // path the walker paced 2760-2764,2763 for 1,650 ticks.
+        await walkAtoll('to warehouse door', [{ x: 2806, z: 2767, tol: 1 }, { x: 2784, z: 2764, tol: 1 }, inWh[0]!], [{ x: 2779, z: 2764, tol: 1 }, inWh[0]!]);
+        await locOp('warehouse door', { x: 2764, z: 2764 }, /door/i, /open/i, [], () => z() >= 2764, 6, 4, false);
+        await walkStop('to denture crate', inWh.slice(1), inCell);
+        if (inCell()) throw new Jailed('to denture crate');
         await locOp('dentures', { x: 2767, z: 2769 }, /crate/i, /search/i, [/^yes$/i], () => q.has(ITEM.dentures) && !q.dialogOpen(), 30, 10);
         // The hole crate from its south tile: the warehouse spider (2 HP, respawnrate 4, huntrange 1) spawns at 2770,2766,
         // beside the north and east tiles, and each of its hits closes the crate's choice.
@@ -667,6 +692,14 @@ try {
         await giveZooknock('gold bar', ITEM.goldBar, () => true);
         await giveZooknock('mould', ITEM.mould, () => q.has(ITEM.encBar));
         await giveZooknock('bones', ITEM.bones, () => true);
+        // A hit on the mould page ends the use-on-Zooknock script after he keeps the mould but before
+        // mm_zooknock_amulet_check. Asking about the amulet runs that check again (:259-261, all three parts are his);
+        // his pages then end in a choice menu.
+        for (let i = 0; i < 6 && !q.has(ITEM.encBar); i++) {
+            await clearPests('zooknock bar', 2);
+            await talk1('zooknock bar', /^zooknock$/i, [/need for the monkey amulet/i], () => q.has(ITEM.encBar), 60, ZOOKNOCK, 1, false);
+        }
+        if (q.has(ITEM.encBar)) { let shutBar = 0; await converse1([/be back later/i], () => { shutBar = q.dialogOpen() ? 0 : shutBar + 1; return shutBar >= 3; }, 20); }
         if (!q.has(ITEM.encBar) || !q.has(ITEM.mould)) await q.fail('zooknock: no enchanted bar');
         await ms(100);
     }
@@ -949,6 +982,9 @@ try {
         // The chapter 3 cutscene runs in region 0_41_71 (2624-2687, 4544-4607) and returns the player to the coord
         // saved at its start (%mm_cutscene_coord).
         const inCut3 = (): boolean => { const p = q.pos(); return !!p && p.worldX >= 2624 && p.worldX < 2688 && p.worldZ >= 4544 && p.worldZ < 4608; };
+        // Asked about the talisman, his pages end in a choice menu (:285), and the queued cutscene waits for the talk to end.
+        let shut3 = 0;
+        await converse1([/be back later/i], () => { shut3 = q.dialogOpen() ? 0 : shut3 + 1; return inCut3() || shut3 >= 4; }, 40);
         await q.waitUntil(() => inCut3(), 30);
         await cutscene(inCut3);
         if (!q.has(ITEM.greegree) || inCut3()) await q.fail('chapter 3');
@@ -1001,7 +1037,8 @@ try {
         await q.dash('to hall door', 2802, 2759, 0, 10);
         await talk1('elder leave', elder2, [/leave now/i], () => !inThrone() && !q.dialogOpen(), 20, undefined, 3);
     };
-    const inCage = (): boolean => { const p = q.pos(); return !!p && p.worldX >= 2598 && p.worldX <= 2606 && p.worldZ >= 3274 && p.worldZ <= 3282; };
+    // The minder's cage zones (mm_monkey_minder.rs2:7). He drops the bot on any walkable tile within 5 of him, and 2606,3275 is outside them.
+    const inCage = (): boolean => { const p = q.pos(); if (!p) return false; const cx = p.worldX, cz = p.worldZ; return (cx >= 2598 && cx <= 2600 && cz >= 3274 && cz <= 3278) || (cx >= 2600 && cx <= 2604 && cz >= 3276 && cz <= 3282) || (cx >= 2605 && cx <= 2606 && cz >= 3276 && cz <= 3281); };
     const spirit = async (label: string, at: { x: number; z: number }, pats: RegExp[], land: { x: number; z: number }): Promise<void> => {
         await walk(`to ${label}`, [{ x: at.x, z: at.z - 2, tol: 2 }]);
         for (let i = 0; i < 3 && !q.near(land.x, land.z, 8); i++) {
@@ -1061,7 +1098,11 @@ try {
         await toLanding('zoo');
         await talk1('lumdo out', /^lumdo$/i, [], () => (q.pos()?.worldX ?? 0) > 2880, 20, { x: 2803, z: 2707 });
         await shutDialog();
+        // A prayer click closes the open talk (auto toggled at a scorpion 4 tiles off, the menu shut 3 tries running), so
+        // the prayer stays fixed on for it.
+        want = PFM;
         await talk1('waydar home', /^waydar$/i, [/return to your kingdom/i], () => q.near(2393, 3466, 10), 40, { x: 2897, z: 2727 });
+        want = 'auto';
         await shutDialog();
         await spirit('stronghold tree', { x: 2461, z: 3444 }, [/where can i go/i, /battlefield of khazard/i], { x: 2555, z: 3259 });
         // Round the locked door of the Khazard building (2567-2569,3237-3239) that the SDK plans through.

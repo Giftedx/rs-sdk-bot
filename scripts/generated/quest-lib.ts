@@ -268,7 +268,8 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
                     if (still >= 3) break;
                 }
                 // On the live server a player can shut a door that is open on a fresh practice server.
-                if (!dialogOpen() && msgCount(/can't reach that/i) > blocked0) await openDoorNear(npc(re) ?? n, label);
+                // The client sends nothing for a target with no route, so no message comes back; the reachable flag says the same.
+                if (!dialogOpen() && (msgCount(/can't reach that/i) > blocked0 || npc(re)?.reachable === false)) await openDoorNear(npc(re) ?? n, label);
             }
             if (!dialogOpen()) { const m: any = npc(re); const p = pos(); console.log(`WARN talk ${label} no dialog: npc ${m?.x},${m?.z} d=${m?.distance} me ${p?.worldX},${p?.worldZ} op=${JSON.stringify(st()?.opFeedback ?? {})}`); }
             let shut = 0;

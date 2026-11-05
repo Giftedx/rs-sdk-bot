@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {runPrayer,planPrayer,prayerOptions,prayerBank} from './train-prayer';
+import {runPrayer,planPrayer,prayerOptions,prayerBank,BONE_XP} from './train-prayer';
 import {levelForXp,xpForLevel} from '../packages/planner/src/curve';
 import type {Session} from '../packages/core/src/inprocess';
 
@@ -78,4 +78,13 @@ test('missing observed Bury option and unchanged input each stop without repeate
 });
 test('failure to observe protection OFF cannot report goal fulfilled',async()=>{
     const f=fixture({rawXp:196875,offFails:true});try{const r=await runPrayer(f.s,options);expect(r.ok).toBe(false);expect(r.toggledOn).toBe(true);expect(r.toggledOff).toBe(false);expect(r.failure).toContain('OFF unobserved');}finally{f.dispose();}
+});
+test('BONE_ID=532 plans owned big bones at375XP and banks at Varrock West',()=>{
+    expect(prayerOptions(['bun','script','any','90'],{BONE_ID:'532',MAX_BURY:'1500'})).toEqual({target:90,cap:1500,maximum:1500,reserve:6,bone:532});
+    expect(BONE_XP[532]).toBe(375);
+    expect(planPrayer(1400,xpForLevel(74),1500,6,90,375)).toBe(Math.ceil((xpForLevel(90)-xpForLevel(74))/375));
+    expect(prayerBank({worldX:3186,worldZ:3437,level:0})).toEqual({x:3185,z:3436});
+});
+test('an unknown bone id refuses before any bank work',async()=>{
+    const f=fixture({});try{await expect(runPrayer(f.s,{...options,bone:999})).rejects.toThrow('unsupported bone id');expect(f.burials()).toBe(0);}finally{f.dispose();}
 });

@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {GOALS,initialState,addTasks,chooseTask,startTask,finishTask,acceptStatus,boundAccounts,failedBuildStreak,activeBuildFocus,type CoordTask} from '../src/coordinator';
+import {GOALS,initialState,addTasks,chooseTask,startTask,finishTask,acceptStatus,boundAccounts,failedBuildStreak,activeBuildFocus,repeatedBuildFault,heldBuilds,validateTask,BUILD_HOLD_MS,type CoordTask} from '../src/coordinator';
 const task=(id:string,extra:Partial<CoordTask>={}):CoordTask=>({id,goal:'skills',kind:'qualify',capability:'wine-order',dependsOn:[],priority:5,estimatedMs:1000,why:'Close a useful consumer dependency',...extra});
 test('all owner goals survive and a dependency chain advances without another prompt',()=>{
  const s=initialState();expect(s.goals.map(g=>g.id)).toEqual([...GOALS]);
@@ -128,4 +128,37 @@ test('a focus that failed three builds in a row is not re-adopted',()=>{
  const ok=initialState();addTasks(ok,[task('a',{kind:'build',capability:'wine-order'}),task('b',{kind:'build',capability:'wine-order'})],0);
  const r=startTask(ok,'a',1,'ra');finishTask(ok,{taskId:'a',runId:r.runId!,ok:false,at:2,error:'x',output:{}});startTask(ok,'b',3,'rb');
  expect(activeBuildFocus(ok)?.capability).toBe('wine-order');
+});
+
+const failBuild=(s:ReturnType<typeof initialState>,id:string,at:number,buildFault?:string)=>{const r=startTask(s,id,at,'r'+id);finishTask(s,{taskId:id,runId:r.runId!,ok:false,at:at+1,error:'check failed',output:buildFault?{buildFault}:{}});};
+const build=(id:string,extra:Partial<CoordTask>={})=>task(id,{kind:'build',capability:'herblore-order',...extra});
+test('two builds with one fault hold the next build and leave other lanes eligible',()=>{
+ const s=initialState();addTasks(s,[build('b1'),build('b2'),build('b3'),task('other',{kind:'build',capability:'wine-order',priority:1})],0);
+ failBuild(s,'b1',10,'practice: vial-shortfall');expect(repeatedBuildFault(s,'herblore-order')).toBeNull();
+ failBuild(s,'b2',20,'practice: vial-shortfall');
+ expect(repeatedBuildFault(s,'herblore-order')).toEqual({capability:'herblore-order',fault:'practice: vial-shortfall',builds:2,at:21});
+ expect(heldBuilds(s,22).map(h=>h.capability)).toEqual(['herblore-order']);
+ expect(chooseTask(s,22)?.id).toBe('other');
+ s.tasks.find(r=>r.spec.id==='other')!.status='superseded';
+ expect(chooseTask(s,21+BUILD_HOLD_MS-1)).toBeNull();
+ expect(chooseTask(s,21+BUILD_HOLD_MS)?.id).toBe('b3');expect(heldBuilds(s,21+BUILD_HOLD_MS)).toEqual([]);
+});
+test('different faults, unknown faults and a newer success do not hold a build',()=>{
+ const differ=initialState();addTasks(differ,[build('b1'),build('b2'),build('b3')],0);
+ failBuild(differ,'b1',10,'practice: clock-stage');failBuild(differ,'b2',20,'practice: vampire-started');expect(chooseTask(differ,22)?.id).toBe('b3');
+ const unknown=initialState();addTasks(unknown,[build('b1'),build('b2'),build('b3')],0);
+ failBuild(unknown,'b1',10);failBuild(unknown,'b2',20);expect(chooseTask(unknown,22)?.id).toBe('b3');
+ const passed=initialState();addTasks(passed,[build('b1'),build('b2'),build('b3'),build('b4')],0);
+ failBuild(passed,'b1',10,'x');failBuild(passed,'b2',20,'x');
+ const r=startTask(passed,'b3',30,'r');finishTask(passed,{taskId:'b3',runId:r.runId!,ok:true,at:31,output:{}});
+ expect(repeatedBuildFault(passed,'herblore-order')).toBeNull();expect(chooseTask(passed,32)?.id).toBe('b4');
+});
+test('new evidence passes the first hold only',()=>{
+ const s=initialState();addTasks(s,[build('b1'),build('b2'),build('b3',{newEvidence:'route trace shows the failing leg'}),build('b4',{newEvidence:'another claim'})],0);
+ failBuild(s,'b1',10,'x');failBuild(s,'b2',20,'x');
+ expect(chooseTask(s,22)?.id).toBe('b3');
+ failBuild(s,'b3',30,'x');expect(repeatedBuildFault(s,'herblore-order')?.builds).toBe(3);
+ expect(chooseTask(s,32)).toBeNull();
+ expect(()=>validateTask(task('q',{newEvidence:'x'}))).toThrow('invalid new evidence');
+ expect(()=>validateTask(build('b',{newEvidence:' '}))).toThrow('invalid new evidence');
 });

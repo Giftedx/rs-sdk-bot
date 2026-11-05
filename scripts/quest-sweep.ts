@@ -96,6 +96,13 @@ export function plan(need:ReadonlyMap<number,number>,pack:readonly Item[],bank:r
  }
  return{withdraw,missing};
 }
+// A quest's own items: never deposited as unneeded, and withdrawn when the bank holds them, since the server counts
+// them in the bank (obj_gettotal) and then neither re-issues nor accepts them (sedridor.rs2, duke_horacio.rs2, aubury.rs2).
+// An untradeable item is kept the same way: quest and reward items are the untradeable ones a pack carries.
+export const QUEST_KEEP:Record<string,number[]>={runemysteries:[1438,290,291],totem:[1858,1857]};
+export function keepsItem(quest:string,id:number,tradeable:(id:number)=>boolean|undefined):boolean{
+ return (QUEST_KEEP[quest]??[]).includes(id)||tradeable(id)===false;
+}
 export function nearestBanks(at:Tile):Tile[]{
  return BANKS.filter(b=>b.level===at.level).sort((a,b)=>Math.max(Math.abs(a.x-at.x),Math.abs(a.z-at.z))-Math.max(Math.abs(b.x-at.x),Math.abs(b.z-at.z)));
 }
@@ -339,6 +346,7 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
   const rows=():Item[]=>(st()?.bank?.items??[]).map((i:any)=>({id:i.id,count:i.count}));
   const p=plan(need,pack(),rows()),meal=plan(food,pack(),rows()).withdraw;
   p.withdraw.push(...meal);
+  for(const id of QUEST_KEEP[quest]??[])if(count(pack(),id)===0&&count(rows(),id)>0)p.withdraw.push({id,count:1});
   if(seekGhostSkull&&retainedGhostBankSkull(ghostState(),pack(),s.sdk.getEquipment(),rows()))p.withdraw.push({id:553,count:1});
   // A missing item a shop sells is bought after the bank: take coins for it now.
   const shops=(items:readonly Item[])=>shopPlan(items,here(),catalogItem,(d,at)=>{const n=nearestSeller(d,at);return n&&{npc:n.npc,npcId:n.npcId,tile:n.tile};},(d,at)=>sellersByDistance(d,at).map(n=>({npc:n.npc,npcId:n.npcId,tile:n.tile})));
@@ -357,7 +365,7 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
   }
   // Free the slots the withdrawals need: bank every pack item the quest does not use.
   const slots=p.withdraw.reduce((n,i)=>n+i.count,0);
-  if(28-(st()?.inventory?.length??0)<slots)for(const i of [...(st()?.inventory??[])])if(!need.has(i.id))await s.bot.depositItem(i,-1);
+  if(28-(st()?.inventory?.length??0)<slots)for(const i of [...(st()?.inventory??[])])if(!need.has(i.id)&&!keepsItem(quest,i.id,id=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable))await s.bot.depositItem(i,-1);
   for(const w of p.withdraw){
    const row=(st()?.bank?.items??[]).find((i:any)=>i.id===w.id);
    const before=count(pack(),w.id),bankBefore=count(rows(),w.id);

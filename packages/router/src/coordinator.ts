@@ -17,6 +17,8 @@ export interface CoordTask {
  resumeSource?:string;
  // Build only: command types whose replay difference is this build's stated change (model-worker.ts reviewGate).
  replayAllow?:string[];
+ // Build only: the observation this build has that the failed builds lacked. It passes one repeated-fault hold.
+ newEvidence?:string;
  /** Set when a deterministic rule (coordinator-rules.ts) created the task. */
  rule?:'next-band';
 }
@@ -110,6 +112,7 @@ export function validateTask(t:CoordTask){
  if(t.participants!==undefined&&(!Array.isArray(t.participants)||!t.participants.length||t.participants.some(n=>typeof n!=='string'||!(n.startsWith('@')?TASK_ID.test(n.slice(1)):ACCOUNT.test(n)))
   ||new Set(t.participants.map(n=>n.toLowerCase())).size!==t.participants.length))throw Error('invalid participants');
  if(t.replayAllow!==undefined&&(t.kind!=='build'||!Array.isArray(t.replayAllow)||t.replayAllow.length>16||t.replayAllow.some(a=>typeof a!=='string'||!/^[A-Za-z]{1,40}$/.test(a))))throw Error('invalid replay allowance');
+ if(t.newEvidence!==undefined&&(t.kind!=='build'||typeof t.newEvidence!=='string'||!t.newEvidence.trim()||t.newEvidence.length>500))throw Error('invalid new evidence');
  if(t.args!==undefined&&(!Array.isArray(t.args)||t.args.some(a=>typeof a!=='string'||a.includes('\0'))))throw Error('invalid task args');
  if(t.acceptIndex!==undefined&&(!Number.isSafeInteger(t.acceptIndex)||t.acceptIndex<0||t.acceptIndex>=(t.participants?.length??1)))throw Error('invalid acceptance participant index');
  if(t.kind==='run'){
@@ -169,9 +172,27 @@ export function boundAccounts(task:CoordTask,state:CoordinatorState):string[]|nu
 // Consecutive failed builds of one capability, newest first. A focus that keeps failing starves every other lane:
 // a shark-supply-order focus held all development 11.2 h through 19 failed builds (research/bot-host.md "Isolated build workspaces").
 export const FOCUS_FAILURE_LIMIT=3;
+const finishedBuilds=(state:CoordinatorState,capability:string)=>state.tasks.filter(r=>r.spec.kind==='build'&&r.spec.capability===capability&&r.receipt&&(r.status==='failed'||r.status==='succeeded')).sort((a,b)=>(b.receipt!.at??0)-(a.receipt!.at??0));
 export function failedBuildStreak(state:CoordinatorState,capability:string):number{
- const builds=state.tasks.filter(r=>r.spec.kind==='build'&&r.spec.capability===capability&&r.receipt&&(r.status==='failed'||r.status==='succeeded')).sort((a,b)=>(b.receipt!.at??0)-(a.receipt!.at??0));
- let n=0;for(const r of builds){if(r.status!=='failed')break;n++;}return n;
+ let n=0;for(const r of finishedBuilds(state,capability)){if(r.status!=='failed')break;n++;}return n;
+}
+// Two failed builds in a row with one fault (build-fault.ts) mean the repair did not reach it, so the next author pass
+// would repeat it. The capability's builds wait BUILD_HOLD_MS after the last failure; other lanes keep running.
+export const BUILD_HOLD_MS=24*60*60*1000;
+export function repeatedBuildFault(state:CoordinatorState,capability:string){
+ const builds=finishedBuilds(state,capability),fault=builds[0]?.status==='failed'?builds[0].receipt!.output?.buildFault:undefined;
+ if(typeof fault!=='string')return null;
+ let count=0;for(const r of builds){if(r.status!=='failed'||r.receipt!.output?.buildFault!==fault)break;count++;}
+ return count>=2?{capability,fault,builds:count,at:builds[0]!.receipt!.at}:null;
+}
+// A build that names new evidence passes the first hold only: a third matching failure waits out the time.
+export function buildHeld(state:CoordinatorState,task:CoordTask,now:number){
+ const repeat=repeatedBuildFault(state,task.capability!);
+ return !!repeat&&now-repeat.at<BUILD_HOLD_MS&&!(task.newEvidence&&repeat.builds===2);
+}
+export function heldBuilds(state:CoordinatorState,now:number){
+ const capabilities=new Set(state.tasks.filter(r=>r.spec.kind==='build'&&r.spec.capability).map(r=>r.spec.capability!));
+ return [...capabilities].flatMap(c=>{const repeat=repeatedBuildFault(state,c);return repeat&&now-repeat.at<BUILD_HOLD_MS?[repeat]:[];});
 }
 export function activeBuildFocus(state:CoordinatorState):{capability:string;since:number}|null{
  const record=state.tasks.find(r=>r.status==='running'&&r.spec.kind==='build'&&r.spec.capability&&failedBuildStreak(state,r.spec.capability)<FOCUS_FAILURE_LIMIT);
@@ -204,7 +225,7 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
  }
  const pending=state.tasks.filter(r=>r.status==='pending'&&[...r.spec.dependsOn,...provisionRefs(r.spec)].every(id=>records.get(id)?.status==='succeeded'));
  const sourceReady=resources.sourceReady??resources.nativeReady;
- const canBuild=(r:TaskRecord)=>{const prior=lastBuildOutcome(state,r.spec.capability!);return sourceReady!==false&&!(prior?.hostDeferred===true&&prior.sourcePrepared===true&&resources.nativeReady===false)&&!(resources.isolatedBuilds&&buildOverlap(r.spec.capability!,busyBuilds,resources.ownedFiles));};
+ const canBuild=(r:TaskRecord)=>{const prior=lastBuildOutcome(state,r.spec.capability!);return sourceReady!==false&&!buildHeld(state,r.spec,now)&&!(prior?.hostDeferred===true&&prior.sourcePrepared===true&&resources.nativeReady===false)&&!(resources.isolatedBuilds&&buildOverlap(r.spec.capability!,busyBuilds,resources.ownedFiles));};
  const buildWaiting=pending.some(r=>r.spec.kind==='build'&&canBuild(r)&&(!resources.focusCapability||focusCaps.has(r.spec.capability!)));
  // Give a freshly qualified capability one finite consumer before another
  // build invalidates it. The runtime still verifies source/review/admission.

@@ -4,7 +4,8 @@
 // areas/area_varrock/scripts/aubury.rs2.
 import { openQuest } from './quest-lib';
 import type {Session} from '../../packages/core/src/inprocess';
-import {walkRuneMysteries,runeMysteriesStartProblem,exitRuneTower,runeMysteriesDecision} from '../rune-mysteries-route';
+import {walkRuneMysteries,runeMysteriesStartProblem,exitRuneTower,runeMysteriesDecision,sedridorOutcome,nearestBankTile,RUNE_MYSTERIES_ITEMS} from '../rune-mysteries-route';
+import travel from '../../packages/planner/src/haggis-travel.json';
 import {waitUntil} from '../../packages/core/src/ticks';
 import {questFlags} from '../../packages/core/src/quest-status';
 
@@ -20,7 +21,7 @@ const q = await openQuest({ session:s, cap:options.cap??4000, stop:options.stop,
 try {
     const questState=()=>questFlags((q.s as any).client)?.find(f=>f.name==='Rune Mysteries Quest')?.state??'unknown';
     await waitUntil(q.s,()=>questState()!=='unknown',{timeoutTicks:15});
-    const decision=runeMysteriesDecision(questState(),q.inv().filter(i=>i.count>0).map(i=>i.id));
+    let decision=runeMysteriesDecision(questState(),q.inv().filter(i=>i.count>0).map(i=>i.id));
     if(decision==='observe')throw Error('Rune Mysteries journal unknown; cannot infer quest stage from talisman');
     const problem=runeMysteriesStartProblem(q.pos()?.combatLevel);
     if(problem&&decision!=='complete')throw Error(problem);
@@ -52,8 +53,68 @@ try {
         return {ok:true,alreadyComplete:true,reward:q.has(ITEM.talisman),eats:q.stats.eats};
     }
 
+    // 3. The Wizards' Tower: north door (loc 1536 at 3109,3166), inner door (3107,3162, diagonal), ladder down, the basement door.
+    const toSedridor = async (label: string): Promise<void> => {
+        if(inBasement()){
+            await q.openDoor(`${label} resumed basement door`,3108,9570);
+            return;
+        }
+        await walkRuneMysteries(q.pos(), { x: 3109, z: 3167, tol: 1 }, point=>q.walk(`${label} tower`, [point]));
+        await q.openDoor(`${label} north door`, 3109, 3166);
+        await q.dash(`${label} hall`, 3108, 3164, 1);
+        await q.openDoor(`${label} inner door`, 3107, 3162);
+        await q.climb(`${label} ladder down`, () => q.locAt(LADDER_TOP.x, LADDER_TOP.z) ?? LADDER_TOP, /climb-down/i, inBasement);
+        // The basement door: loc_1530 at 3108,9570 (west wall, maps/m48_149.jm2). Shut, the talk click is rejected.
+        await q.dash(`${label} corridor`, 3108, 9570, 0);
+        await q.openDoor(`${label} basement door`, 3108, 9570);
+    };
+
+    // 0. Started with no quest item: Sedridor's branch names the stage (sedridor.rs2). He takes the talisman and gives
+    // the package (stages 1 to 2), re-issues a lost package (3), or sends the bot to Aubury for the notes (4, 5); with
+    // the talisman lost he asks for it, and the Duke re-issues it (duke_horacio.rs2 duke_rune_mysteries_in_progress).
+    let needTalisman = decision==='duke', toAubury = false;
+    if (decision==='sedridor') {
+        // quest-sweep stages the quest in the Duke's room (castle level 1); the tower walk needs a surface start.
+        if (q.lvl() === 1) {
+            await q.openDoor('recover duke door leave', 3207, 3222);
+            await q.walk('recover to stairs', [{ x: 3206, z: 3210, tol: 1 }]);
+            await q.climb('recover castle stairs down', stairs(/climb-down/i), /climb-down/i, levelIs(0));
+        }
+        // A quest item in the bank counts as held for the server (obj_gettotal): Sedridor and the Duke then re-issue
+        // nothing and Sedridor sends the bot "to get them from the bank". Take the quest's items out first; a run
+        // resumed in the tower basement climbs out before the walk (walkPath takes no ladder).
+        await leaveSedridor('recover bank');
+        const bank = nearestBankTile({ x: q.pos()?.worldX ?? 0, z: q.pos()?.worldZ ?? 0 }, Object.values((travel as unknown as { banks: Record<string, { x: number; z: number; level: number }> }).banks));
+        await q.walk('recover to bank', [{ x: bank.x, z: bank.z, tol: 3 }]);
+        const opened: any = await q.s.bot.openBank();
+        if (!opened?.success) throw Error('Rune Mysteries recovery: bank did not open');
+        await q.waitUntil(() => (q.st()?.bank?.items?.length ?? 0) > 0, 10);
+        const rows = (): any[] => q.st()?.bank?.items ?? [];
+        for (const id of RUNE_MYSTERIES_ITEMS) {
+            const row = rows().find((i: any) => i.id === id);
+            if (!row || q.has(id)) continue;
+            await q.s.bot.withdrawItem(row, 1);
+            const got = await q.waitUntil(() => q.has(id), 10);
+            console.log(`NOTE rune mysteries recovery: withdrew ${id} ${got ? 'ok' : 'unobserved'}`);
+        }
+        await q.s.bot.closeBank();
+        decision = runeMysteriesDecision(questState(), q.inv().filter(i => i.count > 0).map(i => i.id));
+        console.log(`NOTE rune mysteries recovery: after the bank ${decision}`);
+    }
+    if (decision==='sedridor') {
+        await toSedridor('recover');
+        const outcome = () => sedridorOutcome(q.has(ITEM.pack), q.sawText);
+        await q.talk('sedridor recover', sed, [/looking for the head wizard/i, /ok, here you are/i, /yes, certainly/i], () => outcome() !== 'unknown', SEDRIDOR, 120);
+        const next = outcome();
+        console.log(`NOTE rune mysteries recovery: sedridor says ${next}`);
+        if (next === 'unknown' || next === 'bank') throw Error(`Rune Mysteries recovery: Sedridor named ${next === 'bank' ? 'a banked item the bank trip did not find' : 'no stage'}`);
+        if (next === 'aubury') toAubury = true;
+        if (next === 'duke') { needTalisman = true; await leaveSedridor('recover talisman'); }
+        q.milestone('recover');
+    }
+
     // 1. The Duke: "Have you any quests for me?", "Sure, no problem." gives the air talisman (duke_horacio.rs2:22-36).
-    if (decision==='duke') {
+    if (needTalisman) {
         if (q.lvl() === 0) {
             await walkRuneMysteries(q.pos(), { x: 3205, z: 3209, tol: 2 }, point=>q.walk('to castle stairs up', [point]));
             await q.climb('castle stairs up', stairs(/climb-up|climb/i), /climb-up|climb/i, levelIs(1));
@@ -75,22 +136,6 @@ try {
         q.milestone('castle');
     }
 
-    // 3. The Wizards' Tower: north door (loc 1536 at 3109,3166), inner door (3107,3162, diagonal), ladder down, the basement door.
-    const toSedridor = async (label: string): Promise<void> => {
-        if(inBasement()){
-            await q.openDoor(`${label} resumed basement door`,3108,9570);
-            return;
-        }
-        await walkRuneMysteries(q.pos(), { x: 3109, z: 3167, tol: 1 }, point=>q.walk(`${label} tower`, [point]));
-        await q.openDoor(`${label} north door`, 3109, 3166);
-        await q.dash(`${label} hall`, 3108, 3164, 1);
-        await q.openDoor(`${label} inner door`, 3107, 3162);
-        await q.climb(`${label} ladder down`, () => q.locAt(LADDER_TOP.x, LADDER_TOP.z) ?? LADDER_TOP, /climb-down/i, inBasement);
-        // The basement door: loc_1530 at 3108,9570 (west wall, maps/m48_149.jm2). Shut, the talk click is rejected.
-        await q.dash(`${label} corridor`, 3108, 9570, 0);
-        await q.openDoor(`${label} basement door`, 3108, 9570);
-    };
-
     if (q.has(ITEM.talisman) && !q.has(ITEM.pack) && !q.has(ITEM.notes)) {
         await toSedridor('sed 1');
         q.milestone('basement');
@@ -100,7 +145,7 @@ try {
         q.milestone(3);
     }
 
-    if (q.has(ITEM.pack)||decision==='recover-notes') {
+    if (q.has(ITEM.pack)||toAubury) {
         // 5. Aubury's shop in Varrock
         await tryTeleport('varrock teleport', 'magic:varrock_teleport', 3212, 3424);
         await q.walk('to aubury', [{ x: 3253, z: 3398, tol: 1 }]);

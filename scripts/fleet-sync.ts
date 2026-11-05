@@ -4,18 +4,21 @@
 // this side's listed accounts from .practice/status, never practice bots or credentials; an account with no local status,
 // or an older one, keeps its published row, so a fresh cloud container does not erase what the side last saw), this side's claim
 // (fleet/claims/<side>.json: the knight spots, pens and shops the enabled jobs of this side's plan hold, SWARM_PLAN or
-// swarm.json merged with the coordinator's jobs, so other sides' planners stay off them) and this side's live
+// swarm.json merged with the coordinator's jobs, for accounts seen in the world within CLAIM_MAX_AGE_MS, so other sides'
+// planners stay off them while a job the swarm has not admitted for hours holds nothing) and this side's live
 // assignments (fleet/plans/<side>.json: the same merged plan, as scripts/swarm.ts runs it, so other machines and audits
 // see what runs), commits fleet/ and pushes.
+// The side's lease (fleet/leases/<side>.json) is this machine's live controller heartbeat (.practice/swarm-state.json,
+// written every swarm tick) while no other machine holds a fresh one; scripts/swarm.ts refuses to start against it.
 // Usage: bun scripts/fleet-sync.ts [--no-push]
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { FLEET_WORKTREE, loadOwners, mySide } from '../packages/core/src/fleet';
+import { FLEET_WORKTREE, loadOwners, mySide, nextLease, readLease, leaseHeldElsewhere, thisHost, type Lease } from '../packages/core/src/fleet';
 import { CLAIM_MAX_AGE_MS, claimFor } from '../packages/planner/src/autopilot';
 import { mergeJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 
 const root = resolve(import.meta.dir, '..');
-const BRANCH = 'fleet-data';
+const BRANCH = 'fleet-data', HEARTBEAT_MAX_AGE_MS = 60_000;
 const rows = (r: any[] | undefined) => (r ?? []).map((i: any) => ({ id: i.baseId ?? i.id, name: i.name, count: i.count }));
 // `prior` is the side's published snapshot rows: a row stays when its account has no local status or a staler one.
 export function snapshot(statuses: readonly any[], side = mySide(), owners = loadOwners(), now = Date.now(), prior: readonly any[] = []) {
@@ -35,10 +38,19 @@ export function snapshot(statuses: readonly any[], side = mySide(), owners = loa
     return { side, at: now, accounts: [...by.values()] };
 }
 // A session whose plan has no jobs has nothing to publish: it keeps this side's claim and plan while the published claim
-// is fresh and holds resources, since another session of the same side (a fresh cloud container beside the one that runs
-// the swarm) wrote them from the jobs it runs. A claim older than CLAIM_MAX_AGE_MS has aged out anyway.
-export function keepPublished(jobs: readonly any[], published: { at?: number; resources?: unknown[] } | null | undefined, now = Date.now()): boolean {
-    return jobs.length === 0 && !!published && Array.isArray(published.resources) && published.resources.length > 0 && Number.isFinite(published.at) && now - published.at! < CLAIM_MAX_AGE_MS;
+// is fresh and holds resources, or the published plan is fresh and holds jobs (a Ranged or quest job holds no exclusive
+// resource, so its claim is empty while its plan is not), since another session of the same side (a fresh cloud container
+// beside the one that runs the swarm) wrote them from the jobs it runs. Older than CLAIM_MAX_AGE_MS, both have aged out anyway.
+export function keepPublished(jobs: readonly any[], claim: { at?: number; resources?: unknown[] } | null | undefined, now = Date.now(), plan?: { at?: number; jobs?: unknown[] } | null): boolean {
+    const fresh = (p: { at?: number } | null | undefined, held: unknown) => !!p && Number.isFinite(p.at) && now - p.at! < CLAIM_MAX_AGE_MS && Array.isArray(held) && held.length > 0;
+    return jobs.length === 0 && (fresh(claim, claim?.resources) || fresh(plan, plan?.jobs));
+}
+// The accounts of the side's snapshot rows seen within CLAIM_MAX_AGE_MS: a bot writes its status every few ticks, and
+// the snapshot keeps the newest `at` of the status file and the published row, so a job of an account older than that
+// is one the swarm has not run for hours and its spot, pen or shop is free for the other sides' planners.
+export function activeAccounts(rows: readonly any[], now = Date.now()): (account: string) => boolean {
+    const seen = new Map(rows.filter(r => typeof r?.name === 'string' && Number.isFinite(r.at)).map(r => [r.name.toLowerCase(), r.at as number]));
+    return a => now - (seen.get(a.toLowerCase()) ?? -Infinity) < CLAIM_MAX_AGE_MS;
 }
 // The jobs of this side's own accounts, without the main account and without job notes. The swarm plan file stays
 // uncommitted while it runs; this copy is what other sides read.
@@ -83,24 +95,30 @@ export function runSync(push = true): string {
     const planFile = resolve(process.env.SWARM_PLAN ?? join(root, 'swarm.json'));
     const jobs = (() => { try { const p = JSON.parse(readFileSync(planFile, 'utf8')); return Array.isArray(p.jobs) ? p.jobs as any[] : null; } catch { return null; } })();
     let claim: ReturnType<typeof claimFor> | null = null;
-    const claimFile = join(dir, 'fleet', 'claims', `${snap.side}.json`);
-    const publishedClaim = (() => { try { return JSON.parse(readFileSync(claimFile, 'utf8')); } catch { return null; } })();
-    if (jobs && !keepPublished(mergeJobs(jobs, readCoordinatorJobs(root).jobs), publishedClaim)) {
+    const claimFile = join(dir, 'fleet', 'claims', `${snap.side}.json`), out = join(dir, 'fleet', 'plans', `${snap.side}.json`);
+    const published = (f: string) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return null; } };
+    if (jobs && !keepPublished(mergeJobs(jobs, readCoordinatorJobs(root).jobs), published(claimFile), Date.now(), published(out))) {
         const merged = mergeJobs(jobs, readCoordinatorJobs(root).jobs);
-        claim = claimFor(merged, snap.side, a => owners.get(a.toLowerCase())?.side ?? 'local');
+        claim = claimFor(merged, snap.side, a => owners.get(a.toLowerCase())?.side ?? 'local', Date.now(), activeAccounts(snap.accounts));
         mkdirSync(join(dir, 'fleet', 'claims'), { recursive: true }); writeFileSync(claimFile, JSON.stringify(claim) + '\n');
         const view = planView(merged, snap.side, owners);
         mkdirSync(join(dir, 'fleet', 'plans'), { recursive: true });
-        const out = join(dir, 'fleet', 'plans', `${snap.side}.json`);
-        const was = (() => { try { return JSON.stringify(JSON.parse(readFileSync(out, 'utf8')).jobs); } catch { return ''; } })();
+        const was = JSON.stringify(published(out)?.jobs ?? '');
         if (was !== JSON.stringify(view.jobs)) writeFileSync(out, JSON.stringify(view, null, 1) + '\n');
     }
+    // A controller heartbeat older than HEARTBEAT_MAX_AGE_MS is a dead controller's last write, not a running one.
+    const state = published(join(root, '.practice', 'swarm-state.json'));
+    const mine: Lease | null = state && Number.isFinite(state.at) && Date.now() - state.at < HEARTBEAT_MAX_AGE_MS && Number.isSafeInteger(state.controllerPid)
+        ? { side: snap.side, host: thisHost(), pid: state.controllerPid, at: state.at } : null;
+    const current = readLease(snap.side, join(dir, 'fleet')), lease = nextLease(current, mine);
+    if (lease) { mkdirSync(join(dir, 'fleet', 'leases'), { recursive: true }); writeFileSync(join(dir, 'fleet', 'leases', `${snap.side}.json`), JSON.stringify(lease) + '\n'); }
+    const leaseNote = lease ? 'ours' : leaseHeldElsewhere(current, thisHost()) ? `held by ${current!.host}` : 'none';
     git(dir, 'add', '--', 'fleet');
     const staged = !git(dir, 'diff', '--cached', '--quiet').ok;
     if (staged) { const c = git(dir, 'commit', '-m', `fleet: ${snap.side} sync (${snap.accounts.length} accounts)`); if (!c.ok) throw Error(`commit: ${c.out}`); }
     const ahead = !hasRemote || git(dir, 'rev-list', '--count', `origin/${BRANCH}..HEAD`).out !== '0';
     if (push && ahead) { const p = git(dir, 'push', '-u', 'origin', BRANCH); if (!p.ok) throw Error(`push: ${p.out}`); }
-    return `side=${snap.side} accounts=${snap.accounts.length} claims=${claim ? claim.resources.length : 'unreadable plan'} committed=${staged} pushed=${push && ahead}`;
+    return `side=${snap.side} accounts=${snap.accounts.length} claims=${claim ? claim.resources.length : jobs ? 'kept: published by the session running this side' : 'unreadable plan'} lease=${leaseNote} committed=${staged} pushed=${push && ahead}`;
 }
 
 if (import.meta.main) {

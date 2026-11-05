@@ -33,9 +33,29 @@ export const REST_PRESETS: Record<string, SaveConfig> = {
     quest_junglepotion: rest({ x: 2810, z: 3086 }, [], 6),
     // Tribal Totem: beside Kangai Mau in Brimhaven (spawn 2791,3182, maps/m43_49.jm2). Plague City done (165 = 30; the
     // quest sits in the quests-medium row after Plague City) for Ardougne Teleport (teleport.rs2:22-35). Helper items:
-    // runes for one Ardougne Teleport (2 law 563, 2 water 555), 30 coins for Captain Barnaby back to Brimhaven, 4
+    // runes for one Ardougne Teleport (2 law 563, 2 water 555), 60 coins for the customs officer's boat when the teleport
+    // cannot be cast and Captain Barnaby back to Brimhaven, 4
     // lobsters. The label and the totem are quest items from the run.
-    quest_totem: rest({ x: 2791, z: 3183 }, [[563, 2], [555, 2]], 4, 30, { 165: 30 }),
+    quest_totem: rest({ x: 2791, z: 3183 }, [[563, 2], [555, 2]], 4, 60, { 165: 30 }),
+    // Tribal Totem resumed as a parked live account resumes it: beside Kangai Mau, Hitpoints 17, Magic 29, Thieving 99
+    // for the stairs trap, no Plague City and no runes, so the runner takes the customs officer's boat and Captain
+    // Barnaby's back (60 coins). Varp 200 (quest_totem.constant): 1 started at Kangai, 2 the crate label replaced.
+    // Tribal Totem run directly from the mainland (the Draynor bank), as the live account TheFullMonty stands: Hitpoints
+    // 37, Magic 99, no Plague City, no runes, 90 coins for up to three fares. Varp 200: 0 not started, 1 started.
+    ...Object.fromEntries([0, 1].map(stage => [`quest_totem_mainland${stage}`, {
+        position: { x: 3092, z: 3243, level: 0 }, skills: { Hitpoints: 37, Magic: 99, Thieving: 99 }, varps: { ...DONE, 200: stage }, coins: 90,
+        inventory: Array.from({ length: 4 }, () => ({ id: 379, count: 1 })),
+    } satisfies SaveConfig])),
+    // Tribal Totem with a full pack at the Ardougne south bank, as Quickhandjob stood live: 27 sharks and coins fill
+    // all 28 slots, so the depot label would drop under the bot. Started, Hitpoints 17, no Plague City, no runes.
+    quest_totem_fullpack: {
+        position: { x: 2655, z: 3283, level: 0 }, skills: { Hitpoints: 17, Magic: 29, Thieving: 99 }, varps: { ...DONE, 200: 1 }, coins: 60,
+        inventory: Array.from({ length: 27 }, () => ({ id: 385, count: 1 })),
+    } satisfies SaveConfig,
+    ...Object.fromEntries([1, 2].map(stage => [`quest_totem_boat${stage}`, {
+        position: { x: 2791, z: 3183, level: 0 }, skills: { Hitpoints: 17, Magic: 29, Thieving: 99 }, varps: { ...DONE, 200: stage }, coins: 60,
+        inventory: Array.from({ length: 4 }, () => ({ id: 379, count: 1 })),
+    } satisfies SaveConfig])),
     // Tai Bwo Wannai Trio: at Timfraku's ladder in Tai Bwo Wannai (2782,3086, maps/m43_48.jm2). Jungle Potion done (175 =
     // 12, quest.constant:41; tbwt_timfraku.rs2:51 reads it). Helper items (tradeable, the rs-stun-toolkit kit): 4 raw
     // karambwan (3142), pestle and mortar (233), iron spear (1239), agility potion (3032), small net (303), jogre bones

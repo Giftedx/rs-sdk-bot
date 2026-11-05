@@ -205,7 +205,9 @@ try {
         await q.talk('hazelmere', /^hazelmere/i, [], () => q.has(ITEM.scroll) && !q.dialogOpen(), { x: 2678, z: 3086 }, 60);
         await ms(20);
         await ladder('hazelmere ladder down', HAZEL_LADDER, 'down', 0);
-        await usePrayerWalk('off the island', [{ x: 2638, z: 3089, tol: 4 }]);
+        // The way off is the pier north of the island (2652-2672,3109-3111), as on the way in. With one far goal the bot
+        // paced 2670-2673,3089-3091 until the prayer ran out and the spiders killed it.
+        await usePrayerWalk('off the island', [{ x: 2678, z: 3099, tol: 2 }, { x: 2674, z: 3109, tol: 2 }, { x: 2660, z: 3111, tol: 2 }, { x: 2652, z: 3103, tol: 2 }, { x: 2638, z: 3089, tol: 4 }]);
         await setPfm(false);
     }
 

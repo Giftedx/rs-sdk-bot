@@ -88,13 +88,16 @@ try {
     // %barcrawl (77) is 2, Alfred Grimhand's Barcrawl (scripts/generated/quest-barcrawl.ts, the barcrawl row); before
     // that a Barbarian guard within 5 tiles talks instead (areas/area_barbarian_outpost/scripts/outpost_gate.rs2:1-5).
     // The gate moves the bot through (outpost_gate.rs2:7-11).
-    const inOutpost = () => (q.pos()?.worldX ?? 0) >= 2546;
+    // The yard between the gate and the hut door 2551,3569-3570. The land east of the hut is also x >= 2546, and it has no way in.
+    const inOutpost = () => { const x = q.pos()?.worldX ?? 0; return x >= 2546 && x <= 2552; };
     if (FROM < 3) {
         if (!inOutpost()) {
             await q.walk('to outpost gate', [{ x: 2544, z: 3569, tol: 1 }]);
             await q.step('outpost gate', () => { const g = q.findLoc(l => /gate/i.test(l.name) && l.x === 2545 && (l.z === 3569 || l.z === 3570) && (l.optionsWithIndex ?? []).length > 0); return g ? q.opLoc(g, 1) : q.waitTicks(1); }, inOutpost, 8, 4);
         }
-        await q.walk('to scorpion b', [{ x: SCORP_B.x + 1, z: SCORP_B.z, tol: 2 }]);
+        await q.openDoor('hut door', 2551, 3570);
+        await q.openDoor('hut door 2', 2551, 3569);
+        await q.dash('to scorpion b', SCORP_B.x, SCORP_B.z, 3, 12);
         await catchScorp('b', SCORP_B);
     }
 
@@ -136,7 +139,11 @@ try {
     await q.walk('to dusty gate', [{ x: GATE.x + 1, z: GATE.z, tol: 1 }]);
     await q.step('dusty gate', () => q.useOnLoc(ITEM.dusty, GATE), pastGate, 15, 4);
     q.milestone('gate');
-    await q.walk('to wall', [{ x: WALL.x, z: WALL.z, tol: 1 }]);
+    // Black Demon spawns near 2860,9776 close the only corridor (x 2877-2879, z 9769-9788) to the danger guard
+    // (packages/core/src/danger.ts), so planned walks pace in the dragon room. Client-routed clicks do not use that guard.
+    await q.dash('to south cave', 2894, 9776, 2, 30);
+    await q.dash('to wall corridor', 2877, 9788, 2, 34);
+    await q.dash('to wall', WALL.x, WALL.z, 1, 24);
     await q.step('secret wall', () => q.opLoc(WALL, 1), () => (q.pos()?.worldZ ?? 9999) < WALL.z, 10, 4);
     await catchScorp('a', SCORP_A);
 

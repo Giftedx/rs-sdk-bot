@@ -2,7 +2,7 @@ import {readFileSync,existsSync,readdirSync,writeFileSync,mkdirSync} from 'node:
 import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
 import {join} from 'node:path';
-import {GOALS,addTasks,replaceTasks,type CoordinatorState,type CoordTask} from './coordinator';
+import {GOALS,addTasks,heldBuilds,replaceTasks,type CoordinatorState,type CoordTask} from './coordinator';
 import {runModel,type ModelWorker} from './model-worker';
 import {validateDelivery,type DeliveryTask} from './delivery';
 import {freshScoreboard} from './coverage';
@@ -27,10 +27,22 @@ export function gameCoverage(methods:any[],quests:any[],statuses:any[],protected
 }
 export function queueFacts(state:CoordinatorState){
  const records=new Map(state.tasks.map(r=>[r.spec.id,r]));
+ const active=state.tasks.filter(r=>r.status==='pending'||r.status==='running');
+ const seen=new Set<string>();
+ const shared=new Map<string,number>();
+ for(const {spec} of active)for(const id of spec.dependsOn){
+  if(seen.has(id)&&!shared.has(id))shared.set(id,shared.size);
+  seen.add(id);
+ }
  return{lastUsefulLiveAt:Math.max(0,...state.tasks.filter(r=>r.spec.kind==='run'&&r.status==='succeeded').map(r=>r.receipt?.at??0)),
   blocked:state.tasks.filter(r=>r.status==='pending').map(r=>({id:r.spec.id,goal:r.spec.goal,capability:r.spec.capability,
    dependencies:r.spec.dependsOn.filter(id=>records.get(id)?.status!=='succeeded').map(id=>({id,status:records.get(id)?.status??'missing',replacement:records.get(id)?.supersededBy}))})).filter(r=>r.dependencies.length),
-  active:state.tasks.filter(r=>r.status==='pending'||r.status==='running').map(r=>({spec:briefSpec(r.spec),status:r.status}))};
+  heldBuilds:heldBuilds(state,Date.now()),
+  sharedDependencyIds:[...shared.keys()],
+  active:active.map(({spec,status})=>{
+   const {dependsOn,...task}=briefSpec(spec);
+   return{spec:task,status,dependencyRefs:dependsOn.map((id:string)=>shared.get(id)??id)};
+  })};
 }
 // The prompt carries each task's decision fields and the start of its work order; the full spec, receipts and logs stay
 // in .practice/coordinator/state.json and runs/<runId>/ (full specs made the prompt 450,000 characters; research/bot-host.md "Isolated build workspaces").
@@ -123,9 +135,11 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'New capability schema is existing DeliveryTask: {id,goal,entry,files,consumer,checks:[{id,phase:regression|practice|consumer,command:[argv...],timeoutMs}]}. New definitions go in capabilities; no overwrite of existing definitions. A build task may own worker/helper/test/native-proof files, never credentials, AGENTS.md, swarm.json or the coordinator. Acceptance must independently inspect effects including applicable recovery/logout. Existing definitions are preferred.',
   'Use all game data, not just today\'s prototype. Entry points: knowledge/ (inspect filenames), knowledge/drops.json, packages/planner/src/{requirements,haggis,production-batch}.ts, research/INDEX.md and project-use-map.md. Unknown observations stay unknown. Supply qty, access, skills, location and clock constraints need producer tasks. Fresh accounts are for a missing role or measured bottleneck; reuse trained idle helpers first.',
   'Return at most12 tasks per proposal. Keep independent goal lanes eligible. Do not fill slots with surplus earning. If work is genuinely waiting, return tasks:[] and explain the missing event. No human confirmation is required within current authority.',
+  'heldBuilds in the active queue names capabilities whose last builds failed with one fault. Their builds wait 24 hours from the last failure. Do not propose another author pass for the same fault. Plan other lanes. Only a build with a new observation, stated in newEvidence, passes the first hold.',
   'A hostDeferred receipt is a RAM deferral, not a source defect. Retain its prepared source and failed proof; do not invent another code repair. A same-source replacement build resumes native delivery without another author call once native headroom is ready. Keep its finite consumer connected through replacements; do not repeat a headroom failure while capacity is unchanged.',
   'RECENT FINISHED TASKS, last 48 succeeded or failed (open tasks are in the active queue below; superseded tasks are omitted; counts are NOT game completion): '+JSON.stringify({...state,tasks:state.tasks.filter(r=>r.status==='succeeded'||r.status==='failed').slice(-48).map(r=>({spec:briefSpec(r.spec),status:r.status,runId:r.runId,error:clip(r.receipt?.error,240),output:r.receipt?.output?{account:r.receipt.output.account,ok:r.receipt.output.ok,evidence:r.receipt.output.evidence,error:clip(r.receipt.output.error??r.receipt.output.review?.reason??r.receipt.output.delivery?.reason,240)}:null}))}),
   'DATED WORLD (timestamps matter; reserved main/specialists must not be used for tests): '+JSON.stringify(compact),
+  'In the active queue, a string in dependencyRefs is a task ID. A number is a zero-based index into sharedDependencyIds. In proposal dependsOn use the full string task IDs.',
   'COMPLETE ACTIVE QUEUE AND BLOCKED EDGES (not truncated to recent history): '+JSON.stringify(queueFacts(state)),
   'Full inventories, raw dated status and definitions: '+worldFile,
   'Task source, model/reviewer output, failures and complete receipts: .practice/coordinator/runs/<runId>/. Read these for any repair; do not re-diagnose from summaries.',
