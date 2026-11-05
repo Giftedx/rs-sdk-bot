@@ -7380,9 +7380,11 @@
   },
   {
     "name": "chartercrafter",
-    "decision": "blocked",
+    "decision": "partial",
     "behaviour": "Buy seaweed/sand from charter shop, Lunar Superglass Make, blow selected glass item and sell to shop",
-    "localConsumers": [],
+    "localConsumers": [
+      "scripts/microbot-production.ts"
+    ],
     "sourceEvidence": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/chartercrafter/CharterCrafterScript.java",
@@ -7423,6 +7425,16 @@
         "path": "src/main/java/net/runelite/client/plugins/microbot/chartercrafter/CharterCrafterScript.java",
         "line": 97,
         "claim": "case WAIT_CRAFTING:"
+      },
+      {
+        "path": "src/main/java/net/runelite/client/plugins/microbot/chartercrafter/CharterCrafterScript.java",
+        "line": 155,
+        "claim": "Bootstrap goes directly to glassblowing when the pack holds molten glass."
+      },
+      {
+        "path": "src/main/java/net/runelite/client/plugins/microbot/chartercrafter/CharterCrafterScript.java",
+        "line": 307,
+        "claim": "Glassblowing combines the held pipe and molten glass, then chooses the configured product."
       }
     ],
     "serverEvidence": [
@@ -7430,17 +7442,22 @@
         "path": "research/microbot-server-search-a.ndjson",
         "line": 55,
         "claim": "Exact case-insensitive content search returned zero lines for superglass|charter|light_orb"
+      },
+      {
+        "path": "vendor/rs-sdk/server/content/scripts/skill_crafting/scripts/glass/glass.rs2",
+        "line": 5,
+        "claim": "The pipe and molten glass open the Native glass crafting menu."
       }
     ],
     "blockers": [
-      "The donor route requires Lunar Superglass Make and charter stock, absent from the pinned native scripts. Existing furnace glass and inventory production provide a distinct native fallback with all three native blowing choices: beer_glass, vial_empty and stafforb. The native glass skill_multi3 handler offers those three, not the five additional donor choices. This fallback does not implement the absent charter/Lunar route. Donor behaviour references: src/main/java/net/runelite/client/plugins/microbot/chartercrafter/CharterCrafterScript.java:76, src/main/java/net/runelite/client/plugins/microbot/chartercrafter/CharterCrafterScript.java:79. Native search receipt: research/microbot-server-search-a.ndjson:55"
+      "The pinned Native server has no charter supply and sale route or Lunar Superglass Make. The glass menu has no candle lantern, oil lamp, fishbowl, lantern lens or light orb choice."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/chartercrafter/CharterCrafterScript.java",
-        "decision": "blocked",
-        "consumer": null,
-        "gap": "The donor route requires Lunar Superglass Make and charter stock, absent from the pinned native scripts. Existing furnace glass and inventory production provide a distinct native fallback with all three native blowing choices: beer_glass, vial_empty and stafforb. The native glass skill_multi3 handler offers those three, not the five additional donor choices. This fallback does not implement the absent charter/Lunar route."
+        "decision": "partial",
+        "consumer": "scripts/microbot-production.ts",
+        "gap": "The owned inventory production worker covers the independent held-molten-glass branch for beer glass, empty vial and unpowered orb. Charter buying, charter sales, supply-driven world hopping, Superglass Make and five product choices remain unsupported."
       }
     ],
     "variants": [
@@ -7459,7 +7476,7 @@
         ]
       }
     ],
-    "proof": "Source inspection and pinned native content search only; local consumers are reuse candidates/subsets, not claims of full donor parity."
+    "proof": "Pinned donor branch and Native menu traced to the existing worker. Inventory recipe and SDK adapter checks cover the orb. No end-to-end charter or Native glassblowing qualification is asserted here."
   },
   {
     "name": "chatbot",
