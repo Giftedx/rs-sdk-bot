@@ -92,3 +92,5 @@ test('native CLI recipe names resolve the rung products without accepting the gu
     expect(() => smeltRecipe('adamant')).toThrow('unsupported smelt recipe: adamant');
     expect(() => smeltRecipe('blurite')).toThrow('unsupported smelt recipe: blurite');
 });
+
+test('native druid and giant rungs use the generic worker while the cow capability stays cow-only',()=>{for(const skill of ['attack','strength','defence','hitpoints'] as const){for(const target of ['chaos_druid','giant']){const rung=out.ladders[skill].find(m=>m.id===skill+'/target-'+target);expect(rung).toBeDefined();expect(rung!.workers).toContain('scripts/gather-combat.ts');expect(rung!.workers).not.toContain('cow-progress-order');}const cow=out.ladders[skill].find(m=>m.id===skill+'/target-cow');expect(cow!.workers).toContain('cow-progress-order');}});

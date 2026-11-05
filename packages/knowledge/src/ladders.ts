@@ -79,8 +79,8 @@ const COVERED_GUIDES = ['skill_guide_mining_ores', 'skill_guide_runecrafting_run
 
 const MELEE: SkillName[] = ['attack', 'strength', 'defence', 'hitpoints'];
 const TARGET_SKILLS: SkillName[] = [...MELEE, 'ranged'];
-// Monsters a combat worker fights by name; added as target rungs next to the band representatives.
-const WORKER_TARGETS = ['chicken', 'cow', 'chaos_druid'];
+// Native monsters bound by a combat worker; added as target rungs next to the band representatives.
+const WORKER_TARGETS = ['chicken', 'cow', 'chaos_druid', 'giant'];
 
 // Worker rules. A rule applies only when `evidence` is a literal substring of the worker's file (the capability entry,
 // or the capability JSON for a pending one). Capabilities come first: they carry acceptance.
@@ -98,7 +98,6 @@ const RULES: Rule[] = [
     { worker: 'cap:shark-supply-order', evidence: 'shark', methods: /^(fishing\/catch-shark|cooking\/cooking_generic_shark)$/ },
     { worker: 'cap:iron-progress-order', evidence: "BAR_TYPE: iron", methods: /^smithing\/smelt-iron$/ },
     { worker: 'cap:cow-progress-order', evidence: 'cowTraining', methods: /^(attack|strength|defence|hitpoints)\/target-cow$/ },
-    { worker: 'cap:cow-progress-order', evidence: '/^chaos druid$/i', methods: /^(attack|strength|defence|hitpoints)\/target-chaos_druid$/ },
     { worker: 'cap:ranged-train', evidence: 'export const BOWS=[', methods: /^ranged\/bow-gear-(standard-bows|oak-bows|willow-bows|maple-bows|yew-bows|magic-bows)$/ },
     { worker: 'cap:ranged-train', evidence: 'Lumbridge chickens', methods: /^(ranged|hitpoints)\/target-chicken$/ },
     { worker: 'scripts/gather-yews.ts', evidence: "'yew'", methods: /^woodcutting\/(normal|oak|yew)_tree_table$/ },
@@ -122,7 +121,7 @@ const RULES: Rule[] = [
     { worker: 'scripts/brew-potions.ts', evidence: 'super_def:', methods: /^herblore\/potion-(prayer-restore-potion|super-attack-potion|super-strength-potion|super-defence-potion|energy-potion)$/ },
     { worker: 'scripts/train-prayer.ts', evidence: 'BONE=526', methods: /^prayer\/bury-bones$/ },
     { worker: 'scripts/train-chickens.ts', evidence: 'Train on Lumbridge chickens', methods: /^(attack|strength|defence|hitpoints)\/target-chicken$/ },
-    { worker: 'scripts/gather-combat.ts', evidence: '/^chaos druid$/i', methods: /^(attack|strength|defence|hitpoints)\/target-chaos_druid$/ },
+    { worker: 'scripts/gather-combat.ts', evidence: "target==='giant'?117:target==='druid'?181", methods: /^(attack|strength|defence|hitpoints)\/target-(chaos_druid|giant)$/ },
     { worker: 'scripts/gather-ranged.ts', evidence: 'BOW=841', methods: /^(ranged\/bow-gear-standard-bows|ranged\/target-chicken)$/ },
 ];
 
