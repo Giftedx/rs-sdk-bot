@@ -46,7 +46,7 @@ export const pairKey = (account: string, template: string) => `${account.toLower
 export function unitValue(item: string, bill: readonly BillRow[], prices: Readonly<Record<string, number>>): number {
     const k = norm(item);
     if (k === 'coin') return 1;
-    const short = new Set(bill.filter(r => r.short > 0).map(r => norm(r.item)));
+    const short = new Set(bill.filter(r => r.short > 0).flatMap(r => [r.item, ...(r.aliases ?? [])].map(norm)));
     return (prices[k] ?? 0) * (short.has(k) || (FEEDS[k] ?? []).some(f => short.has(f)) ? BILL_PREMIUM : SURPLUS);
 }
 

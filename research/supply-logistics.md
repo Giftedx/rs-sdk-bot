@@ -9,6 +9,11 @@ The coordinator plans Overall supplies from the route bill's demand and the late
 
 Source -> local consumer -> adapt -> check: the bank observation time in status, the preparation report's five-minute window, and Microbot's bank freshness pattern in the project use map -> the coordinator's supply summary -> preserve bank time through fleet sync and keep unverified holdings visible -> a planner test reads local and published snapshots with recent, stale and absent bank times. A read-only live-data comparison is in `.practice/planner-supply-freshness/summary.json`. A verified balance still needs a transfer and consumer receipt.
 
+
+The supply bill adds demands with the same resolved base item IDs before checking stock. It preserves the alternate labels for planning and reports partly overlapping matches as unresolved. A combined count covers base stock. The handoff still needs to verify the form each consumer needs.
+
+Source -> local consumer -> adapt -> check: the planner's pinned item resolver and the shared-stock accounting pattern in Iron Compass from the project use map -> supply bill, coordinator and Autopilot -> combine demand before assigning a stock balance -> regressions for 1,200 units of demand against 600 owned, an overlapping match, and a cached bill round trip. These checks do not reserve or transfer stock.
+
 ## Market policy (current)
 
 Owner decision: use GE for progression and wealth whenever it beats other sources. Account ownership and evidence requirements still apply.

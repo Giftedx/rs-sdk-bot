@@ -6,6 +6,7 @@ import {mkdirSync,mkdtempSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {snapshot} from '../../../scripts/fleet-sync';
+import {supplyBill} from '../../planner/src/supply-bill';
 
 const world={coverage:{scriptCandidates:[]},statuses:[],jobs:[],capabilities:[]} as any;
 
@@ -65,4 +66,23 @@ test('planner keeps old or undated supplies visible for verification and uses th
   {item:'Headless arrow',need:10,recent:0,toVerify:6,holders:[{account:'Legacy',count:6}]},
  ]);
  expect(summary?.short).toEqual([{item:'Headless arrow',need:10,short:4,holders:[{account:'Legacy',count:6}]}]);
+});
+
+test('a cached bill and a legacy bill report the same shortage for shared base stock', () => {
+ const base=mkdtempSync(join(tmpdir(),'planner-shared-stock-'));
+ const now=1_000_000,server='rs-sdk-demo.fly.dev',fleetDir=join(base,'snapshots');
+ const items=[{id:1995,name:'Unfermented wine'}];
+ const demands=[{item:'Unfermented wine (noted)',count:600},{item:'Unfermented wine',count:600}];
+ const status={name:'Helper',server,at:now,bankAt:now,bank:[{id:1995,count:600}]};
+ for(const dir of ['knowledge','.practice/coordinator','.practice/status','snapshots'])mkdirSync(join(base,dir),{recursive:true});
+ writeFileSync(join(base,'knowledge/items.json'),JSON.stringify(items));
+ writeFileSync(join(base,'.practice/status/Helper.json'),JSON.stringify(status));
+ for(const rows of [demands.map(r=>({item:r.item,need:r.count})),supplyBill(demands,items,[status])]){
+  writeFileSync(join(base,'.practice/coordinator/supply-bill.json'),JSON.stringify({at:now,rows}));
+  const summary=supplyBillSummary({base,now,fleetDir,side:'local'});
+  expect(summary?.recentlyCovered).toBe(0);
+  expect(summary?.short).toEqual([{
+   item:'Unfermented wine (noted)',aliases:['Unfermented wine'],need:1200,short:600,holders:[{account:'Helper',count:600}],
+  }]);
+ }
 });
