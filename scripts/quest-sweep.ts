@@ -12,8 +12,8 @@ import {goTo,sessionWalker,walkPath,walkRoute,type PathDeps} from '../packages/c
 import type {World,Transport} from '../packages/core/src/world';
 import {loadTravel} from '../packages/core/src/travel';
 import {sellersByDistance,shopSellers} from '../packages/core/src/shop-index';
-import {spawnsByDistance} from '../packages/core/src/spawn-index';
-import {gatherPlan,gatherItems,rangedKit,magicKit,arrowsFor,castsFor,ARROWS,BOWS,NPC_SOURCES} from '../packages/core/src/gather';
+import {spawnsByDistance,locsByDistance} from '../packages/core/src/spawn-index';
+import {gatherPlan,gatherItems,rangedKit,magicKit,arrowsFor,castsFor,ARROWS,BOWS,NPC_SOURCES,PICK_SOURCES} from '../packages/core/src/gather';
 import {questFlags} from '../packages/core/src/quest-status';
 import {PRESETS,type SaveConfig} from '../packages/practice/src/presets';
 import travel from '../packages/planner/src/haggis-travel.json';
@@ -231,16 +231,16 @@ async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number)
   const r=await router(down);if(!r.ok)return r;
  }
  if(eastOfArdougne(at(s),to)){const r=await crossEast(s,world,to);if(!r.ok)return r;}
- // An upstairs target (Morgan's garlic cupboard in Draynor) is approached by the hubs toward the ground beneath it;
+ // An upstairs target (Morgan's garlic cupboard in Draynor) is approached by the hubs toward the foot of its way up;
  // only the last leg, with its stairs, is the world router's.
- const beneath={x:to.x,z:to.z,level:0};
+ const beneath=wayUp(world.navigationGraph?.().transports??[],to);
  for(const hop of at(s).level===0?hopsTo(at(s),beneath):[]){
   console.log(`QUEST_SWEEP_HOP ${JSON.stringify({from:at(s),to:hop})}`);
   const r=await ground(hop);if(!r.ok)return r;
  }
  // A far upstairs target with no hub on the way (Hudo's shop on the Grand Tree's first floor, 226 tiles from the Ardougne
- // bank) is still approached by the ground beneath it: asked from Ardougne, the world router took an Ardougne staircase
- // and a 240-tile walk on the first floor, where no floor lies, and the search ran out the plan budget.
+ // bank) is still approached by the ground: asked from Ardougne, the world router took an Ardougne staircase and a
+ // 240-tile walk on the first floor, where no floor lies, and the search ran out the plan budget.
  if(to.level!==0&&at(s).level===0&&cheb(at(s),beneath)>MAX_HOP){const r=await ground(beneath);if(!r.ok)return r;}
  return to.level===0&&at(s).level===0&&cheb(at(s),to)>30?ground(to):router(to);
 }
@@ -249,6 +249,15 @@ async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number)
 export function wayDown(transports:readonly Transport[],at:Tile):Tile{
  const downs=transports.filter(t=>t.from.level===at.level&&t.to.level<at.level&&cheb(t.from,at)<=80).sort((a,b)=>cheb(a.from,at)-cheb(b.from,at));
  return downs[0]?.to??{x:at.x,z:at.z,level:0};
+}
+// The ground foot of the nearest way up to an upstairs target (the Grand Tree ladder's base, 2466,3495, for Hudo's counter):
+// a far walk heads for a floor tile the router can reach, not the wall beneath the target. A way up from a middle floor
+// is followed down to the ground; with no way up within 80 tiles the tile beneath stands in.
+export function wayUp(transports:readonly Transport[],to:Tile,depth=3):Tile{
+ if(to.level===0||depth===0)return{x:to.x,z:to.z,level:0};
+ const up=transports.filter(t=>t.to.level===to.level&&t.from.level<to.level&&cheb(t.to,to)<=80).sort((a,b)=>cheb(a.to,to)-cheb(b.to,to))[0];
+ if(!up)return{x:to.x,z:to.z,level:0};
+ return up.from.level===0?up.from:wayUp(transports,up.from,depth-1);
 }
 // From the Ardougne side (x under 2800, z 3270 and up) to anywhere east of x 2950 the way is the two boats, Brimhaven and
 // Port Sarim, with the Karamja and Port Sarim corridors between: no hub lies within a hop of Ardougne to the east, and
@@ -300,6 +309,37 @@ export function shopPlan(missing:readonly Item[],at:Tile,item:(id:number)=>{debu
   buys.push({id:m.id,count:m.count,name:it.name,npcId:s.npcId,npc:s.npc,tile:s.tile,alts:alts(it.debugname,at).filter(a=>a.npcId!==s.npcId||a.tile.x!==s.tile.x||a.tile.z!==s.tile.z).slice(0,8)});coins+=3*Math.max(1,it.cost)*m.count;
  }
  return{buys,unsold,coins:buys.length?coins+100:0};
+}
+// What a stop adds to a tour: the least extra travel over any leg of the ordered stops (its distance from one end when
+// the tour is a single tile).
+export function detour(stops:readonly Tile[],t:Tile):number{
+ if(stops.length<2)return stops.length?travelDistance(stops[0]!,t):0;
+ let best=Infinity;
+ for(let i=1;i<stops.length;i++)best=Math.min(best,travelDistance(stops[i-1]!,t)+travelDistance(t,stops[i]!)-travelDistance(stops[i-1]!,stops[i]!));
+ return best;
+}
+// The stops in the order the purchases run: nearest first from wherever the last one ended.
+export function tourOrder(from:Tile,stops:readonly Tile[]):Tile[]{
+ const out:Tile[]=[],left=[...stops];let at=from;
+ while(left.length){const next=left.sort((a,b)=>travelDistance(at,a)-travelDistance(at,b)).shift()!;out.push(next);at=next;}
+ return out;
+}
+// A purchase whose item also grows in a field is picked instead when the field is the smaller detour from the tour of the
+// bank, the other sellers and the quest start. From the Ardougne bank the Lumbridge onion field is 533 tiles off and
+// Hudo 226, but redberries come from Wydin in Port Sarim and the Goblin Village lies 52 tiles from Wydin: the field adds
+// 263 tiles to that tour and Hudo 452. The field judged is the nearest to any stop; the gather walks to the nearest from
+// where the purchases end.
+export function pickInstead(buys:readonly Buy[],from:Tile,end:Tile,fields:(id:number,at:Tile)=>Tile[]=(id,at)=>locsByDistance(PICK_SOURCES[id]!.loc,at)):{buys:Buy[];picks:{id:number;count:number;field:Tile;detours:{field:number;seller:number}}[]}{
+ const picks:{id:number;count:number;field:Tile;detours:{field:number;seller:number}}[]=[];let left=[...buys];
+ for(const b of buys){
+  if(!PICK_SOURCES[b.id])continue;
+  const stops=[from,...tourOrder(from,left.filter(o=>o!==b).map(o=>o.tile)),end];
+  const field=stops.map(a=>fields(b.id,a)[0]).filter((t):t is Tile=>!!t).sort((a,c)=>detour(stops,a)-detour(stops,c))[0];
+  if(!field)continue;
+  const detours={field:detour(stops,field),seller:detour(stops,b.tile)};
+  if(detours.field<detours.seller){picks.push({id:b.id,count:b.count,field,detours});left=left.filter(o=>o!==b);}
+ }
+ return{buys:left,picks};
 }
 let itemCatalog:Map<number,{debugname:string;name:string;cost:number}>|undefined;
 const catalogItem=(id:number)=>(itemCatalog??=new Map((JSON.parse(readFileSync(resolve(import.meta.dir,'../knowledge/items.json'),'utf8')) as {id:number;debugname:string;name:string;cost:number}[]).map(i=>[i.id,i])) ).get(id);
@@ -523,7 +563,15 @@ export async function sweep(account:string,quest:string,fresh?:string){
   const tools=toolPlan(gather.tools,need,pack(),worn(),rows(),p.withdraw);
   p.withdraw.push(...tools.withdraw);
   const toolIds=new Set(gather.tools.map(t=>t.id));
-  const shop=shops([...gather.still,...tools.missing]);
+  let shop=shops([...gather.still,...tools.missing]);
+  // A field on the way beats a seller off it (onions at Lumbridge over Hudo, when redberries take the tour to Port Sarim):
+  // the pick goes before the gathers, as an ingredient of a dye does, and the shop plan is drawn again without it.
+  const instead=pickInstead(shop.buys,here(),preset.position);
+  if(instead.picks.length){
+   console.log(`QUEST_SWEEP_PICK_INSTEAD ${JSON.stringify(instead.picks)}`);
+   gather.gathers.unshift(...instead.picks.map(i=>({id:i.id,count:i.count,how:'pick' as const})));
+   shop=shops([...gather.still,...tools.missing].filter(i=>!instead.picks.some(p=>p.id===i.id)));
+  }
   // A kit consumable (arrows, runes) is estimated with a margin: nine in ten of the shortfall from the shops serve, where
   // 17 of 18 air runes from three sellers ended a run whose casts were budgeted at three a goblin.
   const consumable=new Set(tools.missing.filter(t=>STACKS.has(t.id)).map(t=>t.id));
