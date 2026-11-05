@@ -19,7 +19,7 @@ export function goalPlan(text: string) {
 
 export type GoalRow = { label:string; value:string; at?:number; source:string; tone?:'warn'|'good'|'dm' };
 type Lane = { title:string; metric:string; meta:string; level:string; blocker:string; next:string; rows:GoalRow[] };
-export type GoalInputs = { requirements:{item:string;count:number}[]|null; items:any[]; quests:any[]; questConstants:string; receipts:Record<string,any> };
+export type GoalInputs = { requirements:{item:string;count:number;itemId?:number}[]|null; items:any[]; quests:any[]; questConstants:string; receipts:Record<string,any> };
 const validAt=(at:any,now:number)=>Number.isFinite(at)&&at>0&&at<=now;
 const fresh=(at:any,now:number,limit=300000)=>validAt(at,now)&&now-at<limit;
 const nameKey=(s:string)=>s.trim().toLowerCase().replace(/\s*\(noted\)$/,'').replace(/^feathers$/,'feather').replace(/^headless arrows$/,'headless arrow');
@@ -46,8 +46,17 @@ export function goalProgress(state:any,input:GoalInputs):Lane[]{
  const statusPath=(b:any)=>`.practice/status/${b.name}.json`;
  const snapshotBots=bots.filter((b:any)=>validAt(b.at,now)),banks=bots.filter((b:any)=>validAt(b.bankAt,now)&&Array.isArray(b.bank)&&b.bank.every((i:any)=>Number.isSafeInteger(i.baseId??i.id)&&Number.isSafeInteger(i.count)&&i.count>0));
  const catalog=new Map<string,any[]>();for(const i of input.items){if(!i||typeof i.name!=='string'||!Number.isSafeInteger(i.id))continue;const k=nameKey(i.name);catalog.set(k,[...(catalog.get(k)??[]),i]);}
- const supply=(input.requirements??[]).map(r=>{
-  const key=nameKey(r.item),alias=supplyAliases[key],matches=alias?input.items.filter(i=>i?.debugname===alias):(catalog.get(key)??[]),id=matches.length===1&&Number.isSafeInteger(matches[0].id)?matches[0].id:null;
+ const demand=new Map<string|number,{item:string;count:number;id:number|null}>();
+ for(const r of input.requirements??[]){
+  const key=nameKey(r.item),alias=supplyAliases[key];
+  const matches=r.itemId!==undefined?input.items.filter(i=>i?.id===r.itemId)
+   :alias?input.items.filter(i=>i?.debugname===alias):(catalog.get(key)??[]);
+  const id=matches.length===1&&Number.isSafeInteger(matches[0].id)?matches[0].id:null;
+  const pool=id??key,prior=demand.get(pool);
+  demand.set(pool,{item:prior?.item??r.item,count:(prior?.count??0)+r.count,id});
+ }
+ const supply=[...demand.values()].map(r=>{
+  const {id}=r;
   const holders=id===null?[]:banks.flatMap((b:any)=>{const count=b.bank.filter((i:any)=>(i.baseId??i.id)===id).reduce((n:number,i:any)=>n+i.count,0);return count?[{name:b.name,count,at:b.bankAt,recent:fresh(b.bankAt,now)}]:[]});
   const recent=holders.filter((h:any)=>h.recent).reduce((n:number,h:any)=>n+h.count,0),old=holders.filter((h:any)=>!h.recent).reduce((n:number,h:any)=>n+h.count,0);
   return {...r,id,holders,recent,old,missing:Math.max(0,r.count-recent)};

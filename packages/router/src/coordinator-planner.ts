@@ -124,7 +124,7 @@ export function supplyBillSummary({base=projectRoot,now=Date.now(),fleetDir,side
 }={}){
  try{
   const bill=JSON.parse(readFileSync(join(base,'.practice/coordinator/supply-bill.json'),'utf8'));
-  const demands=bill.rows.map((row:{item:string;need:number;aliases?:string[]})=>({item:row.item,count:row.need,aliases:row.aliases}));
+  const demands=bill.rows.map((row:{item:string;itemId?:number;need:number;aliases?:string[]})=>({item:row.item,itemId:row.itemId,count:row.need,aliases:row.aliases}));
   const items=JSON.parse(readFileSync(join(base,'knowledge/items.json'),'utf8'));
   const statuses=liveHelperStatuses(base,fleetDir,side).filter(s=>!s.practice);
   // Use the same five-minute window as the preparation report. A fresh status does not make an older bank recent.
@@ -144,7 +144,7 @@ export function supplyBillSummary({base=projectRoot,now=Date.now(),fleetDir,side
    const freshByAccount=new Map(current.holders.map(h=>[h.account,h.count]));
    const holders=row.holders.map(h=>({account:h.account,count:h.count-(freshByAccount.get(h.account)??0)}))
     .filter(h=>h.count>0).sort((a,b)=>b.count-a.count).slice(0,2);
-   return [{item:row.item,need:row.need,recent:current.owned,toVerify,holders,...(row.aliases?{aliases:row.aliases}:{})}];
+   return [{item:row.item,...(row.itemId===undefined?{}:{itemId:row.itemId}),need:row.need,recent:current.owned,toVerify,holders,...(row.aliases?{aliases:row.aliases}:{})}];
   });
   return {
    at:bill.at,
@@ -156,7 +156,7 @@ export function supplyBillSummary({base=projectRoot,now=Date.now(),fleetDir,side
    verificationNeeded:verify.length,
    verify:verify.sort((a,b)=>b.toVerify-a.toVerify).slice(0,25),
    short:observed.filter(r=>r.ids.length>0&&r.short>0).sort((a,b)=>b.short-a.short).slice(0,25)
-    .map(r=>({item:r.item,need:r.need,short:r.short,holders:r.holders.slice(0,2),...(r.aliases?{aliases:r.aliases}:{})})),
+    .map(r=>({item:r.item,...(r.itemId===undefined?{}:{itemId:r.itemId}),need:r.need,short:r.short,holders:r.holders.slice(0,2),...(r.aliases?{aliases:r.aliases}:{})})),
   };
  }catch{return null;}
 }

@@ -33,7 +33,7 @@ export type Mode = 'floor' | 'realistic';
 export interface Range { floor: number; realistic: number; evidence?: Evidence; source?: string }
 // `from`: the activity id that makes the item during the run (Haggis keeps the output). When that row is in the
 // route, the item is not staged by a helper (suppliesFor leaves it out).
-export interface Supply { item: string; count: number; note?: string; from?: string }
+export interface Supply { item: string; count: number; itemId?: number; note?: string; from?: string }
 
 export const XP99 = xpForLevel(99);
 
@@ -567,13 +567,16 @@ export interface Tier { id: string; level: number; xpPerAction: number; items: S
 export function ladderSupplies(skill: Skill, tiers: Tier[], margin = 1, toLevel = 99): Supply[] {
     const methods: Method[] = tiers.map(t => ({ id: t.id, skill, level: t.level, xpPerHour: t.xpPerAction, source: 'estimated' }));
     const plan = planSkill({ skill, fromXp: 0, toLevel, methods });
-    const out = new Map<string, number>();
+    const out = new Map<string | number, Supply>();
     for (const seg of plan.segments) {
         const tier = tiers.find(t => t.id === seg.method)!;
         const actions = Math.ceil((seg.xp / tier.xpPerAction) * margin);
-        for (const it of tier.items) out.set(it.item, (out.get(it.item) ?? 0) + actions * it.count);
+        for (const {item,itemId,count} of tier.items) {
+            const key=itemId??item,prior=out.get(key);
+            out.set(key,{item:prior?.item??item,...(itemId===undefined?{}:{itemId}),count:(prior?.count??0)+actions*count});
+        }
     }
-    return [...out].map(([item, count]) => ({ item, count }));
+    return [...out.values()];
 }
 
 const each = (item: string, count = 1): Supply => ({ item, count });
@@ -746,7 +749,7 @@ export const SCENARIOS: { id: string; label: string; tricks: Trick[] }[] = [
 // Supplies a helper stages for the activities the scenario uses, summed by item. With `boards`, the route is the
 // one schedule() uses (chooseRoute); without, the raw-tick choice. An item made by a row of the route is left out.
 export function suppliesFor(activities: Activity[], opts: ScheduleOptions, boards?: Board[]): Supply[] {
-    return goalRequirementsFor(activities, opts, boards).supplies.map(({item,count})=>({item,count}));
+    return goalRequirementsFor(activities, opts, boards).supplies.map(({consumers,...supply})=>supply);
 }
 
 // Stage the rows that begin before the last 99, including a row that still runs at that tick.
@@ -763,7 +766,7 @@ export function goalRequirementsFor(activities: Activity[], opts: ScheduleOption
     const route = boards && opts.route !== 'ticks' ? chooseRoute(boards, activities, opts).route : {};
     const acts = chooseVariants(activities, { ...opts, force: { ...opts.force, ...route } });
     const ids = new Set(acts.map(a => a.id));
-    const out = new Map<string, {item:string;count:number;consumers:string[]}>();
+    const out = new Map<string | number, {item:string;itemId?:number;count:number;consumers:string[]}>();
     const unlocks = new Map<string, {activity:string;consumers:string[];selected:boolean}>();
     for (const a of acts) {
         for (const id of a.requires ?? []) {
@@ -772,10 +775,11 @@ export function goalRequirementsFor(activities: Activity[], opts: ScheduleOption
             unlocks.set(id,row);
         }
         for (const s of a.supplies ?? []) if (!s.from || !ids.has(s.from)) {
-            const row=out.get(s.item)??{item:s.item,count:0,consumers:[]};
+            const key=s.itemId??s.item;
+            const row=out.get(key)??{item:s.item,...(s.itemId===undefined?{}:{itemId:s.itemId}),count:0,consumers:[]};
             row.count+=s.count;
             if(!row.consumers.includes(a.id))row.consumers.push(a.id);
-            out.set(s.item,row);
+            out.set(key,row);
         }
     }
     return {supplies:[...out.values()],unlocks:[...unlocks.values()]};

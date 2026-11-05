@@ -3,6 +3,13 @@ import {preparationRoute,reconcilePreparation} from './preparation-report';
 import {questDefinitions} from '../packages/core/src/quest-status';
 const now=1_000_000;
 const bank=(name:string,items:any[],age=100)=>({name,server:'rs-sdk-demo.fly.dev',bankAt:now-age,bank:items});
+test('exact kit IDs ignore lookalikes and pool known aliases once',()=>{
+ const requirements=[{item:'black dragonhide body',itemId:2503,count:1},{item:'Black body alias',itemId:2503,count:1}];
+ const rows=[bank('Wrong',[{id:2501,name:'Dragonhide body',count:8}]),bank('Right',[{id:2503,name:'Dragonhide body',count:1}])];
+ const r=reconcilePreparation(requirements,rows,['Wrong','Right'],now);
+ expect(r.items).toHaveLength(1);
+ expect(r.items[0]).toMatchObject({itemId:2503,required:2,recentBanked:1,shortfall:1,state:'short'});
+});
 test('preparation unlocks distinguish unobserved containers from observed empty ones',()=>{
  const quest=questDefinitions().find(q=>q.name==='Rune Mysteries Quest')!;
  const pick={id:1267,name:'Iron pickaxe',count:1};
