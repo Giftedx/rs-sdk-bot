@@ -3,7 +3,7 @@
 import {existsSync,mkdirSync,readFileSync,statSync,writeFileSync,openSync,closeSync,unlinkSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {randomUUID} from 'node:crypto';
-import type {CoordinatorState,TaskRecord} from './coordinator';
+import {usefulLiveReceipt,type CoordinatorState,type TaskRecord} from './coordinator';
 import {atomicJson} from './coordinator-store';
 import {FLEET_DIR,mySide} from '../../core/src/fleet';
 import {cachedLaunchRevision} from '../../core/src/worker-release';
@@ -51,7 +51,7 @@ export function summarizeProgress(input:{side:string;now:number;state:Input<Coor
    const dependencies=r.spec.dependsOn.filter(id=>byId.get(id)?.status!=='succeeded').map(id=>({id,status:byId.get(id)?.status??'missing'}));
    return{...task(r),status:dependencies.length?'waiting-dependencies':'queued',dependencies};
   });
-  const useful=mine.filter(r=>r.spec.kind==='run'&&!r.spec.sessionRecovery&&r.status==='succeeded'&&matchedReceipt(r)&&r.receipt?.ok===true&&r.receipt.output?.ok===true&&r.receipt.output?.evidence==='live'&&validTime(r.receipt.at)&&r.receipt.at<=input.now)
+  const useful=mine.filter(r=>usefulLiveReceipt(r,input.now))
    .sort((a,b)=>b.receipt!.at-a.receipt!.at)[0];
   const recovery=mine.filter(r=>r.spec.sessionRecovery&&r.status==='succeeded'&&matchedReceipt(r)&&r.receipt?.ok===true&&r.receipt.output?.ok===true&&r.receipt.output?.evidence==='live'&&validTime(r.receipt.at)&&r.receipt.at<=input.now).sort((a,b)=>b.receipt!.at-a.receipt!.at)[0];
   const preparation=mine.filter(r=>r.status==='succeeded'&&r.spec.kind!=='run'&&matchedReceipt(r)&&r.receipt?.ok===true&&validTime(r.receipt.at)&&r.receipt.at<=input.now).sort((a,b)=>b.receipt!.at-a.receipt!.at)[0];

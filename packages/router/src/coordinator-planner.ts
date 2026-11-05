@@ -2,7 +2,7 @@ import {readFileSync,existsSync,readdirSync,writeFileSync,mkdirSync} from 'node:
 import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
 import {join} from 'node:path';
-import {GOALS,addTasks,heldBuilds,provisionRefs,replaceTasks,type CoordinatorState,type CoordTask} from './coordinator';
+import {GOALS,addTasks,heldBuilds,provisionRefs,replaceTasks,usefulLiveReceipt,type CoordinatorState,type CoordTask} from './coordinator';
 import {runModel,type ModelWorker} from './model-worker';
 import {validateDelivery,type DeliveryTask} from './delivery';
 import {freshScoreboard} from './coverage';
@@ -27,7 +27,7 @@ export function gameCoverage(methods:any[],quests:any[],statuses:any[],protected
   otherGoals:['wealth and market logistics','quest access and travel unlocks','equipment and combat','items and collection','specialist records','main Overall record'],
   unknown:'Catalogue extraction is incomplete. Zero methods means inspect pinned content, not unavailable. Presence, native proof, live pilot and repeat qualification are separate states.'};
 }
-export function queueFacts(state:CoordinatorState,held:readonly HeldRuns[]=[]){
+export function queueFacts(state:CoordinatorState,held:readonly HeldRuns[]=[],now=Date.now()){
  const records=new Map(state.tasks.map(r=>[r.spec.id,r]));
  const active=state.tasks.filter(r=>r.status==='pending'||r.status==='running');
  const dependencies = new Map(active.map(({spec}) => [
@@ -83,9 +83,9 @@ export function queueFacts(state:CoordinatorState,held:readonly HeldRuns[]=[]){
   return {id, status: record?.status ?? 'missing', runId: record?.runId, replacement: record?.supersededBy, ...count};
  }).sort((a, b) => b.pendingRuns - a.pendingRuns || b.pendingTasks - a.pendingTasks || a.id.localeCompare(b.id));
 
- return{lastUsefulLiveAt:Math.max(0,...state.tasks.filter(r=>r.spec.kind==='run'&&r.status==='succeeded').map(r=>r.receipt?.at??0)),
+ return{lastUsefulLiveAt:state.tasks.reduce((latest,r)=>Math.max(latest,usefulLiveReceipt(r,now)?.at??0),0),
   dependencyReadiness, rootBlockers, blocked,
-  heldBuilds:heldBuilds(state,Date.now()),
+  heldBuilds:heldBuilds(state,now),
   heldRuns:held.map(h=>({...h,reason:clip(h.reason,240)})),
   sharedDependencyIds:[...shared.keys()],
   active:active.map(({spec,status})=>{
