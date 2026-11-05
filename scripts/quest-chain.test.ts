@@ -32,5 +32,10 @@ test('a quest whose skill check the account fails is named with the shortfall', 
     expect(questShortfall('seaslug', [{ name: 'Firemaking', level: 12 }])).toEqual(['firemaking 12/30']);
     expect(questShortfall('seaslug', [{ name: 'Firemaking', level: 30 }])).toEqual([]);
     expect(questShortfall('fishingcompo', undefined)).toEqual(['fishing 1/10']);
+    // TheFullMonty: Thieving 99 and Crafting 52, every other skill 1.
+    const monty = [{ name: 'Thieving', level: 99 }, { name: 'Crafting', level: 52 }, { name: 'Magic', level: 99 }];
+    expect(questShortfall('dig', monty)).toEqual(['herblore 1/10', 'agility 1/10']);
+    expect(questShortfall('elemental', monty)).toEqual(['mining 1/20', 'smithing 1/20']);
+    expect(questShortfall('elemental', [{ name: 'Mining', level: 20 }, { name: 'Smithing', level: 20 }, { name: 'Crafting', level: 20 }])).toEqual([]);
     expect(questShortfall('sheep', [])).toEqual([]);
 });

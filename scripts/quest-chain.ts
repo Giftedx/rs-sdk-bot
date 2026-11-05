@@ -32,8 +32,13 @@ export const QUEST_NAMES: Record<string, string> = {
 };
 
 // Skill levels a quest checks before it can finish. Sea Slug: the dry sticks light only at Firemaking 30
-// (quest_seaslug.rs2:43). Fishing Contest: the contest needs Fishing 10 (hemenster_fishing.rs2:70).
-export const QUEST_SKILLS: Record<string, Record<string, number>> = { seaslug: { firemaking: 30 }, fishingcompo: { fishing: 10 } };
+// (quest_seaslug.rs2:43). Fishing Contest: the contest needs Fishing 10 (hemenster_fishing.rs2:70). Digsite: the exam
+// and the site want Herblore 10, Agility 10 and Thieving 25 (quest_itexam stat_base checks). Elemental Workshop: the
+// workshop wants Mining, Smithing and Crafting 20 (quest_elemental_workshop stat_base checks).
+export const QUEST_SKILLS: Record<string, Record<string, number>> = {
+    seaslug: { firemaking: 30 }, fishingcompo: { fishing: 10 },
+    dig: { herblore: 10, agility: 10, thieving: 25 }, elemental: { mining: 20, smithing: 20, crafting: 20 },
+};
 // The skills a quest needs that the account lacks, as "skill have/need"; empty when it can run.
 export function questShortfall(quest: string, skills: { name: string; level: number }[] | undefined): string[] {
     const have = new Map((skills ?? []).map(s => [s.name.toLowerCase(), s.level]));
