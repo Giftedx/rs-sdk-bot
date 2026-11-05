@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793892218741,
+ "at": 1793892827131,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -153,19 +153,6 @@
     "KNIGHT_SPOT": "2653,3302"
    },
    "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "coins for route supplies: Ardougne knights",
-   "role": "supply"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297"
-   },
-   "enabled": false,
    "standing": true,
    "repeat": true,
    "goal": "coins for route supplies: Ardougne knights",
@@ -494,10 +481,31 @@
     "CAP": "2400",
     "COORDINATOR_RUN_ID": "task-40e208fd-e9ef-478d-9c2f-b217b529e727"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-ge-oreelse-glass-reserve20k [task-40e208fd-e9ef-478d-9c2f-b217b529e727]",
    "role": "smithing"
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ORDER_KEY": "pocketpython-cat-sardine",
+    "ITEM_ID": "1552",
+    "QUANTITY": "1",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "5000",
+    "CASH_RESERVE": "3000000",
+    "ORDER_MS": "600000",
+    "FILL_WAIT_TICKS": "50",
+    "CAP": "2400",
+    "COORDINATOR_RUN_ID": "task-45830d52-1185-4eb9-b586-6da0803b41e6"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-ge-pocketpython-cat-sardine [task-45830d52-1185-4eb9-b586-6da0803b41e6]",
+   "role": "supply"
   }
  ]
 }
