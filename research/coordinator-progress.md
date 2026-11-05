@@ -41,6 +41,8 @@ Source -> local consumer -> reuse -> check: the progress export's matched useful
 
 ## Planner rounds and dead tasks
 
+Source -> local consumer -> reuse -> check: the shared practice ticket queue and exact-source native resume path -> delivery and planner -> classify an expired ticket wait as host deferral and withdraw a paused waiter without touching the holder -> queue and admission fixtures separate wait expiry, owner stop and a started check timeout. The live readback in `.practice/native-turn-deferral/observed.json` records a live ticket behind the native owner and two separate quest proof failures. A ticket deferral carries no native acceptance.
+
 Source -> local consumer -> reuse -> check: the account-plan write lock -> coordinator startup and reload -> claim ownership and read the queue under the same lock after the previous owner exits -> fixtures cover two starters and a predecessor's final save. The Windows probe in `.practice/coordinator-owner-claim/process-race.json` uses two real processes and an isolated queue. One acquires the claim and the other names the active owner in its refusal.
 
 Source -> local consumer -> adapt -> check: the TypeScript parser and existing import closure -> controller source checks and delivery fingerprints -> reuse parsed imports by content hash and resolve paths per scan -> a fixture covers added and removed targets and a same-size import edit. In `.practice/qualification-closure/matched.json`, Windows Bun 1.3.14 scans a 67-file controller closure and four delivery fingerprints three times per sample. Baseline groups take 2,683, 2,543 and 2,412 ms. Cached groups take 1,521, 1,432 and 1,345 ms, with equal results. The benchmark measures warm scans in one process.
