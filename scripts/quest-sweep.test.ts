@@ -165,7 +165,7 @@ test('a quest keeps its own items and every untradeable item out of the unneeded
 });
 
 test('withdrawal slots count a stack once and nothing for a stack the pack already holds; deposits free whole kinds and spare coins, food and quest items',async()=>{
- const {slotsFor,depositPlan}=await import('./quest-sweep');
+ const {slotsFor,depositPlan,QUEST_PICKUP_SLOTS}=await import('./quest-sweep');
  const pack=[{id:995,count:500},...Array.from({length:5},()=>({id:385,count:1})),{id:1351,count:1},{id:590,count:1},{id:1438,count:1}];
  expect(slotsFor([{id:995,count:190}],pack)).toBe(0);
  expect(slotsFor([{id:563,count:1},{id:556,count:5}],pack)).toBe(2);
@@ -182,6 +182,8 @@ test('withdrawal slots count a stack once and nothing for a stack the pack alrea
  expect(depositPlan(sharks,3,keep)).toEqual([{id:385,count:3}]);
  // The allowance holds eight food units back whatever the need.
  expect(depositPlan(sharks,28,keep)).toEqual([{id:385,count:19}]);
+ // Three pots of flour plus the pickup reserve: a full pack of sharks banks eleven and keeps sixteen.
+ expect(depositPlan(sharks,slotsFor([{id:1933,count:3}],sharks)+QUEST_PICKUP_SLOTS,keep)).toEqual([{id:385,count:11}]);
 });
 
 test('a far start walks hub to hub in hops of at most 150 tiles that each bring the goal nearer; a near start has no hops',async()=>{

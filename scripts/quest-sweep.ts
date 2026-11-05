@@ -67,6 +67,9 @@ export function slotsFor(withdraw:readonly Item[],pack:readonly Item[]):number{
 // banks the kind; a second deposit of the same kind from a stale slot waits out its timeout), never coins, runes, the
 // quest's own items or what the preset needs; then food units beyond a KEEP_FOOD allowance, as many as still needed.
 export const KEEP_FOOD=8;
+// Slots a quest script fills on its own, undeclared by its preset: what it picks up and is handed (Murder Mystery takes
+// the dagger, flypaper, a suspect's item and its dust and print, and a full pack fails its first pickup).
+export const QUEST_PICKUP_SLOTS=8;
 export function depositPlan(pack:readonly Item[],need:number,keep:(id:number)=>boolean):Item[]{
  let free=28-pack.length;
  const out:Item[]=[];
@@ -361,9 +364,9 @@ export async function sweep(account:string,quest:string,fresh?:string){
    if(take>0){const c=p.withdraw.find(w=>w.id===COINS);if(c)c.count+=take;else p.withdraw.push({id:COINS,count:take});}
    console.log(`QUEST_SWEEP_SHOP_PLAN ${JSON.stringify({buys:shop.buys,coins:shop.coins})}`);
   }
-  // Free the slots the withdrawals, the shop purchases and the gathered items need: whole kinds the quest does not use
-  // first, one deposit per kind, then food beyond the allowance.
-  const slots=slotsFor([...p.withdraw,...shop.buys.map(b=>({id:b.id,count:b.count})),...gather.gathers.map(g=>({id:g.id,count:g.count}))],pack());
+  // Free the slots the withdrawals, the shop purchases and the gathered items need, plus the pickups: whole kinds the
+  // quest does not use first, one deposit per kind, then food beyond the allowance.
+  const slots=slotsFor([...p.withdraw,...shop.buys.map(b=>({id:b.id,count:b.count})),...gather.gathers.map(g=>({id:g.id,count:g.count}))],pack())+QUEST_PICKUP_SLOTS;
   for(const d of depositPlan(pack(),slots,id=>need.has(id)||keepsItem(quest,id,id=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable))){
    const item=(st()?.inventory??[]).find((i:any)=>i.id===d.id);
    if(!item)continue;
