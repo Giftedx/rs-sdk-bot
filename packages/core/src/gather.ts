@@ -20,6 +20,7 @@ export const MILK=1927,BUCKET=1925,COW=81;
 // 2613 open: Open, then Search). The only shops are the Greengrocers on Miscellania and in Rellekka.
 export const LOC_SOURCES:Record<number,{tile:Tile;open:RegExp;take:RegExp}>={1550:{tile:{x:3096,z:3268,level:1},open:/^open$/i,take:/^search$/i}};
 export type Gather={id:number;count:number;how:'spawn'|'milk'|'loc'};
+export const CLUSTER=20;
 // A spawn wins over a shop when it is nearer: eggs lie by Lumbridge, while the only egg seller is in Rellekka.
 // `seller` gives the straight-line distance to the nearest seller (Infinity when no shop sells the item).
 export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:Tile)=>Tile[]=spawnsByDistance,seller:(id:number)=>number=()=>Infinity){
@@ -45,11 +46,15 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
  const here=():Tile=>{const p=st()?.player;return{x:p?.worldX??0,z:p?.worldZ??0,level:p?.level??0};};
  for(const g of gathers){
   const target=held(g.id)+g.count,sources=(g.how==='milk'?nearest(cows(),here()):g.how==='loc'?[LOC_SOURCES[g.id]!.tile]:spawnsByDistance(g.id,here())).slice(0,6);
+  // Spawns lie in clusters (three egg spawns within 4 tiles beyond White Wolf Mountain): one with no route rules out
+  // the rest of its cluster, so the walk moves on to the next place rather than searching the same ground again.
+  const unreachable:Tile[]=[];
   for(const at of sources){
    if(held(g.id)>=target)break;
+   if(unreachable.some(u=>u.level===at.level&&Math.max(Math.abs(u.x-at.x),Math.abs(u.z-at.z))<=CLUSTER))continue;
    const walked=await walk(at);
    console.log(`QUEST_SWEEP_GATHER_WALK ${JSON.stringify({item:g.id,how:g.how,to:at,ok:walked.ok,detail:walked.detail})}`);
-   if(!walked.ok)continue;
+   if(!walked.ok){unreachable.push(at);continue;}
    for(let tries=0;tries<g.count+3&&held(g.id)<target;tries++){
     const before=held(g.id);
     if(g.how==='milk'){

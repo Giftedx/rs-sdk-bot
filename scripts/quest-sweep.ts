@@ -180,17 +180,21 @@ export async function walkCorridor(deps:PathDeps,points:readonly Pt[],walk:typeo
 // idled 920 ticks on practice, and Al Kharid to a Karamja shop idled 938), and takes the world router only when that
 // walk fails or the legs change level.
 export type Walked={ok:boolean;reason?:string;detail?:string;ticks?:number};
+// The sweep's route searches get 15 s each: a legitimate leg plans in well under that, and the 900-tick watchdog runs at
+// 150 ms ticks on practice (135 s), so three 45 s searches for one unreachable spawn cluster ended a run.
+export const SWEEP_PLAN_BUDGET_MS=15_000;
 export async function walkFar(s:Session,world:World,to:Tile,legTimeoutTicks=150):Promise<Walked>{
  const at=():Tile=>{const q=s.sdk.getState()?.player;return{x:q?.worldX??0,z:q?.worldZ??0,level:q?.level??0};};
+ const router=(t:Tile)=>goTo(s,world,t,accountOf(s),{legTimeoutTicks,planBudgetMs:SWEEP_PLAN_BUDGET_MS});
  const ground=async(t:Tile):Promise<Walked>=>{
   const r=at().level===0&&t.level===0?await walkCorridor(await sessionWalker(s),[[t.x,t.z,3]]):{ok:false};
-  return r.ok?{ok:true}:goTo(s,world,t,accountOf(s),{legTimeoutTicks});
+  return r.ok?{ok:true}:router(t);
  };
  for(const hop of hopsTo(at(),to)){
   console.log(`QUEST_SWEEP_HOP ${JSON.stringify({from:at(),to:hop})}`);
   const r=await ground(hop);if(!r.ok)return r;
  }
- return to.level===0&&at().level===0&&cheb(at(),to)>30?ground(to):goTo(s,world,to,accountOf(s),{legTimeoutTicks});
+ return to.level===0&&at().level===0&&cheb(at(),to)>30?ground(to):router(to);
 }
 async function reachStart(s:Session,world:World,start:Tile){
  const p=s.sdk.getState()?.player;
