@@ -9,7 +9,7 @@ import {openBot,finish,getWorld,accountOf,finishHooks} from '../packages/core/sr
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {goTo,sessionWalker,walkPath,walkRoute,type PathDeps} from '../packages/core/src/walk';
-import type {World} from '../packages/core/src/world';
+import type {World,Transport} from '../packages/core/src/world';
 import {loadTravel} from '../packages/core/src/travel';
 import {sellersByDistance,shopSellers} from '../packages/core/src/shop-index';
 import {spawnsByDistance} from '../packages/core/src/spawn-index';
@@ -210,9 +210,13 @@ async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number)
   const r=at(s).level===0&&t.level===0?await walkCorridor(await sessionWalker(s),[[t.x,t.z,3]]):{ok:false};
   return r.ok?{ok:true}:router(t);
  };
- // A far walk that starts upstairs (Hudo's shop on the Grand Tree's first floor, bound for Port Sarim) first comes down to
- // the ground beneath: the boats and hubs are ground legs, and asked from the first floor the world router found no route.
- if(at(s).level!==0&&cheb(at(s),to)>MAX_HOP){const r=await router({x:at(s).x,z:at(s).z,level:0});if(!r.ok)return r;}
+ // A far walk that starts upstairs (Hudo's shop on the Grand Tree's first floor, bound for Port Sarim) first comes down by
+ // the nearest way down: the boats and hubs are ground legs, and asked from the first floor the world router found no route.
+ for(let i=0;i<3&&at(s).level!==0&&cheb(at(s),to)>MAX_HOP;i++){
+  const down=wayDown(world.navigationGraph?.().transports??[],at(s));
+  console.log(`QUEST_SWEEP_DOWN ${JSON.stringify({from:at(s),to:down})}`);
+  const r=await router(down);if(!r.ok)return r;
+ }
  if(eastOfArdougne(at(s),to)){const r=await crossEast(s,world,to);if(!r.ok)return r;}
  // An upstairs target (Morgan's garlic cupboard in Draynor) is approached by the hubs toward the ground beneath it;
  // only the last leg, with its stairs, is the world router's.
@@ -226,6 +230,12 @@ async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number)
  // and a 240-tile walk on the first floor, where no floor lies, and the search ran out the plan budget.
  if(to.level!==0&&at(s).level===0&&cheb(at(s),beneath)>MAX_HOP){const r=await ground(beneath);if(!r.ok)return r;}
  return to.level===0&&at(s).level===0&&cheb(at(s),to)>30?ground(to):router(to);
+}
+// The landing of the nearest way down from this floor (the Grand Tree ladder, 2466,3495): the tile beneath an upstairs shop
+// is a wall as often as a floor (under Hudo's counter, 2449,3508, the router found no route).
+export function wayDown(transports:readonly Transport[],at:Tile):Tile{
+ const downs=transports.filter(t=>t.from.level===at.level&&t.to.level<at.level&&cheb(t.from,at)<=80).sort((a,b)=>cheb(a.from,at)-cheb(b.from,at));
+ return downs[0]?.to??{x:at.x,z:at.z,level:0};
 }
 // From the Ardougne side (x under 2800, z 3270 and up) to anywhere east of x 2950 the way is the two boats, Brimhaven and
 // Port Sarim, with the Karamja and Port Sarim corridors between: no hub lies within a hop of Ardougne to the east, and
