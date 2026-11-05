@@ -39,3 +39,13 @@ test('waits and checked actions end at once when the session ends (no more ticks
     await t;
     expect(await c).toMatchObject({ ok: false, reason: 'aborted', detail: expect.stringContaining('session ended') });
 });
+
+test('a loop that only awaits waits on an ended session still lets timers run, so its settle can finish', async () => {
+    const s: any = { ...fakeSession([at(0, 0)]), ended: Promise.resolve({ reason: 'disconnected' }) };
+    let fired = false;
+    setTimeout(() => { fired = true; }, 10);
+    let loops = 0;
+    while (!fired && loops < 1_000_000) { loops++; await waitTicks(s, 1); await waitUntil(s, () => false, { timeoutTicks: 5 }); }
+    expect(fired).toBe(true);
+    expect(loops).toBeLessThan(5);
+});
