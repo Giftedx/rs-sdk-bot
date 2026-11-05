@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793904995766,
+ "at": 1793906212744,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -18,6 +18,22 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
+   "role": "supply"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
+    "scripts/goldfarm.ts KNIGHT_SPOT=2582,3297"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Thieving 55, then coins from Ardougne knights",
    "role": "supply"
   },
   {
@@ -143,6 +159,27 @@
    "role": "supply"
   },
   {
+   "account": "Pocketrocket",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby",
+    "6000"
+   ],
+   "env": {
+    "ITEMS": "arrowtips",
+    "BANK_PACK": "1",
+    "MAX_SPEND": "200000",
+    "COIN_RESERVE": "10000",
+    "FLOAT": "210000",
+    "NO_BUY_TICKS": "50"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "rune, adamant, mithril and steel arrowtips from Hickton",
+   "role": "supply"
+  },
+  {
    "account": "mmsmk1232",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -153,6 +190,27 @@
    "standing": true,
    "repeat": true,
    "goal": "coins for route supplies: Ardougne knights",
+   "role": "supply"
+  },
+  {
+   "account": "mmthv2350",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "betty",
+    "6000"
+   ],
+   "env": {
+    "ITEMS": "fire rune|earth rune",
+    "BANK_PACK": "1",
+    "MAX_SPEND": "200000",
+    "COIN_RESERVE": "10000",
+    "FLOAT": "210000",
+    "NO_BUY_TICKS": "50"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "fire and earth runes from Betty",
    "role": "supply"
   },
   {
@@ -377,45 +435,6 @@
    "enabled": false,
    "repeat": false,
    "goal": "run-ge-pocketpython-cat-sardine [task-45830d52-1185-4eb9-b586-6da0803b41e6]",
-   "role": "supply"
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-3f680fa5-1e3c-4e7b-8ff0-5a7d74506994"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "recover-bank-audit-pocketrocket-2 [task-3f680fa5-1e3c-4e7b-8ff0-5a7d74506994]",
-   "role": "supply"
-  },
-  {
-   "account": "mmthv2350",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-c3c23db0-f1b1-4785-a87a-e5789183d024"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "recover-bank-audit-mmthv2350-2 [task-c3c23db0-f1b1-4785-a87a-e5789183d024]",
-   "role": "supply"
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-c184f8f3-ef91-46a8-bb11-7e2398c10218"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "recover-bank-audit-mineyourbiz-2 [task-c184f8f3-ef91-46a8-bb11-7e2398c10218]",
    "role": "supply"
   },
   {
