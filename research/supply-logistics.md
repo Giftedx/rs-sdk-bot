@@ -13,6 +13,8 @@ Source -> local consumer -> reuse -> check: the status producer's equipment obse
 
 Source -> local consumer -> reuse -> check: the pinned item catalog and the measured Ranged preset's black dragonhide IDs -> Overall supplies, planner, dashboard and launch staging -> split the cannon and ranged kit into eight pinned item IDs -> fixtures reject a different colour with the same display name, and the CLI readback in `.practice/exact-overall-kit/readback.json` checks the bill and preparation report. The IDs are procurement requirements. They need bank and transfer evidence for staging.
 
+Source -> local consumer -> reuse -> check: the preparation report's overlap rule and the separate status and bank observation times -> route supply bill, Autopilot demand and coordinator assets -> take the larger count of carried or banked stock per account and base item -> a fixture covers noted stock, pack and equipment, and a second holder. The same-input replay in `.practice/supply-snapshot-overlap/verified.json` shows where separate observations leave demand uncovered. It does not establish exact current ownership.
+
 
 The Overall supply bill, Autopilot demand, preparation report, dashboard and launch manifest use the route rows that start before the modeled last 99. The full route remains available for later quest, gear and bank goals. If the model has no Overall finish, it cannot produce an Overall supply bill.
 
