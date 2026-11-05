@@ -1,8 +1,8 @@
 import {test,expect} from 'bun:test';
-import {mkdtempSync,writeFileSync,existsSync,readFileSync,readdirSync} from 'node:fs';
+import {mkdtempSync,writeFileSync,existsSync,readFileSync,readdirSync,mkdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {withPracticeTurn} from '../src/proof-lock';
+import {observePracticeTurn,withPracticeTurn} from '../src/proof-lock';
 
 const deps=(alive:(pid:number)=>boolean)=>({alive,sleep:(ms:number)=>Bun.sleep(1),now:()=>Date.now(),waitMs:5000});
 
@@ -43,4 +43,20 @@ test('an owner stop withdraws a waiting ticket without touching the holder',asyn
  expect(starts).toBe(0);
  expect(readFileSync(file,'utf8')).toBe(owner);
  expect(readdirSync(file+'.queue')).toEqual([]);
+});
+
+test('practice observation distinguishes a live queue from stale or unclear files without writing',()=>{
+ const file=join(mkdtempSync(join(tmpdir(),'turn-observe-')),'turn.lock'),queue=file+'.queue';
+ const now=10_000,alive=(pid:number)=>pid===12||pid===14;
+ expect(observePracticeTurn(file,now,alive)).toEqual({observedAt:now,holder:'no-lock',liveWaiters:0,oldestWaitMs:null,unknownTickets:0});
+ mkdirSync(queue);
+ const owner=JSON.stringify({pid:12,at:8000});writeFileSync(file,owner);
+ for(const name of ['000000000006000-14-live','000000000003000-99-stale','invalid-ticket'])writeFileSync(join(queue,name),'');
+ expect(observePracticeTurn(file,now,alive)).toEqual({observedAt:now,holder:'pid-present',liveWaiters:1,oldestWaitMs:4000,unknownTickets:1});
+ expect(readFileSync(file,'utf8')).toBe(owner);
+ expect(readdirSync(queue)).toHaveLength(3);
+ writeFileSync(file,'{');
+ expect(observePracticeTurn(file,now,alive).holder).toBe('unknown');
+ writeFileSync(file,JSON.stringify({pid:99,at:8000}));
+ expect(observePracticeTurn(file,now,alive).holder).toBe('pid-gone');
 });

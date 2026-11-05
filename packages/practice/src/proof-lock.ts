@@ -7,6 +7,33 @@ const alive=(pid:number)=>{
     catch(error){return (error as NodeJS.ErrnoException).code!=='ESRCH';}
 };
 export const PRACTICE_TURN_WAIT_EXPIRED='practice turn wait expired';
+const missing=(error:unknown)=>(error as NodeJS.ErrnoException).code==='ENOENT';
+
+// A read-only sample of the ticket queue. PID presence does not prove process identity.
+export function observePracticeTurn(file:string,observedAt=Date.now(),pidPresent=alive){
+    let holder:'no-lock'|'pid-present'|'pid-gone'|'unknown'='unknown';
+    try{
+        const owner=JSON.parse(readFileSync(file,'utf8'));
+        if(Number.isSafeInteger(owner?.pid)&&owner.pid>0&&Number.isSafeInteger(owner.at)&&owner.at>0&&owner.at<=observedAt){
+            holder=pidPresent(owner.pid)?'pid-present':'pid-gone';
+        }
+    }catch(error){if(missing(error))holder='no-lock';}
+    let liveWaiters=0,oldestWaitMs:number|null=null,unknownTickets=0,tickets:string[];
+    try{tickets=readdirSync(file+'.queue');}
+    catch(error){
+        if(!missing(error))return{observedAt,holder,liveWaiters:null,oldestWaitMs,unknownTickets:null};
+        tickets=[];
+    }
+    for(const ticket of tickets){
+        const fields=/^(\d{15})-(\d+)-[a-z0-9]{0,6}$/.exec(ticket);
+        const at=Number(fields?.[1]),pid=Number(fields?.[2]);
+        if(!Number.isSafeInteger(at)||at<1||at>observedAt||!Number.isSafeInteger(pid)||pid<1){unknownTickets++;continue;}
+        if(!pidPresent(pid))continue;
+        liveWaiters++;
+        oldestWaitMs=Math.max(oldestWaitMs??0,observedAt-at);
+    }
+    return{observedAt,holder,liveWaiters,oldestWaitMs,unknownTickets};
+}
 
 // Only the parent of this delivery may recover its dead proof's lock. The
 // still-present lock excludes a new owner until it is moved to the run's evidence.
