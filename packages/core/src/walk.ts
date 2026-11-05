@@ -314,10 +314,12 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
     // A spell leg that failed (the runes gone, a cast the server did not take) is not tried again: the route is planned
     // once more for the account without its law runes, so the walk goes by foot and boat from where it stands.
     if (!first.ok && first.reason !== 'aborted' && r.legs.some(l => l.kind === 'travel' && l.travel.kind === 'spell')) {
-        const q = s.sdk.getState()?.player, at = q ? { x: q.worldX, z: q.worldZ, level: q.level } : from;
-        const d = world.route(at, to, withoutSpells(acct), { deadline: performance.now() + budgetMs });
-        console.log(`WALK_REPLAN_NO_SPELLS ${JSON.stringify({ from: at, to, failed: first.detail, ok: d.ok, reason: d.ok ? undefined : d.reason })}`);
-        if (d.ok) first = await walkRoute(s, d.legs, opts);
+        // A trip with a bank stop ends its first legs at the bank, so the replan heads there and the stop still follows.
+        const q = s.sdk.getState()?.player, at = q ? { x: q.worldX, z: q.worldZ, level: q.level } : from, goal = r.bank?.at ?? to, grounded = withoutSpells(acct);
+        const d = world.offThread ? await planTripOffThread(at, goal, grounded, undefined, budgetMs)
+            : (() => { const x = world.route(at, goal, grounded, { deadline: performance.now() + budgetMs }); return x.ok ? { cost: x.cost, legs: x.legs } as TripPlan : null; })();
+        console.log(`WALK_REPLAN_NO_SPELLS ${JSON.stringify({ from: at, to: goal, failed: first.detail, ok: !!d })}`);
+        if (d) first = await walkRoute(s, d.legs, opts);
     }
     if (!first.ok || !r.bank) return first;
     const took = await takeItems(banker, r.bank.coins, r.bank.items, n => waitTicks(s, n));
