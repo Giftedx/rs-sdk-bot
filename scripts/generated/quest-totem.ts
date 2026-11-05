@@ -8,6 +8,10 @@
 // (:142-154), the chest on level 1 (:156-170); Kangai Mau takes the totem and queues completion (kangai_mau.rs2:66-74).
 import { openQuest } from './quest-lib';
 import { componentId } from '../../packages/core/src/logout';
+import { questFlags } from '../../packages/core/src/quest-status';
+import { loadTravel } from '../../packages/core/src/travel';
+import { walkRoute } from '../../packages/core/src/walk';
+import { CUSTOMS_OFFICER_ARDOUGNE, totemStartsAtKangai, totemTravel } from '../tribal-totem-route';
 
 const KANGAI = { x: 2791, z: 3182 };
 const HORNCRATE = { id: 2707, x: 2650, z: 3273 };
@@ -30,19 +34,40 @@ try {
     const lv = () => q.lvl();
     const btn = (n: number) => q.s.direct({ type: 'clickComponent', componentId: componentId(`tribal_door2:com_${n}`), reason: 'SDK' });
 
+    // The journal: a started quest skips Kangai Mau, who would only ask for the totem (kangai_mau.rs2 kangai_mau_totem_back).
+    const flag = (name: string) => questFlags((q.s as any).client)?.find(f => f.name === name)?.state ?? 'unknown';
+    await q.waitUntil(() => flag('Tribal Totem') !== 'unknown', 15);
+    console.log(`NOTE tribal totem journal ${flag('Tribal Totem')}, plague city ${flag('Plague City')}`);
+
     // 1. Kangai Mau: "I'm in search of adventure!", "Ok, I will get it back." sets 1.
-    await q.talk('kangai 1', /^kangai mau$/i, [/in search of adventure/i, /ok, i will get it back/i], () => q.sawText(/best of luck with that/i), KANGAI, 60);
+    if (totemStartsAtKangai(flag('Tribal Totem'))) {
+        await q.talk('kangai 1', /^kangai mau$/i, [/in search of adventure/i, /ok, i will get it back/i], () => q.sawText(/best of luck with that/i) || q.sawText(/have you got our totem back/i), KANGAI, 60);
+    }
     q.milestone(1);
 
-    // 2. Ardougne Teleport; the RPDT depot: the label from the horn crate onto the teleport crate (2), the employee (3).
-    await q.teleport('ardougne teleport', 'magic:ardougne_teleport', 2661, 3301);
+    // 2. To Ardougne: the teleport when the account can cast it, else the customs officer's boat (30 coins, lands on the
+    // Ardougne dock); the RPDT depot: the label from the horn crate onto the teleport crate (2), the employee (3).
+    const travel = totemTravel({ plagueCity: flag('Plague City'), magic: q.s.sdk.getSkill('Magic')?.level ?? 1, law: q.cnt(563), water: q.cnt(555), coins: q.cnt(995) });
+    console.log(`NOTE tribal totem to ardougne by ${travel.how}`);
+    if (travel.how === 'missing') await q.fail(travel.detail);
+    if (travel.how === 'teleport') await q.teleport('ardougne teleport', 'magic:ardougne_teleport', 2661, 3301);
+    else {
+        const leg = loadTravel().find(t => t.id === CUSTOMS_OFFICER_ARDOUGNE);
+        if (!leg?.from) await q.fail(`travel leg ${CUSTOMS_OFFICER_ARDOUGNE} unavailable`);
+        await q.walk('to customs officer', [{ x: leg!.from!.x, z: leg!.from!.z, tol: 3 }]);
+        const r = await walkRoute(q.s as any, [{ kind: 'travel', travel: leg!, at: leg!.from!, to: leg!.to }], { maxRetriesPerLeg: 1, legTimeoutTicks: 150 });
+        if (!r.ok || !q.near(leg!.to.x, leg!.to.z, 8)) await q.fail(`boat to ardougne: ${r.ok ? 'arrival unobserved' : `${r.reason} ${r.detail}`}`);
+    }
     await q.walk('to depot', [{ x: 2649, z: 3272, tol: 1 }]);
     await q.step('take label', () => q.opLoc(q.locAt(HORNCRATE.x, HORNCRATE.z) ?? HORNCRATE, 2), () => q.has(ITEM.label), 10, 4);
     await q.converse([], () => !q.dialogOpen(), 6);
-    await q.step('label on crate', () => q.useOnLoc(ITEM.label, q.locAt(TELECRATE.x, TELECRATE.z) ?? TELECRATE), () => !q.has(ITEM.label), 10, 4);
+    // Past stage 2 the crate keeps its new label and answers "already replaced" (quest_totem.rs2 oplocu,teleportcrate).
+    const marked = () => !q.has(ITEM.label) || q.msgCount(/already replaced the delivery address label/i) > 0;
+    await q.step('label on crate', () => q.useOnLoc(ITEM.label, q.locAt(TELECRATE.x, TELECRATE.z) ?? TELECRATE), marked, 10, 4);
     await q.converse([], () => !q.dialogOpen(), 8);
     q.milestone(2);
-    await q.talk('rpdt', /^rpdt employee$/i, [/when are you going to deliver this crate/i], () => q.sawText(/we could do it now/i), RPDT, 40);
+    // Past stage 2 the employee has no delivery option and only thanks the bot (rdpt_employee.rs2).
+    await q.talk('rpdt', /^rpdt employee$/i, [/when are you going to deliver this crate/i], () => q.sawText(/we could do it now/i) || q.sawText(/thank you very much/i), RPDT, 40);
     q.milestone(3);
 
     // 3. Wizard Cromperty: "So what have you invented?", "Can I be teleported please?", "Yes, that sounds good."

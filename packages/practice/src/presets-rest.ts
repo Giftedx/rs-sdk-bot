@@ -37,6 +37,13 @@ export const REST_PRESETS: Record<string, SaveConfig> = {
     // cannot be cast and Captain Barnaby back to Brimhaven, 4
     // lobsters. The label and the totem are quest items from the run.
     quest_totem: rest({ x: 2791, z: 3183 }, [[563, 2], [555, 2]], 4, 60, { 165: 30 }),
+    // Tribal Totem resumed as a parked live account resumes it: beside Kangai Mau, Hitpoints 17, Magic 29, Thieving 99
+    // for the stairs trap, no Plague City and no runes, so the runner takes the customs officer's boat and Captain
+    // Barnaby's back (60 coins). Varp 200 (quest_totem.constant): 1 started at Kangai, 2 the crate label replaced.
+    ...Object.fromEntries([1, 2].map(stage => [`quest_totem_boat${stage}`, {
+        position: { x: 2791, z: 3183, level: 0 }, skills: { Hitpoints: 17, Magic: 29, Thieving: 99 }, varps: { ...DONE, 200: stage }, coins: 60,
+        inventory: Array.from({ length: 4 }, () => ({ id: 379, count: 1 })),
+    } satisfies SaveConfig])),
     // Tai Bwo Wannai Trio: at Timfraku's ladder in Tai Bwo Wannai (2782,3086, maps/m43_48.jm2). Jungle Potion done (175 =
     // 12, quest.constant:41; tbwt_timfraku.rs2:51 reads it). Helper items (tradeable, the rs-stun-toolkit kit): 4 raw
     // karambwan (3142), pestle and mortar (233), iron spear (1239), agility potion (3032), small net (303), jogre bones
