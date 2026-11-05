@@ -331,9 +331,17 @@ function syncWorld(){
     url.searchParams.set('live','wss://rs-sdk-demo.fly.dev/worldfeed');url.searchParams.set('embed','0');url.searchParams.set('client','1');url.searchParams.set('fps','20');url.searchParams.set('scale',String(window.atlasQuality||1));
     url.searchParams.set('hideNamesFrom',new URL('api/hidden-names',document.baseURI).href);url.searchParams.set('highlightFrom',new URL('api/our-names',document.baseURI).href);
     if(Q.get('flight')==='0')url.searchParams.set('flight','0');if(Q.get('cache')==='0')url.searchParams.set('cache','0');
-    if(sel&&!window.atlasFreeCamera)url.searchParams.set('follow',sel);rswFor=sel;window.atlasFollowOther=null;f.src=url.href;
+    if(sel&&!window.atlasFreeCamera)url.searchParams.set('follow',sel);rswFor=sel;window.atlasFollowOther=null;sentMaxLevel=viewerMaxLevel();url.searchParams.set('ml',String(sentMaxLevel));f.src=url.href;
   }else if(rswFor!==sel&&sel&&!window.atlasFreeCamera&&!window.atlasFollowOther){rswFor=sel;f.contentWindow?.postMessage({follow:sel},VIEWER.origin);}
 }
+
+// Roof removal (RuneLite roofremoval): the 3D view draws floors up to the followed player's. Free camera draws them all.
+const ROOF_KEY='atlas-roof-removal';let sentMaxLevel=null;
+window.atlasRoofsOff=()=>{try{return localStorage.getItem(ROOF_KEY)!=='0';}catch{return true;}};
+window.atlasSetRoofsOff=off=>{try{localStorage.setItem(ROOF_KEY,off?'1':'0');}catch{/* private window */}syncRoofs();};
+function viewerMaxLevel(){if(!window.atlasRoofsOff()||window.atlasFreeCamera)return 3;const name=String(window.atlasFollowOther||sel||'').toLowerCase(),row=(S?.roster||[]).find(r=>String(r?.[0]).toLowerCase()===name),b=(S?.bots||[]).find(x=>x.name.toLowerCase()===name),level=row?.[3]??b?.live?.level??b?.pos?.level;return Number.isInteger(level)&&level>=0&&level<=3?level:3;}
+function syncRoofs(){if(mode!=='3d'||VIEWER.state!=='ready')return;const level=viewerMaxLevel();if(level===sentMaxLevel)return;sentMaxLevel=level;$('#rsw').contentWindow?.postMessage({maxLevel:level},VIEWER.origin);}
+setInterval(syncRoofs,1000);
 
 function chainHud(){const el=$('#chain'),c=S.chain;if(!c){el.style.display='none';return}el.style.display='';
   const node=(n,fresh,cap,main,sub,tt)=>n?`<div class="cn${fresh?'':' cnoff'}" data-pick="${E(n)}" title="${E(tt)}"><span class="cap">${cap}</span><b>${main}</b><span class="dm ell">${E(n)}${sub?' · '+sub:''}</span></div>`:'';

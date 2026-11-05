@@ -33,7 +33,10 @@ export function hostedIndex(html: string) {
 export function hostedScript(name: string, text: string) {
     if (/^main\.[0-9a-f]+\.js$/.test(name)) {
         text = once(text, /\bn\.p="\/"/, 'n.p=new URL(".",document.baseURI).pathname', 'main public path');
-        return once(text, 'de="/caches/"', 'de=new URL("caches/",document.baseURI).pathname', 'cache path');
+        text = once(text, 'de="/caches/"', 'de=new URL("caches/",document.baseURI).pathname', 'cache path');
+        // Roof removal: ?ml=<floor> sets the highest floor drawn at the start, a {maxLevel} message changes it.
+        text = once(text, /this\.maxLevel=([A-Za-z_$][\w$]*)\.MAX_LEVELS-1/, 'this.maxLevel=(e=>e>=0&&e<=3?e:$1.MAX_LEVELS-1)(parseInt(new URLSearchParams(location.search).get("ml")))', 'first floor limit');
+        return once(text, '"number"===typeof t.scale&&t.scale>0&&(s.resolutionScale=t.scale)', '"number"===typeof t.scale&&t.scale>0&&(s.resolutionScale=t.scale),Number.isInteger(t.maxLevel)&&t.maxLevel>=0&&t.maxLevel<=3&&s.setMaxLevel&&s.setMaxLevel(t.maxLevel)', 'floor limit message');
     }
     return text.replace(/\b([a-zA-Z_$][\w$]*)\.p="\/"/g, '$1.p=new URL("../../",self.location.href).pathname');
 }
