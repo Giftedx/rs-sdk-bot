@@ -13,7 +13,7 @@ import type {World,Transport} from '../packages/core/src/world';
 import {loadTravel} from '../packages/core/src/travel';
 import {sellersByDistance,shopSellers} from '../packages/core/src/shop-index';
 import {spawnsByDistance} from '../packages/core/src/spawn-index';
-import {gatherPlan,gatherItems,rangedKit,arrowsFor,ARROWS,NPC_SOURCES} from '../packages/core/src/gather';
+import {gatherPlan,gatherItems,rangedKit,arrowsFor,ARROWS,BOWS,NPC_SOURCES} from '../packages/core/src/gather';
 import {questFlags} from '../packages/core/src/quest-status';
 import {PRESETS,type SaveConfig} from '../packages/practice/src/presets';
 import travel from '../packages/planner/src/haggis-travel.json';
@@ -484,6 +484,10 @@ export async function sweep(account:string,quest:string,fresh?:string){
   const worn=():Item[]=>s.sdk.getEquipment().map((i:any)=>({id:i.id,count:i.count}));
   const owned=[...pack(),...rows(),...worn()];
   const kit=rangedKit(owned);
+  // What the kit decision saw: live, UnderMyKilt's plan for the Druidic Ritual bear had no kit although its bank held a
+  // shortbow and 19 iron arrows by the last receipt, and the log could not say which of the three containers was read.
+  const seen=(ids:readonly number[])=>Object.fromEntries(ids.filter(id=>owned.some(i=>i.id===id)).map(id=>[id,count(owned,id)]));
+  console.log(`QUEST_SWEEP_KIT ${JSON.stringify({kit,bows:seen(BOWS),arrows:seen(ARROWS),bank:rows().length,pack:pack().length,worn:worn().length,ranged:skill('Ranged'),attack:skill('Attack')})}`);
   const gather=gatherPlan(p.missing,here(),spawnsByDistance,sellerAt,undefined,skill('Attack'),kit?skill('Ranged'):1);
   if(kit&&gather.gathers.some(g=>g.kit==='ranged'))gather.tools.push({id:kit.bow,count:1},{id:kit.arrows,count:gather.gathers.filter(g=>g.kit==='ranged').reduce((n,g)=>n+arrowsFor(g.id,g.count),0)});
   // A tool already worn (the bow, the arrows) counts as held; the gather's tools are kept by the deposit pass.
