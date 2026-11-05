@@ -6,11 +6,13 @@ import {randomUUID} from 'node:crypto';
 import type {CoordinatorState,TaskRecord} from './coordinator';
 import {atomicJson} from './coordinator-store';
 import {FLEET_DIR,mySide} from '../../core/src/fleet';
+import {cachedLaunchRevision} from '../../core/src/worker-release';
 
 type Model='claude'|'codex'|'unassigned';
 export type ProcessObservation='alive'|'dead'|'unknown';
 type Input<T>={value:T|null;observedAt:number|null;error?:'missing'|'unreadable'};
-type Swarm={at?:number;controllerPid?:number;running?:number;jobs?:{account?:string;script?:string;state?:string}[]};
+type Swarm={at?:number;controllerPid?:number;coordinatorOwner?:string;release?:string;running?:number;jobs?:{account?:string;script?:string;state?:string}[]};
+type ControllerLease={pid?:number;nonce?:string;source?:string;at?:number};
 export const STALE_MS=120000;
 const validTime=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n)&&n>0;
 const model=(t:TaskRecord):Model=>t.agent==='claude'||t.agent==='codex'?t.agent:t.spec.agent==='claude'||t.spec.agent==='codex'?t.spec.agent:'unassigned';
@@ -24,7 +26,18 @@ export function observeProcess(pid:unknown):ProcessObservation{
  if(!Number.isSafeInteger(pid)||(pid as number)<1)return'unknown';
  try{process.kill(pid as number,0);return'alive';}catch(e){return(e as NodeJS.ErrnoException).code==='ESRCH'?'dead':'unknown';}
 }
-export function summarizeProgress(input:{side:string;now:number;state:Input<CoordinatorState>;swarm:Input<Swarm>;owner:Input<{pid?:number;at?:number}>;paused:boolean;process?:(pid:unknown)=>ProcessObservation}){
+const releaseHash=(value:unknown)=>typeof value==='string'&&/^[0-9a-f]{64}$/.test(value)?value:null;
+function controllerRelease(swarm:Swarm|null,lease:ControllerLease|null|undefined,disk:unknown,stale:boolean){
+ const reported=releaseHash(swarm?.release),onDisk=releaseHash(disk);
+ let state:'unknown'|'lease-mismatch'|'matches-disk'|'disk-drift'='unknown';
+ if(!stale&&reported&&lease&&releaseHash(lease.source)&&typeof lease.pid==='number'&&Number.isSafeInteger(lease.pid)&&lease.pid>0&&typeof lease.nonce==='string'&&lease.nonce
+  &&validTime(lease.at)&&validTime(swarm?.at)&&swarm.at>lease.at){
+  if(swarm.controllerPid!==lease.pid||swarm.coordinatorOwner!==lease.nonce||reported!==lease.source)state='lease-mismatch';
+  else if(onDisk)state=reported===onDisk?'matches-disk':'disk-drift';
+ }
+ return{state,reported,onDisk};
+}
+export function summarizeProgress(input:{side:string;now:number;state:Input<CoordinatorState>;swarm:Input<Swarm>;owner:Input<{pid?:number;at?:number}>;paused:boolean;process?:(pid:unknown)=>ProcessObservation;controllerLease?:ControllerLease|null;launchSource?:string}){
  const probe=input.process??observeProcess,records=input.state.value?.tasks??[],byId=new Map(records.map(r=>[r.spec.id,r]));
  const stateFreshness=freshness(input.state,input.now),swarmFreshness=freshness(input.swarm,input.now);
  const workers=Object.fromEntries((['claude','codex','unassigned'] as const).map(agent=>{
@@ -54,6 +67,7 @@ export function summarizeProgress(input:{side:string;now:number;state:Input<Coor
    planner:input.state.value?.planner?{runId:input.state.value.planner.runId,agent:input.state.value.planner.agent??'unassigned',startedAt:input.state.value.planner.startedAt,processState:probe(input.state.value.planner.pid)}:null},
   workers,swarm:{controllerPid:input.swarm.value?.controllerPid??null,processState:probe(input.swarm.value?.controllerPid),
    reportedRunning:input.swarm.value?.running??null,observationStale:swarmFreshness.stale,
+   release:controllerRelease(input.swarm.value,input.controllerLease,input.launchSource,swarmFreshness.stale),
    jobs:(input.swarm.value?.jobs??[]).filter(j=>!/haggis/i.test(j.account??'')).map(j=>({account:j.account??null,script:j.script??null,state:j.state??'unknown'}))},
   limits:['PID existence does not establish process identity or useful output.','Source freshness is separate from export freshness.','Only succeeded live gameplay run receipts count as useful live coordinator results; session recovery is separate.','Model attribution covers coordinator tasks; swarm gameplay is reported separately.','Archived coordinator task history is not included.']};
 }
@@ -68,7 +82,10 @@ export function exportProgress(root=resolve(import.meta.dir,'../../..'),fleet=FL
  if(!swarm.error&&(!swarm.value||!Array.isArray(swarm.value.jobs)||!validTime(swarm.value.at)||swarm.value.jobs.some(j=>!j||typeof j!=='object')))Object.assign(swarm,{value:null,error:'unreadable',observedAt:null});
  // A copied or unchanged file cannot refresh the controller's own heartbeat.
  if(swarm.value)swarm.observedAt=swarm.value.at!;
- const report=summarizeProgress({side,now,state,swarm,owner:readInput(join(root,'.practice/coordinator/owner.json')),paused:existsSync(join(root,'.practice/stop-coordinator'))||existsSync(join(root,'.practice/stop-swarm'))});
+ const controllerLease=readInput<ControllerLease>(join(root,'.practice/coordinator/swarm-owner.json')).value;
+ let launchSource:string|undefined;
+ if(releaseHash(swarm.value?.release)&&!freshness(swarm,now).stale)try{launchSource=cachedLaunchRevision(root);}catch{/* incomplete checkout leaves the comparison unknown */}
+ const report=summarizeProgress({side,now,state,swarm,controllerLease,launchSource,owner:readInput(join(root,'.practice/coordinator/owner.json')),paused:existsSync(join(root,'.practice/stop-coordinator'))||existsSync(join(root,'.practice/stop-swarm'))});
  const dir=join(fleet,'evidence');mkdirSync(dir,{recursive:true});const file=join(dir,`${side}-coordinator.json`);atomicJson(file,report);return{file,report};
 }
 export function acquireExporterLock(file:string){

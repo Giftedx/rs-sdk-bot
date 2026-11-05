@@ -2,6 +2,8 @@
 
 Evidence: MEASURED practice (local server, 150 ms tick) + CODE-READ. Boards: infra (all).
 
+Source -> local consumer -> reuse -> check: the rollout's heartbeat, lease and launch fingerprint -> side progress export -> compare the fresh heartbeat with its saved lease and the cached disk fingerprint -> fixtures cover matching, drift, stale data and mismatched lease fields. The read-only export in `.practice/live-release-audit/export-check.json` shows the reported and disk releases without publishing the lease nonce or changing the controller.
+
 ## Isolated build workspaces
 
 Claim: a global build fence starves live work, and isolated build workspaces remove the fence. Evidence (`.practice/coordinator/state.json`, about 35 h of fenced operation): builds ran 21.7 h (117 builds: 17 succeeded, 71 failed), live runs 3.2 h (13 succeeded); `coordinator.ts` blocked every run while a build ran and every build while a run ran, and the worker held the build lock through authoring, native proof and review. A capability focus held all development for 11.2 h (shark), 6.6 h (rune) and 5.4 h (agility) through repeated failed builds; 1,491 of 1,603 planner cycles proposed no work.

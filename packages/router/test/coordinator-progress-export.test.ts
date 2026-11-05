@@ -49,6 +49,22 @@ test('a fresh export cannot freshen stale state or swarm observations',()=>{
  const out=summarize(state.tasks,{state:{value:state,observedAt:now-STALE_MS-1},swarm:{value:{at:now-STALE_MS-1,running:2,jobs:[]},observedAt:now-STALE_MS-1},paused:true});
  expect(out.exportedAt).toBe(now);expect(out.sources.state.stale).toBe(true);expect(out.swarm.observationStale).toBe(true);expect(out.coordinator.paused).toBe(true);expect(out.workers.codex.running[0].observationStale).toBe(true);
 });
+test('release evidence binds the fresh heartbeat to the controller lease without exporting its nonce',()=>{
+ const reported='a'.repeat(64),disk='b'.repeat(64),nonce='owner-private-marker';
+ const value={at:now-100,controllerPid:19,coordinatorOwner:nonce,release:reported,jobs:[]};
+ const lease={pid:19,nonce,at:now-200,source:reported};
+ const check=(swarm=value,owner=lease,onDisk=disk)=>summarize([],{
+  swarm:{value:swarm,observedAt:swarm.at},controllerLease:owner,launchSource:onDisk,
+ }).swarm.release;
+ expect(check()).toEqual({state:'disk-drift',reported,onDisk:disk});
+ expect(check(value,lease,reported).state).toBe('matches-disk');
+ expect(check(value,{...lease,pid:20}).state).toBe('lease-mismatch');
+ expect(check(value,{...lease,nonce:'different'}).state).toBe('lease-mismatch');
+ expect(check(value,{...lease,source:disk}).state).toBe('lease-mismatch');
+ expect(check({...value,at:now-STALE_MS-1}).state).toBe('unknown');
+ expect(check(value,lease,'').state).toBe('unknown');
+ expect(JSON.stringify(check())).not.toContain(nonce);
+});
 test('one-shot export preserves source bytes and exposes missing or unreadable observations',()=>{
  const root=mkdtempSync(join(tmpdir(),'progress-export-')),fleet=join(root,'fleet');
  try{
