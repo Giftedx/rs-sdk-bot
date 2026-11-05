@@ -67,7 +67,7 @@ test('quest doors use one exact local walk without auto-opening and wait for Nat
  if(mode==='ineffective'){await expect(heroesRestaurantCrossing(s,q,kind,inward,()=>{})).rejects.toThrow('no walk or repeat');expect(walks).toBe(0);}else{await heroesRestaurantCrossing(s,q,kind,inward,()=>{});expect([p.worldX,p.worldZ]).toEqual(kind==='panel'?[inward?2786:2788,3190]:kind==='treasure-door'?[inward?2764:2763,3197]:[2781,inward?3197:3196]);}expect(inputs).toBe(1);expect(moves).toBe(1);
 }});
 
-test('Grip lure waits for the original NPC at the scripted window, not seven ticks of partial walking',async()=>{let tick=0,inputs=0;const n:any={id:792,index:7,x:2774,z:3192,hp:25},native={},s:any={tick:()=>tick,client:{npc:{7:native}},sdk:{getState:()=>({nearbyNpcs:[n]})}},q:any={walk:async()=>{},opLoc:async()=>{inputs++;},dialogOpen:()=>false,sawText:()=>true,converse:async(_:any,done:any)=>{for(tick=1;tick<=20;tick++){Object.assign(n,tick<8?{x:2777,z:3194}:tick<16?{x:2777,z:3196}:{x:2777,z:3198});if(tick===7)expect(done()).toBe(false);if(done())return true;}return false;}};await heroesLureGrip(s,q,()=>{});expect(tick).toBe(16);expect(inputs).toBe(1);});
+test('Grip lure waits for the original NPC at the scripted window, not seven ticks of partial walking',async()=>{let tick=0,inputs=0;const n:any={id:792,index:7,x:2774,z:3192,hp:25},native={},s:any={tick:()=>tick,client:{npc:{7:native}},sdk:{getState:()=>({nearbyNpcs:[n],nearbyLocs:[{id:2635,x:2775,z:3196,level:0}]})}},q:any={walk:async()=>{},opLoc:async()=>{inputs++;},dialogOpen:()=>false,sawText:()=>true,converse:async(_:any,done:any)=>{for(tick=1;tick<=20;tick++){Object.assign(n,tick<8?{x:2777,z:3194}:tick<16?{x:2777,z:3196}:{x:2777,z:3198});if(tick===7)expect(done()).toBe(false);if(done())return true;}return false;}};await heroesLureGrip(s,q,()=>{});expect(tick).toBe(16);expect(inputs).toBe(1);});
 
 test('quest spells admit the Native ten tile AP range with clear sight and refuse overlap walls and eleven tiles',()=>{const player:any={worldX:2847,worldZ:3386,level:0},s:any={sdk:{getState:()=>({player})}};for(const d of[1,5,6,9,10])expect(heroesQuestSpellReach(s,{x:2847+d,z:3386,size:1},()=>true)).toBe(true);for(const d of[0,11])expect(heroesQuestSpellReach(s,{x:2847+d,z:3386,size:1},()=>true)).toBe(false);expect(heroesQuestSpellReach(s,{x:2848,z:3386,size:1},()=>false)).toBe(false);player.level=1;expect(heroesQuestSpellReach(s,{x:2848,z:3386,size:1},()=>true)).toBe(false);const native=readFileSync('vendor/rs-sdk/server/engine/src/engine/entity/PathingEntity.ts','utf8');expect(native).toContain('this.apRange = 10;');expect(native).toContain('CoordGrid.distanceTo(this, target) <= range');});
 
@@ -78,11 +78,20 @@ test('paired phase reports the first causal failure after waiting for the cancel
 
 test('Grip lure approaches from the key handoff before binding the newly visible original NPC',async()=>{
  const n:any={id:792,index:7,x:2774,z:3192,hp:25},npcs:any[]=[],native={};let walks=0,cabinets=0;
- const s:any={client:{npc:{7:native}},sdk:{getState:()=>({nearbyNpcs:npcs})}},q:any={walk:async(label:string,points:any[])=>{walks++;expect(points).toEqual([{x:2777,z:3196,tol:0}]);npcs.push(n);},opLoc:async()=>{cabinets++;Object.assign(n,{x:2777,z:3198});},dialogOpen:()=>false,sawText:()=>true,converse:async(_:any,done:any)=>done()};
+ const s:any={client:{npc:{7:native}},sdk:{getState:()=>({nearbyNpcs:npcs,nearbyLocs:[{id:2635,x:2775,z:3196,level:0}]})}},q:any={walk:async(label:string,points:any[])=>{walks++;expect(points).toEqual([{x:2777,z:3196,tol:0}]);npcs.push(n);},opLoc:async()=>{cabinets++;Object.assign(n,{x:2777,z:3198});},dialogOpen:()=>false,sawText:()=>true,converse:async(_:any,done:any)=>done()};
  await heroesLureGrip(s,q,()=>{});expect(walks).toBe(1);expect(cabinets).toBe(1);
 });
 test('missing or ambiguous Grip after approach refuses the cabinet input',async()=>{
  for(const count of[0,2]){let inputs=0;const s:any={client:{npc:{}},sdk:{getState:()=>({nearbyNpcs:Array.from({length:count},(_,index)=>({id:792,index}))})}},q:any={walk:async()=>{},opLoc:async()=>{inputs++;}};await expect(heroesLureGrip(s,q,()=>{})).rejects.toThrow('unique original Grip');expect(inputs).toBe(0);}
 });
 
-test('visible original Grip cannot be replaced during the approach',async()=>{let inputs=0;const n:any={id:792,index:7,x:2774,z:3192,hp:25},client:any={npc:{7:{}}},s:any={client,sdk:{getState:()=>({nearbyNpcs:[n]})}},q:any={walk:async()=>{client.npc[7]={};},opLoc:async()=>{inputs++;}};await expect(heroesLureGrip(s,q,()=>{})).rejects.toThrow('replaced during approach');expect(inputs).toBe(0);});
+test('visible original Grip cannot be replaced during the approach',async()=>{let inputs=0;const n:any={id:792,index:7,x:2774,z:3192,hp:25},client:any={npc:{7:{}}},s:any={client,sdk:{getState:()=>({nearbyNpcs:[n],nearbyLocs:[{id:2635,x:2775,z:3196,level:0}]})}},q:any={walk:async()=>{client.npc[7]={};},opLoc:async()=>{inputs++;}};await expect(heroesLureGrip(s,q,()=>{})).rejects.toThrow('replaced during approach');expect(inputs).toBe(0);});
+
+test('repeat Grip lure uses the observed open cabinet after its first closed transition',async()=>{
+ const n:any={id:792,index:7,x:2774,z:3192,hp:25},cabinet:any={id:2635,x:2775,z:3196,level:0},inputs:number[]=[],s:any={client:{npc:{7:{}}},sdk:{getState:()=>({nearbyNpcs:[n],nearbyLocs:[cabinet]})}},q:any={walk:async()=>{},opLoc:async(loc:any)=>{inputs.push(loc.id);expect(loc.id).toBe(cabinet.id);cabinet.id=2636;Object.assign(n,{x:2777,z:3198});},dialogOpen:()=>false,sawText:()=>true,converse:async(_:any,done:any)=>done()};
+ await heroesLureGrip(s,q,()=>{});Object.assign(n,{x:2774,z:3192,hp:17});await heroesLureGrip(s,q,()=>{});expect(inputs).toEqual([2635,2636]);expect(n.hp).toBe(17);
+});
+
+test('Grip lure refuses missing or ambiguous observed cabinet before input',async()=>{
+ for(const locs of[[],[{id:2635,x:2774,z:3196,level:0}],[{id:2635,x:2775,z:3196,level:0},{id:2636,x:2775,z:3196,level:0}]]){let inputs=0;const s:any={client:{npc:{7:{}}},sdk:{getState:()=>({nearbyNpcs:[{id:792,index:7,x:2774,z:3192,hp:25}],nearbyLocs:locs})}},q:any={walk:async()=>{},dialogOpen:()=>false,opLoc:async()=>{inputs++;}};await expect(heroesLureGrip(s,q,()=>{})).rejects.toThrow('unique observed Grip cabinet');expect(inputs).toBe(0);}
+});
