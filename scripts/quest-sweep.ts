@@ -909,7 +909,9 @@ export async function sweep(account:string,quest:string,fresh?:string){
  }
  const pack=():Item[]=>(st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count}));
  const seekGhostSkull=quest==='priest'&&ghostState()==='started'&&s.sdk.getEquipment().some(i=>i.id===552);
- if(seekGhostSkull||WORN_KIT[quest]?.some(i=>!i.required&&!s.sdk.getEquipment().some(e=>e.id===i.id))||plan(need,pack(),[]).missing.length||plan(food,pack(),[]).missing.length){
+ const skill=(name:string)=>st()?.skills?.find((k:any)=>k.name===name)?.baseLevel??1;
+ // A skill the quest wants and the account lacks sends the account through the bank pass too, with every supply held.
+ if(seekGhostSkull||WORN_KIT[quest]?.some(i=>!i.required&&!s.sdk.getEquipment().some(e=>e.id===i.id))||plan(need,pack(),[]).missing.length||plan(food,pack(),[]).missing.length||questSkillTraining(quest,skill)){
   const exit=await leaveStronghold(s);
   if(!exit.ok)return fail(exit.detail!);
   // The nearest bank may be out of reach: try the next three.
@@ -941,7 +943,6 @@ export async function sweep(account:string,quest:string,fresh?:string){
   const shops=(items:readonly Item[])=>shopPlan(items,here(),catalogItem,(d,at)=>ranked(d,at)[0]??null,ranked);
   // What no shop sells is gathered after the shops; a gather tool comes from the bank or a shop.
   const sellerAt=(id:number)=>{const it=catalogItem(id),n=it&&id!==COINS?ranked(it.debugname,here())[0]:null;return n?travelDistance(here(),n.tile):Infinity;};
-  const skill=(name:string)=>st()?.skills?.find((k:any)=>k.name===name)?.baseLevel??1;
   // A bow and arrows owned (pack, bank or worn) let the Ranged level count against an animal; the kit is withdrawn
   // with the gather's tools and wielded before the kill (UnderMyKilt: Ranged 97, Attack 6, a shortbow and iron arrows).
   const worn=():Item[]=>s.sdk.getEquipment().map((i:any)=>({id:i.id,count:i.count}));
