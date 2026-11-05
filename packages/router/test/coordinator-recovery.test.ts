@@ -13,11 +13,33 @@ import {initialState,addTasks,startTask,chooseTask,validateTask} from '../src/co
 import {atomicJson,saveState,loadState,runDirectory} from '../src/coordinator-store';
 import {readMergedPlan,coordinatorJobsPath,writeCoordinatorJobs,emptyCoordinatorJobs} from '../../core/src/coordinator-jobs';
 const jobOf=(base:string,account:string)=>readMergedPlan(base).jobs.find((j:any)=>(j.accounts??[j.account]).includes(account));
-import {reconcile} from '../src/coordinator-cli';
+import {claimCoordinatorState,reconcile} from '../src/coordinator-cli';
 import {acceptProposal,parseModelObject} from '../src/coordinator-planner';
 import {replaceAssignments,prepareLiveRecovery,requestLiveRecovery,requestAuthenticatedRecovery,recoveryQualification,installJob,awaitControllerDrain,ensureSwarm,preserveCompletedLiveEnd} from '../src/coordinator-live';
 import type {CoordTask} from '../src/coordinator';
 const seed=()=>{const s=initialState();addTasks(s,[{id:'producer',goal:'skills',kind:'qualify',capability:'wine-order',dependsOn:[],priority:2,estimatedMs:1,why:'native producer'},{id:'consumer',goal:'gear',kind:'qualify',capability:'ammo-order',dependsOn:['producer'],priority:2,estimatedMs:1,why:'next useful consumer'}]);startTask(s,'producer',Date.now()-20000,'recovery-run');return s;};
+test('concurrent coordinator starts leave exactly one owner',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'coord-owner-'));
+ const nonces=['start-a','start-b'];
+ const starts=await Promise.allSettled(nonces.map(nonce=>claimCoordinatorState(nonce,dir,()=>true)));
+ const winner=starts.findIndex(result=>result.status==='fulfilled');
+ expect(starts.filter(result=>result.status==='fulfilled')).toHaveLength(1);
+ expect(starts.find(result=>result.status==='rejected')?.reason.message).toMatch(/coordinator already owned/);
+ expect(JSON.parse(readFileSync(join(dir,'owner.json'),'utf8')).nonce).toBe(nonces[winner]);
+});
+test('a reload reads state written while its predecessor still owns the queue',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'coord-reload-'));
+ const state=initialState();
+ saveState(state,dir);
+ atomicJson(join(dir,'owner.json'),{pid:123,nonce:'old',at:1});
+ let alive=true;
+ const reload=claimCoordinatorState('reload-test',dir,()=>alive);
+ addTasks(state,[{id:'late',goal:'skills',kind:'qualify',capability:'wine-order',dependsOn:[],priority:2,estimatedMs:1,why:'late predecessor write'}]);
+ saveState(state,dir);
+ alive=false;
+ expect((await reload).tasks.map(task=>task.spec.id)).toEqual(['late']);
+ expect(JSON.parse(readFileSync(join(dir,'owner.json'),'utf8')).nonce).toBe('reload-test');
+});
 function recoveryFixture(){
  const base=mkdtempSync(join(tmpdir(),'live-repair-')),run='test-run',prac=join(base,'.practice');
  mkdirSync(join(prac,'status'),{recursive:true});mkdirSync(join(prac,'coordinator/runs',run),{recursive:true});
