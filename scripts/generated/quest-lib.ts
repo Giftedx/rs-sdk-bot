@@ -332,8 +332,16 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         if (!canCast(comp)) {
             // The world router first: it knows the ladders and doors between an upstairs end (the Black Knights' Fortress's
             // first floor, 3029,3505) and the ground, which a one-floor corridor and a Climb-down loc in view do not.
-            const routed = await goTo(s, await getWorld(), { x, z, level: 0 }, accountOf(s), { legTimeoutTicks: 150, planBudgetMs: 15_000 });
+            // The route runs under the quest's own guards: a death, the retreat threshold, an eater failure or the tick
+            // cap abort it, and guard() then acts on them as after any walk.
+            await guard(label);
+            const ac = new AbortController();
+            const stopOff = s.onTick(() => { if (stats.died || retreating || sustain.failure() || T() > CAP) ac.abort('quest guard'); });
+            let routed: { ok: boolean; reason?: string };
+            try { routed = await goTo(s, await getWorld(), { x, z, level: 0 }, accountOf(s), { legTimeoutTicks: 150, planBudgetMs: 15_000, signal: ac.signal }); }
+            finally { stopOff(); }
             console.log(`QUEST_TELEPORT_WALK ${JSON.stringify({ label, to: { x, z }, ok: routed.ok, reason: routed.ok ? undefined : routed.reason, at: pos() && { x: pos()!.worldX, z: pos()!.worldZ, level: pos()!.level } })}`);
+            await guard(label);
             if (routed.ok && near(x, z, 6)) return;
             // walkPath keeps to one floor: from upstairs (Juliet's room, 3158,3425,1) take the nearest way down first.
             for (let i = 0; i < 3 && lvl() > 0; i++) {
