@@ -142,12 +142,15 @@ try {
     // he is killed first; the spade at the X queues the completion (dig.rs2:10-24).
     await q.teleport('falador teleport', 'magic:falador_teleport', 2965, 3378);
     await q.walk('to park', [{ x: DIG.x, z: DIG.z, tol: 0 }]);
-    for (let i = 0; i < 6 && !questDone; i++) {
+    // A bare-handed account at Attack 6 needs many blows for the gardener (a bow account one or two), and a dig while
+    // he fights is stopped: the fight is waited out before the spade, over up to twelve rounds.
+    for (let i = 0; i < 12 && !questDone; i++) {
         await q.guard('dig');
         const g = q.npc(/^gardener$/i);
         if (g && q.cheb(g.x, g.z) <= 11) {
             await q.s.bot.attack(g as any);
-            await q.waitUntil(() => !q.npc(/^gardener$/i) || q.cheb(q.npc(/^gardener$/i).x, q.npc(/^gardener$/i).z) > 11, 20);
+            await q.waitUntil(() => !q.npc(/^gardener$/i) || q.cheb(q.npc(/^gardener$/i).x, q.npc(/^gardener$/i).z) > 11, 40);
+            await q.waitUntil(() => !(q.pos() as any)?.combat?.inCombat, 20);
             if (!q.near(DIG.x, DIG.z, 0)) await q.dash('back to x', DIG.x, DIG.z, 0);
         }
         await q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.spade)!, optionIndex: 1, reason: 'SDK' });
