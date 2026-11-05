@@ -170,6 +170,43 @@ test('whole-game view includes all19 skills, catalogue gaps and all active queue
  const s=initialState();addTasks(s,[task('bad'),run('waiting',['bad'])]);complete(s,'bad',false,2);
  expect(queueFacts(s).blocked[0]!.dependencies).toEqual([{id:'bad',status:'failed',replacement:undefined}]);expect(queueFacts(s).lastUsefulLiveAt).toBe(0);
 });
+test('queue groups failed roots across branches and distinguishes work waiting on a running task', () => {
+ const state = initialState();
+ addTasks(state, [
+  task('failed-build', {kind:'build'}),
+  task('left-proof', {dependsOn:['failed-build']}),
+  task('right-proof', {dependsOn:['failed-build']}),
+  run('quest', ['left-proof','right-proof']),
+  task('running-proof'),
+  run('wait-for-proof', ['running-proof']),
+  run('independent'),
+ ], 0);
+ complete(state, 'failed-build', false, 2);
+ startTask(state, 'running-proof', 3, 'in-flight');
+ const facts = queueFacts(state);
+ expect(facts.dependencyReadiness).toEqual({ready:1, waiting:1, blocked:3});
+ expect(facts.rootBlockers).toEqual([
+  {id:'failed-build', status:'failed', runId:'failed-build', pendingTasks:3, pendingRuns:1},
+ ]);
+ expect(chooseTask(state, 4)?.id).toBe('independent');
+});
+
+test('queue includes provision dependencies that are not in dependsOn', () => {
+ const state = initialState();
+ addTasks(state, [
+  task('register', {kind:'provision',role:'quest'}),
+  task('another-registration', {kind:'provision',role:'quest'}),
+  {...run('one-account'), account:undefined, accountFrom:'register'},
+  {...run('two-accounts'), account:undefined, participants:['@register','@another-registration']},
+ ], 0);
+ complete(state, 'register', false, 2);
+ complete(state, 'another-registration', true, 4, {account:'Partner'});
+ const facts = queueFacts(state);
+ expect(facts.dependencyReadiness).toEqual({ready:0, waiting:0, blocked:2});
+ expect(facts.rootBlockers[0]).toMatchObject({id:'register', pendingTasks:2, pendingRuns:2});
+ expect(facts.blocked.map(row=>row.dependencies.map(d=>d.id))).toEqual([['register'],['register']]);
+});
+
 test('planner prompt lists a shared prerequisite once and preserves the active dependency order',()=>{
  const shared='qualify-quest-order-with-current-source';
  const state=initialState();

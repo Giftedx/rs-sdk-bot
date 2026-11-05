@@ -2,7 +2,7 @@ import {readFileSync,existsSync,readdirSync,writeFileSync,mkdirSync} from 'node:
 import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
 import {join} from 'node:path';
-import {GOALS,addTasks,heldBuilds,replaceTasks,type CoordinatorState,type CoordTask} from './coordinator';
+import {GOALS,addTasks,heldBuilds,provisionRefs,replaceTasks,type CoordinatorState,type CoordTask} from './coordinator';
 import {runModel,type ModelWorker} from './model-worker';
 import {validateDelivery,type DeliveryTask} from './delivery';
 import {freshScoreboard} from './coverage';
@@ -28,22 +28,69 @@ export function gameCoverage(methods:any[],quests:any[],statuses:any[],protected
 export function queueFacts(state:CoordinatorState){
  const records=new Map(state.tasks.map(r=>[r.spec.id,r]));
  const active=state.tasks.filter(r=>r.status==='pending'||r.status==='running');
+ const dependencies = new Map(active.map(({spec}) => [
+  spec.id, [...new Set([...spec.dependsOn, ...provisionRefs(spec)])],
+ ]));
  const seen=new Set<string>();
  const shared=new Map<string,number>();
- for(const {spec} of active)for(const id of spec.dependsOn){
+ for(const ids of dependencies.values())for(const id of ids){
   if(seen.has(id)&&!shared.has(id))shared.set(id,shared.size);
   seen.add(id);
  }
+
+ const rootsByTask = new Map<string, Set<string>>();
+ function terminalRoots(id: string): Set<string> {
+  const cached = rootsByTask.get(id);
+  if (cached) return cached;
+  const roots = new Set<string>();
+  rootsByTask.set(id, roots);
+  const record = records.get(id);
+  if (!record || record.status === 'failed' || record.status === 'superseded') {
+   roots.add(id);
+  } else {
+   for (const dep of dependencies.get(id) ?? []) {
+    for (const root of terminalRoots(dep)) roots.add(root);
+   }
+  }
+  return roots;
+ }
+
+ const dependencyReadiness = {ready: 0, waiting: 0, blocked: 0};
+ const rootCounts = new Map<string, {pendingTasks: number; pendingRuns: number}>();
+ const blocked = [];
+ for (const {spec, status} of active) {
+  if (status !== 'pending') continue;
+  const unmet = dependencies.get(spec.id)!.filter(id => records.get(id)?.status !== 'succeeded');
+  const roots = terminalRoots(spec.id);
+  dependencyReadiness[roots.size ? 'blocked' : unmet.length ? 'waiting' : 'ready']++;
+  for (const id of roots) {
+   const count = rootCounts.get(id) ?? {pendingTasks: 0, pendingRuns: 0};
+   count.pendingTasks++;
+   if (spec.kind === 'run') count.pendingRuns++;
+   rootCounts.set(id, count);
+  }
+  if (unmet.length) blocked.push({id: spec.id, goal: spec.goal, capability: spec.capability,
+   dependencies: unmet.map(id => ({
+    id, status: records.get(id)?.status ?? 'missing', replacement: records.get(id)?.supersededBy,
+   })),
+  });
+ }
+
+ const rootBlockers = [...rootCounts].map(([id, count]) => {
+  const record = records.get(id);
+  return {id, status: record?.status ?? 'missing', runId: record?.runId, replacement: record?.supersededBy, ...count};
+ }).sort((a, b) => b.pendingRuns - a.pendingRuns || b.pendingTasks - a.pendingTasks || a.id.localeCompare(b.id));
+
  return{lastUsefulLiveAt:Math.max(0,...state.tasks.filter(r=>r.spec.kind==='run'&&r.status==='succeeded').map(r=>r.receipt?.at??0)),
-  blocked:state.tasks.filter(r=>r.status==='pending').map(r=>({id:r.spec.id,goal:r.spec.goal,capability:r.spec.capability,
-   dependencies:r.spec.dependsOn.filter(id=>records.get(id)?.status!=='succeeded').map(id=>({id,status:records.get(id)?.status??'missing',replacement:records.get(id)?.supersededBy}))})).filter(r=>r.dependencies.length),
+  dependencyReadiness, rootBlockers, blocked,
   heldBuilds:heldBuilds(state,Date.now()),
   sharedDependencyIds:[...shared.keys()],
   active:active.map(({spec,status})=>{
    const {dependsOn,...task}=briefSpec(spec);
-   return{spec:task,status,dependencyRefs:dependsOn.map((id:string)=>shared.get(id)??id)};
+   return{spec:task,status,dependencyRefs:dependencies.get(spec.id)!.map(id=>shared.get(id)??id)};
   })};
 }
+
 // The prompt carries each task's decision fields and the start of its work order; the full spec, receipts and logs stay
 // in .practice/coordinator/state.json and runs/<runId>/ (full specs made the prompt 450,000 characters; research/bot-host.md "Isolated build workspaces").
 const clip=(text:unknown,n:number)=>typeof text==='string'&&text.length>n?text.slice(0,n)+'...':text;
@@ -140,6 +187,7 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'RECENT FINISHED TASKS, last 48 succeeded or failed (open tasks are in the active queue below; superseded tasks are omitted; counts are NOT game completion): '+JSON.stringify({...state,tasks:state.tasks.filter(r=>r.status==='succeeded'||r.status==='failed').slice(-48).map(r=>({spec:briefSpec(r.spec),status:r.status,runId:r.runId,error:clip(r.receipt?.error,240),output:r.receipt?.output?{account:r.receipt.output.account,ok:r.receipt.output.ok,evidence:r.receipt.output.evidence,error:clip(r.receipt.output.error??r.receipt.output.review?.reason??r.receipt.output.delivery?.reason,240)}:null}))}),
   'DATED WORLD (timestamps matter; reserved main/specialists must not be used for tests): '+JSON.stringify(compact),
   'In the active queue, a string in dependencyRefs is a task ID. A number is a zero-based index into sharedDependencyIds. In proposal dependsOn use the full string task IDs.',
+  'Use rootBlockers to trace failed, superseded or missing prerequisites across the queue. Counts include downstream pending work and do not prove its readiness after one repair. Inspect the root receipt before proposing a replacement or retiring obsolete work. Waiting chains without a terminal blocker and independent work remain eligible. Dependency-ready work still needs runtime admission.',
   'COMPLETE ACTIVE QUEUE AND BLOCKED EDGES (not truncated to recent history): '+JSON.stringify(queueFacts(state)),
   'Full inventories, raw dated status and definitions: '+worldFile,
   'Task source, model/reviewer output, failures and complete receipts: .practice/coordinator/runs/<runId>/. Read these for any repair; do not re-diagnose from summaries.',
