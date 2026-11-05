@@ -5,6 +5,7 @@ import {openBot,settle,getWorld,accountOf} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {goTo} from '../packages/core/src/walk';
 import {waitTicks} from '../packages/core/src/ticks';
+import {componentId} from '../packages/core/src/logout';
 import {watchProductionLife} from './microbot-c-lifetime';
 import {discoverNativeClueNpcHandlers,nativeSpecialClueSearchHandlers} from './microbot-c-clue-handlers';
 type Point={x:number;z:number;level:number};
@@ -125,9 +126,17 @@ export async function runNativeClueStep(s:Session,clueId:number,cap:number,stop:
    }
    if(distance()>2)throw Error('native clue destination unobserved');
   }
-  let sent=false,openedAt:number|undefined,challengeReady=step.challengeItem!==undefined&&count(before,step.challengeItem)>0,answered=false;
+  let sent=false,openedAt:number|undefined,challengeReady=step.challengeItem!==undefined&&count(before,step.challengeItem)>0,answered=false,rewardClosed=false;
   while(!over()){
    effect=clueEffect(step,before,stock(),complete());if(effect.ok)break;
+   const modal=s.sdk.getState()?.interface;
+   if(sent&&!rewardClosed&&modal?.isOpen&&modal.interfaceId===componentId('trail_reward')&&
+      complete()&&count(stock(),clueId)===0){
+    rewardClosed=true;
+    if(!(await s.sdk.sendCloseModal()).success)throw Error('native clue reward close refused');
+    await waitTicks(s,1);
+    continue;
+   }
    const dialog=s.sdk.getDialog();
    if(step.kind==='challenge'&&sent&&!answered&&(s.client as any)?.isChatBackInputOpen?.()){
     if(!challengeReady||step.answer===undefined)throw Error('native challenge prompt appeared before staged challenge');await s.sdk.sendCountDialog(step.answer);answered=true;

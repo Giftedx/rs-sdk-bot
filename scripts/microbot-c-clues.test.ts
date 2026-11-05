@@ -29,3 +29,21 @@ test('finite staged dig skips routing from the exact tile and records one conver
  const s:any={tick:()=>tick,onTick:(cb:()=>void)=>{let active=true;const next=()=>queueMicrotask(()=>{if(active){tick++;cb();next();}});next();return()=>{active=false;};},sdk:{getSkill:()=>({level:10}),getInventory:()=>items,getDialog:()=>null,getState:()=>({player:{lifeId:1,worldX:r.point!.x,worldZ:r.point!.z,level:r.point!.level},gameMessages:[]}),sendUseItem:async(slot:number,op:number)=>{expect([slot,op]).toEqual([1,1]);items[0]={id:r.casket,count:1,slot:0};}}};
  expect(await runNativeClueStep(s,r.id,20,()=>false,async()=>{throw Error("already at the dig tile");})).toMatchObject({ok:true,kind:'dig',preserved:true,effect:{outcome:'casket'}});
 });
+
+test('final casket closes the Native reward interface once before accepting queued items', async () => {
+ const items=[{id:2714,count:1,slot:0}];
+ const gameMessages:{type:number;text:string;tick:number}[]=[];
+ let tick=0, rewardOpen=false, closes=0;
+ const session:any={
+  tick:()=>tick,
+  onTick:(cb:()=>void)=>{let active=true;const next=()=>queueMicrotask(()=>{if(active){tick++;cb();next();}});next();return()=>{active=false;};},
+  sdk:{
+   getSkill:()=>({level:99}),getInventory:()=>items,getDialog:()=>null,
+   getState:()=>({player:{lifeId:1,worldX:3177,worldZ:3360,level:0},gameMessages,interface:{isOpen:rewardOpen,interfaceId:rewardOpen?6960:-1}}),
+   sendUseItem:async()=>{items.pop();rewardOpen=true;gameMessages.push({type:0,text:"Well done you've completed the Treasure Trail!",tick});return {success:true};},
+   sendCloseModal:async()=>{closes++;rewardOpen=false;items.push({id:563,count:6,slot:0});return {success:true};}
+  }
+ };
+ expect(await runNativeClueStep(session,2714,20)).toMatchObject({ok:true,effect:{outcome:'reward',rewards:[{id:563,count:6}]}});
+ expect(closes).toBe(1);
+});
