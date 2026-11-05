@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793908646130,
+ "at": 1793909863959,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -146,6 +146,22 @@
    "role": "quests"
   },
   {
+   "account": "Magicwanda",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/goldfarm.ts KNIGHT_SPOT=2669,3298"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "RUN": "2"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Thieving 55, then coins from Ardougne knights",
+   "role": "supply"
+  },
+  {
    "account": "PickpockDick",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -180,6 +196,22 @@
    "role": "supply"
   },
   {
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/walk-to.ts 2809 3441",
+    "scripts/firemaking-order.ts TARGET_LEVEL=99 LOG=normal MAX_LOGS=1300 CAP=60000 TOOL_BUDGET=50"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": false,
+   "goal": "Firemaking 99 from 5072 banked normal logs at Catherby",
+   "role": "firemaking"
+  },
+  {
    "account": "mmsmk1232",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -207,7 +239,7 @@
     "FLOAT": "210000",
     "NO_BUY_TICKS": "50"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true,
    "goal": "fire and earth runes from Betty",
@@ -464,26 +496,6 @@
    "repeat": false,
    "goal": "quests: runemysteries, murder, blackknight, vampire, priest, junglepotion, sheep, fishingcompo, druid, arrav, seaslug, haunted, demon, dig, drunkmonk, elemental, death, grandtree",
    "role": "combat"
-  },
-  {
-   "accounts": [
-    "Magicwanda",
-    "Shaftmaker"
-   ],
-   "script": "scripts/coin-courier.ts",
-   "args": [
-    "20120",
-    "--timeout-ms=600000"
-   ],
-   "env": {
-    "CAP": "1600",
-    "STALL_TICKS": "0",
-    "COORDINATOR_RUN_ID": "task-6bac26fb-c35e-400b-9d88-330f648abc89"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-courier-colocated-magic-bankroll [task-6bac26fb-c35e-400b-9d88-330f648abc89]",
-   "role": "supply"
   }
  ]
 }
