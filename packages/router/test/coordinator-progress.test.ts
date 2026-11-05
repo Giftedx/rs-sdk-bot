@@ -1,6 +1,6 @@
 import {test,expect} from 'bun:test';
 import {initialState,addTasks,startTask,finishTask,chooseTask,refreshQualifications,qualificationDemand,buildWorkOrder,fleetExpansion,activeBuildFocus,preparedNativeDelivery,type CoordTask} from '../src/coordinator';
-import {acceptProposal,gameCoverage,GAME_SKILLS,queueFacts} from '../src/coordinator-planner';
+import {acceptProposal,gameCoverage,GAME_SKILLS,plannerPrompt,queueFacts} from '../src/coordinator-planner';
 import {buildBrief} from '../src/author';
 const task=(id:string,extra:Partial<CoordTask>={}):CoordTask=>({id,kind:'qualify',goal:'quests',capability:'quest-order',dependsOn:[],priority:5,estimatedMs:60000,why:'Finish useful quest',...extra});
 const run=(id:string,deps:string[]=[])=>task(id,{kind:'run',account:'Helper',dependsOn:deps,accept:{quests:["Cook's Assistant"]}});
@@ -169,6 +169,29 @@ test('whole-game view includes all19 skills, catalogue gaps and all active queue
  expect(c.skills.find(s=>s.name==='Agility')!.cataloguedMethods).toBe(0);expect(c.unknown).toContain('not unavailable');expect(c.questCount).toBe(1);
  const s=initialState();addTasks(s,[task('bad'),run('waiting',['bad'])]);complete(s,'bad',false,2);
  expect(queueFacts(s).blocked[0]!.dependencies).toEqual([{id:'bad',status:'failed',replacement:undefined}]);expect(queueFacts(s).lastUsefulLiveAt).toBe(0);
+});
+test('planner prompt lists a shared prerequisite once and preserves the active dependency order',()=>{
+ const shared='qualify-quest-order-with-current-source';
+ const state=initialState();
+ addTasks(state,[task(shared),task('unique-proof'),task('failed-proof'),run('first',[shared,'unique-proof']),run('second',['failed-proof',shared])]);
+ complete(state,shared,true,2);
+ complete(state,'unique-proof',true,4);
+ complete(state,'failed-proof',false,6);
+ const world:Parameters<typeof plannerPrompt>[1]={
+  at:0,scoreboard:null,stall:null,assets:[],supplyBill:null,executionDirective:'',deliveryFocus:null,
+  capacity:{maxBots:0,minFreeGB:0,freeGB:0,nativeStartupGB:0,maxLive:0,preferLive:false},
+  protectedNames:[],jobs:[],statuses:[],ended:{},capabilities:[],capabilitySources:{},coverage:gameCoverage([],[],[],[],[])
+ };
+ const prompt=plannerPrompt(state,world);
+ const activeLine=prompt.split('\n').find(line=>line.startsWith('COMPLETE ACTIVE QUEUE'))!;
+ const facts=JSON.parse(activeLine.slice(activeLine.indexOf(': ')+2));
+ expect(activeLine.split(shared)).toHaveLength(2);
+ expect(facts.sharedDependencyIds).toEqual([shared]);
+ expect(facts.active.map((row:any)=>[row.spec.id,row.dependencyRefs.map((ref:string|number)=>
+  typeof ref==='number'?facts.sharedDependencyIds[ref]:ref)])).toEqual([
+  ['first',[shared,'unique-proof']],['second',['failed-proof',shared]]
+ ]);
+ expect(facts.blocked[0].dependencies).toEqual([{id:'failed-proof',status:'failed'}]);
 });
 test('cancel retires a pending build and points its consumer at the named qualification',()=>{
  const s=initialState();addTasks(s,[task('rebind',{kind:'build'}),run('consume',['rebind'])],0);
