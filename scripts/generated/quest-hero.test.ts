@@ -75,3 +75,14 @@ test('quest spells admit the Native ten tile AP range with clear sight and refus
 
 test('crossing settlement outlasts the Native three tick replacement wall',()=>{const native=readFileSync('vendor/rs-sdk/server/content/scripts/doors/scripts/open_and_close_doors.rs2','utf8');expect(native).toContain('loc_change(inviswall, 3);');const source=readFileSync('scripts/generated/quest-hero-owned.ts','utf8');expect(source).toContain("await waitTicks(s,4);guard();if(!same())throw Error('Heroes crossing settling assets changed')");});
 test('paired phase reports the first causal failure after waiting for the cancelled partner',async()=>{const cause=Error('Phoenix bait exhausted');let release!:()=>void,returned=false;const cancelled=new Promise<void>(r=>release=r);const run=heroesOwnedPairPhase([0,1],async actor=>{if(actor===1)throw cause;await cancelled;returned=true;throw Error('BlackArm route stopped');},()=>release());try{await run;throw Error('expected causal failure');}catch(error){expect(error).toBe(cause);expect(returned).toBe(true);}});
+
+test('Grip lure approaches from the key handoff before binding the newly visible original NPC',async()=>{
+ const n:any={id:792,index:7,x:2774,z:3192,hp:25},npcs:any[]=[],native={};let walks=0,cabinets=0;
+ const s:any={client:{npc:{7:native}},sdk:{getState:()=>({nearbyNpcs:npcs})}},q:any={walk:async(label:string,points:any[])=>{walks++;expect(points).toEqual([{x:2777,z:3196,tol:0}]);npcs.push(n);},opLoc:async()=>{cabinets++;Object.assign(n,{x:2777,z:3198});},dialogOpen:()=>false,sawText:()=>true,converse:async(_:any,done:any)=>done()};
+ await heroesLureGrip(s,q,()=>{});expect(walks).toBe(1);expect(cabinets).toBe(1);
+});
+test('missing or ambiguous Grip after approach refuses the cabinet input',async()=>{
+ for(const count of[0,2]){let inputs=0;const s:any={client:{npc:{}},sdk:{getState:()=>({nearbyNpcs:Array.from({length:count},(_,index)=>({id:792,index}))})}},q:any={walk:async()=>{},opLoc:async()=>{inputs++;}};await expect(heroesLureGrip(s,q,()=>{})).rejects.toThrow('unique original Grip');expect(inputs).toBe(0);}
+});
+
+test('visible original Grip cannot be replaced during the approach',async()=>{let inputs=0;const n:any={id:792,index:7,x:2774,z:3192,hp:25},client:any={npc:{7:{}}},s:any={client,sdk:{getState:()=>({nearbyNpcs:[n]})}},q:any={walk:async()=>{client.npc[7]={};},opLoc:async()=>{inputs++;}};await expect(heroesLureGrip(s,q,()=>{})).rejects.toThrow('replaced during approach');expect(inputs).toBe(0);});
