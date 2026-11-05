@@ -246,7 +246,8 @@ foodUsed=0`.
 ## 6a. Ranged: bow plus cannon at the Wilderness poison spiders
 
 Claim: rapid bow plus cannon at the poison spiders takes Ranged 55 to 99 in about 2,000 ticks (476.7 XP per tick) at
-Attack 99 and at Attack 1. Attack does not matter while a bow is worn.
+Attack 99, 3 of 3 runs. The Attack 1 specialist time is preliminary: 2 valid runs (2,046 and 1,973 ticks), not 3. The
+cannon roll follows the worn weapon, so a code read says Attack does not matter while a bow is worn.
 
 Conditions: MEASURED practice, one bot at the site, 150 ms tick, presets `cannon_spiders_*` (start tile 3287,3810,
 Wilderness level 37, multiway `maps/multiway.csv` `0_51_59_16_32`), `CANNON=1 TARGET='^poison spider$' STYLE=1 NEAR=8

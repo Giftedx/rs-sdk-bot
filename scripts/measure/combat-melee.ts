@@ -32,8 +32,10 @@ const PROTECT = process.env.PROTECT === '1';
 const STOP_LEVEL = Number(process.env.STOP_LEVEL ?? 100);
 const PFM = 14; // protect_from_melee (sdk PRAYER_INDICES)
 const FOOD = /^(lobster|swordfish|shark)$/i;
-let stopped = '';
-const s = await openBot(bot!, { onStop: async (_s, detail) => { stopped = detail; } }).catch(e => finish([], false, `login: ${String(e)}`));
+let stopped = '', measuring = false;
+// Inside the measured window a stop ends the loop, so the cannon is picked up and the result is still reported as failed.
+// In set-up and cleanup a stop or death fails the run at once.
+const s = await openBot(bot!, { onStop: async (session, detail) => { if (measuring) stopped = detail; else await finish([session], false, detail); } }).catch(e => finish([], false, `login: ${String(e)}`));
 try {
     await waitTicks(s, 3);
     const st = () => s.sdk.getState()!;
@@ -136,6 +138,7 @@ try {
     const sample = (now: number) => console.log(`SAMPLE t=${now - t0} lv=${s.sdk.getSkill('Ranged')?.baseLevel} ranged=${xp('Ranged') - x0.Ranged!} balls=${balls0 - balls()} arrows=${arrows0 - arrows()} food=${food0 - countItems(s, FOOD)} hp=${hp()} prayer=${s.sdk.getSkill('Prayer')?.level}`);
     const bad = new Map<number, number>();
     const seenHit = new Set<string>();
+    measuring = true;
     await new Promise<void>(resolve => {
         const off = s.onTick(() => {
             const now = s.tick();
@@ -215,6 +218,7 @@ try {
         });
         void s.ended.then(() => { off(); resolve(); });
     });
+    measuring = false;
     const ticks = s.tick() - t0;
     const died = hp() <= 0 || /died/.test(stopped);
     sample(s.tick());
