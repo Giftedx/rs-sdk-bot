@@ -36052,14 +36052,14 @@
             "src/main/java/net/runelite/client/plugins/microbot/gecooker/enums/LogType.java"
           ],
           "sourceUrl": "https://github.com/chsami/Microbot-Hub/tree/cd648f48d536c01c58aa82aa4d353fb31ce6e102/src/main/java/net/runelite/client/plugins/microbot/gecooker",
-          "gap": "Native cooking effect is reused at supported bank/range. Donor GE fire/bank route is absent from classic map; no location parity is claimed.",
+          "gap": "Native Varrock bank and regular fire lines support the donor cycle through the bounded GE cooking CLI. The four donor GE work quadrants require the modern map. The composed CLI still requires a Native run.",
           "review": {
             "name": "gecooker",
             "decision": "partial",
             "behaviour": "GE-bank cooking with local fire creation and raw-food banking",
             "localConsumers": [
-              "scripts/cook-food.ts",
-              "scripts/cook-stock.ts"
+              "scripts/microbot-ge-cooking.ts",
+              "scripts/microbot-bank-jobs.ts"
             ],
             "sourceEvidence": [
               {
@@ -37013,17 +37013,17 @@
               }
             ],
             "blockers": [
-              "Native cooking effect is reused at supported bank/range. Donor GE fire/bank route is absent from classic map; no location parity is claimed."
+              "Native Varrock bank and regular fire lines support the donor cycle through the bounded GE cooking CLI. The four donor GE work quadrants require the modern map. The composed CLI still requires a Native run."
             ],
             "scriptDecisions": [
               {
                 "path": "src/main/java/net/runelite/client/plugins/microbot/gecooker/GECookerScript.java",
                 "decision": "partial",
                 "consumer": [
-                  "scripts/cook-food.ts",
-                  "scripts/cook-stock.ts"
+                  "scripts/microbot-ge-cooking.ts",
+                  "scripts/microbot-bank-jobs.ts"
                 ],
-                "gap": "Native cooking effect is reused at supported bank/range. Donor GE fire/bank route is absent from classic map; no location parity is claimed.",
+                "gap": "Native Varrock bank and regular fire lines support the donor cycle through the bounded GE cooking CLI. The four donor GE work quadrants require the modern map. The composed CLI still requires a Native run.",
                 "sourceEvidence": [
                   {
                     "path": "src/main/java/net/runelite/client/plugins/microbot/gecooker/GECookerScript.java",
@@ -37219,7 +37219,7 @@
               }
             ],
             "proof": {
-              "level": "source review; no practice or live qualification",
+              "level": "focused TypeScript tests cover existing fire reuse, light-and-bank composition, refill, bounds, and refusal; Native CLI and live qualification pending",
               "donorRevision": "cd648f48d536c01c58aa82aa4d353fb31ce6e102",
               "nativeSearch": {
                 "root": "vendor/rs-sdk/server/content/scripts",
