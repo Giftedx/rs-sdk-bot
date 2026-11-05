@@ -34,6 +34,13 @@ export const SHORT_PRESETS: Record<string, SaveConfig> = {
     // Rune Mysteries: beside Duke Horacio on level 1 of Lumbridge castle (duke_of_lumbridge spawn 3212,3220,1,
     // maps/m50_50.jm2); runes for a Varrock and a Lumbridge teleport (2 law 563, 6 air 556, 1 fire 554, 1 earth 557).
     quest_runemysteries: short({ x: 3210, z: 3221, level: 1 }, [[563, 2], [556, 6], [554, 1], [557, 1]]),
+    // Rune Mysteries resumed mid-quest with every quest item lost, as a parked live account resumes it: at the Varrock
+    // East bank, low combat (Hitpoints 17, Magic 29), no runes, so the runner walks. Varp 63 is the quest stage
+    // (quest_runemysteries.constant): 1 started, 2 given talisman, 3 received package, 4 given package, 5 received notes.
+    ...Object.fromEntries([1, 2, 3, 4, 5].map(stage => [`quest_runemysteries_lost${stage}`, {
+        position: { x: 3252, z: 3420, level: 0 }, skills: { Hitpoints: 17, Magic: 29 }, varps: { ...DONE, 63: stage },
+        inventory: Array.from({ length: 4 }, () => ({ id: 379, count: 1 })),
+    } satisfies SaveConfig])),
     // The Restless Ghost: in Lumbridge church beside Father Aereck (spawn 3244,3206, maps/m50_50.jm2); runes for a
     // Lumbridge teleport (1 law 563, 3 air 556, 1 earth 557) for the way back from the Wizards' Tower basement. The amulet
     // of ghostspeak and the skull are untradeable (quest_priest.obj), so Urhney and the skull are part of the run.

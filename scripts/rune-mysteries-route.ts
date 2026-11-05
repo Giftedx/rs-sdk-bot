@@ -10,9 +10,21 @@ export function runeMysteriesDecision(state:QuestFlag['state'],items:readonly nu
     if(items.includes(291))return 'notes';
     if(items.includes(290))return 'package';
     if(items.includes(1438))return 'talisman';
-    // A package handoff can finish before the second Aubury conversation.
-    // Probe that resumable step once; absence of notes must never report success.
-    return 'recover-notes';
+    // Started with none of the quest items: the journal shows one colour for stages 1 to 5, so only Sedridor's own
+    // branch (sedridor.rs2) names the stage: he takes a talisman, re-issues a lost package, or sends the bot on.
+    return 'sedridor';
+}
+
+// The next step after Sedridor's stage branch, from the page text seen (sedridor.rs2):
+// stage 1 without the talisman: "Come back again when you have found it." (the Duke re-issues it, duke_horacio.rs2);
+// stage 4, or stage 5 without the notes: "speak to him again" / "speak to Aubury once more" (Aubury gives or re-issues them);
+// stage 2 or 3: the package is in the pack when the talk ends.
+export type SedridorOutcome='package'|'duke'|'aubury'|'unknown';
+export function sedridorOutcome(hasPackage:boolean,sawText:(re:RegExp)=>boolean):SedridorOutcome{
+    if(hasPackage)return 'package';
+    if(sawText(/speak to him again|speak to aubury once more/i))return 'aubury';
+    if(sawText(/come back again when you have found it/i))return 'duke';
+    return 'unknown';
 }
 
 // Any combat level may start: below 13 the walk skips the guarded corridors (walkRuneMysteries).
