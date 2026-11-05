@@ -214,3 +214,12 @@ test('the claim lists every spot, pen and shop the enabled jobs of this side hol
     expect(claim).toEqual({ side, at: 1234, resources: ['knight:2582,3297', 'knight:2653,3300', 'pen:3017,3288'] });
     expect(claimFor([], side, () => side, 5).resources).toEqual([]);
 });
+
+test('on a value tie an account keeps the template it holds, so a level change does not move it to another spot', () => {
+    const a = acct('UnderMyKilt', { Thieving: 99 }), b = acct('TheFullMonty', { Thieving: 99 });
+    expect(ids(plan(inputs([a, b])))).toEqual({ TheFullMonty: 'goldfarm@2582,3297', UnderMyKilt: 'goldfarm@2652,3318' });
+    const current = new Map([['undermykilt', 'goldfarm@2669,3298'], ['thefullmonty', 'goldfarm@2671,3313']]);
+    expect(ids(plan(inputs([a, b], { current })))).toEqual({ TheFullMonty: 'goldfarm@2671,3313', UnderMyKilt: 'goldfarm@2669,3298' });
+    // A held spot another side now claims is taken: the account moves, the other keeps its own.
+    expect(ids(plan(inputs([a, b], { current, taken: { 'knight:2669,3298': 1 } })))).toEqual({ TheFullMonty: 'goldfarm@2671,3313', UnderMyKilt: 'goldfarm@2582,3297' });
+});

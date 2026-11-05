@@ -118,7 +118,7 @@ export function pass(planFile: string, dry: boolean): string[] {
         const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
         return { name: n, coins: accountFrom(n, side, f ? readJson(join(statusDir, f), null) : null, id => byId.get(id)).items.coin ?? 0 };
     }).filter(d => d.coins > 0);
-    const planned = plan({ side, accounts, owners, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: { 'catherby:lobster': 3 }, unfundable: busy, donors });
+    const planned = plan({ side, accounts, owners, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: { 'catherby:lobster': 3 }, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])) });
     const funding = fundOrders(planned, open, (from, to, coins) => coinOrder(from, to, coins, owners.get(to.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev', now));
     const out = funding.assignments;
     log.push(...funding.log);
