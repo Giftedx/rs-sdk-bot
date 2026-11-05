@@ -28,7 +28,7 @@
   dock.innerHTML='<nav class="dock-tabs" aria-label="Journal views"><button data-dock="events" class="on">Journal</button><button data-dock="boards">24 boards</button><button data-dock="allocation">Allocation</button><div class="dock-end"><span id="journal-age">Read-only observations</span><button id="toggle-dock" aria-label="Collapse journal" aria-expanded="true">−</button></div></nav><div class="dock-body"><div id="world-journal"></div></div>';
   app.append(dock);$('.dock-body').append($('.boards'),$('#allocation-panel'));$('.boards').hidden=true;$('#allocation-panel').hidden=true;
   const controls=document.createElement('div');controls.className='map-place';
-  controls.innerHTML='<select id="atlas-place" aria-label="Map destination">'+PLACES.map(([name,x,z])=>`<option value="${x},${z}">${E(name)}</option>`).join('')+'</select><button id="atlas-go" title="Move the camera; does not move a game account">Go</button><button id="atlas-locate" title="Show the selected account’s last observed position">Locate</button>';
+  controls.innerHTML='<select id="atlas-place" aria-label="Map destination">'+PLACES.map(([name,x,z])=>`<option value="${x},${z}">${E(name)}</option>`).join('')+'</select><button id="atlas-go" title="Move the camera; does not move a game account">Go</button>';
   app.append(controls);
   const quality=document.createElement('select');quality.id='atlas-quality';quality.setAttribute('aria-label','Map render quality');quality.title='Render resolution; lower it to reduce GPU use';
   quality.innerHTML='<option value="1">Sharp</option><option value="0.75">Balanced</option><option value="0.5">Light</option>';$('#world-panel>.bar').append(quality);
@@ -85,7 +85,7 @@
     app.classList.toggle('shell-viewer-error',VIEWER.state==='unavailable');
   }
   const oldRender=render;render=function(){oldRender();mapShell();};
-  const oldPick=pick;pick=function(name){const b=S?.bots?.find(b=>b.name===name);window.atlasFreeCamera=!b?.inWorld;if(b?.inWorld)window.atlasDestination=null;openInspector();oldPick(name);if(!b?.inWorld&&b?.pos)goTo(b.pos);};
+  const oldPick=pick;pick=function(name){openInspector();oldPick(name);};
   const oldChoose=choose;choose=function(next){openInspector();selectedJob=null;oldChoose(next);};
   rail.addEventListener('click',e=>{
     const button=e.target.closest('[data-plugin]');if(!button)return;
@@ -108,10 +108,9 @@
   const focusMap=()=>{app.classList.toggle('focus-map');};
   rail.querySelector('[data-map-focus]').onclick=focusMap;
   document.addEventListener('keydown',e=>{if(e.key==='Tab'&&e.target===document.body){e.preventDefault();focusMap();}if(e.key==='Escape'&&app.classList.contains('focus-map'))app.classList.remove('focus-map');if(e.key==='/'&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();app.classList.remove('left-hidden');app.classList.add('mobile-fleet');$('#search').focus();}});
-  function goTo(pos){if(!Number.isFinite(pos.x)||!Number.isFinite(pos.z))return;window.atlasFreeCamera=true;window.atlasDestination=pos;TOUR=false;$('#bt').classList.remove('on');rswFor=null;request3D();$('#follow').textContent='Camera · '+pos.x+', '+pos.z+' · no game input';}
+  function goTo(pos){if(!Number.isFinite(pos.x)||!Number.isFinite(pos.z))return;window.atlasFreeCamera=true;window.atlasDestination=pos;rswFor=null;request3D();$('#follow').textContent='Camera · '+pos.x+', '+pos.z+' · no game input';}
   $('#atlas-go').onclick=()=>{const [x,z]=$('#atlas-place').value.split(',').map(Number);goTo({x,z});};
-  $('#atlas-locate').onclick=()=>{const b=S?.bots?.find(b=>b.name===sel);if(b?.pos){goTo(b.pos);$('#follow').textContent=safeName(b.name)+' · last position '+age(b.at)+' old';}else{$('#follow').textContent='No observed position for the selected account';}};
-  window.addEventListener('message',event=>{if(event.source!==$('#rsw').contentWindow||event.origin!==location.origin)return;const name=event.data?.atlasFollow;if(typeof name==='string'&&S?.bots?.some(b=>b.name===name&&!b.practice)&&sel!==name)pick(name);});
+  window.addEventListener('message',event=>{if(event.source!==$('#rsw').contentWindow||event.origin!==location.origin)return;const name=event.data?.atlasFollow;if(typeof name!=='string'||!S?.bots)return;const b=S.bots.find(b=>b.name.toLowerCase()===name.toLowerCase()&&!b.practice);if(b){if(sel!==b.name||window.atlasFreeCamera||window.atlasFollowOther)window.atlasClient.follow(b.name);}else if(name!==MARK&&window.atlasFollowOther!==name){window.atlasFreeCamera=false;window.atlasDestination=null;window.atlasFollowOther=name;render();}});
   document.addEventListener('visibilitychange',()=>$('#rsw').contentWindow?.postMessage({fps:document.hidden?1:20},location.origin));
   if(S?.bots&&!S.bots.some(b=>!b.practice&&b.inWorld))window.atlasFreeCamera=true;if(S)render();markPlugins();request3D();
 })();

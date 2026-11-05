@@ -11,11 +11,44 @@ test('the fleet search shortcut focuses the visible search control',()=>{
 });
 
 test('Free camera clears the selected account and asks the 3D viewer to stop following',()=>{
- const code=shell.slice(shell.indexOf("  $('#client-account').onchange="),shell.indexOf('  function toast('));
- const picker:any={},messages:any[]=[],window:any={atlasFollowOther:'Worker'};let renders=0;
- const selected=new Function('$','window','location','render',`let sel='Worker',picked=false,rswFor='Worker';const pick=()=>{},refresh=()=>{};${code};return()=>{$('#client-account').onchange({target:{value:''}});return sel;};`)((s:string)=>s==='#client-account'?picker:{contentWindow:{postMessage:(m:any)=>messages.push(m)}},window,{origin:'http://localhost'},()=>renders++);
+ const code=shell.slice(shell.indexOf('  const focusFree='),shell.indexOf('  function focusStep('));
+ const messages:any[]=[],window:any={atlasFollowOther:'Worker'};let renders=0;
+ const selected=new Function('$','window','location','render',`let sel='Worker',picked=false,rswFor='Worker';${code};return()=>{focusFree();return sel;};`)(()=>({contentWindow:{postMessage:(m:any)=>messages.push(m)}}),window,{origin:'http://localhost'},()=>renders++);
  expect(selected()).toBeNull();expect(window.atlasFollowOther).toBeNull();expect(window.atlasFreeCamera).toBe(true);
  expect(messages).toEqual([{atlasFreeCamera:true}]);expect(renders).toBe(1);
+});
+
+function focusStepper(bots:any[],sel:string|null,window:any={}){
+ const live=shell.slice(shell.indexOf('  const focusLive='),shell.indexOf('  function focusState('));
+ const step=shell.slice(shell.indexOf('  function focusStep('),shell.indexOf('  function focusChoose('));
+ const picks:string[]=[];
+ return {picks,step:new Function('S','sel','window','pick',`${live}${step};return focusStep;`)({bots},sel,window,(n:string)=>picks.push(n))};
+}
+
+test('the step buttons walk only accounts in the world, in name order, and wrap round',()=>{
+ const bots=[{name:'Zed',inWorld:true},{name:'Away',inWorld:false},{name:'Ann',inWorld:true},{name:'Lab',inWorld:true,practice:true}];
+ const a=focusStepper(bots,'Zed');a.step(1);a.step(-1);expect(a.picks).toEqual(['Ann','Ann']);
+ const b=focusStepper(bots,'Away',{atlasFreeCamera:true});b.step(1);b.step(-1);expect(b.picks).toEqual(['Ann','Zed']);
+ const c=focusStepper([],null);c.step(1);expect(c.picks).toEqual([]);
+});
+
+function focusMoves(from:string|null,to:string|null,state='ready'){
+ const code=shell.slice(shell.indexOf('  function focusMoved('),shell.indexOf('  const focusFree='));
+ const said:string[]=[],classes=new Set<string>(),box={classList:{add:(c:string)=>classes.add(c),remove:(c:string)=>classes.delete(c)},offsetWidth:0};
+ new Function('mode','VIEWER','focusTarget','safeName','focus','focusNote','focusSay','$','from','name',`let flightTo=null;${code};focusMoved(from,name);`)('3d',{state},()=>to,String,box,box,(s:string)=>said.push(s),()=>box,from,to??'Away');
+ return {said,classes};
+}
+
+test('a switch shows a flight, a faded cut, or that the account is not in the world',()=>{
+ expect(focusMoves('Ann','Zed').said).toEqual(['Flying to Zed']);expect(focusMoves('Ann','Zed').classes.has('flying')).toBe(true);
+ const cut=focusMoves(null,'Zed');expect(cut.said).toEqual(['Now watching Zed']);expect(cut.classes.has('focus-cut')).toBe(true);
+ expect(focusMoves('Ann',null).said).toEqual(['Away is not in the world. The camera stays here.']);
+ expect(focusMoves('Ann','Ann').said).toEqual([]);expect(focusMoves('Ann','Zed','loading').said).toEqual([]);
+});
+
+test('the switcher is the only follow control left on the page',()=>{
+ const page=['client-shell.js','map-shell.js','operations.js','index.html'].map(f=>readFileSync(new URL('./'+f,import.meta.url),'utf8')).join('\n');
+ for(const gone of ['atlas-locate',"'locate'",'data-act="follow"','data-world-go','id="bt"','TOUR','client-account','dblclick'])expect(page).not.toContain(gone);
 });
 
 test('an open bank redraws newer observations and closes when its account changes',()=>{
