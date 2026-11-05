@@ -333,7 +333,7 @@ export function lifecycleAccounts(dir: string): string[] {
 // A session whose owner died with no end line (a killed worker, or a swarm that died with its children) leaves a
 // held attempt, so no repair can name it until the owner is gone and its end is recorded.
 export function orphanedSessionEnds(accounts: readonly string[], ended: ReadonlyMap<string, EndRecord>, busy: readonly string[],
-    proof: (a: string) => LogoutProof, producer: (a: string, attemptId: string) => { pid: number; updatedAt: number } | undefined, alive: (pid: number) => boolean): [string, string][] {
+    proof: (a: string) => LogoutProof, producer: (a: string, attemptId: string) => { pid: number; createdAt: number; updatedAt: number } | undefined, alive: (pid: number) => boolean): [string, string][] {
     const out: [string, string][] = [], seen = new Set<string>();
     for (const a of accounts) {
         const key = a.toLowerCase();
@@ -343,9 +343,12 @@ export function orphanedSessionEnds(accounts: readonly string[], ended: Readonly
         let p: LogoutProof; try { p = proof(a); } catch { continue; }
         if (p.state !== 'held') continue;
         const receipt = producer(a, p.attemptId);
-        if (!receipt || !Number.isSafeInteger(receipt.pid) || receipt.pid < 1 || !Number.isFinite(receipt.updatedAt) || alive(receipt.pid)) continue;
+        if (!receipt || !Number.isSafeInteger(receipt.pid) || receipt.pid < 1 || !Number.isFinite(receipt.createdAt) || !Number.isFinite(receipt.updatedAt) || alive(receipt.pid)) continue;
         const prior = [...ended].find(([name]) => name.toLowerCase() === key);
-        if (prior && (!prior[1].reason.startsWith('exit orphaned: attempt ') || receipt.updatedAt <= prior[1].at)) continue;
+        // An older orphan end yields to a later update. A successful end yields to an attempt that started after it: that
+        // end cannot describe the attempt and holds nothing. Every other end stays, because a repair reads its reason.
+        const orphan = prior?.[1].reason.startsWith('exit orphaned: attempt ');
+        if (prior && !(orphan ? receipt.updatedAt > prior[1].at : successfulEnd(prior[1].reason) && receipt.createdAt > prior[1].at)) continue;
         out.push([prior?.[0] ?? a, `exit orphaned: attempt ${p.attemptId} owner ${receipt.pid} gone`]);
     }
     return out;
@@ -647,7 +650,7 @@ if (import.meta.main) {
             const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch (e) { return (e as NodeJS.ErrnoException).code !== 'ESRCH'; } };
             const producer = (a: string, id: string) => {
                 const receipt = listAttempts(a, LIVE_SERVER).find(x => x.attemptId === id)?.receipt;
-                return receipt ? { pid: receipt.owner.pid, updatedAt: receipt.updatedAt } : undefined;
+                return receipt ? { pid: receipt.owner.pid, createdAt: receipt.createdAt, updatedAt: receipt.updatedAt } : undefined;
             };
             const accounts = planned.flatMap(p => p.accounts).concat(lifecycleAccounts(join(prac, 'session-lifecycle/live', LIVE_SERVER)));
             for (const [a, reason] of orphanedSessionEnds(accounts, ended, busy, a => readLogoutProof(a, LIVE_SERVER), producer, alive)) {
