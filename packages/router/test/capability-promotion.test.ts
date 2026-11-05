@@ -1,11 +1,11 @@
 import {test,expect} from 'bun:test';
-import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,unlinkSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {initialState,addTasks,startTask,qualificationDemand,chooseTask,type CoordTask} from '../src/coordinator';
 import {acceptProposal} from '../src/coordinator-planner';
-import {deliveryFingerprint} from '../src/delivery-cli';
+import {deliveryFingerprint,importClosure} from '../src/delivery-cli';
 import type {DeliveryTask} from '../src/delivery';
 const definition={id:'cook-order',goal:'Complete a quest',entry:'scripts/cook.ts',files:['scripts/cook.ts'],consumer:'Quest flag, XP and logout',checks:['regression','practice','consumer'].map(phase=>({id:phase,phase,command:['bun','check.ts'],timeoutMs:1000}))};
 function fixture(){const base=mkdtempSync(join(tmpdir(),'cap-promote-'));mkdirSync(join(base,'packages/router/tasks'),{recursive:true});const file=join(base,'packages/router/tasks/cook-order.json'),bytes=JSON.stringify(definition);writeFileSync(file,bytes);return{base,file,bytes,hash:createHash('sha256').update(bytes).digest('hex')};}
@@ -36,4 +36,17 @@ test('changing the consumer command invalidates old qualification even when work
  for(const file of ['scripts/cook.ts','packages/router/src/delivery.ts','packages/router/src/delivery-cli.ts','package.json','bun.lock','tsconfig.json'])writeFileSync(join(f.base,file),'// unchanged fixture bytes');
  const d=structuredClone(definition) as DeliveryTask,changed=structuredClone(d);changed.checks[1]!.command.push('--changed-scenario');
  expect(deliveryFingerprint(changed,f.base)).not.toBe(deliveryFingerprint(d,f.base));
+});
+test('import scans recheck missing paths and same-size source edits on every pass',()=>{
+ const f=fixture(),entry='scripts/cook.ts',scan=()=>importClosure([entry],f.base);
+ mkdirSync(join(f.base,'scripts'),{recursive:true});
+ writeFileSync(join(f.base,entry),"import './old';");
+ expect(scan()).toEqual([entry]);
+ writeFileSync(join(f.base,'scripts/old.ts'),'export const old = 1;');
+ expect(scan()).toEqual([entry,'scripts/old.ts']);
+ writeFileSync(join(f.base,'scripts/new.ts'),'export const newer = 1;');
+ writeFileSync(join(f.base,entry),"import './new';");
+ expect(scan()).toEqual([entry,'scripts/new.ts']);
+ unlinkSync(join(f.base,'scripts/new.ts'));
+ expect(scan()).toEqual([entry]);
 });

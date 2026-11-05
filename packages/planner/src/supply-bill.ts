@@ -4,7 +4,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { FLEET_DIR, mySide } from '../../core/src/fleet';
 import { join, resolve } from 'node:path';
-import { haggisActivities, haggisTravel, loadSnapshot, overallRequirementsFor, scheduleOverall, TRICKS } from './haggis';
+import { boardsFromSnapshot, haggisActivities, haggisTravel, overallRequirementsFor, scheduleOverall, TRICKS } from './haggis';
 
 const root = resolve(import.meta.dir, '../../..');
 export type BillRow = { item: string; itemId?: number; need: number; owned: number; short: number; ids: number[]; holders: { account: string; count: number }[]; aliases?: string[] };
@@ -18,6 +18,22 @@ export function idsFor(item: string, items: readonly { id: number; name: string;
     if (unf) return items.filter(i => i.debugname === unf[1]!.replace(/\s+/g, '') + 'vial').map(i => i.id);
     const forms = new Set([want, want.replace(/s$/, ''), want.replace(/ies$/, 'y'), want.replace(/us$/, 'i')]);
     return items.filter(i => forms.has(String(i.name).toLowerCase())).map(i => i.id);
+}
+
+type StockRow = { id: number; baseId?: number; count?: number };
+// Pack and equipment come from one status. The last bank snapshot can contain the same units before a withdrawal.
+export function observedStock(status: { inventory?: StockRow[]; equipment?: StockRow[]; bank?: StockRow[] }): Map<number, number> {
+    const counts = (items: readonly StockRow[]) => {
+        const totals = new Map<number, number>();
+        for (const item of items) {
+            const id = item.baseId ?? item.id;
+            totals.set(id, (totals.get(id) ?? 0) + (item.count ?? 0));
+        }
+        return totals;
+    };
+    const held = counts([...(status.inventory ?? []), ...(status.equipment ?? [])]);
+    for (const [id, count] of counts(status.bank ?? [])) held.set(id, Math.max(held.get(id) ?? 0, count));
+    return held;
 }
 
 export function supplyBill(
@@ -58,9 +74,9 @@ export function supplyBill(
 
     for (const status of statuses) {
         const holdings = new Map<BillRow, number>();
-        for (const item of [...(status.inventory ?? []), ...(status.equipment ?? []), ...(status.bank ?? [])]) {
-            const row = byId.get(item.baseId ?? item.id);
-            if (row) holdings.set(row, (holdings.get(row) ?? 0) + (item.count ?? 0));
+        for (const [id, count] of observedStock(status)) {
+            const row = byId.get(id);
+            if (row) holdings.set(row, (holdings.get(row) ?? 0) + count);
         }
         for (const [row, count] of holdings) {
             if (count <= 0) continue;
@@ -85,16 +101,23 @@ export function liveHelperStatuses(base = root, fleetDir = join(FLEET_DIR(), 'sn
         .filter(s => s?.server === 'rs-sdk-demo.fly.dev' && typeof s.name === 'string' && s.name.toLowerCase() !== 'haggis');
 }
 
-if (import.meta.main) {
-    const snapshot = process.argv[2] ?? join(root, 'research/hiscores-live.json');
-    const activities = haggisActivities(), boards = loadSnapshot(snapshot);
+export function overallSupplyDemand(snapshot = join(root, 'research/hiscores-live.json')) {
+    const target = JSON.parse(readFileSync(snapshot, 'utf8')) as Parameters<typeof boardsFromSnapshot>[0];
+    const activities = haggisActivities(), boards = boardsFromSnapshot(target);
     const options = { mode: 'realistic' as const, tricks: new Set(TRICKS), travel: haggisTravel() };
     const plan = scheduleOverall(boards, activities, options);
     const { supplies } = overallRequirementsFor(activities, options, plan);
+    const snapshotAt = Number.isFinite(Date.parse(target.takenAt)) ? target.takenAt : null;
+    return { overallFinish: plan.overallFinish, supplies, snapshotAt };
+}
+
+if (import.meta.main) {
+    const snapshot = process.argv[2] ?? join(root, 'research/hiscores-live.json');
+    const { overallFinish, supplies, snapshotAt } = overallSupplyDemand(snapshot);
     const items = JSON.parse(readFileSync(join(root, 'knowledge/items.json'), 'utf8'));
     const bill = supplyBill(supplies, items, liveHelperStatuses());
     const dir = join(root, '.practice/coordinator'); if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, 'supply-bill.json'), JSON.stringify({ at: Date.now(), snapshot, scope: 'overall', overallFinish: plan.overallFinish, rows: bill }, null, 1) + '\n');
+    writeFileSync(join(dir, 'supply-bill.json'), JSON.stringify({ at: Date.now(), snapshot, snapshotAt, scope: 'overall', overallFinish, rows: bill }, null, 1) + '\n');
     const covered = bill.filter(r => r.short === 0).length, unmapped = bill.filter(r => !r.ids.length).length;
     console.log(`Route supplies ${bill.length}: covered ${covered}, short ${bill.length - covered} (${unmapped} not matched to an item id)\n`);
     console.log('| Supply | Need | Owned | Short | Top holders |\n|---|---|---|---|---|');
