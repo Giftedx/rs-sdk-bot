@@ -3,6 +3,27 @@
   "minFreeGB": 4,
   "jobs": [
     {
+      "accounts": [
+        "YewFirst"
+      ],
+      "host": true,
+      "script": "scripts/quest-chain.ts",
+      "args": [
+        "runemysteries",
+        "murder",
+        "sheep",
+        "fishingcompo",
+        "druid",
+        "seaslug"
+      ],
+      "role": "quests",
+      "goal": "quests in one host (D): runemysteries, murder, sheep, fishingcompo, druid, seaslug",
+      "enabled": false,
+      "repeat": false,
+      "standing": true,
+      "maxRestarts": 0
+    },
+    {
       "account": "Haggis",
       "script": "",
       "role": "main",
@@ -40,21 +61,102 @@
       "repeat": false
     },
     {
-      "account": "Bigchopper",
-      "standing": true,
+      "account": "Mightyrod",
+      "script": "scripts/quest-chain.ts",
+      "args": [
+        "runemysteries,murder,blackknight,vampire,priest,junglepotion,sheep,fishingcompo,druid,arrav,seaslug,haunted,demon,dig,drunkmonk,elemental,death,grandtree"
+      ],
+      "role": "combat",
+      "goal": "quests: runemysteries, murder, blackknight, vampire, priest, junglepotion, sheep, fishingcompo, druid, arrav, seaslug, haunted, demon, dig, drunkmonk, elemental, death, grandtree",
       "enabled": false,
       "repeat": false,
-      "maxRestarts": 0,
-      "script": "scripts/chain.ts",
-      "role": "firemaking",
-      "goal": "Firemaking 15 then 99 and rank XP from 9616 banked oak logs at Catherby",
+      "standing": true,
+      "maxRestarts": 0
+    },
+    {
+      "account": "Hocuspokeus",
       "args": [
-        "scripts/walk-to.ts 2809 3441",
-        "scripts/firemaking-order.ts TARGET_LEVEL=15 LOG=normal MAX_LOGS=13 CAP=4000 TOOL_BUDGET=50",
-        "scripts/firemaking-order.ts TARGET_LEVEL=99 LOG=oak MAX_LOGS=9616 CAP=400000 TOOL_BUDGET=50"
+        "hetty"
       ],
+      "maxRestarts": 0,
+      "script": "scripts/quest-cook-job.ts",
+      "role": "helper",
+      "goal": "run-quest-items-hetty-first-live [task-ed6935b8-b246-4f22-b3c5-de6fad74778c]",
+      "enabled": false,
+      "repeat": false,
+      "coordinatorOwner": "coordinator",
+      "coordinatorTask": "run-quest-items-hetty-first-live",
       "env": {
-        "ROUNDS": "1"
+        "CAP": "6000",
+        "COORDINATOR_RUN_ID": "task-ed6935b8-b246-4f22-b3c5-de6fad74778c"
+      }
+    },
+    {
+      "account": "Moneyshot",
+      "args": [
+        "hetty"
+      ],
+      "maxRestarts": 0,
+      "script": "scripts/quest-cook-job.ts",
+      "role": "helper",
+      "goal": "run-hetty-moneyshot-current-admission [task-abebf80f-bed2-4eaa-99cf-1bb2c6098afe]",
+      "enabled": false,
+      "repeat": false,
+      "coordinatorOwner": "coordinator",
+      "coordinatorTask": "run-hetty-moneyshot-current-admission",
+      "env": {
+        "CAP": "6000",
+        "COORDINATOR_RUN_ID": "task-abebf80f-bed2-4eaa-99cf-1bb2c6098afe"
+      }
+    },
+    {
+      "account": "CoinCock",
+      "script": "",
+      "role": "thieving",
+      "goal": "planner opt-in: goldfarm knights at the first free spot (Thieving 99)",
+      "enabled": true,
+      "autopilot": "local"
+    },
+    {
+      "account": "PickpockDick",
+      "script": "scripts/goldfarm.ts",
+      "args": [],
+      "role": "supply",
+      "goal": "coins for route supplies: Ardougne knights",
+      "enabled": true,
+      "repeat": true,
+      "standing": true,
+      "maxRestarts": 0,
+      "env": {
+        "KNIGHT_SPOT": "2653,3302"
+      }
+    },
+    {
+      "account": "Pocketpython",
+      "script": "scripts/goldfarm.ts",
+      "args": [],
+      "role": "supply",
+      "goal": "coins for route supplies: Ardougne knights",
+      "enabled": true,
+      "repeat": true,
+      "standing": true,
+      "maxRestarts": 0,
+      "env": {
+        "KNIGHT_SPOT": "2582,3297"
+      }
+    },
+    {
+      "account": "Bigchopper",
+      "script": "scripts/goldfarm.ts",
+      "args": [],
+      "role": "supply",
+      "goal": "coins for route supplies: Ardougne knights",
+      "enabled": true,
+      "repeat": true,
+      "standing": true,
+      "maxRestarts": 0,
+      "env": {
+        "KNIGHT_SPOT": "2652,3318"
       }
     },
     {
@@ -66,7 +168,7 @@
       ],
       "role": "supply",
       "goal": "cooked lobsters (607 short): fish then cook at Catherby",
-      "enabled": false,
+      "enabled": true,
       "repeat": true,
       "standing": true,
       "maxRestarts": 0,
@@ -91,6 +193,65 @@
       "env": {
         "ROUNDS": "0",
         "RUN": "2"
+      }
+    },
+    {
+      "account": "Magicwanda",
+      "script": "",
+      "role": "thieving",
+      "goal": "planner opt-in: goldfarm knights at the first free spot (Thieving 99)",
+      "enabled": true,
+      "autopilot": "local"
+    },
+    {
+      "account": "OreElse",
+      "script": "scripts/chain.ts",
+      "args": [
+        "scripts/goldfarm.ts KNIGHT_SPOT=2671,3313"
+      ],
+      "role": "supply",
+      "goal": "Thieving 55, then coins from Ardougne knights",
+      "enabled": true,
+      "repeat": true,
+      "standing": true,
+      "maxRestarts": 0,
+      "env": {
+        "ROUNDS": "1",
+        "RUN": "2"
+      }
+    },
+    {
+      "account": "Shaftsinker",
+      "script": "scripts/chain.ts",
+      "args": [
+        "scripts/goldfarm.ts KNIGHT_SPOT=2653,3300"
+      ],
+      "role": "supply",
+      "goal": "Thieving 55, then coins from Ardougne knights",
+      "enabled": true,
+      "repeat": true,
+      "standing": true,
+      "maxRestarts": 0,
+      "env": {
+        "ROUNDS": "1",
+        "RUN": "2"
+      }
+    },
+    {
+      "account": "Ballspinner",
+      "script": "scripts/chain.ts",
+      "args": [
+        "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
+        "scripts/goldfarm.ts KNIGHT_SPOT=2652,3318"
+      ],
+      "role": "supply",
+      "goal": "Thieving 55, then coins from Ardougne knights",
+      "enabled": false,
+      "repeat": true,
+      "standing": true,
+      "maxRestarts": 0,
+      "env": {
+        "ROUNDS": "1"
       }
     },
     {
@@ -154,300 +315,25 @@
       ],
       "role": "supply",
       "goal": "rune arrows (826 short) from headless arrows and rune arrowtips",
-      "enabled": false,
-      "repeat": false,
-      "standing": true,
-      "maxRestarts": 0
-    },
-    {
-      "account": "mmtha0205",
-      "script": "scripts/shop-buyer.ts",
-      "args": [
-        "aubury",
-        "6000"
-      ],
-      "role": "supply",
-      "goal": "fire runes (2000 short) and earth runes (1193 short) from Aubury",
-      "enabled": true,
-      "repeat": true,
-      "standing": true,
-      "maxRestarts": 0,
-      "env": {
-        "ITEMS": "fire rune|earth rune",
-        "BANK_PACK": "1",
-        "MAX_SPEND": "200000",
-        "COIN_RESERVE": "10000",
-        "FLOAT": "210000",
-        "NO_BUY_TICKS": "50"
-      }
-    },
-    {
-      "accounts": [
-        "NabTheKnob"
-      ],
-      "host": true,
-      "script": "scripts/quest-chain.ts",
-      "args": [
-        "runemysteries",
-        "murder",
-        "sheep",
-        "cook",
-        "rj"
-      ],
-      "role": "quests",
-      "goal": "quests in one host: runemysteries, murder, sheep, cook, rj",
       "enabled": true,
       "repeat": false,
       "standing": true,
       "maxRestarts": 0
-    },
-    {
-      "accounts": [
-        "Swordinhand"
-      ],
-      "host": true,
-      "script": "scripts/quest-chain.ts",
-      "args": [
-        "runemysteries",
-        "murder",
-        "sheep",
-        "cook",
-        "rj"
-      ],
-      "role": "quests",
-      "goal": "quests in one host: runemysteries, murder, sheep, cook, rj",
-      "enabled": true,
-      "repeat": false,
-      "standing": true,
-      "maxRestarts": 0
-    },
-    {
-      "accounts": [
-        "Abracadickra"
-      ],
-      "host": true,
-      "script": "scripts/quest-chain.ts",
-      "args": [
-        "runemysteries",
-        "murder",
-        "sheep",
-        "cook",
-        "rj"
-      ],
-      "role": "quests",
-      "goal": "quests in one host: runemysteries, murder, sheep, cook, rj",
-      "enabled": true,
-      "repeat": false,
-      "standing": true,
-      "maxRestarts": 0
-    },
-    {
-      "accounts": [
-        "Woodenstaff"
-      ],
-      "host": true,
-      "script": "scripts/quest-chain.ts",
-      "args": [
-        "runemysteries",
-        "murder",
-        "sheep",
-        "cook",
-        "rj"
-      ],
-      "role": "quests",
-      "goal": "quests in one host: runemysteries, murder, sheep, cook, rj",
-      "enabled": true,
-      "repeat": false,
-      "standing": true,
-      "maxRestarts": 0
-    },
-    {
-      "account": "CoinCock",
-      "script": "scripts/goldfarm.ts",
-      "args": [],
-      "role": "supply",
-      "goal": "coins for route supplies: Ardougne knights",
-      "enabled": false,
-      "repeat": true,
-      "standing": true,
-      "maxRestarts": 0,
-      "env": {
-        "KNIGHT_SPOT": "2670,3306"
-      }
-    },
-    {
-      "account": "Magicwanda",
-      "script": "scripts/chain.ts",
-      "args": [
-        "scripts/goldfarm.ts KNIGHT_SPOT=2669,3298"
-      ],
-      "role": "supply",
-      "goal": "Thieving 55, then coins from Ardougne knights",
-      "enabled": false,
-      "repeat": true,
-      "standing": true,
-      "maxRestarts": 0,
-      "env": {
-        "ROUNDS": "1",
-        "RUN": "2"
-      }
-    },
-    {
-      "account": "OreElse",
-      "standing": true,
-      "enabled": false,
-      "repeat": false,
-      "maxRestarts": 0,
-      "script": "scripts/chain.ts",
-      "role": "smithing",
-      "goal": "Smithing from banked ore: 1630 bronze and 571 iron at Al Kharid",
-      "args": [
-        "scripts/walk-to.ts 3269 3167",
-        "scripts/smelt-bars.ts 3000 bronze MAX_MAKE=13",
-        "scripts/smelt-bars.ts 3000 iron"
-      ],
-      "env": {
-        "ROUNDS": "0"
-      }
-    },
-    {
-      "account": "PickpockDick",
-      "script": "scripts/goldfarm.ts",
-      "args": [],
-      "role": "supply",
-      "goal": "coins for route supplies: Ardougne knights",
-      "enabled": true,
-      "repeat": true,
-      "standing": true,
-      "maxRestarts": 0,
-      "env": {
-        "KNIGHT_SPOT": "2653,3302"
-      }
-    },
-    {
-      "account": "Pocketpython",
-      "script": "scripts/goldfarm.ts",
-      "args": [],
-      "role": "supply",
-      "goal": "coins for route supplies: Ardougne knights",
-      "enabled": false,
-      "repeat": true,
-      "standing": true,
-      "maxRestarts": 0,
-      "env": {
-        "KNIGHT_SPOT": "2582,3297"
-      }
-    },
-    {
-      "account": "Pocketrocket",
-      "script": "scripts/shop-buyer.ts",
-      "args": [
-        "catherby",
-        "6000"
-      ],
-      "role": "supply",
-      "goal": "rune, adamant, mithril and steel arrowtips from Hickton",
-      "enabled": false,
-      "repeat": true,
-      "standing": true,
-      "maxRestarts": 0,
-      "env": {
-        "ITEMS": "arrowtips",
-        "BANK_PACK": "1",
-        "MAX_SPEND": "200000",
-        "COIN_RESERVE": "10000",
-        "FLOAT": "210000",
-        "NO_BUY_TICKS": "50"
-      }
-    },
-    {
-      "account": "Shaftmaker",
-      "standing": true,
-      "enabled": false,
-      "repeat": false,
-      "maxRestarts": 0,
-      "script": "scripts/chain.ts",
-      "role": "firemaking",
-      "goal": "Firemaking 99 from 5072 banked normal logs at Catherby",
-      "args": [
-        "scripts/walk-to.ts 2809 3441",
-        "scripts/firemaking-order.ts TARGET_LEVEL=99 LOG=normal MAX_LOGS=1300 CAP=60000 TOOL_BUDGET=50"
-      ],
-      "env": {
-        "ROUNDS": "1"
-      }
     },
     {
       "account": "mmsmk1232",
-      "script": "scripts/goldfarm.ts",
-      "args": [],
-      "role": "supply",
-      "goal": "coins for route supplies: Ardougne knights",
-      "enabled": false,
-      "repeat": true,
-      "standing": true,
-      "maxRestarts": 0,
-      "env": {
-        "KNIGHT_SPOT": "2671,3313"
-      }
+      "script": "",
+      "role": "thieving",
+      "goal": "planner opt-in: goldfarm knights at the first free spot (Thieving 99)",
+      "enabled": true,
+      "autopilot": "local"
     },
     {
-      "account": "mmthv2350",
-      "script": "scripts/shop-buyer.ts",
-      "args": [
-        "betty",
-        "6000"
-      ],
-      "role": "supply",
-      "goal": "fire and earth runes from Betty",
-      "enabled": false,
-      "repeat": true,
-      "standing": true,
-      "maxRestarts": 0,
-      "env": {
-        "ITEMS": "fire rune|earth rune",
-        "BANK_PACK": "1",
-        "MAX_SPEND": "200000",
-        "COIN_RESERVE": "10000",
-        "FLOAT": "210000",
-        "NO_BUY_TICKS": "50"
-      }
-    },
-    {
-      "account": "Shaftsinker",
-      "standing": true,
-      "enabled": false,
-      "repeat": true,
-      "maxRestarts": 0,
-      "script": "scripts/rune-bank-craft.ts",
-      "args": [
-        "99"
-      ],
-      "role": "runecraft",
-      "goal": "Runecraft 99 from 20022 banked rune essence",
-      "env": {
-        "CAP": "60000"
-      }
-    },
-    {
-      "account": "Mightyrod",
-      "script": "scripts/quest-chain.ts",
-      "args": [
-        "runemysteries,murder,blackknight,vampire,priest,junglepotion,sheep,fishingcompo,druid,arrav,seaslug,haunted,demon,dig,drunkmonk,elemental,death,grandtree"
-      ],
-      "role": "combat",
-      "goal": "quests: runemysteries, murder, blackknight, vampire, priest, junglepotion, sheep, fishingcompo, druid, arrav, seaslug, haunted, demon, dig, drunkmonk, elemental, death, grandtree",
-      "enabled": false,
-      "repeat": false,
-      "standing": true,
-      "maxRestarts": 0
-    },
-    {
-      "account": "Ballspinner",
+      "account": "Woodpecker",
       "script": "scripts/chain.ts",
       "args": [
         "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
-        "scripts/goldfarm.ts KNIGHT_SPOT=2652,3318"
+        "scripts/goldfarm.ts KNIGHT_SPOT=2653,3300"
       ],
       "role": "supply",
       "goal": "Thieving 55, then coins from Ardougne knights",
@@ -458,67 +344,11 @@
       "env": {
         "ROUNDS": "1"
       }
-    },
-    {
-      "account": "Moneyshot",
-      "script": "scripts/goldfarm.ts",
-      "args": [],
-      "env": {
-        "KNIGHT_SPOT": "2652,3318",
-        "TICKS": "9000"
-      },
-      "role": "thieving",
-      "goal": "goldfarm knights at 2652,3318",
-      "enabled": true,
-      "repeat": true,
-      "standing": true,
-      "autopilot": "local",
-      "template": "goldfarm@2652,3318",
-      "resources": [
-        "knight:2652,3318"
-      ],
-      "note": "autopilot goldfarm@2652,3318: coins, 11.93 coins/tick (estimate)"
-    },
-    {
-      "account": "Billionaire",
-      "script": "scripts/goldfarm.ts",
-      "args": [],
-      "env": {
-        "KNIGHT_SPOT": "2582,3297",
-        "TICKS": "9000"
-      },
-      "role": "thieving",
-      "goal": "goldfarm knights at 2582,3297",
-      "enabled": true,
-      "repeat": true,
-      "standing": true,
-      "autopilot": "local",
-      "template": "goldfarm@2582,3297",
-      "resources": [
-        "knight:2582,3297"
-      ],
-      "note": "autopilot goldfarm@2582,3297: coins, 11.93 coins/tick (estimate)"
-    },
-    {
-      "account": "Swordinhand",
-      "script": "scripts/gather-combat.ts",
-      "role": "combat",
-      "goal": "Cow combat: Attack to 20",
-      "enabled": true,
-      "repeat": true,
-      "env": {
-        "TARGET": "cow",
-        "CAP": "1000",
-        "MAX_KILLS": "5",
-        "TRAIN_SKILL": "Attack",
-        "TARGET_LEVEL": "20"
-      },
-      "standing": true
     }
   ],
   "coordination": {
     "enabled": true,
-    "maxActive": 2,
+    "maxActive": 6,
     "plannerIntervalMs": 30000,
     "modelTimeoutMs": 600000,
     "bootstrap": [
@@ -550,6 +380,8 @@
     "maxLive": 17,
     "preferLive": true,
     "directive": "The owner grants full PC resources for maximum USEFUL qualified account progress. Fill available live slots across levelling, quest unlocks, combat, advanced resources and endgame supply; do not stop at two live jobs. Prefer sharks and other endgame-quality supplies over new trout/salmon surplus; use already-owned food rather than waste it. Finish current capability through its live consumer and automatically assign the next useful finite job. Reuse trained helpers; create/register additional task-specific accounts once a qualified useful role or measured capacity need exists. Main/fresh scored-launch clocks remain protected. Max17 is an initial measured cap, not an end goal: after fresh useful outputs, measured host/tick/supply headroom and a reserved practice slot, expand in measured batches under current owner authority. Headless services stay quiet and lean. Keep all full-game/endgame/maxed-quest-gear/hiscore goals in scope; make real game output the priority, not another catalogue or tests-only result.",
-    "autoExpand": true
+    "autoExpand": true,
+    "focusCapability": "firemaking-order",
+    "focusSince": 1793320508218
   }
 }
