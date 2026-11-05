@@ -312,7 +312,9 @@ test('a bow and arrows let the Ranged level count against an animal, and the pla
  expect(killStyle(2136,6,1)).toBeNull();            // bear, Attack 6, no kit
  expect(killStyle(2136,6,97)).toBe('ranged');       // bear, Ranged 97 with a kit
  expect(killStyle(2134,6,97)).toBe('melee');        // a giant rat dies to anyone
- expect(killStyle(2136,22,97)).toBe('melee');       // melee first when it suffices
+ expect(killStyle(2136,22,97)).toBe('ranged');      // the bow when Ranged is the higher level: melee is bare-handed
+ expect(killStyle(2136,68,97)).toBe('ranged');      // UnderMyKilt live: Attack 68, Ranged 97, a bow in the bank
+ expect(killStyle(2136,70,40)).toBe('melee');       // melee when Attack is the higher level and beats the animal
  // A series of goblin kills for their mail takes the bow when Ranged beats Attack, and melee without a kit.
  expect(killStyle(288,6,97)).toBe('ranged');expect(killStyle(288,6,1)).toBe('melee');expect(killStyle(288,40,30)).toBe('melee');
  const {arrowsFor,killAttempts:attempts}=await import('../packages/core/src/gather');

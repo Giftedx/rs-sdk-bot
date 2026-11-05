@@ -60,15 +60,18 @@ export const KILL_SOURCES:Record<number,{npcs:number[];name:string;combat:number
 // Kills allowed for `count` drops: half again the expected number, plus three misses.
 export const killAttempts=(id:number,count:number)=>Math.ceil(count/(KILL_SOURCES[id]?.chance??1)*1.5)+3;
 export const EASY_KILL=6;
-// The style that beats the animal: melee below the Attack level, else a bow below the Ranged level (ranged is 1 without a kit).
-// A drop by chance means a series of kills (3 goblin mails: 77 goblins expected), so the stronger style: at Attack 6 with
-// bare hands, 15 goblins took 60 of an 81-hitpoint account's hitpoints and the fight was abandoned.
+// The style that beats the animal. An easy animal that drops every kill (a chicken, a rat) dies to bare hands and costs
+// no arrows. Otherwise the stronger style: the bow when the Ranged level is the higher and beats the animal (ranged is 1
+// without a kit), else melee below the Attack level, else the bow below the Ranged level. The sweep's melee is
+// bare-handed, so an Attack level above a bear's combat level does not beat the bear when Ranged is higher still; a
+// drop by chance (goblin mail) is a series of kills and takes the stronger style even against an easy animal.
 export function killStyle(id:number,attack:number,ranged=1):'melee'|'ranged'|null{
  const src=KILL_SOURCES[id];
  if(!src)return null;
  const c=src.combat;
- if(src.chance<1&&ranged>attack&&c<ranged)return 'ranged';
- if(c<=EASY_KILL||c<attack)return 'melee';
+ if(c<=EASY_KILL&&src.chance===1)return 'melee';
+ if(ranged>attack&&c<ranged)return 'ranged';
+ if(c<attack)return 'melee';
  return c<ranged?'ranged':null;
 }
 // Arrows for the kills: ARROWS_PER_KILL for each drop that comes every kill (a bear's 27 hitpoints), two for each attempt
