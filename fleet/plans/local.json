@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793909863959,
+ "at": 1793910472739,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -144,22 +144,6 @@
    "repeat": false,
    "goal": "quests in one host: runemysteries, murder, sheep, cook, rj",
    "role": "quests"
-  },
-  {
-   "account": "Magicwanda",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/goldfarm.ts KNIGHT_SPOT=2669,3298"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "RUN": "2"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "Thieving 55, then coins from Ardougne knights",
-   "role": "supply"
   },
   {
    "account": "PickpockDick",
@@ -496,6 +480,27 @@
    "repeat": false,
    "goal": "quests: runemysteries, murder, blackknight, vampire, priest, junglepotion, sheep, fishingcompo, druid, arrav, seaslug, haunted, demon, dig, drunkmonk, elemental, death, grandtree",
    "role": "combat"
+  },
+  {
+   "account": "Magicwanda",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ORDER_KEY": "magicwanda-main-mithril280",
+    "ITEM_ID": "2359",
+    "QUANTITY": "280",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "1000",
+    "CASH_RESERVE": "350000",
+    "ORDER_MS": "600000",
+    "FILL_WAIT_TICKS": "50",
+    "CAP": "2400",
+    "COORDINATOR_RUN_ID": "task-2973321d-a062-4e45-bdb5-5c9b021a9a89"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-ge-magicwanda-main-mithril280 [task-2973321d-a062-4e45-bdb5-5c9b021a9a89]",
+   "role": "supply"
   }
  ]
 }
