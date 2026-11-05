@@ -260,6 +260,15 @@ test('a far walk from the Ardougne side to anywhere east of x 2950 crosses by th
  expect(eastOfArdougne(ardougne,{x:2684,z:3318,level:0})).toBe(false);  // Ardougne itself
  expect(eastOfArdougne({x:3092,z:3243,level:0},{x:3222,z:3218,level:0})).toBe(false); // Draynor to Lumbridge
  expect(eastOfArdougne({x:2655,z:3283,level:1},{x:3222,z:3218,level:0})).toBe(false); // from upstairs: climb down first
+test('the edible part of a preset\'s needs is reserved for the eaters',async()=>{
+ const {reservedEdible}=await import('./quest-sweep');
+ // Pirate's Treasure: 10 bananas (edible) and a white apron; Family Crest: 5 cooked trout.
+ expect(reservedEdible(new Map([[1963,10],[1005,1]]))).toEqual({1963:10});
+ expect(reservedEdible(new Map([[333,5],[995,100]]))).toEqual({333:5});
+ expect(reservedEdible(new Map())).toEqual({});
+ // Black Knight's Fortress carries a cabbage to eat nowhere but the hole: the preset's own needs reserve it.
+ const {PRESETS}=await import('../packages/practice/src/presets');
+ expect(reservedEdible(needs(PRESETS.quest_blackknight!))).toEqual({1965:1});
 });
 
 test('a meat no shop sells is a kill from its animal; an item with no source stays missing',async()=>{

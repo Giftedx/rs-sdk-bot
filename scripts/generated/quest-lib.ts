@@ -4,14 +4,16 @@
 import { openBot, finish } from '../../packages/core/src/bot';
 import type { Session } from '../../packages/core/src/inprocess';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
-import { startQuestSustain, selectQuestFood } from '../quest-sustain';
+import { startQuestSustain, selectQuestFood, questFoodDefinitions } from '../quest-sustain';
 import { walkQuestCorridor } from '../quest-walk';
 import { sessionWalker, walkPath, type PathPoint } from '../../packages/core/src/walk';
 import { componentId } from '../../packages/core/src/logout';
 import { ClientProt } from '../../vendor/rs-sdk/server/webclient/src/io/ClientProt';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { castable } from '../teleport-runes';
+import { needs, reservedEdible } from '../quest-sweep';
+import { PRESETS } from '../../packages/practice/src/presets';
 // Root interface ids of every interface interface_chat/scripts/chat.rs2 sets text on, from content/pack/interface.pack.
 const CHAT_NAMES = /^(chat[1-4]|npcchat[1-4]|message[1-5]|multi[2-5]|multiobj[2-4]|multiobj3_close|objbox[1-4]|doubleobjbox|inter_213|skill_multi[2-5])$/;
 const CHAT_ROOTS = new Set(readFileSync(join(import.meta.dir, '..', '..', 'vendor', 'rs-sdk', 'server', 'content', 'pack', 'interface.pack'), 'utf8')
@@ -33,7 +35,10 @@ export const SKILLS = ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged', '
 export async function openQuest(opts: { session?: Session; stop?:()=>boolean; cap?: number; eatAt?: number; food?: number[]; reservedFood?: Readonly<Record<number,number>>|(()=>Readonly<Record<number,number>>); trace?: boolean; lumbridgeOk?: boolean; name?: string; others?: () => Session[] } = {}) {
     const CAP = opts.cap ?? 3000;
     const EAT_AT = opts.eatAt ?? 40;
-    const FOOD = opts.food ?? [379];
+    // Without a list of its own a quest eats anything that heals: a live account carries swordfish, cake slices or
+    // trout, not the lobsters a preset does. quest-sweep marks the preset's edible ingredients on the session
+    // (questReserved), and a script's reservedFood adds its own; neither is eaten.
+    const FOOD = opts.food ?? [...questFoodDefinitions().keys()];
     const TRACE = opts.trace ?? process.env.Q_TRACE === '1';
     // quest-sweep.ts stages items and travel in its own login, then hands that session over here.
     const s: Session = opts.session ?? (globalThis as { QUEST_SESSION?: Session }).QUEST_SESSION ?? await openBot(opts.name ?? process.argv[2]!);
@@ -118,7 +123,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         const reply=await s.direct(action);
         if(!reply||typeof reply!=='object'||!('success' in reply)||typeof reply.success!=='boolean')throw Error('quest consume reply unknown');
         return{success:reply.success,message:'message' in reply?String(reply.message):undefined};
-    }},{food:FOOD,eatAt:EAT_AT,reserved:opts.reservedFood,onConsumed:()=>{stats.eats++;}});
+    }},{food:FOOD,eatAt:EAT_AT,reserved:()=>reservedNow(),onConsumed:()=>{stats.eats++;}});
     let lastHp = hp();
     const off = s.onTick(() => {
         const p = pos();
@@ -162,7 +167,11 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     // an 81-hitpoint, Attack 6 account went from 81 to 0 over 300 ticks at Delrith with no food and no such rule.
     const maxHp = (): number => s.sdk.getSkill('Hitpoints')?.baseLevel ?? 10;
     const RETREAT_AT = Math.max(5, Math.ceil(maxHp() * 0.25)), RETREAT_TILES = 30, COMBAT_LOGOUT_TICKS = 17;
-    const reservedNow = (): Readonly<Record<number, number>> => (typeof opts.reservedFood === 'function' ? opts.reservedFood() : opts.reservedFood) ?? {};
+    // A quest started on its own (bun scripts/generated/quest-<name>.ts <account>) reserves its preset's edible
+    // ingredients itself (Black Knight's Fortress' cabbage): quest-sweep's handover marks the same on the session.
+    const scriptQuest = basename(process.argv[1] ?? '').match(/^quest-([a-z0-9]+)\.ts$/)?.[1];
+    const presetReserved: Readonly<Record<number, number>> = scriptQuest && PRESETS[`quest_${scriptQuest}`] ? reservedEdible(needs(PRESETS[`quest_${scriptQuest}`]!)) : {};
+    const reservedNow = (): Readonly<Record<number, number>> => ({ ...presetReserved, ...((s as { questReserved?: Record<number, number> }).questReserved ?? {}), ...((typeof opts.reservedFood === 'function' ? opts.reservedFood() : opts.reservedFood) ?? {}) });
     // Food is what the eater would eat: the quest's food list and its later forms, beyond the reserved counts. A shrimp in
     // the pack of a lobster-only quest is not food and does not hold the retreat back.
     const foodLeft = (): boolean => !!selectQuestFood(st(), { food: FOOD, eatAt: Number.MAX_SAFE_INTEGER, reserved: reservedNow() });
