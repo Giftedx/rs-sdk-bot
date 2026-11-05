@@ -15,3 +15,7 @@ Source -> local consumer -> reuse -> check: the coordinator's sequence at worker
 Autopilot keeps the standing assignment for an account shadowed by the coordinator, including a parked coordinator job. That account is ineligible for reassignment, coin funding and trainer polling while the overlay holds it.
 
 Source -> local consumer -> reuse -> check: the coordinator job overlay and Luna's stable job ownership pattern in the project use map -> Autopilot -> preserve standing job bytes and exclude held accounts before planning or funding -> a release fixture and an isolated CLI pass preserve the held job and its assignment history while placing a free account. The CLI proof is in `.practice/autopilot-coordinator-ownership/cli-proof.json`. A live handoff needs separate evidence.
+
+A bounded worker failure receipt keeps the supervisor's terminal reason and the worker's result if the current status matches the same account, server, source and run before that end. If the status is missing or mismatched, the receipt keeps only the supervisor reason.
+
+Source -> local consumer -> reuse -> check: the coordinator's live acceptance identity check and Luna's settled job evidence pattern -> the failure receipt and planner -> reuse the identity check for a bounded diagnostic -> a regression covers the matching failure, another run, an older source and a later observation. The diagnostic does not count as acceptance or authorize a retry.
