@@ -165,6 +165,9 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
    const walked=await walk(at);
    console.log(`QUEST_SWEEP_GATHER_WALK ${JSON.stringify({item:g.id,how:g.how,to:at,ok:walked.ok,detail:walked.detail})}`);
    if(!walked.ok){unreachable.push(at);continue;}
+   // A kill series at one source is summed when the source is left: kills, drops, and the ticks it stood with no free
+   // animal in sight, so a run that ends short says whether the animals or the budget ran out.
+   const tally={kills:0,drops:0,idle:0,start:s.tick()};
    for(let tries=0;tries<(g.how==='kill'?killAttempts(g.id,g.count):g.count+3)&&held(g.id)<target;tries++){
     const before=held(g.id);
     if(g.how==='combine'){
@@ -205,7 +208,7 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
      // own wait ends only on a drop that was not there when it began.
      if(lying()[0]){await s.bot.pickupItem(lying()[0]);await waitUntil(s,()=>held(g.id)>before,{timeoutTicks:15});continue;}
      const npc=(st()?.nearbyNpcs??[]).filter((n:any)=>ids.includes(n.id)&&!n.inCombat&&n.distance<=15).sort((a:any,b:any)=>a.distance-b.distance)[0];
-     if(!npc){if(!await waitUntil(s,()=>(st()?.nearbyNpcs??[]).some((n:any)=>ids.includes(n.id)&&!n.inCombat&&n.distance<=15),{timeoutTicks:30}))break;continue;}
+     if(!npc){const t0=s.tick(),found=await waitUntil(s,()=>(st()?.nearbyNpcs??[]).some((n:any)=>ids.includes(n.id)&&!n.inCombat&&n.distance<=15),{timeoutTicks:30});tally.idle+=s.tick()-t0;if(!found)break;continue;}
      // A ranged kill wields the bow and the arrows from the pack first; without them in the pack the fight is not taken.
      if(g.kit==='ranged'){
       const worn=()=>s.sdk.getEquipment().map((i:any)=>i.id);
@@ -244,7 +247,9 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
       return `kill of ${npc.name} abandoned at ${hp()?.level} of ${hp()?.baseLevel} hitpoints`;
      }
      // The drop lands as the animal dies; a kill without one (123 of 128 goblins) moves on after three ticks.
+     if(gone())tally.kills++;
      if(!await waitUntil(s,()=>!!drop(),{timeoutTicks:3}))continue;
+     tally.drops++;
      await s.bot.pickupItem(drop());
      console.log(`QUEST_SWEEP_KILL ${JSON.stringify({item:g.id,npc:npc.name,at:{x:npc.x,z:npc.z},held:held(g.id)})}`);
     }else if(g.how==='milk'){
@@ -266,6 +271,7 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
     }
     await waitUntil(s,()=>held(g.id)>before,{timeoutTicks:15});
    }
+   if(g.how==='kill')console.log(`QUEST_SWEEP_KILLS ${JSON.stringify({item:g.id,at,kills:tally.kills,drops:tally.drops,idle:tally.idle,ticks:s.tick()-tally.start,held:held(g.id),target})}`);
   }
   // The route search plans from the ground floor: come down from an upstairs source.
   for(let i=0;i<3&&here().level>0;i++){
