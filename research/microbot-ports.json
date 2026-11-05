@@ -2322,6 +2322,22 @@
                 "Legends Quest"
               ],
               "scope": "Upstream staged CLI workers and owned API workers have distinct entry contracts. Captured Native receipts bind their recorded source and starting conditions. Full owned Legends acceptance remains open. Live, repeat and lower-level conditions remain unqualified.",
+              "legendsComponents": {
+                "strengthReturn": {
+                  "evidence": ".practice/microbot-ports/legends-strength-native-1793877363687/saved-corridor-audit.json",
+                  "sourceCheck": ".practice/microbot-ports/legends-strength-native-1793877363687/source-check.json",
+                  "sourceSha256": "0f55e55c70f326375742d6d733e93a39c6bbb4b64c189acb60c84ff709cf7df9",
+                  "fixtureWorkerSha256": "7cdc9ac401f116a0ea5f17ecd8e59f9aa3c76a5600bb3c7e52fbfec1241c8b8c",
+                  "scope": "Seeded south approach with a carried pickaxe. The worker defeats its Death wing attacker, crosses the Strength gate, mines three swamp rocks, exits the bookcase at (2795, 9338), and logs out. The captured save matches combat XP, Mining XP, stock, gear and declared controls."
+                },
+                "earthOrbGate": {
+                  "evidence": ".practice/microbot-ports/legends-orb-gate-native-1793877922772/result.json",
+                  "sourceCheck": ".practice/microbot-ports/legends-orb-gate-native-1793877922772/source-check.json",
+                  "sourceSha256": "0f55e55c70f326375742d6d733e93a39c6bbb4b64c189acb60c84ff709cf7df9",
+                  "fixtureWorkerSha256": "4ad640cf6e888ad3a778b483ee885fa7e1e28aaec6028d23430e7db40d58da6a",
+                  "scope": "Seeded gate approach. The worker consumes 30 earth runes, three cosmic runes and one orb, gains 17,500 raw Magic XP at 25x, lands at (2763, 9320), and logs out with gear and declared controls conserved."
+                }
+              },
               "heroes": {
                 "evidence": ".practice/microbot-ports/heroes-quest-native-1793857302531/result.json",
                 "sourceCheck": ".practice/microbot-ports/heroes-quest-native-1793857302531/source-check.json",
