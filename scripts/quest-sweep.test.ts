@@ -155,6 +155,16 @@ test('garlic comes from the Draynor cupboard when the only seller is far away',(
  expect(gatherPlan([{id:1550,count:1}],at,()=>[],()=>600).gathers).toEqual([{id:1550,count:1,how:'loc'}]);
 });
 
+test('the white apron behind the apron-locked door is no spawn source: the plan buys it',async()=>{
+ const {gatherPlan,openSpawns}=await import('../packages/core/src/gather');
+ const {spawnsByDistance}=await import('../packages/core/src/spawn-index');
+ const draynor={x:3092,z:3243,level:0};
+ expect(spawnsByDistance(1005,draynor)[0]).toEqual({x:3010,z:3208,level:0});
+ expect(openSpawns(1005,spawnsByDistance(1005,draynor))).toEqual([]);
+ const r=gatherPlan([{id:1005,count:1}],draynor,spawnsByDistance,()=>200);
+ expect(r.gathers).toEqual([]);expect(r.still).toEqual([{id:1005,count:1}]);
+});
+
 test("Pirate's Treasure needs no bananas from the sweep: the script picks them on Karamja",()=>{
  const hunt=needs(presetFor('hunt')),hazeel=needs(presetFor('hazeelcult'));
  expect(hunt.has(1963)).toBe(false);expect(hunt.get(1005)).toBe(1);expect(hunt.get(952)).toBe(1);

@@ -19,6 +19,10 @@ const count = (rows: readonly Item[], id: number) => rows.filter(r => r.id === i
 export const MILK=1927,BUCKET=1925,COW=81;
 // Garlic: the cupboard upstairs in Morgan's house, Draynor (general_use/scripts/cupboards.rs2:34, loc 2612 shut,
 // 2613 open: Open, then Search). The only shops are the Greengrocers on Miscellania and in Rellekka.
+// An item spawn behind a gate that needs the item itself is no source: the white apron lies in Wydin's back room, whose
+// door opens to a worn apron only (quest_hunt/scripts/food_store.rs2:9).
+export const GATED_SPAWNS:Record<number,Tile[]>={1005:[{x:3010,z:3208,level:0}]};
+export const openSpawns=(id:number,tiles:readonly Tile[]):Tile[]=>tiles.filter(t=>!(GATED_SPAWNS[id]??[]).some(g=>g.x===t.x&&g.z===t.z&&g.level===t.level));
 export const LOC_SOURCES:Record<number,{tile:Tile;open:RegExp;take:RegExp}>={1550:{tile:{x:3096,z:3268,level:1},open:/^open$/i,take:/^search$/i}};
 export type Gather={id:number;count:number;how:'spawn'|'milk'|'loc'|'kill'|'pick'|'npc'|'combine';kit?:'ranged'|'magic'};
 // A plant picked for its item: onions are loc 3366 with the Pick option (general_use/scripts/pickables.rs2:31-39; the
@@ -136,7 +140,7 @@ export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:
  const gathers:Gather[]=[],still:Item[]=[],tools:Item[]=[];let coins=0;
  const d=(t:Tile)=>Math.max(Math.abs(t.x-at.x),Math.abs(t.z-at.z));
  const place=(m:Item,depth:number):void=>{
-  const sold=seller(m.id),spot=spawns(m.id,at)[0],pick=PICK_SOURCES[m.id]?picks(PICK_SOURCES[m.id]!.loc,at)[0]:undefined;
+  const sold=seller(m.id),spot=openSpawns(m.id,spawns(m.id,at))[0],pick=PICK_SOURCES[m.id]?picks(PICK_SOURCES[m.id]!.loc,at)[0]:undefined;
   if(m.id===MILK&&sold===Infinity){gathers.push({...m,how:'milk'});tools.push({id:BUCKET,count:m.count});}
   else if(spot&&d(spot)<sold)gathers.push({...m,how:'spawn'});
   else if(LOC_SOURCES[m.id]&&d(LOC_SOURCES[m.id]!.tile)<sold)gathers.push({...m,how:'loc'});
@@ -171,7 +175,7 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
  // Each gather's target is fixed before any runs: a bead taken during another colour's series counts toward its own.
  const targets=new Map(gathers.map(g=>[g.id,held(g.id)+g.count]));
  for(const g of gathers){
-  const target=targets.get(g.id)!,sources=(g.how==='milk'?nearest(cows(),here()):g.how==='loc'?[LOC_SOURCES[g.id]!.tile]:g.how==='kill'?nearest((KILL_SOURCES[g.id]?.chance??1)<1?denseSpawns(killSpawns(g.id)):killSpawns(g.id),here()):g.how==='pick'?locsByDistance(PICK_SOURCES[g.id]!.loc,here()):g.how==='npc'?[NPC_SOURCES[g.id]!.tile]:g.how==='combine'?[here()]:spawnsByDistance(g.id,here())).slice(0,6);
+  const target=targets.get(g.id)!,sources=(g.how==='milk'?nearest(cows(),here()):g.how==='loc'?[LOC_SOURCES[g.id]!.tile]:g.how==='kill'?nearest((KILL_SOURCES[g.id]?.chance??1)<1?denseSpawns(killSpawns(g.id)):killSpawns(g.id),here()):g.how==='pick'?locsByDistance(PICK_SOURCES[g.id]!.loc,here()):g.how==='npc'?[NPC_SOURCES[g.id]!.tile]:g.how==='combine'?[here()]:openSpawns(g.id,spawnsByDistance(g.id,here()))).slice(0,6);
   // Spawns lie in clusters (three egg spawns within 4 tiles beyond White Wolf Mountain): one with no route rules out
   // the rest of its cluster, so the walk moves on to the next place rather than searching the same ground again.
   const unreachable:Tile[]=[];
