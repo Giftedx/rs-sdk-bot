@@ -35,10 +35,12 @@ export function snapshot(statuses: readonly any[], side = mySide(), owners = loa
     return { side, at: now, accounts: [...by.values()] };
 }
 // A session whose plan has no jobs has nothing to publish: it keeps this side's claim and plan while the published claim
-// is fresh and holds resources, since another session of the same side (a fresh cloud container beside the one that runs
-// the swarm) wrote them from the jobs it runs. A claim older than CLAIM_MAX_AGE_MS has aged out anyway.
-export function keepPublished(jobs: readonly any[], published: { at?: number; resources?: unknown[] } | null | undefined, now = Date.now()): boolean {
-    return jobs.length === 0 && !!published && Array.isArray(published.resources) && published.resources.length > 0 && Number.isFinite(published.at) && now - published.at! < CLAIM_MAX_AGE_MS;
+// is fresh and holds resources, or the published plan is fresh and holds jobs (a Ranged or quest job holds no exclusive
+// resource, so its claim is empty while its plan is not), since another session of the same side (a fresh cloud container
+// beside the one that runs the swarm) wrote them from the jobs it runs. Older than CLAIM_MAX_AGE_MS, both have aged out anyway.
+export function keepPublished(jobs: readonly any[], claim: { at?: number; resources?: unknown[] } | null | undefined, now = Date.now(), plan?: { at?: number; jobs?: unknown[] } | null): boolean {
+    const fresh = (p: { at?: number } | null | undefined, held: unknown) => !!p && Number.isFinite(p.at) && now - p.at! < CLAIM_MAX_AGE_MS && Array.isArray(held) && held.length > 0;
+    return jobs.length === 0 && (fresh(claim, claim?.resources) || fresh(plan, plan?.jobs));
 }
 // The jobs of this side's own accounts, without the main account and without job notes. The swarm plan file stays
 // uncommitted while it runs; this copy is what other sides read.
@@ -83,16 +85,15 @@ export function runSync(push = true): string {
     const planFile = resolve(process.env.SWARM_PLAN ?? join(root, 'swarm.json'));
     const jobs = (() => { try { const p = JSON.parse(readFileSync(planFile, 'utf8')); return Array.isArray(p.jobs) ? p.jobs as any[] : null; } catch { return null; } })();
     let claim: ReturnType<typeof claimFor> | null = null;
-    const claimFile = join(dir, 'fleet', 'claims', `${snap.side}.json`);
-    const publishedClaim = (() => { try { return JSON.parse(readFileSync(claimFile, 'utf8')); } catch { return null; } })();
-    if (jobs && !keepPublished(mergeJobs(jobs, readCoordinatorJobs(root).jobs), publishedClaim)) {
+    const claimFile = join(dir, 'fleet', 'claims', `${snap.side}.json`), out = join(dir, 'fleet', 'plans', `${snap.side}.json`);
+    const published = (f: string) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return null; } };
+    if (jobs && !keepPublished(mergeJobs(jobs, readCoordinatorJobs(root).jobs), published(claimFile), Date.now(), published(out))) {
         const merged = mergeJobs(jobs, readCoordinatorJobs(root).jobs);
         claim = claimFor(merged, snap.side, a => owners.get(a.toLowerCase())?.side ?? 'local');
         mkdirSync(join(dir, 'fleet', 'claims'), { recursive: true }); writeFileSync(claimFile, JSON.stringify(claim) + '\n');
         const view = planView(merged, snap.side, owners);
         mkdirSync(join(dir, 'fleet', 'plans'), { recursive: true });
-        const out = join(dir, 'fleet', 'plans', `${snap.side}.json`);
-        const was = (() => { try { return JSON.stringify(JSON.parse(readFileSync(out, 'utf8')).jobs); } catch { return ''; } })();
+        const was = JSON.stringify(published(out)?.jobs ?? '');
         if (was !== JSON.stringify(view.jobs)) writeFileSync(out, JSON.stringify(view, null, 1) + '\n');
     }
     git(dir, 'add', '--', 'fleet');
@@ -100,7 +101,7 @@ export function runSync(push = true): string {
     if (staged) { const c = git(dir, 'commit', '-m', `fleet: ${snap.side} sync (${snap.accounts.length} accounts)`); if (!c.ok) throw Error(`commit: ${c.out}`); }
     const ahead = !hasRemote || git(dir, 'rev-list', '--count', `origin/${BRANCH}..HEAD`).out !== '0';
     if (push && ahead) { const p = git(dir, 'push', '-u', 'origin', BRANCH); if (!p.ok) throw Error(`push: ${p.out}`); }
-    return `side=${snap.side} accounts=${snap.accounts.length} claims=${claim ? claim.resources.length : 'unreadable plan'} committed=${staged} pushed=${push && ahead}`;
+    return `side=${snap.side} accounts=${snap.accounts.length} claims=${claim ? claim.resources.length : jobs ? 'kept: published by the session running this side' : 'unreadable plan'} committed=${staged} pushed=${push && ahead}`;
 }
 
 if (import.meta.main) {

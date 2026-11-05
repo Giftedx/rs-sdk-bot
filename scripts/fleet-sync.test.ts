@@ -39,11 +39,19 @@ test('the snapshot keeps a published row for an account with no local status or 
     expect(next[1]!.bank).toEqual([{ id: 995, name: 'Coins', count: 7 }]);
 });
 
-test('an empty plan keeps a fresh published claim that holds resources; a planned job, a stale or empty claim does not', () => {
+test('an empty plan keeps a fresh published claim that holds resources or a fresh published plan that holds jobs; a planned job, or a stale or empty one, does not', () => {
     const fresh = { side: 'claude-cloud', at: 1_000_000, resources: ['knight:2669,3298'] };
     expect(keepPublished([], fresh, 1_000_000 + 60_000)).toBe(true);
     expect(keepPublished([{ account: 'Quickhandjob', script: 'scripts/goldfarm.ts', enabled: true }], fresh, 1_000_000 + 60_000)).toBe(false);
     expect(keepPublished([], { ...fresh, resources: [] }, 1_000_000 + 60_000)).toBe(false);
     expect(keepPublished([], fresh, 1_000_000 + CLAIM_MAX_AGE_MS)).toBe(false);
     expect(keepPublished([], null)).toBe(false);
+    // A Ranged or quest job holds no exclusive resource: its claim is empty, so the fresh published plan that holds it is
+    // what keeps an empty-plan session from erasing it; a stale or empty plan does not.
+    const plan = { side: 'claude-cloud', at: 1_000_000, jobs: [{ account: 'TrouserSnake', script: 'scripts/ranged-train.ts', enabled: true }] };
+    expect(keepPublished([], { ...fresh, resources: [] }, 1_000_000 + 60_000, plan)).toBe(true);
+    expect(keepPublished([], null, 1_000_000 + 60_000, plan)).toBe(true);
+    expect(keepPublished([], null, 1_000_000 + CLAIM_MAX_AGE_MS, plan)).toBe(false);
+    expect(keepPublished([], null, 1_000_000 + 60_000, { ...plan, jobs: [] })).toBe(false);
+    expect(keepPublished([{ account: 'Quickhandjob', script: 'scripts/goldfarm.ts', enabled: true }], null, 1_000_000 + 60_000, plan)).toBe(false);
 });
