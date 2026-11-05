@@ -412,7 +412,7 @@ function pick(n){if(!n)return;if(window.atlasFollowOther){window.atlasFollowOthe
 // Any online player, followed by the 3D camera (a player lookup's Follow button); picking one of our accounts returns.
 window.atlasFollow3d=name=>{const f=$('#rsw');if(mode!=='3d'||VIEWER.state!=='ready'||!f.contentWindow||!/^[A-Za-z0-9_ -]{1,12}$/.test(name))return false;window.atlasFreeCamera=false;window.atlasDestination=null;window.atlasFollowOther=name;f.contentWindow.postMessage({follow:name},VIEWER.origin);render();return true;};
 function choose(v){view=v;detailPage=0;render();}
-function render(){if(!S)return;S.bots??=[];if(!window.atlasFreeCamera&&!picked&&(!sel||!S.bots.some(b=>b.name===sel)))sel=liveBots().find(b=>b.operation==='observed')?.name||null;
+function render(){if(!S)return;S.bots??=[];if(!window.atlasFreeCamera&&!picked&&!S.bots.some(b=>b.name===sel&&b.operation==='observed'))sel=liveBots().find(b=>b.operation==='observed')?.name||(S.bots.some(b=>b.name===sel)?sel:null);
  if(TOUR&&S.now-TOUR_AT>60000){TOUR_AT=S.now;const a=liveBots().filter(running);if(a.length)sel=a[(a.findIndex(b=>b.name===sel)+1)%a.length].name;}
  $('#pause').textContent=S.objectives?.paused?'Ⅱ GAME WORK PAUSED':S.objectives?.available?'PLAN ACTIVE':'PLAN UNKNOWN';
  capacityView();goalCards();roster();inspect();boardGrid();syncWorld();loadMap();drawMap();
@@ -434,7 +434,35 @@ $('#fleet-prev').onclick=()=>{fleetPage=Math.max(0,fleetPage-1);roster()};$('#fl
 $('#detail-prev').onclick=()=>{detailPage=Math.max(0,detailPage-1);inspect()};$('#detail-next').onclick=()=>{detailPage++;inspect()};
 $('#board-mode').onclick=()=>{boardMode=boardMode==='model'?'specialists':'model';boardGrid()};$('#board-grid').onclick=e=>{const b=e.target.closest('[data-board]');if(b){chosenBoard=b.dataset.board;choose('board')}};
 window.addEventListener('resize',()=>{if(S)render()});window.onerror=m=>{$('#connection').textContent='DISPLAY ERROR';$('#connection').className='bad';$('#notice').textContent=String(m)};
-function receive(j){S=j;lastReceived=Date.now();connected=true;render()}
+// Live presence: the published state can be 10 minutes old, and the 3D viewer relays the world feed's roster every 10
+// ticks. While that roster is fresh it decides who is online, where they stand and how many players the world holds.
+const LIVE_ROSTER_MS=30000;let LIVE_ROSTER=null,followedLive=null,SNAPSHOT=null;
+function withLiveRoster(j,live,now){
+  if(!j||!live||now-live.at>LIVE_ROSTER_MS)return j;
+  const seen=new Map(live.players.map(p=>[String(p[0]).toLowerCase(),p]));
+  const bots=(j.bots||[]).map(b=>{
+    if(b.practice)return b;
+    const p=seen.get(String(b.name).toLowerCase());
+    if(!p)return b.inWorld||b.operation==='observed'?{...b,inWorld:false,fresh:false,live:null,liveAt:now,operation:b.operation==='observed'?'offline':b.operation}:{...b,liveAt:now};
+    const pos={x:p[1],z:p[2],level:p[3]};
+    return {...b,inWorld:true,pos,live:{name:b.name,...pos,combat:p[4],seen:now},lastSeen:now,liveAt:now,operation:['offline','unobserved'].includes(b.operation)?'observed':b.operation};
+  });
+  return {...j,bots,roster:live.players,worldPlayers:live.players.length,world:{...j.world,players:live.players.length,connected:true}};
+}
+window.atlasLiveRoster=()=>!!LIVE_ROSTER&&Date.now()-LIVE_ROSTER.at<=LIVE_ROSTER_MS;
+// A follow asked for while the account was offline ends in the viewer, so it is asked again once the feed has the account.
+function liveRosterIn(r){
+  if(!Array.isArray(r?.players))return;
+  LIVE_ROSTER={at:Date.now(),players:r.players};
+  // A static page reads its state once, so nothing else would apply the roster.
+  if(STATIC&&SNAPSHOT){S=withLiveRoster(SNAPSHOT,LIVE_ROSTER,Date.now());render();}
+  const here=!!sel&&r.players.some(p=>String(p[0]).toLowerCase()===sel.toLowerCase());
+  if(!here)followedLive=null;
+  else if(followedLive!==sel&&mode==='3d'&&VIEWER.state==='ready'&&!window.atlasFreeCamera&&!window.atlasFollowOther){followedLive=sel;rswFor=sel;$('#rsw').contentWindow?.postMessage({follow:sel},VIEWER.origin);}
+}
+window.atlasRosterIn=liveRosterIn;
+function receive(j){SNAPSHOT=j;S=withLiveRoster(j,LIVE_ROSTER,Date.now());lastReceived=Date.now();connected=true;render()}
+if(STATIC)setInterval(()=>{if(SNAPSHOT&&LIVE_ROSTER&&!window.atlasLiveRoster()){LIVE_ROSTER=null;S=SNAPSHOT;render();}},5000);
 if(STATIC)fetch('/api/state').then(r=>r.json()).then(receive);else{let version=null;const es=new EventSource('/events');es.onmessage=e=>{const j=JSON.parse(e.data);if(version&&j.pageVersion!==version){location.reload();return}version=j.pageVersion;receive(j)};es.onerror=()=>{connected=false;connectionState()};setInterval(connectionState,2000)}
 
 </script><script src="/map-shell.js"></script><script src="/xp-tracker.js"></script><script src="/client-shell.js"></script><script src="/operations.js"></script></body></html>
