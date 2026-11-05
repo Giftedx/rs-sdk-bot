@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { applyLevers, bestSet, haggisActivities, haggisTravel, haggisUnsourceable, LEVERS, loadSnapshot, schedule, SCENARIOS, suppliesFor, TRICKS, XP99, type Activity, type Board } from '../src/haggis';
+import { applyLevers, bestSet, haggisActivities, haggisTravel, haggisUnsourceable, LEVERS, loadSnapshot, overallRequirementsFor, schedule, SCENARIOS, suppliesFor, TRICKS, XP99, type Activity, type Board } from '../src/haggis';
 import { leg, place, resolve, RUN_TICKS_PER_TILE, START_TICKS, type TravelModel } from '../src/travel';
 import { join } from 'node:path';
 import { xpForLevel } from '../src/curve';
@@ -141,6 +141,27 @@ test('a supply made by a row of the route is not staged by a helper', () => {
     ];
     expect(suppliesFor(acts, opts, boards).map(s => s.item)).toEqual(['arrowtips', 'bow']);
     expect(suppliesFor(acts.slice(1), opts, boards).map(s => s.item)).toEqual(['arrow', 'bow']);
+});
+
+test('Overall stages the started route rows and skips later goals and unchosen variants', () => {
+    const acts: Activity[] = [
+        job('make', 'fletching', 8, { supplies: [{ item: 'arrowtips', count: 5 }] }),
+        job('range', 'ranged', 30, { variant:{group:'range',option:'bow'}, supplies: [
+            { item: 'arrow', count: 5, from: 'make' },
+            { item: 'bow', count: 1 },
+            { item: 'food', count: 3, from: 'later' },
+        ] }),
+        job('alt', 'ranged', 2, { variant:{group:'range',option:'other'}, supplies: [{ item: 'alternate', count: 1 }] }),
+        job('later', 'cooking', 5, { supplies: [{ item: 'raw food', count: 3 }] }),
+    ];
+    const row=(id:string,start:number,end:number)=>({id,label:id,start,end,landsAt:end,ticks:end-start,deadline:100});
+    const plan={overallFinish:20,route:{range:'bow'},order:[row('make',0,8),row('range',8,38),row('later',38,43)]};
+    expect(overallRequirementsFor(acts, opts, plan).supplies).toEqual([
+        {item:'arrowtips',count:5,consumers:['make']},
+        {item:'bow',count:1,consumers:['range']},
+        {item:'food',count:3,consumers:['range']},
+    ]);
+    expect(() => overallRequirementsFor(acts, opts, {...plan,overallFinish:null})).toThrow('Overall has no modeled finish');
 });
 
 test('the real table loads, schedules without blocks, and covers all 24 boards', () => {

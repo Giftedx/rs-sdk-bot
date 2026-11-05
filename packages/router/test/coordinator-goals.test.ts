@@ -59,6 +59,7 @@ test('planner keeps old or undated supplies visible for verification and uses th
  remote.accounts.push({name:'Legacy',server,at:now-50,bank:[stack(3,6)]});
  writeFileSync(join(fleetDir,'cloud.json'),JSON.stringify(remote));
  const summary=supplyBillSummary({base,now,fleetDir,side:'local'});
+ expect(summary?.scope).toBe('unknown');
  expect(summary?.recentlyCovered).toBe(1);
  expect(summary?.verificationNeeded).toBe(2);
  expect(summary?.verify).toEqual([
