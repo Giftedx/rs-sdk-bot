@@ -1,12 +1,58 @@
 {
   "id": "ammo-order",
-  "goal": "Transfer an exact owned arrowtip order to the Fletching worker, consume it into arrows, bank the output and reject a duplicate order without another login.",
+  "goal": "Transfer exact owned ammunition inputs or produce a finite owned headless-arrow order, reconcile assets, bank useful output and confirm logout.",
   "entry": "scripts/handoff-inputs.ts",
-  "files": ["scripts/handoff-inputs.ts", "scripts/payout-order.ts", "scripts/courier-handoff.ts", "scripts/fletch-arrows.ts", "scripts/handoff-inputs.test.ts", "scripts/payout-order.test.ts", "scripts/iron-handoff-races.test.ts", "scripts/fletch-arrows.test.ts"],
-  "consumer": "scripts/fletch-arrows.ts consumes the delivery and banks 90 iron arrows for Ranged staging",
+  "files": [
+    "scripts/handoff-inputs.ts",
+    "scripts/payout-order.ts",
+    "scripts/courier-handoff.ts",
+    "scripts/fletch-arrows.ts",
+    "scripts/fletch-shafts.ts",
+    "scripts/handoff-inputs.test.ts",
+    "scripts/payout-order.test.ts",
+    "scripts/iron-handoff-races.test.ts",
+    "scripts/fletch-arrows.test.ts",
+    "scripts/fletch-shafts.test.ts",
+    "packages/practice/src/ammo-order-proof.ts",
+    "packages/practice/test/ammo-order-proof.test.ts"
+  ],
+  "consumer": "Preserve existing exact owned handoffs, the90-iron-arrow consumer and duplicate-order refusal. Add the single-account CLI mode <account> --headless-order <new-headless-count> <logs-to-cut>, with CAP bounding the complete session. Reuse runShafts and runHeadless. The finite live consumer runs Bigchopper --headless-order135 14 from its observed Varrock West bank stock:15 logs,35 shafts,5705 feathers,300 headless arrows and one knife. Bank435 headless arrows while retaining110 shafts,5570 feathers,1 log, the knife and unrelated assets. This closes the129-input Haggis Fletching shortfall with6 surplus. Native proof invokes this real entry CLI, checks useful saved effects, reconciled assets, clear refusal and logout. Haggis remains offline until its launch gates pass.",
   "checks": [
-    {"id": "order-regressions", "phase": "regression", "command": ["bun", "test", "scripts/handoff-inputs.test.ts", "scripts/payout-order.test.ts", "scripts/iron-handoff-races.test.ts", "scripts/fletch-arrows.test.ts", "--timeout", "10000"], "timeoutMs": 60000},
-    {"id": "native-order", "phase": "practice", "command": ["bun", "packages/practice/src/ammo-order-proof.ts"], "timeoutMs": 600000},
-    {"id": "saved-consumer-state", "phase": "consumer", "command": ["bun", "packages/practice/src/ammo-order-proof.ts", "--verify"], "timeoutMs": 30000}
+    {
+      "id": "order-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/handoff-inputs.test.ts",
+        "scripts/payout-order.test.ts",
+        "scripts/iron-handoff-races.test.ts",
+        "scripts/fletch-arrows.test.ts",
+        "scripts/fletch-shafts.test.ts",
+        "packages/practice/test/ammo-order-proof.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "native-order",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/ammo-order-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "saved-consumer-state",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/ammo-order-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
   ]
 }

@@ -7,6 +7,7 @@
 // areas/area_seers/scripts/mcgrubors_wood.rs2, quests/quest_fishingcompo/scripts/quest_fishingcompo.rs2,
 // hemenster_fishing.rs2 (a red vine worm at the pipes spot gives a giant carp, :26-36).
 import { openQuest } from './quest-lib';
+import { returnFishingContestTrophy } from '../quest-walk';
 
 const DWARF = { x: 2820, z: 3487 };
 const RAILING = { id: 51, x: 2662, z: 3500 };              // mcgruborlooserailing (west wall of its tile)
@@ -80,9 +81,9 @@ try {
     await q.converse([], () => !q.dialogOpen(), 15);
     q.milestone(4);
 
-    // 6. Camelot teleport, the dwarf takes the trophy and queues the completion (mountain_dwarf.rs2:91-101).
-    await q.teleport('camelot teleport', 'magic:camelot_teleport', 2757, 3477);
-    await q.walk('to dwarf', [{ x: DWARF.x + 2, z: DWARF.z + 2, tol: 2 }]);
+    // 6. Leave through Morris's gate, then return the trophy without a spell prerequisite.
+    // The dwarf takes the trophy and queues completion (mountain_dwarf.rs2:91-101).
+    await returnFishingContestTrophy(q);
     await q.talk('dwarf 2', dwarf, [], () => questDone, DWARF, 60, true);
     await q.converse([], () => !q.dialogOpen(), 10);
     q.milestone(100);
