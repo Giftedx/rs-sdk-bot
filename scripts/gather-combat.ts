@@ -309,6 +309,7 @@ if (!botName) {
 const cowStop=cowStopControl(TARGET_KEY,()=>existsSync(resolve(import.meta.dir,'../.practice',`stop-${botName}`)),!!potionPolicy||maximum!==undefined);
 let s = await openBot(botName,cowStop.options).catch(e => finish([], false, `login: ${String(e)}`));
 const dungeonTravel=TARGET_KEY!=='cow'&&!alch?.route?createEdgevilleTravel(s):undefined;
+const ownedSession=s;
 const cleanupScope=(potionPolicy||maximum!==undefined)&&TARGET_KEY!=='cow'?combatPotionSession(s,cowStop.stop,CAP):undefined;if(cleanupScope)s=cleanupScope;
 if(TARGET_KEY==='cow'){
     try{const r=await runCows(s,{cap:CAP,maximum:Number(process.env.MAX_KILLS??5),trainSkill:process.env.TRAIN_SKILL,targetLevel:process.env.TARGET_LEVEL===undefined?undefined:Number(process.env.TARGET_LEVEL),bankProfile:process.env.COW_BANK_PROFILE,foodMode:process.env.COW_FOOD_MODE,potions:potionPolicy,diagnostics:process.env.COW_DIAGNOSTICS==='1',stop:cowStop.stop});console.log(`COW_RESULT ${JSON.stringify(r)}`);await finish([s],r.ok&&cowStop.reason()!=='died',`mode=cow ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
@@ -359,6 +360,7 @@ try {
         bankTrips++;
         await s.bot.closeInterface();
         await waitTicks(s, 1);
+        if(recoveringPotions&&!await walk(conf.bankSpot.x,conf.bankSpot.z,2))throw Error('combat final bank position unavailable');
     };
 
     if(cleanupScope)combatRecovery=combatPotionRecovery(cleanupScope,()=>!!potions?.blocked||loot.blocked,bank,active=>{recoveringPotions=active;});
@@ -429,9 +431,9 @@ try {
     const total = kills + itemsLooted;
     const perK = (total * 1000 / Math.max(1, used())).toFixed(2);
     const targetMet=maximum===undefined||kills===maximum&&!cowStop.stop();
-    await finish([s], total > 0&&targetMet, `ticks=${used()} ${counters()} actionsPer1kTicks=${perK} targetMet=${targetMet} maximum=${maximum??'-'}`);
+    await finish([ownedSession], total > 0&&targetMet, `ticks=${used()} ${counters()} actionsPer1kTicks=${perK} targetMet=${targetMet} maximum=${maximum??'-'}`);
 } catch (e) {
     let detail=String(e);if(combatRecovery)try{await combatRecovery();}catch(recovery){detail+='; cleanup '+String(recovery);}
-    await finish([s], false, detail);
+    await finish([ownedSession], false, detail);
 }
 }
