@@ -1,8 +1,8 @@
 import {test,expect} from 'bun:test';
-import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile,cowStopControl} from './gather-combat';
+import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile,cowStopControl,genericCombatNpc} from './gather-combat';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks} from '../packages/core/src/ticks';
-import {existsSync} from 'node:fs';
+import {existsSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 
 test('real CLI rejects unknown combat target before reading account config; valid targets still reach missing phantom config',async()=>{
@@ -242,3 +242,6 @@ test('generic combat rejects invalid finite caps before opening an account',()=>
 test('generic combat rejects malformed optional kill targets before login',()=>{
  for(const maximum of ['0','-1','NaN','1.5']){const name='max'+crypto.randomUUID().slice(0,8),r=Bun.spawnSync([process.execPath,'--smol',resolve(import.meta.dir,'gather-combat.ts'),name,'1800','giant'],{env:{...process.env,MAX_KILLS:maximum},windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:10000}),text=r.stdout.toString()+r.stderr.toString();expect(r.exitCode).toBe(1);expect(text).toContain('finite positive MAX_KILLS required');expect(text).not.toContain('bot.env');}
 });
+
+test('generic combat binds native Giant117 and Chaos druid181 rather than donor names',()=>{const types=JSON.parse(readFileSync(resolve(import.meta.dir,'../knowledge/npcs.json'),'utf8')) as {id:number;name:string}[];expect(types.find(n=>n.id===117)?.name).toBe('Giant');const giant={id:117,name:'Giant',distance:3,reachable:true,inCombat:false,targetIndex:-1},druid={...giant,id:181,name:'Chaos druid'},warrior={...giant,id:193,name:'Chaos druid warrior',distance:1};expect(genericCombatNpc('giant',[warrior,giant,druid])).toBe(giant);expect(genericCombatNpc('druid',[warrior,giant,druid])).toBe(druid);});
+test('generic combat rejects foreign, unreachable, unknown or out-of-leash targets',()=>{const base={id:117,distance:3,reachable:true,inCombat:false,targetIndex:-1};for(const bad of [{...base,inCombat:true},{...base,targetIndex:32770},{...base,reachable:false},{...base,distance:16},{...base,distance:NaN},{...base,distance:-1},{...base,targetIndex:undefined}])expect(genericCombatNpc('giant',[bad])).toBeUndefined();expect(genericCombatNpc('unknown',[base])).toBeUndefined();});

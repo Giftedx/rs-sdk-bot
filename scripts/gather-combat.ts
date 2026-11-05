@@ -65,6 +65,10 @@ export function cowStopControl(target:string,stopFile:()=>boolean,ownedRecovery=
     const options=target==='cow'||ownedRecovery?{onStop:async(_s:unknown,why:string)=>{if(reason===undefined){reason=why;console.log(`${target==='cow'?'COW':'COMBAT'}_STOP_OWNER ${why}`);}}}:{};
     return {options,stop:()=>reason!==undefined||stopFile(),reason:()=>reason};
 }
+export function genericCombatNpc<T extends {id:number;distance:number;reachable?:boolean;inCombat?:boolean;targetIndex?:number}>(target:string,npcs:readonly T[]):T|undefined{
+    const id=target==='giant'?117:target==='druid'?181:undefined;
+    return npcs.filter(n=>n.id===id&&n.reachable===true&&n.inCombat===false&&n.targetIndex===-1&&Number.isFinite(n.distance)&&n.distance>=0&&n.distance<=15).sort((a,b)=>a.distance-b.distance)[0];
+}
 export const cowCredit=(gone:boolean,selectedXp:number,newDrops:readonly number[])=>gone&&selectedXp>0&&newDrops.length===3&&newDrops.every(n=>n>=1);
 export function cowGroundCounts(items:readonly {id:number;x:number;z:number;count:number}[]){
     const counts=new Map<string,number>();for(const i of items){const key=`${i.id}:${i.x}:${i.z}`;counts.set(key,(counts.get(key)??0)+i.count);}return counts;
@@ -262,19 +266,16 @@ const TARGET_KEY = (process.argv[4] ?? process.env.TARGET ?? 'druid').toLowerCas
 const CAP = Number(process.argv[3] ?? process.env.CAP ?? 15000);
 
 const CONFIGS: Record<string, {
-    npc: RegExp;
     spot: { x: number; z: number };
     bankSpot: { x: number; z: number };
     drops: RegExp;
 }> = {
     druid: {
-        npc: /^chaos druid$/i,
         spot: { x: 3115, z: 9928 }, // Edgeville Dungeon Chaos Druids
         bankSpot: { x: 3092, z: 3496 }, // Edgeville Bank
         drops: /(herb|nature rune|law rune|vial of water)/i,
     },
     giant: {
-        npc: /^hill giant$/i,
         spot: { x: 3117, z: 9850 }, // Edgeville Dungeon Hill Giants
         bankSpot: { x: 3092, z: 3496 }, // Edgeville Bank
         drops: /(big bones|limpwurt root|iron arrow|nature rune)/i,
@@ -404,7 +405,7 @@ try {
         if(maximum!==undefined&&kills>=maximum)break;
 
         // Find target monster
-        const monster = s.sdk.findNearbyNpc(conf.npc);
+        const monster = genericCombatNpc(TARGET_KEY,s.sdk.getState()?.nearbyNpcs??[]);
         if (!monster) {
             await waitTicks(s, 2);
             continue;
