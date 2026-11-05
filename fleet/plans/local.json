@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793853553679,
+ "at": 1793860850330,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -422,27 +422,6 @@
    "role": "combat"
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ORDER_KEY": "wandwaver-blackknight-lobsters8",
-    "ITEM_ID": "379",
-    "QUANTITY": "8",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "500",
-    "CASH_RESERVE": "175000",
-    "ORDER_MS": "600000",
-    "FILL_WAIT_TICKS": "200",
-    "CAP": "2400",
-    "COORDINATOR_RUN_ID": "task-de955176-b9f9-409b-864b-809b8ffdff4e"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-wandwaver-fortress-lobsters8 [task-de955176-b9f9-409b-864b-809b8ffdff4e]",
-   "role": "supply"
-  },
-  {
    "accounts": [
     "Shaftsinker",
     "OreElse"
@@ -484,6 +463,19 @@
    "resources": [
     "knight:2652,3318"
    ]
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-8630246c-9fe5-4930-b4d3-ee226b7ac4f9"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-recovery-wandwaver-blackknight [task-8630246c-9fe5-4930-b4d3-ee226b7ac4f9]",
+   "role": "supply"
   }
  ]
 }
