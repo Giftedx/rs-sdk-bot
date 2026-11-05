@@ -6,6 +6,9 @@
 // swarm.json merged with the coordinator's jobs, so other sides' planners stay off them) and this side's live
 // assignments (fleet/plans/<side>.json: the same merged plan, as scripts/swarm.ts runs it, so other machines and audits
 // see what runs), commits fleet/ and pushes.
+// Several containers can sync one side (each Claude Code cloud session is a fresh machine): a snapshot row is replaced
+// only by a newer status of that account, and the claim and plan view are rewritten only by a machine whose plan names
+// an account of this side, so a container with no statuses and no jobs never erases what the side's running machine wrote.
 // Usage: bun scripts/fleet-sync.ts [--no-push]
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -23,6 +26,14 @@ export function snapshot(statuses: readonly any[], side = mySide(), owners = loa
         // No field when the journal was never read, so readers see unknown and not zero completed.
         ...(Array.isArray(s.quests) && s.quests.some((q: any) => q.state !== 'unknown') ? { quests: s.quests.filter((q: any) => q.state === 'complete').map((q: any) => q.name) } : {}),
     })) };
+}
+// This side's snapshot rows after a sync: a fresh status row replaces the stored row of its account when it is at least
+// as new; a stored row with no fresh status stays; a row of an account the owners file no longer gives this side goes.
+export function mergeSnapshot(fresh: ReturnType<typeof snapshot>, stored: readonly any[], owners = loadOwners()) {
+    const mine = (r: any) => typeof r?.name === 'string' && owners.get(r.name.toLowerCase())?.side === fresh.side && owners.get(r.name.toLowerCase())?.server === String(r.server).toLowerCase();
+    const byName = new Map(stored.filter(mine).map(r => [r.name.toLowerCase(), r]));
+    for (const r of fresh.accounts) { const old = byName.get(r.name.toLowerCase()); if (!old || !(Number(old.at) > Number(r.at))) byName.set(r.name.toLowerCase(), r); }
+    return { ...fresh, accounts: [...byName.values()] };
 }
 // The jobs of this side's own accounts, without the main account and without job notes. The swarm plan file stays
 // uncommitted while it runs; this copy is what other sides read.
@@ -55,22 +66,23 @@ export function runSync(push = true): string {
     if (hasRemote) { const pull = git(dir, 'pull', '--rebase', 'origin', BRANCH); if (!pull.ok) throw Error(`pull: ${pull.out}`); }
     const statusDir = join(root, '.practice', 'status');
     const statuses = existsSync(statusDir) ? readdirSync(statusDir).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(statusDir, f), 'utf8'))]; } catch { return []; } }) : [];
-    const owners = loadOwners(join(dir, 'fleet', 'owners.json')), snap = snapshot(statuses, mySide(), owners);
+    const owners = loadOwners(join(dir, 'fleet', 'owners.json'));
     mkdirSync(join(dir, 'fleet', 'snapshots'), { recursive: true });
+    const file = join(dir, 'fleet', 'snapshots', `${mySide()}.json`);
+    const stored = (() => { try { const a = JSON.parse(readFileSync(file, 'utf8')).accounts; return Array.isArray(a) ? a as any[] : []; } catch { return []; } })();
+    const snap = mergeSnapshot(snapshot(statuses, mySide(), owners), stored, owners);
     // Write only when an account changed: the time stamp alone makes no commit.
-    const file = join(dir, 'fleet', 'snapshots', `${snap.side}.json`);
-    const prior = (() => { try { return JSON.stringify(JSON.parse(readFileSync(file, 'utf8')).accounts); } catch { return ''; } })();
-    if (prior !== JSON.stringify(snap.accounts)) writeFileSync(file, JSON.stringify(snap) + '\n');
-    // The claim's time stamp is its freshness, so every sync rewrites it. An unreadable plan writes nothing: the old
-    // claim ages out instead of releasing spots the plan may still hold.
+    if (JSON.stringify(stored) !== JSON.stringify(snap.accounts)) writeFileSync(file, JSON.stringify(snap) + '\n');
+    // The claim's time stamp is its freshness, so every sync of the machine running this side's jobs rewrites it. An
+    // unreadable plan, or one naming none of this side's accounts, writes nothing: the old claim ages out instead of
+    // releasing spots the side's running machine may still hold.
     const planFile = resolve(process.env.SWARM_PLAN ?? join(root, 'swarm.json'));
     const jobs = (() => { try { const p = JSON.parse(readFileSync(planFile, 'utf8')); return Array.isArray(p.jobs) ? p.jobs as any[] : null; } catch { return null; } })();
     let claim: ReturnType<typeof claimFor> | null = null;
-    if (jobs) {
-        const merged = mergeJobs(jobs, readCoordinatorJobs(root).jobs);
+    const merged = jobs ? mergeJobs(jobs, readCoordinatorJobs(root).jobs) : null, view = merged ? planView(merged, snap.side, owners) : null;
+    if (merged && view && view.jobs.length) {
         claim = claimFor(merged, snap.side, a => owners.get(a.toLowerCase())?.side ?? 'local');
         mkdirSync(join(dir, 'fleet', 'claims'), { recursive: true }); writeFileSync(join(dir, 'fleet', 'claims', `${snap.side}.json`), JSON.stringify(claim) + '\n');
-        const view = planView(merged, snap.side, owners);
         mkdirSync(join(dir, 'fleet', 'plans'), { recursive: true });
         const out = join(dir, 'fleet', 'plans', `${snap.side}.json`);
         const was = (() => { try { return JSON.stringify(JSON.parse(readFileSync(out, 'utf8')).jobs); } catch { return ''; } })();
@@ -81,7 +93,7 @@ export function runSync(push = true): string {
     if (staged) { const c = git(dir, 'commit', '-m', `fleet: ${snap.side} sync (${snap.accounts.length} accounts)`); if (!c.ok) throw Error(`commit: ${c.out}`); }
     const ahead = !hasRemote || git(dir, 'rev-list', '--count', `origin/${BRANCH}..HEAD`).out !== '0';
     if (push && ahead) { const p = git(dir, 'push', '-u', 'origin', BRANCH); if (!p.ok) throw Error(`push: ${p.out}`); }
-    return `side=${snap.side} accounts=${snap.accounts.length} claims=${claim ? claim.resources.length : 'unreadable plan'} committed=${staged} pushed=${push && ahead}`;
+    return `side=${snap.side} accounts=${snap.accounts.length} claims=${claim ? claim.resources.length : jobs ? 'kept: this plan names no account of this side' : 'unreadable plan'} committed=${staged} pushed=${push && ahead}`;
 }
 
 if (import.meta.main) {

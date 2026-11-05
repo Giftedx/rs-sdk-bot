@@ -1,6 +1,20 @@
 import { test, expect } from 'bun:test';
-import { planView } from './fleet-sync';
+import { mergeSnapshot, planView, snapshot } from './fleet-sync';
 import { mergeJobs } from '../packages/core/src/coordinator-jobs';
+
+test('a sync replaces a snapshot row only with a newer status of that account and keeps the rows it has no status for', () => {
+    const server = 'rs-sdk-demo.fly.dev';
+    const owners = new Map([['quickhandjob', { side: 'claude-cloud', server }], ['trousersnake', { side: 'claude-cloud', server }], ['gone', { side: 'local', server }]]) as any;
+    const row = (name: string, at: number, coins: number) => ({ name, server, at, bank: [{ id: 995, name: 'Coins', count: coins }], inventory: [], equipment: [], skills: [{ name: 'Thieving', level: 99 }] });
+    const stored = [row('Quickhandjob', 200, 220_357), row('TrouserSnake', 200, 88_276), row('Gone', 200, 1)];
+    // A fresh container with no status files: every stored row of this side stays; the account handed to another side goes.
+    const empty = mergeSnapshot(snapshot([], 'claude-cloud', owners, 300), stored, owners);
+    expect(empty).toEqual({ side: 'claude-cloud', at: 300, accounts: [stored[0], stored[1]] });
+    // A newer status replaces its row; an older one (a stale file) does not; the other row stays.
+    const status = (name: string, at: number, coins: number) => ({ ...row(name, at, coins), bank: [{ baseId: 995, name: 'Coins', count: coins }], skills: [{ name: 'Thieving', level: 99, xp: 1 }] });
+    const merged = mergeSnapshot(snapshot([status('Quickhandjob', 500, 230_000), status('TrouserSnake', 100, 1)], 'claude-cloud', owners, 600), stored, owners);
+    expect(merged.accounts).toEqual([row('Quickhandjob', 500, 230_000), stored[1]]);
+});
 
 test('a coordinator job takes its account in the view, as the swarm runs it', () => {
     const owners = new Map([['oreelse', { side: 'local', server: 'rs-sdk-demo.fly.dev' }]]) as any;
