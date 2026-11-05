@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { keepPublished, planView, snapshot } from './fleet-sync';
+import { activeAccounts, keepPublished, planView, snapshot } from './fleet-sync';
 import { CLAIM_MAX_AGE_MS } from '../packages/planner/src/autopilot';
 import { mergeJobs } from '../packages/core/src/coordinator-jobs';
 
@@ -37,6 +37,13 @@ test('the snapshot keeps a published row for an account with no local status or 
     const next = snapshot([status('Quickhandjob', 200, 99), status('TrouserSnake', 50, 1)], 'claude-cloud', owners, 5, prior).accounts;
     expect(next.map(a => [a.name, a.at, a.skills[0]!.level])).toEqual([['TrouserSnake', 100, 99], ['Quickhandjob', 200, 99]]);
     expect(next[1]!.bank).toEqual([{ id: 995, name: 'Coins', count: 7 }]);
+});
+
+test('an account is active for the claim when its snapshot row was written within CLAIM_MAX_AGE_MS', () => {
+    const now = 10 * CLAIM_MAX_AGE_MS;
+    const active = activeAccounts([{ name: 'Pocketpython', at: now - 60_000 }, { name: 'Billionaire', at: now - CLAIM_MAX_AGE_MS }, { name: 'Broken', at: 'x' }], now);
+    expect(['Pocketpython', 'pocketpython', 'Billionaire', 'Broken', 'PickpockDick'].map(active)).toEqual([true, true, false, false, false]);
+    expect(activeAccounts([], now)('Pocketpython')).toBe(false);
 });
 
 test('an empty plan keeps a fresh published claim that holds resources or a fresh published plan that holds jobs; a planned job, or a stale or empty one, does not', () => {

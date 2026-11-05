@@ -255,12 +255,15 @@ export function reservedResources(jobs: readonly any[], side: string, paused: Re
 }
 
 // This side's fleet claim (fleet/claims/<side>.json on the fleet-data branch): every exclusive resource an enabled job
-// of this side's own accounts holds, planner-made or hand-made, from the plan the swarm runs. scripts/fleet-sync.ts
-// writes it on every sync, so it never depends on the planner running; scripts/autopilot.ts on every side ignores a
-// claim older than CLAIM_MAX_AGE_MS, so a side that stops syncing releases its spots.
+// of this side's own accounts holds, planner-made or hand-made, from the plan the swarm runs, when one of the job's
+// accounts is `active` (scripts/fleet-sync.ts: seen in the world within CLAIM_MAX_AGE_MS). A plan with more enabled
+// jobs than the swarm admits parks some for days; a parked job's spot is free for the other sides, and when the job
+// does start, the planner that took the spot sees this side's claim on its next pass and moves its account. fleet-sync
+// writes the claim on every sync, so it never depends on the planner running; scripts/autopilot.ts on every side
+// ignores a claim older than CLAIM_MAX_AGE_MS, so a side that stops syncing releases its spots.
 export const CLAIM_MAX_AGE_MS = 2 * 3600_000;
-export function claimFor(jobs: readonly any[], side: string, sideOf: (account: string) => string, now = Date.now()): { side: string; at: number; resources: string[] } {
-    const held = jobs.filter(j => j?.enabled !== false && jobNames(j).length > 0 && jobNames(j).every(a => sideOf(a) === side)).flatMap(jobResources);
+export function claimFor(jobs: readonly any[], side: string, sideOf: (account: string) => string, now = Date.now(), active: (account: string) => boolean = () => true): { side: string; at: number; resources: string[] } {
+    const held = jobs.filter(j => j?.enabled !== false && jobNames(j).length > 0 && jobNames(j).every(a => sideOf(a) === side) && jobNames(j).some(active)).flatMap(jobResources);
     return { side, at: now, resources: [...new Set(held)].sort() };
 }
 
