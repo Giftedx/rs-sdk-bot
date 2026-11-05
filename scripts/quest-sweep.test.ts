@@ -269,5 +269,6 @@ test('a spawn on another floor is found, after a nearer one on the same floor',a
  expect(spawnsByDistance(273,manor,list).map(t=>t.level)).toEqual([0,1]);
  // From upstairs the same-floor spawn comes first unless the ground one is more than LEVEL_STEP tiles nearer.
  expect(spawnsByDistance(273,{...manor,level:1},list).map(t=>t.level)).toEqual([1,0]);
- expect(spawnsByDistance(273,{x:3097,z:3366+LEVEL_STEP+20,level:1},list).map(t=>t.level)).toEqual([0,1]);
+ const far=new Map([[275,[{x:3097,z:3366,level:0},{x:3097+LEVEL_STEP+1,z:3366,level:1}]]]);
+ expect(spawnsByDistance(275,{x:3097,z:3366,level:1},far).map(t=>t.level)).toEqual([0,1]);
 });
