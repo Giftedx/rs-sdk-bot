@@ -331,20 +331,22 @@ export function lifecycleAccounts(dir: string): string[] {
     return names.flatMap(n => { try { const a = JSON.parse(readFileSync(join(dir, n, 'latest.json'), 'utf8')).account; return typeof a === 'string' && ACCOUNT.test(a) ? [a] : []; } catch { return []; } });
 }
 // A session whose owner died with no end line (a killed worker, or a swarm that died with its children) leaves a
-// held attempt and no end record, so no repair can name it. Record its end once the attempt's owner pid is gone.
+// held attempt, so no repair can name it until the owner is gone and its end is recorded.
 export function orphanedSessionEnds(accounts: readonly string[], ended: ReadonlyMap<string, EndRecord>, busy: readonly string[],
-    proof: (a: string) => LogoutProof, owner: (a: string, attemptId: string) => number | undefined, alive: (pid: number) => boolean): [string, string][] {
+    proof: (a: string) => LogoutProof, producer: (a: string, attemptId: string) => { pid: number; updatedAt: number } | undefined, alive: (pid: number) => boolean): [string, string][] {
     const out: [string, string][] = [], seen = new Set<string>();
     for (const a of accounts) {
         const key = a.toLowerCase();
         if (PROTECTED_ACCOUNTS.includes(key)) continue;
-        if (seen.has(key) || busy.some(b => b.toLowerCase() === key) || [...ended.keys()].some(n => n.toLowerCase() === key)) continue;
+        if (seen.has(key) || busy.some(b => b.toLowerCase() === key)) continue;
         seen.add(key);
         let p: LogoutProof; try { p = proof(a); } catch { continue; }
         if (p.state !== 'held') continue;
-        const pid = owner(a, p.attemptId);
-        if (!Number.isSafeInteger(pid) || pid! < 1 || alive(pid!)) continue;
-        out.push([a, `exit orphaned: attempt ${p.attemptId} owner ${pid} gone`]);
+        const receipt = producer(a, p.attemptId);
+        if (!receipt || !Number.isSafeInteger(receipt.pid) || receipt.pid < 1 || !Number.isFinite(receipt.updatedAt) || alive(receipt.pid)) continue;
+        const prior = [...ended].find(([name]) => name.toLowerCase() === key);
+        if (prior && (!prior[1].reason.startsWith('exit orphaned: attempt ') || receipt.updatedAt <= prior[1].at)) continue;
+        out.push([prior?.[0] ?? a, `exit orphaned: attempt ${p.attemptId} owner ${receipt.pid} gone`]);
     }
     return out;
 }
@@ -643,9 +645,12 @@ if (import.meta.main) {
             orphanScanAt = Date.now();
             const busy = [...runs.values()].flatMap(r => r.accounts).concat(inheritedRecoveries.map(r => r.account), recoveryDispatch.active ? [recoveryDispatch.active.account] : []);
             const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch (e) { return (e as NodeJS.ErrnoException).code !== 'ESRCH'; } };
-            const owner = (a: string, id: string) => listAttempts(a, LIVE_SERVER).find(x => x.attemptId === id)?.receipt?.owner.pid;
+            const producer = (a: string, id: string) => {
+                const receipt = listAttempts(a, LIVE_SERVER).find(x => x.attemptId === id)?.receipt;
+                return receipt ? { pid: receipt.owner.pid, updatedAt: receipt.updatedAt } : undefined;
+            };
             const accounts = planned.flatMap(p => p.accounts).concat(lifecycleAccounts(join(prac, 'session-lifecycle/live', LIVE_SERVER)));
-            for (const [a, reason] of orphanedSessionEnds(accounts, ended, busy, a => readLogoutProof(a, LIVE_SERVER), owner, alive)) {
+            for (const [a, reason] of orphanedSessionEnds(accounts, ended, busy, a => readLogoutProof(a, LIVE_SERVER), producer, alive)) {
                 ended.set(a, { at: Date.now(), reason });
                 console.log(`SWARM end ${a} ${reason}`);
             }
