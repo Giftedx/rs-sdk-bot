@@ -147,6 +147,22 @@
   "Ballspinner": {
    "side": "local",
    "server": "rs-sdk-demo.fly.dev"
+  },
+  "Ballbag": {
+   "side": "claude-cloud-b",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Packhorse": {
+   "side": "claude-cloud-b",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Heavyload": {
+   "side": "claude-cloud-b",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "PackageDeal": {
+   "side": "claude-cloud-b",
+   "server": "rs-sdk-demo.fly.dev"
   }
  }
 }
