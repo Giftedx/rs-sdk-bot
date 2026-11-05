@@ -254,6 +254,10 @@ try {
         await act('rubble up', () => { const r = rubble(); return q.opLoc(r, q.opIndex(r, /search/i)); }, [/wriggle through/i], () => z() > 9340, 20, 4);
         await q.walk('to falls', [{ x: FALLS.x - 2, z: FALLS.z, tol: 2 }]);
         await act('falls', () => q.opLoc(loc(FALLS), 2), [/follow the path/i], () => z() < 4000, 25, 4);
+        // A fall from this ledge throws the bot to 2928,2950, and the water carries it to the north bank at 2932,2953
+        // (quest_zombiequeen.rs2 oploc2 zqwaterfallrocks), which no walk leaves for Cairn Isle except the stones.
+        if (z() > 2947) await q.waitTicks(8);
+        if (z() >= 2951) await stones(false);
         q.milestone(8);
     }
     if (from('cairn')) {
