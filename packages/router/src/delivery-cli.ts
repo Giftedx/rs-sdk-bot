@@ -26,10 +26,13 @@ function readSavedProofPolicy(base:string):SavedProofPolicy{
  return policy;
 }
 // These exact consumer invocations only validate saved files in DELIVERY_DIR.
-export function isSavedProofVerifier(check:DeliveryCheck,policy=readSavedProofPolicy(root)):boolean{
+function savedProofVerifierAllowed(check:DeliveryCheck,policy:SavedProofPolicy):boolean{
  const [bun,script,flag]=check.command;
  return check.phase==='consumer'&&check.command.length===3&&bun==='bun'&&flag==='--verify'
   &&script!==undefined&&Object.hasOwn(policy,check.id)&&policy[check.id]!.includes(script);
+}
+export function isSavedProofVerifier(check:DeliveryCheck):boolean{
+ return savedProofVerifierAllowed(check,readSavedProofPolicy(root));
 }
 type NativeAdmissionDeps={now:()=>number;freeGB:()=>number;stopped:()=>boolean;sleep:(ms:number)=>Promise<void>;progress:(value:{state:string;at:number;freeGB:number;requiredGB:number;deadline:number})=>void};
 export async function withNativeStartup<T>(start:()=>Promise<T>,deps:NativeAdmissionDeps,waitMs=900000):Promise<T>{
@@ -84,12 +87,15 @@ export function importClosure(starts:readonly string[],base=root):string[]{
 }
 // The capability release of the entry (packages/core/src/worker-release.ts); null when the entry cannot be released.
 function runtimeRevision(task:DeliveryTask):string|null{try{return capabilityRevision([task.entry],root);}catch{return null;}}
-export function deliveryFingerprint(t:DeliveryTask,base=root,policy=readSavedProofPolicy(base)){
+export function deliveryFingerprint(t:DeliveryTask,base=root){
+ return fingerprintWithPolicy(t,base,readSavedProofPolicy(base));
+}
+function fingerprintWithPolicy(t:DeliveryTask,base:string,policy:SavedProofPolicy){
  // Entry, scope and acceptance commands are part of the qualified contract.
  const scripts=t.checks.flatMap(c=>c.command.filter(a=>/\.(?:ts|tsx)$/.test(a)));
  const hash=createHash('sha256').update(JSON.stringify(t));
  // Only admission choices for this task belong to its qualification source.
- hash.update('\0saved-proof-policy\0').update(JSON.stringify(t.checks.map(c=>isSavedProofVerifier(c,policy))));
+ hash.update('\0saved-proof-policy\0').update(JSON.stringify(t.checks.map(c=>savedProofVerifierAllowed(c,policy))));
  for(const file of importClosure([t.entry,...t.files,...scripts,'packages/router/src/delivery.ts','packages/router/src/delivery-cli.ts'],base))
   hash.update(file+'\0').update(readFileSync(join(base,file))).update('\0');
  return hash.digest('hex');
@@ -106,12 +112,12 @@ async function runTask(task:DeliveryTask,diagnosticCheck?:string){
     const parent=join(root,'.practice/deliveries');mkdirSync(parent,{recursive:true});
     const directory=mkdtempSync(join(parent,`${task.id}-${Date.now()}-`));
     writeFileSync(join(directory,'task.json'),JSON.stringify(task,null,2));
-    let initialPolicy:SavedProofPolicy|undefined;
+    let initialPolicy:SavedProofPolicy;
     const result=await deliver(task,{
         fingerprint(task){
             const policy=readSavedProofPolicy(root);
             initialPolicy??=policy;
-            return deliveryFingerprint(task,root,policy);
+            return fingerprintWithPolicy(task,root,policy);
         },
         async run(check){
             const index=task.checks.indexOf(check),out=join(directory,`${index}.out.log`),err=join(directory,`${index}.err.log`);
@@ -127,7 +133,7 @@ async function runTask(task:DeliveryTask,diagnosticCheck?:string){
             };
             if(check.phase==='regression')return start();
             const stopped=()=>existsSync(join(root,'.practice/stop-coordinator'))||existsSync(join(root,'.practice/stop-swarm'));
-            if(isSavedProofVerifier(check,initialPolicy)){
+            if(savedProofVerifierAllowed(check,initialPolicy)){
                 if(stopped())throw Error('owner stopped before saved proof verification');
                 return start();
             }
