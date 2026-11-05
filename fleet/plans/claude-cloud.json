@@ -1,82 +1,74 @@
 {
  "side": "claude-cloud",
- "at": 1793838221052,
+ "at": 1793838736168,
  "jobs": [
   {
-   "account": "Quickhandjob",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "account": "UnderMyKilt",
+   "script": "scripts/ranged-train.ts",
+   "args": [
+    "95",
+    "40000"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
+    "FOOD": "2",
+    "BUY_ARROW_ID": "884",
+    "BUY_ARROWS": "200",
+    "MAX_SPEND": "3000",
+    "AMMO": "100",
+    "MIN_ARROWS": "40",
+    "KILLS_PER_TRIP": "8",
+    "MAX_TRIPS": "50"
    },
    "enabled": true,
-   "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2669,3298"
-   ]
+   "goal": "Ranged board gap: Ranged 90 to 95 (fleet best, ours)",
+   "role": "ranged"
   },
   {
    "account": "TrouserSnake",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
+   "script": "scripts/ranged-train.ts",
+   "args": [
+    "90",
+    "35000"
+   ],
    "env": {
-    "PEN": "3017,3288",
-    "TICKS": "3000"
+    "FOOD": "3",
+    "BUY_ARROW_ID": "884",
+    "BUY_ARROWS": "200",
+    "MAX_SPEND": "3000",
+    "AMMO": "100",
+    "MIN_ARROWS": "40",
+    "KILLS_PER_TRIP": "8",
+    "MAX_TRIPS": "50"
    },
    "enabled": true,
-   "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3017,3288",
-   "role": "helper",
-   "template": "feathers@3017,3288",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "pen:3017,3288"
-   ]
+   "goal": "Ranged board gap: Ranged 85 to 90 (~200 chicken kills at ~12k XP per level)",
+   "role": "ranged"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/quest-chain.ts",
+   "args": [
+    "totem,sheepherder,murder,cog,hazeelcult"
+   ],
+   "env": {},
+   "enabled": false,
+   "repeat": false,
+   "goal": "Quest Points chain 2: no-item or shop-item quests with little combat (QP 8 after chain 1)",
+   "role": "quest"
   },
   {
    "account": "TheFullMonty",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2671,3313"
-   ]
-  },
-  {
-   "account": "UnderMyKilt",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
-   "env": {
-    "PEN": "3187,3277",
-    "TICKS": "3000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
-   "role": "helper",
-   "template": "feathers@3187,3277",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "pen:3187,3277"
-   ]
+   "script": "scripts/quest-chain.ts",
+   "args": [
+    "cook,sheep,rj,runemysteries,doric,gobdip,hetty,imp,squire,prince,blackknight,druid"
+   ],
+   "env": {},
+   "enabled": false,
+   "repeat": false,
+   "goal": "Quest Points (fleet best 19) and the Druidic Ritual unlock for Herblore: low-combat quests bought with own coins",
+   "role": "quest"
   }
  ]
 }
