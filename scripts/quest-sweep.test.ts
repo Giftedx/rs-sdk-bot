@@ -223,3 +223,12 @@ test('a seller across the water ranks behind one on the same landmass, and sword
  const pack=[{id:995,count:17400},{id:1387,count:1},{id:1931,count:1},{id:1931,count:1},{id:1931,count:1},{id:1438,count:1},...Array.from({length:5},()=>({id:373,count:1})),...Array.from({length:4},()=>({id:1895,count:1}))];
  expect(depositPlan(pack,20,()=>false)).toEqual([{id:1387,count:-1},{id:1931,count:-1},{id:1438,count:-1},{id:1895,count:1}]);
 });
+
+test('a preset\'s trout and bread are optional food, its bananas and ale are quest items',async()=>{
+ const {needs}=await import('./quest-sweep');
+ const death={inventory:[...Array(10).fill({id:2309,count:1}),...Array(10).fill({id:333,count:1}),{id:1905,count:1},{id:2064,count:1}]} as any;
+ expect([...needs(death).keys()]).toEqual([1905,2064]);
+ expect(needs(death,true).get(333)).toBe(10);expect(needs(death,true).get(2309)).toBe(10);
+ const hunt={inventory:[...Array(10).fill({id:1963,count:1})]} as any;
+ expect(needs(hunt).get(1963)).toBe(10);
+});

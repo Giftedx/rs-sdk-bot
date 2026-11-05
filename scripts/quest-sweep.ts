@@ -32,7 +32,9 @@ export function presetFor(quest:string):SaveConfig&{position:Tile}{
 }
 // Preset food (lobster, shark) only feeds the quest's eat-at threshold, and teleport runes (fire, water, air, earth,
 // law) only save walking (quest-lib teleport walks without a law rune): the runner takes what the bank holds of both.
-export const FOOD=new Set([379,385,554,555,556,557,563]),COINS=995;
+// Fish, bread, lobster and shark are the food presets carry (quest_death: 10 bread, 10 trout); a banana or a cake can be
+// a quest's own item (Pirate's Treasure smuggles bananas), so only these count as optional.
+export const FOOD=new Set([329,333,361,365,373,379,385,2309,554,555,556,557,563]),COINS=995;
 export function needs(preset:SaveConfig,food=false):Map<number,number>{
  const m=new Map<number,number>();
  for(const i of preset.inventory??[])if(FOOD.has(i.id)===food)m.set(i.id,(m.get(i.id)??0)+i.count);
