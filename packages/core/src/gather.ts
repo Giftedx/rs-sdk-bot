@@ -66,9 +66,9 @@ export function magicKit(owned:readonly Item[],magic:number):MagicKit|null{
  }
  return null;
 }
-// Casts for the kills: an easy animal dies to one hit, two casts each; otherwise the animal's combat level stands for
-// its hitpoints and three casts in five land.
-export const castsFor=(id:number,count:number,maxhit:number)=>{const src=KILL_SOURCES[id];if(!src)return 0;const kills=src.chance<1?killAttempts(id,count):count;return kills*(src.combat<=EASY_KILL?2:Math.ceil(src.combat/maxhit/0.6)+1);};
+// Casts for the kills: the animal's combat level stands for its hitpoints, three casts in five land, and one more a kill
+// (a goblin's 5: two Fire Strikes, six Wind Strikes).
+export const castsFor=(id:number,count:number,maxhit:number)=>{const src=KILL_SOURCES[id];if(!src)return 0;const kills=src.chance<1?killAttempts(id,count):count;return kills*(Math.ceil(src.combat/maxhit/0.6)+1);};
 // The arrows are the kind owned in the greatest number (UnderMyKilt: 21 bronze, 19 iron): the shortfall for a long kill
 // series is bought, and bronze arrows are the kind most shops sell.
 export function rangedKit(owned:readonly Item[]):{bow:number;arrows:number}|null{
@@ -208,7 +208,9 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
      // own wait ends only on a drop that was not there when it began.
      if(lying()[0]){await s.bot.pickupItem(lying()[0]);await waitUntil(s,()=>held(g.id)>before,{timeoutTicks:15});continue;}
      const npc=(st()?.nearbyNpcs??[]).filter((n:any)=>ids.includes(n.id)&&!n.inCombat&&n.distance<=15).sort((a:any,b:any)=>a.distance-b.distance)[0];
-     if(!npc){const t0=s.tick(),found=await waitUntil(s,()=>(st()?.nearbyNpcs??[]).some((n:any)=>ids.includes(n.id)&&!n.inCombat&&n.distance<=15),{timeoutTicks:30});tally.idle+=s.tick()-t0;if(!found)break;continue;}
+     // A source that has given a kill is worth its respawn (goblins return within about 50 ticks); one that shows no free
+     // animal at all is left after 30.
+     if(!npc){const t0=s.tick(),found=await waitUntil(s,()=>(st()?.nearbyNpcs??[]).some((n:any)=>ids.includes(n.id)&&!n.inCombat&&n.distance<=15),{timeoutTicks:tally.kills?100:30});tally.idle+=s.tick()-t0;if(!found)break;continue;}
      // A ranged kill wields the bow and the arrows from the pack first; without them in the pack the fight is not taken.
      if(g.kit==='ranged'){
       const worn=()=>s.sdk.getEquipment().map((i:any)=>i.id);
