@@ -183,14 +183,16 @@ try {
     await q.walk('to dusty gate inside', [{ x: GATE.x - 1, z: GATE.z, tol: 1 }]);
     await q.step('dusty gate out', () => q.opLoc(GATE, 1), () => !pastGate(), 15, 4);
     // The way back to the ladder is the way in from it, leg by leg: the room west of the east corridor (x 2922-2934,
-    // z 9756-9763), the corridor's north-east bend (2951,9793), then the north passage to the landing. The planner's
-    // own route from the gate's east side runs back through the dusty gate, which the door policy opens for a holder
-    // of the key and the client finds locked, so its clicks beyond the gate are rejected; the legs never stop for the
-    // poison scorpions, since Protect from Melee blocks their sting while the points last.
+    // z 9756-9763), the corridor's north-east bend (2951,9793), the north passage (2937,9825), then the landing. Each
+    // leg is short enough that the planner's shortest route is the way in; from the bend a one-leg route to the landing
+    // runs back through the dusty gate, which the door policy opens for a holder of the key and the client finds
+    // locked, so its clicks beyond the gate are rejected. The legs never stop for the poison scorpions, since Protect
+    // from Melee blocks their sting while the points last.
     const trace = (label: string) => (line: string) => console.log(`SCORP_WALK ${label}: ${line}`);
     for (const leg of [
         { label: 'to east corridor', to: { x: 2936, z: 9777, tol: 2 } },
         { label: 'to north-east bend', to: { x: 2951, z: 9793, tol: 2 } },
+        { label: 'to north passage', to: { x: 2937, z: 9825, tol: 2 } },
         { label: 'to dungeon ladder', to: { x: TAV_LADDER.x + 1, z: TAV_LADDER.z + 6400, tol: 1 } },
     ]) await q.walk(leg.label, [leg.to], trace(leg.label));
     await q.climb('dungeon ladder up', ladderAt({ x: TAV_LADDER.x + 1, z: TAV_LADDER.z + 6400 }, /climb-up/i), /climb-up/i, () => (q.pos()?.worldZ ?? 9999) < 9000);
