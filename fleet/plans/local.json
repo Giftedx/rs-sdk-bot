@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793929359780,
+ "at": 1793929968342,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -472,8 +472,7 @@
   },
   {
    "accounts": [
-    "Masterbaiter",
-    "MineYourBiz"
+    "Masterbaiter"
    ],
    "script": "scripts/handoff-inputs.ts",
    "args": [
@@ -492,9 +491,25 @@
     "STALL_TICKS": "5000",
     "COORDINATOR_RUN_ID": "task-e8b8c3c0-c4f4-48fd-a120-18e18a4f7662"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-handoff-blood-mineyourbiz-bounded-planning [task-e8b8c3c0-c4f4-48fd-a120-18e18a4f7662]",
+   "role": "supply"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/blood-chest.ts",
+   "args": [
+    "24000"
+   ],
+   "env": {
+    "MAX_LOOTS": "100",
+    "CAP": "24000",
+    "COORDINATOR_RUN_ID": "task-bb714e2b-a1ba-49ff-899e-844268e6fad1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-blood-mineyourbiz-additional200 [task-bb714e2b-a1ba-49ff-899e-844268e6fad1]",
    "role": "supply"
   }
  ]
