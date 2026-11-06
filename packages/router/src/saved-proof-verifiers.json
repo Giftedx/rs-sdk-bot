@@ -3,6 +3,7 @@
     "packages/practice/src/cow-progress-order-proof.ts",
     "packages/practice/src/cow-progress-isolated-proof.ts"
   ],
+  "blood-chest-saved": ["packages/practice/src/blood-chest-proof.ts"],
   "iron-progress-order-saved": ["packages/practice/src/iron-progress-order-proof.ts"],
   "prayer-order-saved": ["packages/practice/src/prayer-order-proof.ts"],
   "quest-sweep-saved": ["packages/practice/src/quest-sweep-proof.ts"],
