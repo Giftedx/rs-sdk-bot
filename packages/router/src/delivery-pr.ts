@@ -6,9 +6,9 @@
 import {existsSync,mkdirSync,mkdtempSync,readFileSync,readdirSync,rmSync,copyFileSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {dirname,isAbsolute,join} from 'node:path';
-import {atomicJson} from './coordinator-store';
+import {atomicJson,capabilityDefinitionTransition} from './coordinator-store';
 import {BASE_DIR,fileHash,mergeText,type WorkspaceBase} from './build-workspace';
-import {importClosure} from './delivery-cli';
+import {deliveryFingerprint,importClosure} from './delivery-cli';
 import {releaseFiles,workerLaunchers} from '../../core/src/worker-release';
 
 export interface DeliveryPr{
@@ -16,6 +16,7 @@ export interface DeliveryPr{
  // Earlier deliveries that this build's source already held when it started; the PR opens after they merge.
  prerequisites:string[];
  createdAt:number;attempts:number;nextAt:number;state:'pending'|'opened'|'empty'|'conflict';url?:string;lastError?:string;
+ definitionBase?:string|null;
  mergeVersion?:number;
 }
 export type Run=(cmd:string[],cwd:string)=>Promise<{code:number;stdout:string;stderr:string}>;
@@ -71,19 +72,32 @@ const readRecords=(dir:string):DeliveryPr[]=>existsSync(dir)?readdirSync(dir).fi
 // of one of those files that the build's source already held becomes a prerequisite.
 export function stageDeliveryPr(input:{workspace:string;runDir:string;coordinationDir:string;taskId:string;capability:string;files:string[];sourceSet:readonly string[];result:any;now?:number}):DeliveryPr|null{
  const files=input.files.filter(committable);
- if(!files.length)return null;
- const meta:WorkspaceBase=JSON.parse(readFileSync(join(input.workspace,'.workspace.json'),'utf8'));
  const snapshot=join(input.runDir,'delivered'),base=join(input.runDir,'delivered-base');
+ const definitionFile='packages/router/tasks/'+input.capability+'.json',definitionPath=join(input.workspace,definitionFile);
+ const definitionBytes=/^[-a-z0-9]+$/.test(input.capability)&&existsSync(definitionPath)?readFileSync(definitionPath):null;
+ const transition=definitionBytes?capabilityDefinitionTransition(input.coordinationDir,input.capability,definitionBytes):undefined;
+ if(!files.length&&!transition)return null;
+ const meta:WorkspaceBase=JSON.parse(readFileSync(join(input.workspace,'.workspace.json'),'utf8'));
+ if(transition){
+  const definition=JSON.parse(definitionBytes!.toString('utf8')),proof=input.result?.delivery;
+  if(definition.id!==input.capability||proof?.ok!==true||proof.id!==input.capability||proof.source!==deliveryFingerprint(definition,input.workspace))throw Error('capability definition differs from qualified delivery');
+ }
  for(const f of files){
   const to=join(snapshot,f);mkdirSync(dirname(to),{recursive:true});copyFileSync(join(input.workspace,f),to);
   const from=join(input.workspace,BASE_DIR,f);
   if(meta.base[f]!==null&&existsSync(from)&&fileHash(from)===meta.base[f]){const out=join(base,f);mkdirSync(dirname(out),{recursive:true});copyFileSync(from,out);}
  }
  const dir=deliveryPrDir(input.coordinationDir),source=new Set(input.sourceSet);
+ if(transition){
+  const to=join(snapshot,definitionFile);mkdirSync(dirname(to),{recursive:true});writeFileSync(to,definitionBytes!);
+  if(transition.prior){const from=join(base,definitionFile);mkdirSync(dirname(from),{recursive:true});writeFileSync(from,transition.prior);}
+  files.push(definitionFile);source.add(definitionFile);
+ }
  const prerequisites=readRecords(dir).filter(p=>p.taskId!==input.taskId&&p.createdAt<meta.created&&p.state!=='empty'&&p.files.some(f=>source.has(f))).sort((a,b)=>a.createdAt-b.createdAt).map(p=>p.taskId);
  const now=input.now??Date.now();
  const pr:DeliveryPr={taskId:input.taskId,capability:input.capability,branch:deliveryBranch(input.taskId),files,snapshot,base,prerequisites,
-  title:`coordinator: deliver ${input.capability} (${input.taskId})`,body:prBody({...input,files,prerequisites}),createdAt:now,attempts:0,nextAt:now,state:'pending'};
+  title:`coordinator: deliver ${input.capability} (${input.taskId})`,body:prBody({...input,files,prerequisites}),createdAt:now,attempts:0,nextAt:now,state:'pending',
+  ...(transition?{definitionBase:transition.priorHash}:{})};
  mkdirSync(dir,{recursive:true});atomicJson(join(dir,input.taskId+'.json'),pr);
  return pr;
 }
@@ -114,6 +128,11 @@ function applyChange(pr:DeliveryPr,tree:string){
  const merged=pr.files.map(f=>{
   const target=join(tree,f),master=existsSync(target)?readText(target):'';
   const basePath=join(pr.base,f),base=existsSync(basePath)?readText(basePath):'',build=readText(join(pr.snapshot,f));
+  if(pr.definitionBase!==undefined&&f==='packages/router/tasks/'+pr.capability+'.json'){
+   if(master===build)return[f,build] as const;
+   if(fileHash(basePath)!==pr.definitionBase||master!==base){conflicts.push(f+' (qualified definition base differs)');return[f,''] as const;}
+   return[f,build] as const;
+  }
   if(master===base)return[f,build] as const;
   const out=mergeText(base,master,build);
   if(!out.ok){conflicts.push(f+' ('+out.conflicts.join('; ').replaceAll('main lines','master lines')+')');return[f,''] as const;}
