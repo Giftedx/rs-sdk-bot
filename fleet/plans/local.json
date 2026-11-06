@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793928142456,
+ "at": 1793929359780,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -489,11 +489,12 @@
    "env": {
     "HANDOFF_ORDER": "blood-mineyourbiz-owned-lobsters100",
     "CAP": "4000",
-    "COORDINATOR_RUN_ID": "task-ecdda28e-2f7e-4780-86a2-871201507a2d"
+    "STALL_TICKS": "5000",
+    "COORDINATOR_RUN_ID": "task-e8b8c3c0-c4f4-48fd-a120-18e18a4f7662"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "run-handoff-blood-mineyourbiz-planned-entry [task-ecdda28e-2f7e-4780-86a2-871201507a2d]",
+   "goal": "run-handoff-blood-mineyourbiz-bounded-planning [task-e8b8c3c0-c4f4-48fd-a120-18e18a4f7662]",
    "role": "supply"
   }
  ]
