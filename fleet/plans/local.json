@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793932407226,
+ "at": 1793935446181,
  "jobs": [
   {
    "account": "Masterbaiter",
@@ -146,6 +146,19 @@
    "role": "quests"
   },
   {
+   "account": "CoinCock",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2670,3306"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "coins for route supplies: Ardougne knights",
+   "role": "supply"
+  },
+  {
    "account": "OreElse",
    "script": "scripts/chain.ts",
    "args": [
@@ -229,6 +242,18 @@
    "repeat": true,
    "goal": "fire and earth runes from Betty",
    "role": "supply"
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/quest-chain.ts",
+   "args": [
+    "runemysteries,murder,blackknight,vampire,priest,junglepotion,sheep,fishingcompo,druid,arrav,seaslug,haunted,demon,dig,drunkmonk,elemental,death,grandtree"
+   ],
+   "enabled": false,
+   "standing": true,
+   "repeat": false,
+   "goal": "quests: runemysteries, murder, blackknight, vampire, priest, junglepotion, sheep, fishingcompo, druid, arrav, seaslug, haunted, demon, dig, drunkmonk, elemental, death, grandtree",
+   "role": "combat"
   },
   {
    "account": "Ballspinner",
@@ -458,32 +483,6 @@
    "repeat": false,
    "goal": "run-magic-shaftmaker-funded-band78 [task-d385af0b-c3dd-4e1e-9912-4a4a7451e043]",
    "role": "firemaking"
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-545d808e-f68f-47a5-aa22-07dcf0891930"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "recover-herblore-handoff-mightyrod-1793931163234 [task-545d808e-f68f-47a5-aa22-07dcf0891930]",
-   "role": "combat"
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-23533728-68e3-469b-bd9b-87f932bb4612"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "recover-herblore-handoff-coincock-1793931163234 [task-23533728-68e3-469b-bd9b-87f932bb4612]",
-   "role": "supply"
   },
   {
    "account": "MineYourBiz",
