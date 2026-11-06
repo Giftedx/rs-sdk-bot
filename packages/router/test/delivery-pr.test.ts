@@ -5,9 +5,15 @@ import {join} from 'node:path';
 import {stageDeliveryPr,processDeliveryPrs,committable,deliveryPrDir,retryDelayMs,PREREQUISITE_WAIT_MS,deliverySourceSet,type Run} from '../src/delivery-pr';
 import {resolve} from 'node:path';
 import {prepareWorkspace,publishWorkspace} from '../src/build-workspace';
+import {createHash} from 'node:crypto';
+import {acceptProposal} from '../src/coordinator-planner';
+import {initialState} from '../src/coordinator';
+import {deliveryFingerprint} from '../src/delivery-cli';
+import type {DeliveryTask} from '../src/delivery';
 
 const lines=(...l:string[])=>l.join('\n')+'\n';
 const FILE='scripts/smelt-batch.ts';
+const DEF='packages/router/tasks/iron-progress-order.json';
 // A main checkout with one owned file, and a build of `capability` that changed its last line.
 const setup=(capability='iron-progress-order')=>{
  const base=mkdtempSync(join(tmpdir(),'dpr-')),main=join(base,'repo'),coord=join(base,'coord');
@@ -17,13 +23,16 @@ const setup=(capability='iron-progress-order')=>{
 };
 const result={delivery:{ok:true,stage:'delivered',source:'abc',runtimeRevision:'rev1',directory:'.practice/deliveries/x'},review:{deferred:true,reason:'gate passed'}};
 // A stub of git and gh. `master` is origin/master's content of FILE; `fail` names a command prefix that exits 1.
-const stub=(opts:{master?:string;fail?:string;prState?:string}={})=>{
+const stub=(opts:{master?:string;definition?:string;fail?:string;prState?:string}={})=>{
  const calls:string[][]=[],committed:Record<string,string>={};
  const run:Run=async(cmd,cwd)=>{
   calls.push(cmd);const line=cmd.join(' ');
   if(opts.fail&&line.startsWith(opts.fail))return{code:1,stdout:'',stderr:'HTTP 502'};
-  if(cmd[0]==='git'&&cmd[1]==='worktree'&&cmd[2]==='add'){mkdirSync(join(cmd[4]!,'scripts'),{recursive:true});writeFileSync(join(cmd[4]!,FILE),opts.master??lines('a','b','c'));}
-  if(line.startsWith('git add'))committed[FILE]=readFileSync(join(cwd,FILE),'utf8');
+  if(cmd[0]==='git'&&cmd[1]==='worktree'&&cmd[2]==='add'){
+   mkdirSync(join(cmd[4]!,'scripts'),{recursive:true});writeFileSync(join(cmd[4]!,FILE),opts.master??lines('a','b','c'));
+   if(opts.definition!==undefined){mkdirSync(join(cmd[4]!,DEF,'..'),{recursive:true});writeFileSync(join(cmd[4]!,DEF),opts.definition);}
+  }
+  if(line.startsWith('git add'))for(const file of cmd.slice(3))committed[file]=readFileSync(join(cwd,file),'utf8');
   if(line.startsWith('git diff --cached --quiet'))return{code:1,stdout:'',stderr:''};
   if(line.startsWith('gh pr view'))return{code:0,stdout:(opts.prState??'MERGED')+'\n',stderr:''};
   if(line.startsWith('gh pr create'))return{code:0,stdout:'https://github.com/Giftedx/rs-sdk-bot/pull/99\n',stderr:''};
@@ -32,6 +41,55 @@ const stub=(opts:{master?:string;fail?:string;prState?:string}={})=>{
  return{calls,run,committed};
 };
 const stage=(s:ReturnType<typeof setup>,root:string,taskId:string,files=[FILE],now=1000)=>stageDeliveryPr({workspace:root,runDir:join(s.base,'runs',taskId),coordinationDir:s.coord,taskId,capability:'iron-progress-order',files,sourceSet:[FILE],result,now});
+
+test('a qualified proposal update delivers the exact definition and refuses a different master definition',async()=>{
+ const s=setup(),coord=join(s.main,'.practice/coordinator'),id='iron-progress-order';
+ const prior:DeliveryTask={id,goal:'Bank iron bars',entry:FILE,files:[FILE],consumer:'Bank one bar',
+  checks:(['regression','practice','consumer'] as const).map(phase=>({id:phase,phase,command:['bun',FILE],timeoutMs:1000}))};
+ const before=JSON.stringify(prior),definition={...prior,consumer:'Bank two bars'};
+ mkdirSync(join(s.main,DEF,'..'),{recursive:true});writeFileSync(join(s.main,DEF),before);
+ mkdirSync(join(s.main,'packages/router/src'),{recursive:true});writeFileSync(join(s.main,'packages/router/src/saved-proof-verifiers.json'),'{}');
+ const build={id:'build-two-bars',kind:'build',goal:'skills',capability:id,priority:5,estimatedMs:1000,why:'Qualify two bars',dependsOn:[]};
+ const run={...build,id:'run-two-bars',kind:'run',account:'Helper',dependsOn:[build.id],accept:{bank:{2351:2}}};
+ acceptProposal(initialState(),{reason:'Bank two bars',capabilities:[],tasks:[build,run],
+  capabilityUpdates:[{expectedSource:createHash('sha256').update(before).digest('hex'),definition}]},s.main);
+ const root=s.build(),qualified={...result,delivery:{...result.delivery,id,source:deliveryFingerprint(definition,root)}};
+ publishWorkspace(s.main,id,[FILE]);
+ const staged=stageDeliveryPr({workspace:root,runDir:join(s.base,'runs',build.id),coordinationDir:coord,taskId:build.id,
+  capability:id,files:[FILE],sourceSet:[FILE],result:qualified,now:1000})!;
+ expect(staged.files).toEqual([FILE,DEF]);
+ expect(readFileSync(join(staged.base,DEF),'utf8')).toBe(before);
+ expect(readFileSync(join(staged.snapshot,DEF),'utf8')).toBe(readFileSync(join(s.main,DEF),'utf8'));
+ expect(()=>stageDeliveryPr({workspace:root,runDir:join(s.base,'runs','wrong-proof'),coordinationDir:coord,
+  taskId:'wrong-proof',capability:id,files:[FILE],sourceSet:[FILE],result:{...qualified,delivery:{...qualified.delivery,source:'stale'}}}))
+  .toThrow('capability definition differs from qualified delivery');
+
+ const other=stub({definition:JSON.stringify({...prior,goal:'Keep newer master contract'})});
+ const failed=await processDeliveryPrs(coord,s.main,other.run,1000,s.base);
+ expect(failed.conflicts[0]?.lastError).toContain(DEF);
+ expect(other.calls.some(c=>c[1]==='push'||c[1]==='commit')).toBe(false);
+
+ writeFileSync(join(deliveryPrDir(coord),build.id+'.json'),JSON.stringify(staged));
+ const git=stub({definition:before}),passed=await processDeliveryPrs(coord,s.main,git.run,1000,s.base);
+ expect(passed.opened.map(p=>p.taskId)).toEqual([build.id]);
+ expect(git.committed[DEF]).toBe(JSON.stringify(definition,null,2));
+});
+
+test('a new qualified definition can publish without an additional worker edit',async()=>{
+ const s=setup(),coord=join(s.main,'.practice/coordinator'),id='iron-progress-order';
+ const definition:DeliveryTask={id,goal:'Bank iron bars',entry:FILE,files:[FILE],consumer:'Bank one bar',
+  checks:(['regression','practice','consumer'] as const).map(phase=>({id:phase,phase,command:['bun',FILE],timeoutMs:1000}))};
+ mkdirSync(join(s.main,DEF,'..'),{recursive:true});
+ mkdirSync(join(s.main,'packages/router/src'),{recursive:true});writeFileSync(join(s.main,'packages/router/src/saved-proof-verifiers.json'),'{}');
+ acceptProposal(initialState(),{reason:'Add the iron order',capabilities:[definition],tasks:[]},s.main);
+ const root=prepareWorkspace(s.main,id,[FILE]).root;
+ const pr=stageDeliveryPr({workspace:root,runDir:join(s.base,'runs','build-new-iron'),coordinationDir:coord,taskId:'build-new-iron',
+  capability:id,files:[],sourceSet:[FILE],result:{...result,delivery:{...result.delivery,id,source:deliveryFingerprint(definition,root)}},now:1000})!;
+ expect(pr.files).toEqual([DEF]);expect(pr.definitionBase).toBeNull();
+ const git=stub(),out=await processDeliveryPrs(coord,s.main,git.run,1000,s.base);
+ expect(out.opened.map(p=>p.taskId)).toEqual(['build-new-iron']);
+ expect(git.committed[DEF]).toBe(JSON.stringify(definition,null,2));
+});
 
 test('a delivery commits the build change to coordinator/<task id> from current master and opens a PR',async()=>{
  const s=setup(),root=s.build();publishWorkspace(s.main,'iron-progress-order',[FILE]);

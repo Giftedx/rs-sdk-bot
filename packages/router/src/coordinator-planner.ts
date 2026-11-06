@@ -1,4 +1,4 @@
-import {readFileSync,existsSync,readdirSync,writeFileSync,mkdirSync} from 'node:fs';
+import {readFileSync,existsSync,readdirSync,writeFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
 import {join} from 'node:path';
@@ -6,7 +6,7 @@ import {GOALS,NEW_EVIDENCE_MAX,addTasks,finishedAt,heldBuilds,provisionRefs,repl
 import {runModel,type ModelWorker} from './model-worker';
 import {validateDelivery,type DeliveryTask} from './delivery';
 import {freshScoreboard} from './coverage';
-import {projectRoot,atomicJson,capabilitySource} from './coordinator-store';
+import {projectRoot,atomicJson,capabilitySource,writeCapabilityDefinition} from './coordinator-store';
 import {diskFreeGB,heldRuns,type HeldRuns} from './coordinator-decisions';
 import {PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {observePracticeTurn} from '../../practice/src/proof-lock';
@@ -322,13 +322,11 @@ export function acceptProposal(state:CoordinatorState,raw:any,base=projectRoot,s
   }
   for(const build of builds)if(!reachable.has(build.id))throw Error('build requires a finite live consumer dependency: '+build.id+'. Link a pending run through pending dependencies.');
  }
- for(const d of definitions)atomicJson(join(base,'packages/router/tasks',d.id+'.json'),d);
+ for(const d of definitions)writeCapabilityDefinition(base,d);
  for(const update of updates){
   const file=join(base,'packages/router/tasks',update.definition.id+'.json'),bytes=readFileSync(file);
   if(createHash('sha256').update(bytes).digest('hex')!==update.expectedSource)throw Error('capability definition changed during proposal');
-  const history=join(base,'.practice/coordinator/capability-history');mkdirSync(history,{recursive:true});
-  writeFileSync(join(history,update.definition.id+'-'+update.expectedSource+'.json'),bytes);
-  atomicJson(file,update.definition);
+  writeCapabilityDefinition(base,update.definition,bytes);
  }
  Object.assign(state,candidate);state.lastPlanReason=raw.reason;return tasks.length;
 }
