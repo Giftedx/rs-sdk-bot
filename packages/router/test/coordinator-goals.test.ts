@@ -30,7 +30,10 @@ test('planner separates the main Overall record from specialist board wins',()=>
  const prompt=plannerPrompt(initialState(),world);
  expect(prompt).not.toContain('main rank1 on all24boards simultaneously');
  expect(prompt).toMatch(/Haggis rank\s*1 Overall under the record/);
- expect(prompt).toContain('specialists rank1 on every available scoreboard');
+ expect(prompt).toContain('specialist rank 1 on skill boards with a priced winning margin');
+ expect(prompt).toContain('price each specialist route against the current board record before treating it as a target');
+ expect(prompt).toContain('actual rank 1 results for the priced specialist targets');
+ expect(prompt).not.toContain('rank1 on every available scoreboard');
  expect(gameCoverage([],[],[],[],[]).otherGoals).toContain('main Overall record');
 });
 
