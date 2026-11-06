@@ -162,7 +162,15 @@ export function readWorld(){
  let scoreboard:any=null;try{scoreboard=scoreboardSummary(freshScoreboard(projectRoot));}catch(error){scoreboard={error:String(error)};}
  let stall:any=null;try{const f=join(projectRoot,'.practice/coordinator/stall.json');if(existsSync(f))stall=JSON.parse(readFileSync(f,'utf8'));}catch{/* no stall note */}
  const controller=readPlannerControllerCapacity();
- return{at:Date.now(),scoreboard,stall,assets:assetSummary(statuses,protectedNames),supplyBill:supplyBillSummary({source:'route'}),executionDirective:plan.coordination?.directive??'',deliveryFocus:plan.coordination?.focusCapability??null,capacity:{maxBots:plan.maxBots,minFreeGB:plan.minFreeGB,freeGB:freemem()/2**30,nativeStartupGB:PRACTICE_STARTUP_GB,nativeTurn:observePracticeTurn(join(projectRoot,'.practice/delivery-native.lock')),diskFreeGB:diskFreeGB(projectRoot),maxLive:plan.coordination?.maxLive??plan.maxBots,preferLive:plan.coordination?.preferLive===true,...(controller?{controller}:{})},protectedNames,jobs:plan.jobs,statuses,ended,capabilities,capabilitySources,coverage};
+ const now=Date.now();
+ return{at:now,scoreboard,stall,assets:assetSummary(statuses,protectedNames,now),supplyBill:supplyBillSummary({source:'route',now}),executionDirective:plan.coordination?.directive??'',deliveryFocus:plan.coordination?.focusCapability??null,capacity:{maxBots:plan.maxBots,minFreeGB:plan.minFreeGB,freeGB:freemem()/2**30,nativeStartupGB:PRACTICE_STARTUP_GB,nativeTurn:observePracticeTurn(join(projectRoot,'.practice/delivery-native.lock')),diskFreeGB:diskFreeGB(projectRoot),maxLive:plan.coordination?.maxLive??plan.maxBots,preferLive:plan.coordination?.preferLive===true,...(controller?{controller}:{})},protectedNames,jobs:plan.jobs,statuses,ended,capabilities,capabilitySources,coverage};
+}
+// A fresh status cannot refresh an older bank observation.
+function recentStockStatus(status:any,now:number){
+ const isRecent=(at:unknown)=>typeof at==='number'&&at>0&&at<=now&&now-at<=300_000;
+ const recent=isRecent(status.at);
+ return{...status,inventory:recent?status.inventory:[],equipment:recent?status.equipment:[],
+  bank:recent&&isRecent(status.bankAt)&&status.bankAt<=status.at?status.bank:[]};
 }
 // Reprice current route demand or an explicitly inspected saved bill. Demand time does not refresh stock.
 export function supplyBillSummary({base=projectRoot,now=Date.now(),fleetDir,side,source='saved'}:{
@@ -174,14 +182,7 @@ export function supplyBillSummary({base=projectRoot,now=Date.now(),fleetDir,side
   const demands=current?.supplies??bill.rows.map((row:{item:string;itemId?:number;need:number;aliases?:string[]})=>({item:row.item,itemId:row.itemId,count:row.need,aliases:row.aliases}));
   const items=JSON.parse(readFileSync(join(base,'knowledge/items.json'),'utf8'));
   const statuses=liveHelperStatuses(base,fleetDir,side).filter(s=>!s.practice);
-  // Use the same five-minute window as the preparation report. A fresh status does not make an older bank recent.
-  const isRecent=(at:unknown)=>typeof at==='number'&&at>0&&at<=now&&now-at<=300_000;
-  const recentStatuses=statuses.map(s=>({
-   ...s,
-   inventory:isRecent(s.at)?s.inventory:[],
-   equipment:isRecent(s.at)?s.equipment:[],
-   bank:isRecent(s.at)&&isRecent(s.bankAt)&&s.bankAt<=s.at?s.bank:[],
-  }));
+  const recentStatuses=statuses.map(s=>recentStockStatus(s,now));
   const observed=supplyBill(demands,items,statuses);
   const recent=supplyBill(demands,items,recentStatuses);
   const verify=observed.flatMap((row,index)=>{
@@ -210,16 +211,23 @@ export function supplyBillSummary({base=projectRoot,now=Date.now(),fleetDir,side
 }
 // Coins and the large stacks each named account holds (inventory, worn and last seen bank), so plans spend and
 // convert owned stock: logs to Firemaking, essence to Runecraft, bows and shafts to Ranged, coins to GE and shop buys.
-export function assetSummary(statuses:readonly any[],protectedNames:readonly string[]=[]){
+export function assetSummary(statuses:readonly any[],protectedNames:readonly string[]=[],now=Date.now()){
  const names=new Map((JSON.parse(readFileSync(join(projectRoot,'knowledge/items.json'),'utf8')) as any[]).map(i=>[i.id,i.name]));
  const protectedAccounts=new Set(['haggis',...protectedNames.map(name=>name.toLowerCase())]);
  return statuses.filter(s=>typeof s?.name==='string'&&/^[A-Z]/.test(s.name)&&s.server==='rs-sdk-demo.fly.dev'
   &&!s.practice&&!protectedAccounts.has(s.name.toLowerCase())).map(s=>{
-  const sums=observedStock(s);
-  const coins=sums.get(995)??0;sums.delete(995);
-  const stacks=[...sums].filter(([,n])=>n>=50).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([id,n])=>`${names.get(id)??id} ${n}`);
-  return{account:s.name,coins,at:s.pos?`${s.pos.x},${s.pos.z}`:null,statusAt:s.at??null,bankAt:s.bankAt??null,stacks};
- }).filter(a=>a.coins>=1000||a.stacks.length);
+  const observed=observedStock(s),fresh=observedStock(recentStockStatus(s,now));
+  const coins=observed.get(995)??0,recentCoins=fresh.get(995)??0;
+  const largeStacks=[...observed].filter(([id,count])=>id!==995&&count>=50).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const recent={coins:recentCoins,stacks:[] as string[]};
+  const verify={coins:coins-recentCoins,stacks:[] as string[]};
+  for(const [id,count] of largeStacks){
+   const current=fresh.get(id)??0,name=names.get(id)??id;
+   if(current>0)recent.stacks.push(`${name} ${current}`);
+   if(count>current)verify.stacks.push(`${name} ${count-current}`);
+  }
+  return{account:s.name,at:s.pos?`${s.pos.x},${s.pos.z}`:null,statusAt:s.at??null,bankAt:s.bankAt??null,recent,verify};
+ }).filter(a=>a.recent.coins+a.verify.coins>=1000||a.recent.stacks.length||a.verify.stacks.length);
 }
 // The planner sees the whole-game scoreboard in a compact form: every skill, every quest by stage, weak domains.
 export function scoreboardSummary(board:any){
@@ -263,7 +271,7 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'PRACTICE CAPACITY (world.capacity.nativeTurn): a present holder PID or live waiters means the shared native turn may be busy even if RAM meets nativeStartupGB. Unknown tickets or holder state need inspection. Use independent qualified live work or source preparation while proof waits. The dated sample does not grant admission.',
   'LIVE CAPACITY (world.capacity.controller): use its dated running and externalRunning counts, pendingStartup and pendingReserveGB to weigh another independent job against the host limits. Missing fields or a missing snapshot mean occupancy is unknown. The controller checks current admission before starting a job.',
   'FAST LANE: when a qualified capability needs only a different account, quest or argument, queue the run; do not queue a build. A failed live step that the runtime already handles (for example the quest talk door rule) gets a fresh qualify and a retry run, not a build.',
-  'ASSETS (world.assets): last-seen coins and large stacks. Check statusAt and bankAt before spending or staging them. Turn confirmed stock into scoreboard progress before buying or gathering more: banked logs to Firemaking, rune essence to Runecraft, bows, shafts and arrows to Ranged, ores to Smithing, coins to GE and shop purchases (runes, bones, arrows, best-in-slot gear the account can wear now). Move coins and items to the account that will use them with the courier and trade workers.',
+  'ASSETS (world.assets): recent shows coins and large stacks supported by observations from the past five minutes. verify shows additional last-seen stock that needs a new observation. Check statusAt, bankAt and reservations before staging stock. Turn confirmed stock into scoreboard progress before buying or gathering more. Move coins and items to the account that will use them with the courier and trade workers.',
   'NO DIARY (AGENTS.md): write why, reason and capability consumer text as the current work order and current facts only. No dates, no was/now, no history of earlier attempts or builds; cite the failed runId or evidence path instead. Git and runs/<runId>/ hold the history.',
   'Task schema: {id,goal,kind,dependsOn,priority,estimatedMs,why,capability?,account?,accountFrom?,participants?,args?,acceptIndex?,role?,env?,accept?,timeoutMs?,launch?,agent?,newEvidence?}. IDs lower-case letters/digits/hyphens. priority1..100 is impact, estimatedMs is an estimate of total work incl. preparation/recovery. Priority orders the queue, so spread it: 90 and over only for the main run critical path or a chain with waiting consumers, 50 to 89 for a whole band or quest, under 50 for the rest. newEvidence is 1 to '+NEW_EVIDENCE_MAX+' characters. Put longer observations and the next consumer in why.',
   'Kinds: review is a read-only cross-model source review of an existing delivered capability and can overlap independent authors. agent optionally selects codex or claude; the dispatcher balances builds and uses the other agent for review. qualify runs an existing capability native delivery. build authors named files, runs native delivery and a fresh reviewer. provision creates/registers one ordinary missing role. run installs a finite assignment in swarm.json, then checks fresh matched live status. Never set repeat:true yourself.',
