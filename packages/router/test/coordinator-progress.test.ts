@@ -365,6 +365,7 @@ test('planner prompt keeps bounded build and resume evidence in recent tasks and
   if(i===1)complete(state,spec.id,false,i+10,{hostDeferred:true,sourcePrepared:true,delivery:{hostDeferred:true,source}});
   else if(i===2)complete(state,spec.id,false,i+10,{hostDeferred:true,sourcePrepared:false,diagnostic:{hostDeferred:true,source}});
   else if(i===3)complete(state,spec.id,false,i+10,{delivery:{failedCheck:'iron-native'},buildFault:'iron-native: IRON_PROOF_TIMING {"pid":N}'});
+  else if(i===4)complete(state,spec.id,false,i+10,{delivery:{failedCheck:'rune-carrier-practice',source},hostInterrupted:'memory-floor'});
   else complete(state,spec.id,true,i+10);
  }
  const world:Parameters<typeof plannerPrompt>[1]={
@@ -386,6 +387,9 @@ test('planner prompt keeps bounded build and resume evidence in recent tasks and
  expect(recent.find((row:any)=>row.spec.id==='filler-2').output.resumeSource).toBeUndefined();
  expect(recent.find((row:any)=>row.spec.id==='filler-3').output).toMatchObject({failedCheck:'iron-native'});
  expect(recent.find((row:any)=>row.spec.id==='filler-3').output.buildFault).toBeUndefined();
+ const interrupted=recent.find((row:any)=>row.spec.id==='filler-4').output;
+ expect(interrupted).toMatchObject({failedCheck:'rune-carrier-practice',hostInterrupted:'memory-floor'});
+ expect(interrupted.resumeSource).toBeUndefined();
  const activeLine=prompt.split('\n').find(line=>line.startsWith('COMPLETE ACTIVE QUEUE'))!;
  const facts=JSON.parse(activeLine.slice(activeLine.indexOf(': ')+2));
  expect(activeLine.split(shared)).toHaveLength(2);

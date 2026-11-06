@@ -123,6 +123,7 @@ function receiptBuildEvidence(output:any){
   ...(typeof failedCheck==='string'?{failedCheck}:{}),
   ...(typeof fault==='string'&&!PROOF_TIMING.test(fault.split(': ',2)[1]??'')?{buildFault:clip(fault,240)}:{}),
   ...(hostDeferred?{hostDeferred,sourcePrepared}:{}),
+  ...(output?.hostInterrupted==='memory-floor'?{hostInterrupted:'memory-floor'}:{}),
   ...(resumable?{resumeSource:source}:{}),
  };
 }
@@ -289,6 +290,7 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'A pending task behind a failed task retires after 24 hours (supersededBy dead-dependency:<id>), and blocked lists these tasks until then. Use replacements inside that time when the consumer still matters; after it, propose a new task.',
   'world.capacity.diskFreeGB is free space on the checkout volume. Below 2 GiB the coordinator starts no planner and no task, so never plan work that writes large outputs near that floor.',
   'A hostDeferred receipt identifies unavailable RAM or a busy native practice turn before a check starts. When the receipt provides resumeSource, copy it to the replacement build to request native delivery on that exact source. Keep its finite consumer connected through replacements. Wait for capacity before retrying.',
+  'A hostInterrupted memory-floor receipt means native practice started and hit the memory floor. Keep its failed proof and check for measured additional headroom before proposing a retry.',
   'RECENT FINISHED TASKS, up to 48 succeeded or failed, newest settlement first (open tasks are in the active queue below; superseded tasks are omitted; counts are NOT game completion): '+JSON.stringify({...state,tasks:recent.map(r=>({spec:briefSpec(r.spec),status:r.status,runId:r.runId,error:clip(r.receipt?.error,240),output:r.receipt?.output?{account:r.receipt.output.account,ok:r.receipt.output.ok,evidence:r.receipt.output.evidence,error:clip(receiptOutputReason(r.receipt),240),...receiptBuildEvidence(r.receipt.output)}:null}))}),
   'DATED WORLD (timestamps matter; reserved main/specialists must not be used for tests): '+JSON.stringify(compact),
   'In the active queue, a string in dependencyRefs is a task ID. A number is a zero-based index into sharedDependencyIds. In proposal dependsOn use the full string task IDs.',
