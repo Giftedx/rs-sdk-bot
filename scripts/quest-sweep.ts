@@ -16,6 +16,7 @@ import {sellersByDistance,shopSellers} from '../packages/core/src/shop-index';
 import {spawnsByDistance,locsByDistance} from '../packages/core/src/spawn-index';
 import {gatherPlan,gatherItems,rangedKit,magicKit,arrowsFor,castsFor,ARROWS,BOWS,NPC_SOURCES,PICK_SOURCES} from '../packages/core/src/gather';
 import {questFlags} from '../packages/core/src/quest-status';
+import {QUEST_NAMES} from './quest-chain';
 import {PRESETS,type SaveConfig} from '../packages/practice/src/presets';
 import travel from '../packages/planner/src/haggis-travel.json';
 import {retainedGhostSkull,retainedGhostBankSkull,leaveGhostBasement,inGhostBasement} from './ghost-basement-exit';
@@ -1025,8 +1026,11 @@ export async function sweep(account:string,quest:string,fresh?:string){
   const tradeable=(id:number)=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable;
   const keep=(id:number)=>need.has(id)||toolIds.has(id)||keepsItem(quest,id,tradeable);
   // Another quest's untradeable leftovers go to the bank when the inputs still want slots, so they are not counted as
-  // staying when the slots to free are sized (counted, nine of them capped the slots at 18 for 26 inputs).
-  const leftover=(id:number)=>!need.has(id)&&!toolIds.has(id)&&!(QUEST_KEEP[quest]??[]).includes(id)&&tradeable(id)===false;
+  // staying when the slots to free are sized (counted, nine of them capped the slots at 18 for 26 inputs). Only while
+  // this quest's journal entry is not started: a resumed quest's own intermediate items (Excalibur on a Merlin's Crystal
+  // resume) are untradeable and in neither list, and the withdrawals are planned before the deposits.
+  const journal=questFlags(s.client)?.find(f=>f.name===QUEST_NAMES[quest])?.state;
+  const leftover=(id:number)=>journal==='not started'&&!need.has(id)&&!toolIds.has(id)&&!(QUEST_KEEP[quest]??[]).includes(id)&&tradeable(id)===false;
   const slots=slotNeed(slotsFor([...p.withdraw,...shop.buys.map(b=>({id:b.id,count:b.count})),...gather.gathers.map(g=>({id:g.id,count:g.count})),...(manorFood?[{id:MANOR_FOOD.id,count:1}]:[]),...(heckelDust?[{id:1975,count:1}]:[]),...(QUEST_PICKUPS[quest]??[]),...(training?.pickups??[])],pack()),staysCount(pack(),id=>keep(id)&&!leftover(id)));
   for(const d of depositPlan(pack(),slots,keep,leftover)){
    const item=(st()?.inventory??[]).find((i:any)=>i.id===d.id);
