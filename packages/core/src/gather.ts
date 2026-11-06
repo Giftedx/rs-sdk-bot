@@ -174,7 +174,10 @@ export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:
  const d=(t:Tile)=>Math.max(Math.abs(t.x-at.x),Math.abs(t.z-at.z));
  const place=(m:Item,depth:number):void=>{
   const sold=seller(m.id),spot=spawns(m.id,at)[0],pick=PICK_SOURCES[m.id]?picks(PICK_SOURCES[m.id]!.loc,at)[0]:undefined;
-  if(m.id===MILK&&sold===Infinity){gathers.push({...m,how:'milk'});tools.push({id:BUCKET,count:m.count});}
+  // Milk comes from the nearest cow when it is nearer than the spawn and the seller: the milk spawn and seller are both
+  // far north while cows graze beside Lumbridge and Ardougne.
+  const cow=m.id===MILK?nearest(npcSpawns([COW]).filter(t=>t.level===at.level),at)[0]:undefined;
+  if(m.id===MILK&&(sold===Infinity||(cow&&d(cow)<Math.min(sold,spot?d(spot):Infinity)))){gathers.push({...m,how:'milk'});tools.push({id:BUCKET,count:m.count});}
   else if(spot&&d(spot)<sold)gathers.push({...m,how:'spawn'});
   else if(LOC_SOURCES[m.id]&&d(LOC_SOURCES[m.id]!.tile)<sold)gathers.push({...m,how:'loc'});
   else if(pick&&d(pick)<sold)gathers.push({...m,how:'pick'});

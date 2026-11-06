@@ -795,6 +795,12 @@ test('a nearer spawn beats a far shop; a nearer shop keeps the item in the shop 
  expect(gatherPlan([{id:1944,count:1}],at,spawns,()=>20).still).toEqual([{id:1944,count:1}]);
  expect(gatherPlan([{id:MILK,count:1}],at,spawns,()=>30).still).toEqual([{id:MILK,count:1}]);
 });
+test('milk is milked from a cow when the cow is nearer than both the milk spawn and the seller',()=>{
+ const lumbridge={x:3222,z:3218,level:0};
+ const farSpawn=(id:number)=>id===MILK?[{x:2685,z:3683,level:0}]:[];
+ const g=gatherPlan([{id:MILK,count:1}],lumbridge,farSpawn,()=>700);
+ expect(g.gathers).toEqual([{id:MILK,count:1,how:'milk'}]);expect(g.tools).toEqual([{id:BUCKET,count:1}]);expect(g.still).toEqual([]);
+});
 
 test('general stores come nearest first, one tile per keeper, and only general shops',()=>{
  const t=(x:number,z:number)=>({x,z,level:0});
