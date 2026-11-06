@@ -1,7 +1,23 @@
 {
  "side": "local",
- "at": 1793930578561,
+ "at": 1793931798303,
  "jobs": [
+  {
+   "account": "Masterbaiter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/gather-fish.ts cage 3000",
+    "scripts/cook-food.ts 1500 lobster"
+   ],
+   "env": {
+    "ROUNDS": "0"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "cooked lobsters (607 short): fish then cook at Catherby",
+   "role": "supply"
+  },
   {
    "account": "FishAndChips",
    "script": "scripts/chain.ts",
@@ -215,18 +231,6 @@
    "role": "supply"
   },
   {
-   "account": "Mightyrod",
-   "script": "scripts/quest-chain.ts",
-   "args": [
-    "runemysteries,murder,blackknight,vampire,priest,junglepotion,sheep,fishingcompo,druid,arrav,seaslug,haunted,demon,dig,drunkmonk,elemental,death,grandtree"
-   ],
-   "enabled": false,
-   "standing": true,
-   "repeat": false,
-   "goal": "quests: runemysteries, murder, blackknight, vampire, priest, junglepotion, sheep, fishingcompo, druid, arrav, seaslug, haunted, demon, dig, drunkmonk, elemental, death, grandtree",
-   "role": "combat"
-  },
-  {
    "account": "Ballspinner",
    "script": "scripts/chain.ts",
    "args": [
@@ -397,21 +401,6 @@
    ]
   },
   {
-   "account": "CoinCock",
-   "script": "scripts/quest-sweep.ts",
-   "args": [
-    "elena"
-   ],
-   "env": {
-    "CAP": "6000",
-    "COORDINATOR_RUN_ID": "task-eafc3d9f-b90e-448f-af7f-7dc25480a27b"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-elena-coincock-heckel-dust [task-eafc3d9f-b90e-448f-af7f-7dc25480a27b]",
-   "role": "supply"
-  },
-  {
    "account": "Pocketpython",
    "script": "scripts/buy-owned-ge-item.ts",
    "args": [],
@@ -471,32 +460,6 @@
    "role": "firemaking"
   },
   {
-   "accounts": [
-    "Masterbaiter"
-   ],
-   "script": "scripts/handoff-inputs.ts",
-   "args": [
-    "100:Lobster",
-    "--notes",
-    "--bank-x=2615",
-    "--bank-z=3332",
-    "--approach-ms=1800000",
-    "--request-ms=60000",
-    "--timeout-ms=600000",
-    "--grace-ms=45000"
-   ],
-   "env": {
-    "HANDOFF_ORDER": "blood-mineyourbiz-owned-lobsters100",
-    "CAP": "4000",
-    "STALL_TICKS": "5000",
-    "COORDINATOR_RUN_ID": "task-e8b8c3c0-c4f4-48fd-a120-18e18a4f7662"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-handoff-blood-mineyourbiz-bounded-planning [task-e8b8c3c0-c4f4-48fd-a120-18e18a4f7662]",
-   "role": "supply"
-  },
-  {
    "account": "MineYourBiz",
    "script": "scripts/blood-chest.ts",
    "args": [
@@ -510,6 +473,32 @@
    "enabled": false,
    "repeat": false,
    "goal": "run-blood-mineyourbiz-additional200 [task-bb714e2b-a1ba-49ff-899e-844268e6fad1]",
+   "role": "supply"
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-545d808e-f68f-47a5-aa22-07dcf0891930"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "recover-herblore-handoff-mightyrod-1793931163234 [task-545d808e-f68f-47a5-aa22-07dcf0891930]",
+   "role": "combat"
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-23533728-68e3-469b-bd9b-87f932bb4612"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "recover-herblore-handoff-coincock-1793931163234 [task-23533728-68e3-469b-bd9b-87f932bb4612]",
    "role": "supply"
   }
  ]
