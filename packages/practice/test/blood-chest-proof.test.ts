@@ -1,6 +1,10 @@
 import {expect,test} from 'bun:test';
-import {ADMISSION,ATTACK_DAMAGE_RAW_XP,HITPOINTS_DAMAGE_RAW_XP,STRANDED,bloodChildChecks,bloodObservations,bloodProofAccountEnv,bloodProofPreset,bloodResult,bloodSaveChecks,childConfiguration,selectBloodProofEndpoints,startBloodProofStack,thievingRawXp} from '../src/blood-chest-proof';
+import {mkdirSync,mkdtempSync,writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {dirname,join} from 'node:path';
+import {ADMISSION,ATTACK_DAMAGE_RAW_XP,HITPOINTS_DAMAGE_RAW_XP,STRANDED,bloodChildChecks,bloodObservations,bloodProofAccountEnv,bloodProofPreset,bloodProofSource,bloodResult,bloodSaveChecks,childConfiguration,selectBloodProofEndpoints,startBloodProofStack,thievingRawXp} from '../src/blood-chest-proof';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
+import {runtimeTrees,workerLaunchers} from '../../core/src/worker-release';
 import {ARRIVAL,BANK,EXIT_TICKS,STAGE} from '../../../scripts/blood-chest';
 import type {readPracticeSave} from '../../../scripts/measure/fleet-player-save';
 
@@ -17,6 +21,28 @@ const pass=(checks:Record<string,boolean>)=>Object.entries(checks).filter(([,v])
 
 test('admission uses the shared memory limits',()=>{
  expect(ADMISSION).toEqual({floorGb:FREE_FLOOR_GB,startupGb:PRACTICE_STARTUP_GB});
+});
+test('the Blood proof source ignores unrelated code and binds its worker, harness and server content',()=>{
+ const base=mkdtempSync(join(tmpdir(),'blood-source-'));
+ const put=(path:string,text='')=>{const file=join(base,path);mkdirSync(dirname(file),{recursive:true});writeFileSync(file,text);};
+ for(const path of runtimeTrees)mkdirSync(join(base,path),{recursive:true});
+ for(const path of [...Object.keys(bloodProofSource().files),...workerLaunchers,'package.json','bun.lock','tsconfig.json'])put(path);
+ put('scripts/blood-chest.ts',"import './blood-fixture';");
+ put('scripts/blood-fixture.ts');
+ put('packages/practice/src/blood-chest-proof.ts',"import './blood-fixture';");
+ put('packages/practice/src/blood-fixture.ts');
+ const source=bloodProofSource(base);
+ put('packages/core/src/replay.ts','unrelated change');
+ expect(bloodProofSource(base)).toEqual(source);
+ put('scripts/blood-fixture.ts','worker dependency');
+ const worker=bloodProofSource(base);
+ expect(worker.runtime).not.toBe(source.runtime);
+ put('packages/practice/src/blood-fixture.ts','proof dependency');
+ const harness=bloodProofSource(base);
+ expect(harness.runtime).not.toBe(worker.runtime);
+ const server=Object.keys(harness.files).find(path=>path.endsWith('/trapped_chest.rs2'))!;
+ put(server,'server content');
+ expect(bloodProofSource(base).files[server]).not.toBe(harness.files[server]);
 });
 test('owned endpoints reach the stack, new fixture and finite CLI child and restore the parent',async()=>{
  const checked:number[]=[],samples=[0,0.01];
