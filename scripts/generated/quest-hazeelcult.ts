@@ -91,7 +91,8 @@ try {
             doors:q.locs().filter((l:any)=>l.x>=2563&&l.x<=2567&&l.z>=3269&&l.z<=3274),
             feedback:st?.opFeedback ?? null, dialog:q.s.sdk.getDialog()}));
     };
-    // Resume: holding Carnillean's armour means steps 1-4 are done (quest varps are not sent to the client).
+    // Resume: holding Carnillean's armour means steps 1-4 are done; otherwise Ceril's greeting names the stage (quest
+    // varps are not sent to the client): the start dialogue at 0, 'recovering my armour' at 2-3, 'had any luck yet' at 4.
     if (!q.has(ITEM.armour)) {
     await enterCerilHouse({...q, observeEntry, probeEntry:async()=>{
         const n=q.npc(/^ceril carnillean$/i);
@@ -105,8 +106,9 @@ try {
     q.milestone('house-entry');
     // Finite practice interruption at the real entry boundary. The next CLI run uses this save unchanged.
     if (process.env.Q_STOP_AFTER_ENTRY === '1') await q.fail('interrupted house entry');
-    // 1. Ceril: "What's wrong?", "Yes, of course, I'd be happy to help." sets 2.
-    await q.talk('ceril', /^ceril carnillean$/i, [/what's wrong/i, /yes, of course/i], () => q.sawText(/see what i can do/i), CERIL, 80);
+    // 1. Ceril: "What's wrong?", "Yes, of course, I'd be happy to help." sets 2; at 2-4 he only nags about the armour.
+    await q.talk('ceril', /^ceril carnillean$/i, [/what's wrong/i, /yes, of course/i], () => q.sawText(/see what i can do|recovering my armour|had any luck yet/i), CERIL, 80);
+    const clivetDone = q.sawText(/had any luck yet/i);
     q.milestone(2);
 
     // 2. The 5 sewer valves (sewervalve3 left, the rest right); each shows a mesbox.
@@ -118,11 +120,15 @@ try {
     }
     q.milestone('valves');
 
-    // 3. The cave; Clivet: "What do you mean?", "You're crazy, I'd never help you." sets 4 (good side); he leaves.
+    // 3. The cave; Clivet: "What do you mean?", "You're crazy, I'd never help you." sets 4 (good side); he leaves for
+    // his respawn (100 ticks), so a bot arriving behind another waits for him. At 4 he only taunts, so the talk is skipped.
     await q.walk('to cave', [{ x: CAVE.x, z: CAVE.z + 1, tol: 1 }]);
     await q.step('cave', () => q.opLoc(loc(CAVE), 1), () => z() > 9000, 10, 4);
-    await q.talk('clivet', /^clivet$/i, [/what do you mean/i, /you're crazy/i], () => q.sawText(/jumps onto the raft/i) || q.msgCount(/never find us/i) > 0, { x: 2566, z: 9683 }, 120);
-    await closeDlg();
+    if (!clivetDone) {
+        if (!q.npc(/^clivet$/i)) await q.waitUntil(() => !!q.npc(/^clivet$/i), 130);
+        await q.talk('clivet', /^clivet$/i, [/what do you mean/i, /you're crazy/i], () => q.sawText(/jumps onto the raft/i) || q.msgCount(/never find us/i) > 0, { x: 2566, z: 9683 }, 120);
+        await closeDlg();
+    }
     q.milestone(4);
 
     // 4. The raft to the hideout end, Alomone's talk turns him hostile; kill him, take the armour (6).
