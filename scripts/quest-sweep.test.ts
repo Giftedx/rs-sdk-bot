@@ -1090,8 +1090,21 @@ test('Prince Ali: soft clay is clay on water, clay is mined with a pickaxe, ashe
  expect(doric.tools).toEqual([{id:BRONZE_PICKAXE,count:1}]);
  expect(MINE_SOURCES[440]!.level).toBe(15);expect(MINE_SOURCES[436]!.level).toBe(1);
  expect(BURN_SOURCES[592]!.logs).toBe(LOGS);
+ // Witch's Potion: burnt meat is cooked meat on a fire of gathered logs; the cooked meat lies in the Barbarian hall.
+ const hetty=gatherPlan([{id:1957,count:1},{id:221,count:1},{id:2146,count:1}],{x:2655,z:3283,level:0},(id)=>id===LOGS?[{x:3089,z:3265,level:0}]:id===2142?[{x:3077,z:3441,level:0}]:[],(id)=>id===221?400:id===1957?300:Infinity,()=>[],6,1,()=>[{x:2600,z:3300,level:0}]);
+ expect(hetty.gathers).toEqual([{id:1957,count:1,how:'pick'},{id:LOGS,count:1,how:'spawn'},{id:2142,count:1,how:'spawn'},{id:2146,count:1,how:'burn'}]);
+ expect(hetty.still).toEqual([{id:221,count:1}]);
+ expect(hetty.tools).toEqual([{id:TINDERBOX,count:1}]);
  // A clay seller nearer than any rock keeps clay in the shop plan.
  expect(gatherPlan([{id:434,count:1}],draynor,()=>[],()=>50).still).toEqual([{id:434,count:1}]);
+});
+
+test('bound for Rimmington, the eye of newt comes from Betty in Port Sarim, not Taverley or Gu\'Tanoth',async()=>{
+ const {sellersByTravel}=await import('./quest-sweep');
+ const ardougne={x:2655,z:3283,level:0},hetty={x:2966,z:3206,level:0};
+ const sellers=[{npc:'Ogre merchant',tile:{x:2528,z:3048,level:0}},{npc:'Jatix',tile:{x:2899,z:3427,level:0}},{npc:'Betty',tile:{x:3012,z:3259,level:0}}];
+ expect(sellersByTravel(sellers,ardougne).map(s=>s.npc)).toEqual(['Ogre merchant','Jatix','Betty']);
+ expect(sellersByTravel(sellers,ardougne,hetty).map(s=>s.npc)).toEqual(['Betty','Jatix','Ogre merchant']);
 });
 
 test('plant tiles come from the knowledge and rank by distance',async()=>{

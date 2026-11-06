@@ -10,6 +10,11 @@ const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 const content = join(repoRoot, 'vendor', 'rs-sdk', 'server', 'content');
 export type ShopSeller = { shop: string; npc: string; npcId: number; spawns: Tile[]; stock: number };
 
+// Entrana's sellers (Frincos's herblore shop, 2808,3342) are off the sweep's map: the monks' boat from Port Sarim takes
+// no weapons or armour, and the sweep's accounts carry theirs. From Ardougne Frincos was the nearest eye of newt seller
+// by distance and the walk found no route.
+export const ENTRANA = { minX: 2798, maxX: 2878, minZ: 3326, maxZ: 3394 };
+export const offMap = (t: Tile) => t.level === 0 && t.x >= ENTRANA.minX && t.x <= ENTRANA.maxX && t.z >= ENTRANA.minZ && t.z <= ENTRANA.maxZ;
 let index: Map<string, ShopSeller[]> | undefined;
 export function shopSellers(): Map<string, ShopSeller[]> {
     if (index) return index;
@@ -27,8 +32,10 @@ export function shopSellers(): Map<string, ShopSeller[]> {
         }
     }
     index = new Map();
-    for (const s of shops) for (const st of s.stock) for (const o of owners.get(s.inv) ?? [])
+    for (const s of shops) for (const st of s.stock) for (const o of owners.get(s.inv) ?? []) {
+        if (o.spawns.every(offMap)) continue;
         index.set(st.item, [...(index.get(st.item) ?? []), { shop: s.inv, npc: o.npc, npcId: o.npcId, spawns: o.spawns, stock: st.count }]);
+    }
     return index;
 }
 

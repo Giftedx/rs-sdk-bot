@@ -253,8 +253,12 @@ export {SEA};
 // The farthest seller a sweep walks to: Al Kharid to Ardougne is 654 tiles; a crossing costs SEA on top.
 export const FAR_SELLER=800;
 export function travelDistance(from:Tile,to:Tile):number{return cheb(from,to)+(crossesSea(from,to)?SEA:0);}
-export function sellersByTravel<S extends {tile:Tile}>(sellers:readonly S[],at:Tile):S[]{
- return [...sellers].sort((a,b)=>travelDistance(at,a.tile)-travelDistance(at,b.tile));
+// With a destination, a seller ranks by the extra travel it adds to the way there (detour): from Ardougne bound for
+// Hetty's house in Rimmington, Betty in Port Sarim (53 tiles off the way) comes before Jatix in Taverley and the ogre
+// merchant at Gu'Tanoth, both nearer the bank and both behind the mountain or a stall counter the client cannot path to.
+export function sellersByTravel<S extends {tile:Tile}>(sellers:readonly S[],at:Tile,dest?:Tile):S[]{
+ const cost=(t:Tile)=>dest?detour([at,dest],t):travelDistance(at,t);
+ return [...sellers].sort((a,b)=>cost(a.tile)-cost(b.tile));
 }
 export function nearestBank(at:Tile):Tile{
  return BANKS.filter(b=>b.level===at.level).sort((a,b)=>Math.max(Math.abs(a.x-at.x),Math.abs(a.z-at.z))-Math.max(Math.abs(b.x-at.x),Math.abs(b.z-at.z)))[0]??BANKS[0]!;
@@ -563,6 +567,9 @@ export const BOAT_FARES=60;
 export const fares=(from:Tile,targets:readonly Tile[],acct?:Pick<Account,'skills'>)=>targets.some(t=>eastOfArdougne(from,t,acct))?BOAT_FARES:0;
 // The Port Sarim landing: a target in the town itself (Wydin's shop, 3014,3204) needs no walk north past the jail.
 export const SARIM_LANDING:Tile={x:3029,z:3217,level:0};
+// Keepers with no Trade option: the shop opens through their talk (area_yanille/scripts/ogre_merchant.rs2: "Yes I do."
+// opens Grud's Herblore Stall at Gu'Tanoth, the eye of newt seller nearest Ardougne that has a route).
+export const SHOP_TALK:Record<number,RegExp[]>={874:[/^yes i do/i]};
 async function crossEast(s:Session,world:World,to:Tile):Promise<Walked>{
  if(count(s.sdk.getState()?.inventory??[],COINS)<BOAT_FARES)return{ok:false,reason:'precondition',detail:`missing 995:${BOAT_FARES} for safe boat route`};
  const walk=(to:Tile)=>goTo(s,world,to,accountOf(s),{legTimeoutTicks:150,planBudgetMs:SWEEP_PLAN_BUDGET_MS});
@@ -725,7 +732,19 @@ async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<s
    if(!npc)return `${c.npc} not in sight at ${c.tile.x},${c.tile.z}`;
    // A shut shop door leaves the keeper unroutable (the client reports cant_reach and sends nothing) even from the
    // seller's own tile: open the nearest door once and ask again, as ranged-train does at Lowe's.
-   const opened=async()=>(await s.bot.openShop(npc)).success&&await waitUntil(s,()=>!!st()?.shop?.isOpen,{timeoutTicks:10});
+   const shopOpen=()=>waitUntil(s,()=>!!st()?.shop?.isOpen,{timeoutTicks:10});
+   // A stall that opens through its keeper's talk (SHOP_TALK) is asked, choice by choice, until the shop shows.
+   const talked=async()=>{
+    const choices=SHOP_TALK[c.npcId]!;
+    const t:any=await s.bot.talkTo(npc);if(!t?.success)return false;
+    for(let i=0,next=0;i<30&&!st()?.shop?.isOpen;i++){
+     const dlg:any=s.sdk.getDialog();
+     if(dlg?.isOpen&&!dlg.isWaiting){const opts:any[]=dlg.options??[];const idx=next<choices.length&&opts.some(o=>choices[next]!.test(o.text))?next:undefined;if(idx!==undefined){await s.sdk.clickDialogByText(choices[idx]!);next=idx+1;}else await s.sdk.sendClickDialog(0);}
+     await waitTicks(s,1);
+    }
+    return !!st()?.shop?.isOpen;
+   };
+   const opened=async()=>SHOP_TALK[c.npcId]?talked():(await s.bot.openShop(npc)).success&&await shopOpen();
    if(!await opened()){
     const door=(await s.bot.openDoor(/door/i)).success;
     console.log(`QUEST_SWEEP_SHOP_DOOR ${JSON.stringify({npc:c.npc,at:here(),door})}`);
@@ -983,7 +1002,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
   for(const id of QUEST_KEEP[quest]??[])if(count(pack(),id)===0&&count(rows(),id)>0)p.withdraw.push({id,count:1});
   if(seekGhostSkull&&retainedGhostBankSkull(ghostState(),pack(),s.sdk.getEquipment(),rows()))p.withdraw.push({id:553,count:1});
   // A missing item a shop sells is bought after the bank: take coins for it now. Sellers rank by travel distance.
-  const ranked=(d:string,at:Tile)=>sellersByTravel(sellersByDistance(d,at),at).map(n=>({npc:n.npc,npcId:n.npcId,tile:n.tile}));
+  const ranked=(d:string,at:Tile)=>sellersByTravel(sellersByDistance(d,at),at,preset.position).map(n=>({npc:n.npc,npcId:n.npcId,tile:n.tile}));
   const shops=(items:readonly Item[])=>shopPlan(items,here(),catalogItem,(d,at)=>ranked(d,at)[0]??null,ranked);
   // What no shop sells is gathered after the shops; a gather tool comes from the bank or a shop.
   const sellerAt=(id:number)=>{const it=catalogItem(id),n=it&&id!==COINS?ranked(it.debugname,here())[0]:null;return n?travelDistance(here(),n.tile):Infinity;};
