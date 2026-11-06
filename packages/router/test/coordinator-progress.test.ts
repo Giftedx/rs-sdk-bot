@@ -211,6 +211,23 @@ test('live fleet slots are independent of development slots and production fills
  const options={developmentLimit:2,liveLimit:2,preferLive:true};
  expect(chooseTask(s,3,options)?.id).toBe('live1');startTask(s,'live1',3,'l1');expect(chooseTask(s,4,options)?.id).toBe('live2');startTask(s,'live2',4,'l2');expect(chooseTask(s,5,options)).toBeNull();
 });
+test('a composed run needs and reserves one live slot per participant',()=>{
+ const s=initialState(),options={liveLimit:2,preferLive:true,isolatedBuilds:true};
+ addTasks(s,[run('active'),{...run('single'),account:'Spare'},
+  {...run('handoff'),account:undefined,participants:['Sender','Receiver'],priority:100}],0);
+ startTask(s,'active',1,'active');
+ expect(chooseTask(s,2,options)?.id).toBe('single');
+ finishTask(s,{taskId:'active',runId:'active',ok:true,at:3,output:{}});
+ expect(chooseTask(s,4,options)?.id).toBe('handoff');
+ startTask(s,'handoff',4,'handoff');
+ expect(chooseTask(s,5,options)).toBeNull();
+});
+test('a running registration reserves one live slot against other runs',()=>{
+ const s=initialState();addTasks(s,[task('claim',{kind:'provision',role:'quests'}),run('ordinary')],0);
+ startTask(s,'claim',1,'claim');
+ expect(chooseTask(s,2,{liveLimit:1,isolatedBuilds:true})).toBeNull();
+ expect(chooseTask(s,2,{liveLimit:2,isolatedBuilds:true})?.id).toBe('ordinary');
+});
 test('live-first scheduling still never admits a live account during a source writer',()=>{
  const s=initialState();addTasks(s,[task('writer',{kind:'build'}),run('consumer')],0);startTask(s,'writer',1,'w');expect(chooseTask(s,2,{preferLive:true,liveLimit:17,developmentLimit:2})).toBeNull();
 });
