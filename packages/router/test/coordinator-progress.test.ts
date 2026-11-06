@@ -330,3 +330,25 @@ test('cancel retires a pending build and points its consumer at the named qualif
  expect(s.tasks.find(r=>r.spec.id==='consume')!.spec.dependsOn).toEqual(['requalify']);
  expect(()=>acceptProposal(s,{reason:'again',capabilities:[],tasks:[],cancel:[{id:'rebind'}]})).toThrow('cancel needs a pending task');
 });
+
+test('cancelling a supply prerequisite requires keeping its consumer blocked or cancelling it in the same batch',()=>{
+ const s=initialState();
+ addTasks(s,[run('supply'),run('consumer',['supply'])],0);
+ const before=structuredClone(s),proposal={reason:'Retire the obsolete supply chain',capabilities:[],tasks:[]};
+ expect(()=>acceptProposal(s,{...proposal,cancel:[{id:'supply'}]})).toThrow('cancel needs a substitute for supply used by consumer');
+ expect(s).toEqual(before);
+ expect(chooseTask(s,1)?.id).toBe('supply');
+
+ acceptProposal(s,{...proposal,cancel:[{id:'supply'},{id:'consumer'}]});
+ expect(s.tasks.map(r=>r.status)).toEqual(['superseded','superseded']);
+ expect(s.tasks[1]!.spec.dependsOn).toEqual(['supply']);
+});
+
+test('cancelling a provision cannot strand a surviving implicit account consumer',()=>{
+ const s=initialState();
+ addTasks(s,[task('claim',{kind:'provision',role:'quest'}),{...run('consumer'),account:undefined,accountFrom:'claim'}],0);
+ const before=structuredClone(s);
+ expect(()=>acceptProposal(s,{reason:'Retire an unused account claim',capabilities:[],tasks:[],cancel:[{id:'claim'}]}))
+  .toThrow('cancel would leave an account reference from consumer to claim');
+ expect(s).toEqual(before);
+});

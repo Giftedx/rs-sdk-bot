@@ -24,6 +24,8 @@ Source -> local consumer -> reuse -> check: declared build outputs and the exist
 
 Source -> local consumer -> adapt -> check: named dependencies and the retained run receipt path -> review prompt -> preserve direct evidence when it fits and summarize historical delivery file lists and status snapshots when the full receipt has a path -> the model-worker fixture checks order, identity, traceability and the JSON character cap. The matched saved-input replay in `.practice/compact-review-receipts/replay.json` measures the rendered receipt sections without calling a model.
 
+Source -> local consumer -> adapt -> check: queue dependency validation and the existing cancellation batch -> planner intake -> require a surviving substitute for a cancelled prerequisite with a remaining consumer and preserve implicit account claims -> fixtures reach proposal intake and dispatch selection. A saved-proposal replay in `.practice/cancelled-prerequisites/replay.json` checks retained cancellations on a copy of the queue.
+
 Source -> local consumer -> reuse -> check: the coordinator's sequence at worker settlement -> the planner trigger -> keep a receipt watermark at planner launch and a separate completion time for cooldowns -> test a late receipt with an older producer timestamp while the planner runs. The event sample in `.practice/planner-root-blockers/receipt-window.json` counts overlap and the time to the next plan. It does not identify why each plan starts.
 
 The deterministic rules pass uses that same settled-receipt sequence. Archive compaction cannot hide a settlement or trigger a rules pass on its own. The five-minute recheck still covers other changes.
