@@ -123,7 +123,7 @@ try {
     await q.step('raft', () => q.opLoc(loc(RAFT), 1), () => q.near(2606, 9692, 4), 12, 4);
     await closeDlg();
     await q.talk('alomone', /^alomone$/i, [], () => q.sawText(/die!!!/i), { x: 2609, z: 9670 }, 40);
-    // Alomone (level 13) dies to the bow of an Attack 6 ranger, not to its hands: 120 ticks of punches left him standing.
+    // Alomone (level 13) dies to a low-Attack ranger's bow, not to its hands; the sweep brings the bow and QUEST_ARROWS.
     await q.wieldBow();
     const alo = (): any => q.npc(/^alomone$/i);
     for (let t = 0; t < 120 && !ground(ITEM.armour); t++) {
