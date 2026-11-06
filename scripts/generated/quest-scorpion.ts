@@ -121,10 +121,19 @@ try {
         await q.walk('to taverley ladder', [{ x: TAV_LADDER.x, z: TAV_LADDER.z + 1, tol: 1 }]);
         await q.climb('taverley ladder', ladderAt(TAV_LADDER, /climb-down/i), /climb-down/i, () => (q.pos()?.worldZ ?? 0) > 9000);
     }
-    // Poison scorpions roam the dungeon between the ladder and the jail and their sting poisons for hundreds of ticks (a
-    // poisoned run bled from 47 to 8 hitpoints through seven cakes); Protect from Melee holds from the ladder down to the
-    // ladder up, the black demons beside the wall corridor included.
-    await setPfm(true);
+    // Poison scorpions roam the dungeon between the ladder and the jail and their sting poisons for hundreds of ticks; the
+    // black demons beside the wall corridor hit for most of a ranger's hitpoints. Protect from Melee drains a point every
+    // five ticks, so Prayer 74 buys 370 ticks of cover for a dungeon pass of over 700: the prayer is held only while a
+    // scorpion or demon stands within seven tiles (released once none is within ten) and the points last.
+    let praying = false;
+    const threatWithin = (r: number): boolean => (q.st()?.nearbyNpcs ?? []).some((n: any) => /demon|scorpion/i.test(n.name ?? '') && n.distance <= r);
+    const releasePrayer = q.s.onTick(() => {
+        if (praying || (q.pos()?.worldZ ?? 0) < 9000) return;
+        const want = pfmOn() ? threatWithin(10) : threatWithin(7) && points() > 0;
+        if (want === pfmOn()) return;
+        praying = true;
+        q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }).catch(() => undefined).finally(() => { praying = false; });
+    });
     // The corridor north of the secret wall is walled off from the ladder (wall on x 2880/2881); the only way in is
     // the dusty key gate (deepdungeondoor 2623, west wall of 2924,9803). From its east side it gives "This gate is
     // locked." (areas/area_taverly/dungeon/scripts/jail_doors.rs2:31, test run t5) unless the dusty key is used on
@@ -192,6 +201,7 @@ try {
         }
     }
     await q.climb('dungeon ladder up', ladderAt({ x: TAV_LADDER.x + 1, z: TAV_LADDER.z + 6400 }, /climb-up/i), /climb-up/i, () => (q.pos()?.worldZ ?? 9999) < 9000);
+    releasePrayer();
     await setPfm(false);
 
     // C: Falador Teleport, the Monastery; the ladder asks to join the order, then climbs.
