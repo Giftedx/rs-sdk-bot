@@ -1,6 +1,6 @@
 {
   "id": "ammo-order",
-  "goal": "Transfer exact owned ammunition inputs or produce a finite owned headless-arrow order, reconcile assets, bank useful output and confirm logout.",
+  "goal": "Transfer exact owned inputs with an optional bounded bank approach (--approach-ms), or produce a finite headless-arrow order. Reconcile assets, bank useful output and confirm logout.",
   "entry": "scripts/handoff-inputs.ts",
   "files": [
     "scripts/handoff-inputs.ts",
@@ -16,7 +16,7 @@
     "packages/practice/src/ammo-order-proof.ts",
     "packages/practice/test/ammo-order-proof.test.ts"
   ],
-  "consumer": "Preserve existing exact owned handoffs, the90-iron-arrow consumer and duplicate-order refusal. Add the single-account CLI mode <account> --headless-order <new-headless-count> <logs-to-cut>, with CAP bounding the complete session. Reuse runShafts and runHeadless. The finite live consumer runs Bigchopper --headless-order135 14 from its observed Varrock West bank stock:15 logs,35 shafts,5705 feathers,300 headless arrows and one knife. Bank435 headless arrows while retaining110 shafts,5570 feathers,1 log, the knife and unrelated assets. This closes the129-input Haggis Fletching shortfall with6 surplus. Native proof invokes this real entry CLI, checks useful saved effects, reconciled assets, clear refusal and logout. Haggis remains offline until its launch gates pass.",
+  "consumer": "Keep exact owned handoffs, the 90-iron-arrow chain and duplicate-order refusal. With --approach-ms, both participants share a travel budget to the named bank before the transfer deadline starts. Confirm the donor debit, receiver bank credit and both logouts. The Blood supply consumer run-handoff-blood-charge-lobsters650 transfers 650 owned lobsters at 2615,3332 and requires the receiver to bank at least 672 lobsters and retain 218 Blood runes for the Charge supply chain. The single-account CLI <account> --headless-order <new-headless-count> <logs-to-cut> uses CAP to bound the complete session. Bigchopper --headless-order 135 14 banks 435 headless arrows while retaining 110 shafts, 5570 feathers, one log, the knife and unrelated assets. Native proof invokes the real CLI for the iron-arrow chain, headless order and planned 100-lobster handoff. Check saved output, reconciled assets, refusal and logout. Haggis remains offline until its launch gates pass.",
   "checks": [
     {
       "id": "order-regressions",
