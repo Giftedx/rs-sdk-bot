@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793924490069,
+ "at": 1793926924954,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -18,22 +18,6 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
-   "role": "supply"
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
-    "scripts/goldfarm.ts KNIGHT_SPOT=2582,3297"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "Thieving 55, then coins from Ardougne knights",
    "role": "supply"
   },
   {
@@ -329,19 +313,6 @@
    "role": "supply"
   },
   {
-   "account": "Masterbaiter",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-c17a9ed2-cf72-4b43-bd2f-f335e8188be6"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-masterbaiter-11 [task-c17a9ed2-cf72-4b43-bd2f-f335e8188be6]",
-   "role": "supply"
-  },
-  {
    "account": "Bigpackage",
    "script": "scripts/buy-owned-ge-item.ts",
    "args": [],
@@ -498,6 +469,31 @@
    "repeat": false,
    "goal": "run-magic-shaftmaker-funded-band78 [task-d385af0b-c3dd-4e1e-9912-4a4a7451e043]",
    "role": "firemaking"
+  },
+  {
+   "accounts": [
+    "Masterbaiter",
+    "MineYourBiz"
+   ],
+   "script": "scripts/handoff-inputs.ts",
+   "args": [
+    "100:Lobster",
+    "--notes",
+    "--bank-x=2615",
+    "--bank-z=3332",
+    "--request-ms=180000",
+    "--timeout-ms=1200000",
+    "--grace-ms=45000"
+   ],
+   "env": {
+    "HANDOFF_ORDER": "blood-mineyourbiz-owned-lobsters100",
+    "CAP": "4000",
+    "COORDINATOR_RUN_ID": "task-4c759682-5717-4c05-8f58-35eb2c51cdfd"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-handoff-blood-mineyourbiz-lobsters100 [task-4c759682-5717-4c05-8f58-35eb2c51cdfd]",
+   "role": "supply"
   }
  ]
 }
