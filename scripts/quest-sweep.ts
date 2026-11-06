@@ -1024,9 +1024,10 @@ export async function sweep(account:string,quest:string,fresh?:string){
   // quest does not use first, one deposit per kind, then food beyond the allowance.
   const tradeable=(id:number)=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable;
   const keep=(id:number)=>need.has(id)||toolIds.has(id)||keepsItem(quest,id,tradeable);
-  // Another quest's untradeable leftovers go to the bank when the inputs still want slots.
+  // Another quest's untradeable leftovers go to the bank when the inputs still want slots, so they are not counted as
+  // staying when the slots to free are sized (counted, nine of them capped the slots at 18 for 26 inputs).
   const leftover=(id:number)=>!need.has(id)&&!toolIds.has(id)&&!(QUEST_KEEP[quest]??[]).includes(id)&&tradeable(id)===false;
-  const slots=slotNeed(slotsFor([...p.withdraw,...shop.buys.map(b=>({id:b.id,count:b.count})),...gather.gathers.map(g=>({id:g.id,count:g.count})),...(manorFood?[{id:MANOR_FOOD.id,count:1}]:[]),...(heckelDust?[{id:1975,count:1}]:[]),...(QUEST_PICKUPS[quest]??[]),...(training?.pickups??[])],pack()),staysCount(pack(),keep));
+  const slots=slotNeed(slotsFor([...p.withdraw,...shop.buys.map(b=>({id:b.id,count:b.count})),...gather.gathers.map(g=>({id:g.id,count:g.count})),...(manorFood?[{id:MANOR_FOOD.id,count:1}]:[]),...(heckelDust?[{id:1975,count:1}]:[]),...(QUEST_PICKUPS[quest]??[]),...(training?.pickups??[])],pack()),staysCount(pack(),id=>keep(id)&&!leftover(id)));
   for(const d of depositPlan(pack(),slots,keep,leftover)){
    const item=(st()?.inventory??[]).find((i:any)=>i.id===d.id);
    if(!item)continue;
