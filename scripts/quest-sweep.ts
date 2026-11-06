@@ -114,7 +114,10 @@ export function slotsFor(withdraw:readonly Item[],pack:readonly Item[]):number{
 }
 // What to deposit so the pack has `need` free slots: first whole kinds the quest does not use (count -1: one deposit
 // banks the kind; a second deposit of the same kind from a stale slot waits out its timeout), never coins, runes, the
-// quest's own items or what the preset needs; then food units beyond a KEEP_FOOD allowance, as many as still needed.
+// quest's own items or what the preset needs; then food units beyond a KEEP_FOOD allowance, as many as still needed;
+// last, when still short, whole kinds `spare` names: another quest's untradeable leftovers (Excalibur, the pirate
+// message, the fishing pass, a lit black candle), which the bank holds as well as the pack does. A pack of nine such
+// slots left Prince Ali Rescue's 22 inputs 19 free.
 export const KEEP_FOOD=8;
 // Everything that heals (consume_normal.dbrow): FOOD above names what a preset carries as optional; this is what the
 // deposit plan protects and the sweep's eater eats (an account arrives with swordfish and cake slices, not lobsters).
@@ -172,7 +175,7 @@ export function slotNeed(supplies:number,stays:number):number{
  const room=28-supplies-stays,reserve=Math.max(MIN_PICKUP_SLOTS,Math.min(QUEST_PICKUP_SLOTS,room-KEEP_FOOD));
  return Math.min(28-stays,supplies+reserve);
 }
-export function depositPlan(pack:readonly Item[],need:number,keep:(id:number)=>boolean):Item[]{
+export function depositPlan(pack:readonly Item[],need:number,keep:(id:number)=>boolean,spare:(id:number)=>boolean=()=>false):Item[]{
  let free=28-pack.length;
  const out:Item[]=[];
  for(const id of [...new Set(pack.map(i=>i.id))]){
@@ -187,6 +190,10 @@ export function depositPlan(pack:readonly Item[],need:number,keep:(id:number)=>b
   const held=pack.filter(i=>i.id===id).length,kept=Math.min(held,allowance);allowance-=kept;
   const bank=Math.min(held-kept,need-free);
   if(bank>0){out.push({id,count:bank});free+=bank;}
+ }
+ for(const id of [...new Set(pack.filter(i=>spare(i.id)).map(i=>i.id))]){
+  if(free>=need)break;
+  out.push({id,count:-1});free+=pack.filter(i=>i.id===id).length;
  }
  return out;
 }
@@ -1015,9 +1022,12 @@ export async function sweep(account:string,quest:string,fresh?:string){
   }
   // Free the slots the withdrawals, the shop purchases and the gathered items need, plus the pickups: whole kinds the
   // quest does not use first, one deposit per kind, then food beyond the allowance.
-  const keep=(id:number)=>need.has(id)||toolIds.has(id)||keepsItem(quest,id,id=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable);
+  const tradeable=(id:number)=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable;
+  const keep=(id:number)=>need.has(id)||toolIds.has(id)||keepsItem(quest,id,tradeable);
+  // Another quest's untradeable leftovers go to the bank when the inputs still want slots.
+  const leftover=(id:number)=>!need.has(id)&&!toolIds.has(id)&&!(QUEST_KEEP[quest]??[]).includes(id)&&tradeable(id)===false;
   const slots=slotNeed(slotsFor([...p.withdraw,...shop.buys.map(b=>({id:b.id,count:b.count})),...gather.gathers.map(g=>({id:g.id,count:g.count})),...(manorFood?[{id:MANOR_FOOD.id,count:1}]:[]),...(heckelDust?[{id:1975,count:1}]:[]),...(QUEST_PICKUPS[quest]??[]),...(training?.pickups??[])],pack()),staysCount(pack(),keep));
-  for(const d of depositPlan(pack(),slots,keep)){
+  for(const d of depositPlan(pack(),slots,keep,leftover)){
    const item=(st()?.inventory??[]).find((i:any)=>i.id===d.id);
    if(!item)continue;
    const r:any=await s.bot.depositItem(item,d.count);
