@@ -1,5 +1,5 @@
 // Tick waste per script family from the swarm logs: each LEDGER line (packages/core/src/ledger.ts) is tagged by the
-// RESULT line after it. Lists scripts by idle+move ticks, the time a bot is logged in without working.
+// RESULT line after it in the same job. Lists scripts by idle+move ticks, the time a bot is logged in without working.
 // wasteShare() gives each family's idle+move share for the autopilot (packages/planner/src/autopilot.ts).
 // Usage: bun scripts/tick-waste.ts [min ticks per family, default 2000]
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -10,17 +10,24 @@ const SIG: [string, RegExp][] = [['goldfarm', /coinsGained=|picks=\d+ fails=/], 
 export type Waste = { runs: number; ticks: number; idle: number; move: number; anim: number; stun: number; dialog: number };
 export const familyOf = (result: string) => SIG.find(([, re]) => re.test(result))?.[0] ?? ('other:' + result.split(/[\s=]/)[0]!.slice(0, 16));
 
+const workerLine = (line: string) => line.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, '');
+
 export function tickWaste(dir = '.practice/swarm-logs'): Map<string, Waste> {
   const agg = new Map<string, Waste>();
   if (!existsSync(dir)) return agg;
   for (const f of readdirSync(dir)) {
-    const lines = readFileSync(`${dir}/${f}`, 'latin1').split(/\r?\n/).map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
+    const lines = readFileSync(`${dir}/${f}`, 'latin1').split(/\r?\n/);
     for (let i = 0; i < lines.length; i++) {
-      const m = lines[i]!.match(/^LEDGER ticks=(\d+).* move=(\d+) anim=(\d+) dialog=(\d+) stun=(\d+) idle=(\d+)/);
+      const line = lines[i]!;
+      if (!line.includes('LEDGER ticks=')) continue;
+      const m = workerLine(line).match(/^LEDGER ticks=(\d+).* move=(\d+) anim=(\d+) dialog=(\d+) stun=(\d+) idle=(\d+)/);
       if (!m) continue;
       let key = '?';
       for (let k = i + 1; k < Math.min(lines.length, i + 8); k++) {
-        const r = lines[k]!.match(/^RESULT (?:ok|fail) (.*)$/);
+        const next = lines[k]!;
+        if (next.startsWith('SWARM_JOB ')) break;
+        if (!next.includes('RESULT ')) continue;
+        const r = workerLine(next).match(/^RESULT (?:ok|fail) (.*)$/);
         if (r) { key = familyOf(r[1]!); break; }
       }
       const e = agg.get(key) ?? { runs: 0, ticks: 0, idle: 0, move: 0, anim: 0, stun: 0, dialog: 0 };

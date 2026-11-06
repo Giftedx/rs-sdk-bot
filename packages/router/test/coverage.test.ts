@@ -33,6 +33,23 @@ test('firedActions reads script names and drops torn lines', () => {
     expect([...firedActions(file)].sort()).toEqual(['if_button,quest_journal:com_1', 'opnpc1,cook', 'oploc1,_door'].sort());
 });
 
+test('one scan preserves overlapping, unicode and exact-name matches', () => {
+    const text = 'xxcacheable café south winding road';
+    const actions = [
+        { subject: '_cache:3' },
+        { subject: 'cacheable' },
+        { subject: 'cacheable' },
+        { subject: 'cacheless' },
+        { subject: 'café' },
+        { subject: 'zz', name: 'Winding Road' },
+        { subject: 'zz', name: 'Café' },
+        { subject: 'ache' },
+    ].map(a => ({ ...a, trigger: 'oploc1', domain: 'sample', src: '' }));
+    const result = domainStages(actions, text);
+    expect(result[0]?.named).toBe(6);
+    expect(result[0]?.named).toBe(actions.filter(a => named(a, text)).length);
+});
+
 test('domainStages counts an action as fired only on its exact trigger and subject', () => {
     const fired = new Set(['opnpc1,cook', 'oploc1,_door', 'proc,cook', 'opnpc3,other']);
     const rows = domainStages([

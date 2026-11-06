@@ -27,6 +27,12 @@ export function parseHunter(npc: { name: string; combat: number; spawns?: Tile[]
     return { name: npc.name, combat: npc.combat, mode, reach, spawns: npc.spawns };
 }
 
+// Spawns the map walls in: the monster hunts, but no player tile is in its reach. The Wizards' Tower lesser demon
+// (combat 82) stands in a cage on the top floor; counted, it closed the whole floor, with Mizgog's room and the
+// Imp Catcher start, to a 37 HP account (TheFullMonty: `no route to 3104,3163,2`).
+export const CAGED: readonly Tile[] = [{ x: 3110, z: 3157, level: 2 }];
+const caged = (s: Tile) => CAGED.some(c => c.x === s.x && c.z === s.z && c.level === s.level);
+
 let hunters: Hunter[] | undefined;
 export function loadHunters(): Hunter[] {
     if (hunters) return hunters;
@@ -40,7 +46,7 @@ export function loadHunters(): Hunter[] {
         if (!lines) { try { lines = readFileSync(join(repoRoot, 'vendor', 'rs-sdk', 'server', 'content', m[1]!), 'utf8').split(/\r?\n/); } catch { lines = []; } files.set(m[1]!, lines); }
         const start = Number(m[2]) - 1, block: string[] = [];
         for (let i = start + 1; i < lines.length && !lines[i]!.startsWith('['); i++) block.push(lines[i]!);
-        const h = parseHunter(n, block.join('\n'));
+        const h = parseHunter({ ...n, spawns: n.spawns.filter(s => !caged(s)) }, block.join('\n'));
         if (h) hunters.push(h);
     }
     return hunters;

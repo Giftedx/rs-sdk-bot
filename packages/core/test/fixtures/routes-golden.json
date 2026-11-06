@@ -1073,6 +1073,15 @@
         {
           "kind": "walk",
           "to": {
+            "x": 2955,
+            "z": 3146,
+            "level": 0
+          },
+          "tolerance": 0
+        },
+        {
+          "kind": "walk",
+          "to": {
             "x": 2772,
             "z": 3225,
             "level": 0
@@ -1121,15 +1130,6 @@
             "z": 3271,
             "level": 0
           }
-        },
-        {
-          "kind": "walk",
-          "to": {
-            "x": 2661,
-            "z": 3301,
-            "level": 0
-          },
-          "tolerance": 0
         },
         {
           "kind": "walk",

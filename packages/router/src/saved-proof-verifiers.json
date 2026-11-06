@@ -1,0 +1,19 @@
+{
+  "cow-progress-order-saved": [
+    "packages/practice/src/cow-progress-order-proof.ts",
+    "packages/practice/src/cow-progress-isolated-proof.ts"
+  ],
+  "blood-chest-saved": ["packages/practice/src/blood-chest-proof.ts"],
+  "iron-progress-order-saved": ["packages/practice/src/iron-progress-order-proof.ts"],
+  "prayer-order-saved": ["packages/practice/src/prayer-order-proof.ts"],
+  "quest-sweep-saved": ["packages/practice/src/quest-sweep-proof.ts"],
+  "ranged-train-saved": ["packages/practice/src/ranged-train-proof.ts"],
+  "rune-bank-craft-saved": ["packages/practice/src/rune-bank-craft-proof.ts"],
+  "rune-carrier-saved": ["packages/practice/src/rune-carriers-proof.ts"],
+  "rune-continuation-saved": ["packages/practice/src/rune-continuation-proof.ts"],
+  "saved-consumer-state": ["packages/practice/src/ammo-order-proof.ts"],
+  "saved-druid-meats-consumer": ["packages/practice/src/druid-meats-proof.ts"],
+  "saved-magic-order-consumer": ["packages/practice/src/magic-order-proof.ts"],
+  "saved-quest-complete": ["packages/practice/src/quest-order-proof.ts"],
+  "session-recovery-only-verified": ["scripts/session-check.ts"]
+}

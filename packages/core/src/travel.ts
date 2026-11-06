@@ -108,8 +108,15 @@ export function teleportTravel(records: TeleRecord[]): Travel[] {
     return out;
 }
 
-type ShortcutRecord = { kind: string; locName: string; id: number; option: string; from: Tile; to: Tile; exact: boolean; via?: unknown; failure?: unknown;
+type ShortcutRecord = { kind: string; locName: string; id: number; option: string; from: Tile; to: Tile; exact: boolean; via?: unknown; failure?: unknown; side?: string[];
     requires?: { skills?: { name: string; level: number }[]; varps?: { varp: string; op: string; value: number }[]; items?: unknown[]; useItem?: unknown; coins?: number | null } };
+// A sided passage (the Grand Tree door, gnome_gate.rs2: the player ends two tiles beyond the door from the side they stand
+// on) is recorded from the loc tile with one landing per side. Each landing's edge starts at the mirror of the landing
+// through the loc tile, on the other side; the world snaps that start to the nearest floor. One start for both landings
+// snapped to one side, so the door had no edge from inside the tree, and the route out found no route.
+export function passageStart(e: { from: Tile; to: Tile; side?: string[] }): Tile {
+    return e.side?.length && e.from.level === e.to.level ? { x: 2 * e.from.x - e.to.x, z: 2 * e.from.z - e.to.z, level: e.from.level } : e.from;
+}
 export function shortcutTravel(edges: ShortcutRecord[]): Travel[] {
     const out: Travel[] = [];
     for (const e of edges) {
@@ -119,7 +126,7 @@ export function shortcutTravel(edges: ShortcutRecord[]): Travel[] {
         if (!op) continue;
         out.push({
             id: `loc:${e.locName}@${e.from.x},${e.from.z},${e.from.level}>${e.to.x},${e.to.z}`, kind: e.kind, name: `${e.locName} ${e.option}`,
-            from: e.from, to: e.to, coins: e.requires?.coins ?? 0,
+            from: passageStart(e), to: e.to, coins: e.requires?.coins ?? 0,
             needs: [...(e.requires?.skills ?? []).map(k => ({ skill: k.name, level: k.level })), ...(e.requires?.varps ?? []).map(v => ({ varp: v.varp, op: v.op, value: v.value }))],
             runes: [], run: { how: 'loc', loc: e.locName, op, option: null, id: e.id, at: e.from },
             cost: Math.max(Math.abs(e.from.x - e.to.x), Math.abs(e.from.z - e.to.z)) + 3,

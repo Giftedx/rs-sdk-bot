@@ -194,3 +194,42 @@ test('ambiguous stair replies cannot pass on the right floor at the wrong landin
     const result=await walkRoute(g as any,[{kind:'transport',loc:'spiralstairstop',option:'op1',at:{x:3205,z:3229,level:2},to:{x:3205,z:3228,level:1},exact:true}],{maxRetriesPerLeg:1,legTimeoutTicks:10});
     g.stop(); expect(result).toMatchObject({ok:false,reason:'timeout'});
 });
+
+test('a scripted gate two tiles from its recorded entrance is clicked, its dialogue answered, and clicked again until the player is through', async () => {
+    // gnome_areagate 190 at 2459,3383 with the record's south entrance 2461,3382: Femi's box dialogue first, then the gate.
+    const gate = { id: 190, name: 'Gate', x: 2459, z: 3383, level: 0, optionsWithIndex: [{ text: 'Open', opIndex: 1 }] };
+    const g = fakeGame({ x: 2460, z: 3381, level: 0, nearbyLocs: [gate] });
+    let clicks = 0;
+    g.quirks.onDirectLoc = () => {
+        clicks++;
+        if (clicks === 1) g.state.dialog = { isOpen: true, isWaiting: false, options: [{ index: 1, text: "Sorry, I'm a bit busy." }, { index: 2, text: 'OK then.' }] };
+        else { g.state.player.worldX = 2461; g.state.player.worldZ = 3385; }
+    };
+    const travel = { id: 'gate:test', kind: 'gate', name: 'Gnome Stronghold gate (Femi boxes)', from: { x: 2460, z: 3381, level: 0 }, to: { x: 2459, z: 3385, level: 0 }, coins: 0, needs: [], runes: [],
+        run: { how: 'gate', loc: 'Gate', action: 'Open', at: { x: 2461, z: 3382, level: 0 }, choices: ['OK then'] }, cost: 8 } as any;
+    const r = await walkRoute(g as any, [{ kind: 'travel', travel, at: travel.from, to: travel.to }], { maxRetriesPerLeg: 1, legTimeoutTicks: 150 });
+    g.stop();
+    expect(r.ok).toBe(true);
+    expect(clicks).toBe(2);
+    expect(g.calls.filter(c => c.startsWith('direct interact 2459,3383 op1'))).toHaveLength(2);
+    expect(g.calls).toContain('dialog 2');
+    expect(g.calls).toContain('walk 2459,3385');
+});
+
+test('a short passage on one floor ends on its landing, not within 8 tiles of it', async () => {
+    // treedoorl 1967 at 2464,3492 from inside the Grand Tree (2464,3493) to the landing 2465,3490: a click that moves nothing fails the leg.
+    const door = { id: 1967, name: 'Door', x: 2464, z: 3492, level: 0, optionsWithIndex: [{ text: 'Open', opIndex: 1 }] };
+    const travel = { id: 'loc:treedoorl', kind: 'passage', name: 'treedoorl op1', from: { x: 2464, z: 3493, level: 0 }, to: { x: 2465, z: 3490, level: 0 }, coins: 0, needs: [], runes: [],
+        run: { how: 'loc', loc: 'treedoorl', op: 1, option: null, id: 1967, at: { x: 2464, z: 3492, level: 0 } }, cost: 5 } as any;
+    const leg = { kind: 'travel', travel, at: travel.from, to: travel.to } as any;
+    const stuck = fakeGame({ x: 2464, z: 3493, level: 0, nearbyLocs: [door] });
+    const r1 = await walkRoute(stuck as any, [leg], { maxRetriesPerLeg: 1, legTimeoutTicks: 150 });
+    stuck.stop();
+    expect(r1).toMatchObject({ ok: false, reason: 'timeout' });
+    expect(stuck.calls).toContain('direct interact 2464,3492 op1');
+    const g = fakeGame({ x: 2464, z: 3493, level: 0, nearbyLocs: [door] });
+    g.quirks.onDirectLoc = () => { g.state.player.worldX = 2465; g.state.player.worldZ = 3490; };
+    const r2 = await walkRoute(g as any, [leg], { maxRetriesPerLeg: 1, legTimeoutTicks: 150 });
+    g.stop();
+    expect(r2.ok).toBe(true);
+});

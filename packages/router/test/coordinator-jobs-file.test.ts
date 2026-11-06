@@ -1,11 +1,13 @@
 import {test,expect} from 'bun:test';
-import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,existsSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,existsSync,appendFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {migrateCoordinatorJobs,currentRevision,REVISION_FRESH_MS} from '../src/coordinator-cli';
+import {migrateCoordinatorJobs,currentRevision,REVISION_FRESH_MS,rulePassDue} from '../src/coordinator-cli';
+import {PLAN_GAP_MS,plannerDue} from '../src/coordinator-decisions';
 import {disableOwnJob,ensureSwarm,controllerStateFresh,CONTROLLER_STATE_FRESH_MS} from '../src/coordinator-live';
 import {atomicJson,saveState,loadState} from '../src/coordinator-store';
-import {initialState,addTasks} from '../src/coordinator';
+import * as planner from '../src/coordinator-planner';
+import {initialState,addTasks,startTask,finishTask,type CoordTask} from '../src/coordinator';
 import {readCoordinatorJobs,readMergedPlan,writeCoordinatorJobs,coordinatorJobsPath} from '../../core/src/coordinator-jobs';
 
 const owner=[{account:'Haggis',script:'',goal:'main simultaneous24 fresh clock',enabled:false},{accounts:['A','B'],host:true,script:'host.ts',enabled:true,standing:true}];
@@ -53,6 +55,25 @@ test('a fresh controller state under the saved pid and nonce replaces the comman
  atomicJson(join(base,'.practice/swarm-state.json'),{at:1000-CONTROLLER_STATE_FRESH_MS,controllerPid:process.pid,coordinatorOwner:'controller'});
  await expect(ensureSwarm('new',deps as any,false)).rejects.toThrow('command ownership is unknown');
  expect(probes).toBe(1);
+});
+test('planner capacity uses only a fresh heartbeat from the saved controller owner',()=>{
+ const base=fixture(),at=1000;
+ const lease=join(base,'.practice/coordinator/swarm-owner.json');
+ const heartbeat=join(base,'.practice/swarm-state.json');
+ const owner={pid:process.pid,nonce:'controller'};
+ const sample={at,controllerPid:owner.pid,coordinatorOwner:owner.nonce,running:2,externalRunning:1,
+  pendingStartup:1,pendingReserveGB:1,freeGB:6.5,minFreeGB:4,maxBots:18};
+ atomicJson(lease,owner);
+ atomicJson(heartbeat,sample);
+ expect(planner.readPlannerControllerCapacity(base,at)).toEqual({at,running:2,externalRunning:1,
+  pendingStartup:1,pendingReserveGB:1,freeGB:6.5,minFreeGB:4,maxBots:18});
+ expect(planner.readPlannerControllerCapacity(base,at+CONTROLLER_STATE_FRESH_MS)).toBeNull();
+ expect(planner.readPlannerControllerCapacity(base,at-1)).toBeNull();
+ atomicJson(heartbeat,{...sample,externalRunning:undefined,pendingReserveGB:-1});
+ expect(planner.readPlannerControllerCapacity(base,at)).toMatchObject({running:2,externalRunning:null,pendingReserveGB:null});
+ atomicJson(lease,{...owner,nonce:'replacement'});
+ expect(planner.readPlannerControllerCapacity(base,at)).toBeNull();
+ expect(planner.readPlannerControllerCapacity(fixture(),at)).toBeNull();
 });
 test('a standing rollout pauses and resumes jobs through the coordinator file; swarm.json keeps its bytes',async()=>{
  const base=fixture(),dir=join(base,'.practice/coordinator'),path=join(base,'swarm.json'),raw=JSON.stringify({maxBots:17,minFreeGB:4,jobs:owner},null,2)+'\n';
@@ -126,6 +147,39 @@ test('archived tasks append to the archive file and the state shrinks; a planner
  expect(plannerState({state}).tasks).toBe(state.tasks);
  expect(()=>plannerState({})).toThrow('names no state');
 });
+test('archive directory failure leaves finished records in the queue',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'coord-archive-')),day=24*60*60*1000,now=10*day,state=initialState();
+ const finished=record('finished','failed',now-5*day),kept=record('kept','failed',now-3*day);
+ state.tasks=[finished,kept];
+ writeFileSync(join(dir,'archive'),'blocks directory creation');
+ expect(()=>archiveFinishedTasks(state,now,dir)).toThrow();
+ expect(state.tasks).toEqual([finished,kept]);
+});
+test('archive append failure preserves the queue and prior bytes, and a restart does not append the same record',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'coord-archive-')),day=24*60*60*1000,now=10*day,state=initialState();
+ const prior=record('prior','failed',now-6*day);
+ const archived=record('archived','failed',now-5*day),kept=record('kept','failed',now-3*day);
+ state.tasks=[prior,kept];
+ expect(archiveFinishedTasks(state,now,dir)).toBe(1);
+ state.tasks.unshift(archived);
+ saveState(state,dir);
+ const file=join(dir,'archive/tasks.jsonl'),before=readFileSync(file,'utf8');
+ expect(()=>archiveFinishedTasks(state,now,dir,(path,bytes)=>{
+  appendFileSync(path,bytes.slice(0,17));
+  throw Error('simulated short write');
+ })).toThrow('simulated short write');
+ expect(state.tasks).toEqual([archived,kept]);
+ expect(readFileSync(file,'utf8')).toBe(before);
+
+ expect(archiveFinishedTasks(state,now,dir)).toBe(1);
+ const complete=before+JSON.stringify(archived)+'\n';
+ expect(readFileSync(file,'utf8')).toBe(complete);
+
+ const restarted=loadState(dir);
+ expect(archiveFinishedTasks(restarted,now,dir)).toBe(1);
+ expect(restarted.tasks).toEqual([kept]);
+ expect(readFileSync(file,'utf8')).toBe(complete);
+});
 test('a replacement plan ignores archived dependencies of finished tasks but still refuses them for open tasks',()=>{
  const day=24*60*60*1000,now=10*day,state=initialState();
  state.tasks=[
@@ -138,4 +192,54 @@ test('a replacement plan ignores archived dependencies of finished tasks but sti
  expect(state.tasks.find(r=>r.spec.id==='waiter')!.spec.dependsOn).toEqual(['new-run']);
  state.tasks.push(record('broken','pending',now,{kind:'run',capability:'fish-order',dependsOn:['archived-build']}));
  expect(()=>replaceTasks(state,[])).toThrow('missing replacement dependency');
+});
+
+test('a late receipt triggers a new planning pass even with an older timestamp', () => {
+ const state = initialState();
+ addTasks(state, [
+  {id:'older',kind:'qualify',goal:'quests',capability:'quest-order',dependsOn:[],priority:1,estimatedMs:1000,why:'Prove a quest worker'},
+  {id:'newer',kind:'qualify',goal:'quests',capability:'quest-order',dependsOn:[],priority:1,estimatedMs:1000,why:'Prove a quest worker'},
+ ], 0);
+ startTask(state, 'older', 1000, 'older');
+ startTask(state, 'newer', 2000, 'newer');
+ expect(finishTask(state, {taskId:'newer',runId:'newer',ok:true,at:4000,output:null})).toBe(true);
+ const firstReceiptSequence = state.latestReceiptSequence;
+ expect(firstReceiptSequence).toBe(state.sequence);
+ state.plannerReceiptSequence = firstReceiptSequence;
+ state.planner = {runId:'planner', startedAt:5000};
+ expect(plannerDue(state, 7000, 0, false)).toBeNull();
+ expect(finishTask(state, {taskId:'older',runId:'older',ok:false,at:3000,output:null})).toBe(true);
+ expect(state.latestReceiptSequence).toBe(state.sequence);
+ expect(state.latestReceiptSequence!).toBeGreaterThan(firstReceiptSequence!);
+ expect(plannerDue(state, 7000, 0, false)).toBeNull();
+ delete state.planner;
+ state.lastPlanAt = 7000;
+ expect(plannerDue(state, 7000 + PLAN_GAP_MS - 1, 0, false)).toBeNull();
+ expect(plannerDue(state, 7000 + PLAN_GAP_MS, 0, false)).toBe('outcome');
+ state.plannerReceiptSequence = state.latestReceiptSequence;
+ expect(plannerDue(state, 7000 + PLAN_GAP_MS, 0, false)).toBeNull();
+ expect(plannerDue(state, 9000, 0, true)).toBe('request');
+});
+
+test('rules notice a new receipt even when archive and settlement leave the same count', () => {
+ const state=initialState();
+ const spec=(id:string):CoordTask=>({id,kind:'qualify',goal:'quests',capability:'quest-order',dependsOn:[],
+  priority:1,estimatedMs:1000,why:'Prove the quest worker'});
+ const settle=(id:string,at:number)=>{
+  addTasks(state,[spec(id)],at-2);
+  startTask(state,id,at-1,id);
+  expect(finishTask(state,{taskId:id,runId:id,ok:true,at,output:null})).toBe(true);
+ };
+ settle('old-proof',2);
+ settle('recent-proof',4);
+ const previous={at:10,receiptSequence:state.latestReceiptSequence!};
+ expect(rulePassDue(state,previous,10)).toBe(false);
+ expect(compactState(state,10,1).map(r=>r.spec.id)).toEqual(['old-proof']);
+ expect(rulePassDue(state,previous,10)).toBe(false);
+ settle('fresh-proof',12);
+ expect(state.tasks.filter(r=>r.receipt)).toHaveLength(2);
+ expect(rulePassDue(state,previous,12)).toBe(true);
+ const current={at:12,receiptSequence:state.latestReceiptSequence!};
+ expect(rulePassDue(state,current,300011)).toBe(false);
+ expect(rulePassDue(state,current,300012)).toBe(true);
 });

@@ -1,13 +1,15 @@
 > Current authority: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. See [AGENTS.md](../AGENTS.md).
 
-> Current target check: [all 24 boards refreshed](../.practice/joined-plan/targets-20261026-093155/comparison.json); timed leaders unchanged, realistic model 44,866 versus 35,916. Value-board targets and tie limits are in [boards-special](boards-special.md). No feasible route has been proved for the 24-board goal; the goal is unchanged. Quest Points has a playtime deadline. Use the [current plan](../docs/plans/joined-plan.md) for the current gap and next experiment.
+> The [current plan](../docs/plans/joined-plan.md) owns the Overall gap. The snapshot covers 21 time-ranked boards, including Quest Points. See [boards-special](boards-special.md) for value-board targets and tie limits.
 
 # Haggis run: 24-board schedule
 
 Model: `packages/planner/src/haggis.ts` with travel (`packages/planner/src/travel.ts`). Inputs:
 `packages/planner/src/haggis-boards.json` (each number has `evidence` and `source`; each row has a place) and the leg
-cache `packages/planner/src/haggis-travel.json`. Deadlines: `research/hiscores-live.json` ), row 1 of each board. Reprint every table here with
-`bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --order --supplies --evidence --levers --travel`.
+cache `packages/planner/src/haggis-travel.json`. Deadlines come from row 1 of each board in `research/hiscores-live.json`. Reprint the schedule with
+`bun packages/planner/src/haggis-cli.ts --order --supplies --evidence --levers --travel`.
+
+Source -> local consumer -> reuse -> check: the pinned server's exact tick titles and the existing scout parser -> the planner's shared record snapshot -> require a readable leader in the declared tick units on every timed board before replacing the file -> parser fixtures reject wrong units and missing leaders. Capture with `bun packages/planner/src/scout-cli.ts --out=research/hiscores-live.json`. The saved comparison in `.practice/hiscore-target/compare.json` binds both route estimates to their snapshot hashes.
 
 ## Verdict
 
@@ -173,6 +175,12 @@ Tick = Haggis playtime. "Walk" rows are travel legs (`walk A -> B` in `--order`)
 | 23 | Gear, bank wealth, Lava Maze runite | 108,400 | 110,425 | Equipment, Bank, Runite |
 
 ## Travel model
+
+Source -> local consumer -> reuse -> check: the scheduler's existing deadline relaxation and route search -> the Overall planner, supply bill and launch check -> compare the usual order with a six-board relaxation and retain the earlier Overall finish -> a fixture checks both start locations and keeps the actual skill record deadlines. The bounded search in `.practice/hiscore-target/priority-beam.json` evaluates 999 deadline sets against a hashed snapshot and route model. The selected order is a model result.
+
+Source -> local consumer -> adapt -> check: the scheduler's prerequisite graph and travel model -> the Overall planner, supply bill and launch check -> try ready prerequisites with more direct dependants first when deadlines tie, and keep a strictly earlier finish -> a fixture checks a shorter trip and an equal-cost fallback. The hashed replay in `.practice/overall-travel-order/verified.json` finds 229 fewer travel and Overall ticks in each of six model cases. Route variants, supplies, quest points, blocked rows and record deadlines match. The nearest-activity order in `.practice/overall-travel-order/prototype.json` takes 415 more realistic ticks and stays out of the planner. The comparison uses the model's travel legs and needs a route rehearsal for game timing.
+
+Source -> local consumer -> adapt -> check: the same deadline and prerequisite scheduler -> the Overall planner, supply bill and launch check -> try a separate travel order on the selected variants and keep it only when Overall finishes earlier -> a fishing fixture checks deadline placement and fallback. The bounded search in `.practice/overall-order-crosscheck/beam.json` compares 882 deadline sets. The source-bound replay in `.practice/overall-order-crosscheck/verified.json` saves 200 Overall ticks and 219 travel ticks in each of six model cases. Route variants, required supplies, quest points, blocked rows and record deadlines match. The route still needs rehearsal and falls short of the record.
 
 - Each row of `haggis-boards.json` has `at` (a place, `anywhere`, or `bank` = the nearest bank), and may have
   `endAt`, `via` and `bankTrips`. The scheduler adds the walk from the player's place to the next row.

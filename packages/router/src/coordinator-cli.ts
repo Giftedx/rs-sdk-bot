@@ -1,11 +1,12 @@
-import {existsSync,readFileSync,writeFileSync,appendFileSync,unlinkSync,watch,mkdirSync,readdirSync,renameSync} from 'node:fs';
-import {join} from 'node:path';
-import {randomUUID} from 'node:crypto';
+import {existsSync,readFileSync,writeFileSync,appendFileSync,statSync,truncateSync,unlinkSync,watch,mkdirSync,readdirSync,renameSync} from 'node:fs';
+import {basename,join} from 'node:path';
+import {createHash,randomUUID} from 'node:crypto';
 import {freemem,cpus} from 'node:os';
-import {addTasks,chooseTask,startTask,finishTask,refreshQualifications,qualificationDemand,boundAccounts,fleetExpansion,activeBuildFocus,failedBuildStreak,heldBuilds,compactState,FOCUS_FAILURE_LIMIT,type CoordinatorState} from './coordinator';
-import {buildFault} from './build-fault';
-import {projectRoot,coordinationDir,loadState,saveState,runDirectory,atomicJson,atomicText,event,spawnDetached,recoverPlanWrite,withPlanWrite} from './coordinator-store';
-import {planWork,acceptProposal} from './coordinator-planner';
+import {addTasks,chooseTask,startTask,finishTask,refreshQualifications,qualificationDemand,boundAccounts,fleetExpansion,activeBuildFocus,failedBuildStreak,heldBuilds,compactState,usefulLiveReceipt,preparedProvisionClaims,FOCUS_FAILURE_LIMIT,type CoordinatorState,type CoordTask} from './coordinator';
+import {buildFailureEvidence} from './build-fault';
+import {projectRoot,coordinationDir,loadState,saveState,runDirectory,atomicJson,atomicText,event,spawnDetached,recoverPlanWrite,withPlanWrite,capabilitySource,publishCapabilityChanges} from './coordinator-store';
+import {DISK_FLOOR_GB,diskFreeGB,finishPlan,plannerDue,retireDeadTasks,reviewHold} from './coordinator-decisions';
+import {planWork,prepareProposal} from './coordinator-planner';
 import {executeTask} from './coordinator-worker';
 import {deliveryTask,deliveryFingerprint,SOURCE_STARTUP_GB,NATIVE_STARTUP_GB} from './delivery-cli';
 import {disableOwnJob,ensureSwarm,liveRows} from './coordinator-live';
@@ -13,6 +14,7 @@ import {cachedLaunchRevision} from '../../core/src/worker-release';
 import {readCoordinatorJobs,writeCoordinatorJobs,readMergedPlan,COORDINATOR_JOBS_FILE} from '../../core/src/coordinator-jobs';
 import {assignedWorker} from './model-worker';
 import {processMatches,killTree} from '../../practice/src/proc';
+import {observePracticeTurn} from '../../practice/src/proof-lock';
 import {prepareWorkspace} from './build-workspace';
 import {applyRules,skillUnlocks} from './coordinator-rules';
 import {processDeliveryPrs} from './delivery-pr';
@@ -49,20 +51,24 @@ export function migrateCoordinatorJobs(base=projectRoot){
 const stop=join(projectRoot,'.practice/stop-coordinator');
 const restart=join(coordinationDir,'restart');
 const planRequest=join(coordinationDir,'plan-request');
-const IDLE_PLAN_MS=30*60*1000;
 const sourceErrors=new Map<string,string>();
 const cpuTotals=()=>cpus().reduce((s,c)=>({idle:s.idle+c.times.idle,total:s.total+Object.values(c.times).reduce((a,b)=>a+b,0)}),{idle:0,total:0});
 let previousCpu=cpuTotals();
 const tickSamples=new Map<string,{started:number;tick:number;at:number;latency:number|null}>();
-async function expandUsefulFleet(state:CoordinatorState,config:any){
- if(!config.autoExpand)return;
- const now=Date.now(),cpu=cpuTotals(),delta=cpu.total-previousCpu.total,usage=delta>0?1-(cpu.idle-previousCpu.idle)/delta:null;previousCpu=cpu;
+export function fleetExpansionDemand(state:CoordinatorState,runHeld:(task:CoordTask)=>boolean){
  const records=new Map(state.tasks.map(r=>[r.spec.id,r]));
  const running=state.tasks.filter(r=>r.status==='running'&&r.spec.kind==='run');
- const ready=state.tasks.filter(r=>r.status==='pending'&&r.spec.kind==='run'&&r.spec.dependsOn.every(id=>records.get(id)?.status==='succeeded'));
- const preparedClaims=state.tasks.filter(r=>r.status==='pending'&&r.spec.kind==='provision'&&r.spec.dependsOn.every(id=>records.get(id)?.status==='succeeded')&&state.tasks.some(child=>child.status==='pending'&&child.spec.kind==='run'&&(child.spec.accountFrom===r.spec.id||child.spec.participants?.includes('@'+r.spec.id))));
- const demand=new Set([...running,...ready].flatMap(r=>boundAccounts(r.spec,state)??[]).map(n=>n.toLowerCase())).size+preparedClaims.length;
+ const ready=state.tasks.filter(r=>r.status==='pending'&&r.spec.kind==='run'
+  &&r.spec.dependsOn.every(id=>records.get(id)?.status==='succeeded')&&!runHeld(r.spec));
+ const preparedClaims=preparedProvisionClaims(state,records,undefined,runHeld);
  const active=new Set(running.flatMap(r=>boundAccounts(r.spec,state)??[]).map(n=>n.toLowerCase()));
+ const demand=new Set([...active,...ready.flatMap(r=>boundAccounts(r.spec,state)??[]).map(n=>n.toLowerCase())]).size+preparedClaims.size;
+ return {active,demand};
+}
+async function expandUsefulFleet(state:CoordinatorState,config:any,runHeld:(task:CoordTask)=>boolean){
+ if(!config.autoExpand)return;
+ const now=Date.now(),cpu=cpuTotals(),delta=cpu.total-previousCpu.total,usage=delta>0?1-(cpu.idle-previousCpu.idle)/delta:null;previousCpu=cpu;
+ const {active,demand}=fleetExpansionDemand(state,runHeld);
  const rows=new Map(liveRows().map(r=>[String(r.name).toLowerCase(),r]));let stalled=false;const latencies:number[]=[];
  for(const name of active){
   const row=rows.get(name);if(!row||row.server!=='rs-sdk-demo.fly.dev'||now-row.at>5000||!Number.isFinite(row.tick)){stalled=true;continue;}
@@ -71,7 +77,7 @@ async function expandUsefulFleet(state:CoordinatorState,config:any){
   tickSamples.set(name,{started:row.started,tick:row.tick,at:row.at,latency});if(latency===null)stalled=true;else latencies.push(latency);
  }
  const plan=readPlan(),last=plan.coordination?.lastExpansionAt??0;
- const useful=state.tasks.filter(r=>r.spec.kind==='run'&&r.status==='succeeded'&&r.receipt?.output?.evidence==='live'&&r.receipt.at>last&&now-r.receipt.at<900000).length;
+ const useful=state.tasks.filter(r=>(usefulLiveReceipt(r,now)?.at??0)>Math.max(last,now-900000)).length;
  const target=fleetExpansion({limit:plan.maxBots,demand,freeGB:freemem()/2**30,reserveGB:plan.minFreeGB,cpu:usage,tickMs:latencies.length?Math.max(...latencies):null,stalled,usefulResults:useful,now,lastExpandedAt:last});
  if(target===plan.maxBots)return;
  // The grant lives in the coordinator's file over the owner's current maxBots; an owner edit of maxBots discards it.
@@ -122,11 +128,28 @@ export function plannerState(input:{state?:CoordinatorState;statePath?:string}):
  return json(input.statePath);
 }
 // Old finished tasks move to an append-only archive before the state is saved; nothing is deleted.
-export function archiveFinishedTasks(state:CoordinatorState,now=Date.now(),directory=coordinationDir){
- const archived=compactState(state,now);
+export function archiveFinishedTasks(state:CoordinatorState,now=Date.now(),directory=coordinationDir,append:(file:string,data:string)=>void=appendFileSync){
+ const candidate={...state};
+ const archived=compactState(candidate,now);
  if(!archived.length)return 0;
  const archive=join(directory,'archive');mkdirSync(archive,{recursive:true});
- appendFileSync(join(archive,'tasks.jsonl'),archived.map(r=>JSON.stringify(r)).join('\n')+'\n');
+ const file=join(archive,'tasks.jsonl');
+ const prior=existsSync(file)?readFileSync(file):Buffer.alloc(0);
+ const contents=prior.toString('utf8');
+ // A restart before the queue save can replay a batch that already reached the archive.
+ const written=new Set(contents.split(/\r?\n/));
+ const pending=archived.map(record=>JSON.stringify(record)).filter(line=>!written.has(line));
+ if(pending.length){
+  const separator=contents&&!contents.endsWith('\n')?'\n':'';
+  try{
+   append(file,separator+pending.join('\n')+'\n');
+  }catch(error){
+   // The controller owns the archive. Remove bytes left by a failed append.
+   if((statSync(file,{throwIfNoEntry:false})?.size??0)>prior.length)truncateSync(file,prior.length);
+   throw error;
+  }
+ }
+ state.tasks=candidate.tasks;
  return archived.length;
 }
 async function child(mode:string,runId:string){
@@ -134,7 +157,13 @@ async function child(mode:string,runId:string){
  try{
   const input=json(join(dir,'input.json'));
   if(mode==='--planner'){const proposal=await planWork(plannerState(input),dir,input.timeoutMs,input.agent??'claude');atomicJson(join(dir,'proposal.json'),proposal);}
-  else{const result=await executeTask(input.task,input.dependencies,dir,runId,input.startedAt,input.agent??'claude'),fault=input.task.kind==='build'?buildFault(result):null,output=fault?{...result,buildFault:fault}:result;atomicJson(join(dir,'receipt.json'),{taskId:input.task.id,runId,agent:input.agent??'claude',ok:output.ok===true,at:Date.now(),output});}
+  else{
+   const result=await executeTask(input.task,input.dependencies,dir,runId,input.startedAt,input.agent??'claude');
+   const build=input.task.kind==='build';
+   const failure=build||input.task.kind==='qualify'?buildFailureEvidence(result,build):{};
+   const output={...result,...failure};
+   atomicJson(join(dir,'receipt.json'),{taskId:input.task.id,runId,agent:input.agent??'claude',ok:output.ok===true,at:Date.now(),output});
+  }
  }catch(error){
   if(mode==='--planner')atomicJson(join(dir,'planner-error.json'),{error:String(error)});
   else{const input=json(join(dir,'input.json'));atomicJson(join(dir,'receipt.json'),{taskId:input.task.id,runId,ok:false,at:Date.now(),output:existsSync(join(dir,'identity.json'))?json(join(dir,'identity.json')):null,error:String(error)});}
@@ -151,14 +180,20 @@ function clearFocus(capability:string){
 const RULE_RECHECK_MS=5*60*1000;
 // The rule reads the fleet best from the scoreboard file; it rebuilds the scoreboard only when the file is older than this.
 const RULE_BOARD_MAX_AGE_MS=60*60*1000;
-let rulePass={at:0,receipts:-1};
+type RulePass={at:number;receiptSequence:number};
+let rulePass:RulePass={at:0,receiptSequence:-1};
+let lowDisk=false;
+
+export function rulePassDue(state:Pick<CoordinatorState,'latestReceiptSequence'>,previous:RulePass,now:number):boolean{
+ return (state.latestReceiptSequence??0)!==previous.receiptSequence||now-previous.at>=RULE_RECHECK_MS;
+}
 let unlocks:((skill:string)=>number[])|undefined;
 // A skipped chain is reported once per reason, not on every pass.
 const ruleSkips=new Set<string>();
 function runRules(state:CoordinatorState,liveLimit:number){
- const receipts=state.tasks.filter(r=>r.receipt).length,now=Date.now();
- if(receipts===rulePass.receipts&&now-rulePass.at<RULE_RECHECK_MS)return;
- rulePass={at:now,receipts};
+ const now=Date.now();
+ if(!rulePassDue(state,rulePass,now))return;
+ rulePass={at:now,receiptSequence:state.latestReceiptSequence??0};
  try{
   let board:any;try{board=freshScoreboard(projectRoot,RULE_BOARD_MAX_AGE_MS);}catch{board=null;}
   const fleetSkills:any[]|undefined=Array.isArray(board?.fleetSkills)?board.fleetSkills:undefined;
@@ -180,6 +215,95 @@ function openDeliveryPrs(){
   for(const pr of conflicts)event('delivery-pr-conflict',{task:pr.taskId,branch:pr.branch,error:pr.lastError});
  }).catch(error=>event('delivery-pr-failed',String(error))).finally(()=>{deliveryPrs=undefined;});
 }
+export function nativeDispatchReady(state:Pick<CoordinatorState,'tasks'>,freeGB:number,
+ observe:()=>Pick<ReturnType<typeof observePracticeTurn>,'holder'|'liveWaiters'>=()=>observePracticeTurn(join(projectRoot,'.practice/delivery-native.lock'))){
+ if(!(freeGB>=NATIVE_STARTUP_GB)||state.tasks.some(r=>r.status==='running'&&r.spec.kind==='qualify'))return false;
+ const {holder,liveWaiters}=observe();
+ return holder!=='pid-present'&&(liveWaiters??0)===0;
+}
+const submissionDigest=(bytes:Buffer)=>createHash('sha256').update(bytes).digest('hex');
+function acknowledgeSubmission(state:CoordinatorState,base:string,publish:typeof publishCapabilityChanges,move=renameSync){
+ const pending=state.pendingSubmission;
+ if(!pending)return;
+ const directory=join(base,'.practice/coordinator'),{sha256,capabilities}=pending;
+ if('file' in pending){
+  const {file}=pending;
+  if(typeof file!=='string'||basename(file)!==file||!file.endsWith('.request.json'))throw Error('invalid pending submission name');
+  const path=join(directory,'requests',file),accepted=path+'.accepted';
+  const alreadyAccepted=existsSync(accepted);
+  if(alreadyAccepted&&existsSync(path))throw Error('duplicate pending and accepted submission: '+file);
+  if(submissionDigest(readFileSync(alreadyAccepted?accepted:path))!==sha256)throw Error('pending submission bytes changed: '+file);
+  if(!alreadyAccepted){
+   publish(base,capabilities);
+   move(path,accepted);
+   event('queue-submitted',{file},directory);
+  }
+ }else{
+  const {runId,count}=pending,dir=runDirectory(runId,directory),accepted=join(dir,'plan-accepted.json');
+  if(submissionDigest(readFileSync(join(dir,'proposal.json')))!==sha256)throw Error('pending model proposal bytes changed: '+runId);
+  const receipt=JSON.stringify({runId,sha256,count},null,2);
+  if(existsSync(accepted)){
+   if(readFileSync(accepted,'utf8')!==receipt)throw Error('model acknowledgement bytes changed: '+runId);
+  }else{
+   publish(base,capabilities);
+   atomicText(accepted,receipt);
+   event('plan-accepted',{runId,count,reason:state.lastPlanReason},directory);
+  }
+ }
+ delete state.pendingSubmission;
+}
+export function intakeRequests(state:CoordinatorState,base=projectRoot,{save=saveState,move=renameSync,publish=publishCapabilityChanges}={}){
+ const directory=join(base,'.practice/coordinator'),requests=join(directory,'requests');mkdirSync(requests,{recursive:true});
+ // Recover before reading another request or dispatching from the committed queue.
+ acknowledgeSubmission(state,base,publish,move);
+ for(const file of readdirSync(requests).filter(f=>f.endsWith('.request.json'))){
+  const path=join(requests,file),bytes=readFileSync(path);
+  let prepared:ReturnType<typeof prepareProposal>;
+  try{prepared=prepareProposal(state,JSON.parse(bytes.toString('utf8')),base);}
+  catch(error){
+   if(typeof (error as NodeJS.ErrnoException)?.code==='string')throw error;
+   move(path,path+'.rejected');
+   event('queue-submit-failed',{file,error:String(error)},directory);
+   continue;
+  }
+  const {candidate,capabilities}=prepared;
+  candidate.pendingSubmission={file,sha256:submissionDigest(bytes),capabilities};
+  save(candidate,directory);
+  Object.assign(state,candidate);
+  acknowledgeSubmission(state,base,publish,move);
+ }
+}
+export function settlePlanner(state:CoordinatorState,base=projectRoot,{save=saveState,publish=publishCapabilityChanges}={}){
+ acknowledgeSubmission(state,base,publish);
+ if(!state.planner)return;
+ const directory=join(base,'.practice/coordinator');
+ const {runId,pid}=state.planner,dir=runDirectory(runId,directory),proposal=join(dir,'proposal.json'),error=join(dir,'planner-error.json');
+ const hasProposal=existsSync(proposal),hasError=existsSync(error);
+ if(!hasProposal&&!hasError&&(existsPid(pid!)||processMatches(pid!,runId)))return;
+ let bytes:Buffer,prepared:ReturnType<typeof prepareProposal>;
+ try{
+  if(!hasProposal)throw Error(hasError?json(error).error:'planner ended without proposal');
+  bytes=readFileSync(proposal);
+  prepared=prepareProposal(state,JSON.parse(bytes.toString('utf8')),base,'model');
+ }catch(error){
+  if(typeof (error as NodeJS.ErrnoException)?.code==='string')throw error;
+  const failed={...state,lastPlanReason:'planner failed: '+String(error)};
+  finishPlan(failed,Date.now(),false);
+  save(failed,directory);
+  Object.assign(state,failed);
+  delete state.planner;
+  event('plan-failed',String(error),directory);
+  return;
+ }
+ const {candidate,capabilities,count}=prepared;
+ finishPlan(candidate,Date.now(),true);
+ candidate.pendingSubmission={runId,count,sha256:submissionDigest(bytes),capabilities};
+ save(candidate,directory);
+ Object.assign(state,candidate);
+ delete state.planner;
+ delete state.planFailures;
+ acknowledgeSubmission(state,base,publish);
+}
 async function tick(state:CoordinatorState,config:any){
  recoverPlanWrite();
  openDeliveryPrs();
@@ -193,12 +317,7 @@ async function tick(state:CoordinatorState,config:any){
   event('fleet-focus-adopted',{capability:config.focusCapability,since:config.focusSince});
  });
  reconcile(state);
- const requests=join(coordinationDir,'requests');mkdirSync(requests,{recursive:true});
- for(const file of readdirSync(requests).filter(f=>f.endsWith('.request.json'))){
-  const path=join(requests,file);
-  try{acceptProposal(state,json(path));saveState(state);renameSync(path,path+'.accepted');event('queue-submitted',{file});}
-  catch(error){renameSync(path,path+'.rejected');event('queue-submit-failed',{file,error:String(error)});}
- }
+ intakeRequests(state);
  // Reuse current evidence; refresh only capabilities with waiting live consumers.
  if(!state.tasks.some(r=>r.status==='running'&&r.spec.kind==='build')){
   const caps=[...new Set(qualificationDemand(state).map(r=>r.spec.capability!))];
@@ -207,16 +326,16 @@ async function tick(state:CoordinatorState,config:any){
   catch(error){const detail=String(error);if(sourceErrors.get(cap)!==detail)event('qualification-source-unavailable',{cap,error:detail});sourceErrors.set(cap,detail);}
   refreshQualifications(state,fingerprints);
  }
- if(state.planner){
-  const pending=state.planner,dir=runDirectory(pending.runId),proposal=join(dir,'proposal.json'),error=join(dir,'planner-error.json');
-  if(existsSync(proposal)||existsSync(error)||(!existsPid(pending.pid!)&&!processMatches(pending.pid!,pending.runId))){
-   try{if(!existsSync(proposal))throw Error(existsSync(error)?json(error).error:'planner ended without proposal');const count=acceptProposal(state,json(proposal));event('plan-accepted',{count,reason:state.lastPlanReason});}
-   catch(e){state.lastPlanReason='planner failed: '+String(e);event('plan-failed',String(e));}
-   state.lastPlanAt=Date.now();delete state.planner;saveState(state);
-  }
- }
+ settlePlanner(state);
+ const retired=retireDeadTasks(state,Date.now());
+ if(retired.length){saveState(state);event('tasks-retired',{count:retired.length,tasks:retired});}
  // Model/native capacity is independent from finite live account jobs.
- if(config.focusCapability&&state.tasks.some(r=>r.spec.capability===config.focusCapability&&r.spec.kind==='run'&&r.status==='succeeded'&&r.receipt?.output?.evidence==='live'&&r.receipt.at>=(config.focusSince??0))){
+ const focusObservedAt=Date.now();
+ if(config.focusCapability&&state.tasks.some(r=>{
+  if(r.spec.capability!==config.focusCapability)return false;
+  const receipt=usefulLiveReceipt(r,focusObservedAt);
+  return !!receipt&&receipt.at>=(config.focusSince??0);
+ })){
   await withPlanWrite(()=>{clearFocus(config.focusCapability);delete config.focusCapability;delete config.focusSince;event('fleet-focus-delivered',{evidence:'live'});});
  }
  // A focus that failed FOCUS_FAILURE_LIMIT builds in a row releases the other lanes; activeBuildFocus does not re-adopt it.
@@ -224,7 +343,15 @@ async function tick(state:CoordinatorState,config:any){
   const released=config.focusCapability;
   await withPlanWrite(()=>{clearFocus(released);delete config.focusCapability;delete config.focusSince;event('fleet-focus-released',{capability:released,failedBuilds:failedBuildStreak(state,released)});});
  }
- await expandUsefulFleet(state,config);
+ const owned=new Map<string,readonly string[]>(),ownedFiles=(cap:string)=>{if(!owned.has(cap))owned.set(cap,deliveryTask(cap).files);return owned.get(cap)!;};
+ // A rejected review holds its capability's runs in the queue until a repair changes the owned files. The worker repeats
+ // the check at start (coordinator-worker.ts), so a read error here holds nothing.
+ const reviewHolds=new Map<string,boolean>(),runHeld=(task:CoordTask)=>{
+  const cap=task.capability!;if(reviewHolds.has(cap))return reviewHolds.get(cap)!;
+  let held=false;try{held=reviewHold(state,cap,()=>capabilitySource(ownedFiles(cap)))!==null;}catch{/* the worker reports an unreadable source */}
+  reviewHolds.set(cap,held);return held;
+ };
+ await expandUsefulFleet(state,config,runHeld);
  const developmentLimit=config.maxActive??2,liveLimit=config.maxLive??readPlan().maxBots;
  runRules(state,liveLimit);
  let controllerPrepared=false,liveBlocked=false;
@@ -234,12 +361,16 @@ async function tick(state:CoordinatorState,config:any){
   try{await ensureSwarm(currentRevision(),{currentSource:()=>currentRevision()},false);sourceErrors.delete('controller');}
   catch(error){const detail=String(error);if(sourceErrors.get('controller')!==detail)event('live-controller-wait',{error:detail});sourceErrors.set('controller',detail);}
  }
+ // Expansion may have sampled review holds before controller preparation waited for a source rollout.
+ reviewHolds.clear();owned.clear();
  for(const held of heldBuilds(state,Date.now())){const key='hold:'+held.capability,seen=held.fault+'@'+held.at;if(sourceErrors.get(key)!==seen){event('build-held',held);sourceErrors.set(key,seen);}}
- const owned=new Map<string,readonly string[]>(),ownedFiles=(cap:string)=>{if(!owned.has(cap))owned.set(cap,deliveryTask(cap).files);return owned.get(cap)!;};
- for(let dispatch=0;dispatch<developmentLimit+liveLimit;dispatch++){
+ // Running tasks finish. A full disk stops the whole loop, so new work stops first.
+ const diskGB=diskFreeGB(projectRoot),diskLow=diskGB!==null&&diskGB<DISK_FLOOR_GB;
+ if(diskLow!==lowDisk){lowDisk=diskLow;event(diskLow?'disk-low':'disk-recovered',{freeGB:diskGB,floorGB:DISK_FLOOR_GB});}
+ for(let dispatch=0;!diskLow&&dispatch<developmentLimit+liveLimit;dispatch++){
   const freeGB=freemem()/2**30,request=join(coordinationDir,'publish-request.json');
   let publishing:string|undefined;try{publishing=existsSync(request)?json(request).capability:undefined;}catch{/* a request being written */}
-  const task=chooseTask(state,Date.now(),{sourceReady:freeGB>=SOURCE_STARTUP_GB,nativeReady:freeGB>=NATIVE_STARTUP_GB,developmentLimit,liveLimit:liveBlocked?0:liveLimit,preferLive:config.preferLive===true,focusCapability:config.focusCapability,isolatedBuilds:true,publishPending:existsSync(request),publishing,ownedFiles});
+  const task=chooseTask(state,Date.now(),{sourceReady:freeGB>=SOURCE_STARTUP_GB,nativeReady:nativeDispatchReady(state,freeGB),developmentLimit,liveLimit:liveBlocked?0:liveLimit,preferLive:config.preferLive===true,focusCapability:config.focusCapability,isolatedBuilds:true,publishPending:existsSync(request),publishing,ownedFiles,runHeld});
   if(!task)break;
   // The single dispatcher prepares the controller before parallel live children
   // can race to create it. Controller startup does not log accounts in.
@@ -249,16 +380,14 @@ async function tick(state:CoordinatorState,config:any){
   }
   launchTask(state,task.id);
  }
- const pending=state.tasks.some(r=>r.status==='pending'),failure=state.tasks.some(r=>r.status==='failed'&&(r.receipt?.at??0)>state.lastPlanAt);
- const newOutcome=state.tasks.some(r=>r.receipt&&r.receipt.at>state.lastPlanAt);
- const actionable=existsSync(planRequest)||newOutcome||failure;
- // Without a new receipt, failure or request the planner only rechecks every IDLE_PLAN_MS: 1,491 of 1,603
- // plans on a 30 s timer proposed no work (research/bot-host.md "Isolated build workspaces").
- if(!state.planner&&(actionable||state.lastPlanReason.startsWith('planner failed:')||Date.now()-state.lastPlanAt>Math.max(config.plannerIntervalMs??0,IDLE_PLAN_MS))&&Date.now()-state.lastPlanAt>(actionable?1000:30000)){
+ const planReason=diskLow?null:plannerDue(state,Date.now(),config.plannerIntervalMs??0,existsSync(planRequest));
+ if(planReason){
   if(existsSync(planRequest))unlinkSync(planRequest);
   const agent=state.tasks.some(r=>r.status==='running'&&r.agent==='codex'&&r.spec.kind==='build')?'claude':'codex';
   const runId='plan-'+randomUUID(),dir=runDirectory(runId);atomicJson(join(dir,'input.json'),{statePath:join(coordinationDir,'state.json'),agent,timeoutMs:config.modelTimeoutMs??600000});
-  state.planner={runId,agent,startedAt:Date.now()};saveState(state);state.planner.pid=spawn('--planner',runId,dir);event('planner-started',{runId,pid:state.planner.pid,agent});
+  // Snapshot the receipts available when the planner starts. Receipts settled during its call trigger the next pass.
+  state.plannerReceiptSequence=state.latestReceiptSequence??0;
+  state.planner={runId,agent,startedAt:Date.now()};saveState(state);state.planner.pid=spawn('--planner',runId,dir);event('planner-started',{runId,pid:state.planner.pid,agent,reason:planReason});
  }
  const archived=archiveFinishedTasks(state);if(archived)event('tasks-archived',{count:archived,remaining:state.tasks.length});
  saveState(state);
@@ -272,28 +401,46 @@ export function waitForWork(timeoutMs=1000,directory=coordinationDir){
   try{watcher=watch(directory,{recursive:true},(_,file)=>{if(/(?:receipt\.json|proposal\.json|planner-error\.json|\.request\.json|plan-request|restart)$/.test(String(file)))done();});}catch{/* bounded fallback also observes stop files */}
  });
 }
+type CoordinatorOwner={pid:number;nonce:string};
+export async function claimCoordinatorState(nonce:string,directory=coordinationDir,
+ held=(owner:CoordinatorOwner)=>owner.pid!==process.pid&&(processMatches(owner.pid,owner.nonce)||existsPid(owner.pid))){
+ const lease=join(directory,'owner.json');
+ const activeOwner=():CoordinatorOwner|null=>{
+  if(!existsSync(lease))return null;
+  const owner:CoordinatorOwner=json(lease);
+  return held(owner)?owner:null;
+ };
+ // The predecessor can still save the queue while its reload successor waits.
+ const deadline=Date.now()+60000;
+ while(nonce.startsWith('reload-')&&activeOwner()&&Date.now()<deadline)await Bun.sleep(1000);
+ const rejectActiveOwner=()=>{
+  const owner=activeOwner();if(owner)throw Error('coordinator already owned by PID '+owner.pid);
+ };
+ rejectActiveOwner();
+ return withPlanWrite(()=>{
+  rejectActiveOwner();
+  const state=loadState(directory);
+  atomicJson(lease,{pid:process.pid,nonce,at:Date.now()});
+  return state;
+ },directory);
+}
 async function main(){
  const mode=process.argv[2]??'--status',arg=process.argv[3];
  if(mode==='--worker'||mode==='--planner'){if(!arg)throw Error('run identity required');await child(mode,arg);return;}
- const state=loadState();
- if(mode==='--status'){console.log(JSON.stringify(state,null,2));return;}
- if(mode==='--submit'){
-  if(!arg)throw Error('proposal file required');const request=json(arg),requests=join(coordinationDir,'requests');mkdirSync(requests,{recursive:true});
-  atomicJson(join(requests,randomUUID()+'.request.json'),request);console.log('Submitted to shared queue');return;
+ if(mode!=='--run'&&mode!=='--once'){
+  const state=loadState();
+  if(mode==='--status'){console.log(JSON.stringify(state,null,2));return;}
+  if(mode==='--submit'){
+   if(!arg)throw Error('proposal file required');const request=json(arg),requests=join(coordinationDir,'requests');mkdirSync(requests,{recursive:true});
+   atomicJson(join(requests,randomUUID()+'.request.json'),request);console.log('Submitted to shared queue');return;
+  }
+  if(mode==='--plan'){writeFileSync(planRequest,'refresh priorities from observed state');console.log('Planning requested');return;}
+  if(mode==='--restart'){writeFileSync(restart,'reload coordinator; preserve owned children');console.log('Coordinator reload requested');return;}
+  if(mode==='--stop'){writeFileSync(stop,'owner pause '+new Date().toISOString());console.log('Coordinator stop requested');return;}
+  throw Error('Use --run, --once, --status or --stop');
  }
- if(mode==='--plan'){writeFileSync(planRequest,'refresh priorities from observed state');console.log('Planning requested');return;}
- if(mode==='--restart'){writeFileSync(restart,'reload coordinator; preserve owned children');console.log('Coordinator reload requested');return;}
- if(mode==='--stop'){writeFileSync(stop,'owner pause '+new Date().toISOString());console.log('Coordinator stop requested');return;}
- if(mode!=='--run'&&mode!=='--once')throw Error('Use --run, --once, --status or --stop');
  const config=readPlan().coordination;if(!config?.enabled)throw Error('swarm.json coordination.enabled required');
- const lease=join(coordinationDir,'owner.json');
- if(existsSync(lease)){
-  const owner=json(lease),held=()=>owner.pid!==process.pid&&(processMatches(owner.pid,owner.nonce)||existsPid(owner.pid));
-  // A reload successor starts while its predecessor finishes the current loop.
-  for(let waited=0;held()&&arg?.startsWith('reload-')&&waited<60000;waited+=1000)await Bun.sleep(1000);
-  if(held())throw Error('coordinator already owned by PID '+owner.pid);
- }
- const nonce=arg??randomUUID();atomicJson(lease,{pid:process.pid,nonce,at:Date.now()});
+ const nonce=arg??randomUUID(),state=await claimCoordinatorState(nonce);
  if(existsSync(stop)||existsSync(join(projectRoot,'.practice/stop-swarm')))throw Error('coordinator or swarm is paused; resume only under owner authority');
  if(!state.tasks.length){addTasks(state,config.bootstrap??[]);saveState(state);}
  event('coordinator-started',{pid:process.pid,nonce});

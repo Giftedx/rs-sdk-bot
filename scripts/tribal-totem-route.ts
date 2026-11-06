@@ -16,9 +16,7 @@ export function totemStartsAtKangai(state:QuestFlag['state']):boolean{
 }
 
 // Brimhaven and Musa Point lie south of z 3260 between x 2690 and 2960; Ardougne's docks are north of that line.
-export function onKaramja(p:{x:number;z:number}):boolean{
-    return p.z<=3260&&p.x>=2690&&p.x<=2960;
-}
+export {onKaramja} from '../packages/core/src/spawn-index';
 
 // Ardougne Teleport needs Plague City, Magic 51, two law and two water runes (magic_spells.dbrow:102-103).
 export const TELEPORT_RUNES={law:2,water:2};
@@ -40,7 +38,7 @@ export function totemTravel(a:{karamja:boolean;started:boolean;plagueCity:QuestF
 // The quest adds the label and then the totem to the pack (inv_add, quest_totem.rs2): with no free slot the engine drops
 // the item under the player (InvOps INV_ADD overflow) and the crate still says it is fastened. The items to bank so the
 // pack has `need` free slots: everything that is not coins, food or a quest item first, then food beyond keepFood.
-export const TOTEM_FOOD=new Set([379,385,373,333,329,351,347,339,361,365,2309,1891]);
+export const TOTEM_FOOD=new Set([379,385,373,333,329,351,347,339,361,365,2309,1891,1893,1895]);
 export function surplusForSlots(pack:readonly {id:number;count:number}[],need:number,keep:ReadonlySet<number>,food:ReadonlySet<number>=TOTEM_FOOD,keepFood=8):{id:number;count:number}[]{
     const slots=pack.length,want=Math.max(0,need-(28-slots));
     if(want===0)return [];

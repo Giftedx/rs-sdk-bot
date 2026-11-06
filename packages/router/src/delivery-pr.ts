@@ -6,9 +6,9 @@
 import {existsSync,mkdirSync,mkdtempSync,readFileSync,readdirSync,rmSync,copyFileSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {dirname,isAbsolute,join} from 'node:path';
-import {atomicJson} from './coordinator-store';
+import {atomicJson,capabilityDefinitionTransition} from './coordinator-store';
 import {BASE_DIR,fileHash,mergeText,type WorkspaceBase} from './build-workspace';
-import {importClosure} from './delivery-cli';
+import {deliveryFingerprint,importClosure} from './delivery-cli';
 import {releaseFiles,workerLaunchers} from '../../core/src/worker-release';
 
 export interface DeliveryPr{
@@ -16,6 +16,8 @@ export interface DeliveryPr{
  // Earlier deliveries that this build's source already held when it started; the PR opens after they merge.
  prerequisites:string[];
  createdAt:number;attempts:number;nextAt:number;state:'pending'|'opened'|'empty'|'conflict';url?:string;lastError?:string;
+ definitionBase?:string|null;
+ mergeVersion?:number;
 }
 export type Run=(cmd:string[],cwd:string)=>Promise<{code:number;stdout:string;stderr:string}>;
 
@@ -28,6 +30,7 @@ export const retryDelayMs=(attempts:number)=>Math.min(60,2**attempts)*60000;
 export const PREREQUISITE_WAIT_MS=5*60000;
 class DeliveryWait extends Error{}
 class DeliveryConflict extends Error{}
+const MERGE_VERSION=1;
 
 const COMMAND_MS=120000;
 export const spawnRun:Run=async(cmd,cwd)=>{
@@ -63,25 +66,61 @@ export function deliverySourceSet(entry:string,files:readonly string[],root:stri
 
 const readRecords=(dir:string):DeliveryPr[]=>existsSync(dir)?readdirSync(dir).filter(n=>n.endsWith('.json')).flatMap(n=>{try{return[JSON.parse(readFileSync(join(dir,n),'utf8'))];}catch{return[];}}):[];
 
+/** Pending publication can depend on a conflict several deliveries upstream. */
+export function deliveryConflictRoots(coordinationDir:string){
+ const records=readRecords(deliveryPrDir(coordinationDir)).filter(r=>r&&typeof r.taskId==='string');
+ const byId=new Map(records.map(r=>[r.taskId,r]));
+ const conflicts=records.filter(r=>r.state==='conflict');
+ const counts=new Map<string,number>();
+ for(const record of records){
+  if(record.state!=='pending'||!Array.isArray(record.prerequisites))continue;
+  const queue=[...record.prerequisites],seen=new Set<string>();
+  while(queue.length){
+   const id=queue.pop()!;
+   if(seen.has(id))continue;
+   seen.add(id);
+   const prior=byId.get(id);
+   if(prior?.state==='conflict')counts.set(id,(counts.get(id)??0)+1);
+   else if(prior?.state==='pending'&&Array.isArray(prior.prerequisites))queue.push(...prior.prerequisites);
+  }
+ }
+ return conflicts.map(r=>({taskId:r.taskId,capability:r.capability,pendingDeliveries:counts.get(r.taskId)??0,
+  reason:typeof r.lastError==='string'?r.lastError.slice(0,240):'Conflict details unavailable'}))
+  .sort((a,b)=>b.pendingDeliveries-a.pendingDeliveries||a.taskId.localeCompare(b.taskId)).slice(0,8);
+}
+
 // Copies the build's version of each published file and the bytes it started from into the run folder, and records
 // the pull request to open. The PR applies base -> build onto master, so a later publish of the same file or a newer
 // master never changes what this delivery claims. `sourceSet` is the import closure the build ran; an earlier delivery
 // of one of those files that the build's source already held becomes a prerequisite.
 export function stageDeliveryPr(input:{workspace:string;runDir:string;coordinationDir:string;taskId:string;capability:string;files:string[];sourceSet:readonly string[];result:any;now?:number}):DeliveryPr|null{
  const files=input.files.filter(committable);
- if(!files.length)return null;
- const meta:WorkspaceBase=JSON.parse(readFileSync(join(input.workspace,'.workspace.json'),'utf8'));
  const snapshot=join(input.runDir,'delivered'),base=join(input.runDir,'delivered-base');
+ const definitionFile='packages/router/tasks/'+input.capability+'.json',definitionPath=join(input.workspace,definitionFile);
+ const definitionBytes=/^[-a-z0-9]+$/.test(input.capability)&&existsSync(definitionPath)?readFileSync(definitionPath):null;
+ const transition=definitionBytes?capabilityDefinitionTransition(input.coordinationDir,input.capability,definitionBytes):undefined;
+ if(!files.length&&!transition)return null;
+ const meta:WorkspaceBase=JSON.parse(readFileSync(join(input.workspace,'.workspace.json'),'utf8'));
+ if(transition){
+  const definition=JSON.parse(definitionBytes!.toString('utf8')),proof=input.result?.delivery;
+  if(definition.id!==input.capability||proof?.ok!==true||proof.id!==input.capability||proof.source!==deliveryFingerprint(definition,input.workspace))throw Error('capability definition differs from qualified delivery');
+ }
  for(const f of files){
   const to=join(snapshot,f);mkdirSync(dirname(to),{recursive:true});copyFileSync(join(input.workspace,f),to);
   const from=join(input.workspace,BASE_DIR,f);
   if(meta.base[f]!==null&&existsSync(from)&&fileHash(from)===meta.base[f]){const out=join(base,f);mkdirSync(dirname(out),{recursive:true});copyFileSync(from,out);}
  }
  const dir=deliveryPrDir(input.coordinationDir),source=new Set(input.sourceSet);
+ if(transition){
+  const to=join(snapshot,definitionFile);mkdirSync(dirname(to),{recursive:true});writeFileSync(to,definitionBytes!);
+  if(transition.prior){const from=join(base,definitionFile);mkdirSync(dirname(from),{recursive:true});writeFileSync(from,transition.prior);}
+  files.push(definitionFile);source.add(definitionFile);
+ }
  const prerequisites=readRecords(dir).filter(p=>p.taskId!==input.taskId&&p.createdAt<meta.created&&p.state!=='empty'&&p.files.some(f=>source.has(f))).sort((a,b)=>a.createdAt-b.createdAt).map(p=>p.taskId);
  const now=input.now??Date.now();
  const pr:DeliveryPr={taskId:input.taskId,capability:input.capability,branch:deliveryBranch(input.taskId),files,snapshot,base,prerequisites,
-  title:`coordinator: deliver ${input.capability} (${input.taskId})`,body:prBody({...input,files,prerequisites}),createdAt:now,attempts:0,nextAt:now,state:'pending'};
+  title:`coordinator: deliver ${input.capability} (${input.taskId})`,body:prBody({...input,files,prerequisites}),createdAt:now,attempts:0,nextAt:now,state:'pending',
+  ...(transition?{definitionBase:transition.priorHash}:{})};
  mkdirSync(dir,{recursive:true});atomicJson(join(dir,input.taskId+'.json'),pr);
  return pr;
 }
@@ -94,7 +133,14 @@ const must=async(run:Run,cmd:string[],cwd:string)=>{
 // A prerequisite is satisfied when its PR merged or it had nothing to commit.
 async function checkPrerequisites(pr:DeliveryPr,dir:string,mainRoot:string,run:Run){
  for(const id of pr.prerequisites??[]){
-  const file=join(dir,id+'.json');if(!existsSync(file))continue;
+  const branch=deliveryBranch(id),file=join(dir,id+'.json');
+  if(!existsSync(file)){
+   // A missing receipt cannot prove an empty delivery. Look for its merged PR by head and base.
+   const merged=await must(run,['gh','pr','list','--head',branch,'--base','master','--state','merged',
+    '--json','number,isCrossRepository','--jq','map(select(.isCrossRepository == false)) | .[0].number // empty'],mainRoot);
+   if(!/^[1-9][0-9]*$/.test(merged.trim()))throw new DeliveryWait('waiting for earlier delivery '+branch+' (missing local record and no merge into master)');
+   continue;
+  }
   const before:DeliveryPr=JSON.parse(readFileSync(file,'utf8'));
   if(before.state==='empty')continue;
   if(before.state!=='opened')throw new DeliveryWait('waiting for earlier delivery '+before.branch+' ('+before.state+(before.state==='conflict'?': resolve it by hand':'')+')');
@@ -107,9 +153,16 @@ function applyChange(pr:DeliveryPr,tree:string){
  // A request staged before base snapshots existed holds whole files only; copying them could revert master.
  if(typeof pr.base!=='string')throw new DeliveryConflict('delivery was staged without base snapshots; commit '+pr.snapshot+' by hand against origin/master');
  const conflicts:string[]=[];
+ // Match the repository's LF checkout policy before git compares lines in Windows snapshots.
+ const readText=(path:string)=>readFileSync(path,'utf8').replaceAll('\r\n','\n');
  const merged=pr.files.map(f=>{
-  const target=join(tree,f),master=existsSync(target)?readFileSync(target,'utf8'):'';
-  const basePath=join(pr.base,f),base=existsSync(basePath)?readFileSync(basePath,'utf8'):'',build=readFileSync(join(pr.snapshot,f),'utf8');
+  const target=join(tree,f),master=existsSync(target)?readText(target):'';
+  const basePath=join(pr.base,f),base=existsSync(basePath)?readText(basePath):'',build=readText(join(pr.snapshot,f));
+  if(pr.definitionBase!==undefined&&f==='packages/router/tasks/'+pr.capability+'.json'){
+   if(master===build)return[f,build] as const;
+   if(fileHash(basePath)!==pr.definitionBase||master!==base){conflicts.push(f+' (qualified definition base differs)');return[f,''] as const;}
+   return[f,build] as const;
+  }
   if(master===base)return[f,build] as const;
   const out=mergeText(base,master,build);
   if(!out.ok){conflicts.push(f+' ('+out.conflicts.join('; ').replaceAll('main lines','master lines')+')');return[f,''] as const;}
@@ -118,15 +171,33 @@ function applyChange(pr:DeliveryPr,tree:string){
  if(conflicts.length)throw new DeliveryConflict('delivery conflicts with origin/master: '+conflicts.join(', '));
  for(const [f,text] of merged){mkdirSync(dirname(join(tree,f)),{recursive:true});writeFileSync(join(tree,f),text);}
 }
+async function verifyQualifiedHead(pr:DeliveryPr,head:string|undefined,mainRoot:string,run:Run){
+ if(pr.definitionBase===undefined)return;
+ if(!head||!(/^[0-9a-f]{40}$/.test(head)))throw Error('delivery: reused head is unverified');
+ const file='packages/router/tasks/'+pr.capability+'.json';
+ if(!/^[-a-z0-9]+$/.test(pr.capability)||!pr.files.includes(file))throw new DeliveryConflict('delivery is missing its staged qualified definition: '+file);
+ const expected=readFileSync(join(pr.snapshot,file),'utf8').replaceAll('\r\n','\n');
+ // Check the observed commit, without changing a branch or the shared FETCH_HEAD.
+ await must(run,['git','fetch','--no-write-fetch-head','origin',head],mainRoot);
+ const entry=await must(run,['git','ls-tree','--full-tree',head,'--',file],mainRoot);
+ if(!/^100(?:644|755) blob /.test(entry))throw new DeliveryConflict('delivery head is missing its qualified definition: '+file);
+ const actual=await must(run,['git','show',head+':'+file],mainRoot);
+ if(actual!==expected)throw new DeliveryConflict('delivery head differs from its qualified definition: '+file);
+}
 // Opens one staged delivery. If the branch already exists on the remote, it opens the PR from it without a push.
 export async function openDeliveryPr(pr:DeliveryPr,mainRoot:string,run:Run=spawnRun,parent=tmpdir(),dir?:string):Promise<{state:'opened'|'empty';url?:string}>{
- const listed=await run(['gh','pr','list','--head',pr.branch,'--state','all','--json','url','--jq','.[0].url'],mainRoot);
- if(listed.code===0&&listed.stdout.trim())return{state:'opened',url:listed.stdout.trim()};
+ const listed=await run(['gh','pr','list','--head',pr.branch,'--state','all','--json','url,headRefOid','--jq','.[0] | select(. != null) | [.url,.headRefOid] | @tsv'],mainRoot);
+ if(listed.code===0&&listed.stdout.trim()){
+  const [url,head]=listed.stdout.trim().split('\t');
+  await verifyQualifiedHead(pr,head,mainRoot,run);
+  return{state:'opened',url};
+ }
+ if(dir)await checkPrerequisites(pr,dir,mainRoot,run);
  const remote=await must(run,['git','ls-remote','--heads','origin','refs/heads/'+pr.branch],mainRoot);
+ if(remote.trim())await verifyQualifiedHead(pr,remote.trim().split('\t')[0],mainRoot,run);
  const work=mkdtempSync(join(parent,'delivery-')),tree=join(work,'tree');
  try{
   if(!remote.trim()){
-   if(dir)await checkPrerequisites(pr,dir,mainRoot,run);
    await must(run,['git','fetch','origin','master'],mainRoot);
    await must(run,['git','worktree','add','--detach',tree,'origin/master'],mainRoot);
    try{
@@ -143,16 +214,30 @@ export async function openDeliveryPr(pr:DeliveryPr,mainRoot:string,run:Run=spawn
  }finally{rmSync(work,{recursive:true,force:true});}
 }
 
+// Only retry conflicts from before LF normalization with complete snapshots and CRLF evidence.
+function legacyLineEndingConflict(pr:DeliveryPr):boolean{
+ if(typeof pr.base!=='string'||typeof pr.snapshot!=='string'||!Array.isArray(pr.files)||!pr.files.length||!pr.files.every(committable))return false;
+ const inputs=pr.files.flatMap(f=>[join(pr.base,f),join(pr.snapshot,f)]);
+ try{return inputs.every(f=>existsSync(f))&&inputs.some(f=>readFileSync(f,'utf8').includes('\r\n'));}
+ catch{return false;}
+}
+
 // Opens every staged delivery that is due, oldest first. A failure stays pending with a later retry time; a wait for a
 // prerequisite checks again later without counting as a failure; a conflict with master stops for the owner.
 export async function processDeliveryPrs(coordinationDir:string,mainRoot:string,run:Run=spawnRun,now=Date.now(),parent=tmpdir()){
  const dir=deliveryPrDir(coordinationDir),opened:DeliveryPr[]=[],failed:DeliveryPr[]=[],waiting:DeliveryPr[]=[],conflicts:DeliveryPr[]=[];
  for(let pr of readRecords(dir).sort((a,b)=>a.createdAt-b.createdAt||a.taskId.localeCompare(b.taskId))){
-  if(pr.state!=='pending'||pr.nextAt>now)continue;
+  if(pr.nextAt>now)continue;
+  if(pr.state==='conflict'&&pr.mergeVersion===undefined&&pr.lastError?.startsWith('delivery conflicts with origin/master: ')){
+   pr={...pr,mergeVersion:MERGE_VERSION};
+   if(!legacyLineEndingConflict(pr)){atomicJson(join(dir,pr.taskId+'.json'),pr);continue;}
+   pr.state='pending';
+  }
+  if(pr.state!=='pending')continue;
   try{const out=await openDeliveryPr(pr,mainRoot,run,parent,dir);pr={...pr,state:out.state,url:out.url,attempts:pr.attempts+1};delete pr.lastError;opened.push(pr);}
   catch(error){
    if(error instanceof DeliveryWait){pr={...pr,lastError:error.message,nextAt:now+PREREQUISITE_WAIT_MS};waiting.push(pr);}
-   else if(error instanceof DeliveryConflict){pr={...pr,state:'conflict',attempts:pr.attempts+1,lastError:error.message};conflicts.push(pr);}
+   else if(error instanceof DeliveryConflict){pr={...pr,state:'conflict',mergeVersion:MERGE_VERSION,attempts:pr.attempts+1,lastError:error.message};conflicts.push(pr);}
    else{pr={...pr,attempts:pr.attempts+1,lastError:String(error),nextAt:now+retryDelayMs(pr.attempts+1)};failed.push(pr);}
   }
   atomicJson(join(dir,pr.taskId+'.json'),pr);

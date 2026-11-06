@@ -1,6 +1,10 @@
 import{test,expect}from'bun:test';
-import{withNativeStartup,nativeDeferralEvidence,NATIVE_STARTUP_GB,SOURCE_STARTUP_GB}from'../src/delivery-cli';
+import{deliveryTask,isSavedProofVerifier,withNativeStartup,nativeDeferralEvidence,NATIVE_STARTUP_GB,SOURCE_STARTUP_GB}from'../src/delivery-cli';
 import{FREE_FLOOR_GB,PRACTICE_RESERVE_GB}from'../../core/src/memory';
+import{mkdtempSync,writeFileSync,readdirSync}from'node:fs';
+import{tmpdir}from'node:os';
+import{join}from'node:path';
+import{withPracticeTurn}from'../../practice/src/proof-lock';
 
 function fixture(){let now=0,free=NATIVE_STARTUP_GB-1,stopped=false,starts=0;const observations:any[]=[];
  const deps={now:()=>now,freeGB:()=>free,stopped:()=>stopped,sleep:async(ms:number)=>{now+=ms;},progress:(v:any):void=>{observations.push(v);}};
@@ -32,4 +36,49 @@ test('the real admission timeout produces host-deferral report fields; other err
  const f=fixture();let reason='';try{await withNativeStartup(f.start,f.deps,1000);}catch(error){reason=String(error);}
  expect(nativeDeferralEvidence(reason)).toEqual({hostDeferred:true});expect(f.starts()).toBe(0);
  for(const other of ['check failed','Error: native admission owner stopped; no child started','child stdout HOST_DEFERRED_NATIVE_HEADROOM: text'])expect(nativeDeferralEvidence(other)).toEqual({});
+});
+
+test('only audited saved-result commands can run without a practice turn',()=>{
+ const checks=[
+  ['cow-progress-order-saved','packages/practice/src/cow-progress-order-proof.ts'],
+  ['cow-progress-order-saved','packages/practice/src/cow-progress-isolated-proof.ts'],
+  ['quest-sweep-saved','packages/practice/src/quest-sweep-proof.ts'],
+  ['session-recovery-only-verified','scripts/session-check.ts'],
+ ];
+ for(const [id,script] of checks){
+  const check={id:id!,phase:'consumer' as const,command:['bun',script!,'--verify'],timeoutMs:30000};
+  expect(isSavedProofVerifier(check)).toBe(true);
+  expect(isSavedProofVerifier({...check,phase:'practice'})).toBe(false);
+  expect(isSavedProofVerifier({...check,id:'other-consumer'})).toBe(false);
+  expect(isSavedProofVerifier({...check,command:['bun',script!]})).toBe(false);
+  expect(isSavedProofVerifier({...check,command:[...check.command,'--extra']})).toBe(false);
+  expect(isSavedProofVerifier({...check,command:['bun','scripts/other.ts','--verify']})).toBe(false);
+ }
+});
+
+test('an expired practice queue wait preserves the host-deferral path without running a check',async()=>{
+ const f=fixture(),file=join(mkdtempSync(join(tmpdir(),'native-turn-defer-')),'turn.lock');
+ writeFileSync(file,JSON.stringify({pid:999999,at:0}));
+ let reason='';
+ try{await withPracticeTurn(file,f.start,{alive:()=>true,waitMs:0});}catch(error){reason=String(error);}
+ expect(nativeDeferralEvidence(reason)).toEqual({hostDeferred:true});
+ expect(f.starts()).toBe(0);
+ expect(readdirSync(file+'.queue')).toEqual([]);
+ for(const other of ['Error: check timed out','Error: practice turn owner stopped; no child started','worker says practice turn wait expired']){
+  expect(nativeDeferralEvidence(other)).toEqual({});
+ }
+});
+
+test('declared saved consumers bypass only the practice turn',()=>{
+ for(const id of ['ammo-order','blood-chest-order','druid-meats-order','iron-progress-order','magic-order','prayer-order','quest-order','ranged-train','rune-bank-craft']){
+  const task=deliveryTask(id);
+  expect(task.checks.filter(c=>c.phase==='practice').some(isSavedProofVerifier)).toBe(false);
+  for(const saved of task.checks.filter(c=>c.phase==='consumer')){
+   expect(isSavedProofVerifier(saved)).toBe(true);
+   expect(isSavedProofVerifier({...saved,command:saved.command.slice(0,2)})).toBe(false);
+   expect(isSavedProofVerifier({...saved,command:[...saved.command,'--run']})).toBe(false);
+  }
+ }
+ const unreviewed=deliveryTask('rune-carrier-stage').checks.find(c=>c.phase==='consumer')!;
+ expect(isSavedProofVerifier(unreviewed)).toBe(false);
 });

@@ -7,22 +7,25 @@ import {admissionDecision,startReserve,activeExternalLive,loadEnded,persistEnded
 import {liveLogoutRef} from './coordinator-session';
 import {BOOTSTRAP_STATUS_AGE_MS} from '../../core/src/session-admission';
 import {evaluateLaunch} from '../../../scripts/haggis-gate';
-import {capabilityRevision,launchRevision,workerEntries} from '../../core/src/worker-release';
+import {cachedLaunchRevision,capabilityRevision,launchRevision,workerEntries} from '../../core/src/worker-release';
 import {importClosure} from './delivery-cli';
 import {processMatches,safeKill,safeKillOne} from '../../practice/src/proc';
-import {acceptStatus,type CoordTask} from './coordinator';
+import {acceptStatus,boundedWorkerEndMessage,type CoordTask} from './coordinator';
 import {projectRoot,coordinationDir,atomicJson,spawnDetached,withPlanWrite} from './coordinator-store';
 import {RECOVERY_SCHEMA,assertNoRecoveryLease,recoveredSessionForRun,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
-import {COORDINATOR_JOBS_FILE,readCoordinatorJobs,writeCoordinatorJobs,mergedPlan,jobAccounts,shadowAssignments,type CoordinatorJobs} from '../../core/src/coordinator-jobs';
+import {COORDINATOR_JOBS_FILE,readCoordinatorJobs,writeCoordinatorJobs,mergedPlan,jobAccounts,parkedCoordinatorAccounts,shadowAssignments,type CoordinatorJobs} from '../../core/src/coordinator-jobs';
 import {readLogoutProof} from '../../core/src/session-lifecycle';
 
 // A controller that wrote .practice/swarm-state.json under this pid and nonce within this window is the saved
 // controller: no PowerShell command-line probe is needed while its pid is alive.
 export const CONTROLLER_STATE_FRESH_MS=10_000;
-export function controllerStateFresh(owner:{pid:number;nonce:string},base=projectRoot,now=Date.now()):boolean{
+export function readFreshControllerState(owner:{pid:number;nonce:string},base=projectRoot,now=Date.now()){
  try{const s=JSON.parse(readFileSync(join(base,'.practice/swarm-state.json'),'utf8'));
-  return s.controllerPid===owner.pid&&s.coordinatorOwner===owner.nonce&&Number.isFinite(s.at)&&now-s.at>=0&&now-s.at<CONTROLLER_STATE_FRESH_MS;}
- catch{return false;}
+  return s.controllerPid===owner.pid&&s.coordinatorOwner===owner.nonce&&Number.isFinite(s.at)&&now-s.at>=0&&now-s.at<CONTROLLER_STATE_FRESH_MS?s:null;}
+ catch{return null;}
+}
+export function controllerStateFresh(owner:{pid:number;nonce:string},base=projectRoot,now=Date.now()):boolean{
+ return readFreshControllerState(owner,base,now)!==null;
 }
 
 export function liveRows(base=projectRoot){
@@ -60,7 +63,7 @@ export async function awaitControllerAck(owner:{pid:number;nonce:string;source:s
  }
  throw Error('controller acknowledgement timed out');
 }
-type SwarmRolloutDeps={base?:string;currentSource?:()=>string;matches?:(pid:number,nonce:string)=>boolean;pidExists?:(pid:number)=>boolean;
+type SwarmRolloutDeps={base?:string;currentSource?:()=>string;diskSource?:()=>string;matches?:(pid:number,nonce:string)=>boolean;pidExists?:(pid:number)=>boolean;
  processes?:()=>number[];rows?:()=>any[];stop?:(pid:number,nonce:string)=>Promise<boolean>;spawn?:(source:string,nonce:string)=>number;
  drain?:(owner:ControllerIdentity,after:number)=>Promise<unknown>;ack?:(owner:ControllerIdentity,after:number)=>Promise<unknown>;stopOne?:(pid:number,nonce:string)=>Promise<boolean>;now?:()=>number};
 // The swarm's own code: a standing job runs current worker source (STANDING=1), so only these files need a rollout.
@@ -72,7 +75,8 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
  const swarmSource=closure.digest('hex');
  const stopped=()=>existsSync(join(base,'.practice/stop-coordinator'))||existsSync(join(base,'.practice/stop-swarm'));
  if(stopped())throw Error('controller rollout owner stopped');
- const currentSource=deps.currentSource??(()=>launchRevision(base)),matches=deps.matches??processMatches,now=deps.now??Date.now;
+ const diskSource=deps.diskSource??(()=>cachedLaunchRevision(base));
+ const currentSource=deps.currentSource??diskSource,matches=deps.matches??processMatches,now=deps.now??Date.now;
  const pidExists=deps.pidExists??((pid:number)=>{try{process.kill(pid,0);return true;}catch(e){return(e as NodeJS.ErrnoException).code!=='ESRCH';}});
  const stop=deps.stop??safeKill,drain=deps.drain??((owner:ControllerIdentity,after:number)=>awaitControllerDrain(owner,after,base));
  const ack=deps.ack??deps.drain??((owner:ControllerIdentity,after:number)=>awaitControllerAck(owner,after,base));
@@ -136,14 +140,18 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
   writeFileSync(repairLease,JSON.stringify({pid:process.pid,runId:rollout,nonce:rollout}),{flag:'wx'});repairLocked=true;
   if(existsSync(repair)||existsSync(repair+'.processing'))throw Error('controller rollout waits for its owned repair channel');
   if(alive){
-   if(!detached)await drain(owner,now());if(stopped())throw Error('controller rollout owner stopped');if(currentSource()!==source)throw Error('runtime changed during controller rollout');
+   if(!detached)await drain(owner,now());if(stopped())throw Error('controller rollout owner stopped');if(diskSource()!==source)throw Error('runtime changed during controller rollout');
    try{await (detached?stopOne:stop)(owner.pid,owner.nonce);}catch(error){if(pidExists(owner.pid))retainFence=owner;throw error;}
    if(pidExists(owner.pid)){retainFence=owner;throw Error('old controller stop unconfirmed; admission remains fenced');}
   }
   if(stopped())throw Error('controller rollout owner stopped');
+  if(diskSource()!==source)throw Error('runtime changed before controller spawn');
   const nonce=randomUUID(),pid=(deps.spawn??((release:string,marker:string)=>spawnDetached([process.execPath,'scripts/swarm.ts','swarm.json','--coordinator='+marker],base,join(dir,'swarm.out.log'),join(dir,'swarm.err.log'),{...process.env,DEMO_OK:'1',WORKER_RELEASE:release,WORKER_ENTRY:''})))(source,nonce);
   const next={pid,nonce,source,swarmSource,at:now(),detached:true};
-  try{atomicJson(ownerFile,next);await ack(next,next.at);if(stopped())throw Error('controller rollout owner stopped');}catch(error){
+  try{
+   atomicJson(ownerFile,next);await ack(next,next.at);if(stopped())throw Error('controller rollout owner stopped');
+   if(diskSource()!==source)throw Error('runtime changed before controller admission');
+  }catch(error){
    try{await stopOne(pid,nonce);}catch{/* retain the fence unless process death can be confirmed */}
    if(pidExists(pid))retainFence=next;
    else if(existsSync(ownerFile)){const saved=JSON.parse(readFileSync(ownerFile,'utf8'));if(saved.pid===pid&&saved.nonce===nonce)unlinkSync(ownerFile);}
@@ -201,8 +209,8 @@ export function releaseCompletedOwnJobs(own:CoordinatorJobs,accounts:readonly st
   const names=jobAccounts(job),remaining=names.filter(n=>!wanted.has(n.toLowerCase()));
   if(remaining.length===names.length||!completed(job,names))return[job];
   if(!remaining.length)return[];
-  const {account:_account,orchestrate:_orchestrate,...rest}=job;
-  return[{...rest,accounts:remaining,enabled:false}];
+  if(job.host)return[{...job,accounts:remaining,enabled:false}];
+  return parkedCoordinatorAccounts(job,remaining);
  });
  return{...own,jobs};
 }
@@ -488,8 +496,12 @@ export async function runLiveTask(task:CoordTask,dependencies:Record<string,any>
   while(Date.now()<deadline){
    if(existsSync(join(projectRoot,'.practice/stop-coordinator')))throw Error('coordinator stopped');
    const end=loadEnded(join(projectRoot,'.practice/swarm-deaths.json')).get(target);
-   if(end&&end.at>=installed.installedAt&&!/^done(?:\s|$)/.test(end.reason))throw Error('bounded worker ended: '+end.reason);
    const file=join(projectRoot,'.practice/status',target+'.json');
+   if(end&&end.at>=installed.installedAt&&!/^done(?:\s|$)/.test(end.reason)){
+    let status:unknown;
+    try{status=JSON.parse(readFileSync(file,'utf8'));}catch{/* A missing observation leaves the supervisor reason intact. */}
+    throw Error(boundedWorkerEndMessage(end,status,{account:target,goal:installed.goal,source,startedAt:installed.installedAt,now:Date.now(),runId}));
+   }
    if(existsSync(file)){
     const status=JSON.parse(readFileSync(file,'utf8'));
     if(status.coordinatorRunId===runId&&status.at>=installed.installedAt&&status.result){

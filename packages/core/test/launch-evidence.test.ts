@@ -13,6 +13,34 @@ test('staging requires observed bank stock and delivered quantities, not a flag'
  const s=supplies();s.allocations.push({...s.allocations[0]!});
  expect(()=>validateSupplies(s,context,requirements,catalog,owned,now,read)).toThrow();
 });
+test('explicit kit IDs reject other colours with the same catalog name',()=>{
+ const kit=[{item:'black dragonhide body',itemId:2503,count:1}];
+ const variants=[{id:2503,name:'Dragonhide body'},{id:2501,name:'Dragonhide body'}];
+ const manifest=(id:number)=>{
+  const s=supplies(),stock=[{id,count:1}];
+  refs.set('bank',{...bank,bank:stock});
+  refs.set('delivery',{...delivery,after:stock,items:stock});
+  s.allocations=[{...s.allocations[0]!,item:kit[0]!.item,itemId:id,count:1}];
+  return s;
+ };
+ expect(()=>validateSupplies(manifest(2503),context,kit,variants,owned,now,read)).not.toThrow();
+ expect(()=>validateSupplies(manifest(2501),context,kit,variants,owned,now,read)).toThrow('Unexpected supply');
+});
+test('staging reserves the total when noted and plain requirements draw from the same base stock', () => {
+ const wine=[{item:'Unfermented wine',count:600},{item:'Unfermented wine (noted)',count:600}];
+ const wineCatalog=[{id:1995,name:'Unfermented wine'}];
+ const manifest=(count:number)=>{
+  const s=supplies();
+  const stock=[{id:1995,count}];
+  refs.set('bank',{...bank,bank:stock});
+  refs.set('delivery',{...delivery,after:stock,items:stock});
+  s.allocations=[{...s.allocations[0]!,item:'Unfermented wine',itemId:1995,count}];
+  return s;
+ };
+ expect(()=>validateSupplies(manifest(600),context,wine,wineCatalog,owned,now,read)).toThrow('Missing or excess reservation');
+ expect(()=>validateSupplies(manifest(1200),context,wine,wineCatalog,owned,now,read)).not.toThrow();
+ expect(()=>validateSupplies(manifest(1201),context,wine,wineCatalog,owned,now,read)).toThrow('Missing or excess reservation');
+});
 test('staging rejects stale/future stock, wrong owner, short delivery and context drift',()=>{
  for(const patch of [{bankAt:now+1},{bankAt:now-3600001},{name:'Stranger'},{bank:[{id:314,count:99}]}]){
   const s=supplies();refs.set('bank',{...bank,...patch});expect(()=>validateSupplies(s,context,requirements,catalog,owned,now,read)).toThrow();

@@ -1,14 +1,13 @@
 import {existsSync,readFileSync,writeFileSync,mkdirSync,copyFileSync,unlinkSync} from 'node:fs';
 import {join,dirname} from 'node:path';
 import {freemem} from 'node:os';
-import {createHash} from 'node:crypto';
 import {admissionDecision,activeExternalLive} from '../../../scripts/swarm';
 import {authorLoop,runClaude,fileExists,type AuthorResult} from './author';
 import {deliveryTask,deliveryFingerprint,runDeliveryTask,runDiagnosticTask} from './delivery-cli';
 import {createAccountProvisionDeps,provisionAccount,REGISTRATION_SCRIPT} from './account-provision';
 import {readWorld,parseModelObject} from './coordinator-planner';
 import {runLiveTask,liveRows,swarmProcesses} from './coordinator-live';
-import {projectRoot,coordinationDir,atomicJson} from './coordinator-store';
+import {projectRoot,coordinationDir,atomicJson,capabilitySource} from './coordinator-store';
 import {isWorkspace,publishWorkspace,workspaceChanges,prepareReplayRoot,removeReplayRoot} from './build-workspace';
 import {recentRecords} from '../../core/src/tick-record';
 import {stageDeliveryPr,deliverySourceSet} from './delivery-pr';
@@ -86,17 +85,17 @@ export async function executeTask(task:CoordTask,dependencies:Record<string,any>
   return{...result,ok:result.registered,evidence:'registered'};
  }
  const definition=deliveryTask(task.capability!);
- const capabilitySource=()=>createHash('sha256').update(JSON.stringify(definition.files.map(file=>[file,readFileSync(join(projectRoot,file),'utf8')]))).digest('hex');
+ const ownedSource=()=>capabilitySource(definition.files);
  if(task.kind==='review'){
-  const fingerprint=capabilitySource;
+  const fingerprint=ownedSource;
   const before=fingerprint();
-  const review=await runModel(agent,'Independently review this delivered capability: its code, callers, tests and saved delivery logs. Do not edit or launch anything. Return ONLY JSON {approved:boolean,reason:string}. Review rule (docs/script-contract.md, Review): approve unless you find a concrete defect in the claimed scope: a wrong game action, asset loss, a death risk, an unbounded loop, a missing logout, a crash, or a broken existing caller. Each rejection names file:line, the scenario and the consequence. Do not reject for missing live results (live runs follow approval), for proof-tooling style, for tests you would add, or for later stages; put those in reason as notes. Claimed review work order: '+task.why+' Definition: '+JSON.stringify(definition)+' Relevant completed dependency receipts: '+JSON.stringify(reviewDependencies(dependencies,definition.id,task.dependsOn)),task.timeoutMs??300000,true);
+  const review=await runModel(agent,'Independently review this delivered capability: its code, callers, tests and saved delivery logs. Do not edit or launch anything. Return ONLY JSON {approved:boolean,reason:string}. Review rule (docs/script-contract.md, Review): approve unless you find a concrete defect in the claimed scope: a wrong game action, asset loss, a death risk, an unbounded loop, a missing logout, a crash, or a broken existing caller. Each rejection names file:line, the scenario and the consequence. Do not reject for missing live results (live runs follow approval), for proof-tooling style, for tests you would add, or for later stages; put those in reason as notes. Some receipts summarize delivery files and live status. Read receipt.json under _task.evidence for the complete record. Claimed review work order: '+task.why+' Definition: '+JSON.stringify(definition)+' Relevant completed dependency receipts: '+JSON.stringify(reviewDependencies(dependencies,definition.id,task.dependsOn)),task.timeoutMs??300000,true);
   atomicJson(join(directory,'review-model.json'),review);
   const verdict=reviewVerdict(review,parseModelObject);
   return{ok:verdict.approved===true&&fingerprint()===before,review:verdict,evidence:'source-review',source:before,agent};
  }
  if(task.kind==='run'){
-  const rejection=rejectedReview(dependencies,definition.id,capabilitySource());if(rejection)throw Error('cross-model review requires repair before live delivery: '+rejection);
+  const rejection=rejectedReview(dependencies,definition.id,ownedSource());if(rejection)throw Error('cross-model review requires repair before live delivery: '+rejection);
   const fingerprint=deliveryFingerprint(definition);
   if(!Object.values(dependencies).some((r:any)=>r?.delivery?.ok&&r.delivery.id===definition.id&&r.delivery.source===fingerprint))throw Error('fresh same-capability native qualification required');
   return runLiveTask(task,dependencies,definition,runId,startedAt);

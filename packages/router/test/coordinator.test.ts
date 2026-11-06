@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {GOALS,initialState,addTasks,chooseTask,startTask,finishTask,acceptStatus,boundAccounts,failedBuildStreak,activeBuildFocus,repeatedBuildFault,heldBuilds,validateTask,BUILD_HOLD_MS,type CoordTask} from '../src/coordinator';
+import {GOALS,initialState,addTasks,chooseTask,startTask,finishTask,acceptStatus,boundedWorkerEndMessage,boundAccounts,failedBuildStreak,activeBuildFocus,repeatedBuildFault,heldBuilds,validateTask,BUILD_HOLD_MS,type CoordTask} from '../src/coordinator';
 const task=(id:string,extra:Partial<CoordTask>={}):CoordTask=>({id,goal:'skills',kind:'qualify',capability:'wine-order',dependsOn:[],priority:5,estimatedMs:1000,why:'Close a useful consumer dependency',...extra});
 test('all owner goals survive and a dependency chain advances without another prompt',()=>{
  const s=initialState();expect(s.goals.map(g=>g.id)).toEqual([...GOALS]);
@@ -15,6 +15,14 @@ test('failed dependencies leave other goals eligible and cannot be replayed as n
  finishTask(s,{taskId:'bad',runId:'r',ok:false,at:2,error:'failed',output:{}});
  expect(chooseTask(s,3)?.id).toBe('other');
  expect(finishTask(s,{taskId:'bad',runId:'r',ok:true,at:4,output:{}})).toBe(false);
+});
+test('a consumer with a terminal prerequisite no longer boosts another prerequisite',()=>{
+ const s=initialState();addTasks(s,[task('root',{priority:1}),task('blocked',{dependsOn:['root']}),
+  task('repair',{priority:8}),task('useful',{priority:10}),task('consumer',{dependsOn:['repair','blocked']})],0);
+ expect(chooseTask(s,1)?.id).toBe('repair');
+ startTask(s,'root',1,'root-run');finishTask(s,{taskId:'root',runId:'root-run',ok:false,at:2,output:{}});
+ expect(chooseTask(s,3)?.id).toBe('useful');
+ expect(s.tasks.find(r=>r.spec.id==='consumer')?.status).toBe('pending');
 });
 test('invalid graphs and attempts to replace existing tasks are rejected atomically',()=>{
  const s=initialState();addTasks(s,[task('existing')]);
@@ -48,10 +56,51 @@ test('participant provision references form dependency edges and resolve identit
  expect(()=>addTasks(other,[task('missing',{kind:'run',participants:['Donor','@unknown'],accept:{counters:{made:1}}})])).toThrow('missing');
 });
 
+test('each viable run adds one priority boost to the provision task it needs',()=>{
+ for(const binding of [{accountFrom:'helper'},{participants:['Donor','@helper']}]){
+  const s=initialState();
+  addTasks(s,[task('helper',{kind:'provision',role:'helper',priority:5}),task('other',{priority:8}),
+   task('run',{kind:'run',...binding,accept:{counters:{made:1}}})],0);
+  expect(chooseTask(s,1)?.id).toBe('helper');
+  s.tasks.find(r=>r.spec.id==='run')!.spec.dependsOn.push('helper');
+  addTasks(s,[task('higher',{priority:12})],0);
+  expect(chooseTask(s,2)?.id).toBe('higher');
+ }
+});
+
 test('provision-derived aliases cannot overlap or supply duplicate participants',()=>{
  const s=initialState();addTasks(s,[task('helper',{kind:'provision',role:'helper'}),task('run1',{kind:'run',accountFrom:'helper',accept:{counters:{made:1}}}),task('run2',{kind:'run',account:'Helper1',accept:{counters:{made:1}}}),task('duplicate',{kind:'run',participants:['Helper1','@helper'],accept:{counters:{made:1}}})],0);
  startTask(s,'helper',1,'p');finishTask(s,{taskId:'helper',runId:'p',ok:true,at:2,output:{account:'Helper1'}});
  expect(boundAccounts(s.tasks[3]!.spec,s)).toBeNull();startTask(s,'run1',3,'r');expect(chooseTask(s,4)).toBeNull();
+});
+
+test('account setup waits for a prepared first run and follows its review hold',()=>{
+ const s=initialState();
+ addTasks(s,[task('helper',{kind:'provision',role:'helper',priority:50}),
+  task('orphan',{kind:'provision',role:'helper',priority:100}),task('proof'),
+  task('first-job',{kind:'run',accountFrom:'helper',dependsOn:['proof'],accept:{counters:{made:1}}})],0);
+ expect(chooseTask(s,1)?.id).toBe('proof');
+ startTask(s,'proof',2,'p');
+ expect(chooseTask(s,3)).toBeNull();
+ const failed=structuredClone(s);
+ finishTask(failed,{taskId:'proof',runId:'p',ok:false,at:4,output:{}});
+ expect(chooseTask(failed,5)).toBeNull();
+ finishTask(s,{taskId:'proof',runId:'p',ok:true,at:4,output:{}});
+ expect(chooseTask(s,5,{runHeld:()=>true})).toBeNull();
+ expect(chooseTask(s,5)?.id).toBe('helper');
+});
+
+test('a prepared run can provision two participants without claiming after either setup fails',()=>{
+ const s=initialState();
+ addTasks(s,[task('first',{kind:'provision',role:'helper'}),task('second',{kind:'provision',role:'helper'}),
+  task('trade',{kind:'run',participants:['@first','@second'],dependsOn:['second'],accept:{bank:{'333':10}}})],0);
+ expect(chooseTask(s,1)?.id).toBe('first');
+ startTask(s,'first',2,'p');
+ const failed=structuredClone(s);
+ finishTask(failed,{taskId:'first',runId:'p',ok:false,at:3,output:{}});
+ expect(chooseTask(failed,4)).toBeNull();
+ finishTask(s,{taskId:'first',runId:'p',ok:true,at:3,output:{account:'Helper1'}});
+ expect(chooseTask(s,4)?.id).toBe('second');
 });
 
 test('ready source builds drain live runs and keep all live work offline until build settles',()=>{
@@ -63,8 +112,12 @@ test('ready source builds drain live runs and keep all live work offline until b
 });
 
 test('provision attempts serialize; goals overdue thirty minutes outrank fresh high-score work',()=>{
- const s=initialState();addTasks(s,[task('p1',{kind:'provision',role:'helper'}),task('p2',{kind:'provision',role:'helper'})],0);
+ const s=initialState();addTasks(s,[task('p1',{kind:'provision',role:'helper'}),task('p2',{kind:'provision',role:'helper'}),
+  task('trade',{kind:'run',participants:['@p1','@p2'],accept:{bank:{'333':10}}})],0);
+ expect(chooseTask(s,1)?.id).toBe('p1');
  startTask(s,'p1',1,'p');expect(chooseTask(s,2)).toBeNull();
+ finishTask(s,{taskId:'p1',runId:'p',ok:true,at:3,output:{account:'Helper1'}});
+ expect(chooseTask(s,4)?.id).toBe('p2');
  const fair=initialState();addTasks(fair,[task('old',{goal:'quests',priority:1,estimatedMs:3600000}),task('fresh',{goal:'wealth',priority:100,estimatedMs:1}),task('older',{goal:'gear',priority:1,estimatedMs:3600000})],0);
  fair.goals.find(g=>g.id==='quests')!.lastStartedAt=10;fair.goals.find(g=>g.id==='gear')!.lastStartedAt=0;fair.goals.find(g=>g.id==='wealth')!.lastStartedAt=1800000;
  expect(chooseTask(fair,1800010)?.id).toBe('older');
@@ -120,6 +173,16 @@ test('with isolated builds a qualification for a waiting live run passes a waiti
  expect(chooseTask(s,4,{developmentLimit:2})).toBeNull(); // without isolation builds and checks take turns
 });
 
+test('a blocked live consumer does not give its qualification a practice slot ahead of a build',()=>{
+ const s=initialState();addTasks(s,[task('failed',{priority:1}),task('blocked',{dependsOn:['failed']}),
+  task('build',{kind:'build',capability:'other-order'}),task('q',{capability:'quest-sweep',priority:50}),
+  task('run',{kind:'run',capability:'quest-sweep',account:'Helper1',dependsOn:['q','blocked'],accept:{quests:['Hazeel Cult']}})],0);
+ const options={isolatedBuilds:true,focusCapability:'other-order'};
+ expect(chooseTask(s,1,options)?.id).toBe('q');
+ startTask(s,'failed',1,'failed-run');finishTask(s,{taskId:'failed',runId:'failed-run',ok:false,at:2,output:{}});
+ expect(chooseTask(s,3,options)?.id).toBe('build');
+});
+
 test('a focus that failed three builds in a row is not re-adopted',()=>{
  const s=initialState();addTasks(s,['b1','b2','b3','b4'].map(id=>task(id,{kind:'build',capability:'agility-order'})),0);
  for(const [i,id] of ['b1','b2','b3'].entries()){const r=startTask(s,id,10+i,'r'+id);finishTask(s,{taskId:id,runId:r.runId!,ok:false,at:20+i,error:'check failed',output:{}});}
@@ -161,4 +224,16 @@ test('new evidence passes the first hold only',()=>{
  expect(chooseTask(s,32)).toBeNull();
  expect(()=>validateTask(task('q',{newEvidence:'x'}))).toThrow('invalid new evidence');
  expect(()=>validateTask(build('b',{newEvidence:' '}))).toThrow('invalid new evidence');
+});
+
+test('worker end evidence names only the result from that live attempt', () => {
+ const ctx={account:'Helper1',goal:'goal',source:'pin',startedAt:100,now:120,runId:'this-run'};
+ const end={reason:'gave-up after 1 runs',at:115};
+ const status={name:'Helper1',server:'rs-sdk-demo.fly.dev',workRevision:'pin',coordinatorRunId:'this-run',
+  started:101,at:110,result:'fail missing coins for the fare'};
+ const generic='bounded worker ended: gave-up after 1 runs';
+ expect(boundedWorkerEndMessage(end,status,ctx)).toBe(generic+' | worker result: fail missing coins for the fare');
+ for(const patch of [{coordinatorRunId:'other-run'},{workRevision:'old'},{practice:true},{at:116},{started:99},{result:null}]){
+  expect(boundedWorkerEndMessage(end,{...status,...patch},ctx)).toBe(generic);
+ }
 });

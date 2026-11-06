@@ -9,14 +9,9 @@
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
-import { VIEWER_MANIFEST_SHA256, viewerBridgeSource } from '../viewer';
+import { VIEWER_MANIFEST_SHA256, once, viewerBridgeSource, viewerBundle } from '../viewer';
 import { MAIN_ACCOUNT } from '../publish-relay';
 
-const once = (text: string, from: string | RegExp, to: string, what: string) => {
-    const count = typeof from === 'string' ? text.split(from).length - 1 : (text.match(new RegExp(from.source, from.flags.includes('g') ? from.flags : from.flags + 'g')) ?? []).length;
-    if (count !== 1) throw Error(`${what}: expected one match, found ${count}`);
-    return text.replace(from, to);
-};
 // The same hash as the bridge (viewer.ts): FNV-1a over the lower-case name.
 export function nameHash(name: string) {
     let h = 0x811c9dc5;
@@ -34,9 +29,7 @@ export function hostedScript(name: string, text: string) {
     if (/^main\.[0-9a-f]+\.js$/.test(name)) {
         text = once(text, /\bn\.p="\/"/, 'n.p=new URL(".",document.baseURI).pathname', 'main public path');
         text = once(text, 'de="/caches/"', 'de=new URL("caches/",document.baseURI).pathname', 'cache path');
-        // Roof removal: ?ml=<floor> sets the highest floor drawn at the start, a {maxLevel} message changes it.
-        text = once(text, /this\.maxLevel=([A-Za-z_$][\w$]*)\.MAX_LEVELS-1/, 'this.maxLevel=(e=>e>=0&&e<=3?e:$1.MAX_LEVELS-1)(parseInt(new URLSearchParams(location.search).get("ml")))', 'first floor limit');
-        return once(text, '"number"===typeof t.scale&&t.scale>0&&(s.resolutionScale=t.scale)', '"number"===typeof t.scale&&t.scale>0&&(s.resolutionScale=t.scale),Number.isInteger(t.maxLevel)&&t.maxLevel>=0&&t.maxLevel<=3&&s.setMaxLevel&&s.setMaxLevel(t.maxLevel)', 'floor limit message');
+        return viewerBundle(text);
     }
     return text.replace(/\b([a-zA-Z_$][\w$]*)\.p="\/"/g, '$1.p=new URL("../../",self.location.href).pathname');
 }

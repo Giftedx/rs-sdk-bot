@@ -12,7 +12,9 @@ export function fakeGame(start: { x: number; z: number; level: number; hp?: numb
     const pending: (() => void)[] = [];
     const calls: string[] = [];
     // Hooks so a test can make the next walk land off target, or a climb do nothing.
-    const quirks = { walkOffBy: 0, climbFails: 0, climbDelayTicks: 0, doorShut: false, climbTo: null as null | { x: number; z: number; level: number } };
+    const quirks = { walkOffBy: 0, climbFails: 0, climbDelayTicks: 0, doorShut: false, climbTo: null as null | { x: number; z: number; level: number },
+        // What a direct loc click does (a scripted gate): open a dialogue, or move the player.
+        onDirectLoc: null as null | ((a: any) => void) };
     const timer = setInterval(() => {
         tick++;
         for (const f of pending.splice(0)) f();
@@ -22,7 +24,16 @@ export function fakeGame(start: { x: number; z: number; level: number; hp?: numb
         state: st,
         calls,
         quirks,
-        sdk: { getState: () => ({ ...st, tick }) },
+        sdk: {
+            getState: () => ({ ...st, tick }),
+            getDialog: () => st.dialog ?? { isOpen: false, isWaiting: false, options: [] },
+            async sendClickDialog(i: number) { calls.push(`dialog ${i}`); pending.push(() => { st.dialog = null; }); },
+        },
+        async direct(a: any) {
+            if (a.type === 'walkTo') return g.bot.walkTo(a.x, a.z);
+            if (a.type === 'interactLoc') { calls.push(`direct interact ${a.x},${a.z} op${a.optionIndex}`); quirks.onDirectLoc?.(a); }
+            return { success: true };
+        },
         tick: () => tick,
         onTick(cb: () => void) { listeners.add(cb); return () => { listeners.delete(cb); }; },
         bot: {

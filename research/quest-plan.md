@@ -12,6 +12,10 @@ Offline integration: [preparation](../.practice/shared-supply/preparation.json) 
 
 Coverage reuses the pinned `questlist.if` journal labels to map observed completion to quest folders, including `fortress` → `quest_blackknight`. The coordinator's quest frontier consumes these stages: live completion outranks practice and script presence; unknown or missing journal flags do not promote a folder. `packages/router/test/coverage.test.ts` checks all 68 mappings and the planner frontier. This classification proves no additional quest completion.
 
+Source -> local consumer -> reuse -> check: the existing chain's step boundary and the supervisor's terminal result markers -> quest-chain dispatch -> check the account stop before each step and keep stop, death and disconnect in the final result -> tests cover a stop before any worker opens, terminal results after a success and continuation after a quest-specific failure. The chain keeps successful quest names in its terminal summary.
+
+Source -> local consumer -> adapt -> check: the pinned `npc/scripts/cow_milking.rs2` exchange and the Cook item's conversion check -> shared milk gathering -> require one milk credit and one empty bucket debit before another interaction -> a tick fixture covers delayed matching observations and refuses either one-sided change. The fixture exercises gathering after the cow walk, with no server run.
+
 ## 1. Measured: Waterfall Quest
 
 Script `scripts/generated/waterfall.ts`, preset `quest_waterfall` (beside Almera, 10 HP, 2 ropes, 6 air, earth and

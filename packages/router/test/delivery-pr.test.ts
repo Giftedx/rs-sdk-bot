@@ -1,13 +1,19 @@
 import {test,expect} from 'bun:test';
-import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,unlinkSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {stageDeliveryPr,processDeliveryPrs,committable,deliveryPrDir,retryDelayMs,PREREQUISITE_WAIT_MS,deliverySourceSet,type Run} from '../src/delivery-pr';
+import {stageDeliveryPr,processDeliveryPrs,committable,deliveryPrDir,deliveryConflictRoots,retryDelayMs,PREREQUISITE_WAIT_MS,deliverySourceSet,type Run} from '../src/delivery-pr';
 import {resolve} from 'node:path';
 import {prepareWorkspace,publishWorkspace} from '../src/build-workspace';
+import {createHash} from 'node:crypto';
+import {acceptProposal,plannerPrompt} from '../src/coordinator-planner';
+import {initialState} from '../src/coordinator';
+import {deliveryFingerprint} from '../src/delivery-cli';
+import type {DeliveryTask} from '../src/delivery';
 
 const lines=(...l:string[])=>l.join('\n')+'\n';
 const FILE='scripts/smelt-batch.ts';
+const DEF='packages/router/tasks/iron-progress-order.json';
 // A main checkout with one owned file, and a build of `capability` that changed its last line.
 const setup=(capability='iron-progress-order')=>{
  const base=mkdtempSync(join(tmpdir(),'dpr-')),main=join(base,'repo'),coord=join(base,'coord');
@@ -17,13 +23,16 @@ const setup=(capability='iron-progress-order')=>{
 };
 const result={delivery:{ok:true,stage:'delivered',source:'abc',runtimeRevision:'rev1',directory:'.practice/deliveries/x'},review:{deferred:true,reason:'gate passed'}};
 // A stub of git and gh. `master` is origin/master's content of FILE; `fail` names a command prefix that exits 1.
-const stub=(opts:{master?:string;fail?:string;prState?:string}={})=>{
+const stub=(opts:{master?:string;definition?:string;fail?:string;prState?:string}={})=>{
  const calls:string[][]=[],committed:Record<string,string>={};
  const run:Run=async(cmd,cwd)=>{
   calls.push(cmd);const line=cmd.join(' ');
   if(opts.fail&&line.startsWith(opts.fail))return{code:1,stdout:'',stderr:'HTTP 502'};
-  if(cmd[0]==='git'&&cmd[1]==='worktree'&&cmd[2]==='add'){mkdirSync(join(cmd[4]!,'scripts'),{recursive:true});writeFileSync(join(cmd[4]!,FILE),opts.master??lines('a','b','c'));}
-  if(line.startsWith('git add'))committed[FILE]=readFileSync(join(cwd,FILE),'utf8');
+  if(cmd[0]==='git'&&cmd[1]==='worktree'&&cmd[2]==='add'){
+   mkdirSync(join(cmd[4]!,'scripts'),{recursive:true});writeFileSync(join(cmd[4]!,FILE),opts.master??lines('a','b','c'));
+   if(opts.definition!==undefined){mkdirSync(join(cmd[4]!,DEF,'..'),{recursive:true});writeFileSync(join(cmd[4]!,DEF),opts.definition);}
+  }
+  if(line.startsWith('git add'))for(const file of cmd.slice(3))committed[file]=readFileSync(join(cwd,file),'utf8');
   if(line.startsWith('git diff --cached --quiet'))return{code:1,stdout:'',stderr:''};
   if(line.startsWith('gh pr view'))return{code:0,stdout:(opts.prState??'MERGED')+'\n',stderr:''};
   if(line.startsWith('gh pr create'))return{code:0,stdout:'https://github.com/Giftedx/rs-sdk-bot/pull/99\n',stderr:''};
@@ -32,6 +41,55 @@ const stub=(opts:{master?:string;fail?:string;prState?:string}={})=>{
  return{calls,run,committed};
 };
 const stage=(s:ReturnType<typeof setup>,root:string,taskId:string,files=[FILE],now=1000)=>stageDeliveryPr({workspace:root,runDir:join(s.base,'runs',taskId),coordinationDir:s.coord,taskId,capability:'iron-progress-order',files,sourceSet:[FILE],result,now});
+
+test('a qualified proposal update delivers the exact definition and refuses a different master definition',async()=>{
+ const s=setup(),coord=join(s.main,'.practice/coordinator'),id='iron-progress-order';
+ const prior:DeliveryTask={id,goal:'Bank iron bars',entry:FILE,files:[FILE],consumer:'Bank one bar',
+  checks:(['regression','practice','consumer'] as const).map(phase=>({id:phase,phase,command:['bun',FILE],timeoutMs:1000}))};
+ const before=JSON.stringify(prior),definition={...prior,consumer:'Bank two bars'};
+ mkdirSync(join(s.main,DEF,'..'),{recursive:true});writeFileSync(join(s.main,DEF),before);
+ mkdirSync(join(s.main,'packages/router/src'),{recursive:true});writeFileSync(join(s.main,'packages/router/src/saved-proof-verifiers.json'),'{}');
+ const build={id:'build-two-bars',kind:'build',goal:'skills',capability:id,priority:5,estimatedMs:1000,why:'Qualify two bars',dependsOn:[]};
+ const run={...build,id:'run-two-bars',kind:'run',account:'Helper',dependsOn:[build.id],accept:{bank:{2351:2}}};
+ acceptProposal(initialState(),{reason:'Bank two bars',capabilities:[],tasks:[build,run],
+  capabilityUpdates:[{expectedSource:createHash('sha256').update(before).digest('hex'),definition}]},s.main);
+ const root=s.build(),qualified={...result,delivery:{...result.delivery,id,source:deliveryFingerprint(definition,root)}};
+ publishWorkspace(s.main,id,[FILE]);
+ const staged=stageDeliveryPr({workspace:root,runDir:join(s.base,'runs',build.id),coordinationDir:coord,taskId:build.id,
+  capability:id,files:[FILE],sourceSet:[FILE],result:qualified,now:1000})!;
+ expect(staged.files).toEqual([FILE,DEF]);
+ expect(readFileSync(join(staged.base,DEF),'utf8')).toBe(before);
+ expect(readFileSync(join(staged.snapshot,DEF),'utf8')).toBe(readFileSync(join(s.main,DEF),'utf8'));
+ expect(()=>stageDeliveryPr({workspace:root,runDir:join(s.base,'runs','wrong-proof'),coordinationDir:coord,
+  taskId:'wrong-proof',capability:id,files:[FILE],sourceSet:[FILE],result:{...qualified,delivery:{...qualified.delivery,source:'stale'}}}))
+  .toThrow('capability definition differs from qualified delivery');
+
+ const other=stub({definition:JSON.stringify({...prior,goal:'Keep newer master contract'})});
+ const failed=await processDeliveryPrs(coord,s.main,other.run,1000,s.base);
+ expect(failed.conflicts[0]?.lastError).toContain(DEF);
+ expect(other.calls.some(c=>c[1]==='push'||c[1]==='commit')).toBe(false);
+
+ writeFileSync(join(deliveryPrDir(coord),build.id+'.json'),JSON.stringify(staged));
+ const git=stub({definition:before}),passed=await processDeliveryPrs(coord,s.main,git.run,1000,s.base);
+ expect(passed.opened.map(p=>p.taskId)).toEqual([build.id]);
+ expect(git.committed[DEF]).toBe(JSON.stringify(definition,null,2));
+});
+
+test('a new qualified definition can publish without an additional worker edit',async()=>{
+ const s=setup(),coord=join(s.main,'.practice/coordinator'),id='iron-progress-order';
+ const definition:DeliveryTask={id,goal:'Bank iron bars',entry:FILE,files:[FILE],consumer:'Bank one bar',
+  checks:(['regression','practice','consumer'] as const).map(phase=>({id:phase,phase,command:['bun',FILE],timeoutMs:1000}))};
+ mkdirSync(join(s.main,DEF,'..'),{recursive:true});
+ mkdirSync(join(s.main,'packages/router/src'),{recursive:true});writeFileSync(join(s.main,'packages/router/src/saved-proof-verifiers.json'),'{}');
+ acceptProposal(initialState(),{reason:'Add the iron order',capabilities:[definition],tasks:[]},s.main);
+ const root=prepareWorkspace(s.main,id,[FILE]).root;
+ const pr=stageDeliveryPr({workspace:root,runDir:join(s.base,'runs','build-new-iron'),coordinationDir:coord,taskId:'build-new-iron',
+  capability:id,files:[],sourceSet:[FILE],result:{...result,delivery:{...result.delivery,id,source:deliveryFingerprint(definition,root)}},now:1000})!;
+ expect(pr.files).toEqual([DEF]);expect(pr.definitionBase).toBeNull();
+ const git=stub(),out=await processDeliveryPrs(coord,s.main,git.run,1000,s.base);
+ expect(out.opened.map(p=>p.taskId)).toEqual(['build-new-iron']);
+ expect(git.committed[DEF]).toBe(JSON.stringify(definition,null,2));
+});
 
 test('a delivery commits the build change to coordinator/<task id> from current master and opens a PR',async()=>{
  const s=setup(),root=s.build();publishWorkspace(s.main,'iron-progress-order',[FILE]);
@@ -57,6 +115,60 @@ test('a master edit that overlaps the build change stops the PR as a conflict in
  expect(out.conflicts[0]!.lastError).toContain('delivery conflicts with origin/master: scripts/smelt-batch.ts (master lines 3-3, build lines 3-3)');
  expect(git.calls.some(c=>c[1]==='push'||c[1]==='commit')).toBe(false);
  expect((await processDeliveryPrs(s.coord,s.main,stub().run,retryDelayMs(10),s.base)).opened).toEqual([]); // no retry
+});
+
+test('the planner sees a publication conflict once with all distinct pending descendants',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'dpr-roots-')),records=deliveryPrDir(dir);
+ mkdirSync(records);
+ const write=(taskId:string,state:string,prerequisites:string[]=[],lastError?:string)=>
+  writeFileSync(join(records,taskId+'.json'),JSON.stringify({taskId,capability:'rune-bank-craft',state,prerequisites,lastError}));
+ write('rune-root','conflict',[],'overlapping changes');
+ write('left','pending',['rune-root']);write('right','pending',['rune-root']);
+ write('join','pending',['left','right']);write('merged','opened',['rune-root']);
+ write('unrelated','pending',['merged']);write('cycle','pending',['cycle']);
+ const roots=deliveryConflictRoots(dir);
+ expect(roots).toEqual([{taskId:'rune-root',capability:'rune-bank-craft',pendingDeliveries:3,reason:'overlapping changes'}]);
+ const world:any={scoreboard:null,coverage:{quests:[],scriptCandidates:[]},statuses:[],jobs:[],capabilities:[]};
+ const prompt=plannerPrompt(initialState(),world,'',[],roots);
+ expect(prompt).toContain('PUBLICATION CONFLICT ROOTS');
+ expect(prompt).toContain(JSON.stringify(roots));
+});
+
+test('a Windows delivery keeps unrelated master edits when the snapshots use CRLF',async()=>{
+ const s=setup();
+ writeFileSync(join(s.main,FILE),'a\r\nb\r\nc\r\n');
+ const root=s.build('iron-progress-order','a\r\nb\r\nC\r\n');
+ stage(s,root,'build-windows');
+ const git=stub({master:lines('A','b','c')});
+ const out=await processDeliveryPrs(s.coord,s.main,git.run,1000,s.base);
+ expect(out.conflicts).toEqual([]);
+ expect(out.opened.map(p=>p.taskId)).toEqual(['build-windows']);
+ expect(git.committed[FILE]).toBe(lines('A','b','C'));
+});
+
+test('legacy line-ending conflicts retry through the normal merge, with complete bases only',async()=>{
+ for(const scenario of ['clean','overlap','missing-base','lf-only']){
+  const s=setup(),eol=scenario==='lf-only'?'\n':'\r\n';
+  writeFileSync(join(s.main,FILE),['a','b','c',''].join(eol));
+  const root=s.build('iron-progress-order',['a','b','C',''].join(eol));
+  const pr=stage(s,root,'build-one')!;
+  const lastError='delivery conflicts with origin/master: '+FILE;
+  writeFileSync(join(deliveryPrDir(s.coord),'build-one.json'),JSON.stringify({...pr,state:'conflict',lastError}));
+  if(scenario==='missing-base')unlinkSync(join(pr.base,FILE));
+  const git=stub({master:scenario==='overlap'?lines('a','b','master edit'):lines('A','b','c')});
+  const out=await processDeliveryPrs(s.coord,s.main,git.run,1000,s.base);
+  if(scenario==='clean'){
+   expect(out.opened.map(p=>p.taskId)).toEqual(['build-one']);
+   expect(git.committed[FILE]).toBe(lines('A','b','C'));
+  }else{
+   expect(out.opened).toEqual([]);
+   if(scenario==='overlap')expect(out.conflicts[0]?.lastError).toContain('master lines 3-3');
+   else expect(git.calls).toEqual([]);
+  }
+  const next=stub();
+  await processDeliveryPrs(s.coord,s.main,next.run,1000+PREREQUISITE_WAIT_MS,s.base);
+  expect(next.calls).toEqual([]);
+ }
 });
 
 test('a build that started on an earlier unmerged delivery opens its PR after that delivery merges',async()=>{
@@ -90,6 +202,83 @@ test('a gh failure stays pending, is retried after its delay and reuses the push
  const out=await processDeliveryPrs(s.coord,s.main,remote,retryDelayMs(1),s.base);
  expect(out.opened[0]).toMatchObject({state:'opened',attempts:2});
  expect(retry.calls.some(c=>c[1]==='push'||c[1]==='commit')).toBe(false);
+});
+
+test('a pushed branch still waits for its earlier delivery before opening a PR',async()=>{
+ const s=setup();
+ const first=stage(s,s.build('first'),'build-first',[FILE],10)!;
+ writeFileSync(join(deliveryPrDir(s.coord),first.taskId+'.json'),JSON.stringify({...first,state:'opened'}));
+ const now=Date.now()+1,second=stage(s,s.build('second'),'build-second',[FILE],now)!;
+ expect(second.prerequisites).toEqual([first.taskId]);
+ const remote=(git:ReturnType<typeof stub>):Run=>async(cmd,cwd)=>cmd[1]==='ls-remote'
+  ?{code:0,stdout:'a'.repeat(40)+'\trefs/heads/'+second.branch+'\n',stderr:''}:git.run(cmd,cwd);
+ const waiting=stub({prState:'OPEN'});
+ const held=await processDeliveryPrs(s.coord,s.main,remote(waiting),now,s.base);
+ expect(held.waiting[0]).toMatchObject({taskId:second.taskId,attempts:0});
+ expect(waiting.calls.some(cmd=>cmd[0]==='gh'&&cmd[2]==='create')).toBe(false);
+
+ const merged=stub({prState:'MERGED'});
+ const released=await processDeliveryPrs(s.coord,s.main,remote(merged),now+PREREQUISITE_WAIT_MS,s.base);
+ expect(released.opened[0]).toMatchObject({taskId:second.taskId,state:'opened'});
+ expect(merged.calls.some(cmd=>cmd[1]==='push'||cmd[1]==='commit')).toBe(false);
+});
+
+test('a missing local prerequisite needs a same-repository merge into master',async()=>{
+ const s=setup(),first=stage(s,s.build('first'),'build-first',[FILE],10)!;
+ const now=Date.now()+1,second=stage(s,s.build('second'),'build-second',[FILE],now)!;
+ expect(second.prerequisites).toEqual([first.taskId]);
+ unlinkSync(join(deliveryPrDir(s.coord),first.taskId+'.json'));
+ const git=stub(),lookup:string[][]=[];
+ let merged=false;
+ const run:Run=async(cmd,cwd)=>{
+  if(cmd[0]==='gh'&&cmd[2]==='list'&&cmd.includes(first.branch)){
+   lookup.push(cmd);
+   return {code:0,stdout:merged?'42\n':'',stderr:''};
+  }
+  return git.run(cmd,cwd);
+ };
+ const held=await processDeliveryPrs(s.coord,s.main,run,now,s.base);
+ expect(held.waiting[0]).toMatchObject({taskId:second.taskId,attempts:0,nextAt:now+PREREQUISITE_WAIT_MS});
+ expect(held.waiting[0]!.lastError).toContain(first.branch);
+ expect(lookup[0]).toEqual(['gh','pr','list','--head',first.branch,'--base','master','--state','merged',
+  '--json','number,isCrossRepository','--jq','map(select(.isCrossRepository == false)) | .[0].number // empty']);
+ expect(git.calls.map(cmd=>cmd.slice(0,3))).toEqual([['gh','pr','list']]);
+ merged=true;
+ const released=await processDeliveryPrs(s.coord,s.main,run,now+PREREQUISITE_WAIT_MS,s.base);
+ expect(released.opened[0]).toMatchObject({taskId:second.taskId,state:'opened'});
+ expect(lookup).toHaveLength(2);
+ expect(existsSync(join(deliveryPrDir(s.coord),first.taskId+'.json'))).toBe(false);
+});
+
+test.each(['branch','pull request'] as const)('reusing a %s requires the staged qualified definition at its exact head',async(kind)=>{
+ for(const match of ['missing','changed','exact'] as const){
+  const s=setup(),pr=stage(s,s.build(),'build-reuse')!;
+  const definition='{"id":"iron-progress-order","consumer":"Bank two bars"}';
+  mkdirSync(join(pr.snapshot,DEF,'..'),{recursive:true});writeFileSync(join(pr.snapshot,DEF),definition);
+  writeFileSync(join(deliveryPrDir(s.coord),pr.taskId+'.json'),JSON.stringify({...pr,definitionBase:null,files:[...pr.files,DEF]}));
+  const git=stub(),head='a'.repeat(40),url='https://github.com/Giftedx/rs-sdk-bot/pull/99';
+  const run:Run=async(cmd,cwd)=>{
+   if(cmd[0]==='gh'&&cmd[1]==='pr'&&cmd[2]==='list')return {code:0,stdout:kind==='pull request'?url+'\t'+head+'\n':'',stderr:''};
+   if(cmd[1]==='ls-remote')return {code:0,stdout:head+'\trefs/heads/'+pr.branch+'\n',stderr:''};
+   if(cmd[1]==='ls-tree'){
+    expect(cmd).toContain(head);
+    return {code:0,stdout:match==='missing'?'':'100644 blob '+'b'.repeat(40)+'\t'+DEF+'\n',stderr:''};
+   }
+   if(cmd[1]==='show'){
+    expect(cmd.at(-1)).toBe(head+':'+DEF);
+    return {code:0,stdout:match==='exact'?definition:'{"id":"iron-progress-order","consumer":"Other work"}',stderr:''};
+   }
+   return git.run(cmd,cwd);
+  };
+  const out=await processDeliveryPrs(s.coord,s.main,run,1000,s.base);
+  if(match==='exact')expect(out.opened[0]).toMatchObject({url,state:'opened'});
+  else {
+   expect(out.opened).toEqual([]);
+   expect(out.conflicts[0]?.lastError).toContain(DEF);
+   expect(git.calls.some(c=>c[0]==='gh'&&c[2]==='create')).toBe(false);
+  }
+  expect(git.calls.some(c=>c[1]==='push'||c[1]==='commit')).toBe(false);
+ }
 });
 
 test('swarm.json and .practice never reach a delivery commit',()=>{

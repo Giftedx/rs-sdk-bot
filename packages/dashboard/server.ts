@@ -15,7 +15,7 @@ import { createHash } from 'node:crypto';
 import { accountJobRows, collectionState, operationState, isLoopback, effectiveJob, productionGoal, boundedOperation, capacityState, hostStopNativeProof, productionReview, type NativeProof } from './collection';
 import {requestEvidence,gateView} from './evidence';
 import {goalPlan,goalProgress,GOAL_RECEIPTS,type GoalInputs} from './goals';
-import { VIEWER_MANIFEST_SHA256, viewerAssetRoute, viewerBridgeSource } from './viewer';
+import { VIEWER_MANIFEST_SHA256, viewerAssetRoute, viewerBridgeSource, viewerBundle } from './viewer';
 import {coordinationView} from './coordination';
 import {fleetSidesView,remoteBots,scoreboardView} from './fleet-view';
 import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,rosterView,valueBoardRows,ONLINE_MS,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow,type ValueRow} from './world-view';
@@ -23,7 +23,7 @@ import {loadContentTable,readWorn} from './appearance';
 import {createOperatorControl} from './operator-control';
 import { xpForLevel } from '../planner/src/curve';
 import { isLocalServer } from '../core/src/localserver';
-import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, schedule, suppliesFor, TRICKS } from '../planner/src/haggis';
+import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, scheduleOverall, overallRequirementsFor, TRICKS } from '../planner/src/haggis';
 
 const root = resolve(import.meta.dir, '..', '..');
 const operatorControl=createOperatorControl({root,readOnly:process.env.DASH_READ_ONLY==='1'});
@@ -891,7 +891,7 @@ function race() {
     try {
         const boards = loadSnapshot(LIVE_HISCORES);
         const acts = haggisActivities(), travel = haggisTravel();
-        const run = (mode: 'floor' | 'realistic') => schedule(boards, acts, { travel, mode, tricks: new Set(TRICKS) });
+        const run = (mode: 'floor' | 'realistic') => scheduleOverall(boards, acts, { travel, mode, tricks: new Set(TRICKS) });
         const fl = run('floor'), re = run('realistic');
         // Evidence of the inputs behind each board: the activities (levers applied) that serve it. Overall: all of them.
         const live = applyLevers(acts, {});
@@ -912,13 +912,14 @@ function race() {
         const lastAct = lastB ? [...re.order].reverse().find(p => live.find(a => a.id === p.id)?.serves.includes(lastB.id as any)) : null;
         const n = (l: typeof rows, k: 'real' | 'floor') => l.filter(r => r[k].status === 'WIN').length;
         const value = {
-            supplies: suppliesFor(acts, {travel, mode:'realistic', tricks:new Set(TRICKS)}, boards),
+            supplies: re.overallFinish === null ? null : overallRequirementsFor(acts, {travel, mode:'realistic', tricks:new Set(TRICKS)}, re)
+                .supplies.map(({consumers,...supply}) => supply),
             rows, unmeasured: (readFileSync(BOARDS_FILE, 'utf8').match(/"evidence":\s*"(ESTIMATE|CODE-READ)"/g) ?? []).length,
             wins: n(rows, 'real'), floorWins: n(rows, 'floor'), gap: overall?.real.slack ?? null, floorGap: overall?.floor.slack ?? null,
             qpEnd: { realistic: re.qp, floor: fl.qp },
             last: lastB ? { board: lastB.label, finish: lastB.real.finish, slack: lastB.real.slack, activity: lastAct?.label ?? null } : null,
             at: Date.now(), source: 'research/hiscores-live.json', sourceAt: Date.parse(JSON.parse(readFileSync(LIVE_HISCORES,'utf8')).takenAt)||0,
-            options: 'planner CLI scenario a: all techniques eligible, travel on; supplies require acquisition',
+            options: 'Planner CLI scenario a. Travel on. Supplies require acquisition. Relaxed scheduling deadlines: ' + (re.boards.filter(b => b.sacrificed).map(b => b.id).join(', ') || 'none'),
         };
         raceCache = { key, value };
         const last = gapHistory[gapHistory.length - 1];
@@ -1212,6 +1213,7 @@ function viewerAvailable() {
             &&files.every(p=>typeof p==='string'&&/^\/static\/(?:js|css)\/[\w.-]+$/.test(p)&&existsSync(join(viewerBuild,p.slice(1))));
     }catch{return false;}
 }
+let viewerMain:string|undefined;
 function viewerAsset(pathname:string):Response|null {
     const route=viewerAssetRoute(pathname);
     if(route===null)return null;
@@ -1220,6 +1222,8 @@ function viewerAsset(pathname:string):Response|null {
     try {
         const realBase=realpathSync(base),file=realpathSync(resolve(base,route.relative));
         if(!file.startsWith(realBase+sep)||!statSync(file).isFile())return new Response('not found',{status:404});
+        // This page runs the same patched viewer as the hosted copy. The text is built once.
+        if(route.root==='static'&&/^js\/main\.[0-9a-f]+\.js$/.test(route.relative))return new Response(viewerMain??=viewerBundle(readFileSync(file,'utf8')),{headers:{...VIEWER_ISO,'content-type':'text/javascript;charset=utf-8','cache-control':'no-cache'}});
         return new Response(Bun.file(file),{headers:{...VIEWER_ISO,'cache-control':route.root==='static'?'public,max-age=3600':'no-cache'}});
     }catch{return new Response('not found',{status:404});}
 }

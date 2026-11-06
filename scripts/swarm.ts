@@ -15,7 +15,7 @@
 // "envByAccount": {"<account>": {"KEY": "value"}} gives one hosted account its own variables on top of "env". A host
 // job whose script is scripts/chain.ts runs its "args" as chain steps inside the host, one chain per account.
 // Usage: DEMO_OK=1 bun scripts/swarm.ts [swarm.json]
-import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, renameSync, rmSync, statSync, writeFileSync, createWriteStream } from 'node:fs';
+import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, renameSync, rmSync, statSync, writeFileSync, writeSync, createWriteStream } from 'node:fs';
 import { spawn as spawnChild } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { freemem } from 'node:os';
@@ -29,12 +29,13 @@ import {withSessionAdmission,missionSignature as sharedMissionSignature,successf
 import {assertNoRecoveryLease,heldRecoveryOwners} from '../packages/core/src/session-recovery-permit';
 import {createRecoveryDispatch} from '../packages/core/src/session-recovery-dispatch';
 import { createHash } from 'node:crypto';
+import { jobLogStart } from '../packages/core/src/job-log';
 import { readLogoutProof, listAttempts, verifyLegacyLogout, type LegacyLogoutClaim, type LegacyLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 import { mergedPlan, readCoordinatorJobs, emptyCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { leaseHeldElsewhere, loadOwners, mySide, readLease, sideOf, thisHost, type Owner } from '../packages/core/src/fleet';
 
-export type Job = { account?: string; accounts?: string[]; host?: boolean; orchestrate?:boolean; args?:string[]; maxRestarts?:number; script: string; role?: string; goal?: string; env?: Record<string, string>; envByAccount?: Record<string, Record<string, string>>; enabled: boolean; repeat?: boolean; note?: string; whenCargoFrom?: string[]; demandNear?: {x:number;z:number;radius:number};whenFoodLowFrom?:string[];foodLowBelow?:number;foodSourceAccount?:string;foodSourceAccounts?:string[];sourceFoodMinimum?:number };
+export type Job = { autopilot?: string; template?: string; account?: string; accounts?: string[]; host?: boolean; orchestrate?:boolean; args?:string[]; maxRestarts?:number; script: string; role?: string; goal?: string; env?: Record<string, string>; envByAccount?: Record<string, Record<string, string>>; enabled: boolean; repeat?: boolean; note?: string; whenCargoFrom?: string[]; demandNear?: {x:number;z:number;radius:number};whenFoodLowFrom?:string[];foodLowBelow?:number;foodSourceAccount?:string;foodSourceAccounts?:string[];sourceFoodMinimum?:number };
 type Plan = { maxBots: number; minFreeGB: number; jobs: Job[] };
 // A run is a detached supervisor process: it outlives this controller, and a restarted controller adopts it from
 // .practice/swarm-runs.json. Its output goes straight to its log file, which the controller follows from `offset`.
@@ -333,7 +334,7 @@ export function lifecycleAccounts(dir: string): string[] {
 // A session whose owner died with no end line (a killed worker, or a swarm that died with its children) leaves a
 // held attempt, so no repair can name it until the owner is gone and its end is recorded.
 export function orphanedSessionEnds(accounts: readonly string[], ended: ReadonlyMap<string, EndRecord>, busy: readonly string[],
-    proof: (a: string) => LogoutProof, producer: (a: string, attemptId: string) => { pid: number; updatedAt: number } | undefined, alive: (pid: number) => boolean): [string, string][] {
+    proof: (a: string) => LogoutProof, producer: (a: string, attemptId: string) => { pid: number; createdAt: number; updatedAt: number } | undefined, alive: (pid: number) => boolean): [string, string][] {
     const out: [string, string][] = [], seen = new Set<string>();
     for (const a of accounts) {
         const key = a.toLowerCase();
@@ -343,9 +344,12 @@ export function orphanedSessionEnds(accounts: readonly string[], ended: Readonly
         let p: LogoutProof; try { p = proof(a); } catch { continue; }
         if (p.state !== 'held') continue;
         const receipt = producer(a, p.attemptId);
-        if (!receipt || !Number.isSafeInteger(receipt.pid) || receipt.pid < 1 || !Number.isFinite(receipt.updatedAt) || alive(receipt.pid)) continue;
+        if (!receipt || !Number.isSafeInteger(receipt.pid) || receipt.pid < 1 || !Number.isFinite(receipt.createdAt) || !Number.isFinite(receipt.updatedAt) || alive(receipt.pid)) continue;
         const prior = [...ended].find(([name]) => name.toLowerCase() === key);
-        if (prior && (!prior[1].reason.startsWith('exit orphaned: attempt ') || receipt.updatedAt <= prior[1].at)) continue;
+        // An older orphan end yields to a later update. A successful end yields to an attempt that started after it: that
+        // end cannot describe the attempt and holds nothing. Every other end stays, because a repair reads its reason.
+        const orphan = prior?.[1].reason.startsWith('exit orphaned: attempt ');
+        if (prior && !(orphan ? receipt.updatedAt > prior[1].at : successfulEnd(prior[1].reason) && receipt.createdAt > prior[1].at)) continue;
         out.push([prior?.[0] ?? a, `exit orphaned: attempt ${p.attemptId} owner ${receipt.pid} gone`]);
     }
     return out;
@@ -507,6 +511,10 @@ if (import.meta.main) {
     const logDir = join(prac, 'swarm-logs');
     mkdirSync(logDir, { recursive: true });
     if (process.env.DEMO_OK !== '1') { console.log('swarm: set DEMO_OK=1 (live server)'); process.exit(2); }
+    if (coordinatorOwner) {
+        try { assertWorkerRelease({ ...process.env, WORKER_ENTRY: '' }, root); }
+        catch (error) { console.log('swarm: ' + String(error)); process.exit(2); }
+    }
     // One controller per side across machines: another machine's fresh lease (scripts/fleet-sync.ts publishes it from the
     // running controller's heartbeat) means its swarm runs this side's accounts; a second controller would log them in twice.
     const held = leaseHeldElsewhere(readLease(side), thisHost());
@@ -615,6 +623,7 @@ if (import.meta.main) {
             // Each worker carries the release of the files its entries can run (docs/script-contract.md, Release
             // scope), so a runtime change needs no swarm restart and an edit outside those files leaves it unchanged.
             const entries = workerEntries(job.script, job.args ?? [], root);
+            writeSync(out, jobLogStart(job));
             child = spawnChild(cmd[0]!, cmd.slice(1), {
                 cwd: root, detached: true, windowsHide: true, stdio: ['ignore', out, out],
                 env: { ...process.env, ...job.env, WORKER_RELEASE: capabilityRevision(entries, root), WORKER_ENTRY: entries.join(','), DEMO_OK: '1', BOT_ROLE: job.role ?? '', BOT_GOAL: job.goal ?? '', STANDING: (job as Job & {standing?:boolean}).standing ? '1' : '',COORDINATOR_PARTICIPANTS:job.orchestrate?JSON.stringify(accounts):'' },
@@ -647,7 +656,7 @@ if (import.meta.main) {
             const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch (e) { return (e as NodeJS.ErrnoException).code !== 'ESRCH'; } };
             const producer = (a: string, id: string) => {
                 const receipt = listAttempts(a, LIVE_SERVER).find(x => x.attemptId === id)?.receipt;
-                return receipt ? { pid: receipt.owner.pid, updatedAt: receipt.updatedAt } : undefined;
+                return receipt ? { pid: receipt.owner.pid, createdAt: receipt.createdAt, updatedAt: receipt.updatedAt } : undefined;
             };
             const accounts = planned.flatMap(p => p.accounts).concat(lifecycleAccounts(join(prac, 'session-lifecycle/live', LIVE_SERVER)));
             for (const [a, reason] of orphanedSessionEnds(accounts, ended, busy, a => readLogoutProof(a, LIVE_SERVER), producer, alive)) {

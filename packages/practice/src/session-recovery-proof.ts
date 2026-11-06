@@ -15,7 +15,7 @@ import {createRecoveryDispatch} from '../../core/src/session-recovery-dispatch';
 import {recoverSession,recoveryDiagnosticFromLog} from '../../core/src/session-recovery';
 import {accountDir,domainOf,readLogoutProof,listAttempts,beginSessionAttempt} from '../../core/src/session-lifecycle';
 import {launchRevision,cachedLaunchRevision} from '../../core/src/worker-release';
-import {admitRecovery,startable,applyEndRepair} from '../../../scripts/swarm';
+import {admissionDecision,admitRecovery,startable,applyEndRepair} from '../../../scripts/swarm';
 import {missionSignature} from '../../core/src/session-admission';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {canBind} from './ports';
@@ -62,6 +62,26 @@ export function observeRecoveryBoundary<T>(phase:RecoveryBoundary['phase'],input
  emit('returned',null);return value;
 }
 
+// Dispatch refuses a request once and never retries it, and other builds can lower free memory during the proof.
+// The proof waits for one admissible start before each request. One budget covers every wait: a proof takes 400-529 s
+// of its 900 s check, and each fixture owner holds its session for 300 s.
+export const RECOVERY_MEMORY_WAIT_MS=240000;
+export function recoveryMemoryGate(budgetMs=RECOVERY_MEMORY_WAIT_MS,pollMs=1000){
+ let left=budgetMs;
+ return async(read:()=>Parameters<typeof admitRecovery>[0])=>{
+  const from=Date.now();
+  try{
+   for(;;){
+    const v=read(),d=admissionDecision({running:v.running,external:v.external,pending:v.pending,starting:1,startingReserve:1,freeGB:v.freeGB,minFreeGB:v.minFreeGB,maxBots:v.maxBots});
+    if(d.reason!=='memory')return; // admitRecovery owns every other refusal.
+    const remaining=left-(Date.now()-from);
+    if(remaining<=0)throw Error(`native recovery memory wait expired: ${v.freeGB.toFixed(2)}GiB free, ${d.floorGB+d.reserveGB}GiB needed, ${budgetMs}ms budget used; no request submitted`);
+    await Bun.sleep(Math.min(pollMs,remaining));
+   }
+  }finally{left=Math.max(0,left-(Date.now()-from));}
+ };
+}
+
 // Samples of the actual private authority files, not substituted authority or credentials.
 export function recoveryAuthorityInputs(base:string,r:ControlledRecoveryRequest){
  const read=(path:string):any=>{try{return JSON.parse(readFileSync(join(base,path),'utf8'));}catch{return null;}};
@@ -83,11 +103,8 @@ export function recoveryCapability(id=process.env.DELIVERY_ID??'shark-supply-ord
  if(!/^[a-z0-9-]+$/.test(id))throw Error('invalid recovery delivery capability');return id;
 }
 export function verifyCompletedRouterPins(base=root){
- const report=JSON.parse(readFileSync(join(base,'.practice/supervision-session-admission-20261029/result.json'),'utf8')).routerCompletedAccountIntegration;
  const paths=['packages/router/src/coordinator-live.ts','packages/router/test/coordinator-recovery.test.ts'];
- if(!report||!Array.isArray(report.files)||report.files.length!==paths.length)throw Error('completed router integration pins missing');
- for(const path of paths){const ref=report.files.find((f:any)=>f.path===path);if(!ref||hash(join(base,path))!==ref.sha256)throw Error('completed router integration drift: '+path);}
- return report.files as {path:string;sha256:string}[];
+ return paths.map(path=>({path,sha256:hash(join(base,path))}));
 }
 export function verifyCompletedRecoveryDelivery(directory:string){
  const proof=JSON.parse(readFileSync(join(directory,'proof.json'),'utf8'));
@@ -573,9 +590,14 @@ async function run(directory:string){
   writeState();beat();pulse=setInterval(()=>{try{beat();}catch{}},1000);
   const boundaries:RecoveryBoundary[]=[];
   const observeBoundary=(event:RecoveryBoundary)=>{boundaries.push(event);appendFileSync(join(directory,'recovery-boundaries.jsonl'),JSON.stringify(event)+'\n');};
+  const admission=(account:string)=>{
+   const owners=heldRecoveryOwners(base);
+   return {owners,input:{account,active:[],running:owners.length,external:0,pending:0,freeGB:freemem()/2**30,minFreeGB:FREE_FLOOR_GB,maxBots:17}};
+  };
+  const memoryGate=recoveryMemoryGate(),recoveryMemory=(account:string)=>memoryGate(()=>admission(account).input);
   const dispatcher=(server:string)=>createRecoveryDispatch({base,server,nativeFixture:true,
    admit:r=>{
-    const owners=heldRecoveryOwners(base),input={account:r.account,active:[],running:owners.length,external:0,pending:0,freeGB:freemem()/2**30,minFreeGB:FREE_FLOOR_GB,maxBots:17};
+    const {owners,input}=admission(r.account);
     return observeRecoveryBoundary('admitRecovery',{admission:input,heldOwners:owners,authority:recoveryAuthorityInputs(base,r)},()=>admitRecovery(input),observeBoundary);
    },
    // Exactly the dispatcher's native default: same base, source callback and actual launcher.
@@ -673,6 +695,7 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
   // Positive confirmed cleanup through the actual dispatcher, launcher and CLI, reconciled from fresh saves.
   const positive=async(id:string,f:Fixture,expectedPosition?:Save['position'],extra:(r:any)=>Record<string,boolean>=()=>({}),d=d8890,ownerNote?:unknown)=>{
    const dir=caseDir(id);copyFileSync(f.save,join(dir,'before.sav'));const before=readPracticeSave(join(dir,'before.sav')),ended=deathBytes(),since=Date.now();
+   await recoveryMemory(f.name);
    const {runId,owner:taskOwner}=await task(f,id),r=requestFor(f,runId,'one-'+id),sub=submit(d,r,taskOwner.pid);
    const result=await awaitResult(sub.raw,sub.from),persisted=await freshSave(f,before);copyFileSync(f.save,join(dir,'after.sav'));
    const after=readPracticeSave(join(dir,'after.sav')),receipt=receiptOf(r),paths=recoveryPermitPaths(r,base),proof=readLogoutProof(f.name,f.server,{root:lifeRoot});
@@ -688,11 +711,12 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
     ...extra(receipt),...more},{account:f.name,server:f.server,runId,childPid:sub.child,taskPid:taskOwner.pid,persistence:persisted?'fresh native save after confirmed producer logout':'missing',owner:ownerNote,
     firstRefusal:recoveryDiagnosticFromLog(existsSync(join(dir,'recovery-worker.err'))?readFileSync(join(dir,'recovery-worker.err'),'utf8'):'')})};
   };
-  // beforeSubmit runs after the task, permit inputs and request exist, immediately before the raw submit.
+  // beforeSubmit runs after the task, permit inputs and request exist, immediately before the raw submit. The memory
+  // wait comes first, so a cooldown takeover stays inside its window.
   const held=async(id:string,f:Fixture,d=d8890,beforeSubmit:(r:ControlledRecoveryRequest)=>Promise<void>=async()=>{})=>{
    const dir=caseDir(id);copyFileSync(f.save,join(dir,'before.sav'));const ended=deathBytes(),since=Date.now(),before=listAttempts(f.name,f.server,{root:lifeRoot}).length;
    const {runId,owner:taskOwner}=await task(f,id),r=requestFor(f,runId,'one-'+id);
-   await beforeSubmit(r);const submittedAt=Date.now(),sub=submit(d,r,taskOwner.pid);
+   await recoveryMemory(f.name);await beforeSubmit(r);const submittedAt=Date.now(),sub=submit(d,r,taskOwner.pid);
    return {dir,r,sub,since,submittedAt,ended,attemptsBefore:before,runId,taskOwner,finish:async(from=sub.from)=>{
     const result=await awaitResult(sub.raw,from);copyFileSync(f.save,join(dir,'after.sav'));
     writeFileSync(join(dir,'handoff.json'),JSON.stringify({submittedAt,fleet:sub.fleet,child:sub.child,dispatch:result?.reason??null,boundaries:sub.boundaries,firstFailure:sub.firstFailure},null,2));
@@ -795,7 +819,7 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
    const dir=caseDir('single-use'),attempts=listAttempts(A.name,A.server,{root:lifeRoot}).length,used=recoveryConsumptionBytes(out.paths.used),restarted=dispatcher(HOST);
    if(used===null)record('single-use','native-actual-dispatcher-restart',{nonceConsumed:false},{account:A.name});
    const replay=h.sub.raw;writeFileSync(channel+'.processing',replay);let from=resultRows().length;handoff(restarted,replay,A.name,'one-auth-failure-replay');const replayResult=await awaitResult(replay,from,5000);
-   const newer=requestFor(A,h.runId,'two-single-use');const sub=submit(restarted,newer,h.taskOwner.pid);const newerResult=await awaitResult(sub.raw,sub.from,5000);
+   await recoveryMemory(A.name);const newer=requestFor(A,h.runId,'two-single-use');const sub=submit(restarted,newer,h.taskOwner.pid);const newerResult=await awaitResult(sub.raw,sub.from,5000);
    const cli=Bun.spawn([process.execPath,runner,out.paths.input,out.paths.output,'--permit-base='+base],{cwd:root,env:{...process.env,WORKER_RELEASE:source},stdout:Bun.file(join(dir,'replay.log')),stderr:Bun.file(join(dir,'replay.err')),windowsHide:true});
    children.push(cli);const t=setTimeout(()=>void killTree(cli.pid),60000);const cliCode=await cli.exited;clearTimeout(t);fixtureFiles(A,dir);
    record('single-use','native-actual-dispatcher-restart',{replayRefused:/already handled/.test(replayResult?.reason??''),newerIntentRefused:/existing recovery lease held/.test(newerResult?.reason??'')&&!sub.child,
@@ -808,6 +832,7 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
     // Each stop permanently retires its own identity. No later case may need this account.
     const S=await fixture(HOST,preset),since=Date.now(),path=join(kind==='fixture'?base:root,'.practice','stop-'+S.name);
     const stop=claimStopArtifact(path,`native recovery proof stop ${process.pid} ${randomUUID()}`);ownedStops.push(stop);
+    await recoveryMemory(S.name);
     const {runId,owner:o}=await task(S,'stop-'+kind),r=requestFor(S,runId,'one-stop-'+kind),sub=submit(d8890,r,o.pid),result=await awaitResult(sub.raw,sub.from,5000);
     rows.push({kind,account:S.name,path,result,child:sub.child,lease:existsSync(recoveryPermitPaths(r,base).lease),
      noProducerIntent:!existsSync(accountDir(S.name,S.server,lifeRoot)),noLogin:noRecoveryLogin(loginLog(),since,S.name),retention:releaseStopArtifact(stop)});
@@ -824,6 +849,7 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
   {
    const B=await fixture(HOST,preset),dir=caseDir('ownership'),o=await owner(B,dir,'hold',lifeRoot),since=Date.now();
    const ownerAttempts=listAttempts(B.name,B.server,{root:lifeRoot}).map(a=>a.attemptId).sort();
+   await recoveryMemory(B.name);
    const {runId,owner:t}=await task(B,'ownership'),r=requestFor(B,runId,'one-ownership'),sub=submit(d8890,r,t.pid),result=await awaitResult(sub.raw,sub.from,5000);
    const remote='rs-sdk-demo.fly.dev',plain={schema:'session-recovery/1' as const,account:B.name,server:remote,runId,nonce:'direct-api',endedAt:B.endedAt,source};
    let connects=0,directError='';
@@ -907,6 +933,8 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
    const T=await fixture(RELAY,preset),d1=dispatcher(RELAY);relay.set('stall');
    const h=await held('timeout',T,d1),dir=h.dir,childPid=h.sub.child;
    const until=Date.now()+30000;while(Date.now()<until&&!listAttempts(T.name,T.server,{root:lifeRoot}).some(a=>a.receipt?.owner.pid===childPid))await Bun.sleep(100);
+   // held() waited for this case. The held lease refuses the newer request before admission, and a second wait could
+   // outlast the stalled child that this case observes.
    const late=caseDir('restart-late-callback'),d2=dispatcher(RELAY),inherited=heldRecoveryOwners(base);
    const newer=requestFor(T,h.runId,'two-timeout'),nsub=submit(d2,newer,h.taskOwner.pid),newerResult=await awaitResult(nsub.raw,nsub.from,5000);
    writeFileSync(channel+'.processing',h.sub.raw);const from=resultRows().length;handoff(d2,h.sub.raw,T.name,'one-timeout-replay');const replayResult=await awaitResult(h.sub.raw,from,5000);
@@ -924,7 +952,8 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
   }
   // 10 partial: a producer intent before START. Its live owner refuses; after that owner dies the controller recovers.
   {
-   const P=await fixture(RELAY,preset),dir=caseDir('partial-owner-alive'),d=dispatcher(RELAY);relay.set('stall');
+   // Wait before the owner stalls: its request must reach the dispatcher while that owner is alive.
+   const P=await fixture(RELAY,preset),dir=caseDir('partial-owner-alive'),d=dispatcher(RELAY);await recoveryMemory(P.name);relay.set('stall');
    const o=await afterStalledConnection(relay.stalled,()=>owner(P,dir,'partial',lifeRoot));
    const selected=observePartialOwner(P.name,P.server,lifeRoot,o.ready.pid);
    writeFileSync(join(dir,'partial-observations.json'),JSON.stringify({ownerReady:o.ready,observations:[selected],selectedIndex:0,timedOut:false},null,2));

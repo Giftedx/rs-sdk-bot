@@ -2,6 +2,7 @@
 // NPC owns it through `param=owned_shop,<inv>` in its config block (content scripts/shop/scripts/shop.rs2 opens
 // npc_param(owned_shop)); knowledge/npcs.json gives the NPC's spawn tiles and config line.
 import { readFileSync } from 'node:fs';
+import { LEVEL_STEP } from './spawn-index';
 import { join, resolve } from 'node:path';
 import type { Tile } from './world';
 
@@ -9,6 +10,11 @@ const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 const content = join(repoRoot, 'vendor', 'rs-sdk', 'server', 'content');
 export type ShopSeller = { shop: string; npc: string; npcId: number; spawns: Tile[]; stock: number };
 
+// Entrana's sellers (Frincos's herblore shop, 2808,3342) are off the sweep's map: the monks' boat from Port Sarim takes
+// no weapons or armour, and the sweep's accounts carry theirs. From Ardougne Frincos was the nearest eye of newt seller
+// by distance and the walk found no route.
+export const ENTRANA = { minX: 2798, maxX: 2878, minZ: 3326, maxZ: 3394 };
+export const offMap = (t: Tile) => t.level === 0 && t.x >= ENTRANA.minX && t.x <= ENTRANA.maxX && t.z >= ENTRANA.minZ && t.z <= ENTRANA.maxZ;
 let index: Map<string, ShopSeller[]> | undefined;
 export function shopSellers(): Map<string, ShopSeller[]> {
     if (index) return index;
@@ -26,25 +32,30 @@ export function shopSellers(): Map<string, ShopSeller[]> {
         }
     }
     index = new Map();
-    for (const s of shops) for (const st of s.stock) for (const o of owners.get(s.inv) ?? [])
+    for (const s of shops) for (const st of s.stock) for (const o of owners.get(s.inv) ?? []) {
+        if (o.spawns.every(offMap)) continue;
         index.set(st.item, [...(index.get(st.item) ?? []), { shop: s.inv, npc: o.npc, npcId: o.npcId, spawns: o.spawns, stock: st.count }]);
+    }
     return index;
 }
 
-// Sellers on `at`'s level, nearest first by straight-line distance (the route search judges the real walk).
+// Sellers nearest first by straight-line distance, a floor between counting LEVEL_STEP tiles (the route search judges
+// the real walk, and the far walk takes the hubs toward the ground beneath an upstairs seller): Hudo's onions are on
+// the Grand Tree's first floor.
+const distance = (t: Tile, at: Tile) => Math.max(Math.abs(t.x - at.x), Math.abs(t.z - at.z)) + LEVEL_STEP * Math.abs(t.level - at.level);
 export function sellersByDistance(item: string, at: Tile): (ShopSeller & { tile: Tile })[] {
     const out: (ShopSeller & { tile: Tile; d: number })[] = [];
     for (const s of shopSellers().get(item) ?? []) for (const t of s.spawns)
-        if (t.level === at.level && s.stock >= 1) out.push({ ...s, tile: t, d: Math.max(Math.abs(t.x - at.x), Math.abs(t.z - at.z)) });
+        if (s.stock >= 1) out.push({ ...s, tile: t, d: distance(t, at) });
     return out.sort((a, b) => a.d - b.d).map(({ d: _d, ...s }) => s);
 }
 
-// The seller nearest `at` on its level, by straight-line distance (the route search judges the real walk).
+// The seller nearest `at` by the same measure.
 export function nearestSeller(item: string, at: Tile): (ShopSeller & { tile: Tile }) | null {
     let best: (ShopSeller & { tile: Tile }) | null = null, d = Infinity;
     for (const s of shopSellers().get(item) ?? []) for (const t of s.spawns) {
-        if (t.level !== at.level || s.stock < 1) continue;
-        const k = Math.max(Math.abs(t.x - at.x), Math.abs(t.z - at.z));
+        if (s.stock < 1) continue;
+        const k = distance(t, at);
         if (k < d) { d = k; best = { ...s, tile: t }; }
     }
     return best;

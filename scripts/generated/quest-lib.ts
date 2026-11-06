@@ -1,22 +1,43 @@
 // Shared helpers for the short-quest scripts (scripts/generated/quest-*.ts). The helpers are the ones proved in
 // dwarfcannon.ts and waterfall.ts: walkPath first (it opens doors; SDK collision treats doors as open), clicks sent
 // again when the server drops them inside a p_delay, one dialog page per tick, MILESTONE / WARN lines, a death check.
-import { openBot, finish } from '../../packages/core/src/bot';
+import { openBot, finish, getWorld, accountOf } from '../../packages/core/src/bot';
 import type { Session } from '../../packages/core/src/inprocess';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
-import { startQuestSustain } from '../quest-sustain';
+import { startQuestSustain, selectQuestFood, questFoodDefinitions } from '../quest-sustain';
 import { walkQuestCorridor } from '../quest-walk';
-import { sessionWalker, walkPath, type PathPoint } from '../../packages/core/src/walk';
+import { sessionWalker, walkPath, goTo, type PathPoint } from '../../packages/core/src/walk';
 import { componentId } from '../../packages/core/src/logout';
 import { ClientProt } from '../../vendor/rs-sdk/server/webclient/src/io/ClientProt';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { castable } from '../teleport-runes';
+import { needs, reservedEdible, walkFar } from '../quest-sweep';
+import { magicKit, type MagicKit } from '../../packages/core/src/gather';
+import { PRESETS } from '../../packages/practice/src/presets';
 // Root interface ids of every interface interface_chat/scripts/chat.rs2 sets text on, from content/pack/interface.pack.
 const CHAT_NAMES = /^(chat[1-4]|npcchat[1-4]|message[1-5]|multi[2-5]|multiobj[2-4]|multiobj3_close|objbox[1-4]|doubleobjbox|inter_213|skill_multi[2-5])$/;
 const CHAT_ROOTS = new Set(readFileSync(join(import.meta.dir, '..', '..', 'vendor', 'rs-sdk', 'server', 'content', 'pack', 'interface.pack'), 'utf8')
     .split(/\r?\n/).map(l => l.split('=')).filter(([, n]) => n && CHAT_NAMES.test(n.trim())).map(([id]) => Number(id)));
 const RESUME = ClientProt.RESUME_PAUSEBUTTON;
+// Magic level per spell: skill_magic/scripts/magic.rs2 refuses a cast while stat(magic) < levelrequired.
+export const parseSpellLevels = (dbrow: string): Map<string, number> => {
+    const levels = new Map<string, number>();
+    for (const row of dbrow.split(/^\[/m)) {
+        const spell = /^data=spell,\^(\w+)/m.exec(row)?.[1], level = /^data=levelrequired,(\d+)/m.exec(row)?.[1];
+        if (spell && level) levels.set(spell, Number(level));
+    }
+    return levels;
+};
+const SPELL_LEVELS = parseSpellLevels(readFileSync(join(import.meta.dir, '..', '..', 'vendor', 'rs-sdk', 'server', 'content', 'scripts', 'skill_magic', 'configs', 'magic_spells.dbrow'), 'utf8'));
+// Why a teleport component cannot be cast (the caller walks instead), or undefined when it can. Every teleport here costs one law rune.
+export const teleportRefusal = (comp: string, magic: number, laws: number, levels: ReadonlyMap<string, number> = SPELL_LEVELS): string | undefined => {
+    const need = levels.get(comp.replace(/^magic:/, ''));
+    if (need === undefined) return `no pinned level for ${comp}`;
+    if (magic < need) return `Magic ${magic} < ${need}`;
+    if (laws < 1) return 'no law rune';
+    return undefined;
+};
 export let bursts = 0;
 export let recorded = 0;
 // Q_BURST=1: blind dialogue bursts (research/quest-plan.md "Dialogue burst"); off by default.
@@ -25,6 +46,8 @@ if (BURST) process.on('exit', () => console.log(`NOTE bursts=${bursts} recorded=
 
 export interface Loc { id: number; x: number; z: number }
 export const LUMBRIDGE = { x: 3222, z: 3218 };
+// Ticks after a teleport click within which a landing by Lumbridge is the spell's, not a respawn.
+export const TELEPORT_TICKS = 10;
 export const SKILLS = ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged', 'Prayer', 'Magic', 'Cooking', 'Woodcutting', 'Fletching', 'Fishing', 'Firemaking', 'Crafting', 'Smithing', 'Mining', 'Herblore', 'Agility', 'Thieving', 'Runecraft'];
 
 // lumbridgeOk: the script teleports to Lumbridge, so a jump there is not a death (respawn and life id still count).
@@ -33,7 +56,10 @@ export const SKILLS = ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged', '
 export async function openQuest(opts: { session?: Session; stop?:()=>boolean; cap?: number; eatAt?: number; food?: number[]; reservedFood?: Readonly<Record<number,number>>|(()=>Readonly<Record<number,number>>); trace?: boolean; lumbridgeOk?: boolean; name?: string; others?: () => Session[] } = {}) {
     const CAP = opts.cap ?? 3000;
     const EAT_AT = opts.eatAt ?? 40;
-    const FOOD = opts.food ?? [379];
+    // Without a list of its own a quest eats anything that heals: a live account carries swordfish, cake slices or
+    // trout, not the lobsters a preset does. quest-sweep marks the preset's edible ingredients on the session
+    // (questReserved), and a script's reservedFood adds its own; neither is eaten.
+    const FOOD = opts.food ?? [...questFoodDefinitions().keys()];
     const TRACE = opts.trace ?? process.env.Q_TRACE === '1';
     // quest-sweep.ts stages items and travel in its own login, then hands that session over here.
     const handoff = globalThis as { QUEST_SESSION?: Session; QUEST_SESSION_TAKEN?: () => void };
@@ -107,6 +133,10 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     const t0 = s.tick();
     const T = (): number => s.tick() - t0;
     const stats = { died: false, hpMin: hp(), eats: 0, walkTicks: 0, retries: 0 };
+    // The tick of the last teleport click or routed walk: a jump that lands by Lumbridge within TELEPORT_TICKS of it,
+    // or during a routed walk, is the Lumbridge teleport (the router casts the teleports the account can), not a
+    // respawn. A death shows as isDead, a respawn count or a new life id.
+    let lastCastAt = -TELEPORT_TICKS, routing = false;
     let last = p0;
     const jumps: string[] = [];
     let lastTrace = '';
@@ -121,7 +151,8 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         const reply=await s.direct(action);
         if(!reply||typeof reply!=='object'||!('success' in reply)||typeof reply.success!=='boolean')throw Error('quest consume reply unknown');
         return{success:reply.success,message:'message' in reply?String(reply.message):undefined};
-    }},{food:FOOD,eatAt:EAT_AT,reserved:opts.reservedFood,onConsumed:()=>{stats.eats++;}});
+    }},{food:FOOD,eatAt:EAT_AT,reserved:()=>reservedNow(),onConsumed:()=>{stats.eats++;}});
+    let lastHp = hp();
     const off = s.onTick(() => {
         const p = pos();
         const h = hp();
@@ -129,10 +160,13 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
             stats.hpMin = h;
             if (h <= 50) console.log(`WARN hp ${h} at ${T()} ${p?.worldX},${p?.worldZ},${p?.level}`);
         }
+        if (h > 0 && h < lastHp) lastHitAt = T();
+        lastHp = h;
+        if (h > 0 && h <= RETREAT_AT && !retreating && !foodLeft()) { retreating = true; console.log(`WARN retreat: hp ${h} of ${maxHp()}, no food, at ${T()}`); }
         if (p?.isDead || (p && p.respawnCount > respawn0) || (p && life0 !== undefined && p.lifeId !== life0)) stats.died = true;
         if (p && last && Math.max(Math.abs(p.worldX - last.worldX), Math.abs(p.worldZ - last.worldZ)) > 20) {
             jumps.push(`${T()}:${last.worldX},${last.worldZ}->${p.worldX},${p.worldZ},${p.level}`);
-            if (!opts.lumbridgeOk && Math.max(Math.abs(p.worldX - LUMBRIDGE.x), Math.abs(p.worldZ - LUMBRIDGE.z)) <= 15 && T() > 5) stats.died = true;
+            if (!opts.lumbridgeOk && Math.max(Math.abs(p.worldX - LUMBRIDGE.x), Math.abs(p.worldZ - LUMBRIDGE.z)) <= 15 && T() > 5 && T() - lastCastAt > TELEPORT_TICKS && !routing) stats.died = true;
         }
         if (p) last = p;
         if (TRACE) {
@@ -155,9 +189,38 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     const all = (): Session[] => [s, ...(opts.others?.() ?? []).filter(o => o !== s)];
     const dispose = async () => { await sustain.settle(); off(); };
     const fail = async (why: string): Promise<never> => { await dispose(); const message=`${why} ${sustain.failure()??''} xp=${gains()} ${detail()}`; if(opts.session)throw Error(message); return finish(all(), false, message); };
+    // A fight the account cannot win ends the quest before it ends the account: at the hitpoint floor (a quarter of the
+    // base level, at least 5) with no food left to eat, the bot walks RETREAT_TILES away from whatever hits it, waits for
+    // the server's 16 ticks after combat (logout.rs2 p_preventlogout), and the run fails with the retreat. Demon Slayer on
+    // an 81-hitpoint, Attack 6 account went from 81 to 0 over 300 ticks at Delrith with no food and no such rule.
+    const maxHp = (): number => s.sdk.getSkill('Hitpoints')?.baseLevel ?? 10;
+    const RETREAT_AT = Math.max(5, Math.ceil(maxHp() * 0.25)), RETREAT_TILES = 30, COMBAT_LOGOUT_TICKS = 17;
+    // A quest started on its own (bun scripts/generated/quest-<name>.ts <account>) reserves its preset's edible
+    // ingredients itself (Black Knight's Fortress' cabbage): quest-sweep's handover marks the same on the session.
+    const scriptQuest = basename(process.argv[1] ?? '').match(/^quest-([a-z0-9]+)\.ts$/)?.[1];
+    const presetReserved: Readonly<Record<number, number>> = scriptQuest && PRESETS[`quest_${scriptQuest}`] ? reservedEdible(needs(PRESETS[`quest_${scriptQuest}`]!)) : {};
+    const reservedNow = (): Readonly<Record<number, number>> => ({ ...presetReserved, ...((s as { questReserved?: Record<number, number> }).questReserved ?? {}), ...((typeof opts.reservedFood === 'function' ? opts.reservedFood() : opts.reservedFood) ?? {}) });
+    // Food is what the eater would eat: the quest's food list and its later forms, beyond the reserved counts. A shrimp in
+    // the pack of a lobster-only quest is not food and does not hold the retreat back.
+    const foodLeft = (): boolean => !!selectQuestFood(st(), { food: FOOD, eatAt: Number.MAX_SAFE_INTEGER, reserved: reservedNow() });
+    let retreating = false, lastHitAt = -1;
+    const retreat = async (label: string): Promise<never> => {
+        const p = pos(), npcs: any[] = st()?.nearbyNpcs ?? [];
+        const foe = npcs.filter(n => n.combatTargetType === 'player' || n.inCombat).sort((a, b) => a.distance - b.distance)[0] ?? npcs.sort((a, b) => a.distance - b.distance)[0];
+        let dx = foe ? Math.sign(p.worldX - foe.x) : 1, dz = foe ? Math.sign(p.worldZ - foe.z) : 0;
+        if (!dx && !dz) dx = 1;
+        const to = { x: p.worldX + dx * RETREAT_TILES, z: p.worldZ + dz * RETREAT_TILES };
+        console.log(`RETREAT hp ${hp()} of ${maxHp()} at ${T()} ${p.worldX},${p.worldZ},${p.level} foe=${foe ? `${foe.name}@${foe.x},${foe.z}` : '-'} to=${to.x},${to.z}`);
+        for (let i = 0; i < 3 && !stats.died; i++) {
+            await s.direct({ type: 'walkTo', x: to.x, z: to.z, running: true, reason: 'SDK' });
+            if (await waitUntil(s, () => stats.died || (!pos()?.combat?.inCombat && T() - lastHitAt > COMBAT_LOGOUT_TICKS), { timeoutTicks: 40 })) break;
+        }
+        return fail(`retreat during ${label}: hp ${hp()} of ${maxHp()}, no food`);
+    };
     const guard = async (label: string): Promise<void> => {
         if(opts.stop?.())await fail(`stopped during ${label}`);
         if (stats.died) await fail(`died during ${label}`);
+        if (retreating) await retreat(label);
         if (sustain.failure()) await fail(`${sustain.failure()} during ${label}`);
         if (T() > CAP) await fail(`tick cap during ${label}`);
     };
@@ -181,7 +244,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
             if (ok()) return;
             if (i > 0) stats.retries++;
             await send();
-            await waitUntil(s, () => ok() || stats.died || !!sustain.failure(), { timeoutTicks: ticks });
+            await waitUntil(s, () => ok() || stats.died || retreating || !!sustain.failure(), { timeoutTicks: ticks });
             await guard(label);
             if (ok()) return;
             const d: any = s.sdk.getDialog();
@@ -226,7 +289,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     // log: walkPath's input and re-plan lines and each attempt's result, for a walk under diagnosis.
     const walk = async (label: string, pts: PathPoint[], log?: (line: string) => void): Promise<void> => {
         await guard(label);
-        const result=await walkQuestCorridor({tick:()=>s.tick(),stop:()=>stats.died||!!sustain.failure(),
+        const result=await walkQuestCorridor({tick:()=>s.tick(),stop:()=>stats.died||retreating||!!sustain.failure(),
             near:(point,tolerance)=>near(point.x,point.z,tolerance),walk:(points,options)=>walkPath(walker,points,log?{...options,log}:options),
             onAttempt:(attempt,result)=>{stats.walkTicks+=result.ticks;if(attempt>0)stats.retries++;log?.(`attempt ${attempt} ${JSON.stringify(result)}`);},
         },pts,t0+CAP);
@@ -288,11 +351,30 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
             return opLoc(k, opIndex(k, re));
         }, arrived, 15, tries);
     };
-    // Every rune the spell costs, or a worn staff for it (scripts/teleport-runes.ts); short of any, the bot walks
-    // to the same spot instead. Monk's Friend leaves 8 law runes beside 1 air: Lumbridge still needs 3 air.
-    const canCast = (comp: string): boolean => castable(comp, cnt, s.sdk.getEquipment().map((i: any) => i.id));
+    // Every rune the spell costs, or a worn staff for it, and the spell's Magic level (scripts/teleport-runes.ts); short
+    // of any, the bot walks to the same spot instead. Monk's Friend leaves 8 law runes beside 1 air: Lumbridge still
+    // needs 3 air, and Magic 31, which UnderMyKilt and TrouserSnake (Magic 1) lack.
+    const magic = (): number => s.sdk.getState()?.skills?.find((k: any) => k.name === 'Magic')?.level ?? 1;
+    const canCast = (comp: string): boolean => castable(comp, cnt, s.sdk.getEquipment().map((i: any) => i.id), magic());
     const teleport = async (label: string, comp: string, x: number, z: number): Promise<void> => {
         if (!canCast(comp)) {
+            // The sweep's far walk first: hub to hub by the known banks, the Ardougne boats for a target east of the
+            // mountain, and the world router for the last leg, which knows the ladders and doors between an upstairs end
+            // (the Black Knights' Fortress's first floor, 3029,3505) and the ground. One routed walk from the Barbarian
+            // Outpost to Falador (410 tiles) ran out its plan budget. The router casts the teleports the account can
+            // (Lumbridge Teleport on the way to Varrock), so a landing by Lumbridge during the walk is not a respawn.
+            // A death, the retreat threshold, a sustain failure or the tick cap abort the walk between and inside its
+            // legs, and guard() then acts on them as after any walk.
+            await guard(label);
+            let routed: { ok: boolean; reason?: string };
+            routing = true;
+            const ac = new AbortController();
+            const stopOff = s.onTick(() => { if (stats.died || retreating || sustain.failure() || T() > CAP) ac.abort('quest guard'); });
+            try { routed = await walkFar(s, await getWorld(), { x, z, level: 0 }, 150, { signal: ac.signal }); }
+            finally { stopOff(); routing = false; lastCastAt = T(); }
+            console.log(`QUEST_TELEPORT_WALK ${JSON.stringify({ label, to: { x, z }, ok: routed.ok, reason: routed.ok ? undefined : routed.reason, at: pos() && { x: pos()!.worldX, z: pos()!.worldZ, level: pos()!.level } })}`);
+            await guard(label);
+            if (routed.ok && near(x, z, 6)) return;
             // walkPath keeps to one floor: from upstairs (Juliet's room, 3158,3425,1) take the nearest way down first.
             for (let i = 0; i < 3 && lvl() > 0; i++) {
                 const from = lvl();
@@ -302,9 +384,14 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
                 await s.bot.interactLoc(down, down.optionsWithIndex.find((o: any) => /climb-down/i.test(o.text)).opIndex);
                 await waitUntil(s, () => lvl() < from, { timeoutTicks: 30 });
             }
-            await walk(`${label} (walk, no law rune)`, [{ x, z, tol: 4 }]); return;
+            const refusal = teleportRefusal(comp, magic(), cnt(563)) ?? 'short of a rune';
+            await walk(`${label} (walk, ${refusal})`, [{ x, z, tol: 4 }]); return;
         }
-        await step(label, () => s.direct({ type: 'clickComponent', componentId: componentId(comp), reason: 'SDK' }), () => near(x, z, 6), 8, 3);
+        const xp0 = s.sdk.getState()?.skills?.find((k: any) => k.name === 'Magic')?.experience ?? 0;
+        await step(label, () => { lastCastAt = T(); return s.direct({ type: 'clickComponent', componentId: componentId(comp), reason: 'SDK' }); }, () => near(x, z, 6), 8, 3);
+        // The landing names the spell the click cast: a Magic XP gain with the player elsewhere is another teleport's.
+        const xp1 = s.sdk.getState()?.skills?.find((k: any) => k.name === 'Magic')?.experience ?? 0;
+        console.log(`QUEST_TELEPORT ${JSON.stringify({ label, comp, component: componentId(comp), to: { x, z }, at: pos() && { x: pos()!.worldX, z: pos()!.worldZ, level: pos()!.level }, magicXp: xp1 - xp0 })}`);
     };
     // Opens the shut door on tile (x, z) on the bot's level; nothing if it is open. walkPath does not see every
     // door (a diagonal door, a door the SDK plan never crosses), so a quest names its doors by tile.
@@ -320,11 +407,49 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         stats.walkTicks += T() - t1;
     };
 
+    // A bow account wields the bow and the arrows in its pack before a fight the quest script runs itself (Prince Ali's
+    // jail guard, Hazeel Cult's Alomone): at a low Attack its hands cut nothing down. The sweep brings them as
+    // QUEST_ARROWS; a pack without them wields nothing and the fight goes on as it stands.
+    const BOWS = [841, 839, 843, 845], ARROWS = [884, 886, 882];
+    const wieldBow = async (): Promise<void> => {
+        const worn = () => s.sdk.getEquipment().map((i: any) => i.id);
+        for (const ids of [BOWS, ARROWS]) {
+            if (ids.some(id => worn().includes(id))) continue;
+            const item: any = (st()?.inventory ?? []).find((i: any) => ids.includes(i.id));
+            if (!item) return;
+            await s.bot.equipItem(item);
+            await waitUntil(s, () => worn().includes(item.id), { timeoutTicks: 5 });
+        }
+    };
+    // One blow at an NPC in a fight the quest script runs itself, with the kit the account fights with: a bow in the pack
+    // or worn is wielded and the Attack option clicked; without one, a strike spell the pack's runes allow is cast at the
+    // cast rate (five ticks, player_magic.rs2) with the staff wielded; with neither, the Attack option alone. The sweep
+    // brings the bow and QUEST_ARROWS, or the staff and QUEST_CASTS' runes, for a Ranged-over-Attack or Magic-over-Attack
+    // account. A ranged or melee blow repeats on its own; a cast does not, so the caller calls again each few ticks.
+    let lastStrikeAt = -Infinity;
+    const strikeKit = (): MagicKit | null => {
+        const magic = st()?.skills?.find((k: any) => k.name === 'Magic')?.baseLevel ?? 1;
+        return magicKit([...(st()?.inventory ?? []), ...s.sdk.getEquipment()].map((i: any) => ({ id: i.id, count: i.count })), magic, 1);
+    };
+    const attackNpc = async (n: any): Promise<void> => {
+        const worn = () => s.sdk.getEquipment().map((i: any) => i.id);
+        const hasBow = BOWS.some(id => worn().includes(id) || (st()?.inventory ?? []).some((i: any) => i.id === id));
+        const kit = hasBow ? null : strikeKit();
+        if (kit) {
+            if (kit.staff !== undefined && !worn().includes(kit.staff)) { const staff = (st()?.inventory ?? []).find((i: any) => i.id === kit.staff); if (staff) { await s.bot.equipItem(staff); await waitUntil(s, () => worn().includes(kit.staff!), { timeoutTicks: 5 }); } }
+            if (T() - lastStrikeAt < 5) return;
+            lastStrikeAt = T();
+            await s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: componentId(kit.component), reason: 'SDK' });
+            return;
+        }
+        if (hasBow) await wieldBow();
+        await s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
+    };
     return {
         s, st, pos, inv, hp, xp, cnt, has, slot, cheb, near, lvl, dialogOpen, sawText, msgCount, T, stats, milestone, dispose,
         blockDoor, guard, fail, end, gains, detail, opLoc, locs, findLoc, locAt, opIndex, npc, talkTo, useOnLoc, useOnNpc, useOnItem,
-        step, converse, walk, talk, climb, teleport, canCast, openDoor, shutAt, dash,
-        waitTicks: async (n: number) => { const until=s.tick()+n;if(n>0)await waitUntil(s,()=>s.tick()>=until||stats.died||T()>CAP,{timeoutTicks:n,signal:sustain.aborted});await guard('wait'); },
-        waitUntil: async (f: () => boolean, ticks: number) => {const reached=await waitUntil(s, () => f() || stats.died||T()>CAP, { timeoutTicks: ticks,signal:sustain.aborted });await guard('wait condition');return reached;},
+        step, converse, walk, talk, climb, teleport, canCast, openDoor, shutAt, dash, wieldBow, attackNpc,
+        waitTicks: async (n: number) => { const until=s.tick()+n;if(n>0)await waitUntil(s,()=>s.tick()>=until||stats.died||retreating||T()>CAP,{timeoutTicks:n,signal:sustain.aborted});await guard('wait'); },
+        waitUntil: async (f: () => boolean, ticks: number) => {const reached=await waitUntil(s, () => f() || stats.died||retreating||T()>CAP, { timeoutTicks: ticks,signal:sustain.aborted });await guard('wait condition');return reached;},
     };
 }

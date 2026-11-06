@@ -15,11 +15,11 @@ import { join, resolve } from 'node:path';
 import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { swarmWroteStop } from './swarm';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
+import { matchingJobLines } from '../packages/core/src/job-log';
 import { CLAIM_MAX_AGE_MS, accountFrom, assess, catalogue, finishedTrainers, freshest, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, type Assignment } from '../packages/planner/src/autopilot';
-import { mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
+import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import type { Order, Receipt } from './fleet-trade';
-import { liveHelperStatuses, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
-import { haggisActivities, haggisTravel, loadSnapshot, suppliesFor, TRICKS } from '../packages/planner/src/haggis';
+import { liveHelperStatuses, overallSupplyDemand, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
 import { tickWaste, wasteShare } from './tick-waste';
 
 const root = resolve(import.meta.dir, '..'), prac = join(root, '.practice');
@@ -29,20 +29,26 @@ type State = { assigned: Record<string, { template: string; offset: number; at: 
 const readJson = (f: string, fallback: any) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return fallback; } };
 const loadState = (side: string): State => ({ assigned: {}, retired: {}, ...readJson(join(prac, 'autopilot', `${side}.json`), {}) });
 const writeAtomic = (f: string, text: string) => { writeFileSync(`${f}.tmp`, text); renameSync(`${f}.tmp`, f); };
-function readFrom(file: string, offset: number): string[] {
+export function readJobResultLines(file: string, offset: number, job: Parameters<typeof matchingJobLines>[1]): string[] {
     if (!existsSync(file)) return [];
     const size = statSync(file).size, start = offset <= size ? offset : 0, buf = Buffer.alloc(Math.min(size - start, 4_000_000));
-    const fd = openSync(file, 'r'); try { readSync(fd, buf, 0, buf.length, size - buf.length); } finally { closeSync(fd); }
-    return buf.toString('latin1').split(/\r?\n/);
+    const fd = openSync(file, 'r');
+    let read: number;
+    try { read = readSync(fd, buf, 0, buf.length, size - buf.length); } finally { closeSync(fd); }
+    const lines = buf.subarray(0, read).toString('utf8').split(/\r?\n/);
+    lines.pop(); // A supervisor can still be writing the final line.
+    return matchingJobLines(lines, job);
 }
 
 function routeBill(items: any[]): BillRow[] {
     try {
-        const supplies = suppliesFor(haggisActivities(), { mode: 'realistic', tricks: new Set(TRICKS), travel: haggisTravel() } as any, loadSnapshot(join(root, 'research/hiscores-live.json')));
+        const { supplies } = overallSupplyDemand();
         return supplyBill(supplies, items, liveHelperStatuses());
     } catch (e) {
-        console.log(`AUTOPILOT bill from the last saved supply bill: ${String(e).slice(0, 120)}`);
-        return readJson(join(prac, 'coordinator/supply-bill.json'), { rows: [] }).rows;
+        const bill = readJson(join(prac, 'coordinator/supply-bill.json'), null);
+        const scoped = bill?.scope === 'overall' && Array.isArray(bill.rows);
+        console.log(`AUTOPILOT ${scoped ? 'uses saved Overall supply bill' : 'has no Overall supply bill'}: ${String(e).slice(0, 120)}`);
+        return scoped ? bill.rows : [];
     }
 }
 
@@ -88,6 +94,15 @@ export function stopClearable(status: any, now: number): boolean {
     return !status || !!status.result || !(Number.isFinite(status.at) && now - status.at < OFFLINE_STATUS_MS);
 }
 
+export function planningOwnership(ownerJobs: readonly any[], coordinatorJobs: readonly any[], paused: ReadonlySet<string>) {
+    // A parked coordinator job still shadows its owner job until the coordinator releases it.
+    const held = new Set(coordinatorJobs.flatMap(jobAccounts).map(account => account.toLowerCase()));
+    const keep = new Set([...paused, ...held]);
+    const busy = enabledAccounts(withCoordinatorJobs(ownerJobs, coordinatorJobs));
+    for (const account of held) busy.add(account);
+    return { held, keep, busy };
+}
+
 export function pass(planFile: string, dry: boolean): string[] {
     const side = mySide(), owners = loadOwners(), swarm = readJson(planFile, null);
     if (!swarm || !Array.isArray(swarm.jobs)) throw Error(`autopilot: ${planFile} has no jobs list`);
@@ -97,22 +112,28 @@ export function pass(planFile: string, dry: boolean): string[] {
     for (const i of items) if (typeof i.name === 'string' && !/^cert_/.test(i.debugname ?? '') && !(norm(i.name) in prices)) prices[norm(i.name)] = i.cost ?? 0;
     const mineMarked = (j: any) => j?.autopilot === side;
 
-    // Retire planner jobs whose own log lines show no progress.
-    const log: string[] = [];
-    for (const j of swarm.jobs.filter(mineMarked)) {
-        const a = state.assigned[j.account];
-        if (!a || a.template !== j.template) continue;
-        const r = assess(readFrom(join(prac, 'swarm-logs', `${j.account}.log`), a.offset));
-        if (r.retire) { state.retired[pairKey(j.account, j.template)] = r.reason; log.push(`AUTOPILOT retire ${j.account} ${j.template}: ${r.reason}`); }
-    }
-
     // Resources other jobs hold: this file's other jobs (paused planner jobs included), and other sides' fresh claims.
     const listedNames = Object.keys(readJson(join(FLEET_DIR(), 'owners.json'), { accounts: {} }).accounts ?? {});
     // An owner's stop file pauses its account. One the controller wrote itself (a job that left the plan, stop-swarm)
     // does not: that account is planned again, and the file goes with the job that replaces it (below).
     const stopText = (n: string): string | undefined => { try { return readFileSync(join(prac, `stop-${n}`), 'utf8'); } catch { return undefined; } };
     const { paused, swarmStopped } = pauses(new Map(listedNames.flatMap(n => { const t = stopText(n); return t === undefined ? [] : [[n, t] as const]; })));
-    const taken = reservedResources(swarm.jobs, side, paused);
+    const { held, keep, busy } = planningOwnership(swarm.jobs, readCoordinatorJobs(root).jobs, paused);
+
+    // Retire planner jobs whose own log lines show no progress.
+    const log: string[] = [];
+    for (const j of swarm.jobs.filter(mineMarked)) {
+        if (jobAccounts(j).some(account => held.has(account.toLowerCase()))) {
+            log.push(`AUTOPILOT hold ${jobAccounts(j).join(',')}: coordinator owns the assignment`);
+            continue;
+        }
+        const a = state.assigned[j.account];
+        if (!a || a.template !== j.template) continue;
+        const r = assess(readJobResultLines(join(prac, 'swarm-logs', `${j.account}.log`), a.offset, j));
+        if (r.retire) { state.retired[pairKey(j.account, j.template)] = r.reason; log.push(`AUTOPILOT retire ${j.account} ${j.template}: ${r.reason}`); }
+    }
+
+    const taken = reservedResources(swarm.jobs, side, keep);
     const claimDir = join(FLEET_DIR(), 'claims');
     if (existsSync(claimDir)) for (const f of readdirSync(claimDir).filter(f => f.endsWith('.json'))) {
         const c = readJson(join(claimDir, f), null);
@@ -129,21 +150,21 @@ export function pass(planFile: string, dry: boolean): string[] {
         const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
         return freshest(f ? readJson(join(statusDir, f), null) : null, published.find(r => String(r?.name).toLowerCase() === n.toLowerCase()));
     };
-    const accounts = plannableAccounts(swarm.jobs, side, listed.filter(n => owners.get(n.toLowerCase())?.side === side), paused).map(n => accountFrom(n, side, observed(n), id => byId.get(id)));
+    const accounts = plannableAccounts(swarm.jobs, side, listed.filter(n => owners.get(n.toLowerCase())?.side === side), keep).map(n => accountFrom(n, side, observed(n), id => byId.get(id)));
     // Coin donors: this side's accounts with no enabled swarm or coordinator job, no stop file and no open order, as
     // their last status reports them. The fleet agent runs a trade only for such accounts.
     const fleetDir = FLEET_DIR(), now = Date.now();
     const orders: Order[] = existsSync(join(fleetDir, 'orders')) ? readdirSync(join(fleetDir, 'orders')).filter(f => f.endsWith('.json')).map(f => readJson(join(fleetDir, 'orders', f), null)).filter(o => typeof o?.id === 'string' && Number.isSafeInteger(o?.end)) : [];
     const receipts: Receipt[] = existsSync(join(fleetDir, 'receipts')) ? readdirSync(join(fleetDir, 'receipts')).filter(f => f.endsWith('.json')).map(f => readJson(join(fleetDir, 'receipts', f), null)).filter(Boolean) : [];
-    const open = inOpenOrder(orders, receipts, now), busy = enabledAccounts(withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs));
-    const donors = listed.filter(n => owners.get(n.toLowerCase())?.side === side && n.toLowerCase() !== 'haggis' && ![busy, paused, open].some(s => s.has(n.toLowerCase())))
+    const open = inOpenOrder(orders, receipts, now);
+    const donors = listed.filter(n => owners.get(n.toLowerCase())?.side === side && n.toLowerCase() !== 'haggis' && ![busy, keep, open].some(s => s.has(n.toLowerCase())))
         .map(n => ({ name: n, coins: accountFrom(n, side, observed(n), id => byId.get(id)).items.coin ?? 0 })).filter(d => d.coins > 0);
     const planned = plan({ side, accounts, owners, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: { 'catherby:lobster': 3 }, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])) });
     const funding = fundOrders(planned, open, (from, to, coins) => coinOrder(from, to, coins, owners.get(to.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev', now));
     const out = funding.assignments;
     log.push(...funding.log);
 
-    const { jobs, fresh } = mergeJobs(swarm.jobs, side, out, paused);
+    const { jobs, fresh } = mergeJobs(swarm.jobs, side, out, keep);
     for (const x of out) {
         if (!x.template) { log.push(`AUTOPILOT vacant ${x.account}: ${x.reason}`); delete state.assigned[x.account]; continue; }
         if (fresh.includes(x.account) || state.assigned[x.account]?.template !== x.template.id) {
@@ -175,13 +196,16 @@ export function pass(planFile: string, dry: boolean): string[] {
 export function trainersDone(planFile: string): string[] {
     const side = mySide(), swarm = readJson(planFile, null), state = loadState(side);
     if (!swarm || !Array.isArray(swarm.jobs)) return [];
-    return finishedTrainers(swarm.jobs, side, state.assigned, catalogue(), (a, offset) => readFrom(join(prac, 'swarm-logs', `${a}.log`), offset))
+    let effectiveJobs: any[];
+    try { effectiveJobs = withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs); }
+    catch { return []; } // An unreadable overlay cannot establish which trainer owns the account.
+    return finishedTrainers(effectiveJobs, side, state.assigned, catalogue(), (a, offset, job) => readJobResultLines(join(prac, 'swarm-logs', `${a}.log`), offset, job))
         .map(a => `${a}:${state.assigned[a]!.template}:${state.assigned[a]!.offset}`);
 }
 
 if (import.meta.main) {
     const args = process.argv.slice(2), planFile = resolve(args.find(a => !a.startsWith('--')) ?? join(root, 'swarm.json'));
-    // The whole pass runs under the account-plan lock: the coordinator installs its own jobs into the same file.
+    // The whole pass runs under the account-plan lock: the coordinator installs jobs into its overlay under the same lock.
     // The timer and the trainer check share one pass at a time: a second call joins the pass in flight.
     let inFlight: Promise<boolean> | null = null;
     const once = () => inFlight ??= (async () => { try { const l = await withPlanWrite(() => pass(planFile, args.includes('--dry')), join(prac, 'coordinator')); console.log(l.join('\n')); console.log(`RESULT ok autopilot jobs=${l.filter(x => / (assign|keep) /.test(x)).length} retired=${l.filter(x => / retire /.test(x)).length}`); return true; }

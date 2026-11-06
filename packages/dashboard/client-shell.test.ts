@@ -39,16 +39,31 @@ function focusMoves(from:string|null,to:string|null,state='ready'){
  return {said,classes};
 }
 
-test('a switch shows a flight, a faded cut, or that the account is not in the world',()=>{
+test('a switch shows a flight, also from free camera, or that the account is not in the world',()=>{
  expect(focusMoves('Ann','Zed').said).toEqual(['Flying to Zed']);expect(focusMoves('Ann','Zed').classes.has('flying')).toBe(true);
- const cut=focusMoves(null,'Zed');expect(cut.said).toEqual(['Now watching Zed']);expect(cut.classes.has('focus-cut')).toBe(true);
+ expect(focusMoves(null,'Zed').said).toEqual(['Flying to Zed']);
  expect(focusMoves('Ann',null).said).toEqual(['Away is not in the world. The camera stays here.']);
  expect(focusMoves('Ann','Ann').said).toEqual([]);expect(focusMoves('Ann','Zed','loading').said).toEqual([]);
 });
 
 test('the switcher is the only follow control left on the page',()=>{
  const page=['client-shell.js','map-shell.js','operations.js','index.html'].map(f=>readFileSync(new URL('./'+f,import.meta.url),'utf8')).join('\n');
- for(const gone of ['atlas-locate',"'locate'",'data-act="follow"','data-world-go','id="bt"','TOUR','client-account','dblclick'])expect(page).not.toContain(gone);
+ for(const gone of ['atlas-locate',"'locate'",'data-act="follow"','data-world-go','id="bt"','TOUR_AT','client-account','dblclick'])expect(page).not.toContain(gone);
+});
+
+test('the tour steps through the switcher only while the 3D view is ready and shown',()=>{
+ const code=shell.slice(shell.indexOf('  function tourStep(){'),shell.indexOf('  function tourSet('));
+ const run=(mode:string,state:string,hidden:boolean)=>{const steps:number[]=[];new Function('mode','VIEWER','document','focusStep','let touring=false;'+code+';tourStep();')(mode,{state},{hidden},(n:number)=>steps.push(n));return steps;};
+ expect(run('3d','ready',false)).toEqual([1]);
+ expect(run('2d','ready',false)).toEqual([]);expect(run('3d','loading',false)).toEqual([]);expect(run('3d','ready',true)).toEqual([]);
+});
+
+test('a choice made in the 3D view ends the tour',()=>{
+ expect(shell).toContain('window.atlasClient={follow:name=>{tourSet(false);previousPick(name);},');
+ const code=shell.slice(shell.indexOf('  function tourStep(){'),shell.indexOf('  function tourSet('));
+ const ended:boolean[]=[],steps:number[]=[];(globalThis as any).atlasFollowOther='Someone';
+ try{new Function('mode','VIEWER','document','focusStep','tourSet','let touring=false;'+code+';tourStep();')('3d',{state:'ready'},{hidden:false},(n:number)=>steps.push(n),(on:boolean)=>ended.push(on));}finally{delete (globalThis as any).atlasFollowOther;}
+ expect(ended).toEqual([false]);expect(steps).toEqual([]);
 });
 
 test('an open bank redraws newer observations and closes when its account changes',()=>{
@@ -90,11 +105,23 @@ test('unknown quest flags stay separate from observed started quests',()=>{
  expect(questPanel(bot,'unknown')).toContain('data-quest="Unobserved quest"');
 });
 
+test('a visitor reads job names as words and does not see housekeeping runs',()=>{
+ const start=shell.indexOf('  window.atlasHousekeeping='),code=shell.slice(start,shell.indexOf('\n',shell.indexOf('  window.atlasJobName=')));
+ const w:any={};new Function('window',code)(w);
+ expect(w.atlasJobName('death-plateau-bread')).toBe('death plateau bread');
+ expect(w.atlasJobName('feathers at the chicken pen 3017,3295')).toBe('feathers at the chicken pen');
+ expect(w.atlasJobName('Grand Exchange trade')).toBe('Grand Exchange trade');
+ for(const job of ['read-bank','recover-oreelse-mithril-qualified-entry','chain-herblore-order-mightyrod'])expect(w.atlasHousekeeping(job)).toBe(true);
+ expect(w.atlasHousekeeping('fire and earth runes from Betty')).toBe(false);
+});
+
 test('friends use world presence rather than the age of the last status file',()=>{
  const code=shell.slice(shell.indexOf("    if(selectedTab==='friends')"),shell.indexOf("    if(selectedTab==='settings')"));
- const html=new Function('S','E','safeName',`const selectedTab='friends';let html='';${code};return html;`)({bots:[{name:'Offline',fresh:true,inWorld:false},{name:'Online',fresh:false,inWorld:true}]},String,String);
+ const friends=(owner:boolean)=>new Function('S','E','safeName','window',`const selectedTab='friends';let html='';${code};return html;`)({bots:[{name:'Offline',fresh:true,inWorld:false},{name:'Online',fresh:false,inWorld:true}]},String,String,{atlasOperator:()=>owner});
+ const html=friends(true);
  expect(html).toContain('<span>Offline</span><span class="friend-off">Offline</span>');
  expect(html).toContain('<span>Online</span><span class="friend-on">local</span>');
+ expect(friends(false)).toContain('<span>Online</span><span class="friend-on">Online</span>');
  expect(html.indexOf('data-friend="Online"')).toBeLessThan(html.indexOf('data-friend="Offline"'));
 });
 
