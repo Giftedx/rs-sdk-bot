@@ -74,7 +74,10 @@ export function magicKit(owned:readonly Item[],magic:number,casts=CASTS_MIN):Mag
 // (a goblin's 5: two Fire Strikes, six Wind Strikes).
 // Casts a kill takes: the animal's hitpoints over half the spell's max hit (the mean of a hit), at three hits in five,
 // plus one; the strike goes out every five ticks whether or not the last one landed.
-export const castsFor=(id:number,count:number,maxhit:number)=>{const src=KILL_SOURCES[id];if(!src)return 0;const kills=src.chance<1?killAttempts(id,count):count;return kills*(Math.ceil(src.hp/(maxhit/2)/0.6)+1);};
+export const castsPerKill=(id:number,maxhit:number)=>{const src=KILL_SOURCES[id];return src?Math.ceil(src.hp/(maxhit/2)/0.6)+1:0;};
+// Casts for the series: a chance drop's kills are the attempts the drop may take, so the plan buys runes for the series;
+// a fight asks castsPerKill, one animal's casts, so a series that has spent most of its budget still takes its next animal.
+export const castsFor=(id:number,count:number,maxhit:number)=>{const src=KILL_SOURCES[id];if(!src)return 0;const kills=src.chance<1?killAttempts(id,count):count;return kills*castsPerKill(id,maxhit);};
 // The arrows are the kind owned in the greatest number (UnderMyKilt: 21 bronze, 19 iron): the shortfall for a long kill
 // series is bought, and bronze arrows are the kind most shops sell.
 export function rangedKit(owned:readonly Item[]):{bow:number;arrows:number}|null{
@@ -255,7 +258,7 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
      if(g.kit==='magic'){
       const worn=()=>s.sdk.getEquipment().map((i:any)=>i.id);
       const magic=st()?.skills?.find((k:any)=>k.name==='Magic')?.baseLevel??1;
-      spell=magicKit([...(st()?.inventory??[]),...s.sdk.getEquipment()].map((i:any)=>({id:i.id,count:i.count})),magic,Math.max(1,castsFor(g.id,1,8)));
+      spell=magicKit([...(st()?.inventory??[]),...s.sdk.getEquipment()].map((i:any)=>({id:i.id,count:i.count})),magic,Math.max(1,castsPerKill(g.id,8)));
       if(!spell)return `magic kill of ${npc.name} needs a strike spell's runes in the pack`;
       const staff=spell.staff===undefined?undefined:(st()?.inventory??[]).find((i:any)=>i.id===spell!.staff);
       if(staff&&!worn().includes(spell.staff!)){await s.bot.equipItem(staff);await waitUntil(s,()=>worn().includes(spell!.staff!),{timeoutTicks:5});}

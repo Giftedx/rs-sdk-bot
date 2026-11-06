@@ -1036,7 +1036,7 @@ test('arrows stack in the slot count, and a destination east of Ardougne adds th
 });
 
 test('a strike spell kit is the strongest strike the runes allow, and the highest level that beats the animal picks the style',async()=>{
- const {magicKit,castsFor,killStyle,gatherPlan,killAttempts}=await import('../packages/core/src/gather');
+ const {magicKit,castsFor,castsPerKill,killStyle,gatherPlan,killAttempts}=await import('../packages/core/src/gather');
  // TheFullMonty: Magic 99, a staff of fire, 500 air and 500 mind runes: Fire Strike at 2 air and 1 mind a cast.
  const monty=[{id:1387,count:1},{id:556,count:500},{id:558,count:500}];
  expect(magicKit(monty,99)).toEqual({staff:1387,component:'magic:fire_strike',level:13,maxhit:8,runes:{558:1,556:2}});
@@ -1059,6 +1059,8 @@ test('a strike spell kit is the strongest strike the runes allow, and the highes
  expect(castsFor(288,3,8)).toBe(4*killAttempts(288,3));
  expect(castsFor(288,3,2)).toBe(10*killAttempts(288,3));
  expect(castsFor(2136,1,8)).toBe(13);expect(castsFor(2138,1,8)).toBe(3);expect(castsFor(2134,1,8)).toBe(4);
+ // A chance drop's fight asks one goblin's casts, not the series' (one goblin mail: a series of casts planned, four a fight).
+ expect(castsPerKill(288,8)).toBe(4);expect(castsFor(288,1,8)).toBe(4*killAttempts(288,1));expect(castsFor(288,1,8)).toBeGreaterThan(100);
  const plan=gatherPlan([{id:288,count:3}],{x:3014,z:3204,level:0},()=>[],()=>Infinity,undefined,69,1,undefined,99,1);
  expect(plan.gathers).toEqual([{id:288,count:3,how:'kill',kit:'magic'}]);
 });
