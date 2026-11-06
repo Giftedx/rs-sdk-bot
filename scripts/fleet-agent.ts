@@ -55,7 +55,14 @@ export function syncResult(out: string, exitCode: number | null): string {
     return line === 'RESULT fail no result' ? `RESULT fail fleet-sync exit ${exitCode}` : line;
 }
 
-const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } };
+// A lock left by a previous boot or container can name a PID that another process now holds, so on Linux the PID must
+// still run a fleet agent; where /proc is absent (Windows) a live PID is taken as the agent.
+const procCmdline = (pid: number): string | undefined => { try { return readFileSync(`/proc/${pid}/cmdline`, 'utf8'); } catch { return undefined; } };
+export function agentAlive(pid: number, cmdline: (pid: number) => string | undefined = procCmdline): boolean {
+    try { process.kill(pid, 0); } catch { return false; }
+    const c = cmdline(pid);
+    return c === undefined || c.includes('fleet-agent');
+}
 
 if (import.meta.main) {
     if (process.argv.includes('--daemon')) {
@@ -65,7 +72,7 @@ if (import.meta.main) {
         console.log(`FLEET_AGENT started pid ${child.pid} (log .practice/fleet-agent.log)`);
         process.exit(0);
     }
-    if (existsSync(lock)) { const pid = Number(readFileSync(lock, 'utf8')); if (pid !== process.pid && alive(pid)) { console.log(`FLEET_AGENT already running pid ${pid}`); process.exit(0); } }
+    if (existsSync(lock)) { const pid = Number(readFileSync(lock, 'utf8')); if (pid !== process.pid && agentAlive(pid)) { console.log(`FLEET_AGENT already running pid ${pid}`); process.exit(0); } }
     writeFileSync(lock, String(process.pid));
     const release = () => { try { if (readFileSync(lock, 'utf8') === String(process.pid)) rmSync(lock); } catch { /* gone */ } };
     process.on('exit', release); process.on('SIGINT', () => process.exit(0)); process.on('SIGTERM', () => process.exit(0));
