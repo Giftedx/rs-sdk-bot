@@ -22,22 +22,28 @@ type Entry = {
     fail(why: string): Promise<never>;
 };
 // m40_51.jm2: loc_1533 at 0_40_51_5_8, angle 3. Collision has a
-// north/south wall between z=3271 and z=3272; distance alone cannot prove entry.
+// north/south wall between z=3271 and z=3272; distance alone cannot prove entry. Ceril wanders through his south
+// door: the talk starts from whichever side the client can path to him on, so a reachable Ceril ends the entry at any
+// stage, and a bot inside with Ceril outside goes back out through the door.
 export async function enterCerilHouse(q: Entry): Promise<void> {
     const reachable = () => q.lvl() === 0 && q.npc(/^ceril carnillean$/i)?.reachable === true;
     q.observeEntry?.('before');
-    if (q.near(2565, 3273, 0) && reachable()) return;
+    if (reachable()) return;
     await q.walk('Ceril exterior', [{x:2565,z:3271,tol:0}]);
     q.observeEntry?.('exterior');
+    if (reachable()) return;
     await q.openDoor('Ceril south door', 2565, 3272);
     q.observeEntry?.('door');
     await q.walk('Ceril interior', [{x:2565,z:3273,tol:0}]);
     q.observeEntry?.('interior');
-    if (!await q.waitUntil(() => { q.observeEntry?.('waiting'); return reachable(); }, 12)) {
-        q.observeEntry?.('deadline');
-        await q.probeEntry?.();
-        await q.fail('Ceril entry unreachable');
-    }
+    if (await q.waitUntil(() => { q.observeEntry?.('waiting'); return reachable(); }, 12)) return;
+    await q.openDoor('Ceril south door out', 2565, 3272);
+    await q.walk('Ceril exterior again', [{x:2565,z:3271,tol:0}]);
+    q.observeEntry?.('exterior again');
+    if (await q.waitUntil(() => { q.observeEntry?.('waiting outside'); return reachable(); }, 12)) return;
+    q.observeEntry?.('deadline');
+    await q.probeEntry?.();
+    await q.fail('Ceril entry unreachable');
 }
 
 const CERIL = { x: 2565, z: 3271 };
