@@ -264,7 +264,7 @@ test('queue groups failed roots across branches and distinguishes work waiting o
  const facts = queueFacts(state);
  expect(facts.dependencyReadiness).toEqual({ready:1, waiting:1, blocked:3});
  expect(facts.rootBlockers).toEqual([
-  {id:'failed-build', status:'failed', runId:'failed-build', replacement:undefined, pendingTasks:3, pendingRuns:1},
+  {id:'failed-build', status:'failed', runId:'failed-build', replacement:undefined, pendingTasks:3, pendingRuns:1, receipt:{at:2}},
  ]);
  expect(chooseTask(state, 4)?.id).toBe('independent');
 });
@@ -288,10 +288,15 @@ test('queue includes provision dependencies that are not in dependsOn', () => {
 test('planner prompt lists a shared prerequisite once and preserves the active dependency order',()=>{
  const shared='qualify-quest-order-with-current-source';
  const state=initialState();
+ const filler=Array.from({length:48},(_,i)=>task(`filler-${i}`));
  addTasks(state,[task(shared),task('unique-proof'),task('failed-proof'),run('first',[shared,'unique-proof']),run('second',['failed-proof',shared])]);
- complete(state,shared,true,2);
+ addTasks(state,filler.slice(0,24));
+ addTasks(state,filler.slice(24));
+ complete(state,shared,true,100);
  complete(state,'unique-proof',true,4);
- complete(state,'failed-proof',false,6);
+ const reason='Native proof requires a staged quest item. '.repeat(8);
+ complete(state,'failed-proof',false,6,{delivery:{reason},unrelated:'raw output stays in the receipt'});
+ for(const [i,spec] of filler.entries())complete(state,spec.id,true,i+10);
  const world:Parameters<typeof plannerPrompt>[1]={
   at:0,scoreboard:null,stall:null,assets:[],supplyBill:null,executionDirective:'',deliveryFocus:null,
   capacity:{maxBots:0,minFreeGB:0,freeGB:7,nativeStartupGB:6.5,
@@ -301,6 +306,11 @@ test('planner prompt lists a shared prerequisite once and preserves the active d
  };
  const prompt=plannerPrompt(state,world);
  expect(prompt).toContain(JSON.stringify(world.capacity.nativeTurn));
+ const recentLine=prompt.split('\n').find(line=>line.startsWith('RECENT FINISHED TASKS'))!;
+ const recent=JSON.parse(recentLine.slice(recentLine.indexOf(': ')+2)).tasks;
+ expect(recent).toHaveLength(48);
+ expect(recent[0].spec.id).toBe(shared);
+ expect(recent.some((row:any)=>row.spec.id==='failed-proof')).toBe(false);
  const activeLine=prompt.split('\n').find(line=>line.startsWith('COMPLETE ACTIVE QUEUE'))!;
  const facts=JSON.parse(activeLine.slice(activeLine.indexOf(': ')+2));
  expect(activeLine.split(shared)).toHaveLength(2);
@@ -310,6 +320,8 @@ test('planner prompt lists a shared prerequisite once and preserves the active d
   ['first',[shared,'unique-proof']],['second',['failed-proof',shared]]
  ]);
  expect(facts.blocked[0].dependencies).toEqual([{id:'failed-proof',status:'failed'}]);
+ expect(facts.rootBlockers[0].receipt).toEqual({at:6,error:reason.slice(0,240)+'...'});
+ expect(activeLine).not.toContain('raw output stays in the receipt');
 });
 test('cancel retires a pending build and points its consumer at the named qualification',()=>{
  const s=initialState();addTasks(s,[task('rebind',{kind:'build'}),run('consume',['rebind'])],0);

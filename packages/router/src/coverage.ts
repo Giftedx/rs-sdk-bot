@@ -43,12 +43,37 @@ export function corpus(root: string): string {
     return parts.join('\n').toLowerCase();
 }
 
-// Text match only: the display name (5+ characters, so "Door" alone does not count) or the debug name appears in our source.
-export function named(a: GameAction, text: string): boolean {
+// The display name needs five characters (so "Door" alone does not count).
+const MIN_DEBUG_NAME = 4;
+function actionNames(a: GameAction): string[] {
     const debug = a.subject.replace(/^_/, '').split(':')[0]!.toLowerCase();
-    if (debug.length >= 4 && text.includes(debug)) return true;
-    const n = a.name?.toLowerCase();
-    return !!n && n.length >= 5 && text.includes(n);
+    const name = a.name?.toLowerCase();
+    return [...(debug.length >= MIN_DEBUG_NAME ? [debug] : []), ...(name && name.length >= 5 ? [name] : [])];
+}
+export function named(a: GameAction, text: string): boolean {
+    return actionNames(a).some(term => text.includes(term));
+}
+
+// Scan once. A shared prefix selects candidates, and startsWith checks each full term.
+function namesInCorpus(names: readonly string[], text: string): Set<string> {
+    const byPrefix = new Map<string, Set<string>>();
+    for (const name of names) {
+        const prefix = name.slice(0, MIN_DEBUG_NAME);
+        const matches = byPrefix.get(prefix) ?? new Set<string>();
+        matches.add(name);
+        byPrefix.set(prefix, matches);
+    }
+    const found = new Set<string>();
+    for (let i = 0; i <= text.length - MIN_DEBUG_NAME && byPrefix.size; i++) {
+        const prefix = text.slice(i, i + MIN_DEBUG_NAME), matches = byPrefix.get(prefix);
+        if (!matches) continue;
+        for (const name of matches) if (text.startsWith(name, i)) {
+            found.add(name);
+            matches.delete(name);
+        }
+        if (!matches.size) byPrefix.delete(prefix);
+    }
+    return found;
 }
 
 // Our script for a quest folder: quest-<folder without quest_ and underscores>.ts unless named otherwise.
@@ -141,9 +166,10 @@ export const actionKey = (a: GameAction) => `${a.trigger},${a.subject}`;
 
 export function domainStages(actions: GameAction[], text: string, fired: Set<string> = new Set()) {
     const by = new Map<string, { total: number; named: number; fired: number }>();
-    for (const a of actions) {
+    const names = actions.map(actionNames), found = namesInCorpus(names.flat(), text);
+    for (const [i, a] of actions.entries()) {
         const d = by.get(a.domain) ?? { total: 0, named: 0, fired: 0 };
-        d.total++; if (named(a, text)) d.named++; if (fired.has(actionKey(a))) d.fired++;
+        d.total++; if (names[i]!.some(term => found.has(term))) d.named++; if (fired.has(actionKey(a))) d.fired++;
         by.set(a.domain, d);
     }
     return [...by].map(([domain, d]) => ({ domain, actions: d.total, named: d.named, fired: d.fired, share: Math.round(100 * d.named / d.total) })).sort((a, b) => a.share - b.share || b.actions - a.actions);
