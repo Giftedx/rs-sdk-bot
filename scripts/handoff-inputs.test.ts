@@ -70,7 +70,7 @@ import {main} from ENTRY;
 import {readFileSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 const root=process.env.FIXTURE_ROOT,stage=process.env.FIXTURE_STAGE;
-process.argv=['bun','handoff-inputs.ts','Donor','Receiver','90:Iron arrowtips','--bank-x=3253','--bank-z=3421'];
+process.argv=['bun','handoff-inputs.ts','Donor','Receiver','90:Iron arrowtips','--bank-x=3253','--bank-z=3421',...(process.env.FIXTURE_ARGS??'').split(' ').filter(Boolean)];
 const file=join(root,'holdings.json');
 const load=()=>JSON.parse(readFileSync(file,'utf8'));
 const save=x=>writeFileSync(file,JSON.stringify(x));
@@ -78,6 +78,13 @@ const hold=async point=>{if(stage===point){console.log('HOLD '+point);await new 
 // Keep a blocked login alive until the parent kills it, with a hard deadline.
 const deadline=setTimeout(()=>process.exit(9),8000);
 await main({root,ownedAccounts:()=>new Set(['donor','receiver']),
+ approach:{ground:async()=>{throw Error('ground approach used');},planned:async(s,to)=>{
+  console.log('PLANNED '+s.name+' '+to.x+','+to.z+','+to.level);
+  if(stage==='approach-refused')return {ok:false,reason:'precondition',detail:'no route'};
+  await hold('approach');
+  if(stage==='approach-slow'){await new Promise(yes=>setTimeout(yes,1500));console.log('IDLE RESET '+s.name+' '+(s.client.idleTimer>0));}
+  s.at=to.x;return {ok:true};
+ }},
  openBot:async name=>{
   console.log('LOGIN '+name);
   const status=join(root,'.practice/status',name+'.json');
@@ -85,16 +92,20 @@ await main({root,ownedAccounts:()=>new Set(['donor','receiver']),
   await hold('login');
   let opened=false,generation=0;
   const role=name==='Donor'?'donor':'receiver';
-  const items=n=>n?[{id:40,name:'Iron arrowtips',count:n,slot:0}]:[];
-  const s={name,tick:()=>0,onTick:()=>()=>{},
+  const items=(n,noted=0)=>[...(n?[{id:40,name:'Iron arrowtips',count:n,slot:0}]:[]),...(noted?[{id:41,name:'Iron arrowtips',count:noted,slot:1}]:[])];
+  const pack=()=>items(load()[role].pack,load()[role].noted);
+  const s={name,client:{idleTimer:0},at:(process.env.FIXTURE_FAR??'').split(',').includes(name)?3092:3253,tick:()=>0,onTick:()=>()=>{},
    bankObservation:()=>opened?{generation,at:Date.now(),items:items(load()[role].bank)}:null,
-   sdk:{getInventory:()=>items(load()[role].pack),getState:()=>({player:{worldX:3253,worldZ:3421,level:0},bank:{isOpen:opened},inventory:items(load()[role].pack)})},
-   bot:{walkTo:async()=>{await hold('bank-entry');return {success:true};},
+   sdk:{getInventory:pack,getSkill:()=>({level:10}),getState:()=>({player:{worldX:s.at,worldZ:3421,level:0},bank:{isOpen:opened},inventory:pack()})},
+   bot:{walkTo:async x=>{console.log('LOCAL '+name);await hold('bank-entry');s.at=x;return {success:true};},
     openBank:async()=>{opened=true;generation++;return {success:true};},closeBank:async()=>{opened=false;return {success:true};},
-    withdrawItem:async(_,count)=>{const x=load();x[role].bank-=count;x[role].pack+=count;save(x);generation++;return {success:true};},
-    serveTrades:async()=>{const x=load();x.donor.pack-=90;x.receiver.pack+=90;x.sends++;save(x);await hold('after-send');return {success:true};},
+    withdrawItem:async(_,count,options)=>{const x=load();x[role].bank-=count;if(options?.asNote)x[role].noted=(x[role].noted??0)+count;else x[role].pack+=count;save(x);generation++;return {success:true};},
+    serveTrades:async()=>{const x=load();
+     // The real offer takes the first row of a name, so a plain row hides the notes.
+     if(x.donor.pack&&x.donor.noted)return {success:false};
+     const form=x.donor.noted?'noted':'pack';x.donor[form]-=90;x.receiver[form]=(x.receiver[form]??0)+90;x.sends++;save(x);await hold('after-send');return {success:true};},
     trade:async()=>({success:true}),
-    depositItem:async()=>{const x=load();x[role].bank+=x[role].pack;x[role].pack=0;save(x);generation++;return {success:true};}}
+    depositItem:async target=>{const x=load(),form=target.id===41?'noted':'pack';x[role].bank+=x[role][form];x[role][form]=0;save(x);generation++;return {success:true};}}
   };return s;
  },settle:async(sessions,ok)=>{for(const s of sessions){writeFileSync(join(root,'.practice/status',s.name+'.json'),JSON.stringify({name:s.name,result:'ended'}));console.log('LOGOUT '+s.name);}return ok;}
 });
@@ -109,8 +120,8 @@ function cliFixture(){
  writeFileSync(join(root,'swarm.json'),JSON.stringify({jobs:[]}));
  writeFileSync(join(root,'holdings.json'),JSON.stringify({donor:{bank:90,pack:0},receiver:{bank:0,pack:0},sends:0}));
  const children:{p:ReturnType<typeof spawn>;done:Promise<number|null>}[]=[];
- const start=(stage='')=>{
-  const p=spawn(process.execPath,['--eval',entryFixture],{windowsHide:true,env:{...process.env,HANDOFF_ORDER:'cli-order',BOT_GOAL:'fixture',FIXTURE_ROOT:root,FIXTURE_STAGE:stage},stdio:['ignore','pipe','pipe']});
+ const start=(stage='',env:Record<string,string>={})=>{
+  const p=spawn(process.execPath,['--eval',entryFixture],{windowsHide:true,env:{...process.env,HANDOFF_ORDER:'cli-order',BOT_GOAL:'fixture',FIXTURE_ROOT:root,FIXTURE_STAGE:stage,...env},stdio:['ignore','pipe','pipe']});
   let output='';p.stdout!.on('data',b=>{output+=b;});p.stderr!.on('data',b=>{output+=b;});
   const done=new Promise<number|null>((yes,no)=>{p.once('error',no);p.once('close',yes);});
   children.push({p,done});
@@ -154,6 +165,43 @@ for(const conflict of ['coordinator','swarm','stop'])test('main refuses '+confli
   if(conflict==='swarm')writeFileSync(join(f.root,'swarm.json'),JSON.stringify({jobs:[{enabled:true,account:'Receiver',id:'other'}]}));
   if(conflict==='stop')writeFileSync(join(f.root,'.practice/stop-Receiver'),'');
   const p=f.start();expect(await p.done).toBe(1);expect(p.output()).not.toContain('LOGIN ');
+ }finally{await f.cleanup();}
+},10000);
+
+test('planned distant entry transfers exactly after travel; refusal, deadline and pause move nothing and log out',async()=>{
+ const untouched={donor:{bank:90,pack:0},receiver:{bank:0,pack:0},sends:0};
+ const holdings=(root:string)=>JSON.parse(readFileSync(join(root,'holdings.json'),'utf8'));
+ const f=cliFixture();try{
+  // Travel outlasts the transfer deadline, which starts only after arrival.
+  const a=f.start('approach-slow',{FIXTURE_FAR:'Donor',FIXTURE_ARGS:'--approach-ms=5000 --request-ms=1000 --timeout-ms=1000'});
+  expect(await a.done).toBe(0);
+  expect(a.output()).toContain('PLANNED Donor 3253,3421,0');expect(a.output()).not.toContain('PLANNED Receiver');expect(a.output()).toContain('IDLE RESET Donor true');
+  expect(a.output()).toContain('LOCAL Receiver');expect(a.output().match(/LOGOUT /g)?.length).toBe(2);
+  expect(holdings(f.root)).toEqual({donor:{bank:0,pack:0},receiver:{bank:90,pack:0},sends:1});
+ }finally{await f.cleanup();}
+ for(const stage of ['approach-refused','approach','pause']){
+  const g=cliFixture();try{
+   const p=g.start(stage==='pause'?'approach':stage,{FIXTURE_FAR:'Donor,Receiver',FIXTURE_ARGS:'--approach-ms='+(stage==='pause'?5000:1000)});
+   if(stage==='pause'){await p.hold();writeFileSync(join(g.root,'.practice/stop-Receiver'),'');}
+   expect(await p.done).toBe(1);
+   expect(p.output()).toContain({'approach-refused':'handoff planned approach failed: Donor',approach:'handoff approach deadline',pause:'existing stop-Receiver'}[stage]!);
+   expect(p.output()).toContain('PLANNED Receiver');expect(p.output()).not.toContain('LOCAL ');
+   expect(p.output().match(/LOGOUT /g)?.length).toBe(2);expect(holdings(g.root)).toEqual(untouched);
+   expect(existsSync(join(g.root,'.practice/account-leases/donor.lock'))).toBe(false);
+  }finally{await g.cleanup();}
+ }
+ // Without the option a distant participant keeps the local approach.
+ const h=cliFixture();try{
+  const p=h.start('',{FIXTURE_FAR:'Donor'});expect(await p.done).toBe(0);
+  expect(p.output()).toContain('LOCAL Donor');expect(p.output()).not.toContain('PLANNED ');
+ }finally{await h.cleanup();}
+},20000);
+
+test('noted transfer leaves the donor pre-held plain stack in its pack',async()=>{
+ const f=cliFixture();try{
+  writeFileSync(join(f.root,'holdings.json'),JSON.stringify({donor:{bank:90,pack:2},receiver:{bank:0,pack:0},sends:0}));
+  const p=f.start('',{FIXTURE_ARGS:'--notes'});expect(await p.done).toBe(0);
+  expect(JSON.parse(readFileSync(join(f.root,'holdings.json'),'utf8'))).toEqual({donor:{bank:0,pack:2,noted:0},receiver:{bank:90,pack:0,noted:0},sends:1});
  }finally{await f.cleanup();}
 },10000);
 
@@ -242,6 +290,10 @@ test('CLI validates bounds, protected overlap and structured arguments without s
     const c=parseHandoff(['Pocketrocket','Ballspinner','153:Flax','--notes','--keep=knife|bread','--bank-x=2725','--bank-z=3493']);
     const cmd=handoffCommands(c,'F:/repo');expect(cmd.receiver.slice(-3)).toEqual(['Ballspinner','153:Flax','--banker=Pocketrocket']);expect(cmd.env).toMatchObject({PAYOUT_NOTES:'1',ON_DEMAND:'1',COURIERS:'',KEEP:'knife|bread',BANK_X:'2725'});
     for(const args of [['Main','Ballspinner','1:Flax'],['Pocketrocket','Pocketrocket','1:Flax'],['../x','Ballspinner','1:Flax'],['Pocketrocket','Ballspinner','0:Flax'],['Pocketrocket','Ballspinner','1:Flax','--keep=flax'],['Pocketrocket','Ballspinner','1:Flax','--bank-x=NaN'],['Pocketrocket','Ballspinner','1:Flax','--whatever=1']])expect(()=>parseHandoff(args)).toThrow();
+    const live=['Masterbaiter','MineYourBiz','100:Lobster','--notes','--bank-x=2615','--bank-z=3332'];
+    expect(parseHandoff([...live,'--approach-ms=1800000','--request-ms=60000','--timeout-ms=600000','--grace-ms=45000'])).toMatchObject({approachMs:1800000,requestMs:60000,timeoutMs:600000});
+    expect(parseHandoff(live).approachMs).toBeUndefined();
+    for(const bound of ['--approach-ms=999','--approach-ms=1800001','--approach-ms=','--request-ms=180000','--timeout-ms=1200000'])expect(()=>parseHandoff([...live,bound])).toThrow();
 });
 test('fresh file cannot authenticate an unrelated session or future timestamp',async()=>{
     const f=fixture();const spawn=f.d.spawn;f.d.spawn=role=>({...spawn(role),goal:'my child'});
