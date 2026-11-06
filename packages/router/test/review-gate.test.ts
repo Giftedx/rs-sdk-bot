@@ -42,6 +42,9 @@ test('an out-of-scope build still waits for its review',async()=>{
  const plain=build();await finishBuildDelivery('fixture',null,plain.deps,'claude');expect(plain.reviewed()).toBe(1);
  expect(reviewGate({scope:{known:false,changed:[],owned:[]},records:3,replays:[clean,clean,clean]}).blocking).toBe(true);
  expect(reviewGate({scope:scope([]),records:2,replays:[clean,clean]}).reason).toContain('found 2');
+ expect(reviewGate({scope:scope([]),records:3,replays:[clean,clean]})).toEqual({
+  blocking:true,reason:'review blocks: replay completed 2 of 3 required runs',
+ });
  const differ={status:'differ' as const,difference:{tick:9,index:4,expected:{a:{type:'walkTo'}},actual:{a:{type:'interactNpc'}}}};
  expect(reviewGate({scope:scope([]),records:3,replays:[clean,differ,clean]}).blocking).toBe(true);
  // replayAllow reaches the replay itself; a difference it still reports blocks, allowed swaps do not.
@@ -63,6 +66,13 @@ test('the gate reads workspace changes and replays the three newest records from
  writeFileSync(join(root,'scripts/x.ts'),'changed');
  expect((await buildReviewGate(input)).blocking).toBe(false);
  expect(replayed.map(f=>f.match(/bot-(\d+)/)![1])).toEqual(['40','30','20']);
+ replayed.length=0;
+ const stopped=await buildReviewGate({...input,replay:async file=>{
+  replayed.push(file);
+  return {status:'error',file,error:'worker did not open its recorded account'};
+ }});
+ expect(replayed).toHaveLength(1);
+ expect(stopped).toEqual({blocking:true,reason:`review blocks: replay failed on ${replayed[0]}: worker did not open its recorded account`});
  writeFileSync(join(root,'scripts/other.ts'),'changed too');utimesSync(join(root,'scripts/other.ts'),new Date(),new Date(Date.now()+5000));
  replayed.length=0;
  const outside=await buildReviewGate(input);

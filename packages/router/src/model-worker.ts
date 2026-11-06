@@ -97,11 +97,12 @@ export function reviewGate(input:{scope:{known:boolean;changed:string[];owned:re
  if(!input.scope.known)return{blocking:true,reason:'review blocks: '+(input.scope.reason??'build changes are unknown')};
  const outside=input.scope.changed.filter(f=>!input.scope.owned.includes(f));
  if(outside.length)return{blocking:true,reason:'review blocks: build changed files outside its owned list: '+outside.slice(0,8).join(', ')+(outside.length>8?' and '+(outside.length-8)+' more':'')};
- if(input.records<REPLAY_RUNS||input.replays.length<REPLAY_RUNS)return{blocking:true,reason:`review blocks: replay needs ${REPLAY_RUNS} recorded runs from before the build, found ${input.records}`};
+ if(input.records<REPLAY_RUNS)return{blocking:true,reason:`review blocks: replay needs ${REPLAY_RUNS} recorded runs from before the build, found ${input.records}`};
  for(const r of input.replays){
   if(r.status==='error')return{blocking:true,reason:'review blocks: replay failed on '+(r.file??'a record')+': '+String(r.error??'').slice(0,300)};
   if(r.status!=='clean')return{blocking:true,reason:`review blocks: replay of ${r.file??'a record'} differs at tick ${r.difference?.tick} command ${r.difference?.index}: recorded ${JSON.stringify(r.difference?.expected?.a??null)} replayed ${JSON.stringify(r.difference?.actual?.a??null)}`};
  }
+ if(input.replays.length<REPLAY_RUNS)return{blocking:true,reason:`review blocks: replay completed ${input.replays.length} of ${REPLAY_RUNS} required runs`};
  const allowed=input.replays.reduce((n,r)=>n+(r.allowed??0),0);
  return{blocking:false,reason:`review runs after delivery: owned files only; replay clean on ${input.replays.length} recorded runs`+(allowed?` with ${allowed} commands changed within ${(input.allow??[]).join(', ')}`:'')};
 }
