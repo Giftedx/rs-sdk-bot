@@ -2,7 +2,7 @@ import {test,expect} from 'bun:test';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,lstatSync,unlinkSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {BASE_DIR,prepareWorkspace,publishWorkspace,workspaceRoot,isWorkspace,mergeText} from '../src/build-workspace';
+import {BASE_DIR,deliveredLedger,prepareWorkspace,publishWorkspace,workspaceRoot,isWorkspace,mergeText} from '../src/build-workspace';
 import {stageDeliveryPr} from '../src/delivery-pr';
 
 const mainTree=()=>{
@@ -95,4 +95,23 @@ test('publish refuses a main checkout that changed a declared file since the bui
  expect(()=>publishWorkspace(main,'cap',files)).toThrow('main source changed');
  expect(readFileSync(join(main,'packages/core/src/shared.ts'),'utf8')).toBe('other capability');
  expect(()=>workspaceRoot(main,'../escape')).toThrow('invalid');
+});
+
+test('a missing later build output leaves all live source and publish metadata intact',()=>{
+ const main=mainTree(),{root}=prepareWorkspace(main,'cap',files);
+ const worker=files[0]!,shared=files[1]!,marker=join(root,'.workspace.json');
+ const originalMarker=readFileSync(marker,'utf8');
+ writeFileSync(join(root,worker),'v2');
+ unlinkSync(join(root,shared));
+
+ expect(()=>publishWorkspace(main,'cap',files)).toThrow('publish: declared file missing in workspace: '+shared);
+ expect(readFileSync(join(main,worker),'utf8')).toBe('v1');
+ expect(readFileSync(join(main,shared),'utf8')).toBe('s1');
+ expect(readFileSync(marker,'utf8')).toBe(originalMarker);
+ expect(existsSync(deliveredLedger(main))).toBe(false);
+
+ writeFileSync(join(root,shared),'s2');
+ expect(publishWorkspace(main,'cap',files).published).toEqual(files);
+ expect(readFileSync(join(main,worker),'utf8')).toBe('v2');
+ expect(readFileSync(join(main,shared),'utf8')).toBe('s2');
 });
