@@ -5,7 +5,7 @@ import {existsSync} from 'node:fs';
 import {openBot,finish,getWorld,accountOf} from '../packages/core/src/bot';
 import {depositObserved} from '../packages/core/src/deposit';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
-import {goTo} from '../packages/core/src/walk';
+import {goTo,sessionWalker,walkPath,type PathDeps} from '../packages/core/src/walk';
 import type {BotWorldState} from '../vendor/rs-sdk/sdk/types';
 
 export const CHEST=2569,BLOOD_RUNE=565,COINS=995,THIEVING_LEVEL=59,RUNES_PER_LOOT=2,COINS_PER_LOOT=500;
@@ -27,7 +27,7 @@ const EAT_DELAY_TICKS=3,PACK_SLOTS=28;
 
 export interface BloodOptions{maxLoots:number;cap:number;idleTicks:number;bankEvery:number}
 export type BloodStop='target'|'cap'|'hp'|'idle';
-export interface BloodResult{ok:boolean;stop:BloodStop;targetMet:boolean;conserved:boolean;loots:number;runes:number;coins:number;bankedRunes:number;bankedCoins:number;startRunes:number;startCoins:number;bankTrips:number;picks:number;meals:number;ticks:number;hpMin:number;died:false}
+export interface BloodResult{ok:boolean;stop:BloodStop;targetMet:boolean;conserved:boolean;loots:number;runes:number;coins:number;bankedRunes:number;bankedCoins:number;startRunes:number;startCoins:number;bankTrips:number;picks:number;entries:number;meals:number;ticks:number;hpMin:number;died:false}
 export interface BloodDeps{
  state():BotWorldState|null;tick():number;stopped():boolean;
  walkSurface(x:number,z:number):Promise<boolean>;walkDungeon(x:number,z:number,tolerance:number):Promise<boolean>;
@@ -56,14 +56,15 @@ export function bloodZone(s:BotWorldState):BloodZone{
  if(p.worldX>=2555&&p.worldX<DOOR.x&&p.worldZ>=3352&&p.worldZ<=3360)return'tower';
  return p.worldZ<6400?'surface':'other';
 }
-// False until the reward lands. True only after the second trap has also moved the player to the arrival tile.
+// False until the reward lands. True only after the second trap has also moved the player to the surface.
+// The player can stand away from the arrival tile at the first observation there, so no exact tile is required.
 export function chestEffect(before:BotWorldState,after:BotWorldState){
  const runes=total(after,BLOOD_RUNE)-total(before,BLOOD_RUNE),coins=total(after,COINS)-total(before,COINS);
  const gained=(skill(after,'Thieving')?.experience??0)>(skill(before,'Thieving')?.experience??0);
  if(runes===0&&coins===0&&!gained)return false;
  if(runes!==RUNES_PER_LOOT||coins!==COINS_PER_LOOT||!gained)throw Error('blood chest effect does not reconcile');
  if(!kitKept(before,after))throw Error('blood chest assets changed');
- return after.player?.level===0&&cheb(after,ARRIVAL)<=1;
+ return bloodZone(after)==='surface';
 }
 export function bloodRefusal(s:BotWorldState,o:BloodOptions){
  const thieving=skill(s,'Thieving')?.level??0;
@@ -79,7 +80,7 @@ export async function runBloodChest(d:BloodDeps,o:BloodOptions):Promise<BloodRes
  const initial=d.state();if(!initial?.player||hp(initial)<1)throw Error('blood chest state unknown');
  const refused=bloodRefusal(initial,o);if(refused)throw Error(refused);
  const start=d.tick(),startRunes=total(initial,BLOOD_RUNE),startCoins=total(initial,COINS),ready=CHESTS.map(()=>0);
- let progress=start,loots=0,sinceBank=0,picks=0,entryPicks=0,hpMin=hp(initial),trip=0,tripStart:number|null=null,walkFails=0,bankedRunes=0,bankedCoins=0,bankTrips=0,meals=0,stop:BloodStop='target';
+ let progress=start,loots=0,sinceBank=0,picks=0,entries=0,seen=bloodZone(initial),entryPicks=0,hpMin=hp(initial),trip=0,tripStart:number|null=null,walkFails=0,bankedRunes=0,bankedCoins=0,bankTrips=0,meals=0,stop:BloodStop='target';
  const eaten=new Map<number,number>();
  // Hard failures end the run at once. Their loot stays in the pack and the session owner logs out.
  const observe=()=>{
@@ -87,9 +88,10 @@ export async function runBloodChest(d:BloodDeps,o:BloodOptions):Promise<BloodRes
   if(d.stopped())throw Error('blood chest stopped');
   if(s.player.isDead||s.player.lifeId!==initial.player!.lifeId)throw Error('blood chest died');
   if(d.tick()-start>=o.cap)throw Error('blood chest tick cap');
-  // Only the observed tile inside the door ends this entry's attempt bound.
-  if(bloodZone(s)==='tower')entryPicks=0;
-  hpMin=Math.min(hpMin,hp(s));return s;
+  // Only the observed tile inside the door ends this entry's attempt bound. A ladder climb reaches the same tile, so only a move from the surface counts as an entry.
+  const zone=bloodZone(s);
+  if(zone==='tower'){entryPicks=0;if(seen==='surface')entries++;}
+  seen=zone;hpMin=Math.min(hpMin,hp(s));return s;
  };
  // Soft limits leave the chests and bank the held loot.
  const checkpoint=()=>{
@@ -182,9 +184,14 @@ export async function runBloodChest(d:BloodDeps,o:BloodOptions):Promise<BloodRes
  const kept=kit(final),conserved=bankedRunes===startRunes+runes&&bankedCoins===startCoins+coins&&[...kit(initial)].every(([id,count])=>(kept.get(id)??0)+(eaten.get(id)??0)>=count);
  if(!conserved)throw Error('blood chest total does not reconcile');
  const targetMet=stop==='target'&&loots===o.maxLoots;
- return{ok:targetMet,stop,targetMet,conserved,loots,runes,coins,bankedRunes,bankedCoins,startRunes,startCoins,bankTrips,picks,meals,ticks:d.tick()-start,hpMin,died:false};
+ return{ok:targetMet,stop,targetMet,conserved,loots,runes,coins,bankedRunes,bankedCoins,startRunes,startCoins,bankTrips,picks,entries,meals,ticks:d.tick()-start,hpMin,died:false};
 }
 export function failureResult(error:unknown){const failure=String(error);return{ok:false,stop:/refused/.test(failure)?'refused':'failed',failure};}
+// SDK walkTo refuses an empty plan before dispatch. The shared walker lets the client route the click,
+// checks the observed arrival and bounds a stalled dungeon leg without spending more worker retries.
+export async function walkBloodDungeon(d:PathDeps,x:number,z:number,tolerance:number,stopped:()=>boolean){
+ return(await walkPath(d,[{x,z,tol:tolerance}],{maxTicks:150,stop:stopped})).ok;
+}
 if(import.meta.main){
  const name=process.argv[2];if(!name)throw Error('account required');
  const o=bloodOptions(process.argv[3]);
@@ -210,7 +217,13 @@ if(import.meta.main){
   const r=await runBloodChest({state:()=>s.sdk.getState(),tick:()=>s.tick(),
    stopped:()=>ended||existsSync(`.practice/stop-${name}`)||existsSync('.practice/stop-all'),
    walkSurface:async(x,z)=>(await goTo(s,await getWorld(),{x,z,level:0},accountOf(s),{legTimeoutTicks:150})).ok,
-   walkDungeon:async(x,z,tolerance)=>(await s.bot.walkTo(x,z,tolerance)).success,
+   walkDungeon:async(x,z,tolerance)=>{
+    const life=s.sdk.getState()?.player?.lifeId;
+    return walkBloodDungeon(await sessionWalker(s),x,z,tolerance,()=>{
+     const p=s.sdk.getState()?.player;
+     return ended||!p||p.isDead||p.lifeId!==life||existsSync(`.practice/stop-${name}`)||existsSync('.practice/stop-all');
+    });
+   },
    act:(x,z,id,option)=>s.sdk.sendInteractLoc(x,z,id,option),
    wait:(test,ticks)=>waitUntil(s,test,{timeoutTicks:ticks}),step:()=>waitTicks(s,1),
    bank:async food=>{
