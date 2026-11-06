@@ -18,6 +18,8 @@ Source -> local consumer -> reuse -> check: settled task receipts and `finishedA
 
 Source -> local consumer -> reuse -> check: the owner goal in `AGENTS.md` and the specialist lane in `docs/plans/joined-plan.md` -> planner goals and completion text -> price a specialist skill route against its record before targeting it, then use the actual board result for acceptance -> the goal fixture checks both steps and preserves the separate Overall and completion paths. The saved prompt readback in `.practice/planner-specialist-scope/replay.json` checks the policy text without a model call.
 
+Source -> local consumer -> adapt -> check: terminal prerequisite times and the existing retirement hold -> queue retirement -> select the oldest dead prerequisite through pending dependencies -> fixtures cover a newer failure listed first and a shared dead root. The matched replay in `.practice/oldest-dead-root/replay.json` compares retirement deadlines on the same queue snapshot. It changes no live tasks.
+
 Source -> local consumer -> reuse -> check: the coordinator's sequence at worker settlement -> the planner trigger -> keep a receipt watermark at planner launch and a separate completion time for cooldowns -> test a late receipt with an older producer timestamp while the planner runs. The event sample in `.practice/planner-root-blockers/receipt-window.json` counts overlap and the time to the next plan. It does not identify why each plan starts.
 
 The deterministic rules pass uses that same settled-receipt sequence. Archive compaction cannot hide a settlement or trigger a rules pass on its own. The five-minute recheck still covers other changes.

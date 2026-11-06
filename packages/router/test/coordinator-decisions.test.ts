@@ -33,6 +33,16 @@ test('a dead task retires only after DEAD_TASK_MS from its root and its own crea
  expect(s.tasks.find(r=>r.spec.id==='late')!.status).toBe('pending');
  expect(retireDeadTasks(s,5000+DEAD_TASK_MS).map(r=>r.id)).toEqual(['late']);
 });
+test('a newer failed dependency does not reset the retirement clock for an older dead root',()=>{
+ const s=initialState();
+ addTasks(s,[task('older'),task('newer'),task('chain',{dependsOn:['newer','older']}),
+  run('direct',{dependsOn:['newer','older']}),run('transitive',{dependsOn:['newer','chain']})],0);
+ finish(s,'older',1000,false);finish(s,'newer',5000,false);
+ expect(retireDeadTasks(s,1000+DEAD_TASK_MS-1)).toEqual([]);
+ expect(retireDeadTasks(s,1000+DEAD_TASK_MS)).toEqual([
+  {id:'chain',root:'older'},{id:'direct',root:'older'},{id:'transitive',root:'older'},
+ ]);
+});
 test('main and specialist launches stay pending behind a failure',()=>{
  const s=initialState();addTasks(s,[task('bad'),run('main',{dependsOn:['bad'],launch:'main'}),run('spec',{dependsOn:['bad'],launch:'specialist',account:'Helper2'})],0);finish(s,'bad',1,false);
  expect(retireDeadTasks(s,1+DEAD_TASK_MS*2)).toEqual([]);
