@@ -124,6 +124,8 @@ try {
     const pickup = (g: any) => q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' });
     if (!q.has(ITEM.dusty)) {
         await q.walk('to jailer', [{ x: JAILER.x - 3, z: JAILER.z - 1, tol: 3 }]);
+        // The Jailer (level 47) dies to a low-Attack ranger's bow, not to its hands; the sweep brings the bow and QUEST_ARROWS.
+        await q.wieldBow();
         for (let t = 0; t < 150 && !q.has(ITEM.jailKey); t++) {
             await q.guard('jailer');
             const g = ground(ITEM.jailKey);

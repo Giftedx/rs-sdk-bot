@@ -140,7 +140,7 @@ export const QUEST_PICKUP_SLOTS=8,MIN_PICKUP_SLOTS=2;
 export const QUEST_PICKUPS:Record<string,Item[]>={hunt:[{id:1963,count:10},{id:431,count:1}]};
 // Arrows a quest's own fights take from a bow account, beyond the gathers' kills: Merlin's Crystal's Sir Mordred has 38
 // hitpoints behind Protect from Melee, and the quiver that emptied on him ended a run at Morgan Le Faye's door.
-export const QUEST_ARROWS:Record<string,number>={merlin:40,prince:30};
+export const QUEST_ARROWS:Record<string,number>={merlin:40,prince:30,hazeelcult:20,scorpion:40};
 // Fishing Contest wants Fishing 10 (hemenster_fishing.rs2:70). An account short of it nets shrimps first, at the
 // nearest Net spot (Catherby beach beside Harry's shop, where the rod and bait come from): 250 XP a catch at 25x, five
 // catches from level 1. The net is a tool of the bank pass; the catches take pack slots until the quest.
@@ -256,8 +256,12 @@ export {SEA};
 // The farthest seller a sweep walks to: Al Kharid to Ardougne is 654 tiles; a crossing costs SEA on top.
 export const FAR_SELLER=800;
 export function travelDistance(from:Tile,to:Tile):number{return cheb(from,to)+(crossesSea(from,to)?SEA:0);}
-export function sellersByTravel<S extends {tile:Tile}>(sellers:readonly S[],at:Tile):S[]{
- return [...sellers].sort((a,b)=>travelDistance(at,a.tile)-travelDistance(at,b.tile));
+// With a destination, a seller ranks by the extra travel it adds to the way there (detour): from Ardougne bound for
+// Hetty's house in Rimmington, Betty in Port Sarim (53 tiles off the way) comes before Jatix in Taverley and the ogre
+// merchant at Gu'Tanoth, both nearer the bank and both behind the mountain or a stall counter the client cannot path to.
+export function sellersByTravel<S extends {tile:Tile}>(sellers:readonly S[],at:Tile,dest?:Tile):S[]{
+ const cost=(t:Tile)=>dest?detour([at,dest],t):travelDistance(at,t);
+ return [...sellers].sort((a,b)=>cost(a.tile)-cost(b.tile));
 }
 export function nearestBank(at:Tile):Tile{
  return BANKS.filter(b=>b.level===at.level).sort((a,b)=>Math.max(Math.abs(a.x-at.x),Math.abs(a.z-at.z))-Math.max(Math.abs(b.x-at.x),Math.abs(b.z-at.z)))[0]??BANKS[0]!;
@@ -321,43 +325,63 @@ export async function leaveFortress(s:Session,approach:(to:readonly Tile[])=>Pro
 // (opens from the south only, quest_haunted.rs2:4-8), spookystairs 3108,3363 up (+4 z) and spookystairstop
 // 3108,3364 down (-4 z, stairs.rs2:106-120), out by hauntedbackdoor 3123,3360 (north wall; opens from both sides).
 export const MANOR_FOOD={id:272,x:3108,z:3356,level:1};
+// The poison lies in the Manor's west room on the ground floor, through two ordinary doors from the hall (loc_1530 at
+// 3103,3363 and 3099,3366); the only shop with it is Frincos's on Entrana, off the sweep's map.
+export const MANOR_POISON={id:273,x:3097,z:3366,level:0};
 export const manorFoodNeed=(quest:string,missing:readonly Item[])=>quest==='haunted'&&missing.some(m=>m.id===MANOR_FOOD.id&&m.count===1);
-// The Manor trip fetches the fish food, so the gather pass leaves it: spawnsByDistance also offers its level-1 spawn.
-export const leaveToManorTrip=<G extends {id:number}>(gathers:readonly G[],manorFood:boolean):G[]=>gathers.filter(g=>!(manorFood&&g.id===MANOR_FOOD.id));
+export const manorPoisonNeed=(quest:string,missing:readonly Item[])=>quest==='haunted'&&missing.some(m=>m.id===MANOR_POISON.id&&m.count===1);
+// The Manor trip fetches the fish food and the poison, so the gather pass leaves them: spawnsByDistance also offers
+// their spawns.
+export const leaveToManorTrip=<G extends {id:number}>(gathers:readonly G[],manorFood:boolean,manorPoison=false):G[]=>gathers.filter(g=>!(manorFood&&g.id===MANOR_FOOD.id)&&!(manorPoison&&g.id===MANOR_POISON.id));
 type ManorLoc={id:number;x:number;z:number};
-export type ManorIO={pos:()=>Tile|undefined;held:()=>number;ground:()=>{x:number;z:number}|undefined;
+type ManorItem={id:number;x:number;z:number;level:number};
+export type ManorIO={pos:()=>Tile|undefined;held:(item:ManorItem)=>number;ground:(item:ManorItem)=>{x:number;z:number}|undefined;
  travel:(to:Tile)=>Promise<{ok:boolean;detail?:string}>;walk:(to:readonly Tile[])=>Promise<{ok:boolean;detail?:string}>;
- op:(loc:ManorLoc,re:RegExp)=>Promise<unknown>;pickup:(at:{x:number;z:number})=>Promise<unknown>;wait:(ok:()=>boolean,ticks:number)=>Promise<boolean>};
-export async function fetchManorFishFood(io:ManorIO,start:Tile):Promise<{ok:boolean;detail?:string}>{
+ op:(loc:ManorLoc,re:RegExp)=>Promise<unknown>;pickup:(at:{x:number;z:number},item:ManorItem)=>Promise<unknown>;wait:(ok:()=>boolean,ticks:number)=>Promise<boolean>};
+export async function fetchManorFishFood(io:ManorIO,start:Tile,want:{food:boolean;poison:boolean}={food:true,poison:false}):Promise<{ok:boolean;detail?:string}>{
  const where=()=>{const p=io.pos();return p?`${p.x},${p.z},${p.level}`:'unknown';};
  const at=(x:number,z:number,level:number,tol=0)=>{const p=io.pos();return !!p&&p.level===level&&Math.max(Math.abs(p.x-x),Math.abs(p.z-z))<=tol;};
  const log=(step:string,ok:boolean,extra:object={})=>console.log(`QUEST_SWEEP_MANOR ${JSON.stringify({step,ok,at:where(),...extra})}`);
  const fail=(step:string,what:string)=>{log(step,false);return{ok:false,detail:`manor fish food ${what} unobserved at ${where()}`};};
- const before=io.held();
+ // One item off its spawn tile, where the bot stands: the spawn is waited on, the pickup repeated until the pack credits it.
+ const take=async(item:ManorItem,name:string):Promise<{ok:boolean;detail?:string}>=>{
+  const before=io.held(item);
+  if(!io.ground(item)&&!await io.wait(()=>!!io.ground(item),60))return fail(name,`ground ${name}`);
+  for(let i=0;i<3&&io.held(item)<before+1;i++){
+   const g=io.ground(item);
+   if(g)await io.pickup(g,item);
+   await io.wait(()=>io.held(item)>=before+1,10);
+  }
+  const got=io.held(item)===before+1;
+  log('pickup',got,{item:item.id,before,after:io.held(item)});
+  return got?{ok:true}:{ok:false,detail:`manor ${name} inventory credit unobserved: ${before} -> ${io.held(item)} at ${where()}`};
+ };
  const travelled=await io.travel(start);
  if(!travelled.ok){log('travel',false);return{ok:false,detail:`manor fish food travel to ${start.x},${start.z} failed: ${travelled.detail}`};}
  if(!(await io.walk([{x:3108,z:3352,level:0}])).ok||!at(3108,3352,0))return fail('front','front door tile 3108,3352,0');
  await io.op({id:134,x:3108,z:3353},/^open$/i);
  if(!await io.wait(()=>{const p=io.pos();return !!p&&p.level===0&&p.z>=3354;},20))return fail('front door','front door entry');
  log('front door',true);
- if(!(await io.walk([{x:3108,z:3362,level:0}])).ok||!at(3108,3362,0))return fail('hall','stairs tile 3108,3362,0');
- await io.op({id:1730,x:3108,z:3363},/climb-up/i);
- if(!await io.wait(()=>io.pos()?.level===1,20))return fail('stairs up','level 1');
- log('stairs up',true);
- if(!(await io.walk([MANOR_FOOD])).ok||!at(MANOR_FOOD.x,MANOR_FOOD.z,1,1))return fail('food tile','food tile 3108,3356,1');
- if(!io.ground()&&!await io.wait(()=>!!io.ground(),60))return fail('food','ground fish food');
- for(let i=0;i<3&&io.held()<before+1;i++){
-  const g=io.ground();
-  if(g)await io.pickup(g);
-  await io.wait(()=>io.held()>=before+1,10);
+ if(want.poison){
+  // The router's walk opens the two doors on the way; walkPath keeps to open ground.
+  const r=await io.travel(MANOR_POISON);
+  if(!r.ok||!at(MANOR_POISON.x,MANOR_POISON.z,0,1))return fail('poison tile','poison tile 3097,3366,0');
+  const taken=await take(MANOR_POISON,'poison');if(!taken.ok)return taken;
+  const back=await io.travel({x:3108,z:3362,level:0});
+  if(!back.ok||!at(3108,3362,0,1))return fail('hall','stairs tile 3108,3362,0');
  }
- const got=io.held()===before+1;
- log('pickup',got,{before,after:io.held()});
- if(!got)return{ok:false,detail:`manor fish food inventory credit unobserved: ${before} -> ${io.held()} at ${where()}`};
- if(!(await io.walk([{x:3108,z:3366,level:1}])).ok||!at(3108,3366,1,1))return fail('landing','stairs landing 3108,3366,1');
- await io.op({id:1731,x:3108,z:3364},/climb-down/i);
- if(!await io.wait(()=>io.pos()?.level===0,20))return fail('stairs down','level 0');
- log('stairs down',true);
+ if(want.food){
+  if(!(await io.walk([{x:3108,z:3362,level:0}])).ok||!at(3108,3362,0))return fail('hall','stairs tile 3108,3362,0');
+  await io.op({id:1730,x:3108,z:3363},/climb-up/i);
+  if(!await io.wait(()=>io.pos()?.level===1,20))return fail('stairs up','level 1');
+  log('stairs up',true);
+  if(!(await io.walk([MANOR_FOOD])).ok||!at(MANOR_FOOD.x,MANOR_FOOD.z,1,1))return fail('food tile','food tile 3108,3356,1');
+  const taken=await take(MANOR_FOOD,'fish food');if(!taken.ok)return taken;
+  if(!(await io.walk([{x:3108,z:3366,level:1}])).ok||!at(3108,3366,1,1))return fail('landing','stairs landing 3108,3366,1');
+  await io.op({id:1731,x:3108,z:3364},/climb-down/i);
+  if(!await io.wait(()=>io.pos()?.level===0,20))return fail('stairs down','level 0');
+  log('stairs down',true);
+ }
  if(!(await io.walk([{x:3123,z:3361,level:0}])).ok||!at(3123,3361,0))return fail('back door','back door exit 3123,3361,0');
  log('back door',true);
  return{ok:true};
@@ -366,15 +390,15 @@ export function manorIO(s:Session,world:World):ManorIO{
  const st=()=>s.sdk.getState() as any;
  return{
   pos:()=>{const p=st()?.player;return p?{x:p.worldX,z:p.worldZ,level:p.level}:undefined;},
-  held:()=>count((st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count})),MANOR_FOOD.id),
-  ground:()=>st()?.player?.level===MANOR_FOOD.level?(st()?.groundItems??[]).find((g:any)=>g.id===MANOR_FOOD.id&&g.x===MANOR_FOOD.x&&g.z===MANOR_FOOD.z):undefined,
+  held:item=>count((st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count})),item.id),
+  ground:item=>st()?.player?.level===item.level?(st()?.groundItems??[]).find((g:any)=>g.id===item.id&&g.x===item.x&&g.z===item.z):undefined,
   travel:async to=>{const r=await goTo(s,world,to,accountOf(s),{legTimeoutTicks:150});return r.ok?{ok:true}:{ok:false,detail:`${r.reason} ${r.detail}`};},
   walk:async to=>walkPath(await sessionWalker(s),to.map(t=>({x:t.x,z:t.z,tol:0})),{maxTicks:150}),
   op:async(loc,re)=>{
    const l=(st()?.nearbyLocs??[]).find((n:any)=>n.x===loc.x&&n.z===loc.z&&(n.optionsWithIndex??[]).some((o:any)=>re.test(o.text)));
    await s.direct({type:'interactLoc',x:loc.x,z:loc.z,locId:l?.id??loc.id,optionIndex:l?.optionsWithIndex.find((o:any)=>re.test(o.text)).opIndex??1,reason:'SDK'});
   },
-  pickup:async g=>s.direct({type:'pickupItem',x:g.x,z:g.z,itemId:MANOR_FOOD.id,reason:'SDK'}),
+  pickup:async(g,item)=>s.direct({type:'pickupItem',x:g.x,z:g.z,itemId:item.id,reason:'SDK'}),
   wait:(ok,ticks)=>waitUntil(s,ok,{timeoutTicks:ticks}),
  };
 }
@@ -546,6 +570,9 @@ export const BOAT_FARES=60;
 export const fares=(from:Tile,targets:readonly Tile[],acct?:Pick<Account,'skills'>)=>targets.some(t=>eastOfArdougne(from,t,acct))?BOAT_FARES:0;
 // The Port Sarim landing: a target in the town itself (Wydin's shop, 3014,3204) needs no walk north past the jail.
 export const SARIM_LANDING:Tile={x:3029,z:3217,level:0};
+// Keepers with no Trade option: the shop opens through their talk (area_yanille/scripts/ogre_merchant.rs2: "Yes I do."
+// opens Grud's Herblore Stall at Gu'Tanoth, the eye of newt seller nearest Ardougne that has a route).
+export const SHOP_TALK:Record<number,RegExp[]>={874:[/^yes i do/i]};
 async function crossEast(s:Session,world:World,to:Tile):Promise<Walked>{
  if(count(s.sdk.getState()?.inventory??[],COINS)<BOAT_FARES)return{ok:false,reason:'precondition',detail:`missing 995:${BOAT_FARES} for safe boat route`};
  const walk=(to:Tile)=>goTo(s,world,to,accountOf(s),{legTimeoutTicks:150,planBudgetMs:SWEEP_PLAN_BUDGET_MS});
@@ -708,7 +735,19 @@ async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<s
    if(!npc)return `${c.npc} not in sight at ${c.tile.x},${c.tile.z}`;
    // A shut shop door leaves the keeper unroutable (the client reports cant_reach and sends nothing) even from the
    // seller's own tile: open the nearest door once and ask again, as ranged-train does at Lowe's.
-   const opened=async()=>(await s.bot.openShop(npc)).success&&await waitUntil(s,()=>!!st()?.shop?.isOpen,{timeoutTicks:10});
+   const shopOpen=()=>waitUntil(s,()=>!!st()?.shop?.isOpen,{timeoutTicks:10});
+   // A stall that opens through its keeper's talk (SHOP_TALK) is asked, choice by choice, until the shop shows.
+   const talked=async()=>{
+    const choices=SHOP_TALK[c.npcId]!;
+    const t:any=await s.bot.talkTo(npc);if(!t?.success)return false;
+    for(let i=0,next=0;i<30&&!st()?.shop?.isOpen;i++){
+     const dlg:any=s.sdk.getDialog();
+     if(dlg?.isOpen&&!dlg.isWaiting){const opts:any[]=dlg.options??[];const idx=next<choices.length&&opts.some(o=>choices[next]!.test(o.text))?next:undefined;if(idx!==undefined){await s.sdk.clickDialogByText(choices[idx]!);next=idx+1;}else await s.sdk.sendClickDialog(0);}
+     await waitTicks(s,1);
+    }
+    return !!st()?.shop?.isOpen;
+   };
+   const opened=async()=>SHOP_TALK[c.npcId]?talked():(await s.bot.openShop(npc)).success&&await shopOpen();
    if(!await opened()){
     const door=(await s.bot.openDoor(/door/i)).success;
     console.log(`QUEST_SWEEP_SHOP_DOOR ${JSON.stringify({npc:c.npc,at:here(),door})}`);
@@ -966,7 +1005,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
   for(const id of QUEST_KEEP[quest]??[])if(count(pack(),id)===0&&count(rows(),id)>0)p.withdraw.push({id,count:1});
   if(seekGhostSkull&&retainedGhostBankSkull(ghostState(),pack(),s.sdk.getEquipment(),rows()))p.withdraw.push({id:553,count:1});
   // A missing item a shop sells is bought after the bank: take coins for it now. Sellers rank by travel distance.
-  const ranked=(d:string,at:Tile)=>sellersByTravel(sellersByDistance(d,at),at).map(n=>({npc:n.npc,npcId:n.npcId,tile:n.tile}));
+  const ranked=(d:string,at:Tile)=>sellersByTravel(sellersByDistance(d,at),at,preset.position).map(n=>({npc:n.npc,npcId:n.npcId,tile:n.tile}));
   const shops=(items:readonly Item[])=>shopPlan(items,here(),catalogItem,(d,at)=>ranked(d,at)[0]??null,ranked);
   // What no shop sells is gathered after the shops; a gather tool comes from the bank or a shop.
   const sellerAt=(id:number)=>{const it=catalogItem(id),n=it&&id!==COINS?ranked(it.debugname,here())[0]:null;return n?travelDistance(here(),n.tile):Infinity;};
@@ -995,9 +1034,9 @@ export async function sweep(account:string,quest:string,fresh?:string){
   // A tool already worn (the bow, the arrows) counts as held; the gather's tools are kept by the deposit pass.
   const tools=toolPlan(gather.tools,need,pack(),worn(),rows(),p.withdraw);
   p.withdraw.push(...tools.withdraw);
-  const manorFood=manorFoodNeed(quest,p.missing),heckelDust=heckelDustNeed(quest,p.missing);
-  const shopNeeds=groundShopNeeds(quest,gather.still).filter(m=>!(manorFood&&m.id===MANOR_FOOD.id));
-  gather.gathers=leaveToManorTrip(gather.gathers,manorFood);
+  const manorFood=manorFoodNeed(quest,p.missing),manorPoison=manorPoisonNeed(quest,p.missing),heckelDust=heckelDustNeed(quest,p.missing);
+  const shopNeeds=groundShopNeeds(quest,gather.still).filter(m=>!(manorFood&&m.id===MANOR_FOOD.id)&&!(manorPoison&&m.id===MANOR_POISON.id));
+  gather.gathers=leaveToManorTrip(gather.gathers,manorFood,manorPoison);
   const toolIds=new Set(gather.tools.map(t=>t.id));
   let shop=shops([...shopNeeds,...tools.missing]);
   // A field on the way beats a seller off it (onions at Lumbridge over Hudo, when redberries take the tour to Port Sarim):
@@ -1034,7 +1073,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
   // resume) are untradeable and in neither list, and the withdrawals are planned before the deposits.
   const journal=questFlags(s.client)?.find(f=>f.name===QUEST_NAMES[quest])?.state;
   const leftover=(id:number)=>journal==='not started'&&!need.has(id)&&!toolIds.has(id)&&!(QUEST_KEEP[quest]??[]).includes(id)&&tradeable(id)===false;
-  const slots=slotNeed(slotsFor([...p.withdraw,...shop.buys.map(b=>({id:b.id,count:b.count})),...gather.gathers.map(g=>({id:g.id,count:g.count})),...(manorFood?[{id:MANOR_FOOD.id,count:1}]:[]),...(heckelDust?[{id:1975,count:1}]:[]),...(QUEST_PICKUPS[quest]??[]),...(training?.pickups??[])],pack()),staysCount(pack(),id=>keep(id)&&!leftover(id)));
+  const slots=slotNeed(slotsFor([...p.withdraw,...shop.buys.map(b=>({id:b.id,count:b.count})),...gather.gathers.map(g=>({id:g.id,count:g.count})),...(manorFood?[{id:MANOR_FOOD.id,count:1}]:[]),...(manorPoison?[{id:MANOR_POISON.id,count:1}]:[]),...(heckelDust?[{id:1975,count:1}]:[]),...(QUEST_PICKUPS[quest]??[]),...(training?.pickups??[])],pack()),staysCount(pack(),id=>keep(id)&&!leftover(id)));
   for(const d of depositPlan(pack(),slots,keep,leftover)){
    const item=(st()?.inventory??[]).find((i:any)=>i.id===d.id);
    if(!item)continue;
@@ -1043,7 +1082,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
   }
   console.log(`QUEST_SWEEP_BANK_PASS ${JSON.stringify({withdraw:p.withdraw,slots,free:28-pack().length})}`);
   // Milk replaces its staged bucket. Other gathered inputs need additional slots.
-  const inputs=[...p.withdraw,...shop.buys,...gather.gathers.filter(g=>g.how!=='milk'),...(manorFood?[{id:MANOR_FOOD.id,count:1}]:[]),...(heckelDust?[{id:1975,count:1}]:[])];
+  const inputs=[...p.withdraw,...shop.buys,...gather.gathers.filter(g=>g.how!=='milk'),...(manorFood?[{id:MANOR_FOOD.id,count:1}]:[]),...(manorPoison?[{id:MANOR_POISON.id,count:1}]:[]),...(heckelDust?[{id:1975,count:1}]:[])];
   const capacity=await reserveInputSlots(s,inputs,new Set([...need.keys(),...toolIds,...inputs.map(i=>i.id),...pack().map(i=>i.id).filter(id=>keep(id)||STACKS.has(id))]));
   if(capacity){await s.bot.closeBank();return fail(capacity);}
   for(const w of p.withdraw){
@@ -1059,7 +1098,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
   console.log(`QUEST_SWEEP_BANK_DONE ${JSON.stringify({at:here(),buys:shop.buys.map(b=>b.id),gathers:gather.gathers.map(g=>g.id)})}`);
   if(shop.buys.length){const why=await buyFromShops(s,world,shop.buys);if(why)return fail(why);}
   if(heckelDust){const dust=await fetchHeckelDust(heckelIO(s,world));if(!dust.ok)return fail(dust.detail!);}
-  if(manorFood){const food=await fetchManorFishFood(manorIO(s,world),preset.position);if(!food.ok)return fail(food.detail!);}
+  if(manorFood||manorPoison){const food=await fetchManorFishFood(manorIO(s,world),preset.position,{food:manorFood,poison:manorPoison});if(!food.ok)return fail(food.detail!);}
   if(gather.gathers.length){const why=await gatherItems(s,world,gather.gathers,(to)=>walkFar(s,world,to,100));if(why)return fail(why);}
   if(training){const why=await trainFishing(s,world,training.level);if(why)return fail(why);}
   const left=plan(need,pack(),[]).missing;

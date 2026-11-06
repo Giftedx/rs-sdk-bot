@@ -52,11 +52,12 @@ export const MINE_SOURCES:Record<number,{name:string;locs:number[];level:number;
  436:{name:'copper rock',locs:[2090,2091],level:1,tiles:[{x:2470,z:3255,level:0},{x:2472,z:3256,level:0},{x:2475,z:3256,level:0},{x:2630,z:3137,level:0},{x:2630,z:3145,level:0},{x:2640,z:3151,level:0},{x:2640,z:3153,level:0},{x:2907,z:3361,level:0},{x:2909,z:3364,level:0},{x:2976,z:3247,level:0},{x:2977,z:3245,level:0},{x:2977,z:3247,level:0},{x:2978,z:3248,level:0},{x:2979,z:3248,level:0},{x:3021,z:9801,level:0},{x:3024,z:9798,level:0},{x:3026,z:9801,level:0},{x:3027,z:9802,level:0},{x:3030,z:9825,level:0},{x:3030,z:9826,level:0},{x:3033,z:9828,level:0},{x:3038,z:9780,level:0},{x:3039,z:9781,level:0},{x:3039,z:9783,level:0},{x:3040,z:9784,level:0},{x:3141,z:9880,level:0},{x:3143,z:9877,level:0},{x:3282,z:3367,level:0},{x:3282,z:3368,level:0},{x:3286,z:3361,level:0},{x:3286,z:3364,level:0},{x:3287,z:3365,level:0},{x:3288,z:3361,level:0},{x:3288,z:9469,level:0},{x:3289,z:3361,level:0},{x:3289,z:3363,level:0},{x:3289,z:9469,level:0},{x:3290,z:3362,level:0},{x:3290,z:9468,level:0},{x:3294,z:9468,level:0},{x:3295,z:9469,level:0},{x:3296,z:3314,level:0},{x:3296,z:9426,level:0},{x:3296,z:9469,level:0},{x:3297,z:3315,level:0},{x:3299,z:3015,level:0},{x:3300,z:3017,level:0},{x:3300,z:9425,level:0},{x:3301,z:3016,level:0},{x:3301,z:3318,level:0},{x:3302,z:3015,level:0},{x:3304,z:9425,level:0},{x:3306,z:9424,level:0}]},
  440:{name:'iron rock',locs:[2092,2093],level:15,tiles:[{x:2435,z:9904,level:0},{x:2435,z:9906,level:0},{x:2436,z:9902,level:0},{x:2436,z:9903,level:0},{x:2437,z:9900,level:0},{x:2439,z:9898,level:0},{x:2440,z:9903,level:0},{x:2488,z:9908,level:0},{x:2581,z:3231,level:0},{x:2583,z:3235,level:0},{x:2589,z:3229,level:0},{x:2589,z:3238,level:0},{x:2590,z:3230,level:0},{x:2591,z:3232,level:0},{x:2592,z:3234,level:0},{x:2602,z:3233,level:0},{x:2602,z:3234,level:0},{x:2602,z:3236,level:0},{x:2605,z:3233,level:0},{x:2605,z:3235,level:0},{x:2605,z:3237,level:0},{x:2625,z:3150,level:0},{x:2625,z:3151,level:0},{x:2626,z:3149,level:0},{x:2626,z:3150,level:0},{x:2627,z:3142,level:0},{x:2628,z:3140,level:0},{x:2628,z:3141,level:0},{x:2634,z:3136,level:0},{x:2638,z:3138,level:0},{x:2667,z:9680,level:0},{x:2667,z:9681,level:0},{x:2669,z:9684,level:0},{x:2672,z:9685,level:0},{x:2673,z:9680,level:0},{x:2691,z:3329,level:0},{x:2692,z:3328,level:0},{x:2693,z:3329,level:0},{x:2696,z:3333,level:0},{x:2697,z:3334,level:0},{x:2710,z:3328,level:0},{x:2711,z:3329,level:0},{x:2712,z:3329,level:0},{x:2713,z:3332,level:0},{x:2714,z:3330,level:0},{x:2715,z:3331,level:0},{x:2722,z:3695,level:0},{x:2723,z:3692,level:0},{x:2723,z:3695,level:0},{x:2723,z:3696,level:0},{x:2724,z:3688,level:0},{x:2725,z:3691,level:0},{x:2725,z:3694,level:0},{x:2727,z:3692,level:0},{x:2728,z:3695,level:0},{x:2848,z:3037,level:0},{x:2903,z:3353,level:0},{x:2904,z:3354,level:0},{x:2904,z:3356,level:0},{x:2968,z:3239,level:0},{x:2969,z:3240,level:0},{x:2969,z:3242,level:0},{x:2971,z:3237,level:0},{x:2981,z:3233,level:0},{x:2982,z:3234,level:0},{x:3032,z:9826,level:0},{x:3033,z:9825,level:0},{x:3036,z:9775,level:0},{x:3037,z:9776,level:0},{x:3039,z:9777,level:0},{x:3044,z:9769,level:0},{x:3045,z:9771,level:0},{x:3053,z:9822,level:0},{x:3054,z:9828,level:0},{x:3057,z:3941,level:0},{x:3075,z:3771,level:0},{x:3076,z:3770,level:0},{x:3076,z:3771,level:0},{x:3088,z:3769,level:0},{x:3089,z:3768,level:0},{x:3090,z:3767,level:0},{x:3090,z:3768,level:0},{x:3091,z:3768,level:0},{x:3099,z:3765,level:0},{x:3099,z:3766,level:0},{x:3099,z:3767,level:0},{x:3099,z:3768,level:0},{x:3100,z:3765,level:0},{x:3100,z:3766,level:0},{x:3101,z:3765,level:0},{x:3101,z:3768,level:0},{x:3104,z:3570,level:0},{x:3105,z:3569,level:0},{x:3139,z:9875,level:0},{x:3141,z:9872,level:0},{x:3143,z:9876,level:0},{x:3175,z:3366,level:0},{x:3175,z:3368,level:0},{x:3181,z:3373,level:0},{x:3284,z:3015,level:0},{x:3285,z:3017,level:0},{x:3285,z:3368,level:0},{x:3285,z:3369,level:0},{x:3286,z:3369,level:0},{x:3287,z:3015,level:0},{x:3288,z:3370,level:0},{x:3294,z:3310,level:0},{x:3295,z:3309,level:0},{x:3295,z:3311,level:0},{x:3302,z:3285,level:0},{x:3303,z:3284,level:0},{x:3303,z:3309,level:0},{x:3303,z:3310,level:0},{x:3304,z:3301,level:0},{x:3305,z:3302,level:0}]},
 };
-// An item a fire leaves: a tinderbox on logs lights a fire that burns 100 to 199 ticks, then ashes lie on its tile for
-// 100 ticks (skill_firemaking/scripts/firemaking.rs2 firemaking_success). The logs are gathered first; the tinderbox is
-// the plan's tool.
+// An item a fire gives: a tinderbox on logs lights a fire that burns 100 to 199 ticks, then ashes lie on its tile for
+// 100 ticks (skill_firemaking/scripts/firemaking.rs2 firemaking_success); cooked meat used on the fire burns every time
+// (skill_cooking/configs/cooking_source/cooking_generic.dbrow cooking_burn_meat, successchance 1,1). The logs and the
+// item `uses` are gathered first; the tinderbox is the plan's tool.
 export const TINDERBOX=590,LOGS=1511,FIRE_TICKS=200;
-export const BURN_SOURCES:Record<number,{name:string;logs:number}>={592:{name:'ashes',logs:LOGS}};
+export const BURN_SOURCES:Record<number,{name:string;logs:number;uses?:number}>={592:{name:'ashes',logs:LOGS},2146:{name:'burnt meat',logs:LOGS,uses:2142}};
 // An item taken from a loc by using items on it in turn, each use consumed: a bucket of wax from a Catherby beehive
 // (area_seers/scripts/bees.rs2: insect repellent clears the bees, then an empty bucket takes the wax; a bucket on a
 // hive with bees stings). The uses are gathered first, as a recipe's ingredients are.
@@ -195,7 +196,7 @@ export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:
    gathers.push({...m,how:'use'});
   }
   else if(MINE_SOURCES[m.id]&&nearest(MINE_SOURCES[m.id]!.tiles,at).some(t=>d(t)<sold)){gathers.push({...m,how:'mine'});if(!tools.some(t=>t.id===BRONZE_PICKAXE))tools.push({id:BRONZE_PICKAXE,count:1});}
-  else if(BURN_SOURCES[m.id]&&depth<4){place({id:BURN_SOURCES[m.id]!.logs,count:m.count},depth+1);tools.push({id:TINDERBOX,count:1});gathers.push({...m,how:'burn'});}
+  else if(BURN_SOURCES[m.id]&&depth<4){const b=BURN_SOURCES[m.id]!;place({id:b.logs,count:m.count},depth+1);if(b.uses)place({id:b.uses,count:m.count},depth+1);if(!tools.some(t=>t.id===TINDERBOX))tools.push({id:TINDERBOX,count:1});gathers.push({...m,how:'burn'});}
   else still.push(m);
  };
  for(const m of missing)place(m,0);
@@ -245,13 +246,24 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
     }else if(g.how==='burn'){
      const src=BURN_SOURCES[g.id]!,inv=st()?.inventory??[],tinder=inv.find((i:any)=>i.id===TINDERBOX),logs=inv.find((i:any)=>i.id===src.logs);
      if(!tinder||!logs)return `${src.name} needs ${TINDERBOX} and ${src.logs} in the pack`;
+     if(src.uses&&!inv.some((i:any)=>i.id===src.uses))return `${src.name} needs ${src.uses} in the pack`;
      const fireAt=here(),logsHeld=held(src.logs);
      await s.direct({type:'useItemOnItem',sourceSlot:tinder.slot,targetSlot:logs.slot,reason:'SDK'});
      // The server swings the tinderbox again every four ticks until the fire catches; logs still held after 30 ticks mean
      // the tile takes no fire, and the next try stands two tiles west.
      if(!await waitUntil(s,()=>held(src.logs)<logsHeld,{timeoutTicks:30})){console.log(`QUEST_SWEEP_BURN ${JSON.stringify({item:g.id,at:fireAt,lit:false})}`);await walk({x:fireAt.x-2,z:fireAt.z,level:fireAt.level});continue;}
-     const ashes=()=>(st()?.groundItems??[]).filter((i:any)=>i.id===g.id&&i.distance<=4).sort((a:any,b:any)=>a.distance-b.distance)[0];
      const lit=s.tick();
+     if(src.uses){
+      // The fire stands on the tile the logs were lit on; the item goes on it as soon as the loc shows.
+      const fire=()=>(st()?.nearbyLocs??[]).find((l:any)=>/^fire$/i.test(l.name)&&Math.max(Math.abs(l.x-fireAt.x),Math.abs(l.z-fireAt.z))<=1);
+      if(!await waitUntil(s,()=>!!fire(),{timeoutTicks:10})){console.log(`QUEST_SWEEP_BURN ${JSON.stringify({item:g.id,at:fireAt,lit:true,fire:false})}`);continue;}
+      const item=(st()?.inventory??[]).find((i:any)=>i.id===src.uses);
+      const r:any=await s.bot.useItemOnLoc(item,fire());
+      await waitUntil(s,()=>held(g.id)>before,{timeoutTicks:15});
+      console.log(`QUEST_SWEEP_BURN ${JSON.stringify({item:g.id,at:fireAt,lit:true,used:src.uses,ok:r?.success,held:held(g.id),target})}`);
+      continue;
+     }
+     const ashes=()=>(st()?.groundItems??[]).filter((i:any)=>i.id===g.id&&i.distance<=4).sort((a:any,b:any)=>a.distance-b.distance)[0];
      if(!await waitUntil(s,()=>!!ashes(),{timeoutTicks:FIRE_TICKS+20})){console.log(`QUEST_SWEEP_BURN ${JSON.stringify({item:g.id,at:fireAt,lit:true,ashes:false,ticks:s.tick()-lit})}`);continue;}
      await s.bot.pickupItem(ashes());
      await waitUntil(s,()=>held(g.id)>before,{timeoutTicks:15});

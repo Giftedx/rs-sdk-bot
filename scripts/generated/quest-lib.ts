@@ -400,10 +400,24 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         stats.walkTicks += T() - t1;
     };
 
+    // A bow account wields the bow and the arrows in its pack before a fight the quest script runs itself (Prince Ali's
+    // jail guard, Hazeel Cult's Alomone): at a low Attack its hands cut nothing down. The sweep brings them as
+    // QUEST_ARROWS; a pack without them wields nothing and the fight goes on as it stands.
+    const BOWS = [841, 839, 843, 845], ARROWS = [884, 886, 882];
+    const wieldBow = async (): Promise<void> => {
+        const worn = () => s.sdk.getEquipment().map((i: any) => i.id);
+        for (const ids of [BOWS, ARROWS]) {
+            if (ids.some(id => worn().includes(id))) continue;
+            const item: any = (st()?.inventory ?? []).find((i: any) => ids.includes(i.id));
+            if (!item) return;
+            await s.bot.equipItem(item);
+            await waitUntil(s, () => worn().includes(item.id), { timeoutTicks: 5 });
+        }
+    };
     return {
         s, st, pos, inv, hp, xp, cnt, has, slot, cheb, near, lvl, dialogOpen, sawText, msgCount, T, stats, milestone, dispose,
         blockDoor, guard, fail, end, gains, detail, opLoc, locs, findLoc, locAt, opIndex, npc, talkTo, useOnLoc, useOnNpc, useOnItem,
-        step, converse, walk, talk, climb, teleport, canCast, openDoor, shutAt, dash,
+        step, converse, walk, talk, climb, teleport, canCast, openDoor, shutAt, dash, wieldBow,
         waitTicks: async (n: number) => { const until=s.tick()+n;if(n>0)await waitUntil(s,()=>s.tick()>=until||stats.died||retreating||T()>CAP,{timeoutTicks:n,signal:sustain.aborted});await guard('wait'); },
         waitUntil: async (f: () => boolean, ticks: number) => {const reached=await waitUntil(s, () => f() || stats.died||retreating||T()>CAP, { timeoutTicks: ticks,signal:sustain.aborted });await guard('wait condition');return reached;},
     };
