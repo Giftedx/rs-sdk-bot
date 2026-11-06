@@ -314,7 +314,14 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
  const productionWindow=new Set(pending.filter(r=>r.spec.kind==='run'&&r.spec.dependsOn.some(id=>{
   const dep=records.get(id);return !!dep&&dep.spec.capability===r.spec.capability&&dep.receipt?.output?.delivery?.ok&&(dep.receipt.at??0)>(lastLiveStartByCapability.get(r.spec.capability!)??0);
  })).map(r=>r.spec.id));
- const activeNames=new Set(running.filter(r=>r.spec.kind==='run').flatMap(r=>boundAccounts(r.spec,state)??[]).map(n=>n.toLowerCase()));
+ const activeNames=new Set<string>();
+ let liveSlotsLeft=resources.liveLimit??Infinity;
+ for(const {spec} of running){
+  if(spec.kind==='run'){
+   liveSlotsLeft-=spec.participants?.length??1;
+   for(const name of boundAccounts(spec,state)??[])activeNames.add(name.toLowerCase());
+  }else if(spec.kind==='provision')liveSlotsLeft--;
+ }
  // An isolated build changes the main checkout only when it publishes, so a qualification for a waiting live run
  // goes ahead of builds and of another focus; the run normally ends before that publish.
  const liveQualifies=new Set(resources.isolatedBuilds?pending.filter(r=>r.spec.kind==='qualify'&&liveDependencies.has(r.spec.id)).map(r=>r.spec.id):[]);
@@ -325,7 +332,6 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
   // With isolated builds a focus only orders work; other capabilities still build in the free slots.
   if(!resources.isolatedBuilds&&!liveQualify&&resources.focusCapability&&['build','qualify'].includes(r.spec.kind)&&!focusCaps.has(r.spec.capability!))return false;
   if(r.spec.kind==='qualify'&&buildWaiting&&!liveQualify)return false;
-  if(r.spec.kind==='run'&&running.filter(a=>a.spec.kind==='run').length>=(resources.liveLimit??Infinity))return false;
   if(r.spec.kind!=='run'&&running.filter(a=>a.spec.kind!=='run').length>=(resources.developmentLimit??Infinity))return false;
   if(r.spec.kind==='build'&&!canBuild(r)||r.spec.kind==='qualify'&&resources.nativeReady===false)return false;
   // Isolated builds author apart and delivery-cli gives native checks one practice turn each, so development tasks
@@ -335,12 +341,12 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
   if(r.spec.kind==='provision'&&!provisionClaims.has(r.spec.id))return false;
   if(r.spec.kind==='provision'&&running.some(a=>a.spec.kind==='provision'))return false;
   if(r.spec.kind==='provision'&&running.some(a=>a.spec.kind==='build'))return false;
-  if(r.spec.kind==='provision'&&new Set(running.filter(a=>a.spec.kind==='run').flatMap(a=>boundAccounts(a.spec,state)??[])).size>=(resources.liveLimit??Infinity))return false;
+  if(r.spec.kind==='provision'&&liveSlotsLeft<1)return false;
   if(r.spec.kind==='run'){
    if(resources.isolatedBuilds){if(resources.publishPending)return false;}
    else if(buildWaiting&&!resources.preferLive&&!productionWindow.has(r.spec.id)||running.some(a=>a.spec.kind==='build'))return false;
    const names=boundAccounts(r.spec,state);
-   if(!names?.length||names.some(n=>activeNames.has(n.toLowerCase())))return false;
+   if(!names?.length||names.length>liveSlotsLeft||names.some(n=>activeNames.has(n.toLowerCase())))return false;
    if(resources.runHeld?.(r.spec))return false;
   }
   return true;
