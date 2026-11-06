@@ -57,7 +57,7 @@ test('Heckel stages the southern gate, observes the north side, and names a fail
  expect(await fetchHeckelDust(io)).toMatchObject({ok:false,detail:expect.stringContaining('north arrival unobserved')});
 });
 import {readFileSync} from 'node:fs';
-import {leaveToManorTrip,plan,needs,nearestBank,presetFor,leaveStronghold,leaveFortress,walkCorridor,KARAMJA,gatherPlan,MILK,BUCKET,generalStores,fetchManorFishFood,manorFoodNeed,manorPoisonNeed,reserveInputSlots,FOOD,type ManorIO} from './quest-sweep';
+import {leaveToManorTrip,plan,mealPlan,needs,nearestBank,presetFor,leaveStronghold,leaveFortress,walkCorridor,KARAMJA,gatherPlan,MILK,BUCKET,generalStores,fetchManorFishFood,manorFoodNeed,manorPoisonNeed,reserveInputSlots,FOOD,type ManorIO} from './quest-sweep';
 import {spawnsByDistance} from '../packages/core/src/spawn-index';
 import {equipment,questSweepChecks} from '../packages/practice/src/quest-sweep-proof';
 import type {Session} from '../packages/core/src/inprocess';
@@ -1376,4 +1376,14 @@ test('Elena saved proof requires bought dust, exact coins/assets, completion, XP
  expect(verify(log.replace('"observed":true','"observed":false'))).toMatchObject({bought:false});
  expect(verify(log.replace('QUEST_SWEEP_TREE_EXIT','OMITTED_TREE_EXIT'))).toMatchObject({treeExit:false});
  expect(verify(log.replace('"z":3491','"z":3494'))).toMatchObject({treeExit:false});
+});
+
+test('the meal takes the preset food kinds first, then the best other edibles the bank holds for the units still short',()=>{
+ const food=new Map([[379,4],[563,5]]);
+ // No lobsters banked: four sharks stand in; the law runes are not edible and stay missing.
+ expect(mealPlan(food,[],[{id:385,count:16},{id:1895,count:3}])).toEqual([{id:385,count:4}]);
+ // One lobster banked and two sharks in the pack: the lobster, then one more edible unit.
+ expect(mealPlan(food,[{id:385,count:2}],[{id:379,count:1},{id:333,count:5}])).toEqual([{id:379,count:1},{id:333,count:1}]);
+ // Enough lobsters: nothing else.
+ expect(mealPlan(food,[],[{id:379,count:9},{id:385,count:9}])).toEqual([{id:379,count:4}]);
 });
