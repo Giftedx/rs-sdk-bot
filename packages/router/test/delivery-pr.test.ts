@@ -223,6 +223,33 @@ test('a pushed branch still waits for its earlier delivery before opening a PR',
  expect(merged.calls.some(cmd=>cmd[1]==='push'||cmd[1]==='commit')).toBe(false);
 });
 
+test('a missing local prerequisite needs a same-repository merge into master',async()=>{
+ const s=setup(),first=stage(s,s.build('first'),'build-first',[FILE],10)!;
+ const now=Date.now()+1,second=stage(s,s.build('second'),'build-second',[FILE],now)!;
+ expect(second.prerequisites).toEqual([first.taskId]);
+ unlinkSync(join(deliveryPrDir(s.coord),first.taskId+'.json'));
+ const git=stub(),lookup:string[][]=[];
+ let merged=false;
+ const run:Run=async(cmd,cwd)=>{
+  if(cmd[0]==='gh'&&cmd[2]==='list'&&cmd.includes(first.branch)){
+   lookup.push(cmd);
+   return {code:0,stdout:merged?'42\n':'',stderr:''};
+  }
+  return git.run(cmd,cwd);
+ };
+ const held=await processDeliveryPrs(s.coord,s.main,run,now,s.base);
+ expect(held.waiting[0]).toMatchObject({taskId:second.taskId,attempts:0,nextAt:now+PREREQUISITE_WAIT_MS});
+ expect(held.waiting[0]!.lastError).toContain(first.branch);
+ expect(lookup[0]).toEqual(['gh','pr','list','--head',first.branch,'--base','master','--state','merged',
+  '--json','number,isCrossRepository','--jq','map(select(.isCrossRepository == false)) | .[0].number // empty']);
+ expect(git.calls.map(cmd=>cmd.slice(0,3))).toEqual([['gh','pr','list']]);
+ merged=true;
+ const released=await processDeliveryPrs(s.coord,s.main,run,now+PREREQUISITE_WAIT_MS,s.base);
+ expect(released.opened[0]).toMatchObject({taskId:second.taskId,state:'opened'});
+ expect(lookup).toHaveLength(2);
+ expect(existsSync(join(deliveryPrDir(s.coord),first.taskId+'.json'))).toBe(false);
+});
+
 test.each(['branch','pull request'] as const)('reusing a %s requires the staged qualified definition at its exact head',async(kind)=>{
  for(const match of ['missing','changed','exact'] as const){
   const s=setup(),pr=stage(s,s.build(),'build-reuse')!;
