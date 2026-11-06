@@ -2,7 +2,8 @@ import {test,expect} from 'bun:test';
 import {initialState,addTasks,startTask,finishTask,chooseTask,refreshQualifications,qualificationDemand,buildWorkOrder,fleetExpansion,activeBuildFocus,preparedNativeDelivery,compactState,ARCHIVE_AFTER_MS,type CoordTask} from '../src/coordinator';
 import {acceptProposal,gameCoverage,GAME_SKILLS,plannerPrompt,queueFacts} from '../src/coordinator-planner';
 import {buildBrief} from '../src/author';
-import {nativeDispatchReady} from '../src/coordinator-cli';
+import {fleetExpansionDemand,nativeDispatchReady} from '../src/coordinator-cli';
+import {reviewHold} from '../src/coordinator-decisions';
 import {PRACTICE_STARTUP_GB} from '../../core/src/memory';
 const task=(id:string,extra:Partial<CoordTask>={}):CoordTask=>({id,kind:'qualify',goal:'quests',capability:'quest-order',dependsOn:[],priority:5,estimatedMs:60000,why:'Finish useful quest',...extra});
 const run=(id:string,deps:string[]=[])=>task(id,{kind:'run',account:'Helper',dependsOn:deps,accept:{quests:["Cook's Assistant"]}});
@@ -238,6 +239,15 @@ test('capacity grows only on useful live receipts, real demand and healthy measu
  const s={limit:17,demand:30,freeGB:16,reserveGB:8,cpu:.5,tickMs:400,stalled:false,usefulResults:2,now:1000000,lastExpandedAt:0};
  expect(fleetExpansion(s)).toBe(21);expect(fleetExpansion({...s,demand:19})).toBe(19);
  for(const change of [{usefulResults:0},{demand:17},{freeGB:11},{cpu:null},{cpu:.9},{tickMs:null},{tickMs:1000},{stalled:true},{lastExpandedAt:999999}])expect(fleetExpansion({...s,...change})).toBe(17);
+});
+test('fleet expansion counts a pending run only after its source review hold lifts',()=>{
+ const s=initialState(),capability='supply-order';
+ addTasks(s,[run('active'),{...run('next'),capability,account:'Other'},task('review',{kind:'review',capability})],0);
+ startTask(s,'active',1,'active');
+ complete(s,'review',false,3,{evidence:'source-review',source:'rejected',review:{approved:false,reason:'wrong item'}});
+ const demand=(source:string)=>fleetExpansionDemand(s,r=>reviewHold(s,r.capability!,()=>source)!==null);
+ expect(demand('rejected')).toEqual({active:new Set(['helper']),demand:1});
+ expect(demand('repaired')).toEqual({active:new Set(['helper']),demand:2});
 });
 test('the planner progress clock ignores recovery, refused, future and crossed live receipts',()=>{
  const s=initialState();

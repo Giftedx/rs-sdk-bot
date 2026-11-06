@@ -55,15 +55,20 @@ const sourceErrors=new Map<string,string>();
 const cpuTotals=()=>cpus().reduce((s,c)=>({idle:s.idle+c.times.idle,total:s.total+Object.values(c.times).reduce((a,b)=>a+b,0)}),{idle:0,total:0});
 let previousCpu=cpuTotals();
 const tickSamples=new Map<string,{started:number;tick:number;at:number;latency:number|null}>();
+export function fleetExpansionDemand(state:CoordinatorState,runHeld:(task:CoordTask)=>boolean){
+ const records=new Map(state.tasks.map(r=>[r.spec.id,r]));
+ const running=state.tasks.filter(r=>r.status==='running'&&r.spec.kind==='run');
+ const ready=state.tasks.filter(r=>r.status==='pending'&&r.spec.kind==='run'
+  &&r.spec.dependsOn.every(id=>records.get(id)?.status==='succeeded')&&!runHeld(r.spec));
+ const preparedClaims=preparedProvisionClaims(state,records,undefined,runHeld);
+ const active=new Set(running.flatMap(r=>boundAccounts(r.spec,state)??[]).map(n=>n.toLowerCase()));
+ const demand=new Set([...active,...ready.flatMap(r=>boundAccounts(r.spec,state)??[]).map(n=>n.toLowerCase())]).size+preparedClaims.size;
+ return {active,demand};
+}
 async function expandUsefulFleet(state:CoordinatorState,config:any,runHeld:(task:CoordTask)=>boolean){
  if(!config.autoExpand)return;
  const now=Date.now(),cpu=cpuTotals(),delta=cpu.total-previousCpu.total,usage=delta>0?1-(cpu.idle-previousCpu.idle)/delta:null;previousCpu=cpu;
- const records=new Map(state.tasks.map(r=>[r.spec.id,r]));
- const running=state.tasks.filter(r=>r.status==='running'&&r.spec.kind==='run');
- const ready=state.tasks.filter(r=>r.status==='pending'&&r.spec.kind==='run'&&r.spec.dependsOn.every(id=>records.get(id)?.status==='succeeded'));
- const preparedClaims=preparedProvisionClaims(state,records,undefined,runHeld);
- const demand=new Set([...running,...ready].flatMap(r=>boundAccounts(r.spec,state)??[]).map(n=>n.toLowerCase())).size+preparedClaims.size;
- const active=new Set(running.flatMap(r=>boundAccounts(r.spec,state)??[]).map(n=>n.toLowerCase()));
+ const {active,demand}=fleetExpansionDemand(state,runHeld);
  const rows=new Map(liveRows().map(r=>[String(r.name).toLowerCase(),r]));let stalled=false;const latencies:number[]=[];
  for(const name of active){
   const row=rows.get(name);if(!row||row.server!=='rs-sdk-demo.fly.dev'||now-row.at>5000||!Number.isFinite(row.tick)){stalled=true;continue;}
