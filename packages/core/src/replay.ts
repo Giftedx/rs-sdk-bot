@@ -97,6 +97,8 @@ export async function replayRecord(lines: any[], run: () => Promise<unknown>, op
         if (opened) throw new Error('replay serves one session per record');
         opened = true;
         shim.start();
+        // The capture starts after openBot is ready. Give the SDK that state without advancing a tick.
+        if (firstPublish?.k === 'p') sdk['handleMessage'](JSON.stringify({ type: 'sdk_state', state }));
         shim.record(compare);
         return session;
     });
