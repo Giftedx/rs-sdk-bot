@@ -19,10 +19,13 @@ import {readLogoutProof} from '../../core/src/session-lifecycle';
 // A controller that wrote .practice/swarm-state.json under this pid and nonce within this window is the saved
 // controller: no PowerShell command-line probe is needed while its pid is alive.
 export const CONTROLLER_STATE_FRESH_MS=10_000;
-export function controllerStateFresh(owner:{pid:number;nonce:string},base=projectRoot,now=Date.now()):boolean{
+export function readFreshControllerState(owner:{pid:number;nonce:string},base=projectRoot,now=Date.now()){
  try{const s=JSON.parse(readFileSync(join(base,'.practice/swarm-state.json'),'utf8'));
-  return s.controllerPid===owner.pid&&s.coordinatorOwner===owner.nonce&&Number.isFinite(s.at)&&now-s.at>=0&&now-s.at<CONTROLLER_STATE_FRESH_MS;}
- catch{return false;}
+  return s.controllerPid===owner.pid&&s.coordinatorOwner===owner.nonce&&Number.isFinite(s.at)&&now-s.at>=0&&now-s.at<CONTROLLER_STATE_FRESH_MS?s:null;}
+ catch{return null;}
+}
+export function controllerStateFresh(owner:{pid:number;nonce:string},base=projectRoot,now=Date.now()):boolean{
+ return readFreshControllerState(owner,base,now)!==null;
 }
 
 export function liveRows(base=projectRoot){
