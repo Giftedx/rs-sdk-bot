@@ -6,6 +6,7 @@ import {migrateCoordinatorJobs,currentRevision,REVISION_FRESH_MS,rulePassDue} fr
 import {PLAN_GAP_MS,plannerDue} from '../src/coordinator-decisions';
 import {disableOwnJob,ensureSwarm,controllerStateFresh,CONTROLLER_STATE_FRESH_MS} from '../src/coordinator-live';
 import {atomicJson,saveState,loadState} from '../src/coordinator-store';
+import * as planner from '../src/coordinator-planner';
 import {initialState,addTasks,startTask,finishTask,type CoordTask} from '../src/coordinator';
 import {readCoordinatorJobs,readMergedPlan,writeCoordinatorJobs,coordinatorJobsPath} from '../../core/src/coordinator-jobs';
 
@@ -54,6 +55,25 @@ test('a fresh controller state under the saved pid and nonce replaces the comman
  atomicJson(join(base,'.practice/swarm-state.json'),{at:1000-CONTROLLER_STATE_FRESH_MS,controllerPid:process.pid,coordinatorOwner:'controller'});
  await expect(ensureSwarm('new',deps as any,false)).rejects.toThrow('command ownership is unknown');
  expect(probes).toBe(1);
+});
+test('planner capacity uses only a fresh heartbeat from the saved controller owner',()=>{
+ const base=fixture(),at=1000;
+ const lease=join(base,'.practice/coordinator/swarm-owner.json');
+ const heartbeat=join(base,'.practice/swarm-state.json');
+ const owner={pid:process.pid,nonce:'controller'};
+ const sample={at,controllerPid:owner.pid,coordinatorOwner:owner.nonce,running:2,externalRunning:1,
+  pendingStartup:1,pendingReserveGB:1,freeGB:6.5,minFreeGB:4,maxBots:18};
+ atomicJson(lease,owner);
+ atomicJson(heartbeat,sample);
+ expect(planner.readPlannerControllerCapacity(base,at)).toEqual({at,running:2,externalRunning:1,
+  pendingStartup:1,pendingReserveGB:1,freeGB:6.5,minFreeGB:4,maxBots:18});
+ expect(planner.readPlannerControllerCapacity(base,at+CONTROLLER_STATE_FRESH_MS)).toBeNull();
+ expect(planner.readPlannerControllerCapacity(base,at-1)).toBeNull();
+ atomicJson(heartbeat,{...sample,externalRunning:undefined,pendingReserveGB:-1});
+ expect(planner.readPlannerControllerCapacity(base,at)).toMatchObject({running:2,externalRunning:null,pendingReserveGB:null});
+ atomicJson(lease,{...owner,nonce:'replacement'});
+ expect(planner.readPlannerControllerCapacity(base,at)).toBeNull();
+ expect(planner.readPlannerControllerCapacity(fixture(),at)).toBeNull();
 });
 test('a standing rollout pauses and resumes jobs through the coordinator file; swarm.json keeps its bytes',async()=>{
  const base=fixture(),dir=join(base,'.practice/coordinator'),path=join(base,'swarm.json'),raw=JSON.stringify({maxBots:17,minFreeGB:4,jobs:owner},null,2)+'\n';

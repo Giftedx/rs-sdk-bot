@@ -57,7 +57,7 @@ test('Heckel stages the southern gate, observes the north side, and names a fail
  expect(await fetchHeckelDust(io)).toMatchObject({ok:false,detail:expect.stringContaining('north arrival unobserved')});
 });
 import {readFileSync} from 'node:fs';
-import {leaveToManorTrip,plan,needs,nearestBank,presetFor,leaveStronghold,leaveFortress,walkCorridor,KARAMJA,gatherPlan,MILK,BUCKET,generalStores,fetchManorFishFood,manorFoodNeed,reserveInputSlots,FOOD,type ManorIO} from './quest-sweep';
+import {leaveToManorTrip,plan,mealPlan,walkFar,needs,nearestBank,presetFor,leaveStronghold,leaveFortress,walkCorridor,KARAMJA,gatherPlan,MILK,BUCKET,generalStores,fetchManorFishFood,manorFoodNeed,manorPoisonNeed,reserveInputSlots,FOOD,type ManorIO} from './quest-sweep';
 import {spawnsByDistance} from '../packages/core/src/spawn-index';
 import {equipment,questSweepChecks} from '../packages/practice/src/quest-sweep-proof';
 import type {Session} from '../packages/core/src/inprocess';
@@ -624,6 +624,33 @@ test('north-side bank entry opens gate190 at its loc tile and observes the south
  }finally{clearInterval(timer);}
 });
 
+test('a run resumed in the Hazeel cave climbs its stairs before the bank walk; above ground nothing is clicked',async()=>{
+ const {leaveHazeelCave}=await import('./quest-sweep');
+ let player={worldX:2570,worldZ:9680,level:0},tick=0;
+ const clicks:any[]=[],walks:unknown[]=[];
+ const listeners=new Set<()=>void>();
+ const s={sdk:{getState:()=>({player})},tick:()=>tick,
+  onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},
+  direct:async(a:any)=>{clicks.push(a);return{success:true};}} as unknown as Session;
+ const timer=setInterval(()=>{tick++;
+  const last=clicks[clicks.length-1];
+  if(last?.locId===2853&&player.worldZ>9000)player={worldX:2587,worldZ:3237,level:0};
+  for(const cb of listeners)cb();},1);
+ try{
+  const result=await leaveHazeelCave(s,async(to)=>{walks.push(to);const t=to[to.length-1]!;player={worldX:t.x,worldZ:t.z,level:t.level};return{ok:true};});
+  expect(result).toEqual({ok:true});
+  expect(clicks.map(c=>[c.locId,c.x,c.z])).toEqual([[2853,2570,9683]]);
+  expect(walks).toEqual([[{x:2570,z:9682,level:0}]]);
+  expect(player).toEqual({worldX:2587,worldZ:3237,level:0});
+  clicks.length=0;walks.length=0;
+  expect(await leaveHazeelCave(s,async(to)=>{walks.push(to);return{ok:true};})).toEqual({ok:true});
+  expect(clicks).toEqual([]);expect(walks).toEqual([]);
+  player={worldX:2606,worldZ:9692,level:0};
+  const stuck=await leaveHazeelCave(s,async()=>({ok:true}));
+  expect(stuck).toEqual({ok:false,detail:'hazeel cave stairs foot 2570,9682,0 unobserved at 2606,9692,0'});
+ }finally{clearInterval(timer);}
+});
+
 test('Mightyrod fortress box-room entry pushes the secret wall and descends the hall ladder before bank selection',async()=>{
  let player={worldX:3029,worldZ:3505,level:1},tick=0;
  const clicks:any[]=[],walks:unknown[]=[];
@@ -667,10 +694,11 @@ test('Ernest fish food has only a level-1 Manor spawn, so the ground-floor gathe
 });
 
 const manorWorld=()=>{
- const s={pos:{x:3094,z:3491,level:0},held:0,ground:true as boolean,frontOpens:true,ops:[] as string[],walks:[] as string[],picks:0};
+ const s={pos:{x:3094,z:3491,level:0},held:0,ground:true as boolean,frontOpens:true,ops:[] as string[],walks:[] as string[],picks:0,poisonHeld:0,poisonGround:true,travels:[] as string[]};
  const io:ManorIO={
-  pos:()=>({...s.pos}),held:()=>s.held,ground:()=>s.ground&&s.pos.level===1?{x:3108,z:3356}:undefined,
-  travel:async to=>{s.pos={...to};return{ok:true};},
+  pos:()=>({...s.pos}),held:item=>item.id===273?s.poisonHeld:s.held,
+  ground:item=>item.id===273?(s.poisonGround&&s.pos.level===0&&s.pos.x===3097?{x:3097,z:3366}:undefined):(s.ground&&s.pos.level===1?{x:3108,z:3356}:undefined),
+  travel:async to=>{s.travels.push(`${to.x},${to.z},${to.level}`);s.pos={...to};return{ok:true};},
   walk:async to=>{const t=to[to.length-1]!;
    // Each leg is a real level-local route in the pinned collision.
    if(t.level===s.pos.level&&(t.x!==s.pos.x||t.z!==s.pos.z))expect(findLongPath(t.level,s.pos.x,s.pos.z,t.x,t.z).at(-1)).toMatchObject({x:t.x,z:t.z});
@@ -679,7 +707,7 @@ const manorWorld=()=>{
    if(loc.id===134&&s.frontOpens&&s.pos.z===3352)s.pos={x:3108,z:3354,level:0};
    if(loc.id===1730&&s.pos.level===0)s.pos={x:s.pos.x,z:s.pos.z+4,level:1};
    if(loc.id===1731&&s.pos.level===1)s.pos={x:s.pos.x,z:s.pos.z-4,level:0};},
-  pickup:async()=>{s.picks++;if(s.ground){s.ground=false;s.held++;}},
+  pickup:async(_g,item)=>{s.picks++;if(item.id===273){if(s.poisonGround){s.poisonGround=false;s.poisonHeld++;}}else if(s.ground){s.ground=false;s.held++;}},
   wait:async ok=>ok(),
  };
  return{s,io};
@@ -691,6 +719,21 @@ test('the Manor trip enters by the front door, picks up exactly one fish food up
  expect(s.walks).toEqual(['3108,3352,0','3108,3362,0','3108,3356,1','3108,3366,1','3123,3361,0']);
  expect([s.held,s.picks]).toEqual([1,1]);
  expect(s.pos).toEqual({x:3123,z:3361,level:0});
+});
+test('the Manor trip takes the poison from the west room on the way to the stairs, or alone',async()=>{
+ const both=manorWorld();
+ expect(await fetchManorFishFood(both.io,presetFor('haunted').position,{food:true,poison:true})).toEqual({ok:true});
+ expect(both.s.travels.slice(1)).toEqual(['3097,3366,0','3108,3362,0']);
+ expect([both.s.poisonHeld,both.s.held,both.s.picks]).toEqual([1,1,2]);
+ expect(both.s.pos).toEqual({x:3123,z:3361,level:0});
+ const alone=manorWorld();
+ expect(await fetchManorFishFood(alone.io,presetFor('haunted').position,{food:false,poison:true})).toEqual({ok:true});
+ expect(alone.s.ops).toEqual(['134@3108,3353']);
+ expect([alone.s.poisonHeld,alone.s.held]).toEqual([1,0]);
+ const gone=manorWorld();gone.s.poisonGround=false;
+ expect(await fetchManorFishFood(gone.io,presetFor('haunted').position,{food:false,poison:true})).toEqual({ok:false,detail:'manor fish food ground poison unobserved at 3097,3366,0'});
+ expect(leaveToManorTrip([{id:272},{id:273},{id:952}],true,true)).toEqual([{id:952}]);
+ expect(manorPoisonNeed('haunted',[{id:273,count:1}])).toBe(true);expect(manorPoisonNeed('haunted',[{id:272,count:1}])).toBe(false);
 });
 test('the Manor trip refuses with its position when the door, the spawn or the inventory credit is unobserved',async()=>{
  const shut=manorWorld();shut.s.frontOpens=false;
@@ -740,10 +783,10 @@ test('missing items a shop sells are bought with coins taken for them; unsold it
 
 test('an unsold item is gathered from a ground spawn or, for milk, a cow and a bucket; the rest stays missing',()=>{
  const at={x:3200,z:3200,level:0},spawns=(id:number)=>id===753?[{x:3266,z:3361,level:0}]:[];
- const g=gatherPlan([{id:753,count:1},{id:MILK,count:1},{id:440,count:2}],at,spawns);
+ const g=gatherPlan([{id:753,count:1},{id:MILK,count:1},{id:1205,count:2}],at,spawns);
  expect(g.gathers).toEqual([{id:753,count:1,how:'spawn'},{id:MILK,count:1,how:'milk'}]);
  expect(g.tools).toEqual([{id:BUCKET,count:1}]);
- expect(g.still).toEqual([{id:440,count:2}]);
+ expect(g.still).toEqual([{id:1205,count:2}]);
 });
 
 test('a nearer spawn beats a far shop; a nearer shop keeps the item in the shop plan',()=>{
@@ -751,6 +794,12 @@ test('a nearer spawn beats a far shop; a nearer shop keeps the item in the shop 
  expect(gatherPlan([{id:1944,count:1}],at,spawns,()=>500).gathers).toEqual([{id:1944,count:1,how:'spawn'}]);
  expect(gatherPlan([{id:1944,count:1}],at,spawns,()=>20).still).toEqual([{id:1944,count:1}]);
  expect(gatherPlan([{id:MILK,count:1}],at,spawns,()=>30).still).toEqual([{id:MILK,count:1}]);
+});
+test('milk is milked from a cow when the cow is nearer than both the milk spawn and the seller',()=>{
+ const lumbridge={x:3222,z:3218,level:0};
+ const farSpawn=(id:number)=>id===MILK?[{x:2685,z:3683,level:0}]:[];
+ const g=gatherPlan([{id:MILK,count:1}],lumbridge,farSpawn,()=>700);
+ expect(g.gathers).toEqual([{id:MILK,count:1,how:'milk'}]);expect(g.tools).toEqual([{id:BUCKET,count:1}]);expect(g.still).toEqual([]);
 });
 
 test('general stores come nearest first, one tile per keeper, and only general shops',()=>{
@@ -790,7 +839,8 @@ test("Merlin's Crystal: the wax comes off a Catherby beehive after its repellent
  expect(arrowsFor(530,1)).toBe(15);expect(arrowsFor(2136,1)).toBe(6);
  // The quest's own fight, Sir Mordred, takes forty arrows more from a bow account.
  const {QUEST_ARROWS}=await import('./quest-sweep');
- expect(QUEST_ARROWS['merlin']).toBe(40);expect(QUEST_ARROWS['imp']).toBeUndefined();
+ expect(QUEST_ARROWS['merlin']).toBe(40);expect(QUEST_ARROWS['prince']).toBe(30);expect(QUEST_ARROWS['hazeelcult']).toBe(20);expect(QUEST_ARROWS['scorpion']).toBe(40);expect(QUEST_ARROWS['imp']).toBeUndefined();
+ const {QUEST_CASTS}=await import('./quest-sweep');expect(QUEST_CASTS['hazeelcult']).toBe(12);expect(QUEST_CASTS['scorpion']).toBeUndefined();expect(QUEST_CASTS['imp']).toBeUndefined();
 });
 
 test("Pirate's Treasure needs no bananas from the sweep: the script picks them on Karamja, and the bank pass keeps their slots",async()=>{
@@ -844,6 +894,13 @@ test('withdrawal slots count a stack once and nothing for a stack the pack alrea
  // An edible quest ingredient the preset needs (Family Crest's cooked fish, 5) is kept whatever the pressure.
  const fishy=[{id:995,count:30},...Array.from({length:5},()=>({id:333,count:1})),...Array.from({length:22},()=>({id:385,count:1}))];
  expect(depositPlan(fishy,27,id=>id===333)).toEqual([{id:385,count:22}]);
+ // Another quest's untradeable leftovers (eight kinds) are kept until the food is gone and the inputs still want
+ // slots; then whole kinds go, as few as free the slots. Without `spare` they all stay.
+ const spareIds=[901,902,903,904,905,906,907,908],spare=(id:number)=>spareIds.includes(id);
+ const cluttered=[{id:995,count:300},...spareIds.map(id=>({id,count:1})),...Array(6).fill({id:385,count:1})];
+ expect(depositPlan(cluttered,20,spare)).toEqual([{id:385,count:6}]);
+ expect(depositPlan(cluttered,20,spare,spare)).toEqual([{id:385,count:6},{id:901,count:-1}]);
+ expect(depositPlan(cluttered,22,spare,spare)).toEqual([{id:385,count:6},{id:901,count:-1},{id:902,count:-1},{id:903,count:-1}]);
  // Twenty balls of wool beside the coins: the reserve gives way to two slots and five sharks stay.
  const nine=[{id:995,count:30},...Array.from({length:9},()=>({id:385,count:1}))];
  expect(slotNeed(20,1)).toBe(22);
@@ -928,12 +985,20 @@ test('a Taverley-side target is east of Ardougne for an account the Big Wolf wou
  const monty={skills:{attack:69,strength:1,defence:1,hitpoints:37,magic:99}},strong={skills:{attack:90,strength:90,defence:90,hitpoints:82}};
  expect(TAVERLEY_SIDE(kaqemeex)).toBe(true);
  expect(TAVERLEY_SIDE({x:2946,z:3368,level:0})).toBe(false); // Falador bank: no mountain between
+ expect(TAVERLEY_SIDE({x:2951,z:3450,level:0})).toBe(true);  // Doric's house, north of Falador
  expect(mountainClosed(monty)).toBe(true);
  expect(mountainClosed(strong)).toBe(false);
  expect(eastOfArdougne(ardougne,kaqemeex)).toBe(false);
  expect(eastOfArdougne(ardougne,kaqemeex,monty)).toBe(true);
  expect(eastOfArdougne(ardougne,kaqemeex,strong)).toBe(false);
  expect(eastOfArdougne({x:2946,z:3368,level:0},kaqemeex,monty)).toBe(false); // from Falador: the road
+ // Catherby is on the Ardougne side for the weak account only: bound for Doric's house or Varrock it takes the boats.
+ const catherby={x:2807,z:3441,level:0},doric={x:2951,z:3450,level:0},varrock={x:3210,z:3424,level:0};
+ expect(eastOfArdougne(catherby,doric,monty)).toBe(true);
+ expect(eastOfArdougne(catherby,varrock,monty)).toBe(true);
+ expect(eastOfArdougne(catherby,doric,strong)).toBe(false);
+ expect(eastOfArdougne(catherby,varrock,strong)).toBe(false);
+ expect(eastOfArdougne(catherby,varrock)).toBe(false);
  expect(fares(ardougne,[kaqemeex],monty)).toBe(BOAT_FARES);
  expect(fares(ardougne,[kaqemeex],strong)).toBe(0);
 });
@@ -1037,10 +1102,69 @@ test('a dye is a recipe: its ingredients are planned first, its dialogue step fo
  ]);
  expect(plan.still).toEqual([{id:1957,count:2}]);
  expect(plan.coins).toBe(5+5+20+5);
- expect(NPC_SOURCES[1763]!.needs).toEqual([{id:1951,count:3}]);expect(COMBINE_SOURCES[1769]).toEqual([1763,1765]);expect(PICK_SOURCES[1957]!.loc).toBe(3366);
+ expect(NPC_SOURCES[1763]!.needs).toEqual([{id:1951,count:3}]);expect(COMBINE_SOURCES[1769]).toEqual([1763,1765]);expect(COMBINE_SOURCES[1552]).toEqual([327,1573]);expect(PICK_SOURCES[1957]!.loc).toBe(3366);
  // A plant nearer than any seller is picked.
  const picked=gatherPlan([{id:1957,count:2}],{x:2600,z:3000,level:0},()=>[],()=>Infinity,()=>[],6,1,()=>[{x:2581,z:2968,level:0}]);
  expect(picked.gathers).toEqual([{id:1957,count:2,how:'pick'}]);
+});
+
+test('Prince Ali: soft clay is clay on water, clay is mined with a pickaxe, ashes come from a lit log',async()=>{
+ const {MINE_SOURCES,BURN_SOURCES,COMBINE_SOURCES,BRONZE_PICKAXE,TINDERBOX,LOGS}=await import('../packages/core/src/gather');
+ const draynor={x:3092,z:3243,level:0};
+ const spawns=(id:number)=>id===LOGS?[{x:3089,z:3265,level:0}]:[];           // logs lie in Draynor
+ const seller=(id:number)=>id===1929?250:Infinity;                           // water buckets at Shantay's
+ const plan=gatherPlan([{id:1761,count:1},{id:592,count:1}],draynor,spawns,seller,()=>[],6,1,()=>[]);
+ expect(plan.gathers).toEqual([
+  {id:434,count:1,how:'mine'},            // clay from the Varrock south-west mine, 128 tiles off
+  {id:1761,count:1,how:'combine'},        // clay on the bucket of water (the bucket is bought)
+  {id:LOGS,count:1,how:'spawn'},          // the ashes' logs
+  {id:592,count:1,how:'burn'},
+ ]);
+ expect(plan.still).toEqual([{id:1929,count:1}]);
+ expect(plan.tools).toEqual([{id:BRONZE_PICKAXE,count:1},{id:TINDERBOX,count:1}]);
+ expect(COMBINE_SOURCES[1761]).toEqual([434,1929]);
+ expect(MINE_SOURCES[434]!.locs).toEqual([2108,2109]);expect(MINE_SOURCES[434]!.tiles.length).toBe(27);
+ expect(MINE_SOURCES[434]!.tiles.some(t=>t.x>=2937&&t.x<=2943&&t.z>=3282&&t.z<=3285)).toBe(false); // the Crafting Guild's
+ // Doric's ores from the Falador bank: three mines, one pickaxe; the iron rocks ask Mining 15.
+ const doric=gatherPlan([{id:434,count:6},{id:436,count:4},{id:440,count:2}],{x:2946,z:3368,level:0},()=>[],()=>Infinity,()=>[],6,1,()=>[]);
+ expect(doric.gathers).toEqual([{id:434,count:6,how:'mine'},{id:436,count:4,how:'mine'},{id:440,count:2,how:'mine'}]);
+ expect(doric.tools).toEqual([{id:BRONZE_PICKAXE,count:1}]);
+ expect(MINE_SOURCES[440]!.level).toBe(15);expect(MINE_SOURCES[436]!.level).toBe(1);
+ expect(BURN_SOURCES[592]!.logs).toBe(LOGS);
+ // Witch's Potion: burnt meat is cooked meat on a fire of gathered logs; the cooked meat lies in the Barbarian hall.
+ const hetty=gatherPlan([{id:1957,count:1},{id:221,count:1},{id:2146,count:1}],{x:2655,z:3283,level:0},(id)=>id===LOGS?[{x:3089,z:3265,level:0}]:id===2142?[{x:3077,z:3441,level:0}]:[],(id)=>id===221?400:id===1957?300:Infinity,()=>[],6,1,()=>[{x:2600,z:3300,level:0}]);
+ expect(hetty.gathers).toEqual([{id:1957,count:1,how:'pick'},{id:LOGS,count:1,how:'spawn'},{id:2142,count:1,how:'spawn'},{id:2146,count:1,how:'burn'}]);
+ expect(hetty.still).toEqual([{id:221,count:1}]);
+ expect(hetty.tools).toEqual([{id:TINDERBOX,count:1}]);
+ // A clay seller nearer than any rock keeps clay in the shop plan.
+ expect(gatherPlan([{id:434,count:1}],draynor,()=>[],()=>50).still).toEqual([{id:434,count:1}]);
+});
+
+test('Scorpion Catcher\'s antipoison is neither a need nor food: no shop sells it and the script never drinks it',async()=>{
+ const {OPTIONAL}=await import('./quest-sweep');
+ expect(OPTIONAL.has(2446)).toBe(true);
+ const preset=presetFor('scorpion');
+ expect((preset.inventory??[]).some(i=>i.id===2446)).toBe(true);
+ expect(needs(preset,false,'scorpion').has(2446)).toBe(false);
+ expect(needs(preset,true,'scorpion').has(2446)).toBe(false);
+ expect(needs(preset,true,'scorpion').get(379)).toBe(4);
+});
+
+test("Gertrude's seasoned sardine is doogle leaves from the spawn by her house on a sardine bought from Gerrant",()=>{
+ const gertrude={x:3150,z:3410,level:0};
+ const spawns=(id:number)=>id===1573?[{x:3152,z:3401,level:0}]:[];
+ const seller=(id:number)=>id===327?190:Infinity;
+ const plan=gatherPlan([{id:1552,count:1}],gertrude,spawns,seller,()=>[],12,1,()=>[]);
+ expect(plan.gathers).toEqual([{id:1573,count:1,how:'spawn'},{id:1552,count:1,how:'combine'}]);
+ expect(plan.still).toEqual([{id:327,count:1}]);
+});
+
+test('bound for Rimmington, the eye of newt comes from Betty in Port Sarim, not Taverley or Gu\'Tanoth',async()=>{
+ const {sellersByTravel}=await import('./quest-sweep');
+ const ardougne={x:2655,z:3283,level:0},hetty={x:2966,z:3206,level:0};
+ const sellers=[{npc:'Ogre merchant',tile:{x:2528,z:3048,level:0}},{npc:'Jatix',tile:{x:2899,z:3427,level:0}},{npc:'Betty',tile:{x:3012,z:3259,level:0}}];
+ expect(sellersByTravel(sellers,ardougne).map(s=>s.npc)).toEqual(['Ogre merchant','Jatix','Betty']);
+ expect(sellersByTravel(sellers,ardougne,hetty).map(s=>s.npc)).toEqual(['Betty','Jatix','Ogre merchant']);
 });
 
 test('plant tiles come from the knowledge and rank by distance',async()=>{
@@ -1086,6 +1210,10 @@ test('a strike spell kit is the strongest strike the runes allow, and the highes
  expect(magicKit([{id:1387,count:1},{id:556,count:4},{id:558,count:2}],99,2)?.component).toBe('magic:fire_strike');
  expect(magicKit([{id:1387,count:1},{id:556,count:4},{id:558,count:2}],99)).toBeNull();
  expect(magicKit(monty,12)?.component).toBe('magic:wind_strike');
+ // A seller covers the runes the account lacks: fire runes owned, air and mind from a shop.
+ expect(magicKit([{id:554,count:150}],29,6,id=>id===556||id===558)).toEqual({staff:undefined,component:'magic:fire_strike',level:13,maxhit:8,runes:{558:1,554:3,556:2}});
+ expect(magicKit([],5,6,id=>id===556||id===558)?.component).toBe('magic:wind_strike');
+ expect(magicKit([],29,6,()=>false)).toBeNull();
  // Attack 69 with Strength 1 and Ranged 1 does not beat a goblin series bare-handed; Magic 99 does. A rat is the staff's
  // kill too: a wielded staff with autocast casts on every attack, so its runes are budgeted.
  expect(killStyle(288,69,1,1,1)).toBeNull();
@@ -1262,4 +1390,25 @@ test('Elena saved proof requires bought dust, exact coins/assets, completion, XP
  expect(verify(log.replace('"observed":true','"observed":false'))).toMatchObject({bought:false});
  expect(verify(log.replace('QUEST_SWEEP_TREE_EXIT','OMITTED_TREE_EXIT'))).toMatchObject({treeExit:false});
  expect(verify(log.replace('"z":3491','"z":3494'))).toMatchObject({treeExit:false});
+});
+
+test('a far walk whose quest guard has already aborted takes no leg and reports stopped',async()=>{
+ const s:any={sdk:{getState:()=>({player:{worldX:2655,worldZ:3283,level:0},inventory:[]})},tick:()=>0};
+ const r=await walkFar(s,{} as any,{x:3222,z:3218,level:0},150,{signal:AbortSignal.abort('quest guard')});
+ expect(r).toEqual({ok:false,reason:'stopped',detail:'quest guard'});
+});
+
+test('the meal takes the preset food kinds first, then the best other edibles the bank holds for the units still short',()=>{
+ const food=new Map([[379,4],[563,5]]);
+ // No lobsters banked: four sharks stand in; the law runes are not edible and stay missing.
+ expect(mealPlan(food,[],[{id:385,count:16},{id:1895,count:3}])).toEqual([{id:385,count:4}]);
+ // One lobster banked and two sharks in the pack: the lobster, then one more edible unit.
+ expect(mealPlan(food,[{id:385,count:2}],[{id:379,count:1},{id:333,count:5}])).toEqual([{id:379,count:1},{id:333,count:1}]);
+ // Enough lobsters: nothing else.
+ expect(mealPlan(food,[],[{id:379,count:9},{id:385,count:9}])).toEqual([{id:379,count:4}]);
+ // Merlin's Crystal: the one bread banked is the beggar's (the quest plan withdraws it) and is no meal; a bread the pack
+ // holds for the quest does not count as food carried either.
+ const beggar=new Map([[2309,1]]);
+ expect(mealPlan(food,[],[{id:2309,count:1}],[{id:2309,count:1}],beggar)).toEqual([]);
+ expect(mealPlan(food,[{id:2309,count:1}],[{id:385,count:2}],[],beggar)).toEqual([{id:385,count:2}]);
 });

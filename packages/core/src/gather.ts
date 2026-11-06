@@ -20,7 +20,7 @@ export const MILK=1927,BUCKET=1925,COW=81;
 // Garlic: the cupboard upstairs in Morgan's house, Draynor (general_use/scripts/cupboards.rs2:34, loc 2612 shut,
 // 2613 open: Open, then Search). The only shops are the Greengrocers on Miscellania and in Rellekka.
 export const LOC_SOURCES:Record<number,{tile:Tile;open:RegExp;take:RegExp}>={1550:{tile:{x:3096,z:3268,level:1},open:/^open$/i,take:/^search$/i}};
-export type Gather={id:number;count:number;how:'spawn'|'milk'|'loc'|'kill'|'pick'|'npc'|'combine'|'use';kit?:'ranged'|'magic'};
+export type Gather={id:number;count:number;how:'spawn'|'milk'|'loc'|'kill'|'pick'|'npc'|'combine'|'use'|'mine'|'burn';kit?:'ranged'|'magic'};
 // A plant picked for its item: onions are loc 3366 with the Pick option (general_use/scripts/pickables.rs2:31-39; the
 // plant stands again 50 ticks after a pick).
 // The five pickable plants (general_use/scripts/pickables.rs2; tiles in knowledge/pickables.json): a cabbage from the
@@ -38,8 +38,28 @@ export const NPC_SOURCES:Record<number,NpcSource>={
  1765:{...AGGIE,needs:[{id:1957,count:2}],coins:5,yields:1,choices:[/make dyes for me/i,/make yellow dye/i,/^okay, make me some yellow dye/i]},
  1767:{...AGGIE,needs:[{id:1793,count:2}],coins:5,yields:1,choices:[/make dyes for me/i,/make blue dye/i,/^okay, make me some blue dye/i]},
 };
-// Two items used on each other: orange dye is red on yellow (skill_crafting/scripts/dye_mixing.rs2).
-export const COMBINE_SOURCES:Record<number,[number,number]>={1769:[1763,1765]};
+// Two items used on each other: orange dye is red on yellow (skill_crafting/scripts/dye_mixing.rs2); soft clay is clay
+// on a bucket of water, which comes back empty (skill_crafting/scripts/pottery/pottery.rs2 make_softclay); a seasoned
+// sardine is doogle leaves on a raw sardine (quests/quest_fluffs/scripts/quest_fluffs.rs2 opheldu). The leaves grow as
+// a ground spawn beside Gertrude's house; Gerrant in Port Sarim sells the sardine.
+export const COMBINE_SOURCES:Record<number,[number,number]>={1769:[1763,1765],1761:[434,1929],1552:[327,1573]};
+// An ore mined from a rock with any pickaxe in the pack or wielded (skill_mining/scripts/pickaxe_checker.rs2). The
+// rocks are the locs of skill_mining/configs/rocks.loc at the tiles the map files (maps/*.jm2) place them; `level` is the
+// Mining level the rock asks (mine.dbrow rock_level). The six clay rocks inside the Crafting Guild (2937-2943,
+// 3282-3285; Crafting 40 and a brown apron at its door) are left out. A bronze pickaxe (1 coin in general stores) is
+// the plan's tool; the fight takes whichever pickaxe the pack holds.
+export const PICKAXES=[1265,1267,1269,1273,1271,1275],BRONZE_PICKAXE=1265;
+export const MINE_SOURCES:Record<number,{name:string;locs:number[];level:number;tiles:Tile[]}>={
+ 434:{name:'clay rock',locs:[2108,2109],level:1,tiles:[{x:2447,z:9902,level:0},{x:2449,z:9907,level:0},{x:2451,z:9906,level:0},{x:2451,z:9908,level:0},{x:2453,z:9905,level:0},{x:2487,z:9915,level:0},{x:2490,z:9916,level:0},{x:2490,z:9917,level:0},{x:2491,z:9912,level:0},{x:2629,z:3143,level:0},{x:2629,z:3145,level:0},{x:2630,z:3143,level:0},{x:2632,z:3139,level:0},{x:2680,z:3707,level:0},{x:2684,z:3707,level:0},{x:2684,z:3709,level:0},{x:2686,z:3704,level:0},{x:2986,z:3239,level:0},{x:2987,z:3240,level:0},{x:3028,z:9808,level:0},{x:3030,z:9809,level:0},{x:3030,z:9810,level:0},{x:3053,z:9818,level:0},{x:3054,z:9819,level:0},{x:3179,z:3371,level:0},{x:3180,z:3372,level:0},{x:3183,z:3377,level:0}]},
+ 436:{name:'copper rock',locs:[2090,2091],level:1,tiles:[{x:2470,z:3255,level:0},{x:2472,z:3256,level:0},{x:2475,z:3256,level:0},{x:2630,z:3137,level:0},{x:2630,z:3145,level:0},{x:2640,z:3151,level:0},{x:2640,z:3153,level:0},{x:2907,z:3361,level:0},{x:2909,z:3364,level:0},{x:2976,z:3247,level:0},{x:2977,z:3245,level:0},{x:2977,z:3247,level:0},{x:2978,z:3248,level:0},{x:2979,z:3248,level:0},{x:3021,z:9801,level:0},{x:3024,z:9798,level:0},{x:3026,z:9801,level:0},{x:3027,z:9802,level:0},{x:3030,z:9825,level:0},{x:3030,z:9826,level:0},{x:3033,z:9828,level:0},{x:3038,z:9780,level:0},{x:3039,z:9781,level:0},{x:3039,z:9783,level:0},{x:3040,z:9784,level:0},{x:3141,z:9880,level:0},{x:3143,z:9877,level:0},{x:3282,z:3367,level:0},{x:3282,z:3368,level:0},{x:3286,z:3361,level:0},{x:3286,z:3364,level:0},{x:3287,z:3365,level:0},{x:3288,z:3361,level:0},{x:3288,z:9469,level:0},{x:3289,z:3361,level:0},{x:3289,z:3363,level:0},{x:3289,z:9469,level:0},{x:3290,z:3362,level:0},{x:3290,z:9468,level:0},{x:3294,z:9468,level:0},{x:3295,z:9469,level:0},{x:3296,z:3314,level:0},{x:3296,z:9426,level:0},{x:3296,z:9469,level:0},{x:3297,z:3315,level:0},{x:3299,z:3015,level:0},{x:3300,z:3017,level:0},{x:3300,z:9425,level:0},{x:3301,z:3016,level:0},{x:3301,z:3318,level:0},{x:3302,z:3015,level:0},{x:3304,z:9425,level:0},{x:3306,z:9424,level:0}]},
+ 440:{name:'iron rock',locs:[2092,2093],level:15,tiles:[{x:2435,z:9904,level:0},{x:2435,z:9906,level:0},{x:2436,z:9902,level:0},{x:2436,z:9903,level:0},{x:2437,z:9900,level:0},{x:2439,z:9898,level:0},{x:2440,z:9903,level:0},{x:2488,z:9908,level:0},{x:2581,z:3231,level:0},{x:2583,z:3235,level:0},{x:2589,z:3229,level:0},{x:2589,z:3238,level:0},{x:2590,z:3230,level:0},{x:2591,z:3232,level:0},{x:2592,z:3234,level:0},{x:2602,z:3233,level:0},{x:2602,z:3234,level:0},{x:2602,z:3236,level:0},{x:2605,z:3233,level:0},{x:2605,z:3235,level:0},{x:2605,z:3237,level:0},{x:2625,z:3150,level:0},{x:2625,z:3151,level:0},{x:2626,z:3149,level:0},{x:2626,z:3150,level:0},{x:2627,z:3142,level:0},{x:2628,z:3140,level:0},{x:2628,z:3141,level:0},{x:2634,z:3136,level:0},{x:2638,z:3138,level:0},{x:2667,z:9680,level:0},{x:2667,z:9681,level:0},{x:2669,z:9684,level:0},{x:2672,z:9685,level:0},{x:2673,z:9680,level:0},{x:2691,z:3329,level:0},{x:2692,z:3328,level:0},{x:2693,z:3329,level:0},{x:2696,z:3333,level:0},{x:2697,z:3334,level:0},{x:2710,z:3328,level:0},{x:2711,z:3329,level:0},{x:2712,z:3329,level:0},{x:2713,z:3332,level:0},{x:2714,z:3330,level:0},{x:2715,z:3331,level:0},{x:2722,z:3695,level:0},{x:2723,z:3692,level:0},{x:2723,z:3695,level:0},{x:2723,z:3696,level:0},{x:2724,z:3688,level:0},{x:2725,z:3691,level:0},{x:2725,z:3694,level:0},{x:2727,z:3692,level:0},{x:2728,z:3695,level:0},{x:2848,z:3037,level:0},{x:2903,z:3353,level:0},{x:2904,z:3354,level:0},{x:2904,z:3356,level:0},{x:2968,z:3239,level:0},{x:2969,z:3240,level:0},{x:2969,z:3242,level:0},{x:2971,z:3237,level:0},{x:2981,z:3233,level:0},{x:2982,z:3234,level:0},{x:3032,z:9826,level:0},{x:3033,z:9825,level:0},{x:3036,z:9775,level:0},{x:3037,z:9776,level:0},{x:3039,z:9777,level:0},{x:3044,z:9769,level:0},{x:3045,z:9771,level:0},{x:3053,z:9822,level:0},{x:3054,z:9828,level:0},{x:3057,z:3941,level:0},{x:3075,z:3771,level:0},{x:3076,z:3770,level:0},{x:3076,z:3771,level:0},{x:3088,z:3769,level:0},{x:3089,z:3768,level:0},{x:3090,z:3767,level:0},{x:3090,z:3768,level:0},{x:3091,z:3768,level:0},{x:3099,z:3765,level:0},{x:3099,z:3766,level:0},{x:3099,z:3767,level:0},{x:3099,z:3768,level:0},{x:3100,z:3765,level:0},{x:3100,z:3766,level:0},{x:3101,z:3765,level:0},{x:3101,z:3768,level:0},{x:3104,z:3570,level:0},{x:3105,z:3569,level:0},{x:3139,z:9875,level:0},{x:3141,z:9872,level:0},{x:3143,z:9876,level:0},{x:3175,z:3366,level:0},{x:3175,z:3368,level:0},{x:3181,z:3373,level:0},{x:3284,z:3015,level:0},{x:3285,z:3017,level:0},{x:3285,z:3368,level:0},{x:3285,z:3369,level:0},{x:3286,z:3369,level:0},{x:3287,z:3015,level:0},{x:3288,z:3370,level:0},{x:3294,z:3310,level:0},{x:3295,z:3309,level:0},{x:3295,z:3311,level:0},{x:3302,z:3285,level:0},{x:3303,z:3284,level:0},{x:3303,z:3309,level:0},{x:3303,z:3310,level:0},{x:3304,z:3301,level:0},{x:3305,z:3302,level:0}]},
+};
+// An item a fire gives: a tinderbox on logs lights a fire that burns 100 to 199 ticks, then ashes lie on its tile for
+// 100 ticks (skill_firemaking/scripts/firemaking.rs2 firemaking_success); cooked meat used on the fire burns every time
+// (skill_cooking/configs/cooking_source/cooking_generic.dbrow cooking_burn_meat, successchance 1,1). The logs and the
+// item `uses` are gathered first; the tinderbox is the plan's tool.
+export const TINDERBOX=590,LOGS=1511,FIRE_TICKS=200;
+export const BURN_SOURCES:Record<number,{name:string;logs:number;uses?:number}>={592:{name:'ashes',logs:LOGS},2146:{name:'burnt meat',logs:LOGS,uses:2142}};
 // An item taken from a loc by using items on it in turn, each use consumed: a bucket of wax from a Catherby beehive
 // (area_seers/scripts/bees.rs2: insect repellent clears the bees, then an empty bucket takes the wax; a bucket on a
 // hive with bees stings). The uses are gathered first, as a recipe's ingredients are.
@@ -64,14 +84,16 @@ export type MagicKit={staff?:number;component:string;level:number;maxhit:number;
 // (TheFullMonty: Magic 99, a staff of fire, air and mind runes: Fire Strike at 2 air and 1 mind a cast).
 // `casts`: the casts the runes must cover. The plan asks for CASTS_MIN; a fight asks for one more kill's casts, so a
 // series that has spent most of its budget still takes its last easy animal (a chicken after a bear).
-export function magicKit(owned:readonly Item[],magic:number,casts=CASTS_MIN):MagicKit|null{
+// `sold`: a rune a shop sells counts as covered; the sweep's shop plan buys the kit's shortfall with its other
+// consumables (Quickhandjob: Magic 29, fire runes and nothing else; Aubury sells the air and mind runes).
+export function magicKit(owned:readonly Item[],magic:number,casts=CASTS_MIN,sold:(id:number)=>boolean=()=>false):MagicKit|null{
  const have=(id:number)=>owned.filter(i=>i.id===id).reduce((c,i)=>c+i.count,0);
  const staffs=Object.keys(STAFF_RUNE).map(Number).filter(id=>have(id)>=1);
  for(const sp of [...SPELLS].reverse()){
   if(sp.level>magic)continue;
   for(const staff of [...staffs,undefined]){
    const runes:Record<number,number>=Object.fromEntries(Object.entries(sp.runes).filter(([id])=>staff===undefined||STAFF_RUNE[staff]!==Number(id)).map(([id,n])=>[Number(id),n]));
-   if(Object.entries(runes).every(([id,n])=>have(Number(id))>=n*casts))return{staff,component:sp.component,level:sp.level,maxhit:sp.maxhit,runes};
+   if(Object.entries(runes).every(([id,n])=>have(Number(id))>=n*casts||sold(Number(id))))return{staff,component:sp.component,level:sp.level,maxhit:sp.maxhit,runes};
   }
  }
  return null;
@@ -156,7 +178,10 @@ export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:
  const d=(t:Tile)=>Math.max(Math.abs(t.x-at.x),Math.abs(t.z-at.z));
  const place=(m:Item,depth:number):void=>{
   const sold=seller(m.id),spot=spawns(m.id,at)[0],pick=PICK_SOURCES[m.id]?picks(PICK_SOURCES[m.id]!.loc,at)[0]:undefined;
-  if(m.id===MILK&&sold===Infinity){gathers.push({...m,how:'milk'});tools.push({id:BUCKET,count:m.count});}
+  // Milk comes from the nearest cow when it is nearer than the spawn and the seller: the milk spawn and seller are both
+  // far north while cows graze beside Lumbridge and Ardougne.
+  const cow=m.id===MILK?nearest(npcSpawns([COW]).filter(t=>t.level===at.level),at)[0]:undefined;
+  if(m.id===MILK&&(sold===Infinity||(cow&&d(cow)<Math.min(sold,spot?d(spot):Infinity)))){gathers.push({...m,how:'milk'});tools.push({id:BUCKET,count:m.count});}
   else if(spot&&d(spot)<sold)gathers.push({...m,how:'spawn'});
   else if(LOC_SOURCES[m.id]&&d(LOC_SOURCES[m.id]!.tile)<sold)gathers.push({...m,how:'loc'});
   else if(pick&&d(pick)<sold)gathers.push({...m,how:'pick'});
@@ -177,6 +202,8 @@ export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:
    for(const id of USE_SOURCES[m.id]!.uses)place({id,count:m.count},depth+1);
    gathers.push({...m,how:'use'});
   }
+  else if(MINE_SOURCES[m.id]&&nearest(MINE_SOURCES[m.id]!.tiles,at).some(t=>d(t)<sold)){gathers.push({...m,how:'mine'});if(!tools.some(t=>t.id===BRONZE_PICKAXE))tools.push({id:BRONZE_PICKAXE,count:1});}
+  else if(BURN_SOURCES[m.id]&&depth<4){const b=BURN_SOURCES[m.id]!;place({id:b.logs,count:m.count},depth+1);if(b.uses)place({id:b.uses,count:m.count},depth+1);if(!tools.some(t=>t.id===TINDERBOX))tools.push({id:TINDERBOX,count:1});gathers.push({...m,how:'burn'});}
   else still.push(m);
  };
  for(const m of missing)place(m,0);
@@ -194,7 +221,7 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
  // Each gather's target is fixed before any runs: a bead taken during another colour's series counts toward its own.
  const targets=new Map(gathers.map(g=>[g.id,held(g.id)+g.count]));
  for(const g of gathers){
-  const target=targets.get(g.id)!,sources=(g.how==='milk'?nearest(cows(),here()):g.how==='loc'?[LOC_SOURCES[g.id]!.tile]:g.how==='kill'?nearest((KILL_SOURCES[g.id]?.chance??1)<1?denseSpawns(killSpawns(g.id)):killSpawns(g.id),here()):g.how==='pick'?locsByDistance(PICK_SOURCES[g.id]!.loc,here()):g.how==='npc'?[NPC_SOURCES[g.id]!.tile]:g.how==='use'?nearest(USE_SOURCES[g.id]!.tiles,here()):g.how==='combine'?[here()]:spawnsByDistance(g.id,here())).slice(0,6);
+  const target=targets.get(g.id)!,sources=(g.how==='milk'?nearest(cows(),here()):g.how==='loc'?[LOC_SOURCES[g.id]!.tile]:g.how==='kill'?nearest((KILL_SOURCES[g.id]?.chance??1)<1?denseSpawns(killSpawns(g.id)):killSpawns(g.id),here()):g.how==='pick'?locsByDistance(PICK_SOURCES[g.id]!.loc,here()):g.how==='npc'?[NPC_SOURCES[g.id]!.tile]:g.how==='use'?nearest(USE_SOURCES[g.id]!.tiles,here()):g.how==='mine'?nearest(MINE_SOURCES[g.id]!.tiles,here()):g.how==='combine'||g.how==='burn'?[here()]:spawnsByDistance(g.id,here())).slice(0,6);
   // Spawns lie in clusters (three egg spawns within 4 tiles beyond White Wolf Mountain): one with no route rules out
   // the rest of its cluster, so the walk moves on to the next place rather than searching the same ground again.
   const unreachable:Tile[]=[];
@@ -208,9 +235,49 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
    // animal in sight, so a run that ends short says whether the animals or the budget ran out.
    // A kill's attempt budget counts fights begun, not waits for a free animal or refused clicks; 400 rounds bound the rest.
    const tally={kills:0,drops:0,idle:0,fights:0,start:s.tick()};
-   for(let tries=0;tries<400&&(g.how==='kill'?tally.fights<killAttempts(g.id,g.count):tries<g.count+3)&&held(g.id)<target;tries++){
+   // A swing at a rock misses as often as it hits at Mining 1, so a mine has four tries an ore.
+   for(let tries=0;tries<400&&(g.how==='kill'?tally.fights<killAttempts(g.id,g.count):tries<(g.how==='mine'?4*g.count:g.count)+3)&&held(g.id)<target;tries++){
     const before=held(g.id);
-    if(g.how==='use'){
+    if(g.how==='mine'){
+     const src=MINE_SOURCES[g.id]!,inv=st()?.inventory??[];
+     if(!PICKAXES.some(id=>inv.some((i:any)=>i.id===id)||s.sdk.getEquipment().some((i:any)=>i.id===id)))return `${src.name} needs a pickaxe in the pack`;
+     // Doric's ores in their order: six clay and four copper (mine.dbrow rock_exp 50 and 175, at 25x) lift Mining 1 to 15,
+     // the iron rocks' level, so the iron comes last and a short level is the plan's order, not a wait.
+     const mining=s.sdk.getSkill('Mining')?.level??1;if(mining<src.level)return `${src.name} needs Mining ${src.level}, have ${mining}`;
+     const rock=(st()?.nearbyLocs??[]).filter((l:any)=>src.locs.includes(l.id)&&(l.optionsWithIndex??[]).some((o:any)=>/^mine$/i.test(o.text))).sort((a:any,b:any)=>a.distance-b.distance)[0];
+     // A mined rock stands bare a while; the mine has several.
+     if(!rock){if(!await waitUntil(s,()=>(st()?.nearbyLocs??[]).some((l:any)=>src.locs.includes(l.id)),{timeoutTicks:60}))break;continue;}
+     await s.bot.interactLoc(rock,/^mine$/i);
+     await waitUntil(s,()=>held(g.id)>before,{timeoutTicks:30});
+     console.log(`QUEST_SWEEP_MINE ${JSON.stringify({item:g.id,at,held:held(g.id),target})}`);
+    }else if(g.how==='burn'){
+     const src=BURN_SOURCES[g.id]!,inv=st()?.inventory??[],tinder=inv.find((i:any)=>i.id===TINDERBOX),logs=inv.find((i:any)=>i.id===src.logs);
+     if(!tinder||!logs)return `${src.name} needs ${TINDERBOX} and ${src.logs} in the pack`;
+     if(src.uses&&!inv.some((i:any)=>i.id===src.uses))return `${src.name} needs ${src.uses} in the pack`;
+     const fireAt=here(),logsHeld=held(src.logs);
+     await s.direct({type:'useItemOnItem',sourceSlot:tinder.slot,targetSlot:logs.slot,reason:'SDK'});
+     // The server swings the tinderbox again every four ticks until the fire catches; logs still held after 30 ticks mean
+     // the tile takes no fire, and the next try stands two tiles west.
+     if(!await waitUntil(s,()=>held(src.logs)<logsHeld,{timeoutTicks:30})){console.log(`QUEST_SWEEP_BURN ${JSON.stringify({item:g.id,at:fireAt,lit:false})}`);await walk({x:fireAt.x-2,z:fireAt.z,level:fireAt.level});continue;}
+     const lit=s.tick();
+     if(src.uses){
+      // The fire stands on the tile the logs were lit on; the item goes on it as soon as the loc shows. The logs leave the
+      // pack when the first strike starts, and each strike lights with stat_random(firemaking, 64, 512) every four ticks
+      // (skill_firemaking/scripts/firemaking.rs2): at Firemaking 1 a quarter of strikes catch, so the fire gets twenty.
+      const fire=()=>(st()?.nearbyLocs??[]).find((l:any)=>/^fire$/i.test(l.name)&&Math.max(Math.abs(l.x-fireAt.x),Math.abs(l.z-fireAt.z))<=1);
+      if(!await waitUntil(s,()=>!!fire(),{timeoutTicks:80})){console.log(`QUEST_SWEEP_BURN ${JSON.stringify({item:g.id,at:fireAt,lit:true,fire:false})}`);continue;}
+      const item=(st()?.inventory??[]).find((i:any)=>i.id===src.uses);
+      const r:any=await s.bot.useItemOnLoc(item,fire());
+      await waitUntil(s,()=>held(g.id)>before,{timeoutTicks:15});
+      console.log(`QUEST_SWEEP_BURN ${JSON.stringify({item:g.id,at:fireAt,lit:true,used:src.uses,ok:r?.success,held:held(g.id),target})}`);
+      continue;
+     }
+     const ashes=()=>(st()?.groundItems??[]).filter((i:any)=>i.id===g.id&&i.distance<=4).sort((a:any,b:any)=>a.distance-b.distance)[0];
+     if(!await waitUntil(s,()=>!!ashes(),{timeoutTicks:FIRE_TICKS+20})){console.log(`QUEST_SWEEP_BURN ${JSON.stringify({item:g.id,at:fireAt,lit:true,ashes:false,ticks:s.tick()-lit})}`);continue;}
+     await s.bot.pickupItem(ashes());
+     await waitUntil(s,()=>held(g.id)>before,{timeoutTicks:15});
+     console.log(`QUEST_SWEEP_BURN ${JSON.stringify({item:g.id,at:fireAt,lit:true,ashes:true,ticks:s.tick()-lit,held:held(g.id),target})}`);
+    }else if(g.how==='use'){
      const src=USE_SOURCES[g.id]!,loc=()=>(st()?.nearbyLocs??[]).find((l:any)=>l.x===at.x&&l.z===at.z&&src.option.test((l.optionsWithIndex??[]).map((o:any)=>o.text).join('|')));
      const l0=loc();if(!l0)break;
      for(const id of src.uses){
@@ -226,7 +293,11 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
     }else if(g.how==='combine'){
      const [a,b]=COMBINE_SOURCES[g.id]!,inv=st()?.inventory??[],ia=inv.find((i:any)=>i.id===a),ib=inv.find((i:any)=>i.id===b);
      if(!ia||!ib)return `combining ${g.id} needs ${a} and ${b} in the pack`;
+     const before=held(g.id);
      await s.direct({type:'useItemOnItem',sourceSlot:ia.slot,targetSlot:ib.slot,reason:'SDK'});
+     // A recipe that opens a message box first (the doogle leaves on the sardine, quest_fluffs.rs2 opheldu) hands the
+     // item over only once the box is continued; the dyes hand theirs over at once.
+     for(let t=0;t<12&&held(g.id)<=before;t++){await waitTicks(s,1);const dlg:any=s.sdk.getDialog();if(dlg?.isOpen&&!dlg.isWaiting)await s.sdk.sendClickDialog(0);}
     }else if(g.how==='pick'){
      const src=PICK_SOURCES[g.id]!,plant=(st()?.nearbyLocs??[]).filter((l:any)=>l.id===src.loc&&(l.optionsWithIndex??[]).some((o:any)=>src.option.test(o.text))).sort((a:any,b:any)=>a.distance-b.distance)[0];
      // A picked plant stands again after 50 ticks; the field has several.
