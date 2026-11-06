@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793935446181,
+ "at": 1793942158312,
  "jobs": [
   {
    "account": "Masterbaiter",
@@ -493,11 +493,11 @@
    "env": {
     "MAX_LOOTS": "100",
     "CAP": "24000",
-    "COORDINATOR_RUN_ID": "task-813568e4-b9ac-4589-87fc-251295eb465d"
+    "COORDINATOR_RUN_ID": "task-f68f6739-25a0-4309-9f0a-79b370b2ec50"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "run-blood-mineyourbiz-observed-reward200 [task-813568e4-b9ac-4589-87fc-251295eb465d]",
+   "goal": "run-blood-charge-second-live100 [task-f68f6739-25a0-4309-9f0a-79b370b2ec50]",
    "role": "supply"
   }
  ]
