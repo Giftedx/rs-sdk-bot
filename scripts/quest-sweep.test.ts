@@ -1200,6 +1200,10 @@ test('a strike spell kit is the strongest strike the runes allow, and the highes
  expect(magicKit([{id:1387,count:1},{id:556,count:4},{id:558,count:2}],99,2)?.component).toBe('magic:fire_strike');
  expect(magicKit([{id:1387,count:1},{id:556,count:4},{id:558,count:2}],99)).toBeNull();
  expect(magicKit(monty,12)?.component).toBe('magic:wind_strike');
+ // A seller covers the runes the account lacks: fire runes owned, air and mind from a shop.
+ expect(magicKit([{id:554,count:150}],29,6,id=>id===556||id===558)).toEqual({staff:undefined,component:'magic:fire_strike',level:13,maxhit:8,runes:{558:1,554:3,556:2}});
+ expect(magicKit([],5,6,id=>id===556||id===558)?.component).toBe('magic:wind_strike');
+ expect(magicKit([],29,6,()=>false)).toBeNull();
  // Attack 69 with Strength 1 and Ranged 1 does not beat a goblin series bare-handed; Magic 99 does. A rat is the staff's
  // kill too: a wielded staff with autocast casts on every attack, so its runes are budgeted.
  expect(killStyle(288,69,1,1,1)).toBeNull();
