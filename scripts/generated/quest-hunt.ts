@@ -67,6 +67,10 @@ try {
     // own branch (redbeard_frank.rs2): the message leaves the dig; the key leaves the chest; otherwise Redbeard takes a
     // held rum for the key, hands a lost key out again, or asks for the rum, and the back-room crate is tried before the
     // Karamja run, since the rum may be shipped already.
+    const readMessage = async (): Promise<void> => {
+        await q.step('read message', () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.message)!, optionIndex: 1, reason: 'SDK' }), () => q.sawText(/white knights/i) || (q.st()?.interface?.isOpen ?? false), 4, 3);
+        await q.waitTicks(1);
+    };
     let stage: 'start' | 'rum' | 'chest' | 'dig' = 'start';
     if (questFlags((q.s as any).client)?.find(f => /^pirate's treasure$/i.test(f.name))?.state === 'started') {
         if (q.has(ITEM.message)) stage = 'dig';
@@ -171,10 +175,11 @@ try {
     await q.climb('inn stairs', () => q.findLoc(l => l.x === INN_STAIRS.x && l.z === INN_STAIRS.z), /climb-up|climb up/i, () => q.lvl() === 1);
     await q.openDoor('chest door', CHEST_DOOR.x, CHEST_DOOR.z);
     await q.step('key on chest', () => q.useOnLoc(ITEM.key, q.locAt(CHEST.x, CHEST.z) ?? CHEST), () => q.has(ITEM.message), 20, 3);
-    await q.step('read message', () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.message)!, optionIndex: 1, reason: 'SDK' }), () => q.sawText(/white knights/i) || (q.st()?.interface?.isOpen ?? false), 4, 3);
-    await q.waitTicks(1);
+    await readMessage();
     q.milestone(3);
     }
+    // A held message may not have been read yet (the read sets 3, pirate_message.rs2); reading it again costs nothing.
+    if (stage === 'dig') await readMessage();
 
     // 9. Falador teleport, the park; a gardener within 10 tiles stops the dig and attacks (dig.rs2:6-8,26-28), so
     // he is killed first; the spade at the X queues the completion (dig.rs2:10-24).
