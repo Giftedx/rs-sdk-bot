@@ -16,6 +16,14 @@ test('failed dependencies leave other goals eligible and cannot be replayed as n
  expect(chooseTask(s,3)?.id).toBe('other');
  expect(finishTask(s,{taskId:'bad',runId:'r',ok:true,at:4,output:{}})).toBe(false);
 });
+test('a consumer with a terminal prerequisite no longer boosts another prerequisite',()=>{
+ const s=initialState();addTasks(s,[task('root',{priority:1}),task('blocked',{dependsOn:['root']}),
+  task('repair',{priority:8}),task('useful',{priority:10}),task('consumer',{dependsOn:['repair','blocked']})],0);
+ expect(chooseTask(s,1)?.id).toBe('repair');
+ startTask(s,'root',1,'root-run');finishTask(s,{taskId:'root',runId:'root-run',ok:false,at:2,output:{}});
+ expect(chooseTask(s,3)?.id).toBe('useful');
+ expect(s.tasks.find(r=>r.spec.id==='consumer')?.status).toBe('pending');
+});
 test('invalid graphs and attempts to replace existing tasks are rejected atomically',()=>{
  const s=initialState();addTasks(s,[task('existing')]);
  expect(()=>addTasks(s,[task('a',{dependsOn:['b']}),task('b',{dependsOn:['a']})])).toThrow('cycle');
@@ -118,6 +126,16 @@ test('with isolated builds a qualification for a waiting live run passes a waiti
  startTask(s,'build',3,'b');expect(chooseTask(s,4,{isolatedBuilds:true,developmentLimit:2})?.id).toBe('q');
  expect(chooseTask(s,4,{isolatedBuilds:true,developmentLimit:1})).toBeNull();
  expect(chooseTask(s,4,{developmentLimit:2})).toBeNull(); // without isolation builds and checks take turns
+});
+
+test('a blocked live consumer does not give its qualification a practice slot ahead of a build',()=>{
+ const s=initialState();addTasks(s,[task('failed',{priority:1}),task('blocked',{dependsOn:['failed']}),
+  task('build',{kind:'build',capability:'other-order'}),task('q',{capability:'quest-sweep',priority:50}),
+  task('run',{kind:'run',capability:'quest-sweep',account:'Helper1',dependsOn:['q','blocked'],accept:{quests:['Hazeel Cult']}})],0);
+ const options={isolatedBuilds:true,focusCapability:'other-order'};
+ expect(chooseTask(s,1,options)?.id).toBe('q');
+ startTask(s,'failed',1,'failed-run');finishTask(s,{taskId:'failed',runId:'failed-run',ok:false,at:2,output:{}});
+ expect(chooseTask(s,3,options)?.id).toBe('build');
 });
 
 test('a focus that failed three builds in a row is not re-adopted',()=>{
