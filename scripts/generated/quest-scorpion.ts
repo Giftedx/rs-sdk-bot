@@ -30,7 +30,9 @@ const JAIL_DOOR = { id: 2631, x: 2931, z: 9690 };            // Velrak's cell do
 const VELRAK = { x: 2931, z: 9685 };
 const GATE = { id: 2623, x: 2924, z: 9803 };                 // deepdungeondoor, west wall of the tile, maps/m45_153.jm2
 
-const q = await openQuest({ cap: 2500, eatAt: 50, food: [379], lumbridgeOk: false });
+// The eater takes any edible in the pack: an account without the preset's lobsters carries its own cake or fish, and the
+// dungeon's poison and the Jailer bleed it either way.
+const q = await openQuest({ cap: 2500, eatAt: 50, lumbridgeOk: false });
 try {
     const FROM = Number(process.env.SC_FROM ?? 0);   // 2: debug preset quest_scorpion_s2 (outside the outpost, stage 2, empty cage); 3: quest_scorpion_s3 (Taverley dungeon ladder, cage with B)
     let questDone = false;
