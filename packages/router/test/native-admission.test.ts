@@ -70,12 +70,14 @@ test('an expired practice queue wait preserves the host-deferral path without ru
 });
 
 test('declared saved consumers bypass only the practice turn',()=>{
- for(const id of ['ammo-order','blood-chest-order','druid-meats-order','iron-progress-order','magic-order','prayer-order','quest-order','ranged-train']){
-  const task=deliveryTask(id),saved=task.checks.find(c=>c.phase==='consumer')!;
-  expect(isSavedProofVerifier(saved)).toBe(true);
+ for(const id of ['ammo-order','blood-chest-order','druid-meats-order','iron-progress-order','magic-order','prayer-order','quest-order','ranged-train','rune-bank-craft']){
+  const task=deliveryTask(id);
   expect(task.checks.filter(c=>c.phase==='practice').some(isSavedProofVerifier)).toBe(false);
-  expect(isSavedProofVerifier({...saved,command:saved.command.slice(0,2)})).toBe(false);
-  expect(isSavedProofVerifier({...saved,command:[...saved.command,'--run']})).toBe(false);
+  for(const saved of task.checks.filter(c=>c.phase==='consumer')){
+   expect(isSavedProofVerifier(saved)).toBe(true);
+   expect(isSavedProofVerifier({...saved,command:saved.command.slice(0,2)})).toBe(false);
+   expect(isSavedProofVerifier({...saved,command:[...saved.command,'--run']})).toBe(false);
+  }
  }
  const unreviewed=deliveryTask('rune-carrier-stage').checks.find(c=>c.phase==='consumer')!;
  expect(isSavedProofVerifier(unreviewed)).toBe(false);
