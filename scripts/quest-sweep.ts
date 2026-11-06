@@ -97,7 +97,9 @@ export function toolPlan(tools:readonly Item[],need:ReadonlyMap<number,number>,p
 // (doctor_orbon.rs2), so a resumed run takes the banked suit.
 export const QUEST_KEEP:Record<string,number[]>={runemysteries:[1438,290,291],totem:[1858,1857],
  murder:[1796,1797,1798,1799,1800,1801,1802,1803,1804,1805,1806,1807,1808,1809,1810,1811,1812,1813,1814,1815,1816,1817,1818,1819,1820,1821,1822],
- sheepherder:[278,279,284,285,280,281,282,283]};
+ sheepherder:[278,279,284,285,280,281,282,283],
+ // Pirate's Treasure's rum, chest key and message: a resumed run carries on from whichever the bank holds.
+ hunt:[431,432,433]};
 export function keepsItem(quest:string,id:number,tradeable:(id:number)=>boolean|undefined):boolean{
  return (QUEST_KEEP[quest]??[]).includes(id)||tradeable(id)===false;
 }
