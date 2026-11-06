@@ -126,6 +126,7 @@ export function publishWorkspace(mainRoot:string,capability:string,files:string[
  const conflicts:string[]=[],mergedText=new Map<string,string>();
  for(const f of files){
   const mainFile=join(mainRoot,f),now=fileHash(mainFile),built=fileHash(join(root,f));
+  if(built===null)throw Error('publish: declared file missing in workspace: '+f);
   if(now===built)continue;
   const snapshot=join(root,BASE_DIR,f);
   if(now===meta.base[f]){
@@ -137,7 +138,7 @@ export function publishWorkspace(mainRoot:string,capability:string,files:string[
    continue;
   }
   const baseText=meta.base[f]===null?'':existsSync(snapshot)&&fileHash(snapshot)===meta.base[f]?readFileSync(snapshot,'utf8'):null;
-  if(now===null||built===null||baseText===null||!ledger[f]?.includes(now)){conflicts.push(f);continue;}
+  if(now===null||baseText===null||!ledger[f]?.includes(now)){conflicts.push(f);continue;}
   const merge=mergeText(baseText,readFileSync(mainFile,'utf8'),readFileSync(join(root,f),'utf8'));
   if(merge.ok)mergedText.set(f,merge.text);else conflicts.push(f+' ('+merge.conflicts.join('; ')+')');
  }
@@ -145,7 +146,6 @@ export function publishWorkspace(mainRoot:string,capability:string,files:string[
  const published:string[]=[],unchanged:string[]=[],merged:string[]=[];
  for(const f of files){
   const from=join(root,f),to=join(mainRoot,f),text=mergedText.get(f);
-  if(!existsSync(from))throw Error('publish: declared file missing in workspace: '+f);
   if(text!==undefined){writeFileSync(to,text);merged.push(f);}
   else{
    if(fileHash(from)===fileHash(to)){unchanged.push(f);continue;}
