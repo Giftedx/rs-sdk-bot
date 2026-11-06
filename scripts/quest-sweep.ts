@@ -203,9 +203,9 @@ export function depositPlan(pack:readonly Item[],need:number,keep:(id:number)=>b
 }
 // A far start walks hub to hub: each hop is a short route search (a search for a 900-tile route plans for hundreds of
 // ticks before the first step, live and on practice, and the session's status row goes stale meanwhile). Hubs are the
-// known banks and Lumbridge; a hop is at most MAX_HOP tiles (a 150-tile search plans in a few ticks) and must bring
-// the goal nearer by HOP_GAIN.
-export const MAX_HOP=150,HOP_GAIN=50;
+// known banks and Lumbridge; a hop is at most MAX_HOP tiles (a search this long plans in a few ticks; the Barbarian
+// Outpost lies 172 from the Seers' bank, its nearest hub) and must bring the goal nearer by HOP_GAIN.
+export const MAX_HOP=180,HOP_GAIN=50;
 const cheb=(a:Tile,b:Tile)=>Math.max(Math.abs(a.x-b.x),Math.abs(a.z-b.z));
 export function hopsTo(from:Tile,to:Tile,hubs:readonly Tile[]=[...BANKS,{x:3222,z:3218,level:0}]):Tile[]{
  const out:Tile[]=[];let at=from;
