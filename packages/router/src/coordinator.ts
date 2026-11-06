@@ -304,9 +304,15 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
  const buildWaiting=pending.some(r=>r.spec.kind==='build'&&canBuild(r)&&(!resources.focusCapability||focusCaps.has(r.spec.capability!)));
  // Give a freshly qualified capability one finite consumer before another
  // build invalidates it. The runtime still verifies source/review/admission.
- const lastLiveStart=Math.max(0,...state.tasks.filter(r=>r.spec.kind==='run').map(r=>r.startedAt??0));
+ const lastLiveStartByCapability=new Map<string,number>();
+ for(const r of state.tasks){
+  const capability=r.spec.capability;
+  if(r.spec.kind==='run'&&capability&&r.startedAt!==undefined){
+   lastLiveStartByCapability.set(capability,Math.max(lastLiveStartByCapability.get(capability)??0,r.startedAt));
+  }
+ }
  const productionWindow=new Set(pending.filter(r=>r.spec.kind==='run'&&r.spec.dependsOn.some(id=>{
-  const dep=records.get(id);return !!dep&&dep.spec.capability===r.spec.capability&&dep.receipt?.output?.delivery?.ok&&(dep.receipt.at??0)>lastLiveStart;
+  const dep=records.get(id);return !!dep&&dep.spec.capability===r.spec.capability&&dep.receipt?.output?.delivery?.ok&&(dep.receipt.at??0)>(lastLiveStartByCapability.get(r.spec.capability!)??0);
  })).map(r=>r.spec.id));
  const activeNames=new Set(running.filter(r=>r.spec.kind==='run').flatMap(r=>boundAccounts(r.spec,state)??[]).map(n=>n.toLowerCase()));
  // An isolated build changes the main checkout only when it publishes, so a qualification for a waiting live run
