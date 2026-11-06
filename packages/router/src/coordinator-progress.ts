@@ -3,7 +3,7 @@
 import {existsSync,mkdirSync,readFileSync,statSync,writeFileSync,openSync,closeSync,unlinkSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {randomUUID} from 'node:crypto';
-import {usefulLiveReceipt,type CoordinatorState,type TaskRecord} from './coordinator';
+import {deadRoots,provisionRefs,usefulLiveReceipt,type CoordinatorState,type TaskRecord} from './coordinator';
 import {atomicJson} from './coordinator-store';
 import {FLEET_DIR,mySide} from '../../core/src/fleet';
 import {cachedLaunchRevision} from '../../core/src/worker-release';
@@ -39,6 +39,7 @@ function controllerRelease(swarm:Swarm|null,lease:ControllerLease|null|undefined
 }
 export function summarizeProgress(input:{side:string;now:number;state:Input<CoordinatorState>;swarm:Input<Swarm>;owner:Input<{pid?:number;at?:number}>;paused:boolean;process?:(pid:unknown)=>ProcessObservation;controllerLease?:ControllerLease|null;launchSource?:string}){
  const probe=input.process??observeProcess,records=input.state.value?.tasks??[],byId=new Map(records.map(r=>[r.spec.id,r]));
+ const terminal=input.state.value?deadRoots(input.state.value,byId):null;
  const stateFreshness=freshness(input.state,input.now),swarmFreshness=freshness(input.swarm,input.now);
  const workers=Object.fromEntries((['claude','codex','unassigned'] as const).map(agent=>{
   const mine=records.filter(r=>model(r)===agent);
@@ -48,8 +49,11 @@ export function summarizeProgress(input:{side:string;now:number;state:Input<Coor
     blocker:processState==='dead'?'recorded worker PID is gone':processState==='unknown'?'worker process state is unknown':null};
   });
   const pending=mine.filter(r=>r.status==='pending').map(r=>{
-   const dependencies=r.spec.dependsOn.filter(id=>byId.get(id)?.status!=='succeeded').map(id=>({id,status:byId.get(id)?.status??'missing'}));
-   return{...task(r),status:dependencies.length?'waiting-dependencies':'queued',dependencies};
+   const dependencies=[...new Set([...r.spec.dependsOn,...provisionRefs(r.spec)])]
+    .filter(id=>byId.get(id)?.status!=='succeeded').map(id=>({id,status:byId.get(id)?.status??'missing'}));
+   const root=terminal?.get(r.spec.id)?.root;
+   return{...task(r),status:dependencies.length?'waiting-dependencies':'queued',dependencies,
+    terminalBlocker:root?{id:root,status:byId.get(root)?.status??'missing'}:null};
   });
   const useful=mine.filter(r=>usefulLiveReceipt(r,input.now))
    .sort((a,b)=>b.receipt!.at-a.receipt!.at)[0];
@@ -77,7 +81,12 @@ function readInput<T>(file:string):Input<T>{
 }
 export function exportProgress(root=resolve(import.meta.dir,'../../..'),fleet=FLEET_DIR(),side=mySide(),now=Date.now()){
  const state=readInput<CoordinatorState>(join(root,'.practice/coordinator/state.json'));
- if(!state.error&&(!state.value||!Array.isArray(state.value.tasks)||state.value.version!==1||state.value.tasks.some(r=>!r||!r.spec||typeof r.spec.id!=='string'||!Array.isArray(r.spec.dependsOn))))Object.assign(state,{value:null,error:'unreadable',observedAt:null});
+ if(!state.error&&(!state.value||!Array.isArray(state.value.tasks)||state.value.version!==1||state.value.tasks.some(r=>!r||!r.spec
+  ||typeof r.spec.id!=='string'||!Array.isArray(r.spec.dependsOn)||r.spec.dependsOn.some(id=>typeof id!=='string')
+  ||r.spec.accountFrom!==undefined&&typeof r.spec.accountFrom!=='string'
+  ||r.spec.participants!==undefined&&(!Array.isArray(r.spec.participants)||r.spec.participants.some(name=>typeof name!=='string'))))){
+  Object.assign(state,{value:null,error:'unreadable',observedAt:null});
+ }
  const swarm=readInput<Swarm>(join(root,'.practice/swarm-state.json'));
  if(!swarm.error&&(!swarm.value||!Array.isArray(swarm.value.jobs)||!validTime(swarm.value.at)||swarm.value.jobs.some(j=>!j||typeof j!=='object')))Object.assign(swarm,{value:null,error:'unreadable',observedAt:null});
  // A copied or unchanged file cannot refresh the controller's own heartbeat.
