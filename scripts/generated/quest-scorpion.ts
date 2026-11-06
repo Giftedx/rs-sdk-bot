@@ -99,6 +99,11 @@ try {
         await q.openDoor('hut door 2', 2551, 3569);
         await q.dash('to scorpion b', SCORP_B.x, SCORP_B.z, 3, 12);
         await catchScorp('b', SCORP_B);
+        // Out by the same gate: the world router holds it shut (its opening is Barcrawl's, which the client cannot see),
+        // so a walk planned from inside the yard finds no way out.
+        await q.openDoor('hut door out', 2551, 3570);
+        await q.dash('to outpost gate inside', 2546, 3569, 1, 12);
+        await q.step('outpost gate out', () => { const g = q.findLoc(l => /gate/i.test(l.name) && l.x === 2545 && (l.z === 3569 || l.z === 3570) && (l.optionsWithIndex ?? []).length > 0); return g ? q.opLoc(g, 1) : q.waitTicks(1); }, () => !inOutpost(), 8, 4);
     }
 
     // A: Falador Teleport, the Taverley dungeon ladder, the dusty key, the secret wall.
