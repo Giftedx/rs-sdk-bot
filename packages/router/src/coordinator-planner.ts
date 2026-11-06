@@ -2,7 +2,7 @@ import {readFileSync,existsSync,readdirSync,writeFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
 import {join} from 'node:path';
-import {GOALS,NEW_EVIDENCE_MAX,addTasks,finishedAt,heldBuilds,provisionRefs,replaceTasks,usefulLiveReceipt,type CapabilityChange,type CoordinatorState,type CoordTask,type TaskRecord} from './coordinator';
+import {GOALS,NEW_EVIDENCE_MAX,addTasks,deadRoots,finishedAt,heldBuilds,provisionRefs,replaceTasks,usefulLiveReceipt,type CapabilityChange,type CoordinatorState,type CoordTask,type TaskRecord} from './coordinator';
 import {runModel,type ModelWorker} from './model-worker';
 import {validateDelivery,type DeliveryTask} from './delivery';
 import {freshScoreboard} from './coverage';
@@ -227,6 +227,7 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'Task schema: {id,goal,kind,dependsOn,priority,estimatedMs,why,capability?,account?,accountFrom?,participants?,args?,acceptIndex?,role?,env?,accept?,timeoutMs?,launch?,agent?,newEvidence?}. IDs lower-case letters/digits/hyphens. priority1..100 is impact, estimatedMs is an estimate of total work incl. preparation/recovery. Priority orders the queue, so spread it: 90 and over only for the main run critical path or a chain with waiting consumers, 50 to 89 for a whole band or quest, under 50 for the rest. newEvidence is 1 to '+NEW_EVIDENCE_MAX+' characters. Put longer observations and the next consumer in why.',
   'Kinds: review is a read-only cross-model source review of an existing delivered capability and can overlap independent authors. agent optionally selects codex or claude; the dispatcher balances builds and uses the other agent for review. qualify runs an existing capability native delivery. build authors named files, runs native delivery and a fresh reviewer. provision creates/registers one ordinary missing role. run installs a finite assignment in swarm.json, then checks fresh matched live status. Never set repeat:true yourself.',
   'For composed jobs use participants:[account or @provision-task-ID,...], at least2; args are passed after all account names. acceptIndex selects whose effects are checked (default0). No account/accountFrom with participants. Normal scripts use args too. '+
+  'Include a pending first run for every new provision task. Bind the new account with accountFrom or @provision-task-ID in participants. Its other prerequisites may be pending but must have no terminal blocker.',
   'Each run must depend on a successful build/qualify of the SAME capability. Native tests do not prove live output. accept is {skills:{Skill:level},bank:{itemId:quantity},counters:{counter:minimum},quests:[questName]}; require a real useful effect, not login. Use only documented worker env controls and finite caps. accountFrom resolves the output of a provision task. No env passwords, release pins or HAGGIS_RUN.',
   'All dependsOn IDs must exist or be in this proposal. Failed tasks remain history. Repair by new tasks with new IDs and changed evidence, not blind retries. A run may specify repairs:[{account,endedAt}] naming an exact old failed end, only with a successful same-source native recovery delivery newer than that failure in its dependencies. The existing controller owns the actual repair. Owner stop files remain preserved. A failed account registration reserves its identity; do not create another same-purpose account to hide it.',
   'New capability schema is existing DeliveryTask: {id,goal,entry,files,consumer,checks:[{id,phase:regression|practice|consumer,command:[argv...],timeoutMs}]}. New definitions go in capabilities; no overwrite of existing definitions. A build task may own worker/helper/test/native-proof files, never credentials, AGENTS.md, swarm.json or the coordinator. Acceptance must independently inspect effects including applicable recovery/logout. Existing definitions are preferred.',
@@ -311,6 +312,14 @@ export function prepareProposal(state:CoordinatorState,raw:any,base=projectRoot,
   for(const r of candidate.tasks.filter(r=>r.status==='pending'&&r.spec.kind==='run'&&r.spec.capability===update.definition.id))r.spec.dependsOn=[...new Set([...r.spec.dependsOn,build.id])];
  }
  replaceTasks(candidate,[]); // Validate cycles introduced by promotion edges too.
+ const newClaims=new Set(tasks.filter(t=>t.kind==='provision').map(t=>t.id));
+ if(newClaims.size){
+  const dead=deadRoots(candidate);
+  const demanded=new Set(candidate.tasks.flatMap(r=>r.status==='pending'&&r.spec.kind==='run'&&!dead.has(r.spec.id)?provisionRefs(r.spec):[]));
+  for(const {spec,status} of candidate.tasks){
+   if(status==='pending'&&newClaims.has(spec.id)&&!demanded.has(spec.id))throw Error('account setup needs a viable first run: '+spec.id);
+  }
+ }
  const builds=tasks.filter(t=>t.kind==='build');
  if(builds.length){
   const pending=new Map(candidate.tasks.filter(r=>r.status==='pending').map(r=>[r.spec.id,r.spec]));

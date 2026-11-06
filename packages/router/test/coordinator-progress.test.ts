@@ -352,3 +352,31 @@ test('cancelling a provision cannot strand a surviving implicit account consumer
   .toThrow('cancel would leave an account reference from consumer to claim');
  expect(s).toEqual(before);
 });
+
+test('planner intake rejects a new account setup without a viable first run',()=>{
+ const s=initialState();
+ addTasks(s,[task('failed-proof')],0);
+ complete(s,'failed-proof',false,2);
+ const claim=task('claim',{kind:'provision',role:'quest'});
+ const first={...run('first'),account:undefined,accountFrom:'claim'};
+ const proposal={reason:'Set up an account for a finite quest',capabilities:[]};
+ const before=structuredClone(s);
+ for(const patch of [
+  {tasks:[claim]},
+  {tasks:[claim,run('unbound',['claim'])]},
+  {tasks:[claim,{...first,dependsOn:['failed-proof']}]},
+  {tasks:[claim,first],cancel:[{id:'first'}]},
+ ]){
+  expect(()=>acceptProposal(s,{...proposal,...patch})).toThrow('account setup needs a viable first run: claim');
+  expect(s).toEqual(before);
+ }
+});
+
+test('planner intake accepts two new participants while their shared proof is pending',()=>{
+ const s=initialState();
+ const tasks=[task('proof'),task('first',{kind:'provision',role:'quest',dependsOn:['proof']}),
+  task('second',{kind:'provision',role:'quest',dependsOn:['proof']}),
+  {...run('handoff',['proof']),account:undefined,participants:['@first','@second']}];
+ expect(acceptProposal(s,{reason:'Prepare a bounded handoff',capabilities:[],tasks})).toBe(4);
+ expect(chooseTask(s,1)?.id).toBe('proof');
+});
