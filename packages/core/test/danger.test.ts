@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { combatLevel, dangerTiles, deadly, escapeTiles, parseHunter } from '../src/danger';
+import { CAGED, combatLevel, dangerTiles, deadly, escapeTiles, loadHunters, parseHunter } from '../src/danger';
 import { createWorld, type PathLength } from '../src/world';
 import type { Travel } from '../src/travel';
 
@@ -19,6 +19,14 @@ test('an account inside a danger square may walk out through that square only', 
     expect(escapeTiles(weak, { x: 103, z: 98, level: 0 }, [wolf]).length).toBe(13 * 13);
     expect(escapeTiles(weak, { x: 120, z: 100, level: 0 }, [wolf])).toEqual([]);
     expect(escapeTiles(weak, { x: 103, z: 98, level: 1 }, [wolf])).toEqual([]);
+});
+
+test('a caged monster closes no ground: the Wizards\' Tower lesser demon', () => {
+    const demon = loadHunters().filter(h => h.name === 'Lesser demon');
+    expect(demon.length).toBeGreaterThan(0);
+    for (const h of demon) for (const c of CAGED) expect(h.spawns.some(s => s.x === c.x && s.z === c.z && s.level === c.level)).toBe(false);
+    const weak = { skills: { attack: 69, strength: 1, defence: 1, hitpoints: 37, magic: 99 }, varps: {}, items: [] };
+    expect(dangerTiles(weak, 2, { minX: 3100, maxX: 3120, minZ: 3150, maxZ: 3170 }).length).toBe(0);
 });
 
 test('a monster without a hunt mode is no danger', () => {
