@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {ammoOrderChecks,headlessOrderChecks,selectAmmoProofEndpoints,ammoProofAccountEnv,startAmmoProofStack,ammoChildConfiguration,ammoRegistrationArgs} from '../src/ammo-order-proof';
+import {ammoOrderChecks,headlessOrderChecks,plannedEntryChecks,selectAmmoProofEndpoints,ammoProofAccountEnv,startAmmoProofStack,ammoChildConfiguration,ammoRegistrationArgs} from '../src/ammo-order-proof';
 
 test('owned ammo endpoints reach the stack, new profiles, registration and every worker child',async()=>{
  const checked:number[]=[],samples=[0,0.01];
@@ -67,4 +67,24 @@ test('owned headless saved-state gate rejects asset loss, old output, no XP and 
  expect(headlessOrderChecks(before,{...final,skills:before.skills},final,production,refusal).headlessXp).toBe(false);
  expect(headlessOrderChecks(before,final,final,production,{code:1,log:'missing owned inputs'}).headlessLogout).toBe(false);
  expect(headlessOrderChecks(before,final,final,production,{...refusal,log:refusal.log+'\nSHAFT_BANK {}'}).refusal).toBe(false);
+});
+
+test('planned entry gate rejects missing approach, lost assets, wrong fares, unclear refusal and no logout',()=>{
+ const save=(pack:{id:number;count:number}[],bank:{id:number;count:number}[],x=2615,z=3332)=>({inventories:{93:pack.map((item,slot)=>({...item,slot})),94:[],95:bank.map((item,slot)=>({...item,slot}))},skills:[],position:{x,z,level:0},version:9,vars:{}}) as any;
+ const donorPack=[{id:379,count:1},{id:379,count:1},{id:231,count:1}];
+ const before=[save([...donorPack,{id:995,count:100}],[{id:379,count:173},{id:995,count:19885}],3028,3221),save([{id:1891,count:3}],[{id:995,count:175}],2662,3305)];
+ const final=[save([...donorPack,{id:995,count:40}],[{id:379,count:73},{id:995,count:19885}]),save([{id:1891,count:3}],[{id:995,count:175},{id:379,count:100}])];
+ const input={before,refused:before,final,names:['pdon','prec'],receipt:{state:'settled',expected:[{id:379,count:100}]},
+  planned:{code:0,log:'HANDOFF_APPROACH {"account":"pdon"\nHANDOFF_APPROACH {"account":"prec"\nHANDOFF_RESULT {"ok":true\nLOGOUT logged-out\nLOGOUT logged-out'},
+  refusal:{code:1,log:'handoff approach deadline\nLOGOUT logged-out\nLOGOUT logged-out'},repeat:{code:1,log:'already settled'}};
+ expect(Object.values(plannedEntryChecks(input)).every(Boolean)).toBe(true);
+ expect(plannedEntryChecks({...input,planned:{...input.planned,log:input.planned.log.replace('"prec"','"other"')}}).plannedTransfer).toBe(false);
+ const overpaid=save([...donorPack,{id:995,count:39}],[{id:379,count:73},{id:995,count:19885}]);
+ expect(plannedEntryChecks({...input,final:[overpaid,final[1]!]}).plannedAssets).toBe(false);
+ const spentFood=save([{id:231,count:1},{id:995,count:40}],[{id:379,count:75},{id:995,count:19885}]);
+ expect(plannedEntryChecks({...input,final:[spentFood,final[1]!]}).plannedPreHeld).toBe(false);
+ expect(plannedEntryChecks({...input,final:[final[0]!,save([{id:1891,count:3}],[{id:995,count:175},{id:379,count:100}],2662,3305)]}).plannedPosition).toBe(false);
+ expect(plannedEntryChecks({...input,refusal:{code:1,log:input.refusal.log+'\nHANDOFF_RECEIPT {}'}}).plannedRefusal).toBe(false);
+ expect(plannedEntryChecks({...input,refused:[final[0]!,before[1]!]}).plannedRefusal).toBe(false);
+ expect(plannedEntryChecks({...input,refusal:{code:1,log:'handoff approach deadline\nLOGOUT logged-out'}}).plannedLogout).toBe(false);
 });

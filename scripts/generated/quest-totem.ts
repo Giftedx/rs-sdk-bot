@@ -6,12 +6,12 @@
 // 3 (rdpt_employee.rs2:3-8); Wizard Cromperty's teleport lands in Handelmort's mansion and sets 4
 // (wizard_cromperty.rs2:66-81); the combination KURT (quest_totem.rs2:35-47), the stairs trap found with Search
 // (:142-154), the chest on level 1 (:156-170); Kangai Mau takes the totem and queues completion (kangai_mau.rs2:66-74).
-import { openQuest } from './quest-lib';
-import { componentId } from '../../packages/core/src/logout';
+import { openQuest, teleportRefusal } from './quest-lib';
+import { BARNABY_BRIMHAVEN, onKaramja, totemTravel } from '../tribal-totem-route';
 import { questFlags } from '../../packages/core/src/quest-status';
 import { loadTravel } from '../../packages/core/src/travel';
 import { walkRoute } from '../../packages/core/src/walk';
-import { BARNABY_BRIMHAVEN, CUSTOMS_OFFICER_ARDOUGNE, onKaramja, totemStartsAtKangai, totemTravel } from '../tribal-totem-route';
+import { componentId } from '../../packages/core/src/logout';
 
 const KANGAI = { x: 2791, z: 3182 };
 const HORNCRATE = { id: 2707, x: 2650, z: 3273 };
@@ -23,61 +23,110 @@ const COMBO = { id: 2705, x: 2634, z: 3323 };
 const STAIRS = { id: 2711, x: 2631, z: 3322 };
 const STAIRSTOP = { id: 1723, x: 2631, z: 3322 };          // level 1
 const CHEST = { x: 2638, z: 3324 };                        // level 1
-const BARNABY = { x: 2679, z: 3275 };
-const BRIM_DECK = { x: 2775, z: 3234 };                    // 1_43_50_23_34 (captain_barnaby.rs2:2)
 const ITEM = { label: 1858, totem: 1857 };
 
-const q = await openQuest({ cap: 2500 });
-try {
-    let questDone = false;
-    const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
+// Stage text comes from totem_journal.rs2; the quest list alone cannot distinguish stages 1-4.
+export function totemJournalStage(body: string): number | undefined {
+    const text = body.replace(/@[a-z0-9]+@/gi, '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+    if (/QUEST COMPLETE!/i.test(text)) return 5;
+    if (/teleported myself inside/i.test(text)) return 4;
+    if (/I should get Wizard Cromperty to teleport me inside now/i.test(text)) return 3;
+    if (/to deliver the crate now/i.test(text)) return 2;
+    if (/I need to get into Lord Handelmorts Mansion/i.test(text)) return 1;
+    if (/I can start this quest by speaking to Kangai Mau/i.test(text)) return 0;
+    return undefined;
+}
+
+type Quest = Awaited<ReturnType<typeof openQuest>>;
+export async function readTotemStage(q: Pick<Quest, 's' | 'waitUntil'>): Promise<number> {
+    const c = q.s.client as any;
+    const close = async () => {
+        if (c.mainModalId !== -1) await q.s.direct({type:'closeModal',reason:'SDK'});
+        if (!await q.waitUntil(() => c.mainModalId === -1, 5)) throw Error('Totem journal close unobserved');
+    };
+    if (q.s.sdk.getDialog()?.isOpen) throw Error('Totem journal blocked by dialogue');
+    await close();
+    await q.s.direct({type:'clickComponent',componentId:componentId('questlist:totem'),reason:'SDK'});
+    const body = () => Array.from({length:50}, (_,i) => c.ifType(8145+i+(i>0?1:0))?.text ?? '').join(' ');
+    let stage: number | undefined;
+    const seen = await q.waitUntil(() => {
+        if (c.mainModalId !== 8134 || !/Tribal Totem/i.test(c.ifType(8144)?.text ?? '')) return false;
+        stage = totemJournalStage(body()); return stage !== undefined;
+    }, 10);
+    await close();
+    if (!seen || stage === undefined) throw Error('Tribal Totem stage unobserved within deadline');
+    console.log('TOTEM_STAGE '+JSON.stringify({stage}));
+    return stage;
+}
+
+// A refused teleport needs a boat, not a ground path across the sea.
+export async function totemBoat(q: Pick<Quest,'s'|'walk'|'guard'|'cnt'|'lvl'|'near'>, id: string, route = walkRoute) {
+    const t = loadTravel().find(t => t.id === id);
+    if (!t?.from) throw Error('Totem boat unavailable: '+id);
+    if (q.cnt(995) < t.coins) throw Error('Totem missing fare '+t.coins);
+    await q.guard('Totem boat');
+    await q.walk('Totem boat approach', [{x:t.from.x,z:t.from.z,tol:2}]);
+    if (q.lvl() !== t.from.level || !q.near(t.from.x,t.from.z,8)) throw Error('Totem boat approach unobserved');
+    const before = q.cnt(995);
+    const r = await route(q.s,[{kind:'travel',travel:t,at:t.from,to:t.to}],{maxRetriesPerLeg:1,legTimeoutTicks:150});
+    await q.guard('Totem boat arrival');
+    if (!r.ok || q.lvl() !== t.to.level || !q.near(t.to.x,t.to.z,8) || q.cnt(995) !== before-t.coins)
+        throw Error('Totem boat arrival/fare unobserved: '+id);
+    console.log('TOTEM_BOAT '+JSON.stringify({id,coins:t.coins,before,after:q.cnt(995)}));
+}
+
+export async function completeTotem(q: Quest, boat = totemBoat) {
+    const state = () => questFlags(q.s.client)?.find(f => f.name === 'Tribal Totem')?.state ?? 'unknown';
+    if (!await q.waitUntil(() => state() !== 'unknown' && !!q.pos() && Array.isArray(q.st()?.inventory),20))
+        throw Error('Totem entry state unobserved');
+    if (state() === 'complete') throw Error('Tribal Totem already complete');
+    let stage = await readTotemStage(q);
+    if (stage === 5) throw Error('Tribal Totem already complete');
+    if ((q.s.sdk.getSkill('Thieving')?.level ?? 0) < 21) throw Error('Totem requires Thieving 21');
+    const magic = q.s.sdk.getSkill('Magic')?.level ?? 0, law = q.cnt(563);
+    const plagueCity = questFlags(q.s.client)?.find(f => f.name === 'Plague City')?.state ?? 'unknown';
+    const position = q.pos();
+    if (!position) throw Error('Totem position unobserved');
+    const karamja = onKaramja({x:position.worldX, z:position.worldZ});
+    const travel = totemTravel({karamja, started:stage>0, plagueCity, magic, law, water:q.cnt(555), coins:q.cnt(995)});
+    if (!q.has(ITEM.totem) && travel.how === 'missing') throw Error(travel.detail);
+    const xp0 = q.xp('Thieving'), fish0 = q.cnt(373);
+    const done = () => state() === 'complete';
     const lv = () => q.lvl();
     const btn = (n: number) => q.s.direct({ type: 'clickComponent', componentId: componentId(`tribal_door2:com_${n}`), reason: 'SDK' });
 
-    // The journal: a started quest skips Kangai Mau, who would only ask for the totem (kangai_mau.rs2 kangai_mau_totem_back).
-    const flag = (name: string) => questFlags((q.s as any).client)?.find(f => f.name === name)?.state ?? 'unknown';
-    await q.waitUntil(() => flag('Tribal Totem') !== 'unknown', 15);
-    console.log(`NOTE tribal totem journal ${flag('Tribal Totem')}, plague city ${flag('Plague City')}`);
-
-    // A boat leg from the travel data (scripts/quest-sweep.ts sails the same way): walk to the sailor, pay, land.
-    const sail = async (label: string, id: string): Promise<void> => {
-        const leg = loadTravel().find(t => t.id === id);
-        if (!leg?.from) await q.fail(`travel leg ${id} unavailable`);
-        await q.walk(`to ${label}`, [{ x: leg!.from!.x, z: leg!.from!.z, tol: 3 }]);
-        const r = await walkRoute(q.s as any, [{ kind: 'travel', travel: leg!, at: leg!.from!, to: leg!.to }], { maxRetriesPerLeg: 1, legTimeoutTicks: 150 });
-        if (!r.ok || !q.near(leg!.to.x, leg!.to.z, 8)) await q.fail(`boat ${label}: ${r.ok ? 'arrival unobserved' : `${r.reason} ${r.detail}`}`);
-    };
-
-    // Where the bot stands decides the travel: quest-sweep stages it at Kangai Mau in Brimhaven; a direct run may start
-    // anywhere on the mainland, where a started quest goes straight to the Ardougne depot.
-    const p0 = q.pos(), karamja = onKaramja({ x: p0?.worldX ?? 0, z: p0?.worldZ ?? 0 });
-    let travel = totemTravel({ karamja, started: !totemStartsAtKangai(flag('Tribal Totem')), plagueCity: flag('Plague City'), magic: q.s.sdk.getSkill('Magic')?.level ?? 1, law: q.cnt(563), water: q.cnt(555), coins: q.cnt(995) });
-    console.log(`NOTE tribal totem ${karamja ? 'on karamja' : 'on the mainland'}, to ardougne by ${travel.how}`);
-    if (travel.how === 'missing') await q.fail(travel.detail);
-    if (travel.how === 'sail-to-kangai') { await sail('barnaby to brimhaven', BARNABY_BRIMHAVEN); travel = { how: 'boat' }; }
-
     // 1. Kangai Mau: "I'm in search of adventure!", "Ok, I will get it back." sets 1.
-    if (totemStartsAtKangai(flag('Tribal Totem'))) {
-        await q.talk('kangai 1', /^kangai mau$/i, [/in search of adventure/i, /ok, i will get it back/i], () => q.sawText(/best of luck with that/i) || q.sawText(/have you got our totem back/i), KANGAI, 60);
+    if (stage === 0) {
+        if (travel.how === 'sail-to-kangai') await boat(q, BARNABY_BRIMHAVEN);
+        await q.talk('kangai 1', /^kangai mau$/i, [/in search of adventure/i, /ok, i will get it back/i], () => state() === 'started', KANGAI, 60);
+        stage = await readTotemStage(q);
+        if (stage !== 1) throw Error('Totem opening stage unobserved');
+        q.milestone(1);
     }
-    q.milestone(1);
+    if (!q.has(ITEM.totem)) {
 
-    // 2. To Ardougne: the teleport when the account can cast it, the customs officer's boat from Brimhaven (30 coins,
-    // lands on the Ardougne dock), or a walk from the mainland; the RPDT depot: the label from the horn crate onto the
-    // teleport crate (2), the employee (3).
-    if (travel.how === 'teleport') await q.teleport('ardougne teleport', 'magic:ardougne_teleport', 2661, 3301);
-    else if (travel.how === 'boat') await sail('customs officer to ardougne', CUSTOMS_OFFICER_ARDOUGNE);
-    await q.walk('to depot', [{ x: 2649, z: 3272, tol: 1 }]);
-    await q.step('take label', () => q.opLoc(q.locAt(HORNCRATE.x, HORNCRATE.z) ?? HORNCRATE, 2), () => q.has(ITEM.label), 10, 4);
-    await q.converse([], () => !q.dialogOpen(), 6);
-    // Past stage 2 the crate keeps its new label and answers "already replaced" (quest_totem.rs2 oplocu,teleportcrate).
-    const marked = () => !q.has(ITEM.label) || q.msgCount(/already replaced the delivery address label/i) > 0;
-    await q.step('label on crate', () => q.useOnLoc(ITEM.label, q.locAt(TELECRATE.x, TELECRATE.z) ?? TELECRATE), marked, 10, 4);
-    await q.converse([], () => !q.dialogOpen(), 8);
-    q.milestone(2);
-    // Past stage 2 the employee has no delivery option and only thanks the bot (rdpt_employee.rs2).
-    await q.talk('rpdt', /^rpdt employee$/i, [/when are you going to deliver this crate/i], () => q.sawText(/we could do it now/i) || q.sawText(/thank you very much/i), RPDT, 40);
-    q.milestone(3);
+    // 2. Ardougne Teleport; the RPDT depot: the label from the horn crate onto the teleport crate (2), the employee (3).
+    if (travel.how === 'boat' || travel.how === 'sail-to-kangai') {
+        const refusal = teleportRefusal('magic:ardougne_teleport', magic, law) ?? 'Ardougne teleport requirements not met';
+        console.log('TOTEM_TELEPORT_REFUSED '+refusal);
+        await boat(q, 'npc:customs_officer:ardougne@2772,3231');
+    } else if (travel.how === 'teleport') await q.teleport('ardougne teleport', 'magic:ardougne_teleport', 2661, 3301);
+    if (stage < 3) {
+        await q.walk('to depot', [{ x: 2649, z: 3272, tol: 1 }]);
+        if (stage < 2) {
+            await q.step('take label', () => q.opLoc(q.locAt(HORNCRATE.x, HORNCRATE.z) ?? HORNCRATE, 2), () => q.has(ITEM.label), 10, 4);
+            await q.converse([], () => !q.dialogOpen(), 6);
+            await q.step('label on crate', () => q.useOnLoc(ITEM.label, q.locAt(TELECRATE.x, TELECRATE.z) ?? TELECRATE), () => !q.has(ITEM.label), 10, 4);
+            await q.converse([], () => !q.dialogOpen(), 8);
+            stage = await readTotemStage(q);
+            if (stage !== 2) throw Error('Totem crate marked stage unobserved');
+            q.milestone(2);
+        }
+        await q.talk('rpdt', /^rpdt employee$/i, [/when are you going to deliver this crate/i], () => q.sawText(/we could do it now/i), RPDT, 40);
+        stage = await readTotemStage(q);
+        if (stage !== 3) throw Error('Totem crate delivery stage unobserved');
+        q.milestone(3);
+    }
 
     // 3. Wizard Cromperty: "So what have you invented?", "Can I be teleported please?", "Yes, that sounds good."
     await q.walk('to cromperty', [{ x: CROMPERTY.x, z: CROMPERTY.z - 1, tol: 2 }]);
@@ -86,17 +135,25 @@ try {
     // The teleport closes the dialog and runs p_delay(4) (wizard_cromperty.rs2:66-81); a talk retry in it found no NPC.
     await q.waitUntil(() => q.near(ARRIVE.x, ARRIVE.z, 2), 12);
     if (!q.near(ARRIVE.x, ARRIVE.z, 2)) await q.fail('cromperty teleport');
+    stage = await readTotemStage(q);
+    if (stage !== 4) throw Error('Totem mansion stage unobserved');
     q.milestone(4);
 
     // 4. The mansion: the crate room door (loc_1533 2636,3323), the combination lock: K U R T from A A A A
     // (lock 1 +10 with com_48; locks 2-4 -6 / -9 / -7 with com_49 / com_51 / com_53; enter com_57).
     await q.openDoor('crate room door', 2636, 3323);
     await q.dash('to combo door', 2635, 3323, 0);
-    const comboOk = () => q.msgCount(/combination seems correct/i) > 0;
+    let unlocked = false;
+    const comboOk = () => unlocked || q.msgCount(/combination seems correct/i) > 0;
     for (let k = 0; k < 3 && !comboOk(); k++) {
         await q.guard('combo');
         await q.opLoc(q.locAt(COMBO.x, COMBO.z) ?? COMBO, 1);   // opens tribal_door2 with the locks at A (:115-120)
-        await q.waitTicks(3);
+        await q.waitUntil(() => (q.s.client as any).mainModalId === componentId('tribal_door2') || !q.shutAt(COMBO.x, COMBO.z), 8);
+        if ((q.s.client as any).mainModalId !== componentId('tribal_door2')) {
+            unlocked = !q.shutAt(COMBO.x, COMBO.z);
+            if (unlocked) break;
+            throw Error('Totem combination interface unobserved');
+        }
         for (const [b, n] of [[48, 10], [49, 6], [51, 9], [53, 7]] as const) for (let i = 0; i < n; i++) { await btn(b); await q.waitTicks(1); }
         await btn(57);
         await q.waitUntil(() => comboOk() || q.msgCount(/combination is incorrect/i) > k, 4);
@@ -122,23 +179,22 @@ try {
     await q.step('combo door out', () => q.opLoc(q.locAt(COMBO.x, COMBO.z) ?? COMBO, 1), () => !q.shutAt(COMBO.x, COMBO.z) || (q.pos()?.worldX ?? 0) >= 2634, 8, 4);
     await q.dash('hall', 2635, 3322, 0);
     await q.openDoor('totem door', 2635, 3321);
-    await q.walk('to barnaby', [{ x: BARNABY.x, z: BARNABY.z, tol: 3 }]);
-    await q.talk('barnaby', /^captain barnaby$/i, [/^yes please/i], () => lv() === 1 && q.near(BRIM_DECK.x, BRIM_DECK.z, 8), BARNABY, 40, true);
-    for (let i = 0; i < 6 && lv() !== 0; i++) {
-        await q.guard('disembark');
-        if (q.dialogOpen()) { await q.converse([], () => !q.dialogOpen(), 4); continue; }
-        const plank = q.findLoc(l => /^gangplank$/i.test(l.name));
-        if (!plank) { await q.waitTicks(2); continue; }
-        await q.opLoc(plank, q.opIndex(plank, /cross/i));
-        await q.waitUntil(() => lv() === 0, 10);
+    await boat(q, 'npc:captain_barnaby:brimhaven@2679,3275');
     }
-    if (lv() !== 0) await q.fail('disembark');
 
     // 7. Kangai Mau takes the totem.
     await q.walk('to kangai', [{ x: KANGAI.x, z: KANGAI.z, tol: 3 }]);
-    await q.talk('kangai 2', /^kangai mau$/i, [], () => questDone || !q.has(ITEM.totem), KANGAI, 40);
-    await q.waitUntil(() => questDone, 10);
+    await q.talk('kangai 2', /^kangai mau$/i, [], () => done() && !q.has(ITEM.totem), KANGAI, 40);
+    await q.waitUntil(done, 10);
+    if (!done() || q.has(ITEM.totem) || q.cnt(373) !== fish0+5 || q.xp('Thieving') <= xp0)
+        throw Error('Totem completion/rewards unobserved');
     q.milestone(100);
-    off();
-    await q.end(questDone, 'qp=1');
-} catch (e) { await q.fail(String(e)); }
+    await q.end(true, 'qp=1 flag=complete totemUsed=true swordfish=5');
+}
+
+if (import.meta.main || (globalThis as { QUEST_SESSION?: unknown }).QUEST_SESSION) {
+    const cap = Number(process.env.CAP ?? 2500);
+    if (!Number.isSafeInteger(cap) || cap < 1) throw Error('Totem CAP must be a positive integer');
+    const q = await openQuest({cap,food:[379,385,1891,1893,1895]});
+    try { await completeTotem(q); } catch (e) { await q.fail(String(e)); }
+}

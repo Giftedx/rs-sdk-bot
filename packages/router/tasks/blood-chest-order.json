@@ -1,0 +1,46 @@
+{
+  "id": "blood-chest-order",
+  "goal": "Loot the Ardougne blood rune chests on an owned Thieving account for a finite number of loots, bank runes and coins, reconcile assets and confirm logout.",
+  "entry": "scripts/blood-chest.ts",
+  "files": [
+    "scripts/blood-chest.ts",
+    "scripts/blood-chest.test.ts",
+    "packages/practice/src/blood-chest-proof.ts",
+    "packages/practice/test/blood-chest-proof.test.ts"
+  ],
+  "consumer": "run-blood-moneyshot-loot100 runs scripts/blood-chest.ts Moneyshot 24000 with MAX_LOOTS100 and CAP24000. It banks at least200 Blood rune565, reconciles assets and confirms logout. Practice invokes the real CLI from2584,3337, loots both chests for4 runes and1000 coins, gives a clear refusal below Thieving59 and confirms logout. Next goal: larger batches to the 2100-rune Haggis supply.",
+  "checks": [
+    {
+      "id": "blood-chest-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/blood-chest.test.ts",
+        "packages/practice/test/blood-chest-proof.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "blood-chest-practice",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/blood-chest-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "blood-chest-saved",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/blood-chest-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
+  ]
+}

@@ -27,20 +27,32 @@ const CONSOLE_ACTIONS=new Set(['plan','pause','resume','queue','account-pause','
 
 const alive=(pid:number)=>{try{process.kill(pid,0);return true;}catch{return false;}};
 const writeAtomic=(f:string,data:string|Uint8Array)=>{mkdirSync(resolve(f,'..'),{recursive:true});writeFileSync(f+'.tmp',data);renameSync(f+'.tmp',f);};
-function run(cmd:string[],cwd=root):{ok:boolean;out:string}{
- const p=Bun.spawnSync(cmd,{cwd,stdout:'pipe',stderr:'pipe',windowsHide:true});
- return {ok:p.exitCode===0,out:`${p.stdout.toString()}${p.exitCode===0?'':p.stderr.toString()}`.trim()};
+// A git push on a dead socket can hold for ten minutes or more, and every later publication waits behind it. A normal
+// push takes about 15 s. The kill takes the whole tree: git's transport helpers hold the output pipes open.
+const RUN_LIMIT_MS=120_000,CLONE_LIMIT_MS=600_000;
+const killTree=(pid:number)=>{if(process.platform==='win32')Bun.spawnSync(['taskkill','/PID',String(pid),'/T','/F'],{stdout:'ignore',stderr:'ignore',windowsHide:true});else{try{process.kill(-pid,'SIGKILL');}catch{/* gone */}}};
+export async function run(cmd:string[],cwd=root,limitMs=RUN_LIMIT_MS):Promise<{ok:boolean;out:string}>{
+ // Off Windows the child leads its own process group, so one signal reaches its descendants.
+ const p=Bun.spawn(cmd,{cwd,stdout:'pipe',stderr:'pipe',windowsHide:true,detached:process.platform!=='win32'});
+ let timer:ReturnType<typeof setTimeout>|undefined;
+ const deadline=new Promise<null>(done=>{timer=setTimeout(()=>{killTree(p.pid);done(null);},limitMs);});
+ // The race returns at the limit even if a surviving descendant still holds the pipes.
+ const result=await Promise.race([Promise.all([new Response(p.stdout).text(),new Response(p.stderr).text(),p.exited]),deadline]);
+ clearTimeout(timer);
+ if(!result)return {ok:false,out:`${cmd.slice(0,2).join(' ')} stopped after ${Math.round(limitMs/1000)} s`};
+ const [stdout,stderr,code]=result;
+ return {ok:code===0,out:`${stdout}${code===0?'':stderr}`.trim()};
 }
 const gh=(...args:string[])=>run(['gh',...args]);
-const ghJson=(...args:string[])=>{const r=gh(...args);if(!r.ok)throw Error(r.out.slice(0,300));return JSON.parse(r.out);};
+const ghJson=async(...args:string[])=>{const r=await gh(...args);if(!r.ok)throw Error(r.out.slice(0,300));return JSON.parse(r.out);};
 // The repository's pull requests, for the page's Pull requests plugin (every agent lane and its PRs are public).
 const BOT_REPO='Giftedx/rs-sdk-bot';
 let prs={at:0,rows:[] as any[]};
-function pullRequests(now:number){
+async function pullRequests(now:number){
  if(now-prs.at<300_000)return prs.rows;
  try{
   const fields='number,title,headRefName,state,isDraft,updatedAt,author,url';
-  const open=ghJson('pr','list','--repo',BOT_REPO,'--state','open','--limit','50','--json',fields),merged=ghJson('pr','list','--repo',BOT_REPO,'--state','merged','--limit','15','--json',fields);
+  const open=await ghJson('pr','list','--repo',BOT_REPO,'--state','open','--limit','50','--json',fields),merged=await ghJson('pr','list','--repo',BOT_REPO,'--state','merged','--limit','15','--json',fields);
   prs={at:now,rows:[...open,...merged].map((r:any)=>({number:r.number,title:String(r.title??''),branch:String(r.headRefName??''),state:String(r.state??''),draft:r.isDraft===true,updatedAt:String(r.updatedAt??''),author:String(r.author?.login??''),url:String(r.url??'')}))};
  }catch(e){console.log(`PUBLISH prs unavailable: ${String(e).slice(0,120)}`);prs.at=now;}
  return prs.rows;
@@ -63,7 +75,7 @@ async function collect(){
  await ensureDashboard();
  const ownersFile=[join(FLEET_WORKTREE,'fleet','owners.json'),join(root,'fleet','owners.json')].find(existsSync);
  const owners=(()=>{try{return ownersFile?loadOwners(ownersFile):new Map();}catch{return new Map();}})();
- const state={...withSides(await (await dash('/api/state')).json(),owners),prs:pullRequests(Date.now())};
+ const state={...withSides(await (await dash('/api/state')).json(),owners),prs:await pullRequests(Date.now())};
  const meta=await (async()=>{try{const r=await dash('/api/control',undefined,10_000);return r.ok?await r.json():null;}catch{return null;}})();
  let map:Uint8Array|null=null;
  if(!mapWritten&&state?.map?.ready){try{const r=await dash('/api/map');if(r.ok)map=new Uint8Array(await r.arrayBuffer());}catch{/* next cycle */}}
@@ -72,30 +84,30 @@ async function collect(){
 
 // ---------- the dashboard repository: main (code, commands), data (control.json), site (GitHub Pages) ----------
 const git=(cwd:string,...args:string[])=>run(['git',...args],cwd);
-function ensureClone(){
+async function ensureClone(){
  const main=join(DIR,'repo');
- if(!existsSync(join(main,'.git'))){mkdirSync(DIR,{recursive:true});const c=gh('repo','clone',REPO,main,'--','--branch','main');if(!c.ok)throw Error(`clone: ${c.out}`);}
+ if(!existsSync(join(main,'.git'))){mkdirSync(DIR,{recursive:true});const c=await run(['gh','repo','clone',REPO,main,'--','--branch','main'],root,CLONE_LIMIT_MS);if(!c.ok)throw Error(`clone: ${c.out}`);}
  for(const branch of ['data','site']){
   const dir=join(DIR,branch);if(existsSync(join(dir,'.git')))continue;
-  const remote=git(main,'ls-remote','--exit-code','--heads','origin',branch).ok;
-  if(remote)git(main,'fetch','-q','origin',branch);
-  const add=remote?git(main,'worktree','add','-B',branch,dir,`origin/${branch}`):git(main,'worktree','add','--orphan','-b',branch,dir);
+  const remote=(await git(main,'ls-remote','--exit-code','--heads','origin',branch)).ok;
+  if(remote)await run(['git','fetch','-q','origin',branch],main,CLONE_LIMIT_MS);
+  const add=await (remote?git(main,'worktree','add','-B',branch,dir,`origin/${branch}`):git(main,'worktree','add','--orphan','-b',branch,dir));
   if(!add.ok)throw Error(`worktree ${branch}: ${add.out}`);
  }
  return main;
 }
 // One commit per branch: the previous publication is amended away, so the repository never grows with history.
-function pushSingleCommit(dir:string,branch:string,message:string):string{
- git(dir,'add','-A');
- const hasHead=git(dir,'rev-parse','--verify','HEAD').ok;
- if(hasHead&&git(dir,'diff','--cached','--quiet').ok)return 'unchanged';
- const c=hasHead?git(dir,'commit','--amend','-q','-m',message):git(dir,'commit','-q','-m',message);
+async function pushSingleCommit(dir:string,branch:string,message:string):Promise<string>{
+ await git(dir,'add','-A');
+ const hasHead=(await git(dir,'rev-parse','--verify','HEAD')).ok;
+ if(hasHead&&(await git(dir,'diff','--cached','--quiet')).ok)return 'unchanged';
+ const c=await (hasHead?git(dir,'commit','--amend','-q','-m',message):git(dir,'commit','-q','-m',message));
  if(!c.ok)throw Error(`commit ${branch}: ${c.out}`);
- const p=git(dir,'push','--force','-q','origin',`HEAD:refs/heads/${branch}`);
+ const p=await git(dir,'push','--force','-q','origin',`HEAD:refs/heads/${branch}`);
  if(!p.ok)throw Error(`push ${branch}: ${p.out}`);
  return 'pushed';
 }
-function pullMain(main:string){const r=git(main,'pull','--ff-only','-q','origin','main');if(!r.ok)console.log(`PUBLISH pull main: ${r.out.slice(0,160)}`);}
+async function pullMain(main:string){const r=await git(main,'pull','--ff-only','-q','origin','main');if(!r.ok)console.log(`PUBLISH pull main: ${r.out.slice(0,160)}`);}
 
 // ---------- commands: files under commands/ on main; the GitHub API names the login that committed each ----------
 async function replayToConsole(body:string,nonce:string){
@@ -105,7 +117,7 @@ async function replayToConsole(body:string,nonce:string){
 }
 async function pollCommands(now:number,nonce:string|null):Promise<number>{
  let list:any[];
- try{list=ghJson('api',`repos/${REPO}/contents/commands?ref=main`);}catch(e){if(!/404|Not Found/.test(String(e)))console.log(`PUBLISH commands list: ${String(e).slice(0,160)}`);return 0;}
+ try{list=await ghJson('api',`repos/${REPO}/contents/commands?ref=main`);}catch(e){if(!/404|Not Found/.test(String(e)))console.log(`PUBLISH commands list: ${String(e).slice(0,160)}`);return 0;}
  if(!Array.isArray(list))return 0;
  let applied=0;const owned=ownedNames(),owner=REPO.split('/')[0]!;
  for(const entry of list){
@@ -113,11 +125,11 @@ async function pollCommands(now:number,nonce:string|null):Promise<number>{
   const path=`commands/${entry.name}`;
   let outcome:{status:string;note:string|null};
   try{
-   const file=ghJson('api',`repos/${REPO}/contents/${path}?ref=main`);
+   const file=await ghJson('api',`repos/${REPO}/contents/${path}?ref=main`);
    const text=Buffer.from(String(file.content??''),'base64').toString('utf8'),raw=JSON.parse(text);
    if(typeof raw?.id!=='string'||!ID_RE.test(raw.id)||raw.id!==entry.name.slice(0,-5))throw Error('file name and command id differ');
    if(typeof raw.at!=='number')throw Error('command carries no time');
-   const commits=ghJson('api',`repos/${REPO}/commits?path=${path}&sha=main&per_page=1`);
+   const commits=await ghJson('api',`repos/${REPO}/commits?path=${path}&sha=main&per_page=1`);
    const login:string|null=commits?.[0]?.committer?.login??commits?.[0]?.author?.login??null;
    if(existsSync(receiptPath(root,raw.id)))outcome={status:'already-applied',note:null};
    else{
@@ -138,7 +150,7 @@ async function pollCommands(now:number,nonce:string|null):Promise<number>{
    }
   }catch(e){outcome={status:'invalid',note:String(e instanceof Error?e.message:e).slice(0,160)};console.log(`PUBLISH command ${entry.name} invalid: ${outcome.note}`);}
   // Remove the command file whatever happened: the receipt in control.json is the answer.
-  const del=gh('api','-X','DELETE',`repos/${REPO}/contents/${path}`,'-f',`message=fleet command ${entry.name.slice(0,8)}: ${outcome.status}`,'-f',`sha=${entry.sha}`,'-f','branch=main');
+  const del=await gh('api','-X','DELETE',`repos/${REPO}/contents/${path}`,'-f',`message=fleet command ${entry.name.slice(0,8)}: ${outcome.status}`,'-f',`sha=${entry.sha}`,'-f','branch=main');
   if(!del.ok)console.log(`PUBLISH command delete ${entry.name}: ${del.out.slice(0,160)}`);
  }
  return applied;
@@ -151,7 +163,7 @@ async function cycle(){
  let note=`bots=${state.bots?.length??0} tasks=${state.coordination?.tasks?.length??0}`;
  if(map){writeAtomic(join(DIR,'out','map.bin'),map);mapWritten=true;note+=' map=written';}
  if(REPO){
-  const main=ensureClone();pullMain(main);
+  const main=await ensureClone();await pullMain(main);
   const applied=await pollCommands(now,meta?.nonce??null);
   if(applied){({state,meta}=await collect());note+=` commands=${applied}`;}
  }
@@ -159,7 +171,7 @@ async function cycle(){
  writeAtomic(join(DIR,'out','control.json'),control);writeAtomic(join(DIR,'out','public.json'),pub);
  if(REPO){
   const main=join(DIR,'repo');
-  if(control!==lastControl){writeAtomic(join(DIR,'data','control.json'),control);note+=` data=${pushSingleCommit(join(DIR,'data'),'data','fleet control state')}`;lastControl=control;}
+  if(control!==lastControl){writeAtomic(join(DIR,'data','control.json'),control);note+=` data=${await pushSingleCommit(join(DIR,'data'),'data','fleet control state')}`;lastControl=control;}
   // A server that has just started has no market prices or board tops yet; that thin file would stay live for a
   // whole push period, so the push waits for a warm state, at most three periods from the first cold cycle.
   const warm=stateWarm(state);if(warm)coldSince=0;else if(!coldSince)coldSince=now;
@@ -169,7 +181,7 @@ async function cycle(){
    if(existsSync(join(main,'site')))cpSync(join(main,'site'),site,{recursive:true});
    writeFileSync(join(site,'public.json'),pub);writeFileSync(join(site,'.nojekyll'),'');
    if(existsSync(join(DIR,'out','map.bin')))cpSync(join(DIR,'out','map.bin'),join(site,'map.bin'));
-   note+=` site=${pushSingleCommit(site,'site','fleet public state')}`;lastSitePush=now;lastPublic=pub;
+   note+=` site=${await pushSingleCommit(site,'site','fleet public state')}`;lastSitePush=now;lastPublic=pub;
   }
  }
  console.log(`PUBLISH ok ${new Date(now).toISOString()} ${note} control=${Math.round(control.length/1024)}K public=${Math.round(pub.length/1024)}K`);

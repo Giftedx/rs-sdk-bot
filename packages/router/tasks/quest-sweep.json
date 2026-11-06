@@ -8,7 +8,12 @@
     "scripts/generated/quest-priest.ts",
     "scripts/generated/quest-fishingcompo.ts",
     "scripts/generated/quest-totem.ts",
+    "scripts/generated/quest-vampire.ts",
+    "scripts/generated/quest-cog.ts",
+    "scripts/generated/quest-rj.ts",
     "scripts/generated/quest-lib.ts",
+    "scripts/generated/quest-prince.ts",
+    "scripts/generated/quest-fluffs.ts",
     "scripts/quest-walk.ts",
     "scripts/quest-walk.test.ts",
     "packages/core/src/walk.ts",
@@ -26,7 +31,7 @@
     "scripts/ghost-basement-exit.test.ts",
     "packages/practice/test/quest-sweep-endpoints.test.ts"
   ],
-  "consumer": "run-quest-ballspinner-retained-skull-completion completes The Restless Ghost through the account-parameterized quest-sweep CLI with priest,CAP6000 and unchanged quest acceptance. Ordinary Ballspinner enters from the observed tower basement with skull553,amulet552 equipped,Magic1 and no law rune. Practice invokes the real CLI and proves quest completion, reconciled assets, clear refusal and confirmed logout. Live completion promotes the quest named->live and releases the connected six existing-helper Rune pipeline trials. Preserve the connected Fishing Contest, Sea Slug, Tribal Totem and Clock Tower consumers and their acceptance. Preserve the existing generic bank/input-staging, Gnome gate, two-boat Sheep Shearer and clear missing-item refusal. The additional native retained-Ghost case invokes the real quest-sweep CLI from3113,9555,0 with Magic1,HP26,started varp107=4,oneheld skull553,worn amulet552 and no law rune. It must skip completed acquisition, leave through the observed cellar ladder and tower doors, complete the coffin return, gain exactly oneQP/28125PrayerXP, consume only553, preserve all other held/banked/worn assets and unrelatedXP, and confirm logout. The finite live consumer completes Ballspinner existing retained quest and releases the original17actor Rune timing cohort. Current native proof does not establish a live route or rank. Its second Ghost entry starts at3094,3491,0 with553 banked and the same started journal/amulet; require observed withdrawal553 bank1->0/pack0->1 before completion, without reacquiring the skull. This is the entry produced by preceding Rune staging and cleanup.",
+  "consumer": "run-prince-wandwaver-plan-window completes Prince Ali Rescue on ordinary Wandwaver and run-cat-pocketpython-made-sardine completes Gertrude's Cat on ordinary Pocketpython, each with quest completion acceptance. Practice invokes the real account-parameterized worker CLI and checks saved completion, quest points, reconciled assets and logout. Preserve existing quest callers, practice cases, refusal checks and acceptance. Main and specialist clocks remain protected.",
   "checks": [
     {
       "id": "quest-sweep-regressions",
@@ -51,13 +56,24 @@
       "timeoutMs": 180000
     },
     {
-      "id": "quest-sweep-practice",
+      "id": "quest-sweep-practice-a",
       "phase": "practice",
       "command": [
         "bun",
-        "packages/practice/src/quest-sweep-proof.ts"
+        "packages/practice/src/quest-sweep-proof.ts",
+        "--part=a"
       ],
-      "timeoutMs": 900000
+      "timeoutMs": 1800000
+    },
+    {
+      "id": "quest-sweep-practice-b",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/quest-sweep-proof.ts",
+        "--part=b"
+      ],
+      "timeoutMs": 1800000
     },
     {
       "id": "quest-sweep-saved",
