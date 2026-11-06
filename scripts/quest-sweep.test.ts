@@ -967,7 +967,8 @@ test('a bow and arrows let the Ranged level count against an animal, and the pla
  const {killStyle,rangedKit,BOWS,ARROWS_PER_KILL}=await import('../packages/core/src/gather');
  expect(killStyle(2136,6,1)).toBeNull();            // bear, Attack 6, no kit
  expect(killStyle(2136,6,97)).toBe('ranged');       // bear, Ranged 97 with a kit
- expect(killStyle(2134,6,97)).toBe('melee');        // a giant rat dies to anyone
+ expect(killStyle(2134,6,97)).toBe('ranged');       // a giant rat dies to anyone, but a bow account's bow fires anyway: its arrows are budgeted
+ expect(killStyle(2134,6,1)).toBe('melee');         // bare hands with no kit
  expect(killStyle(2136,22,97)).toBe('ranged');      // the bow when Ranged is the higher level: melee is bare-handed
  expect(killStyle(2136,68,97)).toBe('ranged');      // UnderMyKilt live: Attack 68, Ranged 97, a bow in the bank
  expect(killStyle(2136,70,40)).toBe('melee');       // melee when Attack is the higher level and beats the animal
@@ -1058,24 +1059,31 @@ test('arrows stack in the slot count, and a destination east of Ardougne adds th
 });
 
 test('a strike spell kit is the strongest strike the runes allow, and the highest level that beats the animal picks the style',async()=>{
- const {magicKit,castsFor,killStyle,gatherPlan,killAttempts}=await import('../packages/core/src/gather');
+ const {magicKit,castsFor,castsPerKill,killStyle,gatherPlan,killAttempts}=await import('../packages/core/src/gather');
  // TheFullMonty: Magic 99, a staff of fire, 500 air and 500 mind runes: Fire Strike at 2 air and 1 mind a cast.
  const monty=[{id:1387,count:1},{id:556,count:500},{id:558,count:500}];
  expect(magicKit(monty,99)).toEqual({staff:1387,component:'magic:fire_strike',level:13,maxhit:8,runes:{558:1,556:2}});
  // Without the staff the fire runes are missing: Wind Strike from air and mind alone; nothing below six casts' worth.
  expect(magicKit([{id:556,count:500},{id:558,count:500}],99)?.component).toBe('magic:wind_strike');
  expect(magicKit([{id:556,count:5},{id:558,count:5}],99)).toBeNull();
+ // A fight asks only for one more kill's casts: two mind runes and four air still cast Fire Strike with the staff.
+ expect(magicKit([{id:1387,count:1},{id:556,count:4},{id:558,count:2}],99,2)?.component).toBe('magic:fire_strike');
+ expect(magicKit([{id:1387,count:1},{id:556,count:4},{id:558,count:2}],99)).toBeNull();
  expect(magicKit(monty,12)?.component).toBe('magic:wind_strike');
- // Attack 69 with Strength 1 and Ranged 1 does not beat a goblin series bare-handed; Magic 99 does. A rat stays melee.
+ // Attack 69 with Strength 1 and Ranged 1 does not beat a goblin series bare-handed; Magic 99 does. A rat is the staff's
+ // kill too: a wielded staff with autocast casts on every attack, so its runes are budgeted.
  expect(killStyle(288,69,1,1,1)).toBeNull();
  expect(killStyle(288,69,1,99,1)).toBe('magic');
- expect(killStyle(2134,69,1,99,1)).toBe('melee');
+ expect(killStyle(2134,69,1,99,1)).toBe('magic');expect(killStyle(2134,69,1,1,1)).toBe('melee');
  expect(killStyle(2136,68,97,99,68)).toBe('magic');
  expect(killStyle(2136,68,97,1,68)).toBe('ranged');
- // Casts: the combat level over the max hit at three in five, plus one: two Fire Strikes or six Wind Strikes a goblin.
- expect(castsFor(288,3,8)).toBe(3*killAttempts(288,3));
- expect(castsFor(288,3,2)).toBe(6*killAttempts(288,3));
- expect(castsFor(2136,1,8)).toBe(Math.ceil(21/8/0.6)+1);
+ // Casts: the hitpoints over half the max hit at three in five, plus one: four Fire Strikes or ten Wind Strikes a
+ // goblin (5 hitpoints), thirteen Fire Strikes a bear (27), three a chicken (3), four a giant rat (5).
+ expect(castsFor(288,3,8)).toBe(4*killAttempts(288,3));
+ expect(castsFor(288,3,2)).toBe(10*killAttempts(288,3));
+ expect(castsFor(2136,1,8)).toBe(13);expect(castsFor(2138,1,8)).toBe(3);expect(castsFor(2134,1,8)).toBe(4);
+ // A chance drop's fight asks one goblin's casts, not the series' (one goblin mail: a series of casts planned, four a fight).
+ expect(castsPerKill(288,8)).toBe(4);expect(castsFor(288,1,8)).toBe(4*killAttempts(288,1));expect(castsFor(288,1,8)).toBeGreaterThan(100);
  const plan=gatherPlan([{id:288,count:3}],{x:3014,z:3204,level:0},()=>[],()=>Infinity,undefined,69,1,undefined,99,1);
  expect(plan.gathers).toEqual([{id:288,count:3,how:'kill',kit:'magic'}]);
 });

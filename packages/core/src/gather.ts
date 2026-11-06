@@ -62,21 +62,28 @@ export const CASTS_MIN=6;
 export type MagicKit={staff?:number;component:string;level:number;maxhit:number;runes:Record<number,number>};
 // The strongest strike the Magic level allows whose runes, less the one a staff owned covers, are owned for CASTS_MIN casts
 // (TheFullMonty: Magic 99, a staff of fire, air and mind runes: Fire Strike at 2 air and 1 mind a cast).
-export function magicKit(owned:readonly Item[],magic:number):MagicKit|null{
+// `casts`: the casts the runes must cover. The plan asks for CASTS_MIN; a fight asks for one more kill's casts, so a
+// series that has spent most of its budget still takes its last easy animal (a chicken after a bear).
+export function magicKit(owned:readonly Item[],magic:number,casts=CASTS_MIN):MagicKit|null{
  const have=(id:number)=>owned.filter(i=>i.id===id).reduce((c,i)=>c+i.count,0);
  const staffs=Object.keys(STAFF_RUNE).map(Number).filter(id=>have(id)>=1);
  for(const sp of [...SPELLS].reverse()){
   if(sp.level>magic)continue;
   for(const staff of [...staffs,undefined]){
    const runes:Record<number,number>=Object.fromEntries(Object.entries(sp.runes).filter(([id])=>staff===undefined||STAFF_RUNE[staff]!==Number(id)).map(([id,n])=>[Number(id),n]));
-   if(Object.entries(runes).every(([id,n])=>have(Number(id))>=n*CASTS_MIN))return{staff,component:sp.component,level:sp.level,maxhit:sp.maxhit,runes};
+   if(Object.entries(runes).every(([id,n])=>have(Number(id))>=n*casts))return{staff,component:sp.component,level:sp.level,maxhit:sp.maxhit,runes};
   }
  }
  return null;
 }
 // Casts for the kills: the animal's combat level stands for its hitpoints, three casts in five land, and one more a kill
 // (a goblin's 5: two Fire Strikes, six Wind Strikes).
-export const castsFor=(id:number,count:number,maxhit:number)=>{const src=KILL_SOURCES[id];if(!src)return 0;const kills=src.chance<1?killAttempts(id,count):count;return kills*(Math.ceil(src.combat/maxhit/0.6)+1);};
+// Casts a kill takes: the animal's hitpoints over half the spell's max hit (the mean of a hit), at three hits in five,
+// plus one; the strike goes out every five ticks whether or not the last one landed.
+export const castsPerKill=(id:number,maxhit:number)=>{const src=KILL_SOURCES[id];return src?Math.ceil(src.hp/(maxhit/2)/0.6)+1:0;};
+// Casts for the series: a chance drop's kills are the attempts the drop may take, so the plan buys runes for the series;
+// a fight asks castsPerKill, one animal's casts, so a series that has spent most of its budget still takes its next animal.
+export const castsFor=(id:number,count:number,maxhit:number)=>{const src=KILL_SOURCES[id];if(!src)return 0;const kills=src.chance<1?killAttempts(id,count):count;return kills*castsPerKill(id,maxhit);};
 // The arrows are the kind owned in the greatest number (UnderMyKilt: 21 bronze, 19 iron): the shortfall for a long kill
 // series is bought, and bronze arrows are the kind most shops sell.
 export function rangedKit(owned:readonly Item[]):{bow:number;arrows:number}|null{
@@ -98,14 +105,14 @@ export const denseSpawns=(tiles:readonly Tile[],min=SERIES_CLUSTER):Tile[]=>tile
 // account on practice. `chance` is the drop's share of kills; the attempt budget follows it.
 // `arrows`: the arrows a kill of this animal takes when ARROWS_PER_KILL is too few (a giant bat has 32 hitpoints and
 // flees when hurt, so many shots miss or fall short).
-export const KILL_SOURCES:Record<number,{npcs:number[];name:string;combat:number;chance:number;arrows?:number}>={
- 2132:{npcs:[81],name:'cow',combat:2,chance:1},2138:{npcs:[41,1017],name:'chicken',combat:1,chance:1},2134:{npcs:[86,87,950],name:'giant rat',combat:6,chance:1},
- 2136:{npcs:[105,106],name:'bear',combat:21,chance:1},288:{npcs:[100,101,298,299],name:'goblin',combat:5,chance:5/128},
+export const KILL_SOURCES:Record<number,{npcs:number[];name:string;combat:number;hp:number;chance:number;arrows?:number}>={
+ 2132:{npcs:[81],name:'cow',combat:2,hp:8,chance:1},2138:{npcs:[41,1017],name:'chicken',combat:1,hp:3,chance:1},2134:{npcs:[86,87,950],name:'giant rat',combat:6,hp:5,chance:1},
+ 2136:{npcs:[105,106],name:'bear',combat:21,hp:27,chance:1},288:{npcs:[100,101,298,299],name:'goblin',combat:5,hp:5,chance:5/128},
  // Imp Catcher's beads (imp.rs2:10-19): one roll of 128 a kill, five faces each for black, red, white and yellow.
- 1470:{npcs:[708],name:'imp',combat:2,chance:5/128},1472:{npcs:[708],name:'imp',combat:2,chance:5/128},
- 1474:{npcs:[708],name:'imp',combat:2,chance:5/128},1476:{npcs:[708],name:'imp',combat:2,chance:5/128},
+ 1470:{npcs:[708],name:'imp',combat:2,hp:8,chance:5/128},1472:{npcs:[708],name:'imp',combat:2,hp:8,chance:5/128},
+ 1474:{npcs:[708],name:'imp',combat:2,hp:8,chance:5/128},1476:{npcs:[708],name:'imp',combat:2,hp:8,chance:5/128},
  // Bat bones from a giant bat every kill (all.npc [bat] death_drop); they roost around Keep Le Faye and Hemenster.
- 530:{npcs:[78],name:'giant bat',combat:27,chance:1,arrows:15},
+ 530:{npcs:[78],name:'giant bat',combat:27,hp:32,chance:1,arrows:15},
 };
 // The drops a kill series takes: its own item and every later kill item of the same animal still short (the four
 // beads fall from the same imps, so a red bead lying by a black-bead kill is picked up, not killed for again).
@@ -115,7 +122,9 @@ export const sharedDrops=(gathers:readonly Gather[],g:Gather,held:(id:number)=>n
 export const killAttempts=(id:number,count:number)=>Math.ceil(count/(KILL_SOURCES[id]?.chance??1)*1.5)+3;
 export const EASY_KILL=6;
 // The style that beats the animal. An easy animal that drops every kill (a chicken, a rat) dies to bare hands and costs
-// no arrows or runes. Otherwise the highest level that beats the animal's combat level wins: melee by the Attack level,
+// no arrows or runes, but only for an account with no kit: a wielded bow fires an arrow and a wielded staff with
+// autocast casts on every attack, so with a kit the kill is the kit's and its ammunition is budgeted (a staff account's
+// bare-hand rat spent the mind runes its bear needed). Otherwise the highest level that beats the animal's combat level wins: melee by the Attack level,
 // the bow by Ranged, the strike spell by Magic (Ranged and Magic are 1 without a kit). The sweep's melee is bare-handed,
 // so it also needs a Strength level at or above the animal's combat level: an Attack level in the sixties with Strength
 // near 1 does not beat a bear or a series of goblins. A drop by chance (goblin mail) is a series of kills and takes the
@@ -125,7 +134,7 @@ export function killStyle(id:number,attack:number,ranged=1,magic=1,strength=atta
  const src=KILL_SOURCES[id];
  if(!src)return null;
  const c=src.combat;
- if(c<=EASY_KILL&&src.chance===1)return 'melee';
+ if(c<=EASY_KILL&&src.chance===1&&ranged<=1&&magic<=1)return 'melee';
  const styles:[KillStyle,number][]=[['melee',c<attack&&strength>=c?attack:0],['ranged',c<ranged?ranged:0],['magic',c<magic?magic:0]];
  const best=styles.filter(([,level])=>level>0).sort((a,b)=>b[1]-a[1])[0];
  return best?best[0]:null;
@@ -276,7 +285,7 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
      if(g.kit==='magic'){
       const worn=()=>s.sdk.getEquipment().map((i:any)=>i.id);
       const magic=st()?.skills?.find((k:any)=>k.name==='Magic')?.baseLevel??1;
-      spell=magicKit([...(st()?.inventory??[]),...s.sdk.getEquipment()].map((i:any)=>({id:i.id,count:i.count})),magic);
+      spell=magicKit([...(st()?.inventory??[]),...s.sdk.getEquipment()].map((i:any)=>({id:i.id,count:i.count})),magic,Math.max(1,castsPerKill(g.id,8)));
       if(!spell)return `magic kill of ${npc.name} needs a strike spell's runes in the pack`;
       const staff=spell.staff===undefined?undefined:(st()?.inventory??[]).find((i:any)=>i.id===spell!.staff);
       if(staff&&!worn().includes(spell.staff!)){await s.bot.equipItem(staff);await waitUntil(s,()=>worn().includes(spell!.staff!),{timeoutTicks:5});}
