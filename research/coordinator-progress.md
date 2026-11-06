@@ -30,6 +30,8 @@ Source -> local consumer -> reuse -> check: capability history, delivery fingerp
 
 Source -> local consumer -> adapt -> check: the existing execution context signal and off-thread worker queue -> route planning for walk and handoff -> reject a stopped caller and terminate its planner when no request survives -> a subprocess fixture checks concurrent callers, late messages and worker replacement. `.practice/cancel-route-requests/worker-probe.json` records process teardown with a real Bun worker. Live travel success requires separate evidence.
 
+Source -> local consumer -> adapt -> check: the existing leg key and Bun SQLite used by the practice tools -> route measurement cache -> save new rows in one transaction and read small legacy JSON caches without rewriting them -> fixtures cover cached refusals, source isolation, blocked writes and retry. The legacy read limit is 16 MiB. Larger legacy files stay on disk and their entries warm again as routes run. `.practice/incremental-leg-cache/matched.json` compares the same cache workload on scratch files.
+
 Source -> local consumer -> reuse -> check: the coordinator's sequence at worker settlement -> the planner trigger -> keep a receipt watermark at planner launch and a separate completion time for cooldowns -> test a late receipt with an older producer timestamp while the planner runs. The event sample in `.practice/planner-root-blockers/receipt-window.json` counts overlap and the time to the next plan. It does not identify why each plan starts.
 
 The deterministic rules pass uses that same settled-receipt sequence. Archive compaction cannot hide a settlement or trigger a rules pass on its own. The five-minute recheck still covers other changes.

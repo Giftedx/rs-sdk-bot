@@ -156,7 +156,8 @@ export async function rsPathLength(): Promise<PathLength> {
         const d=activeDanger(),shut=policyKeys.get(blocked)??(policyKeys.set(blocked,cache.hash(blocked)),policyKeys.get(blocked)!);
         const dk=d?dangerKeys.get(d)??(dangerKeys.set(d,routeDangerHash(d,cache)),dangerKeys.get(d)!):'-';
         const k=`kept:${shut}${dk}${key(from)}>${key(to)}:${tol}${interaction?':'+cache.hash(interaction):''}`;
-        if(cache.has(k))return cache.get(k)!;
+        const cached=cache.get(k);
+        if(cached!==undefined)return cached;
         const v=measureNow(from,to,blocked,tol,interaction);
         cache.set(k,v);
         return v;
