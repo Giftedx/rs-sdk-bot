@@ -182,11 +182,11 @@ try {
     await q.dash('to south cave back', 2894, 9776, 2, 34);
     await q.walk('to dusty gate inside', [{ x: GATE.x - 1, z: GATE.z, tol: 1 }]);
     await q.step('dusty gate out', () => q.opLoc(GATE, 1), () => !pastGate(), 15, 4);
-    // The way back is the way in, leg by leg: the gate to the corridor north of the chaos dwarf's spawn (2915,9760,
-    // maps/m45_152.jm2), the dwarf's corridor to the jail yard, the yard to the climb-down landing (2885,9797, beside
-    // the ladder's dungeon end); the client walk does not find the whole way from the gate in one leg. The dwarf
-    // (level 48, hunts the rangers) and a poison scorpion stand in the one-tile corridors and hit the bot, and a monster
-    // on the path or in combat with the bot holds every planned step, so one within reach is shot dead first.
+    // The way back is the way in, leg by leg, along the east corridor (x 2934-2951, z 9753-9777) that the walk from the
+    // ladder to the Jailer uses: the planner's direct gate-to-yard route cuts through the room west of it (x 2922-2931,
+    // z 9756-9763), where the client finds no way past 2929,9756 and rejects every click. A poison scorpion or the
+    // chaos dwarf (spawn 2915,9760, wanders 20 tiles, hunts the rangers) standing on the bot holds a planned step, so one
+    // within reach is shot dead before each leg.
     const clearBlockers = async (range: number): Promise<void> => {
         for (let t = 0; t < 150; t++) {
             const foe: any = (q.st()?.nearbyNpcs ?? []).filter((n: any) => /scorpion|chaos dwarf/i.test(n.name ?? '') && n.distance <= range).sort((a: any, b: any) => a.distance - b.distance)[0];
@@ -196,12 +196,15 @@ try {
         }
     };
     const trace = (label: string) => (line: string) => console.log(`SCORP_WALK ${label}: ${line}`);
-    await clearBlockers(3);
-    await q.walk('to dwarf corridor', [{ x: 2915, z: 9768, tol: 2 }], trace('dwarf corridor'));
-    await clearBlockers(6);
-    await q.walk('to jail yard', [{ x: JAILER.x - 3, z: JAILER.z - 1, tol: 3 }], trace('jail yard'));
-    await clearBlockers(3);
-    await q.walk('to dungeon ladder', [{ x: TAV_LADDER.x + 1, z: TAV_LADDER.z + 6400, tol: 1 }], trace('dungeon ladder'));
+    for (const leg of [
+        { label: 'to east corridor', to: { x: 2936, z: 9777, tol: 2 } },
+        { label: 'to jail approach', to: { x: 2931, z: 9753, tol: 2 } },
+        { label: 'to jail yard', to: { x: JAILER.x - 3, z: JAILER.z - 1, tol: 3 } },
+        { label: 'to dungeon ladder', to: { x: TAV_LADDER.x + 1, z: TAV_LADDER.z + 6400, tol: 1 } },
+    ]) {
+        await clearBlockers(3);
+        await q.walk(leg.label, [leg.to], trace(leg.label));
+    }
     releasePrayer();
     await setPfm(false);
 
