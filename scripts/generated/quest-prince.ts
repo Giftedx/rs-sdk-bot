@@ -40,10 +40,24 @@ try {
     };
     // Jail guards (vislevel 26) are huntmode=aggressive_melee (area_draynor configs); a guard's hit closes the talk.
     // One trial lost 4 Keli talks so (hpMin 94). The bot kills a guard that is in combat within 3 tiles first.
+    // A bow account (UnderMyKilt: Attack 6, Ranged 97) cannot cut a guard down by hand: one trial lost the four Keli
+    // talks and 24 hitpoints to a guard it punched. The sweep brings its bow and QUEST_ARROWS; the fight wields them.
+    const BOWS = [841, 839, 843, 845], ARROWS = [884, 886, 882];
+    const wieldBow = async (): Promise<void> => {
+        const worn = () => q.s.sdk.getEquipment().map((i: any) => i.id);
+        for (const ids of [BOWS, ARROWS]) {
+            if (ids.some(id => worn().includes(id))) continue;
+            const item: any = (q.st()?.inventory ?? []).find((i: any) => ids.includes(i.id));
+            if (!item) return;
+            await q.s.bot.equipItem(item);
+            await q.waitUntil(() => worn().includes(item.id), 5);
+        }
+    };
     const clearGuards = async (): Promise<void> => {
         for (let t = 0; t < 40; t++) {
             const g: any = (q.st()?.nearbyNpcs ?? []).find((n: any) => /^jail guard$/i.test(n.name) && n.inCombat && n.distance <= 3);
             if (!g) return;
+            if (t === 0) await wieldBow();
             if (t % 3 === 0) await q.s.direct({ type: 'interactNpc', npcIndex: g.index, optionIndex: g.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
             await q.waitTicks(1);
         }
