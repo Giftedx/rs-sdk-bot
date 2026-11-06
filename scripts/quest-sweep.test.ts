@@ -1083,6 +1083,14 @@ test('Prince Ali: soft clay is clay on water, clay is mined with a pickaxe, ashe
  expect(gatherPlan([{id:434,count:1}],draynor,()=>[],()=>50).still).toEqual([{id:434,count:1}]);
 });
 
+test('bound for Rimmington, the eye of newt comes from Betty in Port Sarim, not Taverley or Gu\'Tanoth',async()=>{
+ const {sellersByTravel}=await import('./quest-sweep');
+ const ardougne={x:2655,z:3283,level:0},hetty={x:2966,z:3206,level:0};
+ const sellers=[{npc:'Ogre merchant',tile:{x:2528,z:3048,level:0}},{npc:'Jatix',tile:{x:2899,z:3427,level:0}},{npc:'Betty',tile:{x:3012,z:3259,level:0}}];
+ expect(sellersByTravel(sellers,ardougne).map(s=>s.npc)).toEqual(['Ogre merchant','Jatix','Betty']);
+ expect(sellersByTravel(sellers,ardougne,hetty).map(s=>s.npc)).toEqual(['Betty','Jatix','Ogre merchant']);
+});
+
 test('plant tiles come from the knowledge and rank by distance',async()=>{
  const {locsByDistance,pickableTiles}=await import('../packages/core/src/spawn-index');
  const m=new Map([[3366,[{x:2581,z:2984,level:0},{x:2583,z:2981,level:0}]]]);

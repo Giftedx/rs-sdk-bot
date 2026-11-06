@@ -253,8 +253,12 @@ export {SEA};
 // The farthest seller a sweep walks to: Al Kharid to Ardougne is 654 tiles; a crossing costs SEA on top.
 export const FAR_SELLER=800;
 export function travelDistance(from:Tile,to:Tile):number{return cheb(from,to)+(crossesSea(from,to)?SEA:0);}
-export function sellersByTravel<S extends {tile:Tile}>(sellers:readonly S[],at:Tile):S[]{
- return [...sellers].sort((a,b)=>travelDistance(at,a.tile)-travelDistance(at,b.tile));
+// With a destination, a seller ranks by the extra travel it adds to the way there (detour): from Ardougne bound for
+// Hetty's house in Rimmington, Betty in Port Sarim (53 tiles off the way) comes before Jatix in Taverley and the ogre
+// merchant at Gu'Tanoth, both nearer the bank and both behind the mountain or a stall counter the client cannot path to.
+export function sellersByTravel<S extends {tile:Tile}>(sellers:readonly S[],at:Tile,dest?:Tile):S[]{
+ const cost=(t:Tile)=>dest?detour([at,dest],t):travelDistance(at,t);
+ return [...sellers].sort((a,b)=>cost(a.tile)-cost(b.tile));
 }
 export function nearestBank(at:Tile):Tile{
  return BANKS.filter(b=>b.level===at.level).sort((a,b)=>Math.max(Math.abs(a.x-at.x),Math.abs(a.z-at.z))-Math.max(Math.abs(b.x-at.x),Math.abs(b.z-at.z)))[0]??BANKS[0]!;
@@ -978,7 +982,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
   for(const id of QUEST_KEEP[quest]??[])if(count(pack(),id)===0&&count(rows(),id)>0)p.withdraw.push({id,count:1});
   if(seekGhostSkull&&retainedGhostBankSkull(ghostState(),pack(),s.sdk.getEquipment(),rows()))p.withdraw.push({id:553,count:1});
   // A missing item a shop sells is bought after the bank: take coins for it now. Sellers rank by travel distance.
-  const ranked=(d:string,at:Tile)=>sellersByTravel(sellersByDistance(d,at),at).map(n=>({npc:n.npc,npcId:n.npcId,tile:n.tile}));
+  const ranked=(d:string,at:Tile)=>sellersByTravel(sellersByDistance(d,at),at,preset.position).map(n=>({npc:n.npc,npcId:n.npcId,tile:n.tile}));
   const shops=(items:readonly Item[])=>shopPlan(items,here(),catalogItem,(d,at)=>ranked(d,at)[0]??null,ranked);
   // What no shop sells is gathered after the shops; a gather tool comes from the bank or a shop.
   const sellerAt=(id:number)=>{const it=catalogItem(id),n=it&&id!==COINS?ranked(it.debugname,here())[0]:null;return n?travelDistance(here(),n.tile):Infinity;};
