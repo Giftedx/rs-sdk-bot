@@ -153,6 +153,15 @@ try {
     await q.dash('to wall', WALL.x, WALL.z, 1, 24);
     await q.step('secret wall', () => q.opLoc(WALL, 1), () => (q.pos()?.worldZ ?? 9999) < WALL.z, 10, 4);
     await catchScorp('a', SCORP_A);
+    // Back out the way in: the router holds the dusty gate shut (q.blockDoor), so a Magic 1 account's walk to Falador
+    // starts above ground. The gate's west side is the leaving side and opens without the key (door_procs.rs2:77-88).
+    await q.step('secret wall back', () => q.opLoc(WALL, 1), () => (q.pos()?.worldZ ?? 0) >= WALL.z, 10, 4);
+    await q.dash('to wall corridor back', 2877, 9788, 2, 24);
+    await q.dash('to south cave back', 2894, 9776, 2, 34);
+    await q.walk('to dusty gate inside', [{ x: GATE.x - 1, z: GATE.z, tol: 1 }]);
+    await q.step('dusty gate out', () => q.opLoc(GATE, 1), () => !pastGate(), 15, 4);
+    await q.walk('to dungeon ladder', [{ x: TAV_LADDER.x, z: TAV_LADDER.z + 6400 + 1, tol: 1 }]);
+    await q.climb('dungeon ladder up', ladderAt({ x: TAV_LADDER.x, z: TAV_LADDER.z + 6400 }, /climb-up/i), /climb-up/i, () => (q.pos()?.worldZ ?? 9999) < 9000);
 
     // C: Falador Teleport, the Monastery; the ladder asks to join the order, then climbs.
     await q.teleport('falador teleport 2', 'magic:falador_teleport', 2965, 3378);
