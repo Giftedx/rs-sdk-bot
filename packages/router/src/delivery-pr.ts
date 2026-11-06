@@ -133,7 +133,14 @@ const must=async(run:Run,cmd:string[],cwd:string)=>{
 // A prerequisite is satisfied when its PR merged or it had nothing to commit.
 async function checkPrerequisites(pr:DeliveryPr,dir:string,mainRoot:string,run:Run){
  for(const id of pr.prerequisites??[]){
-  const file=join(dir,id+'.json');if(!existsSync(file))continue;
+  const branch=deliveryBranch(id),file=join(dir,id+'.json');
+  if(!existsSync(file)){
+   // A missing receipt cannot prove an empty delivery. Look for its merged PR by head and base.
+   const merged=await must(run,['gh','pr','list','--head',branch,'--base','master','--state','merged',
+    '--json','number,isCrossRepository','--jq','map(select(.isCrossRepository == false)) | .[0].number // empty'],mainRoot);
+   if(!/^[1-9][0-9]*$/.test(merged.trim()))throw new DeliveryWait('waiting for earlier delivery '+branch+' (missing local record and no merge into master)');
+   continue;
+  }
   const before:DeliveryPr=JSON.parse(readFileSync(file,'utf8'));
   if(before.state==='empty')continue;
   if(before.state!=='opened')throw new DeliveryWait('waiting for earlier delivery '+before.branch+' ('+before.state+(before.state==='conflict'?': resolve it by hand':'')+')');
