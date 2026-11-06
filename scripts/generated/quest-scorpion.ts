@@ -170,7 +170,9 @@ try {
     await q.dash('to south cave back', 2894, 9776, 2, 34);
     await q.walk('to dusty gate inside', [{ x: GATE.x - 1, z: GATE.z, tol: 1 }]);
     await q.step('dusty gate out', () => q.opLoc(GATE, 1), () => !pastGate(), 15, 4);
-    // The climb down lands on 2885,9797 (the ladder's dungeon end stands beside it); that tile is the walk's target.
+    // The way back is the way in, leg by leg: the gate to the jail yard, the yard to the climb-down landing (2885,9797,
+    // beside the ladder's dungeon end); the client walk does not find the whole way from the gate in one leg.
+    await q.walk('to jail yard', [{ x: JAILER.x - 3, z: JAILER.z - 1, tol: 3 }]);
     await q.walk('to dungeon ladder', [{ x: TAV_LADDER.x + 1, z: TAV_LADDER.z + 6400, tol: 1 }]);
     await q.climb('dungeon ladder up', ladderAt({ x: TAV_LADDER.x + 1, z: TAV_LADDER.z + 6400 }, /climb-up/i), /climb-up/i, () => (q.pos()?.worldZ ?? 9999) < 9000);
     await setPfm(false);
