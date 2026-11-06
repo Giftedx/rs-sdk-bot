@@ -1078,6 +1078,16 @@ test('Prince Ali: soft clay is clay on water, clay is mined with a pickaxe, ashe
  expect(gatherPlan([{id:434,count:1}],draynor,()=>[],()=>50).still).toEqual([{id:434,count:1}]);
 });
 
+test('Scorpion Catcher\'s antipoison is neither a need nor food: no shop sells it and the script never drinks it',async()=>{
+ const {OPTIONAL}=await import('./quest-sweep');
+ expect(OPTIONAL.has(2446)).toBe(true);
+ const preset=presetFor('scorpion');
+ expect((preset.inventory??[]).some(i=>i.id===2446)).toBe(true);
+ expect(needs(preset,false,'scorpion').has(2446)).toBe(false);
+ expect(needs(preset,true,'scorpion').has(2446)).toBe(false);
+ expect(needs(preset,true,'scorpion').get(379)).toBe(4);
+});
+
 test('plant tiles come from the knowledge and rank by distance',async()=>{
  const {locsByDistance,pickableTiles}=await import('../packages/core/src/spawn-index');
  const m=new Map([[3366,[{x:2581,z:2984,level:0},{x:2583,z:2981,level:0}]]]);

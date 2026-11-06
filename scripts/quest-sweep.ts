@@ -44,9 +44,12 @@ export function presetFor(quest:string):SaveConfig&{position:Tile}{
 export const FOOD=new Set([329,333,361,365,373,379,385,1891,1893,1895,2309,554,555,556,557,563]),COINS=995;
 // A quest whose own item is on the food list: Merlin's Crystal hands its bread to the beggar for Excalibur.
 export const QUEST_ITEMS_AMONG_FOOD:Record<string,number[]>={merlin:[2309]};
+// A preset's protective supply that no quest script uses and no shop sells (Scorpion Catcher's antipoison, 2446): the
+// sweep neither needs nor withdraws it; an account that holds one keeps it as any other pack item.
+export const OPTIONAL=new Set([2446]);
 export function needs(preset:SaveConfig,food=false,quest=''):Map<number,number>{
  const m=new Map<number,number>(),own=new Set(QUEST_ITEMS_AMONG_FOOD[quest]??[]);
- for(const i of preset.inventory??[])if((FOOD.has(i.id)&&!own.has(i.id))===food)m.set(i.id,(m.get(i.id)??0)+i.count);
+ for(const i of preset.inventory??[])if(!OPTIONAL.has(i.id)&&(FOOD.has(i.id)&&!own.has(i.id))===food)m.set(i.id,(m.get(i.id)??0)+i.count);
  if(!food&&preset.coins)m.set(COINS,(m.get(COINS)??0)+preset.coins);
  return m;
 }
