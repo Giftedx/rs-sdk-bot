@@ -1054,10 +1054,11 @@ test('a strike spell kit is the strongest strike the runes allow, and the highes
  expect(killStyle(2134,69,1,99,1)).toBe('magic');expect(killStyle(2134,69,1,1,1)).toBe('melee');
  expect(killStyle(2136,68,97,99,68)).toBe('magic');
  expect(killStyle(2136,68,97,1,68)).toBe('ranged');
- // Casts: the combat level over the max hit at three in five, plus one: two Fire Strikes or six Wind Strikes a goblin.
- expect(castsFor(288,3,8)).toBe(3*killAttempts(288,3));
- expect(castsFor(288,3,2)).toBe(6*killAttempts(288,3));
- expect(castsFor(2136,1,8)).toBe(Math.ceil(21/8/0.6)+1);
+ // Casts: the hitpoints over half the max hit at three in five, plus one: four Fire Strikes or ten Wind Strikes a
+ // goblin (5 hitpoints), thirteen Fire Strikes a bear (27), two a chicken (3).
+ expect(castsFor(288,3,8)).toBe(4*killAttempts(288,3));
+ expect(castsFor(288,3,2)).toBe(10*killAttempts(288,3));
+ expect(castsFor(2136,1,8)).toBe(13);expect(castsFor(2138,1,8)).toBe(2);expect(castsFor(2134,1,8)).toBe(4);
  const plan=gatherPlan([{id:288,count:3}],{x:3014,z:3204,level:0},()=>[],()=>Infinity,undefined,69,1,undefined,99,1);
  expect(plan.gathers).toEqual([{id:288,count:3,how:'kill',kit:'magic'}]);
 });

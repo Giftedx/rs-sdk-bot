@@ -72,7 +72,9 @@ export function magicKit(owned:readonly Item[],magic:number,casts=CASTS_MIN):Mag
 }
 // Casts for the kills: the animal's combat level stands for its hitpoints, three casts in five land, and one more a kill
 // (a goblin's 5: two Fire Strikes, six Wind Strikes).
-export const castsFor=(id:number,count:number,maxhit:number)=>{const src=KILL_SOURCES[id];if(!src)return 0;const kills=src.chance<1?killAttempts(id,count):count;return kills*(Math.ceil(src.combat/maxhit/0.6)+1);};
+// Casts a kill takes: the animal's hitpoints over half the spell's max hit (the mean of a hit), at three hits in five,
+// plus one; the strike goes out every five ticks whether or not the last one landed.
+export const castsFor=(id:number,count:number,maxhit:number)=>{const src=KILL_SOURCES[id];if(!src)return 0;const kills=src.chance<1?killAttempts(id,count):count;return kills*(Math.ceil(src.hp/(maxhit/2)/0.6)+1);};
 // The arrows are the kind owned in the greatest number (UnderMyKilt: 21 bronze, 19 iron): the shortfall for a long kill
 // series is bought, and bronze arrows are the kind most shops sell.
 export function rangedKit(owned:readonly Item[]):{bow:number;arrows:number}|null{
@@ -92,12 +94,12 @@ export const denseSpawns=(tiles:readonly Tile[],min=SERIES_CLUSTER):Tile[]=>tile
 // knowledge/npcs.json. `combat` is the strongest of the animal's forms. An account fights one only below its Attack level,
 // or at combat 6 or less (a chicken, cow or giant rat dies to anyone): a dark bear (19) killed an 81-hitpoint, Attack 6
 // account on practice. `chance` is the drop's share of kills; the attempt budget follows it.
-export const KILL_SOURCES:Record<number,{npcs:number[];name:string;combat:number;chance:number}>={
- 2132:{npcs:[81],name:'cow',combat:2,chance:1},2138:{npcs:[41,1017],name:'chicken',combat:1,chance:1},2134:{npcs:[86,87,950],name:'giant rat',combat:6,chance:1},
- 2136:{npcs:[105,106],name:'bear',combat:21,chance:1},288:{npcs:[100,101,298,299],name:'goblin',combat:5,chance:5/128},
+export const KILL_SOURCES:Record<number,{npcs:number[];name:string;combat:number;hp:number;chance:number}>={
+ 2132:{npcs:[81],name:'cow',combat:2,hp:8,chance:1},2138:{npcs:[41,1017],name:'chicken',combat:1,hp:3,chance:1},2134:{npcs:[86,87,950],name:'giant rat',combat:6,hp:5,chance:1},
+ 2136:{npcs:[105,106],name:'bear',combat:21,hp:27,chance:1},288:{npcs:[100,101,298,299],name:'goblin',combat:5,hp:5,chance:5/128},
  // Imp Catcher's beads (imp.rs2:10-19): one roll of 128 a kill, five faces each for black, red, white and yellow.
- 1470:{npcs:[708],name:'imp',combat:2,chance:5/128},1472:{npcs:[708],name:'imp',combat:2,chance:5/128},
- 1474:{npcs:[708],name:'imp',combat:2,chance:5/128},1476:{npcs:[708],name:'imp',combat:2,chance:5/128},
+ 1470:{npcs:[708],name:'imp',combat:2,hp:8,chance:5/128},1472:{npcs:[708],name:'imp',combat:2,hp:8,chance:5/128},
+ 1474:{npcs:[708],name:'imp',combat:2,hp:8,chance:5/128},1476:{npcs:[708],name:'imp',combat:2,hp:8,chance:5/128},
 };
 // The drops a kill series takes: its own item and every later kill item of the same animal still short (the four
 // beads fall from the same imps, so a red bead lying by a black-bead kill is picked up, not killed for again).
