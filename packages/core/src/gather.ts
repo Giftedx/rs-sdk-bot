@@ -194,6 +194,12 @@ export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:
   // A kill wins over a shop when its animal is nearer, as a spawn does: Rufus in Canifis sells every meat, 850 tiles
   // from Ardougne and behind Priest in Peril, while cows graze beside the Ardougne banks.
   else if(canKill(m.id,attack,ranged,magic,strength)&&kills(m.id).some(t=>t.level===at.level&&d(t)<sold)){const style=killStyle(m.id,attack,ranged,magic,strength)!;gathers.push({...m,how:'kill',...(style==='melee'?{}:{kit:style})});}
+  // A loc that hands the item out for a use beats a shop farther off, as a spawn does: the sink by the Ardougne bank
+  // fills a bucket where the nearest bucket-of-water seller is Jossik at the Lighthouse.
+  else if(USE_SOURCES[m.id]&&depth<4&&nearest(USE_SOURCES[m.id]!.tiles,at).some(t=>d(t)<sold)){
+   for(const id of USE_SOURCES[m.id]!.uses)place({id,count:m.count},depth+1);
+   gathers.push({...m,how:'use'});
+  }
   else if(sold<Infinity)still.push(m);
   else if(NPC_SOURCES[m.id]&&depth<4){
    const r=NPC_SOURCES[m.id]!,units=Math.ceil(m.count/r.yields);
@@ -203,10 +209,6 @@ export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:
   else if(COMBINE_SOURCES[m.id]&&depth<4){
    for(const id of COMBINE_SOURCES[m.id]!)place({id,count:m.count},depth+1);
    gathers.push({...m,how:'combine'});
-  }
-  else if(USE_SOURCES[m.id]&&depth<4&&nearest(USE_SOURCES[m.id]!.tiles,at).some(t=>d(t)<sold)){
-   for(const id of USE_SOURCES[m.id]!.uses)place({id,count:m.count},depth+1);
-   gathers.push({...m,how:'use'});
   }
   else if(MINE_SOURCES[m.id]&&nearest(MINE_SOURCES[m.id]!.tiles,at).some(t=>d(t)<sold)){gathers.push({...m,how:'mine'});if(!tools.some(t=>t.id===BRONZE_PICKAXE))tools.push({id:BRONZE_PICKAXE,count:1});}
   else if(BURN_SOURCES[m.id]&&depth<4){const b=BURN_SOURCES[m.id]!;place({id:b.logs,count:m.count},depth+1);if(b.uses)place({id:b.uses,count:m.count},depth+1);if(!tools.some(t=>t.id===TINDERBOX))tools.push({id:TINDERBOX,count:1});gathers.push({...m,how:'burn'});}
