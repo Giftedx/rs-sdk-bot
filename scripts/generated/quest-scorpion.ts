@@ -182,15 +182,15 @@ try {
     await q.dash('to south cave back', 2894, 9776, 2, 34);
     await q.walk('to dusty gate inside', [{ x: GATE.x - 1, z: GATE.z, tol: 1 }]);
     await q.step('dusty gate out', () => q.opLoc(GATE, 1), () => !pastGate(), 15, 4);
-    // The way back is the way in, leg by leg, along the east corridor (x 2934-2951, z 9753-9777) that the walk from the
-    // ladder to the Jailer uses, through the room west of it (x 2922-2934, z 9756-9763); the planner's one-leg route from
-    // the gate to the yard stalled at 2915,9761 on three runs. The legs never stop for the poison scorpions: Protect
-    // from Melee blocks their sting while the points last, and standing beside one only lets its poison run.
+    // The way back to the ladder is the way in from it, leg by leg: the room west of the east corridor (x 2922-2934,
+    // z 9756-9763), the corridor's north-east bend (2951,9793), then the north passage to the landing. The planner's
+    // own route from the gate's east side runs back through the dusty gate, which the door policy opens for a holder
+    // of the key and the client finds locked, so its clicks beyond the gate are rejected; the legs never stop for the
+    // poison scorpions, since Protect from Melee blocks their sting while the points last.
     const trace = (label: string) => (line: string) => console.log(`SCORP_WALK ${label}: ${line}`);
     for (const leg of [
         { label: 'to east corridor', to: { x: 2936, z: 9777, tol: 2 } },
-        { label: 'to jail approach', to: { x: 2931, z: 9753, tol: 2 } },
-        { label: 'to jail yard', to: { x: JAILER.x - 3, z: JAILER.z - 1, tol: 3 } },
+        { label: 'to north-east bend', to: { x: 2951, z: 9793, tol: 2 } },
         { label: 'to dungeon ladder', to: { x: TAV_LADDER.x + 1, z: TAV_LADDER.z + 6400, tol: 1 } },
     ]) await q.walk(leg.label, [leg.to], trace(leg.label));
     releasePrayer();
