@@ -1,5 +1,7 @@
 // Durable orchestration above the existing author, delivery and swarm paths.
 // Task counts are coordination metrics, never percentages of game completion.
+import type {DeliveryTask} from './delivery';
+
 export const GOALS=['wealth','skills','quests','gear','specialists','main24'] as const;
 export type GoalId=typeof GOALS[number];
 export type Effect={skills?:Record<string,number>;bank?:Record<string,number>;quests?:string[];counters?:Record<string,number>};
@@ -37,6 +39,7 @@ export function usefulLiveReceipt(record:TaskRecord,now:number):Receipt|undefine
   &&receipt?.taskId===record.spec.id&&receipt.runId===record.runId&&receipt.ok===true
   &&receipt.output?.ok===true&&receipt.output.evidence==='live'&&Number.isFinite(receipt.at)&&receipt.at>0&&receipt.at<=now)return receipt;
 }
+export type CapabilityChange={definition:DeliveryTask;expectedSource:string|null};
 export interface CoordinatorState {
  version:1;sequence:number;tasks:TaskRecord[];
  goals:{id:GoalId;lastStartedAt:number;lastSucceededAt:number;completedTasks:number}[];
@@ -44,6 +47,7 @@ export interface CoordinatorState {
  /** Failed planning rounds in a row (planRetryMs, coordinator-decisions.ts). */
  planFailures?:number;
  latestReceiptSequence?:number; plannerReceiptSequence?:number;
+ pendingSubmission?:{sha256:string;capabilities:CapabilityChange[]}&({file:string}|{runId:string;count:number});
 }
 export function fleetExpansion(s:{limit:number;demand:number;freeGB:number;reserveGB:number;cpu:number|null;tickMs:number|null;stalled:boolean;usefulResults:number;now:number;lastExpandedAt:number;step?:number}){
  if(!Number.isSafeInteger(s.limit)||s.limit<1||!Number.isSafeInteger(s.demand)||s.demand<=s.limit||s.stalled||s.usefulResults<2
@@ -231,6 +235,44 @@ export function buildOverlap(capability:string,busy:readonly string[],ownedFiles
  for(const other of busy){let theirs:readonly string[];try{theirs=ownedFiles(other);}catch{continue;}if(mine.some(f=>theirs.includes(f)))return other;}
  return null;
 }
+/** Each pending task that can never start as queued, with its oldest dead prerequisite. */
+export function deadRoots(state:CoordinatorState,records:ReadonlyMap<string,TaskRecord>=new Map(state.tasks.map(r=>[r.spec.id,r]))){
+ const memo=new Map<string,{root:string;at:number}|null>();
+ const visit=(record:TaskRecord):{root:string;at:number}|null=>{
+  const id=record.spec.id;if(memo.has(id))return memo.get(id)!;
+  memo.set(id,null);
+  let found:{root:string;at:number}|null=null;
+  for(const dep of [...record.spec.dependsOn,...provisionRefs(record.spec)]){
+   // A failed refresh can be replaced when a new source needs qualification.
+   if(record.spec.kind==='run'&&dep.startsWith('refresh-'+record.spec.capability+'-'))continue;
+   const next=records.get(dep);
+   let candidate:{root:string;at:number}|null=null;
+   if(!next)candidate={root:dep,at:0};
+   else if(next.status==='failed'||next.status==='superseded')candidate={root:dep,at:finishedAt(next)};
+   else if(next.status==='pending')candidate=visit(next);
+   if(candidate&&(!found||candidate.at<found.at))found=candidate;
+  }
+  memo.set(id,found);return found;
+ };
+ const roots=new Map<string,{root:string;at:number}>();
+ for(const r of state.tasks)if(r.status==='pending'){const found=visit(r);if(found)roots.set(r.spec.id,found);}
+ return roots;
+}
+export function preparedProvisionClaims(state:CoordinatorState,records:ReadonlyMap<string,TaskRecord>,
+ dead=deadRoots(state,records),runHeld?:(task:CoordTask)=>boolean):Set<string>{
+ const claims=new Set<string>();
+ for(const {spec,status} of state.tasks){
+  if(status!=='pending'||spec.kind!=='run'||dead.has(spec.id))continue;
+  const refs=provisionRefs(spec);
+  // A composed first job can wait on several account claims. Its other prerequisites must have passed.
+  if(!refs.length||spec.dependsOn.some(id=>!refs.includes(id)&&records.get(id)?.status!=='succeeded')||runHeld?.(spec))continue;
+  for(const id of refs){
+   const claim=records.get(id);
+   if(claim?.status==='pending'&&claim.spec.dependsOn.every(dep=>records.get(dep)?.status==='succeeded'))claims.add(id);
+  }
+ }
+ return claims;
+}
 // isolatedBuilds: builds author and prove in their own workspace (build-workspace.ts), so builds and live runs overlap.
 // Only a publish into the main checkout needs a drained fleet: publishPending holds new live starts until it lands.
 export function chooseTask(state:CoordinatorState,now:number,resources:{sourceReady?:boolean;nativeReady?:boolean;liveLimit?:number;developmentLimit?:number;preferLive?:boolean;focusCapability?:string;isolatedBuilds?:boolean;publishPending?:boolean;publishing?:string;ownedFiles?:(capability:string)=>readonly string[];runHeld?:(task:CoordTask)=>boolean}={}):CoordTask|null{
@@ -247,19 +289,42 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
   for(const record of state.tasks)if(['pending','running'].includes(record.status)&&record.spec.capability===resources.focusCapability)includeFocus(record.spec.id);
  }
  const pending=state.tasks.filter(r=>r.status==='pending'&&[...r.spec.dependsOn,...provisionRefs(r.spec)].every(id=>records.get(id)?.status==='succeeded'));
+ if(!pending.length)return null;
+ const dead=deadRoots(state,records),consumerCounts=new Map<string,number>(),liveDependencies=new Set<string>();
+ for(const r of state.tasks){
+  if(r.status!=='pending'||dead.has(r.spec.id))continue;
+  for(const id of new Set([...r.spec.dependsOn,...provisionRefs(r.spec)])){
+   consumerCounts.set(id,(consumerCounts.get(id)??0)+1);
+   if(r.spec.kind==='run')liveDependencies.add(id);
+  }
+ }
+ const provisionClaims=preparedProvisionClaims(state,records,dead,resources.runHeld);
  const sourceReady=resources.sourceReady??resources.nativeReady;
  const canBuild=(r:TaskRecord)=>{const prior=lastBuildOutcome(state,r.spec.capability!);return sourceReady!==false&&!buildHeld(state,r.spec,now)&&!(prior?.hostDeferred===true&&prior.sourcePrepared===true&&resources.nativeReady===false)&&!(resources.isolatedBuilds&&buildOverlap(r.spec.capability!,busyBuilds,resources.ownedFiles));};
  const buildWaiting=pending.some(r=>r.spec.kind==='build'&&canBuild(r)&&(!resources.focusCapability||focusCaps.has(r.spec.capability!)));
  // Give a freshly qualified capability one finite consumer before another
  // build invalidates it. The runtime still verifies source/review/admission.
- const lastLiveStart=Math.max(0,...state.tasks.filter(r=>r.spec.kind==='run').map(r=>r.startedAt??0));
+ const lastLiveStartByCapability=new Map<string,number>();
+ for(const r of state.tasks){
+  const capability=r.spec.capability;
+  if(r.spec.kind==='run'&&capability&&r.startedAt!==undefined){
+   lastLiveStartByCapability.set(capability,Math.max(lastLiveStartByCapability.get(capability)??0,r.startedAt));
+  }
+ }
  const productionWindow=new Set(pending.filter(r=>r.spec.kind==='run'&&r.spec.dependsOn.some(id=>{
-  const dep=records.get(id);return !!dep&&dep.spec.capability===r.spec.capability&&dep.receipt?.output?.delivery?.ok&&(dep.receipt.at??0)>lastLiveStart;
+  const dep=records.get(id);return !!dep&&dep.spec.capability===r.spec.capability&&dep.receipt?.output?.delivery?.ok&&(dep.receipt.at??0)>(lastLiveStartByCapability.get(r.spec.capability!)??0);
  })).map(r=>r.spec.id));
- const activeNames=new Set(running.filter(r=>r.spec.kind==='run').flatMap(r=>boundAccounts(r.spec,state)??[]).map(n=>n.toLowerCase()));
+ const activeNames=new Set<string>();
+ let liveSlotsLeft=resources.liveLimit??Infinity;
+ for(const {spec} of running){
+  if(spec.kind==='run'){
+   liveSlotsLeft-=spec.participants?.length??1;
+   for(const name of boundAccounts(spec,state)??[])activeNames.add(name.toLowerCase());
+  }else if(spec.kind==='provision')liveSlotsLeft--;
+ }
  // An isolated build changes the main checkout only when it publishes, so a qualification for a waiting live run
  // goes ahead of builds and of another focus; the run normally ends before that publish.
- const liveQualifies=new Set(resources.isolatedBuilds?pending.filter(r=>r.spec.kind==='qualify'&&state.tasks.some(p=>p.status==='pending'&&p.spec.kind==='run'&&p.spec.dependsOn.includes(r.spec.id))).map(r=>r.spec.id):[]);
+ const liveQualifies=new Set(resources.isolatedBuilds?pending.filter(r=>r.spec.kind==='qualify'&&liveDependencies.has(r.spec.id)).map(r=>r.spec.id):[]);
  const ready=pending.filter(r=>{
   // Unrelated native proofs would expire at the next focused source repair.
   // Leave them queued until the focused capability reaches its live consumer.
@@ -267,28 +332,28 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
   // With isolated builds a focus only orders work; other capabilities still build in the free slots.
   if(!resources.isolatedBuilds&&!liveQualify&&resources.focusCapability&&['build','qualify'].includes(r.spec.kind)&&!focusCaps.has(r.spec.capability!))return false;
   if(r.spec.kind==='qualify'&&buildWaiting&&!liveQualify)return false;
-  if(r.spec.kind==='run'&&running.filter(a=>a.spec.kind==='run').length>=(resources.liveLimit??Infinity))return false;
   if(r.spec.kind!=='run'&&running.filter(a=>a.spec.kind!=='run').length>=(resources.developmentLimit??Infinity))return false;
   if(r.spec.kind==='build'&&!canBuild(r)||r.spec.kind==='qualify'&&resources.nativeReady===false)return false;
   // Isolated builds author apart and delivery-cli gives native checks one practice turn each, so development tasks
   // overlap up to developmentLimit; without isolation they share the main checkout one at a time.
   if(!resources.isolatedBuilds&&exclusive(r.spec.kind)&&running.some(a=>exclusive(a.spec.kind)))return false;
   if(r.spec.kind==='build'&&running.some(a=>(a.spec.kind==='run'&&!resources.isolatedBuilds)||a.spec.kind==='provision'))return false;
+  if(r.spec.kind==='provision'&&!provisionClaims.has(r.spec.id))return false;
   if(r.spec.kind==='provision'&&running.some(a=>a.spec.kind==='provision'))return false;
   if(r.spec.kind==='provision'&&running.some(a=>a.spec.kind==='build'))return false;
-  if(r.spec.kind==='provision'&&new Set(running.filter(a=>a.spec.kind==='run').flatMap(a=>boundAccounts(a.spec,state)??[])).size>=(resources.liveLimit??Infinity))return false;
+  if(r.spec.kind==='provision'&&liveSlotsLeft<1)return false;
   if(r.spec.kind==='run'){
    if(resources.isolatedBuilds){if(resources.publishPending)return false;}
    else if(buildWaiting&&!resources.preferLive&&!productionWindow.has(r.spec.id)||running.some(a=>a.spec.kind==='build'))return false;
    const names=boundAccounts(r.spec,state);
-   if(!names?.length||names.some(n=>activeNames.has(n.toLowerCase())))return false;
+   if(!names?.length||names.length>liveSlotsLeft||names.some(n=>activeNames.has(n.toLowerCase())))return false;
    if(resources.runHeld?.(r.spec))return false;
   }
   return true;
  });
  const score=(r:TaskRecord)=>{
   const goal=state.goals.find(g=>g.id===r.spec.goal)!;
-  const consumers=state.tasks.filter(t=>t.status==='pending'&&t.spec.dependsOn.includes(r.spec.id)).length;
+  const consumers=consumerCounts.get(r.spec.id)??0;
   return r.spec.priority*(1+consumers)/Math.max(1,r.spec.estimatedMs/60000)
    +Math.min(20,Math.max(0,now-Math.max(goal.lastStartedAt,r.createdAt))/300000);
  };

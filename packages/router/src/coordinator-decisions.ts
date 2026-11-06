@@ -2,7 +2,8 @@
 // wait for a repair, and when the host has no disk left for new work. Each function reads state and returns a decision;
 // the coordinator loop (coordinator-cli.ts) acts on it.
 import {statfsSync} from 'node:fs';
-import {finishedAt,provisionRefs,type CoordinatorState,type TaskRecord} from './coordinator';
+import {deadRoots,provisionRefs,type CoordinatorState,type TaskRecord} from './coordinator';
+export {deadRoots} from './coordinator';
 
 // A planning round costs a 150 KB prompt and about two minutes of a subscription model.
 export const IDLE_PLAN_MS=30*60*1000;
@@ -17,30 +18,6 @@ export const DISK_FLOOR_GB=2;
 export const planRetryMs=(failures:number)=>Math.min(IDLE_PLAN_MS,60000*2**Math.max(0,failures-1));
 
 const open=(r:TaskRecord|undefined)=>r?.status==='pending'||r?.status==='running';
-// A failed refresh does not end a run: refreshQualifications links a new one when the source changes.
-const replaceable=(r:TaskRecord,id:string)=>r.spec.kind==='run'&&id.startsWith('refresh-'+r.spec.capability+'-');
-
-/** Each pending task that can never start as queued, with the failed, superseded or missing task that stops it. */
-export function deadRoots(state:CoordinatorState){
- const records=new Map(state.tasks.map(r=>[r.spec.id,r])),memo=new Map<string,{root:string;at:number}|null>();
- const visit=(record:TaskRecord):{root:string;at:number}|null=>{
-  const id=record.spec.id;if(memo.has(id))return memo.get(id)!;
-  memo.set(id,null);
-  let found:{root:string;at:number}|null=null;
-  for(const dep of [...record.spec.dependsOn,...provisionRefs(record.spec)]){
-   if(replaceable(record,dep))continue;
-   const next=records.get(dep);
-   if(!next)found={root:dep,at:0};
-   else if(next.status==='failed'||next.status==='superseded')found={root:dep,at:finishedAt(next)};
-   else if(next.status==='pending')found=visit(next);
-   if(found)break;
-  }
-  memo.set(id,found);return found;
- };
- const roots=new Map<string,{root:string;at:number}>();
- for(const r of state.tasks)if(r.status==='pending'){const found=visit(r);if(found)roots.set(r.spec.id,found);}
- return roots;
-}
 /** Retire ordinary pending tasks whose root has been dead for holdMs. Main and specialist launches stay for their owner. */
 export function retireDeadTasks(state:CoordinatorState,now:number,holdMs=DEAD_TASK_MS){
  const roots=deadRoots(state),retired:{id:string;root:string}[]=[];

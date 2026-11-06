@@ -7,11 +7,33 @@ export type ModelWorker='codex'|'claude';
 // The receipts a review prompt carries: the task's own dependencies and this capability's history, newest first, within
 // a size the model accepts. The whole coordinator history ran past Codex's 1,048,576-character input limit.
 export const REVIEW_INPUT_MAX_CHARS=400000;
+function reviewReceiptSummary(receipt:any){
+ if(typeof receipt?._task?.evidence!=='string'||!receipt._task.evidence)return receipt;
+ const summary={...receipt};
+ if(Array.isArray(receipt.delivery?.files)){
+  const {files,...delivery}=receipt.delivery;
+  summary.delivery=delivery;
+ }
+ if(receipt.status&&typeof receipt.status==='object'){
+  const {name,at,result,workRevision,coordinatorRunId}=receipt.status;
+  summary.status={name,at,result,workRevision,coordinatorRunId};
+ }
+ return summary;
+}
 export function reviewDependencies(dependencies:Record<string,any>,capability:string,dependsOn:readonly string[],maxChars=REVIEW_INPUT_MAX_CHARS):Record<string,any>{
- const relevant=Object.entries(dependencies).filter(([id,d])=>dependsOn.includes(id)||d?._task?.capability===capability||d?.delivery?.id===capability)
-  .sort((a,b)=>(dependsOn.includes(b[0])?1:0)-(dependsOn.includes(a[0])?1:0)||(b[1]?._task?.at??0)-(a[1]?._task?.at??0));
- const out:Record<string,any>={};let size=0;
- for(const [id,d] of relevant){const text=JSON.stringify(d);if(size+text.length>maxChars)break;out[id]=d;size+=text.length;}
+ const direct=new Set(dependsOn);
+ const relevant=Object.entries(dependencies).filter(([id,d])=>direct.has(id)||d?._task?.capability===capability||d?.delivery?.id===capability)
+  .sort((a,b)=>Number(direct.has(b[0]))-Number(direct.has(a[0]))||(b[1]?._task?.at??0)-(a[1]?._task?.at??0));
+ const out:Record<string,any>={};let size=2;
+ for(const [id,d] of relevant){
+  const named=direct.has(id), overhead=JSON.stringify(id).length+1+(size>2?1:0);
+  let value=named?d:reviewReceiptSummary(d), length=JSON.stringify(value).length;
+  if(named&&size+overhead+length>maxChars){
+   value=reviewReceiptSummary(d);length=JSON.stringify(value).length;
+  }
+  if(size+overhead+length>maxChars)continue;
+  out[id]=value;size+=overhead+length;
+ }
  return out;
 }
 // A verdict exists only when the model answered. A failed or expired call is a failed review task, never a rejection.
@@ -75,11 +97,12 @@ export function reviewGate(input:{scope:{known:boolean;changed:string[];owned:re
  if(!input.scope.known)return{blocking:true,reason:'review blocks: '+(input.scope.reason??'build changes are unknown')};
  const outside=input.scope.changed.filter(f=>!input.scope.owned.includes(f));
  if(outside.length)return{blocking:true,reason:'review blocks: build changed files outside its owned list: '+outside.slice(0,8).join(', ')+(outside.length>8?' and '+(outside.length-8)+' more':'')};
- if(input.records<REPLAY_RUNS||input.replays.length<REPLAY_RUNS)return{blocking:true,reason:`review blocks: replay needs ${REPLAY_RUNS} recorded runs from before the build, found ${input.records}`};
+ if(input.records<REPLAY_RUNS)return{blocking:true,reason:`review blocks: replay needs ${REPLAY_RUNS} recorded runs from before the build, found ${input.records}`};
  for(const r of input.replays){
   if(r.status==='error')return{blocking:true,reason:'review blocks: replay failed on '+(r.file??'a record')+': '+String(r.error??'').slice(0,300)};
   if(r.status!=='clean')return{blocking:true,reason:`review blocks: replay of ${r.file??'a record'} differs at tick ${r.difference?.tick} command ${r.difference?.index}: recorded ${JSON.stringify(r.difference?.expected?.a??null)} replayed ${JSON.stringify(r.difference?.actual?.a??null)}`};
  }
+ if(input.replays.length<REPLAY_RUNS)return{blocking:true,reason:`review blocks: replay completed ${input.replays.length} of ${REPLAY_RUNS} required runs`};
  const allowed=input.replays.reduce((n,r)=>n+(r.allowed??0),0);
  return{blocking:false,reason:`review runs after delivery: owned files only; replay clean on ${input.replays.length} recorded runs`+(allowed?` with ${allowed} commands changed within ${(input.allow??[]).join(', ')}`:'')};
 }

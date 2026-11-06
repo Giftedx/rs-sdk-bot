@@ -1,6 +1,7 @@
 import {test,expect} from 'bun:test';
 import {initialState} from '../src/coordinator';
 import {plannerPrompt,gameCoverage,supplyBillSummary} from '../src/coordinator-planner';
+import * as planner from '../src/coordinator-planner';
 
 import {copyFileSync,mkdirSync,mkdtempSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -9,6 +10,24 @@ import {snapshot} from '../../../scripts/fleet-sync';
 import {supplyBill} from '../../planner/src/supply-bill';
 
 const world={coverage:{scriptCandidates:[]},statuses:[],jobs:[],capabilities:[]} as any;
+
+test('live status projection keeps dated stock available to the planner',()=>{
+ const base=mkdtempSync(join(tmpdir(),'planner-assets-'));
+ const statusDir=join(base,'.practice/status');
+ mkdirSync(statusDir,{recursive:true});
+ const live={server:'rs-sdk-demo.fly.dev',at:300_101,bankAt:100,inventory:[{id:565,count:50}],
+  bank:[{id:995,count:1200},{id:565,count:60}],pos:{x:12,z:34}};
+ for(const [name,status] of Object.entries({Helper:live,Haggis:live,Practice:{...live,practice:true},
+  Other:{...live,server:'localhost'}})){
+  writeFileSync(join(statusDir,name+'.json'),JSON.stringify({name,...status}));
+ }
+ const statuses=planner.readPlannerStatuses(base);
+ expect(statuses.map(s=>s.name).sort()).toEqual(['Haggis','Helper']);
+ expect(planner.assetSummary(statuses,['haggis'],300_101)).toEqual([
+  {account:'Helper',at:'12,34',statusAt:300_101,bankAt:100,
+   recent:{coins:0,stacks:['Blood rune 50']},verify:{coins:1200,stacks:['Blood rune 10']}},
+ ]);
+});
 
 test('the live planner gets current route demand even when a legacy bill is present',()=>{
  const base=mkdtempSync(join(tmpdir(),'planner-current-demand-')),fleetDir=join(base,'snapshots');

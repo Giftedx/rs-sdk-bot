@@ -12,7 +12,8 @@ import { ClientProt } from '../../vendor/rs-sdk/server/webclient/src/io/ClientPr
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { castable } from '../teleport-runes';
-import { needs, reservedEdible } from '../quest-sweep';
+import { needs, reservedEdible, walkFar } from '../quest-sweep';
+import { magicKit, type MagicKit } from '../../packages/core/src/gather';
 import { PRESETS } from '../../packages/practice/src/presets';
 // Root interface ids of every interface interface_chat/scripts/chat.rs2 sets text on, from content/pack/interface.pack.
 const CHAT_NAMES = /^(chat[1-4]|npcchat[1-4]|message[1-5]|multi[2-5]|multiobj[2-4]|multiobj3_close|objbox[1-4]|doubleobjbox|inter_213|skill_multi[2-5])$/;
@@ -354,17 +355,19 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     const canCast = (comp: string): boolean => castable(comp, cnt, s.sdk.getEquipment().map((i: any) => i.id), magic());
     const teleport = async (label: string, comp: string, x: number, z: number): Promise<void> => {
         if (!canCast(comp)) {
-            // The world router first: it knows the ladders and doors between an upstairs end (the Black Knights' Fortress's
-            // first floor, 3029,3505) and the ground, which a one-floor corridor and a Climb-down loc in view do not.
-            // The route runs under the quest's own guards: a death, the retreat threshold, an eater failure or the tick
-            // cap abort it, and guard() then acts on them as after any walk. The router casts the teleports the account
-            // can (Lumbridge Teleport on the way to Varrock), so a landing by Lumbridge during the route is not a respawn.
+            // The sweep's far walk first: hub to hub by the known banks, the Ardougne boats for a target east of the
+            // mountain, and the world router for the last leg, which knows the ladders and doors between an upstairs end
+            // (the Black Knights' Fortress's first floor, 3029,3505) and the ground. One routed walk from the Barbarian
+            // Outpost to Falador (410 tiles) ran out its plan budget. The router casts the teleports the account can
+            // (Lumbridge Teleport on the way to Varrock), so a landing by Lumbridge during the walk is not a respawn.
+            // A death, the retreat threshold, a sustain failure or the tick cap abort the walk between and inside its
+            // legs, and guard() then acts on them as after any walk.
             await guard(label);
-            const ac = new AbortController();
-            const stopOff = s.onTick(() => { if (stats.died || retreating || sustain.failure() || T() > CAP) ac.abort('quest guard'); });
             let routed: { ok: boolean; reason?: string };
             routing = true;
-            try { routed = await goTo(s, await getWorld(), { x, z, level: 0 }, accountOf(s), { legTimeoutTicks: 150, planBudgetMs: 15_000, signal: ac.signal }); }
+            const ac = new AbortController();
+            const stopOff = s.onTick(() => { if (stats.died || retreating || sustain.failure() || T() > CAP) ac.abort('quest guard'); });
+            try { routed = await walkFar(s, await getWorld(), { x, z, level: 0 }, 150, { signal: ac.signal }); }
             finally { stopOff(); routing = false; lastCastAt = T(); }
             console.log(`QUEST_TELEPORT_WALK ${JSON.stringify({ label, to: { x, z }, ok: routed.ok, reason: routed.ok ? undefined : routed.reason, at: pos() && { x: pos()!.worldX, z: pos()!.worldZ, level: pos()!.level } })}`);
             await guard(label);
@@ -401,10 +404,48 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         stats.walkTicks += T() - t1;
     };
 
+    // A bow account wields the bow and the arrows in its pack before a fight the quest script runs itself (Prince Ali's
+    // jail guard, Hazeel Cult's Alomone): at a low Attack its hands cut nothing down. The sweep brings them as
+    // QUEST_ARROWS; a pack without them wields nothing and the fight goes on as it stands.
+    const BOWS = [841, 839, 843, 845], ARROWS = [884, 886, 882];
+    const wieldBow = async (): Promise<void> => {
+        const worn = () => s.sdk.getEquipment().map((i: any) => i.id);
+        for (const ids of [BOWS, ARROWS]) {
+            if (ids.some(id => worn().includes(id))) continue;
+            const item: any = (st()?.inventory ?? []).find((i: any) => ids.includes(i.id));
+            if (!item) return;
+            await s.bot.equipItem(item);
+            await waitUntil(s, () => worn().includes(item.id), { timeoutTicks: 5 });
+        }
+    };
+    // One blow at an NPC in a fight the quest script runs itself, with the kit the account fights with: a bow in the pack
+    // or worn is wielded and the Attack option clicked; without one, a strike spell the pack's runes allow is cast at the
+    // cast rate (five ticks, player_magic.rs2) with the staff wielded; with neither, the Attack option alone. The sweep
+    // brings the bow and QUEST_ARROWS, or the staff and QUEST_CASTS' runes, for a Ranged-over-Attack or Magic-over-Attack
+    // account. A ranged or melee blow repeats on its own; a cast does not, so the caller calls again each few ticks.
+    let lastStrikeAt = -Infinity;
+    const strikeKit = (): MagicKit | null => {
+        const magic = st()?.skills?.find((k: any) => k.name === 'Magic')?.baseLevel ?? 1;
+        return magicKit([...(st()?.inventory ?? []), ...s.sdk.getEquipment()].map((i: any) => ({ id: i.id, count: i.count })), magic, 1);
+    };
+    const attackNpc = async (n: any): Promise<void> => {
+        const worn = () => s.sdk.getEquipment().map((i: any) => i.id);
+        const hasBow = BOWS.some(id => worn().includes(id) || (st()?.inventory ?? []).some((i: any) => i.id === id));
+        const kit = hasBow ? null : strikeKit();
+        if (kit) {
+            if (kit.staff !== undefined && !worn().includes(kit.staff)) { const staff = (st()?.inventory ?? []).find((i: any) => i.id === kit.staff); if (staff) { await s.bot.equipItem(staff); await waitUntil(s, () => worn().includes(kit.staff!), { timeoutTicks: 5 }); } }
+            if (T() - lastStrikeAt < 5) return;
+            lastStrikeAt = T();
+            await s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: componentId(kit.component), reason: 'SDK' });
+            return;
+        }
+        if (hasBow) await wieldBow();
+        await s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
+    };
     return {
         s, st, pos, inv, hp, xp, cnt, has, slot, cheb, near, lvl, dialogOpen, sawText, msgCount, T, stats, milestone, dispose,
         blockDoor, guard, fail, end, gains, detail, opLoc, locs, findLoc, locAt, opIndex, npc, talkTo, useOnLoc, useOnNpc, useOnItem,
-        step, converse, walk, talk, climb, teleport, canCast, openDoor, shutAt, dash,
+        step, converse, walk, talk, climb, teleport, canCast, openDoor, shutAt, dash, wieldBow, attackNpc,
         waitTicks: async (n: number) => { const until=s.tick()+n;if(n>0)await waitUntil(s,()=>s.tick()>=until||stats.died||retreating||T()>CAP,{timeoutTicks:n,signal:sustain.aborted});await guard('wait'); },
         waitUntil: async (f: () => boolean, ticks: number) => {const reached=await waitUntil(s, () => f() || stats.died||retreating||T()>CAP, { timeoutTicks: ticks,signal:sustain.aborted });await guard('wait condition');return reached;},
     };

@@ -19,7 +19,9 @@ const files=['scripts/rune-pipeline.ts','scripts/rune-bank-craft.ts','scripts/ru
 const hashes=()=>Object.fromEntries(files.map(f=>[f,createHash('sha256').update(readFileSync(join(root,f))).digest('hex')]));
 
 function verify(dir:string){
- const meta=JSON.parse(readFileSync(join(dir,'native.json'),'utf8')),stdout=readFileSync(join(dir,'worker.log'),'utf8');
+ const meta=JSON.parse(readFileSync(join(dir,'native.json'),'utf8'));
+ if(meta.lowMemory===true)throw Error('insufficient practice free memory floor');
+ const stdout=readFileSync(join(dir,'worker.log'),'utf8');
  const line=stdout.split(/\r?\n/).find(l=>l.startsWith('RUNE_CARRIERS_RESULT ')),result=line?JSON.parse(line.slice('RUNE_CARRIERS_RESULT '.length)):null;
  const saves=meta.names.map((_:string,i:number)=>readPracticeSave(join(dir,i+'-after.sav')));
  const total=(i:number,id:number)=>Object.values(saves[i].inventories).flat().filter((t:any)=>t.id===id).reduce((n:number,t:any)=>n+t.count,0),all=(id:number)=>saves.reduce((n:number,_:unknown,i:number)=>n+total(i,id),0);

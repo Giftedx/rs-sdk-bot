@@ -3,7 +3,8 @@ import {join,resolve} from 'node:path';
 import {spawn} from 'node:child_process';
 import {createHash,randomUUID} from 'node:crypto';
 import {openSync,closeSync} from 'node:fs';
-import {initialState,GOALS,validateTask,type CoordinatorState} from './coordinator';
+import {initialState,GOALS,validateTask,type CapabilityChange,type CoordinatorState} from './coordinator';
+import type {DeliveryTask} from './delivery';
 
 export const projectRoot=resolve(import.meta.dir,'../../..');
 export const coordinationDir=join(projectRoot,'.practice/coordinator');
@@ -22,6 +23,47 @@ export function atomicText(file:string,text:string,rename:(from:string,to:string
  for(let attempt=0;;attempt++){
   try{rename(temporary,file);return;}
   catch(e){if(attempt>=20||!['EPERM','EBUSY','EACCES'].includes((e as NodeJS.ErrnoException).code??''))throw e;Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,50);}
+ }
+}
+const definitionHash=(bytes:string|Buffer)=>createHash('sha256').update(bytes).digest('hex');
+const definitionHistory=(directory:string,id:string,hash:string)=>join(directory,'capability-history',id+'-'+hash);
+export function writeCapabilityDefinition(base:string,definition:DeliveryTask,previous?:Buffer){
+ const directory=join(base,'.practice/coordinator'),text=JSON.stringify(definition,null,2),hash=definitionHash(text);
+ const priorHash=previous?definitionHash(previous):null;
+ if(priorHash===hash)return;
+ mkdirSync(join(directory,'capability-history'),{recursive:true});
+ if(previous&&priorHash)writeFileSync(definitionHistory(directory,definition.id,priorHash)+'.json',previous);
+ atomicJson(definitionHistory(directory,definition.id,hash)+'.transition.json',{priorHash});
+ atomicText(join(base,'packages/router/tasks',definition.id+'.json'),text);
+}
+export function capabilityDefinitionTransition(directory:string,id:string,bytes:Buffer){
+ if(!/^[-a-z0-9]+$/.test(id))throw Error('invalid capability identity');
+ const file=definitionHistory(directory,id,definitionHash(bytes))+'.transition.json';
+ if(!existsSync(file))return undefined;
+ const {priorHash}=JSON.parse(readFileSync(file,'utf8'));
+ if(priorHash===null)return{priorHash,prior:null};
+ if(typeof priorHash!=='string'||!(/^[a-f0-9]{64}$/).test(priorHash))throw Error('invalid capability definition transition');
+ const prior=readFileSync(definitionHistory(directory,id,priorHash)+'.json');
+ if(definitionHash(prior)!==priorHash)throw Error('capability definition base hash mismatch');
+ return{priorHash,prior};
+}
+export function publishCapabilityChanges(base:string,changes:readonly CapabilityChange[]){
+ const directory=join(base,'.practice/coordinator');
+ for(const {definition,expectedSource} of changes){
+  if(!/^[-a-z0-9]+$/.test(definition.id))throw Error('invalid capability identity');
+  const file=join(base,'packages/router/tasks',definition.id+'.json');
+  let current:Buffer|undefined;
+  try{current=readFileSync(file);}
+  catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}
+  const currentHash=current?definitionHash(current):null;
+  if(currentHash===expectedSource){
+   writeCapabilityDefinition(base,definition,current);
+   continue;
+  }
+  // A prior attempt may have finished this write before the request was acknowledged.
+  if(current&&currentHash===definitionHash(JSON.stringify(definition,null,2))
+   &&capabilityDefinitionTransition(directory,definition.id,current)?.priorHash===expectedSource)continue;
+  throw Error('capability definition changed during proposal: '+definition.id);
  }
 }
 export function loadState(directory=coordinationDir):CoordinatorState{

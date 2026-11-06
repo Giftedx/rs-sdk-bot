@@ -25,13 +25,14 @@ test('Hetty keeps its engaged rat when nearest order changes and waits for carri
   s:{client:{ingame:true,ifType:()=>({colour})},tick:()=>tick,sdk:{getSkillXp:()=>0},direct:async(action:any)=>{
    if(action.type==='interactNpc'){
     attacks.push(action.npcIndex);
-    // A repeated click or a nearer second rat must not interrupt this fight.
-    expect(attacks).toEqual([7]);
+    // Every attack, the first and the repeats at the cast rate, goes to the engaged rat: a nearer second rat never takes the fight.
+    expect(attacks.every(a=>a===7)).toBe(true);
     state.player.combat={inCombat:true,targetType:'npc',targetIndex:7};
    }else if(action.type==='pickupItem'){expect(tick).toBeGreaterThanOrEqual(10);pickup=true;}
    return {success:true};
   }},
   npc:()=>state.nearbyNpcs[0],guard:async()=>{},openDoor:async()=>{},dash:async()=>{},milestone:()=>{},
+  attackNpc:async(n:any)=>q.s.direct({type:'interactNpc',npcIndex:n.index,optionIndex:2,reason:'SDK'}),
   waitTicks:async()=>{
    tick++;
    if(tick===2){rat.hp=1;other.distance=0;state.nearbyNpcs=[other,rat];}
@@ -45,7 +46,7 @@ test('Hetty keeps its engaged rat when nearest order changes and waits for carri
   step:async()=>{colour=0x00f800;},converse:async()=>true,dialogOpen:()=>false,
  };
  const log=spyOn(console,'log').mockImplementation(()=>{});
- try{expect((await hetty.executeHetty(q)).ok).toBe(true);expect(attacks).toEqual([7]);expect(pickup).toBe(true);}
+ try{expect((await hetty.executeHetty(q)).ok).toBe(true);expect(attacks[0]).toBe(7);expect(attacks.every(a=>a===7)).toBe(true);expect(pickup).toBe(true);}
  finally{log.mockRestore();}
 });
 

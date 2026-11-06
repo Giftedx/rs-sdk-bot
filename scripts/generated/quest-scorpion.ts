@@ -30,7 +30,9 @@ const JAIL_DOOR = { id: 2631, x: 2931, z: 9690 };            // Velrak's cell do
 const VELRAK = { x: 2931, z: 9685 };
 const GATE = { id: 2623, x: 2924, z: 9803 };                 // deepdungeondoor, west wall of the tile, maps/m45_153.jm2
 
-const q = await openQuest({ cap: 2500, eatAt: 50, food: [379], lumbridgeOk: false });
+// The eater takes any edible in the pack: an account without the preset's lobsters carries its own cake or fish, and the
+// dungeon's poison and the Jailer bleed it either way.
+const q = await openQuest({ cap: 2500, eatAt: 50, lumbridgeOk: false });
 try {
     const FROM = Number(process.env.SC_FROM ?? 0);   // 2: debug preset quest_scorpion_s2 (outside the outpost, stage 2, empty cage); 3: quest_scorpion_s3 (Taverley dungeon ladder, cage with B)
     let questDone = false;
@@ -99,14 +101,39 @@ try {
         await q.openDoor('hut door 2', 2551, 3569);
         await q.dash('to scorpion b', SCORP_B.x, SCORP_B.z, 3, 12);
         await catchScorp('b', SCORP_B);
+        // Out by the same gate: the world router holds it shut (its opening is Barcrawl's, which the client cannot see),
+        // so a walk planned from inside the yard finds no way out.
+        await q.openDoor('hut door out', 2551, 3570);
+        await q.dash('to outpost gate inside', 2546, 3569, 1, 12);
+        await q.step('outpost gate out', () => { const g = q.findLoc(l => /gate/i.test(l.name) && l.x === 2545 && (l.z === 3569 || l.z === 3570) && (l.optionsWithIndex ?? []).length > 0); return g ? q.opLoc(g, 1) : q.waitTicks(1); }, () => !inOutpost(), 8, 4);
     }
 
+    // Protect from Melee (sdk PRAYER_INDICES 14): the dungeon's poison scorpions and the black demons (level 172, aggressive
+    // to every player) beside the wall corridor all hit with melee.
+    const PFM = 14, prayers = (): any => q.st()?.prayers, pfmOn = (): boolean => !!prayers()?.activePrayers?.[PFM], points = (): number => prayers()?.prayerPoints ?? 0;
+    const setPfm = async (on: boolean): Promise<void> => {
+        if (pfmOn() === on || (on && points() <= 0)) return;
+        await q.step(`protect from melee ${on ? 'on' : 'off'}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }), () => pfmOn() === on, 3, 3);
+    };
     // A: Falador Teleport, the Taverley dungeon ladder, the dusty key, the secret wall.
     if (FROM < 3) {
         await q.teleport('falador teleport 1', 'magic:falador_teleport', 2965, 3378);
         await q.walk('to taverley ladder', [{ x: TAV_LADDER.x, z: TAV_LADDER.z + 1, tol: 1 }]);
         await q.climb('taverley ladder', ladderAt(TAV_LADDER, /climb-down/i), /climb-down/i, () => (q.pos()?.worldZ ?? 0) > 9000);
     }
+    // Poison scorpions roam the dungeon between the ladder and the jail and their sting poisons for hundreds of ticks; the
+    // black demons beside the wall corridor hit for most of a ranger's hitpoints. Protect from Melee drains a point every
+    // five ticks, so Prayer 74 buys 370 ticks of cover for a dungeon pass of over 700: the prayer is held only while a
+    // scorpion or demon stands within seven tiles (released once none is within ten) and the points last.
+    let praying = false;
+    const threatWithin = (r: number): boolean => (q.st()?.nearbyNpcs ?? []).some((n: any) => /demon|scorpion/i.test(n.name ?? '') && n.distance <= r);
+    const releasePrayer = q.s.onTick(() => {
+        if (praying || (q.pos()?.worldZ ?? 0) < 9000) return;
+        const want = pfmOn() ? threatWithin(10) : threatWithin(7) && points() > 0;
+        if (want === pfmOn()) return;
+        praying = true;
+        q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }).catch(() => undefined).finally(() => { praying = false; });
+    });
     // The corridor north of the secret wall is walled off from the ladder (wall on x 2880/2881); the only way in is
     // the dusty key gate (deepdungeondoor 2623, west wall of 2924,9803). From its east side it gives "This gate is
     // locked." (areas/area_taverly/dungeon/scripts/jail_doors.rs2:31, test run t5) unless the dusty key is used on
@@ -119,6 +146,8 @@ try {
     const pickup = (g: any) => q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' });
     if (!q.has(ITEM.dusty)) {
         await q.walk('to jailer', [{ x: JAILER.x - 3, z: JAILER.z - 1, tol: 3 }]);
+        // The Jailer (level 47) dies to a low-Attack ranger's bow, not to its hands; the sweep brings the bow and QUEST_ARROWS.
+        await q.wieldBow();
         for (let t = 0; t < 150 && !q.has(ITEM.jailKey); t++) {
             await q.guard('jailer');
             const g = ground(ITEM.jailKey);
@@ -146,6 +175,29 @@ try {
     await q.dash('to wall', WALL.x, WALL.z, 1, 24);
     await q.step('secret wall', () => q.opLoc(WALL, 1), () => (q.pos()?.worldZ ?? 9999) < WALL.z, 10, 4);
     await catchScorp('a', SCORP_A);
+    // Back out the way in: the router holds the dusty gate shut (q.blockDoor), so a Magic 1 account's walk to Falador
+    // starts above ground. The gate's west side is the leaving side and opens without the key (door_procs.rs2:77-88).
+    await q.step('secret wall back', () => q.opLoc(WALL, 1), () => (q.pos()?.worldZ ?? 0) >= WALL.z, 10, 4);
+    await q.dash('to wall corridor back', 2877, 9788, 2, 24);
+    await q.dash('to south cave back', 2894, 9776, 2, 34);
+    await q.walk('to dusty gate inside', [{ x: GATE.x - 1, z: GATE.z, tol: 1 }]);
+    await q.step('dusty gate out', () => q.opLoc(GATE, 1), () => !pastGate(), 15, 4);
+    // The way back to the ladder is the way in from it, leg by leg: the room west of the east corridor (x 2922-2934,
+    // z 9756-9763), the corridor's north-east bend (2951,9793), the north passage (2937,9825), then the landing. Each
+    // leg is short enough that the planner's shortest route is the way in; from the bend a one-leg route to the landing
+    // runs back through the dusty gate, which the door policy opens for a holder of the key and the client finds
+    // locked, so its clicks beyond the gate are rejected. The legs never stop for the poison scorpions, since Protect
+    // from Melee blocks their sting while the points last.
+    const trace = (label: string) => (line: string) => console.log(`SCORP_WALK ${label}: ${line}`);
+    for (const leg of [
+        { label: 'to east corridor', to: { x: 2936, z: 9777, tol: 2 } },
+        { label: 'to north-east bend', to: { x: 2951, z: 9793, tol: 2 } },
+        { label: 'to north passage', to: { x: 2937, z: 9825, tol: 2 } },
+        { label: 'to dungeon ladder', to: { x: TAV_LADDER.x + 1, z: TAV_LADDER.z + 6400, tol: 1 } },
+    ]) await q.walk(leg.label, [leg.to], trace(leg.label));
+    await q.climb('dungeon ladder up', ladderAt({ x: TAV_LADDER.x + 1, z: TAV_LADDER.z + 6400 }, /climb-up/i), /climb-up/i, () => (q.pos()?.worldZ ?? 9999) < 9000);
+    releasePrayer();
+    await setPfm(false);
 
     // C: Falador Teleport, the Monastery; the ladder asks to join the order, then climbs.
     await q.teleport('falador teleport 2', 'magic:falador_teleport', 2965, 3378);
