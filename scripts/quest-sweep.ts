@@ -84,15 +84,17 @@ export function plan(need:ReadonlyMap<number,number>,pack:readonly Item[],bank:r
 // The edibles a bank may hold in place of a preset's food, best heal first (a shark's 20, a lobster's 12, a slice's 4).
 export const MEALS=[385,373,379,365,361,333,329,1891,1893,1895,2309];
 // The food withdrawal: the preset's own kinds first, then any other edible for the units still short, less the edibles the
-// pack already carries (a ranger with sharks banked and a preset of lobsters leaves with sharks).
-export function mealPlan(food:ReadonlyMap<number,number>,pack:readonly Item[],bank:readonly Item[]):Item[]{
+// pack already carries (a ranger with sharks banked and a preset of lobsters leaves with sharks). The quest's own
+// withdrawals and needs are not meals: Merlin's Crystal's bread for the beggar stays the beggar's.
+export function mealPlan(food:ReadonlyMap<number,number>,pack:readonly Item[],bank:readonly Item[],questWithdraw:readonly Item[]=[],need:ReadonlyMap<number,number>=new Map()):Item[]{
  const exact=plan(food,pack,bank),withdraw=[...exact.withdraw];
  const edible=(id:number)=>MEALS.includes(id)&&!food.has(id);
- let left=exact.missing.filter(m=>MEALS.includes(m.id)).reduce((n,m)=>n+m.count,0)-pack.filter(i=>edible(i.id)).reduce((n,i)=>n+i.count,0);
+ const spare=(id:number)=>Math.max(0,count(pack,id)-(need.get(id)??0));
+ let left=exact.missing.filter(m=>MEALS.includes(m.id)).reduce((n,m)=>n+m.count,0)-MEALS.filter(edible).reduce((n,id)=>n+spare(id),0);
  for(const id of MEALS){
   if(left<=0)break;
   if(!edible(id))continue;
-  const take=Math.min(left,count(bank,id));
+  const take=Math.min(left,count(bank,id)-count(questWithdraw,id));
   if(take>0){withdraw.push({id,count:take});left-=take;}
  }
  return withdraw;
@@ -1039,7 +1041,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
   await waitUntil(s,()=>(st()?.bank?.items?.length??0)>0,{timeoutTicks:10});
   const rows=():Item[]=>(st()?.bank?.items??[]).map((i:any)=>({id:i.id,count:i.count}));
   wornKit=wornKitPlan(quest,base,pack(),rows(),s.sdk.getEquipment());need=wornKit.need;
-  const p=plan(need,pack(),rows()),meal=mealPlan(food,pack(),rows());
+  const p=plan(need,pack(),rows()),meal=mealPlan(food,pack(),rows(),p.withdraw,need);
   p.withdraw.push(...meal);
   for(const id of QUEST_KEEP[quest]??[])if(count(pack(),id)===0&&count(rows(),id)>0)p.withdraw.push({id,count:1});
   if(seekGhostSkull&&retainedGhostBankSkull(ghostState(),pack(),s.sdk.getEquipment(),rows()))p.withdraw.push({id:553,count:1});

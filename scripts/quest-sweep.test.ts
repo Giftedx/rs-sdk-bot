@@ -1386,4 +1386,9 @@ test('the meal takes the preset food kinds first, then the best other edibles th
  expect(mealPlan(food,[{id:385,count:2}],[{id:379,count:1},{id:333,count:5}])).toEqual([{id:379,count:1},{id:333,count:1}]);
  // Enough lobsters: nothing else.
  expect(mealPlan(food,[],[{id:379,count:9},{id:385,count:9}])).toEqual([{id:379,count:4}]);
+ // Merlin's Crystal: the one bread banked is the beggar's (the quest plan withdraws it) and is no meal; a bread the pack
+ // holds for the quest does not count as food carried either.
+ const beggar=new Map([[2309,1]]);
+ expect(mealPlan(food,[],[{id:2309,count:1}],[{id:2309,count:1}],beggar)).toEqual([]);
+ expect(mealPlan(food,[{id:2309,count:1}],[{id:385,count:2}],[],beggar)).toEqual([{id:385,count:2}]);
 });
