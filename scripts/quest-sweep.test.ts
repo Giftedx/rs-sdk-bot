@@ -1107,6 +1107,8 @@ test('Scorpion Catcher\'s antipoison is neither a need nor food: no shop sells i
  expect(needs(preset,false,'scorpion').has(2446)).toBe(false);
  expect(needs(preset,true,'scorpion').has(2446)).toBe(false);
  expect(needs(preset,true,'scorpion').get(379)).toBe(4);
+});
+
 test('bound for Rimmington, the eye of newt comes from Betty in Port Sarim, not Taverley or Gu\'Tanoth',async()=>{
  const {sellersByTravel}=await import('./quest-sweep');
  const ardougne={x:2655,z:3283,level:0},hetty={x:2966,z:3206,level:0};
