@@ -3,7 +3,8 @@
 import {existsSync,readFileSync} from 'node:fs';
 
 // These faults come from the host. They say nothing about the source under test.
-const HOST_FAULT=/port \d+ in use|free memory below floor/i;
+const HOST_FAULT=/port \d+ in use|free memory below floor|insufficient (?:free memory: below the floor|practice (?:free memory floor|memory: need))/i;
+const PROOF_TIMING=/^[A-Z0-9_]+_PROOF_TIMING \{/;
 
 // A proof report lists cases (cases, results) or names its acceptance predicates (checks).
 function failedCases(stdout:string){
@@ -25,7 +26,7 @@ export function faultOf(check:string,stdout:string,stderr:string):string|null{
  // bun test prints each file name to stderr, even when its tests pass, and one (fail) line for each failed test.
  const tests=lines.flatMap(l=>/^\(fail\) (.+?)(?: \[[\d.]+ms\])?$/.exec(l)?.[1]??[]).sort();
  if(tests.length)return `${check}: ${plain(tests.join(','))}`;
- const error=lines.find(l=>!/\.test\.tsx?:$/.test(l));
+ const error=lines.find(l=>!/\.test\.tsx?:$/.test(l)&&!PROOF_TIMING.test(l));
  if(!error||HOST_FAULT.test(error))return null;
  return `${check}: ${plain(error)}`;
 }
