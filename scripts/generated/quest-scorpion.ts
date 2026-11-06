@@ -108,12 +108,23 @@ try {
         await q.step('outpost gate out', () => { const g = q.findLoc(l => /gate/i.test(l.name) && l.x === 2545 && (l.z === 3569 || l.z === 3570) && (l.optionsWithIndex ?? []).length > 0); return g ? q.opLoc(g, 1) : q.waitTicks(1); }, () => !inOutpost(), 8, 4);
     }
 
+    // Protect from Melee (sdk PRAYER_INDICES 14): the dungeon's poison scorpions and the black demons (level 172, aggressive
+    // to every player) beside the wall corridor all hit with melee.
+    const PFM = 14, prayers = (): any => q.st()?.prayers, pfmOn = (): boolean => !!prayers()?.activePrayers?.[PFM], points = (): number => prayers()?.prayerPoints ?? 0;
+    const setPfm = async (on: boolean): Promise<void> => {
+        if (pfmOn() === on || (on && points() <= 0)) return;
+        await q.step(`protect from melee ${on ? 'on' : 'off'}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }), () => pfmOn() === on, 3, 3);
+    };
     // A: Falador Teleport, the Taverley dungeon ladder, the dusty key, the secret wall.
     if (FROM < 3) {
         await q.teleport('falador teleport 1', 'magic:falador_teleport', 2965, 3378);
         await q.walk('to taverley ladder', [{ x: TAV_LADDER.x, z: TAV_LADDER.z + 1, tol: 1 }]);
         await q.climb('taverley ladder', ladderAt(TAV_LADDER, /climb-down/i), /climb-down/i, () => (q.pos()?.worldZ ?? 0) > 9000);
     }
+    // Poison scorpions roam the dungeon between the ladder and the jail and their sting poisons for hundreds of ticks (a
+    // poisoned run bled from 47 to 8 hitpoints through seven cakes); Protect from Melee holds from the ladder down to the
+    // ladder up, the black demons beside the wall corridor included.
+    await setPfm(true);
     // The corridor north of the secret wall is walled off from the ladder (wall on x 2880/2881); the only way in is
     // the dusty key gate (deepdungeondoor 2623, west wall of 2924,9803). From its east side it gives "This gate is
     // locked." (areas/area_taverly/dungeon/scripts/jail_doors.rs2:31, test run t5) unless the dusty key is used on
@@ -144,18 +155,10 @@ try {
         q.milestone('dusty key');
         await q.step('leave cell', () => q.opLoc(JAIL_DOOR, 1), () => !inCell(), 15, 4);
     }
-    // Black demons (level 172, aggressive to every player) stand beside the corridor between the dusty gate and the secret
-    // wall; their hits are melee, so Protect from Melee (sdk PRAYER_INDICES 14) is on from the gate until the ladder.
-    const PFM = 14, prayers = (): any => q.st()?.prayers, pfmOn = (): boolean => !!prayers()?.activePrayers?.[PFM], points = (): number => prayers()?.prayerPoints ?? 0;
-    const setPfm = async (on: boolean): Promise<void> => {
-        if (pfmOn() === on || (on && points() <= 0)) return;
-        await q.step(`protect from melee ${on ? 'on' : 'off'}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }), () => pfmOn() === on, 3, 3);
-    };
     const pastGate = () => (q.pos()?.worldX ?? 0) < GATE.x && Math.abs((q.pos()?.worldZ ?? 0) - GATE.z) < 30;
     await q.walk('to dusty gate', [{ x: GATE.x + 1, z: GATE.z, tol: 1 }]);
     await q.step('dusty gate', () => q.useOnLoc(ITEM.dusty, GATE), pastGate, 15, 4);
     q.milestone('gate');
-    await setPfm(true);
     // Black Demon spawns near 2860,9776 close the only corridor (x 2877-2879, z 9769-9788) to the danger guard
     // (packages/core/src/danger.ts), so planned walks pace in the dragon room. Client-routed clicks do not use that guard.
     await q.dash('to south cave', 2894, 9776, 2, 30);
