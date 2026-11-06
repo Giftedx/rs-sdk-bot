@@ -740,10 +740,10 @@ test('missing items a shop sells are bought with coins taken for them; unsold it
 
 test('an unsold item is gathered from a ground spawn or, for milk, a cow and a bucket; the rest stays missing',()=>{
  const at={x:3200,z:3200,level:0},spawns=(id:number)=>id===753?[{x:3266,z:3361,level:0}]:[];
- const g=gatherPlan([{id:753,count:1},{id:MILK,count:1},{id:440,count:2}],at,spawns);
+ const g=gatherPlan([{id:753,count:1},{id:MILK,count:1},{id:1205,count:2}],at,spawns);
  expect(g.gathers).toEqual([{id:753,count:1,how:'spawn'},{id:MILK,count:1,how:'milk'}]);
  expect(g.tools).toEqual([{id:BUCKET,count:1}]);
- expect(g.still).toEqual([{id:440,count:2}]);
+ expect(g.still).toEqual([{id:1205,count:2}]);
 });
 
 test('a nearer spawn beats a far shop; a nearer shop keeps the item in the shop plan',()=>{
@@ -928,6 +928,7 @@ test('a Taverley-side target is east of Ardougne for an account the Big Wolf wou
  const monty={skills:{attack:69,strength:1,defence:1,hitpoints:37,magic:99}},strong={skills:{attack:90,strength:90,defence:90,hitpoints:82}};
  expect(TAVERLEY_SIDE(kaqemeex)).toBe(true);
  expect(TAVERLEY_SIDE({x:2946,z:3368,level:0})).toBe(false); // Falador bank: no mountain between
+ expect(TAVERLEY_SIDE({x:2951,z:3450,level:0})).toBe(true);  // Doric's house, north of Falador
  expect(mountainClosed(monty)).toBe(true);
  expect(mountainClosed(strong)).toBe(false);
  expect(eastOfArdougne(ardougne,kaqemeex)).toBe(false);
@@ -1058,7 +1059,13 @@ test('Prince Ali: soft clay is clay on water, clay is mined with a pickaxe, ashe
  expect(plan.still).toEqual([{id:1929,count:1}]);
  expect(plan.tools).toEqual([{id:BRONZE_PICKAXE,count:1},{id:TINDERBOX,count:1}]);
  expect(COMBINE_SOURCES[1761]).toEqual([434,1929]);
- expect(MINE_SOURCES[434]!.locs).toEqual([2108,2109]);expect(MINE_SOURCES[434]!.tiles.length).toBe(33);
+ expect(MINE_SOURCES[434]!.locs).toEqual([2108,2109]);expect(MINE_SOURCES[434]!.tiles.length).toBe(27);
+ expect(MINE_SOURCES[434]!.tiles.some(t=>t.x>=2937&&t.x<=2943&&t.z>=3282&&t.z<=3285)).toBe(false); // the Crafting Guild's
+ // Doric's ores from the Falador bank: three mines, one pickaxe; the iron rocks ask Mining 15.
+ const doric=gatherPlan([{id:434,count:6},{id:436,count:4},{id:440,count:2}],{x:2946,z:3368,level:0},()=>[],()=>Infinity,()=>[],6,1,()=>[]);
+ expect(doric.gathers).toEqual([{id:434,count:6,how:'mine'},{id:436,count:4,how:'mine'},{id:440,count:2,how:'mine'}]);
+ expect(doric.tools).toEqual([{id:BRONZE_PICKAXE,count:1}]);
+ expect(MINE_SOURCES[440]!.level).toBe(15);expect(MINE_SOURCES[436]!.level).toBe(1);
  expect(BURN_SOURCES[592]!.logs).toBe(LOGS);
  // A clay seller nearer than any rock keeps clay in the shop plan.
  expect(gatherPlan([{id:434,count:1}],draynor,()=>[],()=>50).still).toEqual([{id:434,count:1}]);

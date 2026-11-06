@@ -525,9 +525,9 @@ export function wayUp(transports:readonly Transport[],to:Tile,depth=3):Tile{
 // the world router's search for the land way round idles out the budget. Two fares of 30 coins.
 // White Wolf Mountain: the Big Wolf (combat 73, reach 22) at 2840,3497 holds the pass against an account it would kill
 // (TheFullMonty, combat 57 and 37 hitpoints: Kandarin to Taverley found no route under the plan budget), so for that
-// account a Taverley-side target (Taverley and Burthorpe, x 2880 to 2950, z 3400 and up) is east of Ardougne too: the
+// account a Taverley-side target (Taverley, Burthorpe and Doric's house, x 2880 to 2960, z 3400 and up) is east of Ardougne too: the
 // boats, then the Port Sarim to Falador road. A stronger account walks the pass.
-export const TAVERLEY_SIDE=(to:Tile)=>to.level===0&&to.x>=2880&&to.x<2950&&to.z>=3400;
+export const TAVERLEY_SIDE=(to:Tile)=>to.level===0&&to.x>=2880&&to.x<2960&&to.z>=3400;
 const BIG_WOLF:Tile={x:2840,z:3497,level:0};
 export const mountainClosed=(acct:Pick<Account,'skills'>,hunters=loadHunters())=>hunters.filter(h=>h.spawns.some(s=>s.x===BIG_WOLF.x&&s.z===BIG_WOLF.z&&s.level===BIG_WOLF.level)).some(h=>deadly(h,combatLevel(acct.skills),acct.skills.hitpoints??10));
 export const eastOfArdougne=(from:Tile,to:Tile,acct?:Pick<Account,'skills'>)=>from.level===0&&from.x<2800&&from.z>=3270&&(to.x>=2950||!!acct&&TAVERLEY_SIDE(to)&&mountainClosed(acct));
