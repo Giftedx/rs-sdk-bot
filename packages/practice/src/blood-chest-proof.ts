@@ -9,7 +9,7 @@ import {createBot} from './bots';
 import {applyPreset,type SaveConfig} from './presets';
 import {runBotName} from './prove';
 import {killTree} from './proc';
-import {workerSourceRevision} from '../../core/src/worker-release';
+import {capabilityRevision,workerSourceRevision} from '../../core/src/worker-release';
 import {readPracticeSave,setPracticeSkills,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {ARRIVAL,BANK,BLOOD_RUNE,COINS,EXIT_TICKS,STAGE} from '../../../scripts/blood-chest';
@@ -17,7 +17,8 @@ import {ARRIVAL,BANK,BLOOD_RUNE,COINS,EXIT_TICKS,STAGE} from '../../../scripts/b
 type Save=ReturnType<typeof readPracticeSave>;
 const root=resolve(import.meta.dir,'../../..');
 const thieving='vendor/rs-sdk/server/content/scripts/skill_thieving/';
-const owned=['scripts/blood-chest.ts','scripts/blood-chest.test.ts','packages/practice/src/blood-chest-proof.ts','packages/practice/test/blood-chest-proof.test.ts'];
+const workerEntry='scripts/blood-chest.ts',proofEntry='packages/practice/src/blood-chest-proof.ts';
+const owned=[workerEntry,'scripts/blood-chest.test.ts',proofEntry,'packages/practice/test/blood-chest-proof.test.ts'];
 const serverFiles=[thieving+'scripts/thieving.rs2',thieving+'scripts/chest/trapped_chest.rs2',thieving+'scripts/doors/locked_door.rs2',thieving+'configs/chests/trapped_chest.dbrow',thieving+'configs/doors/locked_door.dbrow'];
 // Delivery takes the practice turn and admits native startup at startupGb; this proof keeps the floor per child.
 export const ADMISSION={floorGb:FREE_FLOOR_GB,startupGb:PRACTICE_STARTUP_GB};
@@ -52,8 +53,11 @@ export async function startBloodProofStack(p:ProofEndpoints,start:(opts:StackOpt
  try{Object.assign(process.env,p.env);return await start({ports:p.ports,instance:p.instance,tickMs:PROOF_TICK_MS,xpRate:XP_RATE,readyTimeoutMs:60000});}
  finally{for(const [k,v] of Object.entries(previous)){if(v===undefined)delete process.env[k];else process.env[k]=v;}}
 }
-const source=()=>({runtime:workerSourceRevision(),files:Object.fromEntries([...owned,...serverFiles].map(p=>[p,createHash('sha256').update(readFileSync(join(root,p))).digest('hex')]))});
 const hash=(path:string)=>createHash('sha256').update(readFileSync(path)).digest('hex');
+const sourceFiles=(base:string)=>Object.fromEntries([...owned,...serverFiles].map(p=>[p,hash(join(base,p))]));
+export function bloodProofSource(base=root){
+ return {scope:'blood-proof-v2',runtime:capabilityRevision([workerEntry,proofEntry],base),files:sourceFiles(base)};
+}
 const count=(s:Save,container:number,id:number)=>(s.inventories[container]??[]).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 const total=(s:Save,id:number)=>Object.values(s.inventories).flat().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 const near=(s:Save,t:{x:number;z:number},range:number)=>s.position.level===0&&Math.max(Math.abs(s.position.x-t.x),Math.abs(s.position.z-t.z))<=range;
@@ -99,7 +103,9 @@ export function bloodObservations(log:string){
 export function verifyBlood(directory:string){
  const meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8'));
  const endpoints=bloodProofEndpoints(meta.endpoints?.ports,meta.endpoints?.instance??'');
- const checks:Record<string,boolean>={source:JSON.stringify(meta.source)===JSON.stringify(source()),configuration:meta.tickMs===PROOF_TICK_MS&&meta.xpRate===XP_RATE,fresh:Number.isFinite(meta.at)&&meta.at<=Date.now()&&Date.now()-meta.at<900000,
+ // Receipts without a scope still require their original whole-worker pin.
+ const source=meta.source?.scope===undefined?{runtime:workerSourceRevision(),files:sourceFiles(root)}:bloodProofSource();
+ const checks:Record<string,boolean>={source:JSON.stringify(meta.source)===JSON.stringify(source),configuration:meta.tickMs===PROOF_TICK_MS&&meta.xpRate===XP_RATE,fresh:Number.isFinite(meta.at)&&meta.at<=Date.now()&&Date.now()-meta.at<900000,
   cases:JSON.stringify(meta.cases?.map((c:any)=>c.id))===JSON.stringify(cases),endpoints:meta.server===endpoints.server};
  const observed:Record<string,unknown>={};
  for(const id of cases){
@@ -132,7 +138,7 @@ const CASES:Record<Case,{cap:string;maxLoots:string;timeoutMs:number}>={
 };
 export function childConfiguration(name:string,id:Case,inherited:NodeJS.ProcessEnv=process.env,endpoints?:ProofEndpoints){
  const c=CASES[id];
- return{cmd:['bun','scripts/blood-chest.ts',name,c.cap],cwd:root,windowsHide:true,
+ return{cmd:['bun',workerEntry,name,c.cap],cwd:root,windowsHide:true,
   env:{...inherited,...endpoints?.env,...(endpoints?{GATEWAY_URL:endpoints.gateway}:{}),DEMO_OK:'',RANDOM_EVENTS:'0',MAX_LOOTS:c.maxLoots,CAP:c.cap}};
 }
 async function run(directory:string){
@@ -144,7 +150,7 @@ async function run(directory:string){
  const lock=join(root,'.practice/delivery-practice.lock'),fd=openSync(lock,'wx');writeFileSync(fd,JSON.stringify({pid:process.pid,directory,task:'blood-chest-order'}));
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;
  try{
-  const pin=source(),receipts=[],endpoints=selectBloodProofEndpoints();
+  const pin=bloodProofSource(),receipts=[],endpoints=selectBloodProofEndpoints();
   stack=await startBloodProofStack(endpoints);
   for(const [index,id] of cases.entries()){
    if(freemem()/2**30<FREE_FLOOR_GB)throw Error('insufficient practice free memory floor');
