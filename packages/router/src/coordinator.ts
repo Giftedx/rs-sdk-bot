@@ -47,7 +47,7 @@ export interface CoordinatorState {
  /** Failed planning rounds in a row (planRetryMs, coordinator-decisions.ts). */
  planFailures?:number;
  latestReceiptSequence?:number; plannerReceiptSequence?:number;
- pendingSubmission?:{file:string;sha256:string;capabilities:CapabilityChange[]};
+ pendingSubmission?:{sha256:string;capabilities:CapabilityChange[]}&({file:string}|{runId:string;count:number});
 }
 export function fleetExpansion(s:{limit:number;demand:number;freeGB:number;reserveGB:number;cpu:number|null;tickMs:number|null;stalled:boolean;usefulResults:number;now:number;lastExpandedAt:number;step?:number}){
  if(!Number.isSafeInteger(s.limit)||s.limit<1||!Number.isSafeInteger(s.demand)||s.demand<=s.limit||s.stalled||s.usefulResults<2
