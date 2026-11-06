@@ -307,6 +307,10 @@ export function schedule(boards: Board[], allActivities: Activity[], opts: Sched
 const OVERALL_RELAXED_DEADLINES: ReadonlySet<BoardId> = new Set([
     'crafting', 'herblore', 'hitpoints', 'magic', 'runecraft', 'woodcutting',
 ]);
+// Travel comparison in research/haggis-run.md, with prerequisite-first ties.
+const OVERALL_TRAVEL_DEADLINES: ReadonlySet<BoardId> = new Set([
+    'crafting', 'fishing', 'herblore', 'hitpoints', 'magic', 'prayer',
+]);
 
 export function scheduleOverall(boards: Board[], activities: Activity[], opts: ScheduleOptions): ScheduleResult {
     const baseline = schedule(boards, activities, opts);
@@ -316,11 +320,14 @@ export function scheduleOverall(boards: Board[], activities: Activity[], opts: S
     const useRelaxed = finish(relaxed) < finish(baseline);
     const best = useRelaxed ? relaxed : baseline;
     if (!opts.travel) return best;
-    // Try one more order on the selected route. Grouping newly unlocked work can avoid a return trip.
+    // Keep the selected variants while comparing travel orders.
+    const fixedRoute = { ...opts, force: { ...opts.force, ...best.route } };
     const prerequisiteFirst = scheduleRoute(boards, activities, {
-        ...opts, force: { ...opts.force, ...best.route }, sacrificed: useRelaxed ? OVERALL_RELAXED_DEADLINES : undefined,
+        ...fixedRoute, sacrificed: useRelaxed ? OVERALL_RELAXED_DEADLINES : undefined,
     }, true);
-    return finish(prerequisiteFirst) < finish(best) ? prerequisiteFirst : best;
+    const ordered = finish(prerequisiteFirst) < finish(best) ? prerequisiteFirst : best;
+    const travelOrder = scheduleRoute(boards, activities, { ...fixedRoute, sacrificed: OVERALL_TRAVEL_DEADLINES }, true);
+    return finish(travelOrder) < finish(ordered) ? travelOrder : ordered;
 }
 
 // Schedule with opts.force where given and the raw-tick choice for the other variant groups.
