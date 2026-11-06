@@ -183,28 +183,16 @@ try {
     await q.walk('to dusty gate inside', [{ x: GATE.x - 1, z: GATE.z, tol: 1 }]);
     await q.step('dusty gate out', () => q.opLoc(GATE, 1), () => !pastGate(), 15, 4);
     // The way back is the way in, leg by leg, along the east corridor (x 2934-2951, z 9753-9777) that the walk from the
-    // ladder to the Jailer uses: the planner's direct gate-to-yard route cuts through the room west of it (x 2922-2931,
-    // z 9756-9763), where the client finds no way past 2929,9756 and rejects every click. A poison scorpion or the
-    // chaos dwarf (spawn 2915,9760, wanders 20 tiles, hunts the rangers) standing on the bot holds a planned step, so one
-    // within reach is shot dead before each leg.
-    const clearBlockers = async (range: number): Promise<void> => {
-        for (let t = 0; t < 150; t++) {
-            const foe: any = (q.st()?.nearbyNpcs ?? []).filter((n: any) => /scorpion|chaos dwarf/i.test(n.name ?? '') && n.distance <= range).sort((a: any, b: any) => a.distance - b.distance)[0];
-            if (!foe) return;
-            if (t % 3 === 0 && q.pos()?.targetIndex !== foe.index) await q.s.direct({ type: 'interactNpc', npcIndex: foe.index, optionIndex: foe.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
-            await q.waitTicks(1);
-        }
-    };
+    // ladder to the Jailer uses, through the room west of it (x 2922-2934, z 9756-9763); the planner's one-leg route from
+    // the gate to the yard stalled at 2915,9761 on three runs. The legs never stop for the poison scorpions: Protect
+    // from Melee blocks their sting while the points last, and standing beside one only lets its poison run.
     const trace = (label: string) => (line: string) => console.log(`SCORP_WALK ${label}: ${line}`);
     for (const leg of [
         { label: 'to east corridor', to: { x: 2936, z: 9777, tol: 2 } },
         { label: 'to jail approach', to: { x: 2931, z: 9753, tol: 2 } },
         { label: 'to jail yard', to: { x: JAILER.x - 3, z: JAILER.z - 1, tol: 3 } },
         { label: 'to dungeon ladder', to: { x: TAV_LADDER.x + 1, z: TAV_LADDER.z + 6400, tol: 1 } },
-    ]) {
-        await clearBlockers(3);
-        await q.walk(leg.label, [leg.to], trace(leg.label));
-    }
+    ]) await q.walk(leg.label, [leg.to], trace(leg.label));
     releasePrayer();
     await setPfm(false);
 
