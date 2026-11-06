@@ -1036,7 +1036,8 @@ export async function sweep(account:string,quest:string,fresh?:string){
   // with the gather's tools and wielded before the kill (UnderMyKilt: Ranged 97, Attack 6, a shortbow and iron arrows).
   const worn=():Item[]=>s.sdk.getEquipment().map((i:any)=>({id:i.id,count:i.count}));
   const owned=[...pack(),...rows(),...worn()];
-  const kit=rangedKit(owned),mkit=magicKit(owned,skill('Magic'));
+  // A rune a shop sells completes the magic kit: the shop plan buys the casts' shortfall with the other consumables.
+  const kit=rangedKit(owned),mkit=magicKit(owned,skill('Magic'),undefined,id=>sellerAt(id)<Infinity);
   // What the kit decision saw: which containers were read and the levels the style choice compares.
   const seen=(ids:readonly number[])=>Object.fromEntries(ids.filter(id=>owned.some(i=>i.id===id)).map(id=>[id,count(owned,id)]));
   console.log(`QUEST_SWEEP_KIT ${JSON.stringify({kit,mkit,bows:seen(BOWS),arrows:seen(ARROWS),bank:rows().length,pack:pack().length,worn:worn().length,ranged:skill('Ranged'),magic:skill('Magic'),attack:skill('Attack'),strength:skill('Strength')})}`);
