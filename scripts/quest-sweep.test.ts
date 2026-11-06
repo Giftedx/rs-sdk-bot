@@ -1096,7 +1096,7 @@ test('a dye is a recipe: its ingredients are planned first, its dialogue step fo
  ]);
  expect(plan.still).toEqual([{id:1957,count:2}]);
  expect(plan.coins).toBe(5+5+20+5);
- expect(NPC_SOURCES[1763]!.needs).toEqual([{id:1951,count:3}]);expect(COMBINE_SOURCES[1769]).toEqual([1763,1765]);expect(PICK_SOURCES[1957]!.loc).toBe(3366);
+ expect(NPC_SOURCES[1763]!.needs).toEqual([{id:1951,count:3}]);expect(COMBINE_SOURCES[1769]).toEqual([1763,1765]);expect(COMBINE_SOURCES[1552]).toEqual([327,1573]);expect(PICK_SOURCES[1957]!.loc).toBe(3366);
  // A plant nearer than any seller is picked.
  const picked=gatherPlan([{id:1957,count:2}],{x:2600,z:3000,level:0},()=>[],()=>Infinity,()=>[],6,1,()=>[{x:2581,z:2968,level:0}]);
  expect(picked.gathers).toEqual([{id:1957,count:2,how:'pick'}]);
@@ -1132,6 +1132,15 @@ test('Prince Ali: soft clay is clay on water, clay is mined with a pickaxe, ashe
  expect(hetty.tools).toEqual([{id:TINDERBOX,count:1}]);
  // A clay seller nearer than any rock keeps clay in the shop plan.
  expect(gatherPlan([{id:434,count:1}],draynor,()=>[],()=>50).still).toEqual([{id:434,count:1}]);
+});
+
+test("Gertrude's seasoned sardine is doogle leaves from the spawn by her house on a sardine bought from Gerrant",()=>{
+ const gertrude={x:3150,z:3410,level:0};
+ const spawns=(id:number)=>id===1573?[{x:3152,z:3401,level:0}]:[];
+ const seller=(id:number)=>id===327?190:Infinity;
+ const plan=gatherPlan([{id:1552,count:1}],gertrude,spawns,seller,()=>[],12,1,()=>[]);
+ expect(plan.gathers).toEqual([{id:1573,count:1,how:'spawn'},{id:1552,count:1,how:'combine'}]);
+ expect(plan.still).toEqual([{id:327,count:1}]);
 });
 
 test('bound for Rimmington, the eye of newt comes from Betty in Port Sarim, not Taverley or Gu\'Tanoth',async()=>{
