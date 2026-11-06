@@ -63,7 +63,11 @@ export const BURN_SOURCES:Record<number,{name:string;logs:number;uses?:number}>=
 // An item taken from a loc by using items on it in turn, each use consumed: a bucket of wax from a Catherby beehive
 // (area_seers/scripts/bees.rs2: insect repellent clears the bees, then an empty bucket takes the wax; a bucket on a
 // hive with bees stings). The uses are gathered first, as a recipe's ingredients are.
+// A bucket of water is an empty bucket on a sink, fountain or well (general_use/scripts/water_sources.rs2 oplocu
+// _watersource/_well); the sinks and fountains of East Ardougne stand by its banks. Any option text names the loc.
+export const WATER_SOURCES:Tile[]=[{x:2658,z:3273,level:0},{x:2675,z:3310,level:0},{x:2629,z:3311,level:0},{x:2640,z:3311,level:0},{x:2639,z:3369,level:0}];
 export const USE_SOURCES:Record<number,{name:string;tiles:Tile[];uses:number[];option:RegExp}>={
+ 1929:{name:'water source',option:/.*/,uses:[1925],tiles:WATER_SOURCES},
  30:{name:'beehive',option:/take-from/i,uses:[28,1925],tiles:[{x:2755,z:3440,level:0},{x:2755,z:3443,level:0},{x:2755,z:3447,level:0},{x:2758,z:3440,level:0},{x:2758,z:3447,level:0},{x:2759,z:3444,level:0},{x:2762,z:3440,level:0},{x:2762,z:3443,level:0}]},
 };
 // A bow and arrows the account owns: shortbow or longbow, bronze, iron or steel arrows (the kinds the fleet's banks hold).
@@ -182,7 +186,9 @@ export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:
   // far north while cows graze beside Lumbridge and Ardougne.
   const cow=m.id===MILK?nearest(npcSpawns([COW]).filter(t=>t.level===at.level),at)[0]:undefined;
   if(m.id===MILK&&(sold===Infinity||(cow&&d(cow)<Math.min(sold,spot?d(spot):Infinity)))){gathers.push({...m,how:'milk'});tools.push({id:BUCKET,count:m.count});}
-  else if(spot&&d(spot)<sold)gathers.push({...m,how:'spawn'});
+  // A loc that hands the item out for a use beats a farther spawn: a bucket of water from the sink by the Ardougne bank,
+  // not the spawn at Catherby.
+  else if(spot&&d(spot)<sold&&!(USE_SOURCES[m.id]&&nearest(USE_SOURCES[m.id]!.tiles,at).some(t=>d(t)<d(spot))))gathers.push({...m,how:'spawn'});
   else if(LOC_SOURCES[m.id]&&d(LOC_SOURCES[m.id]!.tile)<sold)gathers.push({...m,how:'loc'});
   else if(pick&&d(pick)<sold)gathers.push({...m,how:'pick'});
   // A kill wins over a shop when its animal is nearer, as a spawn does: Rufus in Canifis sells every meat, 850 tiles

@@ -1412,3 +1412,12 @@ test('the meal takes the preset food kinds first, then the best other edibles th
  expect(mealPlan(food,[],[{id:2309,count:1}],[{id:2309,count:1}],beggar)).toEqual([]);
  expect(mealPlan(food,[{id:2309,count:1}],[{id:385,count:2}],[],beggar)).toEqual([{id:385,count:2}]);
 });
+
+test('Plague City\'s buckets of water are filled at the sink by the Ardougne bank, not fetched from the Catherby spawn',()=>{
+ const ardougne={x:2655,z:3283,level:0};
+ const spawns=(id:number)=>id===1929?[{x:2823,z:3449,level:0}]:[];
+ const seller=(id:number)=>id===1925?300:Infinity;
+ const plan=gatherPlan([{id:1929,count:4}],ardougne,spawns,seller,()=>[],6,97,()=>[]);
+ expect(plan.gathers).toEqual([{id:1929,count:4,how:'use'}]);
+ expect(plan.still).toEqual([{id:1925,count:4}]);
+});
