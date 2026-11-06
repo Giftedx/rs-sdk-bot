@@ -83,6 +83,19 @@ test('an unchanged worker replays its record clean', async () => {
     expect(out.commands).toBe(3);
 });
 
+test('a replay worker can read the recorded initial state as soon as openBot returns', async () => {
+    const lines = await record();
+    expect(lines[1]).toMatchObject({ k: 'p', t: 0 });
+    let initial: unknown;
+    const out = await replayRecord(lines, () => worker(async () => {
+        const session = await openBot('Replayer');
+        initial = session.sdk.getState();
+        return session;
+    }, 3300));
+    expect(initial).toEqual(lines[1].d);
+    expect(out).toMatchObject({ status: 'clean', commands: 3 });
+});
+
 test('a changed worker reports the first tick where its command differs', async () => {
     const lines = await record();
     const second = lines.filter(l => l.k === 'a')[1];
