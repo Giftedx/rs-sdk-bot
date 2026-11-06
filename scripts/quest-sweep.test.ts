@@ -771,6 +771,28 @@ test('Fishing Contest trains Fishing 10 with a small net; other quests and Fishi
  expect(questSkillTraining('imp',()=>1)).toBeNull();
 });
 
+test("Merlin's Crystal: the wax comes off a Catherby beehive after its repellent and bucket; bat bones from a giant bat by bow",async()=>{
+ const {gatherPlan,USE_SOURCES,KILL_SOURCES}=await import('../packages/core/src/gather');
+ const {spawnsByDistance}=await import('../packages/core/src/spawn-index');
+ // Bread is food for every other quest; Merlin's Crystal gives it to the beggar, so it is a need and not a meal.
+ const need=needs(presetFor('merlin'),false,'merlin');
+ expect([...need.keys()].sort()).toEqual([30,530,590,995,2309].sort());
+ expect(needs(presetFor('merlin'),true,'merlin').has(2309)).toBe(false);expect(needs(presetFor('merlin')).has(2309)).toBe(false);
+ expect(needs(presetFor('hazeelcult'),true,'hazeelcult').get(385)).toBe(4);
+ expect(USE_SOURCES[30]?.uses).toEqual([28,1925]);expect(KILL_SOURCES[530]).toMatchObject({npcs:[78],chance:1});
+ const catherby={x:2809,z:3441,level:0};
+ const r=gatherPlan([{id:30,count:1},{id:530,count:1}],catherby,spawnsByDistance,()=>Infinity,undefined,6,97);
+ // The repellent and the bucket are spawns in Catherby, gathered before the hive; the bat falls to the bow.
+ expect(r.gathers.map(g=>`${g.id}:${g.how}`)).toEqual(['28:spawn','1925:spawn','30:use','530:kill']);
+ expect(r.gathers.find(g=>g.id===530)?.kit).toBe('ranged');expect(r.still).toEqual([]);
+ // A giant bat takes fifteen arrows a kill (six ran out on practice); a bear keeps the six.
+ const {arrowsFor}=await import('../packages/core/src/gather');
+ expect(arrowsFor(530,1)).toBe(15);expect(arrowsFor(2136,1)).toBe(6);
+ // The quest's own fight, Sir Mordred, takes forty arrows more from a bow account.
+ const {QUEST_ARROWS}=await import('./quest-sweep');
+ expect(QUEST_ARROWS['merlin']).toBe(40);expect(QUEST_ARROWS['imp']).toBeUndefined();
+});
+
 test("Pirate's Treasure needs no bananas from the sweep: the script picks them on Karamja, and the bank pass keeps their slots",async()=>{
  const {QUEST_PICKUPS,slotsFor}=await import('./quest-sweep');
  const hunt=needs(presetFor('hunt')),hazeel=needs(presetFor('hazeelcult'));
