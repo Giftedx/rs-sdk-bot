@@ -12,6 +12,8 @@ Design: builds author and prove in `../rs-sdk-bot-build/<capability>` (copied so
 
 Source -> local consumer -> reuse -> check: the queue retirement check for terminal prerequisites -> dispatch ranking and practice preference -> count only pending consumers without a terminal prerequisite -> regressions cover a transitive failure and a live consumer's practice slot. The read-only replay in `.practice/dispatch-viable-consumers/replay.json` finds 36 pending-to-pending edges from terminal-blocked tasks. Neither scheduler has a ready task in the captured queue. A counterfactual on that snapshot adds two competing tasks and checks that independent work passes work boosted only by a blocked consumer.
 
+Source -> local consumer -> reuse -> check: atomic queue saves and capability transition history -> manual request intake -> save the queue and pending acknowledgement in one write, then finish capability publication before dispatch -> scratch filesystem tests inject queue-save, acknowledgement, and partial publication failures. They check restart, exact definition bytes, one application, and an unchanged queue on validation refusal. The scope is the coordinator's manual request path.
+
 Planner cost: the prompt was 449,960 characters (278,000 of full task specs and receipts, 107,000 of the active queue). `briefSpec` clips work orders to 200 and receipts to 240 characters and points to `state.json`, giving 117,590. Idle plans wait 30 min instead of 30 s; a new receipt, failure or request still plans at once.
 
 Checks: router tests (build-workspace 3/3, coordinator 13/13); a real workspace prepares in 661 ms and runs `goldfarm-stable.test.ts` 29/29.

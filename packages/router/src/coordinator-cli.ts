@@ -1,12 +1,12 @@
 import {existsSync,readFileSync,writeFileSync,appendFileSync,statSync,truncateSync,unlinkSync,watch,mkdirSync,readdirSync,renameSync} from 'node:fs';
-import {join} from 'node:path';
-import {randomUUID} from 'node:crypto';
+import {basename,join} from 'node:path';
+import {createHash,randomUUID} from 'node:crypto';
 import {freemem,cpus} from 'node:os';
 import {addTasks,chooseTask,startTask,finishTask,refreshQualifications,qualificationDemand,boundAccounts,fleetExpansion,activeBuildFocus,failedBuildStreak,heldBuilds,compactState,usefulLiveReceipt,FOCUS_FAILURE_LIMIT,type CoordinatorState,type CoordTask} from './coordinator';
 import {buildFault} from './build-fault';
-import {projectRoot,coordinationDir,loadState,saveState,runDirectory,atomicJson,atomicText,event,spawnDetached,recoverPlanWrite,withPlanWrite,capabilitySource} from './coordinator-store';
+import {projectRoot,coordinationDir,loadState,saveState,runDirectory,atomicJson,atomicText,event,spawnDetached,recoverPlanWrite,withPlanWrite,capabilitySource,publishCapabilityChanges} from './coordinator-store';
 import {DISK_FLOOR_GB,diskFreeGB,finishPlan,plannerDue,retireDeadTasks,reviewHold} from './coordinator-decisions';
-import {planWork,acceptProposal} from './coordinator-planner';
+import {planWork,acceptProposal,prepareProposal} from './coordinator-planner';
 import {executeTask} from './coordinator-worker';
 import {deliveryTask,deliveryFingerprint,SOURCE_STARTUP_GB,NATIVE_STARTUP_GB} from './delivery-cli';
 import {disableOwnJob,ensureSwarm,liveRows} from './coordinator-live';
@@ -210,6 +210,44 @@ export function nativeDispatchReady(state:Pick<CoordinatorState,'tasks'>,freeGB:
  const {holder,liveWaiters}=observe();
  return holder!=='pid-present'&&(liveWaiters??0)===0;
 }
+export function intakeRequests(state:CoordinatorState,base=projectRoot,{save=saveState,move=renameSync,publish=publishCapabilityChanges}={}){
+ const directory=join(base,'.practice/coordinator'),requests=join(directory,'requests');mkdirSync(requests,{recursive:true});
+ const digest=(bytes:Buffer)=>createHash('sha256').update(bytes).digest('hex');
+ const acknowledge=()=>{
+  const pending=state.pendingSubmission;
+  if(!pending)return;
+  const {file,sha256,capabilities}=pending;
+  if(typeof file!=='string'||basename(file)!==file||!file.endsWith('.request.json'))throw Error('invalid pending submission name');
+  const path=join(requests,file),accepted=path+'.accepted';
+  const alreadyAccepted=existsSync(accepted);
+  if(alreadyAccepted&&existsSync(path))throw Error('duplicate pending and accepted submission: '+file);
+  if(digest(readFileSync(alreadyAccepted?accepted:path))!==sha256)throw Error('pending submission bytes changed: '+file);
+  if(!alreadyAccepted){
+   publish(base,capabilities);
+   move(path,accepted);
+   event('queue-submitted',{file},directory);
+  }
+  delete state.pendingSubmission;
+ };
+ // Recover before reading another request or dispatching from the committed queue.
+ acknowledge();
+ for(const file of readdirSync(requests).filter(f=>f.endsWith('.request.json'))){
+  const path=join(requests,file),bytes=readFileSync(path);
+  let prepared:ReturnType<typeof prepareProposal>;
+  try{prepared=prepareProposal(state,JSON.parse(bytes.toString('utf8')),base);}
+  catch(error){
+   if(typeof (error as NodeJS.ErrnoException)?.code==='string')throw error;
+   move(path,path+'.rejected');
+   event('queue-submit-failed',{file,error:String(error)},directory);
+   continue;
+  }
+  const {candidate,capabilities}=prepared;
+  candidate.pendingSubmission={file,sha256:digest(bytes),capabilities};
+  save(candidate,directory);
+  Object.assign(state,candidate);
+  acknowledge();
+ }
+}
 async function tick(state:CoordinatorState,config:any){
  recoverPlanWrite();
  openDeliveryPrs();
@@ -223,12 +261,7 @@ async function tick(state:CoordinatorState,config:any){
   event('fleet-focus-adopted',{capability:config.focusCapability,since:config.focusSince});
  });
  reconcile(state);
- const requests=join(coordinationDir,'requests');mkdirSync(requests,{recursive:true});
- for(const file of readdirSync(requests).filter(f=>f.endsWith('.request.json'))){
-  const path=join(requests,file);
-  try{acceptProposal(state,json(path));saveState(state);renameSync(path,path+'.accepted');event('queue-submitted',{file});}
-  catch(error){renameSync(path,path+'.rejected');event('queue-submit-failed',{file,error:String(error)});}
- }
+ intakeRequests(state);
  // Reuse current evidence; refresh only capabilities with waiting live consumers.
  if(!state.tasks.some(r=>r.status==='running'&&r.spec.kind==='build')){
   const caps=[...new Set(qualificationDemand(state).map(r=>r.spec.capability!))];

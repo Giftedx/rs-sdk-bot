@@ -3,7 +3,7 @@ import {join,resolve} from 'node:path';
 import {spawn} from 'node:child_process';
 import {createHash,randomUUID} from 'node:crypto';
 import {openSync,closeSync} from 'node:fs';
-import {initialState,GOALS,validateTask,type CoordinatorState} from './coordinator';
+import {initialState,GOALS,validateTask,type CapabilityChange,type CoordinatorState} from './coordinator';
 import type {DeliveryTask} from './delivery';
 
 export const projectRoot=resolve(import.meta.dir,'../../..');
@@ -46,6 +46,25 @@ export function capabilityDefinitionTransition(directory:string,id:string,bytes:
  const prior=readFileSync(definitionHistory(directory,id,priorHash)+'.json');
  if(definitionHash(prior)!==priorHash)throw Error('capability definition base hash mismatch');
  return{priorHash,prior};
+}
+export function publishCapabilityChanges(base:string,changes:readonly CapabilityChange[]){
+ const directory=join(base,'.practice/coordinator');
+ for(const {definition,expectedSource} of changes){
+  if(!/^[-a-z0-9]+$/.test(definition.id))throw Error('invalid capability identity');
+  const file=join(base,'packages/router/tasks',definition.id+'.json');
+  let current:Buffer|undefined;
+  try{current=readFileSync(file);}
+  catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}
+  const currentHash=current?definitionHash(current):null;
+  if(currentHash===expectedSource){
+   writeCapabilityDefinition(base,definition,current);
+   continue;
+  }
+  // A prior attempt may have finished this write before the request was acknowledged.
+  if(current&&currentHash===definitionHash(JSON.stringify(definition,null,2))
+   &&capabilityDefinitionTransition(directory,definition.id,current)?.priorHash===expectedSource)continue;
+  throw Error('capability definition changed during proposal: '+definition.id);
+ }
 }
 export function loadState(directory=coordinationDir):CoordinatorState{
  mkdirSync(join(directory,'runs'),{recursive:true});const file=join(directory,'state.json');
