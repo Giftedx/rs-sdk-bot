@@ -46,8 +46,7 @@ try {
         for (let t = 0; t < 40; t++) {
             const g: any = (q.st()?.nearbyNpcs ?? []).find((n: any) => /^jail guard$/i.test(n.name) && n.inCombat && n.distance <= 3);
             if (!g) return;
-            if (t === 0) await q.wieldBow();
-            if (t % 3 === 0) await q.s.direct({ type: 'interactNpc', npcIndex: g.index, optionIndex: g.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
+            if (t % 3 === 0) await q.attackNpc(g);
             await q.waitTicks(1);
         }
     };

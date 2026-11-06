@@ -138,6 +138,9 @@ export const QUEST_PICKUPS:Record<string,Item[]>={hunt:[{id:1963,count:10},{id:4
 // Arrows a quest's own fights take from a bow account, beyond the gathers' kills: Merlin's Crystal's Sir Mordred has 38
 // hitpoints behind Protect from Melee, and the quiver that emptied on him ended a run at Morgan Le Faye's door.
 export const QUEST_ARROWS:Record<string,number>={merlin:40,prince:30,hazeelcult:20};
+// Casts a quest's own fights take from an account that fights with strike spells (Magic above Attack, no bow): Alomone
+// (level 13) and Prince Ali's jail guard (26) fall to a few Fire Strikes; the Jailer (47) to about twenty.
+export const QUEST_CASTS:Record<string,number>={hazeelcult:12,prince:15,scorpion:30};
 // Fishing Contest wants Fishing 10 (hemenster_fishing.rs2:70). An account short of it nets shrimps first, at the
 // nearest Net spot (Catherby beach beside Harry's shop, where the rod and bait come from): 250 XP a catch at 25x, five
 // catches from level 1. The net is a tool of the bank pass; the catches take pack slots until the quest.
@@ -1021,9 +1024,11 @@ export async function sweep(account:string,quest:string,fresh?:string){
   // that merely owns a bow.
   const questArrows=kit&&skill('Ranged')>skill('Attack')?QUEST_ARROWS[quest]??0:0;
   if(kit&&(gather.gathers.some(g=>g.kit==='ranged')||questArrows))gather.tools.push({id:kit.bow,count:1},{id:kit.arrows,count:gather.gathers.filter(g=>g.kit==='ranged').reduce((n,g)=>n+arrowsFor(g.id,g.count),0)+questArrows});
-  // A magic kill takes the staff and the strike's runes for its casts (the staff's own rune costs nothing).
-  if(mkit&&gather.gathers.some(g=>g.kit==='magic')){
-   const casts=gather.gathers.filter(g=>g.kit==='magic').reduce((n,g)=>n+castsFor(g.id,g.count,mkit.maxhit),0);
+  // A magic kill takes the staff and the strike's runes for its casts (the staff's own rune costs nothing); so do the
+  // quest's own fights for an account that fights with strike spells.
+  const questCasts=mkit&&!questArrows&&skill('Magic')>skill('Attack')?QUEST_CASTS[quest]??0:0;
+  if(mkit&&(gather.gathers.some(g=>g.kit==='magic')||questCasts)){
+   const casts=gather.gathers.filter(g=>g.kit==='magic').reduce((n,g)=>n+castsFor(g.id,g.count,mkit.maxhit),0)+questCasts;
    if(mkit.staff!==undefined)gather.tools.push({id:mkit.staff,count:1});
    for(const [id,n] of Object.entries(mkit.runes))gather.tools.push({id:Number(id),count:n*casts});
   }
