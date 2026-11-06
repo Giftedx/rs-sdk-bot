@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793922054236,
+ "at": 1793923881322,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -195,22 +195,6 @@
    "repeat": true,
    "goal": "rune, adamant, mithril and steel arrowtips from Hickton",
    "role": "supply"
-  },
-  {
-   "account": "Shaftmaker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/walk-to.ts 2809 3441",
-    "scripts/firemaking-order.ts TARGET_LEVEL=99 LOG=normal MAX_LOGS=1300 CAP=60000 TOOL_BUDGET=50"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": false,
-   "goal": "Firemaking 99 from 5072 banked normal logs at Catherby",
-   "role": "firemaking"
   },
   {
    "account": "mmsmk1232",
@@ -498,6 +482,23 @@
    "repeat": false,
    "goal": "recover-mightyrod-cloud-1793917835320 [task-ed228171-2067-465b-94c4-b381babc4e34]",
    "role": "combat"
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/magic-order.ts",
+   "args": [],
+   "env": {
+    "TARGET_LEVEL": "78",
+    "MAX_CASTS": "900",
+    "CAP": "12000",
+    "RUNE_BUDGET": "12000",
+    "CASH_RESERVE": "14000",
+    "COORDINATOR_RUN_ID": "task-d385af0b-c3dd-4e1e-9912-4a4a7451e043"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-magic-shaftmaker-funded-band78 [task-d385af0b-c3dd-4e1e-9912-4a4a7451e043]",
+   "role": "firemaking"
   }
  ]
 }
