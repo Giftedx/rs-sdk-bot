@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793931798303,
+ "at": 1793932407226,
  "jobs": [
   {
    "account": "Masterbaiter",
@@ -460,22 +460,6 @@
    "role": "firemaking"
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/blood-chest.ts",
-   "args": [
-    "24000"
-   ],
-   "env": {
-    "MAX_LOOTS": "100",
-    "CAP": "24000",
-    "COORDINATOR_RUN_ID": "task-bb714e2b-a1ba-49ff-899e-844268e6fad1"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-blood-mineyourbiz-additional200 [task-bb714e2b-a1ba-49ff-899e-844268e6fad1]",
-   "role": "supply"
-  },
-  {
    "account": "Mightyrod",
    "script": "scripts/session-check.ts",
    "args": [],
@@ -499,6 +483,22 @@
    "enabled": false,
    "repeat": false,
    "goal": "recover-herblore-handoff-coincock-1793931163234 [task-23533728-68e3-469b-bd9b-87f932bb4612]",
+   "role": "supply"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/blood-chest.ts",
+   "args": [
+    "24000"
+   ],
+   "env": {
+    "MAX_LOOTS": "100",
+    "CAP": "24000",
+    "COORDINATOR_RUN_ID": "task-813568e4-b9ac-4589-87fc-251295eb465d"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-blood-mineyourbiz-observed-reward200 [task-813568e4-b9ac-4589-87fc-251295eb465d]",
    "role": "supply"
   }
  ]
