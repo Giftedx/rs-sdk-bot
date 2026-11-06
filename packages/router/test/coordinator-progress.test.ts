@@ -67,6 +67,30 @@ test('an isolated producer build is rejected until a finite live consumer is inc
  acceptProposal(s,{reason:'whole outcome',capabilities:[],tasks:[task('build',{kind:'build'}),run('consumer',['build'])]});expect(s.tasks).toHaveLength(2);
 });
 
+test('planner intake rejects a build whose consumer still has another terminal blocker',()=>{
+ const s=initialState();
+ addTasks(s,[task('failed-build',{kind:'build'}),run('failed-supply'),run('consumer',['failed-build','failed-supply'])],0);
+ complete(s,'failed-build',false,2);
+ complete(s,'failed-supply',false,4);
+ const build=task('new-build',{kind:'build'});
+ const proposal={reason:'Restore the quest route and its supplies',capabilities:[],tasks:[build],
+  replacements:[{from:'failed-build',to:'new-build'}]};
+ const before=structuredClone(s);
+ expect(()=>acceptProposal(s,proposal)).toThrow('build requires a finite live consumer dependency: new-build');
+ expect(s).toEqual(before);
+ expect(acceptProposal(s,{...proposal,tasks:[build,run('new-supply')],
+  replacements:[...proposal.replacements,{from:'failed-supply',to:'new-supply'}]})).toBe(2);
+ expect(s.tasks.find(r=>r.spec.id==='consumer')?.spec.dependsOn).toEqual(['new-build','new-supply']);
+});
+
+test('a build can reach its first run through an implicit account setup dependency',()=>{
+ const s=initialState();
+ const tasks=[task('build',{kind:'build'}),task('claim',{kind:'provision',role:'quest',dependsOn:['build']}),
+  task('proof'),{...run('first',['proof']),account:undefined,accountFrom:'claim'}];
+ expect(acceptProposal(s,{reason:'Prove the first job before setup',capabilities:[],tasks})).toBe(4);
+ expect(chooseTask(s,1)?.id).toBe('build');
+});
+
 test('an archived build ID cannot borrow a consumer through a settled proof',()=>{
  const s=initialState(),build=task('reused-build',{kind:'build'});
  addTasks(s,[build,task('past-proof',{dependsOn:[build.id]}),task('newer-build',{kind:'build'}),run('old-consumer',['past-proof'])],0);
@@ -248,7 +272,7 @@ test('whole-game view includes all19 skills, catalogue gaps and all active queue
  const s=initialState();addTasks(s,[task('bad'),run('waiting',['bad'])]);complete(s,'bad',false,2);
  expect(queueFacts(s).blocked[0]!.dependencies).toEqual([{id:'bad',status:'failed',replacement:undefined}]);expect(queueFacts(s).lastUsefulLiveAt).toBe(0);
 });
-test('queue groups failed roots across branches and distinguishes work waiting on a running task', () => {
+test('queue distinguishes jobs a single root repair unblocks from downstream jobs', () => {
  const state = initialState();
  addTasks(state, [
   task('failed-build', {kind:'build'}),
@@ -257,14 +281,17 @@ test('queue groups failed roots across branches and distinguishes work waiting o
   run('quest', ['left-proof','right-proof']),
   task('running-proof'),
   run('wait-for-proof', ['running-proof']),
+  run('direct-run', ['failed-build']),
+  run('co-blocked-run', ['failed-build','running-proof']),
   run('independent'),
  ], 0);
  complete(state, 'failed-build', false, 2);
  startTask(state, 'running-proof', 3, 'in-flight');
  const facts = queueFacts(state);
- expect(facts.dependencyReadiness).toEqual({ready:1, waiting:1, blocked:3});
+ expect(facts.dependencyReadiness).toEqual({ready:1, waiting:1, blocked:5});
  expect(facts.rootBlockers).toEqual([
-  {id:'failed-build', status:'failed', runId:'failed-build', replacement:undefined, pendingTasks:3, pendingRuns:1, receipt:{at:2}},
+  {id:'failed-build', status:'failed', runId:'failed-build', replacement:undefined, pendingTasks:5, pendingRuns:3,
+   readyTasksIfFixed:3, readyRunsIfFixed:1, receipt:{at:2}},
  ]);
  expect(chooseTask(state, 4)?.id).toBe('independent');
 });
@@ -281,7 +308,7 @@ test('queue includes provision dependencies that are not in dependsOn', () => {
  complete(state, 'another-registration', true, 4, {account:'Partner'});
  const facts = queueFacts(state);
  expect(facts.dependencyReadiness).toEqual({ready:0, waiting:0, blocked:2});
- expect(facts.rootBlockers[0]).toMatchObject({id:'register', pendingTasks:2, pendingRuns:2});
+ expect(facts.rootBlockers[0]).toMatchObject({id:'register', pendingTasks:2, pendingRuns:2, readyTasksIfFixed:2, readyRunsIfFixed:2});
  expect(facts.blocked.map(row=>row.dependencies.map(d=>d.id))).toEqual([['register'],['register']]);
 });
 
@@ -321,6 +348,7 @@ test('planner prompt lists a shared prerequisite once and preserves the active d
  ]);
  expect(facts.blocked[0].dependencies).toEqual([{id:'failed-proof',status:'failed'}]);
  expect(facts.rootBlockers[0].receipt).toEqual({at:6,error:reason.slice(0,240)+'...'});
+ expect(facts.rootBlockers[0].readyRunsIfFixed).toBe(1);
  expect(activeLine).not.toContain('raw output stays in the receipt');
 });
 test('cancel retires a pending build and points its consumer at the named qualification',()=>{

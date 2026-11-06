@@ -30,6 +30,16 @@ test('host faults and empty logs give no fault',()=>{
  expect(faultOf('native','','Error: practice free memory below floor')).toBeNull();
  expect(faultOf('native','','')).toBeNull();
 });
+test('proof timing cannot hide a source fault or turn a host failure into one',()=>{
+ const timing='IRON_PROOF_TIMING {"pid":27796,"mode":"native","phase":"cli","event":"start","at":1793923351457}\n';
+ const end='IRON_PROOF_TIMING {"pid":27796,"mode":"native","phase":"process-exit","event":"end","at":1793923510306}';
+ expect(faultOf('native','',timing+end)).toBeNull();
+ expect(faultOf('native','',timing+'Error: saved state unobserved\n'+end)).toBe('native: Error: saved state unobserved');
+ expect(faultOf('native','',timing+'Error: bank quantities differ\n'+end)).toBe('native: Error: bank quantities differ');
+ for(const error of ['insufficient practice free memory floor','insufficient free memory: below the floor','insufficient practice memory: need 6.5 GiB free']){
+  expect(faultOf('native','',timing+'Error: '+error+'\n'+end)).toBeNull();
+ }
+});
 test('a build fault reads the failing check logs, from delivery or diagnostic',()=>{
  const dir=mkdtempSync(join(tmpdir(),'fault-')),stdout=join(dir,'o.log'),stderr=join(dir,'e.log');
  writeFileSync(stdout,'');writeFileSync(stderr,'Error: boom\n');

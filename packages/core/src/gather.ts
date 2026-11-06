@@ -293,7 +293,11 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
     }else if(g.how==='combine'){
      const [a,b]=COMBINE_SOURCES[g.id]!,inv=st()?.inventory??[],ia=inv.find((i:any)=>i.id===a),ib=inv.find((i:any)=>i.id===b);
      if(!ia||!ib)return `combining ${g.id} needs ${a} and ${b} in the pack`;
+     const before=held(g.id);
      await s.direct({type:'useItemOnItem',sourceSlot:ia.slot,targetSlot:ib.slot,reason:'SDK'});
+     // A recipe that opens a message box first (the doogle leaves on the sardine, quest_fluffs.rs2 opheldu) hands the
+     // item over only once the box is continued; the dyes hand theirs over at once.
+     for(let t=0;t<12&&held(g.id)<=before;t++){await waitTicks(s,1);const dlg:any=s.sdk.getDialog();if(dlg?.isOpen&&!dlg.isWaiting)await s.sdk.sendClickDialog(0);}
     }else if(g.how==='pick'){
      const src=PICK_SOURCES[g.id]!,plant=(st()?.nearbyLocs??[]).filter((l:any)=>l.id===src.loc&&(l.optionsWithIndex??[]).some((o:any)=>src.option.test(o.text))).sort((a:any,b:any)=>a.distance-b.distance)[0];
      // A picked plant stands again after 50 ticks; the field has several.
