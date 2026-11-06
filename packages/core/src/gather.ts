@@ -188,7 +188,9 @@ export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:
   if(m.id===MILK&&(sold===Infinity||(cow&&d(cow)<Math.min(sold,spot?d(spot):Infinity)))){gathers.push({...m,how:'milk'});tools.push({id:BUCKET,count:m.count});}
   // A loc that hands the item out for a use beats a farther spawn: a bucket of water from the sink by the Ardougne bank,
   // not the spawn at Catherby.
-  else if(spot&&d(spot)<sold&&!(USE_SOURCES[m.id]&&nearest(USE_SOURCES[m.id]!.tiles,at).some(t=>d(t)<d(spot))))gathers.push({...m,how:'spawn'});
+  // Each spawn gives one item at a time, so a count beyond the spawns within the seller's distance (four buckets, one
+  // bucket spawn by the bank) goes to the shop; with no seller the spawns are waited on.
+  else if(spot&&d(spot)<sold&&(sold===Infinity||spawns(m.id,at).filter(t=>d(t)<sold).length>=m.count)&&!(USE_SOURCES[m.id]&&nearest(USE_SOURCES[m.id]!.tiles,at).some(t=>d(t)<d(spot))))gathers.push({...m,how:'spawn'});
   else if(LOC_SOURCES[m.id]&&d(LOC_SOURCES[m.id]!.tile)<sold)gathers.push({...m,how:'loc'});
   else if(pick&&d(pick)<sold)gathers.push({...m,how:'pick'});
   // A kill wins over a shop when its animal is nearer, as a spawn does: Rufus in Canifis sells every meat, 850 tiles
