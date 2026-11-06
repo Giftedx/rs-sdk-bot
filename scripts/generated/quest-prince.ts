@@ -154,6 +154,13 @@ try {
     await q.talk('prince', /^prince ali$/i, [], () => !q.has(ITEM.skirt) && !q.dialogOpen(), { x: 3123, z: 3242 }, 60);
     q.milestone(100);
 
+    // Out of the cell first: Open works from inside (quest_prince.rs2:46-51; from the corridor side the door is locked),
+    // and the world router has no route from within the cell, so a Magic 1 account's Lumbridge walk found none there.
+    await q.openDoor('cell door out', ALIDOOR.x, ALIDOOR.z);
+    await q.walk('out of cell', [{ x: 3128, z: 3245, tol: 1 }]);
+    await jailDoor();
+    await q.walk('out of jail', [{ x: 3128, z: 3248, tol: 1 }]);
+
     // 9. Al Kharid: Hassan queues the completion (hassan.rs2:24-26). The toll gate is free now.
     await lumbridge('lumbridge teleport 4');
     await tollGate();
