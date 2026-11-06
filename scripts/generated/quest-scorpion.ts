@@ -144,10 +144,18 @@ try {
         q.milestone('dusty key');
         await q.step('leave cell', () => q.opLoc(JAIL_DOOR, 1), () => !inCell(), 15, 4);
     }
+    // Black demons (level 172, aggressive to every player) stand beside the corridor between the dusty gate and the secret
+    // wall; their hits are melee, so Protect from Melee (sdk PRAYER_INDICES 14) is on from the gate until the ladder.
+    const PFM = 14, prayers = (): any => q.st()?.prayers, pfmOn = (): boolean => !!prayers()?.activePrayers?.[PFM], points = (): number => prayers()?.prayerPoints ?? 0;
+    const setPfm = async (on: boolean): Promise<void> => {
+        if (pfmOn() === on || (on && points() <= 0)) return;
+        await q.step(`protect from melee ${on ? 'on' : 'off'}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }), () => pfmOn() === on, 3, 3);
+    };
     const pastGate = () => (q.pos()?.worldX ?? 0) < GATE.x && Math.abs((q.pos()?.worldZ ?? 0) - GATE.z) < 30;
     await q.walk('to dusty gate', [{ x: GATE.x + 1, z: GATE.z, tol: 1 }]);
     await q.step('dusty gate', () => q.useOnLoc(ITEM.dusty, GATE), pastGate, 15, 4);
     q.milestone('gate');
+    await setPfm(true);
     // Black Demon spawns near 2860,9776 close the only corridor (x 2877-2879, z 9769-9788) to the danger guard
     // (packages/core/src/danger.ts), so planned walks pace in the dragon room. Client-routed clicks do not use that guard.
     await q.dash('to south cave', 2894, 9776, 2, 30);
@@ -165,6 +173,7 @@ try {
     // The climb down lands on 2885,9797 (the ladder's dungeon end stands beside it); that tile is the walk's target.
     await q.walk('to dungeon ladder', [{ x: TAV_LADDER.x + 1, z: TAV_LADDER.z + 6400, tol: 1 }]);
     await q.climb('dungeon ladder up', ladderAt({ x: TAV_LADDER.x + 1, z: TAV_LADDER.z + 6400 }, /climb-up/i), /climb-up/i, () => (q.pos()?.worldZ ?? 9999) < 9000);
+    await setPfm(false);
 
     // C: Falador Teleport, the Monastery; the ladder asks to join the order, then climbs.
     await q.teleport('falador teleport 2', 'magic:falador_teleport', 2965, 3378);
