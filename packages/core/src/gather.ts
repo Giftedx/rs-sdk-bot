@@ -56,14 +56,16 @@ export const CASTS_MIN=6;
 export type MagicKit={staff?:number;component:string;level:number;maxhit:number;runes:Record<number,number>};
 // The strongest strike the Magic level allows whose runes, less the one a staff owned covers, are owned for CASTS_MIN casts
 // (TheFullMonty: Magic 99, a staff of fire, air and mind runes: Fire Strike at 2 air and 1 mind a cast).
-export function magicKit(owned:readonly Item[],magic:number):MagicKit|null{
+// `casts`: the casts the runes must cover. The plan asks for CASTS_MIN; a fight asks for one more kill's casts, so a
+// series that has spent most of its budget still takes its last easy animal (a chicken after a bear).
+export function magicKit(owned:readonly Item[],magic:number,casts=CASTS_MIN):MagicKit|null{
  const have=(id:number)=>owned.filter(i=>i.id===id).reduce((c,i)=>c+i.count,0);
  const staffs=Object.keys(STAFF_RUNE).map(Number).filter(id=>have(id)>=1);
  for(const sp of [...SPELLS].reverse()){
   if(sp.level>magic)continue;
   for(const staff of [...staffs,undefined]){
    const runes:Record<number,number>=Object.fromEntries(Object.entries(sp.runes).filter(([id])=>staff===undefined||STAFF_RUNE[staff]!==Number(id)).map(([id,n])=>[Number(id),n]));
-   if(Object.entries(runes).every(([id,n])=>have(Number(id))>=n*CASTS_MIN))return{staff,component:sp.component,level:sp.level,maxhit:sp.maxhit,runes};
+   if(Object.entries(runes).every(([id,n])=>have(Number(id))>=n*casts))return{staff,component:sp.component,level:sp.level,maxhit:sp.maxhit,runes};
   }
  }
  return null;
@@ -251,7 +253,7 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
      if(g.kit==='magic'){
       const worn=()=>s.sdk.getEquipment().map((i:any)=>i.id);
       const magic=st()?.skills?.find((k:any)=>k.name==='Magic')?.baseLevel??1;
-      spell=magicKit([...(st()?.inventory??[]),...s.sdk.getEquipment()].map((i:any)=>({id:i.id,count:i.count})),magic);
+      spell=magicKit([...(st()?.inventory??[]),...s.sdk.getEquipment()].map((i:any)=>({id:i.id,count:i.count})),magic,Math.max(1,castsFor(g.id,1,8)));
       if(!spell)return `magic kill of ${npc.name} needs a strike spell's runes in the pack`;
       const staff=spell.staff===undefined?undefined:(st()?.inventory??[]).find((i:any)=>i.id===spell!.staff);
       if(staff&&!worn().includes(spell.staff!)){await s.bot.equipItem(staff);await waitUntil(s,()=>worn().includes(spell!.staff!),{timeoutTicks:5});}

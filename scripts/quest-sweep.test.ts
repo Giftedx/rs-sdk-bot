@@ -1043,6 +1043,9 @@ test('a strike spell kit is the strongest strike the runes allow, and the highes
  // Without the staff the fire runes are missing: Wind Strike from air and mind alone; nothing below six casts' worth.
  expect(magicKit([{id:556,count:500},{id:558,count:500}],99)?.component).toBe('magic:wind_strike');
  expect(magicKit([{id:556,count:5},{id:558,count:5}],99)).toBeNull();
+ // A fight asks only for one more kill's casts: two mind runes and four air still cast Fire Strike with the staff.
+ expect(magicKit([{id:1387,count:1},{id:556,count:4},{id:558,count:2}],99,2)?.component).toBe('magic:fire_strike');
+ expect(magicKit([{id:1387,count:1},{id:556,count:4},{id:558,count:2}],99)).toBeNull();
  expect(magicKit(monty,12)?.component).toBe('magic:wind_strike');
  // Attack 69 with Strength 1 and Ranged 1 does not beat a goblin series bare-handed; Magic 99 does. A rat is the staff's
  // kill too: a wielded staff with autocast casts on every attack, so its runes are budgeted.
