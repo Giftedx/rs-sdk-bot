@@ -3,9 +3,10 @@ import {existsSync,mkdirSync,mkdtempSync,readFileSync,writeFileSync} from 'node:
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
-import {intakeRequests} from '../src/coordinator-cli';
-import {addTasks,initialState} from '../src/coordinator';
-import {capabilityDefinitionTransition,loadState,publishCapabilityChanges,saveState} from '../src/coordinator-store';
+import {intakeRequests,settlePlanner} from '../src/coordinator-cli';
+import {addTasks,finishTask,initialState,startTask} from '../src/coordinator';
+import {PLAN_GAP_MS,plannerDue} from '../src/coordinator-decisions';
+import {capabilityDefinitionTransition,loadState,publishCapabilityChanges,runDirectory,saveState} from '../src/coordinator-store';
 import type {DeliveryTask} from '../src/delivery';
 
 const definition:DeliveryTask={id:'cook-order',goal:'Complete a quest',entry:'scripts/cook.ts',files:['scripts/cook.ts'],consumer:'Quest flag, XP and logout',
@@ -112,4 +113,90 @@ test('recovery holds a changed request or definition instead of accepting differ
  writeFileSync(f.cap,f.bytes);
  intakeRequests(recovered,f.base);
  expect(expected(f)).toEqual({pending:false,accepted:true,rejected:false,tasks:['build','live']});
+});
+
+function modelFixture(){
+ const f=fixture(),id='plan-test',dir=runDirectory(id,f.directory),proposal=join(dir,'proposal.json');
+ f.state.planner={runId:id,startedAt:100};f.state.planFailures=2;
+ f.state.plannerReceiptSequence=4;f.state.latestReceiptSequence=6;
+ saveState(f.state,f.directory);
+ const added={...definition,id:'model-order'},addedPath=join(f.defs,added.id+'.json');
+ writeFileSync(proposal,JSON.stringify({reason:'Qualify model work',capabilities:[added],tasks:[{...task,capability:added.id}]}));
+ return {...f,dir,proposal,added,addedPath,accepted:join(dir,'plan-accepted.json')};
+}
+
+test('a model save failure leaves the planner, its receipt cursor, and capability definition uncommitted',()=>{
+ const f=modelFixture();
+ expect(()=>settlePlanner(f.state,f.base,{save:()=>{throw Error('queue write failed');}})).toThrow('queue write failed');
+ expect(f.state.tasks).toHaveLength(0);
+ expect(f.state.planner?.runId).toBe('plan-test');
+ expect(f.state.planFailures).toBe(2);
+ expect(f.state.plannerReceiptSequence).toBe(4);
+ expect(existsSync(f.addedPath)).toBe(false);
+ expect(loadState(f.directory).tasks).toHaveLength(0);
+ const recovered=loadState(f.directory);
+ settlePlanner(recovered,f.base);
+ expect(recovered.tasks.map(r=>r.spec.id)).toEqual(['check']);
+ expect(recovered.planner).toBeUndefined();
+ expect(recovered.planFailures).toBeUndefined();
+ expect(recovered.plannerReceiptSequence).toBe(4);
+ expect(recovered.latestReceiptSequence).toBe(6);
+});
+
+test('an invalid model proposal is saved as a failed round and leaves definitions untouched',()=>{
+ const f=modelFixture();
+ writeFileSync(f.proposal,JSON.stringify({reason:'Invalid proposal',capabilities:[f.added],tasks:[{...task,dependsOn:['missing']}]}));
+ expect(()=>settlePlanner(f.state,f.base,{save:()=>{throw Error('queue write failed');}})).toThrow('queue write failed');
+ expect(f.state.planner?.runId).toBe('plan-test');
+ expect(f.state.planFailures).toBe(2);
+ settlePlanner(f.state,f.base);
+ expect(loadState(f.directory).planFailures).toBe(3);
+ expect(loadState(f.directory).planner).toBeUndefined();
+ expect(existsSync(f.addedPath)).toBe(false);
+ expect(existsSync(f.accepted)).toBe(false);
+});
+
+test('a model restart finishes publication once and retains the next planning trigger',()=>{
+ const f=modelFixture();
+ f.state.sequence=6;
+ addTasks(f.state,[{...task,id:'completed',dependsOn:[]}],110);
+ startTask(f.state,'completed',111,'receipt-run');
+ expect(finishTask(f.state,{taskId:'completed',runId:'receipt-run',ok:true,at:112,output:{}})).toBe(true);
+ const latest=f.state.latestReceiptSequence;
+ expect(()=>settlePlanner(f.state,f.base,{publish:(base,changes)=>{
+  publishCapabilityChanges(base,changes);
+  throw Error('stopped before acknowledgement');
+ }})).toThrow('stopped before acknowledgement');
+ const saved=loadState(f.directory),sequence=saved.sequence;
+ expect(saved.planner).toBeUndefined();
+ expect(saved.planFailures).toBeUndefined();
+ expect(saved.pendingSubmission).toMatchObject({runId:'plan-test',count:1});
+ expect(existsSync(f.accepted)).toBe(false);
+ expect(JSON.parse(readFileSync(f.addedPath,'utf8'))).toEqual(f.added);
+ // Recovery runs before manual intake, even when no planner is active.
+ intakeRequests(saved,f.base);
+ expect(saved.tasks.map(r=>r.spec.id)).toEqual(['completed','check']);
+ expect(saved.sequence).toBe(sequence);
+ expect(saved.latestReceiptSequence).toBe(latest);
+ expect(saved.plannerReceiptSequence).toBe(4);
+ expect(plannerDue(saved,saved.lastPlanAt+PLAN_GAP_MS+1,0,false)).toBe('outcome');
+ const receipt=JSON.parse(readFileSync(f.accepted,'utf8'));
+ expect(receipt).toMatchObject({runId:'plan-test',count:1,sha256:createHash('sha256').update(readFileSync(f.proposal)).digest('hex')});
+ const restarted=loadState(f.directory);
+ intakeRequests(restarted,f.base,{publish:()=>{throw Error('already published');}});
+ expect(restarted.pendingSubmission).toBeUndefined();
+ expect(readFileSync(join(f.directory,'events.jsonl'),'utf8').match(/"kind":"plan-accepted"/g)).toHaveLength(1);
+});
+
+test('model recovery refuses changed proposal bytes before publishing a committed batch',()=>{
+ const f=modelFixture(),original=readFileSync(f.proposal);
+ expect(()=>settlePlanner(f.state,f.base,{publish:()=>{throw Error('publication failed');}})).toThrow('publication failed');
+ const recovered=loadState(f.directory);
+ writeFileSync(f.proposal,'{}');
+ expect(()=>intakeRequests(recovered,f.base)).toThrow('pending model proposal bytes changed');
+ expect(existsSync(f.addedPath)).toBe(false);
+ expect(existsSync(f.accepted)).toBe(false);
+ writeFileSync(f.proposal,original);
+ intakeRequests(recovered,f.base);
+ expect(existsSync(f.accepted)).toBe(true);
 });
