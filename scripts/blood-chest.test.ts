@@ -1,8 +1,26 @@
 import {test,expect} from 'bun:test';
-import {ARRIVAL,BANK,BLOOD_RUNE,CHEST,CHESTS,COINS,DOOR,EXIT_TICKS,LADDER_DOWN,LADDER_FOOT,LADDER_UP,PICK_LIMIT,RESPAWN_TICKS,STAGE,bloodOptions,bloodRefusal,bloodZone,chestEffect,failureResult,runBloodChest,type BloodDeps} from './blood-chest';
+import {ARRIVAL,BANK,BLOOD_RUNE,CHEST,CHESTS,COINS,DOOR,EXIT_TICKS,LADDER_DOWN,LADDER_FOOT,LADDER_UP,PICK_LIMIT,RESPAWN_TICKS,STAGE,bloodOptions,bloodRefusal,bloodZone,chestEffect,failureResult,runBloodChest,walkBloodDungeon,type BloodDeps} from './blood-chest';
+import type {PathDeps} from '../packages/core/src/walk';
 import type {BotWorldState} from '../vendor/rs-sdk/sdk/types';
 
 const options={maxLoots:2,cap:2000,idleTicks:700,bankEvery:50};
+test('stranded dungeon step 2574,9742 reaches the chest stage despite an empty SDK plan',async()=>{
+ const p={x:2574,z:9742,level:0},clicks:{x:number;z:number}[]=[],listeners=new Set<()=>void>();
+ let tick=0,target={...p};
+ const d:PathDeps={tick:()=>tick,pos:()=>p,onTick:cb=>{listeners.add(cb);return()=>{listeners.delete(cb);};},
+  plan:()=>[],locs:()=>[],walk:(x,z)=>{clicks.push({x,z});target={x,z,level:0};return{success:true};},interactLoc:()=>{throw Error('no door on dungeon leg');}};
+ const travel=walkBloodDungeon(d,STAGE.x,STAGE.z,1,()=>false);
+ expect(clicks.length).toBeGreaterThan(0);
+ for(let i=0;i<160&&listeners.size;i++){p.x+=Math.sign(target.x-p.x);p.z+=Math.sign(target.z-p.z);tick++;for(const cb of [...listeners])cb();}
+ expect(await travel).toBe(true);
+ expect(Math.max(Math.abs(p.x-STAGE.x),Math.abs(p.z-STAGE.z))).toBeLessThanOrEqual(1);
+ expect(listeners.size).toBe(0);
+ // An accepted click with no movement cannot count as arrival.
+ p.x=2574;p.z=9742;tick=0;
+ const stuck=walkBloodDungeon(d,STAGE.x,STAGE.z,1,()=>false);
+ for(let i=0;i<160&&listeners.size;i++){tick++;for(const cb of [...listeners])cb();}
+ expect(await stuck).toBe(false);expect(tick).toBeLessThanOrEqual(151);expect(listeners.size).toBe(0);
+});
 // A small model of the native route: door, ladders, chests with respawn, bank.
 function world(p:{thieving?:number;x?:number;z?:number;pickAfter?:number;hp?:number;coins?:number;cake?:number;hitAt?:number;bankCake?:number;hitPerLoot?:number}={}){
  const w={x:p.x??ARRIVAL.x,z:p.z??ARRIVAL.z,level:0,tick:0,xp:1000,hp:p.hp??56,runes:0,coins:p.coins??0,cake:p.cake??3,bankCake:p.bankCake??0,lifeId:1,
@@ -73,10 +91,23 @@ test('chest effect needs both rewards, XP, kept assets and the teleport',()=>{
  w.coins=500;w.xp-=2500;expect(()=>chestEffect(before,state())).toThrow('reconcile');
  w.xp+=2500;w.cake=2;expect(()=>chestEffect(before,state())).toThrow('assets');
 });
+test('the reward first observed at 2584,3340 counts as a loot and keeps the reward and kit checks',async()=>{
+ const {w,d,state}=world({coins:100}),act=d.act;
+ d.act=async(...a)=>{const r=await act(...a);if(a[2]===CHEST)w.z=3340;return r;};
+ const r=await runBloodChest(d,options);
+ expect(r).toMatchObject({ok:true,stop:'target',conserved:true,loots:2,bankedRunes:4,bankedCoins:1100,entries:2});
+ expect(w.acts.filter(a=>a.id===CHEST)).toHaveLength(2);
+ w.x=STAGE.x;w.z=STAGE.z;w.runes=0;w.coins=0;
+ const before=state();
+ w.x=2584;w.z=3340;w.runes=2;w.coins=500;w.xp+=2500;
+ expect(chestEffect(before,state())).toBe(true);
+ w.coins=499;expect(()=>chestEffect(before,state())).toThrow('reconcile');
+ w.coins=500;w.cake=2;expect(()=>chestEffect(before,state())).toThrow('assets');
+});
 test('two loots use op2 on both chests, bank the exact reward and reconcile',async()=>{
  const {w,d}=world({coins:100,pickAfter:3});
  const r=await runBloodChest(d,options);
- expect(r).toMatchObject({ok:true,stop:'target',targetMet:true,conserved:true,loots:2,runes:4,coins:1000,bankedRunes:4,bankedCoins:1100,startCoins:100,bankTrips:1,died:false});
+ expect(r).toMatchObject({ok:true,stop:'target',targetMet:true,conserved:true,loots:2,runes:4,coins:1000,bankedRunes:4,bankedCoins:1100,startCoins:100,bankTrips:1,entries:2,died:false});
  expect(r.picks).toBeGreaterThanOrEqual(5);
  const chests=w.acts.filter(a=>a.id===CHEST);
  expect(chests.map(a=>a.option)).toEqual([2,2]);
@@ -89,7 +120,7 @@ test('100 successful entries reset the door bound and bank 200 runes within the 
  // Each visit needs one failed pick and one observed entry.
  d.act=async(...a)=>{const r=await act(...a);if(a[2]===CHEST)w.fails=1;return r;};
  const r=await runBloodChest(d,bloodOptions('24000',{MAX_LOOTS:'100',CAP:'24000'}));
- expect(r).toMatchObject({ok:true,stop:'target',targetMet:true,conserved:true,loots:100,runes:200,coins:50000,bankedRunes:200,bankedCoins:50000,bankTrips:2,picks:200,died:false});
+ expect(r).toMatchObject({ok:true,stop:'target',targetMet:true,conserved:true,loots:100,runes:200,coins:50000,bankedRunes:200,bankedCoins:50000,bankTrips:2,picks:200,entries:100,died:false});
  expect(w.acts.filter(a=>a.id===DOOR.id&&a.option===2)).toHaveLength(200);
  expect(w.acts.filter(a=>a.id===CHEST)).toHaveLength(100);
  expect(w.bankRunes).toBe(200);expect(w.bankCoins).toBe(50000);
@@ -120,7 +151,8 @@ test('Hitpoints below half with no food leave by the ladder and the door, then b
  const {w,d}=world({hitAt:3,x:STAGE.x,z:STAGE.z,coins:40,cake:0});
  w.chestUntil=[100000,100000];
  const r=await runBloodChest(d,options);
- expect(r).toMatchObject({ok:false,stop:'hp',targetMet:false,conserved:true,loots:0,bankedCoins:40,bankTrips:1,hpMin:20});
+ // The ladder climb reaches the tower tile without a door entry.
+ expect(r).toMatchObject({ok:false,stop:'hp',targetMet:false,conserved:true,loots:0,bankedCoins:40,bankTrips:1,entries:0,hpMin:20});
  expect(w.acts.map(a=>[a.id,a.option])).toEqual([[LADDER_UP.id,1],[DOOR.id,1]]);
  expect(w.dungeonWalks.at(-1)).toBe(`${LADDER_FOOT.x},${LADDER_FOOT.z}`);
 });

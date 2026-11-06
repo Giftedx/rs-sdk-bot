@@ -10,7 +10,7 @@ import {applyPreset,type SaveConfig} from './presets';
 import {runBotName} from './prove';
 import {killTree} from './proc';
 import {workerSourceRevision} from '../../core/src/worker-release';
-import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
+import {readPracticeSave,setPracticeSkills,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {ARRIVAL,BANK,BLOOD_RUNE,COINS,EXIT_TICKS,STAGE} from '../../../scripts/blood-chest';
 
@@ -21,9 +21,12 @@ const owned=['scripts/blood-chest.ts','scripts/blood-chest.test.ts','packages/pr
 const serverFiles=[thieving+'scripts/thieving.rs2',thieving+'scripts/chest/trapped_chest.rs2',thieving+'scripts/doors/locked_door.rs2',thieving+'configs/chests/trapped_chest.dbrow',thieving+'configs/doors/locked_door.dbrow'];
 // Delivery takes the practice turn and admits native startup at startupGb; this proof keeps the floor per child.
 export const ADMISSION={floorGb:FREE_FLOOR_GB,startupGb:PRACTICE_STARTUP_GB};
-const XP_RATE=25,THIEVING=17,CAKE=1895;
-// Raw tenths: chest 2500 and door 375 (trapped_chest.dbrow, locked_door.dbrow). Each loot needs one door pick from the surface.
-export const ENTRY_RAW_XP=2*(2500+375)*XP_RATE;
+const XP_RATE=25,ATTACK=0,HITPOINTS=3,THIEVING=17,CAKE=1895;
+// Raw tenths: chest 2500 and door 375 (trapped_chest.dbrow, locked_door.dbrow). A surface exit for food adds a door entry that no loot pays for.
+export const thievingRawXp=(loots:number,entries:number)=>(loots*2500+entries*375)*XP_RATE;
+// give_combat_experience, melee accurate: 40 Attack and floor(13.3 x hit) Hitpoints raw tenths. The fixture Strength caps a hit at 2, so Hitpoints is 13 per damage.
+export const ATTACK_DAMAGE_RAW_XP=40*XP_RATE,HITPOINTS_DAMAGE_RAW_XP=13*XP_RATE;
+export const STRANDED={x:2574,z:9742};
 export function bloodProofEndpoints(ports:{engine:number;gateway:number;management:number;tcp:number},instance:string){
  const values=[ports?.engine,ports?.gateway,ports?.management,ports?.tcp];
  if(!values.every(p=>Number.isSafeInteger(p)&&p>=1024&&p<=65535&&![8888,7780,8898,43594].includes(p))
@@ -55,31 +58,38 @@ const count=(s:Save,container:number,id:number)=>(s.inventories[container]??[]).
 const total=(s:Save,id:number)=>Object.values(s.inventories).flat().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 const near=(s:Save,t:{x:number;z:number},range:number)=>s.position.level===0&&Math.max(Math.abs(s.position.x-t.x),Math.abs(s.position.z-t.z))<=range;
 export function bloodResult(log:string){try{return JSON.parse(log.split(/\r?\n/).filter(l=>l.startsWith('BLOOD_CHEST_RESULT ')).at(-1)?.slice(19)??'null');}catch{return null;}}
-const cases=['entry','exit','refusal'] as const;
+const cases=['entry','stranded','exit','refusal'] as const;
 type Case=typeof cases[number];
 export function bloodSaveChecks(before:Save,after:Save,result:any,kind:Case){
  const raw=(s:Save)=>s.skills[THIEVING]!.rawExperience,runes=count(after,95,BLOOD_RUNE)-count(before,95,BLOOD_RUNE),coins=total(after,COINS)-total(before,COINS);
  const packCoins=count(before,93,COINS),ids=new Set([...Object.values(before.inventories).flat(),...Object.values(after.inventories).flat()].map(i=>i.id));
- const looted=kind==='entry',moved=kind!=='refusal';
+ const looted=kind==='entry'||kind==='stranded',moved=kind!=='refusal',stranded=kind==='stranded';
+ const packRunes=count(before,93,BLOOD_RUNE),bankedRunes=count(before,95,BLOOD_RUNE);
+ const rise=(i:number)=>after.skills[i]!.rawExperience-before.skills[i]!.rawExperience,damage=rise(ATTACK)/ATTACK_DAMAGE_RAW_XP;
  return{
-  entry:near(before,kind==='exit'?STAGE:ARRIVAL,0)&&before.skills[THIEVING]!.level===(kind==='refusal'?58:99)&&count(before,93,CAKE)===3&&count(before,93,BLOOD_RUNE)===0&&packCoins>0,
+  entry:near(before,stranded?STRANDED:kind==='exit'?STAGE:ARRIVAL,0)&&before.skills[THIEVING]!.level===(kind==='refusal'?58:99)
+   &&(stranded?before.skills[3]!.level===32&&count(before,93,379)===26&&count(before,95,379)===74&&packRunes===6&&bankedRunes===12&&packCoins===1500:count(before,93,CAKE)===3&&packRunes===0&&packCoins>0),
   place:moved?near(after,BANK,3):JSON.stringify(after.position)===JSON.stringify(before.position),
-  target:kind==='entry'?result?.ok===true&&result?.stop==='target'&&result?.targetMet===true&&result?.conserved===true
+  target:looted?result?.ok===true&&result?.stop==='target'&&result?.targetMet===true&&result?.conserved===true
    :kind==='exit'?result?.ok===false&&result?.stop==='cap'&&result?.targetMet===false&&result?.conserved===true
    :result?.ok===false&&result?.stop==='refused'&&String(result?.failure).includes('blood chest refused: Thieving 58 is below level 59'),
   // The saved bank holds the reward; the pack holds no runes or coins after a bank trip.
-  output:runes===(looted?4:0)&&coins===(looted?1000:0)&&total(after,BLOOD_RUNE)===runes&&count(after,93,BLOOD_RUNE)===0&&count(after,93,COINS)===(moved?0:packCoins)
-   &&(!moved||(result?.loots===(looted?2:0)&&result?.runes===runes&&result?.coins===coins&&result?.bankedRunes===runes&&result?.bankedCoins===packCoins+coins)),
-  xp:raw(after)-raw(before)===(looted?ENTRY_RAW_XP:0),
-  assets:[...ids].every(id=>id===BLOOD_RUNE||id===COINS||total(before,id)===total(after,id))
-   &&[93,94].every(inv=>(before.inventories[inv]??[]).filter(i=>i.id!==COINS).every(i=>count(before,inv,i.id)===count(after,inv,i.id))),
-  skills:before.skills.every((s,i)=>i===THIEVING||after.skills[i]?.rawExperience===s.rawExperience),
+  output:runes===packRunes+(looted?4:0)&&coins===(looted?1000:0)&&total(after,BLOOD_RUNE)===total(before,BLOOD_RUNE)+(looted?4:0)&&count(after,93,BLOOD_RUNE)===0&&count(after,93,COINS)===(moved?0:packCoins)
+   &&(!moved||(result?.loots===(looted?2:0)&&result?.runes===(looted?4:0)&&result?.coins===coins&&result?.bankedRunes===runes&&result?.bankedCoins===packCoins+coins)),
+  // The stranded case starts below the door, so its first loot needs no entry.
+  xp:looted?Number.isSafeInteger(result?.entries)&&result.entries>=(stranded?1:2)&&raw(after)-raw(before)===thievingRawXp(2,result.entries):raw(after)===raw(before),
+  assets:[...ids].every(id=>id===BLOOD_RUNE||id===COINS||(stranded&&id===379?Number.isSafeInteger(result?.meals)&&result.meals>=0&&total(before,id)-total(after,id)===result.meals:total(before,id)===total(after,id)))
+   &&[93,94].every(inv=>(before.inventories[inv]??[]).filter(i=>i.id!==COINS&&!(moved&&i.id===BLOOD_RUNE)&&!(stranded&&inv===93&&i.id===379)).every(i=>count(before,inv,i.id)===count(after,inv,i.id))),
+  // A case that moves can hit an NPC in the dungeon. Attack and Hitpoints must then rise as the same whole damage.
+  skills:before.skills.every((s,i)=>i===THIEVING||(moved&&(i===ATTACK||i===HITPOINTS))||after.skills[i]?.rawExperience===s.rawExperience)
+   &&Number.isSafeInteger(damage)&&damage>=0&&rise(HITPOINTS)===damage*HITPOINTS_DAMAGE_RAW_XP,
   health:after.skills[3]!.level>0&&(!moved||(result?.died===false&&result?.hpMin>=1)),
  };
 }
 export function bloodChildChecks(code:number,timedOut:boolean,log:string,kind:Case){
- return{exit:!timedOut&&(kind==='entry'?code===0:code!==0),logout:(log.match(/^LOGOUT logged-out\r?$/gm)??[]).length===1&&!/^WARN .*?(logout|session close)/m.test(log),
-  result:kind==='entry'?/^RESULT ok /m.test(log):/^RESULT fail /m.test(log)};
+ const looted=kind==='entry'||kind==='stranded';
+ return{exit:!timedOut&&(looted?code===0:code!==0),logout:(log.match(/^LOGOUT logged-out\r?$/gm)??[]).length===1&&!/^WARN .*?(logout|session close)/m.test(log),
+  result:looted?/^RESULT ok /m.test(log):/^RESULT fail /m.test(log)};
 }
 // The route facts that the work order leaves to practice, read from the worker log.
 export function bloodObservations(log:string){
@@ -100,15 +110,22 @@ export function verifyBlood(directory:string){
   for(const [key,value] of Object.entries(local))checks[id+':'+key]=value;
   observed[id]={result:bloodResult(log),...bloodObservations(log)};
  }
- const report={ok:Object.values(checks).every(Boolean),at:Date.now(),checks,observed,scope:'Native installed blood chest CLI only: two loots from the arrival tile with a bank trip, a cap exit from the dungeon and a level refusal. No live release, unattended, rival player or speed claim.',nextConsumer:'run-blood-moneyshot-loot100: Moneyshot banks 200 Blood rune 565, then larger batches to 2100 runes'};
+ const report={ok:Object.values(checks).every(Boolean),at:Date.now(),checks,observed,scope:'Native installed blood chest CLI only: two loots each from the arrival tile and the stranded dungeon tile with bank trips, a cap exit from the dungeon and a level refusal. No live release, unattended, rival player or speed claim.',nextConsumer:'run-blood-mineyourbiz-chest-stage200: MineYourBiz banks at least 200 Blood rune 565 in the existing finite 100-loot job, then another finite batch against reconciled demand'};
  writeFileSync(join(directory,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
 // The Moneyshot profile: Thieving 99, Attack 72, Hitpoints 56, combat 37, slices of cake and coins carried.
 const preset=(id:Case):SaveConfig=>({position:{...(id==='exit'?STAGE:ARRIVAL),level:0},skills:{Thieving:id==='refusal'?58:99,Attack:72,Hitpoints:56,Agility:60},
  inventory:[{id:CAKE,count:3},{id:COINS,count:40}],bank:[{id:COINS,count:1000},{id:314,count:7}]});
+export function bloodProofPreset(id:Case):SaveConfig{
+ if(id!=='stranded')return preset(id);
+ return{position:{...STRANDED,level:0},skills:{Thieving:99,Attack:62,Defence:10,Strength:12,Hitpoints:47,Agility:1},
+  inventory:[{id:COINS,count:1500},...Array.from({length:26},()=>({id:379,count:1})),{id:BLOOD_RUNE,count:6}],
+  bank:[{id:COINS,count:178422},{id:BLOOD_RUNE,count:12},{id:379,count:74}]};
+}
 const CASES:Record<Case,{cap:string;maxLoots:string;timeoutMs:number}>={
  // CAP 2500 ticks is 375 s at 150 ms; the margin covers login and logout.
  entry:{cap:'2500',maxLoots:'2',timeoutMs:420000},
+ stranded:{cap:'2500',maxLoots:'2',timeoutMs:420000},
  // The soft cap is reached at once, so the worker takes the exit from the dungeon inside EXIT_TICKS.
  exit:{cap:String(EXIT_TICKS),maxLoots:'2',timeoutMs:150000},
  refusal:{cap:'2500',maxLoots:'2',timeoutMs:90000},
@@ -132,11 +149,13 @@ async function run(directory:string){
   for(const [index,id] of cases.entries()){
    if(freemem()/2**30<FREE_FLOOR_GB)throw Error('insufficient practice free memory floor');
    const dir=join(directory,id);mkdirSync(dir);
-   const name=runBotName('bloodshot',index+1),botDir=join(root,'vendor/rs-sdk/bots',name);
+   const name=runBotName('flblood',index+1),botDir=join(root,'vendor/rs-sdk/bots',name);
    if(existsSync(botDir))throw Error('isolated practice identity already exists');
    const account=await createBot(name);
    writeFileSync(account.envPath,bloodProofAccountEnv(readFileSync(account.envPath,'utf8'),endpoints));
-   const c=CASES[id],path=await applyPreset(name,preset(id));copyFileSync(path,join(dir,'before.sav'));
+   const c=CASES[id],path=await applyPreset(name,bloodProofPreset(id));
+   if(id==='stranded')setPracticeSkills(path,readPracticeSave(path).skills.map((s,i)=>({xp:s.xp,level:i===3?32:s.level})));
+   copyFileSync(path,join(dir,'before.sav'));
    const child=Bun.spawn({...childConfiguration(name,id,process.env,endpoints),windowsHide:true,stdout:Bun.file(join(dir,'worker.log')),stderr:Bun.file(join(dir,'worker.err'))});
    let timedOut=false,termination:Promise<void>|undefined;const timer=setTimeout(()=>{timedOut=true;termination=killTree(child.pid)},c.timeoutMs);
    const code=await child.exited;clearTimeout(timer);await termination;
