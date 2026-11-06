@@ -140,7 +140,7 @@ export const QUEST_PICKUPS:Record<string,Item[]>={hunt:[{id:1963,count:10},{id:4
 export const QUEST_ARROWS:Record<string,number>={merlin:40,prince:30,hazeelcult:20};
 // Casts a quest's own fights take from an account that fights with strike spells (Magic above Attack, no bow): Alomone
 // (level 13) and Prince Ali's jail guard (26) fall to a few Fire Strikes; the Jailer (47) to about twenty.
-export const QUEST_CASTS:Record<string,number>={hazeelcult:12,prince:15,scorpion:30};
+export const QUEST_CASTS:Record<string,number>={hazeelcult:12,prince:15};
 // Fishing Contest wants Fishing 10 (hemenster_fishing.rs2:70). An account short of it nets shrimps first, at the
 // nearest Net spot (Catherby beach beside Harry's shop, where the rod and bait come from): 250 XP a catch at 25x, five
 // catches from level 1. The net is a tool of the bank pass; the catches take pack slots until the quest.
