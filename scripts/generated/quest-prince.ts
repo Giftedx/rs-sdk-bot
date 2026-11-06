@@ -40,8 +40,8 @@ try {
     };
     // Jail guards (vislevel 26) are huntmode=aggressive_melee (area_draynor configs); a guard's hit closes the talk.
     // One trial lost 4 Keli talks so (hpMin 94). The bot kills a guard that is in combat within 3 tiles first.
-    // A bow account (UnderMyKilt: Attack 6, Ranged 97) cannot cut a guard down by hand: one trial lost the four Keli
-    // talks and 24 hitpoints to a guard it punched. The sweep brings its bow and QUEST_ARROWS; the fight wields them.
+    // A guard's hit closes the Keli talk, and a low-Attack bow account (UnderMyKilt: Attack 6, Ranged 97) cannot cut a
+    // level-26 guard down by hand, so the sweep brings its bow and QUEST_ARROWS and the fight wields them first.
     const BOWS = [841, 839, 843, 845], ARROWS = [884, 886, 882];
     const wieldBow = async (): Promise<void> => {
         const worn = () => q.s.sdk.getEquipment().map((i: any) => i.id);
@@ -154,8 +154,8 @@ try {
     await q.talk('prince', /^prince ali$/i, [], () => !q.has(ITEM.skirt) && !q.dialogOpen(), { x: 3123, z: 3242 }, 60);
     q.milestone(100);
 
-    // Out of the cell first: Open works from inside (quest_prince.rs2:46-51; from the corridor side the door is locked),
-    // and the world router has no route from within the cell, so a Magic 1 account's Lumbridge walk found none there.
+    // Out of the cell first: the world router has no route from within it (its door is locked from the corridor side),
+    // while Open works from inside (quest_prince.rs2:46-51); a Magic 1 account walks to Lumbridge, so it starts outside.
     await q.openDoor('cell door out', ALIDOOR.x, ALIDOOR.z);
     await q.walk('out of cell', [{ x: 3128, z: 3245, tol: 1 }]);
     await jailDoor();
