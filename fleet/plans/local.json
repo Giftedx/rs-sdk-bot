@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793929968342,
+ "at": 1793930578561,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -507,7 +507,7 @@
     "CAP": "24000",
     "COORDINATOR_RUN_ID": "task-bb714e2b-a1ba-49ff-899e-844268e6fad1"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-blood-mineyourbiz-additional200 [task-bb714e2b-a1ba-49ff-899e-844268e6fad1]",
    "role": "supply"
