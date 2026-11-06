@@ -2,11 +2,11 @@ import {readFileSync,existsSync,readdirSync,writeFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
 import {join} from 'node:path';
-import {GOALS,NEW_EVIDENCE_MAX,addTasks,finishedAt,heldBuilds,provisionRefs,replaceTasks,usefulLiveReceipt,type CoordinatorState,type CoordTask,type TaskRecord} from './coordinator';
+import {GOALS,NEW_EVIDENCE_MAX,addTasks,finishedAt,heldBuilds,provisionRefs,replaceTasks,usefulLiveReceipt,type CapabilityChange,type CoordinatorState,type CoordTask,type TaskRecord} from './coordinator';
 import {runModel,type ModelWorker} from './model-worker';
 import {validateDelivery,type DeliveryTask} from './delivery';
 import {freshScoreboard} from './coverage';
-import {projectRoot,atomicJson,capabilitySource,writeCapabilityDefinition} from './coordinator-store';
+import {projectRoot,atomicJson,capabilitySource,publishCapabilityChanges} from './coordinator-store';
 import {diskFreeGB,heldRuns,type HeldRuns} from './coordinator-decisions';
 import {PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {observePracticeTurn} from '../../practice/src/proof-lock';
@@ -248,7 +248,7 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'Task specs above are brief (work order why clipped to 200 characters, receipts to 240). Full specs and receipts: .practice/coordinator/state.json. Read the full why of any task you replace, repair or depend on.',
  ].join('\n');
 }
-export function acceptProposal(state:CoordinatorState,raw:any,base=projectRoot,source:'manual'|'model'='manual'){
+export function prepareProposal(state:CoordinatorState,raw:any,base=projectRoot,source:'manual'|'model'='manual'){
  if(!raw||typeof raw.reason!=='string'||!Array.isArray(raw.tasks)||!Array.isArray(raw.capabilities)||raw.tasks.length>12)throw Error('invalid planner proposal');
  const tasks:CoordTask[]=source==='model'?raw.tasks.map((task:CoordTask)=>{
   const evidence=task?.newEvidence;
@@ -260,7 +260,7 @@ export function acceptProposal(state:CoordinatorState,raw:any,base=projectRoot,s
  if(new Set(definitions.map(d=>d.id)).size!==definitions.length)throw Error('duplicate proposed capability');
  const scope=(d:DeliveryTask)=>{validateDelivery(d);if(d.files.some(f=>! /^(scripts|packages\/(core|practice|planner))\//.test(f)))throw Error('capability scope must contain gameplay source/tests only');};
  for(const d of definitions){scope(d);if(existsSync(join(base,'packages/router/tasks',d.id+'.json')))throw Error('capability already exists: '+d.id);}
- const updates=raw.capabilityUpdates??[];
+ const updates=(raw.capabilityUpdates??[]) as (CapabilityChange&{expectedSource:string})[];
  if(!Array.isArray(updates)||updates.length>1)throw Error('one owned capability update per proposal');
  for(const update of updates){
   scope(update.definition);const id=update.definition.id,file=join(base,'packages/router/tasks',id+'.json');
@@ -322,13 +322,16 @@ export function acceptProposal(state:CoordinatorState,raw:any,base=projectRoot,s
   }
   for(const build of builds)if(!reachable.has(build.id))throw Error('build requires a finite live consumer dependency: '+build.id+'. Link a pending run through pending dependencies.');
  }
- for(const d of definitions)writeCapabilityDefinition(base,d);
- for(const update of updates){
-  const file=join(base,'packages/router/tasks',update.definition.id+'.json'),bytes=readFileSync(file);
-  if(createHash('sha256').update(bytes).digest('hex')!==update.expectedSource)throw Error('capability definition changed during proposal');
-  writeCapabilityDefinition(base,update.definition,bytes);
- }
- Object.assign(state,candidate);state.lastPlanReason=raw.reason;return tasks.length;
+ candidate.lastPlanReason=raw.reason;
+ const capabilities:CapabilityChange[]=[...definitions.map(definition=>({definition,expectedSource:null})),
+  ...updates.map(({definition,expectedSource})=>({definition,expectedSource}))];
+ return {candidate,capabilities,count:tasks.length};
+}
+export function acceptProposal(state:CoordinatorState,raw:any,base=projectRoot,source:'manual'|'model'='manual'){
+ const {candidate,capabilities,count}=prepareProposal(state,raw,base,source);
+ publishCapabilityChanges(base,capabilities);
+ Object.assign(state,candidate);
+ return count;
 }
 export async function runPlannerModel(agent:ModelWorker,prompt:string,timeoutMs:number,run:typeof runModel=runModel,now:()=>number=Date.now){
  const start=now(),first=await run(agent,prompt,timeoutMs,true),attempts=[{agent,...first}];

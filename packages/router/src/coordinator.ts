@@ -1,5 +1,7 @@
 // Durable orchestration above the existing author, delivery and swarm paths.
 // Task counts are coordination metrics, never percentages of game completion.
+import type {DeliveryTask} from './delivery';
+
 export const GOALS=['wealth','skills','quests','gear','specialists','main24'] as const;
 export type GoalId=typeof GOALS[number];
 export type Effect={skills?:Record<string,number>;bank?:Record<string,number>;quests?:string[];counters?:Record<string,number>};
@@ -37,6 +39,7 @@ export function usefulLiveReceipt(record:TaskRecord,now:number):Receipt|undefine
   &&receipt?.taskId===record.spec.id&&receipt.runId===record.runId&&receipt.ok===true
   &&receipt.output?.ok===true&&receipt.output.evidence==='live'&&Number.isFinite(receipt.at)&&receipt.at>0&&receipt.at<=now)return receipt;
 }
+export type CapabilityChange={definition:DeliveryTask;expectedSource:string|null};
 export interface CoordinatorState {
  version:1;sequence:number;tasks:TaskRecord[];
  goals:{id:GoalId;lastStartedAt:number;lastSucceededAt:number;completedTasks:number}[];
@@ -44,6 +47,7 @@ export interface CoordinatorState {
  /** Failed planning rounds in a row (planRetryMs, coordinator-decisions.ts). */
  planFailures?:number;
  latestReceiptSequence?:number; plannerReceiptSequence?:number;
+ pendingSubmission?:{file:string;sha256:string;capabilities:CapabilityChange[]};
 }
 export function fleetExpansion(s:{limit:number;demand:number;freeGB:number;reserveGB:number;cpu:number|null;tickMs:number|null;stalled:boolean;usefulResults:number;now:number;lastExpandedAt:number;step?:number}){
  if(!Number.isSafeInteger(s.limit)||s.limit<1||!Number.isSafeInteger(s.demand)||s.demand<=s.limit||s.stalled||s.usefulResults<2

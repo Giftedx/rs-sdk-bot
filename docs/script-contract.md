@@ -113,3 +113,5 @@ A live start needs the account's logout proof (`packages/core/src/session-admiss
 - A run needs a current qualification of the same capability. State, receipts and model output live in `.practice/coordinator/`. A finished task older than two days moves from `state.json` to the append-only `archive/tasks.jsonl`, unless an open task names it or it is the newest finished task of its capability and kind. A planner run's `input.json` names `state.json`; it does not copy it.
 
 Commands: `bun run coordinate --status`, `--submit <proposal.json>`, `--plan`, `--stop`. To resume after a pause, remove `.practice/stop-coordinator` and start `bun run coordinate --run <owner-token>`.
+
+A manual submission is accepted when its request file has the `.accepted` suffix. The coordinator saves the validated queue and its pending submission record together, publishes the recorded capability changes, then acknowledges the file. It retries the pending submission before dispatch after a failed write or restart. A request or definition that conflicts with the saved bytes holds dispatch until the conflict is resolved.
