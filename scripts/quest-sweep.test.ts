@@ -790,7 +790,7 @@ test("Merlin's Crystal: the wax comes off a Catherby beehive after its repellent
  expect(arrowsFor(530,1)).toBe(15);expect(arrowsFor(2136,1)).toBe(6);
  // The quest's own fight, Sir Mordred, takes forty arrows more from a bow account.
  const {QUEST_ARROWS}=await import('./quest-sweep');
- expect(QUEST_ARROWS['merlin']).toBe(40);expect(QUEST_ARROWS['imp']).toBeUndefined();
+ expect(QUEST_ARROWS['merlin']).toBe(40);expect(QUEST_ARROWS['prince']).toBe(30);expect(QUEST_ARROWS['imp']).toBeUndefined();
 });
 
 test("Pirate's Treasure needs no bananas from the sweep: the script picks them on Karamja, and the bank pass keeps their slots",async()=>{
@@ -1041,6 +1041,27 @@ test('a dye is a recipe: its ingredients are planned first, its dialogue step fo
  // A plant nearer than any seller is picked.
  const picked=gatherPlan([{id:1957,count:2}],{x:2600,z:3000,level:0},()=>[],()=>Infinity,()=>[],6,1,()=>[{x:2581,z:2968,level:0}]);
  expect(picked.gathers).toEqual([{id:1957,count:2,how:'pick'}]);
+});
+
+test('Prince Ali: soft clay is clay on water, clay is mined with a pickaxe, ashes come from a lit log',async()=>{
+ const {MINE_SOURCES,BURN_SOURCES,COMBINE_SOURCES,BRONZE_PICKAXE,TINDERBOX,LOGS}=await import('../packages/core/src/gather');
+ const draynor={x:3092,z:3243,level:0};
+ const spawns=(id:number)=>id===LOGS?[{x:3089,z:3265,level:0}]:[];           // logs lie in Draynor
+ const seller=(id:number)=>id===1929?250:Infinity;                           // water buckets at Shantay's
+ const plan=gatherPlan([{id:1761,count:1},{id:592,count:1}],draynor,spawns,seller,()=>[],6,1,()=>[]);
+ expect(plan.gathers).toEqual([
+  {id:434,count:1,how:'mine'},            // clay from the Varrock south-west mine, 128 tiles off
+  {id:1761,count:1,how:'combine'},        // clay on the bucket of water (the bucket is bought)
+  {id:LOGS,count:1,how:'spawn'},          // the ashes' logs
+  {id:592,count:1,how:'burn'},
+ ]);
+ expect(plan.still).toEqual([{id:1929,count:1}]);
+ expect(plan.tools).toEqual([{id:BRONZE_PICKAXE,count:1},{id:TINDERBOX,count:1}]);
+ expect(COMBINE_SOURCES[1761]).toEqual([434,1929]);
+ expect(MINE_SOURCES[434]!.locs).toEqual([2108,2109]);expect(MINE_SOURCES[434]!.tiles.length).toBe(33);
+ expect(BURN_SOURCES[592]!.logs).toBe(LOGS);
+ // A clay seller nearer than any rock keeps clay in the shop plan.
+ expect(gatherPlan([{id:434,count:1}],draynor,()=>[],()=>50).still).toEqual([{id:434,count:1}]);
 });
 
 test('plant tiles come from the knowledge and rank by distance',async()=>{

@@ -20,7 +20,7 @@ export const MILK=1927,BUCKET=1925,COW=81;
 // Garlic: the cupboard upstairs in Morgan's house, Draynor (general_use/scripts/cupboards.rs2:34, loc 2612 shut,
 // 2613 open: Open, then Search). The only shops are the Greengrocers on Miscellania and in Rellekka.
 export const LOC_SOURCES:Record<number,{tile:Tile;open:RegExp;take:RegExp}>={1550:{tile:{x:3096,z:3268,level:1},open:/^open$/i,take:/^search$/i}};
-export type Gather={id:number;count:number;how:'spawn'|'milk'|'loc'|'kill'|'pick'|'npc'|'combine'|'use';kit?:'ranged'|'magic'};
+export type Gather={id:number;count:number;how:'spawn'|'milk'|'loc'|'kill'|'pick'|'npc'|'combine'|'use'|'mine'|'burn';kit?:'ranged'|'magic'};
 // A plant picked for its item: onions are loc 3366 with the Pick option (general_use/scripts/pickables.rs2:31-39; the
 // plant stands again 50 ticks after a pick).
 // The five pickable plants (general_use/scripts/pickables.rs2; tiles in knowledge/pickables.json): a cabbage from the
@@ -38,8 +38,22 @@ export const NPC_SOURCES:Record<number,NpcSource>={
  1765:{...AGGIE,needs:[{id:1957,count:2}],coins:5,yields:1,choices:[/make dyes for me/i,/make yellow dye/i,/^okay, make me some yellow dye/i]},
  1767:{...AGGIE,needs:[{id:1793,count:2}],coins:5,yields:1,choices:[/make dyes for me/i,/make blue dye/i,/^okay, make me some blue dye/i]},
 };
-// Two items used on each other: orange dye is red on yellow (skill_crafting/scripts/dye_mixing.rs2).
-export const COMBINE_SOURCES:Record<number,[number,number]>={1769:[1763,1765]};
+// Two items used on each other: orange dye is red on yellow (skill_crafting/scripts/dye_mixing.rs2); soft clay is clay
+// on a bucket of water, which comes back empty (skill_crafting/scripts/pottery/pottery.rs2 make_softclay).
+export const COMBINE_SOURCES:Record<number,[number,number]>={1769:[1763,1765],1761:[434,1929]};
+// An ore mined from a rock with any pickaxe in the pack or wielded (skill_mining/scripts/pickaxe_checker.rs2); clay rocks
+// are locs 2108 and 2109 (skill_mining/configs/rocks.loc), placed in the map files (maps/*.jm2): the Varrock south-west
+// mine, Rimmington, the Champions' Guild mine, the Dwarven mine and Ardougne's. A bronze pickaxe (1 coin in general
+// stores) is the plan's tool; the fight takes whichever pickaxe the pack holds.
+export const PICKAXES=[1265,1267,1269,1273,1271,1275],BRONZE_PICKAXE=1265;
+export const MINE_SOURCES:Record<number,{name:string;locs:number[];tiles:Tile[]}>={
+ 434:{name:'clay rock',locs:[2108,2109],tiles:[{x:2447,z:9902,level:0},{x:2449,z:9907,level:0},{x:2451,z:9906,level:0},{x:2451,z:9908,level:0},{x:2453,z:9905,level:0},{x:2487,z:9915,level:0},{x:2490,z:9916,level:0},{x:2490,z:9917,level:0},{x:2491,z:9912,level:0},{x:2629,z:3143,level:0},{x:2629,z:3145,level:0},{x:2630,z:3143,level:0},{x:2632,z:3139,level:0},{x:2680,z:3707,level:0},{x:2684,z:3707,level:0},{x:2684,z:3709,level:0},{x:2686,z:3704,level:0},{x:2937,z:3284,level:0},{x:2938,z:3285,level:0},{x:2940,z:3283,level:0},{x:2942,z:3283,level:0},{x:2943,z:3282,level:0},{x:2943,z:3284,level:0},{x:2986,z:3239,level:0},{x:2987,z:3240,level:0},{x:3028,z:9808,level:0},{x:3030,z:9809,level:0},{x:3030,z:9810,level:0},{x:3053,z:9818,level:0},{x:3054,z:9819,level:0},{x:3179,z:3371,level:0},{x:3180,z:3372,level:0},{x:3183,z:3377,level:0}]},
+};
+// An item a fire leaves: a tinderbox on logs lights a fire that burns 100 to 199 ticks, then ashes lie on its tile for
+// 100 ticks (skill_firemaking/scripts/firemaking.rs2 firemaking_success). The logs are gathered first; the tinderbox is
+// the plan's tool.
+export const TINDERBOX=590,LOGS=1511,FIRE_TICKS=200;
+export const BURN_SOURCES:Record<number,{name:string;logs:number}>={592:{name:'ashes',logs:LOGS}};
 // An item taken from a loc by using items on it in turn, each use consumed: a bucket of wax from a Catherby beehive
 // (area_seers/scripts/bees.rs2: insect repellent clears the bees, then an empty bucket takes the wax; a bucket on a
 // hive with bees stings). The uses are gathered first, as a recipe's ingredients are.
@@ -177,6 +191,8 @@ export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:
    for(const id of USE_SOURCES[m.id]!.uses)place({id,count:m.count},depth+1);
    gathers.push({...m,how:'use'});
   }
+  else if(MINE_SOURCES[m.id]&&nearest(MINE_SOURCES[m.id]!.tiles,at).some(t=>d(t)<sold)){gathers.push({...m,how:'mine'});tools.push({id:BRONZE_PICKAXE,count:1});}
+  else if(BURN_SOURCES[m.id]&&depth<4){place({id:BURN_SOURCES[m.id]!.logs,count:m.count},depth+1);tools.push({id:TINDERBOX,count:1});gathers.push({...m,how:'burn'});}
   else still.push(m);
  };
  for(const m of missing)place(m,0);
@@ -194,7 +210,7 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
  // Each gather's target is fixed before any runs: a bead taken during another colour's series counts toward its own.
  const targets=new Map(gathers.map(g=>[g.id,held(g.id)+g.count]));
  for(const g of gathers){
-  const target=targets.get(g.id)!,sources=(g.how==='milk'?nearest(cows(),here()):g.how==='loc'?[LOC_SOURCES[g.id]!.tile]:g.how==='kill'?nearest((KILL_SOURCES[g.id]?.chance??1)<1?denseSpawns(killSpawns(g.id)):killSpawns(g.id),here()):g.how==='pick'?locsByDistance(PICK_SOURCES[g.id]!.loc,here()):g.how==='npc'?[NPC_SOURCES[g.id]!.tile]:g.how==='use'?nearest(USE_SOURCES[g.id]!.tiles,here()):g.how==='combine'?[here()]:spawnsByDistance(g.id,here())).slice(0,6);
+  const target=targets.get(g.id)!,sources=(g.how==='milk'?nearest(cows(),here()):g.how==='loc'?[LOC_SOURCES[g.id]!.tile]:g.how==='kill'?nearest((KILL_SOURCES[g.id]?.chance??1)<1?denseSpawns(killSpawns(g.id)):killSpawns(g.id),here()):g.how==='pick'?locsByDistance(PICK_SOURCES[g.id]!.loc,here()):g.how==='npc'?[NPC_SOURCES[g.id]!.tile]:g.how==='use'?nearest(USE_SOURCES[g.id]!.tiles,here()):g.how==='mine'?nearest(MINE_SOURCES[g.id]!.tiles,here()):g.how==='combine'||g.how==='burn'?[here()]:spawnsByDistance(g.id,here())).slice(0,6);
   // Spawns lie in clusters (three egg spawns within 4 tiles beyond White Wolf Mountain): one with no route rules out
   // the rest of its cluster, so the walk moves on to the next place rather than searching the same ground again.
   const unreachable:Tile[]=[];
@@ -208,9 +224,33 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
    // animal in sight, so a run that ends short says whether the animals or the budget ran out.
    // A kill's attempt budget counts fights begun, not waits for a free animal or refused clicks; 400 rounds bound the rest.
    const tally={kills:0,drops:0,idle:0,fights:0,start:s.tick()};
-   for(let tries=0;tries<400&&(g.how==='kill'?tally.fights<killAttempts(g.id,g.count):tries<g.count+3)&&held(g.id)<target;tries++){
+   // A swing at a rock misses as often as it hits at Mining 1, so a mine has four tries an ore.
+   for(let tries=0;tries<400&&(g.how==='kill'?tally.fights<killAttempts(g.id,g.count):tries<(g.how==='mine'?4*g.count:g.count)+3)&&held(g.id)<target;tries++){
     const before=held(g.id);
-    if(g.how==='use'){
+    if(g.how==='mine'){
+     const src=MINE_SOURCES[g.id]!,inv=st()?.inventory??[];
+     if(!PICKAXES.some(id=>inv.some((i:any)=>i.id===id)||s.sdk.getEquipment().some((i:any)=>i.id===id)))return `${src.name} needs a pickaxe in the pack`;
+     const rock=(st()?.nearbyLocs??[]).filter((l:any)=>src.locs.includes(l.id)&&(l.optionsWithIndex??[]).some((o:any)=>/^mine$/i.test(o.text))).sort((a:any,b:any)=>a.distance-b.distance)[0];
+     // A mined rock stands bare a while; the mine has several.
+     if(!rock){if(!await waitUntil(s,()=>(st()?.nearbyLocs??[]).some((l:any)=>src.locs.includes(l.id)),{timeoutTicks:60}))break;continue;}
+     await s.bot.interactLoc(rock,/^mine$/i);
+     await waitUntil(s,()=>held(g.id)>before,{timeoutTicks:30});
+     console.log(`QUEST_SWEEP_MINE ${JSON.stringify({item:g.id,at,held:held(g.id),target})}`);
+    }else if(g.how==='burn'){
+     const src=BURN_SOURCES[g.id]!,inv=st()?.inventory??[],tinder=inv.find((i:any)=>i.id===TINDERBOX),logs=inv.find((i:any)=>i.id===src.logs);
+     if(!tinder||!logs)return `${src.name} needs ${TINDERBOX} and ${src.logs} in the pack`;
+     const fireAt=here(),logsHeld=held(src.logs);
+     await s.direct({type:'useItemOnItem',sourceSlot:tinder.slot,targetSlot:logs.slot,reason:'SDK'});
+     // The server swings the tinderbox again every four ticks until the fire catches; logs still held after 30 ticks mean
+     // the tile takes no fire, and the next try stands two tiles west.
+     if(!await waitUntil(s,()=>held(src.logs)<logsHeld,{timeoutTicks:30})){console.log(`QUEST_SWEEP_BURN ${JSON.stringify({item:g.id,at:fireAt,lit:false})}`);await walk({x:fireAt.x-2,z:fireAt.z,level:fireAt.level});continue;}
+     const ashes=()=>(st()?.groundItems??[]).filter((i:any)=>i.id===g.id&&i.distance<=4).sort((a:any,b:any)=>a.distance-b.distance)[0];
+     const lit=s.tick();
+     if(!await waitUntil(s,()=>!!ashes(),{timeoutTicks:FIRE_TICKS+20})){console.log(`QUEST_SWEEP_BURN ${JSON.stringify({item:g.id,at:fireAt,lit:true,ashes:false,ticks:s.tick()-lit})}`);continue;}
+     await s.bot.pickupItem(ashes());
+     await waitUntil(s,()=>held(g.id)>before,{timeoutTicks:15});
+     console.log(`QUEST_SWEEP_BURN ${JSON.stringify({item:g.id,at:fireAt,lit:true,ashes:true,ticks:s.tick()-lit,held:held(g.id),target})}`);
+    }else if(g.how==='use'){
      const src=USE_SOURCES[g.id]!,loc=()=>(st()?.nearbyLocs??[]).find((l:any)=>l.x===at.x&&l.z===at.z&&src.option.test((l.optionsWithIndex??[]).map((o:any)=>o.text).join('|')));
      const l0=loc();if(!l0)break;
      for(const id of src.uses){
