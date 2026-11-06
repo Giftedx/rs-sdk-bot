@@ -317,6 +317,25 @@ export async function leaveFortress(s:Session,approach:(to:readonly Tile[])=>Pro
  return out?{ok:true}:{ok:false,detail:`fortress front 3016,3512,0 unobserved at ${where()}`};
 }
 
+// Hazeel Cult's cave (maps/m40_151.jm2, under the Ardougne cave mouth 2585,3233): the walker has no route out, since
+// the stairs hazeelcultstairs 2853 at 2570,9683 are the quest's own (quest_hazeelcult.rs2 oploc1, Climb-up lands on
+// 2587,3237). A run that resumes down there climbs them before its bank walk.
+const inHazeelCave=(p:{worldX:number;worldZ:number;level:number})=>p.level===0&&p.worldX>=2555&&p.worldX<=2625&&p.worldZ>=9655&&p.worldZ<=9705;
+export async function leaveHazeelCave(s:Session,approach:(to:readonly Tile[])=>Promise<{ok:boolean}>=async(to)=>walkPath(await sessionWalker(s),to.map(t=>({x:t.x,z:t.z,tol:0})),{maxTicks:150})){
+ const pos=()=>s.sdk.getState()?.player;
+ const where=()=>{const p=pos();return p?`${p.worldX},${p.worldZ},${p.level}`:'unknown';};
+ const p=pos();
+ if(!p||!inHazeelCave(p))return{ok:true};
+ const log=(step:string,ok:boolean)=>console.log(`QUEST_SWEEP_HAZEEL_CAVE ${JSON.stringify({step,ok,at:where()})}`);
+ const foot=(await approach([{x:2570,z:9682,level:0}])).ok&&(()=>{const q=pos();return !!q&&q.level===0&&Math.abs(q.worldX-2570)<=1&&Math.abs(q.worldZ-9682)<=1;})();
+ log('stairs foot',foot);
+ if(!foot)return{ok:false,detail:`hazeel cave stairs foot 2570,9682,0 unobserved at ${where()}`};
+ await s.direct({type:'interactLoc',x:2570,z:9683,locId:2853,optionIndex:1,reason:'SDK'});
+ const up=await waitUntil(s,()=>{const q=pos();return !!q&&q.worldZ<9000;},{timeoutTicks:20});
+ log('stairs',up);
+ return up?{ok:true}:{ok:false,detail:`hazeel cave stairs climb unobserved at ${where()}`};
+}
+
 // Ernest the Chicken's fish food has one spawn, upstairs in Draynor Manor (maps/m48_52.jm2:9477, 3108,3356,1).
 // spawn-index.ts lists sources on the player's plane only, so gatherPlan leaves it missing. In by the front door
 // (opens from the south only, quest_haunted.rs2:4-8), spookystairs 3108,3363 up (+4 z) and spookystairstop
@@ -947,6 +966,8 @@ export async function sweep(account:string,quest:string,fresh?:string){
  const world=await getWorld();
  const fortress=await leaveFortress(s);
  if(!fortress.ok)return fail(fortress.detail!);
+ const cave=await leaveHazeelCave(s);
+ if(!cave.ok)return fail(cave.detail!);
  // The world walker plans from the ground floor: an account left upstairs (Hazeel Cult ends there, Ernest the Chicken on
  // Draynor Manor's top floor) takes the nearest way down a floor at a time by the route graph; a Climb-down loc in view is
  // the fallback (the manor's top-floor stairs were out of view and the sweep failed with no way down).
