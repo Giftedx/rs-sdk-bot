@@ -141,6 +141,9 @@ export const QUEST_PICKUPS:Record<string,Item[]>={hunt:[{id:1963,count:10},{id:4
 // Arrows a quest's own fights take from a bow account, beyond the gathers' kills: Merlin's Crystal's Sir Mordred has 38
 // hitpoints behind Protect from Melee, and the quiver that emptied on him ended a run at Morgan Le Faye's door.
 export const QUEST_ARROWS:Record<string,number>={merlin:40,prince:30,hazeelcult:20,scorpion:40};
+// Casts a quest's own fights take from an account that fights with strike spells (Magic above Attack, no bow): Alomone
+// (level 13) and Prince Ali's jail guard (26) fall to a few Fire Strikes; the Jailer (47) to about twenty.
+export const QUEST_CASTS:Record<string,number>={hazeelcult:12,prince:15};
 // Fishing Contest wants Fishing 10 (hemenster_fishing.rs2:70). An account short of it nets shrimps first, at the
 // nearest Net spot (Catherby beach beside Harry's shop, where the rod and bait come from): 250 XP a catch at 25x, five
 // catches from level 1. The net is a tool of the bank pass; the catches take pack slots until the quest.
@@ -318,6 +321,25 @@ export async function leaveFortress(s:Session,approach:(to:readonly Tile[])=>Pro
  const out=(await approach([{x:3016,z:3512,level:0}])).ok&&at(3016,3512,0,1);
  log('front',out);
  return out?{ok:true}:{ok:false,detail:`fortress front 3016,3512,0 unobserved at ${where()}`};
+}
+
+// Hazeel Cult's cave (maps/m40_151.jm2, under the Ardougne cave mouth 2585,3233): the walker has no route out, since
+// the stairs hazeelcultstairs 2853 at 2570,9683 are the quest's own (quest_hazeelcult.rs2 oploc1, Climb-up lands on
+// 2587,3237). A run that resumes down there climbs them before its bank walk.
+const inHazeelCave=(p:{worldX:number;worldZ:number;level:number})=>p.level===0&&p.worldX>=2555&&p.worldX<=2625&&p.worldZ>=9655&&p.worldZ<=9705;
+export async function leaveHazeelCave(s:Session,approach:(to:readonly Tile[])=>Promise<{ok:boolean}>=async(to)=>walkPath(await sessionWalker(s),to.map(t=>({x:t.x,z:t.z,tol:0})),{maxTicks:150})){
+ const pos=()=>s.sdk.getState()?.player;
+ const where=()=>{const p=pos();return p?`${p.worldX},${p.worldZ},${p.level}`:'unknown';};
+ const p=pos();
+ if(!p||!inHazeelCave(p))return{ok:true};
+ const log=(step:string,ok:boolean)=>console.log(`QUEST_SWEEP_HAZEEL_CAVE ${JSON.stringify({step,ok,at:where()})}`);
+ const foot=(await approach([{x:2570,z:9682,level:0}])).ok&&(()=>{const q=pos();return !!q&&q.level===0&&Math.abs(q.worldX-2570)<=1&&Math.abs(q.worldZ-9682)<=1;})();
+ log('stairs foot',foot);
+ if(!foot)return{ok:false,detail:`hazeel cave stairs foot 2570,9682,0 unobserved at ${where()}`};
+ await s.direct({type:'interactLoc',x:2570,z:9683,locId:2853,optionIndex:1,reason:'SDK'});
+ const up=await waitUntil(s,()=>{const q=pos();return !!q&&q.worldZ<9000;},{timeoutTicks:20});
+ log('stairs',up);
+ return up?{ok:true}:{ok:false,detail:`hazeel cave stairs climb unobserved at ${where()}`};
 }
 
 // Ernest the Chicken's fish food has one spawn, upstairs in Draynor Manor (maps/m48_52.jm2:9477, 3108,3356,1).
@@ -565,7 +587,9 @@ export function wayUp(transports:readonly Transport[],to:Tile,depth=3):Tile{
 export const TAVERLEY_SIDE=(to:Tile)=>to.level===0&&to.x>=2880&&to.x<2960&&to.z>=3400;
 const BIG_WOLF:Tile={x:2840,z:3497,level:0};
 export const mountainClosed=(acct:Pick<Account,'skills'>,hunters=loadHunters())=>hunters.filter(h=>h.spawns.some(s=>s.x===BIG_WOLF.x&&s.z===BIG_WOLF.z&&s.level===BIG_WOLF.level)).some(h=>deadly(h,combatLevel(acct.skills),acct.skills.hitpoints??10));
-export const eastOfArdougne=(from:Tile,to:Tile,acct?:Pick<Account,'skills'>)=>from.level===0&&from.x<2800&&from.z>=3270&&(to.x>=2950||!!acct&&TAVERLEY_SIDE(to)&&mountainClosed(acct));
+// Catherby (x 2800 to 2860) is on the Ardougne side too for an account the pass is closed to: its only way east is
+// back through Ardougne and the boats. A stronger account at Catherby walks the pass.
+export const eastOfArdougne=(from:Tile,to:Tile,acct?:Pick<Account,'skills'>)=>from.level===0&&from.z>=3270&&(from.x<2800||from.x<2860&&!!acct&&mountainClosed(acct))&&(to.x>=2950||!!acct&&TAVERLEY_SIDE(to)&&mountainClosed(acct));
 export const BOAT_FARES=60;
 export const fares=(from:Tile,targets:readonly Tile[],acct?:Pick<Account,'skills'>)=>targets.some(t=>eastOfArdougne(from,t,acct))?BOAT_FARES:0;
 // The Port Sarim landing: a target in the town itself (Wydin's shop, 3014,3204) needs no walk north past the jail.
@@ -948,6 +972,8 @@ export async function sweep(account:string,quest:string,fresh?:string){
  const world=await getWorld();
  const fortress=await leaveFortress(s);
  if(!fortress.ok)return fail(fortress.detail!);
+ const cave=await leaveHazeelCave(s);
+ if(!cave.ok)return fail(cave.detail!);
  // The world walker plans from the ground floor: an account left upstairs (Hazeel Cult ends there, Ernest the Chicken on
  // Draynor Manor's top floor) takes the nearest way down a floor at a time by the route graph; a Climb-down loc in view is
  // the fallback (the manor's top-floor stairs were out of view and the sweep failed with no way down).
@@ -1022,9 +1048,11 @@ export async function sweep(account:string,quest:string,fresh?:string){
   // that merely owns a bow.
   const questArrows=kit&&skill('Ranged')>skill('Attack')?QUEST_ARROWS[quest]??0:0;
   if(kit&&(gather.gathers.some(g=>g.kit==='ranged')||questArrows))gather.tools.push({id:kit.bow,count:1},{id:kit.arrows,count:gather.gathers.filter(g=>g.kit==='ranged').reduce((n,g)=>n+arrowsFor(g.id,g.count),0)+questArrows});
-  // A magic kill takes the staff and the strike's runes for its casts (the staff's own rune costs nothing).
-  if(mkit&&gather.gathers.some(g=>g.kit==='magic')){
-   const casts=gather.gathers.filter(g=>g.kit==='magic').reduce((n,g)=>n+castsFor(g.id,g.count,mkit.maxhit),0);
+  // A magic kill takes the staff and the strike's runes for its casts (the staff's own rune costs nothing); so do the
+  // quest's own fights for an account that fights with strike spells.
+  const questCasts=mkit&&!questArrows&&skill('Magic')>skill('Attack')?QUEST_CASTS[quest]??0:0;
+  if(mkit&&(gather.gathers.some(g=>g.kit==='magic')||questCasts)){
+   const casts=gather.gathers.filter(g=>g.kit==='magic').reduce((n,g)=>n+castsFor(g.id,g.count,mkit.maxhit),0)+questCasts;
    if(mkit.staff!==undefined)gather.tools.push({id:mkit.staff,count:1});
    for(const [id,n] of Object.entries(mkit.runes))gather.tools.push({id:Number(id),count:n*casts});
   }

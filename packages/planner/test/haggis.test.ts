@@ -308,18 +308,19 @@ const travelModel = (): TravelModel => ({
     },
 });
 
-test('the Overall plan uses the faster order and keeps actual skill record deadlines', () => {
-    const boards = [clock('hitpoints', 100), clock('mining', 200), clock('overall', 1000)];
-    const startXp = Object.fromEntries(['attack', 'defence', 'strength', 'ranged', 'prayer', 'magic', 'cooking',
-        'woodcutting', 'fletching', 'fishing', 'firemaking', 'crafting', 'smithing', 'herblore', 'agility', 'thieving', 'runecraft'].map(s => [s, XP99]));
-    const acts = [job('combat', 'hitpoints', 10, { at: 'b' }), job('mine', 'mining', 10, { at: 'a' })];
+test.each(['hitpoints', 'fishing'] as const)('the Overall plan can relax %s for placement and keep its record deadline', skill => {
+    const boards = [clock(skill, 100), clock('mining', 200), clock('overall', 1000)];
+    const startXp = Object.fromEntries(['attack', 'defence', 'strength', 'hitpoints', 'ranged', 'prayer', 'magic',
+        'cooking', 'woodcutting', 'fletching', 'fishing', 'firemaking', 'crafting', 'smithing', 'herblore', 'agility',
+        'thieving', 'runecraft'].filter(s => s !== skill).map(s => [s, XP99]));
+    const acts = [job('early', skill, 10, { at: 'b' }), job('mine', 'mining', 10, { at: 'a' })];
     const options = { ...opts, startXp, travel: { ...travelModel(), start: 'a' } };
     const baseline = schedule(boards, acts, options);
     const overall = scheduleOverall(boards, acts, options);
-    expect(baseline.order.map(p => p.id)).toEqual(['combat', 'mine']);
-    expect(overall.order.map(p => p.id)).toEqual(['mine', 'combat']);
+    expect(baseline.order.map(p => p.id)).toEqual(['early', 'mine']);
+    expect(overall.order.map(p => p.id)).toEqual(['mine', 'early']);
     expect(overall.overallFinish!).toBeLessThan(baseline.overallFinish!);
-    expect(finish(overall, 'hitpoints')).toMatchObject({ deadline: 100, sacrificed: true });
+    expect(finish(overall, skill)).toMatchObject({ deadline: 100, sacrificed: true });
     const opposite = { ...options, travel: { ...options.travel, start: 'b' } };
     expect(scheduleOverall(boards, acts, opposite)).toEqual(schedule(boards, acts, opposite));
 });

@@ -624,6 +624,33 @@ test('north-side bank entry opens gate190 at its loc tile and observes the south
  }finally{clearInterval(timer);}
 });
 
+test('a run resumed in the Hazeel cave climbs its stairs before the bank walk; above ground nothing is clicked',async()=>{
+ const {leaveHazeelCave}=await import('./quest-sweep');
+ let player={worldX:2570,worldZ:9680,level:0},tick=0;
+ const clicks:any[]=[],walks:unknown[]=[];
+ const listeners=new Set<()=>void>();
+ const s={sdk:{getState:()=>({player})},tick:()=>tick,
+  onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},
+  direct:async(a:any)=>{clicks.push(a);return{success:true};}} as unknown as Session;
+ const timer=setInterval(()=>{tick++;
+  const last=clicks[clicks.length-1];
+  if(last?.locId===2853&&player.worldZ>9000)player={worldX:2587,worldZ:3237,level:0};
+  for(const cb of listeners)cb();},1);
+ try{
+  const result=await leaveHazeelCave(s,async(to)=>{walks.push(to);const t=to[to.length-1]!;player={worldX:t.x,worldZ:t.z,level:t.level};return{ok:true};});
+  expect(result).toEqual({ok:true});
+  expect(clicks.map(c=>[c.locId,c.x,c.z])).toEqual([[2853,2570,9683]]);
+  expect(walks).toEqual([[{x:2570,z:9682,level:0}]]);
+  expect(player).toEqual({worldX:2587,worldZ:3237,level:0});
+  clicks.length=0;walks.length=0;
+  expect(await leaveHazeelCave(s,async(to)=>{walks.push(to);return{ok:true};})).toEqual({ok:true});
+  expect(clicks).toEqual([]);expect(walks).toEqual([]);
+  player={worldX:2606,worldZ:9692,level:0};
+  const stuck=await leaveHazeelCave(s,async()=>({ok:true}));
+  expect(stuck).toEqual({ok:false,detail:'hazeel cave stairs foot 2570,9682,0 unobserved at 2606,9692,0'});
+ }finally{clearInterval(timer);}
+});
+
 test('Mightyrod fortress box-room entry pushes the secret wall and descends the hall ladder before bank selection',async()=>{
  let player={worldX:3029,worldZ:3505,level:1},tick=0;
  const clicks:any[]=[],walks:unknown[]=[];
@@ -768,6 +795,12 @@ test('a nearer spawn beats a far shop; a nearer shop keeps the item in the shop 
  expect(gatherPlan([{id:1944,count:1}],at,spawns,()=>20).still).toEqual([{id:1944,count:1}]);
  expect(gatherPlan([{id:MILK,count:1}],at,spawns,()=>30).still).toEqual([{id:MILK,count:1}]);
 });
+test('milk is milked from a cow when the cow is nearer than both the milk spawn and the seller',()=>{
+ const lumbridge={x:3222,z:3218,level:0};
+ const farSpawn=(id:number)=>id===MILK?[{x:2685,z:3683,level:0}]:[];
+ const g=gatherPlan([{id:MILK,count:1}],lumbridge,farSpawn,()=>700);
+ expect(g.gathers).toEqual([{id:MILK,count:1,how:'milk'}]);expect(g.tools).toEqual([{id:BUCKET,count:1}]);expect(g.still).toEqual([]);
+});
 
 test('general stores come nearest first, one tile per keeper, and only general shops',()=>{
  const t=(x:number,z:number)=>({x,z,level:0});
@@ -807,6 +840,7 @@ test("Merlin's Crystal: the wax comes off a Catherby beehive after its repellent
  // The quest's own fight, Sir Mordred, takes forty arrows more from a bow account.
  const {QUEST_ARROWS}=await import('./quest-sweep');
  expect(QUEST_ARROWS['merlin']).toBe(40);expect(QUEST_ARROWS['prince']).toBe(30);expect(QUEST_ARROWS['hazeelcult']).toBe(20);expect(QUEST_ARROWS['scorpion']).toBe(40);expect(QUEST_ARROWS['imp']).toBeUndefined();
+ const {QUEST_CASTS}=await import('./quest-sweep');expect(QUEST_CASTS['hazeelcult']).toBe(12);expect(QUEST_CASTS['scorpion']).toBeUndefined();expect(QUEST_CASTS['imp']).toBeUndefined();
 });
 
 test("Pirate's Treasure needs no bananas from the sweep: the script picks them on Karamja, and the bank pass keeps their slots",async()=>{
@@ -958,6 +992,13 @@ test('a Taverley-side target is east of Ardougne for an account the Big Wolf wou
  expect(eastOfArdougne(ardougne,kaqemeex,monty)).toBe(true);
  expect(eastOfArdougne(ardougne,kaqemeex,strong)).toBe(false);
  expect(eastOfArdougne({x:2946,z:3368,level:0},kaqemeex,monty)).toBe(false); // from Falador: the road
+ // Catherby is on the Ardougne side for the weak account only: bound for Doric's house or Varrock it takes the boats.
+ const catherby={x:2807,z:3441,level:0},doric={x:2951,z:3450,level:0},varrock={x:3210,z:3424,level:0};
+ expect(eastOfArdougne(catherby,doric,monty)).toBe(true);
+ expect(eastOfArdougne(catherby,varrock,monty)).toBe(true);
+ expect(eastOfArdougne(catherby,doric,strong)).toBe(false);
+ expect(eastOfArdougne(catherby,varrock,strong)).toBe(false);
+ expect(eastOfArdougne(catherby,varrock)).toBe(false);
  expect(fares(ardougne,[kaqemeex],monty)).toBe(BOAT_FARES);
  expect(fares(ardougne,[kaqemeex],strong)).toBe(0);
 });
@@ -1061,7 +1102,7 @@ test('a dye is a recipe: its ingredients are planned first, its dialogue step fo
  ]);
  expect(plan.still).toEqual([{id:1957,count:2}]);
  expect(plan.coins).toBe(5+5+20+5);
- expect(NPC_SOURCES[1763]!.needs).toEqual([{id:1951,count:3}]);expect(COMBINE_SOURCES[1769]).toEqual([1763,1765]);expect(PICK_SOURCES[1957]!.loc).toBe(3366);
+ expect(NPC_SOURCES[1763]!.needs).toEqual([{id:1951,count:3}]);expect(COMBINE_SOURCES[1769]).toEqual([1763,1765]);expect(COMBINE_SOURCES[1552]).toEqual([327,1573]);expect(PICK_SOURCES[1957]!.loc).toBe(3366);
  // A plant nearer than any seller is picked.
  const picked=gatherPlan([{id:1957,count:2}],{x:2600,z:3000,level:0},()=>[],()=>Infinity,()=>[],6,1,()=>[{x:2581,z:2968,level:0}]);
  expect(picked.gathers).toEqual([{id:1957,count:2,how:'pick'}]);
@@ -1107,6 +1148,15 @@ test('Scorpion Catcher\'s antipoison is neither a need nor food: no shop sells i
  expect(needs(preset,false,'scorpion').has(2446)).toBe(false);
  expect(needs(preset,true,'scorpion').has(2446)).toBe(false);
  expect(needs(preset,true,'scorpion').get(379)).toBe(4);
+});
+
+test("Gertrude's seasoned sardine is doogle leaves from the spawn by her house on a sardine bought from Gerrant",()=>{
+ const gertrude={x:3150,z:3410,level:0};
+ const spawns=(id:number)=>id===1573?[{x:3152,z:3401,level:0}]:[];
+ const seller=(id:number)=>id===327?190:Infinity;
+ const plan=gatherPlan([{id:1552,count:1}],gertrude,spawns,seller,()=>[],12,1,()=>[]);
+ expect(plan.gathers).toEqual([{id:1573,count:1,how:'spawn'},{id:1552,count:1,how:'combine'}]);
+ expect(plan.still).toEqual([{id:327,count:1}]);
 });
 
 test('bound for Rimmington, the eye of newt comes from Betty in Port Sarim, not Taverley or Gu\'Tanoth',async()=>{

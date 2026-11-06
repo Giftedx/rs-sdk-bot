@@ -1,12 +1,12 @@
 import {existsSync,readFileSync,writeFileSync,appendFileSync,statSync,truncateSync,unlinkSync,watch,mkdirSync,readdirSync,renameSync} from 'node:fs';
-import {join} from 'node:path';
-import {randomUUID} from 'node:crypto';
+import {basename,join} from 'node:path';
+import {createHash,randomUUID} from 'node:crypto';
 import {freemem,cpus} from 'node:os';
 import {addTasks,chooseTask,startTask,finishTask,refreshQualifications,qualificationDemand,boundAccounts,fleetExpansion,activeBuildFocus,failedBuildStreak,heldBuilds,compactState,usefulLiveReceipt,FOCUS_FAILURE_LIMIT,type CoordinatorState,type CoordTask} from './coordinator';
 import {buildFault} from './build-fault';
-import {projectRoot,coordinationDir,loadState,saveState,runDirectory,atomicJson,atomicText,event,spawnDetached,recoverPlanWrite,withPlanWrite,capabilitySource} from './coordinator-store';
+import {projectRoot,coordinationDir,loadState,saveState,runDirectory,atomicJson,atomicText,event,spawnDetached,recoverPlanWrite,withPlanWrite,capabilitySource,publishCapabilityChanges} from './coordinator-store';
 import {DISK_FLOOR_GB,diskFreeGB,finishPlan,plannerDue,retireDeadTasks,reviewHold} from './coordinator-decisions';
-import {planWork,acceptProposal} from './coordinator-planner';
+import {planWork,prepareProposal} from './coordinator-planner';
 import {executeTask} from './coordinator-worker';
 import {deliveryTask,deliveryFingerprint,SOURCE_STARTUP_GB,NATIVE_STARTUP_GB} from './delivery-cli';
 import {disableOwnJob,ensureSwarm,liveRows} from './coordinator-live';
@@ -210,6 +210,89 @@ export function nativeDispatchReady(state:Pick<CoordinatorState,'tasks'>,freeGB:
  const {holder,liveWaiters}=observe();
  return holder!=='pid-present'&&(liveWaiters??0)===0;
 }
+const submissionDigest=(bytes:Buffer)=>createHash('sha256').update(bytes).digest('hex');
+function acknowledgeSubmission(state:CoordinatorState,base:string,publish:typeof publishCapabilityChanges,move=renameSync){
+ const pending=state.pendingSubmission;
+ if(!pending)return;
+ const directory=join(base,'.practice/coordinator'),{sha256,capabilities}=pending;
+ if('file' in pending){
+  const {file}=pending;
+  if(typeof file!=='string'||basename(file)!==file||!file.endsWith('.request.json'))throw Error('invalid pending submission name');
+  const path=join(directory,'requests',file),accepted=path+'.accepted';
+  const alreadyAccepted=existsSync(accepted);
+  if(alreadyAccepted&&existsSync(path))throw Error('duplicate pending and accepted submission: '+file);
+  if(submissionDigest(readFileSync(alreadyAccepted?accepted:path))!==sha256)throw Error('pending submission bytes changed: '+file);
+  if(!alreadyAccepted){
+   publish(base,capabilities);
+   move(path,accepted);
+   event('queue-submitted',{file},directory);
+  }
+ }else{
+  const {runId,count}=pending,dir=runDirectory(runId,directory),accepted=join(dir,'plan-accepted.json');
+  if(submissionDigest(readFileSync(join(dir,'proposal.json')))!==sha256)throw Error('pending model proposal bytes changed: '+runId);
+  const receipt=JSON.stringify({runId,sha256,count},null,2);
+  if(existsSync(accepted)){
+   if(readFileSync(accepted,'utf8')!==receipt)throw Error('model acknowledgement bytes changed: '+runId);
+  }else{
+   publish(base,capabilities);
+   atomicText(accepted,receipt);
+   event('plan-accepted',{runId,count,reason:state.lastPlanReason},directory);
+  }
+ }
+ delete state.pendingSubmission;
+}
+export function intakeRequests(state:CoordinatorState,base=projectRoot,{save=saveState,move=renameSync,publish=publishCapabilityChanges}={}){
+ const directory=join(base,'.practice/coordinator'),requests=join(directory,'requests');mkdirSync(requests,{recursive:true});
+ // Recover before reading another request or dispatching from the committed queue.
+ acknowledgeSubmission(state,base,publish,move);
+ for(const file of readdirSync(requests).filter(f=>f.endsWith('.request.json'))){
+  const path=join(requests,file),bytes=readFileSync(path);
+  let prepared:ReturnType<typeof prepareProposal>;
+  try{prepared=prepareProposal(state,JSON.parse(bytes.toString('utf8')),base);}
+  catch(error){
+   if(typeof (error as NodeJS.ErrnoException)?.code==='string')throw error;
+   move(path,path+'.rejected');
+   event('queue-submit-failed',{file,error:String(error)},directory);
+   continue;
+  }
+  const {candidate,capabilities}=prepared;
+  candidate.pendingSubmission={file,sha256:submissionDigest(bytes),capabilities};
+  save(candidate,directory);
+  Object.assign(state,candidate);
+  acknowledgeSubmission(state,base,publish,move);
+ }
+}
+export function settlePlanner(state:CoordinatorState,base=projectRoot,{save=saveState,publish=publishCapabilityChanges}={}){
+ acknowledgeSubmission(state,base,publish);
+ if(!state.planner)return;
+ const directory=join(base,'.practice/coordinator');
+ const {runId,pid}=state.planner,dir=runDirectory(runId,directory),proposal=join(dir,'proposal.json'),error=join(dir,'planner-error.json');
+ const hasProposal=existsSync(proposal),hasError=existsSync(error);
+ if(!hasProposal&&!hasError&&(existsPid(pid!)||processMatches(pid!,runId)))return;
+ let bytes:Buffer,prepared:ReturnType<typeof prepareProposal>;
+ try{
+  if(!hasProposal)throw Error(hasError?json(error).error:'planner ended without proposal');
+  bytes=readFileSync(proposal);
+  prepared=prepareProposal(state,JSON.parse(bytes.toString('utf8')),base,'model');
+ }catch(error){
+  if(typeof (error as NodeJS.ErrnoException)?.code==='string')throw error;
+  const failed={...state,lastPlanReason:'planner failed: '+String(error)};
+  finishPlan(failed,Date.now(),false);
+  save(failed,directory);
+  Object.assign(state,failed);
+  delete state.planner;
+  event('plan-failed',String(error),directory);
+  return;
+ }
+ const {candidate,capabilities,count}=prepared;
+ finishPlan(candidate,Date.now(),true);
+ candidate.pendingSubmission={runId,count,sha256:submissionDigest(bytes),capabilities};
+ save(candidate,directory);
+ Object.assign(state,candidate);
+ delete state.planner;
+ delete state.planFailures;
+ acknowledgeSubmission(state,base,publish);
+}
 async function tick(state:CoordinatorState,config:any){
  recoverPlanWrite();
  openDeliveryPrs();
@@ -223,12 +306,7 @@ async function tick(state:CoordinatorState,config:any){
   event('fleet-focus-adopted',{capability:config.focusCapability,since:config.focusSince});
  });
  reconcile(state);
- const requests=join(coordinationDir,'requests');mkdirSync(requests,{recursive:true});
- for(const file of readdirSync(requests).filter(f=>f.endsWith('.request.json'))){
-  const path=join(requests,file);
-  try{acceptProposal(state,json(path));saveState(state);renameSync(path,path+'.accepted');event('queue-submitted',{file});}
-  catch(error){renameSync(path,path+'.rejected');event('queue-submit-failed',{file,error:String(error)});}
- }
+ intakeRequests(state);
  // Reuse current evidence; refresh only capabilities with waiting live consumers.
  if(!state.tasks.some(r=>r.status==='running'&&r.spec.kind==='build')){
   const caps=[...new Set(qualificationDemand(state).map(r=>r.spec.capability!))];
@@ -237,15 +315,7 @@ async function tick(state:CoordinatorState,config:any){
   catch(error){const detail=String(error);if(sourceErrors.get(cap)!==detail)event('qualification-source-unavailable',{cap,error:detail});sourceErrors.set(cap,detail);}
   refreshQualifications(state,fingerprints);
  }
- if(state.planner){
-  const pending=state.planner,dir=runDirectory(pending.runId),proposal=join(dir,'proposal.json'),error=join(dir,'planner-error.json');
-  if(existsSync(proposal)||existsSync(error)||(!existsPid(pending.pid!)&&!processMatches(pending.pid!,pending.runId))){
-   let accepted=false;
-   try{if(!existsSync(proposal))throw Error(existsSync(error)?json(error).error:'planner ended without proposal');const count=acceptProposal(state,json(proposal),projectRoot,'model');accepted=true;event('plan-accepted',{count,reason:state.lastPlanReason});}
-   catch(e){state.lastPlanReason='planner failed: '+String(e);event('plan-failed',String(e));}
-   finishPlan(state,Date.now(),accepted);saveState(state);
-  }
- }
+ settlePlanner(state);
  const retired=retireDeadTasks(state,Date.now());
  if(retired.length){saveState(state);event('tasks-retired',{count:retired.length,tasks:retired});}
  // Model/native capacity is independent from finite live account jobs.
