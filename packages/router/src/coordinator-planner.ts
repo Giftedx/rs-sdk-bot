@@ -2,7 +2,7 @@ import {readFileSync,existsSync,readdirSync,writeFileSync,mkdirSync} from 'node:
 import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
 import {join} from 'node:path';
-import {GOALS,NEW_EVIDENCE_MAX,addTasks,heldBuilds,provisionRefs,replaceTasks,usefulLiveReceipt,type CoordinatorState,type CoordTask} from './coordinator';
+import {GOALS,NEW_EVIDENCE_MAX,addTasks,finishedAt,heldBuilds,provisionRefs,replaceTasks,usefulLiveReceipt,type CoordinatorState,type CoordTask,type TaskRecord} from './coordinator';
 import {runModel,type ModelWorker} from './model-worker';
 import {validateDelivery,type DeliveryTask} from './delivery';
 import {freshScoreboard} from './coverage';
@@ -81,7 +81,10 @@ export function queueFacts(state:CoordinatorState,held:readonly HeldRuns[]=[],no
 
  const rootBlockers = [...rootCounts].map(([id, count]) => {
   const record = records.get(id);
-  return {id, status: record?.status ?? 'missing', runId: record?.runId, replacement: record?.supersededBy, ...count};
+  const receipt = record?.receipt;
+  const reason = receipt?.error??receiptOutputReason(receipt);
+  return {id, status: record?.status ?? 'missing', runId: record?.runId, replacement: record?.supersededBy, ...count,
+   ...(receipt ? {receipt:{at:receipt.at,...(typeof reason==='string'?{error:clip(reason,240)}:{})}} : {})};
  }).sort((a, b) => b.pendingRuns - a.pendingRuns || b.pendingTasks - a.pendingTasks || a.id.localeCompare(b.id));
 
  return{lastUsefulLiveAt:state.tasks.reduce((latest,r)=>Math.max(latest,usefulLiveReceipt(r,now)?.at??0),0),
@@ -98,6 +101,10 @@ export function queueFacts(state:CoordinatorState,held:readonly HeldRuns[]=[],no
 // The prompt carries each task's decision fields and the start of its work order; the full spec, receipts and logs stay
 // in .practice/coordinator/state.json and runs/<runId>/ (full specs made the prompt 450,000 characters; research/bot-host.md "Isolated build workspaces").
 const clip=(text:unknown,n:number)=>typeof text==='string'&&text.length>n?text.slice(0,n)+'...':text;
+function receiptOutputReason(receipt:TaskRecord['receipt']){
+ const output=receipt?.output;
+ return output?.error??output?.review?.reason??output?.delivery?.reason??output?.buildFault;
+}
 export function briefSpec(spec:CoordTask){
  const {why,env,args,...rest}=spec as any;
  return{...rest,why:clip(why,200),...(env?{env:Object.keys(env)}:{}),...(args?{args:args.length}:{})};
@@ -195,6 +202,7 @@ export function fleetLeads(rows:any[],side:string){
 }
 export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof readWorld>,worldFile='',held:readonly HeldRuns[]=[]){
  const compact={...world,coverage:{...world.coverage,quests:undefined,scriptCandidates:world.coverage.scriptCandidates.length},statuses:world.statuses.map((s:any)=>({name:s.name,at:s.at,result:clip(s.result,160),goal:clip(s.goal,120),skills:Object.fromEntries((s.skills??[]).filter((v:any)=>v.level>1).map((v:any)=>[v.name,v.level])),bankAt:s.bankAt})),jobs:world.jobs.map((j:any)=>({account:j.account,accounts:j.accounts,script:j.script,goal:j.goal,enabled:j.enabled})),capabilities:world.capabilities.map((d:any)=>({id:d.id,entry:d.entry,goal:d.goal}))};
+ const recent=state.tasks.filter(r=>r.status==='succeeded'||r.status==='failed').sort((a,b)=>finishedAt(b)-finishedAt(a)).slice(0,48);
  return[
   'You are the autonomous director of this RuneScape project, working with Codex and Claude through one claimed task queue. Return ONLY a JSON object {reason:string,tasks:CoordTask[],capabilities:DeliveryTask[]}. Both tasks and capabilities must be JSON arrays, including when empty: {"reason":"No new work","tasks":[],"capabilities":[]}. Never use {} or null for either collection; capabilities is not a map of existing definitions.',
   'Do not edit files, launch processes or play the game. The coordinator owns execution. Read local sources as needed.',
@@ -229,10 +237,10 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'A pending task behind a failed task retires after 24 hours (supersededBy dead-dependency:<id>), and blocked lists these tasks until then. Use replacements inside that time when the consumer still matters; after it, propose a new task.',
   'world.capacity.diskFreeGB is free space on the checkout volume. Below 2 GiB the coordinator starts no planner and no task, so never plan work that writes large outputs near that floor.',
   'A hostDeferred receipt identifies unavailable RAM or a busy native practice turn before a check starts. Retain the prepared source and proof evidence. A same-source replacement build resumes native delivery without another author call when practice capacity is available. Keep its finite consumer connected through replacements. Wait for capacity before retrying.',
-  'RECENT FINISHED TASKS, last 48 succeeded or failed (open tasks are in the active queue below; superseded tasks are omitted; counts are NOT game completion): '+JSON.stringify({...state,tasks:state.tasks.filter(r=>r.status==='succeeded'||r.status==='failed').slice(-48).map(r=>({spec:briefSpec(r.spec),status:r.status,runId:r.runId,error:clip(r.receipt?.error,240),output:r.receipt?.output?{account:r.receipt.output.account,ok:r.receipt.output.ok,evidence:r.receipt.output.evidence,error:clip(r.receipt.output.error??r.receipt.output.review?.reason??r.receipt.output.delivery?.reason,240)}:null}))}),
+  'RECENT FINISHED TASKS, up to 48 succeeded or failed, newest settlement first (open tasks are in the active queue below; superseded tasks are omitted; counts are NOT game completion): '+JSON.stringify({...state,tasks:recent.map(r=>({spec:briefSpec(r.spec),status:r.status,runId:r.runId,error:clip(r.receipt?.error,240),output:r.receipt?.output?{account:r.receipt.output.account,ok:r.receipt.output.ok,evidence:r.receipt.output.evidence,error:clip(receiptOutputReason(r.receipt),240)}:null}))}),
   'DATED WORLD (timestamps matter; reserved main/specialists must not be used for tests): '+JSON.stringify(compact),
   'In the active queue, a string in dependencyRefs is a task ID. A number is a zero-based index into sharedDependencyIds. In proposal dependsOn use the full string task IDs.',
-  'Use rootBlockers to trace failed, superseded or missing prerequisites across the queue. Counts include downstream pending work and do not prove its readiness after one repair. Inspect the root receipt before proposing a replacement or retiring obsolete work. Waiting chains without a terminal blocker and independent work remain eligible. Dependency-ready work still needs runtime admission.',
+  'Use rootBlockers to trace failed, superseded or missing prerequisites across the queue. When present, receipt gives the settlement time and a bounded failure excerpt even for roots outside recent history. Counts include downstream pending work and do not prove its readiness after one repair. Inspect the full root receipt before proposing a replacement or retiring obsolete work. Waiting chains without a terminal blocker and independent work remain eligible. Dependency-ready work still needs runtime admission.',
   'COMPLETE ACTIVE QUEUE AND BLOCKED EDGES (not truncated to recent history): '+JSON.stringify(queueFacts(state,held)),
   'Full inventories, raw dated status and definitions: '+worldFile,
   'Task source, model/reviewer output, failures and complete receipts: .practice/coordinator/runs/<runId>/. Read these for any repair; do not re-diagnose from summaries.',
