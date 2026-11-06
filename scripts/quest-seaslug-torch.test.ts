@@ -119,5 +119,6 @@ test('Khazard paste profile targets exact pinned shopkeeper and only one paste u
     const inv = readFileSync('vendor/rs-sdk/server/content/scripts/areas/area_ardougne_east/configs/port_khazard/port_khazard.inv', 'utf8');
     expect(inv).toContain('stock12=swamppaste,500,20');
     expect(readFileSync('vendor/rs-sdk/server/content/scripts/areas/area_ardougne_east/configs/port_khazard/port_khazard.npc', 'utf8')).toContain('param=shop_sell_multiplier,1400');
-    expect(readFileSync('vendor/rs-sdk/server/content/scripts/skill_cooking/configs/cooking_generic/cooking.obj', 'utf8')).toContain('[swamppaste]\nname=Swamp paste\ndesc=A tar like substance mixed with flour and warmed.\ncost=30');
+    const cooking = readFileSync('vendor/rs-sdk/server/content/scripts/skill_cooking/configs/cooking_generic/cooking.obj', 'utf8').replaceAll('\r\n', '\n');
+    expect(cooking).toContain('[swamppaste]\nname=Swamp paste\ndesc=A tar like substance mixed with flour and warmed.\ncost=30');
 });
