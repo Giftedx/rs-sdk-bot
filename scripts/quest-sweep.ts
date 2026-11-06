@@ -44,9 +44,12 @@ export function presetFor(quest:string):SaveConfig&{position:Tile}{
 export const FOOD=new Set([329,333,361,365,373,379,385,1891,1893,1895,2309,554,555,556,557,563]),COINS=995;
 // A quest whose own item is on the food list: Merlin's Crystal hands its bread to the beggar for Excalibur.
 export const QUEST_ITEMS_AMONG_FOOD:Record<string,number[]>={merlin:[2309]};
+// A preset's protective supply that no quest script uses and no shop sells (Scorpion Catcher's antipoison, 2446): the
+// sweep neither needs nor withdraws it; an account that holds one keeps it as any other pack item.
+export const OPTIONAL=new Set([2446]);
 export function needs(preset:SaveConfig,food=false,quest=''):Map<number,number>{
  const m=new Map<number,number>(),own=new Set(QUEST_ITEMS_AMONG_FOOD[quest]??[]);
- for(const i of preset.inventory??[])if((FOOD.has(i.id)&&!own.has(i.id))===food)m.set(i.id,(m.get(i.id)??0)+i.count);
+ for(const i of preset.inventory??[])if(!OPTIONAL.has(i.id)&&(FOOD.has(i.id)&&!own.has(i.id))===food)m.set(i.id,(m.get(i.id)??0)+i.count);
  if(!food&&preset.coins)m.set(COINS,(m.get(COINS)??0)+preset.coins);
  return m;
 }
@@ -155,7 +158,7 @@ export const QUEST_PICKUP_SLOTS=8,MIN_PICKUP_SLOTS=2;
 export const QUEST_PICKUPS:Record<string,Item[]>={hunt:[{id:1963,count:10},{id:431,count:1}]};
 // Arrows a quest's own fights take from a bow account, beyond the gathers' kills: Merlin's Crystal's Sir Mordred has 38
 // hitpoints behind Protect from Melee, and the quiver that emptied on him ended a run at Morgan Le Faye's door.
-export const QUEST_ARROWS:Record<string,number>={merlin:40,prince:30,hazeelcult:20};
+export const QUEST_ARROWS:Record<string,number>={merlin:40,prince:30,hazeelcult:20,scorpion:40};
 // Casts a quest's own fights take from an account that fights with strike spells (Magic above Attack, no bow): Alomone
 // (level 13) and Prince Ali's jail guard (26) fall to a few Fire Strikes; the Jailer (47) to about twenty.
 export const QUEST_CASTS:Record<string,number>={hazeelcult:12,prince:15};
@@ -221,9 +224,9 @@ export function depositPlan(pack:readonly Item[],need:number,keep:(id:number)=>b
 }
 // A far start walks hub to hub: each hop is a short route search (a search for a 900-tile route plans for hundreds of
 // ticks before the first step, live and on practice, and the session's status row goes stale meanwhile). Hubs are the
-// known banks and Lumbridge; a hop is at most MAX_HOP tiles (a 150-tile search plans in a few ticks) and must bring
-// the goal nearer by HOP_GAIN.
-export const MAX_HOP=150,HOP_GAIN=50;
+// known banks and Lumbridge; a hop is at most MAX_HOP tiles (a search this long plans in a few ticks; the Barbarian
+// Outpost lies 172 from the Seers' bank, its nearest hub) and must bring the goal nearer by HOP_GAIN.
+export const MAX_HOP=180,HOP_GAIN=50;
 const cheb=(a:Tile,b:Tile)=>Math.max(Math.abs(a.x-b.x),Math.abs(a.z-b.z));
 export function hopsTo(from:Tile,to:Tile,hubs:readonly Tile[]=[...BANKS,{x:3222,z:3218,level:0}]):Tile[]{
  const out:Tile[]=[];let at=from;
@@ -543,19 +546,25 @@ export type Walked={ok:boolean;reason?:string;detail?:string;ticks?:number};
 // The sweep's route searches get 15 s each: a legitimate leg plans in well under that, and the 900-tick watchdog runs at
 // 150 ms ticks on practice (135 s), so three 45 s searches for one unreachable spawn cluster ended a run.
 export const SWEEP_PLAN_BUDGET_MS=15_000;
-export async function walkFar(s:Session,world:World,to:Tile,legTimeoutTicks=150):Promise<Walked>{
+// `signal`: a quest guard's abort (a death, the retreat threshold, a sustain failure, the tick cap) ends the walk between
+// legs and inside each leg's clicks; the result then says `stopped`.
+export async function walkFar(s:Session,world:World,to:Tile,legTimeoutTicks=150,opts:{signal?:AbortSignal}={}):Promise<Walked>{
  const from=at(s);
- const r=await walkFarLegs(s,world,to,legTimeoutTicks);
+ const r=await walkFarLegs(s,world,to,legTimeoutTicks,opts.signal);
  if(!r.ok)console.log(`QUEST_SWEEP_WALK_FAIL ${JSON.stringify({from,to,at:at(s),reason:r.reason,detail:r.detail})}`);
  return r;
 }
 const at=(s:Session):Tile=>{const q=s.sdk.getState()?.player;return{x:q?.worldX??0,z:q?.worldZ??0,level:q?.level??0};};
-async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number):Promise<Walked>{
- const router=(t:Tile)=>goTo(s,world,t,accountOf(s),{legTimeoutTicks,planBudgetMs:SWEEP_PLAN_BUDGET_MS});
+const STOPPED:Walked={ok:false,reason:'stopped',detail:'quest guard'};
+async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number,signal?:AbortSignal):Promise<Walked>{
+ const stopped=()=>signal?.aborted===true;
+ const router=async(t:Tile):Promise<Walked>=>stopped()?STOPPED:goTo(s,world,t,accountOf(s),{legTimeoutTicks,planBudgetMs:SWEEP_PLAN_BUDGET_MS,signal});
  const ground=async(t:Tile):Promise<Walked>=>{
-  const r=at(s).level===0&&t.level===0?await walkCorridor(await sessionWalker(s),[[t.x,t.z,3]]):{ok:false};
+  if(stopped())return STOPPED;
+  const r=at(s).level===0&&t.level===0?await walkCorridor(await sessionWalker(s),[[t.x,t.z,3]],(d,pts)=>walkPath(d,pts,{signal})):{ok:false};
   return r.ok?{ok:true}:router(t);
  };
+ if(stopped())return STOPPED;
  // A far walk that starts upstairs (Hudo's shop on the Grand Tree's first floor, bound for Port Sarim) first comes down by
  // the nearest way down: the boats and hubs are ground legs, and asked from the first floor the world router found no route.
  for(let i=0;i<3&&at(s).level!==0&&cheb(at(s),to)>MAX_HOP;i++){
@@ -563,7 +572,7 @@ async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number)
   console.log(`QUEST_SWEEP_DOWN ${JSON.stringify({from:at(s),to:down})}`);
   const r=await router(down);if(!r.ok)return r;
  }
- if(eastOfArdougne(at(s),to,accountOf(s))){const r=await crossEast(s,world,to);if(!r.ok)return r;}
+ if(eastOfArdougne(at(s),to,accountOf(s))){const r=await crossEast(s,world,to,signal);if(!r.ok)return r;}
  // An upstairs target (Morgan's garlic cupboard in Draynor) is approached by the hubs toward the foot of its way up;
  // only the last leg, with its stairs, is the world router's.
  const beneath=wayUp(world.navigationGraph?.().transports??[],to);
@@ -612,11 +621,12 @@ export const SARIM_LANDING:Tile={x:3029,z:3217,level:0};
 // Keepers with no Trade option: the shop opens through their talk (area_yanille/scripts/ogre_merchant.rs2: "Yes I do."
 // opens Grud's Herblore Stall at Gu'Tanoth, the eye of newt seller nearest Ardougne that has a route).
 export const SHOP_TALK:Record<number,RegExp[]>={874:[/^yes i do/i]};
-async function crossEast(s:Session,world:World,to:Tile):Promise<Walked>{
+async function crossEast(s:Session,world:World,to:Tile,signal?:AbortSignal):Promise<Walked>{
  if(count(s.sdk.getState()?.inventory??[],COINS)<BOAT_FARES)return{ok:false,reason:'precondition',detail:`missing 995:${BOAT_FARES} for safe boat route`};
- const walk=(to:Tile)=>goTo(s,world,to,accountOf(s),{legTimeoutTicks:150,planBudgetMs:SWEEP_PLAN_BUDGET_MS});
+ const walk=async(to:Tile):Promise<Walked>=>signal?.aborted?STOPPED:goTo(s,world,to,accountOf(s),{legTimeoutTicks:150,planBudgetMs:SWEEP_PLAN_BUDGET_MS,signal});
  const corridor=async(points:readonly Pt[]):Promise<Walked>=>{
-  const r=await walkCorridor(await sessionWalker(s),points);
+  if(signal?.aborted)return STOPPED;
+  const r=await walkCorridor(await sessionWalker(s),points,(d,pts)=>walkPath(d,pts,{signal}));
   return r.ok?{ok:true}:{ok:false,reason:'corridor',detail:`corridor walk failed to ${points[points.length-1]!.join(',')} at ${JSON.stringify(r.at)}`};
  };
  const sail=async(id:string):Promise<Walked>=>{

@@ -57,7 +57,7 @@ test('Heckel stages the southern gate, observes the north side, and names a fail
  expect(await fetchHeckelDust(io)).toMatchObject({ok:false,detail:expect.stringContaining('north arrival unobserved')});
 });
 import {readFileSync} from 'node:fs';
-import {leaveToManorTrip,plan,mealPlan,needs,nearestBank,presetFor,leaveStronghold,leaveFortress,walkCorridor,KARAMJA,gatherPlan,MILK,BUCKET,generalStores,fetchManorFishFood,manorFoodNeed,manorPoisonNeed,reserveInputSlots,FOOD,type ManorIO} from './quest-sweep';
+import {leaveToManorTrip,plan,mealPlan,walkFar,needs,nearestBank,presetFor,leaveStronghold,leaveFortress,walkCorridor,KARAMJA,gatherPlan,MILK,BUCKET,generalStores,fetchManorFishFood,manorFoodNeed,manorPoisonNeed,reserveInputSlots,FOOD,type ManorIO} from './quest-sweep';
 import {spawnsByDistance} from '../packages/core/src/spawn-index';
 import {equipment,questSweepChecks} from '../packages/practice/src/quest-sweep-proof';
 import type {Session} from '../packages/core/src/inprocess';
@@ -839,8 +839,8 @@ test("Merlin's Crystal: the wax comes off a Catherby beehive after its repellent
  expect(arrowsFor(530,1)).toBe(15);expect(arrowsFor(2136,1)).toBe(6);
  // The quest's own fight, Sir Mordred, takes forty arrows more from a bow account.
  const {QUEST_ARROWS}=await import('./quest-sweep');
- expect(QUEST_ARROWS['merlin']).toBe(40);expect(QUEST_ARROWS['prince']).toBe(30);expect(QUEST_ARROWS['hazeelcult']).toBe(20);
- const {QUEST_CASTS}=await import('./quest-sweep');expect(QUEST_CASTS['hazeelcult']).toBe(12);expect(QUEST_CASTS['scorpion']).toBeUndefined();expect(QUEST_CASTS['imp']).toBeUndefined();expect(QUEST_ARROWS['imp']).toBeUndefined();
+ expect(QUEST_ARROWS['merlin']).toBe(40);expect(QUEST_ARROWS['prince']).toBe(30);expect(QUEST_ARROWS['hazeelcult']).toBe(20);expect(QUEST_ARROWS['scorpion']).toBe(40);expect(QUEST_ARROWS['imp']).toBeUndefined();
+ const {QUEST_CASTS}=await import('./quest-sweep');expect(QUEST_CASTS['hazeelcult']).toBe(12);expect(QUEST_CASTS['scorpion']).toBeUndefined();expect(QUEST_CASTS['imp']).toBeUndefined();
 });
 
 test("Pirate's Treasure needs no bananas from the sweep: the script picks them on Karamja, and the bank pass keeps their slots",async()=>{
@@ -1140,6 +1140,16 @@ test('Prince Ali: soft clay is clay on water, clay is mined with a pickaxe, ashe
  expect(gatherPlan([{id:434,count:1}],draynor,()=>[],()=>50).still).toEqual([{id:434,count:1}]);
 });
 
+test('Scorpion Catcher\'s antipoison is neither a need nor food: no shop sells it and the script never drinks it',async()=>{
+ const {OPTIONAL}=await import('./quest-sweep');
+ expect(OPTIONAL.has(2446)).toBe(true);
+ const preset=presetFor('scorpion');
+ expect((preset.inventory??[]).some(i=>i.id===2446)).toBe(true);
+ expect(needs(preset,false,'scorpion').has(2446)).toBe(false);
+ expect(needs(preset,true,'scorpion').has(2446)).toBe(false);
+ expect(needs(preset,true,'scorpion').get(379)).toBe(4);
+});
+
 test("Gertrude's seasoned sardine is doogle leaves from the spawn by her house on a sardine bought from Gerrant",()=>{
  const gertrude={x:3150,z:3410,level:0};
  const spawns=(id:number)=>id===1573?[{x:3152,z:3401,level:0}]:[];
@@ -1380,6 +1390,12 @@ test('Elena saved proof requires bought dust, exact coins/assets, completion, XP
  expect(verify(log.replace('"observed":true','"observed":false'))).toMatchObject({bought:false});
  expect(verify(log.replace('QUEST_SWEEP_TREE_EXIT','OMITTED_TREE_EXIT'))).toMatchObject({treeExit:false});
  expect(verify(log.replace('"z":3491','"z":3494'))).toMatchObject({treeExit:false});
+});
+
+test('a far walk whose quest guard has already aborted takes no leg and reports stopped',async()=>{
+ const s:any={sdk:{getState:()=>({player:{worldX:2655,worldZ:3283,level:0},inventory:[]})},tick:()=>0};
+ const r=await walkFar(s,{} as any,{x:3222,z:3218,level:0},150,{signal:AbortSignal.abort('quest guard')});
+ expect(r).toEqual({ok:false,reason:'stopped',detail:'quest guard'});
 });
 
 test('the meal takes the preset food kinds first, then the best other edibles the bank holds for the units still short',()=>{
