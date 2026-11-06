@@ -187,6 +187,37 @@ test('a gh failure stays pending, is retried after its delay and reuses the push
  expect(retry.calls.some(c=>c[1]==='push'||c[1]==='commit')).toBe(false);
 });
 
+test.each(['branch','pull request'] as const)('reusing a %s requires the staged qualified definition at its exact head',async(kind)=>{
+ for(const match of ['missing','changed','exact'] as const){
+  const s=setup(),pr=stage(s,s.build(),'build-reuse')!;
+  const definition='{"id":"iron-progress-order","consumer":"Bank two bars"}';
+  mkdirSync(join(pr.snapshot,DEF,'..'),{recursive:true});writeFileSync(join(pr.snapshot,DEF),definition);
+  writeFileSync(join(deliveryPrDir(s.coord),pr.taskId+'.json'),JSON.stringify({...pr,definitionBase:null,files:[...pr.files,DEF]}));
+  const git=stub(),head='a'.repeat(40),url='https://github.com/Giftedx/rs-sdk-bot/pull/99';
+  const run:Run=async(cmd,cwd)=>{
+   if(cmd[0]==='gh'&&cmd[1]==='pr'&&cmd[2]==='list')return {code:0,stdout:kind==='pull request'?url+'\t'+head+'\n':'',stderr:''};
+   if(cmd[1]==='ls-remote')return {code:0,stdout:head+'\trefs/heads/'+pr.branch+'\n',stderr:''};
+   if(cmd[1]==='ls-tree'){
+    expect(cmd).toContain(head);
+    return {code:0,stdout:match==='missing'?'':'100644 blob '+'b'.repeat(40)+'\t'+DEF+'\n',stderr:''};
+   }
+   if(cmd[1]==='show'){
+    expect(cmd.at(-1)).toBe(head+':'+DEF);
+    return {code:0,stdout:match==='exact'?definition:'{"id":"iron-progress-order","consumer":"Other work"}',stderr:''};
+   }
+   return git.run(cmd,cwd);
+  };
+  const out=await processDeliveryPrs(s.coord,s.main,run,1000,s.base);
+  if(match==='exact')expect(out.opened[0]).toMatchObject({url,state:'opened'});
+  else {
+   expect(out.opened).toEqual([]);
+   expect(out.conflicts[0]?.lastError).toContain(DEF);
+   expect(git.calls.some(c=>c[0]==='gh'&&c[2]==='create')).toBe(false);
+  }
+  expect(git.calls.some(c=>c[1]==='push'||c[1]==='commit')).toBe(false);
+ }
+});
+
 test('swarm.json and .practice never reach a delivery commit',()=>{
  expect(['swarm.json','.practice/coordinator/state.json','../x.ts','scripts/x.ts'].filter(committable)).toEqual(['scripts/x.ts']);
  const s=setup(),root=s.build();
