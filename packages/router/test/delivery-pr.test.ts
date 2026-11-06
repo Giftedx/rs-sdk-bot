@@ -204,6 +204,25 @@ test('a gh failure stays pending, is retried after its delay and reuses the push
  expect(retry.calls.some(c=>c[1]==='push'||c[1]==='commit')).toBe(false);
 });
 
+test('a pushed branch still waits for its earlier delivery before opening a PR',async()=>{
+ const s=setup();
+ const first=stage(s,s.build('first'),'build-first',[FILE],10)!;
+ writeFileSync(join(deliveryPrDir(s.coord),first.taskId+'.json'),JSON.stringify({...first,state:'opened'}));
+ const now=Date.now()+1,second=stage(s,s.build('second'),'build-second',[FILE],now)!;
+ expect(second.prerequisites).toEqual([first.taskId]);
+ const remote=(git:ReturnType<typeof stub>):Run=>async(cmd,cwd)=>cmd[1]==='ls-remote'
+  ?{code:0,stdout:'a'.repeat(40)+'\trefs/heads/'+second.branch+'\n',stderr:''}:git.run(cmd,cwd);
+ const waiting=stub({prState:'OPEN'});
+ const held=await processDeliveryPrs(s.coord,s.main,remote(waiting),now,s.base);
+ expect(held.waiting[0]).toMatchObject({taskId:second.taskId,attempts:0});
+ expect(waiting.calls.some(cmd=>cmd[0]==='gh'&&cmd[2]==='create')).toBe(false);
+
+ const merged=stub({prState:'MERGED'});
+ const released=await processDeliveryPrs(s.coord,s.main,remote(merged),now+PREREQUISITE_WAIT_MS,s.base);
+ expect(released.opened[0]).toMatchObject({taskId:second.taskId,state:'opened'});
+ expect(merged.calls.some(cmd=>cmd[1]==='push'||cmd[1]==='commit')).toBe(false);
+});
+
 test.each(['branch','pull request'] as const)('reusing a %s requires the staged qualified definition at its exact head',async(kind)=>{
  for(const match of ['missing','changed','exact'] as const){
   const s=setup(),pr=stage(s,s.build(),'build-reuse')!;
