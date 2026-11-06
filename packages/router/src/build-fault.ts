@@ -4,7 +4,7 @@ import {existsSync,readFileSync} from 'node:fs';
 
 // These faults come from the host. They say nothing about the source under test.
 const HOST_FAULT=/port \d+ in use|free memory below floor|insufficient (?:free memory: below the floor|practice (?:free memory floor|memory: need))/i;
-const PROOF_TIMING=/^[A-Z0-9_]+_PROOF_TIMING \{/;
+export const PROOF_TIMING=/^[A-Z0-9_]+_PROOF_TIMING \{/;
 
 // A proof report lists cases (cases, results) or names its acceptance predicates (checks).
 function failedCases(stdout:string){

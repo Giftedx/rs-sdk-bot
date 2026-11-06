@@ -8,6 +8,7 @@ import {validateDelivery,type DeliveryTask} from './delivery';
 import {freshScoreboard} from './coverage';
 import {projectRoot,atomicJson,capabilitySource,publishCapabilityChanges} from './coordinator-store';
 import {diskFreeGB,heldRuns,type HeldRuns} from './coordinator-decisions';
+import {PROOF_TIMING} from './build-fault';
 import {PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {observePracticeTurn} from '../../practice/src/proof-lock';
 import {readMergedPlan} from '../../core/src/coordinator-jobs';
@@ -88,7 +89,7 @@ export function queueFacts(state:CoordinatorState,held:readonly HeldRuns[]=[],no
   const receipt = record?.receipt;
   const reason = receipt?.error??receiptOutputReason(receipt);
   return {id, status: record?.status ?? 'missing', runId: record?.runId, replacement: record?.supersededBy, ...count,
-   ...(receipt ? {receipt:{at:receipt.at,...(typeof reason==='string'?{error:clip(reason,240)}:{})}} : {})};
+   ...(receipt ? {receipt:{at:receipt.at,...(typeof reason==='string'?{error:clip(reason,240)}:{}),...receiptBuildEvidence(receipt.output)}} : {})};
  }).sort((a, b) => b.pendingRuns - a.pendingRuns || b.pendingTasks - a.pendingTasks || a.id.localeCompare(b.id));
 
  return{lastUsefulLiveAt:state.tasks.reduce((latest,r)=>Math.max(latest,usefulLiveReceipt(r,now)?.at??0),0),
@@ -107,7 +108,21 @@ export function queueFacts(state:CoordinatorState,held:readonly HeldRuns[]=[],no
 const clip=(text:unknown,n:number)=>typeof text==='string'&&text.length>n?text.slice(0,n)+'...':text;
 function receiptOutputReason(receipt:TaskRecord['receipt']){
  const output=receipt?.output;
- return output?.error??output?.review?.reason??output?.delivery?.reason??output?.buildFault;
+ return output?.error??output?.review?.reason??output?.delivery?.reason??output?.diagnostic?.reason;
+}
+function receiptBuildEvidence(output:any){
+ const failedCheck=output?.delivery?.failedCheck??output?.diagnostic?.failedCheck;
+ const fault=output?.buildFault;
+ const hostDeferred=output?.hostDeferred===true,sourcePrepared=output?.sourcePrepared===true;
+ const delivery=output?.delivery,source=delivery?.source;
+ const resumable=hostDeferred&&sourcePrepared&&delivery?.hostDeferred===true&&!delivery.diagnostic
+  &&typeof source==='string'&&/^[0-9a-f]{64}$/.test(source);
+ return{
+  ...(typeof failedCheck==='string'?{failedCheck}:{}),
+  ...(typeof fault==='string'&&!PROOF_TIMING.test(fault.split(': ',2)[1]??'')?{buildFault:clip(fault,240)}:{}),
+  ...(hostDeferred?{hostDeferred,sourcePrepared}:{}),
+  ...(resumable?{resumeSource:source}:{}),
+ };
 }
 export function briefSpec(spec:CoordTask){
  const {why,env,args,...rest}=spec as any;
@@ -242,8 +257,8 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'Use cancel:[{id,use?}] for obsolete pending tasks. Name a surviving substitute in use if a pending task still needs the prerequisite, or cancel the dependent tasks in the same proposal. Account references keep their original provision task while a consumer remains queued.',
   'A pending task behind a failed task retires after 24 hours (supersededBy dead-dependency:<id>), and blocked lists these tasks until then. Use replacements inside that time when the consumer still matters; after it, propose a new task.',
   'world.capacity.diskFreeGB is free space on the checkout volume. Below 2 GiB the coordinator starts no planner and no task, so never plan work that writes large outputs near that floor.',
-  'A hostDeferred receipt identifies unavailable RAM or a busy native practice turn before a check starts. Retain the prepared source and proof evidence. A same-source replacement build resumes native delivery without another author call when practice capacity is available. Keep its finite consumer connected through replacements. Wait for capacity before retrying.',
-  'RECENT FINISHED TASKS, up to 48 succeeded or failed, newest settlement first (open tasks are in the active queue below; superseded tasks are omitted; counts are NOT game completion): '+JSON.stringify({...state,tasks:recent.map(r=>({spec:briefSpec(r.spec),status:r.status,runId:r.runId,error:clip(r.receipt?.error,240),output:r.receipt?.output?{account:r.receipt.output.account,ok:r.receipt.output.ok,evidence:r.receipt.output.evidence,error:clip(receiptOutputReason(r.receipt),240)}:null}))}),
+  'A hostDeferred receipt identifies unavailable RAM or a busy native practice turn before a check starts. When the receipt provides resumeSource, copy it to the replacement build to request native delivery on that exact source. Keep its finite consumer connected through replacements. Wait for capacity before retrying.',
+  'RECENT FINISHED TASKS, up to 48 succeeded or failed, newest settlement first (open tasks are in the active queue below; superseded tasks are omitted; counts are NOT game completion): '+JSON.stringify({...state,tasks:recent.map(r=>({spec:briefSpec(r.spec),status:r.status,runId:r.runId,error:clip(r.receipt?.error,240),output:r.receipt?.output?{account:r.receipt.output.account,ok:r.receipt.output.ok,evidence:r.receipt.output.evidence,error:clip(receiptOutputReason(r.receipt),240),...receiptBuildEvidence(r.receipt.output)}:null}))}),
   'DATED WORLD (timestamps matter; reserved main/specialists must not be used for tests): '+JSON.stringify(compact),
   'In the active queue, a string in dependencyRefs is a task ID. A number is a zero-based index into sharedDependencyIds. In proposal dependsOn use the full string task IDs.',
   'Use rootBlockers to trace failed, superseded or missing prerequisites across the queue. When present, receipt gives the settlement time and a bounded failure excerpt even for roots outside recent history. pendingTasks and pendingRuns include all downstream work. readyTasksIfFixed and readyRunsIfFixed count only jobs whose sole unmet dependency is this root. Use both counts to decide which repair or set of repairs leads to a useful job. Inspect the full root receipt before proposing a replacement or retiring obsolete work. Dependency-ready work still needs runtime admission.',

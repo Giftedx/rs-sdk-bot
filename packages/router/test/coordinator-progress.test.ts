@@ -312,7 +312,7 @@ test('queue includes provision dependencies that are not in dependsOn', () => {
  expect(facts.blocked.map(row=>row.dependencies.map(d=>d.id))).toEqual([['register'],['register']]);
 });
 
-test('planner prompt lists a shared prerequisite once and preserves the active dependency order',()=>{
+test('planner prompt keeps bounded build and resume evidence in recent tasks and root blockers',()=>{
  const shared='qualify-quest-order-with-current-source';
  const state=initialState();
  const filler=Array.from({length:48},(_,i)=>task(`filler-${i}`));
@@ -322,8 +322,14 @@ test('planner prompt lists a shared prerequisite once and preserves the active d
  complete(state,shared,true,100);
  complete(state,'unique-proof',true,4);
  const reason='Native proof requires a staged quest item. '.repeat(8);
- complete(state,'failed-proof',false,6,{delivery:{reason},unrelated:'raw output stays in the receipt'});
- for(const [i,spec] of filler.entries())complete(state,spec.id,true,i+10);
+ complete(state,'failed-proof',false,6,{delivery:{reason},diagnostic:{failedCheck:'native-check'},buildFault:'native-check: missing staged item',unrelated:'raw output stays in the receipt'});
+ const source='a'.repeat(64);
+ for(const [i,spec] of filler.entries()){
+  if(i===1)complete(state,spec.id,false,i+10,{hostDeferred:true,sourcePrepared:true,delivery:{hostDeferred:true,source}});
+  else if(i===2)complete(state,spec.id,false,i+10,{hostDeferred:true,sourcePrepared:false,diagnostic:{hostDeferred:true,source}});
+  else if(i===3)complete(state,spec.id,false,i+10,{delivery:{failedCheck:'iron-native'},buildFault:'iron-native: IRON_PROOF_TIMING {"pid":N}'});
+  else complete(state,spec.id,true,i+10);
+ }
  const world:Parameters<typeof plannerPrompt>[1]={
   at:0,scoreboard:null,stall:null,assets:[],supplyBill:null,executionDirective:'',deliveryFocus:null,
   capacity:{maxBots:0,minFreeGB:0,freeGB:7,nativeStartupGB:6.5,
@@ -338,6 +344,11 @@ test('planner prompt lists a shared prerequisite once and preserves the active d
  expect(recent).toHaveLength(48);
  expect(recent[0].spec.id).toBe(shared);
  expect(recent.some((row:any)=>row.spec.id==='failed-proof')).toBe(false);
+ expect(recent.find((row:any)=>row.spec.id==='filler-1').output).toMatchObject({hostDeferred:true,sourcePrepared:true,resumeSource:source});
+ expect(recent.find((row:any)=>row.spec.id==='filler-2').output).toMatchObject({hostDeferred:true,sourcePrepared:false});
+ expect(recent.find((row:any)=>row.spec.id==='filler-2').output.resumeSource).toBeUndefined();
+ expect(recent.find((row:any)=>row.spec.id==='filler-3').output).toMatchObject({failedCheck:'iron-native'});
+ expect(recent.find((row:any)=>row.spec.id==='filler-3').output.buildFault).toBeUndefined();
  const activeLine=prompt.split('\n').find(line=>line.startsWith('COMPLETE ACTIVE QUEUE'))!;
  const facts=JSON.parse(activeLine.slice(activeLine.indexOf(': ')+2));
  expect(activeLine.split(shared)).toHaveLength(2);
@@ -347,7 +358,7 @@ test('planner prompt lists a shared prerequisite once and preserves the active d
   ['first',[shared,'unique-proof']],['second',['failed-proof',shared]]
  ]);
  expect(facts.blocked[0].dependencies).toEqual([{id:'failed-proof',status:'failed'}]);
- expect(facts.rootBlockers[0].receipt).toEqual({at:6,error:reason.slice(0,240)+'...'});
+ expect(facts.rootBlockers[0].receipt).toEqual({at:6,error:reason.slice(0,240)+'...',failedCheck:'native-check',buildFault:'native-check: missing staged item'});
  expect(facts.rootBlockers[0].readyRunsIfFixed).toBe(1);
  expect(activeLine).not.toContain('raw output stays in the receipt');
 });
