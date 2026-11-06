@@ -66,6 +66,29 @@ export function deliverySourceSet(entry:string,files:readonly string[],root:stri
 
 const readRecords=(dir:string):DeliveryPr[]=>existsSync(dir)?readdirSync(dir).filter(n=>n.endsWith('.json')).flatMap(n=>{try{return[JSON.parse(readFileSync(join(dir,n),'utf8'))];}catch{return[];}}):[];
 
+/** Pending publication can depend on a conflict several deliveries upstream. */
+export function deliveryConflictRoots(coordinationDir:string){
+ const records=readRecords(deliveryPrDir(coordinationDir)).filter(r=>r&&typeof r.taskId==='string');
+ const byId=new Map(records.map(r=>[r.taskId,r]));
+ const conflicts=records.filter(r=>r.state==='conflict');
+ const counts=new Map<string,number>();
+ for(const record of records){
+  if(record.state!=='pending'||!Array.isArray(record.prerequisites))continue;
+  const queue=[...record.prerequisites],seen=new Set<string>();
+  while(queue.length){
+   const id=queue.pop()!;
+   if(seen.has(id))continue;
+   seen.add(id);
+   const prior=byId.get(id);
+   if(prior?.state==='conflict')counts.set(id,(counts.get(id)??0)+1);
+   else if(prior?.state==='pending'&&Array.isArray(prior.prerequisites))queue.push(...prior.prerequisites);
+  }
+ }
+ return conflicts.map(r=>({taskId:r.taskId,capability:r.capability,pendingDeliveries:counts.get(r.taskId)??0,
+  reason:typeof r.lastError==='string'?r.lastError.slice(0,240):'Conflict details unavailable'}))
+  .sort((a,b)=>b.pendingDeliveries-a.pendingDeliveries||a.taskId.localeCompare(b.taskId)).slice(0,8);
+}
+
 // Copies the build's version of each published file and the bytes it started from into the run folder, and records
 // the pull request to open. The PR applies base -> build onto master, so a later publish of the same file or a newer
 // master never changes what this delivery claims. `sourceSet` is the import closure the build ran; an earlier delivery

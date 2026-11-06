@@ -2,11 +2,11 @@ import {test,expect} from 'bun:test';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,unlinkSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {stageDeliveryPr,processDeliveryPrs,committable,deliveryPrDir,retryDelayMs,PREREQUISITE_WAIT_MS,deliverySourceSet,type Run} from '../src/delivery-pr';
+import {stageDeliveryPr,processDeliveryPrs,committable,deliveryPrDir,deliveryConflictRoots,retryDelayMs,PREREQUISITE_WAIT_MS,deliverySourceSet,type Run} from '../src/delivery-pr';
 import {resolve} from 'node:path';
 import {prepareWorkspace,publishWorkspace} from '../src/build-workspace';
 import {createHash} from 'node:crypto';
-import {acceptProposal} from '../src/coordinator-planner';
+import {acceptProposal,plannerPrompt} from '../src/coordinator-planner';
 import {initialState} from '../src/coordinator';
 import {deliveryFingerprint} from '../src/delivery-cli';
 import type {DeliveryTask} from '../src/delivery';
@@ -115,6 +115,23 @@ test('a master edit that overlaps the build change stops the PR as a conflict in
  expect(out.conflicts[0]!.lastError).toContain('delivery conflicts with origin/master: scripts/smelt-batch.ts (master lines 3-3, build lines 3-3)');
  expect(git.calls.some(c=>c[1]==='push'||c[1]==='commit')).toBe(false);
  expect((await processDeliveryPrs(s.coord,s.main,stub().run,retryDelayMs(10),s.base)).opened).toEqual([]); // no retry
+});
+
+test('the planner sees a publication conflict once with all distinct pending descendants',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'dpr-roots-')),records=deliveryPrDir(dir);
+ mkdirSync(records);
+ const write=(taskId:string,state:string,prerequisites:string[]=[],lastError?:string)=>
+  writeFileSync(join(records,taskId+'.json'),JSON.stringify({taskId,capability:'rune-bank-craft',state,prerequisites,lastError}));
+ write('rune-root','conflict',[],'overlapping changes');
+ write('left','pending',['rune-root']);write('right','pending',['rune-root']);
+ write('join','pending',['left','right']);write('merged','opened',['rune-root']);
+ write('unrelated','pending',['merged']);write('cycle','pending',['cycle']);
+ const roots=deliveryConflictRoots(dir);
+ expect(roots).toEqual([{taskId:'rune-root',capability:'rune-bank-craft',pendingDeliveries:3,reason:'overlapping changes'}]);
+ const world:any={scoreboard:null,coverage:{quests:[],scriptCandidates:[]},statuses:[],jobs:[],capabilities:[]};
+ const prompt=plannerPrompt(initialState(),world,'',[],roots);
+ expect(prompt).toContain('PUBLICATION CONFLICT ROOTS');
+ expect(prompt).toContain(JSON.stringify(roots));
 });
 
 test('a Windows delivery keeps unrelated master edits when the snapshots use CRLF',async()=>{

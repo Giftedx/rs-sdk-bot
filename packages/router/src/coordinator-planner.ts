@@ -6,7 +6,8 @@ import {GOALS,NEW_EVIDENCE_MAX,addTasks,deadRoots,finishedAt,heldBuilds,provisio
 import {runModel,type ModelWorker} from './model-worker';
 import {validateDelivery,type DeliveryTask} from './delivery';
 import {freshScoreboard} from './coverage';
-import {projectRoot,atomicJson,capabilitySource,publishCapabilityChanges} from './coordinator-store';
+import {projectRoot,coordinationDir,atomicJson,capabilitySource,publishCapabilityChanges} from './coordinator-store';
+import {deliveryConflictRoots} from './delivery-pr';
 import {diskFreeGB,heldRuns,type HeldRuns} from './coordinator-decisions';
 import {PROOF_TIMING} from './build-fault';
 import {liveRows,readFreshControllerState} from './coordinator-live';
@@ -248,7 +249,7 @@ export function fleetLeads(rows:any[],side:string){
   return{skill:r.skill,best:r.best,side:r.side,account:r.account,local:mine,otherSideLeads:r.side!==side&&r.best-(mine?.level??1)>FLEET_BAND};
  });
 }
-export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof readWorld>,worldFile='',held:readonly HeldRuns[]=[]){
+export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof readWorld>,worldFile='',held:readonly HeldRuns[]=[],publicationConflicts:ReturnType<typeof deliveryConflictRoots>=[]){
  const compact={...world,coverage:{...world.coverage,quests:undefined,scriptCandidates:world.coverage.scriptCandidates.length},statuses:world.statuses.map((s:any)=>({name:s.name,at:s.at,result:clip(s.result,160),goal:clip(s.goal,120),skills:Object.fromEntries((s.skills??[]).filter((v:any)=>v.level>1).map((v:any)=>[v.name,v.level])),bankAt:s.bankAt})),jobs:world.jobs.map((j:any)=>({account:j.account,accounts:j.accounts,script:j.script,goal:j.goal,enabled:j.enabled})),capabilities:world.capabilities.map((d:any)=>({id:d.id,entry:d.entry,goal:d.goal}))};
  const recent=state.tasks.filter(r=>r.status==='succeeded'||r.status==='failed').sort((a,b)=>finishedAt(b)-finishedAt(a)).slice(0,48);
  return[
@@ -293,6 +294,10 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'In the active queue, a string in dependencyRefs is a task ID. A number is a zero-based index into sharedDependencyIds. In proposal dependsOn use the full string task IDs.',
   'Use rootBlockers to trace failed, superseded or missing prerequisites across the queue. When present, receipt gives the settlement time and a bounded failure excerpt even for roots outside recent history. pendingTasks and pendingRuns include all downstream work. readyTasksIfFixed and readyRunsIfFixed count only jobs whose sole unmet dependency is this root. Use both counts to decide which repair or set of repairs leads to a useful job. Inspect the full root receipt before proposing a replacement or retiring obsolete work. Dependency-ready work still needs runtime admission.',
   'COMPLETE ACTIVE QUEUE AND BLOCKED EDGES (not truncated to recent history): '+JSON.stringify(queueFacts(state,held)),
+  ...(publicationConflicts.length?[
+   'PUBLICATION CONFLICT ROOTS. These staged deliveries wait on source reconciliation. Read .practice/coordinator/delivery-prs/<taskId>.json before proposing another build for the same consumer. The delivery owner reconciles the conflict.',
+   JSON.stringify(publicationConflicts),
+  ]:[]),
   'Full inventories, raw dated status and definitions: '+worldFile,
   'Task source, model/reviewer output, failures and complete receipts: .practice/coordinator/runs/<runId>/. Read these for any repair; do not re-diagnose from summaries.',
   'Task specs above are brief (work order why clipped to 200 characters, receipts to 240). Full specs and receipts: .practice/coordinator/state.json. Read the full why of any task you replace, repair or depend on.',
@@ -406,7 +411,10 @@ export async function runPlannerModel(agent:ModelWorker,prompt:string,timeoutMs:
  return{...first,attempts};
 }
 export async function planWork(state:CoordinatorState,directory:string,timeoutMs:number,agent:ModelWorker='codex'){
- const world=readWorld();atomicJson(join(directory,'world.json'),world);const held=heldRuns(state,capability=>capabilitySource(JSON.parse(readFileSync(join(projectRoot,'packages/router/tasks',capability+'.json'),'utf8')).files)),prompt=plannerPrompt(state,world,join(directory,'world.json'),held);writeFileSync(join(directory,'prompt.txt'),prompt);
+ const world=readWorld();atomicJson(join(directory,'world.json'),world);
+ const held=heldRuns(state,capability=>capabilitySource(JSON.parse(readFileSync(join(projectRoot,'packages/router/tasks',capability+'.json'),'utf8')).files));
+ const prompt=plannerPrompt(state,world,join(directory,'world.json'),held,deliveryConflictRoots(coordinationDir));
+ writeFileSync(join(directory,'prompt.txt'),prompt);
  const result=await runPlannerModel(agent,prompt,timeoutMs);atomicJson(join(directory,'model.json'),result);
  if(!result.ok)throw Error('subscription planner unavailable: '+result.text.slice(-400));
  return parseModelObject(result.text);
