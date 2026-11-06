@@ -1,4 +1,4 @@
-import {existsSync,readFileSync,writeFileSync,appendFileSync,unlinkSync,watch,mkdirSync,readdirSync,renameSync} from 'node:fs';
+import {existsSync,readFileSync,writeFileSync,appendFileSync,statSync,truncateSync,unlinkSync,watch,mkdirSync,readdirSync,renameSync} from 'node:fs';
 import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {freemem,cpus} from 'node:os';
@@ -123,11 +123,28 @@ export function plannerState(input:{state?:CoordinatorState;statePath?:string}):
  return json(input.statePath);
 }
 // Old finished tasks move to an append-only archive before the state is saved; nothing is deleted.
-export function archiveFinishedTasks(state:CoordinatorState,now=Date.now(),directory=coordinationDir){
- const archived=compactState(state,now);
+export function archiveFinishedTasks(state:CoordinatorState,now=Date.now(),directory=coordinationDir,append:(file:string,data:string)=>void=appendFileSync){
+ const candidate={...state};
+ const archived=compactState(candidate,now);
  if(!archived.length)return 0;
  const archive=join(directory,'archive');mkdirSync(archive,{recursive:true});
- appendFileSync(join(archive,'tasks.jsonl'),archived.map(r=>JSON.stringify(r)).join('\n')+'\n');
+ const file=join(archive,'tasks.jsonl');
+ const prior=existsSync(file)?readFileSync(file):Buffer.alloc(0);
+ const contents=prior.toString('utf8');
+ // A restart before the queue save can replay a batch that already reached the archive.
+ const written=new Set(contents.split(/\r?\n/));
+ const pending=archived.map(record=>JSON.stringify(record)).filter(line=>!written.has(line));
+ if(pending.length){
+  const separator=contents&&!contents.endsWith('\n')?'\n':'';
+  try{
+   append(file,separator+pending.join('\n')+'\n');
+  }catch(error){
+   // The controller owns the archive. Remove bytes left by a failed append.
+   if((statSync(file,{throwIfNoEntry:false})?.size??0)>prior.length)truncateSync(file,prior.length);
+   throw error;
+  }
+ }
+ state.tasks=candidate.tasks;
  return archived.length;
 }
 async function child(mode:string,runId:string){
