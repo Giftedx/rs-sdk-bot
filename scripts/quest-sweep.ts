@@ -9,7 +9,8 @@ import {openBot,finish,getWorld,accountOf,finishHooks,sessionDied} from '../pack
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {goTo,sessionWalker,walkPath,walkRoute,type PathDeps} from '../packages/core/src/walk';
-import type {World,Transport} from '../packages/core/src/world';
+import type {World,Transport,Account} from '../packages/core/src/world';
+import {combatLevel,deadly,loadHunters} from '../packages/core/src/danger';
 import {loadTravel} from '../packages/core/src/travel';
 import {sellersByDistance,shopSellers} from '../packages/core/src/shop-index';
 import {spawnsByDistance,locsByDistance} from '../packages/core/src/spawn-index';
@@ -490,7 +491,7 @@ async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number)
   console.log(`QUEST_SWEEP_DOWN ${JSON.stringify({from:at(s),to:down})}`);
   const r=await router(down);if(!r.ok)return r;
  }
- if(eastOfArdougne(at(s),to)){const r=await crossEast(s,world,to);if(!r.ok)return r;}
+ if(eastOfArdougne(at(s),to,accountOf(s))){const r=await crossEast(s,world,to);if(!r.ok)return r;}
  // An upstairs target (Morgan's garlic cupboard in Draynor) is approached by the hubs toward the foot of its way up;
  // only the last leg, with its stairs, is the world router's.
  const beneath=wayUp(world.navigationGraph?.().transports??[],to);
@@ -522,9 +523,16 @@ export function wayUp(transports:readonly Transport[],to:Tile,depth=3):Tile{
 // From the Ardougne side (x under 2800, z 3270 and up) to anywhere east of x 2950 the way is the two boats, Brimhaven and
 // Port Sarim, with the Karamja and Port Sarim corridors between: no hub lies within a hop of Ardougne to the east, and
 // the world router's search for the land way round idles out the budget. Two fares of 30 coins.
-export const eastOfArdougne=(from:Tile,to:Tile)=>from.level===0&&from.x<2800&&from.z>=3270&&to.x>=2950;
+// White Wolf Mountain: the Big Wolf (combat 73, reach 22) at 2840,3497 holds the pass against an account it would kill
+// (TheFullMonty, combat 57 and 37 hitpoints: Kandarin to Taverley found no route under the plan budget), so for that
+// account a Taverley-side target (Taverley and Burthorpe, x 2880 to 2950, z 3400 and up) is east of Ardougne too: the
+// boats, then the Port Sarim to Falador road. A stronger account walks the pass.
+export const TAVERLEY_SIDE=(to:Tile)=>to.level===0&&to.x>=2880&&to.x<2950&&to.z>=3400;
+const BIG_WOLF:Tile={x:2840,z:3497,level:0};
+export const mountainClosed=(acct:Pick<Account,'skills'>,hunters=loadHunters())=>hunters.filter(h=>h.spawns.some(s=>s.x===BIG_WOLF.x&&s.z===BIG_WOLF.z&&s.level===BIG_WOLF.level)).some(h=>deadly(h,combatLevel(acct.skills),acct.skills.hitpoints??10));
+export const eastOfArdougne=(from:Tile,to:Tile,acct?:Pick<Account,'skills'>)=>from.level===0&&from.x<2800&&from.z>=3270&&(to.x>=2950||!!acct&&TAVERLEY_SIDE(to)&&mountainClosed(acct));
 export const BOAT_FARES=60;
-export const fares=(from:Tile,targets:readonly Tile[])=>targets.some(t=>eastOfArdougne(from,t))?BOAT_FARES:0;
+export const fares=(from:Tile,targets:readonly Tile[],acct?:Pick<Account,'skills'>)=>targets.some(t=>eastOfArdougne(from,t,acct))?BOAT_FARES:0;
 // The Port Sarim landing: a target in the town itself (Wydin's shop, 3014,3204) needs no walk north past the jail.
 export const SARIM_LANDING:Tile={x:3029,z:3217,level:0};
 async function crossEast(s:Session,world:World,to:Tile):Promise<Walked>{
@@ -549,7 +557,8 @@ async function crossEast(s:Session,world:World,to:Tile):Promise<Walked>{
  for(const leg of [()=>sail('npc:captain_barnaby:brimhaven@2679,3275'),()=>corridor(KARAMJA),()=>sail('npc:customs_officer:port-sarim@2953,3147')]){
   const r=await leg();if(!r.ok)return r;
  }
- return cheb(to,SARIM_LANDING)<=60?{ok:true}:corridor(SARIM_NORTH);
+ // SARIM_NORTH leads to Draynor; a Taverley-side target leaves the landing by the hubs and the router (Falador's road).
+ return cheb(to,SARIM_LANDING)<=60||TAVERLEY_SIDE(to)?{ok:true}:corridor(SARIM_NORTH);
 }
 export async function reachStart(s:Session,world:World,start:Tile,quest?:string,walker=()=>sessionWalker(s),route=walkRoute){
  const p=s.sdk.getState()?.player;
@@ -997,7 +1006,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
   // Recipes paid in dialogue (Aggie's dyes, Wyson's woad leaves) take their coins out with the shop money, and so do the
   // two boat fares when a destination lies east of Ardougne: a plan of Wyson's woad and Aggie's blue dye alone budgets 25
   // coins, and crossEast refuses the crossing below 60.
-  shop.coins+=gather.coins+(heckelDust?HECKEL_DUST.coins:0)+fares(here(),[...shop.buys.map(b=>b.tile),preset.position,...gather.gathers.flatMap(g=>g.how==='npc'&&NPC_SOURCES[g.id]?[NPC_SOURCES[g.id]!.tile]:[])]);
+  shop.coins+=gather.coins+(heckelDust?HECKEL_DUST.coins:0)+fares(here(),[...shop.buys.map(b=>b.tile),preset.position,...gather.gathers.flatMap(g=>g.how==='npc'&&NPC_SOURCES[g.id]?[NPC_SOURCES[g.id]!.tile]:[])],accountOf(s));
   if(shop.coins){
    const take=Math.max(0,shop.coins-count(pack(),COINS)-(p.withdraw.find(w=>w.id===COINS)?.count??0));
    if(count(rows(),COINS)<take){await s.bot.closeBank();return fail(`missing ${COINS}:${take} to buy ${[...shop.buys.map(b=>b.id),...(heckelDust?[1975]:[])].join(',')}`+(shop.buys.some(b=>wornKit.wear.some(i=>i.required&&i.id===b.id))?' (required worn kit unavailable)':''));}
