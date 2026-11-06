@@ -922,6 +922,22 @@ test('a far walk from the Ardougne side to anywhere east of x 2950 crosses by th
  expect(eastOfArdougne({x:2655,z:3283,level:1},{x:3222,z:3218,level:0})).toBe(false); // from upstairs: climb down first
 });
 
+test('a Taverley-side target is east of Ardougne for an account the Big Wolf would kill, and over the pass for a stronger one',async()=>{
+ const {eastOfArdougne,mountainClosed,TAVERLEY_SIDE,fares,BOAT_FARES}=await import('./quest-sweep');
+ const ardougne={x:2655,z:3283,level:0},kaqemeex={x:2925,z:3487,level:0};
+ const monty={skills:{attack:69,strength:1,defence:1,hitpoints:37,magic:99}},strong={skills:{attack:90,strength:90,defence:90,hitpoints:82}};
+ expect(TAVERLEY_SIDE(kaqemeex)).toBe(true);
+ expect(TAVERLEY_SIDE({x:2946,z:3368,level:0})).toBe(false); // Falador bank: no mountain between
+ expect(mountainClosed(monty)).toBe(true);
+ expect(mountainClosed(strong)).toBe(false);
+ expect(eastOfArdougne(ardougne,kaqemeex)).toBe(false);
+ expect(eastOfArdougne(ardougne,kaqemeex,monty)).toBe(true);
+ expect(eastOfArdougne(ardougne,kaqemeex,strong)).toBe(false);
+ expect(eastOfArdougne({x:2946,z:3368,level:0},kaqemeex,monty)).toBe(false); // from Falador: the road
+ expect(fares(ardougne,[kaqemeex],monty)).toBe(BOAT_FARES);
+ expect(fares(ardougne,[kaqemeex],strong)).toBe(0);
+});
+
 test('the edible part of a preset\'s needs is reserved for the eaters',async()=>{
  const {reservedEdible}=await import('./quest-sweep');
  // Pirate's Treasure: 10 bananas (edible) and a white apron; Family Crest: 5 cooked trout.
