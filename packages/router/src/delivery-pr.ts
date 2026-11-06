@@ -185,12 +185,12 @@ export async function openDeliveryPr(pr:DeliveryPr,mainRoot:string,run:Run=spawn
   await verifyQualifiedHead(pr,head,mainRoot,run);
   return{state:'opened',url};
  }
+ if(dir)await checkPrerequisites(pr,dir,mainRoot,run);
  const remote=await must(run,['git','ls-remote','--heads','origin','refs/heads/'+pr.branch],mainRoot);
  if(remote.trim())await verifyQualifiedHead(pr,remote.trim().split('\t')[0],mainRoot,run);
  const work=mkdtempSync(join(parent,'delivery-')),tree=join(work,'tree');
  try{
   if(!remote.trim()){
-   if(dir)await checkPrerequisites(pr,dir,mainRoot,run);
    await must(run,['git','fetch','origin','master'],mainRoot);
    await must(run,['git','worktree','add','--detach',tree,'origin/master'],mainRoot);
    try{
