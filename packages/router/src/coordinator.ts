@@ -258,6 +258,21 @@ export function deadRoots(state:CoordinatorState,records:ReadonlyMap<string,Task
  for(const r of state.tasks)if(r.status==='pending'){const found=visit(r);if(found)roots.set(r.spec.id,found);}
  return roots;
 }
+export function preparedProvisionClaims(state:CoordinatorState,records:ReadonlyMap<string,TaskRecord>,
+ dead=deadRoots(state,records),runHeld?:(task:CoordTask)=>boolean):Set<string>{
+ const claims=new Set<string>();
+ for(const {spec,status} of state.tasks){
+  if(status!=='pending'||spec.kind!=='run'||dead.has(spec.id))continue;
+  const refs=provisionRefs(spec);
+  // A composed first job can wait on several account claims. Its other prerequisites must have passed.
+  if(!refs.length||spec.dependsOn.some(id=>!refs.includes(id)&&records.get(id)?.status!=='succeeded')||runHeld?.(spec))continue;
+  for(const id of refs){
+   const claim=records.get(id);
+   if(claim?.status==='pending'&&claim.spec.dependsOn.every(dep=>records.get(dep)?.status==='succeeded'))claims.add(id);
+  }
+ }
+ return claims;
+}
 // isolatedBuilds: builds author and prove in their own workspace (build-workspace.ts), so builds and live runs overlap.
 // Only a publish into the main checkout needs a drained fleet: publishPending holds new live starts until it lands.
 export function chooseTask(state:CoordinatorState,now:number,resources:{sourceReady?:boolean;nativeReady?:boolean;liveLimit?:number;developmentLimit?:number;preferLive?:boolean;focusCapability?:string;isolatedBuilds?:boolean;publishPending?:boolean;publishing?:string;ownedFiles?:(capability:string)=>readonly string[];runHeld?:(task:CoordTask)=>boolean}={}):CoordTask|null{
@@ -283,6 +298,7 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
    if(r.spec.kind==='run')liveDependencies.add(id);
   }
  }
+ const provisionClaims=preparedProvisionClaims(state,records,dead,resources.runHeld);
  const sourceReady=resources.sourceReady??resources.nativeReady;
  const canBuild=(r:TaskRecord)=>{const prior=lastBuildOutcome(state,r.spec.capability!);return sourceReady!==false&&!buildHeld(state,r.spec,now)&&!(prior?.hostDeferred===true&&prior.sourcePrepared===true&&resources.nativeReady===false)&&!(resources.isolatedBuilds&&buildOverlap(r.spec.capability!,busyBuilds,resources.ownedFiles));};
  const buildWaiting=pending.some(r=>r.spec.kind==='build'&&canBuild(r)&&(!resources.focusCapability||focusCaps.has(r.spec.capability!)));
@@ -310,6 +326,7 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
   // overlap up to developmentLimit; without isolation they share the main checkout one at a time.
   if(!resources.isolatedBuilds&&exclusive(r.spec.kind)&&running.some(a=>exclusive(a.spec.kind)))return false;
   if(r.spec.kind==='build'&&running.some(a=>(a.spec.kind==='run'&&!resources.isolatedBuilds)||a.spec.kind==='provision'))return false;
+  if(r.spec.kind==='provision'&&!provisionClaims.has(r.spec.id))return false;
   if(r.spec.kind==='provision'&&running.some(a=>a.spec.kind==='provision'))return false;
   if(r.spec.kind==='provision'&&running.some(a=>a.spec.kind==='build'))return false;
   if(r.spec.kind==='provision'&&new Set(running.filter(a=>a.spec.kind==='run').flatMap(a=>boundAccounts(a.spec,state)??[])).size>=(resources.liveLimit??Infinity))return false;
