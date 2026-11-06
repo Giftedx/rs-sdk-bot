@@ -278,7 +278,7 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
  const dead=deadRoots(state,records),consumerCounts=new Map<string,number>(),liveDependencies=new Set<string>();
  for(const r of state.tasks){
   if(r.status!=='pending'||dead.has(r.spec.id))continue;
-  for(const id of new Set(r.spec.dependsOn)){
+  for(const id of new Set([...r.spec.dependsOn,...provisionRefs(r.spec)])){
    consumerCounts.set(id,(consumerCounts.get(id)??0)+1);
    if(r.spec.kind==='run')liveDependencies.add(id);
   }

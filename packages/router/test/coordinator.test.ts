@@ -56,6 +56,18 @@ test('participant provision references form dependency edges and resolve identit
  expect(()=>addTasks(other,[task('missing',{kind:'run',participants:['Donor','@unknown'],accept:{counters:{made:1}}})])).toThrow('missing');
 });
 
+test('each viable run adds one priority boost to the provision task it needs',()=>{
+ for(const binding of [{accountFrom:'helper'},{participants:['Donor','@helper']}]){
+  const s=initialState();
+  addTasks(s,[task('helper',{kind:'provision',role:'helper',priority:5}),task('other',{priority:8}),
+   task('run',{kind:'run',...binding,accept:{counters:{made:1}}})],0);
+  expect(chooseTask(s,1)?.id).toBe('helper');
+  s.tasks.find(r=>r.spec.id==='run')!.spec.dependsOn.push('helper');
+  addTasks(s,[task('higher',{priority:12})],0);
+  expect(chooseTask(s,2)?.id).toBe('higher');
+ }
+});
+
 test('provision-derived aliases cannot overlap or supply duplicate participants',()=>{
  const s=initialState();addTasks(s,[task('helper',{kind:'provision',role:'helper'}),task('run1',{kind:'run',accountFrom:'helper',accept:{counters:{made:1}}}),task('run2',{kind:'run',account:'Helper1',accept:{counters:{made:1}}}),task('duplicate',{kind:'run',participants:['Helper1','@helper'],accept:{counters:{made:1}}})],0);
  startTask(s,'helper',1,'p');finishTask(s,{taskId:'helper',runId:'p',ok:true,at:2,output:{account:'Helper1'}});
