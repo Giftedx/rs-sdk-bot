@@ -844,6 +844,13 @@ test('withdrawal slots count a stack once and nothing for a stack the pack alrea
  // An edible quest ingredient the preset needs (Family Crest's cooked fish, 5) is kept whatever the pressure.
  const fishy=[{id:995,count:30},...Array.from({length:5},()=>({id:333,count:1})),...Array.from({length:22},()=>({id:385,count:1}))];
  expect(depositPlan(fishy,27,id=>id===333)).toEqual([{id:385,count:22}]);
+ // Another quest's untradeable leftovers (eight kinds) are kept until the food is gone and the inputs still want
+ // slots; then whole kinds go, as few as free the slots. Without `spare` they all stay.
+ const spareIds=[901,902,903,904,905,906,907,908],spare=(id:number)=>spareIds.includes(id);
+ const cluttered=[{id:995,count:300},...spareIds.map(id=>({id,count:1})),...Array(6).fill({id:385,count:1})];
+ expect(depositPlan(cluttered,20,spare)).toEqual([{id:385,count:6}]);
+ expect(depositPlan(cluttered,20,spare,spare)).toEqual([{id:385,count:6},{id:901,count:-1}]);
+ expect(depositPlan(cluttered,22,spare,spare)).toEqual([{id:385,count:6},{id:901,count:-1},{id:902,count:-1},{id:903,count:-1}]);
  // Twenty balls of wool beside the coins: the reserve gives way to two slots and five sharks stay.
  const nine=[{id:995,count:30},...Array.from({length:9},()=>({id:385,count:1}))];
  expect(slotNeed(20,1)).toBe(22);
