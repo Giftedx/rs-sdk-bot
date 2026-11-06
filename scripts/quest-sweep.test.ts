@@ -57,7 +57,7 @@ test('Heckel stages the southern gate, observes the north side, and names a fail
  expect(await fetchHeckelDust(io)).toMatchObject({ok:false,detail:expect.stringContaining('north arrival unobserved')});
 });
 import {readFileSync} from 'node:fs';
-import {leaveToManorTrip,plan,needs,nearestBank,presetFor,leaveStronghold,leaveFortress,walkCorridor,KARAMJA,gatherPlan,MILK,BUCKET,generalStores,fetchManorFishFood,manorFoodNeed,manorPoisonNeed,reserveInputSlots,FOOD,type ManorIO} from './quest-sweep';
+import {leaveToManorTrip,plan,walkFar,needs,nearestBank,presetFor,leaveStronghold,leaveFortress,walkCorridor,KARAMJA,gatherPlan,MILK,BUCKET,generalStores,fetchManorFishFood,manorFoodNeed,manorPoisonNeed,reserveInputSlots,FOOD,type ManorIO} from './quest-sweep';
 import {spawnsByDistance} from '../packages/core/src/spawn-index';
 import {equipment,questSweepChecks} from '../packages/practice/src/quest-sweep-proof';
 import type {Session} from '../packages/core/src/inprocess';
@@ -1386,4 +1386,10 @@ test('Elena saved proof requires bought dust, exact coins/assets, completion, XP
  expect(verify(log.replace('"observed":true','"observed":false'))).toMatchObject({bought:false});
  expect(verify(log.replace('QUEST_SWEEP_TREE_EXIT','OMITTED_TREE_EXIT'))).toMatchObject({treeExit:false});
  expect(verify(log.replace('"z":3491','"z":3494'))).toMatchObject({treeExit:false});
+});
+
+test('a far walk whose quest guard has already aborted takes no leg and reports stopped',async()=>{
+ const s:any={sdk:{getState:()=>({player:{worldX:2655,worldZ:3283,level:0},inventory:[]})},tick:()=>0};
+ const r=await walkFar(s,{} as any,{x:3222,z:3218,level:0},150,{signal:AbortSignal.abort('quest guard')});
+ expect(r).toEqual({ok:false,reason:'stopped',detail:'quest guard'});
 });

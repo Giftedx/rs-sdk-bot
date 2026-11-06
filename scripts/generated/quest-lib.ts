@@ -359,13 +359,16 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
             // mountain, and the world router for the last leg, which knows the ladders and doors between an upstairs end
             // (the Black Knights' Fortress's first floor, 3029,3505) and the ground. One routed walk from the Barbarian
             // Outpost to Falador (410 tiles) ran out its plan budget. The router casts the teleports the account can
-            // (Lumbridge Teleport on the way to Varrock), so a landing by Lumbridge during the walk is not a respawn;
-            // guard() acts on a death or the retreat threshold after the walk as after any walk.
+            // (Lumbridge Teleport on the way to Varrock), so a landing by Lumbridge during the walk is not a respawn.
+            // A death, the retreat threshold, a sustain failure or the tick cap abort the walk between and inside its
+            // legs, and guard() then acts on them as after any walk.
             await guard(label);
             let routed: { ok: boolean; reason?: string };
             routing = true;
-            try { routed = await walkFar(s, await getWorld(), { x, z, level: 0 }, 150); }
-            finally { routing = false; lastCastAt = T(); }
+            const ac = new AbortController();
+            const stopOff = s.onTick(() => { if (stats.died || retreating || sustain.failure() || T() > CAP) ac.abort('quest guard'); });
+            try { routed = await walkFar(s, await getWorld(), { x, z, level: 0 }, 150, { signal: ac.signal }); }
+            finally { stopOff(); routing = false; lastCastAt = T(); }
             console.log(`QUEST_TELEPORT_WALK ${JSON.stringify({ label, to: { x, z }, ok: routed.ok, reason: routed.ok ? undefined : routed.reason, at: pos() && { x: pos()!.worldX, z: pos()!.worldZ, level: pos()!.level } })}`);
             await guard(label);
             if (routed.ok && near(x, z, 6)) return;

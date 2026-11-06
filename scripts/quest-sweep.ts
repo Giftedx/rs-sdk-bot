@@ -528,19 +528,25 @@ export type Walked={ok:boolean;reason?:string;detail?:string;ticks?:number};
 // The sweep's route searches get 15 s each: a legitimate leg plans in well under that, and the 900-tick watchdog runs at
 // 150 ms ticks on practice (135 s), so three 45 s searches for one unreachable spawn cluster ended a run.
 export const SWEEP_PLAN_BUDGET_MS=15_000;
-export async function walkFar(s:Session,world:World,to:Tile,legTimeoutTicks=150):Promise<Walked>{
+// `signal`: a quest guard's abort (a death, the retreat threshold, a sustain failure, the tick cap) ends the walk between
+// legs and inside each leg's clicks; the result then says `stopped`.
+export async function walkFar(s:Session,world:World,to:Tile,legTimeoutTicks=150,opts:{signal?:AbortSignal}={}):Promise<Walked>{
  const from=at(s);
- const r=await walkFarLegs(s,world,to,legTimeoutTicks);
+ const r=await walkFarLegs(s,world,to,legTimeoutTicks,opts.signal);
  if(!r.ok)console.log(`QUEST_SWEEP_WALK_FAIL ${JSON.stringify({from,to,at:at(s),reason:r.reason,detail:r.detail})}`);
  return r;
 }
 const at=(s:Session):Tile=>{const q=s.sdk.getState()?.player;return{x:q?.worldX??0,z:q?.worldZ??0,level:q?.level??0};};
-async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number):Promise<Walked>{
- const router=(t:Tile)=>goTo(s,world,t,accountOf(s),{legTimeoutTicks,planBudgetMs:SWEEP_PLAN_BUDGET_MS});
+const STOPPED:Walked={ok:false,reason:'stopped',detail:'quest guard'};
+async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number,signal?:AbortSignal):Promise<Walked>{
+ const stopped=()=>signal?.aborted===true;
+ const router=async(t:Tile):Promise<Walked>=>stopped()?STOPPED:goTo(s,world,t,accountOf(s),{legTimeoutTicks,planBudgetMs:SWEEP_PLAN_BUDGET_MS,signal});
  const ground=async(t:Tile):Promise<Walked>=>{
-  const r=at(s).level===0&&t.level===0?await walkCorridor(await sessionWalker(s),[[t.x,t.z,3]]):{ok:false};
+  if(stopped())return STOPPED;
+  const r=at(s).level===0&&t.level===0?await walkCorridor(await sessionWalker(s),[[t.x,t.z,3]],(d,pts)=>walkPath(d,pts,{signal})):{ok:false};
   return r.ok?{ok:true}:router(t);
  };
+ if(stopped())return STOPPED;
  // A far walk that starts upstairs (Hudo's shop on the Grand Tree's first floor, bound for Port Sarim) first comes down by
  // the nearest way down: the boats and hubs are ground legs, and asked from the first floor the world router found no route.
  for(let i=0;i<3&&at(s).level!==0&&cheb(at(s),to)>MAX_HOP;i++){
@@ -548,7 +554,7 @@ async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number)
   console.log(`QUEST_SWEEP_DOWN ${JSON.stringify({from:at(s),to:down})}`);
   const r=await router(down);if(!r.ok)return r;
  }
- if(eastOfArdougne(at(s),to,accountOf(s))){const r=await crossEast(s,world,to);if(!r.ok)return r;}
+ if(eastOfArdougne(at(s),to,accountOf(s))){const r=await crossEast(s,world,to,signal);if(!r.ok)return r;}
  // An upstairs target (Morgan's garlic cupboard in Draynor) is approached by the hubs toward the foot of its way up;
  // only the last leg, with its stairs, is the world router's.
  const beneath=wayUp(world.navigationGraph?.().transports??[],to);
@@ -597,11 +603,12 @@ export const SARIM_LANDING:Tile={x:3029,z:3217,level:0};
 // Keepers with no Trade option: the shop opens through their talk (area_yanille/scripts/ogre_merchant.rs2: "Yes I do."
 // opens Grud's Herblore Stall at Gu'Tanoth, the eye of newt seller nearest Ardougne that has a route).
 export const SHOP_TALK:Record<number,RegExp[]>={874:[/^yes i do/i]};
-async function crossEast(s:Session,world:World,to:Tile):Promise<Walked>{
+async function crossEast(s:Session,world:World,to:Tile,signal?:AbortSignal):Promise<Walked>{
  if(count(s.sdk.getState()?.inventory??[],COINS)<BOAT_FARES)return{ok:false,reason:'precondition',detail:`missing 995:${BOAT_FARES} for safe boat route`};
- const walk=(to:Tile)=>goTo(s,world,to,accountOf(s),{legTimeoutTicks:150,planBudgetMs:SWEEP_PLAN_BUDGET_MS});
+ const walk=async(to:Tile):Promise<Walked>=>signal?.aborted?STOPPED:goTo(s,world,to,accountOf(s),{legTimeoutTicks:150,planBudgetMs:SWEEP_PLAN_BUDGET_MS,signal});
  const corridor=async(points:readonly Pt[]):Promise<Walked>=>{
-  const r=await walkCorridor(await sessionWalker(s),points);
+  if(signal?.aborted)return STOPPED;
+  const r=await walkCorridor(await sessionWalker(s),points,(d,pts)=>walkPath(d,pts,{signal}));
   return r.ok?{ok:true}:{ok:false,reason:'corridor',detail:`corridor walk failed to ${points[points.length-1]!.join(',')} at ${JSON.stringify(r.at)}`};
  };
  const sail=async(id:string):Promise<Walked>=>{
