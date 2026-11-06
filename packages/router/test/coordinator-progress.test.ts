@@ -146,6 +146,16 @@ test('a freshly qualified finite live consumer gets one turn before an unrelated
  startTask(s,'use-proof',11,'live');expect(chooseTask(s,12)).toBeNull();
  finishTask(s,{taskId:'use-proof',runId:'live',ok:true,at:13,output:{}});expect(chooseTask(s,14)?.id).toBe('build');
 });
+test('an unrelated live start leaves a fresh proof available to its first finite consumer',()=>{
+ const s=initialState(),resources={isolatedBuilds:true};
+ addTasks(s,[task('proof'),{...run('use-proof',['proof']),priority:6},run('another-consumer',['proof']),
+  {...run('unrelated-live'),capability:'supply-order',account:'Other'},task('build',{kind:'build',capability:'supply-order',priority:100})],0);
+ complete(s,'proof',true,10,{delivery:{ok:true}});
+ complete(s,'unrelated-live',true,12);
+ expect(chooseTask(s,13,resources)?.id).toBe('use-proof');
+ complete(s,'use-proof',true,15);
+ expect(chooseTask(s,16,resources)?.id).toBe('build');
+});
 test('native resource shortage defers heavy work without failing it or blocking independent live work',()=>{
  const s=initialState();addTasks(s,[task('native'),task('build',{kind:'build',priority:100}),run('live')],0);
  expect(chooseTask(s,1,{nativeReady:false})?.id).toBe('live');expect(s.tasks.every(t=>t.status==='pending')).toBe(true);
