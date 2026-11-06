@@ -2,7 +2,7 @@ import {test,expect} from 'bun:test';
 import {mkdtempSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {buildFault,faultOf} from '../src/build-fault';
+import {buildFailureEvidence,buildFault,faultOf} from '../src/build-fault';
 
 test('a fault names the failed proof cases from either report shape',()=>{
  const cases=JSON.stringify({ok:false,cases:[{id:'vial-shortfall',ok:false},{id:'vial-budget',ok:true}]});
@@ -46,6 +46,19 @@ test('a build fault reads the failing check logs, from delivery or diagnostic',(
  const checks=[{id:'unit',exitCode:0,detail:'{}'},{id:'native',exitCode:1,detail:JSON.stringify({stdout,stderr})}];
  expect(buildFault({ok:false,delivery:{checks}})).toBe('native: Error: boom');
  expect(buildFault({ok:false,diagnostic:{checks}})).toBe('native: Error: boom');
+});
+test('a native memory stop survives engine teardown output without becoming a source fault',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'native-floor-fault-')),stderr=join(dir,'e.log');
+ const failure={id:'rune-carrier-practice',phase:'practice',exitCode:1,detail:JSON.stringify({stderr})};
+ const output={ok:false,delivery:{checks:[failure]}};
+ const stop='Error: insufficient practice free memory floor';
+ writeFileSync(stderr,'08:11:02 ERROR logger thread exited with code 0\n'+stop+'\n');
+ expect(buildFailureEvidence(output)).toEqual({hostInterrupted:'memory-floor'});
+ expect(buildFailureEvidence(output,false)).toEqual({hostInterrupted:'memory-floor'});
+ expect(buildFault(output)).toBeNull();
+ expect(buildFailureEvidence({ok:false,delivery:{checks:[{...failure,phase:'regression'}]}},false)).toEqual({});
+ writeFileSync(stderr,stop+'\nError: bank quantities differ\n');
+ expect(buildFailureEvidence(output,false)).toEqual({});
 });
 test('a passed build, a timeout, no checks and an unreadable detail give no fault',()=>{
  expect(buildFault({ok:true,delivery:{checks:[{id:'a',exitCode:1,detail:'{}'}]}})).toBeNull();

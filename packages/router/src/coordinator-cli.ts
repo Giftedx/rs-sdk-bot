@@ -3,7 +3,7 @@ import {basename,join} from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
 import {freemem,cpus} from 'node:os';
 import {addTasks,chooseTask,startTask,finishTask,refreshQualifications,qualificationDemand,boundAccounts,fleetExpansion,activeBuildFocus,failedBuildStreak,heldBuilds,compactState,usefulLiveReceipt,preparedProvisionClaims,FOCUS_FAILURE_LIMIT,type CoordinatorState,type CoordTask} from './coordinator';
-import {buildFault} from './build-fault';
+import {buildFailureEvidence} from './build-fault';
 import {projectRoot,coordinationDir,loadState,saveState,runDirectory,atomicJson,atomicText,event,spawnDetached,recoverPlanWrite,withPlanWrite,capabilitySource,publishCapabilityChanges} from './coordinator-store';
 import {DISK_FLOOR_GB,diskFreeGB,finishPlan,plannerDue,retireDeadTasks,reviewHold} from './coordinator-decisions';
 import {planWork,prepareProposal} from './coordinator-planner';
@@ -157,7 +157,13 @@ async function child(mode:string,runId:string){
  try{
   const input=json(join(dir,'input.json'));
   if(mode==='--planner'){const proposal=await planWork(plannerState(input),dir,input.timeoutMs,input.agent??'claude');atomicJson(join(dir,'proposal.json'),proposal);}
-  else{const result=await executeTask(input.task,input.dependencies,dir,runId,input.startedAt,input.agent??'claude'),fault=input.task.kind==='build'?buildFault(result):null,output=fault?{...result,buildFault:fault}:result;atomicJson(join(dir,'receipt.json'),{taskId:input.task.id,runId,agent:input.agent??'claude',ok:output.ok===true,at:Date.now(),output});}
+  else{
+   const result=await executeTask(input.task,input.dependencies,dir,runId,input.startedAt,input.agent??'claude');
+   const build=input.task.kind==='build';
+   const failure=build||input.task.kind==='qualify'?buildFailureEvidence(result,build):{};
+   const output={...result,...failure};
+   atomicJson(join(dir,'receipt.json'),{taskId:input.task.id,runId,agent:input.agent??'claude',ok:output.ok===true,at:Date.now(),output});
+  }
  }catch(error){
   if(mode==='--planner')atomicJson(join(dir,'planner-error.json'),{error:String(error)});
   else{const input=json(join(dir,'input.json'));atomicJson(join(dir,'receipt.json'),{taskId:input.task.id,runId,ok:false,at:Date.now(),output:existsSync(join(dir,'identity.json'))?json(join(dir,'identity.json')):null,error:String(error)});}
