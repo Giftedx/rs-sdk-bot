@@ -1411,5 +1411,4 @@ test('the meal takes the preset food kinds first, then the best other edibles th
  const beggar=new Map([[2309,1]]);
  expect(mealPlan(food,[],[{id:2309,count:1}],[{id:2309,count:1}],beggar)).toEqual([]);
  expect(mealPlan(food,[{id:2309,count:1}],[{id:385,count:2}],[],beggar)).toEqual([{id:385,count:2}]);
->>>>>>> origin/master
 });
