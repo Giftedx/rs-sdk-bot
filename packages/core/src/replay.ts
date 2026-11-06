@@ -10,13 +10,14 @@
 // allowed type counts in `allowed`, gets the recorded result, and the comparison goes on to the end.
 // Limits: a worker decision that reads the wall clock (Date.now, Bun.sleep) or files written during the run can
 // differ on replay with no code change. One record is one session; a second account's openBot refuses.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
 import { BotActions } from '../../../vendor/rs-sdk/sdk/actions';
 import { createShim, inProcessSdkConfig, type ClientLike, type Session } from './inprocess';
 import { openHooks, finishHooks } from './bot';
 import { applyDelta, readRecord, RECORD_VERSION, type TickRecorder } from './tick-record';
+import { DEFAULT_CACHE, loadPathfinding } from './pathcache';
 
 export interface ReplayCommand { t: number; a: unknown; direct: boolean }
 export interface ReplayDifference { tick: number; index: number; expected: ReplayCommand | null; actual: ReplayCommand | null }
@@ -173,6 +174,8 @@ if (import.meta.main) {
     let out: ReplayResult;
     try {
         const lines = readRecord(file!);
+        // Replay bypasses the login that restores this snapshot before the worker can walk.
+        if (existsSync(DEFAULT_CACHE) && lines.some(line => line.k === 'a' && typeOf(line.a) === 'walkTo')) await loadPathfinding();
         const repoRoot = resolve(import.meta.dir, '..', '..', '..');
         const entry = resolve(repoRoot, entryAt >= 0 ? args[entryAt + 1]! : lines[0].script);
         process.env.REPLAY_ONLY = '1';
