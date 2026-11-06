@@ -141,11 +141,29 @@ function applyChange(pr:DeliveryPr,tree:string){
  if(conflicts.length)throw new DeliveryConflict('delivery conflicts with origin/master: '+conflicts.join(', '));
  for(const [f,text] of merged){mkdirSync(dirname(join(tree,f)),{recursive:true});writeFileSync(join(tree,f),text);}
 }
+async function verifyQualifiedHead(pr:DeliveryPr,head:string|undefined,mainRoot:string,run:Run){
+ if(pr.definitionBase===undefined)return;
+ if(!head||!(/^[0-9a-f]{40}$/.test(head)))throw Error('delivery: reused head is unverified');
+ const file='packages/router/tasks/'+pr.capability+'.json';
+ if(!/^[-a-z0-9]+$/.test(pr.capability)||!pr.files.includes(file))throw new DeliveryConflict('delivery is missing its staged qualified definition: '+file);
+ const expected=readFileSync(join(pr.snapshot,file),'utf8').replaceAll('\r\n','\n');
+ // Check the observed commit, without changing a branch or the shared FETCH_HEAD.
+ await must(run,['git','fetch','--no-write-fetch-head','origin',head],mainRoot);
+ const entry=await must(run,['git','ls-tree','--full-tree',head,'--',file],mainRoot);
+ if(!/^100(?:644|755) blob /.test(entry))throw new DeliveryConflict('delivery head is missing its qualified definition: '+file);
+ const actual=await must(run,['git','show',head+':'+file],mainRoot);
+ if(actual!==expected)throw new DeliveryConflict('delivery head differs from its qualified definition: '+file);
+}
 // Opens one staged delivery. If the branch already exists on the remote, it opens the PR from it without a push.
 export async function openDeliveryPr(pr:DeliveryPr,mainRoot:string,run:Run=spawnRun,parent=tmpdir(),dir?:string):Promise<{state:'opened'|'empty';url?:string}>{
- const listed=await run(['gh','pr','list','--head',pr.branch,'--state','all','--json','url','--jq','.[0].url'],mainRoot);
- if(listed.code===0&&listed.stdout.trim())return{state:'opened',url:listed.stdout.trim()};
+ const listed=await run(['gh','pr','list','--head',pr.branch,'--state','all','--json','url,headRefOid','--jq','.[0] | select(. != null) | [.url,.headRefOid] | @tsv'],mainRoot);
+ if(listed.code===0&&listed.stdout.trim()){
+  const [url,head]=listed.stdout.trim().split('\t');
+  await verifyQualifiedHead(pr,head,mainRoot,run);
+  return{state:'opened',url};
+ }
  const remote=await must(run,['git','ls-remote','--heads','origin','refs/heads/'+pr.branch],mainRoot);
+ if(remote.trim())await verifyQualifiedHead(pr,remote.trim().split('\t')[0],mainRoot,run);
  const work=mkdtempSync(join(parent,'delivery-')),tree=join(work,'tree');
  try{
   if(!remote.trim()){
