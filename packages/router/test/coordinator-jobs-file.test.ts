@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,existsSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,existsSync,appendFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {migrateCoordinatorJobs,currentRevision,REVISION_FRESH_MS,rulePassDue} from '../src/coordinator-cli';
@@ -126,6 +126,39 @@ test('archived tasks append to the archive file and the state shrinks; a planner
  expect(plannerState({statePath:join(dir,'state.json')}).tasks.map(r=>r.spec.id)).toEqual(['c']);
  expect(plannerState({state}).tasks).toBe(state.tasks);
  expect(()=>plannerState({})).toThrow('names no state');
+});
+test('archive directory failure leaves finished records in the queue',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'coord-archive-')),day=24*60*60*1000,now=10*day,state=initialState();
+ const finished=record('finished','failed',now-5*day),kept=record('kept','failed',now-3*day);
+ state.tasks=[finished,kept];
+ writeFileSync(join(dir,'archive'),'blocks directory creation');
+ expect(()=>archiveFinishedTasks(state,now,dir)).toThrow();
+ expect(state.tasks).toEqual([finished,kept]);
+});
+test('archive append failure preserves the queue and prior bytes, and a restart does not append the same record',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'coord-archive-')),day=24*60*60*1000,now=10*day,state=initialState();
+ const prior=record('prior','failed',now-6*day);
+ const archived=record('archived','failed',now-5*day),kept=record('kept','failed',now-3*day);
+ state.tasks=[prior,kept];
+ expect(archiveFinishedTasks(state,now,dir)).toBe(1);
+ state.tasks.unshift(archived);
+ saveState(state,dir);
+ const file=join(dir,'archive/tasks.jsonl'),before=readFileSync(file,'utf8');
+ expect(()=>archiveFinishedTasks(state,now,dir,(path,bytes)=>{
+  appendFileSync(path,bytes.slice(0,17));
+  throw Error('simulated short write');
+ })).toThrow('simulated short write');
+ expect(state.tasks).toEqual([archived,kept]);
+ expect(readFileSync(file,'utf8')).toBe(before);
+
+ expect(archiveFinishedTasks(state,now,dir)).toBe(1);
+ const complete=before+JSON.stringify(archived)+'\n';
+ expect(readFileSync(file,'utf8')).toBe(complete);
+
+ const restarted=loadState(dir);
+ expect(archiveFinishedTasks(restarted,now,dir)).toBe(1);
+ expect(restarted.tasks).toEqual([kept]);
+ expect(readFileSync(file,'utf8')).toBe(complete);
 });
 test('a replacement plan ignores archived dependencies of finished tasks but still refuses them for open tasks',()=>{
  const day=24*60*60*1000,now=10*day,state=initialState();
