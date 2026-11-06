@@ -68,8 +68,12 @@ export async function executeHetty(q:Awaited<ReturnType<typeof openQuest>>){
             const combat=q.pos()?.combat;
             if(combat?.targetType==='npc'&&combat.targetIndex>=0){selectedIndex??=combat.targetIndex;idleSince=t;}
             else if(selectedIndex!==null&&t-idleSince>=6)selectedIndex=null;
+            // A strike does not repeat on its own: the engaged rat is attacked again every five ticks (the helper's cast
+            // rate) until it dies; the bow and the hands keep fighting through the repeat.
+            const engaged:any = selectedIndex!==null?(q.st()?.nearbyNpcs??[]).find((n:any)=>n.index===selectedIndex):null;
             const rat:any = selectedIndex===null?q.npc(/^rat$/i):null;
-            if (selectedIndex===null&&!rat) { if (t % 10 === 0) await q.dash('to rats', RATS.x, RATS.z, 3); }
+            if (engaged&&t % 5 === 0) await q.attackNpc(engaged);
+            else if (selectedIndex===null&&!rat) { if (t % 10 === 0) await q.dash('to rats', RATS.x, RATS.z, 3); }
             else if (selectedIndex===null&&rat&&t % 4 === 0) {
                 selectedIndex=rat.index;idleSince=t;
                 observeHettyRat(q,'attack',rat.index);
