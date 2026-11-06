@@ -624,6 +624,33 @@ test('north-side bank entry opens gate190 at its loc tile and observes the south
  }finally{clearInterval(timer);}
 });
 
+test('a run resumed in the Hazeel cave climbs its stairs before the bank walk; above ground nothing is clicked',async()=>{
+ const {leaveHazeelCave}=await import('./quest-sweep');
+ let player={worldX:2570,worldZ:9680,level:0},tick=0;
+ const clicks:any[]=[],walks:unknown[]=[];
+ const listeners=new Set<()=>void>();
+ const s={sdk:{getState:()=>({player})},tick:()=>tick,
+  onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},
+  direct:async(a:any)=>{clicks.push(a);return{success:true};}} as unknown as Session;
+ const timer=setInterval(()=>{tick++;
+  const last=clicks[clicks.length-1];
+  if(last?.locId===2853&&player.worldZ>9000)player={worldX:2587,worldZ:3237,level:0};
+  for(const cb of listeners)cb();},1);
+ try{
+  const result=await leaveHazeelCave(s,async(to)=>{walks.push(to);const t=to[to.length-1]!;player={worldX:t.x,worldZ:t.z,level:t.level};return{ok:true};});
+  expect(result).toEqual({ok:true});
+  expect(clicks.map(c=>[c.locId,c.x,c.z])).toEqual([[2853,2570,9683]]);
+  expect(walks).toEqual([[{x:2570,z:9682,level:0}]]);
+  expect(player).toEqual({worldX:2587,worldZ:3237,level:0});
+  clicks.length=0;walks.length=0;
+  expect(await leaveHazeelCave(s,async(to)=>{walks.push(to);return{ok:true};})).toEqual({ok:true});
+  expect(clicks).toEqual([]);expect(walks).toEqual([]);
+  player={worldX:2606,worldZ:9692,level:0};
+  const stuck=await leaveHazeelCave(s,async()=>({ok:true}));
+  expect(stuck).toEqual({ok:false,detail:'hazeel cave stairs foot 2570,9682,0 unobserved at 2606,9692,0'});
+ }finally{clearInterval(timer);}
+});
+
 test('Mightyrod fortress box-room entry pushes the secret wall and descends the hall ladder before bank selection',async()=>{
  let player={worldX:3029,worldZ:3505,level:1},tick=0;
  const clicks:any[]=[],walks:unknown[]=[];
