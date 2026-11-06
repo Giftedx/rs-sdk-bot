@@ -59,7 +59,7 @@ export function queueFacts(state:CoordinatorState,held:readonly HeldRuns[]=[],no
  }
 
  const dependencyReadiness = {ready: 0, waiting: 0, blocked: 0};
- const rootCounts = new Map<string, {pendingTasks: number; pendingRuns: number}>();
+ const rootCounts = new Map<string, {pendingTasks: number; pendingRuns: number; readyTasksIfFixed: number; readyRunsIfFixed: number}>();
  const blocked = [];
  for (const {spec, status} of active) {
   if (status !== 'pending') continue;
@@ -67,9 +67,13 @@ export function queueFacts(state:CoordinatorState,held:readonly HeldRuns[]=[],no
   const roots = terminalRoots(spec.id);
   dependencyReadiness[roots.size ? 'blocked' : unmet.length ? 'waiting' : 'ready']++;
   for (const id of roots) {
-   const count = rootCounts.get(id) ?? {pendingTasks: 0, pendingRuns: 0};
+   const count = rootCounts.get(id) ?? {pendingTasks: 0, pendingRuns: 0, readyTasksIfFixed: 0, readyRunsIfFixed: 0};
    count.pendingTasks++;
    if (spec.kind === 'run') count.pendingRuns++;
+   if (unmet.length === 1 && unmet[0] === id) {
+    count.readyTasksIfFixed++;
+    if (spec.kind === 'run') count.readyRunsIfFixed++;
+   }
    rootCounts.set(id, count);
   }
   if (unmet.length) blocked.push({id: spec.id, goal: spec.goal, capability: spec.capability,
@@ -242,7 +246,7 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'RECENT FINISHED TASKS, up to 48 succeeded or failed, newest settlement first (open tasks are in the active queue below; superseded tasks are omitted; counts are NOT game completion): '+JSON.stringify({...state,tasks:recent.map(r=>({spec:briefSpec(r.spec),status:r.status,runId:r.runId,error:clip(r.receipt?.error,240),output:r.receipt?.output?{account:r.receipt.output.account,ok:r.receipt.output.ok,evidence:r.receipt.output.evidence,error:clip(receiptOutputReason(r.receipt),240)}:null}))}),
   'DATED WORLD (timestamps matter; reserved main/specialists must not be used for tests): '+JSON.stringify(compact),
   'In the active queue, a string in dependencyRefs is a task ID. A number is a zero-based index into sharedDependencyIds. In proposal dependsOn use the full string task IDs.',
-  'Use rootBlockers to trace failed, superseded or missing prerequisites across the queue. When present, receipt gives the settlement time and a bounded failure excerpt even for roots outside recent history. Counts include downstream pending work and do not prove its readiness after one repair. Inspect the full root receipt before proposing a replacement or retiring obsolete work. Waiting chains without a terminal blocker and independent work remain eligible. Dependency-ready work still needs runtime admission.',
+  'Use rootBlockers to trace failed, superseded or missing prerequisites across the queue. When present, receipt gives the settlement time and a bounded failure excerpt even for roots outside recent history. pendingTasks and pendingRuns include all downstream work. readyTasksIfFixed and readyRunsIfFixed count only jobs whose sole unmet dependency is this root. Use both counts to decide which repair or set of repairs leads to a useful job. Inspect the full root receipt before proposing a replacement or retiring obsolete work. Dependency-ready work still needs runtime admission.',
   'COMPLETE ACTIVE QUEUE AND BLOCKED EDGES (not truncated to recent history): '+JSON.stringify(queueFacts(state,held)),
   'Full inventories, raw dated status and definitions: '+worldFile,
   'Task source, model/reviewer output, failures and complete receipts: .practice/coordinator/runs/<runId>/. Read these for any repair; do not re-diagnose from summaries.',
