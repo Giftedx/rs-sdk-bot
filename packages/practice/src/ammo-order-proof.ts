@@ -58,8 +58,9 @@ const lines=readFileSync(${JSON.stringify(join(rsSdkRoot(),'bots',name,'bot.env'
 if(!lines.includes(${JSON.stringify('SERVER='+p.server)})||!lines.includes(${JSON.stringify('GATEWAY_URL='+p.gateway)}))throw Error('owned practice account required');
 const session=await openBot(${JSON.stringify(name)});await waitTicks(session,3);await finish([session],true,'practice ownership registered');`];
 }
+const totals=(s:Save)=>{const m=new Map<number,number>();for(const c of [93,94,95])for(const i of s.inventories[c]??[])m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
+const reconciled=(before:Save,after:Save,changes:Map<number,number>)=>{const a=totals(before),b=totals(after);return [...new Set([...a.keys(),...b.keys(),...changes.keys()])].every(id=>(b.get(id)??0)===(a.get(id)??0)+(changes.get(id)??0));};
 export function headlessOrderChecks(before:Save,final:Save,refused:Save,production:Run,refusal:Run){
-    const totals=(s:Save)=>{const m=new Map<number,number>();for(const c of [93,94,95])for(const i of s.inventories[c]??[])m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
     const a=totals(before),b=totals(final),r=totals(refused),changes=new Map([[1511,-14],[52,75],[314,-135],[53,135]]);
     return {
         entry:qty(before,1511)===15&&qty(before,52)===35&&qty(before,314)===5705&&qty(before,53)===300&&qty(before,946)===1,
@@ -88,14 +89,33 @@ export function ammoOrderChecks(p:{before:Save[];donor:Save;received:Save;final:
         logout:(transfer.log.match(/LOGOUT logged-out/g)??[]).length>=2&&craft.log.includes('LOGOUT logged-out'),
     };
 }
+// The donor pays two boats from its pack. The receiver walks. Both start beyond the local approach.
+export const PLANNED_BANK={x:2615,z:3332,level:0};
+const PLANNED_FARES=60;
+export function plannedEntryChecks(p:{before:Save[];refused:Save[];final:Save[];receipt:any;names:string[];planned:Run;refusal:Run;repeat:Run}){
+    const {before,refused,final,receipt,names,planned,refusal,repeat}=p,none=new Map<number,number>();
+    const logouts=(r:Run)=>(r.log.match(/LOGOUT logged-out/g)??[]).length>=2;
+    return{
+        plannedTransfer:planned.code===0&&planned.log.includes('HANDOFF_RESULT {"ok":true')&&names.every(n=>planned.log.includes('HANDOFF_APPROACH {"account":'+JSON.stringify(n))),
+        plannedReceipt:receipt?.state==='settled'&&receipt.expected?.length===1&&receipt.expected[0].id===379&&receipt.expected[0].count===100,
+        plannedBank:qty(final[1]!,379)===qty(before[1]!,379)+100&&qty(final[0]!,379)===qty(before[0]!,379)-100,
+        plannedAssets:reconciled(before[0]!,final[0]!,new Map([[379,-100],[995,-PLANNED_FARES]]))&&reconciled(before[1]!,final[1]!,new Map([[379,100]])),
+        plannedPreHeld:qty(final[0]!,379,93)===qty(before[0]!,379,93)&&qty(before[0]!,379,93)===2,
+        plannedPosition:final.every(s=>s.position.level===PLANNED_BANK.level&&Math.max(Math.abs(s.position.x-PLANNED_BANK.x),Math.abs(s.position.z-PLANNED_BANK.z))<=8),
+        plannedRefusal:refusal.code!==0&&refusal.log.includes('handoff approach deadline')&&!refusal.log.includes('HANDOFF_RECEIPT')&&before.every((s,i)=>reconciled(s,refused[i]!,none)),
+        plannedRepeat:repeat.code!==0&&repeat.log.includes('already settled')&&!repeat.log.includes('START '),
+        plannedLogout:logouts(planned)&&logouts(refusal),
+    };
+}
 
 function verify(directory:string){
     const meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8'));
     const log=(label:string)=>readFileSync(join(directory,label+'.log'),'utf8')+readFileSync(join(directory,label+'.err'),'utf8');
     const checks={...ammoOrderChecks({before:[0,1].map(i=>readPracticeSave(join(directory,`before-${i}.sav`))),donor:readPracticeSave(join(directory,'donor.sav')),received:readPracticeSave(join(directory,'received.sav')),final:readPracticeSave(join(directory,'final.sav')),receipt:JSON.parse(readFileSync(join(directory,'receipt.json'),'utf8')),transfer:{code:meta.transferCode,log:log('transfer')},craft:{code:meta.craftCode,log:log('craft')},repeat:{code:meta.repeatCode,log:log('repeat')}}),
         ...headlessOrderChecks(readPracticeSave(join(directory,'headless-before.sav')),readPracticeSave(join(directory,'headless-final.sav')),readPracticeSave(join(directory,'headless-refused.sav')),{code:meta.headlessCode,log:log('headless')},{code:meta.refusalCode,log:log('headless-refusal')}),
+        ...plannedEntryChecks({before:[0,1].map(i=>readPracticeSave(join(directory,`planned-before-${i}.sav`))),refused:[0,1].map(i=>readPracticeSave(join(directory,`planned-refused-${i}.sav`))),final:[0,1].map(i=>readPracticeSave(join(directory,`planned-final-${i}.sav`))),receipt:JSON.parse(readFileSync(join(directory,'planned-receipt.json'),'utf8')),names:meta.plannedNames,planned:{code:meta.plannedCode,log:log('planned')},refusal:{code:meta.plannedRefusalCode,log:log('planned-refusal')},repeat:{code:meta.plannedRepeatCode,log:log('planned-repeat')}}),
         source:meta.source===workerSourceRevision(),fresh:Number.isFinite(meta.at)&&meta.at<=Date.now()&&Date.now()-meta.at<900000};
-    const report={ok:Object.values(checks).every(Boolean),at:Date.now(),checks,source:meta.source,scope:'Native150ms/25x: exact owned tips -> banked iron arrows; owned logs and feathers ->135 new banked headless arrows; no live or Ranged-route claim'};
+    const report={ok:Object.values(checks).every(Boolean),at:Date.now(),checks,source:meta.source,scope:'Native150ms/25x: exact owned tips -> banked iron arrows; owned logs and feathers ->135 new banked headless arrows; distant participants -> planned bank approach ->100 banked Lobsters; no live or Ranged-route claim'};
     writeFileSync(join(directory,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
 
@@ -108,10 +128,10 @@ async function run(directory:string){
     const lock=join(practiceDir(),'delivery-practice.lock'),fd=openSync(lock,'wx');
     writeFileSync(fd,JSON.stringify({pid:process.pid,task:'ammo-order',directory,at:Date.now()}));
     let stack:Awaited<ReturnType<typeof startStack>>|undefined;
-    const command=async(args:string[],env:Record<string,string>,label:string):Promise<Run>=>{
+    const command=async(args:string[],env:Record<string,string>,label:string,timeoutMs=180000):Promise<Run>=>{
         const out=join(directory,label+'.log'),err=join(directory,label+'.err');
         const child=Bun.spawn({...ammoChildConfiguration(args,env,endpoints),windowsHide:true,stdout:Bun.file(out),stderr:Bun.file(err)});
-        let expired=false;const timer=setTimeout(()=>{expired=true;void killTree(child.pid);},180000);
+        let expired=false;const timer=setTimeout(()=>{expired=true;void killTree(child.pid);},timeoutMs);
         const code=await child.exited;clearTimeout(timer);
         return{code:expired?-1:code,log:readFileSync(out,'utf8')+readFileSync(err,'utf8')};
     };
@@ -153,7 +173,29 @@ async function run(directory:string){
         await waitPracticeSave(headlessPath,s=>qty(s,53)===435);copyFileSync(headlessPath,join(directory,'headless-final.sav'));
         const refusal=await command(headlessArgs,{CAP:'1600'},'headless-refusal');
         copyFileSync(headlessPath,join(directory,'headless-refused.sav'));
-        writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source,order,names,server:endpoints.server,endpoints:{ports:endpoints.ports,instance:endpoints.instance},transferCode:transfer.code,craftCode:craft.code,repeatCode:repeat.code,headlessCode:headless.code,refusalCode:refusal.code},null,2));
+        const plannedNames=[runBotName('pdon',1),runBotName('prec',1)],plannedOrder='planned-'+Date.now(),plannedPaths:string[]=[];
+        const plannedStart=[{x:3028,z:3221,level:0},{x:2662,z:3305,level:0}];
+        for(const [i,name]of plannedNames.entries()){
+            if(existsSync(join(rsSdkRoot(),'bots',name)))throw Error('practice name already exists');
+            const planned=await createBot(name);
+            writeFileSync(planned.envPath,ammoProofAccountEnv(readFileSync(planned.envPath,'utf8'),endpoints));
+            plannedPaths.push(await applyPreset(name,{position:plannedStart[i]!,skills:{Hitpoints:i?47:16},inventory:i?[{id:1891,count:1},{id:1891,count:1},{id:1891,count:1}]:[{id:379,count:1},{id:379,count:1},{id:231,count:1},{id:995,count:100}],bank:i?[{id:995,count:175}]:[{id:379,count:173},{id:995,count:19885}]}));
+            if((await command(ammoRegistrationArgs(name,endpoints),{},'planned-auth-'+i)).code!==0)throw Error('planned registration failed');
+            if(!(await waitPracticeSave(plannedPaths[i]!,s=>s.position.x===plannedStart[i]!.x&&s.position.z===plannedStart[i]!.z&&s.skills[3]!.level===(i?47:16))).matched)throw Error('planned entry state not retained');
+            copyFileSync(plannedPaths[i]!,join(directory,`planned-before-${i}.sav`));
+        }
+        const plannedArgs=['scripts/handoff-inputs.ts',...plannedNames,'100:Lobster','--notes',`--bank-x=${PLANNED_BANK.x}`,`--bank-z=${PLANNED_BANK.z}`,'--request-ms=60000','--timeout-ms=600000','--grace-ms=45000'];
+        const plannedEnv={HANDOFF_ORDER:plannedOrder,HANDOFF_ITEM_ID:'379'};
+        // A short budget ends before any item moves. The same order then completes on the full budget.
+        const plannedRefusal=await command([...plannedArgs,'--approach-ms=1000'],plannedEnv,'planned-refusal');
+        plannedPaths.forEach((path,i)=>copyFileSync(path,join(directory,`planned-refused-${i}.sav`)));
+        const planned=await command([...plannedArgs,'--approach-ms=1800000'],plannedEnv,'planned',420000);
+        await waitPracticeSave(plannedPaths[1]!,s=>qty(s,379)===100);
+        plannedPaths.forEach((path,i)=>copyFileSync(path,join(directory,`planned-final-${i}.sav`)));
+        const plannedReceipt=join(practiceDir(),'item-handoffs',plannedOrder,`${plannedNames[0]}-${plannedNames[1]}.json`.toLowerCase());
+        writeFileSync(join(directory,'planned-receipt.json'),existsSync(plannedReceipt)?readFileSync(plannedReceipt):'null');
+        const plannedRepeat=await command([...plannedArgs,'--approach-ms=1800000'],plannedEnv,'planned-repeat');
+        writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source,order,names,plannedNames,plannedCode:planned.code,plannedRefusalCode:plannedRefusal.code,plannedRepeatCode:plannedRepeat.code,server:endpoints.server,endpoints:{ports:endpoints.ports,instance:endpoints.instance},transferCode:transfer.code,craftCode:craft.code,repeatCode:repeat.code,headlessCode:headless.code,refusalCode:refusal.code},null,2));
         return verify(directory);
     }finally{
         try{await stack?.stop();}finally{closeSync(fd);unlinkSync(lock);}
