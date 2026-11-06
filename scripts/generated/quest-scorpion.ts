@@ -193,6 +193,7 @@ try {
         { label: 'to north-east bend', to: { x: 2951, z: 9793, tol: 2 } },
         { label: 'to dungeon ladder', to: { x: TAV_LADDER.x + 1, z: TAV_LADDER.z + 6400, tol: 1 } },
     ]) await q.walk(leg.label, [leg.to], trace(leg.label));
+    await q.climb('dungeon ladder up', ladderAt({ x: TAV_LADDER.x + 1, z: TAV_LADDER.z + 6400 }, /climb-up/i), /climb-up/i, () => (q.pos()?.worldZ ?? 9999) < 9000);
     releasePrayer();
     await setPfm(false);
 
