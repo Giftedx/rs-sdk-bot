@@ -13,6 +13,7 @@ import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { castable } from '../teleport-runes';
 import { needs, reservedEdible } from '../quest-sweep';
+import { magicKit, type MagicKit } from '../../packages/core/src/gather';
 import { PRESETS } from '../../packages/practice/src/presets';
 // Root interface ids of every interface interface_chat/scripts/chat.rs2 sets text on, from content/pack/interface.pack.
 const CHAT_NAMES = /^(chat[1-4]|npcchat[1-4]|message[1-5]|multi[2-5]|multiobj[2-4]|multiobj3_close|objbox[1-4]|doubleobjbox|inter_213|skill_multi[2-5])$/;
@@ -415,10 +416,34 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
             await waitUntil(s, () => worn().includes(item.id), { timeoutTicks: 5 });
         }
     };
+    // One blow at an NPC in a fight the quest script runs itself, with the kit the account fights with: a bow in the pack
+    // or worn is wielded and the Attack option clicked; without one, a strike spell the pack's runes allow is cast at the
+    // cast rate (five ticks, player_magic.rs2) with the staff wielded; with neither, the Attack option alone. The sweep
+    // brings the bow and QUEST_ARROWS, or the staff and QUEST_CASTS' runes, for a Ranged-over-Attack or Magic-over-Attack
+    // account. A ranged or melee blow repeats on its own; a cast does not, so the caller calls again each few ticks.
+    let lastStrikeAt = -Infinity;
+    const strikeKit = (): MagicKit | null => {
+        const magic = st()?.skills?.find((k: any) => k.name === 'Magic')?.baseLevel ?? 1;
+        return magicKit([...(st()?.inventory ?? []), ...s.sdk.getEquipment()].map((i: any) => ({ id: i.id, count: i.count })), magic, 1);
+    };
+    const attackNpc = async (n: any): Promise<void> => {
+        const worn = () => s.sdk.getEquipment().map((i: any) => i.id);
+        const hasBow = BOWS.some(id => worn().includes(id) || (st()?.inventory ?? []).some((i: any) => i.id === id));
+        const kit = hasBow ? null : strikeKit();
+        if (kit) {
+            if (kit.staff !== undefined && !worn().includes(kit.staff)) { const staff = (st()?.inventory ?? []).find((i: any) => i.id === kit.staff); if (staff) { await s.bot.equipItem(staff); await waitUntil(s, () => worn().includes(kit.staff!), { timeoutTicks: 5 }); } }
+            if (T() - lastStrikeAt < 5) return;
+            lastStrikeAt = T();
+            await s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: componentId(kit.component), reason: 'SDK' });
+            return;
+        }
+        if (hasBow) await wieldBow();
+        await s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
+    };
     return {
         s, st, pos, inv, hp, xp, cnt, has, slot, cheb, near, lvl, dialogOpen, sawText, msgCount, T, stats, milestone, dispose,
         blockDoor, guard, fail, end, gains, detail, opLoc, locs, findLoc, locAt, opIndex, npc, talkTo, useOnLoc, useOnNpc, useOnItem,
-        step, converse, walk, talk, climb, teleport, canCast, openDoor, shutAt, dash, wieldBow,
+        step, converse, walk, talk, climb, teleport, canCast, openDoor, shutAt, dash, wieldBow, attackNpc,
         waitTicks: async (n: number) => { const until=s.tick()+n;if(n>0)await waitUntil(s,()=>s.tick()>=until||stats.died||retreating||T()>CAP,{timeoutTicks:n,signal:sustain.aborted});await guard('wait'); },
         waitUntil: async (f: () => boolean, ticks: number) => {const reached=await waitUntil(s, () => f() || stats.died||retreating||T()>CAP, { timeoutTicks: ticks,signal:sustain.aborted });await guard('wait condition');return reached;},
     };

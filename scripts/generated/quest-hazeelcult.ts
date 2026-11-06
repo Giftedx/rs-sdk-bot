@@ -129,13 +129,12 @@ try {
     await q.step('raft', () => q.opLoc(loc(RAFT), 1), () => q.near(2606, 9692, 4), 12, 4);
     await closeDlg();
     await q.talk('alomone', /^alomone$/i, [], () => q.sawText(/die!!!/i), { x: 2609, z: 9670 }, 40);
-    // Alomone (level 13) dies to a low-Attack ranger's bow, not to its hands; the sweep brings the bow and QUEST_ARROWS.
-    await q.wieldBow();
+    // Alomone (level 13) dies to a low-Attack account's bow or strike spells, not to its hands (q.attackNpc).
     const alo = (): any => q.npc(/^alomone$/i);
     for (let t = 0; t < 120 && !ground(ITEM.armour); t++) {
         await q.guard('alomone');
         const a = alo();
-        if (a && t % 4 === 0) await q.s.direct({ type: 'interactNpc', npcIndex: a.index, optionIndex: a.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
+        if (a && t % 4 === 0) await q.attackNpc(a);
         await q.waitTicks(1);
     }
     await q.step('armour', () => { const g = ground(ITEM.armour); return g ? q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' }) : q.waitTicks(1); }, () => q.has(ITEM.armour), 12, 6);
