@@ -39,8 +39,10 @@ export const NPC_SOURCES:Record<number,NpcSource>={
  1767:{...AGGIE,needs:[{id:1793,count:2}],coins:5,yields:1,choices:[/make dyes for me/i,/make blue dye/i,/^okay, make me some blue dye/i]},
 };
 // Two items used on each other: orange dye is red on yellow (skill_crafting/scripts/dye_mixing.rs2); soft clay is clay
-// on a bucket of water, which comes back empty (skill_crafting/scripts/pottery/pottery.rs2 make_softclay).
-export const COMBINE_SOURCES:Record<number,[number,number]>={1769:[1763,1765],1761:[434,1929]};
+// on a bucket of water, which comes back empty (skill_crafting/scripts/pottery/pottery.rs2 make_softclay); a seasoned
+// sardine is doogle leaves on a raw sardine (quests/quest_fluffs/scripts/quest_fluffs.rs2 opheldu). The leaves grow as
+// a ground spawn beside Gertrude's house; Gerrant in Port Sarim sells the sardine.
+export const COMBINE_SOURCES:Record<number,[number,number]>={1769:[1763,1765],1761:[434,1929],1552:[327,1573]};
 // An ore mined from a rock with any pickaxe in the pack or wielded (skill_mining/scripts/pickaxe_checker.rs2). The
 // rocks are the locs of skill_mining/configs/rocks.loc at the tiles the map files (maps/*.jm2) place them; `level` is the
 // Mining level the rock asks (mine.dbrow rock_level). The six clay rocks inside the Crafting Guild (2937-2943,
@@ -257,9 +259,11 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
      if(!await waitUntil(s,()=>held(src.logs)<logsHeld,{timeoutTicks:30})){console.log(`QUEST_SWEEP_BURN ${JSON.stringify({item:g.id,at:fireAt,lit:false})}`);await walk({x:fireAt.x-2,z:fireAt.z,level:fireAt.level});continue;}
      const lit=s.tick();
      if(src.uses){
-      // The fire stands on the tile the logs were lit on; the item goes on it as soon as the loc shows.
+      // The fire stands on the tile the logs were lit on; the item goes on it as soon as the loc shows. The logs leave the
+      // pack when the first strike starts, and each strike lights with stat_random(firemaking, 64, 512) every four ticks
+      // (skill_firemaking/scripts/firemaking.rs2): at Firemaking 1 a quarter of strikes catch, so the fire gets twenty.
       const fire=()=>(st()?.nearbyLocs??[]).find((l:any)=>/^fire$/i.test(l.name)&&Math.max(Math.abs(l.x-fireAt.x),Math.abs(l.z-fireAt.z))<=1);
-      if(!await waitUntil(s,()=>!!fire(),{timeoutTicks:10})){console.log(`QUEST_SWEEP_BURN ${JSON.stringify({item:g.id,at:fireAt,lit:true,fire:false})}`);continue;}
+      if(!await waitUntil(s,()=>!!fire(),{timeoutTicks:80})){console.log(`QUEST_SWEEP_BURN ${JSON.stringify({item:g.id,at:fireAt,lit:true,fire:false})}`);continue;}
       const item=(st()?.inventory??[]).find((i:any)=>i.id===src.uses);
       const r:any=await s.bot.useItemOnLoc(item,fire());
       await waitUntil(s,()=>held(g.id)>before,{timeoutTicks:15});
