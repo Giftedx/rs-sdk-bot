@@ -67,6 +67,30 @@ test('an isolated producer build is rejected until a finite live consumer is inc
  acceptProposal(s,{reason:'whole outcome',capabilities:[],tasks:[task('build',{kind:'build'}),run('consumer',['build'])]});expect(s.tasks).toHaveLength(2);
 });
 
+test('planner intake rejects a build whose consumer still has another terminal blocker',()=>{
+ const s=initialState();
+ addTasks(s,[task('failed-build',{kind:'build'}),run('failed-supply'),run('consumer',['failed-build','failed-supply'])],0);
+ complete(s,'failed-build',false,2);
+ complete(s,'failed-supply',false,4);
+ const build=task('new-build',{kind:'build'});
+ const proposal={reason:'Restore the quest route and its supplies',capabilities:[],tasks:[build],
+  replacements:[{from:'failed-build',to:'new-build'}]};
+ const before=structuredClone(s);
+ expect(()=>acceptProposal(s,proposal)).toThrow('build requires a finite live consumer dependency: new-build');
+ expect(s).toEqual(before);
+ expect(acceptProposal(s,{...proposal,tasks:[build,run('new-supply')],
+  replacements:[...proposal.replacements,{from:'failed-supply',to:'new-supply'}]})).toBe(2);
+ expect(s.tasks.find(r=>r.spec.id==='consumer')?.spec.dependsOn).toEqual(['new-build','new-supply']);
+});
+
+test('a build can reach its first run through an implicit account setup dependency',()=>{
+ const s=initialState();
+ const tasks=[task('build',{kind:'build'}),task('claim',{kind:'provision',role:'quest',dependsOn:['build']}),
+  task('proof'),{...run('first',['proof']),account:undefined,accountFrom:'claim'}];
+ expect(acceptProposal(s,{reason:'Prove the first job before setup',capabilities:[],tasks})).toBe(4);
+ expect(chooseTask(s,1)?.id).toBe('build');
+});
+
 test('an archived build ID cannot borrow a consumer through a settled proof',()=>{
  const s=initialState(),build=task('reused-build',{kind:'build'});
  addTasks(s,[build,task('past-proof',{dependsOn:[build.id]}),task('newer-build',{kind:'build'}),run('old-consumer',['past-proof'])],0);
