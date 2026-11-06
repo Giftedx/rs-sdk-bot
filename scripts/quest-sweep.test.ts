@@ -958,6 +958,13 @@ test('a Taverley-side target is east of Ardougne for an account the Big Wolf wou
  expect(eastOfArdougne(ardougne,kaqemeex,monty)).toBe(true);
  expect(eastOfArdougne(ardougne,kaqemeex,strong)).toBe(false);
  expect(eastOfArdougne({x:2946,z:3368,level:0},kaqemeex,monty)).toBe(false); // from Falador: the road
+ // Catherby is on the Ardougne side for the weak account only: bound for Doric's house or Varrock it takes the boats.
+ const catherby={x:2807,z:3441,level:0},doric={x:2951,z:3450,level:0},varrock={x:3210,z:3424,level:0};
+ expect(eastOfArdougne(catherby,doric,monty)).toBe(true);
+ expect(eastOfArdougne(catherby,varrock,monty)).toBe(true);
+ expect(eastOfArdougne(catherby,doric,strong)).toBe(false);
+ expect(eastOfArdougne(catherby,varrock,strong)).toBe(false);
+ expect(eastOfArdougne(catherby,varrock)).toBe(false);
  expect(fares(ardougne,[kaqemeex],monty)).toBe(BOAT_FARES);
  expect(fares(ardougne,[kaqemeex],strong)).toBe(0);
 });
