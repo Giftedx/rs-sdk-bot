@@ -1027,6 +1027,27 @@ test('a dye is a recipe: its ingredients are planned first, its dialogue step fo
  expect(picked.gathers).toEqual([{id:1957,count:2,how:'pick'}]);
 });
 
+test('Prince Ali: soft clay is clay on water, clay is mined with a pickaxe, ashes come from a lit log',async()=>{
+ const {MINE_SOURCES,BURN_SOURCES,COMBINE_SOURCES,BRONZE_PICKAXE,TINDERBOX,LOGS}=await import('../packages/core/src/gather');
+ const draynor={x:3092,z:3243,level:0};
+ const spawns=(id:number)=>id===LOGS?[{x:3089,z:3265,level:0}]:[];           // logs lie in Draynor
+ const seller=(id:number)=>id===1929?250:Infinity;                           // water buckets at Shantay's
+ const plan=gatherPlan([{id:1761,count:1},{id:592,count:1}],draynor,spawns,seller,()=>[],6,1,()=>[]);
+ expect(plan.gathers).toEqual([
+  {id:434,count:1,how:'mine'},            // clay from the Varrock south-west mine, 128 tiles off
+  {id:1761,count:1,how:'combine'},        // clay on the bucket of water (the bucket is bought)
+  {id:LOGS,count:1,how:'spawn'},          // the ashes' logs
+  {id:592,count:1,how:'burn'},
+ ]);
+ expect(plan.still).toEqual([{id:1929,count:1}]);
+ expect(plan.tools).toEqual([{id:BRONZE_PICKAXE,count:1},{id:TINDERBOX,count:1}]);
+ expect(COMBINE_SOURCES[1761]).toEqual([434,1929]);
+ expect(MINE_SOURCES[434]!.locs).toEqual([2108,2109]);expect(MINE_SOURCES[434]!.tiles.length).toBe(33);
+ expect(BURN_SOURCES[592]!.logs).toBe(LOGS);
+ // A clay seller nearer than any rock keeps clay in the shop plan.
+ expect(gatherPlan([{id:434,count:1}],draynor,()=>[],()=>50).still).toEqual([{id:434,count:1}]);
+});
+
 test('plant tiles come from the knowledge and rank by distance',async()=>{
  const {locsByDistance,pickableTiles}=await import('../packages/core/src/spawn-index');
  const m=new Map([[3366,[{x:2581,z:2984,level:0},{x:2583,z:2981,level:0}]]]);
