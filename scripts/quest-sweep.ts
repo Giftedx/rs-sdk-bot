@@ -137,7 +137,7 @@ export const QUEST_PICKUP_SLOTS=8,MIN_PICKUP_SLOTS=2;
 export const QUEST_PICKUPS:Record<string,Item[]>={hunt:[{id:1963,count:10},{id:431,count:1}]};
 // Arrows a quest's own fights take from a bow account, beyond the gathers' kills: Merlin's Crystal's Sir Mordred has 38
 // hitpoints behind Protect from Melee, and the quiver that emptied on him ended a run at Morgan Le Faye's door.
-export const QUEST_ARROWS:Record<string,number>={merlin:40,prince:30};
+export const QUEST_ARROWS:Record<string,number>={merlin:40,prince:30,hazeelcult:20};
 // Fishing Contest wants Fishing 10 (hemenster_fishing.rs2:70). An account short of it nets shrimps first, at the
 // nearest Net spot (Catherby beach beside Harry's shop, where the rod and bait come from): 250 XP a catch at 25x, five
 // catches from level 1. The net is a tool of the bank pass; the catches take pack slots until the quest.
