@@ -57,7 +57,7 @@ test('Heckel stages the southern gate, observes the north side, and names a fail
  expect(await fetchHeckelDust(io)).toMatchObject({ok:false,detail:expect.stringContaining('north arrival unobserved')});
 });
 import {readFileSync} from 'node:fs';
-import {leaveToManorTrip,plan,walkFar,needs,nearestBank,presetFor,leaveStronghold,leaveFortress,walkCorridor,KARAMJA,gatherPlan,MILK,BUCKET,generalStores,fetchManorFishFood,manorFoodNeed,manorPoisonNeed,reserveInputSlots,FOOD,type ManorIO} from './quest-sweep';
+import {leaveToManorTrip,plan,mealPlan,walkFar,needs,nearestBank,presetFor,leaveStronghold,leaveFortress,walkCorridor,KARAMJA,gatherPlan,MILK,BUCKET,generalStores,fetchManorFishFood,manorFoodNeed,manorPoisonNeed,reserveInputSlots,FOOD,type ManorIO} from './quest-sweep';
 import {spawnsByDistance} from '../packages/core/src/spawn-index';
 import {equipment,questSweepChecks} from '../packages/practice/src/quest-sweep-proof';
 import type {Session} from '../packages/core/src/inprocess';
@@ -1210,6 +1210,10 @@ test('a strike spell kit is the strongest strike the runes allow, and the highes
  expect(magicKit([{id:1387,count:1},{id:556,count:4},{id:558,count:2}],99,2)?.component).toBe('magic:fire_strike');
  expect(magicKit([{id:1387,count:1},{id:556,count:4},{id:558,count:2}],99)).toBeNull();
  expect(magicKit(monty,12)?.component).toBe('magic:wind_strike');
+ // A seller covers the runes the account lacks: fire runes owned, air and mind from a shop.
+ expect(magicKit([{id:554,count:150}],29,6,id=>id===556||id===558)).toEqual({staff:undefined,component:'magic:fire_strike',level:13,maxhit:8,runes:{558:1,554:3,556:2}});
+ expect(magicKit([],5,6,id=>id===556||id===558)?.component).toBe('magic:wind_strike');
+ expect(magicKit([],29,6,()=>false)).toBeNull();
  // Attack 69 with Strength 1 and Ranged 1 does not beat a goblin series bare-handed; Magic 99 does. A rat is the staff's
  // kill too: a wielded staff with autocast casts on every attack, so its runes are budgeted.
  expect(killStyle(288,69,1,1,1)).toBeNull();
@@ -1392,4 +1396,20 @@ test('a far walk whose quest guard has already aborted takes no leg and reports 
  const s:any={sdk:{getState:()=>({player:{worldX:2655,worldZ:3283,level:0},inventory:[]})},tick:()=>0};
  const r=await walkFar(s,{} as any,{x:3222,z:3218,level:0},150,{signal:AbortSignal.abort('quest guard')});
  expect(r).toEqual({ok:false,reason:'stopped',detail:'quest guard'});
+});
+
+test('the meal takes the preset food kinds first, then the best other edibles the bank holds for the units still short',()=>{
+ const food=new Map([[379,4],[563,5]]);
+ // No lobsters banked: four sharks stand in; the law runes are not edible and stay missing.
+ expect(mealPlan(food,[],[{id:385,count:16},{id:1895,count:3}])).toEqual([{id:385,count:4}]);
+ // One lobster banked and two sharks in the pack: the lobster, then one more edible unit.
+ expect(mealPlan(food,[{id:385,count:2}],[{id:379,count:1},{id:333,count:5}])).toEqual([{id:379,count:1},{id:333,count:1}]);
+ // Enough lobsters: nothing else.
+ expect(mealPlan(food,[],[{id:379,count:9},{id:385,count:9}])).toEqual([{id:379,count:4}]);
+ // Merlin's Crystal: the one bread banked is the beggar's (the quest plan withdraws it) and is no meal; a bread the pack
+ // holds for the quest does not count as food carried either.
+ const beggar=new Map([[2309,1]]);
+ expect(mealPlan(food,[],[{id:2309,count:1}],[{id:2309,count:1}],beggar)).toEqual([]);
+ expect(mealPlan(food,[{id:2309,count:1}],[{id:385,count:2}],[],beggar)).toEqual([{id:385,count:2}]);
+>>>>>>> origin/master
 });

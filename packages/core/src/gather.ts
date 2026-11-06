@@ -84,14 +84,16 @@ export type MagicKit={staff?:number;component:string;level:number;maxhit:number;
 // (TheFullMonty: Magic 99, a staff of fire, air and mind runes: Fire Strike at 2 air and 1 mind a cast).
 // `casts`: the casts the runes must cover. The plan asks for CASTS_MIN; a fight asks for one more kill's casts, so a
 // series that has spent most of its budget still takes its last easy animal (a chicken after a bear).
-export function magicKit(owned:readonly Item[],magic:number,casts=CASTS_MIN):MagicKit|null{
+// `sold`: a rune a shop sells counts as covered; the sweep's shop plan buys the kit's shortfall with its other
+// consumables (Quickhandjob: Magic 29, fire runes and nothing else; Aubury sells the air and mind runes).
+export function magicKit(owned:readonly Item[],magic:number,casts=CASTS_MIN,sold:(id:number)=>boolean=()=>false):MagicKit|null{
  const have=(id:number)=>owned.filter(i=>i.id===id).reduce((c,i)=>c+i.count,0);
  const staffs=Object.keys(STAFF_RUNE).map(Number).filter(id=>have(id)>=1);
  for(const sp of [...SPELLS].reverse()){
   if(sp.level>magic)continue;
   for(const staff of [...staffs,undefined]){
    const runes:Record<number,number>=Object.fromEntries(Object.entries(sp.runes).filter(([id])=>staff===undefined||STAFF_RUNE[staff]!==Number(id)).map(([id,n])=>[Number(id),n]));
-   if(Object.entries(runes).every(([id,n])=>have(Number(id))>=n*casts))return{staff,component:sp.component,level:sp.level,maxhit:sp.maxhit,runes};
+   if(Object.entries(runes).every(([id,n])=>have(Number(id))>=n*casts||sold(Number(id))))return{staff,component:sp.component,level:sp.level,maxhit:sp.maxhit,runes};
   }
  }
  return null;

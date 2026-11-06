@@ -74,6 +74,35 @@ test('provision-derived aliases cannot overlap or supply duplicate participants'
  expect(boundAccounts(s.tasks[3]!.spec,s)).toBeNull();startTask(s,'run1',3,'r');expect(chooseTask(s,4)).toBeNull();
 });
 
+test('account setup waits for a prepared first run and follows its review hold',()=>{
+ const s=initialState();
+ addTasks(s,[task('helper',{kind:'provision',role:'helper',priority:50}),
+  task('orphan',{kind:'provision',role:'helper',priority:100}),task('proof'),
+  task('first-job',{kind:'run',accountFrom:'helper',dependsOn:['proof'],accept:{counters:{made:1}}})],0);
+ expect(chooseTask(s,1)?.id).toBe('proof');
+ startTask(s,'proof',2,'p');
+ expect(chooseTask(s,3)).toBeNull();
+ const failed=structuredClone(s);
+ finishTask(failed,{taskId:'proof',runId:'p',ok:false,at:4,output:{}});
+ expect(chooseTask(failed,5)).toBeNull();
+ finishTask(s,{taskId:'proof',runId:'p',ok:true,at:4,output:{}});
+ expect(chooseTask(s,5,{runHeld:()=>true})).toBeNull();
+ expect(chooseTask(s,5)?.id).toBe('helper');
+});
+
+test('a prepared run can provision two participants without claiming after either setup fails',()=>{
+ const s=initialState();
+ addTasks(s,[task('first',{kind:'provision',role:'helper'}),task('second',{kind:'provision',role:'helper'}),
+  task('trade',{kind:'run',participants:['@first','@second'],dependsOn:['second'],accept:{bank:{'333':10}}})],0);
+ expect(chooseTask(s,1)?.id).toBe('first');
+ startTask(s,'first',2,'p');
+ const failed=structuredClone(s);
+ finishTask(failed,{taskId:'first',runId:'p',ok:false,at:3,output:{}});
+ expect(chooseTask(failed,4)).toBeNull();
+ finishTask(s,{taskId:'first',runId:'p',ok:true,at:3,output:{account:'Helper1'}});
+ expect(chooseTask(s,4)?.id).toBe('second');
+});
+
 test('ready source builds drain live runs and keep all live work offline until build settles',()=>{
  const s=initialState();addTasks(s,[task('live',{kind:'run',account:'Helper1',accept:{counters:{made:1}}}),task('next',{kind:'run',account:'Helper2',priority:100,accept:{counters:{made:1}}}),task('build',{kind:'build'})],0);
  startTask(s,'live',1,'l');expect(chooseTask(s,2)).toBeNull();
@@ -83,8 +112,12 @@ test('ready source builds drain live runs and keep all live work offline until b
 });
 
 test('provision attempts serialize; goals overdue thirty minutes outrank fresh high-score work',()=>{
- const s=initialState();addTasks(s,[task('p1',{kind:'provision',role:'helper'}),task('p2',{kind:'provision',role:'helper'})],0);
+ const s=initialState();addTasks(s,[task('p1',{kind:'provision',role:'helper'}),task('p2',{kind:'provision',role:'helper'}),
+  task('trade',{kind:'run',participants:['@p1','@p2'],accept:{bank:{'333':10}}})],0);
+ expect(chooseTask(s,1)?.id).toBe('p1');
  startTask(s,'p1',1,'p');expect(chooseTask(s,2)).toBeNull();
+ finishTask(s,{taskId:'p1',runId:'p',ok:true,at:3,output:{account:'Helper1'}});
+ expect(chooseTask(s,4)?.id).toBe('p2');
  const fair=initialState();addTasks(fair,[task('old',{goal:'quests',priority:1,estimatedMs:3600000}),task('fresh',{goal:'wealth',priority:100,estimatedMs:1}),task('older',{goal:'gear',priority:1,estimatedMs:3600000})],0);
  fair.goals.find(g=>g.id==='quests')!.lastStartedAt=10;fair.goals.find(g=>g.id==='gear')!.lastStartedAt=0;fair.goals.find(g=>g.id==='wealth')!.lastStartedAt=1800000;
  expect(chooseTask(fair,1800010)?.id).toBe('older');
