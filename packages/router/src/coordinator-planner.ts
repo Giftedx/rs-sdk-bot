@@ -234,6 +234,7 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'Return at most12 tasks per proposal. Keep independent goal lanes eligible. Do not fill slots with surplus earning. If work is genuinely waiting, return tasks:[] and explain the missing event. No human confirmation is required within current authority.',
   'heldBuilds in the active queue names capabilities whose last builds failed with one fault. Their builds wait 24 hours from the last failure. Do not propose another author pass for the same fault. Plan other lanes. Only a build with a new observation, stated in newEvidence, passes the first hold.',
   'heldRuns in the active queue names runs that wait because the newest review of their capability rejected its current source. They start by themselves when a repair build changes the owned files. Queue that repair or cancel them; do not queue another run of that capability.',
+  'Use cancel:[{id,use?}] for obsolete pending tasks. Name a surviving substitute in use if a pending task still needs the prerequisite, or cancel the dependent tasks in the same proposal. Account references keep their original provision task while a consumer remains queued.',
   'A pending task behind a failed task retires after 24 hours (supersededBy dead-dependency:<id>), and blocked lists these tasks until then. Use replacements inside that time when the consumer still matters; after it, propose a new task.',
   'world.capacity.diskFreeGB is free space on the checkout volume. Below 2 GiB the coordinator starts no planner and no task, so never plan work that writes large outputs near that floor.',
   'A hostDeferred receipt identifies unavailable RAM or a busy native practice turn before a check starts. Retain the prepared source and proof evidence. A same-source replacement build resumes native delivery without another author call when practice capacity is available. Keep its finite consumer connected through replacements. Wait for capacity before retrying.',
@@ -280,17 +281,27 @@ export function acceptProposal(state:CoordinatorState,raw:any,base=projectRoot,s
   if(!Array.isArray(raw.replacements)||raw.replacements.length>24||raw.replacements.some((r:any)=>typeof r?.from!=='string'||typeof r?.to!=='string'))throw Error('invalid replacements');
   replaceTasks(candidate,raw.replacements);
  }
- // cancel retires pending tasks that no longer serve a consumer (for example a build that only rebinds source);
- // each consumer then depends on `use` instead, or loses that dependency.
- if(raw.cancel!==undefined){
-  if(!Array.isArray(raw.cancel)||raw.cancel.length>24)throw Error('invalid cancel list');
+ // Cancel obsolete pending work without removing prerequisites from surviving work.
+ const cancellations:unknown=raw.cancel;
+ if(cancellations!==undefined){
+  if(!Array.isArray(cancellations)||cancellations.length>24||cancellations.some(c=>typeof c?.id!=='string'||c.use!==undefined&&typeof c.use!=='string'))throw Error('invalid cancel list');
+  const cancelled=new Set<string>(cancellations.map(c=>c.id));
+  if(cancelled.size!==cancellations.length)throw Error('duplicate cancellation');
   const byId=new Map(candidate.tasks.map(r=>[r.spec.id,r]));
-  for(const c of raw.cancel){
-   const old=byId.get(c?.id);if(!old||old.status!=='pending')throw Error('cancel needs a pending task: '+c?.id);
-   if(c.use!==undefined&&!byId.has(c.use))throw Error('cancel substitute is unknown: '+c.use);
+  const surviving=candidate.tasks.filter(r=>r.status==='pending'&&!cancelled.has(r.spec.id));
+  for(const c of cancellations){
+   const old=byId.get(c.id);if(!old||old.status!=='pending')throw Error('cancel needs a pending task: '+c.id);
+   if(c.use!==undefined){
+    const substitute=byId.get(c.use);
+    if(!substitute||substitute.status==='failed'||substitute.status==='superseded'||cancelled.has(c.use))throw Error('cancel needs a surviving substitute: '+c.use);
+   }
+   for(const r of surviving){
+    if(provisionRefs(r.spec).includes(c.id))throw Error('cancel would leave an account reference from '+r.spec.id+' to '+c.id);
+    if(!r.spec.dependsOn.includes(c.id))continue;
+    if(c.use===undefined)throw Error('cancel needs a substitute for '+c.id+' used by '+r.spec.id);
+    r.spec.dependsOn=[...new Set(r.spec.dependsOn.map(id=>id===c.id?c.use:id))];
+   }
    old.status='superseded';old.supersededBy=c.use??'cancelled';
-   for(const r of candidate.tasks)if(r.status==='pending'&&r.spec.dependsOn.includes(old.spec.id))
-    r.spec.dependsOn=[...new Set(r.spec.dependsOn.flatMap(d=>d===old.spec.id?(c.use?[c.use]:[]):[d]))];
   }
  }
  // A changed contract must be built before any old consumer can request its
