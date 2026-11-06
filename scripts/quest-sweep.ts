@@ -957,7 +957,9 @@ export async function sweep(account:string,quest:string,fresh?:string){
   const seen=(ids:readonly number[])=>Object.fromEntries(ids.filter(id=>owned.some(i=>i.id===id)).map(id=>[id,count(owned,id)]));
   console.log(`QUEST_SWEEP_KIT ${JSON.stringify({kit,mkit,bows:seen(BOWS),arrows:seen(ARROWS),bank:rows().length,pack:pack().length,worn:worn().length,ranged:skill('Ranged'),magic:skill('Magic'),attack:skill('Attack'),strength:skill('Strength')})}`);
   const gather=questGatherPlan(quest,p.missing,here(),sellerAt,undefined,skill('Attack'),kit?skill('Ranged'):1,undefined,mkit?skill('Magic'):1,skill('Strength'));
-  const questArrows=kit?QUEST_ARROWS[quest]??0:0;
+  // The quest's own fights take arrows from an account that fights with the bow (Ranged above Attack), not from one
+  // that merely owns a bow.
+  const questArrows=kit&&skill('Ranged')>skill('Attack')?QUEST_ARROWS[quest]??0:0;
   if(kit&&(gather.gathers.some(g=>g.kit==='ranged')||questArrows))gather.tools.push({id:kit.bow,count:1},{id:kit.arrows,count:gather.gathers.filter(g=>g.kit==='ranged').reduce((n,g)=>n+arrowsFor(g.id,g.count),0)+questArrows});
   // A magic kill takes the staff and the strike's runes for its casts (the staff's own rune costs nothing).
   if(mkit&&gather.gathers.some(g=>g.kit==='magic')){
