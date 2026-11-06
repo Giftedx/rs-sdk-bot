@@ -2,7 +2,7 @@ import {existsSync,readFileSync,writeFileSync,appendFileSync,statSync,truncateSy
 import {basename,join} from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
 import {freemem,cpus} from 'node:os';
-import {addTasks,chooseTask,startTask,finishTask,refreshQualifications,qualificationDemand,boundAccounts,fleetExpansion,activeBuildFocus,failedBuildStreak,heldBuilds,compactState,usefulLiveReceipt,FOCUS_FAILURE_LIMIT,type CoordinatorState,type CoordTask} from './coordinator';
+import {addTasks,chooseTask,startTask,finishTask,refreshQualifications,qualificationDemand,boundAccounts,fleetExpansion,activeBuildFocus,failedBuildStreak,heldBuilds,compactState,usefulLiveReceipt,preparedProvisionClaims,FOCUS_FAILURE_LIMIT,type CoordinatorState,type CoordTask} from './coordinator';
 import {buildFault} from './build-fault';
 import {projectRoot,coordinationDir,loadState,saveState,runDirectory,atomicJson,atomicText,event,spawnDetached,recoverPlanWrite,withPlanWrite,capabilitySource,publishCapabilityChanges} from './coordinator-store';
 import {DISK_FLOOR_GB,diskFreeGB,finishPlan,plannerDue,retireDeadTasks,reviewHold} from './coordinator-decisions';
@@ -55,14 +55,14 @@ const sourceErrors=new Map<string,string>();
 const cpuTotals=()=>cpus().reduce((s,c)=>({idle:s.idle+c.times.idle,total:s.total+Object.values(c.times).reduce((a,b)=>a+b,0)}),{idle:0,total:0});
 let previousCpu=cpuTotals();
 const tickSamples=new Map<string,{started:number;tick:number;at:number;latency:number|null}>();
-async function expandUsefulFleet(state:CoordinatorState,config:any){
+async function expandUsefulFleet(state:CoordinatorState,config:any,runHeld:(task:CoordTask)=>boolean){
  if(!config.autoExpand)return;
  const now=Date.now(),cpu=cpuTotals(),delta=cpu.total-previousCpu.total,usage=delta>0?1-(cpu.idle-previousCpu.idle)/delta:null;previousCpu=cpu;
  const records=new Map(state.tasks.map(r=>[r.spec.id,r]));
  const running=state.tasks.filter(r=>r.status==='running'&&r.spec.kind==='run');
  const ready=state.tasks.filter(r=>r.status==='pending'&&r.spec.kind==='run'&&r.spec.dependsOn.every(id=>records.get(id)?.status==='succeeded'));
- const preparedClaims=state.tasks.filter(r=>r.status==='pending'&&r.spec.kind==='provision'&&r.spec.dependsOn.every(id=>records.get(id)?.status==='succeeded')&&state.tasks.some(child=>child.status==='pending'&&child.spec.kind==='run'&&(child.spec.accountFrom===r.spec.id||child.spec.participants?.includes('@'+r.spec.id))));
- const demand=new Set([...running,...ready].flatMap(r=>boundAccounts(r.spec,state)??[]).map(n=>n.toLowerCase())).size+preparedClaims.length;
+ const preparedClaims=preparedProvisionClaims(state,records,undefined,runHeld);
+ const demand=new Set([...running,...ready].flatMap(r=>boundAccounts(r.spec,state)??[]).map(n=>n.toLowerCase())).size+preparedClaims.size;
  const active=new Set(running.flatMap(r=>boundAccounts(r.spec,state)??[]).map(n=>n.toLowerCase()));
  const rows=new Map(liveRows().map(r=>[String(r.name).toLowerCase(),r]));let stalled=false;const latencies:number[]=[];
  for(const name of active){
@@ -332,7 +332,15 @@ async function tick(state:CoordinatorState,config:any){
   const released=config.focusCapability;
   await withPlanWrite(()=>{clearFocus(released);delete config.focusCapability;delete config.focusSince;event('fleet-focus-released',{capability:released,failedBuilds:failedBuildStreak(state,released)});});
  }
- await expandUsefulFleet(state,config);
+ const owned=new Map<string,readonly string[]>(),ownedFiles=(cap:string)=>{if(!owned.has(cap))owned.set(cap,deliveryTask(cap).files);return owned.get(cap)!;};
+ // A rejected review holds its capability's runs in the queue until a repair changes the owned files. The worker repeats
+ // the check at start (coordinator-worker.ts), so a read error here holds nothing.
+ const reviewHolds=new Map<string,boolean>(),runHeld=(task:CoordTask)=>{
+  const cap=task.capability!;if(reviewHolds.has(cap))return reviewHolds.get(cap)!;
+  let held=false;try{held=reviewHold(state,cap,()=>capabilitySource(ownedFiles(cap)))!==null;}catch{/* the worker reports an unreadable source */}
+  reviewHolds.set(cap,held);return held;
+ };
+ await expandUsefulFleet(state,config,runHeld);
  const developmentLimit=config.maxActive??2,liveLimit=config.maxLive??readPlan().maxBots;
  runRules(state,liveLimit);
  let controllerPrepared=false,liveBlocked=false;
@@ -342,15 +350,9 @@ async function tick(state:CoordinatorState,config:any){
   try{await ensureSwarm(currentRevision(),{currentSource:()=>currentRevision()},false);sourceErrors.delete('controller');}
   catch(error){const detail=String(error);if(sourceErrors.get('controller')!==detail)event('live-controller-wait',{error:detail});sourceErrors.set('controller',detail);}
  }
+ // Expansion may have sampled review holds before controller preparation waited for a source rollout.
+ reviewHolds.clear();owned.clear();
  for(const held of heldBuilds(state,Date.now())){const key='hold:'+held.capability,seen=held.fault+'@'+held.at;if(sourceErrors.get(key)!==seen){event('build-held',held);sourceErrors.set(key,seen);}}
- const owned=new Map<string,readonly string[]>(),ownedFiles=(cap:string)=>{if(!owned.has(cap))owned.set(cap,deliveryTask(cap).files);return owned.get(cap)!;};
- // A rejected review holds its capability's runs in the queue until a repair changes the owned files. The worker repeats
- // the check at start (coordinator-worker.ts), so a read error here holds nothing.
- const reviewHolds=new Map<string,boolean>(),runHeld=(task:CoordTask)=>{
-  const cap=task.capability!;if(reviewHolds.has(cap))return reviewHolds.get(cap)!;
-  let held=false;try{held=reviewHold(state,cap,()=>capabilitySource(ownedFiles(cap)))!==null;}catch{/* the worker reports an unreadable source */}
-  reviewHolds.set(cap,held);return held;
- };
  // Running tasks finish. A full disk stops the whole loop, so new work stops first.
  const diskGB=diskFreeGB(projectRoot),diskLow=diskGB!==null&&diskGB<DISK_FLOOR_GB;
  if(diskLow!==lowDisk){lowDisk=diskLow;event(diskLow?'disk-low':'disk-recovered',{freeGB:diskGB,floorGB:DISK_FLOOR_GB});}
