@@ -174,9 +174,23 @@ try {
     await q.walk('to dusty gate inside', [{ x: GATE.x - 1, z: GATE.z, tol: 1 }]);
     await q.step('dusty gate out', () => q.opLoc(GATE, 1), () => !pastGate(), 15, 4);
     // The way back is the way in, leg by leg: the gate to the jail yard, the yard to the climb-down landing (2885,9797,
-    // beside the ladder's dungeon end); the client walk does not find the whole way from the gate in one leg.
-    await q.walk('to jail yard', [{ x: JAILER.x - 3, z: JAILER.z - 1, tol: 3 }]);
-    await q.walk('to dungeon ladder', [{ x: TAV_LADDER.x + 1, z: TAV_LADDER.z + 6400, tol: 1 }]);
+    // beside the ladder's dungeon end); the client walk does not find the whole way from the gate in one leg. A poison
+    // scorpion on the bot interrupts every walk click, so one in combat within reach is shot first.
+    const clearScorpions = async (): Promise<void> => {
+        for (let t = 0; t < 60; t++) {
+            const foe: any = (q.st()?.nearbyNpcs ?? []).find((n: any) => /scorpion/i.test(n.name) && n.inCombat && n.distance <= 3);
+            if (!foe) return;
+            if (t % 3 === 0 && q.pos()?.targetIndex !== foe.index) await q.s.direct({ type: 'interactNpc', npcIndex: foe.index, optionIndex: foe.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
+            await q.waitTicks(1);
+        }
+    };
+    for (const leg of [{ label: 'to jail yard', to: { x: JAILER.x - 3, z: JAILER.z - 1, tol: 3 } }, { label: 'to dungeon ladder', to: { x: TAV_LADDER.x + 1, z: TAV_LADDER.z + 6400, tol: 1 } }]) {
+        for (let i = 0; i < 3; i++) {
+            await clearScorpions();
+            if (await q.walk(leg.label, [leg.to]).then(() => true, () => false)) break;
+            if (i === 2) await q.fail(`walk ${leg.label}`);
+        }
+    }
     await q.climb('dungeon ladder up', ladderAt({ x: TAV_LADDER.x + 1, z: TAV_LADDER.z + 6400 }, /climb-up/i), /climb-up/i, () => (q.pos()?.worldZ ?? 9999) < 9000);
     await setPfm(false);
 
