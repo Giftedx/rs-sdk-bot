@@ -9,6 +9,7 @@ import {freshScoreboard} from './coverage';
 import {projectRoot,atomicJson,capabilitySource,publishCapabilityChanges} from './coordinator-store';
 import {diskFreeGB,heldRuns,type HeldRuns} from './coordinator-decisions';
 import {PROOF_TIMING} from './build-fault';
+import {readFreshControllerState} from './coordinator-live';
 import {PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {observePracticeTurn} from '../../practice/src/proof-lock';
 import {readMergedPlan} from '../../core/src/coordinator-jobs';
@@ -128,6 +129,19 @@ export function briefSpec(spec:CoordTask){
  const {why,env,args,...rest}=spec as any;
  return{...rest,why:clip(why,200),...(env?{env:Object.keys(env)}:{}),...(args?{args:args.length}:{})};
 }
+export function readPlannerControllerCapacity(base=projectRoot,now=Date.now()){
+ try{
+  const owner=JSON.parse(readFileSync(join(base,'.practice/coordinator/swarm-owner.json'),'utf8'));
+  if(!Number.isSafeInteger(owner?.pid)||owner.pid<=0||typeof owner.nonce!=='string'||!owner.nonce)return null;
+  const state=readFreshControllerState(owner,base,now);
+  if(!state)return null;
+  const count=(value:unknown)=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=0?value:null;
+  const memory=(value:unknown)=>typeof value==='number'&&Number.isFinite(value)&&value>=0?value:null;
+  return{at:state.at,running:count(state.running),externalRunning:count(state.externalRunning),
+   pendingStartup:count(state.pendingStartup),pendingReserveGB:memory(state.pendingReserveGB),
+   freeGB:memory(state.freeGB),minFreeGB:memory(state.minFreeGB),maxBots:count(state.maxBots)};
+ }catch{return null;}
+}
 export function readWorld(){
  const plan=readMergedPlan(projectRoot);
  const dir=join(projectRoot,'.practice/status'),statuses:any[]=[];
@@ -143,7 +157,8 @@ export function readWorld(){
  const coverage=gameCoverage(JSON.parse(readFileSync(join(projectRoot,'knowledge/skills.json'),'utf8')),JSON.parse(readFileSync(join(projectRoot,'knowledge/quests.json'),'utf8')),statuses,protectedNames,scripts.sort());
  let scoreboard:any=null;try{scoreboard=scoreboardSummary(freshScoreboard(projectRoot));}catch(error){scoreboard={error:String(error)};}
  let stall:any=null;try{const f=join(projectRoot,'.practice/coordinator/stall.json');if(existsSync(f))stall=JSON.parse(readFileSync(f,'utf8'));}catch{/* no stall note */}
- return{at:Date.now(),scoreboard,stall,assets:assetSummary(statuses),supplyBill:supplyBillSummary({source:'route'}),executionDirective:plan.coordination?.directive??'',deliveryFocus:plan.coordination?.focusCapability??null,capacity:{maxBots:plan.maxBots,minFreeGB:plan.minFreeGB,freeGB:freemem()/2**30,nativeStartupGB:PRACTICE_STARTUP_GB,nativeTurn:observePracticeTurn(join(projectRoot,'.practice/delivery-native.lock')),diskFreeGB:diskFreeGB(projectRoot),maxLive:plan.coordination?.maxLive??plan.maxBots,preferLive:plan.coordination?.preferLive===true},protectedNames,jobs:plan.jobs,statuses,ended,capabilities,capabilitySources,coverage};
+ const controller=readPlannerControllerCapacity();
+ return{at:Date.now(),scoreboard,stall,assets:assetSummary(statuses),supplyBill:supplyBillSummary({source:'route'}),executionDirective:plan.coordination?.directive??'',deliveryFocus:plan.coordination?.focusCapability??null,capacity:{maxBots:plan.maxBots,minFreeGB:plan.minFreeGB,freeGB:freemem()/2**30,nativeStartupGB:PRACTICE_STARTUP_GB,nativeTurn:observePracticeTurn(join(projectRoot,'.practice/delivery-native.lock')),diskFreeGB:diskFreeGB(projectRoot),maxLive:plan.coordination?.maxLive??plan.maxBots,preferLive:plan.coordination?.preferLive===true,...(controller?{controller}:{})},protectedNames,jobs:plan.jobs,statuses,ended,capabilities,capabilitySources,coverage};
 }
 // Reprice current route demand or an explicitly inspected saved bill. Demand time does not refresh stock.
 export function supplyBillSummary({base=projectRoot,now=Date.now(),fleetDir,side,source='saved'}:{
@@ -240,6 +255,7 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'METHOD LADDER (owner order): a worker uses the best method the current level of the account and owned items allow and switches at once when a better one unlocks (Runecraft altars by level and owned talisman, Agility courses, bows and arrows by Ranged level, logs by Firemaking level, monsters by combat). XP is 25x, so a level band takes minutes. Ordinary helper batches target the next unlock. Completion and scored routes may span a qualified method-switching ladder; never target a distant level on a weak method. Never gather or make stock the banks already hold in quantity (world.assets); spend it.',
   'MEMORY GATES: a proof imports FREE_FLOOR_GB and PRACTICE_STARTUP_GB from packages/core/src/memory.ts and takes the practice turn through delivery; it never hardcodes a free-memory number (a hardcoded 12 GiB gate failed the Firemaking and Magic builds on a machine with 5 to 10 GB available).',
   'PRACTICE CAPACITY (world.capacity.nativeTurn): a present holder PID or live waiters means the shared native turn may be busy even if RAM meets nativeStartupGB. Unknown tickets or holder state need inspection. Use independent qualified live work or source preparation while proof waits. The dated sample does not grant admission.',
+  'LIVE CAPACITY (world.capacity.controller): use its dated running and externalRunning counts, pendingStartup and pendingReserveGB to weigh another independent job against the host limits. Missing fields or a missing snapshot mean occupancy is unknown. The controller checks current admission before starting a job.',
   'FAST LANE: when a qualified capability needs only a different account, quest or argument, queue the run; do not queue a build. A failed live step that the runtime already handles (for example the quest talk door rule) gets a fresh qualify and a retry run, not a build.',
   'ASSETS (world.assets): last-seen coins and large stacks. Check status and bankAt before spending or staging them. Turn confirmed stock into scoreboard progress before buying or gathering more: banked logs to Firemaking, rune essence to Runecraft, bows, shafts and arrows to Ranged, ores to Smithing, coins to GE and shop purchases (runes, bones, arrows, best-in-slot gear the account can wear now). Move coins and items to the account that will use them with the courier and trade workers.',
   'NO DIARY (AGENTS.md): write why, reason and capability consumer text as the current work order and current facts only. No dates, no was/now, no history of earlier attempts or builds; cite the failed runId or evidence path instead. Git and runs/<runId>/ hold the history.',
