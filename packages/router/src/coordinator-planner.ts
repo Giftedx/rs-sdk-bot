@@ -282,13 +282,14 @@ export function acceptProposal(state:CoordinatorState,raw:any,base=projectRoot,s
   replaceTasks(candidate,raw.replacements);
  }
  // Cancel obsolete pending work without removing prerequisites from surviving work.
- if(raw.cancel!==undefined){
-  if(!Array.isArray(raw.cancel)||raw.cancel.length>24||raw.cancel.some(c=>typeof c?.id!=='string'||c.use!==undefined&&typeof c.use!=='string'))throw Error('invalid cancel list');
-  const cancelled=new Set<string>(raw.cancel.map(c=>c.id));
-  if(cancelled.size!==raw.cancel.length)throw Error('duplicate cancellation');
+ const cancellations:unknown=raw.cancel;
+ if(cancellations!==undefined){
+  if(!Array.isArray(cancellations)||cancellations.length>24||cancellations.some(c=>typeof c?.id!=='string'||c.use!==undefined&&typeof c.use!=='string'))throw Error('invalid cancel list');
+  const cancelled=new Set<string>(cancellations.map(c=>c.id));
+  if(cancelled.size!==cancellations.length)throw Error('duplicate cancellation');
   const byId=new Map(candidate.tasks.map(r=>[r.spec.id,r]));
   const surviving=candidate.tasks.filter(r=>r.status==='pending'&&!cancelled.has(r.spec.id));
-  for(const c of raw.cancel){
+  for(const c of cancellations){
    const old=byId.get(c.id);if(!old||old.status!=='pending')throw Error('cancel needs a pending task: '+c.id);
    if(c.use!==undefined){
     const substitute=byId.get(c.use);
