@@ -57,7 +57,7 @@ test('Heckel stages the southern gate, observes the north side, and names a fail
  expect(await fetchHeckelDust(io)).toMatchObject({ok:false,detail:expect.stringContaining('north arrival unobserved')});
 });
 import {readFileSync} from 'node:fs';
-import {leaveToManorTrip,plan,needs,nearestBank,presetFor,leaveStronghold,leaveFortress,walkCorridor,KARAMJA,gatherPlan,MILK,BUCKET,generalStores,fetchManorFishFood,manorFoodNeed,reserveInputSlots,FOOD,type ManorIO} from './quest-sweep';
+import {leaveToManorTrip,plan,needs,nearestBank,presetFor,leaveStronghold,leaveFortress,walkCorridor,KARAMJA,gatherPlan,MILK,BUCKET,generalStores,fetchManorFishFood,manorFoodNeed,manorPoisonNeed,reserveInputSlots,FOOD,type ManorIO} from './quest-sweep';
 import {spawnsByDistance} from '../packages/core/src/spawn-index';
 import {equipment,questSweepChecks} from '../packages/practice/src/quest-sweep-proof';
 import type {Session} from '../packages/core/src/inprocess';
@@ -667,10 +667,11 @@ test('Ernest fish food has only a level-1 Manor spawn, so the ground-floor gathe
 });
 
 const manorWorld=()=>{
- const s={pos:{x:3094,z:3491,level:0},held:0,ground:true as boolean,frontOpens:true,ops:[] as string[],walks:[] as string[],picks:0};
+ const s={pos:{x:3094,z:3491,level:0},held:0,ground:true as boolean,frontOpens:true,ops:[] as string[],walks:[] as string[],picks:0,poisonHeld:0,poisonGround:true,travels:[] as string[]};
  const io:ManorIO={
-  pos:()=>({...s.pos}),held:()=>s.held,ground:()=>s.ground&&s.pos.level===1?{x:3108,z:3356}:undefined,
-  travel:async to=>{s.pos={...to};return{ok:true};},
+  pos:()=>({...s.pos}),held:item=>item.id===273?s.poisonHeld:s.held,
+  ground:item=>item.id===273?(s.poisonGround&&s.pos.level===0&&s.pos.x===3097?{x:3097,z:3366}:undefined):(s.ground&&s.pos.level===1?{x:3108,z:3356}:undefined),
+  travel:async to=>{s.travels.push(`${to.x},${to.z},${to.level}`);s.pos={...to};return{ok:true};},
   walk:async to=>{const t=to[to.length-1]!;
    // Each leg is a real level-local route in the pinned collision.
    if(t.level===s.pos.level&&(t.x!==s.pos.x||t.z!==s.pos.z))expect(findLongPath(t.level,s.pos.x,s.pos.z,t.x,t.z).at(-1)).toMatchObject({x:t.x,z:t.z});
@@ -679,7 +680,7 @@ const manorWorld=()=>{
    if(loc.id===134&&s.frontOpens&&s.pos.z===3352)s.pos={x:3108,z:3354,level:0};
    if(loc.id===1730&&s.pos.level===0)s.pos={x:s.pos.x,z:s.pos.z+4,level:1};
    if(loc.id===1731&&s.pos.level===1)s.pos={x:s.pos.x,z:s.pos.z-4,level:0};},
-  pickup:async()=>{s.picks++;if(s.ground){s.ground=false;s.held++;}},
+  pickup:async(_g,item)=>{s.picks++;if(item.id===273){if(s.poisonGround){s.poisonGround=false;s.poisonHeld++;}}else if(s.ground){s.ground=false;s.held++;}},
   wait:async ok=>ok(),
  };
  return{s,io};
@@ -691,6 +692,21 @@ test('the Manor trip enters by the front door, picks up exactly one fish food up
  expect(s.walks).toEqual(['3108,3352,0','3108,3362,0','3108,3356,1','3108,3366,1','3123,3361,0']);
  expect([s.held,s.picks]).toEqual([1,1]);
  expect(s.pos).toEqual({x:3123,z:3361,level:0});
+});
+test('the Manor trip takes the poison from the west room on the way to the stairs, or alone',async()=>{
+ const both=manorWorld();
+ expect(await fetchManorFishFood(both.io,presetFor('haunted').position,{food:true,poison:true})).toEqual({ok:true});
+ expect(both.s.travels.slice(1)).toEqual(['3097,3366,0','3108,3362,0']);
+ expect([both.s.poisonHeld,both.s.held,both.s.picks]).toEqual([1,1,2]);
+ expect(both.s.pos).toEqual({x:3123,z:3361,level:0});
+ const alone=manorWorld();
+ expect(await fetchManorFishFood(alone.io,presetFor('haunted').position,{food:false,poison:true})).toEqual({ok:true});
+ expect(alone.s.ops).toEqual(['134@3108,3353']);
+ expect([alone.s.poisonHeld,alone.s.held]).toEqual([1,0]);
+ const gone=manorWorld();gone.s.poisonGround=false;
+ expect(await fetchManorFishFood(gone.io,presetFor('haunted').position,{food:false,poison:true})).toEqual({ok:false,detail:'manor fish food ground poison unobserved at 3097,3366,0'});
+ expect(leaveToManorTrip([{id:272},{id:273},{id:952}],true,true)).toEqual([{id:952}]);
+ expect(manorPoisonNeed('haunted',[{id:273,count:1}])).toBe(true);expect(manorPoisonNeed('haunted',[{id:272,count:1}])).toBe(false);
 });
 test('the Manor trip refuses with its position when the door, the spawn or the inventory credit is unobserved',async()=>{
  const shut=manorWorld();shut.s.frontOpens=false;
