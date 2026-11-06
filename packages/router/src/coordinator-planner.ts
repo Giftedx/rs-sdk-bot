@@ -216,7 +216,7 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'GOAL LOOP: completion needs current game state and scoreboards proving the goals, including one fresh completion account with all19 skills99, every implemented quest complete and every available boss defeated, plus actual rank 1 results for the priced specialist targets. world.scoreboard.progress is fleet-wide coverage, not completion proof; use progress.remaining to choose work. Until then always queue the next best finite task; return no tasks only while queued or running work is about to change the scoreboard, and name it. When a band, quest or capability is done, queue the next one at once. World.stall, when present, means no progress number rose for its hours: drop the approaches tried in that window and choose a different lane, capability or method.',
   'SCOREBOARD (deterministic, .practice/coordinator/scoreboard.json; world.scoreboard): every skill, quest, content domain (5,807 player actions in 154 domains) and item, staged none, named, practice, live. Full game coverage means every entry live, then batch. Each task why must name the scoreboard entries it moves and the expected stage change or size (levels, quests, actions, items, main-run ticks). Rank by that movement per hour of total cost. Prefer one shared or parameterized change that moves many entries, skills with a band at none, quests from named to practice to live, and domains with share 0. Do not propose a small target (for example one helper +10 levels, a handful of items) unless it is the first proof of a new script; size live batches to whole bands. Stock without a named consumer moves nothing.',
   'Choose across the whole coverage catalogue before extending the current prototype. In reason compare the best ready live job, the highest-impact unlock/supply bottleneck, and an uncovered capability. State expected useful output, entry facts, total acquisition/travel/build/test cost, uncertainty, and the next consumer. Prefer the fastest supported gain, not the most familiar script. Finish a qualified live consumer before more unrelated builds. Never repeat a failed build without new evidence and the exact repair in why.',
-  'Return optional replacements:[{from,to}] to replace failed/pending tasks with a changed same-kind/capability/goal/account task and reconnect waiting consumers atomically. Failed receipts remain history. Each new build needs a dependency path from a pending finite live run through pending tasks. A settled proof cannot carry a new build. Do not add another numbered repair while leaving its consumers behind failed dependencies. Do not replace successful/running work or provision identities. Avoid duplicate open work with the same consumer. Build why is the actual work order sent to its builder; include exact defect, source scope, evidence paths and acceptance.',
+  'Return optional replacements:[{from,to}] to replace failed/pending tasks with a changed same-kind/capability/goal/account task and reconnect waiting consumers atomically. Failed receipts remain history. Each new build needs a dependency path from a pending finite live run through pending tasks with no terminal blockers after the proposal. A settled proof cannot carry a new build. Do not add another numbered repair while leaving its consumers behind failed dependencies. Do not replace successful/running work or provision identities. Avoid duplicate open work with the same consumer. Build why is the actual work order sent to its builder; include exact defect, source scope, evidence paths and acceptance.',
   'Expand coverage incrementally: reuse candidate scripts, promote the smallest missing parameterized action, qualify normal entry and recovery, run a useful finite live batch, then pick its next consumer. New accounts require a named absent role or measured capacity need, prepared inputs and a finite first useful job. Never use protected accounts for discovery. Full coverage is a continuing goal across pinned content, not a claim made from filename counts.',
   'For an existing capability whose owned files or entry cannot support the real consumer, return capabilityUpdates:[{expectedSource:<capabilitySources[id]>,definition:<complete DeliveryTask>}] with a same-capability build task and explicit replacements for old pending builds. One update per proposal; no running owner may hold that capability. The daemon preserves the old definition. Expand the existing module scope instead of duplicating it under a new capability name. Entry must be an actual account-parameterized live worker; local --save fixtures and privileged practice commands belong in checks. Native proof must invoke that worker CLI, not only helper functions. Every new/progress build must include a finite live consumer with useful acceptance, inputs and a next goal; never stop at stock or qualification.',
   'THIN ACCEPTANCE (owner order): a consumer and its checks hold only the script contract acceptance bar: unit tests, one practice run of the real CLI showing the useful effect, assets reconciled, a clear refusal and logout. Never add interruption/resume, reseed, independent recompute, raw-file binding or failure-window scenarios, and never widen an existing consumer. A live failure gets the smallest fix of the exact failed step plus one regression test.',
@@ -317,23 +317,25 @@ export function prepareProposal(state:CoordinatorState,raw:any,base=projectRoot,
  }
  replaceTasks(candidate,[]); // Validate cycles introduced by promotion edges too.
  const newClaims=new Set(tasks.filter(t=>t.kind==='provision').map(t=>t.id));
+ const builds=tasks.filter(t=>t.kind==='build');
+ const dead=newClaims.size||builds.length?deadRoots(candidate):null;
+ const pending=candidate.tasks.filter(r=>r.status==='pending'&&!dead?.has(r.spec.id));
+ const runs=pending.filter(r=>r.spec.kind==='run');
  if(newClaims.size){
-  const dead=deadRoots(candidate);
-  const demanded=new Set(candidate.tasks.flatMap(r=>r.status==='pending'&&r.spec.kind==='run'&&!dead.has(r.spec.id)?provisionRefs(r.spec):[]));
+  const demanded=new Set(runs.flatMap(r=>provisionRefs(r.spec)));
   for(const {spec,status} of candidate.tasks){
    if(status==='pending'&&newClaims.has(spec.id)&&!demanded.has(spec.id))throw Error('account setup needs a viable first run: '+spec.id);
   }
  }
- const builds=tasks.filter(t=>t.kind==='build');
  if(builds.length){
-  const pending=new Map(candidate.tasks.filter(r=>r.status==='pending').map(r=>[r.spec.id,r.spec]));
-  const visit=[...pending.values()].filter(t=>t.kind==='run').map(t=>t.id),reachable=new Set<string>();
+  const byId=new Map(pending.map(r=>[r.spec.id,r.spec]));
+  const visit=runs.map(r=>r.spec.id),reachable=new Set<string>();
   while(visit.length){
-   const id=visit.pop()!,task=pending.get(id);
+   const id=visit.pop()!,task=byId.get(id);
    if(!task||reachable.has(id))continue;
-   reachable.add(id);visit.push(...task.dependsOn);
+   reachable.add(id);visit.push(...task.dependsOn,...provisionRefs(task));
   }
-  for(const build of builds)if(!reachable.has(build.id))throw Error('build requires a finite live consumer dependency: '+build.id+'. Link a pending run through pending dependencies.');
+  for(const build of builds)if(!reachable.has(build.id))throw Error('build requires a finite live consumer dependency: '+build.id+'. Link a pending run through pending dependencies with no terminal blockers.');
  }
  candidate.lastPlanReason=raw.reason;
  const capabilities:CapabilityChange[]=[...definitions.map(definition=>({definition,expectedSource:null})),
