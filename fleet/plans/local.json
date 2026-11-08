@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794172241028,
+ "at": 1794173128222,
  "jobs": [
   {
    "account": "Masterbaiter",
@@ -144,19 +144,6 @@
    "repeat": false,
    "goal": "quests in one host: runemysteries, murder, sheep, cook, rj",
    "role": "quests"
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2670,3306"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "coins for route supplies: Ardougne knights",
-   "role": "supply"
   },
   {
    "account": "OreElse",
@@ -497,6 +484,27 @@
    "enabled": false,
    "repeat": false,
    "goal": "run-blood-charge-resume-live100-lease-retry [task-879344a9-15bb-4263-b7ce-32763e9aa9f3]",
+   "role": "supply"
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ORDER_KEY": "mightyrod-blood261-600",
+    "ITEM_ID": "565",
+    "QUANTITY": "261",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "600",
+    "CASH_RESERVE": "250000",
+    "ORDER_MS": "360000",
+    "FILL_WAIT_TICKS": "200",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-ce1de9c0-7a37-4669-9cda-edc677734ba4"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-ge-coincock-mightyrod-blood261-600-resume [task-ce1de9c0-7a37-4669-9cda-edc677734ba4]",
    "role": "supply"
   }
  ]
