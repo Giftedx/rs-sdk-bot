@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794166326134,
+ "at": 1794166779180,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -11,7 +11,7 @@
    "env": {
     "CAP": "1800"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "Complete Hazeel Cult for cloud quest coverage",
    "role": "quests"
@@ -25,7 +25,7 @@
    "env": {
     "CAP": "1800"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "Complete Romeo and Juliet for cloud quest coverage",
    "role": "quests"
@@ -38,7 +38,7 @@
     "RANDOM_EVENTS": "1",
     "BANK_KNIFE": "1"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "Bank 375 arrow shafts for Shaftshooter starter ammunition route",
    "role": "supply"
@@ -52,7 +52,7 @@
    "env": {
     "CAP": "1800"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "Complete Romeo and Juliet for cloud quest coverage",
    "role": "quests"
@@ -67,7 +67,7 @@
    "env": {
     "ROUNDS": "1"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "Mainland entry then complete proved Romeo and Juliet quest route (+5 QP)",
    "role": "quests"
@@ -82,7 +82,7 @@
    "env": {
     "ROUNDS": "1"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "Mainland entry then complete proved Romeo and Juliet quest route (+5 QP)",
    "role": "quests"
@@ -97,7 +97,7 @@
    "env": {
     "ROUNDS": "1"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "Mainland entry then complete proved Romeo and Juliet quest route (+5 QP)",
    "role": "quests"
@@ -112,7 +112,7 @@
    "env": {
     "ROUNDS": "1"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "Mainland entry then complete proved Romeo and Juliet quest route (+5 QP)",
    "role": "quests"
