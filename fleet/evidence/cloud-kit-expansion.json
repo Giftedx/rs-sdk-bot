@@ -1,6 +1,6 @@
 {
   "schema": "cloud-kit-expansion/1",
-  "at": 1794181477677,
+  "at": 1794181539983,
   "side": "cloud-kit",
   "controller": {
     "pid": 6955,
@@ -187,11 +187,11 @@
     }
   },
   "headroom": {
-    "freeGB": 15.796592712402344,
+    "freeGB": 15.451942443847656,
     "load": [
-      0.72,
-      0.61,
-      0.49
+      0.47,
+      0.55,
+      0.48
     ],
     "cpus": 5,
     "minFreeGB": 8,
@@ -200,11 +200,11 @@
   "accounts": [
     {
       "account": "Familyjewel",
-      "at": 1794181474897,
-      "tick": 39,
+      "at": 1794181538118,
+      "tick": 121,
       "position": {
-        "x": 2655,
-        "z": 3283,
+        "x": 2665,
+        "z": 3311,
         "level": 0
       },
       "hp": {
@@ -316,9 +316,9 @@
         },
         {
           "name": "Thieving",
-          "level": 69,
-          "currentLevel": 69,
-          "xp": 127310
+          "level": 70,
+          "currentLevel": 70,
+          "xp": 135632
         },
         {
           "name": "Stat18",
@@ -344,7 +344,7 @@
           "id": 995,
           "baseId": 995,
           "name": "Coins",
-          "count": 2469
+          "count": 2169
         },
         {
           "id": 1891,
@@ -401,6 +401,12 @@
           "baseId": 1931,
           "name": "Pot",
           "count": 1
+        },
+        {
+          "id": 995,
+          "baseId": 995,
+          "name": "Coins",
+          "count": 450
         },
         {
           "id": 1265,
@@ -467,21 +473,49 @@
           "baseId": 559,
           "name": "Body rune",
           "count": 2
+        },
+        {
+          "id": 2309,
+          "baseId": 2309,
+          "name": "Bread",
+          "count": 1
+        },
+        {
+          "id": 2309,
+          "baseId": 2309,
+          "name": "Bread",
+          "count": 1
+        },
+        {
+          "id": 1891,
+          "baseId": 1891,
+          "name": "Cake",
+          "count": 1
+        },
+        {
+          "id": 1891,
+          "baseId": 1891,
+          "name": "Cake",
+          "count": 1
+        },
+        {
+          "id": 1891,
+          "baseId": 1891,
+          "name": "Cake",
+          "count": 1
         }
       ],
       "equipment": [],
-      "result": "ok thieving=69 xp=0 ticks=33 at=2655,3283,0 hp=10 hpMin=10 died=false relogs=0 relogTicks=0 logoutTicks=0 idleTicks=0 pickTicks=0 shopTicks=0 eatTicks=0 stunWait=0 stunMsgs=0 tries=0 stuns=0 eaten=0 bought=0 waits=0 walkTicks=0 chases=0 coins=0 bread=0 milestones=ardougne,coins60,level40,leve",
+      "result": "",
       "workRevision": "d7e4fa5e7f1d59ac33abf8cd4f60393aeeac20eb2ab310e717e5bd896f8d3657",
-      "attempt": "1794181452349-0000012701-0000000001",
+      "attempt": "1794181483043-0000013006-0000000001",
       "logout": {
-        "state": "confirmed",
+        "state": "held",
         "account": "Familyjewel",
         "server": "rs-sdk-demo.fly.dev",
         "domain": "live",
-        "attemptId": "1794181452349-0000012701-0000000001",
-        "loggedOutAt": 1794181473659,
-        "ownerRun": null,
-        "receiptSha256": "e8195b95134ee139eefeec789338400a55160295e80be861db62b311467349a8"
+        "attemptId": "1794181483043-0000013006-0000000001",
+        "reason": "session active or outcome unknown"
       },
       "progress": {
         "stage": "earning",
@@ -493,11 +527,11 @@
     },
     {
       "account": "Glassblower",
-      "at": 1794181476150,
-      "tick": 456,
+      "at": 1794181539822,
+      "tick": 51,
       "position": {
-        "x": 2672,
-        "z": 3301,
+        "x": 2668,
+        "z": 3312,
         "level": 0
       },
       "hp": {
@@ -611,7 +645,7 @@
           "name": "Thieving",
           "level": 75,
           "currentLevel": 75,
-          "xp": 194350
+          "xp": 196857
         },
         {
           "name": "Stat18",
@@ -637,7 +671,7 @@
           "id": 995,
           "baseId": 995,
           "name": "Coins",
-          "count": 2423
+          "count": 3723
         },
         {
           "id": 2309,
@@ -655,7 +689,7 @@
           "id": 1891,
           "baseId": 1891,
           "name": "Cake",
-          "count": 8
+          "count": 13
         },
         {
           "id": 1893,
@@ -705,7 +739,7 @@
           "id": 995,
           "baseId": 995,
           "name": "Coins",
-          "count": 1550
+          "count": 300
         },
         {
           "id": 1265,
@@ -774,56 +808,30 @@
           "count": 2
         },
         {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
+          "id": 2309,
+          "baseId": 2309,
+          "name": "Bread",
           "count": 1
         }
       ],
       "equipment": [],
       "result": "",
       "workRevision": "d7e4fa5e7f1d59ac33abf8cd4f60393aeeac20eb2ab310e717e5bd896f8d3657",
-      "attempt": "1794181290689-0000011539-0000000001",
+      "attempt": "1794181514654-0000013284-0000000001",
       "logout": {
-        "state": "confirmed",
+        "state": "held",
         "account": "Glassblower",
         "server": "rs-sdk-demo.fly.dev",
         "domain": "live",
-        "attemptId": "1794181290689-0000011539-0000000001",
-        "loggedOutAt": 1794181477441,
-        "ownerRun": null,
-        "receiptSha256": "5e0bd3f76bdb9c87c8554fd78c6e54a350b90b1c5f6305eeac807b6de4bf8fb2"
+        "attemptId": "1794181514654-0000013284-0000000001",
+        "reason": "session active or outcome unknown"
       },
       "progress": {
         "stage": "earning",
-        "batch": 3,
+        "batch": 4,
         "spot": "2671,3313",
-        "before": 2723,
-        "lastAttempt": "1794181259638-0000011236-0000000001"
+        "before": 4023,
+        "lastAttempt": "1794181482479-0000012984-0000000001"
       }
     }
   ],
