@@ -3,16 +3,16 @@
  "side": "cloud",
  "source": "70fcbce85350659ad82496060e9c3e4f992c91a0",
  "started": 1794167124636,
- "at": 1794175787519,
+ "at": 1794175948072,
  "peakLive": 9,
  "currentLive": 0,
  "minFreeGB": 8.638957977294922,
  "headroom": {
-  "freeGB": 15.639816284179688,
+  "freeGB": 15.659496307373047,
   "load": [
-   0.76,
-   0.57,
-   0.74
+   0.12,
+   0.38,
+   0.64
   ],
   "cpus": 5,
   "requiredFloorGB": 4,
