@@ -1,6 +1,6 @@
 {
   "schema": "cloud-kit-expansion/1",
-  "at": 1794181914277,
+  "at": 1794181976935,
   "side": "cloud-kit",
   "controller": {
     "pid": 6955,
@@ -187,11 +187,11 @@
     }
   },
   "headroom": {
-    "freeGB": 15.900875091552734,
+    "freeGB": 15.878597259521484,
     "load": [
-      0.47,
-      0.48,
-      0.46
+      0.44,
+      0.49,
+      0.47
     ],
     "cpus": 5,
     "minFreeGB": 8,
@@ -200,11 +200,11 @@
   "accounts": [
     {
       "account": "Familyjewel",
-      "at": 1794181913042,
-      "tick": 16,
+      "at": 1794181975928,
+      "tick": 96,
       "position": {
-        "x": 2647,
-        "z": 3304,
+        "x": 2669,
+        "z": 3310,
         "level": 0
       },
       "hp": {
@@ -316,9 +316,9 @@
         },
         {
           "name": "Thieving",
-          "level": 76,
-          "currentLevel": 76,
-          "xp": 213687
+          "level": 77,
+          "currentLevel": 77,
+          "xp": 224117
         },
         {
           "name": "Stat18",
@@ -344,19 +344,19 @@
           "id": 995,
           "baseId": 995,
           "name": "Coins",
-          "count": 3219
+          "count": 4019
         },
         {
           "id": 1891,
           "baseId": 1891,
           "name": "Cake",
-          "count": 24
+          "count": 29
         },
         {
           "id": 1893,
           "baseId": 1893,
           "name": "2/3 cake",
-          "count": 4
+          "count": 8
         },
         {
           "id": 2309,
@@ -406,7 +406,7 @@
           "id": 995,
           "baseId": 995,
           "name": "Coins",
-          "count": 1100
+          "count": 500
         },
         {
           "id": 1265,
@@ -481,33 +481,9 @@
           "count": 1
         },
         {
-          "id": 1893,
-          "baseId": 1893,
-          "name": "2/3 cake",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 1893,
-          "baseId": 1893,
-          "name": "2/3 cake",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 1893,
-          "baseId": 1893,
-          "name": "2/3 cake",
+          "id": 2309,
+          "baseId": 2309,
+          "name": "Bread",
           "count": 1
         },
         {
@@ -523,30 +499,30 @@
           "count": 1
         },
         {
-          "id": 1893,
-          "baseId": 1893,
-          "name": "2/3 cake",
+          "id": 2309,
+          "baseId": 2309,
+          "name": "Bread",
           "count": 1
         }
       ],
       "equipment": [],
       "result": "",
       "workRevision": "d7e4fa5e7f1d59ac33abf8cd4f60393aeeac20eb2ab310e717e5bd896f8d3657",
-      "attempt": "1794181901063-0000015953-0000000001",
+      "attempt": "1794181931409-0000016083-0000000001",
       "logout": {
         "state": "held",
         "account": "Familyjewel",
         "server": "rs-sdk-demo.fly.dev",
         "domain": "live",
-        "attemptId": "1794181901063-0000015953-0000000001",
+        "attemptId": "1794181931409-0000016083-0000000001",
         "reason": "session active or outcome unknown"
       },
       "progress": {
         "stage": "earning",
-        "batch": 5,
+        "batch": 6,
         "spot": "2652,3318",
-        "before": 3519,
-        "lastAttempt": "1794181677515-0000014462-0000000001"
+        "before": 4319,
+        "lastAttempt": "1794181901063-0000015953-0000000001"
       }
     },
     {
