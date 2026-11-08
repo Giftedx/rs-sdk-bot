@@ -1,0 +1,228 @@
+{
+  "start": {
+    "save": {
+      "position": {
+        "x": 2721,
+        "z": 3493,
+        "level": 0
+      },
+      "skills": {
+        "Attack": 29,
+        "Defence": 18,
+        "Strength": 27,
+        "Hitpoints": 27,
+        "Ranged": 1,
+        "Prayer": 47,
+        "Magic": 1,
+        "Cooking": 55,
+        "Woodcutting": 73,
+        "Fletching": 1,
+        "Fishing": 77,
+        "Firemaking": 31,
+        "Crafting": 1,
+        "Smithing": 1,
+        "Mining": 1,
+        "Herblore": 1,
+        "Agility": 1,
+        "Thieving": 86,
+        "Runecraft": 1
+      },
+      "bank": [
+        {
+          "id": 995,
+          "count": 8808
+        },
+        {
+          "id": 1351,
+          "count": 1
+        },
+        {
+          "id": 315,
+          "count": 1
+        },
+        {
+          "id": 1265,
+          "count": 1
+        },
+        {
+          "id": 1205,
+          "count": 1
+        },
+        {
+          "id": 841,
+          "count": 1
+        },
+        {
+          "id": 882,
+          "count": 25
+        },
+        {
+          "id": 556,
+          "count": 25
+        },
+        {
+          "id": 558,
+          "count": 15
+        },
+        {
+          "id": 555,
+          "count": 6
+        },
+        {
+          "id": 557,
+          "count": 2
+        },
+        {
+          "id": 559,
+          "count": 2
+        },
+        {
+          "id": 314,
+          "count": 59
+        },
+        {
+          "id": 303,
+          "count": 1
+        },
+        {
+          "id": 317,
+          "count": 13
+        },
+        {
+          "id": 590,
+          "count": 1
+        },
+        {
+          "id": 343,
+          "count": 3
+        },
+        {
+          "id": 331,
+          "count": 1
+        },
+        {
+          "id": 309,
+          "count": 1
+        },
+        {
+          "id": 1468,
+          "count": 1
+        },
+        {
+          "id": 1469,
+          "count": 1
+        },
+        {
+          "id": 594,
+          "count": 1
+        },
+        {
+          "id": 413,
+          "count": 1
+        },
+        {
+          "id": 563,
+          "count": 8
+        },
+        {
+          "id": 279,
+          "count": 1
+        },
+        {
+          "id": 1277,
+          "count": 1
+        },
+        {
+          "id": 952,
+          "count": 1
+        },
+        {
+          "id": 284,
+          "count": 1
+        },
+        {
+          "id": 275,
+          "count": 1
+        },
+        {
+          "id": 433,
+          "count": 1
+        },
+        {
+          "id": 1635,
+          "count": 1
+        },
+        {
+          "id": 1605,
+          "count": 1
+        },
+        {
+          "id": 1515,
+          "count": 23
+        },
+        {
+          "id": 1893,
+          "count": 3
+        },
+        {
+          "id": 946,
+          "count": 1
+        },
+        {
+          "id": 278,
+          "count": 1
+        },
+        {
+          "id": 1511,
+          "count": 3
+        },
+        {
+          "id": 1519,
+          "count": 9
+        },
+        {
+          "id": 1759,
+          "count": 20
+        }
+      ],
+      "inventory": [],
+      "equipment": [
+        {
+          "id": 552,
+          "count": 1,
+          "slot": 2
+        },
+        {
+          "id": 1353,
+          "count": 1,
+          "slot": 3
+        },
+        {
+          "id": 1005,
+          "count": 1,
+          "slot": 4
+        },
+        {
+          "id": 1171,
+          "count": 1,
+          "slot": 5
+        },
+        {
+          "id": 285,
+          "count": 1,
+          "slot": 7
+        }
+      ]
+    }
+  },
+  "script": "scripts/chain.ts",
+  "args": [
+    "scripts/walk-to.ts 2654 3283 0 --ground",
+    "scripts/goldfarm-stable.ts TICKS=180 BANK_AT=500"
+  ],
+  "env": {
+    "ROUNDS": "1",
+    "FLEET_SIDE": "local"
+  },
+  "timeoutMs": 240000
+}
