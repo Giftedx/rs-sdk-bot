@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794168426789,
+ "at": 1794168589140,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -32,14 +32,18 @@
   },
   {
    "account": "Swordswallow",
-   "script": "scripts/fleet-trade.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "rollout2-swords-yew-300-v2"
+    "scripts/fletch-arrows.ts CAP=600 MODE=headless MAX_MAKE=375 SHAFT_RESERVE=100 FEATHER_RESERVE=100",
+    "scripts/fletch-worker.ts RANDOM_EVENTS=1 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts CAP=600 MODE=headless MAX_MAKE=360 SHAFT_RESERVE=100 FEATHER_RESERVE=100"
    ],
-   "env": {},
+   "env": {
+    "ROUNDS": "1"
+   },
    "enabled": true,
    "repeat": false,
-   "goal": "Deliver 300 earned quest coins to YewGotWood at Draynor for the admitted Sea Slug input shortfall",
+   "goal": "Bank 735 headless arrows for Haggis Fletching route: current route bill short 724; preserve shaft/feather reserves",
    "role": "quests"
   },
   {
@@ -87,14 +91,16 @@
   },
   {
    "account": "YewGotWood",
-   "script": "scripts/fleet-trade.ts",
+   "script": "scripts/quest-sweep.ts",
    "args": [
-    "rollout2-swords-yew-300-v2"
+    "seaslug"
    ],
-   "env": {},
+   "env": {
+    "CAP": "2400"
+   },
    "enabled": true,
    "repeat": false,
-   "goal": "Receive and bank 300 owned coins for the Sea Slug input shortfall; quest resumes only after funding receipt",
+   "goal": "Funded Sea Slug completion after observed 300-coin transfer and Firemaking 30 unlock",
    "role": "quests"
   },
   {
