@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794169629542,
+ "at": 1794169839138,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -18,52 +18,56 @@
   },
   {
    "account": "TossTheCaber",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/walk-to.ts 3092 3243 --ground",
+    "scripts/foodcourier.ts HOME_ONLY=1 CAP=1800",
+    "scripts/goldfarm.ts TICKS=600 BANK_AT=500 KNIGHT_SPOT=2669,3298 SHOP=1"
+   ],
    "env": {
-    "TICKS": "600",
-    "BANK_AT": "500",
-    "KNIGHT_SPOT": "2669,3298",
-    "SHOP": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Finite banked-funding pilot for Porksword rune-arrowtip buyer; distinct unclaimed knight spawn, current Haggis gap 1787 tips",
+   "goal": "Use explicit Draynor and boat staging to Ardougne, then bank funding at a distinct knight spawn for Porksword tip buyer; no White Wolf crossing",
    "role": "supply"
   },
   {
    "account": "Swordswallow",
-   "script": "scripts/gather-essence.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/walk-to.ts 3253 3420 --ground",
+    "scripts/gather-essence.ts CAP=1200 BANK_AT=27"
+   ],
    "env": {
-    "CAP": "1000",
-    "BANK_AT": "27"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Bank the remaining 58 rune essence for Haggis Runecraft after Spitroaster banked 23; Rune Mysteries already observed complete",
+   "goal": "Stage at the proven Varrock east bank entry, then bank the remaining Haggis rune essence gap; no White Wolf route",
    "role": "quests"
   },
   {
    "account": "Unsheathed",
-   "script": "scripts/quest-sweep.ts",
+   "script": "scripts/gather-spawn.ts",
    "args": [
-    "junglepotion"
+    "223",
+    "7"
    ],
    "env": {
-    "CAP": "3500"
+    "TICKS": "1200"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "New live Jungle Potion coverage after observed Druidic Ritual and Herblore unlock; eight owned trout staged",
-   "role": "quests"
+   "goal": "Bank exactly seven red spider eggs for Haggis Herblore route; strong combat account above spider aggression threshold",
+   "role": "supply"
   },
   {
    "account": "Porksword",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/goldfarm.ts TICKS=2400 BANK_AT=1000 KNIGHT_SPOT=2653,3300 SHOP=1",
-    "scripts/shop-buyer.ts catherby 800 ITEMS=rune arrowtips MAX_ITEMS=5 MAX_SPEND=1200 COIN_RESERVE=300 FLOAT=1500 STOCK_TARGET=1789 BANK_PACK=1 NO_BUY_TICKS=150"
+    "scripts/shop-buyer.ts catherby 800 ITEMS=rune MAX_ITEMS=5 MAX_SPEND=1200 COIN_RESERVE=300 FLOAT=1500 STOCK_TARGET=1789 BANK_PACK=1 NO_BUY_TICKS=150"
    ],
    "env": {
     "ROUNDS": "1"
