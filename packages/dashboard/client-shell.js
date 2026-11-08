@@ -172,6 +172,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       '<div class="xp-box"><div class="xp-head"><span>Sources</span></div><p class="xp-muted">Client look: RuneLite (BSD 2-Clause), 3D view: rs-world, game data: the Lost City server content (MIT). Licences and image credits: <a href="'+asset('ATTRIBUTION.txt')+'" target="_blank" rel="noopener">ATTRIBUTION.txt</a>. RuneScape art belongs to Jagex.</p></div></div>';
   }
   function worldPanel(){
+    if(!S)return '<p class="xp-muted">Waiting for world data…</p>';
     const spots=(S.contention||[]).filter(s=>s.x!=null),named=(S.contention||[]).filter(s=>s.x==null),roster=S.roster||[],fleet=new Set(S.bots.map(b=>b.name.toLowerCase()));
     const crowded=spots.filter(s=>s.others.length).length;
     return `<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>Look up a player</span></div><form id="wp-form"><input id="wp-name" class="rl-search" list="wp-names" maxlength="12" placeholder="Player name..." value="${E(worldLookupName)}" aria-label="Player name"><datalist id="wp-names">${roster.filter(r=>!fleet.has(String(r[0]).toLowerCase())).slice(0,400).map(r=>`<option value="${E(r[0])}">`).join('')}</datalist></form><div id="wp-result">${worldLookup?lookupCard(worldLookup):'<span class="xp-muted">Any player: levels, ranks and where they are now. Right-click a dot on the map to look that player up.</span>'}</div></div>`+
