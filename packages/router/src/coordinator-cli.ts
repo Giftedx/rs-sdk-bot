@@ -13,7 +13,7 @@ import {disableOwnJob,ensureSwarm,liveRows} from './coordinator-live';
 import {cachedLaunchRevision} from '../../core/src/worker-release';
 import {readCoordinatorJobs,writeCoordinatorJobs,readMergedPlan,COORDINATOR_JOBS_FILE} from '../../core/src/coordinator-jobs';
 import {assignedWorker} from './model-worker';
-import {processMatches,killTree} from '../../practice/src/proc';
+import {processMatches,safeKill} from '../../practice/src/proc';
 import {observePracticeTurn} from '../../practice/src/proof-lock';
 import {prepareWorkspace} from './build-workspace';
 import {applyRules,skillUnlocks} from './coordinator-rules';
@@ -84,7 +84,7 @@ async function expandUsefulFleet(state:CoordinatorState,config:any,runHeld:(task
  await withPlanWrite(()=>{const current=readPlan();if(current.maxBots!==plan.maxBots)return;const own=readCoordinatorJobs(projectRoot);own.expansion={maxBots:target,over:json(join(projectRoot,'swarm.json')).maxBots};own.coordination.lastExpansionAt=now;writeCoordinatorJobs(projectRoot,own);config.maxLive=target;config.lastExpansionAt=now;event('fleet-capacity-expanded',{from:plan.maxBots,to:target,freeGB:freemem()/2**30,cpu:usage,tickMs:Math.max(...latencies),usefulResults:useful});});
 }
 const existsPid=(pid:number)=>{try{process.kill(pid,0);return true;}catch{return false;}};
-export function reconcile(state:CoordinatorState,alive:(pid:number,marker:string)=>boolean=processMatches,directory=coordinationDir,pidExists=existsPid){
+export function reconcile(state:CoordinatorState,alive:(pid:number,marker:string)=>boolean=processMatches,directory=coordinationDir,pidExists=existsPid,startupGraceMs=15000){
  for(const record of state.tasks.filter(r=>r.status==='failed'&&r.receipt?.error?.startsWith('worker ended without a receipt'))){
   const file=join(runDirectory(record.runId!,directory),'receipt.json');
   if(existsSync(file)){
@@ -106,7 +106,7 @@ export function reconcile(state:CoordinatorState,alive:(pid:number,marker:string
   // Check OS liveness first: command-line lookup starts PowerShell on Windows.
   // The existing rule retains a live PID even when CIM cannot identify it.
   if(pid&&(pidExists(pid)||alive(pid,record.runId!)))continue;
-  if(Date.now()-(record.startedAt??0)>15000)finishTask(state,{taskId:record.spec.id,runId:record.runId!,ok:false,at:Date.now(),output:null,error:'worker ended without a receipt; inspect preserved run before repair'});
+  if(Date.now()-(record.startedAt??0)>=startupGraceMs)finishTask(state,{taskId:record.spec.id,runId:record.runId!,ok:false,at:Date.now(),output:null,error:'worker ended without a receipt; inspect preserved run before repair'});
  }
 }
 function spawn(mode:string,id:string,directory:string,cwd=projectRoot){
@@ -424,6 +424,26 @@ export async function claimCoordinatorState(nonce:string,directory=coordinationD
   return state;
  },directory);
 }
+export async function pauseCoordinator(state:CoordinatorState,base=projectRoot,stopWorker=safeKill){
+ const practice=join(base,'.practice'),directory=join(practice,'coordinator');
+ for(const job of readCoordinatorJobs(base).jobs.filter((j:any)=>j.coordinatorOwner==='coordinator'&&j.enabled!==false)){
+  await disableOwnJob(job.env?.COORDINATOR_RUN_ID,base);
+  for(const account of job.accounts??[job.account])if(account){const file=join(practice,'stop-'+account);if(!existsSync(file))writeFileSync(file,'coordinator owner pause');}
+ }
+ const running=state.tasks.filter(r=>r.status==='running');
+ // Live task watchers check for the pause once a second, then disable their job before writing the receipt.
+ const deadline=Date.now()+3000;
+ while(Date.now()<deadline&&running.some(r=>r.spec.kind==='run'&&r.pid&&existsPid(r.pid)
+  &&!existsSync(join(directory,'runs',r.runId!,'receipt.json'))))await Bun.sleep(100);
+ for(const r of running)if(r.pid)await stopWorker(r.pid,r.runId!);
+ if(state.planner?.pid)await stopWorker(state.planner.pid,state.planner.runId);
+ // Workers can write their terminal receipt while the pause is stopping them.
+ // No more workers will start, so a dead worker needs no startup grace period.
+ reconcile(state,undefined,directory,undefined,0);
+ saveState(state,directory);
+ const unsettledRuns=running.filter(r=>r.status==='running').map(r=>r.runId);
+ event('coordinator-paused',{reason:'owner stop file',unsettledRuns},directory);
+}
 async function main(){
  const mode=process.argv[2]??'--status',arg=process.argv[3];
  if(mode==='--worker'||mode==='--planner'){if(!arg)throw Error('run identity required');await child(mode,arg);return;}
@@ -456,14 +476,6 @@ async function main(){
   const pid=spawnDetached([process.execPath,'packages/router/src/coordinator-cli.ts','--run',token],projectRoot,join(coordinationDir,`daemon-${stamp}.out.log`),join(coordinationDir,`daemon-${stamp}.err.log`));
   event('coordinator-reload',{children:'preserved for adoption',successor:pid});return;
  }
- if(existsSync(stop)||existsSync(join(projectRoot,'.practice/stop-swarm'))){
-  for(const job of readCoordinatorJobs(projectRoot).jobs.filter((j:any)=>j.coordinatorOwner==='coordinator'&&j.enabled!==false)){
-   await disableOwnJob(job.env?.COORDINATOR_RUN_ID);
-   for(const account of job.accounts??[job.account])if(account){const file=join(projectRoot,'.practice','stop-'+account);if(!existsSync(file))writeFileSync(file,'coordinator owner pause');}
-  }
-  for(const r of state.tasks.filter(r=>r.status==='running'))if(r.pid&&processMatches(r.pid,r.runId!))await killTree(r.pid);
-  if(state.planner?.pid&&processMatches(state.planner.pid,state.planner.runId))await killTree(state.planner.pid);
-  event('coordinator-paused',{reason:'owner stop file'});
- }
+ if(existsSync(stop)||existsSync(join(projectRoot,'.practice/stop-swarm')))await pauseCoordinator(state);
 }
 if(import.meta.main)await main().catch(e=>{console.error(String(e));process.exitCode=1;});
