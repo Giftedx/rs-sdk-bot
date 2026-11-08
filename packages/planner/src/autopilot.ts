@@ -135,12 +135,14 @@ export function finishedTrainers(jobs: readonly any[], side: string, assigned: R
 // no progress, a RESULT reports a death, or the last LEDGER spent WASTE_LIMIT or more of its ticks idle or walking.
 // A trainer that hits its tick cap short of the target ends fail with the XP it gained (scripts/generated/thieving60.ts
 // prints xp=<gain>), so the supervisor runs it again; such a fail is progress and does not count toward retirement.
-// A run the server or the relayed gateway dropped (`RESULT fail session ended: disconnected`; the cloud proxy's 1012
-// `server_draining` closes) says nothing about the job: its supervisor logs the account back in and the next run banks
-// the carried pack, so such a result is counted as a drain, never as a failure.
+// A run the server or the relayed gateway dropped says nothing about the job, so it is counted as a drain, never as a
+// failure: a dropped session (`RESULT fail session ended: disconnected`; the cloud proxy's 1012 `server_draining`
+// closes), a game socket that errors at login (`RESULT fail login: [object WebSocket]`), and a server that stops
+// ticking (`RESULT fail TickStallError`). Its supervisor logs the account back in and the next run banks the carried
+// pack. Counting these as failures retired every knight spot of every account in one server outage.
 export const RETIRE_FAILS = 2, WASTE_LIMIT = 0.9;
 export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked)=[1-9]\d*\b/.test(result);
-export const DRAIN_RESULT = /^RESULT fail session ended: disconnected\b/;
+export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|TickStallError\b)/;
 export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number; drains: number } {
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
     const drains = clean.filter(l => DRAIN_RESULT.test(l)).length;
