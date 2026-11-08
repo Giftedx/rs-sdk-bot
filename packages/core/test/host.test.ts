@@ -159,3 +159,16 @@ test('a stop file ends a chain bot before its next step', async () => {
         expect(r!.result).toBe('RESULT fail stop file chain rounds=0 ok=0 failed=0');
     } finally { rmSync(stop, { force: true }); rmSync(logDir, { recursive: true, force: true }); }
 });
+
+test('invalid chain rounds refuse one hosted actor without rejecting its peers', async () => {
+    const logDir = join(tmpdir(), `host-chain-invalid-${process.pid}`);
+    const step = { script: 'packages/core/test/fixtures/host-echo.ts', args: [], env: {} };
+    try {
+        const results = await runHost([
+            { name: 'alpha', script: 'scripts/chain.ts', steps: [step] },
+            { name: 'beta', script: 'scripts/chain.ts', env: { ROUNDS: 'bad' }, steps: [step] },
+        ], { out: () => {}, logDir, guard: false });
+        expect(results.map(r => [r.name, r.code])).toEqual([['alpha', 0], ['beta', 1]]);
+        expect(results[1]!.result).toBe('RESULT fail chain needs steps and nonnegative integer ROUNDS');
+    } finally { rmSync(logDir, { recursive: true, force: true }); }
+});

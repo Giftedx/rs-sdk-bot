@@ -43,6 +43,15 @@ test('successful finite rounds keep their ordering and totals', async () => {
     expect(result).toBe('RESULT ok chain rounds=2 ok=4 failed=0');
 });
 
+test.each([-1, NaN, Infinity, 1.5])('invalid round limit %s is a per-chain refusal before dispatch', async rounds => {
+    let calls = 0;
+    const result = await runChain([parseStep('scripts/walk-to.ts')], rounds, {
+        stopped: () => false, log: () => {}, run: async () => { calls++; return 'RESULT ok'; },
+    });
+    expect(calls).toBe(0);
+    expect(result).toBe('RESULT fail chain needs steps and nonnegative integer ROUNDS');
+});
+
 test('the last RESULT line wins; none is a failure', () => {
     expect(lastResult('RESULT fail a\nlog\nRESULT ok b\n')).toBe('RESULT ok b');
     expect(lastResult('no result here')).toBe('RESULT fail no result');

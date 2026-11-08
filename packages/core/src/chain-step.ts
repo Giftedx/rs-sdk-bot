@@ -16,7 +16,7 @@ export async function runChainSteps(steps: readonly Step[], rounds: number, deps
     run(step: Step, round: number, index: number): Promise<string>;
     log(line: string): void;
 }): Promise<string> {
-    if (!steps.length || !Number.isSafeInteger(rounds) || rounds < 0) throw Error('chain needs steps and nonnegative integer ROUNDS');
+    if (!steps.length || !Number.isSafeInteger(rounds) || rounds < 0) return 'RESULT fail chain needs steps and nonnegative integer ROUNDS';
     let ok = 0, failed = 0, round = 0;
     const summary = (result: string) => `${result} chain rounds=${round} ok=${ok} failed=${failed}`;
     while (rounds === 0 || round < rounds) {
