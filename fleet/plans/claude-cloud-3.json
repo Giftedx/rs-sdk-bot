@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud-3",
- "at": 1794179201632,
+ "at": 1794179789699,
  "jobs": [
   {
    "account": "Kiltlifter",
@@ -10,7 +10,7 @@
     "KNIGHT_SPOT": "2653,3300",
     "TICKS": "9000"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true,
    "goal": "goldfarm knights at 2653,3300",
@@ -48,7 +48,7 @@
     "PEN": "3187,3277",
     "TICKS": "3000"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true,
    "goal": "feathers at the chicken pen 3187,3277",
