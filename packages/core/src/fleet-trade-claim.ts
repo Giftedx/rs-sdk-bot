@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { SIDE_NAME } from './fleet';
@@ -102,6 +103,38 @@ function appendClaim(git: ReturnType<typeof gitForTrade>, ref: string, head: str
     return appendFleetGitRecord(git, ref, head, tree, subject + '\n\n' + JSON.stringify(claim));
 }
 
+const pendingDir = (root: string) => join(root, '.practice', 'fleet-account-pending');
+const pendingPath = (root: string, nonce: string) => join(pendingDir(root), nonce + '.json');
+
+function abandonedPending(root: string, claim: FleetSwarmClaim, target: ClaimIdentity): { inherited?: FleetSwarmClaim } | undefined {
+    if (claim.side !== target.side || claim.host !== hostname() || pidAlive(claim.pid) || claim.checkout !== fleetCheckoutId(root)) return;
+    let pending: {claim: string; inherited?: FleetSwarmClaim};
+    try { pending = JSON.parse(readFileSync(pendingPath(root, claim.nonce), 'utf8')); }
+    catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+        throw error;
+    }
+    if (pending?.claim !== JSON.stringify(claim)) return;
+    const attempts = listAttempts(target.account, target.server, {root: join(root, '.practice/session-lifecycle')});
+    // A missing receipt alone proves nothing. Require the pre-push marker and refuse if
+    // any receipt is unreadable or could belong to the marked attempt.
+    if (attempts.some(row => !row.receipt || row.receipt.owner.sharedClaimNonce === claim.nonce)) return;
+    if (!pending.inherited) return {};
+    const prior = parseClaim(JSON.stringify(pending.inherited), claim.account, claim.server);
+    if (isSwarmClaim(prior) && prior.phase === 'held' && prior.checkout === claim.checkout
+        && prior.side === claim.side && prior.host === claim.host && prior.nonce !== claim.nonce) return {inherited: prior};
+}
+
+function forgetPending(root: string, nonce: string) {
+    try { unlinkSync(pendingPath(root, nonce)); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+}
+
+function cleanPending(root: string, nonce: string) {
+    try { forgetPending(root, nonce); }
+    catch { console.error('could not clean superseded fleet admission marker'); }
+}
+
 // The caller supplies the exact nonce only after it proves settlement and logout,
 // or proves that the held attempt never connected. A stale caller cannot clear a new claim.
 export function releaseFleetTradeClaim(root: string, target: Identity & { nonce: string }, now = Date.now): void {
@@ -119,12 +152,17 @@ export function acquireFleetTradeClaim(root: string, input: TradeClaimInput, now
     const { side, orderId, role } = input;
     if (!SIDE_NAME.test(side) || !ORDER_ID.test(orderId) || (role !== 'from' && role !== 'to')) throw Error('invalid fleet trade claim order');
     const git = gitForTrade(root), { ref, head, claim } = loadClaim(git, account, server);
-    if (claim?.phase === 'held') throw Error(isSwarmClaim(claim) ? 'fleet account claim held by swarm' : 'fleet trade claim held for order ' + claim.orderId);
+    if (claim?.phase === 'held') {
+        if (!isSwarmClaim(claim)) throw Error('fleet trade claim held for order ' + claim.orderId);
+        const pending = abandonedPending(root, claim, input);
+        if (!pending || pending.inherited) throw Error('fleet account claim held by swarm');
+    }
     const key = createHash('sha256').update(JSON.stringify([orderId.toLowerCase(), role])).digest('hex');
     const subject = 'Fleet trade attempt ' + key;
     if (head && git(['log', '-1', '--format=%H', '--fixed-strings', '--grep=' + subject, head])) throw Error('fleet trade order role already claimed');
     const record: FleetTradeClaim = { account, server, side, orderId, role, nonce: randomUUID(), phase: 'held', at: now() };
     appendClaim(git, ref, head, subject, record);
+    if (claim?.phase === 'held' && isSwarmClaim(claim)) cleanPending(root, claim.nonce);
     return { ...record, release: () => releaseFleetTradeClaim(root, record, now) };
 }
 
@@ -132,7 +170,9 @@ export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { rec
     const { account, server } = identity(input), { side } = input;
     if (!SIDE_NAME.test(side)) throw Error('invalid fleet swarm claim side');
     const git = fleetGitWindow(root, 'fleet swarm claim authority');
-    const { ref, head, claim } = loadClaim(git, account, server);
+    const { ref, head, claim: current } = loadClaim(git, account, server);
+    const pending = current?.phase === 'held' && isSwarmClaim(current) ? abandonedPending(root, current, input) : undefined;
+    const claim = pending ? pending.inherited : current;
     const checkout = fleetCheckoutId(root), host = hostname();
     const lifecycleRoot = join(root, '.practice/session-lifecycle');
     const proof = () => readLogoutProof(input.account, input.server, { root: lifecycleRoot });
@@ -150,7 +190,10 @@ export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { rec
         if (prior.state === 'held') inheritedHold = claim;
     }
     const record: FleetSwarmClaim = { kind: 'swarm', account, server, side, checkout, host, pid: process.pid, nonce: randomUUID(), phase: 'held', at: now() };
+    mkdirSync(pendingDir(root), {recursive: true});
+    writeFileSync(pendingPath(root, record.nonce), JSON.stringify({claim: JSON.stringify(record), inherited: inheritedHold}), {flag: 'wx'});
     const owned = appendClaim(git, ref, head, 'Fleet swarm attempt', record);
+    if (pending && current) cleanPending(root, current.nonce);
     let released = false;
     const release = (restore?: FleetSwarmClaim) => {
         if (released) return;
@@ -158,9 +201,11 @@ export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { rec
             restore ? 'Fleet swarm inherited hold restored' : 'Fleet swarm released',
             restore ?? { ...record, phase: 'released', at: now() });
         released = true;
+        cleanPending(root, record.nonce);
     };
     return {
         nonce: record.nonce,
+        armNetwork: () => forgetPending(root, record.nonce),
         abortBeforeNetwork: () => release(inheritedHold),
         releaseAfterLogout(attemptId: string) {
             const latest = proof(), owner = latest.state === 'confirmed' && latest.attemptId === attemptId ? producer(attemptId) : undefined;

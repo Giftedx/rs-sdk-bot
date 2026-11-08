@@ -72,7 +72,7 @@ export async function awaitBotReady(s: Session, log: (line: string) => void): Pr
 // `opts.log` receives the START and LOGOUT lines; the bot host (host.ts) passes a per-bot log. Default console.log.
 // `opts.record` names the worker script and its arguments for the run record (tick-record.ts); the bot host passes
 // the hosted script, a standalone worker uses its own process arguments.
-export async function openBot(name: string, opts: { log?: (line: string) => void; onStop?: (s: Session, detail: string) => Promise<unknown>; onSessionEnd?: (s: Session, detail: string) => Promise<unknown>; record?: { script: string; argv: string[] }; admitWithPlanLock?: (server: string) => void } = {}): Promise<Session> {
+export async function openBot(name: string, opts: { log?: (line: string) => void; onStop?: (s: Session, detail: string) => Promise<unknown>; onSessionEnd?: (s: Session, detail: string) => Promise<unknown>; record?: { script: string; argv: string[] }; trade?: Parameters<typeof connectInProcess>[0]['trade'] } = {}): Promise<Session> {
     if (executionContext.getStore()?.signal.aborted) return new Promise(() => {});
     // An in-process runner in a bot host routes this account's logins through the host's own openBot, so the host
     // tracks the session and logs it out when the runner ends. The hook is lifted for the call it makes back here.
@@ -89,9 +89,9 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     const server = serverFromEnv(env);
     assertServerAllowed(server);
     assertLiveWorkerRelease(server);
-    const admission = opts.admitWithPlanLock;
-    const s = await connectInProcess({ name, password, server, ...(admission ? {
-        beforeConnect: () => { assertSideOwns(name); admission(server); }, lockPlan: true,
+    const trade = opts.trade;
+    const s = await connectInProcess({ name, password, server, ...(trade ? {
+        trade: {...trade, check: server => { assertSideOwns(name); trade.check(server); }},
     } : {}) });
     await awaitBotReady(s, log);
     const p = s.sdk.getState()!.player!;

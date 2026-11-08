@@ -72,7 +72,7 @@ test('a trade and a swarm racing on the same account have exactly one winner', a
     await withRepos(async (a, b) => {
         const modulePath = JSON.stringify(resolve(import.meta.dir, '../src/fleet-trade-claim.ts'));
         const start = (root: string, functionName: string) => Bun.spawn([process.execPath, '-e',
-            `import { ${functionName} } from ${modulePath}; ${functionName}(process.cwd(), ${JSON.stringify(input)})`],
+            `import { ${functionName} } from ${modulePath}; ${functionName}(process.cwd(), ${JSON.stringify(input)})${functionName === 'acquireFleetSwarmClaim' ? '.armNetwork()' : ''}`],
         { cwd: root, stdout: 'ignore', stderr: 'pipe', timeout: 15_000, windowsHide: true });
         const results = await Promise.all([start(a, 'acquireFleetTradeClaim').exited, start(b, 'acquireFleetSwarmClaim').exited]);
         expect(results.filter(code => code === 0)).toHaveLength(1);
@@ -100,10 +100,41 @@ test('a dead swarm producer remains held, and pre-network recovery refusal resto
         expect(prior).toMatchObject({ kind: 'swarm', phase: 'held' });
         expect(() => acquireFleetSwarmClaim(a, input)).toThrow('held');
         expect(() => acquireFleetSwarmClaim(b, input, { recover: true })).toThrow('held');
+        const interrupted = Bun.spawn([process.execPath, '-e',
+            `import { acquireFleetSwarmClaim } from ${claimModule}; acquireFleetSwarmClaim(process.cwd(), ${JSON.stringify(input)}, {recover: true})`],
+        { cwd: a, stdout: 'ignore', stderr: 'pipe', timeout: 15_000, windowsHide: true });
+        expect(await interrupted.exited).toBe(0);
+        expect(() => acquireFleetTradeClaim(a, input)).toThrow('held');
         const replacement = acquireFleetSwarmClaim(a, input, { recover: true });
         expect(replacement.nonce).not.toBe(prior?.nonce);
         replacement.abortBeforeNetwork();
         expect(readFleetAccountClaim(b, input)).toEqual(prior);
         expect(() => acquireFleetTradeClaim(b, input)).toThrow('held');
+    });
+}, 30_000);
+
+test('the owning checkout can recover a dead claim that never reached session intent', async () => {
+    await withRepos(async (a, b) => {
+        const modulePath = JSON.stringify(resolve(import.meta.dir, '../src/fleet-trade-claim.ts'));
+        const child = Bun.spawn([process.execPath, '-e',
+            `import { acquireFleetSwarmClaim } from ${modulePath}; acquireFleetSwarmClaim(process.cwd(), ${JSON.stringify(input)})`],
+        { cwd: a, stdout: 'ignore', stderr: 'pipe', timeout: 15_000, windowsHide: true });
+        expect(await child.exited).toBe(0);
+        expect(() => acquireFleetTradeClaim(b, input)).toThrow('held');
+        const claim = acquireFleetTradeClaim(a, input);
+        expect(readFleetAccountClaim(b, input)?.nonce).toBe(claim.nonce);
+        claim.release();
+    });
+}, 30_000);
+
+test('a dead claim with no pending marker stays held even if the session receipt is missing', async () => {
+    await withRepos(async (a) => {
+        const modulePath = JSON.stringify(resolve(import.meta.dir, '../src/fleet-trade-claim.ts'));
+        const child = Bun.spawn([process.execPath, '-e',
+            `import { acquireFleetSwarmClaim } from ${modulePath}; acquireFleetSwarmClaim(process.cwd(), ${JSON.stringify(input)}).armNetwork()`],
+        { cwd: a, stdout: 'ignore', stderr: 'pipe', timeout: 15_000, windowsHide: true });
+        expect(await child.exited).toBe(0);
+        expect(() => acquireFleetTradeClaim(a, input)).toThrow('held');
+        expect(() => acquireFleetSwarmClaim(a, input, {recover: true})).toThrow('held');
     });
 }, 30_000);
