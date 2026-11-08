@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794173128222,
+ "at": 1794176167483,
  "jobs": [
   {
    "account": "Masterbaiter",
@@ -470,23 +470,6 @@
    "role": "firemaking"
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/blood-chest.ts",
-   "args": [
-    "24000"
-   ],
-   "env": {
-    "MAX_LOOTS": "100",
-    "CAP": "24000",
-    "BANK_EVERY": "25",
-    "COORDINATOR_RUN_ID": "task-879344a9-15bb-4263-b7ce-32763e9aa9f3"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-blood-charge-resume-live100-lease-retry [task-879344a9-15bb-4263-b7ce-32763e9aa9f3]",
-   "role": "supply"
-  },
-  {
    "account": "CoinCock",
    "script": "scripts/buy-owned-ge-item.ts",
    "args": [],
@@ -505,6 +488,23 @@
    "enabled": false,
    "repeat": false,
    "goal": "run-ge-coincock-mightyrod-blood261-600-resume [task-ce1de9c0-7a37-4669-9cda-edc677734ba4]",
+   "role": "supply"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/blood-chest.ts",
+   "args": [
+    "24000"
+   ],
+   "env": {
+    "MAX_LOOTS": "100",
+    "CAP": "24000",
+    "BANK_EVERY": "5",
+    "COORDINATOR_RUN_ID": "task-98121627-5728-49a2-8345-54a547f27810"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-blood-charge-renewed-controller-qualified [task-98121627-5728-49a2-8345-54a547f27810]",
    "role": "supply"
   }
  ]
