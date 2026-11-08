@@ -239,6 +239,11 @@
    "side": "cloud-kit",
    "server": "rs-sdk-demo.fly.dev",
    "reservation": "task-e05bb012-344d-479a-9db3-618013d935bd"
+  },
+  "Glassblower": {
+   "side": "cloud-kit",
+   "server": "rs-sdk-demo.fly.dev",
+   "reservation": "task-30b2bb88-95a5-42f0-8eb2-4d5c8e0ef7ea"
   }
  }
 }
