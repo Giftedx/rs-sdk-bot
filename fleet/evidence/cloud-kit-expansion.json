@@ -1,6 +1,6 @@
 {
   "schema": "cloud-kit-expansion/1",
-  "at": 1794180640504,
+  "at": 1794180702669,
   "side": "cloud-kit",
   "controller": {
     "pid": 6955,
@@ -29,11 +29,11 @@
     }
   },
   "headroom": {
-    "freeGB": 15.455364227294922,
+    "freeGB": 16.262699127197266,
     "load": [
-      0.24,
-      0.43,
-      0.36
+      0.08,
+      0.35,
+      0.34
     ],
     "cpus": 5,
     "minFreeGB": 8,
@@ -42,15 +42,15 @@
   "accounts": [
     {
       "account": "Familyjewel",
-      "at": 1794180640172,
-      "tick": 1306,
+      "at": 1794180678644,
+      "tick": 1399,
       "position": {
-        "x": 2658,
-        "z": 3310,
+        "x": 2655,
+        "z": 3283,
         "level": 0
       },
       "hp": {
-        "now": 7,
+        "now": 9,
         "max": 10
       },
       "skills": [
@@ -75,7 +75,7 @@
         {
           "name": "Hitpoints",
           "level": 10,
-          "currentLevel": 7,
+          "currentLevel": 9,
           "xp": 980
         },
         {
@@ -158,9 +158,9 @@
         },
         {
           "name": "Thieving",
-          "level": 52,
-          "currentLevel": 52,
-          "xp": 39650
+          "level": 55,
+          "currentLevel": 55,
+          "xp": 46670
         },
         {
           "name": "Stat18",
@@ -181,7 +181,14 @@
           "xp": 0
         }
       ],
-      "bank": null,
+      "bank": [
+        {
+          "id": 995,
+          "baseId": 995,
+          "name": "Coins",
+          "count": 869
+        }
+      ],
       "inventory": [
         {
           "id": 1351,
@@ -284,48 +291,39 @@
           "baseId": 559,
           "name": "Body rune",
           "count": 2
-        },
-        {
-          "id": 995,
-          "baseId": 995,
-          "name": "Coins",
-          "count": 664
-        },
-        {
-          "id": 1901,
-          "baseId": 1901,
-          "name": "Chocolate slice",
-          "count": 1
         }
       ],
       "equipment": [],
-      "result": "",
+      "result": "ok thieving=55 xp=46670 ticks=1381 at=2655,3283,0 hp=9 hpMin=4 died=false relogs=0 relogTicks=0 logoutTicks=0 idleTicks=81 pickTicks=754 shopTicks=80 eatTicks=15 stunWait=38 stunMsgs=43 tries=377 stuns=42 eaten=18 bought=7 waits=0 walkTicks=68 chases=122 coins=0 bread=0 milestones=coins60,ard",
       "workRevision": "73fe1601e1db0a40d8a67b6548fb6aef7ebdc08a461a40276a8f177a06399c98",
       "attempt": "1794180110552-0000008077-0000000001",
       "logout": {
-        "state": "held",
+        "state": "confirmed",
         "account": "Familyjewel",
         "server": "rs-sdk-demo.fly.dev",
         "domain": "live",
         "attemptId": "1794180110552-0000008077-0000000001",
-        "reason": "session active or outcome unknown"
+        "loggedOutAt": 1794180677670,
+        "ownerRun": null,
+        "receiptSha256": "723a6e9f0ab3cf9f07b393a56472d7c5ec4a23706a61b024272e0d3c73b92ab9"
       },
       "progress": {
         "stage": "training",
-        "batch": 0
+        "batch": 0,
+        "blocker": "qualified knight spot at capacity"
       }
     },
     {
       "account": "Glassblower",
-      "at": 1794180639441,
-      "tick": 1301,
+      "at": 1794180665771,
+      "tick": 1363,
       "position": {
-        "x": 2661,
-        "z": 3310,
+        "x": 2655,
+        "z": 3283,
         "level": 0
       },
       "hp": {
-        "now": 8,
+        "now": 9,
         "max": 10
       },
       "skills": [
@@ -350,7 +348,7 @@
         {
           "name": "Hitpoints",
           "level": 10,
-          "currentLevel": 8,
+          "currentLevel": 9,
           "xp": 980
         },
         {
@@ -433,9 +431,9 @@
         },
         {
           "name": "Thieving",
-          "level": 54,
-          "currentLevel": 54,
-          "xp": 44330
+          "level": 55,
+          "currentLevel": 55,
+          "xp": 46670
         },
         {
           "name": "Stat18",
@@ -456,7 +454,26 @@
           "xp": 0
         }
       ],
-      "bank": null,
+      "bank": [
+        {
+          "id": 995,
+          "baseId": 995,
+          "name": "Coins",
+          "count": 773
+        },
+        {
+          "id": 2309,
+          "baseId": 2309,
+          "name": "Bread",
+          "count": 1
+        },
+        {
+          "id": 1901,
+          "baseId": 1901,
+          "name": "Chocolate slice",
+          "count": 1
+        }
+      ],
       "inventory": [
         {
           "id": 1351,
@@ -492,12 +509,6 @@
           "id": 1931,
           "baseId": 1931,
           "name": "Pot",
-          "count": 1
-        },
-        {
-          "id": 2309,
-          "baseId": 2309,
-          "name": "Bread",
           "count": 1
         },
         {
@@ -565,41 +576,26 @@
           "baseId": 559,
           "name": "Body rune",
           "count": 2
-        },
-        {
-          "id": 995,
-          "baseId": 995,
-          "name": "Coins",
-          "count": 688
-        },
-        {
-          "id": 2309,
-          "baseId": 2309,
-          "name": "Bread",
-          "count": 1
-        },
-        {
-          "id": 1901,
-          "baseId": 1901,
-          "name": "Chocolate slice",
-          "count": 1
         }
       ],
       "equipment": [],
-      "result": "",
+      "result": "ok thieving=55 xp=46670 ticks=1343 at=2655,3283,0 hp=9 hpMin=4 died=false relogs=0 relogTicks=0 logoutTicks=0 idleTicks=92 pickTicks=734 shopTicks=49 eatTicks=12 stunWait=31 stunMsgs=39 tries=367 stuns=38 eaten=16 bought=6 waits=0 walkTicks=64 chases=125 coins=0 bread=0 milestones=coins60,ard",
       "workRevision": "73fe1601e1db0a40d8a67b6548fb6aef7ebdc08a461a40276a8f177a06399c98",
       "attempt": "1794180110871-0000008088-0000000001",
       "logout": {
-        "state": "held",
+        "state": "confirmed",
         "account": "Glassblower",
         "server": "rs-sdk-demo.fly.dev",
         "domain": "live",
         "attemptId": "1794180110871-0000008088-0000000001",
-        "reason": "session active or outcome unknown"
+        "loggedOutAt": 1794180664517,
+        "ownerRun": null,
+        "receiptSha256": "c6faa9798a1939bdd5a909f59f72f7febf870a35fec1eab76b651c83be7a23ae"
       },
       "progress": {
         "stage": "training",
-        "batch": 0
+        "batch": 0,
+        "blocker": "qualified knight spot at capacity"
       }
     }
   ],
