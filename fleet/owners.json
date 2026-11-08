@@ -183,6 +183,10 @@
   "BoneToPick": {
    "side": "cloud",
    "server": "rs-sdk-demo.fly.dev"
+  },
+  "Crownjewels": {
+   "side": "cloud",
+   "server": "rs-sdk-demo.fly.dev"
   }
  }
 }
