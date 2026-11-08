@@ -175,6 +175,10 @@
   "Spitroaster": {
    "side": "cloud",
    "server": "rs-sdk-demo.fly.dev"
+  },
+  "Stirmypot": {
+   "side": "cloud",
+   "server": "rs-sdk-demo.fly.dev"
   }
  }
 }
