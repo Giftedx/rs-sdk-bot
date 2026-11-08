@@ -3,16 +3,16 @@
  "side": "cloud",
  "source": "70fcbce85350659ad82496060e9c3e4f992c91a0",
  "started": 1794167124636,
- "at": 1794176148572,
+ "at": 1794176238735,
  "peakLive": 9,
  "currentLive": 1,
  "minFreeGB": 8.638957977294922,
  "headroom": {
-  "freeGB": 15.203681945800781,
+  "freeGB": 15.296390533447266,
   "load": [
-   0.33,
-   0.3,
-   0.55
+   0.18,
+   0.27,
+   0.52
   ],
   "cpus": 5,
   "requiredFloorGB": 4,
@@ -37,8 +37,8 @@
    "account": "TossTheCaber",
    "goal": "Final10 yews for Haggis23-yew demand,13banked; live5+8 pilots clean, actual Seers grove and steelaxe equipped; finite1600ticks one trip.20replacementwool reserved for held Stirmypot",
    "enabled": true,
-   "tick": 6,
-   "at": 1794176146613,
+   "tick": 236,
+   "at": 1794176238560,
    "position": {
     "x": 2714,
     "z": 3462,
