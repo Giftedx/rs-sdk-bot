@@ -1,0 +1,346 @@
+{
+  "schema": "porksword-kit-stage/1",
+  "account": "Porksword",
+  "source": {
+    "baseMaster": "70fcbce85350659ad82496060e9c3e4f992c91a0",
+    "commit": "42657529ef8b84f0b9f6888197e375a2028da048",
+    "pr": "https://github.com/Giftedx/rs-sdk-bot/pull/444",
+    "entry": "scripts/pvp-kit-stage.ts",
+    "entrySha256": "32392aae0958a46d98257efc95c6816acf7a2d624a7c71100e5465e9ec0c1926",
+    "workerRelease": "21c34e4540fe6a8419c91e4129ffc730d967c4633ffa66468697ef5899bed51a",
+    "sdkPin": "db0cc51e0a8f9f0d6a7d60c44e534412bb0601bb",
+    "setupPatchSha256": "f6faac29e4a5f5e9b90e9c48762e9000614513dc376c4b39dcc6d43cd7b0b509",
+    "runtime": "Bun1.3.6; local native150ms/25x"
+  },
+  "proofLevel": "Standalone native practice accepted; no live gameplay or live admission",
+  "fixture": {
+    "actor": "rhporxgem01",
+    "sourceSnapshotBlob": "d9cb41b9a6c64baabe1f94de9a1f1c1c7a0bbb4d",
+    "start": {
+      "save": {
+        "position": {
+          "x": 2807,
+          "z": 3441,
+          "level": 0
+        },
+        "skills": {
+          "Attack": 1,
+          "Defence": 1,
+          "Strength": 1,
+          "Hitpoints": 10,
+          "Ranged": 1,
+          "Prayer": 1,
+          "Magic": 1,
+          "Cooking": 1,
+          "Woodcutting": 1,
+          "Fletching": 1,
+          "Fishing": 1,
+          "Firemaking": 1,
+          "Crafting": 1,
+          "Smithing": 1,
+          "Mining": 1,
+          "Herblore": 1,
+          "Agility": 1,
+          "Thieving": 86,
+          "Runecraft": 1
+        },
+        "inventory": [
+          {
+            "id": 995,
+            "count": 1300
+          }
+        ],
+        "bank": [
+          {
+            "id": 995,
+            "count": 7052
+          },
+          {
+            "id": 1351,
+            "count": 1
+          },
+          {
+            "id": 590,
+            "count": 1
+          },
+          {
+            "id": 303,
+            "count": 1
+          },
+          {
+            "id": 315,
+            "count": 1
+          },
+          {
+            "id": 2309,
+            "count": 5
+          },
+          {
+            "id": 1265,
+            "count": 1
+          },
+          {
+            "id": 1205,
+            "count": 1
+          },
+          {
+            "id": 1277,
+            "count": 1
+          },
+          {
+            "id": 1171,
+            "count": 1
+          },
+          {
+            "id": 841,
+            "count": 1
+          },
+          {
+            "id": 882,
+            "count": 25
+          },
+          {
+            "id": 556,
+            "count": 25
+          },
+          {
+            "id": 558,
+            "count": 15
+          },
+          {
+            "id": 555,
+            "count": 6
+          },
+          {
+            "id": 557,
+            "count": 4
+          },
+          {
+            "id": 559,
+            "count": 2
+          },
+          {
+            "id": 1893,
+            "count": 7
+          },
+          {
+            "id": 1901,
+            "count": 7
+          },
+          {
+            "id": 1927,
+            "count": 1
+          },
+          {
+            "id": 1931,
+            "count": 1
+          },
+          {
+            "id": 1944,
+            "count": 1
+          },
+          {
+            "id": 44,
+            "count": 3
+          },
+          {
+            "id": 1895,
+            "count": 3
+          }
+        ]
+      }
+    },
+    "scope": "Exact published inventory, bank, empty equipment, levels and owner-reported Catherby/fullHP10 start. XP seeded at level floors and default quest flags; not an exact live save. Raw initial/final fixture bytes included.",
+    "missingLiveState": [
+      "exact XP",
+      "full quest/varp state"
+    ]
+  },
+  "result": {
+    "ok": true,
+    "workerTicks": 773,
+    "position": {
+      "x": 3252,
+      "z": 3420,
+      "level": 0
+    },
+    "coinsBefore": 8352,
+    "coinsAfter": 8284,
+    "coinsBanked": 8284,
+    "food": {
+      "id": 1985,
+      "bought": 2,
+      "banked": 2,
+      "gp": 8
+    },
+    "faresGp": 60,
+    "spentGp": 68,
+    "spendCeilingGp": 108,
+    "protectedBankFloorGp": 8244,
+    "heldRuneArrowtips": 3,
+    "allOtherAssetsPreserved": true,
+    "all21SkillBytesPreserved": true,
+    "varpChanges": {
+      "20": [
+        0,
+        1114112
+      ],
+      "21": [
+        0,
+        134479872
+      ],
+      "22": [
+        0,
+        66694
+      ],
+      "23": [
+        0,
+        330752
+      ],
+      "24": [
+        0,
+        1576960
+      ],
+      "134": [
+        0,
+        798
+      ],
+      "166": [
+        0,
+        2
+      ],
+      "168": [
+        0,
+        2
+      ],
+      "169": [
+        0,
+        2
+      ],
+      "275": [
+        0,
+        4294967295
+      ],
+      "277": [
+        0,
+        4294967295
+      ],
+      "300": [
+        0,
+        1000
+      ],
+      "346": [
+        0,
+        2
+      ],
+      "367": [
+        0,
+        4294967295
+      ]
+    },
+    "varpScope": "Fixture initialization and travel changes retained explicitly; no full quest-flag preservation claim.",
+    "emptyPackAndEquipment": true,
+    "nativeProducerLogout": "logged-out",
+    "accounting": true
+  },
+  "traceAudit": {
+    "publications": 811,
+    "hpMin": 10,
+    "hpMax": 10,
+    "wildernessTicks": [],
+    "actions": {
+      "interactLoc": 8,
+      "bankDeposit": 3,
+      "bankWithdraw": 1,
+      "closeModal": 2,
+      "clickComponent": 5,
+      "walkTo": 104,
+      "interactNpc": 3,
+      "clickDialogOption": 15,
+      "shopBuy": 2,
+      "closeShop": 1
+    },
+    "end": {
+      "k": "end",
+      "t": 774,
+      "reason": "logged-out",
+      "ticks": 773,
+      "rawBytes": 9377335,
+      "cpuMs": 403.9
+    },
+    "cut": false
+  },
+  "validation": {
+    "typecheck": "pass on final source",
+    "focusedTests": {
+      "pass": 26,
+      "fail": 0,
+      "assertions": 134
+    },
+    "fullSuite": {
+      "pass": 3324,
+      "skip": 6,
+      "fail": 1,
+      "assertions": 35957,
+      "scope": "Full suite on staging branch before final deposit-loop correction; final correction has focused checks/typecheck and standalone native proof.",
+      "failure": "packages/router/test/account-provision.test.ts:142; preparedProvisionProof expected true, received false",
+      "baseline": "Same failure reproduced on unchanged master70fcbce8 in separate checkout;9pass/1fail"
+    }
+  },
+  "firstJob": {
+    "admitted": false,
+    "installationGate": "Entry is on PR444, absent master. Full-suite gate fails on existing master test. Incumbent must install a reviewed/released entry through its existing release protocol, refresh current account state/logout and recompute matching hash before one live attempt.",
+    "command": "DEMO_OK=1 WORKER_ENTRY=scripts/pvp-kit-stage.ts WORKER_RELEASE=21c34e4540fe6a8419c91e4129ffc730d967c4633ffa66468697ef5899bed51a bun packages/practice/src/supervise.ts Porksword scripts/pvp-kit-stage.ts 0 1800",
+    "job": {
+      "account": "Porksword",
+      "script": "scripts/pvp-kit-stage.ts",
+      "args": [
+        "1800"
+      ],
+      "enabled": false,
+      "repeat": false,
+      "standing": false,
+      "maxRestarts": 0
+    },
+    "acceptance": "One RESULT ok and newest native producer logout;2cheese banked at Varrock East/fullHP10;all21XP and other assets conserved;3rune tips retained;totalGP>=8244;no combat/Wilderness.",
+    "stops": "One attempt; health/life change, owner stop, cap1800ticks, uncertain route/fare/bank/purchase/deposit, stock change or any accounting gap holds. No automatic continuation to training."
+  },
+  "blockers": [
+    "Not released to master: existing full-suite provisioning test failure",
+    "No exact live XP or full quest flags in published snapshot; incumbent must refresh its own state and hold checks",
+    "No live account/lease assignment accepted by this session"
+  ],
+  "ownership": "No live accounts, controller, lease, fleet plan or stock changed. PR443 ranged worker and local brackets untouched.",
+  "artifacts": {
+    "initial.sav": {
+      "path": "fleet/evidence/porksword-kit-stage/initial.sav",
+      "sha256": "e569f1bc2431b7477d7b4e81746b08104bc14d640e43627120fe3035809fad88",
+      "bytes": 2477
+    },
+    "final.sav": {
+      "path": "fleet/evidence/porksword-kit-stage/final.sav",
+      "sha256": "c6b557c472072349f509496c6dc91f041cb15c4481ac4fe99d7cbd0b8641fdab",
+      "bytes": 1770
+    },
+    "native.log": {
+      "path": "fleet/evidence/porksword-kit-stage/native.log",
+      "sha256": "6a8ed20f6d8cd6461bb6995a4bf0646ae12211cbb373e2740e4b9d87d759e81b",
+      "bytes": 33062
+    },
+    "ticks.ndjson.gz": {
+      "path": "fleet/evidence/porksword-kit-stage/ticks.ndjson.gz",
+      "sha256": "2f28e943d85b813bd07e4468ff4cfade05591ea45e3d91bb2e6893d1df77f503",
+      "bytes": 360825
+    },
+    "logout.json": {
+      "path": "fleet/evidence/porksword-kit-stage/logout.json",
+      "sha256": "6977c9b3d904b4308584804e456c3dac338cdc797e261a35aadabb703fe26b63",
+      "bytes": 669
+    },
+    "fixture.json": {
+      "path": "fleet/evidence/porksword-kit-stage/fixture.json",
+      "sha256": "bbb98b1301f13d340bd9f85dccd7bf6bd887f4f3856627fd40da6b1ed7c605e3",
+      "bytes": 2729
+    }
+  }
+}
