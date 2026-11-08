@@ -70,7 +70,7 @@ test('an expired practice queue wait preserves the host-deferral path without ru
 });
 
 test('declared saved consumers bypass only the practice turn',()=>{
- for(const id of ['ammo-order','blood-chest-order','druid-meats-order','iron-progress-order','magic-order','prayer-order','quest-order','ranged-train','rune-bank-craft']){
+ for(const id of ['ammo-order','blood-chest-order','druid-meats-order','ge-bulk-order','iron-progress-order','magic-order','prayer-order','quest-order','ranged-train','rune-bank-craft']){
   const task=deliveryTask(id);
   expect(task.checks.filter(c=>c.phase==='practice').some(isSavedProofVerifier)).toBe(false);
   for(const saved of task.checks.filter(c=>c.phase==='consumer')){
