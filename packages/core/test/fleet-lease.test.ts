@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { acquireFleetLease, fleetLeaseAllowsWorker, FLEET_LEASE_RENEW_MS, FLEET_LEASE_TTL_MS } from '../src/fleet-lease';
+import { acquireFleetLease, fleetGitWindow, fleetLeaseAllowsWorker, FLEET_LEASE_RENEW_MS, FLEET_LEASE_TTL_MS } from '../src/fleet-lease';
 
 test('the remote lease excludes another checkout, fences old workers, and permits expired takeover', () => {
     const base = mkdtempSync(join(tmpdir(), 'fleet-lease-'));
@@ -77,3 +77,10 @@ test('a replacement in the same checkout can adopt workers after the previous co
         if (dirname(base) === tmpdir()) rmSync(base, { recursive: true, force: true, maxRetries: 5 });
     }
 }, 30_000);
+
+test.skipIf(process.platform !== 'win32')('a fresh Git deadline works in a long-running process', async () => {
+    expect(fleetGitWindow(process.cwd())(['--version'])).toStartWith('git version ');
+    await Bun.sleep(12_500);
+    const git = fleetGitWindow(process.cwd());
+    expect(git(['--version'])).toStartWith('git version ');
+}, 25_000);
