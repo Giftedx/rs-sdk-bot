@@ -1,0 +1,22 @@
+{
+ "id": "rollout3-crown-uns-ess50",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Crownjewels",
+ "to": "Unsheathed",
+ "item": "Rune essence",
+ "count": 50,
+ "start": 1794172932798,
+ "end": 1794174732798,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ]
+}
