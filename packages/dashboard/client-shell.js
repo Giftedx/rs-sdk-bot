@@ -80,8 +80,10 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       if(!quests.length)html+='<p class="game-muted">Quest progress has not been reported for this account.</p>';
       if(questDetail){const q=quests.find(q=>q.name===questDetail);html='<h3>'+E(questDetail)+'</h3><p style="text-align:center">'+E(q?.state||'Not reported')+'</p><p class="game-muted">'+(b?.questsAt?'Last observed '+age(b.questsAt)+' ago.':'No quest snapshot.')+'</p><button class="game-control" data-quest-back>Back to quest list</button>';}
     }
-    if(selectedTab==='friends'){const bots=S.bots.filter(x=>!x.practice&&!x.reserved).sort((x,y)=>(y.inWorld?1:0)-(x.inWorld?1:0)||x.name.localeCompare(y.name));
-      html='<h3>Friends List</h3><p style="text-align:center">Friends: '+bots.filter(x=>x.inWorld).length+' online / '+bots.length+'</p><div class="game-list friends-list">'+bots.map(x=>`<button data-friend="${E(x.name)}" title="${E(safeName(x.name))}${x.goal?' · '+E(x.goal):''}"><span>${E(safeName(x.name))}</span><span class="${x.inWorld?'friend-on':'friend-off'}">${x.inWorld?(window.atlasOperator()?E(x.side||'local'):'Online'):'Offline'}</span></button>`).join('')+'</div><button class="game-control" data-open-plugin="fleet">Fleet plugin</button>';}
+    if(selectedTab==='friends'){
+      if(!S)html='<h3>Friends List</h3><p class="game-muted" role="status">Waiting for fleet data…</p>';
+      else{const bots=S.bots.filter(x=>!x.practice&&!x.reserved).sort((x,y)=>(y.inWorld?1:0)-(x.inWorld?1:0)||x.name.localeCompare(y.name));
+      html='<h3>Friends List</h3><p style="text-align:center">Friends: '+bots.filter(x=>x.inWorld).length+' online / '+bots.length+'</p><div class="game-list friends-list">'+bots.map(x=>`<button data-friend="${E(x.name)}" title="${E(safeName(x.name))}${x.goal?' · '+E(x.goal):''}"><span>${E(safeName(x.name))}</span><span class="${x.inWorld?'friend-on':'friend-off'}">${x.inWorld?(window.atlasOperator()?E(x.side||'local'):'Online'):'Offline'}</span></button>`).join('')+'</div><button class="game-control" data-open-plugin="fleet">Fleet plugin</button>';}}
     if(selectedTab==='settings')html='<h3>Settings</h3><label>Display mode<select id="game-display"><option value="open">Sidebar open</option><option value="closed" '+(app.classList.contains('client-collapsed')?'selected':'')+'>Game only</option></select></label><label>Render quality<select id="game-quality"><option value="1">Sharp</option><option value="0.75">Balanced</option><option value="0.5">Light</option></select></label>'+(window.FleetShim?'<label>Roofs<select id="game-roofs"><option value="off">Removed</option><option value="on" '+(window.atlasRoofsOff()?'':'selected')+'>Shown</option></select></label>':'')+'<button class="game-control" data-toggle-chat>Show / hide chatbox</button><button class="game-control" data-places>Places & camera</button>'+(window.atlasOperator()?'<button class="game-control" data-open-plugin="machine">Performance</button>':'');
     if(selectedTab==='logout'){const owner=window.FleetShim?.signedIn?.();html='<h3>Logout</h3><p style="text-align:center">'+(owner?'Logged in as '+E(owner)+'.':'You are watching as a spectator.')+'</p><p class="game-muted">Account sessions belong to their workers; logging out here never logs a bot out.</p><button class="game-control" data-logout>Click here to logout</button><button class="game-control" data-open-plugin="fleet">View active sessions</button>';}
     const typing=document.activeElement?.matches?.('[data-quest-search]')?[document.activeElement.selectionStart,document.activeElement.selectionEnd]:null;
@@ -485,19 +487,27 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   window.atlasOverlay=()=>{if(S)overlay();};
   function accountChoices(){const choices=S.bots.filter(b=>!b.practice).map(b=>({name:b.name,inWorld:b.inWorld}));const following=window.atlasFollowOther;if(following&&!choices.some(b=>b.name===following))choices.push({name:following,inWorld:true,following:true});if(sel&&!choices.some(b=>b.name===sel))choices.push({name:sel,inWorld:false,missing:true});return choices;}
   // The address names the open plugin and account, so a link opens the same view.
+  let linkedPluginRestored=false;
+  function restoreLinkedPlugin(){
+    linkedPluginRestored=true;
+    const id=new URLSearchParams(location.hash.slice(1)).get('p');
+    if(!id||!rail.querySelector('[data-client-plugin="'+CSS.escape(id)+'"]'))return false;
+    showPlugin(id);
+    return true;
+  }
   let linkRead=false;
-  function followLink(){
+  function followLinkedAccount(){
     if(linkRead)return;linkRead=true;
-    const q=new URLSearchParams(location.hash.slice(1)),id=q.get('p'),name=q.get('a');
-    if(id&&rail.querySelector('[data-client-plugin="'+CSS.escape(id)+'"]'))showPlugin(id);
+    const name=new URLSearchParams(location.hash.slice(1)).get('a');
     if(name&&S.bots.some(b=>b.name===name))pick(name);
   }
   function writeLink(){
-    if(!linkRead)return;
-    const q=new URLSearchParams({p:selectedPlugin});if(sel)q.set('a',sel);
+    if(!linkedPluginRestored)return;
+    const name=linkRead?sel:new URLSearchParams(location.hash.slice(1)).get('a');
+    const q=new URLSearchParams({p:selectedPlugin});if(name)q.set('a',name);
     const hash='#'+q;if(location.hash!==hash)history.replaceState(null,'',location.pathname+location.search+hash);
   }
-  function refresh(){if(!S)return;followLink();writeLink();if(body.firstElementChild?.hasAttribute('data-snapshot-loading'))renderSnapshotPlugin(selectedPlugin);syncNotifyControls();$('#client-more').hidden=!window.atlasOperator();hud.querySelector('.game-bank')?.refreshObservation?.();camUpdate();screens();minimap();xpDrops(account());overlay();chatFeed();idleNotifier(account());levelUps();deaths();if(selectedPlugin==='xp'&&body.dataset.plugin==='xp'){const top=body.scrollTop;body.innerHTML=xpTracker();body.scrollTop=top;}if(selectedPlugin==='boards'&&body.dataset.plugin==='boards'){const head=body.querySelector('.progress-head');if(head)head.innerHTML=boardSummary()+progressPanel();const rw=body.querySelector('.rivals-wrap');if(rw&&!rw.contains(document.activeElement))rw.innerHTML=rivalsPanel();}if(selectedPlugin==='ge')refreshGe();if(selectedPlugin==='world'&&body.dataset.plugin==='world'&&!(body.contains(document.activeElement)&&document.activeElement.matches('input,select,textarea'))){const top=body.scrollTop;body.innerHTML=worldPanel();body.scrollTop=top;}else if(selectedPlugin==='world')refreshWorldLookup();infoboxes();title.querySelector('.connection').textContent=$('#connection').textContent;const b=account();focusPaint();warmPlaces();welcomeCard();$('#chat-name').textContent=(b?safeName(b.name):'Spectator')+':';
+  function refresh(){if(!S)return;followLinkedAccount();writeLink();if(body.firstElementChild?.hasAttribute('data-snapshot-loading'))renderSnapshotPlugin(selectedPlugin);syncNotifyControls();$('#client-more').hidden=!window.atlasOperator();hud.querySelector('.game-bank')?.refreshObservation?.();camUpdate();screens();minimap();xpDrops(account());overlay();chatFeed();idleNotifier(account());levelUps();deaths();if(selectedPlugin==='xp'&&body.dataset.plugin==='xp'){const top=body.scrollTop;body.innerHTML=xpTracker();body.scrollTop=top;}if(selectedPlugin==='boards'&&body.dataset.plugin==='boards'){const head=body.querySelector('.progress-head');if(head)head.innerHTML=boardSummary()+progressPanel();const rw=body.querySelector('.rivals-wrap');if(rw&&!rw.contains(document.activeElement))rw.innerHTML=rivalsPanel();}if(selectedPlugin==='ge')refreshGe();if(selectedPlugin==='world'&&body.dataset.plugin==='world'&&!(body.contains(document.activeElement)&&document.activeElement.matches('input,select,textarea'))){const top=body.scrollTop;body.innerHTML=worldPanel();body.scrollTop=top;}else if(selectedPlugin==='world')refreshWorldLookup();infoboxes();title.querySelector('.connection').textContent=$('#connection').textContent;const b=account();focusPaint();warmPlaces();welcomeCard();$('#chat-name').textContent=(b?safeName(b.name):'Spectator')+':';
     const orbBox=hud.querySelector('.game-orbs');orbBox.innerHTML=[['hp','Hitpoints',b?.hp?.now,b?.hp?.max],['prayer','Prayer',level('Prayer')?.currentLevel,level('Prayer')?.level]].map(([id,label,value,max])=>`<div class="game-orb orb-${id}" title="${label}: ${value??'not reported'}${max?' / '+max:''}"><span class="orb-num" style="color:${orbColour(value,max)}">${value??'—'}</span><canvas class="orb-art" data-orb="${id}" data-frac="${value!=null&&max?Math.max(0,Math.min(1,value/max)):0}"></canvas></div>`).join('');orbBox.querySelectorAll('canvas').forEach(drawOrb);if(!(selectedTab==='settings'&&$('#game-panel').contains(document.activeElement)))gamePanel();}
   const previousRender=render;render=function(){previousRender();refresh();};
   const previousDrawMap=drawMap;drawMap=function(){previousDrawMap();minimap();};
@@ -510,7 +520,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const focus=title.querySelector('#client-focus'),focusNow=focus.querySelector('.focus-now'),focusName=focus.querySelector('.focus-name'),focusFind=focus.querySelector('.focus-find'),focusList=focus.querySelector('.focus-list');
   const focusNote=document.createElement('div');focusNote.className='focus-note';focusNote.setAttribute('role','status');hud.append(focusNote);
   let focusShown='',focusRowsHtml='',focusNoteTimer=0,flightTo=null;
-  const focusLive=()=>S.bots.filter(b=>b.inWorld&&!b.practice).sort((a,b)=>a.name.localeCompare(b.name));
+  const focusLive=()=>(S?.bots||[]).filter(b=>b.inWorld&&!b.practice).sort((a,b)=>a.name.localeCompare(b.name));
   const focusTarget=()=>window.atlasFollowOther||(window.atlasFreeCamera?null:sel)||null;
   function focusState(){
     const other=window.atlasFollowOther,b=S.bots.find(x=>x.name===sel);
@@ -521,6 +531,10 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     return ['Free camera','free','The camera follows nobody.'];
   }
   function focusRows(){
+    if(!S){
+      focusList.innerHTML='<p class="focus-none" role="status">Waiting for fleet data…</p>';
+      return;
+    }
     const q=focusFind.value.trim().toLowerCase(),current=focusTarget(),choices=accountChoices().filter(c=>!q||safeName(c.name).toLowerCase().includes(q)).sort((a,b)=>a.name.localeCompare(b.name));
     const row=c=>{const b=S.bots.find(x=>x.name===c.name),on=c.name===(current||sel),note=c.following?'another player':c.missing?'no snapshot':c.inWorld?String(b?.phaseShort||b?.goal||'').slice(0,34):'';return '<button role="option" aria-selected="'+on+'" class="focus-row'+(on?' on':'')+(c.inWorld?' live':'')+'" data-focus="'+E(c.name)+'"'+(c.missing||c.following?' disabled':'')+'><i class="focus-dot"></i><span>'+E(safeName(c.name))+'</span><small>'+E(note)+'</small></button>';};
     const group=(label,rows)=>rows.length?'<h6>'+label+' · '+rows.length+'</h6>'+rows.map(row).join(''):'';
@@ -659,6 +673,6 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(F_KEYS[e.key]&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();e.stopPropagation();selectedTab=F_KEYS[e.key];hud.classList.remove('game-panel-hidden');gamePanel();}
     if(e.key==='/'&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();e.stopPropagation();showPlugin('fleet');($('#op-fleet-search')||$('#search'))?.focus();}
   },true);
-  window.atlasClient={follow:name=>{tourSet(false);previousPick(name);},openPlugin:showPlugin,openBank,selectedPlugin:()=>selectedPlugin,gameTab:id=>{selectedTab=id;hud.classList.remove('game-panel-hidden');gamePanel();}};
+  window.atlasClient={follow:name=>{tourSet(false);previousPick(name);},openPlugin:showPlugin,restoreLinkedPlugin,openBank,selectedPlugin:()=>selectedPlugin,gameTab:id=>{selectedTab=id;hud.classList.remove('game-panel-hidden');gamePanel();}};
   app.classList.remove('focus-map','right-hidden','left-hidden');showPlugin('fleet');renderChat();if(S)refresh();
 })();
