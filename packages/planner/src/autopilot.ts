@@ -2,8 +2,8 @@
 // so no person picks jobs, restarts ended ones or spots loops (plan Lanes table, Autopilot).
 // plan() is pure: one assignment per account of this side, highest value per tick first, from proven templates only,
 // never more accounts on one resource (a knight spot, a chicken pen, a shop) across all sides than its capacity
-// (CAPACITY: four farmers to a knight spot, one to a pen or a shop). A job on a resource another account already holds
-// keeps that resource's shared rate of its value (SHARED), so the empty spots fill first.
+// (CAPACITY: three farmers to a knight spot, one to a pen or a shop). A job on a resource other accounts already hold
+// keeps that resource's shared rate of its value once per holder (SHARED), so the empty spots fill first.
 // Value is an estimate in coins per game tick: each output's rate times its unit value, minus coin spend, times the
 // script family's measured work share (1 - idle - move, scripts/tick-waste.ts). A training template is worth a share
 // of the best job it unlocks, and reserves that job's resource. assess() reads a job's recent log lines and retires
@@ -94,12 +94,10 @@ export function plan(inp: Inputs): Assignment[] {
     // same worth, which would replace a running job with a fresh one that changes nothing useful.
     const keeps = (c: Cand) => inp.current?.get(c.account.toLowerCase()) === c.template.id ? 1 : 0;
     const used = new Map(Object.entries(inp.taken ?? {})), done = new Map<string, Assignment>();
-    // A candidate's worth with the holders taken so far: a resource someone already holds keeps its shared rate.
-    const worth = (c: Cand) => c.resources.reduce((v, r) => (used.get(r) ?? 0) > 0 ? v * (inp.shared?.[r] ?? 1) : v, c.value);
-    // Among places of equal worth a new holder takes the least-held resource, so farmers spread over the knight spots
-    // before any spot gets a third; a held job keeps its place first.
-    const holders = (c: Cand) => c.resources.reduce((n, r) => n + (used.get(r) ?? 0), 0);
-    const order = (x: Cand, y: Cand) => worth(y) - worth(x) || keeps(y) - keeps(x) || holders(x) - holders(y) || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id);
+    // A candidate's worth with the holders taken so far: each holder of a resource scales it by that resource's shared
+    // rate, so a third farmer on a spot is worth less than a second and the farmers spread over the spots.
+    const worth = (c: Cand) => c.resources.reduce((v, r) => v * (inp.shared?.[r] ?? 1) ** (used.get(r) ?? 0), c.value);
+    const order = (x: Cand, y: Cand) => worth(y) - worth(x) || keeps(y) - keeps(x) || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id);
     // Donor coins above the reserve, spent as funded candidates take them; a funded account gives nothing.
     // A donor that gives stays free this pass, so the fleet agent can log it in for the trade.
     const pool = new Map((inp.donors ?? []).map(d => [d.name, Math.max(0, d.coins - FUND_RESERVE)])), gave = new Set<string>();
@@ -177,12 +175,13 @@ export function assess(lines: readonly string[]): { retire: boolean; reason: str
 export const knightCoinsPerTick = (thieving: number) => thieving < 55 ? 0 : 18.8 * (50 + 190 * (Math.min(99, thieving) - 1) / 98) / 240;
 export const KNIGHT_SPOTS = ['2652,3318', '2653,3300', '2669,3298', '2671,3313', '2582,3297'];
 export const CHICKEN_PENS = ['3229,3298', '3017,3288', '3187,3277', '3197,3353'];
-// Claim: four farmers can share one knight spot. A pickpocket does not hold the knight: 4 practice bots on the same
-// knights each earned 13.3-15.1 coins per tick (mean 14.7) against the 18.8 model, every run RESULT ok and logged out.
-// Conditions: practice server, goldfarm.ts at its default spot, 3 runs of 600 ticks and one of 9,000. Evidence:
-// research/bot-host.md section 3. Gap: the live rate with more than one farmer on a spot is not measured, so
-// KNIGHT_SHARED_RATE is an estimate; the planner's tick-waste discount and retirement still apply per job.
-export const KNIGHT_SHARE = 4, KNIGHT_SHARED_RATE = 0.75;
+// Claim: three farmers can share one knight spot. A pickpocket does not hold the knight: 4 practice bots at one spot
+// each earned 13.3-15.1 coins per tick (mean 14.7) against the 18.8 model, every run RESULT ok and logged out.
+// Conditions: practice server, goldfarm.ts at its default spot 2653,3302 (the knights in range there, perhaps one or
+// two), 3 runs of 600 ticks and one of 9,000. Evidence: research/bot-host.md section 3. Gap: the live rate with more
+// than one farmer on a spot is not measured, so KNIGHT_SHARED_RATE is an estimate, applied once per holder; the
+// planner's tick-waste discount and retirement still apply per job.
+export const KNIGHT_SHARE = 3, KNIGHT_SHARED_RATE = 0.75;
 export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 

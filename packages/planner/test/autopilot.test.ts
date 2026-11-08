@@ -45,7 +45,7 @@ test('a fresh account trains toward a free knight spot and reserves it; with no 
     expect(ids(plan(inputs(fresh, { taken: { ...four, 'knight:2582,3297': 1 } })))).toEqual({ NewA: expect.stringMatching(/^feathers@/), NewB: expect.stringMatching(/^feathers@/) });
 });
 
-test('a knight spot takes KNIGHT_SHARE farmers: the empty spots fill first, then the held spots take more', () => {
+test('a knight spot takes KNIGHT_SHARE farmers, each worth less: the empty spots fill first, then the least-held', () => {
     const fresh = [acct('NewA'), acct('NewB'), acct('NewC')];
     const knights = (n: number) => Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, n]));
     const shared = (taken: Record<string, number>) => plan(inputs(fresh, { taken, capacity: CAPACITY, shared: SHARED }));
@@ -57,13 +57,16 @@ test('a knight spot takes KNIGHT_SHARE farmers: the empty spots fill first, then
     expect(Math.max(...Object.values(holders({ ...knights(1), 'knight:2582,3297': 0 }, one)))).toBe(2);
     expect(one[1]!.value).toBeCloseTo(one[0]!.value * SHARED['knight:2652,3318']!, 9);
     // No account takes a place beyond a spot's capacity.
-    expect(KNIGHT_SHARE).toBe(4);
+    expect(KNIGHT_SHARE).toBe(3);
     expect(ids(shared({ ...knights(KNIGHT_SHARE), 'knight:2582,3297': KNIGHT_SHARE - 1 }))).toEqual({ NewA: 'thieving55', NewB: expect.stringMatching(/^feathers@/), NewC: expect.stringMatching(/^feathers@/) });
     expect(Object.values(ids(shared(knights(KNIGHT_SHARE)))).every(id => id.startsWith('feathers@'))).toBe(true);
-    // With every spot at two farmers, the third and fourth places still take fresh accounts.
+    // With every spot at two farmers, the third places still take fresh accounts, one to a spot, each worth less than a
+    // second place.
     const third = shared(knights(2));
     expect(ids(third)).toEqual({ NewA: 'thieving55', NewB: 'thieving55', NewC: 'thieving55' });
     expect(Math.max(...Object.values(holders(knights(2), third)))).toBe(3);
+    expect(third[0]!.value).toBeCloseTo(one[0]!.value * SHARED['knight:2652,3318']! ** 2, 9);
+    expect(third[0]!.value).toBeLessThan(one[1]!.value);
     // Two accounts of this side on empty spots spread out instead of sharing.
     const spread = shared({});
     expect(new Set(spread.map(x => x.resources[0])).size).toBe(3);
