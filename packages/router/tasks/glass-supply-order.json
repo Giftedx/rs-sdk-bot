@@ -1,0 +1,46 @@
+{
+  "id": "glass-supply-order",
+  "goal": "Produce a finite banked molten-glass order for a named quest or crafting consumer through ordinary input acquisition, furnace production and logout.",
+  "entry": "scripts/microbot-glass.ts",
+  "files": [
+    "scripts/microbot-glass.ts",
+    "scripts/microbot-glass.test.ts",
+    "packages/practice/src/glass-supply-proof.ts",
+    "packages/practice/test/glass-supply-proof.test.ts"
+  ],
+  "consumer": "run-glass-magicwanda-observatory-one banks one molten glass1775 on ordinary Magicwanda after Imp Catcher, using fresh holdings and bounded acquisition. run-observatory-magicwanda-glass-consumer consumes it to complete Observatory Quest. Practice invokes the actual supply-mode worker CLI from an ordinary bank entry and verifies useful bank credit, reconciled costs and buckets, unrelated assets, clear refusal and logout. Preserve the existing staged furnace API and callers.",
+  "checks": [
+    {
+      "id": "glass-supply-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/microbot-glass.test.ts",
+        "packages/practice/test/glass-supply-proof.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "glass-supply-native",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/glass-supply-proof.ts"
+      ],
+      "timeoutMs": 1800000
+    },
+    {
+      "id": "glass-supply-consumer",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/glass-supply-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 60000
+    }
+  ]
+}
