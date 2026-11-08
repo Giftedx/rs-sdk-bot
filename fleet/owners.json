@@ -195,6 +195,10 @@
   "Knightstick": {
    "side": "claude-cloud-3",
    "server": "rs-sdk-demo.fly.dev"
+  },
+  "PocketPool": {
+   "side": "claude-cloud-3",
+   "server": "rs-sdk-demo.fly.dev"
   }
  }
 }
