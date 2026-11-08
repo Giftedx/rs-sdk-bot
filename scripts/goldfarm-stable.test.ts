@@ -348,3 +348,13 @@ test('the courier service may wait between trips for the next cooked pack withou
         expect(foodWaitLimit('Bigpackage', undefined, now, { ...service, jobs: [{ ...service.jobs[0], ...patch }] })).toBe(300);
     }
 });
+
+test('a bank containing owned cake portions can replenish the same food the farm eats',()=>{
+    for(const name of ['2/3 cake','Slice of cake']){
+        const item={id:name==='2/3 cake'?1893:1895,name,count:3,optionsWithIndex:[{text:'Eat',opIndex:1}]};
+        expect(isFoodItem(item)).toBe(true);
+        const selected=WITHDRAW_FOOD.flatMap(pattern=>[item].filter(row=>pattern.test(row.name)));
+        expect(selected).toHaveLength(1);
+        expect(selected[0]!.count).toBeGreaterThanOrEqual(2);
+    }
+});

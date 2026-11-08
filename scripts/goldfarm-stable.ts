@@ -163,7 +163,7 @@ export const FOOD_DEFS: FoodDef[] = [
 ];
 
 // Owned low-tier fish first; premium sharks only after cheaper stock is gone.
-export const WITHDRAW_FOOD = [/^trout$/i, /^salmon$/i, /^lobster$/i, /^bread$/i, /^cake$/i, /^shark$/i];
+export const WITHDRAW_FOOD = [/^trout$/i, /^salmon$/i, /^lobster$/i, /^bread$/i, /^(slice of cake|2\/3 cake|cake)$/i, /^shark$/i];
 
 export const isFoodItem = (i: any) =>
     FOOD_DEFS.some(d => d.pattern.test(i.name)) &&
