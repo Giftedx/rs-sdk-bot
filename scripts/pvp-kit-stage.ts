@@ -23,7 +23,7 @@ export function kitStageAccounting(before:readonly Item[],after:readonly Item[],
 export async function runKitStage(s:Session,cap=1800,stop=()=>false){
  if(!Number.isSafeInteger(cap)||cap<1||cap>2000)throw Error('kit stage CAP must be1..2000');
  const state=()=>s.sdk.getState(),inv=()=>s.sdk.getInventory(),eq=()=>s.sdk.getEquipment(),p=()=>state()?.player;
- if(!await waitUntil(s,()=>!!p()&&state()?.skills.length===21&&equipmentObserved(s.sdk),{timeoutTicks:20}))throw Error('kit stage initial observations missing');
+ if(!await waitUntil(s,()=>!!p()&&state()?.skills.length===21&&!!s.client&&equipmentObserved(s.client),{timeoutTicks:20}))throw Error('kit stage initial observations missing');
  const born={...p()!},start=s.tick(),hpStart=born.hp,initialXp=JSON.stringify(state()!.skills.map(i=>[i.name,i.experience]));
  if(born.level!==0||Math.max(Math.abs(born.worldX-2807),Math.abs(born.worldZ-3441))>3||hpStart!==10||eq().length)throw Error('kit stage needs fullHP10 Catherby bank start and empty equipment');
  let ended=false,hpMin=hpStart,failure='',spent=0,fares=0,foodSpent=0,bought=0;
