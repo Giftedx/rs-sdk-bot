@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud-3",
- "at": 1794178585048,
+ "at": 1794179174028,
  "jobs": [
   {
    "account": "Kiltlifter",
@@ -44,42 +44,40 @@
   },
   {
    "account": "PocketPool",
-   "script": "scripts/generated/thieving60.ts",
+   "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
-    "TARGET": "55",
-    "CAP": "2500",
-    "CLEAN_FOOD": "1"
+    "PEN": "3187,3277",
+    "TICKS": "3000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "train Thieving to 55 for a knight spot",
-   "role": "thieving",
-   "template": "thieving55",
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
    "autopilot": "claude-cloud-3",
    "resources": [
-    "knight:2669,3298"
+    "pen:3187,3277"
    ]
   },
   {
    "account": "SporranDip",
-   "script": "scripts/generated/thieving60.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "TARGET": "55",
-    "CAP": "2500",
-    "CLEAN_FOOD": "1"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "train Thieving to 55 for a knight spot",
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
    "role": "thieving",
-   "template": "thieving55",
+   "template": "goldfarm@2582,3297",
    "autopilot": "claude-cloud-3",
    "resources": [
-    "knight:2671,3313"
+    "knight:2582,3297"
    ]
   }
  ]
