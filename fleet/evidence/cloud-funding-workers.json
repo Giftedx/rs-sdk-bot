@@ -1,0 +1,487 @@
+{
+  "schema": "cloud-funding-workers/1",
+  "at": 1794180114870,
+  "sourceInstalled": "ae60e14022ecccf347e2d7b11e6056d01976b590",
+  "goal": "Bounded fresh Thieving55 training and banked earnings toward the cloud combat-15 kit; no automatic knight farming",
+  "native": {
+    "ok": true,
+    "checks": {
+      "exit": true,
+      "success": true,
+      "alive": true,
+      "thieving55": true,
+      "bankCoins": true,
+      "bankPosition": true,
+      "saved": true,
+      "logout": true,
+      "pin": true,
+      "beforeFresh": true,
+      "unchangedOtherXp": true,
+      "noDeath": true
+    },
+    "name": "flfundxfe600",
+    "dir": ".practice/cloud-expansion/native-1794179545216",
+    "pin": "73fe1601e1db0a40d8a67b6548fb6aef7ebdc08a461a40276a8f177a06399c98",
+    "entry": "scripts/generated/thieving60.ts",
+    "source": "cc4e77cc911a2e3a90e84a4146b86133695682e6",
+    "bankCoins": 493,
+    "thievingXp": 46670,
+    "logout": {
+      "state": "confirmed",
+      "account": "flfundxfe600",
+      "server": "127.0.0.1:36457",
+      "domain": "practice",
+      "attemptId": "1794179550561-0000002630-0000000001",
+      "loggedOutAt": 1794179708716,
+      "ownerRun": null,
+      "receiptSha256": "546e7d1d880f70cbb912486f401c5d1af2a61410d9d5084f2c9c8ac39412b73c"
+    },
+    "hashes": {
+      "before.sav": "bada2623d764ab281f90fd5ce65a9ddf81d675365274b73ce33c26e67fc7de7a",
+      "after.sav": "f8c8dde4222b784c5e60f8d0f71418c0b60b606e2bd92e2b1c26e50a1874839c",
+      "worker.log": "71153f2bd37f6d71a96f9e9f1435294c1f4783de5f2ae537a810af8b520e8c72",
+      "worker.err": "9e1901a4e497db00e4d8ffdacac0f67c1e7a62c18d3c21afc08a409854b16313"
+    },
+    "threshold": 46534,
+    "scope": "fresh Lumbridge Thieving55, banked earnings, survival, unchanged other skill XP and confirmed logout; tutorial skip also has existing live consumers"
+  },
+  "maxNewWorkers": 2,
+  "sharedControllerUntouched": true,
+  "sharedHoldsPreserved": true,
+  "headroom": {
+    "freeGB": 15.33456802368164,
+    "load": [
+      0.7,
+      0.33,
+      0.16
+    ]
+  },
+  "accounts": [
+    {
+      "account": "FullSporran",
+      "admission": {
+        "account": "FullSporran",
+        "server": "rs-sdk-demo.fly.dev",
+        "reservation": "task-a870ce17-35c1-443a-ba32-db62a09fefaa",
+        "source": "cc4e77cc911a2e3a90e84a4146b86133695682e6",
+        "pin": "73fe1601e1db0a40d8a67b6548fb6aef7ebdc08a461a40276a8f177a06399c98",
+        "proof": ".practice/cloud-expansion/native-1794179545216/qualified.json",
+        "pid": 2817,
+        "goal": "Train Thieving55 and bank earnings toward cloud combat-15 kit replacement; no automatic farming or shared-controller changes",
+        "cap": 2500,
+        "repeat": false,
+        "headroom": {
+          "freeGB": 16.580718994140625,
+          "load": [
+            0.18,
+            0.23,
+            0.11
+          ],
+          "cpus": 5
+        },
+        "started": 1794179752493
+      },
+      "at": 1794180114460,
+      "active": true,
+      "tick": 887,
+      "position": {
+        "x": 2659,
+        "z": 3312,
+        "level": 0
+      },
+      "hp": {
+        "now": 6,
+        "max": 10
+      },
+      "skills": [
+        {
+          "name": "Attack",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Defence",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Strength",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Hitpoints",
+          "level": 10,
+          "currentLevel": 6,
+          "xp": 980
+        },
+        {
+          "name": "Ranged",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Prayer",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Magic",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Cooking",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Woodcutting",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Fletching",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Fishing",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Firemaking",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Crafting",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Smithing",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Mining",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Herblore",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Agility",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Thieving",
+          "level": 44,
+          "currentLevel": 44,
+          "xp": 21900
+        },
+        {
+          "name": "Stat18",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Stat19",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Runecraft",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        }
+      ],
+      "inventory": [
+        {
+          "id": 1351,
+          "baseId": 1351,
+          "name": "Bronze axe",
+          "count": 1
+        },
+        {
+          "id": 590,
+          "baseId": 590,
+          "name": "Tinderbox",
+          "count": 1
+        },
+        {
+          "id": 303,
+          "baseId": 303,
+          "name": "Small fishing net",
+          "count": 1
+        },
+        {
+          "id": 315,
+          "baseId": 315,
+          "name": "Shrimps",
+          "count": 1
+        },
+        {
+          "id": 1925,
+          "baseId": 1925,
+          "name": "Bucket",
+          "count": 1
+        },
+        {
+          "id": 1931,
+          "baseId": 1931,
+          "name": "Pot",
+          "count": 1
+        },
+        {
+          "id": 1265,
+          "baseId": 1265,
+          "name": "Bronze pickaxe",
+          "count": 1
+        },
+        {
+          "id": 1205,
+          "baseId": 1205,
+          "name": "Bronze dagger",
+          "count": 1
+        },
+        {
+          "id": 1277,
+          "baseId": 1277,
+          "name": "Bronze sword",
+          "count": 1
+        },
+        {
+          "id": 1171,
+          "baseId": 1171,
+          "name": "Wooden shield",
+          "count": 1
+        },
+        {
+          "id": 841,
+          "baseId": 841,
+          "name": "Shortbow",
+          "count": 1
+        },
+        {
+          "id": 882,
+          "baseId": 882,
+          "name": "Bronze arrow",
+          "count": 25
+        },
+        {
+          "id": 556,
+          "baseId": 556,
+          "name": "Air rune",
+          "count": 25
+        },
+        {
+          "id": 558,
+          "baseId": 558,
+          "name": "Mind rune",
+          "count": 15
+        },
+        {
+          "id": 555,
+          "baseId": 555,
+          "name": "Water rune",
+          "count": 6
+        },
+        {
+          "id": 557,
+          "baseId": 557,
+          "name": "Earth rune",
+          "count": 4
+        },
+        {
+          "id": 559,
+          "baseId": 559,
+          "name": "Body rune",
+          "count": 2
+        },
+        {
+          "id": 995,
+          "baseId": 995,
+          "name": "Coins",
+          "count": 345
+        },
+        {
+          "id": 2309,
+          "baseId": 2309,
+          "name": "Bread",
+          "count": 1
+        },
+        {
+          "id": 2309,
+          "baseId": 2309,
+          "name": "Bread",
+          "count": 1
+        }
+      ],
+      "bank": null,
+      "equipment": [],
+      "result": "",
+      "terminal": null,
+      "logout": {
+        "state": "held",
+        "account": "FullSporran",
+        "server": "rs-sdk-demo.fly.dev",
+        "domain": "live",
+        "attemptId": "1794179755621-0000002817-0000000001",
+        "reason": "session active or outcome unknown"
+      },
+      "stopPresent": false
+    },
+    {
+      "account": "Coinpurse",
+      "admission": null,
+      "at": null,
+      "active": false,
+      "tick": null,
+      "position": null,
+      "hp": null,
+      "skills": null,
+      "inventory": null,
+      "bank": null,
+      "equipment": null,
+      "result": null,
+      "terminal": null,
+      "logout": {
+        "state": "none",
+        "account": "Coinpurse",
+        "server": "rs-sdk-demo.fly.dev",
+        "domain": "live"
+      },
+      "stopPresent": false
+    },
+    {
+      "account": "FullLoad",
+      "admission": {
+        "account": "FullLoad",
+        "server": "rs-sdk-demo.fly.dev",
+        "reservation": "task-668f79d3-8846-40af-8f7d-039b215124b5",
+        "source": "cc4e77cc911a2e3a90e84a4146b86133695682e6",
+        "pin": "73fe1601e1db0a40d8a67b6548fb6aef7ebdc08a461a40276a8f177a06399c98",
+        "proof": ".practice/cloud-expansion/native-1794179545216/qualified.json",
+        "pid": 3070,
+        "goal": "Train Thieving55 and bank earnings toward cloud combat-15 kit replacement; no automatic farming or shared-controller changes",
+        "cap": 2500,
+        "repeat": false,
+        "headroom": {
+          "freeGB": 16.287315368652344,
+          "load": [
+            0.31,
+            0.22,
+            0.11
+          ],
+          "cpus": 5
+        },
+        "started": 1794179910832
+      },
+      "at": null,
+      "active": false,
+      "tick": null,
+      "position": null,
+      "hp": null,
+      "skills": null,
+      "inventory": null,
+      "bank": null,
+      "equipment": null,
+      "result": null,
+      "terminal": {
+        "ok": false,
+        "code": 1,
+        "ended": 1794179919763
+      },
+      "logout": {
+        "state": "held",
+        "account": "FullLoad",
+        "server": "rs-sdk-demo.fly.dev",
+        "domain": "live",
+        "attemptId": "1794179914009-0000003070-0000000001",
+        "reason": "connect failed without an observed end"
+      },
+      "stopPresent": true
+    },
+    {
+      "account": "Heavyload",
+      "admission": {
+        "account": "Heavyload",
+        "server": "rs-sdk-demo.fly.dev",
+        "reservation": "task-49808733-8bca-4f45-8a36-a818d43b73d2",
+        "source": "cc4e77cc911a2e3a90e84a4146b86133695682e6",
+        "pin": "73fe1601e1db0a40d8a67b6548fb6aef7ebdc08a461a40276a8f177a06399c98",
+        "proof": ".practice/cloud-expansion/native-1794179545216/qualified.json",
+        "pid": 2957,
+        "goal": "Train Thieving55 and bank earnings toward cloud combat-15 kit replacement; no automatic farming or shared-controller changes",
+        "cap": 2500,
+        "repeat": false,
+        "headroom": {
+          "freeGB": 16.25668716430664,
+          "load": [
+            0.07,
+            0.18,
+            0.1
+          ],
+          "cpus": 5
+        },
+        "started": 1794179837736
+      },
+      "at": null,
+      "active": false,
+      "tick": null,
+      "position": null,
+      "hp": null,
+      "skills": null,
+      "inventory": null,
+      "bank": null,
+      "equipment": null,
+      "result": null,
+      "terminal": {
+        "ok": false,
+        "code": 1,
+        "ended": 1794179846881
+      },
+      "logout": {
+        "state": "held",
+        "account": "Heavyload",
+        "server": "rs-sdk-demo.fly.dev",
+        "domain": "live",
+        "attemptId": "1794179841588-0000002957-0000000001",
+        "reason": "connect failed without an observed end"
+      },
+      "stopPresent": true
+    }
+  ],
+  "blockedNames": {
+    "SporranBulge": "Reserved by cloud-kit; no connection attempted",
+    "Heavyload": "Invalid username/password; lifecycle held and local stop set, no retry or release",
+    "FullLoad": "Invalid username/password; lifecycle held and local stop set, no retry or release"
+  },
+  "evidenceRoot": "/workspace/rs-sdk-bot-cloud-expansion/.practice/cloud-expansion"
+}
