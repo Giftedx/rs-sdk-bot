@@ -1,6 +1,6 @@
 {
   "schema": "cloud-kit-expansion/1",
-  "at": 1794180765033,
+  "at": 1794180828006,
   "side": "cloud-kit",
   "controller": {
     "pid": 6955,
@@ -28,13 +28,92 @@
       "logout": "logged-out"
     }
   },
-  "spotQualification": {},
+  "spotQualification": {
+    "2652,3318": {
+      "spot": "2652,3318",
+      "args": [
+        "scripts/goldfarm.ts TICKS=450 BANK_AT=2000 KNIGHT_SPOT=2652,3318",
+        "scripts/generated/thieving60.ts TARGET=55 CAP=240"
+      ],
+      "entry": "scripts/chain.ts",
+      "pin": "d7e4fa5e7f1d59ac33abf8cd4f60393aeeac20eb2ab310e717e5bd896f8d3657",
+      "report": {
+        "ok": true,
+        "segment": "earn-north",
+        "account": "rhearxme701",
+        "start": {
+          "snapshot": "cloud-kit-earner55"
+        },
+        "ticks": {
+          "used": 458,
+          "enter": 26,
+          "leave": 484,
+          "overPlan": null
+        },
+        "child": {
+          "code": 0,
+          "timedOut": false
+        },
+        "checks": {
+          "exit": true,
+          "saved": true,
+          "ticksMeasured": true,
+          "item.556.any": true,
+          "item.558.any": true,
+          "item.882.any": true,
+          "item.995.bank": true,
+          "position": true
+        },
+        "end": {
+          "position": {
+            "x": 2655,
+            "z": 3283,
+            "level": 0
+          },
+          "skills": {
+            "Hitpoints": {
+              "level": 10,
+              "xp": 980
+            },
+            "Thieving": {
+              "level": 70,
+              "xp": 138262
+            }
+          },
+          "inventory": {
+            "303": 1,
+            "315": 1,
+            "556": 25,
+            "558": 15,
+            "590": 1,
+            "841": 1,
+            "882": 25,
+            "1171": 1,
+            "1265": 1,
+            "1277": 1,
+            "1351": 1
+          },
+          "worn": {},
+          "bank": {
+            "995": 2503,
+            "1893": 5,
+            "1895": 1,
+            "1901": 7,
+            "2309": 3
+          },
+          "varps": 22
+        },
+        "scope": "One practice rehearsal (local engine, 150 ms ticks, 25x XP). No live or speed claim."
+      },
+      "ok": true
+    }
+  },
   "headroom": {
-    "freeGB": 15.180858612060547,
+    "freeGB": 14.559024810791016,
     "load": [
-      0.55,
-      0.44,
-      0.37
+      1.13,
+      0.61,
+      0.43
     ],
     "cpus": 5,
     "minFreeGB": 8,
@@ -43,11 +122,11 @@
   "accounts": [
     {
       "account": "Familyjewel",
-      "at": 1794180678644,
-      "tick": 1399,
+      "at": 1794180827717,
+      "tick": 31,
       "position": {
-        "x": 2655,
-        "z": 3283,
+        "x": 2649,
+        "z": 3305,
         "level": 0
       },
       "hp": {
@@ -187,7 +266,7 @@
           "id": 995,
           "baseId": 995,
           "name": "Coins",
-          "count": 869
+          "count": 569
         }
       ],
       "inventory": [
@@ -226,6 +305,12 @@
           "baseId": 1931,
           "name": "Pot",
           "count": 1
+        },
+        {
+          "id": 995,
+          "baseId": 995,
+          "name": "Coins",
+          "count": 300
         },
         {
           "id": 1265,
@@ -295,23 +380,22 @@
         }
       ],
       "equipment": [],
-      "result": "ok thieving=55 xp=46670 ticks=1381 at=2655,3283,0 hp=9 hpMin=4 died=false relogs=0 relogTicks=0 logoutTicks=0 idleTicks=81 pickTicks=754 shopTicks=80 eatTicks=15 stunWait=38 stunMsgs=43 tries=377 stuns=42 eaten=18 bought=7 waits=0 walkTicks=68 chases=122 coins=0 bread=0 milestones=coins60,ard",
-      "workRevision": "73fe1601e1db0a40d8a67b6548fb6aef7ebdc08a461a40276a8f177a06399c98",
-      "attempt": "1794180110552-0000008077-0000000001",
+      "result": "",
+      "workRevision": "d7e4fa5e7f1d59ac33abf8cd4f60393aeeac20eb2ab310e717e5bd896f8d3657",
+      "attempt": "1794180808481-0000009478-0000000001",
       "logout": {
-        "state": "confirmed",
+        "state": "held",
         "account": "Familyjewel",
         "server": "rs-sdk-demo.fly.dev",
         "domain": "live",
-        "attemptId": "1794180110552-0000008077-0000000001",
-        "loggedOutAt": 1794180677670,
-        "ownerRun": null,
-        "receiptSha256": "723a6e9f0ab3cf9f07b393a56472d7c5ec4a23706a61b024272e0d3c73b92ab9"
+        "attemptId": "1794180808481-0000009478-0000000001",
+        "reason": "session active or outcome unknown"
       },
       "progress": {
-        "stage": "training",
-        "batch": 0,
-        "blocker": "qualified knight spots at capacity"
+        "stage": "earning",
+        "batch": 1,
+        "spot": "2652,3318",
+        "before": 869
       }
     },
     {
