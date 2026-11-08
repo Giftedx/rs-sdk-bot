@@ -79,8 +79,9 @@ test('a replacement in the same checkout can adopt workers after the previous co
 }, 30_000);
 
 test.skipIf(process.platform !== 'win32')('a fresh Git deadline works in a long-running process', async () => {
-    expect(fleetGitWindow(process.cwd())(['--version'])).toStartWith('git version ');
+    const args = ['hash-object', '--stdin'];
+    const input = 'lease payload';
+    const expected = fleetGitWindow(process.cwd())(args, input);
     await Bun.sleep(12_500);
-    const git = fleetGitWindow(process.cwd());
-    expect(git(['--version'])).toStartWith('git version ');
+    expect(fleetGitWindow(process.cwd())(args, input)).toBe(expected);
 }, 25_000);

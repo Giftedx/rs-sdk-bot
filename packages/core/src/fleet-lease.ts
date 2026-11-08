@@ -19,15 +19,21 @@ type RemoteLease = { side: string; host: string; holder: string; epoch: string; 
 export function fleetGitWindow(root: string, authority = 'fleet controller lease authority', budgetMs = GIT_DEADLINE_MS) {
     const deadline = performance.now() + budgetMs;
     return (args: string[], input?: string): string => {
-        const timeout = Math.floor(deadline - performance.now());
-        if (timeout <= 0) throw Error(authority + ' timed out');
-        try {
-            return execFileSync('git', args, {
-                cwd: root, input, stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf8', timeout, killSignal: 'SIGKILL', windowsHide: true,
-                env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'Never' },
-            }).trim();
-        } catch {
-            throw Error(authority + ' unavailable or changed');
+        for (let attempt = 0; ; attempt++) {
+            const timeout = Math.floor(deadline - performance.now());
+            if (timeout <= 0) throw Error(authority + ' timed out');
+            try {
+                return execFileSync('git', args, {
+                    cwd: root, input, stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf8', timeout, killSignal: 'SIGKILL', windowsHide: true,
+                    env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'Never' },
+                }).trim();
+            } catch (error) {
+                const failure = error as NodeJS.ErrnoException & { stdout?: string; stderr?: string };
+                // Windows Bun can report an empty timeout before Git starts after an idle period.
+                if (attempt === 0 && process.platform === 'win32' && failure.code === 'ETIMEDOUT'
+                    && !failure.stdout?.length && !failure.stderr?.length && performance.now() < deadline) continue;
+                throw Error(authority + ' unavailable or changed');
+            }
         }
     };
 }
