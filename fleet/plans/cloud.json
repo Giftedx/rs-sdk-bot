@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794165996892,
+ "at": 1794166039017,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -32,16 +32,15 @@
   },
   {
    "account": "Swordswallow",
-   "script": "scripts/quest-sweep.ts",
-   "args": [
-    "cog"
-   ],
+   "script": "scripts/fletch-worker.ts",
+   "args": [],
    "env": {
-    "CAP": "1800"
+    "RANDOM_EVENTS": "1",
+    "BANK_KNIFE": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Complete cog for cloud quest coverage",
+   "goal": "Bank 375 arrow shafts for Shaftshooter starter ammunition route",
    "role": "quests"
   },
   {
