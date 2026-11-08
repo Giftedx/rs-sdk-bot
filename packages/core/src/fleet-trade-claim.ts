@@ -11,8 +11,9 @@ type Identity = { account: string; server: string };
 type ClaimIdentity = Identity & { side: string };
 type TradeClaimInput = ClaimIdentity & { orderId: string; role: 'from' | 'to' };
 type ClaimState = { nonce: string; phase: 'held' | 'released'; at: number };
-export type FleetTradeClaim = TradeClaimInput & ClaimState;
-type FleetSwarmClaim = ClaimIdentity & ClaimState & { kind: 'swarm'; checkout: string; host: string; pid: number };
+type ClaimOwner = { checkout: string; host: string; pid: number };
+export type FleetTradeClaim = TradeClaimInput & ClaimState & Partial<ClaimOwner>;
+type FleetSwarmClaim = ClaimIdentity & ClaimState & ClaimOwner & { kind: 'swarm' };
 type FleetAccountClaim = FleetTradeClaim | FleetSwarmClaim;
 
 const ORDER_ID = /^[A-Za-z0-9_-]{1,64}$/;
@@ -44,10 +45,11 @@ function parseClaim(raw: string, account: string, server?: string): FleetAccount
         || (claim.phase !== 'held' && claim.phase !== 'released') || !Number.isSafeInteger(claim.at) || claim.at <= 0) {
         throw Error('fleet trade claim authority has an invalid record');
     }
-    if (isSwarmClaim(claim)) {
+    if (isSwarmClaim(claim) || 'checkout' in claim || 'host' in claim || 'pid' in claim) {
         if (typeof claim.checkout !== 'string' || !UUID.test(claim.checkout) || typeof claim.host !== 'string' || !claim.host
-            || !Number.isSafeInteger(claim.pid) || claim.pid <= 0) throw Error('fleet swarm claim authority has an invalid record');
-    } else if ('kind' in claim || typeof claim.orderId !== 'string' || !ORDER_ID.test(claim.orderId) || (claim.role !== 'from' && claim.role !== 'to')) {
+            || typeof claim.pid !== 'number' || !Number.isSafeInteger(claim.pid) || claim.pid <= 0) throw Error('fleet account claim owner is invalid');
+    }
+    if (!isSwarmClaim(claim) && ('kind' in claim || typeof claim.orderId !== 'string' || !ORDER_ID.test(claim.orderId) || (claim.role !== 'from' && claim.role !== 'to'))) {
         throw Error('fleet trade claim authority has an invalid record');
     }
     return claim;
@@ -105,9 +107,23 @@ function appendClaim(git: ReturnType<typeof gitForTrade>, ref: string, head: str
 
 const pendingDir = (root: string) => join(root, '.practice', 'fleet-account-pending');
 const pendingPath = (root: string, nonce: string) => join(pendingDir(root), nonce + '.json');
+const lifecycleOptions = (root: string) => ({root: join(root, '.practice/session-lifecycle')});
+const claimOwner = (root: string): ClaimOwner => ({checkout: fleetCheckoutId(root), host: hostname(), pid: process.pid});
 
-function abandonedPending(root: string, claim: FleetSwarmClaim, target: ClaimIdentity): { inherited?: FleetSwarmClaim } | undefined {
-    if (claim.side !== target.side || claim.host !== hostname() || pidAlive(claim.pid) || claim.checkout !== fleetCheckoutId(root)) return;
+function owningCheckout(root: string, claim: FleetAccountClaim, side: string) {
+    return claim.side === side && claim.host === hostname() && claim.checkout === fleetCheckoutId(root);
+}
+
+function matchedWorkerProof(root: string, claim: FleetSwarmClaim, target: ClaimIdentity) {
+    if (!owningCheckout(root, claim, target.side)) return;
+    const options = lifecycleOptions(root), proof = readLogoutProof(target.account, target.server, options);
+    if (proof.state !== 'confirmed' && proof.state !== 'held') return;
+    const producer = listAttempts(target.account, target.server, options).find(row => row.attemptId === proof.attemptId)?.receipt?.owner;
+    if (producer?.sharedClaimNonce === claim.nonce && producer.pid === claim.pid) return proof;
+}
+
+function abandonedPending(root: string, claim: FleetAccountClaim, target: ClaimIdentity): { inherited?: FleetSwarmClaim } | undefined {
+    if (!claim.pid || pidAlive(claim.pid) || !owningCheckout(root, claim, target.side)) return;
     let pending: {claim: string; inherited?: FleetSwarmClaim};
     try { pending = JSON.parse(readFileSync(pendingPath(root, claim.nonce), 'utf8')); }
     catch (error) {
@@ -115,14 +131,20 @@ function abandonedPending(root: string, claim: FleetSwarmClaim, target: ClaimIde
         throw error;
     }
     if (pending?.claim !== JSON.stringify(claim)) return;
-    const attempts = listAttempts(target.account, target.server, {root: join(root, '.practice/session-lifecycle')});
+    const attempts = listAttempts(target.account, target.server, lifecycleOptions(root));
     // A missing receipt alone proves nothing. Require the pre-push marker and refuse if
     // any receipt is unreadable or could belong to the marked attempt.
     if (attempts.some(row => !row.receipt || row.receipt.owner.sharedClaimNonce === claim.nonce)) return;
     if (!pending.inherited) return {};
+    if (!isSwarmClaim(claim)) return;
     const prior = parseClaim(JSON.stringify(pending.inherited), claim.account, claim.server);
     if (isSwarmClaim(prior) && prior.phase === 'held' && prior.checkout === claim.checkout
         && prior.side === claim.side && prior.host === claim.host && prior.nonce !== claim.nonce) return {inherited: prior};
+}
+
+function writePending(root: string, claim: FleetAccountClaim, inherited?: FleetSwarmClaim) {
+    mkdirSync(pendingDir(root), {recursive: true});
+    writeFileSync(pendingPath(root, claim.nonce), JSON.stringify({claim: JSON.stringify(claim), inherited}), {flag: 'wx'});
 }
 
 function forgetPending(root: string, nonce: string) {
@@ -152,18 +174,26 @@ export function acquireFleetTradeClaim(root: string, input: TradeClaimInput, now
     const { side, orderId, role } = input;
     if (!SIDE_NAME.test(side) || !ORDER_ID.test(orderId) || (role !== 'from' && role !== 'to')) throw Error('invalid fleet trade claim order');
     const git = gitForTrade(root), { ref, head, claim } = loadClaim(git, account, server);
-    if (claim?.phase === 'held') {
+    const pending = claim?.phase === 'held' ? abandonedPending(root, claim, input) : undefined;
+    if (claim?.phase === 'held' && !(pending && !pending.inherited)) {
         if (!isSwarmClaim(claim)) throw Error('fleet trade claim held for order ' + claim.orderId);
-        const pending = abandonedPending(root, claim, input);
-        if (!pending || pending.inherited) throw Error('fleet account claim held by swarm');
+        if (matchedWorkerProof(root, claim, input)?.state !== 'confirmed') throw Error('fleet account claim held by swarm');
     }
     const key = createHash('sha256').update(JSON.stringify([orderId.toLowerCase(), role])).digest('hex');
     const subject = 'Fleet trade attempt ' + key;
     if (head && git(['log', '-1', '--format=%H', '--fixed-strings', '--grep=' + subject, head])) throw Error('fleet trade order role already claimed');
-    const record: FleetTradeClaim = { account, server, side, orderId, role, nonce: randomUUID(), phase: 'held', at: now() };
+    const record: FleetTradeClaim = { account, server, side, orderId, role, nonce: randomUUID(), phase: 'held', at: now(), ...claimOwner(root) };
+    writePending(root, record);
     appendClaim(git, ref, head, subject, record);
-    if (claim?.phase === 'held' && isSwarmClaim(claim)) cleanPending(root, claim.nonce);
-    return { ...record, release: () => releaseFleetTradeClaim(root, record, now) };
+    if (pending && claim) cleanPending(root, claim.nonce);
+    return {
+        ...record,
+        armNetwork: () => forgetPending(root, record.nonce),
+        release: () => {
+            releaseFleetTradeClaim(root, record, now);
+            cleanPending(root, record.nonce);
+        },
+    };
 }
 
 export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { recover = false, now = Date.now } = {}) {
@@ -171,27 +201,19 @@ export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { rec
     if (!SIDE_NAME.test(side)) throw Error('invalid fleet swarm claim side');
     const git = fleetGitWindow(root, 'fleet swarm claim authority');
     const { ref, head, claim: current } = loadClaim(git, account, server);
-    const pending = current?.phase === 'held' && isSwarmClaim(current) ? abandonedPending(root, current, input) : undefined;
+    const pending = current?.phase === 'held' ? abandonedPending(root, current, input) : undefined;
     const claim = pending ? pending.inherited : current;
-    const checkout = fleetCheckoutId(root), host = hostname();
-    const lifecycleRoot = join(root, '.practice/session-lifecycle');
-    const proof = () => readLogoutProof(input.account, input.server, { root: lifecycleRoot });
-    const producer = (attemptId: string) => listAttempts(input.account, input.server, { root: lifecycleRoot })
-        .find(row => row.attemptId === attemptId)?.receipt?.owner;
     let inheritedHold: FleetSwarmClaim | undefined;
     if (claim?.phase === 'held') {
         if (!isSwarmClaim(claim)) throw Error('fleet trade claim held for order ' + claim.orderId);
-        const prior = proof(), owner = 'attemptId' in prior ? producer(prior.attemptId) : undefined;
-        const bound = claim.checkout === checkout && claim.host === host && claim.side === side
-            && owner?.sharedClaimNonce === claim.nonce && owner.pid === claim.pid;
-        if (!bound || (prior.state !== 'confirmed' && !(recover && prior.state === 'held' && !pidAlive(claim.pid)))) {
+        const prior = matchedWorkerProof(root, claim, input);
+        if (!prior || (prior.state !== 'confirmed' && !(recover && !pidAlive(claim.pid)))) {
             throw Error('fleet account claim held by swarm');
         }
         if (prior.state === 'held') inheritedHold = claim;
     }
-    const record: FleetSwarmClaim = { kind: 'swarm', account, server, side, checkout, host, pid: process.pid, nonce: randomUUID(), phase: 'held', at: now() };
-    mkdirSync(pendingDir(root), {recursive: true});
-    writeFileSync(pendingPath(root, record.nonce), JSON.stringify({claim: JSON.stringify(record), inherited: inheritedHold}), {flag: 'wx'});
+    const record: FleetSwarmClaim = { kind: 'swarm', account, server, side, ...claimOwner(root), nonce: randomUUID(), phase: 'held', at: now() };
+    writePending(root, record, inheritedHold);
     const owned = appendClaim(git, ref, head, 'Fleet swarm attempt', record);
     if (pending && current) cleanPending(root, current.nonce);
     let released = false;
@@ -208,8 +230,8 @@ export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { rec
         armNetwork: () => forgetPending(root, record.nonce),
         abortBeforeNetwork: () => release(inheritedHold),
         releaseAfterLogout(attemptId: string) {
-            const latest = proof(), owner = latest.state === 'confirmed' && latest.attemptId === attemptId ? producer(attemptId) : undefined;
-            if (owner?.sharedClaimNonce !== record.nonce || owner.pid !== record.pid) throw Error('fleet swarm claim lacks exact logout proof');
+            const latest = matchedWorkerProof(root, record, input);
+            if (latest?.state !== 'confirmed' || latest.attemptId !== attemptId) throw Error('fleet swarm claim lacks exact logout proof');
             release();
         },
     };

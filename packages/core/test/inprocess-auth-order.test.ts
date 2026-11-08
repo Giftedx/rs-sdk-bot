@@ -1,12 +1,17 @@
 import {expect,test} from 'bun:test';
 import {resolve} from 'node:path';
 
-async function trace(reject:boolean,lateStop=false,direct=false){
+async function trace(reject:boolean,lateStop=false,direct=false,accountStop=false){
  const root=resolve(import.meta.dir,'../../..');
  const code=`import {mock} from 'bun:test';
  import{mkdtempSync}from'node:fs';import{join}from'node:path';import{tmpdir}from'node:os';
  const lifecycleRoot=mkdtempSync(join(tmpdir(),'auth-order-'));
  const events=[];let stopped=false;
+ if(${accountStop}){
+  const fs=await import('node:fs');
+  const existsSync=fs.existsSync;
+  mock.module('node:fs',()=>({...fs,existsSync:p=>String(p).endsWith('stop-authfixture')||existsSync(p)}));
+ }
  if(${direct})delete process.env.SWARM_LEASE_HOLDER;
  if(${direct}){
   const claims=await import(${JSON.stringify(resolve(root,'packages/core/src/fleet-trade-claim.ts'))});
@@ -45,4 +50,9 @@ test('a direct live login refuses a shared account claim before authentication',
  const r=await trace(true,false,true);
  expect(r.events).toEqual(['local-setup','before-connect','account-claim']);
  expect(r.error).toContain('fixture trade holds the account');
+});
+test('a direct live login checks an account stop before claiming or authenticating',async()=>{
+ const r=await trace(true,false,true,true);
+ expect(r.events).toEqual(['local-setup']);
+ expect(r.error).toContain('stop file');
 });

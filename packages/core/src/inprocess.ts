@@ -380,8 +380,9 @@ export async function connectInProcess(opts: { name: string; password: string; s
         const currentTicket = assertLoginAllowed(opts.name, Date.now(), process.env, server);
         if (currentTicket !== ticket) throw Error('specialist authorization changed before login');
         if (!isLocalServer(server) && !fleetLeaseAllowsWorker(repoRoot)) throw Error('fleet controller lease unavailable');
-        if (swarm && ['stop-swarm', 'stop-' + opts.name, 'stop-' + opts.name.toLowerCase()].some(file => existsSync(join(repoRoot, '.practice', file)))) {
-            throw Error('fleet swarm admission paused by stop file');
+        const stopped = (file: string) => existsSync(join(repoRoot, '.practice', file));
+        if (live && (stopped('stop-' + opts.name) || stopped('stop-' + opts.name.toLowerCase()) || swarm && stopped('stop-swarm'))) {
+            throw Error('live admission paused by stop file');
         }
         if (live && opts.recoverSwarm) assertSpentRecoveryConnection(opts.recoverSwarm, opts.name, server);
         opts.beforeConnect?.();
@@ -389,49 +390,43 @@ export async function connectInProcess(opts: { name: string; password: string; s
             assertWorkerRelease();
             lifecycle.owner = {...lifecycleOwner(), specialistAuthorization: {ticket: currentTicket, mission: process.env.SWARM_MISSION_HASH!}};
         }
-        if (opts.trade) {
-            const {orderId, role} = opts.trade;
-            opts.trade.check(server);
-            const claim = acquireFleetTradeClaim(repoRoot, {account: opts.name, server, side: mySide(), orderId, role});
-            try {
-                opts.trade.check(server);
-                opts.trade.prepare(claim);
-            } catch (error) {
-                claim.release();
-                throw error;
-            }
-        }
+        opts.trade?.check(server);
     };
     return startInProcessSession(opts, { startSession, sdk: new BotSDK(inProcessSdkConfig(opts)), Actions: BotActions, cacheDir,
         beforeConnect,planLock:opts.lockPlan||ticket||opts.trade?planLockDir:undefined,lifecycle,
-        sharedAccount:live&&!opts.trade?{root:repoRoot,side:mySide(),recover:!!opts.recoverSwarm}:undefined });
+        sharedAccount:live?{root:repoRoot,side:mySide(),recover:!!opts.recoverSwarm,trade:opts.trade}:undefined });
 }
 
 export type StartSession = (o: any) => Promise<{ client: unknown; stop(): void; stopped: Promise<unknown> }>;
 // The network part of connectInProcess. The lifecycle intent is written first; if it cannot be written, no
 // connection starts. Every later event comes from this session's own callbacks. Tests pass a fake startSession.
 export async function startInProcessSession(opts: { name: string; password: string; server?: string; members?: boolean },
-    deps: { startSession: StartSession; sdk: BotSDK; Actions: new (sdk: BotSDK) => BotActions; cacheDir: string; lifecycle?: Parameters<typeof beginSessionAttempt>[1]; recordOwned?: typeof recordOwnedAccount;beforeConnect?:()=>void; planLock?: string; sharedAccount?:{root:string;side:string;recover?:boolean} }): Promise<Session> {
+    deps: { startSession: StartSession; sdk: BotSDK; Actions: new (sdk: BotSDK) => BotActions; cacheDir: string; lifecycle?: Parameters<typeof beginSessionAttempt>[1]; recordOwned?: typeof recordOwnedAccount;beforeConnect?:()=>void; planLock?: string; sharedAccount?:{root:string;side:string;recover?:boolean;trade?:TradeAdmission} }): Promise<Session> {
     const { startSession, sdk, Actions, cacheDir } = deps;
     let endResolve!: (v: { reason: string }) => void;
     const ended = new Promise<{ reason: string }>(r => { endResolve = r; });
     let shim: Shim | null = null;
     const host = opts.server ?? 'localhost:8888'; // host:port, same as SERVER in bot.env
     let sharedClaim: ReturnType<typeof acquireFleetSwarmClaim> | undefined;
+    let tradeClaim: ReturnType<typeof acquireFleetTradeClaim> | undefined;
     const admit = () => {
         // Async imports/pathfinding can outlive an owner stop. Recheck before any intent or network work.
         deps.beforeConnect?.();
         if (deps.sharedAccount) {
-            const { root, side, recover } = deps.sharedAccount;
-            sharedClaim = acquireFleetSwarmClaim(root, { account: opts.name, server: host, side }, { recover });
+            const { root, side, recover, trade } = deps.sharedAccount;
+            const target = { account: opts.name, server: host, side };
+            if (trade) tradeClaim = acquireFleetTradeClaim(root, {...target, orderId: trade.orderId, role: trade.role});
+            else sharedClaim = acquireFleetSwarmClaim(root, target, { recover });
+            deps.beforeConnect?.(); // A stop or expired permit can land during the Git call.
+            if (trade && tradeClaim) trade.prepare(tradeClaim);
         }
-        if (sharedClaim) deps.beforeConnect?.(); // A stop or expired permit can land during the Git call.
-        const lifecycle = sharedClaim ? {
+        const claim = sharedClaim ?? tradeClaim;
+        const lifecycle = claim ? {
             ...deps.lifecycle,
-            owner: { ...(deps.lifecycle?.owner ?? lifecycleOwner()), sharedClaimNonce: sharedClaim.nonce },
+            owner: { ...(deps.lifecycle?.owner ?? lifecycleOwner()), sharedClaimNonce: claim.nonce },
         } : deps.lifecycle;
         const attempt = beginSessionAttempt({ account: opts.name, server: host, members: opts.members, secret: opts.password }, lifecycle);
-        sharedClaim?.armNetwork();
+        claim?.armNetwork();
         return attempt;
     };
     // Plan-locked callers publish intent before another plan writer may proceed.
@@ -439,7 +434,10 @@ export async function startInProcessSession(opts: { name: string; password: stri
     try { attempt = deps.planLock ? await withPlanWrite(admit, deps.planLock) : admit(); }
     catch (error) {
         // No call to startSession has run. A failed release leaves the shared hold in place.
-        try { sharedClaim?.abortBeforeNetwork(); } catch { console.error('fleet swarm claim retained after admission refusal'); }
+        try {
+            tradeClaim?.release();
+            sharedClaim?.abortBeforeNetwork();
+        } catch { console.error('fleet account claim retained after admission refusal'); }
         throw error;
     }
     let session: Awaited<ReturnType<StartSession>>;
