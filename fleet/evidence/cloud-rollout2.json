@@ -3,16 +3,16 @@
  "side": "cloud",
  "source": "70fcbce85350659ad82496060e9c3e4f992c91a0",
  "started": 1794167124636,
- "at": 1794173784121,
+ "at": 1794173984534,
  "peakLive": 9,
  "currentLive": 2,
  "minFreeGB": 8.638957977294922,
  "headroom": {
-  "freeGB": 12.363513946533203,
+  "freeGB": 13.571224212646484,
   "load": [
-   0.6,
-   1.04,
-   1.58
+   0.76,
+   0.91,
+   1.41
   ],
   "cpus": 5,
   "requiredFloorGB": 4,
@@ -35,13 +35,13 @@
   },
   {
    "account": "TossTheCaber",
-   "goal": "Verified Ardougne bank departure for combat35 safe boat staging; then WC60 unlock for Haggis23yew; funds400coins, separate finite workers",
+   "goal": "Native-proved WC56-to60 unlock for Haggis23yew logs; actual340coin tool budget prevents pickpocketing; Draynor/northern Lumbridge route, no White Wolf; finite cap1200",
    "enabled": true,
-   "tick": 164,
-   "at": 1794173783134,
+   "tick": 286,
+   "at": 1794173984043,
    "position": {
-    "x": 2953,
-    "z": 3146,
+    "x": 3232,
+    "z": 3244,
     "level": 0
    },
    "result": "",
@@ -49,16 +49,16 @@
   },
   {
    "account": "Swordswallow",
-   "goal": "New live Vampire Slayer coverage from Draynor; strong HP54 account, local garlic source proved by gather planner, owned funding for beer/hammer; bounded budget and retreat guard",
-   "enabled": true,
-   "tick": 201,
-   "at": 1794173783622,
+   "goal": "DEATH HOLD: died during Vampire Slayer acquisition route; no restart or repair.5willows20wool69essence banked before death retained; incident requires qualified recovery",
+   "enabled": false,
+   "tick": 424,
+   "at": 1794173873362,
    "position": {
-    "x": 3138,
-    "z": 3351,
+    "x": 3202,
+    "z": 3248,
     "level": 0
    },
-   "result": "",
+   "result": "fail died",
    "logout": "held"
   },
   {
@@ -91,17 +91,17 @@
   },
   {
    "account": "MeatNTwoVeg",
-   "goal": "One bounded ore load for Haggis two-iron-bar shortfall via Superheat; Magic31 satisfies proven combat13 mine admission, no White Wolf route",
-   "enabled": false,
-   "tick": 180,
-   "at": 1794170918850,
+   "goal": "Single9-ore bounded pilot for Haggis2iron-bar inputs; require actual iron bank delta, prior4copper2tin did not close gap; proved combat18 Varrock mine route, no repeat",
+   "enabled": true,
+   "tick": 146,
+   "at": 1794173982951,
    "position": {
-    "x": 3252,
-    "z": 3420,
+    "x": 3286,
+    "z": 3365,
     "level": 0
    },
-   "result": "ok ticks=176 died=false mined=6 banked=6 held=0 bankTrips=1 walkTicks=97 hpMin=10 profile=mixed softMade=0 softBanked=0 softPreserved=true initialOre=0 recovered=6 xpGain=2625 stop=max-trips  oreWaitTicks=0   orePer1kTicks=34.09",
-   "logout": "confirmed"
+   "result": "",
+   "logout": "held"
   },
   {
    "account": "YewGotWood",
@@ -17594,6 +17594,244 @@
      "baseId": 995,
      "name": "Coins",
      "count": 400
+    },
+    {
+     "id": 1893,
+     "baseId": 1893,
+     "name": "2/3 cake",
+     "count": 1
+    },
+    {
+     "id": 1893,
+     "baseId": 1893,
+     "name": "2/3 cake",
+     "count": 1
+    },
+    {
+     "id": 1893,
+     "baseId": 1893,
+     "name": "2/3 cake",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "account": "TossTheCaber",
+   "attemptId": "1794173711772-0000063711-0000000001",
+   "started": 1794173718099,
+   "at": 1794173836264,
+   "source": "a719f49682804c7145df95c483b62679293c84913a55d20c1df92586560e5a72",
+   "entry": "scripts/foodcourier.ts",
+   "result": "ok outboundOnly=true ticks=263 received=0 handed=0 fishNotes=0 coins=340 walkTicks=216 boatTicks=47 waitTicks=0 giveTicks=0 featherTicks=0 feathersBought=0 feathersLeft=0 legs=sarim@182,draynor@263 hpMin=20 died=false jumps=50:2674,3270->2775,3234,1;181:2953,3146->3032,3217,1 coins=340 at=309",
+   "logout": "confirmed",
+   "newQuests": [
+    "Ernest the Chicken",
+    "Pirate's Treasure"
+   ],
+   "hp": {
+    "now": 22,
+    "max": 27
+   },
+   "bank": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 8778
+    },
+    {
+     "id": 1351,
+     "baseId": 1351,
+     "name": "Bronze axe",
+     "count": 1
+    },
+    {
+     "id": 315,
+     "baseId": 315,
+     "name": "Shrimps",
+     "count": 1
+    },
+    {
+     "id": 1265,
+     "baseId": 1265,
+     "name": "Bronze pickaxe",
+     "count": 1
+    },
+    {
+     "id": 1205,
+     "baseId": 1205,
+     "name": "Bronze dagger",
+     "count": 1
+    },
+    {
+     "id": 841,
+     "baseId": 841,
+     "name": "Shortbow",
+     "count": 1
+    },
+    {
+     "id": 882,
+     "baseId": 882,
+     "name": "Bronze arrow",
+     "count": 25
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 25
+    },
+    {
+     "id": 558,
+     "baseId": 558,
+     "name": "Mind rune",
+     "count": 15
+    },
+    {
+     "id": 555,
+     "baseId": 555,
+     "name": "Water rune",
+     "count": 6
+    },
+    {
+     "id": 557,
+     "baseId": 557,
+     "name": "Earth rune",
+     "count": 2
+    },
+    {
+     "id": 559,
+     "baseId": 559,
+     "name": "Body rune",
+     "count": 2
+    },
+    {
+     "id": 314,
+     "baseId": 314,
+     "name": "Feather",
+     "count": 59
+    },
+    {
+     "id": 303,
+     "baseId": 303,
+     "name": "Small fishing net",
+     "count": 1
+    },
+    {
+     "id": 317,
+     "baseId": 317,
+     "name": "Raw shrimps",
+     "count": 13
+    },
+    {
+     "id": 590,
+     "baseId": 590,
+     "name": "Tinderbox",
+     "count": 1
+    },
+    {
+     "id": 343,
+     "baseId": 343,
+     "name": "Burnt fish",
+     "count": 3
+    },
+    {
+     "id": 331,
+     "baseId": 331,
+     "name": "Raw salmon",
+     "count": 1
+    },
+    {
+     "id": 309,
+     "baseId": 309,
+     "name": "Fly fishing rod",
+     "count": 1
+    },
+    {
+     "id": 1468,
+     "baseId": 1468,
+     "name": "Dry sticks",
+     "count": 1
+    },
+    {
+     "id": 1469,
+     "baseId": 1469,
+     "name": "Broken glass",
+     "count": 1
+    },
+    {
+     "id": 594,
+     "baseId": 594,
+     "name": "Torch",
+     "count": 1
+    },
+    {
+     "id": 413,
+     "baseId": 413,
+     "name": "Oyster pearls",
+     "count": 1
+    },
+    {
+     "id": 563,
+     "baseId": 563,
+     "name": "Law rune",
+     "count": 8
+    },
+    {
+     "id": 279,
+     "baseId": 279,
+     "name": "Feed",
+     "count": 1
+    },
+    {
+     "id": 1277,
+     "baseId": 1277,
+     "name": "Bronze sword",
+     "count": 1
+    },
+    {
+     "id": 952,
+     "baseId": 952,
+     "name": "Spade",
+     "count": 1
+    },
+    {
+     "id": 284,
+     "baseId": 284,
+     "name": "Plague jacket",
+     "count": 1
+    },
+    {
+     "id": 275,
+     "baseId": 275,
+     "name": "Key",
+     "count": 1
+    },
+    {
+     "id": 433,
+     "baseId": 433,
+     "name": "Pirate message",
+     "count": 1
+    },
+    {
+     "id": 1635,
+     "baseId": 1635,
+     "name": "Gold ring",
+     "count": 1
+    },
+    {
+     "id": 1605,
+     "baseId": 1605,
+     "name": "Emerald",
+     "count": 1
+    }
+   ],
+   "inventory": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 340
     },
     {
      "id": 1893,

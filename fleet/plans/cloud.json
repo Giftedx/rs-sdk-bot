@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794173706262,
+ "at": 1794173986587,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -18,16 +18,16 @@
   },
   {
    "account": "TossTheCaber",
-   "script": "scripts/foodcourier.ts",
+   "script": "scripts/generated/woodcutting.ts",
    "args": [],
    "env": {
-    "OUTBOUND_ONLY": "1",
-    "CAP": "1800"
+    "TARGET": "60",
+    "CAP": "1200"
    },
    "enabled": true,
    "standing": false,
    "repeat": false,
-   "goal": "Verified Ardougne bank departure for combat35 safe boat staging; then WC60 unlock for Haggis23yew; funds400coins, separate finite workers",
+   "goal": "Native-proved WC56-to60 unlock for Haggis23yew logs; actual340coin tool budget prevents pickpocketing; Draynor/northern Lumbridge route, no White Wolf; finite cap1200",
    "role": "supply"
   },
   {
@@ -39,9 +39,9 @@
    "env": {
     "CAP": "2000"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
-   "goal": "New live Vampire Slayer coverage from Draynor; strong HP54 account, local garlic source proved by gather planner, owned funding for beer/hammer; bounded budget and retreat guard",
+   "goal": "DEATH HOLD: died during Vampire Slayer acquisition route; no restart or repair.5willows20wool69essence banked before death retained; incident requires qualified recovery",
    "role": "quests"
   },
   {
@@ -86,15 +86,15 @@
    "script": "scripts/gather-ore.ts",
    "args": [
     "600",
-    "6"
+    "9"
    ],
    "env": {
     "MAX_TRIPS": "1",
     "ORE_PROFILE": "mixed"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "One bounded ore load for Haggis two-iron-bar shortfall via Superheat; Magic31 satisfies proven combat13 mine admission, no White Wolf route",
+   "goal": "Single9-ore bounded pilot for Haggis2iron-bar inputs; require actual iron bank delta, prior4copper2tin did not close gap; proved combat18 Varrock mine route, no repeat",
    "role": "supply"
   },
   {

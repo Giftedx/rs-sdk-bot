@@ -1,0 +1,752 @@
+{
+ "schema": "live-death-observation/1",
+ "account": "Swordswallow",
+ "record": ".practice/ticks/quest-sweep/swordswallow-1794173703564.ticks.ndjson.gz",
+ "attemptId": "1794173695671-0000063568-0000000001",
+ "hpChanges": [
+  {
+   "tick": 1,
+   "hp": [
+    54,
+    1,
+    0
+   ],
+   "pos": [
+    3092,
+    3242
+   ],
+   "dead": false
+  },
+  {
+   "tick": 32,
+   "hp": [
+    52,
+    1,
+    0
+   ],
+   "pos": [
+    3118,
+    3254
+   ],
+   "dead": false
+  },
+  {
+   "tick": 40,
+   "hp": [
+    50,
+    1,
+    0
+   ],
+   "pos": [
+    3130,
+    3251
+   ],
+   "dead": false
+  },
+  {
+   "tick": 101,
+   "hp": [
+    51,
+    1,
+    0
+   ],
+   "pos": [
+    3215,
+    3243
+   ],
+   "dead": false
+  },
+  {
+   "tick": 192,
+   "hp": [
+    50,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 196,
+   "hp": [
+    49,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 201,
+   "hp": [
+    50,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 212,
+   "hp": [
+    48,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 216,
+   "hp": [
+    46,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 220,
+   "hp": [
+    45,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 224,
+   "hp": [
+    43,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 228,
+   "hp": [
+    42,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 232,
+   "hp": [
+    39,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 240,
+   "hp": [
+    38,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 244,
+   "hp": [
+    37,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 252,
+   "hp": [
+    36,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 264,
+   "hp": [
+    33,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 268,
+   "hp": [
+    31,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 269,
+   "hp": [
+    35,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 272,
+   "hp": [
+    32,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 276,
+   "hp": [
+    31,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 280,
+   "hp": [
+    29,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 284,
+   "hp": [
+    27,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 288,
+   "hp": [
+    26,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 296,
+   "hp": [
+    24,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 301,
+   "hp": [
+    25,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 304,
+   "hp": [
+    22,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 308,
+   "hp": [
+    19,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 316,
+   "hp": [
+    18,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 324,
+   "hp": [
+    16,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 328,
+   "hp": [
+    15,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 332,
+   "hp": [
+    14,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 348,
+   "hp": [
+    11,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 356,
+   "hp": [
+    8,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 360,
+   "hp": [
+    7,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 364,
+   "hp": [
+    6,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 372,
+   "hp": [
+    4,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 380,
+   "hp": [
+    2,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": false
+  },
+  {
+   "tick": 388,
+   "hp": [
+    0,
+    1,
+    0
+   ],
+   "pos": [
+    3138,
+    3351
+   ],
+   "dead": true
+  },
+  {
+   "tick": 394,
+   "hp": [
+    54,
+    2,
+    1
+   ],
+   "pos": [
+    3220,
+    3219
+   ],
+   "dead": false
+  }
+ ],
+ "deathObservations": [
+  {
+   "tick": 388,
+   "player": {
+    "name": "Swordswallow",
+    "combatLevel": 42,
+    "hp": 0,
+    "maxHp": 54,
+    "x": 5440,
+    "z": 10176,
+    "worldX": 3138,
+    "worldZ": 3351,
+    "level": 0,
+    "runEnergy": 100,
+    "runWeight": 4,
+    "animId": 397,
+    "spotanimId": -1,
+    "combat": {
+     "inCombat": true,
+     "targetIndex": -1,
+     "targetType": "none",
+     "lastDamageTick": 388
+    },
+    "isDead": true,
+    "lifeId": 1,
+    "respawnCount": 0,
+    "lastDeathTick": 388
+   },
+   "nearby": [
+    "Cow",
+    "Duck",
+    "Giant spider",
+    "Tree"
+   ]
+  },
+  {
+   "tick": 389,
+   "player": {
+    "name": "Swordswallow",
+    "combatLevel": 42,
+    "hp": 0,
+    "maxHp": 54,
+    "x": 5440,
+    "z": 10176,
+    "worldX": 3138,
+    "worldZ": 3351,
+    "level": 0,
+    "runEnergy": 100,
+    "runWeight": 4,
+    "animId": -1,
+    "spotanimId": -1,
+    "combat": {
+     "inCombat": true,
+     "targetIndex": -1,
+     "targetType": "none",
+     "lastDamageTick": 388
+    },
+    "isDead": true,
+    "lifeId": 1,
+    "respawnCount": 0,
+    "lastDeathTick": 388
+   },
+   "nearby": [
+    "Cow",
+    "Duck",
+    "Giant spider",
+    "Tree"
+   ]
+  }
+ ],
+ "result": "fail died",
+ "hold": "Owner stop and controller died hold retained; logout timeout holds admission; no restart",
+ "retainedBank": [
+  {
+   "id": 995,
+   "baseId": 995,
+   "name": "Coins",
+   "count": 132
+  },
+  {
+   "id": 303,
+   "baseId": 303,
+   "name": "Small fishing net",
+   "count": 1
+  },
+  {
+   "id": 315,
+   "baseId": 315,
+   "name": "Shrimps",
+   "count": 1
+  },
+  {
+   "id": 1205,
+   "baseId": 1205,
+   "name": "Bronze dagger",
+   "count": 1
+  },
+  {
+   "id": 1277,
+   "baseId": 1277,
+   "name": "Bronze sword",
+   "count": 1
+  },
+  {
+   "id": 1171,
+   "baseId": 1171,
+   "name": "Wooden shield",
+   "count": 1
+  },
+  {
+   "id": 841,
+   "baseId": 841,
+   "name": "Shortbow",
+   "count": 1
+  },
+  {
+   "id": 882,
+   "baseId": 882,
+   "name": "Bronze arrow",
+   "count": 25
+  },
+  {
+   "id": 556,
+   "baseId": 556,
+   "name": "Air rune",
+   "count": 19
+  },
+  {
+   "id": 558,
+   "baseId": 558,
+   "name": "Mind rune",
+   "count": 15
+  },
+  {
+   "id": 555,
+   "baseId": 555,
+   "name": "Water rune",
+   "count": 6
+  },
+  {
+   "id": 557,
+   "baseId": 557,
+   "name": "Earth rune",
+   "count": 4
+  },
+  {
+   "id": 559,
+   "baseId": 559,
+   "name": "Body rune",
+   "count": 2
+  },
+  {
+   "id": 314,
+   "baseId": 314,
+   "name": "Feather",
+   "count": 1035
+  },
+  {
+   "id": 52,
+   "baseId": 52,
+   "name": "Arrow shaft",
+   "count": 120
+  },
+  {
+   "id": 53,
+   "baseId": 53,
+   "name": "Headless arrow",
+   "count": 1005
+  },
+  {
+   "id": 1438,
+   "baseId": 1438,
+   "name": "Air talisman",
+   "count": 1
+  },
+  {
+   "id": 590,
+   "baseId": 590,
+   "name": "Tinderbox",
+   "count": 1
+  },
+  {
+   "id": 275,
+   "baseId": 275,
+   "name": "Key",
+   "count": 1
+  },
+  {
+   "id": 952,
+   "baseId": 952,
+   "name": "Spade",
+   "count": 1
+  },
+  {
+   "id": 1925,
+   "baseId": 1925,
+   "name": "Bucket",
+   "count": 1
+  },
+  {
+   "id": 1436,
+   "baseId": 1436,
+   "name": "Rune essence",
+   "count": 69
+  },
+  {
+   "id": 1759,
+   "baseId": 1759,
+   "name": "Ball of wool",
+   "count": 20
+  },
+  {
+   "id": 946,
+   "baseId": 946,
+   "name": "Knife",
+   "count": 1
+  },
+  {
+   "id": 1519,
+   "baseId": 1519,
+   "name": "Willow logs",
+   "count": 5
+  }
+ ]
+}
