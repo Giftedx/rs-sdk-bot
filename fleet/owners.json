@@ -218,6 +218,11 @@
    "side": "cloud",
    "server": "rs-sdk-demo.fly.dev",
    "reservation": "task-49808733-8bca-4f45-8a36-a818d43b73d2"
+  },
+  "FullLoad": {
+   "side": "cloud",
+   "server": "rs-sdk-demo.fly.dev",
+   "reservation": "task-668f79d3-8846-40af-8f7d-039b215124b5"
   }
  },
  "Fingersmith": {
