@@ -1,0 +1,399 @@
+{
+ "schema": "cloud-pvp-prerequisite-result/1",
+ "at": 1794178476108,
+ "account": "Porksword",
+ "server": "rs-sdk-demo.fly.dev",
+ "source": "7cd74fe469a81ec2a9433817277f7a4a9fdf39d5",
+ "qualifiedPin": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+ "attemptId": "1794177752245-0000072993-0000000001",
+ "workerResult": {
+  "ok": true,
+  "targetMet": true,
+  "stop": "target-level",
+  "targetLevel": 7,
+  "startLevel": 1,
+  "finalLevel": 7,
+  "xpGain": 600,
+  "bow": 841,
+  "arrow": 882,
+  "trips": 1,
+  "kills": 2,
+  "bonesPicked": 2,
+  "chickenPicked": 2,
+  "shots": 13,
+  "picked": 10,
+  "arrowsSpent": 3,
+  "arrowsBought": 0,
+  "coinsSpent": 68,
+  "coinDebit": 68,
+  "foodId": 1985,
+  "foodBought": 2,
+  "foodSpent": 8,
+  "foodPurchases": {
+   "1985": 2
+  },
+  "foodConsumed": {},
+  "travelSpent": 60,
+  "shopVisits": 0,
+  "eaten": 0,
+  "hpMin": 10,
+  "hp": 11,
+  "died": false,
+  "ticks": 1101,
+  "preserved": true,
+  "accounting": true,
+  "equipmentRestored": true,
+  "failure": "-"
+ },
+ "checks": {
+  "workerPin": true,
+  "targetMet": true,
+  "strictAccounting": true,
+  "coins": true,
+  "protectedAssets": true,
+  "equipmentRestored": true,
+  "otherSkillsUnchanged": true,
+  "noDeath": true,
+  "noArrowBuying": true,
+  "producerLogout": true,
+  "protectedStockExact": true
+ },
+ "assetDelta": {
+  "314": 20,
+  "526": 2,
+  "882": -3,
+  "995": -68,
+  "1985": 2,
+  "2138": 2
+ },
+ "finalAccountState": {
+  "pos": {
+   "x": 3252,
+   "z": 3420,
+   "level": 0
+  },
+  "hp": {
+   "now": 11,
+   "max": 11
+  },
+  "combat": 6,
+  "skills": [
+   {
+    "name": "Attack",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Defence",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Strength",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Hitpoints",
+    "level": 11,
+    "currentLevel": 11,
+    "xp": 1175
+   },
+   {
+    "name": "Ranged",
+    "level": 7,
+    "currentLevel": 7,
+    "xp": 600
+   },
+   {
+    "name": "Prayer",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Magic",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Cooking",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Woodcutting",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Fletching",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Fishing",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Firemaking",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Crafting",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Smithing",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Mining",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Herblore",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Agility",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Thieving",
+    "level": 86,
+    "currentLevel": 86,
+    "xp": 422652
+   },
+   {
+    "name": "Stat18",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Stat19",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Runecraft",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   }
+  ],
+  "bank": [
+   {
+    "id": 995,
+    "baseId": 995,
+    "name": "Coins",
+    "count": 8284
+   },
+   {
+    "id": 1351,
+    "baseId": 1351,
+    "name": "Bronze axe",
+    "count": 1
+   },
+   {
+    "id": 590,
+    "baseId": 590,
+    "name": "Tinderbox",
+    "count": 1
+   },
+   {
+    "id": 303,
+    "baseId": 303,
+    "name": "Small fishing net",
+    "count": 1
+   },
+   {
+    "id": 315,
+    "baseId": 315,
+    "name": "Shrimps",
+    "count": 1
+   },
+   {
+    "id": 2309,
+    "baseId": 2309,
+    "name": "Bread",
+    "count": 5
+   },
+   {
+    "id": 1265,
+    "baseId": 1265,
+    "name": "Bronze pickaxe",
+    "count": 1
+   },
+   {
+    "id": 1205,
+    "baseId": 1205,
+    "name": "Bronze dagger",
+    "count": 1
+   },
+   {
+    "id": 1277,
+    "baseId": 1277,
+    "name": "Bronze sword",
+    "count": 1
+   },
+   {
+    "id": 1171,
+    "baseId": 1171,
+    "name": "Wooden shield",
+    "count": 1
+   },
+   {
+    "id": 556,
+    "baseId": 556,
+    "name": "Air rune",
+    "count": 25
+   },
+   {
+    "id": 558,
+    "baseId": 558,
+    "name": "Mind rune",
+    "count": 15
+   },
+   {
+    "id": 555,
+    "baseId": 555,
+    "name": "Water rune",
+    "count": 6
+   },
+   {
+    "id": 557,
+    "baseId": 557,
+    "name": "Earth rune",
+    "count": 4
+   },
+   {
+    "id": 559,
+    "baseId": 559,
+    "name": "Body rune",
+    "count": 2
+   },
+   {
+    "id": 1893,
+    "baseId": 1893,
+    "name": "2/3 cake",
+    "count": 7
+   },
+   {
+    "id": 1901,
+    "baseId": 1901,
+    "name": "Chocolate slice",
+    "count": 7
+   },
+   {
+    "id": 1927,
+    "baseId": 1927,
+    "name": "Bucket of milk",
+    "count": 1
+   },
+   {
+    "id": 1931,
+    "baseId": 1931,
+    "name": "Pot",
+    "count": 1
+   },
+   {
+    "id": 1944,
+    "baseId": 1944,
+    "name": "Egg",
+    "count": 1
+   },
+   {
+    "id": 44,
+    "baseId": 44,
+    "name": "Rune arrowtips",
+    "count": 3
+   },
+   {
+    "id": 1895,
+    "baseId": 1895,
+    "name": "Slice of cake",
+    "count": 3
+   },
+   {
+    "id": 526,
+    "baseId": 526,
+    "name": "Bones",
+    "count": 2
+   },
+   {
+    "id": 2138,
+    "baseId": 2138,
+    "name": "Raw chicken",
+    "count": 2
+   },
+   {
+    "id": 1985,
+    "baseId": 1985,
+    "name": "Cheese",
+    "count": 2
+   },
+   {
+    "id": 314,
+    "baseId": 314,
+    "name": "Feather",
+    "count": 20
+   },
+   {
+    "id": 882,
+    "baseId": 882,
+    "name": "Bronze arrow",
+    "count": 22
+   },
+   {
+    "id": 841,
+    "baseId": 841,
+    "name": "Shortbow",
+    "count": 1
+   }
+  ],
+  "inventory": [],
+  "equipment": [],
+  "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+  "workEntry": "scripts/ranged-train.ts"
+ },
+ "publicHiscoreCheck": {
+  "url": "https://rs-sdk-demo.fly.dev/hiscores/player/porksword?profile=main",
+  "http": 200,
+  "Ranged": null,
+  "Hitpoints": null,
+  "limitation": "Public profile exposes no rows for these low-level stats; not used as saved-stat acceptance. No verification relog."
+ },
+ "wildernessHeld": true,
+ "nextAdmission": "Parked. Magic7/full bracket and kit need separate native qualification; no repeat or simultaneous stage-only worker.",
+ "logout": {
+  "state": "confirmed",
+  "attemptId": "1794177752245-0000072993-0000000001",
+  "loggedOutAt": 1794178209342,
+  "claimPhase": "released"
+ },
+ "saveEvidence": "Final observed stats and fresh paired bank receipts, followed by matching server-confirmed logout and released claim; no verification relog"
+}

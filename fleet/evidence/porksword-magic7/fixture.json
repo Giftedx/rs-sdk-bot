@@ -1,0 +1,159 @@
+{
+  "start": {
+    "save": {
+      "position": {
+        "x": 3252,
+        "z": 3420,
+        "level": 0
+      },
+      "skills": {
+        "Attack": 1,
+        "Defence": 1,
+        "Strength": 1,
+        "Hitpoints": 11,
+        "Ranged": 7,
+        "Prayer": 1,
+        "Magic": 1,
+        "Cooking": 1,
+        "Woodcutting": 1,
+        "Fletching": 1,
+        "Fishing": 1,
+        "Firemaking": 1,
+        "Crafting": 1,
+        "Smithing": 1,
+        "Mining": 1,
+        "Herblore": 1,
+        "Agility": 1,
+        "Thieving": 86,
+        "Runecraft": 1
+      },
+      "bank": [
+        {
+          "id": 995,
+          "count": 8284
+        },
+        {
+          "id": 1351,
+          "count": 1
+        },
+        {
+          "id": 590,
+          "count": 1
+        },
+        {
+          "id": 303,
+          "count": 1
+        },
+        {
+          "id": 315,
+          "count": 1
+        },
+        {
+          "id": 2309,
+          "count": 5
+        },
+        {
+          "id": 1265,
+          "count": 1
+        },
+        {
+          "id": 1205,
+          "count": 1
+        },
+        {
+          "id": 1277,
+          "count": 1
+        },
+        {
+          "id": 1171,
+          "count": 1
+        },
+        {
+          "id": 556,
+          "count": 25
+        },
+        {
+          "id": 558,
+          "count": 15
+        },
+        {
+          "id": 555,
+          "count": 6
+        },
+        {
+          "id": 557,
+          "count": 4
+        },
+        {
+          "id": 559,
+          "count": 2
+        },
+        {
+          "id": 1893,
+          "count": 7
+        },
+        {
+          "id": 1901,
+          "count": 7
+        },
+        {
+          "id": 1927,
+          "count": 1
+        },
+        {
+          "id": 1931,
+          "count": 1
+        },
+        {
+          "id": 1944,
+          "count": 1
+        },
+        {
+          "id": 44,
+          "count": 3
+        },
+        {
+          "id": 1895,
+          "count": 3
+        },
+        {
+          "id": 526,
+          "count": 2
+        },
+        {
+          "id": 2138,
+          "count": 2
+        },
+        {
+          "id": 1985,
+          "count": 2
+        },
+        {
+          "id": 314,
+          "count": 20
+        },
+        {
+          "id": 882,
+          "count": 22
+        },
+        {
+          "id": 841,
+          "count": 1
+        }
+      ],
+      "inventory": [],
+      "equipment": []
+    }
+  },
+  "script": "scripts/magic-order.ts",
+  "args": [],
+  "env": {
+    "TARGET_LEVEL": "7",
+    "MAX_CASTS": "5",
+    "CAP": "600",
+    "RUNE_BUDGET": "0",
+    "CASH_RESERVE": "8284",
+    "FLEET_SIDE": "local"
+  },
+  "timeoutMs": 180000
+}

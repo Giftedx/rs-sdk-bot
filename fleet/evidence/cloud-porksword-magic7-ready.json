@@ -1,0 +1,970 @@
+{
+  "ok": true,
+  "sourceCommit": "cc4e77cc911a2e3a90e84a4146b86133695682e6",
+  "runtimeRevision": "a084f4b6a88cd7fd83f065ac5bc318881dd91819c08baea1d1f5e759e44eb80c",
+  "fixtureAccount": "flmagixi9r01",
+  "targetAccount": "Porksword",
+  "result": {
+    "ok": true,
+    "stop": "target",
+    "target": 7,
+    "level": 7,
+    "casts": 5,
+    "runesUsed": {
+      "air": 5,
+      "mind": 5
+    },
+    "bought": {
+      "air": 0,
+      "mind": 0
+    },
+    "coinsSpent": 0,
+    "magicXpGained": 687,
+    "hpXpGained": 0,
+    "hpMin": 11,
+    "eats": 0,
+    "ticks": 132,
+    "banked": {
+      "air": 20,
+      "mind": 10,
+      "coins": 0
+    }
+  },
+  "checks": {
+    "exit": true,
+    "worker": true,
+    "release": true,
+    "savedMagic7": true,
+    "savedHP11": true,
+    "otherSkills": true,
+    "xp": true,
+    "runes": true,
+    "coins": true,
+    "assets": true,
+    "bank": true,
+    "noDeath": true,
+    "logout": true
+  },
+  "before": {
+    "version": 6,
+    "position": {
+      "x": 3252,
+      "z": 3420,
+      "level": 0
+    },
+    "skills": [
+      {
+        "index": 0,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 1,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 2,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 3,
+        "rawExperience": 11750,
+        "xp": 1175,
+        "level": 11
+      },
+      {
+        "index": 4,
+        "rawExperience": 6000,
+        "xp": 600,
+        "level": 7
+      },
+      {
+        "index": 5,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 6,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 7,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 8,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 9,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 10,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 11,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 12,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 13,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 14,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 15,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 16,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 17,
+        "rawExperience": 4226520,
+        "xp": 422652,
+        "level": 86
+      },
+      {
+        "index": 18,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 19,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 20,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      }
+    ],
+    "vars": {
+      "0": 0,
+      "1": 0,
+      "2": 0,
+      "3": 0,
+      "4": 0,
+      "5": 0,
+      "6": 0,
+      "7": 0,
+      "8": 0,
+      "9": 0,
+      "10": 0,
+      "11": 0,
+      "12": 0,
+      "13": 0,
+      "14": 0,
+      "15": 0,
+      "16": 0,
+      "17": 0,
+      "18": 0,
+      "19": 0,
+      "20": 0,
+      "21": 0,
+      "22": 0,
+      "23": 0,
+      "24": 0,
+      "25": 0,
+      "26": 0,
+      "27": 0,
+      "28": 0,
+      "29": 0,
+      "30": 0,
+      "31": 0,
+      "32": 0,
+      "33": 0,
+      "34": 0,
+      "35": 0,
+      "36": 0,
+      "37": 0,
+      "38": 0,
+      "39": 0,
+      "40": 0,
+      "41": 0,
+      "42": 0,
+      "43": 0,
+      "44": 0,
+      "45": 0,
+      "46": 0,
+      "47": 0,
+      "48": 0,
+      "49": 0,
+      "50": 0,
+      "51": 0,
+      "52": 0,
+      "53": 0,
+      "54": 0,
+      "55": 0,
+      "56": 0,
+      "57": 0,
+      "58": 0,
+      "59": 0,
+      "60": 0,
+      "61": 0,
+      "62": 0,
+      "63": 0,
+      "64": 0,
+      "65": 0,
+      "66": 0,
+      "67": 0,
+      "68": 0,
+      "69": 0,
+      "70": 0,
+      "71": 0,
+      "72": 0,
+      "73": 0,
+      "74": 0,
+      "75": 0,
+      "76": 0,
+      "77": 0,
+      "78": 0,
+      "79": 0,
+      "80": 0,
+      "81": 0,
+      "82": 0,
+      "83": 0,
+      "84": 0,
+      "85": 0,
+      "86": 0,
+      "87": 0,
+      "88": 0,
+      "89": 0,
+      "90": 0,
+      "91": 0,
+      "92": 0,
+      "93": 0,
+      "94": 0,
+      "95": 0,
+      "96": 0,
+      "97": 0,
+      "98": 0,
+      "99": 0,
+      "100": 0,
+      "101": 0,
+      "102": 0,
+      "103": 0,
+      "104": 0,
+      "105": 0,
+      "106": 0,
+      "107": 0,
+      "108": 0,
+      "109": 0,
+      "110": 0,
+      "111": 0,
+      "112": 0,
+      "113": 0,
+      "114": 0,
+      "115": 0,
+      "116": 0,
+      "117": 0,
+      "118": 0,
+      "119": 0,
+      "120": 0,
+      "121": 0,
+      "122": 0,
+      "123": 0,
+      "124": 0,
+      "125": 0,
+      "126": 0,
+      "127": 0,
+      "128": 0,
+      "129": 0,
+      "130": 0,
+      "131": 0,
+      "132": 0,
+      "133": 0,
+      "134": 0,
+      "135": 0,
+      "136": 0,
+      "137": 0,
+      "138": 0,
+      "139": 0,
+      "140": 0,
+      "141": 0,
+      "142": 0,
+      "143": 0,
+      "144": 0,
+      "145": 0,
+      "146": 0,
+      "147": 0,
+      "148": 0,
+      "149": 0,
+      "150": 0,
+      "151": 0,
+      "152": 0,
+      "153": 0,
+      "154": 0,
+      "155": 0,
+      "156": 0,
+      "157": 0,
+      "158": 0,
+      "159": 0,
+      "160": 0,
+      "161": 0,
+      "162": 0,
+      "163": 0,
+      "164": 0,
+      "165": 0,
+      "166": 0,
+      "167": 0,
+      "168": 0,
+      "169": 0,
+      "170": 0,
+      "171": 0,
+      "172": 0,
+      "173": 0,
+      "174": 0,
+      "175": 0,
+      "176": 0,
+      "177": 0,
+      "178": 0,
+      "179": 0,
+      "180": 0,
+      "181": 0,
+      "182": 0,
+      "183": 0,
+      "184": 0,
+      "185": 0,
+      "186": 0,
+      "187": 0,
+      "188": 0,
+      "189": 0,
+      "190": 0,
+      "191": 0,
+      "192": 0,
+      "193": 0,
+      "194": 0,
+      "195": 0,
+      "196": 0,
+      "197": 0,
+      "198": 0,
+      "199": 0,
+      "200": 0,
+      "201": 0,
+      "202": 0,
+      "203": 0,
+      "204": 0,
+      "205": 0,
+      "206": 0,
+      "207": 0,
+      "208": 0,
+      "209": 0,
+      "210": 0,
+      "211": 0,
+      "212": 0,
+      "213": 0,
+      "214": 0,
+      "215": 0,
+      "216": 0,
+      "217": 0,
+      "218": 0,
+      "219": 0,
+      "220": 0,
+      "221": 0,
+      "222": 0,
+      "223": 0,
+      "224": 0,
+      "225": 0,
+      "226": 0,
+      "227": 0,
+      "228": 0,
+      "229": 0,
+      "230": 0,
+      "231": 0,
+      "232": 0,
+      "233": 0,
+      "234": 0,
+      "235": 0,
+      "236": 0,
+      "237": 0,
+      "238": 0,
+      "239": 0,
+      "240": 0,
+      "241": 0,
+      "242": 0,
+      "243": 0,
+      "244": 0,
+      "245": 0,
+      "246": 0,
+      "247": 0,
+      "248": 0,
+      "249": 0,
+      "250": 0,
+      "251": 0,
+      "252": 0,
+      "253": 0,
+      "254": 0,
+      "255": 0,
+      "256": 0,
+      "257": 0,
+      "258": 0,
+      "259": 0,
+      "260": 0,
+      "261": 0,
+      "262": 0,
+      "263": 0,
+      "264": 0,
+      "265": 0,
+      "266": 0,
+      "267": 0,
+      "268": 0,
+      "269": 0,
+      "270": 0,
+      "271": 0,
+      "272": 0,
+      "273": 0,
+      "274": 0,
+      "275": 0,
+      "276": 0,
+      "277": 0,
+      "278": 0,
+      "279": 0,
+      "280": 0,
+      "281": 1000,
+      "282": 0,
+      "283": 0,
+      "284": 0,
+      "285": 0,
+      "286": 0,
+      "287": 0,
+      "288": 0,
+      "289": 0,
+      "290": 0,
+      "291": 0,
+      "292": 0,
+      "293": 0,
+      "294": 0,
+      "295": 0,
+      "296": 0,
+      "297": 0,
+      "298": 0,
+      "299": 0,
+      "300": 0,
+      "301": 0,
+      "302": 0,
+      "303": 0,
+      "304": 0,
+      "305": 0,
+      "306": 0,
+      "307": 0,
+      "308": 0
+    },
+    "inventories": {
+      "95": [
+        {
+          "slot": 0,
+          "id": 995,
+          "count": 8284
+        },
+        {
+          "slot": 1,
+          "id": 1351,
+          "count": 1
+        },
+        {
+          "slot": 2,
+          "id": 590,
+          "count": 1
+        },
+        {
+          "slot": 3,
+          "id": 303,
+          "count": 1
+        },
+        {
+          "slot": 4,
+          "id": 315,
+          "count": 1
+        },
+        {
+          "slot": 5,
+          "id": 2309,
+          "count": 5
+        },
+        {
+          "slot": 6,
+          "id": 1265,
+          "count": 1
+        },
+        {
+          "slot": 7,
+          "id": 1205,
+          "count": 1
+        },
+        {
+          "slot": 8,
+          "id": 1277,
+          "count": 1
+        },
+        {
+          "slot": 9,
+          "id": 1171,
+          "count": 1
+        },
+        {
+          "slot": 10,
+          "id": 556,
+          "count": 25
+        },
+        {
+          "slot": 11,
+          "id": 558,
+          "count": 15
+        },
+        {
+          "slot": 12,
+          "id": 555,
+          "count": 6
+        },
+        {
+          "slot": 13,
+          "id": 557,
+          "count": 4
+        },
+        {
+          "slot": 14,
+          "id": 559,
+          "count": 2
+        },
+        {
+          "slot": 15,
+          "id": 1893,
+          "count": 7
+        },
+        {
+          "slot": 16,
+          "id": 1901,
+          "count": 7
+        },
+        {
+          "slot": 17,
+          "id": 1927,
+          "count": 1
+        },
+        {
+          "slot": 18,
+          "id": 1931,
+          "count": 1
+        },
+        {
+          "slot": 19,
+          "id": 1944,
+          "count": 1
+        },
+        {
+          "slot": 20,
+          "id": 44,
+          "count": 3
+        },
+        {
+          "slot": 21,
+          "id": 1895,
+          "count": 3
+        },
+        {
+          "slot": 22,
+          "id": 526,
+          "count": 2
+        },
+        {
+          "slot": 23,
+          "id": 2138,
+          "count": 2
+        },
+        {
+          "slot": 24,
+          "id": 1985,
+          "count": 2
+        },
+        {
+          "slot": 25,
+          "id": 314,
+          "count": 20
+        },
+        {
+          "slot": 26,
+          "id": 882,
+          "count": 22
+        },
+        {
+          "slot": 27,
+          "id": 841,
+          "count": 1
+        }
+      ]
+    }
+  },
+  "after": {
+    "version": 10,
+    "position": {
+      "x": 3252,
+      "z": 3420,
+      "level": 0
+    },
+    "skills": [
+      {
+        "index": 0,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 1,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 2,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 3,
+        "rawExperience": 11750,
+        "xp": 1175,
+        "level": 11
+      },
+      {
+        "index": 4,
+        "rawExperience": 6000,
+        "xp": 600,
+        "level": 7
+      },
+      {
+        "index": 5,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 6,
+        "rawExperience": 6875,
+        "xp": 687,
+        "level": 7
+      },
+      {
+        "index": 7,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 8,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 9,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 10,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 11,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 12,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 13,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 14,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 15,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 16,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 17,
+        "rawExperience": 4226520,
+        "xp": 422652,
+        "level": 86
+      },
+      {
+        "index": 18,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 19,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      },
+      {
+        "index": 20,
+        "rawExperience": 0,
+        "xp": 0,
+        "level": 1
+      }
+    ],
+    "vars": {
+      "21": 262144,
+      "134": 161,
+      "166": 2,
+      "168": 2,
+      "169": 2,
+      "275": 4294967295,
+      "277": 4294967295,
+      "281": 1000,
+      "300": 200,
+      "367": 4294967295
+    },
+    "inventories": {
+      "93": [],
+      "94": [],
+      "95": [
+        {
+          "slot": 0,
+          "id": 995,
+          "count": 8284
+        },
+        {
+          "slot": 1,
+          "id": 1351,
+          "count": 1
+        },
+        {
+          "slot": 2,
+          "id": 590,
+          "count": 1
+        },
+        {
+          "slot": 3,
+          "id": 303,
+          "count": 1
+        },
+        {
+          "slot": 4,
+          "id": 315,
+          "count": 1
+        },
+        {
+          "slot": 5,
+          "id": 2309,
+          "count": 5
+        },
+        {
+          "slot": 6,
+          "id": 1265,
+          "count": 1
+        },
+        {
+          "slot": 7,
+          "id": 1205,
+          "count": 1
+        },
+        {
+          "slot": 8,
+          "id": 1277,
+          "count": 1
+        },
+        {
+          "slot": 9,
+          "id": 1171,
+          "count": 1
+        },
+        {
+          "slot": 10,
+          "id": 555,
+          "count": 6
+        },
+        {
+          "slot": 11,
+          "id": 557,
+          "count": 4
+        },
+        {
+          "slot": 12,
+          "id": 559,
+          "count": 2
+        },
+        {
+          "slot": 13,
+          "id": 1893,
+          "count": 7
+        },
+        {
+          "slot": 14,
+          "id": 1901,
+          "count": 7
+        },
+        {
+          "slot": 15,
+          "id": 1927,
+          "count": 1
+        },
+        {
+          "slot": 16,
+          "id": 1931,
+          "count": 1
+        },
+        {
+          "slot": 17,
+          "id": 1944,
+          "count": 1
+        },
+        {
+          "slot": 18,
+          "id": 44,
+          "count": 3
+        },
+        {
+          "slot": 19,
+          "id": 1895,
+          "count": 3
+        },
+        {
+          "slot": 20,
+          "id": 526,
+          "count": 2
+        },
+        {
+          "slot": 21,
+          "id": 2138,
+          "count": 2
+        },
+        {
+          "slot": 22,
+          "id": 1985,
+          "count": 2
+        },
+        {
+          "slot": 23,
+          "id": 314,
+          "count": 20
+        },
+        {
+          "slot": 24,
+          "id": 882,
+          "count": 22
+        },
+        {
+          "slot": 25,
+          "id": 841,
+          "count": 1
+        },
+        {
+          "slot": 26,
+          "id": 556,
+          "count": 20
+        },
+        {
+          "slot": 27,
+          "id": 558,
+          "count": 10
+        }
+      ]
+    }
+  },
+  "job": {
+    "account": "Porksword",
+    "script": "scripts/magic-order.ts",
+    "args": [],
+    "env": {
+      "TARGET_LEVEL": "7",
+      "MAX_CASTS": "5",
+      "CAP": "600",
+      "RUNE_BUDGET": "0",
+      "CASH_RESERVE": "8284",
+      "RANDOM_EVENTS": "0"
+    },
+    "maxRestarts": 0,
+    "repeat": false,
+    "enabled": false
+  },
+  "tickRecord": {
+    "file": "flmagixi9r01-1794179629852.ticks.ndjson.gz",
+    "sha256": "7d8a0dff1ee539b0e7abf6d980be5d64d708fb80b86b2cbf627e4442ae4e286f"
+  },
+  "limits": [
+    "Exact live skill XP and stocks reconstructed from the terminal Ranged receipt; no live login.",
+    "Incumbent must refresh admission, ownership, producer logout, holds, health, exact input and installed release before enabling this single job.",
+    "No Wilderness entry. Magic7/HP11 is the next prerequisite; full standby staging and kit remain separate."
+  ],
+  "proofLevel": "native practice; no live launch",
+  "unitTests": {
+    "pass": 50,
+    "fail": 0
+  },
+  "admission": "Existing cloud controller only; one attempt, no repeat, no Wilderness. Recheck exact Porksword terminal state and current pin.",
+  "engineObservation": {
+    "tick": 255,
+    "online": false,
+    "pendingLogout": false
+  },
+  "verification": "Run from the source repository root: bun <bundle>/verify.ts <bundle>"
+}

@@ -1,0 +1,17 @@
+Pathfinding initialized in 907ms (136704 zones + 297 mainland fill, 1268350 tiles, 2691 doors masked, 5 one-way doors blocked)
+START 3252 3420 0
+MAGIC_ORDER_INITIAL {"name":"flmagixi9r01","options":{"target":7,"maxCasts":5,"cap":600,"budget":0,"reserve":8284},"tick":1,"position":{"x":3252,"z":3420,"level":0},"hp":11,"hpBase":11,"magic":{"level":1,"xp":0},"pack":{"air":0,"mind":0,"coins":0},"inventory":[],"equipment":[]}
+MAGIC_ORDER_ENTRY {"tick":3,"region":"varrock-east","position":{"x":3252,"z":3420,"level":0},"hp":11,"magic":{"level":1,"xp":0},"owned":{"air":25,"mind":15,"coins":8284},"pack":{"air":0,"mind":0,"coins":0},"bank":{"air":25,"mind":15,"coins":8284},"allowance":0,"airCost":1}
+MAGIC_ORDER_CAST {"tick":52,"cast":1,"position":{"x":3223,"z":3399,"level":0},"target":{"index":2983,"name":"Man"},"gain":{"magic":137,"hp":0},"magic":{"level":2,"xp":137},"pack":{"air":24,"mind":14},"hp":11,"purchased":false}
+MAGIC_ORDER_CAST {"tick":57,"cast":2,"position":{"x":3223,"z":3399,"level":0},"target":{"index":2983,"name":"Man"},"gain":{"magic":138,"hp":0},"magic":{"level":4,"xp":275},"pack":{"air":23,"mind":13},"hp":11,"purchased":false}
+MAGIC_ORDER_CAST {"tick":62,"cast":3,"position":{"x":3223,"z":3399,"level":0},"target":{"index":2983,"name":"Man"},"gain":{"magic":137,"hp":0},"magic":{"level":5,"xp":412},"pack":{"air":22,"mind":12},"hp":11,"purchased":false}
+MAGIC_ORDER_CAST {"tick":67,"cast":4,"position":{"x":3223,"z":3399,"level":0},"target":{"index":2983,"name":"Man"},"gain":{"magic":138,"hp":0},"magic":{"level":6,"xp":550},"pack":{"air":21,"mind":11},"hp":11,"purchased":false}
+MAGIC_ORDER_CAST {"tick":72,"cast":5,"position":{"x":3223,"z":3399,"level":0},"target":{"index":2983,"name":"Man"},"gain":{"magic":137,"hp":0},"magic":{"level":7,"xp":687},"pack":{"air":20,"mind":10},"hp":11,"purchased":false}
+DEPOSIT_RECEIPT {"account":"flmagixi9r01","itemId":556,"name":"Air rune","amount":20,"packBefore":20,"packAfter":0,"bankBefore":0,"bankAfter":20,"generationBefore":4,"generationAfter":5,"at":1794179646251,"tick":111,"sdkSuccess":true}
+DEPOSIT_RECEIPT {"account":"flmagixi9r01","itemId":558,"name":"Mind rune","amount":10,"packBefore":10,"packAfter":0,"bankBefore":0,"bankAfter":10,"generationBefore":5,"generationAfter":6,"at":1794179646425,"tick":112,"sdkSuccess":true}
+MAGIC_ORDER_BANKED {"tick":112,"air":20,"mind":10,"coins":0,"bank":{"air":20,"mind":10,"coins":8284}}
+MAGIC_ORDER_DISENGAGE {"tick":133,"quiet":true,"retreated":true,"ticks":20,"lastHit":72,"position":{"x":3252,"z":3420,"level":0},"hp":11}
+MAGIC_ORDER_RESULT {"ok":true,"stop":"target","target":7,"level":7,"casts":5,"runesUsed":{"air":5,"mind":5},"bought":{"air":0,"mind":0},"coinsSpent":0,"magicXpGained":687,"hpXpGained":0,"hpMin":11,"eats":0,"ticks":132,"banked":{"air":20,"mind":10,"coins":0}}
+LEDGER ticks=132 xp=5 inventory=4 move=69 anim=7 dialog=3 stun=0 idle=44 idlePct=33.3 longestIdle=21@t113(3252,3420),3@t2(3252,3420),3@t6(3252,3420),3@t53(3223,3399),2@t39(3234,3397) bot=flmagixi9r01
+LOGOUT logged-out
+RESULT ok magic-order target level=7 target=7 casts=5 spent=0
