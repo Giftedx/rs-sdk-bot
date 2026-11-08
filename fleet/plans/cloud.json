@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794168055488,
+ "at": 1794168339116,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -34,6 +34,7 @@
    "account": "Swordswallow",
    "script": "scripts/chain.ts",
    "args": [
+    "scripts/walk-to.ts 2655 3283",
     "scripts/foodcourier.ts OUTBOUND_ONLY=1 CAP=1800",
     "scripts/fleet-trade.ts rollout2-swords-yew-300"
    ],
@@ -61,15 +62,17 @@
   },
   {
    "account": "Porksword",
-   "script": "scripts/generated/thieving60.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "TARGET": "55",
-    "CAP": "3000"
+    "TICKS": "1200",
+    "BANK_AT": "1000",
+    "KNIGHT_SPOT": "2653,3300",
+    "SHOP": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Unlock knight earnings; bank funds for cloud quest inputs and BraveHardon food rescue",
+   "goal": "Finite knight pilot: bank up to 1200 ticks of funding for BraveHardon food rescue and staged cloud quest ingredients",
    "role": "quests"
   },
   {
@@ -93,37 +96,37 @@
     "rollout2-swords-yew-300"
    ],
    "env": {},
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "Receive and bank 300 owned coins for the Sea Slug input shortfall; quest resumes only after funding receipt",
    "role": "quests"
   },
   {
    "account": "Spitroaster",
-   "script": "scripts/quest-sweep.ts",
-   "args": [
-    "runemysteries"
-   ],
+   "script": "scripts/gather-essence.ts",
+   "args": [],
    "env": {
-    "CAP": "2400"
+    "CAP": "900",
+    "BANK_AT": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Rune Mysteries unlock for the future magic supply chain",
+   "goal": "Bank rune essence for Haggis Runecraft route; measured supply bill is 81 essence short",
    "role": "quests"
   },
   {
    "account": "Stirmypot",
-   "script": "scripts/quest-sweep.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "doric"
+    "scripts/collect-wool.ts CAP=2400 MAX_TRIPS=3",
+    "scripts/quest-sweep.ts sheep CAP=1600"
    ],
    "env": {
-    "CAP": "2400"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "New live Doric coverage: mine six clay then four copper to unlock iron; +Mining quest reward",
+   "goal": "Sheep Shearer Crafting unlock toward Elemental Workshop; owns the free Lumbridge wool/spinning resource after MeatNTwoVeg",
    "role": "quests"
   },
   {

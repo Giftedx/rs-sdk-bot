@@ -1,0 +1,22 @@
+{
+ "id": "rollout2-swords-yew-300-v2",
+ "server": "rs-sdk-demo.fly.dev",
+ "to": "YewGotWood",
+ "item": "Coins",
+ "count": 300,
+ "start": 1794168360853,
+ "end": 1794169800853,
+ "meet": [
+  {
+   "x": 3092,
+   "z": 3242,
+   "level": 0
+  },
+  {
+   "x": 3092,
+   "z": 3243,
+   "level": 0
+  }
+ ],
+ "from": "Swordswallow"
+}
