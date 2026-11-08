@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794167495270,
+ "at": 1794167611725,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -48,14 +48,14 @@
    "account": "Unsheathed",
    "script": "scripts/quest-sweep.ts",
    "args": [
-    "murder"
+    "druid"
    ],
    "env": {
     "CAP": "2400"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "New live Murder Mystery coverage; 3 QP, Crafting unlock and 2000 coin reward",
+   "goal": "New live Druidic Ritual coverage; unlock Herblore for Jungle Potion chain",
    "role": "quests"
   },
   {
@@ -112,6 +112,21 @@
    "enabled": true,
    "repeat": false,
    "goal": "Restless Ghost unlock for the later Nature Spirit quest chain",
+   "role": "quests"
+  },
+  {
+   "account": "Stirmypot",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/measure/tutorial.ts",
+    "scripts/quest-cook-job.ts hetty CAP=6000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "Proved fresh Witch potion first job: unlock Magic from gathered ingredients; dedicated Port Sarim/Rimmington resources",
    "role": "quests"
   }
  ]

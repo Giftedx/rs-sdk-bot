@@ -3,18 +3,18 @@
  "side": "cloud",
  "source": "7bd9e77d2d50648c53df71d35175e5e8f5da5c10",
  "started": 1794167124636,
- "at": 1794167533843,
+ "at": 1794167610647,
  "peakLive": 7,
- "currentLive": 7,
+ "currentLive": 6,
  "minFreeGB": 11.668563842773438,
  "current": [
   {
    "account": "TossTheCaber",
-   "tick": 61,
-   "at": 1794167533248,
+   "tick": 251,
+   "at": 1794167609550,
    "position": {
-    "x": 2941,
-    "z": 3450,
+    "x": 2842,
+    "z": 3502,
     "level": 0
    },
    "result": "",
@@ -22,11 +22,11 @@
   },
   {
    "account": "Swordswallow",
-   "tick": 146,
-   "at": 1794167533236,
+   "tick": 338,
+   "at": 1794167610380,
    "position": {
-    "x": 3123,
-    "z": 3418,
+    "x": 3012,
+    "z": 3359,
     "level": 0
    },
    "result": "",
@@ -34,23 +34,23 @@
   },
   {
    "account": "Unsheathed",
-   "tick": 961,
-   "at": 1794167533027,
+   "tick": 966,
+   "at": 1794167535189,
    "position": {
     "x": 2745,
     "z": 3573,
     "level": 0
    },
-   "result": "",
-   "logout": "held"
+   "result": "ok qp=3  xp=crafting=35150 at=2745,3573,0 ticks=285 hpMin=52 eats=0 walkTicks=117 retries=0 died=false milestones=1,print1,salesman,murderer talk,poison proof,100 jumps= msgs=You use the flypaper on the flour covered pot. / You have a clean impression of Frank's finger prints. / The finger pr",
+   "logout": "confirmed"
   },
   {
    "account": "Porksword",
-   "tick": 151,
-   "at": 1794167533709,
+   "tick": 341,
+   "at": 1794167609795,
    "position": {
-    "x": 3220,
-    "z": 3218,
+    "x": 3049,
+    "z": 3246,
     "level": 0
    },
    "result": "",
@@ -58,11 +58,11 @@
   },
   {
    "account": "MeatNTwoVeg",
-   "tick": 731,
-   "at": 1794167532142,
+   "tick": 926,
+   "at": 1794167610411,
    "position": {
-    "x": 3092,
-    "z": 3242,
+    "x": 3196,
+    "z": 3269,
     "level": 0
    },
    "result": "",
@@ -70,23 +70,35 @@
   },
   {
    "account": "YewGotWood",
-   "tick": 956,
-   "at": 1794167533241,
+   "tick": 1123,
+   "at": 1794167600754,
    "position": {
-    "x": 3134,
-    "z": 3219,
+    "x": 3253,
+    "z": 3420,
+    "level": 0
+   },
+   "result": "ok {\"ok\":true,\"alreadyComplete\":false,\"reward\":true,\"eats\":0}",
+   "logout": "confirmed"
+  },
+  {
+   "account": "Spitroaster",
+   "tick": 256,
+   "at": 1794167610297,
+   "position": {
+    "x": 3234,
+    "z": 3157,
     "level": 0
    },
    "result": "",
    "logout": "held"
   },
   {
-   "account": "Spitroaster",
-   "tick": 63,
-   "at": 1794167533149,
+   "account": "Stirmypot",
+   "tick": 66,
+   "at": 1794167610297,
    "position": {
-    "x": 3180,
-    "z": 3253,
+    "x": 3162,
+    "z": 3275,
     "level": 0
    },
    "result": "",
@@ -875,6 +887,540 @@
     }
    ],
    "inventory": []
+  },
+  {
+   "account": "Unsheathed",
+   "attemptId": "1794167140251-0000008532-0000000001",
+   "started": 1794167149132,
+   "at": 1794167535189,
+   "source": "0c41a2bb0cab401038f251a0c1eaa820648a7394076c1190771afb88ed0d940d",
+   "entry": "scripts/quest-sweep.ts",
+   "result": "ok qp=3  xp=crafting=35150 at=2745,3573,0 ticks=285 hpMin=52 eats=0 walkTicks=117 retries=0 died=false milestones=1,print1,salesman,murderer talk,poison proof,100 jumps= msgs=You use the flypaper on the flour covered pot. / You have a clean impression of Frank's finger prints. / The finger pr",
+   "logout": "confirmed",
+   "newQuests": [
+    "Murder Mystery"
+   ],
+   "hp": {
+    "now": 54,
+    "max": 54
+   },
+   "bank": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 382
+    },
+    {
+     "id": 1351,
+     "baseId": 1351,
+     "name": "Bronze axe",
+     "count": 1
+    },
+    {
+     "id": 590,
+     "baseId": 590,
+     "name": "Tinderbox",
+     "count": 1
+    },
+    {
+     "id": 303,
+     "baseId": 303,
+     "name": "Small fishing net",
+     "count": 1
+    },
+    {
+     "id": 315,
+     "baseId": 315,
+     "name": "Shrimps",
+     "count": 1
+    },
+    {
+     "id": 2309,
+     "baseId": 2309,
+     "name": "Bread",
+     "count": 1
+    },
+    {
+     "id": 1265,
+     "baseId": 1265,
+     "name": "Bronze pickaxe",
+     "count": 1
+    },
+    {
+     "id": 1205,
+     "baseId": 1205,
+     "name": "Bronze dagger",
+     "count": 1
+    },
+    {
+     "id": 1277,
+     "baseId": 1277,
+     "name": "Bronze sword",
+     "count": 1
+    },
+    {
+     "id": 1171,
+     "baseId": 1171,
+     "name": "Wooden shield",
+     "count": 1
+    },
+    {
+     "id": 841,
+     "baseId": 841,
+     "name": "Shortbow",
+     "count": 1
+    },
+    {
+     "id": 882,
+     "baseId": 882,
+     "name": "Bronze arrow",
+     "count": 25
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 14
+    },
+    {
+     "id": 558,
+     "baseId": 558,
+     "name": "Mind rune",
+     "count": 15
+    },
+    {
+     "id": 559,
+     "baseId": 559,
+     "name": "Body rune",
+     "count": 2
+    },
+    {
+     "id": 314,
+     "baseId": 314,
+     "name": "Feather",
+     "count": 1835
+    },
+    {
+     "id": 1438,
+     "baseId": 1438,
+     "name": "Air talisman",
+     "count": 1
+    },
+    {
+     "id": 552,
+     "baseId": 552,
+     "name": "Ghostspeak amulet",
+     "count": 1
+    },
+    {
+     "id": 954,
+     "baseId": 954,
+     "name": "Rope",
+     "count": 2
+    },
+    {
+     "id": 297,
+     "baseId": 297,
+     "name": "Glarial's urn",
+     "count": 1
+    },
+    {
+     "id": 1601,
+     "baseId": 1601,
+     "name": "Diamond",
+     "count": 2
+    },
+    {
+     "id": 2357,
+     "baseId": 2357,
+     "name": "Gold bar",
+     "count": 2
+    },
+    {
+     "id": 298,
+     "baseId": 298,
+     "name": "A key",
+     "count": 1
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
+     "count": 2
+    },
+    {
+     "id": 292,
+     "baseId": 292,
+     "name": "Book on baxtorian",
+     "count": 1
+    },
+    {
+     "id": 299,
+     "baseId": 299,
+     "name": "Mithril seeds",
+     "count": 40
+    },
+    {
+     "id": 294,
+     "baseId": 294,
+     "name": "Glarial's pebble",
+     "count": 1
+    }
+   ],
+   "inventory": [
+    {
+     "id": 1931,
+     "baseId": 1931,
+     "name": "Pot",
+     "count": 1
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
+     "count": 1
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
+     "count": 1
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
+     "count": 1
+    },
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 3915
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 5
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
+     "count": 1
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
+     "count": 1
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
+     "count": 1
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
+     "count": 1
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
+     "count": 1
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
+     "count": 1
+    },
+    {
+     "id": 753,
+     "baseId": 753,
+     "name": "Cadava berries",
+     "count": 1
+    },
+    {
+     "id": 1931,
+     "baseId": 1931,
+     "name": "Pot",
+     "count": 1
+    },
+    {
+     "id": 1933,
+     "baseId": 1933,
+     "name": "Pot of flour",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "account": "Stirmypot",
+   "attemptId": "1794167554821-0000011735-0000000001",
+   "started": 1794167563927,
+   "at": 1794167573604,
+   "source": "06d429bd3444a124147211a52a68cd279fbd145f3afe75a5593510300d79daed",
+   "entry": "scripts/chain.ts,scripts/measure/tutorial.ts,scripts/quest-cook-job.ts",
+   "result": "ok skipTutorial true Tutorial skipped after 3 dialog clicks in 7 ticks",
+   "logout": "confirmed",
+   "newQuests": [],
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "bank": null,
+   "inventory": [
+    {
+     "id": 1351,
+     "baseId": 1351,
+     "name": "Bronze axe",
+     "count": 1
+    },
+    {
+     "id": 590,
+     "baseId": 590,
+     "name": "Tinderbox",
+     "count": 1
+    },
+    {
+     "id": 303,
+     "baseId": 303,
+     "name": "Small fishing net",
+     "count": 1
+    },
+    {
+     "id": 315,
+     "baseId": 315,
+     "name": "Shrimps",
+     "count": 1
+    },
+    {
+     "id": 1925,
+     "baseId": 1925,
+     "name": "Bucket",
+     "count": 1
+    },
+    {
+     "id": 1931,
+     "baseId": 1931,
+     "name": "Pot",
+     "count": 1
+    },
+    {
+     "id": 2309,
+     "baseId": 2309,
+     "name": "Bread",
+     "count": 1
+    },
+    {
+     "id": 1265,
+     "baseId": 1265,
+     "name": "Bronze pickaxe",
+     "count": 1
+    },
+    {
+     "id": 1205,
+     "baseId": 1205,
+     "name": "Bronze dagger",
+     "count": 1
+    },
+    {
+     "id": 1277,
+     "baseId": 1277,
+     "name": "Bronze sword",
+     "count": 1
+    },
+    {
+     "id": 1171,
+     "baseId": 1171,
+     "name": "Wooden shield",
+     "count": 1
+    },
+    {
+     "id": 841,
+     "baseId": 841,
+     "name": "Shortbow",
+     "count": 1
+    },
+    {
+     "id": 882,
+     "baseId": 882,
+     "name": "Bronze arrow",
+     "count": 25
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 25
+    },
+    {
+     "id": 558,
+     "baseId": 558,
+     "name": "Mind rune",
+     "count": 15
+    },
+    {
+     "id": 555,
+     "baseId": 555,
+     "name": "Water rune",
+     "count": 6
+    },
+    {
+     "id": 557,
+     "baseId": 557,
+     "name": "Earth rune",
+     "count": 4
+    },
+    {
+     "id": 559,
+     "baseId": 559,
+     "name": "Body rune",
+     "count": 2
+    }
+   ]
+  },
+  {
+   "account": "YewGotWood",
+   "attemptId": "1794167144412-0000008633-0000000001",
+   "started": 1794167151564,
+   "at": 1794167600754,
+   "source": "0c41a2bb0cab401038f251a0c1eaa820648a7394076c1190771afb88ed0d940d",
+   "entry": "scripts/quest-sweep.ts",
+   "result": "ok {\"ok\":true,\"alreadyComplete\":false,\"reward\":true,\"eats\":0}",
+   "logout": "confirmed",
+   "newQuests": [
+    "Rune Mysteries Quest"
+   ],
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "bank": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 25
+    }
+   ],
+   "inventory": [
+    {
+     "id": 1351,
+     "baseId": 1351,
+     "name": "Bronze axe",
+     "count": 1
+    },
+    {
+     "id": 590,
+     "baseId": 590,
+     "name": "Tinderbox",
+     "count": 1
+    },
+    {
+     "id": 303,
+     "baseId": 303,
+     "name": "Small fishing net",
+     "count": 1
+    },
+    {
+     "id": 1438,
+     "baseId": 1438,
+     "name": "Air talisman",
+     "count": 1
+    },
+    {
+     "id": 1925,
+     "baseId": 1925,
+     "name": "Bucket",
+     "count": 1
+    },
+    {
+     "id": 1931,
+     "baseId": 1931,
+     "name": "Pot",
+     "count": 1
+    },
+    {
+     "id": 2309,
+     "baseId": 2309,
+     "name": "Bread",
+     "count": 1
+    },
+    {
+     "id": 1265,
+     "baseId": 1265,
+     "name": "Bronze pickaxe",
+     "count": 1
+    },
+    {
+     "id": 1205,
+     "baseId": 1205,
+     "name": "Bronze dagger",
+     "count": 1
+    },
+    {
+     "id": 1277,
+     "baseId": 1277,
+     "name": "Bronze sword",
+     "count": 1
+    },
+    {
+     "id": 1171,
+     "baseId": 1171,
+     "name": "Wooden shield",
+     "count": 1
+    },
+    {
+     "id": 841,
+     "baseId": 841,
+     "name": "Shortbow",
+     "count": 1
+    },
+    {
+     "id": 882,
+     "baseId": 882,
+     "name": "Bronze arrow",
+     "count": 25
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 25
+    },
+    {
+     "id": 558,
+     "baseId": 558,
+     "name": "Mind rune",
+     "count": 15
+    },
+    {
+     "id": 555,
+     "baseId": 555,
+     "name": "Water rune",
+     "count": 6
+    },
+    {
+     "id": 557,
+     "baseId": 557,
+     "name": "Earth rune",
+     "count": 4
+    },
+    {
+     "id": 559,
+     "baseId": 559,
+     "name": "Body rune",
+     "count": 2
+    }
+   ]
   }
  ],
  "limitations": [
