@@ -1,6 +1,8 @@
 import {test, expect} from 'bun:test';
 import {NAMES} from '../../core/src/names';
 import {provisionAccount, createAccountProvisionDeps,registrationEnvironment, type AccountProvisionDeps, type RegistrationResult} from '../src/account-provision';
+import {addTasks, finishTask, initialState, startTask, type CoordTask} from '../src/coordinator';
+import {preparedProvisionProof} from '../src/coordinator-worker';
 
 const request = {role:'ranged' as const,purpose:'missing role: ranged supply',server:'rs-sdk-demo.fly.dev',reservedNames:['PULLMYBOW']};
 test('live registration forwards its verified release and refuses a missing pin before login',()=>{
@@ -8,19 +10,65 @@ test('live registration forwards its verified release and refuses a missing pin 
  expect(()=>registrationEnvironment('rs-sdk-demo.fly.dev',undefined)).toThrow('qualified runtime');expect(()=>registrationEnvironment('rs-sdk-demo.fly.dev','bad')).toThrow('qualified runtime');expect(registrationEnvironment('localhost:8888',undefined).DEMO_OK).toBe('');
 });
 function harness(result:RegistrationResult={exitCode:0,stdout:'CLAIM ticks=1 in_game=false logout=logged-out\n'}) {
-    const created:string[]=[],registered:string[]=[];
+    const created:string[]=[],registered:string[]=[],reserved:string[]=[];
     const deps:AccountProvisionDeps={
         listLocalAccountNames:()=>['shaftshooter','earlyshooter'],
+        reserveLiveAccount:async(name)=>{reserved.push(name);return true;},
         createLocalAccount:(name)=>{created.push(name);},
         registerAccount:async(name)=>{registered.push(name);return result;},
     };
-    return {deps,created,registered};
+    return {deps,created,registered,reserved};
 }
 
 test('uses the next role name excluding all local and reserved names without changing list order',async()=>{
     const h=harness(), result=await provisionAccount(request,h.deps);
     expect(result).toMatchObject({account:'Quiverfull',server:request.server,registered:true});
+    expect(h.reserved).toEqual(['Quiverfull']);
     expect(h.created).toEqual(['Quiverfull']);expect(h.registered).toEqual(['Quiverfull']);
+});
+
+test('skips a shared name before writing credentials and never falls back after an uncertain reservation',async()=>{
+    const h=harness();
+    h.deps.listLocalAccountNames=()=>['shaftshooter'];
+    h.deps.reserveLiveAccount=async name=>{
+        expect(h.created).toEqual([]);
+        expect(h.registered).toEqual([]);
+        h.reserved.push(name);
+        if(name==='Earlyshooter')return false;
+        throw Error('private remote failure');
+    };
+    const out=await provisionAccount(request,h.deps);
+    expect(h.reserved).toEqual(['Earlyshooter','Quiverfull']);
+    expect(out).toMatchObject({account:'Quiverfull',registered:false,reason:'shared identity reservation unconfirmed; retain identity for review'});
+    expect(h.created).toEqual([]);expect(h.registered).toEqual([]);
+});
+
+test('practice registration does not claim a live registry entry',async()=>{
+    const h=harness();
+    expect((await provisionAccount({...request,server:'localhost:8888'},h.deps)).registered).toBe(true);
+    expect(h.reserved).toEqual([]);
+});
+
+test('first job must directly name the current proof for its own capability',()=>{
+    const state=initialState();
+    const task=(id:string, extra:Partial<CoordTask>):CoordTask=>({
+        id,kind:'qualify',goal:'skills',capability:'train',dependsOn:[],priority:1,estimatedMs:1,why:'starter job',...extra,
+    });
+    addTasks(state,[
+        task('claim',{kind:'provision',role:'ranged'}),
+        task('unrelated',{capability:'other'}),
+        task('proof',{}),
+        task('first-job',{kind:'run',accountFrom:'claim',dependsOn:['unrelated'],accept:{skills:{Ranged:7}}}),
+    ],1);
+    for(const [id,capability] of [['unrelated','other'],['proof','train']] as const){
+        startTask(state,id,2,id);
+        finishTask(state,{taskId:id,runId:id,ok:true,at:3,output:{delivery:{id:capability,ok:true,stage:'delivered',source:'qualified-source',runtimeRevision:'qualified-runtime'}}});
+    }
+    const source=()=>({fingerprint:'qualified-source',runtime:'qualified-runtime'});
+    expect(preparedProvisionProof(state,'claim',source)).toBe(false);
+    state.tasks[3]!.spec.dependsOn=['proof'];
+    expect(preparedProvisionProof(state,'claim',source)).toBe(true);
+    expect(preparedProvisionProof(state,'claim',()=>({...source(),runtime:'changed-runtime'}))).toBe(false);
 });
 
 test('local credentials alone, exit failure, timeout and unconfirmed logout are not registration',async()=>{

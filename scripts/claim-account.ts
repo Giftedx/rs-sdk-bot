@@ -7,6 +7,7 @@ import { assertServerAllowed, serverFromEnv, logoutSession, closeWithin } from '
 import { connectInProcess } from '../packages/core/src/inprocess';
 import { NAMES } from '../packages/core/src/names';
 import { isLocalServer } from '../packages/core/src/localserver';
+import { assertSideOwns } from '../packages/core/src/fleet';
 
 const name = process.argv[2]!;
 const root = resolve(import.meta.dir, '..');
@@ -15,6 +16,7 @@ const password = env.match(/^PASSWORD=(.*)$/m)?.[1]?.trim();
 if (!password) throw new Error(`no PASSWORD in bots/${name}/bot.env`);
 const server = serverFromEnv(env);
 assertServerAllowed(server);
+if (!isLocalServer(server)) assertSideOwns(name);
 // A live name is registered for good: take it from the reviewed joke lists (AGENTS.md "Accounts"), never ad hoc.
 if (!isLocalServer(server) && !Object.values(NAMES).flat().some(n => n.toLowerCase() === name.toLowerCase()))
     throw new Error(`live name ${name} is not in packages/core/src/names.ts; add a real joke there first`);

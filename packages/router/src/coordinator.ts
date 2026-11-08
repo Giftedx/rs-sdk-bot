@@ -258,15 +258,22 @@ export function deadRoots(state:CoordinatorState,records:ReadonlyMap<string,Task
  for(const r of state.tasks)if(r.status==='pending'){const found=visit(r);if(found)roots.set(r.spec.id,found);}
  return roots;
 }
-export function preparedProvisionClaims(state:CoordinatorState,records:ReadonlyMap<string,TaskRecord>,
+export function preparedProvisionRuns(state:CoordinatorState,records:ReadonlyMap<string,TaskRecord>,
  dead=deadRoots(state,records),runHeld?:(task:CoordTask)=>boolean):Set<string>{
- const claims=new Set<string>();
+ const runs=new Set<string>();
  for(const {spec,status} of state.tasks){
   if(status!=='pending'||spec.kind!=='run'||dead.has(spec.id))continue;
   const refs=provisionRefs(spec);
   // A composed first job can wait on several account claims. Its other prerequisites must have passed.
-  if(!refs.length||spec.dependsOn.some(id=>!refs.includes(id)&&records.get(id)?.status!=='succeeded')||runHeld?.(spec))continue;
-  for(const id of refs){
+  if(refs.length&&spec.dependsOn.every(id=>refs.includes(id)||records.get(id)?.status==='succeeded')&&!runHeld?.(spec))runs.add(spec.id);
+ }
+ return runs;
+}
+export function preparedProvisionClaims(state:CoordinatorState,records:ReadonlyMap<string,TaskRecord>,
+ dead=deadRoots(state,records),runHeld?:(task:CoordTask)=>boolean):Set<string>{
+ const claims=new Set<string>();
+ for(const run of preparedProvisionRuns(state,records,dead,runHeld)){
+  for(const id of provisionRefs(records.get(run)!.spec)){
    const claim=records.get(id);
    if(claim?.status==='pending'&&claim.spec.dependsOn.every(dep=>records.get(dep)?.status==='succeeded'))claims.add(id);
   }

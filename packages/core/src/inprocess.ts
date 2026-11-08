@@ -6,6 +6,8 @@ import type { BotActions } from '../../../vendor/rs-sdk/sdk/actions';
 import type { SDKConfig } from '../../../vendor/rs-sdk/sdk/types';
 import { loadPathfinding } from './pathcache';
 import { assertLoginAllowed } from './haggisgate';
+import { fleetLeaseAllowsWorker } from './fleet-lease';
+import { planLockDir, withPlanWrite } from './plan-lock';
 import { isLocalServer } from './localserver';
 import { ownedAccounts, tradePartners, recordOwnedAccount, tradeRefusal } from './tradeguard';
 import { ServerProt } from '../../../vendor/rs-sdk/server/webclient/src/io/ServerProt';
@@ -342,7 +344,7 @@ const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 const vendor = (p: string) => join(repoRoot, 'vendor', 'rs-sdk', p);
 let pathfindingReady = false;
 
-export async function connectInProcess(opts: { name: string; password: string; server?: string; members?: boolean; lifecycleRoot?:string; beforeConnect?:()=>void }): Promise<Session> {
+export async function connectInProcess(opts: { name: string; password: string; server?: string; members?: boolean; lifecycleRoot?:string; beforeConnect?:()=>void; lockPlan?: boolean }): Promise<Session> {
     if(opts.lifecycleRoot&&!isLocalServer(opts.server??'localhost:8888'))throw Error('lifecycle root override is local-only');
     assertLoginAllowed(opts.name);
     installGameWebSocketProxy();
@@ -358,23 +360,32 @@ export async function connectInProcess(opts: { name: string; password: string; s
     }
     const cacheDir = join(repoRoot, '.practice', 'cache');
     mkdirSync(cacheDir, { recursive: true });
+    const beforeConnect = () => {
+        assertLoginAllowed(opts.name);
+        if (!isLocalServer(opts.server ?? 'localhost:8888') && !fleetLeaseAllowsWorker(repoRoot)) throw Error('fleet controller lease unavailable');
+        opts.beforeConnect?.();
+    };
     return startInProcessSession(opts, { startSession, sdk: new BotSDK(inProcessSdkConfig(opts)), Actions: BotActions, cacheDir,
-        beforeConnect:opts.beforeConnect,...(opts.lifecycleRoot?{lifecycle:{root:opts.lifecycleRoot}}:{}) });
+        beforeConnect,planLock:opts.lockPlan?planLockDir:undefined,...(opts.lifecycleRoot?{lifecycle:{root:opts.lifecycleRoot}}:{}) });
 }
 
 export type StartSession = (o: any) => Promise<{ client: unknown; stop(): void; stopped: Promise<unknown> }>;
 // The network part of connectInProcess. The lifecycle intent is written first; if it cannot be written, no
 // connection starts. Every later event comes from this session's own callbacks. Tests pass a fake startSession.
 export async function startInProcessSession(opts: { name: string; password: string; server?: string; members?: boolean },
-    deps: { startSession: StartSession; sdk: BotSDK; Actions: new (sdk: BotSDK) => BotActions; cacheDir: string; lifecycle?: Parameters<typeof beginSessionAttempt>[1]; recordOwned?: typeof recordOwnedAccount;beforeConnect?:()=>void }): Promise<Session> {
+    deps: { startSession: StartSession; sdk: BotSDK; Actions: new (sdk: BotSDK) => BotActions; cacheDir: string; lifecycle?: Parameters<typeof beginSessionAttempt>[1]; recordOwned?: typeof recordOwnedAccount;beforeConnect?:()=>void; planLock?: string }): Promise<Session> {
     const { startSession, sdk, Actions, cacheDir } = deps;
     let endResolve!: (v: { reason: string }) => void;
     const ended = new Promise<{ reason: string }>(r => { endResolve = r; });
     let shim: Shim | null = null;
     const host = opts.server ?? 'localhost:8888'; // host:port, same as SERVER in bot.env
-    // Async imports/pathfinding can outlive an owner stop. Recheck before any intent or network work.
-    deps.beforeConnect?.();
-    const attempt = beginSessionAttempt({ account: opts.name, server: host, members: opts.members, secret: opts.password }, deps.lifecycle);
+    const admit = () => {
+        // Async imports/pathfinding can outlive an owner stop. Recheck before any intent or network work.
+        deps.beforeConnect?.();
+        return beginSessionAttempt({ account: opts.name, server: host, members: opts.members, secret: opts.password }, deps.lifecycle);
+    };
+    // A trade holds the plan lock through its intent, so a plan writer sees the new session owner.
+    const attempt = deps.planLock ? await withPlanWrite(admit, deps.planLock) : admit();
     let session: Awaited<ReturnType<StartSession>>;
     try {
         session = await startSession({

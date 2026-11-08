@@ -48,11 +48,8 @@ export function listedAccounts(server: string, owners = loadOwners()): Set<strin
     return new Set([...owners].filter(([, o]) => o.server === server.toLowerCase()).map(([n]) => n));
 }
 
-// One live controller per side across machines. fleet/leases/<side>.json names the machine whose swarm runs the side's
-// jobs (host and controller pid, from its .practice/swarm-state.json heartbeat); scripts/fleet-sync.ts publishes it, and a
-// swarm on another machine refuses to start while it is fresh (scripts/swarm.ts), so two containers of one side never log
-// the same accounts in. A lease older than LEASE_MAX_AGE_MS has lapsed: the fleet agent syncs every 10 minutes, so a
-// machine that stops syncing frees its side within 15.
+// Legacy controller heartbeat mirror. Fleet sync maintains it for older readers. New controllers
+// use the authoritative per-side ref in fleet-lease.ts and consult the legacy record on first acquisition.
 export const LEASE_MAX_AGE_MS = 15 * 60_000;
 export type Lease = { side: Side; host: string; pid: number; at: number };
 export const thisHost = () => hostname();

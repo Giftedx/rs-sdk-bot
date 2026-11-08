@@ -14,7 +14,8 @@ import {stageDeliveryPr,deliverySourceSet} from './delivery-pr';
 
 // A drained fleet for a publish: finite live runs end within their own timeouts (at most 30 minutes in practice).
 const PUBLISH_WAIT_MS=45*60*1000;
-import {buildWorkOrder,preparedNativeDelivery,type CoordTask} from './coordinator';
+import {buildWorkOrder,preparedNativeDelivery,preparedProvisionRuns,provisionRefs,type CoordinatorState,type CoordTask} from './coordinator';
+import {reviewHold} from './coordinator-decisions';
 import {loadState} from './coordinator-store';
 import {capabilityRevision} from '../../core/src/worker-release';
 import {runModel,rejectedReview,type ModelWorker,reviewDependencies,reviewVerdict,reviewGate,REPLAY_RUNS,type ReplayOutcome} from './model-worker';
@@ -69,18 +70,42 @@ export async function buildReviewGate(input:{root:string;isolated:boolean;entry:
  return reviewGate({scope,records:records.length,replays,allow:input.allow});
 }
 
+export function preparedProvisionProof(state:CoordinatorState,id:string,source:(capability:string)=>{fingerprint:string;runtime:string}|null):boolean{
+ const records=new Map(state.tasks.map(r=>[r.spec.id,r]));
+ for(const runId of preparedProvisionRuns(state,records)){
+  const run=records.get(runId)!.spec;
+  if(!provisionRefs(run).includes(id))continue;
+  const current=source(run.capability!);if(!current)continue;
+  if(run.dependsOn.some(dep=>{
+   const proof=records.get(dep),delivery=proof?.receipt?.output?.delivery;
+   return proof?.status==='succeeded'&&(proof.spec.kind==='build'||proof.spec.kind==='qualify')
+    &&proof.spec.capability===run.capability&&delivery?.id===run.capability&&delivery.ok===true&&delivery.stage==='delivered'
+    &&delivery.source===current.fingerprint&&delivery.runtimeRevision===current.runtime;
+  }))return true;
+ }
+ return false;
+}
+
 export async function executeTask(task:CoordTask,dependencies:Record<string,any>,directory:string,runId:string,startedAt:number,agent:ModelWorker='claude'){
  if(task.kind==='provision'){
-  // A delivery records the capability release of its own entry (delivery-cli.ts); it is fresh while that is unchanged.
-  const fresh=(d:any)=>{try{return d?.delivery?.ok===true&&d.delivery.runtimeRevision===capabilityRevision([deliveryTask(d.delivery.id).entry]);}catch{return false;}};
-  if(!Object.values(dependencies).some(fresh))throw Error('account creation waits for fresh native proof of its prepared first job');
-  const world=readWorld(),deps=createAccountProvisionDeps({workerRelease:capabilityRevision([REGISTRATION_SCRIPT])});
+  const requirePreparedJob=()=>{
+   const state=loadState();
+   if(!preparedProvisionProof(state,task.id,capability=>{
+    try{
+     const definition=deliveryTask(capability);
+     if(reviewHold(state,capability,()=>capabilitySource(definition.files)))return null;
+     return{fingerprint:deliveryFingerprint(definition),runtime:capabilityRevision([definition.entry])};
+    }catch{return null;}
+   }))throw Error('account creation waits for fresh native proof of its prepared first job');
+  };
+  requirePreparedJob();
+  const world=readWorld(),deps=createAccountProvisionDeps({workerRelease:capabilityRevision([REGISTRATION_SCRIPT]),reservation:runId});
   const admission=admissionDecision({running:activeExternalLive(world.statuses,[],Date.now()).length,external:0,starting:1,startingReserve:1,pending:0,freeGB:freemem()/2**30,minFreeGB:world.capacity.minFreeGB,maxBots:world.capacity.maxBots});
   if(!admission.allowed)throw Error('account claim waits for measured capacity: '+admission.reason);
-  const create=deps.createLocalAccount;
-  deps.createLocalAccount=async(name,server)=>{atomicJson(join(directory,'identity.json'),{account:name,server,purpose:task.why,at:Date.now()});return create(name,server);};
+  const reserve=deps.reserveLiveAccount;
+  deps.reserveLiveAccount=async(name,server)=>{atomicJson(join(directory,'identity.json'),{account:name,server,purpose:task.why,at:Date.now()});return reserve(name,server);};
   const register=deps.registerAccount;
-  deps.registerAccount=async(name,server)=>{const result=await register(name,server);atomicJson(join(directory,'claim.json'),result);return result;};
+  deps.registerAccount=async(name,server)=>{requirePreparedJob();const result=await register(name,server);atomicJson(join(directory,'claim.json'),result);return result;};
   const result=await provisionAccount({role:task.role as any,purpose:task.why,server:'rs-sdk-demo.fly.dev',reservedNames:world.jobs.flatMap((j:any)=>j.accounts??[j.account]).filter(Boolean)},deps);
   return{...result,ok:result.registered,evidence:'registered'};
  }

@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { parseBoard, boardGaps } from '../src/scout';
+import { parseBoard, boardGaps, observeProfile } from '../src/scout';
 
 const span = (t: number, s: string) => `<span title="${t.toLocaleString()} ticks" style="font-variant-numeric: tabular-nums">${s}</span>`;
 const PAGE = `<html><body><table><tr>
@@ -39,4 +39,18 @@ test('boardGaps ranks boards by how much faster our plan is than the current #1'
         ['fishing', true, 10_000],
         ['mining', false, -1_000],
     ]);
+});
+
+
+test('profile freshness observes the exact lowercase account and rejects a generic 404', async () => {
+    const base='https://rs-sdk-demo.fly.dev', url=base+'/hiscores/player/shaftshooter?profile=main';
+    const request=(body:string,status:number)=>(async (input:unknown,init:RequestInit)=>{
+        expect(input).toBe(url);
+        expect(init.redirect).toBe('error');
+        return new Response(body,{status});
+    }) as typeof fetch;
+    expect(await observeProfile(base,'Shaftshooter',request('Player "shaftshooter" not found.',404)))
+        .toMatchObject({name:'shaftshooter',status:404});
+    expect(await observeProfile(base,'Shaftshooter',request('profile',200))).toMatchObject({status:200});
+    await expect(observeProfile(base,'Shaftshooter',request('Not Found',404))).rejects.toThrow('invalid 404');
 });

@@ -8,14 +8,15 @@
 // planners stay off them while a job the swarm has not admitted for hours holds nothing) and this side's live
 // assignments (fleet/plans/<side>.json: the same merged plan, as scripts/swarm.ts runs it, so other machines and audits
 // see what runs), commits fleet/ and pushes.
-// The side's lease (fleet/leases/<side>.json) is this machine's live controller heartbeat (.practice/swarm-state.json,
-// written every swarm tick) while no other machine holds a fresh one; scripts/swarm.ts refuses to start against it.
+// fleet/leases/<side>.json mirrors the controller heartbeat for fleet-data readers and old controllers.
+// New controllers acquire their admission lease on a separate per-side ref before writing a heartbeat.
 // Usage: bun scripts/fleet-sync.ts [--no-push]
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { FLEET_WORKTREE, loadOwners, mySide, nextLease, readLease, leaseHeldElsewhere, thisHost, type Lease } from '../packages/core/src/fleet';
 import { CLAIM_MAX_AGE_MS, claimFor } from '../packages/planner/src/autopilot';
 import { mergeJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
+import { withFleetDataWrite } from './fleet-owner-claim';
 
 const root = resolve(import.meta.dir, '..');
 const BRANCH = 'fleet-data', HEARTBEAT_MAX_AGE_MS = 60_000;
@@ -62,7 +63,8 @@ export function planView(jobs: readonly any[], side = mySide(), owners = loadOwn
     return { side, at: now, jobs: own.map(j => Object.fromEntries(PLAN_FIELDS.filter(k => j[k] !== undefined).map(k => [k, j[k]]))) };
 }
 const git = (cwd: string, ...args: string[]) => {
-    const p = Bun.spawnSync(['git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+    const p = Bun.spawnSync(['git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe', windowsHide: true,
+        timeout: 15_000, env: {...process.env, GIT_TERMINAL_PROMPT: '0'} });
     return { ok: p.exitCode === 0, out: `${p.stdout.toString()}${p.stderr.toString()}`.trim() };
 };
 
@@ -123,6 +125,6 @@ export function runSync(push = true): string {
 }
 
 if (import.meta.main) {
-    try { console.log(`RESULT ok fleet-sync ${runSync(!process.argv.includes('--no-push'))}`); }
+    try { console.log(`RESULT ok fleet-sync ${await withFleetDataWrite(root, () => runSync(!process.argv.includes('--no-push')))}`); }
     catch (e) { console.log(`RESULT fail fleet-sync ${String(e)}`); process.exit(1); }
 }
