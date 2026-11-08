@@ -187,6 +187,10 @@
   "Crownjewels": {
    "side": "cloud",
    "server": "rs-sdk-demo.fly.dev"
+  },
+  "Kiltlifter": {
+   "side": "claude-cloud-3",
+   "server": "rs-sdk-demo.fly.dev"
   }
  }
 }
