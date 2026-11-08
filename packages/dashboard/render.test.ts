@@ -35,6 +35,17 @@ test('following a visitor clears the free camera destination before rendering',(
  expect(rendered).toEqual({free:false,destination:null,following:'Visitor'});
  expect(sent).toEqual([{follow:'Visitor'}]);
 });
+test('a shared visitor follow waits for the viewer and takes priority over the selected fleet account',()=>{
+ const code=html.slice(html.indexOf('window.atlasFollow3d='),html.indexOf('\n',html.indexOf('window.atlasFollow3d=')));
+ const sent:unknown[]=[];const window:any={atlasFreeCamera:true};
+ new Function('window','$','render',`const mode='2d',VIEWER={state:'checking'};${code}`)(window,()=>({contentWindow:{postMessage:(m:unknown)=>sent.push(m)}}),()=>{});
+ expect(window.atlasFollow3d('Visitor')).toBe(false);
+ expect(window.atlasFollow3d('Visitor',true)).toBe(true);
+ expect(sent).toEqual([]);
+ const viewer=viewerReady(window,'Worker');
+ viewer.ready();viewer.ready();
+ expect(viewer.sent).toEqual([{follow:'Visitor'}]);
+});
 const source=html.slice(html.indexOf('function chainHud(){'),html.indexOf("$('#chain').addEventListener"));
 for(const chain of [null,{cook:null,courier:null,farmers:[]},
     {cook:{name:'Cook',fresh:false,at:10},courier:null,farmers:[]},

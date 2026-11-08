@@ -510,7 +510,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   }
   window.atlasOverlay=()=>{if(S)overlay();};
   function accountChoices(){const choices=S.bots.filter(b=>!b.practice).map(b=>({name:b.name,inWorld:b.inWorld}));const following=window.atlasFollowOther;if(following&&!choices.some(b=>b.name===following))choices.push({name:following,inWorld:true,following:true});if(sel&&!choices.some(b=>b.name===sel))choices.push({name:sel,inWorld:false,missing:true});return choices;}
-  // The address names the open plugin and account, so a link opens the same view.
+  // Restore the plugin at startup, then restore the account and camera with the first snapshot.
   let linkedPluginRestored=false;
   function restoreLinkedPlugin(){
     linkedPluginRestored=true;
@@ -522,13 +522,24 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   let linkRead=false;
   function followLinkedAccount(){
     if(linkRead)return;linkRead=true;
-    const name=new URLSearchParams(location.hash.slice(1)).get('a');
-    if(name&&S.bots.some(b=>b.name===name))pick(name);
+    const q=new URLSearchParams(location.hash.slice(1)),name=q.get('a');
+    const linked=S.bots.find(b=>b.name===name);
+    if(linked)pick(linked.name);
+    const watch=q.get('watch');
+    if(watch&&window.atlasFollow3d(watch,true))return;
+    if(q.get('cam')==='free')focusFree(linked?.name);
   }
   function writeLink(){
     if(!linkedPluginRestored)return;
-    const name=linkRead?sel:new URLSearchParams(location.hash.slice(1)).get('a');
-    const q=new URLSearchParams({p:selectedPlugin});if(name)q.set('a',name);
+    const q=new URLSearchParams({p:selectedPlugin});
+    if(linkRead){
+      if(sel)q.set('a',sel);
+      if(window.atlasFollowOther)q.set('watch',window.atlasFollowOther);
+      else if(window.atlasFreeCamera)q.set('cam','free');
+    }else{
+      const pending=new URLSearchParams(location.hash.slice(1));
+      for(const key of ['a','watch','cam'])if(pending.has(key))q.set(key,pending.get(key));
+    }
     const hash='#'+q;if(location.hash!==hash)history.replaceState(null,'',location.pathname+location.search+hash);
   }
   let questAccount=null;
@@ -586,7 +597,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(to===from)return;
     flightTo=shown;focus.classList.add('flying');focusNote.classList.add('flying');focusSay('Flying to '+shown,15000);
   }
-  const focusFree=()=>{sel=null;picked=true;window.atlasFreeCamera=true;window.atlasFollowOther=null;window.atlasDestination=null;rswFor=null;$('#rsw')?.contentWindow?.postMessage({atlasFreeCamera:true},location.origin);render();};
+  const focusFree=(name=null)=>{sel=name;picked=true;window.atlasFreeCamera=true;window.atlasFollowOther=null;window.atlasDestination=null;rswFor=null;$('#rsw')?.contentWindow?.postMessage({atlasFreeCamera:true},location.origin);render();};
   // The viewer loads these places while it is idle, so a swap to them has nothing to wait for. The [ and ] neighbours come
   // first, and a row under the pointer goes before them. One place stands for the accounts in the same 32-tile cell.
   let warmSent='';
