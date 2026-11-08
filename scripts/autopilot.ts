@@ -2,8 +2,8 @@
 // only jobs marked "autopilot": <this side>, keeps every other job, and never plans an account that an unmarked job
 // names or another side owns. Each pass retires a planner job whose log since assignment shows repeated fail RESULTs,
 // a death or near-total tick waste, and picks that account's next best template. Other sides' fresh claims
-// (fleet/claims/<side>.json, written by scripts/fleet-sync.ts from each side's plan) count as taken, so sides never
-// share a spot.
+// (fleet/claims/<side>.json, written by scripts/fleet-sync.ts from each side's plan) count as taken, so the sides
+// together never put more accounts on a spot than its capacity (CAPACITY in the planner).
 // A job that only lacks coins gets them from a free account of this side: the pass writes a fleet order
 // (fleet/orders), scripts/fleet-agent.ts runs the trade, and a later pass gives the job.
 // Usage: bun scripts/autopilot.ts [swarm.json] [--dry] [--daemon]
@@ -16,7 +16,7 @@ import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { clearSwarmStop, swarmWroteStop } from './swarm';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { matchingJobLines } from '../packages/core/src/job-log';
-import { CLAIM_MAX_AGE_MS, accountFrom, assess, catalogue, finishedTrainers, freshest, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, type Assignment } from '../packages/planner/src/autopilot';
+import { CAPACITY, CLAIM_MAX_AGE_MS, SHARED, accountFrom, assess, catalogue, finishedTrainers, freshest, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, type Assignment } from '../packages/planner/src/autopilot';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { tradeSettlement, validOrder, type Order, type Receipt, type TradeReceipt } from './fleet-trade-settlement';
 import { readHeldFleetTradeClaims } from '../packages/core/src/fleet-trade-claim';
@@ -193,7 +193,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     }
     const donors = listed.filter(n => owners.get(n.toLowerCase())?.side === side && n.toLowerCase() !== 'haggis' && ![busy, keep, open].some(s => s.has(n.toLowerCase())))
         .map(n => ({ name: n, coins: accountFrom(n, side, observed(n), id => byId.get(id)).items.coin ?? 0 })).filter(d => d.coins > 0);
-    const planned = plan({ side, accounts, owners, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: { 'catherby:lobster': 3 }, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])) });
+    const planned = plan({ side, accounts, owners, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])) });
     const funding = fundOrders(planned, open, (from, to, coins) => coinOrder(from, to, coins, owners.get(to.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev', now));
     const out = funding.assignments;
     log.push(...funding.log);

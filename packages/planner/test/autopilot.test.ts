@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs } from '../src/autopilot';
+import { CAPACITY, KNIGHT_SPOTS, SHARED, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -43,6 +43,26 @@ test('a fresh account trains toward a free knight spot and reserves it; with no 
     expect(ids(out)).toEqual({ NewA: 'thieving55', NewB: expect.stringMatching(/^feathers@/) });
     expect(out[0]!.resources).toEqual(['knight:2582,3297']);
     expect(ids(plan(inputs(fresh, { taken: { ...four, 'knight:2582,3297': 1 } })))).toEqual({ NewA: expect.stringMatching(/^feathers@/), NewB: expect.stringMatching(/^feathers@/) });
+});
+
+test('a knight spot takes two farmers: the empty spots fill first, then each spot takes a second', () => {
+    const fresh = [acct('NewA'), acct('NewB'), acct('NewC')];
+    const knights = (n: number) => Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, n]));
+    const shared = (taken: Record<string, number>) => plan(inputs(fresh, { taken, capacity: CAPACITY, shared: SHARED }));
+    // One empty spot: the first account takes it at full worth, the others take a second place on a held spot.
+    const one = shared({ ...knights(1), 'knight:2582,3297': 0 });
+    expect(ids(one)).toEqual({ NewA: 'thieving55', NewB: 'thieving55', NewC: 'thieving55' });
+    expect(one[0]!.resources).toEqual(['knight:2582,3297']);
+    const holders = (taken: Record<string, number>, out: ReturnType<typeof plan>) => out.reduce((m, x) => ({ ...m, [x.resources[0]!]: (m[x.resources[0]!] ?? 0) + 1 }), { ...taken });
+    expect(Math.max(...Object.values(holders({ ...knights(1), 'knight:2582,3297': 0 }, one)))).toBe(2);
+    expect(one[1]!.value).toBeCloseTo(one[0]!.value * SHARED['knight:2652,3318']!, 9);
+    // No account takes a third place on a spot.
+    expect(ids(shared({ ...knights(2), 'knight:2582,3297': 1 }))).toEqual({ NewA: 'thieving55', NewB: expect.stringMatching(/^feathers@/), NewC: expect.stringMatching(/^feathers@/) });
+    expect(Object.values(ids(shared(knights(2)))).every(id => id.startsWith('feathers@'))).toBe(true);
+    // Two accounts of this side on empty spots spread out instead of sharing.
+    const spread = shared({});
+    expect(new Set(spread.map(x => x.resources[0])).size).toBe(3);
+    expect(spread.every(x => x.value === spread[0]!.value)).toBe(true);
 });
 
 test('skills and holdings gate templates; coins pick a shop; a retired pair picks the next best', () => {
@@ -204,7 +224,7 @@ test('a paused handed-over job keeps its pen reserved', () => {
     expect(Object.keys(reservedResources(jobs, side, new Set(['hocuspokeus']))).sort()).toEqual(['knight:2671,3313', 'pen:3017,3288']);
 });
 
-test('the claim lists every spot, pen and shop the enabled jobs of this side hold, planner-made or not', () => {
+test('the claim lists every spot, pen and shop the enabled jobs of this side hold, planner-made or not, once per job', () => {
     const jobs = [
         { account: 'Pocketpython', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2582,3297' }, enabled: true },
         { account: 'Shaftsinker', script: 'scripts/chain.ts', args: ['scripts/goldfarm.ts KNIGHT_SPOT=2653,3300'], env: { ROUNDS: '1', RUN: '2' }, enabled: true },
@@ -216,7 +236,8 @@ test('the claim lists every spot, pen and shop the enabled jobs of this side hol
         { account: 'Haggis', script: '', enabled: false },
     ];
     const claim = claimFor(jobs, side, a => a === 'Quickhandjob' ? 'cloud' : side, 1234);
-    expect(claim).toEqual({ side, at: 1234, resources: ['knight:2582,3297', 'knight:2653,3300', 'pen:3017,3288'] });
+    // Shaftsinker and PickpockDick both farm the 2653,3300 knights, so the other sides count two farmers there.
+    expect(claim).toEqual({ side, at: 1234, resources: ['knight:2582,3297', 'knight:2653,3300', 'knight:2653,3300', 'pen:3017,3288'] });
     expect(claimFor([], side, () => side, 5).resources).toEqual([]);
     // Only a job with an active account holds its resources: a parked job's spot is free for the other sides.
     expect(claimFor(jobs, side, a => a === 'Quickhandjob' ? 'cloud' : side, 1234, a => a === 'Pocketpython' || a === 'Hocuspokeus').resources).toEqual(['knight:2582,3297', 'pen:3017,3288']);
