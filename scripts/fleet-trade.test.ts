@@ -26,7 +26,7 @@ const claimedReceipt = (role: 'from' | 'to' = 'to'): TradeReceipt => ({
 const logout = { state: 'confirmed', account: 'Taker', server: 's', domain: 'live', attemptId, loggedOutAt: 2400, ownerRun: null, receiptSha256: sha256 } as const;
 
 test('transfer needs a matching partner, observed exact item delta, bank credit, and this session logout', async () => {
-    const item = { id: 379, name: 'Lobster', count: 500 };
+    const item = { id: 379, name: 'Lobster', count: 500, slot: 0 };
     for (const mode of ['ok', 'wrong peer', 'bank failure', 'ambiguous timeout'] as const) {
         let pack = [{ ...item, count: 5 }], calls = 0;
         const fake = {
@@ -59,7 +59,7 @@ test('transfer needs a matching partner, observed exact item delta, bank credit,
 });
 
 test('the sender ends its serving window after the first observed trade outcome', async () => {
-    const item = { id: 379, name: 'Lobster', count: 500 };
+    const item = { id: 379, name: 'Lobster', count: 500, slot: 0 };
     for (const ambiguous of [false, true]) {
         let pack = [item];
         const fake = {
