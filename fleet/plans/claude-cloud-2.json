@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud-2",
- "at": 1794129661282,
+ "at": 1794130264099,
  "jobs": [
   {
    "account": "Deeppockets",
@@ -23,24 +23,21 @@
   },
   {
    "account": "Fatstack",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "catherby"
-   ],
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
    "env": {
-    "ITEMS": "rune arrowtips|adamant arrowtips",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
+    "PEN": "3187,3277",
+    "TICKS": "3000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy rune and adamant arrowtips at Catherby",
-   "role": "bank",
-   "template": "shop-arrowtips",
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
    "autopilot": "claude-cloud-2",
    "resources": [
-    "shop:catherby"
+    "pen:3187,3277"
    ]
   },
   {
