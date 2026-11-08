@@ -1,6 +1,6 @@
 {
  "side": "cloud-kit",
- "at": 1794180892189,
+ "at": 1794181044470,
  "jobs": [
   {
    "account": "Familyjewel",
@@ -10,7 +10,7 @@
     "scripts/generated/thieving60.ts TARGET=55 CAP=240"
    ],
    "env": {
-    "EARNING_BATCH": "1"
+    "EARNING_BATCH": "2"
    },
    "enabled": true,
    "repeat": false,
