@@ -15,10 +15,12 @@ export function trimState(state:any){
  const finished=all.filter((t:any)=>t.status!=='running'&&t.status!=='pending').sort((a:any,b:any)=>(b.finishedAt??b.createdAt??0)-(a.finishedAt??a.createdAt??0)).slice(0,FINISHED_KEEP);
  return {...state,coordination:{...state.coordination,tasks:[...open,...finished]}};
 }
-// Each bot row names its fleet side (fleet/owners.json; an unlisted account is local), so the page can show worlds.
+// Each bot row names its fleet side, so the page can show worlds. A remote row keeps the side of the snapshot it came
+// from: a new cloud account can sync its snapshot before its fleet/owners.json entry arrives. Other rows use
+// fleet/owners.json; an unlisted account is local.
 export function withSides(state:any,owners:ReadonlyMap<string,{side:string}>){
  if(!Array.isArray(state?.bots))return state;
- return {...state,bots:state.bots.map((b:any)=>({...b,side:owners.get(String(b?.name??'').toLowerCase())?.side??'local'}))};
+ return {...state,bots:state.bots.map((b:any)=>({...b,side:(b?.remote&&typeof b.side==='string'&&b.side)||(owners.get(String(b?.name??'').toLowerCase())?.side??'local')}))};
 }
 export function controlView(state:any,controlMeta:any,main=MAIN_ACCOUNT){
  const {nonce:_nonce,...meta}=controlMeta??{};

@@ -76,6 +76,10 @@ describe('withSides',()=>{
   expect(s.now).toBe(1);
   expect(withSides({bots:null},new Map())).toEqual({bots:null});
  });
+ test('a remote row keeps its snapshot side when fleet/owners.json does not list it',()=>{
+  const s=withSides({bots:[{name:'NewCloud',remote:true,side:'claude-cloud-3'},{name:'CoinCock',side:'cloud'}]},new Map());
+  expect(s.bots.map((b:any)=>b.side)).toEqual(['claude-cloud-3','local']);
+ });
 });
 
 test('public item values cover only what public bots carry or wear',()=>{
