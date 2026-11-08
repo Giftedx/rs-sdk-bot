@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud-2",
- "at": 1794180285501,
+ "at": 1794180888083,
  "jobs": [
   {
    "account": "Deeppockets",
@@ -22,22 +22,41 @@
    ]
   },
   {
-   "account": "Fingerblastr",
-   "script": "scripts/gather-feathers.ts",
+   "account": "Fatstack",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "PEN": "3017,3288",
-    "TICKS": "3000"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3017,3288",
-   "role": "helper",
-   "template": "feathers@3017,3288",
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "claude-cloud-2",
    "resources": [
-    "pen:3017,3288"
+    "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "claude-cloud-2",
+   "resources": [
+    "knight:2652,3318"
    ]
   }
  ]
