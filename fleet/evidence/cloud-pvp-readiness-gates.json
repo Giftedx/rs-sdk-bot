@@ -1,6 +1,6 @@
 {
  "schema": "cloud-pvp-readiness-gates/1",
- "at": 1794180854156,
+ "at": 1794181597631,
  "controllerPid": 74667,
  "source": "70fcbce85350659ad82496060e9c3e4f992c91a0",
  "releasedWorker": "scripts/pvp-standby.ts stage|verify",
@@ -53,7 +53,7 @@
   },
   {
    "account": "Porksword",
-   "combat": 3,
+   "combat": 6,
    "hp": {
     "now": 11,
     "max": 11
@@ -69,24 +69,24 @@
     "Magic": 1
    },
    "ownedKit": {
-    "556": 25,
-    "558": 15,
     "841": 1,
-    "882": 25,
-    "1171": 1,
+    "882": 22,
+    "556": 21,
+    "558": 11,
+    "1985": 2,
     "1277": 1,
-    "1985": 0
+    "1171": 1
    },
-   "attemptId": "1794174439329-0000067369-0000000001",
+   "attemptId": "1794180339474-0000074810-0000000001",
    "result": "ok ticks=91 boughtTotal=0 bankedTotal=0 bankTrips=2 shopTrips=1 coinsLeft=1300 spentTotal=0 coinReserve=300 maxSpend=200 maxItems=1 stop=stock-wait targetMet=0 noBuyTicks=50 noBuyLimit=50",
    "missing": [
     "Exact next bracket/kit/protection qualification against live HPXP1207,MagicXP600 before further PvP"
    ],
    "logout": {
     "state": "confirmed",
-    "attemptId": "1794177752245-0000072993-0000000001",
-    "loggedOutAt": 1794178209342,
-    "claimPhase": "released"
+    "attemptId": "1794180339474-0000074810-0000000001",
+    "at": 1794180388632,
+    "claim": "released"
    },
    "side": "cloud",
    "confirmedCombatStats": {
@@ -144,7 +144,30 @@
     "proof": "research/porksword-ranged7-proof.json",
     "ammoAcceptanceWaived": false
    },
-   "terminalReceipt": "fleet/evidence/cloud-porksword-magic7-result.json"
+   "terminalReceipt": "fleet/evidence/cloud-porksword-magic7-result.json",
+   "exactSkillXp": {
+    "Attack": 0,
+    "Defence": 0,
+    "Strength": 0,
+    "Hitpoints": 1207,
+    "Ranged": 600,
+    "Prayer": 0,
+    "Magic": 600,
+    "Cooking": 0,
+    "Woodcutting": 0,
+    "Fletching": 0,
+    "Fishing": 0,
+    "Firemaking": 0,
+    "Crafting": 0,
+    "Smithing": 0,
+    "Mining": 0,
+    "Herblore": 0,
+    "Agility": 0,
+    "Thieving": 422652,
+    "Stat18": 0,
+    "Stat19": 0,
+    "Runecraft": 0
+   }
   }
  ],
  "sharedQualificationReceipts": [],

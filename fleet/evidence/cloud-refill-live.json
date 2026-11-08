@@ -1,0 +1,59 @@
+{
+ "schema": "cloud-refill-terminal/1",
+ "at": 1794181422439,
+ "source": "cc4e77cc911a2e3a90e84a4146b86133695682e6",
+ "controllerPid": 74667,
+ "account": "TossTheCaber",
+ "pin": "16586bd7a3298e527cc089ef741443a67585067ed686a0345c236b9561745158",
+ "attemptId": "1794180860663-0000075329-0000000001",
+ "recordedLiveTickPair": [
+  {
+   "tick": 1,
+   "position": {
+    "x": 2724,
+    "z": 3493,
+    "level": 0
+   },
+   "hp": 27,
+   "carriedMaples": 0
+  },
+  {
+   "tick": 282,
+   "position": {
+    "x": 2724,
+    "z": 3493,
+    "level": 0
+   },
+   "hp": 27,
+   "carriedMaples": 0
+  }
+ ],
+ "result": "ok ticks=281 died=false tree=maple chops=10 banked=10 held=0 bankTrips=1 walkTicks=29 hpMin=27 logsPer1kTicks=35.59",
+ "checks": {
+  "matchedPin": true,
+  "terminalSuccess": true,
+  "maples13": true,
+  "yews23Preserved": true,
+  "wool20Preserved": true,
+  "noDeath": true,
+  "logout": true
+ },
+ "banked": {
+  "maples": 13,
+  "yews": 23,
+  "wool": 20
+ },
+ "logout": {
+  "state": "confirmed",
+  "at": 1794180979232,
+  "claim": "released"
+ },
+ "remainingGates": {
+  "deliveries": "No eligible receiver/lease confirmed by owner; keep stock banked,Haggis offline",
+  "PvP": "Magic7HP11 reached; liveHPXP+32 vs native0; next proof must bind exact new state; Wilderness held",
+  "Cook": "Current native first-job failed wheat effect; Crown not admitted live",
+  "Funding": "Heavyload/FullLoad existing histories/profiles, no login; FullSporran200 needs creator/first-job proof",
+  "Wine": "44water staged; grape delivery and qualified Cooking35 consumer not ready"
+ },
+ "allOwnerDeathFoodHoldsPreserved": true
+}
