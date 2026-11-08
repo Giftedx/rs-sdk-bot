@@ -223,18 +223,18 @@
    "side": "cloud",
    "server": "rs-sdk-demo.fly.dev",
    "reservation": "task-668f79d3-8846-40af-8f7d-039b215124b5"
+  },
+  "Fingersmith": {
+   "side": "claude-cloud-4",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Dipstick": {
+   "side": "claude-cloud-4",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "KnightRider": {
+   "side": "claude-cloud-4",
+   "server": "rs-sdk-demo.fly.dev"
   }
- },
- "Fingersmith": {
-  "side": "claude-cloud-4",
-  "server": "rs-sdk-demo.fly.dev"
- },
- "Dipstick": {
-  "side": "claude-cloud-4",
-  "server": "rs-sdk-demo.fly.dev"
- },
- "KnightRider": {
-  "side": "claude-cloud-4",
-  "server": "rs-sdk-demo.fly.dev"
  }
 }
