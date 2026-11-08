@@ -1,38 +1,23 @@
 {
  "schema": "cloud-expansion-snapshot/1",
  "started": 1794174593771,
- "at": 1794176333964,
+ "at": 1794176389182,
  "source": "70fcbce85350659ad82496060e9c3e4f992c91a0",
  "peakFreshLive": 3,
  "peakWholeRollout": 9,
- "currentLive": 1,
+ "currentLive": 0,
  "headroom": {
-  "freeGB": 15.222900390625,
+  "freeGB": 15.730937957763672,
   "load": [
-   0.1,
-   0.22,
-   0.47
+   0.04,
+   0.18,
+   0.44
   ],
   "cpus": 5,
   "requiredFloorGB": 4,
   "practiceReserveGB": 2.5
  },
- "active": [
-  {
-   "account": "TossTheCaber",
-   "goal": "Final10 yews for Haggis23-yew demand,13banked; live5+8 pilots clean, actual Seers grove and steelaxe equipped; finite1600ticks one trip.20replacementwool reserved for held Stirmypot",
-   "enabled": true,
-   "tick": 471,
-   "at": 1794176332896,
-   "position": {
-    "x": 2713,
-    "z": 3463,
-    "level": 0
-   },
-   "result": "",
-   "logout": "held"
-  }
- ],
+ "active": [],
  "accounts": [
   {
    "account": "BraveHardon",
@@ -52,15 +37,15 @@
    "account": "TossTheCaber",
    "goal": "Final10 yews for Haggis23-yew demand,13banked; live5+8 pilots clean, actual Seers grove and steelaxe equipped; finite1600ticks one trip.20replacementwool reserved for held Stirmypot",
    "enabled": true,
-   "tick": 471,
-   "at": 1794176332896,
+   "tick": 500,
+   "at": 1794176346152,
    "position": {
-    "x": 2713,
-    "z": 3463,
+    "x": 2721,
+    "z": 3493,
     "level": 0
    },
-   "result": "",
-   "logout": "held"
+   "result": "ok ticks=498 died=false tree=yew chops=10 banked=10 held=0 bankTrips=1 walkTicks=22 hpMin=26 logsPer1kTicks=20.08",
+   "logout": "confirmed"
   },
   {
    "account": "Swordswallow",
