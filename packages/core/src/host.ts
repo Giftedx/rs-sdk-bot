@@ -27,7 +27,7 @@ import { dirname, join, resolve } from 'node:path';
 import { inspect } from 'node:util';
 import ts from 'typescript';
 import { openBot, settle } from './bot';
-import { parseStep, type Step } from './chain-step';
+import { parseStep, runChainSteps, type Step } from './chain-step';
 import type { Session } from './inprocess';
 import { noteStatusLine } from './status';
 import { workerExecution } from './worker-execution';
@@ -333,24 +333,17 @@ async function runInstance(inst: Instance): Promise<{ code: number; result: stri
 async function runChain(name: string, stamp: string, steps: Step[], env: Record<string, string | undefined>, sink: Sink, open: typeof openBot): Promise<{ code: number; result: string }> {
     const rounds = Number(env.ROUNDS ?? 1);
     const stopped = () => existsSync(join(repoRoot, '.practice', `stop-${name}`));
-    let ok = 0, failed = 0, round = 0;
-    while ((rounds === 0 || round < rounds) && !stopped()) {
-        round++;
-        let roundOk = 0;
-        for (const [k, st] of steps.entries()) {
-            if (stopped()) break;
+    const result = await runChainSteps(steps, rounds, {
+        stopped, log: sink,
+        run: async (st, round, k) => {
             const inst = createInstance(name, `${name}-${stamp}-r${round}s${k}`, resolve(repoRoot, st.script), st.args, { ...env, ...st.env }, sink, open);
             const r = await runInstance(inst);
             const result = r.result || 'RESULT fail no result';
-            const good = result.startsWith('RESULT ok');
-            good ? (ok++, roundOk++) : failed++;
-            sink(`CHAIN round=${round} ${st.script} ${good ? 'ok' : 'fail'} ${result.slice(0, 200)}`);
-        }
-        if (!roundOk) break;
-    }
-    const result = `RESULT ${ok ? 'ok' : 'fail'} chain rounds=${round} ok=${ok} failed=${failed}${stopped() ? ' stop file' : ''}`;
+            return r.code !== 0 && /^RESULT ok(?: |$)/.test(result) ? `RESULT fail child exit ${r.code}: ${result}` : result;
+        },
+    });
     sink(result);
-    return { code: ok ? 0 : 1, result };
+    return { code: /^RESULT ok(?: |$)/.test(result) ? 0 : 1, result };
 }
 
 export async function runHost(bots: HostedBot[], opts: { staggerMs?: number; out?: (line: string) => void; logDir?: string; guard?: boolean; open?: typeof openBot } = {}): Promise<HostedResult[]> {
