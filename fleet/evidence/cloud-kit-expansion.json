@@ -1,6 +1,6 @@
 {
   "schema": "cloud-kit-expansion/1",
-  "at": 1794181229708,
+  "at": 1794181291624,
   "side": "cloud-kit",
   "controller": {
     "pid": 6955,
@@ -187,11 +187,11 @@
     }
   },
   "headroom": {
-    "freeGB": 15.454025268554688,
+    "freeGB": 15.360225677490234,
     "load": [
-      0.48,
-      0.47,
-      0.42
+      1.07,
+      0.64,
+      0.49
     ],
     "cpus": 5,
     "minFreeGB": 8,
@@ -200,11 +200,302 @@
   "accounts": [
     {
       "account": "Familyjewel",
-      "at": 1794181227395,
-      "tick": 457,
+      "at": 1794181291212,
+      "tick": 63,
       "position": {
-        "x": 2652,
-        "z": 3319,
+        "x": 2669,
+        "z": 3310,
+        "level": 0
+      },
+      "hp": {
+        "now": 4,
+        "max": 10
+      },
+      "skills": [
+        {
+          "name": "Attack",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Defence",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Strength",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Hitpoints",
+          "level": 10,
+          "currentLevel": 4,
+          "xp": 980
+        },
+        {
+          "name": "Ranged",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Prayer",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Magic",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Cooking",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Woodcutting",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Fletching",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Fishing",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Firemaking",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Crafting",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Smithing",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Mining",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Herblore",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Agility",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Thieving",
+          "level": 63,
+          "currentLevel": 63,
+          "xp": 87082
+        },
+        {
+          "name": "Stat18",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Stat19",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Runecraft",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        }
+      ],
+      "bank": [
+        {
+          "id": 995,
+          "baseId": 995,
+          "name": "Coins",
+          "count": 1319
+        },
+        {
+          "id": 1891,
+          "baseId": 1891,
+          "name": "Cake",
+          "count": 13
+        },
+        {
+          "id": 1893,
+          "baseId": 1893,
+          "name": "2/3 cake",
+          "count": 1
+        }
+      ],
+      "inventory": [
+        {
+          "id": 1351,
+          "baseId": 1351,
+          "name": "Bronze axe",
+          "count": 1
+        },
+        {
+          "id": 590,
+          "baseId": 590,
+          "name": "Tinderbox",
+          "count": 1
+        },
+        {
+          "id": 303,
+          "baseId": 303,
+          "name": "Small fishing net",
+          "count": 1
+        },
+        {
+          "id": 315,
+          "baseId": 315,
+          "name": "Shrimps",
+          "count": 1
+        },
+        {
+          "id": 1925,
+          "baseId": 1925,
+          "name": "Bucket",
+          "count": 1
+        },
+        {
+          "id": 1931,
+          "baseId": 1931,
+          "name": "Pot",
+          "count": 1
+        },
+        {
+          "id": 995,
+          "baseId": 995,
+          "name": "Coins",
+          "count": 300
+        },
+        {
+          "id": 1265,
+          "baseId": 1265,
+          "name": "Bronze pickaxe",
+          "count": 1
+        },
+        {
+          "id": 1205,
+          "baseId": 1205,
+          "name": "Bronze dagger",
+          "count": 1
+        },
+        {
+          "id": 1277,
+          "baseId": 1277,
+          "name": "Bronze sword",
+          "count": 1
+        },
+        {
+          "id": 1171,
+          "baseId": 1171,
+          "name": "Wooden shield",
+          "count": 1
+        },
+        {
+          "id": 841,
+          "baseId": 841,
+          "name": "Shortbow",
+          "count": 1
+        },
+        {
+          "id": 882,
+          "baseId": 882,
+          "name": "Bronze arrow",
+          "count": 25
+        },
+        {
+          "id": 556,
+          "baseId": 556,
+          "name": "Air rune",
+          "count": 25
+        },
+        {
+          "id": 558,
+          "baseId": 558,
+          "name": "Mind rune",
+          "count": 15
+        },
+        {
+          "id": 555,
+          "baseId": 555,
+          "name": "Water rune",
+          "count": 6
+        },
+        {
+          "id": 557,
+          "baseId": 557,
+          "name": "Earth rune",
+          "count": 4
+        },
+        {
+          "id": 559,
+          "baseId": 559,
+          "name": "Body rune",
+          "count": 2
+        }
+      ],
+      "equipment": [],
+      "result": "",
+      "workRevision": "d7e4fa5e7f1d59ac33abf8cd4f60393aeeac20eb2ab310e717e5bd896f8d3657",
+      "attempt": "1794181260861-0000011273-0000000001",
+      "logout": {
+        "state": "held",
+        "account": "Familyjewel",
+        "server": "rs-sdk-demo.fly.dev",
+        "domain": "live",
+        "attemptId": "1794181260861-0000011273-0000000001",
+        "reason": "session active or outcome unknown"
+      },
+      "progress": {
+        "stage": "earning",
+        "batch": 3,
+        "spot": "2652,3318",
+        "before": 1619,
+        "lastAttempt": "1794181229851-0000010968-0000000001"
+      }
+    },
+    {
+      "account": "Glassblower",
+      "at": 1794181282344,
+      "tick": 45,
+      "position": {
+        "x": 2655,
+        "z": 3283,
         "level": 0
       },
       "hp": {
@@ -316,9 +607,9 @@
         },
         {
           "name": "Thieving",
-          "level": 63,
-          "currentLevel": 63,
-          "xp": 87082
+          "level": 70,
+          "currentLevel": 70,
+          "xp": 137262
         },
         {
           "name": "Stat18",
@@ -344,342 +635,13 @@
           "id": 995,
           "baseId": 995,
           "name": "Coins",
-          "count": 1069
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 7
-        },
-        {
-          "id": 1893,
-          "baseId": 1893,
-          "name": "2/3 cake",
-          "count": 1
-        }
-      ],
-      "inventory": [
-        {
-          "id": 1351,
-          "baseId": 1351,
-          "name": "Bronze axe",
-          "count": 1
-        },
-        {
-          "id": 590,
-          "baseId": 590,
-          "name": "Tinderbox",
-          "count": 1
-        },
-        {
-          "id": 303,
-          "baseId": 303,
-          "name": "Small fishing net",
-          "count": 1
-        },
-        {
-          "id": 315,
-          "baseId": 315,
-          "name": "Shrimps",
-          "count": 1
-        },
-        {
-          "id": 1925,
-          "baseId": 1925,
-          "name": "Bucket",
-          "count": 1
-        },
-        {
-          "id": 1931,
-          "baseId": 1931,
-          "name": "Pot",
-          "count": 1
-        },
-        {
-          "id": 995,
-          "baseId": 995,
-          "name": "Coins",
-          "count": 550
-        },
-        {
-          "id": 1265,
-          "baseId": 1265,
-          "name": "Bronze pickaxe",
-          "count": 1
-        },
-        {
-          "id": 1205,
-          "baseId": 1205,
-          "name": "Bronze dagger",
-          "count": 1
-        },
-        {
-          "id": 1277,
-          "baseId": 1277,
-          "name": "Bronze sword",
-          "count": 1
-        },
-        {
-          "id": 1171,
-          "baseId": 1171,
-          "name": "Wooden shield",
-          "count": 1
-        },
-        {
-          "id": 841,
-          "baseId": 841,
-          "name": "Shortbow",
-          "count": 1
-        },
-        {
-          "id": 882,
-          "baseId": 882,
-          "name": "Bronze arrow",
-          "count": 25
-        },
-        {
-          "id": 556,
-          "baseId": 556,
-          "name": "Air rune",
-          "count": 25
-        },
-        {
-          "id": 558,
-          "baseId": 558,
-          "name": "Mind rune",
-          "count": 15
-        },
-        {
-          "id": 555,
-          "baseId": 555,
-          "name": "Water rune",
-          "count": 6
-        },
-        {
-          "id": 557,
-          "baseId": 557,
-          "name": "Earth rune",
-          "count": 4
-        },
-        {
-          "id": 559,
-          "baseId": 559,
-          "name": "Body rune",
-          "count": 2
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        }
-      ],
-      "equipment": [],
-      "result": "ok ticks=451 picks=10 fails=5 noops=36 bans=3 coinsGained=250 coinsPerTick=0.55 eaten=5 bankTrips=1 bankTicks=7 walkTicks=32 idleTicks=148 eatTicks=5 stallTrips=1 stallTicks=209 stallPickTicks=4 stolen=11 refused=2 shopTrips=0 shopTicks=0 bought=0 foodTicksPct=49.0 hpMin=5 died=false banked=-",
-      "workRevision": "d7e4fa5e7f1d59ac33abf8cd4f60393aeeac20eb2ab310e717e5bd896f8d3657",
-      "attempt": "1794181035017-0000010133-0000000001",
-      "logout": {
-        "state": "confirmed",
-        "account": "Familyjewel",
-        "server": "rs-sdk-demo.fly.dev",
-        "domain": "live",
-        "attemptId": "1794181035017-0000010133-0000000001",
-        "loggedOutAt": 1794181226053,
-        "ownerRun": null,
-        "receiptSha256": "ef592ab08ce9099e6bd7a2d34faf19f96b59189adf8b45b185c7c43476177851"
-      },
-      "progress": {
-        "stage": "earning",
-        "batch": 2,
-        "spot": "2652,3318",
-        "before": 1369,
-        "lastAttempt": "1794181002386-0000010019-0000000001"
-      }
-    },
-    {
-      "account": "Glassblower",
-      "at": 1794181227767,
-      "tick": 391,
-      "position": {
-        "x": 2672,
-        "z": 3305,
-        "level": 0
-      },
-      "hp": {
-        "now": 9,
-        "max": 10
-      },
-      "skills": [
-        {
-          "name": "Attack",
-          "level": 1,
-          "currentLevel": 1,
-          "xp": 0
-        },
-        {
-          "name": "Defence",
-          "level": 1,
-          "currentLevel": 1,
-          "xp": 0
-        },
-        {
-          "name": "Strength",
-          "level": 1,
-          "currentLevel": 1,
-          "xp": 0
-        },
-        {
-          "name": "Hitpoints",
-          "level": 10,
-          "currentLevel": 9,
-          "xp": 980
-        },
-        {
-          "name": "Ranged",
-          "level": 1,
-          "currentLevel": 1,
-          "xp": 0
-        },
-        {
-          "name": "Prayer",
-          "level": 1,
-          "currentLevel": 1,
-          "xp": 0
-        },
-        {
-          "name": "Magic",
-          "level": 1,
-          "currentLevel": 1,
-          "xp": 0
-        },
-        {
-          "name": "Cooking",
-          "level": 1,
-          "currentLevel": 1,
-          "xp": 0
-        },
-        {
-          "name": "Woodcutting",
-          "level": 1,
-          "currentLevel": 1,
-          "xp": 0
-        },
-        {
-          "name": "Fletching",
-          "level": 1,
-          "currentLevel": 1,
-          "xp": 0
-        },
-        {
-          "name": "Fishing",
-          "level": 1,
-          "currentLevel": 1,
-          "xp": 0
-        },
-        {
-          "name": "Firemaking",
-          "level": 1,
-          "currentLevel": 1,
-          "xp": 0
-        },
-        {
-          "name": "Crafting",
-          "level": 1,
-          "currentLevel": 1,
-          "xp": 0
-        },
-        {
-          "name": "Smithing",
-          "level": 1,
-          "currentLevel": 1,
-          "xp": 0
-        },
-        {
-          "name": "Mining",
-          "level": 1,
-          "currentLevel": 1,
-          "xp": 0
-        },
-        {
-          "name": "Herblore",
-          "level": 1,
-          "currentLevel": 1,
-          "xp": 0
-        },
-        {
-          "name": "Agility",
-          "level": 1,
-          "currentLevel": 1,
-          "xp": 0
-        },
-        {
-          "name": "Thieving",
-          "level": 68,
-          "currentLevel": 68,
-          "xp": 118295
-        },
-        {
-          "name": "Stat18",
-          "level": 1,
-          "currentLevel": 1,
-          "xp": 0
-        },
-        {
-          "name": "Stat19",
-          "level": 1,
-          "currentLevel": 1,
-          "xp": 0
-        },
-        {
-          "name": "Runecraft",
-          "level": 1,
-          "currentLevel": 1,
-          "xp": 0
-        }
-      ],
-      "bank": [
-        {
-          "id": 995,
-          "baseId": 995,
-          "name": "Coins",
-          "count": 1173
+          "count": 2723
         },
         {
           "id": 2309,
           "baseId": 2309,
           "name": "Bread",
-          "count": 3
+          "count": 4
         },
         {
           "id": 1901,
@@ -691,13 +653,13 @@
           "id": 1891,
           "baseId": 1891,
           "name": "Cake",
-          "count": 4
+          "count": 8
         },
         {
           "id": 1893,
           "baseId": 1893,
           "name": "2/3 cake",
-          "count": 1
+          "count": 2
         }
       ],
       "inventory": [
@@ -736,12 +698,6 @@
           "baseId": 1931,
           "name": "Pot",
           "count": 1
-        },
-        {
-          "id": 995,
-          "baseId": 995,
-          "name": "Coins",
-          "count": 1100
         },
         {
           "id": 1265,
@@ -808,62 +764,26 @@
           "baseId": 559,
           "name": "Body rune",
           "count": 2
-        },
-        {
-          "id": 1893,
-          "baseId": 1893,
-          "name": "2/3 cake",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 2309,
-          "baseId": 2309,
-          "name": "Bread",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
         }
       ],
       "equipment": [],
-      "result": "",
+      "result": "ok thieving=70 xp=0 ticks=39 at=2655,3283,0 hp=7 hpMin=7 died=false relogs=0 relogTicks=0 logoutTicks=0 idleTicks=0 pickTicks=0 shopTicks=0 eatTicks=0 stunWait=0 stunMsgs=0 tries=0 stuns=0 eaten=0 bought=0 waits=0 walkTicks=0 chases=0 coins=0 bread=0 milestones=ardougne,coins60,level40,level5",
       "workRevision": "d7e4fa5e7f1d59ac33abf8cd4f60393aeeac20eb2ab310e717e5bd896f8d3657",
-      "attempt": "1794181066460-0000010302-0000000001",
+      "attempt": "1794181259638-0000011236-0000000001",
       "logout": {
         "state": "held",
         "account": "Glassblower",
         "server": "rs-sdk-demo.fly.dev",
         "domain": "live",
-        "attemptId": "1794181066460-0000010302-0000000001",
-        "reason": "session active or outcome unknown"
+        "attemptId": "1794181290689-0000011539-0000000001",
+        "reason": "connection attempt before START, outcome unknown"
       },
       "progress": {
         "stage": "earning",
-        "batch": 2,
+        "batch": 3,
         "spot": "2671,3313",
-        "before": 1473,
-        "lastAttempt": "1794181034728-0000010113-0000000001"
+        "before": 2723,
+        "lastAttempt": "1794181259638-0000011236-0000000001"
       }
     }
   ],
