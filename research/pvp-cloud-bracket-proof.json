@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "checks": {
+    "exit": true,
+    "result": true,
+    "saved": true,
+    "assets": true,
+    "skills": true,
+    "position": true,
+    "logout": true
+  },
+  "name": "flcloux6yh00",
+  "server": "127.0.0.1:22459",
+  "code": 0,
+  "timeout": false,
+  "logout": {
+    "state": "confirmed",
+    "account": "flcloux6yh00",
+    "server": "127.0.0.1:22459",
+    "domain": "practice",
+    "attemptId": "1794175805479-0000001533-0000000001",
+    "loggedOutAt": 1794175839180,
+    "ownerRun": null,
+    "receiptSha256": "8dd534ea3de4b9b9bea824a365d5cd21057fb2bd08af3450e610fde94ff02cfa"
+  },
+  "source": "fac0199e9494e57237dd5db3ef56484acd63fc1f",
+  "sdk": "db0cc51e0a8f9f0d6a7d60c44e534412bb0601bb",
+  "scope": "Seeded combat-15 native kit switching and Wilderness staging only; no fresh training, PvP fight, relog or live qualification",
+  "hashes": {
+    "before.sav": "3f8b5fbaff155f7b0977a754a500ecaeee2038c510a491d55a601f5d497dcd52",
+    "after.sav": "be47edc2a5340b71ce53ade618a047089351e0453ba9abb831d8c919bffa540f",
+    "worker.log": "9378eda87e3c7b9b52a071d978cff1888c2c6cf12b70a72ae188b51ba03f22d4",
+    "worker.err": "7c7e1130a768d90c3e09c18031b001bec43274f52d13acb73bf1cd703d364986"
+  },
+  "harness": {
+    "run": "8fe37433ed00306ed44578a56792c88305a3f011ead0eeba8518998b4baa0013",
+    "worker": "b710ebf921674a115d530ce782e205eddba51a47142a5fba9902edaaf53c2c82"
+  }
+}
