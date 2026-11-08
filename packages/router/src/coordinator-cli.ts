@@ -430,13 +430,19 @@ export async function pauseCoordinator(state:CoordinatorState,base=projectRoot,s
   await disableOwnJob(job.env?.COORDINATOR_RUN_ID,base);
   for(const account of job.accounts??[job.account])if(account){const file=join(practice,'stop-'+account);if(!existsSync(file))writeFileSync(file,'coordinator owner pause');}
  }
- for(const r of state.tasks.filter(r=>r.status==='running'))if(r.pid)await stopWorker(r.pid,r.runId!);
+ const running=state.tasks.filter(r=>r.status==='running');
+ // Live task watchers check for the pause once a second, then disable their job before writing the receipt.
+ const deadline=Date.now()+3000;
+ while(Date.now()<deadline&&running.some(r=>r.spec.kind==='run'&&r.pid&&existsPid(r.pid)
+  &&!existsSync(join(directory,'runs',r.runId!,'receipt.json'))))await Bun.sleep(100);
+ for(const r of running)if(r.pid)await stopWorker(r.pid,r.runId!);
  if(state.planner?.pid)await stopWorker(state.planner.pid,state.planner.runId);
  // Workers can write their terminal receipt while the pause is stopping them.
  // No more workers will start, so a dead worker needs no startup grace period.
  reconcile(state,undefined,directory,undefined,0);
  saveState(state,directory);
- event('coordinator-paused',{reason:'owner stop file'},directory);
+ const unsettledRuns=running.filter(r=>r.status==='running').map(r=>r.runId);
+ event('coordinator-paused',{reason:'owner stop file',unsettledRuns},directory);
 }
 async function main(){
  const mode=process.argv[2]??'--status',arg=process.argv[3];

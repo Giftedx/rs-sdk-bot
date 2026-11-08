@@ -26,7 +26,7 @@ test('owner pause persists a receipt written during worker shutdown',async()=>{
   {id:'next-batch',goal:'main24',kind:'run',capability:'blood-chest-order',account:'Miner',accept:{bank:{565:1618}},dependsOn:[taskId],priority:1,estimatedMs:1000,why:'next batch'},
   {id:'starting',goal:'skills',kind:'qualify',capability:'wine-order',dependsOn:[],priority:1,estimatedMs:1000,why:'not spawned yet'},
  ]);
- startTask(state,taskId,Date.now(),runId).pid=123;
+ startTask(state,taskId,Date.now(),runId).pid=process.pid;
  startTask(state,'starting',Date.now(),'starting-run');
  const runDir=runDirectory(runId,dir);
  saveState(state,dir);
@@ -36,19 +36,38 @@ test('owner pause persists a receipt written during worker shutdown',async()=>{
  const stopFile=join(practice,'stop-coordinator');
  writeFileSync(stopFile,'owner pause');
  const receipt={taskId,runId,ok:false,at:Date.now(),output:null,error:'Error: coordinator stopped'};
- await pauseCoordinator(state,base,async(pid,marker)=>{
-  expect(pid).toBe(123);expect(marker).toBe(runId);
+ const receiptFile=join(runDir,'receipt.json');
+ const worker=(async()=>{
+  const deadline=Date.now()+2000;
+  while(!existsSync(join(practice,'stop-Miner'))&&Date.now()<deadline)await Bun.sleep(10);
   expect(JSON.parse(readFileSync(coordinatorJobsPath(base),'utf8')).jobs[0].enabled).toBe(false);
   expect(existsSync(join(practice,'stop-Miner'))).toBe(true);
-  atomicJson(join(runDir,'receipt.json'),receipt);
+  await Bun.sleep(50);
+  atomicJson(receiptFile,receipt);
+ })();
+ const pause=pauseCoordinator(state,base,async(pid,marker)=>{
+  expect(pid).toBe(process.pid);expect(marker).toBe(runId);
+  expect(existsSync(receiptFile)).toBe(true);
   return true;
  });
+ await Promise.all([worker,pause]);
  const saved=loadState(dir);
  expect(saved.tasks.map(row=>row.status)).toEqual(['failed','pending','failed']);
  expect(saved.tasks[0]!.receipt).toEqual(receipt);
  expect(saved.tasks[2]!.receipt?.error).toContain('worker ended without a receipt');
  expect(readFileSync(stopFile,'utf8')).toBe('owner pause');
  expect(chooseTask(saved,Date.now())).toBeNull();
+});
+test('owner pause reports a worker that could not be stopped without inventing a receipt',async()=>{
+ const base=mkdtempSync(join(tmpdir(),'coord-pause-')),dir=join(base,'.practice','coordinator');
+ const state=seed();
+ state.tasks[0]!.pid=process.pid;
+ mkdirSync(dir,{recursive:true});
+ saveState(state,dir);
+ await pauseCoordinator(state,base,async()=>false);
+ expect(loadState(dir).tasks[0]).toMatchObject({status:'running',runId:'recovery-run'});
+ expect(loadState(dir).tasks[0]!.receipt).toBeUndefined();
+ expect(JSON.parse(readFileSync(join(dir,'events.jsonl'),'utf8')).detail.unsettledRuns).toEqual(['recovery-run']);
 });
 test('concurrent coordinator starts leave exactly one owner',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'coord-owner-'));
