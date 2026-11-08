@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794167461774,
+ "at": 1794167495270,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -20,14 +20,14 @@
    "account": "TossTheCaber",
    "script": "scripts/quest-sweep.ts",
    "args": [
-    "fishingcompo"
+    "sheepherder"
    ],
    "env": {
     "CAP": "2400"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "New live Fishing Contest coverage and White Wolf tunnel unlock",
+   "goal": "New live Sheep Herder coverage; funded protective kit and plague sheep quest",
    "role": "quests"
   },
   {
@@ -102,16 +102,16 @@
   },
   {
    "account": "Spitroaster",
-   "script": "scripts/quest-cook-job.ts",
+   "script": "scripts/quest-sweep.ts",
    "args": [
-    "hetty"
+    "priest"
    ],
    "env": {
-    "CAP": "6000"
+    "CAP": "2400"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Witch potion quest unlock and Magic XP from owned supplies",
+   "goal": "Restless Ghost unlock for the later Nature Spirit quest chain",
    "role": "quests"
   }
  ]
