@@ -505,10 +505,15 @@ export function publishControlFile(path:string,value:unknown,ops:ControlWriteOps
  }
 }
 
+// Dual-stack '::' where the host has IPv6; a container without it refuses that bind (EAFNOSUPPORT) and gets IPv4 loopback.
+export function serveAnyHost<T>(options:Omit<Parameters<typeof Bun.serve<T>>[0],'hostname'>,serve:typeof Bun.serve=Bun.serve){
+ try{return serve<T>({...options,hostname:'::'} as any);}
+ catch(error){if((error as NodeJS.ErrnoException)?.code!=='EAFNOSUPPORT'&&!/EAFNOSUPPORT/.test(String(error)))throw error;return serve<T>({...options,hostname:'127.0.0.1'} as any);}
+}
 // Websocket relay to the private world. 'stall' accepts the socket and never answers: a real pre-START hang.
 function startRelay(port:number,target:number){
  let mode:'forward'|'stall'='forward';const sockets=new Set<any>(),stalled=new EventEmitter();
- const server=Bun.serve<{upstream:WebSocket|null;queue:any[];stalled:boolean}>({port,hostname:'::',
+ const server=serveAnyHost<{upstream:WebSocket|null;queue:any[];stalled:boolean}>({port,
   async fetch(req,srv){
    if(req.headers.get('upgrade')?.toLowerCase()==='websocket'){
     if(srv.upgrade(req,{data:{upstream:null,queue:[],stalled:mode==='stall'},headers:{'Sec-WebSocket-Protocol':'binary'}}))return undefined;
