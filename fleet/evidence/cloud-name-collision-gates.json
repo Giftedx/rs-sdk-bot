@@ -1,0 +1,21 @@
+{
+ "at": 1794180040800,
+ "names": [
+  "Heavyload",
+  "FullLoad"
+ ],
+ "ownerHistoryCommits": [
+  "a37d4c686c0e8371a1e8fa5c85aa7c659d18d24b fleet: reserve account FullLoad",
+  "930775d066c92cc69b70cf4e086146fe1d72e13d fleet: reserve account Heavyload",
+  "de8be9090942701e7928791cf4abdeedd4ad173f fleet: drop the claude-cloud-b accounts; they had no proved job and no server registration",
+  "af70ba34408c301fd66683270535167511355346 fleet: claude-cloud-b sync (0 accounts)",
+  "5b02bf136c47b9bb654669b74f4e772042aec581 fleet: return Rune benchmark crew to original local owners",
+  "e073b29b4dec881fe00bc375448a456dfc424499 fleet: hand existing Rune crew to cloud for bounded host benchmark"
+ ],
+ "publicProfiles": {
+  "heavyload": 200,
+  "fullload": 200
+ },
+ "createdOrReservedByThisController": false,
+ "action": "No login, credential creation or reservation mutation; only reservation creator may reconcile its own claim via safe path"
+}

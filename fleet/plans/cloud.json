@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794180014774,
+ "at": 1794180316825,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -27,10 +27,10 @@
     "TREE": "maple",
     "MAX_TRIPS": "1"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": false,
    "repeat": false,
-   "goal": "Bank3 maples toward Haggis13-maple shortage; exact current native pilot3banked,0damage,logoutconfirmed; one finite1200tick Seers trip.23yews and20wool reserved; recipient delivery gate pending",
+   "goal": "3maples banked toward Haggis13-maple gap;23yews20wool banked,cleanlogout; delivery waits eligible recipient. New release needs requalification before next batch.",
    "role": "supply"
   },
   {
