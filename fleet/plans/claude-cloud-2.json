@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud-2",
- "at": 1794130264099,
+ "at": 1794130866636,
  "jobs": [
   {
    "account": "Deeppockets",
@@ -26,18 +26,18 @@
    "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
-    "PEN": "3187,3277",
+    "PEN": "3197,3353",
     "TICKS": "3000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
+   "goal": "feathers at the chicken pen 3197,3353",
    "role": "helper",
-   "template": "feathers@3187,3277",
+   "template": "feathers@3197,3353",
    "autopilot": "claude-cloud-2",
    "resources": [
-    "pen:3187,3277"
+    "pen:3197,3353"
    ]
   },
   {
