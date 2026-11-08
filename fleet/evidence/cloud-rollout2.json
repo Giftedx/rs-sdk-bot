@@ -3,16 +3,16 @@
  "side": "cloud",
  "source": "70fcbce85350659ad82496060e9c3e4f992c91a0",
  "started": 1794167124636,
- "at": 1794173703942,
+ "at": 1794173784121,
  "peakLive": 9,
- "currentLive": 0,
+ "currentLive": 2,
  "minFreeGB": 8.638957977294922,
  "headroom": {
-  "freeGB": 13.060905456542969,
+  "freeGB": 12.363513946533203,
   "load": [
-   1.51,
-   1.27,
-   1.7
+   0.6,
+   1.04,
+   1.58
   ],
   "cpus": 5,
   "requiredFloorGB": 4,
@@ -35,27 +35,27 @@
   },
   {
    "account": "TossTheCaber",
-   "goal": "Stage actual Ardougne bank departure for safe boat route, then WC60 for Haggis23yew; prior courier refused before travel, logout confirmed",
+   "goal": "Verified Ardougne bank departure for combat35 safe boat staging; then WC60 unlock for Haggis23yew; funds400coins, separate finite workers",
    "enabled": true,
-   "tick": 25,
-   "at": 1794173680734,
+   "tick": 164,
+   "at": 1794173783134,
    "position": {
-    "x": 2654,
-    "z": 3283,
+    "x": 2953,
+    "z": 3146,
     "level": 0
    },
-   "result": "ok walk-to {\"ok\":true,\"ticks\":24,\"still\":2,\"clicks\":6,\"repaths\":1,\"doors\":0,\"next\":1} at=2654,3283,0 ticks=24",
-   "logout": "confirmed"
+   "result": "",
+   "logout": "held"
   },
   {
    "account": "Swordswallow",
    "goal": "New live Vampire Slayer coverage from Draynor; strong HP54 account, local garlic source proved by gather planner, owned funding for beer/hammer; bounded budget and retreat guard",
    "enabled": true,
-   "tick": 1,
-   "at": 1794173703579,
+   "tick": 201,
+   "at": 1794173783622,
    "position": {
-    "x": 3092,
-    "z": 3242,
+    "x": 3138,
+    "z": 3351,
     "level": 0
    },
    "result": "",
