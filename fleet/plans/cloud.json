@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794170833715,
+ "at": 1794171781340,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -36,13 +36,13 @@
    "account": "Swordswallow",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/walk-to.ts 3183 3440 --ground",
+    "scripts/walk-to.ts 3183 3440 0 --ground",
     "scripts/fleet-trade.ts rollout2-swords-spit-60"
    ],
    "env": {
     "ROUNDS": "1"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "Deliver 60 owned coins to Spitroaster at proved Varrock west meeting tiles for Gertrude cat quest inputs",
    "role": "quests"
@@ -72,7 +72,7 @@
    "env": {
     "ROUNDS": "1"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true,
    "goal": "Earn and bank funding, then buy rune arrowtips for Haggis: current bill short 1787; bounded sessions and logout between production/buying; west-side Ardy-Catherby route",
@@ -110,17 +110,17 @@
   },
   {
    "account": "Spitroaster",
-   "script": "scripts/chain.ts",
+   "script": "scripts/walk-to.ts",
    "args": [
-    "scripts/walk-to.ts 3183 3440 --ground",
-    "scripts/fleet-trade.ts rollout2-swords-spit-60"
+    "3183",
+    "3440",
+    "0",
+    "--ground"
    ],
-   "env": {
-    "ROUNDS": "1"
-   },
+   "env": {},
    "enabled": true,
    "repeat": false,
-   "goal": "Stage at proved Varrock west meeting tiles and receive 60 coins for Gertrude cat quest supplies; Haggis Cooking/wine unlock chain",
+   "goal": "Single-stage Varrock west staging for observed owned funding before Gertrude quest",
    "role": "quests"
   },
   {
@@ -129,7 +129,7 @@
    "args": [
     "scripts/shop-buyer.ts zeke 100 ITEMS=bronze STOCK_TARGET=0 MAX_ITEMS=1 MAX_SPEND=1 FLOAT=200 NO_BUY_TICKS=1",
     "scripts/walk-to.ts 3222 3218",
-    "scripts/walk-to.ts 3092 3243 --ground",
+    "scripts/walk-to.ts 3092 3243 0 --ground",
     "scripts/foodcourier.ts HOME_ONLY=1 CAP=1800",
     "scripts/shop-buyer.ts ardy 600 ITEMS=wool MAX_ITEMS=20 MAX_SPEND=70 COIN_RESERVE=60 FLOAT=130 STOCK_TARGET=20 NO_BUY_TICKS=150 BANK_PACK=1",
     "scripts/foodcourier.ts OUTBOUND_ONLY=1 CAP=1800",
@@ -138,7 +138,7 @@
    "env": {
     "ROUNDS": "1"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "Repair Sheep Shearer inputs by buying 20 stocked wool with owned 200 coins, reserving return fare; explicit boat staging, no White Wolf route or repeated shearing",
    "role": "quests"
@@ -147,27 +147,25 @@
    "account": "BoneToPick",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/walk-to.ts 3330 3280 --ground",
+    "scripts/walk-to.ts 3330 3280 0 --ground",
     "scripts/gather-spawn.ts 1937 1 TICKS=600"
    ],
    "env": {
     "ROUNDS": "1"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "Bank Haggis Monk Friend exact one-jug-of-water shortage from Al Kharid; explicit eastern staging, no White Wolf route",
    "role": "supply"
   },
   {
    "account": "Crownjewels",
-   "script": "scripts/chain.ts",
+   "script": "scripts/quest-sweep.ts",
    "args": [
-    "scripts/measure/tutorial.ts",
-    "scripts/quest-sweep.ts runemysteries CAP=3000",
-    "scripts/gather-essence.ts CAP=1200 BANK_AT=27"
+    "runemysteries"
    ],
    "env": {
-    "ROUNDS": "1"
+    "CAP": "3000"
    },
    "enabled": true,
    "repeat": false,
