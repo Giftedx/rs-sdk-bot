@@ -3,16 +3,16 @@
  "side": "cloud",
  "source": "7bd9e77d2d50648c53df71d35175e5e8f5da5c10",
  "started": 1794167124636,
- "at": 1794172335339,
+ "at": 1794172425793,
  "peakLive": 9,
  "currentLive": 4,
  "minFreeGB": 8.638957977294922,
  "headroom": {
-  "freeGB": 11.689334869384766,
+  "freeGB": 10.091785430908203,
   "load": [
-   4.66,
-   3.03,
-   2.03
+   2.86,
+   2.83,
+   2.06
   ],
   "cpus": 5,
   "requiredFloorGB": 4,
@@ -37,11 +37,11 @@
    "account": "TossTheCaber",
    "goal": "Bank profitable funding for Porksword rune-arrowtip buyer against Haggis 1787-tip gap; distinct knight 2669,3298; bounded/logout batches",
    "enabled": true,
-   "tick": 1186,
-   "at": 1794172334957,
+   "tick": 131,
+   "at": 1794172424683,
    "position": {
-    "x": 2666,
-    "z": 3305,
+    "x": 2653,
+    "z": 3300,
     "level": 0
    },
    "result": "",
@@ -51,14 +51,14 @@
    "account": "Swordswallow",
    "goal": "Combat-qualified Swordswallow boat courier from observed Draynor bank to stocked Ardougne wool for held Stirmypot; finite safe route",
    "enabled": true,
-   "tick": 150,
-   "at": 1794172304003,
+   "tick": 221,
+   "at": 1794172425207,
    "position": {
-    "x": 3092,
-    "z": 3243,
+    "x": 2779,
+    "z": 3215,
     "level": 0
    },
-   "result": "ok walk-to {\"ok\":true,\"ticks\":141,\"still\":3,\"clicks\":31,\"repaths\":1,\"doors\":0,\"next\":1} at=3092,3244,0 ticks=141",
+   "result": "",
    "logout": "held"
   },
   {
@@ -79,15 +79,15 @@
    "account": "Porksword",
    "goal": "Direct banked rune arrowtips for Haggis 1787-tip gap; existing Catherby stock buyer, max400 coins, stop on stock wait; no added funding farm",
    "enabled": true,
-   "tick": 64,
-   "at": 1794172334854,
+   "tick": 226,
+   "at": 1794172399792,
    "position": {
-    "x": 2822,
-    "z": 3445,
+    "x": 2807,
+    "z": 3441,
     "level": 0
    },
-   "result": "",
-   "logout": "held"
+   "result": "ok ticks=225 boughtTotal=0 bankedTotal=0 bankTrips=2 shopTrips=1 coinsLeft=1300 spentTotal=0 coinReserve=300 maxSpend=400 maxItems=2 stop=stock-wait targetMet=0 noBuyTicks=150 noBuyLimit=150",
+   "logout": "confirmed"
   },
   {
    "account": "MeatNTwoVeg",
@@ -121,12 +121,12 @@
    "account": "Spitroaster",
    "goal": "Funded Gertrude Cat unlock; Varrock west start, east-side Gerrant sardine and local milk; bounded quest, no White Wolf route",
    "enabled": true,
-   "tick": 391,
-   "at": 1794172333268,
+   "tick": 616,
+   "at": 1794172423544,
    "position": {
-    "x": 3114,
-    "z": 3421,
-    "level": 0
+    "x": 3309,
+    "z": 3507,
+    "level": 1
    },
    "result": "",
    "logout": "held"
@@ -163,11 +163,11 @@
    "account": "Crownjewels",
    "goal": "Bank >=50 rune essence reserved for Unsheathed Priest in Peril; confirmed Rune Mysteries unlock; finite Varrock east batches",
    "enabled": true,
-   "tick": 466,
-   "at": 1794172333678,
+   "tick": 691,
+   "at": 1794172423863,
    "position": {
-    "x": 2926,
-    "z": 4814,
+    "x": 2894,
+    "z": 4811,
     "level": 0
    },
    "result": "",
@@ -13592,6 +13592,175 @@
     }
    ],
    "inventory": []
+  },
+  {
+   "account": "Porksword",
+   "attemptId": "1794172302003-0000046820-0000000001",
+   "started": 1794172309568,
+   "at": 1794172399792,
+   "source": "9f4a9f31e92c4462ad4398938877028ed3d4bd3441cf5a82a45477e1666a62f8",
+   "entry": "scripts/shop-buyer.ts",
+   "result": "ok ticks=225 boughtTotal=0 bankedTotal=0 bankTrips=2 shopTrips=1 coinsLeft=1300 spentTotal=0 coinReserve=300 maxSpend=400 maxItems=2 stop=stock-wait targetMet=0 noBuyTicks=150 noBuyLimit=150",
+   "logout": "confirmed",
+   "newQuests": [],
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "bank": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 7052
+    },
+    {
+     "id": 1351,
+     "baseId": 1351,
+     "name": "Bronze axe",
+     "count": 1
+    },
+    {
+     "id": 590,
+     "baseId": 590,
+     "name": "Tinderbox",
+     "count": 1
+    },
+    {
+     "id": 303,
+     "baseId": 303,
+     "name": "Small fishing net",
+     "count": 1
+    },
+    {
+     "id": 315,
+     "baseId": 315,
+     "name": "Shrimps",
+     "count": 1
+    },
+    {
+     "id": 2309,
+     "baseId": 2309,
+     "name": "Bread",
+     "count": 5
+    },
+    {
+     "id": 1265,
+     "baseId": 1265,
+     "name": "Bronze pickaxe",
+     "count": 1
+    },
+    {
+     "id": 1205,
+     "baseId": 1205,
+     "name": "Bronze dagger",
+     "count": 1
+    },
+    {
+     "id": 1277,
+     "baseId": 1277,
+     "name": "Bronze sword",
+     "count": 1
+    },
+    {
+     "id": 1171,
+     "baseId": 1171,
+     "name": "Wooden shield",
+     "count": 1
+    },
+    {
+     "id": 841,
+     "baseId": 841,
+     "name": "Shortbow",
+     "count": 1
+    },
+    {
+     "id": 882,
+     "baseId": 882,
+     "name": "Bronze arrow",
+     "count": 25
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 25
+    },
+    {
+     "id": 558,
+     "baseId": 558,
+     "name": "Mind rune",
+     "count": 15
+    },
+    {
+     "id": 555,
+     "baseId": 555,
+     "name": "Water rune",
+     "count": 6
+    },
+    {
+     "id": 557,
+     "baseId": 557,
+     "name": "Earth rune",
+     "count": 4
+    },
+    {
+     "id": 559,
+     "baseId": 559,
+     "name": "Body rune",
+     "count": 2
+    },
+    {
+     "id": 1893,
+     "baseId": 1893,
+     "name": "2/3 cake",
+     "count": 7
+    },
+    {
+     "id": 1901,
+     "baseId": 1901,
+     "name": "Chocolate slice",
+     "count": 7
+    },
+    {
+     "id": 1927,
+     "baseId": 1927,
+     "name": "Bucket of milk",
+     "count": 1
+    },
+    {
+     "id": 1931,
+     "baseId": 1931,
+     "name": "Pot",
+     "count": 1
+    },
+    {
+     "id": 1944,
+     "baseId": 1944,
+     "name": "Egg",
+     "count": 1
+    },
+    {
+     "id": 44,
+     "baseId": 44,
+     "name": "Rune arrowtips",
+     "count": 3
+    },
+    {
+     "id": 1895,
+     "baseId": 1895,
+     "name": "Slice of cake",
+     "count": 3
+    }
+   ],
+   "inventory": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 1300
+    }
+   ]
   }
  ],
  "limitations": [
