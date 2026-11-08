@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794168589140,
+ "at": 1794168670256,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -20,14 +20,14 @@
    "account": "TossTheCaber",
    "script": "scripts/quest-sweep.ts",
    "args": [
-    "haunted"
+    "hunt"
    ],
    "env": {
-    "CAP": "2400"
+    "CAP": "3000"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Ernest quest completion and 300 earned coins; distinct manor route, no Sheep Herder retry",
+   "goal": "New live Pirate treasure coverage; funded fares and supplies from Ernest reward",
    "role": "quests"
   },
   {
@@ -50,29 +50,36 @@
    "account": "Unsheathed",
    "script": "scripts/quest-sweep.ts",
    "args": [
-    "druid"
+    "junglepotion"
    ],
    "env": {
-    "CAP": "2400"
+    "CAP": "3500"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "New live Druidic Ritual coverage; unlock Herblore for Jungle Potion chain",
+   "goal": "New live Jungle Potion coverage after observed Druidic Ritual and Herblore unlock; eight owned trout staged",
    "role": "quests"
   },
   {
    "account": "Porksword",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby",
+    "1200"
+   ],
    "env": {
-    "TICKS": "1200",
-    "BANK_AT": "1000",
-    "KNIGHT_SPOT": "2653,3300",
-    "SHOP": "1"
+    "ITEMS": "rune arrowtips",
+    "MAX_ITEMS": "5",
+    "MAX_SPEND": "1200",
+    "COIN_RESERVE": "300",
+    "FLOAT": "1500",
+    "STOCK_TARGET": "5",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Finite knight pilot: bank up to 1200 ticks of funding for BraveHardon food rescue and staged cloud quest ingredients",
+   "goal": "Buy and bank five scarce rune arrowtips for Haggis Fletching; route bill short 1789, funded by confirmed knight pilot",
    "role": "quests"
   },
   {
