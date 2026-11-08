@@ -1,6 +1,6 @@
 import { renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { fetchBoard, type BoardRow } from './scout';
+import { fetchBoard, observeProfile, type BoardRow } from './scout';
 
 // Usage: bun packages/planner/src/scout-cli.ts [base=https://rs-sdk-demo.fly.dev] [--out=path]
 // Saves a complete snapshot of the time-ranked boards. One request per board,
@@ -9,6 +9,8 @@ import { fetchBoard, type BoardRow } from './scout';
 const SKILLS = ['Attack', 'Defence', 'Strength', 'Hitpoints', 'Ranged', 'Prayer', 'Magic', 'Cooking', 'Woodcutting', 'Fletching', 'Fishing', 'Firemaking', 'Crafting', 'Smithing', 'Mining', 'Herblore', 'Agility', 'Thieving', null, null, 'Runecraft'];
 const args = process.argv.slice(2);
 const base = args.find(a => !a.startsWith('--')) ?? 'https://rs-sdk-demo.fly.dev';
+const freshAccounts=[...new Set(args.filter(a=>a.startsWith('--fresh-account=')).map(a=>a.slice('--fresh-account='.length).toLowerCase()))];
+if(freshAccounts.some(name=>! /^[a-z0-9]{1,12}$/.test(name)))throw Error('invalid fresh account name');
 const output = args.find(a => a.startsWith('--out='))?.slice('--out='.length);
 const tickMs = 400;
 const boards: { board: string; category: number }[] = [{ board: 'Overall', category: 0 }];
@@ -21,10 +23,12 @@ for (const b of boards) {
     out.push({ ...b, rows: await fetchBoard(base, b.category, 'main', tickMs) });
     await Bun.sleep(1000);
 }
+const profiles=[];
+for(const name of freshAccounts)profiles.push(await observeProfile(base,name));
 const file = output ? resolve(output) : join(resolve(import.meta.dir, '..', '..', '..'), 'research', `hiscores-${takenAt.slice(0, 10)}.json`);
 const temporary = file + '.' + process.pid + '.tmp';
 try {
-    writeFileSync(temporary, JSON.stringify({ base, takenAt, tickMs, boards: out }, null, 2) + '\n');
+    writeFileSync(temporary, JSON.stringify({ base, takenAt, tickMs, boards: out, ...(profiles.length?{profiles}:{}) }, null, 2) + '\n');
     renameSync(temporary, file);
 } finally { rmSync(temporary, { force: true }); }
 for (const b of out) {

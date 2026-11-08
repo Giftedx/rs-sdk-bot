@@ -33,7 +33,8 @@ export function launchContext(root:string,snapshot:string){
  return {context:sha(JSON.stringify(semantic)),bindings};
 }
 type Read=(ref:any,json?:boolean)=>any;
-export function validateSupplies(s:any,context:string,requirements:{item:string;count:number;itemId?:number}[],catalog:any[],owned:string[],now:number,read:Read){
+export type SupplyRequirement={item:string;count:number;itemId?:number};
+export function validateSupplies(s:any,context:string,requirements:SupplyRequirement[],catalog:any[],owned:string[],now:number,read:Read,recipient="haggis"){
  need(s?.version===2&&s.context===context&&fresh(s.at,now,3600000),'Missing, stale or mismatched staging manifest');
  need(Array.isArray(s.allocations)&&s.allocations.length>0&&requirements.length>0,'No item allocations');
  // Several route stages can draw from one base stock pool. Compare allocations to the sum for that pool.
@@ -55,7 +56,7 @@ export function validateSupplies(s:any,context:string,requirements:{item:string;
   const name=key(a.item),exact=exactLabels.get(a.itemId)?.has(name),item=exact?a.itemId:name;
   need(demand.has(item),'Unexpected supply');
   need(catalog.some(i=>i.id===a.itemId&&(exact||key(i.name)===name)),'Unresolved supply item ID: '+a.item);
-  need(typeof a.holder==='string'&&owners.has(a.holder.toLowerCase())&&a.recipient==='haggis','Unowned holder or wrong recipient');
+  need(typeof a.holder==='string'&&owners.has(a.holder.toLowerCase())&&a.recipient===recipient,'Unowned holder or wrong recipient');
   const b=read(a.bank),d=read(a.delivery);
   need(b.name?.toLowerCase()===a.holder.toLowerCase()&&b.server==='rs-sdk-demo.fly.dev'&&fresh(b.bankAt,now,3600000),'Invalid staging bank observation');
   need(d.ok===true&&d.server==='rs-sdk-demo.fly.dev'&&d.observed===true,'Delivery must record a successful observed live transfer');
@@ -71,12 +72,12 @@ export function validateSupplies(s:any,context:string,requirements:{item:string;
  for(const [item,count] of demand)need(totals.get(item)===count,'Missing or excess reservation: '+item);
  return expiresAt;
 }
-export function validateRehearsals(runs:any[],context:string,expected:Record<string,number>,now:number,read:Read){
- need(runs.length===3&&Object.keys(expected).length>0,'Need three complete rehearsals');
+export function validateRehearsals(runs:any[],context:string,expected:Record<string,number>,now:number,read:Read,options:{count:number;excludedActor:string;externalSupplies?:SupplyRequirement[]}={count:3,excludedActor:'haggis'}){
+ need(runs.length===options.count&&Object.keys(expected).length>0,options.count===3?'Need three complete rehearsals':'Need one complete rehearsal');
  const ids=new Set(),actors=new Set(),logs=new Set();
  for(const r of runs){
   need(r?.version===2&&r.context===context&&fresh(r.at,now,7*86400000),'Stale or mismatched rehearsal');
-  need(typeof r.runId==='string'&&r.runId&&typeof r.actor==='string'&&r.actor&&r.actor.toLowerCase()!=='haggis'&&/^localhost:\d+$/.test(r.server),'Invalid practice identity');
+  need(typeof r.runId==='string'&&r.runId&&typeof r.actor==='string'&&r.actor&&r.actor.toLowerCase()!==options.excludedActor&&/^localhost:\d+$/.test(r.server),'Invalid practice identity');
   need(!ids.has(r.runId)&&!actors.has(r.actor.toLowerCase())&&!logs.has(r.log?.path),'Repeated rehearsal');ids.add(r.runId);actors.add(r.actor.toLowerCase());logs.add(r.log?.path);
   need(r.ok===true&&r.died===false&&r.logout==='logged-out'&&r.startPlaytime===0&&qty(r.endPlaytime),'Incomplete whole-clock run');
   need(Object.keys(r.boardTicks??{}).length===Object.keys(expected).length,'Missing board stamps');
@@ -86,6 +87,10 @@ export function validateRehearsals(runs:any[],context:string,expected:Record<str
   const stamp=log.split(/\r?\n/).filter((line:string)=>line.startsWith('REHEARSAL '));
   need(stamp.length===1,'Need one raw whole-clock receipt');
   const raw=JSON.parse(stamp[0]!.slice(10));
+  if(options.externalSupplies){
+   const required=JSON.stringify(options.externalSupplies);
+   need(JSON.stringify(r.externalSupplies)===required&&JSON.stringify(raw.externalSupplies)===required,'Rehearsal external supplies differ from the route bill');
+  }
   for(const field of ['context','runId','actor','server','at','startPlaytime','endPlaytime','planTicks','ok','died','logout','boardTicks'])need(JSON.stringify(raw[field])===JSON.stringify(r[field]),'Raw rehearsal differs: '+field);
  }
  return Math.min(...runs.map(r=>r.at+7*86400000));

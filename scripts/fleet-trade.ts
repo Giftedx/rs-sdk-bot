@@ -5,7 +5,7 @@
 // receiver trades for exactly that offer and banks it. Each side writes its own receipt to fleet/receipts.
 // Usage: bun scripts/fleet-trade.ts <account> [order id]
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { openBot, finish, getWorld, accountOf, countItems } from '../packages/core/src/bot';
 import { goTo } from '../packages/core/src/walk';
 import { waitUntil } from '../packages/core/src/ticks';
@@ -13,6 +13,10 @@ import { depositObserved } from '../packages/core/src/deposit';
 import { exactItem } from '../packages/core/src/cargo';
 import { FLEET_DIR, mySide } from '../packages/core/src/fleet';
 import { tradePartners } from '../packages/core/src/tradeguard';
+import { jobAccounts, mergedPlan, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
+import { liveLogoutRef } from '../packages/core/src/session-admission';
+import { readLogoutProof } from '../packages/core/src/session-lifecycle';
+import { pidAlive } from '../packages/core/src/session-takeover';
 import { meetingTiles } from './coin-courier';
 
 type Tile = { x: number; z: number; level: number };
@@ -37,6 +41,56 @@ export function pickOrder(orders: readonly Order[], receipts: readonly Receipt[]
 }
 
 const readJson = (dir: string) => existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(dir, f), 'utf8'))]; } catch { return []; } }) : [];
+const root = resolve(import.meta.dir, '..');
+const tradePlanFile = (base: string) => resolve(process.env.SWARM_PLAN ?? join(base, 'swarm.json'));
+
+function readTradePlan(file: string) {
+    const plan = JSON.parse(readFileSync(file, 'utf8'));
+    if (!Array.isArray(plan?.jobs)) throw Error('fleet trade: invalid swarm plan');
+    return plan;
+}
+
+export function readAgentJobs(file = tradePlanFile(root)): readonly any[] {
+    return readTradePlan(file).jobs;
+}
+
+export function swarmBusy(jobs: readonly any[]): Set<string> {
+    return new Set(jobs.filter(j => j?.enabled).flatMap(j => [j.account, ...(j.accounts ?? [])]).filter((n): n is string => typeof n === 'string').map(n => n.toLowerCase()));
+}
+
+export function assertTradeAdmission(order: Order, account: string, server: string, {
+    base = root, planFile = tradePlanFile(base), receipts = join(FLEET_DIR(), 'receipts'), now = Date.now(),
+} = {}): void {
+    const name = account.toLowerCase();
+    const role = order.from.toLowerCase() === name ? 'from' : order.to.toLowerCase() === name ? 'to' : null;
+    if (!role) throw Error('fleet trade: account is outside the order');
+    if (server.toLowerCase() !== order.server.toLowerCase()) throw Error('fleet trade: account server differs from order server');
+    if (now < order.start || now >= order.end) throw Error('fleet trade: outside order window');
+    const practice = join(base, '.practice');
+    const stopFiles = new Set(readdirSync(practice).map(file => file.toLowerCase()));
+    if (stopFiles.has('stop-swarm')) throw Error('fleet trade: swarm is paused');
+    if (stopFiles.has('stop-' + name)) throw Error('fleet trade: account has an owner stop file');
+    const plan = readTradePlan(planFile), overlay = readCoordinatorJobs(base);
+    if (overlay.paused?.some(n => n.toLowerCase() === name)) throw Error('fleet trade: account is paused for controller rollout');
+    const includesAccount = (job: any) => jobAccounts(job).some(n => n.toLowerCase() === name);
+    if (plan.jobs.some((job: any) => includesAccount(job) && (!job.script || /fresh.clock|24 boards|main simultaneous/i.test(job.goal ?? '')))) {
+        throw Error('fleet trade: reserved account');
+    }
+    if (swarmBusy(mergedPlan(plan, overlay).jobs).has(name)) throw Error('fleet trade: account has an enabled swarm job');
+    const runsFile = join(practice, 'swarm-runs.json');
+    if (existsSync(runsFile)) {
+        const runs = JSON.parse(readFileSync(runsFile, 'utf8'));
+        if (!Array.isArray(runs) || runs.some(run => includesAccount(run) && pidAlive(run.pid))) {
+            throw Error('fleet trade: account has an unsettled swarm worker');
+        }
+    }
+    if (existsSync(join(receipts, `${order.id}.${role}.json`))) throw Error('fleet trade: order receipt already exists');
+    if (server === 'rs-sdk-demo.fly.dev') liveLogoutRef(account, base, false, now);
+    else {
+        const proof = readLogoutProof(account, server, { root: join(practice, 'session-lifecycle') });
+        if (proof.state !== 'none' && proof.state !== 'confirmed') throw Error('fleet trade: account logout is not confirmed');
+    }
+}
 
 if (import.meta.main) {
     const [account, onlyId] = process.argv.slice(2);
@@ -56,7 +110,9 @@ if (import.meta.main) {
         console.log('FLEET_RECEIPT ' + JSON.stringify(r));
     };
     while (Date.now() < order.start) await Bun.sleep(Math.min(5000, order.start - Date.now()));
-    const s = await openBot(account).catch(e => finish([], false, `login: ${String(e)}`));
+    const s = await openBot(account, {
+        admitWithPlanLock: server => assertTradeAdmission(order, account, server, { receipts: join(dir, 'receipts') }),
+    }).catch(e => finish([], false, `login: ${String(e)}`));
     const item = exactItem(order.item), held = () => countItems(s, item), left = () => order.end - Date.now();
     try {
         const meet = order.meet ?? meetingTiles({ x: 3185, z: 3436 })!, tile = role === 'from' ? meet[0] : meet[1];

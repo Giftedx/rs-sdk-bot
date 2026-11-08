@@ -33,7 +33,8 @@ import { jobLogStart } from '../packages/core/src/job-log';
 import { readLogoutProof, listAttempts, verifyLegacyLogout, type LegacyLogoutClaim, type LegacyLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 import { mergedPlan, readCoordinatorJobs, emptyCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
-import { leaseHeldElsewhere, loadOwners, mySide, readLease, sideOf, thisHost, type Owner } from '../packages/core/src/fleet';
+import { loadOwners, mySide, sideOf, type Owner } from '../packages/core/src/fleet';
+import { acquireFleetLease, FLEET_LEASE_RENEW_MS } from '../packages/core/src/fleet-lease';
 
 export type Job = { autopilot?: string; template?: string; account?: string; accounts?: string[]; host?: boolean; orchestrate?:boolean; args?:string[]; maxRestarts?:number; script: string; role?: string; goal?: string; env?: Record<string, string>; envByAccount?: Record<string, Record<string, string>>; enabled: boolean; repeat?: boolean; note?: string; whenCargoFrom?: string[]; demandNear?: {x:number;z:number;radius:number};whenFoodLowFrom?:string[];foodLowBelow?:number;foodSourceAccount?:string;foodSourceAccounts?:string[];sourceFoodMinimum?:number };
 type Plan = { maxBots: number; minFreeGB: number; jobs: Job[] };
@@ -515,10 +516,13 @@ if (import.meta.main) {
         try { assertWorkerRelease({ ...process.env, WORKER_ENTRY: '' }, root); }
         catch (error) { console.log('swarm: ' + String(error)); process.exit(2); }
     }
-    // One controller per side across machines: another machine's fresh lease (scripts/fleet-sync.ts publishes it from the
-    // running controller's heartbeat) means its swarm runs this side's accounts; a second controller would log them in twice.
-    const held = leaseHeldElsewhere(readLease(side), thisHost());
-    if (held) { console.log(`swarm: the ${side} side's jobs run on ${held.host} (lease ${Math.round((Date.now() - held.at) / 60_000)} min old, controller pid ${held.pid}); not starting a second controller`); process.exit(2); }
+    // Acquire before adopting or writing controller state. A cached fleet-data heartbeat cannot grant admission.
+    let lease: ReturnType<typeof acquireFleetLease>;
+    try { lease = acquireFleetLease(root, side); }
+    catch (error) { console.log('SWARM ' + String(error)); process.exit(2); }
+    process.env.SWARM_LEASE_HOLDER = lease.holder;
+    let renewAt = performance.now() + FLEET_LEASE_RENEW_MS;
+    const assertLease = () => { if (!lease.allows()) throw Error('fleet controller lease unavailable'); };
 
     const runs = new Map<string, Run>();
     const recoveryDispatch=createRecoveryDispatch({base:root,server:LIVE_SERVER});
@@ -623,10 +627,12 @@ if (import.meta.main) {
             // Each worker carries the release of the files its entries can run (docs/script-contract.md, Release
             // scope), so a runtime change needs no swarm restart and an edit outside those files leaves it unchanged.
             const entries = workerEntries(job.script, job.args ?? [], root);
+            const workRelease = capabilityRevision(entries, root);
+            assertLease();
             writeSync(out, jobLogStart(job));
             child = spawnChild(cmd[0]!, cmd.slice(1), {
                 cwd: root, detached: true, windowsHide: true, stdio: ['ignore', out, out],
-                env: { ...process.env, ...job.env, WORKER_RELEASE: capabilityRevision(entries, root), WORKER_ENTRY: entries.join(','), DEMO_OK: '1', BOT_ROLE: job.role ?? '', BOT_GOAL: job.goal ?? '', STANDING: (job as Job & {standing?:boolean}).standing ? '1' : '',COORDINATOR_PARTICIPANTS:job.orchestrate?JSON.stringify(accounts):'' },
+                env: { ...process.env, ...job.env, SWARM_LEASE_HOLDER: lease.holder, SWARM_MISSION_HASH: createHash('sha256').update(revision).digest('hex'), WORKER_RELEASE: workRelease, WORKER_ENTRY: entries.join(','), DEMO_OK: '1', BOT_ROLE: job.role ?? '', BOT_GOAL: job.goal ?? '', STANDING: (job as Job & {standing?:boolean}).standing ? '1' : '',COORDINATOR_PARTICIPANTS:job.orchestrate?JSON.stringify(accounts):'' },
             });
         } finally { closeSync(out); }
         if (!child.pid) throw Error('supervisor did not start');
@@ -638,6 +644,25 @@ if (import.meta.main) {
     });
 
     const tick = () => {
+        if (performance.now() >= renewAt && lease.allows()) {
+            try { lease.renew(); }
+            catch (error) { console.log('SWARM ' + String(error)); }
+            renewAt = performance.now() + FLEET_LEASE_RENEW_MS;
+        }
+        if (!lease.allows()) {
+            // Also stop adopted runs from code that predates the worker fence. Preserve owner stop files.
+            const accounts = new Set([...runs.values()].flatMap(r => r.accounts));
+            if (recoveryDispatch.active) accounts.add(recoveryDispatch.active.account);
+            for (const held of heldRecoveryOwners(root)) accounts.add(held.account);
+            for (const account of accounts) {
+                try { writeFileSync(stopFile(account), 'fleet controller lease unavailable', { flag: 'wx' }); }
+                catch (error) {
+                    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') console.log('SWARM could not request lease-loss logout for ' + account);
+                }
+            }
+            if (!accounts.size) { console.log('SWARM stopped (fleet controller lease unavailable)'); process.exit(2); }
+            return;
+        }
         let plan: Plan;
         // The coordinator's jobs join the root plan only; a practice plan file given on the command line runs alone.
         try { plan = mergedPlan(JSON.parse(readFileSync(planFile, 'utf8')), rootPlan ? readCoordinatorJobs(root) : emptyCoordinatorJobs()); } catch (e) { console.log(`SWARM bad plan: ${String(e)}`); return; }
@@ -683,6 +708,7 @@ if (import.meta.main) {
                 let request: any, result = { changed: false, reason: 'invalid repair JSON' };
                 try { request = JSON.parse(raw); } catch { /* retained in the receipt */ }
                 if(!recoveryDispatch.handle(raw,request=>{
+                    assertLease();
                     const active=[...runs.values()].flatMap(r=>r.accounts).concat(activeExternalLive(statuses,[],Date.now()));
                     admitRecovery({account:request.account,active,running:botsRunning(),external:activeExternalLive(statuses,[...runs.values()].flatMap(r=>r.accounts).concat(inheritedRecoveries.map(r=>r.account)),Date.now()).length,
                         pending:pendingCount(),freeGB:freemem()/2**30,minFreeGB:plan.minFreeGB,maxBots:plan.maxBots});

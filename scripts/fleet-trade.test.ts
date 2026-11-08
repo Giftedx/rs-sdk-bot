@@ -1,5 +1,9 @@
 import { expect, test } from 'bun:test';
-import { pickOrder, validOrder, type Order, type Receipt } from './fleet-trade';
+import { mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { assertTradeAdmission, pickOrder, validOrder, type Order, type Receipt } from './fleet-trade';
+import { beginSessionAttempt } from '../packages/core/src/session-lifecycle';
 import { makeOrder } from './fleet-order';
 import { snapshot } from './fleet-sync';
 
@@ -21,6 +25,57 @@ test('each side picks its own open order once, in or near its window', () => {
     expect(pickOrder([o], [], 'Giver', 6000)).toBeNull();
     expect(pickOrder([order({ start: 10 * 60_000 + 3000, end: 10 * 60_000 + 9000 })], [], 'Giver', 2000)).toBeNull();
     expect(pickOrder([o], [], 'Stranger', 2000)).toBeNull();
+});
+
+test('trade admission rereads pauses, assignments and producer ownership after the order wait', () => {
+    const base = mkdtempSync(join(tmpdir(), 'fleet-trade-admission-'));
+    try {
+        const practice = join(base, '.practice'), coordinator = join(practice, 'coordinator');
+        const planFile = join(practice, 'cloud.json'), overlay = join(coordinator, 'jobs.json'), receipts = join(base, 'receipts');
+        const live = 'rs-sdk-demo.fly.dev', trade = order({ server: live });
+        mkdirSync(coordinator, { recursive: true });
+        writeFileSync(planFile, '{"jobs":[]}');
+        const admit = (now = 2000, server = live) => assertTradeAdmission(trade, 'Giver', server, { base, planFile, receipts, now });
+        expect(() => admit(999)).toThrow('order window');
+        expect(() => admit()).not.toThrow();
+        const stop = join(practice, 'stop-giver');
+        writeFileSync(stop, 'owner pause');
+        expect(admit).toThrow('owner stop file');
+        unlinkSync(stop);
+        const stopAll = join(practice, 'stop-swarm');
+        writeFileSync(stopAll, 'owner pause');
+        expect(admit).toThrow('swarm is paused');
+        unlinkSync(stopAll);
+        writeFileSync(planFile, '{"jobs":[{"account":"Giver","script":"worker.ts","enabled":true}]}');
+        expect(admit).toThrow('enabled swarm job');
+        writeFileSync(overlay, '{"jobs":[{"account":"Giver","script":"worker.ts","enabled":false}]}');
+        expect(admit).not.toThrow();
+        writeFileSync(overlay, '{"jobs":[{"accounts":["Other","Giver"],"script":"worker.ts","enabled":true}]}');
+        expect(admit).toThrow('enabled swarm job');
+        writeFileSync(overlay, '{"jobs":[],"paused":["Giver"]}');
+        expect(admit).toThrow('paused for controller rollout');
+        writeFileSync(overlay, '{"jobs":[]}');
+        writeFileSync(planFile, '{"jobs":[{"account":"Giver","script":"","goal":"Fresh-clock specialist","enabled":false}]}');
+        expect(admit).toThrow('reserved account');
+        writeFileSync(planFile, '{"jobs":[]}');
+        expect(() => admit(5000)).toThrow('order window');
+        expect(() => admit(2000, 'localhost:8888')).toThrow('order server');
+        const swarmRuns = join(practice, 'swarm-runs.json');
+        writeFileSync(swarmRuns, JSON.stringify([{ accounts: ['Giver'], pid: process.pid }]));
+        expect(admit).toThrow('unsettled swarm worker');
+        unlinkSync(swarmRuns);
+        const attempt = beginSessionAttempt({ account: 'Giver', server: live }, { root: join(practice, 'session-lifecycle'), now: () => 1500 });
+        expect(admit).toThrow('account logout is not confirmed');
+        attempt.record('ended', 'logged-out');
+        expect(admit).not.toThrow();
+        mkdirSync(receipts);
+        writeFileSync(join(receipts, 'o1.from.json'), '{"id":"o1","role":"from"}');
+        expect(admit).toThrow('order receipt');
+        writeFileSync(planFile, '{}');
+        expect(admit).toThrow('invalid swarm plan');
+    } finally {
+        rmSync(base, { recursive: true, force: true });
+    }
 });
 
 test('an order is only made between listed accounts on one server', () => {

@@ -8,6 +8,7 @@ import { waitUntil } from './ticks';
 import { stalled, startLedger, formatLedger } from './ledger';
 import { startTickStallWatch } from './tick-stall';
 import { assertSideOwns } from './fleet';
+import { fleetLeaseAllowsWorker } from './fleet-lease';
 import { startStatus } from './status';
 import { watchRandomEvents, type RandomEventWatch } from './randomevents';
 import { createWorld, rsPathLength, type Account, type World } from './world';
@@ -71,7 +72,7 @@ export async function awaitBotReady(s: Session, log: (line: string) => void): Pr
 // `opts.log` receives the START and LOGOUT lines; the bot host (host.ts) passes a per-bot log. Default console.log.
 // `opts.record` names the worker script and its arguments for the run record (tick-record.ts); the bot host passes
 // the hosted script, a standalone worker uses its own process arguments.
-export async function openBot(name: string, opts: { log?: (line: string) => void; onStop?: (s: Session, detail: string) => Promise<unknown>; onSessionEnd?: (s: Session, detail: string) => Promise<unknown>; record?: { script: string; argv: string[] } } = {}): Promise<Session> {
+export async function openBot(name: string, opts: { log?: (line: string) => void; onStop?: (s: Session, detail: string) => Promise<unknown>; onSessionEnd?: (s: Session, detail: string) => Promise<unknown>; record?: { script: string; argv: string[] }; admitWithPlanLock?: (server: string) => void } = {}): Promise<Session> {
     if (executionContext.getStore()?.signal.aborted) return new Promise(() => {});
     // An in-process runner in a bot host routes this account's logins through the host's own openBot, so the host
     // tracks the session and logs it out when the runner ends. The hook is lifted for the call it makes back here.
@@ -88,7 +89,10 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     const server = serverFromEnv(env);
     assertServerAllowed(server);
     assertLiveWorkerRelease(server);
-    const s = await connectInProcess({ name, password, server });
+    const admission = opts.admitWithPlanLock;
+    const s = await connectInProcess({ name, password, server, ...(admission ? {
+        beforeConnect: () => { assertSideOwns(name); admission(server); }, lockPlan: true,
+    } : {}) });
     await awaitBotReady(s, log);
     const p = s.sdk.getState()!.player!;
     // Life fields copied while connected: after a disconnect the state's player is no evidence of a death (a run
@@ -113,6 +117,7 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     s.onTick(() => {
         lastLife = life(s.sdk.getState()?.player) ?? lastLife;
         const reason = sessionDied(born,lastLife) ? 'died' : ++stopTicks % 25 === 0 && existsSync(join(repoRoot, '.practice', `stop-${name}`)) ? 'stop file'
+            : stopTicks % 25 === 0 && !isLocalServer(server) && !fleetLeaseAllowsWorker(repoRoot) ? 'fleet controller lease unavailable'
             : stopTicks % 50 === 0 && stalled(led.rows, STALL_TICKS) ? `no progress: ${STALL_TICKS} ticks without xp, items, dialog or a journey` : null;
         if (!stopping && !settling.has(s) && reason) {
             stopping = true;

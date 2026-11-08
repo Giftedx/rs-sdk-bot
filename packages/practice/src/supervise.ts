@@ -6,6 +6,7 @@
 // CLI: bun packages/practice/src/supervise.ts <bot> <script> [maxRestarts=20] [scriptArgs...] (env passes through)
 
 import {assertWorkerRelease,isWorkerReleaseHold} from '../../core/src/worker-release';
+import {fleetLeaseAllowsWorker} from '../../core/src/fleet-lease';
 
 export function workerCommand(bot:string,script:string,scriptArgs:readonly string[]):string[]{
     return ['bun',script,bot,...scriptArgs];
@@ -111,7 +112,7 @@ if (import.meta.main) {
             for (;;) { const { done, value } = await reader.read(); if (done) break; const c = new TextDecoder().decode(value); text += c; process.stdout.write(c); }
             return { stdout: text, exitCode: await p.exited };
         },
-        stopped: () => participantsStopped(participants,account=>existsSync(`.practice/stop-${account}`)),
+        stopped: () => !fleetLeaseAllowsWorker(process.cwd()) || participantsStopped(participants,account=>existsSync(`.practice/stop-${account}`)),
         pause: ms => Bun.sleep(ms),
         maxRestarts: Number(maxArg ?? 20),
         log: l => console.log(l),

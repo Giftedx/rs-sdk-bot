@@ -7,6 +7,8 @@ import {admissionDecision,startReserve,activeExternalLive,loadEnded,persistEnded
 import {liveLogoutRef} from './coordinator-session';
 import {BOOTSTRAP_STATUS_AGE_MS} from '../../core/src/session-admission';
 import {evaluateLaunch} from '../../../scripts/haggis-gate';
+import {evaluateSpecialist, SPECIALIST_BOARDS, specialistTokenPath} from '../../core/src/specialist-launch';
+import {loadOwners} from '../../core/src/fleet';
 import {cachedLaunchRevision,capabilityRevision,launchRevision,workerEntries} from '../../core/src/worker-release';
 import {importClosure} from './delivery-cli';
 import {processMatches,safeKill,safeKillOne} from '../../practice/src/proc';
@@ -253,7 +255,10 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
  const sameScriptRepairPreflight=(name:string,end:any)=>!task.sessionRecovery&&end&&!/^died\b/.test(end.reason)&&failedScript(end)===scriptKey(script)&&pendingRepair(name,end);
  const settledOwnerJob=(job:any,name:string,end:any)=>job?.coordinatorOwner!=='coordinator'&&job?.enabled===false&&(!end||!persistentEnd(end.reason)||sameScriptRepairPreflight(name,end))&&readLogoutProof(name,LIVE_SERVER,{root:join(base,'.practice/session-lifecycle')}).state==='confirmed';
  for(const participant of accounts){
-  if(!(options.recoveryPreflight&&(retained||participant===task.sessionRecovery?.account)))liveLogoutRef(participant,base);
+  if(!(options.recoveryPreflight&&(retained||participant===task.sessionRecovery?.account))){
+   const prior=liveLogoutRef(participant,base);
+   if(task.launch==='specialist'&&prior)throw Error('specialist launch evidence requires an unused clock');
+  }
   if(openHold(holds,participant,script))throw Error('failed script still held for '+participant+': '+script);
  }
  for(const participant of accounts.filter(n=>n.toLowerCase()!==account.toLowerCase())){
@@ -261,21 +266,19 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
   if(retained)continue;
   const occupied=plan.jobs.find((j:any)=>(j.accounts??[j.account]).some((n:string)=>n?.toLowerCase()===participant.toLowerCase()));
   const ended=[...loadEnded(join(base,'.practice/swarm-deaths.json'))].find(([n])=>n.toLowerCase()===participant.toLowerCase())?.[1];
-  if(occupied&&(!occupied.script||/fresh.clock|24 boards|main simultaneous/i.test(occupied.goal??'')))throw Error('participant has a protected reservation: '+participant);
+  if(Object.hasOwn(SPECIALIST_BOARDS,participant.toLowerCase())||occupied&&(!occupied.script||/fresh.clock|24 boards|main simultaneous/i.test(occupied.goal??'')))throw Error('participant has a protected reservation: '+participant);
   if(occupied&&occupied.coordinatorOwner!=='coordinator'&&!settledOwnerJob(occupied,participant,ended)&&!rows.some(s=>s.name?.toLowerCase()===participant.toLowerCase()&&/^ok(?:\s|$)/.test(s.result??'')))throw Error('participant assignment is not confirmed complete: '+participant);
   if(existsSync(join(base,'.practice','stop-'+participant)))throw Error('participant has an owner stop file');
   if(ended&&persistentEnd(ended.reason)&&!pendingRepair(participant,ended))throw Error('participant needs verified recovery');
   if(rows.some(s=>s.name?.toLowerCase()===participant.toLowerCase()&&s.server==='rs-sdk-demo.fly.dev'&&!s.result))throw Error('participant session not settled');
  }
- const reserved=existing&&(!existing.script||/fresh.clock|24 boards|main simultaneous/i.test(existing.goal??''));
+ const board=Object.hasOwn(SPECIALIST_BOARDS,account.toLowerCase())?SPECIALIST_BOARDS[account.toLowerCase()]:undefined;
+ const reserved=board||existing&&(!existing.script||/fresh.clock|24 boards|main simultaneous/i.test(existing.goal??''));
  if(reserved){
-  if(task.launch==='main'&&task.goal==='main24'){
+  if(!board&&task.launch==='main'&&task.goal==='main24'){
    const launch=evaluateLaunch(base,'research/hiscores-live.json',now,true);
    if(!launch.go)throw Error('main launch evidence is not ready');if(!options.preflight)atomicJson(join(base,'.practice/haggis-go.json'),launch);
-  }else if(task.launch==='specialist'&&task.goal==='specialists'&&Object.values(dependencies).some((d:any)=>d?.evidence==='live')){
-   // A live staging dependency and the current route qualification precede the
-   // fresh-clock specialist. This does not turn its eventual99 into a board win.
-  }else throw Error('reserved clock needs its scored launch and staging dependencies');
+  }else if(task.launch!=='specialist'||task.goal!=='specialists'||!board)throw Error('reserved clock needs its scored launch and staging evidence');
  }
  if(existsSync(join(base,'.practice','stop-'+account)))throw Error('account has a stop file; preserve its owner');
  const unfinished=rows.find(s=>s.name?.toLowerCase()===account.toLowerCase()&&s.server==='rs-sdk-demo.fly.dev'&&!s.result);
@@ -303,10 +306,24 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
   env:{...task.env,CAP:task.env?.CAP??'1600',COORDINATOR_RUN_ID:runId,...(task.launch==='main'?{HAGGIS_RUN:'1'}:{})}};
  const decision=admissionDecision({running:activeExternalLive(rows,[],now).length,external:0,starting:accounts.length,startingReserve:startReserve({host:false,job},accounts.length),pending:0,freeGB:options.freeGB??freemem()/2**30,minFreeGB:plan.minFreeGB,maxBots:plan.maxBots});
  if(!decision.allowed)throw Error('live admission waiting: '+decision.reason);
+ const revision=missionSignature(job);
+ let specialist;
+ if(task.launch==='specialist'){
+  try{
+   if(!board||accounts.length!==1||task.accept?.skills?.[board.name]!==99)throw Error('need a reserved single-account board and level 99 target');
+   const owners=base===projectRoot?loadOwners():loadOwners(join(base,'fleet/owners.json'));
+   const holders=[...owners].filter(([name,owner])=>name!==account.toLowerCase()&&name!=='haggis'&&!Object.hasOwn(SPECIALIST_BOARDS,name)&&owner.server===LIVE_SERVER).map(([name])=>name);
+   specialist={
+    ...evaluateSpecialist(base,account,runId,source,missionSignature({...job,env:{...job.env,COORDINATOR_RUN_ID:''}}),holders,now),
+    mission:createHash('sha256').update(revision).digest('hex'),
+   };
+  }catch(error){throw Error('specialist launch evidence: '+String(error));}
+ }
  // The merged view checks the split (a composed owner job keeps all its participants); only the coordinator's own
  // file is written. swarm.json stays the owner's: the controller merges both files (packages/core/src/coordinator-jobs.ts).
  const before=plan.jobs;replaceAssignments(plan.jobs,accounts,job);
- if(options.preflight)return{goal,source,account,installedAt:now,revision:missionSignature(job)};
+ if(options.preflight)return{goal,source,account,installedAt:now,revision};
+ if(specialist)atomicJson(join(base,specialistTokenPath(account)),specialist);
  atomicJson(join(base,'.practice/coordinator','runs',runId,'assignments-before.json'),before);
  own.jobs=replaceAssignments(own.jobs,accounts,job);
  if(readFileSync(path,'utf8')!==raw||(existsSync(join(base,COORDINATOR_JOBS_FILE))?readFileSync(join(base,COORDINATOR_JOBS_FILE),'utf8'):null)!==ownRaw)throw Error('assignment plan changed; reconcile before writing');

@@ -85,6 +85,14 @@ The gate runs each replay in a scratch copy of the build's source with its own `
 - A live start is held while an unfinished non-standing peer on the same server runs a stale release of its own entries (its `workRevision` differs from the current release of its `workEntry`). A row with no `workEntry` is compared with the launch release, so a worker started before the scoped release holds starts until it ends. Standing peers keep their exemption.
 - The practice proofs in `packages/practice/src/*-proof.ts` and `scripts/supply-chain.ts` keep the whole-tree `workerSourceRevision` for their own evidence; it does not gate live starts.
 
+### Specialist launch
+
+Shaftshooter uses the Ranged board. Polevaulter uses the Agility board. The coordinator accepts one reserved account with a level 99 target and no prior live session proof. The live login requires a short-lived token for the installed run, worker release and exact assignment.
+
+- Create `.practice/specialist-launch`. Save a current 400 ms record snapshot with `bun packages/planner/src/scout-cli.ts --out=.practice/specialist-launch/hiscores.json --fresh-account=shaftshooter --fresh-account=polevaulter`. The snapshot and exact-account HTTP 404 observation must be under one hour old. For a level 99 record, both the planned and rehearsed clock must beat the record by at least 2%.
+- Use `.practice/specialist-launch/<lowercase-account>.json` with `version: 1`, `account`, `board` (the skill name), `context`, `planTicks`, `requirements`, and a hash binding `rehearsal`. The context is `specialistContext(account, source, mission, requirements)`. Use the installed job's mission signature with an empty `COORDINATOR_RUN_ID`. A requirement has `item`, `count`, and an optional exact `itemId`.
+- Bind one complete fresh-clock practice run of the same route. Use the main rehearsal receipt shape with the skill name as the sole board stamp. The receipt and its matching raw `REHEARSAL` record include `externalSupplies` from the rehearsal's observed external inputs. The raw log also records a successful result. A route that draws stock needs a `staging` hash binding with exact reservations, owned delivery and bank observations for that specialist. An empty requirement list is for a route that draws no external stock.
+
 ## Prove and measure
 
 Bind results to source, server, tick speed and starting state. Speed claims need three matched runs per condition with raw times and spread. Level, XP, bank value and net profit are different measures.

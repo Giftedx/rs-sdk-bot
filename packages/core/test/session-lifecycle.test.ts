@@ -6,6 +6,7 @@ import { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
 import { startInProcessSession, connectInProcess, type Session } from '../src/inprocess';
 import { awaitBotReady, settle } from '../src/bot';
 import { beginSessionAttempt, readLogoutProof, listAttempts, accountDir, DEFAULT_LIFECYCLE_ROOT,lifecycleOwner } from '../src/session-lifecycle';
+import { withPlanWrite } from '../src/plan-lock';
 
 test('producer script identity comes from the actual CLI entry, never a descriptive goal',()=>{
  const repo=resolve(import.meta.dir,'../../..'),env={BOT_GOAL:'scripts/gather-fire-combat.ts',WORKER_RELEASE:'a'.repeat(64)};
@@ -150,6 +151,42 @@ test('pre-connect refusal and unrecordable intent create no network attempt and 
         const mainDir = accountDir('haggis', 'localhost:8888', DEFAULT_LIFECYCLE_ROOT), existed = existsSync(mainDir);
         await expect(connectInProcess({ name: 'haggis', password: SECRET })).rejects.toThrow('Haggis login refused');
         expect(existsSync(mainDir)).toBe(existed);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('plan-locked admission sees a pause written during lock contention and unlocks before connecting', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'lifecycle-admission-')), calls: string[] = [];
+    try {
+        const planLock = join(root, 'plan'), lockFile = join(planLock, 'plan-write-lock.json');
+        const sdk = new BotSDK({ botUsername: 'Bob', password: SECRET, autoLaunchBrowser: false, autoReconnect: false } as any);
+        const identity = { name: 'Bob', password: SECRET }, proof = () => readLogoutProof('Bob', 'localhost:8888', { root });
+        let paused = false, release!: () => void;
+        const writer = withPlanWrite(async () => {
+            await new Promise<void>(resolve => { release = resolve; });
+            paused = true;
+        }, planLock);
+        const start = () => startInProcessSession(identity, {
+            sdk, Actions: FakeActions as any, cacheDir: root, lifecycle: { root, owner }, planLock, recordOwned: () => {},
+            beforeConnect: () => {
+                expect(existsSync(lockFile)).toBe(true);
+                if (paused) throw Error('paused by owner');
+            },
+            startSession: args => {
+                expect(existsSync(lockFile)).toBe(false);
+                expect(proof().state).toBe('held');
+                return fakeStart({}, calls)(args);
+            },
+        });
+        const waiting = start();
+        release();
+        await writer;
+        await expect(waiting).rejects.toThrow('paused by owner');
+        expect(calls).toEqual([]);
+        expect(proof().state).toBe('none');
+        paused = false;
+        const session = await start();
+        expect(calls).toEqual(['Bob']);
+        await session.close();
     } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
