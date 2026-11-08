@@ -191,6 +191,10 @@
   "Kiltlifter": {
    "side": "claude-cloud-3",
    "server": "rs-sdk-demo.fly.dev"
+  },
+  "Knightstick": {
+   "side": "claude-cloud-3",
+   "server": "rs-sdk-demo.fly.dev"
   }
  }
 }
