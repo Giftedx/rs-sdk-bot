@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794176028209,
+ "at": 1794176149711,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -18,18 +18,19 @@
   },
   {
    "account": "TossTheCaber",
-   "script": "scripts/walk-to.ts",
+   "script": "scripts/gather-yews.ts",
    "args": [
-    "2712",
-    "3462",
-    "0",
-    "--ground"
+    "1600",
+    "10"
    ],
-   "env": {},
+   "env": {
+    "TREE": "yew",
+    "MAX_TRIPS": "1"
+   },
    "enabled": true,
    "standing": false,
    "repeat": false,
-   "goal": "20wool now banked on healthy eligible courier for held Stirmypot;13yews banked for Haggis,10remain. Proved west-side Seers approach, steelaxe actually equipped, then final10yew batch",
+   "goal": "Final10 yews for Haggis23-yew demand,13banked; live5+8 pilots clean, actual Seers grove and steelaxe equipped; finite1600ticks one trip.20replacementwool reserved for held Stirmypot",
    "role": "supply"
   },
   {

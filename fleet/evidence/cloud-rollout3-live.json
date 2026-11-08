@@ -1,17 +1,17 @@
 {
  "schema": "cloud-expansion-snapshot/1",
  "started": 1794174593771,
- "at": 1794176023223,
+ "at": 1794176143558,
  "source": "70fcbce85350659ad82496060e9c3e4f992c91a0",
  "peakFreshLive": 3,
  "peakWholeRollout": 9,
  "currentLive": 0,
  "headroom": {
-  "freeGB": 15.674434661865234,
+  "freeGB": 15.124473571777344,
   "load": [
-   0.03,
+   0.27,
    0.29,
-   0.59
+   0.55
   ],
   "cpus": 5,
   "requiredFloorGB": 4,
@@ -35,17 +35,17 @@
   },
   {
    "account": "TossTheCaber",
-   "goal": "Bank20 release-eligible wool for Stirmypot Sheep Shearer; replace inaccessible20 on death-held Swordswallow; healthy courier at Ardy bank, own funding, max70cost60reserve; recipient stays held",
+   "goal": "Final10 yews for Haggis23-yew demand,13banked; live5+8 pilots clean, actual Seers grove and steelaxe equipped; finite1600ticks one trip.20replacementwool reserved for held Stirmypot",
    "enabled": true,
-   "tick": 112,
-   "at": 1794175773680,
+   "tick": 120,
+   "at": 1794176087496,
    "position": {
-    "x": 2655,
-    "z": 3283,
+    "x": 2713,
+    "z": 3462,
     "level": 0
    },
-   "result": "ok ticks=101 boughtTotal=20 bankedTotal=20 bankTrips=2 shopTrips=1 coinsLeft=80 spentTotal=50 coinReserve=60 maxSpend=70 maxItems=20 stop=item-cap targetMet=1 noBuyTicks=0 noBuyLimit=100",
-   "logout": "confirmed"
+   "result": "ok walk-to {\"ok\":true,\"ticks\":119,\"still\":5,\"clicks\":28,\"repaths\":1,\"doors\":0,\"next\":1} at=2713,3462,0 ticks=119",
+   "logout": "held"
   },
   {
    "account": "Swordswallow",
@@ -147,8 +147,8 @@
   },
   {
    "account": "BoneToPick",
-   "goal": "Final21 water inputs toward44 wine-stock-order inputs matching44 shared grapes;23 newwater already banked, original1Monk Friend jug protected; finite1800ticks, no wine-production claim",
-   "enabled": true,
+   "goal": "44new jug-water inputs banked for wine-stock-order plus1 protected Monk Friend jug; clean logout. Wine mixing held until owned grape delivery and qualified Cooking35 consumer are ready",
+   "enabled": false,
    "tick": 1374,
    "at": 1794175774118,
    "position": {

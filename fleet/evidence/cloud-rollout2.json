@@ -3,16 +3,16 @@
  "side": "cloud",
  "source": "70fcbce85350659ad82496060e9c3e4f992c91a0",
  "started": 1794167124636,
- "at": 1794176023223,
+ "at": 1794176148572,
  "peakLive": 9,
- "currentLive": 0,
+ "currentLive": 1,
  "minFreeGB": 8.638957977294922,
  "headroom": {
-  "freeGB": 15.674434661865234,
+  "freeGB": 15.203681945800781,
   "load": [
-   0.03,
-   0.29,
-   0.59
+   0.33,
+   0.3,
+   0.55
   ],
   "cpus": 5,
   "requiredFloorGB": 4,
@@ -35,17 +35,17 @@
   },
   {
    "account": "TossTheCaber",
-   "goal": "Bank20 release-eligible wool for Stirmypot Sheep Shearer; replace inaccessible20 on death-held Swordswallow; healthy courier at Ardy bank, own funding, max70cost60reserve; recipient stays held",
+   "goal": "Final10 yews for Haggis23-yew demand,13banked; live5+8 pilots clean, actual Seers grove and steelaxe equipped; finite1600ticks one trip.20replacementwool reserved for held Stirmypot",
    "enabled": true,
-   "tick": 112,
-   "at": 1794175773680,
+   "tick": 6,
+   "at": 1794176146613,
    "position": {
-    "x": 2655,
-    "z": 3283,
+    "x": 2714,
+    "z": 3462,
     "level": 0
    },
-   "result": "ok ticks=101 boughtTotal=20 bankedTotal=20 bankTrips=2 shopTrips=1 coinsLeft=80 spentTotal=50 coinReserve=60 maxSpend=70 maxItems=20 stop=item-cap targetMet=1 noBuyTicks=0 noBuyLimit=100",
-   "logout": "confirmed"
+   "result": "",
+   "logout": "held"
   },
   {
    "account": "Swordswallow",
@@ -147,8 +147,8 @@
   },
   {
    "account": "BoneToPick",
-   "goal": "Final21 water inputs toward44 wine-stock-order inputs matching44 shared grapes;23 newwater already banked, original1Monk Friend jug protected; finite1800ticks, no wine-production claim",
-   "enabled": true,
+   "goal": "44new jug-water inputs banked for wine-stock-order plus1 protected Monk Friend jug; clean logout. Wine mixing held until owned grape delivery and qualified Cooking35 consumer are ready",
+   "enabled": false,
    "tick": 1374,
    "at": 1794175774118,
    "position": {
@@ -22415,6 +22415,268 @@
      "baseId": 1438,
      "name": "Air talisman",
      "count": 1
+    }
+   ]
+  },
+  {
+   "account": "TossTheCaber",
+   "attemptId": "1794176033194-0000071599-0000000001",
+   "started": 1794176038719,
+   "at": 1794176087496,
+   "source": "44fab6bc256c7bf23c2c40baa2eaed606f419bee2d5556ee2b6092582c129a17",
+   "entry": "scripts/walk-to.ts",
+   "result": "ok walk-to {\"ok\":true,\"ticks\":119,\"still\":5,\"clicks\":28,\"repaths\":1,\"doors\":0,\"next\":1} at=2713,3462,0 ticks=119",
+   "logout": "confirmed",
+   "newQuests": [
+    "Ernest the Chicken",
+    "Pirate's Treasure"
+   ],
+   "hp": {
+    "now": 26,
+    "max": 27
+   },
+   "bank": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 8728
+    },
+    {
+     "id": 1351,
+     "baseId": 1351,
+     "name": "Bronze axe",
+     "count": 1
+    },
+    {
+     "id": 315,
+     "baseId": 315,
+     "name": "Shrimps",
+     "count": 1
+    },
+    {
+     "id": 1265,
+     "baseId": 1265,
+     "name": "Bronze pickaxe",
+     "count": 1
+    },
+    {
+     "id": 1205,
+     "baseId": 1205,
+     "name": "Bronze dagger",
+     "count": 1
+    },
+    {
+     "id": 841,
+     "baseId": 841,
+     "name": "Shortbow",
+     "count": 1
+    },
+    {
+     "id": 882,
+     "baseId": 882,
+     "name": "Bronze arrow",
+     "count": 25
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 25
+    },
+    {
+     "id": 558,
+     "baseId": 558,
+     "name": "Mind rune",
+     "count": 15
+    },
+    {
+     "id": 555,
+     "baseId": 555,
+     "name": "Water rune",
+     "count": 6
+    },
+    {
+     "id": 557,
+     "baseId": 557,
+     "name": "Earth rune",
+     "count": 2
+    },
+    {
+     "id": 559,
+     "baseId": 559,
+     "name": "Body rune",
+     "count": 2
+    },
+    {
+     "id": 314,
+     "baseId": 314,
+     "name": "Feather",
+     "count": 59
+    },
+    {
+     "id": 303,
+     "baseId": 303,
+     "name": "Small fishing net",
+     "count": 1
+    },
+    {
+     "id": 317,
+     "baseId": 317,
+     "name": "Raw shrimps",
+     "count": 13
+    },
+    {
+     "id": 590,
+     "baseId": 590,
+     "name": "Tinderbox",
+     "count": 1
+    },
+    {
+     "id": 343,
+     "baseId": 343,
+     "name": "Burnt fish",
+     "count": 3
+    },
+    {
+     "id": 331,
+     "baseId": 331,
+     "name": "Raw salmon",
+     "count": 1
+    },
+    {
+     "id": 309,
+     "baseId": 309,
+     "name": "Fly fishing rod",
+     "count": 1
+    },
+    {
+     "id": 1468,
+     "baseId": 1468,
+     "name": "Dry sticks",
+     "count": 1
+    },
+    {
+     "id": 1469,
+     "baseId": 1469,
+     "name": "Broken glass",
+     "count": 1
+    },
+    {
+     "id": 594,
+     "baseId": 594,
+     "name": "Torch",
+     "count": 1
+    },
+    {
+     "id": 413,
+     "baseId": 413,
+     "name": "Oyster pearls",
+     "count": 1
+    },
+    {
+     "id": 563,
+     "baseId": 563,
+     "name": "Law rune",
+     "count": 8
+    },
+    {
+     "id": 279,
+     "baseId": 279,
+     "name": "Feed",
+     "count": 1
+    },
+    {
+     "id": 1277,
+     "baseId": 1277,
+     "name": "Bronze sword",
+     "count": 1
+    },
+    {
+     "id": 952,
+     "baseId": 952,
+     "name": "Spade",
+     "count": 1
+    },
+    {
+     "id": 284,
+     "baseId": 284,
+     "name": "Plague jacket",
+     "count": 1
+    },
+    {
+     "id": 275,
+     "baseId": 275,
+     "name": "Key",
+     "count": 1
+    },
+    {
+     "id": 433,
+     "baseId": 433,
+     "name": "Pirate message",
+     "count": 1
+    },
+    {
+     "id": 1635,
+     "baseId": 1635,
+     "name": "Gold ring",
+     "count": 1
+    },
+    {
+     "id": 1605,
+     "baseId": 1605,
+     "name": "Emerald",
+     "count": 1
+    },
+    {
+     "id": 1515,
+     "baseId": 1515,
+     "name": "Yew logs",
+     "count": 13
+    },
+    {
+     "id": 1893,
+     "baseId": 1893,
+     "name": "2/3 cake",
+     "count": 3
+    },
+    {
+     "id": 946,
+     "baseId": 946,
+     "name": "Knife",
+     "count": 1
+    },
+    {
+     "id": 278,
+     "baseId": 278,
+     "name": "Prod",
+     "count": 1
+    },
+    {
+     "id": 1511,
+     "baseId": 1511,
+     "name": "Logs",
+     "count": 3
+    },
+    {
+     "id": 1519,
+     "baseId": 1519,
+     "name": "Willow logs",
+     "count": 9
+    },
+    {
+     "id": 1759,
+     "baseId": 1759,
+     "name": "Ball of wool",
+     "count": 20
+    }
+   ],
+   "inventory": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 80
     }
    ]
   }
