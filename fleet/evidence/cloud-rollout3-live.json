@@ -1,16 +1,16 @@
 {
  "schema": "cloud-expansion-snapshot/1",
  "started": 1794174593771,
- "at": 1794175196087,
+ "at": 1794175281293,
  "source": "70fcbce85350659ad82496060e9c3e4f992c91a0",
  "peakFreshLive": 3,
  "peakWholeRollout": 9,
- "currentLive": 1,
+ "currentLive": 3,
  "headroom": {
-  "freeGB": 15.081314086914062,
+  "freeGB": 14.160842895507812,
   "load": [
-   0.34,
-   0.65,
+   0.68,
+   0.72,
    0.97
   ],
   "cpus": 5,
@@ -19,14 +19,42 @@
  },
  "active": [
   {
+   "account": "TossTheCaber",
+   "goal": "Live first pilot banked5yews,18remain for Haggis23-yew bill; bank next8 on same proved Seers grove/bank, WC60+steelaxe, one finite1500tick trip",
+   "enabled": true,
+   "tick": 146,
+   "at": 1794175281176,
+   "position": {
+    "x": 2716,
+    "z": 3462,
+    "level": 0
+   },
+   "result": "",
+   "logout": "held"
+  },
+  {
    "account": "MeatNTwoVeg",
    "goal": "Bank release-eligible essence toward Haggis58 accessible gap:69 Swords essence death/logout-held, Uns27+Crown4 reserved Priest; other4455+Spit23 leaves58. Proved safe Varrock east worker, finite450ticks, verify actual bank delta",
    "enabled": true,
-   "tick": 41,
-   "at": 1794175194711,
+   "tick": 256,
+   "at": 1794175280672,
    "position": {
-    "x": 2926,
-    "z": 4816,
+    "x": 3252,
+    "z": 3420,
+    "level": 0
+   },
+   "result": "",
+   "logout": "held"
+  },
+  {
+   "account": "BoneToPick",
+   "goal": "Final21 water inputs toward44 wine-stock-order inputs matching44 shared grapes;23 newwater already banked, original1Monk Friend jug protected; finite1800ticks, no wine-production claim",
+   "enabled": true,
+   "tick": 146,
+   "at": 1794175281205,
+   "position": {
+    "x": 3301,
+    "z": 3170,
     "level": 0
    },
    "result": "",
@@ -50,17 +78,17 @@
   },
   {
    "account": "TossTheCaber",
-   "goal": "Bank first5 yew logs for Haggis23-yew shortage; native proof5banked, whole Seers approach no damage, WC60 steelaxe held, finite one-trip pilot",
+   "goal": "Live first pilot banked5yews,18remain for Haggis23-yew bill; bank next8 on same proved Seers grove/bank, WC60+steelaxe, one finite1500tick trip",
    "enabled": true,
-   "tick": 521,
-   "at": 1794175046484,
+   "tick": 146,
+   "at": 1794175281176,
    "position": {
-    "x": 2724,
-    "z": 3493,
+    "x": 2716,
+    "z": 3462,
     "level": 0
    },
-   "result": "ok ticks=520 died=false tree=yew chops=5 banked=5 held=0 bankTrips=1 walkTicks=18 hpMin=27 logsPer1kTicks=9.62",
-   "logout": "confirmed"
+   "result": "",
+   "logout": "held"
   },
   {
    "account": "Swordswallow",
@@ -108,11 +136,11 @@
    "account": "MeatNTwoVeg",
    "goal": "Bank release-eligible essence toward Haggis58 accessible gap:69 Swords essence death/logout-held, Uns27+Crown4 reserved Priest; other4455+Spit23 leaves58. Proved safe Varrock east worker, finite450ticks, verify actual bank delta",
    "enabled": true,
-   "tick": 41,
-   "at": 1794175194711,
+   "tick": 256,
+   "at": 1794175280672,
    "position": {
-    "x": 2926,
-    "z": 4816,
+    "x": 3252,
+    "z": 3420,
     "level": 0
    },
    "result": "",
@@ -162,17 +190,17 @@
   },
   {
    "account": "BoneToPick",
-   "goal": "Bank12 more water inputs for wine-stock-order;11new water already banked,44 shared grapes visible, capwinewater44; original1 Monk Friend jug protected; no wine-production claim",
+   "goal": "Final21 water inputs toward44 wine-stock-order inputs matching44 shared grapes;23 newwater already banked, original1Monk Friend jug protected; finite1800ticks, no wine-production claim",
    "enabled": true,
-   "tick": 783,
-   "at": 1794175002901,
+   "tick": 146,
+   "at": 1794175281205,
    "position": {
-    "x": 3269,
-    "z": 3166,
+    "x": 3301,
+    "z": 3170,
     "level": 0
    },
-   "result": "ok item=1937 banked=12 target=12 trips=1 ticks=781 ",
-   "logout": "confirmed"
+   "result": "",
+   "logout": "held"
   },
   {
    "account": "Crownjewels",
