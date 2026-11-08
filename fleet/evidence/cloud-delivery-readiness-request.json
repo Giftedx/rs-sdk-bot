@@ -1,0 +1,29 @@
+{
+ "schema": "cloud-delivery-readiness-request/1",
+ "at": 1794179983146,
+ "controllerPid": 61575,
+ "fleetSide": "cloud",
+ "mainOffline": true,
+ "requests": [
+  {
+   "donor": "TossTheCaber",
+   "item": "Yew logs",
+   "count": 23,
+   "consumer": "Haggis route25yews;2alreadyheldlocally",
+   "donorStock": "23banked,matchingproducerlogoutconfirmed",
+   "recipient": null,
+   "missing": "Named owned receiver with fresh owner/lease,stop/hold,logout and meeting-window admission"
+  },
+  {
+   "donor": "MeatNTwoVeg",
+   "item": "Rune essence",
+   "count": 59,
+   "consumer": "Haggis released-stock58gap",
+   "donorStock": "59banked,matchingproducerlogoutconfirmed",
+   "recipient": null,
+   "preserve": "gather-essence timeout route remains held; transfer cannot retry that route",
+   "missing": "Named owned receiver with fresh owner/lease,stop/hold,logout and meeting-window admission"
+  }
+ ],
+ "sharedSnapshotGap": "Local snapshots contain stocks but no fresh recipient logout or owner-stop evidence; no active orders for these donations. No donor login until receiver handoff is ready."
+}
