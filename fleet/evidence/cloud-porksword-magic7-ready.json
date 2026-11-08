@@ -961,18 +961,20 @@
   "limits": [
     "Exact live skill XP and stocks reconstructed from the terminal Ranged receipt; no live login.",
     "Incumbent must refresh admission, ownership, producer logout, holds, health, exact input and installed release before enabling this single job.",
-    "No Wilderness entry. Magic training can raise base HP: the merged-source trial ends baseHP12/currentHP11 at combat6. The installed standby profile expects HP11; hold staging until a matching profile and full health are qualified."
+    "No Wilderness entry. Magic training can raise base HP: the merged-source trial ends baseHP12/currentHP11 at combat6. The installed standby profile expects HP11; hold staging until a matching profile and full health are qualified.",
+    "This requalification is retained as source evidence only; terminal live receipt supersedes its input. No further Magic training authorized by this job."
   ],
   "proofLevel": "native practice; no live launch",
   "unitTests": {
     "pass": 50,
     "fail": 0
   },
-  "admission": "Existing cloud controller only; one attempt, no repeat, no Wilderness. Recheck exact Porksword terminal state and current pin.",
+  "admission": "SUPERSEDED: live Magic7 prerequisite already completed. Do not re-enable or repeat. Use cloud-porksword-magic7-result.json exact final HPXP1207/MagicXP600 for next staging qualification; Wilderness held.",
   "verification": "Run from the source repository root: bun <bundle>/verify.ts <bundle>",
   "engineObservation": {
     "tick": 147,
     "online": false,
     "pendingLogout": false
-  }
+  },
+  "liveCompletionReceipt": "fleet/evidence/cloud-porksword-magic7-result.json"
 }

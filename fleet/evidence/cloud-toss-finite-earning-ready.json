@@ -1,7 +1,7 @@
 {
   "schema": "cloud-finite-earning-ready/1",
-  "ready": true,
-  "releaseStatus": "PR453 merged; requires matching installed release and incumbent admission",
+  "ready": false,
+  "releaseStatus": "PR453 merged and source proven; actual entry changed after completed maple job. Requires refreshed matched-state admission before live.",
   "sourceCommit": "6671408ef57c65bbaff1a731b9b951e6cf6ae237",
   "runtimeRevision": "9b37cc362142189b87ac9eed031c07f984b14a5af8c386ebfc950f45034ef402",
   "pr": "https://github.com/Giftedx/rs-sdk-bot/pull/453",
@@ -1151,6 +1151,8 @@
     "Existing controller must refresh lease, hold, producer logout, exact current account state, and demand before admitting this single finite job.",
     "This job moves the account from Seers to Ardougne. It does not deliver the reserved yews or wool.",
     "GP and failure counts vary; accept only exact positive banked income, no death, preserved reserved stock, and confirmed logout. No repeated run.",
-    "Practice fixture uses published levels and stock,generated XP,default quest flags and currentHP26; actual liveXP is not asserted."
-  ]
+    "Practice fixture uses published levels and stock,generated XP,default quest flags and currentHP26; actual liveXP is not asserted.",
+    "Latest live account has Woodcutting75,13maples and full HP27 after native-qualified maple batch; practice entry was WC73/HP26. Refresh full current state and bound route before admission."
+  ],
+  "latestAccountReceipt": "fleet/evidence/cloud-refill-live.json"
 }
