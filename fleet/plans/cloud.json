@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794168670256,
+ "at": 1794168981661,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -34,16 +34,18 @@
    "account": "Swordswallow",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/fletch-arrows.ts CAP=600 MODE=headless MAX_MAKE=375 SHAFT_RESERVE=100 FEATHER_RESERVE=100",
-    "scripts/fletch-worker.ts RANDOM_EVENTS=1 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts CAP=600 MODE=headless MAX_MAKE=360 SHAFT_RESERVE=100 FEATHER_RESERVE=100"
+    "scripts/fletch-arrows.ts CAP=600 MODE=shafts MAX_MAKE=22 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts CAP=600 MODE=headless MAX_MAKE=330 SHAFT_RESERVE=100 FEATHER_RESERVE=100",
+    "scripts/gather-yews.ts REGION=draynor TREE=normal MAX_TRIPS=1 BANK_AT=2 CAP=600",
+    "scripts/fletch-arrows.ts CAP=600 MODE=shafts MAX_MAKE=2 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts CAP=600 MODE=headless MAX_MAKE=30 SHAFT_RESERVE=100 FEATHER_RESERVE=100"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Bank 735 headless arrows for Haggis Fletching route: current route bill short 724; preserve shaft/feather reserves",
+   "goal": "Bank remaining 360 headless arrows for Haggis shortage, using observed 22 logs plus a bounded two-log top-up; no Imp retry",
    "role": "quests"
   },
   {
@@ -65,7 +67,7 @@
    "script": "scripts/shop-buyer.ts",
    "args": [
     "catherby",
-    "1200"
+    "800"
    ],
    "env": {
     "ITEMS": "rune arrowtips",
@@ -73,27 +75,27 @@
     "MAX_SPEND": "1200",
     "COIN_RESERVE": "300",
     "FLOAT": "1500",
-    "STOCK_TARGET": "5",
+    "STOCK_TARGET": "6",
     "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
+    "NO_BUY_TICKS": "150"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Buy and bank five scarce rune arrowtips for Haggis Fletching; route bill short 1789, funded by confirmed knight pilot",
+   "goal": "Bank five more scarce rune arrowtips for Haggis; wait a bounded restock interval, preserve 300 coins",
    "role": "quests"
   },
   {
    "account": "MeatNTwoVeg",
    "script": "scripts/quest-sweep.ts",
    "args": [
-    "doric"
+    "runemysteries"
    ],
    "env": {
     "CAP": "2400"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Doric Mining unlock complements Sheep Shearer Crafting for Elemental Workshop entry",
+   "goal": "Rune Mysteries unlock after observed Crafting, Magic and Mining quest foundations",
    "role": "quests"
   },
   {
@@ -105,7 +107,7 @@
    "env": {
     "CAP": "2400"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "Funded Sea Slug completion after observed 300-coin transfer and Firemaking 30 unlock",
    "role": "quests"
@@ -140,16 +142,16 @@
   },
   {
    "account": "BoneToPick",
-   "script": "scripts/quest-cook-job.ts",
+   "script": "scripts/quest-sweep.ts",
    "args": [
-    "hetty"
+    "doric"
    ],
    "env": {
-    "CAP": "6000"
+    "CAP": "2400"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Witch potion Magic unlock after Restless Ghost; dedicated freed Port Sarim/Rimmington route",
+   "goal": "Doric Mining unlock using ore route proved on equivalent fresh Stirmypot state",
    "role": "quests"
   }
  ]

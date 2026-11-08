@@ -1,0 +1,140 @@
+{
+ "schema": "live-death-observation/1",
+ "account": "YewGotWood",
+ "attemptId": "1794168528296-0000019094-0000000001",
+ "record": ".practice/ticks/quest-sweep/yewgotwood-1794168532875.ticks.ndjson.gz",
+ "meta": {
+  "k": "meta",
+  "v": 1,
+  "account": "YewGotWood",
+  "server": "rs-sdk-demo.fly.dev",
+  "script": "scripts/quest-sweep.ts",
+  "argv": [
+   "YewGotWood",
+   "seaslug"
+  ],
+  "startedAt": 1794168532875
+ },
+ "hpChanges": [
+  {
+   "tick": 1,
+   "hp": 10,
+   "x": 3092,
+   "z": 3242,
+   "lifeId": 1
+  },
+  {
+   "tick": 231,
+   "hp": 8,
+   "x": 2868,
+   "z": 3439,
+   "lifeId": 1
+  },
+  {
+   "tick": 232,
+   "hp": 10,
+   "x": 2868,
+   "z": 3441,
+   "lifeId": 1
+  },
+  {
+   "tick": 240,
+   "hp": 8,
+   "x": 2866,
+   "z": 3457,
+   "lifeId": 1
+  },
+  {
+   "tick": 258,
+   "hp": 6,
+   "x": 2860,
+   "z": 3493,
+   "lifeId": 1
+  },
+  {
+   "tick": 271,
+   "hp": 3,
+   "x": 2845,
+   "z": 3507,
+   "lifeId": 1
+  },
+  {
+   "tick": 275,
+   "hp": 1,
+   "x": 2842,
+   "z": 3501,
+   "lifeId": 1
+  },
+  {
+   "tick": 278,
+   "hp": 0,
+   "x": 2846,
+   "z": 3499,
+   "lifeId": 1
+  },
+  {
+   "tick": 284,
+   "hp": 10,
+   "x": 3220,
+   "z": 3219,
+   "lifeId": 2
+  }
+ ],
+ "death": {
+  "tick": 278,
+  "player": {
+   "name": "Yewgotwood",
+   "combatLevel": 3,
+   "hp": 0,
+   "maxHp": 10,
+   "x": 4928,
+   "z": 5568,
+   "worldX": 2846,
+   "worldZ": 3499,
+   "level": 0,
+   "runEnergy": 100,
+   "runWeight": 3,
+   "animId": 424,
+   "spotanimId": -1,
+   "combat": {
+    "inCombat": true,
+    "targetIndex": -1,
+    "targetType": "none",
+    "lastDamageTick": 278
+   },
+   "isDead": true,
+   "lifeId": 1,
+   "respawnCount": 0,
+   "lastDeathTick": 278
+  },
+  "nearbyNames": [
+   "Big Wolf",
+   "Gnome pilot",
+   "Ice warrior",
+   "White wolf",
+   "Wolf"
+  ]
+ },
+ "missingFromPostDeathPack": [
+  {
+   "id": 590,
+   "count": 1
+  },
+  {
+   "id": 556,
+   "count": 1
+  },
+  {
+   "id": 995,
+   "count": 202
+  },
+  {
+   "id": 1265,
+   "count": 1
+  }
+ ],
+ "bankedCoins": 123,
+ "endResult": "fail died",
+ "hold": "swarm-deaths.json died after 1 runs retained; no repair submitted",
+ "limitation": "Missing pack items compared with the last live inventory; no ground recovery is claimed"
+}
