@@ -5,7 +5,7 @@ import { join, relative, resolve } from 'node:path';
 import { jobLogStart } from '../packages/core/src/job-log';
 import { catalogue, finishedTrainers, jobFor, mergeJobs, plan, plannableAccounts, reservedResources, type Acct, type Inputs } from '../packages/planner/src/autopilot';
 import { missionSignature, startable } from './swarm';
-import { coinOrder, fundOrders, inOpenOrder, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { coinOrder, fundOrders, inOpenOrder, newestClaims, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import type { TradeReceipt } from './fleet-trade-settlement';
 
 const side = 'claude-cloud';
@@ -191,4 +191,12 @@ test('a pause arriving during planning leaves the owner plan bytes intact', () =
         else process.env.FLEET_DIR = previous;
         if (/^rsbot-autopilot-pause-[^\\/]+$/.test(relative(parent, base))) rmSync(base, { recursive: true });
     }
+});
+
+test('each side counts at its newest claim, synced or on origin', () => {
+    const synced = [{ side: 'claude-cloud', at: 100, resources: ['knight:2652,3318'] }, { side: 'claude-cloud-2', at: 300, resources: ['knight:2582,3297'] }, null, { side: 'bad' }];
+    const origin = [{ side: 'claude-cloud', at: 200, resources: [] }, { side: 'claude-cloud-2', at: 250, resources: [] }, { side: 'claude-cloud-3', at: 150, resources: ['knight:2652,3318'] }];
+    const out = Object.fromEntries(newestClaims(synced, origin).map(c => [c.side, c.resources]));
+    expect(out).toEqual({ 'claude-cloud': [], 'claude-cloud-2': ['knight:2582,3297'], 'claude-cloud-3': ['knight:2652,3318'] });
+    expect(newestClaims(synced, [])).toHaveLength(2);
 });
