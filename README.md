@@ -88,6 +88,7 @@ git -C vendor/rs-sdk apply ../../patches/rs-sdk-working.patch
 bun install
 (cd vendor/rs-sdk && bun install --frozen-lockfile --production)
 (cd vendor/rs-sdk/server/webclient && bun install --frozen-lockfile)
+(cd vendor/rs-sdk/server/engine && bun install --frozen-lockfile && bun run build)   # the native practice gates (session recovery) boot this engine
 export FLEET_SIDE=claude-cloud
 bun scripts/fleet-sync.ts
 git -C .practice/fleet-data config rebase.autoStash true

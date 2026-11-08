@@ -7,7 +7,7 @@ import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {EventEmitter} from 'node:events';
 import {accountDir,beginSessionAttempt} from '../../core/src/session-lifecycle';
-import {afterStalledConnection,observePartialOwner,waitOwnerAuthLogout} from '../src/session-recovery-proof';
+import {afterStalledConnection,observePartialOwner,waitOwnerAuthLogout,serveAnyHost} from '../src/session-recovery-proof';
 import {recoveryCloseModal} from '../../core/src/session-recovery';
 import type {Session} from '../../core/src/inprocess';
 import {recoveryCapability,verifyCompletedRouterPins,fleetHandoff,publishControlFile,observeRecoveryBoundary,recoveryAuthorityInputs,recoveryMemoryGate,RECOVERY_MEMORY_WAIT_MS,type RecoveryBoundary} from '../src/session-recovery-proof';
@@ -982,4 +982,15 @@ test('the orphan child reading mid-heartbeat sees a complete fleet view, never f
   expect(JSON.parse(readFileSync(path,'utf8')).at).toBe(1793340901899);
   expect(fs.readdirSync(join(dir,'.practice'))).toEqual(['swarm-state.json']);
  }finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+test('the relay binds dual-stack, falls back to IPv4 loopback only on EAFNOSUPPORT, and keeps other bind errors',()=>{
+ const seen:string[]=[];
+ const ok=((o:any)=>{seen.push(o.hostname);return {hostname:o.hostname};}) as any;
+ expect(serveAnyHost({port:1,fetch:()=>new Response('')} as any,ok) as any).toEqual({hostname:'::'});
+ const noV6=((o:any)=>{seen.push(o.hostname);if(o.hostname==='::'){const e:any=Error('EAFNOSUPPORT: address family not supported, listen');e.code='EAFNOSUPPORT';throw e;}return {hostname:o.hostname};}) as any;
+ expect(serveAnyHost({port:1,fetch:()=>new Response('')} as any,noV6) as any).toEqual({hostname:'127.0.0.1'});
+ const inUse=((o:any)=>{const e:any=Error('EADDRINUSE');e.code='EADDRINUSE';throw e;}) as any;
+ expect(()=>serveAnyHost({port:1,fetch:()=>new Response('')} as any,inUse)).toThrow('EADDRINUSE');
+ expect(seen).toEqual(['::','::','127.0.0.1']);
 });
