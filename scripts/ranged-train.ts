@@ -86,14 +86,15 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
  const entry=rangedEntry(p0);if(!p0||!entry)throw Error('ranged-train prerequisite: supported entry observation lost');
  const entryItems=[...inv(),...eq()].map(i=>({id:i.id,count:i.count}));
  if(originalEquipment.some(id=>BOW_IDS.includes(id)||ARROW_IDS.includes(id)))throw Error('ranged-train prerequisite: bow and arrows must start unequipped');
- let ended=false,died=false,cleanup=false,armed=false,lastAmmo=0,hpMin=hp(),kills=0,trips=0,eaten=0,picked=0,shots=0,bought=0,coinsSpent=0,coinsWithdrawn=0,shopVisits=0,failure='',stop='cap';
+ let ended=false,died=false,cleanup=false,hpMin=hp(),kills=0,trips=0,eaten=0,picked=0,shots=0,bought=0,coinsSpent=0,coinsWithdrawn=0,shopVisits=0,failure='',stop='cap';
  let bowUsed=0,arrowUsed=0,foodId=o.foodId,foodBought=0,foodSpent=0,travelSpent=0;let bankReady=false;
  // Bones and raw chicken are by-products: the kill is already credited on XP and the loot drop, so a pickup another
  // player wins or that misses its window loses only the item. Accounting counts what was actually picked up.
  let bonesPicked=0,chickenPicked=0;
  const foodConsumed:Record<number,number>={},foodPurchases:Record<number,number>={};
  void s.ended.then(()=>{ended=true;});
- const off=s.onTick(()=>{const p=st()?.player;hpMin=Math.min(hpMin,hp());if(armed){const a=sum(inv(),ARROW_IDS)+sum(eq(),ARROW_IDS);shots+=Math.max(0,lastAmmo-a);lastAmmo=a;}
+ let stopAmmo=()=>{};
+ const off=s.onTick(()=>{const p=st()?.player;hpMin=Math.min(hpMin,hp());
   if(hp()<=0||p?.isDead||(p?.respawnCount??0)>(p0.respawnCount??0)||(p0.lifeId!==undefined&&p?.lifeId!==p0.lifeId))died=true;});
  const over=()=>ended||died||(!cleanup&&!!o.stop?.())||s.tick()-start>=o.cap;
  let snapshot:Item[]=[];let initial:Item[]|undefined;
@@ -195,7 +196,9 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
    await s.sdk.sendSetCombatStyle(1);
    if(!await waitUntil(s,()=>{const c=st()?.combatStyle;return !!c?.known&&c.currentStyle===1&&c.styles.some(i=>i.index===1&&i.trainsSkills.length===1&&i.trainsSkills[0]==='Ranged');},{timeoutTicks:10}))throw Error('ranged-train rapid style unobserved');
    bowUsed=bow.id;arrowUsed=arrow.id;trips++;
-   armed=true;lastAmmo=sum(inv(),ARROW_IDS)+sum(eq(),ARROW_IDS);
+   // Observe a prepared trip only: bank transfers are not shots.
+   stopAmmo();let lastAmmo=sum(inv(),ARROW_IDS)+sum(eq(),ARROW_IDS);
+   stopAmmo=s.onTick(()=>{const a=sum(inv(),ARROW_IDS)+sum(eq(),ARROW_IDS);shots+=Math.max(0,lastAmmo-a);lastAmmo=a;});
    console.log('RANGED_TRAIN_TRIP '+JSON.stringify({trip:trips,bow:bow.id,arrow:arrow.id,ammo:lastAmmo,level:level(),tick:s.tick()}));
    await walk(OUT);if(!near({x:3233,z:3297},0))throw Error('ranged-train coop entry unobserved');
    let tripKills=0,lostTargets=0,lastProgress=s.tick();
@@ -233,19 +236,20 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
     console.log('RANGED_TRAIN_KILL '+JSON.stringify({kills,level:level(),xp:xp()-startXp,ammo:sum(inv(),ARROW_IDS)+sum(eq(),ARROW_IDS),picked,hp:hp(),tick:s.tick()}));
     if(bestBow(owned(),level())?.id!==bow.id||chooseArrow(owned(),bow.req,level())?.id!==arrow.id)break;
    }
+   stopAmmo();
    if(over())break;
    await walk(BACK);if(!near(BANK,4))throw Error('ranged-train bank return unobserved');await open();
   }
   if(level()>=o.target)stop='target-level';else if(o.stop?.())stop='stop-file';else if(trips>=o.maxTrips&&stop==='cap')stop='max-trips';
  }catch(e){failure=String(e);}
  finally{
-  cleanup=true;
+  stopAmmo();cleanup=true;
   await sustain.settle();if(sustain.failure())failure=[failure,sustain.failure()].filter(Boolean).join('; ');
   if(!ended&&!died&&initial)try{
    if(st()?.shop?.isOpen)await s.bot.closeShop();
    if(st()?.bank?.isOpen)await close();
    if(!near(BANK,4)){if(!bankReady)await travel(entry);else if((st()?.player?.worldZ??0)<3380)await walk(BACK);else await walk([{...BANK,tol:1}]);}
-   armed=false;await unequip([...ARROW_IDS,...BOW_IDS]);
+   await unequip([...ARROW_IDS,...BOW_IDS]);
    for(const id of originalEquipment)if(!eq().some(i=>i.id===id))await equip(id);
    await open();await deposit([...BOW_IDS,...ARROW_IDS,foodId,BONES,CHICKEN,FEATHER,...(coinsWithdrawn>0?[COINS]:[])]);await close();
    if(st()?.autoRetaliateEnabled!==originalRetaliate){await s.direct({type:'clickComponent',componentId:originalRetaliate?150:151,reason:'restore original auto-retaliate'});if(!await waitUntil(s,()=>st()?.autoRetaliateEnabled===originalRetaliate,{timeoutTicks:8}))throw Error('ranged-train auto-retaliate restore unobserved');}

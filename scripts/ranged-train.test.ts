@@ -141,7 +141,7 @@ test('a stop during the recovery walk aborts the route and skips the unwield',as
 });
 
 // Only travel is stubbed. The worker observes tick, XP, target, loot and bank effects.
-function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],catherby=false,upgrade=false,underground=false,ammoRace?:'foreign'|'own-missing'|'bones-taken'){
+function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],catherby=false,upgrade=false,underground=false,ammoRace?:'foreign'|'own-missing'|'bones-taken',observeBankMoves=false){
  type Item={id:number;name:string;count:number};
  const item=(id:number,count:number):Item=>({id,name:id===995?'Coins':id===1985?'Cheese':String(id),count});
  let tick=0,xp=0,level=7,generation=0,trip=0,active=-1,attempt=0,firstAttack=0,respawnAt:number|undefined;
@@ -176,7 +176,7 @@ function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],c
    closeShop:async()=>{state.shop.isOpen=false;},
    buyFromShop:async(_name:RegExp,n:number)=>{add(pack,1985,n);add(pack,995,-5*n);state.shop.shopItems[0].count-=n;return{success:true};},
    withdrawItem:async(i:Item,n:number)=>{i.count-=n;add(pack,i.id,n);generation++;},
-   depositItem:async(i:Item)=>{add(bank,i.id,i.count);pack=pack.filter(p=>p.id!==i.id);generation++;return{success:true};},
+   depositItem:async(i:Item)=>{add(bank,i.id,i.count);pack=pack.filter(p=>p.id!==i.id);generation++;if(observeBankMoves)for(const cb of [...listeners])cb();return{success:true};},
    equipItem:async(i:Item)=>{const bows=[843,849],arrows=[882,888],group=bows.includes(i.id)?bows:arrows;for(const old of equipment.filter(e=>group.includes(e.id)))add(pack,old.id,old.count);equipment=equipment.filter(e=>!group.includes(e.id));equipment.push({...i});pack=pack.filter(p=>p.id!==i.id);},
    unequipItem:async(i:Item)=>{add(pack,i.id,i.count);equipment=equipment.filter(p=>p.id!==i.id);},
    attack:async()=>{attempt++;attacks.push({target:active,trip,tick,kit:equipment.map(i=>i.id)});if(attempt===1)firstAttack=tick;
@@ -286,4 +286,9 @@ test('a stronger arrow stack too small for a trip gives way to a usable weaker s
  expect(chooseArrow(owned,1,1)?.id).toBe(882);
  expect(chooseArrow([{id:884,count:40},{id:882,count:500}] as any,1,1)?.id).toBe(884);
  expect(chooseArrow([{id:884,count:2}] as any,1,1)).toBeUndefined();
+});
+
+test('banking recovered arrows between trips does not count as firing',async()=>{
+ const f=trainingFixture(['kill','kill'],false,false,false,'foreign',true);
+ try{const r=await f.run({killsPerTrip:1});expect(r).toMatchObject({ok:true,trips:2,kills:2,shots:2,picked:2,arrowsSpent:0,accounting:true});}finally{f.close();}
 });
