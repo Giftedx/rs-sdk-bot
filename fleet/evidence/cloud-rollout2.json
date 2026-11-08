@@ -3,78 +3,78 @@
  "side": "cloud",
  "source": "7bd9e77d2d50648c53df71d35175e5e8f5da5c10",
  "started": 1794167124636,
- "at": 1794167208265,
- "peakLive": 6,
- "currentLive": 6,
- "minFreeGB": 12.193023681640625,
+ "at": 1794167458734,
+ "peakLive": 7,
+ "currentLive": 3,
+ "minFreeGB": 11.668563842773438,
  "current": [
   {
    "account": "TossTheCaber",
-   "tick": 151,
-   "at": 1794167208183,
+   "tick": 450,
+   "at": 1794167328338,
    "position": {
-    "x": 3100,
-    "z": 3434,
+    "x": 2886,
+    "z": 3346,
     "level": 0
    },
-   "result": "",
-   "logout": "held"
+   "result": "fail quest-sweep fishingcompo gathered 0 of 1 item 307 (spawn)",
+   "logout": "confirmed"
   },
   {
    "account": "Swordswallow",
-   "tick": 146,
-   "at": 1794167206929,
+   "tick": 632,
+   "at": 1794167401640,
    "position": {
-    "x": 3109,
-    "z": 3357,
+    "x": 3110,
+    "z": 3367,
+    "level": 2
+   },
+   "result": "ok qp=4  xp= at=3110,3367,2 ticks=380 hpMin=49 eats=0 walkTicks=82 retries=4 died=false milestones=1,gauge,key,house,closet door,tube,basement,oil,2,3 jumps=136:3093,3362->3116,9754,0;282:3116,9754->3092,3361,0 msgs=Oddenstein starts up the machine. / The machine hums and shakes. / Suddenly a",
+   "logout": "confirmed"
+  },
+  {
+   "account": "Unsheathed",
+   "tick": 771,
+   "at": 1794167456858,
+   "position": {
+    "x": 2746,
+    "z": 3577,
     "level": 1
    },
    "result": "",
    "logout": "held"
   },
   {
-   "account": "Unsheathed",
-   "tick": 146,
-   "at": 1794167206934,
-   "position": {
-    "x": 2978,
-    "z": 3396,
-    "level": 0
-   },
-   "result": "",
-   "logout": "held"
-  },
-  {
    "account": "Porksword",
-   "tick": 151,
-   "at": 1794167207474,
+   "tick": 618,
+   "at": 1794167394385,
    "position": {
-    "x": 3162,
-    "z": 3279,
+    "x": 3156,
+    "z": 3300,
     "level": 0
    },
-   "result": "",
-   "logout": "held"
-  },
-  {
-   "account": "MeatNTwoVeg",
-   "tick": 52,
-   "at": 1794167172408,
-   "position": {
-    "x": 3212,
-    "z": 3333,
-    "level": 0
-   },
-   "result": "fail stop file",
+   "result": "fail Error: wheat pickup: effect unobserved",
    "logout": "confirmed"
   },
   {
-   "account": "YewGotWood",
-   "tick": 141,
-   "at": 1794167207353,
+   "account": "MeatNTwoVeg",
+   "tick": 546,
+   "at": 1794167458436,
    "position": {
-    "x": 3233,
-    "z": 3240,
+    "x": 3207,
+    "z": 3267,
+    "level": 0
+   },
+   "result": "",
+   "logout": "held"
+  },
+  {
+   "account": "YewGotWood",
+   "tick": 766,
+   "at": 1794167457297,
+   "position": {
+    "x": 3232,
+    "z": 3224,
     "level": 0
    },
    "result": "",
@@ -82,15 +82,15 @@
   },
   {
    "account": "Spitroaster",
-   "tick": 146,
-   "at": 1794167208174,
+   "tick": 730,
+   "at": 1794167441995,
    "position": {
-    "x": 3162,
-    "z": 3283,
+    "x": 3092,
+    "z": 3242,
     "level": 0
    },
-   "result": "",
-   "logout": "held"
+   "result": "ok Hetty complete; QP+1, Magic+8125, costs, assets and life observed",
+   "logout": "confirmed"
   }
  ],
  "results": [
@@ -226,6 +226,655 @@
      "count": 2
     }
    ]
+  },
+  {
+   "account": "TossTheCaber",
+   "attemptId": "1794167138239-0000008462-0000000001",
+   "started": 1794167148140,
+   "at": 1794167328338,
+   "source": "0c41a2bb0cab401038f251a0c1eaa820648a7394076c1190771afb88ed0d940d",
+   "entry": "scripts/quest-sweep.ts",
+   "result": "fail quest-sweep fishingcompo gathered 0 of 1 item 307 (spawn)",
+   "logout": "confirmed",
+   "newQuests": [],
+   "hp": {
+    "now": 27,
+    "max": 27
+   },
+   "bank": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 551
+    },
+    {
+     "id": 1351,
+     "baseId": 1351,
+     "name": "Bronze axe",
+     "count": 1
+    },
+    {
+     "id": 315,
+     "baseId": 315,
+     "name": "Shrimps",
+     "count": 1
+    },
+    {
+     "id": 1265,
+     "baseId": 1265,
+     "name": "Bronze pickaxe",
+     "count": 1
+    },
+    {
+     "id": 1205,
+     "baseId": 1205,
+     "name": "Bronze dagger",
+     "count": 1
+    },
+    {
+     "id": 841,
+     "baseId": 841,
+     "name": "Shortbow",
+     "count": 1
+    },
+    {
+     "id": 882,
+     "baseId": 882,
+     "name": "Bronze arrow",
+     "count": 25
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 20
+    },
+    {
+     "id": 558,
+     "baseId": 558,
+     "name": "Mind rune",
+     "count": 15
+    },
+    {
+     "id": 555,
+     "baseId": 555,
+     "name": "Water rune",
+     "count": 6
+    },
+    {
+     "id": 557,
+     "baseId": 557,
+     "name": "Earth rune",
+     "count": 2
+    },
+    {
+     "id": 559,
+     "baseId": 559,
+     "name": "Body rune",
+     "count": 2
+    },
+    {
+     "id": 314,
+     "baseId": 314,
+     "name": "Feather",
+     "count": 59
+    },
+    {
+     "id": 303,
+     "baseId": 303,
+     "name": "Small fishing net",
+     "count": 1
+    },
+    {
+     "id": 317,
+     "baseId": 317,
+     "name": "Raw shrimps",
+     "count": 13
+    },
+    {
+     "id": 590,
+     "baseId": 590,
+     "name": "Tinderbox",
+     "count": 1
+    },
+    {
+     "id": 343,
+     "baseId": 343,
+     "name": "Burnt fish",
+     "count": 3
+    },
+    {
+     "id": 331,
+     "baseId": 331,
+     "name": "Raw salmon",
+     "count": 1
+    },
+    {
+     "id": 309,
+     "baseId": 309,
+     "name": "Fly fishing rod",
+     "count": 1
+    }
+   ],
+   "inventory": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 5
+    },
+    {
+     "id": 1468,
+     "baseId": 1468,
+     "name": "Dry sticks",
+     "count": 1
+    },
+    {
+     "id": 1469,
+     "baseId": 1469,
+     "name": "Broken glass",
+     "count": 1
+    },
+    {
+     "id": 594,
+     "baseId": 594,
+     "name": "Torch",
+     "count": 1
+    },
+    {
+     "id": 413,
+     "baseId": 413,
+     "name": "Oyster pearls",
+     "count": 1
+    },
+    {
+     "id": 563,
+     "baseId": 563,
+     "name": "Law rune",
+     "count": 8
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 5
+    },
+    {
+     "id": 329,
+     "baseId": 329,
+     "name": "Salmon",
+     "count": 1
+    },
+    {
+     "id": 329,
+     "baseId": 329,
+     "name": "Salmon",
+     "count": 1
+    },
+    {
+     "id": 329,
+     "baseId": 329,
+     "name": "Salmon",
+     "count": 1
+    },
+    {
+     "id": 329,
+     "baseId": 329,
+     "name": "Salmon",
+     "count": 1
+    },
+    {
+     "id": 952,
+     "baseId": 952,
+     "name": "Spade",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "account": "Porksword",
+   "attemptId": "1794167140832-0000008561-0000000001",
+   "started": 1794167147445,
+   "at": 1794167394385,
+   "source": "b8b25deab9df88bb2902f220ba3dae294be8b16b593ff142ded9dcc1e70d60ea",
+   "entry": "scripts/quest-cook-job.ts",
+   "result": "fail Error: wheat pickup: effect unobserved",
+   "logout": "confirmed",
+   "newQuests": [],
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "bank": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 25
+    },
+    {
+     "id": 1351,
+     "baseId": 1351,
+     "name": "Bronze axe",
+     "count": 1
+    },
+    {
+     "id": 590,
+     "baseId": 590,
+     "name": "Tinderbox",
+     "count": 1
+    },
+    {
+     "id": 303,
+     "baseId": 303,
+     "name": "Small fishing net",
+     "count": 1
+    },
+    {
+     "id": 315,
+     "baseId": 315,
+     "name": "Shrimps",
+     "count": 1
+    },
+    {
+     "id": 2309,
+     "baseId": 2309,
+     "name": "Bread",
+     "count": 1
+    },
+    {
+     "id": 1265,
+     "baseId": 1265,
+     "name": "Bronze pickaxe",
+     "count": 1
+    },
+    {
+     "id": 1205,
+     "baseId": 1205,
+     "name": "Bronze dagger",
+     "count": 1
+    },
+    {
+     "id": 1277,
+     "baseId": 1277,
+     "name": "Bronze sword",
+     "count": 1
+    },
+    {
+     "id": 1171,
+     "baseId": 1171,
+     "name": "Wooden shield",
+     "count": 1
+    },
+    {
+     "id": 841,
+     "baseId": 841,
+     "name": "Shortbow",
+     "count": 1
+    },
+    {
+     "id": 882,
+     "baseId": 882,
+     "name": "Bronze arrow",
+     "count": 25
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 25
+    },
+    {
+     "id": 558,
+     "baseId": 558,
+     "name": "Mind rune",
+     "count": 15
+    },
+    {
+     "id": 555,
+     "baseId": 555,
+     "name": "Water rune",
+     "count": 6
+    },
+    {
+     "id": 557,
+     "baseId": 557,
+     "name": "Earth rune",
+     "count": 4
+    },
+    {
+     "id": 559,
+     "baseId": 559,
+     "name": "Body rune",
+     "count": 2
+    }
+   ],
+   "inventory": [
+    {
+     "id": 1927,
+     "baseId": 1927,
+     "name": "Bucket of milk",
+     "count": 1
+    },
+    {
+     "id": 1931,
+     "baseId": 1931,
+     "name": "Pot",
+     "count": 1
+    },
+    {
+     "id": 1944,
+     "baseId": 1944,
+     "name": "Egg",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "account": "Swordswallow",
+   "attemptId": "1794167139338-0000008513-0000000001",
+   "started": 1794167149072,
+   "at": 1794167401640,
+   "source": "0c41a2bb0cab401038f251a0c1eaa820648a7394076c1190771afb88ed0d940d",
+   "entry": "scripts/quest-sweep.ts",
+   "result": "ok qp=4  xp= at=3110,3367,2 ticks=380 hpMin=49 eats=0 walkTicks=82 retries=4 died=false milestones=1,gauge,key,house,closet door,tube,basement,oil,2,3 jumps=136:3093,3362->3116,9754,0;282:3116,9754->3092,3361,0 msgs=Oddenstein starts up the machine. / The machine hums and shakes. / Suddenly a",
+   "logout": "confirmed",
+   "newQuests": [
+    "Ernest the Chicken"
+   ],
+   "hp": {
+    "now": 52,
+    "max": 54
+   },
+   "bank": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 25
+    },
+    {
+     "id": 303,
+     "baseId": 303,
+     "name": "Small fishing net",
+     "count": 1
+    },
+    {
+     "id": 315,
+     "baseId": 315,
+     "name": "Shrimps",
+     "count": 1
+    },
+    {
+     "id": 1265,
+     "baseId": 1265,
+     "name": "Bronze pickaxe",
+     "count": 1
+    },
+    {
+     "id": 1205,
+     "baseId": 1205,
+     "name": "Bronze dagger",
+     "count": 1
+    },
+    {
+     "id": 1277,
+     "baseId": 1277,
+     "name": "Bronze sword",
+     "count": 1
+    },
+    {
+     "id": 1171,
+     "baseId": 1171,
+     "name": "Wooden shield",
+     "count": 1
+    },
+    {
+     "id": 841,
+     "baseId": 841,
+     "name": "Shortbow",
+     "count": 1
+    },
+    {
+     "id": 882,
+     "baseId": 882,
+     "name": "Bronze arrow",
+     "count": 25
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 25
+    },
+    {
+     "id": 558,
+     "baseId": 558,
+     "name": "Mind rune",
+     "count": 15
+    },
+    {
+     "id": 555,
+     "baseId": 555,
+     "name": "Water rune",
+     "count": 6
+    },
+    {
+     "id": 557,
+     "baseId": 557,
+     "name": "Earth rune",
+     "count": 4
+    },
+    {
+     "id": 559,
+     "baseId": 559,
+     "name": "Body rune",
+     "count": 2
+    },
+    {
+     "id": 314,
+     "baseId": 314,
+     "name": "Feather",
+     "count": 1770
+    },
+    {
+     "id": 52,
+     "baseId": 52,
+     "name": "Arrow shaft",
+     "count": 480
+    },
+    {
+     "id": 53,
+     "baseId": 53,
+     "name": "Headless arrow",
+     "count": 270
+    },
+    {
+     "id": 1438,
+     "baseId": 1438,
+     "name": "Air talisman",
+     "count": 1
+    },
+    {
+     "id": 590,
+     "baseId": 590,
+     "name": "Tinderbox",
+     "count": 1
+    },
+    {
+     "id": 946,
+     "baseId": 946,
+     "name": "Knife",
+     "count": 1
+    }
+   ],
+   "inventory": [
+    {
+     "id": 1351,
+     "baseId": 1351,
+     "name": "Bronze axe",
+     "count": 1
+    },
+    {
+     "id": 2309,
+     "baseId": 2309,
+     "name": "Bread",
+     "count": 1
+    },
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 300
+    },
+    {
+     "id": 275,
+     "baseId": 275,
+     "name": "Key",
+     "count": 1
+    },
+    {
+     "id": 952,
+     "baseId": 952,
+     "name": "Spade",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "account": "Spitroaster",
+   "attemptId": "1794167145404-0000008708-0000000001",
+   "started": 1794167150314,
+   "at": 1794167441995,
+   "source": "b8b25deab9df88bb2902f220ba3dae294be8b16b593ff142ded9dcc1e70d60ea",
+   "entry": "scripts/quest-cook-job.ts",
+   "result": "ok Hetty complete; QP+1, Magic+8125, costs, assets and life observed",
+   "logout": "confirmed",
+   "newQuests": [
+    "Witch's Potion"
+   ],
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "bank": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 21
+    },
+    {
+     "id": 1351,
+     "baseId": 1351,
+     "name": "Bronze axe",
+     "count": 1
+    },
+    {
+     "id": 590,
+     "baseId": 590,
+     "name": "Tinderbox",
+     "count": 1
+    },
+    {
+     "id": 303,
+     "baseId": 303,
+     "name": "Small fishing net",
+     "count": 1
+    },
+    {
+     "id": 315,
+     "baseId": 315,
+     "name": "Shrimps",
+     "count": 1
+    },
+    {
+     "id": 1925,
+     "baseId": 1925,
+     "name": "Bucket",
+     "count": 1
+    },
+    {
+     "id": 1931,
+     "baseId": 1931,
+     "name": "Pot",
+     "count": 1
+    },
+    {
+     "id": 2309,
+     "baseId": 2309,
+     "name": "Bread",
+     "count": 1
+    },
+    {
+     "id": 1265,
+     "baseId": 1265,
+     "name": "Bronze pickaxe",
+     "count": 1
+    },
+    {
+     "id": 1205,
+     "baseId": 1205,
+     "name": "Bronze dagger",
+     "count": 1
+    },
+    {
+     "id": 1277,
+     "baseId": 1277,
+     "name": "Bronze sword",
+     "count": 1
+    },
+    {
+     "id": 1171,
+     "baseId": 1171,
+     "name": "Wooden shield",
+     "count": 1
+    },
+    {
+     "id": 841,
+     "baseId": 841,
+     "name": "Shortbow",
+     "count": 1
+    },
+    {
+     "id": 882,
+     "baseId": 882,
+     "name": "Bronze arrow",
+     "count": 25
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 25
+    },
+    {
+     "id": 558,
+     "baseId": 558,
+     "name": "Mind rune",
+     "count": 15
+    },
+    {
+     "id": 555,
+     "baseId": 555,
+     "name": "Water rune",
+     "count": 6
+    },
+    {
+     "id": 557,
+     "baseId": 557,
+     "name": "Earth rune",
+     "count": 4
+    },
+    {
+     "id": 559,
+     "baseId": 559,
+     "name": "Body rune",
+     "count": 2
+    }
+   ],
+   "inventory": []
   }
  ],
  "limitations": [

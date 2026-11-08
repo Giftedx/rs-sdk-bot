@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794167212844,
+ "at": 1794167461774,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -34,14 +34,14 @@
    "account": "Swordswallow",
    "script": "scripts/quest-sweep.ts",
    "args": [
-    "haunted"
+    "cog"
    ],
    "env": {
     "CAP": "2400"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "New live Ernest the Chicken coverage; 4 QP and 300 coin reward",
+   "goal": "New live Clock Tower coverage; 300-coin quest reward funds the previous 118-coin shortfall",
    "role": "quests"
   },
   {
@@ -60,14 +60,15 @@
   },
   {
    "account": "Porksword",
-   "script": "scripts/quest-cook-job.ts",
+   "script": "scripts/generated/thieving60.ts",
    "args": [],
    "env": {
-    "CAP": "2400"
+    "TARGET": "55",
+    "CAP": "3000"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Cook quest unlock; observed QP and Cooking XP",
+   "goal": "Unlock knight earnings; bank funds for cloud quest inputs and BraveHardon food rescue",
    "role": "quests"
   },
   {
@@ -80,7 +81,7 @@
    "env": {
     "ROUNDS": "1"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
    "goal": "New live Sheep Shearer coverage using one owned wool batch",
    "role": "quests"
