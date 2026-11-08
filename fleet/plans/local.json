@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793949467046,
+ "at": 1794170377526,
  "jobs": [
   {
    "account": "Masterbaiter",
@@ -384,9 +384,7 @@
    "role": "firemaking"
   },
   {
-   "accounts": [
-    "Shaftsinker"
-   ],
+   "account": "Shaftsinker",
    "script": "scripts/handoff-inputs.ts",
    "args": [
     "6:Clay",
@@ -495,7 +493,7 @@
     "CAP": "72000",
     "COORDINATOR_RUN_ID": "task-e79db29d-31ee-4eaa-a6c1-74d1f4c7f0c6"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-blood-charge-batch300-a [task-e79db29d-31ee-4eaa-a6c1-74d1f4c7f0c6]",
    "role": "supply"
