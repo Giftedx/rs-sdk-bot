@@ -1,6 +1,6 @@
 {
   "schema": "cloud-kit-expansion/1",
-  "at": 1794181852214,
+  "at": 1794181914277,
   "side": "cloud-kit",
   "controller": {
     "pid": 6955,
@@ -187,11 +187,11 @@
     }
   },
   "headroom": {
-    "freeGB": 15.816364288330078,
+    "freeGB": 15.900875091552734,
     "load": [
-      0.44,
-      0.5,
-      0.47
+      0.47,
+      0.48,
+      0.46
     ],
     "cpus": 5,
     "minFreeGB": 8,
@@ -200,11 +200,11 @@
   "accounts": [
     {
       "account": "Familyjewel",
-      "at": 1794181850368,
-      "tick": 341,
+      "at": 1794181913042,
+      "tick": 16,
       "position": {
-        "x": 2651,
-        "z": 3323,
+        "x": 2647,
+        "z": 3304,
         "level": 0
       },
       "hp": {
@@ -316,9 +316,9 @@
         },
         {
           "name": "Thieving",
-          "level": 75,
-          "currentLevel": 75,
-          "xp": 201042
+          "level": 76,
+          "currentLevel": 76,
+          "xp": 213687
         },
         {
           "name": "Stat18",
@@ -406,7 +406,7 @@
           "id": 995,
           "baseId": 995,
           "name": "Coins",
-          "count": 800
+          "count": 1100
         },
         {
           "id": 1265,
@@ -505,9 +505,9 @@
           "count": 1
         },
         {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
+          "id": 1893,
+          "baseId": 1893,
+          "name": "2/3 cake",
           "count": 1
         },
         {
@@ -523,22 +523,22 @@
           "count": 1
         },
         {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
+          "id": 1893,
+          "baseId": 1893,
+          "name": "2/3 cake",
           "count": 1
         }
       ],
       "equipment": [],
       "result": "",
       "workRevision": "d7e4fa5e7f1d59ac33abf8cd4f60393aeeac20eb2ab310e717e5bd896f8d3657",
-      "attempt": "1794181706295-0000014725-0000000001",
+      "attempt": "1794181901063-0000015953-0000000001",
       "logout": {
         "state": "held",
         "account": "Familyjewel",
         "server": "rs-sdk-demo.fly.dev",
         "domain": "live",
-        "attemptId": "1794181706295-0000014725-0000000001",
+        "attemptId": "1794181901063-0000015953-0000000001",
         "reason": "session active or outcome unknown"
       },
       "progress": {
