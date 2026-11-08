@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794176133023,
+ "at": 1794178686401,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -23,24 +23,21 @@
   },
   {
    "account": "TrouserSnake",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "catherby"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "ITEMS": "rune arrowtips|adamant arrowtips",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy rune and adamant arrowtips at Catherby",
-   "role": "bank",
-   "template": "shop-arrowtips",
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "claude-cloud",
    "resources": [
-    "shop:catherby"
+    "knight:2582,3297"
    ]
   },
   {
@@ -64,21 +61,21 @@
   },
   {
    "account": "UnderMyKilt",
-   "script": "scripts/gather-feathers.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "PEN": "3017,3288",
-    "TICKS": "3000"
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3017,3288",
-   "role": "helper",
-   "template": "feathers@3017,3288",
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
    "autopilot": "claude-cloud",
    "resources": [
-    "pen:3017,3288"
+    "knight:2652,3318"
    ]
   }
  ]
