@@ -3,16 +3,16 @@
  "side": "cloud",
  "source": "7bd9e77d2d50648c53df71d35175e5e8f5da5c10",
  "started": 1794167124636,
- "at": 1794173202851,
+ "at": 1794173267940,
  "peakLive": 9,
- "currentLive": 1,
+ "currentLive": 2,
  "minFreeGB": 8.638957977294922,
  "headroom": {
-  "freeGB": 12.966133117675781,
+  "freeGB": 12.803802490234375,
   "load": [
-   1.49,
-   2.11,
-   2.21
+   0.99,
+   1.82,
+   2.1
   ],
   "cpus": 5,
   "requiredFloorGB": 4,
@@ -51,25 +51,25 @@
    "account": "Swordswallow",
    "goal": "Stage owned banked bronze axe through proved local supply worker for Haggis5-willow-log job; one log/15shafts bounded byproduct, no new tool purchase",
    "enabled": true,
-   "tick": 275,
-   "at": 1794173036997,
+   "tick": 151,
+   "at": 1794173267490,
    "position": {
-    "x": 3093,
-    "z": 3245,
+    "x": 3201,
+    "z": 3252,
     "level": 0
    },
-   "result": "ok outboundOnly=true ticks=271 received=0 handed=0 fishNotes=0 coins=30 walkTicks=219 boatTicks=52 waitTicks=0 giveTicks=0 featherTicks=0 feathersBought=0 feathersLeft=0 legs=sarim@187,draynor@271 hpMin=54 died=false jumps=47:2678,3276->2775,3234,1;186:2952,3146->3032,3217,1 coins=30 at=3093,",
+   "result": "",
    "logout": "held"
   },
   {
    "account": "Unsheathed",
    "goal": "Complete new live Priest in Peril unlock using50 essence actually delivered by Crownjewels; strong combat75 HP54, owned trout, Varrock start; finite budget",
    "enabled": true,
-   "tick": 441,
-   "at": 1794173202645,
+   "tick": 602,
+   "at": 1794173267136,
    "position": {
-    "x": 3280,
-    "z": 3441,
+    "x": 3219,
+    "z": 3478,
     "level": 0
    },
    "result": "",
