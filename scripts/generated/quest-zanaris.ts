@@ -6,6 +6,8 @@
 // Server truth: areas/area_lumbridge/scripts/warrior_zanaris.rs2, quests/quest_zanaris/scripts/*.rs2,
 // areas/area_port_sarim/scripts/monk_of_entrana.rs2, areas/area_entrana/scripts/cave_monk.rs2 and entrana_dungeon.rs2,
 // drop tables/scripts/zombie.rs2:102-111 (the Entrana zombie drops a bronze axe 50/128).
+import { componentId } from '../../packages/core/src/logout';
+import { lostCityRoute } from '../quest-zanaris-plan';
 import { openQuest } from './quest-lib';
 
 const WARRIOR = { x: 3145, z: 3202 };
@@ -17,11 +19,24 @@ const ZOMBIES = { x: 2845, z: 9761 };                       // zombie_entranan s
 const TREE = { id: 1292, x: 2860, z: 9734 };                // dramentree, maps/m44_152.jm2 0 44 6
 const MAGIC_DOOR = { id: 2407, x: 2874, z: 9750 };          // zanarismagicdoor -> 0_50_58_50_60 (3250,3772)
 const SHED_DOOR = { id: 2406, x: 3202, z: 3169 };           // zanarisdoor, maps/m50_49.jm2 0 2 33
-const ITEM = { axe: 1351, knife: 946, branch: 771, staff: 772, food: 379, prayerPot: [2434, 139, 141, 143] };
+const ITEM = { axe: 1351, knife: 946, branch: 771, staff: 772, prayerPot: [2434, 139, 141, 143] };
 const PFM = 14, ULT_STR = 10, INC_REF = 11;     // skill_prayer/configs/prayers.dbrow order (quest-grail.ts)
 
-const q = await openQuest({ cap: 3000, eatAt: 45, food: [ITEM.food], lumbridgeOk: true });
+const route = lostCityRoute(process.env.LOST_CITY_ROUTE);
+const windBolt = route.windBolt;
+const q = await openQuest({ cap: 3000, eatAt: route.eatAt, food: [route.food], lumbridgeOk: true });
 try {
+    if (windBolt) {
+        const casts = windBolt.axeCasts + windBolt.spiritCasts;
+        const skill = (name: 'Magic' | 'Woodcutting' | 'Crafting' | 'Hitpoints') =>
+            q.s.sdk.getSkill(name)?.baseLevel ?? 0;
+        if (skill('Magic') < 31 || skill('Woodcutting') < 36 || skill('Crafting') < 31 ||
+            skill('Hitpoints') < 52 || q.cnt(562) < casts || q.cnt(556) < casts * 2 + 3 ||
+            !q.has(557) || !q.has(563) || !q.has(ITEM.axe) || !q.has(ITEM.knife) ||
+            q.cnt(route.food) < windBolt.sharks) {
+            await q.fail('Wind Bolt Lost City entry kit or skills missing');
+        }
+    }
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
     const z = () => q.pos()?.worldZ ?? 0;
@@ -31,6 +46,8 @@ try {
     const prayOn = (i: number): boolean => !!q.st()?.prayers?.activePrayers?.[i];
     const setPrayer = async (i: number, on: boolean) => {
         if (prayOn(i) === on || (on && points() <= 0)) return;
+        const required = i === PFM ? 43 : i === ULT_STR ? 31 : 34;
+        if (windBolt && on && (q.s.sdk.getSkill('Prayer')?.baseLevel ?? 0) < required) return;
         await q.step(`prayer ${i} ${on}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: i, reason: 'SDK' }), () => prayOn(i) === on, 3, 3);
     };
     const keepPrayer = async () => {
@@ -41,6 +58,9 @@ try {
         await q.step('prayer potion', () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(pot)!, optionIndex: 1, reason: 'SDK' }), () => points() > p0, 3, 2);
     };
     const attack = (n: any) => q.s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
+    const castWindBolt = (npcIndex: number) => q.s.direct({
+        type: 'spellOnNpc', npcIndex, spellComponent: componentId('magic:wind_bolt'), reason: 'SDK',
+    });
     const wield = async (id: number) => {
         const worn = () => (q.st()?.equipment ?? []).some((e: any) => e.id === id);
         await q.step(`wield ${id}`, () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(id)!, optionIndex: 2, reason: 'SDK' }), worn, 3, 3);
@@ -87,6 +107,7 @@ try {
     const axeOnGround = (): any => (q.st()?.groundItems ?? []).filter((g: any) => g.id === ITEM.axe).sort((a: any, b: any) => (a.distance ?? 0) - (b.distance ?? 0))[0];
     let zombies = 0;
     let lastZombie = -1;
+    const axeRuneFloor = windBolt ? Math.max(windBolt.spiritCasts, q.cnt(562) - windBolt.axeCasts) : 0;
     for (let t = 0; t < 600 && !q.has(ITEM.axe); t++) {
         await q.guard('zombies');
         const g = axeOnGround();
@@ -94,10 +115,19 @@ try {
         else {
             const n = q.npc(/^zombie$/i);
             if (!n) { if (t % 10 === 0) await q.dash('to zombies', ZOMBIES.x, ZOMBIES.z, 3); }
-            else if (q.pos()?.targetIndex !== n.index && t % 4 === 0) { if (n.index !== lastZombie) zombies++; lastZombie = n.index; await attack(n); }
+            else if (windBolt ? q.cnt(562) > axeRuneFloor && t % 5 === 0 :
+                q.pos()?.targetIndex !== n.index && t % 4 === 0) {
+                if (n.index !== lastZombie) zombies++;
+                lastZombie = n.index;
+                if (windBolt) await castWindBolt(n.index);
+                else await attack(n);
+            }
         }
         await q.waitTicks(1);
     }
+    if (windBolt) console.log('AXE_HUNT '+JSON.stringify({
+        zombieTargets: zombies, chaosRemaining: q.cnt(562), axe: q.has(ITEM.axe),
+    }));
     if (!q.has(ITEM.axe)) await q.fail('no bronze axe');
     q.milestone('axe');
     await wield(ITEM.axe);
@@ -118,7 +148,9 @@ try {
         await keepPrayer();
         for (const i of fightPrayers) if (!prayOn(i) && points() > 0) await setPrayer(i, true);
         const n = q.npc(/^tree spirit$/i);
-        if (n && q.pos()?.targetIndex !== n.index && t % 4 === 0) await attack(n);
+        if (n && windBolt && q.cnt(562) > 0) {
+            if (t % 5 === 0) await castWindBolt(n.index);
+        } else if (n && q.pos()?.targetIndex !== n.index && t % 4 === 0) await attack(n);
         await q.waitTicks(1);
     }
     await retaliate();
