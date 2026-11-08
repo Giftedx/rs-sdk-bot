@@ -159,6 +159,22 @@
   "Fingerblastr": {
    "side": "claude-cloud-2",
    "server": "rs-sdk-demo.fly.dev"
+  },
+  "Porksword": {
+   "side": "cloud",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "MeatNTwoVeg": {
+   "side": "cloud",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "YewGotWood": {
+   "side": "cloud",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Spitroaster": {
+   "side": "cloud",
+   "server": "rs-sdk-demo.fly.dev"
   }
  }
 }
