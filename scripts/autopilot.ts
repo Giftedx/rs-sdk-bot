@@ -10,10 +10,10 @@
 // --daemon: a pass every 10 minutes, and one within TRAINER_POLL_MS of a planner trainer's ok RESULT (its target level
 // is met and its job does not repeat, so the account would otherwise sit ended until the timer).
 // Run beside DEMO_OK=1 bun scripts/swarm.ts and bun scripts/fleet-agent.ts --daemon, with FLEET_SIDE set.
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync, openSync, readSync, closeSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync, openSync, readSync, closeSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
-import { swarmWroteStop } from './swarm';
+import { clearSwarmStop, swarmWroteStop } from './swarm';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { matchingJobLines } from '../packages/core/src/job-log';
 import { CLAIM_MAX_AGE_MS, accountFrom, assess, catalogue, finishedTrainers, freshest, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, type Assignment } from '../packages/planner/src/autopilot';
@@ -25,6 +25,8 @@ import { tickWaste, wasteShare } from './tick-waste';
 
 const root = resolve(import.meta.dir, '..'), prac = join(root, '.practice');
 const PASS_EVERY_MS = 10 * 60_000, TRAINER_POLL_MS = 30_000;
+const PAUSED = 'AUTOPILOT hold: swarm is paused';
+const swarmPaused = () => existsSync(join(prac, 'stop-swarm'));
 type State = { assigned: Record<string, { template: string; offset: number; at: number }>; retired: Record<string, string> };
 
 const readJson = (f: string, fallback: any) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return fallback; } };
@@ -125,7 +127,8 @@ export function planningOwnership(ownerJobs: readonly any[], coordinatorJobs: re
     return { held, keep, busy };
 }
 
-export function pass(planFile: string, dry: boolean): string[] {
+export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): string[] {
+    if (!dry && isPaused()) return [PAUSED];
     const side = mySide(), owners = loadOwners(), swarm = readJson(planFile, null);
     if (!swarm || !Array.isArray(swarm.jobs)) throw Error(`autopilot: ${planFile} has no jobs list`);
     const stateFile = join(prac, 'autopilot', `${side}.json`), state = loadState(side);
@@ -205,6 +208,7 @@ export function pass(planFile: string, dry: boolean): string[] {
         log.push(`AUTOPILOT ${fresh.includes(x.account) ? 'assign' : 'keep'} ${x.account} ${x.template.id} ${x.value.toFixed(2)}/tick ${x.reason}`);
     }
     if (dry) return [...log, 'AUTOPILOT dry run: nothing written'];
+    if (isPaused()) return [PAUSED];
     writeAtomic(planFile, JSON.stringify({ ...swarm, jobs }, null, 2) + '\n');
     // The controller's own stop file goes once this pass hands the account work (a job, or a coin order the fleet agent
     // will log it in for) and the account is offline: a run still ending on that file must find it.
@@ -212,7 +216,7 @@ export function pass(planFile: string, dry: boolean): string[] {
     for (const n of listedNames) if (handed.has(n.toLowerCase()) && swarmStopped.has(n.toLowerCase())) {
         const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
         if (!stopClearable(f ? readJson(join(statusDir, f), null) : null, now)) { log.push(`AUTOPILOT hold ${n}: its last run is still ending on the controller's stop file`); continue; }
-        rmSync(join(prac, `stop-${n}`), { force: true });
+        if (!clearSwarmStop(join(prac, 'stop-'+n))) continue;
         log.push(`AUTOPILOT clear ${n}: the controller's stop file from its removed job`);
     }
     mkdirSync(join(prac, 'autopilot'), { recursive: true });
@@ -238,17 +242,38 @@ if (import.meta.main) {
     const args = process.argv.slice(2), planFile = resolve(args.find(a => !a.startsWith('--')) ?? join(root, 'swarm.json'));
     // The whole pass runs under the account-plan lock: the coordinator installs jobs into its overlay under the same lock.
     // The timer and the trainer check share one pass at a time: a second call joins the pass in flight.
-    let inFlight: Promise<boolean> | null = null;
-    const once = () => inFlight ??= (async () => { try { const l = await withPlanWrite(() => pass(planFile, args.includes('--dry')), join(prac, 'coordinator')); console.log(l.join('\n')); console.log(`RESULT ok autopilot jobs=${l.filter(x => / (assign|keep) /.test(x)).length} retired=${l.filter(x => / retire /.test(x)).length}`); return true; }
-        catch (e) { console.log(`RESULT fail autopilot ${String(e)}`); return false; } finally { inFlight = null; } })();
-    if (!args.includes('--daemon')) process.exit(await once() ? 0 : 1);
+    const dry = args.includes('--dry');
+    let inFlight: Promise<'applied' | 'held' | 'failed'> | null = null;
+    const hold = () => {
+        console.log(PAUSED);
+        console.log('RESULT ok autopilot held: swarm is paused');
+        return 'held' as const;
+    };
+    const once = () => {
+        if (!dry && swarmPaused()) return Promise.resolve(hold());
+        return inFlight ??= (async () => {
+            try {
+                const lines = await withPlanWrite(() => pass(planFile, dry), join(prac, 'coordinator'));
+                if (lines[0] === PAUSED) return hold();
+                console.log(lines.join('\n'));
+                console.log(`RESULT ok autopilot jobs=${lines.filter(x => / (assign|keep) /.test(x)).length} retired=${lines.filter(x => / retire /.test(x)).length}`);
+                return 'applied';
+            } catch (e) {
+                console.log(`RESULT fail autopilot ${String(e)}`);
+                return 'failed';
+            } finally { inFlight = null; }
+        })();
+    };
+    if (!args.includes('--daemon')) process.exit(await once() === 'failed' ? 1 : 0);
     await once(); setInterval(once, PASS_EVERY_MS);
     const seen = new Set<string>();
     setInterval(() => {
+        if ((!dry && swarmPaused()) || inFlight) return;
         const due = trainersDone(planFile).filter(k => !seen.has(k));
         if (!due.length) return;
-        for (const k of due) seen.add(k);
         console.log(`AUTOPILOT trainer at target, passing now: ${due.map(k => k.split(':')[0]).join(' ')}`);
-        void once();
+        void once().then(outcome => {
+            if (outcome === 'applied') for (const k of due) seen.add(k);
+        });
     }, TRAINER_POLL_MS);
 }

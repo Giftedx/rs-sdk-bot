@@ -45,7 +45,7 @@ test('no demand cannot hide a retained failure, stop marker or release hold',()=
 });
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { hasPayout } from '../packages/core/src/bank-demand';
 import { supervise } from '../packages/practice/src/supervise';
 import { enabledByAccount, foreignRun, endedForGood, isReservation, parseJob, startable, loadEnded, applyEndRepair, persistEnded, supervisorEndLine, activeExternalLive, pendingStartupCount, admissionDecision, startReserve, missionSignature, overlappingRun, observeEnabled, applyResume, ownedPayoutWaiting,foodSupplyDemand,type Job,type RepairProofs,
@@ -695,7 +695,7 @@ test('a run another job of the account started is foreign to a job that is off o
     expect(foreignRun(planned, planned[0]!, { revision: 'changed-mission' })).toBe(false);
 });
 
-import { SWARM_STOP, swarmWroteStop, standingRetryable } from './swarm';
+import { SWARM_STOP, clearSwarmStop, swarmWroteStop, standingRetryable, writeSwarmStop } from './swarm';
 test('the controller knows its own stop files, and a standing job retries the ends a plan removal or a lost process leaves', () => {
     for (const t of Object.values(SWARM_STOP)) expect(swarmWroteStop(t)).toBe(true);
     expect(swarmWroteStop('hold offline until the GE pilot')).toBe(false);
@@ -707,4 +707,22 @@ test('the controller knows its own stop files, and a standing job retries the en
     expect(standingRetryable('stopped after 3 runs', 'RESULT fail stop file ticks=10')).toBe(true);
     expect(standingRetryable('stopped after 1 runs', 'fail no food')).toBe(false);
     expect(standingRetryable('stopped after 1 runs')).toBe(false);
+});
+
+
+test('controller stop and resume preserve a stop file the owner wrote', () => {
+    const parent = resolve(tmpdir()), base = mkdtempSync(join(parent, 'rsbot-stop-owner-'));
+    try {
+        const file = join(base, 'stop-Helper');
+        writeSwarmStop(file, SWARM_STOP.all);
+        expect(readFileSync(file, 'utf8')).toBe(SWARM_STOP.all);
+        writeFileSync(file, 'owner pause');
+        writeSwarmStop(file, SWARM_STOP.removed);
+        expect(clearSwarmStop(file)).toBe(false);
+        expect(readFileSync(file, 'utf8')).toBe('owner pause');
+        writeFileSync(file, SWARM_STOP.job);
+        expect(clearSwarmStop(file)).toBe(true);
+    } finally {
+        if (/^rsbot-stop-owner-[^\\/]+$/.test(relative(parent, base))) rmSync(base, { recursive: true });
+    }
 });

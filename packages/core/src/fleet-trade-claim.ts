@@ -1,21 +1,29 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { hostname } from 'node:os';
+import { join } from 'node:path';
 import { SIDE_NAME } from './fleet';
-import { appendFleetGitRecord, fleetGitWindow, readFleetGitRefs } from './fleet-lease';
+import { appendFleetGitRecord, fleetCheckoutId, fleetGitWindow, readFleetGitRefs } from './fleet-lease';
+import { listAttempts, readLogoutProof } from './session-lifecycle';
+import { pidAlive } from './session-takeover';
 
 type Identity = { account: string; server: string };
-type TradeClaimInput = Identity & { side: string; orderId: string; role: 'from' | 'to' };
-export type FleetTradeClaim = TradeClaimInput & { nonce: string; phase: 'held' | 'released'; at: number };
+type ClaimIdentity = Identity & { side: string };
+type TradeClaimInput = ClaimIdentity & { orderId: string; role: 'from' | 'to' };
+type ClaimState = { nonce: string; phase: 'held' | 'released'; at: number };
+export type FleetTradeClaim = TradeClaimInput & ClaimState;
+type FleetSwarmClaim = ClaimIdentity & ClaimState & { kind: 'swarm'; checkout: string; host: string; pid: number };
+type FleetAccountClaim = FleetTradeClaim | FleetSwarmClaim;
 
 const ORDER_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const ACCOUNT = /^[a-z0-9]{1,12}$/;
+const ACCOUNT = /^[a-z0-9_-]{1,12}$/;
 const SERVER = /^[a-z0-9][a-z0-9.:-]{0,252}$/;
 const CLAIM_PREFIX = 'refs/heads/fleet-trade-claim/';
 const gitForTrade = (root: string) => fleetGitWindow(root, 'fleet trade claim authority');
 
 function accountName(account: string) {
-    if (!/^[A-Za-z0-9]{1,12}$/.test(account)) throw Error('invalid fleet trade claim account');
-    return account.toLowerCase();
+    if (!/^[A-Za-z0-9_ -]{1,12}$/.test(account)) throw Error('invalid fleet account claim account');
+    return account.toLowerCase().replaceAll(' ', '_');
 }
 
 function identity({ account, server }: Identity) {
@@ -24,14 +32,21 @@ function identity({ account, server }: Identity) {
     return { account: accountName(account), server };
 }
 
-function parseClaim(raw: string, account: string, server?: string): FleetTradeClaim {
-    let claim: FleetTradeClaim;
+const isSwarmClaim = (claim: FleetAccountClaim): claim is FleetSwarmClaim => 'kind' in claim && claim.kind === 'swarm';
+
+function parseClaim(raw: string, account: string, server?: string): FleetAccountClaim {
+    let claim: FleetAccountClaim;
     try { claim = JSON.parse(raw); }
     catch { throw Error('fleet trade claim authority has an unreadable record'); }
     if (claim?.account !== account || typeof claim.server !== 'string' || !SERVER.test(claim.server) || (server !== undefined && claim.server !== server)
-        || typeof claim.side !== 'string' || !SIDE_NAME.test(claim.side) || typeof claim.orderId !== 'string' || !ORDER_ID.test(claim.orderId)
-        || (claim.role !== 'from' && claim.role !== 'to') || typeof claim.nonce !== 'string' || !UUID.test(claim.nonce)
+        || typeof claim.side !== 'string' || !SIDE_NAME.test(claim.side) || typeof claim.nonce !== 'string' || !UUID.test(claim.nonce)
         || (claim.phase !== 'held' && claim.phase !== 'released') || !Number.isSafeInteger(claim.at) || claim.at <= 0) {
+        throw Error('fleet trade claim authority has an invalid record');
+    }
+    if (isSwarmClaim(claim)) {
+        if (typeof claim.checkout !== 'string' || !UUID.test(claim.checkout) || typeof claim.host !== 'string' || !claim.host
+            || !Number.isSafeInteger(claim.pid) || claim.pid <= 0) throw Error('fleet swarm claim authority has an invalid record');
+    } else if ('kind' in claim || typeof claim.orderId !== 'string' || !ORDER_ID.test(claim.orderId) || (claim.role !== 'from' && claim.role !== 'to')) {
         throw Error('fleet trade claim authority has an invalid record');
     }
     return claim;
@@ -48,6 +63,11 @@ function loadClaim(git: ReturnType<typeof gitForTrade>, account: string, server:
 }
 
 export function readFleetTradeClaim(root: string, target: Identity): FleetTradeClaim | null {
+    const claim = readFleetAccountClaim(root, target);
+    return claim && !isSwarmClaim(claim) ? claim : null;
+}
+
+export function readFleetAccountClaim(root: string, target: Identity): FleetAccountClaim | null {
     const { account, server } = identity(target);
     return loadClaim(gitForTrade(root), account, server).claim;
 }
@@ -70,14 +90,14 @@ export function readHeldFleetTradeClaims(root: string, accounts?: readonly strin
         const head = rows.shift()!.trim(), raw = rows.shift()!, account = pending.get(head);
         if (!account) throw Error('fleet trade claim authority has an unexpected record');
         const claim = parseClaim(raw, account);
-        if (claim.phase === 'held') held.push(claim);
+        if (claim.phase === 'held' && !isSwarmClaim(claim)) held.push(claim);
         pending.delete(head);
     }
     if (pending.size || rows[0]?.trim()) throw Error('fleet trade claim authority has incomplete records');
     return held;
 }
 
-function appendClaim(git: ReturnType<typeof gitForTrade>, ref: string, head: string | undefined, subject: string, claim: FleetTradeClaim) {
+function appendClaim(git: ReturnType<typeof gitForTrade>, ref: string, head: string | undefined, subject: string, claim: FleetAccountClaim) {
     const tree = git(['hash-object', '-w', '-t', 'tree', '--stdin'], '');
     return appendFleetGitRecord(git, ref, head, tree, subject + '\n\n' + JSON.stringify(claim));
 }
@@ -87,7 +107,7 @@ function appendClaim(git: ReturnType<typeof gitForTrade>, ref: string, head: str
 export function releaseFleetTradeClaim(root: string, target: Identity & { nonce: string }, now = Date.now): void {
     const { account, server } = identity(target), git = gitForTrade(root);
     const { ref, head, claim } = loadClaim(git, account, server);
-    if (!claim || claim.nonce !== target.nonce) throw Error('fleet trade claim changed');
+    if (!claim || isSwarmClaim(claim) || claim.nonce !== target.nonce) throw Error('fleet trade claim changed');
     if (claim.phase === 'released') return;
     appendClaim(git, ref, head, 'Fleet trade released', { ...claim, phase: 'released', at: now() });
 }
@@ -99,11 +119,53 @@ export function acquireFleetTradeClaim(root: string, input: TradeClaimInput, now
     const { side, orderId, role } = input;
     if (!SIDE_NAME.test(side) || !ORDER_ID.test(orderId) || (role !== 'from' && role !== 'to')) throw Error('invalid fleet trade claim order');
     const git = gitForTrade(root), { ref, head, claim } = loadClaim(git, account, server);
-    if (claim?.phase === 'held') throw Error('fleet trade claim held for order ' + claim.orderId);
+    if (claim?.phase === 'held') throw Error(isSwarmClaim(claim) ? 'fleet account claim held by swarm' : 'fleet trade claim held for order ' + claim.orderId);
     const key = createHash('sha256').update(JSON.stringify([orderId.toLowerCase(), role])).digest('hex');
     const subject = 'Fleet trade attempt ' + key;
     if (head && git(['log', '-1', '--format=%H', '--fixed-strings', '--grep=' + subject, head])) throw Error('fleet trade order role already claimed');
     const record: FleetTradeClaim = { account, server, side, orderId, role, nonce: randomUUID(), phase: 'held', at: now() };
     appendClaim(git, ref, head, subject, record);
     return { ...record, release: () => releaseFleetTradeClaim(root, record, now) };
+}
+
+export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { recover = false, now = Date.now } = {}) {
+    const { account, server } = identity(input), { side } = input;
+    if (!SIDE_NAME.test(side)) throw Error('invalid fleet swarm claim side');
+    const git = fleetGitWindow(root, 'fleet swarm claim authority');
+    const { ref, head, claim } = loadClaim(git, account, server);
+    const checkout = fleetCheckoutId(root), host = hostname();
+    const lifecycleRoot = join(root, '.practice/session-lifecycle');
+    const proof = () => readLogoutProof(input.account, input.server, { root: lifecycleRoot });
+    const producer = (attemptId: string) => listAttempts(input.account, input.server, { root: lifecycleRoot })
+        .find(row => row.attemptId === attemptId)?.receipt?.owner;
+    let inheritedHold: FleetSwarmClaim | undefined;
+    if (claim?.phase === 'held') {
+        if (!isSwarmClaim(claim)) throw Error('fleet trade claim held for order ' + claim.orderId);
+        const prior = proof(), owner = 'attemptId' in prior ? producer(prior.attemptId) : undefined;
+        const bound = claim.checkout === checkout && claim.host === host && claim.side === side
+            && owner?.sharedClaimNonce === claim.nonce && owner.pid === claim.pid;
+        if (!bound || (prior.state !== 'confirmed' && !(recover && prior.state === 'held' && !pidAlive(claim.pid)))) {
+            throw Error('fleet account claim held by swarm');
+        }
+        if (prior.state === 'held') inheritedHold = claim;
+    }
+    const record: FleetSwarmClaim = { kind: 'swarm', account, server, side, checkout, host, pid: process.pid, nonce: randomUUID(), phase: 'held', at: now() };
+    const owned = appendClaim(git, ref, head, 'Fleet swarm attempt', record);
+    let released = false;
+    const release = (restore?: FleetSwarmClaim) => {
+        if (released) return;
+        appendClaim(fleetGitWindow(root, 'fleet swarm claim authority', 4000), ref, owned,
+            restore ? 'Fleet swarm inherited hold restored' : 'Fleet swarm released',
+            restore ?? { ...record, phase: 'released', at: now() });
+        released = true;
+    };
+    return {
+        nonce: record.nonce,
+        abortBeforeNetwork: () => release(inheritedHold),
+        releaseAfterLogout(attemptId: string) {
+            const latest = proof(), owner = latest.state === 'confirmed' && latest.attemptId === attemptId ? producer(attemptId) : undefined;
+            if (owner?.sharedClaimNonce !== record.nonce || owner.pid !== record.pid) throw Error('fleet swarm claim lacks exact logout proof');
+            release();
+        },
+    };
 }

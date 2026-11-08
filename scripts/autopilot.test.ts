@@ -1,11 +1,11 @@
 import { expect, test } from 'bun:test';
-import { appendFileSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { jobLogStart } from '../packages/core/src/job-log';
 import { catalogue, finishedTrainers, jobFor, mergeJobs, plan, plannableAccounts, reservedResources, type Acct, type Inputs } from '../packages/planner/src/autopilot';
 import { missionSignature, startable } from './swarm';
-import { coinOrder, fundOrders, inOpenOrder, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { coinOrder, fundOrders, inOpenOrder, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import type { TradeReceipt } from './fleet-trade-settlement';
 
 const side = 'claude-cloud';
@@ -166,4 +166,29 @@ test('coordinator ownership preserves a standing job and excludes held funding p
     const released=planningOwnership(ownerJobs,[],paused);
     expect(plannableAccounts(ownerJobs,side,['Held','Donor'],released.keep)).toEqual(['Held','Donor']);
     expect(released.busy.has('donor')).toBe(false);
+});
+
+
+test('a paused autopilot pass holds before reading the plan', () => {
+    expect(pass('missing-owner-plan.json', false, () => true)).toEqual(['AUTOPILOT hold: swarm is paused']);
+});
+
+
+test('a pause arriving during planning leaves the owner plan bytes intact', () => {
+    const parent = resolve(tmpdir()), base = mkdtempSync(join(parent, 'rsbot-autopilot-pause-'));
+    const previous = process.env.FLEET_DIR;
+    try {
+        const planFile = join(base, 'swarm.json'), before = '{"jobs":[],"maxBots":4}';
+        writeFileSync(planFile, before);
+        process.env.FLEET_DIR = base;
+        let checks = 0;
+        expect(pass(planFile, false, () => ++checks > 1)).toEqual(['AUTOPILOT hold: swarm is paused']);
+        expect(readFileSync(planFile, 'utf8')).toBe(before);
+        expect(pass(planFile, true, () => true).at(-1)).toBe('AUTOPILOT dry run: nothing written');
+        expect(readFileSync(planFile, 'utf8')).toBe(before);
+    } finally {
+        if (previous === undefined) delete process.env.FLEET_DIR;
+        else process.env.FLEET_DIR = previous;
+        if (/^rsbot-autopilot-pause-[^\\/]+$/.test(relative(parent, base))) rmSync(base, { recursive: true });
+    }
 });
