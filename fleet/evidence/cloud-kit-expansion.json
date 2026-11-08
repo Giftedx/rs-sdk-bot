@@ -1,6 +1,6 @@
 {
   "schema": "cloud-kit-expansion/1",
-  "at": 1794181043647,
+  "at": 1794181105737,
   "side": "cloud-kit",
   "controller": {
     "pid": 6955,
@@ -187,10 +187,10 @@
     }
   },
   "headroom": {
-    "freeGB": 15.301925659179688,
+    "freeGB": 15.359832763671875,
     "load": [
-      0.57,
-      0.52,
+      0.51,
+      0.51,
       0.43
     ],
     "cpus": 5,
@@ -200,15 +200,15 @@
   "accounts": [
     {
       "account": "Familyjewel",
-      "at": 1794181043432,
-      "tick": 1,
+      "at": 1794181105380,
+      "tick": 156,
       "position": {
-        "x": 2655,
-        "z": 3283,
+        "x": 2669,
+        "z": 3310,
         "level": 0
       },
       "hp": {
-        "now": 7,
+        "now": 9,
         "max": 10
       },
       "skills": [
@@ -233,7 +233,7 @@
         {
           "name": "Hitpoints",
           "level": 10,
-          "currentLevel": 7,
+          "currentLevel": 9,
           "xp": 980
         },
         {
@@ -318,7 +318,7 @@
           "name": "Thieving",
           "level": 61,
           "currentLevel": 61,
-          "xp": 72145
+          "xp": 73745
         },
         {
           "name": "Stat18",
@@ -344,7 +344,7 @@
           "id": 995,
           "baseId": 995,
           "name": "Coins",
-          "count": 1369
+          "count": 1069
         },
         {
           "id": 1891,
@@ -395,6 +395,12 @@
           "baseId": 1931,
           "name": "Pot",
           "count": 1
+        },
+        {
+          "id": 995,
+          "baseId": 995,
+          "name": "Coins",
+          "count": 300
         },
         {
           "id": 1265,
@@ -461,6 +467,24 @@
           "baseId": 559,
           "name": "Body rune",
           "count": 2
+        },
+        {
+          "id": 1891,
+          "baseId": 1891,
+          "name": "Cake",
+          "count": 1
+        },
+        {
+          "id": 1891,
+          "baseId": 1891,
+          "name": "Cake",
+          "count": 1
+        },
+        {
+          "id": 1901,
+          "baseId": 1901,
+          "name": "Chocolate slice",
+          "count": 1
         }
       ],
       "equipment": [],
@@ -485,15 +509,15 @@
     },
     {
       "account": "Glassblower",
-      "at": 1794181043409,
-      "tick": 6,
+      "at": 1794181103737,
+      "tick": 81,
       "position": {
-        "x": 2674,
-        "z": 3298,
+        "x": 2666,
+        "z": 3310,
         "level": 0
       },
       "hp": {
-        "now": 8,
+        "now": 5,
         "max": 10
       },
       "skills": [
@@ -518,7 +542,7 @@
         {
           "name": "Hitpoints",
           "level": 10,
-          "currentLevel": 8,
+          "currentLevel": 5,
           "xp": 980
         },
         {
@@ -601,9 +625,9 @@
         },
         {
           "name": "Thieving",
-          "level": 62,
-          "currentLevel": 62,
-          "xp": 80575
+          "level": 63,
+          "currentLevel": 63,
+          "xp": 82682
         },
         {
           "name": "Stat18",
@@ -629,18 +653,30 @@
           "id": 995,
           "baseId": 995,
           "name": "Coins",
-          "count": 473
+          "count": 1173
         },
         {
           "id": 2309,
           "baseId": 2309,
           "name": "Bread",
-          "count": 1
+          "count": 3
         },
         {
           "id": 1901,
           "baseId": 1901,
           "name": "Chocolate slice",
+          "count": 1
+        },
+        {
+          "id": 1891,
+          "baseId": 1891,
+          "name": "Cake",
+          "count": 4
+        },
+        {
+          "id": 1893,
+          "baseId": 1893,
+          "name": "2/3 cake",
           "count": 1
         }
       ],
@@ -685,7 +721,7 @@
           "id": 995,
           "baseId": 995,
           "name": "Coins",
-          "count": 1000
+          "count": 350
         },
         {
           "id": 1265,
@@ -752,67 +788,26 @@
           "baseId": 559,
           "name": "Body rune",
           "count": 2
-        },
-        {
-          "id": 2309,
-          "baseId": 2309,
-          "name": "Bread",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 2309,
-          "baseId": 2309,
-          "name": "Bread",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 1893,
-          "baseId": 1893,
-          "name": "2/3 cake",
-          "count": 1
         }
       ],
       "equipment": [],
       "result": "",
       "workRevision": "d7e4fa5e7f1d59ac33abf8cd4f60393aeeac20eb2ab310e717e5bd896f8d3657",
-      "attempt": "1794181034728-0000010113-0000000001",
+      "attempt": "1794181066460-0000010302-0000000001",
       "logout": {
         "state": "held",
         "account": "Glassblower",
         "server": "rs-sdk-demo.fly.dev",
         "domain": "live",
-        "attemptId": "1794181034728-0000010113-0000000001",
+        "attemptId": "1794181066460-0000010302-0000000001",
         "reason": "session active or outcome unknown"
       },
       "progress": {
         "stage": "earning",
-        "batch": 1,
+        "batch": 2,
         "spot": "2671,3313",
-        "before": 773
+        "before": 1473,
+        "lastAttempt": "1794181034728-0000010113-0000000001"
       }
     }
   ],
