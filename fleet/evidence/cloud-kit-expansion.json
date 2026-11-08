@@ -1,6 +1,6 @@
 {
   "schema": "cloud-kit-expansion/1",
-  "at": 1794181291624,
+  "at": 1794181353468,
   "side": "cloud-kit",
   "controller": {
     "pid": 6955,
@@ -187,11 +187,11 @@
     }
   },
   "headroom": {
-    "freeGB": 15.360225677490234,
+    "freeGB": 15.409454345703125,
     "load": [
-      1.07,
-      0.64,
-      0.49
+      0.58,
+      0.59,
+      0.48
     ],
     "cpus": 5,
     "minFreeGB": 8,
@@ -200,15 +200,15 @@
   "accounts": [
     {
       "account": "Familyjewel",
-      "at": 1794181291212,
-      "tick": 63,
+      "at": 1794181352164,
+      "tick": 216,
       "position": {
-        "x": 2669,
-        "z": 3310,
+        "x": 2666,
+        "z": 3311,
         "level": 0
       },
       "hp": {
-        "now": 4,
+        "now": 10,
         "max": 10
       },
       "skills": [
@@ -233,7 +233,7 @@
         {
           "name": "Hitpoints",
           "level": 10,
-          "currentLevel": 4,
+          "currentLevel": 10,
           "xp": 980
         },
         {
@@ -316,9 +316,9 @@
         },
         {
           "name": "Thieving",
-          "level": 63,
-          "currentLevel": 63,
-          "xp": 87082
+          "level": 64,
+          "currentLevel": 64,
+          "xp": 92497
         },
         {
           "name": "Stat18",
@@ -400,7 +400,7 @@
           "id": 995,
           "baseId": 995,
           "name": "Coins",
-          "count": 300
+          "count": 400
         },
         {
           "id": 1265,
@@ -467,6 +467,24 @@
           "baseId": 559,
           "name": "Body rune",
           "count": 2
+        },
+        {
+          "id": 1893,
+          "baseId": 1893,
+          "name": "2/3 cake",
+          "count": 1
+        },
+        {
+          "id": 1893,
+          "baseId": 1893,
+          "name": "2/3 cake",
+          "count": 1
+        },
+        {
+          "id": 2309,
+          "baseId": 2309,
+          "name": "Bread",
+          "count": 1
         }
       ],
       "equipment": [],
@@ -491,15 +509,15 @@
     },
     {
       "account": "Glassblower",
-      "at": 1794181282344,
-      "tick": 45,
+      "at": 1794181352170,
+      "tick": 146,
       "position": {
-        "x": 2655,
-        "z": 3283,
+        "x": 2666,
+        "z": 3311,
         "level": 0
       },
       "hp": {
-        "now": 7,
+        "now": 9,
         "max": 10
       },
       "skills": [
@@ -524,7 +542,7 @@
         {
           "name": "Hitpoints",
           "level": 10,
-          "currentLevel": 7,
+          "currentLevel": 9,
           "xp": 980
         },
         {
@@ -607,9 +625,9 @@
         },
         {
           "name": "Thieving",
-          "level": 70,
-          "currentLevel": 70,
-          "xp": 137262
+          "level": 71,
+          "currentLevel": 71,
+          "xp": 144785
         },
         {
           "name": "Stat18",
@@ -635,7 +653,7 @@
           "id": 995,
           "baseId": 995,
           "name": "Coins",
-          "count": 2723
+          "count": 2423
         },
         {
           "id": 2309,
@@ -698,6 +716,12 @@
           "baseId": 1931,
           "name": "Pot",
           "count": 1
+        },
+        {
+          "id": 995,
+          "baseId": 995,
+          "name": "Coins",
+          "count": 450
         },
         {
           "id": 1265,
@@ -764,19 +788,31 @@
           "baseId": 559,
           "name": "Body rune",
           "count": 2
+        },
+        {
+          "id": 1891,
+          "baseId": 1891,
+          "name": "Cake",
+          "count": 1
+        },
+        {
+          "id": 1891,
+          "baseId": 1891,
+          "name": "Cake",
+          "count": 1
         }
       ],
       "equipment": [],
-      "result": "ok thieving=70 xp=0 ticks=39 at=2655,3283,0 hp=7 hpMin=7 died=false relogs=0 relogTicks=0 logoutTicks=0 idleTicks=0 pickTicks=0 shopTicks=0 eatTicks=0 stunWait=0 stunMsgs=0 tries=0 stuns=0 eaten=0 bought=0 waits=0 walkTicks=0 chases=0 coins=0 bread=0 milestones=ardougne,coins60,level40,level5",
+      "result": "",
       "workRevision": "d7e4fa5e7f1d59ac33abf8cd4f60393aeeac20eb2ab310e717e5bd896f8d3657",
-      "attempt": "1794181259638-0000011236-0000000001",
+      "attempt": "1794181290689-0000011539-0000000001",
       "logout": {
         "state": "held",
         "account": "Glassblower",
         "server": "rs-sdk-demo.fly.dev",
         "domain": "live",
         "attemptId": "1794181290689-0000011539-0000000001",
-        "reason": "connection attempt before START, outcome unknown"
+        "reason": "session active or outcome unknown"
       },
       "progress": {
         "stage": "earning",
