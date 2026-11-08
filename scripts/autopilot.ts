@@ -127,6 +127,30 @@ export function planningOwnership(ownerJobs: readonly any[], coordinatorJobs: re
     return { held, keep, busy };
 }
 
+// Each side's newest claim. The fleet-data worktree holds the last sync, up to PASS_EVERY_MS old, and a pass that reads
+// a stale claim can give a place another side already holds. So a pass fetches origin and takes origin's claim for a
+// side where it is newer.
+export function newestClaims(synced: readonly any[], origin: readonly any[]): any[] {
+    const bySide = new Map<string, any>();
+    for (const c of [...synced, ...origin]) {
+        if (!c || typeof c.side !== 'string' || !Number.isFinite(c.at)) continue;
+        if (!(bySide.get(c.side)?.at >= c.at)) bySide.set(c.side, c);
+    }
+    return [...bySide.values()];
+}
+// The claims on origin's fleet-data branch, or none when the fetch or a read fails (the synced claims then stand).
+function originClaims(fleetDir: string): any[] {
+    if (!existsSync(fleetDir)) return [];
+    const git = (...args: string[]) => Bun.spawnSync(['git', '-C', fleetDir, ...args], { stdout: 'pipe', stderr: 'ignore', timeout: 30_000, windowsHide: true });
+    if (git('fetch', '-q', 'origin', 'fleet-data').exitCode !== 0) return [];
+    const files = git('ls-tree', '--full-tree', '--name-only', 'origin/fleet-data', 'fleet/claims/');
+    if (files.exitCode !== 0) return [];
+    return files.stdout.toString().split(/\r?\n/).filter(f => f.endsWith('.json')).flatMap(f => {
+        const shown = git('show', `origin/fleet-data:${f}`);
+        try { return shown.exitCode === 0 ? [JSON.parse(shown.stdout.toString())] : []; } catch { return []; }
+    });
+}
+
 export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): string[] {
     if (!dry && isPaused()) return [PAUSED];
     const side = mySide(), owners = loadOwners(), swarm = readJson(planFile, null);
@@ -160,9 +184,9 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
 
     const taken = reservedResources(swarm.jobs, side, keep);
     const claimDir = join(FLEET_DIR(), 'claims');
-    if (existsSync(claimDir)) for (const f of readdirSync(claimDir).filter(f => f.endsWith('.json'))) {
-        const c = readJson(join(claimDir, f), null);
-        if (!c || c.side === side || !Array.isArray(c.resources) || !(Date.now() - c.at < CLAIM_MAX_AGE_MS)) continue;
+    const synced = existsSync(claimDir) ? readdirSync(claimDir).filter(f => f.endsWith('.json')).map(f => readJson(join(claimDir, f), null)) : [];
+    for (const c of newestClaims(synced, originClaims(FLEET_DIR()))) {
+        if (c.side === side || !Array.isArray(c.resources) || !(Date.now() - c.at < CLAIM_MAX_AGE_MS)) continue;
         for (const r of c.resources) if (typeof r === 'string') taken[r] = (taken[r] ?? 0) + 1;
     }
 
