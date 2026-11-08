@@ -1,6 +1,6 @@
 {
  "schema": "cloud-pvp-readiness-gates/1",
- "at": 1794175949915,
+ "at": 1794176335949,
  "controllerPid": 61575,
  "source": "70fcbce85350659ad82496060e9c3e4f992c91a0",
  "releasedWorker": "scripts/pvp-standby.ts stage|verify",
@@ -125,7 +125,32 @@
    ],
    "accountClaimPhase": "released",
    "controllerEnd": "done after 1 runs",
-   "ownerStopPresent": false
+   "ownerStopPresent": false,
+   "stageDecision": "Held pending separable source/release-matched kit/travel handoff; preserve Catherby fixture start; no live attempt",
+   "reportedCombinedFixture": {
+    "trainingAccepted": false,
+    "ranged": 7,
+    "hp": 11,
+    "shots": 0,
+    "arrowDebits": 9,
+    "arrowRecoveries": 7,
+    "netArrowLoss": 2,
+    "ammoAcceptanceWaived": false,
+    "reportedPriorTravel": {
+     "cheeseBought": 2,
+     "cheeseGP": 8,
+     "faresGP": 60,
+     "destination": "Varrock East",
+     "fullHP": true
+    },
+    "proofLevel": "Owner-reported combined fixture; standalone released stage proof not visible"
+   },
+   "requiredStageHandoff": [
+    "Released entry/commit and capability release hash for stage-only command",
+    "Standalone native receipt from Porksword-equivalent Catherby start with exact stats/kit and preserved assets",
+    "Observed2cheese,+68GP total debit (8shop+60fares),Varrock East/fullHP and matching confirmed producer logout",
+    "Bounded stage-only arguments, no combat or Wilderness ingress"
+   ]
   }
  ],
  "sharedQualificationReceipts": [],
@@ -139,6 +164,6 @@
   "MeatNTwoVeg failed essence worker"
  ],
  "localReservations": "Steelrod and local brackets excluded",
- "decision": "No PvP live start; awaiting exact cloud account, released source/full-route native proof, complete owned kit and named consumer. No open-ended PK.",
+ "decision": "No live PvP stage admitted: source and separable native receipts absent; training acceptance remains failed. Controller61575 and all holds retained.",
  "practiceOwnership": "Supply practice stack is down; live readiness worker owns PvP qualification. Controller starts no competing PvP practice."
 }
