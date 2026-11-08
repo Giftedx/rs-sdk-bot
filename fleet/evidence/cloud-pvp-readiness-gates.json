@@ -122,7 +122,10 @@
     "Full exact bracket proof",
     "Full kit including required food (released standby requires cheese)",
     "Full start-to-ingress/retreat route proof and consumer"
-   ]
+   ],
+   "accountClaimPhase": "released",
+   "controllerEnd": "done after 1 runs",
+   "ownerStopPresent": false
   }
  ],
  "sharedQualificationReceipts": [],
