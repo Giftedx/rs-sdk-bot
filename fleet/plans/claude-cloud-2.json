@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud-2",
- "at": 1794136290403,
+ "at": 1794137495525,
  "jobs": [
   {
    "account": "Deeppockets",
@@ -19,6 +19,25 @@
    "autopilot": "claude-cloud-2",
    "resources": [
     "knight:2671,3313"
+   ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "claude-cloud-2",
+   "resources": [
+    "knight:2652,3318"
    ]
   },
   {
