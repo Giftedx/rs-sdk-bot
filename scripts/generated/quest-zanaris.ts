@@ -167,7 +167,13 @@ try {
 
     // 7. The magic door to the Wilderness (3250,3772, level 32), south to level 20 (z 3679), Lumbridge teleport, the
     // swamp shed with the staff worn (quest_zanaris.rs2:89-101).
-    await q.walk('to magic door', [{ x: MAGIC_DOOR.x - 1, z: MAGIC_DOOR.z, tol: 1 }]);
+    const doorApproach = { x: MAGIC_DOOR.x - 1, z: MAGIC_DOOR.z, tol: 1 };
+    const exitRoute = windBolt ? [
+        { x: 2860, z: 9741, tol: 0 }, { x: 2860, z: 9745, tol: 0 },
+        { x: 2864, z: 9748, tol: 0 }, { x: 2871, z: 9749, tol: 0 }, doorApproach,
+    ] : [doorApproach];
+    const traceExit = windBolt && process.env.LOST_CITY_TRACE_EXIT === '1';
+    await q.walk('to magic door', exitRoute, traceExit ? line => console.log('LOST_CITY_EXIT ' + line) : undefined);
     await q.step('magic door', () => q.opLoc(MAGIC_DOOR, 1), () => z() < 9000, 8, 4);
     q.milestone('wilderness');
     await q.walk('wilderness south', [{ x: 3250, z: 3676, tol: 2 }]);
