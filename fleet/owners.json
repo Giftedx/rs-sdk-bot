@@ -199,6 +199,10 @@
   "PocketPool": {
    "side": "claude-cloud-3",
    "server": "rs-sdk-demo.fly.dev"
+  },
+  "SporranDip": {
+   "side": "claude-cloud-3",
+   "server": "rs-sdk-demo.fly.dev"
   }
  }
 }
