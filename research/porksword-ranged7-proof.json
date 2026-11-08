@@ -1,0 +1,1243 @@
+{
+  "schema": "porksword-ranged7-handoff/1",
+  "status": "practice-qualified; incumbent live admission required",
+  "account": "Porksword",
+  "fleetSide": "cloud",
+  "server": "rs-sdk-demo.fly.dev",
+  "source": {
+    "base": "70fcbce85350659ad82496060e9c3e4f992c91a0",
+    "repairCommit": "f8d3fed9",
+    "runtimeRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+    "sdk": "db0cc51e0a8f9f0d6a7d60c44e534412bb0601bb",
+    "sdkSetupPatchSha256": "f6faac29e4a5f5e9b90e9c48762e9000614513dc376c4b39dcc6d43cd7b0b509",
+    "workerSha256": "6eeb73586a6a36147dc31e6b971b19e00257566c58fb1eb98f36c53a501557ca",
+    "releaseCheck": "bun -e \"import {capabilityRevision} from './packages/core/src/worker-release'; console.log(capabilityRevision(['scripts/ranged-train.ts']))\""
+  },
+  "firstAuthorizedLiveJob": {
+    "account": "Porksword",
+    "script": "scripts/ranged-train.ts",
+    "args": [
+      "7",
+      "2200"
+    ],
+    "env": {
+      "MIN_ARROWS": "3",
+      "BUY_ARROWS": "0",
+      "MAX_SPEND": "200",
+      "COIN_RESERVE": "8000",
+      "AMMO": "25",
+      "FOOD": "2",
+      "FOOD_ID": "329",
+      "KILLS_PER_TRIP": "3",
+      "MAX_TRIPS": "3"
+    },
+    "maxRestarts": 0,
+    "enabled": false,
+    "repeat": false,
+    "standing": false,
+    "role": "pvp-prerequisite",
+    "goal": "Train Ranged1 to7 and bank the kit as a prerequisite for the cloud combat6 standby; no Wilderness entry"
+  },
+  "launch": {
+    "owner": "Existing cloud rollout/controller only. Replace the idle arrowtip shelf probe only after incumbent allocation; never launch a second controller or claim its lease.",
+    "entry": {
+      "position": {
+        "x": 2807,
+        "z": 3441,
+        "level": 0
+      },
+      "Attack": 1,
+      "Defence": 1,
+      "Strength": 1,
+      "Ranged": 1,
+      "Magic": 1,
+      "Prayer": 1,
+      "Hitpoints": 10,
+      "bankCoins": 7052,
+      "carriedCoins": 1300,
+      "shortbow": 1,
+      "bronzeArrows": 25,
+      "equipment": []
+    },
+    "gates": [
+      "Current exclusive cloud lease and controller identity; newest producer logout receipt and current holds checked on the incumbent host.",
+      "Current exact-account stock, location, health, skills and Haggis fund reservations agree with this input; no enabled conflicting job.",
+      "Installed worker runtimeRevision equals the qualified pin; preserve existing swarm admission limits, practice reserve and memory floor.",
+      "Observe current Wydin cheese stock >=2 and affordable displayed prices through the worker; nominal shelf stock is not a live quote."
+    ],
+    "accept": [
+      "RESULT ok with targetMet, preserved, accounting and equipmentRestored true; Ranged7 and HP11 observed at Varrock East bank.",
+      "No death/life change; coin debit <=200, coins remaining>=8152; unexplained arrow debit rejected; protected assets and three rune arrowtips retained.",
+      "LOGOUT logged-out and a fresh producer logout receipt; no second run or Wilderness entry."
+    ],
+    "stop": [
+      "maxRestarts0, repeat false, one bounded2200tick job, max3trips and3kills/trip, no arrow purchases.",
+      "Owner stop, disconnect, life change, unsafe HP, missing stock, route failure, accounting failure or cap holds the job. The worker refuses travel at HP<=6 and foodless combat below its retreat floor.",
+      "Any HP/build mismatch blocks the combat6 consumer; do not repair by restarting. Magic7 and full standby-kit qualification remain separate."
+    ]
+  },
+  "native": {
+    "proofLevel": "One isolated native practice run,150ms ticks,25x XP; not live proof or a speed estimate.",
+    "account": "flporkxc7x01",
+    "input": {
+      "position": {
+        "x": 2807,
+        "z": 3441,
+        "level": 0
+      },
+      "skills": {
+        "Attack": 1,
+        "Defence": 1,
+        "Strength": 1,
+        "Hitpoints": 10,
+        "Ranged": 1,
+        "Prayer": 1,
+        "Magic": 1,
+        "Cooking": 1,
+        "Woodcutting": 1,
+        "Fletching": 1,
+        "Fishing": 1,
+        "Firemaking": 1,
+        "Crafting": 1,
+        "Smithing": 1,
+        "Mining": 1,
+        "Herblore": 1,
+        "Agility": 1,
+        "Thieving": 86,
+        "Runecraft": 1
+      },
+      "inventory": [
+        {
+          "id": 995,
+          "count": 1300
+        }
+      ],
+      "bank": [
+        {
+          "id": 995,
+          "count": 7052
+        },
+        {
+          "id": 1351,
+          "count": 1
+        },
+        {
+          "id": 590,
+          "count": 1
+        },
+        {
+          "id": 303,
+          "count": 1
+        },
+        {
+          "id": 315,
+          "count": 1
+        },
+        {
+          "id": 2309,
+          "count": 5
+        },
+        {
+          "id": 1265,
+          "count": 1
+        },
+        {
+          "id": 1205,
+          "count": 1
+        },
+        {
+          "id": 1277,
+          "count": 1
+        },
+        {
+          "id": 1171,
+          "count": 1
+        },
+        {
+          "id": 841,
+          "count": 1
+        },
+        {
+          "id": 882,
+          "count": 25
+        },
+        {
+          "id": 556,
+          "count": 25
+        },
+        {
+          "id": 558,
+          "count": 15
+        },
+        {
+          "id": 555,
+          "count": 6
+        },
+        {
+          "id": 557,
+          "count": 4
+        },
+        {
+          "id": 559,
+          "count": 2
+        },
+        {
+          "id": 1893,
+          "count": 7
+        },
+        {
+          "id": 1901,
+          "count": 7
+        },
+        {
+          "id": 1927,
+          "count": 1
+        },
+        {
+          "id": 1931,
+          "count": 1
+        },
+        {
+          "id": 1944,
+          "count": 1
+        },
+        {
+          "id": 44,
+          "count": 3
+        },
+        {
+          "id": 1895,
+          "count": 3
+        }
+      ]
+    },
+    "result": {
+      "ok": true,
+      "targetMet": true,
+      "stop": "target-level",
+      "targetLevel": 7,
+      "startLevel": 1,
+      "finalLevel": 7,
+      "xpGain": 700,
+      "bow": 841,
+      "arrow": 882,
+      "trips": 1,
+      "kills": 2,
+      "bonesPicked": 2,
+      "chickenPicked": 2,
+      "shots": 11,
+      "picked": 10,
+      "arrowsSpent": 1,
+      "arrowsBought": 0,
+      "coinsSpent": 68,
+      "coinDebit": 68,
+      "foodId": 1985,
+      "foodBought": 2,
+      "foodSpent": 8,
+      "foodPurchases": {
+        "1985": 2
+      },
+      "foodConsumed": {},
+      "travelSpent": 60,
+      "shopVisits": 0,
+      "eaten": 0,
+      "hpMin": 8,
+      "hp": 11,
+      "died": false,
+      "ticks": 967,
+      "preserved": true,
+      "accounting": true,
+      "equipmentRestored": true,
+      "failure": "-"
+    },
+    "checks": {
+      "native": true,
+      "savedRanged7": true,
+      "savedHP11": true,
+      "otherSkills": true,
+      "recordedShots": true,
+      "arrowAccounting": true,
+      "coinAccounting": true,
+      "protectedAssets": true,
+      "logout": true,
+      "release": true
+    },
+    "before": {
+      "version": 6,
+      "position": {
+        "x": 2807,
+        "z": 3441,
+        "level": 0
+      },
+      "skills": [
+        {
+          "index": 0,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 1,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 2,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 3,
+          "rawExperience": 9800,
+          "xp": 980,
+          "level": 10
+        },
+        {
+          "index": 4,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 5,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 6,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 7,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 8,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 9,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 10,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 11,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 12,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 13,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 14,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 15,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 16,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 17,
+          "rawExperience": 4052510,
+          "xp": 405251,
+          "level": 86
+        },
+        {
+          "index": 18,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 19,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 20,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        }
+      ],
+      "vars": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0,
+        "10": 0,
+        "11": 0,
+        "12": 0,
+        "13": 0,
+        "14": 0,
+        "15": 0,
+        "16": 0,
+        "17": 0,
+        "18": 0,
+        "19": 0,
+        "20": 0,
+        "21": 0,
+        "22": 0,
+        "23": 0,
+        "24": 0,
+        "25": 0,
+        "26": 0,
+        "27": 0,
+        "28": 0,
+        "29": 0,
+        "30": 0,
+        "31": 0,
+        "32": 0,
+        "33": 0,
+        "34": 0,
+        "35": 0,
+        "36": 0,
+        "37": 0,
+        "38": 0,
+        "39": 0,
+        "40": 0,
+        "41": 0,
+        "42": 0,
+        "43": 0,
+        "44": 0,
+        "45": 0,
+        "46": 0,
+        "47": 0,
+        "48": 0,
+        "49": 0,
+        "50": 0,
+        "51": 0,
+        "52": 0,
+        "53": 0,
+        "54": 0,
+        "55": 0,
+        "56": 0,
+        "57": 0,
+        "58": 0,
+        "59": 0,
+        "60": 0,
+        "61": 0,
+        "62": 0,
+        "63": 0,
+        "64": 0,
+        "65": 0,
+        "66": 0,
+        "67": 0,
+        "68": 0,
+        "69": 0,
+        "70": 0,
+        "71": 0,
+        "72": 0,
+        "73": 0,
+        "74": 0,
+        "75": 0,
+        "76": 0,
+        "77": 0,
+        "78": 0,
+        "79": 0,
+        "80": 0,
+        "81": 0,
+        "82": 0,
+        "83": 0,
+        "84": 0,
+        "85": 0,
+        "86": 0,
+        "87": 0,
+        "88": 0,
+        "89": 0,
+        "90": 0,
+        "91": 0,
+        "92": 0,
+        "93": 0,
+        "94": 0,
+        "95": 0,
+        "96": 0,
+        "97": 0,
+        "98": 0,
+        "99": 0,
+        "100": 0,
+        "101": 0,
+        "102": 0,
+        "103": 0,
+        "104": 0,
+        "105": 0,
+        "106": 0,
+        "107": 0,
+        "108": 0,
+        "109": 0,
+        "110": 0,
+        "111": 0,
+        "112": 0,
+        "113": 0,
+        "114": 0,
+        "115": 0,
+        "116": 0,
+        "117": 0,
+        "118": 0,
+        "119": 0,
+        "120": 0,
+        "121": 0,
+        "122": 0,
+        "123": 0,
+        "124": 0,
+        "125": 0,
+        "126": 0,
+        "127": 0,
+        "128": 0,
+        "129": 0,
+        "130": 0,
+        "131": 0,
+        "132": 0,
+        "133": 0,
+        "134": 0,
+        "135": 0,
+        "136": 0,
+        "137": 0,
+        "138": 0,
+        "139": 0,
+        "140": 0,
+        "141": 0,
+        "142": 0,
+        "143": 0,
+        "144": 0,
+        "145": 0,
+        "146": 0,
+        "147": 0,
+        "148": 0,
+        "149": 0,
+        "150": 0,
+        "151": 0,
+        "152": 0,
+        "153": 0,
+        "154": 0,
+        "155": 0,
+        "156": 0,
+        "157": 0,
+        "158": 0,
+        "159": 0,
+        "160": 0,
+        "161": 0,
+        "162": 0,
+        "163": 0,
+        "164": 0,
+        "165": 0,
+        "166": 0,
+        "167": 0,
+        "168": 0,
+        "169": 0,
+        "170": 0,
+        "171": 0,
+        "172": 0,
+        "173": 0,
+        "174": 0,
+        "175": 0,
+        "176": 0,
+        "177": 0,
+        "178": 0,
+        "179": 0,
+        "180": 0,
+        "181": 0,
+        "182": 0,
+        "183": 0,
+        "184": 0,
+        "185": 0,
+        "186": 0,
+        "187": 0,
+        "188": 0,
+        "189": 0,
+        "190": 0,
+        "191": 0,
+        "192": 0,
+        "193": 0,
+        "194": 0,
+        "195": 0,
+        "196": 0,
+        "197": 0,
+        "198": 0,
+        "199": 0,
+        "200": 0,
+        "201": 0,
+        "202": 0,
+        "203": 0,
+        "204": 0,
+        "205": 0,
+        "206": 0,
+        "207": 0,
+        "208": 0,
+        "209": 0,
+        "210": 0,
+        "211": 0,
+        "212": 0,
+        "213": 0,
+        "214": 0,
+        "215": 0,
+        "216": 0,
+        "217": 0,
+        "218": 0,
+        "219": 0,
+        "220": 0,
+        "221": 0,
+        "222": 0,
+        "223": 0,
+        "224": 0,
+        "225": 0,
+        "226": 0,
+        "227": 0,
+        "228": 0,
+        "229": 0,
+        "230": 0,
+        "231": 0,
+        "232": 0,
+        "233": 0,
+        "234": 0,
+        "235": 0,
+        "236": 0,
+        "237": 0,
+        "238": 0,
+        "239": 0,
+        "240": 0,
+        "241": 0,
+        "242": 0,
+        "243": 0,
+        "244": 0,
+        "245": 0,
+        "246": 0,
+        "247": 0,
+        "248": 0,
+        "249": 0,
+        "250": 0,
+        "251": 0,
+        "252": 0,
+        "253": 0,
+        "254": 0,
+        "255": 0,
+        "256": 0,
+        "257": 0,
+        "258": 0,
+        "259": 0,
+        "260": 0,
+        "261": 0,
+        "262": 0,
+        "263": 0,
+        "264": 0,
+        "265": 0,
+        "266": 0,
+        "267": 0,
+        "268": 0,
+        "269": 0,
+        "270": 0,
+        "271": 0,
+        "272": 0,
+        "273": 0,
+        "274": 0,
+        "275": 0,
+        "276": 0,
+        "277": 0,
+        "278": 0,
+        "279": 0,
+        "280": 0,
+        "281": 1000,
+        "282": 0,
+        "283": 0,
+        "284": 0,
+        "285": 0,
+        "286": 0,
+        "287": 0,
+        "288": 0,
+        "289": 0,
+        "290": 0,
+        "291": 0,
+        "292": 0,
+        "293": 0,
+        "294": 0,
+        "295": 0,
+        "296": 0,
+        "297": 0,
+        "298": 0,
+        "299": 0,
+        "300": 0,
+        "301": 0,
+        "302": 0,
+        "303": 0,
+        "304": 0,
+        "305": 0,
+        "306": 0,
+        "307": 0,
+        "308": 0
+      },
+      "inventories": {
+        "93": [
+          {
+            "slot": 0,
+            "id": 995,
+            "count": 1300
+          }
+        ],
+        "95": [
+          {
+            "slot": 0,
+            "id": 995,
+            "count": 7052
+          },
+          {
+            "slot": 1,
+            "id": 1351,
+            "count": 1
+          },
+          {
+            "slot": 2,
+            "id": 590,
+            "count": 1
+          },
+          {
+            "slot": 3,
+            "id": 303,
+            "count": 1
+          },
+          {
+            "slot": 4,
+            "id": 315,
+            "count": 1
+          },
+          {
+            "slot": 5,
+            "id": 2309,
+            "count": 5
+          },
+          {
+            "slot": 6,
+            "id": 1265,
+            "count": 1
+          },
+          {
+            "slot": 7,
+            "id": 1205,
+            "count": 1
+          },
+          {
+            "slot": 8,
+            "id": 1277,
+            "count": 1
+          },
+          {
+            "slot": 9,
+            "id": 1171,
+            "count": 1
+          },
+          {
+            "slot": 10,
+            "id": 841,
+            "count": 1
+          },
+          {
+            "slot": 11,
+            "id": 882,
+            "count": 25
+          },
+          {
+            "slot": 12,
+            "id": 556,
+            "count": 25
+          },
+          {
+            "slot": 13,
+            "id": 558,
+            "count": 15
+          },
+          {
+            "slot": 14,
+            "id": 555,
+            "count": 6
+          },
+          {
+            "slot": 15,
+            "id": 557,
+            "count": 4
+          },
+          {
+            "slot": 16,
+            "id": 559,
+            "count": 2
+          },
+          {
+            "slot": 17,
+            "id": 1893,
+            "count": 7
+          },
+          {
+            "slot": 18,
+            "id": 1901,
+            "count": 7
+          },
+          {
+            "slot": 19,
+            "id": 1927,
+            "count": 1
+          },
+          {
+            "slot": 20,
+            "id": 1931,
+            "count": 1
+          },
+          {
+            "slot": 21,
+            "id": 1944,
+            "count": 1
+          },
+          {
+            "slot": 22,
+            "id": 44,
+            "count": 3
+          },
+          {
+            "slot": 23,
+            "id": 1895,
+            "count": 3
+          }
+        ]
+      }
+    },
+    "after": {
+      "version": 10,
+      "position": {
+        "x": 3252,
+        "z": 3420,
+        "level": 0
+      },
+      "skills": [
+        {
+          "index": 0,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 1,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 2,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 3,
+          "rawExperience": 12075,
+          "xp": 1207,
+          "level": 11
+        },
+        {
+          "index": 4,
+          "rawExperience": 7000,
+          "xp": 700,
+          "level": 7
+        },
+        {
+          "index": 5,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 6,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 7,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 8,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 9,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 10,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 11,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 12,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 13,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 14,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 15,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 16,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 17,
+          "rawExperience": 4052510,
+          "xp": 405251,
+          "level": 86
+        },
+        {
+          "index": 18,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 19,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        },
+        {
+          "index": 20,
+          "rawExperience": 0,
+          "xp": 0,
+          "level": 1
+        }
+      ],
+      "vars": {
+        "20": 1245216,
+        "21": 134480128,
+        "22": 328838,
+        "23": 4525056,
+        "24": 1576960,
+        "59": 4294967295,
+        "134": 987,
+        "166": 2,
+        "168": 2,
+        "169": 2,
+        "275": 4294967295,
+        "277": 4294967295,
+        "281": 1000,
+        "300": 1000,
+        "346": 2,
+        "367": 4294967295
+      },
+      "inventories": {
+        "93": [],
+        "94": [],
+        "95": [
+          {
+            "slot": 0,
+            "id": 995,
+            "count": 8284
+          },
+          {
+            "slot": 1,
+            "id": 1351,
+            "count": 1
+          },
+          {
+            "slot": 2,
+            "id": 590,
+            "count": 1
+          },
+          {
+            "slot": 3,
+            "id": 303,
+            "count": 1
+          },
+          {
+            "slot": 4,
+            "id": 315,
+            "count": 1
+          },
+          {
+            "slot": 5,
+            "id": 2309,
+            "count": 5
+          },
+          {
+            "slot": 6,
+            "id": 1265,
+            "count": 1
+          },
+          {
+            "slot": 7,
+            "id": 1205,
+            "count": 1
+          },
+          {
+            "slot": 8,
+            "id": 1277,
+            "count": 1
+          },
+          {
+            "slot": 9,
+            "id": 1171,
+            "count": 1
+          },
+          {
+            "slot": 10,
+            "id": 556,
+            "count": 25
+          },
+          {
+            "slot": 11,
+            "id": 558,
+            "count": 15
+          },
+          {
+            "slot": 12,
+            "id": 555,
+            "count": 6
+          },
+          {
+            "slot": 13,
+            "id": 557,
+            "count": 4
+          },
+          {
+            "slot": 14,
+            "id": 559,
+            "count": 2
+          },
+          {
+            "slot": 15,
+            "id": 1893,
+            "count": 7
+          },
+          {
+            "slot": 16,
+            "id": 1901,
+            "count": 7
+          },
+          {
+            "slot": 17,
+            "id": 1927,
+            "count": 1
+          },
+          {
+            "slot": 18,
+            "id": 1931,
+            "count": 1
+          },
+          {
+            "slot": 19,
+            "id": 1944,
+            "count": 1
+          },
+          {
+            "slot": 20,
+            "id": 44,
+            "count": 3
+          },
+          {
+            "slot": 21,
+            "id": 1895,
+            "count": 3
+          },
+          {
+            "slot": 22,
+            "id": 526,
+            "count": 2
+          },
+          {
+            "slot": 23,
+            "id": 2138,
+            "count": 2
+          },
+          {
+            "slot": 24,
+            "id": 1985,
+            "count": 2
+          },
+          {
+            "slot": 25,
+            "id": 314,
+            "count": 5
+          },
+          {
+            "slot": 26,
+            "id": 882,
+            "count": 24
+          },
+          {
+            "slot": 27,
+            "id": 841,
+            "count": 1
+          }
+        ]
+      }
+    },
+    "savedStates": {
+      "before.sav": {
+        "sha256": "e86cd35201aa52a689b770ab3f4ba173afcf296979b3634eb6f8bf021bf652dd",
+        "encoding": "gzip+base64",
+        "bytes": 2477,
+        "data": "H4sIAAAAAAAAA1NgYWDj+s5byMDAJSSlqKLFAAbqAgwMzC9ALEZkQs2DC0OMZML2mlwYmhijKcMoGAWjYBTQFECKNHoBJoZYBhnmJ/8ZGFhFyDQinvED2ADpHlYPRiZ/RkYDRkYbRk42VpZPjCzbGFn+MbJMYWT2YmQulmTSlWTS52fSYWPSY2EyYGJPY2fPY2fvYGTvYWSfycigy8yewUxlD46CUTAKaA4YF+51vuxpM3l2LgAJDVOIrQkAAA=="
+      },
+      "after.sav": {
+        "sha256": "6d41d09ed374b45092773df2258e9b08ad99ac095eb38eb784509dcd1016aceb",
+        "encoding": "gzip+base64",
+        "bytes": 1781,
+        "data": "H4sIAAAAAAAAA1NgYeDi2cIbw8DAJSSlqKLFAAbqAgwM7BtALEZkQl+bm4FBOoIdQ4IUwvaaXBi6mACDyJkGBQbRAxOaGBjEpnSyMYg3TZnBwCDxYAEDg3X/////6xna2qMZljExrGBiWMnEKAwWYxSFUJLtGYw67RmMUUyM+WARZoZYBhkGckE8kwPzk/8MDAoxrB6MTP6MjAaMjDaMnGysLJ8YWbYxsvxjZJnCyKQryaTPz6TDxqTHwmTAxJ7Gzp7Hzt7ByN7DyD6TkUGXmT2DmYmfiSOaif0QE6M1K3OxBLMXI9luGgWjYBSMAhiIY+DDJ83ErNUbxKzbGwVWxrhwr/NlT3Q17LIMDOyqVHEN22kB/PIl7yB05Tyq2EcBcEoyyAEA1s/KWvUGAAA="
+      }
+    },
+    "offline": {
+      "tick": 988,
+      "online": false,
+      "pendingLogout": false
+    },
+    "workerLogSha256": "1fd6741dda798b1e9f6e47541a1b12361be8667ec042f2609420fa71dfe68e80",
+    "tickRecordSha256": "f968d0b9db46fb343d6dc010f8a2423a3b1add132bd1b95d4e9bf0e466b45133",
+    "observedAmmoDebits": 11,
+    "ammoChanges": [
+      {
+        "tick": 776,
+        "before": 25,
+        "after": 24
+      },
+      {
+        "tick": 779,
+        "before": 24,
+        "after": 23
+      },
+      {
+        "tick": 784,
+        "before": 23,
+        "after": 22
+      },
+      {
+        "tick": 788,
+        "before": 22,
+        "after": 21
+      },
+      {
+        "tick": 791,
+        "before": 21,
+        "after": 20
+      },
+      {
+        "tick": 794,
+        "before": 20,
+        "after": 19
+      },
+      {
+        "tick": 797,
+        "before": 19,
+        "after": 18
+      },
+      {
+        "tick": 800,
+        "before": 18,
+        "after": 17
+      },
+      {
+        "tick": 819,
+        "before": 17,
+        "after": 24
+      },
+      {
+        "tick": 822,
+        "before": 24,
+        "after": 23
+      },
+      {
+        "tick": 830,
+        "before": 23,
+        "after": 22
+      },
+      {
+        "tick": 834,
+        "before": 22,
+        "after": 21
+      },
+      {
+        "tick": 854,
+        "before": 21,
+        "after": 24
+      }
+    ]
+  },
+  "staging": {
+    "separateNoCodeLiveJobQualified": false,
+    "reason": "The existing Ranged worker performs food acquisition and travel before training. It has no prepare-only mode. A bank-start diagnostic with fixture-provided cheese passes unchanged source, but it does not qualify a separate acquisition/staging job for the live Catherby account."
+  },
+  "limits": [
+    "The original nine-debit/zero-shot failure does not recur under diagnostic instrumentation; its precise cause remains unestablished. The reproducible regression is bank transfers counted as shots; trip-scoped subscription removes preparation and banking from the counter lifetime.",
+    "Published cloud receipts provide levels and stocks, not a complete live save or exact live XP. Practice before/after saves are complete and portable; the input reconstructs observed levels and stock with generated XP and default quest flags. Incumbent must check current XP/HP before relying on the combat6 outcome.",
+    "Costs are observed practice costs:60fare+8cheese=68GP,11shots,10arrows recovered,1arrow lost; shop stock and damage are variable.",
+    "No live login, account reservation, lease, stop-file, controller or cloud plan mutation."
+  ]
+}
