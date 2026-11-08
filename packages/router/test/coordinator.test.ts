@@ -103,6 +103,18 @@ test('a prepared run can provision two participants without claiming after eithe
  expect(chooseTask(s,4)?.id).toBe('second');
 });
 
+test('a co-claim waits for every external prerequisite and enough live slots for its first job',()=>{
+ const s=initialState();
+ addTasks(s,[task('first',{kind:'provision',role:'helper'}),task('second',{kind:'provision',role:'helper',dependsOn:['proof']}),
+  task('proof'),task('trade',{kind:'run',participants:['@first','@second'],accept:{bank:{'333':10}}})],0);
+ expect(chooseTask(s,1)?.id).toBe('proof');
+ startTask(s,'proof',2,'q');
+ expect(chooseTask(s,3)).toBeNull();
+ finishTask(s,{taskId:'proof',runId:'q',ok:true,at:4,output:{}});
+ expect(chooseTask(s,5,{liveLimit:1})).toBeNull();
+ expect(chooseTask(s,5,{liveLimit:2})?.id).toBe('first');
+});
+
 test('ready source builds drain live runs and keep all live work offline until build settles',()=>{
  const s=initialState();addTasks(s,[task('live',{kind:'run',account:'Helper1',accept:{counters:{made:1}}}),task('next',{kind:'run',account:'Helper2',priority:100,accept:{counters:{made:1}}}),task('build',{kind:'build'})],0);
  startTask(s,'live',1,'l');expect(chooseTask(s,2)).toBeNull();

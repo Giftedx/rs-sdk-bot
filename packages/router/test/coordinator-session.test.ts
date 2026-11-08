@@ -168,8 +168,13 @@ test('specialist preflight binds the reserved board, winning clock, staged stock
   boards:[{board,category,rows:[{rank:1,name:'Leader',level:99,ticks},...extraRows]}]
  });
  snapshot();
+ const artifacts={
+  finalSave:file(dir+'/practice.final.sav','engine save fixture'),
+  tradeLedger:file(dir+'/practice.trades.jsonl','engine trade ledger fixture'),
+  tickRecord:file(dir+'/practice.ticks.ndjson.gz','engine tick record fixture'),
+ };
  const raw={context,runId:'practice-1',actor:'Practice1',server:'localhost:8888',at:now-10,
-  startPlaytime:0,endPlaytime:4000,planTicks:4000,ok:true,died:false,logout:'logged-out',boardTicks:{[board]:4000},externalSupplies:requirements};
+  startPlaytime:0,endPlaytime:4000,planTicks:4000,ok:true,died:false,logout:'logged-out',boardTicks:{[board]:4000},externalSupplies:requirements,artifacts};
  const log=file(dir+'/practice.log','REHEARSAL '+JSON.stringify(raw)+'\nRESULT ok ranged 99\n');
  let rehearsal=file(dir+'/practice.json',{version:2,...raw,log});
  const items=[{id:886,count:100}];
@@ -199,6 +204,9 @@ test('specialist preflight binds the reserved board, winning clock, staged stock
  rehearsal=file(dir+'/practice.json',{version:2,...raw,externalSupplies:[],log});
  plan();
  expect(()=>check()).toThrow('external supplies differ');
+ rehearsal=file(dir+'/practice.json',{version:2,...raw,artifacts:undefined,log});
+ plan();
+ expect(()=>check()).toThrow('raw rehearsal artifacts');
  rehearsal=file(dir+'/practice.json',{version:2,...raw,log});
  plan(99);
  expect(()=>check()).toThrow('double-counted/short');
@@ -207,6 +215,9 @@ test('specialist preflight binds the reserved board, winning clock, staged stock
  expect(()=>assertSpecialistLogin(f.base,account,Date.now(),env)).not.toThrow();
  expect(()=>assertSpecialistLogin(f.base,account,Date.now(),{...env,COORDINATOR_RUN_ID:'different'})).toThrow('mismatched authorization');
  expect(()=>assertSpecialistLogin(f.base,account,Date.now(),{...env,SWARM_MISSION_HASH:sha('different args')})).toThrow('mismatched authorization');
+ file(artifacts.finalSave.path,'changed save bytes');
+ expect(()=>assertSpecialistLogin(f.base,account,Date.now(),env)).toThrow('Evidence changed');
+ file(artifacts.finalSave.path,'engine save fixture');
  const token=JSON.parse(readFileSync(join(f.base,specialistTokenPath(account)),'utf8'));
  expect(()=>assertSpecialistLogin(f.base,account,token.expiresAt,env)).toThrow('expired');
  snapshot(6000);

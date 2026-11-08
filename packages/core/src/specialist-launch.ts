@@ -45,7 +45,8 @@ export function evaluateSpecialist(root:string, account:string, runId:string, so
     if(profiles.length!==1 || profile.status!==404 || !fresh(profile.at,now,HOUR))
         throw Error('need a recent 404 from the exact specialist profile');
     const rehearsal=bound(plan.rehearsal);
-    const expiry=validateRehearsals([rehearsal],context,{[board.name]:plan.planTicks},now,bound,{count:1,excludedActor:name,externalSupplies:plan.requirements});
+    const expiry=validateRehearsals([rehearsal],context,{[board.name]:plan.planTicks},now,bound,
+        {count:1,excludedActor:name,externalSupplies:plan.requirements,requireArtifacts:true});
     const margin=Math.ceil(leader.ticks*.02);
     if(leader.level===99 && leader.ticks-Math.max(plan.planTicks,rehearsal.endPlaytime)<margin)
         throw Error(`need a ${margin}-tick margin against the record`);

@@ -17,6 +17,8 @@ import { FLEET_WORKTREE, loadOwners, mySide, nextLease, readLease, leaseHeldElse
 import { CLAIM_MAX_AGE_MS, claimFor } from '../packages/planner/src/autopilot';
 import { mergeJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { withFleetDataWrite } from './fleet-owner-claim';
+import { readHeldFleetTradeClaims, releaseFleetTradeClaim, type FleetTradeClaim } from '../packages/core/src/fleet-trade-claim';
+import { terminalTradeReceipt, validOrder } from './fleet-trade-settlement';
 
 const root = resolve(import.meta.dir, '..');
 const BRANCH = 'fleet-data', HEARTBEAT_MAX_AGE_MS = 60_000;
@@ -80,6 +82,41 @@ export function ensureWorktree(dir = FLEET_WORKTREE): string {
     return dir;
 }
 
+export function releasePublishedTradeClaims(
+    claims: readonly FleetTradeClaim[], side: string, read: (path: string) => any,
+    release: (claim: FleetTradeClaim) => void, now = Date.now(),
+): number {
+    let released = 0;
+    for (const claim of claims) {
+        if (claim.phase !== 'held' || claim.side !== side) continue;
+        const order = read(`orders/${claim.orderId}.json`), receipt = read(`receipts/${claim.orderId}.${claim.role}.json`);
+        if (!validOrder(order) || order.id !== claim.orderId || !receipt || !terminalTradeReceipt(order, claim.role, receipt, now)
+            || receipt.claim !== claim.nonce || receipt.side !== claim.side || receipt.account.toLowerCase() !== claim.account
+            || receipt.server.toLowerCase() !== claim.server || receipt.logout!.at < claim.at) continue;
+        release(claim);
+        released++;
+    }
+    return released;
+}
+
+function releaseSyncedTrades(dir: string, side: string) {
+    const receiptDir = join(dir, 'fleet', 'receipts');
+    if (!existsSync(receiptDir)) return;
+    const accounts = readdirSync(receiptDir).filter(name => name.endsWith('.json')).flatMap(name => {
+        try {
+            const r = JSON.parse(readFileSync(join(receiptDir, name), 'utf8'));
+            return r?.version === 2 && r.side === side && typeof r.account === 'string' && /^[A-Za-z0-9]{1,12}$/.test(r.account)
+                && (r.state === 'settled' || r.state === 'failed') ? [r.account] : [];
+        } catch { return []; }
+    });
+    if (!accounts.length) return;
+    const read = (path: string) => {
+        const committed = git(dir, 'show', 'HEAD:fleet/' + path);
+        try { return committed.ok ? JSON.parse(committed.out) : null; } catch { return null; }
+    };
+    releasePublishedTradeClaims(readHeldFleetTradeClaims(root, [...new Set(accounts)]), side, read, claim => releaseFleetTradeClaim(root, claim));
+}
+
 export function runSync(push = true): string {
     const dir = ensureWorktree();
     const hasRemote = git(dir, 'ls-remote', '--exit-code', '--heads', 'origin', BRANCH).ok;
@@ -121,6 +158,7 @@ export function runSync(push = true): string {
     if (staged) { const c = git(dir, 'commit', '-m', `fleet: ${snap.side} sync (${snap.accounts.length} accounts)`); if (!c.ok) throw Error(`commit: ${c.out}`); }
     const ahead = !hasRemote || git(dir, 'rev-list', '--count', `origin/${BRANCH}..HEAD`).out !== '0';
     if (push && ahead) { const p = git(dir, 'push', '-u', 'origin', BRANCH); if (!p.ok) throw Error(`push: ${p.out}`); }
+    if (push) releaseSyncedTrades(dir, snap.side);
     return `side=${snap.side} accounts=${snap.accounts.length} claims=${claim ? claim.resources.length : jobs ? 'kept: published by the session running this side' : 'unreadable plan'} lease=${leaseNote} committed=${staged} pushed=${push && ahead}`;
 }
 

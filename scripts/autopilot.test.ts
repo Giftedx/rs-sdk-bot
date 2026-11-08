@@ -5,7 +5,8 @@ import { join } from 'node:path';
 import { jobLogStart } from '../packages/core/src/job-log';
 import { catalogue, finishedTrainers, jobFor, mergeJobs, plan, plannableAccounts, reservedResources, type Acct, type Inputs } from '../packages/planner/src/autopilot';
 import { missionSignature, startable } from './swarm';
-import { coinOrder, fundOrders, inOpenOrder, planningOwnership, readJobResultLines } from './autopilot';
+import { coinOrder, fundOrders, inOpenOrder, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import type { TradeReceipt } from './fleet-trade-settlement';
 
 const side = 'claude-cloud';
 const inputs = (a: Acct): Inputs => ({ side, accounts: [a], owners: new Map([[a.name.toLowerCase(), { side }]]), bill: [], templates: catalogue(), prices: {} });
@@ -40,10 +41,39 @@ test('a trainer at its target stays ended for the swarm, and the next pass start
 const order = (id: string, from: string, to: string, end: number) => ({ id, server: 'rs-sdk-demo.fly.dev', from, to, item: 'coins', count: 1500, start: 0, end });
 const make = (from: string, to: string, coins: number) => ({ ...order(`o-${from}-${to}`, from, to, 9_999), count: coins });
 
-test('an order is open until its window ends or both parties write a receipt', () => {
+test('legacy order receipts do not close a live window or supply proven stock', () => {
     const orders = [order('a', 'Big', 'Poor', 100), order('b', 'Rich', 'Low', 100), order('c', 'Old', 'Gone', 10)];
     const receipts = [{ id: 'b', role: 'from' }, { id: 'b', role: 'to' }] as any;
-    expect([...inOpenOrder(orders, receipts, 50)].sort()).toEqual(['big', 'poor']);
+    expect([...inOpenOrder(orders, receipts, 50)].sort()).toEqual(['big', 'low', 'poor', 'rich']);
+    expect([...inOpenOrder(orders, receipts, 101)]).toEqual([]);
+});
+
+test('funding holds past expiry on incomplete proof and releases each party only against current settled stock', () => {
+    const o = order('a', 'Big', 'Poor', 3000);
+    const receipt = (role: 'from' | 'to'): TradeReceipt => ({
+        version: 2, state: 'settled', id: o.id, role, account: o[role], partner: role === 'from' ? o.to : o.from, side: 'local',
+        server: o.server, item: o.item, requested: o.count, claim: '12345678-1234-1234-1234-123456789012', at: 2700,
+        ok: true, detail: '', count: o.count, inventory: role === 'from' ? { before: o.count, after: 0 } : { before: 0, after: o.count },
+        ...(role === 'to' ? { bank: { count: o.count, at: 2300 } } : {}),
+        logout: { attemptId: '0000000002400-1-1', at: 2600, sha256: 'a'.repeat(64) },
+    });
+    const giver = receipt('from'), receiver = receipt('to'), now = 5000;
+    const expected = ['big', 'poor'];
+    const held = (r: TradeReceipt[]) => [...inOpenOrder([o], r, now)].sort();
+    expect(held([{ ...giver, state: 'prepared', ok: false }])).toEqual(expected);
+    expect(held([giver, { ...receiver, state: 'reconcile', ok: false }])).toEqual(expected);
+    expect(held([giver, { ...receiver, bank: undefined }])).toEqual(expected);
+    expect(held([giver, { ...receiver, partner: 'Wrong' }])).toEqual(expected);
+    expect(held([giver, { ...receiver, state: 'failed', ok: false, count: 0 }])).toEqual(expected);
+    expect(held([giver, receiver])).toEqual([]);
+    const statuses = {
+        Big: { name: 'Big', server: o.server, at: 2700, inventory: [] },
+        Poor: { name: 'Poor', server: o.server, at: 2700, bankAt: 2299, bank: [], inventory: [] },
+    };
+    const observed = (r: TradeReceipt) => tradeStockReady(r, statuses[r.account as keyof typeof statuses]);
+    expect([...inOpenOrder([o], [giver, receiver], now, observed)]).toEqual(['poor']);
+    statuses.Poor.bankAt = 2300;
+    expect([...inOpenOrder([o], [giver, receiver], now, observed)]).toEqual([]);
 });
 
 test('a funded assignment becomes a coin order and a vacant account; an account in an open order waits', () => {

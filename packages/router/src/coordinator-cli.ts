@@ -7,7 +7,7 @@ import {buildFailureEvidence} from './build-fault';
 import {projectRoot,coordinationDir,loadState,saveState,runDirectory,atomicJson,atomicText,event,spawnDetached,recoverPlanWrite,withPlanWrite,capabilitySource,publishCapabilityChanges} from './coordinator-store';
 import {DISK_FLOOR_GB,diskFreeGB,finishPlan,plannerDue,retireDeadTasks,reviewHold} from './coordinator-decisions';
 import {planWork,prepareProposal} from './coordinator-planner';
-import {executeTask} from './coordinator-worker';
+import {executeTask,provisionParticipantHold} from './coordinator-worker';
 import {deliveryTask,deliveryFingerprint,SOURCE_STARTUP_GB,NATIVE_STARTUP_GB} from './delivery-cli';
 import {disableOwnJob,ensureSwarm,liveRows} from './coordinator-live';
 import {cachedLaunchRevision} from '../../core/src/worker-release';
@@ -370,7 +370,8 @@ async function tick(state:CoordinatorState,config:any){
  for(let dispatch=0;!diskLow&&dispatch<developmentLimit+liveLimit;dispatch++){
   const freeGB=freemem()/2**30,request=join(coordinationDir,'publish-request.json');
   let publishing:string|undefined;try{publishing=existsSync(request)?json(request).capability:undefined;}catch{/* a request being written */}
-  const task=chooseTask(state,Date.now(),{sourceReady:freeGB>=SOURCE_STARTUP_GB,nativeReady:nativeDispatchReady(state,freeGB),developmentLimit,liveLimit:liveBlocked?0:liveLimit,preferLive:config.preferLive===true,focusCapability:config.focusCapability,isolatedBuilds:true,publishPending:existsSync(request),publishing,ownedFiles,runHeld});
+  const task=chooseTask(state,Date.now(),{sourceReady:freeGB>=SOURCE_STARTUP_GB,nativeReady:nativeDispatchReady(state,freeGB),developmentLimit,liveLimit:liveBlocked?0:liveLimit,preferLive:config.preferLive===true,focusCapability:config.focusCapability,isolatedBuilds:true,publishPending:existsSync(request),publishing,ownedFiles,runHeld,
+   provisionRunHeld:(run,records)=>provisionParticipantHold(run,records,()=>deliveryTask(run.capability!).entry)!==null});
   if(!task)break;
   // The single dispatcher prepares the controller before parallel live children
   // can race to create it. Controller startup does not log accounts in.

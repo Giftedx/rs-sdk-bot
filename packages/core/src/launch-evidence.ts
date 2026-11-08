@@ -72,12 +72,12 @@ export function validateSupplies(s:any,context:string,requirements:SupplyRequire
  for(const [item,count] of demand)need(totals.get(item)===count,'Missing or excess reservation: '+item);
  return expiresAt;
 }
-export function validateRehearsals(runs:any[],context:string,expected:Record<string,number>,now:number,read:Read,options:{count:number;excludedActor:string;externalSupplies?:SupplyRequirement[]}={count:3,excludedActor:'haggis'}){
+export function validateRehearsals(runs:any[],context:string,expected:Record<string,number>,now:number,read:Read,options:{count:number;excludedActor:string;externalSupplies?:SupplyRequirement[];requireArtifacts?:boolean}={count:3,excludedActor:'haggis'}){
  need(runs.length===options.count&&Object.keys(expected).length>0,options.count===3?'Need three complete rehearsals':'Need one complete rehearsal');
  const ids=new Set(),actors=new Set(),logs=new Set();
  for(const r of runs){
   need(r?.version===2&&r.context===context&&fresh(r.at,now,7*86400000),'Stale or mismatched rehearsal');
-  need(typeof r.runId==='string'&&r.runId&&typeof r.actor==='string'&&r.actor&&r.actor.toLowerCase()!==options.excludedActor&&/^localhost:\d+$/.test(r.server),'Invalid practice identity');
+  need(typeof r.runId==='string'&&r.runId&&typeof r.actor==='string'&&r.actor&&r.actor.toLowerCase()!==options.excludedActor&&/^(?:localhost|127\.0\.0\.1):\d+$/.test(r.server),'Invalid practice identity');
   need(!ids.has(r.runId)&&!actors.has(r.actor.toLowerCase())&&!logs.has(r.log?.path),'Repeated rehearsal');ids.add(r.runId);actors.add(r.actor.toLowerCase());logs.add(r.log?.path);
   need(r.ok===true&&r.died===false&&r.logout==='logged-out'&&r.startPlaytime===0&&qty(r.endPlaytime),'Incomplete whole-clock run');
   need(Object.keys(r.boardTicks??{}).length===Object.keys(expected).length,'Missing board stamps');
@@ -90,6 +90,18 @@ export function validateRehearsals(runs:any[],context:string,expected:Record<str
   if(options.externalSupplies){
    const required=JSON.stringify(options.externalSupplies);
    need(JSON.stringify(r.externalSupplies)===required&&JSON.stringify(raw.externalSupplies)===required,'Rehearsal external supplies differ from the route bill');
+  }
+  if(options.requireArtifacts){
+   const fields={finalSave:'.sav',tradeLedger:'.jsonl',tickRecord:'.ticks.ndjson.gz'} as const;
+   need(r.artifacts&&Object.keys(r.artifacts).length===3&&JSON.stringify(r.artifacts)===JSON.stringify(raw.artifacts),'Missing or mismatched raw rehearsal artifacts');
+   const paths=new Set([r.log.path]);
+   for(const [kind,ext] of Object.entries(fields)){
+    const artifact=r.artifacts[kind];
+    need(typeof artifact?.path==='string'&&artifact.path.endsWith(ext)&&!paths.has(artifact.path),'Missing or repeated raw rehearsal artifact: '+kind);
+    paths.add(artifact.path);
+    const content=read(artifact,false);
+    need(typeof content==='string'&&(kind==='tradeLedger'||content.length>0),'Empty raw rehearsal artifact: '+kind);
+   }
   }
   for(const field of ['context','runId','actor','server','at','startPlaytime','endPlaytime','planTicks','ok','died','logout','boardTicks'])need(JSON.stringify(raw[field])===JSON.stringify(r[field]),'Raw rehearsal differs: '+field);
  }

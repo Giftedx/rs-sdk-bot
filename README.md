@@ -116,6 +116,10 @@ DEMO_OK=1 bun scripts/fleet-agent.ts --daemon
 bun scripts/autopilot.ts .practice/cloud-handoff/swarm.json --daemon
 ```
 
+Each live trade claims its account on the remote Git ref `refs/heads/fleet-trade-claim/<lowercase-account>` before login. This applies to trade-only hosts. The local assignment check still separates a trade from swarm work on the same host. The receiver proves the exact transfer, bank credit and logout. The sender proves the exact debit and logout. Fleet sync releases a terminal claim after it publishes the matching receipt.
+
+If a trade needs reconciliation, keep the claim and the order reservation. A claim does not expire. Read the latest claim with `readFleetTradeClaim` in `packages/core/src/fleet-trade-claim.ts`. Confirm that the attempt did not connect, or reconcile both accounts and confirm logout. Release only the matching nonce with `releaseFleetTradeClaim`. Use a new order ID for a retry.
+
 One container runs the side. Before the swarm starts work, it acquires `refs/heads/fleet-lease/<side>` on `origin` with a normal fast-forward push. The controller renews every three minutes. If renewal fails, new work stops and owned workers are asked to log out. If the controller dies, the local lease expires eight minutes after the last confirmed renewal. After that, workers refuse logins and request logout. Another checkout can take over after ten minutes. Keep host clocks synchronized. Each swarm needs push access to its lease ref.
 
 Stop all old controllers for the side before moving it to this lease scheme. The first acquisition checks the existing fleet-data heartbeat, which can take 15 minutes to expire. Fleet sync still publishes that heartbeat for older readers.

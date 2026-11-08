@@ -18,7 +18,8 @@ import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { matchingJobLines } from '../packages/core/src/job-log';
 import { CLAIM_MAX_AGE_MS, accountFrom, assess, catalogue, finishedTrainers, freshest, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, type Assignment } from '../packages/planner/src/autopilot';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
-import type { Order, Receipt } from './fleet-trade';
+import { tradeSettlement, validOrder, type Order, type Receipt, type TradeReceipt } from './fleet-trade-settlement';
+import { readHeldFleetTradeClaims } from '../packages/core/src/fleet-trade-claim';
 import { liveHelperStatuses, overallSupplyDemand, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
 import { tickWaste, wasteShare } from './tick-waste';
 
@@ -60,10 +61,31 @@ export function coinOrder(from: string, to: string, coins: number, server: strin
 }
 // Accounts with an enabled job, as scripts/fleet-agent.ts swarmBusy counts them: the agent trades for no other account.
 const enabledAccounts = (jobs: readonly any[]) => new Set(jobs.filter(j => j?.enabled).flatMap(j => [j.account, ...(j.accounts ?? [])]).filter((n): n is string => typeof n === 'string').map(n => n.toLowerCase()));
-// Accounts in a fleet order that is still open: its window has not ended and a party has no receipt yet.
-export function inOpenOrder(orders: readonly Order[], receipts: readonly Receipt[], now: number): Set<string> {
-    const open = orders.filter(o => o.end > now && !(['from', 'to'] as const).every(role => receipts.some(r => r.id === o.id && r.role === role)));
-    return new Set(open.flatMap(o => [o.from, o.to]).map(n => n.toLowerCase()));
+// New receipts hold both parties through a matched settlement or explicit reconciliation, even after the window.
+export function inOpenOrder(orders: readonly Order[], receipts: readonly Receipt[], now: number,
+    stockReady: (receipt: TradeReceipt) => boolean = () => true): Set<string> {
+    const held = new Set<string>();
+    for (const order of orders) {
+        const settlement = tradeSettlement(order, receipts, now);
+        if (settlement.state !== 'settled' && settlement.state !== 'failed') {
+            if (order.end > now || settlement.state !== 'legacy') {
+                held.add(order.from.toLowerCase());
+                held.add(order.to.toLowerCase());
+            }
+            continue;
+        }
+        for (const receipt of settlement.receipts as TradeReceipt[]) {
+            if (!stockReady(receipt)) held.add(receipt.account.toLowerCase());
+        }
+    }
+    return held;
+}
+
+export function tradeStockReady(receipt: TradeReceipt, status: any): boolean {
+    return typeof status?.name === 'string' && status.name.toLowerCase() === receipt.account.toLowerCase() && status.server === receipt.server
+        && !!receipt.logout && Array.isArray(status.inventory) && Number.isFinite(status.at) && status.at >= receipt.logout.at
+        && (!receipt.bank || Array.isArray(status.bank) && Number.isFinite(status.bankAt)
+            && status.bankAt >= receipt.bank.at && status.bankAt <= status.at);
 }
 // A funded assignment becomes a coin order now and the job on a later pass, once the coins are in the account. Until
 // then the account is vacant, so the fleet agent can log it in for the trade. Every party to an open order, donor or
@@ -154,9 +176,18 @@ export function pass(planFile: string, dry: boolean): string[] {
     // Coin donors: this side's accounts with no enabled swarm or coordinator job, no stop file and no open order, as
     // their last status reports them. The fleet agent runs a trade only for such accounts.
     const fleetDir = FLEET_DIR(), now = Date.now();
-    const orders: Order[] = existsSync(join(fleetDir, 'orders')) ? readdirSync(join(fleetDir, 'orders')).filter(f => f.endsWith('.json')).map(f => readJson(join(fleetDir, 'orders', f), null)).filter(o => typeof o?.id === 'string' && Number.isSafeInteger(o?.end)) : [];
+    const orders: Order[] = existsSync(join(fleetDir, 'orders')) ? readdirSync(join(fleetDir, 'orders')).filter(f => f.endsWith('.json')).map(f => readJson(join(fleetDir, 'orders', f), null)).filter(validOrder) : [];
     const receipts: Receipt[] = existsSync(join(fleetDir, 'receipts')) ? readdirSync(join(fleetDir, 'receipts')).filter(f => f.endsWith('.json')).map(f => readJson(join(fleetDir, 'receipts', f), null)).filter(Boolean) : [];
-    const open = inOpenOrder(orders, receipts, now);
+    const open = inOpenOrder(orders, receipts, now, r =>
+        owners.get(r.account.toLowerCase())?.side !== side || tradeStockReady(r, observed(r.account)));
+    // The shared intent precedes the local journal. A crashed host may never publish that journal.
+    // Keep the claimed account and both known participants held even after the order window.
+    const claimedAccounts = [...new Set([...listed, ...orders.flatMap(o => [o.from, o.to])])];
+    if (claimedAccounts.length) for (const claim of readHeldFleetTradeClaims(root, claimedAccounts)) {
+        open.add(claim.account);
+        const order = orders.find(o => o.id === claim.orderId);
+        if (order) for (const name of [order.from, order.to]) open.add(name.toLowerCase());
+    }
     const donors = listed.filter(n => owners.get(n.toLowerCase())?.side === side && n.toLowerCase() !== 'haggis' && ![busy, keep, open].some(s => s.has(n.toLowerCase())))
         .map(n => ({ name: n, coins: accountFrom(n, side, observed(n), id => byId.get(id)).items.coin ?? 0 })).filter(d => d.coins > 0);
     const planned = plan({ side, accounts, owners, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: { 'catherby:lobster': 3 }, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])) });

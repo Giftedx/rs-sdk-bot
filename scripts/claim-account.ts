@@ -1,13 +1,14 @@
 // Claims an account name on the server: log in once (the first login registers the name with the bot.env password),
 // then log out on the first tick the player is in the world, so the account gets as little playtime as possible.
 // Usage: DEMO_OK=1 bun scripts/claim-account.ts <bot>. Prints CLAIM <ticks in world> <logout result>.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { assertServerAllowed, serverFromEnv, logoutSession, closeWithin } from '../packages/core/src/bot';
 import { connectInProcess } from '../packages/core/src/inprocess';
 import { NAMES } from '../packages/core/src/names';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { assertSideOwns } from '../packages/core/src/fleet';
+import { assertProvisionCrew } from './provision-readiness';
 
 const name = process.argv[2]!;
 const root = resolve(import.meta.dir, '..');
@@ -20,7 +21,17 @@ if (!isLocalServer(server)) assertSideOwns(name);
 // A live name is registered for good: take it from the reviewed joke lists (AGENTS.md "Accounts"), never ad hoc.
 if (!isLocalServer(server) && !Object.values(NAMES).flat().some(n => n.toLowerCase() === name.toLowerCase()))
     throw new Error(`live name ${name} is not in packages/core/src/names.ts; add a real joke there first`);
-const s = await connectInProcess({ name, password, server });
+const crew = process.env.FLEET_PROVISION_CREW;
+const s = await connectInProcess({ name, password, server,
+    lockPlan: !!crew,
+    beforeConnect: crew ? () => {
+        if (isLocalServer(server)) throw Error('live first job crew requires a live claim');
+        if (['stop-coordinator','stop-swarm','stop-'+name].some(file=>existsSync(join(root,'.practice',file))))
+            throw Error('live provisioning is paused by the owner');
+        assertSideOwns(name);
+        assertProvisionCrew(JSON.parse(crew),root);
+    } : undefined,
+});
 // Log out the moment the client reports it is in the game: no tutorial, no actions.
 const t0 = Date.now();
 while (!s.sdk.getState()?.inGame && Date.now() - t0 < 30_000) await Bun.sleep(20);

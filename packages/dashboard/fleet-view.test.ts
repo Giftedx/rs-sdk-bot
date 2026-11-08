@@ -39,3 +39,19 @@ test('other sides become fleet rows with snapshot levels and items, a world-feed
  const late=remoteBots(snaps,new Set(),new Map([['tossthecaber',{x:1,z:2,level:0,combat:3,seen:now-60_000}]]),new Map(),now);
  expect(late.find(x=>x.name==='TossTheCaber').fresh).toBe(false);expect(late.find(x=>x.name==='TossTheCaber').pos).toEqual({x:1,z:2,level:0});
 });
+
+
+test('cross-side orders keep an uncertain transfer visible for reconciliation',()=>{
+ const now=10000,order={id:'trade',from:'A',to:'B',server:'rs-sdk-demo.fly.dev',item:'Coins',count:9,start:1,end:9000};
+ const state=(receipts:unknown[])=>fleetSidesView([],[order],now,receipts).orders[0]?.state;
+ const from={version:2,id:'trade',role:'from',account:'A',partner:'B',server:order.server,item:'Coins',requested:9,
+  state:'settled',ok:true,count:9,at:8000,claim:'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',logout:{attemptId:'1000000000000-1-1',at:7000,sha256:'a'.repeat(64)},
+  inventory:{before:9,after:0}};
+ const to={...from,role:'to',account:'B',partner:'A',claim:'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',inventory:{before:0,after:9},bank:{count:9,at:6000}};
+ expect(state([from,to])).toBeUndefined();
+ expect(state([from,{...to,state:'reconcile',ok:false}])).toBe('reconcile');
+ expect(state([from,{...to,bank:undefined}])).toBe('reconcile');
+ expect(state([{...from,version:3},{...to,version:3}])).toBe('reconcile');
+ const failed={state:'failed',ok:false,count:0,inventory:undefined,bank:undefined};
+ expect(state([{...from,...failed},{...to,...failed}])).toBe('failed');
+});
