@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794166039017,
+ "at": 1794166079818,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -41,7 +41,7 @@
    "enabled": true,
    "repeat": false,
    "goal": "Bank 375 arrow shafts for Shaftshooter starter ammunition route",
-   "role": "quests"
+   "role": "supply"
   },
   {
    "account": "Unsheathed",
