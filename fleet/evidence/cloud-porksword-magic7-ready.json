@@ -1,32 +1,32 @@
 {
   "ok": true,
-  "sourceCommit": "cc4e77cc911a2e3a90e84a4146b86133695682e6",
-  "runtimeRevision": "a084f4b6a88cd7fd83f065ac5bc318881dd91819c08baea1d1f5e759e44eb80c",
-  "fixtureAccount": "flmagixi9r01",
+  "sourceCommit": "6671408ef57c65bbaff1a731b9b951e6cf6ae237",
+  "runtimeRevision": "2b112577f80a3bd1af1d74f1f2d11d5a7af61c335db16ded981b99ab6d335a6e",
+  "fixtureAccount": "flmagix6ve01",
   "targetAccount": "Porksword",
   "result": {
     "ok": true,
     "stop": "target",
     "target": 7,
     "level": 7,
-    "casts": 5,
+    "casts": 3,
     "runesUsed": {
-      "air": 5,
-      "mind": 5
+      "air": 3,
+      "mind": 3
     },
     "bought": {
       "air": 0,
       "mind": 0
     },
     "coinsSpent": 0,
-    "magicXpGained": 687,
-    "hpXpGained": 0,
-    "hpMin": 11,
+    "magicXpGained": 662,
+    "hpXpGained": 162,
+    "hpMin": 10,
     "eats": 0,
-    "ticks": 132,
+    "ticks": 125,
     "banked": {
-      "air": 20,
-      "mind": 10,
+      "air": 22,
+      "mind": 12,
       "coins": 0
     }
   },
@@ -35,8 +35,11 @@
     "worker": true,
     "release": true,
     "savedMagic7": true,
-    "savedHP11": true,
+    "baseHP": true,
+    "combat6": true,
+    "currentHP": true,
     "otherSkills": true,
+    "hpXp": true,
     "xp": true,
     "runes": true,
     "coins": true,
@@ -44,6 +47,11 @@
     "bank": true,
     "noDeath": true,
     "logout": true
+  },
+  "finalVitals": {
+    "hpNow": 11,
+    "hpMax": 12,
+    "combat": 6
   },
   "before": {
     "version": 6,
@@ -664,8 +672,8 @@
       },
       {
         "index": 3,
-        "rawExperience": 11750,
-        "xp": 1175,
+        "rawExperience": 13375,
+        "xp": 1337,
         "level": 11
       },
       {
@@ -682,8 +690,8 @@
       },
       {
         "index": 6,
-        "rawExperience": 6875,
-        "xp": 687,
+        "rawExperience": 6625,
+        "xp": 662,
         "level": 7
       },
       {
@@ -773,7 +781,7 @@
     ],
     "vars": {
       "21": 262144,
-      "134": 161,
+      "134": 146,
       "166": 2,
       "168": 2,
       "169": 2,
@@ -920,12 +928,12 @@
         {
           "slot": 26,
           "id": 556,
-          "count": 20
+          "count": 22
         },
         {
           "slot": 27,
           "id": 558,
-          "count": 10
+          "count": 12
         }
       ]
     }
@@ -947,13 +955,13 @@
     "enabled": false
   },
   "tickRecord": {
-    "file": "flmagixi9r01-1794179629852.ticks.ndjson.gz",
-    "sha256": "7d8a0dff1ee539b0e7abf6d980be5d64d708fb80b86b2cbf627e4442ae4e286f"
+    "file": "flmagix6ve01-1794181222691.ticks.ndjson.gz",
+    "sha256": "7e6a0af0ba30a936dbdefcbbf3369362c1d95150907bab17077e48c7d6ab3ccf"
   },
   "limits": [
     "Exact live skill XP and stocks reconstructed from the terminal Ranged receipt; no live login.",
     "Incumbent must refresh admission, ownership, producer logout, holds, health, exact input and installed release before enabling this single job.",
-    "No Wilderness entry. Magic7/HP11 is the next prerequisite; full standby staging and kit remain separate."
+    "No Wilderness entry. Magic training can raise base HP: the merged-source trial ends baseHP12/currentHP11 at combat6. The installed standby profile expects HP11; hold staging until a matching profile and full health are qualified."
   ],
   "proofLevel": "native practice; no live launch",
   "unitTests": {
@@ -961,10 +969,10 @@
     "fail": 0
   },
   "admission": "Existing cloud controller only; one attempt, no repeat, no Wilderness. Recheck exact Porksword terminal state and current pin.",
+  "verification": "Run from the source repository root: bun <bundle>/verify.ts <bundle>",
   "engineObservation": {
-    "tick": 255,
+    "tick": 147,
     "online": false,
     "pendingLogout": false
-  },
-  "verification": "Run from the source repository root: bun <bundle>/verify.ts <bundle>"
+  }
 }

@@ -1,7 +1,7 @@
 {
   "ok": true,
-  "source": "18d9c52fc6e3694d17f90843009b776df8d4d2b373ecbf3c730c929c550e8bc2",
-  "account": "flwealx8xg01",
+  "source": "9b37cc362142189b87ac9eed031c07f984b14a5af8c386ebfc950f45034ef402",
+  "account": "flwealxmv501",
   "fixture": {
     "position": {
       "x": 2721,
@@ -232,34 +232,32 @@
   "code": 0,
   "timedOut": false,
   "online": {
-    "tick": 372,
+    "tick": 371,
     "online": false,
     "pendingLogout": false
   },
   "result": {
     "ok": true,
     "reason": "",
-    "ticks": 209,
-    "picks": 19,
-    "fails": 6,
-    "coinsGained": 650,
-    "banked": 650,
+    "ticks": 207,
+    "picks": 24,
+    "fails": 3,
+    "coinsGained": 1050,
+    "banked": 1050,
     "packCoins": 0,
     "coinsExact": true,
-    "coinsGainedObserved": 650,
+    "coinsGainedObserved": 1050,
     "coins0": 0,
-    "newBankedCoins": 650,
+    "newBankedCoins": 1050,
     "recovery": "not-needed",
     "unbankedCoins": 0,
-    "eaten": 1,
-    "eatenById": {
-      "1893": 1
-    },
+    "eaten": 0,
+    "eatenById": {},
     "food": 3,
     "idleTicks": 0,
-    "bankTrips": 3,
-    "hpMin": 10,
-    "hp": 15,
+    "bankTrips": 4,
+    "hpMin": 19,
+    "hp": 20,
     "died": false,
     "randomEvents": false,
     "at": {
@@ -972,7 +970,7 @@
         "index": 3,
         "rawExperience": 57550,
         "xp": 5755,
-        "level": 15
+        "level": 20
       },
       {
         "index": 4,
@@ -1054,9 +1052,9 @@
       },
       {
         "index": 17,
-        "rawExperience": 4326485,
-        "xp": 432648,
-        "level": 86
+        "rawExperience": 4495085,
+        "xp": 449508,
+        "level": 87
       },
       {
         "index": 18,
@@ -1088,7 +1086,7 @@
       "24": 4,
       "28": 4294967295,
       "64": 4294967295,
-      "134": 371,
+      "134": 370,
       "166": 2,
       "168": 2,
       "169": 2,
@@ -1114,7 +1112,7 @@
         },
         {
           "slot": 2,
-          "id": 1895,
+          "id": 1893,
           "count": 1
         }
       ],
@@ -1149,7 +1147,7 @@
         {
           "slot": 0,
           "id": 995,
-          "count": 9458
+          "count": 9858
         },
         {
           "slot": 1,
@@ -1340,9 +1338,9 @@
     }
   },
   "files": {
-    "before.sav": "09c6189630700ce77303a2a139d792622c882aaa1f49cd5ca5472d62bb077766",
-    "after.sav": "cb85525e5630ca96c91b74392b6759abe2c89c0298ac8267cac3e919562cc2c0",
-    "worker.log": "db888d51cafe63c1d8bdb38f58d1084aaaada18684d9208178e7b7392974297e",
-    "worker.err": "01d124119249c0390217a30d14a759259c376eb975e0cbf676d6ed2fe8300959"
+    "before.sav": "bd47bedf400fb6c7ea3d3ed3a74961f04f78725414feb34206671a7c4c777810",
+    "after.sav": "24571a4926ea236ba61090feb9cfca23472322858791f686dac8ffa900ae907c",
+    "worker.log": "e47ff68c544c080e5fc36a565a87a1000d8da280c0870364fc08a746ab8b5ce1",
+    "worker.err": "a070b0e9432d0856e6466d8ea87bdf44db9f48952945aa9d0928ddb80fcc5037"
   }
 }
