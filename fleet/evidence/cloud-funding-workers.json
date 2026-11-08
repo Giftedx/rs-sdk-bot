@@ -1,6 +1,6 @@
 {
   "schema": "cloud-funding-workers/1",
-  "at": 1794182219933,
+  "at": 1794182346304,
   "sourceInstalled": "ae60e14022ecccf347e2d7b11e6056d01976b590",
   "goal": "Bounded qualified training and earning pilots toward the cloud combat-15 kit; no repeats or shared-controller changes",
   "qualifications": [
@@ -93,9 +93,9 @@
   "sharedControllerUntouched": true,
   "sharedHoldsPreserved": true,
   "headroom": {
-    "freeGB": 16.26138687133789,
+    "freeGB": 16.618846893310547,
     "load": [
-      0.17,
+      0.12,
       0.21,
       0.24
     ]
@@ -635,16 +635,16 @@
         "headroomGB": 16.46274185180664,
         "goal": "One bounded knight earning run with measured bank credit and retained cash for the cloud combat-15 kit; no shared controller or plan changes"
       },
-      "at": 1794182219015,
-      "active": true,
-      "tick": 331,
+      "at": 1794182342512,
+      "active": false,
+      "tick": 634,
       "position": {
-        "x": 2653,
-        "z": 3299,
+        "x": 2666,
+        "z": 3295,
         "level": 0
       },
       "hp": {
-        "now": 10,
+        "now": 9,
         "max": 10
       },
       "skills": [
@@ -669,7 +669,7 @@
         {
           "name": "Hitpoints",
           "level": 10,
-          "currentLevel": 10,
+          "currentLevel": 9,
           "xp": 980
         },
         {
@@ -752,9 +752,9 @@
         },
         {
           "name": "Thieving",
-          "level": 57,
-          "currentLevel": 57,
-          "xp": 55855
+          "level": 60,
+          "currentLevel": 60,
+          "xp": 68500
         },
         {
           "name": "Stat18",
@@ -807,12 +807,6 @@
           "count": 1
         },
         {
-          "id": 1901,
-          "baseId": 1901,
-          "name": "Chocolate slice",
-          "count": 1
-        },
-        {
           "id": 1891,
           "baseId": 1891,
           "name": "Cake",
@@ -848,7 +842,7 @@
           "id": 995,
           "baseId": 995,
           "name": "Coins",
-          "count": 427
+          "count": 727
         },
         {
           "id": 1351,
@@ -954,8 +948,11 @@
         }
       ],
       "equipment": [],
-      "result": "",
-      "terminal": null,
+      "result": "ok ticks=628 picks=9 fails=3 noops=34 bans=6 coinsGained=400 coinsPerTick=0.64 eaten=2 bankTrips=5 bankTicks=60 walkTicks=240 idleTicks=99 eatTicks=2 stallTrips=1 stallTicks=179 stallPickTicks=4 stolen=10 refused=2 shopTrips=0 shopTicks=0 bought=0 foodTicksPct=38.4 hpMin=5 died=false banked=1",
+      "terminal": {
+        "ok": true,
+        "ended": 1794182342531
+      },
       "training": {
         "logout": {
           "state": "confirmed",
@@ -1025,14 +1022,39 @@
           "worker-0.err": "c9cf6d54bb7258ec6dc84af43f822125ea470416c76a97f88b43009a1dfbd609"
         }
       },
-      "earningResult": null,
+      "earningResult": {
+        "ok": true,
+        "netOwnedCoins": 400,
+        "netBankCoins": 100,
+        "finalBankCoins": 727,
+        "carriedCoins": 300,
+        "receipts": [
+          {
+            "entry": "scripts/goldfarm.ts",
+            "pid": 8737,
+            "code": 0,
+            "logout": {
+              "state": "confirmed",
+              "account": "Coinpurse",
+              "server": "rs-sdk-demo.fly.dev",
+              "domain": "live",
+              "attemptId": "1794182080945-0000008737-0000000001",
+              "loggedOutAt": 1794182341216,
+              "ownerRun": null,
+              "receiptSha256": "31521703ffe86dfbd6c40fd5a6bbedba61ee3787cf629044fd6990379c0b8baf"
+            }
+          }
+        ]
+      },
       "logout": {
-        "state": "held",
+        "state": "confirmed",
         "account": "Coinpurse",
         "server": "rs-sdk-demo.fly.dev",
         "domain": "live",
         "attemptId": "1794182080945-0000008737-0000000001",
-        "reason": "session active or outcome unknown"
+        "loggedOutAt": 1794182341216,
+        "ownerRun": null,
+        "receiptSha256": "31521703ffe86dfbd6c40fd5a6bbedba61ee3787cf629044fd6990379c0b8baf"
       },
       "stopPresent": false
     },
