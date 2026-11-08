@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794167687316,
+ "at": 1794167838761,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -106,14 +106,14 @@
    "account": "Spitroaster",
    "script": "scripts/quest-sweep.ts",
    "args": [
-    "priest"
+    "runemysteries"
    ],
    "env": {
     "CAP": "2400"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Restless Ghost unlock for the later Nature Spirit quest chain",
+   "goal": "Rune Mysteries unlock for the future magic supply chain",
    "role": "quests"
   },
   {

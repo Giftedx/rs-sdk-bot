@@ -3,18 +3,18 @@
  "side": "cloud",
  "source": "7bd9e77d2d50648c53df71d35175e5e8f5da5c10",
  "started": 1794167124636,
- "at": 1794167685734,
- "peakLive": 7,
+ "at": 1794167836024,
+ "peakLive": 8,
  "currentLive": 7,
- "minFreeGB": 11.42800521850586,
+ "minFreeGB": 11.427249908447266,
  "current": [
   {
    "account": "TossTheCaber",
-   "tick": 441,
-   "at": 1794167685608,
+   "tick": 816,
+   "at": 1794167835846,
    "position": {
-    "x": 2644,
-    "z": 3284,
+    "x": 2610,
+    "z": 3352,
     "level": 0
    },
    "result": "",
@@ -22,11 +22,11 @@
   },
   {
    "account": "Swordswallow",
-   "tick": 526,
-   "at": 1794167685623,
+   "tick": 901,
+   "at": 1794167835845,
    "position": {
-    "x": 2844,
-    "z": 3468,
+    "x": 2587,
+    "z": 9612,
     "level": 0
    },
    "result": "",
@@ -34,11 +34,11 @@
   },
   {
    "account": "Unsheathed",
-   "tick": 161,
-   "at": 1794167685580,
+   "tick": 536,
+   "at": 1794167835797,
    "position": {
-    "x": 2730,
-    "z": 3560,
+    "x": 3081,
+    "z": 3279,
     "level": 0
    },
    "result": "",
@@ -46,11 +46,11 @@
   },
   {
    "account": "Porksword",
-   "tick": 526,
-   "at": 1794167684030,
+   "tick": 901,
+   "at": 1794167834262,
    "position": {
-    "x": 2772,
-    "z": 3225,
+    "x": 2632,
+    "z": 3295,
     "level": 0
    },
    "result": "",
@@ -58,11 +58,11 @@
   },
   {
    "account": "MeatNTwoVeg",
-   "tick": 1113,
-   "at": 1794167685412,
+   "tick": 1488,
+   "at": 1794167835435,
    "position": {
-    "x": 3211,
-    "z": 3211,
+    "x": 3122,
+    "z": 3293,
     "level": 0
    },
    "result": "",
@@ -70,35 +70,35 @@
   },
   {
    "account": "YewGotWood",
-   "tick": 1123,
-   "at": 1794167600754,
+   "tick": 341,
+   "at": 1794167835832,
    "position": {
-    "x": 3253,
-    "z": 3420,
-    "level": 0
-   },
-   "result": "ok {\"ok\":true,\"alreadyComplete\":false,\"reward\":true,\"eats\":0}",
-   "logout": "confirmed"
-  },
-  {
-   "account": "Spitroaster",
-   "tick": 441,
-   "at": 1794167684214,
-   "position": {
-    "x": 3227,
-    "z": 3234,
+    "x": 3082,
+    "z": 3273,
     "level": 0
    },
    "result": "",
    "logout": "held"
   },
   {
-   "account": "Stirmypot",
-   "tick": 251,
-   "at": 1794167684229,
+   "account": "Spitroaster",
+   "tick": 718,
+   "at": 1794167795733,
    "position": {
-    "x": 3067,
-    "z": 3277,
+    "x": 3248,
+    "z": 3193,
+    "level": 0
+   },
+   "result": "ok qp=1  xp=prayer=28125 at=3248,3193,0 ticks=606 hpMin=7 eats=1 walkTicks=403 retries=1 died=false milestones=1,2,3,4,5 jumps=427:3104,3161->3104,9576,0;471:3104,9576->3105,3162,0 msgs=You open the coffin. / Out of nowhere a skeleton appears! / You open the coffin. / Congratulations! Quest c",
+   "logout": "confirmed"
+  },
+  {
+   "account": "Stirmypot",
+   "tick": 626,
+   "at": 1794167834656,
+   "position": {
+    "x": 3103,
+    "z": 3266,
     "level": 0
    },
    "result": "",
@@ -1419,6 +1419,148 @@
      "baseId": 559,
      "name": "Body rune",
      "count": 2
+    }
+   ]
+  },
+  {
+   "account": "Spitroaster",
+   "attemptId": "1794167502675-0000011301-0000000001",
+   "started": 1794167508133,
+   "at": 1794167795733,
+   "source": "0c41a2bb0cab401038f251a0c1eaa820648a7394076c1190771afb88ed0d940d",
+   "entry": "scripts/quest-sweep.ts",
+   "result": "ok qp=1  xp=prayer=28125 at=3248,3193,0 ticks=606 hpMin=7 eats=1 walkTicks=403 retries=1 died=false milestones=1,2,3,4,5 jumps=427:3104,3161->3104,9576,0;471:3104,9576->3105,3162,0 msgs=You open the coffin. / Out of nowhere a skeleton appears! / You open the coffin. / Congratulations! Quest c",
+   "logout": "confirmed",
+   "newQuests": [
+    "The Restless Ghost",
+    "Witch's Potion"
+   ],
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "bank": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 21
+    },
+    {
+     "id": 1351,
+     "baseId": 1351,
+     "name": "Bronze axe",
+     "count": 1
+    },
+    {
+     "id": 590,
+     "baseId": 590,
+     "name": "Tinderbox",
+     "count": 1
+    },
+    {
+     "id": 303,
+     "baseId": 303,
+     "name": "Small fishing net",
+     "count": 1
+    },
+    {
+     "id": 315,
+     "baseId": 315,
+     "name": "Shrimps",
+     "count": 1
+    },
+    {
+     "id": 1925,
+     "baseId": 1925,
+     "name": "Bucket",
+     "count": 1
+    },
+    {
+     "id": 1931,
+     "baseId": 1931,
+     "name": "Pot",
+     "count": 1
+    },
+    {
+     "id": 1265,
+     "baseId": 1265,
+     "name": "Bronze pickaxe",
+     "count": 1
+    },
+    {
+     "id": 1205,
+     "baseId": 1205,
+     "name": "Bronze dagger",
+     "count": 1
+    },
+    {
+     "id": 1277,
+     "baseId": 1277,
+     "name": "Bronze sword",
+     "count": 1
+    },
+    {
+     "id": 1171,
+     "baseId": 1171,
+     "name": "Wooden shield",
+     "count": 1
+    },
+    {
+     "id": 841,
+     "baseId": 841,
+     "name": "Shortbow",
+     "count": 1
+    },
+    {
+     "id": 882,
+     "baseId": 882,
+     "name": "Bronze arrow",
+     "count": 25
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 22
+    },
+    {
+     "id": 558,
+     "baseId": 558,
+     "name": "Mind rune",
+     "count": 15
+    },
+    {
+     "id": 555,
+     "baseId": 555,
+     "name": "Water rune",
+     "count": 6
+    },
+    {
+     "id": 557,
+     "baseId": 557,
+     "name": "Earth rune",
+     "count": 3
+    },
+    {
+     "id": 559,
+     "baseId": 559,
+     "name": "Body rune",
+     "count": 2
+    }
+   ],
+   "inventory": [
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 3
+    },
+    {
+     "id": 557,
+     "baseId": 557,
+     "name": "Earth rune",
+     "count": 1
     }
    ]
   }
