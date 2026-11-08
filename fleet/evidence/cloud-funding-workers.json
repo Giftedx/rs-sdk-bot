@@ -1,6 +1,6 @@
 {
   "schema": "cloud-funding-workers/1",
-  "at": 1794180411230,
+  "at": 1794180551993,
   "sourceInstalled": "ae60e14022ecccf347e2d7b11e6056d01976b590",
   "goal": "Bounded fresh Thieving55 training and banked earnings toward the cloud combat-15 kit; no automatic knight farming",
   "qualifications": [
@@ -93,11 +93,11 @@
   "sharedControllerUntouched": true,
   "sharedHoldsPreserved": true,
   "headroom": {
-    "freeGB": 14.979545593261719,
+    "freeGB": 16.256805419921875,
     "load": [
-      1.26,
-      1.05,
-      0.54
+      0.37,
+      0.81,
+      0.53
     ]
   },
   "accounts": [
@@ -420,16 +420,16 @@
         },
         "started": 1794180364637
       },
-      "at": 1794180410059,
+      "at": 1794180550074,
       "active": true,
-      "tick": 91,
+      "tick": 441,
       "position": {
-        "x": 3219,
-        "z": 3219,
+        "x": 3220,
+        "z": 3218,
         "level": 0
       },
       "hp": {
-        "now": 5,
+        "now": 1,
         "max": 10
       },
       "skills": [
@@ -454,7 +454,7 @@
         {
           "name": "Hitpoints",
           "level": 10,
-          "currentLevel": 5,
+          "currentLevel": 1,
           "xp": 980
         },
         {
@@ -537,9 +537,9 @@
         },
         {
           "name": "Thieving",
-          "level": 12,
-          "currentLevel": 12,
-          "xp": 1400
+          "level": 19,
+          "currentLevel": 19,
+          "xp": 3000
         },
         {
           "name": "Stat18",
@@ -673,7 +673,7 @@
           "id": 995,
           "baseId": 995,
           "name": "Coins",
-          "count": 21
+          "count": 45
         }
       ],
       "bank": null,
