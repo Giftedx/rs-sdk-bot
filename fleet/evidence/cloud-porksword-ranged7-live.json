@@ -39,8 +39,597 @@
    "workEntry": "scripts/ranged-train.ts",
    "sessionAttemptId": "1794177752245-0000072993-0000000001",
    "result": ""
+  },
+  {
+   "at": 1794178026615,
+   "tick": 661,
+   "pos": {
+    "x": 3082,
+    "z": 3392,
+    "level": 0
+   },
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "stats": {
+    "Attack": 1,
+    "Defence": 1,
+    "Strength": 1,
+    "Hitpoints": 10,
+    "Ranged": 1,
+    "Prayer": 1,
+    "Magic": 1
+   },
+   "GP": 8284,
+   "bronzeArrows": 25,
+   "cheese": 2,
+   "runeArrowtips": 3,
+   "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+   "workEntry": "scripts/ranged-train.ts",
+   "sessionAttemptId": "1794177752245-0000072993-0000000001",
+   "result": ""
+  },
+  {
+   "at": 1794178030933,
+   "tick": 671,
+   "pos": {
+    "x": 3094,
+    "z": 3409,
+    "level": 0
+   },
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "stats": {
+    "Attack": 1,
+    "Defence": 1,
+    "Strength": 1,
+    "Hitpoints": 10,
+    "Ranged": 1,
+    "Prayer": 1,
+    "Magic": 1
+   },
+   "GP": 8284,
+   "bronzeArrows": 25,
+   "cheese": 2,
+   "runeArrowtips": 3,
+   "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+   "workEntry": "scripts/ranged-train.ts",
+   "sessionAttemptId": "1794177752245-0000072993-0000000001",
+   "result": ""
+  },
+  {
+   "at": 1794178037393,
+   "tick": 686,
+   "pos": {
+    "x": 3116,
+    "z": 3420,
+    "level": 0
+   },
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "stats": {
+    "Attack": 1,
+    "Defence": 1,
+    "Strength": 1,
+    "Hitpoints": 10,
+    "Ranged": 1,
+    "Prayer": 1,
+    "Magic": 1
+   },
+   "GP": 8284,
+   "bronzeArrows": 25,
+   "cheese": 2,
+   "runeArrowtips": 3,
+   "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+   "workEntry": "scripts/ranged-train.ts",
+   "sessionAttemptId": "1794177752245-0000072993-0000000001",
+   "result": ""
+  },
+  {
+   "at": 1794178040933,
+   "tick": 696,
+   "pos": {
+    "x": 3132,
+    "z": 3417,
+    "level": 0
+   },
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "stats": {
+    "Attack": 1,
+    "Defence": 1,
+    "Strength": 1,
+    "Hitpoints": 10,
+    "Ranged": 1,
+    "Prayer": 1,
+    "Magic": 1
+   },
+   "GP": 8284,
+   "bronzeArrows": 25,
+   "cheese": 2,
+   "runeArrowtips": 3,
+   "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+   "workEntry": "scripts/ranged-train.ts",
+   "sessionAttemptId": "1794177752245-0000072993-0000000001",
+   "result": ""
+  },
+  {
+   "at": 1794178046941,
+   "tick": 711,
+   "pos": {
+    "x": 3162,
+    "z": 3421,
+    "level": 0
+   },
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "stats": {
+    "Attack": 1,
+    "Defence": 1,
+    "Strength": 1,
+    "Hitpoints": 10,
+    "Ranged": 1,
+    "Prayer": 1,
+    "Magic": 1
+   },
+   "GP": 8284,
+   "bronzeArrows": 25,
+   "cheese": 2,
+   "runeArrowtips": 3,
+   "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+   "workEntry": "scripts/ranged-train.ts",
+   "sessionAttemptId": "1794177752245-0000072993-0000000001",
+   "result": ""
+  },
+  {
+   "at": 1794178050933,
+   "tick": 721,
+   "pos": {
+    "x": 3182,
+    "z": 3426,
+    "level": 0
+   },
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "stats": {
+    "Attack": 1,
+    "Defence": 1,
+    "Strength": 1,
+    "Hitpoints": 10,
+    "Ranged": 1,
+    "Prayer": 1,
+    "Magic": 1
+   },
+   "GP": 8284,
+   "bronzeArrows": 25,
+   "cheese": 2,
+   "runeArrowtips": 3,
+   "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+   "workEntry": "scripts/ranged-train.ts",
+   "sessionAttemptId": "1794177752245-0000072993-0000000001",
+   "result": ""
+  },
+  {
+   "at": 1794178057117,
+   "tick": 736,
+   "pos": {
+    "x": 3212,
+    "z": 3425,
+    "level": 0
+   },
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "stats": {
+    "Attack": 1,
+    "Defence": 1,
+    "Strength": 1,
+    "Hitpoints": 10,
+    "Ranged": 1,
+    "Prayer": 1,
+    "Magic": 1
+   },
+   "GP": 8284,
+   "bronzeArrows": 25,
+   "cheese": 2,
+   "runeArrowtips": 3,
+   "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+   "workEntry": "scripts/ranged-train.ts",
+   "sessionAttemptId": "1794177752245-0000072993-0000000001",
+   "result": ""
+  },
+  {
+   "at": 1794178060934,
+   "tick": 746,
+   "pos": {
+    "x": 3232,
+    "z": 3428,
+    "level": 0
+   },
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "stats": {
+    "Attack": 1,
+    "Defence": 1,
+    "Strength": 1,
+    "Hitpoints": 10,
+    "Ranged": 1,
+    "Prayer": 1,
+    "Magic": 1
+   },
+   "GP": 8284,
+   "bronzeArrows": 25,
+   "cheese": 2,
+   "runeArrowtips": 3,
+   "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+   "workEntry": "scripts/ranged-train.ts",
+   "sessionAttemptId": "1794177752245-0000072993-0000000001",
+   "result": ""
+  },
+  {
+   "at": 1794178066822,
+   "tick": 761,
+   "pos": {
+    "x": 3253,
+    "z": 3421,
+    "level": 0
+   },
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "stats": {
+    "Attack": 1,
+    "Defence": 1,
+    "Strength": 1,
+    "Hitpoints": 10,
+    "Ranged": 1,
+    "Prayer": 1,
+    "Magic": 1
+   },
+   "GP": 8284,
+   "bronzeArrows": 25,
+   "cheese": 2,
+   "runeArrowtips": 3,
+   "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+   "workEntry": "scripts/ranged-train.ts",
+   "sessionAttemptId": "1794177752245-0000072993-0000000001",
+   "result": ""
+  },
+  {
+   "at": 1794178070937,
+   "tick": 771,
+   "pos": {
+    "x": 3252,
+    "z": 3420,
+    "level": 0
+   },
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "stats": {
+    "Attack": 1,
+    "Defence": 1,
+    "Strength": 1,
+    "Hitpoints": 10,
+    "Ranged": 1,
+    "Prayer": 1,
+    "Magic": 1
+   },
+   "GP": 8284,
+   "bronzeArrows": 25,
+   "cheese": 2,
+   "runeArrowtips": 3,
+   "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+   "workEntry": "scripts/ranged-train.ts",
+   "sessionAttemptId": "1794177752245-0000072993-0000000001",
+   "result": ""
+  },
+  {
+   "at": 1794178076737,
+   "tick": 786,
+   "pos": {
+    "x": 3260,
+    "z": 3428,
+    "level": 0
+   },
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "stats": {
+    "Attack": 1,
+    "Defence": 1,
+    "Strength": 1,
+    "Hitpoints": 10,
+    "Ranged": 1,
+    "Prayer": 1,
+    "Magic": 1
+   },
+   "GP": 8284,
+   "bronzeArrows": 25,
+   "cheese": 2,
+   "runeArrowtips": 3,
+   "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+   "workEntry": "scripts/ranged-train.ts",
+   "sessionAttemptId": "1794177752245-0000072993-0000000001",
+   "result": ""
+  },
+  {
+   "at": 1794178080948,
+   "tick": 796,
+   "pos": {
+    "x": 3280,
+    "z": 3429,
+    "level": 0
+   },
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "stats": {
+    "Attack": 1,
+    "Defence": 1,
+    "Strength": 1,
+    "Hitpoints": 10,
+    "Ranged": 1,
+    "Prayer": 1,
+    "Magic": 1
+   },
+   "GP": 8284,
+   "bronzeArrows": 25,
+   "cheese": 2,
+   "runeArrowtips": 3,
+   "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+   "workEntry": "scripts/ranged-train.ts",
+   "sessionAttemptId": "1794177752245-0000072993-0000000001",
+   "result": ""
+  },
+  {
+   "at": 1794178086888,
+   "tick": 811,
+   "pos": {
+    "x": 3289,
+    "z": 3410,
+    "level": 0
+   },
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "stats": {
+    "Attack": 1,
+    "Defence": 1,
+    "Strength": 1,
+    "Hitpoints": 10,
+    "Ranged": 1,
+    "Prayer": 1,
+    "Magic": 1
+   },
+   "GP": 8284,
+   "bronzeArrows": 25,
+   "cheese": 2,
+   "runeArrowtips": 3,
+   "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+   "workEntry": "scripts/ranged-train.ts",
+   "sessionAttemptId": "1794177752245-0000072993-0000000001",
+   "result": ""
+  },
+  {
+   "at": 1794178090936,
+   "tick": 821,
+   "pos": {
+    "x": 3289,
+    "z": 3390,
+    "level": 0
+   },
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "stats": {
+    "Attack": 1,
+    "Defence": 1,
+    "Strength": 1,
+    "Hitpoints": 10,
+    "Ranged": 1,
+    "Prayer": 1,
+    "Magic": 1
+   },
+   "GP": 8284,
+   "bronzeArrows": 25,
+   "cheese": 2,
+   "runeArrowtips": 3,
+   "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+   "workEntry": "scripts/ranged-train.ts",
+   "sessionAttemptId": "1794177752245-0000072993-0000000001",
+   "result": ""
+  },
+  {
+   "at": 1794178097537,
+   "tick": 836,
+   "pos": {
+    "x": 3275,
+    "z": 3373,
+    "level": 0
+   },
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "stats": {
+    "Attack": 1,
+    "Defence": 1,
+    "Strength": 1,
+    "Hitpoints": 10,
+    "Ranged": 1,
+    "Prayer": 1,
+    "Magic": 1
+   },
+   "GP": 8284,
+   "bronzeArrows": 25,
+   "cheese": 2,
+   "runeArrowtips": 3,
+   "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+   "workEntry": "scripts/ranged-train.ts",
+   "sessionAttemptId": "1794177752245-0000072993-0000000001",
+   "result": ""
+  },
+  {
+   "at": 1794178102613,
+   "tick": 851,
+   "pos": {
+    "x": 3272,
+    "z": 3347,
+    "level": 0
+   },
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "stats": {
+    "Attack": 1,
+    "Defence": 1,
+    "Strength": 1,
+    "Hitpoints": 10,
+    "Ranged": 1,
+    "Prayer": 1,
+    "Magic": 1
+   },
+   "GP": 8284,
+   "bronzeArrows": 25,
+   "cheese": 2,
+   "runeArrowtips": 3,
+   "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+   "workEntry": "scripts/ranged-train.ts",
+   "sessionAttemptId": "1794177752245-0000072993-0000000001",
+   "result": ""
+  },
+  {
+   "at": 1794178106756,
+   "tick": 861,
+   "pos": {
+    "x": 3266,
+    "z": 3331,
+    "level": 0
+   },
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "stats": {
+    "Attack": 1,
+    "Defence": 1,
+    "Strength": 1,
+    "Hitpoints": 10,
+    "Ranged": 1,
+    "Prayer": 1,
+    "Magic": 1
+   },
+   "GP": 8284,
+   "bronzeArrows": 25,
+   "cheese": 2,
+   "runeArrowtips": 3,
+   "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+   "workEntry": "scripts/ranged-train.ts",
+   "sessionAttemptId": "1794177752245-0000072993-0000000001",
+   "result": ""
+  },
+  {
+   "at": 1794178110989,
+   "tick": 871,
+   "pos": {
+    "x": 3251,
+    "z": 3312,
+    "level": 0
+   },
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "stats": {
+    "Attack": 1,
+    "Defence": 1,
+    "Strength": 1,
+    "Hitpoints": 10,
+    "Ranged": 1,
+    "Prayer": 1,
+    "Magic": 1
+   },
+   "GP": 8284,
+   "bronzeArrows": 25,
+   "cheese": 2,
+   "runeArrowtips": 3,
+   "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+   "workEntry": "scripts/ranged-train.ts",
+   "sessionAttemptId": "1794177752245-0000072993-0000000001",
+   "result": ""
+  },
+  {
+   "at": 1794178116641,
+   "tick": 886,
+   "pos": {
+    "x": 3233,
+    "z": 3297,
+    "level": 0
+   },
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "stats": {
+    "Attack": 1,
+    "Defence": 1,
+    "Strength": 1,
+    "Hitpoints": 10,
+    "Ranged": 1,
+    "Prayer": 1,
+    "Magic": 1
+   },
+   "GP": 8284,
+   "bronzeArrows": 25,
+   "cheese": 2,
+   "runeArrowtips": 3,
+   "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+   "workEntry": "scripts/ranged-train.ts",
+   "sessionAttemptId": "1794177752245-0000072993-0000000001",
+   "result": ""
   }
  ],
  "wildernessHeld": true,
- "resultPending": true
+ "resultPending": true,
+ "at": 1794178117643,
+ "current": {
+  "tick": 886,
+  "pos": {
+   "x": 3233,
+   "z": 3297,
+   "level": 0
+  },
+  "hp": {
+   "now": 10,
+   "max": 10
+  },
+  "result": "",
+  "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178"
+ },
+ "logout": {
+  "state": "held",
+  "matchingAttempt": false
+ }
 }

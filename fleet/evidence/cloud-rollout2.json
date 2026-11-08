@@ -3,14 +3,14 @@
  "side": "cloud",
  "source": "7cd74fe469a81ec2a9433817277f7a4a9fdf39d5",
  "started": 1794167124636,
- "at": 1794177883346,
+ "at": 1794178068774,
  "peakLive": 9,
  "currentLive": 1,
  "minFreeGB": 8.638957977294922,
  "headroom": {
-  "freeGB": 15.289081573486328,
+  "freeGB": 15.220527648925781,
   "load": [
-   0.3,
+   0.17,
    0.21,
    0.18
   ],
@@ -79,11 +79,11 @@
    "account": "Porksword",
    "goal": "Train Ranged1 to7 and bank the kit as a prerequisite for the cloud combat6 standby; no Wilderness entry",
    "enabled": true,
-   "tick": 301,
-   "at": 1794177882691,
+   "tick": 761,
+   "at": 1794178066822,
    "position": {
-    "x": 2772,
-    "z": 3234,
+    "x": 3253,
+    "z": 3421,
     "level": 0
    },
    "result": "",
