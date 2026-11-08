@@ -1,66 +1,23 @@
 {
  "schema": "cloud-expansion-snapshot/1",
  "started": 1794174593771,
- "at": 1794175281293,
+ "at": 1794175787519,
  "source": "70fcbce85350659ad82496060e9c3e4f992c91a0",
  "peakFreshLive": 3,
  "peakWholeRollout": 9,
- "currentLive": 3,
+ "currentLive": 0,
  "headroom": {
-  "freeGB": 14.160842895507812,
+  "freeGB": 15.639816284179688,
   "load": [
-   0.68,
-   0.72,
-   0.97
+   0.76,
+   0.57,
+   0.74
   ],
   "cpus": 5,
   "requiredFloorGB": 4,
   "practiceReserveGB": 2.5
  },
- "active": [
-  {
-   "account": "TossTheCaber",
-   "goal": "Live first pilot banked5yews,18remain for Haggis23-yew bill; bank next8 on same proved Seers grove/bank, WC60+steelaxe, one finite1500tick trip",
-   "enabled": true,
-   "tick": 146,
-   "at": 1794175281176,
-   "position": {
-    "x": 2716,
-    "z": 3462,
-    "level": 0
-   },
-   "result": "",
-   "logout": "held"
-  },
-  {
-   "account": "MeatNTwoVeg",
-   "goal": "Bank release-eligible essence toward Haggis58 accessible gap:69 Swords essence death/logout-held, Uns27+Crown4 reserved Priest; other4455+Spit23 leaves58. Proved safe Varrock east worker, finite450ticks, verify actual bank delta",
-   "enabled": true,
-   "tick": 256,
-   "at": 1794175280672,
-   "position": {
-    "x": 3252,
-    "z": 3420,
-    "level": 0
-   },
-   "result": "",
-   "logout": "held"
-  },
-  {
-   "account": "BoneToPick",
-   "goal": "Final21 water inputs toward44 wine-stock-order inputs matching44 shared grapes;23 newwater already banked, original1Monk Friend jug protected; finite1800ticks, no wine-production claim",
-   "enabled": true,
-   "tick": 146,
-   "at": 1794175281205,
-   "position": {
-    "x": 3301,
-    "z": 3170,
-    "level": 0
-   },
-   "result": "",
-   "logout": "held"
-  }
- ],
+ "active": [],
  "accounts": [
   {
    "account": "BraveHardon",
@@ -78,17 +35,17 @@
   },
   {
    "account": "TossTheCaber",
-   "goal": "Live first pilot banked5yews,18remain for Haggis23-yew bill; bank next8 on same proved Seers grove/bank, WC60+steelaxe, one finite1500tick trip",
+   "goal": "Bank20 release-eligible wool for Stirmypot Sheep Shearer; replace inaccessible20 on death-held Swordswallow; healthy courier at Ardy bank, own funding, max70cost60reserve; recipient stays held",
    "enabled": true,
-   "tick": 146,
-   "at": 1794175281176,
+   "tick": 112,
+   "at": 1794175773680,
    "position": {
-    "x": 2716,
-    "z": 3462,
+    "x": 2655,
+    "z": 3283,
     "level": 0
    },
-   "result": "",
-   "logout": "held"
+   "result": "ok ticks=101 boughtTotal=20 bankedTotal=20 bankTrips=2 shopTrips=1 coinsLeft=80 spentTotal=50 coinReserve=60 maxSpend=70 maxItems=20 stop=item-cap targetMet=1 noBuyTicks=0 noBuyLimit=100",
+   "logout": "confirmed"
   },
   {
    "account": "Swordswallow",
@@ -134,17 +91,17 @@
   },
   {
    "account": "MeatNTwoVeg",
-   "goal": "Bank release-eligible essence toward Haggis58 accessible gap:69 Swords essence death/logout-held, Uns27+Crown4 reserved Priest; other4455+Spit23 leaves58. Proved safe Varrock east worker, finite450ticks, verify actual bank delta",
-   "enabled": true,
-   "tick": 256,
-   "at": 1794175280672,
+   "goal": "Banked59 essence37+22 toward Haggis minimum58 available gap; last pilot cap end timed out teleport after bank, no death, logoutconfirmed; no repeat, failed essence script held",
+   "enabled": false,
+   "tick": 353,
+   "at": 1794175675689,
    "position": {
-    "x": 3252,
-    "z": 3420,
+    "x": 3260,
+    "z": 3415,
     "level": 0
    },
-   "result": "",
-   "logout": "held"
+   "result": "fail essence {\"ok\":false,\"totalMined\":22,\"totalBanked\":22,\"held\":0,\"trips\":2,\"died\":false,\"failure\":\"Error: Teleport to essence mine timed out\"}",
+   "logout": "confirmed"
   },
   {
    "account": "YewGotWood",
@@ -192,15 +149,15 @@
    "account": "BoneToPick",
    "goal": "Final21 water inputs toward44 wine-stock-order inputs matching44 shared grapes;23 newwater already banked, original1Monk Friend jug protected; finite1800ticks, no wine-production claim",
    "enabled": true,
-   "tick": 146,
-   "at": 1794175281205,
+   "tick": 1374,
+   "at": 1794175774118,
    "position": {
-    "x": 3301,
-    "z": 3170,
+    "x": 3269,
+    "z": 3166,
     "level": 0
    },
-   "result": "",
-   "logout": "held"
+   "result": "ok item=1937 banked=21 target=21 trips=1 ticks=1373 ",
+   "logout": "confirmed"
   },
   {
    "account": "Crownjewels",

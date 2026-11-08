@@ -1,0 +1,97 @@
+{
+ "schema": "cloud-pvp-readiness-gates/1",
+ "at": 1794175790512,
+ "controllerPid": 61575,
+ "source": "70fcbce85350659ad82496060e9c3e4f992c91a0",
+ "releasedWorker": "scripts/pvp-standby.ts stage|verify",
+ "releasedProfiles": [
+  6,
+  9,
+  20
+ ],
+ "coordinatorPausePreserved": true,
+ "candidatesOnly": [
+  {
+   "account": "Crownjewels",
+   "combat": 17,
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "position": {
+    "x": 3092,
+    "z": 3242,
+    "level": 0
+   },
+   "skills": {
+    "Strength": 1,
+    "Ranged": 1,
+    "Magic": 31
+   },
+   "ownedKit": {
+    "841": 1,
+    "882": 25,
+    "556": 25,
+    "558": 15,
+    "1985": 0,
+    "1277": 1,
+    "1171": 1
+   },
+   "attemptId": "1794174833314-0000069654-0000000001",
+   "result": "ok Hetty complete; QP+1, Magic+8125, costs, assets and life observed",
+   "missing": [
+    "No exact released6/9/20 build match",
+    "No exact-account full-route native qualification receipt",
+    "No exact cloud PvP consumer assignment",
+    "Not at required Varrock East bank start"
+   ]
+  },
+  {
+   "account": "Porksword",
+   "combat": 3,
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "position": {
+    "x": 2807,
+    "z": 3441,
+    "level": 0
+   },
+   "skills": {
+    "Strength": 1,
+    "Ranged": 1,
+    "Magic": 1
+   },
+   "ownedKit": {
+    "841": 1,
+    "882": 25,
+    "556": 25,
+    "558": 15,
+    "1985": 0,
+    "1277": 1,
+    "1171": 1
+   },
+   "attemptId": "1794174439329-0000067369-0000000001",
+   "result": "ok ticks=91 boughtTotal=0 bankedTotal=0 bankTrips=2 shopTrips=1 coinsLeft=1300 spentTotal=0 coinReserve=300 maxSpend=200 maxItems=1 stop=stock-wait targetMet=0 noBuyTicks=50 noBuyLimit=50",
+   "missing": [
+    "No exact released6/9/20 build match",
+    "No exact-account full-route native qualification receipt",
+    "No exact cloud PvP consumer assignment",
+    "Not at required Varrock East bank start"
+   ]
+  }
+ ],
+ "sharedQualificationReceipts": [],
+ "holdsPreserved": [
+  "BraveHardon food",
+  "YewGotWood death",
+  "Stirmypot owner/death",
+  "Swordswallow death/uncertain logout",
+  "Unsheathed failed quest/spawn",
+  "Spitroaster failed quest",
+  "MeatNTwoVeg failed essence worker"
+ ],
+ "localReservations": "Steelrod and local brackets excluded",
+ "decision": "No PvP live start; awaiting exact cloud account, released source/full-route native proof, complete owned kit and named consumer. No open-ended PK."
+}

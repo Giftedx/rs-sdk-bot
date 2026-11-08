@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794175204671,
+ "at": 1794175791811,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -18,19 +18,25 @@
   },
   {
    "account": "TossTheCaber",
-   "script": "scripts/gather-yews.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "1500",
-    "8"
+    "ardy",
+    "500"
    ],
    "env": {
-    "TREE": "yew",
-    "MAX_TRIPS": "1"
+    "ITEMS": "wool",
+    "MAX_ITEMS": "20",
+    "MAX_SPEND": "70",
+    "COIN_RESERVE": "60",
+    "FLOAT": "130",
+    "STOCK_TARGET": "20",
+    "NO_BUY_TICKS": "100",
+    "BANK_PACK": "1"
    },
    "enabled": true,
    "standing": false,
    "repeat": false,
-   "goal": "Live first pilot banked5yews,18remain for Haggis23-yew bill; bank next8 on same proved Seers grove/bank, WC60+steelaxe, one finite1500tick trip",
+   "goal": "Bank20 release-eligible wool for Stirmypot Sheep Shearer; replace inaccessible20 on death-held Swordswallow; healthy courier at Ardy bank, own funding, max70cost60reserve; recipient stays held",
    "role": "supply"
   },
   {
@@ -89,12 +95,12 @@
    "script": "scripts/gather-essence.ts",
    "args": [],
    "env": {
-    "CAP": "450",
-    "BANK_AT": "20"
+    "CAP": "350",
+    "BANK_AT": "11"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
-   "goal": "Bank release-eligible essence toward Haggis58 accessible gap:69 Swords essence death/logout-held, Uns27+Crown4 reserved Priest; other4455+Spit23 leaves58. Proved safe Varrock east worker, finite450ticks, verify actual bank delta",
+   "goal": "Banked59 essence37+22 toward Haggis minimum58 available gap; last pilot cap end timed out teleport after bank, no death, logoutconfirmed; no repeat, failed essence script held",
    "role": "supply"
   },
   {
