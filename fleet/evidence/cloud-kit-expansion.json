@@ -1,6 +1,6 @@
 {
   "schema": "cloud-kit-expansion/1",
-  "at": 1794182102019,
+  "at": 1794182164810,
   "side": "cloud-kit",
   "controller": {
     "pid": 6955,
@@ -187,11 +187,11 @@
     }
   },
   "headroom": {
-    "freeGB": 15.859046936035156,
+    "freeGB": 16.296924591064453,
     "load": [
-      0.07,
-      0.33,
-      0.41
+      0.11,
+      0.3,
+      0.39
     ],
     "cpus": 5,
     "minFreeGB": 8,
@@ -200,15 +200,15 @@
   "accounts": [
     {
       "account": "Familyjewel",
-      "at": 1794182101376,
-      "tick": 411,
+      "at": 1794182145679,
+      "tick": 42,
       "position": {
-        "x": 2652,
-        "z": 3317,
+        "x": 2655,
+        "z": 3283,
         "level": 0
       },
       "hp": {
-        "now": 9,
+        "now": 10,
         "max": 10
       },
       "skills": [
@@ -233,7 +233,7 @@
         {
           "name": "Hitpoints",
           "level": 10,
-          "currentLevel": 9,
+          "currentLevel": 10,
           "xp": 980
         },
         {
@@ -316,9 +316,9 @@
         },
         {
           "name": "Thieving",
-          "level": 78,
-          "currentLevel": 78,
-          "xp": 247592
+          "level": 79,
+          "currentLevel": 79,
+          "xp": 253915
         },
         {
           "name": "Stat18",
@@ -344,25 +344,25 @@
           "id": 995,
           "baseId": 995,
           "name": "Coins",
-          "count": 4019
+          "count": 5169
         },
         {
           "id": 1891,
           "baseId": 1891,
           "name": "Cake",
-          "count": 29
+          "count": 33
         },
         {
           "id": 1893,
           "baseId": 1893,
           "name": "2/3 cake",
-          "count": 8
+          "count": 10
         },
         {
           "id": 2309,
           "baseId": 2309,
           "name": "Bread",
-          "count": 5
+          "count": 7
         }
       ],
       "inventory": [
@@ -401,12 +401,6 @@
           "baseId": 1931,
           "name": "Pot",
           "count": 1
-        },
-        {
-          "id": 995,
-          "baseId": 995,
-          "name": "Coins",
-          "count": 1000
         },
         {
           "id": 1265,
@@ -473,74 +467,29 @@
           "baseId": 559,
           "name": "Body rune",
           "count": 2
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 2309,
-          "baseId": 2309,
-          "name": "Bread",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 2309,
-          "baseId": 2309,
-          "name": "Bread",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 1891,
-          "baseId": 1891,
-          "name": "Cake",
-          "count": 1
-        },
-        {
-          "id": 1893,
-          "baseId": 1893,
-          "name": "2/3 cake",
-          "count": 1
         }
       ],
       "equipment": [],
-      "result": "",
+      "result": "ok thieving=79 xp=0 ticks=36 at=2655,3283,0 hp=10 hpMin=10 died=false relogs=0 relogTicks=0 logoutTicks=0 idleTicks=0 pickTicks=0 shopTicks=0 eatTicks=0 stunWait=0 stunMsgs=0 tries=0 stuns=0 eaten=0 bought=0 waits=0 walkTicks=0 chases=0 coins=0 bread=0 milestones=ardougne,coins60,level40,leve",
       "workRevision": "d7e4fa5e7f1d59ac33abf8cd4f60393aeeac20eb2ab310e717e5bd896f8d3657",
-      "attempt": "1794181931409-0000016083-0000000001",
+      "attempt": "1794182123755-0000016698-0000000001",
       "logout": {
-        "state": "held",
+        "state": "confirmed",
         "account": "Familyjewel",
         "server": "rs-sdk-demo.fly.dev",
         "domain": "live",
-        "attemptId": "1794181931409-0000016083-0000000001",
-        "reason": "session active or outcome unknown"
+        "attemptId": "1794182123755-0000016698-0000000001",
+        "loggedOutAt": 1794182144525,
+        "ownerRun": null,
+        "receiptSha256": "9f6ef4253d283d8fe01d191d196913a7246a17f356cc7b2db1f27d6fa2e7e23e"
       },
       "progress": {
-        "stage": "earning",
+        "stage": "funded",
         "batch": 6,
         "spot": "2652,3318",
         "before": 4319,
-        "lastAttempt": "1794181901063-0000015953-0000000001"
+        "lastAttempt": "1794181901063-0000015953-0000000001",
+        "coins": 5169
       }
     },
     {
