@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794174433843,
+ "at": 1794174606378,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -18,18 +18,16 @@
   },
   {
    "account": "TossTheCaber",
-   "script": "scripts/walk-to.ts",
-   "args": [
-    "3092",
-    "3266",
-    "0",
-    "--ground"
-   ],
-   "env": {},
+   "script": "scripts/foodcourier.ts",
+   "args": [],
+   "env": {
+    "HOME_ONLY": "1",
+    "CAP": "1800"
+   },
    "enabled": true,
    "standing": false,
    "repeat": false,
-   "goal": "Observed WC60 success, steel axe held; northern Draynor bank staging for proved boats to Seers5-yew pilot for Haggis23-yew demand",
+   "goal": "Qualified combat35 courier back to Ardougne via boats, then Seers5-yew live pilot after WC60; held steel axe, own fare cash ready; no mountain crossing",
    "role": "supply"
   },
   {
@@ -77,10 +75,10 @@
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "50"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": false,
    "repeat": false,
-   "goal": "One-tip bounded replenished-shelf probe for Haggis1786-rune-arrowtip gap; proved local Catherby buyer, own funds ready; max200coins, no funding job and no repeat on stock wait",
+   "goal": "Idle: fresh one-tip shelf probe bought0/spent0 and logged out; no retry until actual stock; funds remain ready for Haggis arrowtip consumer",
    "role": "supply"
   },
   {
@@ -164,14 +162,17 @@
   },
   {
    "account": "Crownjewels",
-   "script": "scripts/fleet-trade.ts",
+   "script": "scripts/walk-to.ts",
    "args": [
-    "rollout3-crown-uns-ess50"
+    "3013",
+    "3355",
+    "0",
+    "--ground"
    ],
    "env": {},
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "Delivered50 essence to Unsheathed Priest in Peril,4remaining banked; both transfer receipts and producer logouts confirmed; idle pending distinct prepared demand",
+   "goal": "Native-qualified full10HP northern approach to Witch Potion unlock: stage Falador bank, then north Draynor lane;25coin owned inputs proved, no Manor or White Wolf route",
    "role": "supply"
   }
  ]

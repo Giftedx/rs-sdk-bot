@@ -1,0 +1,221 @@
+{
+ "schema": "cloud-expansion-snapshot/1",
+ "started": 1794174593771,
+ "at": 1794174602938,
+ "source": "70fcbce85350659ad82496060e9c3e4f992c91a0",
+ "peakFreshLive": 3,
+ "peakWholeRollout": 9,
+ "currentLive": 3,
+ "headroom": {
+  "freeGB": 12.81711196899414,
+  "load": [
+   1.29,
+   1.11,
+   1.22
+  ],
+  "cpus": 5,
+  "requiredFloorGB": 4,
+  "practiceReserveGB": 2.5
+ },
+ "active": [
+  {
+   "account": "TossTheCaber",
+   "goal": "Qualified combat35 courier back to Ardougne via boats, then Seers5-yew live pilot after WC60; held steel axe, own fare cash ready; no mountain crossing",
+   "enabled": true,
+   "tick": 141,
+   "at": 1794174602625,
+   "position": {
+    "x": 2886,
+    "z": 3163,
+    "level": 0
+   },
+   "result": "",
+   "logout": "held"
+  },
+  {
+   "account": "BoneToPick",
+   "goal": "Bank8 more jug-of-water inputs for wine-stock-order;1200wine bill and44 shared grapes exist; proved Al Kharid source, original1jug Monk Friend reserve retained; production not claimed",
+   "enabled": true,
+   "tick": 501,
+   "at": 1794174602719,
+   "position": {
+    "x": 3301,
+    "z": 3170,
+    "level": 0
+   },
+   "result": "",
+   "logout": "held"
+  },
+  {
+   "account": "Crownjewels",
+   "goal": "Native-qualified full10HP northern approach to Witch Potion unlock: stage Falador bank, then north Draynor lane;25coin owned inputs proved, no Manor or White Wolf route",
+   "enabled": true,
+   "tick": 88,
+   "at": 1794174602113,
+   "position": {
+    "x": 3036,
+    "z": 3408,
+    "level": 0
+   },
+   "result": "",
+   "logout": "held"
+  }
+ ],
+ "accounts": [
+  {
+   "account": "BraveHardon",
+   "goal": "Held: low HP without food; needs owned food delivery and safe exit before any quest retry",
+   "enabled": false,
+   "tick": 945,
+   "at": 1794166653383,
+   "position": {
+    "x": 2609,
+    "z": 9671,
+    "level": 0
+   },
+   "result": "fail retreat during wait: hp 7 of 36, no food  xp=attack=2700,hitpoints=878 at=2609,9671,0 ticks=354 hpMin=6 eats=0 walkTicks=109 retries=0 died=false milestones=house-entry,2,valves,4 jumps=143:2584,3234->2570,9682,0;190:2567,9680->2606,9692,0 msgs=Welcome to RuneScape. / You enter the cave.",
+   "logout": "confirmed"
+  },
+  {
+   "account": "TossTheCaber",
+   "goal": "Qualified combat35 courier back to Ardougne via boats, then Seers5-yew live pilot after WC60; held steel axe, own fare cash ready; no mountain crossing",
+   "enabled": true,
+   "tick": 141,
+   "at": 1794174602625,
+   "position": {
+    "x": 2886,
+    "z": 3163,
+    "level": 0
+   },
+   "result": "",
+   "logout": "held"
+  },
+  {
+   "account": "Swordswallow",
+   "goal": "DEATH HOLD: died during Vampire Slayer acquisition route; no restart or repair.5willows20wool69essence banked before death retained; incident requires qualified recovery",
+   "enabled": false,
+   "tick": 424,
+   "at": 1794173873362,
+   "position": {
+    "x": 3202,
+    "z": 3248,
+    "level": 0
+   },
+   "result": "fail died",
+   "logout": "held"
+  },
+  {
+   "account": "Unsheathed",
+   "goal": "Priest in Peril stage3 guardian defeated;50 delivered essence retained (23pack27bank), repeated Roald door no-progress; pause for qualified route repair, no completion claimed",
+   "enabled": false,
+   "tick": 683,
+   "at": 1794173299657,
+   "position": {
+    "x": 3219,
+    "z": 3478,
+    "level": 0
+   },
+   "result": "fail talk roald 2  xp=attack=4500,hitpoints=1487 at=3219,3478,0 ticks=602 hpMin=37 eats=0 walkTicks=164 retries=2 died=false milestones=1,2,3 jumps=173:3405,3506->3405,9906,0;283:3405,9906->3405,3506,0 msgs=I can't reach that! / I can't reach that! / I can't reach that! / I can't reach that!",
+   "logout": "confirmed"
+  },
+  {
+   "account": "Porksword",
+   "goal": "Idle: fresh one-tip shelf probe bought0/spent0 and logged out; no retry until actual stock; funds remain ready for Haggis arrowtip consumer",
+   "enabled": false,
+   "tick": 92,
+   "at": 1794174480359,
+   "position": {
+    "x": 2807,
+    "z": 3441,
+    "level": 0
+   },
+   "result": "ok ticks=91 boughtTotal=0 bankedTotal=0 bankTrips=2 shopTrips=1 coinsLeft=1300 spentTotal=0 coinReserve=300 maxSpend=200 maxItems=1 stop=stock-wait targetMet=0 noBuyTicks=50 noBuyLimit=50",
+   "logout": "confirmed"
+  },
+  {
+   "account": "MeatNTwoVeg",
+   "goal": "Idle: second mixed pilot banked6copper3tin, zero iron; exact2iron-bar gap remains. No third mixed attempt; targeted method needed",
+   "enabled": false,
+   "tick": 210,
+   "at": 1794174009886,
+   "position": {
+    "x": 3252,
+    "z": 3420,
+    "level": 0
+   },
+   "result": "ok ticks=206 died=false mined=9 banked=9 held=0 bankTrips=1 walkTicks=96 hpMin=10 profile=mixed softMade=0 softBanked=0 softPreserved=true initialOre=0 recovered=9 xpGain=3937 stop=max-trips  oreWaitTicks=0   orePer1kTicks=43.69",
+   "logout": "confirmed"
+  },
+  {
+   "account": "YewGotWood",
+   "goal": "Funded Sea Slug completion after observed 300-coin transfer and Firemaking 30 unlock",
+   "enabled": false,
+   "tick": 307,
+   "at": 1794168655919,
+   "position": {
+    "x": 3223,
+    "z": 3237,
+    "level": 0
+   },
+   "result": "fail died",
+   "logout": "confirmed"
+  },
+  {
+   "account": "Spitroaster",
+   "goal": "Funded Gertrude Cat unlock; Varrock west start, east-side Gerrant sardine and local milk; bounded quest, no White Wolf route",
+   "enabled": false,
+   "tick": 751,
+   "at": 1794172477641,
+   "position": {
+    "x": 3296,
+    "z": 3497,
+    "level": 0
+   },
+   "result": "fail walk varrock teleport (walk, no law rune): quest corridor exhausted bounded retries  xp= at=3296,3497,0 ticks=315 hpMin=10 eats=0 walkTicks=136 retries=2 died=false milestones=1,2,3,4,kitten,5 jumps= msgs=You find nothing. / You search the crate. / You find nothing. / You search the crat",
+   "logout": "confirmed"
+  },
+  {
+   "account": "Stirmypot",
+   "goal": "Repair Sheep Shearer inputs by buying 20 stocked wool with owned 200 coins, reserving return fare; explicit boat staging, no White Wolf route or repeated shearing",
+   "enabled": false,
+   "tick": 160,
+   "at": 1794170852263,
+   "position": {
+    "x": 3269,
+    "z": 3164,
+    "level": 0
+   },
+   "result": "fail quest-sweep sheep missing 995:220 to buy 1759",
+   "logout": "confirmed"
+  },
+  {
+   "account": "BoneToPick",
+   "goal": "Bank8 more jug-of-water inputs for wine-stock-order;1200wine bill and44 shared grapes exist; proved Al Kharid source, original1jug Monk Friend reserve retained; production not claimed",
+   "enabled": true,
+   "tick": 501,
+   "at": 1794174602719,
+   "position": {
+    "x": 3301,
+    "z": 3170,
+    "level": 0
+   },
+   "result": "",
+   "logout": "held"
+  },
+  {
+   "account": "Crownjewels",
+   "goal": "Native-qualified full10HP northern approach to Witch Potion unlock: stage Falador bank, then north Draynor lane;25coin owned inputs proved, no Manor or White Wolf route",
+   "enabled": true,
+   "tick": 88,
+   "at": 1794174602113,
+   "position": {
+    "x": 3036,
+    "z": 3408,
+    "level": 0
+   },
+   "result": "",
+   "logout": "held"
+  }
+ ],
+ "limit": "Finite cloud session; no sustained uptime claim. Existing death, food, script and logout holds remain; new names need distinct proved first jobs."
+}
