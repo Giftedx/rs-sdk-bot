@@ -100,7 +100,7 @@ export async function runEdgevilleWoodcut(s: Session, stopped: () => boolean) {
                 const axe = pack().find(item => item.id === AXE);
                 check(axe && await depositObserved(s, axe) === 1, 'Axe deposit unconfirmed');
             }
-            const saved = s.bankObservation()?.items ?? [];
+            const saved = s.bankObservation?.()?.items ?? [];
             check(count(saved, OAK_LOGS) === originalLogs + banked &&
                 count(saved, AXE) + held(AXE) === originalAxes, 'Woodcutting bank totals differ');
             await s.bot.closeBank();
