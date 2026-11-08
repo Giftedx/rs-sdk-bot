@@ -1,9 +1,23 @@
 {
  "side": "cloud",
- "at": 1794166079818,
+ "at": 1794166326134,
  "jobs": [
   {
    "account": "BraveHardon",
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "hazeelcult"
+   ],
+   "env": {
+    "CAP": "1800"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "Complete Hazeel Cult for cloud quest coverage",
+   "role": "quests"
+  },
+  {
+   "account": "TossTheCaber",
    "script": "scripts/quest-sweep.ts",
    "args": [
     "rj"
@@ -13,21 +27,7 @@
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Complete rj for cloud quest coverage",
-   "role": "quests"
-  },
-  {
-   "account": "TossTheCaber",
-   "script": "scripts/quest-sweep.ts",
-   "args": [
-    "drunkmonk"
-   ],
-   "env": {
-    "CAP": "1800"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "Complete drunkmonk for cloud quest coverage",
+   "goal": "Complete Romeo and Juliet for cloud quest coverage",
    "role": "quests"
   },
   {
@@ -47,14 +47,74 @@
    "account": "Unsheathed",
    "script": "scripts/quest-sweep.ts",
    "args": [
-    "hazeelcult"
+    "rj"
    ],
    "env": {
     "CAP": "1800"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Complete hazeelcult for cloud quest coverage",
+   "goal": "Complete Romeo and Juliet for cloud quest coverage",
+   "role": "quests"
+  },
+  {
+   "account": "Porksword",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/measure/tutorial.ts",
+    "scripts/quest-sweep.ts rj CAP=1800"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "Mainland entry then complete proved Romeo and Juliet quest route (+5 QP)",
+   "role": "quests"
+  },
+  {
+   "account": "MeatNTwoVeg",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/measure/tutorial.ts",
+    "scripts/quest-sweep.ts rj CAP=1800"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "Mainland entry then complete proved Romeo and Juliet quest route (+5 QP)",
+   "role": "quests"
+  },
+  {
+   "account": "YewGotWood",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/measure/tutorial.ts",
+    "scripts/quest-sweep.ts rj CAP=1800"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "Mainland entry then complete proved Romeo and Juliet quest route (+5 QP)",
+   "role": "quests"
+  },
+  {
+   "account": "Spitroaster",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/measure/tutorial.ts",
+    "scripts/quest-sweep.ts rj CAP=1800"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "Mainland entry then complete proved Romeo and Juliet quest route (+5 QP)",
    "role": "quests"
   }
  ]
