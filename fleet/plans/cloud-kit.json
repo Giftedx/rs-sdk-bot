@@ -1,5 +1,32 @@
 {
  "side": "cloud-kit",
- "at": 1794179585639,
- "jobs": []
+ "at": 1794180288107,
+ "jobs": [
+  {
+   "account": "Familyjewel",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
+   "env": {
+    "TARGET": "55",
+    "CAP": "3000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "Finite Thieving55 unlock for own cloud-kit earning/resupply; bank all earned coins and bakery food; confirm logout, then admit a qualified finite GP batch.",
+   "role": "thieving"
+  },
+  {
+   "account": "Glassblower",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
+   "env": {
+    "TARGET": "55",
+    "CAP": "3000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "Finite Thieving55 unlock for own cloud-kit earning/resupply; bank all earned coins and bakery food; confirm logout, then admit a qualified finite GP batch.",
+   "role": "thieving"
+  }
+ ]
 }

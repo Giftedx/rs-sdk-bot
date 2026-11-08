@@ -1,0 +1,17 @@
+{
+  "account": "SporranBulge",
+  "owner": {
+    "side": "local",
+    "server": "rs-sdk-demo.fly.dev"
+  },
+  "ownClaim": {
+    "nonce": "e4d62fb9-4236-46cb-a448-bdaa9f75517d",
+    "phase": "released"
+  },
+  "reconciliationCommit": "907cb3147410101786f0bee8736f83e4bcc89217",
+  "serverOutcome": "Invalid username or password before connected/ready",
+  "gameEntry": false,
+  "ownerHoldRetained": true,
+  "ownIncorrectCredentialRemoved": true,
+  "noRetry": true
+}
