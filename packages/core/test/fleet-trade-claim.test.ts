@@ -4,6 +4,7 @@ import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { acquireFleetSwarmClaim, acquireFleetTradeClaim, readFleetAccountClaim, readFleetTradeClaim, readHeldFleetTradeClaims, releaseFleetTradeClaim } from '../src/fleet-trade-claim';
+import { beginSessionAttempt, lifecycleOwner } from '../src/session-lifecycle';
 
 const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, stdio: 'pipe', timeout: 5000, windowsHide: true });
 const server = 'rs-sdk-demo.fly.dev';
@@ -29,7 +30,7 @@ test('two trade-only checkouts cannot claim the same account concurrently', asyn
     await withRepos(async (a, b) => {
         const modulePath = JSON.stringify(resolve(import.meta.dir, '../src/fleet-trade-claim.ts'));
         const start = (root: string, trade: typeof input) => Bun.spawn([process.execPath, '-e',
-            `import { acquireFleetTradeClaim } from ${modulePath}; acquireFleetTradeClaim(process.cwd(), ${JSON.stringify(trade)})`],
+            `import { acquireFleetTradeClaim } from ${modulePath}; acquireFleetTradeClaim(process.cwd(), ${JSON.stringify(trade)}).armNetwork()`],
         { cwd: root, stdout: 'ignore', stderr: 'pipe', timeout: 15_000, windowsHide: true });
         const one = start(a, input);
         const two = start(b, { ...input, account: 'TRADER', orderId: 'order-two' });
@@ -72,7 +73,7 @@ test('a trade and a swarm racing on the same account have exactly one winner', a
     await withRepos(async (a, b) => {
         const modulePath = JSON.stringify(resolve(import.meta.dir, '../src/fleet-trade-claim.ts'));
         const start = (root: string, functionName: string) => Bun.spawn([process.execPath, '-e',
-            `import { ${functionName} } from ${modulePath}; ${functionName}(process.cwd(), ${JSON.stringify(input)})${functionName === 'acquireFleetSwarmClaim' ? '.armNetwork()' : ''}`],
+            `import { ${functionName} } from ${modulePath}; ${functionName}(process.cwd(), ${JSON.stringify(input)}).armNetwork()`],
         { cwd: root, stdout: 'ignore', stderr: 'pipe', timeout: 15_000, windowsHide: true });
         const results = await Promise.all([start(a, 'acquireFleetTradeClaim').exited, start(b, 'acquireFleetSwarmClaim').exited]);
         expect(results.filter(code => code === 0)).toHaveLength(1);
@@ -136,5 +137,34 @@ test('a dead claim with no pending marker stays held even if the session receipt
         expect(await child.exited).toBe(0);
         expect(() => acquireFleetTradeClaim(a, input)).toThrow('held');
         expect(() => acquireFleetSwarmClaim(a, input, {recover: true})).toThrow('held');
+    });
+}, 30_000);
+
+test('a dead pre-login trade claim can be replaced only on its owning checkout', async () => {
+    await withRepos(async (a, b) => {
+        const modulePath = JSON.stringify(resolve(import.meta.dir, '../src/fleet-trade-claim.ts'));
+        const child = Bun.spawn([process.execPath, '-e',
+            `import { acquireFleetTradeClaim } from ${modulePath}; acquireFleetTradeClaim(process.cwd(), ${JSON.stringify(input)})`],
+        { cwd: a, stdout: 'ignore', stderr: 'pipe', timeout: 15_000, windowsHide: true });
+        expect(await child.exited).toBe(0);
+        expect(() => acquireFleetSwarmClaim(b, input)).toThrow('held');
+        const replacement = acquireFleetSwarmClaim(a, input);
+        expect(readFleetAccountClaim(b, input)?.nonce).toBe(replacement.nonce);
+        replacement.abortBeforeNetwork();
+        expect(() => acquireFleetTradeClaim(a, input)).toThrow('already claimed');
+    });
+}, 30_000);
+
+test('trade admission accepts the owning checkout’s exact confirmed worker logout', async () => {
+    await withRepos((a, b) => {
+        const worker = acquireFleetSwarmClaim(a, input);
+        const attempt = beginSessionAttempt(input, {root: join(a, '.practice/session-lifecycle'),
+            owner: {...lifecycleOwner(), sharedClaimNonce: worker.nonce}});
+        worker.armNetwork();
+        expect(attempt.record('ended', 'logged-out')).toBe(true);
+        expect(() => acquireFleetTradeClaim(b, input)).toThrow('held');
+        const trade = acquireFleetTradeClaim(a, input);
+        expect(readFleetTradeClaim(b, input)?.nonce).toBe(trade.nonce);
+        trade.release();
     });
 }, 30_000);

@@ -90,6 +90,24 @@ test('the network boundary fences a trade-held account and releases only its own
         await second.close();
         expect(calls).toEqual(['Ana', 'Ana']);
         expect(readFleetAccountClaim(base, identity)).toMatchObject({ kind: 'swarm', phase: 'held' });
+
+        const tradeTarget = { account: 'Bob', server: identity.server, side: 'local' };
+        let prepared = '';
+        await expect(startInProcessSession({ name: tradeTarget.account, password: SECRET, server: tradeTarget.server }, {
+            sdk: new BotSDK({ botUsername: tradeTarget.account, password: SECRET, autoLaunchBrowser: false, autoReconnect: false } as any),
+            Actions: FakeActions as any, cacheDir: base, lifecycle: { root }, planLock: join(base, 'plan'), recordOwned: () => {},
+            sharedAccount: { root: base, side: 'local', trade: { orderId: 'armed-trade', role: 'from', check() {}, prepare(claim) {
+                expect(existsSync(join(base, 'plan', 'plan-write-lock.json'))).toBe(true);
+                prepared = claim.nonce;
+            } } },
+            async startSession() {
+                expect(prepared).toMatch(/^[a-f0-9-]{36}$/);
+                expect(listAttempts(tradeTarget.account, tradeTarget.server, {root})[0]?.receipt?.owner.sharedClaimNonce).toBe(prepared);
+                expect(existsSync(join(base, '.practice/fleet-account-pending', prepared + '.json'))).toBe(false);
+                throw Error('trade network failed');
+            },
+        })).rejects.toThrow('trade network failed');
+        expect(readFleetAccountClaim(base, tradeTarget)).toMatchObject({ nonce: prepared, phase: 'held' });
     } finally {
         if (resolve(base, '..') === parent) rmSync(base, { recursive: true, force: true, maxRetries: 5 });
     }
