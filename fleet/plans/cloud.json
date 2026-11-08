@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794174606378,
+ "at": 1794174729013,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -18,16 +18,18 @@
   },
   {
    "account": "TossTheCaber",
-   "script": "scripts/foodcourier.ts",
-   "args": [],
-   "env": {
-    "HOME_ONLY": "1",
-    "CAP": "1800"
-   },
+   "script": "scripts/walk-to.ts",
+   "args": [
+    "2712",
+    "3462",
+    "0",
+    "--ground"
+   ],
+   "env": {},
    "enabled": true,
    "standing": false,
    "repeat": false,
-   "goal": "Qualified combat35 courier back to Ardougne via boats, then Seers5-yew live pilot after WC60; held steel axe, own fare cash ready; no mountain crossing",
+   "goal": "Native-proved Ardougne-bank to Seers yew-grove approach,115ticks no damage; WC60 held steelaxe, then bank5-yew pilot for Haggis23log demand",
    "role": "supply"
   },
   {
@@ -150,29 +152,29 @@
    "script": "scripts/gather-spawn.ts",
    "args": [
     "1937",
-    "8"
+    "12"
    ],
    "env": {
-    "TICKS": "900"
+    "TICKS": "1200"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Bank8 more jug-of-water inputs for wine-stock-order;1200wine bill and44 shared grapes exist; proved Al Kharid source, original1jug Monk Friend reserve retained; production not claimed",
+   "goal": "Bank12 more water inputs for wine-stock-order;11new water already banked,44 shared grapes visible, capwinewater44; original1 Monk Friend jug protected; no wine-production claim",
    "role": "supply"
   },
   {
    "account": "Crownjewels",
    "script": "scripts/walk-to.ts",
    "args": [
-    "3013",
-    "3355",
+    "3092",
+    "3266",
     "0",
     "--ground"
    ],
    "env": {},
    "enabled": true,
    "repeat": false,
-   "goal": "Native-qualified full10HP northern approach to Witch Potion unlock: stage Falador bank, then north Draynor lane;25coin owned inputs proved, no Manor or White Wolf route",
+   "goal": "Native-qualified northern Draynor lane for funded Witch Potion unlock; Falador stage complete and logged out; avoid Manor and jail guards",
    "role": "supply"
   }
  ]

@@ -1,17 +1,17 @@
 {
  "schema": "cloud-expansion-snapshot/1",
  "started": 1794174593771,
- "at": 1794174602938,
+ "at": 1794174728351,
  "source": "70fcbce85350659ad82496060e9c3e4f992c91a0",
  "peakFreshLive": 3,
  "peakWholeRollout": 9,
- "currentLive": 3,
+ "currentLive": 1,
  "headroom": {
-  "freeGB": 12.81711196899414,
+  "freeGB": 13.565898895263672,
   "load": [
-   1.29,
-   1.11,
-   1.22
+   1.36,
+   1.32,
+   1.29
   ],
   "cpus": 5,
   "requiredFloorGB": 4,
@@ -19,42 +19,14 @@
  },
  "active": [
   {
-   "account": "TossTheCaber",
-   "goal": "Qualified combat35 courier back to Ardougne via boats, then Seers5-yew live pilot after WC60; held steel axe, own fare cash ready; no mountain crossing",
-   "enabled": true,
-   "tick": 141,
-   "at": 1794174602625,
-   "position": {
-    "x": 2886,
-    "z": 3163,
-    "level": 0
-   },
-   "result": "",
-   "logout": "held"
-  },
-  {
    "account": "BoneToPick",
-   "goal": "Bank8 more jug-of-water inputs for wine-stock-order;1200wine bill and44 shared grapes exist; proved Al Kharid source, original1jug Monk Friend reserve retained; production not claimed",
+   "goal": "Bank12 more water inputs for wine-stock-order;11new water already banked,44 shared grapes visible, capwinewater44; original1 Monk Friend jug protected; no wine-production claim",
    "enabled": true,
-   "tick": 501,
-   "at": 1794174602719,
+   "tick": 106,
+   "at": 1794174727578,
    "position": {
     "x": 3301,
     "z": 3170,
-    "level": 0
-   },
-   "result": "",
-   "logout": "held"
-  },
-  {
-   "account": "Crownjewels",
-   "goal": "Native-qualified full10HP northern approach to Witch Potion unlock: stage Falador bank, then north Draynor lane;25coin owned inputs proved, no Manor or White Wolf route",
-   "enabled": true,
-   "tick": 88,
-   "at": 1794174602113,
-   "position": {
-    "x": 3036,
-    "z": 3408,
     "level": 0
    },
    "result": "",
@@ -78,16 +50,16 @@
   },
   {
    "account": "TossTheCaber",
-   "goal": "Qualified combat35 courier back to Ardougne via boats, then Seers5-yew live pilot after WC60; held steel axe, own fare cash ready; no mountain crossing",
+   "goal": "Native-proved Ardougne-bank to Seers yew-grove approach,115ticks no damage; WC60 held steelaxe, then bank5-yew pilot for Haggis23log demand",
    "enabled": true,
-   "tick": 141,
-   "at": 1794174602625,
+   "tick": 270,
+   "at": 1794174656332,
    "position": {
-    "x": 2886,
-    "z": 3163,
+    "x": 2654,
+    "z": 3283,
     "level": 0
    },
-   "result": "",
+   "result": "ok ticks=265 received=0 handed=0 fishNotes=0 coins=80 walkTicks=219 boatTicks=46 waitTicks=0 giveTicks=0 featherTicks=0 feathersBought=0 feathersLeft=0 legs=draynor coins=140@0,received0@0,ardougne@265 hpMin=24 died=false jumps=99:3026,3219->2956,3143,1;234:2771,3226->2683,3268,1 at=2652,3283",
    "logout": "held"
   },
   {
@@ -190,10 +162,10 @@
   },
   {
    "account": "BoneToPick",
-   "goal": "Bank8 more jug-of-water inputs for wine-stock-order;1200wine bill and44 shared grapes exist; proved Al Kharid source, original1jug Monk Friend reserve retained; production not claimed",
+   "goal": "Bank12 more water inputs for wine-stock-order;11new water already banked,44 shared grapes visible, capwinewater44; original1 Monk Friend jug protected; no wine-production claim",
    "enabled": true,
-   "tick": 501,
-   "at": 1794174602719,
+   "tick": 106,
+   "at": 1794174727578,
    "position": {
     "x": 3301,
     "z": 3170,
@@ -204,17 +176,17 @@
   },
   {
    "account": "Crownjewels",
-   "goal": "Native-qualified full10HP northern approach to Witch Potion unlock: stage Falador bank, then north Draynor lane;25coin owned inputs proved, no Manor or White Wolf route",
+   "goal": "Native-qualified northern Draynor lane for funded Witch Potion unlock; Falador stage complete and logged out; avoid Manor and jail guards",
    "enabled": true,
-   "tick": 88,
-   "at": 1794174602113,
+   "tick": 89,
+   "at": 1794174724605,
    "position": {
-    "x": 3036,
-    "z": 3408,
+    "x": 3092,
+    "z": 3267,
     "level": 0
    },
-   "result": "",
-   "logout": "held"
+   "result": "ok walk-to {\"ok\":true,\"ticks\":88,\"still\":4,\"clicks\":22,\"repaths\":1,\"doors\":1,\"next\":1} at=3092,3267,0 ticks=88",
+   "logout": "confirmed"
   }
  ],
  "limit": "Finite cloud session; no sustained uptime claim. Existing death, food, script and logout holds remain; new names need distinct proved first jobs."
