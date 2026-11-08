@@ -203,6 +203,11 @@
   "SporranDip": {
    "side": "claude-cloud-3",
    "server": "rs-sdk-demo.fly.dev"
+  },
+  "FullSporran": {
+   "side": "cloud",
+   "server": "rs-sdk-demo.fly.dev",
+   "reservation": "task-a870ce17-35c1-443a-ba32-db62a09fefaa"
   }
  }
 }
