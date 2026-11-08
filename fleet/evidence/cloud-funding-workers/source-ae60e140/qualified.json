@@ -1,0 +1,42 @@
+{
+  "ok": true,
+  "checks": {
+    "exit": true,
+    "success": true,
+    "alive": true,
+    "thieving55": true,
+    "bankCoins": true,
+    "bankPosition": true,
+    "saved": true,
+    "logout": true,
+    "pin": true,
+    "beforeFresh": true,
+    "unchangedOtherXp": true,
+    "noDeath": true
+  },
+  "name": "flfundxkva00",
+  "dir": ".practice/cloud-expansion/native-1794180065277",
+  "pin": "a40f810731c4345391f4fed66d1c875ccc93bbd0cb973b893188f95768916c5c",
+  "entry": "scripts/generated/thieving60.ts",
+  "source": "ae60e14022ecccf347e2d7b11e6056d01976b590",
+  "bankCoins": 639,
+  "thievingXp": 47640,
+  "logout": {
+    "state": "confirmed",
+    "account": "flfundxkva00",
+    "server": "127.0.0.1:24617",
+    "domain": "practice",
+    "attemptId": "1794180070008-0000003343-0000000001",
+    "loggedOutAt": 1794180256629,
+    "ownerRun": null,
+    "receiptSha256": "e607bd28327dfe654f24f4c4433fa0728a23068d9ebb67967c5f2bb88a542bcd"
+  },
+  "hashes": {
+    "before.sav": "fdfb5e8f0f2378a427c25b4f42f08e22c42745426b04ac38d1fa6bb4b16062d8",
+    "after.sav": "3569b39aed5ce115008026203f03d65d8e17c39a2fd72ca7bc170c961134248a",
+    "worker.log": "d30fffcd1b030249ce6a1d2175dd13f9472e4f7619e926260f2827ebf991d57a",
+    "worker.err": "3daa3eab233569621ccbc1358590298a8c0d0184fa2a3f8f9693e194140c9c95"
+  },
+  "threshold": 46534,
+  "scope": "fresh Lumbridge Thieving55, banked earnings, survival, unchanged other skill XP and confirmed logout; tutorial skip also has existing live consumers"
+}

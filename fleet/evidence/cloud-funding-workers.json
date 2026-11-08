@@ -1,59 +1,103 @@
 {
   "schema": "cloud-funding-workers/1",
-  "at": 1794180114870,
+  "at": 1794180411230,
   "sourceInstalled": "ae60e14022ecccf347e2d7b11e6056d01976b590",
   "goal": "Bounded fresh Thieving55 training and banked earnings toward the cloud combat-15 kit; no automatic knight farming",
-  "native": {
-    "ok": true,
-    "checks": {
-      "exit": true,
-      "success": true,
-      "alive": true,
-      "thieving55": true,
-      "bankCoins": true,
-      "bankPosition": true,
-      "saved": true,
-      "logout": true,
-      "pin": true,
-      "beforeFresh": true,
-      "unchangedOtherXp": true,
-      "noDeath": true
+  "qualifications": [
+    {
+      "ok": true,
+      "checks": {
+        "exit": true,
+        "success": true,
+        "alive": true,
+        "thieving55": true,
+        "bankCoins": true,
+        "bankPosition": true,
+        "saved": true,
+        "logout": true,
+        "pin": true,
+        "beforeFresh": true,
+        "unchangedOtherXp": true,
+        "noDeath": true
+      },
+      "name": "flfundxfe600",
+      "dir": ".practice/cloud-expansion/native-1794179545216",
+      "pin": "73fe1601e1db0a40d8a67b6548fb6aef7ebdc08a461a40276a8f177a06399c98",
+      "entry": "scripts/generated/thieving60.ts",
+      "source": "cc4e77cc911a2e3a90e84a4146b86133695682e6",
+      "bankCoins": 493,
+      "thievingXp": 46670,
+      "logout": {
+        "state": "confirmed",
+        "account": "flfundxfe600",
+        "server": "127.0.0.1:36457",
+        "domain": "practice",
+        "attemptId": "1794179550561-0000002630-0000000001",
+        "loggedOutAt": 1794179708716,
+        "ownerRun": null,
+        "receiptSha256": "546e7d1d880f70cbb912486f401c5d1af2a61410d9d5084f2c9c8ac39412b73c"
+      },
+      "hashes": {
+        "before.sav": "bada2623d764ab281f90fd5ce65a9ddf81d675365274b73ce33c26e67fc7de7a",
+        "after.sav": "f8c8dde4222b784c5e60f8d0f71418c0b60b606e2bd92e2b1c26e50a1874839c",
+        "worker.log": "71153f2bd37f6d71a96f9e9f1435294c1f4783de5f2ae537a810af8b520e8c72",
+        "worker.err": "9e1901a4e497db00e4d8ffdacac0f67c1e7a62c18d3c21afc08a409854b16313"
+      },
+      "threshold": 46534,
+      "scope": "fresh Lumbridge Thieving55, banked earnings, survival, unchanged other skill XP and confirmed logout; tutorial skip also has existing live consumers"
     },
-    "name": "flfundxfe600",
-    "dir": ".practice/cloud-expansion/native-1794179545216",
-    "pin": "73fe1601e1db0a40d8a67b6548fb6aef7ebdc08a461a40276a8f177a06399c98",
-    "entry": "scripts/generated/thieving60.ts",
-    "source": "cc4e77cc911a2e3a90e84a4146b86133695682e6",
-    "bankCoins": 493,
-    "thievingXp": 46670,
-    "logout": {
-      "state": "confirmed",
-      "account": "flfundxfe600",
-      "server": "127.0.0.1:36457",
-      "domain": "practice",
-      "attemptId": "1794179550561-0000002630-0000000001",
-      "loggedOutAt": 1794179708716,
-      "ownerRun": null,
-      "receiptSha256": "546e7d1d880f70cbb912486f401c5d1af2a61410d9d5084f2c9c8ac39412b73c"
-    },
-    "hashes": {
-      "before.sav": "bada2623d764ab281f90fd5ce65a9ddf81d675365274b73ce33c26e67fc7de7a",
-      "after.sav": "f8c8dde4222b784c5e60f8d0f71418c0b60b606e2bd92e2b1c26e50a1874839c",
-      "worker.log": "71153f2bd37f6d71a96f9e9f1435294c1f4783de5f2ae537a810af8b520e8c72",
-      "worker.err": "9e1901a4e497db00e4d8ffdacac0f67c1e7a62c18d3c21afc08a409854b16313"
-    },
-    "threshold": 46534,
-    "scope": "fresh Lumbridge Thieving55, banked earnings, survival, unchanged other skill XP and confirmed logout; tutorial skip also has existing live consumers"
-  },
+    {
+      "ok": true,
+      "checks": {
+        "exit": true,
+        "success": true,
+        "alive": true,
+        "thieving55": true,
+        "bankCoins": true,
+        "bankPosition": true,
+        "saved": true,
+        "logout": true,
+        "pin": true,
+        "beforeFresh": true,
+        "unchangedOtherXp": true,
+        "noDeath": true
+      },
+      "name": "flfundxkva00",
+      "dir": ".practice/cloud-expansion/native-1794180065277",
+      "pin": "a40f810731c4345391f4fed66d1c875ccc93bbd0cb973b893188f95768916c5c",
+      "entry": "scripts/generated/thieving60.ts",
+      "source": "ae60e14022ecccf347e2d7b11e6056d01976b590",
+      "bankCoins": 639,
+      "thievingXp": 47640,
+      "logout": {
+        "state": "confirmed",
+        "account": "flfundxkva00",
+        "server": "127.0.0.1:24617",
+        "domain": "practice",
+        "attemptId": "1794180070008-0000003343-0000000001",
+        "loggedOutAt": 1794180256629,
+        "ownerRun": null,
+        "receiptSha256": "e607bd28327dfe654f24f4c4433fa0728a23068d9ebb67967c5f2bb88a542bcd"
+      },
+      "hashes": {
+        "before.sav": "fdfb5e8f0f2378a427c25b4f42f08e22c42745426b04ac38d1fa6bb4b16062d8",
+        "after.sav": "3569b39aed5ce115008026203f03d65d8e17c39a2fd72ca7bc170c961134248a",
+        "worker.log": "d30fffcd1b030249ce6a1d2175dd13f9472e4f7619e926260f2827ebf991d57a",
+        "worker.err": "3daa3eab233569621ccbc1358590298a8c0d0184fa2a3f8f9693e194140c9c95"
+      },
+      "threshold": 46534,
+      "scope": "fresh Lumbridge Thieving55, banked earnings, survival, unchanged other skill XP and confirmed logout; tutorial skip also has existing live consumers"
+    }
+  ],
   "maxNewWorkers": 2,
   "sharedControllerUntouched": true,
   "sharedHoldsPreserved": true,
   "headroom": {
-    "freeGB": 15.33456802368164,
+    "freeGB": 14.979545593261719,
     "load": [
-      0.7,
-      0.33,
-      0.16
+      1.26,
+      1.05,
+      0.54
     ]
   },
   "accounts": [
@@ -81,16 +125,16 @@
         },
         "started": 1794179752493
       },
-      "at": 1794180114460,
-      "active": true,
-      "tick": 887,
+      "at": 1794180352395,
+      "active": false,
+      "tick": 1479,
       "position": {
-        "x": 2659,
-        "z": 3312,
+        "x": 2655,
+        "z": 3283,
         "level": 0
       },
       "hp": {
-        "now": 6,
+        "now": 8,
         "max": 10
       },
       "skills": [
@@ -115,7 +159,7 @@
         {
           "name": "Hitpoints",
           "level": 10,
-          "currentLevel": 6,
+          "currentLevel": 8,
           "xp": 980
         },
         {
@@ -198,9 +242,9 @@
         },
         {
           "name": "Thieving",
-          "level": 44,
-          "currentLevel": 44,
-          "xp": 21900
+          "level": 55,
+          "currentLevel": 55,
+          "xp": 47640
         },
         {
           "name": "Stat18",
@@ -323,24 +367,313 @@
           "baseId": 559,
           "name": "Body rune",
           "count": 2
+        }
+      ],
+      "bank": [
+        {
+          "id": 995,
+          "baseId": 995,
+          "name": "Coins",
+          "count": 733
+        }
+      ],
+      "equipment": [],
+      "result": "ok thieving=55 xp=47640 ticks=1467 at=2655,3283,0 hp=8 hpMin=4 died=false relogs=0 relogTicks=0 logoutTicks=0 idleTicks=70 pickTicks=886 shopTicks=34 eatTicks=22 stunWait=48 stunMsgs=52 tries=443 stuns=52 eaten=27 bought=10 waits=0 walkTicks=52 chases=147 coins=0 bread=0 milestones=coins60,ar",
+      "terminal": {
+        "ok": true,
+        "code": 0,
+        "ended": 1794180352429
+      },
+      "logout": {
+        "state": "confirmed",
+        "account": "FullSporran",
+        "server": "rs-sdk-demo.fly.dev",
+        "domain": "live",
+        "attemptId": "1794179755621-0000002817-0000000001",
+        "loggedOutAt": 1794180351213,
+        "ownerRun": null,
+        "receiptSha256": "2202c6ed1446ae49e35716c490b0c8c30cbd4d9263c20e24de61c21a926d00c9"
+      },
+      "stopPresent": false
+    },
+    {
+      "account": "Coinpurse",
+      "admission": {
+        "account": "Coinpurse",
+        "server": "rs-sdk-demo.fly.dev",
+        "reservation": "task-baf56625-8445-49b5-ba41-e814a75cc35e",
+        "source": "ae60e14022ecccf347e2d7b11e6056d01976b590",
+        "pin": "a40f810731c4345391f4fed66d1c875ccc93bbd0cb973b893188f95768916c5c",
+        "proof": ".practice/cloud-expansion/native-1794180065277/qualified.json",
+        "pid": 6877,
+        "goal": "Train Thieving55 and bank earnings toward cloud combat-15 kit replacement; no automatic farming or shared-controller changes",
+        "cap": 2500,
+        "repeat": false,
+        "headroom": {
+          "freeGB": 15.22403335571289,
+          "load": [
+            1.38,
+            1.04,
+            0.51
+          ],
+          "cpus": 5
+        },
+        "started": 1794180364637
+      },
+      "at": 1794180410059,
+      "active": true,
+      "tick": 91,
+      "position": {
+        "x": 3219,
+        "z": 3219,
+        "level": 0
+      },
+      "hp": {
+        "now": 5,
+        "max": 10
+      },
+      "skills": [
+        {
+          "name": "Attack",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Defence",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Strength",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Hitpoints",
+          "level": 10,
+          "currentLevel": 5,
+          "xp": 980
+        },
+        {
+          "name": "Ranged",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Prayer",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Magic",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Cooking",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Woodcutting",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Fletching",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Fishing",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Firemaking",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Crafting",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Smithing",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Mining",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Herblore",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Agility",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Thieving",
+          "level": 12,
+          "currentLevel": 12,
+          "xp": 1400
+        },
+        {
+          "name": "Stat18",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Stat19",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        },
+        {
+          "name": "Runecraft",
+          "level": 1,
+          "currentLevel": 1,
+          "xp": 0
+        }
+      ],
+      "inventory": [
+        {
+          "id": 1351,
+          "baseId": 1351,
+          "name": "Bronze axe",
+          "count": 1
+        },
+        {
+          "id": 590,
+          "baseId": 590,
+          "name": "Tinderbox",
+          "count": 1
+        },
+        {
+          "id": 303,
+          "baseId": 303,
+          "name": "Small fishing net",
+          "count": 1
+        },
+        {
+          "id": 315,
+          "baseId": 315,
+          "name": "Shrimps",
+          "count": 1
+        },
+        {
+          "id": 1925,
+          "baseId": 1925,
+          "name": "Bucket",
+          "count": 1
+        },
+        {
+          "id": 1931,
+          "baseId": 1931,
+          "name": "Pot",
+          "count": 1
+        },
+        {
+          "id": 2309,
+          "baseId": 2309,
+          "name": "Bread",
+          "count": 1
+        },
+        {
+          "id": 1265,
+          "baseId": 1265,
+          "name": "Bronze pickaxe",
+          "count": 1
+        },
+        {
+          "id": 1205,
+          "baseId": 1205,
+          "name": "Bronze dagger",
+          "count": 1
+        },
+        {
+          "id": 1277,
+          "baseId": 1277,
+          "name": "Bronze sword",
+          "count": 1
+        },
+        {
+          "id": 1171,
+          "baseId": 1171,
+          "name": "Wooden shield",
+          "count": 1
+        },
+        {
+          "id": 841,
+          "baseId": 841,
+          "name": "Shortbow",
+          "count": 1
+        },
+        {
+          "id": 882,
+          "baseId": 882,
+          "name": "Bronze arrow",
+          "count": 25
+        },
+        {
+          "id": 556,
+          "baseId": 556,
+          "name": "Air rune",
+          "count": 25
+        },
+        {
+          "id": 558,
+          "baseId": 558,
+          "name": "Mind rune",
+          "count": 15
+        },
+        {
+          "id": 555,
+          "baseId": 555,
+          "name": "Water rune",
+          "count": 6
+        },
+        {
+          "id": 557,
+          "baseId": 557,
+          "name": "Earth rune",
+          "count": 4
+        },
+        {
+          "id": 559,
+          "baseId": 559,
+          "name": "Body rune",
+          "count": 2
         },
         {
           "id": 995,
           "baseId": 995,
           "name": "Coins",
-          "count": 345
-        },
-        {
-          "id": 2309,
-          "baseId": 2309,
-          "name": "Bread",
-          "count": 1
-        },
-        {
-          "id": 2309,
-          "baseId": 2309,
-          "name": "Bread",
-          "count": 1
+          "count": 21
         }
       ],
       "bank": null,
@@ -349,33 +682,11 @@
       "terminal": null,
       "logout": {
         "state": "held",
-        "account": "FullSporran",
-        "server": "rs-sdk-demo.fly.dev",
-        "domain": "live",
-        "attemptId": "1794179755621-0000002817-0000000001",
-        "reason": "session active or outcome unknown"
-      },
-      "stopPresent": false
-    },
-    {
-      "account": "Coinpurse",
-      "admission": null,
-      "at": null,
-      "active": false,
-      "tick": null,
-      "position": null,
-      "hp": null,
-      "skills": null,
-      "inventory": null,
-      "bank": null,
-      "equipment": null,
-      "result": null,
-      "terminal": null,
-      "logout": {
-        "state": "none",
         "account": "Coinpurse",
         "server": "rs-sdk-demo.fly.dev",
-        "domain": "live"
+        "domain": "live",
+        "attemptId": "1794180367797-0000006877-0000000001",
+        "reason": "session active or outcome unknown"
       },
       "stopPresent": false
     },
