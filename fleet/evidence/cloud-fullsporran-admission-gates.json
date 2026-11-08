@@ -1,0 +1,10 @@
+{
+ "at": 1794180761790,
+ "name": "FullSporran",
+ "ownerHistory": [
+  "17995b55eaef264eba6f4f4e5421e0b0ac1d1621 fleet: reserve account FullSporran"
+ ],
+ "publicProfile": 200,
+ "reservedByThisController": false,
+ "decision": "No login or reservation mutation; first-job proof, reserved-name creator handoff, named funding consumer and nonconflicting resource remain required"
+}

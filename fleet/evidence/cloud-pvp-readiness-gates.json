@@ -1,7 +1,7 @@
 {
  "schema": "cloud-pvp-readiness-gates/1",
- "at": 1794178564217,
- "controllerPid": 61575,
+ "at": 1794180854156,
+ "controllerPid": 74667,
  "source": "70fcbce85350659ad82496060e9c3e4f992c91a0",
  "releasedWorker": "scripts/pvp-standby.ts stage|verify",
  "releasedProfiles": [
@@ -80,7 +80,7 @@
    "attemptId": "1794174439329-0000067369-0000000001",
    "result": "ok ticks=91 boughtTotal=0 bankedTotal=0 bankTrips=2 shopTrips=1 coinsLeft=1300 spentTotal=0 coinReserve=300 maxSpend=200 maxItems=1 stop=stock-wait targetMet=0 noBuyTicks=50 noBuyLimit=50",
    "missing": [
-    "Separate Magic7/full bracket and kit qualification before Wilderness ingress"
+    "Exact next bracket/kit/protection qualification against live HPXP1207,MagicXP600 before further PvP"
    ],
    "logout": {
     "state": "confirmed",
@@ -96,7 +96,7 @@
     "Hitpoints": 11,
     "Ranged": 7,
     "Prayer": 1,
-    "Magic": 1
+    "Magic": 7
    },
    "bankGP": 8284,
    "carriedGP": 0,
@@ -127,7 +127,7 @@
    "accountClaimPhase": "released",
    "controllerEnd": "done after 1 runs",
    "ownerStopPresent": false,
-   "stageDecision": "Terminal success, awaiting separately qualified Magic7/full bracket/kit consumer",
+   "stageDecision": "Magic target reached; exact live HPXP1207 and MagicXP600 published for subsequent qualification",
    "reportedCombinedFixture": {
     "trainingAccepted": true,
     "ranged": 7,
@@ -144,7 +144,7 @@
     "proof": "research/porksword-ranged7-proof.json",
     "ammoAcceptanceWaived": false
    },
-   "terminalReceipt": "fleet/evidence/cloud-porksword-ranged7-result.json"
+   "terminalReceipt": "fleet/evidence/cloud-porksword-magic7-result.json"
   }
  ],
  "sharedQualificationReceipts": [],
@@ -158,7 +158,7 @@
   "MeatNTwoVeg failed essence worker"
  ],
  "localReservations": "Steelrod and local brackets excluded",
- "decision": "Porksword exact one-shot Ranged prerequisite PASSED. Parked after matching producer logout and released claim; no repeat, no second job; Wilderness held.",
+ "decision": "Magic7 HP11 reached; GP/rune/assets/logout pass. HPXP1207 rose32 vs native0; parked awaiting exact next-stage qualification. Wilderness held.",
  "practiceOwnership": "Supply practice stack is down; live readiness worker owns PvP qualification. Controller starts no competing PvP practice.",
- "sourceInstalled": "7cd74fe469a81ec2a9433817277f7a4a9fdf39d5"
+ "sourceInstalled": "cc4e77cc911a2e3a90e84a4146b86133695682e6"
 }
