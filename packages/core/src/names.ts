@@ -6,7 +6,7 @@
 // status.ts finds a bot's role from these lists. Each list starts with the names in use.
 
 export const NAMES = {
-    thieving: ['Pocketrocket', 'Pocketpython', 'Quickhandjob', 'TrouserSnake', 'TheFullMonty', 'UnderMyKilt', 'Fingerblastr', 'Kiltlifter', 'Knightstick', 'PocketPool', 'SporranDip', 'FullSporran', 'Dipstick', 'DipYourWick', 'HalfInch'],
+    thieving: ['Pocketrocket', 'Pocketpython', 'Quickhandjob', 'TrouserSnake', 'TheFullMonty', 'UnderMyKilt', 'Fingerblastr', 'Kiltlifter', 'Knightstick', 'PocketPool', 'SporranDip', 'FullSporran', 'Fingersmith', 'Dipstick', 'KnightRider', 'DipYourWick', 'HalfInch'],
     runecraft: ['Wandwaver', 'Woodenstaff', 'Magicwanda', 'Rubmyrunes', 'ChaosInPants', 'Staffstiffy'],
     mining: ['Shaftsinker', 'HardRockCafe', 'Stonedboner', 'Mineshafted'],
     woodcutting: ['Woodpecker', 'Bigchopper', 'Morningwood', 'YewGotWood', 'WoodInMyKilt'],
