@@ -219,5 +219,17 @@
    "server": "rs-sdk-demo.fly.dev",
    "reservation": "task-49808733-8bca-4f45-8a36-a818d43b73d2"
   }
+ },
+ "Fingersmith": {
+  "side": "claude-cloud-4",
+  "server": "rs-sdk-demo.fly.dev"
+ },
+ "Dipstick": {
+  "side": "claude-cloud-4",
+  "server": "rs-sdk-demo.fly.dev"
+ },
+ "KnightRider": {
+  "side": "claude-cloud-4",
+  "server": "rs-sdk-demo.fly.dev"
  }
 }
