@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794174729013,
+ "at": 1794175204671,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -18,18 +18,19 @@
   },
   {
    "account": "TossTheCaber",
-   "script": "scripts/walk-to.ts",
+   "script": "scripts/gather-yews.ts",
    "args": [
-    "2712",
-    "3462",
-    "0",
-    "--ground"
+    "1500",
+    "8"
    ],
-   "env": {},
+   "env": {
+    "TREE": "yew",
+    "MAX_TRIPS": "1"
+   },
    "enabled": true,
    "standing": false,
    "repeat": false,
-   "goal": "Native-proved Ardougne-bank to Seers yew-grove approach,115ticks no damage; WC60 held steelaxe, then bank5-yew pilot for Haggis23log demand",
+   "goal": "Live first pilot banked5yews,18remain for Haggis23-yew bill; bank next8 on same proved Seers grove/bank, WC60+steelaxe, one finite1500tick trip",
    "role": "supply"
   },
   {
@@ -85,18 +86,15 @@
   },
   {
    "account": "MeatNTwoVeg",
-   "script": "scripts/gather-ore.ts",
-   "args": [
-    "600",
-    "9"
-   ],
+   "script": "scripts/gather-essence.ts",
+   "args": [],
    "env": {
-    "MAX_TRIPS": "1",
-    "ORE_PROFILE": "mixed"
+    "CAP": "450",
+    "BANK_AT": "20"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "Idle: second mixed pilot banked6copper3tin, zero iron; exact2iron-bar gap remains. No third mixed attempt; targeted method needed",
+   "goal": "Bank release-eligible essence toward Haggis58 accessible gap:69 Swords essence death/logout-held, Uns27+Crown4 reserved Priest; other4455+Spit23 leaves58. Proved safe Varrock east worker, finite450ticks, verify actual bank delta",
    "role": "supply"
   },
   {
@@ -152,29 +150,28 @@
    "script": "scripts/gather-spawn.ts",
    "args": [
     "1937",
-    "12"
+    "21"
    ],
    "env": {
-    "TICKS": "1200"
+    "TICKS": "1800"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Bank12 more water inputs for wine-stock-order;11new water already banked,44 shared grapes visible, capwinewater44; original1 Monk Friend jug protected; no wine-production claim",
+   "goal": "Final21 water inputs toward44 wine-stock-order inputs matching44 shared grapes;23 newwater already banked, original1Monk Friend jug protected; finite1800ticks, no wine-production claim",
    "role": "supply"
   },
   {
    "account": "Crownjewels",
-   "script": "scripts/walk-to.ts",
+   "script": "scripts/quest-cook-job.ts",
    "args": [
-    "3092",
-    "3266",
-    "0",
-    "--ground"
+    "hetty"
    ],
-   "env": {},
-   "enabled": true,
+   "env": {
+    "CAP": "1800"
+   },
+   "enabled": false,
    "repeat": false,
-   "goal": "Native-qualified northern Draynor lane for funded Witch Potion unlock; Falador stage complete and logged out; avoid Manor and jail guards",
+   "goal": "Witch Potion complete1QP Magic8125, no life loss; delivered50essence to Uns,4reserve banked; logged out, idle pending next qualified demand",
    "role": "supply"
   }
  ]

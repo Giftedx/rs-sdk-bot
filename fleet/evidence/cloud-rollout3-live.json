@@ -1,17 +1,17 @@
 {
  "schema": "cloud-expansion-snapshot/1",
  "started": 1794174593771,
- "at": 1794174728351,
+ "at": 1794175196087,
  "source": "70fcbce85350659ad82496060e9c3e4f992c91a0",
  "peakFreshLive": 3,
  "peakWholeRollout": 9,
  "currentLive": 1,
  "headroom": {
-  "freeGB": 13.565898895263672,
+  "freeGB": 15.081314086914062,
   "load": [
-   1.36,
-   1.32,
-   1.29
+   0.34,
+   0.65,
+   0.97
   ],
   "cpus": 5,
   "requiredFloorGB": 4,
@@ -19,14 +19,14 @@
  },
  "active": [
   {
-   "account": "BoneToPick",
-   "goal": "Bank12 more water inputs for wine-stock-order;11new water already banked,44 shared grapes visible, capwinewater44; original1 Monk Friend jug protected; no wine-production claim",
+   "account": "MeatNTwoVeg",
+   "goal": "Bank release-eligible essence toward Haggis58 accessible gap:69 Swords essence death/logout-held, Uns27+Crown4 reserved Priest; other4455+Spit23 leaves58. Proved safe Varrock east worker, finite450ticks, verify actual bank delta",
    "enabled": true,
-   "tick": 106,
-   "at": 1794174727578,
+   "tick": 41,
+   "at": 1794175194711,
    "position": {
-    "x": 3301,
-    "z": 3170,
+    "x": 2926,
+    "z": 4816,
     "level": 0
    },
    "result": "",
@@ -50,17 +50,17 @@
   },
   {
    "account": "TossTheCaber",
-   "goal": "Native-proved Ardougne-bank to Seers yew-grove approach,115ticks no damage; WC60 held steelaxe, then bank5-yew pilot for Haggis23log demand",
+   "goal": "Bank first5 yew logs for Haggis23-yew shortage; native proof5banked, whole Seers approach no damage, WC60 steelaxe held, finite one-trip pilot",
    "enabled": true,
-   "tick": 270,
-   "at": 1794174656332,
+   "tick": 521,
+   "at": 1794175046484,
    "position": {
-    "x": 2654,
-    "z": 3283,
+    "x": 2724,
+    "z": 3493,
     "level": 0
    },
-   "result": "ok ticks=265 received=0 handed=0 fishNotes=0 coins=80 walkTicks=219 boatTicks=46 waitTicks=0 giveTicks=0 featherTicks=0 feathersBought=0 feathersLeft=0 legs=draynor coins=140@0,received0@0,ardougne@265 hpMin=24 died=false jumps=99:3026,3219->2956,3143,1;234:2771,3226->2683,3268,1 at=2652,3283",
-   "logout": "held"
+   "result": "ok ticks=520 died=false tree=yew chops=5 banked=5 held=0 bankTrips=1 walkTicks=18 hpMin=27 logsPer1kTicks=9.62",
+   "logout": "confirmed"
   },
   {
    "account": "Swordswallow",
@@ -106,17 +106,17 @@
   },
   {
    "account": "MeatNTwoVeg",
-   "goal": "Idle: second mixed pilot banked6copper3tin, zero iron; exact2iron-bar gap remains. No third mixed attempt; targeted method needed",
-   "enabled": false,
-   "tick": 210,
-   "at": 1794174009886,
+   "goal": "Bank release-eligible essence toward Haggis58 accessible gap:69 Swords essence death/logout-held, Uns27+Crown4 reserved Priest; other4455+Spit23 leaves58. Proved safe Varrock east worker, finite450ticks, verify actual bank delta",
+   "enabled": true,
+   "tick": 41,
+   "at": 1794175194711,
    "position": {
-    "x": 3252,
-    "z": 3420,
+    "x": 2926,
+    "z": 4816,
     "level": 0
    },
-   "result": "ok ticks=206 died=false mined=9 banked=9 held=0 bankTrips=1 walkTicks=96 hpMin=10 profile=mixed softMade=0 softBanked=0 softPreserved=true initialOre=0 recovered=9 xpGain=3937 stop=max-trips  oreWaitTicks=0   orePer1kTicks=43.69",
-   "logout": "confirmed"
+   "result": "",
+   "logout": "held"
   },
   {
    "account": "YewGotWood",
@@ -164,28 +164,28 @@
    "account": "BoneToPick",
    "goal": "Bank12 more water inputs for wine-stock-order;11new water already banked,44 shared grapes visible, capwinewater44; original1 Monk Friend jug protected; no wine-production claim",
    "enabled": true,
-   "tick": 106,
-   "at": 1794174727578,
+   "tick": 783,
+   "at": 1794175002901,
    "position": {
-    "x": 3301,
-    "z": 3170,
+    "x": 3269,
+    "z": 3166,
     "level": 0
    },
-   "result": "",
-   "logout": "held"
+   "result": "ok item=1937 banked=12 target=12 trips=1 ticks=781 ",
+   "logout": "confirmed"
   },
   {
    "account": "Crownjewels",
-   "goal": "Native-qualified northern Draynor lane for funded Witch Potion unlock; Falador stage complete and logged out; avoid Manor and jail guards",
-   "enabled": true,
-   "tick": 89,
-   "at": 1794174724605,
+   "goal": "Witch Potion complete1QP Magic8125, no life loss; delivered50essence to Uns,4reserve banked; logged out, idle pending next qualified demand",
+   "enabled": false,
+   "tick": 446,
+   "at": 1794175020926,
    "position": {
     "x": 3092,
-    "z": 3267,
+    "z": 3242,
     "level": 0
    },
-   "result": "ok walk-to {\"ok\":true,\"ticks\":88,\"still\":4,\"clicks\":22,\"repaths\":1,\"doors\":1,\"next\":1} at=3092,3267,0 ticks=88",
+   "result": "ok Hetty complete; QP+1, Magic+8125, costs, assets and life observed",
    "logout": "confirmed"
   }
  ],
