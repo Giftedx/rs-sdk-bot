@@ -1,0 +1,5 @@
+[bot] cant_reach: Interacting with loc 2566 - no route, so nothing was sent and the server will not reply. Prefer a target whose `reachable` flag is true.
+[walkTo] PATHFINDING FAILED: destination tile is blocked - from (2669, 3312) to (2669, 3311)
+[walkTo] PATHFINDING FAILED: destination tile is blocked - from (2670, 3311) to (2669, 3311)
+[walkTo] PATHFINDING FAILED: destination tile is blocked - from (2669, 3312) to (2669, 3311)
+[lite] flbatcxvx911: session ended (logged-out) 

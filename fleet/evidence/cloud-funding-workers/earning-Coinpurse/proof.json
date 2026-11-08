@@ -1,0 +1,55 @@
+{
+  "ok": true,
+  "checks": {
+    "stages": true,
+    "saved": true,
+    "source": true,
+    "profit": true,
+    "bankCredit": true,
+    "position": true,
+    "thieving": true,
+    "otherSkills": true,
+    "protectedAssets": true,
+    "alive": true
+  },
+  "source": "ae60e14022ecccf347e2d7b11e6056d01976b590",
+  "entries": [
+    "scripts/goldfarm.ts"
+  ],
+  "pin": "6bdbb72e184ff47443028e596aca7b2fb4048507e64a7c731185f560f4062a62",
+  "dir": ".practice/cloud-expansion/earning-batch-1794181944795/2669-3298",
+  "name": "flbatcxvx911",
+  "account": "Coinpurse",
+  "knightSpot": "2669,3298",
+  "ticks": 600,
+  "bankAt": 400,
+  "initialCoins": 627,
+  "finalCoins": 1313,
+  "netCoins": 686,
+  "finalBankCoins": 1013,
+  "carriedCoins": 300,
+  "receipts": [
+    {
+      "entry": "scripts/goldfarm.ts",
+      "code": 0,
+      "timedOut": false,
+      "logout": {
+        "state": "confirmed",
+        "account": "flbatcxvx911",
+        "server": "127.0.0.1:30021",
+        "domain": "practice",
+        "attemptId": "1794181950111-0000008604-0000000001",
+        "loggedOutAt": 1794182042854,
+        "ownerRun": null,
+        "receiptSha256": "d65b172c66dbd61303e11b9148c2d9a478cb07d31964c74cb2ade65fbb30efb9"
+      }
+    }
+  ],
+  "baselineHash": "a2d976fee4b15973a6c442372edc3ca86bdc70d3337dbfacd6d19d65ff481977",
+  "files": {
+    "before.sav": "96d476043324c663173f76c3439c80e64836590bf32ae57c043012ccc73803fd",
+    "after.sav": "7eda69572f263802cd11d8ce6a5bb5f4f0b086e9c9a3d1925a34bde080e24183",
+    "worker-0.log": "c644d1df45c5c84439a91e529b5a4ae19cc36a93caf3fed67cd80e8219bbb661",
+    "worker-0.err": "c9cf6d54bb7258ec6dc84af43f822125ea470416c76a97f88b43009a1dfbd609"
+  }
+}

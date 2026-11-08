@@ -1,6 +1,6 @@
 {
   "schema": "cloud-funding-workers/1",
-  "at": 1794181787716,
+  "at": 1794182219933,
   "sourceInstalled": "ae60e14022ecccf347e2d7b11e6056d01976b590",
   "goal": "Bounded qualified training and earning pilots toward the cloud combat-15 kit; no repeats or shared-controller changes",
   "qualifications": [
@@ -93,11 +93,11 @@
   "sharedControllerUntouched": true,
   "sharedHoldsPreserved": true,
   "headroom": {
-    "freeGB": 16.6083984375,
+    "freeGB": 16.26138687133789,
     "load": [
-      0.32,
-      0.27,
-      0.28
+      0.17,
+      0.21,
+      0.24
     ]
   },
   "accounts": [
@@ -586,36 +586,65 @@
       "account": "Coinpurse",
       "admission": {
         "account": "Coinpurse",
-        "server": "rs-sdk-demo.fly.dev",
-        "reservation": "task-baf56625-8445-49b5-ba41-e814a75cc35e",
         "source": "ae60e14022ecccf347e2d7b11e6056d01976b590",
-        "pin": "a40f810731c4345391f4fed66d1c875ccc93bbd0cb973b893188f95768916c5c",
-        "proof": ".practice/cloud-expansion/native-1794180065277/qualified.json",
-        "pid": 6877,
-        "goal": "Train Thieving55 and bank earnings toward cloud combat-15 kit replacement; no automatic farming or shared-controller changes",
-        "cap": 2500,
+        "proof": ".practice/cloud-expansion/earning-batch-1794181944795/2669-3298/proof.json",
+        "pin": "6bdbb72e184ff47443028e596aca7b2fb4048507e64a7c731185f560f4062a62",
+        "entries": [
+          "scripts/goldfarm.ts"
+        ],
+        "knightSpot": "2669,3298",
+        "holdersObserved": 2,
+        "capacity": 3,
+        "policySource": "75d83f5a",
+        "fleetSource": "bc3c454f5759b3bbdae3f4e7665ee0e1da64d3f6",
+        "plans": [
+          {
+            "path": "fleet/plans/claude-cloud-2.json",
+            "at": 1794180888083
+          },
+          {
+            "path": "fleet/plans/claude-cloud-3.json",
+            "at": 1794181892014
+          },
+          {
+            "path": "fleet/plans/claude-cloud-4.json",
+            "at": 1794181623288
+          },
+          {
+            "path": "fleet/plans/claude-cloud.json",
+            "at": 1794180832006
+          },
+          {
+            "path": "fleet/plans/cloud-kit.json",
+            "at": 1794181978370
+          },
+          {
+            "path": "fleet/plans/cloud.json",
+            "at": 1794181599154
+          },
+          {
+            "path": "fleet/plans/local.json",
+            "at": 1794180421441
+          }
+        ],
+        "ticks": 600,
+        "bankAt": 400,
         "repeat": false,
-        "headroom": {
-          "freeGB": 15.22403335571289,
-          "load": [
-            1.38,
-            1.04,
-            0.51
-          ],
-          "cpus": 5
-        },
-        "started": 1794180364637
+        "started": 1794182077882,
+        "initialCoins": 627,
+        "headroomGB": 16.46274185180664,
+        "goal": "One bounded knight earning run with measured bank credit and retained cash for the cloud combat-15 kit; no shared controller or plan changes"
       },
-      "at": 1794181207334,
-      "active": false,
-      "tick": 2080,
+      "at": 1794182219015,
+      "active": true,
+      "tick": 331,
       "position": {
-        "x": 2655,
-        "z": 3283,
+        "x": 2653,
+        "z": 3299,
         "level": 0
       },
       "hp": {
-        "now": 6,
+        "now": 10,
         "max": 10
       },
       "skills": [
@@ -640,7 +669,7 @@
         {
           "name": "Hitpoints",
           "level": 10,
-          "currentLevel": 6,
+          "currentLevel": 10,
           "xp": 980
         },
         {
@@ -723,9 +752,9 @@
         },
         {
           "name": "Thieving",
-          "level": 55,
-          "currentLevel": 55,
-          "xp": 47640
+          "level": 57,
+          "currentLevel": 57,
+          "xp": 55855
         },
         {
           "name": "Stat18",
@@ -747,6 +776,80 @@
         }
       ],
       "inventory": [
+        {
+          "id": 995,
+          "baseId": 995,
+          "name": "Coins",
+          "count": 300
+        },
+        {
+          "id": 1893,
+          "baseId": 1893,
+          "name": "2/3 cake",
+          "count": 1
+        },
+        {
+          "id": 1901,
+          "baseId": 1901,
+          "name": "Chocolate slice",
+          "count": 1
+        },
+        {
+          "id": 1891,
+          "baseId": 1891,
+          "name": "Cake",
+          "count": 1
+        },
+        {
+          "id": 1891,
+          "baseId": 1891,
+          "name": "Cake",
+          "count": 1
+        },
+        {
+          "id": 1901,
+          "baseId": 1901,
+          "name": "Chocolate slice",
+          "count": 1
+        },
+        {
+          "id": 1891,
+          "baseId": 1891,
+          "name": "Cake",
+          "count": 1
+        },
+        {
+          "id": 1891,
+          "baseId": 1891,
+          "name": "Cake",
+          "count": 1
+        },
+        {
+          "id": 1891,
+          "baseId": 1891,
+          "name": "Cake",
+          "count": 1
+        },
+        {
+          "id": 1891,
+          "baseId": 1891,
+          "name": "Cake",
+          "count": 1
+        },
+        {
+          "id": 1891,
+          "baseId": 1891,
+          "name": "Cake",
+          "count": 1
+        }
+      ],
+      "bank": [
+        {
+          "id": 995,
+          "baseId": 995,
+          "name": "Coins",
+          "count": 427
+        },
         {
           "id": 1351,
           "baseId": 1351,
@@ -850,21 +953,9 @@
           "count": 2
         }
       ],
-      "bank": [
-        {
-          "id": 995,
-          "baseId": 995,
-          "name": "Coins",
-          "count": 627
-        }
-      ],
       "equipment": [],
-      "result": "ok thieving=55 xp=47640 ticks=2068 at=2655,3283,0 hp=6 hpMin=1 died=false relogs=0 relogTicks=0 logoutTicks=0 idleTicks=46 pickTicks=1038 shopTicks=120 eatTicks=39 stunWait=57 stunMsgs=71 tries=519 stuns=70 eaten=37 bought=16 waits=33 walkTicks=79 chases=175 coins=0 bread=0 milestones=coins60",
-      "terminal": {
-        "ok": true,
-        "code": 0,
-        "ended": 1794181207360
-      },
+      "result": "",
+      "terminal": null,
       "training": {
         "logout": {
           "state": "confirmed",
@@ -879,17 +970,69 @@
         "bankGP": 627,
         "result": "ok thieving=55 xp=47640 ticks=2068 at=2655,3283,0 hp=6 hpMin=1 died=false relogs=0 relogTicks=0 logoutTicks=0 idleTicks=46 pickTicks=1038 shopTicks=120 eatTicks=39 stunWait=57 stunMsgs=71 tries=519 stuns=70 eaten=37 bought=16 waits=33 walkTicks=79 chases=175 coins=0 bread=0 milestones=coins60"
       },
-      "earningProof": null,
+      "earningProof": {
+        "ok": true,
+        "checks": {
+          "stages": true,
+          "saved": true,
+          "source": true,
+          "profit": true,
+          "bankCredit": true,
+          "position": true,
+          "thieving": true,
+          "otherSkills": true,
+          "protectedAssets": true,
+          "alive": true
+        },
+        "source": "ae60e14022ecccf347e2d7b11e6056d01976b590",
+        "entries": [
+          "scripts/goldfarm.ts"
+        ],
+        "pin": "6bdbb72e184ff47443028e596aca7b2fb4048507e64a7c731185f560f4062a62",
+        "dir": ".practice/cloud-expansion/earning-batch-1794181944795/2669-3298",
+        "name": "flbatcxvx911",
+        "account": "Coinpurse",
+        "knightSpot": "2669,3298",
+        "ticks": 600,
+        "bankAt": 400,
+        "initialCoins": 627,
+        "finalCoins": 1313,
+        "netCoins": 686,
+        "finalBankCoins": 1013,
+        "carriedCoins": 300,
+        "receipts": [
+          {
+            "entry": "scripts/goldfarm.ts",
+            "code": 0,
+            "timedOut": false,
+            "logout": {
+              "state": "confirmed",
+              "account": "flbatcxvx911",
+              "server": "127.0.0.1:30021",
+              "domain": "practice",
+              "attemptId": "1794181950111-0000008604-0000000001",
+              "loggedOutAt": 1794182042854,
+              "ownerRun": null,
+              "receiptSha256": "d65b172c66dbd61303e11b9148c2d9a478cb07d31964c74cb2ade65fbb30efb9"
+            }
+          }
+        ],
+        "baselineHash": "a2d976fee4b15973a6c442372edc3ca86bdc70d3337dbfacd6d19d65ff481977",
+        "files": {
+          "before.sav": "96d476043324c663173f76c3439c80e64836590bf32ae57c043012ccc73803fd",
+          "after.sav": "7eda69572f263802cd11d8ce6a5bb5f4f0b086e9c9a3d1925a34bde080e24183",
+          "worker-0.log": "c644d1df45c5c84439a91e529b5a4ae19cc36a93caf3fed67cd80e8219bbb661",
+          "worker-0.err": "c9cf6d54bb7258ec6dc84af43f822125ea470416c76a97f88b43009a1dfbd609"
+        }
+      },
       "earningResult": null,
       "logout": {
-        "state": "confirmed",
+        "state": "held",
         "account": "Coinpurse",
         "server": "rs-sdk-demo.fly.dev",
         "domain": "live",
-        "attemptId": "1794180367797-0000006877-0000000001",
-        "loggedOutAt": 1794181206053,
-        "ownerRun": null,
-        "receiptSha256": "76ed276df9ff7fab079e3751a8629683239a1619ee713772a536dc2c682c5b35"
+        "attemptId": "1794182080945-0000008737-0000000001",
+        "reason": "session active or outcome unknown"
       },
       "stopPresent": false
     },
