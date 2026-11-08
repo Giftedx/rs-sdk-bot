@@ -1,11 +1,13 @@
 import { expect, test } from 'bun:test';
-import { mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { assertTradeAdmission, pickOrder, validOrder, type Order, type Receipt } from './fleet-trade';
+import { assertTradeAdmission, fleetTradeOutcome, performFleetTransfer, pickOrder, validOrder, type Order, type Receipt } from './fleet-trade';
 import { beginSessionAttempt } from '../packages/core/src/session-lifecycle';
+import type { Session } from '../packages/core/src/inprocess';
+import { terminalTradeReceipt, writeTradeReceipt, type TradeReceipt } from './fleet-trade-settlement';
 import { makeOrder } from './fleet-order';
-import { snapshot } from './fleet-sync';
+import { releasePublishedTradeClaims, snapshot } from './fleet-sync';
 
 const order = (o: Partial<Order>): Order => ({ id: 'o1', server: 's', from: 'Giver', to: 'Taker', item: 'Lobster', count: 500, start: 1000, end: 5000, ...o });
 
@@ -14,6 +16,97 @@ test('an order needs two different accounts, an item, a positive count and a win
     expect(validOrder(order({ to: 'giver' }))).toBe(false);
     expect(validOrder(order({ count: 0 }))).toBe(false);
     expect(validOrder(order({ end: 1000 }))).toBe(false);
+});
+
+const attemptId = '0000000002300-1-1', sha256 = 'a'.repeat(64), nonce = '12345678-1234-1234-1234-123456789012';
+const claimedReceipt = (role: 'from' | 'to' = 'to'): TradeReceipt => ({
+    version: 2, state: 'prepared', id: 'o1', account: role === 'from' ? 'Giver' : 'Taker', partner: role === 'from' ? 'Taker' : 'Giver',
+    role, side: 'local', server: 's', item: 'Lobster', requested: 500, claim: nonce, ok: false, count: 0, at: 2000, detail: '',
+});
+const logout = { state: 'confirmed', account: 'Taker', server: 's', domain: 'live', attemptId, loggedOutAt: 2400, ownerRun: null, receiptSha256: sha256 } as const;
+
+test('transfer needs a matching partner, observed exact item delta, bank credit, and this session logout', async () => {
+    const item = { id: 379, name: 'Lobster', count: 500 };
+    for (const mode of ['ok', 'wrong peer', 'bank failure', 'ambiguous timeout'] as const) {
+        let pack = [{ ...item, count: 5 }], calls = 0;
+        const fake = {
+            sdk: { getState: () => ({ inventory: pack }), getInventory: () => pack },
+            bot: {
+                trade: async () => {
+                    calls++;
+                    pack = [{ ...item, count: 505 }];
+                    return mode === 'ambiguous timeout' ? { success: false, partner: 'Giver', reason: 'timeout', received: [], gave: [] }
+                        : { success: true, partner: mode === 'wrong peer' ? 'Other' : 'Giver', received: [item], gave: [] };
+                },
+                openBank: async () => ({ success: true }), closeBank: async () => ({ success: true }),
+            },
+            ended: new Promise(() => {}), bankObservation: () => ({ at: 2300 }),
+        } as unknown as Session;
+        const progress = { uncertain: false, count: 0 };
+        const run = performFleetTransfer(fake, order({}), 'to', progress, {
+            now: () => 2200, wait: async (_s, predicate) => predicate(null),
+            deposit: async () => { if (mode === 'bank failure') throw Error('bank unavailable'); pack = []; return 505; },
+        });
+        if (mode === 'ok') await run;
+        else await expect(run).rejects.toThrow(mode === 'bank failure' ? 'bank unavailable' : 'requires reconciliation');
+        expect(calls).toBe(1);
+        const final = fleetTradeOutcome(claimedReceipt(), progress, mode === 'ok', logout, attemptId, 2500, mode);
+        expect(final.state).toBe(mode === 'ok' ? 'settled' : 'reconcile');
+        expect(final.inventory).toEqual({ before: 5, after: 505 });
+        expect(terminalTradeReceipt(order({}), 'to', final, 2500)).toBe(mode === 'ok');
+        expect(fleetTradeOutcome(claimedReceipt(), progress, true, logout, 'wrong attempt', 2500, 'bad logout').state).toBe('reconcile');
+    }
+});
+
+test('the sender ends its serving window after the first observed trade outcome', async () => {
+    const item = { id: 379, name: 'Lobster', count: 500 };
+    for (const ambiguous of [false, true]) {
+        let pack = [item];
+        const fake = {
+            sdk: { getState: () => ({ inventory: pack }), getInventory: () => pack },
+            bot: { serveTrades: async (opts: Parameters<Session['bot']['serveTrades']>[0]) => {
+                pack = [];
+                const result = { success: !ambiguous, partner: 'Taker', message: '', gave: ambiguous ? [] : [item], received: [] };
+                opts!.onTrade!(result);
+                expect(opts!.until!()).toBe(true);
+                return { trades: [result] };
+            } },
+        } as unknown as Session;
+        const progress = { uncertain: false, count: 0 };
+        const run = performFleetTransfer(fake, order({}), 'from', progress, {
+            now: () => 2200, wait: async (_s, predicate) => predicate(null),
+        });
+        if (ambiguous) await expect(run).rejects.toThrow('requires reconciliation');
+        else await run;
+        const final = fleetTradeOutcome(claimedReceipt('from'), progress, !ambiguous,
+            { ...logout, account: 'Giver' }, attemptId, 2500, 'observed');
+        expect(final.state).toBe(ambiguous ? 'reconcile' : 'settled');
+        expect(final.inventory).toEqual({ before: 500, after: 0 });
+    }
+});
+
+test('a prepared receipt is exclusive, and only a published matched terminal receipt releases a claim', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'fleet-trade-settlement-'));
+    try {
+        const prepared = claimedReceipt(), trade = order({}), file = join(dir, 'o1.to.json');
+        writeTradeReceipt(dir, prepared);
+        expect(() => writeTradeReceipt(dir, { ...prepared, at: 2100 })).toThrow();
+        expect(JSON.parse(readFileSync(file, 'utf8')).state).toBe('prepared');
+        const progress = { uncertain: true, count: 500, inventory: { before: 0, after: 500 }, bank: { count: 500, at: 2300 } };
+        const final = fleetTradeOutcome(prepared, progress, true, logout, attemptId, 2500, 'observed');
+        writeTradeReceipt(dir, final);
+        expect(JSON.parse(readFileSync(file, 'utf8')).state).toBe('settled');
+        const claim = { account: 'taker', server: 's', side: 'local', orderId: 'o1', role: 'to', nonce, phase: 'held', at: 2000 } as const;
+        let published: TradeReceipt | null = prepared;
+        const releases: string[] = [], sync = () => releasePublishedTradeClaims([claim], 'local',
+            path => path.startsWith('orders/') ? trade : published, r => releases.push(r.nonce), 2600);
+        expect(sync()).toBe(0);
+        published = { ...final, claim: 'a'.repeat(36) };
+        expect(sync()).toBe(0);
+        published = final;
+        expect(sync()).toBe(1);
+        expect(releases).toEqual([nonce]);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
 test('each side picks its own open order once, in or near its window', () => {

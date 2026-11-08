@@ -16,20 +16,42 @@ const SHA = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
 const LEGACY_REF = 'refs/heads/fleet-data';
 type RemoteLease = { side: string; host: string; holder: string; epoch: string; pid: number; at: number };
 
-function gitWindow(root: string) {
+export function fleetGitWindow(root: string, authority = 'fleet controller lease authority') {
     const deadline = performance.now() + GIT_DEADLINE_MS;
     return (args: string[], input?: string): string => {
         const timeout = Math.floor(deadline - performance.now());
-        if (timeout <= 0) throw Error('fleet controller lease authority timed out');
+        if (timeout <= 0) throw Error(authority + ' timed out');
         try {
             return execFileSync('git', args, {
                 cwd: root, input, stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf8', timeout, killSignal: 'SIGKILL', windowsHide: true,
                 env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'Never' },
             }).trim();
         } catch {
-            throw Error('fleet controller lease authority unavailable or changed');
+            throw Error(authority + ' unavailable or changed');
         }
     };
+}
+
+type FleetGit = ReturnType<typeof fleetGitWindow>;
+
+export function readFleetGitRefs(git: FleetGit, refs: readonly string[]) {
+    const found = new Map<string, string>();
+    for (const line of git(['ls-remote', '--refs', 'origin', ...refs]).split('\n').filter(Boolean)) {
+        const [sha, name] = line.trim().split(/\s+/);
+        if (!sha || !SHA.test(sha) || !name || !refs.some(ref => ref.endsWith('*') ? name.startsWith(ref.slice(0, -1)) : name === ref)) {
+            throw Error('fleet Git authority has an invalid ref');
+        }
+        found.set(name, sha);
+    }
+    return found;
+}
+
+// Publishing a child of the observed head gives one winner without forcing the remote ref.
+export function appendFleetGitRecord(git: FleetGit, ref: string, head: string | undefined, tree: string, message: string) {
+    const next = git(['-c', 'user.name=Fleet Controller', '-c', 'user.email=fleet-controller@users.noreply.github.com',
+        'commit-tree', tree, ...(head ? ['-p', head] : []), '-F', '-'], message + '\n');
+    git(['-c', 'push.followTags=false', 'push', '--quiet', 'origin', next + ':' + ref]);
+    return next;
 }
 
 function localHolder(root: string): string {
@@ -82,13 +104,8 @@ export function acquireFleetLease(root: string, side: string, now = Date.now) {
     const holder = localHolder(root), host = hostname(), pid = process.pid;
     let epoch: string = randomUUID();
     const ref = 'refs/heads/fleet-lease/' + side;
-    const git = gitWindow(root);
-    const refs = new Map<string, string>();
-    for (const line of git(['ls-remote', '--refs', 'origin', ref, LEGACY_REF]).split('\n').filter(Boolean)) {
-        const [sha, name] = line.trim().split(/\s+/);
-        if (!sha || !SHA.test(sha) || (name !== ref && name !== LEGACY_REF)) throw Error('fleet controller lease authority has an invalid ref');
-        refs.set(name, sha);
-    }
+    const git = fleetGitWindow(root);
+    const refs = readFleetGitRefs(git, [ref, LEGACY_REF]);
     let head = refs.get(ref);
     if (head) {
         git(['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', 'origin', head]);
@@ -116,13 +133,11 @@ export function acquireFleetLease(root: string, side: string, now = Date.now) {
     const workerHolder = side + ':' + epoch;
     const tree = git(['hash-object', '-w', '-t', 'tree', '--stdin'], '');
     let at = 0, deadline = 0, lost = false;
-    const publish = (runGit: ReturnType<typeof gitWindow>) => {
+    const publish = (runGit: FleetGit) => {
         const proposed = now();
         const proposedDeadline = performance.now() + FLEET_LEASE_TTL_MS - DRAIN_MS;
         const record: RemoteLease = { side, host, holder, epoch, pid, at: proposed };
-        const next = runGit(['-c', 'user.name=Fleet Controller', '-c', 'user.email=fleet-controller@users.noreply.github.com',
-            'commit-tree', tree, ...(head ? ['-p', head] : []), '-F', '-'], JSON.stringify(record) + '\n');
-        runGit(['-c', 'push.followTags=false', 'push', '--quiet', 'origin', next + ':' + ref]);
+        const next = appendFleetGitRecord(runGit, ref, head, tree, JSON.stringify(record));
         writeFence(root, workerHolder, proposed + FLEET_LEASE_TTL_MS - DRAIN_MS);
         head = next;
         at = proposed;
@@ -137,7 +152,7 @@ export function acquireFleetLease(root: string, side: string, now = Date.now) {
         renew() {
             try {
                 if (!allows()) throw Error('fleet controller lease expired');
-                publish(gitWindow(root));
+                publish(fleetGitWindow(root));
             } catch (error) {
                 lost = true;
                 // A failed invalidation leaves the previous conservative deadline in place.

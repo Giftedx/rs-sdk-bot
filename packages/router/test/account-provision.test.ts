@@ -1,8 +1,11 @@
 import {test, expect} from 'bun:test';
+import {mkdtempSync,mkdirSync,rmSync,writeFileSync,unlinkSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join,relative,resolve} from 'node:path';
 import {NAMES} from '../../core/src/names';
 import {provisionAccount, createAccountProvisionDeps,registrationEnvironment, type AccountProvisionDeps, type RegistrationResult} from '../src/account-provision';
-import {addTasks, finishTask, initialState, startTask, type CoordTask} from '../src/coordinator';
-import {preparedProvisionProof} from '../src/coordinator-worker';
+import {addTasks, chooseTask, finishTask, initialState, startTask, type CoordTask} from '../src/coordinator';
+import {preparedProvisionProof,provisionParticipantHold} from '../src/coordinator-worker';
 
 const request = {role:'ranged' as const,purpose:'missing role: ranged supply',server:'rs-sdk-demo.fly.dev',reservedNames:['PULLMYBOW']};
 test('live registration forwards its verified release and refuses a missing pin before login',()=>{
@@ -111,4 +114,51 @@ test('inventory failure prevents credentials and claim; factory rejects unbounde
     expect(h.created).toEqual([]);expect(h.registered).toEqual([]);
     for(const timeoutMs of [0,-1,Infinity,120001])expect(()=>createAccountProvisionDeps({timeoutMs})).toThrow();
     expect(typeof createAccountProvisionDeps().registerAccount).toBe('function');
+});
+
+
+test('a qualified composed first job holds the claim when its known participant is unavailable',()=>{
+ const parent=resolve(tmpdir()),base=mkdtempSync(join(parent,'rsbot-provision-ready-'));
+ try{
+  mkdirSync(join(base,'.practice/status'),{recursive:true});
+  const plan=(jobs:unknown[])=>writeFileSync(join(base,'swarm.json'),JSON.stringify({jobs,maxBots:17,minFreeGB:4}));
+  plan([]);
+  mkdirSync(join(base,'vendor/rs-sdk/bots/Helper'),{recursive:true});
+  writeFileSync(join(base,'vendor/rs-sdk/bots/Helper/bot.env'),'SERVER=rs-sdk-demo.fly.dev');
+  const state=initialState();
+  const spec={goal:'skills' as const,capability:'train',dependsOn:[],priority:1,estimatedMs:1,why:'starter job'};
+  addTasks(state,[
+   {...spec,id:'claim',kind:'provision',role:'ranged'},
+   {...spec,id:'other-claim',kind:'provision',role:'ranged'},
+   {...spec,id:'proof',kind:'qualify'},
+   {...spec,id:'first-job',kind:'run',participants:['@claim','Helper','@other-claim'],dependsOn:['proof'],accept:{skills:{Ranged:7}}},
+  ],1);
+  startTask(state,'proof',2,'proof');
+  finishTask(state,{taskId:'proof',runId:'proof',ok:true,at:3,output:{delivery:{id:'train',ok:true,stage:'delivered',source:'fp',runtimeRevision:'rev'}}});
+  const prepared=()=>preparedProvisionProof(state,'claim',()=>({fingerprint:'fp',runtime:'rev',entry:'worker.ts'}),{base});
+  const next=()=>chooseTask(state,Date.now(),{
+   provisionRunHeld:(run,records)=>provisionParticipantHold(run,records,()=> 'worker.ts',base)!==null,
+  });
+  expect(prepared()).toBe(true);
+  expect(next()?.kind).toBe('provision');
+  const stop=join(base,'.practice/stop-helper');
+  writeFileSync(stop,'owner pause');
+  expect(prepared()).toBe(false);
+  expect(next()).toBeNull();
+  unlinkSync(stop);
+  plan([{account:'Helper',script:'worker.ts',enabled:true}]);
+  expect(prepared()).toBe(false);
+  plan([{account:'Helper',script:'worker.ts',enabled:false}]);
+  expect(prepared()).toBe(false);
+  plan([{accounts:['Helper','Unrelated'],orchestrate:true,script:'worker.ts',enabled:false}]);
+  expect(prepared()).toBe(false);
+  plan([]);
+  const credentials=join(base,'vendor/rs-sdk/bots/Helper/bot.env');
+  writeFileSync(credentials,'SERVER=localhost:8888');
+  expect(prepared()).toBe(false);
+  writeFileSync(credentials,'SERVER=rs-sdk-demo.fly.dev');
+  expect(prepared()).toBe(true);
+ }finally{
+  if(/^rsbot-provision-ready-[^\\/]+$/.test(relative(parent,base)))rmSync(base,{recursive:true});
+ }
 });

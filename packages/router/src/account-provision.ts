@@ -2,6 +2,7 @@ import {existsSync,readFileSync,readdirSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {NAMES,pickName,type Role} from '../../core/src/names';
 import {accountPassword,createAccount} from '../../../scripts/fleet';
+import type {ProvisionCrew} from '../../../scripts/provision-readiness';
 import {reserveFleetOwner} from '../../../scripts/fleet-owner-claim';
 import {mySide} from '../../core/src/fleet';
 import {killTree} from '../../practice/src/proc';
@@ -21,7 +22,7 @@ export interface AccountProvisionDeps {
     reserveLiveAccount(name:string,server:string):Promise<boolean>;
     createLocalAccount(name:string,server:string):unknown|Promise<unknown>;
     /** Run one bounded claim-account command and retain its raw result outside this adapter. */
-    registerAccount(name:string,server:string):Promise<RegistrationResult>;
+    registerAccount(name:string,server:string,crew?:ProvisionCrew):Promise<RegistrationResult>;
 }
 export interface AccountProvisionResult {
     account?:string;
@@ -97,11 +98,11 @@ export function createAccountProvisionDeps(options:{timeoutMs?:number;workerRele
                     throw Error('cloud credential file does not match the fleet seed');
             }
         },
-        async registerAccount(name,server) {
+        async registerAccount(name,server,crew) {
             if(!/^[A-Za-z0-9]{1,12}$/.test(name)||!allowedServer(server))throw Error('invalid registration target');
             if(server==='rs-sdk-demo.fly.dev')checkPause(name);
             const child=Bun.spawn([process.execPath,REGISTRATION_SCRIPT,name],{
-                cwd:root,env:registrationEnvironment(server,options.workerRelease??process.env.WORKER_RELEASE),stdout:'pipe',stderr:'ignore',
+                cwd:root,env:{...registrationEnvironment(server,options.workerRelease??process.env.WORKER_RELEASE),FLEET_PROVISION_CREW:crew?JSON.stringify(crew):''},stdout:'pipe',stderr:'ignore',
             windowsHide:true});
             let timedOut=false,termination:Promise<void>|undefined;
             const timer=setTimeout(()=>{timedOut=true;termination=killTree(child.pid);},timeoutMs);

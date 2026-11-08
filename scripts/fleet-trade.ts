@@ -4,30 +4,27 @@
 // takes the stack out of its bank (noted when it is not a stack) and serves one trade to the receiver only, the
 // receiver trades for exactly that offer and banks it. Each side writes its own receipt to fleet/receipts.
 // Usage: bun scripts/fleet-trade.ts <account> [order id]
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { openBot, finish, getWorld, accountOf, countItems } from '../packages/core/src/bot';
 import { goTo } from '../packages/core/src/walk';
 import { waitUntil } from '../packages/core/src/ticks';
 import { depositObserved } from '../packages/core/src/deposit';
 import { exactItem } from '../packages/core/src/cargo';
-import { FLEET_DIR, mySide } from '../packages/core/src/fleet';
+import { FLEET_DIR, assertSideOwns, mySide } from '../packages/core/src/fleet';
 import { tradePartners } from '../packages/core/src/tradeguard';
 import { jobAccounts, mergedPlan, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { liveLogoutRef } from '../packages/core/src/session-admission';
 import { readLogoutProof } from '../packages/core/src/session-lifecycle';
 import { pidAlive } from '../packages/core/src/session-takeover';
+import { isLocalServer } from '../packages/core/src/localserver';
 import { meetingTiles } from './coin-courier';
+import type { Session } from '../packages/core/src/inprocess';
+import type { TradeResult } from '../vendor/rs-sdk/sdk/types';
+import { acquireFleetTradeClaim } from '../packages/core/src/fleet-trade-claim';
+import { validOrder, writeTradeReceipt, type Order, type Receipt, type TradeReceipt, type TradeRole } from './fleet-trade-settlement';
+export { validOrder, type Order, type Receipt } from './fleet-trade-settlement';
 
-type Tile = { x: number; z: number; level: number };
-export type Order = { id: string; server: string; from: string; to: string; item: string; count: number; start: number; end: number; meet?: [Tile, Tile] };
-export type Receipt = { id: string; account: string; role: 'from' | 'to'; side: string; ok: boolean; count: number; at: number; detail: string };
-
-export function validOrder(o: any): o is Order {
-    return !!o && /^[A-Za-z0-9_-]{1,64}$/.test(o.id) && typeof o.server === 'string' && [o.from, o.to].every(n => /^[A-Za-z0-9]{1,12}$/.test(n))
-        && o.from.toLowerCase() !== o.to.toLowerCase() && typeof o.item === 'string' && o.item.length > 0
-        && Number.isSafeInteger(o.count) && o.count > 0 && o.count <= 2147483647 && Number.isSafeInteger(o.start) && Number.isSafeInteger(o.end) && o.end > o.start;
-}
 // The open order this account takes part in: in its window (or starting within `lead` ms) and with no receipt from it.
 export function pickOrder(orders: readonly Order[], receipts: readonly Receipt[], account: string, now: number, lead = 10 * 60_000): { order: Order; role: 'from' | 'to' } | null {
     const me = account.toLowerCase();
@@ -92,73 +89,162 @@ export function assertTradeAdmission(order: Order, account: string, server: stri
     }
 }
 
+type Progress = Pick<TradeReceipt, 'count' | 'inventory' | 'bank'> & { uncertain: boolean };
+const requestRefusal = (result: TradeResult) => !result.success && !result.partner
+    && ['player_not_found', 'no_response', 'busy'].includes(result.reason ?? '')
+    && !result.gave.length && !result.received.length && !result.possiblyDropped?.length;
+
+export async function performFleetTransfer(s: Session, order: Order, role: TradeRole, progress: Progress, {
+    now = Date.now, wait = waitUntil, deposit = depositObserved,
+} = {}) {
+    const item = exactItem(order.item), held = () => countItems(s, item), left = () => order.end - now();
+    const partner = role === 'from' ? order.to : order.from, peer = exactItem(partner);
+    const pack = () => s.sdk.getInventory().filter(i => item.test(i.name));
+    const beforeById = new Map<number, number>();
+    for (const row of pack()) beforeById.set(row.id, (beforeById.get(row.id) ?? 0) + row.count);
+    const before = held(), diff = () => role === 'from' ? before - held() : held() - before;
+    let result: TradeResult | undefined;
+    if (left() <= 0) throw Error('order window ended before trade');
+    if (role === 'from') {
+        progress.uncertain = true;
+        const served = await s.bot.serveTrades({
+            from: peer, give: [{ item, amount: order.count }], accept: offer => offer.length === 0,
+            maxTrades: 1, timeout: left(), onTrade: trade => { result = trade; }, until: () => result !== undefined,
+        });
+        if (!result && served.reason === 'timeout' && !served.trades.length && diff() === 0) progress.uncertain = false;
+    } else {
+        let ended = false;
+        void s.ended.then(() => { ended = true; });
+        for (let round = 0; !ended && left() > 0; round++) {
+            progress.uncertain = true;
+            result = await s.bot.trade(peer, {
+                accept: offer => offer.length === 1 && item.test(offer[0]!.name) && offer[0]!.count === order.count,
+                requestTimeout: Math.min(30_000, left()), timeout: Math.min(60_000, left()),
+            });
+            if (!requestRefusal(result) || diff() !== 0) break;
+            progress.uncertain = false;
+            const tile = (order.meet ?? meetingTiles({ x: 3185, z: 3436 })!)[1];
+            if (!ended && left() > 0) await s.bot.walkTo(tile.x + (round % 2 === 0 ? 1 : 0), tile.z, 0);
+        }
+    }
+    if (result?.success) await wait(s, () => diff() === order.count, { timeoutTicks: 10 });
+    const after = held(), count = diff();
+    progress.inventory = { before, after };
+    progress.count = Math.max(0, count);
+    const transferred = role === 'from' ? result?.gave : result?.received;
+    const opposite = role === 'from' ? result?.received : result?.gave;
+    if (!result?.success || !result.partner || !peer.test(result.partner) || result.possiblyDropped?.length
+        || count !== order.count || opposite?.length || !transferred?.length || !transferred.every(i => item.test(i.name))
+        || transferred.reduce((n, i) => n + i.count, 0) !== order.count) {
+        throw Error(progress.uncertain ? 'transfer requires reconciliation' : 'no matching trade completed');
+    }
+    if (role === 'from') return;
+    if (!(await s.bot.openBank()).success || !await wait(s, () => !!s.bankObservation?.(), { timeoutTicks: 20 }))
+        throw Error('receiver bank observation unavailable');
+    let credited = 0, bankAt = 0;
+    for (const id of new Set(transferred.map(i => i.id))) {
+        const rows = pack().filter(i => i.id === id), stack = rows[0];
+        const incoming = transferred.filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+        const amount = rows.reduce((n, i) => n + i.count, 0);
+        if (!stack || amount - (beforeById.get(id) ?? 0) !== incoming) throw Error('receiver item delta differs from trade');
+        if (await deposit(s, stack) !== amount) throw Error('receiver bank credit was not confirmed');
+        const observation = s.bankObservation?.();
+        if (!observation) throw Error('receiver bank credit observation unavailable');
+        bankAt = Math.max(bankAt, observation.at);
+        credited += incoming;
+    }
+    progress.bank = { count: credited, at: bankAt };
+    await s.bot.closeBank();
+}
+
+export function fleetTradeOutcome(prepared: TradeReceipt, progress: Progress, ok: boolean, logout: ReturnType<typeof readLogoutProof>,
+    attemptId: string | undefined, at: number, detail: string): TradeReceipt {
+    const proof = logout.state === 'confirmed' && logout.attemptId === attemptId && logout.loggedOutAt >= prepared.at
+        && logout.account.toLowerCase() === prepared.account.toLowerCase() && logout.server.toLowerCase() === prepared.server.toLowerCase()
+        ? { attemptId: logout.attemptId, at: logout.loggedOutAt, sha256: logout.receiptSha256 } : undefined;
+    const exactBank = prepared.role === 'from' || progress.bank?.count === prepared.requested;
+    const state = proof && ok && progress.count === prepared.requested && exactBank ? 'settled'
+        : proof && !progress.uncertain && progress.count === 0 ? 'failed' : 'reconcile';
+    return { ...prepared, state, ok: state === 'settled', count: progress.count, inventory: progress.inventory, bank: progress.bank, logout: proof, at, detail };
+}
+
 if (import.meta.main) {
     const [account, onlyId] = process.argv.slice(2);
     if (!account) { console.log('RESULT fail usage: fleet-trade.ts <account> [order id]'); process.exit(2); }
-    const dir = FLEET_DIR(), orders = readJson(join(dir, 'orders')).filter(validOrder).filter(o => !onlyId || o.id === onlyId);
-    const picked = pickOrder(orders, readJson(join(dir, 'receipts')), account, Date.now());
+    const dir = FLEET_DIR(), receipts = join(dir, 'receipts');
+    const orders = readJson(join(dir, 'orders')).filter(validOrder).filter(o => !onlyId || o.id === onlyId);
+    const picked = pickOrder(orders, readJson(receipts), account, Date.now());
     if (!picked) { console.log(`RESULT ok fleet-trade no open order for ${account}`); process.exit(0); }
     const { order, role } = picked, partner = role === 'from' ? order.to : order.from;
-    // The partner must be one this machine proved or the owners file lists: never trade with a stranger.
+    if (isLocalServer(order.server)) {
+        console.log('RESULT fail fleet-trade shared orders require a live server'); process.exit(2);
+    }
     if (!tradePartners(order.server).has(partner.toLowerCase())) {
         console.log(`RESULT fail fleet-trade ${order.id}: ${partner} is not a listed fleet account`); process.exit(1);
     }
-    const receipt = (ok: boolean, count: number, detail: string) => {
-        mkdirSync(join(dir, 'receipts'), { recursive: true });
-        const r: Receipt = { id: order.id, account, role, side: mySide(), ok, count, at: Date.now(), detail };
-        writeFileSync(join(dir, 'receipts', `${order.id}.${role}.json`), JSON.stringify(r, null, 1) + '\n');
-        console.log('FLEET_RECEIPT ' + JSON.stringify(r));
-    };
+    let prepared: TradeReceipt | undefined;
+    const progress: Progress = { uncertain: false, count: 0 };
+    const complete = (s: Session, ok: boolean, detail: string) => finish([s], ok, settled => {
+        if (!prepared) throw Error('trade claim journal unavailable');
+        const receipt = fleetTradeOutcome(prepared, progress, settled, readLogoutProof(account, order.server), s.lifecycle?.attemptId, Date.now(), detail);
+        writeTradeReceipt(receipts, receipt);
+        console.log('FLEET_RECEIPT ' + JSON.stringify(receipt));
+        if (settled && !receipt.ok) throw Error('trade requires reconciliation');
+        return `fleet-trade ${order.id} ${receipt.state} ${receipt.count}/${order.count}: ${detail}`;
+    });
     while (Date.now() < order.start) await Bun.sleep(Math.min(5000, order.start - Date.now()));
     const s = await openBot(account, {
-        admitWithPlanLock: server => assertTradeAdmission(order, account, server, { receipts: join(dir, 'receipts') }),
+        admitWithPlanLock: server => {
+            assertTradeAdmission(order, account, server, { receipts });
+            const side = mySide();
+            assertSideOwns(account, side);
+            const claim = acquireFleetTradeClaim(root, { account, server, side, orderId: order.id, role });
+            try { assertTradeAdmission(order, account, server, { receipts }); }
+            catch (error) {
+                // The callback has not returned, so the producer has written no session intent.
+                claim.release();
+                throw error;
+            }
+            prepared = { version: 2, state: 'prepared', id: order.id, account, partner, role, side, server,
+                item: order.item, requested: order.count, claim: claim.nonce, count: 0, ok: false, at: Date.now(), detail: 'trade claimed' };
+            writeTradeReceipt(receipts, prepared);
+        },
+        onStop: (session, detail) => complete(session, false, detail),
+        onSessionEnd: (session, detail) => complete(session, false, detail),
     }).catch(e => finish([], false, `login: ${String(e)}`));
-    const item = exactItem(order.item), held = () => countItems(s, item), left = () => order.end - Date.now();
+    let ok = false, detail: string;
     try {
         const meet = order.meet ?? meetingTiles({ x: 3185, z: 3436 })!, tile = role === 'from' ? meet[0] : meet[1];
         const there = await goTo(s, await getWorld(), tile, accountOf(s), { legTimeoutTicks: 100 });
-        if (!there.ok) throw Error(`route to ${tile.x},${tile.z}: ${there.reason} ${there.detail}`);
+        if (!there.ok) throw Error(`route to ${tile.x}, ${tile.z}: ${there.reason} ${there.detail}`);
         await s.bot.walkTo(tile.x, tile.z, 0);
+        const item = exactItem(order.item), held = () => countItems(s, item);
         if (role === 'from' && held() < order.count) {
-            if (!(await s.bot.openBank()).success || !await waitUntil(s, () => !!s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 20 })) throw Error('bank did not open');
-            const row = s.sdk.getState()!.bank.items.find(i => item.test(i.name));
-            if (!row || row.count + held() < order.count) throw Error(`stock short: ${row?.count ?? 0} banked + ${held()} held < ${order.count}`);
+            if (!(await s.bot.openBank()).success || !await waitUntil(s, () => !!s.bankObservation?.(), { timeoutTicks: 20 })) throw Error('bank did not open');
+            const bankBefore = s.bankObservation?.(), row = bankBefore?.items.find(i => item.test(i.name));
+            const amount = order.count - held(), bankCount = row?.count ?? 0;
+            if (!bankBefore || !row || bankCount < amount) throw Error(`stock short: ${bankCount} banked + ${held()} held < ${order.count}`);
+            const target = s.sdk.getState()?.bank.items.find(i => i.id === row.id);
+            if (!target) throw Error('sender bank item is unavailable');
             const stack = s.sdk.getInventory().find(i => item.test(i.name));
-            // A count of a non-stacking item comes out as notes; coins and runes already stack.
-            const asNote = order.count - held() > 1 && !/^coins$/i.test(order.item) && !(stack && stack.count > 1);
-            await s.bot.withdrawItem(row, order.count - held(), { asNote });
-            await waitUntil(s, () => held() >= order.count, { timeoutTicks: 10 });
+            const asNote = amount > 1 && !/^coins$/i.test(order.item) && !(stack && stack.count > 1);
+            progress.uncertain = true;
+            await s.bot.withdrawItem(target, amount, { asNote });
+            const confirmed = () => {
+                const after = s.bankObservation?.();
+                const remaining = after?.items.filter(i => i.id === row.id).reduce((n, i) => n + i.count, 0);
+                return after && after.generation > bankBefore.generation && remaining === bankCount - amount && held() === order.count ? after : null;
+            };
+            if (!await waitUntil(s, () => !!confirmed(), { timeoutTicks: 10 })) throw Error('sender withdrawal debit or pack credit not confirmed');
+            const bankAfter = confirmed();
+            if (!bankAfter) throw Error('sender withdrawal observation changed');
+            progress.bank = { count: amount, at: bankAfter.at };
             await s.bot.closeBank();
-            if (held() < order.count) throw Error(`withdraw short: ${held()} of ${order.count}`);
+            progress.uncertain = false;
         }
-        const before = held();
-        if (role === 'from') {
-            await s.bot.serveTrades({ from: exactItem(partner), give: [{ item, amount: order.count }], accept: offer => offer.length === 0, maxTrades: 1, timeout: Math.max(1000, left()) });
-            await waitUntil(s, () => held() <= before - order.count, { timeoutTicks: 10 });
-            const gave = before - held();
-            receipt(gave === order.count, gave, `${account} gave ${gave} ${order.item} to ${partner}`);
-            await finish([s], gave === order.count, `fleet-trade ${order.id} gave=${gave}/${order.count}`);
-        } else {
-            // The donor may arrive late. Trade requests are not player input, so step one tile off the meeting tile and
-            // back each round to beat the idle logout (about 900 ticks), and stop once the session ends.
-            let ended = false;
-            void s.ended.then(() => { ended = true; });
-            for (let round = 0; !ended && left() > 0 && held() < before + order.count; round++) {
-                await s.bot.trade(exactItem(partner), { accept: offer => offer.length === 1 && item.test(offer[0]!.name) && offer[0]!.count === order.count, requestTimeout: 30_000, timeout: 60_000 });
-                await waitUntil(s, () => held() >= before + order.count || ended, { timeoutTicks: 10 });
-                if (!ended && held() < before + order.count) await s.bot.walkTo(tile.x + (round % 2 === 0 ? 1 : 0), tile.z, 0);
-            }
-            if (ended && held() < before + order.count) throw Error(`session ended while waiting for ${partner}`);
-            const got = held() - before;
-            if (got > 0) {
-                if ((await s.bot.openBank()).success && await waitUntil(s, () => !!s.bankObservation?.(), { timeoutTicks: 20 })) {
-                    const stack = s.sdk.getInventory().find(i => item.test(i.name));
-                    if (stack) await depositObserved(s, stack);
-                }
-                await s.bot.closeBank();
-            }
-            receipt(got === order.count, got, `${account} received ${got} ${order.item} from ${partner}`);
-            await finish([s], got === order.count, `fleet-trade ${order.id} received=${got}/${order.count}`);
-        }
-    } catch (e) { receipt(false, 0, String(e)); await finish([s], false, `fleet-trade ${order.id}: ${String(e)}`); }
+        await performFleetTransfer(s, order, role, progress);
+        ok = true;
+        detail = 'transfer observed';
+    } catch (error) { detail = String(error); }
+    await complete(s, ok, detail);
 }

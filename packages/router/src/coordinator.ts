@@ -265,7 +265,9 @@ export function preparedProvisionRuns(state:CoordinatorState,records:ReadonlyMap
   if(status!=='pending'||spec.kind!=='run'||dead.has(spec.id))continue;
   const refs=provisionRefs(spec);
   // A composed first job can wait on several account claims. Its other prerequisites must have passed.
-  if(refs.length&&spec.dependsOn.every(id=>refs.includes(id)||records.get(id)?.status==='succeeded')&&!runHeld?.(spec))runs.add(spec.id);
+  if(refs.length&&spec.dependsOn.every(id=>refs.includes(id)||records.get(id)?.status==='succeeded')
+   &&refs.every(id=>records.get(id)?.spec.dependsOn.every(dep=>refs.includes(dep)||records.get(dep)?.status==='succeeded'))
+   &&!runHeld?.(spec))runs.add(spec.id);
  }
  return runs;
 }
@@ -282,7 +284,7 @@ export function preparedProvisionClaims(state:CoordinatorState,records:ReadonlyM
 }
 // isolatedBuilds: builds author and prove in their own workspace (build-workspace.ts), so builds and live runs overlap.
 // Only a publish into the main checkout needs a drained fleet: publishPending holds new live starts until it lands.
-export function chooseTask(state:CoordinatorState,now:number,resources:{sourceReady?:boolean;nativeReady?:boolean;liveLimit?:number;developmentLimit?:number;preferLive?:boolean;focusCapability?:string;isolatedBuilds?:boolean;publishPending?:boolean;publishing?:string;ownedFiles?:(capability:string)=>readonly string[];runHeld?:(task:CoordTask)=>boolean}={}):CoordTask|null{
+export function chooseTask(state:CoordinatorState,now:number,resources:{sourceReady?:boolean;nativeReady?:boolean;liveLimit?:number;developmentLimit?:number;preferLive?:boolean;focusCapability?:string;isolatedBuilds?:boolean;publishPending?:boolean;publishing?:string;ownedFiles?:(capability:string)=>readonly string[];runHeld?:(task:CoordTask)=>boolean;provisionRunHeld?:(task:CoordTask,records:ReadonlyMap<string,TaskRecord>)=>boolean}={}):CoordTask|null{
  const records=new Map(state.tasks.map(r=>[r.spec.id,r])),running=state.tasks.filter(r=>r.status==='running');
  const busyBuilds=[...new Set([...running.filter(r=>r.spec.kind==='build'&&r.spec.capability).map(r=>r.spec.capability!),...(resources.publishing?[resources.publishing]:[])])];
  const focusCaps=new Set<string>(),visited=new Set<string>();
@@ -305,7 +307,8 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
    if(r.spec.kind==='run')liveDependencies.add(id);
   }
  }
- const provisionClaims=preparedProvisionClaims(state,records,dead,resources.runHeld);
+ const provisionClaims=preparedProvisionClaims(state,records,dead,
+  task=>(task.participants?.length??1)>(resources.liveLimit??Infinity)||!!resources.runHeld?.(task)||!!resources.provisionRunHeld?.(task,records));
  const sourceReady=resources.sourceReady??resources.nativeReady;
  const canBuild=(r:TaskRecord)=>{const prior=lastBuildOutcome(state,r.spec.capability!);return sourceReady!==false&&!buildHeld(state,r.spec,now)&&!(prior?.hostDeferred===true&&prior.sourcePrepared===true&&resources.nativeReady===false)&&!(resources.isolatedBuilds&&buildOverlap(r.spec.capability!,busyBuilds,resources.ownedFiles));};
  const buildWaiting=pending.some(r=>r.spec.kind==='build'&&canBuild(r)&&(!resources.focusCapability||focusCaps.has(r.spec.capability!)));
