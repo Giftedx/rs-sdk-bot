@@ -1,0 +1,46 @@
+{
+ "schema": "cloud-pvp-prerequisite-live/1",
+ "account": "Porksword",
+ "source": "7cd74fe469a81ec2a9433817277f7a4a9fdf39d5",
+ "qualifiedPin": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+ "samples": [
+  {
+   "at": 1794177796563,
+   "tick": 91,
+   "pos": {
+    "x": 2807,
+    "z": 3441,
+    "level": 0
+   },
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "phase": "",
+   "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+   "workEntry": "scripts/ranged-train.ts",
+   "sessionAttemptId": "1794177752245-0000072993-0000000001",
+   "result": ""
+  },
+  {
+   "at": 1794177802094,
+   "tick": 101,
+   "pos": {
+    "x": 2807,
+    "z": 3441,
+    "level": 0
+   },
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "phase": "",
+   "workRevision": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+   "workEntry": "scripts/ranged-train.ts",
+   "sessionAttemptId": "1794177752245-0000072993-0000000001",
+   "result": ""
+  }
+ ],
+ "wildernessHeld": true,
+ "resultPending": true
+}

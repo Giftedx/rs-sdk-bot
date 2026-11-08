@@ -1,16 +1,16 @@
 {
  "schema": "cloud-pvp-prerequisite-preflight/1",
- "at": 1794177371707,
+ "at": 1794177884249,
  "account": "Porksword",
  "controllerPid": 61575,
  "side": "cloud",
- "sourceInstalled": "70fcbce85350659ad82496060e9c3e4f992c91a0",
+ "sourceInstalled": "7cd74fe469a81ec2a9433817277f7a4a9fdf39d5",
  "candidatePR": 443,
  "candidateHead": "467f049ffde176ac23d0025edb1142b38bca8a6e",
  "pins": {
   "qualified": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
   "candidate": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
-  "installed": "9633d28c52863c5092428caeed97b6a11237b97877c36adc677fbd83a50e509c",
+  "installed": "5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
   "candidateWorkerSha": "6eeb73586a6a36147dc31e6b971b19e00257566c58fb1eb98f36c53a501557ca",
   "launchInstalled": "309a0c2d98c20dbe1f018ea78fbafc42aa0bd2f08fff6998c1bf3620a635ebee",
   "launchCandidate": "309a0c2d98c20dbe1f018ea78fbafc42aa0bd2f08fff6998c1bf3620a635ebee"
@@ -34,7 +34,28 @@
  },
  "latestProducerAttempt": "1794174439329-0000067369-0000000001",
  "conflictingEnabledJob": false,
- "preparedJob": {
+ "nativePassed": {
+  "native": true,
+  "savedRanged7": true,
+  "savedHP11": true,
+  "otherSkills": true,
+  "recordedShots": true,
+  "arrowAccounting": true,
+  "coinAccounting": true,
+  "protectedAssets": true,
+  "logout": true,
+  "release": true
+ },
+ "remainingGates": [
+  "Live strict Ranged7/HP11, bank and complete accounting acceptance",
+  "Matching producer-confirmed logout; no second run",
+  "Wilderness stays held for separate full bracket/kit qualification"
+ ],
+ "wildernessHeld": true,
+ "combatAdmission": "Only the qualified Ranged1to7 prerequisite after integration; no second Porksword job",
+ "coordinatorPaused": true,
+ "integration": "PR443 merged7cd74fe469a81ec2a9433817277f7a4a9fdf39d5",
+ "admittedJob": {
   "account": "Porksword",
   "script": "scripts/ranged-train.ts",
   "args": [
@@ -53,31 +74,11 @@
    "MAX_TRIPS": "3"
   },
   "maxRestarts": 0,
-  "enabled": false,
+  "enabled": true,
   "repeat": false,
   "standing": false,
   "role": "pvp-prerequisite",
   "goal": "Train Ranged1 to7 and bank the kit as a prerequisite for the cloud combat6 standby; no Wilderness entry"
  },
- "nativePassed": {
-  "native": true,
-  "savedRanged7": true,
-  "savedHP11": true,
-  "otherSkills": true,
-  "recordedShots": true,
-  "arrowAccounting": true,
-  "coinAccounting": true,
-  "protectedAssets": true,
-  "logout": true,
-  "release": true
- },
- "remainingGates": [
-  "PR443 integrated into master after required checks",
-  "Installed capability revision equals5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
-  "Fresh launch-time ownership,lease,logout,holds,inputs and headroom check",
-  "Worker-observed Wydin stock and affordable price; no nominal stock assumption"
- ],
- "wildernessHeld": true,
- "combatAdmission": "Only the qualified Ranged1to7 prerequisite after integration; no second Porksword job",
- "coordinatorPaused": true
+ "status": "Single non-repeating qualified live prerequisite running"
 }

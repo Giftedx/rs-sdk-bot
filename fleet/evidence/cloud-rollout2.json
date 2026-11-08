@@ -1,18 +1,18 @@
 {
  "schema": "cloud-live-rollout/1",
  "side": "cloud",
- "source": "70fcbce85350659ad82496060e9c3e4f992c91a0",
+ "source": "7cd74fe469a81ec2a9433817277f7a4a9fdf39d5",
  "started": 1794167124636,
- "at": 1794177507285,
+ "at": 1794177883346,
  "peakLive": 9,
- "currentLive": 0,
+ "currentLive": 1,
  "minFreeGB": 8.638957977294922,
  "headroom": {
-  "freeGB": 15.792858123779297,
+  "freeGB": 15.289081573486328,
   "load": [
-   0.06,
-   0.07,
-   0.16
+   0.3,
+   0.21,
+   0.18
   ],
   "cpus": 5,
   "requiredFloorGB": 4,
@@ -77,17 +77,17 @@
   },
   {
    "account": "Porksword",
-   "goal": "Idle: fresh one-tip shelf probe bought0/spent0 and logged out; no retry until actual stock; funds remain ready for Haggis arrowtip consumer",
-   "enabled": false,
-   "tick": 92,
-   "at": 1794174480359,
+   "goal": "Train Ranged1 to7 and bank the kit as a prerequisite for the cloud combat6 standby; no Wilderness entry",
+   "enabled": true,
+   "tick": 301,
+   "at": 1794177882691,
    "position": {
-    "x": 2807,
-    "z": 3441,
+    "x": 2772,
+    "z": 3234,
     "level": 0
    },
-   "result": "ok ticks=91 boughtTotal=0 bankedTotal=0 bankTrips=2 shopTrips=1 coinsLeft=1300 spentTotal=0 coinReserve=300 maxSpend=200 maxItems=1 stop=stock-wait targetMet=0 noBuyTicks=50 noBuyLimit=50",
-   "logout": "confirmed"
+   "result": "",
+   "logout": "held"
   },
   {
    "account": "MeatNTwoVeg",

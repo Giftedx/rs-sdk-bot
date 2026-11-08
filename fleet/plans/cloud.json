@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794177508540,
+ "at": 1794177885568,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -63,26 +63,27 @@
   },
   {
    "account": "Porksword",
-   "script": "scripts/shop-buyer.ts",
+   "script": "scripts/ranged-train.ts",
    "args": [
-    "catherby",
-    "300"
+    "7",
+    "2200"
    ],
    "env": {
-    "ITEMS": "rune",
-    "MAX_ITEMS": "1",
+    "MIN_ARROWS": "3",
+    "BUY_ARROWS": "0",
     "MAX_SPEND": "200",
-    "COIN_RESERVE": "300",
-    "FLOAT": "500",
-    "STOCK_TARGET": "1789",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "50"
+    "COIN_RESERVE": "8000",
+    "AMMO": "25",
+    "FOOD": "2",
+    "FOOD_ID": "329",
+    "KILLS_PER_TRIP": "3",
+    "MAX_TRIPS": "3"
    },
-   "enabled": false,
+   "enabled": true,
    "standing": false,
    "repeat": false,
-   "goal": "Idle: fresh one-tip shelf probe bought0/spent0 and logged out; no retry until actual stock; funds remain ready for Haggis arrowtip consumer",
-   "role": "supply"
+   "goal": "Train Ranged1 to7 and bank the kit as a prerequisite for the cloud combat6 standby; no Wilderness entry",
+   "role": "pvp-prerequisite"
   },
   {
    "account": "MeatNTwoVeg",
