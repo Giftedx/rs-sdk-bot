@@ -3,9 +3,9 @@
  "side": "cloud",
  "source": "7bd9e77d2d50648c53df71d35175e5e8f5da5c10",
  "started": 1794167124636,
- "at": 1794169272839,
+ "at": 1794169628375,
  "peakLive": 9,
- "currentLive": 2,
+ "currentLive": 1,
  "minFreeGB": 10.328742980957031,
  "current": [
   {
@@ -34,15 +34,15 @@
   },
   {
    "account": "Unsheathed",
-   "tick": 1521,
-   "at": 1794169271975,
+   "tick": 1610,
+   "at": 1794169307797,
    "position": {
-    "x": 2830,
-    "z": 9522,
+    "x": 2809,
+    "z": 3085,
     "level": 0
    },
-   "result": "",
-   "logout": "held"
+   "result": "ok qp=1  xp=herblore=19687 at=2809,3085,0 ticks=628 hpMin=38 eats=2 walkTicks=474 retries=2 died=false milestones=1,2,3,4,5,6,7,8,9,10,11,100 jumps=494:2824,3120->2830,9520,0;549:2830,9522->2823,3120,0 msgs=You identify the herb. It is Rogues Purse. / I can't reach that! / Congratulations! Qu",
+   "logout": "confirmed"
   },
   {
    "account": "Porksword",
@@ -58,11 +58,11 @@
   },
   {
    "account": "MeatNTwoVeg",
-   "tick": 1026,
-   "at": 1794169272775,
+   "tick": 1911,
+   "at": 1794169627256,
    "position": {
-    "x": 3218,
-    "z": 3273,
+    "x": 3092,
+    "z": 3249,
     "level": 0
    },
    "result": "",
@@ -8165,6 +8165,257 @@
      "id": 1605,
      "baseId": 1605,
      "name": "Emerald",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "account": "Unsheathed",
+   "attemptId": "1794168656117-0000020037-0000000001",
+   "started": 1794168660171,
+   "at": 1794169307797,
+   "source": "0c41a2bb0cab401038f251a0c1eaa820648a7394076c1190771afb88ed0d940d",
+   "entry": "scripts/quest-sweep.ts",
+   "result": "ok qp=1  xp=herblore=19687 at=2809,3085,0 ticks=628 hpMin=38 eats=2 walkTicks=474 retries=2 died=false milestones=1,2,3,4,5,6,7,8,9,10,11,100 jumps=494:2824,3120->2830,9520,0;549:2830,9522->2823,3120,0 msgs=You identify the herb. It is Rogues Purse. / I can't reach that! / Congratulations! Qu",
+   "logout": "confirmed",
+   "newQuests": [
+    "Jungle Potion",
+    "Murder Mystery",
+    "Druidic Ritual"
+   ],
+   "hp": {
+    "now": 42,
+    "max": 54
+   },
+   "bank": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 382
+    },
+    {
+     "id": 1351,
+     "baseId": 1351,
+     "name": "Bronze axe",
+     "count": 1
+    },
+    {
+     "id": 590,
+     "baseId": 590,
+     "name": "Tinderbox",
+     "count": 1
+    },
+    {
+     "id": 303,
+     "baseId": 303,
+     "name": "Small fishing net",
+     "count": 1
+    },
+    {
+     "id": 315,
+     "baseId": 315,
+     "name": "Shrimps",
+     "count": 1
+    },
+    {
+     "id": 2309,
+     "baseId": 2309,
+     "name": "Bread",
+     "count": 1
+    },
+    {
+     "id": 1265,
+     "baseId": 1265,
+     "name": "Bronze pickaxe",
+     "count": 1
+    },
+    {
+     "id": 1205,
+     "baseId": 1205,
+     "name": "Bronze dagger",
+     "count": 1
+    },
+    {
+     "id": 1277,
+     "baseId": 1277,
+     "name": "Bronze sword",
+     "count": 1
+    },
+    {
+     "id": 1171,
+     "baseId": 1171,
+     "name": "Wooden shield",
+     "count": 1
+    },
+    {
+     "id": 841,
+     "baseId": 841,
+     "name": "Shortbow",
+     "count": 1
+    },
+    {
+     "id": 882,
+     "baseId": 882,
+     "name": "Bronze arrow",
+     "count": 25
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 14
+    },
+    {
+     "id": 558,
+     "baseId": 558,
+     "name": "Mind rune",
+     "count": 15
+    },
+    {
+     "id": 559,
+     "baseId": 559,
+     "name": "Body rune",
+     "count": 2
+    },
+    {
+     "id": 314,
+     "baseId": 314,
+     "name": "Feather",
+     "count": 1835
+    },
+    {
+     "id": 1438,
+     "baseId": 1438,
+     "name": "Air talisman",
+     "count": 1
+    },
+    {
+     "id": 552,
+     "baseId": 552,
+     "name": "Ghostspeak amulet",
+     "count": 1
+    },
+    {
+     "id": 954,
+     "baseId": 954,
+     "name": "Rope",
+     "count": 2
+    },
+    {
+     "id": 297,
+     "baseId": 297,
+     "name": "Glarial's urn",
+     "count": 1
+    },
+    {
+     "id": 1601,
+     "baseId": 1601,
+     "name": "Diamond",
+     "count": 2
+    },
+    {
+     "id": 2357,
+     "baseId": 2357,
+     "name": "Gold bar",
+     "count": 2
+    },
+    {
+     "id": 298,
+     "baseId": 298,
+     "name": "A key",
+     "count": 1
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
+     "count": 1
+    },
+    {
+     "id": 292,
+     "baseId": 292,
+     "name": "Book on baxtorian",
+     "count": 1
+    },
+    {
+     "id": 299,
+     "baseId": 299,
+     "name": "Mithril seeds",
+     "count": 40
+    },
+    {
+     "id": 294,
+     "baseId": 294,
+     "name": "Glarial's pebble",
+     "count": 1
+    }
+   ],
+   "inventory": [
+    {
+     "id": 1931,
+     "baseId": 1931,
+     "name": "Pot",
+     "count": 1
+    },
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 3765
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 5
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
+     "count": 1
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
+     "count": 1
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
+     "count": 1
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
+     "count": 1
+    },
+    {
+     "id": 753,
+     "baseId": 753,
+     "name": "Cadava berries",
+     "count": 1
+    },
+    {
+     "id": 1931,
+     "baseId": 1931,
+     "name": "Pot",
+     "count": 1
+    },
+    {
+     "id": 1933,
+     "baseId": 1933,
+     "name": "Pot of flour",
+     "count": 1
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
      "count": 1
     }
    ]

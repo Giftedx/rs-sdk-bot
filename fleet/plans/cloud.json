@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794168981661,
+ "at": 1794169629542,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -18,34 +18,30 @@
   },
   {
    "account": "TossTheCaber",
-   "script": "scripts/quest-sweep.ts",
-   "args": [
-    "hunt"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "CAP": "3000"
+    "TICKS": "600",
+    "BANK_AT": "500",
+    "KNIGHT_SPOT": "2669,3298",
+    "SHOP": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "New live Pirate treasure coverage; funded fares and supplies from Ernest reward",
-   "role": "quests"
+   "goal": "Finite banked-funding pilot for Porksword rune-arrowtip buyer; distinct unclaimed knight spawn, current Haggis gap 1787 tips",
+   "role": "supply"
   },
   {
    "account": "Swordswallow",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/fletch-arrows.ts CAP=600 MODE=shafts MAX_MAKE=22 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts CAP=600 MODE=headless MAX_MAKE=330 SHAFT_RESERVE=100 FEATHER_RESERVE=100",
-    "scripts/gather-yews.ts REGION=draynor TREE=normal MAX_TRIPS=1 BANK_AT=2 CAP=600",
-    "scripts/fletch-arrows.ts CAP=600 MODE=shafts MAX_MAKE=2 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts CAP=600 MODE=headless MAX_MAKE=30 SHAFT_RESERVE=100 FEATHER_RESERVE=100"
-   ],
+   "script": "scripts/gather-essence.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "CAP": "1000",
+    "BANK_AT": "27"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Bank remaining 360 headless arrows for Haggis shortage, using observed 22 logs plus a bounded two-log top-up; no Imp retry",
+   "goal": "Bank the remaining 58 rune essence for Haggis Runecraft after Spitroaster banked 23; Rune Mysteries already observed complete",
    "role": "quests"
   },
   {
@@ -64,25 +60,19 @@
   },
   {
    "account": "Porksword",
-   "script": "scripts/shop-buyer.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "catherby",
-    "800"
+    "scripts/goldfarm.ts TICKS=2400 BANK_AT=1000 KNIGHT_SPOT=2653,3300 SHOP=1",
+    "scripts/shop-buyer.ts catherby 800 ITEMS=rune arrowtips MAX_ITEMS=5 MAX_SPEND=1200 COIN_RESERVE=300 FLOAT=1500 STOCK_TARGET=1789 BANK_PACK=1 NO_BUY_TICKS=150"
    ],
    "env": {
-    "ITEMS": "rune arrowtips",
-    "MAX_ITEMS": "5",
-    "MAX_SPEND": "1200",
-    "COIN_RESERVE": "300",
-    "FLOAT": "1500",
-    "STOCK_TARGET": "6",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "150"
+    "ROUNDS": "1"
    },
    "enabled": true,
-   "repeat": false,
-   "goal": "Bank five more scarce rune arrowtips for Haggis; wait a bounded restock interval, preserve 300 coins",
-   "role": "quests"
+   "standing": true,
+   "repeat": true,
+   "goal": "Earn and bank funding, then buy rune arrowtips for Haggis: current bill short 1787; bounded sessions and logout between production/buying; west-side Ardy-Catherby route",
+   "role": "supply"
   },
   {
    "account": "MeatNTwoVeg",
@@ -114,15 +104,16 @@
   },
   {
    "account": "Spitroaster",
-   "script": "scripts/gather-essence.ts",
-   "args": [],
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "doric"
+   ],
    "env": {
-    "CAP": "450",
-    "BANK_AT": "27"
+    "CAP": "2400"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Bank rune essence for Haggis Runecraft route; measured supply bill is 81 essence short",
+   "goal": "Doric Mining unlock using the east-side ore route proved on Magic31 HP10 accounts; no White Wolf route",
    "role": "quests"
   },
   {
@@ -135,7 +126,7 @@
    "env": {
     "ROUNDS": "1"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "Sheep Shearer Crafting unlock toward Elemental Workshop; owns the free Lumbridge wool/spinning resource after MeatNTwoVeg",
    "role": "quests"
@@ -144,14 +135,14 @@
    "account": "BoneToPick",
    "script": "scripts/quest-sweep.ts",
    "args": [
-    "doric"
+    "runemysteries"
    ],
    "env": {
     "CAP": "2400"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Doric Mining unlock using ore route proved on equivalent fresh Stirmypot state",
+   "goal": "Rune Mysteries unlock on the proved northern tower/Varrock corridor; no White Wolf route",
    "role": "quests"
   }
  ]
