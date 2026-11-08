@@ -1,6 +1,6 @@
 {
   "schema": "cloud-kit-expansion/1",
-  "at": 1794180702669,
+  "at": 1794180765033,
   "side": "cloud-kit",
   "controller": {
     "pid": 6955,
@@ -28,12 +28,13 @@
       "logout": "logged-out"
     }
   },
+  "spotQualification": {},
   "headroom": {
-    "freeGB": 16.262699127197266,
+    "freeGB": 15.180858612060547,
     "load": [
-      0.08,
-      0.35,
-      0.34
+      0.55,
+      0.44,
+      0.37
     ],
     "cpus": 5,
     "minFreeGB": 8,
@@ -310,7 +311,7 @@
       "progress": {
         "stage": "training",
         "batch": 0,
-        "blocker": "qualified knight spot at capacity"
+        "blocker": "qualified knight spots at capacity"
       }
     },
     {
@@ -595,7 +596,7 @@
       "progress": {
         "stage": "training",
         "batch": 0,
-        "blocker": "qualified knight spot at capacity"
+        "blocker": "qualified knight spots at capacity"
       }
     }
   ],
