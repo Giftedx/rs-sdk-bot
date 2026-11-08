@@ -1,6 +1,6 @@
 {
  "side": "cloud-kit",
- "at": 1794181978370,
+ "at": 1794182165833,
  "jobs": [
   {
    "account": "Familyjewel",
@@ -12,9 +12,9 @@
    "env": {
     "EARNING_BATCH": "6"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
-   "goal": "Earn and bank toward owned5000GP for cloud-kit PvP kit/resupply;450tick earning plus observed bank exit; no repeats after failure.",
+   "goal": "Owned5000GP earning target banked; confirmed logout; reserve for cloud-kit PvP kit/resupply consumer.",
    "role": "thieving",
    "resources": [
     "knight:2652,3318"
