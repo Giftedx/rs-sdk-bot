@@ -47,9 +47,7 @@
   "release": true
  },
  "remainingGates": [
-  "Live strict Ranged7/HP11, bank and complete accounting acceptance",
-  "Matching producer-confirmed logout; no second run",
-  "Wilderness stays held for separate full bracket/kit qualification"
+  "Separate qualified next-stage admission; no automatic retry or Wilderness ingress"
  ],
  "wildernessHeld": true,
  "combatAdmission": "Only the qualified Ranged1to7 prerequisite after integration; no second Porksword job",
@@ -80,5 +78,6 @@
   "role": "pvp-prerequisite",
   "goal": "Train Ranged1 to7 and bank the kit as a prerequisite for the cloud combat6 standby; no Wilderness entry"
  },
- "status": "Single non-repeating qualified live prerequisite running"
+ "status": "Terminal PASSED; parked with Wilderness held",
+ "terminalReceipt": "fleet/evidence/cloud-porksword-ranged7-result.json"
 }

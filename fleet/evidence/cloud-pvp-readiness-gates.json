@@ -1,6 +1,6 @@
 {
  "schema": "cloud-pvp-readiness-gates/1",
- "at": 1794177884249,
+ "at": 1794178564217,
  "controllerPid": 61575,
  "source": "70fcbce85350659ad82496060e9c3e4f992c91a0",
  "releasedWorker": "scripts/pvp-standby.ts stage|verify",
@@ -55,12 +55,12 @@
    "account": "Porksword",
    "combat": 3,
    "hp": {
-    "now": 10,
-    "max": 10
+    "now": 11,
+    "max": 11
    },
    "position": {
-    "x": 2807,
-    "z": 3441,
+    "x": 3252,
+    "z": 3420,
     "level": 0
    },
    "skills": {
@@ -80,25 +80,26 @@
    "attemptId": "1794174439329-0000067369-0000000001",
    "result": "ok ticks=91 boughtTotal=0 bankedTotal=0 bankTrips=2 shopTrips=1 coinsLeft=1300 spentTotal=0 coinReserve=300 maxSpend=200 maxItems=1 stop=stock-wait targetMet=0 noBuyTicks=50 noBuyLimit=50",
    "missing": [
-    "Live outcome, complete strict accounting and matching producer logout",
-    "Separate Magic7/full bracket and Wilderness kit qualification"
+    "Separate Magic7/full bracket and kit qualification before Wilderness ingress"
    ],
    "logout": {
     "state": "confirmed",
-    "attemptMatches": true
+    "attemptId": "1794177752245-0000072993-0000000001",
+    "loggedOutAt": 1794178209342,
+    "claimPhase": "released"
    },
    "side": "cloud",
    "confirmedCombatStats": {
     "Attack": 1,
     "Defence": 1,
     "Strength": 1,
-    "Hitpoints": 10,
-    "Ranged": 1,
+    "Hitpoints": 11,
+    "Ranged": 7,
     "Prayer": 1,
     "Magic": 1
    },
-   "bankGP": 7052,
-   "carriedGP": 1300,
+   "bankGP": 8284,
+   "carriedGP": 0,
    "unexpiredOrderReservations": [],
    "food": [
     {
@@ -126,7 +127,7 @@
    "accountClaimPhase": "released",
    "controllerEnd": "done after 1 runs",
    "ownerStopPresent": false,
-   "stageDecision": "Ranged prerequisite admitted; no repeat/retry; live outcome pending",
+   "stageDecision": "Terminal success, awaiting separately qualified Magic7/full bracket/kit consumer",
    "reportedCombinedFixture": {
     "trainingAccepted": true,
     "ranged": 7,
@@ -142,7 +143,8 @@
     "source": "PR443 head467f049f",
     "proof": "research/porksword-ranged7-proof.json",
     "ammoAcceptanceWaived": false
-   }
+   },
+   "terminalReceipt": "fleet/evidence/cloud-porksword-ranged7-result.json"
   }
  ],
  "sharedQualificationReceipts": [],
@@ -156,7 +158,7 @@
   "MeatNTwoVeg failed essence worker"
  ],
  "localReservations": "Steelrod and local brackets excluded",
- "decision": "Qualified Ranged1to7 single prerequisite running under incumbent controller61575 on matched5965d85a pin. No parallel stage-only job; Wilderness held.",
+ "decision": "Porksword exact one-shot Ranged prerequisite PASSED. Parked after matching producer logout and released claim; no repeat, no second job; Wilderness held.",
  "practiceOwnership": "Supply practice stack is down; live readiness worker owns PvP qualification. Controller starts no competing PvP practice.",
  "sourceInstalled": "7cd74fe469a81ec2a9433817277f7a4a9fdf39d5"
 }

@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794177885568,
+ "at": 1794178565732,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -79,10 +79,10 @@
     "KILLS_PER_TRIP": "3",
     "MAX_TRIPS": "3"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": false,
    "repeat": false,
-   "goal": "Train Ranged1 to7 and bank the kit as a prerequisite for the cloud combat6 standby; no Wilderness entry",
+   "goal": "Qualified Ranged prerequisite complete: Ranged7 HP11,13shots10recovered3lost,8284GP banked,22bronze arrows,2cheese,3rune tips intact, equipment restored; clean logout. Parked: Magic7/full bracket/kit/Wilderness remain held; no second run.",
    "role": "pvp-prerequisite"
   },
   {
