@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794169839138,
+ "at": 1794170415168,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -108,31 +108,37 @@
   },
   {
    "account": "Spitroaster",
-   "script": "scripts/quest-sweep.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "doric"
+    "scripts/walk-to.ts 3183 3440 --ground",
+    "scripts/fleet-trade.ts rollout2-swords-spit-60"
    ],
    "env": {
-    "CAP": "2400"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Doric Mining unlock using the east-side ore route proved on Magic31 HP10 accounts; no White Wolf route",
+   "goal": "Stage at proved Varrock west meeting tiles and receive 60 coins for Gertrude cat quest supplies; Haggis Cooking/wine unlock chain",
    "role": "quests"
   },
   {
    "account": "Stirmypot",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/collect-wool.ts CAP=2400 MAX_TRIPS=3",
+    "scripts/shop-buyer.ts zeke 100 ITEMS=bronze STOCK_TARGET=0 MAX_ITEMS=1 MAX_SPEND=1 FLOAT=200 NO_BUY_TICKS=1",
+    "scripts/walk-to.ts 3222 3218",
+    "scripts/walk-to.ts 3092 3243 --ground",
+    "scripts/foodcourier.ts HOME_ONLY=1 CAP=1800",
+    "scripts/shop-buyer.ts ardy 600 ITEMS=wool MAX_ITEMS=20 MAX_SPEND=70 COIN_RESERVE=60 FLOAT=130 STOCK_TARGET=20 NO_BUY_TICKS=150 BANK_PACK=1",
+    "scripts/foodcourier.ts OUTBOUND_ONLY=1 CAP=1800",
     "scripts/quest-sweep.ts sheep CAP=1600"
    ],
    "env": {
     "ROUNDS": "1"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "Sheep Shearer Crafting unlock toward Elemental Workshop; owns the free Lumbridge wool/spinning resource after MeatNTwoVeg",
+   "goal": "Repair Sheep Shearer inputs by buying 20 stocked wool with owned 200 coins, reserving return fare; explicit boat staging, no White Wolf route or repeated shearing",
    "role": "quests"
   },
   {

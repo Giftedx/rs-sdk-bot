@@ -3,61 +3,96 @@
  "side": "cloud",
  "source": "7bd9e77d2d50648c53df71d35175e5e8f5da5c10",
  "started": 1794167124636,
- "at": 1794169834389,
+ "at": 1794170412293,
  "peakLive": 9,
  "currentLive": 2,
  "minFreeGB": 10.328742980957031,
+ "headroom": {
+  "freeGB": 15.684989929199219,
+  "load": [
+   0.2,
+   0.75,
+   1.21
+  ],
+  "cpus": 5,
+  "requiredFloorGB": 4,
+  "practiceReserveGB": 2.5
+ },
  "current": [
   {
-   "account": "TossTheCaber",
-   "tick": 137,
-   "at": 1794169700410,
+   "account": "BraveHardon",
+   "goal": "Held: low HP without food; needs owned food delivery and safe exit before any quest retry",
+   "enabled": false,
+   "tick": 945,
+   "at": 1794166653383,
    "position": {
-    "x": 2999,
-    "z": 3383,
+    "x": 2609,
+    "z": 9671,
     "level": 0
    },
-   "result": "fail travel to Ardougne from 2999,3383 failed: precondition no route to 2654,3283,0",
+   "result": "fail retreat during wait: hp 7 of 36, no food  xp=attack=2700,hitpoints=878 at=2609,9671,0 ticks=354 hpMin=6 eats=0 walkTicks=109 retries=0 died=false milestones=house-entry,2,valves,4 jumps=143:2584,3234->2570,9682,0;190:2567,9680->2606,9692,0 msgs=Welcome to RuneScape. / You enter the cave.",
+   "logout": "confirmed"
+  },
+  {
+   "account": "TossTheCaber",
+   "goal": "Use explicit Draynor and boat staging to Ardougne, then bank funding at a distinct knight spawn for Porksword tip buyer; no White Wolf crossing",
+   "enabled": true,
+   "tick": 606,
+   "at": 1794170249790,
+   "position": {
+    "x": 2653,
+    "z": 3299,
+    "level": 0
+   },
+   "result": "ok ticks=600 picks=24 fails=9 noops=69 bans=6 coinsGained=724 coinsPerTick=1.21 eaten=4 bankTrips=4 bankTicks=57 walkTicks=211 idleTicks=128 eatTicks=8 stallTrips=0 stallTicks=0 stallPickTicks=0 stolen=0 refused=0 shopTrips=1 shopTicks=4 bought=10 foodTicksPct=11.5 hpMin=13 died=false banked=",
    "logout": "confirmed"
   },
   {
    "account": "Swordswallow",
-   "tick": 123,
-   "at": 1794169694411,
+   "goal": "Stage at the proven Varrock east bank entry, then bank the remaining Haggis rune essence gap; no White Wolf route",
+   "enabled": true,
+   "tick": 1237,
+   "at": 1794170353231,
    "position": {
-    "x": 3149,
-    "z": 3417,
+    "x": 3252,
+    "z": 3420,
     "level": 0
    },
-   "result": "fail essence {\"ok\":false,\"totalMined\":0,\"totalBanked\":0,\"held\":0,\"trips\":0,\"died\":false,\"failure\":\"Error: no essence progress: final bank route incomplete\"}",
+   "result": "ok essence {\"ok\":true,\"totalMined\":69,\"totalBanked\":69,\"held\":0,\"trips\":3,\"died\":false,\"failure\":\"-\"}",
    "logout": "confirmed"
   },
   {
    "account": "Unsheathed",
-   "tick": 1610,
-   "at": 1794169307797,
+   "goal": "Bank exactly seven red spider eggs for Haggis Herblore route; strong combat account above spider aggression threshold",
+   "enabled": true,
+   "tick": 26,
+   "at": 1794169868448,
    "position": {
     "x": 2809,
     "z": 3085,
     "level": 0
    },
-   "result": "ok qp=1  xp=herblore=19687 at=2809,3085,0 ticks=628 hpMin=38 eats=2 walkTicks=474 retries=2 died=false milestones=1,2,3,4,5,6,7,8,9,10,11,100 jumps=494:2824,3120->2830,9520,0;549:2830,9522->2823,3120,0 msgs=You identify the herb. It is Rogues Purse. / I can't reach that! / Congratulations! Qu",
+   "result": "fail item=223 banked=0 target=7 trips=0 ticks=24 gathered 0 of 7 item 223 (spawn)",
    "logout": "confirmed"
   },
   {
    "account": "Porksword",
-   "tick": 138,
-   "at": 1794169700143,
+   "goal": "Earn and bank funding, then buy rune arrowtips for Haggis: current bill short 1787; bounded sessions and logout between production/buying; west-side Ardy-Catherby route",
+   "enabled": true,
+   "tick": 1396,
+   "at": 1794170411480,
    "position": {
-    "x": 2785,
-    "z": 3432,
+    "x": 2653,
+    "z": 3301,
     "level": 0
    },
-   "result": "fail stop file",
-   "logout": "confirmed"
+   "result": "",
+   "logout": "held"
   },
   {
    "account": "MeatNTwoVeg",
+   "goal": "Rune Mysteries unlock after observed Crafting, Magic and Mining quest foundations",
+   "enabled": true,
    "tick": 2401,
    "at": 1794169823659,
    "position": {
@@ -70,6 +105,8 @@
   },
   {
    "account": "YewGotWood",
+   "goal": "Funded Sea Slug completion after observed 300-coin transfer and Firemaking 30 unlock",
+   "enabled": false,
    "tick": 307,
    "at": 1794168655919,
    "position": {
@@ -82,18 +119,22 @@
   },
   {
    "account": "Spitroaster",
-   "tick": 471,
-   "at": 1794169833739,
+   "goal": "Doric Mining unlock using the east-side ore route proved on Magic31 HP10 accounts; no White Wolf route",
+   "enabled": true,
+   "tick": 735,
+   "at": 1794169939706,
    "position": {
-    "x": 3202,
-    "z": 3413,
+    "x": 2951,
+    "z": 3450,
     "level": 0
    },
-   "result": "",
-   "logout": "held"
+   "result": "ok qp=1  xp=mining=32500 at=2951,3450,0 ticks=15 hpMin=10 eats=0 walkTicks=0 retries=0 died=false milestones=10,100 jumps= msgs=Congratulations, you just advanced a mining level. / You hand the Clay, Copper and Iron to Doric. / Doric hands you 180 coins. / Congratulations! Quest complete!",
+   "logout": "confirmed"
   },
   {
    "account": "Stirmypot",
+   "goal": "Sheep Shearer Crafting unlock toward Elemental Workshop; owns the free Lumbridge wool/spinning resource after MeatNTwoVeg",
+   "enabled": false,
    "tick": 150,
    "at": 1794168981366,
    "position": {
@@ -106,11 +147,13 @@
   },
   {
    "account": "BoneToPick",
-   "tick": 466,
-   "at": 1794169833742,
+   "goal": "Rune Mysteries unlock on the proved northern tower/Varrock corridor; no White Wolf route",
+   "enabled": true,
+   "tick": 1906,
+   "at": 1794170410929,
    "position": {
-    "x": 3130,
-    "z": 3261,
+    "x": 3096,
+    "z": 3216,
     "level": 0
    },
    "result": "",
@@ -9172,6 +9215,1072 @@
      "count": 1
     }
    ]
+  },
+  {
+   "account": "Unsheathed",
+   "attemptId": "1794169850816-0000023868-0000000001",
+   "started": 1794169858255,
+   "at": 1794169868448,
+   "source": "c539f78d9f2290f92fb03a67a786e63ca7f79ac732b94b6772163e07956ea7a4",
+   "entry": "scripts/gather-spawn.ts",
+   "result": "fail item=223 banked=0 target=7 trips=0 ticks=24 gathered 0 of 7 item 223 (spawn)",
+   "logout": "confirmed",
+   "newQuests": [
+    "Jungle Potion",
+    "Murder Mystery",
+    "Druidic Ritual"
+   ],
+   "hp": {
+    "now": 42,
+    "max": 54
+   },
+   "bank": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 382
+    },
+    {
+     "id": 1351,
+     "baseId": 1351,
+     "name": "Bronze axe",
+     "count": 1
+    },
+    {
+     "id": 590,
+     "baseId": 590,
+     "name": "Tinderbox",
+     "count": 1
+    },
+    {
+     "id": 303,
+     "baseId": 303,
+     "name": "Small fishing net",
+     "count": 1
+    },
+    {
+     "id": 315,
+     "baseId": 315,
+     "name": "Shrimps",
+     "count": 1
+    },
+    {
+     "id": 2309,
+     "baseId": 2309,
+     "name": "Bread",
+     "count": 1
+    },
+    {
+     "id": 1265,
+     "baseId": 1265,
+     "name": "Bronze pickaxe",
+     "count": 1
+    },
+    {
+     "id": 1205,
+     "baseId": 1205,
+     "name": "Bronze dagger",
+     "count": 1
+    },
+    {
+     "id": 1277,
+     "baseId": 1277,
+     "name": "Bronze sword",
+     "count": 1
+    },
+    {
+     "id": 1171,
+     "baseId": 1171,
+     "name": "Wooden shield",
+     "count": 1
+    },
+    {
+     "id": 841,
+     "baseId": 841,
+     "name": "Shortbow",
+     "count": 1
+    },
+    {
+     "id": 882,
+     "baseId": 882,
+     "name": "Bronze arrow",
+     "count": 25
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 14
+    },
+    {
+     "id": 558,
+     "baseId": 558,
+     "name": "Mind rune",
+     "count": 15
+    },
+    {
+     "id": 559,
+     "baseId": 559,
+     "name": "Body rune",
+     "count": 2
+    },
+    {
+     "id": 314,
+     "baseId": 314,
+     "name": "Feather",
+     "count": 1835
+    },
+    {
+     "id": 1438,
+     "baseId": 1438,
+     "name": "Air talisman",
+     "count": 1
+    },
+    {
+     "id": 552,
+     "baseId": 552,
+     "name": "Ghostspeak amulet",
+     "count": 1
+    },
+    {
+     "id": 954,
+     "baseId": 954,
+     "name": "Rope",
+     "count": 2
+    },
+    {
+     "id": 297,
+     "baseId": 297,
+     "name": "Glarial's urn",
+     "count": 1
+    },
+    {
+     "id": 1601,
+     "baseId": 1601,
+     "name": "Diamond",
+     "count": 2
+    },
+    {
+     "id": 2357,
+     "baseId": 2357,
+     "name": "Gold bar",
+     "count": 2
+    },
+    {
+     "id": 298,
+     "baseId": 298,
+     "name": "A key",
+     "count": 1
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
+     "count": 1
+    },
+    {
+     "id": 292,
+     "baseId": 292,
+     "name": "Book on baxtorian",
+     "count": 1
+    },
+    {
+     "id": 299,
+     "baseId": 299,
+     "name": "Mithril seeds",
+     "count": 40
+    },
+    {
+     "id": 294,
+     "baseId": 294,
+     "name": "Glarial's pebble",
+     "count": 1
+    }
+   ],
+   "inventory": [
+    {
+     "id": 1931,
+     "baseId": 1931,
+     "name": "Pot",
+     "count": 1
+    },
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 3765
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 5
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
+     "count": 1
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
+     "count": 1
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
+     "count": 1
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
+     "count": 1
+    },
+    {
+     "id": 753,
+     "baseId": 753,
+     "name": "Cadava berries",
+     "count": 1
+    },
+    {
+     "id": 1931,
+     "baseId": 1931,
+     "name": "Pot",
+     "count": 1
+    },
+    {
+     "id": 1933,
+     "baseId": 1933,
+     "name": "Pot of flour",
+     "count": 1
+    },
+    {
+     "id": 333,
+     "baseId": 333,
+     "name": "Trout",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "account": "Spitroaster",
+   "attemptId": "1794169639897-0000023340-0000000001",
+   "started": 1794169645900,
+   "at": 1794169939706,
+   "source": "0c41a2bb0cab401038f251a0c1eaa820648a7394076c1190771afb88ed0d940d",
+   "entry": "scripts/quest-sweep.ts",
+   "result": "ok qp=1  xp=mining=32500 at=2951,3450,0 ticks=15 hpMin=10 eats=0 walkTicks=0 retries=0 died=false milestones=10,100 jumps= msgs=Congratulations, you just advanced a mining level. / You hand the Clay, Copper and Iron to Doric. / Doric hands you 180 coins. / Congratulations! Quest complete!",
+   "logout": "confirmed",
+   "newQuests": [
+    "Rune Mysteries Quest",
+    "Doric's Quest",
+    "The Restless Ghost",
+    "Witch's Potion"
+   ],
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "bank": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 21
+    },
+    {
+     "id": 1351,
+     "baseId": 1351,
+     "name": "Bronze axe",
+     "count": 1
+    },
+    {
+     "id": 590,
+     "baseId": 590,
+     "name": "Tinderbox",
+     "count": 1
+    },
+    {
+     "id": 303,
+     "baseId": 303,
+     "name": "Small fishing net",
+     "count": 1
+    },
+    {
+     "id": 315,
+     "baseId": 315,
+     "name": "Shrimps",
+     "count": 1
+    },
+    {
+     "id": 1925,
+     "baseId": 1925,
+     "name": "Bucket",
+     "count": 1
+    },
+    {
+     "id": 1931,
+     "baseId": 1931,
+     "name": "Pot",
+     "count": 1
+    },
+    {
+     "id": 1205,
+     "baseId": 1205,
+     "name": "Bronze dagger",
+     "count": 1
+    },
+    {
+     "id": 1277,
+     "baseId": 1277,
+     "name": "Bronze sword",
+     "count": 1
+    },
+    {
+     "id": 1171,
+     "baseId": 1171,
+     "name": "Wooden shield",
+     "count": 1
+    },
+    {
+     "id": 841,
+     "baseId": 841,
+     "name": "Shortbow",
+     "count": 1
+    },
+    {
+     "id": 882,
+     "baseId": 882,
+     "name": "Bronze arrow",
+     "count": 25
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 25
+    },
+    {
+     "id": 558,
+     "baseId": 558,
+     "name": "Mind rune",
+     "count": 15
+    },
+    {
+     "id": 555,
+     "baseId": 555,
+     "name": "Water rune",
+     "count": 6
+    },
+    {
+     "id": 557,
+     "baseId": 557,
+     "name": "Earth rune",
+     "count": 4
+    },
+    {
+     "id": 559,
+     "baseId": 559,
+     "name": "Body rune",
+     "count": 2
+    },
+    {
+     "id": 1438,
+     "baseId": 1438,
+     "name": "Air talisman",
+     "count": 1
+    },
+    {
+     "id": 1436,
+     "baseId": 1436,
+     "name": "Rune essence",
+     "count": 23
+    }
+   ],
+   "inventory": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 180
+    }
+   ]
+  },
+  {
+   "account": "TossTheCaber",
+   "attemptId": "1794169849847-0000023857-0000000001",
+   "started": 1794169854250,
+   "at": 1794169999536,
+   "source": "1df208276e3f470ce9818a8ff152aa6f5637dd284b81ab9f82a9dfd30a5c9c55",
+   "entry": "scripts/chain.ts,scripts/walk-to.ts,scripts/foodcourier.ts,scripts/goldfarm.ts",
+   "result": "ok ticks=358 received=0 handed=0 fishNotes=0 coins=668 walkTicks=314 boatTicks=44 waitTicks=0 giveTicks=0 featherTicks=0 feathersBought=0 feathersLeft=0 legs=draynor coins=728@98,received0@98,ardougne@358 hpMin=27 died=false jumps=191:3028,3220->2956,3143,1;327:2772,3228->2683,3268,1 at=2652,",
+   "logout": "confirmed",
+   "newQuests": [
+    "Ernest the Chicken",
+    "Pirate's Treasure"
+   ],
+   "hp": {
+    "now": 27,
+    "max": 27
+   },
+   "bank": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 356
+    },
+    {
+     "id": 1351,
+     "baseId": 1351,
+     "name": "Bronze axe",
+     "count": 1
+    },
+    {
+     "id": 315,
+     "baseId": 315,
+     "name": "Shrimps",
+     "count": 1
+    },
+    {
+     "id": 1265,
+     "baseId": 1265,
+     "name": "Bronze pickaxe",
+     "count": 1
+    },
+    {
+     "id": 1205,
+     "baseId": 1205,
+     "name": "Bronze dagger",
+     "count": 1
+    },
+    {
+     "id": 841,
+     "baseId": 841,
+     "name": "Shortbow",
+     "count": 1
+    },
+    {
+     "id": 882,
+     "baseId": 882,
+     "name": "Bronze arrow",
+     "count": 25
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 19
+    },
+    {
+     "id": 558,
+     "baseId": 558,
+     "name": "Mind rune",
+     "count": 15
+    },
+    {
+     "id": 555,
+     "baseId": 555,
+     "name": "Water rune",
+     "count": 5
+    },
+    {
+     "id": 557,
+     "baseId": 557,
+     "name": "Earth rune",
+     "count": 2
+    },
+    {
+     "id": 559,
+     "baseId": 559,
+     "name": "Body rune",
+     "count": 2
+    },
+    {
+     "id": 314,
+     "baseId": 314,
+     "name": "Feather",
+     "count": 59
+    },
+    {
+     "id": 303,
+     "baseId": 303,
+     "name": "Small fishing net",
+     "count": 1
+    },
+    {
+     "id": 317,
+     "baseId": 317,
+     "name": "Raw shrimps",
+     "count": 13
+    },
+    {
+     "id": 590,
+     "baseId": 590,
+     "name": "Tinderbox",
+     "count": 1
+    },
+    {
+     "id": 343,
+     "baseId": 343,
+     "name": "Burnt fish",
+     "count": 3
+    },
+    {
+     "id": 331,
+     "baseId": 331,
+     "name": "Raw salmon",
+     "count": 1
+    },
+    {
+     "id": 309,
+     "baseId": 309,
+     "name": "Fly fishing rod",
+     "count": 1
+    }
+   ],
+   "inventory": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 668
+    },
+    {
+     "id": 1468,
+     "baseId": 1468,
+     "name": "Dry sticks",
+     "count": 1
+    },
+    {
+     "id": 1469,
+     "baseId": 1469,
+     "name": "Broken glass",
+     "count": 1
+    },
+    {
+     "id": 594,
+     "baseId": 594,
+     "name": "Torch",
+     "count": 1
+    },
+    {
+     "id": 413,
+     "baseId": 413,
+     "name": "Oyster pearls",
+     "count": 1
+    },
+    {
+     "id": 563,
+     "baseId": 563,
+     "name": "Law rune",
+     "count": 8
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 6
+    },
+    {
+     "id": 279,
+     "baseId": 279,
+     "name": "Feed",
+     "count": 1
+    },
+    {
+     "id": 1277,
+     "baseId": 1277,
+     "name": "Bronze sword",
+     "count": 1
+    },
+    {
+     "id": 555,
+     "baseId": 555,
+     "name": "Water rune",
+     "count": 1
+    },
+    {
+     "id": 329,
+     "baseId": 329,
+     "name": "Salmon",
+     "count": 1
+    },
+    {
+     "id": 952,
+     "baseId": 952,
+     "name": "Spade",
+     "count": 1
+    },
+    {
+     "id": 284,
+     "baseId": 284,
+     "name": "Plague jacket",
+     "count": 1
+    },
+    {
+     "id": 275,
+     "baseId": 275,
+     "name": "Key",
+     "count": 1
+    },
+    {
+     "id": 433,
+     "baseId": 433,
+     "name": "Pirate message",
+     "count": 1
+    },
+    {
+     "id": 1635,
+     "baseId": 1635,
+     "name": "Gold ring",
+     "count": 1
+    },
+    {
+     "id": 1605,
+     "baseId": 1605,
+     "name": "Emerald",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "account": "TossTheCaber",
+   "attemptId": "1794170002741-0000024822-0000000001",
+   "started": 1794170007444,
+   "at": 1794170249790,
+   "source": "1df208276e3f470ce9818a8ff152aa6f5637dd284b81ab9f82a9dfd30a5c9c55",
+   "entry": "scripts/chain.ts,scripts/walk-to.ts,scripts/foodcourier.ts,scripts/goldfarm.ts",
+   "result": "ok ticks=600 picks=24 fails=9 noops=69 bans=6 coinsGained=724 coinsPerTick=1.21 eaten=4 bankTrips=4 bankTicks=57 walkTicks=211 idleTicks=128 eatTicks=8 stallTrips=0 stallTicks=0 stallPickTicks=0 stolen=0 refused=0 shopTrips=1 shopTicks=4 bought=10 foodTicksPct=11.5 hpMin=13 died=false banked=",
+   "logout": "confirmed",
+   "newQuests": [
+    "Ernest the Chicken",
+    "Pirate's Treasure"
+   ],
+   "hp": {
+    "now": 18,
+    "max": 27
+   },
+   "bank": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 1398
+    },
+    {
+     "id": 1351,
+     "baseId": 1351,
+     "name": "Bronze axe",
+     "count": 1
+    },
+    {
+     "id": 315,
+     "baseId": 315,
+     "name": "Shrimps",
+     "count": 1
+    },
+    {
+     "id": 1265,
+     "baseId": 1265,
+     "name": "Bronze pickaxe",
+     "count": 1
+    },
+    {
+     "id": 1205,
+     "baseId": 1205,
+     "name": "Bronze dagger",
+     "count": 1
+    },
+    {
+     "id": 841,
+     "baseId": 841,
+     "name": "Shortbow",
+     "count": 1
+    },
+    {
+     "id": 882,
+     "baseId": 882,
+     "name": "Bronze arrow",
+     "count": 25
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 25
+    },
+    {
+     "id": 558,
+     "baseId": 558,
+     "name": "Mind rune",
+     "count": 15
+    },
+    {
+     "id": 555,
+     "baseId": 555,
+     "name": "Water rune",
+     "count": 6
+    },
+    {
+     "id": 557,
+     "baseId": 557,
+     "name": "Earth rune",
+     "count": 2
+    },
+    {
+     "id": 559,
+     "baseId": 559,
+     "name": "Body rune",
+     "count": 2
+    },
+    {
+     "id": 314,
+     "baseId": 314,
+     "name": "Feather",
+     "count": 59
+    },
+    {
+     "id": 303,
+     "baseId": 303,
+     "name": "Small fishing net",
+     "count": 1
+    },
+    {
+     "id": 317,
+     "baseId": 317,
+     "name": "Raw shrimps",
+     "count": 13
+    },
+    {
+     "id": 590,
+     "baseId": 590,
+     "name": "Tinderbox",
+     "count": 1
+    },
+    {
+     "id": 343,
+     "baseId": 343,
+     "name": "Burnt fish",
+     "count": 3
+    },
+    {
+     "id": 331,
+     "baseId": 331,
+     "name": "Raw salmon",
+     "count": 1
+    },
+    {
+     "id": 309,
+     "baseId": 309,
+     "name": "Fly fishing rod",
+     "count": 1
+    },
+    {
+     "id": 1468,
+     "baseId": 1468,
+     "name": "Dry sticks",
+     "count": 1
+    },
+    {
+     "id": 1469,
+     "baseId": 1469,
+     "name": "Broken glass",
+     "count": 1
+    },
+    {
+     "id": 594,
+     "baseId": 594,
+     "name": "Torch",
+     "count": 1
+    },
+    {
+     "id": 413,
+     "baseId": 413,
+     "name": "Oyster pearls",
+     "count": 1
+    },
+    {
+     "id": 563,
+     "baseId": 563,
+     "name": "Law rune",
+     "count": 8
+    },
+    {
+     "id": 279,
+     "baseId": 279,
+     "name": "Feed",
+     "count": 1
+    },
+    {
+     "id": 1277,
+     "baseId": 1277,
+     "name": "Bronze sword",
+     "count": 1
+    },
+    {
+     "id": 952,
+     "baseId": 952,
+     "name": "Spade",
+     "count": 1
+    },
+    {
+     "id": 284,
+     "baseId": 284,
+     "name": "Plague jacket",
+     "count": 1
+    },
+    {
+     "id": 275,
+     "baseId": 275,
+     "name": "Key",
+     "count": 1
+    },
+    {
+     "id": 433,
+     "baseId": 433,
+     "name": "Pirate message",
+     "count": 1
+    },
+    {
+     "id": 1635,
+     "baseId": 1635,
+     "name": "Gold ring",
+     "count": 1
+    },
+    {
+     "id": 1605,
+     "baseId": 1605,
+     "name": "Emerald",
+     "count": 1
+    }
+   ],
+   "inventory": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 350
+    },
+    {
+     "id": 2309,
+     "baseId": 2309,
+     "name": "Bread",
+     "count": 1
+    },
+    {
+     "id": 2309,
+     "baseId": 2309,
+     "name": "Bread",
+     "count": 1
+    },
+    {
+     "id": 2309,
+     "baseId": 2309,
+     "name": "Bread",
+     "count": 1
+    },
+    {
+     "id": 2309,
+     "baseId": 2309,
+     "name": "Bread",
+     "count": 1
+    },
+    {
+     "id": 2309,
+     "baseId": 2309,
+     "name": "Bread",
+     "count": 1
+    },
+    {
+     "id": 2309,
+     "baseId": 2309,
+     "name": "Bread",
+     "count": 1
+    },
+    {
+     "id": 2309,
+     "baseId": 2309,
+     "name": "Bread",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "account": "Swordswallow",
+   "attemptId": "1794169850061-0000023846-0000000001",
+   "started": 1794169857465,
+   "at": 1794170353231,
+   "source": "b9a58e1d63d3b5aef74319cacc73fc15ac49821a9d46e6289ddec200c114eae0",
+   "entry": "scripts/chain.ts,scripts/walk-to.ts,scripts/gather-essence.ts",
+   "result": "ok essence {\"ok\":true,\"totalMined\":69,\"totalBanked\":69,\"held\":0,\"trips\":3,\"died\":false,\"failure\":\"-\"}",
+   "logout": "confirmed",
+   "newQuests": [
+    "Ernest the Chicken",
+    "Clock Tower"
+   ],
+   "hp": {
+    "now": 54,
+    "max": 54
+   },
+   "bank": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 465
+    },
+    {
+     "id": 303,
+     "baseId": 303,
+     "name": "Small fishing net",
+     "count": 1
+    },
+    {
+     "id": 315,
+     "baseId": 315,
+     "name": "Shrimps",
+     "count": 1
+    },
+    {
+     "id": 1205,
+     "baseId": 1205,
+     "name": "Bronze dagger",
+     "count": 1
+    },
+    {
+     "id": 1277,
+     "baseId": 1277,
+     "name": "Bronze sword",
+     "count": 1
+    },
+    {
+     "id": 1171,
+     "baseId": 1171,
+     "name": "Wooden shield",
+     "count": 1
+    },
+    {
+     "id": 841,
+     "baseId": 841,
+     "name": "Shortbow",
+     "count": 1
+    },
+    {
+     "id": 882,
+     "baseId": 882,
+     "name": "Bronze arrow",
+     "count": 25
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 25
+    },
+    {
+     "id": 558,
+     "baseId": 558,
+     "name": "Mind rune",
+     "count": 15
+    },
+    {
+     "id": 555,
+     "baseId": 555,
+     "name": "Water rune",
+     "count": 6
+    },
+    {
+     "id": 557,
+     "baseId": 557,
+     "name": "Earth rune",
+     "count": 4
+    },
+    {
+     "id": 559,
+     "baseId": 559,
+     "name": "Body rune",
+     "count": 2
+    },
+    {
+     "id": 314,
+     "baseId": 314,
+     "name": "Feather",
+     "count": 1035
+    },
+    {
+     "id": 52,
+     "baseId": 52,
+     "name": "Arrow shaft",
+     "count": 105
+    },
+    {
+     "id": 53,
+     "baseId": 53,
+     "name": "Headless arrow",
+     "count": 1005
+    },
+    {
+     "id": 1438,
+     "baseId": 1438,
+     "name": "Air talisman",
+     "count": 1
+    },
+    {
+     "id": 590,
+     "baseId": 590,
+     "name": "Tinderbox",
+     "count": 1
+    },
+    {
+     "id": 275,
+     "baseId": 275,
+     "name": "Key",
+     "count": 1
+    },
+    {
+     "id": 952,
+     "baseId": 952,
+     "name": "Spade",
+     "count": 1
+    },
+    {
+     "id": 1925,
+     "baseId": 1925,
+     "name": "Bucket",
+     "count": 1
+    },
+    {
+     "id": 946,
+     "baseId": 946,
+     "name": "Knife",
+     "count": 1
+    },
+    {
+     "id": 1351,
+     "baseId": 1351,
+     "name": "Bronze axe",
+     "count": 1
+    },
+    {
+     "id": 2309,
+     "baseId": 2309,
+     "name": "Bread",
+     "count": 1
+    },
+    {
+     "id": 1436,
+     "baseId": 1436,
+     "name": "Rune essence",
+     "count": 69
+    }
+   ],
+   "inventory": []
   }
  ],
  "limitations": [
