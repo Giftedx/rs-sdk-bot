@@ -7,6 +7,7 @@ test('shallow standby blocks adjacent combat brackets and unknown levels', () =>
     expect(shallowStandbyThreat({ ...nearby, combatLevel: 5 }, tile, 6)).toBe(true);
     expect(shallowStandbyThreat({ ...nearby, combatLevel: 7 }, tile, 6)).toBe(true);
     expect(shallowStandbyThreat({ ...nearby, combatLevel: 20 }, tile, 6)).toBe(false);
+    expect(shallowStandbyThreat({ ...nearby, combatLevel: 9 }, tile, 6)).toBe(false);
     expect(shallowStandbyThreat({ ...nearby, combatLevel: 0 }, tile, 6)).toBe(true);
     expect(shallowStandbyThreat({ ...nearby, z: 3519, combatLevel: 6 }, tile, 6)).toBe(false);
 });

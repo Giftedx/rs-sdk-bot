@@ -9,6 +9,7 @@ const bank = { x: 3252, z: 3420, level: 0 };
 const edge = { x: 3135, z: 3519, level: 0 };
 const profiles = {
     6: { hp: 11, strength: 1, ranged: 7, magic: 7, mindRunes: 5, tile: { x: 3135, z: 3523, level: 0 } },
+    9: { hp: 12, strength: 1, ranged: 7, magic: 13, mindRunes: 3, tile: { x: 3135, z: 3524, level: 0 } },
     20: { hp: 24, strength: 23, ranged: 29, magic: 13, mindRunes: 3, tile: { x: 3135, z: 3521, level: 0 } },
 };
 type StandbyProfile = typeof profiles[keyof typeof profiles];
@@ -69,7 +70,7 @@ function hasBuild(state: ReturnType<typeof snapshot>, profile: StandbyProfile) {
 export function shallowStandbyThreat(
     player: { x: number; z: number; combatLevel: number }, tile: typeof bank, combat: number,
 ) {
-    // Both standby tiles are Wilderness level 1. The server uses the shallower player's level.
+    // These standby tiles are Wilderness level 1. The server uses the shallower player's level.
     return player.z >= 3520 && Math.max(Math.abs(player.x - tile.x), Math.abs(player.z - tile.z)) <= 12 &&
         (!Number.isSafeInteger(player.combatLevel) || player.combatLevel < 3 || player.combatLevel > 126 ||
             Math.abs(player.combatLevel - combat) <= 1);
@@ -88,7 +89,7 @@ export async function runWildernessStandby(
         .reduce((total, item) => total + item.count, 0);
     const ammo = () => session.sdk.getEquipment().find(item => item.slot === 13 && item.id === 882)?.count ?? 0;
     const combat = session.sdk.getState()?.player?.combatLevel;
-    const profile = combat === 6 || combat === 20 ? profiles[combat] : undefined;
+    const profile = combat === 6 || combat === 9 || combat === 20 ? profiles[combat] : undefined;
     const kit = profile ? suppliesFor(profile) : [];
     const threatened = () => session.sdk.getState()?.nearbyPlayers.some(player =>
         profile && combat !== undefined && shallowStandbyThreat(player, profile.tile, combat));
