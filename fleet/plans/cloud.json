@@ -1,5 +1,62 @@
 {
  "side": "cloud",
- "at": 1794165968389,
- "jobs": []
+ "at": 1794165996892,
+ "jobs": [
+  {
+   "account": "BraveHardon",
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "rj"
+   ],
+   "env": {
+    "CAP": "1800"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "Complete rj for cloud quest coverage",
+   "role": "quests"
+  },
+  {
+   "account": "TossTheCaber",
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "drunkmonk"
+   ],
+   "env": {
+    "CAP": "1800"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "Complete drunkmonk for cloud quest coverage",
+   "role": "quests"
+  },
+  {
+   "account": "Swordswallow",
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "cog"
+   ],
+   "env": {
+    "CAP": "1800"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "Complete cog for cloud quest coverage",
+   "role": "quests"
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "hazeelcult"
+   ],
+   "env": {
+    "CAP": "1800"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "Complete hazeelcult for cloud quest coverage",
+   "role": "quests"
+  }
+ ]
 }
