@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794170377526,
+ "at": 1794172241028,
  "jobs": [
   {
    "account": "Masterbaiter",
@@ -486,16 +486,17 @@
    "account": "MineYourBiz",
    "script": "scripts/blood-chest.ts",
    "args": [
-    "72000"
+    "24000"
    ],
    "env": {
-    "MAX_LOOTS": "300",
-    "CAP": "72000",
-    "COORDINATOR_RUN_ID": "task-e79db29d-31ee-4eaa-a6c1-74d1f4c7f0c6"
+    "MAX_LOOTS": "100",
+    "CAP": "24000",
+    "BANK_EVERY": "25",
+    "COORDINATOR_RUN_ID": "task-879344a9-15bb-4263-b7ce-32763e9aa9f3"
    },
    "enabled": false,
    "repeat": false,
-   "goal": "run-blood-charge-batch300-a [task-e79db29d-31ee-4eaa-a6c1-74d1f4c7f0c6]",
+   "goal": "run-blood-charge-resume-live100-lease-retry [task-879344a9-15bb-4263-b7ce-32763e9aa9f3]",
    "role": "supply"
   }
  ]
