@@ -1,19 +1,24 @@
 {
  "side": "cloud-kit",
- "at": 1794180288107,
+ "at": 1794180828963,
  "jobs": [
   {
    "account": "Familyjewel",
-   "script": "scripts/generated/thieving60.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/goldfarm.ts TICKS=450 BANK_AT=2000 KNIGHT_SPOT=2652,3318",
+    "scripts/generated/thieving60.ts TARGET=55 CAP=240"
+   ],
    "env": {
-    "TARGET": "55",
-    "CAP": "3000"
+    "EARNING_BATCH": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Finite Thieving55 unlock for own cloud-kit earning/resupply; bank all earned coins and bakery food; confirm logout, then admit a qualified finite GP batch.",
-   "role": "thieving"
+   "goal": "Earn and bank toward owned5000GP for cloud-kit PvP kit/resupply;450tick earning plus observed bank exit; no repeats after failure.",
+   "role": "thieving",
+   "resources": [
+    "knight:2652,3318"
+   ]
   },
   {
    "account": "Glassblower",
