@@ -1,0 +1,74 @@
+{
+  "schema": "cloud-capacity-operator-progress/1",
+  "at": 1794182091376,
+  "ownerRequestId": "db68b859-ed91-4fde-93e7-f5d66a687398",
+  "planRequestId": "76b16aef-b8ec-4d38-84b8-ef835c553c04",
+  "correctionRequestId": "2c7a38f2-df21-4916-8a11-d908610397e4",
+  "operatorReceipts": [
+    {
+      "id": "2c7a38f2-df21-4916-8a11-d908610397e4",
+      "action": "request",
+      "at": 1794182051933,
+      "taskId": null,
+      "status": "request-recorded"
+    },
+    {
+      "id": "76b16aef-b8ec-4d38-84b8-ef835c553c04",
+      "action": "plan",
+      "at": 1794181987106,
+      "taskId": null,
+      "status": "plan-requested"
+    },
+    {
+      "id": "db68b859-ed91-4fde-93e7-f5d66a687398",
+      "action": "request",
+      "at": 1794181775875,
+      "taskId": null,
+      "status": "request-recorded"
+    }
+  ],
+  "planner": null,
+  "liveLocal": [
+    {
+      "name": "Shaftmaker",
+      "tick": 4401,
+      "at": 1794182058814,
+      "goal": "Firemaking 99 from 5072 banked normal logs at Catherby"
+    },
+    {
+      "name": "MineYourBiz",
+      "tick": 15773,
+      "at": 1794182058617,
+      "goal": "run-blood-charge-renewed-controller-qualified [task-98121627-5728-49a2-8345-54a547f27810]"
+    },
+    {
+      "name": "Billionaire",
+      "tick": 5121,
+      "at": 1794182057107,
+      "goal": "goldfarm knights at 2582,3297"
+    }
+  ],
+  "cloudKitEvidence": "fleet/evidence/cloud-kit-expansion.json",
+  "cloudKitObservation": {
+    "Familyjewel": {
+      "tickPair": [
+        96,
+        256
+      ],
+      "Thieving": 77,
+      "bankCoins": 4019,
+      "stage": "earning"
+    },
+    "Glassblower": {
+      "Thieving": 79,
+      "bankCoins": 5223,
+      "stage": "funded",
+      "logout": "confirmed"
+    }
+  },
+  "limits": [
+    "Live starts were performed by incumbent controllers; this chat submitted normal owner request and plan command, no live login.",
+    "Original cloud side remains parked; other cloud-kit side has fresh progress.",
+    "Completed Porksword Magic7 must not repeat; Toss earning requires latest-state admission. All holds and leases preserved."
+  ]
+}
