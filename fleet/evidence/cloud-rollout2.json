@@ -1,0 +1,235 @@
+{
+ "schema": "cloud-live-rollout/1",
+ "side": "cloud",
+ "source": "7bd9e77d2d50648c53df71d35175e5e8f5da5c10",
+ "started": 1794167124636,
+ "at": 1794167208265,
+ "peakLive": 6,
+ "currentLive": 6,
+ "minFreeGB": 12.193023681640625,
+ "current": [
+  {
+   "account": "TossTheCaber",
+   "tick": 151,
+   "at": 1794167208183,
+   "position": {
+    "x": 3100,
+    "z": 3434,
+    "level": 0
+   },
+   "result": "",
+   "logout": "held"
+  },
+  {
+   "account": "Swordswallow",
+   "tick": 146,
+   "at": 1794167206929,
+   "position": {
+    "x": 3109,
+    "z": 3357,
+    "level": 1
+   },
+   "result": "",
+   "logout": "held"
+  },
+  {
+   "account": "Unsheathed",
+   "tick": 146,
+   "at": 1794167206934,
+   "position": {
+    "x": 2978,
+    "z": 3396,
+    "level": 0
+   },
+   "result": "",
+   "logout": "held"
+  },
+  {
+   "account": "Porksword",
+   "tick": 151,
+   "at": 1794167207474,
+   "position": {
+    "x": 3162,
+    "z": 3279,
+    "level": 0
+   },
+   "result": "",
+   "logout": "held"
+  },
+  {
+   "account": "MeatNTwoVeg",
+   "tick": 52,
+   "at": 1794167172408,
+   "position": {
+    "x": 3212,
+    "z": 3333,
+    "level": 0
+   },
+   "result": "fail stop file",
+   "logout": "confirmed"
+  },
+  {
+   "account": "YewGotWood",
+   "tick": 141,
+   "at": 1794167207353,
+   "position": {
+    "x": 3233,
+    "z": 3240,
+    "level": 0
+   },
+   "result": "",
+   "logout": "held"
+  },
+  {
+   "account": "Spitroaster",
+   "tick": 146,
+   "at": 1794167208174,
+   "position": {
+    "x": 3162,
+    "z": 3283,
+    "level": 0
+   },
+   "result": "",
+   "logout": "held"
+  }
+ ],
+ "results": [
+  {
+   "account": "MeatNTwoVeg",
+   "attemptId": "1794167144664-0000008614-0000000001",
+   "started": 1794167151409,
+   "at": 1794167172408,
+   "source": "d400d72b6336f1f29605b97c70d3918b8c9b5947e2da1dcda8bf0617a7d0ef53",
+   "entry": "scripts/chain.ts,scripts/collect-wool.ts,scripts/quest-sweep.ts",
+   "result": "fail stop file",
+   "logout": "confirmed",
+   "newQuests": [],
+   "hp": {
+    "now": 10,
+    "max": 10
+   },
+   "bank": [
+    {
+     "id": 995,
+     "baseId": 995,
+     "name": "Coins",
+     "count": 25
+    }
+   ],
+   "inventory": [
+    {
+     "id": 1351,
+     "baseId": 1351,
+     "name": "Bronze axe",
+     "count": 1
+    },
+    {
+     "id": 590,
+     "baseId": 590,
+     "name": "Tinderbox",
+     "count": 1
+    },
+    {
+     "id": 303,
+     "baseId": 303,
+     "name": "Small fishing net",
+     "count": 1
+    },
+    {
+     "id": 315,
+     "baseId": 315,
+     "name": "Shrimps",
+     "count": 1
+    },
+    {
+     "id": 1925,
+     "baseId": 1925,
+     "name": "Bucket",
+     "count": 1
+    },
+    {
+     "id": 1931,
+     "baseId": 1931,
+     "name": "Pot",
+     "count": 1
+    },
+    {
+     "id": 2309,
+     "baseId": 2309,
+     "name": "Bread",
+     "count": 1
+    },
+    {
+     "id": 1265,
+     "baseId": 1265,
+     "name": "Bronze pickaxe",
+     "count": 1
+    },
+    {
+     "id": 1205,
+     "baseId": 1205,
+     "name": "Bronze dagger",
+     "count": 1
+    },
+    {
+     "id": 1277,
+     "baseId": 1277,
+     "name": "Bronze sword",
+     "count": 1
+    },
+    {
+     "id": 1171,
+     "baseId": 1171,
+     "name": "Wooden shield",
+     "count": 1
+    },
+    {
+     "id": 841,
+     "baseId": 841,
+     "name": "Shortbow",
+     "count": 1
+    },
+    {
+     "id": 882,
+     "baseId": 882,
+     "name": "Bronze arrow",
+     "count": 25
+    },
+    {
+     "id": 556,
+     "baseId": 556,
+     "name": "Air rune",
+     "count": 25
+    },
+    {
+     "id": 558,
+     "baseId": 558,
+     "name": "Mind rune",
+     "count": 15
+    },
+    {
+     "id": 555,
+     "baseId": 555,
+     "name": "Water rune",
+     "count": 6
+    },
+    {
+     "id": 557,
+     "baseId": 557,
+     "name": "Earth rune",
+     "count": 4
+    },
+    {
+     "id": 559,
+     "baseId": 559,
+     "name": "Body rune",
+     "count": 2
+    }
+   ]
+  }
+ ],
+ "limitations": [
+  "Finite cloud session; no sustained uptime claim",
+  "Results require matching producer-confirmed logout; quest flags are client observations"
+ ]
+}

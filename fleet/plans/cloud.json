@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794167139890,
+ "at": 1794167212844,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -74,13 +74,13 @@
    "account": "MeatNTwoVeg",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/collect-wool.ts CAP=1800 MAX_TRIPS=1",
+    "scripts/collect-wool.ts CAP=2400 MAX_TRIPS=3",
     "scripts/quest-sweep.ts sheep CAP=1600"
    ],
    "env": {
     "ROUNDS": "1"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "New live Sheep Shearer coverage using one owned wool batch",
    "role": "quests"
