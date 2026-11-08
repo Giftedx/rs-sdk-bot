@@ -1,4 +1,5 @@
 import { test, expect } from 'bun:test';
+import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join,resolve } from 'node:path';
@@ -7,6 +8,7 @@ import { startInProcessSession, connectInProcess, type Session } from '../src/in
 import { awaitBotReady, settle } from '../src/bot';
 import { beginSessionAttempt, readLogoutProof, listAttempts, accountDir, DEFAULT_LIFECYCLE_ROOT,lifecycleOwner } from '../src/session-lifecycle';
 import { withPlanWrite } from '../src/plan-lock';
+import { acquireFleetTradeClaim, readFleetAccountClaim } from '../src/fleet-trade-claim';
 
 test('producer script identity comes from the actual CLI entry, never a descriptive goal',()=>{
  const repo=resolve(import.meta.dir,'../../..'),env={BOT_GOAL:'scripts/gather-fire-combat.ts',WORKER_RELEASE:'a'.repeat(64)};
@@ -55,6 +57,43 @@ function noSecret(root: string) {
     const walk = (d: string): string[] => readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(join(d, e.name)) : [readFileSync(join(d, e.name), 'utf8')]);
     expect(walk(root).some(t => t.includes(SECRET))).toBe(false);
 }
+
+test('the network boundary fences a trade-held account and releases only its own confirmed swarm logout', async () => {
+    const parent = resolve(tmpdir()), base = mkdtempSync(join(parent, 'lifecycle-shared-'));
+    try {
+        const git = (...args: string[]) => execFileSync('git', args, { cwd: base, stdio: 'pipe', timeout: 5000, windowsHide: true });
+        const origin = join(base, 'origin.git'), root = join(base, '.practice/session-lifecycle');
+        git('init', '--bare', origin);
+        git('init');
+        git('remote', 'add', 'origin', origin);
+        const identity = { account: 'Ana', server: 'rs-sdk-demo.fly.dev', side: 'local' };
+        const calls: string[] = [];
+        const connect = (beforeConnect?: () => void) => startInProcessSession({ name: identity.account, password: SECRET, server: identity.server }, {
+            startSession: fakeStart({}, calls), sdk: new BotSDK({ botUsername: identity.account, password: SECRET, autoLaunchBrowser: false, autoReconnect: false } as any),
+            Actions: FakeActions as any, cacheDir: base, lifecycle: { root }, recordOwned: () => {}, beforeConnect, sharedAccount: { root: base, side: 'local' },
+        });
+        const trade = acquireFleetTradeClaim(base, { ...identity, orderId: 'test-trade', role: 'from' });
+        await expect(connect()).rejects.toThrow('fleet trade claim held');
+        expect(calls).toEqual([]);
+        expect(readLogoutProof(identity.account, identity.server, { root }).state).toBe('none');
+        trade.release();
+        let checks = 0;
+        await expect(connect(() => { if (++checks === 2) throw Error('paused during Git'); })).rejects.toThrow('paused during Git');
+        expect(readFleetAccountClaim(base, identity)?.phase).toBe('released');
+        expect(calls).toEqual([]);
+        const first = await connect();
+        (first.client as any).end('logged-out');
+        await first.close();
+        expect(readFleetAccountClaim(base, identity)).toMatchObject({ kind: 'swarm', phase: 'released' });
+        const second = await connect();
+        (second.client as any).end('disconnected');
+        await second.close();
+        expect(calls).toEqual(['Ana', 'Ana']);
+        expect(readFleetAccountClaim(base, identity)).toMatchObject({ kind: 'swarm', phase: 'held' });
+    } finally {
+        if (resolve(base, '..') === parent) rmSync(base, { recursive: true, force: true, maxRetries: 5 });
+    }
+}, 30_000);
 
 test('two identities in one worker log keep separate receipts; a failed non-first participant never borrows the first logout', async () => {
     const root = mkdtempSync(join(tmpdir(), 'lifecycle-two-')), log: string[] = [];

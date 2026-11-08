@@ -16,8 +16,8 @@ const SHA = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
 const LEGACY_REF = 'refs/heads/fleet-data';
 type RemoteLease = { side: string; host: string; holder: string; epoch: string; pid: number; at: number };
 
-export function fleetGitWindow(root: string, authority = 'fleet controller lease authority') {
-    const deadline = performance.now() + GIT_DEADLINE_MS;
+export function fleetGitWindow(root: string, authority = 'fleet controller lease authority', budgetMs = GIT_DEADLINE_MS) {
+    const deadline = performance.now() + budgetMs;
     return (args: string[], input?: string): string => {
         const timeout = Math.floor(deadline - performance.now());
         if (timeout <= 0) throw Error(authority + ' timed out');
@@ -54,7 +54,7 @@ export function appendFleetGitRecord(git: FleetGit, ref: string, head: string | 
     return next;
 }
 
-function localHolder(root: string): string {
+export function fleetCheckoutId(root: string): string {
     const dir = join(root, '.practice'), file = join(dir, 'fleet-controller-id');
     mkdirSync(dir, { recursive: true });
     try { writeFileSync(file, randomUUID(), { flag: 'wx' }); }
@@ -101,7 +101,7 @@ function parseRemote(raw: string, side: string): RemoteLease {
 // worktree, remote-tracking ref, or fleet-data index is changed by an acquisition or renewal.
 export function acquireFleetLease(root: string, side: string, now = Date.now) {
     if (!SIDE_NAME.test(side)) throw Error('invalid fleet lease side');
-    const holder = localHolder(root), host = hostname(), pid = process.pid;
+    const holder = fleetCheckoutId(root), host = hostname(), pid = process.pid;
     let epoch: string = randomUUID();
     const ref = 'refs/heads/fleet-lease/' + side;
     const git = fleetGitWindow(root);

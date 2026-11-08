@@ -2,7 +2,7 @@ import {existsSync, mkdtempSync, readFileSync, rmdirSync, unlinkSync} from 'node
 import {tmpdir} from 'node:os';
 import {join, resolve} from 'node:path';
 import {FLEET_DIR, FLEET_WORKTREE, SIDE_NAME, type Owner} from '../packages/core/src/fleet';
-import {withPlanWrite} from '../packages/core/src/plan-lock';
+import {recoverConcurrentPlanWrite, withPlanWrite} from '../packages/core/src/plan-lock';
 
 const OWNERS = 'fleet/owners.json';
 const REF = 'refs/heads/fleet-data';
@@ -10,8 +10,8 @@ const TRACKING = 'refs/remotes/origin/fleet-data';
 const GIT_TIMEOUT_MS = 10_000;
 const ATTEMPTS = 3;
 
-export function withFleetDataWrite<T>(root: string, action: () => T | Promise<T>) {
-    return withPlanWrite(action, join(root, '.practice', 'fleet-data-write'));
+export function withFleetDataWrite<T>(root: string, action: () => T | Promise<T>, timeoutMs?: number) {
+    return withPlanWrite(action, join(root, '.practice', 'fleet-data-write'), timeoutMs, recoverConcurrentPlanWrite);
 }
 
 type GitOptions = {index?: string; input?: string};

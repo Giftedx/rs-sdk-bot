@@ -9,8 +9,8 @@ const root=resolve(import.meta.dir,'../../..');
 export const GATE_FILE = join(root, '.practice', 'haggis-go.json');
 const MAIN = 'haggis';
 
-export function assertLoginAllowed(name: string, now = Date.now(), env = process.env): void {
-    if (name.toLowerCase() !== MAIN) return assertSpecialistLogin(root,name,now,env);
+export function assertLoginAllowed(name: string, now = Date.now(), env = process.env, server?: string): string | undefined {
+    if (name.toLowerCase() !== MAIN) return assertSpecialistLogin(root,name,now,env,server);
     if (env.HAGGIS_RUN !== '1') throw new Error('Haggis login refused: HAGGIS_RUN=1 is not set (the main account runs only the final route)');
     if (!existsSync(GATE_FILE)) throw new Error('Haggis login refused: no gate file; run bun scripts/haggis-gate.ts');
     let g: any;

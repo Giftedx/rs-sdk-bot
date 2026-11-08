@@ -7,7 +7,7 @@ import {admissionDecision,startReserve,activeExternalLive,loadEnded,persistEnded
 import {liveLogoutRef} from './coordinator-session';
 import {BOOTSTRAP_STATUS_AGE_MS} from '../../core/src/session-admission';
 import {evaluateLaunch} from '../../../scripts/haggis-gate';
-import {evaluateSpecialist, SPECIALIST_BOARDS, specialistTokenPath} from '../../core/src/specialist-launch';
+import {evaluateSpecialist, MAX_SPECIALIST_RUN_MS, SPECIALIST_BOARDS, specialistTokenPath} from '../../core/src/specialist-launch';
 import {loadOwners} from '../../core/src/fleet';
 import {cachedLaunchRevision,capabilityRevision,launchRevision,workerEntries} from '../../core/src/worker-release';
 import {importClosure} from './delivery-cli';
@@ -238,6 +238,7 @@ function retiredRecoveryCohort(task:CoordTask,account:string,base:string):Retire
  }
  return{accounts,runId,taskId};
 }
+const liveTaskWindowMs=(task:CoordTask)=>task.timeoutMs??Math.min(MAX_SPECIALIST_RUN_MS,Math.max(900_000,(task.estimatedMs??0)*1.5));
 export function installJob(task:CoordTask,account:string,script:string,runId:string,source:string,dependencies:Record<string,any>,options:{base?:string;preflight?:boolean;recoveryPreflight?:boolean;freeGB?:number;recovered?:(account:string)=>boolean;launch?:string}={}){
  // `source` is the run's capability release; a recovery session binds to the launch release (default: the same value).
  const base=options.base??projectRoot,rows=liveRows(base),launch=options.launch??source;
@@ -313,10 +314,10 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
    if(!board||accounts.length!==1||task.accept?.skills?.[board.name]!==99)throw Error('need a reserved single-account board and level 99 target');
    const owners=base===projectRoot?loadOwners():loadOwners(join(base,'fleet/owners.json'));
    const holders=[...owners].filter(([name,owner])=>name!==account.toLowerCase()&&name!=='haggis'&&!Object.hasOwn(SPECIALIST_BOARDS,name)&&owner.server===LIVE_SERVER).map(([name])=>name);
-   specialist={
-    ...evaluateSpecialist(base,account,runId,source,missionSignature({...job,env:{...job.env,COORDINATOR_RUN_ID:''}}),holders,now),
-    mission:createHash('sha256').update(revision).digest('hex'),
-   };
+   const first=evaluateSpecialist(base,account,runId,source,missionSignature({...job,env:{...job.env,COORDINATOR_RUN_ID:''}}),holders,now);
+   const runUntil=now+Math.floor(liveTaskWindowMs(task));
+   if(!Number.isSafeInteger(runUntil)||runUntil<=now||runUntil>now+MAX_SPECIALIST_RUN_MS)throw Error('invalid specialist run window');
+   specialist={...first,expiresAt:Math.min(first.expiresAt,runUntil),runUntil,mission:createHash('sha256').update(revision).digest('hex')};
   }catch(error){throw Error('specialist launch evidence: '+String(error));}
  }
  // The merged view checks the split (a composed owner job keeps all its participants); only the coordinator's own
@@ -508,7 +509,8 @@ export async function runLiveTask(task:CoordTask,dependencies:Record<string,any>
   }else await withPlanWrite(()=>prepareLiveRecovery(task,account,definition.entry,runId,capability,dependencies,projectRoot,launch));
   for(const repair of task.repairs)if(!preserveCompletedLiveEnd(task,repair,definition.entry,runId,source,dependencies,projectRoot,launch))await requestLiveRecovery(repair,runId);
  }
- const installed=await withPlanWrite(()=>installJob(task,account,definition.entry,runId,source,dependencies,{launch})),deadline=Date.now()+(task.timeoutMs??Math.min(86400000,Math.max(900000,task.estimatedMs*1.5)));
+ const installed=await withPlanWrite(()=>installJob(task,account,definition.entry,runId,source,dependencies,{launch})),
+  deadline=(task.launch==='specialist'?installed.installedAt:Date.now())+Math.floor(liveTaskWindowMs(task));
  try{
   while(Date.now()<deadline){
    if(existsSync(join(projectRoot,'.practice/stop-coordinator')))throw Error('coordinator stopped');

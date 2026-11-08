@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { acquireFleetTradeClaim, readFleetTradeClaim, readHeldFleetTradeClaims, releaseFleetTradeClaim } from '../src/fleet-trade-claim';
+import { acquireFleetSwarmClaim, acquireFleetTradeClaim, readFleetAccountClaim, readFleetTradeClaim, readHeldFleetTradeClaims, releaseFleetTradeClaim } from '../src/fleet-trade-claim';
 
 const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, stdio: 'pipe', timeout: 5000, windowsHide: true });
 const server = 'rs-sdk-demo.fly.dev';
@@ -65,5 +65,45 @@ test('an unknown Git authority cannot grant trade admission', async () => {
     await withRepos((a) => {
         git(a, 'remote', 'remove', 'origin');
         expect(() => acquireFleetTradeClaim(a, input)).toThrow('authority');
+    });
+}, 30_000);
+
+test('a trade and a swarm racing on the same account have exactly one winner', async () => {
+    await withRepos(async (a, b) => {
+        const modulePath = JSON.stringify(resolve(import.meta.dir, '../src/fleet-trade-claim.ts'));
+        const start = (root: string, functionName: string) => Bun.spawn([process.execPath, '-e',
+            `import { ${functionName} } from ${modulePath}; ${functionName}(process.cwd(), ${JSON.stringify(input)})`],
+        { cwd: root, stdout: 'ignore', stderr: 'pipe', timeout: 15_000, windowsHide: true });
+        const results = await Promise.all([start(a, 'acquireFleetTradeClaim').exited, start(b, 'acquireFleetSwarmClaim').exited]);
+        expect(results.filter(code => code === 0)).toHaveLength(1);
+        const held = readFleetAccountClaim(a, input);
+        expect(held?.phase).toBe('held');
+        expect(() => acquireFleetTradeClaim(b, { ...input, orderId: 'next' })).toThrow('held');
+        expect(() => acquireFleetSwarmClaim(b, input)).toThrow('held');
+    });
+}, 30_000);
+
+test('a dead swarm producer remains held, and pre-network recovery refusal restores the prior hold', async () => {
+    await withRepos(async (a, b) => {
+        const claimModule = JSON.stringify(resolve(import.meta.dir, '../src/fleet-trade-claim.ts'));
+        const producerModule = JSON.stringify(resolve(import.meta.dir, '../src/session-lifecycle.ts'));
+        const child = Bun.spawn([process.execPath, '-e', `
+            import { join } from 'node:path';
+            import { acquireFleetSwarmClaim } from ${claimModule};
+            import { beginSessionAttempt, lifecycleOwner } from ${producerModule};
+            const root = process.cwd(), input = ${JSON.stringify(input)};
+            const claim = acquireFleetSwarmClaim(root, input);
+            beginSessionAttempt(input, { root: join(root, '.practice/session-lifecycle'), owner: { ...lifecycleOwner(), sharedClaimNonce: claim.nonce } });
+        `], { cwd: a, stdout: 'ignore', stderr: 'pipe', timeout: 15_000, windowsHide: true });
+        expect(await child.exited).toBe(0);
+        const prior = readFleetAccountClaim(a, input);
+        expect(prior).toMatchObject({ kind: 'swarm', phase: 'held' });
+        expect(() => acquireFleetSwarmClaim(a, input)).toThrow('held');
+        expect(() => acquireFleetSwarmClaim(b, input, { recover: true })).toThrow('held');
+        const replacement = acquireFleetSwarmClaim(a, input, { recover: true });
+        expect(replacement.nonce).not.toBe(prior?.nonce);
+        replacement.abortBeforeNetwork();
+        expect(readFleetAccountClaim(b, input)).toEqual(prior);
+        expect(() => acquireFleetTradeClaim(b, input)).toThrow('held');
     });
 }, 30_000);

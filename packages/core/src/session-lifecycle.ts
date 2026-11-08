@@ -16,7 +16,8 @@ export const DEFAULT_LIFECYCLE_ROOT = join(resolve(import.meta.dir, '..', '..', 
 export type LifecycleDomain = 'practice' | 'live';
 export type LifecycleEventKind = 'connecting' | 'connected' | 'connect-failed' | 'ready' | 'ready-failed' | 'ended' | 'logout' | 'closed';
 export type LifecycleEvent = { at: number; kind: LifecycleEventKind; detail?: string };
-export type LifecycleOwner = { pid: number; coordinatorRunId: string | null; workerRelease: string | null; script: string; role: string | null; participants: string[] | null };
+export type LifecycleOwner = { pid: number; coordinatorRunId: string | null; workerRelease: string | null; script: string; role: string | null; participants: string[] | null; sharedClaimNonce?: string;
+    specialistAuthorization?: {ticket: string; mission: string} };
 export type AttemptReceipt = {
     schema: typeof LIFECYCLE_SCHEMA; attemptId: string; account: string; server: string; domain: LifecycleDomain;
     owner: LifecycleOwner; config: { members: boolean | null }; createdAt: number; updatedAt: number; events: LifecycleEvent[];
@@ -119,7 +120,7 @@ export function beginSessionAttempt(identity: { account: string; server: string;
         // Updates touch only this attempt's file. The first server end is kept; later ends cannot replace it.
         record(kind, detail) {
             if (kind === 'ended') { if (ended) return false; ended = true; }
-            const at = now();
+            const at = Math.max(now(), receipt.updatedAt);
             receipt.events.push({ at, kind, ...(detail !== undefined ? { detail: clean(detail, identity.secret) } : {}) });
             receipt.updatedAt = at;
             try { writeAtomic(file, JSON.stringify(receipt)); return true; }
