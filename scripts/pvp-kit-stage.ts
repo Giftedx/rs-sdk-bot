@@ -44,7 +44,7 @@ export async function runKitStage(s:Session,cap=1800,stop=()=>false){
   bank=s.bankObservation!()!.items.map(i=>({...i}));
  };
  const close=async()=>{await s.bot.closeBank();if(!await waitUntil(s,()=>!state()?.bank?.isOpen,{timeoutTicks:5}))throw Error('kit stage bank close unobserved');};
- const deposit=async()=>{for(const item of [...inv()]){check();await depositObserved(s,item);}bank=s.bankObservation!()!.items.map(i=>({...i}));};
+ const deposit=async()=>{for(const id of new Set(inv().map(i=>i.id))){check();await depositObserved(s,inv().find(i=>i.id===id)!);}bank=s.bankObservation!()!.items.map(i=>({...i}));};
  const assets=()=>[...bank,...inv(),...eq()].map(i=>({id:i.id,count:i.count}));
  const travel=async(x:number,z:number)=>{
   check();const q=p()!,actor=accountOf(s),cash=count(inv(),995);
