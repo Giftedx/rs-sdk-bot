@@ -244,6 +244,11 @@
    "side": "cloud-kit",
    "server": "rs-sdk-demo.fly.dev",
    "reservation": "task-30b2bb88-95a5-42f0-8eb2-4d5c8e0ef7ea"
+  },
+  "Coinpurse": {
+   "side": "cloud",
+   "server": "rs-sdk-demo.fly.dev",
+   "reservation": "task-baf56625-8445-49b5-ba41-e814a75cc35e"
   }
  }
 }
