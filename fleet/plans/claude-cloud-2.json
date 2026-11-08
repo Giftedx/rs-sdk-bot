@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud-2",
- "at": 1794131469205,
+ "at": 1794136290403,
  "jobs": [
   {
    "account": "Deeppockets",
@@ -19,25 +19,6 @@
    "autopilot": "claude-cloud-2",
    "resources": [
     "knight:2671,3313"
-   ]
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
-   "env": {
-    "PEN": "3229,3298",
-    "TICKS": "3000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3229,3298",
-   "role": "helper",
-   "template": "feathers@3229,3298",
-   "autopilot": "claude-cloud-2",
-   "resources": [
-    "pen:3229,3298"
    ]
   },
   {
