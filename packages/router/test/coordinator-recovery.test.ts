@@ -13,11 +13,43 @@ import {initialState,addTasks,startTask,chooseTask,validateTask} from '../src/co
 import {atomicJson,saveState,loadState,runDirectory} from '../src/coordinator-store';
 import {readMergedPlan,coordinatorJobsPath,writeCoordinatorJobs,emptyCoordinatorJobs} from '../../core/src/coordinator-jobs';
 const jobOf=(base:string,account:string)=>readMergedPlan(base).jobs.find((j:any)=>(j.accounts??[j.account]).includes(account));
-import {claimCoordinatorState,reconcile} from '../src/coordinator-cli';
+import {claimCoordinatorState,pauseCoordinator,reconcile} from '../src/coordinator-cli';
 import {acceptProposal,parseModelObject} from '../src/coordinator-planner';
 import {replaceAssignments,prepareLiveRecovery,requestLiveRecovery,requestAuthenticatedRecovery,recoveryQualification,installJob,awaitControllerDrain,ensureSwarm,preserveCompletedLiveEnd} from '../src/coordinator-live';
 import type {CoordTask} from '../src/coordinator';
 const seed=()=>{const s=initialState();addTasks(s,[{id:'producer',goal:'skills',kind:'qualify',capability:'wine-order',dependsOn:[],priority:2,estimatedMs:1,why:'native producer'},{id:'consumer',goal:'gear',kind:'qualify',capability:'ammo-order',dependsOn:['producer'],priority:2,estimatedMs:1,why:'next useful consumer'}]);startTask(s,'producer',Date.now()-20000,'recovery-run');return s;};
+test('owner pause persists a receipt written during worker shutdown',async()=>{
+ const base=mkdtempSync(join(tmpdir(),'coord-pause-')),practice=join(base,'.practice'),dir=join(practice,'coordinator');
+ const state=initialState(),runId='blood-pause',taskId='run-blood';
+ addTasks(state,[
+  {id:taskId,goal:'main24',kind:'run',capability:'blood-chest-order',account:'Miner',accept:{bank:{565:1018}},dependsOn:[],priority:1,estimatedMs:1000,why:'bank runes'},
+  {id:'next-batch',goal:'main24',kind:'run',capability:'blood-chest-order',account:'Miner',accept:{bank:{565:1618}},dependsOn:[taskId],priority:1,estimatedMs:1000,why:'next batch'},
+  {id:'starting',goal:'skills',kind:'qualify',capability:'wine-order',dependsOn:[],priority:1,estimatedMs:1000,why:'not spawned yet'},
+ ]);
+ startTask(state,taskId,Date.now(),runId).pid=123;
+ startTask(state,'starting',Date.now(),'starting-run');
+ const runDir=runDirectory(runId,dir);
+ saveState(state,dir);
+ const own=emptyCoordinatorJobs();
+ own.jobs.push({account:'Miner',script:'scripts/blood-chest.ts',enabled:true,coordinatorOwner:'coordinator',env:{COORDINATOR_RUN_ID:runId}});
+ writeCoordinatorJobs(base,own);
+ const stopFile=join(practice,'stop-coordinator');
+ writeFileSync(stopFile,'owner pause');
+ const receipt={taskId,runId,ok:false,at:Date.now(),output:null,error:'Error: coordinator stopped'};
+ await pauseCoordinator(state,base,async(pid,marker)=>{
+  expect(pid).toBe(123);expect(marker).toBe(runId);
+  expect(JSON.parse(readFileSync(coordinatorJobsPath(base),'utf8')).jobs[0].enabled).toBe(false);
+  expect(existsSync(join(practice,'stop-Miner'))).toBe(true);
+  atomicJson(join(runDir,'receipt.json'),receipt);
+  return true;
+ });
+ const saved=loadState(dir);
+ expect(saved.tasks.map(row=>row.status)).toEqual(['failed','pending','failed']);
+ expect(saved.tasks[0]!.receipt).toEqual(receipt);
+ expect(saved.tasks[2]!.receipt?.error).toContain('worker ended without a receipt');
+ expect(readFileSync(stopFile,'utf8')).toBe('owner pause');
+ expect(chooseTask(saved,Date.now())).toBeNull();
+});
 test('concurrent coordinator starts leave exactly one owner',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'coord-owner-'));
  const nonces=['start-a','start-b'];
