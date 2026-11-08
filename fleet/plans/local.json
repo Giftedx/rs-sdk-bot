@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794176167483,
+ "at": 1794179813320,
  "jobs": [
   {
    "account": "Masterbaiter",
@@ -214,20 +214,23 @@
    "script": "scripts/shop-buyer.ts",
    "args": [
     "betty",
-    "6000"
+    "3000"
    ],
    "env": {
-    "ITEMS": "fire rune|earth rune",
+    "ITEMS": "fire rune",
     "BANK_PACK": "1",
-    "MAX_SPEND": "200000",
+    "MAX_SPEND": "2000",
     "COIN_RESERVE": "10000",
-    "FLOAT": "210000",
-    "NO_BUY_TICKS": "50"
+    "FLOAT": "12000",
+    "NO_BUY_TICKS": "50",
+    "MAX_ITEMS": "250",
+    "STOCK_TARGET": "750",
+    "STOP_AT_TARGET": "1"
    },
-   "enabled": false,
+   "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "fire and earth runes from Betty",
+   "repeat": false,
+   "goal": "Bank 750 fire runes for the main route, up to 250 new",
    "role": "supply"
   },
   {
