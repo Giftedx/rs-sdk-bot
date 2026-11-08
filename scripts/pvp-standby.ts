@@ -14,6 +14,11 @@ const profiles = {
 };
 type StandbyProfile = typeof profiles[keyof typeof profiles];
 
+export function combatTwelveStandbyProfile(hp: number | undefined, ranged: number | undefined): StandbyProfile | undefined {
+    if ((hp !== 14 && hp !== 15) || (ranged !== 17 && ranged !== 18)) return;
+    return { hp, strength: 1, ranged, magic: 13, mindRunes: 3, tile: { x: 3134, z: 3525, level: 0 } };
+}
+
 const route = [
     { x: 3210, z: 3426, tol: 2 },
     { x: 3184, z: 3434, tol: 2 },
@@ -89,7 +94,9 @@ export async function runWildernessStandby(
         .reduce((total, item) => total + item.count, 0);
     const ammo = () => session.sdk.getEquipment().find(item => item.slot === 13 && item.id === 882)?.count ?? 0;
     const combat = session.sdk.getState()?.player?.combatLevel;
-    const profile = combat === 6 || combat === 9 || combat === 20 ? profiles[combat] : undefined;
+    const profile = combat === 12
+        ? combatTwelveStandbyProfile(session.sdk.getSkill('Hitpoints')?.baseLevel, session.sdk.getSkill('Ranged')?.baseLevel)
+        : combat === 6 || combat === 9 || combat === 20 ? profiles[combat] : undefined;
     const kit = profile ? suppliesFor(profile) : [];
     const threatened = () => session.sdk.getState()?.nearbyPlayers.some(player =>
         profile && combat !== undefined && shallowStandbyThreat(player, profile.tile, combat));
