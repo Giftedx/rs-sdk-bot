@@ -1,7 +1,9 @@
 // Autopilot: writes a fleet side's swarm jobs from the route supply bill, account skills and holdings, and tick waste,
 // so no person picks jobs, restarts ended ones or spots loops (plan Lanes table, Autopilot).
 // plan() is pure: one assignment per account of this side, highest value per tick first, from proven templates only,
-// never two accounts on one exclusive resource (a knight spot, a chicken pen, a shop) across all sides.
+// never more accounts on one resource (a knight spot, a chicken pen, a shop) across all sides than its capacity
+// (CAPACITY: two farmers to a knight spot, one to a pen or a shop). A job on a resource another account already holds
+// keeps that resource's shared rate of its value (SHARED), so the empty spots fill first.
 // Value is an estimate in coins per game tick: each output's rate times its unit value, minus coin spend, times the
 // script family's measured work share (1 - idle - move, scripts/tick-waste.ts). A training template is worth a share
 // of the best job it unlocks, and reserves that job's resource. assess() reads a job's recent log lines and retires
@@ -25,6 +27,8 @@ export type Inputs = {
     side: string; accounts: readonly Acct[]; owners: ReadonlyMap<string, { side: string }>; bill: readonly BillRow[];
     templates: readonly Template[]; prices: Readonly<Record<string, number>>; waste?: Readonly<Record<string, number>>;
     taken?: Readonly<Record<string, number>>; retired?: ReadonlySet<string>; capacity?: Readonly<Record<string, number>>;
+    // The share of its value a job keeps on a resource another account already holds (default 1).
+    shared?: Readonly<Record<string, number>>;
     // The template each account holds now, by lower-case name: on a value tie the account keeps it.
     current?: ReadonlyMap<string, string>;
     // Accounts of this side free to trade now (no enabled swarm job), with their coins. Each keeps FUND_RESERVE.
@@ -89,13 +93,19 @@ export function plan(inp: Inputs): Assignment[] {
     // On a value tie an account keeps the template it holds: a level change must not move it to another spot of the
     // same worth, which would replace a running job with a fresh one that changes nothing useful.
     const keeps = (c: Cand) => inp.current?.get(c.account.toLowerCase()) === c.template.id ? 1 : 0;
-    cands.sort((x, y) => y.value - x.value || keeps(y) - keeps(x) || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id));
     const used = new Map(Object.entries(inp.taken ?? {})), done = new Map<string, Assignment>();
+    // A candidate's worth with the holders taken so far: a resource someone already holds keeps its shared rate.
+    const worth = (c: Cand) => c.resources.reduce((v, r) => (used.get(r) ?? 0) > 0 ? v * (inp.shared?.[r] ?? 1) : v, c.value);
+    const order = (x: Cand, y: Cand) => worth(y) - worth(x) || keeps(y) - keeps(x) || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id);
     // Donor coins above the reserve, spent as funded candidates take them; a funded account gives nothing.
     // A donor that gives stays free this pass, so the fleet agent can log it in for the trade.
     const pool = new Map((inp.donors ?? []).map(d => [d.name, Math.max(0, d.coins - FUND_RESERVE)])), gave = new Set<string>();
-    for (const c of cands) {
+    // Re-sorted after every assignment: one more holder lowers the worth of the candidates that share its resource.
+    for (const rest = [...cands]; rest.length;) {
+        rest.sort(order);
+        const c = rest.shift()!;
         if (done.has(c.account) || gave.has(c.account) || c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) continue;
+        const value = worth(c);
         let fund: Funding | undefined;
         if (c.coins) {
             const from = [...pool].filter(([n, left]) => n.toLowerCase() !== c.account.toLowerCase() && !done.has(n) && left >= c.coins!).sort((x, y) => y[1] - x[1])[0]?.[0];
@@ -105,7 +115,7 @@ export function plan(inp: Inputs): Assignment[] {
         }
         pool.delete(c.account);
         for (const r of c.resources) used.set(r, (used.get(r) ?? 0) + 1);
-        done.set(c.account, { account: c.account, template: c.template, value: c.value, reason: fund ? `${c.reason}, funded ${c.coins} coins by ${fund.from}` : c.reason, resources: c.resources, ...(fund ? { fund } : {}) });
+        done.set(c.account, { account: c.account, template: c.template, value, reason: fund ? `${c.reason}, funded ${c.coins} coins by ${fund.from}` : c.reason, resources: c.resources, ...(fund ? { fund } : {}) });
     }
     return mine.map(a => done.get(a.name) ?? { account: a.name, value: 0, resources: [], reason: gave.has(a.name) ? 'vacant: gives coins this pass' : 'vacant: no template meets its skills and holdings with a free resource' });
 }
@@ -164,6 +174,13 @@ export function assess(lines: readonly string[]): { retire: boolean; reason: str
 export const knightCoinsPerTick = (thieving: number) => thieving < 55 ? 0 : 18.8 * (50 + 190 * (Math.min(99, thieving) - 1) / 98) / 240;
 export const KNIGHT_SPOTS = ['2652,3318', '2653,3300', '2669,3298', '2671,3313', '2582,3297'];
 export const CHICKEN_PENS = ['3229,3298', '3017,3288', '3187,3277', '3197,3353'];
+// Claim: two farmers can share one knight spot. A pickpocket does not hold the knight: 4 practice bots on the same
+// knights each earned 13.3-15.1 coins per tick (mean 14.7) against the 18.8 model, every run RESULT ok and logged out.
+// Conditions: practice server, goldfarm.ts at its default spot, 3 runs of 600 ticks and one of 9,000. Evidence:
+// research/bot-host.md section 3. Gap: two farmers on one live spot is not measured. KNIGHT_SHARED_RATE is an estimate.
+export const KNIGHT_SHARE = 2, KNIGHT_SHARED_RATE = 0.75;
+export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
+export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 
 // Proven job templates. Rates are estimates from each script's header model; tick-waste discounts them by measurement.
 export function catalogue(): Template[] {
@@ -275,11 +292,12 @@ export function reservedResources(jobs: readonly any[], side: string, paused: Re
 // jobs than the swarm admits parks some for days; a parked job's spot is free for the other sides, and when the job
 // does start, the planner that took the spot sees this side's claim on its next pass and moves its account. fleet-sync
 // writes the claim on every sync, so it never depends on the planner running; scripts/autopilot.ts on every side
-// ignores a claim older than CLAIM_MAX_AGE_MS, so a side that stops syncing releases its spots.
+// ignores a claim older than CLAIM_MAX_AGE_MS, so a side that stops syncing releases its spots. A resource is listed
+// once for each job that holds it, so the other sides count both farmers on a shared knight spot.
 export const CLAIM_MAX_AGE_MS = 2 * 3600_000;
 export function claimFor(jobs: readonly any[], side: string, sideOf: (account: string) => string, now = Date.now(), active: (account: string) => boolean = () => true): { side: string; at: number; resources: string[] } {
     const held = jobs.filter(j => j?.enabled !== false && jobNames(j).length > 0 && jobNames(j).every(a => sideOf(a) === side) && jobNames(j).some(active)).flatMap(jobResources);
-    return { side, at: now, resources: [...new Set(held)].sort() };
+    return { side, at: now, resources: held.sort() };
 }
 
 // A marked job whose account is in `keep` (an owner pause: a stop file) stays as it is, with its enabled and repeat

@@ -59,7 +59,8 @@ export function contentionView(claims: any[], roster: ReadonlyMap<string, Seen &
     const spots: { side: string; resource: string; kind: string; x: number | null; z: number | null; others: string[]; ours: string[] }[] = [];
     for (const c of claims) {
         if (!c || typeof c.side !== 'string' || !Array.isArray(c.resources)) continue;
-        for (const resource of c.resources) {
+        // A shared knight spot is listed once per farmer; the view shows the spot once.
+        for (const resource of new Set(c.resources)) {
             const m = String(resource).match(/^([a-z]+):(\d{3,5}),(\d{3,5})$/);
             if (!m) { spots.push({ side: c.side, resource: String(resource), kind: String(resource).split(':')[0]!, x: null, z: null, others: [], ours: [] }); continue; }
             const x = Number(m[2]), z = Number(m[3]), near = online.filter(([, p]) => p.level === 0 && Math.abs(p.x - x) <= radius && Math.abs(p.z - z) <= radius).map(([n, p]) => p.name ?? n);
