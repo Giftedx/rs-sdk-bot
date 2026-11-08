@@ -7,7 +7,7 @@ import type { SDKConfig } from '../../../vendor/rs-sdk/sdk/types';
 import { loadPathfinding } from './pathcache';
 import { assertLoginAllowed } from './haggisgate';
 import { fleetLeaseAllowsWorker } from './fleet-lease';
-import { acquireFleetSwarmClaim } from './fleet-trade-claim';
+import { acquireFleetSwarmClaim, acquireFleetTradeClaim, type FleetTradeClaim } from './fleet-trade-claim';
 import { mySide } from './fleet';
 import { planLockDir, withPlanWrite } from './plan-lock';
 import { isLocalServer } from './localserver';
@@ -348,12 +348,19 @@ const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 const vendor = (p: string) => join(repoRoot, 'vendor', 'rs-sdk', p);
 let pathfindingReady = false;
 
-export async function connectInProcess(opts: { name: string; password: string; server?: string; members?: boolean; lifecycleRoot?:string; beforeConnect?:()=>void; lockPlan?: boolean; recoverSwarm?: RecoveryConnectionAdmission }): Promise<Session> {
+export type TradeAdmission = {
+    orderId: string;
+    role: FleetTradeClaim['role'];
+    check(server: string): void;
+    prepare(claim: FleetTradeClaim): void;
+};
+
+export async function connectInProcess(opts: { name: string; password: string; server?: string; members?: boolean; lifecycleRoot?:string; beforeConnect?:()=>void; lockPlan?: boolean; recoverSwarm?: RecoveryConnectionAdmission; trade?: TradeAdmission }): Promise<Session> {
     if(opts.lifecycleRoot&&!isLocalServer(opts.server??'localhost:8888'))throw Error('lifecycle root override is local-only');
     const server = opts.server ?? 'localhost:8888';
-    // Trade and registration own their own plan-locked admission. Normal swarm workers
-    // inherit the controller's fence, including authenticated recovery children.
-    const swarm = !isLocalServer(server) && !opts.lockPlan && !!process.env.SWARM_LEASE_HOLDER;
+    const live = !isLocalServer(server);
+    if (!live && opts.trade) throw Error('fleet trade claim requires a live server');
+    const swarm = live && !!process.env.SWARM_LEASE_HOLDER;
     const ticket = assertLoginAllowed(opts.name, Date.now(), process.env, server);
     installGameWebSocketProxy();
     // dom-shim must load before any webclient `#/` module (session.ts:15 does the same).
@@ -376,16 +383,28 @@ export async function connectInProcess(opts: { name: string; password: string; s
         if (swarm && ['stop-swarm', 'stop-' + opts.name, 'stop-' + opts.name.toLowerCase()].some(file => existsSync(join(repoRoot, '.practice', file)))) {
             throw Error('fleet swarm admission paused by stop file');
         }
-        if (swarm && opts.recoverSwarm) assertSpentRecoveryConnection(opts.recoverSwarm, opts.name, server);
+        if (live && opts.recoverSwarm) assertSpentRecoveryConnection(opts.recoverSwarm, opts.name, server);
         opts.beforeConnect?.();
         if (currentTicket) {
             assertWorkerRelease();
             lifecycle.owner = {...lifecycleOwner(), specialistAuthorization: {ticket: currentTicket, mission: process.env.SWARM_MISSION_HASH!}};
         }
+        if (opts.trade) {
+            const {orderId, role} = opts.trade;
+            opts.trade.check(server);
+            const claim = acquireFleetTradeClaim(repoRoot, {account: opts.name, server, side: mySide(), orderId, role});
+            try {
+                opts.trade.check(server);
+                opts.trade.prepare(claim);
+            } catch (error) {
+                claim.release();
+                throw error;
+            }
+        }
     };
     return startInProcessSession(opts, { startSession, sdk: new BotSDK(inProcessSdkConfig(opts)), Actions: BotActions, cacheDir,
-        beforeConnect,planLock:opts.lockPlan||ticket?planLockDir:undefined,lifecycle,
-        sharedAccount:swarm?{root:repoRoot,side:mySide(),recover:!!opts.recoverSwarm}:undefined });
+        beforeConnect,planLock:opts.lockPlan||ticket||opts.trade?planLockDir:undefined,lifecycle,
+        sharedAccount:live&&!opts.trade?{root:repoRoot,side:mySide(),recover:!!opts.recoverSwarm}:undefined });
 }
 
 export type StartSession = (o: any) => Promise<{ client: unknown; stop(): void; stopped: Promise<unknown> }>;
@@ -411,7 +430,9 @@ export async function startInProcessSession(opts: { name: string; password: stri
             ...deps.lifecycle,
             owner: { ...(deps.lifecycle?.owner ?? lifecycleOwner()), sharedClaimNonce: sharedClaim.nonce },
         } : deps.lifecycle;
-        return beginSessionAttempt({ account: opts.name, server: host, members: opts.members, secret: opts.password }, lifecycle);
+        const attempt = beginSessionAttempt({ account: opts.name, server: host, members: opts.members, secret: opts.password }, lifecycle);
+        sharedClaim?.armNetwork();
+        return attempt;
     };
     // Plan-locked callers publish intent before another plan writer may proceed.
     let attempt: SessionAttempt;

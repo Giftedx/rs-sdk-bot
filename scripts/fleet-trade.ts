@@ -11,7 +11,7 @@ import { goTo } from '../packages/core/src/walk';
 import { waitUntil } from '../packages/core/src/ticks';
 import { depositObserved } from '../packages/core/src/deposit';
 import { exactItem } from '../packages/core/src/cargo';
-import { FLEET_DIR, assertSideOwns, mySide } from '../packages/core/src/fleet';
+import { FLEET_DIR } from '../packages/core/src/fleet';
 import { tradePartners } from '../packages/core/src/tradeguard';
 import { jobAccounts, mergedPlan, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { liveLogoutRef } from '../packages/core/src/session-admission';
@@ -21,7 +21,6 @@ import { isLocalServer } from '../packages/core/src/localserver';
 import { meetingTiles } from './coin-courier';
 import type { Session } from '../packages/core/src/inprocess';
 import type { TradeResult } from '../vendor/rs-sdk/sdk/types';
-import { acquireFleetTradeClaim } from '../packages/core/src/fleet-trade-claim';
 import { validOrder, writeTradeReceipt, type Order, type Receipt, type TradeReceipt, type TradeRole } from './fleet-trade-settlement';
 export { validOrder, type Order, type Receipt } from './fleet-trade-settlement';
 
@@ -194,20 +193,14 @@ if (import.meta.main) {
     });
     while (Date.now() < order.start) await Bun.sleep(Math.min(5000, order.start - Date.now()));
     const s = await openBot(account, {
-        admitWithPlanLock: server => {
-            assertTradeAdmission(order, account, server, { receipts });
-            const side = mySide();
-            assertSideOwns(account, side);
-            const claim = acquireFleetTradeClaim(root, { account, server, side, orderId: order.id, role });
-            try { assertTradeAdmission(order, account, server, { receipts }); }
-            catch (error) {
-                // The callback has not returned, so the producer has written no session intent.
-                claim.release();
-                throw error;
-            }
-            prepared = { version: 2, state: 'prepared', id: order.id, account, partner, role, side, server,
-                item: order.item, requested: order.count, claim: claim.nonce, count: 0, ok: false, at: Date.now(), detail: 'trade claimed' };
-            writeTradeReceipt(receipts, prepared);
+        trade: {
+            orderId: order.id, role,
+            check: server => assertTradeAdmission(order, account, server, { receipts }),
+            prepare: claim => {
+                prepared = { version: 2, state: 'prepared', id: order.id, account, partner, role, side: claim.side, server: order.server,
+                    item: order.item, requested: order.count, claim: claim.nonce, count: 0, ok: false, at: Date.now(), detail: 'trade claimed' };
+                writeTradeReceipt(receipts, prepared);
+            },
         },
         onStop: (session, detail) => complete(session, false, detail),
         onSessionEnd: (session, detail) => complete(session, false, detail),
