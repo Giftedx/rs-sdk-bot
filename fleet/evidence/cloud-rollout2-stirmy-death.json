@@ -1,0 +1,36 @@
+{
+ "schema": "live-death-observation/1",
+ "account": "Stirmypot",
+ "death": {
+  "record": ".practice/ticks/shop-buyer/stirmypot-1794170593454.ticks.ndjson.gz",
+  "tick": 412,
+  "player": {
+   "name": "Stirmypot",
+   "combatLevel": 17,
+   "hp": 0,
+   "maxHp": 10,
+   "x": 5184,
+   "z": 2624,
+   "worldX": 2848,
+   "worldZ": 3476,
+   "level": 0,
+   "runEnergy": 100,
+   "runWeight": 0,
+   "animId": 424,
+   "spotanimId": -1,
+   "combat": {
+    "inCombat": true,
+    "targetIndex": -1,
+    "targetType": "none",
+    "lastDamageTick": 412
+   },
+   "isDead": true,
+   "lifeId": 1,
+   "respawnCount": 0,
+   "lastDeathTick": 412
+  }
+ },
+ "hold": "Owner stop retained; combat and death recovery not qualified; no restart",
+ "cause": "Failed courier combat admission followed by unsafe child because old chain continued",
+ "limitation": "No recovered items or safe recovery claimed"
+}

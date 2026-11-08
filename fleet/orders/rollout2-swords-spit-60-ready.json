@@ -1,0 +1,22 @@
+{
+ "id": "rollout2-swords-spit-60-ready",
+ "server": "rs-sdk-demo.fly.dev",
+ "to": "Spitroaster",
+ "item": "Coins",
+ "count": 60,
+ "start": 1794171881682,
+ "end": 1794173681682,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "from": "Swordswallow"
+}
