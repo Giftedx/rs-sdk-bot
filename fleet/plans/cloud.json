@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794167611725,
+ "at": 1794167687316,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -88,16 +88,18 @@
   },
   {
    "account": "YewGotWood",
-   "script": "scripts/quest-sweep.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "runemysteries"
+    "scripts/gather-yews.ts REGION=draynor TREE=normal MAX_TRIPS=1 BANK_AT=25 CAP=1800 MAX_MAKE=25",
+    "scripts/firemaking-order.ts TARGET_LEVEL=30 MAX_LOGS=25 CAP=1000 TOOL_BUDGET=0",
+    "scripts/quest-sweep.ts seaslug CAP=2400"
    ],
    "env": {
-    "CAP": "2400"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Rune Mysteries unlock for future essence/runecraft supply",
+   "goal": "Owned logs -> Firemaking 30 -> Sea Slug Fishing unlock chain; distinct Draynor normal grove",
    "role": "quests"
   },
   {
