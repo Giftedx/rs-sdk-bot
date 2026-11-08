@@ -1,6 +1,6 @@
 {
  "schema": "cloud-pvp-readiness-gates/1",
- "at": 1794176335949,
+ "at": 1794177507237,
  "controllerPid": 61575,
  "source": "70fcbce85350659ad82496060e9c3e4f992c91a0",
  "releasedWorker": "scripts/pvp-standby.ts stage|verify",
@@ -80,8 +80,9 @@
    "attemptId": "1794174439329-0000067369-0000000001",
    "result": "ok ticks=91 boughtTotal=0 bankedTotal=0 bankTrips=2 shopTrips=1 coinsLeft=1300 spentTotal=0 coinReserve=300 maxSpend=200 maxItems=1 stop=stock-wait targetMet=0 noBuyTicks=50 noBuyLimit=50",
    "missing": [
-    "Released single-stage training entry and exact Porksword source-bound native proof",
-    "Named bounded cloud PvP consumer/assignment; readiness worker owns qualification"
+    "PR443 integrated after required checks",
+    "Installed ranged-train capability release matches5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178",
+    "Fresh incumbent launch admission and worker-observed cheese stock/price"
    ],
    "logout": {
     "state": "confirmed",
@@ -126,31 +127,23 @@
    "accountClaimPhase": "released",
    "controllerEnd": "done after 1 runs",
    "ownerStopPresent": false,
-   "stageDecision": "Held pending separable source/release-matched kit/travel handoff; preserve Catherby fixture start; no live attempt",
+   "stageDecision": "Preserve exact Catherby fixture; await integrated matched Ranged prerequisite. No simultaneous stage-only job.",
    "reportedCombinedFixture": {
-    "trainingAccepted": false,
+    "trainingAccepted": true,
     "ranged": 7,
     "hp": 11,
-    "shots": 0,
-    "arrowDebits": 9,
-    "arrowRecoveries": 7,
-    "netArrowLoss": 2,
-    "ammoAcceptanceWaived": false,
-    "reportedPriorTravel": {
-     "cheeseBought": 2,
-     "cheeseGP": 8,
-     "faresGP": 60,
-     "destination": "Varrock East",
-     "fullHP": true
-    },
-    "proofLevel": "Owner-reported combined fixture; standalone released stage proof not visible"
-   },
-   "requiredStageHandoff": [
-    "Released entry/commit and capability release hash for stage-only command",
-    "Standalone native receipt from Porksword-equivalent Catherby start with exact stats/kit and preserved assets",
-    "Observed2cheese,+68GP total debit (8shop+60fares),Varrock East/fullHP and matching confirmed producer logout",
-    "Bounded stage-only arguments, no combat or Wilderness ingress"
-   ]
+    "shots": 11,
+    "arrowRecoveries": 10,
+    "netArrowLoss": 1,
+    "gpSpent": 68,
+    "gpRetained": 8284,
+    "assetsPreserved": true,
+    "logoutConfirmed": true,
+    "engineOffline": true,
+    "source": "PR443 head467f049f",
+    "proof": "research/porksword-ranged7-proof.json",
+    "ammoAcceptanceWaived": false
+   }
   }
  ],
  "sharedQualificationReceipts": [],
@@ -164,6 +157,6 @@
   "MeatNTwoVeg failed essence worker"
  ],
  "localReservations": "Steelrod and local brackets excluded",
- "decision": "No live PvP stage admitted: source and separable native receipts absent; training acceptance remains failed. Controller61575 and all holds retained.",
+ "decision": "Native Ranged1to7 qualification passes at PR443 head467f049f/release5965d85a68a5f3b044627dd96127ad9c2c60b829294daac186767adabcf4a178. Live remains held: PR is draft/unintegrated and installed pin differs. Exact disabled job prepared; one incumbent controller only.",
  "practiceOwnership": "Supply practice stack is down; live readiness worker owns PvP qualification. Controller starts no competing PvP practice."
 }

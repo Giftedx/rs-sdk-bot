@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794176149711,
+ "at": 1794177508540,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -27,10 +27,10 @@
     "TREE": "yew",
     "MAX_TRIPS": "1"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": false,
    "repeat": false,
-   "goal": "Final10 yews for Haggis23-yew demand,13banked; live5+8 pilots clean, actual Seers grove and steelaxe equipped; finite1600ticks one trip.20replacementwool reserved for held Stirmypot",
+   "goal": "23yew logs banked for Haggis,20replacementwool banked for held Stirmypot; clean logout, consumer handoff awaits admission. No repeat.",
    "role": "supply"
   },
   {
