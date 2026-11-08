@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794167838761,
+ "at": 1794168055488,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -20,28 +20,29 @@
    "account": "TossTheCaber",
    "script": "scripts/quest-sweep.ts",
    "args": [
-    "sheepherder"
+    "haunted"
    ],
    "env": {
     "CAP": "2400"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "New live Sheep Herder coverage; funded protective kit and plague sheep quest",
+   "goal": "Ernest quest completion and 300 earned coins; distinct manor route, no Sheep Herder retry",
    "role": "quests"
   },
   {
    "account": "Swordswallow",
-   "script": "scripts/quest-sweep.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "cog"
+    "scripts/foodcourier.ts OUTBOUND_ONLY=1 CAP=1800",
+    "scripts/fleet-trade.ts rollout2-swords-yew-300"
    ],
    "env": {
-    "CAP": "2400"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "New live Clock Tower coverage; 300-coin quest reward funds the previous 118-coin shortfall",
+   "goal": "Deliver 300 earned quest coins to YewGotWood at Draynor for the admitted Sea Slug input shortfall",
    "role": "quests"
   },
   {
@@ -73,33 +74,28 @@
   },
   {
    "account": "MeatNTwoVeg",
-   "script": "scripts/chain.ts",
+   "script": "scripts/quest-cook-job.ts",
    "args": [
-    "scripts/collect-wool.ts CAP=2400 MAX_TRIPS=3",
-    "scripts/quest-sweep.ts sheep CAP=1600"
+    "hetty"
    ],
    "env": {
-    "ROUNDS": "1"
+    "CAP": "6000"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "New live Sheep Shearer coverage using one owned wool batch",
+   "goal": "Witch potion Magic unlock using the fresh route proved on Spitroaster and Stirmypot",
    "role": "quests"
   },
   {
    "account": "YewGotWood",
-   "script": "scripts/chain.ts",
+   "script": "scripts/fleet-trade.ts",
    "args": [
-    "scripts/gather-yews.ts REGION=draynor TREE=normal MAX_TRIPS=1 BANK_AT=25 CAP=1800 MAX_MAKE=25",
-    "scripts/firemaking-order.ts TARGET_LEVEL=30 MAX_LOGS=25 CAP=1000 TOOL_BUDGET=0",
-    "scripts/quest-sweep.ts seaslug CAP=2400"
+    "rollout2-swords-yew-300"
    ],
-   "env": {
-    "ROUNDS": "1"
-   },
+   "env": {},
    "enabled": true,
    "repeat": false,
-   "goal": "Owned logs -> Firemaking 30 -> Sea Slug Fishing unlock chain; distinct Draynor normal grove",
+   "goal": "Receive and bank 300 owned coins for the Sea Slug input shortfall; quest resumes only after funding receipt",
    "role": "quests"
   },
   {
@@ -118,17 +114,31 @@
   },
   {
    "account": "Stirmypot",
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "doric"
+   ],
+   "env": {
+    "CAP": "2400"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "New live Doric coverage: mine six clay then four copper to unlock iron; +Mining quest reward",
+   "role": "quests"
+  },
+  {
+   "account": "BoneToPick",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/measure/tutorial.ts",
-    "scripts/quest-cook-job.ts hetty CAP=6000"
+    "scripts/quest-sweep.ts priest CAP=2400"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Proved fresh Witch potion first job: unlock Magic from gathered ingredients; dedicated Port Sarim/Rimmington resources",
+   "goal": "Proved fresh Restless Ghost first job; Prayer unlock for later quest chain; separate Lumbridge/ghost basement resources",
    "role": "quests"
   }
  ]
