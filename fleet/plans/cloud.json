@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794168339116,
+ "at": 1794168426789,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -32,15 +32,11 @@
   },
   {
    "account": "Swordswallow",
-   "script": "scripts/chain.ts",
+   "script": "scripts/fleet-trade.ts",
    "args": [
-    "scripts/walk-to.ts 2655 3283",
-    "scripts/foodcourier.ts OUTBOUND_ONLY=1 CAP=1800",
-    "scripts/fleet-trade.ts rollout2-swords-yew-300"
+    "rollout2-swords-yew-300-v2"
    ],
-   "env": {
-    "ROUNDS": "1"
-   },
+   "env": {},
    "enabled": true,
    "repeat": false,
    "goal": "Deliver 300 earned quest coins to YewGotWood at Draynor for the admitted Sea Slug input shortfall",
@@ -77,26 +73,26 @@
   },
   {
    "account": "MeatNTwoVeg",
-   "script": "scripts/quest-cook-job.ts",
+   "script": "scripts/quest-sweep.ts",
    "args": [
-    "hetty"
+    "doric"
    ],
    "env": {
-    "CAP": "6000"
+    "CAP": "2400"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Witch potion Magic unlock using the fresh route proved on Spitroaster and Stirmypot",
+   "goal": "Doric Mining unlock complements Sheep Shearer Crafting for Elemental Workshop entry",
    "role": "quests"
   },
   {
    "account": "YewGotWood",
    "script": "scripts/fleet-trade.ts",
    "args": [
-    "rollout2-swords-yew-300"
+    "rollout2-swords-yew-300-v2"
    ],
    "env": {},
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
    "goal": "Receive and bank 300 owned coins for the Sea Slug input shortfall; quest resumes only after funding receipt",
    "role": "quests"
@@ -106,7 +102,7 @@
    "script": "scripts/gather-essence.ts",
    "args": [],
    "env": {
-    "CAP": "900",
+    "CAP": "450",
     "BANK_AT": "27"
    },
    "enabled": true,
@@ -131,17 +127,16 @@
   },
   {
    "account": "BoneToPick",
-   "script": "scripts/chain.ts",
+   "script": "scripts/quest-cook-job.ts",
    "args": [
-    "scripts/measure/tutorial.ts",
-    "scripts/quest-sweep.ts priest CAP=2400"
+    "hetty"
    ],
    "env": {
-    "ROUNDS": "1"
+    "CAP": "6000"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "Proved fresh Restless Ghost first job; Prayer unlock for later quest chain; separate Lumbridge/ghost basement resources",
+   "goal": "Witch potion Magic unlock after Restless Ghost; dedicated freed Port Sarim/Rimmington route",
    "role": "quests"
   }
  ]
