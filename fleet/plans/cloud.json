@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794173986587,
+ "at": 1794174433843,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -18,16 +18,18 @@
   },
   {
    "account": "TossTheCaber",
-   "script": "scripts/generated/woodcutting.ts",
-   "args": [],
-   "env": {
-    "TARGET": "60",
-    "CAP": "1200"
-   },
+   "script": "scripts/walk-to.ts",
+   "args": [
+    "3092",
+    "3266",
+    "0",
+    "--ground"
+   ],
+   "env": {},
    "enabled": true,
    "standing": false,
    "repeat": false,
-   "goal": "Native-proved WC56-to60 unlock for Haggis23yew logs; actual340coin tool budget prevents pickpocketing; Draynor/northern Lumbridge route, no White Wolf; finite cap1200",
+   "goal": "Observed WC60 success, steel axe held; northern Draynor bank staging for proved boats to Seers5-yew pilot for Haggis23-yew demand",
    "role": "supply"
   },
   {
@@ -63,22 +65,22 @@
    "script": "scripts/shop-buyer.ts",
    "args": [
     "catherby",
-    "500"
+    "300"
    ],
    "env": {
     "ITEMS": "rune",
-    "MAX_ITEMS": "2",
-    "MAX_SPEND": "400",
+    "MAX_ITEMS": "1",
+    "MAX_SPEND": "200",
     "COIN_RESERVE": "300",
-    "FLOAT": "700",
+    "FLOAT": "500",
     "STOCK_TARGET": "1789",
     "BANK_PACK": "1",
-    "NO_BUY_TICKS": "150"
+    "NO_BUY_TICKS": "50"
    },
-   "enabled": false,
+   "enabled": true,
    "standing": false,
    "repeat": false,
-   "goal": "Idle: Catherby shelf empty, bounded buyer banked0/spent0 with confirmed logout; funds ready, wait for actual stock before retry",
+   "goal": "One-tip bounded replenished-shelf probe for Haggis1786-rune-arrowtip gap; proved local Catherby buyer, own funds ready; max200coins, no funding job and no repeat on stock wait",
    "role": "supply"
   },
   {
@@ -92,9 +94,9 @@
     "MAX_TRIPS": "1",
     "ORE_PROFILE": "mixed"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
-   "goal": "Single9-ore bounded pilot for Haggis2iron-bar inputs; require actual iron bank delta, prior4copper2tin did not close gap; proved combat18 Varrock mine route, no repeat",
+   "goal": "Idle: second mixed pilot banked6copper3tin, zero iron; exact2iron-bar gap remains. No third mixed attempt; targeted method needed",
    "role": "supply"
   },
   {
@@ -147,17 +149,17 @@
   },
   {
    "account": "BoneToPick",
-   "script": "scripts/chain.ts",
+   "script": "scripts/gather-spawn.ts",
    "args": [
-    "scripts/walk-to.ts 3330 3280 0 --ground",
-    "scripts/gather-spawn.ts 1937 1 TICKS=600"
+    "1937",
+    "8"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TICKS": "900"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "Bank Haggis Monk Friend exact one-jug-of-water shortage from Al Kharid; explicit eastern staging, no White Wolf route",
+   "goal": "Bank8 more jug-of-water inputs for wine-stock-order;1200wine bill and44 shared grapes exist; proved Al Kharid source, original1jug Monk Friend reserve retained; production not claimed",
    "role": "supply"
   },
   {
