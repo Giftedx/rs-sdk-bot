@@ -1,24 +1,24 @@
 {
  "side": "claude-cloud-3",
- "at": 1794179789699,
+ "at": 1794180392253,
  "jobs": [
   {
    "account": "Kiltlifter",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2653,3300",
+    "KNIGHT_SPOT": "2582,3297",
     "TICKS": "9000"
    },
    "enabled": false,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
+   "goal": "goldfarm knights at 2582,3297",
    "role": "thieving",
-   "template": "goldfarm@2653,3300",
+   "template": "goldfarm@2582,3297",
    "autopilot": "claude-cloud-3",
    "resources": [
-    "knight:2653,3300"
+    "knight:2582,3297"
    ]
   },
   {
@@ -45,18 +45,18 @@
    "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
-    "PEN": "3187,3277",
+    "PEN": "3197,3353",
     "TICKS": "3000"
    },
    "enabled": false,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
+   "goal": "feathers at the chicken pen 3197,3353",
    "role": "helper",
-   "template": "feathers@3187,3277",
+   "template": "feathers@3197,3353",
    "autopilot": "claude-cloud-3",
    "resources": [
-    "pen:3187,3277"
+    "pen:3197,3353"
    ]
   },
   {
