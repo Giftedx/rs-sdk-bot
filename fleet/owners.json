@@ -213,6 +213,11 @@
    "side": "cloud-kit",
    "server": "rs-sdk-demo.fly.dev",
    "reservation": "task-df056997-62e6-48f2-9cfa-be702419d3e3"
+  },
+  "Heavyload": {
+   "side": "cloud",
+   "server": "rs-sdk-demo.fly.dev",
+   "reservation": "task-49808733-8bca-4f45-8a36-a818d43b73d2"
   }
  }
 }
