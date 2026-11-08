@@ -1,6 +1,6 @@
 {
  "side": "cloud",
- "at": 1794180316825,
+ "at": 1794180649206,
  "jobs": [
   {
    "account": "BraveHardon",
@@ -20,17 +20,17 @@
    "account": "TossTheCaber",
    "script": "scripts/gather-yews.ts",
    "args": [
-    "1200",
-    "3"
+    "1600",
+    "10"
    ],
    "env": {
     "TREE": "maple",
     "MAX_TRIPS": "1"
    },
-   "enabled": false,
+   "enabled": true,
    "standing": false,
    "repeat": false,
-   "goal": "3maples banked toward Haggis13-maple gap;23yews20wool banked,cleanlogout; delivery waits eligible recipient. New release needs requalification before next batch.",
+   "goal": "Bank remaining10maples for Haggis13maple demand;3livebanked, current released-pin native3banked confirmed; one1600tick Seers trip.23yews20wool remain banked pending eligible recipient.",
    "role": "supply"
   },
   {
@@ -63,26 +63,19 @@
   },
   {
    "account": "Porksword",
-   "script": "scripts/ranged-train.ts",
-   "args": [
-    "7",
-    "2200"
-   ],
+   "script": "scripts/magic-order.ts",
+   "args": [],
    "env": {
-    "MIN_ARROWS": "3",
-    "BUY_ARROWS": "0",
-    "MAX_SPEND": "200",
-    "COIN_RESERVE": "8000",
-    "AMMO": "25",
-    "FOOD": "2",
-    "FOOD_ID": "329",
-    "KILLS_PER_TRIP": "3",
-    "MAX_TRIPS": "3"
+    "TARGET_LEVEL": "7",
+    "MAX_CASTS": "5",
+    "CAP": "600",
+    "RUNE_BUDGET": "0",
+    "CASH_RESERVE": "8284",
+    "RANDOM_EVENTS": "0"
    },
    "enabled": false,
-   "standing": false,
    "repeat": false,
-   "goal": "Qualified Ranged prerequisite complete: Ranged7 HP11,13shots10recovered3lost,8284GP banked,22bronze arrows,2cheese,3rune tips intact, equipment restored; clean logout. Parked: Magic7/full bracket/kit/Wilderness remain held; no second run.",
+   "goal": "Magic7 HP11 reached in4casts,0GP; liveHPxp+32to1207 differs native0HPxp, preserve exact state for next qualification. Clean logout,claimreleased; no repeat, Wilderness held.",
    "role": "pvp-prerequisite"
   },
   {

@@ -1,0 +1,429 @@
+{
+ "schema": "cloud-porksword-magic7-live/1",
+ "at": 1794180647982,
+ "source": "cc4e77cc911a2e3a90e84a4146b86133695682e6",
+ "pin": "a084f4b6a88cd7fd83f065ac5bc318881dd91819c08baea1d1f5e759e44eb80c",
+ "account": "Porksword",
+ "attemptId": "1794180339474-0000074810-0000000001",
+ "record": ".practice/ticks/magic-order/porksword-1794180345985.ticks.ndjson.gz",
+ "recordedLiveTickPair": [
+  {
+   "tick": 1,
+   "position": {
+    "x": 3252,
+    "z": 3420,
+    "level": 0
+   },
+   "hp": 11,
+   "magic": 1,
+   "magicXp": 0,
+   "hpXp": 1175
+  },
+  {
+   "tick": 107,
+   "position": {
+    "x": 3252,
+    "z": 3420,
+    "level": 0
+   },
+   "hp": 11,
+   "magic": 7,
+   "magicXp": 600,
+   "hpXp": 1207
+  }
+ ],
+ "workerResult": {
+  "ok": true,
+  "stop": "target",
+  "target": 7,
+  "level": 7,
+  "casts": 4,
+  "runesUsed": {
+   "air": 4,
+   "mind": 4
+  },
+  "bought": {
+   "air": 0,
+   "mind": 0
+  },
+  "coinsSpent": 0,
+  "magicXpGained": 600,
+  "hpXpGained": 32,
+  "hpMin": 10,
+  "eats": 0,
+  "ticks": 105,
+  "banked": {
+   "air": 21,
+   "mind": 11,
+   "coins": 0
+  }
+ },
+ "checks": {
+  "target": true,
+  "release": true,
+  "runes": true,
+  "zeroGP": true,
+  "protectedAssets": true,
+  "noDeath": true,
+  "otherSkillsIncludingHPUnchanged": false,
+  "logout": true
+ },
+ "nativeDifference": {
+  "nativeHPxpGain": 0,
+  "liveHPxpGain": 32,
+  "nativeCasts": 5,
+  "liveCasts": 4
+ },
+ "changedSkills": [
+  {
+   "name": "Hitpoints",
+   "before": {
+    "name": "Hitpoints",
+    "level": 11,
+    "currentLevel": 11,
+    "xp": 1175
+   },
+   "after": {
+    "name": "Hitpoints",
+    "level": 11,
+    "currentLevel": 11,
+    "xp": 1207
+   }
+  },
+  {
+   "name": "Magic",
+   "before": {
+    "name": "Magic",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   "after": {
+    "name": "Magic",
+    "level": 7,
+    "currentLevel": 7,
+    "xp": 600
+   }
+  }
+ ],
+ "final": {
+  "position": {
+   "x": 3252,
+   "z": 3420,
+   "level": 0
+  },
+  "hp": {
+   "now": 11,
+   "max": 11
+  },
+  "combat": 6,
+  "skills": [
+   {
+    "name": "Attack",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Defence",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Strength",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Hitpoints",
+    "level": 11,
+    "currentLevel": 11,
+    "xp": 1207
+   },
+   {
+    "name": "Ranged",
+    "level": 7,
+    "currentLevel": 7,
+    "xp": 600
+   },
+   {
+    "name": "Prayer",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Magic",
+    "level": 7,
+    "currentLevel": 7,
+    "xp": 600
+   },
+   {
+    "name": "Cooking",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Woodcutting",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Fletching",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Fishing",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Firemaking",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Crafting",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Smithing",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Mining",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Herblore",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Agility",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Thieving",
+    "level": 86,
+    "currentLevel": 86,
+    "xp": 422652
+   },
+   {
+    "name": "Stat18",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Stat19",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   },
+   {
+    "name": "Runecraft",
+    "level": 1,
+    "currentLevel": 1,
+    "xp": 0
+   }
+  ],
+  "bank": [
+   {
+    "id": 995,
+    "baseId": 995,
+    "name": "Coins",
+    "count": 8284
+   },
+   {
+    "id": 1351,
+    "baseId": 1351,
+    "name": "Bronze axe",
+    "count": 1
+   },
+   {
+    "id": 590,
+    "baseId": 590,
+    "name": "Tinderbox",
+    "count": 1
+   },
+   {
+    "id": 303,
+    "baseId": 303,
+    "name": "Small fishing net",
+    "count": 1
+   },
+   {
+    "id": 315,
+    "baseId": 315,
+    "name": "Shrimps",
+    "count": 1
+   },
+   {
+    "id": 2309,
+    "baseId": 2309,
+    "name": "Bread",
+    "count": 5
+   },
+   {
+    "id": 1265,
+    "baseId": 1265,
+    "name": "Bronze pickaxe",
+    "count": 1
+   },
+   {
+    "id": 1205,
+    "baseId": 1205,
+    "name": "Bronze dagger",
+    "count": 1
+   },
+   {
+    "id": 1277,
+    "baseId": 1277,
+    "name": "Bronze sword",
+    "count": 1
+   },
+   {
+    "id": 1171,
+    "baseId": 1171,
+    "name": "Wooden shield",
+    "count": 1
+   },
+   {
+    "id": 555,
+    "baseId": 555,
+    "name": "Water rune",
+    "count": 6
+   },
+   {
+    "id": 557,
+    "baseId": 557,
+    "name": "Earth rune",
+    "count": 4
+   },
+   {
+    "id": 559,
+    "baseId": 559,
+    "name": "Body rune",
+    "count": 2
+   },
+   {
+    "id": 1893,
+    "baseId": 1893,
+    "name": "2/3 cake",
+    "count": 7
+   },
+   {
+    "id": 1901,
+    "baseId": 1901,
+    "name": "Chocolate slice",
+    "count": 7
+   },
+   {
+    "id": 1927,
+    "baseId": 1927,
+    "name": "Bucket of milk",
+    "count": 1
+   },
+   {
+    "id": 1931,
+    "baseId": 1931,
+    "name": "Pot",
+    "count": 1
+   },
+   {
+    "id": 1944,
+    "baseId": 1944,
+    "name": "Egg",
+    "count": 1
+   },
+   {
+    "id": 44,
+    "baseId": 44,
+    "name": "Rune arrowtips",
+    "count": 3
+   },
+   {
+    "id": 1895,
+    "baseId": 1895,
+    "name": "Slice of cake",
+    "count": 3
+   },
+   {
+    "id": 526,
+    "baseId": 526,
+    "name": "Bones",
+    "count": 2
+   },
+   {
+    "id": 2138,
+    "baseId": 2138,
+    "name": "Raw chicken",
+    "count": 2
+   },
+   {
+    "id": 1985,
+    "baseId": 1985,
+    "name": "Cheese",
+    "count": 2
+   },
+   {
+    "id": 314,
+    "baseId": 314,
+    "name": "Feather",
+    "count": 20
+   },
+   {
+    "id": 882,
+    "baseId": 882,
+    "name": "Bronze arrow",
+    "count": 22
+   },
+   {
+    "id": 841,
+    "baseId": 841,
+    "name": "Shortbow",
+    "count": 1
+   },
+   {
+    "id": 556,
+    "baseId": 556,
+    "name": "Air rune",
+    "count": 21
+   },
+   {
+    "id": 558,
+    "baseId": 558,
+    "name": "Mind rune",
+    "count": 11
+   }
+  ],
+  "inventory": [],
+  "equipment": []
+ },
+ "logout": {
+  "state": "confirmed",
+  "attemptId": "1794180339474-0000074810-0000000001",
+  "at": 1794180388632,
+  "claim": "released"
+ },
+ "wildernessHeld": true,
+ "decision": "Target Magic7/HP11 and rune/GP/assets/logout passed. Native no-HP-XP condition differs live (+32); parked, no repeat, next qualification must bind exact HPXP1207 and MagicXP600."
+}
