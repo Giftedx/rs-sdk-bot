@@ -52,6 +52,9 @@ export function recoveryProposal(side: string, account: string, endedAt: number,
 }
 
 // The folder that receives the coordinator's parked jobs and stop file after a release.
+// The session-lifecycle root that readLogoutProof reads (packages/core/src/session-lifecycle.ts DEFAULT_LIFECYCLE_ROOT).
+export const lifecycleRoot = (root: string) => join(root, '.practice', 'session-lifecycle');
+
 export function archiveDir(root: string, account: string, now: number): string {
     return join(root, '.practice', 'coordinator', 'release-archive', `${stamp(now)}-${account.toLowerCase()}`);
 }
@@ -77,7 +80,7 @@ async function main(root: string, dry: boolean): Promise<number> {
     for (const lower of accounts) {
         const name = [...ended.keys()].find(n => n.toLowerCase() === lower) ?? lower;
         if (queued(name)) { log(`${name}: recovery already queued`); return 0; }
-        const proof = readLogoutProof(name, LIVE_SERVER, { root });
+        const proof = readLogoutProof(name, LIVE_SERVER, { root: lifecycleRoot(root) });
         if (proof.state !== 'held') continue;
         // A live worker refreshes its status every few seconds; skip it before reading the claim ref from origin.
         const status = readJson(join(root, '.practice', 'status', `${name}.json`), null);
@@ -103,7 +106,7 @@ async function main(root: string, dry: boolean): Promise<number> {
             if (task?.status === 'failed' || Date.now() > deadline) { log(`${target.account}: recovery ${task?.status ?? 'timed out'} (${runId}); no retry`); return 1; }
             await Bun.sleep(5000);
         }
-        const proof = readLogoutProof(target.account, LIVE_SERVER, { root });
+        const proof = readLogoutProof(target.account, LIVE_SERVER, { root: lifecycleRoot(root) });
         log(`${target.account}: recovery succeeded (${runId}); logout proof ${proof.state}`);
         if (proof.state !== 'confirmed') return 1;
     }

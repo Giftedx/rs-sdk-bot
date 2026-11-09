@@ -1,5 +1,7 @@
 import { expect, test } from 'bun:test';
-import { archiveDir, eligibility, parkedAccounts, recoveryProposal, type ClaimView } from './cloud-recover';
+import { join } from 'node:path';
+import { archiveDir, eligibility, lifecycleRoot, parkedAccounts, recoveryProposal, type ClaimView } from './cloud-recover';
+import { DEFAULT_LIFECYCLE_ROOT } from '../packages/core/src/session-lifecycle';
 import type { LogoutProof } from '../packages/core/src/session-lifecycle';
 
 const held: LogoutProof = { state: 'held', account: 'kiltlifter', server: 'rs-sdk-demo.fly.dev', domain: 'live', attemptId: 'a', reason: 'disconnected' };
@@ -55,4 +57,10 @@ test('only disabled coordinator-owned account jobs count as parked', () => {
         { account: 'SporranDip', enabled: false },
         { accounts: ['A'], coordinatorOwner: 'coordinator', enabled: false },
     ])).toEqual(['Kiltlifter']);
+});
+
+test('logout proofs are read from the session-lifecycle directory under the checkout', () => {
+    // readLogoutProof's root is the lifecycle directory, not the checkout; a checkout root reads every proof as none.
+    expect(lifecycleRoot(join(import.meta.dir, '..'))).toBe(DEFAULT_LIFECYCLE_ROOT);
+    expect(lifecycleRoot('/r')).toBe('/r/.practice/session-lifecycle');
 });
