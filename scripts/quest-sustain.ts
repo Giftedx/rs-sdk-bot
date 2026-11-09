@@ -8,7 +8,10 @@ import {waitUntil,type TickSource} from '../packages/core/src/ticks';
 // MIT notice: quest-sustain.NOTICE.txt. Values come from our pinned content, not modern OSRS.
 type FoodDefinition={heal:number;next?:number};
 type FoodItem={id:number;slot:number;count:number;optionsWithIndex?:{text:string;opIndex:number}[]};
-type FoodPolicy={food:readonly number[];eatAt:number;reserved?:Readonly<Record<number,number>>};
+type FoodPolicy={food:readonly number[];eatAt:number|((maxHp:number)=>number);reserved?:Readonly<Record<number,number>>};
+// A quest with no eat level of its own eats at 60% of its maximum, at most 40. Eating delays the next attack, so a fixed 40
+// on a 40-Hitpoints account eats at every hit and loses the fight: Pirate's Treasure never killed its gardener.
+export const defaultEatAt=(maxHp:number)=>Math.min(40,Math.max(10,Math.floor(maxHp*0.6)));
 let definitions:Map<number,FoodDefinition>|undefined;
 export function questFoodDefinitions():ReadonlyMap<number,FoodDefinition>{
  if(definitions)return definitions;
@@ -34,7 +37,7 @@ export function questFoodDefinitions():ReadonlyMap<number,FoodDefinition>{
 
 export function selectQuestFood(state:any,policy:FoodPolicy){
  const skill=state?.skills?.find((s:any)=>s.name==='Hitpoints'),hp=skill?.level,max=skill?.baseLevel;
- if(!Number.isFinite(hp)||!Number.isFinite(max)||hp<=0||max<=0||hp>=max||hp>policy.eatAt)return null;
+ if(!Number.isFinite(hp)||!Number.isFinite(max)||hp<=0||max<=0||hp>=max||hp>(typeof policy.eatAt==='function'?policy.eatAt(max):policy.eatAt))return null;
  const defs=questFoodDefinitions(),allowed=new Set<number>();
  for(const id of policy.food){let current:number|undefined=id;const seen=new Set<number>();while(current!==undefined&&!seen.has(current)&&defs.has(current)){seen.add(current);allowed.add(current);current=defs.get(current)?.next;}}
  const inventory:FoodItem[]=state?.inventory??[],counts=new Map<number,number>();
