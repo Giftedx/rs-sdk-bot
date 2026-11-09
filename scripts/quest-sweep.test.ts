@@ -464,6 +464,53 @@ test('Fishing Contest reaches the west dwarf from the retained bank endpoint wit
  }finally{clearInterval(timer);}
 },30000);
 
+// ballspinner.log:5017-5024: from the plank spawn at 3291,3652 the far walk stopped at 2790,3502, the client refused the
+// straight fallback click to 2779,3491, and walkFar found no route to 2439,3187. Each leg here is planned as
+// sessionWalker plans it, on pinned collision with the combat-19 account's deadly ground closed.
+test('Observatory entry east of the closed pass takes Port Sarim boats and the pinned Ardougne path, never walkFar',async()=>{
+ const grid=await import('../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
+ const {guardWalk}=await import('../packages/core/src/danger');
+ const weak={skills:{attack:37,strength:1,defence:1,hitpoints:26,ranged:1,magic:1,prayer:1},items:[],counts:{}} as unknown as import('../packages/core/src/world').Account;
+ const start=presetFor('itgronigen').position,karamja=new Set([...KARAMJA,[2772,3231]].map(([x,z])=>`${x},${z}`));
+ expect(start).toEqual({level:0,x:2439,z:3187});
+ for(const entry of [{x:2790,z:3502},{x:3291,z:3652}]){
+  let tick=0,coins=116,player={worldX:entry.x,worldZ:entry.z,level:0};
+  const listeners=new Set<()=>void>(),boats:string[]=[],clicks:{x:number;z:number}[]=[];
+  const s={sdk:{getState:()=>({player,inventory:[{id:995,count:coins}]})},tick:()=>tick,
+   onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);}} as unknown as Session;
+  const deps:PathDeps={pos:()=>({x:player.worldX,z:player.worldZ,level:player.level}),onTick:s.onTick,locs:()=>[],
+   interactLoc:()=>{throw Error('unexpected interaction');},
+   plan:(level,from,to)=>{
+    const path=guardWalk(grid as never,weak,{...from,level},{...to,level},32,()=>findLongPath(level,from.x,from.z,to.x,to.z));
+    // An empty or short plan is the straight-line fallback that the client refused at 2779,3491. The courier's
+    // Karamja corridor keeps its proven straight clicks (2850,3175 and 2772,3231 plan empty without the guard too).
+    // The reception tile 2439,3187 is itself blocked; its path ends beside it at 2440,3187.
+    const end=path.at(-1);
+    if(!karamja.has(`${to.x},${to.z}`))expect(end&&Math.max(Math.abs(end.x-to.x),Math.abs(end.z-to.z))).toBeLessThanOrEqual(1);
+    return path;
+   },
+   walk:(x,z)=>{clicks.push({x,z});player.worldX=x;player.worldZ=z;}};
+  const world={route:()=>{throw Error('walkFar must not plan the Observatory leg');},blockedDoors:()=>[]};
+  const sail=(async(_s,legs)=>{
+   const leg=legs[0]!;if(leg.kind!=='travel')throw Error('not travel');
+   boats.push(leg.travel.id);coins-=leg.travel.coins;player={worldX:leg.to.x,worldZ:leg.to.z,level:leg.to.level};return{ok:true,ticks:0};
+  }) as typeof import('../packages/core/src/walk').walkRoute;
+  const timer=setInterval(()=>{tick++;for(const cb of listeners)cb();},1);
+  try{await reachStart(s,world,start,'itgronigen',async()=>deps,sail,()=>weak);}
+  finally{clearInterval(timer);}
+  expect(boats).toEqual(['npc:captain_tobias:karamja-musa-point@3028,3216','npc:customs_officer:ardougne@2772,3231']);
+  expect(coins).toBe(56);
+  // No click lands in the Big Wolf's reach (22 tiles round 2840,3497) or the refused tile.
+  expect(clicks.some(c=>Math.max(Math.abs(c.x-2840),Math.abs(c.z-3497))<=22)).toBe(false);
+  expect(clicks).not.toContainEqual({x:2779,z:3491});
+  expect(Math.max(Math.abs(player.worldX-start.x),Math.abs(player.worldZ-start.z))).toBeLessThanOrEqual(3);
+ }
+ // Below both fares the entry refuses before any click.
+ const player={worldX:2790,worldZ:3502,level:0};
+ const s={sdk:{getState:()=>({player,inventory:[{id:995,count:59}]})},tick:()=>0} as unknown as Session;
+ await expect(reachStart(s,{} as never,start,'itgronigen',async()=>{throw Error('no walk below the fares');},undefined,()=>weak)).rejects.toThrow('missing 995:60 for Observatory boat route');
+},60000);
+
 // Retained bank-stage.log: goTo reported "no route to 2850,3175,0" after Brimhaven. The courier walks that tile
 // as a tolerance-5 pass-by point of one walkPath call.
 test('the Karamja corridor keeps courier waypoint tolerances and resumes from the unpassed point',async()=>{
