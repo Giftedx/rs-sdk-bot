@@ -63,15 +63,27 @@ async function walk(s: Session, to: { x: number; z: number }, stop: () => boolea
     return walkPath(await sessionWalker(s), [{ ...to, tol: 2 }], { maxTicks, idleMs: 9000, stop });
 }
 
-// Bank everything but the worn set, then take the trip and the food.
-export async function restock(s: Session, food: number, trip: readonly { id: number; count: number }[] = TRIP): Promise<string | null> {
+// Re-equip the melee set and any unequipped body armour, bank everything else in the pack, then withdraw the trip and food.
+export async function restock(s: Session, food: number, trip: readonly { id: number; count: number }[] = TRIP, kit: Kit = TRIBRID_KIT): Promise<string | null> {
+    const equip = typeof s.sdk.getEquipment === 'function' ? () => s.sdk.getEquipment() : () => s.sdk.getState()?.equipment ?? [];
+    let switched = false;
+    for (const item of [...s.sdk.getInventory()]) {
+        if (!(kit.melee ?? []).includes(item.id) && !/(platebody|chainbody)/i.test(item.name)) continue;
+        if (equip().some(e => e.id === item.id)) continue;
+        const op = item.optionsWithIndex?.find(x => /^(Wield|Wear)$/i.test(x.text));
+        if (op) { await s.sdk.sendUseItem(item.slot, op.opIndex); switched = true; }
+    }
+    if (switched && typeof s.onTick === 'function') await nextTick(s);
     if (!(await s.bot.openBank()).success) return 'bank did not open';
-    for (const item of s.sdk.getInventory()) await s.bot.depositItem(item, -1);
+    for (const item of [...s.sdk.getInventory()]) await s.bot.depositItem(item, -1);
     const stock = () => s.bankObservation?.()?.items ?? [];
     for (const want of [...trip, { id: ITEMS.shark, count: food }]) {
+        const wornCount = equip().filter(e => e.id === want.id).reduce((n, e) => n + e.count, 0);
+        const need = want.count - wornCount;
+        if (need <= 0) continue;
         const row = s.sdk.getBankItems().find(b => b.id === want.id);
-        if (!row || row.count < want.count) { await s.bot.closeBank(); return `bank lacks ${want.count} of item ${want.id} (has ${stock().find(b => b.id === want.id)?.count ?? 0})`; }
-        await s.bot.withdrawItem(row, want.count, { asNote: false });
+        if (!row || row.count < need) { await s.bot.closeBank(); return `bank lacks ${need} of item ${want.id} (has ${stock().find(b => b.id === want.id)?.count ?? 0})`; }
+        await s.bot.withdrawItem(row, need, { asNote: false });
     }
     await s.bot.closeBank();
     return held(s, ITEMS.shark) >= food ? null : 'food withdrawal short';
@@ -113,7 +125,7 @@ export async function hunt(s: Session, o: HuntOptions) {
         if (held(s, ITEMS.shark) < o.minFood) {
             const back = await walk(s, EDGEVILLE_BANK, over, 600);
             if (!back.ok) return { ...tally, end: 'bank walk failed ' + JSON.stringify(back) };
-            const missing = await restock(s, o.food, o.trip);
+            const missing = await restock(s, o.food, o.trip, kit);
             if (missing) return { ...tally, end: missing };
             tally.trips++;
         }

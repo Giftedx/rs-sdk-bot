@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { fleetNames, hitByPlayer, pickTarget, verdict } from './pk-hunt';
+import { fleetNames, hitByPlayer, pickTarget, restock, TRIBRID_KIT, verdict } from './pk-hunt';
 
 const me = { z: 3556, combatLevel: 126 };
 const p = (index: number, name: string, combatLevel: number, distance: number, extra: object = {}) => ({ index, name, combatLevel, z: 3556, distance, ...extra });
@@ -35,3 +35,53 @@ test("only a player's hit on us counts as an attack, not an NPC's damage reporte
     expect(hitByPlayer({ type: 'damage_taken', sourceType: 'npc', targetType: 'player', sourceIndex: 5 })).toBe(false);
     expect(hitByPlayer({ type: 'damage_dealt', sourceType: 'player', targetType: 'other_player', sourceIndex: 0 })).toBe(false);
 });
+
+test('restock re-equips melee weapon, shield, and platebody before depositing so ending a fight on ranged/magic preserves kit', async () => {
+    const inventory: any[] = [
+        { slot: 0, id: 1231, name: 'Dragon dagger(p)', count: 1, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+        { slot: 1, id: 1201, name: 'Rune kiteshield', count: 1, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+        { slot: 2, id: 1127, name: 'Rune platebody', count: 1, optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] },
+        { slot: 3, id: 1401, name: 'Mystic fire staff', count: 1, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+    ];
+    const equipment: any[] = [{ slot: 3, id: 861, name: 'Magic shortbow', count: 1 }];
+    const bank: any[] = [{ id: 385, count: 50 }];
+    const s: any = {
+        sdk: {
+            getInventory: () => inventory,
+            getEquipment: () => equipment,
+            getBankItems: () => bank,
+            sendUseItem: async (slot: number) => {
+                const idx = inventory.findIndex(i => i.slot === slot);
+                if (idx >= 0) {
+                    const [item] = inventory.splice(idx, 1);
+                    if (item.id === 1231) {
+                        const bowIdx = equipment.findIndex(e => e.id === 861);
+                        if (bowIdx >= 0) inventory.push(equipment.splice(bowIdx, 1)[0]);
+                    }
+                    equipment.push(item);
+                }
+            },
+        },
+        bot: {
+            openBank: async () => ({ success: true }),
+            closeBank: async () => {},
+            depositItem: async (item: any) => {
+                const idx = inventory.findIndex(i => i.id === item.id);
+                if (idx >= 0) inventory.splice(idx, 1);
+                const row = bank.find(b => b.id === item.id);
+                if (row) row.count += item.count; else bank.push({ id: item.id, count: item.count });
+            },
+            withdrawItem: async (row: any, need: number) => {
+                row.count -= need;
+                inventory.push({ slot: inventory.length, id: row.id, count: need });
+            },
+        },
+    };
+    const err = await restock(s, 2, [{ id: 1401, count: 1 }, { id: 861, count: 1 }], TRIBRID_KIT);
+    expect(err).toBeNull();
+    expect(equipment.map(e => e.id).sort()).toEqual([1127, 1201, 1231]);
+    expect(inventory.some(i => i.id === 1401)).toBe(true);
+    expect(inventory.some(i => i.id === 861)).toBe(true);
+    expect(inventory.find(i => i.id === 385)?.count).toBe(2);
+});
+

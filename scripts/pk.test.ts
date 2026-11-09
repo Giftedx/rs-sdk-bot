@@ -73,7 +73,7 @@ test('defaultSpec identifies special-attack weapons from kit', () => {
     });
     expect(defaultSpec({ melee: [1305, 1201] })?.bar).toBe('combat_hacksword:specbar');
     expect(defaultSpec({ ranged: [861] })).toEqual({
-        kit: [861], bar: 'combat_bow:specbar', cost: 550, below: 0.5, style: 'ranged',
+        kit: [861], bar: 'combat_bow:specbar', cost: 350, below: 0.5, style: 'ranged',
     });
     expect(defaultSpec({ magic: [1401] })).toBeUndefined();
 });
@@ -242,4 +242,71 @@ test('fightPlayer records same-tick multi-hit events/messages, executes same-tic
     expect(actions.filter(a => !a.startsWith('pray:'))).toEqual(['use:0:2', 'click:7562', 'attack:1:2']);
     expect(actions.length).toBeLessThanOrEqual(5); // respects 5-packet USER_EVENT limit
 });
+
+test('fightPlayer reserves 2 USER_EVENT packets for non-adjacent attack and re-equips inventory tank body on melee turns', async () => {
+    let tick = 10;
+    const perTick: string[][] = [];
+    const appearance = new Uint16Array(12);
+    appearance[3] = 861 + 512;
+    const client = {
+        var: { 300: 0, 301: 0, 172: 1 },
+        players: [null, { headicons: 0, appearance, health: 99, totalHealth: 99 }],
+    };
+    const state: any = {
+        player: { worldX: 3094, worldZ: 3555, combatLevel: 126, hp: 99, maxHp: 99, runEnergy: 100, lifeId: 1 },
+        skills: [{ name: 'Magic', level: 99, baseLevel: 99 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+        prayers: { prayerPoints: 99, activePrayers: new Array(20).fill(false) },
+        inventory: [
+            { slot: 0, id: 1231, name: 'Dragon dagger(p)', count: 1, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+            { slot: 1, id: 1201, name: 'Rune kiteshield', count: 1, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+            { slot: 2, id: 1127, name: 'Rune platebody', count: 1, optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] },
+        ],
+        equipment: [{ slot: 3, id: 1401, name: 'Mystic fire staff', count: 1, optionsWithIndex: [] }],
+        // Distance > 1: interactPlayer emits MOVE_OPCLICK + OPPLAYER2 (2 USER_EVENT packets).
+        nearbyPlayers: [{ index: 1, name: 'Dummy', combatLevel: 126, x: 3098, z: 3555, distance: 4 }],
+        combatEvents: [],
+        gameMessages: [],
+    };
+    const session: any = {
+        client,
+        tick: () => tick,
+        ended: new Promise(() => {}),
+        onTick: (cb: () => void) => {
+            setTimeout(() => {
+                tick++;
+                perTick.push([]);
+                if (tick === 12) {
+                    state.gameMessages = [{ observationId: 1, tick: 12, type: 0, text: 'You have defeated Dummy.' }];
+                }
+                cb();
+            }, 0);
+            return () => {};
+        },
+        sdk: {
+            getState: () => state,
+            sendUseItem: (slot: number, op: number) => { perTick[perTick.length - 1]!.push(`use:${slot}:${op}`); },
+            sendClickComponent: (id: number) => { perTick[perTick.length - 1]!.push(`click:${id}`); },
+            sendInteractPlayer: (idx: number, op: number) => { perTick[perTick.length - 1]!.push(`attack:${idx}:${op}`); },
+            sendSpellOnPlayer: (idx: number, spell: number) => { perTick[perTick.length - 1]!.push(`spell:${idx}:${spell}`); },
+            sendTogglePrayer: (p: number) => { state.prayers.activePrayers[p] = !state.prayers.activePrayers[p]; perTick[perTick.length - 1]!.push(`pray:${p}`); },
+        },
+    };
+    const res = await fightPlayer(session, 'Dummy', {
+        kit: { melee: [1231, 1201] },
+        rotation: ['melee'],
+        freeze: false,
+        log: () => {},
+    });
+    expect(res.outcome).toBe('kill');
+    const firstTick = perTick[0]!;
+    // Equips dagger (slot 0), shield (slot 1), and tank platebody (slot 2) discovered from inventory,
+    // leaving 2 packets in the 5-packet budget for non-adjacent attack (3 equips + 2 attack = 5 USER_EVENT packets).
+    expect(firstTick).toContain('use:0:2');
+    expect(firstTick).toContain('use:1:2');
+    expect(firstTick).toContain('use:2:2');
+    expect(firstTick).toContain('attack:1:2');
+    const userEvents = firstTick.filter(a => a.startsWith('pray:') || a.startsWith('use:') || a.startsWith('click:')).length + 2;
+    expect(userEvents).toBeLessThanOrEqual(5);
+});
+
 
