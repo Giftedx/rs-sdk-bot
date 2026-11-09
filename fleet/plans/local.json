@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794190356417,
+ "at": 1794190964972,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -18,6 +18,20 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
+   "role": "supply"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/fletch-arrows.ts",
+   "args": [
+    "3000",
+    "arrows",
+    "rune"
+   ],
+   "enabled": false,
+   "standing": true,
+   "repeat": false,
+   "goal": "rune arrows (826 short) from headless arrows and rune arrowtips",
    "role": "supply"
   },
   {
@@ -108,18 +122,18 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2671,3313",
+    "KNIGHT_SPOT": "2582,3297",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
+   "goal": "goldfarm knights at 2582,3297",
    "role": "thieving",
-   "template": "goldfarm@2671,3313",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "knight:2671,3313"
+    "knight:2582,3297"
    ]
   },
   {
@@ -127,37 +141,18 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
+    "KNIGHT_SPOT": "2653,3300",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
+   "goal": "goldfarm knights at 2653,3300",
    "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
    "resources": [
-    "knight:2669,3298"
-   ]
-  },
-  {
-   "account": "mmthv2350",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
-   "autopilot": "local",
-   "resources": [
-    "knight:2671,3313"
+    "knight:2653,3300"
    ]
   },
   {
@@ -177,28 +172,6 @@
    "autopilot": "local",
    "resources": [
     "pen:3187,3277"
-   ]
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "catherby"
-   ],
-   "env": {
-    "ITEMS": "rune arrowtips|adamant arrowtips",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy rune and adamant arrowtips at Catherby",
-   "role": "bank",
-   "template": "shop-arrowtips",
-   "autopilot": "local",
-   "resources": [
-    "shop:catherby"
    ]
   },
   {
@@ -244,18 +217,18 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
+    "KNIGHT_SPOT": "2653,3300",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
+   "goal": "goldfarm knights at 2653,3300",
    "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
    "resources": [
-    "knight:2669,3298"
+    "knight:2653,3300"
    ]
   },
   {
@@ -392,23 +365,6 @@
    "role": "supply"
   },
   {
-   "account": "BowBeforeMe",
-   "script": "scripts/handoff-inputs.ts",
-   "args": [
-    "--headless-order",
-    "615",
-    "1"
-   ],
-   "env": {
-    "CAP": "900",
-    "COORDINATOR_RUN_ID": "task-cc692a69-de56-4be1-9fc2-2c9f828aa281"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ammo-bowbeforeme-headless615-current [task-cc692a69-de56-4be1-9fc2-2c9f828aa281]",
-   "role": "supply"
-  },
-  {
    "account": "MineYourBiz",
    "script": "scripts/blood-chest.ts",
    "args": [
@@ -430,20 +386,20 @@
    "script": "scripts/buy-owned-ge-item.ts",
    "args": [],
    "env": {
-    "ITEM_ID": "1552",
+    "ITEM_ID": "1775",
     "QUANTITY": "1",
     "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "5000",
+    "LIMIT_PRICE": "3000",
     "CASH_RESERVE": "240000",
-    "ORDER_KEY": "ballspinner-fluffs-seasoned-sardine1-requal",
+    "ORDER_KEY": "ballspinner-observatory-molten-glass1",
     "FILL_WAIT_TICKS": "30",
     "ORDER_MS": "240000",
     "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-b60c3daa-e8f5-44b5-bf63-99bb1f4983ee"
+    "COORDINATOR_RUN_ID": "task-2fa462d6-83fe-498b-8be2-ff6a051267a1"
    },
    "enabled": false,
    "repeat": false,
-   "goal": "run-ge-ballspinner-sardine1-requal [task-b60c3daa-e8f5-44b5-bf63-99bb1f4983ee]",
+   "goal": "run-ge-ballspinner-molten-glass1 [task-2fa462d6-83fe-498b-8be2-ff6a051267a1]",
    "role": "supply"
   }
  ]
