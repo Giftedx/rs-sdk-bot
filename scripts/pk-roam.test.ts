@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { bestFireSpell, canAttack, CLAIM_TTL_MS, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
+import { bestFireSpell, canAttack, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
 
 test('wildLevel: 8 tiles per level from z 3520 inside x 2944-3391', () => {
     expect(wildLevel(3094, 3519)).toBe(0);
@@ -179,4 +179,24 @@ test('pickTrack prefers a skulled target a little further away', () => {
     const me = { x: 3060, z: 3700, combat: 100 };
     const pair = [track({ name: 'Close', z: 3710 }), track({ name: 'Skull', z: 3760, skulled: true })];
     expect(pickTrack(me, pair, new Set(), 56, new Set(), 40, new Map(), 0, () => false)?.track.name).toBe('Skull');
+});
+
+test('escapeStep: glory to level 30, teleport to 20, else run south', () => {
+    expect(escapeStep(0, { glory: false, teleport: false })).toBe('out');
+    expect(escapeStep(30, { glory: true, teleport: true })).toBe('glory');
+    expect(escapeStep(31, { glory: true, teleport: true })).toBe('run');
+    expect(escapeStep(20, { glory: false, teleport: true })).toBe('teleport');
+    expect(escapeStep(21, { glory: false, teleport: true })).toBe('run');
+    expect(escapeStep(5, { glory: false, teleport: false })).toBe('run');
+});
+
+test('pickTrack skips a target that outclasses us or stands in a pile', () => {
+    const me = { x: 3060, z: 3700, combat: 100 };
+    expect(pickTrack(me, [track({ name: 'Big', z: 3705, combatLevel: 104 })], new Set(), 56, new Set(), 40, new Map(), 0, () => false)).toBeNull();
+    expect(pickTrack(me, [track({ name: 'Even', z: 3705, combatLevel: 103 })], new Set(), 56, new Set(), 40, new Map(), 0, () => false)?.track.name).toBe('Even');
+    const pile = [track({ name: 'Mark', z: 3705 }), track({ name: 'A', x: 3062, z: 3706 }), track({ name: 'B', x: 3058, z: 3704 })];
+    // Each of the three has two strangers within 6 tiles: all skipped.
+    expect(pickTrack(me, pile, new Set(), 56, new Set(), 40, new Map(), 0, () => false)).toBeNull();
+    // Our own accounts near a target are not a pile.
+    expect(pickTrack(me, pile, new Set(['a', 'b']), 56, new Set(), 40, new Map(), 0, () => false)?.track.name).toBe('Mark');
 });

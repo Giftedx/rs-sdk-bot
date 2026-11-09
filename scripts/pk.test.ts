@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { attackable, freezeSpell, killMessage, lowHealth, nextStyle, observePlayer, protectedStyles, skulled, SPELLS, weaponStyle, wildernessLevel } from './pk';
+import { attackable, bestFood, dangerReason, estMaxHit, freezeSpell, killMessage, lowHealth, nextStyle, observePlayer, protectedStyles, skulled, SPELLS, weaponStyle, wildernessLevel } from './pk';
 
 test('Wilderness level follows wilderness_levels.rs2: surface from z 3520, the dungeon from z 9920', () => {
     expect(wildernessLevel(3519)).toBe(0);
@@ -77,4 +77,30 @@ test("another player's head icons and worn items are read from the client's play
     expect(lowHealth({ ...seen, totalHealth: 0 }, 0.5)).toBe(false);
     expect(observePlayer(client, 0)).toBeNull();
     expect(observePlayer(undefined, 1)).toBeNull();
+});
+
+test('bestFood eats the best food held, then any other edible item', () => {
+    const item = (name: string, eat = true) => ({ name, optionsWithIndex: eat ? [{ text: 'Eat' }] : [{ text: 'Drop' }] });
+    expect(bestFood([item('Trout'), item('Shark'), item('Salmon')])?.name).toBe('Shark');
+    expect(bestFood([item('Trout'), item('Salmon')])?.name).toBe('Salmon');
+    expect(bestFood([item('Cake'), item('Law rune', false)])?.name).toBe('Cake');
+    expect(bestFood([item('Law rune', false)])).toBeUndefined();
+});
+
+test('estMaxHit is about a quarter of combat, at least 10', () => {
+    expect(estMaxHit(126)).toBe(32);
+    expect(estMaxHit(20)).toBe(10);
+});
+
+test('dangerReason: no food near the max hit, a pile, a lost damage race, no prayer', () => {
+    const base = { hp: 80, maxHp: 99, food: true, prayer: 50, oppMax: 30, hits: [] as { tick: number; damage: number; src: number }[], dealt: [] as { tick: number; damage: number }[], now: 100 };
+    expect(dangerReason(base)).toBeNull();
+    expect(dangerReason({ ...base, food: false, hp: 45 })).toMatch(/no food/);
+    expect(dangerReason({ ...base, food: false, hp: 46 })).toBeNull();
+    expect(dangerReason({ ...base, hits: [{ tick: 95, damage: 5, src: 1 }, { tick: 98, damage: 5, src: 2 }] })).toMatch(/2 players/);
+    expect(dangerReason({ ...base, hits: [{ tick: 80, damage: 5, src: 1 }, { tick: 98, damage: 5, src: 2 }] })).toBeNull(); // first hit too old
+    const race = { ...base, hp: 55, hits: [{ tick: 80, damage: 20, src: 1 }, { tick: 90, damage: 15, src: 1 }], dealt: [{ tick: 85, damage: 10 }] };
+    expect(dangerReason(race)).toMatch(/losing the race/);
+    expect(dangerReason({ ...race, hp: 60 })).toBeNull(); // still over 60%
+    expect(dangerReason({ ...base, prayer: 0, hp: 49 })).toMatch(/no prayer/);
 });

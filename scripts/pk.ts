@@ -39,11 +39,13 @@ export type FightOptions = {
     // Out of food at or under this HP: rub an inventory amulet of glory to Edgeville (amulet_of_glory.rs2 allows it up
     // to Wilderness level 30; there is no Teleblock in the content).
     escapeAt?: number;
+    // Return outcome "danger" (with the reason) as soon as dangerReason fires, so the caller can escape.
+    exitOnDanger?: boolean;
     damageSpell?: number;
     cap?: number;
     log?: (line: string) => void;
 };
-export type FightResult = { outcome: 'kill' | 'died' | 'escaped' | 'lost' | 'timeout'; ticks: number; dealt: number; taken: number; eaten: number; attacks: Record<Style, number>; freezes: number; specs: number; targetAt?: { x: number; z: number } };
+export type FightResult = { outcome: 'kill' | 'died' | 'escaped' | 'lost' | 'timeout' | 'danger'; danger?: string; ticks: number; dealt: number; taken: number; eaten: number; attacks: Record<Style, number>; freezes: number; specs: number; targetAt?: { x: number; z: number } };
 
 // Overhead protect prayers from the head icon bits (content player/configs/headicon.constant: 3 melee, 4 missiles, 5 magic).
 export function protectedStyles(headicons: number | undefined): Set<Style> {
@@ -91,6 +93,34 @@ export const killMessage = (text: string, name: string) => KILL_MESSAGES.some(t 
 // Attack delays in ticks: dragon dagger 4, dragon longsword 5, magic shortbow 4 (3 on rapid), spells 5.
 const TURN: Record<Style, number> = { magic: 5, ranged: 4, melee: 4 };
 
+// Food best first by heal; any other item with an Eat option comes after these.
+export const FOOD_ORDER = [/^shark$/i, /^swordfish$/i, /^lobster$/i, /^bass$/i, /^tuna$/i, /^salmon$/i, /^trout$/i, /^pike$/i];
+export function bestFood<T extends { name: string; optionsWithIndex: { text: string }[] }>(inv: readonly T[]): T | undefined {
+    const edible = inv.filter(i => i.optionsWithIndex.some(o => /^eat$/i.test(o.text)));
+    for (const re of FOOD_ORDER) { const hit = edible.find(i => re.test(i.name)); if (hit) return hit; }
+    return edible[0];
+}
+// A conservative max hit for an opponent of this combat level: about a quarter of it, never under 10 (a combat 126
+// melee main with a dragon weapon hits about 30; the dagger special hits twice).
+export const estMaxHit = (combatLevel: number) => Math.max(10, Math.round(combatLevel / 4));
+
+// Danger: the fight is lost or about to be. Survival comes before the kill.
+// - out of food with HP at or under 1.5 opponent max hits;
+// - two or more players hit us in the last 10 ticks (a pile);
+// - losing the damage race: over the last 30 ticks we took 30+ and at least twice what we dealt, at under 60% HP;
+// - no prayer points left at under 50% HP.
+export function dangerReason(o: { hp: number; maxHp: number; food: boolean; prayer: number; oppMax: number;
+    hits: readonly { tick: number; damage: number; src: number }[]; dealt: readonly { tick: number; damage: number }[]; now: number }): string | null {
+    if (!o.food && o.hp <= o.oppMax * 1.5) return `no food at HP ${o.hp}`;
+    const attackers = new Set(o.hits.filter(h => o.now - h.tick <= 10).map(h => h.src));
+    if (attackers.size >= 2) return `${attackers.size} players hitting`;
+    const taken = o.hits.filter(h => o.now - h.tick <= 30).reduce((n, h) => n + h.damage, 0);
+    const dealt = o.dealt.filter(h => o.now - h.tick <= 30).reduce((n, h) => n + h.damage, 0);
+    if (taken >= 30 && taken >= 2 * dealt && o.hp < o.maxHp * 0.6) return `losing the race: took ${taken}, dealt ${dealt}`;
+    if (o.prayer <= 0 && o.hp < o.maxHp * 0.5) return 'no prayer points';
+    return null;
+}
+
 export const wildernessLevel = (z: number) => (z >= 9920 ? Math.floor((z - 9920) / 8) + 1 : z >= 3520 ? Math.floor((z - 3520) / 8) + 1 : 0);
 // Both players must stand in the Wilderness and the combat gap must fit inside the shallower player's level.
 export function attackable(me: { z: number; combatLevel: number }, other: { z: number; combatLevel: number }): boolean {
@@ -120,6 +150,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
     const startLife = sdk.getState()?.player?.lifeId;
     let last = -1, nextAttack = start, foodReady = start, potionReady = start, freezeReady = start, frozenUntil = start, seenEvent = 0, seenMessage = 0, lastSeen = start;
     let target: NearbyPlayer | undefined, rubbed = -1;
+    const hits: { tick: number; damage: number; src: number }[] = [], dealtLog: { tick: number; damage: number }[] = [];
     for (;;) {
         await new Promise<void>(resolve => { const off = s.onTick(() => { off(); resolve(); }); });
         const now = s.tick(), state = sdk.getState(), me = state?.player;
@@ -130,8 +161,8 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         for (const e of state.combatEvents) {
             if ((e.observationId ?? e.tick) <= seenEvent) continue;
             seenEvent = e.observationId ?? e.tick;
-            if (e.type === 'damage_dealt' && e.targetType === 'other_player') result.dealt += e.damage;
-            if (e.type === 'damage_taken') result.taken += e.damage;
+            if (e.type === 'damage_dealt' && e.targetType === 'other_player') { result.dealt += e.damage; dealtLog.push({ tick: now, damage: e.damage }); }
+            if (e.type === 'damage_taken') { result.taken += e.damage; if (e.sourceType === 'other_player') hits.push({ tick: now, damage: e.damage, src: e.sourceIndex }); }
         }
         for (const m of state.gameMessages) {
             const id = m.observationId ?? m.tick;
@@ -150,12 +181,16 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             const op = item.optionsWithIndex.find(x => verb.test(x.text));
             if (op) void sdk.sendUseItem(item.slot, op.opIndex);
         };
-        // Food before anything: a shark heals 20 and takes 3 ticks before the next.
-        if (me.hp <= eatAt && now >= foodReady) {
-            const food = slotOf([ITEMS.shark]);
+        // Food before anything, any food best first; the eat level covers the strongest opponent hitting us now.
+        const oppCombat = Math.max(target?.combatLevel ?? 0, ...state.nearbyPlayers.filter(p => hits.some(h => h.src === p.index && now - h.tick <= 10)).map(p => p.combatLevel));
+        const oppMax = estMaxHit(oppCombat || me.combatLevel);
+        if (me.hp <= Math.max(eatAt, oppMax + 8) && now >= foodReady) {
+            const food = bestFood(inv);
             if (food) { use(food, /^Eat$/i); foodReady = now + 3; result.eaten++; }
         }
-        if (o.escapeAt !== undefined && me.hp <= o.escapeAt && !slotOf([ITEMS.shark]) && wildernessLevel(at.z) <= 30) {
+        const danger = dangerReason({ hp: me.hp, maxHp: me.maxHp, food: !!bestFood(inv), prayer: state.prayers.prayerPoints, oppMax, hits, dealt: dealtLog, now });
+        if (danger && o.exitOnDanger) { result.outcome = 'danger'; result.danger = danger; log(`PK danger against ${targetName}: ${danger}`); return result; }
+        if (o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(inv) && wildernessLevel(at.z) <= 30) {
             const glory = slotOf(ITEMS.glory);
             if (glory && (rubbed < 0 || now - rubbed > 6) && !state.dialog?.isOpen) { log(`PK rub glory at HP ${me.hp}`); use(glory, /^Rub$/i); rubbed = now; }
             if (state.dialog?.isOpen) void sdk.clickDialogByText(/^Edgeville/i);
@@ -170,7 +205,10 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         const seen = observePlayer(s.client, target.index);
         // Protect from the style of the opponent's worn weapon, and Protect Item.
         if (prayers.prayerPoints > 0) {
-            const wanted = seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
+            // Protect from the weapon of whoever hit us last (a third player can hit us), else the target's.
+            const lastHit = [...hits].reverse().find(h => now - h.tick <= 10);
+            const hitter = lastHit && lastHit.src !== target.index ? observePlayer(s.client, lastHit.src) : null;
+            const wanted = hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
             for (const p of [PRAYER.item, wanted]) if (!prayers.activePrayers[p]) void sdk.sendTogglePrayer(p);
         }
         if (now < nextAttack || !attackable({ z: at.z, combatLevel: me.combatLevel }, target)) continue;

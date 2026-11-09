@@ -3,8 +3,8 @@
 // first, runs to where that target will be (cutting it off on its way south), freezes it when it runs, and keeps
 // attacking with the style the target does not protect against until the target dies, logs out or leaves.
 //
-// usage: bun scripts/pk-roam.ts <account> [MAX_MINUTES=20] [MAX_WILD=56] [EAT_AT=50] [FLEE_AT=30] [SPELL=AUTO]
-//        [RANGED=bow-name-regex] [LOOT=1] [FREEZE=1] [LOOT_MIN=1000] [BANK_AT=100000]
+// usage: bun scripts/pk-roam.ts <account> [MAX_MINUTES=20] [MAX_WILD=30] [EAT_AT=50] [FLEE_AT=30] [SPELL=AUTO]
+//        [RANGED=bow-name-regex] [LOOT=1] [FREEZE=1] [LOOT_MIN=1000] [BANK_AT=30000]
 // The account starts south of the Wilderness with its gear worn and food in its inventory.
 // Stop files: .practice/stop-<account>, .practice/stop-pk-hunt (shared with scripts/pk-hunt.ts).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -15,7 +15,8 @@ import { isLocalServer } from '../packages/core/src/localserver';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { tradePartners } from '../packages/core/src/tradeguard';
 import { readOpponent, readOpponents } from '../packages/core/src/opponent';
-import { fightPlayer, type Kit } from './pk';
+import { componentId } from '../packages/core/src/logout';
+import { bestFood, dangerReason, estMaxHit, fightPlayer, type Kit } from './pk';
 
 // Surface Wilderness (content area_wilderness wilderness_zones: 0_46_55 to 3_52_99, 8 tiles per level).
 export function wildLevel(x: number, z: number): number {
@@ -72,6 +73,18 @@ export function preyScore(t: Track, meetTicks: number, ganged = false): number {
 // fight a target, so a claimed target is left to its hunter; in multi-combat a claimed target is ganged.
 export type Claims = Map<string, { hunter: string; at: number }>;
 export const CLAIM_TTL_MS = 60_000;
+// A target this many combat levels above us outclasses us; this many strangers within 6 tiles of it is a pile.
+export const OUTCLASS_GAP = 3;
+export const PILE_SIZE = 2;
+
+// Where the escape stands at a Wilderness level with what the pack holds: a glory works to level 30
+// (amulet_of_glory.rs2), a teleport spell to level 20; deeper than both, run south until one works.
+export function escapeStep(level: number, has: { glory: boolean; teleport: boolean }): 'glory' | 'teleport' | 'run' | 'out' {
+    if (level === 0) return 'out';
+    if (has.glory && level <= 30) return 'glory';
+    if (has.teleport && level <= 20) return 'teleport';
+    return 'run';
+}
 
 // Where to run to meet a moving target: the first tick t at which we (2 tiles per tick running) can stand on its
 // predicted tile. A target running south at full speed from behind has no meeting point; then the hunter heads for
@@ -111,6 +124,9 @@ export function pickTrack(me: { x: number; z: number; combat: number; name?: str
         const claim = claims.get(key);
         const claimedByOther = !!claim && now - claim.at < CLAIM_TTL_MS && claim.hunter !== me.name?.toLowerCase();
         if (!multiHere && (t.fighting === 'player' || claimedByOther)) continue;
+        // Survival first: never pick a fight with someone stronger, or with a crowd round them.
+        if (t.combatLevel > me.combat + OUTCLASS_GAP) continue;
+        if (tracks.filter(o => o !== t && !friends.has(o.name.toLowerCase()) && cheb(o, t) <= 6).length >= PILE_SIZE) continue;
         const score = preyScore(t, at.ticks, multiHere && claimedByOther);
         if (!best || score < best.score) best = { track: t, at, score };
     }
@@ -219,7 +235,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     const food = () => sdk.getInventory().filter(i => (i.optionsWithIndex ?? []).some((o: any) => /^eat$/i.test(o.text)));
     const magic = sdk.getSkill('Magic')?.baseLevel ?? 1;
     const freeze = cfg.freeze ? freezeSpell(magic) : null;
-    const stats = { attacks: 0, kills: 0, deaths: 0, eats: 0, freezes: 0, chases: 0, loot: [] as string[], lootValue: 0, banked: 0, targets: [] as string[] };
+    const stats = { attacks: 0, kills: 0, deaths: 0, eats: 0, freezes: 0, chases: 0, loot: [] as string[], lootValue: 0, banked: 0, escapes: 0, targets: [] as string[] };
     const walker = await sessionWalker(session);
     const skip = new Set<string>();
     // Roster tracks plus the players the client sees now; the client copy wins for players in view.
@@ -261,7 +277,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     const startFood = food()[0];
     const foodCount = startFood ? sdk.getInventory().filter(i => i.id === startFood.id).length : 0;
     const valuer = makeValuer(server);
-    const lootMin = cfg.lootMin ?? 1000, bankAt = cfg.bankAt ?? 100_000;
+    const lootMin = cfg.lootMin ?? 1000, bankAt = cfg.bankAt ?? 30_000;
     let carried = 0;
     const loot = async (at: { x: number; z: number }) => { carried += await lootAt(session, at, { value: valuer, min: lootMin, stats, emit }); };
     const needBank = () => carried >= bankAt || 28 - sdk.getInventory().length <= 2;
@@ -272,15 +288,62 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
         return ok;
     };
 
+    // Damage taken from players, for the danger checks between fights (the fight loop keeps its own).
+    const hits: { tick: number; damage: number; src: number }[] = [];
+    let seenHit = 0;
+    const recordHits = () => {
+        for (const e of sdk.getState()?.combatEvents ?? []) {
+            const id = e.observationId ?? e.tick;
+            if (id <= seenHit) continue;
+            seenHit = id;
+            if (e.type === 'damage_taken' && e.sourceType === 'other_player') hits.push({ tick: session.tick(), damage: e.damage, src: e.sourceIndex });
+        }
+    };
+    const GLORY = /^amulet of glory\([1-4]\)$/i;
+    const canTeleport = () => (sdk.getSkill('Magic')?.level ?? 1) >= 25 && sdk.getInventory().some(i => /^law rune$/i.test(i.name))
+        && sdk.getInventory().some(i => /^air rune$/i.test(i.name) && i.count >= 3)
+        && (sdk.getInventory().some(i => /^fire rune$/i.test(i.name)) || sdk.getEquipment().some(i => /staff of fire|fire battlestaff/i.test(i.name)));
+    // Leave the Wilderness: glory, else teleport, else run south (eating) until one works. Ends the hunt.
+    const escape = async (why: string) => {
+        stats.escapes++;
+        emit({ e: 'escape', why, hp: me()?.hp, wild: me() ? wildLevel(me()!.x, me()!.z) : 0 });
+        for (let step = 0; step < 80 && !stopped(); step++) {
+            const m = me();
+            if (!m) { await sdk.waitForTicks(1); continue; }
+            if (m.hp * 100 <= m.maxHp * cfg.eatAt) { const meal = bestFood(sdk.getInventory() as any); if (meal) await bot.eatFood(meal as any); }
+            const glory = sdk.getInventory().find(i => GLORY.test(i.name));
+            const how = escapeStep(wildLevel(m.x, m.z), { glory: !!glory, teleport: canTeleport() });
+            if (how === 'out') { emit({ e: 'escaped', at: [m.x, m.z], hp: m.hp }); return true; }
+            if (how === 'glory') {
+                const op = glory!.optionsWithIndex?.find((o: any) => /^rub$/i.test(o.text));
+                await sdk.sendUseItem(glory!.slot, op?.opIndex ?? 4);
+                for (let i = 0; i < 6 && !sdk.getDialog()?.isOpen; i++) await sdk.waitForTicks(1);
+                await sdk.clickDialogByText(/^Edgeville/i);
+                await sdk.waitForTicks(6);
+            } else if (how === 'teleport') {
+                await sdk.sendClickComponent(componentId('magic:varrock_teleport'));
+                await sdk.waitForTicks(6);
+            } else {
+                await walkPath(walker, [{ x: m.x, z: Math.max(3510, m.z - 20), tol: 2 }], { maxTicks: 12, idleMs: 9000, stop: stopped });
+            }
+        }
+        return false;
+    };
     const survive = async (): Promise<'ok' | 'flee' | 'dead'> => {
         const m = me();
         if (!m) return 'ok';
+        recordHits();
         if (wildLevel(m.x, m.z) > 0) wentIn = true;
         if (wentIn && cheb(m, { x: 3222, z: 3218 }) <= 6) { stats.deaths++; emit({ e: 'death' }); return 'dead'; }
-        if (m.hp * 100 <= m.maxHp * cfg.eatAt && food().length) {
-            const r = await bot.eatFood(food()[0]);
+        const attackers = (sdk.getState()?.nearbyPlayers ?? []).filter(p => hits.some(h => h.src === p.index && session.tick() - h.tick <= 10));
+        const oppMax = estMaxHit(Math.max(m.combat, ...attackers.map(p => p.combatLevel)));
+        if (m.hp <= Math.max(m.maxHp * cfg.eatAt / 100, oppMax + 8) && food().length) {
+            const r = await bot.eatFood(bestFood(sdk.getInventory() as any) as any ?? food()[0]);
             stats.eats++; emit({ e: 'eat', hp: m.hp, ok: r.success });
-        } else if (m.hp * 100 <= m.maxHp * cfg.fleeAt && !food().length) return 'flee';
+        }
+        const danger = wildLevel(m.x, m.z) > 0 ? dangerReason({ hp: m.hp, maxHp: m.maxHp, food: food().length > 0, prayer: sdk.getState()?.prayers?.prayerPoints ?? 1,
+            oppMax, hits, dealt: [], now: session.tick() }) : null;
+        if (danger) { await escape(danger); return 'flee'; }
         return 'ok';
     };
 
@@ -344,7 +407,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 // range and re-aims between calls.
                 stats.attacks++;
                 const fight = await fightPlayer(session, name, {
-                    kit, freeze: !!freeze, eatAt: cfg.eatAt,
+                    kit, freeze: !!freeze, eatAt: cfg.eatAt, exitOnDanger: true,
                     escapeAt: Math.ceil((me()?.maxHp ?? 99) * cfg.fleeAt / 100), damageSpell: cfg.spell.toUpperCase() === 'AUTO' ? bestFireSpell(magic, sdk.getInventory()) : spellId(cfg.spell), cap: 12,
                     log: line => emit({ e: "fight", line }),
                 });
@@ -359,6 +422,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 }
                 if (fight.outcome === "died") { stats.deaths++; return "dead"; }
                 if (fight.outcome === "escaped") return "flee";
+                if (fight.outcome === "danger") { await escape(fight.danger ?? "danger"); return "flee"; }
                 lastDist = Infinity;
                 continue;
             }
@@ -384,11 +448,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             if (s === 'dead') break;
             const m = me();
             if (!m) { await sdk.waitForTicks(1); continue; }
-            if (s === 'flee') {
-                emit({ e: 'flee', hp: m.hp });
-                await walkPath(walker, [{ x: m.x, z: 3510, tol: 3 }], { maxTicks: 300, idleMs: 9000, stop: stopped });
-                break;
-            }
+            if (s === 'flee') break;
             const pick = pickNow(m);
             if (!pick) {
                 // Nobody attackable: sweep the Wilderness. Start at the nearest sweep tile, then go round.
@@ -410,11 +470,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             const outcome = await chase(name).finally(() => release(name));
             emit({ e: 'chase-end', target: name, outcome });
             if (outcome === 'dead' || outcome === 'stop') break;
-            if (outcome === 'flee') {
-                const at = me()!;
-                await walkPath(walker, [{ x: at.x, z: 3510, tol: 3 }], { maxTicks: 300, idleMs: 9000, stop: stopped });
-                break;
-            }
+            if (outcome === 'flee') break;
             if (outcome === 'stall' || outcome === 'left') skip.add(name.toLowerCase());
             if (needBank() && !(await bank(carried >= bankAt ? 'loot value' : 'pack full'))) break;
         }
@@ -510,16 +566,16 @@ const arg = (args: string[], key: string, d: string) => args.find(a => a.startsW
 
 if (import.meta.main) {
     const [name, ...args] = process.argv.slice(2);
-    if (!name) throw new Error('usage: bun scripts/pk-roam.ts <account> [MAX_MINUTES=20] [MAX_WILD=56] [EAT_AT=50] [FLEE_AT=30] [SPELL=AUTO] [RANGED=regex] [LOOT=1] [FREEZE=1] [LOOT_MIN=1000] [BANK_AT=100000]');
+    if (!name) throw new Error('usage: bun scripts/pk-roam.ts <account> [MAX_MINUTES=20] [MAX_WILD=30] [EAT_AT=50] [FLEE_AT=30] [SPELL=AUTO] [RANGED=regex] [LOOT=1] [FREEZE=1] [LOOT_MIN=1000] [BANK_AT=30000]');
     const stop = () => existsSync('.practice/stop-' + name) || existsSync('.practice/stop-pk-hunt');
     if (stop()) throw new Error('PK stop file present');
     const ranged = arg(args, 'RANGED', '');
     const cfg: Cfg = {
-        maxMs: Number(arg(args, 'MAX_MINUTES', '20')) * 60_000, maxWild: Number(arg(args, 'MAX_WILD', '56')),
+        maxMs: Number(arg(args, 'MAX_MINUTES', '20')) * 60_000, maxWild: Number(arg(args, 'MAX_WILD', '30')),
         eatAt: Number(arg(args, 'EAT_AT', '50')), fleeAt: Number(arg(args, 'FLEE_AT', '30')),
         spell: arg(args, 'SPELL', 'AUTO'), ranged: ranged ? new RegExp(ranged, 'i') : undefined,
         loot: arg(args, 'LOOT', '1') === '1', freeze: arg(args, 'FREEZE', '1') === '1',
-        lootMin: Number(arg(args, 'LOOT_MIN', '1000')), bankAt: Number(arg(args, 'BANK_AT', '100000')),
+        lootMin: Number(arg(args, 'LOOT_MIN', '1000')), bankAt: Number(arg(args, 'BANK_AT', '30000')),
     };
     const session = await openBot(name);
     const emit = (e: object) => console.log('PK_EVENT ' + JSON.stringify({ t: session.tick(), ...e }));
