@@ -193,6 +193,50 @@ xulvexi mined all 1,928 inside the last 7 days and 309 in the last 24 hours. 309
   `ROUTE 3059,3885 -> 3060,3884: 2 tiles, 0 danger spawns in reach (margin 8)`. The walk from Edgeville
   through the Wilderness is not checked yet.
 
+### Protection qualification: single-way reserve lock
+
+**Uncovered failure (source audit and synthetic unit checks; no native or live qualification):**
+both counted rocks occupy zone `0_47_60_48_40`, absent from pinned
+`vendor/rs-sdk/server/content/maps/multiway.csv`. The engine loads those 8x8 zones in
+`server/engine/src/engine/GameMap.ts:58-59,102-104`; the opcode uses that map in
+`server/engine/src/engine/script/handlers/ServerOps.ts:337-340`.
+At an equal-level melee contact on either rock, escort and reserve cannot assume simultaneous
+focus on one hostile. `pvp_combat.rs2:105-133` checks the target's multiway flag and rejects a
+third party while the target's `lastcombat + 8 > map_clock` and its latest attacker is someone
+else. `pk_skull.rs2:14-29` records the recipient's attacker and combat tick;
+`pvp_melee.rs2:16-17` calls it even when the damage roll misses. These content paths are under
+`vendor/rs-sdk/server/content/scripts/skill_combat/scripts/pvp/` at pin
+`db0cc51e0a8f9f0d6a7d60c44e534412bb0601bb`, parent source
+`70fcbce85350659ad82496060e9c3e4f992c91a0`.
+
+With miner auto-retaliation off and no other combat, an escort may attack the hostile that hits
+the miner: receiving an attack sets the recipient's lock. Once the escort attacks the hostile,
+reserve focus on that hostile is refused for offsets 1 through 7; offset 8 passes this lock only
+if no further attack refreshes it. For example, an escort attack at model tick 101 permits a
+reserve attempt at 109; another escort attack at 105 moves that boundary to 113. Miner
+retaliation against the hostile can lock the escort out too. These are source-derived model
+boundaries, not measured contact response ticks or a safe handoff: range, level, path, damage,
+NPC locks and server processing still need native qualification. Separate-hostile reserve
+cover is not ruled out by this finding and is unqualified.
+
+Source → consumer → decision → check: reuse `scripts/pvp-standby.ts` for its existing shallow
+staging only and `vendor/rs-sdk/sdk/actions.ts` player targeting/refusal reporting for a future
+owned protection fixture. Reject simultaneous same-hostile reserve focus at these rocks.
+The standby profiles cover combat 6, 9 and 20 at Edgeville, not a Lava Maze retreat or a
+three-role worker; retain their owner's files. The pinned SDK targeting suite passes 9/9
+synthetic tests, including `already_in_combat`; it does not run a server. The reproducible
+source-model audit, hashed inputs and output are in
+[the audit](../.practice/lava-multi-protection/audit.py),
+[the report](../.practice/lava-multi-protection/report.json) and
+[the SDK test log](../.practice/lava-multi-protection/sdk-tests.log).
+No contact recordings or shared ownership receipts are available in this checkout. Response
+ticks, minimum HP, kit retention and safe exit remain unmeasured; no practice or live login,
+controller change or account claim contributes game progress. The finite consumer is the
+two-rock miner protection qualification. Its next check needs an owned native fixture with
+miner retreat, one escort target, and reserve coverage of a distinct hostile or an observed
+lock-expiry handoff, recording all participants' ticks, HP, item totals, safe tiles and confirmed
+logout. Live Wilderness deployment remains outside this qualification.
+
 ### Plan
 
 1. Mine runite **after** every playtime-stamped board (19 skills, Overall, Quest Points). The Runite board

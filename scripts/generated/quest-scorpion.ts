@@ -146,14 +146,14 @@ try {
     const pickup = (g: any) => q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' });
     if (!q.has(ITEM.dusty)) {
         await q.walk('to jailer', [{ x: JAILER.x - 3, z: JAILER.z - 1, tol: 3 }]);
-        // The Jailer (level 47) dies to a low-Attack ranger's bow, not to its hands; the sweep brings the bow and QUEST_ARROWS.
-        await q.wieldBow();
+        // The Jailer (level 47) dies to the kit the account fights with: a low-Attack ranger's bow or a mage's strikes
+        // (attackNpc; the sweep brings the bow and QUEST_ARROWS, or the staff and QUEST_CASTS), not to its hands.
         for (let t = 0; t < 150 && !q.has(ITEM.jailKey); t++) {
             await q.guard('jailer');
             const g = ground(ITEM.jailKey);
             const n = npcId(NPC.jailer);
             if (g) { if (t % 3 === 0) await pickup(g); }
-            else if (n && t % 4 === 0 && q.pos()?.targetIndex !== n.index) await q.s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
+            else if (n && (t % 5 === 0 || q.pos()?.targetIndex !== n.index)) await q.attackNpc(n);
             await q.waitTicks(1);
         }
         if (!q.has(ITEM.jailKey)) await q.fail('jail key');

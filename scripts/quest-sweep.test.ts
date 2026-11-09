@@ -840,7 +840,7 @@ test("Merlin's Crystal: the wax comes off a Catherby beehive after its repellent
  // The quest's own fight, Sir Mordred, takes forty arrows more from a bow account.
  const {QUEST_ARROWS}=await import('./quest-sweep');
  expect(QUEST_ARROWS['merlin']).toBe(40);expect(QUEST_ARROWS['prince']).toBe(30);expect(QUEST_ARROWS['hazeelcult']).toBe(20);expect(QUEST_ARROWS['scorpion']).toBe(40);expect(QUEST_ARROWS['imp']).toBeUndefined();
- const {QUEST_CASTS}=await import('./quest-sweep');expect(QUEST_CASTS['hazeelcult']).toBe(12);expect(QUEST_CASTS['scorpion']).toBeUndefined();expect(QUEST_CASTS['imp']).toBeUndefined();
+ const {QUEST_CASTS}=await import('./quest-sweep');expect(QUEST_CASTS['hazeelcult']).toBe(12);expect(QUEST_CASTS['scorpion']).toBe(30);expect(QUEST_CASTS['imp']).toBeUndefined();
 });
 
 test("Pirate's Treasure needs no bananas from the sweep: the script picks them on Karamja, and the bank pass keeps their slots",async()=>{
@@ -1411,4 +1411,14 @@ test('the meal takes the preset food kinds first, then the best other edibles th
  const beggar=new Map([[2309,1]]);
  expect(mealPlan(food,[],[{id:2309,count:1}],[{id:2309,count:1}],beggar)).toEqual([]);
  expect(mealPlan(food,[{id:2309,count:1}],[{id:385,count:2}],[],beggar)).toEqual([{id:385,count:2}]);
+});
+
+test('Plague City\'s buckets of water are filled at the sink by the Ardougne bank, not fetched from the Catherby spawn',()=>{
+ const ardougne={x:2655,z:3283,level:0};
+ // One empty-bucket spawn by the bank cannot give four buckets: they come from the shop.
+ const spawns=(id:number)=>id===1929?[{x:2823,z:3449,level:0}]:id===1925?[{x:2650,z:3290,level:0}]:[];
+ const seller=(id:number)=>id===1925?300:id===1929?700:Infinity;
+ const plan=gatherPlan([{id:1929,count:4}],ardougne,spawns,seller,()=>[],6,97,()=>[]);
+ expect(plan.gathers).toEqual([{id:1929,count:4,how:'use'}]);
+ expect(plan.still).toEqual([{id:1925,count:4}]);
 });

@@ -76,3 +76,17 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
 12. **The SDK reports an NPC's damage from someone else as `damage_taken`** with `targetType` npc and `sourceIndex` -1. A
     hunter that read it as an attack started a fight in watch-only mode. Only `damage_taken` with `targetType` player and a
     player source index counts as an attack.
+13. **Live scout: the deep Wilderness held one player, out of range.** UnderMyKilt (combat 78), watch-only (`PK_OBSERVE=1`),
+    one run, about 1,800 ticks on a route from Edgeville to the Lava Maze (`PK_SPOTS`):
+    - Seen: one player, Goondelf, combat 126 at (3078, 3640), Wilderness level 16, out of range for combat 78.
+    - Spots: the spots at levels 5, 16, 26 and 36 were reached. The walk to (3060, 3870) by the runite rocks stopped at
+      (3055, 3872) twice ("Failed to walk"; the maze's lava walls), so the rocks need a routed approach. xulvexi was not seen.
+    - Damage and loss: no NPC damage.
+    - End: the session dropped at level 45 (the gateway's drain).
+    - Evidence: `.practice/pk-pilot/pk-scout.log` in the claude-cloud container.
+    - Gap: one run; the agility course spot was not reached.
+14. **A dropped session ends the hunt.** After that drop, the hunt loop spun on failed walks (47,220 lines). Its stale status
+    then blocked other workers' logins until the run was killed. `nextTick` resolves false when the session ends, and
+    the fight loop and the hunter now stop on it. On practice, closing the hunter's session mid-run ended the hunt at once
+    (`end: session ended`, 13 log lines). Gap: a hand run outside the swarm leaves no supervisor end record, so
+    cloud-recover waits on it. Restoring the account's swarm job lets the swarm write one, and cloud-recover takes it.

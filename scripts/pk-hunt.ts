@@ -15,7 +15,7 @@ import { existsSync } from 'node:fs';
 import type { Session } from '../packages/core/src/inprocess';
 import { loadOwners } from '../packages/core/src/fleet';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { attackable, fightPlayer, ITEMS, wildernessLevel, type FightResult, type Kit, type Style } from './pk';
+import { attackable, fightPlayer, ITEMS, nextTick, wildernessLevel, type FightResult, type Kit, type Style } from './pk';
 
 export const EDGEVILLE_BANK = { x: 3092, z: 3496 };
 // Wilderness levels 3-7 north of Edgeville, inside single-way combat (multiway.csv: east Wilderness starts at x 3136).
@@ -82,7 +82,9 @@ export type HuntOptions = { cap: number; food: number; minFood: number; escapeAt
 export async function hunt(s: Session, o: HuntOptions) {
     const log = o.log ?? ((l: string) => console.log(l)), start = s.tick(), ours = fleetNames();
     const tally = { kills: 0, deaths: 0, escapes: 0, fights: 0, looted: 0, trips: 0 };
-    const over = () => o.stop() || s.tick() - start >= o.cap;
+    let ended = false;
+    void s.ended.then(() => { ended = true; });
+    const over = () => ended || o.stop() || s.tick() - start >= o.cap;
     const kit = o.kit ?? TRIBRID_KIT, sighted = new Map<string, string>();
     let spot = 0;
     const far = () => { const p = s.sdk.getState()?.player; return !p || Math.max(Math.abs(p.worldX - EDGEVILLE_BANK.x), Math.abs(p.worldZ - EDGEVILLE_BANK.z)) > 60; };
@@ -93,14 +95,14 @@ export async function hunt(s: Session, o: HuntOptions) {
             const op = glory.optionsWithIndex.find(x => /^Rub$/i.test(x.text));
             if (op) await s.sdk.sendUseItem(glory.slot, op.opIndex);
             for (let t = 0; t < 20 && far() && !over(); t++) {
-                await new Promise<void>(r => { const off = s.onTick(() => { off(); r(); }); });
+                await nextTick(s);
                 if (s.sdk.getState()?.dialog?.isOpen) await s.sdk.clickDialogByText(/^Edgeville/i);
             }
             if (far()) return { ...tally, end: 'glory to Edgeville failed' };
         } else if (o.teleSpell !== undefined) {
             const from = position();
             await s.sdk.sendClickComponent(o.teleSpell);
-            for (let t = 0; t < 12 && position() === from && !over(); t++) await new Promise<void>(r => { const off = s.onTick(() => { off(); r(); }); });
+            for (let t = 0; t < 12 && position() === from && !over(); t++) await nextTick(s);
             if (position() === from) return { ...tally, end: 'travel teleport did not move the account' };
             const walked = await walk(s, EDGEVILLE_BANK, over, 600);
             if (!walked.ok) return { ...tally, end: 'walk from the teleport to Edgeville failed ' + JSON.stringify(walked) };
@@ -122,7 +124,7 @@ export async function hunt(s: Session, o: HuntOptions) {
         let attackerIndex: number | null = null, seen = 0, foodReady = 0;
         const waitUntil = s.tick() + (here.dwell ?? 60);
         while (!over() && s.tick() < waitUntil) {
-            await new Promise<void>(r => { const off = s.onTick(() => { off(); r(); }); });
+            await nextTick(s);
             const state = s.sdk.getState(), me = state?.player;
             if (!state || !me) continue;
             for (const e of state.combatEvents) if ((e.observationId ?? e.tick) > seen) { seen = e.observationId ?? e.tick; if (hitByPlayer(e)) attackerIndex = e.sourceIndex; }
@@ -151,11 +153,12 @@ export async function hunt(s: Session, o: HuntOptions) {
                 log(`HUNT looted ${n} piles at ${JSON.stringify(r.targetAt ?? target)}`);
             }
             if (r.outcome === 'died') { tally.deaths++; return { ...tally, end: 'died' }; }
+            if (r.outcome === 'session ended') return { ...tally, end: 'session ended' };
             if (r.outcome === 'escaped') { tally.escapes++; }
             break;
         }
     }
-    return { ...tally, end: o.stop() ? 'stopped' : 'cap' };
+    return { ...tally, end: ended ? 'session ended' : o.stop() ? 'stopped' : 'cap' };
 }
 
 // Pick up what the loser dropped near where it stood, bones aside, while the inventory has room.
@@ -163,7 +166,7 @@ async function loot(s: Session, at: { x: number; z: number }, stop: () => boolea
     let taken = 0;
     // The drop lands after the death animation: wait up to 10 ticks for the first pile.
     const near = (g: { x: number; z: number; name: string }) => Math.max(Math.abs(g.x - at.x), Math.abs(g.z - at.z)) <= 3 && !/bones$/i.test(g.name);
-    for (let wait = 0; wait < 10 && !stop() && !(s.sdk.getState()?.groundItems ?? []).some(near); wait++) await new Promise<void>(r => { const off = s.onTick(() => { off(); r(); }); });
+    for (let wait = 0; wait < 10 && !stop() && !(s.sdk.getState()?.groundItems ?? []).some(near); wait++) await nextTick(s);
     for (let tries = 0; tries < 28 && !stop(); tries++) {
         if (s.sdk.getInventory().length >= 28) break;
         const pile = (s.sdk.getState()?.groundItems ?? []).filter(near)
@@ -188,5 +191,7 @@ if (import.meta.main) {
         rotation: env.PK_ROTATION ? env.PK_ROTATION.split(',') as Style[] : undefined, teleSpell: env.PK_TELE ? Number(env.PK_TELE) : undefined,
         spots: env.PK_SPOTS ? JSON.parse(env.PK_SPOTS) as Spot[] : undefined, observe: env.PK_OBSERVE === '1' });
     console.log('HUNT ' + JSON.stringify(r));
+    // A dropped session reports the swarm's drain wording (planner DRAIN_RESULT), not a hunt outcome.
+    if (r.end === 'session ended') await finish([s], false, 'session ended: disconnected');
     await finish([s], r.end !== 'died' && !/failed|lacks|short|did not open/.test(r.end), `hunt ${r.end} kills ${r.kills}`);
 }

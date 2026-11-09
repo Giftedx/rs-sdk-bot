@@ -48,7 +48,7 @@ export type FightOptions = {
     cap?: number;
     log?: (line: string) => void;
 };
-export type FightResult = { outcome: 'kill' | 'died' | 'escaped' | 'lost' | 'timeout' | 'danger'; danger?: string; ticks: number; dealt: number; taken: number; eaten: number; attacks: Record<Style, number>; freezes: number; specs: number; targetAt?: { x: number; z: number } };
+export type FightResult = { outcome: 'kill' | 'died' | 'escaped' | 'lost' | 'timeout' | 'danger' | 'session ended'; danger?: string; ticks: number; dealt: number; taken: number; eaten: number; attacks: Record<Style, number>; freezes: number; specs: number; targetAt?: { x: number; z: number } };
 
 // Overhead protect prayers from the head icon bits (content player/configs/headicon.constant: 3 melee, 4 missiles, 5 magic).
 export function protectedStyles(headicons: number | undefined): Set<Style> {
@@ -124,6 +124,15 @@ export function dangerReason(o: { hp: number; maxHp: number; food: boolean; pray
     return null;
 }
 
+// The next game tick, or false once the session has ended: a dropped session publishes no more ticks, so a plain
+// onTick wait would hang and a loop around it would spin on failed actions.
+export function nextTick(s: Pick<Session, 'onTick' | 'ended'>): Promise<boolean> {
+    return new Promise(resolve => {
+        const off = s.onTick(() => { off(); resolve(true); });
+        void s.ended.then(() => { off(); resolve(false); });
+    });
+}
+
 export const wildernessLevel = (z: number) => (z >= 9920 ? Math.floor((z - 9920) / 8) + 1 : z >= 3520 ? Math.floor((z - 3520) / 8) + 1 : 0);
 // Both players must stand in the Wilderness and the combat gap must fit inside the shallower player's level.
 export function attackable(me: { z: number; combatLevel: number }, other: { z: number; combatLevel: number }): boolean {
@@ -155,7 +164,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
     let target: NearbyPlayer | undefined, rubbed = -1, ranAt = -10;
     const hits: { tick: number; damage: number; src: number }[] = [], dealtLog: { tick: number; damage: number }[] = [];
     for (;;) {
-        await new Promise<void>(resolve => { const off = s.onTick(() => { off(); resolve(); }); });
+        if (!await nextTick(s)) { result.outcome = 'session ended'; log(`PK session ended against ${targetName}`); return result; }
         const now = s.tick(), state = sdk.getState(), me = state?.player;
         // PlayerState x and z are scene-local; worldX and worldZ are the tile coordinates players and the Wilderness use.
         const at = me ? { x: me.worldX, z: me.worldZ } : null;

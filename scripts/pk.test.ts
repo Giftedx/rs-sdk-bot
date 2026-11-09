@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { attackable, bestFood, dangerReason, estMaxHit, freezeSpell, killMessage, lowHealth, nextStyle, observePlayer, protectedStyles, skulled, SPELLS, weaponStyle, wildernessLevel } from './pk';
+import { attackable, bestFood, dangerReason, estMaxHit, freezeSpell, killMessage, lowHealth, nextStyle, nextTick, observePlayer, protectedStyles, skulled, SPELLS, weaponStyle, wildernessLevel } from './pk';
 
 test('Wilderness level follows wilderness_levels.rs2: surface from z 3520, the dungeon from z 9920', () => {
     expect(wildernessLevel(3519)).toBe(0);
@@ -103,4 +103,16 @@ test('dangerReason: no food near the max hit, a pile, a lost damage race, no pra
     expect(dangerReason(race)).toMatch(/losing the race/);
     expect(dangerReason({ ...race, hp: 60 })).toBeNull(); // still over 60%
     expect(dangerReason({ ...base, prayer: 0, hp: 49 })).toMatch(/no prayer/);
+});
+
+test('a tick wait resolves false once the session ends, so loops stop instead of hanging or spinning', async () => {
+    let fire: (() => void) | undefined, endSession: (() => void) | undefined;
+    const session = { onTick: (cb: () => void) => { fire = cb; return () => { fire = undefined; }; }, ended: new Promise<{ reason: string }>(r => { endSession = () => r({ reason: 'disconnected' }); }) };
+    const first = nextTick(session);
+    fire!();
+    expect(await first).toBe(true);
+    const second = nextTick(session);
+    endSession!();
+    expect(await second).toBe(false);
+    expect(await nextTick(session)).toBe(false);
 });
