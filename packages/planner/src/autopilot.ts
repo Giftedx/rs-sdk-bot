@@ -95,8 +95,10 @@ export function plan(inp: Inputs): Assignment[] {
     const keeps = (c: Cand) => inp.current?.get(c.account.toLowerCase()) === c.template.id ? 1 : 0;
     const used = new Map(Object.entries(inp.taken ?? {})), done = new Map<string, Assignment>();
     // A candidate's worth with the holders taken so far: each holder of a resource scales it by that resource's shared
-    // rate, so a third farmer on a spot is worth less than a second and the farmers spread over the spots.
-    const worth = (c: Cand) => c.resources.reduce((v, r) => v * (inp.shared?.[r] ?? 1) ** (used.get(r) ?? 0), c.value);
+    // rate, so a third farmer on a spot is worth less than a second and new farmers spread over the spots. The place an
+    // account already holds keeps its full worth: crowding counts only against a move, so a farmer stays put until its
+    // spot is full (capacity is a hard limit below), and sides do not chase each other's lagging claims.
+    const worth = (c: Cand) => c.resources.reduce((v, r) => v * (inp.shared?.[r] ?? 1) ** (keeps(c) ? 0 : (used.get(r) ?? 0)), c.value);
     const order = (x: Cand, y: Cand) => worth(y) - worth(x) || keeps(y) - keeps(x) || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id);
     // Donor coins above the reserve, spent as funded candidates take them; a funded account gives nothing.
     // A donor that gives stays free this pass, so the fleet agent can log it in for the trade.
