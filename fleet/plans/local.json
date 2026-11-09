@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794217709793,
+ "at": 1794218320130,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -88,15 +88,18 @@
   },
   {
    "account": "Mightyrod",
-   "script": "scripts/pk-live/live-pilot.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "10",
-    "15"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=10 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=mightyrod-law10 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/pk-live/live-pilot.ts 10 20"
    ],
-   "enabled": false,
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "Wilderness PK pilot: tribrid hunter from Edgeville, 10 minutes, Wilderness 15 or less",
+   "goal": "Buy 10 law runes on the GE for Varrock Teleport escapes, then a 10-minute PK pilot at Wilderness 20 or less",
    "role": "pk"
   },
   {
@@ -139,21 +142,21 @@
   },
   {
    "account": "mmtha0205",
-   "script": "scripts/gather-feathers.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "PEN": "3187,3277",
-    "TICKS": "3000"
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
-   "role": "helper",
-   "template": "feathers@3187,3277",
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
    "resources": [
-    "pen:3187,3277"
+    "knight:2653,3300"
    ]
   },
   {
@@ -377,7 +380,7 @@
     "CAP": "6000",
     "COORDINATOR_RUN_ID": "task-0199e6be-a99c-4f3a-8b82-41052a32a005"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-observatory-ballspinner-furnace-glass [task-0199e6be-a99c-4f3a-8b82-41052a32a005]",
    "role": "supply"
