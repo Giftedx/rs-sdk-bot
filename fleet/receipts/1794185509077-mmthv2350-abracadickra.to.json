@@ -1,0 +1,30 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794185509077-mmthv2350-abracadickra",
+ "account": "Abracadickra",
+ "partner": "mmthv2350",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 12151,
+ "claim": "92c3b2ac-66f5-431c-9167-f844b4b68013",
+ "count": 12151,
+ "ok": true,
+ "at": 1794185629089,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2060,
+  "after": 14211
+ },
+ "bank": {
+  "count": 12151,
+  "at": 1794185628364
+ },
+ "logout": {
+  "attemptId": "1794185593484-0000036028-0000000001",
+  "at": 1794185629080,
+  "sha256": "85ec4402f888057903489ac277ef0469f4909b8f7eb4b8ce65c13bf7d92fdda0"
+ }
+}
