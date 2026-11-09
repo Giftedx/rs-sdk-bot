@@ -49,3 +49,8 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
    - move a hunt spot that rejected walks.
 
    Gap: no live run; no opponent that eats, prays or flees; a death ends the run.
+8. **A range pure runs the hunter from Ardougne.** Practice, one run. A combat-78 pure (Attack 69, Strength 1, Defence 1,
+   Ranged 99, Magic 48, Prayer 75, Hitpoints 83) in coif, black d'hide chaps and vambraces, with a magic shortbow. It started at
+   Ardougne with a glory, rubbed to Edgeville, and restocked a staff of fire, a rune scimitar and Fire Bolt runes (`PK_KIT`,
+   `PK_TRIP`, `PK_SPELL`). It killed a combat-76 melee dummy at Wilderness level 4 in 128 ticks and looted 4 piles. Gap: one
+   run; no live run.
