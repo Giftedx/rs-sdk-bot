@@ -10,7 +10,7 @@ export const COW_NORTH_BANK={x:2619,z:3332},COW_KIT=[1277,1171] as const;
 // Bank food in pick order: trout, whole cakes, 2/3 cakes, slices.
 const FOOD=[333,1891,1897,1893,1899,1895,1901];
 const count=(items:readonly Item[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
-export const atNorthBank=(p:{worldX:number;worldZ:number;level:number}|undefined)=>!!p&&p.level===0&&Math.max(Math.abs(p.worldX-COW_NORTH_BANK.x),Math.abs(p.worldZ-COW_NORTH_BANK.z))<=3;
+export const atNorthBank=(p:{worldX:number;worldZ:number;level:number}|null|undefined)=>!!p&&p.level===0&&Math.max(Math.abs(p.worldX-COW_NORTH_BANK.x),Math.abs(p.worldZ-COW_NORTH_BANK.z))<=3;
 
 // The withdrawals that complete the cow kit and food, or the missing part. Carried food counts first, then bank food
 // in FOOD order until the held food heals COW_FOOD_HP.
@@ -40,7 +40,7 @@ export async function stageCows(s:Session,o:{walk:(x:number,z:number)=>Promise<b
     if('missing' in plan){await s.bot.closeBank();throw new Error(`cow stage: bank lacks ${plan.missing}`);}
     for(const want of plan.take){
         if(o.stop?.())throw new Error('cow stage: stop requested');
-        const row=(observe()?.items??[]).find(i=>i.id===want.id),before=count(inv(),want.id);
+        const row=(state()?.bank?.items??[]).find(i=>i.id===want.id),before=count(inv(),want.id);
         if(!row||!(await s.bot.withdrawItem(row,want.count,{asNote:false})).success||!await waitUntil(s,()=>count(inv(),want.id)>=before+want.count,{timeoutTicks:10}))
             throw new Error(`cow stage: withdraw ${want.count}x${want.id} failed`);
     }
