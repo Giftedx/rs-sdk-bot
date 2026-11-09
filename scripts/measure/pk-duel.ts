@@ -8,6 +8,7 @@
 //   DUMMY_PRAY=magic|ranged|melee   the dummy holds that protect prayer
 //   DUMMY_FOOD=n      sharks for the dummy (default 0)
 //   A_FOOD=n          sharks for the tribrid (default 18); ESCAPE_AT=hp rubs the carried glory once out of food
+//   NO_GLORY=1        no glory carried; ESCAPE_SPELL=<component id> teleports instead (Varrock runes carried)
 // Prints one `DUEL <label> <outcome> <result json>` line.
 import { createBot } from '../../packages/practice/src/bots';
 import { applyPreset } from '../../packages/practice/src/presets';
@@ -30,7 +31,8 @@ await applyPreset(A, { position: { x: 3094, z: 3555, level: 0 }, skills: max, va
     equipment: [...armour, ...melee, { id: ID.runeArrow, count: 300, slot: 13 }],
     // Staff, bow, air/blood runes for Fire Wave, earth/water/nature for the freezes, 2 prayer potions, a glory, sharks.
     inventory: items([[ID.mysticFireStaff, 1], [ID.magicShortbow, 1], [ITEMS.airRune, 500], [ITEMS.bloodRune, 100], [ITEMS.earthRune, 200],
-        [ITEMS.waterRune, 200], [ITEMS.natureRune, 100], [2434, 1], [2434, 1], [1712, 1], ...sharks(Number(env.A_FOOD ?? 18))]) });
+        [ITEMS.waterRune, 200], [ITEMS.natureRune, 100], [2434, 1], [2434, 1], ...(env.NO_GLORY === '1' ? [[ITEMS.lawRune, 2], [ITEMS.fireRune, 2]] : [[1712, 1]]),
+        ...sharks(Number(env.A_FOOD ?? 18))]) });
 await applyPreset(B, { position: { x: 3096, z: 3555, level: 0 }, skills: max, varps: lostCity,
     equipment: [...armour, ...melee], inventory: items(sharks(Number(env.DUMMY_FOOD ?? 0))) });
 const a = await openBot(A), b = await openBot(B);
@@ -39,7 +41,7 @@ if (pray !== undefined) { await b.sdk.sendTogglePrayer(pray); await new Promise(
 const kit: Kit = { magic: [ID.mysticFireStaff], ranged: [ID.magicShortbow], melee: [ID.dragonDaggerP, ID.runeKiteshield] };
 const r = await fightPlayer(a, B, {
     kit, cap: 900, freeze: env.FREEZE === '1', readOverheads: env.READ !== '0', rotation: (env.ROTATION ?? 'magic,ranged,melee').split(',') as Style[],
-    escapeAt: env.ESCAPE_AT ? Number(env.ESCAPE_AT) : undefined,
+    escapeAt: env.ESCAPE_AT ? Number(env.ESCAPE_AT) : undefined, escapeSpell: env.ESCAPE_SPELL ? Number(env.ESCAPE_SPELL) : undefined,
     spec: env.SPEC === '1' ? { kit: [ID.dragonDaggerP, ID.runeKiteshield], bar: 'combat_stabsword:specbar', cost: 250, below: Number(env.SPEC_BELOW ?? 0.5) } : undefined,
     log: l => console.log(`[${A}] ${l}`),
 });

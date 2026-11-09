@@ -16,7 +16,9 @@ export const ITEMS = {
     shark: 385, glory: [1712, 1710, 1708, 1706], prayerPotion: [2434, 139, 141, 143], superRestore: [3024, 3026, 3028, 3030],
     deathRune: 560, bloodRune: 565, fireRune: 554, airRune: 556, waterRune: 555, earthRune: 557, natureRune: 561, lawRune: 563,
 } as const;
-export const SPELLS = { fireBolt: 1169, fireBlast: 1181, fireWave: 1189, bind: 1572, snare: 1582, entangle: 1592 } as const;
+export const SPELLS = { fireBolt: 1169, fireBlast: 1181, fireWave: 1189, bind: 1572, snare: 1582, entangle: 1592,
+    // Teleports work up to Wilderness level 20 (skill_magic/scripts/spells/teleport.rs2:17); Varrock costs 1 law, 3 air, 1 fire.
+    varrockTeleport: 1164, lumbridgeTeleport: 1167, faladorTeleport: 1170, camelotTeleport: 1174 } as const;
 // Prayer indices (vendor/rs-sdk/sdk/types.ts PRAYER_NAMES): 8 Protect Item, 12 Magic, 13 Missiles, 14 Melee.
 export const PRAYER = { item: 8, magic: 12, missiles: 13, melee: 14 } as const;
 
@@ -37,8 +39,9 @@ export type FightOptions = {
     // dagger is { kit: [dagger, shield], bar: 'combat_stabsword:specbar', cost: 250, below: 0.5 }.
     spec?: { kit: number[]; bar: string; cost: number; below: number };
     // Out of food at or under this HP: rub an inventory amulet of glory to Edgeville (amulet_of_glory.rs2 allows it up
-    // to Wilderness level 30; there is no Teleblock in the content).
+    // to Wilderness level 30; there is no Teleblock in the content), or with no glory cast `escapeSpell` (level 20).
     escapeAt?: number;
+    escapeSpell?: number;
     damageSpell?: number;
     cap?: number;
     log?: (line: string) => void;
@@ -158,6 +161,9 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         if (o.escapeAt !== undefined && me.hp <= o.escapeAt && !slotOf([ITEMS.shark]) && wildernessLevel(at.z) <= 30) {
             const glory = slotOf(ITEMS.glory);
             if (glory && (rubbed < 0 || now - rubbed > 6) && !state.dialog?.isOpen) { log(`PK rub glory at HP ${me.hp}`); use(glory, /^Rub$/i); rubbed = now; }
+            else if (!glory && o.escapeSpell !== undefined && wildernessLevel(at.z) <= 20 && (rubbed < 0 || now - rubbed > 6)) {
+                log(`PK teleport spell at HP ${me.hp}`); void sdk.sendClickComponent(o.escapeSpell); rubbed = now;
+            }
             if (state.dialog?.isOpen) void sdk.clickDialogByText(/^Edgeville/i);
             continue;
         }
