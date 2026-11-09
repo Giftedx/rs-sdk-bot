@@ -1,5 +1,5 @@
 import {expect,test,spyOn} from 'bun:test';
-import {productionBatch,productionConserved,talismanTarget,huntFight,collectHuntLoot,depositEarthInventory,runEarthProduction} from './earth-production';
+import {productionBatch,productionConserved,talismanTarget,huntFight,collectHuntLoot,depositEarthInventory,runEarthProduction,stageOwnedEquipment} from './earth-production';
 import * as coreBot from '../packages/core/src/bot';
 import * as walking from '../packages/core/src/walk';
 import {setEquipmentObserved} from '../packages/core/src/container-observation';
@@ -160,4 +160,9 @@ test('conservation binds essence debit, crafted output and food-stage transforma
  expect(productionConserved(before,new Map(after).set(557,21),ledger)).toBe(false);
  expect(productionConserved(before,new Map(after).set(1436,9),ledger)).toBe(false);
  expect(productionConserved(before,new Map(after).set(1893,0),ledger)).toBe(false);
+});
+test('equipping closes the bank, so every missing kit item must be withdrawn first',async()=>{
+ let open=true;const pack=new Set<number>(),worn=new Set<number>();
+ await stageOwnedEquipment([1277,1171,1115],()=>[...worn],async id=>{if(!open)throw Error('bank closed before kit withdrawal');pack.add(id);},async()=>{open=false;},async id=>{open=false;if(!pack.has(id))throw Error('kit item missing');pack.delete(id);worn.add(id);});
+ expect([...worn]).toEqual([1277,1171,1115]);expect(pack.size).toBe(0);
 });
