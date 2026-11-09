@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794189770638,
+ "at": 1794190037227,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -26,18 +26,18 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2652,3318",
+    "KNIGHT_SPOT": "2653,3300",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
+   "goal": "goldfarm knights at 2653,3300",
    "role": "thieving",
-   "template": "goldfarm@2652,3318",
+   "template": "goldfarm@2653,3300",
    "autopilot": "claude-cloud",
    "resources": [
-    "knight:2652,3318"
+    "knight:2653,3300"
    ]
   },
   {
@@ -61,21 +61,24 @@
   },
   {
    "account": "UnderMyKilt",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
+    "ITEMS": "rune arrowtips|adamant arrowtips",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "goal": "buy rune and adamant arrowtips at Catherby",
+   "role": "bank",
+   "template": "shop-arrowtips",
    "autopilot": "claude-cloud",
    "resources": [
-    "knight:2669,3298"
+    "shop:catherby"
    ]
   }
  ]
