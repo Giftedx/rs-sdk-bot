@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794193637301,
+ "at": 1794194253224,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -23,21 +23,21 @@
   },
   {
    "account": "TrouserSnake",
-   "script": "scripts/goldfarm.ts",
+   "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
+    "PEN": "3017,3288",
+    "TICKS": "3000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
+   "goal": "feathers at the chicken pen 3017,3288",
+   "role": "helper",
+   "template": "feathers@3017,3288",
    "autopilot": "claude-cloud",
    "resources": [
-    "knight:2653,3300"
+    "pen:3017,3288"
    ]
   },
   {
