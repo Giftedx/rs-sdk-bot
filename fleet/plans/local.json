@@ -1,23 +1,7 @@
 {
  "side": "local",
- "at": 1794184070592,
+ "at": 1794184678894,
  "jobs": [
-  {
-   "account": "Masterbaiter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/gather-fish.ts cage 3000",
-    "scripts/cook-food.ts 1500 lobster"
-   ],
-   "env": {
-    "ROUNDS": "0"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "cooked lobsters (607 short): fish then cook at Catherby",
-   "role": "supply"
-  },
   {
    "account": "FishAndChips",
    "script": "scripts/chain.ts",
@@ -34,145 +18,6 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
-   "role": "supply"
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
-    "scripts/goldfarm.ts KNIGHT_SPOT=2669,3298"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "Thieving 55, then coins from Ardougne knights",
-   "role": "supply"
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "aubury",
-    "6000"
-   ],
-   "env": {
-    "ITEMS": "fire rune|earth rune",
-    "BANK_PACK": "1",
-    "MAX_SPEND": "200000",
-    "COIN_RESERVE": "10000",
-    "FLOAT": "210000",
-    "NO_BUY_TICKS": "50"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "fire runes (2000 short) and earth runes (1193 short) from Aubury",
-   "role": "supply"
-  },
-  {
-   "accounts": [
-    "NabTheKnob"
-   ],
-   "script": "scripts/quest-chain.ts",
-   "args": [
-    "runemysteries",
-    "murder",
-    "sheep",
-    "cook",
-    "rj"
-   ],
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "quests in one host: runemysteries, murder, sheep, cook, rj",
-   "role": "quests"
-  },
-  {
-   "accounts": [
-    "Swordinhand"
-   ],
-   "script": "scripts/quest-chain.ts",
-   "args": [
-    "runemysteries",
-    "murder",
-    "sheep",
-    "cook",
-    "rj"
-   ],
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "quests in one host: runemysteries, murder, sheep, cook, rj",
-   "role": "quests"
-  },
-  {
-   "accounts": [
-    "Abracadickra"
-   ],
-   "script": "scripts/quest-chain.ts",
-   "args": [
-    "runemysteries",
-    "murder",
-    "sheep",
-    "cook",
-    "rj"
-   ],
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "quests in one host: runemysteries, murder, sheep, cook, rj",
-   "role": "quests"
-  },
-  {
-   "accounts": [
-    "Woodenstaff"
-   ],
-   "script": "scripts/quest-chain.ts",
-   "args": [
-    "runemysteries",
-    "murder",
-    "sheep",
-    "cook",
-    "rj"
-   ],
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "quests in one host: runemysteries, murder, sheep, cook, rj",
-   "role": "quests"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/walk-to.ts 3269 3167",
-    "scripts/smelt-bars.ts 3000 bronze MAX_MAKE=13",
-    "scripts/smelt-bars.ts 3000 iron"
-   ],
-   "env": {
-    "ROUNDS": "0"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": false,
-   "goal": "Smithing from banked ore: 1630 bronze and 571 iron at Al Kharid",
-   "role": "smithing"
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2653,3302"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "coins for route supplies: Ardougne knights",
    "role": "supply"
   },
   {
@@ -213,43 +58,6 @@
    "role": "firemaking"
   },
   {
-   "account": "mmsmk1232",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2671,3313"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "coins for route supplies: Ardougne knights",
-   "role": "supply"
-  },
-  {
-   "account": "mmthv2350",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "betty",
-    "3000"
-   ],
-   "env": {
-    "ITEMS": "fire rune",
-    "BANK_PACK": "1",
-    "MAX_SPEND": "2000",
-    "COIN_RESERVE": "10000",
-    "FLOAT": "12000",
-    "NO_BUY_TICKS": "50",
-    "MAX_ITEMS": "250",
-    "STOCK_TARGET": "750",
-    "STOP_AT_TARGET": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "Bank 750 fire runes for the main route, up to 250 new",
-   "role": "supply"
-  },
-  {
    "account": "Mightyrod",
    "script": "scripts/quest-chain.ts",
    "args": [
@@ -260,6 +68,101 @@
    "repeat": false,
    "goal": "quests: runemysteries, murder, blackknight, vampire, priest, junglepotion, sheep, fishingcompo, druid, arrav, seaslug, haunted, demon, dig, drunkmonk, elemental, death, grandtree",
    "role": "combat"
+  },
+  {
+   "account": "Masterbaiter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/gather-fish.ts cage 3000",
+    "scripts/cook-food.ts 3000 lobster"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "Catherby lobsters, caught and cooked",
+   "role": "fishing",
+   "template": "lobster-chain",
+   "autopilot": "local",
+   "resources": [
+    "catherby:lobster"
+   ]
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3187,3277",
+    "TICKS": "3000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
+   "autopilot": "local",
+   "resources": [
+    "pen:3187,3277"
+   ]
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3229,3298",
+    "TICKS": "3000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3229,3298",
+   "role": "helper",
+   "template": "feathers@3229,3298",
+   "autopilot": "local",
+   "resources": [
+    "pen:3229,3298"
+   ]
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3197,3353",
+    "TICKS": "3000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3197,3353",
+   "role": "helper",
+   "template": "feathers@3197,3353",
+   "autopilot": "local",
+   "resources": [
+    "pen:3197,3353"
+   ]
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3017,3288",
+    "TICKS": "3000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3017,3288",
+   "role": "helper",
+   "template": "feathers@3017,3288",
+   "autopilot": "local",
+   "resources": [
+    "pen:3017,3288"
+   ]
   },
   {
    "account": "Billionaire",
@@ -279,22 +182,6 @@
    "resources": [
     "knight:2582,3297"
    ]
-  },
-  {
-   "account": "Swordinhand",
-   "script": "scripts/gather-combat.ts",
-   "env": {
-    "TARGET": "cow",
-    "CAP": "1000",
-    "MAX_KILLS": "5",
-    "TRAIN_SKILL": "Attack",
-    "TARGET_LEVEL": "20"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "Cow combat: Attack to 20",
-   "role": "combat"
   },
   {
    "account": "Hocuspokeus",
@@ -426,30 +313,9 @@
     "BANK_EVERY": "5",
     "COORDINATOR_RUN_ID": "task-98121627-5728-49a2-8345-54a547f27810"
    },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-blood-charge-renewed-controller-qualified [task-98121627-5728-49a2-8345-54a547f27810]",
-   "role": "supply"
-  },
-  {
-   "account": "Ballspinner",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ORDER_KEY": "ballspinner-kbd-sharks6",
-    "LIMIT_PRICE": "650",
-    "ITEM_ID": "385",
-    "ORDER_MS": "240000",
-    "CASH_RESERVE": "240000",
-    "QUANTITY": "6",
-    "FILL_WAIT_TICKS": "25",
-    "EXPECTED_OWNED": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-4fc989e4-f85e-4084-a199-dfb8d4f87bf1"
-   },
    "enabled": false,
    "repeat": false,
-   "goal": "run-ge-ballspinner-kbd-sharks6-saved-gate [task-4fc989e4-f85e-4084-a199-dfb8d4f87bf1]",
+   "goal": "run-blood-charge-renewed-controller-qualified [task-98121627-5728-49a2-8345-54a547f27810]",
    "role": "supply"
   },
   {
@@ -507,6 +373,27 @@
    "enabled": false,
    "repeat": false,
    "goal": "run-imp-magicwanda-after-market-recovery [task-4e3a0512-4b16-4dd7-a5ee-35072cb3fa5f]",
+   "role": "supply"
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ORDER_KEY": "ballspinner-kbd-sharks6",
+    "LIMIT_PRICE": "650",
+    "ITEM_ID": "385",
+    "ORDER_MS": "240000",
+    "CASH_RESERVE": "240000",
+    "QUANTITY": "6",
+    "FILL_WAIT_TICKS": "25",
+    "EXPECTED_OWNED": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-5890cab8-37f2-453e-bc17-d9a22a646d1f"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-ge-ballspinner-kbd-sharks6-after-publish [task-5890cab8-37f2-453e-bc17-d9a22a646d1f]",
    "role": "supply"
   }
  ]
