@@ -1,9 +1,9 @@
 {
  "side": "claude-cloud-4",
- "at": 1794197169433,
+ "at": 1794197772171,
  "jobs": [
   {
-   "account": "Dipstick",
+   "account": "Fingersmith",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
@@ -22,7 +22,7 @@
    ]
   },
   {
-   "account": "Fingersmith",
+   "account": "Dipstick",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
