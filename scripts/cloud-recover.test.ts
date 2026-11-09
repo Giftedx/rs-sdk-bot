@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { join } from 'node:path';
-import { archiveDir, eligibility, lifecycleRoot, parkedAccounts, recoveryProposal, type ClaimView } from './cloud-recover';
+import { archiveDir, cloudSide, eligibility, lifecycleRoot, parkedAccounts, recoveryProposal, releasableAccounts, type ClaimView } from './cloud-recover';
 import { DEFAULT_LIFECYCLE_ROOT } from '../packages/core/src/session-lifecycle';
 import type { LogoutProof } from '../packages/core/src/session-lifecycle';
 
@@ -63,4 +63,18 @@ test('logout proofs are read from the session-lifecycle directory under the chec
     // readLogoutProof's root is the lifecycle directory, not the checkout; a checkout root reads every proof as none.
     expect(lifecycleRoot(join(import.meta.dir, '..'))).toBe(DEFAULT_LIFECYCLE_ROOT);
     expect(lifecycleRoot('/r')).toBe('/r/.practice/session-lifecycle');
+});
+
+test('only a cloud side runs recovery; the local side and an unset FLEET_SIDE are refused', () => {
+    expect(cloudSide('local')).toBe(false);
+    expect(cloudSide('claude-cloud-3')).toBe(true);
+    expect(cloudSide('cloud')).toBe(true);
+});
+
+test('a release frees accounts only when every coordinator job is a parked session check', () => {
+    const check = (account: string) => ({ account, coordinatorOwner: 'coordinator', enabled: false, script: 'scripts/session-check.ts' });
+    expect(releasableAccounts([check('Kiltlifter'), check('PocketPool')])).toEqual(['Kiltlifter', 'PocketPool']);
+    expect(releasableAccounts([])).toEqual([]);
+    expect(releasableAccounts([check('Kiltlifter'), { account: 'Haggis', coordinatorOwner: 'coordinator', enabled: false, script: 'scripts/fight.ts' }])).toEqual([]);
+    expect(releasableAccounts([check('Kiltlifter'), { account: 'Haggis', coordinatorOwner: 'coordinator', enabled: true, script: 'scripts/session-check.ts' }])).toEqual([]);
 });

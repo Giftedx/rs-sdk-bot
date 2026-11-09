@@ -64,12 +64,23 @@ export function parkedAccounts(jobs: readonly any[]): string[] {
     return jobs.filter(j => j?.coordinatorOwner === 'coordinator' && j.enabled === false && typeof j.account === 'string').map(j => j.account);
 }
 
+// The accounts a release may free: only when every job in the coordinator's file is a finished recovery's parked
+// session check. Any other coordinator job keeps the file in place.
+export function releasableAccounts(jobs: readonly any[]): string[] {
+    const parked = parkedAccounts(jobs);
+    return parked.length && parked.length === jobs.length && jobs.every(j => j.script === 'scripts/session-check.ts') ? parked : [];
+}
+
+// The local side's coordinator owns real work in its jobs.json; only a cloud side runs this script.
+export const cloudSide = (side: string) => side !== 'local';
+
 const pidAlive = (pid: number) => { try { process.kill(pid, 0); return true; } catch (e) { return (e as NodeJS.ErrnoException).code === 'EPERM'; } };
 const readJson = (file: string, fallback: any) => { try { return JSON.parse(readFileSync(file, 'utf8')); } catch { return fallback; } };
 const log = (line: string) => console.log(`CLOUD_RECOVER ${line}`);
 
 async function main(root: string, dry: boolean): Promise<number> {
     const side = mySide(), coord = join(root, '.practice', 'coordinator'), stopCoordinator = join(root, '.practice', 'stop-coordinator');
+    if (!cloudSide(side)) { log('refused: cloud sides only (FLEET_SIDE unset or local); the local coordinator owns its jobs.json'); return 1; }
     const coordinatorRunning = () => { const o = readJson(join(coord, 'owner.json'), null); return !!o && Number.isSafeInteger(o.pid) && pidAlive(o.pid) && !existsSync(stopCoordinator); };
     if (!coordinatorRunning()) { log('refused: coordinator is not running'); return 1; }
     const state = readJson(join(coord, 'state.json'), { tasks: [] });
@@ -111,7 +122,8 @@ async function main(root: string, dry: boolean): Promise<number> {
         if (proof.state !== 'confirmed') return 1;
     }
     // A finished recovery leaves a parked coordinator job that keeps the account from its owner job; release it.
-    const parked = parkedAccounts(readJson(join(coord, 'jobs.json'), { jobs: [] }).jobs ?? []);
+    const jobs = readJson(join(coord, 'jobs.json'), { jobs: [] }).jobs ?? [], parked = releasableAccounts(jobs);
+    if (!parked.length && parkedAccounts(jobs).length) log('release skipped: jobs.json holds coordinator jobs other than parked session checks');
     if (!parked.length || (state.tasks ?? []).some((t: any) => t.status === 'running')) return 0;
     if (dry) { log(`would release parked jobs for ${parked.join(', ')}`); return 0; }
     return (await release(root, parked)) ? 0 : 1;
