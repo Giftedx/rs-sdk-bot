@@ -51,9 +51,10 @@ export function escapeZ(gap: number): number {
     return 3520 + (Math.max(gap, 1) - 1) * 8;
 }
 
-// Tiles a target at the meeting tile must run south to get out of attack range. 16 tiles is 8 ticks running:
-// time to freeze it before it escapes.
-export const MIN_ESCAPE_TILES = 16;
+// Tiles a target at the meeting tile must run south to get out of attack range. A freeze cycle is the hold plus 5
+// immune ticks (pvp_magic.rs2:85-104) in which the target runs about 10 tiles; a tough target takes several cycles
+// (practice: 95 HP in rune armour lost 19 HP in a 24-tick Entangle), so 40 tiles leaves about four.
+export const MIN_ESCAPE_TILES = 40;
 
 // The roster target we can meet first, attack at the meeting tile, and freeze before it runs out of range.
 export function pickTrack(me: { x: number; z: number; combat: number }, tracks: Track[], friends: ReadonlySet<string>, maxWild: number, skip: ReadonlySet<string> = new Set(), minEscape = MIN_ESCAPE_TILES) {
@@ -253,11 +254,12 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 lastDist = near.distance;
                 // The SDK reports every freeze as a hit (the server grants the XP before the hit roll), so a held
                 // target is one that stops moving: a move after a freeze means it splashed or ended.
-                if (held && lastSeenAt && cheb(lastSeenAt, near) >= 1) { held = false; freezeReady = Math.min(freezeReady, session.tick()); }
+                if (held && lastSeenAt && cheb(lastSeenAt, near) >= 1) { held = false; freezeReady = Math.max(freezeReady, session.tick() + 5); }
                 lastSeenAt = { x: near.x, z: near.z };
                 // Freeze first, at first reach, before the target can run; freeze again whenever it moves.
                 if (freeze && canAttack(m, near) && session.tick() >= freezeReady && !held) {
-                    const r = await bot.castSpell(near as any, freeze);
+                    // A cast on an immune or held target gives no XP; the SDK then waits out its timeout, so keep it short.
+                    const r = await bot.castSpell(near as any, freeze, 1000);
                     if (r.success) { held = true; stats.freezes++; lastSeenAt = { x: near.x, z: near.z }; }
                     freezeReady = session.tick() + 3;
                     emit({ e: 'freeze', target: name, spell: freeze, ok: r.success, msg: r.success ? undefined : r.message });

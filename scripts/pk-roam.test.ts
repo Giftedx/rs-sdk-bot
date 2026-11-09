@@ -89,7 +89,8 @@ test('pickTrack skips a target that can run out of range before a freeze lands',
     const me = { x: 3094, z: 3570, combat: 97 };
     // Gap 6: out of range south of z 3560. At 3570 it is 10 tiles from escape: skipped. At 3600: 40 tiles, taken.
     expect(pickTrack(me, [track({ name: 'Edge', x: 3094, z: 3570, combatLevel: 91 })], new Set(), 56)).toBeNull();
-    expect(pickTrack(me, [track({ name: 'Deep', x: 3094, z: 3600, combatLevel: 91 })], new Set(), 56)?.track.name).toBe('Deep');
+    expect(pickTrack(me, [track({ name: 'Mid', x: 3094, z: 3590, combatLevel: 91 })], new Set(), 56)).toBeNull(); // 30 tiles
+    expect(pickTrack(me, [track({ name: 'Deep', x: 3094, z: 3600, combatLevel: 91 })], new Set(), 56)?.track.name).toBe('Deep'); // 40 tiles
 });
 
 test('kitFrom: worn weapon and shield for melee, a carried bow, a carried staff; magic always usable', () => {
