@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud-3",
- "at": 1794182455097,
+ "at": 1794183226336,
  "jobs": [
   {
    "account": "Kiltlifter",
@@ -42,19 +42,18 @@
   },
   {
    "account": "PocketPool",
-   "script": "scripts/generated/thieving60.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "TARGET": "55",
-    "CAP": "2500",
-    "CLEAN_FOOD": "1"
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Thieving to 55 for a knight spot",
+   "goal": "goldfarm knights at 2653,3300",
    "role": "thieving",
-   "template": "thieving55",
+   "template": "goldfarm@2653,3300",
    "autopilot": "claude-cloud-3",
    "resources": [
     "knight:2653,3300"
