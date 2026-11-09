@@ -27,9 +27,11 @@
     "packages/practice/test/proc.test.ts",
     "scripts/ghost-basement-exit.ts",
     "scripts/ghost-basement-exit.test.ts",
-    "packages/practice/test/quest-sweep-endpoints.test.ts"
+    "packages/practice/test/quest-sweep-endpoints.test.ts",
+    "scripts/generated/quest-imp.ts",
+    "scripts/generated/quest-fluffs.ts"
   ],
-  "consumer": "run-rj-wandwaver-exact-letter completes Romeo & Juliet on ordinary Wandwaver with args rj, CAP6000, timeout5400000 and quest completion acceptance. Match Juliet's letter755 exactly while preserving unrelated Pirate message433. Practice invokes the real account-parameterized worker CLI and checks saved completion, five quest points, reconciled assets and logout. Preserve existing quest callers, practice cases, refusal checks and acceptance. The five quest points feed the existing eight-lobster purchase and Black Knight's Fortress live consumer. Main and specialist clocks remain protected.",
+  "consumer": "run-fluffs-magicwanda-yard-exit completes Gertrude's Cat on ordinary Magicwanda (Magic 1, %fluffs 5, inside the lumber yard) with args fluffs, CAP 6000, timeout 5400000 and quest completion acceptance. Practice invokes the real account-parameterized worker CLI from a varp-5 save inside the yard with Magic 1. It checks the exit over fence 2618 at 3305,3493, saved completion, +1 quest point, reconciled assets and logout. Preserve existing quest callers, practice cases, refusal checks and acceptance. Main and specialist clocks remain protected.",
   "checks": [
     {
       "id": "quest-sweep-regressions",

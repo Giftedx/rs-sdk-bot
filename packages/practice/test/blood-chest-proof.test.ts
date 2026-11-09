@@ -73,6 +73,9 @@ test('the entry case needs the banked reward, exact XP and kept assets',()=>{
  expect(pass(bloodSaveChecks(before('entry'),short,entryResult,'entry'))).toContain('output');
  const lost=save({...BANK,raw:1000+ENTRY_RAW_XP,pack:[[1895,2]],bank:[[995,2040],[314,7],[565,4]]});
  expect(pass(bloodSaveChecks(before('entry'),lost,entryResult,'entry'))).toContain('assets');
+ // A surface meal before the second trip spends one carried cake.
+ expect(pass(bloodSaveChecks(before('entry'),lost,{...entryResult,meals:1},'entry'))).toEqual([]);
+ expect(pass(bloodSaveChecks(before('entry'),lost,{...entryResult,meals:2},'entry'))).toContain('assets');
  const carried=save({...BANK,raw:1000+ENTRY_RAW_XP,pack:[[1895,3],[565,4]],bank:[[995,2040],[314,7]]});
  expect(pass(bloodSaveChecks(before('entry'),carried,entryResult,'entry'))).toContain('output');
  const elsewhere=save({...ARRIVAL,raw:1000+ENTRY_RAW_XP,pack:[[1895,3]],bank:[[995,2040],[314,7],[565,4]]});
@@ -110,6 +113,9 @@ test('the exit case banks the carried coins from the dungeon with no loot',()=>{
  const result={ok:false,stop:'cap',targetMet:false,conserved:true,loots:0,runes:0,coins:0,bankedRunes:0,bankedCoins:40,entries:0,died:false,hpMin:56};
  expect(pass(bloodSaveChecks(before('exit'),after,result,'exit'))).toEqual([]);
  expect(pass(bloodSaveChecks(before('exit'),after,{...result,stop:'failed'},'exit'))).toContain('target');
+});
+test('the entry fixture carries three slices of cake in three single-count slots',()=>{
+ expect(bloodProofPreset('entry').inventory?.filter(i=>i.id===1895)).toEqual([{id:1895,count:1},{id:1895,count:1},{id:1895,count:1}]);
 });
 test('stranded entry retains six carried runes and twelve banked runes with the new four-rune output',()=>{
  const fixture=bloodProofPreset('stranded');

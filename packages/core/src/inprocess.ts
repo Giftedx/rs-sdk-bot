@@ -397,6 +397,38 @@ export async function connectInProcess(opts: { name: string; password: string; s
         sharedAccount:live?{root:repoRoot,side:mySide(),recover:!!opts.recoverSwarm,trade:opts.trade}:undefined });
 }
 
+// Read-only observation of the lite bootstrap HTTP calls (session.ts /api/version, cache.ts /crc and archives,
+// LocIndex.ts versionlist and ondemand.zip). Rows hold host, path, status or error and elapsed time; never headers or bodies.
+export type FetchRow = { url: string | null; status?: number; length?: string | null; error?: string; ms: number };
+export function observeFetch(target: { fetch: typeof fetch } = globalThis, now: () => number = Date.now) {
+    const original = target.fetch, rows: FetchRow[] = [];
+    const wrapped = async function (this: unknown, ...args: Parameters<typeof fetch>) {
+        const at = now(), input = args[0] as unknown;
+        let url: string | null = null;
+        try { const u = new URL(typeof input === 'string' || input instanceof URL ? input : (input as Request).url); url = u.host + u.pathname; } catch { /* unparsed */ }
+        try {
+            const res = await Reflect.apply(original, this, args) as Response;
+            if (rows.length < 32) rows.push({ url, status: res.status, length: res.headers.get('content-length'), ms: now() - at });
+            return res;
+        } catch (error) {
+            if (rows.length < 32) rows.push({ url, error: String(error).slice(0, 160), ms: now() - at });
+            throw error;
+        }
+    };
+    target.fetch = Object.assign(wrapped, original) as typeof fetch;
+    return { rows, restore() { if (target.fetch === wrapped) target.fetch = original; } };
+}
+// The lifecycle receipt keeps 300 characters of detail. Bun's socket errors carry a long second sentence, so keep
+// the first sentence of each error and drop the oldest rows first: the request that threw is the last row.
+export function connectFailedDetail(error: unknown, rows: FetchRow[], max = 300): string {
+    if (!rows.length) return String(error);
+    const brief = (text: string) => text.split('. ')[0]!.slice(0, 100);
+    const kept = rows.map(r => r.error === undefined ? r : { ...r, error: brief(r.error) });
+    const text = () => brief(String(error)) + ' http=' + JSON.stringify(kept);
+    while (kept.length > 1 && text().length > max) kept.shift();
+    return text();
+}
+
 export type StartSession = (o: any) => Promise<{ client: unknown; stop(): void; stopped: Promise<unknown> }>;
 // The network part of connectInProcess. The lifecycle intent is written first; if it cannot be written, no
 // connection starts. Every later event comes from this session's own callbacks. Tests pass a fake startSession.
@@ -442,6 +474,7 @@ export async function startInProcessSession(opts: { name: string; password: stri
     }
     let session: Awaited<ReturnType<StartSession>>;
     let confirmedLogout = false;
+    const http = observeFetch();
     const releaseConfirmed = () => {
         if (!sharedClaim || !confirmedLogout) return;
         try { sharedClaim.releaseAfterLogout(attempt.attemptId); }
@@ -475,10 +508,10 @@ export async function startInProcessSession(opts: { name: string; password: stri
         },
         });
     } catch (e) {
-        attempt.record('connect-failed', String(e));
+        attempt.record('connect-failed', connectFailedDetail(e, http.rows));
         releaseConfirmed();
         throw e;
-    }
+    } finally { http.restore(); }
     // The bootstrap callback runs before startSession returns.
     const sh = shim as Shim | null;
     if (!sh) {

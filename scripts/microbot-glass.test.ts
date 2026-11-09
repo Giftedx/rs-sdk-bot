@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {furnaceGlassRecipe,runFurnaceGlass,glassSupplyOptions,planGlassSupply,glassSupplyLedger,runGlassSupply,runBankedGlass,type GlassSupplyIO,type GlassStock} from './microbot-glass';
+import {furnaceGlassRecipe,runFurnaceGlass,glassSupplyOptions,planGlassSupply,glassSupplyLedger,runGlassSupply,runBankedGlass,GLASS_BEAR,GLASS_BEAR_EXIT,SEAWEED_TILES,inGlassBearArea,glassDamageTolerated,type GlassSupplyIO,type GlassStock} from './microbot-glass';
 import {productionEffect} from './microbot-production';
 test('native furnace glass requires sand, ash, glass, empty bucket and XP',()=>{
  const b={items:{1783:1,1781:1},xp:100},a={items:{1775:1,1925:1},xp:120};
@@ -58,6 +58,14 @@ test('session adapter reopens bank after unequipping and reads a fresh observati
   sdk:{getInventory:inventory,getEquipment:()=>[...equipment],getBankItems:rows,isBankOpen:()=>open,getSkill:()=>({level:39}),getDialog:()=>({isOpen:false}),getState:()=>({player:{lifeId:1,level:0},bank:{isOpen:open,items:rows()},interface:{isOpen:open}}),sendCloseModal:async()=>{open=false;return{success:true};}},
   bot:{openBank:async()=>{opens++;open=true;return{success:true};},depositItem:async(item:{id:number})=>{if(!open)throw Error('deposit requires open bank');bank[item.id]=(bank[item.id]??0)+(pack[item.id]??0);pack[item.id]=0;return{success:true};},unequipItem:async()=>{open=false;const item=equipment.shift()!;pack[item.id]=item.count;return{success:true};}}};
  expect(await runBankedGlass(s,options())).toMatchObject({ok:true,made:0,banked:1,conserved:true});expect(opens).toBe(3);expect(observations).toBeGreaterThanOrEqual(2);expect(bank).toMatchObject({995:2017,1775:1,1205:1});expect(open).toBe(false);
+});
+test('Entrana seaweed avoids the m43_52 bear spawn and tolerates only a non-lethal bear hit',()=>{
+ const far=(t:{x:number;z:number})=>Math.max(Math.abs(t.x-GLASS_BEAR.x),Math.abs(t.z-GLASS_BEAR.z));
+ for(const t of SEAWEED_TILES){expect(t.x>=2800&&t.x<=2812&&t.z>=3380&&t.z<=3390).toBe(true);expect(far(t)).toBeGreaterThan(far({x:2804,z:3380}));}
+ expect(inGlassBearArea({...GLASS_BEAR_EXIT,level:0})).toBe(false);
+ const hit={hp:37,initialHp:39,alive:true,sameLife:true,at:{x:2810,z:3387,level:0}};
+ expect(glassDamageTolerated(hit)).toBe(true);
+ for(const bad of [{hp:19},{alive:false},{sameLife:false},{hp:0},{at:{x:3026,z:3289,level:0}}])expect(glassDamageTolerated({...hit,...bad})).toBe(false);
 });
 test('finite staged furnace runner stops after requested output',async()=>{
  let tick=0,xp=100,casts=0;const items:Record<number,number>={1783:2,1781:2,995:50};

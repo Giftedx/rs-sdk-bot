@@ -2,6 +2,7 @@
 // Native contract: trapped_chest.dbrow chest_blood_runes, thieving.rs2 disarm_trapped_chest, locked_door.rs2.
 // Only op2 touches a chest: op1 runs activate_trapped_chest, which damages the player.
 import {existsSync} from 'node:fs';
+import type {Session} from '../packages/core/src/inprocess';
 import {openBot,finish,getWorld,accountOf} from '../packages/core/src/bot';
 import {depositObserved} from '../packages/core/src/deposit';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
@@ -20,9 +21,10 @@ export const EXIT_TICKS=400;
 export const PICK_LIMIT=80;
 const WALK_FAILS=6;
 // The ogres and bats beside the chests hit on each visit, and regeneration cannot repay a long run.
-// A meal happens on the surface only. It raises Hitpoints to FED_SHARE of the base level.
+// A meal happens on the surface only. It raises Hitpoints to FED_SHARE of the base level before each trip.
+// One trip can cost 12 of 47 Hitpoints, so the player leaves the dungeon below LEAVE_SHARE of the base level.
 export const BANK_FOOD=['Shark','Swordfish','Lobster','Tuna','Salmon','Trout','Cake'];
-export const FED_SHARE=0.75,MEAL_LIMIT=40;
+export const FED_SHARE=0.75,LEAVE_SHARE=0.6,MEAL_LIMIT=40;
 const EAT_DELAY_TICKS=3,PACK_SLOTS=28;
 
 export interface BloodOptions{maxLoots:number;cap:number;idleTicks:number;bankEvery:number}
@@ -44,6 +46,7 @@ const total=(s:BotWorldState,id:number)=>s.inventory.filter(i=>i.id===id).reduce
 const skill=(s:BotWorldState,name:string)=>s.skills.find(k=>k.name===name);
 const hp=(s:BotWorldState)=>skill(s,'Hitpoints')?.level??0;
 const baseHp=(s:BotWorldState)=>skill(s,'Hitpoints')?.baseLevel??0;
+const fed=(s:BotWorldState)=>hp(s)>=Math.ceil(baseHp(s)*FED_SHARE);
 const edible=(s:BotWorldState)=>s.inventory.find(i=>i.optionsWithIndex.some(v=>/^Eat$/i.test(v.text)));
 const cheb=(s:BotWorldState,t:{x:number;z:number})=>Math.max(Math.abs(s.player!.worldX-t.x),Math.abs(s.player!.worldZ-t.z));
 const kit=(s:BotWorldState)=>s.inventory.filter(i=>i.id!==BLOOD_RUNE&&i.id!==COINS).reduce((m,i)=>m.set(i.id,(m.get(i.id)??0)+i.count),new Map<number,number>());
@@ -96,7 +99,7 @@ export async function runBloodChest(d:BloodDeps,o:BloodOptions):Promise<BloodRes
  // Soft limits leave the chests and bank the held loot.
  const checkpoint=()=>{
   const s=observe();
-  if(hp(s)*2<baseHp(s))throw new Halt('hp');
+  if(hp(s)<Math.ceil(baseHp(s)*LEAVE_SHARE))throw new Halt('hp');
   if(d.tick()-start>=o.cap-EXIT_TICKS)throw new Halt('cap');
   if(d.tick()-progress>=o.idleTicks)throw new Halt('idle');
   return s;
@@ -133,15 +136,15 @@ export async function runBloodChest(d:BloodDeps,o:BloodOptions):Promise<BloodRes
   if(!(await d.act(chest.x,chest.z,CHEST,option.opIndex)).success){await d.step();return;}
   // A rival can take the chest first. No reward then, and the idle limit bounds the retry.
   if(!(await d.wait(()=>chestEffect(s,observe()),30)))return;
-  loots++;sinceBank++;progress=d.tick();ready[index]=d.tick()+RESPAWN_TICKS;
+  loots++;sinceBank++;progress=d.tick();ready[index]=progress+RESPAWN_TICKS;
   d.log(`BLOOD_LOOT ${JSON.stringify({loot:loots,chest,tick:d.tick()-start,hp:hp(observe())})}`);
  };
- // True when the player can go back to the chests. One bank trip restocks an empty pack.
+ // True when the player is fed for the next trip. One bank trip restocks an empty pack.
  const heal=async()=>{
   let stocked=false;
   for(let i=0;i<MEAL_LIMIT;i++){
    const s=observe(),food=edible(s);
-   if(hp(s)>=baseHp(s)*FED_SHARE)return true;
+   if(fed(s))return true;
    if(!food){if(stocked)break;stocked=true;await bank(true);continue;}
    const before=hp(s),held=total(s,food.id);
    if(!(await d.eat(food)).success)throw Error('blood chest food refused');
@@ -150,7 +153,7 @@ export async function runBloodChest(d:BloodDeps,o:BloodOptions):Promise<BloodRes
    d.log(`BLOOD_MEAL ${JSON.stringify({meal:meals,id:food.id,before,hp:hp(observe()),tick:d.tick()-start})}`);
    const next=d.tick()+EAT_DELAY_TICKS;await d.wait(()=>d.tick()>=next,EAT_DELAY_TICKS+1);
   }
-  const s=observe();return hp(s)*2>=baseHp(s);
+  return fed(observe());
  };
  // Each pass ends on the surface. Only a meal starts another pass, so food and the tick cap bound this loop.
  for(let again=true;again;){
@@ -160,6 +163,8 @@ export async function runBloodChest(d:BloodDeps,o:BloodOptions):Promise<BloodRes
     const s=checkpoint(),zone=bloodZone(s);
     if(zone==='surface'){
      if(sinceBank>=o.bankEvery){await bank();continue;}
+     // Each trip starts fed. A meal or a bank trip for food voids the measured trip start.
+     if(!fed(s)){if(!(await heal()))throw new Halt('hp');tripStart=null;continue;}
      // Wait on the surface: ogres stand beside the chests.
      if(d.tick()<Math.min(...ready)-trip){await d.step();continue;}
      tripStart??=d.tick();await enter(s);
@@ -192,10 +197,7 @@ export function failureResult(error:unknown){const failure=String(error);return{
 export async function walkBloodDungeon(d:PathDeps,x:number,z:number,tolerance:number,stopped:()=>boolean){
  return(await walkPath(d,[{x,z,tol:tolerance}],{maxTicks:150,stop:stopped})).ok;
 }
-if(import.meta.main){
- const name=process.argv[2];if(!name)throw Error('account required');
- const o=bloodOptions(process.argv[3]);
- const s=await openBot(name).catch(e=>finish([],false,`login: ${String(e)}`));
+export async function runBloodChestSession(s:Session,o:BloodOptions,stop:()=>boolean,log:(line:string)=>void=console.log){
  let ended=false;void s.ended.then(()=>{ended=true;});
  const held=(id:number)=>s.sdk.getState()?.inventory.find(i=>i.id===id);
  const deposit=async(id:number)=>{const item=held(id);return item?depositObserved(s,{id,name:item.name}):0;};
@@ -213,15 +215,14 @@ if(import.meta.main){
   }
   return taken;
  };
- try{
-  const r=await runBloodChest({state:()=>s.sdk.getState(),tick:()=>s.tick(),
-   stopped:()=>ended||existsSync(`.practice/stop-${name}`)||existsSync('.practice/stop-all'),
+ return runBloodChest({state:()=>s.sdk.getState(),tick:()=>s.tick(),
+   stopped:()=>ended||stop(),
    walkSurface:async(x,z)=>(await goTo(s,await getWorld(),{x,z,level:0},accountOf(s),{legTimeoutTicks:150})).ok,
    walkDungeon:async(x,z,tolerance)=>{
     const life=s.sdk.getState()?.player?.lifeId;
     return walkBloodDungeon(await sessionWalker(s),x,z,tolerance,()=>{
      const p=s.sdk.getState()?.player;
-     return ended||!p||p.isDead||p.lifeId!==life||existsSync(`.practice/stop-${name}`)||existsSync('.practice/stop-all');
+     return ended||!p||p.isDead||p.lifeId!==life||stop();
     });
    },
    act:(x,z,id,option)=>s.sdk.sendInteractLoc(x,z,id,option),
@@ -230,7 +231,15 @@ if(import.meta.main){
     const open=await s.bot.openBank();if(!open.success)throw Error(`blood chest bank: ${open.message}`);
     const runes=await deposit(BLOOD_RUNE),coins=await deposit(COINS),taken=food?await restock():0;
     await s.bot.closeBank();return{runes,coins,food:taken};
-   },eat:item=>s.bot.eatFood(item),log:line=>console.log(line)},o);
+   },eat:item=>s.bot.eatFood(item),log},o);
+}
+if(import.meta.main){
+ const name=process.argv[2];if(!name)throw Error('account required');
+ const o=bloodOptions(process.argv[3]);
+ const s=await openBot(name).catch(e=>finish([],false,`login: ${String(e)}`));
+ const stop=()=>existsSync(`.practice/stop-${name}`)||existsSync('.practice/stop-all');
+ try{
+  const r=await runBloodChestSession(s,o,stop);
   console.log('BLOOD_CHEST_RESULT '+JSON.stringify(r));
   await finish([s],r.ok,JSON.stringify(r));
  }catch(e){
