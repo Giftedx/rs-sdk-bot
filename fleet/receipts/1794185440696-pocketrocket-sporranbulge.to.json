@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794185440696-pocketrocket-sporranbulge",
  "account": "SporranBulge",
  "partner": "Pocketrocket",
@@ -12,6 +12,11 @@
  "claim": "1481521a-b53b-4f83-8933-eb7dd5f1dde4",
  "count": 0,
  "ok": false,
- "at": 1794185525267,
- "detail": "trade claimed"
+ "at": 1794185930631,
+ "detail": "no progress: 900 ticks without xp, items, dialog or a journey",
+ "logout": {
+  "attemptId": "1794185525617-0000033264-0000000001",
+  "at": 1794185930622,
+  "sha256": "3a0f4d8e417baca700aeadc60a9a7c1db133ecc9bafdf99049b6ee2b191946e9"
+ }
 }
