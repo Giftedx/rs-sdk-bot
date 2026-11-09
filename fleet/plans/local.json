@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794215878219,
+ "at": 1794217099818,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -88,15 +88,16 @@
   },
   {
    "account": "Mightyrod",
-   "script": "scripts/quest-chain.ts",
+   "script": "scripts/pk-live/live-pilot.ts",
    "args": [
-    "runemysteries,murder,blackknight,vampire,priest,junglepotion,sheep,fishingcompo,druid,arrav,seaslug,haunted,demon,dig,drunkmonk,elemental,death,grandtree"
+    "10",
+    "15"
    ],
    "enabled": false,
    "standing": true,
    "repeat": false,
-   "goal": "quests: runemysteries, murder, blackknight, vampire, priest, junglepotion, sheep, fishingcompo, druid, arrav, seaslug, haunted, demon, dig, drunkmonk, elemental, death, grandtree",
-   "role": "combat"
+   "goal": "Wilderness PK pilot: tribrid hunter from Edgeville, 10 minutes, Wilderness 15 or less",
+   "role": "pk"
   },
   {
    "account": "Ballspinner",
@@ -154,21 +155,21 @@
   },
   {
    "account": "mmtha0205",
-   "script": "scripts/goldfarm.ts",
+   "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
+    "PEN": "3187,3277",
+    "TICKS": "3000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
    "autopilot": "local",
    "resources": [
-    "knight:2653,3300"
+    "pen:3187,3277"
    ]
   },
   {
