@@ -11,6 +11,7 @@ import { join, resolve } from 'node:path';
 import { loadOwners, mySide } from '../packages/core/src/fleet';
 import { readFleetAccountClaim } from '../packages/core/src/fleet-trade-claim';
 import { readLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
+import { jobAccounts } from '../packages/core/src/coordinator-jobs';
 import { loadEnded, swarmWroteStop, type EndRecord } from './swarm';
 
 export const LIVE_SERVER = 'rs-sdk-demo.fly.dev';
@@ -43,15 +44,19 @@ const stamp = (now: number) => new Date(now).toISOString().replace(/[-:]/g, '').
 
 // One qualify task and one recovery run task per held account, all with fresh ids (finished task ids never run
 // again). Accounts dropped together recover in one proposal behind one qualify, so a second account does not wait a
-// whole call and reach the swarm's 15-minute end-record deletion.
+// whole call and reach the swarm's 15-minute end-record deletion. Each run also waits for the run before it: the
+// controller has one repair slot and a run gives up after 180 s waiting for it (coordinator-live.ts
+// requestAuthenticatedRecovery), which four parallel runs overran. A run behind a failed one never starts; it counts
+// as a spent attempt and the next call submits its account again.
 export type Target = { account: string; endedAt: number };
 export function recoveryProposal(side: string, targets: readonly Target[], now: number) {
-    const s = stamp(now), qualify = `${side}-recovery-qualified-${s}`;
+    const s = stamp(now), qualify = `${side}-recovery-qualified-${s}`, runId = (account: string) => `${side}-recover-${account.toLowerCase()}-${s}`;
     return {
         reason: `Authenticated recovery of ${targets.map(t => t.account).join(', ')} inside the running coordinator`, capabilities: [],
         tasks: [
             { id: qualify, goal: 'wealth', kind: 'qualify', capability: 'session-recovery-only', dependsOn: [] as string[], priority: 90, estimatedMs: 600000, why: 'Qualify authenticated session recovery' },
-            ...targets.map(({ account, endedAt }) => ({ id: `${side}-recover-${account.toLowerCase()}-${s}`, goal: 'wealth', kind: 'run', capability: 'session-recovery-only', account, dependsOn: [qualify],
+            ...targets.map(({ account, endedAt }, i) => ({ id: runId(account), goal: 'wealth', kind: 'run', capability: 'session-recovery-only', account,
+                dependsOn: i ? [qualify, runId(targets[i - 1]!.account)] : [qualify],
                 repairs: [{ account, endedAt }], sessionRecovery: { account, endedAt }, accept: { counters: { sessionChecked: 1 } },
                 priority: 90, estimatedMs: 120000, why: `Authenticated recovery of ${account}'s orphaned session` })),
         ],
@@ -59,8 +64,36 @@ export function recoveryProposal(side: string, targets: readonly Target[], now: 
 }
 
 // Session-recovery tasks still pending or running in the coordinator's state: a release waits until they settle, so
-// every finished recovery has parked its session check first.
-export const recoveriesInFlight = (tasks: readonly any[]) => tasks.filter(t => t?.spec?.sessionRecovery && (t.status === 'pending' || t.status === 'running'));
+// every finished recovery has parked its session check first. A pending task behind a failed or missing dependency
+// never starts, so it is settled, not in flight.
+// Pending tasks that can never start: a dependency failed, was superseded or is missing, directly or through another
+// pending task. Same rule as the coordinator's deadRoots (packages/router/src/coordinator.ts), which a script may not
+// import (packages/core/src/worker-release.ts); a run's failed refresh qualify is replaceable, so it does not count.
+export function deadTasks(tasks: readonly any[]): Set<string> {
+    const byId = new Map(tasks.map(t => [t?.spec?.id, t])), memo = new Map<string, boolean>();
+    const dead = (t: any): boolean => {
+        if (memo.has(t.spec.id)) return memo.get(t.spec.id)!;
+        memo.set(t.spec.id, false);
+        const result = (t.spec.dependsOn ?? []).some((id: string) => {
+            if (t.spec.kind === 'run' && id.startsWith(`refresh-${t.spec.capability}-`)) return false;
+            const d = byId.get(id);
+            return !d || d.status === 'failed' || d.status === 'superseded' || d.status === 'pending' && dead(d);
+        });
+        memo.set(t.spec.id, result);
+        return result;
+    };
+    return new Set(tasks.filter(t => t?.status === 'pending' && t.spec?.id).filter(dead).map(t => t.spec.id));
+}
+export const recoveriesInFlight = (tasks: readonly any[], dead = deadTasks(tasks)) =>
+    tasks.filter(t => t?.spec?.sessionRecovery && (t.status === 'running' || t.status === 'pending' && !dead.has(t.spec.id)));
+
+// Recovery runs already spent on one exact end: failed, or never started behind a failed dependency. A failure is
+// retried once; a second stops the retries for that end.
+export const MAX_ATTEMPTS = 2;
+export const spentAttempts = (tasks: readonly any[], target: Target, dead = deadTasks(tasks)) => tasks.filter(t => {
+    const r = t?.spec?.sessionRecovery;
+    return r?.account?.toLowerCase() === target.account.toLowerCase() && r.endedAt === target.endedAt && (t.status === 'failed' || t.status === 'pending' && dead.has(t.spec.id));
+}).length;
 
 // The folder that receives the coordinator's parked jobs and stop file after a release.
 // The session-lifecycle root that readLogoutProof reads (packages/core/src/session-lifecycle.ts DEFAULT_LIFECYCLE_ROOT).
@@ -70,16 +103,18 @@ export function archiveDir(root: string, account: string, now: number): string {
     return join(root, '.practice', 'coordinator', 'release-archive', `${stamp(now)}-${account.toLowerCase()}`);
 }
 
-// Parked coordinator jobs that still shadow an account's owner job (packages/core/src/coordinator-jobs.ts).
-export function parkedAccounts(jobs: readonly any[]): string[] {
-    return jobs.filter(j => j?.coordinatorOwner === 'coordinator' && j.enabled === false && typeof j.account === 'string').map(j => j.account);
-}
-
-// The accounts a release may free: only when every job in the coordinator's file is a finished recovery's parked
-// session check. Any other coordinator job keeps the file in place.
-export function releasableAccounts(jobs: readonly any[]): string[] {
-    const parked = parkedAccounts(jobs);
-    return parked.length && parked.length === jobs.length && jobs.every(j => j.script === 'scripts/session-check.ts') ? parked : [];
+// The jobs in the coordinator's file that a release may archive. A finished recovery parks a session check. A recovery
+// that parked the account's owner job (a disabled copy without coordinatorOwner, coordinator-live.ts
+// prepareLiveRecovery) and then failed leaves that copy; once the account's logout is confirmed the copy only keeps the
+// account from what swarm.json assigns it, the coordinator's own settledOwnerJob rule.
+const releasable = (j: any, confirmed: (account: string) => boolean) => j?.enabled === false && (
+    j.coordinatorOwner === 'coordinator' ? typeof j.account === 'string' && j.script === 'scripts/session-check.ts'
+        : jobAccounts(j).length > 0 && jobAccounts(j).every(confirmed));
+// Jobs that keep the coordinator's file in place.
+export const releaseBlockers = (jobs: readonly any[], confirmed: (account: string) => boolean) => jobs.filter(j => !releasable(j, confirmed));
+// The accounts a release frees: only when every job in the coordinator's file may be archived.
+export function releasableAccounts(jobs: readonly any[], confirmed: (account: string) => boolean): string[] {
+    return jobs.length && !releaseBlockers(jobs, confirmed).length ? jobs.flatMap(jobAccounts) : [];
 }
 
 // The local side's coordinator owns real work in its jobs.json; only a cloud side runs this script.
@@ -95,7 +130,7 @@ async function main(root: string, dry: boolean): Promise<number> {
     const coordinatorRunning = () => { const o = readJson(join(coord, 'owner.json'), null); return !!o && Number.isSafeInteger(o.pid) && pidAlive(o.pid) && !existsSync(stopCoordinator); };
     if (!coordinatorRunning()) { log('refused: coordinator is not running'); return 1; }
     const tasksNow = () => readJson(join(coord, 'state.json'), { tasks: [] }).tasks ?? [];
-    const inFlight = recoveriesInFlight(tasksNow());
+    const before = tasksNow(), dead = deadTasks(before), inFlight = recoveriesInFlight(before, dead);
     if (inFlight.length) { log(`recovery in flight for ${inFlight.map((t: any) => t.spec.sessionRecovery.account).join(', ')}; waiting`); return 0; }
     const ended = loadEnded(join(root, '.practice', 'swarm-deaths.json'));
     const accounts = [...loadOwners()].filter(([, o]) => o.side === side && o.server === LIVE_SERVER).map(([n]) => n);
@@ -112,7 +147,9 @@ async function main(root: string, dry: boolean): Promise<number> {
         const stopFile = join(root, '.practice', `stop-${name}`), stopText = existsSync(stopFile) ? readFileSync(stopFile, 'utf8') : undefined;
         const e = eligibility({ proof, claim, end: ended.get(name), stopText, pidAlive, host: hostname() });
         if (!e.eligible) { if (e.log) log(`${name}: refused: ${e.reason}`); continue; }
-        targets.push({ account: name, endedAt: e.endedAt });
+        const target = { account: name, endedAt: e.endedAt };
+        if (spentAttempts(before, target, dead) >= MAX_ATTEMPTS) { log(`${name}: refused: ${MAX_ATTEMPTS} recoveries of end ${e.endedAt} failed; recover by hand`); continue; }
+        targets.push(target);
     }
     let failed = false;
     if (targets.length) {
@@ -125,23 +162,25 @@ async function main(root: string, dry: boolean): Promise<number> {
         // One qualify, then about a minute per recovery run.
         const deadline = Date.now() + (15 + 2 * runs.length) * 60_000;
         for (;;) {
-            const tasks = tasksNow(), status = (id: string) => tasks.find((t: any) => t.spec?.id === id)?.status;
-            if (runs.every(r => ['succeeded', 'failed'].includes(status(r.id)))) break;
+            const tasks = tasksNow(), status = (id: string) => tasks.find((t: any) => t.spec?.id === id)?.status, open = new Set(recoveriesInFlight(tasks).map((t: any) => t.spec.id));
+            if (runs.every(r => status(r.id) && !open.has(r.id))) break;
             if (Date.now() > deadline) { log(`recovery timed out (${runs.map(r => `${r.id} ${status(r.id) ?? 'unseen'}`).join(', ')}); no retry`); return 1; }
             await Bun.sleep(5000);
         }
         const tasks = tasksNow();
         for (const r of runs) {
-            const ok = tasks.find((t: any) => t.spec?.id === r.id)?.status === 'succeeded', proof = readLogoutProof(r.account, LIVE_SERVER, { root: lifecycleRoot(root) });
-            log(`${r.account}: recovery ${ok ? 'succeeded' : 'failed'} (${r.id}); logout proof ${proof.state}`);
+            const status = tasks.find((t: any) => t.spec?.id === r.id)?.status, ok = status === 'succeeded', proof = readLogoutProof(r.account, LIVE_SERVER, { root: lifecycleRoot(root) });
+            log(`${r.account}: recovery ${ok ? 'succeeded' : status === 'pending' ? 'not started: a dependency failed' : 'failed'} (${r.id}); logout proof ${proof.state}`);
             if (!ok || proof.state !== 'confirmed') failed = true;
         }
     }
     // A finished recovery leaves a parked coordinator job that keeps the account from its owner job; release them all
     // once no recovery is still in flight, so each has parked its session check first.
     if (recoveriesInFlight(tasksNow()).length) return failed ? 1 : 0;
-    const jobs = readJson(join(coord, 'jobs.json'), { jobs: [] }).jobs ?? [], parked = releasableAccounts(jobs);
-    if (!parked.length && parkedAccounts(jobs).length) log('release skipped: jobs.json holds coordinator jobs other than parked session checks');
+    const jobs = readJson(join(coord, 'jobs.json'), { jobs: [] }).jobs ?? [];
+    const confirmed = (account: string) => readLogoutProof(account, LIVE_SERVER, { root: lifecycleRoot(root) }).state === 'confirmed';
+    const parked = releasableAccounts(jobs, confirmed), blockers = releaseBlockers(jobs, confirmed);
+    if (!parked.length && blockers.length && blockers.length < jobs.length) log(`release skipped: jobs.json also holds ${blockers.map((j: any) => `${jobAccounts(j).join('+')} ${j.script}${j.enabled === false ? '' : ' (enabled)'}`).join(', ')}`);
     if (!parked.length) return failed ? 1 : 0;
     if (dry) { log(`would release parked jobs for ${parked.join(', ')}`); return 0; }
     return (await release(root, parked)) && !failed ? 0 : 1;
