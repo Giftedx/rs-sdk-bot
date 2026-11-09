@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794192182717,
+ "at": 1794192254147,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -378,7 +378,7 @@
     "CAP": "6000",
     "COORDINATOR_RUN_ID": "task-a1509c05-926c-44bb-a4d7-e6fa58dd27ca"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-fluffs-magicwanda-own-sardine [task-a1509c05-926c-44bb-a4d7-e6fa58dd27ca]",
    "role": "supply"
