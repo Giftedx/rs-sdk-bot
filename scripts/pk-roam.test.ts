@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { bestFireSpell, canAttack, escapeZ, freezeSpell, intercept, itemCost, kitFrom, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
+import { bestFireSpell, canAttack, CLAIM_TTL_MS, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
 
 test('wildLevel: 8 tiles per level from z 3520 inside x 2944-3391', () => {
     expect(wildLevel(3094, 3519)).toBe(0);
@@ -140,4 +140,43 @@ test('bestFireSpell picks by Magic level and the runes carried', () => {
     expect(bestFireSpell(91, [{ id: 560, count: 10 }, { id: 562, count: 10 }])).toBe(1181);
     expect(bestFireSpell(70, [{ id: 565, count: 10 }, { id: 562, count: 10 }])).toBe(1169);
     expect(bestFireSpell(91, [{ id: 560, count: 0 }])).toBe(1158);
+});
+
+test('isMulti reads maps/multiway.csv zones: rune rocks single-way, west of them multi', () => {
+    expect(isMulti(3058, 3884)).toBe(false);
+    expect(isMulti(3040, 3900)).toBe(true);
+    expect(isMulti(3094, 3540)).toBe(false);
+});
+
+test('preyScore favours skulled, busy, hurt, unprotected and no-teleport prey', () => {
+    const t = track({ z: 3600 }); // level 11
+    expect(preyScore(t, 20)).toBe(20);
+    expect(preyScore({ ...t, skulled: true }, 20)).toBe(-20);
+    expect(preyScore({ ...t, fighting: 'npc' }, 20)).toBe(-10);
+    expect(preyScore({ ...t, hpFrac: 0.5 }, 20)).toBe(-10);
+    expect(preyScore({ ...t, protect: [] }, 20)).toBe(10);
+    expect(preyScore({ ...t, z: 3700 }, 20)).toBe(10);  // level 23: no normal teleport
+    expect(preyScore({ ...t, z: 3800 }, 20)).toBe(-5);  // level 36: no glory either
+    expect(preyScore(t, 20, true)).toBe(-10);           // ganged in multi-combat
+});
+
+test('pickTrack: single-way leaves fighters and other hunters\' claims; multi-combat gangs them', () => {
+    const me = { x: 3060, z: 3700, combat: 100, name: 'hunter1' };
+    const single = () => false, multi = () => true;
+    const busy = [track({ name: 'Busy', z: 3705, fighting: 'player' })];
+    expect(pickTrack(me, busy, new Set(), 56, new Set(), 40, new Map(), 0, single)).toBeNull();
+    expect(pickTrack(me, busy, new Set(), 56, new Set(), 40, new Map(), 0, multi)?.track.name).toBe('Busy');
+    const claims = new Map([['near', { hunter: 'hunter2', at: 1000 }]]);
+    const two = [track({ name: 'Near', z: 3702 }), track({ name: 'Far', z: 3740 })];
+    expect(pickTrack(me, two, new Set(), 56, new Set(), 40, claims, 2000, single)?.track.name).toBe('Far');
+    expect(pickTrack(me, two, new Set(), 56, new Set(), 40, claims, 2000, multi)?.track.name).toBe('Near');
+    // A stale claim (older than CLAIM_TTL_MS) is ignored; my own claim never blocks me.
+    expect(pickTrack(me, two, new Set(), 56, new Set(), 40, claims, 1000 + CLAIM_TTL_MS + 1, single)?.track.name).toBe('Near');
+    expect(pickTrack({ ...me, name: 'hunter2' }, two, new Set(), 56, new Set(), 40, claims, 2000, single)?.track.name).toBe('Near');
+});
+
+test('pickTrack prefers a skulled target a little further away', () => {
+    const me = { x: 3060, z: 3700, combat: 100 };
+    const pair = [track({ name: 'Close', z: 3710 }), track({ name: 'Skull', z: 3760, skulled: true })];
+    expect(pickTrack(me, pair, new Set(), 56, new Set(), 40, new Map(), 0, () => false)?.track.name).toBe('Skull');
 });

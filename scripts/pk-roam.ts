@@ -7,14 +7,14 @@
 //        [RANGED=bow-name-regex] [LOOT=1] [FREEZE=1] [LOOT_MIN=1000] [BANK_AT=100000]
 // The account starts south of the Wilderness with its gear worn and food in its inventory.
 // Stop files: .practice/stop-<account>, .practice/stop-pk-hunt (shared with scripts/pk-hunt.ts).
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { openBot, serverFromEnv, settle } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { tradePartners } from '../packages/core/src/tradeguard';
-import { readOpponent } from '../packages/core/src/opponent';
+import { readOpponent, readOpponents } from '../packages/core/src/opponent';
 import { fightPlayer, type Kit } from './pk';
 
 // Surface Wilderness (content area_wilderness wilderness_zones: 0_46_55 to 3_52_99, 8 tiles per level).
@@ -32,7 +32,46 @@ export function canAttack(me: { x: number; z: number; combat: number }, them: { 
 const cheb = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
 const clampWild = (p: { x: number; z: number }) => ({ x: Math.min(3391, Math.max(2944, p.x)), z: Math.min(3967, Math.max(3520, p.z)) });
 
-export type Track = { name: string; x: number; z: number; combatLevel: number; vx: number; vz: number };
+// Roster tile and speed; the rest is known only for players in view (client state and the opponent sensor).
+export type Track = {
+    name: string; x: number; z: number; combatLevel: number; vx: number; vz: number;
+    fighting?: 'npc' | 'player'; skulled?: boolean; protect?: readonly string[]; hpFrac?: number;
+};
+
+// Multi-combat zones: maps/multiway.csv lists 8x8 zones as level_mapX_mapZ_localX_localZ (engine GameMap.loadCsvMap).
+let multi: Set<string> | undefined;
+export function isMulti(x: number, z: number, root = resolve(import.meta.dir, '..')): boolean {
+    if (!multi) {
+        multi = new Set();
+        try {
+            for (const line of readFileSync(join(root, 'vendor/rs-sdk/server/content/maps/multiway.csv'), 'ascii').split(/\r?\n/)) {
+                if (!line || line.startsWith('//')) continue;
+                const [y, mx, mz, lx, lz] = line.split('_').map(Number);
+                if (y === 0) multi.add((((mx! << 6) + lx!) >> 3) + ',' + (((mz! << 6) + lz!) >> 3));
+            }
+        } catch { /* no map: everything single-way */ }
+    }
+    return multi.has((x >> 3) + ',' + (z >> 3));
+}
+
+// Lower is better: ticks to meet, less a bonus for prey that is weak, busy, carrying everything or unable to teleport.
+// A skulled player drops all its items; a player fighting an NPC or another player is already losing HP and looking
+// away; above Wilderness level 20 normal teleports fail and above 30 a glory fails (amulet_of_glory.rs2).
+export function preyScore(t: Track, meetTicks: number, ganged = false): number {
+    const lvl = wildLevel(t.x, t.z);
+    return meetTicks
+        - (t.skulled ? 40 : 0)
+        - (t.fighting ? 30 : 0)
+        - (t.hpFrac !== undefined ? (1 - t.hpFrac) * 60 : 0)
+        - (t.protect && t.protect.length === 0 ? 10 : 0)
+        - (lvl > 30 ? 25 : lvl > 20 ? 10 : 0)
+        - (ganged ? 30 : 0);
+}
+
+// Target claims shared by our hunters (one file per side's checkout): in single-way combat only one attacker can
+// fight a target, so a claimed target is left to its hunter; in multi-combat a claimed target is ganged.
+export type Claims = Map<string, { hunter: string; at: number }>;
+export const CLAIM_TTL_MS = 60_000;
 
 // Where to run to meet a moving target: the first tick t at which we (2 tiles per tick running) can stand on its
 // predicted tile. A target running south at full speed from behind has no meeting point; then the hunter heads for
@@ -56,16 +95,24 @@ export function escapeZ(gap: number): number {
 // (practice: 95 HP in rune armour lost 19 HP in a 24-tick Entangle), so 40 tiles leaves about four.
 export const MIN_ESCAPE_TILES = 40;
 
-// The roster target we can meet first, attack at the meeting tile, and freeze before it runs out of range.
-export function pickTrack(me: { x: number; z: number; combat: number }, tracks: Track[], friends: ReadonlySet<string>, maxWild: number, skip: ReadonlySet<string> = new Set(), minEscape = MIN_ESCAPE_TILES) {
-    let best: { track: Track; at: { x: number; z: number; ticks: number } } | null = null;
+// The best prey we can attack at the meeting tile and freeze before it runs out of range. In single-way combat a
+// player already fighting another player, or claimed by another of our hunters, cannot be attacked; in multi-combat
+// both are fair game and a claimed target is ganged.
+export function pickTrack(me: { x: number; z: number; combat: number; name?: string }, tracks: Track[], friends: ReadonlySet<string>, maxWild: number,
+    skip: ReadonlySet<string> = new Set(), minEscape = MIN_ESCAPE_TILES, claims: Claims = new Map(), now = Date.now(), multiAt: (x: number, z: number) => boolean = isMulti) {
+    let best: { track: Track; at: { x: number; z: number; ticks: number }; score: number } | null = null;
     for (const t of tracks) {
         const key = t.name.toLowerCase();
         if (friends.has(key) || skip.has(key) || wildLevel(t.x, t.z) === 0 || wildLevel(t.x, t.z) > maxWild) continue;
         const at = intercept(me, t);
         if (!canAttack({ x: at.x, z: at.z, combat: me.combat }, { x: at.x, z: at.z, combatLevel: t.combatLevel })) continue;
         if (at.z - escapeZ(Math.abs(me.combat - t.combatLevel)) < minEscape) continue;
-        if (!best || at.ticks < best.at.ticks) best = { track: t, at };
+        const multiHere = multiAt(t.x, t.z);
+        const claim = claims.get(key);
+        const claimedByOther = !!claim && now - claim.at < CLAIM_TTL_MS && claim.hunter !== me.name?.toLowerCase();
+        if (!multiHere && (t.fighting === 'player' || claimedByOther)) continue;
+        const score = preyScore(t, at.ticks, multiHere && claimedByOther);
+        if (!best || score < best.score) best = { track: t, at, score };
     }
     return best;
 }
@@ -177,13 +224,33 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     const skip = new Set<string>();
     // Roster tracks plus the players the client sees now; the client copy wins for players in view.
     const tracks = (): Track[] => {
+        const seen = new Map(readOpponents(session.client).map(o => [o.name.toLowerCase(), o]));
         const all = new Map(radar.fresh() ? radar.tracks : []);
         for (const p of sdk.getState()?.nearbyPlayers ?? []) {
             const key = p.name.toLowerCase(), old = all.get(key);
-            all.set(key, { name: p.name, x: p.x, z: p.z, combatLevel: p.combatLevel, vx: old?.vx ?? 0, vz: old?.vz ?? 0 });
+            const o = seen.get(key);
+            const fighting = p.inCombat && (p.combatTargetType === 'npc' || p.combatTargetType === 'player') ? p.combatTargetType : undefined;
+            all.set(key, { name: p.name, x: p.x, z: p.z, combatLevel: p.combatLevel, vx: old?.vx ?? 0, vz: old?.vz ?? 0, fighting,
+                skulled: o?.skulled, protect: o?.protect, hpFrac: o?.hp ? o.hp.current / o.hp.max : undefined });
         }
         return [...all.values()];
     };
+    const claimsFile = join(resolve(import.meta.dir, '..'), '.practice', 'pk-roam', 'claims.json');
+    const readClaims = (): Claims => {
+        try { return new Map(Object.entries(JSON.parse(readFileSync(claimsFile, 'utf8')))) as Claims; } catch { return new Map(); }
+    };
+    const writeClaims = (edit: (c: Claims) => void) => {
+        try {
+            const c = readClaims(); edit(c);
+            mkdirSync(join(claimsFile, '..'), { recursive: true });
+            writeFileSync(claimsFile, JSON.stringify(Object.fromEntries(c)));
+        } catch { /* claims are a courtesy between our hunters */ }
+    };
+    const myName = session.name.toLowerCase();
+    const claim = (target: string) => writeClaims(c => c.set(target.toLowerCase(), { hunter: myName, at: Date.now() }));
+    const release = (target: string) => writeClaims(c => { if (c.get(target.toLowerCase())?.hunter === myName) c.delete(target.toLowerCase()); });
+    const pickNow = (m: { x: number; z: number; combat: number }) =>
+        pickTrack({ ...m, name: myName }, tracks(), friends, cfg.maxWild, skip, MIN_ESCAPE_TILES, readClaims(), Date.now());
     let wentIn = false;
     let spun = -1;
     // The fight kit is read once, as staged: the worn weapon and shield, a bow and a staff carried.
@@ -231,6 +298,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             const m = me()!;
             const near = sdk.getState()?.nearbyPlayers.find(p => p.name.toLowerCase() === name.toLowerCase());
             const track = radar.tracks.get(name.toLowerCase());
+            if (session.tick() % 10 === 0) claim(name);
             const opp = near ? readOpponent(session.client, name) : null;
             if (opp?.hp?.fresh && opp.hp.current === 0) {
                 stats.kills++; emit({ e: 'kill', target: name, at: lastTile });
@@ -321,13 +389,13 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 await walkPath(walker, [{ x: m.x, z: 3510, tol: 3 }], { maxTicks: 300, idleMs: 9000, stop: stopped });
                 break;
             }
-            const pick = pickTrack(m, tracks(), friends, cfg.maxWild, skip);
+            const pick = pickNow(m);
             if (!pick) {
                 // Nobody attackable: sweep the Wilderness. Start at the nearest sweep tile, then go round.
                 if (leg < 0) leg = route.reduce((b, p, i) => cheb(p, m) < cheb(route[b], m) ? i : b, 0);
                 else if (cheb(route[leg], m) <= 4) leg = (leg + 1) % route.length;
                 const before = session.tick();
-                await walkPath(walker, [{ ...route[leg], tol: 3 }], { maxTicks: 30, idleMs: 9000, stop: () => stopped() || !!pickTrack(me()!, tracks(), friends, cfg.maxWild, skip) });
+                await walkPath(walker, [{ ...route[leg], tol: 3 }], { maxTicks: 30, idleMs: 9000, stop: () => stopped() || !!pickNow(me()!) });
                 // Never spin: a walk that used no tick (blocked or already there) moves to the next leg and waits.
                 if (session.tick() === before) { leg = (leg + 1) % route.length; await sdk.waitForTicks(1); }
                 continue;
@@ -335,7 +403,8 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             const name = pick.track.name;
             stats.targets.push(name);
             emit({ e: 'target', target: name, combat: pick.track.combatLevel, wild: wildLevel(pick.track.x, pick.track.z), meetIn: Math.round(pick.at.ticks), at: [pick.track.x, pick.track.z] });
-            const outcome = await chase(name);
+            claim(name);
+            const outcome = await chase(name).finally(() => release(name));
             emit({ e: 'chase-end', target: name, outcome });
             if (outcome === 'dead' || outcome === 'stop') break;
             if (outcome === 'flee') {
