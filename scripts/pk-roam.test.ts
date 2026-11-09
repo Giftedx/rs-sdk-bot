@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { bestFireSpell, canAttack, castableFreeze, restockPlan, sectorStart, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
+import { bestFireSpell, canAttack, castableFreeze, outclasses, restockPlan, sectorStart, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
 
 test('wildLevel: 8 tiles per level from z 3520 inside x 2944-3391', () => {
     expect(wildLevel(3094, 3519)).toBe(0);
@@ -248,4 +248,13 @@ test('sectorStart spreads hunters round the sweep, the same each run', () => {
     expect(starts.every(i => i >= 0 && i < legs)).toBe(true);
     expect(sectorStart('Mightyrod', legs)).toBe(sectorStart('mightyrod', legs));
     expect(sectorStart('x', 0)).toBe(0);
+});
+
+test('outclasses: higher combat, or a far better weapon at about our level', () => {
+    const me = { combat: 126, weaponValue: itemCost(1331) }; // adamant scimitar
+    expect(outclasses(me, { combatLevel: 126, weapon: 1215 })).toBe(true);   // Goondelf, dragon dagger
+    expect(outclasses(me, { combatLevel: 130 })).toBe(true);                 // 4 levels above
+    expect(outclasses(me, { combatLevel: 126, weapon: 1331 })).toBe(false);
+    expect(outclasses(me, { combatLevel: 110, weapon: 1215 })).toBe(false);  // much lower combat
+    expect(outclasses({ combat: 126 }, { combatLevel: 126, weapon: 1215 })).toBe(false); // our weapon unknown
 });

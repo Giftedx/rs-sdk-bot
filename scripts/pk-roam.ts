@@ -77,6 +77,14 @@ export const CLAIM_TTL_MS = 60_000;
 export const OUTCLASS_GAP = 3;
 export const PILE_SIZE = 2;
 
+// A player outclasses us when its combat is more than OUTCLASS_GAP above ours, or when it is within 5 levels of ours
+// and its weapon is worth more than twice ours (items.json cost). Goondelf (126, dragon dagger) outclasses Mightyrod
+// (126, adamant scimitar).
+export function outclasses(me: { combat: number; weaponValue?: number }, them: { combatLevel: number; weapon?: number }): boolean {
+    if (them.combatLevel > me.combat + OUTCLASS_GAP) return true;
+    return me.weaponValue !== undefined && them.weapon !== undefined && them.combatLevel >= me.combat - 5 && itemCost(them.weapon) > 2 * me.weaponValue;
+}
+
 // Where the escape stands at a Wilderness level with what the pack holds: a glory works to level 30
 // (amulet_of_glory.rs2), a teleport spell to level 20; deeper than both, run south until one works.
 export function escapeStep(level: number, has: { glory: boolean; teleport: boolean }): 'glory' | 'teleport' | 'run' | 'out' {
@@ -332,7 +340,8 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     const escape = async (why: string) => {
         stats.escapes++;
         emit({ e: 'escape', why, hp: me()?.hp, wild: me() ? wildLevel(me()!.x, me()!.z) : 0 });
-        for (let step = 0; step < 80 && !stopped(); step++) {
+        // A stop request does not end the escape: live, a stop file froze Mightyrod at level 36 and it died.
+        for (let step = 0; step < 120; step++) {
             const m = me();
             if (!m) { await sdk.waitForTicks(1); continue; }
             if (m.hp * 100 <= m.maxHp * cfg.eatAt) { const meal = bestFood(sdk.getInventory() as any); if (meal) await bot.eatFood(meal as any); }
@@ -349,7 +358,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 await sdk.sendClickComponent(componentId('magic:varrock_teleport'));
                 await sdk.waitForTicks(6);
             } else {
-                await walkPath(walker, [{ x: m.x, z: Math.max(3510, m.z - 20), tol: 2 }], { maxTicks: 12, idleMs: 9000, stop: stopped });
+                await walkPath(walker, [{ x: m.x, z: Math.max(3510, m.z - 20), tol: 2 }], { maxTicks: 12, idleMs: 9000 });
             }
         }
         return false;
@@ -369,6 +378,13 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
         const danger = wildLevel(m.x, m.z) > 0 ? dangerReason({ hp: m.hp, maxHp: m.maxHp, food: food().length > 0, prayer: sdk.getState()?.prayers?.prayerPoints ?? 1,
             oppMax, hits, dealt: [], now: session.tick() }) : null;
         if (danger) { await escape(danger); return 'flee'; }
+        if (wildLevel(m.x, m.z) > 0) {
+            const seen = new Map(readOpponents(session.client).map(o => [o.name.toLowerCase(), o]));
+            const threat = (sdk.getState()?.nearbyPlayers ?? []).find(p => !friends.has(p.name.toLowerCase()) && p.distance <= 12 && outclasses(
+                { combat: m.combat, weaponValue: myWeaponValue() }, { combatLevel: p.combatLevel, weapon: seen.get(p.name.toLowerCase())?.worn.rhand }));
+            if (threat) { await escape(`threat: ${threat.name} (combat ${threat.combatLevel}) at ${threat.distance} tiles`); return 'flee'; }
+            if (wildLevel(m.x, m.z) > cfg.maxWild) { await escape(`deeper than the limit (${wildLevel(m.x, m.z)} > ${cfg.maxWild})`); return 'flee'; }
+        }
         return 'ok';
     };
 
@@ -402,6 +418,9 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 await sdk.waitForTicks(1); continue;
             }
             if (wildLevel(pos.x, pos.z) === 0) { emit({ e: 'left', target: name }); return 'left'; }
+            // Never follow a target past the depth limit: live, a chase took Mightyrod from level 5 to 36, past the
+            // reach of its teleport (20), and it died there.
+            if (wildLevel(pos.x, pos.z) > cfg.maxWild || wildLevel(m.x, m.z) > cfg.maxWild) { emit({ e: 'too-deep', target: name, wild: wildLevel(m.x, m.z) }); return 'left'; }
             lastTile = { x: pos.x, z: pos.z };
 
             if (near && near.distance <= 15) {
@@ -507,8 +526,9 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
         // Bank whatever loot is carried before logging out; with none, just leave the Wilderness.
         const m = me();
         if (m && stats.deaths === 0) {
+            // Out of the Wilderness first, whatever ended the hunt (a stop request included).
+            if (wildLevel(m.x, m.z) > 0) await escape(stopped() ? 'stop requested' : 'end of hunt');
             if (sdk.getInventory().some(i => !keep.has(i.id))) await bank('end of hunt');
-            else if (wildLevel(m.x, m.z) > 0) await walkPath(walker, [{ x: 3094, z: 3505, tol: 4 }], { maxTicks: 600, idleMs: 9000, stop: stopped });
         }
     } finally { closeRadar(); }
     return stats;
