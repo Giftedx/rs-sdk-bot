@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { bestFireSpell, canAttack, castableFreeze, restockPlan, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
+import { bestFireSpell, canAttack, castableFreeze, restockPlan, sectorStart, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
 
 test('wildLevel: 8 tiles per level from z 3520 inside x 2944-3391', () => {
     expect(wildLevel(3094, 3519)).toBe(0);
@@ -229,4 +229,23 @@ test('restockPlan: law runes first, then freeze runes, within the coins', () => 
     expect(restockPlan({ law: 0, nature: 0, water: 0, coins: 3000, magic: 40 })).toEqual([{ kind: 'ge', item: 563, quantity: 1, limit: 1600, owned: 0 }]);
     expect(restockPlan({ law: 0, nature: 0, water: 0, coins: 2000, magic: 91 })).toEqual([]);
     expect(restockPlan({ law: 5, nature: 10, water: 20, coins: 99999, magic: 91 })).toEqual([]);
+});
+
+test('restockPlan adds sharks, a magic shortbow and a rune chainbody when coins allow', () => {
+    const base = { law: 5, nature: 10, water: 20, magic: 91 };
+    expect(restockPlan({ ...base, coins: 20000, food: 4, sharks: 3 })).toEqual([{ kind: 'ge', item: 385, quantity: 16, limit: 700, owned: 3 }]);
+    expect(restockPlan({ ...base, coins: 20000, food: 15 })).toEqual([]);
+    expect(restockPlan({ ...base, coins: 200000, food: 20, ranged: 99, magicShortbow: false })).toEqual([{ kind: 'ge', item: 861, quantity: 1, limit: 110000, owned: 0 }]);
+    expect(restockPlan({ ...base, coins: 100000, food: 20, ranged: 99, magicShortbow: false })).toEqual([]);
+    expect(restockPlan({ ...base, coins: 5000000, food: 20, defence: 99, runeBody: false })).toEqual([{ kind: 'ge', item: 1113, quantity: 1, limit: 300000, owned: 0 }]);
+    expect(restockPlan({ ...base, coins: 5000000, food: 20, defence: 30, runeBody: false })).toEqual([]);
+});
+
+test('sectorStart spreads hunters round the sweep, the same each run', () => {
+    const legs = sweep(30).length;
+    const starts = ['Mightyrod', 'Shaftmaker', 'Bigchopper', 'OreElse', 'Bigpackage'].map(n => sectorStart(n, legs));
+    expect(new Set(starts).size).toBeGreaterThanOrEqual(4);
+    expect(starts.every(i => i >= 0 && i < legs)).toBe(true);
+    expect(sectorStart('Mightyrod', legs)).toBe(sectorStart('mightyrod', legs));
+    expect(sectorStart('x', 0)).toBe(0);
 });

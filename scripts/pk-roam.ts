@@ -192,6 +192,13 @@ type Cfg = { maxMs: number; maxWild: number; eatAt: number; fleeAt: number; spel
     // Pick up stacks worth at least lootMin gp; bank when carried loot reaches bankAt gp (defaults 1,000 and 100,000).
     lootMin?: number; bankAt?: number };
 
+// A hunter's first sweep tile, from its name: hunters spread round the loop instead of starting together.
+export function sectorStart(name: string, legs: number): number {
+    let h = 0;
+    for (const c of name.toLowerCase()) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    return legs > 0 ? h % legs : 0;
+}
+
 // Sweep tiles across the Wilderness, west to east and back, shallow to deep.
 export function sweep(maxWild: number): { x: number; z: number }[] {
     const pts: { x: number; z: number }[] = [];
@@ -474,7 +481,8 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             const pick = pickNow(m);
             if (!pick) {
                 // Nobody attackable: sweep the Wilderness. Start at the nearest sweep tile, then go round.
-                if (leg < 0) leg = route.reduce((b, p, i) => cheb(p, m) < cheb(route[b], m) ? i : b, 0);
+                // Each hunter starts at its own point of the loop, so several hunters spread over the Wilderness.
+                if (leg < 0) leg = sectorStart(session.name, route.length);
                 else if (cheb(route[leg], m) <= 4) leg = (leg + 1) % route.length;
                 const before = session.tick();
                 const walk = await walkPath(walker, [{ ...route[leg], tol: 3 }], { maxTicks: 30, idleMs: 9000, stop: () => stopped() || !!pickNow(me()!) });
@@ -615,7 +623,12 @@ if (import.meta.main) {
 // escape. Nature runes for freezes: GE at most 300 gp (ask 250), up to 20. Water runes have no GE sellers; Betty's
 // rune shop (scripts/shop-buyer.ts betty) sells them, with a spend cap. 1,000 coins always stay.
 export type RestockStep = { kind: 'ge'; item: number; quantity: number; limit: number; owned: number } | { kind: 'shop'; profile: 'betty'; maxSpend: number };
-export function restockPlan(held: { law: number; nature: number; water: number; coins: number; magic: number }): RestockStep[] {
+// Food and gear come after the escape runes (GE, live prices): sharks up to 20 at 700 gp (ask 563, 2 million for
+// sale); a magic shortbow at 110,000 (ask 96,000) for Ranged 50+ without one; a rune chainbody at 300,000 (ask
+// 278,874) for Defence 40+ without rune body armour. Rune scimitars, platebodies, platelegs and kiteshields had no
+// sellers. Each gear buy also keeps 20,000 coins for the next restock.
+export function restockPlan(held: { law: number; nature: number; water: number; coins: number; magic: number;
+    food?: number; sharks?: number; ranged?: number; defence?: number; magicShortbow?: boolean; runeBody?: boolean }): RestockStep[] {
     const steps: RestockStep[] = [];
     let coins = held.coins - 1000;
     if (held.law < 2) {
@@ -630,6 +643,17 @@ export function restockPlan(held: { law: number; nature: number; water: number; 
         if (quantity >= 4) { steps.push({ kind: 'ge', item: 561, quantity, limit: 300, owned: held.nature }); coins -= quantity * 300; nature += quantity; }
     }
     // Water alone cannot freeze: buy it only with 4 or more nature runes (Bind needs 2, Entangle 4) held after.
-    if (waterShort && nature >= 4 && coins >= 500) steps.push({ kind: 'shop', profile: 'betty', maxSpend: 500 });
+    if (waterShort && nature >= 4 && coins >= 500) { steps.push({ kind: 'shop', profile: 'betty', maxSpend: 500 }); coins -= 500; }
+    if (held.food !== undefined && held.food < 15) {
+        const quantity = Math.min(20 - held.food, Math.floor(coins / 700));
+        // owned is EXPECTED_OWNED for buy-owned-ge-item.ts: the sharks already held, which it tops up from.
+        if (quantity >= 5) { steps.push({ kind: 'ge', item: 385, quantity, limit: 700, owned: held.sharks ?? 0 }); coins -= quantity * 700; }
+    }
+    if ((held.ranged ?? 1) >= 50 && held.magicShortbow === false && coins >= 110_000 + 20_000) {
+        steps.push({ kind: 'ge', item: 861, quantity: 1, limit: 110_000, owned: 0 }); coins -= 110_000;
+    }
+    if ((held.defence ?? 1) >= 40 && held.runeBody === false && coins >= 300_000 + 20_000) {
+        steps.push({ kind: 'ge', item: 1113, quantity: 1, limit: 300_000, owned: 0 }); coins -= 300_000;
+    }
     return steps;
 }
