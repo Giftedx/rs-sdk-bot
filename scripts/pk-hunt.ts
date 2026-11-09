@@ -45,14 +45,24 @@ export function intercept(me: { x: number; z: number }, t: Track, speed = 2, hor
     return { ...p, ticks: horizon + cheb(me, p) / speed };
 }
 
-// The roster target we can meet first and attack at the meeting tile.
-export function pickTrack(me: { x: number; z: number; combat: number }, tracks: Track[], friends: ReadonlySet<string>, maxWild: number, skip: ReadonlySet<string> = new Set()) {
+// The lowest z at which a combat gap is still attackable: Wilderness level >= gap.
+export function escapeZ(gap: number): number {
+    return 3520 + (Math.max(gap, 1) - 1) * 8;
+}
+
+// Tiles a target at the meeting tile must run south to get out of attack range. 16 tiles is 8 ticks running:
+// time to freeze it before it escapes.
+export const MIN_ESCAPE_TILES = 16;
+
+// The roster target we can meet first, attack at the meeting tile, and freeze before it runs out of range.
+export function pickTrack(me: { x: number; z: number; combat: number }, tracks: Track[], friends: ReadonlySet<string>, maxWild: number, skip: ReadonlySet<string> = new Set(), minEscape = MIN_ESCAPE_TILES) {
     let best: { track: Track; at: { x: number; z: number; ticks: number } } | null = null;
     for (const t of tracks) {
         const key = t.name.toLowerCase();
         if (friends.has(key) || skip.has(key) || wildLevel(t.x, t.z) === 0 || wildLevel(t.x, t.z) > maxWild) continue;
         const at = intercept(me, t);
         if (!canAttack({ x: at.x, z: at.z, combat: me.combat }, { x: at.x, z: at.z, combatLevel: t.combatLevel })) continue;
+        if (at.z - escapeZ(Math.abs(me.combat - t.combatLevel)) < minEscape) continue;
         if (!best || at.ticks < best.at.ticks) best = { track: t, at };
     }
     return best;
@@ -202,8 +212,8 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 contactAt = session.tick();
                 const fleeing = near.distance > lastDist && near.distance >= 2;
                 lastDist = near.distance;
-                // Freeze a runner, then close in.
-                if (freeze && fleeing && session.tick() - frozeAt > 25) {
+                // Freeze first, at first reach, before the target can run; freeze again when it runs.
+                if (freeze && canAttack(m, near) && (frozeAt < 0 || (fleeing && session.tick() - frozeAt > 25))) {
                     const r = await bot.castSpell(near as any, freeze);
                     frozeAt = session.tick();
                     if (r.success) stats.freezes++;

@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { canAttack, freezeSpell, intercept, pickTrack, Radar, sweep, wildLevel, type Track } from './pk-hunt';
+import { canAttack, escapeZ, freezeSpell, intercept, pickTrack, Radar, sweep, wildLevel, type Track } from './pk-hunt';
 
 test('wildLevel: 8 tiles per level from z 3520 inside x 2944-3391', () => {
     expect(wildLevel(3094, 3519)).toBe(0);
@@ -81,4 +81,13 @@ test('sweep covers the Wilderness inside the depth limit, west-east then back', 
     expect(deep[5]).toEqual({ x: 3330, z: 3620 });
     expect(sweep(15).every(p => wildLevel(p.x, p.z) <= 15)).toBe(true);
     expect(sweep(1)).toEqual([{ x: 3090, z: 3524 }]);
+});
+
+test('pickTrack skips a target that can run out of range before a freeze lands', () => {
+    expect(escapeZ(6)).toBe(3560);
+    expect(escapeZ(0)).toBe(3520);
+    const me = { x: 3094, z: 3570, combat: 97 };
+    // Gap 6: out of range south of z 3560. At 3570 it is 10 tiles from escape: skipped. At 3600: 40 tiles, taken.
+    expect(pickTrack(me, [track({ name: 'Edge', x: 3094, z: 3570, combatLevel: 91 })], new Set(), 56)).toBeNull();
+    expect(pickTrack(me, [track({ name: 'Deep', x: 3094, z: 3600, combatLevel: 91 })], new Set(), 56)?.track.name).toBe('Deep');
 });
