@@ -210,7 +210,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     const chase = async (name: string): Promise<'kill' | 'gone' | 'left' | 'stall' | 'flee' | 'dead' | 'stop'> => {
         stats.chases++;
         let lastTile: { x: number; z: number } | null = null, lastDist = Infinity, contactAt = session.tick();
-        let held = false, freezeReady = 0;
+        let held = false, freezeReady = 0, lastSeenAt: { x: number; z: number } | null = null;
         while (!stopped() && Date.now() < end) {
             // A pass that used no game tick waits one, so the client and other sessions keep running.
             if (session.tick() === spun) await sdk.waitForTicks(1);
@@ -241,14 +241,16 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 contactAt = session.tick();
                 const fleeing = near.distance > lastDist && near.distance >= 2;
                 lastDist = near.distance;
-                // Freeze first, at first reach, before the target can run; freeze again when it runs. A splash counts
-                // as a cast in the SDK (success with hit false), so only a hit holds the target; a splash recasts in 5 ticks.
-                if (freeze && canAttack(m, near) && session.tick() >= freezeReady && (!held || fleeing)) {
+                // The SDK reports every freeze as a hit (the server grants the XP before the hit roll), so a held
+                // target is one that stops moving: a move after a freeze means it splashed or ended.
+                if (held && lastSeenAt && cheb(lastSeenAt, near) >= 1) { held = false; freezeReady = Math.min(freezeReady, session.tick()); }
+                lastSeenAt = { x: near.x, z: near.z };
+                // Freeze first, at first reach, before the target can run; freeze again whenever it moves.
+                if (freeze && canAttack(m, near) && session.tick() >= freezeReady && !held) {
                     const r = await bot.castSpell(near as any, freeze);
-                    const hit = r.success && r.hit !== false;
-                    if (hit) { held = true; stats.freezes++; }
-                    freezeReady = session.tick() + (hit ? 25 : 5);
-                    emit({ e: 'freeze', target: name, spell: freeze, ok: r.success, hit, msg: r.success ? undefined : r.message });
+                    if (r.success) { held = true; stats.freezes++; lastSeenAt = { x: near.x, z: near.z }; }
+                    freezeReady = session.tick() + 3;
+                    emit({ e: 'freeze', target: name, spell: freeze, ok: r.success, msg: r.success ? undefined : r.message });
                     continue;
                 }
                 if (!canAttack(m, near)) {
