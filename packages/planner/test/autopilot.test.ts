@@ -57,7 +57,7 @@ test('a knight spot takes KNIGHT_SHARE farmers, each worth less: the empty spots
     expect(Math.max(...Object.values(holders({ ...knights(1), 'knight:2582,3297': 0 }, one)))).toBe(2);
     expect(one[1]!.value).toBeCloseTo(one[0]!.value * SHARED['knight:2652,3318']!, 9);
     // No account takes a place beyond a spot's capacity.
-    expect(KNIGHT_SHARE).toBe(3);
+    expect(KNIGHT_SHARE).toBe(4);
     expect(ids(shared({ ...knights(KNIGHT_SHARE), 'knight:2582,3297': KNIGHT_SHARE - 1 }))).toEqual({ NewA: 'thieving55', NewB: expect.stringMatching(/^feathers@/), NewC: expect.stringMatching(/^feathers@/) });
     expect(Object.values(ids(shared(knights(KNIGHT_SHARE)))).every(id => id.startsWith('feathers@'))).toBe(true);
     // With every spot at two farmers, the third places still take fresh accounts, one to a spot, each worth less than a
