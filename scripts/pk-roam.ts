@@ -395,9 +395,12 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 if (leg < 0) leg = route.reduce((b, p, i) => cheb(p, m) < cheb(route[b], m) ? i : b, 0);
                 else if (cheb(route[leg], m) <= 4) leg = (leg + 1) % route.length;
                 const before = session.tick();
-                await walkPath(walker, [{ ...route[leg], tol: 3 }], { maxTicks: 30, idleMs: 9000, stop: () => stopped() || !!pickNow(me()!) });
+                const walk = await walkPath(walker, [{ ...route[leg], tol: 3 }], { maxTicks: 30, idleMs: 9000, stop: () => stopped() || !!pickNow(me()!) });
                 // Never spin: a walk that used no tick (blocked or already there) moves to the next leg and waits.
-                if (session.tick() === before) { leg = (leg + 1) % route.length; await sdk.waitForTicks(1); }
+                if (session.tick() === before) {
+                    if (!walk.ok) emit({ e: 'sweep-blocked', leg: route[leg], at: [m.x, m.z], detail: walk.detail });
+                    leg = (leg + 1) % route.length; await sdk.waitForTicks(1);
+                }
                 continue;
             }
             const name = pick.track.name;
