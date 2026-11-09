@@ -363,7 +363,7 @@ test('goal bands go only to army accounts, before any coin job, earliest band fi
     expect(funded[0]).toMatchObject({ template: { id: 'str60' }, fund: { from: 'Bank', to: 'Nearer', coins: 100_000 } });
 });
 
-test('the Ardougne cow bands train army accounts from Hitpoints 32 to 42 with trout and the bronze kit, as repeating jobs', () => {
+test('the Ardougne cow bands train army accounts from Hitpoints 32 with 14 HP of food and the bronze kit, as repeating jobs', () => {
     const kit = { trout: 2, 'bronze sword': 1, 'wooden shield': 1 };
     const fighter = (name: string, skills: Record<string, number>, items: Record<string, number> = kit) => acct(name, { Thieving: 99, ...skills }, items);
     const army = new Set(['cowhand', 'pure', 'broke', 'second', 'third']);
@@ -372,10 +372,16 @@ test('the Ardougne cow bands train army accounts from Hitpoints 32 to 42 with tr
     expect(pick([fighter('Cowhand', { Hitpoints: 35 })])).toEqual({ Cowhand: 'army-cow-strength' });
     expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 40 })])).toEqual({ Cowhand: 'army-cow-attack' });
     expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 40, Attack: 40 })])).toEqual({ Cowhand: 'army-cow-defence' });
-    // Hitpoints 82 waits for the giants; Hitpoints 10 has too little food margin; a missing trout keeps it farming.
-    expect(pick([fighter('Pure', { Hitpoints: 82 })]).Pure).toMatch(/^goldfarm@/);
+    // With no giant band, a range pure at Hitpoints 82 trains Strength on the cows too; Hitpoints 10 has too little
+    // food margin and farms.
+    expect(pick([fighter('Pure', { Hitpoints: 82 })])).toEqual({ Pure: 'army-cow-strength' });
     expect(pick([fighter('Cowhand', { Hitpoints: 10 })]).Cowhand).toMatch(/^goldfarm@/);
-    expect(pick([fighter('Broke', { Hitpoints: 35 }, { 'bronze sword': 1, 'wooden shield': 1 })]).Broke).toMatch(/^goldfarm@/);
+    // Cake counts by its bites: a 2/3 cake and a slice heal 12 HP, short of 14, and the account farms; add a whole cake
+    // (pack or bank) and it trains.
+    const bronze = { 'bronze sword': 1, 'wooden shield': 1 };
+    expect(pick([fighter('Broke', { Hitpoints: 35 }, { ...bronze, '2/3 cake': 1, 'slice of cake': 1 })]).Broke).toMatch(/^goldfarm@/);
+    expect(pick([fighter('Broke', { Hitpoints: 35 }, { ...bronze, '2/3 cake': 1, 'slice of cake': 1, cake: 1 })])).toEqual({ Broke: 'army-cow-strength' });
+    expect(pick([fighter('Broke', { Hitpoints: 35 }, { trout: 2 })]).Broke).toMatch(/^goldfarm@/);
     // The field takes two; a third army account farms.
     const three = pick([fighter('Cowhand', { Hitpoints: 35 }), fighter('Second', { Hitpoints: 36 }), fighter('Third', { Hitpoints: 37 })]);
     expect(Object.values(three).filter(id => id.startsWith('army-cow-'))).toHaveLength(2);
