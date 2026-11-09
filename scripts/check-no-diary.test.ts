@@ -1,5 +1,7 @@
 import { test, expect } from 'bun:test';
-import { resolve } from 'node:path';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { flag, flagComments, check } from './check-no-diary';
 
 test('dates in code comments are flagged; dates in code, URLs and paths are not', () => {
@@ -18,4 +20,15 @@ test('history in prose is flagged; paths, code, quotes and plain facts are not',
 test('the project docs and swarm.json hold no diary text', () => {
     const found = check(resolve(import.meta.dir, '..'));
     expect(found.map(r => `${r.file}: ${r.flags.length}`)).toEqual([]);
+});
+
+test('swarm.json hand notes are checked; planner notes are not', () => {
+    const root = mkdtempSync(join(tmpdir(), 'no-diary-'));
+    try {
+        writeFileSync(join(root, 'swarm.json'), JSON.stringify({ jobs: [
+            { account: 'Farmer', autopilot: 'local', note: 'autopilot goldfarm@2652,3318: coins, 11.93 coins/tick (estimate)' },
+            { account: 'Hand', note: 'quest chain fails at Murder Mystery' },
+        ] }));
+        expect(check(root).flatMap(r => r.flags.map(f => `${r.file}: ${f.text}`))).toEqual(['swarm.json: Hand: quest chain fails at Murder Mystery']);
+    } finally { rmSync(root, { recursive: true, force: true }); }
 });

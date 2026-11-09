@@ -101,7 +101,7 @@ async function run(directory:string){
    const text=readFileSync(account.envPath,'utf8');if(!/^SERVER=localhost:8888\r?$/m.test(text))throw Error('local fixture required');
    writeFileSync(account.envPath,text.replace(/^SERVER=.*$/gm,`SERVER=127.0.0.1:${ports.engine}`).replace(/^GATEWAY_URL=.*$/gm,`GATEWAY_URL=ws://127.0.0.1:${ports.gateway}`));
    const path=await applyPreset(name,glassProofPreset(id));copyFileSync(path,join(dir,'before.sav'));
-   const child=Bun.spawn({...glassChildConfiguration(name,id,{...process.env,...env}),stdout:Bun.file(join(dir,'worker.log')),stderr:Bun.file(join(dir,'worker.err'))});
+   const child=Bun.spawn({...glassChildConfiguration(name,id,{...process.env,...env}),windowsHide:true,stdout:Bun.file(join(dir,'worker.log')),stderr:Bun.file(join(dir,'worker.err'))});
    let timedOut=false,termination:Promise<void>|undefined;const timer=setTimeout(()=>{timedOut=true;termination=killTree(child.pid)},id==='refusal'?90000:660000);
    const code=await child.exited;clearTimeout(timer);await termination;
    const before=readPracticeSave(join(dir,'before.sav')),persisted=await waitPracticeSave(path,s=>(s.vars[134]??0)>(before.vars[134]??0),{timeoutMs:15000});copyFileSync(path,join(dir,'after.sav'));

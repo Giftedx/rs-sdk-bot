@@ -69,7 +69,9 @@ export function check(root: string) {
     const swarm = join(root, 'swarm.json');
     if (existsSync(swarm) && statSync(swarm).isFile()) {
         const plan = JSON.parse(readFileSync(swarm, 'utf8'));
-        const notes = (plan.jobs ?? []).filter((j: { note?: string }) => j.note).map((j: { note: string; account?: string }, i: number) => ({ line: i + 1, id: 'job-note', text: `${j.account ?? '?'}: ${j.note.slice(0, 120)}` }));
+        // A planner job's note is its current reason and estimate, rewritten on every pass (packages/planner/src/autopilot.ts
+        // jobFor), so only hand-written notes are checked.
+        const notes = (plan.jobs ?? []).filter((j: { note?: string; autopilot?: string }) => j.note && !j.autopilot).map((j: { note: string; account?: string }, i: number) => ({ line: i + 1, id: 'job-note', text: `${j.account ?? '?'}: ${j.note.slice(0, 120)}` }));
         results.push({ file: 'swarm.json', flags: notes });
     }
     return results.filter(r => r.flags.length);
