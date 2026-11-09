@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794186441871,
+ "at": 1794186866007,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -18,6 +18,36 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
+   "role": "supply"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
+    "scripts/goldfarm.ts KNIGHT_SPOT=2582,3297"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Thieving 55, then coins from Ardougne knights",
+   "role": "supply"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/fletch-arrows.ts",
+   "args": [
+    "3000",
+    "arrows",
+    "rune"
+   ],
+   "enabled": false,
+   "standing": true,
+   "repeat": false,
+   "goal": "rune arrows (826 short) from headless arrows and rune arrowtips",
    "role": "supply"
   },
   {
@@ -58,6 +88,21 @@
    "role": "firemaking"
   },
   {
+   "account": "Shaftsinker",
+   "script": "scripts/rune-bank-craft.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "CAP": "60000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Runecraft 99 from 20022 banked rune essence",
+   "role": "runecraft"
+  },
+  {
    "account": "Mightyrod",
    "script": "scripts/quest-chain.ts",
    "args": [
@@ -68,6 +113,22 @@
    "repeat": false,
    "goal": "quests: runemysteries, murder, blackknight, vampire, priest, junglepotion, sheep, fishingcompo, druid, arrav, seaslug, haunted, demon, dig, drunkmonk, elemental, death, grandtree",
    "role": "combat"
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
+    "scripts/goldfarm.ts KNIGHT_SPOT=2652,3318"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Thieving 55, then coins from Ardougne knights",
+   "role": "supply"
   },
   {
    "account": "Abracadickra",
@@ -362,65 +423,6 @@
    "role": "supply"
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/blood-chest.ts",
-   "args": [
-    "24000"
-   ],
-   "env": {
-    "MAX_LOOTS": "100",
-    "CAP": "24000",
-    "BANK_EVERY": "5",
-    "COORDINATOR_RUN_ID": "task-98121627-5728-49a2-8345-54a547f27810"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-blood-charge-renewed-controller-qualified [task-98121627-5728-49a2-8345-54a547f27810]",
-   "role": "supply"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "FILL_WAIT_TICKS": "30",
-    "CASH_RESERVE": "10000",
-    "ITEM_ID": "561",
-    "ORDER_KEY": "bowbeforeme-magic-nature50",
-    "QUANTITY": "50",
-    "ORDER_MS": "240000",
-    "LIMIT_PRICE": "260",
-    "EXPECTED_OWNED": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-1ba638f3-ac7c-48ad-b6d4-5c540d7da9a0"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-bowbeforeme-magic-nature50 [task-1ba638f3-ac7c-48ad-b6d4-5c540d7da9a0]",
-   "role": "supply"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "EXPECTED_OWNED": "0",
-    "FILL_WAIT_TICKS": "40",
-    "QUANTITY": "12",
-    "ORDER_MS": "360000",
-    "ORDER_KEY": "shaftsinker-runite-sharks12",
-    "LIMIT_PRICE": "810",
-    "ITEM_ID": "385",
-    "CASH_RESERVE": "20000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-fd97e6af-54b8-4c62-ade2-f3b7533edcaa"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-shaftsinker-runite-sharks12-saved-gate [task-fd97e6af-54b8-4c62-ade2-f3b7533edcaa]",
-   "role": "runecraft"
-  },
-  {
    "account": "Magicwanda",
    "script": "scripts/quest-sweep.ts",
    "args": [
@@ -433,27 +435,6 @@
    "enabled": false,
    "repeat": false,
    "goal": "run-imp-magicwanda-after-market-recovery [task-4e3a0512-4b16-4dd7-a5ee-35072cb3fa5f]",
-   "role": "supply"
-  },
-  {
-   "account": "Ballspinner",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ORDER_KEY": "ballspinner-kbd-sharks6",
-    "LIMIT_PRICE": "650",
-    "ITEM_ID": "385",
-    "ORDER_MS": "240000",
-    "CASH_RESERVE": "240000",
-    "QUANTITY": "6",
-    "FILL_WAIT_TICKS": "25",
-    "EXPECTED_OWNED": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-5890cab8-37f2-453e-bc17-d9a22a646d1f"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-ballspinner-kbd-sharks6-after-publish [task-5890cab8-37f2-453e-bc17-d9a22a646d1f]",
    "role": "supply"
   }
  ]
