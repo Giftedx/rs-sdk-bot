@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794188528739,
+ "at": 1794189137729,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -18,36 +18,6 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
-   "role": "supply"
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
-    "scripts/goldfarm.ts KNIGHT_SPOT=2582,3297"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "Thieving 55, then coins from Ardougne knights",
-   "role": "supply"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/fletch-arrows.ts",
-   "args": [
-    "3000",
-    "arrows",
-    "rune"
-   ],
-   "enabled": false,
-   "standing": true,
-   "repeat": false,
-   "goal": "rune arrows (826 short) from headless arrows and rune arrowtips",
    "role": "supply"
   },
   {
@@ -154,18 +124,18 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2653,3300",
+    "KNIGHT_SPOT": "2671,3313",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
+   "goal": "goldfarm knights at 2671,3313",
    "role": "thieving",
-   "template": "goldfarm@2653,3300",
+   "template": "goldfarm@2671,3313",
    "autopilot": "local",
    "resources": [
-    "knight:2653,3300"
+    "knight:2671,3313"
    ]
   },
   {
@@ -271,18 +241,18 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
+    "KNIGHT_SPOT": "2669,3298",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
+   "goal": "goldfarm knights at 2669,3298",
    "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "template": "goldfarm@2669,3298",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "knight:2669,3298"
    ]
   },
   {
@@ -416,6 +386,40 @@
    "enabled": false,
    "repeat": false,
    "goal": "run-imp-magicwanda-after-market-recovery [task-4e3a0512-4b16-4dd7-a5ee-35072cb3fa5f]",
+   "role": "supply"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/handoff-inputs.ts",
+   "args": [
+    "--headless-order",
+    "615",
+    "1"
+   ],
+   "env": {
+    "CAP": "900",
+    "COORDINATOR_RUN_ID": "task-cc692a69-de56-4be1-9fc2-2c9f828aa281"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-ammo-bowbeforeme-headless615-current [task-cc692a69-de56-4be1-9fc2-2c9f828aa281]",
+   "role": "supply"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/blood-chest.ts",
+   "args": [
+    "24000"
+   ],
+   "env": {
+    "MAX_LOOTS": "100",
+    "CAP": "24000",
+    "BANK_EVERY": "5",
+    "COORDINATOR_RUN_ID": "task-7004185d-145c-41c0-81b8-bff70757e64e"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-blood-mineyourbiz-loot100-requal [task-7004185d-145c-41c0-81b8-bff70757e64e]",
    "role": "supply"
   }
  ]
