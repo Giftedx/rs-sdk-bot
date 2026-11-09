@@ -1,0 +1,45 @@
+{
+  "goal": "Bank exactly one newly mined Lava Maze Runite ore through a finite coordinated escort pilot on two owned ordinary accounts.",
+  "files": [
+    "scripts/lava-maze-escorted-ore.ts",
+    "scripts/lava-maze-escorted-ore.test.ts",
+    "scripts/lava-maze-escort-route.json",
+    "packages/practice/src/lava-maze-escorted-ore-proof.ts"
+  ],
+  "consumer": "run-lava-maze-advance-escort-one-ore uses Bigchopper and Shaftsinker under the existing controller as a finite two-account pilot. Shaftsinker banks one new counted Runite ore from the two Lava Maze rocks, with both accounts safely returned and logged out. The next consumer is repeated bounded ore trips for the live rolling-day lead. Native proof runs the same CLI with two loopback-owned fixtures and verifies fresh save, exact new ore, protected staging and both logouts.",
+  "entry": "scripts/lava-maze-escorted-ore.ts",
+  "id": "lava-maze-escorted-ore",
+  "checks": [
+    {
+      "id": "escort-route-regressions",
+      "timeoutMs": 60000,
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/lava-maze-escorted-ore.test.ts",
+        "--timeout",
+        "10000"
+      ]
+    },
+    {
+      "id": "escorted-one-ore-native",
+      "timeoutMs": 900000,
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/lava-maze-escorted-ore-proof.ts"
+      ]
+    },
+    {
+      "id": "escorted-one-ore-saved",
+      "timeoutMs": 30000,
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/lava-maze-escorted-ore-proof.ts",
+        "--verify"
+      ]
+    }
+  ]
+}

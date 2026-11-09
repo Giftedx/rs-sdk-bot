@@ -1,5 +1,6 @@
 // bun scripts/firemaking-order.ts <account>
-// TARGET_LEVEL (required), MAX_LOGS=10000, CAP=20000 ticks, LOG=normal|oak|willow, TOOL_BUDGET=50, CASH_RESERVE=0.
+// TARGET_LEVEL (required), MAX_LOGS=10000, CAP=20000 ticks, LOG=normal|oak|willow|maple|yew|magic.
+// PROGRESSIVE=1 reselects the highest native tier after each BATCH=27 logs, with no stock fallback.
 // Server comes from openBot's account config. Acceptance belongs to packages/practice/src/firemaking-order-proof.ts.
 // Source decision: scripts/measure/fm-line-search.ts --from 3092,3243 --safe -> BURN_ROWS (danger 0, 3 and 9 tiles
 // from the Draynor booths); floor-fm-line.ts push/turn rules -> burn(). Reuse by import: gather-yews.ts session, walk
@@ -7,6 +8,8 @@
 // skill_firemaking/scripts/firemaking.rs2: light_logs_inv refuses "You can't light a fire here." before it drops the
 // log; firemaking_success deletes the ground log, then stat_advance. push_player tries west, east, south, north.
 import {openBot,finish,getWorld,accountOf} from '../packages/core/src/bot';
+import {BotActions} from '../vendor/rs-sdk/sdk/actions';
+import {productionStopRequested} from './microbot-c-lifetime';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
 import {walkPath,sessionWalker,walkRoute,FAR_WALK_TILES,type PathPoint} from '../packages/core/src/walk';
@@ -16,8 +19,13 @@ import {planTripOffThread} from '../packages/core/src/route-plan';
 import {depositObserved} from '../packages/core/src/deposit';
 import {planShopPurchases,buyWithBudget,maximumUnitCost} from './shop-buyer';
 
-export const LOGS={normal:{id:1511,name:'Logs',level:1},oak:{id:1521,name:'Oak logs',level:15},willow:{id:1519,name:'Willow logs',level:30}} as const;
+// Native skill_firemaking/configs/firemaking.obj levelrequire; modern log families are absent.
+export const LOGS={normal:{id:1511,name:'Logs',level:1},oak:{id:1521,name:'Oak logs',level:15},willow:{id:1519,name:'Willow logs',level:30},maple:{id:1517,name:'Maple logs',level:45},yew:{id:1515,name:'Yew logs',level:60},magic:{id:1513,name:'Magic logs',level:75}} as const;
 export type LogKind=keyof typeof LOGS;
+export function progressiveFiremakingLog(level:number):LogKind{
+ if(!Number.isSafeInteger(level)||level<1||level>99)throw Error('native Firemaking base level unknown');
+ return(Object.keys(LOGS)as LogKind[]).filter(k=>LOGS[k].level<=level).at(-1)!;
+}
 export const TINDERBOX=590,COINS=995,FIREMAKING='Firemaking';
 export const DRAYNOR_BANK={x:3092,z:3243};
 export const BURN_ROWS=[{z:3248,sx:3098,ex:3072},{z:3250,sx:3105,ex:3077}] as const;
@@ -37,13 +45,15 @@ export const TINDER_SHOP={npc:/^(shopkeeper|shop assistant)$/i,item:/^tinderbox$
  route:[{x:3092,z:3250,tol:1},{x:3089,z:3266,tol:2},{x:3100,z:3270,tol:2},{x:3140,z:3270,tol:2},{x:3180,z:3258,tol:2},{x:3212,z:3246,tol:2}] as PathPoint[]};
 export const PACK_LOGS=27,LIGHT_TICKS=120,TILE_WAIT_TICKS=40;
 
-export interface FiremakingOptions{target:number;maxLogs:number;cap:number;log:LogKind;toolBudget:number;cashReserve:number}
+export interface FiremakingOptions{target:number;maxLogs:number;cap:number;log:LogKind;toolBudget:number;cashReserve:number;progressive?:boolean;batch?:number;burnOnly?:boolean}
 export function firemakingOptions(env:Record<string,string|undefined>=process.env):FiremakingOptions{
  const int=(key:string,fallback:number|undefined,min:number,max:number)=>{
   const n=Number(env[key]??fallback);if(!Number.isSafeInteger(n)||n<min||n>max)throw Error(`invalid ${key}`);return n;};
- const log=(env.LOG??'normal').toLowerCase();if(!Object.hasOwn(LOGS,log))throw Error('invalid LOG: use normal, oak or willow');
- return{target:int('TARGET_LEVEL',undefined,2,99),maxLogs:int('MAX_LOGS',10000,1,1000000),cap:int('CAP',20000,1,10000000),
-  log:log as LogKind,toolBudget:int('TOOL_BUDGET',50,0,1000000),cashReserve:int('CASH_RESERVE',0,0,2000000000)};
+ const log=(env.LOG??'normal').toLowerCase();if(!Object.hasOwn(LOGS,log))throw Error('invalid native LOG');
+ if(env.BURN_ONLY!==undefined&&!['0','1'].includes(env.BURN_ONLY))throw Error('invalid BURN_ONLY');
+ if(env.PROGRESSIVE!==undefined&&!['0','1'].includes(env.PROGRESSIVE))throw Error('invalid PROGRESSIVE');
+ return{...env.BURN_ONLY==='1'?{burnOnly:true}:{},target:int('TARGET_LEVEL',env.BURN_ONLY==='1'?99:undefined,2,99),maxLogs:int('MAX_LOGS',10000,1,1000000),cap:int('CAP',20000,1,10000000),
+  log:log as LogKind,toolBudget:int('TOOL_BUDGET',50,0,1000000),cashReserve:int('CASH_RESERVE',0,0,2000000000),...env.PROGRESSIVE==='1'?{progressive:true,batch:int('BATCH',27,1,27)}:{}};
 }
 // Player.ts levelExperience: this server uses 2^(level/10), not the 2^(level/7) table.
 export function xpForLevel(level:number){let points=0;for(let l=1;l<level;l++)points+=Math.floor(l+300*2**(l/10));return Math.floor(points/4);}
@@ -55,7 +65,7 @@ export function logShortfall(target:number,xp:number,xpPerLog:number,owned:numbe
 }
 export function firemakingPreflight(o:FiremakingOptions,s:{plane:number;baseLevel:number;level:number}){
  if(!Number.isSafeInteger(s.baseLevel)||s.baseLevel<1)return 'firemaking state unknown';
- if(s.baseLevel>=o.target)return 'already at target';
+ if(!o.burnOnly&&s.baseLevel>=o.target)return 'already at target';
  if(s.plane!==0)return 'off plane 0';
  if(s.level<LOGS[o.log].level)return `${LOGS[o.log].name} need Firemaking ${LOGS[o.log].level}`;
  return null;
@@ -92,7 +102,7 @@ export const ENTRY_BANK_TICKS=40,ENTRY_BURN_TICKS=20;
 export const entryBudget=(o:FiremakingOptions,used:number)=>o.cap-used-ENTRY_BANK_TICKS-ENTRY_BURN_TICKS*Math.min(o.maxLogs,PACK_LOGS);
 
 export async function runFiremaking(s:Session,o:FiremakingOptions,selectedSite?:FiremakingSite){
- const L=LOGS[o.log],start=s.tick();let ended=false;
+ let L=LOGS[o.log];const start=s.tick();let ended=false;
  void s.ended.then(()=>{ended=true;});
  const st=()=>s.sdk.getState(),pos=()=>st()!.player!;
  const inv=()=>s.sdk.getInventory(),held=(id:number)=>inv().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
@@ -101,14 +111,23 @@ export async function runFiremaking(s:Session,o:FiremakingOptions,selectedSite?:
  const ready=()=>{const p=st()?.player,f=s.sdk.getSkill(FIREMAKING),h=s.sdk.getSkill('Hitpoints');
   return !!p&&p.worldX>0&&!!f&&f.baseLevel>0&&!!h&&h.baseLevel>0&&Number.isFinite(s.sdk.getSkillXp(FIREMAKING))&&Array.isArray(st()?.inventory);};
  if(!await waitUntil(s,ready,{timeoutTicks:20}))throw Error('entry state unobserved');
+ const guarded=!!o.burnOnly||!!o.progressive||L.level>=45;
+ let continuation=()=>{};
+ if(guarded){
+  const original=s,client=s.client,executor=(client as any)?.executeBotAction,p=st()!.player!,life=p.lifeId,respawns=p.respawnCount??0,plane=p.level,initialHP=hp();let lost=false;
+  continuation=()=>{const now=original.sdk.getState()?.player;if(original.client!==client||(client as any)?.executeBotAction!==executor)lost=true;
+   if(lost||typeof executor!=='function'||ended||life===undefined||!now||now.isDead||now.lifeId!==life||(now.respawnCount??0)!==respawns||now.level!==plane||(original.sdk.getSkill('Hitpoints')?.level??0)<initialHP||original.tick()-start>=o.cap||productionStopRequested(original.name))throw Error('firemaking original owner/life/HP/stop/budget unavailable');};
+  const sdk=new Proxy(original.sdk,{get(target,key,receiver){const v=Reflect.get(target,key,receiver);return typeof v==='function'?function(...args:unknown[]){if(typeof key==='string'&&key.startsWith('send'))continuation();return v.apply(receiver,args);}:v;}});
+  s={...original,sdk,bot:new BotActions(sdk),direct:async(action:Parameters<Session['direct']>[0])=>{continuation();return original.direct(action);}}as Session;
+ }
  let hpMin=hp();const off=s.onTick(()=>{const h=s.sdk.getSkill('Hitpoints')?.level;if(h!==undefined)hpMin=Math.min(hpMin,h);});
  const project=(list:{slot:number;id:number;count:number}[]|undefined)=>(list??[]).map(({slot,id,count})=>({slot,id,count}));
  const at=()=>({x:pos().worldX,z:pos().worldZ,level:pos().level});
  const site=selectedSite??firemakingSite(at()),bank=site.bank;
- const startXp=xp(),startLevel=base();
+ const startXp=xp(),startLevel=base();if(o.progressive){if(!Number.isSafeInteger(o.batch)||o.batch!<1||o.batch!>27)throw Error('invalid progressive batch');L=LOGS[progressiveFiremakingLog(startLevel)];}
  console.log('FIREMAKING_INITIAL '+JSON.stringify({name:s.name,options:o,tick:s.tick(),position:at(),hp:hp(),xp:startXp,level:startLevel,
   inventory:project(st()?.inventory),equipment:project(st()?.equipment)}));
- const live=()=>{if(ended)throw Error('session interrupted');if(hp()<=0)throw Error('died');};
+ const live=()=>{if(guarded)continuation();if(ended)throw Error('session interrupted');if(hp()<=0)throw Error('died');};
  const r={ok:false,stop:'',target:o.target,log:o.log,startLevel,level:startLevel,xpGained:0,logsBurnt:0,xpPerLog:0,ticks:0,logsPer1kTicks:0,
   hpMin,bankTrips:0,tinderbox:{source:'',spent:0},ownedLogs:0,shortfall:0,refused:'',failure:''};
  const seen=new Set<string>();
@@ -204,17 +223,25 @@ export async function runFiremaking(s:Session,o:FiremakingOptions,selectedSite?:
   const tb=inv().find(i=>i.id===TINDERBOX),log=inv().find(i=>i.id===L.id);
   if(!tb||!log)throw Error('tinderbox or log missing from pack');
   if(st()?.dialog?.isOpen||st()?.modalOpen)await s.direct({type:'closeModal',reason:'SDK'});
+  const inventoryTotals=()=>{const out:Record<number,number>={};for(const i of inv())out[i.id]=(out[i.id]??0)+i.count;return out;};
+  const expected=guarded?inventoryTotals():undefined;if(expected)expected[L.id]=(expected[L.id]??0)-1;
+  const gear=guarded?JSON.stringify(project(st()?.equipment)):undefined,otherXP=()=>JSON.stringify((st()?.skills??[]).filter(k=>k.name!==FIREMAKING).map(k=>[k.name,k.experience]));
+  const xpOther=guarded?otherXP():undefined;
   const x0=xp(),n0=held(L.id),sent=s.tick();fresh(/$^/);
   await s.sdk.sendUseItemOnItem(tb.slot,log.slot);
   let resends=0;
   while(s.tick()-sent<LIGHT_TICKS){
    await waitTicks(s,1);live();
-   if(xp()>x0){await waitUntil(s,()=>held(L.id)===n0-1,{timeoutTicks:3});return xp()-x0;}
+   if(xp()>x0){await waitUntil(s,()=>held(L.id)===n0-1,{timeoutTicks:3});if(guarded){
+    const receipt=()=>{live();const actual=inventoryTotals();if([...new Set([...Object.keys(expected!),...Object.keys(actual)])].some(id=>(actual[+id]??0)!==(expected![+id]??0))||JSON.stringify(project(st()?.equipment))!==gear||otherXP()!==xpOther)throw Error('native burn whole-pack/gear/other-XP receipt differs');};receipt();
+    // firemaking_success -> push_player p_delay(0): one suspension plus one publication tick.
+    for(let settle=0;settle<2;settle++){await waitTicks(s,1);receipt();}
+   }return xp()-x0;}
    if(fresh(/can't light a fire here/i))return 'blocked';
    if(fresh(/need a firemaking level|need a tinderbox/i))throw Error('light refused by server');
    // A modal (a level-up dialog) can swallow the packet: close it and resend only while the log is still in the
    // pack, never after the drop.
-   if(held(L.id)===n0&&s.tick()-sent>=4*(resends+1)&&resends<3){
+   if(!guarded&&held(L.id)===n0&&s.tick()-sent>=4*(resends+1)&&resends<3){
     resends++;if(st()?.dialog?.isOpen||st()?.modalOpen)await s.direct({type:'closeModal',reason:'SDK'});
     const t=inv().find(i=>i.id===TINDERBOX),l=inv().find(i=>i.id===L.id);if(t&&l)await s.sdk.sendUseItemOnItem(t.slot,l.slot);
    }
@@ -227,9 +254,10 @@ export async function runFiremaking(s:Session,o:FiremakingOptions,selectedSite?:
  const blocked=(t:{x:number;z:number})=>fireAt(t)||(refused.get(key(t))??-1)>s.tick();
  let cursor=0;
  const owned=()=>held(L.id)+banked(L.id);
- const stopReason=()=>base()>=o.target?'target':r.logsBurnt>=o.maxLogs?'max-logs':s.tick()-start>=o.cap?'cap':owned()<1?'logs-exhausted':'';
+ const stopReason=()=>!o.burnOnly&&base()>=o.target?'target':r.logsBurnt>=o.maxLogs?'max-logs':s.tick()-start>=o.cap?'cap':owned()<1?'logs-exhausted':'';
  try{
-  const pre=firemakingPreflight(o,{plane:pos().level,baseLevel:startLevel,level:s.sdk.getSkill(FIREMAKING)!.level});
+  if(guarded)continuation();
+  const pre=firemakingPreflight(o.progressive?{...o,log:progressiveFiremakingLog(startLevel)}:o,{plane:pos().level,baseLevel:startLevel,level:s.sdk.getSkill(FIREMAKING)!.level});
   if(pre)throw new Refusal(pre);
   await openBank();
   r.ownedLogs=owned();
@@ -240,14 +268,16 @@ export async function runFiremaking(s:Session,o:FiremakingOptions,selectedSite?:
   else if(tinderOwned===0)await buyTinderbox();
   let row=0;
   for(;;){
+   if(o.progressive){L=LOGS[progressiveFiremakingLog(base())];if(s.sdk.getSkill(FIREMAKING)!.level<L.level)throw new Refusal('selected progressive Firemaking level drained');}
    r.stop=stopReason();if(r.stop)break;
    // At the bank: carry up to one pack of logs, bounded by MAX_LOGS.
-   const want=packWant(held(L.id),inv().length,o.maxLogs-r.logsBurnt);
+   const want=packWant(held(L.id),inv().length,Math.min(o.maxLogs-r.logsBurnt,o.progressive?o.batch!:Infinity));
    if(want>0&&banked(L.id)>0)await withdraw(L.id,Math.min(want,banked(L.id)));
    if(held(L.id)<1)throw Error('pack has no logs after withdrawal');
    await closeBank();
    cursor=rowStart(row,site.rows);row++;
-   while(held(L.id)>0){
+   const batchStart=r.logsBurnt;
+   while(held(L.id)>0&&(!o.progressive||r.logsBurnt-batchStart<o.batch!)){
     r.stop=stopReason();if(r.stop)break;
     let i=nextFreeTile(tiles,cursor,blocked);
     for(let w=0;i<0&&w<TILE_WAIT_TICKS;w++){await waitTicks(s,1);live();i=nextFreeTile(tiles,cursor,blocked);}
@@ -259,16 +289,18 @@ export async function runFiremaking(s:Session,o:FiremakingOptions,selectedSite?:
     r.logsBurnt++;r.xpPerLog||=gain;
     if(gain!==r.xpPerLog)console.log('FIREMAKING_WARN '+JSON.stringify({event:'xp-per-log-changed',gain,xpPerLog:r.xpPerLog}));
     cursor=i+1;
-    console.log('FIREMAKING_PROGRESS '+JSON.stringify({burns:r.logsBurnt,xp:xp(),level:base(),tick:s.tick(),x:t.x,z:t.z}));
+    console.log('FIREMAKING_PROGRESS '+JSON.stringify({burns:r.logsBurnt,xp:xp(),level:base(),tick:s.tick(),x:t.x,z:t.z,...o.progressive?{logId:L.id}: {}}));
    }
    if(r.stop)break;
    await openBank();
+   if(o.progressive&&held(L.id)>0)await deposit(L.id);
   }
   // Rebank leftover logs; the tinderbox stays in the pack.
   if(held(L.id)>0){await openBank();await deposit(L.id);}
   if(st()?.bank?.isOpen)await closeBank();
   r.ownedLogs=owned();
-  if(r.stop==='logs-exhausted'&&base()<o.target)r.shortfall=logShortfall(o.target,xp(),r.xpPerLog,0);
+  if(r.stop==='logs-exhausted'&&o.burnOnly)r.shortfall=Math.max(0,o.maxLogs-r.logsBurnt);
+  if(r.stop==='logs-exhausted'&&!o.burnOnly&&base()<o.target)r.shortfall=logShortfall(o.target,xp(),r.xpPerLog,0);
   r.ok=r.stop==='target'||r.stop==='max-logs';
   if(r.stop==='logs-exhausted')r.failure=`log stock exhausted: shortfall ${r.shortfall} ${L.name}`;
   else if(r.stop==='cap')r.failure='tick cap reached before target';

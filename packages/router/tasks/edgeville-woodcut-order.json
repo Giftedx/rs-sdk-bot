@@ -1,0 +1,44 @@
+{
+  "id": "edgeville-woodcut-order",
+  "goal": "skills",
+  "entry": "scripts/edgeville-woodcut-order.ts",
+  "files": [
+    "scripts/edgeville-woodcut-order.ts",
+    "packages/practice/src/edgeville-woodcut-order-proof.ts",
+    "packages/practice/test/edgeville-woodcut-order-proof.test.ts"
+  ],
+  "consumer": "Bigpackage needs Woodcutting 36 for the Lost City dragon dagger unlock. From Edgeville at Woodcutting 15 the worker takes its owned bronze axe, cuts only the three mapped oaks, banks the axe and logs, and logs out. The native consumer verifies the saved level, exact XP and bank log delta, retained assets and confirmed logout.",
+  "checks": [
+    {
+      "id": "edgeville-woodcut-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "packages/practice/test/edgeville-woodcut-order-proof.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "edgeville-woodcut-native",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/edgeville-woodcut-order-proof.ts"
+      ],
+      "timeoutMs": 540000
+    },
+    {
+      "id": "edgeville-woodcut-saved",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/edgeville-woodcut-order-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
+  ]
+}

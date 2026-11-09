@@ -79,8 +79,8 @@ const COVERED_GUIDES = ['skill_guide_mining_ores', 'skill_guide_runecrafting_run
 
 const MELEE: SkillName[] = ['attack', 'strength', 'defence', 'hitpoints'];
 const TARGET_SKILLS: SkillName[] = [...MELEE, 'ranged'];
-// Monsters a combat worker fights by name; added as target rungs next to the band representatives.
-const WORKER_TARGETS = ['chicken', 'cow', 'chaos_druid'];
+// Native monsters bound by a combat worker; added as target rungs next to the band representatives.
+const WORKER_TARGETS = ['chicken', 'cow', 'chaos_druid', 'giant'];
 
 // Worker rules. A rule applies only when `evidence` is a literal substring of the worker's file (the capability entry,
 // or the capability JSON for a pending one). Capabilities come first: they carry acceptance.
@@ -98,7 +98,6 @@ const RULES: Rule[] = [
     { worker: 'cap:shark-supply-order', evidence: 'shark', methods: /^(fishing\/catch-shark|cooking\/cooking_generic_shark)$/ },
     { worker: 'cap:iron-progress-order', evidence: "BAR_TYPE: iron", methods: /^smithing\/smelt-iron$/ },
     { worker: 'cap:cow-progress-order', evidence: 'cowTraining', methods: /^(attack|strength|defence|hitpoints)\/target-cow$/ },
-    { worker: 'cap:cow-progress-order', evidence: '/^chaos druid$/i', methods: /^(attack|strength|defence|hitpoints)\/target-chaos_druid$/ },
     { worker: 'cap:ranged-train', evidence: 'export const BOWS=[', methods: /^ranged\/bow-gear-(standard-bows|oak-bows|willow-bows|maple-bows|yew-bows|magic-bows)$/ },
     { worker: 'cap:ranged-train', evidence: 'Lumbridge chickens', methods: /^(ranged|hitpoints)\/target-chicken$/ },
     { worker: 'scripts/gather-yews.ts', evidence: "'yew'", methods: /^woodcutting\/(normal|oak|yew)_tree_table$/ },
@@ -111,8 +110,8 @@ const RULES: Rule[] = [
     { worker: 'scripts/collect-wool.ts', evidence: 'spin the rest', methods: /^crafting\/spin-wool$/ },
     { worker: 'scripts/fletch-arrows.ts', evidence: 'TIP_TYPE: rune | adamant | mithril | steel', methods: /^fletching\/fletching_(steel|mithril|adamant|rune)_arrow$/ },
     { worker: 'scripts/fletch-arrows.ts', evidence: 'OAK_BOW = 845', methods: /^fletching\/stringing_oak_longbow$/ },
-    { worker: 'scripts/smelt-bars.ts', evidence: 'BAR_TYPE: iron | bronze | steel | gold | mithril', methods: /^smithing\/smelt-(bronze|iron|steel|gold|mithril)$/ },
-    { worker: 'scripts/smelt-batch.ts', evidence: "['iron','steel','gold','mithril']", methods: /^smithing\/smelt-(iron|steel|gold|mithril)$/ },
+    { worker: 'scripts/smelt-bars.ts', evidence: 'BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite', methods: /^smithing\/smelt-(bronze|iron|silver|steel|gold|mithril|adamant|runite)$/ },
+    { worker: 'scripts/smelt-batch.ts', evidence: "['bronze','iron','silver','steel','gold','mithril','adamantite','runite']", methods: /^smithing\/smelt-(bronze|iron|silver|steel|gold|mithril|adamant|runite)$/ },
     { worker: 'scripts/cook-food.ts', evidence: 'FOOD_TYPE: lobster | swordfish | trout | salmon | shark', methods: /^cooking\/cooking_generic_(lobster|swordfish|trout|salmon|shark)$/ },
     { worker: 'scripts/cook-stock.ts', evidence: 'Cook banked trout/salmon', methods: /^cooking\/cooking_generic_(trout|salmon)$/ },
     { worker: 'scripts/fishcook.ts', evidence: 'Fly fishes trout and salmon', methods: /^(fishing\/catch-(trout|salmon)|cooking\/cooking_generic_(trout|salmon))$/ },
@@ -122,7 +121,7 @@ const RULES: Rule[] = [
     { worker: 'scripts/brew-potions.ts', evidence: 'super_def:', methods: /^herblore\/potion-(prayer-restore-potion|super-attack-potion|super-strength-potion|super-defence-potion|energy-potion)$/ },
     { worker: 'scripts/train-prayer.ts', evidence: 'BONE=526', methods: /^prayer\/bury-bones$/ },
     { worker: 'scripts/train-chickens.ts', evidence: 'Train on Lumbridge chickens', methods: /^(attack|strength|defence|hitpoints)\/target-chicken$/ },
-    { worker: 'scripts/gather-combat.ts', evidence: '/^chaos druid$/i', methods: /^(attack|strength|defence|hitpoints)\/target-chaos_druid$/ },
+    { worker: 'scripts/gather-combat.ts', evidence: "target==='giant'?117:target==='druid'?181", methods: /^(attack|strength|defence|hitpoints)\/target-(chaos_druid|giant)$/ },
     { worker: 'scripts/gather-ranged.ts', evidence: 'BOW=841', methods: /^(ranged\/bow-gear-standard-bows|ranged\/target-chicken)$/ },
 ];
 

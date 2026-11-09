@@ -1,4 +1,6 @@
+import {magicStopRequested} from './microbot-magic-teleport';
 import {test,expect} from 'bun:test';
+import{readFileSync}from'node:fs';
 import {nativeNpcSpell,npcCastEffect,selectMagicTarget,runNpcMagic} from './microbot-magic-npc';
 test('native standard strike/bolt/blast/wave and six debuffs resolve exact costs',()=>{
  for(const el of ['wind','water','earth','fire'])for(const tier of ['strike','bolt','blast','wave'])expect(nativeNpcSpell(el+'_'+tier).level).toBeGreaterThan(0);
@@ -29,3 +31,47 @@ test('finite NPC magic refuses native repeating autocast or unknown mode before 
  await expect(runNpcMagic(s,nativeNpcSpell('wind_strike'),{npc:1,casts:1,cap:100})).rejects.toThrow('disable native autocast');expect(actions).toBe(0);
  delete s.client.var;await expect(runNpcMagic(s,nativeNpcSpell('wind_strike'),{npc:1,casts:1,cap:100})).rejects.toThrow('autocast mode unknown');expect(actions).toBe(0);
 });
+
+test('all thirty real player spells resolve exact native component, level, membership, costs and worn item',()=>{
+ const names=[...['wind','water','earth','fire'].flatMap(e=>['strike','bolt','blast','wave'].map(t=>e+'_'+t)),...['confuse','weaken','curse','vulnerability','enfeeble','stun','bind','snare','entangle','crumble_undead','saradomin_strike','claws_of_guthix','flames_of_zamorak','iban_blast']];expect(names).toHaveLength(30);
+ const db=readFileSync('vendor/rs-sdk/server/content/scripts/skill_combat/configs/magic/magic_combat_spells.dbrow','utf8'),items=new Map(readFileSync('vendor/rs-sdk/server/content/pack/obj.pack','utf8').split(/\r?\n/).flatMap(l=>{const m=l.match(/^(\d+)=(.+)$/);return m?[[m[2]!,Number(m[1])]as const]:[];}));
+ for(const name of names){const spell=nativeNpcSpell(name),body=db.split('[magic_spell_'+name+']')[1]!.split('\n[')[0]!,field=(key:string)=>body.match(new RegExp('^data='+key+',(.+)$','m'))?.[1]?.trim(),runes=field('runesrequired')!.split(','),expected:Record<number,number>={};for(let i=0;i<runes.length;i+=2)if(runes[i]!=='null')expected[items.get(runes[i]!)!]=Number(runes[i+1]);expect(spell.component).toBe(field('spellcom')!);expect(spell.level).toBe(Number(field('levelrequired')));expect(spell.members).toBe(field('members')==='true');expect(spell.runes).toEqual(expected);expect(spell.requiredWorn).toBe(field('wornrequired')?items.get(field('wornrequired')!):undefined);}
+ expect(nativeNpcSpell('crumble_undead')).toMatchObject({level:39,members:false,runes:{562:1,556:2,557:2}});
+ for(const [name,id]of [['saradomin_strike',2415],['claws_of_guthix',2416],['flames_of_zamorak',2417],['iban_blast',1409]]as const)expect(nativeNpcSpell(name).requiredWorn).toBe(id);
+ for(const name of ['skeleton_mage','skeleton_mage_attack','nezikchened','saradomin_strike_npc','claws_of_guthix_npc','flames_of_zamorak_npc','ice_barrage'])expect(()=>nativeNpcSpell(name)).toThrow('unsupported');
+});
+test('required staves and member scope reject before any UI or paid spell action',async()=>{
+ let actions=0;const s:any={sdk:{getEquipment:()=>[{slot:3,id:1381}],getState:()=>{actions++;throw Error('should not inspect player');}},bot:{dismissBlockingUI:async()=>{actions++;}},direct:async()=>{actions++;}};
+ for(const name of ['saradomin_strike','claws_of_guthix','flames_of_zamorak','iban_blast']){const spell=nativeNpcSpell(name);await expect(runNpcMagic(s,spell,{npc:1,casts:1,cap:30,members:true})).rejects.toThrow('requires worn staff');await expect(runNpcMagic({}as any,spell,{npc:1,casts:1,cap:30})).rejects.toThrow('member NPC spell');}
+ s.sdk.getEquipment=()=>[{slot:0,id:1409}];await expect(runNpcMagic(s,nativeNpcSpell('iban_blast'),{npc:1,casts:1,cap:30,members:true})).rejects.toThrow('requires worn staff');expect(actions).toBe(0);
+});
+
+test('shared CLI global stop prevents a paid staged NPC cast',async()=>{
+ let actions=0;const s:any={tick:()=>0,ended:new Promise(()=>{}),client:{selfSlot:1,var:Array(109).fill(0)},sdk:{getInventory:()=>[],getEquipment:()=>[],getSkill:()=>({level:99}),getSkillXp:()=>0,getState:()=>({player:{lifeId:1,level:0,worldX:3197,worldZ:3353},nearbyNpcs:[]})},direct:async()=>{actions++;return{success:true};}},stop=()=>magicStopRequested('owned',false,path=>path==='.practice/stop-all','');
+ const r=await runNpcMagic(s,nativeNpcSpell('wind_strike'),{npc:41,casts:1,cap:50,stop});expect(r.ok).toBe(false);expect(r.casts).toBe(0);expect(actions).toBe(0);
+});
+
+async function hpFloorFixture(floor:number|undefined,change:'hit'|'below'|'life'|'respawn'|'move'='hit'){
+ let tick=0,xp=0,hp=99,actions=0,done=false;const listeners=new Set<()=>void>(),player={lifeId:1,respawnCount:0,isDead:false,level:0,worldX:3197,worldZ:3353},inventory=[{id:556,count:10},{id:558,count:10}];
+ const s:any={client:{selfSlot:1,var:Array(109).fill(0)},ended:new Promise(()=>{}),tick:()=>tick,onTick:(f:()=>void)=>{listeners.add(f);return()=>listeners.delete(f);},bot:{dismissBlockingUI:async()=>{}},sdk:{getState:()=>({player,nearbyNpcs:[{id:41,index:7,hp:10,reachable:true,inCombat:false,distance:1,optionsWithIndex:[{text:'Attack'}]}]}),getInventory:()=>inventory,getEquipment:()=>[],getSkill:(name:string)=>({level:name==='Hitpoints'?hp:99}),getSkillXp:(name:string)=>name==='Magic'?xp:0},direct:async()=>{actions++;inventory.forEach(i=>i.count--);xp+=5;if(actions===1){if(change==='hit')hp=95;if(change==='below')hp=89;if(change==='life')player.lifeId=2;if(change==='respawn')player.respawnCount=1;if(change==='move')player.worldX+=11;}return{success:true};}};
+ const pending=runNpcMagic(s,nativeNpcSpell('wind_strike'),{npc:41,casts:2,cap:80,...floor===undefined?{}:{hpFloor:floor}}).then(r=>{done=true;return r;});
+ for(let n=0;n<85&&!done;n++){tick++;for(const f of [...listeners])f();for(let k=0;k<12;k++)await Promise.resolve();}
+ return{result:await pending,actions};
+}
+test('NPC magic keeps strict initial HP by default and permits only a declared bounded floor',async()=>{
+ const strict=await hpFloorFixture(undefined);expect(strict.result.ok).toBe(false);expect(strict.actions).toBe(1);
+ const bounded=await hpFloorFixture(90);expect(bounded.result.ok).toBe(true);expect(bounded.actions).toBe(2);
+ const below=await hpFloorFixture(90,'below');expect(below.result.ok).toBe(false);expect(below.actions).toBe(1);
+});
+test('scalar initial life, respawn and position prevent a second paid action after mutable cached state changes',async()=>{
+ for(const change of ['life','respawn','move']as const){const r=await hpFloorFixture(90,change);expect(r.result.ok).toBe(false);expect(r.actions).toBe(1);}
+});
+test('declared HP floor rejects unknown, fractional, too low and above initial HP before paid input',async()=>{
+ for(const floor of [NaN,9,90.5,100])await expect(hpFloorFixture(floor)).rejects.toThrow('HP floor');
+});
+
+test('explicit environmental ledger reconciles only actual stock outside rune cost and preserves default exactness',()=>{const costs={556:1,558:1},b={556:5,558:5,379:8},rot={556:5,558:5,379:7,2959:1},paid={556:4,558:4,379:7,2959:1},env={379:-1,2959:1};expect(npcCastEffect(costs,b,rot,0,0,env)).toBe('none');expect(npcCastEffect(costs,b,paid,0,5,env)).toBe('cast');expect(npcCastEffect(costs,b,paid,0,5)).toBe('invalid');expect(npcCastEffect(costs,b,{...paid,995:1},0,5,env)).toBe('invalid');expect(npcCastEffect(costs,b,paid,0,5,{...env,556:-1})).toBe('invalid');expect(npcCastEffect(costs,b,rot,0,5,env)).toBe('invalid');});
+async function environmentFixture(paid:boolean){let tick=0,xp=0,actions=0,known=0;const listeners=new Set<()=>void>(),inventory:any[]=[{id:556,count:5},{id:558,count:5},{id:379,count:8}],player={lifeId:1,respawnCount:0,isDead:false,level:0,worldX:3200,worldZ:3200};const s:any={client:{selfSlot:1,var:Array(109).fill(0)},ended:new Promise(()=>{}),tick:()=>tick,onTick:(f:()=>void)=>{listeners.add(f);return()=>listeners.delete(f);},bot:{dismissBlockingUI:async()=>{}},sdk:{getState:()=>({player,nearbyNpcs:[{id:41,index:7,hp:10,reachable:true,inCombat:false,distance:1,optionsWithIndex:[{text:'Attack'}]}]}),getInventory:()=>inventory,getEquipment:()=>[],getSkill:()=>({level:99}),getSkillXp:(name:string)=>name==='Magic'?xp:0},direct:async()=>{actions++;inventory[2].count--;inventory.push({id:2959,count:1});known++;return{success:true};}};let done=false;const pending=runNpcMagic(s,nativeNpcSpell('wind_strike'),{npc:41,casts:1,cap:50,environmentDelta:():Record<number,number>=>known?{379:-known,2959:known}:{}}).then(r=>{done=true;return r;});for(let n=0;n<55&&!done;n++){tick++;if(paid&&tick===4){inventory[0].count--;inventory[1].count--;xp=5;}for(const cb of [...listeners])cb();for(let i=0;i<12;i++)await Promise.resolve();}return{r:await pending,actions};}
+test('actual NPC consumer waits through environmental-only publication for one original cast, never redispatches if absent',async()=>{const paid=await environmentFixture(true);expect(paid.r.ok).toBe(true);expect(paid.actions).toBe(1);expect(paid.r.environmentReceipts[0].delta).toEqual({379:-1,2959:1});const missing=await environmentFixture(false);expect(missing.r.ok).toBe(false);expect(missing.actions).toBe(1);expect(missing.r.failure).toContain('no repeated input');});
+
+test('passive continuation option leaves strict defaults and all foreign/dead/reach filters intact',()=>{const n:any={id:132,index:2003,hp:6,inCombat:true,targetIndex:-1,reachable:true,distance:1,optionsWithIndex:[{text:'Attack'}]};expect(selectMagicTarget([n],132,new Set(),1)).toBeUndefined();expect(selectMagicTarget([n],132,new Set(),1,()=>true)).toBe(n);for(const bad of[{...n,targetIndex:32770},{...n,hp:0},{...n,reachable:false},{...n,id:128}])expect(selectMagicTarget([bad],132,new Set(),1,()=>true)).toBeUndefined();expect(selectMagicTarget([n],132,new Set([2003]),1,()=>true)).toBeUndefined();});

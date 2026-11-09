@@ -18,6 +18,23 @@ const root = resolve(import.meta.dir, '../../..');
 const source = () => createHash('sha256').update(files.map(p => p + '\0' + readFileSync(join(root, p), 'utf8')).join('\0')).digest('hex');
 type Save = ReturnType<typeof readPracticeSave>;
 const count = (s: Save, container: number) => (s.inventories[container] ?? []).filter(i => i.id === 995).reduce((n, i) => n + i.count, 0);
+const itemTotals = (items: { id: number; count: number }[]) => {
+    const totals = new Map<number, number>();
+    for (const item of items) if (item.id !== 995) totals.set(item.id, (totals.get(item.id) ?? 0) + item.count);
+    return [...totals].sort((a, b) => a[0] - b[0]);
+};
+const retainedAssets = (before: Save, after: Save, donor: boolean) => {
+    const containers = [93, 94, 95];
+    const expected = containers.map(c => (before.inventories[c] ?? []).filter(it => it.id !== 995).map(it => ({ ...it })));
+    // The full donor fixture declares exactly one talisman moved from pack to bank.
+    if (donor) {
+        expected[0] = expected[0]!.filter(it => it.id !== 1446);
+        expected[2]!.push({ slot: -1, id: 1446, count: 1 });
+    }
+    return containers.every((c, i) => JSON.stringify(itemTotals(expected[i]!)) === JSON.stringify(itemTotals(after.inventories[c] ?? [])))
+        && JSON.stringify(itemTotals(containers.flatMap(c => before.inventories[c] ?? [])))
+            === JSON.stringify(itemTotals(containers.flatMap(c => after.inventories[c] ?? [])));
+};
 
 export function coinProofEndpoints(ports:{engine:number;gateway:number;management:number;tcp:number},instance:string){
     const values=[ports?.engine,ports?.gateway,ports?.management,ports?.tcp];
@@ -69,9 +86,12 @@ export function verify(directory: string) {
     const refused = [0, 1].map(i => readPracticeSave(join(directory, `refused-${i}.sav`)));
     const checks = {
         source: meta.source === source(),
+        fullDonor: meta.amount === 45000 && count(before[0]!, 93) === 0 && before[0]!.inventories[93]?.length === 28
+            && before[0]!.inventories[93]!.filter(i => i.id === 1436 && i.count === 1).length === 27
+            && before[0]!.inventories[93]!.filter(i => i.id === 1446 && i.count === 1).length === 1,
         transfer: meta.code === 0 && log.includes('COIN_RESULT {"ok":true'),
         coins: exactCoinDelta(before.map(s => ({ bank: count(s, 95), pack: count(s, 93) })), after.map(s => ({ bank: count(s, 95), pack: count(s, 93) })), meta.amount),
-        assets: before.every((s, i) => [93, 94, 95].every(c => JSON.stringify((s.inventories[c] ?? []).filter(it => it.id !== 995)) === JSON.stringify((after[i]!.inventories[c] ?? []).filter(it => it.id !== 995)))),
+        assets: before.every((s, i) => retainedAssets(s, after[i]!, i === 0)),
         health: before.every((s, i) => s.skills[3]!.level === after[i]!.skills[3]!.level),
         logout: log.includes('LOGOUT logged-out logged-out'),
         refusal: meta.refusalCode !== 0 && refusal.includes('coin bank funds short') && refusal.includes('COIN_RESULT {"ok":false') && refusal.includes('LOGOUT logged-out logged-out'),
@@ -97,16 +117,19 @@ async function run(directory: string) {
         try { const code = await child.exited; return timedOut ? -1 : code; } finally { clearTimeout(timer); }
     };
     try {
-        const revision = source(), amount = 12345, names = [runBotName('cgive', 1), runBotName('ctake', 1)], saves: string[] = [];
+        const revision = source(), amount = 45000, names = [runBotName('cgive', 1), runBotName('ctake', 1)], saves: string[] = [];
         stack = await startCoinProofStack(endpoints);
         for (const [i, name] of names.entries()) {
             if (existsSync(join(rsSdkRoot(), 'bots', name))) throw Error('practice name already exists');
             const account = await createBot(name);
             writeFileSync(account.envPath, coinProofAccountEnv(readFileSync(account.envPath, 'utf8'), endpoints));
-            const path = await applyPreset(name, { position: { x: i ? 3184 : 3183, z: 3436, level: 0 }, skills: { Hitpoints: 15 }, inventory: [{ id: 995, count: i ? 7 : 9 }, { id: 1265, count: 1 }], bank: [{ id: 995, count: i ? 500 : 50000 }, { id: 2347, count: 1 }] });
+            const inventory = i ? [{ id: 995, count: 7 }, { id: 1265, count: 1 }]
+                : [{ id: 1446, count: 1 }, ...Array.from({ length: 27 }, () => ({ id: 1436, count: 1 }))];
+            const path = await applyPreset(name, { position: { x: i ? 3184 : 3183, z: 3436, level: 0 }, skills: { Hitpoints: 15 }, inventory, bank: [{ id: 995, count: i ? 500 : 50000 }, { id: 2347, count: 1 }] });
             saves.push(path);
             if (await command(coinRegistrationArgs(name, endpoints), 'auth-' + i) !== 0) throw Error('practice registration failed');
-            const entry = await waitPracticeSave(path, s => count(s, 95) === (i ? 500 : 50000) && count(s, 93) === (i ? 7 : 9));
+            const entry = await waitPracticeSave(path, s => count(s, 95) === (i ? 500 : 50000) && count(s, 93) === (i ? 7 : 0)
+                && (i !== 0 || s.inventories[93]?.length === 28));
             if (!entry.matched) throw Error('practice entry not retained');
             copyFileSync(path, join(directory, `before-${i}.sav`));
         }

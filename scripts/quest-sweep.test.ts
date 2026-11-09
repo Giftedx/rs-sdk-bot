@@ -57,8 +57,11 @@ test('Heckel stages the southern gate, observes the north side, and names a fail
  expect(await fetchHeckelDust(io)).toMatchObject({ok:false,detail:expect.stringContaining('north arrival unobserved')});
 });
 import {readFileSync} from 'node:fs';
-import {leaveToManorTrip,plan,mealPlan,walkFar,needs,nearestBank,presetFor,leaveStronghold,leaveFortress,walkCorridor,KARAMJA,gatherPlan,MILK,BUCKET,generalStores,fetchManorFishFood,manorFoodNeed,manorPoisonNeed,reserveInputSlots,FOOD,type ManorIO} from './quest-sweep';
+import {leaveToManorTrip,plan,mealPlan,walkFar,needs,nearestBank,presetFor,leaveStronghold,leaveFortress,walkCorridor,KARAMJA,gatherPlan,MILK,BUCKET,generalStores,sweep,fetchManorFishFood,manorFoodNeed,manorPoisonNeed,reserveInputSlots,FOOD,type ManorIO} from './quest-sweep';
 import {spawnsByDistance} from '../packages/core/src/spawn-index';
+
+import {questDefinitions} from '../packages/core/src/quest-status';
+import {BotSDK} from '../vendor/rs-sdk/sdk';
 import {equipment,questSweepChecks} from '../packages/practice/src/quest-sweep-proof';
 import type {Session} from '../packages/core/src/inprocess';
 import type {PathDeps,PathPoint,PathResult} from '../packages/core/src/walk';
@@ -72,7 +75,7 @@ import {vampireOpening} from './generated/quest-vampire';
 import {totemJournalStage,readTotemStage,totemBoat,completeTotem} from './generated/quest-totem';
 import {componentId} from '../packages/core/src/logout';
 import {questGatherPlan,shopPlan} from './quest-sweep';
-import {nearestSeller} from '../packages/core/src/shop-index';
+import {nearestSeller,sellersByDistance} from '../packages/core/src/shop-index';
 import {hasJulietMessage,rjJournalStage,readRjStage} from './generated/quest-rj';
 import {wornKitPlan,wearQuestKit} from './quest-sweep';
 
@@ -461,6 +464,53 @@ test('Fishing Contest reaches the west dwarf from the retained bank endpoint wit
  }finally{clearInterval(timer);}
 },30000);
 
+// ballspinner.log:5017-5024: from the plank spawn at 3291,3652 the far walk stopped at 2790,3502, the client refused the
+// straight fallback click to 2779,3491, and walkFar found no route to 2439,3187. Each leg here is planned as
+// sessionWalker plans it, on pinned collision with the combat-19 account's deadly ground closed.
+test('Observatory entry east of the closed pass takes Port Sarim boats and the pinned Ardougne path, never walkFar',async()=>{
+ const grid=await import('../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
+ const {guardWalk}=await import('../packages/core/src/danger');
+ const weak={skills:{attack:37,strength:1,defence:1,hitpoints:26,ranged:1,magic:1,prayer:1},items:[],counts:{}} as unknown as import('../packages/core/src/world').Account;
+ const start=presetFor('itgronigen').position,karamja=new Set([...KARAMJA,[2772,3231]].map(([x,z])=>`${x},${z}`));
+ expect(start).toEqual({level:0,x:2439,z:3187});
+ for(const entry of [{x:2790,z:3502},{x:3291,z:3652}]){
+  let tick=0,coins=116,player={worldX:entry.x,worldZ:entry.z,level:0};
+  const listeners=new Set<()=>void>(),boats:string[]=[],clicks:{x:number;z:number}[]=[];
+  const s={sdk:{getState:()=>({player,inventory:[{id:995,count:coins}]})},tick:()=>tick,
+   onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);}} as unknown as Session;
+  const deps:PathDeps={pos:()=>({x:player.worldX,z:player.worldZ,level:player.level}),onTick:s.onTick,locs:()=>[],
+   interactLoc:()=>{throw Error('unexpected interaction');},
+   plan:(level,from,to)=>{
+    const path=guardWalk(grid as never,weak,{...from,level},{...to,level},32,()=>findLongPath(level,from.x,from.z,to.x,to.z));
+    // An empty or short plan is the straight-line fallback that the client refused at 2779,3491. The courier's
+    // Karamja corridor keeps its proven straight clicks (2850,3175 and 2772,3231 plan empty without the guard too).
+    // The reception tile 2439,3187 is itself blocked; its path ends beside it at 2440,3187.
+    const end=path.at(-1);
+    if(!karamja.has(`${to.x},${to.z}`))expect(end&&Math.max(Math.abs(end.x-to.x),Math.abs(end.z-to.z))).toBeLessThanOrEqual(1);
+    return path;
+   },
+   walk:(x,z)=>{clicks.push({x,z});player.worldX=x;player.worldZ=z;}};
+  const world={route:()=>{throw Error('walkFar must not plan the Observatory leg');},blockedDoors:()=>[]};
+  const sail=(async(_s,legs)=>{
+   const leg=legs[0]!;if(leg.kind!=='travel')throw Error('not travel');
+   boats.push(leg.travel.id);coins-=leg.travel.coins;player={worldX:leg.to.x,worldZ:leg.to.z,level:leg.to.level};return{ok:true,ticks:0};
+  }) as typeof import('../packages/core/src/walk').walkRoute;
+  const timer=setInterval(()=>{tick++;for(const cb of listeners)cb();},1);
+  try{await reachStart(s,world,start,'itgronigen',async()=>deps,sail,()=>weak);}
+  finally{clearInterval(timer);}
+  expect(boats).toEqual(['npc:captain_tobias:karamja-musa-point@3028,3216','npc:customs_officer:ardougne@2772,3231']);
+  expect(coins).toBe(56);
+  // No click lands in the Big Wolf's reach (22 tiles round 2840,3497) or the refused tile.
+  expect(clicks.some(c=>Math.max(Math.abs(c.x-2840),Math.abs(c.z-3497))<=22)).toBe(false);
+  expect(clicks).not.toContainEqual({x:2779,z:3491});
+  expect(Math.max(Math.abs(player.worldX-start.x),Math.abs(player.worldZ-start.z))).toBeLessThanOrEqual(3);
+ }
+ // Below both fares the entry refuses before any click.
+ const player={worldX:2790,worldZ:3502,level:0};
+ const s={sdk:{getState:()=>({player,inventory:[{id:995,count:59}]})},tick:()=>0} as unknown as Session;
+ await expect(reachStart(s,{} as never,start,'itgronigen',async()=>{throw Error('no walk below the fares');},undefined,()=>weak)).rejects.toThrow('missing 995:60 for Observatory boat route');
+},60000);
+
 // Retained bank-stage.log: goTo reported "no route to 2850,3175,0" after Brimhaven. The courier walks that tile
 // as a tolerance-5 pass-by point of one walkPath call.
 test('the Karamja corridor keeps courier waypoint tolerances and resumes from the unpassed point',async()=>{
@@ -813,6 +863,27 @@ test('garlic comes from the Draynor cupboard when the only seller is far away',(
  expect(gatherPlan([{id:1550,count:1}],at,()=>[],()=>600).gathers).toEqual([{id:1550,count:1,how:'loc'}]);
 });
 
+function apiSweepFixture(mode='normal'){
+ let tick=0,stopped=false,opens=0,stages=0,runs=0,sends=0;const finished:any[]=[],goals:any[]=[],callbacks=new Set<()=>void>(),inventory:any[]=[],equipment:any[]=[],player={worldX:3185,worldZ:3436,level:0,lifeId:1,respawnCount:0,isDead:false},green=new Set(questDefinitions().filter(q=>['Jungle Potion','Shilo Village'].includes(q.name)).map(q=>q.id));
+ const client:any={ingame:true,membersAccount:1,selfSlot:1,var:{108:0,320:0,321:0},executeBotAction:()=>({success:true}),ifType:(id:number)=>({colour:green.has(id)?0x00f800:0xf80000})};
+ const prayers={activePrayers:Array(15).fill(false),prayerPoints:99};
+ const state=()=>({player,inventory,equipment,skills:[],nearbyNpcs:[],nearbyPlayers:[],nearbyLocs:[],inGame:true,prayers,autoRetaliateEnabled:false});
+ const s:any={name:'SweepOwned',client,ended:new Promise(()=>{}),tick:()=>tick,onTick:(f:()=>void)=>{callbacks.add(f);return()=>callbacks.delete(f);},sdk:{getState:state,getStateAge:()=>0,getInventory:()=>inventory,getEquipment:()=>equipment,getSkill:()=>({level:99,baseLevel:99})},direct:async()=>{sends++;return{success:true};}};
+ if(mode==='sdk-reconnect'){const sdk:any=new BotSDK({botUsername:'SweepOwned',actionTimeout:50});Object.assign(sdk,s.sdk);sdk.connectionState='reconnecting';sdk.ws={readyState:WebSocket.OPEN,send:()=>{sends++;}};sdk.waitForConnection=async()=>{await Promise.resolve();client.executeBotAction=()=>({success:true});sdk.connectionState='connected';};s.sdk=sdk;}
+ if(mode==='no-shilo')for(const q of questDefinitions())if(q.name==='Shilo Village')green.delete(q.id);
+ if(mode==='prayer-low')s.sdk.getSkill=(name:string)=>({level:name==='Prayer'?42:99,baseLevel:name==='Prayer'?42:99});
+ if(mode==='unknown-journal')client.ifType=()=>({colour:0xff0000});
+ const deps:any={transit:()=>({pending:()=>mode==='transit-pending',returnVillage:async(stop:()=>boolean)=>{if(stop())throw Error('cleanup stopped');goals.push({cleanup:true});Object.assign(player,{worldX:2852,worldZ:2955});prayers.activePrayers[14]=false;},outbound:async(stop:()=>boolean)=>{if(mode==='transit-owner')client.executeBotAction=()=>({success:true});if(mode==='transit-stop')stopped=true;if(stop())throw Error('stopped');if(['transit-wood','transit-metal','transit-pending','transit-partial-owner','transit-deadline'].includes(mode)){Object.assign(player,{worldX:mode==='transit-wood'?2868:2876,worldZ:2953});prayers.activePrayers[14]=true;if(mode==='transit-partial-owner')client.executeBotAction=()=>({success:true});if(mode==='transit-deadline')tick=550;else stopped=true;throw Error('partial stockade');}goals.push({x:2880,z:2952,level:0,shilo:true});Object.assign(player,{worldX:2880,worldZ:2952});}}),exists:()=>false,stop:()=>stopped,open:async()=>{opens++;return s;},world:async()=>{if(mode==='owner-world')client.executeBotAction=()=>({success:true});if(mode==='client-world')s.client={...client};if(mode==='life-world')player.lifeId++;if(mode==='stop-world')stopped=true;return{};},go:async(_s:any,_world:any,to:any)=>{goals.push(to);Object.assign(player,{worldX:to.x,worldZ:to.z,level:to.level});tick+=mode==='deadline'?1000:2;for(const f of callbacks)f();return{ok:true};},loadout:async(view:any,kit:any)=>{stages++;if(mode==='sdk-reconnect'){const result=await view.sdk.sendUseItem(0);return{ok:false,failure:result.message};}if(mode==='missing')return{ok:false,failure:'owned stock missing'};if(mode==='false-stage')return{ok:true};if(mode==='owner-stage'){client.executeBotAction=()=>({success:true});await view.direct({type:'walkTo',x:1,z:1});}inventory.splice(0,inventory.length,...kit.pack.map((i:any,slot:number)=>({...i,slot})));equipment.splice(0,equipment.length,...kit.wear.map((i:any)=>({...i})));if(mode==='stop-stage')stopped=true;return{ok:true};},load:async(path:string)=>{const m:any=await import(path);const run=async(view:any)=>{runs++;if(mode==='throw')throw Error('native API failure');if(mode==='unknown')return undefined;return{ok:true,complete:true,scrollRead:true,inventory:view.sdk.getInventory()};};return{...m,runWatchtower:run,runTaiBwoWannaiTrio:run};},finish:async(sessions:any[],ok:boolean,detail:any)=>{finished.push({sessions,ok,detail});return{ok};}};
+ return{s,client,inventory,equipment,finished,goals,deps,stats:()=>({opens,stages,runs,sends}),stop:()=>{stopped=true;}};
+}
+const apiOptions={cap:6000,xpRate:25,prepareTicks:1000,maximumCasts:25};
+test('actual sweep explicitly dispatches imported non-main APIs on one strictly staged owned session',async()=>{for(const quest of ['tbwt','itwatchtower']){const f=apiSweepFixture();const options=quest==='tbwt'?apiOptions:{cap:6000,xpRate:25,prepareTicks:1000};const g=globalThis as any,old=g.QUEST_SESSION;try{g.QUEST_SESSION={name:'Unrelated'};await sweep('SweepOwned',quest,'fixture',options,f.deps);expect(f.stats()).toMatchObject({opens:1,stages:1,runs:1});expect(f.finished).toHaveLength(1);expect(f.finished[0].ok).toBe(true);expect(f.finished[0].sessions[0].client).toBe(f.client);expect(g.QUEST_SESSION.name).toBe('Unrelated');if(quest==='tbwt'){expect(f.goals[0]).toMatchObject({x:2852,z:2955});expect(f.goals.some(g=>g.shilo)).toBe(true);expect(f.inventory.find(i=>i.id===3150).count).toBe(21);expect(f.inventory.find(i=>i.id===379).count).toBe(1);expect(f.equipment.find(i=>i.slot===3).id).toBe(1381);}else{expect(f.inventory.find(i=>i.id===385).count).toBe(8);expect(f.inventory.find(i=>i.id===995).count).toBe(20);expect(f.equipment.find(i=>i.slot===3).id).toBe(1289);}}finally{if(old===undefined)delete g.QUEST_SESSION;else g.QUEST_SESSION=old;}}});
+test('API options, Hero single-actor mode and an initial stop are rejected before login',async()=>{for(const [quest,options]of [['hero',apiOptions],['tbwt',undefined],['tbwt',{...apiOptions,maximumCasts:0}],['itwatchtower',{cap:6000,xpRate:0,prepareTicks:1000}]]){const f=apiSweepFixture();await expect(sweep('SweepOwned',quest as string,undefined,options as any,f.deps)).rejects.toThrow();expect(f.stats().opens).toBe(0);}const f=apiSweepFixture();f.stop();await expect(sweep('SweepOwned','tbwt',undefined,apiOptions,f.deps)).rejects.toThrow('stop');expect(f.stats().opens).toBe(0);});
+test('mandatory stock failure, API throws and unknown results settle the original session once',async()=>{for(const mode of ['missing','false-stage','throw','unknown','stop-stage','stop-world','deadline','unknown-journal','no-shilo','prayer-low','transit-stop']){const f=apiSweepFixture(mode);await sweep('SweepOwned','tbwt',undefined,apiOptions,f.deps);expect(f.finished).toHaveLength(1);expect(f.finished[0].ok).toBe(false);expect(f.stats().runs).toBe(mode==='throw'||mode==='unknown'?1:0);}});
+test('original owner is pinned before world/loadout awaits and foreign continuations cannot send or settle',async()=>{for(const mode of ['owner-world','owner-stage','client-world','life-world','sdk-reconnect','transit-owner']){const f=apiSweepFixture(mode);await sweep('SweepOwned','tbwt',undefined,apiOptions,f.deps);expect(f.stats()).toMatchObject({runs:0,sends:0});expect(f.finished).toHaveLength(0);if(!['owner-stage','sdk-reconnect','transit-owner'].includes(mode))expect(f.stats().stages).toBe(0);}});
+
+test('known partial Shilo gates return under protection despite ordinary stop; unknown crossing and foreign ownership defer',async()=>{for(const mode of ['transit-wood','transit-metal','transit-deadline']){const f=apiSweepFixture(mode);await sweep('SweepOwned','tbwt',undefined,apiOptions,f.deps);expect(f.goals.some(g=>g.cleanup)).toBe(true);expect(f.finished).toHaveLength(1);expect(f.finished[0].ok).toBe(false);expect(f.s.sdk.getState().prayers.activePrayers[14]).toBe(false);expect(f.stats().runs).toBe(0);}for(const mode of ['transit-pending','transit-partial-owner']){const f=apiSweepFixture(mode);const result:any=await sweep('SweepOwned','tbwt',undefined,apiOptions,f.deps);expect(result.recoveryDeferred).toBe(true);expect(f.goals.some(g=>g.cleanup)).toBe(false);expect(f.finished).toHaveLength(0);expect(f.stats().runs).toBe(0);}});
+
 test('Fishing Contest trains Fishing 10 with a small net; other quests and Fishing 10 train nothing',async()=>{
  const {questSkillTraining,NET}=await import('./quest-sweep');
  expect(questSkillTraining('fishingcompo',()=>1)).toMatchObject({skill:'Fishing',level:10,tools:[{id:NET,count:1}]});
@@ -840,7 +911,7 @@ test("Merlin's Crystal: the wax comes off a Catherby beehive after its repellent
  // The quest's own fight, Sir Mordred, takes forty arrows more from a bow account.
  const {QUEST_ARROWS}=await import('./quest-sweep');
  expect(QUEST_ARROWS['merlin']).toBe(40);expect(QUEST_ARROWS['prince']).toBe(30);expect(QUEST_ARROWS['hazeelcult']).toBe(20);expect(QUEST_ARROWS['scorpion']).toBe(40);expect(QUEST_ARROWS['imp']).toBeUndefined();
- const {QUEST_CASTS}=await import('./quest-sweep');expect(QUEST_CASTS['hazeelcult']).toBe(12);expect(QUEST_CASTS['scorpion']).toBeUndefined();expect(QUEST_CASTS['imp']).toBeUndefined();
+ const {QUEST_CASTS}=await import('./quest-sweep');expect(QUEST_CASTS['hazeelcult']).toBe(12);expect(QUEST_CASTS['scorpion']).toBe(30);expect(QUEST_CASTS['imp']).toBeUndefined();
 });
 
 test("Pirate's Treasure needs no bananas from the sweep: the script picks them on Karamja, and the bank pass keeps their slots",async()=>{
@@ -1167,6 +1238,21 @@ test('bound for Rimmington, the eye of newt comes from Betty in Port Sarim, not 
  expect(sellersByTravel(sellers,ardougne,hetty).map(s=>s.npc)).toEqual(['Betty','Jatix','Ogre merchant']);
 });
 
+test('bound for Doric, a Big Wolf account buys its pickaxe from Bob on foot, not Arhein past the refused 2855,3430 step',async()=>{
+ const {sellersByTravel,eastOfArdougne}=await import('./quest-sweep');
+ const bank={x:2946,z:3368,level:0},doric={x:2951,z:3450,level:0},weak={skills:{attack:1,strength:1,defence:1,hitpoints:10}};
+ const sellers=sellersByDistance('bronze_pickaxe',bank);
+ // The rejected leg: Arhein's detour is the least, and the way back from Catherby takes both boats.
+ const arhein=sellersByTravel(sellers,bank,doric)[0]!;
+ expect(arhein).toMatchObject({npc:'Arhein',tile:{x:2803,z:3430,level:0}});
+ expect(eastOfArdougne(arhein.tile,doric,weak)).toBe(true);
+ // The valid leg: Bob in Lumbridge, reached and left by the Falador road with no boat.
+ const bob=sellersByTravel(sellers,bank,doric,weak)[0]!;
+ expect(bob).toMatchObject({npc:'Bob',tile:{x:3232,z:3203,level:0}});
+ expect(eastOfArdougne(bank,bob.tile,weak)||eastOfArdougne(bob.tile,doric,weak)).toBe(false);
+ expect(sellersByTravel(sellers,bank,doric,{skills:{attack:90,strength:90,defence:90,hitpoints:82}})[0]!.npc).toBe('Arhein');
+});
+
 test('plant tiles come from the knowledge and rank by distance',async()=>{
  const {locsByDistance,pickableTiles}=await import('../packages/core/src/spawn-index');
  const m=new Map([[3366,[{x:2581,z:2984,level:0},{x:2583,z:2981,level:0}]]]);
@@ -1411,4 +1497,40 @@ test('the meal takes the preset food kinds first, then the best other edibles th
  const beggar=new Map([[2309,1]]);
  expect(mealPlan(food,[],[{id:2309,count:1}],[{id:2309,count:1}],beggar)).toEqual([]);
  expect(mealPlan(food,[{id:2309,count:1}],[{id:385,count:2}],[],beggar)).toEqual([{id:385,count:2}]);
+});
+
+test('Plague City\'s buckets of water are filled at the sink by the Ardougne bank, not fetched from the Catherby spawn',()=>{
+ const ardougne={x:2655,z:3283,level:0};
+ // One empty-bucket spawn by the bank cannot give four buckets: they come from the shop.
+ const spawns=(id:number)=>id===1929?[{x:2823,z:3449,level:0}]:id===1925?[{x:2650,z:3290,level:0}]:[];
+ const seller=(id:number)=>id===1925?300:id===1929?700:Infinity;
+ const plan=gatherPlan([{id:1929,count:4}],ardougne,spawns,seller,()=>[],6,97,()=>[]);
+ expect(plan.gathers).toEqual([{id:1929,count:4,how:'use'}]);
+ expect(plan.still).toEqual([{id:1925,count:4}]);
+});
+
+import {fluffsExit,fluffsKittenGiven,inLumberYard,FLUFFS_FENCE} from './quest-sweep';
+test('Gertrude\'s Cat without Varrock Teleport climbs the yard fence, and a kitten-given journal resumes at the exit',()=>{
+ const stuck={worldX:3296,worldZ:3497,level:0},upstairs={worldX:3306,worldZ:3511,level:1},outside={worldX:3305,worldZ:3492,level:0};
+ expect(FLUFFS_FENCE).toEqual({id:2618,x:3305,z:3493});
+ expect([stuck,upstairs].every(inLumberYard)).toBe(true);
+ expect([outside,{worldX:3212,worldZ:3424,level:0},{worldX:3296,worldZ:3497,level:2}].some(inLumberYard)).toBe(false);
+ // Magic 1 or no runes inside the yard: the fence. A castable teleport, or an account already out, keeps the teleport path.
+ expect(fluffsExit(false,stuck)).toBe('fence');expect(fluffsExit(false,upstairs)).toBe('fence');
+ expect(fluffsExit(true,stuck)).toBe('teleport');expect(fluffsExit(false,outside)).toBe('teleport');
+ // %fluffs 5: started, inside the yard, no milk, sardine or kitten held.
+ expect(fluffsKittenGiven('started',[{id:995}],stuck)).toBe(true);
+ expect(fluffsKittenGiven('started',[],upstairs)).toBe(true);
+ for(const id of [1927,1552,1554])expect(fluffsKittenGiven('started',[{id}],stuck)).toBe(false);
+ for(const state of ['not started','complete','unknown',undefined])expect(fluffsKittenGiven(state,[],stuck)).toBe(false);
+ expect(fluffsKittenGiven('started',[],outside)).toBe(false);
+ // The quest script skips steps 1-4 on the resume and takes the fence before the teleport's walk; the sweep hands a
+ // resumed run over before any bank pass.
+ const fluffs=readFileSync(new URL('./generated/quest-fluffs.ts',import.meta.url),'utf8');
+ const resume=fluffs.indexOf('if (fluffsKittenGiven('),step1=fluffs.indexOf("q.talk('gertrude 1'"),fence=fluffs.indexOf("=== 'fence'"),teleport=fluffs.indexOf("q.teleport('varrock teleport'");
+ expect(resume).toBeGreaterThan(0);expect(step1).toBeGreaterThan(resume);expect(fence).toBeGreaterThan(step1);expect(teleport).toBeGreaterThan(fence);
+ expect(fluffs.slice(fence,teleport)).toMatch(/worldZ \?\? FENCE\.z\) < FENCE\.z/);
+ const sweep=readFileSync(new URL('./quest-sweep.ts',import.meta.url),'utf8');
+ expect(sweep.indexOf('QUEST_SWEEP_FLUFFS_RESUME')).toBeGreaterThan(0);
+ expect(sweep.indexOf('QUEST_SWEEP_FLUFFS_RESUME')).toBeLessThan(sweep.indexOf('QUEST_SWEEP_BANK '));
 });

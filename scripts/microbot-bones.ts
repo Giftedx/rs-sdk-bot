@@ -41,7 +41,8 @@ export async function runBonesConversion(io:BonesIO,o:{maximum:number;cap:number
 }
 
 // Bank-side worker. The caller owns staging and travel. Plain runes make costs explicit.
-export async function runBonesBank(s:import('../packages/core/src/inprocess').Session,o:{maximum:number;cap:number;members?:boolean;stop?:()=>boolean}){
+export async function runBonesBank(s:import('../packages/core/src/inprocess').Session,o:{maximum:number;cap:number;members?:boolean;reserve?:number;stop?:()=>boolean}){
+ const reserve=o.reserve??0;if(!Number.isSafeInteger(reserve)||reserve<0)throw Error('invalid bones reserve');
  const {waitUntil,waitTicks}=await import('../packages/core/src/ticks');
  const {depositObserved}=await import('../packages/core/src/deposit');
  const {componentId}=await import('../packages/core/src/logout');
@@ -73,16 +74,18 @@ export async function runBonesBank(s:import('../packages/core/src/inprocess').Se
  const result=await runBonesConversion({tick:()=>s.tick(),stopped,level:()=>s.sdk.getSkill('Magic')?.level??0,read,costs,
   prepare:async maximum=>{
    await open();
+   if((s.bankObservation?.()?.items??[]).filter(i=>i.id===ids.bones).reduce((n,i)=>n+i.count,0)+count(ids.bones)-reserve<maximum)return false;
    for(const [name,need] of Object.entries(costs()) as [keyof BonesCosts,number][]){
     const id=ids[name],missing=Math.max(0,need-count(id));
-    if(missing){const before=count(id);const r=await s.bot.withdrawItem(new RegExp(`^${name} rune$`,'i'),missing,{asNote:false});
+    if(missing){const stock=(s.bankObservation?.()?.items??[]).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);if(stock-missing<reserve)return false;const before=count(id);const r=await s.bot.withdrawItem(new RegExp(`^${name} rune$`,'i'),missing,{asNote:false});
      if(!r.success||!await waitUntil(s,()=>count(id)===before+missing,{timeoutTicks:10}))return false;}
    }
    const owned=count(ids.bones);
    if(owned>maximum)return false;
    if(!owned){
     const available=(s.bankObservation?.()?.items??[]).filter(i=>i.id===ids.bones).reduce((n,i)=>n+i.count,0);
-    const amount=Math.min(maximum,available,28-inv().length);
+    if(available-reserve<maximum)return false;
+    const amount=Math.min(maximum,available-reserve,28-inv().length);
     if(amount<1)return false;
     const r=await s.bot.withdrawItem(/^bones$/i,amount,{asNote:false});
     if(!r.success||!await waitUntil(s,()=>count(ids.bones)===amount,{timeoutTicks:10}))return false;

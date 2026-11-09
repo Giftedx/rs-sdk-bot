@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join,resolve } from 'node:path';
 import { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
 import { startInProcessSession, connectInProcess, type Session } from '../src/inprocess';
-import { awaitBotReady, settle } from '../src/bot';
+import { watchUnexpectedEnd, logoutSession, awaitBotReady, settle } from '../src/bot';
 import { beginSessionAttempt, readLogoutProof, listAttempts, accountDir, DEFAULT_LIFECYCLE_ROOT,lifecycleOwner } from '../src/session-lifecycle';
 import { withPlanWrite } from '../src/plan-lock';
 import { acquireFleetTradeClaim, readFleetAccountClaim } from '../src/fleet-trade-claim';
@@ -131,6 +131,33 @@ test('two identities in one worker log keep separate receipts; a failed non-firs
         expect(kinds(root, 'Bob')[0]![1]).toBe('connect-failed:Error: login refused for Bob with [redacted]');
         noSecret(root);
     } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('a bootstrap HTTP failure names its request in connect-failed and restores fetch', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'lifecycle-http-')), native = globalThis.fetch;
+    const stub = (async (input: any) => {
+        if (String(input).endsWith('/api/version')) return new Response('{}', { status: 200, headers: { 'content-length': '2' } });
+        throw new Error('The socket connection was closed unexpectedly');
+    }) as typeof fetch;
+    globalThis.fetch = stub;
+    try {
+        const sdk = new BotSDK({ botUsername: 'Ana', password: SECRET, autoLaunchBrowser: false, autoReconnect: false } as any);
+        await expect(startInProcessSession({ name: 'Ana', password: SECRET, server: 'localhost:8890' }, {
+            sdk, Actions: FakeActions as any, cacheDir: root, lifecycle: { root, owner }, recordOwned: () => {},
+            async startSession(o: any) {
+                await fetch(`http://${o.host}/api/version`);
+                await fetch(`http://${o.host}/crc`);
+                throw new Error('unreachable');
+            },
+        })).rejects.toThrow('closed unexpectedly');
+        expect(globalThis.fetch).toBe(stub);
+        const detail = listAttempts('Ana', 'localhost:8890', { root })[0]!.receipt!.events.find(e => e.kind === 'connect-failed')!.detail!;
+        const rows = JSON.parse(detail.slice(detail.indexOf(' http=') + 6));
+        expect(rows.map((r: any) => [r.url, r.status ?? null, r.error ?? null])).toEqual([
+            ['localhost:8890/api/version', 200, null], ['localhost:8890/crc', null, 'Error: The socket connection was closed unexpectedly']]);
+        expect(readLogoutProof('Ana', 'localhost:8890', { root })).toMatchObject({ state: 'held', reason: 'connect failed without an observed end' });
+        noSecret(root);
+    } finally { globalThis.fetch = native; rmSync(root, { recursive: true, force: true }); }
 });
 
 test('first and non-first partial connections before START supersede older proof with stale or absent status', async () => {
@@ -274,4 +301,19 @@ test('practice and live identities stay in separate trees; crossed or malformed 
         writeFileSync(join(bobDir, 'latest.json'), pointer);
         expect(readLogoutProof('Bob', 'localhost:8888', { root })).toMatchObject({ state: 'held', reason: expect.stringMatching(/^newer attempt .* is not the latest pointer$/) });
     } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+
+test('custom settlement owns original raw bookkeeping before logout ends the session', async () => {
+ const root=mkdtempSync(join(tmpdir(),'lifecycle-owned-settle-')),lines:string[]=[];
+ try{const s=await open(root,'Ana');await ready(s);let settling=false,unexpected=0,paid=0;
+ watchUnexpectedEnd(s,()=>settling,()=>false,async()=>{unexpected++;});
+ const ok=await settle([s],true,'owned work',{log:l=>lines.push(l),onReported:()=>{settling=true;},logout:async raw=>{expect(raw).toBe(s);expect(settling).toBe(true);paid++;return logoutSession(raw);}});
+ expect(ok).toBe(true);expect(unexpected).toBe(0);expect(paid).toBe(1);expect(lines.filter(l=>l.startsWith('RESULT '))).toEqual(['RESULT ok owned work']);expect(readLogoutProof('Ana','localhost:8888',{root}).state).toBe('confirmed');
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('rejected guarded logout never falls back to raw logout or close',async()=>{
+ let closes=0,inputs=0;const s={name:'guard-reject',close:async()=>{closes++;},direct:async()=>{inputs++;return{success:true};},tick:()=>0}as unknown as Session;
+ await expect(settle([s],true,'foreign',{log:()=>{},logout:async()=>{throw Error('owner replaced');}})).rejects.toThrow('owner replaced');expect(inputs).toBe(0);expect(closes).toBe(0);
 });

@@ -2,9 +2,50 @@ import {test,expect} from 'bun:test';
 import {resolve} from 'node:path';
 import {levelForXp} from '../packages/planner/src/curve';
 
+test('packet refresh skips unchanged polls but observes packets, local mutations and resets',async()=>{
+ const {createRuneTradeRefresh}=await import('./rune-carrier-trade');
+ let scans=0;const actor:any={client:{packetsReceived:10},sdk:{scanGroundItems:async()=>{scans++;}}};
+ const r=createRuneTradeRefresh('packets');
+ await r.refresh(actor);await r.refresh(actor);expect(scans).toBe(1);
+ actor.client.packetsReceived++;await r.refresh(actor);expect(scans).toBe(2);
+ r.dirty(actor);await r.refresh(actor);expect(scans).toBe(3);
+ actor.client.packetsReceived=0;await r.refresh(actor);expect(scans).toBe(4);
+ expect(r.stats()).toEqual({mode:'packets',scanned:4,skipped:1});
+});
+test('packet refresh does not swallow arrivals or mutations during an awaited scan',async()=>{
+ const {createRuneTradeRefresh}=await import('./rune-carrier-trade');
+ let scans=0,release:()=>void=()=>{};const actor:any={client:{packetsReceived:10},sdk:{scanGroundItems:async()=>{if(++scans===1)await new Promise<void>(r=>{release=r;});}}};
+ const r=createRuneTradeRefresh('packets'),pending=r.refresh(actor);
+ actor.client.packetsReceived++;r.dirty(actor);release();await pending;
+ await r.refresh(actor);expect(scans).toBe(2);
+ await r.refresh(actor);expect(scans).toBe(2);
+});
+test('poll mode and missing counters keep refreshing; failed scans retry',async()=>{
+ const {createRuneTradeRefresh}=await import('./rune-carrier-trade');
+ for(const mode of ['poll','packets'] as const){
+  let scans=0;const actor:any={sdk:{scanGroundItems:async()=>{scans++;}}};
+  const r=createRuneTradeRefresh(mode);await r.refresh(actor);await r.refresh(actor);expect(scans).toBe(2);
+ }
+ let scans=0;const actor:any={client:{packetsReceived:0},sdk:{scanGroundItems:async()=>{if(++scans===1)throw Error('scan failed');}}};
+ const r=createRuneTradeRefresh('packets');await expect(r.refresh(actor)).rejects.toThrow('scan failed');await r.refresh(actor);expect(scans).toBe(2);
+ expect(()=>createRuneTradeRefresh('invalid')).toThrow('RUNE_TRADE_REFRESH');
+});
+
 test('confirmation mode is explicit and rejects unknown controls',async()=>{
  const {runeConfirmation}=await import('./rune-carrier-trade');
  expect(runeConfirmation('observed')).toBe('observed');expect(runeConfirmation('causal')).toBe('causal');expect(()=>runeConfirmation('optimistic')).toThrow('RUNE_CONFIRM_AFTER');
+});
+
+test('packet-gated transfer reads an incoming request between game ticks',()=>{
+ const code=`import{mock}from'bun:test';import{resolve}from'node:path';process.env.RUNE_TRADE_REFRESH='packets';
+ let response=-1,scans=0,raw=[];const start=performance.now(),s={name:'Crafter',messages:[],client:{packetsReceived:1}},h={name:'Carrier',messages:[],client:{packetsReceived:1}};
+ for(const[a,o]of[[s,h],[h,s]]){a.tick=()=>0;a.direct=async()=>{if(a===h)setTimeout(()=>{s.client.packetsReceived++;raw=[{type:4,sender:'Carrier',text:'wishes to trade with you.',observationId:1}]},35);else response=performance.now()-start;return{success:true}};
+ a.sdk={getInventory:()=>a===h?Array.from({length:27},(_,slot)=>({id:1436,count:1,slot})):[],getState:()=>({trade:{isOpen:false},gameMessages:a.messages,nearbyPlayers:[{name:o.name,index:1}]}),scanGroundItems:async()=>{scans++;if(a===s)a.messages=[...raw]}};}
+ mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>new Promise(()=>{})}));
+ const{transfer}=await import('./scripts/rune-carrier-trade');try{await transfer(s,h,()=>response>=0||performance.now()-start>350)}catch{}console.log(JSON.stringify({response,scans}));`;
+ const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:2000});
+ if(child.exitCode!==0)throw Error(child.stderr.toString());const r=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
+ expect(r.response).toBeGreaterThanOrEqual(35);expect(r.response).toBeLessThan(350);expect(r.scans).toBeLessThanOrEqual(6);
 });
 
 test('causal confirmation reaches the server before confirmation publication and falls back after an invisible click',()=>{

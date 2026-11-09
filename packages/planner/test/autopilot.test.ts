@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { CAPACITY, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
+import { CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -81,6 +81,11 @@ test('skills and holdings gate templates; coins pick a shop; a retired pair pick
     const knights = Object.fromEntries(['2652,3318', '2653,3300', '2669,3298', '2671,3313', '2582,3297'].map(s => [`knight:${s}`, 1]));
     expect(ids(plan(inputs([acct('Rich', {}, { coin: 50_000 })], { taken: knights }))).Rich).toBe('shop-feathers');
     expect(ids(plan(inputs([acct('Fletch', {}, { 'arrow shaft': 1000, feather: 1000 })]))).Fletch).toBe('fletch-headless');
+});
+test('an account whose pack meets the feather target gets no feather job', () => {
+    const knights = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, 1]));
+    expect(ids(plan(inputs([acct('Full', {}, { feather: FEATHER_TARGET })], { taken: knights }))).Full).not.toMatch(/^feathers@/);
+    expect(ids(plan(inputs([acct('Room', {}, { feather: FEATHER_TARGET - 1 })], { taken: knights }))).Room).toMatch(/^feathers@/);
 });
 
 test('a shop blocked only by coins is funded by the richest free donor above its reserve', () => {

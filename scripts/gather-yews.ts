@@ -6,7 +6,46 @@ import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker, expandPath } from '../packages/core/src/walk';
 import { bankCargo } from '../packages/core/src/cargo';
 import type {Session} from '../packages/core/src/inprocess';
+import {BotActions} from '../vendor/rs-sdk/sdk/actions';
+import type {NearbyLoc} from '../vendor/rs-sdk/sdk/types';
+import {productionStopRequested} from './microbot-c-lifetime';
 
+// Native m42_54 willow and m42_53 magic placements, within the published loc radius.
+export function seersProcessingGrove(tree:string){
+ if(tree==='willow')return{x:2708,z:3509};if(tree==='magic')return{x:2692,z:3425};if(tree==='maple'||tree==='yew')return{x:2712,z:3462};throw Error('unsupported Seers processing grove');
+}
+export function processingTreeEdges(tree:{x:number;z:number},width:number,length:number){
+ if(!Number.isSafeInteger(width)||!Number.isSafeInteger(length)||width<1||width>4||length!==width)throw Error('native square tree footprint unknown');
+ return[...Array.from({length:width},(_,i)=>({x:tree.x+i,z:tree.z-1})),...Array.from({length:width},(_,i)=>({x:tree.x+i,z:tree.z+length})),...Array.from({length},(_,i)=>({x:tree.x-1,z:tree.z+i})),...Array.from({length},(_,i)=>({x:tree.x+width,z:tree.z+i}))];
+}
+// Native loc AP requires a cardinal edge of the loaded footprint, not its diagonal corner.
+export async function chopProcessingTree(original:Session,tree:NearbyLoc,stop:()=>boolean,walk?:(x:number,z:number)=>Promise<boolean>){
+ const client=original.client,executor=(client as any)?.executeBotAction,first=original.sdk.getState()?.player,life=first?.lifeId,respawns=first?.respawnCount??0,plane=first?.level,hp=original.sdk.getSkill('Hitpoints')?.level??0;let lost=false;
+ const safe=()=>{const p=original.sdk.getState()?.player;if(original.client!==client||(client as any)?.executeBotAction!==executor)lost=true;return !lost&&typeof executor==='function'&&life!==undefined&&!!p&&!p.isDead&&p.lifeId===life&&(p.respawnCount??0)===respawns&&p.level===plane&&(original.sdk.getSkill('Hitpoints')?.level??0)===hp&&!stop()&&!productionStopRequested(original.name);};
+ if(!safe())throw Error('native tree original life/owner/HP/stop unavailable');
+ const type=(client as {locTypeOf(id:number):{width:number;length:number}}).locTypeOf(tree.id),width=type.width,length=type.length,edges=processingTreeEdges(tree,width,length),began=original.tick();
+ const received=()=>{const c=client as any,local=c.localPlayer;return{x:c.mapBuildBaseX+local?.routeX?.[0],z:c.mapBuildBaseZ+local?.routeZ?.[0],level:c.minusedlevel,routeLength:local?.routeLength};};
+ const head=received();if(!Number.isSafeInteger(head.x)||!Number.isSafeInteger(head.z)||head.level!==plane)throw Error('native tree received approach origin unavailable');let goal:typeof edges[number]|undefined;
+ {
+  const goals=edges.flatMap(goal=>{if(goal.x===head.x&&goal.z===head.z)return[];const plan=original.sdk.findPath(goal.x,goal.z);if(!plan.success||plan.reachedDestination!==true||!plan.waypoints.length||plan.waypoints.at(-1)!.x!==goal.x||plan.waypoints.at(-1)!.z!==goal.z)return[];let cost=0,at={x:head.x,z:head.z};for(const point of plan.waypoints){cost+=Math.max(Math.abs(at.x-point.x),Math.abs(at.z-point.z));at=point;}return[{...goal,cost}];}).sort((a,b)=>a.cost-b.cost);
+  goal=goals[0];if(!goal)throw Error('native tree no complete cardinal approach path');
+ }
+ let settlement:{frames:number;after:number|undefined;at:number|undefined}|undefined;const stand=goal,coherent=()=>{const at=original.sdk.getState()?.player,h=received();return !!at&&at.level===plane&&at.worldX===stand.x&&at.worldZ===stand.z&&h.x===stand.x&&h.z===stand.z&&h.level===plane;};
+ {
+  if(!safe())throw Error('native tree stopped before approach');
+  const movementSdk=new Proxy(original.sdk,{get(target,key,receiver){const v=Reflect.get(target,key,receiver);return typeof v==='function'?function(...args:unknown[]){if(typeof key==='string'&&key.startsWith('send')){if(!safe())throw Error('native tree movement owner changed');const action=args[0]as any;if(key==='sendWalk'||key==='send'&&action?.type==='walkTo'){const now=received();if(now.x===stand.x&&now.z===stand.z)throw Error('native tree approach became a same-tile no-op');}}return v.apply(receiver,args);}:v;}}),movement={...original,sdk:movementSdk,bot:new BotActions(movementSdk),direct:async(action:Parameters<Session['direct']>[0])=>{if(!safe())throw Error('native tree movement owner changed');return original.direct(action);}}as Session;
+  // A received edge can be a transient tile on an older server route.
+  // Lite emits no packet for a same-tile walk; use a different legal edge once.
+  const moved=walk?await walk(stand.x,stand.z):(await movement.sdk.sendWalk(stand.x,stand.z)).success;
+  const remaining=40-(original.tick()-began),sentTick=original.sdk.getState()?.tick;let last=sentTick,stable=0;const settled=()=>{const tick=original.sdk.getState()?.tick;if(!coherent()){stable=0;last=tick;return false;}if(Number.isSafeInteger(tick)&&Number.isSafeInteger(last)&&tick!>last!){stable++;last=tick;}return stable>=2;};
+  if(!moved||remaining<=0||!await waitUntil(original,()=>!safe()||settled(),{timeoutTicks:remaining})||!safe()||!coherent())throw Error('native tree cardinal arrival unobserved');settlement={frames:stable,after:sentTick,at:last};
+ }
+ const fresh=()=>original.sdk.getState()?.nearbyLocs.some(l=>l.id===tree.id&&l.x===tree.x&&l.z===tree.z&&l.level===plane&&l.optionsWithIndex.some(o=>/^chop down$/i.test(o.text)));
+ if(!fresh())throw Error('native tree changed before chop');
+ const initialMessages=original.sdk.getState()?.gameMessages??[],revision=Math.max(0,...initialMessages.map(m=>m.observationId??0)),tick=original.tick();let refusal='';
+ const sdk=new Proxy(original.sdk,{get(target,key,receiver){const value=Reflect.get(target,key,receiver);if(key==='waitForCondition')return function(predicate:(state:any)=>boolean,timeout:number){return value.call(receiver,(state:any)=>{if(!safe())throw Error('native tree original context ended');const message=state.gameMessages?.find((m:any)=>m.type===0&&((m.observationId??0)>revision||m.tick>tick)&&/I can't reach that!/i.test(m.text));if(message){refusal=message.text;throw Error(refusal);}return predicate(state);},timeout);};return typeof value==='function'?function(...args:unknown[]){if(typeof key==='string'&&key.startsWith('send')&&(!safe()||key==='sendInteractLoc'&&(!coherent()||!fresh())))throw Error('native tree pre-dispatch context changed');if(key==='sendInteractLoc')console.log('WOOD_TREE_APPROACH '+JSON.stringify({tree:{id:tree.id,x:tree.x,z:tree.z,width,length},stand,settlement,received:received(),public:{x:original.sdk.getState()?.player?.worldX,z:original.sdk.getState()?.player?.worldZ,level:original.sdk.getState()?.player?.level},tick:original.tick()}));return value.apply(receiver,args);}:value;}});
+ const result=await new BotActions(sdk).chopTree(tree);if(refusal)throw Error('native processing tree refusal: '+refusal);if(!safe())throw Error('native tree context changed during chop');return result;
+}
 export const treeAfterBank=(explicit:string|undefined,normalLogs:number)=>explicit??(normalLogs<100?'normal':'oak');
 const NORTH_NORMAL_TREES=new Set(['3078,3307','3081,3308','3082,3304','3083,3306','3084,3298','3086,3296','3087,3307','3089,3301','3089,3310','3090,3305','3093,3301','3096,3310']);
 export function normalGrove(name='south'){
@@ -114,6 +153,7 @@ const grove=draynor?normalGrove(process.env.NORMAL_GROVE):undefined;
 let YEW_SPOT = local ? { x: 3226, z: 3237 } : draynor ? grove!.spot : { x: 2712, z: 3462 };
 const SEERS_BANK = local || draynor ? { x: 3092, z: 3243 } : { x: 2727, z: 3492 };
 let TREE = process.env.TREE ?? (draynor ? 'normal' : 'yew');
+if(process.env.WOOD_GROVE!==undefined){if(process.env.WOOD_GROVE!=='native-processing'||local||draynor)throw Error('invalid WOOD_GROVE');YEW_SPOT=seersProcessingGrove(TREE);}
 if(process.env.NORMAL_GROVE&&(!draynor||TREE!=='normal'))throw Error('NORMAL_GROVE requires Draynor normal trees');
 const logRe = draynor&&!process.env.TREE ? /^(logs|oak logs)$/i : TREE === 'normal' ? /^logs$/i : new RegExp(`^${TREE} logs$`, 'i');
 let treeRe = TREE === 'normal' ? /^tree$/i : new RegExp(`^${TREE}`, 'i');
@@ -277,7 +317,7 @@ try {
                 console.log(`WARN wood tree=${tree.id}@${tree.x},${tree.z} ticks=${s.tick()-a} no log and XP gain`);
             }
         } else {
-            const r=await s.bot.chopTree(tree);
+            const r=process.env.WOOD_GROVE==='native-processing'?await chopProcessingTree(s,tree,over):await s.bot.chopTree(tree);
             if(r.success) {
                 chops=banked+yewLogs();
                 if(yewLogs()>before) progressTick=s.tick();

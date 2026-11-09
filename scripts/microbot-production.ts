@@ -1,5 +1,6 @@
 // Inventory production behaviours adapted from Microbot-Hub. BSD notice: research/microbot-ports-LICENSE.txt.
 import {readFileSync} from 'node:fs';
+import{productionStopRequested}from'./microbot-c-lifetime';
 import {resolve} from 'node:path';
 export type InventoryRecipe={name:string;inputs:{id:number;units:number}[];tools:number[];product:number;productUnits?:number;lossProduct?:number;byproducts?:{id:number;units:number}[];optionalInputs?:number[];menu?:string;extraSlot?:boolean;itemOption?:number;skill:'Crafting'|'Cooking'|'Fletching'|'Herblore';level:number;xp:boolean;members:boolean;source:string};
 export type ProductionSnapshot={items:Record<number,number>;xp:number};
@@ -106,6 +107,9 @@ export function inventoryRecipes():InventoryRecipe[]{
  add('prepare:uncooked-pizza',['incomplete_pizza','cheese'],'uncooked_pizza','Cooking',35,false,pizza);
  for(const [topping,product,level,members] of [['cooked_meat','meat_pizza',45,false],['cooked_chicken','meat_pizza',45,false],['anchovies','anchovie_pizza',55,false],['pineapple_ring','pineapple_pizza',65,true],['pineapple_chunks','pineapple_pizza',65,true]] as const)
   add('top-pizza:'+topping,['plain_pizza',topping],product,'Cooking',level,true,pizza,[],members);
+ const chicken=cooking+'meat/cooked_meat.rs2';
+ add('prepare:chicken-stew',['cooked_chicken','bowl_water'],'stew2','Cooking',25,false,chicken);
+ add('prepare:uncooked-stew-chicken',['stew1','cooked_chicken'],'uncooked_stew','Cooking',25,false,chicken);
  if(new Set(recipes.map(r=>r.name)).size!==recipes.length)throw Error('duplicate inventory production profile');
  return recipes;
 }
@@ -150,17 +154,21 @@ export async function runInventoryProduction(io:ProductionIO,r:InventoryRecipe,o
  finally{try{await io.close();}catch(e){failure||=String(e);}}
  return{ok:!failure,recipe:r.name,made,banked,losses,attempts,ticks:io.tick()-start,failure:failure||'-'};
 }
-export async function runInventoryBank(s:import('../packages/core/src/inprocess').Session,r:InventoryRecipe,o:{maximum:number;cap:number;maxAttempts:number;reserve?:number;members?:boolean;stop?:()=>boolean}){
+export function productionInputReserves(r:InventoryRecipe,reserve=0,overrides:Readonly<Record<number,number>>={}){
+ if(!Number.isSafeInteger(reserve)||reserve<0||!overrides||typeof overrides!=='object'||Array.isArray(overrides)||Object.entries(overrides).some(([id,n])=>!Number.isSafeInteger(+id)||!r.inputs.some(i=>i.id===+id)||!Number.isSafeInteger(n)||n<0))throw Error('invalid production input reserves');
+ return Object.fromEntries(r.inputs.map(i=>[i.id,overrides[i.id]??reserve]));
+}
+export async function runInventoryBank(s:import('../packages/core/src/inprocess').Session,r:InventoryRecipe,o:{maximum:number;cap:number;maxAttempts:number;reserve?:number;inputReserves?:Readonly<Record<number,number>>;members?:boolean;stop?:()=>boolean}){
+ const reserves=productionInputReserves(r,o.reserve,o.inputReserves);
  const {waitUntil}=await import('../packages/core/src/ticks');
  const {depositObserved}=await import('../packages/core/src/deposit');
  const {componentId}=await import('../packages/core/src/logout');
  if(r.members&&!o.members)throw Error('production recipe requires confirmed members world');
- const reserve=o.reserve??0;if(!Number.isSafeInteger(reserve)||reserve<0)throw Error('invalid production reserve');
  if(!await waitUntil(s,()=>!!s.sdk.getState()?.player&&!!s.sdk.getSkill(r.skill),{timeoutTicks:10}))throw Error('production state unavailable');
  const inv=()=>s.sdk.getInventory(),count=(id:number)=>inv().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
- const initial=s.sdk.getState()!.player!;let ended=false;void s.ended.then(()=>{ended=true;});
- const stopped=()=>{const p=s.sdk.getState()?.player;return ended||!!o.stop?.()||!p||p.isDead||(s.sdk.getSkill('Hitpoints')?.level??0)<=0||
-  (p.respawnCount??0)>(initial.respawnCount??0)||initial.lifeId!==undefined&&p.lifeId!==initial.lifeId;};
+ const initial=s.sdk.getState()!.player!,initialLife=initial.lifeId,initialRespawns=initial.respawnCount??0;let ended=false;void s.ended.then(()=>{ended=true;});
+ const stopped=()=>{const p=s.sdk.getState()?.player;return ended||productionStopRequested(s.name,o.stop)||!p||p.isDead||(s.sdk.getSkill('Hitpoints')?.level??0)<=0||
+  (p.respawnCount??0)>initialRespawns||initialLife!==undefined&&p.lifeId!==initialLife;};
  if([r.product,...r.lossProduct!==undefined?[r.lossProduct]:[],...(r.byproducts??[]).map(i=>i.id)].some(id=>count(id)))throw Error('bank existing production outputs and returned containers before entry');
  const read=():ProductionSnapshot=>{const items:Record<number,number>={};for(const i of inv())items[i.id]=(items[i.id]??0)+i.count;return{items,xp:s.sdk.getSkillXp(r.skill)??0};};
  const open=async()=>{
@@ -181,7 +189,7 @@ export async function runInventoryBank(s:import('../packages/core/src/inprocess'
    for(const need of [...[...r.tools,...r.optionalInputs??[]].map(id=>({id,units:1})),...r.inputs]){
     const missing=Math.max(0,need.units-count(need.id));if(!missing)continue;
     const item=s.bankObservation?.()?.items.find(i=>i.id===need.id);
-    if(!item||item.count-missing<(r.inputs.some(i=>i.id===need.id)?reserve:0))return false;
+    if(!item||item.count-missing<(reserves[need.id]??0))return false;
     const target=s.sdk.getState()?.bank?.items.find(i=>i.id===need.id);
     if(!target||!Number.isSafeInteger(target.slot))return false;
     const before=count(need.id);const response=await s.bot.withdrawItem(target,missing,{asNote:false});
@@ -215,8 +223,9 @@ if(import.meta.main){
  const r=inventoryRecipes().find(r=>r.name===process.argv[3]);if(!r)throw Error('unknown inventory recipe');
  const maximum=Number(process.env.MAX_MAKE??1),cap=Number(process.env.CAP??500),maxAttempts=Number(process.env.MAX_ATTEMPTS??maximum);
  if(![maximum,cap,maxAttempts].every(n=>Number.isSafeInteger(n)&&n>0)||maximum%(r.productUnits??1)||maxAttempts<maximum/(r.productUnits??1))throw Error('invalid production limits');
+ const inputReserves=process.env.INPUT_RESERVES?JSON.parse(process.env.INPUT_RESERVES):undefined;productionInputReserves(r,Number(process.env.RAW_RESERVE??0),inputReserves);
  const {openBot,finish}=await import('../packages/core/src/bot');let stop=false;
  const s=await openBot(process.argv[2]!,{onStop:async()=>{stop=true;}});
- try{const result=await runInventoryBank(s,r,{maximum,cap,maxAttempts,reserve:Number(process.env.RAW_RESERVE??0),members:process.env.MEMBERS==='1',stop:()=>stop});await finish([s],result.ok,JSON.stringify(result));}
+ try{const result=await runInventoryBank(s,r,{maximum,cap,maxAttempts,reserve:Number(process.env.RAW_RESERVE??0),inputReserves,members:process.env.MEMBERS==='1',stop:()=>stop});await finish([s],result.ok,JSON.stringify(result));}
  catch(e){await finish([s],false,String(e));}
 }

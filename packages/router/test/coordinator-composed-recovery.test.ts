@@ -31,7 +31,7 @@ function fixture(){
   why:'Recover one exact failed actor while retaining its retired cohort.',repairs:[{account:name,endedAt:i+1}],sessionRecovery:{account:name,endedAt:i+1},accept:{counters:{sessionChecked:1}}}));
  for(const task of tasks){validateTask(task);mkdirSync(join(prac,'coordinator/runs',task.id),{recursive:true});}
  const deps={native:{delivery}};
- return{base,prac,names,job,tasks,deps,prepare:(i:number)=>prepareLiveRecovery(tasks[i]!,names[i]!,'check.ts',tasks[i]!.id,'new',deps,base),
+ return{base,prac,names,job,tasks,deps,prepare:(i:number,freeGB=64)=>prepareLiveRecovery(tasks[i]!,names[i]!,'check.ts',tasks[i]!.id,'new',deps,base,'new',{freeGB}),
   confirm:(i:number)=>beginSessionAttempt({account:names[i]!,server:'rs-sdk-demo.fly.dev'},{root:join(prac,'session-lifecycle')}).record('ended','logged-out')};
 }
 
@@ -70,7 +70,7 @@ test('paired exact recoveries serialize their requests and wait outside the plan
   await Promise.all(f.tasks.map(async(task,i)=>{
    let retained:ReturnType<typeof prepareLiveRecovery>;
    await requestAuthenticatedRecovery(task,f.deps,'new',task.id,f.base,3000,'new',async()=>{retained=f.prepare(i);});
-   await awaitRecoveryInstallPreflight(task,f.names[i]!,'check.ts',task.id,'new',f.deps,retained,f.base,'new',3000);
+   await awaitRecoveryInstallPreflight(task,f.names[i]!,'check.ts',task.id,'new',f.deps,retained,f.base,'new',3000,{freeGB:64});
   }));
   if(controllerFailure)throw controllerFailure;
   expect(firstStillHeld).toBe(true);expect(new Set(order)).toEqual(new Set(f.names));
@@ -86,15 +86,15 @@ test('a peer check starting after ordinary cohort release does not hold the rema
  mkdirSync(join(f.prac,'coordinator/runs/check-first'),{recursive:true});
  installJob({...f.tasks[0]!,repairs:undefined,sessionRecovery:undefined},f.names[0]!,'check.ts','check-first','new',f.deps,{base:f.base,freeGB:64});
  beginSessionAttempt({account:f.names[0]!,server:'rs-sdk-demo.fly.dev'},{root:join(f.prac,'session-lifecycle')});
- await expect(awaitRecoveryInstallPreflight(f.tasks[1]!,f.names[1]!,'check.ts',f.tasks[1]!.id,'new',f.deps,retained,f.base,'new',30)).resolves.toBeDefined();
+ await expect(awaitRecoveryInstallPreflight(f.tasks[1]!,f.names[1]!,'check.ts',f.tasks[1]!.id,'new',f.deps,retained,f.base,'new',30,{freeGB:64})).resolves.toBeDefined();
 });
 
 test('a missing peer logout or owner pause leaves the whole retired assignment disabled',async()=>{
  const f=fixture(),retained=f.prepare(0);f.confirm(0);
- await expect(awaitRecoveryInstallPreflight(f.tasks[0]!,f.names[0]!,'check.ts',f.tasks[0]!.id,'new',f.deps,retained,f.base,'new',10)).rejects.toThrow('still lacks confirmed logout');
+ await expect(awaitRecoveryInstallPreflight(f.tasks[0]!,f.names[0]!,'check.ts',f.tasks[0]!.id,'new',f.deps,retained,f.base,'new',10,{freeGB:64})).rejects.toThrow('still lacks confirmed logout');
  expect(readCoordinatorJobs(f.base).jobs).toEqual([f.job]);
  writeFileSync(join(f.prac,'stop-'+f.names[1]),'owner pause');
- await expect(awaitRecoveryInstallPreflight(f.tasks[0]!,f.names[0]!,'check.ts',f.tasks[0]!.id,'new',f.deps,retained,f.base,'new',10)).rejects.toThrow('owner stopped');
+ await expect(awaitRecoveryInstallPreflight(f.tasks[0]!,f.names[0]!,'check.ts',f.tasks[0]!.id,'new',f.deps,retained,f.base,'new',10,{freeGB:64})).rejects.toThrow('owner stopped');
  expect(readCoordinatorJobs(f.base).jobs).toEqual([f.job]);
 });
 
@@ -132,3 +132,5 @@ test('ordinary failure-clear waits for the authenticated request to release the 
   expect(authenticated).toBe(true);expect(existsSync(file+'.lease')).toBe(false);
  }finally{clearInterval(timer);}
 },10000);
+
+test('recovery preflight still rejects an insufficient observed memory snapshot without parking the cohort',()=>{const f=fixture(),before=readFileSync(join(f.prac,'coordinator/jobs.json'),'utf8');expect(()=>f.prepare(0,0)).toThrow('live admission waiting: memory');expect(readFileSync(join(f.prac,'coordinator/jobs.json'),'utf8')).toBe(before);});

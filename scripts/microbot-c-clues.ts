@@ -4,7 +4,8 @@ import {parseConfigs,listConfigFiles} from '../packages/knowledge/src/config';
 import {openBot,settle,getWorld,accountOf} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {goTo} from '../packages/core/src/walk';
-import {waitTicks} from '../packages/core/src/ticks';
+import {waitTicks,waitUntil} from '../packages/core/src/ticks';
+import {componentId} from '../packages/core/src/logout';
 import {watchProductionLife} from './microbot-c-lifetime';
 import {discoverNativeClueNpcHandlers,nativeSpecialClueSearchHandlers} from './microbot-c-clue-handlers';
 type Point={x:number;z:number;level:number};
@@ -111,16 +112,37 @@ export async function runNativeClueStep(s:Session,clueId:number,cap:number,stop:
   if(s.sdk.getInventory().length>19)throw Error('native clue step requires nine free inventory slots');
   if(step.tools.some(id=>count(before,id)<1))throw Error('native clue requires staged tools/key: '+step.tools.join(','));
   if(step.point){
-   if(walk){if(!await walk(step.point,over))throw Error('native clue route refused');}
-   else{
-    const ac=new AbortController(),off=s.onTick(()=>{if(over())ac.abort();});
-    try{const result=await goTo(s,await getWorld(),step.point,accountOf(s),{signal:ac.signal,legTimeoutTicks:Math.min(60,cap)});if(!result.ok)throw Error('native clue route '+result.detail);}finally{off();}
+   const point=step.point;
+   const distance=()=>{
+    const p=s.sdk.getState()?.player;
+    return p?.level===point.level?Math.max(Math.abs(p.worldX-point.x),Math.abs(p.worldZ-point.z)):Infinity;
+   };
+   if(distance()!==0){
+    if(walk){if(!await walk(point,over))throw Error('native clue route refused');}
+    else{
+     const ac=new AbortController(),off=s.onTick(()=>{if(over())ac.abort();});
+     try{const result=await goTo(s,await getWorld(),point,accountOf(s),{signal:ac.signal,legTimeoutTicks:Math.min(60,cap)});if(!result.ok)throw Error('native clue route '+result.detail);}finally{off();}
+    }
    }
-   const p=s.sdk.getState()?.player;if(!p||p.level!==step.point.level||Math.max(Math.abs(p.worldX-step.point.x),Math.abs(p.worldZ-step.point.z))>2)throw Error('native clue destination unobserved');
+   if(distance()>2)throw Error('native clue destination unobserved');
+   if(step.kind==='dig'&&distance()>1){
+    if(over())throw Error('native clue approach stopped');
+    if(!(await s.sdk.sendWalk(point.x,point.z)).success)throw Error('native clue dig approach refused');
+    await waitUntil(s,()=>over()||distance()<=1,{timeoutTicks:Math.min(12,Math.max(1,cap-(s.tick()-start)))});
+    if(over()||distance()>1)throw Error('native clue dig approach unobserved');
+   }
   }
-  let sent=false,openedAt:number|undefined,challengeReady=step.challengeItem!==undefined&&count(before,step.challengeItem)>0,answered=false;
+  let sent=false,openedAt:number|undefined,challengeReady=step.challengeItem!==undefined&&count(before,step.challengeItem)>0,answered=false,rewardClosed=false;
   while(!over()){
    effect=clueEffect(step,before,stock(),complete());if(effect.ok)break;
+   const modal=s.sdk.getState()?.interface;
+   if(sent&&!rewardClosed&&modal?.isOpen&&modal.interfaceId===componentId('trail_reward')&&
+      complete()&&count(stock(),clueId)===0){
+    rewardClosed=true;
+    if(!(await s.sdk.sendCloseModal()).success)throw Error('native clue reward close refused');
+    await waitTicks(s,1);
+    continue;
+   }
    const dialog=s.sdk.getDialog();
    if(step.kind==='challenge'&&sent&&!answered&&(s.client as any)?.isChatBackInputOpen?.()){
     if(!challengeReady||step.answer===undefined)throw Error('native challenge prompt appeared before staged challenge');await s.sdk.sendCountDialog(step.answer);answered=true;

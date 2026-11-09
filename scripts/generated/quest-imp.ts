@@ -12,6 +12,8 @@ try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
     const miz = /^wizard mizgog$/i;
+    // Capture before either dialogue can hand in beads. Mizgog takes one of each colour, keeping any surplus.
+    const carried = BEADS.map(b => q.cnt(b));
 
     // 1. Start (wizard_mizgog.rs2:39-52).
     await q.talk('mizgog 1', miz, [/^give me a quest!$/i, /give me a quest please/i], () => q.sawText(/get my beads back/i), MIZGOG);
@@ -22,5 +24,5 @@ try {
     await q.converse([], () => !q.dialogOpen(), 10);
     q.milestone(2);
     off();
-    await q.end(questDone && BEADS.every(b => !q.has(b)), 'qp=1');
+    await q.end(questDone && BEADS.every((b, i) => carried[i]! >= 1 && q.cnt(b) === carried[i]! - 1), 'qp=1');
 } catch (e) { await q.fail(String(e)); }

@@ -1,8 +1,8 @@
 import {test,expect} from 'bun:test';
-import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile,cowStopControl,cowFoodBites,cowFoodPick,cowFoodHeal,COW_FOOD_HP} from './gather-combat';
+import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile,cowStopControl,genericCombatNpc,bankCombatLoot,cowFoodBites,cowFoodPick,cowFoodHeal,COW_FOOD_HP} from './gather-combat';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks} from '../packages/core/src/ticks';
-import {existsSync} from 'node:fs';
+import {existsSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 
 test('real CLI rejects unknown combat target before reading account config; valid targets still reach missing phantom config',async()=>{
@@ -233,6 +233,34 @@ test('low HP with no food retreats and banks; a changed life stops without anoth
         // The fixture removes Trout without an eat; that unobserved debit is a food loss.
         if(injury==='death'){expect(r.died).toBe(true);expect(r.lifeId).toBe(2);}else{expect(r.stop).toBe('low-hp');expect(r.preserved).toBe(true);expect(r.foodAccounted).toBe(false);}
     }finally{f.dispose();}}
+});
+
+test('generic combat rejects invalid finite caps before opening an account',()=>{
+ for(const cap of ['0','-1','NaN','1.5']){const name='cap'+crypto.randomUUID().slice(0,8),r=Bun.spawnSync([process.execPath,'--smol',resolve(import.meta.dir,'gather-combat.ts'),name,cap,'druid'],{windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:10000}),text=r.stdout.toString()+r.stderr.toString();expect(r.exitCode).toBe(1);expect(text).toContain('finite positive CAP required');expect(text).not.toContain('bot.env');expect(text).not.toContain('START combat');}
+});
+
+test('generic combat rejects malformed optional kill targets before login',()=>{
+ for(const maximum of ['0','-1','NaN','1.5']){const name='max'+crypto.randomUUID().slice(0,8),r=Bun.spawnSync([process.execPath,'--smol',resolve(import.meta.dir,'gather-combat.ts'),name,'1800','giant'],{env:{...process.env,MAX_KILLS:maximum},windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:10000}),text=r.stdout.toString()+r.stderr.toString();expect(r.exitCode).toBe(1);expect(text).toContain('finite positive MAX_KILLS required');expect(text).not.toContain('bot.env');}
+});
+
+test('generic combat binds native Giant117 and Chaos druid181 rather than donor names',()=>{const types=JSON.parse(readFileSync(resolve(import.meta.dir,'../knowledge/npcs.json'),'utf8')) as {id:number;name:string}[];expect(types.find(n=>n.id===117)?.name).toBe('Giant');const giant={id:117,name:'Giant',distance:3,reachable:true,inCombat:false,targetIndex:-1},druid={...giant,id:181,name:'Chaos druid'},warrior={...giant,id:193,name:'Chaos druid warrior',distance:1};expect(genericCombatNpc('giant',[warrior,giant,druid])).toBe(giant);expect(genericCombatNpc('druid',[warrior,giant,druid])).toBe(druid);});
+test('generic combat rejects foreign, unreachable, unknown or out-of-leash targets',()=>{const base={id:117,distance:3,reachable:true,inCombat:false,targetIndex:-1};for(const bad of [{...base,inCombat:true},{...base,targetIndex:32770},{...base,reachable:false},{...base,distance:16},{...base,distance:NaN},{...base,distance:-1},{...base,targetIndex:undefined}])expect(genericCombatNpc('giant',[bad])).toBeUndefined();expect(genericCombatNpc('unknown',[base])).toBeUndefined();});
+
+test('combat bank return requires fresh bank and paired loot debit/credit before success',async()=>{
+ for(const mode of['landed','refused','missing-credit','bank-refused','stale-bank']){
+  let tick=0,generation=0,open=false,inputs=0;const listeners=new Set<()=>void>(),pack=[{id:532,name:'Big bones',count:2,slot:0},{id:379,name:'Lobster',count:3,slot:1}],bank:any[]=[];
+  const timer=setInterval(()=>{tick++;for(const f of listeners)f();},1);
+  const s:any={name:'combat-bank',tick:()=>tick,onTick:(f:()=>void)=>{listeners.add(f);return()=>listeners.delete(f);},bankObservation:()=>open||mode==='stale-bank'?{generation,items:bank}:null,sdk:{getState:()=>({inventory:pack,bank:{isOpen:open}}),getInventory:()=>pack},bot:{openBank:async()=>{if(mode==='bank-refused')return{success:false};open=true;if(mode!=='stale-bank')generation++;return{success:true};},depositItem:async()=>{inputs++;if(mode==='refused')return{success:false};pack.shift();generation++;if(mode!=='missing-credit')bank.push({id:532,name:'Big bones',count:2});return{success:true};}}};
+  try{if(mode==='landed'){await bankCombatLoot(s,/big bones/i);expect(pack.map(i=>i.id)).toEqual([379]);expect(bank[0].count).toBe(2);}else await expect(bankCombatLoot(s,/big bones/i)).rejects.toThrow();expect(inputs).toBe(['bank-refused','stale-bank'].includes(mode)?0:1);}finally{clearInterval(timer);}
+ }
+});
+
+test('generic combat prefers a native attacker targeting this player over a free NPC', () => {
+    const free = {id:181,distance:1,reachable:true,inCombat:false,targetIndex:-1};
+    const own = {...free,distance:3,inCombat:true,targetIndex:32769};
+    const foreign = {...own,distance:0,targetIndex:32770};
+    expect(genericCombatNpc('druid',[foreign,free,own],1)).toBe(own);
+    expect(genericCombatNpc('druid',[foreign,free,own])).toBe(free);
 });
 
 test('cow food counts cake pieces in bites and eats the smallest piece first', () => {

@@ -43,7 +43,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   let selectedTab='inventory',selectedPlugin='fleet',channel='All',context=null,questDetail=null,questFilter='all',questQuery='',xpHideMaxed=false;
   const chat=[],seen=new Set(),seenChat=new Set();
   let tourTimer=null,touring=false;
-  const account=()=>S?.bots?.find(b=>b.name===sel);
+  const account=()=>window.atlasFollowOther?null:S?.bots?.find(b=>b.name===sel);
   const notify=text=>{chat.push({kind:'Game',text,at:Date.now()});if(chat.length>200)chat.shift();renderChat();};
   const stamp=at=>at?`<span class="chat-time">[${new Date(at).toTimeString().slice(0,5)}]</span> `:'';
   const KV=/(^|\s)([A-Za-z][A-Za-z0-9]*)=(\S+)/g;const kvWord=k=>k==='t'?'tick':k.replace(/([a-z0-9])([A-Z])/g,'$1 $2').toLowerCase();const kvValue=v=>/^\d{4,}$/.test(v)?Number(v).toLocaleString():v;
@@ -80,40 +80,61 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       if(!quests.length)html+='<p class="game-muted">Quest progress has not been reported for this account.</p>';
       if(questDetail){const q=quests.find(q=>q.name===questDetail);html='<h3>'+E(questDetail)+'</h3><p style="text-align:center">'+E(q?.state||'Not reported')+'</p><p class="game-muted">'+(b?.questsAt?'Last observed '+age(b.questsAt)+' ago.':'No quest snapshot.')+'</p><button class="game-control" data-quest-back>Back to quest list</button>';}
     }
-    if(selectedTab==='friends'){const bots=S.bots.filter(x=>!x.practice&&!x.reserved).sort((x,y)=>(y.inWorld?1:0)-(x.inWorld?1:0)||x.name.localeCompare(y.name));
-      html='<h3>Friends List</h3><p style="text-align:center">Friends: '+bots.filter(x=>x.inWorld).length+' online / '+bots.length+'</p><div class="game-list friends-list">'+bots.map(x=>`<button data-friend="${E(x.name)}" title="${E(safeName(x.name))}${x.goal?' · '+E(x.goal):''}"><span>${E(safeName(x.name))}</span><span class="${x.inWorld?'friend-on':'friend-off'}">${x.inWorld?(window.atlasOperator()?E(x.side||'local'):'Online'):'Offline'}</span></button>`).join('')+'</div><button class="game-control" data-open-plugin="fleet">Fleet plugin</button>';}
+    if(selectedTab==='friends'){
+      if(!S)html='<h3>Friends List</h3><p class="game-muted" role="status">Waiting for fleet data…</p>';
+      else{const bots=S.bots.filter(x=>!x.practice&&!x.reserved).sort((x,y)=>(y.inWorld?1:0)-(x.inWorld?1:0)||x.name.localeCompare(y.name));
+      html='<h3>Friends List</h3><p style="text-align:center">Friends: '+bots.filter(x=>x.inWorld).length+' online / '+bots.length+'</p><div class="game-list friends-list">'+bots.map(x=>`<button data-friend="${E(x.name)}" title="${E(safeName(x.name))}${x.goal?' · '+E(x.goal):''}"><span>${E(safeName(x.name))}</span><span class="${x.inWorld?'friend-on':'friend-off'}">${x.inWorld?(window.atlasOperator()?E(x.side||'local'):'Online'):'Offline'}</span></button>`).join('')+'</div><button class="game-control" data-open-plugin="fleet">Fleet plugin</button>';}}
     if(selectedTab==='settings')html='<h3>Settings</h3><label>Display mode<select id="game-display"><option value="open">Sidebar open</option><option value="closed" '+(app.classList.contains('client-collapsed')?'selected':'')+'>Game only</option></select></label><label>Render quality<select id="game-quality"><option value="1">Sharp</option><option value="0.75">Balanced</option><option value="0.5">Light</option></select></label>'+(window.FleetShim?'<label>Roofs<select id="game-roofs"><option value="off">Removed</option><option value="on" '+(window.atlasRoofsOff()?'':'selected')+'>Shown</option></select></label>':'')+'<button class="game-control" data-toggle-chat>Show / hide chatbox</button><button class="game-control" data-places>Places & camera</button>'+(window.atlasOperator()?'<button class="game-control" data-open-plugin="machine">Performance</button>':'');
     if(selectedTab==='logout'){const owner=window.FleetShim?.signedIn?.();html='<h3>Logout</h3><p style="text-align:center">'+(owner?'Logged in as '+E(owner)+'.':'You are watching as a spectator.')+'</p><p class="game-muted">Account sessions belong to their workers; logging out here never logs a bot out.</p><button class="game-control" data-logout>Click here to logout</button><button class="game-control" data-open-plugin="fleet">View active sessions</button>';}
-    const typing=document.activeElement?.matches?.('[data-quest-search]')?[document.activeElement.selectionStart,document.activeElement.selectionEnd]:null;
-    panel.innerHTML=html;if(typing){const box=panel.querySelector('[data-quest-search]');if(box){box.focus();box.setSelectionRange(typing[0],typing[1]);}}hud.querySelectorAll('[data-game-tab]').forEach(el=>{el.classList.toggle('active',el.dataset.gameTab===selectedTab);el.setAttribute('aria-pressed',String(el.dataset.gameTab===selectedTab));});
+    const active=document.activeElement,friend=panel.contains(active)?active.dataset.friend:null;
+    const typing=active?.matches?.('[data-quest-search]')?[document.activeElement.selectionStart,document.activeElement.selectionEnd]:null;
+    put(panel,html);
+    if(!active?.isConnected){
+      if(typing){const box=panel.querySelector('[data-quest-search]');if(box){box.focus({preventScroll:true});box.setSelectionRange(typing[0],typing[1]);}}
+      if(friend)panel.querySelector('[data-friend="'+CSS.escape(friend)+'"]')?.focus({preventScroll:true});
+    }
+    hud.querySelectorAll('[data-game-tab]').forEach(el=>{el.classList.toggle('active',el.dataset.gameTab===selectedTab);el.setAttribute('aria-pressed',String(el.dataset.gameTab===selectedTab));});
     if(selectedTab==='settings')$('#game-quality').value=String(window.atlasQuality||1);
   }
   // The XP Tracker plugin (RuneLite's): gains since the account's login, XP an hour, level progress, time to level.
   const XP_STORE='atlas-xp-baselines';
   const xpStore=()=>{try{return JSON.parse(localStorage.getItem(XP_STORE)||'{}')||{};}catch{return {};}},saveXpStore=store=>{try{localStorage.setItem(XP_STORE,JSON.stringify(store));}catch{/* private window */}};
-  function xpTracker(){
+  function refreshXp(){
+    const panel=body.querySelector('.xp-tracker');
+    if(!panel)return;
     const b=account(),now=Date.now(),X=window.atlasXp;
-    if(!b){const live=S.bots.filter(x=>x.fresh&&!x.practice&&!x.reserved);return '<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>XP Tracker</span></div><span class="xp-muted">Choose an account in the title bar, or one below.</span></div>'+(live.map(x=>`<button class="xp-box xp-row xp-pick" data-xp-focus="${E(x.name)}"><img src="${asset(trainedSkill(x)?'skill-'+skillFile(trainedSkill(x))+'.png':'rl-xp.png')}" alt=""><span class="xp-name">${E(safeName(x.name))}</span><span class="xp-gain">${x.xpPerHour?nf(Math.round(x.xpPerHour))+' XP/hr':'—'}</span></button>`).join('')||'<div class="xp-box"><span class="xp-muted">No account is playing now.</span></div>')+'</div>';}
-    if(b.remote)return `<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>${E(safeName(b.name))}</span><span>${E(b.side)} side</span></div><span class="xp-muted">The ${E(b.side)} side shares levels, not XP, in its snapshot (${b.snapshotAt?age(b.snapshotAt)+' old':'age unknown'}). The Skills tab and the Hiscore plugin show its levels and ranks.</span></div></div>`;
+    if(!b){const live=S.bots.filter(x=>x.fresh&&!x.practice&&!x.reserved);return put(panel,'<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>XP Tracker</span></div><span class="xp-muted">Choose an account in the title bar, or one below.</span></div>'+(live.map(x=>`<button class="xp-box xp-row xp-pick" data-xp-focus="${E(x.name)}"><img src="${asset(trainedSkill(x)?'skill-'+skillFile(trainedSkill(x))+'.png':'rl-xp.png')}" alt=""><span class="xp-name">${E(safeName(x.name))}</span><span class="xp-gain">${x.xpPerHour?nf(Math.round(x.xpPerHour))+' XP/hr':'—'}</span></button>`).join('')||'<div class="xp-box"><span class="xp-muted">No account is playing now.</span></div>')+'</div>');}
+    if(b.remote)return put(panel,`<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>${E(safeName(b.name))}</span><span>${E(b.side)} side</span></div><span class="xp-muted">The ${E(b.side)} side shares levels, not XP, in its snapshot (${b.snapshotAt?age(b.snapshotAt)+' old':'age unknown'}). The Skills tab and the Hiscore plugin show its levels and ranks.</span></div></div>`);
     const store=xpStore(),base=X.baseline(store,b,now);saveXpStore(store);
     // Paused: the rows and the clock stay as they were at the pause (RuneLite xptracker pause).
     const at=base.paused?.at??now,seen=base.paused?{...b,skills:(b.skills||[]).map(k=>({...k,xp:base.paused.xp[k.name]??k.xp}))}:b;
     const all=X.rows(seen,base,at,b.goalSkill&&!base.paused?{skill:b.goalSkill,xpPerHour:b.xpPerHour}:null),rows=xpHideMaxed?all.filter(r=>r.level<99):all,total=X.total(all),hours=(at-base.at)/3.6e6;
-    return `<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>Overall</span><span>${E(safeName(b.name))}</span></div><div class="xp-stats"><span>XP gained <b>${nf(total)}</b></span><span>XP/hr <b>${nf(Math.round(hours>0.001?total/hours:0))}</b></span><span>Tracked <b>${dur(at-base.at)}</b>${base.paused?' (paused)':''}</span></div><div class="xp-buttons"><button class="xp-reset" data-xp-pause>${base.paused?'Resume':'Pause'}</button><button class="xp-reset" data-xp-reset>Reset</button><label class="xp-hide"><input type="checkbox" data-xp-hide-maxed ${xpHideMaxed?'checked':''}> Hide maxed</label></div></div>`+
-      (rows.length?rows.map(r=>`<div class="xp-box xp-row"><img src="${asset('skill-'+skillFile(r.skill)+'.png')}" alt="" title="${E(r.skill)}"><div class="xp-main"><div class="xp-head"><span>${E(r.skill)}</span><span class="xp-gain">+${nf(r.gained)} xp</span></div><div class="xp-bar"><i style="width:${Math.round(r.progress*100)}%"></i><span>${r.level} → ${r.next} · ${Math.round(r.progress*100)}%</span></div><div class="xp-meta"><span>${nf(r.rate)} XP/hr</span><span>${r.ttl!=null?'TTL '+dur(r.ttl):nf(r.left)+' xp to level'}</span></div></div></div>`).join(''):'<div class="xp-box"><span class="xp-muted">'+(window.atlasOperator()?'No XP gained since tracking started.':'No XP gained yet. This counts from when you opened the page, and the numbers update every 10 minutes.')+'</span></div>')+'</div>';
+    put(panel,'<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>Overall</span><span class="xp-account"></span></div><div class="xp-stats"></div><div class="xp-buttons"><button class="xp-reset" data-xp-pause>Pause</button><button class="xp-reset" data-xp-reset>Reset</button><label class="xp-hide"><input type="checkbox" data-xp-hide-maxed> Hide maxed</label></div></div><div class="xp-results"></div></div>');
+    panel.querySelector('.xp-account').textContent=safeName(b.name);
+    put(panel.querySelector('.xp-stats'),`<span>XP gained <b>${nf(total)}</b></span><span>XP/hr <b>${nf(Math.round(hours>0.001?total/hours:0))}</b></span><span>Tracked <b>${dur(at-base.at)}</b>${base.paused?' (paused)':''}</span>`);
+    panel.querySelector('[data-xp-pause]').textContent=base.paused?'Resume':'Pause';
+    panel.querySelector('[data-xp-hide-maxed]').checked=xpHideMaxed;
+    put(panel.querySelector('.xp-results'),rows.length?rows.map(r=>`<div class="xp-box xp-row"><img src="${asset('skill-'+skillFile(r.skill)+'.png')}" alt="" title="${E(r.skill)}"><div class="xp-main"><div class="xp-head"><span>${E(r.skill)}</span><span class="xp-gain">+${nf(r.gained)} xp</span></div><div class="xp-bar"><i style="width:${Math.round(r.progress*100)}%"></i><span>${r.level} → ${r.next} · ${Math.round(r.progress*100)}%</span></div><div class="xp-meta"><span>${nf(r.rate)} XP/hr</span><span>${r.ttl!=null?'TTL '+dur(r.ttl):nf(r.left)+' xp to level'}</span></div></div></div>`).join(''):'<div class="xp-box"><span class="xp-muted">'+(window.atlasOperator()?'No XP gained since tracking started.':'No XP gained yet. This counts from when you opened the page, and the numbers update every 10 minutes.')+'</span></div>');
   }
   // Hiscore plugin (RuneLite's layout): any fleet account's levels per skill with rank and XP on hover.
   let hiscoreName='';
-  function hiscorePanel(){
-    const name=hiscoreName||sel||'',b=S.bots.find(x=>x.name===name);
+  function hiscoreResults(name){
+    const b=S.bots.find(x=>x.name.toLowerCase()===name.toLowerCase());
     const rank=(board)=>b?.ranks?.find(r=>r.board===board);
     const cell=(skill,label,levelText,title)=>`<div class="hs-cell" title="${E(title)}"><img src="${asset('skill-'+skillFile(skill)+'.png')}" alt="${E(label)}"><span>${levelText}</span></div>`;
     const grid=b?skills.filter(n=>reported(b,n)).map(n=>{const k=b.skills?.find(x=>x.name===n),r=rank(n);return cell(n,n,k?String(k.level):'--',n+(k?'\nLevel: '+k.level+(k.xp!=null?'\nExperience: '+nf(k.xp):''):' is not reported')+(r?'\nRank: '+nf(r.rank)+(r.delta?' ('+(r.delta>0?'+':'')+r.delta+' today)':''):''));}).join(''):'';
     const overall=b?.ranks?.find(r=>r.board==='Overall');const total=b?.skills?.filter(realSkill).reduce((n,k)=>n+k.level,0);
     const extra=(b?.ranks||[]).filter(r=>['Quest Points','Equipment','Bank','Runite'].includes(r.board)).map(r=>`<div class="hs-row"><span>${E(r.board)}</span><span>Rank ${nf(r.rank)}</span><span>${E(r.level)}</span></div>`).join('');
-    return `<div class="hs-panel"><div class="hs-search"><input id="hs-name" list="hs-names" placeholder="Search for a player..." value="${E(name)}" aria-label="Player name"><datalist id="hs-names">${S.bots.filter(x=>!x.practice).map(x=>`<option value="${E(x.name)}">`).join('')}</datalist></div>`+
-      (b?`<div class="hs-head"><span>${E(safeName(b.name))}</span><span>${overall?'Rank '+nf(overall.rank):''}</span></div><div class="hs-grid">${grid}<div class="hs-cell hs-overall" title="${E('Overall\nTotal level: '+total+(overall?'\nRank: '+nf(overall.rank)+'\nTime: '+overall.time:''))}"><img src="${asset('rl-xp.png')}" alt="Overall"><span>${total??'--'}</span></div></div>${extra?'<div class="hs-extra">'+extra+'</div>':''}<p class="xp-muted">Ranks from the demo hiscores, read every 5 to 15 minutes. Hover a skill.</p>`
-        :'<p class="xp-muted">Type a fleet account name, or follow one in the title bar.</p>')+'</div>';
+    return b?`<div class="hs-head"><span>${E(safeName(b.name))}</span><span>${overall?'Rank '+nf(overall.rank):''}</span></div><div class="hs-grid">${grid}<div class="hs-cell hs-overall" title="${E('Overall\nTotal level: '+total+(overall?'\nRank: '+nf(overall.rank)+'\nTime: '+overall.time:''))}"><img src="${asset('rl-xp.png')}" alt="Overall"><span>${total??'--'}</span></div></div>${extra?'<div class="hs-extra">'+extra+'</div>':''}<p class="xp-muted">Ranks from the demo hiscores, read every 5 to 15 minutes. Hover a skill.</p>`
+        :'<p class="xp-muted">'+(hiscoreName?'No fleet account matches that name.':'Type a fleet account name, or follow one in the title bar.')+'</p>';
+  }
+  function refreshHiscoreAccount(){
+    const panel=body.querySelector('.hs-wrap');
+    if(!panel)return;
+    const name=hiscoreName||sel||'',input=panel.querySelector('#hs-name');
+    if(input!==document.activeElement&&input.value!==name)input.value=name;
+    put(panel.querySelector('#hs-names'),S.bots.filter(b=>!b.practice).map(b=>`<option value="${E(b.name)}"></option>`).join(''));
+    put(panel.querySelector('.hs-results'),hiscoreResults(name));
   }
   // Hiscores: Fleet shows the scoreboard and the fleet's best rank per board; Account shows one account's ranks.
   let hiscoresMode='fleet';
@@ -128,7 +149,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const head=document.createElement('div');head.className='op-filter hs-mode';head.innerHTML=[['fleet','Fleet'],['rivals','Rivals'],['account','Account']].map(([m,l])=>`<button data-hs-mode="${m}" class="${hiscoresMode===m?'active':''}">${l}</button>`).join('');body.append(head);
     if(hiscoresMode==='fleet'){boards.hidden=false;const p=document.createElement('div');p.className='progress-head';p.innerHTML=boardSummary()+progressPanel();body.append(p,boards);if(S)boardGrid();}
     else if(hiscoresMode==='rivals'){const w=document.createElement('div');w.className='rivals-wrap';w.innerHTML=rivalsPanel();body.append(w);}
-    else{const w=document.createElement('div');w.className='hs-wrap';w.innerHTML=hiscorePanel();body.append(w);}
+    else{const w=document.createElement('div');w.className='hs-wrap';w.innerHTML='<div class="hs-panel"><div class="hs-search"><input id="hs-name" list="hs-names" placeholder="Search for a player..." aria-label="Player name"><datalist id="hs-names"></datalist></div><div class="hs-results"></div></div>';body.append(w);refreshHiscoreAccount();}
   }
   // Where a tile is, in words: the nearest named place within 64 tiles.
   const placeOf=(x,z)=>{if(x==null)return '';let best=null,bd=64*64;for(const [n,px,pz] of (typeof PLACES!=='undefined'?PLACES:[])){const d=(px-x)**2+(pz-z)**2;if(d<bd){bd=d;best=n;}}return best?'near '+best:x+', '+z;};
@@ -156,19 +177,21 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // World plugin: who stands at the spots our bots claim, and a lookup of any player (hiscores and where they are).
   let worldLookup=null,worldLookupName='',worldLookupRequest=0;
   // Info (RuneLite info): what this page is, how fresh its data is, what the marks mean, and where the data comes from.
-  function infoPanel(){
+  const infoRow=(label,value)=>`<div class="info-row"><span>${E(label)}</span><span>${value}</span></div>`;
+  function infoData(){
     const fleet=S.bots.filter(b=>!b.practice&&!b.reserved),playing=fleet.filter(b=>b.operation==='observed'),sides=S.fleetSides?.sides||[],hosted=S.hosted?.kind==='public';
-    const row=(k,v)=>`<div class="info-row"><span>${E(k)}</span><span>${v}</span></div>`;
+    return infoRow('This page',hosted?(S.hostedAge!=null?'updated '+ago(S.hostedAge)+' ago':'update time unknown')+' · new data every 10 minutes':window.atlasOperator()?'owner view, live':'live')+
+      infoRow('3D view','every player, live')+
+      infoRow('Online now',S.worldPlayers==null?'—':nf(S.worldPlayers)+(S.worldPlayers===1?' player':' players'))+
+      infoRow('Our accounts',playing.length+' playing of '+fleet.length+(sides.length&&window.atlasOperator()?' · '+sides.length+' machines':''))+
+      infoRow('Hiscores','the demo server, read every 5 to 15 minutes');
+  }
+  function infoPanel(){
     return '<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>RuneLite — Swarm</span></div><p class="xp-muted">A team of bot accounts on the rs-sdk demo world (the Lost City 2004 engine), shown in a RuneLite-style client. The 3D view and the map show every player online; gold names are our accounts.</p></div>'+
-      '<div class="xp-box"><div class="xp-head"><span>Data</span></div>'+
-      row('This page',hosted?(S.hostedAge!=null?'updated '+ago(S.hostedAge)+' ago':'update time unknown')+' · new data every 10 minutes':window.atlasOperator()?'owner view, live':'live')+
-      row('3D view','every player, live')+
-      row('Online now',S.worldPlayers?nf(S.worldPlayers)+' players':'—')+
-      row('Our accounts',playing.length+' playing of '+fleet.length+(sides.length&&window.atlasOperator()?' · '+sides.length+' machines':''))+
-      row('Hiscores','the demo server, read every 5 to 15 minutes')+'</div>'+
-      (window.atlasOperator()?'':'<div class="xp-box"><div class="xp-head"><span>Controls</span></div>'+row('[ and ]','watch the previous or next account')+row('Title bar','choose an account, or start the tour')+row('Drag','turn the camera')+row('Wheel','zoom in or out')+row('W A S D','leave the account and fly free')+'</div>')+
+      '<div class="xp-box"><div class="xp-head"><span>Data</span></div><div class="info-data">'+infoData()+'</div></div>'+
+      (window.atlasOperator()?'':'<div class="xp-box"><div class="xp-head"><span>Controls</span></div>'+infoRow('[ and ]','watch the previous or next account')+infoRow('Title bar','choose an account, or start the tour')+infoRow('Drag','turn the camera')+infoRow('Wheel','zoom in or out')+infoRow('W A S D','leave the account and fly free')+'</div>')+
       '<div class="xp-box"><div class="xp-head"><span>Marks</span></div>'+
-      row('Gold name','one of our accounts')+row('Green dot','our account on the map (bright: playing)')+row('Grey dot','another player')+(window.atlasOperator()?row('⟦MAIN⟧ / Hidden','an account this page does not show'):'')+row('~ before a rank','the last rank we read; it can be old')+'</div>'+
+      infoRow('Gold name','one of our accounts')+infoRow('Green dot','our account on the map (bright: playing)')+infoRow('Grey dot','another player')+(window.atlasOperator()?infoRow('⟦MAIN⟧ / Hidden','an account this page does not show'):'')+infoRow('~ before a rank','the last rank we read; it can be old')+'</div>'+
       '<div class="xp-box"><div class="xp-head"><span>Sources</span></div><p class="xp-muted">Client look: RuneLite (BSD 2-Clause), 3D view: rs-world, game data: the Lost City server content (MIT). Licences and image credits: <a href="'+asset('ATTRIBUTION.txt')+'" target="_blank" rel="noopener">ATTRIBUTION.txt</a>. RuneScape art belongs to Jagex.</p></div></div>';
   }
   function worldPanel(){
@@ -266,13 +289,24 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     return '<div class="xp-panel">'+[...groups].map(([agent,list])=>`<div class="xp-box"><div class="xp-head"><span>${E(agent)}</span><span class="xp-gain">${list.filter(r=>r.state==='OPEN').length} open</span></div>${list.sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)).slice(0,12).map(r=>`<a class="pr-row" href="${E(r.url)}" target="_blank" rel="noopener"><span class="pr-num">#${r.number}</span><span class="pr-title">${E(r.title)}</span>${chipFor(r)}<span class="pr-age">${r.updatedAt?age(Date.parse(r.updatedAt))+' ago':''}</span></a>`).join('')}</div>`).join('')+'</div>';
   }
   new MutationObserver(followTitle).observe(plugin.querySelector('#client-plugin-name'),{childList:true,characterData:true,subtree:true});
+  function renderSnapshotPlugin(id){
+    if(!S){
+      body.innerHTML='<p class="xp-muted" role="status" data-snapshot-loading>Waiting for fleet data…</p>';
+      return;
+    }
+    if(id==='boards')hiscores();
+    else if(id==='xp'){body.innerHTML='<div class="xp-tracker"></div>';refreshXp();}
+    else body.innerHTML=infoPanel();
+  }
   function showPlugin(id){if(!window.atlasOperator()&&OPERATOR_PLUGINS.includes(id)){toast('Sign in as owner for the command tools.');id='fleet';}const priorPlugin=selectedPlugin;window.atlasBeforePluginChange?.(priorPlugin,id);selectedPlugin=id;app.classList.remove('client-collapsed');app.classList.add('mobile-plugin');for(const el of [fleet,inspect,boards,allocation,journal])parked.append(el);body.replaceChildren();$('#client-plugin-name').textContent=window.atlasPlugins?.[id]?.label||window.atlasPluginNames?.[id]||plugins.find(p=>p[0]===id)?.[1]||({raw:'Raw evidence'}[id]||'Settings');
-    body.dataset.plugin=id;plugin.dataset.plugin=id;if(window.atlasPlugins?.[id]){window.atlasPlugins[id].render(body);}else if(id==='xp')body.innerHTML=xpTracker();else if(id==='ge')body.innerHTML=gePanel();else if(id==='prs')body.innerHTML=prsPanel();else if(id==='fleet')body.append(fleet);else if(id==='boards')hiscores();else if(id==='world')body.innerHTML=worldPanel();else if(id==='info')body.innerHTML=infoPanel();else if(id==='activity'){body.append(journal);journal.style.setProperty('display','block','important');journal.style.position='static';journal.style.width='100%';journal.style.height='auto';}else{body.append(inspect);choose(id==='settings'?'machine':id);if(id==='goals'&&window.atlasOperator()){const form=document.createElement('form');form.className='goal-request';form.innerHTML='<input name="text" maxlength="500" placeholder="Tell the agents what you want next..." aria-label="New owner request"><button>Send</button><small>Goes to research/owner-requests.md as the next numbered row.</small>';body.prepend(form);}}
+    body.dataset.plugin=id;plugin.dataset.plugin=id;if(window.atlasPlugins?.[id]){window.atlasPlugins[id].render(body);}else if(['xp','boards','info'].includes(id))renderSnapshotPlugin(id);else if(id==='ge')body.innerHTML=gePanel();else if(id==='prs')body.innerHTML=prsPanel();else if(id==='fleet')body.append(fleet);else if(id==='world')body.innerHTML=worldPanel();else if(id==='activity'){body.append(journal);journal.style.setProperty('display','block','important');journal.style.position='static';journal.style.width='100%';journal.style.height='auto';}else{body.append(inspect);choose(id==='settings'?'machine':id);if(id==='goals'&&window.atlasOperator()){const form=document.createElement('form');form.className='goal-request';form.innerHTML='<input name="text" maxlength="500" placeholder="Tell the agents what you want next..." aria-label="New owner request"><button>Send</button><small>Goes to research/owner-requests.md as the next numbered row.</small>';body.prepend(form);}}
     rail.querySelectorAll('[data-client-plugin]').forEach(b=>b.classList.toggle('on',b.dataset.clientPlugin===id));if(S&&id==='fleet')roster();window.atlasAfterPluginChange?.(priorPlugin,id);
   }
   function openBank(){
     if(!window.atlasOperator()){toast('Sign in as owner to see banks.');return;}
-    const name=account()?.name;hud.querySelector('.game-bank')?.remove();const modal=document.createElement('section');modal.className='game-bank';modal.setAttribute('aria-label','Bank snapshot for '+safeName(name));
+    const name=account()?.name;
+    if(!name){toast('Choose a fleet account to see its bank.');return;}
+    hud.querySelector('.game-bank')?.remove();const modal=document.createElement('section');modal.className='game-bank';modal.setAttribute('aria-label','Bank snapshot for '+safeName(name));
     modal.innerHTML='<header><span>The Bank of Gielinor</span><small class="bank-value"></small><small class="bank-count">0</small><button aria-label="Close bank">×</button></header><div class="bank-tabs"><button title="All items">∞</button>'+Array.from({length:8},(_,i)=>'<button title="Bank tab '+(i+1)+'">＋</button>').join('')+'</div><div class="bank-items"></div><footer><span class="bank-group">Rearrange mode: <button data-view-action="Swap" class="on">Swap</button><button data-view-action="Insert">Insert</button></span><span class="bank-group">Withdraw as: <button data-view-action="Withdraw as item" class="on">Item</button><button data-view-action="Withdraw as note">Note</button></span><span class="bank-group">Quantity: '+['1','5','10','X','All'].map((q,i)=>'<button data-view-action="Quantity '+q+'"'+(i===0?' class="on"':'')+'>'+q+'</button>').join('')+'</span><input aria-label="Search bank" placeholder="Search bank…"><span class="bank-age"></span></footer>';
     const draw=()=>{
       const b=account();if(b?.name!==name){modal.remove();return;}
@@ -476,20 +510,43 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   }
   window.atlasOverlay=()=>{if(S)overlay();};
   function accountChoices(){const choices=S.bots.filter(b=>!b.practice).map(b=>({name:b.name,inWorld:b.inWorld}));const following=window.atlasFollowOther;if(following&&!choices.some(b=>b.name===following))choices.push({name:following,inWorld:true,following:true});if(sel&&!choices.some(b=>b.name===sel))choices.push({name:sel,inWorld:false,missing:true});return choices;}
-  // The address names the open plugin and account, so a link opens the same view.
+  // Restore the plugin at startup, then restore the account and camera with the first snapshot.
+  let linkedPluginRestored=false;
+  function restoreLinkedPlugin(){
+    linkedPluginRestored=true;
+    const id=new URLSearchParams(location.hash.slice(1)).get('p');
+    if(!id||!rail.querySelector('[data-client-plugin="'+CSS.escape(id)+'"]'))return false;
+    showPlugin(id);
+    return true;
+  }
   let linkRead=false;
-  function followLink(){
+  function followLinkedAccount(){
     if(linkRead)return;linkRead=true;
-    const q=new URLSearchParams(location.hash.slice(1)),id=q.get('p'),name=q.get('a');
-    if(id&&rail.querySelector('[data-client-plugin="'+CSS.escape(id)+'"]'))showPlugin(id);
-    if(name&&S.bots.some(b=>b.name===name))pick(name);
+    const q=new URLSearchParams(location.hash.slice(1)),name=q.get('a');
+    const linked=S.bots.find(b=>b.name===name);
+    if(linked)pick(linked.name);
+    const watch=q.get('watch');
+    if(watch&&window.atlasFollow3d(watch,true))return;
+    if(q.get('cam')==='free')focusFree(linked?.name);
   }
   function writeLink(){
-    if(!linkRead)return;
-    const q=new URLSearchParams({p:selectedPlugin});if(sel)q.set('a',sel);
+    if(!linkedPluginRestored)return;
+    const q=new URLSearchParams({p:selectedPlugin});
+    if(linkRead){
+      if(sel)q.set('a',sel);
+      if(window.atlasFollowOther)q.set('watch',window.atlasFollowOther);
+      else if(window.atlasFreeCamera)q.set('cam','free');
+    }else{
+      const pending=new URLSearchParams(location.hash.slice(1));
+      for(const key of ['a','watch','cam'])if(pending.has(key))q.set(key,pending.get(key));
+    }
     const hash='#'+q;if(location.hash!==hash)history.replaceState(null,'',location.pathname+location.search+hash);
   }
-  function refresh(){if(!S)return;followLink();writeLink();syncNotifyControls();$('#client-more').hidden=!window.atlasOperator();hud.querySelector('.game-bank')?.refreshObservation?.();camUpdate();screens();minimap();xpDrops(account());overlay();chatFeed();idleNotifier(account());levelUps();deaths();if(selectedPlugin==='xp'&&body.dataset.plugin==='xp'){const top=body.scrollTop;body.innerHTML=xpTracker();body.scrollTop=top;}if(selectedPlugin==='boards'&&body.dataset.plugin==='boards'){const head=body.querySelector('.progress-head');if(head)head.innerHTML=boardSummary()+progressPanel();const rw=body.querySelector('.rivals-wrap');if(rw&&!rw.contains(document.activeElement))rw.innerHTML=rivalsPanel();}if(selectedPlugin==='ge')refreshGe();if(selectedPlugin==='world'&&body.dataset.plugin==='world'&&!(body.contains(document.activeElement)&&document.activeElement.matches('input,select,textarea'))){const top=body.scrollTop;body.innerHTML=worldPanel();body.scrollTop=top;}else if(selectedPlugin==='world')refreshWorldLookup();infoboxes();title.querySelector('.connection').textContent=$('#connection').textContent;const b=account();focusPaint();warmPlaces();welcomeCard();$('#chat-name').textContent=(b?safeName(b.name):'Spectator')+':';
+  let questAccount=null;
+  function refresh(){if(!S)return;followLinkedAccount();writeLink();
+    const b=account(),name=b?.name??null;
+    if(name!==questAccount){questAccount=name;questDetail=null;}
+    if(body.firstElementChild?.hasAttribute('data-snapshot-loading'))renderSnapshotPlugin(selectedPlugin);syncNotifyControls();$('#client-more').hidden=!window.atlasOperator();hud.querySelector('.game-bank')?.refreshObservation?.();camUpdate();screens();minimap();xpDrops(b);overlay();chatFeed();idleNotifier(b);levelUps();deaths();if(selectedPlugin==='xp')refreshXp();if(selectedPlugin==='boards'&&body.dataset.plugin==='boards'){const head=body.querySelector('.progress-head');if(head)head.innerHTML=boardSummary()+progressPanel();const rw=body.querySelector('.rivals-wrap');if(rw&&!rw.contains(document.activeElement))rw.innerHTML=rivalsPanel();refreshHiscoreAccount();}const data=body.querySelector('.info-data');if(data)put(data,infoData());if(selectedPlugin==='ge')refreshGe();if(selectedPlugin==='world'&&body.dataset.plugin==='world'&&!(body.contains(document.activeElement)&&document.activeElement.matches('input,select,textarea'))){const top=body.scrollTop;body.innerHTML=worldPanel();body.scrollTop=top;}else if(selectedPlugin==='world')refreshWorldLookup();infoboxes();title.querySelector('.connection').textContent=$('#connection').textContent;focusPaint();warmPlaces();welcomeCard();$('#chat-name').textContent=(b?safeName(b.name):'Spectator')+':';
     const orbBox=hud.querySelector('.game-orbs');orbBox.innerHTML=[['hp','Hitpoints',b?.hp?.now,b?.hp?.max],['prayer','Prayer',level('Prayer')?.currentLevel,level('Prayer')?.level]].map(([id,label,value,max])=>`<div class="game-orb orb-${id}" title="${label}: ${value??'not reported'}${max?' / '+max:''}"><span class="orb-num" style="color:${orbColour(value,max)}">${value??'—'}</span><canvas class="orb-art" data-orb="${id}" data-frac="${value!=null&&max?Math.max(0,Math.min(1,value/max)):0}"></canvas></div>`).join('');orbBox.querySelectorAll('canvas').forEach(drawOrb);if(!(selectedTab==='settings'&&$('#game-panel').contains(document.activeElement)))gamePanel();}
   const previousRender=render;render=function(){previousRender();refresh();};
   const previousDrawMap=drawMap;drawMap=function(){previousDrawMap();minimap();};
@@ -502,7 +559,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const focus=title.querySelector('#client-focus'),focusNow=focus.querySelector('.focus-now'),focusName=focus.querySelector('.focus-name'),focusFind=focus.querySelector('.focus-find'),focusList=focus.querySelector('.focus-list');
   const focusNote=document.createElement('div');focusNote.className='focus-note';focusNote.setAttribute('role','status');hud.append(focusNote);
   let focusShown='',focusRowsHtml='',focusNoteTimer=0,flightTo=null;
-  const focusLive=()=>S.bots.filter(b=>b.inWorld&&!b.practice).sort((a,b)=>a.name.localeCompare(b.name));
+  const focusLive=()=>(S?.bots||[]).filter(b=>b.inWorld&&!b.practice).sort((a,b)=>a.name.localeCompare(b.name));
   const focusTarget=()=>window.atlasFollowOther||(window.atlasFreeCamera?null:sel)||null;
   function focusState(){
     const other=window.atlasFollowOther,b=S.bots.find(x=>x.name===sel);
@@ -513,6 +570,10 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     return ['Free camera','free','The camera follows nobody.'];
   }
   function focusRows(){
+    if(!S){
+      focusList.innerHTML='<p class="focus-none" role="status">Waiting for fleet data…</p>';
+      return;
+    }
     const q=focusFind.value.trim().toLowerCase(),current=focusTarget(),choices=accountChoices().filter(c=>!q||safeName(c.name).toLowerCase().includes(q)).sort((a,b)=>a.name.localeCompare(b.name));
     const row=c=>{const b=S.bots.find(x=>x.name===c.name),on=c.name===(current||sel),note=c.following?'another player':c.missing?'no snapshot':c.inWorld?String(b?.phaseShort||b?.goal||'').slice(0,34):'';return '<button role="option" aria-selected="'+on+'" class="focus-row'+(on?' on':'')+(c.inWorld?' live':'')+'" data-focus="'+E(c.name)+'"'+(c.missing||c.following?' disabled':'')+'><i class="focus-dot"></i><span>'+E(safeName(c.name))+'</span><small>'+E(note)+'</small></button>';};
     const group=(label,rows)=>rows.length?'<h6>'+label+' · '+rows.length+'</h6>'+rows.map(row).join(''):'';
@@ -536,7 +597,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(to===from)return;
     flightTo=shown;focus.classList.add('flying');focusNote.classList.add('flying');focusSay('Flying to '+shown,15000);
   }
-  const focusFree=()=>{sel=null;picked=true;window.atlasFreeCamera=true;window.atlasFollowOther=null;window.atlasDestination=null;rswFor=null;$('#rsw')?.contentWindow?.postMessage({atlasFreeCamera:true},location.origin);render();};
+  const focusFree=(name=null)=>{sel=name;picked=true;window.atlasFreeCamera=true;window.atlasFollowOther=null;window.atlasDestination=null;rswFor=null;$('#rsw')?.contentWindow?.postMessage({atlasFreeCamera:true},location.origin);render();};
   // The viewer loads these places while it is idle, so a swap to them has nothing to wait for. The [ and ] neighbours come
   // first, and a row under the pointer goes before them. One place stands for the accounts in the same 32-tile cell.
   let warmSent='';
@@ -579,9 +640,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   hud.onclick=e=>{const t=e.target.closest('[data-game-tab]');if(t){if(t.dataset.gameTab===selectedTab)hud.classList.toggle('game-panel-hidden');else{selectedTab=t.dataset.gameTab;hud.classList.remove('game-panel-hidden');gamePanel();}}const c=e.target.closest('[data-chat]');if(c){channel=c.dataset.chat;hud.querySelectorAll('[data-chat]').forEach(b=>b.classList.toggle('active',b===c));renderChat();}if(e.target.closest('.chat-toggle,[data-toggle-chat]'))hud.classList.toggle('chat-hidden');const to3d=msg=>$('#rsw')?.contentWindow?.postMessage(msg,location.origin);if(e.target.closest('.minimap-compass')){if(typeof mode!=='undefined'&&mode==='3d')to3d({atlasCompass:true});else toast('The 2D map always faces north.');}if(e.target.closest('[data-viewer-worldmap]')){to3d({atlasOpenWorldMap:true});placesBox.hidden=true;}else if(e.target.closest('[data-places]')){placesBox.hidden=!placesBox.hidden;placesBox.querySelector('[data-viewer-worldmap]').hidden=!(typeof mode!=='undefined'&&mode==='3d');}else if(!e.target.closest('.game-places'))placesBox.hidden=true;const p=e.target.closest('[data-open-plugin]');if(p)showPlugin(p.dataset.openPlugin);if(e.target.closest('.game-logout')){selectedTab='logout';hud.classList.remove('game-panel-hidden');gamePanel();}if(e.target.closest('[data-logout]')){if(window.FleetShim?.signedIn?.())window.FleetShim.signOut();else toast('Nothing to log out of: this is the spectator view.');}if(e.target.closest('.game-xp'))showPlugin('xp');const a=e.target.closest('[data-view-action]');if(a)toast(a.dataset.viewAction+' · spectator view; no game input sent');const q=e.target.closest('[data-quest]');if(q){questDetail=q.dataset.quest;gamePanel();}const fr=e.target.closest('[data-friend]');if(fr){pick(fr.dataset.friend);}if(e.target.closest('[data-quest-back]')){questDetail=null;gamePanel();}const qf=e.target.closest('[data-quest-filter]');if(qf){questFilter=qf.dataset.questFilter;gamePanel();}const sk=e.target.closest('[data-skill]');if(sk){const st=level(sk.dataset.skill);toast(sk.dataset.skill+(st?' · Level '+st.level+(st.xp!=null?' · '+st.xp.toLocaleString()+' XP':''):' · not reported by this game'));}};
   body.addEventListener('submit',e=>{if(e.target.id==='wp-form'){e.preventDefault();lookup(e.target.querySelector('#wp-name').value);return;}const f=e.target.closest('.goal-request');if(!f)return;e.preventDefault();const text=f.text.value.trim();if(!text)return;if(!window.atlasCommand){notify('The command desk is not loaded.');return;}f.querySelector('button').disabled=true;window.atlasCommand('request',{text}).then(r=>{notify('request: '+String(r?.status||'sent').replaceAll('-',' '));f.text.value='';},err=>notify('Refused: '+(err?.message||err))).finally(()=>{f.querySelector('button').disabled=false;});});
   body.addEventListener('change',e=>{if(e.target.id==='rival-board'){rivalBoard=e.target.value;const w=body.querySelector('.rivals-wrap');if(w)w.innerHTML=rivalsPanel();return;}if(e.target.dataset.notify!==undefined){void setNotify(e.target.checked);}});
-  body.addEventListener('input',e=>{if(e.target.id==='wp-name')worldLookupName=e.target.value;if(e.target.id==='ge-search'){geQuery=e.target.value;refreshGe();}if(e.target.id==='hs-name'){hiscoreName=e.target.value.trim();const b=S.bots.find(x=>x.name.toLowerCase()===hiscoreName.toLowerCase());if(b||!hiscoreName){hiscoreName=b?b.name:'';const el=body.querySelector('.hs-wrap');if(el){const input=e.target,pos=input.selectionStart;el.innerHTML=hiscorePanel();const again=body.querySelector('#hs-name');if(again){again.focus();again.setSelectionRange(pos,pos);}}}}});
+  body.addEventListener('input',e=>{if(e.target.id==='wp-name')worldLookupName=e.target.value;if(e.target.id==='ge-search'){geQuery=e.target.value;refreshGe();}if(e.target.id==='hs-name'){hiscoreName=e.target.value.trim();refreshHiscoreAccount();}});
   hud.addEventListener('click',e=>{const f=e.target.closest('.infobox[data-xp-focus]');if(f){pick(f.dataset.xpFocus);}});
-  body.addEventListener('click',e=>{const lk=e.target.closest('[data-lookup]');if(lk){lookup(lk.dataset.lookup);return;}const fw=e.target.closest('[data-world-follow]');if(fw){const name=fw.dataset.worldFollow,ours=S.bots.find(b=>b.name.toLowerCase()===name.toLowerCase()&&!b.practice),from=focusTarget();if(ours)pick(ours.name);else if(window.atlasFollow3d?.(name))focusMoved(from,name);else toast('The 3D view is not ready, so the camera cannot watch a player.');return;}if(e.target.closest('[data-ge-all]')){geAll=!geAll;refreshGe();return;}const hm=e.target.closest('[data-hs-mode]');if(hm){hiscoresMode=hm.dataset.hsMode;hiscores();return;}if(e.target.closest('[data-xp-reset]')){const store=xpStore();delete store[sel];saveXpStore(store);body.innerHTML=xpTracker();}if(e.target.closest('[data-xp-pause]')){const store=xpStore(),b=account(),base=b&&store[b.name];if(base){if(base.paused){const gap=Date.now()-base.paused.at;base.at+=gap;for(const k of b.skills||[])if(typeof k.xp==='number'&&base.paused.xp[k.name]!=null)base.xp[k.name]=(base.xp[k.name]??base.paused.xp[k.name])+(k.xp-base.paused.xp[k.name]);delete base.paused;}else base.paused={at:Date.now(),xp:Object.fromEntries((b.skills||[]).map(k=>[k.name,k.xp]))};saveXpStore(store);}body.innerHTML=xpTracker();}const hm2=e.target.closest('[data-xp-hide-maxed]');if(hm2){xpHideMaxed=hm2.checked;body.innerHTML=xpTracker();}const f=e.target.closest('[data-xp-focus]');if(f){pick(f.dataset.xpFocus);showPlugin('xp');}});
+  body.addEventListener('click',e=>{const lk=e.target.closest('[data-lookup]');if(lk){lookup(lk.dataset.lookup);return;}const fw=e.target.closest('[data-world-follow]');if(fw){const name=fw.dataset.worldFollow,ours=S.bots.find(b=>b.name.toLowerCase()===name.toLowerCase()&&!b.practice),from=focusTarget();if(ours)pick(ours.name);else if(window.atlasFollow3d?.(name))focusMoved(from,name);else toast('The 3D view is not ready, so the camera cannot watch a player.');return;}if(e.target.closest('[data-ge-all]')){geAll=!geAll;refreshGe();return;}const hm=e.target.closest('[data-hs-mode]');if(hm){hiscoresMode=hm.dataset.hsMode;hiscores();return;}if(e.target.closest('[data-xp-reset]')){const store=xpStore();delete store[sel];saveXpStore(store);refreshXp();}if(e.target.closest('[data-xp-pause]')){const store=xpStore(),b=account(),base=b&&store[b.name];if(base){if(base.paused){const gap=Date.now()-base.paused.at;base.at+=gap;for(const k of b.skills||[])if(typeof k.xp==='number'&&base.paused.xp[k.name]!=null)base.xp[k.name]=(base.xp[k.name]??base.paused.xp[k.name])+(k.xp-base.paused.xp[k.name]);delete base.paused;}else base.paused={at:Date.now(),xp:Object.fromEntries((b.skills||[]).map(k=>[k.name,k.xp]))};saveXpStore(store);}refreshXp();}const hm2=e.target.closest('[data-xp-hide-maxed]');if(hm2){xpHideMaxed=hm2.checked;refreshXp();}const f=e.target.closest('[data-xp-focus]');if(f){pick(f.dataset.xpFocus);showPlugin('xp');}});
   hud.onchange=e=>{if(e.target.id==='game-display'){app.classList.toggle('client-collapsed',e.target.value==='closed');}if(e.target.id==='game-quality'){$('#atlas-quality').value=e.target.value;$('#atlas-quality').onchange();}if(e.target.id==='game-roofs')window.atlasSetRoofsOff(e.target.value==='off');};
   hud.addEventListener('contextmenu',e=>{const cell=e.target.closest('[data-item],[data-equipment]');if(!cell)return;e.preventDefault();const b=account(),it=cell.dataset.item!==undefined?b?.inventory?.[Number(cell.dataset.item)]:b?.equipment?.find(i=>i.slot===Number(cell.dataset.equipment));if(!it)return;context?.remove();context=document.createElement('div');context.className='game-context';context.style.left=Math.min(e.clientX,innerWidth-220)+'px';context.style.top=Math.min(e.clientY,innerHeight-110)+'px';const worn=cell.dataset.equipment!==undefined,n=String(it.name),verb=worn?'Remove':/\b(sword|axe|bow|dagger|mace|staff|scimitar|pickaxe|harpoon|rod|net|hammer|chisel|knife|spear|halberd|whip|wand|crossbow|blade|club|warhammer)\b/i.test(n)?'Wield':/\b(helm|hat|cape|amulet|body|chainbody|platebody|platelegs|plateskirt|legs|boots|gloves|shield|ring|coif|robe|hood|vambraces|chaps|mask|kiteshield|sq shield|necklace)\b/i.test(n)?'Wear':/\b(potion|brew|beer|wine|tea|milk|juice|water)\b/i.test(n)?'Drink':/\b(bread|cake|pie|stew|fish|shark|lobster|trout|salmon|tuna|swordfish|shrimps|anchovies|sardine|herring|pike|cod|bass|meat|chicken|kebab|pizza|cheese|apple|banana|bananas|peach|onion|tomato|cabbage|potato|egg|monkfish)\b/i.test(n)?'Eat':null;
     const options=worn?[['Remove',null]]:[['Use',null],...(verb?[[verb,null]]:[]),['Drop',null]];
@@ -651,6 +712,6 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(F_KEYS[e.key]&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();e.stopPropagation();selectedTab=F_KEYS[e.key];hud.classList.remove('game-panel-hidden');gamePanel();}
     if(e.key==='/'&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();e.stopPropagation();showPlugin('fleet');($('#op-fleet-search')||$('#search'))?.focus();}
   },true);
-  window.atlasClient={follow:name=>{tourSet(false);previousPick(name);},openPlugin:showPlugin,openBank,selectedPlugin:()=>selectedPlugin,gameTab:id=>{selectedTab=id;hud.classList.remove('game-panel-hidden');gamePanel();}};
+  window.atlasClient={follow:name=>{tourSet(false);previousPick(name);},openPlugin:showPlugin,restoreLinkedPlugin,openBank,selectedPlugin:()=>selectedPlugin,gameTab:id=>{selectedTab=id;hud.classList.remove('game-panel-hidden');gamePanel();}};
   app.classList.remove('focus-map','right-hidden','left-hidden');showPlugin('fleet');renderChat();if(S)refresh();
 })();

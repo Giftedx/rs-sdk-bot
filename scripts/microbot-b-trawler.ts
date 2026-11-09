@@ -1,23 +1,13 @@
-// Finite legacy Trawler support actions. Stage inside the boat with paste/rope/bucket.
+// Legacy Trawler: trip mode boards at Port Khazard, wins, collects and banks; support modes stage aboard.
 // This ports native leak/net/bailing mechanics, not modern tentacle/contribution rewards.
 import {existsSync} from 'node:fs';
 import {openBot,finish} from '../packages/core/src/bot';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import type {BotWorldState} from '../vendor/rs-sdk/sdk/types';
-export type TrawlerMode='net'|'leak'|'bail';
+import {insideLegacyTrawler,trawlerEffect,type TrawlerMode} from './microbot-trawler-trip-effects';
+export {insideLegacyTrawler,trawlerEffect,type TrawlerMode} from './microbot-trawler-trip-effects';
 const count=(s:BotWorldState,id:number)=>s.inventory.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
-const xp=(s:BotWorldState)=>s.skills.find(k=>k.name==='Crafting')?.experience??0;
 const hp=(s:BotWorldState)=>s.skills.find(k=>k.name==='Hitpoints')?.level??0;
-export function insideLegacyTrawler(s:BotWorldState){const p=s.player;return !!p&&[0,1].includes(p.level)&&Math.floor(p.worldZ/64)===75&&[29,31].includes(Math.floor(p.worldX/64));}
-export function trawlerEffect(before:BotWorldState,after:BotWorldState,mode:TrawlerMode,phase:'fill'|'empty'='fill'){
- const delta=new Map<number,number>();for(const i of before.inventory)delta.set(i.id,(delta.get(i.id)??0)-i.count);for(const i of after.inventory)delta.set(i.id,(delta.get(i.id)??0)+i.count);
- const expected=mode==='net'?new Map([[954,-1]]):mode==='leak'?new Map([[1941,-1]]):phase==='fill'?new Map([[583,-1],[585,1]]):new Map([[585,-1],[583,1]]);
- const keys=new Set([...delta.keys(),...expected.keys()]);
- const noChange=[...delta.values()].every(n=>n===0)&&xp(after)===xp(before);
- if(noChange)return false;
- if(![...keys].every(id=>(delta.get(id)??0)===(expected.get(id)??0))||mode==='net'&&xp(after)<=xp(before)||mode!=='net'&&xp(after)!==xp(before))throw Error('trawler asset or XP effect does not reconcile');
- return true;
-}
 export interface TrawlerDriver{state:()=>BotWorldState|null;tick:()=>number;stop:()=>boolean;object:(x:number,z:number,id:number,op:number)=>Promise<boolean>;item:(slot:number,op:number)=>Promise<boolean>;wait:(test:()=>boolean,ticks:number)=>Promise<boolean>;step:()=>Promise<void>}
 export async function runTrawlerSupport(d:TrawlerDriver,o:{mode:TrawlerMode;maximum:number;cap:number;maxAttempts:number}){
  if(!['net','leak','bail'].includes(o.mode)||![o.maximum,o.cap,o.maxAttempts].every(n=>Number.isSafeInteger(n)&&n>0))throw Error('invalid trawler job');
@@ -51,7 +41,11 @@ export async function runTrawlerSupport(d:TrawlerDriver,o:{mode:TrawlerMode;maxi
  }
  return{mode:o.mode,completed,attempts,ticks:d.tick()-start};
 }
-if(import.meta.main){
+if(import.meta.main&&process.argv[3]==='trip'){
+ const name=process.argv[2];if(!name)throw Error('account required');
+ const s=await openBot(name).catch(e=>finish([],false,`login: ${String(e)}`));
+ try{const {runTrawlerTrip}=await import('./microbot-trawler-trip');const r=await runTrawlerTrip(s,{cap:Number(process.argv[4]??2200),stop:()=>existsSync(`.practice/stop-${name}`)||existsSync('.practice/stop-all')});console.log('TRAWLER_TRIP '+JSON.stringify(r));await finish([s],r.ok,JSON.stringify(r));}catch(e){const state=s.sdk.getState();console.log('TRAWLER_ERROR_STATE '+JSON.stringify({player:state?.player,locs:state?.nearbyLocs,ground:state?.groundItems,inventory:state?.inventory,messages:state?.gameMessages,modal:state?.modalInterface}));await finish([s],false,String(e));}
+}else if(import.meta.main){
  const name=process.argv[2],mode=process.argv[3] as TrawlerMode,maximum=Number(process.argv[4]??1),cap=Number(process.argv[5]??200);if(!name)throw Error('account required');
  const s=await openBot(name).catch(e=>finish([],false,`login: ${String(e)}`));let ended=false;void s.ended.then(()=>{ended=true;});
  try{const result=await runTrawlerSupport({state:()=>s.sdk.getState(),tick:()=>s.tick(),stop:()=>ended||existsSync(`.practice/stop-${name}`)||existsSync('.practice/stop-all'),object:async(x,z,id,op)=>(await s.sdk.sendInteractLoc(x,z,id,op)).success,item:async(slot,op)=>(await s.sdk.sendUseItem(slot,op)).success,wait:(test,ticks)=>waitUntil(s,test,{timeoutTicks:ticks}),step:()=>waitTicks(s,1)},{mode,maximum,cap,maxAttempts:Number(process.env.MAX_ATTEMPTS??100)});await finish([s],true,JSON.stringify(result));}catch(e){await finish([s],false,String(e));}

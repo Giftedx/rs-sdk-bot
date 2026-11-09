@@ -1,11 +1,17 @@
 import{test,expect,spyOn}from'bun:test';
+import{mkdtempSync,readFileSync,writeFileSync,rmSync,cpSync,unlinkSync}from'node:fs';
+import{join,resolve}from'node:path';
+import{tmpdir}from'node:os';
+import{createHash}from'node:crypto';
+import{capabilityRevision}from'../../core/src/worker-release';
+import * as workerRelease from '../../core/src/worker-release';
 import * as coreBot from '../../core/src/bot';
 import * as walking from '../../core/src/walk';
 import {runEarthProduction} from '../../../scripts/earth-production';
 import {setEquipmentObserved} from '../../core/src/container-observation';
 import {createSaveData} from '../../../vendor/rs-sdk/sdk/test/utils/save-generator';
 import {parsePracticeSave} from '../../../scripts/measure/fleet-player-save';
-import{bettySupplyChecks,shopSupplyChecks,shopRepeatChecks,shopRefusalChecks,shopSupplyFixture}from'../src/shop-supply-order-proof';
+import{bettySupplyChecks,shopSupplyChecks,shopRepeatChecks,shopRefusalChecks,shopSupplyFixture,verifyShopSupply}from'../src/shop-supply-order-proof';
 const save=(earth=3,coins=352288)=>({position:{x:3252,z:3420,level:0},skills:{3:{level:35,xp:10000}},inventories:{93:[],94:[],95:[{id:557,count:earth},{id:554,count:1482},{id:995,count:coins},{id:1277,count:1}]}} as any);
 const run=(bought=1136,spent=6816,target=1)=>({code:0,timedOut:false,hpMin:35,log:`LOGOUT logged-out\nRESULT ok ticks=500 boughtTotal=${bought} spentTotal=${spent} stop=stock-target targetMet=${target}\n`});
 
@@ -74,4 +80,85 @@ test('alternate Betty profile proves its route, useful stock and the same conser
  const before=save(),after=save(53,351888);after.position={x:3092,z:3243,level:0};
  expect(Object.values(bettySupplyChecks(before,after,run(50,400))).every(Boolean)).toBe(true);
  after.inventories[95][0].count--;expect(Object.values(bettySupplyChecks(before,after,run(50,400))).every(Boolean)).toBe(false);
+});
+
+// File-only fixture exercises the saved verifier without a client, service or live actor.
+function savedShopFixture(directory:string){
+ const digest=(p:string)=>createHash('sha256').update(readFileSync(p)).digest('hex');
+ const files=['scripts/buy-owned-ge-item.ts','scripts/earth-shop.ts','scripts/earth-shop.test.ts','scripts/earth-production.ts','scripts/earth-production.test.ts','scripts/shop-buyer.ts','scripts/shop-buyer.test.ts','packages/practice/src/shop-supply-order-proof.ts','packages/practice/test/shop-supply-order-proof.test.ts'];
+ const root=resolve(import.meta.dir,'../../..'),paths:string[]=[];
+ const put=(file:string,data:string|Uint8Array)=>{writeFileSync(join(directory,file),data);paths.push(file);};
+ const saved=(label:string,earth=3,coins=352288,betty=false,essence=0)=>put(label+'.sav',createSaveData({
+  position:betty?{x:3092,z:3243,level:0}:{x:3252,z:3420,level:0},skills:{Hitpoints:35},
+  bank:[{id:557,count:earth},{id:554,count:1482},{id:995,count:coins},{id:1277,count:1},...(essence?[{id:1436,count:essence}]:[])],
+ }));
+ saved('before');saved('after',1139,345472);saved('repeat',1139,345472);
+ saved('refuse-before',3,30000);saved('refused',3,30000);
+ saved('betty-before');saved('betty-after',53,351888,true);
+ saved('refill-before');saved('refill-after',53,351888,true);saved('refill-repeat',53,351888,true);
+ saved('hunt-before');saved('hunt-after');saved('craft-before',3,352288,false,60);saved('craft-after',105,352288,false,9);
+ const production={ok:true,conserved:true,consumed:0,crafted:0,air:0,eaten:{},equipmentRestored:true,kills:2,pilotReady:1};
+ const runs:Record<string,any>={buy:run(),repeat:run(0,0),refuse:{...run(0,0,0),log:run(0,0,0).log.replace('stock-target','stock-wait')},betty:run(50,400),
+  refill:{...run(),log:run(51,401).log+'EARTH_REFILL '+JSON.stringify({targetMet:1,seeded:1,boughtTotal:51,spentTotal:401,seedCredit:1,bank:true,ok:true,conserved:true})},
+  'refill-repeat':{...run(0,0),log:run(0,0).log.trimEnd()+' seeded=0\n'},
+  'owned-hunt':{...run(),log:'LOGOUT logged-out\nEARTH_PRODUCTION '+JSON.stringify(production)},
+  'owned-craft':{...run(),log:'LOGOUT logged-out\nEARTH_PRODUCTION '+JSON.stringify({...production,consumed:51,crafted:102,targetMet:1,trips:2})}};
+ for(const [key,r]of Object.entries(runs)){r.logout={state:'confirmed'};put(key+'.log',r.log);}
+ for(const label of ['empty-ge','betty-empty-ge','refill-empty-ge'])put(label+'.log','LOGOUT logged-out\n');
+ put('original-ge-journal.json','{}');put('original-ge-journal-after.json','{}');
+ put('fallback-spend.json',JSON.stringify({phase:'settled',request:{item:557,quantity:1136,expectedOwned:3},spent:6816}));
+ put('refill-ledger.json',JSON.stringify({phase:'settled',seeded:1,spent:401}));
+ const meta={at:Date.now(),directory:resolve(directory),source:{runtime:capabilityRevision(['scripts/buy-owned-ge-item.ts'],root),files:Object.fromEntries(files.map(f=>[f,digest(join(root,f))]))},runs,hashes:Object.fromEntries(paths.map(f=>[f,digest(join(directory,f))]))};
+ const write=()=>writeFileSync(join(directory,'native.json'),JSON.stringify(meta));write();return{meta,write};
+}
+
+test('immutable same-source shop receipts reconcile after an independent 15-minute queue wait',()=>{
+ const directory=mkdtempSync(join(tmpdir(),'shop-saved-')),clock=spyOn(Date,'now');
+ // The GE closure test covers runtime hashing; these tests retain real source and artifact byte checks.
+ const revision=spyOn(workerRelease,'capabilityRevision').mockReturnValue('shop-saved-test-runtime');
+ try{
+  const {meta}=savedShopFixture(directory),at=meta.at;
+  const initial=verifyShopSupply(directory);
+  expect(Object.entries(initial.checks).filter(([,ok])=>!ok)).toEqual([]);
+  expect(initial.ok).toBe(true);
+  const bytes=readFileSync(join(directory,'native.json'));
+  clock.mockReturnValue(at+15*60*1000+1);
+  const report=verifyShopSupply(directory);
+  expect(report.ok).toBe(true);expect(report.ageMs).toBe(900001);
+  expect(report.nativeAt).toBe(at);expect(report.directory).toBe(resolve(directory));
+  expect(readFileSync(join(directory,'native.json'))).toEqual(bytes);
+ }finally{revision.mockRestore();clock.mockRestore();rmSync(directory,{recursive:true,force:true});}
+});
+
+test('saved shop timestamps must be finite numbers and cannot be in the future',()=>{
+ const directory=mkdtempSync(join(tmpdir(),'shop-time-')),clock=spyOn(Date,'now');
+ const revision=spyOn(workerRelease,'capabilityRevision').mockReturnValue('shop-saved-test-runtime');
+ try{
+  const {meta,write}=savedShopFixture(directory),now=meta.at;clock.mockReturnValue(now);
+  for(const at of [now+1,null,'invalid',String(now),undefined,NaN,Infinity]){
+   (meta as any).at=at;write();const report=verifyShopSupply(directory);
+   expect(report.checks.fresh).toBe(false);expect(report.ok).toBe(false);
+  }
+ }finally{revision.mockRestore();clock.mockRestore();rmSync(directory,{recursive:true,force:true});}
+});
+
+test('saved shop proof rejects changed bytes, missing receipts, wrong source and another run directory',()=>{
+ const directory=mkdtempSync(join(tmpdir(),'shop-receipts-')),copy=mkdtempSync(join(tmpdir(),'shop-copy-'));
+ const revision=spyOn(workerRelease,'capabilityRevision').mockReturnValue('shop-saved-test-runtime');
+ try{
+  const {meta,write}=savedShopFixture(directory);
+  expect(verifyShopSupply(directory).ok).toBe(true);
+  const log=readFileSync(join(directory,'buy.log'));writeFileSync(join(directory,'buy.log'),Buffer.concat([log,Buffer.from('\nchanged')]));
+  expect(verifyShopSupply(directory).checks.artifacts).toBe(false);writeFileSync(join(directory,'buy.log'),log);
+  const receipt=meta.hashes['fallback-spend.json'];delete meta.hashes['fallback-spend.json'];write();
+  expect(verifyShopSupply(directory).ok).toBe(false);meta.hashes['fallback-spend.json']=receipt!;write();
+  const runDirectory=meta.directory;(meta as any).directory=undefined;write();
+  expect(verifyShopSupply(directory).checks.nativeRun).toBe(false);meta.directory=runDirectory;
+  meta.source.runtime='wrong-source';write();expect(verifyShopSupply(directory).checks.source).toBe(false);
+  meta.source.runtime='shop-saved-test-runtime';meta.source.files['scripts/earth-shop.ts']='wrong-bytes';write();
+  expect(verifyShopSupply(directory).checks.source).toBe(false);
+  savedShopFixture(directory);cpSync(directory,copy,{recursive:true});
+  expect(verifyShopSupply(copy).ok).toBe(false);
+  unlinkSync(join(directory,'refill-ledger.json'));expect(()=>verifyShopSupply(directory)).toThrow();
+ }finally{revision.mockRestore();rmSync(directory,{recursive:true,force:true});rmSync(copy,{recursive:true,force:true});}
 });

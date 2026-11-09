@@ -22,7 +22,7 @@ export const NAMES = {
     fletching: ['Shaftmaker', 'Nockitoff'],
     smithing: ['Hammeredhard', 'Ironrod', 'Steelrod'],
     herblore: ['Stirmypot', 'Grindmyherb', 'Vialvirile'],
-    bank: ['Moneyshot', 'SporranBulge', 'Fatstack', 'Deeppockets'],
+    bank: ['Moneyshot', 'SporranBulge', 'Fatstack', 'Deeppockets', 'Coinpurse'],
     runite: ['Runeboner', 'Hotrocks', 'Moltenrod'],
     helper: ['Bigpackage', 'Ballbag', 'Packhorse', 'Heavyload', 'DropMyLoad', 'FullLoad', 'WellHung', 'InTheSack', 'PackageDeal', 'BackdoorMan', 'RearEntry', 'TackleBox', 'UnloadMe'],
 } as const satisfies Record<string, readonly string[]>;

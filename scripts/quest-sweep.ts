@@ -3,6 +3,9 @@
 // nearest bank, walks to the start tile and hands its session to the quest script, which owns the quest, the RESULT
 // line and the logout. A missing item ends the run before travel with `missing id:count` (acquisition work).
 // Usage: bun scripts/quest-sweep.ts <account> <quest>      e.g. bun scripts/quest-sweep.ts Mightyrod blackknight
+// tbwt/itwatchtower use owned API staging with finite options; omit options for the preset CLI.
+// Trio stages inside the observed Shilo bank and reuses its protected stockade exit; full28 pack carries no ferry fare.
+// Heroes uses the explicit owned-pair quest-hero-owned.ts CLI/API, never this single-account entry.
 import {existsSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {openBot,finish,getWorld,accountOf,finishHooks,sessionDied} from '../packages/core/src/bot';
@@ -19,6 +22,10 @@ import {questFlags} from '../packages/core/src/quest-status';
 import {QUEST_NAMES} from './quest-chain';
 import {PRESETS,type SaveConfig} from '../packages/practice/src/presets';
 import travel from '../packages/planner/src/haggis-travel.json';
+import {BotActions} from '../vendor/rs-sdk/sdk/actions';
+import {runOwnedLoadout,validateOwnedKit,type OwnedKit} from './microbot-owned-loadout';
+import {productionStopRequested} from './microbot-c-lifetime';
+import {createShiloTransit,NATURE} from './microbot-rune-trip';
 import {retainedGhostSkull,retainedGhostBankSkull,leaveGhostBasement,inGhostBasement} from './ghost-basement-exit';
 import {walkQuestCorridor} from './quest-walk';
 import {crossStrongholdGate,STRONGHOLD_GATE,type GateDeps} from './agility-order';
@@ -28,6 +35,46 @@ import {startQuestSustain,questFoodDefinitions} from './quest-sustain';
 type Item={id:number;count:number};
 type Tile={x:number;z:number;level:number};
 const BANKS:Tile[]=Object.values((travel as unknown as {banks:Record<string,Tile>}).banks);
+
+export type SweepApiOptions={cap:number;prepareTicks:number;xpRate:number;maximumCasts?:number};
+type ApiSweepDeps={open:typeof openBot;world:typeof getWorld;go:typeof goTo;loadout:typeof runOwnedLoadout;load:(path:string)=>Promise<Record<string,unknown>>;finish:(sessions:Session[],ok:boolean,detail:string)=>Promise<unknown>;exists:(path:string)=>boolean;stop:()=>boolean;transit:typeof createShiloTransit};
+function apiOptions(quest:string,value:unknown):SweepApiOptions{
+ if(!value||typeof value!=='object'||Array.isArray(value))throw Error('quest sweep API requires explicit bounded options');const o=value as SweepApiOptions;
+ if(Object.keys(o).some(k=>!['cap','prepareTicks','xpRate','maximumCasts'].includes(k))||![o.cap,o.prepareTicks,o.xpRate].every(Number.isSafeInteger)||o.cap<1000||o.cap>(quest==='tbwt'?15000:12000)||o.prepareTicks<200||o.prepareTicks>4000||o.xpRate<1||o.xpRate>1000||quest==='tbwt'&&(!Number.isSafeInteger(o.maximumCasts)||o.maximumCasts!<1||o.maximumCasts!>40)||quest==='itwatchtower'&&o.maximumCasts!==undefined)throw Error('quest sweep API invalid finite options');return{...o};
+}
+async function apiSweep(account:string,quest:'tbwt'|'itwatchtower',fresh:string|undefined,value:unknown,injected:Partial<ApiSweepDeps>){
+ const o=apiOptions(quest,value),d:ApiSweepDeps={open:openBot,world:getWorld,go:goTo,loadout:runOwnedLoadout,load:path=>import(path),finish,exists:existsSync,stop:()=>false,transit:createShiloTransit,...injected};
+ let signalled=false;const requested=()=>productionStopRequested(account,()=>signalled||d.stop(),d.exists)||d.exists('.practice/stop-quest-sweep');if(requested())throw Error('quest sweep API stopped before login');
+ const path=resolve(import.meta.dir,'generated',`quest-${quest}-owned.ts`),m=await d.load(fresh?`${path}?${fresh}`:path),run=m[quest==='tbwt'?'runTaiBwoWannaiTrio':'runWatchtower'];if(typeof run!=='function')throw Error('quest sweep explicit API export missing');
+ const pack=quest==='tbwt'?Object.entries({3150:21,3032:1,3171:1,3128:1,3164:1,401:1,379:1,558:Math.max(20,o.maximumCasts!)}).map(([id,count])=>({id:Number(id),count})):Object.entries(m.WATCH_SUPPLIES as Record<number,number>).map(([id,count])=>({id:Number(id),count}));
+ const wear=(quest==='tbwt'?[[1381,3],[1540,5],[577,4],[1011,7],[579,0]]:[[1289,3],[1540,5],[1127,4],[1079,7],[1163,0]]).map(([id,slot])=>({id:id!,slot:slot!,count:1})),start:Tile=quest==='tbwt'?{x:2781,z:3086,level:0}:{x:2548,z:3118,level:0};
+ validateOwnedKit({bank:BANKS[0]!,pack,wear,cap:600,maximumMoves:160});if(requested())throw Error('quest sweep API stopped before login');
+ const raw=await d.open(account,{onStop:async()=>{signalled=true;}}),client=raw.client as any,owner=client?.executeBotAction,self=client?.selfSlot,initial=raw.sdk.getState()?.player,life=initial?.lifeId,respawns=initial?.respawnCount??0,began=raw.tick();let ended=false,preparing=true,ok=false,detail='quest sweep API incomplete',transit:ReturnType<typeof createShiloTransit>|undefined,departed=false,recoveryDeferred=false;const cleanupReserve=quest==='tbwt'?Math.min(600,Math.floor(o.prepareTicks/2)):0;void raw.ended.then(()=>{ended=true;});
+ const own=()=>{const p=raw.sdk.getState()?.player;return !ended&&!!initial&&typeof owner==='function'&&raw.client===client&&client.executeBotAction===owner&&client.selfSlot===self&&!!p&&!p.isDead&&p.lifeId===life&&(p.respawnCount??0)===respawns;};
+ const stop=()=>!own()||requested()||preparing&&raw.tick()-began>=o.prepareTicks-cleanupReserve,guard=()=>{if(!own()||raw.sdk.getStateAge()>5000)throw Error('quest sweep original client/life/input owner unavailable');};
+ // Keep the receiver through SDK reconnect and BotActions door/UI awaits.
+ // Helpers retain their own ordinary-stop and owned-cleanup distinction.
+ const sdk=new Proxy(raw.sdk,{get(target,key,receiver){const v=Reflect.get(target,key,receiver);return typeof v==='function'?function(...args:unknown[]){if(String(key).startsWith('send'))guard();return v.apply(receiver,args);}:v;}}),s=Object.create(raw)as Session;
+ Object.defineProperties(s,{sdk:{value:sdk},bot:{value:new BotActions(sdk)},direct:{value:(action:Parameters<Session['direct']>[0])=>{guard();return raw.direct(action);}}});
+ const controller=new AbortController(),off=raw.onTick(()=>{if(stop())controller.abort('quest sweep preparation stop/owner/budget');});
+ const position=()=>{const p=s.sdk.getState()?.player;return p&&{x:p.worldX,z:p.worldZ,level:p.level};},near=(to:Tile,tol=3)=>{const p=position();return !!p&&p.level===to.level&&Math.max(Math.abs(p.x-to.x),Math.abs(p.z-to.z))<=tol;};
+ const move=async(world:World,to:Tile)=>{guard();if(stop())throw Error('quest sweep preparation stopped');const r=await d.go(s,world,to,accountOf(s),{signal:controller.signal,legTimeoutTicks:120,maxRetriesPerLeg:1});guard();if(stop()||!r.ok||!near(to))throw Error('quest sweep preparation route unconfirmed '+(r.ok?'arrival/stop':r.detail));};
+ try{
+  guard();if(stop())throw Error('quest sweep preparation stopped');const flags=questFlags(client),journal=flags?.find(f=>f.name===(quest==='tbwt'?'Tai Bwo Wannai Trio':'Watch Tower'));if(journal?.state!=='not started'||quest==='tbwt'&&!flags?.some(f=>f.name==='Jungle Potion'&&f.state==='complete')||client.membersAccount!==1)throw Error('quest sweep observed member/journal/prerequisite unavailable');
+  if(quest==='tbwt'&&(!flags?.some(f=>f.name==='Shilo Village'&&f.state==='complete')||(s.sdk.getSkill('Prayer')?.baseLevel??0)<43||(s.sdk.getState()?.prayers.prayerPoints??0)<40||s.sdk.getSkill('Hitpoints')?.level!==s.sdk.getSkill('Hitpoints')?.baseLevel||s.sdk.getState()?.autoRetaliateEnabled!==false||s.sdk.getState()?.prayers.activePrayers.some(Boolean)))throw Error('Trio sweep requires observed Shilo access, full health, Prayer43/40 points and original all-off controls');
+  const world=await d.world();guard();if(stop())throw Error('quest sweep preparation stopped');
+  const exit=await leaveStronghold(s,async to=>{await move(world,to);return{ok:true};});guard();if(!exit.ok||stop())throw Error('quest sweep observed Stronghold exit unavailable');
+  const at=position();if(!at)throw Error('quest sweep initial position unknown');let bank:Tile|undefined,last='';for(const candidate of (quest==='tbwt'?[NATURE.bank]:nearestBanks({...at,level:0}).slice(0,4))){try{await move(world,candidate);bank=candidate;break;}catch(e){last=String(e);if(stop()||!own())throw e;}}if(!bank)throw Error('quest sweep reachable owned bank unavailable '+last);
+  const remaining=o.prepareTicks-(s.tick()-began);if(remaining<120)throw Error('quest sweep owned kit preparation budget');const kit:OwnedKit={bank,pack,wear,cap:Math.min(600,remaining),maximumMoves:160},staged=await d.loadout(s,kit,stop);guard();if(staged.ok!==true||stop())throw Error('quest sweep mandatory owned kit unconfirmed '+staged.failure);
+  const totals=(rows:readonly{id:number;count:number}[])=>Object.entries(rows.reduce((a,r)=>(a[r.id]=(a[r.id]??0)+r.count,a),{}as Record<number,number>)).sort(([a],[b])=>Number(a)-Number(b));
+  if(JSON.stringify(totals(s.sdk.getInventory()))!==JSON.stringify(totals(pack))||JSON.stringify(s.sdk.getEquipment().map(i=>[i.slot,i.id,i.count]).sort((a,b)=>a[0]!-b[0]!))!==JSON.stringify(wear.map(i=>[i.slot,i.id,i.count]).sort((a,b)=>a[0]!-b[0]!)))throw Error('quest sweep mandatory observed pack/wear differs');
+  if(quest==='tbwt'){transit=d.transit(s,{protectMelee:true},()=>own()&&(s.sdk.getSkill('Hitpoints')?.level??0)===(s.sdk.getSkill('Hitpoints')?.baseLevel??-1));departed=true;await transit.outbound(stop);guard();if(stop())throw Error('Trio Shilo departure unconfirmed');}
+  await move(world,start);guard();if(stop())throw Error('quest sweep stopped before API dispatch');off();preparing=false;
+  console.log('QUEST_SWEEP_API '+JSON.stringify({quest,phase:'dispatch',start,options:o}));const result=quest==='tbwt'?await run(s,{cap:o.cap,xpRate:o.xpRate,maximumCasts:o.maximumCasts},stop):await run(s,{cap:o.cap,xpRate:o.xpRate,stop});guard();
+  if(!result||typeof result.ok!=='boolean'||result.complete!==true)throw Error('quest sweep API completion unknown');ok=result.ok&&!requested();detail=JSON.stringify({quest,scope:'explicit API on mandatory owned bank kit',result});
+ }catch(error){detail=`quest-sweep ${quest} ${String(error)}`;if(preparing&&departed&&transit&&own()){if(transit.pending()){recoveryDeferred=true;detail+='; Shilo crossing outcome unknown; no repeat or bank movement';}else{const cleanupStop=()=>!own()||raw.tick()-began>=o.prepareTicks||(s.sdk.getSkill('Hitpoints')?.level??0)!==(s.sdk.getSkill('Hitpoints')?.baseLevel??-1);try{await transit.returnVillage(cleanupStop);guard();if(cleanupStop()||!near(NATURE.bank,0)||s.sdk.getState()?.prayers.activePrayers[14]!==false)throw Error('Shilo bank/protection restoration unconfirmed');}catch(cleanup){recoveryDeferred=true;detail+='; Shilo cleanup '+String(cleanup);}}}}finally{off();preparing=false;}
+ if(recoveryDeferred||!own()){console.log('QUEST_SWEEP_SETTLEMENT_DEFERRED '+detail);return{ok:false,recoveryDeferred:true,detail};}return d.finish([s],ok,detail);
+}
 
 export function presetFor(quest:string):SaveConfig&{position:Tile}{
  const p=PRESETS['quest_'+quest];
@@ -161,7 +208,7 @@ export const QUEST_PICKUPS:Record<string,Item[]>={hunt:[{id:1963,count:10},{id:4
 export const QUEST_ARROWS:Record<string,number>={merlin:40,prince:30,hazeelcult:20,scorpion:40};
 // Casts a quest's own fights take from an account that fights with strike spells (Magic above Attack, no bow): Alomone
 // (level 13) and Prince Ali's jail guard (26) fall to a few Fire Strikes; the Jailer (47) to about twenty.
-export const QUEST_CASTS:Record<string,number>={hazeelcult:12,prince:15};
+export const QUEST_CASTS:Record<string,number>={hazeelcult:12,prince:15,scorpion:30};
 // Fishing Contest wants Fishing 10 (hemenster_fishing.rs2:70). An account short of it nets shrimps first, at the
 // nearest Net spot (Catherby beach beside Harry's shop, where the rod and bait come from): 250 XP a catch at 25x, five
 // catches from level 1. The net is a tool of the bank pass; the catches take pack slots until the quest.
@@ -280,8 +327,13 @@ export function travelDistance(from:Tile,to:Tile):number{return cheb(from,to)+(c
 // With a destination, a seller ranks by the extra travel it adds to the way there (detour): from Ardougne bound for
 // Hetty's house in Rimmington, Betty in Port Sarim (53 tiles off the way) comes before Jatix in Taverley and the ogre
 // merchant at Gu'Tanoth, both nearer the bank and both behind the mountain or a stall counter the client cannot path to.
-export function sellersByTravel<S extends {tile:Tile}>(sellers:readonly S[],at:Tile,dest?:Tile):S[]{
- const cost=(t:Tile)=>dest?detour([at,dest],t):travelDistance(at,t);
+// A seller that adds the two boats (eastOfArdougne, walkFar's own test) costs a crossing on top: for a Big Wolf account at
+// the Falador bank bound for Doric, Arhein in Catherby (detour 222) ranked before Bob in Lumbridge (485), the foot leg west
+// from Taverley ended at 2866,3423 with the client refusing 2855,3430 (no floor joins Taverley to Catherby off the
+// pass), and the way back east took both boats.
+export function sellersByTravel<S extends {tile:Tile}>(sellers:readonly S[],at:Tile,dest?:Tile,acct?:Pick<Account,'skills'>):S[]{
+ const boats=(a:Tile,b:Tile)=>eastOfArdougne(a,b,acct)?1:0;
+ const cost=(t:Tile)=>(dest?detour([at,dest],t)+SEA*Math.max(0,boats(at,t)+boats(t,dest)-boats(at,dest)):travelDistance(at,t)+SEA*boats(at,t));
  return [...sellers].sort((a,b)=>cost(a.tile)-cost(b.tile));
 }
 export function nearestBank(at:Tile):Tile{
@@ -647,20 +699,30 @@ async function crossEast(s:Session,world:World,to:Tile,signal?:AbortSignal):Prom
  // SARIM_NORTH leads to Draynor; a Taverley-side target leaves the landing by the hubs and the router (Falador's road).
  return cheb(to,SARIM_LANDING)<=60||TAVERLEY_SIDE(to)?{ok:true}:corridor(SARIM_NORTH);
 }
-export async function reachStart(s:Session,world:World,start:Tile,quest?:string,walker=()=>sessionWalker(s),route=walkRoute){
+// The surface east of White Wolf Mountain's pass, for an account the Big Wolf closes it to: Misthalin, Asgarnia, the
+// Wilderness, the Taverley side and the mountain's north-west pocket (Ballspinner, combat 19, stopped at 2790,3502: the
+// danger-guarded plan from there reaches the west only through the Big Wolf's ground, so it is empty, and the straight
+// fallback click to 2779,3491 was refused). Port Sarim's boats lead round to Ardougne.
+export const eastOfPass=(at:Tile,acct:Pick<Account,'skills'>)=>at.level===0&&at.z<4000
+ &&(at.z>=3270?at.x>=2880||at.x>=2780&&at.z>=3470:at.x>=2950)&&mountainClosed(acct);
+// Ardougne customs landing (2683,3271) to the Observatory reception: corners of the pinned findLongPath, danger-guarded
+// for a combat-19 account. The path passes south of the reception and turns north at 2456,3167.
+export const OBSERVATORY_FROM_ARDOUGNE:Pt[]=[[2657,3275,2],[2626,3260,2],[2588,3243,2],[2549,3230,2],[2527,3240,2],[2501,3228,2],[2481,3204,2],[2466,3180,2],[2456,3167,2]];
+export async function reachStart(s:Session,world:World,start:Tile,quest?:string,walker=()=>sessionWalker(s),route=walkRoute,acct=():Pick<Account,'skills'>=>accountOf(s)){
  const p=s.sdk.getState()?.player;
  const totemMainland=quest==='totem'&&p?.level===0&&p.worldX<2745&&p.worldZ>=3200;
+ const observatoryEast=quest==='itgronigen'&&!!p&&start.level===0&&eastOfPass({x:p.worldX,z:p.worldZ,level:p.level},acct());
  // The mainland-to-tower whole-world bank comparison waits before the first walk leg;
  // legTimeoutTicks cannot bound that planner. Reuse the courier's two boats and corridors.
- if(totemMainland||quest==='cog'&&p?.level===0&&p.worldX>=2950&&p.worldZ<3500&&start.level===0){
-  const fares=totemMainland?90:60,label=totemMainland?'Tribal Totem':'Clock Tower';
+ if(totemMainland||observatoryEast||quest==='cog'&&p?.level===0&&p.worldX>=2950&&p.worldZ<3500&&start.level===0){
+  const fares=totemMainland?90:60,label=totemMainland?'Tribal Totem':observatoryEast?'Observatory':'Clock Tower';
   if(count(s.sdk.getState()?.inventory??[],COINS)<fares)throw Error(`missing 995:${fares} for ${label} boat route`);
-  const deps=await walker(),deadline=s.tick()+1800;
+  const deps=await walker(),deadline=s.tick()+(observatoryEast?2700:1800);
   const near=(point:{x:number;z:number},tol:number)=>{const at=deps.pos();return !!at&&at.level===0&&Math.max(Math.abs(at.x-point.x),Math.abs(at.z-point.z))<=tol;};
-  const corridor=async(points:readonly Pt[])=>{
+  const corridor=async(points:readonly Pt[],legTicks=600)=>{
    const r=await walkQuestCorridor({tick:()=>s.tick(),stop:()=>s.sdk.getState()?.player?.isDead===true,near,
     walk:(points,opts)=>walkPath(deps,points,opts),
-   },points.map(([x,z,tol])=>({x,z,tol})),Math.min(deadline,s.tick()+600));
+   },points.map(([x,z,tol])=>({x,z,tol})),Math.min(deadline,s.tick()+legTicks));
    if(!r.ok)throw Error(`${label} corridor failed: ${r.detail}`);
   };
   const sail=async(id:string)=>{
@@ -675,6 +737,16 @@ export async function reachStart(s:Session,world:World,start:Tile,quest?:string,
    await corridor([[2644,3293,2],[2669,3284,2],[2679,3275,2]]);
    await sail('npc:captain_barnaby:brimhaven@2679,3275');
    await corridor([[2774,3228,2],[start.x,start.z,2]]);
+   return;
+  }
+  // One guarded leg to the landing: 115 path corners from 2790,3502 round the mountain's north side, 93 from the
+  // Wilderness plank spawn at 3291,3652. Then the boats to Ardougne and the pinned ground path to the reception.
+  if(observatoryEast){
+   await corridor([[SARIM_LANDING.x,SARIM_LANDING.z,2]],900);
+   await sail('npc:captain_tobias:karamja-musa-point@3028,3216');
+   await corridor([...KARAMJA].reverse().concat([[2772,3231,2]]));
+   await sail('npc:customs_officer:ardougne@2772,3231');
+   await corridor([...OBSERVATORY_FROM_ARDOUGNE,[start.x,start.z,2]]);
    return;
   }
   await corridor([...SARIM_NORTH].reverse().concat([[3029,3217,2]]));
@@ -864,6 +936,17 @@ export function downward<L extends DownLoc>(locs:readonly L[]):{loc:L;opIndex:nu
  return loc&&opIndex!==undefined?{loc,opIndex}:undefined;
 }
 
+// Gertrude's Cat's lumber yard has one way out the walkers know nothing of: the gertrudefence loc 2618 at 3305,3493,
+// climbed from inside onto 3305,3492 (quest_fluffs.rs2:116-136). %fluffs is not sent to the client, so a started
+// journal inside the yard with no milk 1927, seasoned sardine 1552 or kitten 1554 held is the kitten given (5).
+export const FLUFFS_FENCE={id:2618,x:3305,z:3493};
+type YardPos={worldX:number;worldZ:number;level:number};
+export const inLumberYard=(p?:YardPos|null)=>!!p&&p.level>=0&&p.level<=1&&p.worldX>=3293&&p.worldX<=3313&&p.worldZ>=FLUFFS_FENCE.z&&p.worldZ<=3517;
+export const fluffsKittenGiven=(journal:string|undefined,pack:readonly {id:number}[],p?:YardPos|null)=>
+ journal==='started'&&inLumberYard(p)&&!pack.some(i=>i.id===1927||i.id===1552||i.id===1554);
+// Varrock Teleport when the account can cast it; otherwise the fence first, from inside the yard.
+export const fluffsExit=(castable:boolean,p?:YardPos|null):'teleport'|'fence'=>!castable&&inLumberYard(p)?'fence':'teleport';
+
 // One bot at a time hands its session over through globalThis.QUEST_SESSION, until quest-lib's openQuest has taken
 // it (QUEST_SESSION_TAKEN) or 60 s pass. `fresh` imports the quest module under a unique query, so every bot in one
 // process runs the quest's top-level code again.
@@ -947,7 +1030,13 @@ function observeQuestFlags(s:Session){
  const observe=()=>{for(const q of questFlags(s.client)??[])if(seen.get(q.id)!==q.state){seen.set(q.id,q.state);console.log(`QUEST_SWEEP_FLAG ${JSON.stringify(q)}`);}};
  observe();const off=s.onTick(observe);void s.ended.then(off);
 }
-export async function sweep(account:string,quest:string,fresh?:string){
+export async function sweep(account:string,quest:string,fresh?:string,options?:SweepApiOptions,deps:Partial<ApiSweepDeps>={}){
+ if(quest==='hero'||quest==='heroes')throw Error('Heroes requires the explicit owned pair CLI quest-hero-owned.ts or runHeroesPair(original sessions, validated order); no single-actor partner login');
+ if(quest==='tbwt'||quest==='itwatchtower')return apiSweep(account,quest,fresh,options,deps);
+ return sweepPreset(account,quest,fresh);
+}
+export async function sweepPreset(account:string,quest:string,fresh?:string){
+ if(quest==='hero'||quest==='heroes')throw Error('Heroes requires the explicit owned pair CLI quest-hero-owned.ts or runHeroesPair(original sessions, validated order); no single-actor partner login');
  const script=resolve(import.meta.dir,'generated',`quest-${quest}.ts`);
  if(!existsSync(script))throw Error(`quest sweep: no script ${script}`);
  const preset=presetFor(quest),base=needs(preset,false,quest),food=needs(preset,true,quest);
@@ -991,6 +1080,16 @@ export async function sweep(account:string,quest:string,fresh?:string){
   if((st()?.inventory??[]).some(i=>i.id===553)){
    if(!retained())return fail('retained skull requires a started journal and worn ghostspeak amulet');
    return await returnSkull();
+  }
+ }
+ // Gertrude's Cat with the kitten given inside the lumber yard needs no inputs, and no walker leaves the yard: the
+ // quest script climbs the fence itself.
+ if(quest==='fluffs'){
+  const journal=()=>questFlags(s.client)?.find(f=>f.name===QUEST_NAMES.fluffs)?.state??'unknown';
+  await waitUntil(s,()=>journal()!=='unknown',{timeoutTicks:20});
+  if(fluffsKittenGiven(journal(),st()?.inventory??[],st()?.player)){
+   console.log('QUEST_SWEEP_FLUFFS_RESUME '+JSON.stringify({state:journal(),position:{x:st()!.player!.worldX,z:st()!.player!.worldZ,level:st()!.player!.level}}));
+   observeQuestFlags(s);sustain.stop();handed=true;(s as {questReserved?:Record<number,number>}).questReserved=reservedEdible(need);await handOver(s,script,fresh);return;
   }
  }
  const here=():Tile=>{const p=st()?.player;return p?{x:p.worldX,z:p.worldZ,level:p.level}:{x:0,z:0,level:-1};};
@@ -1056,7 +1155,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
   for(const id of QUEST_KEEP[quest]??[])if(count(pack(),id)===0&&count(rows(),id)>0)p.withdraw.push({id,count:1});
   if(seekGhostSkull&&retainedGhostBankSkull(ghostState(),pack(),s.sdk.getEquipment(),rows()))p.withdraw.push({id:553,count:1});
   // A missing item a shop sells is bought after the bank: take coins for it now. Sellers rank by travel distance.
-  const ranked=(d:string,at:Tile)=>sellersByTravel(sellersByDistance(d,at),at,preset.position).map(n=>({npc:n.npc,npcId:n.npcId,tile:n.tile}));
+  const ranked=(d:string,at:Tile)=>sellersByTravel(sellersByDistance(d,at),at,preset.position,accountOf(s)).map(n=>({npc:n.npc,npcId:n.npcId,tile:n.tile}));
   const shops=(items:readonly Item[])=>shopPlan(items,here(),catalogItem,(d,at)=>ranked(d,at)[0]??null,ranked);
   // What no shop sells is gathered after the shops; a gather tool comes from the bank or a shop.
   const sellerAt=(id:number)=>{const it=catalogItem(id),n=it&&id!==COINS?ranked(it.debugname,here())[0]:null;return n?travelDistance(here(),n.tile):Infinity;};
@@ -1110,7 +1209,8 @@ export async function sweep(account:string,quest:string,fresh?:string){
   // Recipes paid in dialogue (Aggie's dyes, Wyson's woad leaves) take their coins out with the shop money, and so do the
   // two boat fares when a destination lies east of Ardougne: a plan of Wyson's woad and Aggie's blue dye alone budgets 25
   // coins, and crossEast refuses the crossing below 60.
-  shop.coins+=gather.coins+(heckelDust?HECKEL_DUST.coins:0)+fares(here(),[...shop.buys.map(b=>b.tile),preset.position,...gather.gathers.flatMap(g=>g.how==='npc'&&NPC_SOURCES[g.id]?[NPC_SOURCES[g.id]!.tile]:[])],accountOf(s));
+  shop.coins+=gather.coins+(heckelDust?HECKEL_DUST.coins:0)+fares(here(),[...shop.buys.map(b=>b.tile),preset.position,...gather.gathers.flatMap(g=>g.how==='npc'&&NPC_SOURCES[g.id]?[NPC_SOURCES[g.id]!.tile]:[])],accountOf(s))
+   +(quest==='itgronigen'&&eastOfPass(here(),accountOf(s))?BOAT_FARES:0);
   if(shop.coins){
    const take=Math.max(0,shop.coins-count(pack(),COINS)-(p.withdraw.find(w=>w.id===COINS)?.count??0));
    if(count(rows(),COINS)<take){await s.bot.closeBank();return fail(`missing ${COINS}:${take} to buy ${[...shop.buys.map(b=>b.id),...(heckelDust?[1975]:[])].join(',')}`+(shop.buys.some(b=>wornKit.wear.some(i=>i.required&&i.id===b.id))?' (required worn kit unavailable)':''));}
@@ -1178,13 +1278,14 @@ export async function sweep(account:string,quest:string,fresh?:string){
 }
 
 async function main(){
- const [account,quest]=process.argv.slice(2);
- if(!account||!quest)throw Error('usage: bun scripts/quest-sweep.ts <account> <quest>');
+ const [account,quest,optionsPath]=process.argv.slice(2);
+ if(!account||!quest)throw Error('usage: bun scripts/quest-sweep.ts <account> <quest> [api-options.json]');
+ let options:SweepApiOptions|undefined;if((quest==='tbwt'||quest==='itwatchtower')&&optionsPath){const bytes=readFileSync(optionsPath);if(bytes.length>32768)throw Error('quest sweep options file too large');let value:unknown;try{value=JSON.parse(bytes.toString('utf8'));}catch{throw Error('invalid quest sweep options JSON');}options=apiOptions(quest,value);}
  // As a bot-host entry, the quest module's finish() (plain bot.ts) reports through this entry's own finish, which
  // the host rewrites to the per-bot one; without it the quest's finish would end the whole host.
  if((globalThis as {__rsBotHost?:unknown}).__rsBotHost)finishHooks.set(account.toLowerCase(),(ok,detail)=>{void finish([],ok,detail);});
  // A unique query: in a bot host, each account runs the quest module afresh.
- await sweep(account,quest,`run=${account.toLowerCase()}-${Date.now()}`);
+ const fresh=`run=${account.toLowerCase()}-${Date.now()}`;if((quest==='tbwt'||quest==='itwatchtower')&&!optionsPath)await sweepPreset(account,quest,fresh);else await sweep(account,quest,fresh,options);
 }
 
 if(import.meta.main)await main();

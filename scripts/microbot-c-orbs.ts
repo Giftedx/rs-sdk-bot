@@ -1,3 +1,4 @@
+import {existsSync} from 'node:fs';
 import {openBot,settle} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
@@ -11,7 +12,7 @@ type Assets={raw:number;product:number;cosmic:number;element:number;xp:number};
 export function orbEffect(a:Assets,b:Assets,elementCost=30){return a.raw-b.raw===1&&b.product-a.product===1&&a.cosmic-b.cosmic===3&&a.element-b.element===elementCost&&b.xp>a.xp;}
 // Staged consumer: stand at selected obelisk with unpowered orbs and runes.
 // Native equipped elemental staves substitute their rune at slot 3.
-export async function chargeInventory(s:Session,kind:OrbKind,maximum:number,cap:number,stop:()=>boolean=()=>false){
+export async function chargeInventory(s:Session,kind:OrbKind,maximum:number,cap:number,stop:()=>boolean=()=>false,scopedBridge?:()=>()=>void){
  if(!Object.hasOwn(orbRecipes,kind)||!Number.isSafeInteger(maximum)||maximum<1||!Number.isSafeInteger(cap)||cap<1)throw Error('invalid orb order');
  const r=orbRecipes[kind],start=s.tick(),count=(id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
  const assets=():Assets=>({raw:count(567),product:count(r.output),cosmic:count(564),element:count(r.rune),xp:s.sdk.getSkillXp('Magic')??0});
@@ -22,7 +23,7 @@ export async function chargeInventory(s:Session,kind:OrbKind,maximum:number,cap:
  try{
   if((s.sdk.getSkill('Magic')?.baseLevel??0)<r.level)throw Error('orb magic level short');
   if(initial.raw<maximum||initial.cosmic<maximum*3||initial.element<maximum*elementCost())throw Error('staged orb supplies short');
-  restore=installSpellLocBridge(s.client);
+  restore=scopedBridge?scopedBridge():installSpellLocBridge(s.client);
   while(made<maximum&&!over()){
    const loc=s.sdk.getState()?.nearbyLocs.find(l=>l.id===r.loc);
    if(!loc)throw Error('required obelisk not nearby');
@@ -37,11 +38,13 @@ export async function chargeInventory(s:Session,kind:OrbKind,maximum:number,cap:
  const final=assets(),preserved=[...protectedItems].every(([id,n])=>count(id)===n);
  detail ||= life.reason();return{ok:!detail&&preserved&&made===maximum,made,preserved,ticks:s.tick()-start,detail,initial,final};
 }
+export function orbStopRequested(name:string,stopped=false,exists:(path:string)=>boolean=existsSync,stopFile=process.env.STOP_FILE){return stopped||['.practice/stop-'+name,'.practice/stop-all','.practice/stop-microbot-orbs',stopFile].some(path=>!!path&&exists(path));}
 if(import.meta.main){
- const name=process.argv[2]??'',kind=process.argv[3] as OrbKind,maximum=Number(process.argv[4]??1),cap=Number(process.argv[5]??80);
+ const name=process.argv[2]??'',kind=process.argv[3] as OrbKind,maximum=Number(process.argv[4]??1),cap=Number(process.argv[5]??(process.env.ORB_TRIP==='1'?6000:80));
  if(!name||!Object.hasOwn(orbRecipes,kind)||!Number.isSafeInteger(maximum)||maximum<1||!Number.isSafeInteger(cap)||cap<1)throw Error('Usage (members world): bun scripts/microbot-c-orbs.ts <account> <air|water|earth|fire> [quantity] [ticks]');
  let stopped=false;process.once('SIGINT',()=>{stopped=true;});process.once('SIGTERM',()=>{stopped=true;});
+ const stop=()=>orbStopRequested(name,stopped);
  const s=await openBot(name);let ok=false;
- try{const result=await chargeInventory(s,kind,maximum,cap,()=>stopped);console.log('ORB_RESULT '+JSON.stringify(result));ok=result.ok;}
+ try{const result=process.env.ORB_TRIP==='1'?await (await import('./microbot-orb-trip')).runOrbTrips(s,kind,orbRecipes[kind],chargeInventory,{target:maximum,batch:Number(process.env.ORB_BATCH??1),cap,stop,...(await import('./microbot-orb-trip')).orbOptions()}):await chargeInventory(s,kind,maximum,cap,stop);console.log('ORB_RESULT '+JSON.stringify(result));ok=result.ok;}
  finally{ok=await settle([s],ok,'finite orb order');}process.exitCode=ok?0:1;
 }

@@ -64,12 +64,15 @@ const near=(s:Save,t:{x:number;z:number},range:number)=>s.position.level===0&&Ma
 export function bloodResult(log:string){try{return JSON.parse(log.split(/\r?\n/).filter(l=>l.startsWith('BLOOD_CHEST_RESULT ')).at(-1)?.slice(19)??'null');}catch{return null;}}
 const cases=['entry','stranded','exit','refusal'] as const;
 type Case=typeof cases[number];
+const looting=(kind:Case)=>kind==='entry'||kind==='stranded';
 export function bloodSaveChecks(before:Save,after:Save,result:any,kind:Case){
  const raw=(s:Save)=>s.skills[THIEVING]!.rawExperience,runes=count(after,95,BLOOD_RUNE)-count(before,95,BLOOD_RUNE),coins=total(after,COINS)-total(before,COINS);
  const packCoins=count(before,93,COINS),ids=new Set([...Object.values(before.inventories).flat(),...Object.values(after.inventories).flat()].map(i=>i.id));
- const looted=kind==='entry'||kind==='stranded',moved=kind!=='refusal',stranded=kind==='stranded';
+ const looted=looting(kind),moved=kind!=='refusal',stranded=kind==='stranded';
  const packRunes=count(before,93,BLOOD_RUNE),bankedRunes=count(before,95,BLOOD_RUNE);
  const rise=(i:number)=>after.skills[i]!.rawExperience-before.skills[i]!.rawExperience,damage=rise(ATTACK)/ATTACK_DAMAGE_RAW_XP;
+ // A looting case eats its carried food on the surface before a trip, so that food may fall by the reported meals only.
+ const food=stranded?379:looted?CAKE:undefined,meals=result?.meals??0;
  return{
   entry:near(before,stranded?STRANDED:kind==='exit'?STAGE:ARRIVAL,0)&&before.skills[THIEVING]!.level===(kind==='refusal'?58:99)
    &&(stranded?before.skills[3]!.level===32&&count(before,93,379)===26&&count(before,95,379)===74&&packRunes===6&&bankedRunes===12&&packCoins===1500:count(before,93,CAKE)===3&&packRunes===0&&packCoins>0),
@@ -82,8 +85,8 @@ export function bloodSaveChecks(before:Save,after:Save,result:any,kind:Case){
    &&(!moved||(result?.loots===(looted?2:0)&&result?.runes===(looted?4:0)&&result?.coins===coins&&result?.bankedRunes===runes&&result?.bankedCoins===packCoins+coins)),
   // The stranded case starts below the door, so its first loot needs no entry.
   xp:looted?Number.isSafeInteger(result?.entries)&&result.entries>=(stranded?1:2)&&raw(after)-raw(before)===thievingRawXp(2,result.entries):raw(after)===raw(before),
-  assets:[...ids].every(id=>id===BLOOD_RUNE||id===COINS||(stranded&&id===379?Number.isSafeInteger(result?.meals)&&result.meals>=0&&total(before,id)-total(after,id)===result.meals:total(before,id)===total(after,id)))
-   &&[93,94].every(inv=>(before.inventories[inv]??[]).filter(i=>i.id!==COINS&&!(moved&&i.id===BLOOD_RUNE)&&!(stranded&&inv===93&&i.id===379)).every(i=>count(before,inv,i.id)===count(after,inv,i.id))),
+  assets:[...ids].every(id=>id===BLOOD_RUNE||id===COINS||(id===food?Number.isSafeInteger(meals)&&meals>=0&&total(before,id)-total(after,id)===meals:total(before,id)===total(after,id)))
+   &&[93,94].every(inv=>(before.inventories[inv]??[]).filter(i=>i.id!==COINS&&!(moved&&i.id===BLOOD_RUNE)&&!(inv===93&&i.id===food)).every(i=>count(before,inv,i.id)===count(after,inv,i.id))),
   // A case that moves can hit an NPC in the dungeon. Attack and Hitpoints must then rise as the same whole damage.
   skills:before.skills.every((s,i)=>i===THIEVING||(moved&&(i===ATTACK||i===HITPOINTS))||after.skills[i]?.rawExperience===s.rawExperience)
    &&Number.isSafeInteger(damage)&&damage>=0&&rise(HITPOINTS)===damage*HITPOINTS_DAMAGE_RAW_XP,
@@ -91,14 +94,14 @@ export function bloodSaveChecks(before:Save,after:Save,result:any,kind:Case){
  };
 }
 export function bloodChildChecks(code:number,timedOut:boolean,log:string,kind:Case){
- const looted=kind==='entry'||kind==='stranded';
+ const looted=looting(kind);
  return{exit:!timedOut&&(looted?code===0:code!==0),logout:(log.match(/^LOGOUT logged-out\r?$/gm)??[]).length===1&&!/^WARN .*?(logout|session close)/m.test(log),
   result:looted?/^RESULT ok /m.test(log):/^RESULT fail /m.test(log)};
 }
 // The route facts that the work order leaves to practice, read from the worker log.
+const rows=(log:string,tag:string)=>log.split(/\r?\n/).filter(l=>l.startsWith(tag+' ')).map(l=>{try{return JSON.parse(l.slice(tag.length+1));}catch{return null;}});
 export function bloodObservations(log:string){
- const rows=(tag:string)=>log.split(/\r?\n/).filter(l=>l.startsWith(tag+' ')).map(l=>{try{return JSON.parse(l.slice(tag.length+1));}catch{return null;}});
- return{trips:rows('BLOOD_TRIP'),loots:rows('BLOOD_LOOT'),banks:rows('BLOOD_BANK')};
+ return{trips:rows(log,'BLOOD_TRIP'),loots:rows(log,'BLOOD_LOOT'),banks:rows(log,'BLOOD_BANK')};
 }
 export function verifyBlood(directory:string){
  const meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8'));
@@ -121,7 +124,8 @@ export function verifyBlood(directory:string){
 }
 // The Moneyshot profile: Thieving 99, Attack 72, Hitpoints 56, combat 37, slices of cake and coins carried.
 const preset=(id:Case):SaveConfig=>({position:{...(id==='exit'?STAGE:ARRIVAL),level:0},skills:{Thieving:id==='refusal'?58:99,Attack:72,Hitpoints:56,Agility:60},
- inventory:[{id:CAKE,count:3},{id:COINS,count:40}],bank:[{id:COINS,count:1000},{id:314,count:7}]});
+ // Slice of cake is not stackable, so each one takes its own slot.
+ inventory:[...Array.from({length:3},()=>({id:CAKE,count:1})),{id:COINS,count:40}],bank:[{id:COINS,count:1000},{id:314,count:7}]});
 export function bloodProofPreset(id:Case):SaveConfig{
  if(id!=='stranded')return preset(id);
  return{position:{...STRANDED,level:0},skills:{Thieving:99,Attack:62,Defence:10,Strength:12,Hitpoints:47,Agility:1},
