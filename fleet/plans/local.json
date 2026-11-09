@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794184678894,
+ "at": 1794185240819,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -90,25 +90,44 @@
   },
   {
    "account": "mmsmk1232",
-   "script": "scripts/gather-feathers.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "PEN": "3187,3277",
-    "TICKS": "3000"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
-   "role": "helper",
-   "template": "feathers@3187,3277",
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "pen:3187,3277"
+    "knight:2582,3297"
    ]
   },
   {
    "account": "mmtha0205",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
+   ]
+  },
+  {
+   "account": "NabTheKnob",
    "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
@@ -169,18 +188,18 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
+    "KNIGHT_SPOT": "2653,3300",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
+   "goal": "goldfarm knights at 2653,3300",
    "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "knight:2653,3300"
    ]
   },
   {
