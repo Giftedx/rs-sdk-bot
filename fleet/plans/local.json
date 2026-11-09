@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794198798957,
+ "at": 1794199408040,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -367,27 +367,6 @@
    "role": "supply"
   },
   {
-   "account": "Ballspinner",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "1775",
-    "QUANTITY": "1",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "3000",
-    "CASH_RESERVE": "240000",
-    "ORDER_KEY": "ballspinner-observatory-molten-glass1",
-    "FILL_WAIT_TICKS": "30",
-    "ORDER_MS": "240000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-2fa462d6-83fe-498b-8be2-ff6a051267a1"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-ballspinner-molten-glass1 [task-2fa462d6-83fe-498b-8be2-ff6a051267a1]",
-   "role": "supply"
-  },
-  {
    "account": "Magicwanda",
    "script": "scripts/quest-sweep.ts",
    "args": [
@@ -400,6 +379,27 @@
    "enabled": false,
    "repeat": false,
    "goal": "run-fluffs-magicwanda-own-sardine [task-a1509c05-926c-44bb-a4d7-e6fa58dd27ca]",
+   "role": "supply"
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "536",
+    "QUANTITY": "4",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "11000",
+    "CASH_RESERVE": "239000",
+    "ORDER_KEY": "ballspinner-dragonbones4-glass-gate",
+    "FILL_WAIT_TICKS": "30",
+    "ORDER_MS": "240000",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-678f03a0-b9e0-4696-9b38-2bfc455ce567"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-ge-ballspinner-dragonbones4-glass-gate [task-678f03a0-b9e0-4696-9b38-2bfc455ce567]",
    "role": "supply"
   }
  ]
