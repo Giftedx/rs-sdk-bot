@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794218930654,
+ "at": 1794219543448,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -32,6 +32,22 @@
    "standing": true,
    "repeat": false,
    "goal": "rune arrows (826 short) from headless arrows and rune arrowtips",
+   "role": "supply"
+  },
+  {
+   "account": "Magicwanda",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/goldfarm.ts KNIGHT_SPOT=2669,3298"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "RUN": "2"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Thieving 55, then coins from Ardougne knights",
    "role": "supply"
   },
   {
@@ -88,18 +104,15 @@
   },
   {
    "account": "Mightyrod",
-   "script": "scripts/chain.ts",
+   "script": "scripts/pk-live/live-pilot.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=10 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=mightyrod-law10 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/pk-live/live-pilot.ts 10 20"
+    "15",
+    "20"
    ],
-   "env": {
-    "ROUNDS": "1"
-   },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "Buy 10 law runes on the GE for Varrock Teleport escapes, then a 10-minute PK pilot at Wilderness 20 or less",
+   "repeat": true,
+   "goal": "PK hunts of 15 minutes at Wilderness 20 or less; Varrock Teleport escapes from 9 owned law runes",
    "role": "pk"
   },
   {
@@ -404,21 +417,6 @@
    "role": "supply"
   },
   {
-   "account": "Magicwanda",
-   "script": "scripts/quest-sweep.ts",
-   "args": [
-    "fluffs"
-   ],
-   "env": {
-    "CAP": "6000",
-    "COORDINATOR_RUN_ID": "task-0f829572-d37c-4c26-8d97-1d1932256be2"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-fluffs-magicwanda-yard-exit [task-0f829572-d37c-4c26-8d97-1d1932256be2]",
-   "role": "supply"
-  },
-  {
    "account": "Woodpecker",
    "script": "scripts/buy-owned-ge-item.ts",
    "args": [],
@@ -434,7 +432,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-ba7ddac9-17e0-497c-a16c-321de8f810d5"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-ge-woodpecker-sharks30-blood-food [task-ba7ddac9-17e0-497c-a16c-321de8f810d5]",
    "role": "helper"
