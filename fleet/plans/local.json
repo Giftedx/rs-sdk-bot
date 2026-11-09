@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794207942170,
+ "at": 1794208551968,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -154,21 +154,21 @@
   },
   {
    "account": "mmtha0205",
-   "script": "scripts/gather-feathers.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "PEN": "3187,3277",
-    "TICKS": "3000"
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
-   "role": "helper",
-   "template": "feathers@3187,3277",
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
    "resources": [
-    "pen:3187,3277"
+    "knight:2653,3300"
    ]
   },
   {
