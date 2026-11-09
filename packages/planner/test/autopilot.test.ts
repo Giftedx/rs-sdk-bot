@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { CAPACITY, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs } from '../src/autopilot';
+import { CAPACITY, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -249,6 +249,24 @@ test('the claim lists every spot, pen and shop the enabled jobs of this side hol
     expect(claimFor([], side, () => side, 5).resources).toEqual([]);
     // Only a job with an active account holds its resources: a parked job's spot is free for the other sides.
     expect(claimFor(jobs, side, a => a === 'Quickhandjob' ? 'cloud' : side, 1234, a => a === 'Pocketpython' || a === 'Hocuspokeus').resources).toEqual(['knight:2582,3297', 'pen:3017,3288']);
+});
+
+test('an account the coordinator is recovering keeps its own job in the claim; other coordinator work does not', () => {
+    const own = [
+        { account: 'Kiltlifter', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2671,3313' }, enabled: true, autopilot: side, resources: ['knight:2671,3313'] },
+        { account: 'SporranDip', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2652,3318' }, enabled: true, autopilot: side, resources: ['knight:2652,3318'] },
+        { account: 'Knightstick', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2669,3298' }, enabled: true, autopilot: side, resources: ['knight:2669,3298'] },
+    ];
+    const coord = [
+        { account: 'Kiltlifter', script: 'scripts/session-check.ts', enabled: false, coordinatorOwner: 'coordinator' },
+        { account: 'Knightstick', script: 'scripts/generated/quest-cook.ts', enabled: true, coordinatorOwner: 'coordinator' },
+    ];
+    expect(recoveringOwnerJobs(own, coord).map(j => j.account)).toEqual(['Kiltlifter']);
+    expect(recoveringOwnerJobs(own, [{ ...coord[0], script: './scripts/session-check.ts' }]).map(j => j.account)).toEqual(['Kiltlifter']);
+    expect(recoveringOwnerJobs(own, [])).toEqual([]);
+    // The merged plan drops both shadowed jobs; adding the recovering one back keeps only Kiltlifter's place.
+    const merged = [own[1]!, ...coord];
+    expect(claimFor([...merged, ...recoveringOwnerJobs(own, coord)], side, () => side, 1).resources).toEqual(['knight:2652,3318', 'knight:2671,3313']);
 });
 
 test('a marked reservation opts its account in, and planning replaces it with an enabled job', () => {

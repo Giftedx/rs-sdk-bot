@@ -306,6 +306,18 @@ export function claimFor(jobs: readonly any[], side: string, sideOf: (account: s
     return { side, at: now, resources: held.sort() };
 }
 
+// A recovery the coordinator runs for an account (scripts/session-check.ts, coordinatorOwner "coordinator") shadows that
+// account's own job in the merged plan (packages/core/src/coordinator-jobs.ts mergeJobs). The account returns to its own
+// job, so the side's claim keeps that job's places while the recovery runs; without them the other sides see the places
+// free and fill them. Other coordinator work keeps the merged plan's claim.
+export const RECOVERY_JOB_SCRIPT = 'scripts/session-check.ts';
+export function recoveringOwnerJobs(ownerJobs: readonly any[], coordinatorJobs: readonly any[]): any[] {
+    const script = (j: any) => String(j?.script ?? '').replace(/\\/g, '/').replace(/^\.\//, '');
+    const recovering = new Set(coordinatorJobs.filter(j => j?.coordinatorOwner === 'coordinator' && script(j) === RECOVERY_JOB_SCRIPT)
+        .flatMap(jobNames).map(a => a.toLowerCase()));
+    return ownerJobs.filter(j => j?.enabled !== false && jobNames(j).length > 0 && jobNames(j).every(a => recovering.has(a.toLowerCase())));
+}
+
 // A marked job whose account is in `keep` (an owner pause: a stop file) stays as it is, with its enabled and repeat
 // settings, so lifting the pause later resumes that job instead of handing the account a fresh enabled one.
 export function mergeJobs(jobs: readonly any[], side: string, out: readonly Assignment[], keep: ReadonlySet<string> = new Set()): { jobs: any[]; fresh: string[] } {
