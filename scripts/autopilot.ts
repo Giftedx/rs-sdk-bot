@@ -156,6 +156,13 @@ function originClaims(fleetDir: string): any[] {
     });
 }
 
+// The side's army roster: the plan's `army` array of account names (README "Claude Code cloud fleet side"). Only these
+// accounts take the planner's goal bands (combat training toward the PK army); Haggis never does.
+export function armyRoster(plan: any): Set<string> {
+    const names = Array.isArray(plan?.army) ? plan.army.filter((n: unknown): n is string => typeof n === 'string') : [];
+    return new Set(names.map((n: string) => n.toLowerCase()).filter((n: string) => n !== 'haggis'));
+}
+
 export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): string[] {
     if (!dry && isPaused()) return [PAUSED];
     const side = mySide(), owners = loadOwners(), swarm = readJson(planFile, null);
@@ -222,7 +229,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     }
     const donors = listed.filter(n => owners.get(n.toLowerCase())?.side === side && n.toLowerCase() !== 'haggis' && ![busy, keep, open].some(s => s.has(n.toLowerCase())))
         .map(n => ({ name: n, coins: accountFrom(n, side, observed(n), id => byId.get(id)).items.coin ?? 0 })).filter(d => d.coins > 0);
-    const planned = plan({ side, accounts, owners, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])) });
+    const planned = plan({ side, accounts, owners, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm) });
     const funding = fundOrders(planned, open, (from, to, coins) => coinOrder(from, to, coins, owners.get(to.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev', now));
     const out = funding.assignments;
     log.push(...funding.log);

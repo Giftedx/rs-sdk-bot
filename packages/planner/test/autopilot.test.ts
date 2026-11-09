@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { CAPACITY, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs } from '../src/autopilot';
+import { CAPACITY, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -339,4 +339,26 @@ test('a run the gateway dropped is a drain, not a failure: two drains keep the j
     expect(assess([drain, drain])).toMatchObject({ retire: false, ok: 0, fail: 0, drains: 2 });
     expect(assess(['RESULT fail no chickens', drain, 'RESULT fail no chickens'])).toMatchObject({ retire: true, fail: 2, drains: 1 });
     expect(assess(['RESULT fail no chickens', drain, 'RESULT ok feathers=30 gained=30'])).toMatchObject({ retire: false, ok: 1, fail: 1, drains: 1 });
+});
+
+test('goal bands go only to army accounts, before any coin job, earliest band first and nearest target first', () => {
+    const band = (id: string, n: number, skill: string, to: number, extra: Partial<Template> = {}): Template => ({ id, family: 'combat-train', script: 'scripts/gather-combat.ts', role: 'combat',
+        goal: `${skill} to ${to}`, tier: 'goal', band: n, trains: { skill, to, unlocks: [] }, yields: () => [], resources: ['giant:edge'], ...extra });
+    const bands = [band('str60', 0, 'Strength', 60), band('att60', 1, 'Attack', 60)];
+    const farm = catalogue().filter(t => t.family === 'goldfarm');
+    const thief = (name: string, skills: Record<string, number> = {}) => acct(name, { Thieving: 99, ...skills });
+    const army = new Set(['nearer', 'farther']);
+    const run = (accounts: Acct[], extra: Partial<Inputs> = {}) => ids(plan(inputs(accounts, { templates: [...bands, ...farm], army, capacity: { 'giant:edge': 1 }, ...extra })));
+    // An army account trains even though goldfarm pays coins; a specialist off the roster keeps farming.
+    expect(run([thief('Nearer'), thief('Specialist')])).toEqual({ Nearer: 'str60', Specialist: expect.stringMatching(/^goldfarm@/) });
+    // One giant place, shared by both bands: the account nearest its band target takes it, and the other, with no free
+    // band left, falls to the coin tier rather than idling.
+    expect(run([thief('Nearer', { Strength: 50 }), thief('Farther', { Strength: 10 })])).toEqual({ Nearer: 'str60', Farther: expect.stringMatching(/^goldfarm@/) });
+    // A met band is skipped: Strength 60 goes on to Attack.
+    expect(run([thief('Nearer', { Strength: 60 })])).toEqual({ Nearer: 'att60' });
+    // Kit money: a band an account cannot pay for is funded by a donor of its side, or left to the coin tier.
+    const kit = [band('str60', 0, 'Strength', 60, { needs: { items: { coins: 100_000 } } })];
+    expect(ids(plan(inputs([thief('Nearer')], { templates: [...kit, ...farm], army })))).toEqual({ Nearer: expect.stringMatching(/^goldfarm@/) });
+    const funded = plan(inputs([thief('Nearer')], { templates: [...kit, ...farm], army, donors: [{ name: 'Bank', coins: 1_000_000 }] }));
+    expect(funded[0]).toMatchObject({ template: { id: 'str60' }, fund: { from: 'Bank', to: 'Nearer', coins: 100_000 } });
 });

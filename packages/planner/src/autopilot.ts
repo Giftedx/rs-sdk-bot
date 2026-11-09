@@ -18,6 +18,9 @@ export type Template = {
     needs?: { skills?: Record<string, number>; items?: Record<string, number> };
     yields: (a: Acct) => Flow[]; spends?: (a: Acct) => Flow[];
     resources?: string[]; trains?: { skill: string; to: number; unlocks: string[] };
+    // A goal band (AGENTS.md goals: the PK army of maxed tribrids) trains an army account toward its target and is
+    // assigned before any coin job; `band` orders the bands by PK value, lowest first. Gold only buys their kits.
+    tier?: 'goal'; band?: number;
 };
 // `fund`: the template needs coins the account lacks; a donor of this side sends them first (scripts/autopilot.ts
 // places the fleet order), and the account takes the job on the pass after the coins arrive.
@@ -36,6 +39,9 @@ export type Inputs = {
     // Lower-case names of accounts with an enabled job. Funding one would remove its running job, and the stop file
     // scripts/swarm.ts writes for it would block the trade, so such an account is never funded.
     unfundable?: ReadonlySet<string>;
+    // Lower-case names of the accounts on this side's army roster: only they take goal bands. A specialist's board
+    // time counts every tick it plays, so combat training is opt-in per account, never global.
+    army?: ReadonlySet<string>;
 };
 export const FUND_RESERVE = 50_000;
 
@@ -70,10 +76,19 @@ export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'price
 export function plan(inp: Inputs): Assignment[] {
     const byId = new Map(inp.templates.map(t => [t.id, t]));
     const mine = inp.accounts.filter(a => (inp.owners.get(a.name.toLowerCase())?.side ?? 'local') === inp.side && a.side === inp.side);
-    type Cand = { account: string; template: Template; value: number; resources: string[]; reason: string; coins?: number };
+    type Cand = { account: string; template: Template; value: number; resources: string[]; reason: string; coins?: number; goal?: { band: number; left: number } };
     const cands: Cand[] = [];
     for (const a of mine) for (const t of inp.templates) {
         if (inp.retired?.has(pairKey(a.name, t.id))) continue;
+        if (t.tier === 'goal') {
+            // One candidate per goal band whose target an army account has not met; never for anyone else.
+            if (!inp.army?.has(a.name.toLowerCase()) || !t.trains || (a.skills[t.trains.skill] ?? 1) >= t.trains.to) continue;
+            const goal = { band: t.band ?? 0, left: t.trains.to - (a.skills[t.trains.skill] ?? 1) }, reason = `army band ${goal.band}: ${t.trains.skill} to ${t.trains.to}`;
+            if (meets(a, t.needs)) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal });
+            else if (inp.donors?.length && !inp.unfundable?.has(a.name.toLowerCase()) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs)))
+                cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, coins: coinShort(a, t.needs) });
+            continue;
+        }
         if (t.trains) {
             if ((a.skills[t.trains.skill] ?? 1) >= t.trains.to || !meets(a, t.needs)) continue;
             const trained: Acct = { ...a, skills: { ...a.skills, [t.trains.skill]: t.trains.to } };
@@ -103,22 +118,29 @@ export function plan(inp: Inputs): Assignment[] {
     // Donor coins above the reserve, spent as funded candidates take them; a funded account gives nothing.
     // A donor that gives stays free this pass, so the fleet agent can log it in for the trade.
     const pool = new Map((inp.donors ?? []).map(d => [d.name, Math.max(0, d.coins - FUND_RESERVE)])), gave = new Set<string>();
-    // Re-sorted after every assignment: one more holder lowers the worth of the candidates that share its resource.
-    for (const rest = [...cands]; rest.length;) {
-        rest.sort(order);
-        const c = rest.shift()!;
-        if (done.has(c.account) || gave.has(c.account) || c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) continue;
-        const value = worth(c);
+    const take = (c: Cand, value: number) => {
+        if (done.has(c.account) || gave.has(c.account) || c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
         let fund: Funding | undefined;
         if (c.coins) {
             const from = [...pool].filter(([n, left]) => n.toLowerCase() !== c.account.toLowerCase() && !done.has(n) && left >= c.coins!).sort((x, y) => y[1] - x[1])[0]?.[0];
-            if (!from) continue;
+            if (!from) return;
             pool.set(from, pool.get(from)! - c.coins); gave.add(from);
             fund = { from, to: c.account, coins: c.coins, template: c.template.id };
         }
         pool.delete(c.account);
         for (const r of c.resources) used.set(r, (used.get(r) ?? 0) + 1);
         done.set(c.account, { account: c.account, template: c.template, value, reason: fund ? `${c.reason}, funded ${c.coins} coins by ${fund.from}` : c.reason, resources: c.resources, ...(fund ? { fund } : {}) });
+    };
+    // The goal tier first: each army account takes the earliest band it can (a full band's resource sends it to the
+    // next), the account nearest its target first; it never competes with coin jobs on coins per tick.
+    const goalOrder = (x: Cand, y: Cand) => x.goal!.band - y.goal!.band || x.goal!.left - y.goal!.left || keeps(y) - keeps(x) || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id);
+    for (const c of cands.filter(c => c.goal).sort(goalOrder)) take(c, 0);
+    // The coin tier, re-sorted after every assignment: one more holder lowers the worth of the candidates that share
+    // its resource.
+    for (const rest = cands.filter(c => !c.goal); rest.length;) {
+        rest.sort(order);
+        const c = rest.shift()!;
+        take(c, worth(c));
     }
     return mine.map(a => done.get(a.name) ?? { account: a.name, value: 0, resources: [], reason: gave.has(a.name) ? 'vacant: gives coins this pass' : 'vacant: no template meets its skills and holdings with a free resource' });
 }
