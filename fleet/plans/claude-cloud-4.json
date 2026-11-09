@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud-4",
- "at": 1794196566765,
+ "at": 1794197169433,
  "jobs": [
   {
    "account": "Dipstick",
@@ -23,29 +23,41 @@
   },
   {
    "account": "Fingersmith",
-   "script": "scripts/session-check.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-8f3c6be6-98b8-4438-8397-5f25473d68e9"
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
    },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-4-recover-fingersmith-20261109t035147z [task-8f3c6be6-98b8-4438-8397-5f25473d68e9]",
-   "role": "thieving"
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "claude-cloud-4",
+   "resources": [
+    "knight:2652,3318"
+   ]
   },
   {
    "account": "KnightRider",
-   "script": "scripts/session-check.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-365785aa-81e2-4582-92fd-0274ff7b6491"
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
    },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-4-recover8-knightrider [task-365785aa-81e2-4582-92fd-0274ff7b6491]",
-   "role": "thieving"
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "claude-cloud-4",
+   "resources": [
+    "knight:2653,3300"
+   ]
   }
  ]
 }
