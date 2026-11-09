@@ -15,7 +15,8 @@ export type Acct = { name: string; side: string; skills: Record<string, number>;
 export type Flow = { item: string; perTick: number };
 export type Template = {
     id: string; family: string; script: string; args?: string[]; env?: Record<string, string>; role: string; goal: string;
-    needs?: { skills?: Record<string, number>; items?: Record<string, number> };
+    // `under`: holdings that end the job at once. The account must hold fewer, or the run finds its target met and fails.
+    needs?: { skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number> };
     yields: (a: Acct) => Flow[]; spends?: (a: Acct) => Flow[];
     resources?: string[]; trains?: { skill: string; to: number; unlocks: string[] };
 };
@@ -56,7 +57,8 @@ export function unitValue(item: string, bill: readonly BillRow[], prices: Readon
 
 const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: string; to: number }) =>
     Object.entries(needs?.skills ?? {}).every(([s, l]) => (skillOverride?.skill === s ? Math.max(skillOverride.to, a.skills[s] ?? 1) : a.skills[s] ?? 1) >= l)
-    && Object.entries(needs?.items ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n);
+    && Object.entries(needs?.items ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n)
+    && Object.entries(needs?.under ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) < n);
 // The coins a template needs beyond what the account holds, and its needs without the coin line.
 const coinShort = (a: Acct, needs: Template['needs']) => Math.max(0, (Object.entries(needs?.items ?? {}).find(([i]) => norm(i) === 'coin')?.[1] ?? 0) - (a.items.coin ?? 0));
 const withoutCoins = (needs: Template['needs']): Template['needs'] => ({ ...needs, items: Object.fromEntries(Object.entries(needs?.items ?? {}).filter(([i]) => norm(i) !== 'coin')) });
@@ -180,6 +182,8 @@ export function assess(lines: readonly string[]): { retire: boolean; reason: str
 export const knightCoinsPerTick = (thieving: number) => thieving < 55 ? 0 : 18.8 * (50 + 190 * (Math.min(99, thieving) - 1) / 98) / 240;
 export const KNIGHT_SPOTS = ['2652,3318', '2653,3300', '2669,3298', '2671,3313', '2582,3297'];
 export const CHICKEN_PENS = ['3229,3298', '3017,3288', '3187,3277', '3197,3353'];
+// scripts/gather-feathers.ts stops when its pack holds TARGET feathers.
+export const FEATHER_TARGET = 2000;
 // Claim: four farmers can share one knight spot. A pickpocket does not hold the knight. Practice: 4 bots at one spot
 // each earned 13.3-15.1 coins per tick (mean 14.7) against the 18.8 model, every run RESULT ok and logged out
 // (goldfarm.ts at its default spot 2653,3302, 3 runs of 600 ticks and one of 9,000; research/bot-host.md section 3).
@@ -203,8 +207,8 @@ export function catalogue(): Template[] {
         { id: 'thieving55', family: 'thieving60', script: 'scripts/generated/thieving60.ts', env: { TARGET: '55', CAP: '2500', CLEAN_FOOD: '1' }, role: 'thieving',
             goal: 'train Thieving to 55 for a knight spot', trains: { skill: 'Thieving', to: 55, unlocks: goldfarm.map(g => g.id) }, yields: () => [] },
         ...CHICKEN_PENS.map((pen): Template => ({
-            id: `feathers@${pen}`, family: 'gather-feathers', script: 'scripts/gather-feathers.ts', env: { PEN: pen, TICKS: '3000' }, role: 'helper',
-            goal: `feathers at the chicken pen ${pen}`, resources: [`pen:${pen}`],
+            id: `feathers@${pen}`, family: 'gather-feathers', script: 'scripts/gather-feathers.ts', env: { PEN: pen, TICKS: '3000', TARGET: String(FEATHER_TARGET) }, role: 'helper',
+            goal: `feathers at the chicken pen ${pen}`, resources: [`pen:${pen}`], needs: { under: { feather: FEATHER_TARGET } },
             // chicken.rs2: 15 feathers 1/4, 5 feathers 1/4 -> 5 a kill; about one kill and pickup per 16 ticks.
             yields: () => [{ item: 'feather', perTick: 0.3 }],
         })),
