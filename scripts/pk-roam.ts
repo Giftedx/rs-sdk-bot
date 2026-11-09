@@ -217,9 +217,10 @@ export function sweep(maxWild: number): { x: number; z: number }[] {
 
 type Item = { id: number; name: string; slot?: number };
 // Fight kit for scripts/pk.ts: melee wields the worn weapon and shield, ranged a carried bow (RANGED, default any bow),
-// magic a carried staff. Magic with no staff casts with whatever is wielded (an empty list switches nothing).
+// magic a carried staff. A style is present only when the account carries its weapon: fightPlayer skips a style
+// with an empty kit (pk.ts hasStyle), so no damage spell is ever cast with a melee weapon wielded.
 export function kitFrom(worn: readonly Item[], carried: readonly Item[], ranged = /bow$/i): Kit {
-    const kit: Kit = { magic: [] };
+    const kit: Kit = {};
     const melee = worn.filter(i => i.slot === 3 || i.slot === 5).filter(i => !ranged.test(i.name) && !/staff/i.test(i.name)).map(i => i.id);
     if (melee.length) kit.melee = melee;
     const bow = [...worn, ...carried].find(i => ranged.test(i.name));
@@ -455,7 +456,9 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 const fight = await fightPlayer(session, name, {
                     // eatAt is a percentage here and an HP value in fightPlayer. Live, a 26 HP account given 50 ate a shark every
                     // 3 ticks at full HP.
-                    kit, freeze: freezeNow() !== null && freezeNow() === freezeSpell(magic), eatAt: Math.ceil((me()?.maxHp ?? 99) * cfg.eatAt / 100), exitOnDanger: true,
+                    // No freeze here: the chase already cast one with bot.castSpell above; a second freeze inside
+                    // fightPlayer would land on a held target ("already held") and waste the turn.
+                    kit, freeze: false, eatAt: Math.ceil((me()?.maxHp ?? 99) * cfg.eatAt / 100), exitOnDanger: true,
                     escapeAt: Math.ceil((me()?.maxHp ?? 99) * cfg.fleeAt / 100), damageSpell: cfg.spell.toUpperCase() === 'AUTO' ? bestFireSpell(magic, sdk.getInventory()) : spellId(cfg.spell), cap: 12,
                     log: line => emit({ e: "fight", line }),
                 });

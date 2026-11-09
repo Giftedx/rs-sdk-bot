@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { attackable, bestFood, dangerReason, estMaxHit, freezeSpell, killMessage, lowHealth, nextStyle, nextTick, observePlayer, protectedStyles, skulled, SPELLS, weaponStyle, wildernessLevel } from './pk';
+import { attackable, bestFood, dangerReason, estMaxHit, freezeSpell, hasStyle, killMessage, lowHealth, nextStyle, nextTick, observePlayer, protectedStyles, skulled, SPELLS, weaponStyle, wildernessLevel } from './pk';
 
 test('Wilderness level follows wilderness_levels.rs2: surface from z 3520, the dungeon from z 9920', () => {
     expect(wildernessLevel(3519)).toBe(0);
@@ -103,6 +103,16 @@ test('dangerReason: no food near the max hit, a pile, a lost damage race, no pra
     expect(dangerReason(race)).toMatch(/losing the race/);
     expect(dangerReason({ ...race, hp: 60 })).toBeNull(); // still over 60%
     expect(dangerReason({ ...base, prayer: 0, hp: 49 })).toMatch(/no prayer/);
+});
+
+test('a style is usable only with a non-empty kit, so an empty magic list wastes no turn', () => {
+    expect(hasStyle({ magic: [] }, 'magic')).toBe(false);
+    expect(hasStyle({ magic: undefined }, 'magic')).toBe(false);
+    expect(hasStyle({}, 'magic')).toBe(false);
+    expect(hasStyle({ magic: [1401] }, 'magic')).toBe(true);
+    expect(hasStyle({ melee: [1231] }, 'melee')).toBe(true);
+    const rotation = ['magic', 'ranged', 'melee'] as const;
+    expect(nextStyle(rotation, -1, s => hasStyle({ magic: [], ranged: [861] }, s))).toEqual({ style: 'ranged', index: 1 });
 });
 
 test('a tick wait resolves false once the session ends, so loops stop instead of hanging or spinning', async () => {

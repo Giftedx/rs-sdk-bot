@@ -146,7 +146,13 @@ export async function hunt(s: Session, o: HuntOptions) {
             if (!target) continue;
             log(`HUNT engage ${target.name} (combat ${target.combatLevel}) at ${target.x},${target.z}`);
             tally.fights++;
-            const r: FightResult = await fightPlayer(s, target.name, { kit, escapeAt: o.escapeAt, escapeSpell: o.teleSpell, cap: 900, damageSpell: o.damageSpell, rotation: o.rotation, log });
+            // exitOnDanger: a pile (two or more players hitting us) or a lost damage race must end the fight so
+            // the hunter breaks to the next spot and heals, instead of fighting on at 1.5x the strongest hit.
+            // The dragon dagger special fires at half health when the kit carries it (the maxed tribrid's DDs);
+            // a pure's kit has no DDs, so no special is attempted (scripts/measure/pk-duel.ts SPEC=1).
+            const dds = (kit.melee ?? []).includes(KIT_IDS.dragonDaggerP);
+            const r: FightResult = await fightPlayer(s, target.name, { kit, escapeAt: o.escapeAt, escapeSpell: o.teleSpell, cap: 900, damageSpell: o.damageSpell, rotation: o.rotation, exitOnDanger: true,
+                spec: dds ? { kit: [KIT_IDS.dragonDaggerP, KIT_IDS.runeKiteshield], bar: 'combat_stabsword:specbar', cost: 250, below: 0.5 } : undefined, log });
             log(`HUNT fight ${r.outcome} ${JSON.stringify(r)}`);
             if (r.outcome === 'kill') {
                 tally.kills++; const n = await loot(s, r.targetAt ?? target, over); tally.looted += n;

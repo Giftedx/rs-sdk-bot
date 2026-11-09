@@ -144,6 +144,11 @@ export const freezeSpell = (magic: number) => (magic >= 79 ? SPELLS.entangle : m
 // Adjacent, not diagonal: where a melee attack lands.
 const adjacent = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.abs(a.x - b.x) + Math.abs(a.z - b.z) === 1;
 
+// A style is usable only with a non-empty kit: an empty list casts damage spells with whatever is wielded
+// (a dagger, a bow), which hits for a fraction of the staff's max hit and wastes the turn. kits built by
+// scripts/pk-roam.ts kitFrom only hold a style when the account carries its weapon.
+export const hasStyle = (kit: Kit, style: Style) => (kit[style]?.length ?? 0) > 0;
+
 // The next style turn in rotation order, skipping a style that is not usable.
 export function nextStyle(rotation: readonly Style[], last: number, usable: (s: Style) => boolean): { style: Style; index: number } | null {
     for (let step = 1; step <= rotation.length; step++) {
@@ -249,11 +254,11 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         }
         const magicLevel = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
         const freeze = o.freeze ? freezeSpell(magicLevel) : null;
-        const castFreeze = freeze !== null && o.kit.magic && now >= freezeReady && now >= frozenUntil;
+        const castFreeze = freeze !== null && hasStyle(o.kit, 'magic') && now >= freezeReady && now >= frozenUntil;
         // Hit off the opponent's overhead: a style they protect against loses 40% of its max hit.
         const guarded = o.readOverheads === false ? new Set<Style>() : protectedStyles(seen?.headicons);
         const turn = castFreeze ? { style: 'magic' as Style, index: last }
-            : nextStyle(rotation, last, st => !!o.kit[st] && !guarded.has(st)) ?? nextStyle(rotation, last, st => !!o.kit[st]);
+            : nextStyle(rotation, last, st => hasStyle(o.kit, st) && !guarded.has(st)) ?? nextStyle(rotation, last, st => hasStyle(o.kit, st));
         if (!turn) continue;
         // Wield the turn's kit in this tick, then attack.
         for (const id of o.kit[turn.style] ?? []) {
