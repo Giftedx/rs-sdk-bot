@@ -57,15 +57,29 @@ test('archive folders are named by time and account under the coordinator direct
     expect(archiveDir('/r', 'PocketPool', Date.UTC(2026, 10, 9, 0, 24, 26))).toBe('/r/.practice/coordinator/release-archive/20261109t002426z-pocketpool');
 });
 
-test('a parked copy of an owner job is archived only once every account in it has a confirmed logout', () => {
-    const check = { account: 'TheFullMonty', coordinatorOwner: 'coordinator', enabled: false, script: 'scripts/session-check.ts' };
-    const copy = { account: 'Quickhandjob', script: 'scripts/goldfarm.ts', enabled: false, standing: true, autopilot: 'knights' };
-    expect(releasableAccounts([check, copy], () => true)).toEqual(['TheFullMonty', 'Quickhandjob']);
-    expect(releasableAccounts([check, copy], a => a !== 'Quickhandjob')).toEqual([]);
-    expect(releaseBlockers([check, copy], a => a !== 'Quickhandjob')).toEqual([copy]);
-    expect(releasableAccounts([check, { ...copy, enabled: true }], () => true)).toEqual([]);
-    expect(releasableAccounts([check, { ...copy, account: undefined, accounts: ['A', 'B'] }], a => a === 'A')).toEqual([]);
-    expect(releasableAccounts([{ ...copy, account: undefined }], () => true)).toEqual([]);
+// The claude-cloud release of 06:33 was blocked by a parked copy of Quickhandjob's goldfarm job.
+const settled = { ownerJob: () => true, confirmed: () => true, recovering: () => false };
+const check = { account: 'TheFullMonty', coordinatorOwner: 'coordinator', enabled: false, script: 'scripts/session-check.ts' };
+const copy = { account: 'Quickhandjob', script: 'scripts/goldfarm.ts', enabled: false, standing: true, autopilot: 'knights' };
+test('a parked owner-job copy is archived when its owner job is in swarm.json, its logout is confirmed and no recovery of it is open', () => {
+    expect(releasableAccounts([check, copy], settled)).toEqual(['TheFullMonty', 'Quickhandjob']);
+    expect(releasableAccounts([check, { ...copy, enabled: true }], settled)).toEqual([]);
+    expect(releasableAccounts([{ ...copy, account: undefined }], settled)).toEqual([]);
+});
+test('a parked owner-job copy stays when swarm.json no longer names the account', () => {
+    const v = { ...settled, ownerJob: (a: string) => a !== 'Quickhandjob' };
+    expect(releasableAccounts([check, copy], v)).toEqual([]);
+    expect(releaseBlockers([check, copy], v)).toEqual([copy]);
+});
+test('a parked owner-job copy stays unless the logout proof is confirmed: none, invalid and held all block', () => {
+    for (const state of ['none', 'invalid', 'held']) {
+        const v = { ...settled, confirmed: (a: string) => a !== 'Quickhandjob' || state === 'confirmed' };
+        expect(releasableAccounts([check, copy], v)).toEqual([]);
+    }
+    expect(releasableAccounts([check, { ...copy, account: undefined, accounts: ['A', 'B'] }], { ...settled, confirmed: (a: string) => a === 'A' })).toEqual([]);
+});
+test('a parked owner-job copy stays while a recovery of its account is pending or running', () => {
+    expect(releasableAccounts([check, copy], { ...settled, recovering: (a: string) => a === 'Quickhandjob' })).toEqual([]);
 });
 
 test('logout proofs are read from the session-lifecycle directory under the checkout', () => {
@@ -82,8 +96,8 @@ test('only a cloud side runs recovery; the local side and an unset FLEET_SIDE ar
 
 test('a release frees accounts only when every coordinator-owned job is a parked session check', () => {
     const check = (account: string) => ({ account, coordinatorOwner: 'coordinator', enabled: false, script: 'scripts/session-check.ts' });
-    const yes = () => true;
-    expect(releasableAccounts([check('Kiltlifter'), check('PocketPool')], () => false)).toEqual(['Kiltlifter', 'PocketPool']);
+    const yes = settled, no = { ownerJob: () => false, confirmed: () => false, recovering: () => true };
+    expect(releasableAccounts([check('Kiltlifter'), check('PocketPool')], no)).toEqual(['Kiltlifter', 'PocketPool']);
     expect(releasableAccounts([], yes)).toEqual([]);
     expect(releasableAccounts([check('Kiltlifter'), { account: 'Haggis', coordinatorOwner: 'coordinator', enabled: false, script: 'scripts/fight.ts' }], yes)).toEqual([]);
     expect(releasableAccounts([check('Kiltlifter'), { account: 'Haggis', coordinatorOwner: 'coordinator', enabled: true, script: 'scripts/session-check.ts' }], yes)).toEqual([]);
@@ -132,7 +146,7 @@ test('the dead-task rule matches the coordinator: missing or superseded dependen
     expect(deadTasks([refresh, run]).size).toBe(0);
 });
 
-test('an end is retried once after a failed or never-started recovery, then left for a person', () => {
+test('an end is retried once after its run or its qualify failed, then left for a person', () => {
     const target = { account: 'Quickhandjob', endedAt: 7 };
     const first = [task('q1', 'failed', []), task('a1', 'pending', ['q1'], target)];
     expect(spentAttempts(first, target)).toBe(1);
@@ -140,4 +154,11 @@ test('an end is retried once after a failed or never-started recovery, then left
     expect(spentAttempts(second, target)).toBe(MAX_ATTEMPTS);
     expect(spentAttempts(second, { ...target, endedAt: 8 })).toBe(0);
     expect(spentAttempts([task('q', 'succeeded', []), task('a', 'running', ['q'], target)], target)).toBe(0);
+});
+
+test('a run that never started behind a failed earlier run of its chain spends no attempt and is submitted again', () => {
+    const target = { account: 'TrouserSnake', endedAt: 9 };
+    const tasks = [task('q', 'succeeded', []), task('a', 'failed', ['q'], { account: 'Quickhandjob', endedAt: 7 }), task('b', 'pending', ['q', 'a'], target)];
+    expect(recoveriesInFlight(tasks)).toEqual([]);
+    expect(spentAttempts([...tasks, ...tasks.map(t => ({ ...t, spec: { ...t.spec, id: t.spec.id + '2', dependsOn: t.spec.dependsOn.map(d => d + '2') } }))], target)).toBe(0);
 });
