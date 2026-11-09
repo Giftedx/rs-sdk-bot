@@ -1,6 +1,6 @@
 {
   "schema": "cloud-kit-expansion/1",
-  "at": 1794193569839,
+  "at": 1794193632103,
   "side": "cloud-kit",
   "controller": {
     "pid": 6955,
@@ -187,9 +187,9 @@
     }
   },
   "headroom": {
-    "freeGB": 16.54110336303711,
+    "freeGB": 16.539974212646484,
     "load": [
-      0.01,
+      0,
       0.02,
       0
     ],
