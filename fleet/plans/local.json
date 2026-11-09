@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794183461107,
+ "at": 1794184070592,
  "jobs": [
   {
    "account": "Masterbaiter",
@@ -504,7 +504,7 @@
     "CAP": "6000",
     "COORDINATOR_RUN_ID": "task-4e3a0512-4b16-4dd7-a5ee-35072cb3fa5f"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-imp-magicwanda-after-market-recovery [task-4e3a0512-4b16-4dd7-a5ee-35072cb3fa5f]",
    "role": "supply"
