@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794195756775,
+ "at": 1794196363015,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -97,6 +97,25 @@
    "repeat": false,
    "goal": "quests: runemysteries, murder, blackknight, vampire, priest, junglepotion, sheep, fishingcompo, druid, arrav, seaslug, haunted, demon, dig, drunkmonk, elemental, death, grandtree",
    "role": "combat"
+  },
+  {
+   "account": "Masterbaiter",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3197,3353",
+    "TICKS": "3000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3197,3353",
+   "role": "helper",
+   "template": "feathers@3197,3353",
+   "autopilot": "local",
+   "resources": [
+    "pen:3197,3353"
+   ]
   },
   {
    "account": "mmsmk1232",
@@ -323,7 +342,7 @@
     "BANK_EVERY": "5",
     "COORDINATOR_RUN_ID": "task-7004185d-145c-41c0-81b8-bff70757e64e"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-blood-mineyourbiz-loot100-requal [task-7004185d-145c-41c0-81b8-bff70757e64e]",
    "role": "supply"
