@@ -291,6 +291,11 @@ test('a server outage is a drain: a socket error at login or a stalled tick stre
     expect(assess(['RESULT fail no chickens', login, stall, 'RESULT fail no chickens'])).toMatchObject({ retire: true, fail: 2, drains: 2 });
     expect(assess(['RESULT fail login: LoginError: Account already logged in', 'RESULT fail login: LoginError: Account already logged in']).retire).toBe(true);
 });
+test('a held account refusing logins after a drop is a drain: the claim refusals never retire the spot', () => {
+    const drop = 'RESULT fail session ended: disconnected', held = 'RESULT fail login: Error: fleet account claim held by swarm';
+    expect(assess([drop, held, held, held])).toMatchObject({ retire: false, ok: 0, fail: 0, drains: 4 });
+    expect(assess(['RESULT fail no chickens', held, 'RESULT fail no chickens'])).toMatchObject({ retire: true, fail: 2, drains: 1 });
+});
 test('a run the gateway dropped is a drain, not a failure: two drains keep the job, two real fails after them retire it', () => {
     const drain = 'RESULT fail session ended: disconnected';
     expect(assess([drain, drain])).toMatchObject({ retire: false, ok: 0, fail: 0, drains: 2 });

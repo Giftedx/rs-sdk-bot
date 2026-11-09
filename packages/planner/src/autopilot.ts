@@ -149,11 +149,13 @@ export function finishedTrainers(jobs: readonly any[], side: string, assigned: R
 // A run the server or the relayed gateway dropped says nothing about the job, so it is counted as a drain, never as a
 // failure: a dropped session (`RESULT fail session ended: disconnected`; the cloud proxy's 1012 `server_draining`
 // closes), a game socket that errors at login (`RESULT fail login: [object WebSocket]`), and a server that stops
-// ticking (`RESULT fail TickStallError`). Its supervisor logs the account back in and the next run banks the carried
+// ticking (`RESULT fail TickStallError`). A dropped session leaves its logout uncertain, so the account's fleet claim
+// refuses every login until authenticated recovery (`RESULT fail login: Error: fleet account claim held`); those refusals
+// follow the drop and are drains too. Its supervisor logs the account back in and the next run banks the carried
 // pack. Counting these as failures retired every knight spot of every account in one server outage.
 export const RETIRE_FAILS = 2, WASTE_LIMIT = 0.9;
 export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked)=[1-9]\d*\b/.test(result);
-export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|TickStallError\b)/;
+export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|TickStallError\b|login: Error: fleet account claim held\b)/;
 export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number; drains: number } {
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
     const drains = clean.filter(l => DRAIN_RESULT.test(l)).length;
