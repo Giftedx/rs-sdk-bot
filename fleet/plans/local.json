@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794185867935,
+ "at": 1794186441871,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -71,6 +71,28 @@
   },
   {
    "account": "Abracadickra",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby"
+   ],
+   "env": {
+    "ITEMS": "rune arrowtips|adamant arrowtips",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy rune and adamant arrowtips at Catherby",
+   "role": "bank",
+   "template": "shop-arrowtips",
+   "autopilot": "local",
+   "resources": [
+    "shop:catherby"
+   ]
+  },
+  {
+   "account": "Masterbaiter",
    "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
@@ -89,41 +111,22 @@
    ]
   },
   {
-   "account": "Masterbaiter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/gather-fish.ts cage 3000",
-    "scripts/cook-food.ts 3000 lobster"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "Catherby lobsters, caught and cooked",
-   "role": "fishing",
-   "template": "lobster-chain",
-   "autopilot": "local",
-   "resources": [
-    "catherby:lobster"
-   ]
-  },
-  {
    "account": "mmsmk1232",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2671,3313",
+    "KNIGHT_SPOT": "2653,3300",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
+   "goal": "goldfarm knights at 2653,3300",
    "role": "thieving",
-   "template": "goldfarm@2671,3313",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
    "resources": [
-    "knight:2671,3313"
+    "knight:2653,3300"
    ]
   },
   {
@@ -150,37 +153,18 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
+    "KNIGHT_SPOT": "2653,3300",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
+   "goal": "goldfarm knights at 2653,3300",
    "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
    "resources": [
-    "knight:2669,3298"
-   ]
-  },
-  {
-   "account": "NabTheKnob",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
-   "autopilot": "local",
-   "resources": [
-    "knight:2671,3313"
+    "knight:2653,3300"
    ]
   },
   {
@@ -245,18 +229,18 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
+    "KNIGHT_SPOT": "2653,3300",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
+   "goal": "goldfarm knights at 2653,3300",
    "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
    "resources": [
-    "knight:2669,3298"
+    "knight:2653,3300"
    ]
   },
   {
