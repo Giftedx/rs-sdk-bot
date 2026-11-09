@@ -13,17 +13,37 @@ import { componentId } from '../../packages/core/src/logout';
 import type { NearbyPlayer } from '../../vendor/rs-sdk/sdk/types';
 
 export const ITEMS = {
-    shark: 385, glory: [1712, 1710, 1708, 1706], prayerPotion: [2434, 139, 141, 143], superRestore: [3024, 3026, 3028, 3030],
-    deathRune: 560, bloodRune: 565, fireRune: 554, airRune: 556, waterRune: 555, earthRune: 557, natureRune: 561, lawRune: 563,
+    shark: 385, karambwan: 3144, glory: [1712, 1710, 1708, 1706],
+    prayerPotion: [2434, 139, 141, 143], superRestore: [3024, 3026, 3028, 3030],
+    superAttack: [2436, 145, 147, 149], attackPotion: [2428, 121, 123, 125],
+    superStrength: [2440, 157, 159, 161], strengthPotion: [113, 115, 117, 119],
+    superDefence: [2442, 163, 165, 167], defencePotion: [2432, 133, 135, 137],
+    rangingPotion: [2444, 169, 171, 173], magicPotion: [3040, 3042, 3044, 3046],
+    antipoison: [2448, 181, 183, 185, 2446, 175, 177, 179],
+    deathRune: 560, bloodRune: 565, chaosRune: 562, mindRune: 558,
+    fireRune: 554, airRune: 556, waterRune: 555, earthRune: 557, natureRune: 561, lawRune: 563,
 } as const;
-export const SPELLS = { fireBolt: 1169, fireBlast: 1181, fireWave: 1189, bind: 1572, snare: 1582, entangle: 1592,
+export const SPELLS = {
+    fireStrike: 1158, fireBolt: 1169, fireBlast: 1181, fireWave: 1189,
+    saradominStrike: 1190, clawsOfGuthix: 1191, flamesOfZamorak: 1192, charge: 1193, ibanBlast: 1539,
+    bind: 1572, snare: 1582, entangle: 1592,
     // Teleports work up to Wilderness level 20 (skill_magic/scripts/spells/teleport.rs2:17); Varrock costs 1 law, 3 air, 1 fire.
-    varrockTeleport: 1164, lumbridgeTeleport: 1167, faladorTeleport: 1170, camelotTeleport: 1174 } as const;
-// Prayer indices (vendor/rs-sdk/sdk/types.ts PRAYER_NAMES): 8 Protect Item, 12 Magic, 13 Missiles, 14 Melee.
-export const PRAYER = { item: 8, magic: 12, missiles: 13, melee: 14 } as const;
+    varrockTeleport: 1164, lumbridgeTeleport: 1167, faladorTeleport: 1170, camelotTeleport: 1174,
+} as const;
+// Prayer indices (vendor/rs-sdk/sdk/types.ts PRAYER_NAMES, content prayers.dbrow).
+export const PRAYER = {
+    thickSkin: 0, burstOfStrength: 1, clarityOfThought: 2,
+    rockSkin: 3, superhumanStrength: 4, improvedReflexes: 5,
+    item: 8, steelSkin: 9, ultimateStrength: 10, incredibleReflexes: 11,
+    magic: 12, missiles: 13, melee: 14, smite: 17,
+} as const;
+const PRAYER_REQ: Record<number, number> = {
+    0: 1, 1: 4, 2: 7, 3: 10, 4: 13, 5: 16, 8: 25, 9: 28, 10: 31, 11: 34, 12: 37, 13: 40, 14: 43, 17: 52,
+};
 
 export type Style = 'magic' | 'ranged' | 'melee';
 export type Kit = { [S in Style]?: number[] };
+export type SpecConfig = { kit: number[]; bar: string; cost: number; below: number; style?: Style };
 export type FightOptions = {
     kit: Kit;
     // Style turns in order; a style with no kit is skipped. Melee walks to the target.
@@ -35,9 +55,9 @@ export type FightOptions = {
     freeze?: boolean;
     // Choose a style the opponent's overhead prayer does not cover (default on).
     readOverheads?: boolean;
-    // A melee special with this kit and combat-tab bar once the target's health bar is at or under `below`: the dragon
-    // dagger is { kit: [dagger, shield], bar: 'combat_stabsword:specbar', cost: 250, below: 0.5 }.
-    spec?: { kit: number[]; bar: string; cost: number; below: number };
+    // A melee or ranged special with this kit and combat-tab bar once the target's health bar is at or under `below`:
+    // the dragon dagger is { kit: [dagger, shield], bar: 'combat_stabsword:specbar', cost: 250, below: 0.5 }.
+    spec?: SpecConfig;
     // Out of food at or under this HP: rub an inventory amulet of glory to Edgeville (amulet_of_glory.rs2 allows it up
     // to Wilderness level 30; there is no Teleblock in the content), or with no glory cast `escapeSpell` (level 20).
     escapeAt?: number;
@@ -45,10 +65,13 @@ export type FightOptions = {
     // Return outcome "danger" (with the reason) as soon as dangerReason fires, so the caller can escape.
     exitOnDanger?: boolean;
     damageSpell?: number;
+    maxWild?: number;
+    maxDistance?: number;
+    stop?: () => boolean;
     cap?: number;
     log?: (line: string) => void;
 };
-export type FightResult = { outcome: 'kill' | 'died' | 'escaped' | 'lost' | 'timeout' | 'danger'; danger?: string; ticks: number; dealt: number; taken: number; eaten: number; attacks: Record<Style, number>; freezes: number; specs: number; targetAt?: { x: number; z: number } };
+export type FightResult = { outcome: 'kill' | 'died' | 'escaped' | 'lost' | 'timeout' | 'danger' | 'session ended'; danger?: string; ticks: number; dealt: number; taken: number; eaten: number; attacks: Record<Style, number>; freezes: number; specs: number; targetAt?: { x: number; z: number } };
 
 // Overhead protect prayers from the head icon bits (content player/configs/headicon.constant: 3 melee, 4 missiles, 5 magic).
 export function protectedStyles(headicons: number | undefined): Set<Style> {
@@ -62,14 +85,65 @@ export const skulled = (headicons: number | undefined) => ((headicons ?? 0) & 1)
 
 // The style a worn weapon attacks with, from its object name (content pack/obj.pack). No weapon is melee (fists).
 let objNames: Map<number, string> | undefined;
-export function weaponStyle(id: number | undefined, names = (objNames ??= new Map(readFileSync(join(resolve(import.meta.dir, '..', '..'), 'vendor/rs-sdk/server/content/pack/obj.pack'), 'utf8')
-    .split(/\r?\n/).flatMap(l => { const m = l.match(/^(\d+)=(.+)$/); return m ? [[Number(m[1]), m[2]!] as const] : []; })))): Style {
+const getObjNames = () => (objNames ??= new Map(readFileSync(join(resolve(import.meta.dir, '..', '..'), 'vendor/rs-sdk/server/content/pack/obj.pack'), 'utf8')
+    .split(/\r?\n/).flatMap(l => { const m = l.match(/^(\d+)=(.+)$/); return m ? [[Number(m[1]), m[2]!] as const] : []; })));
+export function weaponStyle(id: number | undefined, names = getObjNames()): Style {
     const name = id !== undefined && id >= 0 ? names.get(id) ?? '' : '';
     if (/(^|_)(shortbow|longbow|crossbow|dart|knife|thrownaxe|javelin)(_|$)|bow$/.test(name)) return 'ranged';
     if (/staff|wand/.test(name)) return 'magic';
     return 'melee';
 }
 const PROTECT_FROM: Record<Style, number> = { melee: 14, ranged: 13, magic: 12 };
+
+// Prayers for the current combat state (player_combat_stat.rs2:33-35, 62-67): Protect Item, the best Defence prayer
+// (boosts melee, ranged and 30% of magic defence), the overhead for the opponent's weapon, and on melee/spec turns the
+// best Strength and Attack prayers (+15% max hit and accuracy at 31/34), turned off on non-melee turns to save drain.
+export function combatPrayers(prayerBase: number, overhead: number | null, meleeTurn: boolean): { want: number[]; off: number[] } {
+    const want: number[] = [], off: number[] = [];
+    if (prayerBase >= PRAYER_REQ[PRAYER.item]!) want.push(PRAYER.item);
+    const def = prayerBase >= 28 ? PRAYER.steelSkin : prayerBase >= 10 ? PRAYER.rockSkin : prayerBase >= 1 ? PRAYER.thickSkin : null;
+    if (def !== null) want.push(def);
+    if (overhead !== null && prayerBase >= (PRAYER_REQ[overhead] ?? 99)) want.push(overhead);
+    const str = prayerBase >= 31 ? PRAYER.ultimateStrength : prayerBase >= 13 ? PRAYER.superhumanStrength : prayerBase >= 4 ? PRAYER.burstOfStrength : null;
+    const atk = prayerBase >= 34 ? PRAYER.incredibleReflexes : prayerBase >= 16 ? PRAYER.improvedReflexes : prayerBase >= 7 ? PRAYER.clarityOfThought : null;
+    for (const p of [str, atk]) {
+        if (p === null) continue;
+        if (meleeTurn) want.push(p);
+        else off.push(p);
+    }
+    return { want, off };
+}
+
+// Default special-attack config from a staged kit (content specwep=true: dragon dagger 25%, longsword 25%, mace 25%,
+// rune claws 25%, magic shortbow 55%).
+export function defaultSpec(kit: Kit, names = getObjNames()): SpecConfig | undefined {
+    for (const id of kit.melee ?? []) {
+        const n = names.get(id) ?? '';
+        if (/^dragon_dagger/.test(n)) return { kit: kit.melee!, bar: 'combat_stabsword:specbar', cost: 250, below: 0.65, style: 'melee' };
+        if (n === 'dragon_longsword') return { kit: kit.melee!, bar: 'combat_hacksword:specbar', cost: 250, below: 0.6, style: 'melee' };
+        if (n === 'dragon_mace') return { kit: kit.melee!, bar: 'combat_spiked:specbar', cost: 250, below: 0.6, style: 'melee' };
+        if (n === 'rune_claws') return { kit: kit.melee!, bar: 'combat_claw:specbar', cost: 250, below: 0.6, style: 'melee' };
+    }
+    for (const id of kit.ranged ?? []) {
+        if ((names.get(id) ?? '') === 'magic_shortbow') return { kit: kit.ranged!, bar: 'combat_bow:specbar', cost: 550, below: 0.5, style: 'ranged' };
+    }
+    return undefined;
+}
+
+// Metal/leather armour pieces that penalize a magic or ranged attack roll on the cast/shot tick (kiteshields.obj,
+// platebodies.obj, platelegs.obj, full_helms.obj, leather_gear.obj). Ordered by largest penalty first (torso -30,
+// legs -21, shield -8, helm -6); unequipped on the attack tick before the hit roll and re-equipped on the next tick.
+export function negativeCastArmour(worn: readonly { id: number; slot: number }[], style: Style, kitIds: ReadonlySet<number>, names = getObjNames()): { id: number; slot: number }[] {
+    if (style === 'melee') return [];
+    const re = style === 'magic'
+        ? /(^|_)(platebody|chainbody|dragonhide_body|leather_body|studded_body|platelegs|plateskirt|dragonhide_chaps|studded_chaps|kiteshield|sq_shield|full_helm|med_helm|coif)(_|$)/
+        : /(^|_)(platebody|chainbody|platelegs|plateskirt|full_helm)(_|$)/;
+    const rank = (slot: number) => (slot === 4 ? 0 : slot === 7 ? 1 : slot === 5 ? 2 : 3);
+    return worn
+        .filter(e => !kitIds.has(e.id) && re.test(names.get(e.id) ?? ''))
+        .sort((a, b) => rank(a.slot) - rank(b.slot))
+        .map(e => ({ id: e.id, slot: e.slot }));
+}
 
 // Another player's head icons and worn items, read from the in-process client's player entity (webclient
 // dash3d/ClientPlayer.ts headicons, appearance: a part at 512 or more is an object id + 512). The SDK state leaves them
@@ -97,7 +171,7 @@ export const killMessage = (text: string, name: string) => KILL_MESSAGES.some(t 
 const TURN: Record<Style, number> = { magic: 5, ranged: 4, melee: 4 };
 
 // Food best first by heal; any other item with an Eat option comes after these.
-export const FOOD_ORDER = [/^shark$/i, /^swordfish$/i, /^lobster$/i, /^bass$/i, /^tuna$/i, /^salmon$/i, /^trout$/i, /^pike$/i];
+export const FOOD_ORDER = [/^shark$/i, /^cooked karambwan$/i, /^swordfish$/i, /^lobster$/i, /^bass$/i, /^tuna$/i, /^salmon$/i, /^trout$/i, /^pike$/i];
 export function bestFood<T extends { name: string; optionsWithIndex: { text: string }[] }>(inv: readonly T[]): T | undefined {
     const edible = inv.filter(i => i.optionsWithIndex.some(o => /^eat$/i.test(o.text)));
     for (const re of FOOD_ORDER) { const hit = edible.find(i => re.test(i.name)); if (hit) return hit; }
@@ -124,6 +198,15 @@ export function dangerReason(o: { hp: number; maxHp: number; food: boolean; pray
     return null;
 }
 
+// The next game tick, or false once the session has ended: a dropped session publishes no more ticks, so a plain
+// onTick wait would hang and a loop around it would spin on failed actions.
+export function nextTick(s: Pick<Session, 'onTick' | 'ended'>): Promise<boolean> {
+    return new Promise(resolve => {
+        const off = s.onTick(() => { off(); resolve(true); });
+        void s.ended.then(() => { off(); resolve(false); });
+    });
+}
+
 export const wildernessLevel = (z: number) => (z >= 9920 ? Math.floor((z - 9920) / 8) + 1 : z >= 3520 ? Math.floor((z - 3520) / 8) + 1 : 0);
 // Both players must stand in the Wilderness and the combat gap must fit inside the shallower player's level.
 export function attackable(me: { z: number; combatLevel: number }, other: { z: number; combatLevel: number }): boolean {
@@ -132,8 +215,36 @@ export function attackable(me: { z: number; combatLevel: number }, other: { z: n
 }
 // The freeze spell the magic level allows: Entangle 79, Snare 50, Bind 20.
 export const freezeSpell = (magic: number) => (magic >= 79 ? SPELLS.entangle : magic >= 50 ? SPELLS.snare : magic >= 20 ? SPELLS.bind : null);
+const FREEZE_RUNES: Record<number, [number, number, number]> = { [SPELLS.entangle]: [5, 5, 4], [SPELLS.snare]: [4, 4, 3], [SPELLS.bind]: [3, 3, 2] };
+const FREEZE_TICKS: Record<number, number> = { [SPELLS.entangle]: 24, [SPELLS.snare]: 16, [SPELLS.bind]: 8 };
+// Freeze duration in ticks (magic_combat_spells.dbrow freeze_time; halved against Protect from Magic in pvp_magic.rs2:156-158).
+export const freezeDuration = (spell: number, protectFromMagic: boolean) => {
+    const base = FREEZE_TICKS[spell] ?? 16;
+    return protectFromMagic ? Math.floor(base / 2) : base;
+};
+// Strongest freeze the Magic level and held runes allow (557 earth, 555 water, 561 nature).
+export function castableFreeze(magic: number, carried: readonly { id: number; count: number }[]): number | null {
+    const max = freezeSpell(magic);
+    if (max === null) return null;
+    const held = (id: number) => carried.filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+    for (const spell of [SPELLS.entangle, SPELLS.snare, SPELLS.bind]) {
+        const [earth, water, nature] = FREEZE_RUNES[spell]!;
+        if (spell <= max && held(ITEMS.earthRune) >= earth && held(ITEMS.waterRune) >= water && held(ITEMS.natureRune) >= nature) return spell;
+    }
+    return null;
+}
+// Strongest fire spell the Magic level and carried catalyst runes allow; defaults to Fire Wave when no catalyst runes are carried.
+export function bestDamageSpell(magic: number, carried: readonly { id: number; count: number }[]): number {
+    const has = (id: number) => carried.some(i => i.id === id && i.count > 0);
+    if (magic >= 75 && has(ITEMS.bloodRune)) return SPELLS.fireWave;
+    if (magic >= 59 && has(ITEMS.deathRune)) return SPELLS.fireBlast;
+    if (magic >= 35 && has(ITEMS.chaosRune)) return SPELLS.fireBolt;
+    if (has(ITEMS.mindRune)) return SPELLS.fireStrike;
+    return SPELLS.fireWave;
+}
 // Adjacent, not diagonal: where a melee attack lands.
 const adjacent = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.abs(a.x - b.x) + Math.abs(a.z - b.z) === 1;
+const cheb = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
 
 // The next style turn in rotation order, skipping a style that is not usable.
 export function nextStyle(rotation: readonly Style[], last: number, usable: (s: Style) => boolean): { style: Style; index: number } | null {
@@ -151,45 +262,91 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
     const result: FightResult = { outcome: 'timeout', ticks: 0, dealt: 0, taken: 0, eaten: 0, attacks: { magic: 0, ranged: 0, melee: 0 }, freezes: 0, specs: 0 };
     const sdk = s.sdk, start = s.tick(), want = targetName.toLowerCase();
     const startLife = sdk.getState()?.player?.lifeId;
-    let last = -1, nextAttack = start, foodReady = start, potionReady = start, freezeReady = start, frozenUntil = start, seenEvent = 0, seenMessage = 0, lastSeen = start;
+    let last = -1, nextAttack = start, lastAttackAt = -10, lastWalkTicks = 0, hasAttacked = false;
+    let foodReady = start, karambwanReady = start, potionReady = start;
+    let freezeReady = start, frozenUntil = start, freezeCastAt = -10, frozenTile: { x: number; z: number } | null = null, selfFrozenUntil = start;
+    let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = false, rapidSet = false, pjedByNpc = false;
     let target: NearbyPlayer | undefined, rubbed = -1, ranAt = -10;
     const hits: { tick: number; damage: number; src: number }[] = [], dealtLog: { tick: number; damage: number }[] = [];
+    // Torso worn at fight start (or unequipped for a cast/shot) that is re-equipped on melee turns.
+    const names = getObjNames();
+    const tankIds = new Set<number>(
+        (sdk.getState()?.equipment ?? []).filter(e => e.slot === 4 && /(platebody|chainbody)/.test(names.get(e.id) ?? '')).map(e => e.id),
+    );
     for (;;) {
-        await new Promise<void>(resolve => { const off = s.onTick(() => { off(); resolve(); }); });
+        if (!await nextTick(s)) { result.outcome = 'session ended'; log(`PK session ended against ${targetName}`); return result; }
         const now = s.tick(), state = sdk.getState(), me = state?.player;
         // PlayerState x and z are scene-local; worldX and worldZ are the tile coordinates players and the Wilderness use.
         const at = me ? { x: me.worldX, z: me.worldZ } : null;
         result.ticks = now - start;
         if (!state || !me || !at) continue;
+        let maxEvent = seenEvent;
         for (const e of state.combatEvents) {
-            if ((e.observationId ?? e.tick) <= seenEvent) continue;
-            seenEvent = e.observationId ?? e.tick;
+            const id = e.observationId ?? e.tick;
+            if (id <= seenEvent) continue;
+            if (id > maxEvent) maxEvent = id;
             if (e.type === 'damage_dealt' && e.targetType === 'other_player') { result.dealt += e.damage; dealtLog.push({ tick: now, damage: e.damage }); }
             if (e.type === 'damage_taken') { result.taken += e.damage; if (e.sourceType === 'other_player') hits.push({ tick: now, damage: e.damage, src: e.sourceIndex }); }
         }
+        seenEvent = maxEvent;
+        let maxMessage = seenMessage;
         for (const m of state.gameMessages) {
             const id = m.observationId ?? m.tick;
             if (id <= seenMessage || m.tick < start) continue;
-            seenMessage = id;
+            if (id > maxMessage) maxMessage = id;
             if (m.type === 0 && killMessage(m.text, targetName)) { result.outcome = 'kill'; log(`PK kill ${targetName} after ${result.ticks} ticks`); return result; }
+            if (/magical force stops you from moving/i.test(m.text)) selfFrozenUntil = Math.max(selfFrozenUntil, now + 8);
+            if (/already held by a magical force|currently immune to that spell/i.test(m.text)) {
+                freezeReady = Math.max(freezeReady, now + 4);
+                frozenUntil = Math.max(frozenUntil, now + 4);
+            }
+            if (/have been poisoned/i.test(m.text)) poisoned = true;
+            if (/already under attack/i.test(m.text)) pjedByNpc = true;
         }
+        seenMessage = maxMessage;
         if ((rubbed >= 0 || ranAt >= 0) && wildernessLevel(at.z) === 0) { result.outcome = 'escaped'; log(`PK escaped ${targetName} after ${result.ticks} ticks at HP ${me.hp}`); return result; }
         if (me.isDead || me.hp <= 0 || (startLife !== undefined && me.lifeId !== startLife)) { result.outcome = 'died'; log(`PK died to ${targetName} after ${result.ticks} ticks`); return result; }
+        if (o.stop?.()) { log(`PK stopped against ${targetName}`); return result; }
         target = state.nearbyPlayers.find(p => p.name.toLowerCase() === want);
-        if (target) { lastSeen = now; result.targetAt = { x: target.x, z: target.z }; }
-        else if (now - lastSeen > 10) { result.outcome = 'lost'; log(`PK lost ${targetName} after ${result.ticks} ticks`); return result; }
+        if (target) {
+            lastSeen = now;
+            result.targetAt = { x: target.x, z: target.z };
+            if (frozenTile && now > freezeCastAt + 1 && (target.x !== frozenTile.x || target.z !== frozenTile.z)) {
+                // Target moved after the freeze cast: if it moved right away the spell splashed (no immunity); else it wore off (5-tick immunity).
+                const splashed = now <= freezeCastAt + 3;
+                frozenUntil = now;
+                freezeReady = splashed ? now : Math.min(freezeReady, now + 5);
+                frozenTile = null;
+            }
+            if (o.maxDistance !== undefined && target.distance > o.maxDistance) { result.outcome = 'lost'; return result; }
+            if (o.maxWild !== undefined && (wildernessLevel(at.z) > o.maxWild || wildernessLevel(target.z) > o.maxWild)) { result.outcome = 'lost'; return result; }
+        } else if (now - lastSeen > 10) { result.outcome = 'lost'; log(`PK lost ${targetName} after ${result.ticks} ticks`); return result; }
         if (result.ticks >= cap) { log(`PK timeout against ${targetName}`); return result; }
         const inv = state.inventory, slotOf = (ids: readonly number[]) => inv.find(i => ids.includes(i.id));
-        const use = (item: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }, verb: RegExp) => {
+        const use = (item: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }, verb: RegExp): boolean => {
             const op = item.optionsWithIndex.find(x => verb.test(x.text));
-            if (op) void sdk.sendUseItem(item.slot, op.opIndex);
+            if (!op) return false;
+            void sdk.sendUseItem(item.slot, op.opIndex);
+            return true;
         };
-        // Food before anything, any food best first; the eat level covers the strongest opponent hitting us now.
+        if (state.combatStyle?.currentStyle === 1) rapidSet = true;
+        // Food before anything, any food best first; eating adds 3 ticks to %action_delay on the server (consume.rs2:130).
         const oppCombat = Math.max(target?.combatLevel ?? 0, ...state.nearbyPlayers.filter(p => hits.some(h => h.src === p.index && now - h.tick <= 10)).map(p => p.combatLevel));
         const oppMax = estMaxHit(oppCombat || me.combatLevel);
         if (me.hp <= Math.max(eatAt, oppMax + 8) && now >= foodReady) {
             const food = bestFood(inv);
-            if (food) { use(food, /^Eat$/i); foodReady = now + 3; result.eaten++; }
+            if (food) {
+                use(food, /^Eat$/i);
+                foodReady = now + 3;
+                nextAttack = (hasAttacked ? nextAttack : now) + 3;
+                hasAttacked = true;
+                result.eaten++;
+                // Combo-eat a cooked karambwan in the same tick when dangerously low (uses %eat_delay2, +2 %action_delay).
+                if (me.hp <= oppMax && now >= karambwanReady && food.id !== ITEMS.karambwan) {
+                    const kw = slotOf([ITEMS.karambwan]);
+                    if (kw) { use(kw, /^Eat$/i); karambwanReady = now + 3; nextAttack += 2; result.eaten++; }
+                }
+            }
         }
         const danger = dangerReason({ hp: me.hp, maxHp: me.maxHp, food: !!bestFood(inv), prayer: state.prayers.prayerPoints, oppMax, hits, dealt: dealtLog, now });
         if (danger && o.exitOnDanger) { result.outcome = 'danger'; result.danger = danger; log(`PK danger against ${targetName}: ${danger}`); return result; }
@@ -209,57 +366,174 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             continue;
         }
         const prayers = state.prayers;
-        if (prayers.prayerPoints <= restoreAt && now >= potionReady) {
-            const potion = slotOf([...ITEMS.prayerPotion, ...ITEMS.superRestore]);
-            if (potion) { use(potion, /^Drink$/i); potionReady = now + 3; }
+        // Drinking a potion triggers p_delay(1) on the server (consume_effects.rs2:125), suspending actions for 2 ticks.
+        // Prefer drinking during weapon cooldown windows (now < nextAttack - 1) unless prayer is exhausted.
+        if (now >= potionReady && (prayers.prayerPoints <= 5 || now < nextAttack - 1)) {
+            let potion = prayers.prayerPoints <= restoreAt ? slotOf([...ITEMS.prayerPotion, ...ITEMS.superRestore]) : undefined;
+            if (!potion && poisoned) {
+                potion = slotOf(ITEMS.antipoison);
+                if (potion) poisoned = false;
+            }
+            if (!potion && now < nextAttack - 1) {
+                const skill = (n: string) => state.skills.find(k => k.name === n);
+                const unboosted = (n: string) => { const k = skill(n); return !!k && k.level <= k.baseLevel; };
+                if (o.kit.melee && unboosted('Strength')) potion = slotOf([...ITEMS.superStrength, ...ITEMS.strengthPotion]);
+                if (!potion && o.kit.melee && unboosted('Attack')) potion = slotOf([...ITEMS.superAttack, ...ITEMS.attackPotion]);
+                if (!potion && o.kit.ranged && unboosted('Ranged')) potion = slotOf(ITEMS.rangingPotion);
+                if (!potion && unboosted('Defence')) potion = slotOf([...ITEMS.superDefence, ...ITEMS.defencePotion]);
+            }
+            if (potion) {
+                use(potion, /^Drink$/i);
+                potionReady = now + 3;
+                nextAttack = Math.max(nextAttack, now + 2);
+                continue;
+            }
         }
         if (!target) continue;
+        if (!attackable({ z: at.z, combatLevel: me.combatLevel }, target)) {
+            if (wildernessLevel(target.z) === 0) { result.outcome = 'lost'; return result; }
+            if (unattackableSince < 0) unattackableSince = now;
+            else if (now - unattackableSince >= 6) { result.outcome = 'lost'; return result; }
+        } else unattackableSince = -1;
         const seen = observePlayer(s.client, target.index);
-        // Protect from the style of the opponent's worn weapon, and Protect Item.
-        if (prayers.prayerPoints > 0) {
-            // Protect from the weapon of whoever hit us last (a third player can hit us), else the target's.
-            const lastHit = [...hits].reverse().find(h => now - h.tick <= 10);
-            const hitter = lastHit && lastHit.src !== target.index ? observePlayer(s.client, lastHit.src) : null;
-            const wanted = hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
-            for (const p of [PRAYER.item, wanted]) if (!prayers.activePrayers[p]) void sdk.sendTogglePrayer(p);
+        const prayerBase = state.skills.find(k => k.name === 'Prayer')?.baseLevel ?? 99;
+        const lastHit = [...hits].reverse().find(h => now - h.tick <= 10);
+        const hitter = lastHit && lastHit.src !== target.index ? observePlayer(s.client, lastHit.src) : null;
+        const overhead = hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
+        const canReachMelee = !(now < selfFrozenUntil && !adjacent(at, target)) && (cheb(at, target) <= 6 || (!o.kit.magic && !o.kit.ranged));
+        const guarded = o.readOverheads === false ? new Set<Style>() : protectedStyles(seen?.headicons);
+        const styleUsable = (st: Style) => !!o.kit[st] && (st !== 'melee' || canReachMelee);
+        const upcomingTurn = nextStyle(rotation, last, st => styleUsable(st) && !guarded.has(st)) ?? nextStyle(rotation, last, styleUsable) ?? nextStyle(rotation, last, st => !!o.kit[st]);
+        if (pjedByNpc) {
+            pjedByNpc = false;
+            if (!hitter && typeof sdk.sendInteractNpc === 'function') {
+                const npc = (state.nearbyNpcs ?? [])
+                    .filter(n => (n.hp === null || n.hp > 0) && n.optionsWithIndex?.some(op => /^attack$/i.test(op.text)))
+                    .sort((a, b) => Number(b.inCombat) - Number(a.inCombat) || a.distance - b.distance)[0];
+                const op = npc?.optionsWithIndex.find(x => /^attack$/i.test(x.text));
+                if (npc && op) {
+                    for (const id of [...(o.kit.melee ?? []), ...tankIds]) {
+                        if (state.equipment.some(e => e.id === id)) continue;
+                        const item = slotOf([id]);
+                        if (item) use(item, /^(Wield|Wear)$/i);
+                    }
+                    void sdk.sendInteractNpc(npc.index, op.opIndex);
+                    nextAttack = now + 8;
+                    continue;
+                }
+            }
         }
-        if (now < nextAttack || !attackable({ z: at.z, combatLevel: me.combatLevel }, target)) continue;
-        // The special: wield its kit first, since the combat tab shows the new weapon's bar only after the switch;
-        // then turn the bar on and attack in the next tick.
-        const spec = o.spec, energy = special(s.client);
-        if (spec && energy.energy >= spec.cost && lowHealth(seen, spec.below)) {
-            const missing = spec.kit.filter(id => !state.equipment.some(e => e.id === id));
-            if (missing.length) { for (const id of missing) { const item = slotOf([id]); if (item) use(item, /^(Wield|Wear)$/i); } nextAttack = now + 1; continue; }
+        // Cooldown ticks: never send OpHeld/InvButton (which call clearPendingAction on the server), but configure
+        // prayers and one-time combat-style settings once any melee approach walk has finished.
+        if (now < nextAttack || unattackableSince >= 0) {
+            let budget = 5;
+            const walkingToMelee = now <= lastAttackAt + lastWalkTicks;
+            if (!walkingToMelee && !rapidSet && state.combatStyle && state.combatStyle.styles.length > 1 && state.combatStyle.currentStyle !== 1 && budget > 0) {
+                void sdk.sendSetCombatStyle?.(1);
+                rapidSet = true;
+                budget--;
+            }
+            if (prayers.prayerPoints > 0 && budget > 0) {
+                // Pre-activate melee prayers on the tick before a melee turn so the attack tick needs 0 prayer packets.
+                const nextIsMelee = now === nextAttack - 1 && (upcomingTurn?.style === 'melee' || (!!o.spec && lowHealth(seen, o.spec.below)));
+                const { want: wantPray, off: offPray } = combatPrayers(prayerBase, overhead, nextIsMelee);
+                for (const p of wantPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
+                for (const p of offPray) if (prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
+            }
+            continue;
+        }
+        // The special: equip its kit, toggle its specbar, and attack in the same tick (OpHeldHandler updates tabs[0]
+        // during decodeIn before IfButtonHandler checks isComponentVisible). Keep total USER_EVENT packets <= 5.
+        const spec = o.spec, energy = special(s.client), specStyle: Style = spec?.style ?? 'melee';
+        if (spec && energy.energy >= spec.cost && lowHealth(seen, spec.below) && (specStyle !== 'melee' || canReachMelee)
+            && (!guarded.has(specStyle) || lowHealth(seen, 0.25))) {
+            let budget = 5 - 1 - (energy.on ? 0 : 1); // reserve 1 for attack + 1 for specbar
+            const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
+            for (const id of [...spec.kit, ...(specStyle === 'melee' ? tankIds : [])]) {
+                if (state.equipment.some(e => e.id === id)) continue;
+                const item = slotOf([id]);
+                if (item && toWield.length < budget) toWield.push(item);
+            }
+            budget -= toWield.length;
+            if (prayers.prayerPoints > 0 && budget > 0) {
+                const { want: wantPray } = combatPrayers(prayerBase, overhead, specStyle === 'melee');
+                for (const p of wantPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
+            }
+            for (const item of toWield) use(item, /^(Wield|Wear)$/i);
             log(`PK special energy ${energy.energy} on ${energy.on} target ${seen!.health}/${seen!.totalHealth}`);
             if (!energy.on) void sdk.sendClickComponent(componentId(spec.bar));
             void sdk.sendInteractPlayer(target.index, 2);
-            result.specs++; result.attacks.melee++;
-            last = Math.max(0, rotation.indexOf('melee'));
-            nextAttack = now + TURN.melee;
+            result.specs++; result.attacks[specStyle]++;
+            last = Math.max(0, rotation.indexOf(specStyle));
+            const walkTicks = specStyle === 'melee' ? ((me.runEnergy ?? 100) >= 100 ? Math.ceil(Math.max(0, cheb(at, target) - 1) / 2) : Math.max(0, cheb(at, target) - 1)) : 0;
+            const delay = specStyle === 'ranged' && rapidSet ? 3 : TURN[specStyle];
+            lastAttackAt = now; lastWalkTicks = walkTicks;
+            nextAttack = now + walkTicks + delay;
+            hasAttacked = true;
             continue;
         }
         const magicLevel = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
-        const freeze = o.freeze ? freezeSpell(magicLevel) : null;
+        const hasFreezeRunes = inv.some(i => i.id === ITEMS.natureRune || i.id === ITEMS.earthRune || i.id === ITEMS.waterRune);
+        const freeze = o.freeze ? (hasFreezeRunes ? castableFreeze(magicLevel, inv) : freezeSpell(magicLevel)) : null;
         const castFreeze = freeze !== null && o.kit.magic && now >= freezeReady && now >= frozenUntil;
         // Hit off the opponent's overhead: a style they protect against loses 40% of its max hit.
-        const guarded = o.readOverheads === false ? new Set<Style>() : protectedStyles(seen?.headicons);
-        const turn = castFreeze ? { style: 'magic' as Style, index: last }
-            : nextStyle(rotation, last, st => !!o.kit[st] && !guarded.has(st)) ?? nextStyle(rotation, last, st => !!o.kit[st]);
+        const turn = castFreeze ? { style: 'magic' as Style, index: last } : upcomingTurn;
         if (!turn) continue;
-        // Wield the turn's kit in this tick, then attack.
-        for (const id of o.kit[turn.style] ?? []) {
+        const kitIds = new Set(o.kit[turn.style] ?? []);
+        const switching2H = turn.style === 'ranged' && state.equipment.some(e => e.slot === 3) && state.equipment.some(e => e.slot === 5);
+        // If switching to a 2H bow with a full 28-item pack and a shield worn, eat a food first so ~try_equip has room for the shield.
+        if (switching2H && inv.length >= 28 && now >= foodReady) {
+            const food = bestFood(inv);
+            if (food) {
+                use(food, /^Eat$/i);
+                foodReady = now + 3;
+                nextAttack = (hasAttacked ? nextAttack : now) + 3;
+                hasAttacked = true;
+                result.eaten++;
+                continue;
+            }
+        }
+        let budget = 5 - 1; // reserve 1 for the attack packet
+        const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
+        for (const id of [...(o.kit[turn.style] ?? []), ...(turn.style === 'melee' ? tankIds : [])]) {
             if (state.equipment.some(e => e.id === id)) continue;
             const item = slotOf([id]);
-            if (item) use(item, /^(Wield|Wear)$/i);
+            if (item && toWield.length < budget) toWield.push(item);
+        }
+        budget -= toWield.length;
+        const freeSlots = 28 - inv.length - (switching2H ? 1 : 0);
+        const toRemove = turn.style !== 'melee' && typeof sdk.sendUseEquipmentItem === 'function' && me.hp > oppMax + 12 && freeSlots >= 1 && budget >= 1
+            ? negativeCastArmour(state.equipment, turn.style, kitIds, names).filter(eq => eq.slot === 4).slice(0, 1)
+            : [];
+        budget -= toRemove.length;
+        if (prayers.prayerPoints > 0 && budget > 0) {
+            const { want: wantPray } = combatPrayers(prayerBase, overhead, turn.style === 'melee');
+            for (const p of wantPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
+        }
+        for (const item of toWield) use(item, /^(Wield|Wear)$/i);
+        for (const eq of toRemove) {
+            tankIds.add(eq.id);
+            void sdk.sendUseEquipmentItem(eq.slot, 1);
         }
         if (turn.style === 'magic') {
-            const spell = castFreeze ? freeze! : (o.damageSpell ?? SPELLS.fireWave);
+            const spell = castFreeze ? freeze! : (o.damageSpell ?? bestDamageSpell(magicLevel, inv));
             void sdk.sendSpellOnPlayer(target.index, spell);
-            if (castFreeze) { result.freezes++; freezeReady = now + 25; frozenUntil = now + 16; }
+            if (castFreeze) {
+                result.freezes++;
+                const dur = freezeDuration(freeze!, guarded.has('magic'));
+                frozenUntil = now + dur;
+                freezeReady = now + dur + 5;
+                freezeCastAt = now;
+                frozenTile = { x: target.x, z: target.z };
+            }
         } else void sdk.sendInteractPlayer(target.index, 2);
         result.attacks[turn.style]++;
         last = turn.index;
-        nextAttack = now + TURN[turn.style];
+        const walkTicks = turn.style === 'melee' ? ((me.runEnergy ?? 100) >= 100 ? Math.ceil(Math.max(0, cheb(at, target) - 1) / 2) : Math.max(0, cheb(at, target) - 1)) : 0;
+        const delay = turn.style === 'ranged' && rapidSet ? 3 : TURN[turn.style];
+        lastAttackAt = now; lastWalkTicks = walkTicks;
+        nextAttack = now + walkTicks + delay;
+        hasAttacked = true;
     }
 }
 
@@ -271,6 +545,6 @@ if (import.meta.main) {
     const kit: Kit = {
         magic: [1401], ranged: [861, 892], melee: [1231, 1201],
     };
-    const r = await fightPlayer(s, target, { kit, cap: Number(cap ?? 600) });
+    const r = await fightPlayer(s, target, { kit, spec: defaultSpec(kit), cap: Number(cap ?? 600) });
     await finish([s], r.outcome === 'kill', `${r.outcome} ${JSON.stringify(r)}`);
 }

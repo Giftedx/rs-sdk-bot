@@ -97,6 +97,8 @@ test('kitFrom: worn weapon and shield for melee, a carried bow, a carried staff;
     const worn = [{ id: 1215, name: 'Dragon dagger', slot: 3 }, { id: 1540, name: 'Anti-dragon shield', slot: 5 }, { id: 1127, name: 'Rune platebody', slot: 4 }];
     const carried = [{ id: 861, name: 'Magic shortbow' }, { id: 1401, name: 'Mystic fire staff' }, { id: 385, name: 'Shark' }];
     expect(kitFrom(worn, carried)).toEqual({ magic: [1401], melee: [1215, 1540], ranged: [861] });
+    expect(kitFrom([{ id: 1401, name: 'Mystic fire staff', slot: 3 }], [{ id: 1215, name: 'Dragon dagger' }, { id: 1201, name: 'Rune kiteshield' }, { id: 861, name: 'Magic shortbow' }]))
+        .toEqual({ magic: [1401], melee: [1215, 1201], ranged: [861] });
     expect(kitFrom([{ id: 1333, name: 'Rune scimitar', slot: 3 }], [])).toEqual({ magic: [], melee: [1333] });
     expect(kitFrom([{ id: 1387, name: 'Staff of fire', slot: 3 }], [])).toEqual({ magic: [1387] });
 });
