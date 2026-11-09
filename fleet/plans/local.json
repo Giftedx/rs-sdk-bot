@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794189137729,
+ "at": 1794189746986,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -85,22 +85,6 @@
    "role": "combat"
   },
   {
-   "account": "Ballspinner",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
-    "scripts/goldfarm.ts KNIGHT_SPOT=2652,3318"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "Thieving 55, then coins from Ardougne knights",
-   "role": "supply"
-  },
-  {
    "account": "Masterbaiter",
    "script": "scripts/gather-feathers.ts",
    "args": [],
@@ -124,18 +108,18 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2671,3313",
+    "KNIGHT_SPOT": "2653,3300",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
+   "goal": "goldfarm knights at 2653,3300",
    "role": "thieving",
-   "template": "goldfarm@2671,3313",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
    "resources": [
-    "knight:2671,3313"
+    "knight:2653,3300"
    ]
   },
   {
@@ -143,22 +127,41 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2671,3313",
+    "KNIGHT_SPOT": "2582,3297",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
+   "goal": "goldfarm knights at 2582,3297",
    "role": "thieving",
-   "template": "goldfarm@2671,3313",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "knight:2671,3313"
+    "knight:2582,3297"
    ]
   },
   {
    "account": "mmthv2350",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
+   ]
+  },
+  {
+   "account": "NabTheKnob",
    "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
@@ -241,18 +244,18 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
+    "KNIGHT_SPOT": "2582,3297",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
+   "goal": "goldfarm knights at 2582,3297",
    "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "knight:2669,3298"
+    "knight:2582,3297"
    ]
   },
   {
@@ -420,6 +423,27 @@
    "enabled": true,
    "repeat": false,
    "goal": "run-blood-mineyourbiz-loot100-requal [task-7004185d-145c-41c0-81b8-bff70757e64e]",
+   "role": "supply"
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "1552",
+    "QUANTITY": "1",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "5000",
+    "CASH_RESERVE": "240000",
+    "ORDER_KEY": "ballspinner-fluffs-seasoned-sardine1-requal",
+    "FILL_WAIT_TICKS": "30",
+    "ORDER_MS": "240000",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-b60c3daa-e8f5-44b5-bf63-99bb1f4983ee"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-ge-ballspinner-sardine1-requal [task-b60c3daa-e8f5-44b5-bf63-99bb1f4983ee]",
    "role": "supply"
   }
  ]
