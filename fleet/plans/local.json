@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794218320130,
+ "at": 1794218930654,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -59,8 +59,8 @@
    "account": "Shaftmaker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/walk-to.ts 2809 3441",
-    "scripts/firemaking-order.ts TARGET_LEVEL=99 LOG=normal MAX_LOGS=1300 CAP=60000 TOOL_BUDGET=50"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=10 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=shaftmaker-law10 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/pk-live/live-pilot.ts 10 20"
    ],
    "env": {
     "ROUNDS": "1"
@@ -68,8 +68,8 @@
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "Firemaking 99 from 5072 banked normal logs at Catherby",
-   "role": "firemaking"
+   "goal": "Buy 10 law runes on the GE, then a 10-minute PK pilot at Wilderness 20 or less",
+   "role": "pk"
   },
   {
    "account": "Shaftsinker",
@@ -100,6 +100,24 @@
    "standing": true,
    "repeat": false,
    "goal": "Buy 10 law runes on the GE for Varrock Teleport escapes, then a 10-minute PK pilot at Wilderness 20 or less",
+   "role": "pk"
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=10 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=oreelse-law10 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1333 QUANTITY=1 LIMIT_PRICE=30000 CASH_RESERVE=1000 ORDER_KEY=oreelse-runescim ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=20 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=oreelse-shark20 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/pk-live/live-pilot.ts 10 20"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "Buy law runes, a rune scimitar and sharks on the GE, then a 10-minute PK pilot at Wilderness 20 or less",
    "role": "pk"
   },
   {
@@ -160,6 +178,25 @@
    ]
   },
   {
+   "account": "mmthv2350",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
+   ]
+  },
+  {
    "account": "NabTheKnob",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -176,25 +213,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2671,3313"
-   ]
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
-   "env": {
-    "PEN": "3017,3288",
-    "TICKS": "3000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3017,3288",
-   "role": "helper",
-   "template": "feathers@3017,3288",
-   "autopilot": "local",
-   "resources": [
-    "pen:3017,3288"
    ]
   },
   {
@@ -399,6 +417,27 @@
    "repeat": false,
    "goal": "run-fluffs-magicwanda-yard-exit [task-0f829572-d37c-4c26-8d97-1d1932256be2]",
    "role": "supply"
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "385",
+    "QUANTITY": "30",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "810",
+    "CASH_RESERVE": "70000",
+    "ORDER_KEY": "woodpecker-sharks30-blood-food",
+    "FILL_WAIT_TICKS": "40",
+    "ORDER_MS": "360000",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-ba7ddac9-17e0-497c-a16c-321de8f810d5"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-ge-woodpecker-sharks30-blood-food [task-ba7ddac9-17e0-497c-a16c-321de8f810d5]",
+   "role": "helper"
   }
  ]
 }
