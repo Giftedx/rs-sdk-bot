@@ -43,7 +43,7 @@ export type FightOptions = {
     cap?: number;
     log?: (line: string) => void;
 };
-export type FightResult = { outcome: 'kill' | 'died' | 'escaped' | 'lost' | 'timeout'; ticks: number; dealt: number; taken: number; eaten: number; attacks: Record<Style, number>; freezes: number; specs: number };
+export type FightResult = { outcome: 'kill' | 'died' | 'escaped' | 'lost' | 'timeout'; ticks: number; dealt: number; taken: number; eaten: number; attacks: Record<Style, number>; freezes: number; specs: number; targetAt?: { x: number; z: number } };
 
 // Overhead protect prayers from the head icon bits (content player/configs/headicon.constant: 3 melee, 4 missiles, 5 magic).
 export function protectedStyles(headicons: number | undefined): Set<Style> {
@@ -142,7 +142,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         if (rubbed >= 0 && wildernessLevel(at.z) === 0) { result.outcome = 'escaped'; log(`PK escaped ${targetName} after ${result.ticks} ticks at HP ${me.hp}`); return result; }
         if (me.isDead || me.hp <= 0 || (startLife !== undefined && me.lifeId !== startLife)) { result.outcome = 'died'; log(`PK died to ${targetName} after ${result.ticks} ticks`); return result; }
         target = state.nearbyPlayers.find(p => p.name.toLowerCase() === want);
-        if (target) lastSeen = now;
+        if (target) { lastSeen = now; result.targetAt = { x: target.x, z: target.z }; }
         else if (now - lastSeen > 10) { result.outcome = 'lost'; log(`PK lost ${targetName} after ${result.ticks} ticks`); return result; }
         if (result.ticks >= cap) { log(`PK timeout against ${targetName}`); return result; }
         const inv = state.inventory, slotOf = (ids: readonly number[]) => inv.find(i => ids.includes(i.id));

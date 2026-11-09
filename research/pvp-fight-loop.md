@@ -39,3 +39,13 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
    read 47/99 before and after four specials in a row. Gap: whether the specials hit, and whether the bar refreshes on every hit.
 6. **The glory escape works.** No food, escape at 60 HP: the loop rubbed the glory at 59 HP, chose Edgeville and left the
    Wilderness 82 ticks into the fight. One run.
+7. **The hunter runs a whole trip.** `scripts/pk-hunt.ts` on practice: start at Edgeville bank with the kit banked, restock
+   (18 sharks, runes, potions, glory, staff, bow), walk to (3094, 3540), engage a maxed dummy at Wilderness level 4, kill it in
+   174 ticks and loot 5 piles (rune arrows, rune scimitar, rune full helm, shark) at the dummy's last tile until the inventory
+   was full, then hunt on to the tick cap and log out. One clean run after four fixes:
+   - wait for the drop;
+   - loot at the target's last tile, not where the fight began;
+   - heal before a new fight;
+   - move a hunt spot that rejected walks.
+
+   Gap: no live run; no opponent that eats, prays or flees; a death ends the run.
