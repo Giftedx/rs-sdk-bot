@@ -16,7 +16,7 @@ import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { clearSwarmStop, swarmWroteStop } from './swarm';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { matchingJobLines } from '../packages/core/src/job-log';
-import { CAPACITY, CLAIM_MAX_AGE_MS, SHARED, accountFrom, assess, catalogue, finishedTrainers, freshest, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, type Assignment } from '../packages/planner/src/autopilot';
+import { CAPACITY, CLAIM_MAX_AGE_MS, SHARED, accountFrom, assess, catalogue, finishedTrainers, freshest, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, type Assignment } from '../packages/planner/src/autopilot';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { tradeSettlement, validOrder, type Order, type Receipt, type TradeReceipt } from './fleet-trade-settlement';
 import { readHeldFleetTradeClaims } from '../packages/core/src/fleet-trade-claim';
@@ -26,6 +26,11 @@ import { tickWaste, wasteShare } from './tick-waste';
 const root = resolve(import.meta.dir, '..'), prac = join(root, '.practice');
 const PASS_EVERY_MS = 10 * 60_000, TRAINER_POLL_MS = 30_000;
 const PAUSED = 'AUTOPILOT hold: swarm is paused';
+// A pass that changes the resources this plan's enabled jobs hold publishes the side's claim at once. Other sides plan
+// against origin's claims (newestClaims), and a claim that waits for the fleet agent's next sync (up to 10 minutes)
+// lets two sides give the same knight place in that window.
+export const CLAIM_CHANGED = 'AUTOPILOT claim changed: publishing it now';
+export const heldResources = (jobs: readonly any[]) => jobs.filter(j => j?.enabled !== false).flatMap(j => jobResources(j)).sort().join('|');
 const swarmPaused = () => existsSync(join(prac, 'stop-swarm'));
 type State = { assigned: Record<string, { template: string; offset: number; at: number }>; retired: Record<string, string> };
 
@@ -234,6 +239,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     if (dry) return [...log, 'AUTOPILOT dry run: nothing written'];
     if (isPaused()) return [PAUSED];
     writeAtomic(planFile, JSON.stringify({ ...swarm, jobs }, null, 2) + '\n');
+    if (heldResources(swarm.jobs) !== heldResources(jobs)) log.push(CLAIM_CHANGED);
     // The controller's own stop file goes once this pass hands the account work (a job, or a coin order the fleet agent
     // will log it in for) and the account is offline: a run still ending on that file must find it.
     const handed = new Set([...fresh, ...funding.orders.flatMap(o => [o.from, o.to])].map(a => a.toLowerCase()));
@@ -280,6 +286,11 @@ if (import.meta.main) {
                 const lines = await withPlanWrite(() => pass(planFile, dry), join(prac, 'coordinator'));
                 if (lines[0] === PAUSED) return hold();
                 console.log(lines.join('\n'));
+                // Outside the plan lock: fleet-sync takes the fleet-data write lock, so it queues behind the agent's sync.
+                // A sync that fails to start leaves the claim to the agent's next sync.
+                if (lines.includes(CLAIM_CHANGED)) try {
+                    Bun.spawn([process.execPath, 'scripts/fleet-sync.ts'], { cwd: root, env: process.env, stdin: 'ignore', stdout: 'ignore', stderr: 'ignore', windowsHide: true }).unref();
+                } catch { /* the fleet agent's next sync publishes it */ }
                 console.log(`RESULT ok autopilot jobs=${lines.filter(x => / (assign|keep) /.test(x)).length} retired=${lines.filter(x => / retire /.test(x)).length}`);
                 return 'applied';
             } catch (e) {

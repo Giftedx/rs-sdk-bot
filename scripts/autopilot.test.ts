@@ -5,7 +5,7 @@ import { join, relative, resolve } from 'node:path';
 import { jobLogStart } from '../packages/core/src/job-log';
 import { catalogue, finishedTrainers, jobFor, mergeJobs, plan, plannableAccounts, reservedResources, type Acct, type Inputs } from '../packages/planner/src/autopilot';
 import { missionSignature, startable } from './swarm';
-import { coinOrder, fundOrders, inOpenOrder, newestClaims, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { coinOrder, fundOrders, heldResources, inOpenOrder, newestClaims, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import type { TradeReceipt } from './fleet-trade-settlement';
 
 const side = 'claude-cloud';
@@ -199,4 +199,13 @@ test('each side counts at its newest claim, synced or on origin', () => {
     const out = Object.fromEntries(newestClaims(synced, origin).map(c => [c.side, c.resources]));
     expect(out).toEqual({ 'claude-cloud': [], 'claude-cloud-2': ['knight:2582,3297'], 'claude-cloud-3': ['knight:2652,3318'] });
     expect(newestClaims(synced, [])).toHaveLength(2);
+});
+
+test('a plan whose enabled jobs hold different resources has a changed claim; an unchanged one does not', () => {
+    const farm = (account: string, spot: string, enabled = true) => ({ account, script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: spot }, enabled, resources: [`knight:${spot}`] });
+    const before = [farm('A', '2652,3318'), farm('B', '2669,3298')];
+    expect(heldResources(before)).toBe(heldResources([farm('B', '2669,3298'), farm('A', '2652,3318')]));
+    expect(heldResources(before)).not.toBe(heldResources([farm('A', '2653,3300'), farm('B', '2669,3298')]));
+    expect(heldResources(before)).not.toBe(heldResources([farm('A', '2652,3318'), farm('B', '2669,3298', false)]));
+    expect(heldResources([...before, farm('C', '2671,3313', false)])).toBe(heldResources(before));
 });
