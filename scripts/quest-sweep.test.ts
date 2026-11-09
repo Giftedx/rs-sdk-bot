@@ -72,7 +72,7 @@ import {vampireOpening} from './generated/quest-vampire';
 import {totemJournalStage,readTotemStage,totemBoat,completeTotem} from './generated/quest-totem';
 import {componentId} from '../packages/core/src/logout';
 import {questGatherPlan,shopPlan} from './quest-sweep';
-import {nearestSeller} from '../packages/core/src/shop-index';
+import {nearestSeller,sellersByDistance} from '../packages/core/src/shop-index';
 import {hasJulietMessage,rjJournalStage,readRjStage} from './generated/quest-rj';
 import {wornKitPlan,wearQuestKit} from './quest-sweep';
 
@@ -1167,6 +1167,21 @@ test('bound for Rimmington, the eye of newt comes from Betty in Port Sarim, not 
  expect(sellersByTravel(sellers,ardougne,hetty).map(s=>s.npc)).toEqual(['Betty','Jatix','Ogre merchant']);
 });
 
+test('bound for Doric, a Big Wolf account buys its pickaxe from Bob on foot, not Arhein past the refused 2855,3430 step',async()=>{
+ const {sellersByTravel,eastOfArdougne}=await import('./quest-sweep');
+ const bank={x:2946,z:3368,level:0},doric={x:2951,z:3450,level:0},weak={skills:{attack:1,strength:1,defence:1,hitpoints:10}};
+ const sellers=sellersByDistance('bronze_pickaxe',bank);
+ // The rejected leg: Arhein's detour is the least, and the way back from Catherby takes both boats.
+ const arhein=sellersByTravel(sellers,bank,doric)[0]!;
+ expect(arhein).toMatchObject({npc:'Arhein',tile:{x:2803,z:3430,level:0}});
+ expect(eastOfArdougne(arhein.tile,doric,weak)).toBe(true);
+ // The valid leg: Bob in Lumbridge, reached and left by the Falador road with no boat.
+ const bob=sellersByTravel(sellers,bank,doric,weak)[0]!;
+ expect(bob).toMatchObject({npc:'Bob',tile:{x:3232,z:3203,level:0}});
+ expect(eastOfArdougne(bank,bob.tile,weak)||eastOfArdougne(bob.tile,doric,weak)).toBe(false);
+ expect(sellersByTravel(sellers,bank,doric,{skills:{attack:90,strength:90,defence:90,hitpoints:82}})[0]!.npc).toBe('Arhein');
+});
+
 test('plant tiles come from the knowledge and rank by distance',async()=>{
  const {locsByDistance,pickableTiles}=await import('../packages/core/src/spawn-index');
  const m=new Map([[3366,[{x:2581,z:2984,level:0},{x:2583,z:2981,level:0}]]]);
@@ -1421,4 +1436,30 @@ test('Plague City\'s buckets of water are filled at the sink by the Ardougne ban
  const plan=gatherPlan([{id:1929,count:4}],ardougne,spawns,seller,()=>[],6,97,()=>[]);
  expect(plan.gathers).toEqual([{id:1929,count:4,how:'use'}]);
  expect(plan.still).toEqual([{id:1925,count:4}]);
+});
+
+import {fluffsExit,fluffsKittenGiven,inLumberYard,FLUFFS_FENCE} from './quest-sweep';
+test('Gertrude\'s Cat without Varrock Teleport climbs the yard fence, and a kitten-given journal resumes at the exit',()=>{
+ const stuck={worldX:3296,worldZ:3497,level:0},upstairs={worldX:3306,worldZ:3511,level:1},outside={worldX:3305,worldZ:3492,level:0};
+ expect(FLUFFS_FENCE).toEqual({id:2618,x:3305,z:3493});
+ expect([stuck,upstairs].every(inLumberYard)).toBe(true);
+ expect([outside,{worldX:3212,worldZ:3424,level:0},{worldX:3296,worldZ:3497,level:2}].some(inLumberYard)).toBe(false);
+ // Magic 1 or no runes inside the yard: the fence. A castable teleport, or an account already out, keeps the teleport path.
+ expect(fluffsExit(false,stuck)).toBe('fence');expect(fluffsExit(false,upstairs)).toBe('fence');
+ expect(fluffsExit(true,stuck)).toBe('teleport');expect(fluffsExit(false,outside)).toBe('teleport');
+ // %fluffs 5: started, inside the yard, no milk, sardine or kitten held.
+ expect(fluffsKittenGiven('started',[{id:995}],stuck)).toBe(true);
+ expect(fluffsKittenGiven('started',[],upstairs)).toBe(true);
+ for(const id of [1927,1552,1554])expect(fluffsKittenGiven('started',[{id}],stuck)).toBe(false);
+ for(const state of ['not started','complete','unknown',undefined])expect(fluffsKittenGiven(state,[],stuck)).toBe(false);
+ expect(fluffsKittenGiven('started',[],outside)).toBe(false);
+ // The quest script skips steps 1-4 on the resume and takes the fence before the teleport's walk; the sweep hands a
+ // resumed run over before any bank pass.
+ const fluffs=readFileSync(new URL('./generated/quest-fluffs.ts',import.meta.url),'utf8');
+ const resume=fluffs.indexOf('if (fluffsKittenGiven('),step1=fluffs.indexOf("q.talk('gertrude 1'"),fence=fluffs.indexOf("=== 'fence'"),teleport=fluffs.indexOf("q.teleport('varrock teleport'");
+ expect(resume).toBeGreaterThan(0);expect(step1).toBeGreaterThan(resume);expect(fence).toBeGreaterThan(step1);expect(teleport).toBeGreaterThan(fence);
+ expect(fluffs.slice(fence,teleport)).toMatch(/worldZ \?\? FENCE\.z\) < FENCE\.z/);
+ const sweep=readFileSync(new URL('./quest-sweep.ts',import.meta.url),'utf8');
+ expect(sweep.indexOf('QUEST_SWEEP_FLUFFS_RESUME')).toBeGreaterThan(0);
+ expect(sweep.indexOf('QUEST_SWEEP_FLUFFS_RESUME')).toBeLessThan(sweep.indexOf('QUEST_SWEEP_BANK '));
 });

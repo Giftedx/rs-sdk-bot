@@ -22,13 +22,13 @@ test('stranded dungeon step 2574,9742 reaches the chest stage despite an empty S
  expect(await stuck).toBe(false);expect(tick).toBeLessThanOrEqual(151);expect(listeners.size).toBe(0);
 });
 // A small model of the native route: door, ladders, chests with respawn, bank.
-function world(p:{thieving?:number;x?:number;z?:number;pickAfter?:number;hp?:number;coins?:number;cake?:number;hitAt?:number;bankCake?:number;hitPerLoot?:number}={}){
- const w={x:p.x??ARRIVAL.x,z:p.z??ARRIVAL.z,level:0,tick:0,xp:1000,hp:p.hp??56,runes:0,coins:p.coins??0,cake:p.cake??3,bankCake:p.bankCake??0,lifeId:1,
+function world(p:{thieving?:number;x?:number;z?:number;pickAfter?:number;hp?:number;coins?:number;cake?:number;hitAt?:number;bankCake?:number;hitPerLoot?:number;base?:number;lobster?:number}={}){
+ const w={x:p.x??ARRIVAL.x,z:p.z??ARRIVAL.z,level:0,tick:0,xp:1000,hp:p.hp??56,base:p.base??56,runes:0,coins:p.coins??0,cake:p.cake??3,lobster:p.lobster??0,bankCake:p.bankCake??0,lifeId:1,
   bankRunes:0,bankCoins:0,bankCalls:0,fails:p.pickAfter??0,chestUntil:CHESTS.map(()=>0),acts:[] as {id:number;option:number;x:number;z:number;tick:number}[],
   messages:[] as {type:number;text:string;sender:string;tick:number}[],stopped:false,surfaceWalks:[] as string[],dungeonWalks:[] as string[]};
  const state=()=>({player:{worldX:w.x,worldZ:w.z,level:w.level,lifeId:w.lifeId,isDead:false},
-  skills:[{name:'Thieving',level:p.thieving??99,baseLevel:p.thieving??99,experience:w.xp},{name:'Hitpoints',level:w.hp,baseLevel:56,experience:1000}],
-  inventory:[...(w.cake?[{id:1895,count:w.cake,slot:0,name:'Slice of cake',optionsWithIndex:[{text:'Eat',opIndex:1}]}]:[]),...(w.coins?[{id:COINS,count:w.coins,slot:1,name:'Coins',optionsWithIndex:[]}]:[]),...(w.runes?[{id:BLOOD_RUNE,count:w.runes,slot:2,name:'Blood rune',optionsWithIndex:[]}]:[])],
+  skills:[{name:'Thieving',level:p.thieving??99,baseLevel:p.thieving??99,experience:w.xp},{name:'Hitpoints',level:w.hp,baseLevel:w.base,experience:1000}],
+  inventory:[...(w.lobster?[{id:379,count:w.lobster,slot:3,name:'Lobster',optionsWithIndex:[{text:'Eat',opIndex:1}]}]:[]),...(w.cake?[{id:1895,count:w.cake,slot:0,name:'Slice of cake',optionsWithIndex:[{text:'Eat',opIndex:1}]}]:[]),...(w.coins?[{id:COINS,count:w.coins,slot:1,name:'Coins',optionsWithIndex:[]}]:[]),...(w.runes?[{id:BLOOD_RUNE,count:w.runes,slot:2,name:'Blood rune',optionsWithIndex:[]}]:[])],
   gameMessages:w.messages,nearbyNpcs:[],
   nearbyLocs:[{id:DOOR.id,x:DOOR.x,z:DOOR.z,level:0,optionsWithIndex:[{text:'Open',opIndex:1},{text:'Pick Lock',opIndex:2}]},
    ...CHESTS.filter((_,i)=>w.chestUntil[i]!<=w.tick).map(c=>({id:CHEST,x:c.x,z:c.z,level:0,optionsWithIndex:[{text:'Open',opIndex:1},{text:'Search for traps',opIndex:2}]}))]} as unknown as BotWorldState);
@@ -55,7 +55,7 @@ function world(p:{thieving?:number;x?:number;z?:number;pickAfter?:number;hp?:num
   wait:async(check,ticks)=>{for(let i=0;i<ticks;i++){if(check())return true;await step();}return check();},
   step,
   bank:async food=>{const taken=food?w.bankCake:0,r={runes:w.runes,coins:w.coins,food:taken};w.bankCalls++;w.bankRunes+=w.runes;w.bankCoins+=w.coins;w.runes=0;w.coins=0;w.cake+=taken;w.bankCake-=taken;return r;},
-  eat:async()=>{w.cake--;w.hp=Math.min(56,w.hp+20);return{success:true};},
+  eat:async item=>{if(item.id===379){w.lobster--;w.hp=Math.min(w.base,w.hp+12);}else{w.cake--;w.hp=Math.min(w.base,w.hp+20);}return{success:true};},
   log:()=>{}};
  return{w,d,state};
 }
@@ -169,6 +169,21 @@ test('a food stock that runs out ends the run at the hp stop with the loot banke
  expect(r).toMatchObject({ok:false,stop:'hp',targetMet:false,conserved:true,meals:1});
  expect(r.loots).toBeGreaterThan(0);expect(r.loots).toBeLessThan(12);
  expect(r.bankedRunes).toBe(r.loots*2);
+});
+// MineYourBiz death: one trip cost up to 12 of 47 Hitpoints, and three trips started at 25-26 Hitpoints.
+test('a 47 Hitpoints account eats before the door at 25 and leaves the dungeon at 27',async()=>{
+ const {w,d}=world({hp:25,base:47,cake:0,lobster:1}),order:string[]=[],act=d.act,eat=d.eat;
+ d.act=async(...a)=>{order.push(a[2]===DOOR.id?'door':'act');return act(...a);};
+ d.eat=async item=>{order.push(`eat ${w.hp}`);return eat(item);};
+ const r=await runBloodChest(d,options);
+ expect(order[0]).toBe('eat 25');expect(order.indexOf('door')).toBeGreaterThan(0);
+ expect(r).toMatchObject({ok:true,stop:'target',conserved:true,loots:2,meals:1});
+ expect(w.lobster).toBe(0);
+ const low=world({hp:27,base:47,cake:0,x:STAGE.x,z:STAGE.z});
+ const left=await runBloodChest(low.d,options);
+ expect(left).toMatchObject({ok:false,stop:'hp',loots:0,hpMin:27});
+ expect(low.w.acts.some(a=>a.id===CHEST)).toBe(false);
+ expect(low.w.acts.map(a=>[a.id,a.option])).toEqual([[LADDER_UP.id,1],[DOOR.id,1]]);
 });
 test('food with no observed effect fails the run',async()=>{
  const {d}=world({hp:20});

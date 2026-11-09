@@ -133,6 +133,33 @@ test('two identities in one worker log keep separate receipts; a failed non-firs
     } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
+test('a bootstrap HTTP failure names its request in connect-failed and restores fetch', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'lifecycle-http-')), native = globalThis.fetch;
+    const stub = (async (input: any) => {
+        if (String(input).endsWith('/api/version')) return new Response('{}', { status: 200, headers: { 'content-length': '2' } });
+        throw new Error('The socket connection was closed unexpectedly');
+    }) as typeof fetch;
+    globalThis.fetch = stub;
+    try {
+        const sdk = new BotSDK({ botUsername: 'Ana', password: SECRET, autoLaunchBrowser: false, autoReconnect: false } as any);
+        await expect(startInProcessSession({ name: 'Ana', password: SECRET, server: 'localhost:8890' }, {
+            sdk, Actions: FakeActions as any, cacheDir: root, lifecycle: { root, owner }, recordOwned: () => {},
+            async startSession(o: any) {
+                await fetch(`http://${o.host}/api/version`);
+                await fetch(`http://${o.host}/crc`);
+                throw new Error('unreachable');
+            },
+        })).rejects.toThrow('closed unexpectedly');
+        expect(globalThis.fetch).toBe(stub);
+        const detail = listAttempts('Ana', 'localhost:8890', { root })[0]!.receipt!.events.find(e => e.kind === 'connect-failed')!.detail!;
+        const rows = JSON.parse(detail.slice(detail.indexOf(' http=') + 6));
+        expect(rows.map((r: any) => [r.url, r.status ?? null, r.error ?? null])).toEqual([
+            ['localhost:8890/api/version', 200, null], ['localhost:8890/crc', null, 'Error: The socket connection was closed unexpectedly']]);
+        expect(readLogoutProof('Ana', 'localhost:8890', { root })).toMatchObject({ state: 'held', reason: 'connect failed without an observed end' });
+        noSecret(root);
+    } finally { globalThis.fetch = native; rmSync(root, { recursive: true, force: true }); }
+});
+
 test('first and non-first partial connections before START supersede older proof with stale or absent status', async () => {
     const root = mkdtempSync(join(tmpdir(), 'lifecycle-partial-'));
     try {

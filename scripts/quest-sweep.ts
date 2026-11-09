@@ -280,8 +280,13 @@ export function travelDistance(from:Tile,to:Tile):number{return cheb(from,to)+(c
 // With a destination, a seller ranks by the extra travel it adds to the way there (detour): from Ardougne bound for
 // Hetty's house in Rimmington, Betty in Port Sarim (53 tiles off the way) comes before Jatix in Taverley and the ogre
 // merchant at Gu'Tanoth, both nearer the bank and both behind the mountain or a stall counter the client cannot path to.
-export function sellersByTravel<S extends {tile:Tile}>(sellers:readonly S[],at:Tile,dest?:Tile):S[]{
- const cost=(t:Tile)=>dest?detour([at,dest],t):travelDistance(at,t);
+// A seller that adds the two boats (eastOfArdougne, walkFar's own test) costs a crossing on top: for a Big Wolf account at
+// the Falador bank bound for Doric, Arhein in Catherby (detour 222) ranked before Bob in Lumbridge (485), the foot leg west
+// from Taverley ended at 2866,3423 with the client refusing 2855,3430 (no floor joins Taverley to Catherby off the
+// pass), and the way back east took both boats.
+export function sellersByTravel<S extends {tile:Tile}>(sellers:readonly S[],at:Tile,dest?:Tile,acct?:Pick<Account,'skills'>):S[]{
+ const boats=(a:Tile,b:Tile)=>eastOfArdougne(a,b,acct)?1:0;
+ const cost=(t:Tile)=>(dest?detour([at,dest],t)+SEA*Math.max(0,boats(at,t)+boats(t,dest)-boats(at,dest)):travelDistance(at,t)+SEA*boats(at,t));
  return [...sellers].sort((a,b)=>cost(a.tile)-cost(b.tile));
 }
 export function nearestBank(at:Tile):Tile{
@@ -864,6 +869,17 @@ export function downward<L extends DownLoc>(locs:readonly L[]):{loc:L;opIndex:nu
  return loc&&opIndex!==undefined?{loc,opIndex}:undefined;
 }
 
+// Gertrude's Cat's lumber yard has one way out the walkers know nothing of: the gertrudefence loc 2618 at 3305,3493,
+// climbed from inside onto 3305,3492 (quest_fluffs.rs2:116-136). %fluffs is not sent to the client, so a started
+// journal inside the yard with no milk 1927, seasoned sardine 1552 or kitten 1554 held is the kitten given (5).
+export const FLUFFS_FENCE={id:2618,x:3305,z:3493};
+type YardPos={worldX:number;worldZ:number;level:number};
+export const inLumberYard=(p?:YardPos|null)=>!!p&&p.level>=0&&p.level<=1&&p.worldX>=3293&&p.worldX<=3313&&p.worldZ>=FLUFFS_FENCE.z&&p.worldZ<=3517;
+export const fluffsKittenGiven=(journal:string|undefined,pack:readonly {id:number}[],p?:YardPos|null)=>
+ journal==='started'&&inLumberYard(p)&&!pack.some(i=>i.id===1927||i.id===1552||i.id===1554);
+// Varrock Teleport when the account can cast it; otherwise the fence first, from inside the yard.
+export const fluffsExit=(castable:boolean,p?:YardPos|null):'teleport'|'fence'=>!castable&&inLumberYard(p)?'fence':'teleport';
+
 // One bot at a time hands its session over through globalThis.QUEST_SESSION, until quest-lib's openQuest has taken
 // it (QUEST_SESSION_TAKEN) or 60 s pass. `fresh` imports the quest module under a unique query, so every bot in one
 // process runs the quest's top-level code again.
@@ -993,6 +1009,16 @@ export async function sweep(account:string,quest:string,fresh?:string){
    return await returnSkull();
   }
  }
+ // Gertrude's Cat with the kitten given inside the lumber yard needs no inputs, and no walker leaves the yard: the
+ // quest script climbs the fence itself.
+ if(quest==='fluffs'){
+  const journal=()=>questFlags(s.client)?.find(f=>f.name===QUEST_NAMES.fluffs)?.state??'unknown';
+  await waitUntil(s,()=>journal()!=='unknown',{timeoutTicks:20});
+  if(fluffsKittenGiven(journal(),st()?.inventory??[],st()?.player)){
+   console.log('QUEST_SWEEP_FLUFFS_RESUME '+JSON.stringify({state:journal(),position:{x:st()!.player!.worldX,z:st()!.player!.worldZ,level:st()!.player!.level}}));
+   observeQuestFlags(s);sustain.stop();handed=true;(s as {questReserved?:Record<number,number>}).questReserved=reservedEdible(need);await handOver(s,script,fresh);return;
+  }
+ }
  const here=():Tile=>{const p=st()?.player;return p?{x:p.worldX,z:p.worldZ,level:p.level}:{x:0,z:0,level:-1};};
  const world=await getWorld();
  const fortress=await leaveFortress(s);
@@ -1056,7 +1082,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
   for(const id of QUEST_KEEP[quest]??[])if(count(pack(),id)===0&&count(rows(),id)>0)p.withdraw.push({id,count:1});
   if(seekGhostSkull&&retainedGhostBankSkull(ghostState(),pack(),s.sdk.getEquipment(),rows()))p.withdraw.push({id:553,count:1});
   // A missing item a shop sells is bought after the bank: take coins for it now. Sellers rank by travel distance.
-  const ranked=(d:string,at:Tile)=>sellersByTravel(sellersByDistance(d,at),at,preset.position).map(n=>({npc:n.npc,npcId:n.npcId,tile:n.tile}));
+  const ranked=(d:string,at:Tile)=>sellersByTravel(sellersByDistance(d,at),at,preset.position,accountOf(s)).map(n=>({npc:n.npc,npcId:n.npcId,tile:n.tile}));
   const shops=(items:readonly Item[])=>shopPlan(items,here(),catalogItem,(d,at)=>ranked(d,at)[0]??null,ranked);
   // What no shop sells is gathered after the shops; a gather tool comes from the bank or a shop.
   const sellerAt=(id:number)=>{const it=catalogItem(id),n=it&&id!==COINS?ranked(it.debugname,here())[0]:null;return n?travelDistance(here(),n.tile):Infinity;};
