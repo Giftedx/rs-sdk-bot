@@ -125,6 +125,15 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     const stats = { attacks: 0, kills: 0, deaths: 0, eats: 0, freezes: 0, chases: 0, loot: [] as string[], targets: [] as string[] };
     const walker = await sessionWalker(session);
     const skip = new Set<string>();
+    // Roster tracks plus the players the client sees now; the client copy wins for players in view.
+    const tracks = (): Track[] => {
+        const all = new Map(radar.fresh() ? radar.tracks : []);
+        for (const p of sdk.getState()?.nearbyPlayers ?? []) {
+            const key = p.name.toLowerCase(), old = all.get(key);
+            all.set(key, { name: p.name, x: p.x, z: p.z, combatLevel: p.combatLevel, vx: old?.vx ?? 0, vz: old?.vz ?? 0 });
+        }
+        return [...all.values()];
+    };
     let style: CombatStyle = 'melee';
     let wentIn = false;
 
@@ -166,7 +175,11 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             }
             if (!near && radar.fresh() && !track) { emit({ e: 'gone', target: name, at: lastTile }); if (cfg.loot && lastTile && cheb(m, lastTile) <= 3) await lootAt(session, lastTile, stats, emit); return 'gone'; }
             const pos = near ?? track;
-            if (!pos) { await sdk.waitForTicks(1); continue; }
+            if (!pos) {
+                // No radar and out of view: give up after 60 ticks.
+                if (session.tick() - contactAt > 60) { emit({ e: 'gone', target: name, at: lastTile }); return 'gone'; }
+                await sdk.waitForTicks(1); continue;
+            }
             if (wildLevel(pos.x, pos.z) === 0) { emit({ e: 'left', target: name }); return 'left'; }
             lastTile = { x: pos.x, z: pos.z };
 
@@ -222,11 +235,11 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 await walkPath(walker, [{ x: m.x, z: 3510, tol: 3 }], { maxTicks: 300, idleMs: 9000, stop: stopped });
                 break;
             }
-            const pick = radar.fresh() ? pickTrack(m, [...radar.tracks.values()], friends, cfg.maxWild, skip) : null;
+            const pick = pickTrack(m, tracks(), friends, cfg.maxWild, skip);
             if (!pick) {
                 // Nobody attackable: walk north into the Wilderness so the level range opens up.
                 const goal = { x: m.x < 2960 || m.x > 3380 ? 3090 : m.x, z: Math.min(3520 + cfg.maxWild * 8 - 4, m.z + 24) };
-                await walkPath(walker, [{ ...goal, tol: 3 }], { maxTicks: 30, idleMs: 9000, stop: () => stopped() || (radar.fresh() && !!pickTrack(me()!, [...radar.tracks.values()], friends, cfg.maxWild, skip)) });
+                await walkPath(walker, [{ ...goal, tol: 3 }], { maxTicks: 30, idleMs: 9000, stop: () => stopped() || !!pickTrack(me()!, tracks(), friends, cfg.maxWild, skip) });
                 continue;
             }
             const name = pick.track.name;
