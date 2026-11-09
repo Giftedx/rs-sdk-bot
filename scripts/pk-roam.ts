@@ -4,7 +4,7 @@
 // attacking with the style the target does not protect against until the target dies, logs out or leaves.
 //
 // usage: bun scripts/pk-roam.ts <account> [MAX_MINUTES=20] [MAX_WILD=56] [EAT_AT=50] [FLEE_AT=30] [SPELL=FIRE_BOLT]
-//        [RANGED=bow-name-regex] [LOOT=1] [FREEZE=1]
+//        [RANGED=bow-name-regex] [LOOT=1] [FREEZE=1] [LOOT_MIN=1000] [BANK_AT=100000]
 // The account starts south of the Wilderness with its gear worn and food in its inventory.
 // Stop files: .practice/stop-<account>, .practice/stop-pk-hunt (shared with scripts/pk-hunt.ts).
 import { existsSync, readFileSync } from 'node:fs';
@@ -110,7 +110,9 @@ export function freezeSpell(magic: number): number | null {
 }
 
 // friends replaces the fleet list of accounts never to attack (practice passes its own target's absence).
-type Cfg = { maxMs: number; maxWild: number; eatAt: number; fleeAt: number; spell: string; ranged?: RegExp; loot: boolean; freeze: boolean; friends?: readonly string[] };
+type Cfg = { maxMs: number; maxWild: number; eatAt: number; fleeAt: number; spell: string; ranged?: RegExp; loot: boolean; freeze: boolean; friends?: readonly string[];
+    // Pick up stacks worth at least lootMin gp; bank when carried loot reaches bankAt gp (defaults 1,000 and 100,000).
+    lootMin?: number; bankAt?: number };
 
 // Sweep tiles across the Wilderness, west to east and back, shallow to deep.
 export function sweep(maxWild: number): { x: number; z: number }[] {
@@ -159,7 +161,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     const food = () => sdk.getInventory().filter(i => (i.optionsWithIndex ?? []).some((o: any) => /^eat$/i.test(o.text)));
     const magic = sdk.getSkill('Magic')?.baseLevel ?? 1;
     const freeze = cfg.freeze ? freezeSpell(magic) : null;
-    const stats = { attacks: 0, kills: 0, deaths: 0, eats: 0, freezes: 0, chases: 0, loot: [] as string[], targets: [] as string[] };
+    const stats = { attacks: 0, kills: 0, deaths: 0, eats: 0, freezes: 0, chases: 0, loot: [] as string[], lootValue: 0, banked: 0, targets: [] as string[] };
     const walker = await sessionWalker(session);
     const skip = new Set<string>();
     // Roster tracks plus the players the client sees now; the client copy wins for players in view.
@@ -176,6 +178,21 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     // The fight kit is read once, as staged: the worn weapon and shield, a bow and a staff carried.
     const kit = kitFrom(sdk.getEquipment(), sdk.getInventory(), cfg.ranged);
     emit({ e: 'kit', kit });
+    // Loot and banking: everything staged at the start is kit; anything else carried is loot.
+    const keep = new Set([...sdk.getInventory(), ...sdk.getEquipment()].map(i => i.id));
+    const startFood = food()[0];
+    const foodCount = startFood ? sdk.getInventory().filter(i => i.id === startFood.id).length : 0;
+    const valuer = makeValuer(server);
+    const lootMin = cfg.lootMin ?? 1000, bankAt = cfg.bankAt ?? 100_000;
+    let carried = 0;
+    const loot = async (at: { x: number; z: number }) => { carried += await lootAt(session, at, { value: valuer, min: lootMin, stats, emit }); };
+    const needBank = () => carried >= bankAt || 28 - sdk.getInventory().length <= 2;
+    const bank = async (why: string) => {
+        emit({ e: 'bank-trip', why, carried });
+        const ok = await bankTrip(session, walker, keep, startFood?.id, foodCount, stopped, emit);
+        if (ok) { stats.banked += carried; carried = 0; }
+        return ok;
+    };
 
     const survive = async (): Promise<'ok' | 'flee' | 'dead'> => {
         const m = me();
@@ -206,10 +223,10 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             if (opp?.hp?.fresh && opp.hp.current === 0) {
                 stats.kills++; emit({ e: 'kill', target: name, at: lastTile });
                 await sdk.waitForTicks(4);
-                if (cfg.loot && lastTile) await lootAt(session, lastTile, stats, emit);
+                if (cfg.loot && lastTile) await loot(lastTile);
                 return 'kill';
             }
-            if (!near && radar.fresh() && !track) { emit({ e: 'gone', target: name, at: lastTile }); if (cfg.loot && lastTile && cheb(m, lastTile) <= 3) await lootAt(session, lastTile, stats, emit); return 'gone'; }
+            if (!near && radar.fresh() && !track) { emit({ e: 'gone', target: name, at: lastTile }); if (cfg.loot && lastTile && cheb(m, lastTile) <= 3) await loot(lastTile); return 'gone'; }
             const pos = near ?? track;
             if (!pos) {
                 // No radar and out of view: give up after 60 ticks.
@@ -250,7 +267,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                     stats.kills++;
                     const at = fight.targetAt ?? lastTile;
                     await sdk.waitForTicks(4);
-                    if (cfg.loot && at) await lootAt(session, at, stats, emit);
+                    if (cfg.loot && at) await loot(at);
                     return "kill";
                 }
                 if (fight.outcome === "died") { stats.deaths++; return "dead"; }
@@ -308,31 +325,101 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 break;
             }
             if (outcome === 'stall' || outcome === 'left') skip.add(name.toLowerCase());
+            if (needBank() && !(await bank(carried >= bankAt ? 'loot value' : 'pack full'))) break;
         }
+        // Bank whatever loot is carried before logging out; with none, just leave the Wilderness.
         const m = me();
-        if (m && wildLevel(m.x, m.z) > 0 && stats.deaths === 0) {
-            await walkPath(walker, [{ x: 3094, z: 3505, tol: 4 }], { maxTicks: 600, idleMs: 9000, stop: stopped });
+        if (m && stats.deaths === 0) {
+            if (sdk.getInventory().some(i => !keep.has(i.id))) await bank('end of hunt');
+            else if (wildLevel(m.x, m.z) > 0) await walkPath(walker, [{ x: 3094, z: 3505, tol: 4 }], { maxTicks: 600, idleMs: 9000, stop: stopped });
         }
     } finally { closeRadar(); }
     return stats;
 }
 
-async function lootAt(session: Session, at: { x: number; z: number }, stats: { loot: string[] }, emit: (e: object) => void) {
+// Item value in gp: the live market (referencePrice, else lastPrice, else basePrice), cached per item; with no market
+// (a practice server or a failed request) the item cost in knowledge/items.json. Coins are 1 gp each.
+let costs: Map<number, number> | undefined;
+export function itemCost(id: number, root = resolve(import.meta.dir, '..')): number {
+    costs ??= new Map((JSON.parse(readFileSync(join(root, 'knowledge/items.json'), 'utf8')) as { id: number; cost?: number }[]).map(i => [i.id, i.cost ?? 0]));
+    return costs.get(id) ?? 0;
+}
+export function makeValuer(server: string, get: (url: string) => Promise<any> = async url => (await fetch(url, { signal: AbortSignal.timeout(3000) })).json()) {
+    const cache = new Map<number, number>();
+    return async (id: number): Promise<number> => {
+        if (id === 995) return 1;
+        if (cache.has(id)) return cache.get(id)!;
+        let price = 0;
+        if (!isLocalServer(server)) {
+            try { const r = await get(`https://${server}/api/market/items/${id}`); price = r?.referencePrice ?? r?.lastPrice ?? r?.basePrice ?? 0; }
+            catch { /* market down: cost below */ }
+        }
+        if (!(price > 0)) price = itemCost(id);
+        cache.set(id, price);
+        return price;
+    };
+}
+
+type Ground = { id: number; name: string; count: number; x: number; z: number };
+// The stacks on and next to the kill tile worth at least min gp, most valuable first.
+export function planLoot(ground: readonly Ground[], at: { x: number; z: number }, price: ReadonlyMap<number, number>, min: number) {
+    return ground.filter(g => cheb(g, at) <= 1).map(g => ({ ...g, value: (price.get(g.id) ?? 0) * g.count }))
+        .filter(g => g.value >= min).sort((a, b) => b.value - a.value);
+}
+
+// Picks up the valuable stacks at a kill tile; a full pack eats a food to make room. Returns the gp picked up.
+async function lootAt(session: Session, at: { x: number; z: number }, ctx: { value: (id: number) => Promise<number>; min: number; stats: { loot: string[]; lootValue: number }; emit: (e: object) => void }) {
     const { sdk, bot } = session;
-    for (let i = 0; i < 12; i++) {
-        const item = (sdk.getState()?.groundItems ?? []).find((g: any) => Math.abs(g.x - at.x) <= 1 && Math.abs(g.z - at.z) <= 1);
-        if (!item || sdk.getInventory().length >= 28) break;
-        const r = await bot.pickupItem(item as any);
-        if (r.success) { stats.loot.push(item.name); emit({ e: 'loot', item: item.name, count: item.count }); }
-        else break;
+    const ground = (sdk.getState()?.groundItems ?? []) as unknown as Ground[];
+    const price = new Map<number, number>();
+    for (const g of ground) if (cheb(g, at) <= 1 && !price.has(g.id)) price.set(g.id, await ctx.value(g.id));
+    let got = 0;
+    for (const g of planLoot(ground, at, price, ctx.min)) {
+        const stacks = sdk.getInventory().some(i => i.id === g.id && i.count > 1);
+        if (sdk.getInventory().length >= 28 && !stacks) {
+            const meal = sdk.getInventory().find(i => (i.optionsWithIndex ?? []).some((o: any) => /^eat$/i.test(o.text)));
+            if (!meal) { ctx.emit({ e: 'loot-skipped', item: g.name, value: g.value, why: 'pack full' }); continue; }
+            await bot.eatFood(meal);
+        }
+        const live = (sdk.getState()?.groundItems ?? []).find((x: any) => x.id === g.id && x.x === g.x && x.z === g.z);
+        if (!live) continue;
+        const r = await bot.pickupItem(live as any);
+        if (!r.success) { ctx.emit({ e: 'loot-failed', item: g.name, msg: r.message }); continue; }
+        got += g.value; ctx.stats.lootValue += g.value; ctx.stats.loot.push(g.name);
+        ctx.emit({ e: 'loot', item: g.name, count: g.count, value: g.value });
     }
+    return got;
+}
+
+export const EDGEVILLE_BANK_TILE = { x: 3094, z: 3492 };
+// Walks to Edgeville bank, deposits everything that is not kit, takes food back to its staged count. True when banked.
+async function bankTrip(session: Session, walker: Awaited<ReturnType<typeof sessionWalker>>, keep: ReadonlySet<number>, foodId: number | undefined, foodCount: number, stopped: () => boolean, emit: (e: object) => void): Promise<boolean> {
+    const { sdk, bot } = session;
+    const walk = await walkPath(walker, [{ ...EDGEVILLE_BANK_TILE, tol: 3 }], { maxTicks: 900, idleMs: 9000, stop: stopped });
+    if (!walk.ok) { emit({ e: 'bank-failed', why: 'walk', detail: walk.detail }); return false; }
+    if (!(await bot.openBank()).success) { emit({ e: 'bank-failed', why: 'open' }); return false; }
+    const deposited: string[] = [];
+    for (const item of [...sdk.getInventory()]) {
+        if (keep.has(item.id) || deposited.includes(item.name)) continue;
+        const r = await bot.depositItem(item, -1);
+        if (r.success) deposited.push(item.name);
+    }
+    let restocked = 0;
+    const have = foodId === undefined ? 0 : sdk.getInventory().filter(i => i.id === foodId).length;
+    if (foodId !== undefined && have < foodCount) {
+        const r = await bot.withdrawItem(foodId, foodCount - have);
+        if (r.success) restocked = foodCount - have;
+    }
+    await bot.closeBank();
+    emit({ e: 'banked', deposited, restocked });
+    return true;
 }
 
 const arg = (args: string[], key: string, d: string) => args.find(a => a.startsWith(key + '='))?.slice(key.length + 1) ?? d;
 
 if (import.meta.main) {
     const [name, ...args] = process.argv.slice(2);
-    if (!name) throw new Error('usage: bun scripts/pk-roam.ts <account> [MAX_MINUTES=20] [MAX_WILD=56] [EAT_AT=50] [FLEE_AT=30] [SPELL=FIRE_BOLT] [RANGED=regex] [LOOT=1] [FREEZE=1]');
+    if (!name) throw new Error('usage: bun scripts/pk-roam.ts <account> [MAX_MINUTES=20] [MAX_WILD=56] [EAT_AT=50] [FLEE_AT=30] [SPELL=FIRE_BOLT] [RANGED=regex] [LOOT=1] [FREEZE=1] [LOOT_MIN=1000] [BANK_AT=100000]');
     const stop = () => existsSync('.practice/stop-' + name) || existsSync('.practice/stop-pk-hunt');
     if (stop()) throw new Error('PK stop file present');
     const ranged = arg(args, 'RANGED', '');
@@ -341,6 +428,7 @@ if (import.meta.main) {
         eatAt: Number(arg(args, 'EAT_AT', '50')), fleeAt: Number(arg(args, 'FLEE_AT', '30')),
         spell: arg(args, 'SPELL', 'FIRE_BOLT'), ranged: ranged ? new RegExp(ranged, 'i') : undefined,
         loot: arg(args, 'LOOT', '1') === '1', freeze: arg(args, 'FREEZE', '1') === '1',
+        lootMin: Number(arg(args, 'LOOT_MIN', '1000')), bankAt: Number(arg(args, 'BANK_AT', '100000')),
     };
     const session = await openBot(name);
     const emit = (e: object) => console.log('PK_EVENT ' + JSON.stringify({ t: session.tick(), ...e }));

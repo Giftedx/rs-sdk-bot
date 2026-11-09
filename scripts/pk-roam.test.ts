@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { canAttack, escapeZ, freezeSpell, intercept, kitFrom, pickTrack, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
+import { canAttack, escapeZ, freezeSpell, intercept, itemCost, kitFrom, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
 
 test('wildLevel: 8 tiles per level from z 3520 inside x 2944-3391', () => {
     expect(wildLevel(3094, 3519)).toBe(0);
@@ -105,4 +105,31 @@ test('spellId maps names and ids, and falls back to Fire Bolt', () => {
     expect(spellId('fire_blast')).toBe(1181);
     expect(spellId('1158')).toBe(1158);
     expect(spellId('nonsense')).toBe(1169);
+});
+
+test('planLoot keeps stacks on or next to the kill tile worth the floor, most valuable first', () => {
+    const at = { x: 3060, z: 3700 };
+    const ground = [
+        { id: 526, name: 'Bones', count: 1, x: 3060, z: 3700 },
+        { id: 1215, name: 'Dragon dagger', count: 1, x: 3061, z: 3700 },
+        { id: 995, name: 'Coins', count: 5000, x: 3060, z: 3701 },
+        { id: 385, name: 'Shark', count: 1, x: 3060, z: 3700 },
+        { id: 1079, name: 'Rune platelegs', count: 1, x: 3065, z: 3700 },
+    ];
+    const price = new Map([[526, 1], [1215, 300000], [995, 1], [385, 900], [1079, 38000]]);
+    expect(planLoot(ground, at, price, 1000).map(g => [g.name, g.value])).toEqual([['Dragon dagger', 300000], ['Coins', 5000]]);
+    expect(planLoot(ground, at, price, 500).map(g => g.name)).toEqual(['Dragon dagger', 'Coins', 'Shark']);
+});
+
+test('makeValuer: live market price, cost fallback, coins at 1, local server skips the market', async () => {
+    const calls: string[] = [];
+    const live = makeValuer('rs-sdk-demo.fly.dev', async url => { calls.push(url); if (url.endsWith('/1215')) return { referencePrice: 300000, basePrice: 30000 }; throw Error('down'); });
+    expect(await live(1215)).toBe(300000);
+    expect(await live(1215)).toBe(300000);
+    expect(calls.length).toBe(1); // cached
+    expect(await live(526)).toBe(itemCost(526)); // market down: items.json cost
+    expect(await live(995)).toBe(1);
+    const local = makeValuer('localhost:8888', async () => { throw Error('must not call'); });
+    expect(await local(1215)).toBe(itemCost(1215));
+    expect(itemCost(1215)).toBe(30000);
 });
