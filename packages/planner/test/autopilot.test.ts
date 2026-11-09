@@ -392,5 +392,5 @@ test('the Ardougne cow bands train army accounts from Hitpoints 32 with 14 HP of
     expect(Object.values(three).filter(id => id.startsWith('army-cow-'))).toHaveLength(2);
     // Cow mode runs a fixed 8 kills, so its job repeats until the band's target moves the account on.
     const job = jobFor(run([fighter('Cowhand', { Hitpoints: 35 })])[0]!, side);
-    expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['3000', 'cow'], env: { TRAIN_SKILL: 'Strength', COW_BANK_PROFILE: 'north', MAX_KILLS: '8' }, repeat: true, resources: ['cow:ardougne-north'] });
+    expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['3000', 'cow'], env: { TRAIN_SKILL: 'Strength', COW_BANK_PROFILE: 'north', MAX_KILLS: '8', COW_STAGE: '1' }, repeat: true, resources: ['cow:ardougne-north'] });
 });

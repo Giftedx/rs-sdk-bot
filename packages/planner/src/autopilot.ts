@@ -237,9 +237,9 @@ export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGH
 // (claude-cloud-4 .practice/combat-ladder); 3/3 again with cake and no trout (cow-dip-cake-final). Cow mode needs 14 HP
 // of trout or cake held (COW_FOOD_HP) and the bronze sword and wooden shield held or worn, starts at the north bank and
 // never wields better gear. Below Hitpoints 32 the food runs out. Hill giants for Hitpoints 43 and up are not
-// qualified, so the cows take every army account from 32. Gap: the live XP factor and field crowding are not measured,
-// and every cloud account banks its sword and shield away from the north bank, so a job needs a staging step that
-// cow mode does not run yet; no side lists army accounts until it does.
+// qualified, so the cows take every army account from 32. COW_STAGE=1 (scripts/cow-stage.ts) walks the account to the
+// north bank and takes the sword, shield and food from its bank first. Gap: staging, the live XP factor and field
+// crowding are not measured on practice or live.
 export const COW_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence'; band: number; to: number }[] = [
     { skill: 'Strength', band: 0, to: 40 }, { skill: 'Attack', band: 1, to: 40 }, { skill: 'Defence', band: 5, to: 40 },
 ];
@@ -253,7 +253,7 @@ export function catalogue(): Template[] {
     }));
     const cows = COW_BANDS.map(({ skill, band, to }): Template => ({
         id: `army-cow-${skill.toLowerCase()}`, family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['3000', 'cow'],
-        env: { TRAIN_SKILL: skill, COW_BANK_PROFILE: 'north', MAX_KILLS: '8' }, role: 'combat', goal: `train ${skill} to ${to} on the Ardougne cows`,
+        env: { TRAIN_SKILL: skill, COW_BANK_PROFILE: 'north', MAX_KILLS: '8', COW_STAGE: '1' }, role: 'combat', goal: `train ${skill} to ${to} on the Ardougne cows`,
         tier: 'goal', band, repeats: true, trains: { skill, to, unlocks: [] }, resources: [COW_FIELD], yields: () => [],
         needs: { skills: { Hitpoints: 32 }, food: 14, items: { 'bronze sword': 1, 'wooden shield': 1 } },
     }));
