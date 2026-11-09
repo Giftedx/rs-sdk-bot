@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794204286875,
+ "at": 1794204896740,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -97,6 +97,22 @@
    "repeat": false,
    "goal": "quests: runemysteries, murder, blackknight, vampire, priest, junglepotion, sheep, fishingcompo, druid, arrav, seaslug, haunted, demon, dig, drunkmonk, elemental, death, grandtree",
    "role": "combat"
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
+    "scripts/goldfarm.ts KNIGHT_SPOT=2652,3318"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Thieving 55, then coins from Ardougne knights",
+   "role": "supply"
   },
   {
    "account": "Masterbaiter",
@@ -360,24 +376,6 @@
    "enabled": false,
    "repeat": false,
    "goal": "run-fluffs-magicwanda-own-sardine [task-a1509c05-926c-44bb-a4d7-e6fa58dd27ca]",
-   "role": "supply"
-  },
-  {
-   "account": "Ballspinner",
-   "script": "scripts/microbot-glass.ts",
-   "args": [],
-   "env": {
-    "SUPPLY_MODE": "1",
-    "MAX_MAKE": "1",
-    "MAX_SPEND": "5000",
-    "CASH_RESERVE": "230000",
-    "CAP": "6000",
-    "MEMBERS": "1",
-    "COORDINATOR_RUN_ID": "task-46d762c3-dc92-4ac3-8004-78e6189a6410"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-glass-ballspinner-furnace1-after-sharks [task-46d762c3-dc92-4ac3-8004-78e6189a6410]",
    "role": "supply"
   }
  ]
