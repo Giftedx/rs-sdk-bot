@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794180421441,
+ "at": 1794183461107,
  "jobs": [
   {
    "account": "Masterbaiter",
@@ -262,22 +262,6 @@
    "role": "combat"
   },
   {
-   "account": "Ballspinner",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
-    "scripts/goldfarm.ts KNIGHT_SPOT=2652,3318"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "Thieving 55, then coins from Ardougne knights",
-   "role": "supply"
-  },
-  {
    "account": "Billionaire",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -328,26 +312,6 @@
    "role": "helper"
   },
   {
-   "account": "BowBeforeMe",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ORDER_KEY": "bigchopper-ranged40-maple",
-    "ITEM_ID": "853",
-    "QUANTITY": "1",
-    "LIMIT_PRICE": "5000",
-    "CASH_RESERVE": "30000",
-    "ORDER_MS": "900000",
-    "FILL_WAIT_TICKS": "50",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-ce47490c-e3f8-45ae-be05-a9fa81c83fa2"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-bowbeforeme-maple-for-ranged40 [task-ce47490c-e3f8-45ae-be05-a9fa81c83fa2]",
-   "role": "supply"
-  },
-  {
    "account": "Bigpackage",
    "script": "scripts/buy-owned-ge-item.ts",
    "args": [],
@@ -390,27 +354,6 @@
    "role": "firemaking"
   },
   {
-   "account": "Shaftsinker",
-   "script": "scripts/handoff-inputs.ts",
-   "args": [
-    "6:Clay",
-    "--bank-x=3185",
-    "--bank-z=3436",
-    "--request-ms=180000",
-    "--timeout-ms=600000",
-    "--grace-ms=45000"
-   ],
-   "env": {
-    "HANDOFF_ORDER": "doric-oreelse-clay-six-owned",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-7ec9ad9b-a1a0-4aec-8155-40b002ba7125"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-handoff-doric-clay-oreelse-repair [task-7ec9ad9b-a1a0-4aec-8155-40b002ba7125]",
-   "role": "runecraft"
-  },
-  {
    "account": "Moneyshot",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -451,27 +394,6 @@
    "role": "supply"
   },
   {
-   "account": "Magicwanda",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ORDER_KEY": "magicwanda-main-mithril280",
-    "ITEM_ID": "2359",
-    "QUANTITY": "280",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "1000",
-    "CASH_RESERVE": "350000",
-    "ORDER_MS": "600000",
-    "FILL_WAIT_TICKS": "50",
-    "CAP": "2400",
-    "COORDINATOR_RUN_ID": "task-2973321d-a062-4e45-bdb5-5c9b021a9a89"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-magicwanda-main-mithril280 [task-2973321d-a062-4e45-bdb5-5c9b021a9a89]",
-   "role": "supply"
-  },
-  {
    "account": "CoinCock",
    "script": "scripts/buy-owned-ge-item.ts",
    "args": [],
@@ -507,6 +429,84 @@
    "enabled": true,
    "repeat": false,
    "goal": "run-blood-charge-renewed-controller-qualified [task-98121627-5728-49a2-8345-54a547f27810]",
+   "role": "supply"
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ORDER_KEY": "ballspinner-kbd-sharks6",
+    "LIMIT_PRICE": "650",
+    "ITEM_ID": "385",
+    "ORDER_MS": "240000",
+    "CASH_RESERVE": "240000",
+    "QUANTITY": "6",
+    "FILL_WAIT_TICKS": "25",
+    "EXPECTED_OWNED": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-4fc989e4-f85e-4084-a199-dfb8d4f87bf1"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-ge-ballspinner-kbd-sharks6-saved-gate [task-4fc989e4-f85e-4084-a199-dfb8d4f87bf1]",
+   "role": "supply"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "FILL_WAIT_TICKS": "30",
+    "CASH_RESERVE": "10000",
+    "ITEM_ID": "561",
+    "ORDER_KEY": "bowbeforeme-magic-nature50",
+    "QUANTITY": "50",
+    "ORDER_MS": "240000",
+    "LIMIT_PRICE": "260",
+    "EXPECTED_OWNED": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-1ba638f3-ac7c-48ad-b6d4-5c540d7da9a0"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-ge-bowbeforeme-magic-nature50 [task-1ba638f3-ac7c-48ad-b6d4-5c540d7da9a0]",
+   "role": "supply"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "EXPECTED_OWNED": "0",
+    "FILL_WAIT_TICKS": "40",
+    "QUANTITY": "12",
+    "ORDER_MS": "360000",
+    "ORDER_KEY": "shaftsinker-runite-sharks12",
+    "LIMIT_PRICE": "810",
+    "ITEM_ID": "385",
+    "CASH_RESERVE": "20000",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-fd97e6af-54b8-4c62-ade2-f3b7533edcaa"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-ge-shaftsinker-runite-sharks12-saved-gate [task-fd97e6af-54b8-4c62-ade2-f3b7533edcaa]",
+   "role": "runecraft"
+  },
+  {
+   "account": "Magicwanda",
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "imp"
+   ],
+   "env": {
+    "CAP": "6000",
+    "COORDINATOR_RUN_ID": "task-4e3a0512-4b16-4dd7-a5ee-35072cb3fa5f"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-imp-magicwanda-after-market-recovery [task-4e3a0512-4b16-4dd7-a5ee-35072cb3fa5f]",
    "role": "supply"
   }
  ]
