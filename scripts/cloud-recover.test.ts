@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { join } from 'node:path';
-import { archiveDir, cloudSide, eligibility, lifecycleRoot, parkedAccounts, recoveriesInFlight, recoveryProposal, releasableAccounts, type ClaimView } from './cloud-recover';
+import { archiveDir, cloudSide, deadTasks, eligibility, lifecycleRoot, MAX_ATTEMPTS, recoveriesInFlight, recoveryProposal, releasableAccounts, releaseBlockers, spentAttempts, type ClaimView } from './cloud-recover';
 import { DEFAULT_LIFECYCLE_ROOT } from '../packages/core/src/session-lifecycle';
 import type { LogoutProof } from '../packages/core/src/session-lifecycle';
 
@@ -57,13 +57,29 @@ test('archive folders are named by time and account under the coordinator direct
     expect(archiveDir('/r', 'PocketPool', Date.UTC(2026, 10, 9, 0, 24, 26))).toBe('/r/.practice/coordinator/release-archive/20261109t002426z-pocketpool');
 });
 
-test('only disabled coordinator-owned account jobs count as parked', () => {
-    expect(parkedAccounts([
-        { account: 'Kiltlifter', coordinatorOwner: 'coordinator', enabled: false, script: 'scripts/session-check.ts' },
-        { account: 'PocketPool', coordinatorOwner: 'coordinator', enabled: true },
-        { account: 'SporranDip', enabled: false },
-        { accounts: ['A'], coordinatorOwner: 'coordinator', enabled: false },
-    ])).toEqual(['Kiltlifter']);
+// The claude-cloud release of 06:33 was blocked by a parked copy of Quickhandjob's goldfarm job.
+const settled = { ownerJob: () => true, confirmed: () => true, recovering: () => false };
+const check = { account: 'TheFullMonty', coordinatorOwner: 'coordinator', enabled: false, script: 'scripts/session-check.ts' };
+const copy = { account: 'Quickhandjob', script: 'scripts/goldfarm.ts', enabled: false, standing: true, autopilot: 'knights' };
+test('a parked owner-job copy is archived when its owner job is in swarm.json, its logout is confirmed and no recovery of it is open', () => {
+    expect(releasableAccounts([check, copy], settled)).toEqual(['TheFullMonty', 'Quickhandjob']);
+    expect(releasableAccounts([check, { ...copy, enabled: true }], settled)).toEqual([]);
+    expect(releasableAccounts([{ ...copy, account: undefined }], settled)).toEqual([]);
+});
+test('a parked owner-job copy stays when swarm.json no longer names the account', () => {
+    const v = { ...settled, ownerJob: (a: string) => a !== 'Quickhandjob' };
+    expect(releasableAccounts([check, copy], v)).toEqual([]);
+    expect(releaseBlockers([check, copy], v)).toEqual([copy]);
+});
+test('a parked owner-job copy stays unless the logout proof is confirmed: none, invalid and held all block', () => {
+    for (const state of ['none', 'invalid', 'held']) {
+        const v = { ...settled, confirmed: (a: string) => a !== 'Quickhandjob' || state === 'confirmed' };
+        expect(releasableAccounts([check, copy], v)).toEqual([]);
+    }
+    expect(releasableAccounts([check, { ...copy, account: undefined, accounts: ['A', 'B'] }], { ...settled, confirmed: (a: string) => a === 'A' })).toEqual([]);
+});
+test('a parked owner-job copy stays while a recovery of its account is pending or running', () => {
+    expect(releasableAccounts([check, copy], { ...settled, recovering: (a: string) => a === 'Quickhandjob' })).toEqual([]);
 });
 
 test('logout proofs are read from the session-lifecycle directory under the checkout', () => {
@@ -78,12 +94,14 @@ test('only a cloud side runs recovery; the local side and an unset FLEET_SIDE ar
     expect(cloudSide('cloud')).toBe(true);
 });
 
-test('a release frees accounts only when every coordinator job is a parked session check', () => {
+test('a release frees accounts only when every coordinator-owned job is a parked session check', () => {
     const check = (account: string) => ({ account, coordinatorOwner: 'coordinator', enabled: false, script: 'scripts/session-check.ts' });
-    expect(releasableAccounts([check('Kiltlifter'), check('PocketPool')])).toEqual(['Kiltlifter', 'PocketPool']);
-    expect(releasableAccounts([])).toEqual([]);
-    expect(releasableAccounts([check('Kiltlifter'), { account: 'Haggis', coordinatorOwner: 'coordinator', enabled: false, script: 'scripts/fight.ts' }])).toEqual([]);
-    expect(releasableAccounts([check('Kiltlifter'), { account: 'Haggis', coordinatorOwner: 'coordinator', enabled: true, script: 'scripts/session-check.ts' }])).toEqual([]);
+    const yes = settled, no = { ownerJob: () => false, confirmed: () => false, recovering: () => true };
+    expect(releasableAccounts([check('Kiltlifter'), check('PocketPool')], no)).toEqual(['Kiltlifter', 'PocketPool']);
+    expect(releasableAccounts([], yes)).toEqual([]);
+    expect(releasableAccounts([check('Kiltlifter'), { account: 'Haggis', coordinatorOwner: 'coordinator', enabled: false, script: 'scripts/fight.ts' }], yes)).toEqual([]);
+    expect(releasableAccounts([check('Kiltlifter'), { account: 'Haggis', coordinatorOwner: 'coordinator', enabled: true, script: 'scripts/session-check.ts' }], yes)).toEqual([]);
+    expect(releasableAccounts([check('Kiltlifter'), { accounts: ['A'], coordinatorOwner: 'coordinator', enabled: false, script: 'scripts/session-check.ts' }], yes)).toEqual([]);
 });
 
 test('accounts dropped together recover in one proposal behind one qualify', () => {
@@ -92,13 +110,55 @@ test('accounts dropped together recover in one proposal behind one qualify', () 
     expect(p.tasks).toHaveLength(3);
     expect(q).toMatchObject({ kind: 'qualify', dependsOn: [] });
     expect(a).toMatchObject({ account: 'Fingersmith', dependsOn: [q.id], sessionRecovery: { account: 'Fingersmith', endedAt: 1 } });
-    expect(b).toMatchObject({ account: 'KnightRider', dependsOn: [q.id], sessionRecovery: { account: 'KnightRider', endedAt: 2 } });
+    expect(b).toMatchObject({ account: 'KnightRider', sessionRecovery: { account: 'KnightRider', endedAt: 2 } });
     expect(new Set(p.tasks.map((t: any) => t.id)).size).toBe(3);
 });
 
+test('runs in one proposal take the single repair slot one after another', () => {
+    const p = recoveryProposal('claude-cloud', ['Quickhandjob', 'TrouserSnake', 'TheFullMonty', 'UnderMyKilt'].map((account, endedAt) => ({ account, endedAt })), Date.UTC(2026, 10, 9, 6, 33, 28));
+    const [q, ...runs] = p.tasks as any[];
+    expect(runs.map(r => r.dependsOn)).toEqual([[q.id], [q.id, runs[0].id], [q.id, runs[1].id], [q.id, runs[2].id]]);
+});
+
 test('a release waits while any session-recovery task is pending or running', () => {
-    const t = (status: string, sessionRecovery?: object) => ({ status, spec: { id: status, ...(sessionRecovery ? { sessionRecovery } : {}) } });
+    const t = (status: string, sessionRecovery?: object) => ({ status, spec: { id: status, dependsOn: [], ...(sessionRecovery ? { sessionRecovery } : {}) } });
     expect(recoveriesInFlight([t('succeeded', { account: 'A' }), t('failed', { account: 'B' }), t('running')])).toHaveLength(0);
     expect(recoveriesInFlight([t('succeeded', { account: 'A' }), t('running', { account: 'B' })]).map((x: any) => x.spec.sessionRecovery.account)).toEqual(['B']);
     expect(recoveriesInFlight([t('pending', { account: 'C' })])).toHaveLength(1);
+});
+
+// The claude-cloud qualify of 06:07 failed in its native gate and left its run pending; every later call waited on it.
+const task = (id: string, status: string, dependsOn: string[], recovery?: { account: string; endedAt: number }) => ({ status, spec: { id, kind: recovery ? 'run' : 'qualify', dependsOn, ...(recovery ? { sessionRecovery: recovery } : {}) } });
+test('a recovery behind a failed qualify or a failed earlier run is settled, not in flight', () => {
+    const tasks = [task('q', 'failed', []), task('a', 'pending', ['q'], { account: 'Quickhandjob', endedAt: 7 })];
+    expect(recoveriesInFlight(tasks)).toEqual([]);
+    const chain = [task('q', 'succeeded', []), task('a', 'failed', ['q'], { account: 'A', endedAt: 1 }), task('b', 'pending', ['q', 'a'], { account: 'B', endedAt: 2 }), task('c', 'pending', ['q', 'b'], { account: 'C', endedAt: 3 })];
+    expect(recoveriesInFlight(chain)).toEqual([]);
+    const waiting = [task('q', 'running', []), task('a', 'pending', ['q'], { account: 'A', endedAt: 1 }), task('b', 'pending', ['q', 'a'], { account: 'B', endedAt: 2 })];
+    expect(recoveriesInFlight(waiting).map((t: any) => t.spec.id)).toEqual(['a', 'b']);
+});
+
+test('the dead-task rule matches the coordinator: missing or superseded dependencies count, a failed refresh does not', () => {
+    expect([...deadTasks([task('a', 'pending', ['gone'], { account: 'A', endedAt: 1 })])]).toEqual(['a']);
+    expect([...deadTasks([task('q', 'superseded', []), task('a', 'pending', ['q'], { account: 'A', endedAt: 1 })])]).toEqual(['a']);
+    const refresh = { status: 'failed', spec: { id: 'refresh-session-recovery-only-x', kind: 'qualify', dependsOn: [] } };
+    const run = { status: 'pending', spec: { id: 'a', kind: 'run', capability: 'session-recovery-only', dependsOn: [refresh.spec.id] } };
+    expect(deadTasks([refresh, run]).size).toBe(0);
+});
+
+test('an end is retried once after its run or its qualify failed, then left for a person', () => {
+    const target = { account: 'Quickhandjob', endedAt: 7 };
+    const first = [task('q1', 'failed', []), task('a1', 'pending', ['q1'], target)];
+    expect(spentAttempts(first, target)).toBe(1);
+    const second = [...first, task('q2', 'succeeded', []), task('a2', 'failed', ['q2'], { account: 'quickhandjob', endedAt: 7 })];
+    expect(spentAttempts(second, target)).toBe(MAX_ATTEMPTS);
+    expect(spentAttempts(second, { ...target, endedAt: 8 })).toBe(0);
+    expect(spentAttempts([task('q', 'succeeded', []), task('a', 'running', ['q'], target)], target)).toBe(0);
+});
+
+test('a run that never started behind a failed earlier run of its chain spends no attempt and is submitted again', () => {
+    const target = { account: 'TrouserSnake', endedAt: 9 };
+    const tasks = [task('q', 'succeeded', []), task('a', 'failed', ['q'], { account: 'Quickhandjob', endedAt: 7 }), task('b', 'pending', ['q', 'a'], target)];
+    expect(recoveriesInFlight(tasks)).toEqual([]);
+    expect(spentAttempts([...tasks, ...tasks.map(t => ({ ...t, spec: { ...t.spec, id: t.spec.id + '2', dependsOn: t.spec.dependsOn.map(d => d + '2') } }))], target)).toBe(0);
 });
