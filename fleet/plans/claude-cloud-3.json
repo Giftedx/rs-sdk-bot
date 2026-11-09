@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud-3",
- "at": 1794192230604,
+ "at": 1794192339433,
  "jobs": [
   {
    "account": "Kiltlifter",
@@ -67,7 +67,7 @@
     "KNIGHT_SPOT": "2653,3300",
     "TICKS": "9000"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true,
    "goal": "goldfarm knights at 2653,3300",
