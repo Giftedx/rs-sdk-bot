@@ -132,3 +132,27 @@ The plan starts with an empty jobs list; a hand-written placeholder job with `"e
 A second container that runs its own accounts beside the `claude-cloud` controller is the `claude-cloud-2` side: the same commands with `FLEET_SIDE=claude-cloud-2` in every shell and `"side": "claude-cloud-2"` in `owners.json`, so its lease, claim, plan and snapshot never touch the `claude-cloud` files. A new name must be absent from every version of `fleet/owners.json` (`git -C .practice/fleet-data log -S'"<Name>"' -- fleet/owners.json` prints nothing) and from the hiscores: `https://rs-sdk-demo.fly.dev/hiscores/player/<name in lower case>?profile=main` answers 200 for a registered name and 404 for a free one, and only the lower-case form matches. A name another side registered answers its first login with code 3 (invalid username or password), because this seed cannot rebuild that side's password.
 
 The cloud container can restart and kill its daemons and workers. Keep the checkout's `.practice` files so the next process can read its session evidence. On an authorized resume, start the daemons from the same checkout on `master`. A farm with an uncertain logout needs authenticated recovery before the worker can log in again.
+
+The session's agent proxy drains its relay tunnels from time to time and closes the game WebSocket with code 1012 (`server_draining`); `curl -sS "$HTTPS_PROXY/__agentproxy/status"` lists each close under `recentRelayFailures`. The worker then ends `LOGOUT disconnected`, the account's fleet claim stays held and every later login fails `fleet account claim held by swarm` until an authenticated recovery confirms the logout. A Claude Code cloud container is also reclaimed about five minutes after its session goes idle, whatever daemons run, so the session keeps a `run_in_background` watchdog running at all times.
+
+### Running a side under its coordinator
+
+A side that runs its swarm under its own coordinator recovers a held account while the other farmers keep running: the recovery is a submitted task that the running controller processes.
+
+```bash
+(cd vendor/rs-sdk/server/engine && bun install --frozen-lockfile && bun run build)   # the recovery proof runs the native server
+mkdir -p .practice/cloud-handoff/nomodel
+printf '#!/bin/sh\necho "model CLI disabled" >&2\nexit 1\n' > .practice/cloud-handoff/nomodel/claude
+cp .practice/cloud-handoff/nomodel/claude .practice/cloud-handoff/nomodel/codex && chmod +x .practice/cloud-handoff/nomodel/*
+git update-index --skip-worktree swarm.json   # the side plan lives in root swarm.json and is never committed
+# root swarm.json: the side plan (maxBots 4, minFreeGB 4, the planner's jobs) plus
+#   "coordination": {"enabled": true, "maxActive": 1, "maxLive": 4, "plannerIntervalMs": 86400000, "agents": [], "bootstrap": []}
+export SWARM_PLAN=$PWD/swarm.json             # for scripts/autopilot.ts, scripts/fleet-agent.ts and scripts/fleet-sync.ts
+env -u SWARM_PLAN DEMO_OK=1 PATH="$PWD/.practice/cloud-handoff/nomodel:$PATH" bun packages/router/src/coordinator-cli.ts --run
+```
+
+The coordinator starts `scripts/swarm.ts swarm.json` itself while an enabled standing job exists, and adopts a running swarm through `.practice/coordinator/swarm-owner.json`. The stub makes the coordinator's model planner fail, so it queues no work of its own; it retries with a growing delay. `autoExpand` stays unset, so the coordinator creates no accounts. Switching an existing side over stops its plain swarm with `.practice/stop-swarm` (each worker logs out), removes that file and the controller's `stop-<name>` files, then starts the coordinator.
+
+`bun scripts/cloud-recover.ts`, run by the watchdog with the stub on `PATH`, recovers one account per call. It takes an account of this side whose logout proof is held, whose fleet claim is a swarm claim with a dead worker, with no owner stop file and with an end record in `.practice/swarm-deaths.json`. It submits a qualify task and a recovery run task with fresh ids (`bun run coordinate --submit <proposal>`), waits for the run task and a `confirmed` `readLogoutProof`, then releases the account. It refuses with a logged reason when the coordinator is not running, when a death ended the account, or when the end record is gone. The swarm's standing retry deletes the end record once the account's status is 15 minutes old (`BOOTSTRAP_STATUS_AGE_MS`), so a recovery starts within that window; an owner stop file does not keep the record, and the recovery login refuses while `stop-<name>` exists.
+
+A finished recovery leaves a disabled `scripts/session-check.ts` job owned by the coordinator in `.practice/coordinator/jobs.json`. That job shadows the account's planner job (`AUTOPILOT hold <name>: coordinator owns the assignment`, and the side's claim drops the account) until the file changes. The release stops the coordinator (`bun run coordinate --stop`; the swarm and its workers are detached and keep running), waits for the `--run` process to exit, moves `jobs.json` and `.practice/stop-coordinator` into `.practice/coordinator/release-archive/<time>-<account>/` and starts `--run` again, which adopts the running swarm. The account's planner job then starts.
