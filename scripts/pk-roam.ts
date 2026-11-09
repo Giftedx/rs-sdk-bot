@@ -408,8 +408,9 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 // Freeze first, at first reach, before the target can run; freeze again whenever it moves.
                 const castable = freezeNow();
                 if (castable && canAttack(m, near) && session.tick() >= freezeReady && !held) {
-                    // A cast on an immune or held target gives no XP; the SDK then waits out its timeout, so keep it short.
-                    const r = await bot.castSpell(near as any, castable, 1000);
+                    // A cast on an immune or held target gives no XP; the SDK then waits out its timeout, so keep it short:
+                    // 2.4 s is 6 live ticks (400 ms). Live, 1 s (2.5 ticks) reported every Snare as unproved.
+                    const r = await bot.castSpell(near as any, castable, 2400);
                     if (r.success) { held = true; stats.freezes++; lastSeenAt = { x: near.x, z: near.z }; }
                     freezeReady = session.tick() + 3;
                     emit({ e: 'freeze', target: name, spell: freeze, ok: r.success, msg: r.success ? undefined : r.message });
@@ -426,7 +427,9 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 // range and re-aims between calls.
                 stats.attacks++;
                 const fight = await fightPlayer(session, name, {
-                    kit, freeze: freezeNow() !== null && freezeNow() === freezeSpell(magic), eatAt: cfg.eatAt, exitOnDanger: true,
+                    // eatAt is a percentage here and an HP value in fightPlayer. Live, a 26 HP account given 50 ate a shark every
+                    // 3 ticks at full HP.
+                    kit, freeze: freezeNow() !== null && freezeNow() === freezeSpell(magic), eatAt: Math.ceil((me()?.maxHp ?? 99) * cfg.eatAt / 100), exitOnDanger: true,
                     escapeAt: Math.ceil((me()?.maxHp ?? 99) * cfg.fleeAt / 100), damageSpell: cfg.spell.toUpperCase() === 'AUTO' ? bestFireSpell(magic, sdk.getInventory()) : spellId(cfg.spell), cap: 12,
                     log: line => emit({ e: "fight", line }),
                 });
@@ -605,4 +608,28 @@ if (import.meta.main) {
     const loggedOut = await settle([session], ok, failure ?? `PK hunt: ${result!.kills} kills, ${result!.deaths} deaths, ${result!.attacks} attacks`);
     console.log('PK_HUNT ' + JSON.stringify({ ok, failure, ...result, loggedOut }));
     process.exitCode = ok && loggedOut ? 0 : 1;
+}
+
+// Restock before a trip: what to buy from the runes held (bank and pack) and the coins held.
+// Law runes: GE at most 1,600 gp each (live ask 1,345), up to 10, while under 2 are held: Varrock Teleport is the
+// escape. Nature runes for freezes: GE at most 300 gp (ask 250), up to 20. Water runes have no GE sellers; Betty's
+// rune shop (scripts/shop-buyer.ts betty) sells them, with a spend cap. 1,000 coins always stay.
+export type RestockStep = { kind: 'ge'; item: number; quantity: number; limit: number; owned: number } | { kind: 'shop'; profile: 'betty'; maxSpend: number };
+export function restockPlan(held: { law: number; nature: number; water: number; coins: number; magic: number }): RestockStep[] {
+    const steps: RestockStep[] = [];
+    let coins = held.coins - 1000;
+    if (held.law < 2) {
+        const quantity = Math.min(10, Math.floor(coins / 1600));
+        if (quantity >= 1) { steps.push({ kind: 'ge', item: 563, quantity, limit: 1600, owned: held.law }); coins -= quantity * 1600; }
+    }
+    // Freezes need both nature and water runes: keep the water budget back before buying nature runes.
+    const waterShort = held.magic >= 50 && held.water < 10;
+    let nature = held.nature;
+    if (held.magic >= 50 && held.nature < 8) {
+        const quantity = Math.min(20, Math.floor((coins - (waterShort ? 500 : 0)) / 300));
+        if (quantity >= 4) { steps.push({ kind: 'ge', item: 561, quantity, limit: 300, owned: held.nature }); coins -= quantity * 300; nature += quantity; }
+    }
+    // Water alone cannot freeze: buy it only with 4 or more nature runes (Bind needs 2, Entangle 4) held after.
+    if (waterShort && nature >= 4 && coins >= 500) steps.push({ kind: 'shop', profile: 'betty', maxSpend: 500 });
+    return steps;
 }

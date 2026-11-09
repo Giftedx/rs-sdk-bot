@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { bestFireSpell, canAttack, castableFreeze, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
+import { bestFireSpell, canAttack, castableFreeze, restockPlan, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
 
 test('wildLevel: 8 tiles per level from z 3520 inside x 2944-3391', () => {
     expect(wildLevel(3094, 3519)).toBe(0);
@@ -217,4 +217,16 @@ test('pickTrack skips a target at our level whose weapon is worth over twice our
     expect(pickTrack({ ...me, weaponValue: itemCost(1215) }, [goondelf], new Set(), 56, new Set(), 40, new Map(), 0, () => false)?.track.name).toBe('Goondelf');
     // A much weaker player with a good weapon is still prey.
     expect(pickTrack(me, [{ ...goondelf, combatLevel: 110 }], new Set(), 56, new Set(), 40, new Map(), 0, () => false)?.track.name).toBe('Goondelf');
+});
+
+test('restockPlan: law runes first, then freeze runes, within the coins', () => {
+    // Live Mightyrod after its first trip: 9 law, 0 nature, 1 water, about 4,900 coins: nothing for law; 11 nature, 500 gp kept for water.
+    expect(restockPlan({ law: 9, nature: 0, water: 1, coins: 4943, magic: 91 })).toEqual([
+        { kind: 'ge', item: 561, quantity: 11, limit: 300, owned: 0 },
+        { kind: 'shop', profile: 'betty', maxSpend: 500 },
+    ]);
+    expect(restockPlan({ law: 1, nature: 20, water: 50, coins: 20000, magic: 72 })).toEqual([{ kind: 'ge', item: 563, quantity: 10, limit: 1600, owned: 1 }]);
+    expect(restockPlan({ law: 0, nature: 0, water: 0, coins: 3000, magic: 40 })).toEqual([{ kind: 'ge', item: 563, quantity: 1, limit: 1600, owned: 0 }]);
+    expect(restockPlan({ law: 0, nature: 0, water: 0, coins: 2000, magic: 91 })).toEqual([]);
+    expect(restockPlan({ law: 5, nature: 10, water: 20, coins: 99999, magic: 91 })).toEqual([]);
 });
