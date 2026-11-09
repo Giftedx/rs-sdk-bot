@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud-3",
- "at": 1794181892014,
+ "at": 1794182455097,
  "jobs": [
   {
    "account": "Kiltlifter",
@@ -42,21 +42,22 @@
   },
   {
    "account": "PocketPool",
-   "script": "scripts/gather-feathers.ts",
+   "script": "scripts/generated/thieving60.ts",
    "args": [],
    "env": {
-    "PEN": "3197,3353",
-    "TICKS": "3000"
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
    },
-   "enabled": false,
+   "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3197,3353",
-   "role": "helper",
-   "template": "feathers@3197,3353",
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
    "autopilot": "claude-cloud-3",
    "resources": [
-    "pen:3197,3353"
+    "knight:2653,3300"
    ]
   },
   {
