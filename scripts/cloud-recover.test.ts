@@ -31,6 +31,13 @@ test('held sessions that cannot be recovered safely are refused with a logged re
     expect(eligibility({ ...base, claim: { phase: 'held' } })).toMatchObject({ eligible: false, log: true });
 });
 
+test('an end record older than the held attempt is an earlier run: wait quietly until the supervisor ends this one', () => {
+    const attempt: LogoutProof = { ...held, attemptId: '1794190630000-0000012460-0000000001' } as LogoutProof;
+    expect(eligibility({ ...base, proof: attempt, end: { at: 1794190600000, reason: 'done after 1 runs' } })).toEqual({ eligible: false, reason: 'waiting: the supervisor has not ended the held attempt', log: false });
+    expect(eligibility({ ...base, proof: attempt, end: { at: 1794190845000, reason: 'gave-up after 21 runs' } })).toEqual({ eligible: true, endedAt: 1794190845000 });
+    expect(eligibility({ ...base, proof: attempt, end: { at: 1794190845000, reason: 'done after 1 runs' } })).toMatchObject({ eligible: false, log: true });
+});
+
 test('a worker pid on another host does not count as alive here', () => {
     expect(eligibility({ ...base, host: 'other', pidAlive: () => true })).toEqual({ eligible: true, endedAt: 1794183517222 });
 });
