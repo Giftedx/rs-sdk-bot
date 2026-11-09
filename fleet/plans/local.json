@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794220154647,
+ "at": 1794220765237,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -86,18 +86,19 @@
   },
   {
    "account": "Shaftsinker",
-   "script": "scripts/rune-bank-craft.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "99"
+    "scripts/walk-to.ts 3253 3420",
+    "scripts/train-chickens.ts TRAIN_BANK=varrock TRAIN_SKILL=Strength TARGET_LEVEL=30 CAP=3000"
    ],
    "env": {
-    "CAP": "60000"
+    "ROUNDS": "1"
    },
-   "enabled": false,
+   "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "Runecraft 99 from 20022 banked rune essence",
-   "role": "runecraft"
+   "goal": "Strength 30 on chickens so it can hit hard enough to PK",
+   "role": "pk-trainee"
   },
   {
    "account": "Mightyrod",
