@@ -17,7 +17,8 @@ export type Template = {
     id: string; family: string; script: string; args?: string[]; env?: Record<string, string>; role: string; goal: string;
     // `under`: skills that must stay below a level (a band hands an account on to the next band at that level).
     // `holdsUnder`: holdings that end the job at once. The account must hold fewer, or the run finds its target met and fails.
-    needs?: { skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number>; holdsUnder?: Record<string, number> };
+    // `food`: HP the account's food heals, pack and bank (FOOD_HEAL).
+    needs?: { skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number>; holdsUnder?: Record<string, number>; food?: number };
     yields: (a: Acct) => Flow[]; spends?: (a: Acct) => Flow[];
     resources?: string[]; trains?: { skill: string; to: number; unlocks: string[] };
     // A goal band (AGENTS.md goals: the PK army of maxed tribrids) trains an army account toward its target and is
@@ -56,6 +57,12 @@ export const BILL_PREMIUM = 2, SURPLUS = 0.5, TRAIN_SHARE = 0.25;
 export const FEEDS: Record<string, string[]> = { feather: ['headless arrow'], 'arrow shaft': ['headless arrow'], 'raw lobster': ['lobster'] };
 export const norm = (s: string) => s.toLowerCase().replace(/\s*\((?:noted|quest)\)$/, '').trim().replace(/s$/, '');
 export const pairKey = (account: string, template: string) => `${account.toLowerCase()}:${template}`;
+// HP one held item heals over all its bites, by item name: scripts/gather-combat.ts COW_FOOD_BITES × COW_BITE_HEAL
+// (trout 7; a cake bite 4, a chocolate cake bite 5). scripts/autopilot.test.ts checks the two tables agree.
+export const FOOD_HEAL: Readonly<Record<string, number>> = {
+    trout: 7, cake: 12, '2/3 cake': 8, 'slice of cake': 4, 'chocolate cake': 15, '2/3 chocolate cake': 10, 'chocolate slice': 5,
+};
+export const foodHeal = (a: Acct) => Object.entries(FOOD_HEAL).reduce((n, [item, hp]) => n + (a.items[item] ?? 0) * hp, 0);
 
 export function unitValue(item: string, bill: readonly BillRow[], prices: Readonly<Record<string, number>>): number {
     const k = norm(item);
@@ -68,7 +75,8 @@ const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: strin
     Object.entries(needs?.skills ?? {}).every(([s, l]) => (skillOverride?.skill === s ? Math.max(skillOverride.to, a.skills[s] ?? 1) : a.skills[s] ?? 1) >= l)
     && Object.entries(needs?.items ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n)
     && Object.entries(needs?.under ?? {}).every(([s, l]) => (a.skills[s] ?? 1) < l)
-    && Object.entries(needs?.holdsUnder ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) < n);
+    && Object.entries(needs?.holdsUnder ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) < n)
+    && foodHeal(a) >= (needs?.food ?? 0);
 // The coins a template needs beyond what the account holds, and its needs without the coin line.
 const coinShort = (a: Acct, needs: Template['needs']) => Math.max(0, (Object.entries(needs?.items ?? {}).find(([i]) => norm(i) === 'coin')?.[1] ?? 0) - (a.items.coin ?? 0));
 const withoutCoins = (needs: Template['needs']): Template['needs'] => ({ ...needs, items: Object.fromEntries(Object.entries(needs?.items ?? {}).filter(([i]) => norm(i) !== 'coin')) });
@@ -226,9 +234,12 @@ export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGH
 // Prayer, Defence last. Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile) qualified 3/3 on practice
 // with MAX_KILLS=8: no death, logged out, RESULT ok stop=max-kills, about 700 ticks a run, trained skill 0.38 and
 // Hitpoints 0.12 XP per tick at practice XP rate 1, 2 trout carried and none eaten, from Attack 45 and Hitpoints 32
-// (claude-cloud-4 .practice/combat-ladder). Cow mode needs 2 trout and the bronze sword and wooden shield held or worn,
-// starts at the north bank and never wields better gear. Below Hitpoints 32 the food runs out; from 43 the hill giants
-// take over. Gap: the live XP factor and field crowding are not measured.
+// (claude-cloud-4 .practice/combat-ladder); 3/3 again with cake and no trout (cow-dip-cake-final). Cow mode needs 14 HP
+// of trout or cake held (COW_FOOD_HP) and the bronze sword and wooden shield held or worn, starts at the north bank and
+// never wields better gear. Below Hitpoints 32 the food runs out. Hill giants for Hitpoints 43 and up are not
+// qualified, so the cows take every army account from 32. Gap: the live XP factor and field crowding are not measured,
+// and every cloud account banks its sword and shield away from the north bank, so a job needs a staging step that
+// cow mode does not run yet; no side lists army accounts until it does.
 export const COW_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence'; band: number; to: number }[] = [
     { skill: 'Strength', band: 0, to: 40 }, { skill: 'Attack', band: 1, to: 40 }, { skill: 'Defence', band: 5, to: 40 },
 ];
@@ -244,7 +255,7 @@ export function catalogue(): Template[] {
         id: `army-cow-${skill.toLowerCase()}`, family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['3000', 'cow'],
         env: { TRAIN_SKILL: skill, COW_BANK_PROFILE: 'north', MAX_KILLS: '8' }, role: 'combat', goal: `train ${skill} to ${to} on the Ardougne cows`,
         tier: 'goal', band, repeats: true, trains: { skill, to, unlocks: [] }, resources: [COW_FIELD], yields: () => [],
-        needs: { skills: { Hitpoints: 32 }, under: { Hitpoints: 43 }, items: { trout: 2, 'bronze sword': 1, 'wooden shield': 1 } },
+        needs: { skills: { Hitpoints: 32 }, food: 14, items: { 'bronze sword': 1, 'wooden shield': 1 } },
     }));
     return [
         ...goldfarm,

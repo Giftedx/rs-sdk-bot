@@ -3,7 +3,8 @@ import { appendFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { jobLogStart } from '../packages/core/src/job-log';
-import { catalogue, finishedTrainers, jobFor, mergeJobs, plan, plannableAccounts, reservedResources, type Acct, type Inputs } from '../packages/planner/src/autopilot';
+import { catalogue, finishedTrainers, FOOD_HEAL, jobFor, mergeJobs, norm, plan, plannableAccounts, reservedResources, type Acct, type Inputs } from '../packages/planner/src/autopilot';
+import { COW_FOOD_BITES, COW_FOOD_HP, cowFoodHeal } from './gather-combat';
 import { missionSignature, startable } from './swarm';
 import { armyRoster, coinOrder, fundOrders, heldResources, inOpenOrder, newestClaims, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import type { TradeReceipt } from './fleet-trade-settlement';
@@ -214,4 +215,11 @@ test('the army roster is the plan\'s explicit list, lower-cased, never Haggis', 
     expect([...armyRoster({ army: ['Kiltlifter', 'PocketPool', 'Haggis', 7] })]).toEqual(['kiltlifter', 'pocketpool']);
     expect(armyRoster({ jobs: [] }).size).toBe(0);
     expect(armyRoster(null).size).toBe(0);
+});
+
+test('the planner heals food by the same table as cow mode, and the cow bands need its HP', () => {
+    const names = new Map((JSON.parse(readFileSync(resolve(import.meta.dir, '../knowledge/items.json'), 'utf8')) as { id: number; name: string }[]).map(i => [i.id, i.name]));
+    const ids = Object.keys(COW_FOOD_BITES).map(Number);
+    expect(Object.fromEntries(ids.map(id => [norm(names.get(id)!), cowFoodHeal([{ id, count: 1 }])]))).toEqual({ ...FOOD_HEAL });
+    for (const t of catalogue().filter(t => t.id.startsWith('army-cow-'))) expect(t.needs?.food).toBe(COW_FOOD_HP);
 });
