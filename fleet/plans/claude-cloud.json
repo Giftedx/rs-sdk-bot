@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794221113231,
+ "at": 1794221291335,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -64,18 +64,18 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2653,3300",
+    "KNIGHT_SPOT": "2669,3298",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
+   "goal": "goldfarm knights at 2669,3298",
    "role": "thieving",
-   "template": "goldfarm@2653,3300",
+   "template": "goldfarm@2669,3298",
    "autopilot": "claude-cloud",
    "resources": [
-    "knight:2653,3300"
+    "knight:2669,3298"
    ]
   }
  ]
