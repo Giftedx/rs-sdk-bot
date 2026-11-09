@@ -1,332 +1,137 @@
-// Wilderness PK hunt over the whole surface Wilderness.
-// The world feed roster shows every player's tile and combat level, so the hunter picks the target it can reach
-// first, runs to where that target will be (cutting it off on its way south), freezes it when it runs, and keeps
-// attacking with the style the target does not protect against until the target dies, logs out or leaves.
-//
-// usage: bun scripts/pk-hunt.ts <account> [MAX_MINUTES=20] [MAX_WILD=56] [EAT_AT=50] [FLEE_AT=30] [SPELL=FIRE_BOLT]
-//        [RANGED=bow-name-regex] [LOOT=1] [FREEZE=1]
-// The account starts south of the Wilderness with its gear worn and food in its inventory.
-// Stop files: .practice/stop-<account>, .practice/stop-pk-hunt.
-import { existsSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { openBot, serverFromEnv, settle } from '../packages/core/src/bot';
+// PK hunter: restocks a tribrid kit at Edgeville bank, walks into the shallow Wilderness north of Edgeville, fights the
+// nearest attackable player who is not a fleet account (or anyone who attacks it) with scripts/pk.ts, loots a kill and
+// banks again when food runs low or after a glory escape. A death ends the run; so do the tick cap and a stop file.
+// Usage: bun scripts/pk-hunt.ts <bot> [CAP ticks, default 6000]. Environment: HUNT_FOOD sharks per trip (default 18),
+// MIN_FOOD sharks that send it back to bank (default 6), ESCAPE_AT HP (default 35). Practice only until a live pilot is
+// qualified: openBot refuses a non-local server without DEMO_OK=1.
+import { existsSync } from 'node:fs';
 import type { Session } from '../packages/core/src/inprocess';
-import { isLocalServer } from '../packages/core/src/localserver';
+import { loadOwners } from '../packages/core/src/fleet';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { tradePartners } from '../packages/core/src/tradeguard';
-import { openStyles, readOpponent, type CombatStyle } from '../packages/core/src/opponent';
+import { attackable, fightPlayer, ITEMS, type FightResult, type Kit } from './pk';
 
-// Surface Wilderness (content area_wilderness wilderness_zones: 0_46_55 to 3_52_99, 8 tiles per level).
-export function wildLevel(x: number, z: number): number {
-    if (x < 2944 || x > 3391 || z < 3520 || z > 3967) return 0;
-    return Math.floor((z - 3520) / 8) + 1;
+export const EDGEVILLE_BANK = { x: 3092, z: 3496 };
+// Wilderness levels 3-7 north of Edgeville, inside single-way combat (multiway.csv: east Wilderness starts at x 3136).
+export const HUNT_SPOTS = [{ x: 3094, z: 3540 }, { x: 3100, z: 3556 }, { x: 3094, z: 3562 }];
+export const KIT_IDS = { mysticFireStaff: 1401, magicShortbow: 861, runeArrow: 892, dragonDaggerP: 1231, runeKiteshield: 1201 } as const;
+export const TRIBRID_KIT: Kit = { magic: [KIT_IDS.mysticFireStaff], ranged: [KIT_IDS.magicShortbow], melee: [KIT_IDS.dragonDaggerP, KIT_IDS.runeKiteshield] };
+// What a trip carries besides food: the switch weapons, Fire Wave runes (air, blood; the staff gives fire), two prayer
+// potions and a glory for the escape.
+export const TRIP = [
+    { id: KIT_IDS.mysticFireStaff, count: 1 }, { id: KIT_IDS.magicShortbow, count: 1 },
+    { id: ITEMS.airRune, count: 300 }, { id: ITEMS.bloodRune, count: 60 }, { id: 2434, count: 2 }, { id: ITEMS.glory[0], count: 1 },
+] as const;
+
+// Never fight our own accounts: every fleet side's owners plus the main account.
+export function fleetNames(owners = loadOwners()): Set<string> {
+    return new Set([...owners.keys(), 'haggis'].map(n => n.toLowerCase()));
 }
 
-// pvp_combat.rs2: the combat gap must be no more than the lower of the two Wilderness levels.
-export function canAttack(me: { x: number; z: number; combat: number }, them: { x: number; z: number; combatLevel: number }): boolean {
-    const a = wildLevel(me.x, me.z), b = wildLevel(them.x, them.z);
-    return a > 0 && b > 0 && Math.abs(me.combat - them.combatLevel) <= Math.min(a, b);
+// The player to fight: whoever is hitting us first, else the nearest attackable stranger who is not fighting someone else.
+type Seen = { index: number; name: string; combatLevel: number; z: number; distance: number; inCombat?: boolean; combatTargetType?: string };
+export function pickTarget<P extends Seen>(me: { z: number; combatLevel: number }, players: readonly P[], ours: Set<string>, attackerIndex: number | null): P | undefined {
+    const attacker = attackerIndex === null ? undefined : players.find(p => p.index === attackerIndex);
+    if (attacker) return attacker;
+    return [...players]
+        .filter(p => !ours.has(p.name.toLowerCase()) && attackable(me, p) && !(p.inCombat && p.combatTargetType === 'player'))
+        .sort((a, b) => a.distance - b.distance)[0];
 }
 
-const cheb = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
-const clampWild = (p: { x: number; z: number }) => ({ x: Math.min(3391, Math.max(2944, p.x)), z: Math.min(3967, Math.max(3520, p.z)) });
+const held = (s: Session, id: number) => s.sdk.getInventory().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
 
-export type Track = { name: string; x: number; z: number; combatLevel: number; vx: number; vz: number };
+async function walk(s: Session, to: { x: number; z: number }, stop: () => boolean, maxTicks = 400) {
+    return walkPath(await sessionWalker(s), [{ ...to, tol: 2 }], { maxTicks, idleMs: 9000, stop });
+}
 
-// Where to run to meet a moving target: the first tick t at which we (2 tiles per tick running) can stand on its
-// predicted tile. A target running south at full speed from behind has no meeting point; then the hunter heads for
-// the tile 30 ticks along its line, which puts it between the target and the south edge.
-export function intercept(me: { x: number; z: number }, t: Track, speed = 2, horizon = 120): { x: number; z: number; ticks: number } {
-    for (let tick = 0; tick <= horizon; tick++) {
-        const p = clampWild({ x: Math.round(t.x + t.vx * tick), z: Math.round(t.z + t.vz * tick) });
-        if (cheb(me, p) <= speed * tick) return { ...p, ticks: tick };
+// Bank everything but the worn set, then take the trip and the food.
+export async function restock(s: Session, food: number): Promise<string | null> {
+    if (!(await s.bot.openBank()).success) return 'bank did not open';
+    for (const item of s.sdk.getInventory()) await s.bot.depositItem(item, -1);
+    const stock = () => s.bankObservation?.()?.items ?? [];
+    for (const want of [...TRIP, { id: ITEMS.shark, count: food }]) {
+        const row = s.sdk.getBankItems().find(b => b.id === want.id);
+        if (!row || row.count < want.count) { await s.bot.closeBank(); return `bank lacks ${want.count} of item ${want.id} (has ${stock().find(b => b.id === want.id)?.count ?? 0})`; }
+        await s.bot.withdrawItem(row, want.count, { asNote: false });
     }
-    const p = clampWild({ x: Math.round(t.x + t.vx * 30), z: Math.round(t.z + t.vz * 30) });
-    return { ...p, ticks: horizon + cheb(me, p) / speed };
+    await s.bot.closeBank();
+    return held(s, ITEMS.shark) >= food ? null : 'food withdrawal short';
 }
 
-// The lowest z at which a combat gap is still attackable: Wilderness level >= gap.
-export function escapeZ(gap: number): number {
-    return 3520 + (Math.max(gap, 1) - 1) * 8;
-}
-
-// Tiles a target at the meeting tile must run south to get out of attack range. 16 tiles is 8 ticks running:
-// time to freeze it before it escapes.
-export const MIN_ESCAPE_TILES = 16;
-
-// The roster target we can meet first, attack at the meeting tile, and freeze before it runs out of range.
-export function pickTrack(me: { x: number; z: number; combat: number }, tracks: Track[], friends: ReadonlySet<string>, maxWild: number, skip: ReadonlySet<string> = new Set(), minEscape = MIN_ESCAPE_TILES) {
-    let best: { track: Track; at: { x: number; z: number; ticks: number } } | null = null;
-    for (const t of tracks) {
-        const key = t.name.toLowerCase();
-        if (friends.has(key) || skip.has(key) || wildLevel(t.x, t.z) === 0 || wildLevel(t.x, t.z) > maxWild) continue;
-        const at = intercept(me, t);
-        if (!canAttack({ x: at.x, z: at.z, combat: me.combat }, { x: at.x, z: at.z, combatLevel: t.combatLevel })) continue;
-        if (at.z - escapeZ(Math.abs(me.combat - t.combatLevel)) < minEscape) continue;
-        if (!best || at.ticks < best.at.ticks) best = { track: t, at };
+export async function hunt(s: Session, o: { cap: number; food: number; minFood: number; escapeAt: number; stop: () => boolean; log?: (l: string) => void }) {
+    const log = o.log ?? ((l: string) => console.log(l)), start = s.tick(), ours = fleetNames();
+    const tally = { kills: 0, deaths: 0, escapes: 0, fights: 0, looted: 0, trips: 0 };
+    const over = () => o.stop() || s.tick() - start >= o.cap;
+    let spot = 0;
+    while (!over()) {
+        if (held(s, ITEMS.shark) < o.minFood) {
+            const back = await walk(s, EDGEVILLE_BANK, over, 600);
+            if (!back.ok) return { ...tally, end: 'bank walk failed ' + JSON.stringify(back) };
+            const missing = await restock(s, o.food);
+            if (missing) return { ...tally, end: missing };
+            tally.trips++;
+        }
+        const out = await walk(s, HUNT_SPOTS[spot % HUNT_SPOTS.length]!, over);
+        spot++;
+        if (!out.ok && !over()) { log(`HUNT walk to spot failed ${JSON.stringify(out)}`); continue; }
+        // Wait at the spot for a target or an attacker.
+        let attackerIndex: number | null = null, seen = 0, foodReady = 0;
+        const waitUntil = s.tick() + 60;
+        while (!over() && s.tick() < waitUntil) {
+            await new Promise<void>(r => { const off = s.onTick(() => { off(); r(); }); });
+            const state = s.sdk.getState(), me = state?.player;
+            if (!state || !me) continue;
+            for (const e of state.combatEvents) if ((e.observationId ?? e.tick) > seen) { seen = e.observationId ?? e.tick; if (e.type === 'damage_taken' && e.sourceType === 'other_player') attackerIndex = e.sourceIndex; }
+            // Heal between fights: eat while 20 or more under full, and start a fight only near full unless attacked.
+            const shark = state.inventory.find(i => i.id === ITEMS.shark);
+            if (me.hp <= me.maxHp - 20 && shark && s.tick() >= foodReady) {
+                const op = shark.optionsWithIndex.find(x => /^Eat$/i.test(x.text));
+                if (op) { void s.sdk.sendUseItem(shark.slot, op.opIndex); foodReady = s.tick() + 3; }
+            }
+            if (attackerIndex === null && me.hp < me.maxHp - 20) continue;
+            const target = pickTarget({ z: me.worldZ, combatLevel: me.combatLevel }, state.nearbyPlayers, ours, attackerIndex);
+            if (!target) continue;
+            log(`HUNT engage ${target.name} (combat ${target.combatLevel}) at ${target.x},${target.z}`);
+            tally.fights++;
+            const r: FightResult = await fightPlayer(s, target.name, { kit: TRIBRID_KIT, escapeAt: o.escapeAt, cap: 900, log });
+            log(`HUNT fight ${r.outcome} ${JSON.stringify(r)}`);
+            if (r.outcome === 'kill') {
+                tally.kills++; const n = await loot(s, r.targetAt ?? target, over); tally.looted += n;
+                log(`HUNT looted ${n} piles at ${JSON.stringify(r.targetAt ?? target)}`);
+            }
+            if (r.outcome === 'died') { tally.deaths++; return { ...tally, end: 'died' }; }
+            if (r.outcome === 'escaped') { tally.escapes++; }
+            break;
+        }
     }
-    return best;
+    return { ...tally, end: o.stop() ? 'stopped' : 'cap' };
 }
 
-// Two roster frames 10 ticks apart give each player's tile and velocity in tiles per tick.
-export class Radar {
-    private prev = new Map<string, { x: number; z: number; k: number }>();
-    tracks = new Map<string, Track>();
-    tick = -1;
-    at = 0;
-    accept(m: { t?: string; k?: number; p?: [number, string, number, number, number, number][] }, now = Date.now()) {
-        if (m?.t !== 'roster' || !Array.isArray(m.p) || typeof m.k !== 'number') return;
-        const next = new Map<string, Track>();
-        for (const [, name, x, z, plane, combatLevel] of m.p) {
-            if (plane !== 0 || typeof name !== 'string') continue;
-            const key = name.toLowerCase(), old = this.prev.get(key), dt = old ? m.k - old.k : 0;
-            next.set(key, { name, x, z, combatLevel, vx: dt > 0 ? (x - old!.x) / dt : 0, vz: dt > 0 ? (z - old!.z) / dt : 0 });
-        }
-        this.prev = new Map([...next].map(([k, t]) => [k, { x: t.x, z: t.z, k: m.k! }]));
-        this.tracks = next;
-        this.tick = m.k;
-        this.at = now;
+// Pick up what the loser dropped near where it stood, bones aside, while the inventory has room.
+async function loot(s: Session, at: { x: number; z: number }, stop: () => boolean): Promise<number> {
+    let taken = 0;
+    // The drop lands after the death animation: wait up to 10 ticks for the first pile.
+    const near = (g: { x: number; z: number; name: string }) => Math.max(Math.abs(g.x - at.x), Math.abs(g.z - at.z)) <= 3 && !/bones$/i.test(g.name);
+    for (let wait = 0; wait < 10 && !stop() && !(s.sdk.getState()?.groundItems ?? []).some(near); wait++) await new Promise<void>(r => { const off = s.onTick(() => { off(); r(); }); });
+    for (let tries = 0; tries < 28 && !stop(); tries++) {
+        if (s.sdk.getInventory().length >= 28) break;
+        const pile = (s.sdk.getState()?.groundItems ?? []).filter(near)
+            .sort((a, b) => a.distance - b.distance)[0];
+        if (!pile) break;
+        const r = await s.bot.pickupItem(pile);
+        if (!r.success) break;
+        taken++;
     }
-    fresh(now = Date.now()) { return now - this.at < 15_000; }
+    return taken;
 }
-
-function connectRadar(server: string, radar: Radar) {
-    const url = `${isLocalServer(server) ? 'ws' : 'wss'}://${server}/worldfeed`;
-    const socket = new WebSocket(url);
-    let beat: ReturnType<typeof setInterval> | undefined;
-    socket.addEventListener('open', () => {
-        socket.send(JSON.stringify({ t: 'roster', on: true }));
-        beat = setInterval(() => { if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ t: 'ping' })); }, 30_000);
-    });
-    socket.addEventListener('message', ({ data }) => { try { radar.accept(JSON.parse(String(data))); } catch { /* not a roster frame */ } });
-    socket.addEventListener('close', () => { if (beat) clearInterval(beat); });
-    return () => { if (beat) clearInterval(beat); socket.close(); };
-}
-
-// Strongest freeze the account can cast (components from pack/interface.pack magic:bind/snare/entangle).
-export function freezeSpell(magic: number): number | null {
-    return magic >= 79 ? 1592 : magic >= 50 ? 1582 : magic >= 20 ? 1572 : null;
-}
-
-// friends replaces the fleet list of accounts never to attack (practice passes its own target's absence).
-type Cfg = { maxMs: number; maxWild: number; eatAt: number; fleeAt: number; spell: string; ranged?: RegExp; loot: boolean; freeze: boolean; friends?: readonly string[] };
-
-// Sweep tiles across the Wilderness, west to east and back, shallow to deep.
-export function sweep(maxWild: number): { x: number; z: number }[] {
-    const pts: { x: number; z: number }[] = [];
-    const zs = [3540, 3620, 3700, 3780, 3860, 3940].filter(z => wildLevel(3100, z) <= maxWild);
-    zs.forEach((z, i) => { const xs = [2970, 3060, 3150, 3240, 3330]; pts.push(...(i % 2 ? xs.reverse() : xs).map(x => ({ x, z }))); });
-    return pts.length ? pts : [{ x: 3090, z: 3524 }];
-}
-
-// The account's server, from the SERVER line of its bot.env (the same file openBot reads).
-export function accountServer(name: string, root = resolve(import.meta.dir, '..')): string {
-    return serverFromEnv(readFileSync(join(root, 'vendor', 'rs-sdk', 'bots', name, 'bot.env'), 'utf8'));
-}
-
-export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolean, emit: (e: object) => void, server = accountServer(session.name)) {
-    const { sdk, bot } = session;
-    const me = () => { const p = sdk.getState()?.player; return p && { x: p.worldX, z: p.worldZ, level: p.level, combat: p.combatLevel, hp: p.hp, maxHp: p.maxHp }; };
-    const friends = new Set([...(cfg.friends ?? tradePartners(server))].map(n => n.toLowerCase()));
-    friends.add(session.name.toLowerCase());
-    const route = sweep(cfg.maxWild);
-    let leg = -1;
-    const radar = new Radar();
-    const closeRadar = connectRadar(server, radar);
-    const end = Date.now() + cfg.maxMs;
-    const food = () => sdk.getInventory().filter(i => (i.optionsWithIndex ?? []).some((o: any) => /^eat$/i.test(o.text)));
-    const magic = sdk.getSkill('Magic')?.baseLevel ?? 1;
-    const freeze = cfg.freeze ? freezeSpell(magic) : null;
-    const styles = (): CombatStyle[] => [
-        'melee',
-        ...(cfg.ranged && [...sdk.getInventory(), ...sdk.getEquipment()].some(i => cfg.ranged!.test(i.name)) ? ['ranged' as const] : []),
-        ...(magic >= 13 ? ['magic' as const] : []),
-    ];
-    const meleeWeapon = sdk.getEquipment().find(i => i.slot === 3)?.name;
-    const stats = { attacks: 0, kills: 0, deaths: 0, eats: 0, freezes: 0, chases: 0, loot: [] as string[], targets: [] as string[] };
-    const walker = await sessionWalker(session);
-    const skip = new Set<string>();
-    // Roster tracks plus the players the client sees now; the client copy wins for players in view.
-    const tracks = (): Track[] => {
-        const all = new Map(radar.fresh() ? radar.tracks : []);
-        for (const p of sdk.getState()?.nearbyPlayers ?? []) {
-            const key = p.name.toLowerCase(), old = all.get(key);
-            all.set(key, { name: p.name, x: p.x, z: p.z, combatLevel: p.combatLevel, vx: old?.vx ?? 0, vz: old?.vz ?? 0 });
-        }
-        return [...all.values()];
-    };
-    let style: CombatStyle = 'melee';
-    let wentIn = false;
-    let spun = -1;
-
-    const setStyle = async (s: CombatStyle, target: string) => {
-        if (s === style) return;
-        if (s === 'ranged' && cfg.ranged) await bot.equipItem(cfg.ranged);
-        if (s === 'melee' && style === 'ranged' && meleeWeapon) await bot.equipItem(new RegExp('^' + meleeWeapon.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i'));
-        style = s;
-        emit({ e: 'style', style: s, target });
-    };
-    const survive = async (): Promise<'ok' | 'flee' | 'dead'> => {
-        const m = me();
-        if (!m) return 'ok';
-        if (wildLevel(m.x, m.z) > 0) wentIn = true;
-        if (wentIn && cheb(m, { x: 3222, z: 3218 }) <= 6) { stats.deaths++; emit({ e: 'death' }); return 'dead'; }
-        if (m.hp * 100 <= m.maxHp * cfg.eatAt && food().length) {
-            const r = await bot.eatFood(food()[0]);
-            stats.eats++; emit({ e: 'eat', hp: m.hp, ok: r.success });
-        } else if (m.hp * 100 <= m.maxHp * cfg.fleeAt && !food().length) return 'flee';
-        return 'ok';
-    };
-
-    // Fight one target until it dies, logs out, leaves the Wilderness, or the chase stalls.
-    const chase = async (name: string): Promise<'kill' | 'gone' | 'left' | 'stall' | 'flee' | 'dead' | 'stop'> => {
-        stats.chases++;
-        let lastTile: { x: number; z: number } | null = null, lastDist = Infinity, frozeAt = -100, contactAt = session.tick();
-        while (!stopped() && Date.now() < end) {
-            // A pass that used no game tick waits one, so the client and other sessions keep running.
-            if (session.tick() === spun) await sdk.waitForTicks(1);
-            spun = session.tick();
-            const s = await survive();
-            if (s !== 'ok') return s;
-            const m = me()!;
-            const near = sdk.getState()?.nearbyPlayers.find(p => p.name.toLowerCase() === name.toLowerCase());
-            const track = radar.tracks.get(name.toLowerCase());
-            const opp = near ? readOpponent(session.client, name) : null;
-            if (opp?.hp?.fresh && opp.hp.current === 0) {
-                stats.kills++; emit({ e: 'kill', target: name, at: lastTile });
-                await sdk.waitForTicks(4);
-                if (cfg.loot && lastTile) await lootAt(session, lastTile, stats, emit);
-                return 'kill';
-            }
-            if (!near && radar.fresh() && !track) { emit({ e: 'gone', target: name, at: lastTile }); if (cfg.loot && lastTile && cheb(m, lastTile) <= 3) await lootAt(session, lastTile, stats, emit); return 'gone'; }
-            const pos = near ?? track;
-            if (!pos) {
-                // No radar and out of view: give up after 60 ticks.
-                if (session.tick() - contactAt > 60) { emit({ e: 'gone', target: name, at: lastTile }); return 'gone'; }
-                await sdk.waitForTicks(1); continue;
-            }
-            if (wildLevel(pos.x, pos.z) === 0) { emit({ e: 'left', target: name }); return 'left'; }
-            lastTile = { x: pos.x, z: pos.z };
-
-            if (near && near.distance <= 15) {
-                contactAt = session.tick();
-                const fleeing = near.distance > lastDist && near.distance >= 2;
-                lastDist = near.distance;
-                // Freeze first, at first reach, before the target can run; freeze again when it runs.
-                if (freeze && canAttack(m, near) && (frozeAt < 0 || (fleeing && session.tick() - frozeAt > 25))) {
-                    const r = await bot.castSpell(near as any, freeze);
-                    frozeAt = session.tick();
-                    if (r.success) stats.freezes++;
-                    emit({ e: 'freeze', target: name, spell: freeze, ok: r.success, msg: r.success ? undefined : r.message });
-                    continue;
-                }
-                const open = opp ? openStyles(opp, styles()) : styles();
-                await setStyle(open.includes(style) ? style : open[0] ?? style, name);
-                const engaged = sdk.getState()?.player?.combat?.targetType === 'player';
-                if (!engaged || style === 'magic') {
-                    if (!canAttack(m, near)) {
-                        // Out of level range here: step toward the target, which takes us deeper.
-                        await walkPath(walker, [{ x: near.x, z: near.z, tol: 1 }], { maxTicks: 4, idleMs: 9000, stop: stopped });
-                        continue;
-                    }
-                    const r = style === 'magic' ? await bot.castSpell(near as any, cfg.spell) : await bot.attack(near as any);
-                    stats.attacks++;
-                    emit({ e: 'attack', target: name, style, protect: opp?.protect, hp: opp?.hp, ok: r.success, msg: r.success ? undefined : r.message });
-                }
-                await sdk.waitForTicks(1);
-                continue;
-            }
-            // Out of view: run to the cut-off tile, re-aimed on each new roster frame.
-            if (session.tick() - contactAt > 400) { emit({ e: 'stall', target: name }); return 'stall'; }
-            const aim = track ? intercept(m, track) : { ...pos, ticks: 0 };
-            const frame = radar.tick;
-            await walkPath(walker, [{ x: aim.x, z: aim.z, tol: 2 }], {
-                maxTicks: 40, idleMs: 9000,
-                stop: () => stopped() || radar.tick !== frame ||
-                    !!sdk.getState()?.nearbyPlayers.some(p => p.name.toLowerCase() === name.toLowerCase() && p.distance <= 15),
-            });
-        }
-        return 'stop';
-    };
-
-    try {
-        while (!stopped() && Date.now() < end) {
-            // A pass that used no game tick waits one, so the client and other sessions keep running.
-            if (session.tick() === spun) await sdk.waitForTicks(1);
-            spun = session.tick();
-            const s = await survive();
-            if (s === 'dead') break;
-            const m = me();
-            if (!m) { await sdk.waitForTicks(1); continue; }
-            if (s === 'flee') {
-                emit({ e: 'flee', hp: m.hp });
-                await walkPath(walker, [{ x: m.x, z: 3510, tol: 3 }], { maxTicks: 300, idleMs: 9000, stop: stopped });
-                break;
-            }
-            const pick = pickTrack(m, tracks(), friends, cfg.maxWild, skip);
-            if (!pick) {
-                // Nobody attackable: sweep the Wilderness. Start at the nearest sweep tile, then go round.
-                if (leg < 0) leg = route.reduce((b, p, i) => cheb(p, m) < cheb(route[b], m) ? i : b, 0);
-                else if (cheb(route[leg], m) <= 4) leg = (leg + 1) % route.length;
-                const before = session.tick();
-                await walkPath(walker, [{ ...route[leg], tol: 3 }], { maxTicks: 30, idleMs: 9000, stop: () => stopped() || !!pickTrack(me()!, tracks(), friends, cfg.maxWild, skip) });
-                // Never spin: a walk that used no tick (blocked or already there) moves to the next leg and waits.
-                if (session.tick() === before) { leg = (leg + 1) % route.length; await sdk.waitForTicks(1); }
-                continue;
-            }
-            const name = pick.track.name;
-            stats.targets.push(name);
-            emit({ e: 'target', target: name, combat: pick.track.combatLevel, wild: wildLevel(pick.track.x, pick.track.z), meetIn: Math.round(pick.at.ticks), at: [pick.track.x, pick.track.z] });
-            const outcome = await chase(name);
-            emit({ e: 'chase-end', target: name, outcome });
-            if (outcome === 'dead' || outcome === 'stop') break;
-            if (outcome === 'flee') {
-                const at = me()!;
-                await walkPath(walker, [{ x: at.x, z: 3510, tol: 3 }], { maxTicks: 300, idleMs: 9000, stop: stopped });
-                break;
-            }
-            if (outcome === 'stall' || outcome === 'left') skip.add(name.toLowerCase());
-        }
-        const m = me();
-        if (m && wildLevel(m.x, m.z) > 0 && stats.deaths === 0) {
-            await walkPath(walker, [{ x: 3094, z: 3505, tol: 4 }], { maxTicks: 600, idleMs: 9000, stop: stopped });
-        }
-    } finally { closeRadar(); }
-    return stats;
-}
-
-async function lootAt(session: Session, at: { x: number; z: number }, stats: { loot: string[] }, emit: (e: object) => void) {
-    const { sdk, bot } = session;
-    for (let i = 0; i < 12; i++) {
-        const item = (sdk.getState()?.groundItems ?? []).find((g: any) => Math.abs(g.x - at.x) <= 1 && Math.abs(g.z - at.z) <= 1);
-        if (!item || sdk.getInventory().length >= 28) break;
-        const r = await bot.pickupItem(item as any);
-        if (r.success) { stats.loot.push(item.name); emit({ e: 'loot', item: item.name, count: item.count }); }
-        else break;
-    }
-}
-
-const arg = (args: string[], key: string, d: string) => args.find(a => a.startsWith(key + '='))?.slice(key.length + 1) ?? d;
 
 if (import.meta.main) {
-    const [name, ...args] = process.argv.slice(2);
-    if (!name) throw new Error('usage: bun scripts/pk-hunt.ts <account> [MAX_MINUTES=20] [MAX_WILD=56] [EAT_AT=50] [FLEE_AT=30] [SPELL=FIRE_BOLT] [RANGED=regex] [LOOT=1] [FREEZE=1]');
-    const stop = () => existsSync('.practice/stop-' + name) || existsSync('.practice/stop-pk-hunt');
-    if (stop()) throw new Error('pk-hunt stop file present');
-    const ranged = arg(args, 'RANGED', '');
-    const cfg: Cfg = {
-        maxMs: Number(arg(args, 'MAX_MINUTES', '20')) * 60_000, maxWild: Number(arg(args, 'MAX_WILD', '56')),
-        eatAt: Number(arg(args, 'EAT_AT', '50')), fleeAt: Number(arg(args, 'FLEE_AT', '30')),
-        spell: arg(args, 'SPELL', 'FIRE_BOLT'), ranged: ranged ? new RegExp(ranged, 'i') : undefined,
-        loot: arg(args, 'LOOT', '1') === '1', freeze: arg(args, 'FREEZE', '1') === '1',
-    };
-    const session = await openBot(name);
-    const emit = (e: object) => console.log('PK_EVENT ' + JSON.stringify({ t: session.tick(), ...e }));
-    let result: Awaited<ReturnType<typeof huntOnce>> | undefined, failure: string | undefined;
-    try { result = await huntOnce(session, cfg, stop, emit); }
-    catch (error) { failure = String(error); }
-    const ok = !!result && !failure;
-    const loggedOut = await settle([session], ok, failure ?? `PK hunt: ${result!.kills} kills, ${result!.deaths} deaths, ${result!.attacks} attacks`);
-    console.log('PK_HUNT ' + JSON.stringify({ ok, failure, ...result, loggedOut }));
-    process.exitCode = ok && loggedOut ? 0 : 1;
+    const [bot, capArg] = process.argv.slice(2);
+    if (!bot) { console.log('usage: bun scripts/pk-hunt.ts <bot> [CAP ticks]'); process.exit(2); }
+    const { openBot, finish } = await import('../packages/core/src/bot');
+    const stop = () => existsSync(`.practice/stop-${bot}`) || existsSync('.practice/stop-pk-hunt');
+    const s = await openBot(bot);
+    const env = process.env;
+    const r = await hunt(s, { cap: Number(capArg ?? 6000), food: Number(env.HUNT_FOOD ?? 18), minFood: Number(env.MIN_FOOD ?? 6), escapeAt: Number(env.ESCAPE_AT ?? 35), stop });
+    console.log('HUNT ' + JSON.stringify(r));
+    await finish([s], r.end !== 'died' && !/failed|lacks|short|did not open/.test(r.end), `hunt ${r.end} kills ${r.kills}`);
 }
