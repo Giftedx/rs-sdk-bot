@@ -1,7 +1,26 @@
 {
  "side": "claude-cloud-4",
- "at": 1794217063830,
+ "at": 1794217667186,
  "jobs": [
+  {
+   "account": "Dipstick",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "99",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "cow pilot: 4 x 8-kill Strength runs at Ardougne north field",
+   "role": "combat"
+  },
   {
    "account": "Fingersmith",
    "script": "scripts/goldfarm.ts",
@@ -39,24 +58,6 @@
    "resources": [
     "knight:2653,3300"
    ]
-  },
-  {
-   "account": "Dipstick",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8"
-   },
-   "enabled": true,
-   "repeat": true,
-   "goal": "cow pilot: 4 x 8-kill Strength runs at Ardougne north field",
-   "role": "combat"
   }
  ]
 }
