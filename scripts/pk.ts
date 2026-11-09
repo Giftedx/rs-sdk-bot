@@ -122,7 +122,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
     const sdk = s.sdk, start = s.tick(), want = targetName.toLowerCase();
     const startLife = sdk.getState()?.player?.lifeId;
     let last = -1, nextAttack = start, foodReady = start, potionReady = start, freezeReady = start, frozenUntil = start, seenEvent = 0, seenMessage = 0, lastSeen = start;
-    let target: NearbyPlayer | undefined, rubbed = -1;
+    let target: NearbyPlayer | undefined, rubbed = -1, ranAt = -10;
     for (;;) {
         await new Promise<void>(resolve => { const off = s.onTick(() => { off(); resolve(); }); });
         const now = s.tick(), state = sdk.getState(), me = state?.player;
@@ -142,7 +142,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             seenMessage = id;
             if (m.type === 0 && killMessage(m.text, targetName)) { result.outcome = 'kill'; log(`PK kill ${targetName} after ${result.ticks} ticks`); return result; }
         }
-        if (rubbed >= 0 && wildernessLevel(at.z) === 0) { result.outcome = 'escaped'; log(`PK escaped ${targetName} after ${result.ticks} ticks at HP ${me.hp}`); return result; }
+        if ((rubbed >= 0 || ranAt >= 0) && wildernessLevel(at.z) === 0) { result.outcome = 'escaped'; log(`PK escaped ${targetName} after ${result.ticks} ticks at HP ${me.hp}`); return result; }
         if (me.isDead || me.hp <= 0 || (startLife !== undefined && me.lifeId !== startLife)) { result.outcome = 'died'; log(`PK died to ${targetName} after ${result.ticks} ticks`); return result; }
         target = state.nearbyPlayers.find(p => p.name.toLowerCase() === want);
         if (target) { lastSeen = now; result.targetAt = { x: target.x, z: target.z }; }
@@ -157,6 +157,12 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         if (me.hp <= eatAt && now >= foodReady) {
             const food = slotOf([ITEMS.shark]);
             if (food) { use(food, /^Eat$/i); foodReady = now + 3; result.eaten++; }
+        }
+        // Deeper than the teleports reach (glory 30, spells 20): run south first.
+        const reach = slotOf(ITEMS.glory) ? 30 : o.escapeSpell !== undefined ? 20 : 0;
+        if (o.escapeAt !== undefined && me.hp <= o.escapeAt && !slotOf([ITEMS.shark]) && reach && wildernessLevel(at.z) > reach) {
+            if (now - ranAt > 3) { void sdk.sendWalk(at.x, at.z - 14); ranAt = now; }
+            continue;
         }
         if (o.escapeAt !== undefined && me.hp <= o.escapeAt && !slotOf([ITEMS.shark]) && wildernessLevel(at.z) <= 30) {
             const glory = slotOf(ITEMS.glory);

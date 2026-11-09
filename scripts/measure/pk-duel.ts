@@ -27,13 +27,15 @@ const melee = [{ id: ID.dragonDaggerP, count: 1, slot: 3 }, { id: ID.runeKiteshi
 const items = (pairs: number[][]) => pairs.map(([id, count]) => ({ id: id!, count: count! }));
 const sharks = (n: number) => Array.from({ length: n }, () => [ITEMS.shark, 1]);
 await createBot(A); await createBot(B);
-await applyPreset(A, { position: { x: 3094, z: 3555, level: 0 }, skills: max, varps: { ...lostCity, 300: 1000 },
+// DUEL_Z puts both at another latitude, e.g. 3800 for Wilderness level 36 (beyond the glory's 30).
+const z = Number(env.DUEL_Z ?? 3555);
+await applyPreset(A, { position: { x: 3094, z, level: 0 }, skills: max, varps: { ...lostCity, 300: 1000 },
     equipment: [...armour, ...melee, { id: ID.runeArrow, count: 300, slot: 13 }],
     // Staff, bow, air/blood runes for Fire Wave, earth/water/nature for the freezes, 2 prayer potions, a glory, sharks.
     inventory: items([[ID.mysticFireStaff, 1], [ID.magicShortbow, 1], [ITEMS.airRune, 500], [ITEMS.bloodRune, 100], [ITEMS.earthRune, 200],
         [ITEMS.waterRune, 200], [ITEMS.natureRune, 100], [2434, 1], [2434, 1], ...(env.NO_GLORY === '1' ? [[ITEMS.lawRune, 2], [ITEMS.fireRune, 2]] : [[1712, 1]]),
         ...sharks(Number(env.A_FOOD ?? 18))]) });
-await applyPreset(B, { position: { x: 3096, z: 3555, level: 0 }, skills: max, varps: lostCity,
+await applyPreset(B, { position: { x: 3096, z, level: 0 }, skills: max, varps: lostCity,
     equipment: [...armour, ...melee], inventory: items(sharks(Number(env.DUMMY_FOOD ?? 0))) });
 const a = await openBot(A), b = await openBot(B);
 const pray = { magic: PRAYER.magic, ranged: PRAYER.missiles, melee: PRAYER.melee }[env.DUMMY_PRAY ?? ''];

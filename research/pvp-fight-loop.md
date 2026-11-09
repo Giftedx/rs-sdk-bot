@@ -63,3 +63,16 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
    - With no food and no glory, the fight loop cast the teleport at 53 HP and left the Wilderness 136 ticks into the fight.
 
    Gap: one run each; the walk from Varrock to Edgeville is not checked live.
+10. **Live: the hunter's trip works, and the shallow Wilderness by Edgeville had no target.** UnderMyKilt (claude-cloud),
+    one run of 1,500 ticks:
+    - Kit: magic shortbow, 66 rune arrows, sharks and Varrock Teleport runes, bought for 478,785 coins.
+    - Trip: it cast Varrock Teleport, walked to Edgeville, restocked once and cycled the three spots at Wilderness levels 3-7.
+    - Result: 0 fights and 0 deaths; it ended at the cap and logged out (`RESULT ok hunt cap kills 0`).
+    - Evidence: `.practice/pk-pilot/pk-hunt.log` in the claude-cloud container.
+    - Gap: the run logged no seen players, so it cannot tell an empty area from out-of-range or busy players. The hunter
+      now logs every player it sees with its verdict (`HUNT seen`).
+11. **Deeper than a teleport reaches, the loop runs south first.** Practice, one duel at Wilderness level 36 with no food:
+    it ran south, rubbed the glory at 48 HP once at level 30, and left the Wilderness 199 ticks into the fight.
+12. **The SDK reports an NPC's damage from someone else as `damage_taken`** with `targetType` npc and `sourceIndex` -1. A
+    hunter that read it as an attack started a fight in watch-only mode. Only `damage_taken` with `targetType` player and a
+    player source index counts as an attack.
