@@ -303,6 +303,19 @@ test('on a value tie an account keeps the template it holds, so a level change d
     expect(ids(plan(inputs([a, b], { current, taken: { 'knight:2669,3298': 1 } })))).toEqual({ TheFullMonty: 'goldfarm@2671,3313', UnderMyKilt: 'goldfarm@2582,3297' });
 });
 
+test('a farmer keeps its knight place while the spot has room, so sides do not chase each other\'s claims', () => {
+    const a = acct('UnderMyKilt', { Thieving: 99 }), current = new Map([['undermykilt', 'goldfarm@2669,3298']]);
+    const held = (others: number) => plan(inputs([a], { current, capacity: CAPACITY, shared: SHARED, taken: { 'knight:2669,3298': others } }));
+    // Two other farmers on its spot while four spots stand empty: it stays.
+    expect(ids(held(2))).toEqual({ UnderMyKilt: 'goldfarm@2669,3298' });
+    // A full spot (KNIGHT_SHARE other farmers) moves it to an empty spot.
+    expect(ids(held(KNIGHT_SHARE)).UnderMyKilt).toMatch(/^goldfarm@/);
+    expect(ids(held(KNIGHT_SHARE)).UnderMyKilt).not.toBe('goldfarm@2669,3298');
+    // An account with no place still takes an empty spot over the crowded one.
+    const fresh = plan(inputs([acct('NewA', { Thieving: 99 })], { capacity: CAPACITY, shared: SHARED, taken: { 'knight:2669,3298': 2 } }));
+    expect(ids(fresh).NewA).not.toBe('goldfarm@2669,3298');
+});
+
 test('a server outage is a drain: a socket error at login or a stalled tick stream never retires a job', () => {
     const login = 'RESULT fail login: [object WebSocket]', stall = 'RESULT fail TickStallError: tick stream stalled: no new game tick for 15000ms';
     expect(assess([login, login, stall, stall])).toMatchObject({ retire: false, ok: 0, fail: 0, drains: 4 });
