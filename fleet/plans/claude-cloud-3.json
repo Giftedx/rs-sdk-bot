@@ -1,26 +1,7 @@
 {
  "side": "claude-cloud-3",
- "at": 1794196482921,
+ "at": 1794197085406,
  "jobs": [
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "claude-cloud-3",
-   "resources": [
-    "knight:2669,3298"
-   ]
-  },
   {
    "account": "Knightstick",
    "script": "scripts/shop-buyer.ts",
@@ -44,6 +25,25 @@
    ]
   },
   {
+   "account": "Kiltlifter",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "claude-cloud-3",
+   "resources": [
+    "knight:2669,3298"
+   ]
+  },
+  {
    "account": "PocketPool",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -64,16 +64,22 @@
   },
   {
    "account": "SporranDip",
-   "script": "scripts/session-check.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-da054490-38ad-4d55-83f6-318075e49c00"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
-   "repeat": false,
-   "goal": "claude-cloud-3-recover-sporrandip-20261109t035051z [task-da054490-38ad-4d55-83f6-318075e49c00]",
-   "role": "thieving"
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "claude-cloud-3",
+   "resources": [
+    "knight:2582,3297"
+   ]
   }
  ]
 }
