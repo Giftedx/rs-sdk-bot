@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794220765237,
+ "at": 1794221376160,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -132,6 +132,54 @@
    "role": "pk"
   },
   {
+   "account": "YewFirst",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/walk-to.ts 3092 3243",
+    "scripts/train-chickens.ts TRAIN_BANK=draynor TRAIN_SKILL=Strength TARGET_LEVEL=30 CAP=3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "Strength 30 on chickens so it can hit hard enough to PK",
+   "role": "pk-trainee"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/walk-to.ts 3092 3243",
+    "scripts/train-chickens.ts TRAIN_BANK=draynor TRAIN_SKILL=Strength TARGET_LEVEL=30 CAP=3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "Strength 30 on chickens so it can hit hard enough to PK",
+   "role": "pk-trainee"
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/walk-to.ts 3253 3420",
+    "scripts/train-chickens.ts TRAIN_BANK=varrock TRAIN_SKILL=Strength TARGET_LEVEL=30 CAP=3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "Strength 30 on chickens so it can hit hard enough to PK",
+   "role": "pk-trainee"
+  },
+  {
    "account": "Masterbaiter",
    "script": "scripts/gather-feathers.ts",
    "args": [],
@@ -243,6 +291,25 @@
    "autopilot": "local",
    "resources": [
     "pen:3229,3298"
+   ]
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3187,3277",
+    "TICKS": "3000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
+   "autopilot": "local",
+   "resources": [
+    "pen:3187,3277"
    ]
   },
   {
@@ -383,23 +450,6 @@
    "role": "supply"
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/blood-chest.ts",
-   "args": [
-    "24000"
-   ],
-   "env": {
-    "MAX_LOOTS": "100",
-    "CAP": "24000",
-    "BANK_EVERY": "5",
-    "COORDINATOR_RUN_ID": "task-7004185d-145c-41c0-81b8-bff70757e64e"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-blood-mineyourbiz-loot100-requal [task-7004185d-145c-41c0-81b8-bff70757e64e]",
-   "role": "supply"
-  },
-  {
    "account": "Ballspinner",
    "script": "scripts/quest-sweep.ts",
    "args": [
@@ -434,6 +484,19 @@
    "repeat": false,
    "goal": "run-ge-woodpecker-sharks30-blood-food [task-ba7ddac9-17e0-497c-a16c-321de8f810d5]",
    "role": "helper"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-067f199b-4944-4019-8894-ecee4dc377a3"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-session-recovery-mineyourbiz-connect-fix [task-067f199b-4944-4019-8894-ecee4dc377a3]",
+   "role": "supply"
   }
  ]
 }
