@@ -30,6 +30,10 @@ export function eligibility(v: { proof: LogoutProof; claim: ClaimView; end: EndR
     if (v.claim.host === v.host && typeof v.claim.pid === 'number' && v.pidAlive(v.claim.pid)) return { eligible: false, reason: 'worker still alive', log: false };
     if (v.stopText !== undefined && !swarmWroteStop(v.stopText)) return { eligible: false, reason: 'owner stop file holds the account', log: true };
     if (!v.end) return { eligible: false, reason: 'end record gone (standing retry window passed); recover by hand', log: true };
+    // The supervisor retries the dropped session before it writes the end; until then the end record is an earlier
+    // run's. The attempt id starts with its creation time (packages/core/src/session-lifecycle.ts).
+    const started = /^\d{13}-/.test(v.proof.attemptId) ? Number(v.proof.attemptId.slice(0, 13)) : NaN;
+    if (v.end.at < started) return { eligible: false, reason: 'waiting: the supervisor has not ended the held attempt', log: false };
     if (/^died\b/.test(v.end.reason)) return { eligible: false, reason: 'death needs a person', log: true };
     if (!RECOVERABLE_END.test(v.end.reason)) return { eligible: false, reason: `end reason not recoverable: ${v.end.reason}`, log: true };
     return { eligible: true, endedAt: v.end.at };
