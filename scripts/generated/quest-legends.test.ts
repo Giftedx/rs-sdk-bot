@@ -1,0 +1,189 @@
+import{legendsBlessBowlAttempt}from'./quest-legends-owned';
+import{legendsSummonAttempt}from'./quest-legends-owned';
+import{legendsSurfaceJourney,legendsNextFare}from'./quest-legends-owned';
+import{legendsJungleTarget}from'./quest-legends-owned';
+import{test,expect}from'bun:test';
+import{readFileSync}from'node:fs';
+import{parseJm2}from'../../packages/knowledge/src/jm2';
+import{LEGENDS_ITEMS,legendsContext,legendsLoginOwner,finishLegendsOwned,legendsPotionWindows,legendsPackEffect,legendsMapEffect,legendsMapAttempt,legendsTrainingOptions,validateLegendsOrder,runLegends,type LegendsOrder}from'./quest-legends-owned';
+const order:LegendsOrder={account:'legendsunit',server:'localhost:19081',cap:40000,returnTicks:4000,xpRate:25,maximumTrials:12,maximumFood:60,maximumDoses:30,coinBudget:3000,training:['Herblore','Agility','Thieving','Prayer']};
+test('Legends finite order rejects unknown training, exhausted return budget and unbounded trials',()=>{expect(()=>validateLegendsOrder(order)).not.toThrow();for(const patch of[{maximumTrials:21},{maximumDoses:61},{returnTicks:40000},{xpRate:0},{training:['Ranged','Attack','Attack','Attack']}])expect(()=>validateLegendsOrder({...order,...patch} as LegendsOrder)).toThrow();expect(legendsTrainingOptions('Herblore').map(r=>r.source)).toEqual(['Go to Skill Menu 2','Go to Skill Menu 3','Go to Skill Menu 4','^\\* Herblore \\*$']);});
+test('whole pack effects reject an unrelated debit, missing gem debit or extra quest reward',()=>{const before={995:37,1609:1,385:5};expect(legendsPackEffect(before,{995:37,385:5},{1609:-1})).toBe(true);expect(legendsPackEffect(before,{995:36,385:5},{1609:-1})).toBe(false);expect(legendsPackEffect(before,{995:37,385:5,730:1},{1609:-1})).toBe(false);expect(legendsPackEffect(before,before,{1609:-1})).toBe(false);});
+test('public map completion requires one paper and the exact notes-to-map conversion',()=>{const b={714:1,970:4,973:2,995:37};expect(legendsMapEffect(b,{714:1,970:3,973:2,995:37},false)).toBe(true);expect(legendsMapEffect(b,{715:1,970:3,973:2,995:37},true)).toBe(true);expect(legendsMapEffect(b,{715:1,970:3,973:1,995:37},true)).toBe(false);expect(legendsMapEffect(b,{714:1,970:3,973:2,995:37},true)).toBe(false);});
+function actor(){const player={lifeId:1,respawnCount:0,isDead:false},client={executeBotAction:()=>{}},s:any={name:'legendsunit',client,lifecycle:{server:order.server},tick:()=>0,ended:new Promise(()=>{}),sdk:{getState:()=>({player}),getSkill:()=>({level:99})}};return{s,player,client};}
+test('original owner latches replacement and mutable life/respawn changes cannot donate a replacement life',()=>{for(const change of['owner','life','respawn','server']as const){const a=actor(),c=legendsContext(a.s,40000);expect(c.alive()).toBe(true);if(change==='owner'){const original=a.client.executeBotAction;a.client.executeBotAction=()=>{};expect(c.alive()).toBe(false);a.client.executeBotAction=original;}else if(change==='life')a.player.lifeId++;else if(change==='respawn')a.player.respawnCount++;else a.s.lifecycle.server='foreign';expect(c.alive()).toBe(false);}});
+test('wrong actor/server is rejected before any quest dialogue, bank or movement input',async()=>{const a=actor();await expect(runLegends({...a.s,name:'other'},order)).rejects.toThrow('identity mismatch');await expect(runLegends({...a.s,lifecycle:{server:'other'}},order)).rejects.toThrow('identity mismatch');});
+test('quest items are pinned native items, not progress seeded by the worker',()=>{expect(LEGENDS_ITEMS).toMatchObject({notes:714,map:715,bull:716,book:730,seed:735,germ:736,heart:744,dagger:746,force:748,totem:749,gift:750});const source=readFileSync('scripts/generated/quest-legends-owned.ts','utf8');expect(source).not.toMatch(/\.var\s*\[|\blegendsquest\b|\blegends_bits\b/);const native=readFileSync('vendor/rs-sdk/server/content/scripts/quests/quest_legends/scripts/radimus_erkle.rs2','utf8');expect(native).toContain('stat_advance($skill, 76500)');});
+test('all literal initial location targets match actual Native map coordinates',()=>{const root='vendor/rs-sdk/server/content/',pack=new Map(readFileSync(root+'pack/loc.pack','utf8').split(/\r?\n/).map(l=>{const [id,n]=l.split('=');return[n,Number(id)]})),source=readFileSync('scripts/generated/quest-legends-owned.ts','utf8'),cache=new Map<string,ReturnType<typeof parseJm2>>(),transformed=new Set(['lg_winchdown_rope','lgwaterpool']);let checked=0;for(const m of source.matchAll(/(?:interact\(|useLoc\([^,]+,)\s*'([a-z_0-9]+)',\s*(\d+),\s*(\d+)/g)){const[,name,xs,zs]=m,x=+xs!,z=+zs!;if(transformed.has(name!))continue;const file=`m${Math.floor(x/64)}_${Math.floor(z/64)}.jm2`;if(!cache.has(file))cache.set(file,parseJm2(file,readFileSync(root+'maps/'+file,'utf8')));expect({name,x,z,present:cache.get(file)!.locs.some(l=>l.id===pack.get(name)&&l.x===x&&l.z===z)}).toMatchObject({present:true});checked++;}expect(checked).toBeGreaterThan(20);});
+
+function liveActor(){const a=actor(),state:any={player:{...a.player,worldX:3185,worldZ:3436,level:0,combat:{targetType:'none',targetIndex:-1}},inventory:[],equipment:[{id:1289,slot:3,count:1}],autoRetaliateEnabled:false,combatStyle:{known:true,currentStyle:0,weaponName:'Rune sword'},prayers:{activePrayers:Array(18).fill(false),prayerPoints:99,prayerLevel:99},skills:[],gameMessages:[],nearbyPlayers:[],nearbyNpcs:[],nearbyLocs:[],interface:{isOpen:false},bank:{isOpen:false,items:[]}},listeners=new Set<()=>void>();let tick=0,inputs=0;Object.assign(a.client,{ingame:true,membersAccount:1,ifType:(id:number)=>({colour:id===7366?0xf80000:0x00f800})});Object.assign(a.s,{onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},tick:()=>tick,direct:async()=>{inputs++;throw Error('first-owned-action');}});Object.assign(a.s.sdk,{getState:()=>state,getStateAge:()=>0,getInventory:()=>state.inventory,getEquipment:()=>state.equipment,getSkill:()=>({level:99,baseLevel:99}),getSkillXp:()=>0,getPrayerState:()=>state.prayers,isPrayerActive:()=>false,getDialog:()=>({isOpen:false,options:[],isWaiting:false}),sendCloseModal:async()=>{inputs++;throw Error('first-owned-action');}});return{...a,state,listeners,advance(){tick++;for(const cb of listeners)cb();},inputs:()=>inputs};}
+
+test('actual valid-entry Legends consumer reaches its first owned action with primitive-valid potion windows',async()=>{const a=liveActor(),original=a.s.direct;a.s.direct=async()=>{a.client.executeBotAction=()=>{};return original();};const timer=setInterval(()=>a.advance(),1);try{const result=await runLegends(a.s,order);expect(result.failure).toContain('first-owned-action');expect(a.inputs()).toBe(1);}finally{clearInterval(timer);}});
+
+test('healthy actual restorative primitive can poll across bounded windows without resetting global dose budget',async()=>{const a=liveActor(),care=legendsPotionWindows(a.s,60,()=>true,()=>false);await expect(care.poll()).resolves.toBeUndefined();for(let n=0;n<901;n++)a.advance();await expect(care.poll()).resolves.toBeUndefined();expect(care.doses).toBe(0);});
+
+test('restorative window renewal keeps total dose count and never renews an unresolved outcome',async()=>{const a=liveActor();let made=0,fail=false;const windows:any[]=[];const create:any=(_s:any,o:any)=>{expect(o.cap).toBe(1000);expect(o.maximumDoses).toBeLessThanOrEqual(40);made++;const w={doses:0,blocked:false,async poll(){if(fail){w.blocked=true;throw Error('uncertain dose');}w.doses++;}};windows.push(w);return w;};const care=legendsPotionWindows(a.s,60,()=>true,()=>false,create);await care.poll();expect(care.doses).toBe(1);for(let n=0;n<901;n++)a.advance();await care.poll();expect(made).toBe(2);expect(care.doses).toBe(2);fail=true;await expect(care.poll()).rejects.toThrow('uncertain dose');for(let n=0;n<901;n++)a.advance();await expect(care.poll()).rejects.toThrow('unresolved');expect(made).toBe(2);});
+
+test('actual CLI boundary never settles through a replacement from the first quest await',async()=>{for(const mode of['unchanged','executor','client','life','respawn']as const){const a=liveActor(),owns=legendsLoginOwner(a.s);let logouts=0;const timer=setInterval(()=>{a.advance();if(a.s.tick()===1){if(mode==='executor')a.client.executeBotAction=()=>{};if(mode==='client')a.s.client={...a.client};if(mode==='life')a.state.player.lifeId++;if(mode==='respawn')a.state.player.respawnCount++;}},1);try{const result=await runLegends(a.s,order);expect(result.ok).toBe(false);const settled=await finishLegendsOwned(a.s,owns,false,result.failure,async()=>{logouts++;return true;});expect(settled).toBe(mode==='unchanged');expect(logouts).toBe(mode==='unchanged'?1:0);if(mode!=='unchanged')expect(a.inputs()).toBe(0);}finally{clearInterval(timer);}}});
+
+test('mapping consumer continues deferred completion once before exact notes conversion and terminal status',async()=>{
+ for(const complete of[false,true]){
+  let tick=0,paid=0,continues=0,open=false,current='',finished=-1;
+  let stock:Record<number,number>={714:1,970:4,973:2,995:37};const pages:string[]=[];
+  const publish=(text:string)=>{current=text;open=!!text;if(text)pages.push(text);};
+  const result=await legendsMapAttempt({pack:()=>stock,saw:re=>pages.some(t=>re.test(t)),send:async()=>{paid++;publish('You prepare to start mapping this area...');},step:async(send,done)=>{
+   await send();for(;tick<60;tick++){
+    if(done()&&!open){finished=tick;return;}
+    if(open){continues++;open=false;if(current.startsWith('Well done'))stock={715:1,970:3,973:2,995:37};}
+    if(tick===1)stock={714:1,970:3,973:2,995:37};
+    if(tick===2)publish('You use your crafting skill to neatly add a new section to your map.');
+    if(tick===5)publish(complete?'Well done! You have completed mapping the Kharazi Jungle.':'*** Mapping the Kharazi Jungle *** Western - Completed');
+    if(complete&&tick===7)publish('*** Mapping the Kharazi Jungle *** All completed');
+   }throw Error('mapping timeout');
+  }},complete);
+  expect(result).toBe(true);expect(paid).toBe(1);expect(finished).toBe(complete?9:7);expect(continues).toBe(complete?4:3);expect(legendsMapEffect({714:1,970:4,973:2,995:37},stock,complete)).toBe(true);
+ }
+});
+test('mapping consumer never reissues an unknown conversion and validates exact known failure costs',async()=>{
+ for(const kind of['missing-terminal','missing-conversion','failure','foreign-cost']){
+  let paid=0;let stock:Record<number,number>={714:1,970:4,973:2};const pages:string[]=[];
+  const attempt=legendsMapAttempt({pack:()=>stock,saw:re=>pages.some(t=>re.test(t)),send:async()=>{paid++;},step:async(send,done)=>{await send();if(kind==='failure'||kind==='foreign-cost'){pages.push('You snap your stick of charcoal.');stock={714:1,970:4,973:1};if(kind==='foreign-cost')stock[995]=1;}else{pages.push('You neatly add a new section');stock={714:1,970:3,973:2};if(kind==='missing-conversion')pages.push('*** Mapping the Kharazi Jungle ***');}if(!done())throw Error('bounded mapping timeout');}},true);
+  if(kind==='failure')expect(await attempt).toBe(false);else await expect(attempt).rejects.toThrow();expect(paid).toBe(1);
+ }
+});
+test('Native jungle selection refuses the unreachable straight plant behind a blocked tile',()=>{const p={x:2863,z:2939},blocked={id:2893,x:2863,z:2937,reachable:false,optionsWithIndex:[{opIndex:1}]},adjacent={id:2889,x:2864,z:2938,reachable:true,optionsWithIndex:[{opIndex:1}]};expect(legendsJungleTarget([blocked,adjacent],p,-1)).toBe(adjacent);for(const bad of [{...adjacent,reachable:undefined},{...adjacent,optionsWithIndex:[]},{...adjacent,z:2940},{...adjacent,x:2866}])expect(legendsJungleTarget([blocked,bad],p,-1)).toBeUndefined();});
+
+test('Legends surface travel uses only ordered ground legs and one explicit ferry per continent crossing',async()=>{for(const inbound of [true,false]){const calls:any[]=[],from=inbound?{x:3185,z:3436,level:0}:{x:2864,z:2942,level:0},to=inbound?{x:2864,z:2942,level:0}:{x:3185,z:3436,level:0};await legendsSurfaceJourney(from,to,{ground:async p=>{calls.push(['ground',p]);},boat:async b=>{calls.push(['boat',b]);}});expect(calls).toEqual([['ground',inbound?{x:3028,z:3216}:{x:2955,z:3146}],['boat',inbound],['ground',to]]);}});
+test('Legends ground travel stops before boat payment after a failed approach and refuses underground routing',async()=>{let boats=0,grounds=0;const drive={ground:async()=>{grounds++;throw Error('route stopped');},boat:async()=>{boats++;}};await expect(legendsSurfaceJourney({x:3185,z:3436,level:0},{x:2864,z:2942,level:0},drive)).rejects.toThrow('route stopped');expect(boats).toBe(0);await expect(legendsSurfaceJourney({x:2800,z:9300,level:0},{x:3185,z:3436,level:0},drive)).rejects.toThrow('surface');expect(grounds).toBe(1);});
+
+test('Legends fares cannot spend the bank reserve after a finite round trip and keep return fare funded',()=>{
+ let spent=legendsNextFare(60,0,true);expect(spent).toBe(30);spent=legendsNextFare(60,spent,false);expect(spent).toBe(60);expect(()=>legendsNextFare(60,spent,true)).toThrow('fare budget');expect(()=>legendsNextFare(59,0,true)).toThrow('fare budget');expect(legendsNextFare(30,0,false)).toBe(30);expect(()=>legendsNextFare(29,0,false)).toThrow('fare budget');
+});
+
+
+test('Gujuo summon requires retreat after known wildlife and stops on an unknown result',async()=>{
+ let sends=0,cooldowns=0,retreats=0,message="You're a bit too busy to do that at the moment.";
+ const io={present:()=>false,saw:(r:RegExp)=>r.test(message),send:async()=>{sends++;},cooldown:async()=>{cooldowns++;},retreat:async()=>{retreats++;},step:async(send:()=>Promise<unknown>,done:()=>boolean)=>{await send();if(!done())throw Error('unknown effect');}};
+ expect(await legendsSummonAttempt(io)).toBe(false);expect(sends).toBe(1);expect(cooldowns).toBe(1);
+ message='But nothing much seems to happen.';expect(await legendsSummonAttempt(io)).toBe(false);expect(cooldowns).toBe(1);
+ message='A nearby Jungle wolf takes a dislike to the noise you are making.';expect(await legendsSummonAttempt(io)).toBe(false);expect(retreats).toBe(1);
+ message='';await expect(legendsSummonAttempt(io)).rejects.toThrow('unknown effect');expect(sends).toBe(4);expect(cooldowns).toBe(1);expect(retreats).toBe(1);
+});
+
+
+test('mapping settles an observed Kings messenger grant during the receipt tail', async () => {
+ for (const variant of ['messenger', 'no-dialogue', 'extra-item', 'extra-letter']) {
+  let stock: Record<number, number> = {714: 1, 970: 4, 973: 3};
+  const pages = ['You neatly add a new section', '*** Mapping the Kharazi Jungle ***'];
+  const outcome = legendsMapAttempt({
+   pack: () => stock,
+   saw: re => pages.some(page => re.test(page)),
+   send: async () => { stock = {714: 1, 970: 3, 973: 3}; },
+   step: async (send, done) => {
+    await send();
+    expect(done()).toBe(true);
+    if (variant !== 'no-dialogue') pages.push('Kings messenger King Lathas sent this message for you.');
+    stock[3206] = variant === 'extra-letter' ? 2 : 1;
+    if (variant === 'extra-item') stock[995] = 1;
+   },
+  }, false);
+  if (variant === 'messenger') expect(await outcome).toBe(true);
+  else await expect(outcome).rejects.toThrow('mapping stock conversion differs');
+  expect(stock[3206]).toBe(variant === 'extra-letter' ? 2 : 1);
+ }
+});
+
+
+test('Gujuo blessing accepts both Native prompts and declines the retry after one five-point loss', async () => {
+ let failed = false, prayer = 99, sends = 0;
+ const result = await legendsBlessBowlAttempt({
+  pack: () => ({721: 1}), prayer: () => prayer, sawFailure: () => failed,
+  send: async () => { sends++; },
+  step: async (send, done, choices) => {
+   await send();
+   expect(done()).toBe(false);
+   for (const prompt of ["Yes, I'd like you to bless my gold bowl.", "Yes, I'd like to bless my gold bowl."]) {
+    expect(choices.some(choice => choice.test(prompt))).toBe(true);
+   }
+   expect(choices.some(choice => choice.test("No thanks, I'll wait."))).toBe(false);
+   failed = true;
+   prayer -= 5;
+   expect(done()).toBe(true);
+   expect(choices.some(choice => choice.test("Yes, I'd like to bless my gold bowl."))).toBe(false);
+   expect(choices.some(choice => choice.test("No thanks, I'll wait."))).toBe(true);
+  },
+ });
+ expect(result).toBe(false);
+ expect(sends).toBe(1);
+});
+
+
+test('Gujuo distinguishes a late verified messenger grant from an unknown stock change', async () => {
+ for (const variant of ['observed', 'unobserved', 'extra']) {
+  let pack: Record<number, number> = {721: 1};
+  let prayer = 49;
+  let failed = false;
+  const result = legendsBlessBowlAttempt({
+   pack: () => pack, prayer: () => prayer, sawFailure: () => failed,
+   saw: pattern => variant !== 'unobserved' && pattern.test('Kings messenger King Lathas sent this message for you.'),
+   send: async () => {},
+   step: async (send, done) => {
+    await send();
+    prayer -= 5;
+    failed = true;
+    expect(done()).toBe(true);
+    pack = {721: 1, 3206: 1};
+    if (variant === 'extra') pack[995] = 1;
+   },
+  });
+  if (variant === 'observed') expect(await result).toBe(false);
+  else await expect(result).rejects.toThrow('bowl blessing outcome differs');
+ }
+});
+
+test('mapping reconciles the wrapped Native ruined-paper page before another attempt', async () => {
+ for (const debit of [0, 1, 2]) {
+  let stock = {714: 1, 970: 4, 973: 3};
+  let page = '';
+  const outcome = legendsMapAttempt({
+   pack: () => stock,
+   saw: re => re.test(page),
+   send: async () => {
+    page = 'ruined. You make a mess of the map, the paper is totally Click here to continue';
+    stock = {...stock, 970: stock[970] - debit};
+   },
+   step: async (send, done) => { await send(); expect(done()).toBe(true); },
+  }, true);
+  if (debit === 1) expect(await outcome).toBe(false);
+  else await expect(outcome).rejects.toThrow('map outcome unknown');
+ }
+});
+
+
+test('blessing restores Prayer from 37 to 42 with one observed owned dose', async () => {
+ const a = liveActor();
+ a.state.inventory = [{id: 2434, slot: 0, count: 1}];
+ a.state.prayers.prayerLevel = 42;
+ a.state.prayers.prayerPoints = 37;
+ let inputs = 0;
+ a.s.direct = async () => {
+  inputs++;
+  a.state.inventory = [{id: 139, slot: 0, count: 1}];
+  a.state.prayers.prayerPoints = 42;
+  a.state.gameMessages = [{type: 0, tick: a.s.tick(), observationId: 1, text: 'You have 3 doses of potion left.'}];
+  return {success: true, message: 'fixture dose'};
+ };
+ const care = legendsPotionWindows(a.s, 1, () => true, () => false);
+ const timer = setInterval(() => a.advance(), 1);
+ try {
+  await care.poll();
+  expect(inputs).toBe(0);
+  await care.poll(42);
+  expect(inputs).toBe(1);
+  expect(care.doses).toBe(1);
+  expect(a.state.prayers.prayerPoints).toBe(42);
+  a.state.prayers.prayerPoints = 37;
+  await care.poll(42);
+  expect(inputs).toBe(1);
+ } finally { clearInterval(timer); }
+});

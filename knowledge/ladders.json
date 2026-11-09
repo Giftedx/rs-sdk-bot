@@ -5,39 +5,39 @@
  "enablesNote": "enables.feeds lists rungs that use this rung output as an input, tool or requirement; enables.teleport is the spell destination (magic_spell_table tele_coord). Tool tiers are the toolLevel of each roll in timing.rolls.",
  "counts": {
   "attack": {
-   "methods": 22,
-   "withWorker": 3,
-   "withXp": 14,
+   "methods": 23,
+   "withWorker": 4,
+   "withXp": 15,
    "withTicks": 0,
-   "withGaps": 14
+   "withGaps": 15
   },
   "defence": {
-   "methods": 22,
-   "withWorker": 3,
-   "withXp": 14,
+   "methods": 23,
+   "withWorker": 4,
+   "withXp": 15,
    "withTicks": 0,
-   "withGaps": 14
+   "withGaps": 15
   },
   "strength": {
-   "methods": 14,
-   "withWorker": 3,
-   "withXp": 14,
+   "methods": 15,
+   "withWorker": 4,
+   "withXp": 15,
    "withTicks": 0,
-   "withGaps": 14
+   "withGaps": 15
   },
   "hitpoints": {
-   "methods": 14,
-   "withWorker": 3,
-   "withXp": 14,
+   "methods": 15,
+   "withWorker": 4,
+   "withXp": 15,
    "withTicks": 0,
-   "withGaps": 14
+   "withGaps": 15
   },
   "ranged": {
-   "methods": 28,
+   "methods": 29,
    "withWorker": 7,
-   "withXp": 14,
+   "withXp": 15,
    "withTicks": 0,
-   "withGaps": 14
+   "withGaps": 15
   },
   "prayer": {
    "methods": 16,
@@ -97,7 +97,7 @@
   },
   "smithing": {
    "methods": 137,
-   "withWorker": 5,
+   "withWorker": 8,
    "withXp": 137,
    "withTicks": 137,
    "withGaps": 0
@@ -276,12 +276,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "cow-progress-order",
+    "worker": "scripts/gather-combat.ts",
     "workers": [
-     "cow-progress-order",
      "scripts/gather-combat.ts"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"/^chaos druid$/i\"",
+    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?117:target==='druid'?181\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -516,6 +515,80 @@
     "combat": 34,
     "spawns": 60,
     "targetBasis": "most spawns in its 10-level combat band"
+   },
+   {
+    "xpPerAction": 140,
+    "inputs": [],
+    "outputs": [],
+    "requires": [],
+    "where": {
+     "locs": [],
+     "npcs": [
+      "giant"
+     ],
+     "tiles": [
+      {
+       "npc": "giant",
+       "spawns": 27,
+       "sample": [
+        {
+         "x": 2507,
+         "z": 3149,
+         "level": 0,
+         "src": "maps/m39_49.jm2:6805"
+        },
+        {
+         "x": 2545,
+         "z": 3144,
+         "level": 0,
+         "src": "maps/m39_49.jm2:6843"
+        },
+        {
+         "x": 2548,
+         "z": 3147,
+         "level": 0,
+         "src": "maps/m39_49.jm2:6844"
+        }
+       ]
+      }
+     ]
+    },
+    "inputsBuyable": null,
+    "members": null,
+    "quest": null,
+    "tools": [],
+    "xpSrc": "scripts/_unpack/225/all.npc:2982",
+    "xpNote": "XP per kill: hitpoints 35 x accurate style, 4 XP per damage (scripts/skill_combat/scripts/combat.rs2:146) x multiplier 1000/1000 (scripts/skill_combat/configs/combat.param:167)",
+    "ticksPerAction": null,
+    "timing": null,
+    "modelXpPerTick": null,
+    "modelXpPerTick99": null,
+    "modelBands": [],
+    "enables": {
+     "feeds": [],
+     "teleport": null
+    },
+    "xpPerTick": null,
+    "rateMethod": null,
+    "worker": "scripts/gather-combat.ts",
+    "workers": [
+     "scripts/gather-combat.ts"
+    ],
+    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?117:target==='druid'?181\"",
+    "pendingCapability": null,
+    "gaps": [
+     "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
+    ],
+    "id": "attack/target-giant",
+    "skill": "attack",
+    "level": 1,
+    "kind": "target",
+    "label": "fight Giant (combat 28)",
+    "source": "knowledge/npcs.json",
+    "src": "scripts/_unpack/225/all.npc:2968",
+    "combat": 28,
+    "spawns": 27,
+    "targetBasis": "named by a combat worker"
    },
    {
     "xpPerAction": 200,
@@ -1653,12 +1726,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "cow-progress-order",
+    "worker": "scripts/gather-combat.ts",
     "workers": [
-     "cow-progress-order",
      "scripts/gather-combat.ts"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"/^chaos druid$/i\"",
+    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?117:target==='druid'?181\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -1893,6 +1965,80 @@
     "combat": 34,
     "spawns": 60,
     "targetBasis": "most spawns in its 10-level combat band"
+   },
+   {
+    "xpPerAction": 140,
+    "inputs": [],
+    "outputs": [],
+    "requires": [],
+    "where": {
+     "locs": [],
+     "npcs": [
+      "giant"
+     ],
+     "tiles": [
+      {
+       "npc": "giant",
+       "spawns": 27,
+       "sample": [
+        {
+         "x": 2507,
+         "z": 3149,
+         "level": 0,
+         "src": "maps/m39_49.jm2:6805"
+        },
+        {
+         "x": 2545,
+         "z": 3144,
+         "level": 0,
+         "src": "maps/m39_49.jm2:6843"
+        },
+        {
+         "x": 2548,
+         "z": 3147,
+         "level": 0,
+         "src": "maps/m39_49.jm2:6844"
+        }
+       ]
+      }
+     ]
+    },
+    "inputsBuyable": null,
+    "members": null,
+    "quest": null,
+    "tools": [],
+    "xpSrc": "scripts/_unpack/225/all.npc:2982",
+    "xpNote": "XP per kill: hitpoints 35 x defensive style, 4 XP per damage (scripts/skill_combat/scripts/combat.rs2:150) x multiplier 1000/1000 (scripts/skill_combat/configs/combat.param:167)",
+    "ticksPerAction": null,
+    "timing": null,
+    "modelXpPerTick": null,
+    "modelXpPerTick99": null,
+    "modelBands": [],
+    "enables": {
+     "feeds": [],
+     "teleport": null
+    },
+    "xpPerTick": null,
+    "rateMethod": null,
+    "worker": "scripts/gather-combat.ts",
+    "workers": [
+     "scripts/gather-combat.ts"
+    ],
+    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?117:target==='druid'?181\"",
+    "pendingCapability": null,
+    "gaps": [
+     "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
+    ],
+    "id": "defence/target-giant",
+    "skill": "defence",
+    "level": 1,
+    "kind": "target",
+    "label": "fight Giant (combat 28)",
+    "source": "knowledge/npcs.json",
+    "src": "scripts/_unpack/225/all.npc:2968",
+    "combat": 28,
+    "spawns": 27,
+    "targetBasis": "named by a combat worker"
    },
    {
     "xpPerAction": 200,
@@ -2886,12 +3032,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "cow-progress-order",
+    "worker": "scripts/gather-combat.ts",
     "workers": [
-     "cow-progress-order",
      "scripts/gather-combat.ts"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"/^chaos druid$/i\"",
+    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?117:target==='druid'?181\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -3126,6 +3271,80 @@
     "combat": 34,
     "spawns": 60,
     "targetBasis": "most spawns in its 10-level combat band"
+   },
+   {
+    "xpPerAction": 140,
+    "inputs": [],
+    "outputs": [],
+    "requires": [],
+    "where": {
+     "locs": [],
+     "npcs": [
+      "giant"
+     ],
+     "tiles": [
+      {
+       "npc": "giant",
+       "spawns": 27,
+       "sample": [
+        {
+         "x": 2507,
+         "z": 3149,
+         "level": 0,
+         "src": "maps/m39_49.jm2:6805"
+        },
+        {
+         "x": 2545,
+         "z": 3144,
+         "level": 0,
+         "src": "maps/m39_49.jm2:6843"
+        },
+        {
+         "x": 2548,
+         "z": 3147,
+         "level": 0,
+         "src": "maps/m39_49.jm2:6844"
+        }
+       ]
+      }
+     ]
+    },
+    "inputsBuyable": null,
+    "members": null,
+    "quest": null,
+    "tools": [],
+    "xpSrc": "scripts/_unpack/225/all.npc:2982",
+    "xpNote": "XP per kill: hitpoints 35 x aggressive style, 4 XP per damage (scripts/skill_combat/scripts/combat.rs2:148) x multiplier 1000/1000 (scripts/skill_combat/configs/combat.param:167)",
+    "ticksPerAction": null,
+    "timing": null,
+    "modelXpPerTick": null,
+    "modelXpPerTick99": null,
+    "modelBands": [],
+    "enables": {
+     "feeds": [],
+     "teleport": null
+    },
+    "xpPerTick": null,
+    "rateMethod": null,
+    "worker": "scripts/gather-combat.ts",
+    "workers": [
+     "scripts/gather-combat.ts"
+    ],
+    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?117:target==='druid'?181\"",
+    "pendingCapability": null,
+    "gaps": [
+     "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
+    ],
+    "id": "strength/target-giant",
+    "skill": "strength",
+    "level": 1,
+    "kind": "target",
+    "label": "fight Giant (combat 28)",
+    "source": "knowledge/npcs.json",
+    "src": "scripts/_unpack/225/all.npc:2968",
+    "combat": 28,
+    "spawns": 27,
+    "targetBasis": "named by a combat worker"
    },
    {
     "xpPerAction": 200,
@@ -3903,12 +4122,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "cow-progress-order",
+    "worker": "scripts/gather-combat.ts",
     "workers": [
-     "cow-progress-order",
      "scripts/gather-combat.ts"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"/^chaos druid$/i\"",
+    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?117:target==='druid'?181\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -4143,6 +4361,80 @@
     "combat": 34,
     "spawns": 60,
     "targetBasis": "most spawns in its 10-level combat band"
+   },
+   {
+    "xpPerAction": 46.6,
+    "inputs": [],
+    "outputs": [],
+    "requires": [],
+    "where": {
+     "locs": [],
+     "npcs": [
+      "giant"
+     ],
+     "tiles": [
+      {
+       "npc": "giant",
+       "spawns": 27,
+       "sample": [
+        {
+         "x": 2507,
+         "z": 3149,
+         "level": 0,
+         "src": "maps/m39_49.jm2:6805"
+        },
+        {
+         "x": 2545,
+         "z": 3144,
+         "level": 0,
+         "src": "maps/m39_49.jm2:6843"
+        },
+        {
+         "x": 2548,
+         "z": 3147,
+         "level": 0,
+         "src": "maps/m39_49.jm2:6844"
+        }
+       ]
+      }
+     ]
+    },
+    "inputsBuyable": null,
+    "members": null,
+    "quest": null,
+    "tools": [],
+    "xpSrc": "scripts/_unpack/225/all.npc:2982",
+    "xpNote": "XP per kill: hitpoints 35 x any style, 1.33 XP per damage (scripts/skill_combat/scripts/combat.rs2:167) x multiplier 1000/1000 (scripts/skill_combat/configs/combat.param:167)",
+    "ticksPerAction": null,
+    "timing": null,
+    "modelXpPerTick": null,
+    "modelXpPerTick99": null,
+    "modelBands": [],
+    "enables": {
+     "feeds": [],
+     "teleport": null
+    },
+    "xpPerTick": null,
+    "rateMethod": null,
+    "worker": "scripts/gather-combat.ts",
+    "workers": [
+     "scripts/gather-combat.ts"
+    ],
+    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?117:target==='druid'?181\"",
+    "pendingCapability": null,
+    "gaps": [
+     "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
+    ],
+    "id": "hitpoints/target-giant",
+    "skill": "hitpoints",
+    "level": 1,
+    "kind": "target",
+    "label": "fight Giant (combat 28)",
+    "source": "knowledge/npcs.json",
+    "src": "scripts/_unpack/225/all.npc:2968",
+    "combat": 28,
+    "spawns": 27,
+    "targetBasis": "named by a combat worker"
    },
    {
     "xpPerAction": 66.5,
@@ -5230,6 +5522,78 @@
     "combat": 34,
     "spawns": 60,
     "targetBasis": "most spawns in its 10-level combat band"
+   },
+   {
+    "xpPerAction": 140,
+    "inputs": [],
+    "outputs": [],
+    "requires": [],
+    "where": {
+     "locs": [],
+     "npcs": [
+      "giant"
+     ],
+     "tiles": [
+      {
+       "npc": "giant",
+       "spawns": 27,
+       "sample": [
+        {
+         "x": 2507,
+         "z": 3149,
+         "level": 0,
+         "src": "maps/m39_49.jm2:6805"
+        },
+        {
+         "x": 2545,
+         "z": 3144,
+         "level": 0,
+         "src": "maps/m39_49.jm2:6843"
+        },
+        {
+         "x": 2548,
+         "z": 3147,
+         "level": 0,
+         "src": "maps/m39_49.jm2:6844"
+        }
+       ]
+      }
+     ]
+    },
+    "inputsBuyable": null,
+    "members": null,
+    "quest": null,
+    "tools": [],
+    "xpSrc": "scripts/_unpack/225/all.npc:2982",
+    "xpNote": "XP per kill: hitpoints 35 x accurate or rapid style, 4 XP per damage (scripts/skill_combat/scripts/combat.rs2:156) x multiplier 1000/1000 (scripts/skill_combat/configs/combat.param:167)",
+    "ticksPerAction": null,
+    "timing": null,
+    "modelXpPerTick": null,
+    "modelXpPerTick99": null,
+    "modelBands": [],
+    "enables": {
+     "feeds": [],
+     "teleport": null
+    },
+    "xpPerTick": null,
+    "rateMethod": null,
+    "worker": null,
+    "workers": [],
+    "workerEvidence": null,
+    "pendingCapability": null,
+    "gaps": [
+     "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
+    ],
+    "id": "ranged/target-giant",
+    "skill": "ranged",
+    "level": 1,
+    "kind": "target",
+    "label": "fight Giant (combat 28)",
+    "source": "knowledge/npcs.json",
+    "src": "scripts/_unpack/225/all.npc:2968",
+    "combat": 28,
+    "spawns": 27,
+    "targetBasis": "named by a combat worker"
    },
    {
     "xpPerAction": 200,
@@ -34845,9 +35209,10 @@
     "rateMethod": null,
     "worker": "scripts/smelt-bars.ts",
     "workers": [
-     "scripts/smelt-bars.ts"
+     "scripts/smelt-bars.ts",
+     "scripts/smelt-batch.ts"
     ],
-    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril\"",
+    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-bronze",
@@ -38316,9 +38681,12 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": null,
-    "workers": [],
-    "workerEvidence": null,
+    "worker": "scripts/smelt-bars.ts",
+    "workers": [
+     "scripts/smelt-bars.ts",
+     "scripts/smelt-batch.ts"
+    ],
+    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-silver",
@@ -39775,7 +40143,7 @@
      "scripts/smelt-bars.ts",
      "scripts/smelt-batch.ts"
     ],
-    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril\"",
+    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-steel",
@@ -41875,7 +42243,7 @@
      "scripts/smelt-bars.ts",
      "scripts/smelt-batch.ts"
     ],
-    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril\"",
+    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-gold",
@@ -42872,7 +43240,7 @@
      "scripts/smelt-bars.ts",
      "scripts/smelt-batch.ts"
     ],
-    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril\"",
+    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-mithril",
@@ -45310,9 +45678,12 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": null,
-    "workers": [],
-    "workerEvidence": null,
+    "worker": "scripts/smelt-bars.ts",
+    "workers": [
+     "scripts/smelt-bars.ts",
+     "scripts/smelt-batch.ts"
+    ],
+    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-adamant",
@@ -47410,9 +47781,12 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": null,
-    "workers": [],
-    "workerEvidence": null,
+    "worker": "scripts/smelt-bars.ts",
+    "workers": [
+     "scripts/smelt-bars.ts",
+     "scripts/smelt-batch.ts"
+    ],
+    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-runite",

@@ -8,13 +8,14 @@ import {accountOf,getWorld} from '../packages/core/src/bot';
 import {parseConfigs} from '../packages/knowledge/src/config';
 import {productionBatch} from '../packages/planner/src/production-batch';
 import {smithStageRoute,SMITH_BANK,SMITH_ANVIL} from '../packages/planner/src/travel';
+import {questFlags} from '../packages/core/src/quest-status';
 
 // Finite anvil order. Recipe, bar count, XP and interface slot come from the pinned server content
 // (smithing.dbrow, smelting.obj, smithing.struct, smithing.inv, interface.pack), the mapping that
 // scripts/measure/floor-smithing.ts hardcodes. Each product is one Make-1 click with an observed
 // bar debit, product credit and XP gain (smithing.rs2 attempt_smithing/smithing_anvil).
 type Stock=readonly {id:number;count:number}[];
-export type SmithRecipe={product:number;amount:number;level:number;bar:number;bars:number;xpPerBar:number;component:number;slot:number};
+export type SmithRecipe={product:number;amount:number;level:number;bar:number;bars:number;xpPerBar:number;component:number;slot:number;quest?:'The Tourist Trap'|'Death Plateau'};
 export const HAMMER=2347,SMITHING_INTERFACE=994,TOLL_GUARD_EAST=926;
 const count=(rows:Stock,id:number)=>rows.filter(v=>v.id===id).reduce((n,v)=>n+v.count,0);
 export function smithRecipe(product:number):SmithRecipe{
@@ -30,15 +31,20 @@ export function smithRecipe(product:number):SmithRecipe{
  const bar=field(row.props.data,'bar')!,struct=field(blocks('smelting/smelting.obj').find(b=>b.name===bar)?.props.param,'smithing_anvil_struct');
  const params=blocks('smithing/smithing.struct').find(b=>b.name===struct)?.props.param;
  const invs=blocks('smithing/smithing.inv'),components=pack('interface.pack');
- // Columns1-5 only: claws and dart tips have quest gates this order does not check.
- for(let column=1;column<=5;column++){
-  const inv=invs.find(b=>b.name===field(params,'invcolumn'+column));
+ const columns=Array.from({length:5},(_,i)=>({inventory:field(params,'invcolumn'+(i+1)),component:'smithing:column'+(i+1)}));
+ // The native handler binds claws outside the five struct-defined columns.
+ const handler=readFileSync(resolve(content,'scripts/skill_smithing/scripts/smithing/smithing.rs2'),'utf8'),branch=handler.split('case '+bar+' :')[1]?.split(/\bcase /)[0],claws=branch?.match(/inv_transmit\((\w+), smithing:column_claws\)/)?.[1];
+ if(claws)columns.push({inventory:claws,component:'smithing:column_claws'});
+ for(const column of columns){
+  const inv=invs.find(b=>b.name===column.inventory);
   const stock=Object.entries(inv?.props??{}).find(([k,v])=>/^stock\d+$/.test(k)&&v[0]?.split(',')[0]===name);
-  const component=components.get('smithing:column'+column);
+  const component=components.get(column.component);
   if(!stock||component===undefined)continue;
   const recipe={product,amount:Number(field(row.props.data,'product_amount')),level:Math.max(Number(field(row.props.data,'levelrequired')),Number(field(params,'levelrequired'))),
    bar:objs.get(bar)!,bars:Number(field(row.props.data,'bar_amount')),xpPerBar:Number(field(params,'xpperbar')),component,slot:Number(stock[0].slice(5))-1};
   if(!Object.values(recipe).every(n=>Number.isSafeInteger(n)&&n>=0)||recipe.amount<1||recipe.bars<1)throw unsupported;
+  if(name!.endsWith('_dart_tip'))return{...recipe,quest:'The Tourist Trap'};
+  if(column.component==='smithing:column_claws')return{...recipe,quest:'Death Plateau'};
   return recipe;
  }
  throw unsupported;
@@ -53,9 +59,14 @@ export function smithEffect(r:SmithRecipe,before:Stock,after:Stock,xpBefore:numb
  if(debit===r.bars&&made===r.amount&&xpAfter>xpBefore)return 1;
  throw Error('smith bar/product/XP mismatch');
 }
-export async function runSmithBatch(s:Session,o:{product:number;cap:number;maximum:number;reserve:number;stop?:()=>boolean},io?:{walk:(x:number,z:number)=>Promise<boolean>;recover?:(x:number,z:number)=>Promise<boolean>}){
+export async function runSmithBatch(s:Session,o:{product:number;cap:number;maximum:number;reserve:number;stop?:()=>boolean;allowNativeQuestProbe?:boolean},io?:{walk:(x:number,z:number)=>Promise<boolean>;recover?:(x:number,z:number)=>Promise<boolean>}){
  if(![o.product,o.cap,o.maximum,o.reserve].every(Number.isSafeInteger)||o.cap<1||o.maximum<1||o.reserve<0)throw Error('invalid finite smith order');
  const r=smithRecipe(o.product),state=()=>s.sdk.getState(),inv=()=>s.sdk.getInventory(),held=(id:number)=>count(inv(),id),xp=()=>s.sdk.getSkillXp('Smithing')??0;
+ if(o.allowNativeQuestProbe!==undefined&&typeof o.allowNativeQuestProbe!=='boolean')throw Error('invalid native quest admission option');
+ // Explicit CLI opt-in supports learned darts before quest completion. Native
+ // attempt_smithing refuses locked darts before inv_del; one intended Make-1
+ // must either earn its declared product or stop, never repeat an unknown input.
+ const allowNativeQuestProbe=o.allowNativeQuestProbe??process.env.SMITH_NATIVE_QUEST_PROBE==='1';let nativeQuestAdmission=false;
  const ready=await waitUntil(s,()=>!!state()?.player&&(s.sdk.getSkill('Hitpoints')?.level??0)>0&&(s.sdk.getSkill('Smithing')?.baseLevel??0)>0,{timeoutTicks:15});
  if(!ready)throw Error('smith entry state unobserved');
  const p0=state()!.player!,start=s.tick(),xp0=xp(),level=s.sdk.getSkill('Smithing')!.baseLevel;
@@ -110,6 +121,7 @@ export async function runSmithBatch(s:Session,o:{product:number;cap:number;maxim
  try{
   // Refusals happen at the observed starting bank, before any travel or withdrawal.
   if(level<r.level)throw Error(`smith refused: Smithing ${level} is below level ${r.level} for product ${r.product}`);
+  if(r.quest&&!questFlags(s.client)?.some(q=>q.name===r.quest&&q.state==='complete')){if(r.quest==='The Tourist Trap'&&allowNativeQuestProbe)nativeQuestAdmission=true;else throw Error(`smith refused: ${r.quest} quest completion unobserved`);}
   let route:ReturnType<typeof smithStageRoute>;
   try{route=smithStageRoute(p0);}catch(error){throw Error('smith refused: '+(error as Error).message);}
   entry=route.name;
@@ -177,7 +189,8 @@ export async function runSmithBatch(s:Session,o:{product:number;cap:number;maxim
     await waitUntil(s,()=>ended||died||held(r.bar)<count(before,r.bar),{timeoutTicks:8});
     // Inventory and XP can be separate publications; settle both before judging.
     await waitUntil(s,()=>ended||died||held(r.product)>count(before,r.product)&&xp()>beforeXp,{timeoutTicks:3});
-    if(smithEffect(r,before,inv(),beforeXp,xp())){made++;misses=0;}
+    if(smithEffect(r,before,inv(),beforeXp,xp())){made++;misses=0;nativeQuestAdmission=false;}
+    else if(nativeQuestAdmission)throw Error('native dart admission refused or unconfirmed; no input retry');
     else if(!sent.success||++misses>=3)throw Error('no smith progress: unchanged anvil after bounded attempts');
    }
   }

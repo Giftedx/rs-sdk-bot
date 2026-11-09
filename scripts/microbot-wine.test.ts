@@ -8,6 +8,9 @@ test('fermentation conserves prepared stock and records bad wine separately',()=
 });
 import {runMixedWine} from './microbot-wine';
 import {inventoryRecipes} from './microbot-production';
+test('wine stock reserve refuses a whole order before mixing any reserved input',async()=>{
+ const f=wineFixture();try{await expect(runMixedWine(f.s,2,100,()=>false,1)).rejects.toThrow('reserve');expect(f.stock.get(1987)).toBe(2);expect(f.stock.get(1937)).toBe(2);expect(f.stock.get(1995)).toBe(0);}finally{f.close();}
+});
 function wineFixture(cancel=false){
  const recipe=inventoryRecipes().find(r=>r.name==='wine-unfermented')!;let tick=0,generation=1,bankOpen=false,modal=false,fermentAt=Infinity;
  const stock=new Map<number,number>([[1993,8],[1991,2],[1995,0],...recipe.inputs.map(i=>[i.id,2] as [number,number])]);

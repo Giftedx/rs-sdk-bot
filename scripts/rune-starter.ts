@@ -73,4 +73,3 @@ export async function leaveRuneStarter(s:Session,stop:()=>boolean){
  }
  if(stop())throw Error('stopped during starter exit');
 }
-

@@ -26,3 +26,13 @@ test('finite pickup reports held output and refuses a contested disappearance',a
  expect(await runVisibleGroundLoot(d,policy)).toMatchObject({units:3,pickups:1,acquired:{561:3},staticValue:540,banked:0});expect(actions).toBe(1);
  current=state();await expect(runVisibleGroundLoot({...d,pickup:async()=>{current={...current,groundItems:[]};return true;}},policy)).rejects.toThrow('without own inventory');
 });
+
+test('skips a pickup address whose same-ID piles have different counts', () => {
+ const s = state();
+ const first = s.groundItems[0]!;
+ const definition = () => ({cost:180,stackable:true});
+ s.groundItems.push({...first,count:16});
+ expect(selectGroundLoot(s,policy,definition)).toBeUndefined();
+ s.groundItems[1]!.count = first.count;
+ expect(selectGroundLoot(s,policy,definition)?.item.count).toBe(first.count);
+});

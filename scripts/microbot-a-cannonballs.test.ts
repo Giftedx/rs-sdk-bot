@@ -8,6 +8,6 @@ test('native cannonball recipe preserves mould and all unrelated assets',()=>{
  expect(cannonballEffect(b,a.map(i=>i.id===2?{...i,count:8}:i),0,37.5)).toBe('invalid');expect(cannonballEffect(b,a,0,0)).toBe('invalid');
 });
 test('cannonball entry rejects invalid and unsupported stage before action',async()=>{
- await expect(runCannonballs({} as any,{bars:27,cap:10})).rejects.toThrow('invalid');
+ await expect(runCannonballs({} as any,{bars:100001,cap:10})).rejects.toThrow('invalid');
  const s:any={sdk:{getState:()=>null,getSkill:()=>undefined}};await expect(runCannonballs(s,{bars:1,cap:10})).rejects.toThrow('stage');
 });

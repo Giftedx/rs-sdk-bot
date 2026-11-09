@@ -22,7 +22,7 @@ export function miningProfiles():MiningProfile[]{
 }
 export const incidentalMiningGems=['uncut_diamond','uncut_ruby','uncut_emerald','uncut_sapphire'].map(item);
 const pickaxes=configs('scripts/skill_mining/configs/pickaxes.obj').filter(b=>/^(bronze|iron|steel|mithril|adamant|rune)_pickaxe$/.test(b.name)).map(b=>({id:item(b.name),level:Number((b.props.param??[]).find(v=>v.startsWith('levelrequire,'))?.split(',')[1]),rate:Number((b.props.param??[]).find(v=>v.startsWith('mining_rate,'))?.split(',')[1])}));
-export function eligiblePickaxe(s:BotWorldState){
+export function eligiblePickaxe(s:{skills:readonly{name:string;level:number}[];inventory:readonly{id:number}[];equipment:readonly{id:number;slot:number}[]}){
  const level=s.skills.find(k=>k.name==='Mining')?.level??0;
  return pickaxes.filter(p=>level>=p.level&&(s.inventory.some(i=>i.id===p.id)||s.equipment.some(i=>i.id===p.id&&i.slot===3))).sort((a,b)=>a.rate-b.rate)[0];
 }

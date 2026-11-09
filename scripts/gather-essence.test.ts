@@ -1,6 +1,6 @@
 import { test, expect, spyOn } from 'bun:test';
 import * as walking from '../packages/core/src/walk';
-import { isEssence, dist, essenceTeleportProblem, runEssenceGatherer, mineEssenceBatch } from './gather-essence';
+import { isEssence, dist, essenceTeleportProblem, runEssenceGatherer, mineEssenceBatch, upgradeOwnedEssencePick, essencePickWieldLevel } from './gather-essence';
 
 for(const mode of ['stalled','productive','stopped','event-stalled','last-tick']) test(`essence output budget: ${mode}`,async()=>{
     let tick=0,held=0,output=0,clicks=0;
@@ -114,4 +114,24 @@ test('cancellation after a matched bank credit preserves that receipt and does n
     s.bot.equipItem=async()=>{equips++;return{success:true};};
     const r=await runEssenceGatherer(s,{cap:100,bankAt:28,maxTrips:1,stop:()=>stopped});
     expect(r.ok).toBe(false);expect(r.totalBanked).toBe(28);expect(r.held).toBe(0);expect(equips).toBe(0);
+});
+
+function ownedPickBank(mode:'observed'|'stale-withdraw'|'no-wield'|'stop-after-withdraw',mining=99,attack=99){
+ let tick=0,generation=1,withdrawals=0,equips=0,nullOnEquip=false;const bank:any[]=[{id:1275,name:"Rune pickaxe",count:1,slot:0},{id:995,name:"Coins",count:77,slot:1},{id:2357,name:"Gold bar",count:1,slot:2}],inventory:any[]=[],equipment:any[]=[{id:1265,name:"Bronze pickaxe",count:1,slot:3}];
+ const player={worldX:3253,worldZ:3420,level:0,lifeId:1,respawnCount:0,isDead:false},state:any={player,bank:{isOpen:true,items:bank},inventory,equipment,skills:[{name:'Mining',level:mining},{name:'Hitpoints',level:99}]};const listeners=new Set<()=>void>();
+ const s:any={tick:()=>tick,onTick:(fn:()=>void)=>{listeners.add(fn);return()=>listeners.delete(fn)},bankObservation:()=>state.bank.isOpen?{generation,items:bank}:null,sdk:{getState:()=>state,getInventory:()=>inventory,getEquipment:()=>equipment,getSkill:(name:string)=>({level:name==='Mining'?mining:99,baseLevel:name==='Attack'?attack:99})},bot:{closeBank:async()=>{state.bank.isOpen=false;return{success:true};},withdrawItem:async(item:any,n:number)=>{withdrawals++;item.count-=n;inventory.push({id:item.id,name:item.name,count:n,slot:0});if(mode!=='stale-withdraw')generation++;return{success:true};},equipItem:async(item:any)=>{equips++;state.bank.isOpen=false;nullOnEquip=s.bankObservation()===null;if(mode==='no-wield')return{success:false};const old=equipment.pop();inventory.splice(inventory.indexOf(item),1);equipment.push({...item,slot:3});if(old)inventory.push({...old,slot:0});return{success:true};},depositItem:async(item:any)=>{const i=inventory.indexOf(item);inventory.splice(i,1);const row=bank.find(v=>v.id===item.id);if(row)row.count+=item.count;else bank.push({...item,slot:bank.length});generation++;return{success:true};}}};
+ const timer=setInterval(()=>{tick++;for(const fn of listeners)fn();},1);return{s,bank,inventory,equipment,withdrawals:()=>withdrawals,equips:()=>equips,nullOnEquip:()=>nullOnEquip,open:async()=>{state.bank.isOpen=true;generation++;},stop:()=>mode==='stop-after-withdraw'&&withdrawals>0,done:()=>clearInterval(timer)};
+}
+
+test('owned bank upgrade replaces an eligible inferior pick without spending or losing either tool',async()=>{
+ const f=ownedPickBank('observed');try{const r=await upgradeOwnedEssencePick(f.s,{openBank:f.open,stop:f.stop});expect(r).toEqual({id:1275,worn:true,preserved:true});expect(f.equipment[0].id).toBe(1275);expect(f.bank.find(i=>i.id===1265)?.count).toBe(1);expect(f.bank.find(i=>i.id===995)?.count).toBe(77);expect(f.bank.find(i=>i.id===2357)?.count).toBe(1);expect(f.withdrawals()).toBe(1);expect(f.nullOnEquip()).toBe(true);await upgradeOwnedEssencePick(f.s,{openBank:f.open,stop:f.stop});expect(f.withdrawals()).toBe(1);}finally{f.done();}
+});
+test('native Mining eligibility skips an unusable bank upgrade and a wield refusal keeps both tools',async()=>{
+ for(const [mode,level,id,worn]of [['observed',1,1265,true],['no-wield',99,1275,false]]as const){const f=ownedPickBank(mode,level);try{const r=await upgradeOwnedEssencePick(f.s,{openBank:f.open,stop:f.stop});expect(r.id).toBe(id);expect(r.worn).toBe(worn);expect(f.equipment[0].id).toBe(1265);expect(f.withdrawals()).toBe(level===1?0:1);if(!worn)expect(f.inventory.some(i=>i.id===1275)).toBe(true);if(!worn){await upgradeOwnedEssencePick(f.s,{openBank:f.open,stop:f.stop});expect(f.equips()).toBe(1);expect(f.nullOnEquip()).toBe(true);}}finally{f.done();}}
+});
+test('stale withdrawal or operator stop cannot authorize a later wield/deposit',async()=>{
+ for(const mode of ['stale-withdraw','stop-after-withdraw']as const){const f=ownedPickBank(mode);try{await expect(upgradeOwnedEssencePick(f.s,{openBank:f.open,stop:f.stop})).rejects.toThrow();expect(f.equipment[0].id).toBe(1265);expect(f.inventory.some(i=>i.id===1275)).toBe(true);expect(f.withdrawals()).toBe(1);expect(f.bank.find(i=>i.id===995)?.count).toBe(77);}finally{f.done();}}
+});
+test('native base Attack requirement avoids a known Rune wield refusal across repeated bank visits',async()=>{
+ expect(essencePickWieldLevel(1275)).toBe(40);expect(essencePickWieldLevel(1269)).toBe(5);const f=ownedPickBank('observed',99,1);try{for(let i=0;i<2;i++){const r=await upgradeOwnedEssencePick(f.s,{openBank:f.open,stop:f.stop});expect(r.id).toBe(1275);expect(r.worn).toBe(false);}expect(f.equips()).toBe(0);expect(f.withdrawals()).toBe(1);expect(f.equipment[0].id).toBe(1265);expect(f.inventory.some(i=>i.id===1275)).toBe(true);}finally{f.done();}
 });

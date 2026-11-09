@@ -6,7 +6,10 @@ import { openBot, finish, randomEventsOf } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';
 import type { Session } from '../packages/core/src/inprocess';
-import { existsSync } from 'node:fs';
+import { existsSync,readFileSync } from 'node:fs';
+import {resolve} from 'node:path';
+import {eligiblePickaxe} from './microbot-b-mining';
+import {depositObserved} from '../packages/core/src/deposit';
 
 const BANK_SPOT = { x: 3253, z: 3420 };
 const AUBURY_OUTSIDE = { x: 3253, z: 3398 };
@@ -34,6 +37,49 @@ const ESSENCE_IDS = [RUNE_ESSENCE, PURE_ESSENCE];
 const PICKAXES = [1275, 1271, 1273, 1269, 1267, 1265]; // Rune down to Bronze
 
 // Retries are activity, not output. Bound a broken rock even when clicks succeed.
+const refusedPickWields=new WeakMap<Session,Set<number>>();
+let nativePickWieldLevels:Map<number,number>|undefined;
+export function essencePickWieldLevel(id:number){
+ if(!nativePickWieldLevels){const root=resolve(import.meta.dir,'../vendor/rs-sdk/server/content'),pack=new Map(readFileSync(resolve(root,'pack/obj.pack'),'utf8').split(/\r?\n/).flatMap(l=>{const m=l.match(/^(\d+)=(.+)$/);return m?[[m[2]!,Number(m[1])]as const]:[];}));nativePickWieldLevels=new Map();
+  for(const tier of[1,5,20,30,40])for(const m of readFileSync(resolve(root,'scripts/levelrequire/scripts/tier'+tier+'.rs2'),'utf8').matchAll(/\[opheld2,(\w+_pickaxe)\]\s*@levelrequire_attack\((\d+),/g)){const item=pack.get(m[1]!);if(item!==undefined)nativePickWieldLevels.set(item,Number(m[2]));}
+  const bronze=pack.get('bronze_pickaxe'),tier1=readFileSync(resolve(root,'scripts/levelrequire/scripts/tier1.rs2'),'utf8'),tutorial=readFileSync(resolve(root,'scripts/tutorial/scripts/tutorial.rs2'),'utf8');if(bronze!==undefined&&tier1.includes('[opheld2,bronze_pickaxe] @tutorial_island_equip(last_slot);')&&/@levelrequire_attack\(1,\s*\$slot\)/.test(tutorial))nativePickWieldLevels.set(bronze,1);
+ }return nativePickWieldLevels.get(id);
+}
+// Native Mining eligibility/rate comes from the existing pickaxe table consumer.
+// Called only during the worker's own bank visit; never buys or discards a tool.
+export async function upgradeOwnedEssencePick(s:Session,o:{openBank:()=>Promise<void>;stop:()=>boolean}){
+ const p=s.sdk.getState()?.player,life=p?.lifeId,respawns=p?.respawnCount??0,hp0=s.sdk.getSkill('Hitpoints')?.level??0;
+ const stop=()=>{const at=s.sdk.getState()?.player;return o.stop()||!at||at.isDead||at.lifeId!==life||(at.respawnCount??0)!==respawns||(s.sdk.getSkill('Hitpoints')?.level??0)<hp0||hp0<1;};
+ if(stop())throw Error('essence pick upgrade stopped');await o.openBank();
+ if(!await waitUntil(s,()=>stop()||!!s.bankObservation?.(),{timeoutTicks:10})||stop()||!s.sdk.getState()?.bank.isOpen)throw Error('essence pick bank observation absent');
+ const state=s.sdk.getState()!,bank=s.bankObservation!()!,candidate=eligiblePickaxe({...state,inventory:[...s.sdk.getInventory(),...bank.items.filter(i=>i.count>0)],equipment:s.sdk.getEquipment()});
+ if(!candidate)throw Error('no eligible owned native pickaxe');
+ const inv=()=>s.sdk.getInventory(),eq=()=>s.sdk.getEquipment(),count=(id:number,rows:readonly{id:number;count:number}[])=>rows.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
+ const totals=()=>{const b=s.bankObservation?.();if(!b||!s.sdk.getState()?.bank.isOpen)throw Error('essence pick current bank receipt missing');const m=new Map<number,number>();for(const i of [...inv(),...eq(),...b.items])m.set(i.id,(m.get(i.id)??0)+i.count);return m;},before=totals(),weapon=eq().find(i=>i.slot===3);
+ if(!inv().some(i=>i.id===candidate.id)&&!eq().some(i=>i.slot===3&&i.id===candidate.id)){
+  if(inv().length>=28||stop())throw Error('essence pick upgrade needs one free slot');const item=state.bank.items.find(i=>i.id===candidate.id),old=s.bankObservation!()!,held=count(candidate.id,inv()),stored=count(candidate.id,old.items);
+  if(!item)throw Error('owned upgrade pick missing from observed bank');await s.bot.withdrawItem(item,1,{asNote:false});
+  const matched=()=>{const b=s.bankObservation?.();return !!b&&b.generation>old.generation&&count(candidate.id,inv())===held+1&&count(candidate.id,b.items)===stored-1;};
+  if(!await waitUntil(s,()=>stop()||matched(),{timeoutTicks:10})||stop()||!matched())throw Error('essence upgrade withdrawal does not reconcile');
+ }
+ const requiredAttack=essencePickWieldLevel(candidate.id),attack=s.sdk.getSkill('Attack')?.baseLevel,refused=refusedPickWields.get(s)??new Set<number>();refusedPickWields.set(s,refused);
+ if(!eq().some(i=>i.slot===3&&i.id===candidate.id)&&(!weapon||PICKAXES.includes(weapon.id))&&requiredAttack!==undefined&&attack!==undefined&&attack>=requiredAttack&&!refused.has(candidate.id)){
+  if(stop())throw Error('essence stopped before pick equip');const item=inv().find(i=>i.id===candidate.id);if(!item)throw Error('owned pick vanished');const generation=s.bankObservation!()!.generation;
+  await s.bot.closeBank();if(!await waitUntil(s,()=>stop()||!s.sdk.getState()?.bank.isOpen&&!s.bankObservation?.(),{timeoutTicks:8})||stop()||s.sdk.getState()?.bank.isOpen)throw Error('essence upgrade bank close unobserved');
+  // SDK equip dismisses modal UI. A closed bank has no bankObservation receipt.
+  try{await s.bot.equipItem(item);}catch{/* Observe once; never retry this uncertain wield in the same session. */}
+  if(!eq().some(i=>i.slot===3&&i.id===candidate.id))refused.add(candidate.id);
+  if(stop())throw Error('essence stopped after wield');await o.openBank();
+  if(!await waitUntil(s,()=>stop()||!!s.sdk.getState()?.bank.isOpen&&(s.bankObservation?.()?.generation??-1)>generation,{timeoutTicks:12})||stop()||!s.sdk.getState()?.bank.isOpen||!s.bankObservation?.()||(s.bankObservation?.()?.generation??-1)<=generation)throw Error('essence post-wield fresh bank absent');
+ }
+ if(stop())throw Error('essence pick upgrade stopped after dispatch');
+ const worn=eq().some(i=>i.slot===3&&i.id===candidate.id);
+ if(worn)for(const item of [...inv()].filter(i=>PICKAXES.includes(i.id)&&i.id!==candidate.id)){if(stop())throw Error('essence stopped before inferior pick bank');await depositObserved(s,item);}
+ const after=totals();if([...new Set([...before.keys(),...after.keys()])].some(id=>(before.get(id)??0)!==(after.get(id)??0)))throw Error('essence pick upgrade changed owned assets');
+ const active=eligiblePickaxe({...s.sdk.getState()!,inventory:inv(),equipment:eq()});if(active?.id!==candidate.id)throw Error('best owned eligible pick not active');
+ console.log('ESSENCE_PICK '+JSON.stringify({id:candidate.id,worn,preserved:true}));return{id:candidate.id,worn,preserved:true};
+}
+
 export async function mineEssenceBatch(s: Session, o: {count:()=>number;full:()=>boolean;stop:()=>boolean;busy:()=>boolean;click:()=>Promise<unknown>;gain:(n:number)=>void}) {
     let held=o.count(), lastOutput=s.tick(), lastClick=s.tick();
     await o.click();
@@ -180,47 +226,13 @@ export async function runEssenceGatherer(s: Session, o: { cap: number; bankAt: n
             throw Error('essence bank close unobserved');
         active();
 
-        // Equip pickaxe if still held in inventory (frees up the 28th inventory slot)
-        const heldPickaxe = inv().find(i => PICKAXES.includes(i.id));
-        if (heldPickaxe) {
-            const eqRes = await action('equip-pickaxe',()=>s.bot.equipItem(heldPickaxe));
-            if (eqRes.success) {
-                console.log(`MILESTONE Equipped pickaxe: ${heldPickaxe.name}! 28 slots free.`);
-            }
-        }
     };
 
     const checkPickaxe = async () => {
-        active();
-        let hasEquipped = eq().some(i => PICKAXES.includes(i.id));
-        let heldPick = inv().find(i => PICKAXES.includes(i.id));
-
-        if (!hasEquipped && heldPick) {
-            const eqRes = await action('check-equip-pickaxe',()=>s.bot.equipItem(heldPick!));
-            if (eqRes.success) {
-                console.log(`MILESTONE Equipped pickaxe: ${heldPick.name}! 28 slots free.`);
-                hasEquipped = true;
-            }
-        }
-
-        if (hasEquipped || inv().some(i => PICKAXES.includes(i.id))) return;
-
-        await openBank();
-        const bankPickaxe = (st()?.bank.items ?? []).find(i => PICKAXES.includes(i.id));
-        if (bankPickaxe) {
-            await s.bot.withdrawItem(bankPickaxe, 1);
-            await waitUntil(s, () => inv().some(i => PICKAXES.includes(i.id)), { timeoutTicks: 10 });
-            await s.bot.closeBank();
-            await waitUntil(s, () => !st()?.bank.isOpen, { timeoutTicks: 5 });
-            const justWithdrawn = inv().find(i => PICKAXES.includes(i.id));
-            if (justWithdrawn) {
-                await s.bot.equipItem(justWithdrawn);
-            }
-        } else {
-            throw new Error('No pickaxe found in inventory, equipment, or bank');
-        }
+        active();await upgradeOwnedEssencePick(s,{openBank,stop:over});active();
+        await action('close-upgrade-bank',()=>s.bot.closeBank());
+        if(!await waitUntil(s,()=>over()||!st()?.bank.isOpen,{timeoutTicks:5})||over()||st()?.bank.isOpen)throw Error('essence pick bank close unobserved');
     };
-
     const teleportToMine = async () => {
         // Walk to shop entrance and open door if closed
         await walk(AUBURY_OUTSIDE.x, AUBURY_OUTSIDE.z, 2);
@@ -349,7 +361,7 @@ export async function runEssenceGatherer(s: Session, o: { cap: number; bankAt: n
                 throw Error('no essence progress: final bank route incomplete');
             if (inv().some(i => !PICKAXES.includes(i.id))) await depositEssence();
             if (over() || essenceCount() > 0) throw Error('no essence progress: final load not banked');
-            await action('check-pickaxe',checkPickaxe);
+            if(s.tick()-start<o.cap&&(o.maxTrips===undefined||trips<o.maxTrips))await action('check-pickaxe',checkPickaxe);
             active();
         } finally { cleanupDeadline = undefined; }
     };

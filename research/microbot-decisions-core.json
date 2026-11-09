@@ -707,10 +707,12 @@
   {
     "name": "inventorysetups",
     "decision": "partial",
-    "behaviour": "Loadout persistence and item alternatives map to native preparation requirements. OSRS presets and cache IDs require translation.",
+    "behaviour": "Donor compact and portable inventory setups compile through explicit donor-to-native item bindings into the existing finite owned-kit validator and loadout worker.",
     "localConsumers": [
       "packages/planner/src/requirements.ts",
-      "scripts/preparation-report.ts"
+      "scripts/preparation-report.ts",
+      "scripts/microbot-loadout-import.ts",
+      "scripts/microbot-owned-loadout.ts"
     ],
     "sourceEvidence": [
       {
@@ -722,14 +724,30 @@
         "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/inventorysetups/ConfigInventorySetupDataManager.java",
         "line": 19,
         "claim": "Loadout persistence and item alternatives map to native preparation requirements. OSRS presets and cache IDs require translation."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/inventorysetups/serialization/InventorySetupItemSerializableTypeAdapter.java",
+        "line": 25,
+        "claim": "Compact serialization writes explicit id, optional quantity, fuzzy/comparator/locked fields and slot; native compilation requires explicit item bindings and supported exact-count semantics."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/inventorysetups/serialization/InventorySetupSerializable.java",
+        "line": 20,
+        "claim": "inv and eq are separate item lists; rp, bp, qv, afi and spellbook semantics are explicit unsupported boundaries for this native compiler."
       }
     ],
     "serverEvidence": [],
     "blockers": [
-      "OSRS inventory-setup JSON item IDs and equipment presets cannot be imported as native IDs. Resolve each setup against pinned obj.pack before use."
+      "Every donor item still requires an explicit native-ID binding validated against pinned native metadata; unknown and implicit identity mappings refuse. Nonempty rune/bolt pouches, quivers, additional-filtered items, nonstandard spellbooks, fuzzy/locked/inequality matching and unknown fields refuse. GUI layout and bank tags are outside the exact-counts preparation policy. Offline compilation does not prove gameplay execution of every imported setup; that uses the existing owned-loadout qualification and per-job Native/live acceptance."
     ],
     "scriptDecisions": [],
-    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+    "proof": {
+      "level": "offline actual CLI and existing consumer validation; no new gameplay qualification",
+      "consumer": "scripts/microbot-loadout-import.ts",
+      "runtimeSha256": "3d4747f73a3aeb58ac3e5bfd47816fd69dded62735deed6f83fe10fff4950a2a",
+      "result": ".practice/microbot-loadout-import/result-1793655669101.json",
+      "scope": "26 tests and122 assertions pass across importer and existing owned-loadout consumer. Actual CLI compiles pinned donor IDs385/563/1171/1277 through explicit bindings and its emitted JSON passes validateOwnedKit. Source review confirms native slots, capacity, two-hand conflicts, exact list selection and refusals. Full typecheck pending integration; no new Native or live claim."
+    }
   },
   {
     "name": "mouserecorder",
@@ -802,7 +820,16 @@
     "localConsumers": [
       "scripts/generated/quest-lib.ts",
       "scripts/quest-order.ts",
-      "packages/core/src/quest-status.ts"
+      "packages/core/src/quest-status.ts",
+      "scripts/generated/quest-itwatchtower.ts",
+      "scripts/generated/quest-hero.ts",
+      "scripts/generated/quest-hero-owned.ts",
+      "scripts/generated/quest-itwatchtower-owned.ts",
+      "scripts/generated/quest-tbwt.ts",
+      "scripts/generated/quest-tbwt-owned.ts",
+      "scripts/generated/quest-legends.ts",
+      "scripts/quest-sweep.ts",
+      "scripts/generated/quest-legends-owned.ts"
     ],
     "sourceEvidence": [
       {
@@ -821,19 +848,179 @@
         "claim": "QuestHelper dynamic steps map to existing native quest handlers, requirements and flags."
       }
     ],
-    "serverEvidence": [],
+    "serverEvidence": [
+      {
+        "path": "vendor/rs-sdk/server/content/scripts/quests/quest_hero/scripts/quest_hero.rs2",
+        "line": 42,
+        "claim": "Native Heroes quest completion handler"
+      },
+      {
+        "path": "vendor/rs-sdk/server/content/scripts/quests/quest_itwatchtower/scripts/quest_itwatchtower.rs2",
+        "line": 564,
+        "claim": "Native Watchtower quest completion handler"
+      },
+      {
+        "path": "vendor/rs-sdk/server/content/scripts/quests/quest_legends/scripts/quest_legends.rs2",
+        "line": 2102,
+        "claim": "Native Legends quest completion handler"
+      },
+      {
+        "path": "vendor/rs-sdk/server/content/scripts/quests/quest_tbwt/scripts/quest_tbwt.rs2",
+        "line": 268,
+        "claim": "Native Tai Bwo Wannai Trio completion handler"
+      }
+    ],
     "blockers": [
-      "Donor QuestScript consumes Java QuestHelper step classes, OSRS quest IDs and modern quest data. Native generated quest scripts cover the server quest set, not those client objects. Each unsupported quest needs native content, not a copied Java step."
+      "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs require native adaptation. Watchtower, Trio and Heroes pass complete owned Native routes and reward audits. Legends Quest has a Native handler and an owned worker with full-route qualification open. Source, per-quest Native receipts and live/repeat acceptance remain distinct."
     ],
     "scriptDecisions": [
       {
         "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/questhelper/QuestScript.java",
         "decision": "partial",
         "consumer": "scripts/generated/quest-lib.ts, scripts/quest-order.ts, packages/core/src/quest-status.ts",
-        "gap": "Donor QuestScript consumes Java QuestHelper step classes, OSRS quest IDs and modern quest data. Native generated quest scripts cover the server quest set, not those client objects. Each unsupported quest needs native content, not a copied Java step."
+        "gap": "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs require native adaptation. Watchtower, Trio and Heroes pass complete owned Native routes and reward audits. Legends Quest has a Native handler and an owned worker with full-route qualification open. Source, per-quest Native receipts and live/repeat acceptance remain distinct."
       }
     ],
-    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+    "proof": {
+      "level": "Source-traced quest reuse and complete Native Watchtower, Trio and Heroes routes. Owned Legends qualification remains open.",
+      "nativeQuestCount": 68,
+      "missingSupported": [
+        "Legends Quest"
+      ],
+      "scope": "Upstream staged CLI workers and owned API workers have distinct entry contracts. Captured Native receipts bind their recorded source and starting conditions. Full owned Legends acceptance remains open. Live, repeat and lower-level conditions remain unqualified.",
+      "legendsComponents": {
+        "stage22ToCompletion": {
+          "evidence": ".practice/microbot-ports/legends-suffix-native-1793896617962/result.json",
+          "sourceCheck": ".practice/microbot-ports/legends-suffix-native-1793896617962/source-check.json",
+          "compiledCheck": ".practice/microbot-ports/legends-suffix-native-1793896617962/compiled-cache-ready-check.json",
+          "sourceSha256": "c5cf577fb37d3d6b06bb87acc5b94ff6552730f73a184246601b18aad2958f01",
+          "fixtureWorkerSha256": "90e685e468d3c91083fbbe3d4ccbe294b3105022351fb31d3efd0958156b1366",
+          "checkpointSha256": "4e509034ec514e85320e38012b3d940d7cf1f5611c3f7188eec81564556ec9a9",
+          "scope": "Captured stage-22 save after the second demon with the exact prior fare total. The production suffix reaches stage 75 and four quest points in 2942 ticks. It collects sacred water, plants and carves Yommi, defeats the final demon, restores Prayer controls, returns the map and gilded totem, earns four Herblore rewards and logs out at the bank. Native practice starts at stage 22."
+        },
+        "lowerCaveLedges": {
+          "evidence": ".practice/microbot-ports/legends-lower-cave-native-1793879435919/result.json",
+          "sourceCheck": ".practice/microbot-ports/legends-lower-cave-native-1793879435919/source-check.json",
+          "sourceSha256": "8f12a74fc4ad93c0bba904a91e8bd45e2353ba31c4075eb4bab940574e421ae0",
+          "fixtureWorkerSha256": "feb893ae35d7ff2174822133e9f59ff7c984e4c1253a6490ccffc64212bf35de",
+          "scope": "Seeded rope landing. All six forward and six reverse production ledges pass in 128 ticks. The fixture bypasses the return barrier and rope. The save confirms (2378, 4717), exact stock and gear, no XP change, declared controls and logout."
+        },
+        "gujuoRetreat": {
+          "evidence": ".practice/microbot-ports/legends-gujuo-native-1793882251303/result.json",
+          "sourceCheck": ".practice/microbot-ports/legends-gujuo-native-1793882251303/source-check.json",
+          "sourceSha256": "cb17820c8e8e7d2f5cbc666f26bb25c460393c1667ea1894429a7e89be4e22e1",
+          "fixtureWorkerSha256": "8fc737d1ee0135e2e48b132155dc54d456161c76ad82617eb7d58ef0b8cdbbc1",
+          "scope": "Seeded jungle clearing with bullroarer and ordinary supplies. Real bullroarer aggro triggers a sustained Savage pursuit. The production map-route retreat clears it and Gujuo appears after return. The 113-tick run preserves stock, XP, gear and controls and logs out. The disappear-and-reacquire branch is outside this capture."
+        },
+        "strengthReturn": {
+          "evidence": ".practice/microbot-ports/legends-strength-native-1793877363687/saved-corridor-audit.json",
+          "sourceCheck": ".practice/microbot-ports/legends-strength-native-1793877363687/source-check.json",
+          "sourceSha256": "0f55e55c70f326375742d6d733e93a39c6bbb4b64c189acb60c84ff709cf7df9",
+          "fixtureWorkerSha256": "7cdc9ac401f116a0ea5f17ecd8e59f9aa3c76a5600bb3c7e52fbfec1241c8b8c",
+          "scope": "Seeded south approach with a carried pickaxe. The worker defeats its Death wing attacker, crosses the Strength gate, mines three swamp rocks, exits the bookcase at (2795, 9338), and logs out. The captured save matches combat XP, Mining XP, stock, gear and declared controls."
+        },
+        "earthOrbGate": {
+          "evidence": ".practice/microbot-ports/legends-orb-gate-native-1793877922772/result.json",
+          "sourceCheck": ".practice/microbot-ports/legends-orb-gate-native-1793877922772/source-check.json",
+          "sourceSha256": "0f55e55c70f326375742d6d733e93a39c6bbb4b64c189acb60c84ff709cf7df9",
+          "fixtureWorkerSha256": "4ad640cf6e888ad3a778b483ee885fa7e1e28aaec6028d23430e7db40d58da6a",
+          "scope": "Seeded gate approach. The worker consumes 30 earth runes, three cosmic runes and one orb, gains 17,500 raw Magic XP at 25x, lands at (2763, 9320), and logs out with gear and declared controls conserved."
+        }
+      },
+      "heroes": {
+        "evidence": ".practice/microbot-ports/heroes-quest-native-1793857302531/result.json",
+        "sourceCheck": ".practice/microbot-ports/heroes-quest-native-1793857302531/source-check.json",
+        "compiledCheck": ".practice/microbot-ports/heroes-quest-native-1793857302531/compiled-cache-ready-check.json",
+        "runtimeSha256": "9fa547d554b9b1077486bc8df1e2cf6be1a3b3e522861692d46e5fe5f3cdcf27",
+        "scope": "Actual two-actor owned CLI from fresh Heroes stages with ordinary staged supplies and level 99 skills. Both gangs complete in 5604 ticks per actor, gain 12 exact skill rewards, and return to bank at HP99. Each spends 60 coins, one bait and five observed potion doses. Black Arm casts two spells and Phoenix ten. Independent saved assets, controls, raw prayer observations and logout pass. Source11596 and ready-cache42 entries unchanged. Live, repeat and lower-level conditions remain open."
+      },
+      "watchtower": {
+        "evidence": ".practice/microbot-ports/watchtower-native-1793681609878/result.json",
+        "sourceCheck": ".practice/microbot-ports/watchtower-native-1793681609878/source-check.json",
+        "compiledCheck": ".practice/microbot-ports/watchtower-native-1793681609878/compiled-cache-check.json",
+        "runtimeSha256": "a94e1509222038d9de92ac96cba5c13032c160f1f3e152d3ae75c093311146a6",
+        "fixtureSha256": "4742801249759644c82cdcc83acecc6ea4fdc30c237113f16a61c0371b2e790d",
+        "scope": "Actual fresh quest0 through reward13 and read-scroll14, QP+4; all quest items earned from ordinary staged ingredients and the listed skill levels and owned kit. CLI0 in2084ticks, sameLife1/no death, HPmin94/saved96, food unchanged, exact coins+4980 and all owned assets/gear/controls/logout. RawXP Magic3825000/Agility41500/Attack80000/HP26525/Herblore5000/Thieving1625; foreignXP0. Exact five wall climbs, two return swings and one paid bridge. Source11521 unchanged; server-ready42 and compiled-end57 contents unchanged, ZIP metadata excluded. Independent CRC/raw/source review agrees. Live, repeat and other starting conditions remain unqualified.",
+        "skills": {
+          "Attack": 99,
+          "Strength": 99,
+          "Defence": 99,
+          "Hitpoints": 99,
+          "Magic": 99,
+          "Mining": 99,
+          "Herblore": 99,
+          "Thieving": 99,
+          "Agility": 99
+        },
+        "capturedRuntimePath": "scripts/generated/quest-itwatchtower.ts",
+        "localRuntimePath": "scripts/generated/quest-itwatchtower-owned.ts",
+        "integratedQualification": "pending merged-source Native renewal"
+      },
+      "heroesCrossings": {
+        "evidence": ".practice/microbot-ports/heroes-crossing-native-1793828591571/result.json",
+        "sourceCheck": ".practice/microbot-ports/heroes-crossing-native-1793828591571/source-check.json",
+        "compiledCheck": ".practice/microbot-ports/heroes-crossing-native-1793828591571/compiled-cache-ready-check.json",
+        "runtimeSha256": "fc61cb67f1d195357e6bbbedc5e62758bb462b5362d7bae4de725516020f2f12",
+        "scope": "Six production helper crossings: panel, keyed side door and keyed treasure door, both directions. Two CLI0/logouts and independent saved position, inventory and zero-XP audits. Staged keys and Heroes progress4/11; no full quest, Grip combat, rewards, live or repeat claim. Source11441 and server-ready42 unchanged.",
+        "capturedRuntimePath": "scripts/generated/quest-hero.ts",
+        "localRuntimePath": "scripts/generated/quest-hero-owned.ts",
+        "integratedQualification": "pending merged-source Native renewal"
+      },
+      "trio": {
+        "evidence": ".practice/microbot-ports/tbwt-native-1793832071961/result.json",
+        "sourceCheck": ".practice/microbot-ports/tbwt-native-1793832071961/source-check.json",
+        "compiledCheck": ".practice/microbot-ports/tbwt-native-1793832071961/compiled-cache-check.json",
+        "runtimeSha256": "9018cefc2fb26c059a6389d6db357d272493c87c4bed6ed59b5ef5f04cc4fa2c",
+        "fixtureSha256": "53b4b0e51df5f7fb475dbdd9e97299e44296351dcb25cce061224cdca941e15e",
+        "scope": "Actual fresh quest0 through6, Tiadeche7 and all three brother rewards; QP+2, coins+2000, exact whole assets/gear/controls and logout. Owned post-start Monkey kill/corpse, both hunt cutscenes, cooking, log and bridge receipts. Independent CRC and full raw audit pass. Native100ms/XP25; Combat99/Agility99 and staged ordinary prequest supplies. No Trio progress/corpse/manual/vessel staged. Source11529 unchanged, server-ready42 and compiled57 contents unchanged; ZIP metadata excluded. Live, repeat and lower-level conditions remain unqualified.",
+        "ticks": 1362,
+        "casts": 8,
+        "rawXP": {
+          "Attack": 625000,
+          "Defence": 0,
+          "Strength": 625000,
+          "Hitpoints": 1950,
+          "Ranged": 0,
+          "Prayer": 0,
+          "Magic": 14000,
+          "Cooking": 1275000,
+          "Woodcutting": 0,
+          "Fletching": 0,
+          "Fishing": 1625000,
+          "Firemaking": 0,
+          "Crafting": 0,
+          "Smithing": 0,
+          "Mining": 0,
+          "Herblore": 0,
+          "Agility": 7000,
+          "Thieving": 0,
+          "Runecraft": 0,
+          "Slayer": 0,
+          "Farming": 0
+        },
+        "capturedRuntimePath": "scripts/generated/quest-tbwt.ts",
+        "localRuntimePath": "scripts/generated/quest-tbwt-owned.ts",
+        "integratedQualification": "pending merged-source Native renewal"
+      },
+      "integrationRenewal": [
+        "owned Watchtower merged dependency closure",
+        "owned Trio merged dependency closure"
+      ],
+      "stagedLegends": {
+        "entry": "scripts/generated/quest-legends.ts",
+        "mergeCommit": "68688262c029274a2010e9bcacdf05af34dbf275",
+        "currentGitBlob": "4333d8b36ec9213ba7efe8fd1c18b8ad4c0aedda",
+        "reportedProofCommit": "16161109",
+        "reportedProofGitBlob": "cb7ae67603f588df110c66e49e78a66818f9c744",
+        "peerReport": "https://github.com/Giftedx/rs-sdk-bot/pull/214",
+        "reportedNativeTicks": [
+          3996,
+          3878,
+          4221
+        ],
+        "scope": "Peer reports three complete staged Native routes at all99 with two owned supply helpers. Current source adds a required helper logout-result check. Native receipt/source delta is explicit; this integration has not independently qualified the strengthened helper gate, whole assets, live, minimum levels or helper staging."
+      }
+    }
   },
   {
     "name": "recovery",

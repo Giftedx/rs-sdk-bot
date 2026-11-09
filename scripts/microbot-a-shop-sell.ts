@@ -5,6 +5,7 @@ import {openBot,finish} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
 import {watchProductionLife} from './microbot-c-lifetime';
+import {componentId} from '../packages/core/src/logout';
 export interface ShopSaleOptions{item:number;quantity:number;minimumUnit:number;reserve:number;shopTitle:string;cap:number;stop?:()=>boolean}
 export function validateShopSale(o:ShopSaleOptions){
  if(![o.item,o.quantity,o.minimumUnit,o.reserve,o.cap].every(Number.isSafeInteger)||o.item<1||o.item===995||o.quantity<1||o.quantity>1000||o.minimumUnit<1||o.minimumUnit>2147483647||o.reserve<0||o.cap<1||o.cap>100000||!o.shopTitle||o.shopTitle.length>100)throw Error('invalid finite merchant sale');return o;
@@ -12,6 +13,14 @@ export function validateShopSale(o:ShopSaleOptions){
 export function shopSaleEffect(item:number,quote:number,b:Record<number,number>,a:Record<number,number>){
  const ids=new Set([...Object.keys(b),...Object.keys(a)].map(Number));
  return [...ids].every(id=>(a[id]??0)-(b[id]??0)===(id===item?-1:id===995?quote:0));
+}
+export async function observeMerchantQuote(s:Session,item:{id:number;slot:number;name:string},stop:()=>boolean,ticks:number){
+ const state=()=>s.sdk.getState(),cursor=Math.max(-1,...(state()?.gameMessages??[]).map(m=>m.observationId??m.tick));
+ const quote=()=>{const message=(state()?.gameMessages??[]).find(m=>m.type===0&&(m.observationId??m.tick)>cursor&&m.text.startsWith(item.name+': shop will buy for '));const match=message?.text.match(/: shop will buy for (\d+)gp\.$/);return match?Number(match[1]):undefined;};
+ if(stop())throw Error('merchant quote stopped');
+ if(!(await s.sdk.sendClickComponentWithOption(componentId('shop_template_side:inv'),1,item.slot)).success)throw Error('merchant native Value refused');
+ if(!await waitUntil(s,()=>stop()||quote()!==undefined,{timeoutTicks:ticks})||stop()||!Number.isSafeInteger(quote()))throw Error('fresh native merchant Value missing');
+ return quote()!;
 }
 export async function runShopSale(s:Session,o:ShopSaleOptions){
  validateShopSale(o);const life=watchProductionLife(s,o.stop),start=s.tick();
@@ -22,8 +31,9 @@ export async function runShopSale(s:Session,o:ShopSaleOptions){
  try{
  while(sold<o.quantity&&!over()){
   const shop=state()?.shop;if(!shop?.isOpen||shop.title!==o.shopTitle)throw Error('exact staged shop is not open');
-  const item=shop.playerItems.find(i=>i.id===o.item),quote=item?.sellPrice;
-  if(!item||!Number.isSafeInteger(quote)||quote!<o.minimumUnit){stop='price floor';break;}
+  const item=shop.playerItems.find(i=>i.id===o.item);if(!item){stop='reserve';break;}
+  const quote=await observeMerchantQuote(s,item,over,Math.min(10,Math.max(1,o.cap-(s.tick()-start))));
+  if(quote<o.minimumUnit){stop='price floor';break;}
   const before=counts();if((before[o.item]??0)<=o.reserve){stop='reserve';break;}
   const result=await s.bot.sellToShop(item,1);
   await waitUntil(s,()=>over()||(counts()[o.item]??0)===(before[o.item]??0)-1&&(counts()[995]??0)===(before[995]??0)+quote!,{timeoutTicks:Math.min(10,Math.max(1,o.cap-(s.tick()-start)))});

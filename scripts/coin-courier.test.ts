@@ -143,4 +143,3 @@ test('owned coin endpoints reach the stack, new profiles, registration and every
  }
  expect(()=>selectCoinProofEndpoints(()=>false,()=>0)).toThrow('owned practice ports unavailable');
 });
-
