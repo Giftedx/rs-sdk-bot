@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794219543448,
+ "at": 1794220154647,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -73,18 +73,15 @@
   },
   {
    "account": "Shaftmaker",
-   "script": "scripts/chain.ts",
+   "script": "scripts/pk-live/live-pilot.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=10 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=shaftmaker-law10 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/pk-live/live-pilot.ts 10 20"
+    "10",
+    "20"
    ],
-   "env": {
-    "ROUNDS": "1"
-   },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "Buy 10 law runes on the GE, then a 10-minute PK pilot at Wilderness 20 or less",
+   "repeat": true,
+   "goal": "PK hunts of 10 minutes at Wilderness 20 or less, with GE and shop rune restock",
    "role": "pk"
   },
   {
@@ -112,7 +109,7 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "PK hunts of 15 minutes at Wilderness 20 or less; Varrock Teleport escapes from 9 owned law runes",
+   "goal": "PK hunts of 15 minutes at Wilderness 20 or less, with GE and shop rune restock",
    "role": "pk"
   },
   {
