@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { CAPACITY, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs } from '../src/autopilot';
+import { CAPACITY, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -339,4 +339,53 @@ test('a run the gateway dropped is a drain, not a failure: two drains keep the j
     expect(assess([drain, drain])).toMatchObject({ retire: false, ok: 0, fail: 0, drains: 2 });
     expect(assess(['RESULT fail no chickens', drain, 'RESULT fail no chickens'])).toMatchObject({ retire: true, fail: 2, drains: 1 });
     expect(assess(['RESULT fail no chickens', drain, 'RESULT ok feathers=30 gained=30'])).toMatchObject({ retire: false, ok: 1, fail: 1, drains: 1 });
+});
+
+test('goal bands go only to army accounts, before any coin job, earliest band first and nearest target first', () => {
+    const band = (id: string, n: number, skill: string, to: number, extra: Partial<Template> = {}): Template => ({ id, family: 'combat-train', script: 'scripts/gather-combat.ts', role: 'combat',
+        goal: `${skill} to ${to}`, tier: 'goal', band: n, trains: { skill, to, unlocks: [] }, yields: () => [], resources: ['giant:edge'], ...extra });
+    const bands = [band('str60', 0, 'Strength', 60), band('att60', 1, 'Attack', 60)];
+    const farm = catalogue().filter(t => t.family === 'goldfarm');
+    const thief = (name: string, skills: Record<string, number> = {}) => acct(name, { Thieving: 99, ...skills });
+    const army = new Set(['nearer', 'farther']);
+    const run = (accounts: Acct[], extra: Partial<Inputs> = {}) => ids(plan(inputs(accounts, { templates: [...bands, ...farm], army, capacity: { 'giant:edge': 1 }, ...extra })));
+    // An army account trains even though goldfarm pays coins; a specialist off the roster keeps farming.
+    expect(run([thief('Nearer'), thief('Specialist')])).toEqual({ Nearer: 'str60', Specialist: expect.stringMatching(/^goldfarm@/) });
+    // One giant place, shared by both bands: the account nearest its band target takes it, and the other, with no free
+    // band left, falls to the coin tier rather than idling.
+    expect(run([thief('Nearer', { Strength: 50 }), thief('Farther', { Strength: 10 })])).toEqual({ Nearer: 'str60', Farther: expect.stringMatching(/^goldfarm@/) });
+    // A met band is skipped: Strength 60 goes on to Attack.
+    expect(run([thief('Nearer', { Strength: 60 })])).toEqual({ Nearer: 'att60' });
+    // Kit money: a band an account cannot pay for is funded by a donor of its side, or left to the coin tier.
+    const kit = [band('str60', 0, 'Strength', 60, { needs: { items: { coins: 100_000 } } })];
+    expect(ids(plan(inputs([thief('Nearer')], { templates: [...kit, ...farm], army })))).toEqual({ Nearer: expect.stringMatching(/^goldfarm@/) });
+    const funded = plan(inputs([thief('Nearer')], { templates: [...kit, ...farm], army, donors: [{ name: 'Bank', coins: 1_000_000 }] }));
+    expect(funded[0]).toMatchObject({ template: { id: 'str60' }, fund: { from: 'Bank', to: 'Nearer', coins: 100_000 } });
+});
+
+test('the Ardougne cow bands train army accounts from Hitpoints 32 with 14 HP of food and the bronze kit, as repeating jobs', () => {
+    const kit = { trout: 2, 'bronze sword': 1, 'wooden shield': 1 };
+    const fighter = (name: string, skills: Record<string, number>, items: Record<string, number> = kit) => acct(name, { Thieving: 99, ...skills }, items);
+    const army = new Set(['cowhand', 'pure', 'broke', 'second', 'third']);
+    const run = (accounts: Acct[]) => plan(inputs(accounts, { army, capacity: CAPACITY }));
+    const pick = (accounts: Acct[]) => ids(run(accounts));
+    expect(pick([fighter('Cowhand', { Hitpoints: 35 })])).toEqual({ Cowhand: 'army-cow-strength' });
+    expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 40 })])).toEqual({ Cowhand: 'army-cow-attack' });
+    expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 40, Attack: 40 })])).toEqual({ Cowhand: 'army-cow-defence' });
+    // With no giant band, a range pure at Hitpoints 82 trains Strength on the cows too; Hitpoints 10 has too little
+    // food margin and farms.
+    expect(pick([fighter('Pure', { Hitpoints: 82 })])).toEqual({ Pure: 'army-cow-strength' });
+    expect(pick([fighter('Cowhand', { Hitpoints: 10 })]).Cowhand).toMatch(/^goldfarm@/);
+    // Cake counts by its bites: a 2/3 cake and a slice heal 12 HP, short of 14, and the account farms; add a whole cake
+    // (pack or bank) and it trains.
+    const bronze = { 'bronze sword': 1, 'wooden shield': 1 };
+    expect(pick([fighter('Broke', { Hitpoints: 35 }, { ...bronze, '2/3 cake': 1, 'slice of cake': 1 })]).Broke).toMatch(/^goldfarm@/);
+    expect(pick([fighter('Broke', { Hitpoints: 35 }, { ...bronze, '2/3 cake': 1, 'slice of cake': 1, cake: 1 })])).toEqual({ Broke: 'army-cow-strength' });
+    expect(pick([fighter('Broke', { Hitpoints: 35 }, { trout: 2 })]).Broke).toMatch(/^goldfarm@/);
+    // The field takes two; a third army account farms.
+    const three = pick([fighter('Cowhand', { Hitpoints: 35 }), fighter('Second', { Hitpoints: 36 }), fighter('Third', { Hitpoints: 37 })]);
+    expect(Object.values(three).filter(id => id.startsWith('army-cow-'))).toHaveLength(2);
+    // Cow mode runs a fixed 8 kills, so its job repeats until the band's target moves the account on.
+    const job = jobFor(run([fighter('Cowhand', { Hitpoints: 35 })])[0]!, side);
+    expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['3000', 'cow'], env: { TRAIN_SKILL: 'Strength', COW_BANK_PROFILE: 'north', MAX_KILLS: '8' }, repeat: true, resources: ['cow:ardougne-north'] });
 });

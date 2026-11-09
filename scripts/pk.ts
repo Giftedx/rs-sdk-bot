@@ -16,7 +16,9 @@ export const ITEMS = {
     shark: 385, glory: [1712, 1710, 1708, 1706], prayerPotion: [2434, 139, 141, 143], superRestore: [3024, 3026, 3028, 3030],
     deathRune: 560, bloodRune: 565, fireRune: 554, airRune: 556, waterRune: 555, earthRune: 557, natureRune: 561, lawRune: 563,
 } as const;
-export const SPELLS = { fireBlast: 1181, fireWave: 1189, bind: 1572, snare: 1582, entangle: 1592 } as const;
+export const SPELLS = { fireBolt: 1169, fireBlast: 1181, fireWave: 1189, bind: 1572, snare: 1582, entangle: 1592,
+    // Teleports work up to Wilderness level 20 (skill_magic/scripts/spells/teleport.rs2:17); Varrock costs 1 law, 3 air, 1 fire.
+    varrockTeleport: 1164, lumbridgeTeleport: 1167, faladorTeleport: 1170, camelotTeleport: 1174 } as const;
 // Prayer indices (vendor/rs-sdk/sdk/types.ts PRAYER_NAMES): 8 Protect Item, 12 Magic, 13 Missiles, 14 Melee.
 export const PRAYER = { item: 8, magic: 12, missiles: 13, melee: 14 } as const;
 
@@ -37,8 +39,9 @@ export type FightOptions = {
     // dagger is { kit: [dagger, shield], bar: 'combat_stabsword:specbar', cost: 250, below: 0.5 }.
     spec?: { kit: number[]; bar: string; cost: number; below: number };
     // Out of food at or under this HP: rub an inventory amulet of glory to Edgeville (amulet_of_glory.rs2 allows it up
-    // to Wilderness level 30; there is no Teleblock in the content).
+    // to Wilderness level 30; there is no Teleblock in the content), or with no glory cast `escapeSpell` (level 20).
     escapeAt?: number;
+    escapeSpell?: number;
     // Return outcome "danger" (with the reason) as soon as dangerReason fires, so the caller can escape.
     exitOnDanger?: boolean;
     damageSpell?: number;
@@ -149,7 +152,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
     const sdk = s.sdk, start = s.tick(), want = targetName.toLowerCase();
     const startLife = sdk.getState()?.player?.lifeId;
     let last = -1, nextAttack = start, foodReady = start, potionReady = start, freezeReady = start, frozenUntil = start, seenEvent = 0, seenMessage = 0, lastSeen = start;
-    let target: NearbyPlayer | undefined, rubbed = -1;
+    let target: NearbyPlayer | undefined, rubbed = -1, ranAt = -10;
     const hits: { tick: number; damage: number; src: number }[] = [], dealtLog: { tick: number; damage: number }[] = [];
     for (;;) {
         await new Promise<void>(resolve => { const off = s.onTick(() => { off(); resolve(); }); });
@@ -170,7 +173,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             seenMessage = id;
             if (m.type === 0 && killMessage(m.text, targetName)) { result.outcome = 'kill'; log(`PK kill ${targetName} after ${result.ticks} ticks`); return result; }
         }
-        if (rubbed >= 0 && wildernessLevel(at.z) === 0) { result.outcome = 'escaped'; log(`PK escaped ${targetName} after ${result.ticks} ticks at HP ${me.hp}`); return result; }
+        if ((rubbed >= 0 || ranAt >= 0) && wildernessLevel(at.z) === 0) { result.outcome = 'escaped'; log(`PK escaped ${targetName} after ${result.ticks} ticks at HP ${me.hp}`); return result; }
         if (me.isDead || me.hp <= 0 || (startLife !== undefined && me.lifeId !== startLife)) { result.outcome = 'died'; log(`PK died to ${targetName} after ${result.ticks} ticks`); return result; }
         target = state.nearbyPlayers.find(p => p.name.toLowerCase() === want);
         if (target) { lastSeen = now; result.targetAt = { x: target.x, z: target.z }; }
@@ -190,9 +193,18 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         }
         const danger = dangerReason({ hp: me.hp, maxHp: me.maxHp, food: !!bestFood(inv), prayer: state.prayers.prayerPoints, oppMax, hits, dealt: dealtLog, now });
         if (danger && o.exitOnDanger) { result.outcome = 'danger'; result.danger = danger; log(`PK danger against ${targetName}: ${danger}`); return result; }
+        // Deeper than the teleports reach (glory 30, spells 20): run south first.
+        const reach = slotOf(ITEMS.glory) ? 30 : o.escapeSpell !== undefined ? 20 : 0;
+        if (o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(inv) && reach && wildernessLevel(at.z) > reach) {
+            if (now - ranAt > 3) { void sdk.sendWalk(at.x, at.z - 14); ranAt = now; }
+            continue;
+        }
         if (o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(inv) && wildernessLevel(at.z) <= 30) {
             const glory = slotOf(ITEMS.glory);
             if (glory && (rubbed < 0 || now - rubbed > 6) && !state.dialog?.isOpen) { log(`PK rub glory at HP ${me.hp}`); use(glory, /^Rub$/i); rubbed = now; }
+            else if (!glory && o.escapeSpell !== undefined && wildernessLevel(at.z) <= 20 && (rubbed < 0 || now - rubbed > 6)) {
+                log(`PK teleport spell at HP ${me.hp}`); void sdk.sendClickComponent(o.escapeSpell); rubbed = now;
+            }
             if (state.dialog?.isOpen) void sdk.clickDialogByText(/^Edgeville/i);
             continue;
         }

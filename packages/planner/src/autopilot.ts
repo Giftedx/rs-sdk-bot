@@ -15,9 +15,16 @@ export type Acct = { name: string; side: string; skills: Record<string, number>;
 export type Flow = { item: string; perTick: number };
 export type Template = {
     id: string; family: string; script: string; args?: string[]; env?: Record<string, string>; role: string; goal: string;
-    needs?: { skills?: Record<string, number>; items?: Record<string, number> };
+    // `under`: skills that must stay below a level (a band hands an account on to the next band at that level).
+    // `food`: HP the account's food heals, pack and bank (FOOD_HEAL).
+    needs?: { skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number>; food?: number };
     yields: (a: Acct) => Flow[]; spends?: (a: Acct) => Flow[];
     resources?: string[]; trains?: { skill: string; to: number; unlocks: string[] };
+    // A goal band (AGENTS.md goals: the PK army of maxed tribrids) trains an army account toward its target and is
+    // assigned before any coin job; `band` orders the bands by PK value, lowest first. Gold only buys their kits.
+    tier?: 'goal'; band?: number;
+    // A trainer whose script runs a fixed amount (not to its target level) repeats until the planner moves it on.
+    repeats?: boolean;
 };
 // `fund`: the template needs coins the account lacks; a donor of this side sends them first (scripts/autopilot.ts
 // places the fleet order), and the account takes the job on the pass after the coins arrive.
@@ -36,6 +43,9 @@ export type Inputs = {
     // Lower-case names of accounts with an enabled job. Funding one would remove its running job, and the stop file
     // scripts/swarm.ts writes for it would block the trade, so such an account is never funded.
     unfundable?: ReadonlySet<string>;
+    // Lower-case names of the accounts on this side's army roster: only they take goal bands. A specialist's board
+    // time counts every tick it plays, so combat training is opt-in per account, never global.
+    army?: ReadonlySet<string>;
 };
 export const FUND_RESERVE = 50_000;
 
@@ -46,6 +56,12 @@ export const BILL_PREMIUM = 2, SURPLUS = 0.5, TRAIN_SHARE = 0.25;
 export const FEEDS: Record<string, string[]> = { feather: ['headless arrow'], 'arrow shaft': ['headless arrow'], 'raw lobster': ['lobster'] };
 export const norm = (s: string) => s.toLowerCase().replace(/\s*\((?:noted|quest)\)$/, '').trim().replace(/s$/, '');
 export const pairKey = (account: string, template: string) => `${account.toLowerCase()}:${template}`;
+// HP one held item heals over all its bites, by item name: scripts/gather-combat.ts COW_FOOD_BITES × COW_BITE_HEAL
+// (trout 7; a cake bite 4, a chocolate cake bite 5). scripts/autopilot.test.ts checks the two tables agree.
+export const FOOD_HEAL: Readonly<Record<string, number>> = {
+    trout: 7, cake: 12, '2/3 cake': 8, 'slice of cake': 4, 'chocolate cake': 15, '2/3 chocolate cake': 10, 'chocolate slice': 5,
+};
+export const foodHeal = (a: Acct) => Object.entries(FOOD_HEAL).reduce((n, [item, hp]) => n + (a.items[item] ?? 0) * hp, 0);
 
 export function unitValue(item: string, bill: readonly BillRow[], prices: Readonly<Record<string, number>>): number {
     const k = norm(item);
@@ -56,7 +72,9 @@ export function unitValue(item: string, bill: readonly BillRow[], prices: Readon
 
 const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: string; to: number }) =>
     Object.entries(needs?.skills ?? {}).every(([s, l]) => (skillOverride?.skill === s ? Math.max(skillOverride.to, a.skills[s] ?? 1) : a.skills[s] ?? 1) >= l)
-    && Object.entries(needs?.items ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n);
+    && Object.entries(needs?.items ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n)
+    && Object.entries(needs?.under ?? {}).every(([s, l]) => (a.skills[s] ?? 1) < l)
+    && foodHeal(a) >= (needs?.food ?? 0);
 // The coins a template needs beyond what the account holds, and its needs without the coin line.
 const coinShort = (a: Acct, needs: Template['needs']) => Math.max(0, (Object.entries(needs?.items ?? {}).find(([i]) => norm(i) === 'coin')?.[1] ?? 0) - (a.items.coin ?? 0));
 const withoutCoins = (needs: Template['needs']): Template['needs'] => ({ ...needs, items: Object.fromEntries(Object.entries(needs?.items ?? {}).filter(([i]) => norm(i) !== 'coin')) });
@@ -70,10 +88,19 @@ export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'price
 export function plan(inp: Inputs): Assignment[] {
     const byId = new Map(inp.templates.map(t => [t.id, t]));
     const mine = inp.accounts.filter(a => (inp.owners.get(a.name.toLowerCase())?.side ?? 'local') === inp.side && a.side === inp.side);
-    type Cand = { account: string; template: Template; value: number; resources: string[]; reason: string; coins?: number };
+    type Cand = { account: string; template: Template; value: number; resources: string[]; reason: string; coins?: number; goal?: { band: number; left: number } };
     const cands: Cand[] = [];
     for (const a of mine) for (const t of inp.templates) {
         if (inp.retired?.has(pairKey(a.name, t.id))) continue;
+        if (t.tier === 'goal') {
+            // One candidate per goal band whose target an army account has not met; never for anyone else.
+            if (!inp.army?.has(a.name.toLowerCase()) || !t.trains || (a.skills[t.trains.skill] ?? 1) >= t.trains.to) continue;
+            const goal = { band: t.band ?? 0, left: t.trains.to - (a.skills[t.trains.skill] ?? 1) }, reason = `army band ${goal.band}: ${t.trains.skill} to ${t.trains.to}`;
+            if (meets(a, t.needs)) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal });
+            else if (inp.donors?.length && !inp.unfundable?.has(a.name.toLowerCase()) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs)))
+                cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, coins: coinShort(a, t.needs) });
+            continue;
+        }
         if (t.trains) {
             if ((a.skills[t.trains.skill] ?? 1) >= t.trains.to || !meets(a, t.needs)) continue;
             const trained: Acct = { ...a, skills: { ...a.skills, [t.trains.skill]: t.trains.to } };
@@ -103,22 +130,29 @@ export function plan(inp: Inputs): Assignment[] {
     // Donor coins above the reserve, spent as funded candidates take them; a funded account gives nothing.
     // A donor that gives stays free this pass, so the fleet agent can log it in for the trade.
     const pool = new Map((inp.donors ?? []).map(d => [d.name, Math.max(0, d.coins - FUND_RESERVE)])), gave = new Set<string>();
-    // Re-sorted after every assignment: one more holder lowers the worth of the candidates that share its resource.
-    for (const rest = [...cands]; rest.length;) {
-        rest.sort(order);
-        const c = rest.shift()!;
-        if (done.has(c.account) || gave.has(c.account) || c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) continue;
-        const value = worth(c);
+    const take = (c: Cand, value: number) => {
+        if (done.has(c.account) || gave.has(c.account) || c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
         let fund: Funding | undefined;
         if (c.coins) {
             const from = [...pool].filter(([n, left]) => n.toLowerCase() !== c.account.toLowerCase() && !done.has(n) && left >= c.coins!).sort((x, y) => y[1] - x[1])[0]?.[0];
-            if (!from) continue;
+            if (!from) return;
             pool.set(from, pool.get(from)! - c.coins); gave.add(from);
             fund = { from, to: c.account, coins: c.coins, template: c.template.id };
         }
         pool.delete(c.account);
         for (const r of c.resources) used.set(r, (used.get(r) ?? 0) + 1);
         done.set(c.account, { account: c.account, template: c.template, value, reason: fund ? `${c.reason}, funded ${c.coins} coins by ${fund.from}` : c.reason, resources: c.resources, ...(fund ? { fund } : {}) });
+    };
+    // The goal tier first: each army account takes the earliest band it can (a full band's resource sends it to the
+    // next), the account nearest its target first; it never competes with coin jobs on coins per tick.
+    const goalOrder = (x: Cand, y: Cand) => x.goal!.band - y.goal!.band || x.goal!.left - y.goal!.left || keeps(y) - keeps(x) || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id);
+    for (const c of cands.filter(c => c.goal).sort(goalOrder)) take(c, 0);
+    // The coin tier, re-sorted after every assignment: one more holder lowers the worth of the candidates that share
+    // its resource.
+    for (const rest = cands.filter(c => !c.goal); rest.length;) {
+        rest.sort(order);
+        const c = rest.shift()!;
+        take(c, worth(c));
     }
     return mine.map(a => done.get(a.name) ?? { account: a.name, value: 0, resources: [], reason: gave.has(a.name) ? 'vacant: gives coins this pass' : 'vacant: no template meets its skills and holdings with a free resource' });
 }
@@ -131,7 +165,7 @@ export function plan(inp: Inputs): Assignment[] {
 // finishedTrainers() brings that next pass forward.
 export function jobFor(x: Assignment, side: string) {
     const t = x.template!;
-    return { account: x.account, script: t.script, args: t.args ?? [], env: t.env ?? {}, role: t.role, goal: t.goal, enabled: true, repeat: !t.trains, standing: true,
+    return { account: x.account, script: t.script, args: t.args ?? [], env: t.env ?? {}, role: t.role, goal: t.goal, enabled: true, repeat: t.repeats ?? !t.trains, standing: true,
         autopilot: side, template: t.id, resources: x.resources, note: `autopilot ${t.id}: ${x.reason}, ${x.value.toFixed(2)} coins/tick (estimate)` };
 }
 
@@ -188,8 +222,23 @@ export const CHICKEN_PENS = ['3229,3298', '3017,3288', '3187,3277', '3197,3353']
 // 8.1 near-solo. Gap: one live run per condition, not three matched, so KNIGHT_SHARED_RATE is an estimate, applied
 // once per holder; the planner's tick-waste discount and retirement still apply per job.
 export const KNIGHT_SHARE = 4, KNIGHT_SHARED_RATE = 0.75;
-export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
+// Ardougne north cow field: two army farmers to start, crowding not yet measured.
+export const COW_FIELD = 'cow:ardougne-north', COW_FIELD_CAPACITY = 2;
+export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [COW_FIELD]: COW_FIELD_CAPACITY, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
+// Army goal bands (AGENTS.md goals: maxed tribrids), in PK-value order: Strength, Attack, then Ranged, Magic and
+// Prayer, Defence last. Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile) qualified 3/3 on practice
+// with MAX_KILLS=8: no death, logged out, RESULT ok stop=max-kills, about 700 ticks a run, trained skill 0.38 and
+// Hitpoints 0.12 XP per tick at practice XP rate 1, 2 trout carried and none eaten, from Attack 45 and Hitpoints 32
+// (claude-cloud-4 .practice/combat-ladder); 3/3 again with cake and no trout (cow-dip-cake-final). Cow mode needs 14 HP
+// of trout or cake held (COW_FOOD_HP) and the bronze sword and wooden shield held or worn, starts at the north bank and
+// never wields better gear. Below Hitpoints 32 the food runs out. Hill giants for Hitpoints 43 and up are not
+// qualified, so the cows take every army account from 32. Gap: the live XP factor and field crowding are not measured,
+// and every cloud account banks its sword and shield away from the north bank, so a job needs a staging step that
+// cow mode does not run yet; no side lists army accounts until it does.
+export const COW_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence'; band: number; to: number }[] = [
+    { skill: 'Strength', band: 0, to: 40 }, { skill: 'Attack', band: 1, to: 40 }, { skill: 'Defence', band: 5, to: 40 },
+];
 
 // Proven job templates. Rates are estimates from each script's header model; tick-waste discounts them by measurement.
 export function catalogue(): Template[] {
@@ -198,8 +247,15 @@ export function catalogue(): Template[] {
         goal: `goldfarm knights at ${spot}`, needs: { skills: { Thieving: 55 } }, resources: [`knight:${spot}`],
         yields: a => [{ item: 'coins', perTick: knightCoinsPerTick(a.skills.Thieving ?? 1) }],
     }));
+    const cows = COW_BANDS.map(({ skill, band, to }): Template => ({
+        id: `army-cow-${skill.toLowerCase()}`, family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['3000', 'cow'],
+        env: { TRAIN_SKILL: skill, COW_BANK_PROFILE: 'north', MAX_KILLS: '8' }, role: 'combat', goal: `train ${skill} to ${to} on the Ardougne cows`,
+        tier: 'goal', band, repeats: true, trains: { skill, to, unlocks: [] }, resources: [COW_FIELD], yields: () => [],
+        needs: { skills: { Hitpoints: 32 }, food: 14, items: { 'bronze sword': 1, 'wooden shield': 1 } },
+    }));
     return [
         ...goldfarm,
+        ...cows,
         { id: 'thieving55', family: 'thieving60', script: 'scripts/generated/thieving60.ts', env: { TARGET: '55', CAP: '2500', CLEAN_FOOD: '1' }, role: 'thieving',
             goal: 'train Thieving to 55 for a knight spot', trains: { skill: 'Thieving', to: 55, unlocks: goldfarm.map(g => g.id) }, yields: () => [] },
         ...CHICKEN_PENS.map((pen): Template => ({
