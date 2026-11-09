@@ -14,7 +14,8 @@ import type { Session } from '../packages/core/src/inprocess';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { tradePartners } from '../packages/core/src/tradeguard';
-import { openStyles, readOpponent, type CombatStyle } from '../packages/core/src/opponent';
+import { readOpponent } from '../packages/core/src/opponent';
+import { fightPlayer, type Kit } from './pk';
 
 // Surface Wilderness (content area_wilderness wilderness_zones: 0_46_55 to 3_52_99, 8 tiles per level).
 export function wildLevel(x: number, z: number): number {
@@ -119,6 +120,27 @@ export function sweep(maxWild: number): { x: number; z: number }[] {
     return pts.length ? pts : [{ x: 3090, z: 3524 }];
 }
 
+type Item = { id: number; name: string; slot?: number };
+// Fight kit for scripts/pk.ts: melee wields the worn weapon and shield, ranged a carried bow (RANGED, default any bow),
+// magic a carried staff. Magic with no staff casts with whatever is wielded (an empty list switches nothing).
+export function kitFrom(worn: readonly Item[], carried: readonly Item[], ranged = /bow$/i): Kit {
+    const kit: Kit = { magic: [] };
+    const melee = worn.filter(i => i.slot === 3 || i.slot === 5).filter(i => !ranged.test(i.name) && !/staff/i.test(i.name)).map(i => i.id);
+    if (melee.length) kit.melee = melee;
+    const bow = [...worn, ...carried].find(i => ranged.test(i.name));
+    if (bow) kit.ranged = [bow.id];
+    const staff = [...worn, ...carried].find(i => /staff/i.test(i.name));
+    if (staff) kit.magic = [staff.id];
+    return kit;
+}
+
+// Damage spell components (vendor/rs-sdk/sdk/spells.ts) by SPELL name.
+const SPELL_IDS: Record<string, number> = { FIRE_STRIKE: 1158, FIRE_BOLT: 1169, FIRE_BLAST: 1181, FIRE_WAVE: 1189 };
+export function spellId(name: string): number {
+    const n = Number(name);
+    return SPELL_IDS[name.toUpperCase()] ?? (Number.isInteger(n) && n > 0 ? n : SPELL_IDS.FIRE_BOLT);
+}
+
 // The account's server, from the SERVER line of its bot.env (the same file openBot reads).
 export function accountServer(name: string, root = resolve(import.meta.dir, '..')): string {
     return serverFromEnv(readFileSync(join(root, 'vendor', 'rs-sdk', 'bots', name, 'bot.env'), 'utf8'));
@@ -137,12 +159,6 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     const food = () => sdk.getInventory().filter(i => (i.optionsWithIndex ?? []).some((o: any) => /^eat$/i.test(o.text)));
     const magic = sdk.getSkill('Magic')?.baseLevel ?? 1;
     const freeze = cfg.freeze ? freezeSpell(magic) : null;
-    const styles = (): CombatStyle[] => [
-        'melee',
-        ...(cfg.ranged && [...sdk.getInventory(), ...sdk.getEquipment()].some(i => cfg.ranged!.test(i.name)) ? ['ranged' as const] : []),
-        ...(magic >= 13 ? ['magic' as const] : []),
-    ];
-    const meleeWeapon = sdk.getEquipment().find(i => i.slot === 3)?.name;
     const stats = { attacks: 0, kills: 0, deaths: 0, eats: 0, freezes: 0, chases: 0, loot: [] as string[], targets: [] as string[] };
     const walker = await sessionWalker(session);
     const skip = new Set<string>();
@@ -155,17 +171,12 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
         }
         return [...all.values()];
     };
-    let style: CombatStyle = 'melee';
     let wentIn = false;
     let spun = -1;
+    // The fight kit is read once, as staged: the worn weapon and shield, a bow and a staff carried.
+    const kit = kitFrom(sdk.getEquipment(), sdk.getInventory(), cfg.ranged);
+    emit({ e: 'kit', kit });
 
-    const setStyle = async (s: CombatStyle, target: string) => {
-        if (s === style) return;
-        if (s === 'ranged' && cfg.ranged) await bot.equipItem(cfg.ranged);
-        if (s === 'melee' && style === 'ranged' && meleeWeapon) await bot.equipItem(new RegExp('^' + meleeWeapon.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i'));
-        style = s;
-        emit({ e: 'style', style: s, target });
-    };
     const survive = async (): Promise<'ok' | 'flee' | 'dead'> => {
         const m = me();
         if (!m) return 'ok';
@@ -220,20 +231,31 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                     emit({ e: 'freeze', target: name, spell: freeze, ok: r.success, msg: r.success ? undefined : r.message });
                     continue;
                 }
-                const open = opp ? openStyles(opp, styles()) : styles();
-                await setStyle(open.includes(style) ? style : open[0] ?? style, name);
-                const engaged = sdk.getState()?.player?.combat?.targetType === 'player';
-                if (!engaged || style === 'magic') {
-                    if (!canAttack(m, near)) {
-                        // Out of level range here: step toward the target, which takes us deeper.
-                        await walkPath(walker, [{ x: near.x, z: near.z, tol: 1 }], { maxTicks: 4, idleMs: 9000, stop: stopped });
-                        continue;
-                    }
-                    const r = style === 'magic' ? await bot.castSpell(near as any, cfg.spell) : await bot.attack(near as any);
-                    stats.attacks++;
-                    emit({ e: 'attack', target: name, style, protect: opp?.protect, hp: opp?.hp, ok: r.success, msg: r.success ? undefined : r.message });
+                if (!canAttack(m, near)) {
+                    // Out of level range here: step toward the target, which takes us deeper.
+                    await walkPath(walker, [{ x: near.x, z: near.z, tol: 1 }], { maxTicks: 4, idleMs: 9000, stop: stopped });
+                    continue;
                 }
-                await sdk.waitForTicks(1);
+                // The tribrid fight itself: scripts/pk.ts fightPlayer (style off the overhead, gear switch per turn,
+                // food, prayer, glory escape). It returns "lost" after 10 ticks out of view; the chase then re-aims.
+                stats.attacks++;
+                const fight = await fightPlayer(session, name, {
+                    kit, freeze: !!freeze, eatAt: cfg.eatAt,
+                    escapeAt: Math.ceil((me()?.maxHp ?? 99) * cfg.fleeAt / 100), damageSpell: spellId(cfg.spell), cap: 600,
+                    log: line => emit({ e: "fight", line }),
+                });
+                emit({ e: "fight-end", target: name, outcome: fight.outcome, ticks: fight.ticks, dealt: fight.dealt, taken: fight.taken, eaten: fight.eaten });
+                stats.eats += fight.eaten;
+                if (fight.outcome === "kill") {
+                    stats.kills++;
+                    const at = fight.targetAt ?? lastTile;
+                    await sdk.waitForTicks(4);
+                    if (cfg.loot && at) await lootAt(session, at, stats, emit);
+                    return "kill";
+                }
+                if (fight.outcome === "died") { stats.deaths++; return "dead"; }
+                if (fight.outcome === "escaped") return "flee";
+                lastDist = Infinity;
                 continue;
             }
             // Out of view: run to the cut-off tile, re-aimed on each new roster frame.

@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { canAttack, escapeZ, freezeSpell, intercept, pickTrack, Radar, sweep, wildLevel, type Track } from './pk-roam';
+import { canAttack, escapeZ, freezeSpell, intercept, kitFrom, pickTrack, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
 
 test('wildLevel: 8 tiles per level from z 3520 inside x 2944-3391', () => {
     expect(wildLevel(3094, 3519)).toBe(0);
@@ -90,4 +90,19 @@ test('pickTrack skips a target that can run out of range before a freeze lands',
     // Gap 6: out of range south of z 3560. At 3570 it is 10 tiles from escape: skipped. At 3600: 40 tiles, taken.
     expect(pickTrack(me, [track({ name: 'Edge', x: 3094, z: 3570, combatLevel: 91 })], new Set(), 56)).toBeNull();
     expect(pickTrack(me, [track({ name: 'Deep', x: 3094, z: 3600, combatLevel: 91 })], new Set(), 56)?.track.name).toBe('Deep');
+});
+
+test('kitFrom: worn weapon and shield for melee, a carried bow, a carried staff; magic always usable', () => {
+    const worn = [{ id: 1215, name: 'Dragon dagger', slot: 3 }, { id: 1540, name: 'Anti-dragon shield', slot: 5 }, { id: 1127, name: 'Rune platebody', slot: 4 }];
+    const carried = [{ id: 861, name: 'Magic shortbow' }, { id: 1401, name: 'Mystic fire staff' }, { id: 385, name: 'Shark' }];
+    expect(kitFrom(worn, carried)).toEqual({ magic: [1401], melee: [1215, 1540], ranged: [861] });
+    expect(kitFrom([{ id: 1333, name: 'Rune scimitar', slot: 3 }], [])).toEqual({ magic: [], melee: [1333] });
+    expect(kitFrom([{ id: 1387, name: 'Staff of fire', slot: 3 }], [])).toEqual({ magic: [1387] });
+});
+
+test('spellId maps names and ids, and falls back to Fire Bolt', () => {
+    expect(spellId('FIRE_WAVE')).toBe(1189);
+    expect(spellId('fire_blast')).toBe(1181);
+    expect(spellId('1158')).toBe(1158);
+    expect(spellId('nonsense')).toBe(1169);
 });
