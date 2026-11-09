@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794207251781,
+ "at": 1794215084842,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -67,13 +67,12 @@
     "KNIGHT_SPOT": "2653,3300",
     "TICKS": "9000"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true,
    "goal": "goldfarm knights at 2653,3300",
    "role": "thieving",
    "template": "goldfarm@2653,3300",
-   "autopilot": "claude-cloud",
    "resources": [
     "knight:2653,3300"
    ]
