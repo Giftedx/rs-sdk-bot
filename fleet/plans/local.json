@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794199408040,
+ "at": 1794203070469,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -383,23 +383,20 @@
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/buy-owned-ge-item.ts",
+   "script": "scripts/microbot-glass.ts",
    "args": [],
    "env": {
-    "ITEM_ID": "536",
-    "QUANTITY": "4",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "11000",
-    "CASH_RESERVE": "239000",
-    "ORDER_KEY": "ballspinner-dragonbones4-glass-gate",
-    "FILL_WAIT_TICKS": "30",
-    "ORDER_MS": "240000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-678f03a0-b9e0-4696-9b38-2bfc455ce567"
+    "SUPPLY_MODE": "1",
+    "MAX_MAKE": "1",
+    "MAX_SPEND": "5000",
+    "CASH_RESERVE": "230000",
+    "CAP": "6000",
+    "MEMBERS": "1",
+    "COORDINATOR_RUN_ID": "task-46d762c3-dc92-4ac3-8004-78e6189a6410"
    },
    "enabled": false,
    "repeat": false,
-   "goal": "run-ge-ballspinner-dragonbones4-glass-gate [task-678f03a0-b9e0-4696-9b38-2bfc455ce567]",
+   "goal": "run-glass-ballspinner-furnace1-after-sharks [task-46d762c3-dc92-4ac3-8004-78e6189a6410]",
    "role": "supply"
   }
  ]
