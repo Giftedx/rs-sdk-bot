@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794215480952,
+ "at": 1794216289921,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -10,12 +10,13 @@
     "KNIGHT_SPOT": "2653,3300",
     "TICKS": "9000"
    },
-   "enabled": false,
+   "enabled": true,
    "standing": true,
    "repeat": true,
    "goal": "goldfarm knights at 2653,3300",
    "role": "thieving",
    "template": "goldfarm@2653,3300",
+   "autopilot": "claude-cloud",
    "resources": [
     "knight:2653,3300"
    ]
