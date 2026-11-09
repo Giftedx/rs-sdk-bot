@@ -31,6 +31,29 @@ the `ranged` row. The critical path is the `ranged` row (4,808 ticks, cannon + m
 ticks). `cannon-melee` costs 295 / 314 ticks: it slows `def-top` from 162.9 to 86.7 style XP per tick, and the
 Ranged it adds is not needed at that point.
 
+## Live cow training and the level table
+
+- **Level table.** This server's level table is `floor(level + 300 * 2^(level / 10))`, summed and divided by 4
+  (`server/engine/src/engine/entity/Player.ts:82-88`; the standard curve uses `2^(level / 7)`). So 99 costs 998,458 XP:
+  level 46 is 24,475, 60 is 66,193, 70 is 133,230 and 90 is 534,888. The live server's xpRate is 25
+  (`server/engine/src/util/WorldConfig.ts:102`).
+- **Live cow training.** Dipstick (claude-cloud-4), `scripts/gather-combat.ts Dipstick 3000 cow` with
+  `TRAIN_SKILL=Strength COW_BANK_PROFILE=north MAX_KILLS=8`, 4 runs, all `RESULT ok` with 8 kills, no deaths, no
+  food, logged out:
+
+  | Run | Ticks | Strength XP | Strength level |
+  |---|---|---|---|
+  | 1 | 486 | 6,700 | 1 -> 28 |
+  | 2 | 412 | 6,500 | 28 -> 37 |
+  | 3 | 366 | 6,500 | 37 -> 43 |
+  | 4 | 398 | 6,400 | 43 -> 46 |
+
+  Total 1,662 ticks for 26,100 Strength XP (15.7 per tick) and about 5.1 Hitpoints XP per tick. A kill gives 815 XP live
+  against 34 on practice at xpRate 1. Ticks per level reach 133 by level 43.
+- **What it implies.** At that rate, Strength 46 to 99 is about 62,000 ticks; at the ice warriors' 185 style XP per tick
+  (section 4) it is about 5,300. Cows suit levels up to about 45, then a better trainer.
+- **Gap.** One account and one skill; the rate at levels above 46 is not measured.
+
 ## 1. Melee, no cannon
 
 Script `scripts/measure/combat-melee.ts`, runner `scripts/measure/floor-run.ts`, 300 ticks per run,
