@@ -1,0 +1,22 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1794192731813-pickpockdick-abracadickra",
+ "account": "Abracadickra",
+ "partner": "PickpockDick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 19947,
+ "claim": "2c7ee39e-31f2-4861-98d4-5791975ec5cd",
+ "count": 0,
+ "ok": false,
+ "at": 1794192789853,
+ "detail": "Error: route to 3182, 3440: precondition no route to 3182,3440,0",
+ "logout": {
+  "attemptId": "1794192739574-0000038536-0000000001",
+  "at": 1794192789844,
+  "sha256": "4da3d613d7713ff144017f8efeeb869c4b5d80f8d064d341e32a8681fee9837d"
+ }
+}
