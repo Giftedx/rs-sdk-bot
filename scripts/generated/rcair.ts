@@ -34,10 +34,31 @@ export async function exitAirAltar(s:Session,stop:()=>boolean=()=>false){
  record('selected');
  const off=s.onTick(()=>record('observe'));
  try{
-  // SDK actions.ts _interactLocOnce uses walkTo(...,2), then treats any
-  // animId as success. Neither proves reach or portal use after a craft.
-  // Pinned shape10,1x1 portal uses reachedLoc, not travel tolerance. Finish
-  // a complete local path to a cardinal edge before replacing its walk op.
+  const idle=()=>{const st=s.sdk.getState();return st?.player?.animId===-1&&!st.dialog.isOpen&&!st.interface.isOpen&&!st.modalOpen;};
+  const settle=async(ready:()=>boolean,reason:string,quietTicks=1,recover?:(dismissed:boolean)=>Promise<boolean>)=>{
+   let last='',lastTick=-1,stable=0,quietAt=-1,dismissed=false;
+   for(let observation=0;observation<20;observation++){
+    check();const st=s.sdk.getState();
+    const blocked=!!(st?.dialog.isOpen||st?.interface.isOpen||st?.modalOpen);
+    await s.bot.dismissBlockingUI();check();
+    if(blocked){stable=0;last='';quietAt=-1;dismissed=true;}
+    const p=s.sdk.getState()?.player,now=s.tick(),key=p?`${p.level}:${p.worldX}:${p.worldZ}`:'';
+    if(now!==lastTick){stable=idle()&&key?(key===last?stable+1:1):0;last=stable?key:'';lastTick=now;
+     if(stable===1)quietAt=now;
+    }
+    if(stable>=2&&now-quietAt>=quietTicks){
+     if(ready())return;
+     if(recover&&await recover(dismissed)){stable=0;last='';quietAt=-1;dismissed=false;}
+    }
+    if(!await waitUntil(s,()=>stop()||s.tick()>now,{timeoutTicks:1})){check();break;}
+   }
+   check();throw Error(reason);
+  };
+  // Craft effects precede runecraft.rs2 p_delay(3) and the level-up modal.
+  // Observe a quiet position across the three delayed ticks and the next queue
+  // turn. Idle169/170 precedes the level-up171 and cannot prove readiness.
+  await settle(()=>insideAirAltar(s.sdk.getState()?.player),'air craft/modal did not settle',4);
+  // Pinned shape10,1x1 portal uses reachedLoc, not travel tolerance.
   const edges=[{x:2841,z:4829},{x:2842,z:4828},{x:2841,z:4827},{x:2840,z:4828}];
   let edge:typeof edges[number]|undefined;
   for(const candidate of edges){
@@ -45,10 +66,27 @@ export async function exitAirAltar(s:Session,stop:()=>boolean=()=>false){
    if(path.success&&path.reachedDestination===true){edge=candidate;break;}
   }
   if(!edge)throw Error('air portal approach unavailable');
-  check();record('approach',edge);
-  const walk=await s.bot.walkTo(edge.x,edge.z,0,{timeout:10000});record('approached',walk);check();
-  const p=s.sdk.getState()?.player;
-  if(!walk.success||p?.level!==0||p.worldX!==edge.x||p.worldZ!==edge.z)throw Error('air portal approach unobserved');
+  const approachCursor=cursor(),approachRejected=s.sdk.getState()?.opFeedback?.opRejectedCount;
+  let retried=false;
+  const approach=async()=>{
+   check();record('approach',edge);
+   const walk=await s.sdk.sendWalk(edge.x,edge.z);record('approach-dispatched',walk);check();
+   if(!walk.success)throw Error('air portal approach refused '+JSON.stringify(walk));
+  };
+  await approach();
+  const atEdge=()=>{const p=s.sdk.getState()?.player;return p?.level===0&&p.worldX===edge.x&&p.worldZ===edge.z;};
+  await settle(atEdge,'air portal approach unobserved',1,async dismissed=>{
+   const levelup=messages().some(m=>(m.observationId??m.tick)>approachCursor&&/^Congratulations, you just advanced a runecraft level\.$/i.test(m.text));
+   const rejected=approachRejected!==undefined&&(s.sdk.getState()?.opFeedback?.opRejectedCount??approachRejected)>approachRejected;
+   if(retried||!dismissed||!levelup||!rejected)return false;
+   // Only a newly observed level-up rejection permits a replacement walk.
+   // settle has observed the closed UI and fresh idle position on distinct ticks.
+   const path=s.sdk.findPath(edge.x,edge.z);record('approach-recovery-path',path);
+   if(!path.success||path.reachedDestination!==true)throw Error('air portal recovery approach unavailable');
+   retried=true;await approach();return true;
+  });
+  check();if(!atEdge()||!idle())throw Error('air portal approach changed before dispatch');
+  record('approached');
   baseline=cursor();const rejected=s.sdk.getState()?.opFeedback?.opRejectedCount;
   // Dispatch exactly the pinned op. Observe its effect ourselves: a previous
   // crafting animation must never settle this action. No unchanged click loop.

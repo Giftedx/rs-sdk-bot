@@ -1,7 +1,7 @@
 // Watchdog: every 30 s checks the machine and the swarm, and writes .practice/monitor.json (latest state) plus
 // .practice/alerts.jsonl (one line per new alert) for the dashboard and the lead session.
 // Fixes on its own only what is always safe: headless Edge left by a screenshot (profile folder shot-<port>) older
-// than 2 minutes is killed (2026-10-23: leaks of 5, 11 and 16 Edge processes, up to 70% CPU).
+// than 2 minutes is killed (leaks of 5, 11 and 16 Edge processes, up to 70% CPU).
 // Alerts: low RAM, stray `python -` processes, live bots that died, stalled (no status for 2 min without a RESULT)
 // or idle 20+ ticks in a row, and too many practice bots at once.
 // Usage: bun scripts/monitor.ts
@@ -48,14 +48,14 @@ function cycle() {
         raise({ level: 'fixed', key: `edge-${now}`, text: `killed ${stale.length} leaked screenshot Edge processes (${[...new Set(stale.map(p => p.cmd.match(/shot-\d+/)![0]))].join(', ')})` });
     }
     // A `python -` (script piped from a Bash heredoc) still alive after 10 minutes is stuck; two such processes burned
-    // about one CPU core each on 2026-10-23 (589 and 655 CPU-seconds in 11 minutes). Kill those that use CPU.
+    // about one CPU core each (589 and 655 CPU-seconds in 11 minutes). Kill those that use CPU.
     for (const p of list.filter(p => p.name === 'python.exe' && /python(3|\.exe)?"? -\s*$/.test(p.cmd) && p.ageSec > 600)) {
         if (p.cpuSec > 60) {
             Bun.spawnSync(['taskkill', '/PID', String(p.pid), '/F'], { stdout: 'ignore', stderr: 'ignore' ,windowsHide:true});
             raise({ level: 'fixed', key: `py-${p.pid}`, text: `killed stuck python - (pid ${p.pid}, ${Math.round(p.ageSec / 60)} min, ${p.cpuSec} CPU-s)` });
         } else raise({ level: 'warn', key: `py-${p.pid}`, text: `python reading stdin for ${Math.round(p.ageSec / 60)} min (pid ${p.pid}), likely stuck` });
     }
-    // Zombie bots: a bot process whose session was replaced keeps running and leaks memory (2026-10-23: an old
+    // Zombie bots: a bot process whose session was replaced keeps running and leaks memory (an old
     // mmtha0205 goldfarm reached 8.5 GB and another 2.6 GB, each beside the live process for the same account).
     // Two processes running the same script for the same account: the older one is the zombie; kill it. A bot process
     // over 2 GB is an alert either way.

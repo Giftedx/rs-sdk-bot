@@ -4,7 +4,7 @@ import{join,resolve}from'node:path';
 import{createHash}from'node:crypto';
 import{freemem}from'node:os';
 import{createBot}from'./bots';
-import{applyPreset}from'./presets';
+import{applyPreset,type SaveConfig}from'./presets';
 import{practiceDir,rsSdkRoot}from'./paths';
 import{runBotName}from'./prove';
 import{killTree}from'./proc';
@@ -25,6 +25,7 @@ const amount=(log:string,key:string)=>Number(log.split(/\r?\n/).filter(l=>l.star
 const exits=(r:Run)=>({exit:r.code===0&&!r.timedOut,logout:/^LOGOUT logged-out\r?$/m.test(r.log)&&!/^WARN .*?(logout|session close)/m.test(r.log)});
 const unchanged=(a:Save,b:Save,allowed:number[]=[])=>[...new Set([...Object.values(a.inventories).flat(),...Object.values(b.inventories).flat()].map(i=>i.id))].every(id=>allowed.includes(id)||total(a,id)===total(b,id));
 const atBank=(s:Save)=>s.position.level===0&&Math.max(Math.abs(s.position.x-3253),Math.abs(s.position.z-3420))<=4;
+export const shopSupplyFixture=(coins:number,extra:SaveConfig={}):SaveConfig=>({position:{x:3185,z:3436,level:0},skills:{Attack:49,Strength:10,Defence:11,Hitpoints:35},inventory:[{id:1277,count:1}],bank:[{id:995,count:coins},{id:554,count:1482},{id:557,count:3},{id:1521,count:7}],...extra});
 export function shopSupplyChecks(before:Save,after:Save,r:Run){const spent=amount(r.log,'spentTotal');return{
  ...exits(r),entry:total(before,557)===3&&total(before,554)===1482&&total(before,995)===352288,
  target:bank(after,557)===1139&&total(after,557)===1139&&amount(r.log,'boughtTotal')===1136&&amount(r.log,'targetMet')===1,
@@ -57,11 +58,13 @@ export function refillSupplyChecks(before:Save,after:Save,r:Run){
 }
 const files=['scripts/buy-owned-ge-item.ts','scripts/earth-shop.ts','scripts/earth-shop.test.ts','scripts/earth-production.ts','scripts/earth-production.test.ts','scripts/shop-buyer.ts','scripts/shop-buyer.test.ts','packages/practice/src/shop-supply-order-proof.ts','packages/practice/test/shop-supply-order-proof.test.ts'];
 const hash=(p:string)=>createHash('sha256').update(readFileSync(p)).digest('hex');
+const artifactPaths=['before.sav','after.sav','repeat.sav','refuse-before.sav','refused.sav','buy.log','repeat.log','refuse.log','empty-ge.log','original-ge-journal.json','original-ge-journal-after.json','fallback-spend.json','betty-before.sav','betty-after.sav','betty.log','betty-empty-ge.log','refill-before.sav','refill-after.sav','refill-repeat.sav','refill.log','refill-repeat.log','refill-empty-ge.log','refill-ledger.json','hunt-before.sav','hunt-after.sav','craft-before.sav','craft-after.sav','owned-hunt.log','owned-craft.log'];
 const ownedTotals=(s:Save)=>{const m=new Map<number,number>();for(const c of [93,94,95])for(const i of s.inventories[c]??[])m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
 const productionSaved=(before:Save,after:Save,v:any)=>productionConserved(ownedTotals(before),ownedTotals(after),{consumed:v.consumed,crafted:v.crafted,air:v.air,eaten:v.eaten,found:v.found})&&JSON.stringify(before.inventories[94]??[])===JSON.stringify(after.inventories[94]??[]);
 const source=()=>({runtime:capabilityRevision(['scripts/buy-owned-ge-item.ts'],root),files:Object.fromEntries(files.map(f=>[f,hash(join(root,f))]))});
 export function verifyShopSupply(directory:string){
  const meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8'));
+ const now=Date.now(),ageMs=now-meta.at;
  const saved=(p:string)=>readPracticeSave(join(directory,p+'.sav'));
  const run=(key:string):Run=>({...meta.runs[key],log:readFileSync(join(directory,key+'.log'),'utf8')});
  const checks={...shopSupplyChecks(saved('before'),saved('after'),run('buy')),
@@ -69,8 +72,10 @@ export function verifyShopSupply(directory:string){
   refusal:Object.values(shopRefusalChecks(saved('refuse-before'),saved('refused'),run('refuse'))).every(Boolean),
   source:JSON.stringify(meta.source)===JSON.stringify(source()),
   lifecycle:Object.values(meta.runs).every((r:any)=>r.logout?.state==='confirmed'),
-  artifacts:Object.entries(meta.hashes).every(([f,h])=>hash(join(directory,f))===h),
-  fresh:Number.isFinite(meta.at)&&meta.at<=Date.now()&&Date.now()-meta.at<900000,
+  artifacts:artifactPaths.every(f=>typeof meta.hashes?.[f]==='string'&&hash(join(directory,f))===meta.hashes[f])&&Object.entries(meta.hashes).every(([f,h])=>hash(join(directory,f))===h),
+  nativeRun:typeof meta.directory==='string'&&meta.directory===resolve(directory),
+  // Immutable saved effects have no age limit. Qualification and live admission have separate owners.
+  fresh:Number.isFinite(meta.at)&&meta.at<=now,
   originalJournal:hash(join(directory,'original-ge-journal.json'))===hash(join(directory,'original-ge-journal-after.json')),
   fallbackSpend:(()=>{const j=JSON.parse(readFileSync(join(directory,'fallback-spend.json'),'utf8'));return j.phase==='settled'&&j.request.item===557&&j.request.quantity===1136&&j.request.expectedOwned===3&&j.spent===total(saved('before'),995)-total(saved('after'),995);})(),
   betty:Object.values(bettySupplyChecks(saved('betty-before'),saved('betty-after'),run('betty'))).every(Boolean),
@@ -80,7 +85,7 @@ export function verifyShopSupply(directory:string){
   ownedHunt:(()=>{const r=run('owned-hunt'),v=JSON.parse(r.log.split(/\r?\n/).find(l=>l.startsWith('EARTH_PRODUCTION '))!.slice(17));return r.code===0&&!r.timedOut&&v.ok===true&&v.kills===2&&v.pilotReady===1&&v.conserved===true&&v.equipmentRestored===true&&productionSaved(saved('hunt-before'),saved('hunt-after'),v)&&r.hpMin>6&&bank(saved('hunt-after'),995)===bank(saved('hunt-before'),995)&&bank(saved('hunt-after'),554)===1482;})(),
   ownedCraft:(()=>{const r=run('owned-craft'),v=JSON.parse(r.log.split(/\r?\n/).find(l=>l.startsWith('EARTH_PRODUCTION '))!.slice(17));return r.code===0&&!r.timedOut&&v.ok===true&&v.targetMet===1&&v.trips===2&&v.conserved===true&&productionSaved(saved('craft-before'),saved('craft-after'),v)&&v.consumed>0&&v.consumed<60&&bank(saved('craft-after'),557)>=103&&bank(saved('craft-after'),557)<=105&&bank(saved('craft-after'),554)===1482&&total(saved('craft-before'),1436)-total(saved('craft-after'),1436)===v.consumed&&r.hpMin>6;})(),
  };
- const report={ok:Object.values(checks).every(Boolean),checks,at:Date.now(),source:meta.source,scope:'Native 150ms/25x existing shop-buyer CLI: exact 1136-earth acquisition, retained1482fire, repeat and funds refusal; no live or rank claim.'};
+ const report={ok:Object.values(checks).every(Boolean),checks,at:now,nativeAt:meta.at,ageMs,directory:resolve(directory),source:meta.source,scope:'Native 150ms/25x existing shop-buyer CLI: exact 1136-earth acquisition, retained1482fire, repeat and funds refusal; no live or rank claim.'};
  writeFileSync(join(directory,'verified.json'),JSON.stringify(report,null,2));return report;
 }
 export async function runShopSupplyNative(directory:string){
@@ -105,7 +110,7 @@ export async function runShopSupplyNative(directory:string){
   const seed=async(index:number,coins:number,extra:Record<string,unknown>={})=>{
    const name=runBotName('flshop',index);if(existsSync(join(rsSdkRoot(),'bots',name)))throw Error('practice identity already exists');
    const {envPath}=await createBot(name);writeFileSync(envPath,geProofAccountEnv(readFileSync(envPath,'utf8'),endpoint));assertGeProofAccount(readFileSync(envPath,'utf8'),endpoint.env);actors.add(name);
-   const path=await applyPreset(name,{position:{x:3185,z:3436,level:0},skills:{Hitpoints:35},inventory:[{id:1277,count:1}],bank:[{id:995,count:coins},{id:554,count:1482},{id:557,count:3},{id:1521,count:7}],...extra});return{name,path};
+   const path=await applyPreset(name,shopSupplyFixture(coins,extra));return{name,path};
   };
   const buyer=await seed(1,352288);copyFileSync(buyer.path,join(directory,'before.sav'));
   const empty=await command(buyer.name,'empty-ge',false);if(empty.code===0||!empty.log.includes('"acquired":0')||!empty.log.includes('LOGOUT logged-out'))throw Error('real zero-fill GE settlement not proved');
@@ -139,9 +144,7 @@ export async function runShopSupplyNative(directory:string){
   copyFileSync(crafter.path,join(directory,'craft-before.sav'));
   const ownedCraft=await command(crafter.name,'owned-craft',true,100,'owned-craft');
   await waitPracticeSave(crafter.path,s=>bank(s,557)>=103||ownedCraft.code!==0);copyFileSync(crafter.path,join(directory,'craft-after.sav'));
-  const paths=['before.sav','after.sav','repeat.sav','refuse-before.sav','refused.sav','buy.log','repeat.log','refuse.log','empty-ge.log','original-ge-journal.json','original-ge-journal-after.json','fallback-spend.json','betty-before.sav','betty-after.sav','betty.log','betty-empty-ge.log','refill-before.sav','refill-after.sav','refill-repeat.sav','refill.log','refill-repeat.log','refill-empty-ge.log','refill-ledger.json'];
-  paths.push('hunt-before.sav','hunt-after.sav','craft-before.sav','craft-after.sav','owned-hunt.log','owned-craft.log');
-  writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source:pin,endpoint:{ports:endpoint.ports,instance:endpoint.instance},runs:{buy,repeat,refuse,betty,refill,'refill-repeat':refillRepeat,'owned-hunt':ownedHunt,'owned-craft':ownedCraft},hashes:Object.fromEntries(paths.map(f=>[f,hash(join(directory,f))]))},null,2));
+  writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),directory:resolve(directory),source:pin,endpoint:{ports:endpoint.ports,instance:endpoint.instance},runs:{buy,repeat,refuse,betty,refill,'refill-repeat':refillRepeat,'owned-hunt':ownedHunt,'owned-craft':ownedCraft},hashes:Object.fromEntries(artifactPaths.map(f=>[f,hash(join(directory,f))]))},null,2));
   return verifyShopSupply(directory);
  }finally{
   try{await(stack?stack.stop():stopStack(endpoint.instance));}finally{closeSync(fd);if(existsSync(lock)&&JSON.parse(readFileSync(lock,'utf8')).pid===process.pid)unlinkSync(lock);}

@@ -1,3 +1,37 @@
+diff --git a/server/engine/src/engine/script/ScriptRunner.ts b/server/engine/src/engine/script/ScriptRunner.ts
+index b568cf587..51f89e861 100644
+--- a/server/engine/src/engine/script/ScriptRunner.ts
++++ b/server/engine/src/engine/script/ScriptRunner.ts
+@@ -1,3 +1,5 @@
++import { appendFileSync } from 'fs';
++
+ import Entity from '#/engine/entity/Entity.js';
+ import Loc from '#/engine/entity/Loc.js';
+ import Npc from '#/engine/entity/Npc.js';
+@@ -28,6 +30,11 @@ import World from '#/engine/World.js';
+ import Environment from '#/util/Environment.js';
+ import { printError, printWarning } from '#/util/Logger.js';
+ 
++// Practice only: ACTION_TRACE_FILE names a file that gets one line for the first run of each script in this process.
++// A production engine never traces.
++const ACTION_TRACE_FILE = Environment.node.production ? '' : (process.env.ACTION_TRACE_FILE ?? '');
++const actionTraceSeen = new Set<string>();
++
+ export type CommandHandler = (state: ScriptState) => void;
+ export type CommandHandlers = {
+     [opcode: number]: CommandHandler;
+@@ -64,6 +71,11 @@ export default class ScriptRunner {
+      * @param args
+      */
+     static init(script: ScriptFile, self: Entity | null = null, target: Entity | null = null, args: ScriptArgument[] | null = []) {
++        if (ACTION_TRACE_FILE && !actionTraceSeen.has(script.name)) {
++            actionTraceSeen.add(script.name);
++            appendFileSync(ACTION_TRACE_FILE, script.name + '\n');
++        }
++
+         const state = new ScriptState(script, args);
+         state.self = self;
+ 
 diff --git a/server/engine/tools/pack/config/PackShared.ts b/server/engine/tools/pack/config/PackShared.ts
 index 2812a3ec5..519b1df50 100644
 --- a/server/engine/tools/pack/config/PackShared.ts

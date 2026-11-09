@@ -13,7 +13,7 @@ async function run(file: string): Promise<{ restored: boolean; ms: number; paths
     return JSON.parse(line.slice(6));
 }
 
-// Seen 2026-10-22: three proof runs built the snapshot at once and wrote the same file. A cut-off file must be
+// Seen: three proof runs built the snapshot at once and wrote the same file. A cut-off file must be
 // rebuilt, never restored as a partial map.
 test('a truncated snapshot is rebuilt, not restored', async () => {
     const { readFileSync, writeFileSync } = await import('node:fs');

@@ -22,6 +22,15 @@ const now=1_000_000;
 const bot=(name='Worker')=>({name,server:'rs-sdk-demo.fly.dev',at:now-1000,bankAt:now-1000,bank:[{id:314,name:'Feather',count:100}],equipment:[],skills:[{name:'Mining',level:99,xp:2_000_000},{name:'Stat18',level:99,xp:2_000_000}],ranks:[],operation:'observed'});
 const inputs=():GoalInputs=>({requirements:[{item:'Feathers',count:100},{item:'Bronze sword',count:1}],items:[{id:314,name:'Feather'},{id:1277,name:'Bronze sword'}],quests:[{questPoints:1}],questConstants:'^first_questpoints = 1\n^second_questpoints = 2',receipts:{}});
 const state=(bots:any[]=[bot()]):any=>({now,bots,boards:[{board:'Mining'},{board:'Equipment',kind:'value'}],objectives:{paused:true},race:null,gates:null});
+test('kit coverage uses exact IDs even when variants share a display name',()=>{
+ const i=inputs();
+ i.requirements=[{item:'black dragonhide body',itemId:2503,count:1}];
+ i.items=[{id:2501,name:'Dragonhide body'},{id:2503,name:'Dragonhide body'}];
+ const b={...bot(),bank:[{id:2501,name:'Dragonhide body',count:4}]};
+ expect(goalProgress(state([b]),i)[1]!.metric).toBe('0/1');
+ b.bank[0]!.id=2503;
+ expect(goalProgress(state([b]),i)[1]!.metric).toBe('1/1');
+});
 test('supply coverage uses resolved IDs and recent owned banks; missing stock is not an unknown item',()=>{
  const s=state(),g=goalProgress(s,inputs());expect(g[1]!.metric).toBe('1/2');
  expect(g[1]!.rows.find(r=>r.label==='Bronze sword')?.value).toBe('0/1 recent · 0 old');

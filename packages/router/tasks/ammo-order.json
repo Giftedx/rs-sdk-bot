@@ -1,12 +1,58 @@
 {
   "id": "ammo-order",
-  "goal": "Transfer an exact owned arrowtip order to the Fletching worker, consume it into arrows, bank the output and reject a duplicate order without another login.",
+  "goal": "Transfer exact owned inputs with an optional bounded bank approach (--approach-ms), or produce a finite headless-arrow order. Reconcile assets, bank useful output and confirm logout.",
   "entry": "scripts/handoff-inputs.ts",
-  "files": ["scripts/handoff-inputs.ts", "scripts/payout-order.ts", "scripts/courier-handoff.ts", "scripts/fletch-arrows.ts", "scripts/handoff-inputs.test.ts", "scripts/payout-order.test.ts", "scripts/iron-handoff-races.test.ts", "scripts/fletch-arrows.test.ts"],
-  "consumer": "scripts/fletch-arrows.ts consumes the delivery and banks 90 iron arrows for Ranged staging",
+  "files": [
+    "scripts/handoff-inputs.ts",
+    "scripts/payout-order.ts",
+    "scripts/courier-handoff.ts",
+    "scripts/fletch-arrows.ts",
+    "scripts/fletch-shafts.ts",
+    "scripts/handoff-inputs.test.ts",
+    "scripts/payout-order.test.ts",
+    "scripts/iron-handoff-races.test.ts",
+    "scripts/fletch-arrows.test.ts",
+    "scripts/fletch-shafts.test.ts",
+    "packages/practice/src/ammo-order-proof.ts",
+    "packages/practice/test/ammo-order-proof.test.ts"
+  ],
+  "consumer": "Keep exact owned handoffs, the 90-iron-arrow chain and duplicate-order refusal. With --approach-ms, both participants share a travel budget to the named bank before the transfer deadline starts. Confirm the donor debit, receiver bank credit and both logouts. The Blood supply consumer run-handoff-blood-charge-lobsters650 transfers 650 owned lobsters at 2615,3332 and requires the receiver to bank at least 672 lobsters and retain 218 Blood runes for the Charge supply chain. The single-account CLI <account> --headless-order <new-headless-count> <logs-to-cut> uses CAP to bound the complete session. Bigchopper --headless-order 135 14 banks 435 headless arrows while retaining 110 shafts, 5570 feathers, one log, the knife and unrelated assets. Native proof invokes the real CLI for the iron-arrow chain, headless order and planned 100-lobster handoff. Check saved output, reconciled assets, refusal and logout. Haggis remains offline until its launch gates pass.",
   "checks": [
-    {"id": "order-regressions", "phase": "regression", "command": ["bun", "test", "scripts/handoff-inputs.test.ts", "scripts/payout-order.test.ts", "scripts/iron-handoff-races.test.ts", "scripts/fletch-arrows.test.ts", "--timeout", "10000"], "timeoutMs": 60000},
-    {"id": "native-order", "phase": "practice", "command": ["bun", "packages/practice/src/ammo-order-proof.ts"], "timeoutMs": 600000},
-    {"id": "saved-consumer-state", "phase": "consumer", "command": ["bun", "packages/practice/src/ammo-order-proof.ts", "--verify"], "timeoutMs": 30000}
+    {
+      "id": "order-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/handoff-inputs.test.ts",
+        "scripts/payout-order.test.ts",
+        "scripts/iron-handoff-races.test.ts",
+        "scripts/fletch-arrows.test.ts",
+        "scripts/fletch-shafts.test.ts",
+        "packages/practice/test/ammo-order-proof.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "native-order",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/ammo-order-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "saved-consumer-state",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/ammo-order-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
   ]
 }

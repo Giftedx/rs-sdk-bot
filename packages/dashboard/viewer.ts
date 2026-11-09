@@ -10,11 +10,63 @@ export function viewerAssetRoute(pathname:string):{root:'static'|'caches';relati
     return {root,relative};
 }
 
+export const once = (text: string, from: string | RegExp, to: string, what: string) => {
+    const count = typeof from === 'string' ? text.split(from).length - 1 : (text.match(new RegExp(from.source, from.flags.includes('g') ? from.flags : from.flags + 'g')) ?? []).length;
+    if (count !== 1) throw Error(`${what}: expected one match, found ${count}`);
+    return text.replace(from, () => to.replace(/\$1/g, () => (typeof from === 'string' ? '$1' : text.match(from)![1]!)));
+};
+
+// The area a swap waits for around the new account, and the area a prewarm loads: a prewarmed account needs no load.
+export const WARM_RADIUS = 56;
+// The account swap in the pinned viewer. It holds the old view while the squares around the new account load, then
+// moves. A hop up to 64 tiles flies straight across. A longer hop blurs for 300 ms and settles into the orbit.
+// It loads nothing around the old account: those squares only served a climb that this flight does not make.
+// Jc is the bundle's ease function.
+const FLIGHT_STEP = 'step(e,t,n){const i=performance.now(),s=e=>Math.min(1,(i-this.phaseStart)/e),o=e=>{this.phase=e,this.phaseStart=i};t&&t.prefetch(this.toX,this.toZ,' + WARM_RADIUS + ');switch(this.phase){'
+    + 'case"prep":this.apply(e,this.from),(!t||t.ready(this.toX,this.toZ,' + WARM_RADIUS + ')||i-this.phaseStart>6e3)&&o(this.glide?"glide":"warp");break;'
+    + 'case"glide":{const t=Jc(s(Math.min(1400,500+6*this.distance))),n=this.mix(this.from,this.end,t);if(n.y-=Math.sin(Math.PI*t)*Math.min(10,.1*this.distance),this.apply(e,n),t>=1)return this.done=!0,!0;break}'
+    + 'case"warp":{const t=s(300),n=14*Math.sin(Math.PI*t);this.near=this.near||{...this.end,x:this.toX+1.35*(this.end.x-this.toX),y:1.35*this.end.y,z:this.toZ+1.35*(this.end.z-this.toZ)},this.canvas&&(this.canvas.style.filter=n>.2?"blur("+n.toFixed(1)+"px) brightness("+(1+n/40).toFixed(2)+")":""),this.apply(e,t>=.5?this.near:this.from),t>=1&&(this.canvas&&(this.canvas.style.filter=""),o("descend"));break}'
+    + 'case"descend":{const t=Jc(s(450));if(this.apply(e,this.mix(this.near,this.end,t)),t>=1)return this.done=!0,!0;break}'
+    + '}return!1}cancel(){';
+// Idle work: when nothing is loading, the renderer loads the squares around the next place the page listed.
+const WARM_STEP = 'warmStep(e){const t=this.warmTiles,n=this.mapManager;if(!t||!t.length||e.flight||n.loadingMapIds.size||this.mapsToLoad.length||n.blankOnScreen)return;this.warmNext=((this.warmNext??-1)+1)%t.length;n.prefetch(t[this.warmNext][0],t[this.warmNext][1],' + WARM_RADIUS + ')}isValidMapData(e){';
+
+// Changes to the reviewed main bundle. Every anchor must match, so a different bundle stops the export.
+export function viewerBundle(text: string) {
+    // Roof removal: ?ml=<floor> sets the highest floor drawn at the start, a {maxLevel} message changes it.
+    text = once(text, /this\.maxLevel=([A-Za-z_$][\w$]*)\.MAX_LEVELS-1/, 'this.maxLevel=(e=>e>=0&&e<=3?e:$1.MAX_LEVELS-1)(parseInt(new URLSearchParams(location.search).get("ml")))', 'first floor limit');
+    // {warm:[[x,z],...]} lists the places the page may swap to next.
+    text = once(text, '"number"===typeof t.scale&&t.scale>0&&(s.resolutionScale=t.scale)', '"number"===typeof t.scale&&t.scale>0&&(s.resolutionScale=t.scale),Number.isInteger(t.maxLevel)&&t.maxLevel>=0&&t.maxLevel<=3&&s.setMaxLevel&&s.setMaxLevel(t.maxLevel),Array.isArray(t.warm)&&(s.warmTiles=t.warm.filter((e=>Array.isArray(e)&&Number.isFinite(e[0])&&Number.isFinite(e[1]))).slice(0,16),s.warmNext=-1)', 'floor limit message');
+    // Every square holds all floors and the shader hides those above the limit, so a floor change reloads nothing.
+    // The bundle's own setMaxLevel deletes every loaded square.
+    text = once(text, 'setMaxLevel(e){const t=this.maxLevel!==e;this.maxLevel=e,t&&this.clearMaps()}', 'setMaxLevel(e){this.maxLevel=e}', 'floor change');
+    text = once(text, 'maxLevel:this.maxLevel,', 'maxLevel:3,', 'square floors');
+    text = once(text, 'e.maxLevel===this.maxLevel&&', '3===e.maxLevel&&', 'square floor check');
+    text = once(text, 'TE.FLOAT_VEC2,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT])', 'TE.FLOAT_VEC2,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT])', 'scene uniforms');
+    text = once(text, '.set(10,this.mapViewer.isNewTextureAnim)', '.set(10,this.mapViewer.isNewTextureAnim).set(11,this.maxLevel)', 'floor uniform');
+    if (!text.includes('float u_isNewTextureAnim;')) throw Error('scene uniform block: not found');
+    text = text.replaceAll('float u_isNewTextureAnim;', String.raw`float u_isNewTextureAnim;\r\n    float u_maxPlane;`);
+    text = once(text, String.raw`float(modelInfo.priority)) * 0.0007;\n    gl_Position = u_projectionMatrix * gl_Position;\n}`, String.raw`float(modelInfo.priority)) * 0.0007;\n    gl_Position = u_projectionMatrix * gl_Position;\n    if (float(modelInfo.plane) > u_maxPlane) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);\n}`, 'floor cut');
+    // A hosted page has no shared memory, and the bundle then uses one worker. Each worker there holds its own cache
+    // copy, so it gets two: with prewarm they swap as fast as four, for 70 MB more memory, not 660 MB.
+    text = once(text, 'II.create(ee||!J?1:te?2:4)', 'II.create(ee?1:!J||te?2:4)', 'worker count');
+    // The bundle adds one square per frame, which limits a swap to 20 squares a second at 20 frames a second.
+    text = once(text, 'const F=this.mapsToLoad.shift();F&&this.isValidMapData(F)&&this.loadMap(this.mainProgram,this.mainAlphaProgram,this.npcProgram,this.textureArray,this.textureMaterials,this.sceneUniformBuffer,F,a),', 'for(const e=performance.now();;){const F=this.mapsToLoad.shift();if(!F)break;if(this.isValidMapData(F)&&this.loadMap(this.mainProgram,this.mainAlphaProgram,this.npcProgram,this.textureArray,this.textureMaterials,this.sceneUniformBuffer,F,a),performance.now()-e>6)break}', 'square uploads');
+    text = once(text, 't.maps=this.mapManager,t.canvas=this.canvas,', 't.maps=this.mapManager,this.warmStep(t),t.canvas=this.canvas,', 'warm call');
+    text = once(text, 'isValidMapData(e){', WARM_STEP, 'warm step');
+    // A swap from free camera flies too, once the scene has squares to hold on screen.
+    text = once(text, 'i&&Gc&&void 0!==this.followName&&this.followName.toLowerCase()!==e.toLowerCase()', 'i&&Gc&&(void 0===this.followName?this.maps&&this.maps.visibleMapCount>0:this.followName.toLowerCase()!==e.toLowerCase())', 'flight from free camera');
+    return once(text, /step\(e,t,n\)\{const r=Math\.min\(128,n\)\+32,[\s\S]*?\}cancel\(\)\{/, FLIGHT_STEP, 'flight step');
+}
+
 // Kept self-contained: only this function is serialized into the /viewer/ entry.
 // A geometry draw followed by a screen present is not a promise that every tile loaded.
 export function installViewerBridge(host:any) {
     let privacyReady=false,renderReady=false,feedConnected:boolean|null=null,failed=false,announced=false;
-    let hiddenNames=new Set<string>(),publishedFollow:string|null=null,publishedWorldMap=false,publishedCamera='';
+    // The feed sends the roster about every 30 s: one that arrives while the scene loads waits here for the ready state.
+    // The page takes a roster as new, so one older than the page's 30 s limit is dropped.
+    let heldRoster:(()=>void)|null=null,heldRosterAt=0;
+    let hiddenNames=new Set<string>(),publishedFollow:string|null=null,publishedWorldMap=false,publishedCamera='',freeCameraPolls=0;
     // A hosted page must not hold the hidden name itself: its list carries "h:<FNV-1a of the lower-case name>" entries.
     // The bridge then renames a matching roster player to HIDDEN_ALIAS before the viewer reads the message, and gives
     // the viewer that alias to hide. Names keep the one character set the list allows, so a plain loop hashes them.
@@ -27,6 +79,7 @@ export function installViewerBridge(host:any) {
     const emit=(detail=!privacyReady?'Loading the 3D world… applying the name filter.':!renderReady?'Loading the 3D world… drawing the first frame.':'3D world ready.')=>{
         if(host.parent===host)return;
         const state=failed?'error':privacyReady&&renderReady?'ready':'loading';
+        if(state==='ready'&&heldRoster){const send=heldRoster;heldRoster=null;if(Date.now()-heldRosterAt<30_000)send();}
         host.parent.postMessage({viewerState:{state,privacyReady,renderReady,feedConnected,detail}},host.location.origin);
         if(state==='ready'&&!announced){announced=true;for(const restore of undo.splice(0))restore();}
     };
@@ -119,7 +172,12 @@ export function installViewerBridge(host:any) {
                 this.addEventListener('message',(event:any)=>{
                     if(typeof event.data!=='string'||event.data.length>2_000_000)return;
                     let message:any;try{message=JSON.parse(event.data);}catch{return;}
-                    if(message.t==='roster'&&Array.isArray(message.p))for(const p of message.p)if(Array.isArray(p)&&typeof p[0]==='number'&&typeof p[1]==='string')names.set(p[0],p[1]);
+                    if(message.t==='roster'&&Array.isArray(message.p)){
+                        for(const p of message.p)if(Array.isArray(p)&&typeof p[0]==='number'&&typeof p[1]==='string')names.set(p[0],p[1]);
+                        // The page's own data can be minutes old; each roster is the full list of players online now.
+                        const sendRoster=()=>host.parent.postMessage({atlasRoster:{players:message.p.filter((p:any)=>Array.isArray(p)&&typeof p[1]==='string'&&[p[2],p[3],p[4],p[5]].every(Number.isFinite)).map((p:any)=>[hiddenHashes.has(fnv(p[1].toLowerCase()))?'⟦MAIN⟧':mask(p[1]),p[2],p[3],p[4],p[5]])}},host.location.origin);
+                        if(host.parent!==host&&!failed){if(privacyReady&&renderReady)sendRoster();else{heldRoster=sendRoster;heldRosterAt=Date.now();}}
+                    }
                     if(message.t==='tick'){
                         if(message.reset){faces.clear();npcs.clear();playerHp.clear();}
                         for(const r of Array.isArray(message.p)?message.p:[]){if(typeof r?.i!=='number')continue;if(r.f){faces.delete(r.i);playerHp.delete(r.i);}if(typeof r.fe==='number')r.fe<0?faces.delete(r.i):faces.set(r.i,r.fe);const h=hp(r.hp);if(h)playerHp.set(r.i,h);}
@@ -149,23 +207,54 @@ export function installViewerBridge(host:any) {
     };
     // The page's minimap stands in for the viewer's own (hidden by client-viewer.css): its compass and world-map buttons
     // press the viewer's, which stay in the page for this.
+    let pageFollow='',pageFollowPolls=0;
+    const releaseFollow=()=>{
+        const button=host.document?.querySelector('.live-follow button');if(!button)return false;
+        button.click();freeCameraPolls=0;
+        const url=new host.URL(host.location.href);publishedFollow=url.searchParams.get('follow');
+        // Native Stop can leave the URL unchanged until the camera next moves.
+        // Remove the released target before the URL relay can select it again.
+        if(host.history?.replaceState){url.searchParams.delete('follow');host.history.replaceState(host.history.state,'',url.href);publishedFollow=null;}
+        return true;
+    };
     host.addEventListener('message',(event:any)=>{
         if(event.origin!==host.location.origin||event.source!==host.parent||!event.data||typeof event.data!=='object')return;
         if(event.data.atlasCompass===true)host.document?.querySelector('.minimap-container .compass')?.click();
         if(event.data.atlasOpenWorldMap===true)host.document?.querySelector('.minimap-container .worldmap-icon')?.click();
+        if(typeof event.data.follow==='string'){freeCameraPolls=0;publishedFollow=null;pageFollow=event.data.follow.toLowerCase();pageFollowPolls=20;}
+        if(event.data.atlasFreeCamera===true){freeCameraPolls=10;releaseFollow();}
     });
+    // The page owns the account order: [ and ] step through its accounts, not through every online player.
+    host.addEventListener('keydown',(event:any)=>{
+        if(event.key!=='['&&event.key!==']')return;
+        event.stopImmediatePropagation();event.preventDefault();
+        if(host.parent!==host)host.parent.postMessage({atlasStep:event.key===']'?1:-1},host.location.origin);
+    },true);
     host.addEventListener('error',()=>fail('The 3D viewer reported an error; use the 2D map.'));
+    // A graphics reset leaves a black canvas. The page reloads the viewer after this failure. The event does not bubble.
+    host.document?.addEventListener?.('webglcontextlost',()=>fail('The 3D view lost its graphics context.'),true);
     host.addEventListener('unhandledrejection',(event:any)=>{if(event.reason?.name!=='AbortError')fail('The 3D viewer could not finish loading; use the 2D map.');});
     // The pinned viewer publishes its current follow target in its URL. Relay
     // that documented state; do not depend on unbuilt debug globals.
     host.setInterval?.(()=>{
         if(!privacyReady||!renderReady||failed||host.parent===host)return;
+        if(freeCameraPolls){
+            if(releaseFollow())return;
+            if(!new host.URL(host.location.href).searchParams.get('follow'))freeCameraPolls=0;
+            else if(--freeCameraPolls===0)fail('The 3D follow could not stop. Use the 2D map.');
+            return;
+        }
         const worldMap=!!host.document?.querySelector('.worldmap-modal-overlay');
         if(worldMap!==publishedWorldMap){publishedWorldMap=worldMap;host.parent.postMessage({atlasWorldMap:worldMap},host.location.origin);}
         // The viewer keeps its camera in its own URL (cx, cz in tiles, y = yaw 0-2047): the page's minimap turns with it.
         const params=new host.URL(host.location.href).searchParams,cx=Number(params.get('cx')),cz=Number(params.get('cz')),yaw=Number(params.get('y'));
         if(params.has('cx')&&Number.isFinite(cx)&&Number.isFinite(cz)&&Number.isFinite(yaw)){const key=cx+','+cz+','+yaw;if(key!==publishedCamera){publishedCamera=key;host.parent.postMessage({atlasCamera3d:{x:cx,z:cz,yaw:yaw&2047}},host.location.origin);}}
         const follow=params.get('follow');
+        // The viewer writes its URL late. Until the URL names the page's choice, the old name there is not a new follow.
+        if(pageFollowPolls){
+            if(follow?.toLowerCase()===pageFollow){pageFollowPolls=0;publishedFollow=follow;return;}
+            if(--pageFollowPolls)return;
+        }
         if(!follow||follow===publishedFollow||!/^[A-Za-z0-9_ -]{1,12}$/.test(follow))return;
         publishedFollow=follow;
         host.parent.postMessage({atlasFollow:hiddenNames.has(follow.toLowerCase())?'⟦MAIN⟧':follow},host.location.origin);

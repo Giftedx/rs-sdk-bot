@@ -10,6 +10,7 @@ import { FILLER_PRESETS } from './presets-filler';
 import { PATH_PRESETS } from './presets-path';
 import { REST_PRESETS } from './presets-rest';
 import { LONG_PRESETS } from './presets-long';
+import { LEGENDS_PRESETS } from './presets-legends';
 
 // Mirrors SaveConfig in vendor/rs-sdk/sdk/test/utils/save-generator.ts. createSaveData sets tutorial varp 281 = 1000 itself.
 export interface SaveConfig {
@@ -50,7 +51,7 @@ export const PRESETS: Record<string, SaveConfig> = {
     brew_potions_bank: { position: { x: 3253, z: 3420, level: 0 }, skills: { Herblore: 50 }, inventory: [{ id: 99, count: 14 }, { id: 231, count: 14 }], bank: [{ id: 99, count: 100 }, { id: 231, count: 100 }] },
     craft_jewelry_bank: { position: { x: 3269, z: 3167, level: 0 }, skills: { Crafting: 50 }, inventory: [{ id: 1755, count: 1 }, { id: 1623, count: 27 }], bank: [{ id: 1623, count: 100 }] },
     gather_combat_druid: { position: { x: 3115, z: 9928, level: 0 }, skills: { Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60 }, equipment: [{ id: 1333, count: 1, slot: 3 }, { id: 1113, count: 1, slot: 4 }, { id: 1079, count: 1, slot: 7 }], inventory: [{ id: 379, count: 5 }] },
-    // Trees within reach, measured by the 2026-10-22 spike run.
+    // Trees within reach, measured by the spike run.
     wc_lumbridge: { position: { x: 3224, z: 3245, level: 0 }, inventory: [{ id: 1351, count: 1 }] },
     // Lumbridge castle courtyard, ground floor (vendor/rs-sdk/learnings/walking.md: castle 3222,3218).
     floors_lumbridge: { position: LUMBRIDGE },
@@ -101,6 +102,8 @@ export const PRESETS: Record<string, SaveConfig> = {
     thieve_knights: { position: { x: 2654, z: 3304, level: 0 }, skills: { Thieving: 55, Hitpoints: 50 }, inventory: Array.from({ length: 20 }, () => ({ id: 379, count: 1 })) },
     // Same as thieve_knights but with a fresh account's 10 HP: isolates the cost of a low HP cap at knights.
     thieve_knights_hp10: { position: { x: 2654, z: 3304, level: 0 }, skills: { Thieving: 55 }, inventory: Array.from({ length: 20 }, () => ({ id: 379, count: 1 })) },
+    // Eat-timing tests for thieving60.ts, whose food list has bread and no lobsters: a fresh account's 10 HP, 20 bread (2309).
+    thieve_knights_bread: { position: { x: 2654, z: 3304, level: 0 }, skills: { Thieving: 55 }, inventory: Array.from({ length: 20 }, () => ({ id: 2309, count: 1 })) },
     // Cycle tests only: HP 99 and 27 lobsters, so food never runs out in a 1,500-tick knight run.
     thieve_knights_hp99: { position: { x: 2654, z: 3304, level: 0 }, skills: { Thieving: 55, Hitpoints: 99 }, inventory: Array.from({ length: 27 }, () => ({ id: 379, count: 1 })) },
     // Ardougne baker's stall food test: Thieving 5 (stall level), HP 10, next to the west stall (loc touches 2654,3310).
@@ -111,7 +114,7 @@ export const PRESETS: Record<string, SaveConfig> = {
     door_2551: { position: { x: 2675, z: 3304, level: 0 }, skills: { Thieving: 16 } },
     // Waterfall Quest test: next to Almera at Baxtorian Falls (2521,3495), 10 HP, 2 ropes (954), 6 each of air (556),
     // earth (557) and water (555) runes, 18 lobsters (379), 500 coins. 10 lobsters ran out in the falls (MEASURED
-    // practice 2026-10-23: eats=10 lobsters=0 at death); a helper hands Haggis the food.
+    // practice: eats=10 lobsters=0 at death); a helper hands Haggis the food.
     quest_waterfall: { position: { x: 2522, z: 3494, level: 0 }, coins: 500, inventory: [{ id: 954, count: 1 }, { id: 954, count: 1 }, { id: 556, count: 6 }, { id: 557, count: 6 }, { id: 555, count: 6 }, ...Array.from({ length: 18 }, () => ({ id: 379, count: 1 }))] },
     // Waterfall Quest from step 6: inside the falls at the key crate (2589,9888), %waterfall_quest (varp 65) = 5,
     // Glarial's amulet (295), urn (296), 6 each of air, earth and water runes, 10 lobsters. Tests the fire giant crossing.
@@ -236,7 +239,7 @@ export const PRESETS: Record<string, SaveConfig> = {
     // Trade pair: giver holds 100 coins, receiver stands one tile east (3223,3218).
     trade_giver: { position: LUMBRIDGE, coins: 100 },
     trade_receiver: { position: { x: 3223, z: 3218, level: 0 } },
-    // Fishing resume test, the live Mightyrod state of 2026-10-23: near Bob's Axes (3236,3206), Fishing 22, Thieving 50,
+    // Fishing resume test, a recorded live Mightyrod state: near Bob's Axes (3236,3206), Fishing 22, Thieving 50,
     // 0 coins, 28 items (starter kit, small net 303, fly fishing rod 309, 24 feathers 314, knife 946, 7 logs 1511,
     // shrimps 315, bread 2309). A save cannot set current HP, so this starts at 10 HP, not 2.
     fish_resume: {
@@ -327,6 +330,29 @@ export const PRESETS: Record<string, SaveConfig> = {
         equipment: [[1163, 0], [1725, 2], [1333, 3], [1113, 4], [1201, 5], [1079, 7], [1059, 9], [1061, 10]].map(([id, slot]) => ({ id: id!, count: 1, slot: slot! })),
         inventory: Array.from({ length: 20 }, () => ({ id: 379, count: 1 })),
     } satisfies SaveConfig])),
+    // Cannon at the Wilderness poison spiders (level 37, multiway, 62 spawns, maps/m51_59.jm2): 1,500 cannonballs, 700 rune
+    // arrows, 18 sharks 385, 2 antipoison 2446, 3 prayer potions 2434, cannon parts, %mcannon = 11. Bow sets wear the band
+    // 40 ranged kit above with the magic shortbow. _h = Haggis at the Ranged row (Attack 99, Prayer 99); _s = a Ranged
+    // specialist (Attack 1, Strength 1, Defence 40, Hitpoints 55, Prayer 1), _sp = the same with Prayer 43. _sci sets hold a
+    // scimitar instead (rune 1333 at Attack 99, iron 1323 at Attack 1): the cannon rolls with the worn weapon's style
+    // (player_combat.rs2:52, %damagetype). _h80 starts at Ranged 80 for the upper bands.
+    ...((): Record<string, SaveConfig> => {
+        const pack = [6, 8, 10, 12].map(id => ({ id, count: 1 })).concat([{ id: 2, count: 1500 }], [...Array(18).fill(385), 2446, 2446, 2434, 2434, 2434].map(id => ({ id, count: 1 })));
+        const kit = (weapon: number) => [[1169, 0], [1731, 2], [weapon, 3], [1135, 4], [1099, 7], [1065, 9], [1061, 10]].map(([id, slot]) => ({ id: id!, count: 1, slot: slot! }))
+            .concat(weapon === 861 ? [{ id: 892, count: 700, slot: 13 }] : []);
+        const set = (skills: Record<string, number>, weapon = 861): SaveConfig => ({ position: { x: 3287, z: 3810, level: 0 }, skills, equipment: kit(weapon), varps: { 0: 11, 4: -1 }, inventory: pack });
+        const haggis = { Attack: 99, Strength: 99, Defence: 89, Hitpoints: 97, Prayer: 99, Ranged: 55 };
+        const spec = { Attack: 1, Strength: 1, Defence: 40, Hitpoints: 55, Ranged: 55 };
+        return {
+            cannon_spiders_h: set(haggis),
+            cannon_spiders_h80: set({ ...haggis, Ranged: 80 }),
+            cannon_spiders_s: set(spec),
+            // 43 Prayer points restore 17 a dose, so this set carries 9 prayer potions and 12 sharks.
+            cannon_spiders_sp: { ...set({ ...spec, Prayer: 43 }), inventory: pack.slice(0, 5).concat([...Array(12).fill(385), 2446, 2446, ...Array(9).fill(2434)].map(id => ({ id, count: 1 }))) },
+            cannon_spiders_h_sci: set(haggis, 1333),
+            cannon_spiders_s_sci: set({ ...spec, Prayer: 43 }, 1323),
+        };
+    })(),
     // Ranged with a bow at the Gnome battlefield (spot gb), bands 40 / 70 / 90 in Ranged, Defence and Hitpoints. Band 40:
     // yew shortbow 857 (Ranged 40, tier40.rs2:64) and green d'hide body 1135, chaps 1099, vambraces 1065; bands 70 and 90:
     // magic shortbow 861 (Ranged 50) and black d'hide body 2503 (Ranged 70, Defence 40), chaps 2497, vambraces 2491.
@@ -452,7 +478,7 @@ export const PRESETS: Record<string, SaveConfig> = {
         skills: { Woodcutting: l, Attack: 70, Strength: 70, Defence: 70, Hitpoints: 70 },
         inventory: [{ id: 1359, count: 1 }, { id: 946, count: 1 }, ...Array.from({ length: 15 }, () => ({ id: 1511, count: 1 }))],
     }])),
-    // Combat 70s: a Fishing-only preset died at the Lumbridge river spot (practice 2026-10-24, respawned at 3222,3216).
+    // Combat 70s: a Fishing-only preset died at the Lumbridge river spot (practice, respawned at 3222,3216).
     // Fishing ladder from the Sea Slug level (scripts/measure/floor-fish.ts): fly at the Lumbridge river (fly rod 309,
     // feathers 314, knife 946, logs 1511); cage (pot 301) and harpoon (311) at Musa Point.
     ...Object.fromEntries([74, 85].flatMap(l => [
@@ -486,6 +512,8 @@ export const PRESETS: Record<string, SaveConfig> = {
     ...REST_PRESETS,
     // Long and very long quests of the quests-rest row: packages/practice/src/presets-long.ts.
     ...LONG_PRESETS,
+    // Legends' Quest and its segment presets: packages/practice/src/presets-legends.ts.
+    ...LEGENDS_PRESETS,
     // The 4 quests of the qp-filler row: packages/practice/src/presets-filler.ts.
     ...FILLER_PRESETS,
 };

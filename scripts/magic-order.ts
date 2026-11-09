@@ -14,6 +14,7 @@ import {waitTicks,waitUntil,type TickSource} from '../packages/core/src/ticks';
 import {walkPath,sessionWalker,goTo,type PathPoint} from '../packages/core/src/walk';
 import {depositObserved} from '../packages/core/src/deposit';
 import {componentId} from '../packages/core/src/logout';
+import {equipmentObserved} from '../packages/core/src/container-observation';
 import {PROFILES,buyWithBudget,maximumUnitCost} from './shop-buyer';
 import {chickenTrainingProfile} from './train-chickens';
 import {startQuestSustain,questFoodDefinitions,selectQuestFood} from './quest-sustain';
@@ -82,12 +83,16 @@ type Tile={x:number;z:number};
 export const BANKS={draynor:{x:3092,z:3243},varrockWest:{x:3185,z:3436},varrockEast:{x:3253,z:3420}} as const;
 // The banks the Falador and Camelot teleport cleanup ends at (the walks in the cleanup below).
 export const CLEANUP_BANKS={falador:{x:2946,z:3370},seers:{x:2725,z:3491}} as const;
-// research/route-danger.ts: Varrock East bank -> 3244,3407 and Varrock West bank -> 3244,3407 pass 0 aggressive
-// spawns (margin 3). The shop door 3253,3398 passes 7 tiles from the mugger at 3249,3391 (reach 8). The mugger
-// (all.npc: strength 5, strengthbonus -21) and the men and women here hit at most 1, so an HP10 account survives
-// inside the food and hurt floors below.
-export const CAST_SITE={x:3244,z:3407,tol:2};
-export const TARGET_AREA={x0:3228,x1:3250,z0:3393,z1:3415};
+// research/route-danger.ts: Varrock East bank -> 3223,3400 and Varrock West bank -> 3223,3400 pass 0 aggressive
+// spawns (margin 3). The shop door 3253,3398 -> 3223,3400 passes 1 tile from the mugger at 3249,3391 (reach 8). The
+// mugger (all.npc: strength 5, strengthbonus -21) and the men and women here hit at most 1, so an HP10 account
+// survives inside the food and hurt floors below.
+// The client routes only through open doors, and a reachable:false target sends no packet. m50_53.jm2 spawns the Man
+// at 3223,3398 and the Woman at 3223,3401 on open floor. Each respawns in 50 ticks and wanders 5 tiles, inside
+// x 3218-3228, z 3393-3402, so the area holds both with a margin of 2. The men at 3237,3406 and 3238,3406 are behind
+// the doors at 3235,3406 and 3241,3406, and the man at 3245,3395 is behind the doors at 3244,3396 and 3248,3396.
+export const CAST_SITE={x:3223,z:3400,tol:2};
+export const TARGET_AREA={x0:3216,x1:3230,z0:3391,z1:3404};
 export const TARGET_NAMES=/^(man|woman|mugger)$/i;
 // A struck mugger retaliates, so it is a target only when no free man or woman is in the area.
 export const PREFERRED_TARGETS=/^(man|woman)$/i;
@@ -178,13 +183,13 @@ export function classifyCast(before:{air:number;mind:number;xp:number},after:{ai
  if(air<0||mind<0||air>airCost||mind>WIND_STRIKE.mind)return 'invalid';
  return 'partial';
 }
-type Npc={index:number;name:string;x:number;z:number;distance:number;hp:number|null;inCombat:boolean;reachable?:boolean;optionsWithIndex?:{text:string;opIndex:number}[]};
+type Npc={index:number;name:string;x:number;z:number;distance:number;hp:number|null;inCombat:boolean;targetIndex?:number;reachable?:boolean;optionsWithIndex?:{text:string;opIndex:number}[]};
 // The engaged NPC first (single-way combat refuses any other), then the nearest free man or woman, then a mugger.
-export function pickTarget(npcs:readonly Npc[],engaged:number,avoid:ReadonlySet<number>){
+export function pickTarget(npcs:readonly Npc[],engaged:number,avoid:ReadonlySet<number>,ownPlayer?:number){
  const A=TARGET_AREA;
  const fit=(n:Npc)=>TARGET_NAMES.test(n.name)&&(n.hp===null||n.hp>0)&&n.reachable!==false
   &&n.x>=A.x0&&n.x<=A.x1&&n.z>=A.z0&&n.z<=A.z1&&(n.optionsWithIndex??[]).some(o=>/^attack$/i.test(o.text));
- const own=npcs.find(n=>n.index===engaged&&fit(n));
+ const own=npcs.find(n=>(n.index===engaged||Number.isSafeInteger(ownPlayer)&&n.inCombat&&n.targetIndex===32768+ownPlayer!)&&fit(n));
  if(own)return own;
  const free=npcs.filter(n=>fit(n)&&!n.inCombat&&!avoid.has(n.index)).sort((a,b)=>a.distance-b.distance);
  return free.find(n=>PREFERRED_TARGETS.test(n.name))??free[0];
@@ -251,7 +256,9 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
  const r:MagicResult={ok:false,stop:'entry',target:o.target,level:0,casts:0,runesUsed:{air:0,mind:0},bought:{air:0,mind:0},
   coinsSpent:0,magicXpGained:0,hpXpGained:0,hpMin:0,eats:0,ticks:0};
  const ready=()=>{const p=pos(),m=s.sdk.getSkill('Magic'),h=s.sdk.getSkill('Hitpoints');
-  return !!p&&p.worldX>0&&!!m&&m.baseLevel>0&&!!h&&h.baseLevel>0&&Number.isFinite(magicXp())&&Number.isFinite(hpXp())&&Array.isArray(state()?.inventory);};
+  return !!p&&p.worldX>0&&!!m&&m.baseLevel>0&&!!h&&h.baseLevel>0&&Number.isFinite(magicXp())&&Number.isFinite(hpXp())&&Array.isArray(state()?.inventory)
+   // The air-rune cost reads the worn staff, so equipment must be the server's packet, not the empty default.
+   &&!!s.client&&typeof s.client==='object'&&equipmentObserved(s.client);};
  if(!await waitUntil(s,ready,{timeoutTicks:30})){r.stop='entry';r.failure='entry state unobserved';return r;}
  const xp0=magicXp(),hpXp0=hpXp();r.level=level();r.hpMin=hp();
  const project=(list:{slot:number;id:number;count:number}[])=>list.map(({slot,id,count})=>({slot,id,count}));
@@ -385,7 +392,6 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
   const allowance0=spendAllowance(o.budget,0,owned.coins,o.reserve);
   console.log('MAGIC_ORDER_ENTRY '+JSON.stringify({tick:s.tick(),region,position:at(),hp:hp(),magic:{level:level(),xp:xp0},owned,
    pack:{air:pack(AIR),mind:pack(MIND),coins:pack(COINS)},bank:{air:banked(AIR),mind:banked(MIND),coins:banked(COINS)},allowance:allowance0,airCost}));
-  if(level()>=25){
    // UPDATE_PID reports account membership, not map_members. It only admits a bounded
    // candidate attempt. Debit, XP and destination must still prove the spell actually ran.
    let members=(s.client as {membersAccount?:number}|undefined)?.membersAccount===1;
@@ -394,7 +400,8 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
    // Keep the highest funded method; only consider a shop-funded candidate when no owned cast is possible.
    const first=selectTeleport(availableLevel,o.target,totalRunes,worn(),members)
     ??(allowance0>0?TELEPORTS.find(t=>availableLevel>=t.level&&(!t.members||members)&&totalRunes.law>=teleportCosts(t,worn(),members).law):undefined);
-   if(!first){r.stop='short teleport runes';await closeBank();return r;}
+  // Without a funded teleport, use the same bounded Wind Strike path at every Magic level.
+  if(first){
    const missing=teleportShortfall(magicXp(),o.target,o.maxCasts,first,teleportCosts(first,worn(),members),totalRunes);
    const shopNeeded=allowance0>0&&SHOP_RUNES.some(k=>missing[k]>0);
    r.teleportRunesUsed=runeCounts(()=>0);r.teleportRunesBought=runeCounts(()=>0);moved=true;
@@ -530,8 +537,17 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
    const p=at()!;if(d8(p,CAST_SITE)>8)await walk([CAST_SITE],'return to cast site');
    if(state()?.dialog?.isOpen)await s.direct({type:'closeModal',reason:'SDK'});
    const combat=pos()?.combat,engaged=combat?.targetType==='npc'?combat.targetIndex:-1;
-   const target=pickTarget((state()?.nearbyNpcs??[]) as Npc[],engaged,new Set(avoid.keys()));
-   if(!target){if(++idle>=CAST.targetWaitTicks)throw Object.assign(Error('combat stall: no safe target near the cast site'),{stop:'combat stall'});await waitTicks(s,1);return;}
+   const target=pickTarget((state()?.nearbyNpcs??[]) as Npc[],engaged,new Set(avoid.keys()),(s.client as {selfSlot?:number})?.selfSlot);
+   if(!target){
+    if(++idle>=CAST.targetWaitTicks){
+     console.log('MAGIC_ORDER_TARGET_STALL '+JSON.stringify({tick:s.tick(),position:at(),idle,engaged,
+      ownPlayer:(s.client as {selfSlot?:number})?.selfSlot??null,avoid:[...avoid.keys()],area:TARGET_AREA,
+      nearbyNpcs:(state()?.nearbyNpcs??[]).map(n=>({index:n.index,name:n.name,x:n.x,z:n.z,hp:n.hp,
+       inCombat:n.inCombat,reachable:n.reachable??null,optionsWithIndex:n.optionsWithIndex??null}))}));
+     throw Object.assign(Error('combat stall: no safe target near the cast site'),{stop:'combat stall'});
+    }
+    await waitTicks(s,1);return;
+   }
    idle=0;
    if(await fed())return;
    const before={air:pack(AIR),mind:pack(MIND),xp:magicXp()},hp0=hpXp();
@@ -543,7 +559,7 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
    if(effect==='cast'){
     const gain={magic:Math.round((after.xp-before.xp)*10)/10,hp:Math.round((hpXp()-hp0)*10)/10};
     casts.push(gain);r.casts++;r.runesUsed.air+=airCost;r.runesUsed.mind++;misses=0;lastCast=s.tick();
-    console.log('MAGIC_ORDER_CAST '+JSON.stringify({tick:s.tick(),cast:r.casts,target:{index:target.index,name:target.name},gain,
+    console.log('MAGIC_ORDER_CAST '+JSON.stringify({tick:s.tick(),cast:r.casts,position:at(),target:{index:target.index,name:target.name},gain,
      magic:{level:level(),xp:after.xp},pack:{air:after.air,mind:after.mind},hp:hp(),purchased:r.bought.air+r.bought.mind>0}));
     return;
    }

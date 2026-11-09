@@ -34,7 +34,7 @@ export function wcPass(stdout: string): boolean {
 }
 
 // rs-sdk usernames are at most 12 alphanumeric chars. A name that played before can keep its old save over a
-// fresh preset (seen 2026-10-22: florr1 started where the previous run ended), so every name gets a token
+// fresh preset (seen: florr1 started where the previous run ended), so every name gets a token
 // from the clock and a counter and is never reused.
 let nameCounter = 0;
 export function runBotName(base: string, i: number): string {

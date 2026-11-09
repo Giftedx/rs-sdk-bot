@@ -26,6 +26,7 @@ const STAIRS_N = { id: 1742, x: 2505, z: 3871 };            // level 0 <-> level
 const STAIRS_S = { id: 1742, x: 2505, z: 3848 };
 const SIGRID = { x: 2612, z: 3877 };                        // level 1 of the Etceteria castle
 const SIG_STAIRS = { id: 1738, x: 2613, z: 3867 };          // level 0; the top is 2614,3867 (1740)
+const SIG_DOOR = { x: 2615, z: 3870 };                      // level 1
 const DERRIK = { x: 2551, z: 3897 };
 const HERBS = [4677, 4678, 4679];                           // misc_heather_light/normal/dark; 2524-2530, 3847-3855
 const EMOTE = { dance: 'controls:com_18', kiss: 'controls:com_45' };
@@ -92,8 +93,15 @@ try {
         await down();
         await q.walk('to etceteria', [{ x: 2560, z: 3870, tol: 3 }, { x: 2590, z: 3878, tol: 3 }, { x: SIG_STAIRS.x - 1, z: SIG_STAIRS.z, tol: 1 }]);
         await climb('sigrid stairs up', SIG_STAIRS, /climb-up/i, 1);
+        // Her room's south door (loc 1512, north wall of 2615,3870) is shut on a fresh server and the planner treats it as open.
+        await q.walk('sigrid door', [{ ...SIG_DOOR, tol: 0 }]);
+        await q.openDoor('sigrid door', SIG_DOOR.x, SIG_DOOR.z);
+        await q.walk('sigrid room', [{ x: SIG_DOOR.x, z: SIG_DOOR.z + 1, tol: 0 }]);
         await q.talk(label, /queen sigrid/i, pats, ok, SIGRID, 120);
         await closeDlg();
+        await q.walk('sigrid door out', [{ x: SIG_DOOR.x, z: SIG_DOOR.z + 1, tol: 0 }]);
+        await q.openDoor('sigrid door out', SIG_DOOR.x, SIG_DOOR.z);
+        await q.walk('sigrid landing', [{ ...SIG_DOOR, tol: 0 }]);
         await climb('sigrid stairs down', { id: 1740, x: 2614, z: 3867 }, /climb-down/i, 0);
     };
     const emote = async (label: string, comp: string, reply: RegExp) => {
@@ -157,14 +165,16 @@ try {
     }
     if (from('weed')) {
         // 3. The approval: weed the herbs by the castle until 64 have counted.
-        await q.walk('to herbs', [{ x: 2523, z: 3851, tol: 2 }]);
+        // Inside the fence: 2523,3851 is the far side of the castle wall, where every herb has no route and each
+        // refused click costs about a minute. The way in is the fence's north-east corner (2530,3855).
+        await q.walk('to herbs', [{ x: 2527, z: 3852, tol: 1 }]);
         const t1 = q.T();
         let target = -1, sent = 0, lastCount = weeded, idle = 0;
         while (weeded < NEED && q.T() - t1 < 1200) {
             await q.guard('weeding');
             if (q.dialogOpen()) { await closeDlg(); continue; }
             if (weeded !== lastCount) { lastCount = weeded; target = -1; idle = 0; }
-            const herb = q.findLoc((l: any) => HERBS.includes(l.id) && l.distance <= 12);
+            const herb = q.findLoc((l: any) => HERBS.includes(l.id) && l.distance <= 12 && l.reachable !== false);
             if (!herb) { await q.walk('herbs', [{ x: 2527, z: 3851, tol: 2 }]); continue; }
             if (target === -1 || ++idle > 12) {
                 idle = 0;
@@ -189,8 +199,17 @@ try {
         // Brand's room is south of the throne room: up by the south stairs.
         await q.walk('to stairs s', [{ x: STAIRS_S.x - 1, z: STAIRS_S.z, tol: 1 }]);
         await climb('stairs s up', STAIRS_S, /climb-up/i, 1);
+        // Two shut doors the planner treats as open: the landing's north door (2506,3851) and Brand's east door (2504,3853).
+        await q.walk('brand landing', [{ x: 2506, z: 3851, tol: 0 }]);
+        await q.openDoor('brand landing door', 2506, 3851);
+        await q.walk('brand corridor', [{ x: 2505, z: 3853, tol: 0 }]);
+        await q.openDoor('brand door', 2504, 3853);
+        await q.walk('brand room', [{ x: 2504, z: 3853, tol: 0 }]);
         await q.talk('brand', /prince brand/i, [], () => q.has(ITEM.anthemBad) && q.sawText(/don't mention it/i), BRAND, 120);
         await closeDlg();
+        await q.walk('brand door out', [{ x: 2504, z: 3853, tol: 0 }]);
+        await q.openDoor('brand door out', 2504, 3853);
+        await q.walk('brand corridor out', [{ x: 2505, z: 3853, tol: 0 }]);
         q.milestone(50);
         await throne();
         await q.talk('ghrim', /advisor ghrim/i, [/what am i meant to be doing/i], () => q.has(ITEM.anthemGood) && q.sawText(/negotiating peace/i), GHRIM, 120);

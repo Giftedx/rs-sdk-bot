@@ -45,7 +45,7 @@ test('no demand cannot hide a retained failure, stop marker or release hold',()=
 });
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { hasPayout } from '../packages/core/src/bank-demand';
 import { supervise } from '../packages/practice/src/supervise';
 import { enabledByAccount, foreignRun, endedForGood, isReservation, parseJob, startable, loadEnded, applyEndRepair, persistEnded, supervisorEndLine, activeExternalLive, pendingStartupCount, admissionDecision, startReserve, missionSignature, overlappingRun, observeEnabled, applyResume, ownedPayoutWaiting,foodSupplyDemand,type Job,type RepairProofs,
@@ -603,8 +603,46 @@ test('a held session whose owner pid is gone gets an end record; live, busy or a
     const ended = new Map([['ended', { at: 1, reason: 'exit 1' }]]);
     const out = orphanedSessionEnds(['Dead', 'dead', 'Live', 'Busy', 'Ended', 'Clean', 'NoPid'], ended, ['busy'],
         a => a === 'Clean' ? { state: 'confirmed', account: a, server: 's', domain: 'live', attemptId: 'x', loggedOutAt: 1, ownerRun: null, receiptSha256: '' } : held(a),
-        (_a, id) => pids[id], pid => pid === 12);
+        (_a, id) => pids[id] ? { pid: pids[id]!, createdAt: 1, updatedAt: 2 } : undefined, pid => pid === 12);
     expect(out).toEqual([['Dead', 'exit orphaned: attempt id-Dead owner 11 gone']]);
+});
+test('the orphan scan replaces only a successful end, and only for an attempt that started after it', async () => {
+    const { orphanedSessionEnds } = await import('./swarm');
+    const ended = new Map([
+        ['Retired', { at: 100, reason: 'done after 1 runs' }],
+        ['SameSession', { at: 100, reason: 'done after 1 runs' }],
+        ['Died', { at: 100, reason: 'died during cows' }],
+        ['Stopped', { at: 100, reason: 'stopped after 1 runs' }],
+    ]);
+    const held = (account: string) => ({
+        state: 'held' as const, account, server: 's', domain: 'live' as const,
+        attemptId: 'new-' + account, reason: 'session active or outcome unknown',
+    });
+    const producer = (account: string) => ({ pid: 11, createdAt: account === 'SameSession' ? 90 : 150, updatedAt: 200 });
+    const out = orphanedSessionEnds(['Retired', 'SameSession', 'Died', 'Stopped'], ended, [], held, producer, () => false);
+    expect(out).toEqual([['Retired', 'exit orphaned: attempt new-Retired owner 11 gone']]);
+});
+
+test('the orphan scan refreshes an older orphan end for a newer held attempt only', async () => {
+    const { orphanedSessionEnds } = await import('./swarm');
+    const prior = { at: 100, reason: 'exit orphaned: attempt old owner 10 gone' };
+    const ended = new Map([
+        ['Mightyrod', prior],
+        ['AlreadyCurrent', { ...prior, at: 200 }],
+        ['OwnerStopped', { at: 100, reason: 'stopped by owner' }],
+        ['OwnerAlive', prior],
+        ['StillBusy', prior],
+    ]);
+    const held = (account: string) => ({
+        state: 'held' as const, account, server: 's', domain: 'live' as const,
+        attemptId: 'new-' + account, reason: 'ended stopped',
+    });
+    const producer = (account: string) => ({ pid: account === 'OwnerAlive' ? 12 : 11, createdAt: 50, updatedAt: 200 });
+    const out = orphanedSessionEnds(
+        ['mightyrod', 'AlreadyCurrent', 'OwnerStopped', 'OwnerAlive', 'StillBusy'], ended,
+        ['stillbusy'], held, producer, pid => pid === 12,
+    );
+    expect(out).toEqual([['Mightyrod', 'exit orphaned: attempt new-mightyrod owner 11 gone']]);
 });
 test('the orphan scan finds lifecycle accounts outside the plan and skips the protected accounts', async () => {
     const { orphanedSessionEnds, lifecycleAccounts } = await import('./swarm');
@@ -617,7 +655,7 @@ test('the orphan scan finds lifecycle accounts outside the plan and skips the pr
         mkdirSync(join(dir, 'broken'));
         expect(lifecycleAccounts(dir).sort()).toEqual(['Haggis', 'OffPlan']);
         const held = (a: string) => ({ state: 'held' as const, account: a, server: 's', domain: 'live' as const, attemptId: 'id', reason: 'r' });
-        expect(orphanedSessionEnds(lifecycleAccounts(dir), new Map(), [], held, () => 5, () => false).map(([a]) => a)).toEqual(['OffPlan']);
+        expect(orphanedSessionEnds(lifecycleAccounts(dir), new Map(), [], held, () => ({ pid: 5, createdAt: 1, updatedAt: 2 }), () => false).map(([a]) => a)).toEqual(['OffPlan']);
     } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
@@ -655,4 +693,36 @@ test('a run another job of the account started is foreign to a job that is off o
     expect(foreignRun(planned, planned[1]!, run)).toBe(true);
     expect(foreignRun(planned, planned[0]!, run)).toBe(false);
     expect(foreignRun(planned, planned[0]!, { revision: 'changed-mission' })).toBe(false);
+});
+
+import { SWARM_STOP, clearSwarmStop, swarmWroteStop, standingRetryable, writeSwarmStop } from './swarm';
+test('the controller knows its own stop files, and a standing job retries the ends a plan removal or a lost process leaves', () => {
+    for (const t of Object.values(SWARM_STOP)) expect(swarmWroteStop(t)).toBe(true);
+    expect(swarmWroteStop('hold offline until the GE pilot')).toBe(false);
+    expect(swarmWroteStop(undefined)).toBe(false);
+    for (const r of ['blocked: no food', 'gave-up after 3 runs', 'exit unknown']) expect(standingRetryable(r)).toBe(true);
+    for (const r of ['died', 'done after 1 runs', 'exit 1', 'release-paused: pin missing', 'stopped after 3 runs and more']) expect(standingRetryable(r)).toBe(false);
+    // A stopped end is retried only when the account's own RESULT names a stop file; a supervisor also ends stopped on no food.
+    expect(standingRetryable('stopped after 3 runs', 'fail stop file ticks=6888 picks=1550')).toBe(true);
+    expect(standingRetryable('stopped after 3 runs', 'RESULT fail stop file ticks=10')).toBe(true);
+    expect(standingRetryable('stopped after 1 runs', 'fail no food')).toBe(false);
+    expect(standingRetryable('stopped after 1 runs')).toBe(false);
+});
+
+
+test('controller stop and resume preserve a stop file the owner wrote', () => {
+    const parent = resolve(tmpdir()), base = mkdtempSync(join(parent, 'rsbot-stop-owner-'));
+    try {
+        const file = join(base, 'stop-Helper');
+        writeSwarmStop(file, SWARM_STOP.all);
+        expect(readFileSync(file, 'utf8')).toBe(SWARM_STOP.all);
+        writeFileSync(file, 'owner pause');
+        writeSwarmStop(file, SWARM_STOP.removed);
+        expect(clearSwarmStop(file)).toBe(false);
+        expect(readFileSync(file, 'utf8')).toBe('owner pause');
+        writeFileSync(file, SWARM_STOP.job);
+        expect(clearSwarmStop(file)).toBe(true);
+    } finally {
+        if (/^rsbot-stop-owner-[^\\/]+$/.test(relative(parent, base))) rmSync(base, { recursive: true });
+    }
 });

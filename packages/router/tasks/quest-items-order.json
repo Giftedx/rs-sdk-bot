@@ -15,7 +15,8 @@
     "scripts/quest-order.test.ts",
     "scripts/generated/quest-hetty.ts",
     "packages/core/src/deposit.ts",
-    "packages/core/test/deposit.test.ts"
+    "packages/core/test/deposit.test.ts",
+    "packages/practice/src/register-proof-account.ts"
   ],
   "consumer": "The account-parameterized live CLI preserves Cook invocation and accepts the hetty argument. The Hetty job reuses owned inputs, acquires only missing ingredients, completes Witch's Potion and confirms logout. Practice invokes the same worker CLI and reaches carried-coin deposit reconciliation. Acceptance establishes quest completion, QP+1, Magic+8125 at25x, declared costs, retained assets and life, a clear refusal and logout. The connected finite live consumer is Moneyshot completing Witch's Potion and reaching Magic31.",
   "checks": [

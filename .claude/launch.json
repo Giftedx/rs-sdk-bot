@@ -6,6 +6,12 @@
       "runtimeExecutable": "bun",
       "runtimeArgs": ["packages/dashboard/server.ts"],
       "port": 3100
+    },
+    {
+      "name": "fleet-command-site",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["../rs-fleet-command/scripts/serve.ts"],
+      "port": 3200
     }
   ]
 }

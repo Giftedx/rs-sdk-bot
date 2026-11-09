@@ -21,7 +21,7 @@ const source=()=>({runtime:workerSourceRevision(),files:Object.fromEntries(owned
 const hash=(path:string)=>createHash('sha256').update(readFileSync(path)).digest('hex');
 const DROPS=[1739,526,2132],TROUT=333,SWORD=1277,SHIELD=1171;
 const BANK={x:2654,z:3283};
-// Swordinhand status 2026-10-26: Attack9/900, Defence20/3200, Strength20/3300, HP19/20 (3385XP) at Ardougne south bank.
+// Swordinhand status: Attack9/900, Defence20/3200, Strength20/3300, HP19/20 (3385XP) at Ardougne south bank.
 export const SWORDINHAND={position:{x:2655,z:3283,level:0},
  skills:[{level:9,xp:900},{level:20,xp:3200},{level:20,xp:3300},{level:19,xp:3385},...Array.from({length:17},()=>({level:1,xp:0}))],
  inventory:[{id:995,count:140},{id:TROUT,count:1},{id:315,count:1},{id:TROUT,count:1},{id:TROUT,count:1},{id:2309,count:1},{id:TROUT,count:1},{id:TROUT,count:1},{id:TROUT,count:1},{id:SWORD,count:1},{id:SHIELD,count:1}],

@@ -4,19 +4,21 @@ import {openBot,settle,getWorld,accountOf,serverFromEnv,assertServerAllowed} fro
 import type {Session} from '../packages/core/src/inprocess';
 import {assertSideOwns} from '../packages/core/src/fleet';
 import {ownedAccounts} from '../packages/core/src/tradeguard';
-import {goTo} from '../packages/core/src/walk';
+import {goTo,walkPath,sessionWalker} from '../packages/core/src/walk';
 import {waitUntil} from '../packages/core/src/ticks';
 import {depositObserved} from '../packages/core/src/deposit';
 import {assertAccountOwnership,assertRecoverableStatus,acquireAccountLeases} from './handoff-inputs';
 import {ownedSwap,state} from './rune-carrier-trade';
 import {inside,leaveBody,enterBody,stopCarriers} from './rune-carrier-bank';
-import {leaveRuneStarter,runeSupplyAssets} from './rune-supply';
+import {leaveRuneStarter,runeSupplyAssets} from './rune-starter';
 import {assertRuneDonor} from './rune-carrier-roster';
-import {runeStageRoster,runeCarrierShortfall,runeStageAuthenticate} from './rune-carrier-stage-contract';
+import {runeStageRoster,runeCarrierShortfall,runeStageAuthenticate,runeStageRequirement,exitRuneStageBasement,runeStageBankApproach} from './rune-carrier-stage-contract';
 import {runeStageStatus} from './rune-carrier-stage-status';
 
 export async function mainRuneStage(args:readonly string[]){
  const {mode,names}=runeStageRoster(args),root=resolve(import.meta.dir,'..'),dir=join(root,'.practice');
+ const purpose=process.env.RUNE_STAGE_PURPOSE;
+ runeStageRequirement(purpose,[]);
  const cap=Number(process.env.CAP??1600);if(!Number.isSafeInteger(cap)||cap<1||cap>2800)throw Error('Rune staging budget must be1..2800');
  const servers=names.map(n=>{assertSideOwns(n);return serverFromEnv(readFileSync(join(root,'vendor/rs-sdk/bots',n,'bot.env'),'utf8'));});
  if(new Set(servers.map(s=>s.toLowerCase())).size!==1)throw Error('Rune staging participants must share a server');
@@ -36,13 +38,47 @@ export async function mainRuneStage(args:readonly string[]){
  const fail=(s:Session,detail:string)=>{if(!closing.has(s)&&!done){failure=Error(s.name+': '+detail);stop();}};
  const open=async(n:string)=>runeStageAuthenticate(n,async()=>{check();const s=await openBot(n,{onStop:async(s,d)=>fail(s,d),onSessionEnd:async(s,d)=>fail(s,d)});opened.push(s);active.add(s);monitors.push(s.onTick(stop));
   if(!await waitUntil(s,()=>stop()||!!state(s)?.player&&state(s).skills?.length===21,{timeoutTicks:20}))throw Error('Rune staging initial state unavailable');check();return s;},()=>ownedAccounts(server));
- const close=async(s:Session,ok:boolean)=>{closing.add(s);logout=(await settle([s],ok,'finite Rune carrier staging',{log:line=>log(s.name,line)}))&&logout;active.delete(s);};
+ const close=async(s:Session,ok:boolean)=>{
+  closing.add(s);let confirmed=false,warning=false;
+  const result=await settle([s],ok,'finite Rune carrier staging',{log:line=>{
+   log(s.name,line);if(line==='LOGOUT logged-out')confirmed=true;if(line.startsWith('WARN '))warning=true;
+  }});
+  // A refused task can still confirm logout. Retain a failed successful-task settlement.
+  logout=confirmed&&!warning&&(!ok||result)&&logout;active.delete(s);
+ };
  const xp=(s:Session)=>JSON.stringify(state(s).skills.map(i=>[i.name,i.experience]));
  const count=(items:readonly {id:number;count:number}[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
  const bankItems=(s:Session)=>{const b=s.bankObservation?.();if(!b)throw Error('Rune staging bank unobserved');return b.items;};
  const travel=async(s:Session,x:number,z:number)=>{check();const r=await goTo(s,await getWorld(),{x,z,level:0},accountOf(s),{legTimeoutTicks:180,signal:cancel.signal});check();if(!r.ok)throw Error('Rune staging travel '+JSON.stringify(r));};
  const bank=async(s:Session)=>{
-  check();if(inside(s))await leaveBody(s);await travel(s,3094,3491);
+  check();if(inside(s))await leaveBody(s);
+  await exitRuneStageBasement({position:()=>state(s).player!,
+   dash:async(label,x,z,tol)=>{
+    check();const r=await walkPath(await sessionWalker(s),[{x,z,tol}],{maxTicks:45,stop});check();
+    const p=state(s).player!;
+    if(!r.ok||p.level!==0||Math.max(Math.abs(p.worldX-x),Math.abs(p.worldZ-z))>tol)throw Error('Rune staging '+label+' unobserved');
+   },
+   openDoor:async(label,x,z)=>{
+    check();
+    const shut=()=>state(s).nearbyLocs.find(l=>l.x===x&&l.z===z&&l.optionsWithIndex.some(o=>/^open$/i.test(o.text)));
+    const door=shut();
+    if(door&&door.distance>2){
+     const r=await walkPath(await sessionWalker(s),[{x,z,tol:1}],{maxTicks:30,stop});check();
+     if(!r.ok)throw Error('Rune staging '+label+' approach failed');
+    }
+    const current=shut(),op=current?.optionsWithIndex.find(o=>/^open$/i.test(o.text));
+    if(current&&op&&(!(await s.sdk.sendInteractLoc(current.x,current.z,current.id,op.opIndex)).success||!await waitUntil(s,()=>stop()||!shut(),{timeoutTicks:15})))throw Error('Rune staging '+label+' refused');
+    check();
+   },
+   climb:async()=>{
+    check();
+    if(!await waitUntil(s,()=>stop()||state(s).nearbyLocs.some(l=>l.id===2148&&l.x===3103&&l.z===9576),{timeoutTicks:15}))throw Error('Rune staging upward ladder unavailable');check();
+    if(!(await s.sdk.sendInteractLoc(3103,9576,2148,1)).success||!await waitUntil(s,()=>{const p=state(s).player!;return stop()||p.worldX===3105&&p.worldZ===3162&&p.level===0;},{timeoutTicks:20}))throw Error('Rune staging upward climb unobserved');check();
+   },
+   waitForLanding:async()=>{const seen=await waitUntil(s,()=>stop()||state(s).nearbyLocs.some(l=>l.id===2147&&l.x===3104&&l.z===3162),{timeoutTicks:15});check();return seen;}
+  });check();
+  for(const point of runeStageBankApproach(state(s).player!))await travel(s,point.x,point.z);
+  await travel(s,3094,3491);
   if(state(s).bank.isOpen){await s.bot.closeBank();check();}
   const generation=s.bankObservation?.()?.generation??0;
   if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>stop()||state(s).bank.isOpen&&(s.bankObservation?.()?.generation??0)>generation,{timeoutTicks:20}))throw Error('Rune staging fresh bank unavailable');check();
@@ -77,7 +113,8 @@ export async function mainRuneStage(args:readonly string[]){
    let source:Session|undefined,sourceXp='',sourceEssence=0,sourceTalismans=0;
    if(needs.length){
     source=await open(names[0]!);sourceXp=xp(source);await bank(source);await deposit(source);sourceEssence=count(bankItems(source),1436);sourceTalismans=count(bankItems(source),1446);
-    if(sourceEssence<432+needs.reduce((n,r)=>n+r.shortfall.essence,0)||sourceTalismans<2+needs.reduce((n,r)=>n+r.shortfall.talismans,0)||count(bankItems(source),1438)<1)throw Error('Rune staging supplier lacks kits plus opening reserve');
+    const required=runeStageRequirement(purpose,needs.map(r=>r.shortfall));
+    if(sourceEssence<required.essence||sourceTalismans<required.talismans||count(bankItems(source),1438)<required.airTalismans)throw Error('Rune staging supplier lacks '+(purpose==='existing-cohort'?'finite receiver shortfall':'kits plus opening reserve')+' '+JSON.stringify(required));
    }
    for(const r of receivers){
     check();const {s,shortfall}=r;

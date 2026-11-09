@@ -169,7 +169,7 @@ test('a roster that arrives before the hash list loads waits, then reaches the v
 test('the 3D camera reaches the page after readiness, and the page presses the hidden minimap buttons', async () => {
  const b=browser();let relay:any;const listeners:any[]=[];const clicked:string[]=[];
  b.host.setInterval=(fn:any)=>{relay=fn;};b.host.addEventListener=(t:string,fn:any)=>{if(t==='message')listeners.push(fn);};
- b.host.document={querySelector:(q:string)=>q.includes('.minimap-container')?{click:()=>clicked.push(q)}:null};
+ b.host.document={querySelector:(q:string)=>q.includes('.minimap-container')||q==='.live-follow button'?{click:()=>clicked.push(q)}:null};
  installViewerBridge(b.host);
  b.host.location.href+='&cx=3200.50&cz=3210.25&y=512';relay();expect(b.messages.some(m=>m.data.atlasCamera3d)).toBe(false);
  await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();relay();relay();
@@ -177,7 +177,57 @@ test('the 3D camera reaches the page after readiness, and the page presses the h
  for(const f of listeners)f({origin:'http://localhost:3102',source:b.host.parent,data:{atlasCompass:true}});
  for(const f of listeners)f({origin:'https://evil.example',source:b.host.parent,data:{atlasOpenWorldMap:true}});
  for(const f of listeners)f({origin:'http://localhost:3102',source:b.host.parent,data:{atlasOpenWorldMap:true}});
- expect(clicked).toEqual(['.minimap-container .compass','.minimap-container .worldmap-icon']);
+ for(const f of listeners)f({origin:'https://evil.example',source:b.host.parent,data:{atlasFreeCamera:true}});
+ for(const f of listeners)f({origin:'http://localhost:3102',source:b.host.parent,data:{atlasFreeCamera:true}});
+ expect(clicked).toEqual(['.minimap-container .compass','.minimap-container .worldmap-icon','.live-follow button']);
+});
+
+test('Free camera waits for the native follow control to mount during loading',async()=>{
+ const b=browser();let relay:any,available=false,clicks=0;const listeners:any[]=[];
+ b.host.setInterval=(fn:any)=>{relay=fn;};b.host.addEventListener=(t:string,fn:any)=>{if(t==='message')listeners.push(fn);};
+ b.host.document={querySelector:(q:string)=>q==='.live-follow button'&&available?{click:()=>clicks++}:null};
+ installViewerBridge(b.host);
+ for(const f of listeners)f({origin:'http://localhost:3102',source:b.host.parent,data:{atlasFreeCamera:true}});
+ relay();expect(clicks).toBe(0);
+ await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();available=true;
+ relay();expect(clicks).toBe(1);
+});
+
+test('native Stop cannot echo a stale follow URL back into the account picker',async()=>{
+ for(const hasHistory of [false,true]){
+  const b=browser();let relay:any;const listeners:any[]=[];
+  b.host.location.href+='&follow=Worker';b.host.setInterval=(fn:any)=>{relay=fn;};
+  b.host.addEventListener=(t:string,fn:any)=>{if(t==='message')listeners.push(fn);};
+  b.host.document={querySelector:(q:string)=>q==='.live-follow button'?{click:()=>{}}:null};
+  if(hasHistory)b.host.history={state:null,replaceState:(_state:any,_title:any,url:string)=>{b.host.location.href=url;}};
+  installViewerBridge(b.host);await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();
+  for(const f of listeners)f({origin:'http://localhost:3102',source:b.host.parent,data:{atlasFreeCamera:true}});
+  relay();relay();expect(b.messages.filter(m=>m.data.atlasFollow)).toHaveLength(0);
+  if(hasHistory)expect(new URL(b.host.location.href).searchParams.has('follow')).toBe(false);
+ }
+});
+
+test('a page follow change cannot be undone by the old name still in the viewer URL',async()=>{
+ const b=browser();let relay:any;const listeners:any[]=[];
+ b.host.location.href+='&follow=Worker';b.host.setInterval=(fn:any)=>{relay=fn;};
+ b.host.addEventListener=(t:string,fn:any)=>{if(t==='message')listeners.push(fn);};
+ installViewerBridge(b.host);await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();relay();
+ const before=b.messages.filter(m=>m.data.atlasFollow).length;
+ for(const f of listeners)f({origin:'http://localhost:3102',source:b.host.parent,data:{follow:'Other'}});
+ relay();relay();expect(b.messages.filter(m=>m.data.atlasFollow)).toHaveLength(before);
+ b.host.location.href=b.host.location.href.replace('follow=Worker','follow=Other');relay();relay();
+ expect(b.messages.filter(m=>m.data.atlasFollow)).toHaveLength(before);
+ b.host.location.href=b.host.location.href.replace('follow=Other','follow=Third');relay();
+ expect(b.messages.at(-1)!.data).toEqual({atlasFollow:'Third'});
+});
+
+test('the [ and ] keys step through the page accounts, not the viewer roster',()=>{
+ const b=browser();let key:any;
+ b.host.addEventListener=(t:string,fn:any,capture?:boolean)=>{if(t==='keydown'&&capture)key=fn;};
+ installViewerBridge(b.host);let stopped=0;
+ const press=(k:string)=>key({key:k,stopImmediatePropagation:()=>stopped++,preventDefault:()=>{}});
+ press(']');press('[');press('w');
+ expect(b.messages.filter(m=>m.data.atlasStep).map(m=>m.data.atlasStep)).toEqual([1,-1]);expect(stopped).toBe(2);
 });
 
 test('opponent information: the followed player\'s target after a hit, renamed when hidden, cleared when it stops facing',async()=>{
@@ -193,4 +243,25 @@ test('opponent information: the followed player\'s target after a hit, renamed w
  socket.message({t:'tick',k:4,p:[{i:8,fe:32768+7},{i:7,hm:[[2,1]],hp:[5,10]}]});
  expect(opp()[1]).toEqual({kind:'player',name:'⟦MAIN⟧',hp:[5,10]});expect(JSON.stringify(b.messages)).not.toContain('HiddenActor');
  socket.message({t:'tick',k:5,p:[{i:8,fe:-1}]});expect(opp()[2]).toBeNull();
+});
+
+test('a roster held past the 30 s limit is dropped at the ready state',async()=>{
+ const b=browser();class Socket {listeners=new Map<string,Function[]>();constructor(..._args:any[]){}addEventListener(t:string,fn:Function){this.listeners.set(t,[...(this.listeners.get(t)||[]),fn]);}message(m:any){for(const f of this.listeners.get('message')||[])f({data:JSON.stringify(m),origin:'wss://x'});}}
+ b.host.WebSocket=Socket;installViewerBridge(b.host);const socket=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');
+ socket.message({t:'roster',p:[[8,'Worker',3201,3201,0,50]]});
+ const now=Date.now;Date.now=()=>now()+30_001;
+ try{await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();}finally{Date.now=now;}
+ expect(b.states().at(-1).state).toBe('ready');expect(b.messages.some(m=>m.data.atlasRoster)).toBe(false);
+});
+test('the roster reaches the page live, with the hidden account as the mark only',async()=>{
+ const b=browser();class Socket {listeners=new Map<string,Function[]>();constructor(..._args:any[]){}addEventListener(t:string,fn:Function){this.listeners.set(t,[...(this.listeners.get(t)||[]),fn]);}message(m:any){for(const f of this.listeners.get('message')||[])f({data:JSON.stringify(m)});}}
+ b.host.WebSocket=Socket;installViewerBridge(b.host);const socket=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');
+ socket.message({t:'roster',p:[[7,'HiddenActor',3200,3200,0,126],[8,'Worker',3201,3201,0,50]]});expect(b.messages.some(m=>m.data.atlasRoster)).toBe(false);
+ await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();
+ // The roster that arrived during the load reaches the page at the ready state.
+ expect(b.messages.filter(m=>m.data.atlasRoster)).toHaveLength(1);
+ socket.message({t:'roster',p:[[7,'HiddenActor',3200,3200,0,126],[8,'Worker',3201,3201,0,50],[9,'Bad',null,3,0,1]]});
+ const rosters=b.messages.filter(m=>m.data.atlasRoster);expect(rosters).toHaveLength(2);
+ for(const r of rosters)expect(r.data.atlasRoster.players).toEqual([['⟦MAIN⟧',3200,3200,0,126],['Worker',3201,3201,0,50]]);
+ expect(JSON.stringify(rosters)).not.toContain('HiddenActor');
 });

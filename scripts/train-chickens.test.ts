@@ -1,5 +1,5 @@
 import {expect,test} from 'bun:test';
-import {chickenTrainingStyle,chickenTrainingKit,chickenTrainingProfile,chickenTrainingThreat,chickenTrainingTarget,trainChickens} from './train-chickens';
+import {chickenTrainingStyle,chickenTrainingKit,chickenTrainingProfile,chickenTrainingThreat,chickenTrainingTarget,chickenStrengthGoal,chickenTrainingHealth,chickenTrainingEntry,chickenCombatUnlockPlan,chickenCombatUnlockStyle,chickenCombatUnlockMode,guardArdougneTrainingWalker,trainChickens} from './train-chickens';
 import {mixedOreCombatProblem} from './gather-ore';
 
 test('qualification keeps combat13 by default and admits the bounded combat29 courier target',()=>{
@@ -46,4 +46,60 @@ test('Draynor wizard threshold follows its hunt3 plus one tile; jail guards and 
 
 test('bootstrap chicken demand is finite and invalid demand fails before game actions',async()=>{
  for(const rawChicken of [-1,13,1.5,NaN])await expect(trainChickens({} as any,1800,'draynor',13,{rawChicken})).rejects.toThrow('0..12');
+});
+
+test('Ardougne is a local bank-to-farm profile and requires a bounded Strength goal',()=>{
+ const p=chickenTrainingProfile('ardougne');expect(p.route[0]).toMatchObject({x:2654,z:3283});
+ expect(p.pen).toMatchObject({x0:2686,x1:2700,z0:3268,z1:3283});
+ expect(()=>chickenStrengthGoal('ardougne',undefined,undefined)).toThrow('explicit Strength');
+ expect(chickenStrengthGoal('ardougne','Strength',13)).toBe(13);
+ for(const [skill,level] of [['Attack',13],['Strength',0],['Strength',13.5],['Strength',100]] as const)
+  expect(()=>chickenStrengthGoal('ardougne',skill,level)).toThrow();
+});
+test('partial HP admission is explicit and does not relax the original full-health profiles',()=>{
+ expect(()=>chickenTrainingHealth('ardougne',27,35)).not.toThrow();
+ for(const hp of [0,10,26,NaN])expect(()=>chickenTrainingHealth('ardougne',hp,35)).toThrow('at least27');
+ expect(()=>chickenTrainingHealth('varrock',27,35)).toThrow('full HP');
+ expect(()=>chickenTrainingHealth('draynor',35,35)).not.toThrow();
+ expect(chickenTrainingThreat({name:'Bear',distance:4},'ardougne')).toBe(true);
+ expect(chickenTrainingThreat({name:'Giant bat',distance:9},'ardougne')).toBe(false);
+});
+test('Ardougne route guard blocks direct and partial-path fallbacks outside the admitted corridor',()=>{
+ let sent=0;
+ const base={pos:()=>({x:2655,z:3283,level:0}),plan:(_l:number,_f:any,to:any)=>[to],walk:()=>{sent++;return{};},interactLoc:()=>({})} as any;
+ const safe=guardArdougneTrainingWalker(base);
+ safe.deps.walk(2691,3277);expect(sent).toBe(1);
+ safe.deps.walk(2765,3422);expect(sent).toBe(1);expect(safe.reason()).toContain('outside admitted');
+ const detour=guardArdougneTrainingWalker({...base,plan:(_l:number,_f:any,to:any)=>[{x:2640,z:3274},to]});
+ expect(detour.deps.plan(0,{x:2655,z:3283},{x:2691,z:3277})).toEqual([]);
+ detour.deps.walk(2691,3277);expect(sent).toBe(1);
+ const partial=guardArdougneTrainingWalker({...base,plan:()=>[{x:2660,z:3283}]});
+ partial.deps.walk(2691,3277);expect(sent).toBe(1);
+});
+
+test('lower-health entry is explicit, local and cannot relax default Brave admission',()=>{
+ expect(chickenTrainingEntry()).toBe('standard');expect(chickenTrainingEntry('lower-health')).toBe('lower-health');
+ expect(()=>chickenTrainingEntry('toss')).toThrow('unsupported');
+ expect(()=>chickenTrainingHealth('ardougne',10,19,'lower-health')).not.toThrow();
+ for(const [bank,hp,max] of [['ardougne',9,19],['ardougne',10,18],['draynor',10,19],['varrock',10,19],['ardougne',20,19]] as const)expect(()=>chickenTrainingHealth(bank,hp,max,'lower-health')).toThrow('lower-health');
+ expect(()=>chickenTrainingHealth('ardougne',10,19)).toThrow('at least27');
+ expect(()=>chickenTrainingHealth('ardougne',27,35)).not.toThrow();
+});
+test('balanced unlock minimizes remaining melee XP with conservative HP growth and fixes Attack',()=>{
+ const levels={Attack:28,Defence:1,Hitpoints:19,Prayer:1,Ranged:1,Magic:1};
+ expect(chickenCombatUnlockPlan(levels,{Strength:0,Defence:0,Hitpoints:3060})).toEqual({strength:27,defence:18,hitpoints:27,combat:29,requiredXp:8310});
+ const partial=chickenCombatUnlockPlan({...levels,Defence:2},{Strength:200,Defence:100,Hitpoints:3060});expect(partial.requiredXp).toBeLessThan(8310);
+ expect(()=>chickenCombatUnlockPlan(levels,{Strength:NaN,Defence:0,Hitpoints:3060})).toThrow('unavailable');
+ expect(()=>chickenCombatUnlockPlan({...levels,Attack:0},{Strength:0,Defence:0,Hitpoints:3060})).toThrow('unavailable');
+});
+test('balanced phases raise early damage, then Defence, then remaining Strength with no Attack style',()=>{
+ const plan={strength:27,defence:18};
+ expect(chickenCombatUnlockStyle({Strength:1,Defence:1},plan)).toBe(1);
+ expect(chickenCombatUnlockStyle({Strength:6,Defence:1},plan)).toBe(3);
+ expect(chickenCombatUnlockStyle({Strength:6,Defence:18},plan)).toBe(1);
+ expect(()=>chickenCombatUnlockStyle({Strength:27,Defence:18},plan)).toThrow('exhausted');
+ expect(Math.floor(((6+8)*69+320)/640)).toBe(2);
+ expect(chickenCombatUnlockMode('ardougne','CombatUnlock',undefined,'lower-health',29)).toBe(true);
+ expect(chickenCombatUnlockMode('ardougne','Strength',13,'standard',29)).toBe(false);
+ for(const args of [['draynor','CombatUnlock',undefined,'lower-health',29],['ardougne','CombatUnlock',27,'lower-health',29],['ardougne','CombatUnlock',undefined,'standard',29]] as const)expect(()=>chickenCombatUnlockMode(args[0],args[1],args[2],args[3],args[4])).toThrow('requires');
 });

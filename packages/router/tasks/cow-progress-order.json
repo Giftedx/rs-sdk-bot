@@ -4,14 +4,11 @@
   "entry": "scripts/gather-combat.ts",
   "files": [
     "scripts/gather-combat.ts",
-    "scripts/gather-combat.test.ts",
+    "scripts/gather-combat-giant.test.ts",
     "scripts/quest-sustain.ts",
     "scripts/quest-sustain.test.ts",
-    "packages/practice/src/cow-progress-order-proof.ts",
-    "packages/practice/test/cow-progress-order-proof.test.ts",
-    "packages/core/test/session-recovery-permit.test.ts",
-    "packages/practice/src/session-recovery-proof.ts",
-    "packages/practice/test/session-recovery-proof.test.ts"
+    "packages/practice/src/cow-progress-isolated-proof.ts",
+    "packages/practice/test/cow-progress-isolated-proof.test.ts"
   ],
   "consumer": "The actual account-parameterized cow CLI raises Attack9 to20 on practice, retains kit, cash and life, reconciles food and banks cow outputs before confirmed logout. The existing authenticated recovery check supplies the controller's required recovery artifact. Shared production runtime comes from current main and remains outside this worker's author ownership; all existing integration checks remain required. The connected finite live consumer on Swordinhand credits five cow kills within1500 ticks, banks drops and confirms logout, then releases the account to its next eligible quest assignment. Peer recovery enables the downstream Witch's Potion and Magic31 consumer.",
   "checks": [
@@ -22,8 +19,10 @@
         "bun",
         "test",
         "scripts/gather-combat.test.ts",
+        "scripts/gather-combat-giant.test.ts",
         "scripts/quest-sustain.test.ts",
         "packages/practice/test/cow-progress-order-proof.test.ts",
+        "packages/practice/test/cow-progress-isolated-proof.test.ts",
         "--timeout",
         "10000"
       ],
@@ -81,7 +80,7 @@
       "phase": "practice",
       "command": [
         "bun",
-        "packages/practice/src/cow-progress-order-proof.ts"
+        "packages/practice/src/cow-progress-isolated-proof.ts"
       ],
       "timeoutMs": 900000
     },
@@ -90,7 +89,7 @@
       "phase": "consumer",
       "command": [
         "bun",
-        "packages/practice/src/cow-progress-order-proof.ts",
+        "packages/practice/src/cow-progress-isolated-proof.ts",
         "--verify"
       ],
       "timeoutMs": 30000

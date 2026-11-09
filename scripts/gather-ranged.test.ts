@@ -34,3 +34,6 @@ test('owned interruption remains stopped with its target unmet',async()=>{
 });
 
 test('regen credit is bounded: own3HP beats every other contributor within180ticks',()=>{expect(rangedCredit(true,400,1,1,170)).toBe(true);expect(rangedCredit(true,500,1,1,180)).toBe(true);expect(rangedCredit(true,300,1,1,181)).toBe(false);expect(rangedCredit(true,200,1,1,50)).toBe(false);});
+
+
+test('actual Ranged pickup consumer reconciles lost ordinary pickup reply by held output',async()=>{const{pickupRangedLoot}=await import('./gather-ranged');let held=0;const s:any={sdk:{getState:()=>({}),getInventory:()=>held?[{id:526,count:held}]:[]}};const item:any={id:526,count:1};expect(await pickupRangedLoot(s,{pickup:async()=>{held++;return{success:false,telegrab:false};}},item)).toBe(1);held=0;await expect(pickupRangedLoot(s,{pickup:async()=>({success:false,telegrab:true,skipped:true})},item)).rejects.toThrow('loot unavailable');expect(held).toBe(0);});

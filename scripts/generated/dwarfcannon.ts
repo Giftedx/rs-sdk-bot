@@ -22,6 +22,7 @@ const LOC = {
     crate: { id: 1, x: 2571, z: 9850 },              // mcannoncrateboy
     mud: { id: 13, x: 2621, z: 9796 },               // mcanmudpile: back to 2623,3391
     shedDoor: { id: 4, x: 2576, z: 3461 },           // mcannondoor1 (needs %mcannon >= 6)
+    nulodionDoor: { id: 3, x: 3015, z: 3453 },       // mcannondoor (needs %mcannon >= 9), west wall of the porch
     cannon: { id: 5, x: 2577, z: 3461 },             // broken_multicannon
 };
 // The six broken railings, mcannonrailing1-6 (loc 15-20), far end first, so the last one is beside the commander.
@@ -343,14 +344,17 @@ try {
     milestone(8);
 
     // 9. Commander: "Ok then, just for you!" sets 9 (lawgof2.rs2:139-175). The shed door shuts behind the bot
-    // (~open_and_close_door), so walkPath (which opens it) takes the bot out first.
+    // (~open_and_close_door) and no planned walk opens it, so the bot ops it from inside (west wall of 2576,3461).
+    await step('shed door out', () => opLoc(LOC.shedDoor, opIndex(findLoc(l => l.id === LOC.shedDoor.id), /open/i)), () => (pos()?.worldX ?? 2576) < 2576, 10, 4);
     await walk('out of shed', [{ x: LAWGOF.x + 1, z: LAWGOF.z, tol: 2 }]);
     await talk('commander 5', /^dwarf commander$/i, [/just for you/i], () => sawText(/speak to nulodion|nulodion, the dwarf cannon/i), 80);
     milestone(9);
 
     // 10. Falador teleport (2965,3378), walk to Nulodion; his talk gives the notes and the mould and sets 10.
     await teleport('falador teleport', 'magic:falador_teleport', 2965, 3378);
-    await walk('to nulodion', [{ x: NULODION.x, z: NULODION.z, tol: 2 }]);
+    // Nulodion's room opens only by the quest door, which no planned walk opens: the porch, then the door by hand.
+    await walk('to nulodion porch', [{ x: LOC.nulodionDoor.x, z: LOC.nulodionDoor.z, tol: 0 }]);
+    await step('nulodion door', () => opLoc(LOC.nulodionDoor, opIndex(findLoc(l => l.id === LOC.nulodionDoor.id), /open/i)), () => (pos()?.worldX ?? 3015) < 3015, 10, 4);
     await talk('nulodion', /^nulodion$/i, [], () => has(ITEM.notes) && has(ITEM.mould), 60, NULODION);
     milestone(10);
 

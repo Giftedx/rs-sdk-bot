@@ -2,10 +2,10 @@
   "id": "rune-carrier-stage",
   "goal": "Stage owned bank carriers and an opening donor for the fresh Runecraft ranking run without logging in the specialist.",
   "entry": "scripts/rune-bank-craft.ts",
-  "files": ["scripts/rune-bank-craft.ts", "scripts/rune-carrier-stage.ts", "scripts/rune-carrier-stage-contract.ts", "scripts/rune-carrier-stage-contract.test.ts", "scripts/rune-carrier-stage-status.ts", "scripts/rune-carrier-stage-status.test.ts", "scripts/rune-carrier-bank.ts", "packages/practice/src/rune-carrier-stage-proof.ts"],
+  "files": ["scripts/rune-bank-craft.ts", "scripts/rune-carrier-stage.ts", "scripts/rune-carrier-stage-contract.ts", "scripts/rune-carrier-stage-contract.test.ts", "scripts/rune-carrier-stage-status.ts", "scripts/rune-carrier-stage-status.test.ts", "scripts/rune-carrier-bank.ts", "scripts/rune-starter.ts", "scripts/rune-starter.test.ts", "packages/practice/src/rune-carrier-stage-proof.ts"],
   "consumer": "The finite Rune CLI stages four authentic fresh carriers with27 held essence,378 banked essence and a body talisman, sends no extra stock on repeat, and prepares the supplier's27 essence and air talisman beside the tutorial exit. Preserve all assets and XP, reconcile supplier debits and receiver credits and confirm all logouts. Fixture supplies are not live procurement.",
   "checks": [
-    {"id":"rune-carrier-stage-regressions","phase":"regression","command":["bun","test","scripts/rune-carrier-stage-contract.test.ts","scripts/rune-carrier-stage-status.test.ts","scripts/handoff-inputs.test.ts","scripts/rune-carrier-trade.test.ts","--timeout","10000"],"timeoutMs":60000},
+    {"id":"rune-carrier-stage-regressions","phase":"regression","command":["bun","test","scripts/rune-starter.test.ts","scripts/rune-carrier-stage-contract.test.ts","scripts/rune-carrier-stage-status.test.ts","scripts/handoff-inputs.test.ts","scripts/rune-carrier-trade.test.ts","--timeout","10000"],"timeoutMs":60000},
     {"id":"rune-carrier-stage-practice","phase":"practice","command":["bun","packages/practice/src/rune-carrier-stage-proof.ts"],"timeoutMs":900000},
     {"id":"rune-carrier-stage-saved","phase":"consumer","command":["bun","packages/practice/src/rune-carrier-stage-proof.ts","--verify"],"timeoutMs":30000}
   ]

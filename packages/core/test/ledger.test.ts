@@ -68,4 +68,9 @@ test('a session is stalled after a window with no xp, item change or dialog', as
     expect(stalled([...walking.slice(0, 450), row('dialog', 450), ...walking.slice(451)], 900)).toBe(false);
     expect(stalled(walking.slice(0, 899), 900)).toBe(false);
     expect(stalled(walking, 0)).toBe(false);
+    // A journey is progress: a walk that ends 20 tiles or more from where the window began; pacing within 19 tiles is not.
+    const journey = Array.from({ length: 900 }, (_, i) => ({ tick: i, kind: (i % 2 ? 'move' : 'idle') as any, at: `${3013 - Math.floor(i / 4)},3207` }));
+    expect(stalled(journey, 900)).toBe(false);
+    const pacing = Array.from({ length: 900 }, (_, i) => ({ tick: i, kind: 'move' as any, at: `${3013 + (i % 19)},3207` }));
+    expect(stalled(pacing, 900)).toBe(true);
 });

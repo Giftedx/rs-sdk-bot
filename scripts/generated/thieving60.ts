@@ -4,7 +4,8 @@
 // Preset floors_lumbridge. Plan: pickpocket Lumbridge men to 60 coins, sail to Ardougne (copy of boatardy.ts),
 // then pickpocket the best target for the level: men below 40, guards from 40, knights from 55.
 // Stun damage (skill_thieving pickpocket.dbrow): man 1, guard 2, knight 3. The bot only pickpockets a target
-// when Hitpoints is above that damage, so one failed attempt cannot kill it.
+// when Hitpoints is above that damage plus HP_RESERVE (default 2), so a failed attempt leaves at least
+// HP_RESERVE + 1: room for a stray hit (a watchman event, a Lumbridge spider) and for the walk to the boat.
 // Food: bread from the Baker (2654,3311, shop 'bakery', 12 coins), eaten at 5 Hitpoints or less.
 import { existsSync } from 'node:fs';
 import { openBot, finish, countItems } from '../../packages/core/src/bot';
@@ -21,9 +22,12 @@ const ARDY_DECK = { x: 2683, z: 3268 };
 const TARGET = Number(process.env.TARGET ?? 60);
 const CAP = Number(process.env.CAP ?? 2500);
 const EAT_AT = 5;
+// Hitpoints kept above the worst single stun. 0 is the old rule (a failed attempt could leave 1 Hitpoint).
+const HP_RESERVE = Number(process.env.HP_RESERVE ?? 2);
 const EXIT_BANK = { x: 2654, z: 3283 };
 const BANK_ITEMS = /^(coins|bread|cake|2\/3 cake|slice of cake|chocolate slice)$/i;
 if (!Number.isInteger(TARGET) || TARGET < 1 || TARGET > 99 || !Number.isInteger(CAP) || CAP < 240) await finish([], false, 'TARGET must be1..99 and CAP at least240ticks');
+if (!Number.isInteger(HP_RESERVE) || HP_RESERVE < 0 || HP_RESERVE > 6) await finish([], false, 'HP_RESERVE must be 0..6');
 if (process.env.RELOG === '1') await finish([], false, 'RELOG is unsupported: train through ordinary stuns');
 const BREAD = /^bread$/i;
 const COINS = /^coins$/i;
@@ -55,6 +59,8 @@ try {
     const pos = () => s.sdk.getState()?.player;
     const coins = () => countItems(s, COINS);
     const bread = () => countItems(s, BREAD);
+    // A pickpocket on t may start only while a failed attempt still leaves HP_RESERVE + 1 Hitpoints.
+    const canSteal = (t: Target) => hp() > t.dmg + HP_RESERVE;
     const cheb = (a: { x: number; z: number }, p: { worldX: number; worldZ: number }) => Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ));
     const xp0 = xp();
     const t0 = now();
@@ -138,21 +144,33 @@ try {
         console.log(`RATE thieving ${gained} ${ticks}`);
         const p = pos();
         const detail = `thieving=${lvl()} xp=${gained} ticks=${ticks} at=${p?.worldX},${p?.worldZ},${p?.level} hp=${hp()} hpMin=${hpMin} `
-            + `died=${died} relogs=${relogs} relogTicks=${relogTicks} logoutTicks=${logoutTicks} idleTicks=${idleTicks} pickTicks=${pickTicks} shopTicks=${shopTicks} eatTicks=${eatTicks} stunWait=${stunWait} tries=${tries} stuns=${stuns} eaten=${eaten} bought=${bought} waits=${waits} walkTicks=${walkTicks} chases=${chases} coins=${coins()} bread=${bread()} `
+            + `died=${died} relogs=${relogs} relogTicks=${relogTicks} logoutTicks=${logoutTicks} idleTicks=${idleTicks} pickTicks=${pickTicks} shopTicks=${shopTicks} eatTicks=${eatTicks} stunWait=${stunWait} stunMsgs=${stunMsgs} tries=${tries} stuns=${stuns} eaten=${eaten} bought=${bought} waits=${waits} walkTicks=${walkTicks} chases=${chases} coins=${coins()} bread=${bread()} `
             + `milestones=${[...marks].join(',')} jumps=${jumps.join(';')}`;
         return finish([s], ok, ok ? detail : `${why} ${detail} last=${lastFail}`);
     };
 
     // One pickpocket step on a target near `spot`. Returns false when it did not try (no target in range).
-    // Movement rules (2026-10-23, owner: "you move like a total moron"): take the closest target, never walk back
+    // Movement rules (owner: "you move like a total moron"): take the closest target, never walk back
     // to a fixed spot, and only walk to the target area when no target is within `range` of where the bot stands.
     // Targets wander, so waiting a tick for one to come close beats chasing one across the market.
     // Set in step 3: what to do inside a stun (8 ticks when the bot cannot pickpocket but can walk, shop and eat).
     let onStun: (() => Promise<void>) | null = null;
+    // A fail sets %action_delay to the stun end (thieving.rs2:49); a success does not touch it. An eat adds 3 to that value
+    // (consume.rs2:129-130), and a pick waits on it (pickpocket.rs2:134). Inside the stun the eat delays the next pick by 3
+    // ticks; once the value is 3 ticks old the eat costs nothing, so the bot eats on the spare tick between clicks.
+    // EAT_IN_STUN=1 keeps the old timing for comparison.
+    const EAT_IN_STUN = process.env.EAT_IN_STUN === '1';
+    let delayEnd = -100, stunMsgs = 0, lastStunTick = -1;
+    // The game message counts every stun; an eat on the same tick can hide the HP drop.
+    s.onTick(() => {
+        const m = (s.sdk.getState()?.gameMessages ?? []).some((x: any) => x.tick === s.tick() && /been stunned/i.test(x.text));
+        if (m && lastStunTick !== s.tick()) { lastStunTick = s.tick(); stunMsgs++; delayEnd = s.tick() + 8; }
+    });
+    let eatFree = async (): Promise<void> => {};
     const steal = async (t: Target): Promise<boolean> => {
         const p = pos();
         const near = (s.sdk.getState()?.nearbyNpcs ?? [])
-            .filter((n: any) => t.re.test(n.name) && (!p || Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ)) <= t.range))
+            .filter((n: any) => t.re.test(n.name) && n.reachable !== false && (!p || Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ)) <= t.range))
             .sort((a: any, b: any) => a.distance - b.distance);
         const npc = near[0];
         if (!npc) {
@@ -166,7 +184,7 @@ try {
         if (npc.distance > 1) chases++;
         tries++;
         const k0 = now();
-        // Leader rhythm (Jackalopett1, recorded 2026-10-23): one click every 2 ticks, sent straight to the client.
+        // Leader rhythm (Jackalopett1, recorded): one click every 2 ticks, sent straight to the client.
         // Measured +22% over bot.pickpocketNpc (scripts/measure/pick-cycle.ts DIRECT=1: 277.5/245.9 vs 254.7/175.6).
         // The server drops clicks inside a stun. An HP drop means a fail: the stun has started, so eat inside it.
         // SLOW_PICK=1 keeps the old SDK path.
@@ -174,7 +192,9 @@ try {
             const op = (npc as any).optionsWithIndex.find((o: any) => /pickpocket/i.test(o.text))!.opIndex;
             const hp0 = hp();
             await s.direct({ type: 'interactNpc', npcIndex: (npc as any).index, optionIndex: op, reason: 'SDK' });
-            await waitTicks(s, 2);
+            await waitTicks(s, 1);
+            await eatFree();
+            await waitTicks(s, 1);
             pickTicks += now() - k0;
             if (hp() < hp0) { stuns++; if (onStun) await onStun(); }
             return true;
@@ -193,14 +213,14 @@ try {
     // Waits for Hitpoints to regenerate when no food and no coins: pickpocketing could kill the bot.
     const rest = async () => { waits++; await waitTicks(s, 10); };
 
-    // A resumed live account is already in Ardougne (seen 2026-10-23: it started the walk to Port Sarim from there).
+    // A resumed live account is already in Ardougne (seen: it started the walk to Port Sarim from there).
     const p1 = pos();
     const inArdougne = !!p1 && cheb(MARKET, p1) <= 80;
     if (inArdougne) mark('ardougne');
     // ---- Step 1: Lumbridge men until 60 coins (the two boat fares, 30 each).
     const LUMB_MEN: Target = { name: 'man', re: /^man$/i, dmg: 1, spot: LUMBRIDGE, range: 15 };
     for (let i = 0; i < 600 && !inArdougne && coins() < 60 && !died && left() > 0; i++) {
-        if (hp() <= LUMB_MEN.dmg) { await rest(); continue; }
+        if (!canSteal(LUMB_MEN)) { await rest(); continue; }
         await steal(LUMB_MEN);
     }
     if (died) await end(false, 'died in Lumbridge');
@@ -327,9 +347,17 @@ try {
     // shopping inside it cannot work.
     const maxHp = () => s.sdk.getSkill('Hitpoints')?.baseLevel ?? 10;
     onStun = async () => {
-        if (food() > 0 && hp() <= maxHp() - 4) { const e0 = now(); if ((await s.bot.eatFood(FOOD)).success) eaten++; eatTicks += now() - e0; return; }
+        if (EAT_IN_STUN && food() > 0 && hp() <= maxHp() - 4) { const e0 = now(); if ((await s.bot.eatFood(FOOD)).success) eaten++; eatTicks += now() - e0; return; }
         stunWait++;
         await waitTicks(s, 1);
+    };
+    if (!EAT_IN_STUN) eatFree = async () => {
+        if (hp() > maxHp() - 4 || delayEnd + 3 > now()) return;
+        const item = s.sdk.getInventory().find(i => FOOD.test(i.name));
+        if (!item) return;
+        const op = item.optionsWithIndex.find(o => /eat/i.test(o.text))?.opIndex ?? 1;
+        const r: any = await s.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: op, reason: 'SDK' });
+        if (r?.success !== false) { eaten++; delayEnd += 3; }
     };
     if (food() === 0) await stockUp();
     // A file .practice/stop-<bot> asks for a clean in-game logout, so a run can be swapped without the 500-tick linger.
@@ -352,9 +380,9 @@ try {
             continue;
         }
         // Both warriors can be busy (other players); the men stand 10 tiles away, so use them instead of waiting.
-        if (hp() > t.dmg) { if (!(await steal(t)) && t === WARRIORS && hp() > MEN.dmg) await steal(MEN); continue; }
+        if (canSteal(t)) { if (!(await steal(t)) && t === WARRIORS && canSteal(MEN)) await steal(MEN); continue; }
         // Too low for this target and no food: men hit for 1, so use them for coins, else rest.
-        if (hp() > MEN.dmg) await steal(MEN);
+        if (canSteal(MEN)) await steal(MEN);
         else await rest();
     }
     checkLevels();

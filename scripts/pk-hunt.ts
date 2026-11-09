@@ -1,0 +1,197 @@
+// PK hunter: restocks a tribrid kit at Edgeville bank, walks into the shallow Wilderness north of Edgeville, fights the
+// nearest attackable player who is not a fleet account (or anyone who attacks it) with scripts/pk.ts, loots a kill and
+// banks again when food runs low or after a glory escape. A death ends the run; so do the tick cap and a stop file.
+// Usage: bun scripts/pk-hunt.ts <bot> [CAP ticks, default 6000]. Environment: HUNT_FOOD sharks per trip (default 18),
+// MIN_FOOD sharks that send it back to bank (default 6), ESCAPE_AT HP (default 35). For a build other than the maxed
+// tribrid: PK_KIT the switch weapons as JSON {"magic":[ids],"ranged":[ids],"melee":[ids]}, PK_TRIP what a trip carries
+// besides sharks as JSON [{"id":n,"count":n}], PK_SPELL the damage spell's component id (scripts/pk.ts SPELLS),
+// PK_ROTATION the style order, e.g. "ranged,magic" for a pure with Strength 1, PK_TELE a teleport spell's component
+// id (scripts/pk.ts SPELLS) used where no glory is carried, both to reach Edgeville and to escape. An account that starts
+// more than 60 tiles from Edgeville rubs a carried glory there first, or casts PK_TELE and walks on. PK_SPOTS replaces
+// the hunt spots as JSON [{"x":n,"z":n,"dwell":ticks}], visited in order (dwell 0 makes a waypoint), so a route can
+// reach the deep Wilderness; PK_OBSERVE=1 only watches and logs (it still fights back when attacked). Every player seen
+// is logged as `HUNT seen` when first seen and whenever its verdict changes. openBot refuses a non-local server without DEMO_OK=1.
+import { existsSync } from 'node:fs';
+import type { Session } from '../packages/core/src/inprocess';
+import { loadOwners } from '../packages/core/src/fleet';
+import { sessionWalker, walkPath } from '../packages/core/src/walk';
+import { attackable, fightPlayer, ITEMS, nextTick, wildernessLevel, type FightResult, type Kit, type Style } from './pk';
+
+export const EDGEVILLE_BANK = { x: 3092, z: 3496 };
+// Wilderness levels 3-7 north of Edgeville, inside single-way combat (multiway.csv: east Wilderness starts at x 3136).
+export type Spot = { x: number; z: number; dwell?: number };
+export const HUNT_SPOTS: readonly Spot[] = [{ x: 3094, z: 3540 }, { x: 3100, z: 3556 }, { x: 3094, z: 3562 }];
+export const KIT_IDS = { mysticFireStaff: 1401, magicShortbow: 861, runeArrow: 892, dragonDaggerP: 1231, runeKiteshield: 1201 } as const;
+export const TRIBRID_KIT: Kit = { magic: [KIT_IDS.mysticFireStaff], ranged: [KIT_IDS.magicShortbow], melee: [KIT_IDS.dragonDaggerP, KIT_IDS.runeKiteshield] };
+// What a trip carries besides food: the switch weapons, Fire Wave runes (air, blood; the staff gives fire), two prayer
+// potions and a glory for the escape.
+export const TRIP: readonly { id: number; count: number }[] = [
+    { id: KIT_IDS.mysticFireStaff, count: 1 }, { id: KIT_IDS.magicShortbow, count: 1 },
+    { id: ITEMS.airRune, count: 300 }, { id: ITEMS.bloodRune, count: 60 }, { id: 2434, count: 2 }, { id: ITEMS.glory[0], count: 1 },
+] as const;
+
+// Never fight our own accounts: every fleet side's owners plus the main account.
+export function fleetNames(owners = loadOwners()): Set<string> {
+    return new Set([...owners.keys(), 'haggis'].map(n => n.toLowerCase()));
+}
+
+type Seen = { index: number; name: string; combatLevel: number; z: number; distance: number; inCombat?: boolean; combatTargetType?: string };
+// Why a seen player is or is not a target: a fleet account, outside the Wilderness combat range, already in a player
+// fight (single-way combat refuses a second attacker), or attackable.
+export function verdict(me: { z: number; combatLevel: number }, p: Seen, ours: Set<string>): 'fleet' | 'out of range' | 'busy' | 'attackable' {
+    if (ours.has(p.name.toLowerCase())) return 'fleet';
+    if (!attackable(me, p)) return 'out of range';
+    if (p.inCombat && p.combatTargetType === 'player') return 'busy';
+    return 'attackable';
+}
+// The player to fight: whoever is hitting us first, else the nearest attackable stranger who is not fighting someone else.
+export function pickTarget<P extends Seen>(me: { z: number; combatLevel: number }, players: readonly P[], ours: Set<string>, attackerIndex: number | null): P | undefined {
+    const attacker = attackerIndex === null ? undefined : players.find(p => p.index === attackerIndex);
+    if (attacker) return attacker;
+    return [...players].filter(p => verdict(me, p, ours) === 'attackable').sort((a, b) => a.distance - b.distance)[0];
+}
+
+// A hit we took from another player. The SDK also reports an NPC's damage from someone else as damage_taken, with
+// targetType npc and source index -1; those are not attacks on us.
+export const hitByPlayer = (e: { type: string; sourceType: string; targetType: string; sourceIndex: number }) =>
+    e.type === 'damage_taken' && e.sourceType === 'other_player' && e.targetType === 'player' && e.sourceIndex >= 0;
+
+const held = (s: Session, id: number) => s.sdk.getInventory().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+
+async function walk(s: Session, to: { x: number; z: number }, stop: () => boolean, maxTicks = 400) {
+    return walkPath(await sessionWalker(s), [{ ...to, tol: 2 }], { maxTicks, idleMs: 9000, stop });
+}
+
+// Bank everything but the worn set, then take the trip and the food.
+export async function restock(s: Session, food: number, trip: readonly { id: number; count: number }[] = TRIP): Promise<string | null> {
+    if (!(await s.bot.openBank()).success) return 'bank did not open';
+    for (const item of s.sdk.getInventory()) await s.bot.depositItem(item, -1);
+    const stock = () => s.bankObservation?.()?.items ?? [];
+    for (const want of [...trip, { id: ITEMS.shark, count: food }]) {
+        const row = s.sdk.getBankItems().find(b => b.id === want.id);
+        if (!row || row.count < want.count) { await s.bot.closeBank(); return `bank lacks ${want.count} of item ${want.id} (has ${stock().find(b => b.id === want.id)?.count ?? 0})`; }
+        await s.bot.withdrawItem(row, want.count, { asNote: false });
+    }
+    await s.bot.closeBank();
+    return held(s, ITEMS.shark) >= food ? null : 'food withdrawal short';
+}
+
+export type HuntOptions = { cap: number; food: number; minFood: number; escapeAt: number; stop: () => boolean; log?: (l: string) => void;
+    kit?: Kit; trip?: readonly { id: number; count: number }[]; damageSpell?: number; rotation?: Style[]; teleSpell?: number;
+    spots?: readonly Spot[]; observe?: boolean };
+export async function hunt(s: Session, o: HuntOptions) {
+    const log = o.log ?? ((l: string) => console.log(l)), start = s.tick(), ours = fleetNames();
+    const tally = { kills: 0, deaths: 0, escapes: 0, fights: 0, looted: 0, trips: 0 };
+    let ended = false;
+    void s.ended.then(() => { ended = true; });
+    const over = () => ended || o.stop() || s.tick() - start >= o.cap;
+    const kit = o.kit ?? TRIBRID_KIT, sighted = new Map<string, string>();
+    let spot = 0;
+    const far = () => { const p = s.sdk.getState()?.player; return !p || Math.max(Math.abs(p.worldX - EDGEVILLE_BANK.x), Math.abs(p.worldZ - EDGEVILLE_BANK.z)) > 60; };
+    if (far()) {
+        const glory = s.sdk.getInventory().find(i => (ITEMS.glory as readonly number[]).includes(i.id));
+        const position = () => { const p = s.sdk.getState()?.player; return p ? `${p.worldX},${p.worldZ}` : ''; };
+        if (glory) {
+            const op = glory.optionsWithIndex.find(x => /^Rub$/i.test(x.text));
+            if (op) await s.sdk.sendUseItem(glory.slot, op.opIndex);
+            for (let t = 0; t < 20 && far() && !over(); t++) {
+                await nextTick(s);
+                if (s.sdk.getState()?.dialog?.isOpen) await s.sdk.clickDialogByText(/^Edgeville/i);
+            }
+            if (far()) return { ...tally, end: 'glory to Edgeville failed' };
+        } else if (o.teleSpell !== undefined) {
+            const from = position();
+            await s.sdk.sendClickComponent(o.teleSpell);
+            for (let t = 0; t < 12 && position() === from && !over(); t++) await nextTick(s);
+            if (position() === from) return { ...tally, end: 'travel teleport did not move the account' };
+            const walked = await walk(s, EDGEVILLE_BANK, over, 600);
+            if (!walked.ok) return { ...tally, end: 'walk from the teleport to Edgeville failed ' + JSON.stringify(walked) };
+        } else return { ...tally, end: 'far from Edgeville with no glory or PK_TELE' };
+    }
+    while (!over()) {
+        if (held(s, ITEMS.shark) < o.minFood) {
+            const back = await walk(s, EDGEVILLE_BANK, over, 600);
+            if (!back.ok) return { ...tally, end: 'bank walk failed ' + JSON.stringify(back) };
+            const missing = await restock(s, o.food, o.trip);
+            if (missing) return { ...tally, end: missing };
+            tally.trips++;
+        }
+        const spots = o.spots ?? HUNT_SPOTS, here = spots[spot % spots.length]!;
+        const out = await walk(s, here, over);
+        spot++;
+        if (!out.ok && !over()) { log(`HUNT walk to spot failed ${JSON.stringify(out)}`); continue; }
+        // Wait at the spot for a target or an attacker.
+        let attackerIndex: number | null = null, seen = 0, foodReady = 0;
+        const waitUntil = s.tick() + (here.dwell ?? 60);
+        while (!over() && s.tick() < waitUntil) {
+            await nextTick(s);
+            const state = s.sdk.getState(), me = state?.player;
+            if (!state || !me) continue;
+            for (const e of state.combatEvents) if ((e.observationId ?? e.tick) > seen) { seen = e.observationId ?? e.tick; if (hitByPlayer(e)) attackerIndex = e.sourceIndex; }
+            // Heal between fights: eat while 20 or more under full, and start a fight only near full unless attacked.
+            const shark = state.inventory.find(i => i.id === ITEMS.shark);
+            if (me.hp <= me.maxHp - 20 && shark && s.tick() >= foodReady) {
+                const op = shark.optionsWithIndex.find(x => /^Eat$/i.test(x.text));
+                if (op) { void s.sdk.sendUseItem(shark.slot, op.opIndex); foodReady = s.tick() + 3; }
+            }
+            const self = { z: me.worldZ, combatLevel: me.combatLevel };
+            for (const p of state.nearbyPlayers) {
+                const v = verdict(self, p, ours);
+                if (sighted.get(p.name) === v) continue;
+                sighted.set(p.name, v);
+                log(`HUNT seen ${p.name} combat ${p.combatLevel} at ${p.x},${p.z} wild ${wildernessLevel(p.z)} ${v}${p.inCombat ? ` fighting ${p.combatTargetType}` : ''}`);
+            }
+            if (attackerIndex === null && (o.observe || me.hp < me.maxHp - 20)) continue;
+            const target = pickTarget(self, state.nearbyPlayers, ours, attackerIndex);
+            if (!target) continue;
+            log(`HUNT engage ${target.name} (combat ${target.combatLevel}) at ${target.x},${target.z}`);
+            tally.fights++;
+            const r: FightResult = await fightPlayer(s, target.name, { kit, escapeAt: o.escapeAt, escapeSpell: o.teleSpell, cap: 900, damageSpell: o.damageSpell, rotation: o.rotation, log });
+            log(`HUNT fight ${r.outcome} ${JSON.stringify(r)}`);
+            if (r.outcome === 'kill') {
+                tally.kills++; const n = await loot(s, r.targetAt ?? target, over); tally.looted += n;
+                log(`HUNT looted ${n} piles at ${JSON.stringify(r.targetAt ?? target)}`);
+            }
+            if (r.outcome === 'died') { tally.deaths++; return { ...tally, end: 'died' }; }
+            if (r.outcome === 'session ended') return { ...tally, end: 'session ended' };
+            if (r.outcome === 'escaped') { tally.escapes++; }
+            break;
+        }
+    }
+    return { ...tally, end: ended ? 'session ended' : o.stop() ? 'stopped' : 'cap' };
+}
+
+// Pick up what the loser dropped near where it stood, bones aside, while the inventory has room.
+async function loot(s: Session, at: { x: number; z: number }, stop: () => boolean): Promise<number> {
+    let taken = 0;
+    // The drop lands after the death animation: wait up to 10 ticks for the first pile.
+    const near = (g: { x: number; z: number; name: string }) => Math.max(Math.abs(g.x - at.x), Math.abs(g.z - at.z)) <= 3 && !/bones$/i.test(g.name);
+    for (let wait = 0; wait < 10 && !stop() && !(s.sdk.getState()?.groundItems ?? []).some(near); wait++) await nextTick(s);
+    for (let tries = 0; tries < 28 && !stop(); tries++) {
+        if (s.sdk.getInventory().length >= 28) break;
+        const pile = (s.sdk.getState()?.groundItems ?? []).filter(near)
+            .sort((a, b) => a.distance - b.distance)[0];
+        if (!pile) break;
+        const r = await s.bot.pickupItem(pile);
+        if (!r.success) break;
+        taken++;
+    }
+    return taken;
+}
+
+if (import.meta.main) {
+    const [bot, capArg] = process.argv.slice(2);
+    if (!bot) { console.log('usage: bun scripts/pk-hunt.ts <bot> [CAP ticks]'); process.exit(2); }
+    const { openBot, finish } = await import('../packages/core/src/bot');
+    const stop = () => existsSync(`.practice/stop-${bot}`) || existsSync('.practice/stop-pk-hunt');
+    const s = await openBot(bot);
+    const env = process.env;
+    const r = await hunt(s, { cap: Number(capArg ?? 6000), food: Number(env.HUNT_FOOD ?? 18), minFood: Number(env.MIN_FOOD ?? 6), escapeAt: Number(env.ESCAPE_AT ?? 35), stop,
+        kit: env.PK_KIT ? JSON.parse(env.PK_KIT) as Kit : undefined, trip: env.PK_TRIP ? JSON.parse(env.PK_TRIP) : undefined, damageSpell: env.PK_SPELL ? Number(env.PK_SPELL) : undefined,
+        rotation: env.PK_ROTATION ? env.PK_ROTATION.split(',') as Style[] : undefined, teleSpell: env.PK_TELE ? Number(env.PK_TELE) : undefined,
+        spots: env.PK_SPOTS ? JSON.parse(env.PK_SPOTS) as Spot[] : undefined, observe: env.PK_OBSERVE === '1' });
+    console.log('HUNT ' + JSON.stringify(r));
+    // A dropped session reports the swarm's drain wording (planner DRAIN_RESULT), not a hunt outcome.
+    if (r.end === 'session ended') await finish([s], false, 'session ended: disconnected');
+    await finish([s], r.end !== 'died' && !/failed|lacks|short|did not open/.test(r.end), `hunt ${r.end} kills ${r.kills}`);
+}

@@ -6,15 +6,16 @@ import { loadPathfinding } from './pathcache';
 import { planTrip, type BankStock } from './trip';
 import { createWorld, rsPathLength, type Account, type Tile, type World } from './world';
 
-export type PlanRequest = { id: number; from: Tile; to: Tile; acct: Account; stock?: BankStock };
+export type PlanRequest = { id: number; from: Tile; to: Tile; acct: Account; stock?: BankStock; budgetMs?: number };
 declare const self: { onmessage: ((e: MessageEvent<PlanRequest>) => void) | null; postMessage(m: unknown): void };
 
 let world: Promise<World> | null = null;
 self.onmessage = async e => {
-    const { id, from, to, acct, stock } = e.data;
+    const { id, from, to, acct, stock, budgetMs } = e.data;
     try {
         world ??= (async () => { await loadPathfinding(); return createWorld({ pathLength: await rsPathLength() }); })();
-        self.postMessage({ id, plan: planTrip(await world, from, to, acct, stock) });
+        const w = await world, deadline = budgetMs === undefined ? undefined : performance.now() + budgetMs;
+        self.postMessage({ id, plan: planTrip(w, from, to, acct, stock, undefined, undefined, { deadline }) });
     } catch (error) {
         self.postMessage({ id, error: String((error as Error)?.stack ?? error) });
     }

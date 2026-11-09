@@ -5,9 +5,11 @@
   "files": [
     "scripts/coin-courier.ts",
     "scripts/coin-courier.test.ts",
-    "packages/practice/src/coin-courier-proof.ts"
+    "packages/practice/src/coin-courier-proof.ts",
+    "packages/core/src/leg-cache.ts",
+    "packages/core/test/leg-cache.test.ts"
   ],
-  "consumer": "The receiver's bank gains exactly the amount and the giver's loses it; both log out.",
+  "consumer": "The receiver's bank gains exactly the amount and the giver's loses it; both log out. Existing run-courier-coincock-shaftmaker-magic55 transfers20000 coins for the connected finite rune orders and Magic55 consumer. Optional route-cache ENOSPC must not discard a computed route; required durable outputs retain their error handling.",
   "checks": [
     {
       "id": "coin-courier-regressions",
@@ -16,6 +18,7 @@
         "bun",
         "test",
         "scripts/coin-courier.test.ts",
+        "packages/core/test/leg-cache.test.ts",
         "--timeout",
         "10000"
       ],

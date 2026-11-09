@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test';
 import { join } from 'node:path';
-import { stalled, STALL_MS } from '../src/watchdog';
+import { publisherRepo, stalled, STALL_MS } from '../src/watchdog';
 import { launcherScript } from '../src/watchdog-install';
 import { improved, progressOf } from '../src/coverage';
 
@@ -25,4 +25,11 @@ test('the hidden launcher runs the watchdog with window style 0 from the repo', 
     const bun = join('C:', 'bun', 'bun.exe'), repo = join('F:', 'repo'), v = launcherScript(bun, repo);
     expect(v).toContain(`shell.CurrentDirectory = "${repo}"`);
     expect(v).toContain(`""${bun}"" ""${join(repo, 'packages', 'router', 'src', 'watchdog.ts')}""", 0, False`);
+});
+
+test('the publisher repository comes from the clone origin URL', () => {
+    expect(publisherRepo('https://github.com/Giftedx/rs-fleet-command.git\n')).toBe('Giftedx/rs-fleet-command');
+    expect(publisherRepo('git@github.com:Giftedx/rs-fleet-command')).toBe('Giftedx/rs-fleet-command');
+    expect(publisherRepo('https://example.com/a/b.git')).toBeNull();
+    expect(publisherRepo('')).toBeNull();
 });

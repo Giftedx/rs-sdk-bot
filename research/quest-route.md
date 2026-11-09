@@ -21,7 +21,7 @@ Dragon Slayer 466,250 + Holy Grail 382,500 (needs Merlin's Crystal, Attack 20) =
 - none: Waterfall, Tree Gnome Village, Fight Arena, Vampyre Slayer, Witch's House, Watchtower, Dragon Slayer (QP)
 - The Grand Tree: Agility 25 at the tree climb (`quest_grandtree/scripts/quest_grandtree.rs2`). Tree Gnome Village is not a verified prerequisite. Holy Grail: Merlin's Crystal, Attack 20.
 - The Dig Site: Agility 10, Herblore 10, Thieving 25. Temple of Ikov: Ranged 40, Thieving 42.
-- Underground Pass: Biohazard, Ranged 25. Regicide: Underground Pass, Agility 56, Crafting 10.
+- Underground Pass: Biohazard. Regicide: Underground Pass, Agility 56, Crafting 10.
 - Haunted Mine: Priest in Peril, Crafting 35. Eadgar's Ruse: Druidic Ritual, Troll Stronghold, Herblore 31.
 - Legends' Quest and Heroes' Quest: long chains; later.
 

@@ -2,7 +2,7 @@
 // AGI_MAX_LAPS=1000, AGI_MAX_TICKS=10000, AGI_PROGRESS_TICKS=150, AGI_ENTRY_TICKS=2000.
 // AGI_POTION=1 permits an owned potion for Wilderness entry. Server comes from openBot's account config.
 // AGI_ENTRY_TICKS bounds the whole entry, including the Draynor boat route to the Gnome course.
-// Source decision, 2026-10-28: measured agility-laps.ts course facts + pinned skill_agility scripts
+// Source decision: measured agility-laps.ts course facts + pinned skill_agility scripts
 // -> this order consumer. Adapt to observed per-obstacle effects and position-based restart;
 // do not import the measurement CLI (it logs in at module load). Acceptance belongs to agility-order-proof.
 import {basename} from 'node:path';
@@ -82,7 +82,7 @@ const food=/^(lobster|swordfish|shark|trout|salmon|tuna|shrimp|shrimps|cooked me
 // a discarded immediate re-eat is an inference, not an observed historical cause.
 export const EAT_DELAY_TICKS=2;
 export function eatReady(lastEffectTick:number,now:number){return now>lastEffectTick+EAT_DELAY_TICKS;}
-// Source decision, 2026-10-28 (build-agility-inflight-food-settlement-27): pinned OpHeldHandler.ts,
+// Source decision (build-agility-inflight-food-settlement-27): pinned OpHeldHandler.ts,
 // OpLocHandler.ts, PlayerOps.ts P_EXACTMOVE and wilderness_course.rs2 -> runAgility health().
 // While a course script holds p_delay, OpHeld returns without UNSET_MAP_FLAG: the eat is lost silently.
 // Each stepping-stone jump calls p_exactmove (unsetMapFlag) then p_delay(1). Delivery 1793230520845-UVgqj1
@@ -92,8 +92,8 @@ export function eatReady(lastEffectTick:number,now:number){return now>lastEffect
 // settled: same tile, anim -1 and no opRejected rise for quietTicks consecutive ticks. Ropeswing waits
 // p_delay(distance) without anim or movement, so quietTicks exceeds that pause. Unsettled within maxTicks fails.
 export const OBSTACLE_SETTLE={quietTicks:6,maxTicks:40};
-// Source decision, 2026-10-28: scripts/foodcourier.ts boats + courier-route.ts lanes -> Gnome entry.
-// The land path east of x 2760 crosses White Wolf Mountain (courier-route.ts: the 2026-10-25 death).
+// Source decision: scripts/foodcourier.ts boats + courier-route.ts lanes -> Gnome entry.
+// The land path east of x 2760 crosses White Wolf Mountain (courier-route.ts: the death).
 // A Draynor/Port Sarim start sails Port Sarim -> Musa Point, walks to Brimhaven, sails to Ardougne.
 // research/route-danger.ts: Draynor -> Wydin -> dock and Ardougne dock -> course have 0 aggressive
 // spawns in reach; Musa -> Brimhaven passes two level-14 scorpions and a level-5 snake, so a weak
@@ -103,7 +103,7 @@ export function gnomeEntry(p:Pos):'walk'|'draynor'|null{
  if(p.worldX<=2760)return 'walk';
  return p.worldX>=3000&&p.worldX<=3110&&p.worldZ>=3195&&p.worldZ<=3290?'draynor':null;
 }
-// Source decision, 2026-10-28 (build-agility-shop-approach-17): pinned m47_50.jm2 NPC 557 (Wydin) at 3014,3204,
+// Source decision (build-agility-shop-approach-17): pinned m47_50.jm2 NPC 557 (Wydin) at 3014,3204,
 // port_sarim.npc Trade op3 -> wydinstore, and scripts/shop-buyer.ts npcSpot -> this consumer. Adapt: the dock
 // end 3029,3217 does not observe Wydin, so openShop failed. The vendor pathfinder plans the dock -> 3015,3206
 // leg through the public east side; it never uses wydindoor 2069 (3012,3204, employee-only back room x<3012).
@@ -118,7 +118,7 @@ export function draynorFunds(coins:number,ownedFood:number){
  return coins>=need?null:`draynor entry needs ${need} carried coins for boat fares${ownedFood>0?'':' and food'}`;
 }
 type Point={x:number;z:number;tol?:number};
-// Source decision, 2026-10-28 (build-agility-public-entry-19): pinned SDK collision + gnome_gate.rs2 ->
+// Source decision (build-agility-public-entry-19): pinned SDK collision + gnome_gate.rs2 ->
 // course approach. The course lies in the closed Stronghold interior (level-0 flood fill x2369..2505,
 // z3385..3524). The retained 2494,3437 strip is outside gnomefence 1982, and every plan to 2474,3437 from
 // outside ends there. The public link is gnome_areagate 190 (m38_52 LOC 0 27 55 = 2459,3383, op1 Open):
@@ -127,7 +127,7 @@ type Point={x:number;z:number;tol?:number};
 // keeps her later Grand Tree help free. Pipes 154 and net 2286 are course obstacles, not an entrance.
 export const STRONGHOLD_GATE={id:190,x:2459,z:3383,south:{x:2461,z:3382},north:{x:2461,z:3385},
  femi:/^ok then\.?$/i,attempts:4,waitTicks:30,quietTicks:8,
- // Source decision, 2026-10-28 (femi-settlement-21): femi.rs2 grandtree_femi_boxes + agility.rs2
+ // Source decision (femi-settlement-21): femi.rs2 grandtree_femi_boxes + agility.rs2
  // forcewalk2/clipped_telewalk -> this gate consumer. After "Thanks traveller!" the server closes UI and runs
  // forcewalk2 to 0_38_52_29_52 (2461,3380): 1 delay, then 1 delay per tile (2 from 2461,3382), then 6
  // facesquare/anim delays before femi_help=2 and "Thanks again friend!". Retained CLI (agixavn07): UI closed
@@ -142,7 +142,7 @@ export function gnomeApproachRoute(plan:(from:{x:number;z:number},to:{x:number;z
  return reaches(p,G.south)&&reaches(G.north,start)?'gate':null;
 }
 export interface GateDeps{left:(label:string)=>void;live:()=>void;health:()=>Promise<void>}
-// Source decision, 2026-10-28 (femi-observation-20): pinned femi.rs2 final thanks + SDK
+// Source decision (femi-observation-20): pinned femi.rs2 final thanks + SDK
 // dialog-page.ts / clickDialogByText -> this entry consumer. Adapt guarded choice and
 // observed retirement; reject per-tick unguarded redispatch. Retained copies are negative
 // regressions. Native page/timing evidence belongs to the unchanged harness gates.
@@ -259,7 +259,7 @@ interface EntryTravelControls{
  left:(label:string)=>void;live:()=>void;health:()=>Promise<void>;
  low:()=>boolean;heals:()=>number;interrupted:()=>boolean;idleMs?:number;
 }
-// Source decision, 2026-10-28: sessionWalker + pinned collision/course rules ->
+// Source decision: sessionWalker + pinned collision/course rules ->
 // installed Agility entry. Preserve the actual walk result before any recovery;
 // an endpoint or onCourse bound is not entry proof. The Stronghold gate step
 // (crossStrongholdGate) precedes this walk when the course start is unreachable.

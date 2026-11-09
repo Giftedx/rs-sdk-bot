@@ -1,6 +1,38 @@
 import {expect,test} from 'bun:test';
-import {ironResult,ironSaveChecks,ironChildChecks,smithResult,smithSaveChecks,SMITH_ORDER,ADMISSION} from '../src/iron-progress-order-proof';
+import {ironResult,ironSaveChecks,ironChildChecks,smithResult,smithSaveChecks,SMITH_ORDER,ADMISSION,selectIronProofEndpoints,ironProofAccountEnv,startIronProofStack,childConfiguration} from '../src/iron-progress-order-proof';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
+
+test('owned endpoints reach the stack, new fixture and finite CLI child and restore the parent',async()=>{
+ const checked:number[]=[],samples=[0,0.01];
+ const p=selectIronProofEndpoints(port=>{checked.push(port);return port!==20003;},()=>samples.shift()!);
+ expect(checked).toEqual([20000,20001,20002,20003,20200,20201,20202,20203]);
+ expect(p.ports).toEqual({engine:20200,gateway:20201,management:20202,tcp:20203});
+ expect(p.instance).toMatch(/^iron-[a-z0-9-]{1,25}$/);
+ const original='SERVER=localhost:8888\r\nGATEWAY_URL=ws://localhost:7780\r\nPASSWORD=fixture\r\n';
+ const configured=ironProofAccountEnv(original,p);
+ expect(configured).toContain(`SERVER=${p.server}\r\n`);
+ expect(configured).toContain(`GATEWAY_URL=${p.gateway}\r\n`);
+ expect(configured).toContain('PASSWORD=fixture\r\n');
+ expect(()=>ironProofAccountEnv(original.replace('localhost:8888','rs-sdk-demo.fly.dev'),p)).toThrow('new practice account required');
+ const previous=Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]));
+ let calls=0,stops=0;
+ const owned={logs:{engine:'',gateway:''},stop:async()=>{stops++;}};
+ const stack=await startIronProofStack(p,async opts=>{
+  calls++;expect(opts).toEqual({ports:p.ports,instance:p.instance,tickMs:150,xpRate:25,readyTimeoutMs:60000});
+  for(const [k,v] of Object.entries(p.env))expect(process.env[k]).toBe(v);
+  return owned;
+ });
+ expect(calls).toBe(1);expect(stack).toBe(owned);await stack.stop();expect(stops).toBe(1);
+ expect(Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]))).toEqual(previous);
+ await expect(startIronProofStack(p,async()=>{throw Error('startup refused');})).rejects.toThrow('startup refused');
+ expect(Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]))).toEqual(previous);
+ const child=childConfiguration('fixture','anvil',{GATEWAY_URL:'ws://localhost:7780',WEB_MANAGEMENT_PORT:'8898',NODE_PORT:'43594'},p);
+ expect(child.cmd).toEqual(['bun','scripts/smelt-bars.ts','fixture','1600','iron']);
+ expect(child.env).toMatchObject({...p.env,GATEWAY_URL:p.gateway,DEMO_OK:'',RANDOM_EVENTS:'0',ORDER_ACTION:'smith',PRODUCT_ID:'1115',MAX_MAKE:'3',BAR_RESERVE:'334'});
+ expect(child.env.GE_DATABASE).toBe(`data/market-${p.instance}.sqlite`);
+ expect(child.windowsHide).toBe(true);
+ expect(()=>selectIronProofEndpoints(()=>false,()=>0)).toThrow('owned practice ports unavailable');
+});
 
 function fixture(){
  const before:any={position:{x:3252,z:3420,level:0},skills:Array.from({length:21},(_,index)=>({index,level:index===13?31:16,xp:100,rawExperience:1000})),vars:{},inventories:{93:[{id:1265,count:1},{id:315,count:2}],95:[{id:440,count:684},{id:995,count:24}]}};

@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { LUMBRIDGE_TO_DRAYNOR, draynorApproach, onKaramja, outboundStart } from './courier-route';
 
 test('a home trip that ended between the boats resumes on Karamja only', () => {
-    expect(onKaramja({ worldX: 2829, worldZ: 3190, level: 0 })).toBe(true); // Pocketpython, disconnected 2026-10-25
+    expect(onKaramja({ worldX: 2829, worldZ: 3190, level: 0 })).toBe(true); // Pocketpython, disconnected
     expect(onKaramja({ worldX: 2956, worldZ: 3146, level: 0 })).toBe(true); // Musa Point
     expect(onKaramja({ worldX: 2774, worldZ: 3228, level: 0 })).toBe(true); // Brimhaven dock
     expect(onKaramja({ worldX: 2956, worldZ: 3143, level: 1 })).toBe(false); // on the deck
@@ -24,7 +24,7 @@ const at = (worldX: number, worldZ: number, level = 0) => ({ worldX, worldZ, lev
 test('from either Ardougne bank the courier sails, whatever its pack coins', () => {
     expect(outboundStart(at(2654, 3283))).toBe('boat-south');
     expect(outboundStart(at(2650, 3290))).toBe('boat-south');
-    // 2026-10-25: this start took the land route over White Wolf Mountain and the courier died.
+    // this start took the land route over White Wolf Mountain and the courier died.
     expect(outboundStart(at(2619, 3332))).toBe('boat-north');
 });
 

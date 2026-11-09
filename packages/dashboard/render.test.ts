@@ -1,6 +1,51 @@
 import {test,expect} from 'bun:test';
 import {readFileSync} from 'node:fs';
 const html=readFileSync(process.env.DASH_PAGE || new URL('./index.html',import.meta.url),'utf8');
+
+function viewerReady(state:any,selected:string|null){
+ const code=html.slice(html.indexOf("window.addEventListener('message',e=>{"),html.indexOf('function syncWorld(){'));
+ const sent:any[]=[];let handler:any;const frame={postMessage:(m:any)=>sent.push(m)},window:any={...state,addEventListener:(_t:string,f:any)=>handler=f};
+ new Function('window','$','viewerMessage','viewerCanReveal','sel',`let VIEWER={origin:'http://test',state:'loading'},VIEWER_TIMER;const mode='3d',showViewerStatus=()=>{},viewerUnavailable=()=>{};${code}`)(window,()=>({contentWindow:frame}),()=>({state:'ready',privacyReady:true,renderReady:true}),()=>true,selected);
+ return {sent,ready:()=>handler({source:frame,origin:'http://test',data:{}})};
+}
+
+test('Free camera intent is replayed when the 3D frame becomes ready',()=>{
+ const v=viewerReady({atlasFreeCamera:true},null);v.ready();expect(v.sent).toEqual([{atlasFreeCamera:true}]);
+});
+
+test('a release for an offline account is replayed once when the 3D frame becomes ready',()=>{
+ const v=viewerReady({atlasFreeCamera:true},'Away');v.ready();v.ready();expect(v.sent).toEqual([{atlasFreeCamera:true}]);
+});
+
+test('a follow chosen during loading is replayed once when the 3D frame becomes ready',()=>{
+ const v=viewerReady({},'Worker');v.ready();v.ready();expect(v.sent).toEqual([{follow:'Worker'}]);
+});
+
+test('a chosen camera destination stays labelled as the destination, not the selected account position',()=>{
+ const code=html.slice(html.indexOf('function syncWorld(){'),html.indexOf('function chainHud(){'));
+ const follow={textContent:''};
+ new Function('$',`const S={bots:[{name:'Worker',at:1}]},sel='Worker',mode='2d',VIEWER={url:null},window={atlasFreeCamera:true,atlasDestination:{x:3200,z:3450}},age=()=>'old',showViewerStatus=()=>{};${code};syncWorld();`)(()=>follow);
+ expect(follow.textContent).toContain('3200, 3450');expect(follow.textContent).not.toContain('Worker');
+});
+test('following a visitor clears the free camera destination before rendering',()=>{
+ const code=html.slice(html.indexOf('window.atlasFollow3d='),html.indexOf('\n',html.indexOf('window.atlasFollow3d=')));
+ const sent:any[]=[];const window:any={atlasFreeCamera:true,atlasDestination:{x:3200,z:3450}};let rendered:any;
+ new Function('window','$','render',`const mode='3d',VIEWER={state:'ready',origin:'http://viewer'};${code}`)(window,()=>({contentWindow:{postMessage:(m:any)=>sent.push(m)}}),()=>rendered={free:window.atlasFreeCamera,destination:window.atlasDestination,following:window.atlasFollowOther});
+ expect(window.atlasFollow3d('Visitor')).toBe(true);
+ expect(rendered).toEqual({free:false,destination:null,following:'Visitor'});
+ expect(sent).toEqual([{follow:'Visitor'}]);
+});
+test('a shared visitor follow waits for the viewer and takes priority over the selected fleet account',()=>{
+ const code=html.slice(html.indexOf('window.atlasFollow3d='),html.indexOf('\n',html.indexOf('window.atlasFollow3d=')));
+ const sent:unknown[]=[];const window:any={atlasFreeCamera:true};
+ new Function('window','$','render',`const mode='2d',VIEWER={state:'checking'};${code}`)(window,()=>({contentWindow:{postMessage:(m:unknown)=>sent.push(m)}}),()=>{});
+ expect(window.atlasFollow3d('Visitor')).toBe(false);
+ expect(window.atlasFollow3d('Visitor',true)).toBe(true);
+ expect(sent).toEqual([]);
+ const viewer=viewerReady(window,'Worker');
+ viewer.ready();viewer.ready();
+ expect(viewer.sent).toEqual([{follow:'Visitor'}]);
+});
 const source=html.slice(html.indexOf('function chainHud(){'),html.indexOf("$('#chain').addEventListener"));
 for(const chain of [null,{cook:null,courier:null,farmers:[]},
     {cook:{name:'Cook',fresh:false,at:10},courier:null,farmers:[]},
@@ -66,10 +111,12 @@ function rosterFunctions(){return new Function('S','E','ago','sel','ocIcon',rost
 const stopProof={kind:'host-stop-cleanup',outcome:'proved',level:'local-native',workerOutcome:'fail',goalMet:false,scope:'four sent inputs settled; assets banked'};
 
 test('goal cards use current plan actions while preserving evidence metrics and unknown-plan fallback',()=>{
- const code=html.slice(html.indexOf('function goalMetrics(){'),html.indexOf('function goalCards(){'));
- const progress=Array.from({length:6},(_,i)=>({metric:`evidence${i}`,next:'historical action'}));
+ const code=html.slice(html.indexOf('function goalPlanFor('),html.indexOf('function goalCards(){'));
+ const titles=['Fleet & wealth','Collection & gear','Quests · unlocks · 99s','Specialist hiscores','Main Overall','Tick efficiency'];
+ const planTitles=['Wealth / logistics / GE','Gear / collection','Coverage','Specialist hiscores','Main Overall','Efficiency / visibility'];
+ const progress=titles.map((title,i)=>({title,metric:`evidence${i}`,next:'historical action'}));
  const run=new Function('S',code+';return goalMetrics();');
- const state={objectives:{available:true,progress,lanes:progress.map((_,i)=>({next:`current${i}`}))}};
+ const state={objectives:{available:true,progress,lanes:planTitles.map((title,i)=>({title,next:`current${i}`}))}};
  expect(run(state).map((g:any)=>g.next)).toEqual(progress.map((_,i)=>`current${i}`));
  expect(run(state).map((g:any)=>g.metric)).toEqual(progress.map(g=>g.metric));
  state.objectives.available=false;expect(run(state)[0].next).toBe('historical action');
@@ -78,6 +125,17 @@ test('goal cards use current plan actions while preserving evidence metrics and 
 
 test('dashboard commerce policy matches authorized GE use',()=>{
  expect(html).toContain('GE ENABLED · LIMIT ORDERS');expect(html).not.toContain('OWNED ONLY · NO GE');
+});
+
+test('host resources keep missing capacity and RAM headroom unknown',()=>{
+ const code=html.slice(html.indexOf('function inspect(){'),html.indexOf('function connectionState(){'));
+ const end=code.indexOf('\nfunction ',1),inspectCode=end<0?code:code.slice(0,end),procAt=html.indexOf('function procGroups('),procCode=html.slice(procAt,html.indexOf('\n',procAt));
+ const run=new Function('S',`${procCode};let view='machine',detailPages=1,detailPage=0,captured;const innerWidth=1280,document={querySelectorAll:()=>[]},box={},world={parentElement:null},$=s=>s==='#inspector'?box:s==='#world-panel'?world:{},machine=()=>S.sys,row=(label,value,tone)=>({label,value,tone}),pagedRows=rows=>{captured=rows},age=()=>'',observedAt=()=>false;${inspectCode};inspect();return captured;`);
+ const rows=run({capacity:{active:null,cap:null,fresh:false,headroomGB:null},sys:{freeGB:8,totalGB:32}});
+ expect(rows.find((r:any)=>r.label==='Bots running').value).toBe('? / ?');
+ expect(rows.find((r:any)=>r.label==='RAM headroom')).toEqual({label:'RAM headroom',value:'?',tone:'warn'});
+ const procs=run({capacity:null,sys:{freeGB:8,totalGB:32,procs:[{pid:7,script:'app.ts',mb:1380},{pid:8,script:'coordinator-cli.ts',mb:1000},{pid:9,script:'coordinator-cli.ts',mb:1048}]}}).slice(-2);
+ expect(procs.map((r:any)=>[r.label,r.value])).toEqual([['coordinator-cli.ts ×2','2,048 MB · 6.3%'],['app.ts','1,380 MB · 4.2% · 7']]);
 });
 
 test('dashboard inline JavaScript parses without running browser or making requests',()=>{
@@ -183,4 +241,22 @@ test('Runite inspector uses the known value-board record despite display-name di
     const run=new Function('S','chosenBoard','boardKey','specialistRows','pagedRows','row','E','age','nf','sgn',source+';boardView();');
     run({boards:[{board:'Runite',top:{name:'Leader',value:42}}],race:{rows:[{label:'Lava Maze Runite',rule:{kind:'value'}}]}},'Lava Maze Runite',(s:string)=>s.replace('Lava Maze ',''),()=>[],(r:string[])=>rows=r,(label:string,value:unknown)=>label+': '+value,String,()=>'? ',String,String);
     expect(rows).toContain('Record holder: Leader');expect(rows).toContain('Record time / value: 42');
+});
+
+function picked(bots:any[],state:any={}){
+ const code=html.slice(html.indexOf('function pick(n){'),html.indexOf('\n',html.indexOf('function pick(n){')));
+ const sent:any[]=[],window:any={atlasDestination:{x:1,z:2},atlasFollowOther:'Stranger',...state};
+ const run=new Function('S','window','$','render',`let sel='Old',picked=false,view='',detailPage=1,rswFor='Old';const mode='3d',VIEWER={origin:'http://viewer'};${code};return n=>{pick(n);return {sel,rswFor};};`)({bots},window,()=>({contentWindow:{postMessage:(m:any)=>sent.push(m)}}),()=>{});
+ return {run,sent,window};
+}
+
+test('pick follows an account in the world even when it was the last one chosen',()=>{
+ const p=picked([{name:'Old',inWorld:true}],{atlasFreeCamera:true});
+ expect(p.run('Old')).toEqual({sel:'Old',rswFor:null});
+ expect(p.window.atlasFreeCamera).toBe(false);expect(p.window.atlasFollowOther).toBeNull();expect(p.window.atlasDestination).toBeNull();expect(p.sent).toEqual([]);
+});
+
+test('pick releases the camera for an account that is not in the world, with no viewer reload',()=>{
+ const p=picked([{name:'Away',inWorld:false,pos:{x:3200,z:3200}}]);
+ expect(p.run('Away').sel).toBe('Away');expect(p.window.atlasFreeCamera).toBe(true);expect(p.sent).toEqual([{atlasFreeCamera:true}]);
 });

@@ -170,6 +170,44 @@ test('big fish: the net left the pack and lies near by, so pick it up', async ()
     w.stop();
 });
 
+test('an offered net with another net nearby never triggers pickup during or after trade', async () => {
+    for (const prior of ['none', 'disappearance', 'pickup'] as const) {
+        const f = fake({ ...base(3222, 3222), trade: { isOpen: false } });
+        const net = { slot: 0, id: 303, name: 'Small fishing net', count: 1 };
+        const nearby = { id: 303, name: 'Small fishing net', count: 1, x: 3223, z: 3222, distance: 1 };
+        f.state.inventory = [net];
+        const w = f.watch();
+        await f.step();
+        if (prior !== 'none') {
+            f.state.inventory = [];
+            if (prior === 'pickup') f.state.groundItems = [nearby];
+            await f.step();
+        }
+        const sentBeforeTrade = f.sent.length;
+        f.state.trade = { isOpen: true, screen: 'offer', myOffer: [net] };
+        f.state.inventory = [];
+        f.state.groundItems = [nearby];
+        await f.step(2);
+        f.state.trade.screen = 'confirm';
+        await f.step(2);
+        expect(f.sent.length).toBe(sentBeforeTrade);
+        expect(w.busy()).toBe(false);
+        // Completed trade: the offered net stays absent after both windows close.
+        f.state.trade = { isOpen: false };
+        await f.step(13);
+        expect(f.sent.length).toBe(sentBeforeTrade);
+        expect(f.lines.filter(l => l.includes('tool-dropped')).length).toBe(prior === 'pickup' ? 1 : 0);
+        // A later real loss still uses the refreshed inventory baseline.
+        f.state.inventory = [net];
+        await f.step();
+        f.state.inventory = [];
+        await f.step();
+        expect(f.sent.at(-1)).toMatchObject({ type: 'pickupItem', itemId: 303 });
+        expect(f.sent.length).toBe(sentBeforeTrade + 1);
+        w.stop();
+    }
+});
+
 test('strange box: the solver reads the models, and the job clicks the right answer', async () => {
     // centre red triangle (3063), side blue star (3083), top yellow circle (3079)
     expect(solveCube('What colour is the Star?', [3063, 3083, 3079])).toBe(1);

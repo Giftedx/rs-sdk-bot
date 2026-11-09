@@ -22,22 +22,28 @@ type Entry = {
     fail(why: string): Promise<never>;
 };
 // m40_51.jm2: loc_1533 at 0_40_51_5_8, angle 3. Collision has a
-// north/south wall between z=3271 and z=3272; distance alone cannot prove entry.
+// north/south wall between z=3271 and z=3272; distance alone cannot prove entry. Ceril wanders through his south
+// door: the talk starts from whichever side the client can path to him on, so a reachable Ceril ends the entry at any
+// stage, and a bot inside with Ceril outside goes back out through the door.
 export async function enterCerilHouse(q: Entry): Promise<void> {
     const reachable = () => q.lvl() === 0 && q.npc(/^ceril carnillean$/i)?.reachable === true;
     q.observeEntry?.('before');
-    if (q.near(2565, 3273, 0) && reachable()) return;
+    if (reachable()) return;
     await q.walk('Ceril exterior', [{x:2565,z:3271,tol:0}]);
     q.observeEntry?.('exterior');
+    if (reachable()) return;
     await q.openDoor('Ceril south door', 2565, 3272);
     q.observeEntry?.('door');
     await q.walk('Ceril interior', [{x:2565,z:3273,tol:0}]);
     q.observeEntry?.('interior');
-    if (!await q.waitUntil(() => { q.observeEntry?.('waiting'); return reachable(); }, 12)) {
-        q.observeEntry?.('deadline');
-        await q.probeEntry?.();
-        await q.fail('Ceril entry unreachable');
-    }
+    if (await q.waitUntil(() => { q.observeEntry?.('waiting'); return reachable(); }, 12)) return;
+    await q.openDoor('Ceril south door out', 2565, 3272);
+    await q.walk('Ceril exterior again', [{x:2565,z:3271,tol:0}]);
+    q.observeEntry?.('exterior again');
+    if (await q.waitUntil(() => { q.observeEntry?.('waiting outside'); return reachable(); }, 12)) return;
+    q.observeEntry?.('deadline');
+    await q.probeEntry?.();
+    await q.fail('Ceril entry unreachable');
 }
 
 const CERIL = { x: 2565, z: 3271 };
@@ -85,7 +91,8 @@ try {
             doors:q.locs().filter((l:any)=>l.x>=2563&&l.x<=2567&&l.z>=3269&&l.z<=3274),
             feedback:st?.opFeedback ?? null, dialog:q.s.sdk.getDialog()}));
     };
-    // Resume: holding Carnillean's armour means steps 1-4 are done (quest varps are not sent to the client).
+    // Resume: holding Carnillean's armour means steps 1-4 are done; otherwise Ceril's greeting names the stage (quest
+    // varps are not sent to the client): the start dialogue at 0, 'recovering my armour' at 2-3, 'had any luck yet' at 4.
     if (!q.has(ITEM.armour)) {
     await enterCerilHouse({...q, observeEntry, probeEntry:async()=>{
         const n=q.npc(/^ceril carnillean$/i);
@@ -99,8 +106,9 @@ try {
     q.milestone('house-entry');
     // Finite practice interruption at the real entry boundary. The next CLI run uses this save unchanged.
     if (process.env.Q_STOP_AFTER_ENTRY === '1') await q.fail('interrupted house entry');
-    // 1. Ceril: "What's wrong?", "Yes, of course, I'd be happy to help." sets 2.
-    await q.talk('ceril', /^ceril carnillean$/i, [/what's wrong/i, /yes, of course/i], () => q.sawText(/see what i can do/i), CERIL, 80);
+    // 1. Ceril: "What's wrong?", "Yes, of course, I'd be happy to help." sets 2; at 2-4 he only nags about the armour.
+    await q.talk('ceril', /^ceril carnillean$/i, [/what's wrong/i, /yes, of course/i], () => q.sawText(/see what i can do|recovering my armour|had any luck yet/i), CERIL, 80);
+    const clivetDone = q.sawText(/had any luck yet/i);
     q.milestone(2);
 
     // 2. The 5 sewer valves (sewervalve3 left, the rest right); each shows a mesbox.
@@ -112,22 +120,27 @@ try {
     }
     q.milestone('valves');
 
-    // 3. The cave; Clivet: "What do you mean?", "You're crazy, I'd never help you." sets 4 (good side); he leaves.
+    // 3. The cave; Clivet: "What do you mean?", "You're crazy, I'd never help you." sets 4 (good side); he leaves for
+    // his respawn (100 ticks), so a bot arriving behind another waits for him. At 4 he only taunts, so the talk is skipped.
     await q.walk('to cave', [{ x: CAVE.x, z: CAVE.z + 1, tol: 1 }]);
     await q.step('cave', () => q.opLoc(loc(CAVE), 1), () => z() > 9000, 10, 4);
-    await q.talk('clivet', /^clivet$/i, [/what do you mean/i, /you're crazy/i], () => q.sawText(/jumps onto the raft/i) || q.msgCount(/never find us/i) > 0, { x: 2566, z: 9683 }, 120);
-    await closeDlg();
+    if (!clivetDone) {
+        if (!q.npc(/^clivet$/i)) await q.waitUntil(() => !!q.npc(/^clivet$/i), 130);
+        await q.talk('clivet', /^clivet$/i, [/what do you mean/i, /you're crazy/i], () => q.sawText(/jumps onto the raft/i) || q.msgCount(/never find us/i) > 0, { x: 2566, z: 9683 }, 120);
+        await closeDlg();
+    }
     q.milestone(4);
 
     // 4. The raft to the hideout end, Alomone's talk turns him hostile; kill him, take the armour (6).
     await q.step('raft', () => q.opLoc(loc(RAFT), 1), () => q.near(2606, 9692, 4), 12, 4);
     await closeDlg();
     await q.talk('alomone', /^alomone$/i, [], () => q.sawText(/die!!!/i), { x: 2609, z: 9670 }, 40);
+    // Alomone (level 13) dies to a low-Attack account's bow or strike spells, not to its hands (q.attackNpc).
     const alo = (): any => q.npc(/^alomone$/i);
     for (let t = 0; t < 120 && !ground(ITEM.armour); t++) {
         await q.guard('alomone');
         const a = alo();
-        if (a && t % 4 === 0) await q.s.direct({ type: 'interactNpc', npcIndex: a.index, optionIndex: a.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
+        if (a && t % 4 === 0) await q.attackNpc(a);
         await q.waitTicks(1);
     }
     await q.step('armour', () => { const g = ground(ITEM.armour); return g ? q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' }) : q.waitTicks(1); }, () => q.has(ITEM.armour), 12, 6);

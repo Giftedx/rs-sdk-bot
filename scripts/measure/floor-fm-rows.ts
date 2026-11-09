@@ -1,6 +1,6 @@
 // Firemaking 1 -> 99 floor with no banking: a helper drops the logs on a planned path north of Draynor bank, and the
 // firemaker (tinderbox only) lights each log where it lies ([opobj4,_category_22] -> light_logs_ground).
-// Path (walk map from the rsmod pathfinder, 2026-10-23): row z=3248 west 3098 -> 3072, row 3249 east 3077 -> 3097,
+// Path (walk map from the rsmod pathfinder): row z=3248 west 3098 -> 3072, row 3249 east 3077 -> 3097,
 // row 3250 west 3098 -> 3078, then again from 3098,3248. A fire lasts 100-199 ticks (firemaking.rs2:121), so a row
 // is free again two rows later. Player drops show to others after 100 ticks (WorldConfig.ts:115) and last 300
 // (drop.rs2:22), so the helper stays 20-55 logs ahead of the firemaker.

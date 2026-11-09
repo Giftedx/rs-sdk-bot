@@ -13,11 +13,84 @@ import {initialState,addTasks,startTask,chooseTask,validateTask} from '../src/co
 import {atomicJson,saveState,loadState,runDirectory} from '../src/coordinator-store';
 import {readMergedPlan,coordinatorJobsPath,writeCoordinatorJobs,emptyCoordinatorJobs} from '../../core/src/coordinator-jobs';
 const jobOf=(base:string,account:string)=>readMergedPlan(base).jobs.find((j:any)=>(j.accounts??[j.account]).includes(account));
-import {reconcile} from '../src/coordinator-cli';
+import {claimCoordinatorState,pauseCoordinator,reconcile} from '../src/coordinator-cli';
 import {acceptProposal,parseModelObject} from '../src/coordinator-planner';
 import {replaceAssignments,prepareLiveRecovery,requestLiveRecovery,requestAuthenticatedRecovery,recoveryQualification,installJob,awaitControllerDrain,ensureSwarm,preserveCompletedLiveEnd} from '../src/coordinator-live';
 import type {CoordTask} from '../src/coordinator';
 const seed=()=>{const s=initialState();addTasks(s,[{id:'producer',goal:'skills',kind:'qualify',capability:'wine-order',dependsOn:[],priority:2,estimatedMs:1,why:'native producer'},{id:'consumer',goal:'gear',kind:'qualify',capability:'ammo-order',dependsOn:['producer'],priority:2,estimatedMs:1,why:'next useful consumer'}]);startTask(s,'producer',Date.now()-20000,'recovery-run');return s;};
+test('owner pause persists a receipt written during worker shutdown',async()=>{
+ const base=mkdtempSync(join(tmpdir(),'coord-pause-')),practice=join(base,'.practice'),dir=join(practice,'coordinator');
+ const state=initialState(),runId='blood-pause',taskId='run-blood';
+ addTasks(state,[
+  {id:taskId,goal:'main24',kind:'run',capability:'blood-chest-order',account:'Miner',accept:{bank:{565:1018}},dependsOn:[],priority:1,estimatedMs:1000,why:'bank runes'},
+  {id:'next-batch',goal:'main24',kind:'run',capability:'blood-chest-order',account:'Miner',accept:{bank:{565:1618}},dependsOn:[taskId],priority:1,estimatedMs:1000,why:'next batch'},
+  {id:'starting',goal:'skills',kind:'qualify',capability:'wine-order',dependsOn:[],priority:1,estimatedMs:1000,why:'not spawned yet'},
+ ]);
+ startTask(state,taskId,Date.now(),runId).pid=process.pid;
+ startTask(state,'starting',Date.now(),'starting-run');
+ const runDir=runDirectory(runId,dir);
+ saveState(state,dir);
+ const own=emptyCoordinatorJobs();
+ own.jobs.push({account:'Miner',script:'scripts/blood-chest.ts',enabled:true,coordinatorOwner:'coordinator',env:{COORDINATOR_RUN_ID:runId}});
+ writeCoordinatorJobs(base,own);
+ const stopFile=join(practice,'stop-coordinator');
+ writeFileSync(stopFile,'owner pause');
+ const receipt={taskId,runId,ok:false,at:Date.now(),output:null,error:'Error: coordinator stopped'};
+ const receiptFile=join(runDir,'receipt.json');
+ const worker=(async()=>{
+  const deadline=Date.now()+2000;
+  while(!existsSync(join(practice,'stop-Miner'))&&Date.now()<deadline)await Bun.sleep(10);
+  expect(JSON.parse(readFileSync(coordinatorJobsPath(base),'utf8')).jobs[0].enabled).toBe(false);
+  expect(existsSync(join(practice,'stop-Miner'))).toBe(true);
+  await Bun.sleep(50);
+  atomicJson(receiptFile,receipt);
+ })();
+ const pause=pauseCoordinator(state,base,async(pid,marker)=>{
+  expect(pid).toBe(process.pid);expect(marker).toBe(runId);
+  expect(existsSync(receiptFile)).toBe(true);
+  return true;
+ });
+ await Promise.all([worker,pause]);
+ const saved=loadState(dir);
+ expect(saved.tasks.map(row=>row.status)).toEqual(['failed','pending','failed']);
+ expect(saved.tasks[0]!.receipt).toEqual(receipt);
+ expect(saved.tasks[2]!.receipt?.error).toContain('worker ended without a receipt');
+ expect(readFileSync(stopFile,'utf8')).toBe('owner pause');
+ expect(chooseTask(saved,Date.now())).toBeNull();
+});
+test('owner pause reports a worker that could not be stopped without inventing a receipt',async()=>{
+ const base=mkdtempSync(join(tmpdir(),'coord-pause-')),dir=join(base,'.practice','coordinator');
+ const state=seed();
+ state.tasks[0]!.pid=process.pid;
+ mkdirSync(dir,{recursive:true});
+ saveState(state,dir);
+ await pauseCoordinator(state,base,async()=>false);
+ expect(loadState(dir).tasks[0]).toMatchObject({status:'running',runId:'recovery-run'});
+ expect(loadState(dir).tasks[0]!.receipt).toBeUndefined();
+ expect(JSON.parse(readFileSync(join(dir,'events.jsonl'),'utf8')).detail.unsettledRuns).toEqual(['recovery-run']);
+});
+test('concurrent coordinator starts leave exactly one owner',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'coord-owner-'));
+ const nonces=['start-a','start-b'];
+ const starts=await Promise.allSettled(nonces.map(nonce=>claimCoordinatorState(nonce,dir,()=>true)));
+ const winner=starts.findIndex(result=>result.status==='fulfilled');
+ expect(starts.filter(result=>result.status==='fulfilled')).toHaveLength(1);
+ expect(starts.find(result=>result.status==='rejected')?.reason.message).toMatch(/coordinator already owned/);
+ expect(JSON.parse(readFileSync(join(dir,'owner.json'),'utf8')).nonce).toBe(nonces[winner]);
+});
+test('a reload reads state written while its predecessor still owns the queue',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'coord-reload-'));
+ const state=initialState();
+ saveState(state,dir);
+ atomicJson(join(dir,'owner.json'),{pid:123,nonce:'old',at:1});
+ let alive=true;
+ const reload=claimCoordinatorState('reload-test',dir,()=>alive);
+ addTasks(state,[{id:'late',goal:'skills',kind:'qualify',capability:'wine-order',dependsOn:[],priority:2,estimatedMs:1,why:'late predecessor write'}]);
+ saveState(state,dir);
+ alive=false;
+ expect((await reload).tasks.map(task=>task.spec.id)).toEqual(['late']);
+ expect(JSON.parse(readFileSync(join(dir,'owner.json'),'utf8')).nonce).toBe('reload-test');
+});
 function recoveryFixture(){
  const base=mkdtempSync(join(tmpdir(),'live-repair-')),run='test-run',prac=join(base,'.practice');
  mkdirSync(join(prac,'status'),{recursive:true});mkdirSync(join(prac,'coordinator/runs',run),{recursive:true});
@@ -27,7 +100,7 @@ function recoveryFixture(){
  beginSessionAttempt({account:'Mightyrod',server:'rs-sdk-demo.fly.dev'},{root:join(prac,'session-lifecycle')}).record('ended','logged-out');
  const task:CoordTask={id:'pilot',goal:'gear',kind:'run',capability:'shark-supply-order',account:'Mightyrod',dependsOn:[],priority:1,estimatedMs:1,why:'finite pilot',repairs:[{account:'Mightyrod',endedAt:1}]};
  const deps={build:{delivery:{id:task.capability,stage:'delivered',ok:true,at:2,runtimeRevision:'new'}}};
- return{base,run,prac,task,deps,prepare:()=>prepareLiveRecovery(task,'Mightyrod','new.ts',run,'new',deps,base)};
+ return{base,run,prac,task,deps,prepare:()=>prepareLiveRecovery(task,'Mightyrod','new.ts',run,'new',deps,base,'new',{freeGB:64})};
 }
 function authenticatedFixture(){
  const f=recoveryFixture();f.task.sessionRecovery={account:'Mightyrod',endedAt:1};f.task.accept={counters:{cooked:25}};
@@ -112,22 +185,23 @@ test('rollout waits for a post-lock tick and never kills a child omitted by the 
  }
 });
 test('actual rollout handles lock/repair refusals and failed new-controller acknowledgement without open admission',async()=>{
- for(const scenario of ['lock','repair-lease','pending','processing','busy','source','paused','pause-before-spawn','pause-after-start','ack-failed','ack-unconfirmed','foreign-finally','success']){
+ for(const scenario of ['lock','repair-lease','pending','processing','busy','source','source-after-stop','source-after-ack','paused','pause-before-spawn','pause-after-start','ack-failed','ack-unconfirmed','foreign-finally','success']){
   const f=recoveryFixture(),dir=join(f.prac,'coordinator'),lock=join(dir,'build-lock.json'),lease=join(f.prac,'swarm-repair.json.lease'),ownerFile=join(dir,'swarm-owner.json');
   const old={pid:11,nonce:'old-controller',source:'old'},live=new Set([11]),events:string[]=[];let current='new';
   atomicJson(ownerFile,old);const foreign={pid:999,runId:'other-owner'};
   if(scenario==='lock')atomicJson(lock,foreign);if(scenario==='repair-lease')atomicJson(lease,foreign);
   if(scenario==='paused')writeFileSync(join(f.prac,'stop-swarm'),'owner pause');
   if(scenario==='pending'||scenario==='processing')writeFileSync(join(f.prac,'swarm-repair.json'+(scenario==='processing'?'.processing':'')),'owned request');
-  const deps={base:f.base,currentSource:()=>current,matches:(pid:number,_nonce:string)=>live.has(pid),pidExists:(pid:number)=>live.has(pid),processes:()=>[...live],rows:()=>[],now:()=>1000,
-   stop:async(pid:number,nonce:string)=>{events.push('stop:'+pid+':'+nonce);if(scenario==='ack-unconfirmed'&&pid===22)return false;live.delete(pid);return true;},
+  const deps={base:f.base,currentSource:()=>'new',diskSource:()=>current,matches:(pid:number,_nonce:string)=>live.has(pid),pidExists:(pid:number)=>live.has(pid),processes:()=>[...live],rows:()=>[],now:()=>1000,
+   stop:async(pid:number,nonce:string)=>{events.push('stop:'+pid+':'+nonce);if(scenario==='ack-unconfirmed'&&pid===22)return false;live.delete(pid);if(scenario==='source-after-stop'&&pid===11)current='changed';return true;},
    spawn:(_source:string,_nonce:string)=>{events.push('spawn');live.add(22);if(scenario==='foreign-finally')atomicJson(lock,foreign);return 22;},
    drain:async(owner:{pid:number},_after:number)=>{events.push('drain:'+owner.pid);if(scenario==='busy'&&owner.pid===11)throw Error('owned sessions');if(scenario==='source'&&owner.pid===11)current='changed';
+    if(scenario==='source-after-ack'&&owner.pid===22)current='changed';
     if(scenario==='pause-before-spawn'&&owner.pid===11||scenario==='pause-after-start'&&owner.pid===22)writeFileSync(join(f.prac,'stop-swarm'),'owner pause');
     if(['ack-failed','ack-unconfirmed'].includes(scenario)&&owner.pid===22)throw Error('new acknowledgement missing');}};
   const action=ensureSwarm('new',deps);
   if(['success','foreign-finally'].includes(scenario))await action;else await expect(action).rejects.toThrow();
-  if(['lock','repair-lease','pending','processing','busy','source','paused','pause-before-spawn'].includes(scenario))expect(events).not.toContain('spawn');
+  if(['lock','repair-lease','pending','processing','busy','source','source-after-stop','paused','pause-before-spawn'].includes(scenario))expect(events).not.toContain('spawn');
   if(scenario==='lock')expect(JSON.parse(readFileSync(lock,'utf8'))).toEqual(foreign);
   else if(scenario==='ack-unconfirmed'){
    expect(JSON.parse(readFileSync(lock,'utf8')).pid).toBe(22);expect(live.has(22)).toBe(true);
@@ -135,7 +209,7 @@ test('actual rollout handles lock/repair refusals and failed new-controller ackn
   }else if(scenario==='foreign-finally')expect(JSON.parse(readFileSync(lock,'utf8'))).toEqual(foreign);
   else expect(existsSync(lock)).toBe(false);
   if(scenario==='repair-lease')expect(JSON.parse(readFileSync(lease,'utf8'))).toEqual(foreign);else expect(existsSync(lease)).toBe(false);
-  if(scenario==='ack-failed'||scenario==='pause-after-start'){expect(live.has(22)).toBe(false);expect(existsSync(ownerFile)).toBe(false);expect(events.some(e=>e.startsWith('stop:22:'))).toBe(true);}
+  if(scenario==='ack-failed'||scenario==='pause-after-start'||scenario==='source-after-ack'){expect(live.has(22)).toBe(false);expect(existsSync(ownerFile)).toBe(false);expect(events.some(e=>e.startsWith('stop:22:'))).toBe(true);}
   if(scenario==='pending'||scenario==='processing')expect(readFileSync(join(f.prac,'swarm-repair.json'+(scenario==='processing'?'.processing':'')),'utf8')).toBe('owned request');
  }
 });
@@ -164,7 +238,7 @@ test('successful preflight parks the failed assignment and retains its evidence 
 test('same-script death repair refuses before spending the failure or disabling the old assignment',()=>{
  const f=recoveryFixture(),path=join(f.base,'swarm.json'),before=readFileSync(path,'utf8');
  atomicJson(join(f.prac,'swarm-deaths.json'),{Mightyrod:{at:1,reason:'died',revision:JSON.stringify(['old.ts',false,['mightyrod'],[]])}});
- expect(()=>prepareLiveRecovery(f.task,'Mightyrod','./old.ts',f.run,'new',f.deps,f.base)).toThrow('same-script');
+ expect(()=>prepareLiveRecovery(f.task,'Mightyrod','./old.ts',f.run,'new',f.deps,f.base,'new',{freeGB:64})).toThrow('same-script');
  expect(readFileSync(path,'utf8')).toBe(before);expect(loadEnded(join(f.prac,'swarm-deaths.json')).get('Mightyrod')?.at).toBe(1);
 });
 
@@ -174,7 +248,7 @@ for(const reason of ['blocked after 1 runs','gave-up after 1 runs'])test('qualif
  atomicJson(join(f.prac,'status/Mightyrod.json'),{name:'Mightyrod',server:'rs-sdk-demo.fly.dev',result:'fail prior job'});
  atomicJson(join(f.prac,'swarm-deaths.json'),{Mightyrod:{at:1,reason,revision:JSON.stringify(['old.ts',false,['mightyrod'],[]])}});
  const owner=readFileSync(path,'utf8');
- expect(()=>prepareLiveRecovery(f.task,'Mightyrod','old.ts',f.run,'new',f.deps,f.base)).not.toThrow();
+ expect(()=>prepareLiveRecovery(f.task,'Mightyrod','old.ts',f.run,'new',f.deps,f.base,'new',{freeGB:64})).not.toThrow();
  expect(readFileSync(path,'utf8')).toBe(owner);expect(loadEnded(join(f.prac,'swarm-deaths.json')).get('Mightyrod')?.at).toBe(1);
  expect(jobOf(f.base,'Mightyrod').enabled).toBe(false);expect(jobOf(f.base,'Other').enabled).toBe(true);
  expect(()=>installJob(f.task,'Mightyrod','old.ts',f.run,'new',f.deps,{base:f.base,freeGB:64})).toThrow('recovery');
@@ -188,7 +262,7 @@ test('a qualified five-actor non-death repair checks every exact end and keeps a
  for(const name of names){atomicJson(join(f.prac,'status',name+'.json'),{name,server:'rs-sdk-demo.fly.dev',result:'fail prior composed job'});beginSessionAttempt({account:name,server:'rs-sdk-demo.fly.dev'},{root:join(f.prac,'session-lifecycle')}).record('ended','logged-out');}
  delete f.task.account;f.task.participants=names;f.task.repairs=names.map((account,i)=>({account,endedAt:i+1}));f.deps.build.delivery.at=10;
  const owner=readFileSync(path,'utf8');
- expect(()=>prepareLiveRecovery(f.task,names[0]!,'old.ts',f.run,'new',f.deps,f.base)).not.toThrow();
+ expect(()=>prepareLiveRecovery(f.task,names[0]!,'old.ts',f.run,'new',f.deps,f.base,'new',{freeGB:64})).not.toThrow();
  expect(readFileSync(path,'utf8')).toBe(owner);expect(Object.fromEntries(loadEnded(join(f.prac,'swarm-deaths.json')))).toEqual(ends);
  expect(names.every(name=>jobOf(f.base,name).enabled===false)).toBe(true);
  expect(()=>installJob(f.task,names[0]!,'old.ts',f.run,'new',f.deps,{base:f.base,freeGB:64})).toThrow('participant assignment is not confirmed complete');
@@ -204,7 +278,7 @@ for(const invalid of ['stale','failed','foreign capability','wrong source','unco
  if(invalid==='wrong source')f.deps.build.delivery.runtimeRevision='old';
  if(invalid==='unconfirmed logout')beginSessionAttempt({account:'Mightyrod',server:'rs-sdk-demo.fly.dev'},{root:join(f.prac,'session-lifecycle')});
  const owner=readFileSync(path,'utf8');
- expect(()=>prepareLiveRecovery(f.task,'Mightyrod','old.ts',f.run,'new',f.deps,f.base)).toThrow(invalid==='unconfirmed logout'?'logout':'fresh post-failure');
+ expect(()=>prepareLiveRecovery(f.task,'Mightyrod','old.ts',f.run,'new',f.deps,f.base,'new',{freeGB:64})).toThrow(invalid==='unconfirmed logout'?'logout':'fresh post-failure');
  expect(readFileSync(path,'utf8')).toBe(owner);expect(loadEnded(join(f.prac,'swarm-deaths.json')).get('Mightyrod')?.at).toBe(1);
 });
 test('a recovery timeout fails, cancels its own unclaimed request and never writes controller end state',async()=>{
@@ -290,7 +364,7 @@ test('a detached-run controller rolls over without drain or pause, and is stoppe
  const f = recoveryFixture(), dir = join(f.prac, 'coordinator'), ownerFile = join(dir, 'swarm-owner.json');
  atomicJson(ownerFile, { pid: 11, nonce: 'old-controller', source: 'old', swarmSource: 'stale', detached: true });
  const live = new Set([11]), events: string[] = [];
- const deps = { base: f.base, currentSource: () => 'new', matches: (pid: number) => live.has(pid), pidExists: (pid: number) => live.has(pid), processes: () => [...live], now: () => 1000,
+ const deps = { base: f.base, currentSource: () => 'new', diskSource: () => 'new', matches: (pid: number) => live.has(pid), pidExists: (pid: number) => live.has(pid), processes: () => [...live], now: () => 1000,
   rows: () => [{ server: 'rs-sdk-demo.fly.dev', name: 'Busy', at: 1000 }],
   stop: async () => { events.push('tree-stop'); return true; },
   stopOne: async (pid: number) => { events.push('stop-one:' + pid); live.delete(pid); return true; },
@@ -306,15 +380,15 @@ test('a detached-run controller rolls over without drain or pause, and is stoppe
 test('a run rolls a controller whose release differs from its source; a standing check reuses it', async () => {
  const f = recoveryFixture(), dir = join(f.prac, 'coordinator'), ownerFile = join(dir, 'swarm-owner.json');
  atomicJson(ownerFile, { pid: 11, nonce: 'old-controller', source: 'old', swarmSource: 'stale', detached: true });
- const live = new Set([11]), events: string[] = [];let next = 22;
- const deps = { base: f.base, currentSource: () => 'new', matches: (pid: number) => live.has(pid), pidExists: (pid: number) => live.has(pid), processes: () => [...live], now: () => 1000,
+ const live = new Set([11]), events: string[] = [];let next = 22,source='new';
+ const deps = { base: f.base, currentSource: () => source, diskSource: () => source, matches: (pid: number) => live.has(pid), pidExists: (pid: number) => live.has(pid), processes: () => [...live], now: () => 1000,
   rows: () => [],
   stopOne: async (pid: number) => { events.push('stop-one:' + pid); live.delete(pid); return true; },
   spawn: () => { const pid = next++; events.push('spawn:' + pid); live.add(pid); return pid; },
   ack: async () => {} };
  await ensureSwarm('new', deps as any);
  atomicJson(join(dir, 'rollout-backoff.json'), { until: 5000 });
- deps.currentSource = () => 'newer';
+ source = 'newer';
  events.length = 0;
  await ensureSwarm('newer', deps as any, false);
  expect(events).toEqual([]);

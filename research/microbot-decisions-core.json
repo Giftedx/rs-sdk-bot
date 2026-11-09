@@ -1,0 +1,1235 @@
+[
+  {
+    "name": "AlwaysOnPlugins.java",
+    "decision": "client-only",
+    "behaviour": "Locks required Java plugins in the RuneLite plugin manager.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/AlwaysOnPlugins.java",
+        "line": 5,
+        "claim": "Locks required Java plugins in the RuneLite plugin manager."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "BlockingEvent.java",
+    "decision": "reuse",
+    "behaviour": "Blocker interface maps to observed predicates and abortable checked actions.",
+    "localConsumers": [
+      "packages/core/src/act.ts",
+      "packages/core/src/randomevents.ts"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/BlockingEvent.java",
+        "line": 11,
+        "claim": "Blocker interface maps to observed predicates and abortable checked actions."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+  },
+  {
+    "name": "BlockingEventManager.java",
+    "decision": "reuse",
+    "behaviour": "Prioritized blocking events map to random-event ownership and reflex cancellation.",
+    "localConsumers": [
+      "packages/core/src/randomevents.ts",
+      "packages/core/src/reflex.ts"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/BlockingEventManager.java",
+        "line": 22,
+        "claim": "Prioritized blocking events map to random-event ownership and reflex cancellation."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+  },
+  {
+    "name": "BlockingEventPriority.java",
+    "decision": "reuse",
+    "behaviour": "Priority enum is client scheduling metadata. Existing action and reflex ownership supplies this behaviour.",
+    "localConsumers": [
+      "packages/core/src/act.ts",
+      "packages/core/src/reflex.ts"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/BlockingEventPriority.java",
+        "line": 8,
+        "claim": "Priority enum is client scheduling metadata. Existing action and reflex ownership supplies this behaviour."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+  },
+  {
+    "name": "GameChatAppender.java",
+    "decision": "client-only",
+    "behaviour": "Logback chat-panel appender. No server gameplay action.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/GameChatAppender.java",
+        "line": 15,
+        "claim": "Logback chat-panel appender. No server gameplay action."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "HwidSpoofCheck.java",
+    "decision": "client-only",
+    "behaviour": "RuneLite hardware-identity check. The SDK has its own login transport.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/HwidSpoofCheck.java",
+        "line": 1,
+        "claim": "RuneLite hardware-identity check. The SDK has its own login transport."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "IScript.java",
+    "decision": "reuse",
+    "behaviour": "Java script lifecycle interface maps to a finite async worker, session and finish.",
+    "localConsumers": [
+      "packages/core/src/bot.ts",
+      "packages/core/src/inprocess.ts"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/IScript.java",
+        "line": 11,
+        "claim": "Java script lifecycle interface maps to a finite async worker, session and finish."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/IScript.java",
+        "decision": "reuse",
+        "consumer": "packages/core/src/bot.ts, packages/core/src/inprocess.ts",
+        "gap": ""
+      }
+    ],
+    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+  },
+  {
+    "name": "InputSelector.java",
+    "decision": "client-only",
+    "behaviour": "AWT mouse/keyboard input selection. Structured SDK commands bypass desktop input.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/InputSelector.java",
+        "line": 11,
+        "claim": "AWT mouse/keyboard input selection. Structured SDK commands bypass desktop input."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "Microbot.java",
+    "decision": "reuse",
+    "behaviour": "Global Java client services map to the per-session SDK, world and action owners.",
+    "localConsumers": [
+      "packages/core/src/bot.ts",
+      "packages/core/src/inprocess.ts"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/Microbot.java",
+        "line": 95,
+        "claim": "Global Java client services map to the per-session SDK, world and action owners."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+  },
+  {
+    "name": "MicrobotApi.java",
+    "decision": "client-only",
+    "behaviour": "External-plugin access annotation and Java visibility contract.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/MicrobotApi.java",
+        "line": 40,
+        "claim": "External-plugin access annotation and Java visibility contract."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "MicrobotClientConfigLoader.java",
+    "decision": "client-only",
+    "behaviour": "Loads RuneLite client configuration.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/MicrobotClientConfigLoader.java",
+        "line": 1,
+        "claim": "Loads RuneLite client configuration."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "MicrobotClientLoader.java",
+    "decision": "client-only",
+    "behaviour": "Loads and injects the RuneLite Java applet.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/MicrobotClientLoader.java",
+        "line": 50,
+        "claim": "Loads and injects the RuneLite Java applet."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "MicrobotConfig.java",
+    "decision": "client-only",
+    "behaviour": "RuneLite settings UI configuration interface.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/MicrobotConfig.java",
+        "line": 14,
+        "claim": "RuneLite settings UI configuration interface."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "MicrobotConfigManager.java",
+    "decision": "client-only",
+    "behaviour": "RuneLite configuration persistence and migration.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/MicrobotConfigManager.java",
+        "line": 15,
+        "claim": "RuneLite configuration persistence and migration."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "MicrobotOverlay.java",
+    "decision": "client-only",
+    "behaviour": "RuneLite overlay paint surface.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/MicrobotOverlay.java",
+        "line": 23,
+        "claim": "RuneLite overlay paint surface."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "MicrobotPlugin.java",
+    "decision": "client-only",
+    "behaviour": "Java plugin bootstrap and lifecycle wiring. Native workers run through the existing session owner.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/MicrobotPlugin.java",
+        "line": 95,
+        "claim": "Java plugin bootstrap and lifecycle wiring. Native workers run through the existing session owner."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "MicrobotRSAppletStub.java",
+    "decision": "client-only",
+    "behaviour": "AppletStub adapter for the RuneLite JVM client.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/MicrobotRSAppletStub.java",
+        "line": 1,
+        "claim": "AppletStub adapter for the RuneLite JVM client."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "MicrobotRSConfig.java",
+    "decision": "client-only",
+    "behaviour": "Java game applet configuration keys.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/MicrobotRSConfig.java",
+        "line": 34,
+        "claim": "Java game applet configuration keys."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "MicrobotTeeInputStream.java",
+    "decision": "client-only",
+    "behaviour": "Java stream tee plumbing.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/MicrobotTeeInputStream.java",
+        "line": 1,
+        "claim": "Java stream tee plumbing."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "MicrobotVersionChecker.java",
+    "decision": "client-only",
+    "behaviour": "Microbot release/version check.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/MicrobotVersionChecker.java",
+        "line": 22,
+        "claim": "Microbot release/version check."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "RandomFactClient.java",
+    "decision": "client-only",
+    "behaviour": "Fetches random facts for client presentation. No gameplay product.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/RandomFactClient.java",
+        "line": 17,
+        "claim": "Fetches random facts for client presentation. No gameplay product."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "Script.java",
+    "decision": "reuse",
+    "behaviour": "Scheduled lifecycle, stop and interruption map to session lifecycle and tick waits.",
+    "localConsumers": [
+      "packages/core/src/bot.ts",
+      "packages/core/src/ticks.ts",
+      "packages/core/src/session-lifecycle.ts"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/Script.java",
+        "line": 34,
+        "claim": "Scheduled lifecycle, stop and interruption map to session lifecycle and tick waits."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/Script.java",
+        "decision": "reuse",
+        "consumer": "packages/core/src/bot.ts, packages/core/src/ticks.ts, packages/core/src/session-lifecycle.ts",
+        "gap": ""
+      }
+    ],
+    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+  },
+  {
+    "name": "ScriptStarted.java",
+    "decision": "reuse",
+    "behaviour": "Script-start event maps to worker status and session admission.",
+    "localConsumers": [
+      "packages/core/src/status.ts",
+      "packages/core/src/session-admission.ts"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/ScriptStarted.java",
+        "line": 7,
+        "claim": "Script-start event maps to worker status and session admission."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+  },
+  {
+    "name": "WorldSupplier.java",
+    "decision": "client-only",
+    "behaviour": "Supplies OSRS world-list data. Native server selection comes from the account configuration.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/WorldSupplier.java",
+        "line": 1,
+        "claim": "Supplies OSRS world-list data. Native server selection comes from the account configuration."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "accountselector",
+    "decision": "reuse",
+    "behaviour": "Profile login/logout ownership is supplied by openBot, admission and confirmed logout.",
+    "localConsumers": [
+      "packages/core/src/bot.ts",
+      "packages/core/src/session-admission.ts",
+      "packages/core/src/logout.ts"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/accountselector/AutoLoginScript.java",
+        "line": 29,
+        "claim": "Profile login/logout ownership is supplied by openBot, admission and confirmed logout."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/accountselector/AutoLoginConfig.java",
+        "line": 12,
+        "claim": "Profile login/logout ownership is supplied by openBot, admission and confirmed logout."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/accountselector/AutoLoginPlugin.java",
+        "line": 32,
+        "claim": "Profile login/logout ownership is supplied by openBot, admission and confirmed logout."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/accountselector/AutoLoginScript.java",
+        "decision": "reuse",
+        "consumer": "packages/core/src/bot.ts, packages/core/src/session-admission.ts, packages/core/src/logout.ts",
+        "gap": ""
+      }
+    ],
+    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+  },
+  {
+    "name": "agentserver",
+    "decision": "reuse",
+    "behaviour": "Java deployed-script lifecycle and observe/act HTTP surface map to existing TypeScript workers and coordinator.",
+    "localConsumers": [
+      "packages/router/src/coordinator-cli.ts",
+      "packages/core/src/inprocess.ts",
+      "scripts/swarm.ts"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/agentserver/scripting/DeployedScript.java",
+        "line": 14,
+        "claim": "Java deployed-script lifecycle and observe/act HTTP surface map to existing TypeScript workers and coordinator."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/agentserver/AgentServerConfig.java",
+        "line": 9,
+        "claim": "Java deployed-script lifecycle and observe/act HTTP surface map to existing TypeScript workers and coordinator."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/agentserver/AgentServerPlugin.java",
+        "line": 56,
+        "claim": "Java deployed-script lifecycle and observe/act HTTP surface map to existing TypeScript workers and coordinator."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/agentserver/scripting/DeployedScript.java",
+        "decision": "reuse",
+        "consumer": "packages/router/src/coordinator-cli.ts, packages/core/src/inprocess.ts, scripts/swarm.ts",
+        "gap": ""
+      }
+    ],
+    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+  },
+  {
+    "name": "alerts",
+    "decision": "reuse",
+    "behaviour": "Local alert state and failure reports map to worker status; external Discord/Telegram delivery is outside gameplay port scope.",
+    "localConsumers": [
+      "packages/core/src/status.ts"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/alerts/AlertEvent.java",
+        "line": 17,
+        "claim": "Local alert state and failure reports map to worker status; external Discord/Telegram delivery is outside gameplay port scope."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/alerts/BotAlertStatus.java",
+        "line": 8,
+        "claim": "Local alert state and failure reports map to worker status; external Discord/Telegram delivery is outside gameplay port scope."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+  },
+  {
+    "name": "api",
+    "decision": "reuse",
+    "behaviour": "Entity query/filter snapshots map to observed SDK entities. Java Queryable cache classes are not dependencies.",
+    "localConsumers": [
+      "vendor/rs-sdk/sdk/index.ts",
+      "vendor/rs-sdk/sdk/types.ts"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/api/AbstractEntityQueryable.java",
+        "line": 16,
+        "claim": "Entity query/filter snapshots map to observed SDK entities. Java Queryable cache classes are not dependencies."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/api/IEntity.java",
+        "line": 8,
+        "claim": "Entity query/filter snapshots map to observed SDK entities. Java Queryable cache classes are not dependencies."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+  },
+  {
+    "name": "breakhandler",
+    "decision": "reuse",
+    "behaviour": "Bounded jobs, stop handling, cooldown and logout ownership replace Java scheduled breaks and auto-login.",
+    "localConsumers": [
+      "scripts/swarm.ts",
+      "packages/core/src/logout.ts",
+      "packages/core/src/session-lifecycle.ts"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/breakhandler/BreakHandlerScript.java",
+        "line": 53,
+        "claim": "Bounded jobs, stop handling, cooldown and logout ownership replace Java scheduled breaks and auto-login."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/breakhandler/breakhandlerv2/BreakHandlerV2Script.java",
+        "line": 38,
+        "claim": "Bounded jobs, stop handling, cooldown and logout ownership replace Java scheduled breaks and auto-login."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/breakhandler/BreakHandlerConfig.java",
+        "line": 13,
+        "claim": "Bounded jobs, stop handling, cooldown and logout ownership replace Java scheduled breaks and auto-login."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/breakhandler/BreakHandlerOverlay.java",
+        "line": 19,
+        "claim": "Bounded jobs, stop handling, cooldown and logout ownership replace Java scheduled breaks and auto-login."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/breakhandler/BreakHandlerScript.java",
+        "decision": "reuse",
+        "consumer": "scripts/swarm.ts, packages/core/src/logout.ts, packages/core/src/session-lifecycle.ts",
+        "gap": ""
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/breakhandler/breakhandlerv2/BreakHandlerV2Script.java",
+        "decision": "reuse",
+        "consumer": "scripts/swarm.ts, packages/core/src/logout.ts, packages/core/src/session-lifecycle.ts",
+        "gap": ""
+      }
+    ],
+    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+  },
+  {
+    "name": "configs",
+    "decision": "client-only",
+    "behaviour": "Shared Java settings definitions, including special-attack configuration. Actual gameplay special-attack support belongs to the relevant Hub worker review.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/configs/SpecialAttackConfigs.java",
+        "line": 19,
+        "claim": "Shared Java settings definitions, including special-attack configuration. Actual gameplay special-attack support belongs to the relevant Hub worker review."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "diagnostics",
+    "decision": "reuse",
+    "behaviour": "Flight recorder and failure capture map to tick records, status and replay.",
+    "localConsumers": [
+      "packages/core/src/tick-record.ts",
+      "packages/core/src/replay.ts",
+      "packages/core/src/status.ts"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/diagnostics/BugReportCollector.java",
+        "line": 57,
+        "claim": "Flight recorder and failure capture map to tick records, status and replay."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/diagnostics/BugReportReceipt.java",
+        "line": 6,
+        "claim": "Flight recorder and failure capture map to tick records, status and replay."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+  },
+  {
+    "name": "externalplugins",
+    "decision": "client-only",
+    "behaviour": "Java JAR plugin hub discovery, installation, loading and signing. TypeScript source is delivered through the repository pipeline.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/externalplugins/MicrobotPluginClient.java",
+        "line": 54,
+        "claim": "Java JAR plugin hub discovery, installation, loading and signing. TypeScript source is delivered through the repository pipeline."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/externalplugins/MicrobotPluginHealth.java",
+        "line": 22,
+        "claim": "Java JAR plugin hub discovery, installation, loading and signing. TypeScript source is delivered through the repository pipeline."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "globval",
+    "decision": "client-only",
+    "behaviour": "OSRS widget indices/constants. Native interface IDs come from the pinned interface pack.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/globval/GlobalWidgetInfo.java",
+        "line": 11,
+        "claim": "OSRS widget indices/constants. Native interface IDs come from the pinned interface pack."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/globval/WidgetIndices.java",
+        "line": 3,
+        "claim": "OSRS widget indices/constants. Native interface IDs come from the pinned interface pack."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "inventorysetups",
+    "decision": "partial",
+    "behaviour": "Donor compact and portable inventory setups compile through explicit donor-to-native item bindings into the existing finite owned-kit validator and loadout worker.",
+    "localConsumers": [
+      "packages/planner/src/requirements.ts",
+      "scripts/preparation-report.ts",
+      "scripts/microbot-loadout-import.ts",
+      "scripts/microbot-owned-loadout.ts"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/inventorysetups/Bolts.java",
+        "line": 14,
+        "claim": "Loadout persistence and item alternatives map to native preparation requirements. OSRS presets and cache IDs require translation."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/inventorysetups/ConfigInventorySetupDataManager.java",
+        "line": 19,
+        "claim": "Loadout persistence and item alternatives map to native preparation requirements. OSRS presets and cache IDs require translation."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/inventorysetups/serialization/InventorySetupItemSerializableTypeAdapter.java",
+        "line": 25,
+        "claim": "Compact serialization writes explicit id, optional quantity, fuzzy/comparator/locked fields and slot; native compilation requires explicit item bindings and supported exact-count semantics."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/inventorysetups/serialization/InventorySetupSerializable.java",
+        "line": 20,
+        "claim": "inv and eq are separate item lists; rp, bp, qv, afi and spellbook semantics are explicit unsupported boundaries for this native compiler."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [
+      "Every donor item still requires an explicit native-ID binding validated against pinned native metadata; unknown and implicit identity mappings refuse. Nonempty rune/bolt pouches, quivers, additional-filtered items, nonstandard spellbooks, fuzzy/locked/inequality matching and unknown fields refuse. GUI layout and bank tags are outside the exact-counts preparation policy. Offline compilation does not prove gameplay execution of every imported setup; that uses the existing owned-loadout qualification and per-job Native/live acceptance."
+    ],
+    "scriptDecisions": [],
+    "proof": {
+      "level": "offline actual CLI and existing consumer validation; no new gameplay qualification",
+      "consumer": "scripts/microbot-loadout-import.ts",
+      "runtimeSha256": "3d4747f73a3aeb58ac3e5bfd47816fd69dded62735deed6f83fe10fff4950a2a",
+      "result": ".practice/microbot-loadout-import/result-1793655669101.json",
+      "scope": "26 tests and122 assertions pass across importer and existing owned-loadout consumer. Actual CLI compiles pinned donor IDs385/563/1171/1277 through explicit bindings and its emitted JSON passes validateOwnedKit. Source review confirms native slots, capacity, two-hand conflicts, exact list selection and refusals. Full typecheck pending integration; no new Native or live claim."
+    }
+  },
+  {
+    "name": "mouserecorder",
+    "decision": "client-only",
+    "behaviour": "Records and replays desktop mouse menu events. Structured SDK actions replace this transport.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/mouserecorder/MenuEntrySnapshot.java",
+        "line": 9,
+        "claim": "Records and replays desktop mouse menu events. Structured SDK actions replace this transport."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/mouserecorder/MouseButton.java",
+        "line": 3,
+        "claim": "Records and replays desktop mouse menu events. Structured SDK actions replace this transport."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "pouch",
+    "decision": "blocked",
+    "behaviour": "Tracks OSRS essence-pouch contents, degradation and Check messages.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/pouch/PouchScript.java",
+        "line": 21,
+        "claim": "Tracks OSRS essence-pouch contents, degradation and Check messages."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/pouch/ClickOperation.java",
+        "line": 1,
+        "claim": "Tracks OSRS essence-pouch contents, degradation and Check messages."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/pouch/Pouch.java",
+        "line": 11,
+        "claim": "Tracks OSRS essence-pouch contents, degradation and Check messages."
+      }
+    ],
+    "serverEvidence": [
+      {
+        "path": "vendor/rs-sdk/server/content/scripts/skill_runecraft/scripts/runecraft.rs2",
+        "line": 1,
+        "claim": "Native ordinary essence runecrafting implementation. Source-wide pouch search retained separately."
+      }
+    ],
+    "blockers": [
+      "Native Runecraft has ordinary rune essence but no essence-pouch fill/empty/check handlers or daeyalt/colossal pouch objects. The donor tracker requires those container actions and OSRS ItemID values."
+    ],
+    "scriptDecisions": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/pouch/PouchScript.java",
+        "decision": "blocked",
+        "consumer": "",
+        "gap": "Native Runecraft has ordinary rune essence but no essence-pouch fill/empty/check handlers or daeyalt/colossal pouch objects. The donor tracker requires those container actions and OSRS ItemID values."
+      }
+    ],
+    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+  },
+  {
+    "name": "questhelper",
+    "decision": "partial",
+    "behaviour": "QuestHelper dynamic steps map to existing native quest handlers, requirements and flags.",
+    "localConsumers": [
+      "scripts/generated/quest-lib.ts",
+      "scripts/quest-order.ts",
+      "packages/core/src/quest-status.ts",
+      "scripts/generated/quest-itwatchtower.ts",
+      "scripts/generated/quest-hero.ts",
+      "scripts/generated/quest-hero-owned.ts",
+      "scripts/generated/quest-itwatchtower-owned.ts",
+      "scripts/generated/quest-tbwt.ts",
+      "scripts/generated/quest-tbwt-owned.ts",
+      "scripts/generated/quest-legends.ts",
+      "scripts/quest-sweep.ts",
+      "scripts/generated/quest-legends-owned.ts"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/questhelper/QuestScript.java",
+        "line": 65,
+        "claim": "QuestHelper dynamic steps map to existing native quest handlers, requirements and flags."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/questhelper/MultiNpcTargetTracker.java",
+        "line": 1,
+        "claim": "QuestHelper dynamic steps map to existing native quest handlers, requirements and flags."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/questhelper/QuestHelperConfig.java",
+        "line": 44,
+        "claim": "QuestHelper dynamic steps map to existing native quest handlers, requirements and flags."
+      }
+    ],
+    "serverEvidence": [
+      {
+        "path": "vendor/rs-sdk/server/content/scripts/quests/quest_hero/scripts/quest_hero.rs2",
+        "line": 42,
+        "claim": "Native Heroes quest completion handler"
+      },
+      {
+        "path": "vendor/rs-sdk/server/content/scripts/quests/quest_itwatchtower/scripts/quest_itwatchtower.rs2",
+        "line": 564,
+        "claim": "Native Watchtower quest completion handler"
+      },
+      {
+        "path": "vendor/rs-sdk/server/content/scripts/quests/quest_legends/scripts/quest_legends.rs2",
+        "line": 2102,
+        "claim": "Native Legends quest completion handler"
+      },
+      {
+        "path": "vendor/rs-sdk/server/content/scripts/quests/quest_tbwt/scripts/quest_tbwt.rs2",
+        "line": 268,
+        "claim": "Native Tai Bwo Wannai Trio completion handler"
+      }
+    ],
+    "blockers": [
+      "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs require native adaptation. Watchtower, Trio and Heroes pass complete owned Native routes and reward audits. Legends Quest has a Native handler and an owned worker with full-route qualification open. Source, per-quest Native receipts and live/repeat acceptance remain distinct."
+    ],
+    "scriptDecisions": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/questhelper/QuestScript.java",
+        "decision": "partial",
+        "consumer": "scripts/generated/quest-lib.ts, scripts/quest-order.ts, packages/core/src/quest-status.ts",
+        "gap": "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs require native adaptation. Watchtower, Trio and Heroes pass complete owned Native routes and reward audits. Legends Quest has a Native handler and an owned worker with full-route qualification open. Source, per-quest Native receipts and live/repeat acceptance remain distinct."
+      }
+    ],
+    "proof": {
+      "level": "Source-traced quest reuse and complete Native Watchtower, Trio and Heroes routes. Owned Legends qualification remains open.",
+      "nativeQuestCount": 68,
+      "missingSupported": [
+        "Legends Quest"
+      ],
+      "scope": "Upstream staged CLI workers and owned API workers have distinct entry contracts. Captured Native receipts bind their recorded source and starting conditions. Full owned Legends acceptance remains open. Live, repeat and lower-level conditions remain unqualified.",
+      "legendsComponents": {
+        "stage22ToCompletion": {
+          "evidence": ".practice/microbot-ports/legends-suffix-native-1793896617962/result.json",
+          "sourceCheck": ".practice/microbot-ports/legends-suffix-native-1793896617962/source-check.json",
+          "compiledCheck": ".practice/microbot-ports/legends-suffix-native-1793896617962/compiled-cache-ready-check.json",
+          "sourceSha256": "c5cf577fb37d3d6b06bb87acc5b94ff6552730f73a184246601b18aad2958f01",
+          "fixtureWorkerSha256": "90e685e468d3c91083fbbe3d4ccbe294b3105022351fb31d3efd0958156b1366",
+          "checkpointSha256": "4e509034ec514e85320e38012b3d940d7cf1f5611c3f7188eec81564556ec9a9",
+          "scope": "Captured stage-22 save after the second demon with the exact prior fare total. The production suffix reaches stage 75 and four quest points in 2942 ticks. It collects sacred water, plants and carves Yommi, defeats the final demon, restores Prayer controls, returns the map and gilded totem, earns four Herblore rewards and logs out at the bank. Native practice starts at stage 22."
+        },
+        "lowerCaveLedges": {
+          "evidence": ".practice/microbot-ports/legends-lower-cave-native-1793879435919/result.json",
+          "sourceCheck": ".practice/microbot-ports/legends-lower-cave-native-1793879435919/source-check.json",
+          "sourceSha256": "8f12a74fc4ad93c0bba904a91e8bd45e2353ba31c4075eb4bab940574e421ae0",
+          "fixtureWorkerSha256": "feb893ae35d7ff2174822133e9f59ff7c984e4c1253a6490ccffc64212bf35de",
+          "scope": "Seeded rope landing. All six forward and six reverse production ledges pass in 128 ticks. The fixture bypasses the return barrier and rope. The save confirms (2378, 4717), exact stock and gear, no XP change, declared controls and logout."
+        },
+        "gujuoRetreat": {
+          "evidence": ".practice/microbot-ports/legends-gujuo-native-1793882251303/result.json",
+          "sourceCheck": ".practice/microbot-ports/legends-gujuo-native-1793882251303/source-check.json",
+          "sourceSha256": "cb17820c8e8e7d2f5cbc666f26bb25c460393c1667ea1894429a7e89be4e22e1",
+          "fixtureWorkerSha256": "8fc737d1ee0135e2e48b132155dc54d456161c76ad82617eb7d58ef0b8cdbbc1",
+          "scope": "Seeded jungle clearing with bullroarer and ordinary supplies. Real bullroarer aggro triggers a sustained Savage pursuit. The production map-route retreat clears it and Gujuo appears after return. The 113-tick run preserves stock, XP, gear and controls and logs out. The disappear-and-reacquire branch is outside this capture."
+        },
+        "strengthReturn": {
+          "evidence": ".practice/microbot-ports/legends-strength-native-1793877363687/saved-corridor-audit.json",
+          "sourceCheck": ".practice/microbot-ports/legends-strength-native-1793877363687/source-check.json",
+          "sourceSha256": "0f55e55c70f326375742d6d733e93a39c6bbb4b64c189acb60c84ff709cf7df9",
+          "fixtureWorkerSha256": "7cdc9ac401f116a0ea5f17ecd8e59f9aa3c76a5600bb3c7e52fbfec1241c8b8c",
+          "scope": "Seeded south approach with a carried pickaxe. The worker defeats its Death wing attacker, crosses the Strength gate, mines three swamp rocks, exits the bookcase at (2795, 9338), and logs out. The captured save matches combat XP, Mining XP, stock, gear and declared controls."
+        },
+        "earthOrbGate": {
+          "evidence": ".practice/microbot-ports/legends-orb-gate-native-1793877922772/result.json",
+          "sourceCheck": ".practice/microbot-ports/legends-orb-gate-native-1793877922772/source-check.json",
+          "sourceSha256": "0f55e55c70f326375742d6d733e93a39c6bbb4b64c189acb60c84ff709cf7df9",
+          "fixtureWorkerSha256": "4ad640cf6e888ad3a778b483ee885fa7e1e28aaec6028d23430e7db40d58da6a",
+          "scope": "Seeded gate approach. The worker consumes 30 earth runes, three cosmic runes and one orb, gains 17,500 raw Magic XP at 25x, lands at (2763, 9320), and logs out with gear and declared controls conserved."
+        }
+      },
+      "heroes": {
+        "evidence": ".practice/microbot-ports/heroes-quest-native-1793857302531/result.json",
+        "sourceCheck": ".practice/microbot-ports/heroes-quest-native-1793857302531/source-check.json",
+        "compiledCheck": ".practice/microbot-ports/heroes-quest-native-1793857302531/compiled-cache-ready-check.json",
+        "runtimeSha256": "9fa547d554b9b1077486bc8df1e2cf6be1a3b3e522861692d46e5fe5f3cdcf27",
+        "scope": "Actual two-actor owned CLI from fresh Heroes stages with ordinary staged supplies and level 99 skills. Both gangs complete in 5604 ticks per actor, gain 12 exact skill rewards, and return to bank at HP99. Each spends 60 coins, one bait and five observed potion doses. Black Arm casts two spells and Phoenix ten. Independent saved assets, controls, raw prayer observations and logout pass. Source11596 and ready-cache42 entries unchanged. Live, repeat and lower-level conditions remain open."
+      },
+      "watchtower": {
+        "evidence": ".practice/microbot-ports/watchtower-native-1793681609878/result.json",
+        "sourceCheck": ".practice/microbot-ports/watchtower-native-1793681609878/source-check.json",
+        "compiledCheck": ".practice/microbot-ports/watchtower-native-1793681609878/compiled-cache-check.json",
+        "runtimeSha256": "a94e1509222038d9de92ac96cba5c13032c160f1f3e152d3ae75c093311146a6",
+        "fixtureSha256": "4742801249759644c82cdcc83acecc6ea4fdc30c237113f16a61c0371b2e790d",
+        "scope": "Actual fresh quest0 through reward13 and read-scroll14, QP+4; all quest items earned from ordinary staged ingredients and the listed skill levels and owned kit. CLI0 in2084ticks, sameLife1/no death, HPmin94/saved96, food unchanged, exact coins+4980 and all owned assets/gear/controls/logout. RawXP Magic3825000/Agility41500/Attack80000/HP26525/Herblore5000/Thieving1625; foreignXP0. Exact five wall climbs, two return swings and one paid bridge. Source11521 unchanged; server-ready42 and compiled-end57 contents unchanged, ZIP metadata excluded. Independent CRC/raw/source review agrees. Live, repeat and other starting conditions remain unqualified.",
+        "skills": {
+          "Attack": 99,
+          "Strength": 99,
+          "Defence": 99,
+          "Hitpoints": 99,
+          "Magic": 99,
+          "Mining": 99,
+          "Herblore": 99,
+          "Thieving": 99,
+          "Agility": 99
+        },
+        "capturedRuntimePath": "scripts/generated/quest-itwatchtower.ts",
+        "localRuntimePath": "scripts/generated/quest-itwatchtower-owned.ts",
+        "integratedQualification": "pending merged-source Native renewal"
+      },
+      "heroesCrossings": {
+        "evidence": ".practice/microbot-ports/heroes-crossing-native-1793828591571/result.json",
+        "sourceCheck": ".practice/microbot-ports/heroes-crossing-native-1793828591571/source-check.json",
+        "compiledCheck": ".practice/microbot-ports/heroes-crossing-native-1793828591571/compiled-cache-ready-check.json",
+        "runtimeSha256": "fc61cb67f1d195357e6bbbedc5e62758bb462b5362d7bae4de725516020f2f12",
+        "scope": "Six production helper crossings: panel, keyed side door and keyed treasure door, both directions. Two CLI0/logouts and independent saved position, inventory and zero-XP audits. Staged keys and Heroes progress4/11; no full quest, Grip combat, rewards, live or repeat claim. Source11441 and server-ready42 unchanged.",
+        "capturedRuntimePath": "scripts/generated/quest-hero.ts",
+        "localRuntimePath": "scripts/generated/quest-hero-owned.ts",
+        "integratedQualification": "pending merged-source Native renewal"
+      },
+      "trio": {
+        "evidence": ".practice/microbot-ports/tbwt-native-1793832071961/result.json",
+        "sourceCheck": ".practice/microbot-ports/tbwt-native-1793832071961/source-check.json",
+        "compiledCheck": ".practice/microbot-ports/tbwt-native-1793832071961/compiled-cache-check.json",
+        "runtimeSha256": "9018cefc2fb26c059a6389d6db357d272493c87c4bed6ed59b5ef5f04cc4fa2c",
+        "fixtureSha256": "53b4b0e51df5f7fb475dbdd9e97299e44296351dcb25cce061224cdca941e15e",
+        "scope": "Actual fresh quest0 through6, Tiadeche7 and all three brother rewards; QP+2, coins+2000, exact whole assets/gear/controls and logout. Owned post-start Monkey kill/corpse, both hunt cutscenes, cooking, log and bridge receipts. Independent CRC and full raw audit pass. Native100ms/XP25; Combat99/Agility99 and staged ordinary prequest supplies. No Trio progress/corpse/manual/vessel staged. Source11529 unchanged, server-ready42 and compiled57 contents unchanged; ZIP metadata excluded. Live, repeat and lower-level conditions remain unqualified.",
+        "ticks": 1362,
+        "casts": 8,
+        "rawXP": {
+          "Attack": 625000,
+          "Defence": 0,
+          "Strength": 625000,
+          "Hitpoints": 1950,
+          "Ranged": 0,
+          "Prayer": 0,
+          "Magic": 14000,
+          "Cooking": 1275000,
+          "Woodcutting": 0,
+          "Fletching": 0,
+          "Fishing": 1625000,
+          "Firemaking": 0,
+          "Crafting": 0,
+          "Smithing": 0,
+          "Mining": 0,
+          "Herblore": 0,
+          "Agility": 7000,
+          "Thieving": 0,
+          "Runecraft": 0,
+          "Slayer": 0,
+          "Farming": 0
+        },
+        "capturedRuntimePath": "scripts/generated/quest-tbwt.ts",
+        "localRuntimePath": "scripts/generated/quest-tbwt-owned.ts",
+        "integratedQualification": "pending merged-source Native renewal"
+      },
+      "integrationRenewal": [
+        "owned Watchtower merged dependency closure",
+        "owned Trio merged dependency closure"
+      ],
+      "stagedLegends": {
+        "entry": "scripts/generated/quest-legends.ts",
+        "mergeCommit": "68688262c029274a2010e9bcacdf05af34dbf275",
+        "currentGitBlob": "4333d8b36ec9213ba7efe8fd1c18b8ad4c0aedda",
+        "reportedProofCommit": "16161109",
+        "reportedProofGitBlob": "cb7ae67603f588df110c66e49e78a66818f9c744",
+        "peerReport": "https://github.com/Giftedx/rs-sdk-bot/pull/214",
+        "reportedNativeTicks": [
+          3996,
+          3878,
+          4221
+        ],
+        "scope": "Peer reports three complete staged Native routes at all99 with two owned supply helpers. Current source adds a required helper logout-result check. Native receipt/source delta is explicit; this integration has not independently qualified the strengthened helper gate, whole assets, live, minimum levels or helper staging."
+      }
+    }
+  },
+  {
+    "name": "recovery",
+    "decision": "reuse",
+    "behaviour": "Startup/login recovery maps to admission, transport observation and authenticated session recovery.",
+    "localConsumers": [
+      "packages/core/src/session-recovery.ts",
+      "packages/core/src/session-admission.ts",
+      "packages/core/src/inprocess.ts"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/recovery/RecoveryPrompt.java",
+        "line": 27,
+        "claim": "Startup/login recovery maps to admission, transport observation and authenticated session recovery."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/recovery/RecoveryState.java",
+        "line": 12,
+        "claim": "Startup/login recovery maps to admission, transport observation and authenticated session recovery."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+  },
+  {
+    "name": "shortestpath",
+    "decision": "reuse",
+    "behaviour": "Manual target walking and path cancellation map to native route planning and bounded walking. OSRS collision/transport tables are not imported.",
+    "localConsumers": [
+      "packages/core/src/walk.ts",
+      "packages/core/src/world.ts",
+      "scripts/walk-to.ts"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/shortestpath/ShortestPathScript.java",
+        "line": 17,
+        "claim": "Manual target walking and path cancellation map to native route planning and bounded walking. OSRS collision/transport tables are not imported."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/shortestpath/DebugOverlayPanel.java",
+        "line": 17,
+        "claim": "Manual target walking and path cancellation map to native route planning and bounded walking. OSRS collision/transport tables are not imported."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/shortestpath/ETAOverlayPanel.java",
+        "line": 16,
+        "claim": "Manual target walking and path cancellation map to native route planning and bounded walking. OSRS collision/transport tables are not imported."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/shortestpath/ShortestPathScript.java",
+        "decision": "reuse",
+        "consumer": "packages/core/src/walk.ts, packages/core/src/world.ts, scripts/walk-to.ts",
+        "gap": ""
+      }
+    ],
+    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+  },
+  {
+    "name": "statemachine",
+    "decision": "reuse",
+    "behaviour": "Guarded states and transitions are ordinary deterministic worker branches with logged results and aborts. No foreign framework is required.",
+    "localConsumers": [
+      "packages/core/src/act.ts",
+      "packages/core/src/ticks.ts",
+      "packages/core/src/status.ts"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/statemachine/StateMachineScript.java",
+        "line": 24,
+        "claim": "Guarded states and transitions are ordinary deterministic worker branches with logged results and aborts. No foreign framework is required."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/statemachine/PendingTransition.java",
+        "line": 9,
+        "claim": "Guarded states and transitions are ordinary deterministic worker branches with logged results and aborts. No foreign framework is required."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/statemachine/StateMachineScript.java",
+        "decision": "reuse",
+        "consumer": "packages/core/src/act.ts, packages/core/src/ticks.ts, packages/core/src/status.ts",
+        "gap": ""
+      }
+    ],
+    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+  },
+  {
+    "name": "statemachineexample",
+    "decision": "reuse",
+    "behaviour": "Example cycles through entity queries and observations. SDK snapshots and session lifecycle already supply the exercised operations.",
+    "localConsumers": [
+      "vendor/rs-sdk/sdk/index.ts",
+      "packages/core/src/inprocess.ts"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/statemachineexample/StateMachineExampleScript.java",
+        "line": 27,
+        "claim": "Example cycles through entity queries and observations. SDK snapshots and session lifecycle already supply the exercised operations."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/statemachineexample/StateMachineExampleConfig.java",
+        "line": 8,
+        "claim": "Example cycles through entity queries and observations. SDK snapshots and session lifecycle already supply the exercised operations."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/statemachineexample/StateMachineExamplePlugin.java",
+        "line": 19,
+        "claim": "Example cycles through entity queries and observations. SDK snapshots and session lifecycle already supply the exercised operations."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/statemachineexample/StateMachineExampleScript.java",
+        "decision": "reuse",
+        "consumer": "vendor/rs-sdk/sdk/index.ts, packages/core/src/inprocess.ts",
+        "gap": ""
+      }
+    ],
+    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+  },
+  {
+    "name": "testing",
+    "decision": "reuse",
+    "behaviour": "Bounded test runner and result output map to the existing practice/delivery harness.",
+    "localConsumers": [
+      "packages/practice/src/prove.ts",
+      "packages/router/src/delivery-cli.ts"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/testing/TestResult.java",
+        "line": 7,
+        "claim": "Bounded test runner and result output map to the existing practice/delivery harness."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/testing/TestResultWriter.java",
+        "line": 19,
+        "claim": "Bounded test runner and result output map to the existing practice/delivery harness."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+  },
+  {
+    "name": "ui",
+    "decision": "client-only",
+    "behaviour": "Swing panels, cloud links and bug-report forms. No game-state transition.",
+    "localConsumers": [],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/ui/BugReportDialog.java",
+        "line": 1,
+        "claim": "Swing panels, cloud links and bug-report forms. No game-state transition."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/ui/MicrobotBugReporter.java",
+        "line": 21,
+        "claim": "Swing panels, cloud links and bug-report forms. No game-state transition."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [],
+    "scriptDecisions": [],
+    "proof": "source classification; no gameplay port needed"
+  },
+  {
+    "name": "util",
+    "decision": "partial",
+    "behaviour": "Bank generations, tick waits, pathing, requirements and inventory observations map to existing core primitives. Java utility parity is not a gameplay target.",
+    "localConsumers": [
+      "packages/core/src/deposit.ts",
+      "packages/core/src/ticks.ts",
+      "packages/core/src/walk.ts",
+      "packages/core/src/inprocess.ts"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/util/ActorModel.java",
+        "line": 18,
+        "claim": "Bank generations, tick waits, pathing, requirements and inventory observations map to existing core primitives. Java utility parity is not a gameplay target."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/util/GameTickBroadcaster.java",
+        "line": 13,
+        "claim": "Bank generations, tick waits, pathing, requirements and inventory observations map to existing core primitives. Java utility parity is not a gameplay target."
+      }
+    ],
+    "serverEvidence": [],
+    "blockers": [
+      "OSRS-only utilities (Hunter, Sailing, spellbooks, OSRS cache/widget/varbit constants, world hopping) need the corresponding native content or protocol mapping. Each gameplay use is decided in the Hub script entry."
+    ],
+    "scriptDecisions": [],
+    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+  }
+]

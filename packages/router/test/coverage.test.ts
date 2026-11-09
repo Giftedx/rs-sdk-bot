@@ -2,8 +2,8 @@ import { test, expect } from 'bun:test';
 import { domainOf } from '../../knowledge/src/actions';
 import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { named, questScript, questJournalNames, questStages, itemsHeld, skillBands, domainStages, sideSnapshots, fleetSkills } from '../src/coverage';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { named, questScript, questJournalNames, questStages, itemsHeld, skillBands, domainStages, firedActions, sideSnapshots, fleetSkills, practicePasses, ownedNames } from '../src/coverage';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { questDefinitions } from '../../core/src/quest-status';
@@ -22,7 +22,43 @@ test('named needs a debug name or a 5+ letter display name in our source', () =>
     expect(named({ domain: 'x', trigger: 'opnpc1', subject: 'father_aereck_2', name: 'Father Aereck', src: '' }, text)).toBe(true);
     expect(named({ domain: 'x', trigger: 'oploc1', subject: 'khazzacklowwall', src: '' }, text)).toBe(true);
     expect(named({ domain: 'x', trigger: 'oploc1', subject: 'door1', name: 'Door', src: '' }, 'door')).toBe(false);
-    expect(domainStages([{ domain: 'a', trigger: 'oploc1', subject: 'khazzacklowwall', src: '' }, { domain: 'a', trigger: 'oploc1', subject: 'zzzz', src: '' }], text)).toEqual([{ domain: 'a', actions: 2, named: 1, share: 50 }]);
+    expect(domainStages([{ domain: 'a', trigger: 'oploc1', subject: 'khazzacklowwall', src: '' }, { domain: 'a', trigger: 'oploc1', subject: 'zzzz', src: '' }], text)).toEqual([{ domain: 'a', actions: 2, named: 1, fired: 0, share: 50 }]);
+});
+
+test('firedActions reads script names and drops torn lines', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'trace-'));
+    expect(firedActions(join(dir, 'missing.log')).size).toBe(0);
+    const file = join(dir, 'action-trace.log');
+    writeFileSync(file, '[opnpc1,cook]\r\n[oploc1,_door]\n[opnpc1,cook]\n[if_button,quest_journal:com_1]\n[oploc1,to\ncooks_proc\n');
+    expect([...firedActions(file)].sort()).toEqual(['if_button,quest_journal:com_1', 'opnpc1,cook', 'oploc1,_door'].sort());
+});
+
+test('one scan preserves overlapping, unicode and exact-name matches', () => {
+    const text = 'xxcacheable café south winding road';
+    const actions = [
+        { subject: '_cache:3' },
+        { subject: 'cacheable' },
+        { subject: 'cacheable' },
+        { subject: 'cacheless' },
+        { subject: 'café' },
+        { subject: 'zz', name: 'Winding Road' },
+        { subject: 'zz', name: 'Café' },
+        { subject: 'ache' },
+    ].map(a => ({ ...a, trigger: 'oploc1', domain: 'sample', src: '' }));
+    const result = domainStages(actions, text);
+    expect(result[0]?.named).toBe(6);
+    expect(result[0]?.named).toBe(actions.filter(a => named(a, text)).length);
+});
+
+test('domainStages counts an action as fired only on its exact trigger and subject', () => {
+    const fired = new Set(['opnpc1,cook', 'oploc1,_door', 'proc,cook', 'opnpc3,other']);
+    const rows = domainStages([
+        { domain: 'q', trigger: 'opnpc1', subject: 'cook', src: '' },
+        { domain: 'q', trigger: 'opnpc2', subject: 'cook', src: '' },
+        { domain: 'r', trigger: 'oploc1', subject: '_door', src: '' },
+    ], '', fired);
+    expect(rows.find(d => d.domain === 'q')).toMatchObject({ actions: 2, fired: 1 });
+    expect(rows.find(d => d.domain === 'r')).toMatchObject({ actions: 1, fired: 1 });
 });
 
 test('quest folders map to our script names', () => {
@@ -62,10 +98,48 @@ test('live completion outranks practice and scripts without promoting incomplete
     expect(summary.quests.liveComplete).toHaveLength(3);
 });
 
+test('practice passes come from every results log and need a finished quest', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'practice-'));
+    const rows = (...r: unknown[]) => r.map(x => JSON.stringify(x)).join('\n') + '\n{"cut';
+    writeFileSync(join(dir, 'results.jsonl'), rows(
+        { goal: 'quest-cook', ok: true, text: 'ok qp=1 xp=cooking=300' },
+        { goal: 'waterfall', ok: true, text: 'ok attackXp=9' },
+        { goal: 'quest-mm', ok: true, text: 'ok stage=70 (stages 80-160 not scripted)' },
+        { goal: 'quest-tree', ok: true, text: 'ok stopped at 40' },
+        { goal: 'quest-imp', ok: true, text: 'ok qp=0 xp=' },
+        { goal: 'quest-doric', ok: false, text: 'fail Error: x' },
+        { goal: 'ball', ok: true, text: 'ok' }));
+    mkdirSync(join(dir, 'sweep'));
+    writeFileSync(join(dir, 'sweep', 'results.jsonl'), rows({ quest: 'ball', ok: true, result: 'RESULT ok qp=4' }, { quest: 'quest-rj.ts', ok: true, result: 'RESULT ok qp=5' }, { quest: 'mm', ok: true, result: 'RESULT ok stage=70' }));
+    const byScript = new Map(['quest_cook', 'quest_waterfall', 'quest_mm', 'quest_tree', 'quest_imp', 'quest_doric', 'quest_ball', 'quest_romeojuliet'].map(f => [questScript(f), f]));
+    expect([...practicePasses(dir, byScript)].sort()).toEqual(['quest_ball', 'quest_cook', 'quest_romeojuliet', 'quest_waterfall']);
+    expect(practicePasses(join(dir, 'missing'), byScript).size).toBe(0);
+});
+
+test('a side snapshot carries quests only when the side shared them', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'fleet-quests-'));
+    const acct = (name: string, extra = {}) => ({ name, server: 'rs-sdk-demo.fly.dev', at: 1_800_000_000_000, skills: [], ...extra });
+    writeFileSync(join(dir, 'claude-cloud.json'), JSON.stringify({ side: 'claude-cloud', accounts: [acct('Kilt', { quests: ["Cook's Assistant"] }), acct('Haggis', { quests: ['Dragon Slayer'] }), acct('Old')] }));
+    const { accounts } = sideSnapshots(dir, 'local', 1_800_000_000_000);
+    expect(accounts.map(a => [a.name, a.quests])).toEqual([['Kilt', ["Cook's Assistant"]], ['Old', undefined]]);
+    const quests = [{ folder: 'quest_cook', varp: 'cookquest', name: "Cook's Assistant", questPoints: 1 }];
+    const local = questStages([], new Set(), new Set(), quests), shared = questStages(accounts.map(a => ({ quests: (a.quests ?? []).map(name => ({ name, state: 'complete' })) })), new Set(), new Set(), quests);
+    expect(local.folders[0]!.stage).toBe('none');
+    expect(shared.folders[0]!.stage).toBe('live');
+    expect(shared.liveComplete).toEqual(["Cook's Assistant"]);
+});
+
 test('an unmapped journal label cannot imply a folder completion', () => {
     const result = questStages([{ quests: [{ name: 'quest_cook', state: 'complete' }] }], new Set(), new Set(),
         [{ folder: 'quest_cook', varp: 'cookquest', name: "Cook's Assistant", questPoints: 1 }]);
     expect(result.folders[0]!.stage).toBe('none');
+});
+
+test('owned names come from the verified-login registry, never the main account; a machine without one owns none', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'owned-'));
+    expect(ownedNames(join(dir, 'owned-accounts.json'))).toEqual(new Set());
+    writeFileSync(join(dir, 'owned-accounts.json'), JSON.stringify({ Haggis: { server: 'rs-sdk-demo.fly.dev', at: 1 }, undermykilt: { server: 'rs-sdk-demo.fly.dev', at: 1 } }));
+    expect(ownedNames(join(dir, 'owned-accounts.json'))).toEqual(new Set(['undermykilt']));
 });
 
 test('items and skill bands come from owned live statuses', () => {

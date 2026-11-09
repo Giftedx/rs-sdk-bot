@@ -49,6 +49,20 @@ test('a review carries only its capability history and dependencies, newest firs
  expect(Object.keys(picked)).toEqual(['dep-z','review-x-2','qualify-x-1']);
  expect(Object.keys(reviewDependencies(deps,'x',['dep-z'],60))).toEqual(['dep-z']);
 });
+test('historical review receipts keep the source, check results and full receipt path without large snapshots',()=>{
+ const files=Array.from({length:20},(_,i)=>`packages/old-source-${i}.ts`);
+ const direct={_task:{capability:'x',at:4,evidence:'/runs/direct'},delivery:{id:'x',files:['direct.ts']}};
+ const prior={_task:{capability:'x',at:3,evidence:'/runs/prior'},delivery:{id:'x',source:'pinned',files,
+  checks:[{id:'native',exitCode:1,detail:'stderr.log'}]},status:{at:3,result:'fail blocked',inventory:files}};
+ const newerWithoutPath={_task:{capability:'x',at:5},status:{inventory:files}};
+ const selected=reviewDependencies({direct,newerWithoutPath,prior},'x',['direct'],440);
+ expect(Object.keys(selected)).toEqual(['direct','prior']);
+ expect(selected.direct).toEqual(direct);
+ expect(selected.prior).toEqual({_task:prior._task,
+  delivery:{id:'x',source:'pinned',checks:prior.delivery.checks},status:{at:3,result:'fail blocked'}});
+ expect(JSON.stringify(selected).length).toBeLessThanOrEqual(440);
+ expect(prior.delivery.files).toEqual(files);
+});
 test('a failed or malformed model answer is a failed review, not a rejection',()=>{
  expect(()=>reviewVerdict({ok:false,text:'turn/start failed: Input exceeds the maximum length'},JSON.parse)).toThrow('review model unavailable');
  expect(()=>reviewVerdict({ok:true,text:'I rejected it.'},t=>({text:t}))).toThrow('malformed');

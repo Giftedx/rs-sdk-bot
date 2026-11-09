@@ -75,6 +75,15 @@ for (const l of locSpawns) {
     const open=c.kind==='team'&&openName===name+'_open'&&openId!==undefined?openedTeamDoor(name,l,openId):undefined;
     doors.push({ id: l.id, loc: name, x: l.x, z: l.z, level: l.level, ...(c.need?.whenAxis!==undefined?{angle:l.angle,shape:l.shape}:l.shape===9?{shape:9}:{}),...(open?{open}:{}),kind: c.kind, ...(c.need ? { need: c.need } : {}), trigger: c.trigger, src: l.src });
 }
+// Pickable plants (general_use/scripts/pickables.rs2: potato, wheat, onion, cabbage, flax, each with a Pick option):
+// their tiles, so a bot finds the nearest field without reading the map squares at run time.
+const PICKABLES = ['potato', 'wheat', 'onion', 'cabbage', 'flax'];
+const pickables: Record<string, { name: string; tiles: { x: number; z: number; level: number }[] }> = {};
+for (const name of PICKABLES) {
+    const id = locIds.get(name);
+    if (id === undefined) continue;
+    pickables[id] = { name, tiles: locSpawns.filter(l => l.id === id).map(l => ({ x: l.x, z: l.z, level: l.level })) };
+}
 // Phase 1b: skill actions from dbtables, quests, and drop tables.
 const dbTables = buildDbTables(blocksOf('.dbtable'), blocksOf('.dbrow'));
 const skillActions = buildSkillActions(dbTables);
@@ -107,6 +116,7 @@ write('dbtables.json', dbTables);
 write('skills.json', skillActions);
 write('quests.json', quests.quests);
 write('drops.json', drops);
+write('pickables.json', pickables);
 
 const counts = {
     items: items.length,
@@ -132,6 +142,7 @@ const counts = {
     questPoints: quests.quests.reduce((n, q) => n + q.questPoints, 0),
     questLinesSkipped: quests.skipped.length,
     dropTables: drops.length,
+    pickablePlants: Object.values(pickables).reduce((n, p) => n + p.tiles.length, 0),
     doors: doors.length,
     ...Object.fromEntries(Object.entries(doorKinds).map(([k, v]) => [`doors_${k}`, v])),
 };

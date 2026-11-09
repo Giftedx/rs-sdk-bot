@@ -1,7 +1,7 @@
 import {existsSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {createHash} from 'node:crypto';
-import {haggisActivities,haggisTravel,loadSnapshot,goalRequirementsFor} from '../packages/planner/src/haggis';
+import {haggisActivities,haggisTravel,loadSnapshot,overallRequirementsFor,scheduleOverall,TRICKS} from '../packages/planner/src/haggis';
 import {supplyRoute,routeGateRequirements,type SupplyRouteRequest} from '../packages/planner/src/supply-route';
 import type {TravelModel} from '../packages/planner/src/travel';
 import {FLEET} from './fleet';
@@ -10,7 +10,7 @@ import {ownedLoadout,fireKit,type GearSlot,type GearCount} from '../packages/pla
 import {orderAccounting,validateRequest,type ItemOrder} from './buy-owned-ge-item';
 import {observedRouteResources,type RouteActor} from './preparation-route-state';
 
-type Requirement={item:string;count:number;consumers?:string[]};
+type Requirement={item:string;count:number;itemId?:number;consumers?:string[]};
 type Holder={name:string;count:number;at:number;state:'recent'|'stale'};
 // Verified names in knowledge/items.json: Feather (314), Headless arrow (53).
 // Do not guess singular forms for other supplies or expand composite gear requirements.
@@ -98,26 +98,26 @@ export function reconcilePreparation(requirements:Requirement[],statuses:any[],o
   const state:'unknown'|'recent'|'stale'=!valid?'unknown':now-s.bankAt>300000?'stale':'recent';
   return{name,at:s?.bankAt??null,state,items:valid?s.bank as {id:number;baseId?:number;name:string;count:number}[]:[]};
  });
- const shared=new Map<string,Requirement>();
+ const shared=new Map<string|number,Requirement&{resolvedId:number|null}>();
  for(const r of requirements){
-  if(!r.item||!integer(r.count)||r.count<1)throw Error('Invalid supply requirement');
-  const id=key(r.item),prior=shared.get(id);
+  if(!r.item||!integer(r.count)||r.count<1||r.itemId!==undefined&&!integer(r.itemId))throw Error('Invalid supply requirement');
+  const name=key(r.item);
+  const ids=r.itemId===undefined?new Set(banks.flatMap(b=>b.items.filter(i=>key(i.name)===name).map(i=>i.baseId??i.id))):new Set([r.itemId]);
+  const resolvedId=ids.size===1?[...ids][0]!:null,id=resolvedId??name,prior=shared.get(id);
   const total=(prior?.count??0)+r.count;
   if(!integer(total))throw Error('Supply requirement exceeds safe integer range');
-  shared.set(id,{item:prior?.item??r.item,count:total,consumers:[...new Set([...(prior?.consumers??[]),...(r.consumers??[])])]});
+  shared.set(id,{item:prior?.item??r.item,resolvedId,count:total,consumers:[...new Set([...(prior?.consumers??[]),...(r.consumers??[])])]});
  }
  const items=[...shared.values()].map(r=>{
-  if(!r.item||!integer(r.count)||r.count<1)throw Error('Invalid supply requirement');
-  const rows=banks.flatMap(b=>b.items.filter(i=>key(i.name)===key(r.item)).map(i=>({bank:b,item:i})));
-  const ids=new Set(rows.map(r=>r.item.baseId??r.item.id)),unresolved=ids.size!==1;
+  const unresolved=r.resolvedId===null;
   const holders:Holder[]=unresolved?[]:banks.flatMap(b=>{
-   const count=rows.filter(r=>r.bank===b).reduce((n,r)=>n+r.item.count,0);
+   const count=b.items.filter(i=>(i.baseId??i.id)===r.resolvedId).reduce((n,i)=>n+i.count,0);
    if(!Number.isSafeInteger(count))throw Error('Supply total exceeds safe integer range');
    return count>0&&b.state!=='unknown'?[{name:b.name,count,at:b.at as number,state:b.state}]:[];
   });
   const recentBanked=holders.filter(h=>h.state==='recent').reduce((n,h)=>n+h.count,0),datedBanked=holders.filter(h=>h.state==='stale').reduce((n,h)=>n+h.count,0);
   const state=!unresolved&&recentBanked>=r.count?'covered':unresolved||banks.some(b=>b.state!=='recent')?'unknown':'short';
-  return{item:r.item,consumers:r.consumers,state,itemId:unresolved?null:[...ids][0],required:r.count,recentBanked,datedBanked,shortfall:Math.max(0,r.count-recentBanked),unresolved,holders};
+  return{item:r.item,consumers:r.consumers,state,itemId:r.resolvedId,required:r.count,recentBanked,datedBanked,shortfall:Math.max(0,r.count-recentBanked),unresolved,holders};
  });
  const readiness=uniqueNames.map(name=>{
   const newest=statuses.filter(s=>s?.name?.toLowerCase()===name.toLowerCase()&&s.server==='rs-sdk-demo.fly.dev'&&!s.practice).sort((a,b)=>(b.at??0)-(a.at??0))[0];
@@ -152,8 +152,9 @@ if(import.meta.main){
  const root=resolve(import.meta.dir,'..'),snapshot=resolve(process.argv[2]??join(root,'research/hiscores-live.json'));
  const out=resolve(process.argv[3]??join(root,'.practice/joined-plan/preparation.json'));
  if(out===join(root,'.practice/haggis-supplies.json')||out===join(root,'.practice/haggis-go.json'))throw Error('Advisory output cannot replace a launch gate');
- const opts={mode:'realistic' as const,tricks:new Set<never>(),travel:haggisTravel()};
- const goals=goalRequirementsFor(haggisActivities(),opts,loadSnapshot(snapshot));
+ const opts={mode:'realistic' as const,tricks:new Set(TRICKS),travel:haggisTravel()};
+ const activities=haggisActivities(),planResult=scheduleOverall(loadSnapshot(snapshot),activities,opts);
+ const goals=overallRequirementsFor(activities,opts,planResult);
  const requirements=goals.supplies;
  const plan=JSON.parse(readFileSync(join(root,'swarm.json'),'utf8')) as {jobs:GearJob[]};
  const names=[...new Set([...FLEET.filter(a=>a.role!=='main'&&a.server==='rs-sdk-demo.fly.dev').map(a=>a.name),...plan.jobs.filter(j=>j.role!=='main').flatMap(gearJobAccounts)])];
@@ -173,7 +174,7 @@ if(import.meta.main){
  const requestPath=process.argv[4]?resolve(process.argv[4]):null;
  const request=requestPath?JSON.parse(readFileSync(requestPath,'utf8')):null;
  const route=request?preparationRoute(stock,opts.travel,request.item,request):null;
- const report={...stock,gear:preparationGear(plan.jobs,statuses,names,Date.now(),[],orderJournals),orderSources,unlocks:goals.unlocks,route,routeSource:requestPath?{path:requestPath,sha256:hash(requestPath)}:null,issues,sources,snapshot:{path:snapshot,sha256:hash(snapshot)},sourceHashes:Object.fromEntries(['scripts/preparation-report.ts','scripts/preparation-route-state.ts','scripts/goal-readiness.ts','scripts/buy-owned-ge-item.ts','knowledge/items.json','packages/planner/src/requirements.ts','packages/planner/src/owned-loadout.ts','packages/planner/src/market-progress.ts','packages/planner/src/transport-requirements.ts','packages/core/src/status.ts','packages/core/src/quest-status.ts','scripts/fleet.ts','swarm.json','packages/planner/src/haggis.ts','packages/planner/src/supply-route.ts','packages/planner/src/travel.ts','packages/planner/src/haggis-boards.json','packages/planner/src/haggis-travel.json'].map(p=>[p,hash(join(root,p))]))};
+ const report={...stock,scope:'Advisory Overall route supplies. No reservations or delivery acceptance.',overallFinish:planResult.overallFinish,gear:preparationGear(plan.jobs,statuses,names,Date.now(),[],orderJournals),orderSources,unlocks:goals.unlocks,route,routeSource:requestPath?{path:requestPath,sha256:hash(requestPath)}:null,issues,sources,snapshot:{path:snapshot,sha256:hash(snapshot)},sourceHashes:Object.fromEntries(['scripts/preparation-report.ts','scripts/preparation-route-state.ts','scripts/goal-readiness.ts','scripts/buy-owned-ge-item.ts','knowledge/items.json','packages/planner/src/requirements.ts','packages/planner/src/owned-loadout.ts','packages/planner/src/market-progress.ts','packages/planner/src/transport-requirements.ts','packages/core/src/status.ts','packages/core/src/quest-status.ts','scripts/fleet.ts','swarm.json','packages/planner/src/haggis.ts','packages/planner/src/supply-route.ts','packages/planner/src/travel.ts','packages/planner/src/haggis-boards.json','packages/planner/src/haggis-travel.json'].map(p=>[p,hash(join(root,p))]))};
  mkdirSync(resolve(out,'..'),{recursive:true});writeFileSync(out,JSON.stringify(report,null,2)+'\n');
  console.log(JSON.stringify({output:out,requirements:report.items.length,coveredByRecentBanks:report.items.filter(i=>i.shortfall===0).length,unknownBanks:report.banks.filter(b=>b.state==='unknown').length,staged:false}));
 }

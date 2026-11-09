@@ -1,8 +1,38 @@
 import {test,expect} from 'bun:test';
-import {mkdtempSync,mkdirSync,writeFileSync,rmSync,readFileSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,rmSync,readFileSync,statSync,utimesSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {workerSourceRoots,workerSourceRevision,runtimeTrees,releaseFiles,releaseEntries,workerEntries,capabilityRevision,launchRevision,cachedLaunchRevision,assertWorkerRelease,assertCompatibleWorkers,assertLiveWorkerRelease,standingPeer} from '../src/worker-release';
+import {workerSourceRoots,workerSourceRevision,runtimeTrees,releaseFiles,releaseEntries,workerEntries,capabilityRevision,launchRevision,cachedLaunchRevision,cachedReleaseFor,assertWorkerRelease,assertCompatibleWorkers,assertLiveWorkerRelease,standingPeer} from '../src/worker-release';
+
+test('cached admission keeps entry closures separate and rejects changed bytes, new imports and removed files',()=>{
+ const root=fixture(),entry=['scripts/worker.ts'];
+ try{
+  mkdirSync(join(root,'vendor/rs-sdk/sdk/empty/nested'),{recursive:true});
+  mkdirSync(join(root,'knowledge/empty/nested'),{recursive:true});
+  mkdirSync(join(root,'knowledge/optional'),{recursive:true});
+  writeFileSync(join(root,'scripts/worker.ts'),readFileSync(join(root,'scripts/worker.ts'),'utf8')+"export const folder='knowledge/empty';\nexport const optional='knowledge/optional/new.json';\n");
+  const pin=capabilityRevision(entry,root),env={WORKER_ENTRY:entry[0],WORKER_RELEASE:pin};
+  for(let i=0;i<17;i++)expect(cachedReleaseFor(entry,root)).toBe(pin);
+  expect(cachedReleaseFor(['scripts/other.ts'],root)).toBe(capabilityRevision(['scripts/other.ts'],root));
+  const file=join(root,'packages/core/src/shared.ts'),stamp=statSync(file);
+  writeFileSync(file,'export const shared=2;\n');utimesSync(file,stamp.atime,stamp.mtime);
+  expect(cachedReleaseFor(entry,root)).toBe(capabilityRevision(entry,root));
+  expect(()=>assertLiveWorkerRelease('rs-sdk-demo.fly.dev',env,root)).toThrow('release source changed');
+  writeFileSync(join(root,'knowledge/optional/new.json'),'[]');
+  expect(cachedReleaseFor(entry,root)).toBe(capabilityRevision(entry,root));
+  writeFileSync(join(root,'knowledge/empty/nested/added.json'),'[]');
+  expect(cachedReleaseFor(entry,root)).toBe(capabilityRevision(entry,root));
+  writeFileSync(join(root,'scripts/worker.ts'),"export * from './new-helper';\n");
+  writeFileSync(join(root,'scripts/new-helper.ts'),'export const value=1;');
+  expect(cachedReleaseFor(entry,root)).toBe(capabilityRevision(entry,root));
+  writeFileSync(join(root,'vendor/rs-sdk/sdk/added.ts'),'export {};');
+  expect(cachedReleaseFor(entry,root)).toBe(capabilityRevision(entry,root));
+  writeFileSync(join(root,'vendor/rs-sdk/sdk/empty/nested/new.ts'),'export {};');
+  expect(cachedReleaseFor(entry,root)).toBe(capabilityRevision(entry,root));
+  rmSync(join(root,'scripts/worker.ts'));
+  expect(()=>cachedReleaseFor(entry,root)).toThrow('entry missing');
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
 
 // A small repository: one worker with a helper and a knowledge read, an unrelated script and data file, the launch
 // entries and both runtime trees.
@@ -179,18 +209,49 @@ test('an empty-result live row is closed only when its own producer lifecycle sh
   const done=start('Done',11);done.record('ended','logged-out');
   const later=start('Later',12);const newer=start('Later',13);newer.record('ended','logged-out');
   const dead=start('Dead',14),live=start('Live',15),fresh=start('Fresh',16),gone=start('Gone',17);start('Gone',18);
-  const now=1_000_000_000_000,old=now-LOST_SESSION_DROP_MS,row=(a:{account:string;attemptId:string},at=old)=>({name:a.account,server,result:'',at,workRevision:pin,sessionAttemptId:a.attemptId});
+  // The live deadlock: a worker killed mid-session (attempt 19, pid dead) and a later login the gate refused (attempt
+  // 20, pid dead, held): nothing alive owns the account. A held later attempt whose owner runs (pid 15) still holds.
+  const killed=start('Killed',19);start('Killed',20);
+  const retried=start('Retried',21);start('Retried',15);
+  // The fixtures' receipts are written now; the gate judges them LOST_SESSION_DROP_MS later, when their drop has passed.
+  const now=Date.now()+LOST_SESSION_DROP_MS,old=now-LOST_SESSION_DROP_MS,row=(a:{account:string;attemptId:string},at=old)=>({name:a.account,server,result:'',at,workRevision:pin,sessionAttemptId:a.attemptId});
   const alive=(pid:number)=>pid===15,closed=(r:any)=>closedSessionRow(r,server,{root},alive,now);
   expect(closed(row(done))).toBe(true);        // its own attempt confirmed logout
   expect(closed(row(later))).toBe(true);       // a newer attempt confirmed logout
   expect(closed(row(dead))).toBe(true);        // owner gone and past the server's lost-session drop
   expect(closed(row(live))).toBe(false);       // owner alive
   expect(closed(row(fresh,now-LOST_SESSION_DROP_MS+1))).toBe(false); // owner gone, inside the drop window
-  expect(closed(row(gone))).toBe(false);       // a newer held attempt is not this row
+  expect(closed(row(gone))).toBe(true);        // a newer held attempt with a gone owner, past the drop
+  expect(closed(row(gone,now-LOST_SESSION_DROP_MS+1))).toBe(false); // inside the drop window
+  expect(closed(row(killed))).toBe(true);      // killed worker, refused retry, both owners gone
+  expect(closed(row(retried))).toBe(false);    // the retry's owner still runs
+  // The retry's receipt is younger than the drop: its session may still stand on the server.
+  expect(closedSessionRow(row(killed),server,{root},alive,now-1)).toBe(false);
+  expect(()=>assertCompatibleWorkers(pin,server,[row(killed)],now,closed)).not.toThrow();
+  expect(()=>assertCompatibleWorkers(pin,server,[row(retried)],now,closed)).toThrow('peer state unknown');
   expect(closed({...row(dead),sessionAttemptId:undefined})).toBe(false);
   expect(closed({...row(done),name:'Nobody'})).toBe(false);
   expect(()=>assertCompatibleWorkers(pin,server,[row(done),row(dead)],now,closed)).not.toThrow();
   expect(()=>assertCompatibleWorkers(pin,server,[row(done),row(live)],now,closed)).toThrow('peer state unknown');
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('a reused PID does not hold an expired peer row; matching or unknown owners still hold',async()=>{
+ const {closedSessionRow,LOST_SESSION_DROP_MS}=await import('../src/worker-release');
+ const {beginSessionAttempt}=await import('../src/session-lifecycle');
+ const root=mkdtempSync(join(tmpdir(),'release-reused-pid-')),server='rs-sdk-demo.fly.dev',pin='a'.repeat(64);
+ try{
+  const attempt=beginSessionAttempt({account:'Peer',server},{root,owner:{pid:35376,coordinatorRunId:null,workerRelease:null,script:'scripts/goldfarm.ts',role:null,participants:null}});
+  attempt.record('ready');attempt.record('ended','connection-lost');
+  const now=Date.now(),row={name:'Peer',server,result:'',at:now-LOST_SESSION_DROP_MS,workRevision:pin,sessionAttemptId:attempt.attemptId};
+  const closed=(line:string|null)=>(r:any)=>closedSessionRow(r,server,{root,commandLine:()=>line},()=>true,now);
+  expect(closed('python worker.py')(row)).toBe(true);
+  expect(()=>assertCompatibleWorkers(pin,server,[row],now,closed('python worker.py'))).not.toThrow();
+  for(const line of ['bun scripts/goldfarm.ts Peer',null,'']){
+   expect(closed(line)(row)).toBe(false);
+   expect(()=>assertCompatibleWorkers(pin,server,[row],now,closed(line))).toThrow('peer state unknown');
+  }
+  expect(closed('python worker.py')({...row,at:row.at+1})).toBe(false);
  }finally{rmSync(root,{recursive:true,force:true});}
 });
 

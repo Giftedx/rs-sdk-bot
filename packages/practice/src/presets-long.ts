@@ -93,12 +93,12 @@ function trollLove(position: { x: number; z: number; level?: number }, varps: Re
 // Captain (the bot takes it off before the camp: the guards jail a player with a weapon or armour,
 // quest_desertrescue.rs2:145-186) and the desert shirt, robe and boots (1833/1835/1837, tradeable), which the slave
 // swaps for his clothes in the worn slots (mining_slave.rs2:145-200) and which slow the desert heat
-// (area_desert/scripts/desert_heat.rs2:10-56). Helper items (tradeable): a hammer, 3 bronze bars and 40 feathers for
+// (area_desert/scripts/desert_heat.rs2:10-56). Helper items (tradeable): a hammer, 5 bronze bars and 40 feathers for
 // the dart (quest_desertrescue.rs2:577-672; a failed roll wastes a bar or 10 feathers), 2 full waterskins (1823), 6
 // sharks. %desertrescue is varp 197, %desertrescue_map_mechanisms 198.
 const TT_WORN = wear([[1333, 3], [1833, 4], [1835, 7], [1837, 10]]);
 const SLAVE_WORN = wear([[1844, 4], [1845, 7], [1846, 10]]);
-const TT_ITEMS: Array<number | [number, number]> = [2347, 2349, 2349, 2349, [314, 40], 1823, 1823];
+const TT_ITEMS: Array<number | [number, number]> = [2347, 2349, 2349, 2349, 2349, 2349, [314, 40], 1823, 1823];
 function tt(position: { x: number; z: number; level?: number }, varps: Record<number, number> = {}, extra: Array<number | [number, number]> = [], equipment = TT_WORN): SaveConfig {
     return {
         position: { level: 0, ...position }, skills: ALL_99, equipment, varps: { ...DONE, ...varps },

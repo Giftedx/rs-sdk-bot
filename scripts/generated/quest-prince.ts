@@ -40,11 +40,13 @@ try {
     };
     // Jail guards (vislevel 26) are huntmode=aggressive_melee (area_draynor configs); a guard's hit closes the talk.
     // One trial lost 4 Keli talks so (hpMin 94). The bot kills a guard that is in combat within 3 tiles first.
+    // A guard's hit closes the Keli talk, and a low-Attack bow account (UnderMyKilt: Attack 6, Ranged 97) cannot cut a
+    // level-26 guard down by hand, so the sweep brings its bow and QUEST_ARROWS and the fight wields them first.
     const clearGuards = async (): Promise<void> => {
         for (let t = 0; t < 40; t++) {
             const g: any = (q.st()?.nearbyNpcs ?? []).find((n: any) => /^jail guard$/i.test(n.name) && n.inCombat && n.distance <= 3);
             if (!g) return;
-            if (t % 3 === 0) await q.s.direct({ type: 'interactNpc', npcIndex: g.index, optionIndex: g.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
+            if (t % 3 === 0) await q.attackNpc(g);
             await q.waitTicks(1);
         }
     };
@@ -139,6 +141,13 @@ try {
     await q.step('cell door', () => q.useOnLoc(ITEM.key, ALIDOOR), () => x() <= 3125 && z() <= 3243, 12, 4);
     await q.talk('prince', /^prince ali$/i, [], () => !q.has(ITEM.skirt) && !q.dialogOpen(), { x: 3123, z: 3242 }, 60);
     q.milestone(100);
+
+    // Out of the cell first: the world router has no route from within it (its door is locked from the corridor side),
+    // while Open works from inside (quest_prince.rs2:46-51); a Magic 1 account walks to Lumbridge, so it starts outside.
+    await q.openDoor('cell door out', ALIDOOR.x, ALIDOOR.z);
+    await q.walk('out of cell', [{ x: 3128, z: 3245, tol: 1 }]);
+    await jailDoor();
+    await q.walk('out of jail', [{ x: 3128, z: 3248, tol: 1 }]);
 
     // 9. Al Kharid: Hassan queues the completion (hassan.rs2:24-26). The toll gate is free now.
     await lumbridge('lumbridge teleport 4');

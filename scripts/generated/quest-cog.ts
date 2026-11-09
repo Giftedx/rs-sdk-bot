@@ -98,7 +98,9 @@ try {
     await pickup('poison', ITEM.poison);
     await q.walk('to lever', [{ x: 2566, z: 9659, tol: 2 }, { x: 2577, z: 9659, tol: 2 }, { x: LEVER.x, z: LEVER.z, tol: 1 }]);
     await q.step('lever', () => q.opLoc(loc(LEVER), 1), () => !!q.findLoc(l => l.x === LEVER.x && l.z === LEVER.z && l.id === 35), 8, 4);
-    await q.walk('to trough', [{ x: 2596, z: 9660, tol: 1 }, { x: 2596, z: 9657, tol: 1 }, { x: 2588, z: 9656, tol: 1 }]);
+    // The lever opens gate 37 (2595,9657) for 500 ticks (quest_cog_gates_and_levers.rs2:38-42), but the door table keeps it
+    // blocked (kind unknown), so the planned walk ends at the cage bars. One client-routed click goes through the open gate.
+    await q.dash('to trough', 2588, 9656, 1, 40);
     await q.step('poison trough', () => q.useOnLoc(ITEM.poison, loc(TROUGH)), () => !q.has(ITEM.poison), 10, 4);
     q.milestone('trough');
     await near('to rat gate', { x: GATE_C.x, z: GATE_C.z }, 0);

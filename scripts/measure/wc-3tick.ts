@@ -1,6 +1,6 @@
 // 3-tick woodcutting benchmark. Usage: bun scripts/measure/wc-3tick.ts <bot> <normal|3tick> [ticks=300]
 // Preset oaks_3tick: Woodcutting 15 at the Varrock oaks, bronze axe, knife, one log.
-// Mechanism (code-read 2026-10-23): woodcutting rolls when %action_delay = map_clock (skill_woodcutting woodcut.rs2).
+// Mechanism (code-read): woodcutting rolls when %action_delay = map_clock (skill_woodcutting woodcut.rs2).
 // Knife on a log, then "Make 1", sets %action_delay = clock + 2 (skill_fletching/scripts/cut_logs.rs2:83) and only
 // queues the cut. Clicking the tree in the same tick clears that queue (no log used) and keeps the delay, so the
 // tree rolls 2 ticks later. Repeating every 3 ticks gives a 3-tick cycle instead of 4.

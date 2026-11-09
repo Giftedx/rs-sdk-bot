@@ -48,9 +48,8 @@ export async function executeHetty(q:Awaited<ReturnType<typeof openQuest>>){
     await q.openDoor('hetty door', 2965, 3206);
     await q.dash('rat house', 2956, 3206, 0);
     await q.openDoor('rat door', 2956, 3205);
-    const attack = (n: any) => q.s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
     const tailOnGround = (): any => (q.st()?.groundItems ?? []).find((g: any) => g.id === TAIL);
-    let selectedIndex:number|null=null;
+    let selectedIndex:number|null=null,idleSince=0;
     for (let t = 0; t < 120 && !q.has(TAIL); t++) {
         observeHettyRat(q,'tick');
         await q.guard('rat');
@@ -62,17 +61,23 @@ export async function executeHetty(q:Awaited<ReturnType<typeof openQuest>>){
                 observeHettyRat(q,'pickup-reply',null,reply);
             }
         } else {
-            // The target is nested under combat, not on player. Nearest-NPC order
-            // changes during a fight. Dispatch once and allow death/drop processing
-            // (rat.rs2) within the same budget; neither XP nor HP zero is a tail.
+            // The target is nested under combat, not on player. Nearest-NPC order changes during a fight. One dispatch
+            // per fight (attackNpc: the bow, the strikes or the hands), and a fight that ends with no tail on the ground
+            // (a miss with the hands, a rat lost) frees the next dispatch after six ticks; death/drop processing (rat.rs2)
+            // fits within that. Neither XP nor HP zero is a tail.
             const combat=q.pos()?.combat;
-            if(combat?.targetType==='npc'&&combat.targetIndex>=0)selectedIndex??=combat.targetIndex;
+            if(combat?.targetType==='npc'&&combat.targetIndex>=0){selectedIndex??=combat.targetIndex;idleSince=t;}
+            else if(selectedIndex!==null&&t-idleSince>=6)selectedIndex=null;
+            // A strike does not repeat on its own: the engaged rat is attacked again every five ticks (the helper's cast
+            // rate) until it dies; the bow and the hands keep fighting through the repeat.
+            const engaged:any = selectedIndex!==null?(q.st()?.nearbyNpcs??[]).find((n:any)=>n.index===selectedIndex):null;
             const rat:any = selectedIndex===null?q.npc(/^rat$/i):null;
-            if (selectedIndex===null&&!rat) { if (t % 10 === 0) await q.dash('to rats', RATS.x, RATS.z, 3); }
+            if (engaged&&t % 5 === 0) await q.attackNpc(engaged);
+            else if (selectedIndex===null&&!rat) { if (t % 10 === 0) await q.dash('to rats', RATS.x, RATS.z, 3); }
             else if (selectedIndex===null&&rat&&t % 4 === 0) {
-                selectedIndex=rat.index;
+                selectedIndex=rat.index;idleSince=t;
                 observeHettyRat(q,'attack',rat.index);
-                const reply=await attack(rat);
+                const reply=await q.attackNpc(rat);
                 observeHettyRat(q,'attack-reply',rat.index,reply);
             }
         }

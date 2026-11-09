@@ -86,11 +86,20 @@ try {
         // (trial 2: no path to him); a squeeze moves 3 tiles each way (skill_agility/scripts/barbarian_course.rs2:125-147).
         // Proof attempt 2 went to the bridge first, then round by the Rellekka shore: about 350 ticks from the bridge to the key.
         await jump('rocks south', SOUTH);
-        await q.walk('to pipe', [{ x: PIPE.x, z: PIPE.z + 2, tol: 1 }]);
+        // The planned walk ends east of the pipe; a client-routed click reaches the north stand (barbarian_course.rs2:125-147).
+        // The pipe's north stand is in the yard east of the outpost gate (2545,3569), so the bot goes out through the gate.
+        const gate = async (label: string, through: () => boolean) => {
+            await q.step(label, () => { const g = q.findLoc((l: any) => l.x === 2545 && l.z === 3569) ?? { id: 2116, x: 2545, z: 3569 }; return q.opLoc(g, 1); }, through, 8, 5);
+        };
+        await q.walk('to outpost gate', [{ x: 2544, z: 3569, tol: 1 }]);
+        await gate('gate out', () => (q.pos()?.worldX ?? 0) >= 2546);
+        await q.dash('pipe stand', PIPE.x, PIPE.z + 2, 0, 16);
         await q.step('pipe in', () => q.opLoc(loc(PIPE), 1), () => z() <= PIPE.z - 1, 14, 4);
         await q.talk('gunnjorn', /^gunnjorn$/i, [], () => q.has(ITEM.key), GUNNJORN, 40);
         await q.walk('to pipe back', [{ x: PIPE.x, z: PIPE.z - 1, tol: 1 }]);
         await q.step('pipe out', () => q.opLoc(loc(PIPE), 1), () => z() >= PIPE.z + 2, 14, 4);
+        await q.dash('gate yard', 2546, 3569, 1, 16);
+        await gate('gate in', () => (q.pos()?.worldX ?? 9999) <= 2545);
         q.milestone('key');
         await q.walk('to rocks', [{ x: 2522, z: 3594, tol: 1 }]);
         await jump('rocks north', NORTH);
@@ -131,7 +140,9 @@ try {
         await q.walk('to wall', [{ x: WALL_MID.x, z: WALL_MID.z - 1, tol: 0 }]);
         for (const [name, id] of [['fire', ITEM.fire], ['water', ITEM.water], ['earth', ITEM.earth], ['air', ITEM.air], ['dagger', ITEM.dagger], ['arrow', ITEM.arrow]] as const) {
             const t3 = q.s.tick();
-            const placed = () => msgSince(/you place (a|an) /i, t3) || msgSince(/no space to put/i, t3);
+            // Count the item: the previous item's message can land on this tick, and it would skip this slot.
+            const n0 = q.cnt(id);
+            const placed = () => q.cnt(id) < n0 || msgSince(/no space to put/i, t3 + 1);
             for (let i = 0; i < 3 && !placed(); i++) {
                 await q.guard(`wall ${name}`);
                 await q.useOnLoc(id, loc(WALL_MID));

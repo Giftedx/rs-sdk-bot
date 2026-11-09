@@ -1,6 +1,6 @@
 // 3-tick fishing benchmark. Usage: bun scripts/measure/fish-3tick.ts <bot> <normal|3tick> [ticks=300]
 // Preset shrimp_3tick: Draynor net spot, small fishing net, knife, one log.
-// Mechanism (code-read 2026-10-23, skill_fishing/scripts/fishing_spots/saltfish.rs2 and freshfish.rs2:37-50): a
+// Mechanism (code-read, skill_fishing/scripts/fishing_spots/saltfish.rs2 and freshfish.rs2:37-50): a
 // click with an expired %action_delay sets it to clock + 4 and rolls 4 ticks later (a 5-tick cycle). Knife on a log
 // + "Make 1" sets it to clock + 2 first (skill_fletching/scripts/cut_logs.rs2:83), so the spot rolls 2 ticks later;
 // repeating every 3 ticks gives a 3-tick cycle. The fletch is queued and cleared by the spot click: no log used.

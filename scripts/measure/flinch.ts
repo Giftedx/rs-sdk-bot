@@ -2,7 +2,7 @@
 // Env: TARGET = loc name regex (default ^oak$), ATTACKER = NPC name regex (default ^barbarian$), PHASE_TRIES (default 8).
 // Presets: flinch_oak_15, flinch_oak_45 (Barbarian Village oak, multiway zone; shortbow, pot, bucket, food).
 //
-// Mechanism (code-read 2026-10-23):
+// Mechanism (code-read):
 // - An NPC melee hit (also a miss) queues playerhit_n_retaliate with delay 0 (npc_combat_melee.rs2:28-48); the
 //   queue runs the same tick (Player.ts processQueue, delay <= 0). With auto-retaliate on and busy2 = false, and
 //   %action_delay < map_clock, it sets %action_delay = map_clock + attackrate/2 - (1 on rapid)

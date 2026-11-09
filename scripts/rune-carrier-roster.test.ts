@@ -6,6 +6,13 @@ test('the composed worker uses the complete ordered supervisor roster',()=>{
  for(const args of [['Wandwaver','--carriers'],['Wandwaver','Shaftsinker','shaftsinker','--carriers'],['Wandwaver','99','--carriers','extra']])expect(()=>runeCarrierRoster(args)).toThrow();
  expect(()=>runeCarrierRoster(['Wandwaver',...Array.from({length:17},(_,i)=>'helper'+i),'--carriers'])).toThrow();
 });
+test('bounded body measurements require an explicit12..48 pack mode and the retained16 helpers',()=>{
+ const names=['Wandwaver',...Array.from({length:16},(_,i)=>'helper'+i)];
+ for(const n of [12,13,37,48])expect(runeCarrierRoster([...names,'--body-measure='+n])).toEqual(names);
+ for(const mode of ['--body-measure=0','--body-measure=11','--body-measure=49','--body-measure=013','--body-measure=NaN','--body-measure=13.5'])expect(()=>runeCarrierRoster([...names,mode])).toThrow();
+ expect(()=>runeCarrierRoster([...names.slice(1),'--body-measure=13'])).toThrow();
+ expect(()=>runeCarrierRoster([...names,'--body-continuation','--body-measure=13'])).toThrow();
+});
 test('a missing or trained skill refuses the fresh route',()=>{
  expect(()=>assertFreshRuneSkills(skills)).not.toThrow();
  expect(()=>assertFreshRuneSkills(skills.slice(1))).toThrow();

@@ -1,20 +1,107 @@
 // One exact owned handoff. HANDOFF_ORDER is mandatory; saved bank/pack totals govern recovery.
 // HANDOFF_ORDER=order-key bun scripts/handoff-inputs.ts <donor> <receiver> 153:Flax --notes --keep='food|tool' --bank-x=2725 --bank-z=3493
 // Both jobs must already be paused externally. Existing stop files are never cleared.
+// --approach-ms=1800000 sends distant participants to the bank by planned travel on one shared budget (1000..1800000).
+// The transfer deadline --timeout-ms starts after that travel. Without it, every participant uses the local approach.
+// Owned production: CAP=1600 bun scripts/handoff-inputs.ts <account> --headless-order 135 14
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { ownedAccounts } from '../packages/core/src/tradeguard';
 import { assertServerAllowed, serverFromEnv, openBot, settle } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
+import {FAR_WALK_TILES} from '../packages/core/src/walk';
 import {depositObserved} from '../packages/core/src/deposit';
 import {preparePayout} from './banker';
 import {exactOrder,acquireExclusiveLease,ownerAlive} from './payout-order';
 import {reconcileOrder, type OrderSnapshot} from './courier-handoff';
+import {runShafts} from './fletch-shafts';
+import {runHeadless} from './fletch-arrows';
+import {walkTarget} from './walk-to';
+import {abortable, executionContext} from '../vendor/rs-sdk/sdk/execution-context';
+
+export function parseHeadlessOrder(args:string[],cap=process.env.CAP??'1600') {
+    const [account,mode,output,logs]=args;
+    if(args.length!==4||mode!=='--headless-order'||!account||account.trim()!==account||!ACCOUNT.test(account)||/^(main|haggis)$/i.test(account))
+        throw Error('headless-order requires one non-reserved account, new output count and logs to cut');
+    if(![output,logs,cap].every(n=>typeof n==='string'&&/^\d+$/.test(n)))throw Error('invalid headless-order counts/CAP');
+    const maximum=Number(output),logsToCut=Number(logs),budget=Number(cap);
+    if(![maximum,logsToCut,budget].every(Number.isSafeInteger)||maximum<15||maximum%15||logsToCut<1||logsToCut>25||budget<1)
+        throw Error('headless-order requires output multiple15, logs1..25 and positive CAP');
+    return {account,maximum,logsToCut,cap:budget};
+}
+
+// One budget covers bank entry, both helpers and final reconciliation. The entry owns logout.
+export async function runOwnedHeadless(s:Session,c:ReturnType<typeof parseHeadlessOrder>,check:()=>void) {
+    const start=s.tick(),controller=new AbortController(),parent=executionContext.getStore();
+    const parentAbort=()=>controller.abort(parent?.signal.reason);
+    parent?.signal.addEventListener('abort',parentAbort,{once:true});
+    if(parent?.signal.aborted)parentAbort();
+    const guard=()=>{try{check();if(s.tick()-start>=c.cap)throw Error('headless-order CAP exhausted');}catch(e){controller.abort(e);}};
+    const off=s.onTick(guard);
+    const remaining=()=>{guard();controller.signal.throwIfAborted();return c.cap-(s.tick()-start);};
+    try{return await executionContext.run({...parent,signal:controller.signal},()=>abortable((async()=>{
+        remaining();
+        if(!await waitUntil(s,()=>!!s.sdk.getState()?.player&&(s.sdk.getSkill('Hitpoints')?.level??0)>0&&(s.sdk.getSkill('Fletching')?.baseLevel??0)>0,{timeoutTicks:15}))throw Error('headless-order entry not observed');
+        const generation=s.bankObservation?.()?.generation??0;
+        if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>!!s.sdk.getState()?.bank?.isOpen&&(s.bankObservation?.()?.generation??0)>generation,{timeoutTicks:15}))throw Error('headless-order fresh bank unavailable');
+        const totals=()=>{
+            const bank=s.bankObservation?.();if(!bank)throw Error('headless-order bank unknown');
+            const counts=new Map<number,number>();
+            for(const i of [...bank.items,...s.sdk.getInventory(),...s.sdk.getEquipment()])counts.set(i.id,(counts.get(i.id)??0)+i.count);
+            return counts;
+        };
+        const before=totals(),qty=(id:number)=>before.get(id)??0,xp=s.sdk.getSkillXp('Fletching')??0;
+        // Equipment is protected, never an input source. Helpers use only pack and bank stock.
+        const available=(id:number)=>qty(id)-s.sdk.getEquipment().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
+        if(available(1511)<c.logsToCut||available(946)<1||available(52)+15*c.logsToCut-c.maximum<100||available(314)-c.maximum<100)
+            throw Error('headless-order missing owned inputs: logs, knife, shafts or feathers with100 reserves required');
+        const shafts=await runShafts(s,{cap:remaining(),maximum:c.logsToCut,reserve:available(1511)-c.logsToCut,bankKnife:true});
+        console.log('SHAFT_BANK '+JSON.stringify(shafts));
+        if(!shafts.ok||!shafts.targetMet)throw Error('headless-order shafts incomplete: '+JSON.stringify(shafts));
+        const headless=await runHeadless(s,{cap:remaining(),maximum:c.maximum,shaftReserve:100,featherReserve:100});
+        console.log('HEADLESS_BANK '+JSON.stringify(headless));
+        remaining();
+        const after=totals(),changes=new Map([[1511,-c.logsToCut],[52,15*c.logsToCut-c.maximum],[314,-c.maximum],[53,c.maximum]]);
+        const preserved=[...new Set([...before.keys(),...after.keys(),...changes.keys()])].every(id=>(after.get(id)??0)===(before.get(id)??0)+(changes.get(id)??0));
+        const bank=s.bankObservation?.();if(!bank)throw Error('headless-order final bank unknown');
+        const banked=bank.items.filter(i=>i.id===53).reduce((n,i)=>n+i.count,0);
+        const ok=headless.ok&&headless.targetMet&&preserved&&banked===qty(53)+c.maximum&&(s.sdk.getSkillXp('Fletching')??0)>xp;
+        return {ok,phase:'headless-order',reason:ok?'exact new headless output banked; assets reconciled':'headless-order final output/assets/XP incomplete',shafts,headless,preserved,ticks:s.tick()-start};
+    })()));}finally{off();parent?.signal.removeEventListener('abort',parentAbort);controller.abort(Error('headless-order ended'));}
+}
+
+async function headlessMain(io:{root?:string;openBot?:typeof openBot;settle?:typeof settle;ownedAccounts?:typeof ownedAccounts}) {
+    const c=parseHeadlessOrder(process.argv.slice(2)),root=io.root??resolve(import.meta.dir,'..'),dir=join(root,'.practice');
+    const host=serverFromEnv(readFileSync(join(root,'vendor/rs-sdk/bots',c.account,'bot.env'),'utf8'));assertServerAllowed(host);
+    const owned=(io.ownedAccounts??ownedAccounts)(host),sessions:Session[]=[];
+    const runId=process.env.COORDINATOR_RUN_ID??(process.env.BOT_GOAL??'').match(/\[(task-[a-z0-9-]+)\]/)?.[1]??'';
+    let cancelled=false,release:(()=>void)|undefined;
+    const cancel=()=>{cancelled=true;};
+    const read=(p:string,fallback:any)=>existsSync(p)?JSON.parse(readFileSync(p,'utf8')):fallback;
+    const check=()=>{
+        if(cancelled)throw Error('headless-order cancelled');
+        assertAccountOwnership([c.account],read(join(dir,'coordinator/state.json'),null),read(join(root,'swarm.json'),{}).jobs,n=>existsSync(join(dir,'stop-'+n)),runId);
+        if(!owned.has(c.account.toLowerCase()))throw Error('not authenticated owned: '+c.account);
+        if(!sessions.length)assertRecoverableStatus(read(join(dir,'status',c.account+'.json'),null),null,ownerAlive);
+    };
+    let out:any={ok:false,phase:'headless-order',reason:''};
+    try{
+        check();release=acquireAccountLeases([c.account],runId,join(dir,'account-leases'));check();
+        process.on('SIGINT',cancel);process.on('SIGTERM',cancel);
+        sessions.push(await (io.openBot??openBot)(c.account,{onStop:async()=>cancel(),onSessionEnd:async()=>cancel()}));
+        out=await runOwnedHeadless(sessions[0]!,c,check);
+    }catch(e){out.reason=String(e);}
+    finally{
+        try{if(sessions.length)out.ok=await (io.settle??settle)(sessions,out.ok,out.reason)&&out.ok;}
+        finally{process.off('SIGINT',cancel);process.off('SIGTERM',cancel);release?.();}
+    }
+    console.log('HANDOFF_RESULT '+JSON.stringify(out));process.exitCode=out.ok?0:1;
+}
 
 type Item = { name: string; count: number };
 export type Handoff = { donor: string; receiver: string; items: Item[]; notes: boolean; keep?: string;
-    x: number; z: number; requestMs: number; timeoutMs: number; graceMs: number };
+    x: number; z: number; approachMs?: number; requestMs: number; timeoutMs: number; graceMs: number };
 const ACCOUNT = /^[A-Za-z0-9_ -]{1,12}$/;
 export function parseHandoff(args: string[]): Handoff {
     const [donor, receiver, ...rest] = args;
@@ -35,13 +122,14 @@ export function parseHandoff(args: string[]): Handoff {
         const v = value.join('=');
         if (key === '--notes' && !value.length) cfg.notes = true;
         else if (key === '--keep' && v && v.length <= 300) { new RegExp(v, 'i'); cfg.keep = v; }
-        else if (['--bank-x','--bank-z','--request-ms','--timeout-ms','--grace-ms'].includes(key!) && /^\d+$/.test(v)) {
-            const fields: Record<string,'x'|'z'|'requestMs'|'timeoutMs'|'graceMs'> = { '--bank-x': 'x', '--bank-z': 'z', '--request-ms': 'requestMs', '--timeout-ms': 'timeoutMs', '--grace-ms': 'graceMs' };
+        else if (['--bank-x','--bank-z','--approach-ms','--request-ms','--timeout-ms','--grace-ms'].includes(key!) && /^\d+$/.test(v)) {
+            const fields: Record<string,'x'|'z'|'approachMs'|'requestMs'|'timeoutMs'|'graceMs'> = { '--bank-x': 'x', '--bank-z': 'z', '--approach-ms': 'approachMs', '--request-ms': 'requestMs', '--timeout-ms': 'timeoutMs', '--grace-ms': 'graceMs' };
             const field = fields[key!]!;
             cfg[field] = Number(v);
         } else throw new Error(`unknown/invalid handoff option ${key}`);
     }
     if (!cfg.items.length || ![cfg.x,cfg.z].every(n => Number.isSafeInteger(n) && n > 0 && n < 16384)
+        || cfg.approachMs !== undefined && (!Number.isSafeInteger(cfg.approachMs) || cfg.approachMs < 1000 || cfg.approachMs > 1_800_000)
         || !Number.isSafeInteger(cfg.requestMs) || cfg.requestMs < 1000 || cfg.requestMs > 60_000
         || !Number.isSafeInteger(cfg.timeoutMs) || cfg.timeoutMs < cfg.requestMs || cfg.timeoutMs > 600_000
         || !Number.isSafeInteger(cfg.graceMs) || cfg.graceMs < 1000 || cfg.graceMs > 60_000) throw new Error('invalid handoff bounds/items');
@@ -184,11 +272,41 @@ export function assertRecoverableStatus(status:any,owner:any,alive:(pid:number)=
         throw Error('account session ownership unsettled: '+status.name);
 }
 
+type ApproachOperations=NonNullable<Parameters<typeof walkTarget>[3]>;
+// Distant participants travel together, so neither waits idle at the bank. The caller retains
+// its sessions: a failure aborts both walks and returns to that owner for logout.
+async function approachBank(c:Handoff,sessions:Session[],check:()=>void,operations?:ApproachOperations) {
+    const to={x:c.x,z:c.z,level:0},deadline=Date.now()+c.approachMs!,controller=new AbortController(),parent=executionContext.getStore();
+    const parentAbort=()=>controller.abort(parent?.signal.reason);
+    parent?.signal.addEventListener('abort',parentAbort,{once:true});
+    if(parent?.signal.aborted)parentAbort();
+    const guard=()=>{
+        try{check();if(Date.now()>=deadline)throw Error('handoff approach deadline; transfer not started');}catch(e){controller.abort(e);}
+        // Route planning and waiting at the bank send no input, and the client logs out after 10 idle minutes.
+        for(const s of sessions){const client=s.client as {idleTimer?:number}|undefined;if(typeof client?.idleTimer==='number')client.idleTimer=performance.now();}
+    };
+    // A timer, not a tick listener: this budget must also end if a tick stream stops.
+    const timer=setInterval(guard,1000);
+    try{
+        guard();controller.signal.throwIfAborted();
+        await executionContext.run({...parent,signal:controller.signal},()=>abortable(Promise.all(sessions.map(async s=>{
+            if(!await waitUntil(s,st=>!!st.player&&st.player.worldX>0&&(s.sdk.getSkill('Hitpoints')?.level??0)>0,{timeoutTicks:15}))throw Error(`handoff approach entry unobserved: ${s.name}`);
+            const p=s.sdk.getState()!.player!,from={x:p.worldX,z:p.worldZ,level:p.level};
+            if(from.level===0&&Math.max(Math.abs(from.x-c.x),Math.abs(from.z-c.z))<=FAR_WALK_TILES)return;
+            const walked=await walkTarget(s,to,false,operations);
+            if(!walked.ok)throw Error(`handoff planned approach failed: ${s.name} ${JSON.stringify(walked)}`);
+            console.log('HANDOFF_APPROACH '+JSON.stringify({account:s.name,from,to}));
+        }))));
+    }finally{clearInterval(timer);parent?.signal.removeEventListener('abort',parentAbort);controller.abort(Error('handoff approach ended'));}
+}
+
 // Own both sessions in this entry: the shared banker/taker mains are outside the
 // definition. Reuse their bounded withdrawal helper, but independently check every effect.
-export async function runExactHandoff(c:Handoff,donor:Session,receiver:Session,order:ReturnType<typeof exactOrder>,check:()=>void) {
+export async function runExactHandoff(c:Handoff,donor:Session,receiver:Session,order:ReturnType<typeof exactOrder>,check:()=>void,approach?:ApproachOperations) {
     if(donor.name.toLowerCase()!==c.donor.toLowerCase()||receiver.name.toLowerCase()!==c.receiver.toLowerCase())throw Error('exact session identity mismatch');
-    const sessions=[donor,receiver],start=Date.now();
+    const sessions=[donor,receiver];
+    if(c.approachMs)await approachBank(c,sessions,check,approach);
+    const start=Date.now();
     const bounded=()=>{check();if(Date.now()-start>=c.timeoutMs)throw Error('exact handoff deadline; reconcile saved state before retry');};
     for(const s of sessions){
         bounded();
@@ -226,9 +344,17 @@ export async function runExactHandoff(c:Handoff,donor:Session,receiver:Session,o
     const receipt=prior??order.prepare(expected,snapshot());
     let action=reconcileOrder(receipt,snapshot());
     let tradeResults:unknown[]=[];
+    const packed=(rows:{id:number;name:string;count:number}[],k:number,plain:boolean)=>rows.filter(i=>i.name.toLowerCase()===c.items[k]!.name.toLowerCase()&&(i.id===expected[k]!.id)===plain).reduce((n,i)=>n+i.count,0);
+    const baselinePack:{id:number;name:string;count:number}[]=receipt.baseline.donor.rawPack??[];
     if(action==='resume'){
         bounded();
-        const missing=c.items.map(w=>({...w,count:Math.max(0,w.count-donor.sdk.getInventory().filter(i=>i.name.toLowerCase()===w.name.toLowerCase()).reduce((n,i)=>n+i.count,0))})).filter(w=>w.count>0);
+        // A trade offer takes the first pack row of a name, so a plain row would hide the notes.
+        // Bank the plain rows for the trade. Settlement restores them, and totals never change.
+        if(c.notes)for(const [k,w] of c.items.entries()){
+            const plain=donor.sdk.getInventory().find(i=>i.name.toLowerCase()===w.name.toLowerCase()&&i.id===expected[k]!.id);
+            if(plain)await depositObserved(donor,plain);
+        }
+        const missing=c.items.map((w,k)=>({...w,count:Math.max(0,w.count-(c.notes?packed(donor.sdk.getInventory(),k,false)-packed(baselinePack,k,false):donor.sdk.getInventory().filter(i=>i.name.toLowerCase()===w.name.toLowerCase()).reduce((n,i)=>n+i.count,0)))})).filter(w=>w.count>0);
         if(missing.length)await preparePayout(donor,missing,c.notes,c.keep?new RegExp(c.keep,'i'):null);
         await donor.bot.closeBank();await receiver.bot.closeBank();
         bounded();
@@ -253,6 +379,15 @@ export async function runExactHandoff(c:Handoff,donor:Session,receiver:Session,o
             const item=receiver.sdk.getInventory().find(i=>i.id===id);if(item)await depositObserved(receiver,item);
         }
     }
+    if(c.notes)for(const [k,w] of c.items.entries()){
+        const short=packed(baselinePack,k,true)-packed(donor.sdk.getInventory(),k,true);
+        if(short<=0)continue;
+        bounded();
+        const banked=()=>donor.bankObservation?.()?.items.filter(i=>i.id===expected[k]!.id).reduce((n,i)=>n+i.count,0),before=banked();
+        await donor.bot.withdrawItem(exactName(w.name),short);
+        if(before===undefined||!await waitUntil(donor,()=>banked()===before-short&&packed(donor.sdk.getInventory(),k,true)===packed(baselinePack,k,true),{timeoutTicks:10}))
+            throw Error('pre-held stock restore unobserved: '+w.name);
+    }
     bounded();
     const settled=order.settle(snapshot());
     console.log('HANDOFF_RECEIPT '+JSON.stringify(settled));
@@ -261,7 +396,8 @@ export async function runExactHandoff(c:Handoff,donor:Session,receiver:Session,o
 
 // Injectable I/O lets process-level regressions exercise this entry without
 // credentials or a game server. The real CLI always uses the production defaults.
-export async function main(io:{root?:string;openBot?:typeof openBot;settle?:typeof settle;ownedAccounts?:typeof ownedAccounts}={}) {
+export async function main(io:{root?:string;openBot?:typeof openBot;settle?:typeof settle;ownedAccounts?:typeof ownedAccounts;approach?:ApproachOperations}={}) {
+    if(process.argv[3]==='--headless-order')return headlessMain(io);
     const c=parseHandoff(process.argv.slice(2)),root=io.root??resolve(import.meta.dir,'..'),dir=join(root,'.practice');
     // Key and duplicate checks precede even opening credentials or sessions.
     const key=process.env.HANDOFF_ORDER??'';
@@ -296,7 +432,7 @@ export async function main(io:{root?:string;openBot?:typeof openBot;settle?:type
         process.on('SIGINT',cancel);process.on('SIGTERM',cancel);
         check();sessions.push(await (io.openBot??openBot)(c.donor,{onStop:async()=>{cancelled=true;},onSessionEnd:async()=>{cancelled=true;}}));
         check();sessions.push(await (io.openBot??openBot)(c.receiver,{onStop:async()=>{cancelled=true;},onSessionEnd:async()=>{cancelled=true;}}));
-        out=await runExactHandoff(c,sessions[0]!,sessions[1]!,order,check);
+        out=await runExactHandoff(c,sessions[0]!,sessions[1]!,order,check,io.approach);
     }catch(e){out={ok:false,phase:'transfer',reason:String(e)};}
     finally{
         // This entry retains session ownership through the logout checks. Each settle

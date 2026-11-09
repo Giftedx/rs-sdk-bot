@@ -1,8 +1,58 @@
 import {test,expect} from 'bun:test';
-import {totals,lines,unrelatedKept,segmentChecks,progressChecks,refusalChecks,fixtureChecks,
- FIXTURES,CASES,ADMISSION} from '../src/magic-order-proof';
+import {totals,lines,unrelatedKept,segmentChecks,progressChecks,fallbackChecks,refusalChecks,fixtureChecks,
+ FIXTURES,CASES,ADMISSION,magicProofEndpoints,selectMagicProofEndpoints,magicProofAccountEnv,startMagicProofStack,magicChildConfiguration,magicRegistrationArgs,magicSavedEndpoints} from '../src/magic-order-proof';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import type {readPracticeSave} from '../../../scripts/measure/fleet-player-save';
+import {magicXpForLevel} from '../../../scripts/magic-order';
+
+test('owned magic endpoints reach the stack, new profiles, registration and every worker child',async()=>{
+ const checked:number[]=[],samples=[0,0.01];
+ const p=selectMagicProofEndpoints(port=>{checked.push(port);return port!==20003;},()=>samples.shift()!);
+ expect(checked).toEqual([20000,20001,20002,20003,20200,20201,20202,20203]);
+ expect(p.ports).toEqual({engine:20200,gateway:20201,management:20202,tcp:20203});
+ expect(p.instance).toMatch(/^magic-[a-z0-9-]{1,25}$/);
+ const original='SERVER=localhost:8888\r\nGATEWAY_URL=ws://localhost:7780\r\nPASSWORD=fixture\r\n';
+ const configured=magicProofAccountEnv(original,p);
+ expect(configured).toContain(`SERVER=${p.server}\r\n`);
+ expect(configured).toContain(`GATEWAY_URL=${p.gateway}\r\n`);
+ expect(configured).toContain('PASSWORD=fixture\r\n');
+ expect(()=>magicProofAccountEnv(original.replace('localhost:8888','rs-sdk-demo.fly.dev'),p)).toThrow('new practice account required');
+ const previous=Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]));
+ let stops=0;
+ const owned={logs:{engine:'',gateway:''},stop:async()=>{stops++;}};
+ const stack=await startMagicProofStack(p,async opts=>{
+  expect(opts).toEqual({ports:p.ports,instance:p.instance,tickMs:150,xpRate:25,readyTimeoutMs:60000});
+  for(const [k,v] of Object.entries(p.env))expect(process.env[k]).toBe(v);
+  return owned;
+ });
+ expect(stack).toBe(owned);await stack.stop();expect(stops).toBe(1);
+ expect(Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]))).toEqual(previous);
+ await expect(startMagicProofStack(p,async()=>{throw Error('startup refused');})).rejects.toThrow('startup refused');
+ expect(Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]))).toEqual(previous);
+ const registration=magicRegistrationArgs('fixture',p);
+ expect(registration[0]).toBe('--eval');
+ expect(registration[1]).toContain(JSON.stringify(`SERVER=${p.server}`));
+ expect(registration[1]).toContain(JSON.stringify(`GATEWAY_URL=${p.gateway}`));
+ expect(registration[1]).toContain('openBot(');
+ expect(registration[1]).toContain('finish([session]');
+ for(const args of [registration,['scripts/magic-order.ts','fixture']]){
+  const child=magicChildConfiguration(args,{TARGET_LEVEL:'37',MAX_CASTS:'5',CAP:'1500'},p,{GATEWAY_URL:'ws://localhost:7780',WEB_MANAGEMENT_PORT:'8898',NODE_PORT:'43594'});
+  expect(child.cmd).toEqual(['bun',...args]);
+  expect(child.env).toMatchObject({...p.env,GATEWAY_URL:p.gateway,DEMO_OK:'',RANDOM_EVENTS:'0',TARGET_LEVEL:'37',MAX_CASTS:'5',CAP:'1500'});
+  expect(child.env.GE_DATABASE).toBe(`data/market-${p.instance}.sqlite`);
+  expect(child.windowsHide).toBe(true);
+ }
+ expect(()=>magicProofEndpoints({...p.ports,tcp:8888},p.instance)).toThrow('owned practice endpoints required');
+ expect(()=>magicProofEndpoints({...p.ports,tcp:p.ports.engine},p.instance)).toThrow('owned practice endpoints required');
+ expect(()=>selectMagicProofEndpoints(()=>false,()=>0)).toThrow('owned practice ports unavailable');
+ const meta={endpoints:{ports:p.ports,instance:p.instance},server:p.server,gateway:p.gateway};
+ expect(magicSavedEndpoints(meta)).toEqual(p);
+ expect(()=>magicSavedEndpoints({...meta,server:'localhost:8888'})).toThrow('saved owned practice endpoint mismatch');
+ expect(()=>magicSavedEndpoints({...meta,gateway:'ws://localhost:7780'})).toThrow('saved owned practice endpoint mismatch');
+ expect(()=>magicSavedEndpoints({...meta,endpoints:{...meta.endpoints,ports:{...p.ports,management:8898}}})).toThrow('owned practice endpoints required');
+ expect(()=>magicSavedEndpoints({...meta,endpoints:{...meta.endpoints,ports:{...p.ports,tcp:43594}}})).toThrow('owned practice endpoints required');
+ expect(()=>magicSavedEndpoints({server:p.server,gateway:p.gateway})).toThrow('owned practice endpoints required');
+});
 
 type Save=ReturnType<typeof readPracticeSave>;
 type Item={id:number;count:number};
@@ -51,6 +101,26 @@ test('the connected teleport proof reconciles five casts and rejects false landi
 const cast=(n:number,purchased=false)=>Array.from({length:n},(_,i)=>'MAGIC_ORDER_CAST '+JSON.stringify({cast:i+1,purchased})).join('\n');
 const purchase=(p:Record<string,unknown>)=>'MAGIC_ORDER_PURCHASE '+JSON.stringify({rune:'Mind rune',packBefore:{air:38,mind:0,coins:300},...p});
 
+test('high-level fallback proof requires a Wind Strike, paid rune, saved XP and retained assets',()=>{
+ const f=FIXTURES.fallback,xp=magicXpForLevel(71)-1;
+ const b=save({at:f.position,pack:f.inventory,bank:f.bank,magic:{level:70,xp}});
+ const a=save({pack:f.inventory,bank:f.bank.map(i=>({...i,count:i.count-(i.id===AIR?1:i.id===COINS?4:0)})),magic:{level:71,xp:xp+137.5}});
+ const log=[purchase({requested:1,bought:1,spent:4,packBefore:{air:2,mind:0,coins:300}}),
+  'MAGIC_ORDER_CAST '+JSON.stringify({cast:1,position:{x:3223,z:3400,level:0},target:{name:'Man'}}),
+  result({casts:1,coinsSpent:4,bought:{air:0,mind:1},runesUsed:{air:1,mind:1},magicXpGained:137.5}),logout].join('\n');
+ expect(fixtureChecks(b,'fallback')).toBe(true);
+ expect(Object.values(progressChecks(b,a,log,ok,71,300,1000)).every(Boolean)).toBe(true);
+ expect(Object.values(fallbackChecks(b,a,log)).every(Boolean)).toBe(true);
+ expect(fallbackChecks(b,a,log.replace('"Man"','"Guard"')).windStrike).toBe(false);
+ expect(fallbackChecks(b,a,log.replace('"x":3223','"x":3092')).castSite).toBe(false);
+ expect(fallbackChecks(b,a,log.replace('"magicXpGained":137.5','"magicXpGained":138')).xp).toBe(false);
+ expect(fallbackChecks(b,a,log.replace('"bought":1','"bought":2')).purchase).toBe(false);
+ const lost=structuredClone(a);lost.inventories[95]!.find(i=>i.id===557)!.count--;
+ expect(fallbackChecks(b,lost,log).otherRunes).toBe(false);
+ expect(progressChecks(b,a,log.replace('LOGOUT logged-out','LOGOUT timeout'),ok,71,300,1000).logout).toBe(false);
+ expect(fixtureChecks({...b,skills:a.skills},'fallback')).toBe(false);
+});
+
 test('fixtures match the work order shapes',()=>{
  expect(FIXTURES.varrock.position).toEqual({x:3185,z:3436,level:0});
  expect(FIXTURES.varrock.bank).toContainEqual({id:AIR,count:25});
@@ -59,8 +129,8 @@ test('fixtures match the work order shapes',()=>{
  expect(FIXTURES.varrock.bank).toContainEqual({id:563,count:5});
  expect(FIXTURES.short.bank.some(i=>i.id===MIND)).toBe(false);
  for(const f of Object.values(FIXTURES)){expect(f.bank.some(i=>i.id===COINS&&i.count>0)).toBe(true);expect(f.inventory.some(i=>i.id===TROUT)).toBe(true);}
- expect(CASES.map(c=>c.label)).toEqual(['varrock','rerun','short']);
- expect(CASES.map(c=>c.mode)).toEqual(['progress','refusal','refusal']);
+ expect(CASES.map(c=>c.label)).toEqual(['varrock','rerun','fallback','short']);
+ expect(CASES.map(c=>c.mode)).toEqual(['progress','refusal','progress','refusal']);
  // The rerun repeats the varrock account and target, so it starts at the target.
  expect(CASES[1].fixture).toBe('varrock');expect(CASES[1].env.TARGET_LEVEL).toBe(CASES[0].env.TARGET_LEVEL);
  expect(CASES[0].env.TARGET_LEVEL).toBe('37');
@@ -78,7 +148,7 @@ test('fixture checks read the saved shape',()=>{
 test('food fixtures prevent the item333 3->0 debit from one pinned slot deletion',()=>{
  // consume_effect_stat uses inv_delslot(inv, last_slot), not a quantity debit.
  for(const fixture of ['varrock','short'] as const){
-  const f=FIXTURES[fixture],before=save({at:f.position,pack:f.inventory,bank:f.bank,magic:fixture==='varrock'?{xp:8125,level:31}:undefined});
+  const f=FIXTURES[fixture],before=save({at:f.position,pack:f.inventory,bank:f.bank,magic:fixture==='varrock'?{xp:8125,level:31}:{xp:magicXpForLevel(70),level:70}});
   const food=before.inventories[93]!.filter(i=>i.id===TROUT);
   expect(food.map(i=>i.count)).toEqual(Array(fixture==='varrock'?3:2).fill(1));
   expect(fixtureChecks(before,fixture)).toBe(true);

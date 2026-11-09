@@ -43,7 +43,7 @@ export function sources(){return{runtime:workerSourceRevision(),files:Object.fro
 export function trainedLevel(xp:number){let points=0;for(let level=1;level<99;level++){points+=Math.floor(level+300*2**(level/10));if(xp<Math.floor(points/4))return level;}return 99;}
 const foodIds=new Set([379,373,385,333,329,361,315,2142,2309,1963,1985]);
 function items(s:Save){const out=new Map<string,number>();for(const [inv,list] of Object.entries(s.inventories))for(const i of list){const k=`${inv}:${i.id}`;out.set(k,(out.get(k)??0)+i.count);}return out;}
-// Source decision, 2026-10-28: save-generator.ts writes dense v6 zeros (0..308).
+// Source decision: save-generator.ts writes dense v6 zeros (0..308).
 // Player's constructor initializes non-int varps to -1; PlayerLoading overwrites
 // them with those zeros, then Player.save omits them in v9. The SECOND login
 // therefore restores the typed nulls. Seed them before either session instead.
@@ -159,7 +159,7 @@ export function agilitySaveChecks(before:Save,after:Save,target:number,mode:'pro
   alive:(after.skills[3]?.level??0)>0,hpExperience:before.skills[3]?.rawExperience===after.skills[3]?.rawExperience};
 }
 type Child={code:number;timedOut:boolean;interrupted:boolean};
-// Source decision, 2026-10-28: World.processLogouts + NetworkPlayer.decodeIn
+// Source decision: World.processLogouts + NetworkPlayer.decodeIn
 // -> restart proof. A killed socket remains owned for 500 ticks (idle), up to
 // 1000 ticks (no response). At 150ms the old 30s disk predicate preceded logout.
 // Adapt the deadline, require removal AND a saved logout/XP effect, retain failures.
@@ -191,7 +191,7 @@ export function fallRecoveryCheck(log:string){
  return [...log.matchAll(/^AGILITY_PROGRESS level=\d+ xp=(\d+(?:\.\d+)?) tick=(\d+) step=\w+$/gm)]
   .some(m=>Number(m[1])>Number(fall[2])&&Number(m[2])>Number(fall[1]));
 }
-// Source decision, 2026-10-28: wilderness_course.rs2 fails the ropeswing and log on
+// Source decision: wilderness_course.rs2 fails the ropeswing and log on
 // stat_random(agility,200,250) and the stones on (180,250). PlayerOps STAT_RANDOM passes
 // when floor(low*(99-l)/98)+floor(high*(l-1)/98)+1 > floor(rand*256). Seven laps from
 // 52 to 70 have no fall with p=0.088, so one child is not a fall proof. Delivery
@@ -468,7 +468,7 @@ export function foodRecoveryChecks(before:Save,after:Save,log:string,child:Child
    &&result?.course===C.course&&result?.target===C.target,
   savedLogout:(after.vars[134]??0)>(before.vars[134]??0),position:savedCoursePosition(after,'gnome')};
 }
-// Source decision, 2026-10-29: pinned Wilderness log fall -> pit ladder -> stones, OpHeldHandler and
+// Source decision: pinned Wilderness log fall -> pit ladder -> stones, OpHeldHandler and
 // P_EXACTMOVE plus retained UVgqj1 ticks550..558 -> installed CLI. Adapt action identity and independently
 // recomputed settlement. A labelled ordinary log approach at HP40 permits a natural log fall to HP33.
 // That is preparation, not proof of the publication timing: only an observed healthy->low transition
@@ -701,7 +701,7 @@ export function verify(directory:string):{ok:boolean;at:number;scope:string;chec
  }catch{}
  return{...report,ok:report.ok&&matches,checks:{...report.checks,report:matches}};
 }
-// Source decision, 2026-10-29 (build-agility-gnome-consumer-31): pinned gnome_course.rs2 (no damage, fail or
+// Source decision (build-agility-gnome-consumer-31): pinned gnome_course.rs2 (no damage, fail or
 // random), gnome_gate.rs2/femi.rs2, consume_normal.dbrow and the installed worker -> current Gnome consumers.
 // Reuse fixture, initialization, child, interruption, food and Femi predicates. Add ordinary Ardougne-town entry,
 // restart-state food and Gnome-scoped read-only verification. Wilderness and Barbarian modes keep their own

@@ -23,7 +23,7 @@ test('Rune Mysteries qualification failures block instead of relogging an untrai
  expect(isPrerequisiteFailure('RESULT fail Error: Rune Mysteries prerequisite: combat13 required for guarded route')).toBe(true);
  expect(isPrerequisiteFailure('RESULT ok Rune Mysteries prerequisite: qualified')).toBe(false);
 });
-import { supervise, isPrerequisiteFailure } from '../src/supervise';
+import { supervise, isPrerequisiteFailure, isTransportStall } from '../src/supervise';
 
 const out = (lines: string[], code: number) => async () => ({ stdout: lines.join('\n'), exitCode: code });
 
@@ -76,6 +76,15 @@ test('a death ends supervision: restarting would walk the account into the same 
     expect(r.reason).toBe('died');
 });
 
+
+test('a tick-stream stall retries like a disconnect, even inside a no-progress result, then gives up',async()=>{
+    const stall='RESULT fail no Ranged progress: {"failure":"Error: ranged-train route failed tick stream stalled: no new game tick for 15000ms"}';
+    expect(isTransportStall(stall)).toBe(true);
+    expect(isTransportStall('RESULT fail Error: stalled at bank ticks=999')).toBe(false);
+    expect(isTransportStall('RESULT ok mode=x tick stream stalled: no new game tick for 15000ms')).toBe(false);
+    let calls=0;const result=await supervise({run:async()=>{calls++;return{stdout:stall,exitCode:1};},stopped:()=>false,pause:async()=>{},maxRestarts:2});
+    expect(result).toEqual({reason:'gave-up',runs:3});expect(calls).toBe(3);
+});
 
 for (const detail of ['no ore progress for 220 ticks', 'no wood progress for 220 ticks', 'no training progress: training requires full HP', 'shearing made no progress',
     'spinning made no progress', 'flax spinning made no progress', 'withdraw made no progress', 'cooking made no progress for12 ticks', 'stalled at bank', 'no-progress guard']) {
@@ -166,4 +175,19 @@ test('a refusal before any game tick frees the account instead of holding it', a
     expect(isEntryRefusal('RESULT fail ticks=0 died=true')).toBe(false);
     const r = await supervise({ run: async () => ({ exitCode: 1, stdout: shark }), stopped: () => false, maxRestarts: 20, pause: async () => {} } as any);
     expect(r).toEqual({ reason: 'refused', runs: 1 });
+});
+
+test('a run the connection ended after real work restarts the streak toward gave-up; failures without work still add up', async () => {
+    const drained = out(['START 1 1 0', 'LEDGER ticks=1200 xp=9000 inventory=0 move=100 anim=800 dialog=0 stun=0 idle=300 idlePct=25.0 ', 'RESULT fail session ended: disconnected'], 1);
+    const dead = out(['login: Error: Unable to connect'], 1);
+    const brief = out(['LEDGER ticks=40 xp=0 inventory=0 move=10 anim=0 dialog=0 stun=0 idle=30 idlePct=75.0 ', 'RESULT fail session ended: disconnected'], 1);
+    let n = 0;
+    const runs = [dead, dead, drained, dead, dead, drained, dead, brief, dead];
+    const r = await supervise({ run: () => runs[n++]!(), stopped: () => false, pause: async () => {}, maxRestarts: 3 });
+    expect(r.reason).toBe('gave-up');
+    expect(n).toBe(9);
+    // Productive runs alone never give up: a stop file ends them.
+    let m = 0;
+    const s = await supervise({ run: () => { m++; return drained(); }, stopped: () => m >= 6, pause: async () => {}, maxRestarts: 1 });
+    expect(s).toEqual({ reason: 'stopped', runs: 6 });
 });

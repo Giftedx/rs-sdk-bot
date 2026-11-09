@@ -1,8 +1,13 @@
 name: CI
+# Hosted minutes are limited: a newer push cancels the older run on the same branch or PR.
+# When runners are out of minutes, `bun scripts/ci-gate.ts --post` runs these checks on the PC and posts `local-gate`.
 on:
   push:
     branches: [master]
   pull_request:
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:

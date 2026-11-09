@@ -3,11 +3,11 @@
 // 3089,3265-3266), small net at Gerrant (Port Sarim), net at Draynor (3086,3228) to Fishing 20 with the fish banked
 // at Draynor, sell the fish (withdrawn as notes) at Gerrant, buy a fly fishing rod and feathers, then 3-tick fly fish
 // at the Lumbridge river spot (3238,3252).
-// Coins limit the feathers (code-read 2026-10-23, shop/scripts/shop.rs2 calc_shop_value, port_sarim.inv/.npc):
+// Coins limit the feathers (code-read, shop/scripts/shop.rs2 calc_shop_value, port_sarim.inv/.npc):
 // a feather costs floor(2 * (1000 + 10 * bought) / 1000), so 2 gp for the first 50, then 3, 4, 5. Gerrant pays
 // floor(cost * (700 - 10 * sold) / 1000): raw shrimps 3 gp falling to 0 after 50, raw anchovies 10 gp falling to 1.
 // When the feathers run out before the target, the bot sells its trout and salmon at Gerrant and buys more.
-// Resume (live Mightyrod 2026-10-23: Fishing 22, rod, 24 feathers, full pack of starter items, 0 coins, HP 2): the
+// Resume (live Mightyrod: Fishing 22, rod, 24 feathers, full pack of starter items, 0 coins, HP 2): the
 // old script always went back to pickpocketing for 5 coins and only waited at HP 2. Now each step runs only when
 // its item or level is missing, the bot eats when HP is low, sells spare pack items at the Lumbridge general store,
 // and pickpockets only at HP 5 or more and only when coins are still short.
@@ -182,7 +182,7 @@ try {
     const WHIRLPOOL = new Set([403, 404, 405, 406]);
     const spot = (opt: RegExp, maxZ = 99999) => (st()?.nearbyNpcs ?? [])
         // Fly (Lure) spots south of z 3248 sit on the giant spiders' bank (spawns 3243,3236 and 3245,3232; they attack a
-        // combat-3 player; research/random-events.md). Mightyrod died there live at 3240,3243 on 2026-10-23: skip them.
+        // combat-3 player; research/random-events.md). Mightyrod died there live at 3240,3243: skip them.
         .filter((n: any) => /fishing spot/i.test(n.name) && !WHIRLPOOL.has(n.id) && n.z <= maxZ && !(/lure/i.test(opt.source) && n.z < 3248) && n.optionsWithIndex?.some((o: any) => opt.test(o.text)))
         .sort((a: any, b: any) => a.distance - b.distance)[0] as any;
     // True when a fishing random event is active: the caller sends no fishing click this tick.

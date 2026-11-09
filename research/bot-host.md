@@ -2,11 +2,19 @@
 
 Evidence: MEASURED practice (local server, 150 ms tick) + CODE-READ. Boards: infra (all).
 
+Source -> local consumer -> reuse -> check: the rollout's heartbeat, lease and launch fingerprint -> side progress export -> compare the fresh heartbeat with its saved lease and the cached disk fingerprint -> fixtures cover matching, drift, stale data and mismatched lease fields. The read-only export in `.practice/live-release-audit/export-check.json` shows the reported and disk releases without publishing the lease nonce or changing the controller.
+
+Source -> local consumer -> reuse -> check: the scheduler's terminal-root and account-provision checks -> side progress export -> report implicit provision edges and the oldest terminal blocker alongside each pending task's status -> fixtures distinguish a failed root from a replaceable refresh and reject malformed account references. The scratch export in `.practice/progress-terminal-blockers/replay.json` identifies 66 terminal-blocked tasks across 28 roots in the captured queue and preserves the live state bytes.
+
 ## Isolated build workspaces
 
 Claim: a global build fence starves live work, and isolated build workspaces remove the fence. Evidence (`.practice/coordinator/state.json`, about 35 h of fenced operation): builds ran 21.7 h (117 builds: 17 succeeded, 71 failed), live runs 3.2 h (13 succeeded); `coordinator.ts` blocked every run while a build ran and every build while a run ran, and the worker held the build lock through authoring, native proof and review. A capability focus held all development for 11.2 h (shark), 6.6 h (rune) and 5.4 h (agility) through repeated failed builds; 1,491 of 1,603 planner cycles proposed no work.
 
 Design: builds author and prove in `../rs-sdk-bot-build/<capability>` (copied source, junctions for `node_modules`, `vendor`, `.practice`, `.claude`). Only `publishWorkspace` writes the main checkout, under the build lock and a drained fleet. `chooseTask(isolatedBuilds)` lets builds and runs overlap and holds new live starts while `publish-request.json` exists. Three failed builds in a row release a focus.
+
+Source -> local consumer -> reuse -> check: the queue retirement check for terminal prerequisites -> dispatch ranking and practice preference -> count only pending consumers without a terminal prerequisite -> regressions cover a transitive failure and a live consumer's practice slot. The read-only replay in `.practice/dispatch-viable-consumers/replay.json` finds 36 pending-to-pending edges from terminal-blocked tasks. Neither scheduler has a ready task in the captured queue. A counterfactual on that snapshot adds two competing tasks and checks that independent work passes work boosted only by a blocked consumer.
+
+Source -> local consumer -> reuse -> check: atomic queue saves and capability transition history -> manual and model proposal intake -> save the queue and pending acknowledgement in one write, then finish capability publication before dispatch -> scratch filesystem tests inject queue-save, acknowledgement, and partial publication failures. They check restart, exact definition bytes, one application, and an unchanged queue on validation refusal. Model recovery keeps the round's receipt cursor so later receipts can still trigger planning.
 
 Planner cost: the prompt was 449,960 characters (278,000 of full task specs and receipts, 107,000 of the active queue). `briefSpec` clips work orders to 200 and receipts to 240 characters and points to `state.json`, giving 117,590. Idle plans wait 30 min instead of 30 s; a new receipt, failure or request still plans at once.
 
@@ -19,6 +27,8 @@ Gaps:
 - Acceptance for overlap: a bounded build whose edits cannot affect any remaining source/data read, or an immutable qualified runtime. It must show useful output under the original release, refusal of new/reconnect starts, working disabled-job stops, and refusal of old-source starts after publication. The build-lock check in `swarm.ts` must move below active-run control first; it skips the disabled-job branch. Global stop is handled earlier.
 
 **Pack verification:** this fork appends booth5116, teller1596 and varp1000. Removing only those extensions reproduces all three canonical CRCs; six other config CRCs already match (`.practice/mm-exit/cache/audit.json`). `PackShared.ts` now checks the exact fork CRCs; verification stays enabled. Strict `tools/pack/Build.ts` advances to a separate interface checksum failure, changing no cached bytes (`cache/build-proof.json`, verified backup `cache/before-pack/`). Full rebuild remains unproved; retain frozen practice startup until the interface difference is explained and the complete build passes. Never replace an unexplained checksum with the observed value.
+
+Source -> local consumer -> reuse -> check: the cached launch fingerprint, worker release guard and controller acknowledgement -> coordinator rollout -> recheck disk source at stop, spawn and admission while the build fence holds, and verify the controller's pin before its first tick -> fixture source changes during stop and acknowledgement, plus a real CLI refusal with a wrong pin and an empty plan. The startup evidence is in `.practice/live-release-audit/startup-refusal.json`.
 
 ## Summary
 
@@ -277,6 +287,13 @@ Recommendation: use the host. 4 bots in one host cost about one bot process plus
 - Swarm host jobs exist (section 3c) with per-account env and chain steps (section 3d); the live farmers are not
   moved yet (owner switch: the proposed `swarm.json` host jobs are in the PR that added section 3d).
 - Live runs not done (practice only).
+
+
+## Tick waste attribution
+
+A tick ledger can use a nearby result only within its supervisor job. A ledger with no result before the next job marker stays unknown and does not affect another family's Autopilot waste rate.
+
+Source -> local consumer -> reuse -> check: swarm job markers and worker ledger lines -> the existing tick-waste report and Autopilot scoring -> stop attribution at a marker and normalize only ledger or result candidates -> a boundary regression and three matched scans of the same local log set. The scans compare 54 files totaling 103,319,274 bytes on Bun 1.3.14 with identical legacy results. Raw elapsed times are in `.practice/tick-waste-job-boundary/timing.json`. This measures report time. It does not measure game ticks saved.
 
 ## Repeated route search
 

@@ -25,7 +25,7 @@ Assumptions: members world, 25x XP rate, 99 = 998,458 XP, helpers supply all tra
 | Attack | Quest XP: Waterfall + Tree Gnome Village + Grand Tree (+ MM) | quests | 343,750 + 286,250 + 460,000 | one-off | quest time only | 4,728 | Plausible (inferred) |
 | Strength | Quest XP: Haunted Mine + Waterfall + Dragon Slayer / Scorpion Catcher | quests | 550,000 + 343,750 + 466,250 | one-off | quest time only | 4,966 | Plausible (inferred) |
 | Defence | Quest XP: Dragon Slayer + Holy Grail + MM | quests | 466,250 + 382,500 + 875,000 | one-off | quest time only | 7,974 | Plausible (inferred) |
-| Ranged | Dwarf multicannon + own ranged attacks | Dwarf Cannon quest | 2 XP/dmg -> 50/dmg (cannon); 4 -> 100/dmg (player) | cannon up to 1 shot/tick | ~1,700 + quest (inferred) | 5,595 | Not verified |
+| Ranged | Dwarf multicannon + own ranged attacks | Dwarf Cannon quest | 2 XP/dmg -> 50/dmg (cannon); 4 -> 100/dmg (player) | cannon up to 1 shot/tick | 55-99 1,997 at the Wilderness poison spiders, 476.7 XP/tick (MEASURED practice, `research/combat-measure.md` section 6a); 1-99 about 2,151 + quest (ESTIMATE) | 5,595 | Practice only |
 | Hitpoints | MM reward (875,000) + Witch's House (158,125), or combat at 1.33 XP/dmg | quests | 33.25 XP/dmg at 25x | combat-bound | quest time only | 17,058 | Live looks like plain combat |
 
 ## Engine facts that every estimate uses
@@ -120,7 +120,7 @@ Assumptions: members world, 25x XP rate, 99 = 998,458 XP, helpers supply all tra
 
 ### Attack, Strength, Defence, Hitpoints, Ranged (formula seen in code; times inferred)
 - Combat XP: `skill_combat/scripts/combat.rs2:88-150`. 4 XP per damage in the trained style -> 100/dmg at 25x. Hitpoints get 1.33/dmg -> 33.25. NPC `combat_xp_multiplier` is only ever lower than the default (`macro events/configs/antimacro.npc`). Attack dummy: 5 XP per 6 ticks (`areas/area_varrock/scripts/attack_dummy.rs2:12-15`), which is useless.
-- Cannon: `quests/quest_mcannon/scripts/cannon_fire.rs2:91,117-119` rotates every tick, max hit 30, and gives 2 XP/dmg (50 at 25x) to ranged. It does not depend on the player's level.
+- Cannon: `quests/quest_mcannon/scripts/cannon_fire.rs2:91,117-119` rotates every tick, max hit 30, and gives 2 XP/dmg (50 at 25x) to ranged. Its hit roll is `~player_npc_hit_roll(%damagetype)` (`cannon_fire.rs2:116`, `skill_combat/scripts/player/player_combat.rs2:52-65`): the owner's worn weapon and style set the roll. A bow rolls with Ranged and ranged bonus, a scimitar with Attack and slash bonus. The damage range does not depend on the player's level. Measured at the Wilderness poison spiders: `research/combat-measure.md` section 6a.
 - Quest XP is the large lever (25x applies):
   - Monkey Madness `quest_mm/scripts/mm_daero.rs2:295-307`: 875,000 to two skills of att/def/str/hp and 500,000 to the other two.
   - Grand Tree attack `quest_grandtree.rs2:200` = 460,000.

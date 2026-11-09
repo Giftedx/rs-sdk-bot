@@ -1,4 +1,4 @@
-// Bounded charter-boat legs, extracted 2026-10-28 from scripts/foodcourier.ts (sail, converse, disembark).
+// Bounded charter-boat legs, extracted from scripts/foodcourier.ts (sail, converse, disembark).
 // Callers keep their own fare accounting, health checks and route policy. Pass a `before` hook for health,
 // a `stop` for death or a cap, and an absolute `deadline` tick. Results report the observed boundary.
 import { waitTicks, waitUntil, type TickSource } from './ticks';

@@ -1,27 +1,54 @@
 // Autopilot: writes a fleet side's swarm jobs from the route supply bill, account skills and holdings, and tick waste,
 // so no person picks jobs, restarts ended ones or spots loops (plan Lanes table, Autopilot).
 // plan() is pure: one assignment per account of this side, highest value per tick first, from proven templates only,
-// never two accounts on one exclusive resource (a knight spot, a chicken pen, a shop) across all sides.
+// never more accounts on one resource (a knight spot, a chicken pen, a shop) across all sides than its capacity
+// (CAPACITY: four farmers to a knight spot, one to a pen or a shop). A job on a resource other accounts already hold
+// keeps that resource's shared rate of its value once per holder (SHARED), so the empty spots fill first.
 // Value is an estimate in coins per game tick: each output's rate times its unit value, minus coin spend, times the
 // script family's measured work share (1 - idle - move, scripts/tick-waste.ts). A training template is worth a share
 // of the best job it unlocks, and reserves that job's resource. assess() reads a job's recent log lines and retires
-// it after repeated fail RESULTs or a run that was nearly all idle and walking. scripts/autopilot.ts applies it.
+// it after repeated fail RESULTs or a run that was nearly all idle and walking. finishedTrainers() names the accounts
+// whose trainer reached its target, so the next pass needs no timer. scripts/autopilot.ts applies it.
 import type { BillRow } from './supply-bill';
 
 export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number> };
 export type Flow = { item: string; perTick: number };
 export type Template = {
     id: string; family: string; script: string; args?: string[]; env?: Record<string, string>; role: string; goal: string;
-    needs?: { skills?: Record<string, number>; items?: Record<string, number> };
+    // `under`: skills that must stay below a level (a band hands an account on to the next band at that level).
+    // `holdsUnder`: holdings that end the job at once. The account must hold fewer, or the run finds its target met and fails.
+    // `food`: HP the account's food heals, pack and bank (FOOD_HEAL).
+    needs?: { skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number>; holdsUnder?: Record<string, number>; food?: number };
     yields: (a: Acct) => Flow[]; spends?: (a: Acct) => Flow[];
     resources?: string[]; trains?: { skill: string; to: number; unlocks: string[] };
+    // A goal band (AGENTS.md goals: the PK army of maxed tribrids) trains an army account toward its target and is
+    // assigned before any coin job; `band` orders the bands by PK value, lowest first. Gold only buys their kits.
+    tier?: 'goal'; band?: number;
+    // A trainer whose script runs a fixed amount (not to its target level) repeats until the planner moves it on.
+    repeats?: boolean;
 };
-export type Assignment = { account: string; template?: Template; value: number; reason: string; resources: string[] };
+// `fund`: the template needs coins the account lacks; a donor of this side sends them first (scripts/autopilot.ts
+// places the fleet order), and the account takes the job on the pass after the coins arrive.
+export type Funding = { from: string; to: string; coins: number; template: string };
+export type Assignment = { account: string; template?: Template; value: number; reason: string; resources: string[]; fund?: Funding };
 export type Inputs = {
     side: string; accounts: readonly Acct[]; owners: ReadonlyMap<string, { side: string }>; bill: readonly BillRow[];
     templates: readonly Template[]; prices: Readonly<Record<string, number>>; waste?: Readonly<Record<string, number>>;
     taken?: Readonly<Record<string, number>>; retired?: ReadonlySet<string>; capacity?: Readonly<Record<string, number>>;
+    // The share of its value a job keeps on a resource another account already holds (default 1).
+    shared?: Readonly<Record<string, number>>;
+    // The template each account holds now, by lower-case name: on a value tie the account keeps it.
+    current?: ReadonlyMap<string, string>;
+    // Accounts of this side free to trade now (no enabled swarm job), with their coins. Each keeps FUND_RESERVE.
+    donors?: readonly { name: string; coins: number }[];
+    // Lower-case names of accounts with an enabled job. Funding one would remove its running job, and the stop file
+    // scripts/swarm.ts writes for it would block the trade, so such an account is never funded.
+    unfundable?: ReadonlySet<string>;
+    // Lower-case names of the accounts on this side's army roster: only they take goal bands. A specialist's board
+    // time counts every tick it plays, so combat training is opt-in per account, never global.
+    army?: ReadonlySet<string>;
 };
+export const FUND_RESERVE = 50_000;
 
 // A bill line still short is worth twice its shop value: it is acquisition work the route needs. A unit nobody needs
 // is worth half, the price a sale would fetch. A share of a job a training run unlocks counts for the training.
@@ -30,17 +57,29 @@ export const BILL_PREMIUM = 2, SURPLUS = 0.5, TRAIN_SHARE = 0.25;
 export const FEEDS: Record<string, string[]> = { feather: ['headless arrow'], 'arrow shaft': ['headless arrow'], 'raw lobster': ['lobster'] };
 export const norm = (s: string) => s.toLowerCase().replace(/\s*\((?:noted|quest)\)$/, '').trim().replace(/s$/, '');
 export const pairKey = (account: string, template: string) => `${account.toLowerCase()}:${template}`;
+// HP one held item heals over all its bites, by item name: scripts/gather-combat.ts COW_FOOD_BITES × COW_BITE_HEAL
+// (trout 7; a cake bite 4, a chocolate cake bite 5). scripts/autopilot.test.ts checks the two tables agree.
+export const FOOD_HEAL: Readonly<Record<string, number>> = {
+    trout: 7, cake: 12, '2/3 cake': 8, 'slice of cake': 4, 'chocolate cake': 15, '2/3 chocolate cake': 10, 'chocolate slice': 5,
+};
+export const foodHeal = (a: Acct) => Object.entries(FOOD_HEAL).reduce((n, [item, hp]) => n + (a.items[item] ?? 0) * hp, 0);
 
 export function unitValue(item: string, bill: readonly BillRow[], prices: Readonly<Record<string, number>>): number {
     const k = norm(item);
     if (k === 'coin') return 1;
-    const short = new Set(bill.filter(r => r.short > 0).map(r => norm(r.item)));
+    const short = new Set(bill.filter(r => r.short > 0).flatMap(r => [r.item, ...(r.aliases ?? [])].map(norm)));
     return (prices[k] ?? 0) * (short.has(k) || (FEEDS[k] ?? []).some(f => short.has(f)) ? BILL_PREMIUM : SURPLUS);
 }
 
 const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: string; to: number }) =>
     Object.entries(needs?.skills ?? {}).every(([s, l]) => (skillOverride?.skill === s ? Math.max(skillOverride.to, a.skills[s] ?? 1) : a.skills[s] ?? 1) >= l)
-    && Object.entries(needs?.items ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n);
+    && Object.entries(needs?.items ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n)
+    && Object.entries(needs?.under ?? {}).every(([s, l]) => (a.skills[s] ?? 1) < l)
+    && Object.entries(needs?.holdsUnder ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) < n)
+    && foodHeal(a) >= (needs?.food ?? 0);
+// The coins a template needs beyond what the account holds, and its needs without the coin line.
+const coinShort = (a: Acct, needs: Template['needs']) => Math.max(0, (Object.entries(needs?.items ?? {}).find(([i]) => norm(i) === 'coin')?.[1] ?? 0) - (a.items.coin ?? 0));
+const withoutCoins = (needs: Template['needs']): Template['needs'] => ({ ...needs, items: Object.fromEntries(Object.entries(needs?.items ?? {}).filter(([i]) => norm(i) !== 'coin')) });
 
 export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'prices' | 'waste'>): number {
     const gross = t.yields(a).reduce((v, f) => v + f.perTick * unitValue(f.item, inp.bill, inp.prices), 0);
@@ -51,10 +90,19 @@ export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'price
 export function plan(inp: Inputs): Assignment[] {
     const byId = new Map(inp.templates.map(t => [t.id, t]));
     const mine = inp.accounts.filter(a => (inp.owners.get(a.name.toLowerCase())?.side ?? 'local') === inp.side && a.side === inp.side);
-    type Cand = { account: string; template: Template; value: number; resources: string[]; reason: string };
+    type Cand = { account: string; template: Template; value: number; resources: string[]; reason: string; coins?: number; goal?: { band: number; left: number } };
     const cands: Cand[] = [];
     for (const a of mine) for (const t of inp.templates) {
         if (inp.retired?.has(pairKey(a.name, t.id))) continue;
+        if (t.tier === 'goal') {
+            // One candidate per goal band whose target an army account has not met; never for anyone else.
+            if (!inp.army?.has(a.name.toLowerCase()) || !t.trains || (a.skills[t.trains.skill] ?? 1) >= t.trains.to) continue;
+            const goal = { band: t.band ?? 0, left: t.trains.to - (a.skills[t.trains.skill] ?? 1) }, reason = `army band ${goal.band}: ${t.trains.skill} to ${t.trains.to}`;
+            if (meets(a, t.needs)) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal });
+            else if (inp.donors?.length && !inp.unfundable?.has(a.name.toLowerCase()) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs)))
+                cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, coins: coinShort(a, t.needs) });
+            continue;
+        }
         if (t.trains) {
             if ((a.skills[t.trains.skill] ?? 1) >= t.trains.to || !meets(a, t.needs)) continue;
             const trained: Acct = { ...a, skills: { ...a.skills, [t.trains.skill]: t.trains.to } };
@@ -66,41 +114,101 @@ export function plan(inp: Inputs): Assignment[] {
         } else if (meets(a, t.needs)) {
             const value = jobValue(t, a, inp);
             if (value > 0) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+') });
+        } else if (inp.donors?.length && !inp.unfundable?.has(a.name.toLowerCase()) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs))) {
+            const value = jobValue(t, a, inp);
+            if (value > 0) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+'), coins: coinShort(a, t.needs) });
         }
     }
-    cands.sort((x, y) => y.value - x.value || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id));
+    // On a value tie an account keeps the template it holds: a level change must not move it to another spot of the
+    // same worth, which would replace a running job with a fresh one that changes nothing useful.
+    const keeps = (c: Cand) => inp.current?.get(c.account.toLowerCase()) === c.template.id ? 1 : 0;
     const used = new Map(Object.entries(inp.taken ?? {})), done = new Map<string, Assignment>();
-    for (const c of cands) {
-        if (done.has(c.account) || c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) continue;
+    // A candidate's worth with the holders taken so far: each holder of a resource scales it by that resource's shared
+    // rate, so a third farmer on a spot is worth less than a second and new farmers spread over the spots. The place an
+    // account already holds keeps its full worth: crowding counts only against a move, so a farmer stays put until its
+    // spot is full (capacity is a hard limit below), and sides do not chase each other's lagging claims.
+    const worth = (c: Cand) => c.resources.reduce((v, r) => v * (inp.shared?.[r] ?? 1) ** (keeps(c) ? 0 : (used.get(r) ?? 0)), c.value);
+    const order = (x: Cand, y: Cand) => worth(y) - worth(x) || keeps(y) - keeps(x) || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id);
+    // Donor coins above the reserve, spent as funded candidates take them; a funded account gives nothing.
+    // A donor that gives stays free this pass, so the fleet agent can log it in for the trade.
+    const pool = new Map((inp.donors ?? []).map(d => [d.name, Math.max(0, d.coins - FUND_RESERVE)])), gave = new Set<string>();
+    const take = (c: Cand, value: number) => {
+        if (done.has(c.account) || gave.has(c.account) || c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
+        let fund: Funding | undefined;
+        if (c.coins) {
+            const from = [...pool].filter(([n, left]) => n.toLowerCase() !== c.account.toLowerCase() && !done.has(n) && left >= c.coins!).sort((x, y) => y[1] - x[1])[0]?.[0];
+            if (!from) return;
+            pool.set(from, pool.get(from)! - c.coins); gave.add(from);
+            fund = { from, to: c.account, coins: c.coins, template: c.template.id };
+        }
+        pool.delete(c.account);
         for (const r of c.resources) used.set(r, (used.get(r) ?? 0) + 1);
-        done.set(c.account, { account: c.account, template: c.template, value: c.value, reason: c.reason, resources: c.resources });
+        done.set(c.account, { account: c.account, template: c.template, value, reason: fund ? `${c.reason}, funded ${c.coins} coins by ${fund.from}` : c.reason, resources: c.resources, ...(fund ? { fund } : {}) });
+    };
+    // The goal tier first: each army account takes the earliest band it can (a full band's resource sends it to the
+    // next), the account nearest its target first; it never competes with coin jobs on coins per tick.
+    const goalOrder = (x: Cand, y: Cand) => x.goal!.band - y.goal!.band || x.goal!.left - y.goal!.left || keeps(y) - keeps(x) || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id);
+    for (const c of cands.filter(c => c.goal).sort(goalOrder)) take(c, 0);
+    // The coin tier, re-sorted after every assignment: one more holder lowers the worth of the candidates that share
+    // its resource.
+    for (const rest = cands.filter(c => !c.goal); rest.length;) {
+        rest.sort(order);
+        const c = rest.shift()!;
+        take(c, worth(c));
     }
-    return mine.map(a => done.get(a.name) ?? { account: a.name, value: 0, resources: [], reason: 'vacant: no template meets its skills and holdings with a free resource' });
+    return mine.map(a => done.get(a.name) ?? { account: a.name, value: 0, resources: [], reason: gave.has(a.name) ? 'vacant: gives coins this pass' : 'vacant: no template meets its skills and holdings with a free resource' });
 }
 
 // The swarm job for an assignment. `autopilot` marks it as this side's planner job; the CLI replaces only marked jobs.
+// A training job does not repeat: its ok RESULT means the target level is met, and a rerun would log in, find the level
+// met and log out (a scored login for nothing). The swarm keeps the account's `done` end until the next pass hands it
+// a job with a different mission, which the met level unlocks. A run that ends short of the target is a fail RESULT,
+// which the supervisor retries and the swarm's standing retry resumes, with or without repeat.
+// finishedTrainers() brings that next pass forward.
 export function jobFor(x: Assignment, side: string) {
     const t = x.template!;
-    return { account: x.account, script: t.script, args: t.args ?? [], env: t.env ?? {}, role: t.role, goal: t.goal, enabled: true, repeat: true, standing: true,
+    return { account: x.account, script: t.script, args: t.args ?? [], env: t.env ?? {}, role: t.role, goal: t.goal, enabled: true, repeat: t.repeats ?? !t.trains, standing: true,
         autopilot: side, template: t.id, resources: x.resources, note: `autopilot ${t.id}: ${x.reason}, ${x.value.toFixed(2)} coins/tick (estimate)` };
 }
 
-// Retirement from a job's own log lines (since the autopilot assigned it): the last RETIRE_FAILS RESULTs all fail, a
-// RESULT reports a death, or the last LEDGER spent WASTE_LIMIT or more of its ticks idle or walking.
+// Accounts whose planner trainer has reached its target: the job's template trains, the state still assigns that
+// template, and the job's log since the assignment holds an ok RESULT. The daemon re-plans these accounts at once.
+export function finishedTrainers(jobs: readonly any[], side: string, assigned: Readonly<Record<string, { template: string; offset: number }>>, templates: readonly Template[],
+    linesSince: (account: string, offset: number, job: any) => readonly string[]): string[] {
+    const trains = new Set(templates.filter(t => t.trains).map(t => t.id));
+    return jobs.filter(j => j?.autopilot === side && typeof j.account === 'string' && trains.has(j.template) && assigned[j.account]?.template === j.template
+        && assess(linesSince(j.account, assigned[j.account]!.offset, j)).ok > 0).map(j => j.account);
+}
+
+// Retirement from a job's own log lines (since the autopilot assigned it): the last RETIRE_FAILS RESULTs all fail with
+// no progress, a RESULT reports a death, or the last LEDGER spent WASTE_LIMIT or more of its ticks idle or walking.
+// A trainer that hits its tick cap short of the target ends fail with the XP it gained (scripts/generated/thieving60.ts
+// prints xp=<gain>), so the supervisor runs it again; such a fail is progress and does not count toward retirement.
+// A run the server or the relayed gateway dropped says nothing about the job, so it is counted as a drain, never as a
+// failure: a dropped session (`RESULT fail session ended: disconnected`; the cloud proxy's 1012 `server_draining`
+// closes), a game socket that errors at login (`RESULT fail login: [object WebSocket]`), and a server that stops
+// ticking (`RESULT fail TickStallError`). Its supervisor logs the account back in and the next run banks the carried
+// pack. Counting these as failures retired every knight spot of every account in one server outage. A login refused
+// because a dropped session still holds the account's fleet claim (the worker logs `RESULT fail login: Error: fleet
+// account claim held by swarm` until an authenticated recovery confirms the logout) is a drain too: the job never ran,
+// and the recovered account resumes it.
 export const RETIRE_FAILS = 2, WASTE_LIMIT = 0.9;
-export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number } {
+export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked)=[1-9]\d*\b/.test(result);
+export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b)/;
+export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number; drains: number } {
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
-    const results = clean.filter(l => /^RESULT (ok|fail)\b/.test(l));
+    const drains = clean.filter(l => DRAIN_RESULT.test(l)).length;
+    const results = clean.filter(l => /^RESULT (ok|fail)\b/.test(l) && !DRAIN_RESULT.test(l));
     const ok = results.filter(l => l.startsWith('RESULT ok')).length, fail = results.length - ok;
     // goldfarm and thieving60 print died=false on a healthy run: only a bare word or a field that is not false counts.
     const died = results.find(l => /\b(?:died|death)\b(?!=)|\b(?:died|death)=(?!false\b)/i.test(l));
-    if (died) return { retire: true, reason: `death: ${died.slice(0, 120)}`, ok, fail };
+    if (died) return { retire: true, reason: `death: ${died.slice(0, 120)}`, ok, fail, drains };
     const tail = results.slice(-RETIRE_FAILS);
-    if (tail.length === RETIRE_FAILS && tail.every(l => l.startsWith('RESULT fail'))) return { retire: true, reason: `${RETIRE_FAILS} fail RESULTs: ${tail.at(-1)!.slice(0, 120)}`, ok, fail };
+    if (tail.length === RETIRE_FAILS && tail.every(l => l.startsWith('RESULT fail') && !progressed(l))) return { retire: true, reason: `${RETIRE_FAILS} fail RESULTs: ${tail.at(-1)!.slice(0, 120)}`, ok, fail, drains };
     const ledger = clean.filter(l => l.startsWith('LEDGER ')).at(-1)?.match(/^LEDGER ticks=(\d+).* move=(\d+).* idle=(\d+)/);
     if (ledger && +ledger[1]! >= 300 && (+ledger[2]! + +ledger[3]!) / +ledger[1]! >= WASTE_LIMIT)
-        return { retire: true, reason: `tick waste ${(100 * (+ledger[2]! + +ledger[3]!) / +ledger[1]!).toFixed(0)}% idle+move`, ok, fail };
-    return { retire: false, reason: '', ok, fail };
+        return { retire: true, reason: `tick waste ${(100 * (+ledger[2]! + +ledger[3]!) / +ledger[1]!).toFixed(0)}% idle+move`, ok, fail, drains };
+    return { retire: false, reason: '', ok, fail, drains };
 }
 
 // Thieving success at a knight of Ardougne (pickpocket.dbrow: 50..240 of 256 from level 1 to 99), scaled from the
@@ -108,6 +216,33 @@ export function assess(lines: readonly string[]): { retire: boolean; reason: str
 export const knightCoinsPerTick = (thieving: number) => thieving < 55 ? 0 : 18.8 * (50 + 190 * (Math.min(99, thieving) - 1) / 98) / 240;
 export const KNIGHT_SPOTS = ['2652,3318', '2653,3300', '2669,3298', '2671,3313', '2582,3297'];
 export const CHICKEN_PENS = ['3229,3298', '3017,3288', '3187,3277', '3197,3353'];
+// scripts/gather-feathers.ts stops when its pack holds TARGET feathers.
+export const FEATHER_TARGET = 2000;
+// Claim: four farmers can share one knight spot. A pickpocket does not hold the knight. Practice: 4 bots at one spot
+// each earned 13.3-15.1 coins per tick (mean 14.7) against the 18.8 model, every run RESULT ok and logged out
+// (goldfarm.ts at its default spot 2653,3302, 3 runs of 600 ticks and one of 9,000; research/bot-host.md section 3).
+// Live (claude-cloud-3 swarm logs): two full 9,000-tick goldfarm runs, RESULT ok and logged out, made 7.46
+// coins per tick with 3 holders on 2652,3318 and 7.57 with 3 holders on 2669,3298 (4 for its last part), against about
+// 8.1 near-solo. Gap: one live run per condition, not three matched, so KNIGHT_SHARED_RATE is an estimate, applied
+// once per holder; the planner's tick-waste discount and retirement still apply per job.
+export const KNIGHT_SHARE = 4, KNIGHT_SHARED_RATE = 0.75;
+// Ardougne north cow field: two army farmers to start, crowding not yet measured.
+export const COW_FIELD = 'cow:ardougne-north', COW_FIELD_CAPACITY = 2;
+export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [COW_FIELD]: COW_FIELD_CAPACITY, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
+export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
+// Army goal bands (AGENTS.md goals: maxed tribrids), in PK-value order: Strength, Attack, then Ranged, Magic and
+// Prayer, Defence last. Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile) qualified 3/3 on practice
+// with MAX_KILLS=8: no death, logged out, RESULT ok stop=max-kills, about 700 ticks a run, trained skill 0.38 and
+// Hitpoints 0.12 XP per tick at practice XP rate 1, 2 trout carried and none eaten, from Attack 45 and Hitpoints 32
+// (claude-cloud-4 .practice/combat-ladder); 3/3 again with cake and no trout (cow-dip-cake-final). Cow mode needs 14 HP
+// of trout or cake held (COW_FOOD_HP) and the bronze sword and wooden shield held or worn, starts at the north bank and
+// never wields better gear. Below Hitpoints 32 the food runs out. Hill giants for Hitpoints 43 and up are not
+// qualified, so the cows take every army account from 32. Gap: the live XP factor and field crowding are not measured,
+// and every cloud account banks its sword and shield away from the north bank, so a job needs a staging step that
+// cow mode does not run yet; no side lists army accounts until it does.
+export const COW_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence'; band: number; to: number }[] = [
+    { skill: 'Strength', band: 0, to: 40 }, { skill: 'Attack', band: 1, to: 40 }, { skill: 'Defence', band: 5, to: 40 },
+];
 
 // Proven job templates. Rates are estimates from each script's header model; tick-waste discounts them by measurement.
 export function catalogue(): Template[] {
@@ -116,13 +251,20 @@ export function catalogue(): Template[] {
         goal: `goldfarm knights at ${spot}`, needs: { skills: { Thieving: 55 } }, resources: [`knight:${spot}`],
         yields: a => [{ item: 'coins', perTick: knightCoinsPerTick(a.skills.Thieving ?? 1) }],
     }));
+    const cows = COW_BANDS.map(({ skill, band, to }): Template => ({
+        id: `army-cow-${skill.toLowerCase()}`, family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['3000', 'cow'],
+        env: { TRAIN_SKILL: skill, COW_BANK_PROFILE: 'north', MAX_KILLS: '8' }, role: 'combat', goal: `train ${skill} to ${to} on the Ardougne cows`,
+        tier: 'goal', band, repeats: true, trains: { skill, to, unlocks: [] }, resources: [COW_FIELD], yields: () => [],
+        needs: { skills: { Hitpoints: 32 }, food: 14, items: { 'bronze sword': 1, 'wooden shield': 1 } },
+    }));
     return [
         ...goldfarm,
+        ...cows,
         { id: 'thieving55', family: 'thieving60', script: 'scripts/generated/thieving60.ts', env: { TARGET: '55', CAP: '2500', CLEAN_FOOD: '1' }, role: 'thieving',
             goal: 'train Thieving to 55 for a knight spot', trains: { skill: 'Thieving', to: 55, unlocks: goldfarm.map(g => g.id) }, yields: () => [] },
         ...CHICKEN_PENS.map((pen): Template => ({
-            id: `feathers@${pen}`, family: 'gather-feathers', script: 'scripts/gather-feathers.ts', env: { PEN: pen, TICKS: '3000' }, role: 'helper',
-            goal: `feathers at the chicken pen ${pen}`, resources: [`pen:${pen}`],
+            id: `feathers@${pen}`, family: 'gather-feathers', script: 'scripts/gather-feathers.ts', env: { PEN: pen, TICKS: '3000', TARGET: String(FEATHER_TARGET) }, role: 'helper',
+            goal: `feathers at the chicken pen ${pen}`, resources: [`pen:${pen}`], needs: { holdsUnder: { feather: FEATHER_TARGET } },
             // chicken.rs2: 15 feathers 1/4, 5 feathers 1/4 -> 5 a kill; about one kill and pickup per 16 ticks.
             yields: () => [{ item: 'feather', perTick: 0.3 }],
         })),
@@ -160,10 +302,19 @@ export function jobResources(job: { script?: string; args?: string[]; env?: Reco
             out.push(`knight:${KNIGHT_SPOTS.reduce((b, s) => cheb(s, x, z) < cheb(b, x, z) ? s : b)}`);
         }
         if (file === 'scripts/gather-feathers.ts') out.push(`pen:${env.PEN ?? '3229,3298'}`);
+        // Ranged training kills the Lumbridge pen's chickens (scripts/ranged-train.ts OUT ends at 3233,3297), so it holds
+        // that pen like a feather job does: two sides must not farm one pen.
+        if (file === 'scripts/ranged-train.ts') out.push('pen:3229,3298');
         if (file === 'scripts/shop-buyer.ts' && args[0]) out.push(`shop:${args[0]}`);
         if (file === 'scripts/gather-fish.ts' && (args[0] ?? 'cage') === 'cage') out.push('catherby:lobster');
     }
     return [...new Set(out)];
+}
+
+// The freshest of an account's observations by `at`: its status file and its row in the side's fleet snapshot. A fresh
+// cloud container has no status files, so without the snapshot every account would plan as a level-1 start.
+export function freshest(...observations: readonly any[]): any {
+    return observations.filter(o => o && typeof o === 'object').reduce((best, o) => (Number(o.at) || 0) > (Number(best?.at) || 0) ? o : best, null);
 }
 
 // An account as the planner sees it, from its status file (.practice/status/<name>.json) or a fleet snapshot row:
@@ -193,18 +344,41 @@ export function plannableAccounts(jobs: readonly any[], side: string, listed: re
     return listed.filter(n => { const k = n.toLowerCase(); return !hard.has(k) && !paused.has(k) && (optIn.has(k) || !named.has(k)); });
 }
 
+const jobNames = (j: any) => [j?.account, ...(j?.accounts ?? [])].filter(Boolean) as string[];
+
 // Resources the jobs in the file hold against this side's planning: every enabled unmarked job, and every enabled
 // marked job whose account is paused (a stop file; mergeJobs keeps that job as it is, so its pen or spot stays its own).
-// ownHeld is the part held by this side's own accounts, which goes into this side's fleet claim.
-export function reservedResources(jobs: readonly any[], side: string, paused: ReadonlySet<string>, sideOf: (account: string) => string): { taken: Record<string, number>; ownHeld: string[] } {
-    const taken: Record<string, number> = {}, ownHeld: string[] = [];
-    const names = (j: any) => [j?.account, ...(j?.accounts ?? [])].filter(Boolean) as string[];
-    const holds = (j: any) => j?.enabled !== false && (j?.autopilot !== side || names(j).some(a => paused.has(a.toLowerCase())));
-    for (const j of jobs) if (holds(j)) for (const r of jobResources(j)) {
-        taken[r] = (taken[r] ?? 0) + 1;
-        if (names(j).every(a => sideOf(a) === side)) ownHeld.push(r);
-    }
-    return { taken, ownHeld };
+export function reservedResources(jobs: readonly any[], side: string, paused: ReadonlySet<string>): Record<string, number> {
+    const taken: Record<string, number> = {};
+    const holds = (j: any) => j?.enabled !== false && (j?.autopilot !== side || jobNames(j).some(a => paused.has(a.toLowerCase())));
+    for (const j of jobs) if (holds(j)) for (const r of jobResources(j)) taken[r] = (taken[r] ?? 0) + 1;
+    return taken;
+}
+
+// This side's fleet claim (fleet/claims/<side>.json on the fleet-data branch): every exclusive resource an enabled job
+// of this side's own accounts holds, planner-made or hand-made, from the plan the swarm runs, when one of the job's
+// accounts is `active` (scripts/fleet-sync.ts: seen in the world within CLAIM_MAX_AGE_MS). A plan with more enabled
+// jobs than the swarm admits parks some for days; a parked job's spot is free for the other sides, and when the job
+// does start, the planner that took the spot sees this side's claim on its next pass and moves its account. fleet-sync
+// writes the claim on every sync, so it never depends on the planner running; scripts/autopilot.ts on every side
+// ignores a claim older than CLAIM_MAX_AGE_MS, so a side that stops syncing releases its spots. A resource is listed
+// once for each job that holds it, so the other sides count both farmers on a shared knight spot.
+export const CLAIM_MAX_AGE_MS = 2 * 3600_000;
+export function claimFor(jobs: readonly any[], side: string, sideOf: (account: string) => string, now = Date.now(), active: (account: string) => boolean = () => true): { side: string; at: number; resources: string[] } {
+    const held = jobs.filter(j => j?.enabled !== false && jobNames(j).length > 0 && jobNames(j).every(a => sideOf(a) === side) && jobNames(j).some(active)).flatMap(jobResources);
+    return { side, at: now, resources: held.sort() };
+}
+
+// A recovery the coordinator runs for an account (scripts/session-check.ts, coordinatorOwner "coordinator") shadows that
+// account's own job in the merged plan (packages/core/src/coordinator-jobs.ts mergeJobs). The account returns to its own
+// job, so the side's claim keeps that job's places while the recovery runs; without them the other sides see the places
+// free and fill them. Other coordinator work keeps the merged plan's claim.
+export const RECOVERY_JOB_SCRIPT = 'scripts/session-check.ts';
+export function recoveringOwnerJobs(ownerJobs: readonly any[], coordinatorJobs: readonly any[]): any[] {
+    const script = (j: any) => String(j?.script ?? '').replace(/\\/g, '/').replace(/^\.\//, '');
+    const recovering = new Set(coordinatorJobs.filter(j => j?.coordinatorOwner === 'coordinator' && script(j) === RECOVERY_JOB_SCRIPT)
+        .flatMap(jobNames).map(a => a.toLowerCase()));
+    return ownerJobs.filter(j => j?.enabled !== false && jobNames(j).length > 0 && jobNames(j).every(a => recovering.has(a.toLowerCase())));
 }
 
 // A marked job whose account is in `keep` (an owner pause: a stop file) stays as it is, with its enabled and repeat

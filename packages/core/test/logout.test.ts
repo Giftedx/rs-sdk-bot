@@ -34,7 +34,7 @@ test('logout clicks again within one tick by default (a skilling delay drops cli
     expect(clicks).toBeGreaterThanOrEqual(4);
 });
 
-// Seen 2026-10-22 (bankx8v0r3): the engine logged the player out (P_LOGOUT, removePlayer, LOGOUT packet), but
+// Seen (bankx8v0r3): the engine logged the player out (P_LOGOUT, removePlayer, LOGOUT packet), but
 // the socket closed before the lite session read that packet, so the session ended as 'disconnected'.
 test('a disconnect after a logout click remains unconfirmed', async () => {
     let end!: (v: { reason: string }) => void;

@@ -44,10 +44,43 @@ test('pending dependencies retain failed, unfinished and missing blockers',()=>{
  expect(out.workers.codex.pending[0]).toMatchObject({id:'waiting',status:'waiting-dependencies',dependencies:[{id:'failed',status:'failed'},{id:'missing',status:'missing'},{id:'busy',status:'running'}]});
  expect(summarize([record('ready')]).workers.codex.pending[0].status).toBe('queued');
 });
+test('progress shows terminal roots and implicit provision edges without reporting repairable refreshes as terminal',()=>{
+ const failed=record('failed',{status:'failed'}),claim=record('claim',{spec:{...record('claim').spec,kind:'provision',dependsOn:['failed']}});
+ const consumer=record('consumer',{spec:{...record('consumer').spec,accountFrom:'claim'}});
+ const cohort=record('cohort',{spec:{...record('cohort').spec,dependsOn:['claim'],participants:['@claim','@other']}});
+ const refresh=record('refresh-earn-failed',{status:'failed'}),repairable=record('repairable',{spec:{...record('repairable').spec,dependsOn:[refresh.spec.id]}});
+ const out=summarize([failed,claim,consumer,cohort,record('other'),refresh,repairable]);
+ expect(out.workers.codex.pending.find(r=>r.id==='consumer')).toMatchObject({
+  status:'waiting-dependencies',dependencies:[{id:'claim',status:'pending'}],terminalBlocker:{id:'failed',status:'failed'},
+ });
+ expect(out.workers.codex.pending.find(r=>r.id==='cohort')).toMatchObject({
+  status:'waiting-dependencies',dependencies:[{id:'claim',status:'pending'},{id:'other',status:'pending'}],
+  terminalBlocker:{id:'failed',status:'failed'},
+ });
+ expect(out.workers.codex.pending.find(r=>r.id==='repairable')).toMatchObject({
+  status:'waiting-dependencies',dependencies:[{id:refresh.spec.id,status:'failed'}],terminalBlocker:null,
+ });
+});
 test('a fresh export cannot freshen stale state or swarm observations',()=>{
  const state=initialState();state.tasks=[record('r',{status:'running',pid:7})];
  const out=summarize(state.tasks,{state:{value:state,observedAt:now-STALE_MS-1},swarm:{value:{at:now-STALE_MS-1,running:2,jobs:[]},observedAt:now-STALE_MS-1},paused:true});
  expect(out.exportedAt).toBe(now);expect(out.sources.state.stale).toBe(true);expect(out.swarm.observationStale).toBe(true);expect(out.coordinator.paused).toBe(true);expect(out.workers.codex.running[0].observationStale).toBe(true);
+});
+test('release evidence binds the fresh heartbeat to the controller lease without exporting its nonce',()=>{
+ const reported='a'.repeat(64),disk='b'.repeat(64),nonce='owner-private-marker';
+ const value={at:now-100,controllerPid:19,coordinatorOwner:nonce,release:reported,jobs:[]};
+ const lease={pid:19,nonce,at:now-200,source:reported};
+ const check=(swarm=value,owner=lease,onDisk=disk)=>summarize([],{
+  swarm:{value:swarm,observedAt:swarm.at},controllerLease:owner,launchSource:onDisk,
+ }).swarm.release;
+ expect(check()).toEqual({state:'disk-drift',reported,onDisk:disk});
+ expect(check(value,lease,reported).state).toBe('matches-disk');
+ expect(check(value,{...lease,pid:20}).state).toBe('lease-mismatch');
+ expect(check(value,{...lease,nonce:'different'}).state).toBe('lease-mismatch');
+ expect(check(value,{...lease,source:disk}).state).toBe('lease-mismatch');
+ expect(check({...value,at:now-STALE_MS-1}).state).toBe('unknown');
+ expect(check(value,lease,'').state).toBe('unknown');
+ expect(JSON.stringify(check())).not.toContain(nonce);
 });
 test('one-shot export preserves source bytes and exposes missing or unreadable observations',()=>{
  const root=mkdtempSync(join(tmpdir(),'progress-export-')),fleet=join(root,'fleet');
@@ -56,6 +89,10 @@ test('one-shot export preserves source bytes and exposes missing or unreadable o
   mkdirSync(join(root,'.practice'),{recursive:true});const path=join(root,'.practice/swarm-state.json'),body=JSON.stringify({at:now-STALE_MS-1,running:0,jobs:[{account:'Haggis',state:'disabled'},{account:'Rod',state:'running'}]});writeFileSync(path,body);
   const second=exportProgress(root,fleet,'cloud',now);expect(readFileSync(path,'utf8')).toBe(body);expect(second.report.swarm.observationStale).toBe(true);expect(second.report.swarm.jobs.map(j=>j.account)).toEqual(['Rod']);
   expect(JSON.parse(readFileSync(second.file,'utf8')).side).toBe('cloud');
+  mkdirSync(join(root,'.practice/coordinator'),{recursive:true});
+  const state=initialState(),bad=record('bad');
+  writeFileSync(join(root,'.practice/coordinator/state.json'),JSON.stringify({...state,tasks:[{...bad,spec:{...bad.spec,participants:[null]}}]}));
+  expect(exportProgress(root,fleet,'cloud',now).report.sources.state.error).toBe('unreadable');
   writeFileSync(path,'{invalid');expect(exportProgress(root,fleet,'cloud',now).report.sources.swarm.error).toBe('unreadable');
  }finally{rmSync(root,{recursive:true,force:true});}
 });

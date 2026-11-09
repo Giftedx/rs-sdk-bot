@@ -1,6 +1,7 @@
 // No-diary rule (AGENTS.md "Keep knowledge small"): docs, plans, research and configs state what is true now. Git
 // commits are the only history. This check flags history in prose: dates, before/after wording, update logs and
-// attempt stories. Text in backticks, quotes and link targets is exempt (paths, game text, file names).
+// attempt stories. Text in backticks, quotes and link targets is exempt (paths, game text, file names). TypeScript
+// comments get the date rule only: the wording rules would flag present-tense code words such as "no longer".
 // Usage: bun scripts/check-no-diary.ts [--list]   exit 1 when a flagged line exists.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
@@ -30,15 +31,27 @@ export function flag(text: string): { line: number; id: string; text: string }[]
     return out;
 }
 
-// The files the rule covers: hand-written Markdown outside generated and vendored trees, plus swarm.json job notes.
-export function covered(root: string): string[] {
+// A comment starts at line start or after white space, so the // of a URL is not one.
+const DATE = DIARY.find(d => d.id === 'date')!.re;
+export function flagComments(text: string): { line: number; id: string; text: string }[] {
+    const out: { line: number; id: string; text: string }[] = [];
+    text.split(/\r?\n/).forEach((raw, i) => {
+        const c = /(?:^|\s)\/\/(.*)$/.exec(raw)?.[1] ?? /^\s*(?:\/\*|\*)(.*)$/.exec(raw)?.[1];
+        if (c !== undefined && DATE.test(prose(c))) out.push({ line: i + 1, id: 'date', text: raw.trim().slice(0, 160) });
+    });
+    return out;
+}
+
+// The files the rule covers: hand-written Markdown and TypeScript outside generated and vendored trees, plus
+// swarm.json job notes.
+export function covered(root: string, ext = '.md'): string[] {
     const files: string[] = [];
     const walk = (dir: string) => {
         for (const e of readdirSync(dir, { withFileTypes: true })) {
             if (['node_modules', 'vendor', '.git', '.practice', '.claude', '.superpowers', 'archive'].includes(e.name)) continue;
             const p = join(dir, e.name);
             if (e.isDirectory()) walk(p);
-            else if (e.name.endsWith('.md') && !GENERATED.has(relative(root, p).replace(/\\/g, '/'))) files.push(p);
+            else if (e.name.endsWith(ext) && !GENERATED.has(relative(root, p).replace(/\\/g, '/'))) files.push(p);
         }
     };
     walk(root);
@@ -52,6 +65,7 @@ const GENERATED = new Set(['knowledge/BUILD.md', 'research/board-ranking.md', 'r
 export function check(root: string) {
     const results: { file: string; flags: ReturnType<typeof flag> }[] = [];
     for (const f of covered(root)) results.push({ file: relative(root, f).replace(/\\/g, '/'), flags: flag(readFileSync(f, 'utf8')) });
+    for (const f of covered(root, '.ts')) results.push({ file: relative(root, f).replace(/\\/g, '/'), flags: flagComments(readFileSync(f, 'utf8')) });
     const swarm = join(root, 'swarm.json');
     if (existsSync(swarm) && statSync(swarm).isFile()) {
         const plan = JSON.parse(readFileSync(swarm, 'utf8'));

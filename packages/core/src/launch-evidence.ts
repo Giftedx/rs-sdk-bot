@@ -33,16 +33,30 @@ export function launchContext(root:string,snapshot:string){
  return {context:sha(JSON.stringify(semantic)),bindings};
 }
 type Read=(ref:any,json?:boolean)=>any;
-export function validateSupplies(s:any,context:string,requirements:{item:string;count:number}[],catalog:any[],owned:string[],now:number,read:Read){
+export type SupplyRequirement={item:string;count:number;itemId?:number};
+export function validateSupplies(s:any,context:string,requirements:SupplyRequirement[],catalog:any[],owned:string[],now:number,read:Read,recipient="haggis"){
  need(s?.version===2&&s.context===context&&fresh(s.at,now,3600000),'Missing, stale or mismatched staging manifest');
  need(Array.isArray(s.allocations)&&s.allocations.length>0&&requirements.length>0,'No item allocations');
+ // Several route stages can draw from one base stock pool. Compare allocations to the sum for that pool.
+ const demand=new Map<string|number,number>(),exactLabels=new Map<number,Set<string>>();
+ for(const r of requirements){
+  need(typeof r.item==='string'&&qty(r.count),'Invalid supply requirement');
+  const name=key(r.item),item=r.itemId??name,total=(demand.get(item)??0)+r.count;
+  need(name&&qty(total),'Invalid supply requirement total');
+  if(r.itemId!==undefined){
+   need(Number.isSafeInteger(r.itemId)&&r.itemId>=0&&catalog.some(i=>i.id===r.itemId),'Unresolved supply item ID: '+r.item);
+   const labels=exactLabels.get(r.itemId)??new Set<string>();labels.add(name);exactLabels.set(r.itemId,labels);
+  }
+  demand.set(item,total);
+ }
  let expiresAt=s.at+3600000;
- const owners=new Set(owned.map(n=>n.toLowerCase())),totals=new Map<string,number>(),stock=new Map<string,number>(),deliveries=new Map<string,number>();
+ const owners=new Set(owned.map(n=>n.toLowerCase())),totals=new Map<string|number,number>(),stock=new Map<string,number>(),deliveries=new Map<string,number>();
  for(const a of s.allocations){
   need(typeof a.item==='string'&&qty(a.count)&&Number.isSafeInteger(a.itemId)&&a.itemId>=0,'Invalid allocation');
-  need(requirements.some(r=>key(r.item)===key(a.item)),'Unexpected supply');
-  need(catalog.some(i=>i.id===a.itemId&&key(i.name)===key(a.item)),'Unresolved supply item ID: '+a.item);
-  need(typeof a.holder==='string'&&owners.has(a.holder.toLowerCase())&&a.recipient==='haggis','Unowned holder or wrong recipient');
+  const name=key(a.item),exact=exactLabels.get(a.itemId)?.has(name),item=exact?a.itemId:name;
+  need(demand.has(item),'Unexpected supply');
+  need(catalog.some(i=>i.id===a.itemId&&(exact||key(i.name)===name)),'Unresolved supply item ID: '+a.item);
+  need(typeof a.holder==='string'&&owners.has(a.holder.toLowerCase())&&a.recipient===recipient,'Unowned holder or wrong recipient');
   const b=read(a.bank),d=read(a.delivery);
   need(b.name?.toLowerCase()===a.holder.toLowerCase()&&b.server==='rs-sdk-demo.fly.dev'&&fresh(b.bankAt,now,3600000),'Invalid staging bank observation');
   need(d.ok===true&&d.server==='rs-sdk-demo.fly.dev'&&d.observed===true,'Delivery must record a successful observed live transfer');
@@ -53,17 +67,17 @@ export function validateSupplies(s:any,context:string,requirements:{item:string;
   stock.set(sk,(stock.get(sk)??0)+a.count);deliveries.set(dk,(deliveries.get(dk)??0)+a.count);
   need(count(d.after)-count(d.before)===count(d.items),'Delivery lacks matching observed recipient delta');
   need(stock.get(sk)!<=count(b.bank)&&deliveries.get(dk)!<=count(d.items),'Stock or delivery double-counted/short');
-  totals.set(key(a.item),(totals.get(key(a.item))??0)+a.count);
+  totals.set(item,(totals.get(item)??0)+a.count);
  }
- for(const r of requirements)need(qty(r.count)&&totals.get(key(r.item))===r.count,'Missing or excess reservation: '+r.item);
+ for(const [item,count] of demand)need(totals.get(item)===count,'Missing or excess reservation: '+item);
  return expiresAt;
 }
-export function validateRehearsals(runs:any[],context:string,expected:Record<string,number>,now:number,read:Read){
- need(runs.length===3&&Object.keys(expected).length>0,'Need three complete rehearsals');
+export function validateRehearsals(runs:any[],context:string,expected:Record<string,number>,now:number,read:Read,options:{count:number;excludedActor:string;externalSupplies?:SupplyRequirement[];requireArtifacts?:boolean}={count:3,excludedActor:'haggis'}){
+ need(runs.length===options.count&&Object.keys(expected).length>0,options.count===3?'Need three complete rehearsals':'Need one complete rehearsal');
  const ids=new Set(),actors=new Set(),logs=new Set();
  for(const r of runs){
   need(r?.version===2&&r.context===context&&fresh(r.at,now,7*86400000),'Stale or mismatched rehearsal');
-  need(typeof r.runId==='string'&&r.runId&&typeof r.actor==='string'&&r.actor&&r.actor.toLowerCase()!=='haggis'&&/^localhost:\d+$/.test(r.server),'Invalid practice identity');
+  need(typeof r.runId==='string'&&r.runId&&typeof r.actor==='string'&&r.actor&&r.actor.toLowerCase()!==options.excludedActor&&/^(?:localhost|127\.0\.0\.1):\d+$/.test(r.server),'Invalid practice identity');
   need(!ids.has(r.runId)&&!actors.has(r.actor.toLowerCase())&&!logs.has(r.log?.path),'Repeated rehearsal');ids.add(r.runId);actors.add(r.actor.toLowerCase());logs.add(r.log?.path);
   need(r.ok===true&&r.died===false&&r.logout==='logged-out'&&r.startPlaytime===0&&qty(r.endPlaytime),'Incomplete whole-clock run');
   need(Object.keys(r.boardTicks??{}).length===Object.keys(expected).length,'Missing board stamps');
@@ -73,6 +87,22 @@ export function validateRehearsals(runs:any[],context:string,expected:Record<str
   const stamp=log.split(/\r?\n/).filter((line:string)=>line.startsWith('REHEARSAL '));
   need(stamp.length===1,'Need one raw whole-clock receipt');
   const raw=JSON.parse(stamp[0]!.slice(10));
+  if(options.externalSupplies){
+   const required=JSON.stringify(options.externalSupplies);
+   need(JSON.stringify(r.externalSupplies)===required&&JSON.stringify(raw.externalSupplies)===required,'Rehearsal external supplies differ from the route bill');
+  }
+  if(options.requireArtifacts){
+   const fields={finalSave:'.sav',tradeLedger:'.jsonl',tickRecord:'.ticks.ndjson.gz'} as const;
+   need(r.artifacts&&Object.keys(r.artifacts).length===3&&JSON.stringify(r.artifacts)===JSON.stringify(raw.artifacts),'Missing or mismatched raw rehearsal artifacts');
+   const paths=new Set([r.log.path]);
+   for(const [kind,ext] of Object.entries(fields)){
+    const artifact=r.artifacts[kind];
+    need(typeof artifact?.path==='string'&&artifact.path.endsWith(ext)&&!paths.has(artifact.path),'Missing or repeated raw rehearsal artifact: '+kind);
+    paths.add(artifact.path);
+    const content=read(artifact,false);
+    need(typeof content==='string'&&(kind==='tradeLedger'||content.length>0),'Empty raw rehearsal artifact: '+kind);
+   }
+  }
   for(const field of ['context','runId','actor','server','at','startPlaytime','endPlaytime','planTicks','ok','died','logout','boardTicks'])need(JSON.stringify(raw[field])===JSON.stringify(r[field]),'Raw rehearsal differs: '+field);
  }
  return Math.min(...runs.map(r=>r.at+7*86400000));

@@ -1,0 +1,8 @@
+import {test,expect} from 'bun:test';
+import {validateSkullResume,SKULL_WAIT_TICKS} from './ghost-skull-entry';
+const prior={name:'Sword',pos:{x:3120,z:9567,level:0},result:'fail step take skull xp=',phase:'3 469',sessionAttemptId:'attempt',inventory:[{id:1438,count:1}],equipment:[{id:552,count:1,slot:2}]};
+const current={name:'Sword',x:3120,z:9567,level:0,inventory:prior.inventory.map((i,slot)=>({...i,slot})),equipment:prior.equipment};
+const log='RESULT fail step take skull xp= hpMin=54 eats=0 died=false milestones=1,2,3 jumps=0';const logout={state:'confirmed',attemptId:'attempt',account:'Sword'};
+test('proved failed skull entry accepts exact held assets and budgets one full respawn',()=>{expect(()=>validateSkullResume(prior,log,logout,current)).not.toThrow();expect(SKULL_WAIT_TICKS).toBeGreaterThan(100);});
+test('started alone, unrelated failure, completed pickup, death and mismatched logout refuse',()=>{for(const p of [{...prior,result:'started'},{...prior,phase:'4 500'}])expect(()=>validateSkullResume(p,log,logout,current)).toThrow();for(const l of [log.replace('died=false','died=true'),log.replace('1,2,3 ','1,2,3,4 ')])expect(()=>validateSkullResume(prior,l,logout,current)).toThrow();expect(()=>validateSkullResume(prior,log,{...logout,attemptId:'other'},current)).toThrow();});
+test('another account, moved entry, missing amulet, skull held or changed kit refuse',()=>{for(const c of [{...current,name:'Other'},{...current,x:3119},{...current,equipment:[]},{...current,inventory:[...current.inventory,{id:553,count:1}]},{...current,inventory:[]}])expect(()=>validateSkullResume(prior,log,logout,c)).toThrow();});

@@ -87,9 +87,11 @@ test('a travel leg with no movement for 20 ticks is retried once, then refused w
  expect(legs[1]!.tick-legs[0]!.tick).toBe(STALL_TICKS);
  expect(f.counts().attacks).toBe(0);
 });
-for(const fallback of [false,true])test(fallback?'bear search takes the nearest untried spawn through short hops and skips failed routes and unreachable bears within 12 ticks':'worker skips banked and carried meat, credits kills, and deposits only meat',async()=>{
+for(const mode of ['owned','fallback','draynor'])test(mode==='draynor'?'Draynor entry observes banked beef, acquires only the other three meats locally, and banks them':mode==='fallback'?'bear search takes the nearest untried spawn through short hops and skips failed routes and unreachable bears within 12 ticks':'worker skips banked and carried meat, credits kills, and deposits only meat',async()=>{
+ const fallback=mode==='fallback',draynor=mode==='draynor';
  const f=fixture([2132]),st=f.s.sdk.getState();
  st.inventory=[{id:2134,count:1,name:'Raw rat meat'},{id:954,count:1,name:'Rope'}];
+ if(draynor){Object.assign(st.player,{worldX:3092,worldZ:3242});st.bank.isOpen=false;st.inventory.shift();}
  const bank=[{id:2132,count:1,name:'Raw beef'}];let gen=1,xp=0;
  const attacked:number[]=[],routes:{x:number;z:number;tick:number}[]=[];
  let tick=0,settled=false;
@@ -98,7 +100,10 @@ for(const fallback of [false,true])test(fallback?'bear search takes the nearest 
  f.s.onTick=(cb:()=>void)=>{listeners.add(cb);return ()=>listeners.delete(cb);};
  f.s.bankObservation=()=>({generation:gen,items:bank});
  f.s.sdk.getSkillXp=()=>xp;
- f.s.bot.openBank=async()=>{st.bank.isOpen=true;gen++;return {success:true};};
+ f.s.bot.openBank=async()=>{
+  if(draynor)expect(Math.max(Math.abs(st.player.worldX-3092),Math.abs(st.player.worldZ-3243))).toBeLessThanOrEqual(2);
+  st.bank.isOpen=true;gen++;return {success:true};
+ };
  f.s.bot.closeBank=async()=>{st.bank.isOpen=false;return {success:true};};
  f.s.bot.depositItem=async(item:any)=>{
   const held=st.inventory.filter((i:any)=>i.id===item.id).reduce((n:number,i:any)=>n+i.count,0);
@@ -122,7 +127,8 @@ for(const fallback of [false,true])test(fallback?'bear search takes the nearest 
   if(fallback&&x===2691&&z===3341)throw Error(`route-failed ${x},${z}: walk to ${x},${z},0: no effect in 400 ticks`);
   if(fallback&&x===2691&&z===3273)throw Error(`route-failed ${x},${z}: no route to ${x},${z},0`);
   Object.assign(st.player,{worldX:x,worldZ:z});
-  const m=BEAR_SPAWNS.some(([bx,bz])=>x===bx&&z===bz)?MEATS[2]:MEATS.find(m=>m.x===x&&m.z===z)??(x>=2690&&x<=2692&&z>=3272&&z<=3274?MEATS[3]:undefined);
+  const east=draynor?(x===3192&&z===3207?MEATS[1]:x===3185&&z===3277?MEATS[3]:undefined):undefined;
+  const m=east??(BEAR_SPAWNS.some(([bx,bz])=>x===bx&&z===bz)?MEATS[2]:MEATS.find(m=>m.x===x&&m.z===z)??(x>=2690&&x<=2692&&z>=3272&&z<=3274?MEATS[3]:undefined));
   st.nearbyNpcs=m?[{id:m.npc,index:m.npc,x,z,inCombat:false,reachable:!(fallback&&x===2692&&z===3333)}]:[];
   if(m?.npc===105)st.nearbyNpcs.unshift({id:105,index:999,x,z,inCombat:false,reachable:false});
  }}).then(result=>{settled=true;return {result};},error=>{settled=true;return {error};});
@@ -143,8 +149,13 @@ for(const fallback of [false,true])test(fallback?'bear search takes the nearest 
   expect(routes[after]!.tick-routes[after-1]!.tick).toBe(12);
   expect(routes.some(p=>Math.max(Math.abs(p.x-2691),Math.abs(p.z-3273))===1)).toBe(true);
  }
- expect(attacked).toEqual([105,41]);
- expect(result.skipped).toEqual([2132,2134]);
+ expect(attacked).toEqual(draynor?[105,41,86]:[105,41]);
+ expect(result.skipped).toEqual(draynor?[2132]:[2132,2134]);
+ if(draynor){
+  expect(result.acquired).toEqual([2136,2138,2134]);
+  expect(routes.every(p=>p.x>=3090&&p.x<=3192)).toBe(true);
+  expect([st.player.worldX,st.player.worldZ]).toEqual([3092,3243]);
+ }
  expect(result.bank).toEqual({2132:1,2134:1,2136:1,2138:1});
  expect(st.inventory).toEqual([{id:954,count:1,name:'Rope'}]);
 });

@@ -45,19 +45,44 @@ export async function collectHuntLoot(s:Session,stop:()=>boolean,afterKill=false
  return{id:item.id,count:item.count};
 }
 export async function huntFight(s:Session,npc:{id:number;index:number},stop:()=>boolean,foodEpoch:()=>number){
- const before=s.sdk.getSkillXp('Strength')??0,start=s.tick();let sent=start,food=foodEpoch(),retries=0;
- await s.bot.attack(npc as Parameters<typeof s.bot.attack>[0]);
+ const before=s.sdk.getSkillXp('Strength'),start=s.tick();let sent=start,food=foodEpoch(),retries=0;
+ if(before==null||!Number.isFinite(before))throw Error('earth hunt strength XP unknown');
+ const revision=s.sdk.getState()?.revision??start;
+ let engaged=false,dead=false;
+ const observe=()=>{
+  const st=s.sdk.getState(),combat=st?.player?.combat;
+  if(combat?.inCombat&&combat.targetType==='npc'&&combat.targetIndex===npc.index)engaged=true;
+  if(st?.combatEvents?.some(e=>(e.observationId??e.tick)>revision&&e.type==='damage_dealt'&&e.targetType==='npc'&&e.targetIndex===npc.index))engaged=true;
+  if(st?.nearbyNpcs.some(n=>n.index===npc.index&&n.id===npc.id&&n.hp===0))dead=true;
+ };
+ const attack=async(target:Parameters<typeof s.bot.attack>[0])=>{
+  const result=await s.bot.attack(target);observe();
+  if(stop())throw Error('earth hunt fight stopped');
+  if(s.tick()-start>=100)throw Error('earth hunt fight credit deadline');
+  if(result.success){engaged=true;return true;}
+  // The SDK maps sendInteractNpc's target_not_found to timeout and preserves its message.
+  const missing=result.reason==='npc_not_found'||result.reason==='timeout'&&/\btarget_not_found\b/.test(result.message);
+  const st=s.sdk.getState();
+  // A refused retry can race with the ongoing kill. Only the outer target/XP check credits it.
+  if(missing&&engaged)return true;
+  if(missing&&dead&&!engaged&&st&&!st.nearbyNpcs.some(n=>n.index===npc.index&&n.id===npc.id)&&s.sdk.getSkillXp('Strength')===before)return false;
+  throw Error('earth hunt attack refused: '+result.reason+'; '+result.message);
+ };
+ const off=s.onTick(observe);
+ try{
+ observe();if(!await attack(npc as Parameters<typeof s.bot.attack>[0]))return 'uncredited' as const;
  while(s.tick()-start<100){
   if(stop())throw Error('earth hunt fight stopped');
   const current=s.sdk.getState()?.nearbyNpcs.find(n=>n.index===npc.index&&n.id===npc.id&&(n.hp??1)>0);
-  if(!current&&(s.sdk.getSkillXp('Strength')??0)>before)return;
+  if(!current&&(s.sdk.getSkillXp('Strength')??0)>before)return 'credited' as const;
   const epoch=foodEpoch();
   if(current&&retries<3&&(epoch!==food||s.tick()-sent>=16)){
-   food=epoch;sent=s.tick();retries++;await s.bot.attack(current);
+   food=epoch;sent=s.tick();retries++;if(!await attack(current))return 'uncredited' as const;
   }
   await waitTicks(s,1);
  }
  throw Error('earth hunt fight credit deadline');
+ }finally{off();}
 }
 type Ledger={consumed:number;crafted:number;air:number;eaten:Record<number,number>;found?:Record<number,number>};
 export function productionConserved(before:ReadonlyMap<number,number>,after:ReadonlyMap<number,number>,l:Ledger){
@@ -66,6 +91,13 @@ export function productionConserved(before:ReadonlyMap<number,number>,after:Read
  for(const [id,n] of Object.entries(l.found??{}))add(Number(id),n);
  for(const [id,n] of Object.entries(l.eaten)){const def=questFoodDefinitions().get(Number(id));if(!def||!Number.isSafeInteger(n)||n<0)return false;add(Number(id),-n);if(def.next)add(def.next,n);}
  return [...new Set([...expected.keys(),...after.keys()])].every(id=>(expected.get(id)??0)===(after.get(id)??0)&&(expected.get(id)??0)>=0);
+}
+
+export async function depositEarthInventory(s:Session,check:()=>void){
+ for(const id of new Set(s.sdk.getInventory().map(i=>i.id))){
+  check();const item=s.sdk.getInventory().find(i=>i.id===id);
+  if(item)await depositObserved(s,item);
+ }
 }
 
 export async function runEarthProduction(s:Session,o:{mode:'talismans'|'craft';cap:number;target:number;reserve:number;killsPerTarget?:number;stop:()=>boolean}){
@@ -94,8 +126,8 @@ export async function runEarthProduction(s:Session,o:{mode:'talismans'|'craft';c
   try{const r=await goTo(s,await getWorld(),{...to,level:0},actor,{legTimeoutTicks:150,signal:ac.signal});if(!r.ok)throw Error('earth production route: '+JSON.stringify(r));}finally{off();}check();
  };
  const open=async()=>{check();await s.bot.dismissBlockingUI();await openEarthBankObserved(s);banks();};
- const deposit=async()=>{for(const i of [...inv()]){check();await depositObserved(s,i);}banks();};
- const withdraw=async(id:number,n:number)=>{if(!n)return;check();const item=st()?.bank.items.find(i=>i.id===id),b=banked(id),p=held(id);if(!item||b<n)throw Error('earth production missing owned '+id);await s.bot.withdrawItem(item,n);if(!await waitUntil(s,()=>over()||held(id)===p+n&&banked(id)===b-n,{timeoutTicks:12})||over())throw Error('earth production withdrawal unobserved '+id);};
+ const deposit=async()=>{await depositEarthInventory(s,check);banks();};
+ const withdraw=async(id:number,n:number)=>{if(!n)return;await open();const item=st()?.bank.items.find(i=>i.id===id),b=banked(id),p=held(id);if(!item||b<n)throw Error('earth production missing owned '+id);await s.bot.withdrawItem(item,n);if(!await waitUntil(s,()=>over()||held(id)===p+n&&banked(id)===b-n,{timeoutTicks:12})||over())throw Error('earth production withdrawal unobserved '+id);};
  const equip=async(id:number)=>{if(eq().some(i=>i.id===id))return;const item=inv().find(i=>i.id===id);if(!item)throw Error('earth production kit missing '+id);await s.bot.equipItem(item);if(!await waitUntil(s,()=>over()||eq().some(i=>i.id===id),{timeoutTicks:10})||over())throw Error('earth production equip unobserved');};
  const insideEarth=()=>!!pos()&&pos()!.level===0&&pos()!.worldX>=2645&&pos()!.worldX<=2670&&pos()!.worldZ>=4820&&pos()!.worldZ<=4845;
  const exitEarth=async()=>{
@@ -134,7 +166,9 @@ export async function runEarthProduction(s:Session,o:{mode:'talismans'|'craft';c
      if(held(id)&&!o.killsPerTarget)break;
      const npc=st()?.nearbyNpcs.filter(n=>target.npcIds.includes(n.id)&&!n.inCombat&&(n.hp??1)>0&&n.reachable!==false&&Math.max(Math.abs(n.x-target.spot.x),Math.abs(n.z-target.spot.z))<=18).sort((a,b)=>a.distance-b.distance)[0];
      if(!npc){await waitTicks(s,1);continue;}
-     await huntFight(s,npc,()=>over()||!!sustain.failure()||hp()<=6,()=>Object.values(ledger.eaten).reduce((n,v)=>n+v,0));kills++;lastOutput=s.tick();
+     const outcome=await huntFight(s,npc,()=>over()||!!sustain.failure()||hp()<=6,()=>Object.values(ledger.eaten).reduce((n,v)=>n+v,0));
+     if(outcome==='uncredited')continue;
+     kills++;lastOutput=s.tick();
      const dropped=await collectHuntLoot(s,over,true);if(dropped)ledger.found![dropped.id]=(ledger.found![dropped.id]??0)+dropped.count;
      console.log('EARTH_PRODUCTION_KILL '+JSON.stringify({kills,target:id,hp:hp(),tick:s.tick()}));
     }

@@ -1,6 +1,8 @@
 import {test,expect,spyOn} from 'bun:test';
-import {bestBow,usableArrows,chooseArrow,buyChunk,arrowAccount,rangedTrainOptions,runRangedTrain,rangedEntry,preparationFunds} from './ranged-train';
+import {bestBow,usableArrows,chooseArrow,buyChunk,arrowAccount,rangedTrainOptions,runRangedTrain,rangedEntry,preparationFunds,needsRangedRecovery,recoveryWalker,recoverRangedStart,openShopWithDoor} from './ranged-train';
 import * as walking from '../packages/core/src/walk';
+import * as bot from '../packages/core/src/bot';
+import {setEquipmentObserved} from '../packages/core/src/container-observation';
 import * as trips from '../packages/core/src/route-plan';
 import type {Session} from '../packages/core/src/inprocess';
 import {rangedProofSource,rangedChildConfiguration,rangedMemoryFloor,rangedSaveSettled,rangedStackOptions} from '../packages/practice/src/ranged-train-proof';
@@ -88,9 +90,58 @@ test('options keep defaults, accept argv target and cap, and refuse unbounded in
  expect(rangedTrainOptions({TARGET_LEVEL:'20'},['bun','s','Bot','12','4000'])).toMatchObject({target:12,cap:4000});
  for(const env of [{CAP:'100'},{BUY_ARROW_ID:'888'},{FOOD_ID:'315'},{MAX_TRIPS:'0'},{AMMO:'x'},{MAX_SPEND:'-1'}])expect(()=>rangedTrainOptions(env,['bun','s','Bot'])).toThrow('bounded options');
 });
+test('recovery runs only off a supported entry or with the bow or quiver worn',()=>{
+ expect(needsRangedRecovery({worldX:3253,worldZ:3421,level:0},[])).toBe(false);
+ expect(needsRangedRecovery({worldX:3253,worldZ:3421,level:0},[1171])).toBe(false);
+ expect(needsRangedRecovery({worldX:3231,worldZ:3299,level:0},[])).toBe(true);
+ expect(needsRangedRecovery({worldX:3253,worldZ:3421,level:1},[])).toBe(true);
+ expect(needsRangedRecovery({worldX:3254,worldZ:3420,level:0},[841,884])).toBe(true);
+});
+test('bones another player takes lose only the item; the kill and accounting stand',async()=>{
+ const f=trainingFixture(['kill','kill'],false,false,false,'bones-taken');
+ try{const r=await f.run();expect(r).toMatchObject({ok:true,targetMet:true,kills:2,bonesPicked:0,chickenPicked:2,accounting:true,preserved:true});}finally{f.close();}
+});
+test('a shut shop door is opened once before the keeper is asked again',async()=>{
+ const run=async(shopResults:boolean[],door:boolean)=>{const calls:string[]=[];
+  const bot={openShop:async()=>{calls.push('shop');return{success:shopResults.shift()??false};},openDoor:async()=>{calls.push('door');return{success:door};}};
+  return{ok:await openShopWithDoor(bot,/^lowe$/i,async()=>true),calls};};
+ expect(await run([true],true)).toEqual({ok:true,calls:['shop']});
+ expect(await run([false,true],true)).toEqual({ok:true,calls:['shop','door','shop']});
+ expect(await run([false,false],true)).toEqual({ok:false,calls:['shop','door','shop']});
+ expect(await run([false],false)).toEqual({ok:false,calls:['shop','door']});
+});
+test('the recovery walk plans with no Magic, items, worn gear or coins, so it can spend nothing',()=>{
+ const w=recoveryWalker({skills:{magic:55,ranged:70},varps:{a:1},items:['law_rune'],counts:{law_rune:9},worn:['staff_of_air'],coins:90000});
+ expect(w).toEqual({skills:{magic:0,ranged:70},varps:{a:1},items:[],counts:{},worn:[],coins:0});
+});
+function recoverySession(){
+ const client={};setEquipmentObserved(client,true);
+ let tick=0;const callbacks=new Set<()=>void>(),unequipped:number[]=[];
+ const equipment=[{id:841,name:'Shortbow',count:1},{id:884,name:'Iron arrow',count:50}];
+ const s={name:'unit',client,tick:()=>tick,onTick:(cb:()=>void)=>{callbacks.add(cb);return()=>{callbacks.delete(cb);};},
+  sdk:{getState:()=>({player:{worldX:3236,worldZ:3296,level:0}}),getEquipment:()=>equipment},
+  bot:{unequipItem:async(i:{id:number})=>{unequipped.push(i.id);equipment.splice(equipment.findIndex(e=>e.id===i.id),1);}}};
+ const timer=setInterval(()=>{tick++;for(const cb of [...callbacks])cb();},1);
+ return{s:s as unknown as Session,unequipped,stop:()=>clearInterval(timer)};
+}
+test('a stop before recovery starts no route and leaves the kit worn',async()=>{
+ const f=recoverySession(),go=spyOn(walking,'goTo').mockImplementation(async()=>({ok:true} as any));
+ try{const r=await recoverRangedStart(f.s,()=>true);expect(r).toEqual({from:{x:3236,z:3296,level:0},stopped:true});expect(go).not.toHaveBeenCalled();expect(f.unequipped).toEqual([]);}
+ finally{go.mockRestore();f.stop();}
+});
+test('a stop during the recovery walk aborts the route and skips the unwield',async()=>{
+ const f=recoverySession();let stop=false,actor:any,signal:AbortSignal|undefined;
+ const world=spyOn(bot,'getWorld').mockImplementation(async()=>({} as any)),acct=spyOn(bot,'accountOf').mockImplementation(()=>({skills:{magic:40},varps:{},items:['law_rune'],coins:500} as any));
+ const go=spyOn(walking,'goTo').mockImplementation(async(_s,_w,_to,a,o)=>{actor=a;signal=o?.signal;stop=true;
+  await new Promise<void>(res=>o!.signal!.addEventListener('abort',()=>res()));return{ok:false,reason:'aborted'} as any;});
+ try{
+  const r=await recoverRangedStart(f.s,()=>stop);
+  expect(r?.stopped).toBe(true);expect(signal?.aborted).toBe(true);expect(actor).toMatchObject({items:[],coins:0,skills:{magic:0}});expect(f.unequipped).toEqual([]);
+ }finally{go.mockRestore();world.mockRestore();acct.mockRestore();f.stop();}
+});
 
 // Only travel is stubbed. The worker observes tick, XP, target, loot and bank effects.
-function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],catherby=false,upgrade=false,underground=false,ammoRace?:'foreign'|'own-missing'){
+function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],catherby=false,upgrade=false,underground=false,ammoRace?:'foreign'|'own-missing'|'bones-taken',observeBankMoves=false){
  type Item={id:number;name:string;count:number};
  const item=(id:number,count:number):Item=>({id,name:id===995?'Coins':id===1985?'Cheese':String(id),count});
  let tick=0,xp=0,level=7,generation=0,trip=0,active=-1,attempt=0,firstAttack=0,respawnAt:number|undefined;
@@ -125,7 +176,7 @@ function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],c
    closeShop:async()=>{state.shop.isOpen=false;},
    buyFromShop:async(_name:RegExp,n:number)=>{add(pack,1985,n);add(pack,995,-5*n);state.shop.shopItems[0].count-=n;return{success:true};},
    withdrawItem:async(i:Item,n:number)=>{i.count-=n;add(pack,i.id,n);generation++;},
-   depositItem:async(i:Item)=>{add(bank,i.id,i.count);pack=pack.filter(p=>p.id!==i.id);generation++;return{success:true};},
+   depositItem:async(i:Item)=>{add(bank,i.id,i.count);pack=pack.filter(p=>p.id!==i.id);generation++;if(observeBankMoves)for(const cb of [...listeners])cb();return{success:true};},
    equipItem:async(i:Item)=>{const bows=[843,849],arrows=[882,888],group=bows.includes(i.id)?bows:arrows;for(const old of equipment.filter(e=>group.includes(e.id)))add(pack,old.id,old.count);equipment=equipment.filter(e=>!group.includes(e.id));equipment.push({...i});pack=pack.filter(p=>p.id!==i.id);},
    unequipItem:async(i:Item)=>{add(pack,i.id,i.count);equipment=equipment.filter(p=>p.id!==i.id);},
    attack:async()=>{attempt++;attacks.push({target:active,trip,tick,kit:equipment.map(i=>i.id)});if(attempt===1)firstAttack=tick;
@@ -133,7 +184,7 @@ function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],c
     if(outcomes[active]==='noloot'&&attempt===1){xp+=300;state.nearbyNpcs=[];respawnAt=tick+3;}
     if(outcomes[active]==='kill'||outcomes[active]==='retry'&&attempt===4||outcomes[active]==='noloot'&&attempt===2)kill();
     return{success:true};},
-   pickupItem:async(i:Item)=>{if(!(ammoRace==='own-missing'&&i.id===882))add(pack,i.id,i.count);state.groundItems=state.groundItems.filter((g:Item)=>g!==i&&!(ammoRace==='foreign'&&i.id===882&&g.id===884));}},
+   pickupItem:async(i:Item)=>{if(!(ammoRace==='own-missing'&&i.id===882)&&!(ammoRace==='bones-taken'&&i.id===526))add(pack,i.id,i.count);state.groundItems=state.groundItems.filter((g:Item)=>g!==i&&!(ammoRace==='foreign'&&i.id===882&&g.id===884));}},
  }as unknown as Session;
  const walker=spyOn(walking,'sessionWalker').mockImplementation(async()=>({} as any));
  const planner=spyOn(trips,'planTripOffThread').mockImplementation(async(from,to)=>({cost:1,legs:from.x===to.x&&from.z===to.z?[]:[{kind:'travel',to,travel:{coins:30,runes:[],needs:[]}}]} as any));
@@ -235,4 +286,9 @@ test('a stronger arrow stack too small for a trip gives way to a usable weaker s
  expect(chooseArrow(owned,1,1)?.id).toBe(882);
  expect(chooseArrow([{id:884,count:40},{id:882,count:500}] as any,1,1)?.id).toBe(884);
  expect(chooseArrow([{id:884,count:2}] as any,1,1)).toBeUndefined();
+});
+
+test('banking recovered arrows between trips does not count as firing',async()=>{
+ const f=trainingFixture(['kill','kill'],false,false,false,'foreign',true);
+ try{const r=await f.run({killsPerTrip:1});expect(r).toMatchObject({ok:true,trips:2,kills:2,shots:2,picked:2,arrowsSpent:0,accounting:true});}finally{f.close();}
 });

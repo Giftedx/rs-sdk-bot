@@ -39,6 +39,10 @@ export function writeCoordinatorJobs(base: string, value: CoordinatorJobs) {
     }
 }
 export const jobAccounts = (job: any): string[] => (job?.accounts ?? [job?.account]).filter((n: unknown): n is string => typeof n === 'string');
+export function parkedCoordinatorAccounts(job: any, accounts: readonly string[]): any[] {
+    const { accounts: _accounts, orchestrate: _orchestrate, ...rest } = job;
+    return accounts.map(account => ({ ...rest, account, enabled: false }));
+}
 // The owner jobs minus the named accounts. A composed job that loses part of its participants is kept off: it cannot
 // run without all of them, and installJob refuses that split before it happens.
 export function shadowAssignments(jobs: readonly any[], accounts: readonly string[]): any[] {
@@ -54,7 +58,14 @@ export function shadowAssignments(jobs: readonly any[], accounts: readonly strin
 // One job list: the owner's jobs, then each coordinator job in install order, each taking its accounts first.
 export function mergeJobs(ownerJobs: readonly any[], coordinatorJobs: readonly any[]): any[] {
     let merged = [...ownerJobs];
-    for (const job of coordinatorJobs) merged = [...shadowAssignments(merged, jobAccounts(job)), job];
+    for (const job of coordinatorJobs) {
+        const accounts = jobAccounts(job);
+        // Retired cohorts from earlier releases kept an accounts array after removing orchestrate.
+        const legacyParked = job?.coordinatorOwner === 'coordinator' && job.enabled === false && job.account === undefined
+            && !job.host && !job.orchestrate && Array.isArray(job.accounts) && accounts.length > 0 && accounts.length === job.accounts.length
+            && typeof job.coordinatorTask === 'string' && typeof job.env?.COORDINATOR_RUN_ID === 'string';
+        merged = [...shadowAssignments(merged, accounts), ...(legacyParked ? parkedCoordinatorAccounts(job, accounts) : [job])];
+    }
     return merged;
 }
 export function mergedPlan<P extends { maxBots: number; jobs: any[]; coordination?: any }>(plan: P, overlay: CoordinatorJobs): P {

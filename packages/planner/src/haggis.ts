@@ -33,7 +33,7 @@ export type Mode = 'floor' | 'realistic';
 export interface Range { floor: number; realistic: number; evidence?: Evidence; source?: string }
 // `from`: the activity id that makes the item during the run (Haggis keeps the output). When that row is in the
 // route, the item is not staged by a helper (suppliesFor leaves it out).
-export interface Supply { item: string; count: number; note?: string; from?: string }
+export interface Supply { item: string; count: number; itemId?: number; note?: string; from?: string }
 
 export const XP99 = xpForLevel(99);
 
@@ -302,11 +302,45 @@ export function schedule(boards: Board[], allActivities: Activity[], opts: Sched
     return scheduleRoute(boards, allActivities, { ...opts, force: { ...opts.force, ...route } });
 }
 
+// Candidate from the deadline search in research/haggis-run.md. Relaxed deadlines
+// affect placement only. The result still scores each board against its record.
+const OVERALL_RELAXED_DEADLINES: ReadonlySet<BoardId> = new Set([
+    'crafting', 'herblore', 'hitpoints', 'magic', 'runecraft', 'woodcutting',
+]);
+// Travel comparison in research/haggis-run.md, with prerequisite-first ties.
+const OVERALL_TRAVEL_DEADLINES: ReadonlySet<BoardId> = new Set([
+    'crafting', 'fishing', 'herblore', 'hitpoints', 'magic', 'prayer',
+]);
+
+export function scheduleOverall(boards: Board[], activities: Activity[], opts: ScheduleOptions): ScheduleResult {
+    const baseline = schedule(boards, activities, opts);
+    if (opts.sacrificed !== undefined) return baseline;
+    const relaxed = schedule(boards, activities, { ...opts, sacrificed: OVERALL_RELAXED_DEADLINES });
+    const finish = (plan: ScheduleResult) => plan.overallFinish ?? Infinity;
+    const useRelaxed = finish(relaxed) < finish(baseline);
+    const best = useRelaxed ? relaxed : baseline;
+    if (!opts.travel) return best;
+    // Keep the selected variants while comparing travel orders.
+    const fixedRoute = { ...opts, force: { ...opts.force, ...best.route } };
+    const prerequisiteFirst = scheduleRoute(boards, activities, {
+        ...fixedRoute, sacrificed: useRelaxed ? OVERALL_RELAXED_DEADLINES : undefined,
+    }, true);
+    const ordered = finish(prerequisiteFirst) < finish(best) ? prerequisiteFirst : best;
+    const travelOrder = scheduleRoute(boards, activities, { ...fixedRoute, sacrificed: OVERALL_TRAVEL_DEADLINES }, true);
+    return finish(travelOrder) < finish(ordered) ? travelOrder : ordered;
+}
+
 // Schedule with opts.force where given and the raw-tick choice for the other variant groups.
-function scheduleRoute(boards: Board[], allActivities: Activity[], opts: ScheduleOptions): ScheduleResult {
+function scheduleRoute(boards: Board[], allActivities: Activity[], opts: ScheduleOptions, prerequisiteFirst = false): ScheduleResult {
     const sacrificed = opts.sacrificed ?? new Set<BoardId>();
     const activities = chooseVariants(allActivities, opts);
     const ids = new Set(activities.map(a => a.id));
+    const dependants = new Map<string, number>();
+    if (prerequisiteFirst) {
+        for (const a of activities) for (const id of new Set(a.requires)) {
+            dependants.set(id, (dependants.get(id) ?? 0) + 1);
+        }
+    }
     const overall = boards.find(b => b.id === 'overall');
     const overallDeadline = overall && overall.rule.kind === 'clock' ? overall.rule.deadline : Infinity;
     const dl = new Map<BoardId, number>(boards.map(b => [b.id, boardDeadline(b, sacrificed, overallDeadline)]));
@@ -391,7 +425,9 @@ function scheduleRoute(boards: Board[], allActivities: Activity[], opts: Schedul
             for (const a of pending) blocked.push(a.id);
             break;
         }
-        ready.sort((x, y) => eff.get(x.id)! - eff.get(y.id)! || activities.indexOf(x) - activities.indexOf(y));
+        ready.sort((x, y) => eff.get(x.id)! - eff.get(y.id)!
+            || (prerequisiteFirst ? (dependants.get(y.id) ?? 0) - (dependants.get(x.id) ?? 0) : 0)
+            || activities.indexOf(x) - activities.indexOf(y));
         const a = ready[0]!;
         pending.splice(pending.indexOf(a), 1);
 
@@ -553,13 +589,16 @@ export interface Tier { id: string; level: number; xpPerAction: number; items: S
 export function ladderSupplies(skill: Skill, tiers: Tier[], margin = 1, toLevel = 99): Supply[] {
     const methods: Method[] = tiers.map(t => ({ id: t.id, skill, level: t.level, xpPerHour: t.xpPerAction, source: 'estimated' }));
     const plan = planSkill({ skill, fromXp: 0, toLevel, methods });
-    const out = new Map<string, number>();
+    const out = new Map<string | number, Supply>();
     for (const seg of plan.segments) {
         const tier = tiers.find(t => t.id === seg.method)!;
         const actions = Math.ceil((seg.xp / tier.xpPerAction) * margin);
-        for (const it of tier.items) out.set(it.item, (out.get(it.item) ?? 0) + actions * it.count);
+        for (const {item,itemId,count} of tier.items) {
+            const key=itemId??item,prior=out.get(key);
+            out.set(key,{item:prior?.item??item,...(itemId===undefined?{}:{itemId}),count:(prior?.count??0)+actions*count});
+        }
     }
-    return [...out].map(([item, count]) => ({ item, count }));
+    return [...out.values()];
 }
 
 const each = (item: string, count = 1): Supply => ({ item, count });
@@ -696,7 +735,7 @@ export const TRICKS: Trick[] = ['loginWine', 'stunRelog', 'sacredOil'];
 export const LEVERS: { id: string; owner: boolean; label: string; retired?: boolean }[] = [
     { id: 'magic-enchant', owner: false, label: 'Enchant ladder rather than teleport ladder; compare by disabling this option' },
     { id: 'combat-hp-bound', owner: false, label: "Melee by combat (HP-bound); melee-only quests after Overall; Witch's House split out" },
-    // Retired 2026-10-23: measured, it slows Defence to 86.7 style XP/tick and loses ticks in every table
+    // Retired: measured, it slows Defence to 86.7 style XP/tick and loses ticks in every table
     // (research/combat-measure.md section 6); bow + cannon carries Ranged instead.
     { id: 'cannon-melee', owner: false, retired: true, label: 'Cannon fires for Ranged XP during every melee top-up (RETIRED: loses ticks)' },
     { id: 'stun-guests', owner: false, label: 'Prayer and Magic inside the pickpocket stuns' },
@@ -714,12 +753,12 @@ export const LEVERS: { id: string; owner: boolean; label: string; retired?: bool
     { id: 'rival-dialogue-burst', owner: false, label: 'Dialogue bursts (several continue clicks in one tick)' },
     { id: 'rival-grandtree-agility', owner: false, label: 'Grand Tree first, then agility laps' },
     { id: 'rival-bury-in-knife-wc', owner: false, label: 'Bury bones inside the knife woodcutting loop' },
-    // Retired 2026-10-23: our measured laps (research/agility.md) replace the rival's estimate.
+    // Retired: our measured laps (research/agility.md) replace the rival's estimate.
     { id: 'rival-agility-lap', owner: false, retired: true, label: '66-74 tick agility laps (RETIRED: measured rates used)' },
     { id: 'rival-stun-pack', owner: false, label: 'Stun pack: skill actions inside pickpocket stuns' },
     { id: 'rival-monkey-madness', owner: false, label: 'Monkey Madness before melee and thieving' },
     { id: 'rival-sea-slug', owner: false, label: 'Sea Slug for early Fishing' },
-    // Retired 2026-10-29: Cairn's order (research/community-and-upstream.md section 7) loses 628 ticks in our model.
+    // Retired: Cairn's order (research/community-and-upstream.md section 7) loses 628 ticks in our model.
     // Dragon Slayer replaces the Strength and Defence top-ups, but Hitpoints then needs Witch's House at the end.
     { id: 'rival-dragon-combat', owner: false, retired: true, label: 'Dragon Slayer before the melee top-ups, Doric for the 32 QP (RETIRED: loses ticks in the model)' },
 ];
@@ -732,7 +771,15 @@ export const SCENARIOS: { id: string; label: string; tricks: Trick[] }[] = [
 // Supplies a helper stages for the activities the scenario uses, summed by item. With `boards`, the route is the
 // one schedule() uses (chooseRoute); without, the raw-tick choice. An item made by a row of the route is left out.
 export function suppliesFor(activities: Activity[], opts: ScheduleOptions, boards?: Board[]): Supply[] {
-    return goalRequirementsFor(activities, opts, boards).supplies.map(({item,count})=>({item,count}));
+    return goalRequirementsFor(activities, opts, boards).supplies.map(({consumers,...supply})=>supply);
+}
+
+// Stage the rows that begin before the last 99, including a row that still runs at that tick.
+export function overallRequirementsFor(activities: Activity[], opts: ScheduleOptions, plan: Pick<ScheduleResult, 'overallFinish' | 'order' | 'route'>) {
+    const finish = plan.overallFinish;
+    if (finish === null || !Number.isFinite(finish) || finish < 0) throw Error('Overall has no modeled finish');
+    const started = new Set(plan.order.filter(row => row.start < finish).map(row => row.id));
+    return goalRequirementsFor(activities.filter(a => started.has(a.id)), { ...opts, force: { ...opts.force, ...plan.route } });
 }
 
 // Keep shared unlocks once, but add consumables across consumers. These are requirements,
@@ -741,7 +788,7 @@ export function goalRequirementsFor(activities: Activity[], opts: ScheduleOption
     const route = boards && opts.route !== 'ticks' ? chooseRoute(boards, activities, opts).route : {};
     const acts = chooseVariants(activities, { ...opts, force: { ...opts.force, ...route } });
     const ids = new Set(acts.map(a => a.id));
-    const out = new Map<string, {item:string;count:number;consumers:string[]}>();
+    const out = new Map<string | number, {item:string;itemId?:number;count:number;consumers:string[]}>();
     const unlocks = new Map<string, {activity:string;consumers:string[];selected:boolean}>();
     for (const a of acts) {
         for (const id of a.requires ?? []) {
@@ -750,10 +797,11 @@ export function goalRequirementsFor(activities: Activity[], opts: ScheduleOption
             unlocks.set(id,row);
         }
         for (const s of a.supplies ?? []) if (!s.from || !ids.has(s.from)) {
-            const row=out.get(s.item)??{item:s.item,count:0,consumers:[]};
+            const key=s.itemId??s.item;
+            const row=out.get(key)??{item:s.item,...(s.itemId===undefined?{}:{itemId:s.itemId}),count:0,consumers:[]};
             row.count+=s.count;
             if(!row.consumers.includes(a.id))row.consumers.push(a.id);
-            out.set(s.item,row);
+            out.set(key,row);
         }
     }
     return {supplies:[...out.values()],unlocks:[...unlocks.values()]};

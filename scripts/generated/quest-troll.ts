@@ -28,6 +28,7 @@ const SH_DOOR = { id: 3771, x: 2839, z: 3689 };             // troll_stronghold_
 const STAIRS_L2 = { id: 3789, x: 2843, z: 10108 };          // stairstop, level 2 -> 2841,10108 level 1
 const PRISON_DOOR = { id: 3780, x: 2848, z: 10107 };        // level 1, west wall
 const STAIRS_L1 = { id: 3789, x: 2852, z: 10107 };          // stairstop, level 1 -> 2852,10105 level 0
+const GENERAL_HALL = { x: 2826, z: 10086 };                 // level 2 west hall; generals spawn at 2831,10086 2822,10073 2829,10100
 const CELL_GODRIC = { id: 3767, x: 2832, z: 10078 };
 const CELL_EADGAR = { id: 3765, x: 2832, z: 10082 };
 const BACK_EXIT = { id: 3761, x: 2823, z: 10048 };          // troll_stronghold_exit -> 2827,3646
@@ -67,13 +68,15 @@ try {
     };
     // Attacks the NPC (re) until done(); the attack is sent again every 6 ticks (auto retaliate is off, a meal or Dad's
     // knock-back stops it, troll_champion.rs2:42-82).
-    const fight = async (label: string, re: RegExp, done: () => boolean, maxTicks: number) => {
+    // The NPC list covers about 15 tiles: a route that leaves it (the stronghold door to the west hall goes south by
+    // 2839,10057, 29 tiles from the generals) ends with no target, so the bot walks back to `home`.
+    const fight = async (label: string, re: RegExp, done: () => boolean, maxTicks: number, home?: { x: number; z: number }) => {
         const t1 = q.T();
         while (!done() && q.T() - t1 < maxTicks) {
             await q.guard(label);
             if (q.dialogOpen()) { await closeDlg(); continue; }
             const n = q.npc(re);
-            if (!n) { await q.waitTicks(2); continue; }
+            if (!n) { if (home) await q.walk(`${label} home`, [{ ...home, tol: 4 }]); else await q.waitTicks(2); continue; }
             await q.s.bot.attack(n as any);
             await q.waitUntil(() => done() || q.dialogOpen(), 6);
         }
@@ -132,8 +135,9 @@ try {
     if (from('inside')) {
         // 5. A Troll General (level 113) drops the prison key while %troll_quest < 30 (drop tables/scripts/
         // troll_commander.rs2:1-7); Protect from Melee for the fight.
+        await q.walk('to general hall', [{ ...GENERAL_HALL, tol: 4 }]);
         await pfm(true);
-        await fight('general', /^troll general$/i, () => (q.st()?.groundItems ?? []).some((g: any) => g.id === ITEM.keyPrison) || q.has(ITEM.keyPrison), 500);
+        await fight('general', /^troll general$/i, () => (q.st()?.groundItems ?? []).some((g: any) => g.id === ITEM.keyPrison) || q.has(ITEM.keyPrison), 500, GENERAL_HALL);
         await pickup('prison key', ITEM.keyPrison);
         await q.walk('to stairs l2', [{ x: STAIRS_L2.x, z: STAIRS_L2.z - 1, tol: 1 }]);
         await op('stairs l2', STAIRS_L2, () => q.lvl() === 1);

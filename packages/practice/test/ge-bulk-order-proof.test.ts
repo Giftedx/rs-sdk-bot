@@ -45,7 +45,7 @@ test('elapsed verification delay alone does not invalidate same-source saved GE 
   metadata();writeFileSync(join(dir,'buy.log'),input.buy.log.replace('LOGOUT logged-out','LOGOUT timeout'));
   expect(verifyCase(dir).checks.logout).toBe(false);
  }finally{clock.mockRestore();rmSync(dir,{recursive:true,force:true});}
-});
+},20_000); // Three saved-state verifications: about 7 s on the loaded Windows PC, past bun's 5 s default
 
 test('owned GE endpoints propagate through starts, account config and child guards; non-practice endpoints refuse',async()=>{
  const p=geProofEndpoints({engine:28888,gateway:27780,management:28898,tcp:28899},'ge-test');

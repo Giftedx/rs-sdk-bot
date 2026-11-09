@@ -6,7 +6,9 @@ import { isLocalServer } from './localserver';
 import { logout } from './logout';
 import { waitUntil } from './ticks';
 import { stalled, startLedger, formatLedger } from './ledger';
+import { startTickStallWatch } from './tick-stall';
 import { assertSideOwns } from './fleet';
+import { fleetLeaseAllowsWorker } from './fleet-lease';
 import { startStatus } from './status';
 import { watchRandomEvents, type RandomEventWatch } from './randomevents';
 import { createWorld, rsPathLength, type Account, type World } from './world';
@@ -14,7 +16,8 @@ import {assertLiveWorkerRelease} from './worker-release';
 import { createTickRecorder } from './tick-record';
 import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 
-// Ticks without xp, an item change or dialog before a session counts as stalled and stops (STALL_TICKS=0: never).
+// Ticks without xp, an item change, dialog or a walk of FAR_WALK tiles (ledger.ts) before a session counts as stalled
+// and stops (STALL_TICKS=0: never).
 const STALL_TICKS = Number(process.env.STALL_TICKS ?? 900);
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 
@@ -69,7 +72,7 @@ export async function awaitBotReady(s: Session, log: (line: string) => void): Pr
 // `opts.log` receives the START and LOGOUT lines; the bot host (host.ts) passes a per-bot log. Default console.log.
 // `opts.record` names the worker script and its arguments for the run record (tick-record.ts); the bot host passes
 // the hosted script, a standalone worker uses its own process arguments.
-export async function openBot(name: string, opts: { log?: (line: string) => void; onStop?: (s: Session, detail: string) => Promise<unknown>; onSessionEnd?: (s: Session, detail: string) => Promise<unknown>; record?: { script: string; argv: string[] } } = {}): Promise<Session> {
+export async function openBot(name: string, opts: { log?: (line: string) => void; onStop?: (s: Session, detail: string) => Promise<unknown>; onSessionEnd?: (s: Session, detail: string) => Promise<unknown>; record?: { script: string; argv: string[] }; trade?: Parameters<typeof connectInProcess>[0]['trade'] } = {}): Promise<Session> {
     if (executionContext.getStore()?.signal.aborted) return new Promise(() => {});
     // An in-process runner in a bot host routes this account's logins through the host's own openBot, so the host
     // tracks the session and logs it out when the runner ends. The hook is lifted for the call it makes back here.
@@ -86,7 +89,10 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     const server = serverFromEnv(env);
     assertServerAllowed(server);
     assertLiveWorkerRelease(server);
-    const s = await connectInProcess({ name, password, server });
+    const trade = opts.trade;
+    const s = await connectInProcess({ name, password, server, ...(trade ? {
+        trade: {...trade, check: server => { assertSideOwns(name); trade.check(server); }},
+    } : {}) });
     await awaitBotReady(s, log);
     const p = s.sdk.getState()!.player!;
     // Life fields copied while connected: after a disconnect the state's player is no evidence of a death (a run
@@ -105,18 +111,25 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // Random events (dryad, genie, lost axe...): handled on every tick unless RANDOM_EVENTS=0 (packages/core/src/randomevents.ts).
     if (process.env.RANDOM_EVENTS !== '0') randomEvents.set(s, watchRandomEvents(s));
     // Any bot stops cleanly when .practice/stop-<name> appears (checked every 25 ticks): a script that never checks
-    // it (seen: fishing30 under the supervisor, 2026-10-23) still logs out in game.
+    // it (seen: fishing30 under the supervisor) still logs out in game.
     let stopTicks = 0;
     let stopping = false;
     s.onTick(() => {
         lastLife = life(s.sdk.getState()?.player) ?? lastLife;
         const reason = sessionDied(born,lastLife) ? 'died' : ++stopTicks % 25 === 0 && existsSync(join(repoRoot, '.practice', `stop-${name}`)) ? 'stop file'
-            : stopTicks % 50 === 0 && stalled(led.rows, STALL_TICKS) ? `no progress: ${STALL_TICKS} ticks without xp, items or dialog` : null;
+            : stopTicks % 25 === 0 && !isLocalServer(server) && !fleetLeaseAllowsWorker(repoRoot) ? 'fleet controller lease unavailable'
+            : stopTicks % 50 === 0 && stalled(led.rows, STALL_TICKS) ? `no progress: ${STALL_TICKS} ticks without xp, items, dialog or a journey` : null;
         if (!stopping && !settling.has(s) && reason) {
             stopping = true;
             void (opts.onStop ? opts.onStop(s,reason) : finish([s], false, reason));
         }
     });
+    // A tick stream that stops arriving without a disconnect (tick-stall.ts) ends the session on the clock.
+    stallWatches.set(s, startTickStallWatch(s, reason => {
+        if (stopping || settling.has(s)) return;
+        stopping = true;
+        void (opts.onStop ? opts.onStop(s, reason) : finish([s], false, reason));
+    }));
     // Live status for the dashboard (packages/dashboard).
     statuses.set(s, startStatus(s as any, server, () => { const c: Record<string, number> = {}; for (const r of led.rows) c[r.kind] = (c[r.kind] ?? 0) + 1; return c; }, () => led.rows.slice(-300).map(r => r.kind === 'inventory' ? 'v' : r.kind[0]).join('')));
     // No more game ticks arrive after disconnect. End a script waiting on them
@@ -145,7 +158,7 @@ export function logoutSession(s: Session): Promise<string> {
     return logout(adapter, 15_000).catch(e => `error ${String(e)}`).then(out => { s.lifecycle?.record('logout', out); return out; });
 }
 
-// A session close can hang (seen 2026-10-22: one proving run printed RESULT ok, then sat until the 300 s
+// A session close can hang (seen: one proving run printed RESULT ok, then sat until the 300 s
 // kill). Each close gets `ms`; the caller exits either way, and the engine saves on socket close.
 export async function closeWithin(sessions: Pick<Session, 'close'>[], ms: number): Promise<{ closed: number; timedOut: number }> {
     let closed = 0;
@@ -161,6 +174,7 @@ export async function closeWithin(sessions: Pick<Session, 'close'>[], ms: number
 // session (5 s limit each), and exits with 0 on ok.
 const ledgers = new Map<Session, ReturnType<typeof startLedger>>();
 const statuses = new Map<Session, ReturnType<typeof startStatus>>();
+const stallWatches = new Map<Session, { stop(): void }>();
 const randomEvents = new Map<Session, RandomEventWatch>();
 const records = new Map<Session, NonNullable<ReturnType<typeof createTickRecorder>>>();
 // A record whose file is not complete in this time is left as it is; the exit does not wait longer.
@@ -178,12 +192,14 @@ type FinishDetail = string | ((ok: boolean) => string);
 // then settles (RESULT, logout) and reports to the runner instead of exiting the process, which holds other bots.
 export const finishHooks = new Map<string, (ok: boolean, detail: FinishDetail) => void>();
 export const openHooks = new Map<string, (name: string, opts: Parameters<typeof openBot>[1]) => Promise<Session>>();
-export async function finish(sessions: Session[], ok: boolean, detail: FinishDetail): Promise<never> {
+export type SettlementOptions = { log?: (line: string) => void; onReported?: (okNow: () => boolean) => void; logout?: (rawSession: Session) => Promise<string> };
+export async function finish(sessions: Session[], ok: boolean, detail: FinishDetail, opts: Pick<SettlementOptions, 'logout'> = {}): Promise<never> {
     const hook = finishHooks.get(String((sessions[0] as { name?: string } | undefined)?.name ?? '').toLowerCase());
-    if (hook) { const final = await settle(sessions, ok, detail); hook(final, detail); return new Promise<never>(() => {}); }
+    if (hook) { const final = await settle(sessions, ok, detail, opts); hook(final, detail); return new Promise<never>(() => {}); }
     // Inside a bot host other bots share this process: log this one out and stop here, never exit the host.
-    if ((globalThis as { __rsBotHost?: unknown }).__rsBotHost) { await settle(sessions, ok, detail); console.log('WARN finish inside a bot host without a runner hook; this bot stops, the host keeps running'); return new Promise<never>(() => {}); }
+    if ((globalThis as { __rsBotHost?: unknown }).__rsBotHost) { await settle(sessions, ok, detail, opts); console.log('WARN finish inside a bot host without a runner hook; this bot stops, the host keeps running'); return new Promise<never>(() => {}); }
     const final = await settle(sessions, ok, detail, {
+        ...opts,
         // Backstop: two proving runs printed RESULT ok and then sat until the 300 s kill (cause not found).
         // Logout runs first, so the account leaves the world either way; this only bounds the process.
         onReported: okNow => { setTimeout(() => { console.log('WARN finish backstop exit'); process.exit(okNow() ? 0 : 1); }, 30_000).unref?.(); },
@@ -193,7 +209,7 @@ export async function finish(sessions: Session[], ok: boolean, detail: FinishDet
 
 // finish() without the exit: prints RESULT, the ledgers and events, logs every account out, closes every session,
 // and returns the final ok. The bot host (host.ts) calls it once per hosted script.
-export function settle(sessions: Session[], ok: boolean, detail: FinishDetail, opts: { log?: (line: string) => void; onReported?: (okNow: () => boolean) => void } = {}): Promise<boolean> {
+export function settle(sessions: Session[], ok: boolean, detail: FinishDetail, opts: SettlementOptions = {}): Promise<boolean> {
     const unique = [...new Set(sessions)];
     const existing = [...new Set(unique.map(s => settlements.get(s)).filter((p): p is Promise<boolean> => !!p))];
     const fresh = unique.filter(s => !settlements.has(s));
@@ -205,7 +221,7 @@ export function settle(sessions: Session[], ok: boolean, detail: FinishDetail, o
     return result;
 }
 
-async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail, opts: { log?: (line: string) => void; onReported?: (okNow: () => boolean) => void }, prior: Promise<boolean>): Promise<boolean> {
+async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail, opts: SettlementOptions, prior: Promise<boolean>): Promise<boolean> {
     for (const s of sessions) settling.add(s);
     const log = opts.log ?? ((l: string) => console.log(l));
     for (const s of sessions) {
@@ -213,7 +229,7 @@ async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail
         const e = randomEvents.get(s); if (e) { e.stop(); log(`EVENTS ${JSON.stringify(e.counts())} bot=${s.name}`); }
     }
     opts.onReported?.(() => ok);
-    const outs = await Promise.all(sessions.map(s => logoutSession(s)));
+    const outs = await Promise.all(sessions.map(s => (opts.logout ?? logoutSession)(s)));
     log(`LOGOUT ${outs.join(' ')}`);
     // A session the server did not end keeps adding scored playtime until its 500-tick timeout, so it fails the run.
     if (outs.some(o => o !== 'logged-out')) { log(`WARN logout did not complete: ${outs.join(' ')}`); ok = false; }
@@ -232,7 +248,7 @@ async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail
     try { finalDetail = typeof detail === 'function' ? detail(ok) : detail; }
     catch (error) { ok = false; finalDetail = `final accounting: ${String(error)}`; }
     log(`RESULT ${ok ? 'ok' : 'fail'} ${finalDetail}`);
-    for (const s of sessions) { statuses.get(s)?.stop(); ledgers.delete(s); statuses.delete(s); randomEvents.delete(s); }
+    for (const s of sessions) { statuses.get(s)?.stop(); stallWatches.get(s)?.stop(); stallWatches.delete(s); ledgers.delete(s); statuses.delete(s); randomEvents.delete(s); }
     return ok;
 }
 

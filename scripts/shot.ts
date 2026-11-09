@@ -8,7 +8,7 @@ const EDGE = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
 const port = 9300 + Math.floor(Math.random() * 500);
 const proc = Bun.spawn([EDGE, '--headless=new', '--disable-gpu', `--remote-debugging-port=${port}`, `--user-data-dir=${process.env.TEMP}\\shot-${port}`, `--window-size=${W},${H}`, 'about:blank'], { stdout: 'ignore', stderr: 'ignore' ,windowsHide:true});
 // The spawned msedge.exe is only a launcher: it starts the real browser and exits, so killing its pid or tree misses
-// the browser (seen 2026-10-23: 11-16 headless Edge processes left after shots, about 70% CPU). Every exit path kills
+// the browser (seen: 11-16 headless Edge processes left after shots, about 70% CPU). Every exit path kills
 // each Edge process that uses this shot's own profile folder.
 // One pass can miss children Edge starts while it is being killed (seen: 9 left after a shot), so repeat until the
 // query finds none, at most 5 passes.

@@ -4,14 +4,36 @@ import {tmpdir} from 'node:os';import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {createOperatorControl} from './operator-control';
 import {initialState} from '../router/src/coordinator';
-function fixture(){
+function fixture(readOnly=false){
  const root=mkdtempSync(join(tmpdir(),'atlas-control-')),dir=join(root,'.practice/coordinator');mkdirSync(dir,{recursive:true});mkdirSync(join(root,'packages/router/tasks'),{recursive:true});
  writeFileSync(join(dir,'state.json'),JSON.stringify(initialState()));writeFileSync(join(root,'swarm.json'),JSON.stringify({coordination:{enabled:true}}));
  writeFileSync(join(root,'packages/router/tasks/food.json'),JSON.stringify({id:'food',goal:'Supply fish',entry:'scripts/fishcook.ts',files:['scripts/fishcook.ts'],consumer:'Feed earning accounts',checks:[]}));
- let starts=0;const handler=createOperatorControl({root,nonce:'test-nonce',alive:()=>false,spawn:(()=>{starts++;return 7;}) as any});
+ let starts=0;const handler=createOperatorControl({root,readOnly,nonce:'test-nonce',alive:()=>false,spawn:(()=>{starts++;return 7;}) as any});
  const send=(body:any,headers:any={})=>handler(new Request('http://127.0.0.1:3100/api/control',{method:'POST',headers:{origin:'http://127.0.0.1:3100','x-atlas-control':'test-nonce','content-type':'application/json',...headers},body:JSON.stringify(body)}),'127.0.0.1');
  return{root,dir,handler,send,starts:()=>starts,close:()=>rmSync(root,{recursive:true,force:true})};
 }
+
+test('read-only dashboards expose metadata but refuse every command before writing or spawning',async()=>{
+ const f=fixture(true);try{
+  const meta=await(await f.handler(new Request('http://127.0.0.1:3100/api/control'),'127.0.0.1')).json();
+  expect(meta.readOnly).toBe(true);
+  for(const action of ['pause','resume','plan','queue','account-pause','account-release','request','swarm-pause','swarm-resume','job-enable','job-disable'])expect((await f.send({id:randomUUID(),action})).status).toBe(403);
+  expect(f.starts()).toBe(0);expect(existsSync(join(f.root,'.practice/stop-coordinator'))).toBe(false);
+  expect(existsSync(join(f.root,'.practice/dashboard-controls'))).toBe(false);
+ }finally{f.close();}
+});
+
+test('coordinator process presence is independent of queue freshness',async()=>{
+ const f=fixture();try{
+  const handler=createOperatorControl({root:f.root,alive:pid=>pid===42});
+  const meta=async()=>await(await handler(new Request('http://127.0.0.1:3100/api/control'),'127.0.0.1')).json() as any;
+  expect((await meta()).coordinatorRunning).toBe(false);
+  writeFileSync(join(f.dir,'owner.json'),JSON.stringify({pid:42,at:1}));
+  expect((await meta()).coordinatorRunning).toBe(true);
+  writeFileSync(join(f.dir,'owner.json'),JSON.stringify({pid:43,at:1}));
+  expect((await meta()).coordinatorRunning).toBe(false);
+ }finally{f.close();}
+});
 test('operator controls require loopback, same origin and the current session nonce',async()=>{
  const f=fixture();try{expect((await f.handler(new Request('http://127.0.0.1:3100/api/control'),'10.0.0.1')).status).toBe(403);
  expect((await f.handler(new Request('http://rebound.invalid:3100/api/control'),'127.0.0.1')).status).toBe(403);

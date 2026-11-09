@@ -6,6 +6,7 @@ test('host release refusal pauses each account without retrying',async()=>{
  stopped:()=>false,pause:async()=>{throw Error('must not retry');},maxRestarts:20});
  expect(r.ends).toEqual({a:'release-paused',b:'release-paused'});expect(r.runs).toBe(1);
  expect(classify('RESULT fail Error: no courier progress: collection credit unbound',false)).toBe('blocked');
+ expect(classify('RESULT fail no Ranged progress: Error: route failed tick stream stalled: no new game tick for 15000ms',false)).toBeNull();
 });
 
 test('classify applies the supervise.ts rules to one account', () => {

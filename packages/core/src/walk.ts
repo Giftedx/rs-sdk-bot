@@ -3,7 +3,7 @@ import { atTile, checked, levelIs, type Outcome } from './act';
 import { waitTicks } from './ticks';
 import { watchTickStream } from './tick-stream';
 import type { TickSource } from './ticks';
-import { blockedDoorsNear,installDoorPolicy,transportAllowed,interactionApproach,canonicalTransportLeg, type Account, type Door, type Leg, type Tile, type World,type DoorBlock } from './world';
+import { blockedDoorsNear,installDoorPolicy,transportAllowed,interactionApproach,canonicalTransportLeg, type Account, type Door, type Leg, type Tile, type World, ROUTE_BUDGET_MS,type DoorBlock } from './world';
 import {accountForSdk,withDoorPolicy} from './door-policy';
 import {guardWalk} from './danger';
 import {disembark,type BoatSession} from './boat';
@@ -13,6 +13,7 @@ import {planTripOffThread} from './route-plan';
 import {readFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {bankStock,planTrip,takeItems,type TripPlan} from './trip';
+import {travelAllowed} from './travel';
 import {refreshGuildEvidence} from './guild-observation';
 
 export interface Walker extends TickSource {
@@ -25,7 +26,8 @@ export interface Walker extends TickSource {
     };
 }
 
-export interface WalkOptions { maxRetriesPerLeg?: number; legTimeoutTicks?: number; signal?: AbortSignal }
+// planBudgetMs bounds the route search (world.ts ROUTE_BUDGET_MS when absent); a search over budget is 'no route (budget)'.
+export interface WalkOptions { maxRetriesPerLeg?: number; legTimeoutTicks?: number; signal?: AbortSignal; planBudgetMs?: number }
 
 const cheb = (a: Tile, b: { worldX: number; worldZ: number }) => Math.max(Math.abs(a.x - b.worldX), Math.abs(a.z - b.worldZ));
 
@@ -51,7 +53,7 @@ async function walkRouteInner(s: Walker, legs: Leg[], opts: WalkOptions): Promis
             last = leg.kind === 'walk' ? await (farWalk(s, leg.to) ? walkFar(s, leg.to, opts, leg.tolerance ?? 2) : walkLeg(s, leg.to, opts, leg.tolerance ?? 2))
                 : leg.kind === 'travel' ? await travelLeg(s, leg, opts) : await climbLeg(s, leg, opts);
             total += last.ticks;
-            if (last.ok || last.reason === 'aborted') break;
+            if (last.ok || last.reason === 'aborted' || leg.kind === 'travel' && leg.travel.run.how === 'npc' && leg.travel.run.button) break;
             // Right after a climb the server refuses movement until the arrival delay ends (seen live: 3 quick
             // retries all refused within 11 ticks). Wait a little longer before each retry.
             if (last.reason === 'rejected') await waitTicks(s, 2 * (attempt + 1));
@@ -76,7 +78,7 @@ async function travelLeg(s: Walker, leg: Extract<Leg, { kind: 'travel' }>, opts:
     const stop = () => opts.signal?.aborted === true, st = () => s.sdk.getState() as any;
     const here = () => { const p = st()?.player; return p ? { x: p.worldX, z: p.worldZ, level: p.level } : null; };
     const arrived = () => { const p = st()?.player; return !!p && p.level === t.to.level && cheb(t.to, p) <= 8; };
-    const fail = (reason: 'rejected' | 'timeout' | 'precondition', detail: string): Outcome => ({ ok: false, reason: stop() ? 'aborted' : reason, detail: `${t.name}: ${detail}`, ticks: s.tick() - start });
+    const fail = (reason: 'rejected' | 'timeout' | 'precondition' | 'aborted', detail: string): Outcome => ({ ok: false, reason: stop() ? 'aborted' : reason, detail: `${t.name}: ${detail}`, ticks: s.tick() - start });
     const choices = run.how === 'npc' ? run.options : run.how === 'gate' ? run.choices : run.how === 'rub' || run.how === 'loc' ? (run.option ? [run.option] : []) : [];
     const answer = async (until: () => boolean, ticks: number) => {
         for (let i = 0; i < ticks && !until() && !stop(); i++) {
@@ -93,10 +95,53 @@ async function travelLeg(s: Walker, leg: Extract<Leg, { kind: 'travel' }>, opts:
     if (run.how === 'npc') {
         const npc = (st()?.nearbyNpcs ?? []).filter((n: any) => n.name?.toLowerCase() === run.npc.toLowerCase()).sort((x: any, y: any) => (x.distance ?? 0) - (y.distance ?? 0))[0];
         if (!npc) return fail('precondition', `no ${run.npc} in sight`);
+        if (run.button) {
+            const client = s.client as { executeBotAction?: unknown } | undefined, executor = client?.executeBotAction, sdk = s.sdk;
+            const first = st()?.player, life = first?.lifeId, respawns = first?.respawnCount ?? 0;
+            const unsafe = () => stop() || s.client !== client || s.sdk !== sdk || client?.executeBotAction !== executor || typeof executor !== 'function'
+                || !Number.isSafeInteger(life) || !st()?.player || st().player.isDead || st().player.lifeId !== life || (st().player.respawnCount ?? 0) !== respawns;
+            const button = run.button.component, namespace = button.split(':')[0]!;
+            if (!/^[a-z0-9_]+:[a-z0-9_]+$/.test(button)) return fail('precondition', 'invalid native travel button');
+            let main: number, component: number;
+            try { main = componentId(namespace); component = componentId(button); } catch { return fail('precondition', 'unknown native travel interface/button'); }
+            const mapOpen = () => st()?.modalInterface === main || st()?.interface?.isOpen === true && st()?.interface?.interfaceId === main;
+            const landed = () => { const p = here(); return !!p && p.level === t.to.level && Math.max(Math.abs(p.x-t.to.x),Math.abs(p.z-t.to.z)) <= 1; };
+            if (unsafe()) return fail('aborted', 'original travel input owner/life unavailable');
+            try {
+                await b.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: run.op, reason: 'SDK' });
+                const answered = new Set<string>();
+                for (let i=0;i<60&&!mapOpen()&&!unsafe();i++) {
+                    const d = b.sdk.getDialog();
+                    if (d?.isOpen && !d.isWaiting) {
+                        const key = 'pageId' in d && typeof d.pageId === 'string' ? d.pageId : JSON.stringify(d), norm = (v:string)=>v.toLowerCase().replace(/^[^a-z0-9]+|[^a-z0-9]+$/g,'');
+                        if (!answered.has(key)) {
+                            const option = d.options.find(o=>run.options.some(c=>norm(o.text)===norm(c)));
+                            if (!option && (d.options.length>1 || d.options.length===1 && !/continue/i.test(d.options[0]!.text))) return fail('precondition','unmapped native travel dialogue');
+                            if (unsafe()) return fail('aborted','travel owner changed before dialogue');
+                            answered.add(key);
+                            await b.direct({type:'clickDialogOption',optionIndex:option?.index??d.options[0]?.index??0,reason:'SDK'});
+                        }
+                    }
+                    if (unsafe()) return fail('aborted','travel owner changed after dialogue');
+                    await waitTicks(s,1);
+                }
+                if (unsafe()) return fail('aborted','travel owner changed before button');
+                if (!mapOpen()) return fail('precondition','expected native travel interface unobserved');
+                // This dispatch is not retried: an absent acknowledgement cannot prove non-payment.
+                const sent = await b.direct({type:'clickComponent',componentId:component,reason:'SDK'});
+                if ((sent as {success?:boolean}|undefined)?.success !== true) return fail('rejected','native travel button outcome uncertain');
+                for(let i=0;i<12&&!landed()&&!unsafe();i++)await waitTicks(s,1);
+                if(unsafe())return fail('aborted','travel owner/life changed during landing');
+                return landed()?{ok:true,ticks:s.tick()-start}:fail('timeout','native travel button landing unobserved');
+            } catch(error) { return fail(stop()?'aborted':'rejected',`native travel outcome uncertain: ${String(error)}`); }
+        }
         await b.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: run.op, reason: 'SDK' });
         await answer(() => arrived() || (!!run.deck && onDeck()), 60);
         if (run.deck && onDeck()) { const off = await disembark(b, { stop }); if (!off.ok) return fail('timeout', off.detail); }
     } else if (run.how === 'spell') {
+        // The plan admitted the spell on the account as it stood when the route was planned; a cast on the way can have
+        // spent the runes since, and the server refuses a short cast with a message the walker does not read.
+        if (!travelAllowed(t, accountForSdk(s.sdk))) return fail('precondition', `cannot cast now (needs ${t.runes.map(r => `${r.count} ${r.item}`).join(', ')})`);
         await b.direct({ type: 'clickComponent', componentId: componentId(run.component), reason: 'SDK' });
         await answer(arrived, 12);
     } else if (run.how === 'rub') {
@@ -106,14 +151,29 @@ async function travelLeg(s: Walker, leg: Extract<Leg, { kind: 'travel' }>, opts:
         await b.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: 4, reason: 'SDK' });
         await answer(arrived, 20);
     } else if (run.how === 'gate') {
-        // A scripted gate: click its action, answer the dialogue, then step to the far tile while it stands open.
-        const want = run.action.toLowerCase(), near = (l: any) => l.level === run.at.level && Math.max(Math.abs(l.x - run.at.x), Math.abs(l.z - run.at.z)) <= 1;
-        const gate = (st()?.nearbyLocs ?? []).find((l: any) => near(l) && l.name?.toLowerCase() === run.loc.toLowerCase() && (l.optionsWithIndex ?? []).some((o: any) => o.text?.toLowerCase() === want));
-        if (!gate) return fail('precondition', `no ${run.loc} with ${run.action} at ${run.at.x},${run.at.z}`);
-        const op = gate.optionsWithIndex.find((o: any) => o.text?.toLowerCase() === want).opIndex;
+        // A scripted gate: click its action, answer the dialogue, then step to the far tile while it stands open. The gate
+        // loc stands up to two tiles from the recorded entrance tile (gnome_areagate 190 at 2459,3383; the record names
+        // its south entrance, 2461,3382). Femi's box dialogue at that gate (femi.rs2) ends with the player still outside
+        // and the gate shut; the next click opens it, so the click repeats while the player is not through.
+        const want = run.action.toLowerCase(), near = (l: any) => l.level === run.at.level && Math.max(Math.abs(l.x - run.at.x), Math.abs(l.z - run.at.z)) <= 2;
+        const gateOf = () => (st()?.nearbyLocs ?? []).filter((l: any) => near(l) && l.name?.toLowerCase() === run.loc.toLowerCase() && (l.optionsWithIndex ?? []).some((o: any) => o.text?.toLowerCase() === want))
+            .sort((x: any, y: any) => cheb(run.at, { worldX: x.x, worldZ: x.z }) - cheb(run.at, { worldX: y.x, worldZ: y.z }))[0];
         const through = () => { const p = here(); return !!p && p.level === t.to.level && cheb(t.to, { worldX: p.x, worldZ: p.z }) <= 1; };
-        await b.direct({ type: 'interactLoc', x: gate.x, z: gate.z, locId: gate.id, optionIndex: op, reason: 'SDK' });
-        await answer(through, 20);
+        // Across: nearer the far side than the near side (the Stronghold gate force-moves the player to 2461,3385, two
+        // tiles from the far tile 2459,3385); another click from there would open the gate back out.
+        const across = () => { const p = here(); return !!p && p.level === t.to.level && (!t.from || cheb(t.to, { worldX: p.x, worldZ: p.z }) < cheb(t.from, { worldX: p.x, worldZ: p.z })); };
+        const dialogOpen = () => b.sdk.getDialog()?.isOpen === true;
+        for (let i = 0; i < 3 && !across() && !stop(); i++) {
+            const gate = gateOf();
+            if (!gate) return fail('precondition', `no ${run.loc} with ${run.action} at ${run.at.x},${run.at.z}`);
+            const op = gate.optionsWithIndex.find((o: any) => o.text?.toLowerCase() === want).opIndex;
+            await b.direct({ type: 'interactLoc', x: gate.x, z: gate.z, locId: gate.id, optionIndex: op, reason: 'SDK' });
+            // Until the player is through, or a dialogue that opened has stayed shut three ticks (Femi's box cutscene
+            // closes its chat between its animations).
+            let talked = false, shut = 0;
+            await answer(() => { if (dialogOpen()) { talked = true; shut = 0; } else if (talked) shut++; return across() || shut >= 3; }, 40);
+            if (!across()) await waitTicks(s, 3);
+        }
         for (let i = 0; i < 3 && !through() && !stop(); i++) { await b.direct({ type: 'walkTo', x: t.to.x, z: t.to.z, running: true, reason: 'SDK' }); await waitTicks(s, 4); }
         return through() ? { ok: true, ticks: s.tick() - start } : fail('timeout', `not through ${run.loc} (at ${JSON.stringify(here())})`);
     } else {
@@ -122,7 +182,12 @@ async function travelLeg(s: Walker, leg: Extract<Leg, { kind: 'travel' }>, opts:
             .sort((x: any, y: any) => (x.distance ?? 0) - (y.distance ?? 0))[0];
         if (!loc) return fail('precondition', `no ${run.loc} in sight`);
         await b.direct({ type: 'interactLoc', x: loc.x, z: loc.z, locId: loc.id, optionIndex: run.op, reason: 'SDK' });
-        await answer(arrived, 20);
+        // A short passage on one floor (the Grand Tree door moves the player two tiles) ends on its landing: within 8
+        // tiles of it the player already stood, on the wrong side.
+        const short = !!t.from && t.from.level === t.to.level && cheb(t.from, { worldX: t.to.x, worldZ: t.to.z }) <= 8;
+        const landed = () => { const p = here(); return !!p && p.level === t.to.level && cheb(t.to, { worldX: p.x, worldZ: p.z }) <= 1; };
+        await answer(short ? landed : arrived, 20);
+        if (short && !landed()) return fail('timeout', `not through ${run.loc} to ${t.to.x},${t.to.z} (at ${JSON.stringify(here())})`);
     }
     return arrived() ? { ok: true, ticks: s.tick() - start } : fail('timeout', `not at ${t.to.x},${t.to.z},${t.to.level} (at ${JSON.stringify(here())})`);
 }
@@ -277,19 +342,34 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
     // A session with a bank snapshot may stop at a bank for fares first (trip.ts).
     const name=(s as {name?:string}).name,banker=s as unknown as Parameters<typeof takeItems>[0];
     const stock=name&&typeof (banker.bot as {openBank?:unknown}).openBank==='function'?bankStock(name):undefined;
-    const r = world.offThread?await planTripOffThread(from,to,acct,stock)
-        :stock?planTrip(world,from,to,acct,stock)
-        :(()=>{const d=world.route(from,to,acct);return d.ok?{cost:d.cost,legs:d.legs} as TripPlan:null;})();
-    if (!r) return { ok: false, reason: 'precondition', detail: `no route to ${to.x},${to.z},${to.level}`, ticks: 0 };
+    const budgetMs=opts.planBudgetMs??ROUTE_BUDGET_MS,deadline=performance.now()+budgetMs;
+    let why='';
+    const r = world.offThread?await planTripOffThread(from,to,acct,stock,budgetMs)
+        :stock?planTrip(world,from,to,acct,stock,undefined,undefined,{deadline})
+        :(()=>{const d=world.route(from,to,acct,{deadline});if(!d.ok)why=d.reason;return d.ok?{cost:d.cost,legs:d.legs} as TripPlan:null;})();
+    if (!r) return { ok: false, reason: 'precondition', detail: `no route${why==='budget'?` (search over ${budgetMs} ms)`:''} to ${to.x},${to.z},${to.level}`, ticks: 0 };
     // Actor prerequisites are synchronous query masks, not long-lived refusal
     // walls: gear/stat changes and allowed exits must be re-evaluated.
-    const first = await walkRoute(s, r.legs, opts);
+    let first = await walkRoute(s, r.legs, opts);
+    // A spell leg that failed (the runes gone, a cast the server did not take) is not tried again: the route is planned
+    // once more for the account without its law runes, so the walk goes by foot and boat from where it stands.
+    if (!first.ok && first.reason !== 'aborted' && r.legs.some(l => l.kind === 'travel' && l.travel.kind === 'spell')) {
+        // A trip with a bank stop ends its first legs at the bank, so the replan heads there and the stop still follows.
+        const q = s.sdk.getState()?.player, at = q ? { x: q.worldX, z: q.worldZ, level: q.level } : from, goal = r.bank?.at ?? to, grounded = withoutSpells(acct);
+        const d = world.offThread ? await planTripOffThread(at, goal, grounded, undefined, budgetMs)
+            : (() => { const x = world.route(at, goal, grounded, { deadline: performance.now() + budgetMs }); return x.ok ? { cost: x.cost, legs: x.legs } as TripPlan : null; })();
+        console.log(`WALK_REPLAN_NO_SPELLS ${JSON.stringify({ from: at, to: goal, failed: first.detail, ok: !!d })}`);
+        if (d) first = await walkRoute(s, d.legs, opts);
+    }
     if (!first.ok || !r.bank) return first;
     const took = await takeItems(banker, r.bank.coins, r.bank.items, n => waitTicks(s, n));
     if (!took.ok) return { ok: false, reason: 'precondition', detail: `bank stop at ${r.bank.at.x},${r.bank.at.z}: ${took.detail}`, ticks: s.tick() - started };
     const rest = await walkRoute(s, r.bank.then, opts);
     return rest.ok ? { ok: true, ticks: s.tick() - started } : rest;
 }
+
+// The account with no law rune: no teleport spell is castable, so a route planned for it keeps to the ground.
+export const withoutSpells = (a: Account): Account => ({ ...a, items: a.items.filter(i => i !== 'lawrune'), counts: { ...a.counts, lawrune: 0 } });
 
 // ---- walkPath: walk through points the way a player clicks ahead on the minimap ----
 // bot.walkTo clicks each path corner and waits until the bot is within 2 tiles of it. The bot then takes 1 step

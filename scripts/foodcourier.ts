@@ -190,8 +190,8 @@ try {
     }
     console.log(`FOODCOURIER from=${FROM} farmers=${FARMERS.join(',') || '-'} coins=${coins()} fishNotes=${fishNotes()} at=${p0?.worldX},${p0?.worldZ}`);
     // Outbound start (scripts/courier-route.ts): sail from either Ardougne bank, walk only from east of White Wolf
-    // Mountain. Before 2026-10-25 this branch ran only for a start away from the south bank, so a south-bank start
-    // skipped Draynor entirely, and a North-bank start walked over the mountain and died.
+    // Mountain. A branch that runs only for a start away from the south bank lets a south-bank start
+    // skip Draynor, and a North-bank start walks over the mountain and dies.
     const start = START_DRAYNOR || resume ? null : outboundStart(p0);
     // "no courier progress" makes the supervisors block the account instead of logging it in again (supervise.ts).
     if (start === 'refuse') await fail('no courier progress: start is not an Ardougne bank or east of White Wolf Mountain');
@@ -200,7 +200,7 @@ try {
     }
     if (start !== null) {
         const requiredFare = OUTBOUND_ONLY ? BOAT_FARES_OUT : BOAT_FARES_ROUND;
-        // Fares come from the bank when the pack is short (2026-10-23: a live trip spent the pack on feathers, and
+        // Fares come from the bank when the pack is short (a live trip spent the pack on feathers, and
         // scripts/banker.ts banks the coins a donor gives).
         if (coins() < requiredFare) {
             const o = await s.bot.openBank();
@@ -219,7 +219,7 @@ try {
             if (!(await walk([[SARIM.x, SARIM.z, 3]]))) await fail('land route to Port Sarim');
             leg('land-sarim');
         } else if (coins() < requiredFare) {
-            // At Ardougne without fares: never walk over White Wolf Mountain (the 2026-10-25 death). Stop and log out.
+            // At Ardougne without fares: never walk over White Wolf Mountain (the death). Stop and log out.
             await fail(`no courier progress: needs ${requiredFare} coins for the boat fares; refusing the White Wolf Mountain land route`);
         } else {
         if (!(await walk([[2679, 3275, 3]]))) await fail('walk to Barnaby');

@@ -1,14 +1,22 @@
 import {test,expect} from 'bun:test';
-import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,unlinkSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {initialState,addTasks,startTask,qualificationDemand,chooseTask,type CoordTask} from '../src/coordinator';
 import {acceptProposal} from '../src/coordinator-planner';
-import {deliveryFingerprint} from '../src/delivery-cli';
+import {deliveryFingerprint,importClosure} from '../src/delivery-cli';
 import type {DeliveryTask} from '../src/delivery';
 const definition={id:'cook-order',goal:'Complete a quest',entry:'scripts/cook.ts',files:['scripts/cook.ts'],consumer:'Quest flag, XP and logout',checks:['regression','practice','consumer'].map(phase=>({id:phase,phase,command:['bun','check.ts'],timeoutMs:1000}))};
-function fixture(){const base=mkdtempSync(join(tmpdir(),'cap-promote-'));mkdirSync(join(base,'packages/router/tasks'),{recursive:true});const file=join(base,'packages/router/tasks/cook-order.json'),bytes=JSON.stringify(definition);writeFileSync(file,bytes);return{base,file,bytes,hash:createHash('sha256').update(bytes).digest('hex')};}
+function fixture(){
+ const base=mkdtempSync(join(tmpdir(),'cap-promote-'));
+ mkdirSync(join(base,'packages/router/tasks'),{recursive:true});
+ mkdirSync(join(base,'packages/router/src'),{recursive:true});
+ const file=join(base,'packages/router/tasks/cook-order.json'),bytes=JSON.stringify(definition);
+ const policy=join(base,'packages/router/src/saved-proof-verifiers.json');
+ writeFileSync(file,bytes);writeFileSync(policy,'{}');
+ return{base,file,bytes,policy,hash:createHash('sha256').update(bytes).digest('hex')};
+}
 const build:CoordTask={id:'promote-cook',kind:'build',goal:'quests',capability:'cook-order',dependsOn:[],priority:80,estimatedMs:60000,why:'Promote existing helpers through an actual live worker entry'};
 const proposal=(hash:string)=>({reason:'Complete reusable live quest',capabilities:[],tasks:[build,{id:'live-quest',kind:'run',goal:'quests',capability:'cook-order',account:'Helper',dependsOn:[build.id],priority:90,estimatedMs:10000,why:'Complete actual quest',accept:{quests:["Cook's Assistant"]}}],capabilityUpdates:[{expectedSource:hash,definition:{...definition,entry:'scripts/cook-live.ts',files:['scripts/cook.ts','scripts/cook-live.ts']}}]});
 
@@ -36,4 +44,32 @@ test('changing the consumer command invalidates old qualification even when work
  for(const file of ['scripts/cook.ts','packages/router/src/delivery.ts','packages/router/src/delivery-cli.ts','package.json','bun.lock','tsconfig.json'])writeFileSync(join(f.base,file),'// unchanged fixture bytes');
  const d=structuredClone(definition) as DeliveryTask,changed=structuredClone(d);changed.checks[1]!.command.push('--changed-scenario');
  expect(deliveryFingerprint(changed,f.base)).not.toBe(deliveryFingerprint(d,f.base));
+});
+test('only admission changes that apply to a declared check affect its qualification',()=>{
+ const f=fixture(),d=structuredClone(definition) as DeliveryTask;
+ const saved=d.checks.find(c=>c.phase==='consumer')!;
+ saved.command=['bun','check.ts','--verify'];
+ const before=deliveryFingerprint(d,f.base);
+ writeFileSync(f.policy,JSON.stringify({unrelated:['other.ts'],[saved.id]:['another.ts']}));
+ expect(deliveryFingerprint(d,f.base)).toBe(before);
+ writeFileSync(f.policy,JSON.stringify({[saved.id]:['check.ts']}));
+ const admitted=deliveryFingerprint(d,f.base);
+ expect(admitted).not.toBe(before);
+ writeFileSync(f.policy,JSON.stringify({[saved.id]:['check.ts'],unrelated:['other.ts']},null,2));
+ expect(deliveryFingerprint(d,f.base)).toBe(admitted);
+ writeFileSync(f.policy,JSON.stringify({[saved.id]:'check.ts'}));
+ expect(()=>deliveryFingerprint(d,f.base)).toThrow('invalid saved proof verifier policy');
+});
+test('import scans recheck missing paths and same-size source edits on every pass',()=>{
+ const f=fixture(),entry='scripts/cook.ts',scan=()=>importClosure([entry],f.base);
+ mkdirSync(join(f.base,'scripts'),{recursive:true});
+ writeFileSync(join(f.base,entry),"import './old';");
+ expect(scan()).toEqual([entry]);
+ writeFileSync(join(f.base,'scripts/old.ts'),'export const old = 1;');
+ expect(scan()).toEqual([entry,'scripts/old.ts']);
+ writeFileSync(join(f.base,'scripts/new.ts'),'export const newer = 1;');
+ writeFileSync(join(f.base,entry),"import './new';");
+ expect(scan()).toEqual([entry,'scripts/new.ts']);
+ unlinkSync(join(f.base,'scripts/new.ts'));
+ expect(scan()).toEqual([entry]);
 });

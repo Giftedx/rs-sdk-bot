@@ -53,7 +53,7 @@ export const cases:{id:string;kind:Kind;thieving:number;from?:string;preset?:Sav
  {id:'unbanked-restart',kind:'earn',thieving:99,from:'unbanked-error'},
 ];
 
-// Reduced doorway gate (--door-repro). 2026-10-28 route-error-restart idled at 2651,3304 inside the knight
+// Reduced doorway gate (--door-repro). route-error-restart idled at 2651,3304 inside the knight
 // house with 8900 carried coins. TICKS=0 earns nothing: the CLI must only leave, bank the carried cash and log out.
 // This gate is diagnostic only. It never replaces the full earning proof above.
 export const DOOR_DIR='door-repro';

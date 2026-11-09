@@ -2,7 +2,7 @@
 // Usage: bun packages/planner/src/cairn-cli.ts [path/to/hiscores.json]
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { haggisActivities, haggisTravel, loadSnapshot, schedule, TRICKS, type Placed } from './haggis';
+import { haggisActivities, haggisTravel, loadSnapshot, scheduleOverall, TRICKS, type Placed } from './haggis';
 
 export interface CairnStep { id: string; label: string; skills: string; plan: number; took: number; ours: string[]; scripts: string[]; capability?: string; note?: string }
 export const CAIRN_ROUTE: { source: string; steps: CairnStep[] } = JSON.parse(readFileSync(join(import.meta.dir, 'cairn-route.json'), 'utf8'));
@@ -34,7 +34,7 @@ export function deliveredCapabilities(statePath: string): Set<string> {
 if (import.meta.main) {
     const root = resolve(import.meta.dir, '..', '..', '..');
     const snap = process.argv.slice(2).find(a => !a.startsWith('--')) ?? join(root, 'research', 'hiscores-live.json');
-    const real = schedule(loadSnapshot(snap), haggisActivities(), { mode: 'realistic', tricks: new Set(TRICKS), travel: haggisTravel() });
+    const real = scheduleOverall(loadSnapshot(snap), haggisActivities(), { mode: 'realistic', tricks: new Set(TRICKS), travel: haggisTravel() });
     const finish = real.overallFinish ?? real.endTick;
     const prices = priceSteps(real.order, finish, CAIRN_ROUTE.steps, root);
     const delivered = deliveredCapabilities(join(root, '.practice', 'coordinator', 'state.json'));

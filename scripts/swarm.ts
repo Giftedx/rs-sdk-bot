@@ -15,7 +15,7 @@
 // "envByAccount": {"<account>": {"KEY": "value"}} gives one hosted account its own variables on top of "env". A host
 // job whose script is scripts/chain.ts runs its "args" as chain steps inside the host, one chain per account.
 // Usage: DEMO_OK=1 bun scripts/swarm.ts [swarm.json]
-import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, renameSync, rmSync, statSync, writeFileSync, createWriteStream } from 'node:fs';
+import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, renameSync, rmSync, statSync, writeFileSync, writeSync, createWriteStream } from 'node:fs';
 import { spawn as spawnChild } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { freemem } from 'node:os';
@@ -29,12 +29,14 @@ import {withSessionAdmission,missionSignature as sharedMissionSignature,successf
 import {assertNoRecoveryLease,heldRecoveryOwners} from '../packages/core/src/session-recovery-permit';
 import {createRecoveryDispatch} from '../packages/core/src/session-recovery-dispatch';
 import { createHash } from 'node:crypto';
+import { jobLogStart } from '../packages/core/src/job-log';
 import { readLogoutProof, listAttempts, verifyLegacyLogout, type LegacyLogoutClaim, type LegacyLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 import { mergedPlan, readCoordinatorJobs, emptyCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { loadOwners, mySide, sideOf, type Owner } from '../packages/core/src/fleet';
+import { acquireFleetLease, FLEET_LEASE_RENEW_MS } from '../packages/core/src/fleet-lease';
 
-export type Job = { account?: string; accounts?: string[]; host?: boolean; orchestrate?:boolean; args?:string[]; maxRestarts?:number; script: string; role?: string; goal?: string; env?: Record<string, string>; envByAccount?: Record<string, Record<string, string>>; enabled: boolean; repeat?: boolean; note?: string; whenCargoFrom?: string[]; demandNear?: {x:number;z:number;radius:number};whenFoodLowFrom?:string[];foodLowBelow?:number;foodSourceAccount?:string;foodSourceAccounts?:string[];sourceFoodMinimum?:number };
+export type Job = { autopilot?: string; template?: string; account?: string; accounts?: string[]; host?: boolean; orchestrate?:boolean; args?:string[]; maxRestarts?:number; script: string; role?: string; goal?: string; env?: Record<string, string>; envByAccount?: Record<string, Record<string, string>>; enabled: boolean; repeat?: boolean; note?: string; whenCargoFrom?: string[]; demandNear?: {x:number;z:number;radius:number};whenFoodLowFrom?:string[];foodLowBelow?:number;foodSourceAccount?:string;foodSourceAccounts?:string[];sourceFoodMinimum?:number };
 type Plan = { maxBots: number; minFreeGB: number; jobs: Job[] };
 // A run is a detached supervisor process: it outlives this controller, and a restarted controller adopts it from
 // .practice/swarm-runs.json. Its output goes straight to its log file, which the controller follows from `offset`.
@@ -210,6 +212,32 @@ export type EndRecord = { at: number; reason: string; revision?: string };
 export function persistentEnd(reason: string): boolean {
     return /^(?:died|blocked|gave-up)(?:\b|$)/.test(reason);
 }
+// The stop files this controller writes itself: a run whose job left the plan, stop-swarm, a job turned off. They are
+// not an owner's pause: the planner (scripts/autopilot.ts) plans such an account again and removes the file with the
+// job that replaces it. A stop file with any other text is the owner's and holds the account.
+export const SWARM_STOP = { removed: 'swarm plan removed or stopped', all: 'swarm stopped', job: 'swarm', recovery: 'swarm recovery stopped', inherited: 'inherited recovery stopped' } as const;
+export function swarmWroteStop(text: string | undefined): boolean {
+    return text !== undefined && (Object.values(SWARM_STOP) as string[]).includes(text.trim());
+}
+export function writeSwarmStop(file: string, reason: string): void {
+    try { writeFileSync(file, reason, { flag: 'wx' }); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error; }
+}
+export function clearSwarmStop(file: string): boolean {
+    let text: string;
+    try { text = readFileSync(file, 'utf8'); } catch { return false; }
+    if (!swarmWroteStop(text)) return false;
+    rmSync(file, { force: true });
+    return true;
+}
+// The ends a standing job retries by itself once the account is offline: a block or give-up, a stop that a stop file
+// caused (the account's own RESULT says so; an owner's file still blocks the start, the controller's own is gone), or a
+// process the controller lost track of (its own restart). A supervisor also ends `stopped` on `RESULT fail no food`,
+// which only a resupply repairs, so that stop is not retried. A death waits for a person; done is not a pause.
+export function standingRetryable(reason: string, result?: string): boolean {
+    if (/^stopped after \d+ runs$/.test(reason)) return typeof result === 'string' && /^(?:RESULT )?fail stop file\b/.test(result);
+    return /^(?:blocked|gave-up)\b|^exit unknown$/.test(reason);
+}
 export function endedForGood(end: { reason: string } | undefined, repeat: boolean | undefined): boolean {
     return !!end && (!repeat || !successfulEnd(end.reason));
 }
@@ -316,20 +344,25 @@ export function lifecycleAccounts(dir: string): string[] {
     return names.flatMap(n => { try { const a = JSON.parse(readFileSync(join(dir, n, 'latest.json'), 'utf8')).account; return typeof a === 'string' && ACCOUNT.test(a) ? [a] : []; } catch { return []; } });
 }
 // A session whose owner died with no end line (a killed worker, or a swarm that died with its children) leaves a
-// held attempt and no end record, so no repair can name it. Record its end once the attempt's owner pid is gone.
+// held attempt, so no repair can name it until the owner is gone and its end is recorded.
 export function orphanedSessionEnds(accounts: readonly string[], ended: ReadonlyMap<string, EndRecord>, busy: readonly string[],
-    proof: (a: string) => LogoutProof, owner: (a: string, attemptId: string) => number | undefined, alive: (pid: number) => boolean): [string, string][] {
+    proof: (a: string) => LogoutProof, producer: (a: string, attemptId: string) => { pid: number; createdAt: number; updatedAt: number } | undefined, alive: (pid: number) => boolean): [string, string][] {
     const out: [string, string][] = [], seen = new Set<string>();
     for (const a of accounts) {
         const key = a.toLowerCase();
         if (PROTECTED_ACCOUNTS.includes(key)) continue;
-        if (seen.has(key) || busy.some(b => b.toLowerCase() === key) || [...ended.keys()].some(n => n.toLowerCase() === key)) continue;
+        if (seen.has(key) || busy.some(b => b.toLowerCase() === key)) continue;
         seen.add(key);
         let p: LogoutProof; try { p = proof(a); } catch { continue; }
         if (p.state !== 'held') continue;
-        const pid = owner(a, p.attemptId);
-        if (!Number.isSafeInteger(pid) || pid! < 1 || alive(pid!)) continue;
-        out.push([a, `exit orphaned: attempt ${p.attemptId} owner ${pid} gone`]);
+        const receipt = producer(a, p.attemptId);
+        if (!receipt || !Number.isSafeInteger(receipt.pid) || receipt.pid < 1 || !Number.isFinite(receipt.createdAt) || !Number.isFinite(receipt.updatedAt) || alive(receipt.pid)) continue;
+        const prior = [...ended].find(([name]) => name.toLowerCase() === key);
+        // An older orphan end yields to a later update. A successful end yields to an attempt that started after it: that
+        // end cannot describe the attempt and holds nothing. Every other end stays, because a repair reads its reason.
+        const orphan = prior?.[1].reason.startsWith('exit orphaned: attempt ');
+        if (prior && !(orphan ? receipt.updatedAt > prior[1].at : successfulEnd(prior[1].reason) && receipt.createdAt > prior[1].at)) continue;
+        out.push([prior?.[0] ?? a, `exit orphaned: attempt ${p.attemptId} owner ${receipt.pid} gone`]);
     }
     return out;
 }
@@ -490,6 +523,17 @@ if (import.meta.main) {
     const logDir = join(prac, 'swarm-logs');
     mkdirSync(logDir, { recursive: true });
     if (process.env.DEMO_OK !== '1') { console.log('swarm: set DEMO_OK=1 (live server)'); process.exit(2); }
+    if (coordinatorOwner) {
+        try { assertWorkerRelease({ ...process.env, WORKER_ENTRY: '' }, root); }
+        catch (error) { console.log('swarm: ' + String(error)); process.exit(2); }
+    }
+    // Acquire before adopting or writing controller state. A cached fleet-data heartbeat cannot grant admission.
+    let lease: ReturnType<typeof acquireFleetLease>;
+    try { lease = acquireFleetLease(root, side); }
+    catch (error) { console.log('SWARM ' + String(error)); process.exit(2); }
+    process.env.SWARM_LEASE_HOLDER = lease.holder;
+    let renewAt = performance.now() + FLEET_LEASE_RENEW_MS;
+    const assertLease = () => { if (!lease.allows()) throw Error('fleet controller lease unavailable'); };
 
     const runs = new Map<string, Run>();
     const recoveryDispatch=createRecoveryDispatch({base:root,server:LIVE_SERVER});
@@ -594,9 +638,12 @@ if (import.meta.main) {
             // Each worker carries the release of the files its entries can run (docs/script-contract.md, Release
             // scope), so a runtime change needs no swarm restart and an edit outside those files leaves it unchanged.
             const entries = workerEntries(job.script, job.args ?? [], root);
+            const workRelease = capabilityRevision(entries, root);
+            assertLease();
+            writeSync(out, jobLogStart(job));
             child = spawnChild(cmd[0]!, cmd.slice(1), {
                 cwd: root, detached: true, windowsHide: true, stdio: ['ignore', out, out],
-                env: { ...process.env, ...job.env, WORKER_RELEASE: capabilityRevision(entries, root), WORKER_ENTRY: entries.join(','), DEMO_OK: '1', BOT_ROLE: job.role ?? '', BOT_GOAL: job.goal ?? '', STANDING: (job as Job & {standing?:boolean}).standing ? '1' : '',COORDINATOR_PARTICIPANTS:job.orchestrate?JSON.stringify(accounts):'' },
+                env: { ...process.env, ...job.env, SWARM_LEASE_HOLDER: lease.holder, SWARM_MISSION_HASH: createHash('sha256').update(revision).digest('hex'), WORKER_RELEASE: workRelease, WORKER_ENTRY: entries.join(','), DEMO_OK: '1', BOT_ROLE: job.role ?? '', BOT_GOAL: job.goal ?? '', STANDING: (job as Job & {standing?:boolean}).standing ? '1' : '',COORDINATOR_PARTICIPANTS:job.orchestrate?JSON.stringify(accounts):'' },
             });
         } finally { closeSync(out); }
         if (!child.pid) throw Error('supervisor did not start');
@@ -608,6 +655,25 @@ if (import.meta.main) {
     });
 
     const tick = () => {
+        if (performance.now() >= renewAt && lease.allows()) {
+            try { lease.renew(); }
+            catch (error) { console.log('SWARM ' + String(error)); }
+            renewAt = performance.now() + FLEET_LEASE_RENEW_MS;
+        }
+        if (!lease.allows()) {
+            // Also stop adopted runs from code that predates the worker fence. Preserve owner stop files.
+            const accounts = new Set([...runs.values()].flatMap(r => r.accounts));
+            if (recoveryDispatch.active) accounts.add(recoveryDispatch.active.account);
+            for (const held of heldRecoveryOwners(root)) accounts.add(held.account);
+            for (const account of accounts) {
+                try { writeSwarmStop(stopFile(account), 'fleet controller lease unavailable'); }
+                catch (error) {
+                    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') console.log('SWARM could not request lease-loss logout for ' + account);
+                }
+            }
+            if (!accounts.size) { console.log('SWARM stopped (fleet controller lease unavailable)'); process.exit(2); }
+            return;
+        }
         let plan: Plan;
         // The coordinator's jobs join the root plan only; a practice plan file given on the command line runs alone.
         try { plan = mergedPlan(JSON.parse(readFileSync(planFile, 'utf8')), rootPlan ? readCoordinatorJobs(root) : emptyCoordinatorJobs()); } catch (e) { console.log(`SWARM bad plan: ${String(e)}`); return; }
@@ -616,17 +682,20 @@ if (import.meta.main) {
         if(!Array.isArray(plan.jobs)||!Number.isFinite(plan.maxBots)||plan.maxBots<1||!Number.isFinite(plan.minFreeGB)) { console.log('SWARM bad plan shape'); return; }
         const stopAll = existsSync(join(prac, 'stop-swarm'));
         inheritedRecoveries=heldRecoveryOwners(root,recoveryDispatch.active?[recoveryDispatch.active.account]:[]);
-        if(stopAll&&recoveryDispatch.active)writeFileSync(stopFile(recoveryDispatch.active.account),'swarm recovery stopped');
-        if(stopAll)for(const held of inheritedRecoveries)writeFileSync(stopFile(held.account),'inherited recovery stopped');
+        if(stopAll&&recoveryDispatch.active)writeSwarmStop(stopFile(recoveryDispatch.active.account),SWARM_STOP.recovery);
+        if(stopAll)for(const held of inheritedRecoveries)writeSwarmStop(stopFile(held.account),SWARM_STOP.inherited);
         const planned=plan.jobs.flatMap(j=>{ const p=parseJob(j); return 'error' in p?[]:[p]; });
         const accountEnabled = enabledByAccount(planned);
         if (Date.now() - orphanScanAt >= 60_000) {
             orphanScanAt = Date.now();
             const busy = [...runs.values()].flatMap(r => r.accounts).concat(inheritedRecoveries.map(r => r.account), recoveryDispatch.active ? [recoveryDispatch.active.account] : []);
             const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch (e) { return (e as NodeJS.ErrnoException).code !== 'ESRCH'; } };
-            const owner = (a: string, id: string) => listAttempts(a, LIVE_SERVER).find(x => x.attemptId === id)?.receipt?.owner.pid;
+            const producer = (a: string, id: string) => {
+                const receipt = listAttempts(a, LIVE_SERVER).find(x => x.attemptId === id)?.receipt;
+                return receipt ? { pid: receipt.owner.pid, createdAt: receipt.createdAt, updatedAt: receipt.updatedAt } : undefined;
+            };
             const accounts = planned.flatMap(p => p.accounts).concat(lifecycleAccounts(join(prac, 'session-lifecycle/live', LIVE_SERVER)));
-            for (const [a, reason] of orphanedSessionEnds(accounts, ended, busy, a => readLogoutProof(a, LIVE_SERVER), owner, alive)) {
+            for (const [a, reason] of orphanedSessionEnds(accounts, ended, busy, a => readLogoutProof(a, LIVE_SERVER), producer, alive)) {
                 ended.set(a, { at: Date.now(), reason });
                 console.log(`SWARM end ${a} ${reason}`);
             }
@@ -634,7 +703,7 @@ if (import.meta.main) {
         // A replacement host/account configuration waits for its current owner;
         // changing the run key must neither stop it nor permit a second login.
         for(const r of runs.values()) if(!overlappingRun(planned,r.accounts)||stopAll)
-            for(const a of r.accounts) writeFileSync(stopFile(a),'swarm plan removed or stopped');
+            for(const a of r.accounts) writeSwarmStop(stopFile(a),SWARM_STOP.removed);
         const statuses: unknown[] = [];
         try {
             for (const file of readdirSync(join(prac, 'status'))) if (file.endsWith('.json')) {
@@ -650,6 +719,7 @@ if (import.meta.main) {
                 let request: any, result = { changed: false, reason: 'invalid repair JSON' };
                 try { request = JSON.parse(raw); } catch { /* retained in the receipt */ }
                 if(!recoveryDispatch.handle(raw,request=>{
+                    assertLease();
                     const active=[...runs.values()].flatMap(r=>r.accounts).concat(activeExternalLive(statuses,[],Date.now()));
                     admitRecovery({account:request.account,active,running:botsRunning(),external:activeExternalLive(statuses,[...runs.values()].flatMap(r=>r.accounts).concat(inheritedRecoveries.map(r=>r.account)),Date.now()).length,
                         pending:pendingCount(),freeGB:freemem()/2**30,minFreeGB:plan.minFreeGB,maxBots:plan.maxBots});
@@ -706,9 +776,9 @@ if (import.meta.main) {
                 continue;
             }
             for (const a of p.accounts) observeEnabled([a], accountEnabled.get(a.toLowerCase()) === true, previousEnabled, pendingResume);
-            if(stopAll) for(const a of p.accounts) writeFileSync(stopFile(a),'swarm stopped');
+            if(stopAll) for(const a of p.accounts) writeSwarmStop(stopFile(a),SWARM_STOP.all);
             const r = overlappingRun(runs.values(), p.accounts);
-            if (!stopAll && endStateOk && applyResume(p.accounts, !!r, ended, pendingResume, a => rmSync(stopFile(a), {force:true})))
+            if (!stopAll && endStateOk && applyResume(p.accounts, !!r, ended, pendingResume, a => clearSwarmStop(stopFile(a))))
                 persistEnded(deathsFile, ended);
             const st: Record<string, string> = {};
             if (r && foreignRun(planned, p, r) && !stopAll) {
@@ -718,19 +788,21 @@ if (import.meta.main) {
                 for (const a of p.accounts) {
                     if (!r.accounts.some(name => name.toLowerCase() === a.toLowerCase())) st[a] = 'waiting: current mission still running';
                     else if (ended.has(a) && ended.get(a)!.at >= r.started) st[a] = `ended: ${ended.get(a)!.reason}`;
-                    else if (stop) { writeFileSync(stopFile(a), 'swarm'); st[a] = 'stopping'; }
+                    else if (stop) { writeFileSync(stopFile(a), SWARM_STOP.job); st[a] = 'stopping'; }
                     else st[a] = pendingResume.has(a.toLowerCase()) ? 'stopping; resume queued'
                         : r.revision !== missionSignature(job) ? 'running; updated mission queued' : 'running';
                 }
             } else if (!job.enabled || stopAll) for (const a of p.accounts) st[a] = 'disabled';
             else if (!endStateOk) for (const a of p.accounts) st[a] = 'paused: repair or source ownership unresolved';
             else {
-                // A standing owner job retries a blocked or gave-up end by itself once the account's live status shows
-                // a finished session unchanged for BOOTSTRAP_STATUS_AGE_MS. A death still waits for a person.
+                // A standing owner job retries a blocked, gave-up, stopped or lost end (standingRetryable) by itself once the
+                // account's live status shows a finished session unchanged for BOOTSTRAP_STATUS_AGE_MS. A death still waits
+                // for a person; an owner's stop file still blocks the start below.
                 if ((job as Job & {standing?:boolean}).standing) for (const a of p.accounts) {
                     const key = [...ended.keys()].find(n => n.toLowerCase() === a.toLowerCase()), end = key ? ended.get(key) : undefined;
-                    if (!end || !/^(?:blocked|gave-up)\b/.test(end.reason)) continue;
+                    if (!end) continue;
                     let s: any; try { s = JSON.parse(readFileSync(join(prac, 'status', `${a}.json`), 'utf8')); } catch { continue; }
+                    if (!standingRetryable(end.reason, s?.result)) continue;
                     // A host-run account writes no status result; its confirmed producer logout (2 min old) shows it offline.
                     let settled = false;
                     try { const lp = readLogoutProof(a, LIVE_SERVER); settled = lp.state === 'confirmed' && Date.now() - lp.loggedOutAt >= 120_000; } catch { /* unreadable: use the status rule */ }

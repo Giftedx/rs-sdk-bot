@@ -8,7 +8,7 @@ export async function runChild(args: string[], env: Record<string, string | unde
     const p = Bun.spawn(['bun', ...args], { cwd: root, stdout: 'pipe', stderr: 'inherit', windowsHide: true, env });
     let out = '';
     for await (const c of p.stdout) { const t = new TextDecoder().decode(c); out += t; process.stdout.write(t.replace(/^(?=.)/gm, '  | ')); }
-    await p.exited;
-    return lastResult(out);
+    const code = await p.exited, result = lastResult(out);
+    return code !== 0 && /^RESULT ok(?: |$)/.test(result) ? `RESULT fail child exit ${code}: ${result}` : result;
 }
 export const lastResult = (out: string) => out.split(/\r?\n/).filter(l => l.startsWith('RESULT')).at(-1) ?? 'RESULT fail no result';

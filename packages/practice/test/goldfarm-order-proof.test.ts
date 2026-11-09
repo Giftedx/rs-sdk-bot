@@ -4,7 +4,7 @@ import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 
-test('native fault preload forwards real calls without recursion, fails after earning, then controls recovery',()=>{
+test('native fault preload forwards real calls without recursion, fails after earning, then controls recovery',async()=>{
  const directory=mkdtempSync(join(tmpdir(),'goldfarm-preload-'));
  try {
   const module=join(directory,'walk.ts'),preload=join(directory,'fault.ts'),entry=join(directory,'check.ts');
@@ -15,9 +15,10 @@ console.log(JSON.stringify(await walkPath(d,[{z:3283}])));
 console.log(JSON.stringify(await walkPath(d,[{z:3302}])));`);
   for(const fail of [true,false]){
    writeFileSync(preload,goldfarmFaultPreload(module,fail));
-   const child=Bun.spawnSync([process.execPath,'--preload',preload,entry],{timeout:5000,windowsHide:true});
-   expect(child.exitCode).toBe(0);
-   const results=child.stdout.toString().split(/\r?\n/).filter(l=>l.startsWith('{')).map(l=>JSON.parse(l));
+   const child=Bun.spawn([process.execPath,'--preload',preload,entry],{timeout:5000,windowsHide:true,stdout:'pipe',stderr:'pipe'});
+   const [exitCode,stdout,stderr]=await Promise.all([child.exited,new Response(child.stdout).text(),new Response(child.stderr).text()]);
+   expect(exitCode,stderr).toBe(0);
+   const results=stdout.split(/\r?\n/).filter(l=>l.startsWith('{')).map(l=>JSON.parse(l));
    expect(results).toEqual([{ok:true},{ok:false,detail:'proof injected route failure'},fail?{ok:false,detail:'proof injected recovery failure'}:{ok:true}]);
   }
  } finally {rmSync(directory,{recursive:true,force:true});}

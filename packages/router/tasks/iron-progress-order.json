@@ -1,6 +1,6 @@
 {
   "id": "iron-progress-order",
-  "goal": "Convert owned ore into exact banked bars or owned bars into exact banked smithing products, with Smithing XP, finite ordinary entry, asset reconciliation and logout.",
+  "goal": "Mine exact owned ore orders, convert owned ore into banked bars, or convert owned bars into banked smithing products, with finite ordinary entry, useful output, asset reconciliation and logout.",
   "entry": "scripts/smelt-bars.ts",
   "files": [
     "scripts/smelt-bars.ts",
@@ -9,12 +9,14 @@
     "scripts/smelt-batch.test.ts",
     "scripts/smith-batch.ts",
     "scripts/smith-batch.test.ts",
+    "scripts/gather-ore.ts",
+    "scripts/gather-ore.test.ts",
     "packages/planner/src/travel.ts",
     "packages/planner/src/production-batch.ts",
     "packages/practice/src/iron-progress-order-proof.ts",
     "packages/practice/test/iron-progress-order-proof.test.ts"
   ],
-  "consumer": "Preserve existing finite smelting CLI callers and their acceptance. Add ORDER_ACTION=smith to the same account-parameterized entry. The first live anvil consumer is OreElse Smithing84->85: PRODUCT_ID=1115, MAX_MAKE=3, BAR_RESERVE=334, CAP=1600. Consume15 owned iron bars, gain9375 XP and bank three new iron platebodies. Retain the hammer, reserved bars, coins and unrelated assets. Refuse unsupported recipes, insufficient levels or inputs clearly and confirm logout. Live admission requires the standing owner's release and settled session. The next consumer prices rune production at85.",
+  "consumer": "Preserve existing smith/smelt callers and their acceptance. Add ORDER_ACTION=mine through this same account-parameterized entry, reusing gather-ore.ts. ORE_PROFILE=coal|mithril selects the product; MAX_MAKE is the exact final bank target after crediting owned stock; CAP and NO_ORE_TICKS bound work and waits. Preserve mixed/clay callers. The finite live chain uses OreElse Mining99 and Smithing99 to bank280 mithril ore and1120 coal, then ORDER_ACTION=smelt, MAX_MAKE=280, ORE_RESERVE=0, ORDER_MODE=exact produces280 mithril bars. Mining ends at Varrock East bank3253,3420 for the smelter. Retain the rune pickaxe, unrelated stock and coins beyond declared fares. Refuse insufficient levels, tools or unsupported orders clearly and confirm logout. Live admission requires a settled session, no owner stop and no competing account owner. Reserve bars for Haggis's56 mithril platebodies; handoff waits for main launch gates. Native acceptance uses the real entry CLI for normal mining, banking and smelting, reconciles saved effects, and checks one clear refusal with logout. Do not add interruption/resume or failure-window requirements.",
   "checks": [
     {
       "id": "iron-progress-order-regressions",
@@ -25,6 +27,7 @@
         "scripts/smelt-bars.test.ts",
         "scripts/smelt-batch.test.ts",
         "scripts/smith-batch.test.ts",
+        "scripts/gather-ore.test.ts",
         "packages/practice/test/iron-progress-order-proof.test.ts",
         "--timeout",
         "10000"

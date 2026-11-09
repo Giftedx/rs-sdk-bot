@@ -10,13 +10,25 @@ function enforce(env: string, key: string, value: string): string {
 export async function createBot(name: string): Promise<{ name: string; envPath: string }> {
     const root = rsSdkRoot();
     const envPath = join(root, 'bots', name, 'bot.env');
-    if (!existsSync(envPath)) {
+    const generated = !existsSync(envPath);
+    if (generated) {
         const r = Bun.spawnSync(['bun', 'bots/create-bot.ts', name, '--local', '--no-chat'], { cwd: root, stdout: 'pipe', stderr: 'pipe' ,windowsHide:true});
         if (r.exitCode !== 0 || !existsSync(envPath)) {
             throw new Error(`create-bot failed for ${name}: ${r.stderr.toString()}${r.stdout.toString()}`);
         }
     }
     let env = readFileSync(envPath, 'utf8');
+    if (generated) {
+        const lines = env.split(/\r?\n/);
+        const servers = lines.filter(line => line.startsWith('SERVER='));
+        const gateways = lines.filter(line => line.startsWith('GATEWAY_URL='));
+        if (servers.length !== 1 || !/^SERVER=(?:localhost|127\.0\.0\.1)(?::8888)?$/.test(servers[0]!)
+            || gateways.length > 1 || gateways.some(line => !/^GATEWAY_URL=ws:\/\/(?:localhost|127\.0\.0\.1):7780$/.test(line))) {
+            throw new Error(`create-bot did not generate a default loopback profile for ${name}`);
+        }
+        env = enforce(env, 'SERVER', 'localhost:8888');
+        env = enforce(env, 'GATEWAY_URL', 'ws://localhost:7780');
+    }
     env = enforce(env, 'TELEMETRY', 'false');
     env = enforce(env, 'SHOW_CHAT', 'false');
     writeFileSync(envPath, env);

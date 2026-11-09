@@ -66,6 +66,11 @@ function dig(position: { x: number; z: number; level?: number }, items: number[]
 }
 const DIG_HELPER = [1978, 1609, 954, 954, 229, 973, 233, 590];
 
+const BARCRAWL: SaveConfig = {
+    position: { x: 2541, z: 3569, level: 0 }, skills: ALL_99, equipment: RUNE_SET, varps: { ...QP_BEFORE_DRAGON, 176: 10 }, coins: 500,
+    inventory: [[563, 3], [556, 11], [555, 1], [554, 1]].map(([id, count]) => ({ id: id!, count: count! }))
+        .concat([379, 379, 379, 379].map(id => ({ id, count: 1 }))),
+};
 export const PATH_PRESETS: Record<string, SaveConfig> = {
     // The Dig Site: beside the examiner (spawn 3360,3343, maps/m52_52.jm2), in the Exam Centre.
     quest_dig: dig({ x: 3361, z: 3341 }, DIG_HELPER),
@@ -87,10 +92,8 @@ export const PATH_PRESETS: Record<string, SaveConfig> = {
     // set, QP_BEFORE_DRAGON and Dragon Slayer), outside the Barbarian Outpost gate (guards 2544,3567 / 2544,3571).
     // 500 coins (208 for the bars, 60 for two ships); runes for Falador, Varrock and Camelot Teleport (3 law 563,
     // 11 air 556, 1 water 555, 1 fire 554); 4 lobsters.
-    barcrawl: {
-        position: { x: 2541, z: 3569, level: 0 }, skills: ALL_99, equipment: RUNE_SET, varps: { ...QP_BEFORE_DRAGON, 176: 10 }, coins: 500,
-        inventory: [[563, 3], [556, 11], [555, 1], [554, 1]].map(([id, count]) => ({ id: id!, count: count! }))
-            .concat([379, 379, 379, 379].map(id => ({ id, count: 1 }))),
-    },
+    barcrawl: BARCRAWL,
+    // The quest sweep's name for the same start (presetFor('barcrawl')): the live chain runs it before Scorpion Catcher.
+    quest_barcrawl: BARCRAWL,
     quest_seaslug: late({ x: 2717, z: 3302 }, LATE_SKILLS, [1941, 596, 563, 563, 563, 556, 556, 556]),
 };

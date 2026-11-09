@@ -37,7 +37,7 @@ export async function completeCook(q: CookIO): Promise<{ ok: true; detail: strin
             { x: 3217, z: 3220, tol: 1 },
         ]);
         // m50_50: north wall z=3217, door loc_1536 at x=3207. The old tol=5 NPC
-        // approach stopped at 3209,3218 outside this wall (2026-10-28 consumer.log).
+        // approach stopped at 3209,3218 outside this wall (consumer.log).
         // quest-lib.walk/openDoor -> this consumer: reuse, then require interior arrival.
         await q.walk('cook kitchen door approach', [{ x: 3207, z: 3218, tol: 0 }]);
         await q.openDoor('cook kitchen north door', 3207, 3217);

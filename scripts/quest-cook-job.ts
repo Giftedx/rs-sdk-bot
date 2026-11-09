@@ -1,5 +1,5 @@
 // bun scripts/quest-cook-job.ts <account> ; CAP is a game-tick budget (default 2400).
-// 2026-10-28: quest-items-order + completeCook -> one ordinary actor -> observed
+// quest-items-order + completeCook -> one ordinary actor -> observed
 // bank/quest/XP deltas and settle logout. The harness checks the server's saved result.
 import {openBot,settle} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';

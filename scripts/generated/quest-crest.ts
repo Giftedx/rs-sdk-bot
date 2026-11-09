@@ -158,6 +158,19 @@ try {
         }
         if ((q.pos()?.worldZ ?? 0) < 9000) await q.fail('trapdoor');
         q.milestone('dungeon');
+        // His lair gate (chronodoorl 2432 at 3089,9945): the planner treats it as open, and one op from the north tile
+        // lands on the gate tile, inside (rs-stun-toolkit `q-family-crest.ts`, MIT, research/stun-toolkit-LICENSE.txt).
+        // A double gate (1557 at 3105,9944) on the way is also planned as open.
+        await q.walk('to wild gate', [{ x: 3105, z: 9943, tol: 0 }]);
+        await q.step('wild gate', () => { const g = q.findLoc((l: any) => l.x === 3105 && l.z === 9944) ?? { id: 1557, x: 3105, z: 9944 }; return q.opLoc(g, q.opIndex(g, /open/i)); },
+            () => (q.pos()?.worldZ ?? 0) >= 9944 || !q.shutAt(3105, 9944), 6, 5);
+        await q.dash('past wild gate', 3105, 9946, 1, 8);
+        // Short client-routed legs north and west round the rock: the long walk paced at z 9946-9950 under attack.
+        await q.dash('north of gate', 3104, 9952, 2, 12);
+        await q.dash('west passage', 3092, 9950, 2, 20);
+        await q.dash('to chronozon gate', 3089, 9946, 0, 12);
+        await q.step('chronozon gate', () => { const g = q.findLoc((l: any) => l.x === 3089 && l.z === 9945) ?? { id: 2432, x: 3089, z: 9945 }; return q.opLoc(g, q.opIndex(g, /open/i)); },
+            () => (q.pos()?.worldZ ?? 0) <= 9945, 6, 5);
         await q.walk('to chronozon', [{ x: CHRONOZON.x, z: CHRONOZON.z - 4, tol: 3 }]);
         const chz = () => q.npc(/^chronozon$/i);
         if (!chz()) await q.waitUntil(() => !!chz(), 30);
@@ -232,12 +245,31 @@ try {
     // 12. Join the three pieces; Dimintheis takes the crest (queued completion, steel gauntlets).
     await q.step('join crest', () => q.useOnItem(ITEM.avanPiece, ITEM.calebPiece), () => q.has(ITEM.crest), 4, 4);
     await tele('varrock teleport 2', 'magic:varrock_teleport', 3213, 3424);
-    await q.walk('back to dimintheis', [{ x: DIMINTHEIS.x, z: DIMINTHEIS.z - 1, tol: 2 }]);
+    // His house is reached only through Varrock's east gate (guidorgatelclosed 2050 at 3264,3405, a teleport gate the walker
+    // does not open; area_varrock/scripts/east_gate.rs2). One op from the west tile lands at x 3264 (rs-stun-toolkit
+    // `q-family-crest.ts`, MIT, research/stun-toolkit-LICENSE.txt).
+    const VGATE = { id: 2050, x: 3264, z: 3405 };
+    const gx = () => q.pos()?.worldX ?? 0;
+    const crossGate = async (label: string, through: () => boolean) => {
+        for (let i = 0; i < 5 && !through(); i++) {
+            await q.guard(label);
+            if (q.dialogOpen()) { await q.converse([/.*/], () => !q.dialogOpen(), 10); continue; }
+            await q.opLoc(q.locAt(VGATE.x, VGATE.z) ?? VGATE, 1);
+            await q.waitUntil(() => through() || q.dialogOpen(), 8);
+        }
+        await q.converse([/.*/], () => !q.dialogOpen(), 10);
+        if (!through()) await q.fail(label);
+    };
+    await q.walk('to varrock gate', [{ x: VGATE.x - 1, z: VGATE.z, tol: 0 }]);
+    await crossGate('varrock gate in', () => gx() >= VGATE.x);
+    await q.walk('back to dimintheis', [{ x: 3279, z: 3403, tol: 2 }]);
     await q.talk('dimintheis 2', /^dimintheis$/i, [], () => !q.has(ITEM.crest), DIMINTHEIS, 60);
     await q.waitUntil(() => q.has(ITEM.steel), 5);
     q.milestone('complete');
 
     // 13. Avan pounds the steel gauntlets into goldsmith gauntlets.
+    await q.walk('to gate inside', [{ x: VGATE.x, z: VGATE.z, tol: 0 }]);
+    await crossGate('varrock gate out', () => gx() < VGATE.x);
     await q.walk('to avan 3', [{ x: AVAN.x, z: AVAN.z - 2, tol: 2 }]);
     await q.talk('avan 3', avan, [/improve them for me/i], () => q.has(ITEM.gold), AVAN, 60);
     q.milestone('gauntlets');

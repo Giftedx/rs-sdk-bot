@@ -8,6 +8,7 @@
 // pack (areas/area_karamja/scripts/customs_officer.rs2:13,48-53), so it rides in Luthas's banana crate to Wydin's
 // back room (banana_crate.rs2:50-68, luthas.rs2:12-27, food_store.rs2:20-37).
 import { openQuest } from './quest-lib';
+import { questFlags } from '../../packages/core/src/quest-status';
 
 const REDBEARD = { x: 3053, z: 3250 };
 const WYDIN = { x: 3014, z: 3204 };
@@ -44,14 +45,58 @@ try {
     };
     const onDeck = (d: { x: number; z: number }) => () => q.lvl() === 1 && q.near(d.x, d.z, 8);
 
-    // 1. Redbeard Frank: "I'm in search of treasure." sets 1 (redbeard_frank.rs2:57-66).
-    await q.talk('redbeard 1', /^redbeard frank$/i, [/in search of treasure/i], () => q.sawText(/no rum like karamja rum/i), REDBEARD, 40);
-    q.milestone(1);
+    // Wydin's back room: the apron worn (wydin_apron_required, food_store.rs2:1-14), the crate gives the rum
+    // (food_store.rs2:20-37); "No" to the banana. Strict when the rum must be there; a probe leaves without it.
+    const inBack = () => (q.pos()?.worldX ?? 9999) < WYDIN_DOOR.x;
+    const backRoomRum = async (strict: boolean): Promise<void> => {
+        const e = await q.s.bot.equipItem(/^white apron$/i);
+        if (!e.success) console.log(`WARN apron ${e.message}`);
+        await q.walk('to back door', [{ x: WYDIN_DOOR.x, z: WYDIN_DOOR.z, tol: 0 }]);
+        for (let i = 0; i < (strict ? 4 : 2) && !inBack(); i++) { await q.opLoc(q.locAt(WYDIN_DOOR.x, WYDIN_DOOR.z) ?? WYDIN_DOOR, 1); await q.waitUntil(inBack, 8); }
+        if (!inBack()) { if (strict) await q.fail('back door'); return; }
+        for (let i = 0; i < 3 && !q.has(ITEM.rum); i++) {
+            await q.opLoc(q.locAt(GROCERY.x, GROCERY.z) ?? GROCERY, 1);
+            await q.waitUntil(() => q.has(ITEM.rum) || q.dialogOpen(), 12);
+            await q.converse([/^no$/i], () => !q.dialogOpen(), 10);
+        }
+        if (strict && !q.has(ITEM.rum)) await q.fail('grocery crate');
+        await q.step('out door', () => q.opLoc(q.locAt(WYDIN_DOOR.x, WYDIN_DOOR.z) ?? WYDIN_DOOR, 1), () => !inBack(), 8, 4);
+    };
 
-    // 2. Wydin hires a player with a white apron while %hunt is 1 (wydin.rs2:8-10,40-50).
-    await q.talk('wydin job', /^wydin$/i, [/can i get a job here/i], () => q.sawText(/you're hired/i), WYDIN, 40);
-    q.milestone('job');
+    // The quest varps are not sent, so a started quest (the journal flag) resumes from what is held and from Redbeard's
+    // own branch (redbeard_frank.rs2): the message leaves the dig; the key leaves the chest; otherwise Redbeard takes a
+    // held rum for the key, hands a lost key out again, or asks for the rum, and the back-room crate is tried before the
+    // Karamja run, since the rum may be shipped already.
+    const readMessage = async (): Promise<void> => {
+        await q.step('read message', () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.message)!, optionIndex: 1, reason: 'SDK' }), () => q.sawText(/white knights/i) || (q.st()?.interface?.isOpen ?? false), 4, 3);
+        await q.waitTicks(1);
+    };
+    let stage: 'start' | 'rum' | 'chest' | 'dig' = 'start';
+    if (questFlags((q.s as any).client)?.find(f => /^pirate's treasure$/i.test(f.name))?.state === 'started') {
+        if (q.has(ITEM.message)) stage = 'dig';
+        else if (q.has(ITEM.key)) stage = 'chest';
+        else {
+            await q.talk('redbeard resume', /^redbeard frank$/i, [], () => q.has(ITEM.key) || q.sawText(/brought some rum|still have to finish/i), REDBEARD, 40, true);
+            await q.converse([], () => !q.dialogOpen(), 10);
+            stage = q.has(ITEM.key) ? 'chest' : 'rum';
+        }
+        console.log(`NOTE pirate's treasure resumed at ${stage}: rum ${q.has(ITEM.rum)}, key ${q.has(ITEM.key)}, message ${q.has(ITEM.message)}`);
+        q.milestone(1);
+    }
 
+    if (stage === 'start') {
+        // 1. Redbeard Frank: "I'm in search of treasure." sets 1 (redbeard_frank.rs2:57-66).
+        await q.talk('redbeard 1', /^redbeard frank$/i, [/in search of treasure/i], () => q.sawText(/no rum like karamja rum/i), REDBEARD, 40);
+        q.milestone(1);
+    }
+    if ((stage === 'start' || stage === 'rum') && !q.has(ITEM.rum)) {
+        // 2. Wydin hires a player with a white apron while %hunt is 1 (wydin.rs2:8-10,40-50); hired already, he asks
+        // about the back room instead.
+        await q.talk('wydin job', /^wydin$/i, [/can i get a job here/i, /no, it's a complete mess/i], () => q.sawText(/you're hired|something to do, won't it/i), WYDIN, 40);
+        q.milestone('job');
+        if (stage === 'rum') await backRoomRum(false);
+    }
+    if ((stage === 'start' || stage === 'rum') && !q.has(ITEM.rum)) {
     // 3. A seaman to Musa Point (30 coins, sailors.rs2:10-30), Zambo's rum (shop stock karamja_rum).
     await q.walk('to seamen', [{ x: SEAMEN.x + 1, z: SEAMEN.z + 2, tol: 2 }]);
     await q.talk('seaman', /^(seaman (lorris|thresnor)|captain tobias)$/i, [/^yes please/i], onDeck(MUSA_DECK), SEAMEN, 40, true);
@@ -73,6 +118,22 @@ try {
     // 4. Luthas's job, the rum and 10 bananas in his crate, paid: %crate_rum 1 -> 2 (luthas.rs2:1-27,29-33,
     // banana_crate.rs2:21-68).
     await q.talk('luthas job', /^luthas$/i, [/offer me employment/i], () => q.sawText(/i'll pay you 30 gold/i), LUTHAS, 40);
+    // Bananas short of ten come off the plantation's trees (banana_tree.rs2: Search gives one and steps the tree down a
+    // stage, five a tree, back to full after 500 ticks). A tree that gives nothing is empty and is left for the next;
+    // Wydin's shelf holds three with one back every 100 ticks, so the sweep does not buy them.
+    const trees = () => (q.st()?.nearbyLocs ?? []).filter((l: any) => /^banana tree$/i.test(l.name) && !empty.has(`${l.x},${l.z}`)).sort((a: any, b: any) => a.distance - b.distance);
+    const empty = new Set<string>();
+    for (let i = 0; i < 60 && q.cnt(ITEM.banana) < 10; i++) {
+        await q.guard('bananas');
+        const t = trees()[0];
+        if (!t) { if (empty.size) { empty.clear(); await q.waitTicks(20); } else await q.walk('to trees', [{ x: 2925, z: 3160, tol: 3 }]); continue; }
+        const n = q.cnt(ITEM.banana);
+        if ((q.st()?.inventory?.length ?? 0) >= 28) await q.fail(`bananas: pack full at ${n} of 10`);
+        await q.opLoc(t, 1);
+        if (!await q.waitUntil(() => q.cnt(ITEM.banana) > n, 6)) empty.add(`${t.x},${t.z}`);
+    }
+    if (q.cnt(ITEM.banana) < 10) await q.fail(`bananas: ${q.cnt(ITEM.banana)} of 10 from the plantation`);
+    q.milestone('bananas');
     await q.walk('to crate', [{ x: CRATE.x - 1, z: CRATE.z, tol: 1 }]);
     await q.step('rum in crate', () => q.useOnLoc(ITEM.rum, q.locAt(CRATE.x, CRATE.z) ?? CRATE), () => !q.has(ITEM.rum), 8, 4);
     await q.converse([], () => !q.dialogOpen(), 6);
@@ -95,22 +156,18 @@ try {
     await disembark('sarim gangplank');
     q.milestone('sarim');
 
-    // 6. Wydin's back room: the apron worn (wydin_apron_required, food_store.rs2:1-14), the crate gives the rum
-    // (food_store.rs2:20-37); "No" to the banana.
-    const e = await q.s.bot.equipItem(/^white apron$/i);
-    if (!e.success) console.log(`WARN apron ${e.message}`);
-    await q.walk('to back door', [{ x: WYDIN_DOOR.x, z: WYDIN_DOOR.z, tol: 0 }]);
-    const inBack = () => (q.pos()?.worldX ?? 9999) < WYDIN_DOOR.x;
-    await q.step('back door', () => q.opLoc(q.locAt(WYDIN_DOOR.x, WYDIN_DOOR.z) ?? WYDIN_DOOR, 1), inBack, 8, 4);
-    await q.step('grocery crate', () => q.opLoc(q.locAt(GROCERY.x, GROCERY.z) ?? GROCERY, 1), () => q.has(ITEM.rum), 12, 3);
-    await q.converse([/^no$/i], () => !q.dialogOpen(), 10);
+    // 6. The rum back out of Wydin's crate.
+    await backRoomRum(true);
     q.milestone('rum back');
-    await q.step('out door', () => q.opLoc(q.locAt(WYDIN_DOOR.x, WYDIN_DOOR.z) ?? WYDIN_DOOR, 1), () => !inBack(), 8, 4);
+    }
 
-    // 7. Redbeard takes the rum and gives the chest key: 2 (redbeard_frank.rs2:32-55).
-    await q.talk('redbeard 2', /^redbeard frank$/i, [/ok thanks, i'll go and get it/i], () => q.has(ITEM.key) && q.sawText(/with any luck his treasure/i), REDBEARD, 60);
-    q.milestone(2);
+    if (stage === 'start' || stage === 'rum') {
+        // 7. Redbeard takes the rum and gives the chest key: 2 (redbeard_frank.rs2:32-55).
+        await q.talk('redbeard 2', /^redbeard frank$/i, [/ok thanks, i'll go and get it/i], () => q.has(ITEM.key) && q.sawText(/with any luck his treasure/i), REDBEARD, 60);
+        q.milestone(2);
+    }
 
+    if (stage !== 'dig') {
     // 8. Varrock teleport, the Blue Moon Inn upstairs, the key on Hector's chest gives the message; read it: 3
     // (pirate_message.rs2:1-24).
     await q.teleport('varrock teleport', 'magic:varrock_teleport', 3212, 3424);
@@ -118,20 +175,25 @@ try {
     await q.climb('inn stairs', () => q.findLoc(l => l.x === INN_STAIRS.x && l.z === INN_STAIRS.z), /climb-up|climb up/i, () => q.lvl() === 1);
     await q.openDoor('chest door', CHEST_DOOR.x, CHEST_DOOR.z);
     await q.step('key on chest', () => q.useOnLoc(ITEM.key, q.locAt(CHEST.x, CHEST.z) ?? CHEST), () => q.has(ITEM.message), 20, 3);
-    await q.step('read message', () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.message)!, optionIndex: 1, reason: 'SDK' }), () => q.sawText(/white knights/i) || (q.st()?.interface?.isOpen ?? false), 4, 3);
-    await q.waitTicks(1);
+    await readMessage();
     q.milestone(3);
+    }
+    // A held message may not have been read yet (the read sets 3, pirate_message.rs2); reading it again costs nothing.
+    if (stage === 'dig') await readMessage();
 
     // 9. Falador teleport, the park; a gardener within 10 tiles stops the dig and attacks (dig.rs2:6-8,26-28), so
     // he is killed first; the spade at the X queues the completion (dig.rs2:10-24).
     await q.teleport('falador teleport', 'magic:falador_teleport', 2965, 3378);
     await q.walk('to park', [{ x: DIG.x, z: DIG.z, tol: 0 }]);
-    for (let i = 0; i < 6 && !questDone; i++) {
+    // A bare-handed account at Attack 6 needs many blows for the gardener (a bow account one or two), and a dig while
+    // he fights is stopped: the fight is waited out before the spade, over up to twelve rounds.
+    for (let i = 0; i < 12 && !questDone; i++) {
         await q.guard('dig');
         const g = q.npc(/^gardener$/i);
         if (g && q.cheb(g.x, g.z) <= 11) {
             await q.s.bot.attack(g as any);
-            await q.waitUntil(() => !q.npc(/^gardener$/i) || q.cheb(q.npc(/^gardener$/i).x, q.npc(/^gardener$/i).z) > 11, 20);
+            await q.waitUntil(() => !q.npc(/^gardener$/i) || q.cheb(q.npc(/^gardener$/i).x, q.npc(/^gardener$/i).z) > 11, 40);
+            await q.waitUntil(() => !(q.pos() as any)?.combat?.inCombat, 20);
             if (!q.near(DIG.x, DIG.z, 0)) await q.dash('back to x', DIG.x, DIG.z, 0);
         }
         await q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.spade)!, optionIndex: 1, reason: 'SDK' });

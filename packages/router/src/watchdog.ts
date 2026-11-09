@@ -4,6 +4,10 @@
 // 2. Restarts the coordinator hidden and detached when its owner process is gone.
 // 3. Records the scoreboard progress numbers, and writes .practice/coordinator/stall.json when none rose for
 //    STALL_MS; the planner reads it and must change lane or method. A gain removes the note.
+// Before the owner-stop check, it restarts the hosted dashboard's publisher (packages/dashboard/publish.ts) when the
+// publisher has a clone in .practice/fleet-command/repo and its lock names no live process. Nothing else starts it
+// after a reboot, and a stopped publisher leaves the hosted page on its last file. .practice/stop-dashboard-publish
+// keeps it stopped. The coordinator stop files do not: they stop game work, not the page.
 import { appendFileSync, existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -21,8 +25,28 @@ export function stalled(history: { at: number; progress: Progress }[], now: numb
     return now - lastGain >= stallMs ? { since: lastGain, last: history.at(-1)!.progress } : null;
 }
 
+// owner/name of the hosted dashboard repository from the publisher clone's origin URL.
+export function publisherRepo(remote: string): string | null {
+    const m = /github\.com[/:]([\w.-]+\/[\w.-]+?)(?:\.git)?\/?$/.exec(remote.trim());
+    return m ? m[1]! : null;
+}
+
 if (import.meta.main) {
     const now = Date.now(), log = (line: string) => appendFileSync(join(dir, 'watchdog.log'), `${new Date(now).toISOString()} ${line}\n`);
+    const prac = join(root, '.practice'), clone = join(prac, 'fleet-command', 'repo'), pubLock = join(prac, 'dashboard-publish.lock');
+    if (!existsSync(join(prac, 'stop-dashboard-publish')) && existsSync(join(clone, '.git'))) {
+        const pid = existsSync(pubLock) ? Number(readFileSync(pubLock, 'utf8')) : 0;
+        if (!pid || !alive(pid)) {
+            const remote = Bun.spawnSync(['git', '-C', clone, 'remote', 'get-url', 'origin'], { stdout: 'pipe', stderr: 'ignore', windowsHide: true }).stdout.toString();
+            const repo = publisherRepo(remote);
+            if (!repo) log(`publisher not restarted: no GitHub origin in ${clone}`);
+            else {
+                // --daemon detaches the publisher, appends to .practice/dashboard-publish.log and returns at once.
+                const r = Bun.spawnSync([process.execPath, 'packages/dashboard/publish.ts', '--daemon'], { cwd: root, env: { ...process.env, FLEET_COMMAND_REPO: repo }, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+                log(`publisher restarted for ${repo} (previous pid=${pid || 'none'}): ${(r.stdout.toString() + r.stderr.toString()).trim().slice(0, 200)}`);
+            }
+        }
+    }
     if (['stop-coordinator', 'stop-swarm'].some(f => existsSync(join(root, '.practice', f)))) { log('owner stop present; nothing started'); process.exit(0); }
     const owner = existsSync(join(dir, 'owner.json')) ? JSON.parse(readFileSync(join(dir, 'owner.json'), 'utf8')) : null;
     if (!owner?.pid || !alive(owner.pid)) {

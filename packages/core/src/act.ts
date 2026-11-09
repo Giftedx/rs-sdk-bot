@@ -22,7 +22,9 @@ export interface CheckedSpec {
 const rejectedCount = (st: any): number => st?.opFeedback?.opRejectedCount ?? 0;
 
 // Sends once, then watches each tick for the effect. A rise in opFeedback.opRejectedCount with no effect
-// means the server refused the op silently (UNSET_MAP_FLAG, no message), so it ends early as `rejected`.
+// usually means the server refused the op silently (UNSET_MAP_FLAG, no message), so it ends early as `rejected`.
+// An accepted op that runs p_stopaction (burying, agility, firemaking, teleports) raises the count too, so those
+// callers set rejectOnFeedback false.
 export async function checked(s: TickSource, spec: CheckedSpec): Promise<Outcome> {
     const before = s.sdk.getState();
     const why = spec.pre?.(before) ?? null;

@@ -3,7 +3,7 @@
 // Server truth: vendor/rs-sdk/server/content/scripts/quests/quest_waterfall/scripts/*.rs2 (%waterfall_quest 0..10).
 // Loc origins come from the maps (m39_53, m39_54, m39_149, m39_153, m40_154 .jm2); ids from pack/loc.pack and obj.pack.
 // The SDK state has no varps, so each MILESTONE is printed on the observed effect of the step that sets the varp.
-// Route notes (bun research/route-danger.ts, 2026-10-23): the gnome cellar (hobgoblins), Glarial's tomb (skeletons,
+// Route notes (bun research/route-danger.ts): the gnome cellar (hobgoblins), Glarial's tomb (skeletons,
 // zombies, moss giants) and the falls (shadow spiders, skeletons, fire giants max hit about 7) have aggressive NPCs
 // with hunt range 1-2. The bot never fights; it eats a lobster at 7 HP or less.
 import type { Session } from '../../packages/core/src/inprocess';
@@ -56,6 +56,57 @@ export function waterfallFood(kind = 'lobster', eatAt?: number, count = 16) {
     return { ...food, count, eatAt: threshold, crossAt: food.id === 379 && eatAt === undefined ? 9 : threshold };
 }
 const WF_BANK = { x: 2654, z: 3283 };
+const RUNE_DROP_TILE = { x: 2557, z: 3444 };
+const DROP_RUNES = [556, 557, 555];
+// A walk can report arrival while its final step is pending. Bind the dropped
+// stacks to a settled tile and paired inventory/ground observations.
+export async function dropWaterfallRunes(s: Session, stop: () => boolean, budget = 24) {
+    if (!Number.isSafeInteger(budget) || budget < 3 || budget > 24) throw Error('Waterfall rune drop budget must be3..24');
+    const start = s.tick();
+    const state = () => s.sdk.getState();
+    const atTile = () => {
+        const p = state()?.player;
+        return p?.level === 0 && p.worldX === RUNE_DROP_TILE.x && p.worldZ === RUNE_DROP_TILE.z;
+    };
+    const held = (id: number) => (state()?.inventory ?? []).filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+    const ground = (id: number) => (state()?.groundItems ?? []).filter(i => i.id === id && i.x === RUNE_DROP_TILE.x && i.z === RUNE_DROP_TILE.z).reduce((n, i) => n + i.count, 0);
+    const evidence = () => ({ tick: s.tick(), player: state()?.player, held: DROP_RUNES.map(id => ({ id, count: held(id) })), ground: state()?.groundItems?.filter(i => DROP_RUNES.includes(i.id)) });
+    const check = () => {
+        if (stop() || s.tick() - start >= budget || !state()?.player || !Array.isArray(state()?.inventory)
+            || !Array.isArray(state()?.groundItems) || state()?.player?.isDead || s.sdk.getStateAge() > 5000)
+            throw Error(`Waterfall rune drop stopped/stale/deadline ${JSON.stringify(evidence())}`);
+    };
+    const observe = async (pred: () => boolean, label: string) => {
+        if (!await waitUntil(s, () => { check(); return pred(); }, { timeoutTicks: Math.max(1, budget - (s.tick() - start)) }))
+            throw Error(`Waterfall ${label} unobserved ${JSON.stringify(evidence())}`);
+        check();
+    };
+    check();
+    if (!atTile()) {
+        const walk = await s.direct({ type: 'walkTo', ...RUNE_DROP_TILE, running: true, reason: 'SDK' }) as { success?: boolean; message?: string };
+        check();
+        if (walk.success === false && !atTile()) throw Error(`Waterfall drop-tile walk refused: ${walk.message}`);
+    }
+    let stable = 0, lastTick = -1;
+    await observe(() => {
+        const tick = state()?.tick;
+        if (tick === undefined || tick === lastTick) return false;
+        lastTick = tick;
+        stable = atTile() ? stable + 1 : 0;
+        return stable >= 2;
+    }, 'stable rune drop tile');
+    if (DROP_RUNES.some(id => held(id) !== 6 || ground(id) !== 0))
+        throw Error(`Waterfall rune drop needs six owned runes and an empty tile ${JSON.stringify(evidence())}`);
+    const rows = state()!.inventory.filter(i => DROP_RUNES.includes(i.id));
+    const replies = await Promise.all(rows.map(row => s.direct({ type: 'dropItem', slot: row.slot, reason: 'SDK' })));
+    check();
+    if (replies.some(reply => (reply as { success?: boolean }).success !== true))
+        throw Error(`Waterfall rune drop dispatch refused ${JSON.stringify({ replies, ...evidence() })}`);
+    await observe(() => atTile() && DROP_RUNES.every(id => held(id) === 0 && ground(id) === 6), 'owned rune drop credit');
+    const receipt = { ...RUNE_DROP_TILE, tick: s.tick(), counts: DROP_RUNES.map(id => ({ id, count: ground(id) })) };
+    console.log(`WATERFALL_RUNE_DROP ${JSON.stringify(receipt)}`);
+    return receipt;
+}
 export function waterfallAssets(s: Session): Map<number, number> {
     const counts = new Map<number, number>();
     for (const i of [...s.sdk.getInventory(), ...s.sdk.getEquipment(), ...(s.sdk.getState()?.bank?.items ?? [])]) counts.set(i.id, (counts.get(i.id) ?? 0) + i.count);
@@ -354,7 +405,7 @@ try {
         for (const [x, z, tol] of pts.slice(next)) if (!(await walkPt(x, z, tol))) await fail(`walk ${label} ${x},${z}`);
     };
     // Client-routed run through waypoints: one walk click per leg, sent again when the bot stands still for 2 ticks or
-    // an eat landed. bot.walkTo stalled 26 ticks at 2581,9875 among the falls spiders (MEASURED practice 2026-10-23).
+    // an eat landed. bot.walkTo stalled 26 ticks at 2581,9875 among the falls spiders (MEASURED practice).
     // Falls back to bot.walkTo for a leg the client cannot route.
     const dash = async (label: string, pts: [number, number][]): Promise<void> => {
         const end = pts[pts.length - 1]!;
@@ -523,8 +574,8 @@ try {
         // (300-tick drop timer). The pebble opens the tomb and sets 4.
         await walkMaze('maze out', 2557, 3444, [...MAZE].reverse());
         // All three stacks in one tick (the server takes 5 inputs per tick); bot.dropItem cost about 15 idle ticks here.
-        const runeDrop = { x: pos()?.worldX, z: pos()?.worldZ };
-        for (let i = 0; i < 4 && RUNES.some(has); i++) {
+        const runeDrop = MIGHTY ? await dropWaterfallRunes(s, () => died || T() > CAP) : { x: pos()?.worldX, z: pos()?.worldZ };
+        if (!MIGHTY) for (let i = 0; i < 4 && RUNES.some(has); i++) {
             for (const r of inv().filter(x => RUNES.includes(x.id))) void s.direct({ type: 'dropItem', slot: r.slot, reason: 'SDK' });
             await waitUntil(s, () => !RUNES.some(has) || died, { timeoutTicks: 2 });
         }
@@ -551,7 +602,7 @@ try {
         for (let i = 0; i < 20 && RUNES.some(id => cnt(id) < 6); i++) {
             await guard('pick runes');
             const id = RUNES.find(r => cnt(r) < 6)!;
-            const g = (st()?.groundItems ?? []).filter((x: any) => x.id === id && (!MIGHTY || x.x === runeDrop.x && x.z === runeDrop.z)).sort((a: any, b: any) => a.distance - b.distance)[0];
+            const g = (st()?.groundItems ?? []).filter((x: any) => x.id === id && (!MIGHTY || x.x === runeDrop.x && x.z === runeDrop.z && x.count === 6)).sort((a: any, b: any) => a.distance - b.distance)[0];
             if (g) await s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: id, reason: 'SDK' });
             await waitUntil(s, () => cnt(id) >= 6 || died, { timeoutTicks: 3 });
         }
@@ -569,7 +620,7 @@ try {
     // 6. Key from the crate in the east room, through the fire giant room, key on the puzzle-room door sets 6.
     await dash('falls crate', [[2574, 9873], [2584, 9876], [2589, 9887]]);
     await step('falls crate', () => opLoc(LOC.baxCrate), () => has(ITEM.baxKey), 12, 3);
-    // Cause of the 8 failed runs (MEASURED practice 2026-10-23, quest_waterfall_falls preset): the fire giant room is
+    // Cause of the 8 failed runs (MEASURED practice, quest_waterfall_falls preset): the fire giant room is
     // shut by a closed large double door (loc 1516/1519 at 2564-2565,9881, maps/m40_154.jm2). The SDK collision masks
     // doors, so bot.walkTo plans through it, but the client route stops at it: a key use from the south room gets
     // "I can't reach that!" and a walk click is client_rejected. The bot then stood in the south room until the shadow

@@ -41,7 +41,7 @@ export function validateDelivery(t:DeliveryTask):void {
     for(const c of t.checks){
         const phase=phases.indexOf(c.phase);
         if(phase<previous||phase<0||!c.id?.trim()||seen.has(c.id)||!Array.isArray(c.command)||!c.command.length
-            ||!c.command.every(s=>typeof s==='string'&&s.trim())||!Number.isSafeInteger(c.timeoutMs)||c.timeoutMs<1||c.timeoutMs>900000)
+            ||!c.command.every(s=>typeof s==='string'&&s.trim())||!Number.isSafeInteger(c.timeoutMs)||c.timeoutMs<1||c.timeoutMs>1800000)
             throw Error('invalid delivery check order, command or timeout');
         seen.add(c.id);previous=phase;
     }

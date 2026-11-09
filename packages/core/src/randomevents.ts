@@ -301,7 +301,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
                 const engaged = npc ? targetsMe(npc) : false;
                 // Phase 2: the NPC dropped the target; walk back to where the flight began (the NPC wanders near
                 // its spawn and never takes the target again), so the script resumes where it was and the bot
-                // does not stand at a strange tile (seen 2026-10-23: a swarm flight ended next to dark wizards).
+                // does not stand at a strange tile (seen: a swarm flight ended next to dark wizards).
                 if (backSince >= 0) {
                     if (engaged) { backSince = -1; dest = null; say(h.name, 'flee-again'); }
                     else {
@@ -465,6 +465,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
         return {
             name: 'big_fish', hold: true,
             tick() {
+                if (st?.trade?.isOpen) return true;
                 if (inv().some(i => i.id === id)) { say('big_fish', 'recovered', `ticks=${s.tick() - begin}`); return true; }
                 if (s.tick() - begin > 30) { say('big_fish', 'lost-tool'); return true; }
                 const g = (st?.groundItems ?? []).filter((x: any) => x.id === id && x.distance <= 10).sort((a: any, b: any) => a.distance - b.distance)[0];
@@ -754,12 +755,19 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
         if (all.some(i => i.id === AXE_HANDLE)) want('lost_axe', lostToolJob('axe'));
         if (all.some(i => i.id === PICK_HANDLE)) want('lost_pickaxe', lostToolJob('pickaxe'));
 
-        // Big fish: a fishing tool left the pack (no bank open) and the same item lies on the ground near by.
+        // Trade offers remove tools from the pack without dropping them.
         for (const id of FISH_TOOLS) {
             const c = inv().filter(i => i.id === id).length;
             const prev = toolCounts.get(id) ?? c;
-            if (c < prev && !st?.bank?.isOpen) toolGone.set(id, now);
             toolCounts.set(id, c);
+            if (st?.trade?.isOpen) {
+                toolGone.delete(id);
+                const key = `tool:${id}`;
+                if (active === jobs.get(key)) active = null;
+                jobs.delete(key);
+                continue;
+            }
+            if (c < prev && !st?.bank?.isOpen) toolGone.set(id, now);
             const gone = toolGone.get(id);
             if (gone !== undefined && now - gone <= 12 && (st?.groundItems ?? []).some((g: any) => g.id === id && g.distance <= 10)) {
                 toolGone.delete(id);

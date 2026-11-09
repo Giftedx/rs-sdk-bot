@@ -66,7 +66,7 @@ const SHARK_START = /^You start Harpooning fish\.$/;
 const messageKey = (m: {observationId?:number;tick:number;type:number;text:string}) => JSON.stringify([m.observationId??null,m.tick,m.type,m.text]);
 // A confirmed action is left alone while it animates. fish_shark replays anim(human_harpoon)
 // on every roll, one roll per6 ticks (%action_delay +5, then the equal phase). Native
-// cWx27l (2026-10-29): longest animId -1 run while the server action kept rolling was3 ticks;
+// cWx27l: longest animId -1 run while the server action kept rolling was3 ticks;
 // a48-tick time watchdog re-click landed at phase3 and dropped two live actions (9 idle ticks each).
 // After7 ticks without the harpoon animation %action_delay is stale, so a re-dispatch starts fresh.
 // A re-dispatch that lands mid-cycle prints no start message and is retried after the window.

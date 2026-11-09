@@ -22,7 +22,7 @@ number of logged-in ticks from the first input to the level-99 stamp.
 | Fletching | **49** (49, 49, 49) | 58 | **+9** | Arrows and darts from stacks, open loop 5 per tick | MEASURED |
 | Crafting | **194** (194, 194, 195) | 197 | **+3** | Gems from a booth, 27 per trip | MEASURED |
 | Herblore | **246** from Herblore 3 (246, 246, 246) | 447 | **+201** (less the ticks to reach 3) | Potions from a booth, 14 per trip | MEASURED |
-| Smithing | **1,312** (1,312, 1,313, 1,316) with a helper trading at the anvil; bank loop 1,572 x3 | 1,337 | **+25** (bank loop -235) | Platebodies at the Varrock west anvil | MEASURED |
+| Smithing | **991** (991, 992, 991) with a helper trading at the anvil; bank loop 1,572 x3 | 1,281 | **+290** (bank loop -291) | Platebodies at the Varrock west anvil | MEASURED |
 | Firemaking | **667** mean of 13 runs on two lines (642-706); north of Lumbridge 662, 646, 678 | 664 (live file) | **-3** mean; 6 of 13 runs under 664 | 157-tile line, 27 logs in the pack, helpers drop the rest; no bank | MEASURED |
 | Prayer | **1,260** (1,260, 1,260, 1,260) | 1,281 | **+21** | Bury dragon bones from a booth | MEASURED |
 | Magic | **1,762** from Magic 7 (1,762, 1,765, 1,762); 1,670 from 44 (1 run) | 1,513 (live file 1,324) | **-249** (-438 against 1,324), plus the ticks to reach 7 | Enchant jewellery from a booth | MEASURED |
@@ -226,9 +226,8 @@ Measured (preset `floor_smithing`, Varrock west bank (3185,3436) and the smithy 
 This bank loop loses to the #1 (1,337) by 235 ticks. A trip is still 14 bank ticks, because the walk back from the
 anvil (about 10 tiles) is in it. Cut, not yet measured:
 
-- A helper trades 25 bars at the anvil instead of the bank walk: smith 754 + 36 trades x 12 ticks (realistic,
-  `research/crafting-board.md`) + level-up pages = about 1,290 ticks; with 5-tick trades about 1,040. ESTIMATE from
-  MEASURED parts.
+- A helper trades 25 bars at the anvil instead of the bank walk. Measured result: 991 ticks, in
+  [Flip attempts](#smithing-helper-trades-bars-at-the-anvil-flipped-on-practice).
 
 Supplies: bronze bars 19, iron 36, steel 95, mithril 280, adamantite 340.
 
@@ -387,27 +386,60 @@ Supplies: logs 2, oak 4, willow 7, maple 13, yew 24, magic 107, tinderbox.
 ### Smithing: helper trades bars at the anvil (FLIPPED on practice)
 
 `scripts/measure/floor-smith-trade.ts`, presets `floor_smith_trade` (smither beside the Varrock west anvil, hammer)
-and `floor_smith_helper` (helper `<bot>b` at Varrock west bank with the bars). The smither never banks or walks:
-per load, both players send "Trade with" every tick until the screen opens (the second request opens it,
-`interface_trade/scripts/trade.rs2`), the helper offers All of each bar, the smither offers the products back in
-the same trade, both accept both screens, then the smither uses a bar on the anvil and picks Make 1/5/10. The
-helper banks for the next load while the smither works; its ticks are not on the smither's board.
+and `floor_smith_helper` (helper `<bot>b` at Varrock west bank with the bars). The smither never banks or walks. The
+helper banks for the next load while the smither works. The helper's ticks are not on the smither's board.
 
-| Runs | Ticks to 99 | Steady cycle (5 platebodies) |
-|---|---|---|
-| 1,312, 1,313, 1,316 | **1,312** against #1 1,337: **+25** | 37 ticks: trade 11, anvil use 2, smith 24 |
+Claim: a steady cycle of 5 platebodies takes **29 ticks**, and Smithing 1 to 99 takes **991 ticks**, 290 under the #1
+(nickironhand 1,281). Conditions: practice, 150 ms tick, `RANDOM_EVENTS=0`, supplies from the preset, helper logged in
+first, both clients on one address. Evidence: `.practice/smith-trade/`. Gap: no live run, and no run at a 300 or
+400 ms tick.
 
-`FLOOR Smithing level=99 xp=998750 ticks=1312 actions=158 ... waitTicks=14 tradeTicks=362 useTicks=157 smithTicks=779`.
+| Condition | Ticks to 99 | Steady cycle (loads 22-30) | Trade + anvil use + smith |
+|---|---|---|---|
+| Burst (default) | **991, 992, 991** | 29 | 6 + 0 + 23 |
+| `FLOOR_TRADE=old`, guard cache 5 minutes | 1,053, 1,052, 1,052 | 31 | 7 + 1 + 23 |
+| `FLOOR_TRADE=old`, guard cache 5 s | 1,211, 1,222, 1 failed run | 31-50, mean about 37 | 7-26 + 1 + 23 |
 
-- Overlap: a trade cannot open during the smith delay. With the helper requesting every tick through the
-  Make-X (`FLOOR_OVERLAP=1`), 0 of 31 trades opened while smithing (`overlapOpened=0`) and the total stayed
-  1,312. `trade.rs2` refuses a busy partner (`.busy`: delayed or a modal). The pickpocket-stun case differs: a
-  stun is not a `p_delay`.
-- Harness rules: a second request after the screen opened resets the trade (the
-  offer-to-confirm switch reads closed for one tick), and Make 5 / Make 10 run on until the bars run out, so ask
+The "trade" figure starts when the last bar goes, so it holds 3 ticks of the last `p_delay(2)`. Raw cycle totals,
+identical in all three burst runs after load 1 (81-82 ticks): 29 41 29 33 33 31 31 31 30 30 30 29 30 29 29 29 37 29
+30 29 29 29 29 29 29 29 29 29 29 30. The `old` runs with the 5-minute cache: 82-83, then 31 43 31 35 35 33 33 33 32 32
+32 31 32 31 31 31 39 31 32 31 31 31 31 31 31 31 31 31 31 32.
+
+A 5 s guard cache gives the 37-tick cycle. When the cache expires, `ownedAccounts` scans every bot folder. The scan
+blocks the event loop for about 1.2 s (1,220 ms and 1,151 ms measured), which is 8 ticks at 150 ms. Both clients in the
+process stall in the trade, and one stall failed a run (`WARN trade 2 did not deliver`). The cache lasts 5 minutes. A
+verified login clears it, because the login changes the registry file.
+
+Burst sequence, with H the helper, S the smither and T0 the first tick after the smith delay (C = the Make click
+tick, T0 = C+26):
+
+| Tick | H | S | Server result |
+|---|---|---|---|
+| T0-3 to T0-1 | requests | requests | `OpPlayerHandler` drops S's op while delayed; H's op gets `.busy` |
+| T0 | requests | requests | both `[opplayer4]` fire and the trade opens |
+| T1 | offers All of each bar | offers All of each product, accepts | S's accept comes after H's offer |
+| T2 | accepts offer screen, accepts confirm screen | accepts confirm screen, uses a bar on the anvil | trade ends; the smithing interface opens |
+| T3 | | clicks Make | |
+
+- Decode order sets the sequence. Each player's packets decode in `playerLoop` order. Players from one address share
+  a bucket in login order (`World.ts:1142`), so the helper logs in first. An offer resets both accepts (`trade.rs2`), so
+  S must accept after H's offer in T1. If the two clients have different addresses, the order is not known.
+- `Player.openMainModal` sets the modal at once, so a confirm click in the same decode passes `isComponentVisible`.
+- The client sends a use only for an item it shows, and the new bars are not on the client in T2. S keeps one bar of
+  the next load, so each load but the last arrives one bar ahead. The total bar count does not change.
+- 29 is the floor for a two-sided trade. C to T0 is 26 ticks of smith delay. The trade opens in `processPlayers` of
+  T0, so the first offer is T1. H decodes before S, so H cannot accept after S's offer until T2. The Make click needs
+  the interface that T2 opens, so it is T3. If S drops the products and does not offer, H still needs T2 for the
+  confirm screen.
+- Overlap: a trade cannot open during the smith delay. With the helper requesting every tick through the Make-X
+  (`FLOOR_OVERLAP=1`), 0 of 31 trades opened while smithing. `trade.rs2` refuses a busy partner (`.busy`: delayed or
+  a modal). The pickpocket-stun case differs: a stun is not a `p_delay`.
+- Harness rules: a request while the trade is open resets it. Make 5 and Make 10 run on until the bars run out, so ask
   only for 1, 5 or 10.
-- The margin is 25 ticks for a board trained first. Supply delivery to the helper and the first trade are in
-  the figure; the helper's bank walks are not.
+- Cycles above 29: 2 level-ups in a batch cost 1-4 ticks, because each page needs a close. Mixed loads (loads 1, 3, 18
+  and 31) use Make 1 for runs below 5.
+- The margin is for a board trained first. Supply delivery to the helper and the first trade are in the figure. The
+  helper's bank walks are not.
 
 ### Firemaking: ground logs, no banking (NOT flipped)
 

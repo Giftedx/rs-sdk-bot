@@ -21,6 +21,20 @@ export function parseObjSpawns(file: string, text: string, out = new Map<number,
     return out;
 }
 
+// Where a pickable plant stands (knowledge/pickables.json from the knowledge build: potato, wheat, onion, cabbage and
+// flax plants by loc id). Reading every map square's LOC section at run time took 147 s on the bot's own thread and the
+// server dropped the client, so the tiles come from the generated file.
+let pickables: Map<number, Tile[]> | undefined;
+export function pickableTiles(locId: number): Tile[] {
+    pickables ??= new Map(Object.entries(JSON.parse(readFileSync(join(resolve(import.meta.dir, '..', '..', '..'), 'knowledge', 'pickables.json'), 'utf8')) as Record<string, { tiles: Tile[] }>).map(([id, p]) => [Number(id), p.tiles]));
+    return pickables.get(locId) ?? [];
+}
+export const rank = (list: Tile[], at: Tile): Tile[] => {
+    const d = (t: Tile) => Math.max(Math.abs(t.x - at.x), Math.abs(t.z - at.z)) + LEVEL_STEP * Math.abs(t.level - at.level) + (crossesSea(t, at) ? SEA : 0);
+    return [...list].sort((a, b) => d(a) - d(b));
+};
+export const locsByDistance = (locId: number, at: Tile, list?: Map<number, Tile[]>): Tile[] => rank(list ? list.get(locId) ?? [] : pickableTiles(locId), at);
+
 let index: Map<number, Tile[]> | undefined;
 export function objSpawns(): Map<number, Tile[]> {
     if (index) return index;
@@ -29,8 +43,18 @@ export function objSpawns(): Map<number, Tile[]> {
     return index;
 }
 
-// Spawn tiles of `id` on `at`'s level, nearest first by straight-line distance (the route search judges the walk).
-export function spawnsByDistance(id: number, at: Tile, list = objSpawns()): Tile[] {
-    const d = (t: Tile) => Math.max(Math.abs(t.x - at.x), Math.abs(t.z - at.z));
-    return (list.get(id) ?? []).filter(t => t.level === at.level).sort((a, b) => d(a) - d(b));
-}
+// Spawn tiles of `id`, nearest first by straight-line distance with LEVEL_STEP tiles for each floor between (the route
+// search judges the walk, and the far walk takes the hubs toward the ground beneath an upstairs spawn). Ernest the
+// Chicken's fish food lies upstairs in Draynor Manor (3108,3356,1) and nowhere on the ground.
+export const LEVEL_STEP = 40;
+// A tile across water ranks SEA tiles farther: a bot standing by the Musa Point beer spawn saw the Falador hammer spawn
+// nearer than Ardougne's, by straight line, and from Ardougne the Miscellania food shop (2516,3864) ranked within the
+// seller limit, so the sweep walked up the Fremennik shore toward a boat it has no fare for.
+export const SEA = 1000;
+// Karamja: the island south of Brimhaven and west of Port Sarim.
+export const onKaramja = (p: { x: number; z: number }): boolean => p.z <= 3260 && p.x >= 2690 && p.x <= 2960;
+// Miscellania and Etceteria: the isles north of Rellekka, reached by Sailor Fjord's boat.
+const onFremennikIsles = (p: { x: number; z: number }): boolean => p.z >= 3830 && p.x >= 2490 && p.x <= 2630;
+export const landmass = (p: { x: number; z: number }): 'mainland' | 'karamja' | 'isles' => onKaramja(p) ? 'karamja' : onFremennikIsles(p) ? 'isles' : 'mainland';
+export const crossesSea = (a: { x: number; z: number }, b: { x: number; z: number }): boolean => landmass(a) !== landmass(b);
+export function spawnsByDistance(id: number, at: Tile, list = objSpawns()): Tile[] { return rank(list.get(id) ?? [], at); }
