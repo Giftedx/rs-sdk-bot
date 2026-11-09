@@ -1,26 +1,7 @@
 {
  "side": "claude-cloud-4",
- "at": 1794223699380,
+ "at": 1794224302703,
  "jobs": [
-  {
-   "account": "Fingersmith",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
-   "autopilot": "claude-cloud-4",
-   "resources": [
-    "knight:2652,3318"
-   ]
-  },
   {
    "account": "Dipstick",
    "script": "scripts/gather-combat.ts",
@@ -39,6 +20,25 @@
    "repeat": true,
    "goal": "cow training: Defence to 40 at Ardougne north field (hand job)",
    "role": "combat"
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "claude-cloud-4",
+   "resources": [
+    "knight:2652,3318"
+   ]
   },
   {
    "account": "KnightRider",
