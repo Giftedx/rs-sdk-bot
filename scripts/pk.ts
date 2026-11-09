@@ -115,7 +115,7 @@ export function combatPrayers(prayerBase: number, overhead: number | null, melee
 }
 
 // Default special-attack config from a staged kit (content specwep=true: dragon dagger 25%, longsword 25%, mace 25%,
-// rune claws 25%, magic shortbow 55%).
+// rune claws 25%, magic shortbow 35% in bows.obj:343).
 export function defaultSpec(kit: Kit, names = getObjNames()): SpecConfig | undefined {
     for (const id of kit.melee ?? []) {
         const n = names.get(id) ?? '';
@@ -125,7 +125,7 @@ export function defaultSpec(kit: Kit, names = getObjNames()): SpecConfig | undef
         if (n === 'rune_claws') return { kit: kit.melee!, bar: 'combat_claw:specbar', cost: 250, below: 0.6, style: 'melee' };
     }
     for (const id of kit.ranged ?? []) {
-        if ((names.get(id) ?? '') === 'magic_shortbow') return { kit: kit.ranged!, bar: 'combat_bow:specbar', cost: 550, below: 0.5, style: 'ranged' };
+        if ((names.get(id) ?? '') === 'magic_shortbow') return { kit: kit.ranged!, bar: 'combat_bow:specbar', cost: 350, below: 0.5, style: 'ranged' };
     }
     return undefined;
 }
@@ -167,8 +167,10 @@ const KILL_MESSAGES = ['You have defeated {}.', '{} was no match for you.', 'Wit
 const plain = (text: string) => text.trim().toLowerCase().replace(/[_\u00a0]/g, ' ');
 export const killMessage = (text: string, name: string) => KILL_MESSAGES.some(t => plain(t.replace('{}', name)) === plain(text));
 
-// Attack delays in ticks: dragon dagger 4, dragon longsword 5, magic shortbow 4 (3 on rapid), spells 5.
+// Attack delays in ticks: dragon dagger/scimitar/claws 4, longsword/mace 5, magic shortbow 4 (3 on rapid, 4 on spec per pvp_special_attack.rs2:35), spells 5.
 const TURN: Record<Style, number> = { magic: 5, ranged: 4, melee: 4 };
+const meleeWeaponDelay = (ids: readonly number[] | undefined, names = getObjNames()) =>
+    (ids ?? []).some(id => /(longsword|mace|battleaxe|warhammer|2h_sword|halberd)/.test(names.get(id) ?? '')) ? 5 : 4;
 
 // Food best first by heal; any other item with an Eat option comes after these.
 export const FOOD_ORDER = [/^shark$/i, /^cooked karambwan$/i, /^swordfish$/i, /^lobster$/i, /^bass$/i, /^tuna$/i, /^salmon$/i, /^trout$/i, /^pike$/i];
@@ -262,16 +264,18 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
     const result: FightResult = { outcome: 'timeout', ticks: 0, dealt: 0, taken: 0, eaten: 0, attacks: { magic: 0, ranged: 0, melee: 0 }, freezes: 0, specs: 0 };
     const sdk = s.sdk, start = s.tick(), want = targetName.toLowerCase();
     const startLife = sdk.getState()?.player?.lifeId;
-    let last = -1, nextAttack = start, lastAttackAt = -10, lastWalkTicks = 0, hasAttacked = false;
+    let last = -1, nextAttack = start, lastAttackAt = -10, lastWalkTicks = 0, hasAttacked = false, delayedUntil = start;
     let foodReady = start, karambwanReady = start, potionReady = start;
     let freezeReady = start, frozenUntil = start, freezeCastAt = -10, frozenTile: { x: number; z: number } | null = null, selfFrozenUntil = start;
     let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = false, rapidSet = false, pjedByNpc = false;
-    let target: NearbyPlayer | undefined, rubbed = -1, ranAt = -10;
+    let target: NearbyPlayer | undefined, rubbed = -1, ranAt = -10, prevSelf: { x: number; z: number } | null = null;
     const hits: { tick: number; damage: number; src: number }[] = [], dealtLog: { tick: number; damage: number }[] = [];
-    // Torso worn at fight start (or unequipped for a cast/shot) that is re-equipped on melee turns.
+    // Tank torso worn or carried at fight start (unequipped for a cast/shot and re-equipped on melee turns).
     const names = getObjNames();
+    const initState = sdk.getState();
     const tankIds = new Set<number>(
-        (sdk.getState()?.equipment ?? []).filter(e => e.slot === 4 && /(platebody|chainbody)/.test(names.get(e.id) ?? '')).map(e => e.id),
+        [...(initState?.equipment ?? []).filter(e => e.slot === 4), ...(initState?.inventory ?? [])]
+            .filter(e => /(^|_)(platebody|chainbody)(_|$)/.test(names.get(e.id) ?? '')).map(e => e.id),
     );
     for (;;) {
         if (!await nextTick(s)) { result.outcome = 'session ended'; log(`PK session ended against ${targetName}`); return result; }
@@ -280,6 +284,8 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         const at = me ? { x: me.worldX, z: me.worldZ } : null;
         result.ticks = now - start;
         if (!state || !me || !at) continue;
+        if (prevSelf && (at.x !== prevSelf.x || at.z !== prevSelf.z)) selfFrozenUntil = now;
+        prevSelf = { x: at.x, z: at.z };
         let maxEvent = seenEvent;
         for (const e of state.combatEvents) {
             const id = e.observationId ?? e.tick;
@@ -295,7 +301,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             if (id <= seenMessage || m.tick < start) continue;
             if (id > maxMessage) maxMessage = id;
             if (m.type === 0 && killMessage(m.text, targetName)) { result.outcome = 'kill'; log(`PK kill ${targetName} after ${result.ticks} ticks`); return result; }
-            if (/magical force stops you from moving/i.test(m.text)) selfFrozenUntil = Math.max(selfFrozenUntil, now + 8);
+            if (/magical force stops you from moving|you're stunned/i.test(m.text) && now >= selfFrozenUntil) selfFrozenUntil = now + 8;
             if (/already held by a magical force|currently immune to that spell/i.test(m.text)) {
                 freezeReady = Math.max(freezeReady, now + 4);
                 frozenUntil = Math.max(frozenUntil, now + 4);
@@ -323,6 +329,13 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         } else if (now - lastSeen > 10) { result.outcome = 'lost'; log(`PK lost ${targetName} after ${result.ticks} ticks`); return result; }
         if (result.ticks >= cap) { log(`PK timeout against ${targetName}`); return result; }
         const inv = state.inventory, slotOf = (ids: readonly number[]) => inv.find(i => ids.includes(i.id));
+        const oppCombat = Math.max(target?.combatLevel ?? 0, ...state.nearbyPlayers.filter(p => hits.some(h => h.src === p.index && now - h.tick <= 10)).map(p => p.combatLevel));
+        const oppMax = estMaxHit(oppCombat || me.combatLevel);
+        const danger = dangerReason({ hp: me.hp, maxHp: me.maxHp, food: !!bestFood(inv), prayer: state.prayers.prayerPoints, oppMax, hits, dealt: dealtLog, now });
+        if (danger && o.exitOnDanger) { result.outcome = 'danger'; result.danger = danger; log(`PK danger against ${targetName}: ${danger}`); return result; }
+        // While suspended by p_delay (DDS spec p_delay(0), potion p_delay(1), karambwan p_delay(2)), processClientsIn
+        // drops OpHeld/InvButton/OpPlayer/MoveClick and protected scripts fail p_finduid(uid); wait until un-delayed.
+        if (now < delayedUntil) continue;
         const use = (item: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }, verb: RegExp): boolean => {
             const op = item.optionsWithIndex.find(x => verb.test(x.text));
             if (!op) return false;
@@ -331,8 +344,6 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         };
         if (state.combatStyle?.currentStyle === 1) rapidSet = true;
         // Food before anything, any food best first; eating adds 3 ticks to %action_delay on the server (consume.rs2:130).
-        const oppCombat = Math.max(target?.combatLevel ?? 0, ...state.nearbyPlayers.filter(p => hits.some(h => h.src === p.index && now - h.tick <= 10)).map(p => p.combatLevel));
-        const oppMax = estMaxHit(oppCombat || me.combatLevel);
         if (me.hp <= Math.max(eatAt, oppMax + 8) && now >= foodReady) {
             const food = bestFood(inv);
             if (food) {
@@ -341,15 +352,20 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
                 nextAttack = (hasAttacked ? nextAttack : now) + 3;
                 hasAttacked = true;
                 result.eaten++;
-                // Combo-eat a cooked karambwan in the same tick when dangerously low (uses %eat_delay2, +2 %action_delay).
+                if (food.id === ITEMS.karambwan) { delayedUntil = Math.max(delayedUntil, now + 4); nextAttack = Math.max(nextAttack, delayedUntil); }
+                // Combo-eat a cooked karambwan in the same tick when dangerously low (consume_messages.dbrow:779 p_delay(2)).
                 if (me.hp <= oppMax && now >= karambwanReady && food.id !== ITEMS.karambwan) {
                     const kw = slotOf([ITEMS.karambwan]);
-                    if (kw) { use(kw, /^Eat$/i); karambwanReady = now + 3; nextAttack += 2; result.eaten++; }
+                    if (kw) {
+                        use(kw, /^Eat$/i);
+                        karambwanReady = now + 3;
+                        delayedUntil = Math.max(delayedUntil, now + 4);
+                        nextAttack = Math.max(nextAttack + 2, delayedUntil);
+                        result.eaten++;
+                    }
                 }
             }
         }
-        const danger = dangerReason({ hp: me.hp, maxHp: me.maxHp, food: !!bestFood(inv), prayer: state.prayers.prayerPoints, oppMax, hits, dealt: dealtLog, now });
-        if (danger && o.exitOnDanger) { result.outcome = 'danger'; result.danger = danger; log(`PK danger against ${targetName}: ${danger}`); return result; }
         // Deeper than the teleports reach (glory 30, spells 20): run south first.
         const reach = slotOf(ITEMS.glory) ? 30 : o.escapeSpell !== undefined ? 20 : 0;
         if (o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(inv) && reach && wildernessLevel(at.z) > reach) {
@@ -366,15 +382,15 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             continue;
         }
         const prayers = state.prayers;
-        // Drinking a potion triggers p_delay(1) on the server (consume_effects.rs2:125), suspending actions for 2 ticks.
-        // Prefer drinking during weapon cooldown windows (now < nextAttack - 1) unless prayer is exhausted.
-        if (now >= potionReady && (prayers.prayerPoints <= 5 || now < nextAttack - 1)) {
+        // Drinking a potion triggers p_delay(1) in processClientsIn (consume_effects.rs2:167), blocking client input on
+        // now+1 and now+2 (ready on now+3). Drink non-emergency potions only when now+3 <= nextAttack.
+        if (now >= potionReady && (prayers.prayerPoints <= 5 || now + 3 <= nextAttack)) {
             let potion = prayers.prayerPoints <= restoreAt ? slotOf([...ITEMS.prayerPotion, ...ITEMS.superRestore]) : undefined;
             if (!potion && poisoned) {
                 potion = slotOf(ITEMS.antipoison);
                 if (potion) poisoned = false;
             }
-            if (!potion && now < nextAttack - 1) {
+            if (!potion && now + 3 <= nextAttack) {
                 const skill = (n: string) => state.skills.find(k => k.name === n);
                 const unboosted = (n: string) => { const k = skill(n); return !!k && k.level <= k.baseLevel; };
                 if (o.kit.melee && unboosted('Strength')) potion = slotOf([...ITEMS.superStrength, ...ITEMS.strengthPotion]);
@@ -385,7 +401,8 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             if (potion) {
                 use(potion, /^Drink$/i);
                 potionReady = now + 3;
-                nextAttack = Math.max(nextAttack, now + 2);
+                delayedUntil = Math.max(delayedUntil, now + 3);
+                nextAttack = Math.max(nextAttack, delayedUntil);
                 continue;
             }
         }
@@ -442,12 +459,14 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             }
             continue;
         }
+        // When not cardinally adjacent, client interactPlayer/spellOnPlayer emits MOVE_OPCLICK + OPPLAYER* (2 USER_EVENT packets).
+        const attackPackets = adjacent(at, target) ? 1 : 2;
         // The special: equip its kit, toggle its specbar, and attack in the same tick (OpHeldHandler updates tabs[0]
         // during decodeIn before IfButtonHandler checks isComponentVisible). Keep total USER_EVENT packets <= 5.
         const spec = o.spec, energy = special(s.client), specStyle: Style = spec?.style ?? 'melee';
         if (spec && energy.energy >= spec.cost && lowHealth(seen, spec.below) && (specStyle !== 'melee' || canReachMelee)
             && (!guarded.has(specStyle) || lowHealth(seen, 0.25))) {
-            let budget = 5 - 1 - (energy.on ? 0 : 1); // reserve 1 for attack + 1 for specbar
+            let budget = 5 - attackPackets - (energy.on ? 0 : 1);
             const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
             for (const id of [...spec.kit, ...(specStyle === 'melee' ? tankIds : [])]) {
                 if (state.equipment.some(e => e.id === id)) continue;
@@ -466,7 +485,11 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             result.specs++; result.attacks[specStyle]++;
             last = Math.max(0, rotation.indexOf(specStyle));
             const walkTicks = specStyle === 'melee' ? ((me.runEnergy ?? 100) >= 100 ? Math.ceil(Math.max(0, cheb(at, target) - 1) / 2) : Math.max(0, cheb(at, target) - 1)) : 0;
-            const delay = specStyle === 'ranged' && rapidSet ? 3 : TURN[specStyle];
+            // pvp_special_attack.rs2:35 always uses oc_param($weapon, attackrate) (4 for MSB/DDS/claws, 5 for longsword/mace), ignoring Rapid.
+            const delay = specStyle === 'melee' ? meleeWeaponDelay(spec.kit, names) : TURN[specStyle];
+            if (specStyle === 'melee' && walkTicks === 0 && spec.kit.some(id => /^dragon_dagger/.test(names.get(id) ?? ''))) {
+                delayedUntil = Math.max(delayedUntil, now + 2); // pvp_dragon_dagger.rs2:11 p_delay(0)
+            }
             lastAttackAt = now; lastWalkTicks = walkTicks;
             nextAttack = now + walkTicks + delay;
             hasAttacked = true;
@@ -493,7 +516,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
                 continue;
             }
         }
-        let budget = 5 - 1; // reserve 1 for the attack packet
+        let budget = 5 - attackPackets;
         const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
         for (const id of [...(o.kit[turn.style] ?? []), ...(turn.style === 'melee' ? tankIds : [])]) {
             if (state.equipment.some(e => e.id === id)) continue;
@@ -530,7 +553,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         result.attacks[turn.style]++;
         last = turn.index;
         const walkTicks = turn.style === 'melee' ? ((me.runEnergy ?? 100) >= 100 ? Math.ceil(Math.max(0, cheb(at, target) - 1) / 2) : Math.max(0, cheb(at, target) - 1)) : 0;
-        const delay = turn.style === 'ranged' && rapidSet ? 3 : TURN[turn.style];
+        const delay = turn.style === 'ranged' && rapidSet ? 3 : turn.style === 'melee' ? meleeWeaponDelay(o.kit.melee, names) : TURN[turn.style];
         lastAttackAt = now; lastWalkTicks = walkTicks;
         nextAttack = now + walkTicks + delay;
         hasAttacked = true;
