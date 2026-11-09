@@ -209,7 +209,8 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     // Fight one target until it dies, logs out, leaves the Wilderness, or the chase stalls.
     const chase = async (name: string): Promise<'kill' | 'gone' | 'left' | 'stall' | 'flee' | 'dead' | 'stop'> => {
         stats.chases++;
-        let lastTile: { x: number; z: number } | null = null, lastDist = Infinity, frozeAt = -100, contactAt = session.tick();
+        let lastTile: { x: number; z: number } | null = null, lastDist = Infinity, contactAt = session.tick();
+        let held = false, freezeReady = 0;
         while (!stopped() && Date.now() < end) {
             // A pass that used no game tick waits one, so the client and other sessions keep running.
             if (session.tick() === spun) await sdk.waitForTicks(1);
@@ -240,12 +241,14 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 contactAt = session.tick();
                 const fleeing = near.distance > lastDist && near.distance >= 2;
                 lastDist = near.distance;
-                // Freeze first, at first reach, before the target can run; freeze again when it runs.
-                if (freeze && canAttack(m, near) && (frozeAt < 0 || (fleeing && session.tick() - frozeAt > 25))) {
+                // Freeze first, at first reach, before the target can run; freeze again when it runs. A splash counts
+                // as a cast in the SDK (success with hit false), so only a hit holds the target; a splash recasts in 5 ticks.
+                if (freeze && canAttack(m, near) && session.tick() >= freezeReady && (!held || fleeing)) {
                     const r = await bot.castSpell(near as any, freeze);
-                    frozeAt = session.tick();
-                    if (r.success) stats.freezes++;
-                    emit({ e: 'freeze', target: name, spell: freeze, ok: r.success, msg: r.success ? undefined : r.message });
+                    const hit = r.success && r.hit !== false;
+                    if (hit) { held = true; stats.freezes++; }
+                    freezeReady = session.tick() + (hit ? 25 : 5);
+                    emit({ e: 'freeze', target: name, spell: freeze, ok: r.success, hit, msg: r.success ? undefined : r.message });
                     continue;
                 }
                 if (!canAttack(m, near)) {
@@ -254,11 +257,13 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                     continue;
                 }
                 // The tribrid fight itself: scripts/pk.ts fightPlayer (style off the overhead, gear switch per turn,
-                // food, prayer, glory escape). It returns "lost" after 10 ticks out of view; the chase then re-aims.
+                // food, prayer, glory escape), 50 ticks at a time. It keeps waiting on a target that is still in the
+                // scene but out of range or out of the Wilderness (practice: 600 idle ticks), so the chase re-checks
+                // range and re-aims between calls.
                 stats.attacks++;
                 const fight = await fightPlayer(session, name, {
                     kit, freeze: !!freeze, eatAt: cfg.eatAt,
-                    escapeAt: Math.ceil((me()?.maxHp ?? 99) * cfg.fleeAt / 100), damageSpell: spellId(cfg.spell), cap: 600,
+                    escapeAt: Math.ceil((me()?.maxHp ?? 99) * cfg.fleeAt / 100), damageSpell: spellId(cfg.spell), cap: 50,
                     log: line => emit({ e: "fight", line }),
                 });
                 emit({ e: "fight-end", target: name, outcome: fight.outcome, ticks: fight.ticks, dealt: fight.dealt, taken: fight.taken, eaten: fight.eaten });
