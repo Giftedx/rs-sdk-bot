@@ -1,5 +1,10 @@
 import { expect, test } from 'bun:test';
-import { attackable, bestFood, dangerReason, estMaxHit, freezeSpell, killMessage, lowHealth, nextStyle, nextTick, observePlayer, protectedStyles, skulled, SPELLS, weaponStyle, wildernessLevel } from './pk';
+import {
+    attackable, bestDamageSpell, bestFood, castableFreeze, combatPrayers, dangerReason, defaultSpec,
+    estMaxHit, fightPlayer, freezeDuration, freezeSpell, ITEMS, killMessage, lowHealth,
+    negativeCastArmour, nextStyle, nextTick, observePlayer, PRAYER, protectedStyles, skulled, SPELLS,
+    weaponStyle, wildernessLevel,
+} from './pk';
 
 test('Wilderness level follows wilderness_levels.rs2: surface from z 3520, the dungeon from z 9920', () => {
     expect(wildernessLevel(3519)).toBe(0);
@@ -25,6 +30,64 @@ test('the freeze is the best one the Magic level allows', () => {
     expect(freezeSpell(50)).toBe(SPELLS.snare);
     expect(freezeSpell(20)).toBe(SPELLS.bind);
     expect(freezeSpell(19)).toBeNull();
+});
+
+test('castableFreeze and freezeDuration respect runes and Protect from Magic halving', () => {
+    const runes = (earth: number, water: number, nature: number) => [
+        { id: ITEMS.earthRune, count: earth },
+        { id: ITEMS.waterRune, count: water },
+        { id: ITEMS.natureRune, count: nature },
+    ];
+    expect(castableFreeze(99, runes(5, 5, 4))).toBe(SPELLS.entangle);
+    expect(castableFreeze(99, runes(4, 4, 3))).toBe(SPELLS.snare);
+    expect(castableFreeze(99, runes(3, 3, 2))).toBe(SPELLS.bind);
+    expect(castableFreeze(99, runes(2, 2, 1))).toBeNull();
+    expect(freezeDuration(SPELLS.entangle, false)).toBe(24);
+    expect(freezeDuration(SPELLS.entangle, true)).toBe(12);
+    expect(freezeDuration(SPELLS.snare, true)).toBe(8);
+    expect(freezeDuration(SPELLS.bind, true)).toBe(4);
+});
+
+test('bestDamageSpell selects the strongest fire spell for Magic level and carried runes', () => {
+    expect(bestDamageSpell(75, [{ id: ITEMS.bloodRune, count: 1 }])).toBe(SPELLS.fireWave);
+    expect(bestDamageSpell(75, [{ id: ITEMS.deathRune, count: 1 }])).toBe(SPELLS.fireBlast);
+    expect(bestDamageSpell(50, [{ id: ITEMS.chaosRune, count: 1 }])).toBe(SPELLS.fireBolt);
+    expect(bestDamageSpell(20, [{ id: ITEMS.mindRune, count: 1 }])).toBe(SPELLS.fireStrike);
+    expect(bestDamageSpell(99, [])).toBe(SPELLS.fireWave);
+});
+
+test('combatPrayers activates Steel Skin + Protect Item + overhead and toggles melee boosts only on melee turns', () => {
+    const melee = combatPrayers(99, PRAYER.melee, true);
+    expect(melee.want).toEqual([PRAYER.item, PRAYER.steelSkin, PRAYER.melee, PRAYER.ultimateStrength, PRAYER.incredibleReflexes]);
+    expect(melee.off).toEqual([]);
+    const magic = combatPrayers(99, PRAYER.magic, false);
+    expect(magic.want).toEqual([PRAYER.item, PRAYER.steelSkin, PRAYER.magic]);
+    expect(magic.off).toEqual([PRAYER.ultimateStrength, PRAYER.incredibleReflexes]);
+    const low = combatPrayers(15, PRAYER.melee, true);
+    expect(low.want).toEqual([PRAYER.rockSkin, PRAYER.superhumanStrength, PRAYER.clarityOfThought]);
+});
+
+test('defaultSpec identifies special-attack weapons from kit', () => {
+    expect(defaultSpec({ melee: [1231, 1201], ranged: [861] })).toEqual({
+        kit: [1231, 1201], bar: 'combat_stabsword:specbar', cost: 250, below: 0.65, style: 'melee',
+    });
+    expect(defaultSpec({ melee: [1305, 1201] })?.bar).toBe('combat_hacksword:specbar');
+    expect(defaultSpec({ ranged: [861] })).toEqual({
+        kit: [861], bar: 'combat_bow:specbar', cost: 550, below: 0.5, style: 'ranged',
+    });
+    expect(defaultSpec({ magic: [1401] })).toBeUndefined();
+});
+
+test('negativeCastArmour orders penalizing armour by torso, legs, shield, helm and skips melee', () => {
+    const worn = [
+        { id: 1163, slot: 0 }, // rune_full_helm
+        { id: 1127, slot: 4 }, // rune_platebody
+        { id: 1201, slot: 5 }, // rune_kiteshield
+        { id: 1079, slot: 7 }, // rune_platelegs
+    ];
+    expect(negativeCastArmour(worn, 'melee', new Set())).toEqual([]);
+    expect(negativeCastArmour(worn, 'magic', new Set()).map(x => x.slot)).toEqual([4, 7, 5, 0]);
+    expect(negativeCastArmour(worn, 'ranged', new Set()).map(x => x.slot)).toEqual([4, 7, 0]);
 });
 
 test('style turns follow the rotation and skip a style that is not usable', () => {
@@ -116,3 +179,67 @@ test('a tick wait resolves false once the session ends, so loops stop instead of
     expect(await second).toBe(false);
     expect(await nextTick(session)).toBe(false);
 });
+
+test('fightPlayer records same-tick multi-hit events/messages, executes same-tick spec, and skips ranged melee when self-frozen', async () => {
+    let tick = 10;
+    const actions: string[] = [];
+    const appearance = new Uint16Array(12);
+    appearance[3] = 1231 + 512;
+    const client = {
+        var: { 300: 1000, 301: 0, 172: 1 },
+        players: [null, { headicons: 0, appearance, health: 20, totalHealth: 99 }],
+    };
+    const state: any = {
+        player: { worldX: 3094, worldZ: 3555, combatLevel: 126, hp: 99, maxHp: 99, runEnergy: 100, lifeId: 1 },
+        skills: [{ name: 'Magic', level: 99, baseLevel: 99 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+        prayers: { prayerPoints: 99, activePrayers: new Array(20).fill(false) },
+        inventory: [
+            { slot: 0, id: 1231, name: 'Dragon dagger(p)', count: 1, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+            { slot: 1, id: 861, name: 'Magic shortbow', count: 1, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+        ],
+        equipment: [{ slot: 3, id: 1401, name: 'Mystic fire staff', count: 1, optionsWithIndex: [] }],
+        nearbyPlayers: [{ index: 1, name: 'Dummy', combatLevel: 126, x: 3095, z: 3555, distance: 1 }],
+        combatEvents: [
+            { observationId: 5, tick: 11, type: 'damage_dealt', targetType: 'other_player', damage: 18 },
+            { observationId: 5, tick: 11, type: 'damage_dealt', targetType: 'other_player', damage: 14 },
+        ],
+        gameMessages: [],
+    };
+    const session: any = {
+        client,
+        tick: () => tick,
+        ended: new Promise(() => {}),
+        onTick: (cb: () => void) => {
+            setTimeout(() => {
+                tick++;
+                if (tick === 12) {
+                    state.gameMessages = [
+                        { observationId: 9, tick: 12, type: 0, text: 'A magical force stops you from moving!' },
+                        { observationId: 9, tick: 12, type: 0, text: 'You have defeated Dummy.' },
+                    ];
+                }
+                cb();
+            }, 0);
+            return () => {};
+        },
+        sdk: {
+            getState: () => state,
+            sendUseItem: (slot: number, op: number) => { actions.push(`use:${slot}:${op}`); },
+            sendClickComponent: (id: number) => { actions.push(`click:${id}`); },
+            sendInteractPlayer: (idx: number, op: number) => { actions.push(`attack:${idx}:${op}`); },
+            sendSpellOnPlayer: (idx: number, spell: number) => { actions.push(`spell:${idx}:${spell}`); },
+            sendTogglePrayer: (p: number) => { state.prayers.activePrayers[p] = !state.prayers.activePrayers[p]; actions.push(`pray:${p}`); },
+        },
+    };
+    const res = await fightPlayer(session, 'Dummy', {
+        kit: { magic: [1401], ranged: [861], melee: [1231] },
+        spec: { kit: [1231], bar: 'combat_stabsword:specbar', cost: 250, below: 0.5 },
+        log: () => {},
+    });
+    expect(res.outcome).toBe('kill');
+    expect(res.dealt).toBe(32); // both same-tick observationId=5 hits counted
+    expect(res.specs).toBe(1);
+    expect(actions.filter(a => !a.startsWith('pray:'))).toEqual(['use:0:2', 'click:7562', 'attack:1:2']);
+    expect(actions.length).toBeLessThanOrEqual(5); // respects 5-packet USER_EVENT limit
+});
+

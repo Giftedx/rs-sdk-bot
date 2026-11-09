@@ -16,7 +16,7 @@ import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { tradePartners } from '../packages/core/src/tradeguard';
 import { readOpponent, readOpponents } from '../packages/core/src/opponent';
 import { componentId } from '../packages/core/src/logout';
-import { bestFood, dangerReason, estMaxHit, fightPlayer, type Kit } from './pk';
+import { bestFood, dangerReason, defaultSpec, estMaxHit, fightPlayer, type Kit } from './pk';
 
 // Surface Wilderness (content area_wilderness wilderness_zones: 0_46_55 to 3_52_99, 8 tiles per level).
 export function wildLevel(x: number, z: number): number {
@@ -216,11 +216,16 @@ export function sweep(maxWild: number): { x: number; z: number }[] {
 }
 
 type Item = { id: number; name: string; slot?: number };
-// Fight kit for scripts/pk.ts: melee wields the worn weapon and shield, ranged a carried bow (RANGED, default any bow),
-// magic a carried staff. Magic with no staff casts with whatever is wielded (an empty list switches nothing).
+const MELEE_WEAPON = /dagger|scimitar|longsword|sword|mace|battleaxe|warhammer|spear|halberd/i;
+// Fight kit for scripts/pk.ts: melee wields the worn weapon and shield (or a carried melee weapon/shield if a bow or
+// staff is worn at start), ranged a carried bow (RANGED, default any bow), magic a carried staff.
 export function kitFrom(worn: readonly Item[], carried: readonly Item[], ranged = /bow$/i): Kit {
     const kit: Kit = { magic: [] };
-    const melee = worn.filter(i => i.slot === 3 || i.slot === 5).filter(i => !ranged.test(i.name) && !/staff/i.test(i.name)).map(i => i.id);
+    const wornWep = worn.find(i => i.slot === 3 && !ranged.test(i.name) && !/staff/i.test(i.name));
+    const wornShield = worn.find(i => i.slot === 5);
+    const wep = wornWep ?? carried.find(i => !ranged.test(i.name) && !/staff/i.test(i.name) && MELEE_WEAPON.test(i.name));
+    const shield = wornShield ?? (wep ? carried.find(i => /shield$/i.test(i.name)) : undefined);
+    const melee = [wep?.id, shield?.id].filter((id): id is number => id !== undefined);
     if (melee.length) kit.melee = melee;
     const bow = [...worn, ...carried].find(i => ranged.test(i.name));
     if (bow) kit.ranged = [bow.id];
@@ -325,12 +330,14 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     const hits: { tick: number; damage: number; src: number }[] = [];
     let seenHit = 0;
     const recordHits = () => {
+        let maxHit = seenHit;
         for (const e of sdk.getState()?.combatEvents ?? []) {
             const id = e.observationId ?? e.tick;
             if (id <= seenHit) continue;
-            seenHit = id;
+            if (id > maxHit) maxHit = id;
             if (e.type === 'damage_taken' && e.sourceType === 'other_player') hits.push({ tick: session.tick(), damage: e.damage, src: e.sourceIndex });
         }
+        seenHit = maxHit;
     };
     const GLORY = /^amulet of glory\([1-4]\)$/i;
     const canTeleport = () => (sdk.getSkill('Magic')?.level ?? 1) >= 25 && sdk.getInventory().some(i => /^law rune$/i.test(i.name))
@@ -448,19 +455,20 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                     continue;
                 }
                 // The tribrid fight itself: scripts/pk.ts fightPlayer (style off the overhead, gear switch per turn,
-                // food, prayer, glory escape), 12 ticks at a time. It keeps waiting on a target that is still in the
-                // scene but out of range or out of the Wilderness (practice: 600 idle ticks), so the chase re-checks
-                // range and re-aims between calls.
+                // special, food, prayer, glory escape). It exits immediately if the target leaves range or the
+                // Wilderness, exceeds maxWild, or a stop condition fires.
                 stats.attacks++;
                 const fight = await fightPlayer(session, name, {
                     // eatAt is a percentage here and an HP value in fightPlayer. Live, a 26 HP account given 50 ate a shark every
                     // 3 ticks at full HP.
-                    kit, freeze: freezeNow() !== null && freezeNow() === freezeSpell(magic), eatAt: Math.ceil((me()?.maxHp ?? 99) * cfg.eatAt / 100), exitOnDanger: true,
-                    escapeAt: Math.ceil((me()?.maxHp ?? 99) * cfg.fleeAt / 100), damageSpell: cfg.spell.toUpperCase() === 'AUTO' ? bestFireSpell(magic, sdk.getInventory()) : spellId(cfg.spell), cap: 12,
+                    kit, spec: defaultSpec(kit), freeze: freezeNow() !== null, eatAt: Math.ceil((me()?.maxHp ?? 99) * cfg.eatAt / 100), exitOnDanger: true,
+                    escapeAt: Math.ceil((me()?.maxHp ?? 99) * cfg.fleeAt / 100), damageSpell: cfg.spell.toUpperCase() === 'AUTO' ? bestFireSpell(magic, sdk.getInventory()) : spellId(cfg.spell),
+                    cap: 120, maxWild: cfg.maxWild, maxDistance: 15, stop: () => stopped() || Date.now() >= end,
                     log: line => emit({ e: "fight", line }),
                 });
                 emit({ e: "fight-end", target: name, outcome: fight.outcome, ticks: fight.ticks, dealt: fight.dealt, taken: fight.taken, eaten: fight.eaten });
                 stats.eats += fight.eaten;
+                stats.freezes += fight.freezes;
                 if (fight.outcome === "kill") {
                     stats.kills++;
                     const at = fight.targetAt ?? lastTile;
