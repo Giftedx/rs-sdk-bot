@@ -13,6 +13,7 @@
   "rune-continuation-saved": ["packages/practice/src/rune-continuation-proof.ts"],
   "saved-consumer-state": ["packages/practice/src/ammo-order-proof.ts"],
   "saved-druid-meats-consumer": ["packages/practice/src/druid-meats-proof.ts"],
+  "saved-ge-bulk-state": ["packages/practice/src/ge-bulk-order-proof.ts"],
   "saved-magic-order-consumer": ["packages/practice/src/magic-order-proof.ts"],
   "saved-quest-complete": ["packages/practice/src/quest-order-proof.ts"],
   "session-recovery-only-verified": ["scripts/session-check.ts"]
