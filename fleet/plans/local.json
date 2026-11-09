@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794221376160,
+ "at": 1794221986397,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -157,7 +157,7 @@
    "env": {
     "ROUNDS": "1"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true,
    "goal": "Strength 30 on chickens so it can hit hard enough to PK",
@@ -238,21 +238,21 @@
   },
   {
    "account": "mmthv2350",
-   "script": "scripts/goldfarm.ts",
+   "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
+    "PEN": "3017,3288",
+    "TICKS": "3000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
+   "goal": "feathers at the chicken pen 3017,3288",
+   "role": "helper",
+   "template": "feathers@3017,3288",
    "autopilot": "local",
    "resources": [
-    "knight:2653,3300"
+    "pen:3017,3288"
    ]
   },
   {
@@ -314,21 +314,24 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
+    "ITEMS": "rune arrowtips|adamant arrowtips",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "goal": "buy rune and adamant arrowtips at Catherby",
+   "role": "bank",
+   "template": "shop-arrowtips",
    "autopilot": "local",
    "resources": [
-    "knight:2669,3298"
+    "shop:catherby"
    ]
   },
   {
