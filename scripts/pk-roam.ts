@@ -3,7 +3,7 @@
 // first, runs to where that target will be (cutting it off on its way south), freezes it when it runs, and keeps
 // attacking with the style the target does not protect against until the target dies, logs out or leaves.
 //
-// usage: bun scripts/pk-roam.ts <account> [MAX_MINUTES=20] [MAX_WILD=56] [EAT_AT=50] [FLEE_AT=30] [SPELL=FIRE_BOLT]
+// usage: bun scripts/pk-roam.ts <account> [MAX_MINUTES=20] [MAX_WILD=56] [EAT_AT=50] [FLEE_AT=30] [SPELL=AUTO]
 //        [RANGED=bow-name-regex] [LOOT=1] [FREEZE=1] [LOOT_MIN=1000] [BANK_AT=100000]
 // The account starts south of the Wilderness with its gear worn and food in its inventory.
 // Stop files: .practice/stop-<account>, .practice/stop-pk-hunt (shared with scripts/pk-hunt.ts).
@@ -143,6 +143,16 @@ export function spellId(name: string): number {
     return SPELL_IDS[name.toUpperCase()] ?? (Number.isInteger(n) && n > 0 ? n : SPELL_IDS.FIRE_BOLT);
 }
 
+// The strongest fire spell the Magic level and carried runes allow (a fire staff or fire runes assumed):
+// Fire Wave 75 (blood), Fire Blast 59 (death), Fire Bolt 35 (chaos), else Fire Strike.
+export function bestFireSpell(magic: number, carried: readonly { id: number; count: number }[]): number {
+    const has = (id: number) => carried.some(i => i.id === id && i.count > 0);
+    if (magic >= 75 && has(565)) return SPELL_IDS.FIRE_WAVE!;
+    if (magic >= 59 && has(560)) return SPELL_IDS.FIRE_BLAST!;
+    if (magic >= 35 && has(562)) return SPELL_IDS.FIRE_BOLT!;
+    return SPELL_IDS.FIRE_STRIKE!;
+}
+
 // The account's server, from the SERVER line of its bot.env (the same file openBot reads).
 export function accountServer(name: string, root = resolve(import.meta.dir, '..')): string {
     return serverFromEnv(readFileSync(join(root, 'vendor', 'rs-sdk', 'bots', name, 'bot.env'), 'utf8'));
@@ -259,13 +269,13 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                     continue;
                 }
                 // The tribrid fight itself: scripts/pk.ts fightPlayer (style off the overhead, gear switch per turn,
-                // food, prayer, glory escape), 50 ticks at a time. It keeps waiting on a target that is still in the
+                // food, prayer, glory escape), 12 ticks at a time. It keeps waiting on a target that is still in the
                 // scene but out of range or out of the Wilderness (practice: 600 idle ticks), so the chase re-checks
                 // range and re-aims between calls.
                 stats.attacks++;
                 const fight = await fightPlayer(session, name, {
                     kit, freeze: !!freeze, eatAt: cfg.eatAt,
-                    escapeAt: Math.ceil((me()?.maxHp ?? 99) * cfg.fleeAt / 100), damageSpell: spellId(cfg.spell), cap: 50,
+                    escapeAt: Math.ceil((me()?.maxHp ?? 99) * cfg.fleeAt / 100), damageSpell: cfg.spell.toUpperCase() === 'AUTO' ? bestFireSpell(magic, sdk.getInventory()) : spellId(cfg.spell), cap: 12,
                     log: line => emit({ e: "fight", line }),
                 });
                 emit({ e: "fight-end", target: name, outcome: fight.outcome, ticks: fight.ticks, dealt: fight.dealt, taken: fight.taken, eaten: fight.eaten });
@@ -426,14 +436,14 @@ const arg = (args: string[], key: string, d: string) => args.find(a => a.startsW
 
 if (import.meta.main) {
     const [name, ...args] = process.argv.slice(2);
-    if (!name) throw new Error('usage: bun scripts/pk-roam.ts <account> [MAX_MINUTES=20] [MAX_WILD=56] [EAT_AT=50] [FLEE_AT=30] [SPELL=FIRE_BOLT] [RANGED=regex] [LOOT=1] [FREEZE=1] [LOOT_MIN=1000] [BANK_AT=100000]');
+    if (!name) throw new Error('usage: bun scripts/pk-roam.ts <account> [MAX_MINUTES=20] [MAX_WILD=56] [EAT_AT=50] [FLEE_AT=30] [SPELL=AUTO] [RANGED=regex] [LOOT=1] [FREEZE=1] [LOOT_MIN=1000] [BANK_AT=100000]');
     const stop = () => existsSync('.practice/stop-' + name) || existsSync('.practice/stop-pk-hunt');
     if (stop()) throw new Error('PK stop file present');
     const ranged = arg(args, 'RANGED', '');
     const cfg: Cfg = {
         maxMs: Number(arg(args, 'MAX_MINUTES', '20')) * 60_000, maxWild: Number(arg(args, 'MAX_WILD', '56')),
         eatAt: Number(arg(args, 'EAT_AT', '50')), fleeAt: Number(arg(args, 'FLEE_AT', '30')),
-        spell: arg(args, 'SPELL', 'FIRE_BOLT'), ranged: ranged ? new RegExp(ranged, 'i') : undefined,
+        spell: arg(args, 'SPELL', 'AUTO'), ranged: ranged ? new RegExp(ranged, 'i') : undefined,
         loot: arg(args, 'LOOT', '1') === '1', freeze: arg(args, 'FREEZE', '1') === '1',
         lootMin: Number(arg(args, 'LOOT_MIN', '1000')), bankAt: Number(arg(args, 'BANK_AT', '100000')),
     };

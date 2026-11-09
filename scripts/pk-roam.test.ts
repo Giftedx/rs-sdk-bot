@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { canAttack, escapeZ, freezeSpell, intercept, itemCost, kitFrom, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
+import { bestFireSpell, canAttack, escapeZ, freezeSpell, intercept, itemCost, kitFrom, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
 
 test('wildLevel: 8 tiles per level from z 3520 inside x 2944-3391', () => {
     expect(wildLevel(3094, 3519)).toBe(0);
@@ -132,4 +132,11 @@ test('makeValuer: live market price, cost fallback, coins at 1, local server ski
     const local = makeValuer('localhost:8888', async () => { throw Error('must not call'); });
     expect(await local(1215)).toBe(itemCost(1215));
     expect(itemCost(1215)).toBe(30000);
+});
+
+test('bestFireSpell picks by Magic level and the runes carried', () => {
+    expect(bestFireSpell(91, [{ id: 565, count: 10 }, { id: 560, count: 10 }])).toBe(1189);
+    expect(bestFireSpell(91, [{ id: 560, count: 10 }, { id: 562, count: 10 }])).toBe(1181);
+    expect(bestFireSpell(70, [{ id: 565, count: 10 }, { id: 562, count: 10 }])).toBe(1169);
+    expect(bestFireSpell(91, [{ id: 560, count: 0 }])).toBe(1158);
 });
