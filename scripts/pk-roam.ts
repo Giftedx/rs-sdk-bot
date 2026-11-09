@@ -36,7 +36,7 @@ const clampWild = (p: { x: number; z: number }) => ({ x: Math.min(3391, Math.max
 // Roster tile and speed; the rest is known only for players in view (client state and the opponent sensor).
 export type Track = {
     name: string; x: number; z: number; combatLevel: number; vx: number; vz: number;
-    fighting?: 'npc' | 'player'; skulled?: boolean; protect?: readonly string[]; hpFrac?: number;
+    fighting?: 'npc' | 'player'; skulled?: boolean; protect?: readonly string[]; hpFrac?: number; weapon?: number;
 };
 
 // Multi-combat zones: maps/multiway.csv lists 8x8 zones as level_mapX_mapZ_localX_localZ (engine GameMap.loadCsvMap).
@@ -111,7 +111,7 @@ export const MIN_ESCAPE_TILES = 40;
 // The best prey we can attack at the meeting tile and freeze before it runs out of range. In single-way combat a
 // player already fighting another player, or claimed by another of our hunters, cannot be attacked; in multi-combat
 // both are fair game and a claimed target is ganged.
-export function pickTrack(me: { x: number; z: number; combat: number; name?: string }, tracks: Track[], friends: ReadonlySet<string>, maxWild: number,
+export function pickTrack(me: { x: number; z: number; combat: number; name?: string; weaponValue?: number }, tracks: Track[], friends: ReadonlySet<string>, maxWild: number,
     skip: ReadonlySet<string> = new Set(), minEscape = MIN_ESCAPE_TILES, claims: Claims = new Map(), now = Date.now(), multiAt: (x: number, z: number) => boolean = isMulti) {
     let best: { track: Track; at: { x: number; z: number; ticks: number }; score: number } | null = null;
     for (const t of tracks) {
@@ -126,6 +126,9 @@ export function pickTrack(me: { x: number; z: number; combat: number; name?: str
         if (!multiHere && (t.fighting === 'player' || claimedByOther)) continue;
         // Survival first: never pick a fight with someone stronger, or with a crowd round them.
         if (t.combatLevel > me.combat + OUTCLASS_GAP) continue;
+        // Live: Goondelf (combat 126, dragon dagger) out-hit Mightyrod (126, adamant scimitar) about 10 to 1. At about
+        // our combat level, a weapon worth more than twice ours means we lose the trade.
+        if (me.weaponValue !== undefined && t.weapon !== undefined && t.combatLevel >= me.combat - 5 && itemCost(t.weapon) > 2 * me.weaponValue) continue;
         if (tracks.filter(o => o !== t && !friends.has(o.name.toLowerCase()) && cheb(o, t) <= 6).length >= PILE_SIZE) continue;
         const score = preyScore(t, at.ticks, multiHere && claimedByOther);
         if (!best || score < best.score) best = { track: t, at, score };
@@ -169,6 +172,17 @@ function connectRadar(server: string, radar: Radar) {
 }
 
 // Strongest freeze the account can cast (components from pack/interface.pack magic:bind/snare/entangle).
+const FREEZE_RUNES: Record<number, [number, number, number]> = { 1592: [5, 5, 4], 1582: [4, 4, 3], 1572: [3, 3, 2] };
+// The strongest freeze the Magic level allows and the pack holds the runes for (557 earth, 555 water, 561 nature).
+// Live: Mightyrod (Magic 91) tried Entangle with 1 water and no nature runes: "Not enough runes to cast spell".
+export function castableFreeze(magic: number, carried: readonly { id: number; count: number }[]): number | null {
+    const held = (id: number) => carried.filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+    for (const spell of [1592, 1582, 1572]) {
+        const [earth, water, nature] = FREEZE_RUNES[spell]!;
+        if (freezeSpell(magic) !== null && freezeSpell(magic)! >= spell && held(557) >= earth && held(555) >= water && held(561) >= nature) return spell;
+    }
+    return null;
+}
 export function freezeSpell(magic: number): number | null {
     return magic >= 79 ? 1592 : magic >= 50 ? 1582 : magic >= 20 ? 1572 : null;
 }
@@ -234,7 +248,9 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     const end = Date.now() + cfg.maxMs;
     const food = () => sdk.getInventory().filter(i => (i.optionsWithIndex ?? []).some((o: any) => /^eat$/i.test(o.text)));
     const magic = sdk.getSkill('Magic')?.baseLevel ?? 1;
-    const freeze = cfg.freeze ? freezeSpell(magic) : null;
+    // The fight loop casts the freeze the level allows, so it freezes only when that one is castable.
+    const freezeNow = () => cfg.freeze ? castableFreeze(magic, sdk.getInventory()) : null;
+    const freeze = freezeNow();
     const stats = { attacks: 0, kills: 0, deaths: 0, eats: 0, freezes: 0, chases: 0, loot: [] as string[], lootValue: 0, banked: 0, escapes: 0, targets: [] as string[] };
     const walker = await sessionWalker(session);
     const skip = new Set<string>();
@@ -247,7 +263,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             const o = seen.get(key);
             const fighting = p.inCombat && (p.combatTargetType === 'npc' || p.combatTargetType === 'player') ? p.combatTargetType : undefined;
             all.set(key, { name: p.name, x: p.x, z: p.z, combatLevel: p.combatLevel, vx: old?.vx ?? 0, vz: old?.vz ?? 0, fighting,
-                skulled: o?.skulled, protect: o?.protect, hpFrac: o?.hp ? o.hp.current / o.hp.max : undefined });
+                skulled: o?.skulled, protect: o?.protect, hpFrac: o?.hp ? o.hp.current / o.hp.max : undefined, weapon: o?.worn.rhand });
         }
         return [...all.values()];
     };
@@ -263,10 +279,12 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
         } catch { /* claims are a courtesy between our hunters */ }
     };
     const myName = session.name.toLowerCase();
+    // Our own weapon's value: the best of the staged melee and ranged weapons.
+    const myWeaponValue = () => Math.max(0, ...[...(kit.melee ?? []), ...(kit.ranged ?? []), ...(kit.magic ?? [])].map(id => itemCost(id)));
     const claim = (target: string) => writeClaims(c => c.set(target.toLowerCase(), { hunter: myName, at: Date.now() }));
     const release = (target: string) => writeClaims(c => { if (c.get(target.toLowerCase())?.hunter === myName) c.delete(target.toLowerCase()); });
     const pickNow = (m: { x: number; z: number; combat: number }) =>
-        pickTrack({ ...m, name: myName }, tracks(), friends, cfg.maxWild, skip, MIN_ESCAPE_TILES, readClaims(), Date.now());
+        pickTrack({ ...m, name: myName, weaponValue: myWeaponValue() }, tracks(), friends, cfg.maxWild, skip, MIN_ESCAPE_TILES, readClaims(), Date.now());
     let wentIn = false;
     let spun = -1;
     // The fight kit is read once, as staged: the worn weapon and shield, a bow and a staff carried.
@@ -388,9 +406,10 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 if (held && lastSeenAt && cheb(lastSeenAt, near) >= 1) { held = false; freezeReady = Math.max(freezeReady, session.tick() + 5); }
                 lastSeenAt = { x: near.x, z: near.z };
                 // Freeze first, at first reach, before the target can run; freeze again whenever it moves.
-                if (freeze && canAttack(m, near) && session.tick() >= freezeReady && !held) {
+                const castable = freezeNow();
+                if (castable && canAttack(m, near) && session.tick() >= freezeReady && !held) {
                     // A cast on an immune or held target gives no XP; the SDK then waits out its timeout, so keep it short.
-                    const r = await bot.castSpell(near as any, freeze, 1000);
+                    const r = await bot.castSpell(near as any, castable, 1000);
                     if (r.success) { held = true; stats.freezes++; lastSeenAt = { x: near.x, z: near.z }; }
                     freezeReady = session.tick() + 3;
                     emit({ e: 'freeze', target: name, spell: freeze, ok: r.success, msg: r.success ? undefined : r.message });
@@ -407,7 +426,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 // range and re-aims between calls.
                 stats.attacks++;
                 const fight = await fightPlayer(session, name, {
-                    kit, freeze: !!freeze, eatAt: cfg.eatAt, exitOnDanger: true,
+                    kit, freeze: freezeNow() !== null && freezeNow() === freezeSpell(magic), eatAt: cfg.eatAt, exitOnDanger: true,
                     escapeAt: Math.ceil((me()?.maxHp ?? 99) * cfg.fleeAt / 100), damageSpell: cfg.spell.toUpperCase() === 'AUTO' ? bestFireSpell(magic, sdk.getInventory()) : spellId(cfg.spell), cap: 12,
                     log: line => emit({ e: "fight", line }),
                 });

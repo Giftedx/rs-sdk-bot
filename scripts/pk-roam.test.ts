@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { bestFireSpell, canAttack, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
+import { bestFireSpell, canAttack, castableFreeze, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
 
 test('wildLevel: 8 tiles per level from z 3520 inside x 2944-3391', () => {
     expect(wildLevel(3094, 3519)).toBe(0);
@@ -199,4 +199,22 @@ test('pickTrack skips a target that outclasses us or stands in a pile', () => {
     expect(pickTrack(me, pile, new Set(), 56, new Set(), 40, new Map(), 0, () => false)).toBeNull();
     // Our own accounts near a target are not a pile.
     expect(pickTrack(me, pile, new Set(['a', 'b']), 56, new Set(), 40, new Map(), 0, () => false)?.track.name).toBe('Mark');
+});
+
+test('castableFreeze needs the level and the runes', () => {
+    const runes = (earth: number, water: number, nature: number) => [{ id: 557, count: earth }, { id: 555, count: water }, { id: 561, count: nature }];
+    expect(castableFreeze(91, runes(67, 1, 0))).toBeNull();      // live Mightyrod: 1 water, no nature
+    expect(castableFreeze(91, runes(10, 10, 10))).toBe(1592);    // Entangle
+    expect(castableFreeze(91, runes(4, 4, 3))).toBe(1582);       // runes for Snare only
+    expect(castableFreeze(60, runes(10, 10, 10))).toBe(1582);    // level for Snare only
+    expect(castableFreeze(19, runes(10, 10, 10))).toBeNull();
+});
+
+test('pickTrack skips a target at our level whose weapon is worth over twice ours', () => {
+    const me = { x: 3060, z: 3700, combat: 126, weaponValue: itemCost(1331) }; // adamant scimitar
+    const goondelf = track({ name: 'Goondelf', z: 3705, combatLevel: 126, weapon: 1215 }); // dragon dagger
+    expect(pickTrack(me, [goondelf], new Set(), 56, new Set(), 40, new Map(), 0, () => false)).toBeNull();
+    expect(pickTrack({ ...me, weaponValue: itemCost(1215) }, [goondelf], new Set(), 56, new Set(), 40, new Map(), 0, () => false)?.track.name).toBe('Goondelf');
+    // A much weaker player with a good weapon is still prey.
+    expect(pickTrack(me, [{ ...goondelf, combatLevel: 110 }], new Set(), 56, new Set(), 40, new Map(), 0, () => false)?.track.name).toBe('Goondelf');
 });
