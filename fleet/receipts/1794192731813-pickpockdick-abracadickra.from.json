@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1794192731813-pickpockdick-abracadickra",
  "account": "PickpockDick",
  "partner": "Abracadickra",
@@ -12,6 +12,15 @@
  "claim": "538a4591-4322-491c-9911-d8590253dafc",
  "count": 0,
  "ok": false,
- "at": 1794192743901,
- "detail": "trade claimed"
+ "at": 1794193220906,
+ "detail": "no progress: 900 ticks without xp, items, dialog or a journey",
+ "bank": {
+  "count": 19945,
+  "at": 1794192837553
+ },
+ "logout": {
+  "attemptId": "1794192743909-0000023972-0000000001",
+  "at": 1794193220896,
+  "sha256": "3f82d69ae65e60594166e7f556244ddb8dd13647b2e5b18b3d42d89d19355fce"
+ }
 }
