@@ -41,19 +41,26 @@ export function eligibility(v: { proof: LogoutProof; claim: ClaimView; end: EndR
 
 const stamp = (now: number) => new Date(now).toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'z').toLowerCase();
 
-// One qualify task and one recovery run task with fresh ids: finished task ids never run again.
-export function recoveryProposal(side: string, account: string, endedAt: number, now: number) {
+// One qualify task and one recovery run task per held account, all with fresh ids (finished task ids never run
+// again). Accounts dropped together recover in one proposal behind one qualify, so a second account does not wait a
+// whole call and reach the swarm's 15-minute end-record deletion.
+export type Target = { account: string; endedAt: number };
+export function recoveryProposal(side: string, targets: readonly Target[], now: number) {
     const s = stamp(now), qualify = `${side}-recovery-qualified-${s}`;
     return {
-        reason: `Authenticated recovery of ${account} inside the running coordinator`, capabilities: [],
+        reason: `Authenticated recovery of ${targets.map(t => t.account).join(', ')} inside the running coordinator`, capabilities: [],
         tasks: [
-            { id: qualify, goal: 'wealth', kind: 'qualify', capability: 'session-recovery-only', dependsOn: [], priority: 90, estimatedMs: 600000, why: 'Qualify authenticated session recovery' },
-            { id: `${side}-recover-${account.toLowerCase()}-${s}`, goal: 'wealth', kind: 'run', capability: 'session-recovery-only', account, dependsOn: [qualify],
+            { id: qualify, goal: 'wealth', kind: 'qualify', capability: 'session-recovery-only', dependsOn: [] as string[], priority: 90, estimatedMs: 600000, why: 'Qualify authenticated session recovery' },
+            ...targets.map(({ account, endedAt }) => ({ id: `${side}-recover-${account.toLowerCase()}-${s}`, goal: 'wealth', kind: 'run', capability: 'session-recovery-only', account, dependsOn: [qualify],
                 repairs: [{ account, endedAt }], sessionRecovery: { account, endedAt }, accept: { counters: { sessionChecked: 1 } },
-                priority: 90, estimatedMs: 120000, why: `Authenticated recovery of ${account}'s orphaned session` },
+                priority: 90, estimatedMs: 120000, why: `Authenticated recovery of ${account}'s orphaned session` })),
         ],
     };
 }
+
+// Session-recovery tasks still pending or running in the coordinator's state: a release waits until they settle, so
+// every finished recovery has parked its session check first.
+export const recoveriesInFlight = (tasks: readonly any[]) => tasks.filter(t => t?.spec?.sessionRecovery && (t.status === 'pending' || t.status === 'running'));
 
 // The folder that receives the coordinator's parked jobs and stop file after a release.
 // The session-lifecycle root that readLogoutProof reads (packages/core/src/session-lifecycle.ts DEFAULT_LIFECYCLE_ROOT).
@@ -87,14 +94,14 @@ async function main(root: string, dry: boolean): Promise<number> {
     if (!cloudSide(side)) { log('refused: cloud sides only (FLEET_SIDE unset or local); the local coordinator owns its jobs.json'); return 1; }
     const coordinatorRunning = () => { const o = readJson(join(coord, 'owner.json'), null); return !!o && Number.isSafeInteger(o.pid) && pidAlive(o.pid) && !existsSync(stopCoordinator); };
     if (!coordinatorRunning()) { log('refused: coordinator is not running'); return 1; }
-    const state = readJson(join(coord, 'state.json'), { tasks: [] });
-    const queued = (account: string) => (state.tasks ?? []).some((t: any) => t.spec?.sessionRecovery?.account?.toLowerCase() === account.toLowerCase() && (t.status === 'pending' || t.status === 'running'));
+    const tasksNow = () => readJson(join(coord, 'state.json'), { tasks: [] }).tasks ?? [];
+    const inFlight = recoveriesInFlight(tasksNow());
+    if (inFlight.length) { log(`recovery in flight for ${inFlight.map((t: any) => t.spec.sessionRecovery.account).join(', ')}; waiting`); return 0; }
     const ended = loadEnded(join(root, '.practice', 'swarm-deaths.json'));
     const accounts = [...loadOwners()].filter(([, o]) => o.side === side && o.server === LIVE_SERVER).map(([n]) => n);
-    let target: { account: string; endedAt: number } | undefined;
+    const targets: Target[] = [];
     for (const lower of accounts) {
         const name = [...ended.keys()].find(n => n.toLowerCase() === lower) ?? lower;
-        if (queued(name)) { log(`${name}: recovery already queued`); return 0; }
         const proof = readLogoutProof(name, LIVE_SERVER, { root: lifecycleRoot(root) });
         if (proof.state !== 'held') continue;
         // A live worker refreshes its status every few seconds; skip it before reading the claim ref from origin.
@@ -105,32 +112,39 @@ async function main(root: string, dry: boolean): Promise<number> {
         const stopFile = join(root, '.practice', `stop-${name}`), stopText = existsSync(stopFile) ? readFileSync(stopFile, 'utf8') : undefined;
         const e = eligibility({ proof, claim, end: ended.get(name), stopText, pidAlive, host: hostname() });
         if (!e.eligible) { if (e.log) log(`${name}: refused: ${e.reason}`); continue; }
-        target = { account: name, endedAt: e.endedAt }; break;
+        targets.push({ account: name, endedAt: e.endedAt });
     }
-    if (target) {
-        const proposal = recoveryProposal(side, target.account, target.endedAt, Date.now());
-        log(`${target.account}: submitting ${proposal.tasks.map(t => t.id).join(', ')} (endedAt ${target.endedAt})`);
+    let failed = false;
+    if (targets.length) {
+        const proposal = recoveryProposal(side, targets, Date.now()), runs = proposal.tasks.slice(1) as { id: string; account: string }[];
+        log(`submitting ${proposal.tasks.map(t => t.id).join(', ')} (${targets.map(t => `${t.account} endedAt ${t.endedAt}`).join('; ')})`);
         if (dry) return 0;
-        const file = join(root, '.practice', 'cloud-recover', `${proposal.tasks[1]!.id}.json`);
+        const file = join(root, '.practice', 'cloud-recover', `${proposal.tasks[0]!.id}.json`);
         mkdirSync(resolve(file, '..'), { recursive: true }); writeFileSync(file, JSON.stringify(proposal, null, 1) + '\n');
-        if (!(await run(root, ['--submit', file]))) { log(`${target.account}: submit failed`); return 1; }
-        const runId = proposal.tasks[1]!.id, deadline = Date.now() + 15 * 60_000;
+        if (!(await run(root, ['--submit', file]))) { log('submit failed'); return 1; }
+        // One qualify, then about a minute per recovery run.
+        const deadline = Date.now() + (15 + 2 * runs.length) * 60_000;
         for (;;) {
-            const task = (readJson(join(coord, 'state.json'), { tasks: [] }).tasks ?? []).find((t: any) => t.spec?.id === runId);
-            if (task?.status === 'succeeded') break;
-            if (task?.status === 'failed' || Date.now() > deadline) { log(`${target.account}: recovery ${task?.status ?? 'timed out'} (${runId}); no retry`); return 1; }
+            const tasks = tasksNow(), status = (id: string) => tasks.find((t: any) => t.spec?.id === id)?.status;
+            if (runs.every(r => ['succeeded', 'failed'].includes(status(r.id)))) break;
+            if (Date.now() > deadline) { log(`recovery timed out (${runs.map(r => `${r.id} ${status(r.id) ?? 'unseen'}`).join(', ')}); no retry`); return 1; }
             await Bun.sleep(5000);
         }
-        const proof = readLogoutProof(target.account, LIVE_SERVER, { root: lifecycleRoot(root) });
-        log(`${target.account}: recovery succeeded (${runId}); logout proof ${proof.state}`);
-        if (proof.state !== 'confirmed') return 1;
+        const tasks = tasksNow();
+        for (const r of runs) {
+            const ok = tasks.find((t: any) => t.spec?.id === r.id)?.status === 'succeeded', proof = readLogoutProof(r.account, LIVE_SERVER, { root: lifecycleRoot(root) });
+            log(`${r.account}: recovery ${ok ? 'succeeded' : 'failed'} (${r.id}); logout proof ${proof.state}`);
+            if (!ok || proof.state !== 'confirmed') failed = true;
+        }
     }
-    // A finished recovery leaves a parked coordinator job that keeps the account from its owner job; release it.
+    // A finished recovery leaves a parked coordinator job that keeps the account from its owner job; release them all
+    // once no recovery is still in flight, so each has parked its session check first.
+    if (recoveriesInFlight(tasksNow()).length) return failed ? 1 : 0;
     const jobs = readJson(join(coord, 'jobs.json'), { jobs: [] }).jobs ?? [], parked = releasableAccounts(jobs);
     if (!parked.length && parkedAccounts(jobs).length) log('release skipped: jobs.json holds coordinator jobs other than parked session checks');
-    if (!parked.length || (state.tasks ?? []).some((t: any) => t.status === 'running')) return 0;
+    if (!parked.length) return failed ? 1 : 0;
     if (dry) { log(`would release parked jobs for ${parked.join(', ')}`); return 0; }
-    return (await release(root, parked)) ? 0 : 1;
+    return (await release(root, parked)) && !failed ? 0 : 1;
 }
 
 async function run(root: string, args: string[]): Promise<boolean> {

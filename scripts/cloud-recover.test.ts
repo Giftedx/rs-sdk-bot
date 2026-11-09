@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { join } from 'node:path';
-import { archiveDir, cloudSide, eligibility, lifecycleRoot, parkedAccounts, recoveryProposal, releasableAccounts, type ClaimView } from './cloud-recover';
+import { archiveDir, cloudSide, eligibility, lifecycleRoot, parkedAccounts, recoveriesInFlight, recoveryProposal, releasableAccounts, type ClaimView } from './cloud-recover';
 import { DEFAULT_LIFECYCLE_ROOT } from '../packages/core/src/session-lifecycle';
 import type { LogoutProof } from '../packages/core/src/session-lifecycle';
 
@@ -43,14 +43,14 @@ test('a worker pid on another host does not count as alive here', () => {
 });
 
 test('the proposal holds one qualify and one recovery run task with fresh ids', () => {
-    const p = recoveryProposal('claude-cloud-3', 'Kiltlifter', 99, Date.UTC(2026, 10, 9, 0, 18, 57, 123));
+    const p = recoveryProposal('claude-cloud-3', [{ account: 'Kiltlifter', endedAt: 99 }], Date.UTC(2026, 10, 9, 0, 18, 57, 123));
     expect(p.capabilities).toEqual([]);
     const [q, r] = p.tasks as any[];
     expect(q.id).toBe('claude-cloud-3-recovery-qualified-20261109t001857z');
     expect(q).toMatchObject({ kind: 'qualify', capability: 'session-recovery-only', dependsOn: [] });
     expect(r).toMatchObject({ id: 'claude-cloud-3-recover-kiltlifter-20261109t001857z', kind: 'run', account: 'Kiltlifter', dependsOn: [q.id],
         repairs: [{ account: 'Kiltlifter', endedAt: 99 }], sessionRecovery: { account: 'Kiltlifter', endedAt: 99 }, accept: { counters: { sessionChecked: 1 } } });
-    expect(recoveryProposal('claude-cloud-3', 'Kiltlifter', 99, Date.UTC(2026, 10, 9, 0, 19)).tasks[0]!.id).not.toBe(q.id);
+    expect(recoveryProposal('claude-cloud-3', [{ account: 'Kiltlifter', endedAt: 99 }], Date.UTC(2026, 10, 9, 0, 19)).tasks[0]!.id).not.toBe(q.id);
 });
 
 test('archive folders are named by time and account under the coordinator directory', () => {
@@ -84,4 +84,21 @@ test('a release frees accounts only when every coordinator job is a parked sessi
     expect(releasableAccounts([])).toEqual([]);
     expect(releasableAccounts([check('Kiltlifter'), { account: 'Haggis', coordinatorOwner: 'coordinator', enabled: false, script: 'scripts/fight.ts' }])).toEqual([]);
     expect(releasableAccounts([check('Kiltlifter'), { account: 'Haggis', coordinatorOwner: 'coordinator', enabled: true, script: 'scripts/session-check.ts' }])).toEqual([]);
+});
+
+test('accounts dropped together recover in one proposal behind one qualify', () => {
+    const p = recoveryProposal('claude-cloud-4', [{ account: 'Fingersmith', endedAt: 1 }, { account: 'KnightRider', endedAt: 2 }], Date.UTC(2026, 10, 9, 3, 51, 10));
+    const [q, a, b] = p.tasks as any[];
+    expect(p.tasks).toHaveLength(3);
+    expect(q).toMatchObject({ kind: 'qualify', dependsOn: [] });
+    expect(a).toMatchObject({ account: 'Fingersmith', dependsOn: [q.id], sessionRecovery: { account: 'Fingersmith', endedAt: 1 } });
+    expect(b).toMatchObject({ account: 'KnightRider', dependsOn: [q.id], sessionRecovery: { account: 'KnightRider', endedAt: 2 } });
+    expect(new Set(p.tasks.map((t: any) => t.id)).size).toBe(3);
+});
+
+test('a release waits while any session-recovery task is pending or running', () => {
+    const t = (status: string, sessionRecovery?: object) => ({ status, spec: { id: status, ...(sessionRecovery ? { sessionRecovery } : {}) } });
+    expect(recoveriesInFlight([t('succeeded', { account: 'A' }), t('failed', { account: 'B' }), t('running')])).toHaveLength(0);
+    expect(recoveriesInFlight([t('succeeded', { account: 'A' }), t('running', { account: 'B' })]).map((x: any) => x.spec.sessionRecovery.account)).toEqual(['B']);
+    expect(recoveriesInFlight([t('pending', { account: 'C' })])).toHaveLength(1);
 });
