@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794185440696-pocketrocket-sporranbulge",
+ "account": "SporranBulge",
+ "partner": "Pocketrocket",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 19975,
+ "claim": "1481521a-b53b-4f83-8933-eb7dd5f1dde4",
+ "count": 0,
+ "ok": false,
+ "at": 1794185525267,
+ "detail": "trade claimed"
+}
