@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794221986397,
+ "at": 1794223206900,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -94,7 +94,7 @@
    "env": {
     "ROUNDS": "1"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true,
    "goal": "Strength 30 on chickens so it can hit hard enough to PK",
@@ -490,15 +490,23 @@
   },
   {
    "account": "MineYourBiz",
-   "script": "scripts/session-check.ts",
+   "script": "scripts/buy-owned-ge-item.ts",
    "args": [],
    "env": {
+    "ITEM_ID": "385",
+    "QUANTITY": "30",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "810",
+    "CASH_RESERVE": "420000",
+    "ORDER_KEY": "mineyourbiz-sharks30-blood-food",
+    "FILL_WAIT_TICKS": "40",
+    "ORDER_MS": "360000",
     "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-067f199b-4944-4019-8894-ecee4dc377a3"
+    "COORDINATOR_RUN_ID": "task-f933bd89-c2fd-4bed-9ac7-4bbade07797f"
    },
    "enabled": false,
    "repeat": false,
-   "goal": "run-session-recovery-mineyourbiz-connect-fix [task-067f199b-4944-4019-8894-ecee4dc377a3]",
+   "goal": "run-ge-mineyourbiz-sharks30-requal [task-f933bd89-c2fd-4bed-9ac7-4bbade07797f]",
    "role": "supply"
   }
  ]
