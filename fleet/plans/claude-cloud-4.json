@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud-4",
- "at": 1794202592643,
+ "at": 1794205607117,
  "jobs": [
   {
    "account": "Fingersmith",
@@ -48,7 +48,7 @@
     "KNIGHT_SPOT": "2653,3300",
     "TICKS": "9000"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true,
    "goal": "goldfarm knights at 2653,3300",
