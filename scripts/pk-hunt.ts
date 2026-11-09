@@ -98,7 +98,16 @@ export function freezeSpell(magic: number): number | null {
     return magic >= 79 ? 1592 : magic >= 50 ? 1582 : magic >= 20 ? 1572 : null;
 }
 
-type Cfg = { maxMs: number; maxWild: number; eatAt: number; fleeAt: number; spell: string; ranged?: RegExp; loot: boolean; freeze: boolean };
+// friends replaces the fleet list of accounts never to attack (practice passes its own target's absence).
+type Cfg = { maxMs: number; maxWild: number; eatAt: number; fleeAt: number; spell: string; ranged?: RegExp; loot: boolean; freeze: boolean; friends?: readonly string[] };
+
+// Sweep tiles across the Wilderness, west to east and back, shallow to deep.
+export function sweep(maxWild: number): { x: number; z: number }[] {
+    const pts: { x: number; z: number }[] = [];
+    const zs = [3540, 3620, 3700, 3780, 3860, 3940].filter(z => wildLevel(3100, z) <= maxWild);
+    zs.forEach((z, i) => { const xs = [2970, 3060, 3150, 3240, 3330]; pts.push(...(i % 2 ? xs.reverse() : xs).map(x => ({ x, z }))); });
+    return pts.length ? pts : [{ x: 3090, z: 3524 }];
+}
 
 // The account's server, from the SERVER line of its bot.env (the same file openBot reads).
 export function accountServer(name: string, root = resolve(import.meta.dir, '..')): string {
@@ -108,8 +117,10 @@ export function accountServer(name: string, root = resolve(import.meta.dir, '..'
 export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolean, emit: (e: object) => void, server = accountServer(session.name)) {
     const { sdk, bot } = session;
     const me = () => { const p = sdk.getState()?.player; return p && { x: p.worldX, z: p.worldZ, level: p.level, combat: p.combatLevel, hp: p.hp, maxHp: p.maxHp }; };
-    const friends = new Set([...tradePartners(server)].map(n => n.toLowerCase()));
+    const friends = new Set([...(cfg.friends ?? tradePartners(server))].map(n => n.toLowerCase()));
     friends.add(session.name.toLowerCase());
+    const route = sweep(cfg.maxWild);
+    let leg = -1;
     const radar = new Radar();
     const closeRadar = connectRadar(server, radar);
     const end = Date.now() + cfg.maxMs;
@@ -136,6 +147,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     };
     let style: CombatStyle = 'melee';
     let wentIn = false;
+    let spun = -1;
 
     const setStyle = async (s: CombatStyle, target: string) => {
         if (s === style) return;
@@ -161,6 +173,9 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
         stats.chases++;
         let lastTile: { x: number; z: number } | null = null, lastDist = Infinity, frozeAt = -100, contactAt = session.tick();
         while (!stopped() && Date.now() < end) {
+            // A pass that used no game tick waits one, so the client and other sessions keep running.
+            if (session.tick() === spun) await sdk.waitForTicks(1);
+            spun = session.tick();
             const s = await survive();
             if (s !== 'ok') return s;
             const m = me()!;
@@ -226,6 +241,9 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
 
     try {
         while (!stopped() && Date.now() < end) {
+            // A pass that used no game tick waits one, so the client and other sessions keep running.
+            if (session.tick() === spun) await sdk.waitForTicks(1);
+            spun = session.tick();
             const s = await survive();
             if (s === 'dead') break;
             const m = me();
@@ -237,9 +255,13 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             }
             const pick = pickTrack(m, tracks(), friends, cfg.maxWild, skip);
             if (!pick) {
-                // Nobody attackable: walk north into the Wilderness so the level range opens up.
-                const goal = { x: m.x < 2960 || m.x > 3380 ? 3090 : m.x, z: Math.min(3520 + cfg.maxWild * 8 - 4, m.z + 24) };
-                await walkPath(walker, [{ ...goal, tol: 3 }], { maxTicks: 30, idleMs: 9000, stop: () => stopped() || !!pickTrack(me()!, tracks(), friends, cfg.maxWild, skip) });
+                // Nobody attackable: sweep the Wilderness. Start at the nearest sweep tile, then go round.
+                if (leg < 0) leg = route.reduce((b, p, i) => cheb(p, m) < cheb(route[b], m) ? i : b, 0);
+                else if (cheb(route[leg], m) <= 4) leg = (leg + 1) % route.length;
+                const before = session.tick();
+                await walkPath(walker, [{ ...route[leg], tol: 3 }], { maxTicks: 30, idleMs: 9000, stop: () => stopped() || !!pickTrack(me()!, tracks(), friends, cfg.maxWild, skip) });
+                // Never spin: a walk that used no tick (blocked or already there) moves to the next leg and waits.
+                if (session.tick() === before) { leg = (leg + 1) % route.length; await sdk.waitForTicks(1); }
                 continue;
             }
             const name = pick.track.name;

@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { canAttack, freezeSpell, intercept, pickTrack, Radar, wildLevel, type Track } from './pk-hunt';
+import { canAttack, freezeSpell, intercept, pickTrack, Radar, sweep, wildLevel, type Track } from './pk-hunt';
 
 test('wildLevel: 8 tiles per level from z 3520 inside x 2944-3391', () => {
     expect(wildLevel(3094, 3519)).toBe(0);
@@ -71,4 +71,14 @@ test('freezeSpell picks the strongest freeze by Magic level', () => {
     expect(freezeSpell(60)).toBe(1582); // Snare
     expect(freezeSpell(20)).toBe(1572); // Bind
     expect(freezeSpell(19)).toBeNull();
+});
+
+test('sweep covers the Wilderness inside the depth limit, west-east then back', () => {
+    const deep = sweep(56);
+    expect(deep.length).toBe(30);
+    expect(deep.every(p => wildLevel(p.x, p.z) >= 1)).toBe(true);
+    expect(deep[4]).toEqual({ x: 3330, z: 3540 });
+    expect(deep[5]).toEqual({ x: 3330, z: 3620 });
+    expect(sweep(15).every(p => wildLevel(p.x, p.z) <= 15)).toBe(true);
+    expect(sweep(1)).toEqual([{ x: 3090, z: 3524 }]);
 });
