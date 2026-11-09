@@ -16,7 +16,7 @@ export const ITEMS = {
     shark: 385, glory: [1712, 1710, 1708, 1706], prayerPotion: [2434, 139, 141, 143], superRestore: [3024, 3026, 3028, 3030],
     deathRune: 560, bloodRune: 565, fireRune: 554, airRune: 556, waterRune: 555, earthRune: 557, natureRune: 561, lawRune: 563,
 } as const;
-export const SPELLS = { fireBlast: 1181, fireWave: 1189, bind: 1572, snare: 1582, entangle: 1592 } as const;
+export const SPELLS = { fireBolt: 1169, fireBlast: 1181, fireWave: 1189, bind: 1572, snare: 1582, entangle: 1592 } as const;
 // Prayer indices (vendor/rs-sdk/sdk/types.ts PRAYER_NAMES): 8 Protect Item, 12 Magic, 13 Missiles, 14 Melee.
 export const PRAYER = { item: 8, magic: 12, missiles: 13, melee: 14 } as const;
 

@@ -2,13 +2,17 @@
 // nearest attackable player who is not a fleet account (or anyone who attacks it) with scripts/pk.ts, loots a kill and
 // banks again when food runs low or after a glory escape. A death ends the run; so do the tick cap and a stop file.
 // Usage: bun scripts/pk-hunt.ts <bot> [CAP ticks, default 6000]. Environment: HUNT_FOOD sharks per trip (default 18),
-// MIN_FOOD sharks that send it back to bank (default 6), ESCAPE_AT HP (default 35). Practice only until a live pilot is
-// qualified: openBot refuses a non-local server without DEMO_OK=1.
+// MIN_FOOD sharks that send it back to bank (default 6), ESCAPE_AT HP (default 35). For a build other than the maxed
+// tribrid: PK_KIT the switch weapons as JSON {"magic":[ids],"ranged":[ids],"melee":[ids]}, PK_TRIP what a trip carries
+// besides sharks as JSON [{"id":n,"count":n}], PK_SPELL the damage spell's component id (scripts/pk.ts SPELLS),
+// PK_ROTATION the style order, e.g. "ranged,magic" for a pure with Strength 1. An
+// account that starts more than 60 tiles from Edgeville rubs a carried glory there first. openBot refuses a non-local
+// server without DEMO_OK=1.
 import { existsSync } from 'node:fs';
 import type { Session } from '../packages/core/src/inprocess';
 import { loadOwners } from '../packages/core/src/fleet';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { attackable, fightPlayer, ITEMS, type FightResult, type Kit } from './pk';
+import { attackable, fightPlayer, ITEMS, type FightResult, type Kit, type Style } from './pk';
 
 export const EDGEVILLE_BANK = { x: 3092, z: 3496 };
 // Wilderness levels 3-7 north of Edgeville, inside single-way combat (multiway.csv: east Wilderness starts at x 3136).
@@ -17,7 +21,7 @@ export const KIT_IDS = { mysticFireStaff: 1401, magicShortbow: 861, runeArrow: 8
 export const TRIBRID_KIT: Kit = { magic: [KIT_IDS.mysticFireStaff], ranged: [KIT_IDS.magicShortbow], melee: [KIT_IDS.dragonDaggerP, KIT_IDS.runeKiteshield] };
 // What a trip carries besides food: the switch weapons, Fire Wave runes (air, blood; the staff gives fire), two prayer
 // potions and a glory for the escape.
-export const TRIP = [
+export const TRIP: readonly { id: number; count: number }[] = [
     { id: KIT_IDS.mysticFireStaff, count: 1 }, { id: KIT_IDS.magicShortbow, count: 1 },
     { id: ITEMS.airRune, count: 300 }, { id: ITEMS.bloodRune, count: 60 }, { id: 2434, count: 2 }, { id: ITEMS.glory[0], count: 1 },
 ] as const;
@@ -44,11 +48,11 @@ async function walk(s: Session, to: { x: number; z: number }, stop: () => boolea
 }
 
 // Bank everything but the worn set, then take the trip and the food.
-export async function restock(s: Session, food: number): Promise<string | null> {
+export async function restock(s: Session, food: number, trip: readonly { id: number; count: number }[] = TRIP): Promise<string | null> {
     if (!(await s.bot.openBank()).success) return 'bank did not open';
     for (const item of s.sdk.getInventory()) await s.bot.depositItem(item, -1);
     const stock = () => s.bankObservation?.()?.items ?? [];
-    for (const want of [...TRIP, { id: ITEMS.shark, count: food }]) {
+    for (const want of [...trip, { id: ITEMS.shark, count: food }]) {
         const row = s.sdk.getBankItems().find(b => b.id === want.id);
         if (!row || row.count < want.count) { await s.bot.closeBank(); return `bank lacks ${want.count} of item ${want.id} (has ${stock().find(b => b.id === want.id)?.count ?? 0})`; }
         await s.bot.withdrawItem(row, want.count, { asNote: false });
@@ -57,16 +61,31 @@ export async function restock(s: Session, food: number): Promise<string | null> 
     return held(s, ITEMS.shark) >= food ? null : 'food withdrawal short';
 }
 
-export async function hunt(s: Session, o: { cap: number; food: number; minFood: number; escapeAt: number; stop: () => boolean; log?: (l: string) => void }) {
+export type HuntOptions = { cap: number; food: number; minFood: number; escapeAt: number; stop: () => boolean; log?: (l: string) => void;
+    kit?: Kit; trip?: readonly { id: number; count: number }[]; damageSpell?: number; rotation?: Style[] };
+export async function hunt(s: Session, o: HuntOptions) {
     const log = o.log ?? ((l: string) => console.log(l)), start = s.tick(), ours = fleetNames();
     const tally = { kills: 0, deaths: 0, escapes: 0, fights: 0, looted: 0, trips: 0 };
     const over = () => o.stop() || s.tick() - start >= o.cap;
+    const kit = o.kit ?? TRIBRID_KIT;
     let spot = 0;
+    const far = () => { const p = s.sdk.getState()?.player; return !p || Math.max(Math.abs(p.worldX - EDGEVILLE_BANK.x), Math.abs(p.worldZ - EDGEVILLE_BANK.z)) > 60; };
+    if (far()) {
+        const glory = s.sdk.getInventory().find(i => (ITEMS.glory as readonly number[]).includes(i.id));
+        if (!glory) return { ...tally, end: 'far from Edgeville with no glory carried' };
+        const op = glory.optionsWithIndex.find(x => /^Rub$/i.test(x.text));
+        if (op) await s.sdk.sendUseItem(glory.slot, op.opIndex);
+        for (let t = 0; t < 20 && far() && !over(); t++) {
+            await new Promise<void>(r => { const off = s.onTick(() => { off(); r(); }); });
+            if (s.sdk.getState()?.dialog?.isOpen) await s.sdk.clickDialogByText(/^Edgeville/i);
+        }
+        if (far()) return { ...tally, end: 'glory to Edgeville failed' };
+    }
     while (!over()) {
         if (held(s, ITEMS.shark) < o.minFood) {
             const back = await walk(s, EDGEVILLE_BANK, over, 600);
             if (!back.ok) return { ...tally, end: 'bank walk failed ' + JSON.stringify(back) };
-            const missing = await restock(s, o.food);
+            const missing = await restock(s, o.food, o.trip);
             if (missing) return { ...tally, end: missing };
             tally.trips++;
         }
@@ -92,7 +111,7 @@ export async function hunt(s: Session, o: { cap: number; food: number; minFood: 
             if (!target) continue;
             log(`HUNT engage ${target.name} (combat ${target.combatLevel}) at ${target.x},${target.z}`);
             tally.fights++;
-            const r: FightResult = await fightPlayer(s, target.name, { kit: TRIBRID_KIT, escapeAt: o.escapeAt, cap: 900, log });
+            const r: FightResult = await fightPlayer(s, target.name, { kit, escapeAt: o.escapeAt, cap: 900, damageSpell: o.damageSpell, rotation: o.rotation, log });
             log(`HUNT fight ${r.outcome} ${JSON.stringify(r)}`);
             if (r.outcome === 'kill') {
                 tally.kills++; const n = await loot(s, r.targetAt ?? target, over); tally.looted += n;
@@ -131,7 +150,9 @@ if (import.meta.main) {
     const stop = () => existsSync(`.practice/stop-${bot}`) || existsSync('.practice/stop-pk-hunt');
     const s = await openBot(bot);
     const env = process.env;
-    const r = await hunt(s, { cap: Number(capArg ?? 6000), food: Number(env.HUNT_FOOD ?? 18), minFood: Number(env.MIN_FOOD ?? 6), escapeAt: Number(env.ESCAPE_AT ?? 35), stop });
+    const r = await hunt(s, { cap: Number(capArg ?? 6000), food: Number(env.HUNT_FOOD ?? 18), minFood: Number(env.MIN_FOOD ?? 6), escapeAt: Number(env.ESCAPE_AT ?? 35), stop,
+        kit: env.PK_KIT ? JSON.parse(env.PK_KIT) as Kit : undefined, trip: env.PK_TRIP ? JSON.parse(env.PK_TRIP) : undefined, damageSpell: env.PK_SPELL ? Number(env.PK_SPELL) : undefined,
+        rotation: env.PK_ROTATION ? env.PK_ROTATION.split(',') as Style[] : undefined });
     console.log('HUNT ' + JSON.stringify(r));
     await finish([s], r.end !== 'died' && !/failed|lacks|short|did not open/.test(r.end), `hunt ${r.end} kills ${r.kills}`);
 }
