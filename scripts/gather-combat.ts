@@ -110,6 +110,17 @@ export async function equipCowKit(s:Session, stop:()=>boolean=()=>false) {
             throw new Error(`cow kit equip failed ${id}: ${result.message??'no SDK message'}; equipped item not observed`);
     }
 }
+// Held cow food in bites: trout heals once; a cake is eaten in three bites (cake, 2/3 cake, slice), chocolate cake likewise.
+// The knight farm steals cake at the Ardougne bakery, so a farmer arrives with cake pieces rather than trout.
+export const COW_FOOD_BITES:Readonly<Record<number,number>>={333:1,1891:3,1893:2,1895:1,1897:3,1899:2,1901:1};
+export const cowFoodBites=(items:readonly {id:number;count:number}[])=>items.reduce((n,i)=>n+(COW_FOOD_BITES[i.id]??0)*i.count,0);
+// HP one bite heals: trout 7, a cake bite 4, a chocolate cake bite 5. The trout rule held two trout, 14 HP of food;
+// held food must cover the same HP whatever it is made of.
+const COW_BITE_HEAL:Readonly<Record<number,number>>={333:7,1891:4,1893:4,1895:4,1897:5,1899:5,1901:5};
+export const COW_FOOD_HP=14;
+export const cowFoodHeal=(items:readonly {id:number;count:number}[])=>items.reduce((n,i)=>n+(COW_FOOD_BITES[i.id]??0)*(COW_BITE_HEAL[i.id]??0)*i.count,0);
+// The next piece to eat: the fewest bites first, so partial cakes go before whole ones and slots free up.
+export const cowFoodPick=<T extends {id:number}>(items:readonly T[])=>items.filter(i=>COW_FOOD_BITES[i.id]).sort((a,b)=>COW_FOOD_BITES[a.id]!-COW_FOOD_BITES[b.id]!)[0];
 export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill?:string;targetLevel?:number;bankProfile?:string;foodMode?:string;diagnostics?:boolean;noProgress?:number;potions?:CombatPotionPolicy;stop?:()=>boolean;walk?:(x:number,z:number,tol:number)=>Promise<boolean>}) {
     const potionScope=o.potions?combatPotionSession(s,()=>!!o.stop?.(),o.cap):undefined;if(potionScope)s=potionScope;
     const profile=cowProfile(o.bankProfile,o.foodMode,o.maximum);
@@ -117,9 +128,9 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
     const training=cowTraining(o.trainSkill,o.targetLevel);
     const ids=[1739,526,2132],inv=()=>s.sdk.getInventory(),state=()=>s.sdk.getState();
     const count=(items:readonly {id:number;count:number}[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
-    const held=(id:number)=>count(inv(),id),xp=()=>s.sdk.getSkillXp('Attack')??0,hp=()=>s.sdk.getSkill('Hitpoints')?.level??0;
+    const held=(id:number)=>count(inv(),id),bites=()=>cowFoodBites(inv()),heal=()=>cowFoodHeal(inv()),xp=()=>s.sdk.getSkillXp('Attack')??0,hp=()=>s.sdk.getSkill('Hitpoints')?.level??0;
     const selectedXp=()=>s.sdk.getSkillXp(training.skill)??0,level=()=>s.sdk.getSkill(training.skill)?.baseLevel??0;
-    if(!await waitUntil(s,()=>hp()>0&&(profile.foodBanked||held(333)>=2)&&level()>0,{timeoutTicks:15})) throw new Error('cow prerequisite: stage2unnoted Trout and syncedHP/skill');
+    if(!await waitUntil(s,()=>hp()>0&&(profile.foodBanked||heal()>=COW_FOOD_HP)&&level()>0,{timeoutTicks:15})) throw new Error('cow prerequisite: stage2unnoted Trout (or 14HP of cake) and syncedHP/skill');
     const start=s.tick(),initialXp=xp(),initialSelectedXp=selectedXp(),startLevel=level(),p0=state()?.player;
     const goalReached=()=>training.targetLevel!==undefined&&level()>=training.targetLevel;
     if(!p0||p0.level!==0||Math.max(Math.abs(p0.worldX-profile.bank.x),Math.abs(p0.worldZ-profile.bank.z))>(profile.north?3:10)) throw new Error(profile.north?'cow prerequisite: stage at Ardougne north bank':'cow prerequisite: stage at Ardougne south bank');
@@ -127,7 +138,7 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
     if(ids.some(id=>held(id)>0)) throw new Error('cow prerequisite: empty carried cow outputs');
     const allKit=()=>[...inv(),...(state()?.equipment??[])];
     for(const id of [1277,1171]) if(count(allKit(),id)<1) throw new Error(`cow prerequisite: missing kit${id}`);
-    const kit=new Map<number,number>();for(const i of allKit())if(!ids.includes(i.id)&&i.id!==333)kit.set(i.id,(kit.get(i.id)??0)+i.count);
+    const kit=new Map<number,number>();for(const i of allKit())if(!ids.includes(i.id)&&!COW_FOOD_BITES[i.id])kit.set(i.id,(kit.get(i.id)??0)+i.count);
     let ended=false,died=false,healthCutoff=false,retreating=false,hpMin=hp(),creditedKills=0,damageXp=0,eaten=0,bankTrips=0,failure='',stop='cap',lastProgress=start;
     const diagnostics:Record<string,unknown>[]=[];
     let diagnosticKey='',diagnosticTick=-Infinity,activeIndex:number|undefined,attackStarted:number|undefined;
@@ -154,13 +165,13 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
     const over=()=>{observeLife();return ended||died||!!o.stop?.()||s.tick()-start>=o.cap;};
     const potions=o.potions?createCombatPotions(s,o.potions,[training.skill,'Hitpoints'],over):undefined;
     const eat=async()=>{
-        const food=inv().find(i=>i.id===333);
+        const food=cowFoodPick(inv());
         if(!food){stop='low-hp';throw new Error('no cow progress: low HP retreat, no working food');}
-        const before=held(333),beforeHp=hp();await s.bot.eatFood(food);
+        const before=bites(),beforeHp=hp();await s.bot.eatFood(food);
         // SDK eat can finish on inventory debit before the HP packet arrives.
-        const healed=await waitUntil(s,()=>held(333)<before&&hp()>beforeHp||over(),{timeoutTicks:6});
-        eaten+=Math.max(0,before-held(333));
-        if(!healed||held(333)>=before||hp()<=6||over()){stop='low-hp';throw new Error('no cow progress: food did not heal before retreat');}
+        const healed=await waitUntil(s,()=>bites()<before&&hp()>beforeHp||over(),{timeoutTicks:6});
+        eaten+=Math.max(0,before-bites());
+        if(!healed||bites()>=before||hp()<=6||over()){stop='low-hp';throw new Error('no cow progress: food did not heal before retreat');}
     };
     const walk=o.walk??(async(x,z,tol)=>{
         const p=state()?.player;if(!p)return false;
@@ -199,14 +210,20 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
     const baseline:Record<number,number>={};
     const assetTotals=()=>{const m=new Map<number,number>();for(const i of [...(s.bankObservation?.()?.items??[]),...allKit()])m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
     let initialAssets:Map<number,number>|undefined,initialFood:number|undefined;
-    const ownedFood=()=>s.bankObservation?.()?held(333)+bankCount(333):undefined;
+    const ownedFood=()=>s.bankObservation?.()?bites()+cowFoodBites(s.bankObservation?.()?.items??[]):undefined;
     const bank=async()=>{
         retreating=true;
         const p=state()?.player;if(p)bankDistances.push(Math.max(Math.abs(p.worldX-profile.bank.x),Math.abs(p.worldZ-profile.bank.z)));
         if(!await walk(profile.bank.x,profile.bank.z,profile.north?1:2))throw new Error('no cow progress: bank retreat failed');await open();
         for(const id of [...ids,...potions?.depositIds??[]]){const item=inv().find(i=>i.id===id);if(item){const before=bankCount(id),amount=held(id);
             if(!(await s.bot.depositItem(item,-1)).success||held(id)>0||!await waitUntil(s,()=>bankCount(id)===before+amount,{timeoutTicks:20}))throw new Error('no cow progress: deposit failed');}}
-        const needed=profile.foodBanked?0:Math.max(0,2-held(333));if(needed){const item=state()?.bank.items.find(i=>i.id===333);if(!item||item.count<needed||!(await s.bot.withdrawItem(item,needed,{asNote:false})).success||held(333)<2)throw new Error('no cow progress: working food restock failed');}
+        if(!profile.foodBanked)for(let tries=0;heal()<COW_FOOD_HP&&tries<6;tries++){
+            // Trout first (one bite each); otherwise the smallest banked cake piece.
+            const items=state()?.bank.items??[],trout=items.find(i=>i.id===333),item=trout??cowFoodPick(items),want=heal()+(trout?7:0);
+            if(!item||!(await s.bot.withdrawItem(item,trout?Math.min(trout.count,Math.ceil((COW_FOOD_HP-heal())/7)):1,{asNote:false})).success)break;
+            await waitUntil(s,()=>heal()>=Math.min(COW_FOOD_HP,want),{timeoutTicks:5});
+        }
+        if(!profile.foodBanked&&heal()<COW_FOOD_HP)throw new Error('no cow progress: working food restock failed');
     };
     try {
         await open();for(const id of ids)baseline[id]=bankCount(id);initialAssets=assetTotals();initialFood=ownedFood();await s.bot.closeBank();
@@ -268,8 +285,8 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
     finally {if(!died&&!ended)try{if(potionScope)await potionScope.withCombatPotionCleanup(bank);else await bank();}catch(e){failure=[failure,String(e)].filter(Boolean).join('; ');}off();offMetrics();}
     const banked={hide:bankCount(1739)-(baseline[1739]??bankCount(1739)),bones:bankCount(526)-(baseline[526]??bankCount(526)),beef:bankCount(2132)-(baseline[2132]??bankCount(2132))};
     const finalAssets=profile.foodBanked||potions?assetTotals():undefined;
-    const preserved=potions?!!initialAssets&&!!finalAssets&&[...new Set([...initialAssets.keys(),...finalAssets.keys()])].every(id=>ids.includes(id)||(finalAssets.get(id)??0)===(initialAssets!.get(id)??0)+(potions.delta[id]??0)-(id===333?eaten:0)):profile.foodBanked?!!initialAssets&&!!finalAssets&&[...new Set([...initialAssets.keys(),...finalAssets.keys()])].every(id=>ids.includes(id)||(finalAssets.get(id)??0)===(initialAssets!.get(id)??0)):[...kit].every(([id,n])=>count(allKit(),id)===n)&&held(333)>=2;
-    // Owned Trout in pack and bank change only by observed eating.
+    const preserved=potions?!!initialAssets&&!!finalAssets&&[...new Set([...initialAssets.keys(),...finalAssets.keys()])].every(id=>ids.includes(id)||(finalAssets.get(id)??0)===(initialAssets!.get(id)??0)+(potions.delta[id]??0)-(id===333?eaten:0)):profile.foodBanked?!!initialAssets&&!!finalAssets&&[...new Set([...initialAssets.keys(),...finalAssets.keys()])].every(id=>ids.includes(id)||(finalAssets.get(id)??0)===(initialAssets!.get(id)??0)):[...kit].every(([id,n])=>count(allKit(),id)===n)&&heal()>=COW_FOOD_HP;
+    // Owned food (in bites) in pack and bank changes only by observed eating.
     const finalFood=ownedFood(),foodAccounted=initialFood!==undefined&&finalFood===initialFood-eaten;
     const targetMet=(training.targetLevel!==undefined?goalReached():creditedKills===o.maximum)&&Object.values(banked).every(n=>n===creditedKills);
     const partial=training.targetLevel!==undefined&&!targetMet&&creditedKills>0&&['max-kills','cap'].includes(stop)

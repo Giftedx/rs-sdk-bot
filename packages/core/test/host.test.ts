@@ -131,7 +131,7 @@ test('a chain bot runs its steps in order inside the host, repeats rounds and en
             { name: 'alpha', script: 'scripts/chain.ts', env: { ROUNDS: '2' }, steps: [{ script, args: [], env: { HOST_TEST_TAG: 'one' } }, { script, args: [], env: { HOST_TEST_TAG: 'two' } }] },
             { name: 'failer', script: 'scripts/chain.ts', steps: [{ script, args: [], env: {} }] },
         ], { out: l => lines.push(l), logDir, guard: false });
-        expect(r.map(x => [x.name, x.code, x.result])).toEqual([['alpha', 0, 'RESULT ok chain rounds=2 ok=4 failed=0'], ['failer', 1, 'RESULT fail chain rounds=1 ok=0 failed=1']]);
+        expect(r.map(x => [x.name, x.code, x.result])).toEqual([['alpha', 0, 'RESULT ok chain rounds=2 ok=4 failed=0'], ['failer', 1, 'RESULT fail bot=failer chain rounds=1 ok=0 failed=1']]);
         const alpha = lines.filter(l => l.startsWith('[alpha] HELLO') || l.startsWith('[alpha] CHAIN') || l.startsWith('[alpha] RESULT'));
         const step = (round: number) => `[alpha] CHAIN round=${round} ${script} ok RESULT ok bot=alpha`;
         expect(alpha).toEqual([
@@ -156,6 +156,19 @@ test('a stop file ends a chain bot before its next step', async () => {
     writeFileSync(stop, 'test');
     try {
         const [r] = await runHost([{ name, script: 'scripts/chain.ts', env: { ROUNDS: '0' }, steps: [{ script: 'packages/core/test/fixtures/host-echo.ts', args: [], env: {} }] }], { out: () => {}, logDir, guard: false });
-        expect(r!.result).toBe('RESULT fail chain rounds=0 ok=0 failed=0 stop file');
+        expect(r!.result).toBe('RESULT fail stop file chain rounds=0 ok=0 failed=0');
     } finally { rmSync(stop, { force: true }); rmSync(logDir, { recursive: true, force: true }); }
+});
+
+test('invalid chain rounds refuse one hosted actor without rejecting its peers', async () => {
+    const logDir = join(tmpdir(), `host-chain-invalid-${process.pid}`);
+    const step = { script: 'packages/core/test/fixtures/host-echo.ts', args: [], env: {} };
+    try {
+        const results = await runHost([
+            { name: 'alpha', script: 'scripts/chain.ts', steps: [step] },
+            { name: 'beta', script: 'scripts/chain.ts', env: { ROUNDS: 'bad' }, steps: [step] },
+        ], { out: () => {}, logDir, guard: false });
+        expect(results.map(r => [r.name, r.code])).toEqual([['alpha', 0], ['beta', 1]]);
+        expect(results[1]!.result).toBe('RESULT fail chain needs steps and nonnegative integer ROUNDS');
+    } finally { rmSync(logDir, { recursive: true, force: true }); }
 });

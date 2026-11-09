@@ -286,6 +286,12 @@ export function spendRecoveryConnection(admission:unknown,r:RecoveryRequest){
   throw Error('recovery connection admission invalid; no connection attempted');
  entry.spent=true;entry.guard();
 }
+export function assertSpentRecoveryConnection(admission:RecoveryConnectionAdmission,account:string,server:string){
+ const entry=admissions.get(admission);
+ if(!entry?.spent||entry.pid!==process.pid||!same(entry.request.account,account)||entry.request.server!==server||entry.nativeFixture)
+  throw Error('recovery connection admission invalid; no connection attempted');
+ entry.guard();
+}
 
 export function recoveryStatePreserved(before:any,after:any){
  return !!before&&!!after&&same(before.player?.name,after.player?.name)

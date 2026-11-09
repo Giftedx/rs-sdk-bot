@@ -96,7 +96,7 @@ async function ensureClone(){
  }
  return main;
 }
-// One commit per branch: the previous publication is amended away, so the repository never grows with history.
+// Keep the private control branch at one commit so old control snapshots leave its history.
 async function pushSingleCommit(dir:string,branch:string,message:string):Promise<string>{
  await git(dir,'add','-A');
  const hasHead=(await git(dir,'rev-parse','--verify','HEAD')).ok;
@@ -105,6 +105,32 @@ async function pushSingleCommit(dir:string,branch:string,message:string):Promise
  if(!c.ok)throw Error(`commit ${branch}: ${c.out}`);
  const p=await git(dir,'push','--force','-q','origin',`HEAD:refs/heads/${branch}`);
  if(!p.ok)throw Error(`push ${branch}: ${p.out}`);
+ return 'pushed';
+}
+// Keep the published tree as the parent so Git can leave its assets out of the next push.
+// Use the remote tip as the parent even after a manual Pages deploy or a failed local push.
+export async function pushPublicCommit(dir:string):Promise<string>{
+ const ref='refs/heads/site';
+ const checked=async(...args:string[])=>{
+  const result=await git(dir,...args);
+  if(!result.ok)throw Error(`site git ${args[0]}: ${result.out}`);
+  return result.out;
+ };
+ let parent=(await checked('ls-remote','--refs','origin',ref)).split(/\s+/)[0]!;
+ if(parent&&!(await git(dir,'cat-file','-e',parent+'^{commit}')).ok){
+  await checked('fetch','--no-tags','origin',ref);
+  parent=await checked('rev-parse','--verify','FETCH_HEAD');
+ }
+ await checked('add','-A');
+ const tree=await checked('write-tree');
+ if(parent&&tree===await checked('rev-parse',parent+'^{tree}')){
+  await checked('update-ref','HEAD',parent);
+  return 'unchanged';
+ }
+ const parents=parent?['-p',parent]:[];
+ const commit=await checked('commit-tree',tree,...parents,'-m','fleet public state');
+ await checked('push','-q','origin',`${commit}:${ref}`);
+ await checked('update-ref','HEAD',commit);
  return 'pushed';
 }
 async function pullMain(main:string){const r=await git(main,'pull','--ff-only','-q','origin','main');if(!r.ok)console.log(`PUBLISH pull main: ${r.out.slice(0,160)}`);}
@@ -181,7 +207,7 @@ async function cycle(){
    if(existsSync(join(main,'site')))cpSync(join(main,'site'),site,{recursive:true});
    writeFileSync(join(site,'public.json'),pub);writeFileSync(join(site,'.nojekyll'),'');
    if(existsSync(join(DIR,'out','map.bin')))cpSync(join(DIR,'out','map.bin'),join(site,'map.bin'));
-   note+=` site=${await pushSingleCommit(site,'site','fleet public state')}`;lastSitePush=now;lastPublic=pub;
+   note+=` site=${await pushPublicCommit(site)}`;lastSitePush=now;lastPublic=pub;
   }
  }
  console.log(`PUBLISH ok ${new Date(now).toISOString()} ${note} control=${Math.round(control.length/1024)}K public=${Math.round(pub.length/1024)}K`);

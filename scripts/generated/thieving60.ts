@@ -4,7 +4,8 @@
 // Preset floors_lumbridge. Plan: pickpocket Lumbridge men to 60 coins, sail to Ardougne (copy of boatardy.ts),
 // then pickpocket the best target for the level: men below 40, guards from 40, knights from 55.
 // Stun damage (skill_thieving pickpocket.dbrow): man 1, guard 2, knight 3. The bot only pickpockets a target
-// when Hitpoints is above that damage, so one failed attempt cannot kill it.
+// when Hitpoints is above that damage plus HP_RESERVE (default 2), so a failed attempt leaves at least
+// HP_RESERVE + 1: room for a stray hit (a watchman event, a Lumbridge spider) and for the walk to the boat.
 // Food: bread from the Baker (2654,3311, shop 'bakery', 12 coins), eaten at 5 Hitpoints or less.
 import { existsSync } from 'node:fs';
 import { openBot, finish, countItems } from '../../packages/core/src/bot';
@@ -21,9 +22,12 @@ const ARDY_DECK = { x: 2683, z: 3268 };
 const TARGET = Number(process.env.TARGET ?? 60);
 const CAP = Number(process.env.CAP ?? 2500);
 const EAT_AT = 5;
+// Hitpoints kept above the worst single stun. 0 is the old rule (a failed attempt could leave 1 Hitpoint).
+const HP_RESERVE = Number(process.env.HP_RESERVE ?? 2);
 const EXIT_BANK = { x: 2654, z: 3283 };
 const BANK_ITEMS = /^(coins|bread|cake|2\/3 cake|slice of cake|chocolate slice)$/i;
 if (!Number.isInteger(TARGET) || TARGET < 1 || TARGET > 99 || !Number.isInteger(CAP) || CAP < 240) await finish([], false, 'TARGET must be1..99 and CAP at least240ticks');
+if (!Number.isInteger(HP_RESERVE) || HP_RESERVE < 0 || HP_RESERVE > 6) await finish([], false, 'HP_RESERVE must be 0..6');
 if (process.env.RELOG === '1') await finish([], false, 'RELOG is unsupported: train through ordinary stuns');
 const BREAD = /^bread$/i;
 const COINS = /^coins$/i;
@@ -55,6 +59,8 @@ try {
     const pos = () => s.sdk.getState()?.player;
     const coins = () => countItems(s, COINS);
     const bread = () => countItems(s, BREAD);
+    // A pickpocket on t may start only while a failed attempt still leaves HP_RESERVE + 1 Hitpoints.
+    const canSteal = (t: Target) => hp() > t.dmg + HP_RESERVE;
     const cheb = (a: { x: number; z: number }, p: { worldX: number; worldZ: number }) => Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ));
     const xp0 = xp();
     const t0 = now();
@@ -214,7 +220,7 @@ try {
     // ---- Step 1: Lumbridge men until 60 coins (the two boat fares, 30 each).
     const LUMB_MEN: Target = { name: 'man', re: /^man$/i, dmg: 1, spot: LUMBRIDGE, range: 15 };
     for (let i = 0; i < 600 && !inArdougne && coins() < 60 && !died && left() > 0; i++) {
-        if (hp() <= LUMB_MEN.dmg) { await rest(); continue; }
+        if (!canSteal(LUMB_MEN)) { await rest(); continue; }
         await steal(LUMB_MEN);
     }
     if (died) await end(false, 'died in Lumbridge');
@@ -374,9 +380,9 @@ try {
             continue;
         }
         // Both warriors can be busy (other players); the men stand 10 tiles away, so use them instead of waiting.
-        if (hp() > t.dmg) { if (!(await steal(t)) && t === WARRIORS && hp() > MEN.dmg) await steal(MEN); continue; }
+        if (canSteal(t)) { if (!(await steal(t)) && t === WARRIORS && canSteal(MEN)) await steal(MEN); continue; }
         // Too low for this target and no food: men hit for 1, so use them for coins, else rest.
-        if (hp() > MEN.dmg) await steal(MEN);
+        if (canSteal(MEN)) await steal(MEN);
         else await rest();
     }
     checkLevels();

@@ -7,7 +7,7 @@ import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {EventEmitter} from 'node:events';
 import {accountDir,beginSessionAttempt} from '../../core/src/session-lifecycle';
-import {afterStalledConnection,observePartialOwner,waitOwnerAuthLogout} from '../src/session-recovery-proof';
+import {afterStalledConnection,observePartialOwner,waitOwnerAuthLogout,serveAnyHost,worldHost} from '../src/session-recovery-proof';
 import {recoveryCloseModal} from '../../core/src/session-recovery';
 import type {Session} from '../../core/src/inprocess';
 import {recoveryCapability,verifyCompletedRouterPins,fleetHandoff,publishControlFile,observeRecoveryBoundary,recoveryAuthorityInputs,recoveryMemoryGate,RECOVERY_MEMORY_WAIT_MS,type RecoveryBoundary} from '../src/session-recovery-proof';
@@ -982,4 +982,26 @@ test('the orphan child reading mid-heartbeat sees a complete fleet view, never f
   expect(JSON.parse(readFileSync(path,'utf8')).at).toBe(1793340901899);
   expect(fs.readdirSync(join(dir,'.practice'))).toEqual(['swarm-state.json']);
  }finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+test('the relay binds dual-stack, falls back to IPv4 loopback only on EAFNOSUPPORT, and keeps other bind errors',()=>{
+ const seen:string[]=[];
+ const ok=((o:any)=>{seen.push(o.hostname);return {hostname:o.hostname};}) as any;
+ expect(serveAnyHost({port:1,fetch:()=>new Response('')} as any,ok) as any).toEqual({hostname:'::'});
+ const noV6=((o:any)=>{seen.push(o.hostname);if(o.hostname==='::'){const e:any=Error('EAFNOSUPPORT: address family not supported, listen');e.code='EAFNOSUPPORT';throw e;}return {hostname:o.hostname};}) as any;
+ expect(serveAnyHost({port:1,fetch:()=>new Response('')} as any,noV6) as any).toEqual({hostname:'127.0.0.1'});
+ const inUse=((o:any)=>{const e:any=Error('EADDRINUSE');e.code='EADDRINUSE';throw e;}) as any;
+ expect(()=>serveAnyHost({port:1,fetch:()=>new Response('')} as any,inUse)).toThrow('EADDRINUSE');
+ expect(seen).toEqual(['::','::','127.0.0.1']);
+});
+
+test('the world client reaches the IPv4 world when another listener on ::1 accepts and drops the same port',async()=>{
+ // The world binds 0.0.0.0 only. A ::1 listener that closes each socket gave 'socket connection was closed unexpectedly'.
+ const world=Bun.serve({hostname:'127.0.0.1',port:0,fetch:req=>new Response(new URL(req.url).pathname)});
+ let stale:{stop(closeActive?:boolean):void}|undefined;
+ try{
+  try{stale=Bun.listen({hostname:'::1',port:world.port!,socket:{open(s){s.end();},data(){}}});}catch{/* no IPv6 loopback on this host */}
+  expect(worldHost(world.port!)).toBe('127.0.0.1:'+world.port);
+  expect(await (await fetch(`http://${worldHost(world.port!)}/crc`)).text()).toBe('/crc');
+ }finally{stale?.stop(true);world.stop(true);}
 });

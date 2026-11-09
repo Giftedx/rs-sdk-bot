@@ -339,11 +339,11 @@ function syncWorld(){
   const f=$('#rsw');
   if(!f.getAttribute('src')){
     // The viewer's default camera is Lumbridge: without a start it loads those map squares before the followed account's.
-    const url=viewerCameraUrl(viewerFrameUrl(VIEWER.url,location.origin),window.atlasDestination||(window.atlasFreeCamera?null:b?.live||b?.pos));
+    const url=viewerCameraUrl(viewerFrameUrl(VIEWER.url,location.origin),window.atlasDestination||(window.atlasFreeCamera||window.atlasFollowOther?null:b?.live||b?.pos));
     url.searchParams.set('live','wss://rs-sdk-demo.fly.dev/worldfeed');url.searchParams.set('embed','0');url.searchParams.set('client','1');url.searchParams.set('fps','20');url.searchParams.set('scale',String(window.atlasQuality||1));
     url.searchParams.set('hideNamesFrom',new URL('api/hidden-names',document.baseURI).href);url.searchParams.set('highlightFrom',new URL('api/our-names',document.baseURI).href);
     if(Q.get('flight')==='0')url.searchParams.set('flight','0');if(Q.get('cache')==='0')url.searchParams.set('cache','0');
-    if(sel&&!window.atlasFreeCamera)url.searchParams.set('follow',sel);rswFor=sel;window.atlasFollowOther=null;sentMaxLevel=viewerMaxLevel();url.searchParams.set('ml',String(sentMaxLevel));f.src=url.href;
+    const target=window.atlasFollowOther||sel;if(target&&!window.atlasFreeCamera)url.searchParams.set('follow',target);rswFor=sel;sentMaxLevel=viewerMaxLevel();url.searchParams.set('ml',String(sentMaxLevel));f.src=url.href;
   }else if(rswFor!==sel&&sel&&!window.atlasFreeCamera&&!window.atlasFollowOther){rswFor=sel;f.contentWindow?.postMessage({follow:sel},VIEWER.origin);}
 }
 
@@ -432,7 +432,7 @@ function boardGrid(){if(!S.race?.rows?.length)boardMode='specialists';$('#board-
 // Any other account: the panels change and the camera stops where it is, because that account has no place in the world.
 function pick(n){if(!n)return;const b=S?.bots?.find(b=>b.name===n),live=!!b?.inWorld&&!b.practice;window.atlasFollowOther=null;window.atlasDestination=null;window.atlasFreeCamera=!live;rswFor=null;if(!live&&mode==='3d'&&VIEWER.origin)$('#rsw').contentWindow?.postMessage({atlasFreeCamera:true},VIEWER.origin);sel=n;picked=true;view='account';detailPage=0;render();}
 // Any online player, followed by the 3D camera (a player lookup's Follow button); picking one of our accounts returns.
-window.atlasFollow3d=name=>{const f=$('#rsw');if(mode!=='3d'||VIEWER.state!=='ready'||!f.contentWindow||!/^[A-Za-z0-9_ -]{1,12}$/.test(name))return false;window.atlasFreeCamera=false;window.atlasDestination=null;window.atlasFollowOther=name;f.contentWindow.postMessage({follow:name},VIEWER.origin);render();return true;};
+window.atlasFollow3d=(name,allowLoading=false)=>{const frame=$('#rsw').contentWindow,ready=mode==='3d'&&VIEWER.state==='ready'&&frame;if(!/^[A-Za-z0-9_ -]{1,12}$/.test(name)||!ready&&!(allowLoading&&['checking','loading'].includes(VIEWER.state)))return false;window.atlasFreeCamera=false;window.atlasDestination=null;window.atlasFollowOther=name;if(ready)frame.postMessage({follow:name},VIEWER.origin);render();return true;};
 function choose(v){view=v;detailPage=0;render();}
 function render(){if(!S)return;S.bots??=[];if(!window.atlasFreeCamera&&!picked&&!S.bots.some(b=>b.name===sel&&b.operation==='observed'))sel=liveBots().find(b=>b.operation==='observed')?.name||(S.bots.some(b=>b.name===sel)?sel:null);
  $('#pause').textContent=S.objectives?.paused?'Ⅱ GAME WORK PAUSED':S.objectives?.available?'PLAN ACTIVE':'PLAN UNKNOWN';

@@ -33,7 +33,8 @@ import { jobLogStart } from '../packages/core/src/job-log';
 import { readLogoutProof, listAttempts, verifyLegacyLogout, type LegacyLogoutClaim, type LegacyLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 import { mergedPlan, readCoordinatorJobs, emptyCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
-import { leaseHeldElsewhere, loadOwners, mySide, readLease, sideOf, thisHost, type Owner } from '../packages/core/src/fleet';
+import { loadOwners, mySide, sideOf, type Owner } from '../packages/core/src/fleet';
+import { acquireFleetLease, FLEET_LEASE_RENEW_MS } from '../packages/core/src/fleet-lease';
 
 export type Job = { autopilot?: string; template?: string; account?: string; accounts?: string[]; host?: boolean; orchestrate?:boolean; args?:string[]; maxRestarts?:number; script: string; role?: string; goal?: string; env?: Record<string, string>; envByAccount?: Record<string, Record<string, string>>; enabled: boolean; repeat?: boolean; note?: string; whenCargoFrom?: string[]; demandNear?: {x:number;z:number;radius:number};whenFoodLowFrom?:string[];foodLowBelow?:number;foodSourceAccount?:string;foodSourceAccounts?:string[];sourceFoodMinimum?:number };
 type Plan = { maxBots: number; minFreeGB: number; jobs: Job[] };
@@ -217,6 +218,17 @@ export function persistentEnd(reason: string): boolean {
 export const SWARM_STOP = { removed: 'swarm plan removed or stopped', all: 'swarm stopped', job: 'swarm', recovery: 'swarm recovery stopped', inherited: 'inherited recovery stopped' } as const;
 export function swarmWroteStop(text: string | undefined): boolean {
     return text !== undefined && (Object.values(SWARM_STOP) as string[]).includes(text.trim());
+}
+export function writeSwarmStop(file: string, reason: string): void {
+    try { writeFileSync(file, reason, { flag: 'wx' }); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error; }
+}
+export function clearSwarmStop(file: string): boolean {
+    let text: string;
+    try { text = readFileSync(file, 'utf8'); } catch { return false; }
+    if (!swarmWroteStop(text)) return false;
+    rmSync(file, { force: true });
+    return true;
 }
 // The ends a standing job retries by itself once the account is offline: a block or give-up, a stop that a stop file
 // caused (the account's own RESULT says so; an owner's file still blocks the start, the controller's own is gone), or a
@@ -515,10 +527,13 @@ if (import.meta.main) {
         try { assertWorkerRelease({ ...process.env, WORKER_ENTRY: '' }, root); }
         catch (error) { console.log('swarm: ' + String(error)); process.exit(2); }
     }
-    // One controller per side across machines: another machine's fresh lease (scripts/fleet-sync.ts publishes it from the
-    // running controller's heartbeat) means its swarm runs this side's accounts; a second controller would log them in twice.
-    const held = leaseHeldElsewhere(readLease(side), thisHost());
-    if (held) { console.log(`swarm: the ${side} side's jobs run on ${held.host} (lease ${Math.round((Date.now() - held.at) / 60_000)} min old, controller pid ${held.pid}); not starting a second controller`); process.exit(2); }
+    // Acquire before adopting or writing controller state. A cached fleet-data heartbeat cannot grant admission.
+    let lease: ReturnType<typeof acquireFleetLease>;
+    try { lease = acquireFleetLease(root, side); }
+    catch (error) { console.log('SWARM ' + String(error)); process.exit(2); }
+    process.env.SWARM_LEASE_HOLDER = lease.holder;
+    let renewAt = performance.now() + FLEET_LEASE_RENEW_MS;
+    const assertLease = () => { if (!lease.allows()) throw Error('fleet controller lease unavailable'); };
 
     const runs = new Map<string, Run>();
     const recoveryDispatch=createRecoveryDispatch({base:root,server:LIVE_SERVER});
@@ -623,10 +638,12 @@ if (import.meta.main) {
             // Each worker carries the release of the files its entries can run (docs/script-contract.md, Release
             // scope), so a runtime change needs no swarm restart and an edit outside those files leaves it unchanged.
             const entries = workerEntries(job.script, job.args ?? [], root);
+            const workRelease = capabilityRevision(entries, root);
+            assertLease();
             writeSync(out, jobLogStart(job));
             child = spawnChild(cmd[0]!, cmd.slice(1), {
                 cwd: root, detached: true, windowsHide: true, stdio: ['ignore', out, out],
-                env: { ...process.env, ...job.env, WORKER_RELEASE: capabilityRevision(entries, root), WORKER_ENTRY: entries.join(','), DEMO_OK: '1', BOT_ROLE: job.role ?? '', BOT_GOAL: job.goal ?? '', STANDING: (job as Job & {standing?:boolean}).standing ? '1' : '',COORDINATOR_PARTICIPANTS:job.orchestrate?JSON.stringify(accounts):'' },
+                env: { ...process.env, ...job.env, SWARM_LEASE_HOLDER: lease.holder, SWARM_MISSION_HASH: createHash('sha256').update(revision).digest('hex'), WORKER_RELEASE: workRelease, WORKER_ENTRY: entries.join(','), DEMO_OK: '1', BOT_ROLE: job.role ?? '', BOT_GOAL: job.goal ?? '', STANDING: (job as Job & {standing?:boolean}).standing ? '1' : '',COORDINATOR_PARTICIPANTS:job.orchestrate?JSON.stringify(accounts):'' },
             });
         } finally { closeSync(out); }
         if (!child.pid) throw Error('supervisor did not start');
@@ -638,6 +655,25 @@ if (import.meta.main) {
     });
 
     const tick = () => {
+        if (performance.now() >= renewAt && lease.allows()) {
+            try { lease.renew(); }
+            catch (error) { console.log('SWARM ' + String(error)); }
+            renewAt = performance.now() + FLEET_LEASE_RENEW_MS;
+        }
+        if (!lease.allows()) {
+            // Also stop adopted runs from code that predates the worker fence. Preserve owner stop files.
+            const accounts = new Set([...runs.values()].flatMap(r => r.accounts));
+            if (recoveryDispatch.active) accounts.add(recoveryDispatch.active.account);
+            for (const held of heldRecoveryOwners(root)) accounts.add(held.account);
+            for (const account of accounts) {
+                try { writeSwarmStop(stopFile(account), 'fleet controller lease unavailable'); }
+                catch (error) {
+                    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') console.log('SWARM could not request lease-loss logout for ' + account);
+                }
+            }
+            if (!accounts.size) { console.log('SWARM stopped (fleet controller lease unavailable)'); process.exit(2); }
+            return;
+        }
         let plan: Plan;
         // The coordinator's jobs join the root plan only; a practice plan file given on the command line runs alone.
         try { plan = mergedPlan(JSON.parse(readFileSync(planFile, 'utf8')), rootPlan ? readCoordinatorJobs(root) : emptyCoordinatorJobs()); } catch (e) { console.log(`SWARM bad plan: ${String(e)}`); return; }
@@ -646,8 +682,8 @@ if (import.meta.main) {
         if(!Array.isArray(plan.jobs)||!Number.isFinite(plan.maxBots)||plan.maxBots<1||!Number.isFinite(plan.minFreeGB)) { console.log('SWARM bad plan shape'); return; }
         const stopAll = existsSync(join(prac, 'stop-swarm'));
         inheritedRecoveries=heldRecoveryOwners(root,recoveryDispatch.active?[recoveryDispatch.active.account]:[]);
-        if(stopAll&&recoveryDispatch.active)writeFileSync(stopFile(recoveryDispatch.active.account),SWARM_STOP.recovery);
-        if(stopAll)for(const held of inheritedRecoveries)writeFileSync(stopFile(held.account),SWARM_STOP.inherited);
+        if(stopAll&&recoveryDispatch.active)writeSwarmStop(stopFile(recoveryDispatch.active.account),SWARM_STOP.recovery);
+        if(stopAll)for(const held of inheritedRecoveries)writeSwarmStop(stopFile(held.account),SWARM_STOP.inherited);
         const planned=plan.jobs.flatMap(j=>{ const p=parseJob(j); return 'error' in p?[]:[p]; });
         const accountEnabled = enabledByAccount(planned);
         if (Date.now() - orphanScanAt >= 60_000) {
@@ -667,7 +703,7 @@ if (import.meta.main) {
         // A replacement host/account configuration waits for its current owner;
         // changing the run key must neither stop it nor permit a second login.
         for(const r of runs.values()) if(!overlappingRun(planned,r.accounts)||stopAll)
-            for(const a of r.accounts) writeFileSync(stopFile(a),SWARM_STOP.removed);
+            for(const a of r.accounts) writeSwarmStop(stopFile(a),SWARM_STOP.removed);
         const statuses: unknown[] = [];
         try {
             for (const file of readdirSync(join(prac, 'status'))) if (file.endsWith('.json')) {
@@ -683,6 +719,7 @@ if (import.meta.main) {
                 let request: any, result = { changed: false, reason: 'invalid repair JSON' };
                 try { request = JSON.parse(raw); } catch { /* retained in the receipt */ }
                 if(!recoveryDispatch.handle(raw,request=>{
+                    assertLease();
                     const active=[...runs.values()].flatMap(r=>r.accounts).concat(activeExternalLive(statuses,[],Date.now()));
                     admitRecovery({account:request.account,active,running:botsRunning(),external:activeExternalLive(statuses,[...runs.values()].flatMap(r=>r.accounts).concat(inheritedRecoveries.map(r=>r.account)),Date.now()).length,
                         pending:pendingCount(),freeGB:freemem()/2**30,minFreeGB:plan.minFreeGB,maxBots:plan.maxBots});
@@ -739,9 +776,9 @@ if (import.meta.main) {
                 continue;
             }
             for (const a of p.accounts) observeEnabled([a], accountEnabled.get(a.toLowerCase()) === true, previousEnabled, pendingResume);
-            if(stopAll) for(const a of p.accounts) writeFileSync(stopFile(a),SWARM_STOP.all);
+            if(stopAll) for(const a of p.accounts) writeSwarmStop(stopFile(a),SWARM_STOP.all);
             const r = overlappingRun(runs.values(), p.accounts);
-            if (!stopAll && endStateOk && applyResume(p.accounts, !!r, ended, pendingResume, a => rmSync(stopFile(a), {force:true})))
+            if (!stopAll && endStateOk && applyResume(p.accounts, !!r, ended, pendingResume, a => clearSwarmStop(stopFile(a))))
                 persistEnded(deathsFile, ended);
             const st: Record<string, string> = {};
             if (r && foreignRun(planned, p, r) && !stopAll) {

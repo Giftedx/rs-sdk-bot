@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile,cowStopControl,genericCombatNpc,bankCombatLoot} from './gather-combat';
+import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile,cowStopControl,genericCombatNpc,bankCombatLoot,cowFoodBites,cowFoodPick,cowFoodHeal,COW_FOOD_HP} from './gather-combat';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks} from '../packages/core/src/ticks';
 import {existsSync,readFileSync} from 'node:fs';
@@ -261,4 +261,21 @@ test('generic combat prefers a native attacker targeting this player over a free
     const foreign = {...own,distance:0,targetIndex:32770};
     expect(genericCombatNpc('druid',[foreign,free,own],1)).toBe(own);
     expect(genericCombatNpc('druid',[foreign,free,own])).toBe(free);
+});
+
+test('cow food counts cake pieces in bites and eats the smallest piece first', () => {
+    expect(cowFoodBites([{id:333,count:2}])).toBe(2);
+    expect(cowFoodBites([{id:1891,count:1},{id:1893,count:1},{id:1895,count:2},{id:1901,count:1},{id:995,count:500}])).toBe(3+2+2+1);
+    expect(cowFoodBites([{id:995,count:9}])).toBe(0);
+    expect(cowFoodPick([{id:1891},{id:1893},{id:1895},{id:995}])?.id).toBe(1895);
+    expect(cowFoodPick([{id:1897},{id:1899}])?.id).toBe(1899);
+    expect(cowFoodPick([{id:995}])).toBeUndefined();
+});
+
+test('held cow food must cover the trout rule in HP, not in pieces', () => {
+    expect(cowFoodHeal([{id:333,count:2}])).toBe(COW_FOOD_HP);
+    expect(cowFoodHeal([{id:1895,count:3}])).toBe(12);
+    expect(cowFoodHeal([{id:1895,count:3}])<COW_FOOD_HP).toBe(true);
+    expect(cowFoodHeal([{id:1891,count:1},{id:1895,count:1}])).toBe(16);
+    expect(cowFoodHeal([{id:1901,count:3}])).toBe(15);
 });

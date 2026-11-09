@@ -1,6 +1,37 @@
 import { test, expect } from 'bun:test';
-import { parseCoins, exactCoinDelta, coinTradeObservation, meetingTiles } from './coin-courier';
+import { parseCoins, exactCoinDelta, coinTradeObservation, meetingTiles, prepareCoinSlot } from './coin-courier';
 import type { Session } from '../packages/core/src/inprocess';
+
+test('full donor banks an unrelated item before exact 45000-coin withdrawal', async () => {
+    let pack = [{ id: 1446, name: 'Body talisman', count: 1, slot: 0 },
+        ...Array.from({ length: 27 }, (_, slot) => ({ id: 1436, name: 'Rune essence', count: 1, slot: slot + 1 }))];
+    let bank = [{ id: 995, name: 'Coins', count: 50000 }], generation = 1, deposits = 0;
+    const session = {
+        name: 'Giver', tick: () => generation, sdk: { getInventory: () => pack, getState: () => ({ inventory: pack }) },
+        bankObservation: () => ({ generation, items: bank }),
+        bot: {
+            depositItem: async (item: typeof pack[number], amount: number) => {
+                expect(item.id).toBe(1446); expect(amount).toBe(-1); deposits++;
+                pack = pack.filter(i => i.id !== item.id); bank.push({ id: item.id, name: item.name, count: 1 }); generation++;
+                return { success: true };
+            },
+            withdrawItem: async (_item: RegExp, amount: number) => {
+                if (pack.length >= 28 && !pack.some(i => i.id === 995)) throw Error('no inventory space');
+                bank[0]!.count -= amount; pack.push({ id: 995, name: 'Coins', count: amount, slot: 0 }); generation++;
+            },
+        },
+    } as unknown as Session;
+    await prepareCoinSlot(session, () => {});
+    expect(pack.length).toBe(27);
+    expect(bank.find(i => i.id === 1446)?.count).toBe(1);
+    const before = { bank: bank[0]!.count, pack: 0 };
+    await session.bot.withdrawItem(/^Coins$/, 45000);
+    expect(bank[0]!.count).toBe(before.bank - 45000);
+    expect(pack.find(i => i.id === 995)?.count).toBe(45000);
+    expect(pack.filter(i => i.id === 1436).length).toBe(27);
+    await prepareCoinSlot(session, () => {});
+    expect(deposits).toBe(1); // A full pack with a coin stack needs no further deposit.
+});
 
 test('trade diagnostics retain unreachable counter geometry and exact holdings', () => {
     const trade = { isOpen: false, screen: null, partner: null, myAccepted: false, partnerAccepted: false, myOffer: [], theirOffer: [] };

@@ -31,6 +31,18 @@ export async function fetchBoard(base: string, category: number, profile = 'main
     return parseBoard(await res.text(), expectedTickMs);
 }
 
+export async function observeProfile(base:string,name:string,request:typeof fetch=fetch){
+    const account=name.toLowerCase();
+    if(!/^[a-z0-9]{1,12}$/.test(account))throw Error('invalid fresh account name');
+    const response=await request(base+'/hiscores/player/'+account+'?profile=main',
+        {signal:AbortSignal.timeout(15_000),cache:'no-store',redirect:'error'});
+    if(response.status===404){
+        if(await response.text()!==`Player "${account}" not found.`)throw Error('hiscore profile '+account+': invalid 404 response');
+    }else if(response.status===200)await response.body?.cancel();
+    else throw Error('hiscore profile '+account+': HTTP '+response.status);
+    return {name:account,status:response.status,at:Date.now()};
+}
+
 export interface Gap { board: string; leaderName: string | null; leaderTicks: number | null; ourTicks: number; marginTicks: number; winnable: boolean }
 
 // A board is winnable when our plan reaches the leader's level in fewer scored ticks than they took.

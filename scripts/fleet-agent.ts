@@ -9,7 +9,7 @@ import { closeSync, existsSync, openSync, readdirSync, readFileSync, rmSync, wri
 import { join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 import { FLEET_DIR, mySide, sideOf, loadOwners } from '../packages/core/src/fleet';
-import { pickOrder, validOrder, type Order, type Receipt } from './fleet-trade';
+import { pickOrder, readAgentJobs, swarmBusy, validOrder, type Order, type Receipt } from './fleet-trade';
 import { lastResult } from '../packages/core/src/run-child';
 import { mergeJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import {capabilityRevision} from '../packages/core/src/worker-release';
@@ -18,11 +18,8 @@ const root = resolve(import.meta.dir, '..'), lock = join(root, '.practice', 'fle
 const CYCLE = Number(process.env.CYCLE ?? 10) * 60_000, LEAD = Number(process.env.LEAD ?? 15) * 60_000;
 const readJson = (dir: string) => existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(dir, f), 'utf8'))]; } catch { return []; } }) : [];
 
-// Accounts with an enabled swarm job (the owner's in swarm.json or the coordinator's in .practice/coordinator/jobs.json)
-// belong to the swarm while it runs them.
-export function swarmBusy(jobs: readonly any[]): Set<string> {
-    return new Set(jobs.filter(j => j?.enabled).flatMap(j => [j.account, ...(j.accounts ?? [])]).filter((n): n is string => typeof n === 'string').map(n => n.toLowerCase()));
-}
+export { readAgentJobs, swarmBusy } from './fleet-trade';
+
 // The orders this side must act on now: each of its accounts with a pickable order, minus busy or already running ones.
 export function dueTrades(orders: readonly Order[], receipts: readonly Receipt[], side: string, owners: ReturnType<typeof loadOwners>, busy: ReadonlySet<string>, running: ReadonlySet<string>, now: number, lead = LEAD) {
     const names = new Set(orders.flatMap(o => [o.from, o.to]).filter(n => sideOf(n, owners) === side).map(n => n.toLowerCase()));
@@ -37,12 +34,6 @@ export function dueTrades(orders: readonly Order[], receipts: readonly Receipt[]
     return due;
 }
 
-export function readAgentJobs(file=resolve(process.env.SWARM_PLAN??join(root,'swarm.json'))): readonly any[]{
-    // An unreadable plan cannot grant a trade worker ownership of its accounts.
-    const plan=JSON.parse(readFileSync(file,'utf8'));
-    if(!Array.isArray(plan.jobs))throw Error('fleet agent: invalid swarm plan');
-    return plan.jobs;
-}
 const TRADE_SCRIPT='scripts/fleet-trade.ts';
 // The trade worker's capability release (packages/core/src/worker-release.ts).
 export function tradeEnvironment(dir:string,env:Record<string,string|undefined>=process.env,release=capabilityRevision([TRADE_SCRIPT],root)){
@@ -55,7 +46,14 @@ export function syncResult(out: string, exitCode: number | null): string {
     return line === 'RESULT fail no result' ? `RESULT fail fleet-sync exit ${exitCode}` : line;
 }
 
-const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } };
+// A lock left by a previous boot or container can name a PID that another process now holds, so on Linux the PID must
+// still run a fleet agent; where /proc is absent (Windows) a live PID is taken as the agent.
+const procCmdline = (pid: number): string | undefined => { try { return readFileSync(`/proc/${pid}/cmdline`, 'utf8'); } catch { return undefined; } };
+export function agentAlive(pid: number, cmdline: (pid: number) => string | undefined = procCmdline): boolean {
+    try { process.kill(pid, 0); } catch { return false; }
+    const c = cmdline(pid);
+    return c === undefined || c.includes('fleet-agent');
+}
 
 if (import.meta.main) {
     if (process.argv.includes('--daemon')) {
@@ -65,7 +63,7 @@ if (import.meta.main) {
         console.log(`FLEET_AGENT started pid ${child.pid} (log .practice/fleet-agent.log)`);
         process.exit(0);
     }
-    if (existsSync(lock)) { const pid = Number(readFileSync(lock, 'utf8')); if (pid !== process.pid && alive(pid)) { console.log(`FLEET_AGENT already running pid ${pid}`); process.exit(0); } }
+    if (existsSync(lock)) { const pid = Number(readFileSync(lock, 'utf8')); if (pid !== process.pid && agentAlive(pid)) { console.log(`FLEET_AGENT already running pid ${pid}`); process.exit(0); } }
     writeFileSync(lock, String(process.pid));
     const release = () => { try { if (readFileSync(lock, 'utf8') === String(process.pid)) rmSync(lock); } catch { /* gone */ } };
     process.on('exit', release); process.on('SIGINT', () => process.exit(0)); process.on('SIGTERM', () => process.exit(0));

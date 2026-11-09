@@ -6,7 +6,7 @@
 // status.ts finds a bot's role from these lists. Each list starts with the names in use.
 
 export const NAMES = {
-    thieving: ['Pocketrocket', 'Pocketpython', 'Quickhandjob', 'TrouserSnake', 'TheFullMonty', 'UnderMyKilt', 'Fingerblastr'],
+    thieving: ['Pocketrocket', 'Pocketpython', 'Quickhandjob', 'TrouserSnake', 'TheFullMonty', 'UnderMyKilt', 'Fingerblastr', 'Kiltlifter', 'Knightstick', 'PocketPool', 'SporranDip', 'FullSporran', 'Fingersmith', 'Dipstick', 'KnightRider', 'DipYourWick', 'HalfInch'],
     runecraft: ['Wandwaver', 'Woodenstaff', 'Magicwanda', 'Rubmyrunes', 'ChaosInPants', 'Staffstiffy'],
     mining: ['Shaftsinker', 'HardRockCafe', 'Stonedboner', 'Mineshafted'],
     woodcutting: ['Woodpecker', 'Bigchopper', 'Morningwood', 'YewGotWood', 'WoodInMyKilt'],
@@ -22,7 +22,7 @@ export const NAMES = {
     fletching: ['Shaftmaker', 'Nockitoff'],
     smithing: ['Hammeredhard', 'Ironrod', 'Steelrod'],
     herblore: ['Stirmypot', 'Grindmyherb', 'Vialvirile'],
-    bank: ['Moneyshot', 'SporranBulge', 'Fatstack', 'Deeppockets'],
+    bank: ['Moneyshot', 'SporranBulge', 'Fatstack', 'Deeppockets', 'Coinpurse'],
     runite: ['Runeboner', 'Hotrocks', 'Moltenrod'],
     helper: ['Bigpackage', 'Ballbag', 'Packhorse', 'Heavyload', 'DropMyLoad', 'FullLoad', 'WellHung', 'InTheSack', 'PackageDeal', 'BackdoorMan', 'RearEntry', 'TackleBox', 'UnloadMe'],
 } as const satisfies Record<string, readonly string[]>;

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs } from '../src/autopilot';
+import { CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -45,6 +45,34 @@ test('a fresh account trains toward a free knight spot and reserves it; with no 
     expect(ids(plan(inputs(fresh, { taken: { ...four, 'knight:2582,3297': 1 } })))).toEqual({ NewA: expect.stringMatching(/^feathers@/), NewB: expect.stringMatching(/^feathers@/) });
 });
 
+test('a knight spot takes KNIGHT_SHARE farmers, each worth less: the empty spots fill first, then the least-held', () => {
+    const fresh = [acct('NewA'), acct('NewB'), acct('NewC')];
+    const knights = (n: number) => Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, n]));
+    const shared = (taken: Record<string, number>) => plan(inputs(fresh, { taken, capacity: CAPACITY, shared: SHARED }));
+    // One empty spot: the first account takes it at full worth, the others take a second place on a held spot.
+    const one = shared({ ...knights(1), 'knight:2582,3297': 0 });
+    expect(ids(one)).toEqual({ NewA: 'thieving55', NewB: 'thieving55', NewC: 'thieving55' });
+    expect(one[0]!.resources).toEqual(['knight:2582,3297']);
+    const holders = (taken: Record<string, number>, out: ReturnType<typeof plan>) => out.reduce((m, x) => ({ ...m, [x.resources[0]!]: (m[x.resources[0]!] ?? 0) + 1 }), { ...taken });
+    expect(Math.max(...Object.values(holders({ ...knights(1), 'knight:2582,3297': 0 }, one)))).toBe(2);
+    expect(one[1]!.value).toBeCloseTo(one[0]!.value * SHARED['knight:2652,3318']!, 9);
+    // No account takes a place beyond a spot's capacity.
+    expect(KNIGHT_SHARE).toBe(4);
+    expect(ids(shared({ ...knights(KNIGHT_SHARE), 'knight:2582,3297': KNIGHT_SHARE - 1 }))).toEqual({ NewA: 'thieving55', NewB: expect.stringMatching(/^feathers@/), NewC: expect.stringMatching(/^feathers@/) });
+    expect(Object.values(ids(shared(knights(KNIGHT_SHARE)))).every(id => id.startsWith('feathers@'))).toBe(true);
+    // With every spot at two farmers, the third places still take fresh accounts, one to a spot, each worth less than a
+    // second place.
+    const third = shared(knights(2));
+    expect(ids(third)).toEqual({ NewA: 'thieving55', NewB: 'thieving55', NewC: 'thieving55' });
+    expect(Math.max(...Object.values(holders(knights(2), third)))).toBe(3);
+    expect(third[0]!.value).toBeCloseTo(one[0]!.value * SHARED['knight:2652,3318']! ** 2, 9);
+    expect(third[0]!.value).toBeLessThan(one[1]!.value);
+    // Two accounts of this side on empty spots spread out instead of sharing.
+    const spread = shared({});
+    expect(new Set(spread.map(x => x.resources[0])).size).toBe(3);
+    expect(spread.every(x => x.value === spread[0]!.value)).toBe(true);
+});
+
 test('skills and holdings gate templates; coins pick a shop; a retired pair picks the next best', () => {
     const fisher = acct('Fisher', { Fishing: 60, Cooking: 60 }, { 'lobster pot': 1 });
     expect(ids(plan(inputs([fisher])))).toEqual({ Fisher: 'lobster-chain' });
@@ -53,6 +81,11 @@ test('skills and holdings gate templates; coins pick a shop; a retired pair pick
     const knights = Object.fromEntries(['2652,3318', '2653,3300', '2669,3298', '2671,3313', '2582,3297'].map(s => [`knight:${s}`, 1]));
     expect(ids(plan(inputs([acct('Rich', {}, { coin: 50_000 })], { taken: knights }))).Rich).toBe('shop-feathers');
     expect(ids(plan(inputs([acct('Fletch', {}, { 'arrow shaft': 1000, feather: 1000 })]))).Fletch).toBe('fletch-headless');
+});
+test('an account whose pack meets the feather target gets no feather job', () => {
+    const knights = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, 1]));
+    expect(ids(plan(inputs([acct('Full', {}, { feather: FEATHER_TARGET })], { taken: knights }))).Full).not.toMatch(/^feathers@/);
+    expect(ids(plan(inputs([acct('Room', {}, { feather: FEATHER_TARGET - 1 })], { taken: knights }))).Room).toMatch(/^feathers@/);
 });
 
 test('a shop blocked only by coins is funded by the richest free donor above its reserve', () => {
@@ -204,7 +237,7 @@ test('a paused handed-over job keeps its pen reserved', () => {
     expect(Object.keys(reservedResources(jobs, side, new Set(['hocuspokeus']))).sort()).toEqual(['knight:2671,3313', 'pen:3017,3288']);
 });
 
-test('the claim lists every spot, pen and shop the enabled jobs of this side hold, planner-made or not', () => {
+test('the claim lists every spot, pen and shop the enabled jobs of this side hold, planner-made or not, once per job', () => {
     const jobs = [
         { account: 'Pocketpython', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2582,3297' }, enabled: true },
         { account: 'Shaftsinker', script: 'scripts/chain.ts', args: ['scripts/goldfarm.ts KNIGHT_SPOT=2653,3300'], env: { ROUNDS: '1', RUN: '2' }, enabled: true },
@@ -216,10 +249,29 @@ test('the claim lists every spot, pen and shop the enabled jobs of this side hol
         { account: 'Haggis', script: '', enabled: false },
     ];
     const claim = claimFor(jobs, side, a => a === 'Quickhandjob' ? 'cloud' : side, 1234);
-    expect(claim).toEqual({ side, at: 1234, resources: ['knight:2582,3297', 'knight:2653,3300', 'pen:3017,3288'] });
+    // Shaftsinker and PickpockDick both farm the 2653,3300 knights, so the other sides count two farmers there.
+    expect(claim).toEqual({ side, at: 1234, resources: ['knight:2582,3297', 'knight:2653,3300', 'knight:2653,3300', 'pen:3017,3288'] });
     expect(claimFor([], side, () => side, 5).resources).toEqual([]);
     // Only a job with an active account holds its resources: a parked job's spot is free for the other sides.
     expect(claimFor(jobs, side, a => a === 'Quickhandjob' ? 'cloud' : side, 1234, a => a === 'Pocketpython' || a === 'Hocuspokeus').resources).toEqual(['knight:2582,3297', 'pen:3017,3288']);
+});
+
+test('an account the coordinator is recovering keeps its own job in the claim; other coordinator work does not', () => {
+    const own = [
+        { account: 'Kiltlifter', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2671,3313' }, enabled: true, autopilot: side, resources: ['knight:2671,3313'] },
+        { account: 'SporranDip', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2652,3318' }, enabled: true, autopilot: side, resources: ['knight:2652,3318'] },
+        { account: 'Knightstick', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2669,3298' }, enabled: true, autopilot: side, resources: ['knight:2669,3298'] },
+    ];
+    const coord = [
+        { account: 'Kiltlifter', script: 'scripts/session-check.ts', enabled: false, coordinatorOwner: 'coordinator' },
+        { account: 'Knightstick', script: 'scripts/generated/quest-cook.ts', enabled: true, coordinatorOwner: 'coordinator' },
+    ];
+    expect(recoveringOwnerJobs(own, coord).map(j => j.account)).toEqual(['Kiltlifter']);
+    expect(recoveringOwnerJobs(own, [{ ...coord[0], script: './scripts/session-check.ts' }]).map(j => j.account)).toEqual(['Kiltlifter']);
+    expect(recoveringOwnerJobs(own, [])).toEqual([]);
+    // The merged plan drops both shadowed jobs; adding the recovering one back keeps only Kiltlifter's place.
+    const merged = [own[1]!, ...coord];
+    expect(claimFor([...merged, ...recoveringOwnerJobs(own, coord)], side, () => side, 1).resources).toEqual(['knight:2652,3318', 'knight:2671,3313']);
 });
 
 test('a marked reservation opts its account in, and planning replaces it with an enabled job', () => {
@@ -256,9 +308,89 @@ test('on a value tie an account keeps the template it holds, so a level change d
     expect(ids(plan(inputs([a, b], { current, taken: { 'knight:2669,3298': 1 } })))).toEqual({ TheFullMonty: 'goldfarm@2671,3313', UnderMyKilt: 'goldfarm@2582,3297' });
 });
 
+test('a farmer keeps its knight place while the spot has room, so sides do not chase each other\'s claims', () => {
+    const a = acct('UnderMyKilt', { Thieving: 99 }), current = new Map([['undermykilt', 'goldfarm@2669,3298']]);
+    const held = (others: number) => plan(inputs([a], { current, capacity: CAPACITY, shared: SHARED, taken: { 'knight:2669,3298': others } }));
+    // Two other farmers on its spot while four spots stand empty: it stays.
+    expect(ids(held(2))).toEqual({ UnderMyKilt: 'goldfarm@2669,3298' });
+    // A full spot (KNIGHT_SHARE other farmers) moves it to an empty spot.
+    expect(ids(held(KNIGHT_SHARE)).UnderMyKilt).toMatch(/^goldfarm@/);
+    expect(ids(held(KNIGHT_SHARE)).UnderMyKilt).not.toBe('goldfarm@2669,3298');
+    // An account with no place still takes an empty spot over the crowded one.
+    const fresh = plan(inputs([acct('NewA', { Thieving: 99 })], { capacity: CAPACITY, shared: SHARED, taken: { 'knight:2669,3298': 2 } }));
+    expect(ids(fresh).NewA).not.toBe('goldfarm@2669,3298');
+});
+
+test('a server outage is a drain: a socket error at login or a stalled tick stream never retires a job', () => {
+    const login = 'RESULT fail login: [object WebSocket]', stall = 'RESULT fail TickStallError: tick stream stalled: no new game tick for 15000ms';
+    expect(assess([login, login, stall, stall])).toMatchObject({ retire: false, ok: 0, fail: 0, drains: 4 });
+    expect(assess(['RESULT fail no chickens', login, stall, 'RESULT fail no chickens'])).toMatchObject({ retire: true, fail: 2, drains: 2 });
+    expect(assess(['RESULT fail login: LoginError: Account already logged in', 'RESULT fail login: LoginError: Account already logged in']).retire).toBe(true);
+});
+test('a login refused while a dropped session holds the fleet claim is a drain, not a failure', () => {
+    const held = 'RESULT fail Error: fleet account claim held by swarm';
+    expect(assess([held, held, held])).toMatchObject({ retire: false, ok: 0, fail: 0, drains: 3 });
+    expect(assess(['RESULT fail fleet account claim held by swarm'])).toMatchObject({ fail: 0, drains: 1 });
+    expect(assess(['RESULT fail no chickens', held, 'RESULT fail no chickens'])).toMatchObject({ retire: true, fail: 2, drains: 1 });
+});
+
+test('a held account refusing logins after a drop is a drain: the refusal as the worker logs it (`login: Error: …`) never retires the spot', () => {
+    const drop = 'RESULT fail session ended: disconnected', held = 'RESULT fail login: Error: fleet account claim held by swarm';
+    expect(assess([drop, held, held, held])).toMatchObject({ retire: false, ok: 0, fail: 0, drains: 4 });
+    expect(assess(['RESULT fail no chickens', held, 'RESULT fail no chickens'])).toMatchObject({ retire: true, fail: 2, drains: 1 });
+});
 test('a run the gateway dropped is a drain, not a failure: two drains keep the job, two real fails after them retire it', () => {
     const drain = 'RESULT fail session ended: disconnected';
     expect(assess([drain, drain])).toMatchObject({ retire: false, ok: 0, fail: 0, drains: 2 });
     expect(assess(['RESULT fail no chickens', drain, 'RESULT fail no chickens'])).toMatchObject({ retire: true, fail: 2, drains: 1 });
     expect(assess(['RESULT fail no chickens', drain, 'RESULT ok feathers=30 gained=30'])).toMatchObject({ retire: false, ok: 1, fail: 1, drains: 1 });
+});
+
+test('goal bands go only to army accounts, before any coin job, earliest band first and nearest target first', () => {
+    const band = (id: string, n: number, skill: string, to: number, extra: Partial<Template> = {}): Template => ({ id, family: 'combat-train', script: 'scripts/gather-combat.ts', role: 'combat',
+        goal: `${skill} to ${to}`, tier: 'goal', band: n, trains: { skill, to, unlocks: [] }, yields: () => [], resources: ['giant:edge'], ...extra });
+    const bands = [band('str60', 0, 'Strength', 60), band('att60', 1, 'Attack', 60)];
+    const farm = catalogue().filter(t => t.family === 'goldfarm');
+    const thief = (name: string, skills: Record<string, number> = {}) => acct(name, { Thieving: 99, ...skills });
+    const army = new Set(['nearer', 'farther']);
+    const run = (accounts: Acct[], extra: Partial<Inputs> = {}) => ids(plan(inputs(accounts, { templates: [...bands, ...farm], army, capacity: { 'giant:edge': 1 }, ...extra })));
+    // An army account trains even though goldfarm pays coins; a specialist off the roster keeps farming.
+    expect(run([thief('Nearer'), thief('Specialist')])).toEqual({ Nearer: 'str60', Specialist: expect.stringMatching(/^goldfarm@/) });
+    // One giant place, shared by both bands: the account nearest its band target takes it, and the other, with no free
+    // band left, falls to the coin tier rather than idling.
+    expect(run([thief('Nearer', { Strength: 50 }), thief('Farther', { Strength: 10 })])).toEqual({ Nearer: 'str60', Farther: expect.stringMatching(/^goldfarm@/) });
+    // A met band is skipped: Strength 60 goes on to Attack.
+    expect(run([thief('Nearer', { Strength: 60 })])).toEqual({ Nearer: 'att60' });
+    // Kit money: a band an account cannot pay for is funded by a donor of its side, or left to the coin tier.
+    const kit = [band('str60', 0, 'Strength', 60, { needs: { items: { coins: 100_000 } } })];
+    expect(ids(plan(inputs([thief('Nearer')], { templates: [...kit, ...farm], army })))).toEqual({ Nearer: expect.stringMatching(/^goldfarm@/) });
+    const funded = plan(inputs([thief('Nearer')], { templates: [...kit, ...farm], army, donors: [{ name: 'Bank', coins: 1_000_000 }] }));
+    expect(funded[0]).toMatchObject({ template: { id: 'str60' }, fund: { from: 'Bank', to: 'Nearer', coins: 100_000 } });
+});
+
+test('the Ardougne cow bands train army accounts from Hitpoints 32 with 14 HP of food and the bronze kit, as repeating jobs', () => {
+    const kit = { trout: 2, 'bronze sword': 1, 'wooden shield': 1 };
+    const fighter = (name: string, skills: Record<string, number>, items: Record<string, number> = kit) => acct(name, { Thieving: 99, ...skills }, items);
+    const army = new Set(['cowhand', 'pure', 'broke', 'second', 'third']);
+    const run = (accounts: Acct[]) => plan(inputs(accounts, { army, capacity: CAPACITY }));
+    const pick = (accounts: Acct[]) => ids(run(accounts));
+    expect(pick([fighter('Cowhand', { Hitpoints: 35 })])).toEqual({ Cowhand: 'army-cow-strength' });
+    expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 40 })])).toEqual({ Cowhand: 'army-cow-attack' });
+    expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 40, Attack: 40 })])).toEqual({ Cowhand: 'army-cow-defence' });
+    // With no giant band, a range pure at Hitpoints 82 trains Strength on the cows too; Hitpoints 10 has too little
+    // food margin and farms.
+    expect(pick([fighter('Pure', { Hitpoints: 82 })])).toEqual({ Pure: 'army-cow-strength' });
+    expect(pick([fighter('Cowhand', { Hitpoints: 10 })]).Cowhand).toMatch(/^goldfarm@/);
+    // Cake counts by its bites: a 2/3 cake and a slice heal 12 HP, short of 14, and the account farms; add a whole cake
+    // (pack or bank) and it trains.
+    const bronze = { 'bronze sword': 1, 'wooden shield': 1 };
+    expect(pick([fighter('Broke', { Hitpoints: 35 }, { ...bronze, '2/3 cake': 1, 'slice of cake': 1 })]).Broke).toMatch(/^goldfarm@/);
+    expect(pick([fighter('Broke', { Hitpoints: 35 }, { ...bronze, '2/3 cake': 1, 'slice of cake': 1, cake: 1 })])).toEqual({ Broke: 'army-cow-strength' });
+    expect(pick([fighter('Broke', { Hitpoints: 35 }, { trout: 2 })]).Broke).toMatch(/^goldfarm@/);
+    // The field takes two; a third army account farms.
+    const three = pick([fighter('Cowhand', { Hitpoints: 35 }), fighter('Second', { Hitpoints: 36 }), fighter('Third', { Hitpoints: 37 })]);
+    expect(Object.values(three).filter(id => id.startsWith('army-cow-'))).toHaveLength(2);
+    // Cow mode runs a fixed 8 kills, so its job repeats until the band's target moves the account on.
+    const job = jobFor(run([fighter('Cowhand', { Hitpoints: 35 })])[0]!, side);
+    expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['3000', 'cow'], env: { TRAIN_SKILL: 'Strength', COW_BANK_PROFILE: 'north', MAX_KILLS: '8' }, repeat: true, resources: ['cow:ardougne-north'] });
 });

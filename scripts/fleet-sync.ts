@@ -8,14 +8,17 @@
 // planners stay off them while a job the swarm has not admitted for hours holds nothing) and this side's live
 // assignments (fleet/plans/<side>.json: the same merged plan, as scripts/swarm.ts runs it, so other machines and audits
 // see what runs), commits fleet/ and pushes.
-// The side's lease (fleet/leases/<side>.json) is this machine's live controller heartbeat (.practice/swarm-state.json,
-// written every swarm tick) while no other machine holds a fresh one; scripts/swarm.ts refuses to start against it.
+// fleet/leases/<side>.json mirrors the controller heartbeat for fleet-data readers and old controllers.
+// New controllers acquire their admission lease on a separate per-side ref before writing a heartbeat.
 // Usage: bun scripts/fleet-sync.ts [--no-push]
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { FLEET_WORKTREE, loadOwners, mySide, nextLease, readLease, leaseHeldElsewhere, thisHost, type Lease } from '../packages/core/src/fleet';
-import { CLAIM_MAX_AGE_MS, claimFor } from '../packages/planner/src/autopilot';
+import { CLAIM_MAX_AGE_MS, claimFor, recoveringOwnerJobs } from '../packages/planner/src/autopilot';
 import { mergeJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
+import { withFleetDataWrite } from './fleet-owner-claim';
+import { readHeldFleetTradeClaims, releaseFleetTradeClaim, type FleetTradeClaim } from '../packages/core/src/fleet-trade-claim';
+import { terminalTradeReceipt, validOrder } from './fleet-trade-settlement';
 
 const root = resolve(import.meta.dir, '..');
 const BRANCH = 'fleet-data', HEARTBEAT_MAX_AGE_MS = 60_000;
@@ -62,7 +65,8 @@ export function planView(jobs: readonly any[], side = mySide(), owners = loadOwn
     return { side, at: now, jobs: own.map(j => Object.fromEntries(PLAN_FIELDS.filter(k => j[k] !== undefined).map(k => [k, j[k]]))) };
 }
 const git = (cwd: string, ...args: string[]) => {
-    const p = Bun.spawnSync(['git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+    const p = Bun.spawnSync(['git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe', windowsHide: true,
+        timeout: 15_000, env: {...process.env, GIT_TERMINAL_PROMPT: '0'} });
     return { ok: p.exitCode === 0, out: `${p.stdout.toString()}${p.stderr.toString()}`.trim() };
 };
 
@@ -76,6 +80,41 @@ export function ensureWorktree(dir = FLEET_WORKTREE): string {
     if (!add.ok) throw Error(`fleet worktree: ${add.out}`);
     git(dir, 'branch', '--set-upstream-to', `origin/${BRANCH}`);
     return dir;
+}
+
+export function releasePublishedTradeClaims(
+    claims: readonly FleetTradeClaim[], side: string, read: (path: string) => any,
+    release: (claim: FleetTradeClaim) => void, now = Date.now(),
+): number {
+    let released = 0;
+    for (const claim of claims) {
+        if (claim.phase !== 'held' || claim.side !== side) continue;
+        const order = read(`orders/${claim.orderId}.json`), receipt = read(`receipts/${claim.orderId}.${claim.role}.json`);
+        if (!validOrder(order) || order.id !== claim.orderId || !receipt || !terminalTradeReceipt(order, claim.role, receipt, now)
+            || receipt.claim !== claim.nonce || receipt.side !== claim.side || receipt.account.toLowerCase() !== claim.account
+            || receipt.server.toLowerCase() !== claim.server || receipt.logout!.at < claim.at) continue;
+        release(claim);
+        released++;
+    }
+    return released;
+}
+
+function releaseSyncedTrades(dir: string, side: string) {
+    const receiptDir = join(dir, 'fleet', 'receipts');
+    if (!existsSync(receiptDir)) return;
+    const accounts = readdirSync(receiptDir).filter(name => name.endsWith('.json')).flatMap(name => {
+        try {
+            const r = JSON.parse(readFileSync(join(receiptDir, name), 'utf8'));
+            return r?.version === 2 && r.side === side && typeof r.account === 'string' && /^[A-Za-z0-9]{1,12}$/.test(r.account)
+                && (r.state === 'settled' || r.state === 'failed') ? [r.account] : [];
+        } catch { return []; }
+    });
+    if (!accounts.length) return;
+    const read = (path: string) => {
+        const committed = git(dir, 'show', 'HEAD:fleet/' + path);
+        try { return committed.ok ? JSON.parse(committed.out) : null; } catch { return null; }
+    };
+    releasePublishedTradeClaims(readHeldFleetTradeClaims(root, [...new Set(accounts)]), side, read, claim => releaseFleetTradeClaim(root, claim));
 }
 
 export function runSync(push = true): string {
@@ -99,8 +138,8 @@ export function runSync(push = true): string {
     const claimFile = join(dir, 'fleet', 'claims', `${snap.side}.json`), out = join(dir, 'fleet', 'plans', `${snap.side}.json`);
     const published = (f: string) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return null; } };
     if (jobs && !keepPublished(mergeJobs(jobs, readCoordinatorJobs(root).jobs), published(claimFile), Date.now(), published(out))) {
-        const merged = mergeJobs(jobs, readCoordinatorJobs(root).jobs);
-        claim = claimFor(merged, snap.side, a => owners.get(a.toLowerCase())?.side ?? 'local', Date.now(), activeAccounts(snap.accounts));
+        const coordinatorJobs = readCoordinatorJobs(root).jobs, merged = mergeJobs(jobs, coordinatorJobs);
+        claim = claimFor([...merged, ...recoveringOwnerJobs(jobs, coordinatorJobs)], snap.side, a => owners.get(a.toLowerCase())?.side ?? 'local', Date.now(), activeAccounts(snap.accounts));
         mkdirSync(join(dir, 'fleet', 'claims'), { recursive: true }); writeFileSync(claimFile, JSON.stringify(claim) + '\n');
         const view = planView(merged, snap.side, owners);
         mkdirSync(join(dir, 'fleet', 'plans'), { recursive: true });
@@ -119,10 +158,11 @@ export function runSync(push = true): string {
     if (staged) { const c = git(dir, 'commit', '-m', `fleet: ${snap.side} sync (${snap.accounts.length} accounts)`); if (!c.ok) throw Error(`commit: ${c.out}`); }
     const ahead = !hasRemote || git(dir, 'rev-list', '--count', `origin/${BRANCH}..HEAD`).out !== '0';
     if (push && ahead) { const p = git(dir, 'push', '-u', 'origin', BRANCH); if (!p.ok) throw Error(`push: ${p.out}`); }
+    if (push) releaseSyncedTrades(dir, snap.side);
     return `side=${snap.side} accounts=${snap.accounts.length} claims=${claim ? claim.resources.length : jobs ? 'kept: published by the session running this side' : 'unreadable plan'} lease=${leaseNote} committed=${staged} pushed=${push && ahead}`;
 }
 
 if (import.meta.main) {
-    try { console.log(`RESULT ok fleet-sync ${runSync(!process.argv.includes('--no-push'))}`); }
+    try { console.log(`RESULT ok fleet-sync ${await withFleetDataWrite(root, () => runSync(!process.argv.includes('--no-push')))}`); }
     catch (e) { console.log(`RESULT fail fleet-sync ${String(e)}`); process.exit(1); }
 }

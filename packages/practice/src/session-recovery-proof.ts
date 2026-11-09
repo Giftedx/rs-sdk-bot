@@ -26,7 +26,10 @@ import {runBotName} from './prove';
 import { FREE_FLOOR_GB,PRACTICE_STARTUP_GB } from '../../core/src/memory';
 
 const root=resolve(import.meta.dir,'../../..'),engine=join(root,'vendor/rs-sdk/server/engine'),runner=join(root,RECOVERY_SCRIPT);
-const HOST='localhost:8890',RELAY='localhost:8899',LOGIN_PORT=43650,PORTS=[8890,8896,8897,8899,43650,43651];
+// The private world listens on 0.0.0.0 only (engine WebTransportServer.ts). On Windows 'localhost' tries ::1 first, where
+// another process can accept and drop the connection, and canBind checks IPv4 only. Clients use the IPv4 address the world binds.
+export const worldHost=(port:number)=>`127.0.0.1:${port}`;
+const HOST=worldHost(8890),RELAY='localhost:8899',LOGIN_PORT=43650,PORTS=[8890,8896,8897,8899,43650,43651];
 const CONTROLLER_MARKER='packages/practice/src/session-recovery-proof.ts';
 const sha=(b:string|Buffer)=>createHash('sha256').update(b).digest('hex'),hash=(p:string)=>sha(readFileSync(p));
 type Save=ReturnType<typeof readPracticeSave>;
@@ -505,19 +508,24 @@ export function publishControlFile(path:string,value:unknown,ops:ControlWriteOps
  }
 }
 
+// Dual-stack '::' where the host has IPv6; a container without it refuses that bind (EAFNOSUPPORT) and gets IPv4 loopback.
+export function serveAnyHost<T>(options:Omit<Parameters<typeof Bun.serve<T>>[0],'hostname'>,serve:typeof Bun.serve=Bun.serve){
+ try{return serve<T>({...options,hostname:'::'} as any);}
+ catch(error){if((error as NodeJS.ErrnoException)?.code!=='EAFNOSUPPORT'&&!/EAFNOSUPPORT/.test(String(error)))throw error;return serve<T>({...options,hostname:'127.0.0.1'} as any);}
+}
 // Websocket relay to the private world. 'stall' accepts the socket and never answers: a real pre-START hang.
 function startRelay(port:number,target:number){
  let mode:'forward'|'stall'='forward';const sockets=new Set<any>(),stalled=new EventEmitter();
- const server=Bun.serve<{upstream:WebSocket|null;queue:any[];stalled:boolean}>({port,hostname:'::',
+ const server=serveAnyHost<{upstream:WebSocket|null;queue:any[];stalled:boolean}>({port,
   async fetch(req,srv){
    if(req.headers.get('upgrade')?.toLowerCase()==='websocket'){
     if(srv.upgrade(req,{data:{upstream:null,queue:[],stalled:mode==='stall'},headers:{'Sec-WebSocket-Protocol':'binary'}}))return undefined;
     return new Response('upgrade failed',{status:400});
    }
-   const url=new URL(req.url);return fetch(`http://localhost:${target}${url.pathname}${url.search}`);
+   const url=new URL(req.url);return fetch(`http://${worldHost(target)}${url.pathname}${url.search}`);
   },
   websocket:{
-   open(ws){sockets.add(ws);if(ws.data.stalled){stalled.emit('stalled');return;}const up=new WebSocket(`ws://localhost:${target}`,'binary');up.binaryType='arraybuffer';ws.data.upstream=up;
+   open(ws){sockets.add(ws);if(ws.data.stalled){stalled.emit('stalled');return;}const up=new WebSocket(`ws://${worldHost(target)}`,'binary');up.binaryType='arraybuffer';ws.data.upstream=up;
     up.onopen=()=>{for(const m of ws.data.queue)up.send(m);ws.data.queue=[];};
     up.onmessage=e=>{try{ws.sendBinary(new Uint8Array(e.data as ArrayBuffer));}catch{}};up.onclose=()=>{try{ws.close();}catch{}};up.onerror=()=>{try{ws.close();}catch{}};},
    message(ws,m){if(ws.data.stalled)return;const up=ws.data.upstream;if(up?.readyState===WebSocket.OPEN)up.send(m);else ws.data.queue.push(m);},

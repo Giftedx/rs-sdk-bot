@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test';
 import { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
-import { createShim,connectInProcess,clientTransportState,observeClientTransport, type ClientLike } from '../src/inprocess';
+import { createShim,connectInProcess,clientTransportState,observeClientTransport,connectFailedDetail, type ClientLike } from '../src/inprocess';
 import { tradeRefusal } from '../src/tradeguard';
 import { waitTicks } from '../src/ticks';
 import { equipmentObserved } from '../src/container-observation';
@@ -254,4 +254,17 @@ test('bank readiness follows full inventory packets, keeps real empty updates, a
     c.mainModalId=5292;
     expect(shim.bankObservation()?.items[0]?.count).toBe(81);
     shim.stop('stopped');
+});
+
+test('connect-failed detail keeps the request that threw inside the 300-character receipt limit', () => {
+    const bun = 'Error: The socket connection was closed unexpectedly. For more information, pass `verbose: true` in the second argument to fetch()';
+    const detail = connectFailedDetail(new Error(bun.slice(7)), [
+        { url: '127.0.0.1:8890/api/version', error: bun, ms: 2010 },
+        { url: '127.0.0.1:8890/crc', error: bun, ms: 2050 },
+        { url: '127.0.0.1:8890/config123', error: bun, ms: 40 },
+    ]);
+    expect(detail.length).toBeLessThanOrEqual(300);
+    const rows = JSON.parse(detail.slice(detail.indexOf(' http=') + 6));
+    expect(rows.at(-1)).toEqual({ url: '127.0.0.1:8890/config123', error: 'Error: The socket connection was closed unexpectedly', ms: 40 });
+    expect(connectFailedDetail(new Error('login refused'), [])).toBe('Error: login refused');
 });

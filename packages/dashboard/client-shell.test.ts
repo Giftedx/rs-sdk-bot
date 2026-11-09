@@ -144,9 +144,9 @@ test('infoboxes: boosted and drained skills of the followed account; Hitpoints a
 });
 
 function lookupHarness(fetch:typeof globalThis.fetch){
- const code=shell.slice(shell.indexOf('  function lookup(name){'),shell.indexOf('  window.atlasLookup=lookup;'));
+ const code=shell.slice(shell.indexOf('  function refreshWorldLookup(){'),shell.indexOf('  window.atlasLookup=lookup;'));
  const target={innerHTML:''};
- return new Function('fetch','body','lookupCard',`let worldLookupName='',worldLookup=null,worldLookupRequest=0,selectedPlugin='world';const showPlugin=()=>{};${code};return{lookup,value:()=>worldLookup};`)(fetch,{querySelector:()=>target},JSON.stringify);
+ return new Function('fetch','body','lookupCard','put',`let worldLookupName='',worldLookup=null,worldLookupRequest=0,selectedPlugin='world';const showPlugin=()=>{};${code};return{lookup,value:()=>worldLookup};`)(fetch,{querySelector:()=>target},JSON.stringify,(el:{innerHTML:string},html:string)=>el.innerHTML=html);
 }
 
 test('player lookup shows HTTP errors instead of an unnamed empty player',async()=>{

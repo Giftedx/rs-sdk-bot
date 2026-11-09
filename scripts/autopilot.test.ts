@@ -1,11 +1,13 @@
 import { expect, test } from 'bun:test';
-import { appendFileSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { jobLogStart } from '../packages/core/src/job-log';
-import { catalogue, finishedTrainers, jobFor, mergeJobs, plan, plannableAccounts, reservedResources, type Acct, type Inputs } from '../packages/planner/src/autopilot';
+import { catalogue, finishedTrainers, FOOD_HEAL, jobFor, mergeJobs, norm, plan, plannableAccounts, reservedResources, type Acct, type Inputs } from '../packages/planner/src/autopilot';
+import { COW_FOOD_BITES, COW_FOOD_HP, cowFoodHeal } from './gather-combat';
 import { missionSignature, startable } from './swarm';
-import { coinOrder, fundOrders, inOpenOrder, planningOwnership, readJobResultLines } from './autopilot';
+import { armyRoster, coinOrder, fundOrders, heldResources, inOpenOrder, newestClaims, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import type { TradeReceipt } from './fleet-trade-settlement';
 
 const side = 'claude-cloud';
 const inputs = (a: Acct): Inputs => ({ side, accounts: [a], owners: new Map([[a.name.toLowerCase(), { side }]]), bill: [], templates: catalogue(), prices: {} });
@@ -40,10 +42,39 @@ test('a trainer at its target stays ended for the swarm, and the next pass start
 const order = (id: string, from: string, to: string, end: number) => ({ id, server: 'rs-sdk-demo.fly.dev', from, to, item: 'coins', count: 1500, start: 0, end });
 const make = (from: string, to: string, coins: number) => ({ ...order(`o-${from}-${to}`, from, to, 9_999), count: coins });
 
-test('an order is open until its window ends or both parties write a receipt', () => {
+test('legacy order receipts do not close a live window or supply proven stock', () => {
     const orders = [order('a', 'Big', 'Poor', 100), order('b', 'Rich', 'Low', 100), order('c', 'Old', 'Gone', 10)];
     const receipts = [{ id: 'b', role: 'from' }, { id: 'b', role: 'to' }] as any;
-    expect([...inOpenOrder(orders, receipts, 50)].sort()).toEqual(['big', 'poor']);
+    expect([...inOpenOrder(orders, receipts, 50)].sort()).toEqual(['big', 'low', 'poor', 'rich']);
+    expect([...inOpenOrder(orders, receipts, 101)]).toEqual([]);
+});
+
+test('funding holds past expiry on incomplete proof and releases each party only against current settled stock', () => {
+    const o = order('a', 'Big', 'Poor', 3000);
+    const receipt = (role: 'from' | 'to'): TradeReceipt => ({
+        version: 2, state: 'settled', id: o.id, role, account: o[role], partner: role === 'from' ? o.to : o.from, side: 'local',
+        server: o.server, item: o.item, requested: o.count, claim: '12345678-1234-1234-1234-123456789012', at: 2700,
+        ok: true, detail: '', count: o.count, inventory: role === 'from' ? { before: o.count, after: 0 } : { before: 0, after: o.count },
+        ...(role === 'to' ? { bank: { count: o.count, at: 2300 } } : {}),
+        logout: { attemptId: '0000000002400-1-1', at: 2600, sha256: 'a'.repeat(64) },
+    });
+    const giver = receipt('from'), receiver = receipt('to'), now = 5000;
+    const expected = ['big', 'poor'];
+    const held = (r: TradeReceipt[]) => [...inOpenOrder([o], r, now)].sort();
+    expect(held([{ ...giver, state: 'prepared', ok: false }])).toEqual(expected);
+    expect(held([giver, { ...receiver, state: 'reconcile', ok: false }])).toEqual(expected);
+    expect(held([giver, { ...receiver, bank: undefined }])).toEqual(expected);
+    expect(held([giver, { ...receiver, partner: 'Wrong' }])).toEqual(expected);
+    expect(held([giver, { ...receiver, state: 'failed', ok: false, count: 0 }])).toEqual(expected);
+    expect(held([giver, receiver])).toEqual([]);
+    const statuses = {
+        Big: { name: 'Big', server: o.server, at: 2700, inventory: [] },
+        Poor: { name: 'Poor', server: o.server, at: 2700, bankAt: 2299, bank: [], inventory: [] },
+    };
+    const observed = (r: TradeReceipt) => tradeStockReady(r, statuses[r.account as keyof typeof statuses]);
+    expect([...inOpenOrder([o], [giver, receiver], now, observed)]).toEqual(['poor']);
+    statuses.Poor.bankAt = 2300;
+    expect([...inOpenOrder([o], [giver, receiver], now, observed)]).toEqual([]);
 });
 
 test('a funded assignment becomes a coin order and a vacant account; an account in an open order waits', () => {
@@ -136,4 +167,59 @@ test('coordinator ownership preserves a standing job and excludes held funding p
     const released=planningOwnership(ownerJobs,[],paused);
     expect(plannableAccounts(ownerJobs,side,['Held','Donor'],released.keep)).toEqual(['Held','Donor']);
     expect(released.busy.has('donor')).toBe(false);
+});
+
+
+test('a paused autopilot pass holds before reading the plan', () => {
+    expect(pass('missing-owner-plan.json', false, () => true)).toEqual(['AUTOPILOT hold: swarm is paused']);
+});
+
+
+test('a pause arriving during planning leaves the owner plan bytes intact', () => {
+    const parent = resolve(tmpdir()), base = mkdtempSync(join(parent, 'rsbot-autopilot-pause-'));
+    const previous = process.env.FLEET_DIR;
+    try {
+        const planFile = join(base, 'swarm.json'), before = '{"jobs":[],"maxBots":4}';
+        writeFileSync(planFile, before);
+        process.env.FLEET_DIR = base;
+        let checks = 0;
+        expect(pass(planFile, false, () => ++checks > 1)).toEqual(['AUTOPILOT hold: swarm is paused']);
+        expect(readFileSync(planFile, 'utf8')).toBe(before);
+        expect(pass(planFile, true, () => true).at(-1)).toBe('AUTOPILOT dry run: nothing written');
+        expect(readFileSync(planFile, 'utf8')).toBe(before);
+    } finally {
+        if (previous === undefined) delete process.env.FLEET_DIR;
+        else process.env.FLEET_DIR = previous;
+        if (/^rsbot-autopilot-pause-[^\\/]+$/.test(relative(parent, base))) rmSync(base, { recursive: true });
+    }
+});
+
+test('each side counts at its newest claim, synced or on origin', () => {
+    const synced = [{ side: 'claude-cloud', at: 100, resources: ['knight:2652,3318'] }, { side: 'claude-cloud-2', at: 300, resources: ['knight:2582,3297'] }, null, { side: 'bad' }];
+    const origin = [{ side: 'claude-cloud', at: 200, resources: [] }, { side: 'claude-cloud-2', at: 250, resources: [] }, { side: 'claude-cloud-3', at: 150, resources: ['knight:2652,3318'] }];
+    const out = Object.fromEntries(newestClaims(synced, origin).map(c => [c.side, c.resources]));
+    expect(out).toEqual({ 'claude-cloud': [], 'claude-cloud-2': ['knight:2582,3297'], 'claude-cloud-3': ['knight:2652,3318'] });
+    expect(newestClaims(synced, [])).toHaveLength(2);
+});
+
+test('a plan whose enabled jobs hold different resources has a changed claim; an unchanged one does not', () => {
+    const farm = (account: string, spot: string, enabled = true) => ({ account, script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: spot }, enabled, resources: [`knight:${spot}`] });
+    const before = [farm('A', '2652,3318'), farm('B', '2669,3298')];
+    expect(heldResources(before)).toBe(heldResources([farm('B', '2669,3298'), farm('A', '2652,3318')]));
+    expect(heldResources(before)).not.toBe(heldResources([farm('A', '2653,3300'), farm('B', '2669,3298')]));
+    expect(heldResources(before)).not.toBe(heldResources([farm('A', '2652,3318'), farm('B', '2669,3298', false)]));
+    expect(heldResources([...before, farm('C', '2671,3313', false)])).toBe(heldResources(before));
+});
+
+test('the army roster is the plan\'s explicit list, lower-cased, never Haggis', () => {
+    expect([...armyRoster({ army: ['Kiltlifter', 'PocketPool', 'Haggis', 7] })]).toEqual(['kiltlifter', 'pocketpool']);
+    expect(armyRoster({ jobs: [] }).size).toBe(0);
+    expect(armyRoster(null).size).toBe(0);
+});
+
+test('the planner heals food by the same table as cow mode, and the cow bands need its HP', () => {
+    const names = new Map((JSON.parse(readFileSync(resolve(import.meta.dir, '../knowledge/items.json'), 'utf8')) as { id: number; name: string }[]).map(i => [i.id, i.name]));
+    const ids = Object.keys(COW_FOOD_BITES).map(Number);
+    expect(Object.fromEntries(ids.map(id => [norm(names.get(id)!), cowFoodHeal([{ id, count: 1 }])]))).toEqual({ ...FOOD_HEAL });
+    for (const t of catalogue().filter(t => t.id.startsWith('army-cow-'))) expect(t.needs?.food).toBe(COW_FOOD_HP);
 });

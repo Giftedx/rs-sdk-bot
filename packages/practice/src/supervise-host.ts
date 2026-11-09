@@ -10,6 +10,7 @@
 
 import { isNoProgressFailure, isPrerequisiteFailure, isTransportStall } from './supervise';
 import {assertWorkerRelease,isWorkerReleaseHold} from '../../core/src/worker-release';
+import {fleetLeaseAllowsWorker} from '../../core/src/fleet-lease';
 
 export type AccountEnd = 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up' | 'release-paused';
 
@@ -119,7 +120,7 @@ if (import.meta.main) {
             for (;;) { const { done, value } = await reader.read(); if (done) break; const c = new TextDecoder().decode(value); text += c; process.stdout.write(c); }
             return { stdout: text, exitCode: await p.exited };
         },
-        stopped: a => existsSync(`.practice/stop-${a}`),
+        stopped: a => !fleetLeaseAllowsWorker(process.cwd()) || existsSync(`.practice/stop-${a}`),
         pause: ms => Bun.sleep(ms),
         maxRestarts: parsed.maxRestarts,
         log: l => console.log(l),

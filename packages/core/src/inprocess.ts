@@ -1,16 +1,22 @@
 import {installGameWebSocketProxy} from './websocket-proxy';
-import { mkdirSync, realpathSync } from 'node:fs';
+import { existsSync, mkdirSync, realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
 import type { BotActions } from '../../../vendor/rs-sdk/sdk/actions';
 import type { SDKConfig } from '../../../vendor/rs-sdk/sdk/types';
 import { loadPathfinding } from './pathcache';
 import { assertLoginAllowed } from './haggisgate';
+import { fleetLeaseAllowsWorker } from './fleet-lease';
+import { acquireFleetSwarmClaim, acquireFleetTradeClaim, type FleetTradeClaim } from './fleet-trade-claim';
+import { mySide } from './fleet';
+import { planLockDir, withPlanWrite } from './plan-lock';
 import { isLocalServer } from './localserver';
 import { ownedAccounts, tradePartners, recordOwnedAccount, tradeRefusal } from './tradeguard';
 import { ServerProt } from '../../../vendor/rs-sdk/server/webclient/src/io/ServerProt';
 import { setEquipmentObserved } from './container-observation';
-import { beginSessionAttempt, type SessionAttempt } from './session-lifecycle';
+import { beginSessionAttempt, lifecycleOwner, type SessionAttempt } from './session-lifecycle';
+import { assertSpentRecoveryConnection, type RecoveryConnectionAdmission } from './session-recovery-permit';
+import { assertWorkerRelease } from './worker-release';
 import type { TickRecorder } from './tick-record';
 
 // Runs BotSDK + BotActions in the same process as a LiteClient, with no gateway.
@@ -342,9 +348,20 @@ const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 const vendor = (p: string) => join(repoRoot, 'vendor', 'rs-sdk', p);
 let pathfindingReady = false;
 
-export async function connectInProcess(opts: { name: string; password: string; server?: string; members?: boolean; lifecycleRoot?:string; beforeConnect?:()=>void }): Promise<Session> {
+export type TradeAdmission = {
+    orderId: string;
+    role: FleetTradeClaim['role'];
+    check(server: string): void;
+    prepare(claim: FleetTradeClaim): void;
+};
+
+export async function connectInProcess(opts: { name: string; password: string; server?: string; members?: boolean; lifecycleRoot?:string; beforeConnect?:()=>void; lockPlan?: boolean; recoverSwarm?: RecoveryConnectionAdmission; trade?: TradeAdmission }): Promise<Session> {
     if(opts.lifecycleRoot&&!isLocalServer(opts.server??'localhost:8888'))throw Error('lifecycle root override is local-only');
-    assertLoginAllowed(opts.name);
+    const server = opts.server ?? 'localhost:8888';
+    const live = !isLocalServer(server);
+    if (!live && opts.trade) throw Error('fleet trade claim requires a live server');
+    const swarm = live && !!process.env.SWARM_LEASE_HOLDER;
+    const ticket = assertLoginAllowed(opts.name, Date.now(), process.env, server);
     installGameWebSocketProxy();
     // dom-shim must load before any webclient `#/` module (session.ts:15 does the same).
     await import(vendor('server/webclient/src/lite/dom-shim.ts'));
@@ -358,24 +375,111 @@ export async function connectInProcess(opts: { name: string; password: string; s
     }
     const cacheDir = join(repoRoot, '.practice', 'cache');
     mkdirSync(cacheDir, { recursive: true });
+    const lifecycle: NonNullable<Parameters<typeof beginSessionAttempt>[1]> = {root: opts.lifecycleRoot};
+    const beforeConnect = () => {
+        const currentTicket = assertLoginAllowed(opts.name, Date.now(), process.env, server);
+        if (currentTicket !== ticket) throw Error('specialist authorization changed before login');
+        if (!isLocalServer(server) && !fleetLeaseAllowsWorker(repoRoot)) throw Error('fleet controller lease unavailable');
+        const stopped = (file: string) => existsSync(join(repoRoot, '.practice', file));
+        if (live && (stopped('stop-' + opts.name) || stopped('stop-' + opts.name.toLowerCase()) || swarm && stopped('stop-swarm'))) {
+            throw Error('live admission paused by stop file');
+        }
+        if (live && opts.recoverSwarm) assertSpentRecoveryConnection(opts.recoverSwarm, opts.name, server);
+        opts.beforeConnect?.();
+        if (currentTicket) {
+            assertWorkerRelease();
+            lifecycle.owner = {...lifecycleOwner(), specialistAuthorization: {ticket: currentTicket, mission: process.env.SWARM_MISSION_HASH!}};
+        }
+        opts.trade?.check(server);
+    };
     return startInProcessSession(opts, { startSession, sdk: new BotSDK(inProcessSdkConfig(opts)), Actions: BotActions, cacheDir,
-        beforeConnect:opts.beforeConnect,...(opts.lifecycleRoot?{lifecycle:{root:opts.lifecycleRoot}}:{}) });
+        beforeConnect,planLock:opts.lockPlan||ticket||opts.trade?planLockDir:undefined,lifecycle,
+        sharedAccount:live?{root:repoRoot,side:mySide(),recover:!!opts.recoverSwarm,trade:opts.trade}:undefined });
+}
+
+// Read-only observation of the lite bootstrap HTTP calls (session.ts /api/version, cache.ts /crc and archives,
+// LocIndex.ts versionlist and ondemand.zip). Rows hold host, path, status or error and elapsed time; never headers or bodies.
+export type FetchRow = { url: string | null; status?: number; length?: string | null; error?: string; ms: number };
+export function observeFetch(target: { fetch: typeof fetch } = globalThis, now: () => number = Date.now) {
+    const original = target.fetch, rows: FetchRow[] = [];
+    const wrapped = async function (this: unknown, ...args: Parameters<typeof fetch>) {
+        const at = now(), input = args[0] as unknown;
+        let url: string | null = null;
+        try { const u = new URL(typeof input === 'string' || input instanceof URL ? input : (input as Request).url); url = u.host + u.pathname; } catch { /* unparsed */ }
+        try {
+            const res = await Reflect.apply(original, this, args) as Response;
+            if (rows.length < 32) rows.push({ url, status: res.status, length: res.headers.get('content-length'), ms: now() - at });
+            return res;
+        } catch (error) {
+            if (rows.length < 32) rows.push({ url, error: String(error).slice(0, 160), ms: now() - at });
+            throw error;
+        }
+    };
+    target.fetch = Object.assign(wrapped, original) as typeof fetch;
+    return { rows, restore() { if (target.fetch === wrapped) target.fetch = original; } };
+}
+// The lifecycle receipt keeps 300 characters of detail. Bun's socket errors carry a long second sentence, so keep
+// the first sentence of each error and drop the oldest rows first: the request that threw is the last row.
+export function connectFailedDetail(error: unknown, rows: FetchRow[], max = 300): string {
+    if (!rows.length) return String(error);
+    const brief = (text: string) => text.split('. ')[0]!.slice(0, 100);
+    const kept = rows.map(r => r.error === undefined ? r : { ...r, error: brief(r.error) });
+    const text = () => brief(String(error)) + ' http=' + JSON.stringify(kept);
+    while (kept.length > 1 && text().length > max) kept.shift();
+    return text();
 }
 
 export type StartSession = (o: any) => Promise<{ client: unknown; stop(): void; stopped: Promise<unknown> }>;
 // The network part of connectInProcess. The lifecycle intent is written first; if it cannot be written, no
 // connection starts. Every later event comes from this session's own callbacks. Tests pass a fake startSession.
 export async function startInProcessSession(opts: { name: string; password: string; server?: string; members?: boolean },
-    deps: { startSession: StartSession; sdk: BotSDK; Actions: new (sdk: BotSDK) => BotActions; cacheDir: string; lifecycle?: Parameters<typeof beginSessionAttempt>[1]; recordOwned?: typeof recordOwnedAccount;beforeConnect?:()=>void }): Promise<Session> {
+    deps: { startSession: StartSession; sdk: BotSDK; Actions: new (sdk: BotSDK) => BotActions; cacheDir: string; lifecycle?: Parameters<typeof beginSessionAttempt>[1]; recordOwned?: typeof recordOwnedAccount;beforeConnect?:()=>void; planLock?: string; sharedAccount?:{root:string;side:string;recover?:boolean;trade?:TradeAdmission} }): Promise<Session> {
     const { startSession, sdk, Actions, cacheDir } = deps;
     let endResolve!: (v: { reason: string }) => void;
     const ended = new Promise<{ reason: string }>(r => { endResolve = r; });
     let shim: Shim | null = null;
     const host = opts.server ?? 'localhost:8888'; // host:port, same as SERVER in bot.env
-    // Async imports/pathfinding can outlive an owner stop. Recheck before any intent or network work.
-    deps.beforeConnect?.();
-    const attempt = beginSessionAttempt({ account: opts.name, server: host, members: opts.members, secret: opts.password }, deps.lifecycle);
+    let sharedClaim: ReturnType<typeof acquireFleetSwarmClaim> | undefined;
+    let tradeClaim: ReturnType<typeof acquireFleetTradeClaim> | undefined;
+    const admit = () => {
+        // Async imports/pathfinding can outlive an owner stop. Recheck before any intent or network work.
+        deps.beforeConnect?.();
+        if (deps.sharedAccount) {
+            const { root, side, recover, trade } = deps.sharedAccount;
+            const target = { account: opts.name, server: host, side };
+            if (trade) tradeClaim = acquireFleetTradeClaim(root, {...target, orderId: trade.orderId, role: trade.role});
+            else sharedClaim = acquireFleetSwarmClaim(root, target, { recover });
+            deps.beforeConnect?.(); // A stop or expired permit can land during the Git call.
+            if (trade && tradeClaim) trade.prepare(tradeClaim);
+        }
+        const claim = sharedClaim ?? tradeClaim;
+        const lifecycle = claim ? {
+            ...deps.lifecycle,
+            owner: { ...(deps.lifecycle?.owner ?? lifecycleOwner()), sharedClaimNonce: claim.nonce },
+        } : deps.lifecycle;
+        const attempt = beginSessionAttempt({ account: opts.name, server: host, members: opts.members, secret: opts.password }, lifecycle);
+        claim?.armNetwork();
+        return attempt;
+    };
+    // Plan-locked callers publish intent before another plan writer may proceed.
+    let attempt: SessionAttempt;
+    try { attempt = deps.planLock ? await withPlanWrite(admit, deps.planLock) : admit(); }
+    catch (error) {
+        // No call to startSession has run. A failed release leaves the shared hold in place.
+        try {
+            tradeClaim?.release();
+            sharedClaim?.abortBeforeNetwork();
+        } catch { console.error('fleet account claim retained after admission refusal'); }
+        throw error;
+    }
     let session: Awaited<ReturnType<StartSession>>;
+    let confirmedLogout = false;
+    const http = observeFetch();
+    const releaseConfirmed = () => {
+        if (!sharedClaim || !confirmedLogout) return;
+        try { sharedClaim.releaseAfterLogout(attempt.attemptId); }
+        catch { console.error('fleet swarm claim retained after logout'); }
+    };
     try {
         session = await startSession({
         host,
@@ -396,7 +500,7 @@ export async function startInProcessSession(opts: { name: string; password: stri
         ...(opts.members !== undefined ? { members: opts.members } : {}),
         onEnd: (end: { reason: string }) => {
             // The server end reason of this exact attempt; 'logged-out' is the only logout confirmation.
-            attempt.record('ended', end.reason);
+            if (attempt.record('ended', end.reason) && end.reason === 'logged-out') confirmedLogout = true;
             // Publish the lifecycle event before rejected queued actions can
             // be mistaken by their callers for a task prerequisite failure.
             endResolve({ reason: end.reason });
@@ -404,12 +508,17 @@ export async function startInProcessSession(opts: { name: string; password: stri
         },
         });
     } catch (e) {
-        attempt.record('connect-failed', String(e));
+        attempt.record('connect-failed', connectFailedDetail(e, http.rows));
+        releaseConfirmed();
         throw e;
-    }
+    } finally { http.restore(); }
     // The bootstrap callback runs before startSession returns.
     const sh = shim as Shim | null;
-    if (!sh) { attempt.record('connect-failed', 'no packet observer'); throw new Error('Session did not install its packet observer'); }
+    if (!sh) {
+        attempt.record('connect-failed', 'no packet observer');
+        releaseConfirmed();
+        throw new Error('Session did not install its packet observer');
+    }
     attempt.record('connected');
     (deps.recordOwned ?? recordOwnedAccount)(opts.name,host);
     const bot: BotActions = new Actions(sdk);
@@ -430,6 +539,7 @@ export async function startInProcessSession(opts: { name: string; password: stri
             session.stop();
             await session.stopped;
             attempt.record('closed');
+            releaseConfirmed();
         },
     };
 }

@@ -283,7 +283,7 @@ async function cli(){
  const timer=setTimeout(()=>{console.error('RECOVERY_HELD '+JSON.stringify(recoveryHeldDiagnostic(new RecoveryBoundaryError('deadline','outer-deadline'))));process.exit(1);},120000);timer.unref();
  const receipt=await recoveryBoundary('session',()=>recoverSession(request,{root:lifecycleRoot,guard,...(admission?{admission}:{}),
   connect:async()=>{
-   const s=await connectInProcess({name:request.account,password,server:request.server,beforeConnect:guard,...(lifecycleRoot!==join(repo,'.practice/session-lifecycle')?{lifecycleRoot}:{})});
+   const s=await connectInProcess({name:request.account,password,server:request.server,beforeConnect:guard,recoverSwarm:admission,...(lifecycleRoot!==join(repo,'.practice/session-lifecycle')?{lifecycleRoot}:{})});
    // Through cleanup and logout: client write times and lengths, never payloads.
    observeClientTransport(s.client,row=>console.log('RECOVERY_TRANSPORT '+JSON.stringify(row)),{tick:()=>s.tick()});
    return s;
