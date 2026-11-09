@@ -699,20 +699,30 @@ async function crossEast(s:Session,world:World,to:Tile,signal?:AbortSignal):Prom
  // SARIM_NORTH leads to Draynor; a Taverley-side target leaves the landing by the hubs and the router (Falador's road).
  return cheb(to,SARIM_LANDING)<=60||TAVERLEY_SIDE(to)?{ok:true}:corridor(SARIM_NORTH);
 }
-export async function reachStart(s:Session,world:World,start:Tile,quest?:string,walker=()=>sessionWalker(s),route=walkRoute){
+// The surface east of White Wolf Mountain's pass, for an account the Big Wolf closes it to: Misthalin, Asgarnia, the
+// Wilderness, the Taverley side and the mountain's north-west pocket (Ballspinner, combat 19, stopped at 2790,3502: the
+// danger-guarded plan from there reaches the west only through the Big Wolf's ground, so it is empty, and the straight
+// fallback click to 2779,3491 was refused). Port Sarim's boats lead round to Ardougne.
+export const eastOfPass=(at:Tile,acct:Pick<Account,'skills'>)=>at.level===0&&at.z<4000
+ &&(at.z>=3270?at.x>=2880||at.x>=2780&&at.z>=3470:at.x>=2950)&&mountainClosed(acct);
+// Ardougne customs landing (2683,3271) to the Observatory reception: corners of the pinned findLongPath, danger-guarded
+// for a combat-19 account. The path passes south of the reception and turns north at 2456,3167.
+export const OBSERVATORY_FROM_ARDOUGNE:Pt[]=[[2657,3275,2],[2626,3260,2],[2588,3243,2],[2549,3230,2],[2527,3240,2],[2501,3228,2],[2481,3204,2],[2466,3180,2],[2456,3167,2]];
+export async function reachStart(s:Session,world:World,start:Tile,quest?:string,walker=()=>sessionWalker(s),route=walkRoute,acct=():Pick<Account,'skills'>=>accountOf(s)){
  const p=s.sdk.getState()?.player;
  const totemMainland=quest==='totem'&&p?.level===0&&p.worldX<2745&&p.worldZ>=3200;
+ const observatoryEast=quest==='itgronigen'&&!!p&&start.level===0&&eastOfPass({x:p.worldX,z:p.worldZ,level:p.level},acct());
  // The mainland-to-tower whole-world bank comparison waits before the first walk leg;
  // legTimeoutTicks cannot bound that planner. Reuse the courier's two boats and corridors.
- if(totemMainland||quest==='cog'&&p?.level===0&&p.worldX>=2950&&p.worldZ<3500&&start.level===0){
-  const fares=totemMainland?90:60,label=totemMainland?'Tribal Totem':'Clock Tower';
+ if(totemMainland||observatoryEast||quest==='cog'&&p?.level===0&&p.worldX>=2950&&p.worldZ<3500&&start.level===0){
+  const fares=totemMainland?90:60,label=totemMainland?'Tribal Totem':observatoryEast?'Observatory':'Clock Tower';
   if(count(s.sdk.getState()?.inventory??[],COINS)<fares)throw Error(`missing 995:${fares} for ${label} boat route`);
-  const deps=await walker(),deadline=s.tick()+1800;
+  const deps=await walker(),deadline=s.tick()+(observatoryEast?2700:1800);
   const near=(point:{x:number;z:number},tol:number)=>{const at=deps.pos();return !!at&&at.level===0&&Math.max(Math.abs(at.x-point.x),Math.abs(at.z-point.z))<=tol;};
-  const corridor=async(points:readonly Pt[])=>{
+  const corridor=async(points:readonly Pt[],legTicks=600)=>{
    const r=await walkQuestCorridor({tick:()=>s.tick(),stop:()=>s.sdk.getState()?.player?.isDead===true,near,
     walk:(points,opts)=>walkPath(deps,points,opts),
-   },points.map(([x,z,tol])=>({x,z,tol})),Math.min(deadline,s.tick()+600));
+   },points.map(([x,z,tol])=>({x,z,tol})),Math.min(deadline,s.tick()+legTicks));
    if(!r.ok)throw Error(`${label} corridor failed: ${r.detail}`);
   };
   const sail=async(id:string)=>{
@@ -727,6 +737,16 @@ export async function reachStart(s:Session,world:World,start:Tile,quest?:string,
    await corridor([[2644,3293,2],[2669,3284,2],[2679,3275,2]]);
    await sail('npc:captain_barnaby:brimhaven@2679,3275');
    await corridor([[2774,3228,2],[start.x,start.z,2]]);
+   return;
+  }
+  // One guarded leg to the landing: 115 path corners from 2790,3502 round the mountain's north side, 93 from the
+  // Wilderness plank spawn at 3291,3652. Then the boats to Ardougne and the pinned ground path to the reception.
+  if(observatoryEast){
+   await corridor([[SARIM_LANDING.x,SARIM_LANDING.z,2]],900);
+   await sail('npc:captain_tobias:karamja-musa-point@3028,3216');
+   await corridor([...KARAMJA].reverse().concat([[2772,3231,2]]));
+   await sail('npc:customs_officer:ardougne@2772,3231');
+   await corridor([...OBSERVATORY_FROM_ARDOUGNE,[start.x,start.z,2]]);
    return;
   }
   await corridor([...SARIM_NORTH].reverse().concat([[3029,3217,2]]));
@@ -1189,7 +1209,8 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
   // Recipes paid in dialogue (Aggie's dyes, Wyson's woad leaves) take their coins out with the shop money, and so do the
   // two boat fares when a destination lies east of Ardougne: a plan of Wyson's woad and Aggie's blue dye alone budgets 25
   // coins, and crossEast refuses the crossing below 60.
-  shop.coins+=gather.coins+(heckelDust?HECKEL_DUST.coins:0)+fares(here(),[...shop.buys.map(b=>b.tile),preset.position,...gather.gathers.flatMap(g=>g.how==='npc'&&NPC_SOURCES[g.id]?[NPC_SOURCES[g.id]!.tile]:[])],accountOf(s));
+  shop.coins+=gather.coins+(heckelDust?HECKEL_DUST.coins:0)+fares(here(),[...shop.buys.map(b=>b.tile),preset.position,...gather.gathers.flatMap(g=>g.how==='npc'&&NPC_SOURCES[g.id]?[NPC_SOURCES[g.id]!.tile]:[])],accountOf(s))
+   +(quest==='itgronigen'&&eastOfPass(here(),accountOf(s))?BOAT_FARES:0);
   if(shop.coins){
    const take=Math.max(0,shop.coins-count(pack(),COINS)-(p.withdraw.find(w=>w.id===COINS)?.count??0));
    if(count(rows(),COINS)<take){await s.bot.closeBank();return fail(`missing ${COINS}:${take} to buy ${[...shop.buys.map(b=>b.id),...(heckelDust?[1975]:[])].join(',')}`+(shop.buys.some(b=>wornKit.wear.some(i=>i.required&&i.id===b.id))?' (required worn kit unavailable)':''));}
