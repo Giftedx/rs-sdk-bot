@@ -140,7 +140,10 @@ try {
     const keepWorn = wornRank < MELEE.length && wornRank <= bankRank;
     const melee = keepWorn ? MELEE[wornRank]![0] : bankMelee;
     const bow = best(BOWS, level('Ranged')), arrows = bow ? best(ARROWS, level('Ranged')) : undefined;
-    const mage = level('Magic') >= 35 && !melee;
+    // A tribrid stages a staff whenever Magic allows (35+ casts Fire Bolt), even with a melee weapon already
+    // banked: scripts/pk-roam.ts kitFrom only fights magic with a carried staff, so without one the roamer
+    // goes in melee+ranged only, and the fight loop now skips the empty magic style (pk.ts hasStyle).
+    const mage = level('Magic') >= 35;
     if (melee && !keepWorn) await take(melee, 1);
     if (bow) await take(bow, 1);
     if (arrows) await take(arrows, -1);
@@ -161,11 +164,15 @@ try {
         await s.bot.closeBank();
         throw Error('no escape item: bank an amulet of glory, or law runes with Magic 25+, before a PK trip');
     }
-    // Armour: every tier the Defence level allows, best first, so a refused piece falls back to the next.
-    const armour: RegExp[] = [];
+    // Armour: every tier the Defence level allows, best first, so a refused piece (quest requirement) falls
+    // back to the next tier in its slot. Kept per slot so the equip step wears only the first that succeeds:
+    // equipping every tier in order would overwrite the best piece with the worst.
+    const armour: RegExp[][] = [];
     for (const slot of ARMOUR) {
         const options = slot.filter(([re, need]) => level('Defence') >= need && bank().some(b => re.test(b.name))).map(([re]) => re);
-        for (const re of options) if (inv().length < 27 && await take(re, 1)) armour.push(re);
+        const taken: RegExp[] = [];
+        for (const re of options) if (inv().length < 27 && await take(re, 1)) taken.push(re);
+        if (taken.length) armour.push(taken);
     }
     // Food: fill the pack with every food type held, best first; one slot stays free for loot.
     for (const re of FOOD) {
@@ -175,10 +182,14 @@ try {
     }
     await s.bot.closeBank();
     // Wear the best armour piece per slot; a refused piece (quest requirement) leaves the next one to try.
-    for (const re of armour) {
-        if (!inv().some(i => re.test(i.name))) continue;
-        const r = await s.bot.equipItem(re);
-        log({ e: 'wear', item: re.source, ok: r.success, msg: r.success ? undefined : r.message });
+    // Stops at the first success in each slot: later, worse tiers stay in the pack and are banked below.
+    for (const options of armour) {
+        for (const re of options) {
+            if (!inv().some(i => re.test(i.name))) continue;
+            const r = await s.bot.equipItem(re);
+            log({ e: 'wear', item: re.source, ok: r.success, msg: r.success ? undefined : r.message });
+            if (r.success) break;
+        }
     }
     // Wield: the melee weapon (or the staff for a mage), then arrows. The bow stays in the pack for the fight loop's switch.
     if (melee && !keepWorn) await s.bot.equipItem(melee);

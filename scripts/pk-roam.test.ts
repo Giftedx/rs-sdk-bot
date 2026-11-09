@@ -93,14 +93,15 @@ test('pickTrack skips a target that can run out of range before a freeze lands',
     expect(pickTrack(me, [track({ name: 'Deep', x: 3094, z: 3600, combatLevel: 91 })], new Set(), 56)?.track.name).toBe('Deep'); // 40 tiles
 });
 
-test('kitFrom: worn weapon and shield for melee, a carried bow, a carried staff; magic always usable', () => {
+test('kitFrom: worn weapon and shield for melee, a carried bow, a carried staff; no empty magic', () => {
     const worn = [{ id: 1215, name: 'Dragon dagger', slot: 3 }, { id: 1540, name: 'Anti-dragon shield', slot: 5 }, { id: 1127, name: 'Rune platebody', slot: 4 }];
     const carried = [{ id: 861, name: 'Magic shortbow' }, { id: 1401, name: 'Mystic fire staff' }, { id: 385, name: 'Shark' }];
     expect(kitFrom(worn, carried)).toEqual({ magic: [1401], melee: [1215, 1540], ranged: [861] });
     expect(kitFrom([{ id: 1401, name: 'Mystic fire staff', slot: 3 }], [{ id: 1215, name: 'Dragon dagger' }, { id: 1201, name: 'Rune kiteshield' }, { id: 861, name: 'Magic shortbow' }]))
         .toEqual({ magic: [1401], melee: [1215, 1201], ranged: [861] });
-    expect(kitFrom([{ id: 1333, name: 'Rune scimitar', slot: 3 }], [])).toEqual({ magic: [], melee: [1333] });
+    expect(kitFrom([{ id: 1333, name: 'Rune scimitar', slot: 3 }], [])).toEqual({ melee: [1333] });
     expect(kitFrom([{ id: 1387, name: 'Staff of fire', slot: 3 }], [])).toEqual({ magic: [1387] });
+    expect(kitFrom([], [])).toEqual({});
 });
 
 test('spellId maps names and ids, and falls back to Fire Bolt', () => {

@@ -248,6 +248,11 @@ export function bestDamageSpell(magic: number, carried: readonly { id: number; c
 const adjacent = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.abs(a.x - b.x) + Math.abs(a.z - b.z) === 1;
 const cheb = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
 
+// A style is usable only with a non-empty kit: an empty list casts damage spells with whatever is wielded
+// (a dagger, a bow), which hits for a fraction of the staff's max hit and wastes the turn. kits built by
+// scripts/pk-roam.ts kitFrom only hold a style when the account carries its weapon.
+export const hasStyle = (kit: Kit, style: Style) => (kit[style]?.length ?? 0) > 0;
+
 // The next style turn in rotation order, skipping a style that is not usable.
 export function nextStyle(rotation: readonly Style[], last: number, usable: (s: Style) => boolean): { style: Style; index: number } | null {
     for (let step = 1; step <= rotation.length; step++) {
@@ -393,9 +398,9 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             if (!potion && now + 3 <= nextAttack) {
                 const skill = (n: string) => state.skills.find(k => k.name === n);
                 const unboosted = (n: string) => { const k = skill(n); return !!k && k.level <= k.baseLevel; };
-                if (o.kit.melee && unboosted('Strength')) potion = slotOf([...ITEMS.superStrength, ...ITEMS.strengthPotion]);
-                if (!potion && o.kit.melee && unboosted('Attack')) potion = slotOf([...ITEMS.superAttack, ...ITEMS.attackPotion]);
-                if (!potion && o.kit.ranged && unboosted('Ranged')) potion = slotOf(ITEMS.rangingPotion);
+                if (hasStyle(o.kit, 'melee') && unboosted('Strength')) potion = slotOf([...ITEMS.superStrength, ...ITEMS.strengthPotion]);
+                if (!potion && hasStyle(o.kit, 'melee') && unboosted('Attack')) potion = slotOf([...ITEMS.superAttack, ...ITEMS.attackPotion]);
+                if (!potion && hasStyle(o.kit, 'ranged') && unboosted('Ranged')) potion = slotOf(ITEMS.rangingPotion);
                 if (!potion && unboosted('Defence')) potion = slotOf([...ITEMS.superDefence, ...ITEMS.defencePotion]);
             }
             if (potion) {
@@ -417,10 +422,10 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         const lastHit = [...hits].reverse().find(h => now - h.tick <= 10);
         const hitter = lastHit && lastHit.src !== target.index ? observePlayer(s.client, lastHit.src) : null;
         const overhead = hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
-        const canReachMelee = !(now < selfFrozenUntil && !adjacent(at, target)) && (cheb(at, target) <= 6 || (!o.kit.magic && !o.kit.ranged));
+        const canReachMelee = !(now < selfFrozenUntil && !adjacent(at, target)) && (cheb(at, target) <= 6 || (!hasStyle(o.kit, 'magic') && !hasStyle(o.kit, 'ranged')));
         const guarded = o.readOverheads === false ? new Set<Style>() : protectedStyles(seen?.headicons);
-        const styleUsable = (st: Style) => !!o.kit[st] && (st !== 'melee' || canReachMelee);
-        const upcomingTurn = nextStyle(rotation, last, st => styleUsable(st) && !guarded.has(st)) ?? nextStyle(rotation, last, styleUsable) ?? nextStyle(rotation, last, st => !!o.kit[st]);
+        const styleUsable = (st: Style) => hasStyle(o.kit, st) && (st !== 'melee' || canReachMelee);
+        const upcomingTurn = nextStyle(rotation, last, st => styleUsable(st) && !guarded.has(st)) ?? nextStyle(rotation, last, styleUsable) ?? nextStyle(rotation, last, st => hasStyle(o.kit, st));
         if (pjedByNpc) {
             pjedByNpc = false;
             if (!hitter && typeof sdk.sendInteractNpc === 'function') {
@@ -498,7 +503,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         const magicLevel = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
         const hasFreezeRunes = inv.some(i => i.id === ITEMS.natureRune || i.id === ITEMS.earthRune || i.id === ITEMS.waterRune);
         const freeze = o.freeze ? (hasFreezeRunes ? castableFreeze(magicLevel, inv) : freezeSpell(magicLevel)) : null;
-        const castFreeze = freeze !== null && o.kit.magic && now >= freezeReady && now >= frozenUntil;
+        const castFreeze = freeze !== null && hasStyle(o.kit, 'magic') && now >= freezeReady && now >= frozenUntil;
         // Hit off the opponent's overhead: a style they protect against loses 40% of its max hit.
         const turn = castFreeze ? { style: 'magic' as Style, index: last } : upcomingTurn;
         if (!turn) continue;

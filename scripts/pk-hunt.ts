@@ -168,7 +168,7 @@ export async function hunt(s: Session, o: HuntOptions) {
             tally.fights++;
             const magicLevel = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
             const r: FightResult = await fightPlayer(s, target.name, {
-                kit, spec: defaultSpec(kit), freeze: castableFreeze(magicLevel, state.inventory) !== null,
+                kit, spec: defaultSpec(kit), freeze: castableFreeze(magicLevel, state.inventory) !== null, exitOnDanger: true,
                 escapeAt: o.escapeAt, escapeSpell: o.teleSpell, cap: 900, damageSpell: o.damageSpell, rotation: o.rotation, stop: over, log,
             });
             log(`HUNT fight ${r.outcome} ${JSON.stringify(r)}`);

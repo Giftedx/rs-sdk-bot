@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import {
     attackable, bestDamageSpell, bestFood, castableFreeze, combatPrayers, dangerReason, defaultSpec,
-    estMaxHit, fightPlayer, freezeDuration, freezeSpell, ITEMS, killMessage, lowHealth,
+    estMaxHit, fightPlayer, freezeDuration, freezeSpell, hasStyle, ITEMS, killMessage, lowHealth,
     negativeCastArmour, nextStyle, nextTick, observePlayer, PRAYER, protectedStyles, skulled, SPELLS,
     weaponStyle, wildernessLevel,
 } from './pk';
@@ -97,6 +97,14 @@ test('style turns follow the rotation and skip a style that is not usable', () =
     expect(nextStyle(rotation, 2, () => true)).toEqual({ style: 'magic', index: 0 });
     expect(nextStyle(rotation, 0, s => s !== 'ranged')).toEqual({ style: 'melee', index: 2 });
     expect(nextStyle(rotation, 0, () => false)).toBeNull();
+});
+
+test('a style is usable only with a non-empty kit, so an empty magic list wastes no turn', () => {
+    expect(hasStyle({ magic: [] }, 'magic')).toBe(false);
+    expect(hasStyle({}, 'magic')).toBe(false);
+    expect(hasStyle({ magic: [1401] }, 'magic')).toBe(true);
+    const rotation = ['magic', 'ranged', 'melee'] as const;
+    expect(nextStyle(rotation, -1, s => hasStyle({ magic: [], ranged: [861] }, s))).toEqual({ style: 'ranged', index: 1 });
 });
 
 test('a kill is read from any of the eleven killer messages, whatever the name case', () => {
