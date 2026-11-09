@@ -291,7 +291,14 @@ test('a server outage is a drain: a socket error at login or a stalled tick stre
     expect(assess(['RESULT fail no chickens', login, stall, 'RESULT fail no chickens'])).toMatchObject({ retire: true, fail: 2, drains: 2 });
     expect(assess(['RESULT fail login: LoginError: Account already logged in', 'RESULT fail login: LoginError: Account already logged in']).retire).toBe(true);
 });
-test('a held account refusing logins after a drop is a drain: the claim refusals never retire the spot', () => {
+test('a login refused while a dropped session holds the fleet claim is a drain, not a failure', () => {
+    const held = 'RESULT fail Error: fleet account claim held by swarm';
+    expect(assess([held, held, held])).toMatchObject({ retire: false, ok: 0, fail: 0, drains: 3 });
+    expect(assess(['RESULT fail fleet account claim held by swarm'])).toMatchObject({ fail: 0, drains: 1 });
+    expect(assess(['RESULT fail no chickens', held, 'RESULT fail no chickens'])).toMatchObject({ retire: true, fail: 2, drains: 1 });
+});
+
+test('a held account refusing logins after a drop is a drain: the refusal as the worker logs it (`login: Error: …`) never retires the spot', () => {
     const drop = 'RESULT fail session ended: disconnected', held = 'RESULT fail login: Error: fleet account claim held by swarm';
     expect(assess([drop, held, held, held])).toMatchObject({ retire: false, ok: 0, fail: 0, drains: 4 });
     expect(assess(['RESULT fail no chickens', held, 'RESULT fail no chickens'])).toMatchObject({ retire: true, fail: 2, drains: 1 });
