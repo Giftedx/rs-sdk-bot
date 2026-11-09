@@ -15,12 +15,15 @@ export type Acct = { name: string; side: string; skills: Record<string, number>;
 export type Flow = { item: string; perTick: number };
 export type Template = {
     id: string; family: string; script: string; args?: string[]; env?: Record<string, string>; role: string; goal: string;
-    needs?: { skills?: Record<string, number>; items?: Record<string, number> };
+    // `under`: skills that must stay below a level (a band hands an account on to the next band at that level).
+    needs?: { skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number> };
     yields: (a: Acct) => Flow[]; spends?: (a: Acct) => Flow[];
     resources?: string[]; trains?: { skill: string; to: number; unlocks: string[] };
     // A goal band (AGENTS.md goals: the PK army of maxed tribrids) trains an army account toward its target and is
     // assigned before any coin job; `band` orders the bands by PK value, lowest first. Gold only buys their kits.
     tier?: 'goal'; band?: number;
+    // A trainer whose script runs a fixed amount (not to its target level) repeats until the planner moves it on.
+    repeats?: boolean;
 };
 // `fund`: the template needs coins the account lacks; a donor of this side sends them first (scripts/autopilot.ts
 // places the fleet order), and the account takes the job on the pass after the coins arrive.
@@ -62,7 +65,8 @@ export function unitValue(item: string, bill: readonly BillRow[], prices: Readon
 
 const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: string; to: number }) =>
     Object.entries(needs?.skills ?? {}).every(([s, l]) => (skillOverride?.skill === s ? Math.max(skillOverride.to, a.skills[s] ?? 1) : a.skills[s] ?? 1) >= l)
-    && Object.entries(needs?.items ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n);
+    && Object.entries(needs?.items ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n)
+    && Object.entries(needs?.under ?? {}).every(([s, l]) => (a.skills[s] ?? 1) < l);
 // The coins a template needs beyond what the account holds, and its needs without the coin line.
 const coinShort = (a: Acct, needs: Template['needs']) => Math.max(0, (Object.entries(needs?.items ?? {}).find(([i]) => norm(i) === 'coin')?.[1] ?? 0) - (a.items.coin ?? 0));
 const withoutCoins = (needs: Template['needs']): Template['needs'] => ({ ...needs, items: Object.fromEntries(Object.entries(needs?.items ?? {}).filter(([i]) => norm(i) !== 'coin')) });
@@ -153,7 +157,7 @@ export function plan(inp: Inputs): Assignment[] {
 // finishedTrainers() brings that next pass forward.
 export function jobFor(x: Assignment, side: string) {
     const t = x.template!;
-    return { account: x.account, script: t.script, args: t.args ?? [], env: t.env ?? {}, role: t.role, goal: t.goal, enabled: true, repeat: !t.trains, standing: true,
+    return { account: x.account, script: t.script, args: t.args ?? [], env: t.env ?? {}, role: t.role, goal: t.goal, enabled: true, repeat: t.repeats ?? !t.trains, standing: true,
         autopilot: side, template: t.id, resources: x.resources, note: `autopilot ${t.id}: ${x.reason}, ${x.value.toFixed(2)} coins/tick (estimate)` };
 }
 
@@ -210,8 +214,20 @@ export const CHICKEN_PENS = ['3229,3298', '3017,3288', '3187,3277', '3197,3353']
 // 8.1 near-solo. Gap: one live run per condition, not three matched, so KNIGHT_SHARED_RATE is an estimate, applied
 // once per holder; the planner's tick-waste discount and retirement still apply per job.
 export const KNIGHT_SHARE = 4, KNIGHT_SHARED_RATE = 0.75;
-export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
+// Ardougne north cow field: two army farmers to start, crowding not yet measured.
+export const COW_FIELD = 'cow:ardougne-north', COW_FIELD_CAPACITY = 2;
+export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [COW_FIELD]: COW_FIELD_CAPACITY, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
+// Army goal bands (AGENTS.md goals: maxed tribrids), in PK-value order: Strength, Attack, then Ranged, Magic and
+// Prayer, Defence last. Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile) qualified 3/3 on practice
+// with MAX_KILLS=8: no death, logged out, RESULT ok stop=max-kills, about 700 ticks a run, trained skill 0.38 and
+// Hitpoints 0.12 XP per tick at practice XP rate 1, 2 trout carried and none eaten, from Attack 45 and Hitpoints 32
+// (claude-cloud-4 .practice/combat-ladder). Cow mode needs 2 trout and the bronze sword and wooden shield held or worn,
+// starts at the north bank and never wields better gear. Below Hitpoints 32 the food runs out; from 43 the hill giants
+// take over. Gap: the live XP factor and field crowding are not measured.
+export const COW_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence'; band: number; to: number }[] = [
+    { skill: 'Strength', band: 0, to: 40 }, { skill: 'Attack', band: 1, to: 40 }, { skill: 'Defence', band: 5, to: 40 },
+];
 
 // Proven job templates. Rates are estimates from each script's header model; tick-waste discounts them by measurement.
 export function catalogue(): Template[] {
@@ -220,8 +236,15 @@ export function catalogue(): Template[] {
         goal: `goldfarm knights at ${spot}`, needs: { skills: { Thieving: 55 } }, resources: [`knight:${spot}`],
         yields: a => [{ item: 'coins', perTick: knightCoinsPerTick(a.skills.Thieving ?? 1) }],
     }));
+    const cows = COW_BANDS.map(({ skill, band, to }): Template => ({
+        id: `army-cow-${skill.toLowerCase()}`, family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['3000', 'cow'],
+        env: { TRAIN_SKILL: skill, COW_BANK_PROFILE: 'north', MAX_KILLS: '8' }, role: 'combat', goal: `train ${skill} to ${to} on the Ardougne cows`,
+        tier: 'goal', band, repeats: true, trains: { skill, to, unlocks: [] }, resources: [COW_FIELD], yields: () => [],
+        needs: { skills: { Hitpoints: 32 }, under: { Hitpoints: 43 }, items: { trout: 2, 'bronze sword': 1, 'wooden shield': 1 } },
+    }));
     return [
         ...goldfarm,
+        ...cows,
         { id: 'thieving55', family: 'thieving60', script: 'scripts/generated/thieving60.ts', env: { TARGET: '55', CAP: '2500', CLEAN_FOOD: '1' }, role: 'thieving',
             goal: 'train Thieving to 55 for a knight spot', trains: { skill: 'Thieving', to: 55, unlocks: goldfarm.map(g => g.id) }, yields: () => [] },
         ...CHICKEN_PENS.map((pen): Template => ({

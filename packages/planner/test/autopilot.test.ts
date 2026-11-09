@@ -362,3 +362,24 @@ test('goal bands go only to army accounts, before any coin job, earliest band fi
     const funded = plan(inputs([thief('Nearer')], { templates: [...kit, ...farm], army, donors: [{ name: 'Bank', coins: 1_000_000 }] }));
     expect(funded[0]).toMatchObject({ template: { id: 'str60' }, fund: { from: 'Bank', to: 'Nearer', coins: 100_000 } });
 });
+
+test('the Ardougne cow bands train army accounts from Hitpoints 32 to 42 with trout and the bronze kit, as repeating jobs', () => {
+    const kit = { trout: 2, 'bronze sword': 1, 'wooden shield': 1 };
+    const fighter = (name: string, skills: Record<string, number>, items: Record<string, number> = kit) => acct(name, { Thieving: 99, ...skills }, items);
+    const army = new Set(['cowhand', 'pure', 'broke', 'second', 'third']);
+    const run = (accounts: Acct[]) => plan(inputs(accounts, { army, capacity: CAPACITY }));
+    const pick = (accounts: Acct[]) => ids(run(accounts));
+    expect(pick([fighter('Cowhand', { Hitpoints: 35 })])).toEqual({ Cowhand: 'army-cow-strength' });
+    expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 40 })])).toEqual({ Cowhand: 'army-cow-attack' });
+    expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 40, Attack: 40 })])).toEqual({ Cowhand: 'army-cow-defence' });
+    // Hitpoints 82 waits for the giants; Hitpoints 10 has too little food margin; a missing trout keeps it farming.
+    expect(pick([fighter('Pure', { Hitpoints: 82 })]).Pure).toMatch(/^goldfarm@/);
+    expect(pick([fighter('Cowhand', { Hitpoints: 10 })]).Cowhand).toMatch(/^goldfarm@/);
+    expect(pick([fighter('Broke', { Hitpoints: 35 }, { 'bronze sword': 1, 'wooden shield': 1 })]).Broke).toMatch(/^goldfarm@/);
+    // The field takes two; a third army account farms.
+    const three = pick([fighter('Cowhand', { Hitpoints: 35 }), fighter('Second', { Hitpoints: 36 }), fighter('Third', { Hitpoints: 37 })]);
+    expect(Object.values(three).filter(id => id.startsWith('army-cow-'))).toHaveLength(2);
+    // Cow mode runs a fixed 8 kills, so its job repeats until the band's target moves the account on.
+    const job = jobFor(run([fighter('Cowhand', { Hitpoints: 35 })])[0]!, side);
+    expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['3000', 'cow'], env: { TRAIN_SKILL: 'Strength', COW_BANK_PROFILE: 'north', MAX_KILLS: '8' }, repeat: true, resources: ['cow:ardougne-north'] });
+});
