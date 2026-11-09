@@ -5,9 +5,10 @@
 // MIN_FOOD sharks that send it back to bank (default 6), ESCAPE_AT HP (default 35). For a build other than the maxed
 // tribrid: PK_KIT the switch weapons as JSON {"magic":[ids],"ranged":[ids],"melee":[ids]}, PK_TRIP what a trip carries
 // besides sharks as JSON [{"id":n,"count":n}], PK_SPELL the damage spell's component id (scripts/pk.ts SPELLS),
-// PK_ROTATION the style order, e.g. "ranged,magic" for a pure with Strength 1. An
-// account that starts more than 60 tiles from Edgeville rubs a carried glory there first. openBot refuses a non-local
-// server without DEMO_OK=1.
+// PK_ROTATION the style order, e.g. "ranged,magic" for a pure with Strength 1, PK_TELE a teleport spell's component
+// id (scripts/pk.ts SPELLS) used where no glory is carried, both to reach Edgeville and to escape. An account that starts
+// more than 60 tiles from Edgeville rubs a carried glory there first, or casts PK_TELE and walks on. openBot refuses a
+// non-local server without DEMO_OK=1.
 import { existsSync } from 'node:fs';
 import type { Session } from '../packages/core/src/inprocess';
 import { loadOwners } from '../packages/core/src/fleet';
@@ -62,7 +63,7 @@ export async function restock(s: Session, food: number, trip: readonly { id: num
 }
 
 export type HuntOptions = { cap: number; food: number; minFood: number; escapeAt: number; stop: () => boolean; log?: (l: string) => void;
-    kit?: Kit; trip?: readonly { id: number; count: number }[]; damageSpell?: number; rotation?: Style[] };
+    kit?: Kit; trip?: readonly { id: number; count: number }[]; damageSpell?: number; rotation?: Style[]; teleSpell?: number };
 export async function hunt(s: Session, o: HuntOptions) {
     const log = o.log ?? ((l: string) => console.log(l)), start = s.tick(), ours = fleetNames();
     const tally = { kills: 0, deaths: 0, escapes: 0, fights: 0, looted: 0, trips: 0 };
@@ -72,14 +73,23 @@ export async function hunt(s: Session, o: HuntOptions) {
     const far = () => { const p = s.sdk.getState()?.player; return !p || Math.max(Math.abs(p.worldX - EDGEVILLE_BANK.x), Math.abs(p.worldZ - EDGEVILLE_BANK.z)) > 60; };
     if (far()) {
         const glory = s.sdk.getInventory().find(i => (ITEMS.glory as readonly number[]).includes(i.id));
-        if (!glory) return { ...tally, end: 'far from Edgeville with no glory carried' };
-        const op = glory.optionsWithIndex.find(x => /^Rub$/i.test(x.text));
-        if (op) await s.sdk.sendUseItem(glory.slot, op.opIndex);
-        for (let t = 0; t < 20 && far() && !over(); t++) {
-            await new Promise<void>(r => { const off = s.onTick(() => { off(); r(); }); });
-            if (s.sdk.getState()?.dialog?.isOpen) await s.sdk.clickDialogByText(/^Edgeville/i);
-        }
-        if (far()) return { ...tally, end: 'glory to Edgeville failed' };
+        const position = () => { const p = s.sdk.getState()?.player; return p ? `${p.worldX},${p.worldZ}` : ''; };
+        if (glory) {
+            const op = glory.optionsWithIndex.find(x => /^Rub$/i.test(x.text));
+            if (op) await s.sdk.sendUseItem(glory.slot, op.opIndex);
+            for (let t = 0; t < 20 && far() && !over(); t++) {
+                await new Promise<void>(r => { const off = s.onTick(() => { off(); r(); }); });
+                if (s.sdk.getState()?.dialog?.isOpen) await s.sdk.clickDialogByText(/^Edgeville/i);
+            }
+            if (far()) return { ...tally, end: 'glory to Edgeville failed' };
+        } else if (o.teleSpell !== undefined) {
+            const from = position();
+            await s.sdk.sendClickComponent(o.teleSpell);
+            for (let t = 0; t < 12 && position() === from && !over(); t++) await new Promise<void>(r => { const off = s.onTick(() => { off(); r(); }); });
+            if (position() === from) return { ...tally, end: 'travel teleport did not move the account' };
+            const walked = await walk(s, EDGEVILLE_BANK, over, 600);
+            if (!walked.ok) return { ...tally, end: 'walk from the teleport to Edgeville failed ' + JSON.stringify(walked) };
+        } else return { ...tally, end: 'far from Edgeville with no glory or PK_TELE' };
     }
     while (!over()) {
         if (held(s, ITEMS.shark) < o.minFood) {
@@ -111,7 +121,7 @@ export async function hunt(s: Session, o: HuntOptions) {
             if (!target) continue;
             log(`HUNT engage ${target.name} (combat ${target.combatLevel}) at ${target.x},${target.z}`);
             tally.fights++;
-            const r: FightResult = await fightPlayer(s, target.name, { kit, escapeAt: o.escapeAt, cap: 900, damageSpell: o.damageSpell, rotation: o.rotation, log });
+            const r: FightResult = await fightPlayer(s, target.name, { kit, escapeAt: o.escapeAt, escapeSpell: o.teleSpell, cap: 900, damageSpell: o.damageSpell, rotation: o.rotation, log });
             log(`HUNT fight ${r.outcome} ${JSON.stringify(r)}`);
             if (r.outcome === 'kill') {
                 tally.kills++; const n = await loot(s, r.targetAt ?? target, over); tally.looted += n;
@@ -152,7 +162,7 @@ if (import.meta.main) {
     const env = process.env;
     const r = await hunt(s, { cap: Number(capArg ?? 6000), food: Number(env.HUNT_FOOD ?? 18), minFood: Number(env.MIN_FOOD ?? 6), escapeAt: Number(env.ESCAPE_AT ?? 35), stop,
         kit: env.PK_KIT ? JSON.parse(env.PK_KIT) as Kit : undefined, trip: env.PK_TRIP ? JSON.parse(env.PK_TRIP) : undefined, damageSpell: env.PK_SPELL ? Number(env.PK_SPELL) : undefined,
-        rotation: env.PK_ROTATION ? env.PK_ROTATION.split(',') as Style[] : undefined });
+        rotation: env.PK_ROTATION ? env.PK_ROTATION.split(',') as Style[] : undefined, teleSpell: env.PK_TELE ? Number(env.PK_TELE) : undefined });
     console.log('HUNT ' + JSON.stringify(r));
     await finish([s], r.end !== 'died' && !/failed|lacks|short|did not open/.test(r.end), `hunt ${r.end} kills ${r.kills}`);
 }
