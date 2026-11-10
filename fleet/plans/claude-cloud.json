@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794305831119,
+ "at": 1794305867258,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -214,21 +214,26 @@
   },
   {
    "account": "Fingersmith",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "TRAIN_SKILL": "Attack",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "goal": "train Attack to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-attack-45",
    "autopilot": "claude-cloud",
    "resources": [
-    "knight:2582,3297"
+    "cow:ardougne-north"
    ]
   },
   {
@@ -258,7 +263,7 @@
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
+    "TRAIN_SKILL": "Attack",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1"
@@ -266,9 +271,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
+   "goal": "train Attack to 45 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-strength-45",
+   "template": "army-cow-attack-45",
    "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
@@ -276,24 +281,16 @@
   },
   {
    "account": "Fatstack",
-   "script": "scripts/goldfarm.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-dc5ba438-1d1e-4e47-ab48-48c584499d58"
    },
-   "enabled": false,
-   "standing": true,
+   "enabled": true,
    "repeat": false,
-   "goal": "train Defence to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-defence-45",
-   "resources": [
-    "cow:ardougne-north"
-   ]
+   "goal": "claude-cloud-recover-fatstack-20261110t101348z [task-dc5ba438-1d1e-4e47-ab48-48c584499d58]",
+   "role": "combat"
   }
  ]
 }
