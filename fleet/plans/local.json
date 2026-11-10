@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794319353050,
+ "at": 1794319877201,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -521,7 +521,7 @@
     "CASH_RESERVE": "0",
     "COORDINATOR_RUN_ID": "task-2a0bb512-b80b-4bc7-b9b5-8564c39f0245"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-magic-mightyrod-camelot-99-handoff [task-2a0bb512-b80b-4bc7-b9b5-8564c39f0245]",
    "role": "helper"
