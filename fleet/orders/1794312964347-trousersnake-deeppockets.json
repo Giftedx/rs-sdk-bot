@@ -1,0 +1,22 @@
+{
+ "id": "1794312964347-trousersnake-deeppockets",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TrouserSnake",
+ "to": "Deeppockets",
+ "item": "Cake",
+ "count": 6,
+ "start": 1794312964347,
+ "end": 1794314464347,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
