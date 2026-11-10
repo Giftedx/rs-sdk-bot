@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794319087841-quickhandjob-knightrider",
+ "account": "KnightRider",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 20,
+ "claim": "8043ada3-1042-4921-81c4-9ca52dd8ace0",
+ "count": 0,
+ "ok": false,
+ "at": 1794319091301,
+ "detail": "trade claimed"
+}

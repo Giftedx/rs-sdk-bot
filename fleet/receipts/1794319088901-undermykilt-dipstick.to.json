@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794319088901-undermykilt-dipstick",
+ "account": "Dipstick",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 10,
+ "claim": "0b9dfd05-13fb-4e70-a869-95756558f7b1",
+ "count": 0,
+ "ok": false,
+ "at": 1794319093830,
+ "detail": "trade claimed"
+}
