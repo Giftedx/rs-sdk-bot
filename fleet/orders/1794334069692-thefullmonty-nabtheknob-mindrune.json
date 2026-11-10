@@ -1,0 +1,22 @@
+{
+ "id": "1794334069692-thefullmonty-nabtheknob-mindrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TheFullMonty",
+ "to": "NabTheKnob",
+ "item": "Mind rune",
+ "count": 20,
+ "start": 1794334069692,
+ "end": 1794336469692,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
