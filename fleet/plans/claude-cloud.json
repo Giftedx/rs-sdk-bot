@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794299994852,
+ "at": 1794300121966,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -260,7 +260,7 @@
     "KNIGHT_SPOT": "2653,3300",
     "TICKS": "9000"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": false,
    "goal": "train Strength to 45 on the Ardougne cows",
