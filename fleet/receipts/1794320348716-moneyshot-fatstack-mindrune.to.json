@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794320348716-moneyshot-fatstack-mindrune",
+ "account": "Fatstack",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 20,
+ "claim": "0402f0c1-9416-463f-bf49-928ef0f1b05d",
+ "count": 0,
+ "ok": false,
+ "at": 1794320566999,
+ "detail": "trade claimed"
+}

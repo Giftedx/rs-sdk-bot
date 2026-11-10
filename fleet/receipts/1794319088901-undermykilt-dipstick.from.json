@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1794319088901-undermykilt-dipstick",
  "account": "UnderMyKilt",
  "partner": "Dipstick",
@@ -12,6 +12,10 @@
  "claim": "e78c561e-3c6a-432c-9911-d0ae7c89ea47",
  "count": 0,
  "ok": false,
- "at": 1794319095814,
- "detail": "trade claimed"
+ "at": 1794320562043,
+ "detail": "session ended: disconnected",
+ "bank": {
+  "count": 10,
+  "at": 1794319254058
+ }
 }
