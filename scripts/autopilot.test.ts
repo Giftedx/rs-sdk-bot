@@ -6,7 +6,7 @@ import { jobLogStart } from '../packages/core/src/job-log';
 import { catalogue, finishedTrainers, FOOD_HEAL, jobFor, mergeJobs, norm, plan, plannableAccounts, reservedResources, type Acct, type Inputs } from '../packages/planner/src/autopilot';
 import { COW_FOOD_BITES, COW_FOOD_HP, cowFoodHeal } from './gather-combat';
 import { missionSignature, startable } from './swarm';
-import { armyRoster, coinOrder, fundOrders, heldResources, inOpenOrder, newestClaims, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { armyRoster, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, newestClaims, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import type { TradeReceipt } from './fleet-trade-settlement';
 
 const side = 'claude-cloud';
@@ -222,4 +222,24 @@ test('the planner heals food by the same table as cow mode, and the cow bands ne
     const ids = Object.keys(COW_FOOD_BITES).map(Number);
     expect(Object.fromEntries(ids.map(id => [norm(names.get(id)!), cowFoodHeal([{ id, count: 1 }])]))).toEqual({ ...FOOD_HEAL });
     for (const t of catalogue().filter(t => t.id.startsWith('army-cow-'))) expect(t.needs?.food).toBe(COW_FOOD_HP);
+});
+
+test('a retirement lapses when its script changes, except a death or a gone template', () => {
+    const scriptOf = (t: string) => ({ 'army-cow-strength-45': 'new', goldfarm: 'same' } as Record<string, string>)[t];
+    expect(liveRetirements({
+        'trousersnake:army-cow-strength-45': { reason: '2 fail RESULTs', script: 'old' },
+        'fatstack:goldfarm': { reason: 'tick waste 95%', script: 'same' },
+        'dipstick:army-cow-strength-45': { reason: 'death: died', script: 'old' },
+        'kiltlifter:gone-template': { reason: '2 fail RESULTs', script: 'old' },
+        'thefullmonty:army-cow-strength-45': '2 fail RESULTs',
+    }, scriptOf)).toEqual({
+        retired: {
+            'fatstack:goldfarm': { reason: 'tick waste 95%', script: 'same' },
+            'dipstick:army-cow-strength-45': { reason: 'death: died', script: 'old' },
+            'kiltlifter:gone-template': { reason: '2 fail RESULTs', script: 'old' },
+            // A bare reason from before scripts were recorded takes the current script and stays.
+            'thefullmonty:army-cow-strength-45': { reason: '2 fail RESULTs', script: 'new' },
+        },
+        lapsed: ['trousersnake:army-cow-strength-45'],
+    });
 });

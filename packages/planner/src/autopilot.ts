@@ -193,7 +193,8 @@ export function finishedTrainers(jobs: readonly any[], side: string, assigned: R
 // account claim held by swarm` until an authenticated recovery confirms the logout) is a drain too: the job never ran,
 // and the recovered account resumes it.
 export const RETIRE_FAILS = 2, WASTE_LIMIT = 0.9;
-export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked)=[1-9]\d*\b/.test(result);
+// Cow mode reports its progress as selectedXp, damageXp and creditedKills.
+export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked|selectedXp|damageXp|creditedKills)=[1-9]\d*\b/.test(result);
 export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b)/;
 export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number; drains: number } {
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
