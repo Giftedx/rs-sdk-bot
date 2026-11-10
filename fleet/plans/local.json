@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794319877201,
+ "at": 1794319939537,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -118,18 +118,18 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
+    "KNIGHT_SPOT": "2669,3298",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
+   "goal": "goldfarm knights at 2669,3298",
    "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "template": "goldfarm@2669,3298",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "knight:2669,3298"
    ]
   },
   {
