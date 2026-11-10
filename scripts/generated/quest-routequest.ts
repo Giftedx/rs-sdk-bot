@@ -159,7 +159,7 @@ try {
     for (let i = 0; i < 8 && q.npc(/^skeleton hellhound$/i); i++) {
         await q.guard('hellhound');
         const h = q.npc(/^skeleton hellhound$/i);
-        await q.s.bot.attack(h as any);
+        await q.attack(h);
         await q.waitUntil(() => !(q.st()?.nearbyNpcs ?? []).some((m: any) => m.index === h.index), 60);
     }
     if (q.npc(/^skeleton hellhound$/i)) await q.fail('hellhound');
