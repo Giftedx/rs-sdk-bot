@@ -40,9 +40,13 @@ export function bigNetReceipt(b:ReturnType<typeof bigNetSnapshot>,a:ReturnType<t
 }
 const npcPack=new Map(readFileSync(resolve(content,'pack/npc.pack'),'utf8').split(/\r?\n/).map(l=>{const at=l.indexOf('=');return[l.slice(at+1),Number(l.slice(0,at))];}));
 const npcDefs=readFileSync(resolve(content,'scripts/skill_fishing/configs/fishing.npc'),'utf8').split(/(?=^\[)/m);
+const spotIdsCache=new Map<FishMethod,number[]>();
 export function fishSpotIds(method:FishMethod){
+ const hit=spotIdsCache.get(method);if(hit)return hit;
  const profile=FISH_PROFILES[method]as NativeFishProfile;
- return npcDefs.filter(block=>profile.names?profile.names.includes(block.match(/^\[([^\]]+)\]/)?.[1]??''):new RegExp(`^category=${profile.category}\\r?$`,'m').test(block)).map(block=>npcPack.get(block.match(/^\[([^\]]+)\]/)?.[1]??'')).filter((id):id is number=>id!==undefined);
+ const ids=npcDefs.filter(block=>profile.names?profile.names.includes(block.match(/^\[([^\]]+)\]/)?.[1]??''):new RegExp(`^category=${profile.category}\\r?$`,'m').test(block)).map(block=>npcPack.get(block.match(/^\[([^\]]+)\]/)?.[1]??'')).filter((id):id is number=>id!==undefined);
+ spotIdsCache.set(method,ids);
+ return ids;
 }
 export function pickFishSpot(s:BotWorldState,method:FishMethod,radius=8):NearbyNpc|undefined{
  const p=FISH_PROFILES[method],ids=fishSpotIds(method);

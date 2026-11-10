@@ -1,6 +1,7 @@
 // AIOFighter PotionManagerScript: serialized finite upkeep beside AttackNpc.
 // BSD attribution: research/microbot-ports-LICENSE.txt. Native dose policy lives in potion-care.
 import{readFileSync}from'node:fs';
+import{resolve}from'node:path';
 import{BotActions}from'../vendor/rs-sdk/sdk/actions';
 import{waitUntil}from'../packages/core/src/ticks';
 import type{Session}from'../packages/core/src/inprocess';
@@ -15,7 +16,7 @@ export function combatPotionPolicy(env:Record<string,string|undefined>=process.e
 // Native prayer.rs2 accumulates rate*5 each five ticks; all pinned native
 // equipment has nonnegative prayerbonus, so resistance is at least60. Unknown
 // timer/counter phase contributes at most one partial drain interval.
-const prayerScript=readFileSync('vendor/rs-sdk/server/content/scripts/skill_prayer/scripts/prayer.rs2','utf8'),prayerEnum=readFileSync('vendor/rs-sdk/server/content/scripts/skill_prayer/configs/prayers.enum','utf8').split('[prayer_headicons]')[0]!;
+const prayerScript=readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/server/content/scripts/skill_prayer/scripts/prayer.rs2'),'utf8'),prayerEnum=readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/server/content/scripts/skill_prayer/configs/prayers.enum'),'utf8').split('[prayer_headicons]')[0]!;
 const prayerRates=Array.from({length:15},(_,index)=>{const name=[...prayerScript.matchAll(/case \^(\w+) :\s*if \(%prayer(\d+) =/g)].find(m=>Number(m[2])===index)?.[1],rate=Number(prayerEnum.match(new RegExp('val=\\^'+name+',([0-9]+)'))?.[1]);if(!Number.isSafeInteger(rate)||rate<1)throw Error('native prayer drain mapping absent');return rate;});
 export function combatPrayerLoss(active:readonly boolean[],elapsed:number){if(active.length!==15||!Number.isSafeInteger(elapsed)||elapsed<0)throw Error('native prayer observation absent');const rate=active.reduce((sum,on,i)=>sum+(on?prayerRates[i]!:0),0);return Math.ceil(rate*5*Math.ceil((elapsed+1)/5)/60);}
 const canonical=(rows:readonly{id:number;count:number;slot:number}[])=>JSON.stringify(rows.map(r=>({id:r.id,count:r.count,slot:r.slot})).sort((a,b)=>a.slot-b.slot));

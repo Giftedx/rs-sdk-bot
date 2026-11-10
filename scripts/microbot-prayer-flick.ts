@@ -1,3 +1,4 @@
+import {resolve} from 'node:path';
 import {existsSync,readFileSync} from 'node:fs';
 import {BotActions} from '../vendor/rs-sdk/sdk/actions';
 import {nativeNpcSpell,npcCastEffect,runNpcMagic} from './microbot-magic-npc';
@@ -77,7 +78,7 @@ export async function withCombatPrayer<T>(s:Session,o:CombatPrayerOptions,run:(s
  return{ok:!failure&&restored,result,error:error===undefined?undefined:String(error),failure:failure||'-',restored,prayerStateUncertain:uncertain,attackStateUncertain:attackUncertain,attackResumptions,attacksObserved:attacks,attacksWithPrayerObserved:covered,toggles,cycles,pointsBefore,pointsAfter:after?.prayerPoints,spent,ticks:s.tick()-start};
 }
 export function incomingFarmerProfile(){
- const base='vendor/rs-sdk/server/content/',row=readFileSync(base+'scripts/_unpack/225/all.npc','utf8').split('[farmer1]')[1]?.split('\n[')[0]??'',rate=Number(row.match(/^param=attackrate,(\d+)/m)?.[1]),name=row.match(/^param=attack_anim,([^\r\n]+)/m)?.[1],anim=Number(readFileSync(base+'pack/seq.pack','utf8').split(/\r?\n/).find(l=>l.endsWith('='+name))?.split('=')[0]);
+ const base=resolve(import.meta.dir,'../vendor/rs-sdk/server/content')+'/',row=readFileSync(base+'scripts/_unpack/225/all.npc','utf8').split('[farmer1]')[1]?.split('\n[')[0]??'',rate=Number(row.match(/^param=attackrate,(\d+)/m)?.[1]),name=row.match(/^param=attack_anim,([^\r\n]+)/m)?.[1],anim=Number(readFileSync(base+'pack/seq.pack','utf8').split(/\r?\n/).find(l=>l.endsWith('='+name))?.split('=')[0]);
  if(rate!==6||anim!==433||!/^param=damagetype,\^stab_style$/m.test(row))throw Error('native Farmer incoming profile changed');return{npc:7,prayer:14,rate,anim,lead:2,source:'_unpack/225/all.npc farmer1; melee protection before queue0'}as const;
 }
 export async function withIncomingProtection<T>(s:Session,o:{cap:number;hpFloor:number;spell:string;stop?:()=>boolean},run:(owned:Session,stop:()=>boolean,finishCombat:()=>void)=>Promise<T>){

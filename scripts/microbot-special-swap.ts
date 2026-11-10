@@ -1,4 +1,5 @@
 // Adapted behavior: pinned Microbot SpecialAttackConfigs; research/microbot-ports-LICENSE.txt.
+import {resolve} from 'node:path';
 import {readFileSync} from 'node:fs';
 import {openBot,settle} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
@@ -33,21 +34,21 @@ export async function finishSpecialExit(s:Session,exit:ReturnType<typeof special
 }
 
 export function nativeSwapWeapon(id:number){
- const item=(JSON.parse(readFileSync('knowledge/items.json','utf8'))as {id:number;debugname:string;src:string;name:string}[]).find(i=>i.id===id);
+ const item=(JSON.parse(readFileSync(resolve(import.meta.dir,'../knowledge/items.json'),'utf8'))as {id:number;debugname:string;src:string;name:string}[]).find(i=>i.id===id);
  if(!item||!Number.isSafeInteger(id))throw Error('native special weapon absent');
- const block=readFileSync('vendor/rs-sdk/server/content/'+item.src.replace(/:\d+$/,''),'utf8').split('['+item.debugname+']')[1]?.split('\n[')[0]??'';
+ const block=readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/server/content',item.src.replace(/:\d+$/,'')),'utf8').split('['+item.debugname+']')[1]?.split('\n[')[0]??'';
  const param=(key:string)=>block.match(new RegExp('^param='+key+',([^\\r\\n]+)','m'))?.[1],category=block.match(/^category=([^\r\n]+)/m)?.[1];
- const styles=readFileSync('vendor/rs-sdk/server/content/scripts/skill_combat/scripts/player/player_attackstyles.rs2','utf8');
+ const styles=readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/server/content/scripts/skill_combat/scripts/player/player_attackstyles.rs2'),'utf8');
  const tab=[...styles.matchAll(/case ([\w, ]+) : ~weapon_category_tab_attack\((combat_\w+):preview/g)].find(m=>m[1]!.split(/,\s*/).includes(category??''))?.[2];
  const self=item.debugname==='dragon_battleaxe'||item.debugname==='excalibur';
- const handlers=readFileSync('vendor/rs-sdk/server/content/scripts/skill_combat/scripts/player/player_special_attack.rs2','utf8');
+ const handlers=readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/server/content/scripts/skill_combat/scripts/player/player_special_attack.rs2'),'utf8');
  const handler=[...handlers.matchAll(/case ([\w, ]+) : @(pvm_\w+)_sa;/g)].find(m=>m[1]!.split(/,\s*/).includes(item.debugname)),supported=self||!!handler;
- const script=handler?readFileSync('vendor/rs-sdk/server/content/scripts/skill_combat/scripts/player/specs/scripts/'+handler[2]+'.rs2','utf8'):'';
+ const script=handler?readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/server/content/scripts/skill_combat/scripts/player/specs/scripts',handler[2]+'.rs2'),'utf8'):'';
  const delays=[...script.matchAll(/\bp_delay\((\d+)\)/g)];if((script.match(/\bp_delay\(/g)?.length??0)!==delays.length)throw Error('native special suspension needs a literal bound');
  const suspensionTicks=delays.reduce((n,m)=>n+Number(m[1])+1,0);if(suspensionTicks>1)throw Error('native special suspension exceeds declared cancellation reserve');
- const energy=Number(param('sa_energy')??readFileSync('vendor/rs-sdk/server/content/scripts/skill_combat/configs/combat.param','utf8').split('[sa_energy]')[1]?.split('\n[')[0]?.match(/^default=(\d+)/m)?.[1]);
+ const energy=Number(param('sa_energy')??readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/server/content/scripts/skill_combat/configs/combat.param'),'utf8').split('[sa_energy]')[1]?.split('\n[')[0]?.match(/^default=(\d+)/m)?.[1]);
  if(param('specwep')!=='^true'||!supported||!tab||!Number.isSafeInteger(energy)||energy<1||energy>1000)throw Error('native weapon has no supported special handler');
- const ammo=category==='weapon_bow'?(readFileSync('vendor/rs-sdk/server/content/scripts/skill_combat/scripts/player/specs/scripts/pvm_'+item.debugname+'.rs2','utf8').match(/~ranged_dropammo_npc\(/g)?.length??0):item.debugname==='rune_thrownaxe'?1:0;
+ const ammo=category==='weapon_bow'?(readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/server/content/scripts/skill_combat/scripts/player/specs/scripts/pvm_')+item.debugname+'.rs2','utf8').match(/~ranged_dropammo_npc\(/g)?.length??0):item.debugname==='rune_thrownaxe'?1:0;
  return{id,name:item.name,debugname:item.debugname,energy,self,suspensionTicks,range:Number(param('attackrange')??0),ammo,ammoSlot:category==='weapon_bow'?13:3,twoHanded:/^wearpos2=lefthand\r?$/m.test(block),bar:tab+':specbar',tab:componentId(tab)};
 }
 export interface SpecialSwapOrder{weapon:number;minimumEnergy:number;cap:number;target?:{index:number;id:number};costs?:Record<number,number>;chainTargets?:{index:number;id:number}[];maximumHits?:number}

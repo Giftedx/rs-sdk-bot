@@ -1,6 +1,7 @@
 // Finite caller-staged native pickpockets. No bank/site routes or automatic task promotion.
 // bun scripts/microbot-a-pickpocket.ts <account> <profile> [successes=10] [attempts=40] [cap=2000]
 // MEMBERS=1; XP_RATE=25 scopes the expected native XP multiplier; FOOD_ID/FOOD_RESERVE optional whole food.
+import {resolve} from 'node:path';
 import {readFileSync,existsSync} from 'node:fs';
 import {openBot,finish} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
@@ -10,9 +11,9 @@ import {questFlags} from '../packages/core/src/quest-status';
 import {objId} from './measure/floor-bands';
 export interface PocketProfile{name:string;npcs:number[];level:number;xp:number;stunTicks:number;damage:number;pocket:string;loot:{id:number;min:number;max:number}[];source:string;line:number}
 export function pickpocketProfiles():PocketProfile[]{
- const path='vendor/rs-sdk/server/content/scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow',text=readFileSync(path,'utf8');
- const ids=new Map(readFileSync('vendor/rs-sdk/server/content/pack/npc.pack','utf8').split(/\r?\n/).flatMap(l=>{const m=l.match(/^(\d+)=(\w+)$/);return m?[[m[2]!,Number(m[1])] as const]:[]}));
- const triggers=readFileSync('vendor/rs-sdk/server/content/scripts/skill_thieving/scripts/pickpocketing/pickpocket.rs2','utf8');
+ const path=resolve(import.meta.dir,'../vendor/rs-sdk/server/content/scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow'),text=readFileSync(path,'utf8');
+ const ids=new Map(readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/server/content/pack/npc.pack'),'utf8').split(/\r?\n/).flatMap(l=>{const m=l.match(/^(\d+)=(\w+)$/);return m?[[m[2]!,Number(m[1])] as const]:[]}));
+ const triggers=readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/server/content/scripts/skill_thieving/scripts/pickpocketing/pickpocket.rs2'),'utf8');
  return [...text.matchAll(/^\[pickpocket_([^\]]+)\]\r?\n([^\[]*)/gm)].map(m=>{
   const body=m[2]!,field=(key:string)=>body.match(new RegExp('^data='+key+',(.+)$','m'))?.[1]?.trim();
   const npcs=[...body.matchAll(/^data=npc,(\w+)/gm)].map(n=>{if(!triggers.includes('[opnpc3,'+n[1]+']'))throw Error('native pickpocket trigger missing '+n[1]);const id=ids.get(n[1]!);if(id===undefined)throw Error('native NPC ID missing');return id;});

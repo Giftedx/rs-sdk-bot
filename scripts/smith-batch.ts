@@ -18,9 +18,11 @@ type Stock=readonly {id:number;count:number}[];
 export type SmithRecipe={product:number;amount:number;level:number;bar:number;bars:number;xpPerBar:number;component:number;slot:number;quest?:'The Tourist Trap'|'Death Plateau'};
 export const HAMMER=2347,SMITHING_INTERFACE=994,TOLL_GUARD_EAST=926;
 const count=(rows:Stock,id:number)=>rows.filter(v=>v.id===id).reduce((n,v)=>n+v.count,0);
+const smithRecipeCache=new Map<number,SmithRecipe>();
 export function smithRecipe(product:number):SmithRecipe{
  const unsupported=Error('unsupported smith recipe: '+product);
  if(!Number.isSafeInteger(product)||product<0)throw unsupported;
+ const cached=smithRecipeCache.get(product);if(cached)return cached;
  const content=resolve(import.meta.dir,'../vendor/rs-sdk/server/content'),configs='scripts/skill_smithing/configs/';
  const pack=(file:string)=>new Map(readFileSync(resolve(content,'pack',file),'utf8').split(/\r?\n/).flatMap(l=>{const m=l.match(/^(\d+)=(.+)$/);return m?[[m[2]!,Number(m[1])] as const]:[];}));
  const blocks=(file:string)=>parseConfigs(readFileSync(resolve(content,configs+file),'utf8'),file);
@@ -43,9 +45,9 @@ export function smithRecipe(product:number):SmithRecipe{
   const recipe={product,amount:Number(field(row.props.data,'product_amount')),level:Math.max(Number(field(row.props.data,'levelrequired')),Number(field(params,'levelrequired'))),
    bar:objs.get(bar)!,bars:Number(field(row.props.data,'bar_amount')),xpPerBar:Number(field(params,'xpperbar')),component,slot:Number(stock[0].slice(5))-1};
   if(!Object.values(recipe).every(n=>Number.isSafeInteger(n)&&n>=0)||recipe.amount<1||recipe.bars<1)throw unsupported;
-  if(name!.endsWith('_dart_tip'))return{...recipe,quest:'The Tourist Trap'};
-  if(column.component==='smithing:column_claws')return{...recipe,quest:'Death Plateau'};
-  return recipe;
+  const resolved:SmithRecipe=name!.endsWith('_dart_tip')?{...recipe,quest:'The Tourist Trap'}:column.component==='smithing:column_claws'?{...recipe,quest:'Death Plateau'}:recipe;
+  smithRecipeCache.set(product,resolved);
+  return resolved;
  }
  throw unsupported;
 }

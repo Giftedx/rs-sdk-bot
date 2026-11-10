@@ -1,5 +1,7 @@
-export function bankTravelTolerance(family:string,productionSite:boolean):number{return productionSite&&['cooking','magic-npc'].includes(family)?0:2;}
+import{bankTravelTolerance,validateBankRouteJob,fittingBankBatch,type Tile,type FishingProtection,type BankProfile,type BankRouteJob}from'../packages/core/src/bank-trip';
+export{bankTravelTolerance,validateBankRouteJob,fittingBankBatch,type Tile,type FishingProtection,type BankProfile,type BankRouteJob};
 import{readFileSync,existsSync}from'node:fs';
+import{resolve}from'node:path';
 import{openBot,finish,getWorld,accountOf}from'../packages/core/src/bot';
 import type{Session}from'../packages/core/src/inprocess';
 import{goTo,walkPath,sessionWalker}from'../packages/core/src/walk';
@@ -24,22 +26,10 @@ import{actionSessionOwner,finishActionSession}from'./microbot-a-actions';
 import{productionStopRequested}from'./microbot-c-lifetime';
 import{questFlags}from'../packages/core/src/quest-status';
 
-export type Tile={x:number;z:number;level:number};
 // Harvest targets are minimum useful output; manufacturing batches remain exact.
-export type FishingProtection={prayer:14;potionsPerUnit:1|2|3;maximumDoses:number;antifire?:true};
 export type BankJob={family:'jewellery'|'cooking'|'tanning'|'glass'|'magic'|'inventory'|'wine'|'bones'|'mining'|'fishing'|'stalls';recipe:string;target:number;batch:number;cap:number;returnTicks:number;members:boolean;reserve?:number;bank?:Tile;site?:Tile;heat?:Heat;alchemyTarget?:string;tool?:number;xpRate?:number;fishingProtection?:FishingProtection};
-export type BankProfile={inputs:Record<number,number>;tools:number[];outputs:number[];capacityOutputs?:Record<number,number>;bank:Tile;site:Tile;prepare?:(stop:()=>boolean)=>Promise<void>;deferBankRecovery?:()=>boolean;run:(n:number,cap:number,stop:()=>boolean)=>Promise<void|number>};
 const AK={x:3269,z:3167,level:0},FURNACE={x:3275,z:3186,level:0};
-const nativeItems=new Set(readFileSync('vendor/rs-sdk/server/content/pack/obj.pack','utf8').split(/\r?\n/).flatMap(row=>{const m=row.match(/^(\d+)=/);return m?[Number(m[1])]:[];}));
-export type BankRouteJob=Omit<BankJob,'family'>&{family:string};
-export function validateBankRouteJob(j:BankRouteJob){
- if(typeof j.family!=='string'||!j.family||typeof j.recipe!=='string'||!j.recipe||typeof j.members!=='boolean'||![j.target,j.batch,j.cap,j.returnTicks].every(v=>Number.isSafeInteger(v)&&v>0)||j.cap<=j.returnTicks||!Number.isSafeInteger(j.reserve??0)||(j.reserve??0)<0)throw Error('invalid finite bank job');
- if(j.family==='fishing'&&j.recipe==='lava'&&j.fishingProtection?.antifire!==true)throw Error('Lava requires declared melee and antifire protection');
- if(j.fishingProtection!==undefined){const p=j.fishingProtection;if(j.family!=='fishing'||!p||p.prayer!==14||(!Number.isSafeInteger(p.potionsPerUnit)||p.potionsPerUnit<1||p.potionsPerUnit>3)||!Number.isSafeInteger(p.maximumDoses)||p.maximumDoses<1||p.maximumDoses>40||p.antifire!==undefined&&(p.antifire!==true||j.recipe!=='lava'))throw Error('invalid finite fishing protection');}
- if(j.xpRate!==undefined&&(!Number.isSafeInteger(j.xpRate)||j.xpRate<1||j.xpRate>1000))throw Error('invalid declared XP rate');
- if(j.target>2147483647||j.batch>2147483647||j.cap>100000)throw Error('bank job exceeds native count or tick limits');
- for(const p of [j.bank,j.site])if(p&&(![p.x,p.z,p.level].every(Number.isSafeInteger)||p.level<0||p.level>3||p.x<0||p.x>16383||p.z<0||p.z>16383))throw Error('invalid bank/site tile');
-}
+const nativeItems=new Set(readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/server/content/pack/obj.pack'),'utf8').split(/\r?\n/).flatMap(row=>{const m=row.match(/^(\d+)=/);return m?[Number(m[1])]:[];}));
 export function validateBankJob(j:BankJob){
  validateBankRouteJob(j);if(j.fishingProtection){if(shiloFishingJob(j))throw Error('Shilo fishing owns its crossing protection');for(const id of[2434,139,141,143,...j.fishingProtection.antifire?[2452,2454,2456,2458]:[]])potionCareRecipe(id);}
  if(!['jewellery','cooking','tanning','glass','magic','inventory','wine','bones','mining','fishing','stalls'].includes(j.family))throw Error('invalid finite bank job');
@@ -53,10 +43,6 @@ export function validateBankJob(j:BankJob){
  if(j.family==='stalls'&&!stallRecipes().some(r=>r.name===j.recipe))throw Error('unknown stall recipe');
  if(j.tool!==undefined&&(!Number.isSafeInteger(j.tool)||!nativeItems.has(j.tool)))throw Error('invalid native tool');
  if(['mining','stalls'].includes(j.family)&&(!j.bank||!j.site))throw Error('mining/stall job needs exact bank and site tiles');
-}
-export function fittingBankBatch(inputs:Record<number,number>,tools:number[],maximum:number,freeSlots:number,stackable:(id:number)=>boolean,outputs:Record<number,number>={}){
- const slots=(items:Record<number,number>,n:number)=>{const ids=new Set([...Object.keys(items).map(Number),...tools]);let count=0;for(const id of ids){const units=(items[id]??0)*n+(tools.includes(id)?1:0);count+=stackable(id)?1:units;}return count;};
- let lower=0,upper=maximum;while(lower<upper){const n=Math.ceil((lower+upper)/2);if(Math.max(slots(inputs,n),slots(outputs,n))<=freeSlots)lower=n;else upper=n-1;}return lower;
 }
 async function profile(s:Session,j:BankJob):Promise<BankProfile>{
  const state=()=>s.sdk.getState(),base={bank:j.bank??AK,site:j.site??AK};

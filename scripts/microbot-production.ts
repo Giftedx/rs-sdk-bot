@@ -9,7 +9,9 @@ export interface ProductionIO {
  prepare():Promise<boolean>;use():Promise<unknown>;wait(done:()=>boolean):Promise<unknown>;
  deposit(id:number):Promise<number>;close():Promise<void>;
 }
+let cachedInventoryRecipes:InventoryRecipe[]|undefined;
 export function inventoryRecipes():InventoryRecipe[]{
+ if(cachedInventoryRecipes)return cachedInventoryRecipes;
  const root=resolve(import.meta.dir,'..'),content='vendor/rs-sdk/server/content/';
  const names=new Map(readFileSync(resolve(root,content,'pack/obj.pack'),'utf8').split(/\r?\n/).filter(l=>l.includes('=')).map(l=>{const at=l.indexOf('=');return[l.slice(at+1),Number(l.slice(0,at))];}));
  const id=(name:string)=>{const value=names.get(name);if(value===undefined)throw Error('unknown production item '+name);return value;};
@@ -111,7 +113,8 @@ export function inventoryRecipes():InventoryRecipe[]{
  add('prepare:chicken-stew',['cooked_chicken','bowl_water'],'stew2','Cooking',25,false,chicken);
  add('prepare:uncooked-stew-chicken',['stew1','cooked_chicken'],'uncooked_stew','Cooking',25,false,chicken);
  if(new Set(recipes.map(r=>r.name)).size!==recipes.length)throw Error('duplicate inventory production profile');
- return recipes;
+ cachedInventoryRecipes=recipes;
+ return cachedInventoryRecipes;
 }
 export function productionEffect(r:InventoryRecipe,b:ProductionSnapshot,a:ProductionSnapshot):'none'|'made'|'loss'|'invalid'{
  const keys=new Set([...Object.keys(b.items),...Object.keys(a.items)].map(Number));

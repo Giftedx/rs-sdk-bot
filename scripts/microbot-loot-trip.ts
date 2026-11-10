@@ -1,3 +1,4 @@
+import {resolve} from 'node:path';
 import{readFileSync,existsSync}from'node:fs';
 import{openBot,finish,serverFromEnv}from'../packages/core/src/bot';
 import{inProcessSdkConfig,type Session}from'../packages/core/src/inprocess';
@@ -7,7 +8,7 @@ import{runBankProfile,validateBankRouteJob,type BankRouteJob}from'./microbot-ban
 import{runVisibleGroundLoot,type LootPolicy}from'./microbot-b-mining-loot';
 
 export interface LootTripJob{target:number;batch:number;cap:number;returnTicks:number;members:boolean;bank:{x:number;z:number;level:number};site:{x:number;z:number;level:number};policy:Omit<LootPolicy,'maximumUnits'|'cap'>;valuation?:{source:'native-ge-last-trade';ids:number[];thresholds?:'donor'}}
-const ids=readFileSync('vendor/rs-sdk/server/content/pack/obj.pack','utf8').split(/\r?\n/).flatMap(l=>{const m=l.match(/^(\d+)=/);return m?[Number(m[1])]:[];});
+const ids=readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/server/content/pack/obj.pack'),'utf8').split(/\r?\n/).flatMap(l=>{const m=l.match(/^(\d+)=/);return m?[Number(m[1])]:[];});
 export type LootQuoteSnapshot={origin:string;observedAt:number;prices:Readonly<Record<number,Readonly<{price:number;lastTradeAt:number}>>>};
 type Definition=(id:number)=>{name:string;cost:number;stackable:boolean}|undefined;
 export async function fetchLootQuotes(origin:string,scope:readonly number[],stop:()=>boolean,market:Pick<MarketClient,'item'>=new MarketClient(origin),now:()=>number=Date.now):Promise<LootQuoteSnapshot>{

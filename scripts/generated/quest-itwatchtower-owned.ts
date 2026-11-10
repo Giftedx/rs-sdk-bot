@@ -76,7 +76,7 @@ export const WATCH_CAVES=[
  {id:2805,x:2560,z:3022,out:2817,ox:2497,oz:9418,npc:868,nx:2503,nz:9415,reply:/^Nod\.$/i,effect:/Gor nod/i},
 ] as const;
 export function watchtowerNativeBindings(){
- const base='vendor/rs-sdk/server/content/',pack=(kind:string)=>new Map(readFileSync(base+'pack/'+kind+'.pack','utf8').split(/\r?\n/).map(l=>{const[i,n]=l.split('=');return[n,Number(i)];}));
+ const base=resolve(import.meta.dir,'../../vendor/rs-sdk/server/content')+'/',pack=(kind:string)=>new Map(readFileSync(base+'pack/'+kind+'.pack','utf8').split(/\r?\n/).map(l=>{const[i,n]=l.split('=');return[n,Number(i)];}));
  const objects=pack('obj'),locs=pack('loc'),npcs=pack('npc');for(const[name,id]of Object.entries({fingernails:2384,relicpart1:2373,relicpart2:2374,relicpart3:2375,magic_ogre_potion:2395,powering_crystal4:2383,watchtowerspell:2396}))if(objects.get(name)!==id)throw Error('Watchtower Native object differs '+name);
  if(locs.get('watchleverup')!==2794||npcs.get('ogre_shaman')!==871||npcs.get('gorad')!==856)throw Error('Watchtower Native action mapping differs');questDefinitions();
  return{rawRewardMagic:153000,coins:5000,questPoints:4};
@@ -99,7 +99,7 @@ export async function runWatchtower(original:Session,{cap=6000,xpRate=25,stop=()
  const q=await openQuest({session:s,cap:cap-120,eatAt:65,food:[385],stop:()=>(productionStopRequested(original.name,stop)||existsSync('.practice/stop-quest-itwatchtower'))});let phase='entry';const milestones:string[]=[];let receipt:any;const initialCoins=q.cnt(995),initialMagic=q.xp('Magic'),initialPack=new Map<number,number>(q.inv().map(i=>[i.id,q.cnt(i.id)]));
  const walk=async(x:number,z:number,tol=2)=>{guard();await q.walk(phase,[{x,z,tol}]);guard();};
  const npc=(id:number)=>q.st()?.nearbyNpcs?.filter((n:any)=>n.id===id).sort((a:any,b:any)=>a.distance-b.distance)[0];
- const {default:ClientLocType}=await import(resolve('vendor/rs-sdk/server/webclient/src/config/LocType.ts'));guard();
+ const {default:ClientLocType}=await import(resolve(import.meta.dir,'../../vendor/rs-sdk/server/webclient/src/config/LocType.ts'));guard();
  const owns=()=>{try{guard();return true;}catch{return false;}};
  const freshLoc=(id:number,x:number,z:number)=>{const l=q.locs().find((l:any)=>l.id===id&&l.x===x&&l.z===z)??(id===2830&&x===2530&&z===3026?watchtowerBridgeLoc(s,owns,ClientLocType.list(2830)):undefined);if(!l)throw Error('Watchtower loc not observed '+id);return l;};
  let seen='';const text=()=>{const d=s.sdk.getDialog();return[d?.text??'',...(d?.allComponents??[]).map((c:any)=>c.text??'')].join(' ');};

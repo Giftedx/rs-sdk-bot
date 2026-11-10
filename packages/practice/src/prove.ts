@@ -43,14 +43,19 @@ export function runBotName(base: string, i: number): string {
     return base.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12 - suffix.length - 1) + 'x' + suffix;
 }
 
-async function runBun(args: string[], timeoutMs: number): Promise<{ stdout: string; exitCode: number }> {
-    const proc = Bun.spawn(['bun', ...args], { cwd: rsSdkRoot(), stdout: 'pipe', stderr: 'pipe' ,windowsHide:true});
+async function runBun(args: string[], timeoutMs: number, cwd: string = rsSdkRoot()): Promise<{ stdout: string; exitCode: number }> {
+    const proc = Bun.spawn(['bun', ...args], { cwd, stdout: 'pipe', stderr: 'pipe' ,windowsHide:true});
     const timer = setTimeout(() => proc.kill(), timeoutMs);
     const [out, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
     const exitCode = await proc.exited;
     clearTimeout(timer);
     return { stdout: out + err, exitCode };
 }
+
+// In-process (openBot) workers resolve content/bots via repo-root-absolute paths or repo-root-relative
+// literals (knowledge/, vendor/, .practice/). Their cwd must be the repo root, not vendor/rs-sdk
+// (which only lite runner.ts needs for join(cwd, 'bots', ...)).
+const REPO_ROOT = resolve(import.meta.dir, '..', '..', '..');
 
 // Each run logs in a fresh account. A dropped session stays in the engine for TIMEOUT_NO_CONNECTION
 // (500 ticks), and a relogin then attaches to the in-memory player and ignores the save file
@@ -116,7 +121,7 @@ export const realInProcessDeps: InProcessDeps = {
             await applyPreset(bot, p);
         }
     },
-    run: (script, bot, timeoutMs, args = []) => runBun([resolve(script), bot, ...args], timeoutMs),
+    run: (script, bot, timeoutMs, args = []) => runBun([resolve(script), bot, ...args], timeoutMs, REPO_ROOT),
     async cleanup(bot) {
         rmSync(join(rsSdkRoot(), 'bots', bot), { recursive: true, force: true });
     },

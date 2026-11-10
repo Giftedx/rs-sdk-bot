@@ -51,8 +51,10 @@ export function validateSmeltRoute(route:SmeltLocalRoute){
  return route;
 }
 const count=(rows:Stock,id:number)=>rows.filter(v=>v.id===id).reduce((n,v)=>n+v.count,0);
+const smeltRecipeCache=new Map<string,SmeltRecipe>();
 export function smeltRecipe(bar:string):SmeltRecipe{
- if(bar==='cannonballs')return{product:2,level:35,ingredients:[{id:2353,units:1}],iron:false,productUnits:4,tools:[4],receiptTicks:24,rawXp:375};
+ const cached=smeltRecipeCache.get(bar);if(cached)return cached;
+ if(bar==='cannonballs'){const r:SmeltRecipe={product:2,level:35,ingredients:[{id:2353,units:1}],iron:false,productUnits:4,tools:[4],receiptTicks:24,rawXp:375};smeltRecipeCache.set(bar,r);return r;}
  if(!['bronze','iron','silver','steel','gold','mithril','adamantite','runite'].includes(bar))throw Error('unsupported smelt recipe: '+bar);
  const content=resolve(import.meta.dir,'../vendor/rs-sdk/server/content'),file='scripts/skill_smithing/configs/smelting/smelting.struct';
  const ids=new Map(readFileSync(resolve(content,'pack/obj.pack'),'utf8').split(/\r?\n/).flatMap(l=>{const m=l.match(/^(\d+)=(.+)$/);return m?[[m[2]!,Number(m[1])] as const]:[];}));
@@ -62,7 +64,8 @@ export function smeltRecipe(bar:string):SmeltRecipe{
  const item=(name:string)=>{const id=ids.get(name);if(id===undefined)throw Error('unknown smelt item '+name);return id;};
  const ingredients=[{id:item(p.ingredient!),units:Number(p.bar_count)}];
  if(p.ingredient_secondary)ingredients.push({id:item(p.ingredient_secondary),units:Number(p.ingredient_secondary_count)});
- return{product:item(p.product!),level:Number(p.levelrequired),ingredients,iron:bar==='iron'};
+ const r:SmeltRecipe={product:item(p.product!),level:Number(p.levelrequired),ingredients,iron:bar==='iron'};
+ smeltRecipeCache.set(bar,r);return r;
 }
 export function planSmeltLoad(r:SmeltRecipe,bank:Stock,freeSlots:number,maximum:number,reserved:Readonly<Record<number,number>>){
  return productionBatch(r.ingredients.map(i=>({...i,available:count(bank,i.id),reserved:reserved[i.id]??0,stackable:false})),freeSlots,maximum,'best-effort');

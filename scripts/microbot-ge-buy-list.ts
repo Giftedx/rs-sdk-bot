@@ -104,7 +104,7 @@ export async function runBuyList(s:Session,r:BuyListRequest,requestStop:()=>bool
 
 if(import.meta.main){
  const [actor,path]=process.argv.slice(2);if(!actor||!path)throw Error('usage: microbot-ge-buy-list.ts actor plan.json');
- const input=JSON.parse(readFileSync(path,'utf8')),server=serverFromEnv(readFileSync(resolve('vendor/rs-sdk/bots',actor,'bot.env'),'utf8'));
+ const input=JSON.parse(readFileSync(path,'utf8')),server=serverFromEnv(readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/bots',actor,'bot.env'),'utf8'));
  let r=input as BuyListRequest;if(r.actor!==actor||r.server!==server)throw Error('buy-list CLI actor/server mismatch');
  // Optional donor-format list resolves exact native names; prices are frozen once in the persisted intent.
  if(input.list){const path=buyListPaths({...r,entries:[]} as BuyListRequest).parent;if(existsSync(path)){const old=JSON.parse(readFileSync(path,'utf8')).request;const withoutEntries=(x:any)=>{const{entries,...rest}=x;return rest;};if(!same(withoutEntries(old),withoutEntries(input)))throw Error('persisted buy-list source/config changed');r=old;}else{const parsed=parseBuyList(input.list),market=new MarketClient(server.includes('://')?server:`http://${server}`);r.entries=[];for(const e of parsed){const q:MarketQuote=await market.item(e.item);r.entries.push({...e,basePrice:q.lastPrice??Math.max(1,q.basePrice),percent:input.percent,unitCap:input.unitCaps?.[e.item]});}}}

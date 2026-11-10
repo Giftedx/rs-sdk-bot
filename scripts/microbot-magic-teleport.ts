@@ -2,6 +2,7 @@
 // Seven pinned standard teleports, finite staged batches: bun scripts/microbot-magic-teleport.ts <account> <destination> [casts=1] [cap=1200].
 // MEMBERS=1 scopes member-spell expectations; native server requirements and quest/scroll checks still decide acceptance.
 // COMBO_ALCH=high-alch|low-alch and ALCH_ITEM=debugname insert one observed item conversion after each teleport.
+import {resolve} from 'node:path';
 import {readFileSync,existsSync} from 'node:fs';
 import {openBot,finish} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
@@ -12,7 +13,7 @@ import {elementalRuneCost,itemMagicRecipe,runItemMagic,type Recipe} from './micr
 export interface NativeTeleport{name:string;component:string;level:number;members:boolean;runes:Record<number,number>;to:{x:number;z:number;level:number}}
 export function nativeTeleport(name:string):NativeTeleport{
  if(!/^(varrock|lumbridge|falador|camelot|ardougne|watchtower|trollheim)$/.test(name))throw Error('unsupported native teleport');
- const text=readFileSync('vendor/rs-sdk/server/content/scripts/skill_magic/configs/magic_spells.dbrow','utf8'),body=text.split('[magic_spell_teleport_'+name+']')[1]?.split('\n[')[0];if(!body)throw Error('native teleport missing');
+ const text=readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/server/content/scripts/skill_magic/configs/magic_spells.dbrow'),'utf8'),body=text.split('[magic_spell_teleport_'+name+']')[1]?.split('\n[')[0];if(!body)throw Error('native teleport missing');
  const field=(key:string)=>body.match(new RegExp('^data='+key+',(.+)$','m'))?.[1]?.trim(),parts=field('runesrequired')!.split(','),runes:Record<number,number>={};
  for(let i=0;i<parts.length;i+=2)if(parts[i]!=='null')runes[objId(parts[i]!)]=Number(parts[i+1]);
  const [level,mx,mz,lx,lz]=field('tele_coord')!.split('_').map(Number);

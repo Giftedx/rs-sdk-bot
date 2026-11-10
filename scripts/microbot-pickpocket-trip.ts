@@ -1,4 +1,5 @@
 // Finite native pickpocket bank/refill consumer; donor ThievingScript.bankAndEquip.
+import {resolve} from 'node:path';
 import {readFileSync,existsSync} from 'node:fs';
 import {openBot,settle} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
@@ -15,7 +16,7 @@ export function validatePickpocketTrip(j:PickpocketTrip){
  validateBankRouteJob({...j,family:'pickpocket',recipe:j.profile});
  const p=pickpocketProfiles().find(p=>p.name===j.profile),food=questFoodDefinitions().get(j.food);
  if(!p||!j.bank||!j.site||!j.members||j.target>1000||j.batch>16||j.returnTicks<120||![j.food,j.foodPerSuccess,j.attemptsPerSuccess,j.hpFloor,j.eatAt].every(Number.isSafeInteger)||j.foodPerSuccess<1||j.foodPerSuccess>28||j.attemptsPerSuccess<1||j.attemptsPerSuccess>20||j.hpFloor<1||j.eatAt<j.hpFloor+p.damage||!Number.isFinite(j.xpRate)||j.xpRate<=0||j.xpRate>1000||!food||food.next!==undefined)throw Error('invalid finite native pickpocket trip/food budget');
- const spawns=JSON.parse(readFileSync('knowledge/npcs.json','utf8'))as{id:number;spawns:{x:number;z:number;level:number}[]}[];
+ const spawns=JSON.parse(readFileSync(resolve(import.meta.dir,'../knowledge/npcs.json'),'utf8'))as{id:number;spawns:{x:number;z:number;level:number}[]}[];
  if(!spawns.some(n=>p.npcs.includes(n.id)&&n.spawns.some(s=>s.level===j.site!.level&&Math.max(Math.abs(s.x-j.site!.x),Math.abs(s.z-j.site!.z))<=8)))throw Error('pickpocket site lacks declared native profile spawn');
  return{profile:p,food};
 }
