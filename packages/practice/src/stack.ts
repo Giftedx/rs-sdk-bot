@@ -19,7 +19,14 @@ export const PROOF_TICK_MS = 150;
 export interface StackOptions {
     tickMs?: number;
     xpRate?: number;
+    // Lockstep engine (patches/rs-sdk.md item 10): no wall clock, a tick runs when every bot has answered the last one.
+    // `seed` makes the world's random rolls repeat, counted from the login of an account that matches `anchor`.
+    lockstep?: { seed?: number; anchor?: string; ackMs?: number; traceFile?: string };
     ports?: { engine: number; gateway: number };
+    // Extra engine environment for a stack on its own ports (WEB_MANAGEMENT_PORT, NODE_PORT, GE_DATABASE).
+    engineEnv?: Record<string, string>;
+    // false starts no gateway: in-process bots log in to the engine directly.
+    gateway?: boolean;
     readyTimeoutMs?: number;
     // Practice diagnostics only: `bun --preload <module>` for the engine process. Default launches have none.
     enginePreload?: { module: string; env: Record<string, string> };
@@ -36,6 +43,16 @@ export function engineCommand(opts: StackOptions, port: number): { cmd: string[]
         // The coverage scoreboard reads this trace (patches/rs-sdk.md item 8).
         ACTION_TRACE_FILE: join(practiceDir(), 'action-trace.log'),
     };
+    if (opts.lockstep) {
+        Object.assign(env, { SIM_LOCKSTEP: '1', SIM_DET: '1', SIM_ACK_MS: String(opts.lockstep.ackMs ?? 10_000), SIM_LOGIN_MS: '5000', SIM_STAT_FILE: join(practiceDir(), 'logs', 'sim-stat.log') });
+        if (opts.lockstep.seed !== undefined) env.SIM_SEED = String(opts.lockstep.seed);
+        if (opts.lockstep.anchor) env.SIM_SEED_ANCHOR = opts.lockstep.anchor;
+        if (opts.lockstep.traceFile) env.SIM_TRACE_FILE = opts.lockstep.traceFile;
+    }
+    for (const [key, value] of Object.entries(opts.engineEnv ?? {})) {
+        if (key in env) throw new Error(`engineEnv cannot replace ${key}`);
+        env[key] = value;
+    }
     const pre = opts.enginePreload;
     if (!pre) return { cmd: ['bun', MARKERS.engine], env };
     if (!isAbsolute(pre.module) || !existsSync(pre.module)) throw new Error(`engine preload not found: ${pre.module}`);
@@ -82,7 +99,7 @@ export function pidsFile(instance?: string): string {
 
 export async function startStack(opts: StackOptions = {}): Promise<Stack> {
     const ports = opts.ports ?? DEFAULT_PORTS;
-    for (const port of [ports.engine, ports.gateway]) {
+    for (const port of opts.gateway === false ? [ports.engine] : [ports.engine, ports.gateway]) {
         if (!canBind(port)) throw new Error(`port ${port} in use`);
     }
     const root = rsSdkRoot();
@@ -109,6 +126,8 @@ export async function startStack(opts: StackOptions = {}): Promise<Stack> {
         await killTree(engine.pid);
         throw e;
     }
+
+    if (opts.gateway === false) return { logs, stop: () => stopStack(opts.instance) };
 
     const gateway = spawn(join(root, 'server', 'gateway'), ['bun', MARKERS.gateway], {
         GATEWAY_HOSTNAME: '127.0.0.1',

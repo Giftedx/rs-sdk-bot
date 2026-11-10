@@ -1,3 +1,4 @@
+import { tickWaits } from './tick-stream';
 import { existsSync, readFileSync } from 'node:fs';
 import {accountForSdk,registerRouteActor} from './door-policy';
 import { join, resolve } from 'node:path';
@@ -223,6 +224,8 @@ export function settle(sessions: Session[], ok: boolean, detail: FinishDetail, o
 
 async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail, opts: SettlementOptions, prior: Promise<boolean>): Promise<boolean> {
     for (const s of sessions) settling.add(s);
+    // A settling script waits for nothing more, and logout needs ticks: count as waiting so a lockstep tick is not held.
+    tickWaits.active++;
     const log = opts.log ?? ((l: string) => console.log(l));
     for (const s of sessions) {
         const l = ledgers.get(s); if (l) log(`${formatLedger(l.stop())} bot=${s.name}`);
