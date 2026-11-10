@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794309582572-thefullmonty-deeppockets",
+ "account": "Deeppockets",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 20,
+ "claim": "b80d7f37-c90d-4d35-9be7-20e873b515f5",
+ "count": 0,
+ "ok": false,
+ "at": 1794309586309,
+ "detail": "trade claimed"
+}
