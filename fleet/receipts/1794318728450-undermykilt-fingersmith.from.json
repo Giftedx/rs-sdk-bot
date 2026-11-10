@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794318728450-undermykilt-fingersmith",
  "account": "UnderMyKilt",
  "partner": "Fingersmith",
@@ -12,6 +12,11 @@
  "claim": "0351ffc9-e439-4f43-940d-8f917fff58c9",
  "count": 0,
  "ok": false,
- "at": 1794318731145,
- "detail": "trade claimed"
+ "at": 1794318782081,
+ "detail": "Error: route to 2618, 3333: precondition no route to 2618,3333,0",
+ "logout": {
+  "attemptId": "1794318731147-0000001807-0000000001",
+  "at": 1794318782076,
+  "sha256": "64abde05d90dad2e71c6dea74956a83e4e7447772225b8398c5d7fb9e9521ef5"
+ }
 }
