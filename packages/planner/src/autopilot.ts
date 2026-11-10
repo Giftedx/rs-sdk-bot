@@ -72,6 +72,10 @@ export type Inputs = {
     market?: Market;
     // What one coin is worth to this side now (coinValueFor; default 1).
     coinValue?: number;
+    // Each account's kit-buy count, by lower-case name (kitBuyTemplate `seq`; default 0).
+    kitSeq?: ReadonlyMap<string, number>;
+    // Donor and recipient pairs whose item order failed lately, as `from>to` in lower case: no new order for them.
+    noSend?: ReadonlySet<string>;
 };
 export const FUND_RESERVE = 50_000;
 // The template id of a kit buy for a goal band: `kit-buy:<band id>`. A retired pair (two fail RESULTs with no
@@ -131,8 +135,9 @@ const withoutCoins = (needs: Template['needs']): Template['needs'] => ({ ...need
 
 // The kit lines an account still lacks for these needs, or null when a level it does not have (or a holding it must
 // not have) stops the job: no item fixes that. The coin line is not a kit line (coinShort). Of several `anyOf`
-// kits the account takes the one with the fewest missing units.
-export function kitLacks(a: Acct, needs: Template['needs']): Lack[] | null {
+// kits the account takes one whose every line it `can` get (a buy: 250 fire runes, not a fire staff no market sells),
+// then the one with the fewest missing units.
+export function kitLacks(a: Acct, needs: Template['needs'], can: (item: string) => boolean = () => true): Lack[] | null {
     if (!Object.entries(needs?.skills ?? {}).every(([s, l]) => (a.skills[s] ?? 1) >= l)
         || !Object.entries(needs?.under ?? {}).every(([s, l]) => (a.skills[s] ?? 1) < l)
         || !Object.entries(needs?.holdsUnder ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) < n)) return null;
@@ -146,8 +151,8 @@ export function kitLacks(a: Acct, needs: Template['needs']): Lack[] | null {
     const pieces = (needs?.pieces?.count ?? 0) - (needs?.pieces?.of ?? []).reduce((n, i) => n + (a.items[norm(i)] ?? 0), 0);
     if (pieces > 0) out.push({ of: needs!.pieces!.of.map(norm), count: pieces });
     if (needs?.anyOf) {
-        const units = (lacks: readonly Lack[]) => lacks.reduce((n, l) => n + l.count, 0);
-        const kits = needs.anyOf.map(alt => kitLacks(a, alt)).filter((k): k is Lack[] => k !== null).sort((x, y) => units(x) - units(y));
+        const units = (lacks: readonly Lack[]) => lacks.reduce((n, l) => n + l.count, 0), blocked = (lacks: readonly Lack[]) => lacks.filter(l => !l.of.some(can)).length;
+        const kits = needs.anyOf.map(alt => kitLacks(a, alt, can)).filter((k): k is Lack[] => k !== null).sort((x, y) => blocked(x) - blocked(y) || units(x) - units(y));
         if (!kits.length) return null;
         out.push(...kits[0]!);
     }
@@ -169,12 +174,14 @@ export function kitReserve(templates: readonly Template[]): Record<string, numbe
 // One Grand Exchange order of a kit buy. `held` is what the account holds now: the buy script tops up exactly that many.
 export type KitLine = { item: string; id: number; quantity: number; held: number; limit: number };
 // The job that buys an army account's missing kit for a goal band: one login, one capped order per item
-// (scripts/chain.ts runs scripts/buy-owned-ge-item.ts once per line). The order key names the holding before and
-// after, so a rerun continues the same order and a later top-up is a new one. Not a trainer: it does not repeat, and
+// (scripts/chain.ts runs scripts/buy-owned-ge-item.ts once per line). The buy script keeps one journal per order key
+// and never buys again under a settled key. The key names the account's kit-buy count (`seq`, which
+// scripts/autopilot.ts raises when the account leaves a kit buy) and the holding before and after: a rerun of one buy
+// continues its order, and a later top-up from the same holding is a new order. Not a trainer: it does not repeat, and
 // the account takes the band on the pass after its RESULT.
-export function kitBuyTemplate(band: Template, account: string, lines: readonly KitLine[]): Template {
+export function kitBuyTemplate(band: Template, account: string, lines: readonly KitLine[], seq = 0): Template {
     const step = (l: KitLine) => [KIT_BUY_SCRIPT, `ITEM_ID=${l.id}`, `QUANTITY=${l.quantity}`, ...(l.held > 0 ? [`EXPECTED_OWNED=${l.held}`] : []), `LIMIT_PRICE=${l.limit}`,
-        `CASH_RESERVE=${KIT_CASH_RESERVE}`, `ORDER_KEY=${account.toLowerCase()}-kit-${l.id}-${l.held}to${l.held + l.quantity}`, 'ORDER_MS=900000', 'FILL_WAIT_TICKS=200'].join(' ');
+        `CASH_RESERVE=${KIT_CASH_RESERVE}`, `ORDER_KEY=${account.toLowerCase()}-kit${seq}-${l.id}-${l.held}to${l.held + l.quantity}`, 'ORDER_MS=900000', 'FILL_WAIT_TICKS=200'].join(' ');
     return { id: KIT_BUY + band.id, family: 'kit-buy', script: 'scripts/chain.ts', args: lines.map(step), env: { ROUNDS: '1' }, role: 'supply',
         goal: `buy ${lines.map(l => `${l.quantity} ${l.item}`).join(', ')} on the Grand Exchange to ${band.goal}`, repeats: false, yields: () => [] };
 }
@@ -202,7 +209,7 @@ export function plan(inp: Inputs): Assignment[] {
                 cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, coins: coinShort(a, t.needs) });
             else if (coinShort(a, t.needs) === 0) {
                 // The band lacks only kit items: a buy with the account's own coins, or a free account's spare stock.
-                const lacks = kitLacks(a, t.needs);
+                const lacks = kitLacks(a, t.needs, i => !!inp.market?.[i]);
                 if (lacks?.length) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, lacks });
             }
             continue;
@@ -265,18 +272,25 @@ export function plan(inp: Inputs): Assignment[] {
     const acquire = (c: Cand) => {
         const a = byName.get(c.account)!, busy = !!inp.unfundable?.has(c.account.toLowerCase()), buyId = KIT_BUY + c.template.id;
         if (done.has(c.account) || gave.has(c.account) || gaveItems.has(c.account) || vacated.has(c.account)) return;
+        // An account in a running band job keeps the rule it had before the kit tier: its live holdings dip while it
+        // works (food eaten, runes cast), and a kit buy must not replace a band that is still running.
+        const now = inp.current?.get(c.account.toLowerCase());
+        if (busy && now && !now.startsWith(KIT_BUY) && byId.get(now)?.tier === 'goal') return;
         // No kit for a band whose place is full: the account tries its next band.
         if (c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
         const picks = c.lacks!.map(l => { const item = l.of.filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]; return item ? { item, count: l.count } : null; });
         if (picks.every(p => p !== null) && !inp.retired?.has(pairKey(c.account, buyId))) {
-            const lines: KitLine[] = picks.map(p => { const held = a.items[p!.item] ?? 0, m = inp.market![p!.item]!; return { item: m.name, id: m.id, held, limit: m.limit, quantity: Math.max(p!.count, (c.template.batch?.[p!.item] ?? 0) - held) }; });
-            const template = kitBuyTemplate(c.template, c.account, lines), cost = lines.reduce((n, l) => n + l.quantity * l.limit, 0), short = cost + KIT_CASH_RESERVE - (a.items.coin ?? 0);
+            // The batch when the account can pay for it, else only what the band needs to start.
+            const sized = (batch: boolean): KitLine[] => picks.map(p => { const held = a.items[p!.item] ?? 0, m = inp.market![p!.item]!; return { item: m.name, id: m.id, held, limit: m.limit, quantity: Math.max(p!.count, batch ? (c.template.batch?.[p!.item] ?? 0) - held : 0) }; });
+            const price = (ls: readonly KitLine[]) => ls.reduce((n, l) => n + l.quantity * l.limit, 0), coins = a.items.coin ?? 0;
+            const lines = price(sized(true)) + KIT_CASH_RESERVE <= coins ? sized(true) : sized(false);
+            const template = kitBuyTemplate(c.template, c.account, lines, inp.kitSeq?.get(c.account.toLowerCase()) ?? 0), cost = price(lines), short = cost + KIT_CASH_RESERVE - coins;
             const what = lines.map(l => `${l.quantity} ${l.item}`).join(', ');
             if (short <= 0) { done.set(c.account, { account: c.account, template, value: 0, reason: `buys ${what} for ${c.template.id}, at most ${cost} coins`, resources: [] }); return; }
             if (!busy) {
                 // A coin donor of this side, else a free account of another side with coins above the reserve.
                 const coinsOf = (s: Stock) => Math.max(0, (s.items.coin ?? 0) - FUND_RESERVE);
-                const own = [...pool].filter(([n, left]) => n.toLowerCase() !== c.account.toLowerCase() && !done.has(n) && left >= short).sort((x, y) => y[1] - x[1])[0]?.[0];
+                const own = [...pool].filter(([n, left]) => n.toLowerCase() !== c.account.toLowerCase() && !done.has(n) && !gaveItems.has(n) && left >= short).sort((x, y) => y[1] - x[1])[0]?.[0];
                 const far = own ? undefined : stock.filter(s => s.side !== inp.side && !gave.has(s.name) && !gaveItems.has(s.name) && coinsOf(s) >= short).sort((x, y) => coinsOf(y) - coinsOf(x))[0]?.name;
                 const from = own ?? far;
                 if (from) {
@@ -287,13 +301,16 @@ export function plan(inp: Inputs): Assignment[] {
                 }
             }
         }
-        for (const l of c.lacks!) for (const item of l.of) {
-            const from = stock.find(s => s.name.toLowerCase() !== c.account.toLowerCase() && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= l.count);
+        // One order per pass. A line no market sells goes first, so the lines left at the end are one buy.
+        const sold = (l: Lack) => Number(l.of.some(i => !!inp.market?.[i]));
+        for (const l of [...c.lacks!].sort((x, y) => sold(x) - sold(y))) for (const item of l.of) {
+            const from = stock.find(s => s.name.toLowerCase() !== c.account.toLowerCase() && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= l.count
+                && !inp.noSend?.has(`${s.name}>${c.account}`.toLowerCase()));
             if (!from) continue;
             // A trade needs the account offline with no stop file (scripts/fleet-agent.ts). One in a coin job leaves that
             // job on this pass and gets the order on the next; one already on a band or a kit buy keeps it.
             // The donor is held for this account, so a second account does not leave its job for the same stock.
-            if (busy) { if (!goalNow(c.account)) { vacated.set(c.account, `vacant: leaves its job for ${l.count} ${item} from ${from.name} for ${c.template.id}`); gaveItems.add(from.name); } return; }
+            if (busy) { if (!goalNow(c.account)) { vacated.set(c.account, `vacant: leaves its job for ${l.count} ${item} from ${from.name} for ${c.template.id}`); gaveItems.add(from.name); pool.delete(from.name); } return; }
             gaveItems.add(from.name); pool.delete(from.name); pool.delete(c.account);
             done.set(c.account, { account: c.account, template: c.template, value: 0, reason: `${c.reason}, sent ${l.count} ${item} by ${from.name}`, resources: [], send: { from: from.name, to: c.account, item, count: l.count, template: c.template.id } });
             return;
@@ -354,8 +371,9 @@ export function assess(lines: readonly string[]): { retire: boolean; reason: str
     const drains = clean.filter(l => DRAIN_RESULT.test(l)).length;
     const results = clean.filter(l => /^RESULT (ok|fail)\b/.test(l) && !DRAIN_RESULT.test(l));
     const ok = results.filter(l => l.startsWith('RESULT ok')).length, fail = results.length - ok;
-    // goldfarm and thieving60 print died=false on a healthy run: only a bare word or a field that is not false counts.
-    const died = results.find(l => /\b(?:died|death)\b(?!=)|\b(?:died|death)=(?!false\b)/i.test(l));
+    // goldfarm and thieving60 print died=false on a healthy run, and scripts/buy-owned-ge-item.ts prints "died":false in
+    // its JSON: only a bare word or a field that is not false counts.
+    const died = results.find(l => /\b(?:died|death)\b(?!=|"\s*:\s*false\b)|\b(?:died|death)=(?!false\b)/i.test(l));
     if (died) return { retire: true, reason: `death: ${died.slice(0, 120)}`, ok, fail, drains };
     const tail = results.slice(-RETIRE_FAILS);
     if (tail.length === RETIRE_FAILS && tail.every(l => l.startsWith('RESULT fail') && !progressed(l))) return { retire: true, reason: `${RETIRE_FAILS} fail RESULTs: ${tail.at(-1)!.slice(0, 120)}`, ok, fail, drains };
@@ -458,6 +476,8 @@ export function catalogue(): Template[] {
         env: { TRAIN_SKILL: skill, COW_BANK_PROFILE: 'north', MAX_KILLS: '8', COW_STAGE: '1' }, role: 'combat', goal: `train ${skill} to ${to} on the Ardougne cows`,
         tier: 'goal', band, repeats: true, trains: { skill, to, unlocks: [] }, resources: [COW_FIELD], yields: () => [],
         needs: { food: 14, items: { 'bronze sword': 1, 'wooden shield': 1 } },
+        // One trip to the Grand Exchange brings food for many runs, not the two trout one start needs.
+        batch: { trout: 30 },
     }));
     const troopers = TROOPER_BANDS.map(({ skill, band }): Template => ({
         id: `army-trooper-${skill.toLowerCase()}-99`, family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'],

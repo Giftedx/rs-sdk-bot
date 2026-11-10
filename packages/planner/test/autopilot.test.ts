@@ -520,8 +520,8 @@ test('a rich army account buys its missing kit with its own coins in one login, 
     expect(x!.template!.id).toBe(KIT_BUY + 'army-strike-magic-21');
     expect(x!.template!.script).toBe('scripts/chain.ts');
     expect(x!.template!.args).toEqual([
-        'scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=20 EXPECTED_OWNED=15 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=rich-kit-558-15to35 ORDER_MS=900000 FILL_WAIT_TICKS=200',
-        'scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=10 EXPECTED_OWNED=25 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=rich-kit-556-25to35 ORDER_MS=900000 FILL_WAIT_TICKS=200']);
+        'scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=20 EXPECTED_OWNED=15 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=rich-kit0-558-15to35 ORDER_MS=900000 FILL_WAIT_TICKS=200',
+        'scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=10 EXPECTED_OWNED=25 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=rich-kit0-556-25to35 ORDER_MS=900000 FILL_WAIT_TICKS=200']);
     expect(jobFor(x!, side)).toMatchObject({ repeat: false, standing: true, template: KIT_BUY + 'army-strike-magic-21', env: { ROUNDS: '1' } });
     // With the kit held it takes the band.
     expect(ids(plan(inputs([mage('Rich', { coin: 5_000_000, 'mind rune': 35, 'air rune': 35 })], { templates: strike(), army, market })))).toEqual({ Rich: 'army-strike-magic-21' });
@@ -534,7 +534,7 @@ test('a rich army account buys its missing kit with its own coins in one login, 
 test('a kit buy brings the batch, not one start: 1,000 nature runes for alchemy', () => {
     const alch = catalogue().filter(t => t.id === 'army-alch-magic-99'), army = new Set(['rich']);
     const [x] = plan(inputs([mage('Rich', { coin: 5_000_000, 'nature rune': 10, feather: 500, 'staff of fire': 1 }, { Magic: 30 })], { templates: alch, army, market }));
-    expect(x!.template!.args).toEqual(['scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=990 EXPECTED_OWNED=10 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=rich-kit-561-10to1000 ORDER_MS=900000 FILL_WAIT_TICKS=200']);
+    expect(x!.template!.args).toEqual(['scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=990 EXPECTED_OWNED=10 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=rich-kit0-561-10to1000 ORDER_MS=900000 FILL_WAIT_TICKS=200']);
     expect(x!.reason).toContain('at most 792000 coins');
 });
 
@@ -593,4 +593,62 @@ test('a side that banks the glut level counts a coin as almost nothing, so a sho
     expect(pick(COIN_GLUT_VALUE)).toBe('shop-arrowtips');
     // With nothing else to do, the coin job stays as the last job.
     expect(ids(plan(inputs([thief], { templates: catalogue().filter(t => t.family === 'goldfarm'), coinValue: COIN_GLUT_VALUE })))['Thief']).toMatch(/^goldfarm@/);
+});
+
+test('a kit buy RESULT with "died":false is not a death, and a real death still is', () => {
+    const ok = '  | RESULT ok {"ok":true,"phase":"settled","acquired":30,"died":false,"damaged":false}';
+    expect(assess([ok])).toMatchObject({ retire: false, ok: 1 });
+    expect(assess(['RESULT fail {"ok":false,"died":true}']).retire).toBe(true);
+    expect(assess(['RESULT fail died after 1 runs']).retire).toBe(true);
+    expect(assess(['RESULT ok ticks=9001 died=false']).retire).toBe(false);
+});
+
+test('a later top-up from the same holding gets a new order key', () => {
+    const alch = catalogue().filter(t => t.id === 'army-alch-magic-99'), army = new Set(['rich']);
+    const rich = mage('Rich', { coin: 5_000_000, feather: 500, 'staff of fire': 1 }, { Magic: 30 });
+    const key = (kitSeq?: Map<string, number>) => plan(inputs([rich], { templates: alch, army, market, kitSeq }))[0]!.template!.args![0]!.match(/ORDER_KEY=(\S+)/)![1];
+    expect(key()).toBe('rich-kit0-561-0to1000');
+    expect(key(new Map([['rich', 3]]))).toBe('rich-kit3-561-0to1000');
+});
+
+test('with no fire staff the alchemy kit buys fire runes, not a staff no market sells', () => {
+    const alch = catalogue().filter(t => t.id === 'army-alch-magic-99'), army = new Set(['rich']);
+    const full: Market = { ...market, 'fire rune': { id: 554, name: 'Fire rune', limit: KIT_PRICE_CAPS['fire rune']! }, feather: { id: 314, name: 'Feather', limit: KIT_PRICE_CAPS.feather! } };
+    const [x] = plan(inputs([mage('Rich', { coin: 5_000_000 }, { Magic: 30 })], { templates: alch, army, market: full }));
+    expect(x!.template!.id).toBe(KIT_BUY + 'army-alch-magic-99');
+    expect(x!.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).join('x'))).toEqual(['561x1000', '314x50', '554x250']);
+    // With no rule for what it can get, the nearest kit is the one-item staff.
+    const band = alch[0]!;
+    expect(kitLacks(mage('Rich', {}, { Magic: 30 }), band.needs)!.at(-1)).toEqual({ of: ['staff of fire'], count: 1 });
+    expect(kitLacks(mage('Rich', {}, { Magic: 30 }), band.needs, i => !/staff/.test(i))!.at(-1)).toEqual({ of: ['fire rune'], count: 250 });
+});
+
+test('a line no market sells is sent first; a pair whose order failed is not asked again', () => {
+    const cow = catalogue().filter(t => t.id === 'army-cow-strength-45' || t.family === 'goldfarm'), army = new Set(['needy']);
+    const needy = acct('Needy', { Thieving: 99, Hitpoints: 35 }, { 'wooden shield': 1, coin: 100_000 });
+    const stock: Stock[] = [{ name: 'Near', side, items: { 'bronze sword': 3, trout: 500 } }, { name: 'Next', side, items: { 'bronze sword': 2 } }];
+    const run = (extra: Partial<Inputs> = {}) => plan(inputs([needy], { templates: cow, army, market, stock, capacity: CAPACITY, ...extra }))[0]!;
+    // The sword has no market entry, so no one buy covers the kit: the sword comes by order, the trout by a later buy.
+    expect(run().send).toEqual({ from: 'Near', to: 'Needy', item: 'bronze sword', count: 1, template: 'army-cow-strength-45' });
+    expect(run({ noSend: new Set(['near>needy']) }).send).toMatchObject({ from: 'Next' });
+    const armed = acct('Needy', { Thieving: 99, Hitpoints: 35 }, { 'wooden shield': 1, 'bronze sword': 1, coin: 100_000 });
+    expect(plan(inputs([armed], { templates: cow, army, market, stock, capacity: CAPACITY }))[0]!.template!.args).toEqual([
+        'scripts/buy-owned-ge-item.ts ITEM_ID=333 QUANTITY=30 LIMIT_PRICE=100 CASH_RESERVE=1000 ORDER_KEY=needy-kit0-333-0to30 ORDER_MS=900000 FILL_WAIT_TICKS=200']);
+});
+
+test('an account in a running band job gets no kit buy over it', () => {
+    const army = new Set(['busy']), templates = [...strike(), ...catalogue().filter(t => t.id === 'army-bury-prayer-99')];
+    const busy = mage('Busy', { coin: 5_000_000, 'mind rune': 15, 'air rune': 35, bone: 40 });
+    const on = (current: string) => plan(inputs([busy], { templates, army, market, unfundable: new Set(['busy']), current: new Map([['busy', current]]) }))[0]!.template!.id;
+    // Its bones dipped under the band's start count while it buries: the kit tier leaves it to the rule it had before.
+    expect(on('army-bury-prayer-99')).toMatch(/^goldfarm@/);
+    expect(on('goldfarm@2652,3318')).toBe(KIT_BUY + 'army-strike-magic-21');
+});
+
+test('an account that cannot pay for the batch buys only the start kit', () => {
+    const alch = catalogue().filter(t => t.id === 'army-alch-magic-99'), army = new Set(['thin']);
+    const thin = mage('Thin', { coin: 50_000, 'nature rune': 10, feather: 500, 'staff of fire': 1 }, { Magic: 30 });
+    const [x] = plan(inputs([thin], { templates: alch, army, market, unfundable: new Set(['thin']) }));
+    expect(x!.template!.args![0]).toContain('QUANTITY=40 EXPECTED_OWNED=10 LIMIT_PRICE=800');
+    expect(x!.reason).toContain('at most 32000 coins');
 });

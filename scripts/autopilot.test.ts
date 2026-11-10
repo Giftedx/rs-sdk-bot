@@ -292,3 +292,26 @@ test('another side gives only from accounts its fresh plan leaves free and no op
     expect(stock(1_000_000 - 31 * 60_000)).toEqual([]);
     expect(sideStock('claude-cloud', snapshot, null, new Set(), 0, 1, () => undefined)).toEqual([]);
 });
+
+import { failedSends, kitBuyRunning, SEND_RETRY_MS } from './autopilot';
+test('a failed item order stops new orders for that pair for a day; coin orders and old orders do not', () => {
+    const order = (id: string, item: string, start: number) => ({ id, server: 'rs-sdk-demo.fly.dev', from: 'Near', to: 'Needy', item, count: 20, start, end: start + 40 * 60_000 });
+    const now = 10 * 3600_000;
+    // Past its window with one receipt that is not terminal, an order needs reconciliation.
+    const receipt = (id: string) => ({ id, account: 'Needy', role: 'to', side: 'local', ok: false, count: 0, at: now - 3000_000, detail: 'Error: no route', version: 2, state: 'failed', server: 'rs-sdk-demo.fly.dev', partner: 'Near', item: 'Mind rune', requested: 20, claim: 'x' });
+    expect([...failedSends([order('a', 'Mind rune', now - 3600_000)], [receipt('a')] as any, now)]).toEqual(['near>needy']);
+    expect(failedSends([order('a', 'coins', now - 3600_000)], [receipt('a')] as any, now).size).toBe(0);
+    expect(failedSends([order('a', 'Mind rune', now - SEND_RETRY_MS - 1)], [receipt('a')] as any, now).size).toBe(0);
+    // An order still inside its window with no receipt is pending, not failed.
+    expect(failedSends([order('b', 'Mind rune', now - 60_000)], [], now).size).toBe(0);
+});
+
+test('a kit buy with no RESULT yet is running and stays as it is', () => {
+    const job = { enabled: true, template: 'kit-buy:army-strike-magic-21' }, assigned = { template: job.template, offset: 0 };
+    expect(kitBuyRunning(job, assigned, () => ['SUPERVISE start', 'LEDGER ticks=40 xp=0 move=30 idle=10'])).toBe(true);
+    expect(kitBuyRunning(job, assigned, () => ['  | RESULT ok {"ok":true,"died":false}'])).toBe(false);
+    expect(kitBuyRunning(job, assigned, () => ['RESULT fail login: Error: fleet account claim held by swarm'])).toBe(false);
+    expect(kitBuyRunning({ ...job, enabled: false }, assigned, () => [])).toBe(false);
+    expect(kitBuyRunning({ enabled: true, template: 'goldfarm@2652,3318' }, { template: 'goldfarm@2652,3318', offset: 0 }, () => [])).toBe(false);
+    expect(kitBuyRunning(job, { template: 'army-strike-magic-21', offset: 0 }, () => [])).toBe(false);
+});
