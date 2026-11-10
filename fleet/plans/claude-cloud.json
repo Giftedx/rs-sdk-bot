@@ -1,43 +1,9 @@
 {
  "side": "claude-cloud",
- "at": 1794291836249,
+ "at": 1794291891693,
  "jobs": [
   {
    "account": "Quickhandjob",
-   "script": "scripts/alch-train.ts",
-   "args": [
-    "99",
-    "5000"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "combat",
-   "template": "army-alch-magic-99",
-   "resources": []
-  },
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/goldfarm.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Prayer to 99 burying the held bones",
-   "role": "combat",
-   "template": "army-bury-prayer-99",
-   "resources": []
-  },
-  {
-   "account": "UnderMyKilt",
    "script": "scripts/gather-combat.ts",
    "args": [
     "3000",
@@ -56,6 +22,29 @@
    "role": "combat",
    "template": "army-cow-strength-60",
    "autopilot": "claude-cloud",
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Strength to 60 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-60",
    "resources": [
     "cow:ardougne-north"
    ]
@@ -81,6 +70,19 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-e50eed46-67ff-4059-98c0-2c630c7ff659"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-trousersnake-20261110t062048z [task-e50eed46-67ff-4059-98c0-2c630c7ff659]",
+   "role": "combat"
   }
  ]
 }
