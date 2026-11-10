@@ -18,7 +18,7 @@ Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). 
 
 ## Routes
 
-**Claim:** every catalog route is in one of three groups: 180 of 215 have a case that passes at seed 7, 33 cannot run as one case and name the cause, and 2 have a case that fails with a recorded error (`waterfall`, `mm`). **Conditions:** lockstep, a new engine for each case; the start state of each case comes from the worker's entry checks, a proof or the map files. **Evidence:** `bun run bench --coverage`; `.practice/aio-bench/baseline-seed7.json`; the 105 non-quest cases run in 271 s on six engines. **Gap:** a case proves one small job from one start state, not the route at every level or place.
+**Claim:** every catalog route is in one of two groups: 186 of 219 have a case that passes at seed 7, and 33 cannot run as one case and name the cause. **Conditions:** lockstep, a new engine for each case; the start state of each case comes from the worker's entry checks, a proof or the map files. **Evidence:** `bun run bench --coverage`; `.practice/aio-bench/baseline-seed7.json`; the 105 non-quest cases run in 271 s on six engines. **Gap:** a case proves one small job from one start state, not the route at every level or place.
 
 **Claim:** `viking`, `squire` and `zanaris` pass at every seed tried. **Conditions:** seeds 7 to 10, a new engine for each case. **Evidence:** `viking` passes at 7, 8 and 9 (3001, 2727, 2787 ticks): the retreat rule fired in Koschei's fight, which ends at 0 hp by design, and `planLowHp` in `quest-lib` now switches the rule off for that fight. `squire` passes at four seeds with a wider bound on the cupboard search, and `zanaris` with a wider bound on the axe hunt.
 
@@ -55,3 +55,27 @@ Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). 
 ## A shade attack locks out other shades for 100 ticks
 
 **Claim:** a shadow that attacks sets bit 4 of `%morttonmulti` on the player, and the hunt rule of every shadow skips a player with that bit set until `shadeattack_reset` clears it 100 ticks later. A shadow by the entrance door of the Fiyr lair can set it while the bot walks in, so no shadow in the hunt room attacks for up to 100 ticks. The worker waits `SHADE_INCOMING_TICKS` (125) for its first shade. **Conditions:** lockstep, seed 7, `fighter:shade`. **Evidence:** `.practice/aio-bench/trace/fighter_shade.actions` has `hunt npc=shadeshadow_level5 ... candidate` at tick 277 at the door and `skip=var 340&16:536870928` on each later tick in the hunt room; `vendor/rs-sdk/server/content/scripts/minigames/game_mortton/scripts/mortton_shades.rs2`; the case passes in 744 ticks. **Gap:** one seed.
+
+## The knife reset on a fresh woodcutter
+
+**Claim:** from a fresh account to Woodcutting 45, the knife reset takes 6.9% fewer ticks than plain chopping: 984, 880 and 716 ticks against 1064, 948 and 758 at seeds 7, 8 and 9 (2580 against 2770). **Conditions:** lockstep, `skiller:woodcutting:fresh45`, preset `wc_fresh`, XP rate 25; plain chopping is the same case with `--set WC_KNIFE=0`. **Evidence:** `bun run bench '^skiller:woodcutting:fresh45$' --all --seeds 7,8,9`, then the same with `--set WC_KNIFE=0`. **Gap:** the run includes the walk, the pickpocket for coins and the axe purchase, so the saving on the chop alone is larger than 6.9%.
+
+## XP for each 1,000 ticks
+
+**Claim:** each run prints `xpGain`, the XP over all skills that the account gained, on its `LEDGER` line, and the bench table shows it for each 1,000 ticks. Every case has this speed number with no pattern for each case. **Conditions:** XP rate 25 on practice; a case that ends after one unit of work has a rate that is mostly its walk. **Evidence:** `packages/core/src/ledger.ts`, `scripts/measure/aio-practice-bench.ts`. **Gap:** a route that makes gold or supplies and no XP shows 0.
+
+## A bone buried inside each pickpocket stun
+
+**Claim:** at the Ardougne knights, a bone buried inside each 8-tick stun costs no Thieving XP. In 600 ticks the account gains the same Thieving XP with and without the bones at each seed (432037, 446790 and 307695 at seeds 7, 8 and 9), and the 22 dragon bones in the pack add 39600 Prayer XP at each seed. An enchant cast in each stun adds 8750 Magic XP; its Thieving XP is 465757, 434145 and 432037. **Conditions:** lockstep, 600 ticks, Thieving 99, Hitpoints 99, XP rate 25; cases `skiller:thieving:stun-base`, `stun-bury`, `stun-enchant`. **Evidence:** `bun run bench '^skiller:thieving:stun-' --all --seed <n>` for seeds 7, 8 and 9; the `RESULT` line of each run in `.practice/aio-bench/output/`. **Gap:** the bury run ends its 22 bones before the cap, so the Prayer XP for each stun tick is higher than this total shows. The enchant casts change the random rolls of the picks, so its Thieving XP is not a matched comparison. No knight route (`goldfarm.ts`) buries bones yet.
+
+## A script that acts only in tick callbacks
+
+**Claim:** the lockstep client sends its tick acknowledgement at once only when the script waits for a tick through `watchTickStream`, `waitTicks` or a state wait. A script that acts only inside `onTick` callbacks is not seen as waiting, so each tick waits for `SIM_BUSY_MS` (2000 ms). Such a script raises `tickWaits.active` for its callback loop. **Conditions:** `SIM_LOCKSTEP=1`. **Evidence:** `scripts/measure/stun-guest.ts` took more than 500 s for 600 ticks and takes about 60 s with the counter raised; `packages/core/src/inprocess.ts`. **Gap:** no check finds other scripts of this kind.
+
+## The walk into the Tree Gnome Village maze
+
+**Claim:** one plan from outside the maze to the ladder at 2533,3156 goes round the hedge and stops at the nearest outside tile, and a tolerance of 2 at the mouth counts the closed pocket at 2504-2509,3186-3188 as arrived. A walk that enters on the exact tile 2502,3191 and then takes each maze point on its exact tile reaches the ladder. `waterfall` passes in 1364, 1353 and 1355 ticks at seeds 7, 8 and 9. **Conditions:** lockstep, `quester:quest:waterfall`. **Evidence:** `scripts/generated/waterfall.ts` (`walkMaze`); the planner finds every leg of `MAZE` and the whole route from the mouth (`findLongPath`, 51 waypoints). **Gap:** the rival states 980 ticks; this run ends with `hpMin=4`.
+
+## Garkor gives his first talk once
+
+**Claim:** in Monkey Madness, Garkor's varp moves on before his last page. If a hit or a jailing closes the pages after that, each later talk is the three-page reminder that Zooknock works beneath the atoll, and the line that the script waited for does not come again. The script accepts the reminder as the end of the talk. `mm` passes in 4620 ticks. **Conditions:** lockstep, seed 7, `quester:quest:mm`. **Evidence:** `.practice/aio-bench/trace/quester_quest_mm.actions` shows ten talks of three pages each; `mm_garkor.rs2:77-90`; `scripts/generated/quest-mm.ts` (`garkorDone`). **Gap:** one seed.

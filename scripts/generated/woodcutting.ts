@@ -289,7 +289,8 @@ try {
             lastGain = now();
             continue;
         }
-        const knife = slotOf(/^knife$/i), log = slotOf(NORMAL_LOGS);
+        // WC_KNIFE=0 chops with no knife reset, so the bench can measure the reset against plain chopping.
+        const knife = process.env.WC_KNIFE === '0' ? undefined : slotOf(/^knife$/i), log = slotOf(NORMAL_LOGS);
         const k0 = now();
         if (knife === undefined || log === undefined) {
             // Click-once chain: click again only after a level-up dialog closed it.

@@ -20,8 +20,8 @@ Their measured techniques against our default AIO routes (`SKILLER_ROUTES` in `s
 | Tutorial skip (547 to 6 ticks) | used | `scripts/gather-ore.ts:141` |
 | Five dialogue clicks in one tick (878 ticks over all quests) | present, off unless `Q_BURST=1` | `scripts/generated/quest-lib.ts:43-44` |
 | Level-up page answered at once (3 to 0) | in two scripts only | `scripts/fishcook.ts:375`, `scripts/generated/woodcutting.ts:302` |
-| Knife reset (5.53 to 4.23 ticks a willow log; 2,739 ticks over their run) | in two scripts that are not a default route | `scripts/fishcook.ts:858-861`, `scripts/generated/woodcutting.ts:292-303` |
-| Work inside the Thieving stun (470 to 510 ticks) | not in a route: the stun handler eats or waits | `scripts/goldfarm.ts:361-365`; measured only in `scripts/measure/stun-guest.ts` |
+| Knife reset (5.53 to 4.23 ticks a willow log; 2,739 ticks over their run) | used in the route `skiller woodcutting fresh45`; 6.9% fewer ticks to Woodcutting 45 than plain chopping | `scripts/generated/woodcutting.ts`; `research/aio-bench.md` |
+| Work inside the Thieving stun (470 to 510 ticks) | measured in the routes `skiller thieving stun-base`, `stun-bury` and `stun-enchant`: a bone buried in each stun costs no Thieving XP; no knight route uses it yet | `scripts/measure/stun-guest.ts`; `research/aio-bench.md` |
 | Bury between woodcutting rolls (2.07 to 0.23 ticks a bone) | not in a route | no bury call in `woodcut-supply.ts`, `gather-ore.ts`, `gather-yews.ts` |
 | Charge recast (Magic 80 to 99 in 32 to 33 ticks) | not in a route | no Charge cast in `magic-order.ts` or `microbot-magic-*.ts` |
 | Five-click banking (24 to 5 ticks) | not in core: one deposit per item id | `packages/core/src/deposit.ts:63-71` |

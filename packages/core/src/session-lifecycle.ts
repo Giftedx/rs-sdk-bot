@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, linkSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, linkSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { isAbsolute,relative,join,resolve } from 'node:path';
 import { isLocalServer } from './localserver';
 
@@ -46,7 +46,7 @@ function writeAtomic(path: string, text: string, exclusive = false): void {
     }
 }
 // Windows refuses a rename over a file that another process (antivirus, indexer, a reader) holds open for a moment
-// (EPERM/EACCES/EBUSY). The write stays synchronous: short blocking retries within a 2 s deadline, then the error.
+// (EPERM/EACCES/EBUSY). The write stays synchronous: short blocking retries within a 2 s deadline, then one copy in place, then the error.
 const RENAME_RETRY = new Set(['EPERM', 'EACCES', 'EBUSY']);
 const RENAME_DEADLINE_MS = 2000;
 const pause = new Int32Array(new SharedArrayBuffer(4));
@@ -55,7 +55,13 @@ function replaceFile(from: string, to: string): void {
     for (let attempt = 0; ; attempt++) {
         try { renameSync(from, to); return; }
         catch (e: any) {
-            if (!RENAME_RETRY.has(e?.code) || Date.now() - start >= RENAME_DEADLINE_MS) throw e;
+            if (!RENAME_RETRY.has(e?.code)) throw e;
+            if (Date.now() - start >= RENAME_DEADLINE_MS) {
+                // The holder still has the old file open. A copy writes into that file in place, which Windows permits
+                // when the holder shares write access (a scanner does). A lost receipt holds the account, so this
+                // write that is not atomic is the better failure.
+                try { copyFileSync(from, to); rmSync(from, { force: true }); return; } catch { throw e; }
+            }
             Atomics.wait(pause, 0, 0, Math.min(5 * (attempt + 1), 50));
         }
     }

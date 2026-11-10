@@ -1,7 +1,7 @@
 import {test,expect} from 'bun:test';
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {gateSteps,statusBody,checkoutProblem} from './ci-gate';
+import {gateSteps,statusBody,checkoutProblem,localSteps} from './ci-gate';
 
 test('a posted status needs the SDK patch and no changed or untracked files',()=>{
  expect(checkoutProblem('',true,true)).toBeNull();
@@ -25,4 +25,10 @@ test('setup steps and multi-line scripts are not gate checks',()=>{
 test('the posted status names the failed check, or the count and time',()=>{
  expect(statusBody(true,[{name:'a',ok:true,s:10.4},{name:'b',ok:true,s:20}])).toEqual({state:'success',context:'local-gate',description:'2 checks passed in 30 s'});
  expect(statusBody(false,[{name:'bun run typecheck',ok:false,s:5}]).description).toBe('failed: bun run typecheck');
+});
+
+test('the local gate runs the test steps in shards, only the reached files unless --full, and no folder twice',()=>{
+ const steps=[{cmd:['bun','run','typecheck']},{cmd:['bun','test','./scripts','./packages']},{cmd:['bun','test','./packages/dashboard']}];
+ expect(localSteps(steps,false).map(s=>s.cmd.join(' '))).toEqual(['bun run typecheck','bun scripts/test-shards.ts --changed origin/master ./scripts ./packages']);
+ expect(localSteps(steps,true).map(s=>s.cmd.join(' '))).toEqual(['bun run typecheck','bun scripts/test-shards.ts ./scripts ./packages']);
 });
