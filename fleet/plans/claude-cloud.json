@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794306714351,
+ "at": 1794306855525,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -138,24 +138,21 @@
   },
   {
    "account": "Fingerblastr",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [
     "3000",
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
+   "repeat": false,
    "goal": "train Defence to 45 on the Ardougne cows",
    "role": "combat",
    "template": "army-cow-defence-45",
-   "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
    ]
