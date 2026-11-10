@@ -68,3 +68,14 @@ test('the virtual level goes past 99 by the server XP formula, to the level of t
  expect(X.virtualLevel(200000000)).toBe(175);
  expect(X.virtualLevel(2000000000)).toBe(175);
 });
+
+test('the goal bar runs from the floor of the level now to the goal level, with a mark at each level between',()=>{
+ const X=(globalThis as any).atlasXp,floor=X.xpForLevel(50),ceil=X.xpForLevel(53);
+ const g=X.goalBar({level:50,next:51,xp:floor+(ceil-floor)/2,rate:1000},53);
+ expect(g.goal).toBe(53);expect(g.progress).toBeCloseTo(0.5,5);expect(g.left).toBeCloseTo((ceil-floor)/2,5);
+ expect(g.marks).toHaveLength(2);expect(g.marks[0]).toBeGreaterThan(0);expect(g.marks[1]).toBeGreaterThan(g.marks[0]);expect(g.marks[1]).toBeLessThan(100);
+ expect(g.ttl).toBeCloseTo((ceil-floor)/2/1000*3.6e6,3);
+ expect(X.goalBar({level:50,next:51,xp:floor,rate:0},51)).toBeNull();
+ expect(X.goalBar({level:50,next:51,xp:floor,rate:0},undefined)).toBeNull();
+ expect(X.goalBar({level:50,next:51,xp:floor,rate:0},60).ttl).toBeNull();
+});
