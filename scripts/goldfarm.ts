@@ -17,8 +17,8 @@
 // Preset goldfarm_knights (goldfarm_nofood for the stall). Copies the 2-tick direct click and eating inside the stun from scripts/generated/thieving60.ts.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { openBot, finish, randomEventsOf, serverFromEnv, getWorld, accountOf } from '../packages/core/src/bot';
-import { goTo } from '../packages/core/src/walk';
+import { openBot, finish, randomEventsOf, serverFromEnv } from '../packages/core/src/bot';
+import { walkTargetPersist } from './walk-to';
 import { depositPack } from '../packages/core/src/deposit';
 import { waitTicks } from '../packages/core/src/ticks';
 import type {Session} from '../packages/core/src/inprocess';
@@ -91,9 +91,10 @@ try {
     await waitTicks(s, 5);
     // Farm only where the knights are. From elsewhere the world walker, which avoids deadly hunters (danger.ts),
     // takes the bot to the south bank first; a hand-made Lumbridge-Ardougne walk killed mmtha0205 near 2906,3375.
+    // From Varrock it has no westbound land route (live: "no route to 2654,3283,0"), so the walk takes the ferry fallback.
     const p0 = s.sdk.getState()?.player;
     if (!p0 || Math.max(Math.abs(p0.worldX - 2655), Math.abs(p0.worldZ - 3300)) > 60) {
-        const there = await goTo(s, await getWorld(), { x: 2654, z: 3283, level: 0 }, accountOf(s), { legTimeoutTicks: 100 });
+        const there = await walkTargetPersist(s, { x: 2654, z: 3283, level: 0 }) as { ok: boolean; reason?: string; detail?: string };
         if (!there.ok) await finish([s], false, `travel to Ardougne from ${p0?.worldX},${p0?.worldZ} failed: ${there.reason} ${there.detail}`);
     }
     const st = () => s.sdk.getState();
