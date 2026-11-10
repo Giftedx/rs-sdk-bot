@@ -298,3 +298,9 @@ button.op-kpi:hover{filter:brightness(1.15)}
 /* An item name wraps to a second line, so a narrow panel shows it whole. */
 .ge-name{white-space:normal;overflow-wrap:anywhere;line-height:1.15}
 .ge-row.ge-owner{grid-template-columns:26px minmax(0,1fr) 42px 42px 40px 44px;gap:5px}
+/* One type and one rhythm in every panel: the panel font, 12px text, 12px above the first part. */
+.client-plugin-body .info-row,.client-plugin-body .rival-row{font-family:inherit}
+.client-plugin-body .info-row{font-size:12px}
+.client-plugin-body>:is(.xp-panel,.ge-panel):first-child,.client-plugin-body>.xp-tracker:first-child>.xp-panel{padding-top:12px}
+.client-plugin-body .hs-mode{margin-top:12px}
+.client-plugin-body :is(.ge-panel,.op-page)>.rl-search:first-child{margin-top:0}
