@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794318105450-bigchopper-undermykilt-bones",
  "account": "UnderMyKilt",
  "partner": "Bigchopper",
@@ -12,6 +12,11 @@
  "claim": "938b385f-5713-49d7-82f7-97e051ae4e6d",
  "count": 0,
  "ok": false,
- "at": 1794318110181,
- "detail": "trade claimed"
+ "at": 1794318158747,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1794318110183-0000027618-0000000001",
+  "at": 1794318158743,
+  "sha256": "4bd31b8db502bdb0d6e2f564daadd62cd75c54625da82187092e43eca546db2c"
+ }
 }
