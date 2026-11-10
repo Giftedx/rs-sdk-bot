@@ -434,13 +434,15 @@ export const COW_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence'; ban
 // Attack 69, Strength 60, Defence 61, Hitpoints 84, a bronze sword and banked sharks, Strength 60 to 72-73 in 1,585
 // ticks (60.9-63.4 XP per tick, about 4 times the cows), 0-3 sharks eaten, lowest HP 41 (research/combat-measure.md).
 // It walks to the Ardougne north bank from anywhere, wields the best owned metal blade, carries GIANT_FOOD one-bite
-// food (shark, swordfish, lobster or trout; no cake) and eats at half HP. Bands 6-8 come after the first cow pass and
-// before the cow passes from 60, for accounts at 60 or more in all three skills; without the food an account stays on
-// the cows. Live, TheFullMonty trained Ranged 1 to 61 and Strength 61 to 78 there. GIANT_BURY=1 has the trainer bury
+// food (shark, swordfish, lobster, trout or cooked meat; no cake) and eats at half HP. Bands 6-8 come after the first
+// cow pass and before the cow passes from 60, for accounts at 60 or more in all three skills; without the food an
+// account stays on the cows. Raw beef counts as food (TROOPER_STOCK): an account leaves the cows with one raw beef a
+// kill banked, and TROOPER_COOK=1 cooks it at the range by the bank before the run (scripts/trooper-food.ts). Live, TheFullMonty trained Ranged 1 to 61 and Strength 61 to 78 there. GIANT_BURY=1 has the trainer bury
 // the bones each kill leaves until Prayer 99: practice, six at once, about 2.5 Prayer XP per tick for 16% of the
 // Strength rate (research/combat-measure.md, bones buried on the field). Gap: live rates with several accounts at
 // once are not measured.
-export const TROOPER_FOOD = ['shark', 'swordfish', 'lobster', 'trout'] as const;
+export const TROOPER_FOOD = ['shark', 'swordfish', 'lobster', 'trout', 'cooked meat'] as const;
+export const TROOPER_STOCK = [...TROOPER_FOOD, 'raw beef'] as const;
 export const TROOPER_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence'; band: number }[] = [
     { skill: 'Strength', band: 6 }, { skill: 'Attack', band: 7 }, { skill: 'Defence', band: 8 },
 ];
@@ -483,9 +485,9 @@ export function catalogue(): Template[] {
     }));
     const troopers = TROOPER_BANDS.map(({ skill, band }): Template => ({
         id: `army-trooper-${skill.toLowerCase()}-99`, family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'],
-        env: { TRAIN_SKILL: skill, TARGET_LEVEL: '99', GIANT_FOOD: '10', GIANT_BURY: '1' }, role: 'combat', goal: `train ${skill} to 99 on the Khazard troopers`,
+        env: { TRAIN_SKILL: skill, TARGET_LEVEL: '99', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1' }, role: 'combat', goal: `train ${skill} to 99 on the Khazard troopers`,
         tier: 'goal', band, repeats: true, trains: { skill, to: 99, unlocks: [] }, resources: [TROOPER_FIELD], yields: () => [],
-        needs: { skills: { Attack: 60, Strength: 60, Defence: 60, Hitpoints: 40 }, pieces: { of: TROOPER_FOOD, count: 10 } },
+        needs: { skills: { Attack: 60, Strength: 60, Defence: 60, Hitpoints: 40 }, pieces: { of: TROOPER_STOCK, count: 10 } },
         batch: { trout: 100 },
     }));
     const magic: Template = {
@@ -509,9 +511,9 @@ export function catalogue(): Template[] {
     };
     const ranged: Template = {
         id: 'army-trooper-ranged-99', family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'],
-        env: { TRAIN_SKILL: 'Ranged', TARGET_LEVEL: '99', GIANT_FOOD: '10', GIANT_BURY: '1' }, role: 'combat', goal: 'train Ranged to 99 on the Khazard troopers',
+        env: { TRAIN_SKILL: 'Ranged', TARGET_LEVEL: '99', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1' }, role: 'combat', goal: 'train Ranged to 99 on the Khazard troopers',
         tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: [TROOPER_FIELD], yields: () => [],
-        needs: { skills: { Hitpoints: 40 }, pieces: { of: TROOPER_FOOD, count: 10 }, anyOf: RANGED_KIT },
+        needs: { skills: { Hitpoints: 40 }, pieces: { of: TROOPER_STOCK, count: 10 }, anyOf: RANGED_KIT },
         batch: { trout: 100, ...Object.fromEntries(ARROWS.map(([arrow]) => [arrow, 1000])) },
     };
     return [

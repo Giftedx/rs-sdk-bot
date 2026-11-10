@@ -431,9 +431,14 @@ test('army accounts at 60 in all three melee skills train to 99 on the Khazard t
         acct(name, { Thieving: 99, Attack: 69, Strength: 60, Defence: 61, Hitpoints: 84, ...skills }, items);
     const pick = (accounts: Acct[]) => ids(plan(inputs(accounts, { army, capacity: CAPACITY })));
     expect(pick([soldier('Soldier')])).toEqual({ Soldier: 'army-trooper-strength-99' });
-    // Any mix of the four fish counts; cake does not, and an account short of fish stays on the cows.
+    // Any mix of the four fish and cooked meat counts; cake does not, and an account short of food stays on the cows.
     expect(pick([soldier('Soldier', { ...kit, shark: 4, lobster: 3, swordfish: 2, trout: 1 })])).toEqual({ Soldier: 'army-trooper-strength-99' });
+    expect(pick([soldier('Soldier', { ...kit, shark: 4, 'cooked meat': 6 })])).toEqual({ Soldier: 'army-trooper-strength-99' });
     expect(pick([soldier('Soldier', { ...kit, shark: 9 })])).toEqual({ Soldier: 'army-cow-strength-70' });
+    expect(pick([soldier('Soldier', { ...kit, cake: 30, 'slice of cake': 30 })])).toEqual({ Soldier: 'army-cow-strength-70' });
+    // The raw beef a cow leaver banked counts: the trooper job cooks it first (TROOPER_COOK).
+    expect(pick([soldier('Soldier', { ...kit, 'raw beef': 300 })])).toEqual({ Soldier: 'army-trooper-strength-99' });
+    expect(pick([soldier('Soldier', { ...kit, 'raw beef': 9 })])).toEqual({ Soldier: 'army-cow-strength-70' });
     // Strength, Attack, then Defence; an account under 60 in any of them finishes the cow passes to 60 first.
     expect(pick([soldier('Soldier', undefined, { Strength: 99 })])).toEqual({ Soldier: 'army-trooper-attack-99' });
     expect(pick([soldier('Young', undefined, { Attack: 45, Strength: 45, Defence: 45 })])).toEqual({ Young: 'army-cow-strength-60' });
@@ -443,7 +448,7 @@ test('army accounts at 60 in all three melee skills train to 99 on the Khazard t
     expect(Object.values(full).filter(id => id.startsWith('army-trooper-'))).toHaveLength(TROOPER_FIELD_CAPACITY);
     expect(Object.values(full).filter(id => id === 'army-cow-strength-70')).toHaveLength(1);
     const job = jobFor(plan(inputs([soldier('Soldier')], { army, capacity: CAPACITY }))[0]!, side);
-    expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'], env: { TRAIN_SKILL: 'Strength', TARGET_LEVEL: '99', GIANT_FOOD: '10', GIANT_BURY: '1' }, repeat: true, resources: ['trooper:battlefield'] });
+    expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'], env: { TRAIN_SKILL: 'Strength', TARGET_LEVEL: '99', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1' }, repeat: true, resources: ['trooper:battlefield'] });
 });
 
 test('army accounts alch Magic to 99 with natures, feathers and fire, then bury held bones for Prayer', () => {
@@ -490,7 +495,7 @@ test('army accounts train Ranged to 99 on the troopers with a bow they wield and
     expect(pick({}, { shortbow: 1, 'iron arrow': 500 })).not.toBe('army-trooper-ranged-99');
     expect(pick({ Ranged: 99 }, { ...fish, shortbow: 1, 'iron arrow': 500 })).toBe('army-trooper-strength-99');
     const job = jobFor(plan(inputs([acct('Archer', base, { ...fish, shortbow: 1, 'iron arrow': 500 })], { army, capacity: CAPACITY }))[0]!, side);
-    expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'], env: { TRAIN_SKILL: 'Ranged', TARGET_LEVEL: '99', GIANT_FOOD: '10', GIANT_BURY: '1' }, repeat: true, resources: ['trooper:battlefield'] });
+    expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'], env: { TRAIN_SKILL: 'Ranged', TARGET_LEVEL: '99', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1' }, repeat: true, resources: ['trooper:battlefield'] });
 });
 
 import { KIT_BUY, KIT_CASH_RESERVE, KIT_PRICE_CAPS, kitLacks, kitReserve, type Market, type Stock } from '../src/autopilot';
@@ -507,7 +512,7 @@ test('kit lines: what an account lacks, the smallest of several kits, and null w
     // Hitpoints 40 is a level, not a kit line.
     expect(kitLacks(acct('A', { Hitpoints: 39 }, {}), ranged.needs)).toBeNull();
     // A shortbow with 25 bronze arrows is the nearest ranged kit: 75 arrows and 10 pieces of food short.
-    expect(kitLacks(acct('A', { Hitpoints: 40 }, { shortbow: 1, 'bronze arrow': 25 }), ranged.needs)).toEqual([{ of: ['shark', 'swordfish', 'lobster', 'trout'], count: 10 }, { of: ['bronze arrow'], count: 75 }]);
+    expect(kitLacks(acct('A', { Hitpoints: 40 }, { shortbow: 1, 'bronze arrow': 25 }), ranged.needs)).toEqual([{ of: ['shark', 'swordfish', 'lobster', 'trout', 'cooked meat', 'raw beef'], count: 10 }, { of: ['bronze arrow'], count: 75 }]);
     expect(kitReserve(catalogue())).toMatchObject({ 'mind rune': 35, 'air rune': 35, 'nature rune': 50, feather: 50, bone: 100 });
 });
 
