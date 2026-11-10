@@ -89,7 +89,8 @@ body{background:radial-gradient(ellipse at top,#343023,#171613 70%)}
 <footer class="foot"><span class="ell" id="notice" role="status">Waiting for observations</span><button id="latest-gain" class="ell" hidden></button><div id="capacity"></div><span id="clock"></span><span class="gold">GE ENABLED · LIMIT ORDERS</span></footer><div id="chain" hidden></div>
 </div><script>
 const $=s=>document.querySelector(s),E=s=>String(s??'').replaceAll('⟦MAIN⟧','Main · reserved').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const ago=ms=>ms==null||ms<-1e4||!isFinite(ms)?'–':(ms=Math.max(0,ms),0)||ms<60e3?`${Math.round(ms/1e3)}s`:ms<3600e3?`${Math.round(ms/6e4)}m`:ms<864e5?`${(ms/36e5).toFixed(1)}h`:`${Math.round(ms/864e5)}d`;
+// An age has one unit (40s, 12m, 22h, 3d); a duration (dur) has two.
+const ago=ms=>ms==null||ms<-1e4||!isFinite(ms)?'–':(ms=Math.max(0,ms),0)||ms<60e3?`${Math.round(ms/1e3)}s`:ms<3600e3?`${Math.round(ms/6e4)}m`:ms<864e5?`${Math.round(ms/36e5)}h`:`${Math.round(ms/864e5)}d`;
 const dur=ms=>ms==null||ms<0?'–':ms<60e3?`${Math.round(ms/1e3)}s`:ms<3600e3?`${Math.floor(ms/6e4)}m ${String(Math.floor(ms%6e4/1e3)).padStart(2,'0')}s`:`${Math.floor(ms/36e5)}h ${String(Math.floor(ms%36e5/6e4)).padStart(2,'0')}m`;
 const nf=n=>Number(n||0).toLocaleString('en-US'),gp=n=>n==null?'–':n>=1e9?(n/1e9).toFixed(2)+'B':n>=1e7?(n/1e6).toFixed(1)+'M':n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e5?Math.round(n/1e3)+'K':nf(Math.round(n));
 const sgn=n=>n==null?'–':(n>0?'+':n<0?'−':'')+nf(Math.abs(n));
