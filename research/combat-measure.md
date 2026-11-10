@@ -172,6 +172,25 @@ Ranged it adds is not needed at that point.
   at low HP).
 - **Gap.** Practice only, one set of three; Ranged on cooked meat and a run that starts under Defence 60 are not
   measured.
+- **Claim.** With its beef gone a trooper account feeds itself at the Ardougne baker's stalls: the food stage steals
+  cake, bread and chocolate slices, and the trainer eats cake a bite at a time.
+- **Conditions.** Accounts at 62/62/62, Hitpoints 63, Thieving 60, a bronze sword, no beef and no food banked,
+  `TROOPER_COOK=1 GIANT_FOOD=20 GIANT_BURY=1`, cap 1,500. The stage steals until the pack holds 24 food items or 500
+  ticks pass, from a stall side tile with no guard within 6 tiles:
+
+  | Run | At the stalls at once | Stolen, refused | Stage ticks | Bites owned | Strength XP per tick | Bites eaten | Lowest HP |
+  |---|---|---|---|---|---|---|---|
+  | 1 | 1 | 12, 2 | 582 | 28 | 45.5 | 0 | 34 |
+  | 2 | 2 | 8, 8 | 574 | 20 | 47.6 | 5 | 30 |
+  | 3 | 2 | 8, 8 | 573 | 18 | 52.1 | 3 | 31 |
+
+  All three ended `RESULT ok` with the food account exact. A steal is refused for 10 ticks after any combat hit
+  (`stealing.rs2`), so the stage keeps away from guards and does not fight them; two thieves share one stall's
+  8-tick restock. A cake is 3 bites of 4 HP, bread and a chocolate slice 5 HP.
+- **Evidence.** `.practice/troopers/stall.ts` (`stall.out`, `stall2.out`); `scripts/trooper-food.test.ts`;
+  `scripts/gather-combat-giant.test.ts` (trooper food is counted in bites).
+- **Gap.** Practice only. More than two at the stalls at once is not measured, and the stage stops at 500 ticks short
+  of a full pack.
 - **Claim.** A melee-maxed account trains Prayer on the troopers at about 3.8 Prayer XP per tick: it kills them only
   for their bones and buries each on the spot.
 - **Conditions.** Three accounts at once, every melee skill 99, an adamant scimitar, sharks banked, Prayer 89.
