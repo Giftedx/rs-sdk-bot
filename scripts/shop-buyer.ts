@@ -173,6 +173,26 @@ export const PROFILES: Record<string, {
             { re: /^law rune$/i, buyPerTick: 50 },
         ],
     },
+    // The army cow kit (scripts/cow-stage.ts COW_KIT): the GE lists no bronze sword or wooden shield.
+    // Varrock sword shop (varrock.inv swordshop): bronze sword 5, up to adamant sword 2 and adamant longsword 1.
+    // The keeper stands at 3202,3395; the general store's Shop keeper is 13 tiles north.
+    varrock_swords: {
+        npc: /^shop keeper$/i,
+        npcSpot: { x: 3204, z: 3397 },
+        bankSpot: { x: 3185, z: 3436 }, // Varrock West Bank
+        items: [
+            { re: /^bronze sword$/i, buyPerTick: 1 },
+            { re: /^adamant longsword$/i, buyPerTick: 1 },
+            { re: /^adamant sword$/i, buyPerTick: 1 },
+        ],
+    },
+    // Cassie's shield shop in Falador (falador.inv shieldshop): wooden shield 5.
+    cassie: {
+        npc: /^cassie$/i,
+        npcSpot: { x: 2977, z: 3384 },
+        bankSpot: { x: 2946, z: 3370 }, // Falador West Bank (scripts/magic-order.ts CLEANUP_BANKS)
+        items: [{ re: /^wooden shield$/i, buyPerTick: 1 }],
+    },
     zaff: {
         // Zaff's staff shop (area_varrock/configs/varrock.inv staffshop and memberstaffshop): staff_of_fire stock 2,
         // 1 back per 1,000 ticks. A fire staff replaces the fire runes of every alchemy cast (scripts/alch-train.ts).
