@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794293348485,
+ "at": 1794293645147,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -19,28 +19,6 @@
    "role": "combat",
    "template": "army-bury-prayer-99",
    "resources": []
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "10"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Strength to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-strength-99",
-   "resources": [
-    "trooper:battlefield"
-   ]
   },
   {
    "account": "UnderMyKilt",
@@ -78,15 +56,36 @@
     "MAX_KILLS": "8",
     "COW_STAGE": "1"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
-   "repeat": true,
+   "repeat": false,
    "goal": "train Strength to 60 on the Ardougne cows",
    "role": "combat",
    "template": "army-cow-strength-60",
-   "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "10"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "resources": [
+    "trooper:battlefield"
    ]
   }
  ]
