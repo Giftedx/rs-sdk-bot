@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794336520067,
+ "at": 1794337138960,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -196,30 +196,6 @@
    ]
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 60 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-60",
-   "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
-  },
-  {
    "account": "Woodenstaff",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -236,28 +212,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2653,3300"
-   ]
-  },
-  {
-   "account": "Billionaire",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "catherby"
-   ],
-   "env": {
-    "ITEMS": "rune arrowtips|adamant arrowtips",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy rune and adamant arrowtips at Catherby",
-   "role": "bank",
-   "template": "shop-arrowtips",
-   "autopilot": "local",
-   "resources": [
-    "shop:catherby"
    ]
   },
   {
@@ -478,25 +432,42 @@
   },
   {
    "account": "mmthv2350",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "sarim"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "ITEMS": "feather",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-f060549f-2b6c-4667-b38e-eeb5b4d12b8d"
    },
    "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy feathers at Gerrant",
-   "role": "bank",
-   "template": "shop-feathers",
-   "autopilot": "local",
-   "resources": [
-    "shop:sarim"
-   ]
+   "repeat": false,
+   "goal": "run-session-recovery-mmthv2350-q1794336001 [task-f060549f-2b6c-4667-b38e-eeb5b4d12b8d]",
+   "role": "bank"
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-29fe5cdd-d833-415d-9554-6ff874900946"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-session-recovery-billionaire-q1794336001 [task-29fe5cdd-d833-415d-9554-6ff874900946]",
+   "role": "bank"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-9c0854f0-5543-410c-b1f2-f7899ce19587"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-session-recovery-wandwaver-q1794336001 [task-9c0854f0-5543-410c-b1f2-f7899ce19587]",
+   "role": "combat"
   }
  ]
 }
