@@ -223,3 +223,7 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .game-context{font:16px RSBold;box-shadow:none;padding:1px}
 .game-context strong{background:#000;color:#5d5447;font:16px RSBold;height:16px;line-height:16px;padding:0 3px}
 .game-context button{font:16px RSBold;line-height:15px;padding:0 4px}
+/* The ammo infobox draws the item sprite where the other boxes draw an image. */
+.infobox.ammo .ico{pointer-events:none}
+/* A worn stack (arrows) shows its count as an inventory stack does. */
+.equipment-slot .qty{position:absolute;top:0;left:1px;font:14px RS;text-shadow:1px 1px #000}
