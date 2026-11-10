@@ -175,7 +175,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         }
         if (h > 0 && h < lastHp) lastHitAt = T();
         lastHp = h;
-        if (h > 0 && h <= RETREAT_AT && !retreating && !foodLeft()) { retreating = true; console.log(`WARN retreat: hp ${h} of ${maxHp()}, no food, at ${T()}`); }
+        if (h > 0 && h <= RETREAT_AT && !retreating && !lowHpPlanned && !foodLeft()) { retreating = true; console.log(`WARN retreat: hp ${h} of ${maxHp()}, no food, at ${T()}`); }
         if (p?.isDead || (p && p.respawnCount > respawn0) || (p && life0 !== undefined && p.lifeId !== life0)) stats.died = true;
         if (p && last && Math.max(Math.abs(p.worldX - last.worldX), Math.abs(p.worldZ - last.worldZ)) > 20) {
             jumps.push(`${T()}:${last.worldX},${last.worldZ}->${p.worldX},${p.worldZ},${p.level}`);
@@ -217,6 +217,10 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     // the pack of a lobster-only quest is not food and does not hold the retreat back.
     const foodLeft = (): boolean => !!selectQuestFood(st(), { food: FOOD, eatAt: Number.MAX_SAFE_INTEGER, reserved: reservedNow() });
     let retreating = false, lastHitAt = -1;
+    // A step whose content takes the bot to low hitpoints with no harm (Koschei in The Fremennik Trials ends at 0 hp
+    // and the trial passes) switches the retreat off for its length.
+    let lowHpPlanned = false;
+    const planLowHp = (on: boolean): void => { lowHpPlanned = on; };
     const retreat = async (label: string): Promise<never> => {
         const p = pos(), npcs: any[] = st()?.nearbyNpcs ?? [];
         const foe = npcs.filter(n => n.combatTargetType === 'player' || n.inCombat).sort((a, b) => a.distance - b.distance)[0] ?? npcs.sort((a, b) => a.distance - b.distance)[0];
@@ -496,7 +500,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     };
     return {
         s, st, pos, inv, hp, xp, cnt, has, slot, cheb, near, lvl, dialogOpen, sawText, msgCount, T, stats, milestone, dispose,
-        blockDoor, guard, fail, end, gains, detail, opLoc, locs, findLoc, locAt, opIndex, npc, talkTo, useOnLoc, useOnNpc, useOnItem,
+        blockDoor, guard, planLowHp, fail, end, gains, detail, opLoc, locs, findLoc, locAt, opIndex, npc, talkTo, useOnLoc, useOnNpc, useOnItem,
         step, converse, walk, talk, climb, teleport, canCast, openDoor, shutAt, dash, wieldBow, attackNpc,
         waitTicks: async (n: number) => { const until=s.tick()+n;if(n>0)await waitUntil(s,()=>s.tick()>=until||stats.died||retreating||T()>CAP,{timeoutTicks:n,signal:sustain.aborted});await guard('wait'); },
         waitUntil: async (f: () => boolean, ticks: number) => {const reached=await waitUntil(s, () => f() || stats.died||retreating||T()>CAP, { timeoutTicks: ticks,signal:sustain.aborted });await guard('wait condition');return reached;},

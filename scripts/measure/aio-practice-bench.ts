@@ -37,7 +37,7 @@ import {createBot} from '../../packages/practice/src/bots';
 import {applyPreset, PRESETS} from '../../packages/practice/src/presets';
 import {benchCases, benchCoverage, rivalTicks, BENCH_JOB_FILES, SMOKE_KEYS, type BenchCase} from './aio-bench-cases';
 import {rsSdkRoot} from '../../packages/practice/src/paths';
-import {readFileSync, writeFileSync, rmSync, mkdirSync, existsSync} from 'node:fs';
+import {readFileSync, writeFileSync, rmSync, mkdirSync, existsSync, watch} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
 import {dirname, join, resolve} from 'node:path';
@@ -73,6 +73,22 @@ if (import.meta.main) {
     if (at < 1) throw new Error(`--set needs KEY=value, got ${set}`);
     env[set.slice(0, at)] = set.slice(at + 1);
     SET_KEYS.push(set.slice(0, at));
+  }
+  // --watch runs the selection, then runs it again each time a file under scripts/ or packages/ changes.
+  if (has('--watch')) {
+    const run = () => Bun.spawnSync(['bun', import.meta.path, ...argv, ...process.argv.slice(2).filter(a => a.startsWith('--') && a !== '--watch')], { cwd: root, env, stdout: 'inherit', stderr: 'inherit', windowsHide: true });
+    for (;;) {
+      run();
+      console.log('\nwatching scripts/ and packages/ for a change (Ctrl+C ends)');
+      await new Promise<void>(done => {
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const watchers = ['scripts', 'packages'].map(dir => watch(resolve(root, dir), { recursive: true }, (_event, file) => {
+          if (!file || !/\.(ts|json)$/.test(String(file)) || /node_modules/.test(String(file))) return;
+          clearTimeout(timer);
+          timer = setTimeout(() => { for (const w of watchers) w.close(); done(); }, 400);
+        }));
+      });
+    }
   }
   // --seeds 7,8,9 runs the same selection once for each seed and prints one row per case: how many seeds pass and the
   // tick count at each. A case that passes at some seeds and fails at others depends on a random roll it cannot recover from.
@@ -212,16 +228,20 @@ function benchPlanners() {
 // The stored baseline: the tick count of each case at one seed, written by --save-baseline. A run prints each case
 // beside it, so a change shows as a tick difference with no file to compare by hand.
 const baselineFile = () => `.practice/aio-bench/baseline-seed${SEED}.json`;
-type Row = { case: string; ok: boolean; ledgerTicks: number[]; rivalTicks: number | null; result: string | null };
+type Row = { case: string; ok: boolean; ledgerTicks: number[]; rivalTicks: number | null; output?: number | null; result: string | null };
 function report(rows: Row[]) {
-  const baseline: Record<string, { ok: boolean; ticks: number | null }> = existsSync(baselineFile()) ? JSON.parse(readFileSync(baselineFile(), 'utf8')) : {};
+  const baseline: Record<string, { ok: boolean; ticks: number | null; output?: number | null }> = existsSync(baselineFile()) ? JSON.parse(readFileSync(baselineFile(), 'utf8')) : {};
   const ticks = (r: Row) => r.ledgerTicks.at(-1) ?? null;
   const lines = [...rows].sort((a, b) => a.case.localeCompare(b.case)).map(r => {
     const now = ticks(r), base = baseline[r.case];
     const delta = !r.ok ? 'FAIL' : !base ? 'new' : !base.ok ? 'was failing' : now === null || base.ticks === null ? '' : now === base.ticks ? '=' : `${now < base.ticks ? '' : '+'}${now - base.ticks} (${(((now - base.ticks) / base.ticks) * 100).toFixed(1)}%)`;
-    return [r.case, r.ok ? 'pass' : 'FAIL', now ?? '-', base?.ticks ?? '-', delta, r.rivalTicks ?? '-'].map(String);
+    // Amount for each 1,000 ticks, and its change against the baseline: the speed of a case that ends at its cap.
+    const per = (amount: number | null | undefined, t: number | null | undefined) => (amount != null && t ? (amount * 1000) / t : null);
+    const rate = per(r.output, now), baseRate = per(base?.output, base?.ticks);
+    const rateCell = rate === null ? '-' : `${rate.toFixed(1)}${baseRate ? ` (${rate >= baseRate ? '+' : ''}${(((rate - baseRate) / baseRate) * 100).toFixed(1)}%)` : ''}`;
+    return [r.case, r.ok ? 'pass' : 'FAIL', now ?? '-', base?.ticks ?? '-', delta, rateCell, r.rivalTicks ?? '-'].map(String);
   });
-  const head = ['case', 'result', 'ticks', 'baseline', 'change', 'rival'];
+  const head = ['case', 'result', 'ticks', 'baseline', 'change', 'per 1k ticks', 'rival'];
   const width = head.map((h, i) => Math.max(h.length, ...lines.map(l => l[i]!.length)));
   const line = (cells: string[]) => cells.map((c, i) => (i === 0 ? c.padEnd(width[i]!) : c.padStart(width[i]!))).join('  ');
   console.log(['', line(head), line(width.map(w => '-'.repeat(w))), ...lines.map(line)].join('\n'));
@@ -233,7 +253,7 @@ function report(rows: Row[]) {
   const broke = rows.filter(r => !r.ok && baseline[r.case]?.ok).map(r => r.case);
   if (broke.length) console.log(`BROKEN against baseline: ${broke.join(', ')}`);
   if (process.env.BENCH_SAVE_BASELINE === '1') {
-    for (const r of rows) baseline[r.case] = { ok: r.ok, ticks: ticks(r) };
+    for (const r of rows) baseline[r.case] = { ok: r.ok, ticks: ticks(r), ...(r.output != null ? { output: r.output } : {}) };
     writeFileSync(baselineFile(), JSON.stringify(Object.fromEntries(Object.entries(baseline).sort()), null, 1));
     console.log(`baseline saved: ${rows.length} cases in ${baselineFile()}`);
   }
@@ -267,6 +287,9 @@ async function runCase(c: BenchCase, bot: string, enginePort = 8888) {
         const [out, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
         const exitCode = await proc.exited;
         clearTimeout(timer);
+        // The whole output of the last run of each case, for a failure the tail does not explain.
+        mkdirSync('.practice/aio-bench/output', { recursive: true });
+        writeFileSync(`.practice/aio-bench/output/${c.key.replace(/[^a-z0-9-]/gi, '_')}.log`, out + err);
         return { stdout: out + err, exitCode };
       },
       cleanup: async (name) => {
@@ -279,7 +302,8 @@ async function runCase(c: BenchCase, bot: string, enginePort = 8888) {
   const tail = r.results.map(x => x.tail).join('\n---\n');
   const ledgerTicks = [...tail.matchAll(/^LEDGER ticks=(\d+)/gm)].map(x => Number(x[1]));
   const result = tail.split(/\r?\n/).filter(l => /^RESULT /.test(l)).at(-1) ?? null;
-  const row = { case: c.key, ok, passes: r.passes, runs: RUNS, elapsedMs, ledgerTicks, rivalTicks: rivalTicks(c.key) ?? null, result: result?.slice(0, 400) ?? null };
+  const amount = c.output && result ? Number(c.output.exec(result)?.[1] ?? NaN) : NaN;
+  const row = { case: c.key, ok, passes: r.passes, runs: RUNS, elapsedMs, ledgerTicks, rivalTicks: rivalTicks(c.key) ?? null, output: Number.isFinite(amount) ? amount : null, result: result?.slice(0, 400) ?? null };
   console.log(`AIO_BENCH_RESULT ${JSON.stringify(row)}`);
   if (!ok) console.log(`--- tail ${c.key} ---\n${tail.slice(-1500)}\n--- end tail ---`);
   return row;
@@ -335,7 +359,7 @@ async function main() {
             rows.push(row);
           }
         }
-        catch (e) { const row = { case: c.key, ok: false, passes: 0, runs: RUNS, elapsedMs: 0, ledgerTicks: [], rivalTicks: null, result: `bench error ${String((e as Error)?.message ?? e).slice(0, 300)}` }; console.log(`AIO_BENCH_RESULT ${JSON.stringify(row)}`); rows.push(row); }
+        catch (e) { const row = { case: c.key, ok: false, passes: 0, runs: RUNS, elapsedMs: 0, ledgerTicks: [], rivalTicks: null, output: null, result: `bench error ${String((e as Error)?.message ?? e).slice(0, 300)}` }; console.log(`AIO_BENCH_RESULT ${JSON.stringify(row)}`); rows.push(row); }
         await own?.stop();
         writeFileSync(OUT, JSON.stringify({ coverage, concurrency: CONCURRENCY, runs: RUNS, rows }, null, 2));
       }

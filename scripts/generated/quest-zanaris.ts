@@ -108,7 +108,8 @@ try {
     let zombies = 0;
     let lastZombie = -1;
     const axeRuneFloor = windBolt ? Math.max(windBolt.spiritCasts, q.cnt(562) - windBolt.axeCasts) : 0;
-    for (let t = 0; t < 600 && !q.has(ITEM.axe); t++) {
+    // The axe is a chance drop: 600 ticks ran out at one seed in four, so the hunt has a wide bound.
+    for (let t = 0; t < 1500 && !q.has(ITEM.axe); t++) {
         await q.guard('zombies');
         const g = axeOnGround();
         if (g) { if (t % 3 === 0) await q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' }); }

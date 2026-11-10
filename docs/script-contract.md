@@ -116,6 +116,10 @@ Bind results to source, server, tick speed and starting state. Speed claims need
 - **Engine.** A run uses the lockstep engine ([patches/rs-sdk.md](../patches/rs-sdk.md) item 10) with one seed and a new engine for each case. With these conditions a case gives the same tick count on each run, so one run for each condition is a comparison. The three-run rule above applies to a wall-clock engine (`--wall-clock`).
 - **Selection.** A pattern is a regular expression on the case key (`cook`, `^quester:quest:`). `--smoke` runs the short set that touches each category. `--all` includes the `known` cases.
 - **A change.** Run the cases the change touches. `--set KEY=value` sets one worker environment value for the run. A change is accepted for a case when the case passes and its ticks are not above the baseline. `--save-baseline` stores the results of the run as the baseline for its seed.
+- **A case that ends at a tick cap.** Its ticks show no speed. The case names the useful amount in its RESULT line (`output`: coins, items, kills), and the table shows the amount for each 1,000 ticks against the baseline.
+- **Several seeds.** `--seeds 7,8,9` runs the selection once for each seed and prints the pass count of each case. A case that fails at some seeds depends on a random roll it does not recover from.
+- **Watch.** `--watch` runs the selection again each time a file under `scripts/` or `packages/` changes.
+- **Output.** `.practice/aio-bench/output/<case>.log` holds the whole output of the last run of each case.
 - **Kept results.** A result is kept under a hash of the seed, the case, its preset, the worker script with the files it imports, the vendor patch and the `Q_*` and `--set` values. A case with no change in these returns its kept result. A change to a data file a worker reads at run time is not in the hash; use `--no-keep` after one.
 - **Limits.** The bench shows ticks on a practice engine with every skill at the preset level. It does not show a live result. A lockstep tick holds while a script works off the tick clock, up to `SIM_BUSY_MS`; a wall-clock sleep in a worker therefore costs real time and no ticks.
 

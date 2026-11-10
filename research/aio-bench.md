@@ -18,7 +18,13 @@ Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). 
 
 **Claim:** 109 bench cases pass at seed 7; they cover 107 of 221 catalog routes. **Evidence:** `.practice/aio-bench/baseline-seed7.json`; `bun run bench --coverage` lists the routes with a cause and the routes with no case.
 
-**Claim:** five quests fail on a random roll they do not recover from, and two fail at every seed. **Conditions:** seeds 7 to 10. **Evidence:** `troll` fails at 7 and 10; `mm` at 7 and 9; `eadgar` at 7 and 9; `fluffs`, `hauntedmine` and `zanaris` at 7 on a shared engine (`weak-seed8.json`, `weak-seed9.json`); `waterfall` stops in the maze at 2538,3145 and `viking` retreats with no food at every seed. **Gap:** no fix exists for any of them.
+**Claim:** `viking`, `squire` and `zanaris` pass at every seed tried. **Conditions:** seeds 7 to 10, a new engine for each case. **Evidence:** `viking` passes at 7, 8 and 9 (3001, 2727, 2787 ticks): the retreat rule fired in Koschei's fight, which ends at 0 hp by design, and `planLowHp` in `quest-lib` now switches the rule off for that fight. `squire` passes at four seeds with a wider bound on the cupboard search, and `zanaris` with a wider bound on the axe hunt.
+
+**Claim:** `fluffs` fails when the kitten is in the west crate. **Conditions:** seed 9. **Evidence:** the crate at 3298,3514 is the one of six the bot does not reach: `bot.walkTo` answers "Stuck at (3307, 3506)", and `walkPath` clicks 120 times at that tile with no move (`.practice/aio-bench/output/quester_quest_fluffs.log`). **Gap:** the way round to that crate is not found.
+
+**Claim:** `waterfall` stops at the Tree Gnome Village maze. **Evidence:** the walk to the maze mouth 2505,3190 ends at 2509,3187 at any tolerance; the planner has no route from there to the first maze waypoint 2512,3190; the route search to the goal goes round the hedge to 2529,3140, where the client refuses the walk. **Gap:** the tile where the maze opens is not found.
+
+**Claim:** five quests fail at one or two of four seeds on a random roll they do not recover from. **Conditions:** seeds 7 to 10, a new engine for each case. **Evidence:** `eadgar` fails at 7 and 9 (retreat with no food, death); `mm` at 7 and 9 (`talk garkor`); `legends` at 9 and 10; `totem` at 10; `troll` at 7 and 10 in one run and passes at 7 in another (`.practice/aio-bench/quests-seeds-7-10.log`). **Gap:** no fix exists for any of them.
 
 **Claim:** `Q_BURST=1` breaks 20 quests that pass without it and saves 0.7% on the rest. **Conditions:** seed 7, 64 quests. **Evidence:** 44 of 67 pass with the flag against 61 of 64 without; 30,203 ticks against 30,426 on the 41 quests that pass both ways; the errors are `dialogue click refused` and a failed talk step (`quests-burst-s7.json`). Three of the failures repeat on the 150 ms engine. Largest gains: `chompybird` 772 to 474, `murder` 261 to 204.
 
