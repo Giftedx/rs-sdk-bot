@@ -247,9 +247,12 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
             if(hp()<=6)await eat();
             if(potions)await potions.poll();
             if(s.tick()-lastProgress>=(o.noProgress??200))throw new Error('no cow progress: target/loot timeout');
-            const target=state()?.nearbyNpcs.find(n=>n.id===81&&n.x>=2655&&n.x<=2676&&n.z>=3338&&n.z<=3357&&!n.inCombat&&(n.hp==null||n.maxHp==null||n.hp>=n.maxHp));
+            // The nearest free cow with no other player within 2 tiles (one about to attack it). The planner puts up to
+            // 2 army accounts in this field (autopilot COW_BANDS); a 12-tile gap left the second one 198 ticks idle.
+            const players=state()?.nearbyPlayers??[];
+            const target=(state()?.nearbyNpcs??[]).filter(n=>n.id===81&&n.x>=2655&&n.x<=2676&&n.z>=3338&&n.z<=3357&&!n.inCombat&&(n.hp==null||n.maxHp==null||n.hp>=n.maxHp)
+                &&!players.some(p=>Math.max(Math.abs(p.x-n.x),Math.abs(p.z-n.z))<=2)).sort((a,b)=>a.distance-b.distance)[0];
             if(!target){await waitTicks(s,1);continue;}
-            if((state()?.nearbyPlayers??[]).some(p=>Math.max(Math.abs(p.x-target.x),Math.abs(p.z-target.z))<=12)){await waitTicks(s,1);continue;}
             const beforeXp=selectedXp(),groundBefore=cowGroundCounts(state()?.groundItems??[]);
             let x=target.tileX??target.x,z=target.tileZ??target.z;
             if(target.distance>2&&!await walk(x,z,2))throw new Error('no cow progress: guarded cow approach failed');

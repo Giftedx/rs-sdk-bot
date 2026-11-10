@@ -52,6 +52,12 @@ Ranged it adds is not needed at that point.
   against 34 on practice at xpRate 1. Ticks per level reach 133 by level 43.
 - **What it implies.** At that rate, Strength 46 to 99 is about 62,000 ticks; at the ice warriors' 185 style XP per tick
   (section 4) it is about 5,300. Cows suit levels up to about 45, then a better trainer.
+- **Two accounts share the north field.** Practice, 3 pairs run at once. Each account started at the knight spot
+  (2653, 3300) with a farm pack (20,000 coins and 27 cake pieces), Hitpoints 50 and Strength 1, with its sword and shield
+  banked. `COW_STAGE=1` banked the pack, keeping 2 whole cakes. All 6 runs ended `RESULT ok` with 8 kills, Strength
+  1 -> 28 or 29 and no food eaten, in 558/702, 487/554 and 562/552 ticks. This needs the target rule that skips only a
+  cow with another player within 2 tiles: with a 12-tile rule, live claude-cloud TrouserSnake sat 198 ticks with no
+  target beside TheFullMonty. Gap: practice only; a third account in the field is not measured.
 - **Gap.** One account and one skill; the rate at levels above 46 is not measured.
 
 ## 1. Melee, no cannon
