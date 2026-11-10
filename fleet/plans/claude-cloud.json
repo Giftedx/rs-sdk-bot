@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794349404691,
+ "at": 1794349560588,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -154,28 +154,20 @@
   },
   {
    "account": "Fingerblastr",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/alch-train.ts",
    "args": [
-    "1500",
-    "trooper"
+    "99",
+    "5000"
    ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
    "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "template": "army-alch-magic-99",
    "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "resources": []
   },
   {
    "account": "Kiltlifter",
@@ -206,6 +198,31 @@
    "account": "Knightstick",
    "script": "scripts/gather-combat.ts",
    "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Attack",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Attack to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-attack-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "PocketPool",
+   "script": "scripts/gather-combat.ts",
+   "args": [
     "3000",
     "cow"
    ],
@@ -218,16 +235,16 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 70 on the Ardougne cows",
+   "goal": "train Defence to 90 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-defence-70",
+   "template": "army-cow-defence-90",
    "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
    ]
   },
   {
-   "account": "PocketPool",
+   "account": "SporranDip",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
@@ -301,30 +318,28 @@
    ]
   },
   {
-   "account": "SporranDip",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-61f73724-1e7d-414a-abfb-c40b37d2b199"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-sporrandip-20261110t221634z [task-61f73724-1e7d-414a-abfb-c40b37d2b199]",
-   "role": "combat"
-  },
-  {
    "account": "KnightRider",
-   "script": "scripts/session-check.ts",
-   "args": [],
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
    "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-2a57d925-e752-433e-aaac-7fe6d080629b"
+    "TRAIN_SKILL": "Defence",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
    },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-knightrider-20261110t221634z [task-2a57d925-e752-433e-aaac-7fe6d080629b]",
-   "role": "combat"
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Defence to 99 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-defence-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "cow:ardougne-north"
+   ]
   }
  ]
 }
