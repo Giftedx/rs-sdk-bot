@@ -236,10 +236,10 @@ export const FEATHER_TARGET = 2000;
 // 8.1 near-solo. Gap: one live run per condition, not three matched, so KNIGHT_SHARED_RATE is an estimate, applied
 // once per holder; the planner's tick-waste discount and retirement still apply per job.
 export const KNIGHT_SHARE = 4, KNIGHT_SHARED_RATE = 0.75;
-// Ardougne north cow field: three army accounts at once. Practice (research/combat-measure.md), 8-kill runs with full
-// farm packs: solo median 550 ticks; 3 pairs 6/6 RESULT ok, median about 556; 3 triples 9/9 RESULT ok, median 590 per
-// account (within 10% of solo), so the field's output nearly triples. A fourth account is not measured.
-export const COW_FIELD = 'cow:ardougne-north', COW_FIELD_CAPACITY = 3;
+// Ardougne north cow field: six army accounts at once on its ten cows. Practice (research/combat-measure.md), 8-kill
+// runs: solo median 550 ticks; 3 triples 9/9 RESULT ok, median 590 per account; 3 sets of six fresh accounts 18/18
+// RESULT ok, median 779, so six make about 1.5 times the field output of three. More than six is not measured.
+export const COW_FIELD = 'cow:ardougne-north', COW_FIELD_CAPACITY = 6;
 // Gnome battlefield Khazard troopers: about 41 on multiway ground. Practice, nine accounts at once, 3 sets: 27 of 27
 // RESULT ok at a median 49.7 Strength XP per tick an account (56.7 with six, 61-63 alone), the slowest 41.3
 // (research/combat-measure.md, troopers shared). Gap: more than nine at once is not measured.

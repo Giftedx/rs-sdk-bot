@@ -414,8 +414,8 @@ test('the Ardougne cow bands train army accounts, fresh ones too, with 14 HP of 
     expect(pick([fighter('Broke', { Hitpoints: 35 }, { ...bronze, '2/3 cake': 1, 'slice of cake': 1 })]).Broke).toMatch(/^goldfarm@/);
     expect(pick([fighter('Broke', { Hitpoints: 35 }, { ...bronze, '2/3 cake': 1, 'slice of cake': 1, cake: 1 })])).toEqual({ Broke: 'army-cow-strength-45' });
     expect(pick([fighter('Broke', { Hitpoints: 35 }, { trout: 2 })]).Broke).toMatch(/^goldfarm@/);
-    // The field takes COW_FIELD_CAPACITY (three); one more army account farms.
-    expect(COW_FIELD_CAPACITY).toBe(3);
+    // The field takes COW_FIELD_CAPACITY (six); one more army account farms.
+    expect(COW_FIELD_CAPACITY).toBe(6);
     const full = pick([fighter('Cowhand', { Hitpoints: 35 }), ...holders.map((h, i) => fighter(h, { Hitpoints: 36 + i }))]);
     expect(Object.values(full).filter(id => id.startsWith('army-cow-'))).toHaveLength(COW_FIELD_CAPACITY);
     // Cow mode runs a fixed 8 kills, so its job repeats until the band's target moves the account on.

@@ -62,8 +62,16 @@ Ranged it adds is not needed at that point.
   kills, no deaths and no food eaten, in 600/611/544, 590/550/620 and 618/514/551 ticks. The per-bot median is 590,
   against 550 solo (3 solo runs: 550, 594, 550). This needs cow mode to give a cow up and pick another. It releases one
   that has been in someone else's combat for 12 ticks, or one with no own XP and no combat for 40. Without the release,
-  one bot in each triple stopped on `target/loot timeout` after another account took its cow. Gap: practice only; four
-  accounts are not measured.
+  one bot in each triple stopped on `target/loot timeout` after another account took its cow. Gap: practice only.
+- **Six accounts share the north field.** Practice, 3 sets of six fresh accounts at once (every combat skill 1,
+  Hitpoints 10, started at the knight spot with the kit and 20 trout banked). All 18 runs ended `RESULT ok` with 8
+  kills and Strength 1 -> 28 or 29, at most 2 trout eaten and lowest HP 6, in 718/761/764/783/839/882,
+  678/703/703/790/805/821 and 734/744/774/793/826/844 ticks. The per-bot median is 779, against 590 with three, so six
+  make about 1.5 times the field output of three (6/779 against 3/590 runs a tick). The pen holds ten cows. This needs
+  cow mode to give up a cow that another account killed: it gives this account no drops, and a new cow takes its
+  index. Without that, 2 of 18 runs waited out the 200-tick window after 4-5 kills and ended on `target/loot timeout`,
+  in each of two such measurements. Evidence: `.practice/starter/many.ts` (`six.out`, `six-crowd.out`, `six-release.out`);
+  `scripts/gather-combat.test.ts` (a cow another account kills). Gap: practice only; more than six is not measured.
 - **Gap.** One account and one skill; the rate at levels above 46 is not measured.
 
 ## Troopers with an army account's own kit
