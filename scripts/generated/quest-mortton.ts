@@ -98,7 +98,9 @@ try {
         if (!q.st()?.shop?.isOpen) await chat([/open a store for me/i, /building store/i], () => !!q.st()?.shop?.isOpen, 40);
         if (!q.st()?.shop?.isOpen) await q.fail(`${label}: store not open`);
         const free = 28 - q.inv().length;
-        const sets = Math.max(1, Math.floor((free - 1) / 7));
+        // Swamp paste stacks, so a set takes two slots and the paste one more. Seven sets rebuild the whole temple
+        // (six ran out just before the end), so one trip buys eight when the pack has room.
+        const sets = Math.max(1, Math.min(8, Math.floor((free - 1) / 2)));
         for (const [re, id, n] of [[/^plank$/i, ITEM.plank, sets], [/limestone brick/i, ITEM.brick, sets], [/swamp paste/i, ITEM.paste, 5 * sets]] as Array<[RegExp, number, number]>) {
             for (let k = 0; k < 4 && q.cnt(id) < n; k++) {
                 const r: any = await q.s.bot.buyFromShop(re, n - q.cnt(id));
@@ -230,9 +232,11 @@ try {
             continue;
         }
         const lv = levels();
-        // The lowest wall first (a shade knocks down walls above what the build supports, mortton_shades.rs2:284-312).
+        // One Repair click repeats by itself every 3 ticks (p_oploc(3), flamtaer_temple.rs2:18-60), and a wall goes up
+        // one level for each attempt that succeeds once the build total is past its step. So the bot stays on the
+        // highest unfinished wall until it is at level 10: no walk between walls and no new 3-tick start.
         let k = -1;
-        for (let j = 0; j < WALLS.length; j++) if (lv[j]! >= 0 && lv[j]! < 10 && (k < 0 || lv[j]! < lv[k]!)) k = j;
+        for (let j = 0; j < WALLS.length; j++) if (lv[j]! >= 0 && lv[j]! < 10 && (k < 0 || lv[j]! > lv[k]!)) k = j;
         if (k < 0) {
             // All 15 at level 10: Repair still builds (stage and sanctity) without a wall change.
             k = 0;
@@ -248,7 +252,7 @@ try {
         }
         await q.opLoc(w, q.opIndex(w, /repair/i));
         ops++;
-        await q.waitUntil(() => wallLevel(wallAt(wx, wz)?.id ?? -1) !== l0 || q.dialogOpen() || (repairedP() >= 100 && allowed() && sanctityP() >= 40), l0 === 10 ? 6 : 14);
+        await q.waitUntil(() => (l0 !== 10 && wallLevel(wallAt(wx, wz)?.id ?? -1) === 10) || q.dialogOpen() || (repairedP() >= 100 && allowed() && sanctityP() >= 40) || (!hasSet() && resourcesP() < 1), l0 === 10 ? 6 : 60);
         if (i % 10 === 0) console.log(`TEMPLE ${q.T()} levels=${levels().join(',')} repaired=${repairedP()} resources=${resourcesP()} sanctity=${sanctityP()} sets=${q.cnt(ITEM.plank)}`);
     }
     if (repairedP() < 100 || !allowed()) await q.fail(`temple ${repairedP()} allowed=${allowed()}`);
