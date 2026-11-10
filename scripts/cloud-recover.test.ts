@@ -54,7 +54,7 @@ test('the proposal holds one qualify and one recovery run task with fresh ids', 
 });
 
 test('archive folders are named by time and account under the coordinator directory', () => {
-    expect(archiveDir('/r', 'PocketPool', Date.UTC(2026, 10, 9, 0, 24, 26))).toBe('/r/.practice/coordinator/release-archive/20261109t002426z-pocketpool');
+    expect(archiveDir('/r', 'PocketPool', Date.UTC(2026, 10, 9, 0, 24, 26))).toBe(join('/r', '.practice', 'coordinator', 'release-archive', '20261109t002426z-pocketpool'));
 });
 
 // The claude-cloud release of 06:33 was blocked by a parked copy of Quickhandjob's goldfarm job.
@@ -85,7 +85,7 @@ test('a parked owner-job copy stays while a recovery of its account is pending o
 test('logout proofs are read from the session-lifecycle directory under the checkout', () => {
     // readLogoutProof's root is the lifecycle directory, not the checkout; a checkout root reads every proof as none.
     expect(lifecycleRoot(join(import.meta.dir, '..'))).toBe(DEFAULT_LIFECYCLE_ROOT);
-    expect(lifecycleRoot('/r')).toBe('/r/.practice/session-lifecycle');
+    expect(lifecycleRoot('/r')).toBe(join('/r', '.practice', 'session-lifecycle'));
 });
 
 test('only a cloud side runs recovery; the local side and an unset FLEET_SIDE are refused', () => {
