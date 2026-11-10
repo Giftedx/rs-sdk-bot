@@ -581,3 +581,16 @@ test('a donor that gives a kit item takes no job on that pass', () => {
     expect(giver.template).toBeUndefined();
     expect(giver.reason).toBe('vacant: gives a kit item this pass');
 });
+
+import { COIN_GLUT, COIN_GLUT_VALUE, coinValueFor } from '../src/autopilot';
+test('a side that banks the glut level counts a coin as almost nothing, so a short bill line beats a coin job', () => {
+    expect(coinValueFor(COIN_GLUT - 1)).toBe(1);
+    expect(coinValueFor(COIN_GLUT)).toBe(COIN_GLUT_VALUE);
+    expect(unitValue('coins', [], prices, COIN_GLUT_VALUE)).toBe(COIN_GLUT_VALUE);
+    const thief = acct('Thief', { Thieving: 99 }, { coin: 5_000_000 }), shortTips = [row('rune arrowtips', 1588)];
+    const pick = (coinValue?: number) => ids(plan(inputs([thief], { bill: shortTips, coinValue })))['Thief'];
+    expect(pick()).toMatch(/^goldfarm@/);
+    expect(pick(COIN_GLUT_VALUE)).toBe('shop-arrowtips');
+    // With nothing else to do, the coin job stays as the last job.
+    expect(ids(plan(inputs([thief], { templates: catalogue().filter(t => t.family === 'goldfarm'), coinValue: COIN_GLUT_VALUE })))['Thief']).toMatch(/^goldfarm@/);
+});

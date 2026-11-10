@@ -70,6 +70,8 @@ export type Inputs = {
     stock?: readonly Stock[];
     // The items a kit buy may order. Absent: the planner plans no buy.
     market?: Market;
+    // What one coin is worth to this side now (coinValueFor; default 1).
+    coinValue?: number;
 };
 export const FUND_RESERVE = 50_000;
 // The template id of a kit buy for a goal band: `kit-buy:<band id>`. A retired pair (two fail RESULTs with no
@@ -102,9 +104,15 @@ export const FOOD_HEAL: Readonly<Record<string, number>> = {
 };
 export const foodHeal = (a: Acct) => Object.entries(FOOD_HEAL).reduce((n, [item, hp]) => n + (a.items[item] ?? 0) * hp, 0);
 
-export function unitValue(item: string, bill: readonly BillRow[], prices: Readonly<Record<string, number>>): number {
+// Gold is a supply, never a goal (AGENTS.md). A side that banks COIN_GLUT coins or more holds more than its kits and
+// supplies cost, so one more coin is worth COIN_GLUT_VALUE: a coin job then ranks under every job that makes a short
+// bill line, and stays only as the last job for an account nothing else fits. Estimate: the level is not priced from
+// the bill.
+export const COIN_GLUT = 10_000_000, COIN_GLUT_VALUE = 0.01;
+export const coinValueFor = (sideCoins: number) => sideCoins >= COIN_GLUT ? COIN_GLUT_VALUE : 1;
+export function unitValue(item: string, bill: readonly BillRow[], prices: Readonly<Record<string, number>>, coin = 1): number {
     const k = norm(item);
-    if (k === 'coin') return 1;
+    if (k === 'coin') return coin;
     const short = new Set(bill.filter(r => r.short > 0).flatMap(r => [r.item, ...(r.aliases ?? [])].map(norm)));
     return (prices[k] ?? 0) * (short.has(k) || (FEEDS[k] ?? []).some(f => short.has(f)) ? BILL_PREMIUM : SURPLUS);
 }
@@ -171,9 +179,10 @@ export function kitBuyTemplate(band: Template, account: string, lines: readonly 
         goal: `buy ${lines.map(l => `${l.quantity} ${l.item}`).join(', ')} on the Grand Exchange to ${band.goal}`, repeats: false, yields: () => [] };
 }
 
-export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'prices' | 'waste'>): number {
-    const gross = t.yields(a).reduce((v, f) => v + f.perTick * unitValue(f.item, inp.bill, inp.prices), 0);
-    const cost = (t.spends?.(a) ?? []).reduce((v, f) => v + f.perTick * (norm(f.item) === 'coin' ? 1 : (inp.prices[norm(f.item)] ?? 0)), 0);
+export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'prices' | 'waste' | 'coinValue'>): number {
+    const coin = inp.coinValue ?? 1;
+    const gross = t.yields(a).reduce((v, f) => v + f.perTick * unitValue(f.item, inp.bill, inp.prices, coin), 0);
+    const cost = (t.spends?.(a) ?? []).reduce((v, f) => v + f.perTick * (norm(f.item) === 'coin' ? coin : (inp.prices[norm(f.item)] ?? 0)), 0);
     return (gross - cost) * Math.max(0.1, 1 - (inp.waste?.[t.family] ?? 0));
 }
 
