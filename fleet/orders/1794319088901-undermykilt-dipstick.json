@@ -1,0 +1,22 @@
+{
+ "id": "1794319088901-undermykilt-dipstick",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "UnderMyKilt",
+ "to": "Dipstick",
+ "item": "Air rune",
+ "count": 10,
+ "start": 1794319088901,
+ "end": 1794320888901,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

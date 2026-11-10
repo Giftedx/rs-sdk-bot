@@ -1,0 +1,22 @@
+{
+ "id": "1794318728450-undermykilt-fingersmith",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "UnderMyKilt",
+ "to": "Fingersmith",
+ "item": "Air rune",
+ "count": 10,
+ "start": 1794318728450,
+ "end": 1794320528450,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

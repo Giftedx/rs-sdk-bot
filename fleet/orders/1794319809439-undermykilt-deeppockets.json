@@ -1,0 +1,22 @@
+{
+ "id": "1794319809439-undermykilt-deeppockets",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "UnderMyKilt",
+ "to": "Deeppockets",
+ "item": "Air rune",
+ "count": 10,
+ "start": 1794319809439,
+ "end": 1794321609439,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
