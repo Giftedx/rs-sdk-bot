@@ -172,6 +172,7 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .wall-grip.sizing::after{content:attr(data-share);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:1px 6px;border:1px solid #ff981f;border-radius:2px;background:#1e1e1ef2;color:#ff981f;font:600 11px Arial,sans-serif;white-space:nowrap}
 @container (max-width:180px){.wall-note{display:none}.wall-name{flex:1 1 auto}}
 @container (max-width:132px){.wall-num{display:none}}
+@media(hover:none){.game-hud .wall-pin{opacity:.7}}
 @container (max-width:150px){.game-hud .wall-pin{display:none}}
 @container (max-width:104px){.game-hud .wall-open{display:none}.wall-strip{gap:4px;padding:0 4px 0 5px;font-size:15px}}
 @media(max-width:740px){.client-title .focus .wall-tools .wall-layout{display:none}.client-title .focus .wall-tools .wall-cycle{display:grid}.client-title .focus .wall-tools button{width:26px}}
