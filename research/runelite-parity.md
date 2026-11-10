@@ -104,16 +104,21 @@ Use this for every new or changed part.
 | `slayer`, `herbiboars`, `hunter`, `poh` | Skills or content not in a 2004 world. |
 | `screenshot`, `discord`, `twitch`, `gpu` settings | Client features; the page is a viewer, not the game client. |
 
+## Rejected
+
+RuneLite features the page does not take, each with the reason.
+
+| Feature | RuneLite source | Reason |
+|---|---|---|
+| Inventory viewer overlay | `inventoryviewer/InventoryViewerOverlay.java` | The Inventory side tab shows the same grid in the same view. A second grid is a repeat. |
+| Report button clock | `reportbutton/ReportButtonConfig.java` | The session time is in the overlay box and in an infobox. Each chat line has its time. A clock adds no fact. |
+
 ## Candidates
 
 RuneLite features the page lacks and can build from the public state. Each claim: the RuneLite source read at the pinned commit; the data the page holds; the gap.
 
 | Feature | RuneLite source | Data in the public state | Gap |
 |---|---|---|---|
-| Minimap dot colours by player class | `minimap/MinimapConfig.java` `player`, `friend`, `team` | `rivals` names, `farms` | Whether `farms` rows carry every member name on the public page is not checked. |
-| Report button clock | `reportbutton/ReportButtonConfig.java` `time`; `TimeStyle.java` | `bots[].uptime`, browser clock, `snapshotAt` | none |
 | XP bar to the goal level with level marks | `xptracker/XpTrackerConfig.java` `intermediateLevelMarkers`; `XpInfoBox.java` | `bots[].goalSkill`, `goalLevel`, `skills[].xp` | XP is in the state for local-side accounts only. |
 | DPS counter | `dpscounter/DpsOverlay.java`, `DpsConfig.java` | The world feed in the 3D viewer (`playerHp`, npc hp per tick), not the public state | Needs a message from the viewer wrapper; counts every attacker's damage on the target. |
-| Ammo infobox and count on the doll | `ammo/AmmoPlugin.java` | `bots[].equipment[]` with `slot` and `count` | Cloud snapshots carry no slot numbers. |
-| Inventory viewer overlay | `inventoryviewer/InventoryViewerOverlay.java` | `bots[].inventory` | none |
 | Item stats on food | `itemstats/ItemStatChanges.java` | none | Needs a heal table for the 2004 items, checked against the pinned server. |

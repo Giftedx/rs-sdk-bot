@@ -284,6 +284,8 @@ button.op-kpi:hover{filter:brightness(1.15)}
 .mark-dot{display:inline-block;width:7px;height:7px;border:1px solid #000;background:#3d8a33}
 .mark-dot.on{background:#2bff2b}
 .mark-dot.other{background:#fff}
+.mark-dot.rival{background:#19b3ff}
+.mark-dot.farm{background:#9a9a9a}
 .lookup-worn{grid-template-columns:repeat(auto-fill,40px)}
 .public-view .client-plugin-body .boards>.bar{display:none}
 .public-view .client-plugin-body .board-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
