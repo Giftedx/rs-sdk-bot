@@ -199,3 +199,6 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .game-hud.wall-on .focus-note{top:auto;bottom:14px}
 /* The race lines of the overlay box, under a thin rule. */
 .game-overlay h4.race{margin:3px 0 1px;padding-top:2px;border-top:1px solid #0007}
+/* As the 2004 client draws them: every stack count is yellow, also K and M; a quest name is white under the pointer. */
+.game-hud .qty-k,.game-hud .qty-m,.game-bank .qty-k,.game-bank .qty-m{color:#ff0}
+.game-list button[data-quest]:hover{color:#fff!important}
