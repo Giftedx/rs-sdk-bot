@@ -358,3 +358,14 @@ test('a kit buy with no RESULT yet is running and stays as it is', () => {
     expect(kitBuyRunning({ enabled: true, template: 'goldfarm@2652,3318' }, { template: 'goldfarm@2652,3318', offset: 0 }, () => [])).toBe(false);
     expect(kitBuyRunning(job, { template: 'army-strike-magic-21', offset: 0 }, () => [])).toBe(false);
 });
+
+import { unfilledItems } from './autopilot';
+test('a kit buy that got none of an item names that item; a filled or broken buy names none', () => {
+    const none = '  | RESULT fail {"ok":false,"phase":"settled","quantity":20,"targetMet":false,"acquired":0,"refund":2400,"spent":0,"offerId":157266,"progress":{"actor":"Wandwaver","offerId":157266,"itemId":558,"side":"buy","quantity":20,"limit":120,"filled":0},"failure":"exact order short: acquired 0/20"}';
+    const filled = '  | RESULT ok {"ok":true,"phase":"settled","quantity":50,"targetMet":true,"acquired":50,"progress":{"actor":"Mightyrod","itemId":561,"side":"buy","quantity":50,"limit":800,"filled":50,"gross":12500}}';
+    expect(unfilledItems([filled, none, none.replace('"itemId":558', '"itemId":314')])).toEqual([558, 314]);
+    expect(unfilledItems([filled])).toEqual([]);
+    // A part fill and a failure with no offer are not an empty market.
+    expect(unfilledItems([none.replace('"acquired":0', '"acquired":7')])).toEqual([]);
+    expect(unfilledItems(['RESULT fail walk-to {"ok":false,"reason":"timeout"}', 'RESULT fail chain rounds=1 ok=1 failed=1'])).toEqual([]);
+});
