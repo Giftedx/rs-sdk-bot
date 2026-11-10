@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794309360382,
+ "at": 1794309555820,
  "jobs": [
   {
    "account": "Fingerblastr",
@@ -84,7 +84,7 @@
     "MAX_KILLS": "8",
     "COW_STAGE": "1"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": false,
    "goal": "train Defence to 45 on the Ardougne cows",
