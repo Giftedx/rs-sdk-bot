@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794342082393,
+ "at": 1794342153255,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -51,27 +51,24 @@
   },
   {
    "account": "TheFullMonty",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "1500",
-    "trooper"
+    "betty"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "ITEMS": "fire rune|air rune|earth rune",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-defence-99",
+   "goal": "buy elemental runes at Betty",
+   "role": "bank",
+   "template": "shop-runes",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "shop:betty"
    ]
   },
   {
@@ -274,30 +271,6 @@
    ]
   },
   {
-   "account": "Dipstick",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Attack",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Attack to 60 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-attack-60",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "cow:ardougne-north"
-   ]
-  },
-  {
    "account": "KnightRider",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -324,28 +297,29 @@
   },
   {
    "account": "Fatstack",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Attack",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-fc77c0b1-7d78-4cfa-b6c1-0aae2c536336"
    },
    "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Attack to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-attack-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "repeat": false,
+   "goal": "claude-cloud-recover-fatstack-20261110t201751z [task-fc77c0b1-7d78-4cfa-b6c1-0aae2c536336]",
+   "role": "combat"
+  },
+  {
+   "account": "Dipstick",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-5e195a1f-a431-4a6a-9b10-d721ccb41cca"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-dipstick-20261110t201751z [task-5e195a1f-a431-4a6a-9b10-d721ccb41cca]",
+   "role": "combat"
   }
  ]
 }
