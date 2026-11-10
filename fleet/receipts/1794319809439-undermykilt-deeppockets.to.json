@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794319809439-undermykilt-deeppockets",
  "account": "Deeppockets",
  "partner": "UnderMyKilt",
@@ -12,6 +12,11 @@
  "claim": "104ddc62-a52b-4fd4-9e8e-5c11e5495af8",
  "count": 0,
  "ok": false,
- "at": 1794319814821,
- "detail": "trade claimed"
+ "at": 1794319867268,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1794319814823-0000018535-0000000001",
+  "at": 1794319867262,
+  "sha256": "8b4a6658370a54f60de61d217ef1950ae52fd2c01f6986bef353fcfef62513b2"
+ }
 }
