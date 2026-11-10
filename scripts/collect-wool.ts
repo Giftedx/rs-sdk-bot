@@ -112,7 +112,9 @@ try {
                 await s.direct({ type: 'closeModal', reason: 'SDK' });
             await s.sdk.sendUseItemOnLoc(wool.slot,wheel.x,wheel.z,wheel.id);
             const made=await waitUntil(s,()=>cnt(/^ball of wool$/i)>before,{timeoutTicks:8});
-            if(made) { spun++; failed=0; } else if(++failed>4) throw new Error('spinning made no progress');
+            // The wheel holds the player for 3 ticks after the ball appears (p_delay(2), spinning.rs2). Wool sent in that time is refused with no
+            // message, and the wait above then ran its whole 8 ticks: 9 ticks for each ball.
+            if(made) { spun++; failed=0; await waitTicks(s,3); } else if(++failed>4) throw new Error('spinning made no progress');
         }
         console.log(`MILESTONE spin t=${s.tick()-t0} spun=${spun}`);
         await bank();
