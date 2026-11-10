@@ -77,8 +77,11 @@ try {
             if (q.dialogOpen()) { await closeDlg(); continue; }
             const n = q.npc(re);
             if (!n) { if (home) await q.walk(`${label} home`, [{ ...home, tol: 4 }]); else await q.waitTicks(2); continue; }
-            await q.s.bot.attack(n as any);
-            await q.waitUntil(() => done() || q.dialogOpen(), 6);
+            // A direct attack click, sent again every 4 ticks. bot.attack waited about 110 ticks when the engine
+            // refused the click (Dad's knockback holds the player for a tick), and the bot stood idle for that time.
+            const attackOp = ((n as any).optionsWithIndex ?? []).find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2;
+            await q.s.direct({ type: 'interactNpc', npcIndex: (n as any).index, optionIndex: attackOp, reason: 'SDK' });
+            await q.waitUntil(() => done() || q.dialogOpen(), 4);
         }
         if (!done()) await q.fail(`fight ${label}`);
     };
