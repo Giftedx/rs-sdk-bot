@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794305052685,
+ "at": 1794305118947,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -116,7 +116,7 @@
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "10"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": false,
    "goal": "train Strength to 99 on the Khazard troopers",
