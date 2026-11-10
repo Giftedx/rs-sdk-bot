@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794337758237,
+ "at": 1794337892038,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -131,27 +131,23 @@
   },
   {
    "account": "mmsmk1232",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/train-prayer.ts",
    "args": [
-    "3000",
-    "cow"
+    "99"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 70 on the Ardougne cows",
+   "goal": "train Prayer to 99 burying the held bones",
    "role": "combat",
-   "template": "army-cow-defence-70",
+   "template": "army-bury-prayer-99",
    "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
+   "resources": []
   },
   {
    "account": "mmtha0205",
@@ -380,27 +376,6 @@
    "role": "supply"
   },
   {
-   "account": "Pocketrocket",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "892",
-    "QUANTITY": "533",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "600",
-    "CASH_RESERVE": "180000",
-    "ORDER_KEY": "pocketrocket-rune-arrows533-route",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "600000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-a92fe9c7-4fbb-4d38-8279-cb797dfe7be6"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-pocketrocket-rune-arrows533 [task-a92fe9c7-4fbb-4d38-8279-cb797dfe7be6]",
-   "role": "supply"
-  },
-  {
    "account": "Magicwanda",
    "script": "scripts/blood-chest.ts",
    "args": [
@@ -468,6 +443,27 @@
    "repeat": false,
    "goal": "run-session-recovery-wandwaver-q1794336001 [task-9c0854f0-5543-410c-b1f2-f7899ce19587]",
    "role": "combat"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby",
+    "6000"
+   ],
+   "env": {
+    "ITEMS": "arrowtips",
+    "BANK_PACK": "1",
+    "MAX_SPEND": "200000",
+    "COIN_RESERVE": "10000",
+    "FLOAT": "210000",
+    "NO_BUY_TICKS": "50"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "rune, adamant, mithril and steel arrowtips from Hickton",
+   "role": "supply"
   }
  ]
 }
