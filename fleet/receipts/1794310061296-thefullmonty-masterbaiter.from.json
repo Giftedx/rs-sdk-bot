@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794310061296-thefullmonty-masterbaiter",
+ "account": "TheFullMonty",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 20,
+ "claim": "3be9366a-11da-4f41-8cd8-4578a720e2b9",
+ "count": 0,
+ "ok": false,
+ "at": 1794310064858,
+ "detail": "trade claimed"
+}
