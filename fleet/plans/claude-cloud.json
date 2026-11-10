@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794317120765,
+ "at": 1794317211036,
  "jobs": [
   {
    "account": "Fingersmith",
@@ -109,46 +109,40 @@
   },
   {
    "account": "Deeppockets",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=20 EXPECTED_OWNED=15 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=deeppockets-kit0-558-15to35 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=10 EXPECTED_OWNED=25 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=deeppockets-kit0-556-25to35 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
    "env": {
-    "PEN": "3187,3277",
-    "TICKS": "3000",
-    "TARGET": "2000"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
-   "role": "helper",
-   "template": "feathers@3187,3277",
+   "repeat": false,
+   "goal": "buy 20 Mind rune, 10 Air rune on the Grand Exchange to train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
+   "role": "supply",
+   "template": "kit-buy:army-strike-magic-21",
    "autopilot": "claude-cloud",
-   "resources": [
-    "pen:3187,3277"
-   ]
+   "resources": []
   },
   {
    "account": "Fatstack",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 70 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-70",
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
    "autopilot": "claude-cloud",
    "resources": [
-    "cow:ardougne-north"
+    "knight:2652,3318"
    ]
   },
   {
@@ -225,23 +219,27 @@
   },
   {
    "account": "PocketPool",
-   "script": "scripts/train-prayer.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99"
+    "3000",
+    "cow"
    ],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_RESERVE": "6",
-    "CAP": "4000"
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying the held bones",
+   "goal": "train Strength to 70 on the Ardougne cows",
    "role": "combat",
-   "template": "army-bury-prayer-99",
+   "template": "army-cow-strength-70",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "cow:ardougne-north"
+   ]
   },
   {
    "account": "SporranDip",

@@ -1,0 +1,22 @@
+{
+ "id": "1794318105450-bigchopper-undermykilt-bones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigchopper",
+ "to": "UnderMyKilt",
+ "item": "Bones",
+ "count": 22,
+ "start": 1794318105450,
+ "end": 1794320505450,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
