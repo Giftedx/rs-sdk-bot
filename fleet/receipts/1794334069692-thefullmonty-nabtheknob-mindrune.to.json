@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794334069692-thefullmonty-nabtheknob-mindrune",
+ "account": "NabTheKnob",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 20,
+ "claim": "993cb810-e22a-4d0c-8a75-cf77c37c77d6",
+ "count": 0,
+ "ok": false,
+ "at": 1794335912863,
+ "detail": "trade claimed"
+}
