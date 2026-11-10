@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794305118741-undermykilt-quickhandjob",
+ "account": "Quickhandjob",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 20,
+ "claim": "a33e0e19-ab9f-4fdc-b6e9-fd957dd7b2ec",
+ "count": 0,
+ "ok": false,
+ "at": 1794305126290,
+ "detail": "trade claimed"
+}

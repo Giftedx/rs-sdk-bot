@@ -1,0 +1,30 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794305118741-undermykilt-quickhandjob",
+ "account": "UnderMyKilt",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 20,
+ "claim": "f55865ca-3104-4777-8213-792f9bd6c2e5",
+ "count": 20,
+ "ok": true,
+ "at": 1794305140419,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 20,
+  "after": 0
+ },
+ "bank": {
+  "count": 20,
+  "at": 1794305135693
+ },
+ "logout": {
+  "attemptId": "1794305124259-0000019968-0000000001",
+  "at": 1794305140414,
+  "sha256": "4cbf929a35a86eeaced631dc16116f74c4694318c0c1527df04fecdf1dcec6f0"
+ }
+}
