@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794302268914-thefullmonty-trousersnake",
+ "account": "TrouserSnake",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "e1e279de-335a-4eac-914a-33f34e0b74cd",
+ "count": 0,
+ "ok": false,
+ "at": 1794302272279,
+ "detail": "trade claimed"
+}
