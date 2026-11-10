@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { SWARM_STOP } from './swarm';
-import { archiveDir, clearSwarmStops, cloudSide, deadTasks, eligibility, lifecycleRoot, MAX_ATTEMPTS, MAX_TARGETS, recoveriesInFlight, recoveryBatch, recoveryProposal, releasableAccounts, releaseBlockers, releasePlan, spentAttempts, submitRejected, type ClaimView } from './cloud-recover';
+import { archiveDir, archiveStaleLease, clearSwarmStops, cloudSide, deadTasks, eligibility, lifecycleRoot, MAX_ATTEMPTS, MAX_TARGETS, recoveriesInFlight, recoveryBatch, recoveryLeaseState, recoveryProposal, releasableAccounts, releaseBlockers, releasePlan, spentAttempts, submitRejected, type ClaimView } from './cloud-recover';
 import { DEFAULT_LIFECYCLE_ROOT } from '../packages/core/src/session-lifecycle';
 import type { LogoutProof } from '../packages/core/src/session-lifecycle';
 
@@ -226,4 +226,36 @@ test('a rejected submit is seen at once: the coordinator renames the request fil
         // Another proposal's rejection is not this one's.
         expect(submitRejected(requests, 'claude-cloud-recovery-qualified-other')).toBe(false);
     } finally { rmSync(base, { recursive: true }); }
+});
+
+test('a recovery lease is stale once its child is gone or, with no child, its permit has expired; a stale lease is moved aside', () => {
+    const root = mkdtempSync(join(tmpdir(), 'cloud-recover-lease-')), now = 1794183600000;
+    const request = { schema: 'session-recovery/1', account: 'Fingersmith', server: 'rs-sdk-demo.fly.dev', runId: 'run-1', nonce: 'nonce-1', endedAt: 1794183517222, source: 'a'.repeat(64) };
+    const dir = join(root, '.practice', 'coordinator', 'session-recovery', 'accounts', 'fingersmith'), lease = join(dir, 'lease.json');
+    const permit = (expiresAt: number) => writeFileSync(lease, JSON.stringify({ schema: 'session-recovery-permit/1', request, issuedAt: expiresAt - 150000, expiresAt }));
+    try {
+        expect(recoveryLeaseState(root, 'Fingersmith', () => false, now)).toBe('none');
+        mkdirSync(join(dir, 'nonce-1'), { recursive: true });
+        // No child recorded: held until the permit expires.
+        permit(now + 1000);
+        expect(recoveryLeaseState(root, 'Fingersmith', () => false, now)).toBe('held');
+        permit(now - 1000);
+        expect(recoveryLeaseState(root, 'Fingersmith', () => false, now)).toBe('stale');
+        // A recorded child holds the lease while its process lives, whatever the permit says.
+        writeFileSync(join(dir, 'nonce-1', 'child.json'), JSON.stringify({ pid: 4242, nonce: 'nonce-1', runId: 'run-1' }));
+        expect(recoveryLeaseState(root, 'Fingersmith', () => true, now)).toBe('held');
+        expect(recoveryLeaseState(root, 'fingersmith', () => false, now)).toBe('stale');
+        // A child record that is not this lease's, and a lease that cannot be read, are held.
+        writeFileSync(join(dir, 'nonce-1', 'child.json'), JSON.stringify({ pid: 4242, nonce: 'other', runId: 'run-1' }));
+        expect(recoveryLeaseState(root, 'Fingersmith', () => false, now)).toBe('held');
+        writeFileSync(join(dir, 'nonce-1', 'child.json'), JSON.stringify({ pid: 4242, nonce: 'nonce-1', runId: 'run-1' }));
+        writeFileSync(lease, '{');
+        expect(recoveryLeaseState(root, 'Fingersmith', () => false, now)).toBe('held');
+        permit(now - 1000);
+        const moved = archiveStaleLease(root, 'Fingersmith', now);
+        expect(moved.startsWith(join(dir, 'lease-stale-'))).toBe(true);
+        expect(existsSync(moved)).toBe(true);
+        expect(existsSync(join(dir, 'nonce-1', 'child.json'))).toBe(true);
+        expect(recoveryLeaseState(root, 'Fingersmith', () => false, now)).toBe('none');
+    } finally { rmSync(root, { recursive: true, force: true }); }
 });
