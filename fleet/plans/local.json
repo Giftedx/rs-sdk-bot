@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794315684445,
+ "at": 1794315769387,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -171,24 +171,6 @@
    "resources": []
   },
   {
-   "account": "Mightyrod",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=314 QUANTITY=21 EXPECTED_OWNED=29 LIMIT_PRICE=20 CASH_RESERVE=1000 ORDER_KEY=mightyrod-kit0-314-29to50 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 21 Feather on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Wandwaver",
    "script": "scripts/chain.ts",
    "args": [
@@ -206,6 +188,26 @@
    "template": "kit-buy:army-trooper-ranged-99",
    "autopilot": "local",
    "resources": []
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3229,3298",
+    "TICKS": "3000",
+    "TARGET": "2000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3229,3298",
+   "role": "helper",
+   "template": "feathers@3229,3298",
+   "autopilot": "local",
+   "resources": [
+    "pen:3229,3298"
+   ]
   },
   {
    "account": "mmtha0205",
