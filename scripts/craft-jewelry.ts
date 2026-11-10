@@ -93,12 +93,13 @@ try {
 
             const ch = findItem(/^chisel$/i)!;
             const toCut = inv().filter(i => uncutRe.test(i.name));
-            const before = toCut.length;
+            const uncutCount = () => inv().filter(i => uncutRe.test(i.name)).reduce((n, i) => n + i.count, 0);
+            const before = uncutCount();
 
             for (const g of toCut) void s.sdk.sendUseItemOnItem(ch.slot, g.slot);
-            await waitUntil(s, () => inv().filter(i => uncutRe.test(i.name)).length === 0, { timeoutTicks: 15 });
+            await waitUntil(s, () => uncutCount() < before, { timeoutTicks: 15 });
 
-            const after = inv().filter(i => uncutRe.test(i.name)).length;
+            const after = uncutCount();
             const diff = before - after;
             if (diff > 0) crafted += diff;
         } else if (ACTION === 'smelt') {

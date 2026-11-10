@@ -201,7 +201,7 @@ export const LONG_PRESETS: Record<string, SaveConfig> = {
     // maps/m39_60.jm2), where the stairs from the ground floor arrive.
     quest_misc: misc({ x: 2506, z: 3865, level: 1 }),
     // Debug (MI_FROM=weed): by the herb garden, %misc_quest 10, Astrid agreed (approval 32).
-    quest_misc_weed: misc({ x: 2523, z: 3851 }, { 359: 10, 361: MISC_WED | (32 << 18), 362: MISC_V2 }, [2351, 1511]),
+    quest_misc_weed: misc({ x: 2524, z: 3851 }, { 359: 10, 361: MISC_WED | (32 << 18), 362: MISC_V2 }, [2351, 1511]),
     // Debug (MI_FROM=peace): by the herb garden, %misc_quest 10, Astrid agreed, approval 96.
     quest_misc_peace: misc({ x: 2523, z: 3851 }, { 359: 10, 361: MISC_FULL, 362: MISC_V2 }, [2351, 1511]),
     // Debug (MI_FROM=pen): north of the throne room door, %misc_quest 70 with the treaty (3896).
