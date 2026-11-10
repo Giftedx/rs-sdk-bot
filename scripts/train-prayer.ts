@@ -1,10 +1,10 @@
 // bun scripts/train-prayer.ts <account> [target, default43]
 // Owned Bones526 by default; BONE_ID=532 buries owned big bones. MAX_BURY=175, BONE_RESERVE=6, CAP=1500 ticks by default.
-import {openBot,finish} from '../packages/core/src/bot';
+import {openBot,finish,getWorld,accountOf} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
 import {xpForLevel} from '../packages/planner/src/curve';
-import {walkPath,sessionWalker,type PathPoint} from '../packages/core/src/walk';
+import {walkPath,sessionWalker,goTo,type PathPoint} from '../packages/core/src/walk';
 
 const BONE=526,PRAYER=14;
 // Server XP per bury at 25x: bones 4.5, big bones 15 (bury_bone.rs2).
@@ -22,14 +22,21 @@ export function planPrayer(bones:number,xp:number,maximum=175,reserve=6,target=4
 export function prayerBank(p:{worldX:number;worldZ:number;level:number}){
     const near=(x:number,z:number,n:number)=>p.level===0&&Math.max(Math.abs(p.worldX-x),Math.abs(p.worldZ-z))<=n;
     if(near(2655,3283,3))return{x:2655,z:3283};
-    // Ardougne north, the PK army's home bank (scripts/cow-stage.ts); from the market knights and the cow field it walks there.
-    if(near(2619,3332,60))return{x:2619,z:3332};
+    // Ardougne north, the PK army's home bank (scripts/cow-stage.ts). It walks there from the market knights, the cow
+    // field and the Gnome battlefield, where a trooper run that lost its session stops (2525,3242 is 94 tiles away).
+    if(near(2619,3332,150))return{x:2619,z:3332};
     if(near(3185,3436,3))return{x:3185,z:3436}; // Varrock West, where GE purchases settle
     if(near(3092,3243,220))return{x:3092,z:3243};
     throw Error('no prayer progress: unsupported ordinary bank entry');
 }
 type Approach=(s:Session,points:PathPoint[],cap:number,stop:()=>boolean)=>Promise<boolean>;
-const approach:Approach=async(s,points,cap,stop)=>(await walkPath(await sessionWalker(s),points,{maxTicks:cap,stop})).ok;
+// A single-point approach from more than 60 tiles plans with the world walker first, as shop-buyer does.
+const approach:Approach=async(s,points,cap,stop)=>{
+    const last=points.at(-1)!,p=s.sdk.getState()?.player;
+    if(points.length===1&&p&&Math.max(Math.abs(p.worldX-last.x),Math.abs(p.worldZ-last.z))>60
+        &&!(await goTo(s,await getWorld(),{x:last.x,z:last.z,level:0},accountOf(s),{legTimeoutTicks:100})).ok)return false;
+    return (await walkPath(await sessionWalker(s),points,{maxTicks:cap,stop})).ok;
+};
 export async function runPrayer(s:Session,o:PrayerOptions,walk:Approach=approach){
     const goal=o.target??43,targetXp=xpForLevel(goal),BONE=o.bone??526,XP=BONE_XP[BONE];
     if(XP===undefined)throw new Error('no prayer progress: unsupported bone id');

@@ -111,11 +111,17 @@ TrouserSnake and UnderMyKilt hold about 15,000 feathers and 1,500-1,700 bones ea
   (112.5 XP per bone). Practice: `scripts/train-prayer.ts` at the north bank, Prayer 74 -> 75, 113 bones in 251 ticks
   (2.2 ticks per bone with banking), so about 3,700 ticks per account. With `BURY_HELD=1` from the market knights it
   walked to the north bank, buried 114 of 120 bones (6 kept) in 282 ticks and ended ok at Prayer 75 when they ran out.
+  From the Gnome battlefield (2525,3242), where a trooper run that lost its session stops, the world walker took it to
+  the north bank. It buried 114 of 120 bones in 333 ticks and ended ok at Prayer 75.
 - **Evidence.** `.practice/magic-alch/` and `.practice/army-prayer/` in the Claude cloud container that ran them.
 - **Gap.** Practice only. The level-up dialog drops a spell sent under it. The trainer clears it between the Low and
   High Alchemy phases. The worker waits 1-2 ticks more per cast than the 5-tick High Alchemy cycle
-  (`alchemy.rs2` `p_delay(3)`). The live nature rune price is not checked: the last read was 621 each with about 627,000 for sale
-  (`research/supply-costs.md`), so the 612 natures for 50 -> 99 cost about 380,000 coins.
+  (`alchemy.rs2` `p_delay(3)`).
+- **Supply (live market, claude-cloud read).** Nature runes ask 250 with 230,923 listed, so 612 natures cost about 153,000.
+  Fire runes rose from 91 to 200 after 187 bought, and no fire staff is listed. Aubury's shop sells 2,000 fire runes
+  at base 4 (`varrock.inv` `runeshop`; profile `aubury`, `ITEMS='fire rune'`). Zaff sells staffs of fire: practice,
+  `MAX_ITEMS=1 bun scripts/shop-buyer.ts <bot> zaff` from Varrock West bought one for 1,500 coins in 45 ticks and banked
+  it. Zaff stocks 2, with 1 back per 1,000 ticks.
 
 ## 1. Melee, no cannon
 

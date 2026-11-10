@@ -120,6 +120,14 @@ export const PROFILES: Record<string, {
             { re: /body rune/i, buyPerTick: 50 },
         ],
     },
+    zaff: {
+        // Zaff's staff shop (area_varrock/configs/varrock.inv staffshop and memberstaffshop): staff_of_fire stock 2,
+        // 1 back per 1,000 ticks. A fire staff replaces the fire runes of every alchemy cast (scripts/alch-train.ts).
+        npc: /^zaff$/i,
+        npcSpot: { x: 3203, z: 3433 },
+        bankSpot: { x: 3185, z: 3436 }, // Varrock West Bank
+        items: [{ re: /^staff of fire$/i, buyPerTick: 1 }],
+    },
     thessalia: {
         // NPC548, Trade3 -> clotheshop; leather_gloves1059 stock10.
         npc: /^thessalia$/i,

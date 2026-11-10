@@ -98,7 +98,9 @@ test('BURY_HELD buries the held bones above the reserve and is ok after a level 
     const g=fixture({bones:60,rawXp:196875});
     try{expect(await runPrayer(g.s,{target:99,cap:5000,maximum:1000000,reserve:6})).toMatchObject({ok:false,buried:0});}finally{g.dispose();}
 });
-test('the market knights and the cow field walk to the Ardougne north bank; the south bank stays its own entry',()=>{
+test('the market knights, the cow field and the Gnome battlefield walk to the Ardougne north bank; the south bank stays its own entry',()=>{
     expect(prayerBank({worldX:2654,worldZ:3304,level:0})).toEqual({x:2619,z:3332});
     expect(prayerBank({worldX:2655,worldZ:3284,level:0})).toEqual({x:2655,z:3283});
+    expect(prayerBank({worldX:2525,worldZ:3242,level:0})).toEqual({x:2619,z:3332});
+    expect(()=>prayerBank({worldX:2800,worldZ:3440,level:0})).toThrow('unsupported ordinary bank entry');
 });
