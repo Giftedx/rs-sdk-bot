@@ -6,17 +6,20 @@ import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
 import {watchProductionLife} from './microbot-c-lifetime';
 export type StallRecipe={name:string;loc:number;level:number;respawn:number;loot:number[];questGate:boolean;owners:number[];guards:number[]};
+let cachedStallRecipes:StallRecipe[]|undefined;
 export function stallRecipes():StallRecipe[]{
+ if(cachedStallRecipes)return cachedStallRecipes;
  const root=resolve(import.meta.dir,'../vendor/rs-sdk/server/content');
  const pack=(file:string)=>new Map(readFileSync(resolve(root,'pack',file),'utf8').split(/\r?\n/).flatMap(l=>{const m=l.match(/^(\d+)=(.+)$/);return m?[[m[2]!,Number(m[1])] as const]:[];}));
  const locs=pack('loc.pack'),objs=pack('obj.pack'),npcs=pack('npc.pack');
- return parseConfigs(readFileSync(resolve(root,'scripts/skill_thieving/configs/stalls/stealing.dbrow'),'utf8'),'stealing.dbrow').map(b=>{
+ cachedStallRecipes=parseConfigs(readFileSync(resolve(root,'scripts/skill_thieving/configs/stalls/stealing.dbrow'),'utf8'),'stealing.dbrow').map(b=>{
   const fields=b.props.data??[],one=(key:string)=>fields.find(v=>v.startsWith(key+','))?.slice(key.length+1),locName=one('loc')!;
   const actors=(key:string)=>fields.filter(v=>v.startsWith(key+',')).map(v=>{const name=v.slice(key.length+1),id=npcs.get(name);if(id===undefined)throw Error('native stall actor unresolved '+name);return id;});
   const r={name:b.name,loc:locs.get(locName)!,level:Number(one('level')),respawn:Number(one('respawn_ticks')),loot:fields.filter(v=>v.startsWith('loot,')).map(v=>objs.get(v.split(',')[1]!)!),questGate:locName==='viking_fish_market'||locName==='viking_fur_market',owners:actors('owner'),guards:actors('guard')};
   if(!Number.isSafeInteger(r.loc)||!Number.isSafeInteger(r.level)||!Number.isSafeInteger(r.respawn)||!r.loot.length||!r.loot.every(Number.isSafeInteger))throw Error('native stall recipe unresolved: '+b.name);
   return r;
  });
+ return cachedStallRecipes;
 }
 export function stallWatched(r:StallRecipe,p:{worldX:number;worldZ:number;level:number},npcs:readonly{id:number;x:number;z:number;inCombat:boolean}[],sight:(x:number,z:number,toX:number,toZ:number,level:number)=>boolean){
  return npcs.some(n=>(r.owners.includes(n.id)||r.guards.includes(n.id)&&!n.inCombat)&&Math.max(Math.abs(n.x-p.worldX),Math.abs(n.z-p.worldZ))<=5&&sight(n.x,n.z,p.worldX,p.worldZ,p.level));

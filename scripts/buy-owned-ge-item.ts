@@ -88,7 +88,7 @@ export function orderItemMatcher(item:number,catalogue:readonly {id:number;name:
  return(i:{id:number;name?:string})=>i.id===item||!!name&&i.name?.toLowerCase()===name&&!known.has(i.id);
 }
 export function orderPaths(server:string,actor:string,goal:string){
- const base=resolve('.practice/market-orders',createHash('sha256').update(server).digest('hex').slice(0,12));
+ const base=resolve(import.meta.dir,'../.practice/market-orders',createHash('sha256').update(server).digest('hex').slice(0,12));
  return{base,lock:base+'/'+actor.toLowerCase()+'.lock',journal:base+'/'+actor.toLowerCase()+'-'+goal+'.json'};
 }
 function identity(j:ItemOrder,v:OrderView){if(j.request.actor.toLowerCase()!==v.actor.toLowerCase()||j.request.server!==v.server)throw Error('order identity mismatch');}
@@ -226,7 +226,7 @@ export function bankTotals(rows:readonly {id:number;count:number}[]){
  return [...m].sort((a,b)=>a[0]-b[0]);
 }
 function rescueBank(request:ItemRequest){
- const snapshot=JSON.parse(readFileSync(resolve('.practice/status',request.actor+'.json'),'utf8'));
+ const snapshot=JSON.parse(readFileSync(resolve(import.meta.dir,'../.practice/status',request.actor+'.json'),'utf8'));
  if(snapshot.name?.toLowerCase()!==request.actor.toLowerCase()||snapshot.server!==request.server||!Number.isSafeInteger(snapshot.bankAt)
   ||snapshot.bankAt<=0||snapshot.bankAt>Date.now()||!Array.isArray(snapshot.bank))throw Error('owned rescue bank snapshot required');
  bankTotals(snapshot.bank);
@@ -448,7 +448,7 @@ export async function runOwnedItem(s:Session,request:ItemRequest,journalPath:str
 if(import.meta.main){
  const actor=process.argv[2]!,goal=process.env.ORDER_KEY??'combat-sword';if(!/^[a-z0-9]{1,12}$/i.test(actor)||!/^[a-z0-9_-]{1,64}$/i.test(goal))throw Error('explicit owned actor/order key required');
  const fillWaitTicks=Number(process.env.FILL_WAIT_TICKS??10);if(!Number.isSafeInteger(fillWaitTicks)||fillWaitTicks<0||fillWaitTicks>200)throw Error('FILL_WAIT_TICKS must be 0-200 game ticks');
- const server=serverFromEnv(readFileSync(resolve('vendor/rs-sdk/bots',actor,'bot.env'),'utf8')),{base,lock,journal:journalPath}=orderPaths(server,actor,goal);mkdirSync(base,{recursive:true});
+ const server=serverFromEnv(readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/bots',actor,'bot.env'),'utf8')),{base,lock,journal:journalPath}=orderPaths(server,actor,goal);mkdirSync(base,{recursive:true});
  if(existsSync(lock)){const owner=JSON.parse(readFileSync(lock,'utf8'));if(!Number.isSafeInteger(owner.pid)||owner.pid<1)throw Error('unknown market lock owner');let alive=true;try{process.kill(owner.pid,0);}catch(e){if((e as NodeJS.ErrnoException).code==='ESRCH')alive=false;else throw e;}if(alive)throw Error('market actor already owned');unlinkSync(lock);}
  const fd=openSync(lock,'wx');writeFileSync(fd,JSON.stringify({pid:process.pid,actor,server,goal,at:Date.now()}));closeSync(fd);let s:Session|undefined,stopped=false;
  try{

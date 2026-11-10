@@ -1,5 +1,6 @@
 import{readFileSync,existsSync}from'node:fs';
 import{openBot,finish}from'../packages/core/src/bot';
+import {resolve} from 'node:path';
 import type{Session}from'../packages/core/src/inprocess';
 import{waitUntil}from'../packages/core/src/ticks';
 import{runBankProfile,validateBankRouteJob,type BankRouteJob,type BankProfile}from'./microbot-bank-jobs';
@@ -14,7 +15,7 @@ function nativeData(){
  const configs=(ext:string)=>listConfigFiles(ext).flatMap(file=>parseConfigs(readFileSync(join(contentRoot(),file),'utf8'),file));
  const blocks=(ext:string)=>new Map(configs(ext).map(v=>[v.name,v]));
  const pack=(kind:string)=>new Map(readFileSync(join(contentRoot(),'pack',kind+'.pack'),'utf8').split(/\r?\n/).flatMap(v=>{const m=v.match(/^(\d+)=(.+)$/);return m?[[m[2]!,Number(m[1])]as const]:[];}));
- return{npcs:blocks('.npc'),invs:blocks('.inv'),npcPack:pack('npc'),objPack:pack('obj'),spawns:JSON.parse(readFileSync('knowledge/npcs.json','utf8'))as{id:number;debugname:string;spawns:{x:number;z:number;level:number}[]}[],scripts:listConfigFiles('.rs2').map(file=>readFileSync(join(contentRoot(),file),'utf8')).join('\n')};
+ return{npcs:blocks('.npc'),invs:blocks('.inv'),npcPack:pack('npc'),objPack:pack('obj'),spawns:JSON.parse(readFileSync(resolve(import.meta.dir,'../knowledge/npcs.json'),'utf8'))as{id:number;debugname:string;spawns:{x:number;z:number;level:number}[]}[],scripts:listConfigFiles('.rs2').map(file=>readFileSync(join(contentRoot(),file),'utf8')).join('\n')};
 }
 let data:ReturnType<typeof nativeData>|undefined;const native=()=>data??=nativeData();
 const param=(b:ConfigBlock,key:string)=>b.props.param?.find(v=>v.startsWith(key+','))?.slice(key.length+1);

@@ -1,0 +1,360 @@
+// AIO practice-server benchmark & optimization harness.
+// Starts the native 150 ms / 25x practice stack in-process, runs each AIO dispatcher route
+// through proveInProcess (START-matched preset + RESULT ok + outcome tail), compares wall time
+// against the equivalent direct worker, and verifies save outcomes (XP / items / quest flags).
+//
+// Usage (from repo root):
+//   bun scripts/measure/aio-practice-bench.ts
+// Cases come from aio-bench-cases.ts, one per AIO catalog route. AIO_BENCH_COVERAGE lists the routes with no case.
+// Prints AIO_BENCH_RESULT JSON lines per case + AIO_BENCH_SUMMARY, and writes the rows to BENCH_OUT. Exit 0 iff every case passes.
+// Env: BENCH_RUNS (per-case runs, default 1), BENCH_TIMEOUT_MS (per-run timeout, default 600000),
+// BENCH_ONLY (regex on the case key), BENCH_CONCURRENCY (cases at once, default 1; above 1 the cases share NPCs
+// and rocks, so use it to find which cases pass, not to compare ticks), BENCH_COVERAGE_ONLY (print coverage and stop).
+//
+// Only openBot (in-process) routes run here: proveInProcess runs workers via
+// realInProcessDeps with cwd = repo root (see prove.ts REPO_ROOT), which is the
+// cwd the swarm supervisor and chain.ts use. Lite-runner scripts (runScript,
+// e.g. wc-loop.ts) need the lite harness (prove(), cwd vendor/rs-sdk for
+// join(cwd, 'bots', ...) in vendor runner.ts) and are deliberately excluded.
+// Woodcut-supply and similar library-only workers (no import.meta.main) are
+// benched via aio-skiller bank-job JSON profiles, which is their supported
+// process boundary (direct in-process runBankJob).
+//
+// Shop cases are excluded: Hickton's shop stock is shared engine state across
+// sequential bench cases, so a direct-vs-AIO comparison is confounded by
+// restock waits (idle 38-66% in both workers). Quest and bank-trip cases use
+// per-account bank/pack/equipment and are comparable on a shared stack.
+// Boss/pvp/market/logistics readiness is benched offline (planner timing)
+// because their live setups (kits, duel targets, GE intents, coop accounts)
+// need multi-account fixtures the single-account bench cannot stage.
+//
+// localhost quirk: in this Windows sandbox `localhost` resolves to ::1 first
+// while the practice engine listens on IPv4 only, so fetch('http://localhost:8888/crc')
+// resets. Bench bots are therefore pinned to 127.0.0.1 after createBot.
+import {startStack} from '../../packages/practice/src/stack';
+import {proveInProcess} from '../../packages/practice/src/prove';
+import {createBot} from '../../packages/practice/src/bots';
+import {applyPreset, PRESETS} from '../../packages/practice/src/presets';
+import {benchCases, benchCoverage, rivalTicks, BENCH_JOB_FILES, SMOKE_KEYS, type BenchCase} from './aio-bench-cases';
+import {rsSdkRoot} from '../../packages/practice/src/paths';
+import {readFileSync, writeFileSync, rmSync, mkdirSync, existsSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {freemem} from 'node:os';
+import {dirname, join, resolve} from 'node:path';
+import {
+  discoverBankedProduction,
+  planProgressiveSkiller,
+  planAutoFighterBand,
+  assessBossReadiness,
+  pvpCombatBracket,
+  assessTribridReadiness,
+  assessQuestReadiness,
+  prioritizeQuestsForAccount,
+  planGeRestockOrders,
+  planFleetDistribution,
+  resolveAioStep,
+} from '../aio';
+
+const root = resolve(import.meta.dir, '..', '..');
+
+// Command line: `bun run bench [pattern] [--smoke] [--all] [--seed n] [--parallel n] [--set KEY=value]... [--save-baseline]
+// [--no-keep] [--wall-clock]`. A pattern is a regular expression on the case key ("cook", "^quester:quest:").
+// The defaults give comparable numbers with nothing to remember: the lockstep engine, a fresh engine per case, seed 7,
+// kept results, and one engine per 1.5 GiB of free memory above the 4 GiB reserve (at most 6).
+// --set changes one environment setting for the workers (an A/B run); the table at the end shows each case against
+// the stored baseline. --wall-clock runs the 150 ms engine with one shared world instead.
+const SET_KEYS: string[] = [];
+if (import.meta.main) {
+  const argv = process.argv.slice(2), env = process.env;
+  const value = (flag: string) => { const i = argv.indexOf(flag); return i >= 0 ? argv.splice(i, 2)[1] : undefined; };
+  const has = (flag: string) => { const i = argv.indexOf(flag); if (i < 0) return false; argv.splice(i, 1); return true; };
+  for (let set = value('--set'); set !== undefined; set = value('--set')) {
+    const at = set.indexOf('=');
+    if (at < 1) throw new Error(`--set needs KEY=value, got ${set}`);
+    env[set.slice(0, at)] = set.slice(at + 1);
+    SET_KEYS.push(set.slice(0, at));
+  }
+  // --seeds 7,8,9 runs the same selection once for each seed and prints one row per case: how many seeds pass and the
+  // tick count at each. A case that passes at some seeds and fails at others depends on a random roll it cannot recover from.
+  const seeds = value('--seeds');
+  if (seeds) {
+    const list = seeds.split(',').map(Number);
+    if (!list.length || list.some(n => !Number.isSafeInteger(n))) throw new Error(`--seeds needs integers, got ${seeds}`);
+    const table = new Map<string, string[]>();
+    for (const one of list) {
+      const out = `.practice/aio-bench/seed-${one}.json`;
+      const child = Bun.spawnSync(['bun', import.meta.path, ...argv, '--seed', String(one)], { cwd: root, env: { ...env, BENCH_OUT: out }, stdout: 'ignore', stderr: 'inherit', windowsHide: true });
+      if (child.exitCode !== 0 && child.exitCode !== 1) throw new Error(`seed ${one}: bench exited with code ${child.exitCode}`);
+      for (const r of JSON.parse(readFileSync(resolve(root, out), 'utf8')).rows as { case: string; ok: boolean; ledgerTicks: number[] }[]) {
+        table.set(r.case, [...(table.get(r.case) ?? []), r.ok ? String(r.ledgerTicks.at(-1) ?? '?') : 'FAIL']);
+      }
+    }
+    const rows = [...table].sort(([a], [b]) => a.localeCompare(b)).map(([key, cells]) => [key, `${cells.filter(c => c !== 'FAIL').length}/${list.length}`, ...cells]);
+    const head = ['case', 'pass', ...list.map(n => `seed ${n}`)];
+    const width = head.map((h, i) => Math.max(h.length, ...rows.map(r => (r[i] ?? '').length)));
+    const line = (cells: string[]) => cells.map((c, i) => (i === 0 ? c.padEnd(width[i]!) : c.padStart(width[i]!))).join('  ');
+    console.log([line(head), line(width.map(w => '-'.repeat(w))), ...rows.map(line)].join('\n'));
+    const weak = rows.filter(r => r[1] !== `${list.length}/${list.length}`).map(r => `${r[0]} ${r[1]}`);
+    console.log(weak.length ? `\nnot passing at every seed: ${weak.join(', ')}` : `\nevery case passes at every seed`);
+    process.exit(weak.length ? 1 : 0);
+  }
+  const seed = value('--seed'), parallel = value('--parallel');
+  if (has('--smoke')) env.BENCH_SMOKE = '1';
+  if (has('--all')) env.BENCH_ALL = '1';
+  if (has('--save-baseline')) env.BENCH_SAVE_BASELINE = '1';
+  if (has('--no-keep')) env.BENCH_CACHE = '0';
+  if (has('--coverage')) env.BENCH_COVERAGE_ONLY = '1';
+  const wallClock = has('--wall-clock') || env.BENCH_LOCKSTEP === '0';
+  if (argv.length > 1 || argv[0]?.startsWith('--')) throw new Error(`unknown arguments: ${argv.join(' ')}`);
+  if (argv[0]) env.BENCH_ONLY = argv[0];
+  if (wallClock) { env.BENCH_LOCKSTEP = '0'; env.BENCH_FRESH ??= '0'; }
+  else {
+    env.BENCH_LOCKSTEP = '1';
+    env.BENCH_FRESH ??= '1';
+    env.BENCH_SEED = seed ?? env.BENCH_SEED ?? '7';
+    if (env.BENCH_FRESH === '1') env.BENCH_PARALLEL = parallel ?? env.BENCH_PARALLEL ?? String(Math.max(1, Math.min(6, Math.floor((freemem() / 2 ** 30 - 4) / 1.5))));
+  }
+}
+
+const RUNS = Number(process.env.BENCH_RUNS ?? 1);
+const TIMEOUT = Number(process.env.BENCH_TIMEOUT_MS ?? 600_000);
+const CONCURRENCY = Math.max(1, Number(process.env.BENCH_CONCURRENCY ?? 1));
+const ONLY = process.env.BENCH_ONLY ? new RegExp(process.env.BENCH_ONLY) : undefined;
+const OUT = process.env.BENCH_OUT ?? '.practice/aio-bench/last.json';
+// BENCH_LOCKSTEP=1 runs the lockstep engine; BENCH_SEED (default 1) seeds its random rolls from each bench login.
+const LOCKSTEP = process.env.BENCH_LOCKSTEP === '1';
+const SEED = Number(process.env.BENCH_SEED ?? 1);
+// BENCH_FRESH=1 starts a new engine for each case, so one case cannot change the world the next case meets.
+// BENCH_TRACE=<dir> writes the lockstep engine's per-tick world trace for each case there (needs BENCH_FRESH=1).
+const FRESH = process.env.BENCH_FRESH === '1';
+// BENCH_PARALLEL=<n> (with BENCH_FRESH=1) runs n cases at once, each on its own engine and ports. One case uses
+// about 1.5 GB; the cases share no world, so their ticks stay the same as in a serial run.
+const PARALLEL = Math.max(1, Number(process.env.BENCH_PARALLEL ?? 1));
+const SLOT_PORT = Number(process.env.BENCH_PORT_BASE ?? 21000);
+const TRACE_DIR = process.env.BENCH_TRACE;
+
+// Kept results: a lockstep case on a fresh engine with one seed gives the same row each time, so the row is stored
+// under a hash of everything that can change it: the seed, the case, its preset, the Q_* environment, the vendor
+// patch, and the content of the worker script with every file it imports by a relative path. A data file a worker
+// reads at run time (knowledge/, vendor content) is not in the hash: use BENCH_CACHE=0 after such a change.
+const CACHE = FRESH && LOCKSTEP && process.env.BENCH_CACHE !== '0';
+const CACHE_DIR = '.practice/aio-bench/cache';
+function importClosure(entry: string, seen = new Set<string>()): Set<string> {
+  const file = resolve(root, entry);
+  if (seen.has(file) || !existsSync(file)) return seen;
+  seen.add(file);
+  const text = readFileSync(file, 'utf8');
+  for (const m of text.matchAll(/(?:from|import)\s*\(?\s*['"](\.{1,2}\/[^'"]+)['"]/g)) {
+    const base = resolve(dirname(file), m[1]!);
+    for (const candidate of [base, `${base}.ts`, join(base, 'index.ts')]) {
+      if (existsSync(candidate) && !candidate.endsWith(dirname(candidate))) { if (/\.(ts|js|json)$/.test(candidate)) importClosure(candidate, seen); break; }
+    }
+  }
+  return seen;
+}
+function caseHash(c: BenchCase): string {
+  let worker = c.script;
+  const category = /aio-([a-z]+)\.ts$/.exec(c.script)?.[1];
+  if (category) { try { worker = resolveAioStep(category, c.scriptArgs).script; } catch { /* a dispatcher-only case hashes the dispatcher */ } }
+  const h = createHash('sha256');
+  h.update(JSON.stringify({ seed: SEED, key: c.key, script: c.script, args: c.scriptArgs, preset: c.presetConfig ?? PRESETS[c.preset], runs: RUNS,
+    env: Object.entries(process.env).filter(([k]) => k.startsWith('Q_') || k === 'SIM_BUSY_MS' || SET_KEYS.includes(k)).sort() }));
+  h.update(readFileSync(resolve(root, 'patches/rs-sdk-working.patch')));
+  for (const file of [...new Set([...importClosure(c.script), ...importClosure(worker)])].sort()) { h.update(file.slice(root.length)); h.update(readFileSync(file)); }
+  return h.digest('hex').slice(0, 32);
+}
+
+function pinLoopbackToIpv4(envPath: string, enginePort = 8888) {
+  const text = readFileSync(envPath, 'utf8');
+  const next = text
+    .replace(/^SERVER=.*$/gm, `SERVER=127.0.0.1:${enginePort}`)
+    .replace(/^GATEWAY_URL=.*$/gm, 'GATEWAY_URL=ws://127.0.0.1:7780');
+  if (next !== text) writeFileSync(envPath, next);
+}
+
+function benchPlanners() {
+  const rows: unknown[] = [];
+  const time = (label: string, fn: () => unknown) => {
+    const t0 = performance.now();
+    const out = fn();
+    const ms = performance.now() - t0;
+    rows.push({ label, ms: Number(ms.toFixed(2)), ok: true });
+    return out;
+  };
+
+  const bank = { 383: 100, 2357: 10, 1607: 10, 1592: 1, 436: 15, 438: 15, 1593: 20, 1609: 20 };
+  time('discoverBankedProduction', () => discoverBankedProduction({ Cooking: 80, Crafting: 50, Fletching: 60, Smithing: 40 }, bank, { reserve: 5 }));
+  for (const skill of ['firemaking', 'woodcutting', 'fishing', 'cooking', 'agility', 'thieving', 'prayer', 'runecraft']) {
+    time(`planProgressiveSkiller:${skill}`, () => planProgressiveSkiller(skill, 1, 99));
+  }
+  time('planAutoFighterBand:chicken', () => planAutoFighterBand({ Attack: 1, Strength: 1, Defence: 1, Hitpoints: 10 }));
+  time('planAutoFighterBand:cow', () => planAutoFighterBand({ Attack: 20, Strength: 20, Defence: 20, Hitpoints: 25 }));
+  time('planAutoFighterBand:giant', () => planAutoFighterBand({ Attack: 40, Strength: 40, Defence: 40, Hitpoints: 42 }));
+  time('assessBossReadiness:kbd', () => assessBossReadiness('kbd', { skills: { Attack: 99, Defence: 40 }, ownedItems: { 1333: 1 } }));
+  time('assessBossReadiness:trawler', () => assessBossReadiness('trawler', { skills: { Fishing: 20 }, ownedItems: { 954: 1, 1941: 30, 583: 1 } }));
+  time('pvpCombatBracket:126@20', () => pvpCombatBracket({ Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Prayer: 99, Ranged: 99, Magic: 99 }, 20));
+  time('assessTribridReadiness:empty', () => assessTribridReadiness({}));
+  time('assessQuestReadiness:cook', () => assessQuestReadiness('cook', { 1944: 1, 1927: 1, 1933: 1 }));
+  time('prioritizeQuestsForAccount:73quests', () => prioritizeQuestsForAccount({ 1944: 1, 1927: 1, 1933: 1 }, new Set()));
+  time('planGeRestockOrders', () => planGeRestockOrders({
+    actor: 'OreElse', server: 'rs-sdk-demo.fly.dev', goalPrefix: 'pvp-restock',
+    shortfalls: { 385: { quantity: 20, limitPrice: 1200 }, 1333: { quantity: 1, limitPrice: 30000 } },
+    coinsAvailable: 30000, coinReserve: 1000,
+  }));
+  time('planFleetDistribution', () => planFleetDistribution(
+    [{ account: 'Moneyshot', held: 100000, reserve: 10000 }],
+    [{ account: 'OreElse', held: 5000, target: 45000 }, { account: 'Shaftmaker', held: 0, target: 60000 }],
+  ));
+  console.log(`AIO_BENCH_PLANNERS ${JSON.stringify({ rows })}`);
+  return rows;
+}
+
+// The stored baseline: the tick count of each case at one seed, written by --save-baseline. A run prints each case
+// beside it, so a change shows as a tick difference with no file to compare by hand.
+const baselineFile = () => `.practice/aio-bench/baseline-seed${SEED}.json`;
+type Row = { case: string; ok: boolean; ledgerTicks: number[]; rivalTicks: number | null; result: string | null };
+function report(rows: Row[]) {
+  const baseline: Record<string, { ok: boolean; ticks: number | null }> = existsSync(baselineFile()) ? JSON.parse(readFileSync(baselineFile(), 'utf8')) : {};
+  const ticks = (r: Row) => r.ledgerTicks.at(-1) ?? null;
+  const lines = [...rows].sort((a, b) => a.case.localeCompare(b.case)).map(r => {
+    const now = ticks(r), base = baseline[r.case];
+    const delta = !r.ok ? 'FAIL' : !base ? 'new' : !base.ok ? 'was failing' : now === null || base.ticks === null ? '' : now === base.ticks ? '=' : `${now < base.ticks ? '' : '+'}${now - base.ticks} (${(((now - base.ticks) / base.ticks) * 100).toFixed(1)}%)`;
+    return [r.case, r.ok ? 'pass' : 'FAIL', now ?? '-', base?.ticks ?? '-', delta, r.rivalTicks ?? '-'].map(String);
+  });
+  const head = ['case', 'result', 'ticks', 'baseline', 'change', 'rival'];
+  const width = head.map((h, i) => Math.max(h.length, ...lines.map(l => l[i]!.length)));
+  const line = (cells: string[]) => cells.map((c, i) => (i === 0 ? c.padEnd(width[i]!) : c.padStart(width[i]!))).join('  ');
+  console.log(['', line(head), line(width.map(w => '-'.repeat(w))), ...lines.map(line)].join('\n'));
+  const both = rows.filter(r => r.ok && baseline[r.case]?.ok && ticks(r) !== null && baseline[r.case]!.ticks !== null);
+  if (both.length) {
+    const now = both.reduce((n, r) => n + ticks(r)!, 0), base = both.reduce((n, r) => n + baseline[r.case]!.ticks!, 0);
+    console.log(`\n${both.length} cases pass in both: ${now} ticks against baseline ${base} (${now <= base ? '' : '+'}${now - base}, ${(((now - base) / base) * 100).toFixed(2)}%)${SET_KEYS.length ? ` with ${SET_KEYS.map(k => `${k}=${process.env[k]}`).join(' ')}` : ''}`);
+  }
+  const broke = rows.filter(r => !r.ok && baseline[r.case]?.ok).map(r => r.case);
+  if (broke.length) console.log(`BROKEN against baseline: ${broke.join(', ')}`);
+  if (process.env.BENCH_SAVE_BASELINE === '1') {
+    for (const r of rows) baseline[r.case] = { ok: r.ok, ticks: ticks(r) };
+    writeFileSync(baselineFile(), JSON.stringify(Object.fromEntries(Object.entries(baseline).sort()), null, 1));
+    console.log(`baseline saved: ${rows.length} cases in ${baselineFile()}`);
+  }
+}
+
+async function runCase(c: BenchCase, bot: string, enginePort = 8888) {
+  const t0 = Date.now();
+  // proveInProcess checks the START line against the named preset's tile, so a case fixture is registered under its own name.
+  const presetName = c.presetConfig ? `bench:${c.key}` : c.preset;
+  if (c.presetConfig) PRESETS[presetName] = c.presetConfig;
+  const r = await proveInProcess(
+    { bot, script: c.script, runs: RUNS, preset: presetName, scriptArgs: c.scriptArgs, pass: c.pass, timeoutMs: c.timeoutMs ?? TIMEOUT,
+      ...(c.companions ? { companions: c.companions.map(k => ({ suffix: k.suffix, preset: k.preset })) } : {}) },
+    {
+      prepare: async (name, preset) => {
+        const account = await createBot(name);
+        // A partner account is `<bot><suffix>`; it takes its own start state, never the main account's fixture.
+        const partner = c.companions?.find(k => name.endsWith(k.suffix) && preset === k.preset);
+        const conf = partner ? partner.presetConfig ?? PRESETS[partner.preset] : c.presetConfig ?? PRESETS[preset!];
+        if (!conf) throw new Error(`unknown preset ${preset}`);
+        await applyPreset(name, conf);
+        pinLoopbackToIpv4(account.envPath, enginePort);
+      },
+      run: async (script, name, timeoutMs, args = []) => {
+        const proc = Bun.spawn(['bun', resolve(script), name, ...args], { cwd: root, stdout: 'pipe', stderr: 'pipe', windowsHide: true, env: { ...process.env } }); // Bun.spawn does not pass env set at run time unless given
+        // An AIO dispatcher owns a worker child; a timeout must stop the whole tree or the worker keeps its session.
+        const timer = setTimeout(() => {
+          if (process.platform === 'win32') Bun.spawn(['taskkill', '/PID', String(proc.pid), '/T', '/F'], { stdout: 'ignore', stderr: 'ignore', windowsHide: true });
+          else proc.kill();
+        }, timeoutMs);
+        const [out, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
+        const exitCode = await proc.exited;
+        clearTimeout(timer);
+        return { stdout: out + err, exitCode };
+      },
+      cleanup: async (name) => {
+        rmSync(join(rsSdkRoot(), 'bots', name), { recursive: true, force: true });
+      },
+    },
+  );
+  const elapsedMs = Date.now() - t0;
+  const ok = r.passes === RUNS;
+  const tail = r.results.map(x => x.tail).join('\n---\n');
+  const ledgerTicks = [...tail.matchAll(/^LEDGER ticks=(\d+)/gm)].map(x => Number(x[1]));
+  const result = tail.split(/\r?\n/).filter(l => /^RESULT /.test(l)).at(-1) ?? null;
+  const row = { case: c.key, ok, passes: r.passes, runs: RUNS, elapsedMs, ledgerTicks, rivalTicks: rivalTicks(c.key) ?? null, result: result?.slice(0, 400) ?? null };
+  console.log(`AIO_BENCH_RESULT ${JSON.stringify(row)}`);
+  if (!ok) console.log(`--- tail ${c.key} ---\n${tail.slice(-1500)}\n--- end tail ---`);
+  return row;
+}
+
+async function main() {
+  const prevRandom = process.env.RANDOM_EVENTS;
+  process.env.RANDOM_EVENTS = '0';
+  process.env.DEMO_OK = '';
+
+  mkdirSync(dirname(OUT), { recursive: true });
+  for (const [path, job] of Object.entries(BENCH_JOB_FILES)) writeFileSync(path, JSON.stringify(job, null, 2));
+
+  const coverage = benchCoverage();
+  console.log(`AIO_BENCH_COVERAGE ${JSON.stringify(coverage)}`);
+  if (process.env.BENCH_COVERAGE_ONLY) return;
+  benchPlanners();
+
+  // BENCH_SMOKE=1 runs the short smoke set. BENCH_ALL=1 also runs the cases marked `known` (they cannot pass today).
+  const smoke = process.env.BENCH_SMOKE === '1' ? new Set(SMOKE_KEYS) : undefined;
+  const cases = benchCases().filter(c => (!ONLY || ONLY.test(c.key)) && (!smoke || smoke.has(c.key)) && (process.env.BENCH_ALL === '1' || !c.known));
+  console.log(`AIO_BENCH start cases=${cases.length} runs=${RUNS} concurrency=${CONCURRENCY} timeoutMs=${TIMEOUT} ${LOCKSTEP ? `lockstep seed=${SEED}` : 'tickMs=150'} xpRate=25`);
+  if (LOCKSTEP) process.env.SIM_LOCKSTEP = '1'; // bench bots inherit it and acknowledge each tick
+  // A fresh-engine slot owns ports SLOT_PORT+10k .. +3 and its own market database, beside the shared stack's 8888.
+  const slotPort = (slot: number) => SLOT_PORT + slot * 10;
+  const start = (label?: string, slot?: number) => startStack({ tickMs: 150, xpRate: 25, readyTimeoutMs: 120_000,
+    ...(slot === undefined ? {} : { instance: `aiobench-${slot}`, gateway: false as const, ports: { engine: slotPort(slot), gateway: slotPort(slot) + 1 },
+      engineEnv: { WEB_MANAGEMENT_PORT: String(slotPort(slot) + 2), NODE_PORT: String(slotPort(slot) + 3), GE_DATABASE: `data/market-aiobench-${slot}.sqlite` } }),
+    ...(LOCKSTEP ? { lockstep: { seed: SEED, anchor: '^aiob', ...(TRACE_DIR && label ? { traceFile: resolve(TRACE_DIR, `${label.replace(/[^a-z0-9-]/gi, '_')}.trace`) } : {}) } } : {}) });
+  if (TRACE_DIR) mkdirSync(TRACE_DIR, { recursive: true });
+  if (FRESH && CONCURRENCY !== 1) throw new Error('BENCH_FRESH=1 uses BENCH_PARALLEL, not BENCH_CONCURRENCY');
+  if (!FRESH && PARALLEL !== 1) throw new Error('BENCH_PARALLEL needs BENCH_FRESH=1');
+  let stack = FRESH ? null : await start();
+  const rows: Awaited<ReturnType<typeof runCase>>[] = [];
+  try {
+    let next = 0;
+    const worker = async (slot: number) => {
+      for (;;) {
+        const i = next++;
+        const c = cases[i];
+        if (!c) return;
+        let own: Awaited<ReturnType<typeof start>> | null = null;
+        const kept = CACHE ? join(CACHE_DIR, `${caseHash(c)}.json`) : null;
+        try {
+          if (kept && existsSync(kept)) {
+            const row = { ...JSON.parse(readFileSync(kept, 'utf8')), kept: true };
+            console.log(`AIO_BENCH_RESULT ${JSON.stringify(row)}`);
+            rows.push(row);
+          } else {
+            if (FRESH) own = await start(c.key, slot);
+            const row = await runCase(c, FRESH ? 'aiobf' : `aiob${i}`, FRESH ? slotPort(slot) : 8888);
+            if (kept && row.ok) { mkdirSync(CACHE_DIR, { recursive: true }); writeFileSync(kept, JSON.stringify(row)); } // a failure is run again each time
+            rows.push(row);
+          }
+        }
+        catch (e) { const row = { case: c.key, ok: false, passes: 0, runs: RUNS, elapsedMs: 0, ledgerTicks: [], rivalTicks: null, result: `bench error ${String((e as Error)?.message ?? e).slice(0, 300)}` }; console.log(`AIO_BENCH_RESULT ${JSON.stringify(row)}`); rows.push(row); }
+        await own?.stop();
+        writeFileSync(OUT, JSON.stringify({ coverage, concurrency: CONCURRENCY, runs: RUNS, rows }, null, 2));
+      }
+    };
+    await Promise.all(Array.from({ length: FRESH ? PARALLEL : CONCURRENCY }, (_, slot) => worker(slot)));
+  } finally {
+    await stack?.stop();
+    if (prevRandom === undefined) delete process.env.RANDOM_EVENTS;
+    else process.env.RANDOM_EVENTS = prevRandom;
+  }
+  const passed = rows.filter(r => r.ok).length;
+  console.log(`AIO_BENCH_SUMMARY ${JSON.stringify({ ok: passed === rows.length, cases: rows.length, passed, failed: rows.filter(r => !r.ok).map(r => r.case), routes: coverage.routes, covered: coverage.covered })}`);
+  report(rows as Row[]);
+  process.exit(passed === rows.length ? 0 : 1);
+}
+
+if (import.meta.main) {
+  main().catch(e => {
+    console.error(`AIO_BENCH_ERROR ${String(e?.stack ?? e)}`);
+    process.exit(1);
+  });
+}

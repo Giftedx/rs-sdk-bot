@@ -11,7 +11,9 @@ const obj=pack('obj'),loc=pack('loc');
 const id=(name:string)=>{const n=obj.get(name);if(n===undefined)throw Error('unknown native cook item '+name);return n;};
 export type Heat='range'|'fire';
 export interface CookRecipe{name:string;raw:number;products:number[];burnt?:number;additional?:number;noAdditionalSuccess:boolean;level:number;xp:number;range:boolean;fire:boolean;karambwanChoice?:1|2;source:string}
+let cachedCookingRecipes:{recipes:CookRecipe[];blocked:{name:string;reason:string}[]}|undefined;
 export function cookingRecipes(){
+ if(cachedCookingRecipes)return cachedCookingRecipes;
  const file='scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow',text=readFileSync(resolve(content,file),'utf8'),recipes:CookRecipe[]=[],blocked:{name:string;reason:string}[]=[];
  for(const m of text.matchAll(/^\[([^\]]+)\]\r?\n([^\[]*)/gm)){
   const name=m[1]!,body=m[2]!,field=(k:string)=>body.match(new RegExp('^data='+k+',(.+)$','m'))?.[1]?.trim();
@@ -23,7 +25,8 @@ export function cookingRecipes(){
   const optional=(v:string|undefined)=>v&&v!=='null'?id(v):undefined;
   recipes.push({name,raw:id(raw),products,burnt:field('successchance')==='1,1'?undefined:optional(field('burnt')),additional:optional(field('additional')),noAdditionalSuccess:['half_baked_batta','half_baked_bowl','half_baked_crunchy'].includes(product),level:Number(field('levelrequired')??0),xp:Number(field('experience')??0),range:!field('cantcookmessage_range'),fire:!field('cantcookmessage_fire'),...(raw==='tbwt_raw_karambwan'?{karambwanChoice:product==='tbwt_cooked_karambwan'?2 as const:1 as const}:{}),source:'vendor/rs-sdk/server/content/'+file});
  }
- return{recipes,blocked};
+ cachedCookingRecipes={recipes,blocked};
+ return cachedCookingRecipes;
 }
 let heatSources:Map<number,Heat>|undefined;
 export function nativeHeatSources():ReadonlyMap<number,Heat>{

@@ -1,5 +1,5 @@
 import {installGameWebSocketProxy} from './websocket-proxy';
-import { existsSync, mkdirSync, realpathSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
 import type { BotActions } from '../../../vendor/rs-sdk/sdk/actions';
@@ -13,6 +13,8 @@ import { planLockDir, withPlanWrite } from './plan-lock';
 import { isLocalServer } from './localserver';
 import { ownedAccounts, tradePartners, recordOwnedAccount, tradeRefusal } from './tradeguard';
 import { ServerProt } from '../../../vendor/rs-sdk/server/webclient/src/io/ServerProt';
+import { ClientProt } from '../../../vendor/rs-sdk/server/webclient/src/io/ClientProt';
+import { tickWaits } from './tick-stream';
 import { setEquipmentObserved } from './container-observation';
 import { beginSessionAttempt, lifecycleOwner, type SessionAttempt } from './session-lifecycle';
 import { assertSpentRecoveryConnection, type RecoveryConnectionAdmission } from './session-recovery-permit';
@@ -29,6 +31,7 @@ export interface ClientLike {
     setOnGameTickCallback(cb: (() => void) | null): void;
     pumpPackets?(): Promise<void>;
     flush?(): void;
+    writeOpcode?(opcode: number): void;
     getMaxMessageLength?(): number;
     ifMutable?(id: number): unknown;
     ptype0?: number;
@@ -128,6 +131,38 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
 
     const originalPacketPump = client.pumpPackets;
     let pumpingPackets = false, pendingTicks = 0;
+    // Lockstep practice engine (SIM_LOCKSTEP=1): the engine runs its next tick when every client has sent bytes after
+    // this one, so any byte is an acknowledgement. From the first game tick the client's flush is held: the actions of
+    // one tick and a closing NO_TIMEOUT leave in one write. That write goes out on a macrotask once the script waits
+    // for a tick again: a pending waitTicks or waitUntil, a pending wait action, or an SDK state waiter above the
+    // lowest listener count seen. A script that works off the tick clock (a world load, a route search) has none of
+    // these, so it holds the tick until it waits. SIM_BUSY_MS (default 2000) bounds the hold, for a script that ends
+    // without a wait. SIM_ACK_FILE receives one line per held tick and a total at the end.
+    const lockstep = process.env.SIM_LOCKSTEP === '1';
+    const busyMs = Number(process.env.SIM_BUSY_MS ?? 2000);
+    const ackFile = process.env.SIM_ACK_FILE;
+    const ackStat = { ticks: 0, held: 0, heldMs: 0, capped: 0 };
+    const sendNow = client.flush?.bind(client);
+    let flushHeld = false, ackGeneration = 0, stateWaiters = 0, stateWaitersLow = Infinity;
+    const holdFlush = () => { if (!flushHeld && sendNow) { flushHeld = true; client.flush = () => {}; } };
+    const releaseFlush = () => { if (flushHeld) { flushHeld = false; delete (client as { flush?: unknown }).flush; sendNow?.(); } };
+    const acknowledgeTick = () => {
+        const generation = ++ackGeneration, since = performance.now();
+        let turns = 0;
+        const check = () => {
+            if (stopped || generation !== ackGeneration) return;
+            stateWaitersLow = Math.min(stateWaitersLow, stateWaiters);
+            const waiting = tickWaits.active > 0 || waitLeft > 0 || stateWaiters > stateWaitersLow;
+            const busy = (running && waitLeft === 0) || !waiting;
+            if (busy && performance.now() - since < busyMs) { if (turns++ < 20) setImmediate(check); else setTimeout(check, 1); return; }
+            const held = performance.now() - since;
+            ackStat.ticks++; if (busy) ackStat.capped++; if (held > 2) { ackStat.held++; ackStat.heldMs += held; }
+            if (ackFile && held > 2) appendFileSync(ackFile, `ACK tick=${tick} waits=${tickWaits.active} state=${stateWaiters}/${stateWaitersLow} running=${running} held=${held.toFixed(0)}ms${busy ? ' CAPPED' : ''}\n`);
+            client.writeOpcode?.(ClientProt.NO_TIMEOUT);
+            sendNow?.();
+        };
+        setImmediate(check);
+    };
     const publishTick = () => {
         if (stopped) return;
         try {
@@ -140,6 +175,7 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
         } catch (e) {
             console.error('[inprocess] tick handler error', e);
         }
+        if (lockstep) { holdFlush(); acknowledgeTick(); }
     };
     const onGameTick = () => {
         // PLAYER_INFO can precede interface packets in the same socket batch.
@@ -199,12 +235,19 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             };
             const max = client.getMaxMessageLength?.();
             if (max) deliver({ type: 'sdk_info', maxMessageLength: max });
+            if (lockstep && typeof s.onStateUpdate === 'function') {
+                const subscribe = s.onStateUpdate.bind(s);
+                s.onStateUpdate = (listener: unknown) => { stateWaiters++; const off = subscribe(listener); let live = true; return () => { if (live) { live = false; stateWaiters--; } return off(); }; };
+            }
             if (drainPacketBatch) client.pumpPackets = drainPacketBatch;
             client.setOnGameTickCallback(onGameTick);
         },
         stop(reason: string) {
             if (stopped) return;
             stopped = true;
+            if (lockstep && ackFile) appendFileSync(ackFile, `ACK_STAT ${JSON.stringify(ackStat)}
+`);
+            releaseFlush();
             setEquipmentObserved(client, false);
             if (trackedMutable && client.ifMutable === trackedMutable) client.ifMutable = originalMutable;
             client.setOnGameTickCallback(null);

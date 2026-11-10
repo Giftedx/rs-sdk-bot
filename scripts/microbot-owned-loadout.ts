@@ -1,4 +1,5 @@
 // Finite owned bank kit; adapted QoL loadEquipment/loadInventory behavior.
+import {resolve} from 'node:path';
 import {readFileSync,existsSync} from 'node:fs';
 import {openBot,settle} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
@@ -10,7 +11,7 @@ import {withdrawFireOwned} from './gather-fire-giants';
 
 type Count={id:number;count:number};type Worn=Count&{slot:number};
 export type OwnedKit={bank:{x:number;z:number;level:number};pack:Count[];wear:Worn[];cap:number;maximumMoves:number};
-const content='vendor/rs-sdk/server/content/';
+const content=resolve(import.meta.dir,'../vendor/rs-sdk/server/content')+'/';
 const whole=(n:unknown,min=0,max=2147483647)=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=min&&n<=max;
 const canonical=(a:readonly Count[])=>Object.entries(a.reduce((m,i)=>(m[i.id]=(m[i.id]??0)+i.count,m),{}as Record<number,number>)).map(([id,count])=>({id:Number(id),count})).sort((a,b)=>a.id-b.id);
 const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
@@ -20,7 +21,7 @@ export function nativeKitItem(id:number){
  const cached=itemCache.get(id);if(cached)return cached;const item=readNativeKitItem(id);itemCache.set(id,item);return item;
 }
 function readNativeKitItem(id:number){
- const items=JSON.parse(readFileSync('knowledge/items.json','utf8'))as {id:number;name:string;debugname:string;src:string;members:boolean}[];
+ const items=JSON.parse(readFileSync(resolve(import.meta.dir,'../knowledge/items.json'),'utf8'))as {id:number;name:string;debugname:string;src:string;members:boolean}[];
  const packed=readFileSync(content+'pack/obj.pack','utf8').split(/\r?\n/).find(l=>l.startsWith(id+'='))?.split('=')[1],noted=!!packed?.startsWith('cert_');
  const item=items.find(i=>noted?i.debugname===packed!.slice(5):i.id===id);
  if(!item||!whole(id))throw Error('unknown native kit item '+id);

@@ -149,7 +149,7 @@ export async function runTaiBwoWannaiTrio(raw:Session,o:TrioOrder,requestStop:()
  const guard=()=>{if(over()||gear(raw)!==kit||raw.sdk.getState()?.nearbyPlayers.length)throw Error('Trio stopped, original life/kit/owner/isolated area changed at '+phase);targetGuard();};
  const s=trioOwnedActions(raw,guard);
  const q=await openQuest({session:s,cap:o.cap,stop:over,reservedFood:{379:1},food:[379],eatAt:35});
- const {default:ClientLocType}=await import(resolve('vendor/rs-sdk/server/webclient/src/config/LocType.ts'));guard();
+ const {default:ClientLocType}=await import(resolve(import.meta.dir,'../../vendor/rs-sdk/server/webclient/src/config/LocType.ts'));guard();
  const logCrossings:Awaited<ReturnType<typeof trioLogCrossing>>[]=[];
  const progress=(id:320|321):number=>client.var?.[id];
  const add=(d:Record<number,number>)=>{for(const[id,n]of Object.entries(d))ledger[+id]=(ledger[+id]??0)+n;};

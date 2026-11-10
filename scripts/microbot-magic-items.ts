@@ -1,6 +1,7 @@
 // Behaviour source: pinned Microbot-Hub; BSD notice: research/microbot-ports-LICENSE.txt.
 // Finite inventory batch: bun scripts/microbot-magic-items.ts <account> <low-alch|high-alch|superheat:metal|enchant:debugname> [target-debugname-or-dash] [count=1] [cap=200]
 // Native recipes own IDs and conversion rules. Stage inputs and runes; this worker never buys or travels.
+import {resolve} from 'node:path';
 import {readFileSync,existsSync} from 'node:fs';
 import {openBot,finish} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
@@ -8,7 +9,7 @@ import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {componentId} from '../packages/core/src/logout';
 import {watchProductionLife} from './microbot-c-lifetime';
 import {objId} from './measure/floor-bands';
-const content='vendor/rs-sdk/server/content/scripts/';
+const content=resolve(import.meta.dir,'../vendor/rs-sdk/server/content/scripts')+'/';
 export interface Recipe {name:string;spell:string;level:number;smithing:number;target:number;product:number;inputs:Record<number,number>;output:number;members:boolean}
 function blocks(text:string){return [...text.matchAll(/^\[([^\]]+)\]\r?\n([^\[]*)/gm)].map(m=>({name:m[1]!,body:m[2]!}));}
 export function itemMagicRecipe(mode:string,targetName?:string):Recipe{
@@ -35,7 +36,7 @@ export function itemMagicRecipe(mode:string,targetName?:string):Recipe{
  if(secondary)inputs[objId(secondary)]=secondaryCount;
  let output=1;
  if(product==='coins'){
-  const items=JSON.parse(readFileSync('knowledge/items.json','utf8')) as {debugname:string;cost:number}[];
+  const items=JSON.parse(readFileSync(resolve(import.meta.dir,'../knowledge/items.json'),'utf8')) as {debugname:string;cost:number}[];
   const cost=items.find(i=>i.debugname===input)?.cost;if(cost===undefined)throw Error('unknown native alchemy value');
   output=Math.max(1,Math.floor(cost*(mode==='high-alch'?6:4)/10));
  }

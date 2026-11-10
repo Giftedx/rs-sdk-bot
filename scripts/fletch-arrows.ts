@@ -1,3 +1,4 @@
+import {resolve} from 'node:path';
 import {readFileSync} from 'node:fs';
 import {BotActions} from '../vendor/rs-sdk/sdk/actions';
 import {productionStopRequested} from './microbot-c-lifetime';
@@ -129,7 +130,7 @@ type ArrowProfile={metal:ArrowMetal;tip:number;product:number;units:number;level
 const arrowProfiles=new Map<ArrowMetal,ArrowProfile>();
 export function nativeArrowProfile(metal:ArrowMetal):ArrowProfile{
  if(!ARROW_METALS.includes(metal))throw Error('unsupported arrow metal');const cached=arrowProfiles.get(metal);if(cached)return cached;
- const base='vendor/rs-sdk/server/content/',text=readFileSync(base+'scripts/skill_fletching/configs/arrows/arrows.dbrow','utf8'),body=text.split('[fletching_'+metal+'_arrow]')[1]?.split('\n[')[0];if(!body)throw Error('native arrow recipe absent');
+ const base=resolve(import.meta.dir,'../vendor/rs-sdk/server/content')+'/',text=readFileSync(base+'scripts/skill_fletching/configs/arrows/arrows.dbrow','utf8'),body=text.split('[fletching_'+metal+'_arrow]')[1]?.split('\n[')[0];if(!body)throw Error('native arrow recipe absent');
  const field=(key:string)=>body.match(new RegExp('^data='+key+',(.+)$','m'))?.[1]?.trim(),item=field('item')!,[product,units]=field('product')!.split(','),ids=new Map(readFileSync(base+'pack/obj.pack','utf8').split(/\r?\n/).map(l=>{const i=l.indexOf('=');return[l.slice(i+1),Number(l.slice(0,i))];})),obj=readFileSync(base+'scripts/skill_fletching/configs/arrows/arrows.obj','utf8').split('['+item+']')[1]?.split('\n[')[0],tipName=obj?.match(/^name=(.+)$/m)?.[1]?.trim();
  const r={metal,tip:ids.get(item)!,product:ids.get(product!)!,units:Number(units),level:Number(field('level')),rawXpPerArrow:Number(field('experience')),tipName:tipName!};if(![r.tip,r.product,r.level,r.rawXpPerArrow].every(n=>Number.isSafeInteger(n)&&n>0)||r.units!==15||!tipName)throw Error('native arrow mapping invalid');arrowProfiles.set(metal,Object.freeze(r));return r;
 }

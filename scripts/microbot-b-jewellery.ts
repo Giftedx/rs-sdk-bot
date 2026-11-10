@@ -12,9 +12,11 @@ const content=resolve(import.meta.dir,'../vendor/rs-sdk/server/content');
 const itemIds=new Map(readFileSync(resolve(content,'pack/obj.pack'),'utf8').split(/\r?\n/).filter(l=>l.includes('=')).map(l=>{const at=l.indexOf('=');return[l.slice(at+1),Number(l.slice(0,at))];}));
 const id=(name:string)=>{const n=itemIds.get(name);if(n===undefined)throw Error('unknown native jewellery item '+name);return n;};
 export interface JewelleryRecipe extends InventoryRecipe{bar:number;shape:'ring'|'necklace'|'amulet'|'silver';slot:number;silverLetter?:'a'|'b'|'c'}
+let cachedJewelleryRecipes:JewelleryRecipe[]|undefined;
 export function jewelleryRecipes():JewelleryRecipe[]{
+ if(cachedJewelleryRecipes)return cachedJewelleryRecipes;
  const path='scripts/skill_crafting/configs/jewellery/jewellery.struct',text=readFileSync(resolve(content,path),'utf8');
- return [...text.matchAll(/^\[([^\]]+)\]\r?\n([^\[]*)/gm)].map((match):JewelleryRecipe=>{
+ cachedJewelleryRecipes=[...text.matchAll(/^\[([^\]]+)\]\r?\n([^\[]*)/gm)].map((match):JewelleryRecipe=>{
   const name=match[1]!,body=match[2]!,param=(key:string)=>body.match(new RegExp('^param='+key+',(.+)$','m'))?.[1]?.trim();
   const product=param('product')!,silver=['unstrung_symbol','unstrung_emblem','silver_sickle'].includes(name),perfect=name.startsWith('perfect_');
   const shape=silver?'silver':name.includes('ring')?'ring':name.includes('necklace')?'necklace':'amulet';
@@ -23,6 +25,7 @@ export function jewelleryRecipes():JewelleryRecipe[]{
   if(slot<0)throw Error('unknown native jewellery gem');
   return{name,product:id(product),inputs:[{id:bar,units:1},...(gem?[{id:id(gem),units:1}]:[])],tools:[id(mould)],skill:'Crafting',level:Number(param('levelrequired')),xp:true,members:gem==='dragonstone'||name==='unstrung_emblem'||name==='silver_sickle',source:'vendor/rs-sdk/server/content/'+path,bar,shape,slot,...silver?{silverLetter:name==='unstrung_emblem'?'a' as const:name==='unstrung_symbol'?'b' as const:'c' as const}:{}};
  });
+ return cachedJewelleryRecipes;
 }
 export function jewelleryMenu(r:JewelleryRecipe,items:Record<number,number>,members:boolean){
  if(r.shape!=='silver')return{component:`crafting_jewelry:${r.shape==='ring'?'rings':r.shape==='necklace'?'necklaces':'amulets'}_inv`,slot:r.slot,option:1};

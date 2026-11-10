@@ -1,5 +1,5 @@
 import {existsSync,readFileSync,writeFileSync,renameSync,mkdirSync,openSync,closeSync,unlinkSync} from 'node:fs';
-import {dirname} from 'node:path';
+import {dirname,resolve} from 'node:path';
 import {openBot,settle,serverFromEnv} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {orderPaths} from './buy-owned-ge-item';
@@ -105,7 +105,7 @@ export async function runGEPlanSession(s:Session,r:GEPricePlan,stop:()=>boolean=
 }
 if(import.meta.main){
  const [actor,file]=process.argv.slice(2);if(!actor||!file)throw Error('usage: microbot-ge-plan.ts actor explicit-plan.json [--finish]');const request=JSON.parse(readFileSync(file,'utf8'))as GEPricePlan;validateGEPlan(request);
- const actual=serverFromEnv(readFileSync('vendor/rs-sdk/bots/'+actor+'/bot.env','utf8'));if(actual!==request.server)throw Error('GE plan server mismatch');
+ const actual=serverFromEnv(readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/bots',actor,'bot.env'),'utf8'));if(actual!==request.server)throw Error('GE plan server mismatch');
  const p=gePlanPaths(request);mkdirSync(p.base,{recursive:true});reclaimGEPlanLock(p.lock);const lock=openSync(p.lock,'wx');writeFileSync(lock,JSON.stringify({pid:process.pid,goal:request.goal}));let s:Session|undefined,stopped=false;process.once('SIGINT',()=>{stopped=true;});process.once('SIGTERM',()=>{stopped=true;});
  try{s=await openBot(actor);process.exitCode=await runGEPlanSession(s,request,()=>stopped,{},process.argv.includes('--finish'));}finally{closeSync(lock);unlinkSync(p.lock);}
 }

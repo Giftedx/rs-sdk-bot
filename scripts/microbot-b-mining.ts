@@ -10,7 +10,9 @@ const pack=(kind:string)=>new Map(readFileSync(resolve(content,'pack',kind+'.pac
 const obj=pack('obj'),loc=pack('loc'),item=(name:string)=>{const n=obj.get(name);if(n===undefined)throw Error('native mining item missing '+name);return n;};
 const configs=(file:string)=>parseConfigs(readFileSync(resolve(content,file),'utf8'),file);
 export interface MiningProfile{name:string;rocks:number[];products:number[];level:number;respawn:number;gemRock:boolean;perfect:boolean;essence:boolean;excludedRocks:string[]}
+let cachedMiningProfiles:MiningProfile[]|undefined;
 export function miningProfiles():MiningProfile[]{
+ if(cachedMiningProfiles)return cachedMiningProfiles;
  const gems=configs('scripts/skill_mining/configs/gem_rock_table.dbrow').flatMap(b=>(b.props.data??[]).filter(v=>v.startsWith('drop,')).map(v=>item(v.split(',')[1]!)));
  const profiles=configs('scripts/skill_mining/configs/mine.dbrow').map(b=>{
   const rows=b.props.data??[],one=(key:string)=>rows.find(v=>v.startsWith(key+','))?.slice(key.length+1),names=rows.filter(v=>v.startsWith('rock,')).map(v=>v.slice(5)),gemRock=b.name==='gem_rock';
@@ -18,7 +20,9 @@ export function miningProfiles():MiningProfile[]{
   const rocks=names.filter(n=>!excludedRocks.includes(n)).map(n=>{const value=loc.get(n);if(value===undefined)throw Error('native mining rock missing '+n);return value;});
   return{name:b.name,rocks,products:gemRock?gems:[item(one('rock_output')!)],level:Number(one('rock_level')),respawn:Number(one('rock_respawnrate')??0),gemRock,perfect:false,essence:b.name==='rune_essence_table',excludedRocks};
  });
- const gold=profiles.find(p=>p.name==='gold_rock_table')!;profiles.push({...gold,name:'perfect_gold_rock_table',products:[item('perfect_gold_ore')],perfect:true});return profiles;
+ const gold=profiles.find(p=>p.name==='gold_rock_table')!;profiles.push({...gold,name:'perfect_gold_rock_table',products:[item('perfect_gold_ore')],perfect:true});
+ cachedMiningProfiles=profiles;
+ return cachedMiningProfiles;
 }
 export const incidentalMiningGems=['uncut_diamond','uncut_ruby','uncut_emerald','uncut_sapphire'].map(item);
 const pickaxes=configs('scripts/skill_mining/configs/pickaxes.obj').filter(b=>/^(bronze|iron|steel|mithril|adamant|rune)_pickaxe$/.test(b.name)).map(b=>({id:item(b.name),level:Number((b.props.param??[]).find(v=>v.startsWith('levelrequire,'))?.split(',')[1]),rate:Number((b.props.param??[]).find(v=>v.startsWith('mining_rate,'))?.split(',')[1])}));

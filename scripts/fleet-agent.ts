@@ -34,7 +34,7 @@ export function dueTrades(orders: readonly Order[], receipts: readonly Receipt[]
     return due;
 }
 
-const TRADE_SCRIPT='scripts/fleet-trade.ts';
+const TRADE_SCRIPT=resolve(import.meta.dir,'../scripts/fleet-trade.ts');
 // The trade worker's capability release (packages/core/src/worker-release.ts).
 export function tradeEnvironment(dir:string,env:Record<string,string|undefined>=process.env,release=capabilityRevision([TRADE_SCRIPT],root)){
     return {...env,FLEET_DIR:dir,WORKER_RELEASE:release,WORKER_ENTRY:TRADE_SCRIPT};

@@ -11,7 +11,15 @@ Acceptance for workers, shared helpers and accounts. Authority, pauses and accou
 | Need | Home |
 |---|---|
 | Session, actions, waits, walking | `packages/core/src/{bot,act,ticks,reflex,walk}.ts` |
-| Quests (dialogue, steps, burst) | `scripts/generated/quest-lib.ts` |
+| Sustain, bank trips, order journals | `packages/core/src/{sustain,bank-trip,order-journal}.ts` |
+| All-in-one dispatcher & catalog | `scripts/aio.ts` |
+| Skilling (15 skills, gathering, artisan, RC, support) | `scripts/aio-skiller.ts`, `scripts/microbot-bank-jobs.ts` |
+| Combat & monster drop farming | `scripts/aio-fighter.ts`, `scripts/gather-combat.ts` |
+| Bosses & minigames (KBD, Blue Dragon, Trawler) | `scripts/aio-boss.ts`, `scripts/microbot-combat-trip.ts` |
+| Wilderness PvP, tribrid & escort | `scripts/aio-pvp.ts`, `scripts/{pk,pk-hunt,pk-roam}.ts` |
+| Quests & clues (dialogue, steps, sweep, burst) | `scripts/aio-quester.ts`, `scripts/generated/quest-lib.ts` |
+| Shops & Grand Exchange | `scripts/aio-market.ts`, `scripts/{shop-buyer,buy-owned-ge-item}.ts` |
+| Couriers, RC runners, loadouts & relocation | `scripts/aio-logistics.ts`, `scripts/courier-handoff.ts` |
 | Accounts, admission, assignments | `scripts/swarm.ts`, `swarm.json`, `scripts/fleet.ts` |
 | Status and quest observations | `packages/core/src/{status,quest-status}.ts` |
 | Supply demand and routes | `packages/planner/src/{requirements,supply-route}.ts` |
@@ -91,7 +99,7 @@ Shaftshooter uses the Ranged board. Polevaulter uses the Agility board. The coor
 
 - Create `.practice/specialist-launch`. Save a current 400 ms record snapshot with `bun packages/planner/src/scout-cli.ts --out=.practice/specialist-launch/hiscores.json --fresh-account=shaftshooter --fresh-account=polevaulter`. The snapshot and exact-account HTTP 404 observation must be under one hour old. For a level 99 record, both the planned and rehearsed clock must beat the record by at least 2%.
 - In `vendor/rs-sdk/server/engine`, install the pinned engine dependencies with `bun install --frozen-lockfile --production --ignore-scripts`.
-- Run `bun packages/practice/src/rehearse.ts --specialist <segment.json> --start --out <new-.practice-directory>`. Set `id`, `specialist`, `start: {fresh: true}`, `script`, `plan: {ticks, source}` and `expect: {skills: {<board>: 99}}`. Use the live worker’s `args` and `env`. Set the worker tick cap for the full route. Set `timeoutMs` above the planned ticks times 400 ms, with time for login and logout. The isolated engine uses 400 ms ticks and 25x XP. The runner uses a new practice account with no save and disables the GE.
+- Run `bun packages/practice/src/rehearse.ts --specialist <segment.json> --start --out <new-.practice-directory>`. Set `id`, `specialist`, `start: {fresh: true}`, `script`, `plan: {ticks, source}` and `expect: {skills: {<board>: 99}}`. Use the live workerâ€™s `args` and `env`. Set the worker tick cap for the full route. Set `timeoutMs` above the planned ticks times 400 ms, with time for login and logout. The isolated engine uses 400 ms ticks and 25x XP. The runner uses a new practice account with no save and disables the GE.
 - The runner writes a `.candidate.json` and `.receipt.json` after one continuous run reaches level 99 and logs out. It binds the saved clock, engine trade ledger and worker tick record. If the candidate lists external stock, attach verified `staging` before using it as the launch plan.
 - Use `.practice/specialist-launch/<lowercase-account>.json` with `version: 1`, `account`, `board` (the skill name), `context`, `planTicks`, `requirements`, and a hash binding `rehearsal`. The context is `specialistContext(account, source, mission, requirements)`. Use the installed job's mission signature with an empty `COORDINATOR_RUN_ID`. A requirement has `item`, `count`, and an optional exact `itemId`.
 - Bind one complete fresh-clock practice run of the same route. Use the main rehearsal receipt shape with the skill name as the sole board stamp. The receipt and its matching raw `REHEARSAL` record include `externalSupplies` from the rehearsal's observed external inputs. The raw log also records a successful result. A route that draws stock needs a `staging` hash binding with exact reservations, owned delivery and bank observations for that specialist. An empty requirement list is for a route that draws no external stock.
@@ -99,6 +107,18 @@ Shaftshooter uses the Ranged board. Polevaulter uses the Agility board. The coor
 ## Prove and measure
 
 Bind results to source, server, tick speed and starting state. Speed claims need three matched runs per condition with raw times and spread. Level, XP, bank value and net profit are different measures.
+
+### The AIO bench
+
+`bun run bench [pattern]` measures AIO routes on practice and prints one table: the ticks of each case, the stored baseline, the change, and the rival's stated ticks where one is known.
+
+- **Cases.** `scripts/measure/aio-bench-cases.ts` holds one case for each AIO catalog route that has one: the dispatcher, its arguments and the start preset. A case marked `known` cannot pass and names the cause; a default run skips it and coverage does not count it. `bun run bench --coverage` lists the routes with no case.
+- **Engine.** A run uses the lockstep engine ([patches/rs-sdk.md](../patches/rs-sdk.md) item 10) with one seed and a new engine for each case. With these conditions a case gives the same tick count on each run, so one run for each condition is a comparison. The three-run rule above applies to a wall-clock engine (`--wall-clock`).
+- **Selection.** A pattern is a regular expression on the case key (`cook`, `^quester:quest:`). `--smoke` runs the short set that touches each category. `--all` includes the `known` cases.
+- **A change.** Run the cases the change touches. `--set KEY=value` sets one worker environment value for the run. A change is accepted for a case when the case passes and its ticks are not above the baseline. `--save-baseline` stores the results of the run as the baseline for its seed.
+- **Kept results.** A result is kept under a hash of the seed, the case, its preset, the worker script with the files it imports, the vendor patch and the `Q_*` and `--set` values. A case with no change in these returns its kept result. A change to a data file a worker reads at run time is not in the hash; use `--no-keep` after one.
+- **Limits.** The bench shows ticks on a practice engine with every skill at the preset level. It does not show a live result. A lockstep tick holds while a script works off the tick clock, up to `SIM_BUSY_MS`; a wall-clock sleep in a worker therefore costs real time and no ticks.
+
 
 ## Recover a session
 

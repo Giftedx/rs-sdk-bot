@@ -1,3 +1,153 @@
+diff --git a/server/engine/src/app.ts b/server/engine/src/app.ts
+index ec3ce9f7c..aa345480d 100644
+--- a/server/engine/src/app.ts
++++ b/server/engine/src/app.ts
+@@ -1,3 +1,4 @@
++import '#/simseed.js'; // first: replaces Math.random before any module draws from it
+ import fs from 'fs';
+ import { Worker } from 'worker_threads';
+ 
+diff --git a/server/engine/src/engine/World.ts b/server/engine/src/engine/World.ts
+index 4cc01105e..23fb9fddb 100644
+--- a/server/engine/src/engine/World.ts
++++ b/server/engine/src/engine/World.ts
+@@ -72,6 +72,9 @@ import UpdateFriendList from '#/network/game/server/model/UpdateFriendList.js';
+ import UpdateIgnoreList from '#/network/game/server/model/UpdateIgnoreList.js';
+ import UpdateRebootTimer from '#/network/game/server/model/UpdateRebootTimer.js';
+ import ClientSocket from '#/server/ClientSocket.js';
++import NullClientSocket from '#/server/NullClientSocket.js';
++import { simSeed, simSeedAnchor, simReseed, simRandDraws } from '#/simseed.js';
++import JavaRandom from '#/util/JavaRandom.js';
+ import { FriendsServerOpcodes } from '#/server/friend/FriendServer.js';
+ import { FriendThreadMessage } from '#/server/friend/FriendThread.js';
+ import { LoggerEventType } from '#/server/logger/LoggerEventType.js';
+@@ -114,6 +117,18 @@ type LogoutRequest = {
+     lastAttempt: number;
+ };
+ 
++// Lockstep sim (SIM_LOCKSTEP=1, a local practice engine only): no wall clock. See simAwaitAcks.
++// Adapted from TestingPurposes/rs-stun-toolkit World.ts (MIT).
++const SIM_LOCKSTEP = process.env.SIM_LOCKSTEP === '1';
++const SIM_ACK_MS = Number(process.env.SIM_ACK_MS ?? 200); // longest wait for a silent client before the tick runs anyway
++const SIM_LOGIN_MS = Number(process.env.SIM_LOGIN_MS ?? 300); // longest hold while the login thread works
++const SIM_IDLE_MS = Number(process.env.SIM_IDLE_MS ?? 100); // tick length while no client is connected
++// SIM_DET=1: no tick runs while no client is connected and no login or logout is in flight, so the world a login
++// meets does not depend on how long the bot process took to start.
++const SIM_DET = SIM_LOCKSTEP && process.env.SIM_DET === '1';
++// SIM_STAT_FILE: the lockstep gate appends one line per 25 ticks there (mean wait and its cause).
++const simStatLine = (line: string) => { if (process.env.SIM_STAT_FILE) fs.appendFileSync(process.env.SIM_STAT_FILE, line + '\n'); };
++
+ class World {
+     private loginThread = new Worker(new URL('../server/login/LoginThread.ts', import.meta.url));
+     private friendThread = new Worker(new URL('../server/friend/FriendThread.ts', import.meta.url));
+@@ -381,9 +396,89 @@ class World {
+ 
+     // ----
+ 
++    // Lockstep sim: the next cycle runs as soon as every connected client has sent bytes after this tick went out
++    // (a lockstep bot sends NO_TIMEOUT once it has acted on the tick), or after SIM_ACK_MS. Same scripts and order
++    // of operations as a wall-clock engine; ticks run as fast as the bots answer.
++    private simTickSentAt = 0;
++    private simGen = 0;
++    private simWake: (() => void) | null = null;
++    private simLate = 0;
++    private simStat = { ticks: 0, waitMs: 0, ackTicks: 0, ioTicks: 0, idleTicks: 0, cycleMs: 0 };
++    simAnchorTick = 0; // SIM_SEED counts ticks from the last login whose name matches SIM_SEED_ANCHOR
++    private simAwaitAcks(): void {
++        this.simTickSentAt = performance.now();
++        const deadline = this.simTickSentAt + SIM_ACK_MS;
++        const gen = ++this.simGen;
++        let queued = false, sawWaiting = false, sawIo = false;
++        let timer: ReturnType<typeof setTimeout> | null = null;
++        if (ClientSocket.simOnRecv === null) ClientSocket.simOnRecv = () => this.simWake?.();
++        const wake = () => { if (!queued) { queued = true; setImmediate(poll); } };
++        const poll = () => {
++            queued = false;
++            if (gen !== this.simGen) return; // left over from an earlier tick
++            const now = performance.now();
++            let waiting = false, clients = 0;
++            for (const player of this.players) {
++                if (!player) continue;
++                const client = (player as { client?: ClientSocket }).client;
++                if (!client || client instanceof NullClientSocket) continue;
++                clients++;
++                if (client.lastRecvAt < this.simTickSentAt) waiting = true;
++            }
++            // Logins and logouts run on the login thread in wall-clock time: hold the tick while one is in flight.
++            const io = this.loginRequests.size > 0 || this.logoutRequests.size > 0;
++            const pendingNew = this.newPlayers.size > 0;
++            const stopping = this.shutdownTick !== -1;
++            if (!clients && !io && !pendingNew && !stopping && (SIM_DET || now < this.simTickSentAt + SIM_IDLE_MS)) { setTimeout(poll, 5); return; }
++            const limit = io ? Math.max(deadline, this.simTickSentAt + SIM_LOGIN_MS) : deadline;
++            if (waiting) sawWaiting = true;
++            if (io) sawIo = true;
++            if ((!waiting && !io) || now >= limit) {
++                const st = this.simStat;
++                st.ticks++; st.waitMs += now - this.simTickSentAt; if (sawWaiting) st.ackTicks++; if (sawIo) st.ioTicks++; if (!clients) st.idleTicks++;
++                if (st.ticks >= 25) { simStatLine(`[sim] tick ${this.currentTick}: last ${st.ticks} ticks waited ${(st.waitMs / st.ticks).toFixed(1)} ms each (${st.ackTicks} for an ack, ${st.ioTicks} for login or logout, ${st.idleTicks} with no client)`); this.simStat = { ticks: 0, waitMs: 0, ackTicks: 0, ioTicks: 0, idleTicks: 0, cycleMs: 0 }; }
++                if (waiting && ++this.simLate % 100 === 1) simStatLine(`[sim] tick ${this.currentTick}: ${this.simLate} ticks ran on the ${SIM_ACK_MS} ms deadline without every ack`);
++                this.simWake = null;
++                if (timer !== null) { clearTimeout(timer); timer = null; }
++                this.simGen++;
++                this.nextTick = Date.now();
++                this.cycle();
++                return;
++            }
++            if (io) { setTimeout(poll, 1); return; } // a login thread reply is not a socket read
++            this.simWake = wake;
++            if (timer === null) timer = setTimeout(() => { timer = null; poll(); }, Math.max(1, Math.min(5, limit - now)));
++        };
++        setImmediate(poll);
++    }
++
++    // SIM_TRACE_FILE: one line per tick with a hash of every player's and npc's tile, the counts, and the Math.random
++    // draws of the previous tick. Two same-seed runs compared line by line show the first tick where the worlds part.
++    private simTraceDraws = 0;
++    private simTraceLines: string[] = [];
++    private simTrace(): void {
++        let ph = 0, nh = 0, np = 0, nn = 0;
++        for (const p of this.players) {
++            if (!p) continue;
++            np++;
++            ph = (Math.imul(ph ^ ((p.x << 16) | (p.z << 2) | p.level), 0x9e3779b1) + p.slot) >>> 0;
++        }
++        for (const n of this.npcs) {
++            if (!n) continue;
++            nn++;
++            nh = (Math.imul(nh ^ ((n.x << 16) | (n.z << 2) | n.level), 0x85ebca6b) + n.nid) >>> 0;
++        }
++        const draws = simRandDraws - this.simTraceDraws;
++        this.simTraceDraws = simRandDraws;
++        this.simTraceLines.push(`n=${this.currentTick - this.simAnchorTick} t=${this.currentTick} ph=${ph.toString(16)} nh=${nh.toString(16)} np=${np} nn=${nn} r=${draws} io=${this.loginRequests.size}/${this.logoutRequests.size} late=${this.simLate}`);
++        if (this.simTraceLines.length >= 50 || !np) { fs.appendFileSync(process.env.SIM_TRACE_FILE!, this.simTraceLines.join('\n') + '\n'); this.simTraceLines = []; }
++    }
++
+     cycle(): void {
+         try {
+             const start: number = Date.now();
++            if (SIM_LOCKSTEP && process.env.SIM_TRACE_FILE) this.simTrace();
++            if (simSeed !== null) JavaRandom.setSeed(simReseed(this.currentTick - this.simAnchorTick));
+             // rs-sdk: cap catch-up at 2 ticks of backlog. Sustained overload (many bots)
+             // otherwise makes the world sprint at max speed until the full backlog replays.
+             this.nextTick = Math.max(this.nextTick, start - this.tickRate * 2);
+@@ -590,7 +685,8 @@ class World {
+ 
+             // ----
+ 
+-            setTimeout(this.cycle.bind(this), Math.max(0, this.tickRate - (Date.now() - start) - drift));
++            if (SIM_LOCKSTEP) this.simAwaitAcks();
++            else setTimeout(this.cycle.bind(this), Math.max(0, this.tickRate - (Date.now() - start) - drift));
+         } catch (err) {
+             if (err instanceof Error) {
+                 printError('eep eep cabbage! An unhandled error occurred during the cycle: ' + err.message);
+@@ -2339,6 +2435,7 @@ class World {
+                     player.teleport(3221, 3219, 0);
+                 }
+ 
++                if (simSeed !== null && simSeedAnchor.test(username)) this.simAnchorTick = this.currentTick + 1;
+                 this.newPlayers.add(player);
+                 client.state = 1;
+             } catch (err) {
 diff --git a/server/engine/src/engine/script/ScriptRunner.ts b/server/engine/src/engine/script/ScriptRunner.ts
 index b568cf587..51f89e861 100644
 --- a/server/engine/src/engine/script/ScriptRunner.ts
@@ -32,6 +182,69 @@ index b568cf587..51f89e861 100644
          const state = new ScriptState(script, args);
          state.self = self;
  
+diff --git a/server/engine/src/server/ClientSocket.ts b/server/engine/src/server/ClientSocket.ts
+index edee06da3..b469b240a 100644
+--- a/server/engine/src/server/ClientSocket.ts
++++ b/server/engine/src/server/ClientSocket.ts
+@@ -19,6 +19,10 @@ export default abstract class ClientSocket {
+     in = Packet.alloc(65535); // node won't let us read from the socket as a stream so we buffer it ourselves
+     out = Packet.alloc(1);
+ 
++    // Lockstep sim: when this socket last received bytes, and a hook the World sets to re-check its tick gate.
++    lastRecvAt = 0;
++    static simOnRecv: (() => void) | null = null;
++
+     opcode = -1; // current opcode being read
+     waiting = 0; // bytes to wait for (if any)
+ 
+@@ -29,6 +33,8 @@ export default abstract class ClientSocket {
+         }
+ 
+         this.in.pdata(data, 0, data.length);
++        this.lastRecvAt = performance.now();
++        ClientSocket.simOnRecv?.();
+     }
+ 
+     // available bytes we can read
+diff --git a/server/engine/src/simseed.ts b/server/engine/src/simseed.ts
+new file mode 100644
+index 000000000..14ef40ce1
+--- /dev/null
++++ b/server/engine/src/simseed.ts
+@@ -0,0 +1,33 @@
++// Lockstep sim (SIM_LOCKSTEP=1 only): SIM_SEED=<int> makes the world's randomness repeatable. app.ts imports this
++// first, so Math.random is replaced before any module draws from it. The World reseeds Math.random and JavaRandom at
++// the start of every cycle from (seed, ticks since the anchor login): the rolls of tick N after the measured account
++// logged in are the same in every run with the same seed. SIM_SEED_ANCHOR (regex) names the login that starts the count.
++// Adapted from TestingPurposes/rs-stun-toolkit simseed.ts (MIT); never active on a wall-clock engine.
++const seedEnv = process.env.SIM_LOCKSTEP === '1' ? process.env.SIM_SEED : undefined;
++export const simSeed: number | null = seedEnv !== undefined && seedEnv !== '' ? (Number(seedEnv) >>> 0 || 1) : null;
++export const simSeedAnchor = new RegExp(process.env.SIM_SEED_ANCHOR ?? '.', 'i');
++let a = simSeed ?? 1;
++const mix = (x: number, y: number) => {
++    let h = Math.imul(x ^ 0x9e3779b9, 0x85ebca6b) ^ y;
++    h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
++    return (h ^ (h >>> 16)) >>> 0;
++};
++/** Reseed Math.random for tick `n` since the anchor login; returns a 31-bit seed for JavaRandom. */
++export function simReseed(n: number): number {
++    a = mix(simSeed!, n) || 1;
++    return mix(simSeed! ^ 0x5bd1e995, n) & 0x7fffffff;
++}
++/** Math.random draws so far; the per-tick trace prints the difference. */
++export let simRandDraws = 0;
++if (simSeed !== null) {
++    // mulberry32
++    Math.random = () => {
++        simRandDraws++;
++        a = (a + 0x6d2b79f5) >>> 0;
++        let t = a;
++        t = Math.imul(t ^ (t >>> 15), t | 1);
++        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
++        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
++    };
++    console.log(`[sim] SIM_SEED=${simSeed}: world randomness reseeded every tick (anchor ${simSeedAnchor})`);
++}
 diff --git a/server/engine/tools/pack/config/PackShared.ts b/server/engine/tools/pack/config/PackShared.ts
 index 2812a3ec5..519b1df50 100644
 --- a/server/engine/tools/pack/config/PackShared.ts

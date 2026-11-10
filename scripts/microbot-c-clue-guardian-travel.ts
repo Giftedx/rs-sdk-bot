@@ -12,7 +12,7 @@ import type {NativeTeleport} from './microbot-magic-teleport';
 import {elementalRuneCost} from './microbot-magic-items';
 import {CollisionFlag as NativeCollisionFlag} from '../vendor/rs-sdk/server/engine/src/engine/routefinder/flags';
 import {ClientProt} from '../vendor/rs-sdk/server/webclient/src/io/ClientProt';
-const mageAnim=Number(readFileSync('vendor/rs-sdk/server/content/pack/seq.pack','utf8').split(/\r?\n/).find(l=>l.endsWith('=human_casting'))?.split('=')[0]);
+const mageAnim=Number(readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/server/content/pack/seq.pack'),'utf8').split(/\r?\n/).find(l=>l.endsWith('=human_casting'))?.split('=')[0]);
 export const guardianMagePose=(npc:{animId?:number}|undefined)=>Number.isInteger(mageAnim)&&npc?.animId===mageAnim;
 type Policy={fatal:()=>boolean;stop:()=>boolean};
 const hp=(s:Session)=>s.sdk.getSkill('Hitpoints')?.level??0;
@@ -44,24 +44,24 @@ export async function guardianWalk(s:Session,to:{x:number;z:number},p:Policy,max
  if(!result.ok||p.fatal()||hp(s)<35)throw Error('guardian movement '+(result.detail??'life/HP floor'));await guardianHeal(s,p);
 }
 export function guardianEmptyCrossbowSpec(){
- const path='vendor/rs-sdk/server/content/',id=Number(readFileSync(path+'pack/obj.pack','utf8').split(/\r?\n/).find(l=>l.endsWith('=crossbow'))?.split('=')[0]),block=readFileSync(path+'scripts/skill_combat/configs/ranged/crossbows.obj','utf8').split('[crossbow]')[1]?.split('\n[')[0]?.replace(/\r/g,'')??'',field=(key:string)=>Number(block.match(new RegExp('^param='+key+',([0-9]+)$','m'))?.[1]),quiver=Number(readFileSync(path+'scripts/player/configs/equip.constant','utf8').match(/\^wearpos_quiver\s*=\s*(\d+)/)?.[1]);
+ const path=resolve(import.meta.dir,'../vendor/rs-sdk/server/content')+'/',id=Number(readFileSync(path+'pack/obj.pack','utf8').split(/\r?\n/).find(l=>l.endsWith('=crossbow'))?.split('=')[0]),block=readFileSync(path+'scripts/skill_combat/configs/ranged/crossbows.obj','utf8').split('[crossbow]')[1]?.split('\n[')[0]?.replace(/\r/g,'')??'',field=(key:string)=>Number(block.match(new RegExp('^param='+key+',([0-9]+)$','m'))?.[1]),quiver=Number(readFileSync(path+'scripts/player/configs/equip.constant','utf8').match(/\^wearpos_quiver\s*=\s*(\d+)/)?.[1]);
  const range=Math.min(field('attackrange'),10),cooldown=field('attackrate');if(id!==837||range!==10||cooldown!==6||quiver!==13)throw Error('native empty-crossbow recipe changed');
  return{item:id,range,cooldown,quiver,noAmmo:'There is no ammo left in your quiver.'};
 }
 export function guardianSaraMeleeLimit(){
- const base='vendor/rs-sdk/server/content/scripts/',npc=readFileSync(base+'minigames/game_trail/configs/trail.npc','utf8').split('[trail_hard2]')[1]?.split('\n[')[0]??'',strength=Number(npc.match(/^strength=(\d+)/m)?.[1]),bonus=Number(npc.match(/^param=strengthbonus,(\d+)/m)?.[1]);
+ const base=resolve(import.meta.dir,'../vendor/rs-sdk/server/content/scripts')+'/',npc=readFileSync(base+'minigames/game_trail/configs/trail.npc','utf8').split('[trail_hard2]')[1]?.split('\n[')[0]??'',strength=Number(npc.match(/^strength=(\d+)/m)?.[1]),bonus=Number(npc.match(/^param=strengthbonus,(\d+)/m)?.[1]);
  const melee=readFileSync(base+'skill_combat/scripts/npc/npc_combat_melee.rs2','utf8').replace(/\s/g,''),combat=readFileSync(base+'skill_combat/scripts/combat.rs2','utf8').replace(/\s/g,'');
  if(!melee.includes('~combat_effective_stat(npc_stat(strength),100)')||!melee.includes('$effective_strength=add($effective_strength,9);')||!combat.includes('return(scale(max(100,$prayerbonus),100,$stat_level));')||!combat.includes('return(calc($effective_stat*($bonus+64)));')||!combat.includes('return(calc(($combat_stat+320)/640));'))throw Error('native Sara melee formula changed');
  const maximum=Math.floor(((strength+9)*(bonus+64)+320)/640);if(strength!==80||bonus!==40||maximum!==14)throw Error('native Sara melee envelope changed');return{strength,bonus,maximum,floor:70};
 }
 export function guardianSaraLandingTail(){
- const base='vendor/rs-sdk/server/content/scripts/',row=readFileSync(base+'skill_combat/configs/magic/magic_combat_spells.dbrow','utf8').split('[magic_spell_saradomin_strike_npc]')[1]?.split('\n[')[0]??'',source=readFileSync(base+'skill_combat/scripts/npc/npc_combat_magic.rs2','utf8').replace(/\s/g,'');
+ const base=resolve(import.meta.dir,'../vendor/rs-sdk/server/content/scripts')+'/',row=readFileSync(base+'skill_combat/configs/magic/magic_combat_spells.dbrow','utf8').split('[magic_spell_saradomin_strike_npc]')[1]?.split('\n[')[0]??'',source=readFileSync(base+'skill_combat/scripts/npc/npc_combat_magic.rs2','utf8').replace(/\s/g,'');
  if(!row||/^data=spotanim_proj,/m.test(row)||!source.includes('def_int$duration=64;')||!source.includes('queue(combat_damage_player,calc($duration/30),$damage);'))throw Error('native Sara projectile tail changed');return Math.floor(64/30)+1;
 }
 // Sara AP sets mage-only mode before the generic ranged handler. Empty quiver
 // then stops the player's action before damage/XP; its attack-rate cooldown still applies.
 export function guardianSaraAttackRange(){
- const row=readFileSync('vendor/rs-sdk/server/content/scripts/minigames/game_trail/configs/trail.npc','utf8').split('[trail_hard2]')[1]?.split('\n[')[0]??'',range=Number(row.match(/^attackrange=(\d+)/m)?.[1]);if(range!==5)throw Error('native Sara AP attack range changed');return range;
+ const row=readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/server/content/scripts/minigames/game_trail/configs/trail.npc'),'utf8').split('[trail_hard2]')[1]?.split('\n[')[0]??'',range=Number(row.match(/^attackrange=(\d+)/m)?.[1]);if(range!==5)throw Error('native Sara AP attack range changed');return range;
 }
 export function guardianCrossbowGoals(from:{x:number;z:number;level:number},npc:{x:number;z:number;size:number},plan:(level:number,from:{x:number;z:number},to:{x:number;z:number})=>{x:number;z:number}[],reach:(to:{x:number;z:number})=>boolean|null,sight:(from:{x:number;z:number},to:{x:number;z:number;size:number})=>boolean){
  // Intersect the safe pre-OP minimum with the native Sara cast range. A
@@ -74,7 +74,7 @@ export function guardianCrossbowGoals(from:{x:number;z:number;level:number},npc:
 export function guardianLoadedSight(c:any){
  // The SDK walking export omits projectile flags. Keep the native ray algorithm
  // in a private grid populated from the received client's loaded collision scene.
- const file=resolve('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod-pathfinder.js'),module:any=new Module(file);
+ const file=resolve(import.meta.dir,'../vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod-pathfinder.js'),module:any=new Module(file);
  module.filename=file;module._compile(readFileSync(file,'utf8'),file);const ray=module.exports;
  return(a:{x:number;z:number;level:number},b:{x:number;z:number;size:number})=>{
   if(typeof c.ensureCollision!=='function'||![a.x,a.z,a.level,b.x,b.z,b.size,c.mapBuildBaseX,c.mapBuildBaseZ].every(Number.isSafeInteger)||a.level!==c.minusedlevel||b.size!==1)return false;

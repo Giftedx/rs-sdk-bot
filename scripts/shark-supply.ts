@@ -7,6 +7,7 @@ import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
 import {goTo,sessionWalker,walkPath,type PathDeps,type PathPoint,type PathTile} from '../packages/core/src/walk';
 import {depositObserved} from '../packages/core/src/deposit';
+import {claimOrderJournal,settleOrderJournal} from '../packages/core/src/order-journal';
 import {catchSharks} from './gather-fish';
 import {cookSharks} from './cook-food';
 
@@ -24,20 +25,10 @@ export function sharkSummary(r:{banked:number;caught:number;cooked:number;burnt:
 // An unchanged retry therefore cannot count old or uncertain output again; a new order needs a new key.
 export const SHARK_ORDER_DIR=resolve(import.meta.dir,'../.practice/shark-orders');
 export function claimSharkOrder(dir:string,account:string,key:string,order:{target:number;maxTicks:number;consumer:string},now=Date.now()) {
-    if(!/^[A-Za-z0-9_-]{1,12}$/.test(account)||!/^[A-Za-z0-9_-]{1,64}$/.test(key))throw Error('invalid shark order identity');
-    const path=join(dir,account.toLowerCase(),key+'.json');mkdirSync(join(dir,account.toLowerCase()),{recursive:true});
-    try{writeFileSync(path,JSON.stringify({state:'started',at:now,pid:process.pid,account,key,order}),{flag:'wx'});}
-    catch(e){
-        if((e as NodeJS.ErrnoException).code!=='EEXIST')throw e;
-        let state='unreadable';try{state=JSON.parse(readFileSync(path,'utf8')).state;}catch{/* an unreadable entry is uncertain */}
-        throw Error(state==='completed'?`shark order ${key} already completed; duplicate refused`:`shark order ${key} has uncertain output (${state}); no retry`);
-    }
-    return path;
+    return claimOrderJournal(dir,account,key,order,now,'shark order');
 }
 export function settleSharkOrder(path:string,r:{ok:boolean;banked:number;caught:number;cooked:number;burnt:number;failure:string},now=Date.now()) {
-    const entry=existsSync(path)?JSON.parse(readFileSync(path,'utf8')):null;
-    if(entry?.state!=='started'||entry.pid!==process.pid)throw Error('shark order journal ownership changed');
-    writeFileSync(path,JSON.stringify({...entry,state:r.ok?'completed':'failed',settledAt:now,result:{banked:r.banked,caught:r.caught,cooked:r.cooked,burnt:r.burnt,failure:r.failure}}));
+    settleOrderJournal(path,r,({banked,caught,cooked,burnt,failure})=>({banked,caught,cooked,burnt,failure}),now,'shark order');
 }
 export const SHARK_BANK={x:2809,z:3441}, WEST_BANK={x:2619,z:3332};
 const d8=(a:PathTile,b:PathTile)=>Math.max(Math.abs(a.x-b.x),Math.abs(a.z-b.z));

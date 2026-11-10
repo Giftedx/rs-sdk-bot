@@ -2,6 +2,7 @@
 // Finite staged standard-book casts: bun scripts/microbot-magic-npc.ts <account> <spell> <npc-id> [casts=1] [cap=1200].
 // COMBO_ALCH=high-alch|low-alch, ALCH_ITEM=debugname; SPLASH_ONLY=1 requires no Hitpoints XP after impact.
 // Debuffed/frozen targets can refuse repeat casts. Rotate observed targets, then stop after bounded no-effect attempts.
+import {resolve} from 'node:path';
 import {readFileSync} from 'node:fs';
 import {openBot,finish} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
@@ -14,7 +15,7 @@ import {elementalRuneCost,itemMagicRecipe,runItemMagic,type Recipe} from './micr
 export interface NpcSpell{name:string;component:string;level:number;runes:Record<number,number>;debuff:boolean;members:boolean;requiredWorn?:number}
 export function nativeNpcSpell(name:string):NpcSpell{
  if(!/^(?:(?:wind|water|earth|fire)_(?:strike|bolt|blast|wave)|confuse|weaken|curse|vulnerability|enfeeble|stun|bind|snare|entangle|crumble_undead|saradomin_strike|claws_of_guthix|flames_of_zamorak|iban_blast)$/.test(name))throw Error('unsupported standard NPC spell');
- const text=readFileSync('vendor/rs-sdk/server/content/scripts/skill_combat/configs/magic/magic_combat_spells.dbrow','utf8');
+ const text=readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/server/content/scripts/skill_combat/configs/magic/magic_combat_spells.dbrow'),'utf8');
  const body=text.split('[magic_spell_'+name+']')[1]?.split('\n[')[0];if(!body)throw Error('native NPC spell missing');
  const field=(key:string)=>body.match(new RegExp('^data='+key+',(.+)$','m'))?.[1]?.trim();
  const runes=field('runesrequired')!.split(','),costs:Record<number,number>={};for(let i=0;i<runes.length;i+=2)if(runes[i]!=='null')costs[objId(runes[i]!)]=Number(runes[i+1]);

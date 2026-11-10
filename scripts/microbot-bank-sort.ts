@@ -1,5 +1,6 @@
 import{existsSync,readFileSync}from'node:fs';
 import{openBot,settle}from'../packages/core/src/bot';
+import {resolve} from 'node:path';
 import type{Session}from'../packages/core/src/inprocess';
 import{waitUntil}from'../packages/core/src/ticks';
 import{componentId}from'../packages/core/src/logout';
@@ -35,15 +36,15 @@ function sortData(){
  if(nativeSortData)return nativeSortData;const data=new Map<number,NativeSortData>(),names=new Map(nativeItems.map(i=>[i.debugname,i.id])),byId=new Map(nativeItems.map(i=>[i.id,i]));
  const put=(id:number,category:string,level:number,stage:number)=>{if(Number.isFinite(level))data.set(id,{category,level,stage});};
  for(const r of nativeSkills)for(const output of r.outputs){const id=names.get(output);if(id===undefined||r.level===null)continue;if(r.skill==='woodcutting')put(id,'Skilling-Resource-Log',r.level,0);if(r.skill==='mining'&&/ore|coal|clay/.test(output))put(id,'Skilling-Resource-Ore',r.level,0);}
- const smelting='vendor/rs-sdk/server/content/scripts/skill_smithing/configs/smelting/smelting.struct';for(const b of parseConfigs(readFileSync(smelting,'utf8'),smelting)){const p=Object.fromEntries((b.props.param??[]).map(v=>v.split(',',2))),id=names.get(p.product??'');if(id!==undefined)put(id,'Skilling-Resource-Bar',Number(p.levelrequired),1);}
+ const smelting=resolve(import.meta.dir,'../vendor/rs-sdk/server/content/scripts/skill_smithing/configs/smelting/smelting.struct');for(const b of parseConfigs(readFileSync(smelting,'utf8'),smelting)){const p=Object.fromEntries((b.props.param??[]).map(v=>v.split(',',2))),id=names.get(p.product??'');if(id!==undefined)put(id,'Skilling-Resource-Bar',Number(p.levelrequired),1);}
  for(const r of inventoryRecipes()){
   if(r.name.startsWith('cut-')&&r.skill==='Crafting'&&r.tools.includes(1755)){put(r.inputs[0]!.id,'Skilling-Resource-Gem',r.level,0);put(r.product,'Skilling-Resource-Gem',r.level,1);}
   if(r.name.startsWith('identify:')){put(r.inputs[0]!.id,'Skilling-Resource-Herb',r.level,0);put(r.product,'Skilling-Resource-Herb',r.level,1);}
  }
- const brewing='vendor/rs-sdk/server/content/scripts/skill_herblore/configs/brewing/brew_potion',params=(b:{props:Record<string,string[]>})=>Object.fromEntries((b.props.param??[]).map(v=>v.split(',',2)));
+ const brewing=resolve(import.meta.dir,'../vendor/rs-sdk/server/content/scripts/skill_herblore/configs/brewing/brew_potion'),params=(b:{props:Record<string,string[]>})=>Object.fromEntries((b.props.param??[]).map(v=>v.split(',',2)));
  const defaultLevel=Number(parseConfigs(readFileSync(brewing+'.param','utf8'),brewing+'.param').find(b=>b.name==='brew_potion_level')?.props.default?.[0]);
  const families=new Map<string,NativeSortData>(),objects=new Map<string,ReturnType<typeof parseConfigs>>();
- const blocks=(id:number)=>{const path='vendor/rs-sdk/server/content/'+byId.get(id)!.src.replace(/:\d+$/,'');if(!objects.has(path))objects.set(path,parseConfigs(readFileSync(path,'utf8'),path));return objects.get(path)!;};
+ const blocks=(id:number)=>{const path=resolve(import.meta.dir,'../vendor/rs-sdk/server/content')+'/'+byId.get(id)!.src.replace(/:\d+$/,'');if(!objects.has(path))objects.set(path,parseConfigs(readFileSync(path,'utf8'),path));return objects.get(path)!;};
  for(const b of parseConfigs(readFileSync(brewing+'.struct','utf8'),brewing+'.struct')){const p=params(b),id=names.get(p.brew_potion_mixture??'');if(id===undefined)continue;const level=Number(p.brew_potion_level??defaultLevel),stage=p.brew_potion_solvent==='vial_water'?2:4;put(id,'Potions',level,stage);const obj=blocks(id).find(o=>o.name===byId.get(id)!.debugname),family=obj&&params(obj).decant_potion_enum;if(family)families.set(family,{category:'Potions',level,stage});}
  // Dose variants share the native decant enum, never a generic display name.
  for(const file of objects.values())for(const b of file){const id=names.get(b.name),family=params(b).decant_potion_enum,value=family&&families.get(family);if(id!==undefined&&value&&!data.has(id))data.set(id,value);}

@@ -17,6 +17,7 @@ Use the [current plan](../docs/plans/joined-plan.md) for priorities and the [res
 | Where items can duplicate or be lost in the engine | [rs-sdk-item-dup](rs-sdk-item-dup.md) |
 | How does each dashboard part compare with RuneLite? | [runelite-parity](runelite-parity.md): RuneLite source, copy/adapt/reject and open gap per part; `packages/dashboard/parity.test.ts` keeps it complete |
 | Which external work should we use? | [Project use map](project-use-map.md#find-and-port-a-solution) — exact source entry points, local consumers, saved commits and porting recipe; grouped inventory below; [ecosystem evidence](botting-ecosystem-2026-10-23.md), [local upstream review](community-and-upstream.md) |
+| How fast is an AIO route, and does a change make it faster? | [AIO bench findings](aio-bench.md) — the lockstep engine, the tick counts that repeat, the routes that pass, the quests that fail on a random roll, and the rival comparison; command in the [script contract](../docs/script-contract.md#the-aio-bench) |
 | Measured waste and open owner requests | [learning-report](learning-report.md) (generated), [owner-requests](owner-requests.md) |
 
 Find narrower topics with `rg --files research`. Preserve paths cited by code and dashboards.

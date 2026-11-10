@@ -2,6 +2,7 @@
 // One finite explicitly owned paired consumer. Native rules decide whether each player action is legal.
 import{readFileSync,readdirSync}from'node:fs';
 import{openBot,settle}from'../packages/core/src/bot';
+import {resolve} from 'node:path';
 import type{Session}from'../packages/core/src/inprocess';
 import{waitUntil,waitTicks}from'../packages/core/src/ticks';
 import{equipmentObserved}from'../packages/core/src/container-observation';
@@ -19,7 +20,7 @@ import{guardianLoadedSight}from'./microbot-c-clue-guardian-travel';
 type Kind='melee'|'ranged'|'magic'|'special'|'tank'|'walk-under'|'prayer';
 export interface PvpStep{kind:Kind;gear?:number[];prayers?:number[];spell?:string;afterAnimation?:number[]}
 export interface PvpPlan{cap:number;hpFloor:number;steps:PvpStep[];partnerAntidote?:boolean}
-const content='vendor/rs-sdk/server/content/',combat=content+'scripts/skill_combat/',cache=new Map<number,{name:string;category:string;p:Record<string,string>}>();
+const content=resolve(import.meta.dir,'../vendor/rs-sdk/server/content')+'/',combat=content+'scripts/skill_combat/',cache=new Map<number,{name:string;category:string;p:Record<string,string>}>();
 function item(id:number){let found=cache.get(id);if(found)return found;const known=items.find(i=>i.id===id);if(!known)throw Error('native equipment metadata absent');const path=content+known.src.replace(/:\d+$/,''),b=parseConfigs(readFileSync(path,'utf8'),path).find(b=>b.name===known.debugname);if(!b)throw Error('native equipment definition absent');found={name:known.debugname,category:b.props.category?.[0]??'',p:Object.fromEntries((b.props.param??[]).map(v=>v.split(',',2)))};cache.set(id,found);return found;}
 const specialHandlers=readFileSync(combat+'scripts/pvp/pvp_special_attack.rs2','utf8');
 const spellCache=new Map<string,ReturnType<typeof nativeNpcSpell>&{maximum:number}>();
