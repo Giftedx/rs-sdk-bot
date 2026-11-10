@@ -2,6 +2,7 @@
 // Usage: bun scripts/shop-buyer.ts <bot> <profile: catherby | sarim | betty> [CAP ticks, default 15000]
 // Environment: COIN_RESERVE/MAX_SPEND/MAX_ITEMS bound one run; defaults preserve existing unbounded jobs.
 // NO_BUY_TICKS=25 opts into a clean bank-and-offline stop when shelves/budget yield no buys.
+// BANK_PACK=1 banks the whole pack first; without it a pack full of items the profile does not bank stops (pack-full).
 // DEMO_OK=1 is required for live; funding and route admission are separate gates.
 import { openBot, finish, countItems, getWorld, accountOf } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
@@ -423,6 +424,9 @@ try {
         const nonCoinCount = inv.filter(i => !/^coins$/i.test(i.name)).reduce((sum, i) => sum + i.count, 0);
         if (inv.length >= 27 || (BANK_AT > 0 && nonCoinCount >= BANK_AT)) {
             await bank();
+            // bank() deposits only this profile's items. A pack full of other items stays full, and the loop would bank
+            // forever (live and practice: 90-101 bank trips, nothing bought). Stop; BANK_PACK=1 clears the pack first.
+            if (s.sdk.getInventory().length >= 27) { console.log('WARN pack full of items this profile does not bank; set BANK_PACK=1'); stopReason = 'pack-full'; break; }
             continue;
         }
 
@@ -480,8 +484,8 @@ try {
                 || (guarded && needed.length && coins() < Math.min(FLOAT, COIN_RESERVE + MAX_SPEND - spentTotal) && (stock.get('coins') ?? 0) > 0)) {
                 const before = coins();
                 await bank();
-                if (coins() > before) noBuySince = undefined;
-                continue;
+                if (coins() > before) { noBuySince = undefined; continue; }
+                // A trip that added no coins cannot unblock the purchase, so the no-buy limit keeps running.
             }
             if (guarded && needed.length && NO_BUY_TICKS === 0) { stopReason = 'bounded-purchase-unaffordable'; break; }
             const waiting = stockWaitStatus(s.tick(), noBuySince, NO_BUY_TICKS);
