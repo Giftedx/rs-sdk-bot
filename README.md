@@ -151,6 +151,16 @@ export SWARM_PLAN=$PWD/swarm.json             # for scripts/autopilot.ts, script
 env -u SWARM_PLAN DEMO_OK=1 PATH="$PWD/.practice/cloud-handoff/nomodel:$PATH" bun packages/router/src/coordinator-cli.ts --run
 ```
 
+Pull `master` into a side checkout without touching the side plan. `git merge --ff-only origin/master` works while upstream left `swarm.json` alone. When upstream changed it too, a plain pull refuses. Checking out the committed `swarm.json` would hand the swarm the PC's plan, and it would stop the side's farmers with `swarm plan removed or stopped`. Move the index instead, and keep the working file:
+
+```bash
+git fetch origin master && old=$(git rev-parse HEAD)
+git reset --soft origin/master
+git diff --name-only --diff-filter=d "$old" origin/master | grep -vx swarm.json | xargs -r git checkout origin/master --
+git diff --name-only --diff-filter=D "$old" origin/master | xargs -r git rm -q --cached --ignore-unmatch   # then delete those files
+git update-index --cacheinfo "100644,$(git rev-parse origin/master:swarm.json),swarm.json" && git update-index --skip-worktree swarm.json
+```
+
 The coordinator starts `scripts/swarm.ts swarm.json` itself while an enabled standing job exists, and adopts a running swarm through `.practice/coordinator/swarm-owner.json`. The stub makes the coordinator's model planner fail, so it queues no work of its own; it retries with a growing delay. `autoExpand` stays unset, so the coordinator creates no accounts. Switching an existing side over stops its plain swarm with `.practice/stop-swarm` (each worker logs out), removes that file and the controller's `stop-<name>` files, then starts the coordinator.
 
 `bun scripts/cloud-recover.ts`, run by the watchdog with the stub on `PATH`, recovers one account per call. It takes an account of this side whose logout proof is held, whose fleet claim is a swarm claim with a dead worker, with no owner stop file and with an end record in `.practice/swarm-deaths.json`. It submits a qualify task and a recovery run task with fresh ids (`bun run coordinate --submit <proposal>`), waits for the run task and a `confirmed` `readLogoutProof`, then releases the account. It refuses with a logged reason when the coordinator is not running, when a death ended the account, or when the end record is gone. The swarm's standing retry deletes the end record once the account's status is 15 minutes old (`BOOTSTRAP_STATUS_AGE_MS`), so a recovery starts within that window; an owner stop file does not keep the record, and the recovery login refuses while `stop-<name>` exists.
