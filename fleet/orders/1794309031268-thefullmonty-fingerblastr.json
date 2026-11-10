@@ -1,0 +1,22 @@
+{
+ "id": "1794309031268-thefullmonty-fingerblastr",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TheFullMonty",
+ "to": "Fingerblastr",
+ "item": "Mind rune",
+ "count": 20,
+ "start": 1794309031268,
+ "end": 1794310531268,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
