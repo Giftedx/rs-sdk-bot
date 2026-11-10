@@ -59,7 +59,7 @@ test('the tour steps through the switcher only while the 3D view is ready and sh
 });
 
 test('a choice made in the 3D view ends the tour',()=>{
- expect(shell).toContain('window.atlasClient={follow:name=>{tourSet(false);previousPick(name);},');
+ expect(shell).toContain('window.atlasClient={follow:name=>{wallEnd(false);tourSet(false);previousPick(name);},');
  const code=shell.slice(shell.indexOf('  function tourStep(){'),shell.indexOf('  function tourSet('));
  const ended:boolean[]=[],steps:number[]=[];(globalThis as any).atlasFollowOther='Someone';
  try{new Function('mode','VIEWER','document','focusStep','tourSet','let touring=false;'+code+';tourStep();')('3d',{state:'ready'},{hidden:false},(n:number)=>steps.push(n),(on:boolean)=>ended.push(on));}finally{delete (globalThis as any).atlasFollowOther;}
@@ -182,4 +182,123 @@ test('Connection lost stays off the 3D view while the hosted stale bar reports o
  expect(lostFor(false,60_000)).toBe(true);
  expect(lostFor(false,1000)).toBe(false);
  expect(lostFor(true,60_000)).toBe(false);
+});
+
+// The Fleet wall code with the page state it reads. Every message to the viewer and every pick() lands in one log.
+function fleetWall(bots:any[],start:{sel?:string|null,free?:boolean,other?:string|null,mode?:string,state?:string,touring?:boolean}={}){
+ const live=shell.slice(shell.indexOf('  const focusLive='),shell.indexOf('  function focusState('));
+ const state=shell.slice(shell.indexOf('  function focusState('),shell.indexOf('  function focusRows('));
+ const code=shell.slice(shell.indexOf('  // Fleet wall:'),shell.indexOf("  focusFind.addEventListener('input',focusRows);"));
+ const phone={matches:false},log:any[]=[],said:string[]=[],classes={add:()=>{},remove:()=>{}},window:any={atlasFreeCamera:!!start.free,atlasFollowOther:start.other??null,atlasFollow3d:()=>true};
+ const S={bots},VIEWER={state:start.state??'ready',origin:'http://localhost'};
+ const st=(b:any)=>b.inWorld&&b.fresh&&b.action!=='idle'?['on','playing']:['wd','in world'];
+ const api=new Function('S','VIEWER','window','MARK','st','$','focusSay','focusOpen','focus','focusNote','log','safeName','phoneWidth',`
+  let mode=${JSON.stringify(start.mode??'3d')},sel=${JSON.stringify(start.sel??null)},wall=null,wallLinked=false,tourTimer=${start.touring?'setInterval(()=>{},1e9)':'null'},focusRowsHtml='',flightTo=null,sentMaxLevel=2,warmSent='x',rswFor=sel,paints=0,renders=0;
+  const TOUR_MS=45000,tourStep=()=>{},focusPaint=()=>{paints++;},render=()=>{renders++;};
+  let pick=name=>{wallEnd(false);log.push({pick:name});sel=name;window.atlasFreeCamera=false;},setMode=m=>{mode=m;};
+  ${live}${state}${code}
+  return {start:wallStart,end:wallEnd,toggle:wallToggle,sync:wallSync,message:wallMessage,names:wallNames,on:()=>!!wall,label:()=>focusState(),link:()=>{wallLinked=true;},
+   page:()=>({sel,free:window.atlasFreeCamera,other:window.atlasFollowOther,touring:!!tourTimer,sentMaxLevel,warmSent,rswFor,renders}),setMode:m=>setMode(m),stopTour:()=>clearInterval(tourTimer)};`)
+  (S,VIEWER,window,'⟦MAIN⟧',st,()=>({contentWindow:{postMessage:(m:any)=>log.push(m)}}),(t:string)=>said.push(t),()=>{},{classList:classes},{classList:classes},log,(n:string)=>String(n).replaceAll('⟦MAIN⟧','Main · reserved'),phone);
+ return {...api,log,said,S,VIEWER,window,phone};
+}
+const inWorld=(name:string,more:any={})=>({name,inWorld:true,...more});
+
+test('the wall asks for our accounts in the world: playing ones first, then name order, at most 16',()=>{
+ const bots=[inWorld('Zed'),inWorld('Ann'),{name:'Away',inWorld:false,fresh:true},inWorld('Lab',{practice:true}),inWorld('Mid',{fresh:true}),inWorld('Bee',{fresh:true,action:'idle'}),inWorld('Cat',{fresh:true}),inWorld('bad<name>'),inWorld('ThirteenChars')];
+ expect(fleetWall(bots).names()).toEqual(['Cat','Mid','Ann','Bee','Zed']);
+ const many=Array.from({length:20},(_,i)=>inWorld('Bot'+String(i).padStart(2,'0'),{fresh:i>=17}));
+ const w=fleetWall(many);expect(w.names()).toHaveLength(16);expect(w.names().slice(0,4)).toEqual(['Bot17','Bot18','Bot19','Bot00']);
+ expect(w.start()).toBe(true);expect(w.log).toEqual([{multi:w.names()}]);
+ expect(w.label()[0]).toBe('Wall · 0 of 16 shown');expect(w.label()[2]).toContain('16 of our 20 accounts');
+});
+
+test('the wall does not open with none of our accounts in the world, in the 2D map, or before the viewer is ready',()=>{
+ const none=fleetWall([{name:'Away',inWorld:false}]);
+ expect(none.start()).toBe(false);expect(none.on()).toBe(false);expect(none.log).toEqual([]);expect(none.said).toEqual(['None of our accounts is in the world. The wall has nothing to show.']);
+ for(const start of [{mode:'2d'},{state:'loading'},{state:'unavailable'}]){const w=fleetWall([inWorld('Ann')],start);expect(w.start()).toBe(false);expect(w.log).toEqual([]);expect(w.said).toEqual([]);}
+});
+
+test('the wall asks again only when an account enters or leaves the world',()=>{
+ const w=fleetWall([inWorld('Ann'),inWorld('Bob')]);w.start();
+ w.sync();w.S.bots[1].fresh=true;w.sync();w.S.bots.reverse();w.sync();
+ expect(w.log).toEqual([{multi:['Ann','Bob']}]);
+ w.S.bots.push(inWorld('Cat'));w.sync();w.sync();
+ expect(w.log).toEqual([{multi:['Ann','Bob']},{multi:['Bob','Ann','Cat']}]);
+ w.S.bots.find((b:any)=>b.name==='Ann').inWorld=false;w.sync();
+ expect(w.log.at(-1)).toEqual({multi:['Bob','Cat']});expect(w.log).toHaveLength(3);
+ // The last account leaves: the wall closes and says why.
+ for(const b of w.S.bots)b.inWorld=false;w.sync();
+ expect(w.on()).toBe(false);expect(w.log.slice(3)).toEqual([{multi:[]},{atlasFreeCamera:true}]);expect(w.said.at(-1)).toContain('The wall is closed');
+});
+
+test('the wall status counts the views that show their player, from a viewer status for the asked list only',()=>{
+ const w=fleetWall([inWorld('Ann'),inWorld('Bob'),inWorld('Cat')]);w.start();
+ w.message({viewerMulti:{names:['Ann','Bob','Cat'],shown:['Ann','Cat'],offline:[]}});expect(w.label()[0]).toBe('Wall · 2 of 3 shown');
+ for(const bad of [{names:['Ann'],shown:['Ann'],offline:[]},{names:['Ann','Bob','Cat'],shown:'Ann',offline:[]},{names:['Ann','Bob','Cat'],shown:[1,2,3],offline:[]},{names:['Ann','Bob','Cat'],shown:['A','B','C','D'],offline:[]},null,'x'])w.message({viewerMulti:bad});
+ expect(w.label()[0]).toBe('Wall · 2 of 3 shown');
+ // A phone has a narrow switcher.
+ w.phone.matches=true;expect(w.label()[0]).toBe('Wall · 2/3');
+});
+
+test('a click on a view closes the wall first, then follows that account through pick()',()=>{
+ const w=fleetWall([inWorld('Ann'),inWorld('Bob')],{sel:'Ann'});w.start();
+ // A reply that names another account, or no view of the wall, is not a click.
+ for(const bad of [{viewerMultiPick:'Eve',index:1},{viewerMultiPick:'Bob',index:5},{viewerMultiPick:'Bob',index:'1'},{viewerMultiPick:1,index:1},{index:1}])w.message(bad);
+ expect(w.on()).toBe(true);expect(w.log).toHaveLength(1);
+ w.message({viewerMultiPick:'bob',index:1});
+ expect(w.log).toEqual([{multi:['Ann','Bob']},{multi:[]},{pick:'Bob'}]);expect(w.on()).toBe(false);expect(w.said.at(-1)).toBe('Now watching Bob');
+ // The viewer build's own report of the same click finds no wall.
+ w.message({viewerMultiPick:'Bob',index:1});expect(w.log).toHaveLength(3);
+ // The roof and prewarm messages start again from nothing.
+ expect(w.page()).toMatchObject({sentMaxLevel:null,warmSent:''});
+});
+
+test('closing the wall returns to what the page followed, and the tour runs on',()=>{
+ const followed=fleetWall([inWorld('Ann'),inWorld('Bob')],{sel:'Bob',touring:true});followed.start();
+ expect(followed.page().touring).toBe(false);
+ followed.window.atlasFreeCamera=true;followed.end();
+ expect(followed.log).toEqual([{multi:['Ann','Bob']},{multi:[]},{follow:'Bob'}]);
+ expect(followed.page()).toMatchObject({sel:'Bob',free:false,other:null,touring:true,rswFor:'Bob'});followed.stopTour();
+ const free=fleetWall([inWorld('Ann')],{sel:'Ann',free:true});free.toggle();free.toggle();
+ expect(free.log).toEqual([{multi:['Ann']},{multi:[]},{atlasFreeCamera:true}]);expect(free.page()).toMatchObject({free:true,renders:2});
+ const other=fleetWall([inWorld('Ann')],{sel:'Ann',other:'Stranger'});other.start();other.end();
+ expect(other.log.slice(1)).toEqual([{multi:[]},{follow:'Stranger'}]);
+ // The 3D view went away: nothing is left to tell.
+ const lost=fleetWall([inWorld('Ann')],{sel:'Ann'});lost.start();lost.setMode('2d');
+ expect(lost.on()).toBe(false);expect(lost.log).toEqual([{multi:['Ann']}]);
+});
+
+test('a link with wall=1 opens the wall when the viewer is ready and an account is in the world',()=>{
+ const w=fleetWall([inWorld('Ann')],{state:'loading'});w.link();w.sync();expect(w.on()).toBe(false);
+ w.VIEWER.state='ready';w.sync();expect(w.on()).toBe(true);expect(w.log).toEqual([{multi:['Ann']}]);
+ // With the live roster in and nobody of ours on it, the link opens no wall and the page says so once.
+ const none=fleetWall([],{});none.window.atlasLiveRoster=()=>true;none.link();none.sync();none.sync();
+ expect(none.on()).toBe(false);expect(none.said).toHaveLength(1);
+ const link=shell.slice(shell.indexOf('  function writeLink(){'),shell.indexOf('  let questAccount=null;'));
+ expect(link).toContain("if(wall||wallLinked)q.set('wall','1');");expect(link).toContain("['a','watch','cam','wall']");
+});
+
+test('the hidden account goes to the viewer and comes back as its mark only',()=>{
+ const w=fleetWall([inWorld('⟦MAIN⟧',{fresh:true}),inWorld('Ann')]);w.start();
+ expect(w.log).toEqual([{multi:['⟦MAIN⟧','Ann']}]);
+ w.message({viewerMulti:{names:['⟦MAIN⟧','Ann'],shown:['⟦MAIN⟧'],offline:[]}});
+ expect(w.label().join(' ')).not.toContain('MAIN');
+ w.message({viewerMultiPick:'⟦MAIN⟧',index:0});
+ expect(w.log.slice(1)).toEqual([{multi:[]},{pick:'⟦MAIN⟧'}]);
+ // The page takes the name from its own list: text in a reply never becomes a follow target.
+ const own=fleetWall([inWorld('Ann'),inWorld('Bob')]);own.start();own.message({viewerMultiPick:'⟦MAIN⟧',index:1});
+ expect(own.log.at(-1)).toEqual({pick:'Bob'});
+ expect(w.said.at(-1)).toBe('Now watching Main · reserved');
+});
+
+test('while the wall is open the page sends no step, roof, prewarm or follow message',()=>{
+ const step=focusStepper([{name:'Ann',inWorld:true},{name:'Bob',inWorld:true}],'Ann',{atlasWallOn:()=>true});step.step(1);step.step(-1);expect(step.picks).toEqual([]);
+ const page=readFileSync(new URL('./index.html',import.meta.url),'utf8');
+ expect(page).toContain("function syncRoofs(){if(mode!=='3d'||VIEWER.state!=='ready'||window.atlasWallOn?.())return;");
+ expect(page.match(/&&!window\.atlasWallOn\?\.\(\)\)\{(?:rswFor|followedLive)=sel;/g)).toHaveLength(2);
+ expect(shell).toContain("  function warmPlaces(first){\n    if(wall||mode!=='3d'||VIEWER.state!=='ready')return;");
+ expect(shell).toContain('if(e.data?.viewerTiming&&!wall)focusLanded();');
+ expect(shell).toContain('const stuck=!!wall||');
+ expect(readFileSync(new URL('./map-shell.js',import.meta.url),'utf8')).toContain("if(typeof name!=='string'||!S?.bots||window.atlasWallOn?.())return;");
 });
