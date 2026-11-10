@@ -385,6 +385,9 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
     if(!Number.isSafeInteger(o.cap)||o.cap<1)throw new Error('giant needs positive CAP');
     const carry=o.food??5;if(!Number.isSafeInteger(carry)||carry<1||carry>20)throw new Error('giant GIANT_FOOD must be1..20');
     const ranged=training.skill==='Ranged',ammoCarry=o.ammo??500;
+    // A site credited by XP alone (the troopers) shares its targets with gnomes and other players: it lets go of a lost
+    // target and walks back to the spot when none is in view. The giants' big-bone credit keeps the strict wait.
+    const roam=site.creditDrop===undefined;
     if(ranged&&(!Number.isSafeInteger(ammoCarry)||ammoCarry<1||ammoCarry>100000))throw new Error('giant GIANT_AMMO must be1..100000');
     const inv=()=>s.sdk.getInventory(),state=()=>s.sdk.getState();
     const count=(items:readonly {id:number;count:number}[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
@@ -508,9 +511,9 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
             if(s.tick()-lastProgress>=(o.noProgress??200))throw new Error(`no ${label} progress: target/loot timeout`);
             const target=state()?.nearbyNpcs.find(n=>site.npcs.includes(n.id)&&inBox(site.room,n.tileX??n.x,n.tileZ??n.z)&&!n.inCombat&&n.reachable!==false
                 &&(n.hp==null||n.maxHp==null||n.hp>=n.maxHp)&&(retry.get(n.index)??0)<=s.tick());
-            // A bow stands to shoot and can drift to an edge with no trooper in view (practice: two runs idled 307 ticks at
-            // 2505,3242 and ended on the no-progress timeout); after 10 ticks without a target it walks back to the spot.
-            if(!target){if(ranged&&s.tick()-lastProgress>=10&&!near(site.spot.x,site.spot.z,3))await walk(site.spot.x,site.spot.z,3,true);else await waitTicks(s,1);continue;}
+            // With no trooper in view for 10 ticks it walks back to the spot (practice: two bow runs idled 307 ticks at
+            // 2505,3242 and ended on the no-progress timeout).
+            if(!target){if(roam&&s.tick()-lastProgress>=10&&!near(site.spot.x,site.spot.z,3))await walk(site.spot.x,site.spot.z,3,true);else await waitTicks(s,1);continue;}
             const beforeXp=selectedXp(),groundBefore=cowGroundCounts(state()?.groundItems??[]);
             if(!(await s.bot.attack(target)).success){retry.set(target.index,s.tick()+20);await waitTicks(s,1);continue;}
             let x=target.tileX??target.x,z=target.tileZ??target.z,observedXp=beforeXp,gone=false,dry=false,released=false,lastXp=s.tick();lastProgress=s.tick();
@@ -524,11 +527,12 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
                 if(site.creditDrop===undefined?gone&&selectedXp()>beforeXp:giantCredit(gone,selectedXp()-beforeXp,fresh(site.creditDrop)))break;
                 // An empty quiver stops the bow mid-fight: restock instead of waiting out the no-progress window.
                 if(ranged&&quiver()<1){dry=true;break;}
-                // A bow needs line of sight: give up a trooper that 40 ticks of own fire have not hit (practice: one stood
-                // 289 ticks at 2521,3247 and the run ended on the no-progress timeout), as cow mode releases a cow.
-                if(ranged&&!gone&&s.tick()-lastXp>=GIANT_RANGED_RELEASE){retry.set(target.index,s.tick()+50);released=true;break;}
-                // A trooper another player or a gnome killed is gone with no own XP: the credit above never comes (practice: 290 idle ticks).
-                if(ranged&&gone){released=true;break;}
+                // Give up a target that 40 ticks of own attacks have not hit, as cow mode releases a cow. A bow needs line of
+                // sight (practice: one stood 289 ticks at 2521,3247 and the run ended on the no-progress timeout).
+                if(roam&&!gone&&s.tick()-lastXp>=GIANT_RANGED_RELEASE){retry.set(target.index,s.tick()+50);released=true;break;}
+                // A trooper another player or a gnome killed is gone with no own XP: the credit above never comes (practice: 290
+                // idle ticks; live melee: TheFullMonty's first run ended on the no-progress timeout after 32 kills).
+                if(roam&&gone){released=true;break;}
                 // A level-up dialog holds the attack until dismissed (practice, Ranged 1 -> 29: 337 of 681 ticks under one).
                 if(state()?.dialog?.isOpen){await s.bot.dismissBlockingUI();const again=state()?.nearbyNpcs.find(n=>n.index===target.index);if(again)await s.bot.attack(again);}
                 if(s.tick()-lastProgress>=(o.noProgress??200))throw new Error(`no ${label} progress: target/loot timeout`);await waitTicks(s,1);

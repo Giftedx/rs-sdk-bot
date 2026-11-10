@@ -109,6 +109,10 @@ Ranged it adds is not needed at that point.
   - A bow needs line of sight. One run stood 289 ticks on a trooper it could not hit, so a target with no own XP for
     40 ticks is given up.
   - A trooper killed by someone else (a gnome, another bot) never pays the XP the credit waits for, so it is let go.
+    Live, TheFullMonty's first melee trooper run ended on the no-progress timeout after 32 kills (Strength 61 -> 70, one
+    shark). So these release rules and the walk back to the spot apply to every trooper run, melee as well.
+    Practice melee with them, three bots at once: 63, 58 and 51 kills, Strength 60 -> 72-74 at 56.0, 57.2 and 65.7 XP
+    per tick, all ok.
   - A bot that stands to shoot drifted to the west edge with no trooper in view (two runs idled 307 ticks). After 10
     ticks without a target it walks back to the spot.
 - **Evidence.** `.practice/trooper-ranged/` in the Claude cloud container that ran them.
