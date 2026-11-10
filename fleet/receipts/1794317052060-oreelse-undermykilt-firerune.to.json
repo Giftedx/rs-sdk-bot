@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794317052060-oreelse-undermykilt-firerune",
+ "account": "UnderMyKilt",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 130,
+ "claim": "ea76e4c4-7a33-4e6b-a0e9-c6d5e04923db",
+ "count": 0,
+ "ok": false,
+ "at": 1794317055824,
+ "detail": "trade claimed"
+}
