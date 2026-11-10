@@ -1,6 +1,7 @@
 // Runs the CI checks of .github/workflows/ci.yml on this PC and can post the result as the `local-gate` commit
 // status, so a PR can merge when hosted runners are out of minutes or slow to start.
-// Usage: bun scripts/ci-gate.ts [--post] [--force]   (vendor/rs-sdk must carry patches/rs-sdk-working.patch, as in CI)
+// Usage: bun scripts/ci-gate.ts [--post] [--force] [--full]   (vendor/rs-sdk must carry patches/rs-sdk-working.patch, as in CI)
+//   --full   run every test file, not only the files that the change since origin/master can reach
 //   --post   post `local-gate` success or failure on HEAD (needs gh, and no changed or untracked files)
 //   --force  run while the local swarm reports running bots (tsc and the suites slow every bot client)
 // The checks are the workflow's single-line `bun run` and `bun test` steps, read from ci.yml, so the two cannot drift.
@@ -24,6 +25,21 @@ export function gateSteps(yml:string):Step[]{
         if(k==='run')step.run=v!.trim();
     }
     return raw.filter(s=>/^bun (run|test) \S/.test(s.run??'')).map(s=>({name:s.name??s.run!,cmd:s.run!.split(/\s+/),env:s.env}));
+}
+
+// The local form of the workflow's test steps. One `bun test` process for every file takes about 520 s on the PC.
+// test-shards.ts runs the files in 12 processes, and with --changed it runs only the files that the change since
+// origin/master can reach. `--full` keeps the shards and runs every file. A `bun test` step on a folder inside an
+// earlier step's folders is the same files again, so it is left out.
+export function localSteps<T extends {cmd:string[]}>(steps:T[],full:boolean):T[]{
+    const out:T[]=[],seen:string[]=[];
+    for(const step of steps){
+        if(step.cmd[0]!=='bun'||step.cmd[1]!=='test'){out.push(step);continue;}
+        const folders=step.cmd.slice(2).filter(f=>!seen.some(s=>f===s||f.startsWith(s.replace(/\/$/,'')+'/')));
+        seen.push(...folders);
+        if(folders.length)out.push({...step,cmd:['bun','scripts/test-shards.ts',...(full?[]:['--changed','origin/master']),...folders]});
+    }
+    return out;
 }
 
 export function statusBody(ok:boolean,results:{name:string;ok:boolean;s:number}[]){
@@ -52,7 +68,7 @@ if(import.meta.main){
     if(problem){console.error('gate: '+problem);process.exit(2);}
     try{const s=await (await fetch('http://127.0.0.1:3100/api/state',{signal:AbortSignal.timeout(3000)})).json() as any;const active=s?.capacity?.active;
         if(active>0&&!force){console.error(`gate: ${active} bots run now; tsc and the suites slow their clients. Rerun with --force to run anyway.`);process.exit(2);}}catch{/* no local dashboard: no swarm load to read */}
-    const steps=gateSteps(readFileSync(join(root,'.github','workflows','ci.yml'),'utf8')),results:{name:string;ok:boolean;s:number}[]=[];
+    const steps=localSteps(gateSteps(readFileSync(join(root,'.github','workflows','ci.yml'),'utf8')),process.argv.includes('--full')),results:{name:string;ok:boolean;s:number}[]=[];
     for(const step of steps){
         const t=performance.now();console.log(`gate: ${step.name}`);
         const p=Bun.spawnSync(step.cmd,{cwd:root,stdout:'inherit',stderr:'inherit',env:{...process.env,...step.env},windowsHide:true});
