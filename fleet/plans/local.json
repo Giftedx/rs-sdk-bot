@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794311191463,
+ "at": 1794311267827,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -48,22 +48,6 @@
    "standing": true,
    "repeat": false,
    "goal": "rune arrows (826 short) from headless arrows and rune arrowtips",
-   "role": "supply"
-  },
-  {
-   "account": "Magicwanda",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/goldfarm.ts KNIGHT_SPOT=2669,3298"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "RUN": "2"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "Thieving 55, then coins from Ardougne knights",
    "role": "supply"
   },
   {
@@ -317,27 +301,6 @@
    ]
   },
   {
-   "account": "Pocketpython",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ORDER_KEY": "pocketpython-cat-sardine",
-    "ITEM_ID": "1552",
-    "QUANTITY": "1",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "5000",
-    "CASH_RESERVE": "3000000",
-    "ORDER_MS": "600000",
-    "FILL_WAIT_TICKS": "50",
-    "CAP": "2400",
-    "COORDINATOR_RUN_ID": "task-45830d52-1185-4eb9-b586-6da0803b41e6"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-pocketpython-cat-sardine [task-45830d52-1185-4eb9-b586-6da0803b41e6]",
-   "role": "supply"
-  },
-  {
    "account": "CoinCock",
    "script": "scripts/buy-owned-ge-item.ts",
    "args": [],
@@ -470,6 +433,40 @@
    "resources": [
     "knight:2671,3313"
    ]
+  },
+  {
+   "account": "Magicwanda",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "385",
+    "QUANTITY": "30",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "810",
+    "CASH_RESERVE": "200000",
+    "ORDER_KEY": "magicwanda-sharks30-blood-food",
+    "FILL_WAIT_TICKS": "40",
+    "ORDER_MS": "360000",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-31206a65-dc8a-41f6-9e08-018d34e0acd0"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-ge-magicwanda-sharks30-blood-food [task-31206a65-dc8a-41f6-9e08-018d34e0acd0]",
+   "role": "supply"
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "coins for route supplies: Ardougne knights",
+   "role": "supply"
   }
  ]
 }
