@@ -28,6 +28,10 @@ test('spot contention counts other players near a claimed tile on the ground flo
     expect(v[0]).toEqual({ side: 'local', resource: 'knight:2582,3297', kind: 'knight', x: 2582, z: 3297, others: ['Zezima'], ours: ['MyBot'] });
     expect(v[1]).toEqual({ side: 'local', resource: 'shop:aubury', kind: 'shop', x: null, z: null, others: [], ours: [] });
 });
+test('a spot that several claims of one side name is listed once; another side keeps its own row', () => {
+    const v = contentionView([{ side: 'local', resources: ['knight:2582,3297'] }, { side: 'local', resources: ['knight:2582,3297', 'knight:2582,3297'] }, { side: 'cloud', resources: ['knight:2582,3297'] }], roster, fleet, now);
+    expect(v.map(s => s.side + ' ' + s.resource).sort()).toEqual(['cloud knight:2582,3297', 'local knight:2582,3297']);
+});
 test('a lookup carries the hiscore rows and the last world-feed sighting', () => {
     expect(lookupView('Zezima', [], 7, roster.get('zezima'), now)).toEqual({ name: 'Zezima', at: 7, rows: [], online: true, x: 2585, z: 3300, plane: 0, combat: 99, lastSeen: now - 1000, worn: null, wornAt: null });
     expect(lookupView('Zezima', [], 7, roster.get('zezima'), now, [{ slot: 'Weapon', name: 'Bronze sword' }], 8)).toMatchObject({ worn: [{ slot: 'Weapon', name: 'Bronze sword' }], wornAt: 8 });
