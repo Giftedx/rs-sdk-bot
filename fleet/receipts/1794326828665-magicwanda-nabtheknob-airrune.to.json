@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794326828665-magicwanda-nabtheknob-airrune",
  "account": "NabTheKnob",
  "partner": "Magicwanda",
@@ -12,6 +12,11 @@
  "claim": "a7db21a6-36e4-4a90-9488-efada2c68bd6",
  "count": 0,
  "ok": false,
- "at": 1794326844953,
- "detail": "trade claimed"
+ "at": 1794326899260,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1794326844961-0000024080-0000000001",
+  "at": 1794326899251,
+  "sha256": "76bd28a966f15ae2a97d211a394515c2e807df64b40b6c117c08aeb9f0813623"
+ }
 }
