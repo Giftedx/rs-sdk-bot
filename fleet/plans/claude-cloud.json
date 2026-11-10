@@ -1,32 +1,13 @@
 {
  "side": "claude-cloud",
- "at": 1794317211036,
+ "at": 1794317361816,
  "jobs": [
   {
-   "account": "Fingersmith",
+   "account": "Deeppockets",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=20 EXPECTED_OWNED=15 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=fingersmith-kit0-558-15to35 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=10 EXPECTED_OWNED=25 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=fingersmith-kit0-556-25to35 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 20 Mind rune, 10 Air rune on the Grand Exchange to train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-strike-magic-21",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
-   "account": "Dipstick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=20 EXPECTED_OWNED=15 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=dipstick-kit0-558-15to35 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=10 EXPECTED_OWNED=25 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=dipstick-kit0-556-25to35 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=20 EXPECTED_OWNED=15 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=deeppockets-kit0-558-15to35 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=10 EXPECTED_OWNED=25 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=deeppockets-kit0-556-25to35 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
@@ -42,20 +23,18 @@
   },
   {
    "account": "Quickhandjob",
-   "script": "scripts/chain.ts",
+   "script": "scripts/alch-train.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=955 EXPECTED_OWNED=45 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=quickhandjob-kit0-561-45to1000 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=314 QUANTITY=45 EXPECTED_OWNED=5 LIMIT_PRICE=20 CASH_RESERVE=1000 ORDER_KEY=quickhandjob-kit0-314-5to50 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "99",
+    "5000"
    ],
-   "env": {
-    "ROUNDS": "1"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy 955 Nature rune, 45 Feather on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-magic-99",
    "autopilot": "claude-cloud",
    "resources": []
   },
@@ -105,44 +84,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "Deeppockets",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=20 EXPECTED_OWNED=15 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=deeppockets-kit0-558-15to35 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=10 EXPECTED_OWNED=25 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=deeppockets-kit0-556-25to35 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 20 Mind rune, 10 Air rune on the Grand Exchange to train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-strike-magic-21",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2652,3318"
    ]
   },
   {
@@ -219,26 +160,22 @@
   },
   {
    "account": "PocketPool",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "PEN": "3197,3353",
+    "TICKS": "3000",
+    "TARGET": "2000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 70 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-70",
+   "goal": "feathers at the chicken pen 3197,3353",
+   "role": "helper",
+   "template": "feathers@3197,3353",
    "autopilot": "claude-cloud",
    "resources": [
-    "cow:ardougne-north"
+    "pen:3197,3353"
    ]
   },
   {
@@ -266,14 +203,14 @@
    ]
   },
   {
-   "account": "KnightRider",
+   "account": "Fingersmith",
    "script": "scripts/gather-combat.ts",
    "args": [
     "3000",
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
+    "TRAIN_SKILL": "Defence",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1"
@@ -281,12 +218,56 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 70 on the Ardougne cows",
+   "goal": "train Defence to 60 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-strength-70",
+   "template": "army-cow-defence-60",
    "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "Dipstick",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Attack",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Attack to 60 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-attack-60",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3187,3277",
+    "TICKS": "3000",
+    "TARGET": "2000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "pen:3187,3277"
    ]
   }
  ]
