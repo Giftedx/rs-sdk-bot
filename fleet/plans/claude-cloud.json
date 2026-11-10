@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794341482367,
+ "at": 1794342082393,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -101,31 +101,6 @@
   },
   {
    "account": "Deeppockets",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Attack",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Attack to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-attack-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "Fatstack",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
@@ -278,25 +253,24 @@
    "account": "Fingersmith",
    "script": "scripts/gather-combat.ts",
    "args": [
-    "1500",
-    "trooper"
+    "3000",
+    "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Attack",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "TRAIN_SKILL": "Defence",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Attack to 99 on the Khazard troopers",
+   "goal": "train Defence to 70 on the Ardougne cows",
    "role": "combat",
-   "template": "army-trooper-attack-99",
+   "template": "army-cow-defence-70",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "cow:ardougne-north"
    ]
   },
   {
@@ -338,6 +312,31 @@
     "TROOPER_COOK": "1"
    },
    "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Attack to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-attack-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Attack",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": false,
    "standing": true,
    "repeat": true,
    "goal": "train Attack to 99 on the Khazard troopers",
