@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794320021940,
+ "at": 1794320094238,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -78,22 +78,6 @@
    "repeat": true,
    "goal": "PK hunts of 10 minutes at Wilderness 20 or less, with GE and shop rune restock",
    "role": "pk"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/walk-to.ts 3253 3420",
-    "scripts/train-chickens.ts TRAIN_BANK=varrock TRAIN_SKILL=Strength TARGET_LEVEL=30 CAP=3000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "Strength 30 on chickens so it can hit hard enough to PK",
-   "role": "pk-trainee"
   },
   {
    "account": "OreElse",
@@ -503,6 +487,32 @@
    "repeat": false,
    "goal": "run-ge-pocketrocket-rune-arrows533 [task-a92fe9c7-4fbb-4d38-8279-cb797dfe7be6]",
    "role": "supply"
+  },
+  {
+   "accounts": [
+    "Shaftsinker",
+    "Mightyrod"
+   ],
+   "script": "scripts/handoff-inputs.ts",
+   "args": [
+    "1:Shortbow",
+    "75:Bronze arrow",
+    "--bank-x=3253",
+    "--bank-z=3420",
+    "--approach-ms=1500000",
+    "--request-ms=60000",
+    "--timeout-ms=600000",
+    "--grace-ms=45000"
+   ],
+   "env": {
+    "HANDOFF_ORDER": "mightyrod-ranged-shortbow-bronze75",
+    "CAP": "4000",
+    "COORDINATOR_RUN_ID": "task-45f3b4ae-79b5-4b81-92ea-abc546a05b98"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-handoff-shaftsinker-mightyrod-shortbow-arrows [task-45f3b4ae-79b5-4b81-92ea-abc546a05b98]",
+   "role": "pk-trainee"
   }
  ]
 }
