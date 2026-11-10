@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { acquireFleetSwarmClaim, acquireFleetTradeClaim, readFleetAccountClaim, readFleetTradeClaim, readHeldFleetTradeClaims, releaseFleetTradeClaim } from '../src/fleet-trade-claim';
 import { beginSessionAttempt, lifecycleOwner } from '../src/session-lifecycle';
+import { acquireFleetLease } from '../src/fleet-lease';
+import { ORPHAN_CLAIM_MS } from '../src/fleet-trade-claim';
 
 const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, stdio: 'pipe', timeout: 5000, windowsHide: true });
 const server = 'rs-sdk-demo.fly.dev';
@@ -166,5 +168,54 @@ test('trade admission accepts the owning checkout’s exact confirmed worker log
         const trade = acquireFleetTradeClaim(a, input);
         expect(readFleetTradeClaim(b, input)?.nonce).toBe(trade.nonce);
         trade.release();
+    });
+}, 30_000);
+
+const T0 = 1_794_230_000_000;
+const oldSide = { account: 'Dipstick', server, side: 'claude-cloud-4' }, newSide = { account: 'Dipstick', server, side: 'claude-cloud' };
+
+test('another side replaces a dead side\'s swarm claim only once the claim and that side\'s lease are an hour stale', async () => {
+    await withRepos(async (a, b) => {
+        acquireFleetLease(a, 'claude-cloud-4', () => T0);
+        const dead = acquireFleetSwarmClaim(a, oldSide, { now: () => T0 });
+        // The container died holding the claim. Another checkout of the same side stays refused, however long.
+        expect(() => acquireFleetSwarmClaim(b, oldSide, { now: () => T0 + 19 * ORPHAN_CLAIM_MS })).toThrow('held');
+        expect(() => acquireFleetSwarmClaim(b, oldSide, { recover: true, now: () => T0 + 19 * ORPHAN_CLAIM_MS })).toThrow('held');
+        // The side that now owns the account: refused a millisecond early, admitted at the hour.
+        expect(() => acquireFleetSwarmClaim(b, newSide, { now: () => T0 + ORPHAN_CLAIM_MS - 1 })).toThrow('held');
+        const taken = acquireFleetSwarmClaim(b, newSide, { now: () => T0 + ORPHAN_CLAIM_MS });
+        expect(taken.nonce).not.toBe(dead.nonce);
+        expect(readFleetAccountClaim(a, newSide)).toMatchObject({ kind: 'swarm', phase: 'held', side: 'claude-cloud', nonce: taken.nonce });
+        expect(git(b, 'ls-remote', 'origin', 'refs/heads/fleet-trade-claim/dipstick').toString()).toMatch(/^[0-9a-f]{40}/);
+        expect(git(a, 'log', '-1', '--format=%s', git(a, 'ls-remote', 'origin', 'refs/heads/fleet-trade-claim/dipstick').toString().split(/\s/)[0]!).toString())
+            .toContain(`replacing the orphaned claude-cloud-4 claim ${dead.nonce}`);
+    });
+}, 30_000);
+
+test('a side that still renews its lease keeps its held claims, and a side with no lease record gives no takeover', async () => {
+    await withRepos(async (a, b) => {
+        acquireFleetSwarmClaim(a, oldSide, { now: () => T0 });
+        // Its controller recorded the lease five minutes before the other side asks: the side is alive.
+        acquireFleetLease(a, 'claude-cloud-4', () => T0 + 19 * ORPHAN_CLAIM_MS - 5 * 60_000);
+        expect(() => acquireFleetSwarmClaim(b, newSide, { now: () => T0 + 19 * ORPHAN_CLAIM_MS })).toThrow('held');
+        const unknown = { account: 'Kiltlifter', server, side: 'claude-cloud-3' };
+        acquireFleetSwarmClaim(a, unknown, { now: () => T0 });
+        expect(() => acquireFleetSwarmClaim(b, { ...unknown, side: 'claude-cloud' }, { now: () => T0 + 19 * ORPHAN_CLAIM_MS })).toThrow('held');
+    });
+}, 30_000);
+
+test('the older fleet-data heartbeat counts as the dead side\'s lease, and a held trade claim is never taken over', async () => {
+    await withRepos(async (a, b) => {
+        mkdirSync(join(a, 'fleet', 'leases'), { recursive: true });
+        await Bun.write(join(a, 'fleet', 'leases', 'claude-cloud-3.json'), JSON.stringify({ side: 'claude-cloud-3', host: 'vm', pid: 17115, at: T0 }));
+        git(a, 'add', 'fleet/leases/claude-cloud-3.json');
+        git(a, '-c', 'user.name=t', '-c', 'user.email=t@example.invalid', 'commit', '-q', '-m', 'lease');
+        git(a, 'push', '-q', 'origin', 'HEAD:refs/heads/fleet-data');
+        const old = { account: 'Kiltlifter', server, side: 'claude-cloud-3' };
+        acquireFleetSwarmClaim(a, old, { now: () => T0 });
+        expect(() => acquireFleetSwarmClaim(b, { ...old, side: 'claude-cloud' }, { now: () => T0 + ORPHAN_CLAIM_MS - 1 })).toThrow('held');
+        expect(acquireFleetSwarmClaim(b, { ...old, side: 'claude-cloud' }, { now: () => T0 + ORPHAN_CLAIM_MS }).nonce).toBeTruthy();
+        acquireFleetTradeClaim(a, { ...input, account: 'Trader2' }, () => T0);
+        expect(() => acquireFleetSwarmClaim(b, { account: 'Trader2', server, side: 'claude-cloud' }, { now: () => T0 + 19 * ORPHAN_CLAIM_MS })).toThrow('fleet trade claim held');
     });
 }, 30_000);

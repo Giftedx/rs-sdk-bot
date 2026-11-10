@@ -102,6 +102,29 @@ function parseRemote(raw: string, side: string): RemoteLease {
     return lease;
 }
 
+// The newest renewal a side's controller recorded: its lease ref, or the older heartbeat file on fleet-data. null: none.
+export function fleetLeaseLastSeen(git: FleetGit, side: string): number | null {
+    if (!SIDE_NAME.test(side)) throw Error('invalid fleet lease side');
+    const ref = 'refs/heads/fleet-lease/' + side, refs = readFleetGitRefs(git, [ref, LEGACY_REF]);
+    let seen: number | null = null;
+    const head = refs.get(ref);
+    if (head) {
+        git(['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', 'origin', head]);
+        seen = parseRemote(git(['show', '-s', '--format=%B', head]), side).at;
+    }
+    const legacy = refs.get(LEGACY_REF);
+    if (legacy) {
+        git(['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', 'origin', legacy]);
+        const path = 'fleet/leases/' + side + '.json';
+        if (git(['ls-tree', '--name-only', legacy, '--', path]) === path) {
+            const old = JSON.parse(git(['show', legacy + ':' + path]));
+            if (!Number.isSafeInteger(old?.at) || old.at <= 0) throw Error('legacy fleet lease has an invalid record');
+            seen = Math.max(seen ?? 0, old.at);
+        }
+    }
+    return seen;
+}
+
 // The remote ref is the authority. A contender writes a child of the exact head it read.
 // An ordinary fast-forward push lets only one child of that head win. No local branch,
 // worktree, remote-tracking ref, or fleet-data index is changed by an acquisition or renewal.
