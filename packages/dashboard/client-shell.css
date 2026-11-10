@@ -140,7 +140,41 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .client-title .focus .focus-wall{padding:0 8px;border-left:1px solid #3c3c3c;border-radius:0 3px 3px 0;color:#aaa;transition:background .14s,color .14s}.client-title .focus .focus-wall:hover:not(:disabled){background:#3a3a3a;color:#ff981f}.client-title .focus .focus-wall:disabled{color:#555;cursor:default}
 .client-title .focus .focus-wall[aria-pressed=true]{background:#3a2f1c;color:#ff981f}.client-title .focus-now+.focus-step:has(+.focus-wall:not([hidden])){border-radius:0}
 /* The wall fills the 3D view: the panels of the one followed account stay out of it. */
-.game-hud.wall-on>:not(.focus-note):not(.game-toast):not(.game-screen){display:none!important}
+.game-hud.wall-on>:not(.focus-note):not(.game-toast):not(.game-screen):not(.wall-chrome):not(.wall-help){display:none!important}
+/* ==== Fleet wall tiling (start): the layout switcher, the frames the page draws over the views, and the key list ==== */
+.client-title .focus .wall-tools{display:flex;align-items:stretch;border-left:1px solid #3c3c3c}.client-title .focus .wall-tools[hidden],.wall-help[hidden]{display:none!important}
+.client-title .focus .focus-wall:has(+.wall-tools:not([hidden])){border-radius:0}
+.client-title .focus .wall-tools button{display:grid;place-items:center;width:24px;padding:0;border-radius:0;color:#8f8f8f;transition:background .14s,color .14s,box-shadow .14s}.client-title .focus .wall-tools button:last-child{border-radius:0 3px 3px 0}
+.client-title .focus .wall-tools button:hover{background:#3a3a3a;color:#ff981f}.client-title .focus .wall-tools button[aria-pressed=true]{background:#3a2f1c;color:#ff981f;box-shadow:inset 0 -2px #ff981f}
+.wall-tools svg{width:12px;height:12px;fill:currentColor;pointer-events:none}.client-title .focus .wall-tools .wall-cycle{display:none}.client-title .focus .wall-tools .wall-help-button{border-left:1px solid #3c3c3c;font:700 12px Arial,sans-serif}.client-title .focus .wall-tools .wall-help-button[aria-expanded=true]{background:#3a2f1c;color:#ff981f}
+/* The frames. A frame is placed with left, top, width and height; the time (--wall-ms) and the start come from the viewer's
+   move, and the curve is the viewer's ease-out cubic. --wall-fade is the opacity of a frame that opens or closes: a
+   registered number, so it has a transition that runs in the page's frames like the others. Only the title strip takes
+   the pointer. */
+@property --wall-fade{syntax:'<number>';inherits:false;initial-value:1}
+.wall-chrome{position:absolute;left:0;top:0;width:0;height:0;z-index:1;pointer-events:none;--wall-ms:240ms;--wall-ease:cubic-bezier(.3333,1,.6667,1)}
+.wall-tile{position:absolute;left:0;top:0;pointer-events:none;container-type:inline-size;opacity:var(--wall-fade);transition:left var(--wall-ms) var(--wall-ease),top var(--wall-ms) var(--wall-ease),width var(--wall-ms) var(--wall-ease),height var(--wall-ms) var(--wall-ease),--wall-fade var(--wall-ms) var(--wall-ease)}
+.wall-chrome.still .wall-tile{transition:none}
+.wall-tile::after{content:'';position:absolute;inset:0;box-shadow:inset 0 0 0 1px #0a0a0a;pointer-events:none;transition:box-shadow .12s}
+.wall-tile.wall-hover::after,.wall-tile:has(.wall-strip:hover)::after{box-shadow:inset 0 0 0 1px #8a744a}
+.wall-tile.wall-focus{z-index:2}.wall-tile.wall-focus::after{box-shadow:inset 0 0 0 1px #ff981f,inset 0 0 0 2px #ff981f59,inset 0 0 16px #ff981f33}
+.wall-strip{position:absolute;inset:0 0 auto;height:20px;display:flex;align-items:center;gap:5px;padding:0 1px 0 7px;overflow:hidden;white-space:nowrap;background:linear-gradient(#2d2d2df2,#1e1e1eeb);border-bottom:1px solid #0a0a0a;color:#e8dcc4;font:16px/20px RS,serif;text-shadow:1px 1px #000;pointer-events:auto;cursor:default;user-select:none}
+.wall-tile.wall-main .wall-strip{box-shadow:inset 3px 0 #ff981f}.wall-tile.wall-focus .wall-strip{background:linear-gradient(#4b3b1ff2,#3a2f1ceb);color:#ff981f}
+.wall-dot{width:7px;height:7px;flex:none;box-sizing:border-box;border:1.5px solid #777;border-radius:50%}.wall-dot.on{background:#5fd35f;border-color:#5fd35f}.wall-dot.idle{background:#dc8a00;border-color:#dc8a00}.wall-dot.finding{border-color:#ff981f;border-style:dashed}
+.wall-name{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:400}.wall-note{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;color:#9c917d}
+.wall-num{flex:none;min-width:14px;height:14px;padding:0 2px;border:1px solid #4a4a4a;border-radius:2px;color:#a0a0a0;font:10px/12px Arial,sans-serif;text-align:center;text-shadow:none}.wall-num:empty{display:none}
+.game-hud .wall-open{flex:none;display:grid;place-items:center;width:20px;height:19px;margin:0;padding:0;border:0;border-radius:0;background:none;color:#8f8f8f;cursor:pointer}.game-hud .wall-open:hover{background:#ffffff1a;color:#ff981f}.wall-open svg{width:11px;height:11px;fill:currentColor;pointer-events:none}
+@container (max-width:180px){.wall-note{display:none}.wall-name{flex:1 1 auto}}
+@container (max-width:132px){.wall-num{display:none}}
+@container (max-width:104px){.game-hud .wall-open{display:none}.wall-strip{gap:4px;padding:0 4px 0 5px;font-size:15px}}
+.game-hud .wall-help{position:absolute;right:10px;top:28px;z-index:3;width:min(310px,calc(100% - 20px));padding:9px 12px 10px;border:2px ridge #5b5243;border-radius:4px;background:#1e1a14f5;color:#e8dcc4;font:13px/1.35 var(--ui,sans-serif);text-shadow:none;pointer-events:auto}
+.wall-help h6{margin:0 0 6px;color:#ff981f;font:16px RS,serif;text-shadow:1px 1px #000}.wall-help p{display:flex;gap:10px;margin:3px 0}.wall-help kbd{flex:0 0 88px;color:#ff981f;font:600 12px var(--ui,sans-serif)}
+@media(max-width:740px){.client-title .focus .wall-tools .wall-layout{display:none}.client-title .focus .wall-tools .wall-cycle{display:grid}.client-title .focus .wall-tools button{width:26px}}
+/* A phone has no keyboard for the key list and no room for its button. The step buttons do nothing while the wall is
+   open: they make room for the layout button. */
+@media(max-width:479px){.client-title .focus .wall-tools .wall-help-button{display:none}.client-title .focus .wall-tools .wall-cycle{border-radius:0 3px 3px 0}.client-title .focus[data-state=wall] .focus-step{display:none}}
+@media(prefers-reduced-motion:reduce){.wall-tile,.wall-tile::after{transition:none!important}}
+/* ==== Fleet wall tiling (end) ==== */
 .focus[data-state=wall] .focus-now .focus-dot{background:#ff981f;border-color:#ff981f;border-radius:1px}
 @keyframes focus-swap{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
 @keyframes focus-pulse{0%{box-shadow:0 0 0 0 #5fd35f88}70%,100%{box-shadow:0 0 0 5px #5fd35f00}}

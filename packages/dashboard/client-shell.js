@@ -24,7 +24,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   phoneWidth.addEventListener('change',e=>hud.classList.toggle('chat-hidden',e.matches));
   hud.innerHTML=`<button class="game-xp" title="XP Tracker" aria-label="XP Tracker">XP</button><div class="game-orbs" aria-label="Player status"></div><div class="xp-drops" aria-hidden="true"></div><div class="xp-globes" aria-label="XP globes"></div><div class="game-overlay" aria-label="Overlay"></div><div class="game-infoboxes" aria-label="Infoboxes"></div><div class="game-tip" hidden></div><div class="game-screen" id="game-loading"><div class="game-screen-box"><h2>Welcome to RuneScape</h2><p>Loading - please wait.</p></div></div><div class="game-screen" id="game-lost" hidden><div class="game-screen-box"><p>Connection lost.</p><p>Please wait - attempting to reestablish.</p></div></div><div class="game-minimap" aria-label="Minimap"><canvas width="146" height="146"></canvas><canvas class="minimap-frame" aria-hidden="true"></canvas><img class="minimap-compass" src="${asset('compass.png')}" alt="" title="Compass"><button class="game-worldmap" data-places title="Places: move the camera" aria-label="Places"><img src="${asset('worldmap-icon.png')}" alt=""></button></div><button class="game-logout" title="Logout menu">⏻</button><section class="game-tabs" aria-label="Game interface"><nav class="tab-row" aria-label="Primary game tabs"></nav><div class="game-panel" id="game-panel"></div><nav class="tab-row" aria-label="Social and settings tabs"></nav></section><button class="chat-toggle" aria-label="Toggle chat">▾ Chat</button><section class="game-chat" aria-label="In-game chat"><div class="game-chat-lines" role="log" aria-live="polite"></div><form class="chat-input"><span id="chat-name">Spectator:</span><input aria-label="Chat message or local command" autocomplete="off" placeholder="*"></form><nav class="chat-channels" aria-label="Chat channels"></nav></section>`;
   app.append(hud);
-  const title=document.createElement('div');title.className='client-title';title.innerHTML=`<img src="${asset('runelite.png')}" alt=""><span>RuneLite — Swarm</span><span class="connection">● Live world</span><div class="focus" id="client-focus" role="group" aria-label="3D camera focus" data-state="free"><button class="focus-step" data-focus-step="-1" aria-label="Previous account in the world" title="Previous account in the world · [">‹</button><button class="focus-now" aria-haspopup="listbox" aria-expanded="false"><i class="focus-dot"></i><span class="focus-name">Free camera</span><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg></button><button class="focus-step" data-focus-step="1" aria-label="Next account in the world" title="Next account in the world · ]">›</button><button class="focus-wall" aria-pressed="false" hidden title="Fleet wall: up to 16 of our accounts in the world, each in its own 3D view. Click a view to follow that account. · \\">Wall</button><div class="focus-menu"><input class="focus-find" aria-label="Find an account" placeholder="Find an account…" autocomplete="off" spellcheck="false"><div class="focus-list" role="listbox" aria-label="Accounts"></div></div></div><button id="client-sidebar" title="Toggle plugin sidebar" aria-label="Toggle plugin sidebar">❯</button>`;app.append(title);
+  const title=document.createElement('div');title.className='client-title';title.innerHTML=`<img src="${asset('runelite.png')}" alt=""><span>RuneLite — Swarm</span><span class="connection">● Live world</span><div class="focus" id="client-focus" role="group" aria-label="3D camera focus" data-state="free"><button class="focus-step" data-focus-step="-1" aria-label="Previous account in the world" title="Previous account in the world · [">‹</button><button class="focus-now" aria-haspopup="listbox" aria-expanded="false"><i class="focus-dot"></i><span class="focus-name">Free camera</span><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg></button><button class="focus-step" data-focus-step="1" aria-label="Next account in the world" title="Next account in the world · ]">›</button><button class="focus-wall" aria-pressed="false" hidden title="Fleet wall: up to 16 of our accounts in the world, each in its own 3D view, tiled. Click a view to focus it, double click to follow that account. · \\">Wall</button><div class="focus-menu"><input class="focus-find" aria-label="Find an account" placeholder="Find an account…" autocomplete="off" spellcheck="false"><div class="focus-list" role="listbox" aria-label="Accounts"></div></div></div><button id="client-sidebar" title="Toggle plugin sidebar" aria-label="Toggle plugin sidebar">❯</button>`;app.append(title);
   const followTitle=()=>{const name=document.getElementById('client-plugin-name')?.textContent;document.title='RuneLite — Swarm'+(name?' · '+name:'');writeLink();};
   const plugin=document.createElement('aside');plugin.className='client-plugin';plugin.setAttribute('aria-label','RuneLite plugins');plugin.innerHTML='<div class="client-plugin-title"><span id="client-plugin-name">Fleet</span><select id="client-more" aria-label="More plugins"><option value="">⋮</option><option value="raw">Raw evidence</option></select><button id="client-share" aria-label="Copy a link to this view" title="Copy a link to this view">⧉</button><button aria-label="Close plugin">×</button></div><div class="client-plugin-body"></div>';app.append(plugin);
   const body=plugin.querySelector('.client-plugin-body'),rail=document.createElement('nav');rail.className='client-rail';rail.setAttribute('aria-label','RuneLite plugin toolbar');
@@ -189,7 +189,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function infoPanel(){
     return '<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>RuneLite — Swarm</span></div><p class="xp-muted">A team of bot accounts on the rs-sdk demo world (the Lost City 2004 engine), shown in a RuneLite-style client. The 3D view and the map show every player online; gold names are our accounts.</p></div>'+
       '<div class="xp-box"><div class="xp-head"><span>Data</span></div><div class="info-data">'+infoData()+'</div></div>'+
-      (window.atlasOperator()?'':'<div class="xp-box"><div class="xp-head"><span>Controls</span></div>'+infoRow('[ and ]','watch the previous or next account')+infoRow('Wall','watch all our accounts in the world at once')+infoRow('Title bar','choose an account, or start the tour')+infoRow('Drag','turn the camera')+infoRow('Wheel','zoom in or out')+infoRow('W A S D','leave the account and fly free')+'</div>')+
+      (window.atlasOperator()?'':'<div class="xp-box"><div class="xp-head"><span>Controls</span></div>'+infoRow('[ and ]','watch the previous or next account')+infoRow('Wall','our accounts in the world side by side; click a view to focus it, double click to follow it, ? for the keys')+infoRow('Title bar','choose an account, or start the tour')+infoRow('Drag','turn the camera')+infoRow('Wheel','zoom in or out')+infoRow('W A S D','leave the account and fly free')+'</div>')+
       '<div class="xp-box"><div class="xp-head"><span>Marks</span></div>'+
       infoRow('Gold name','one of our accounts')+infoRow('Green dot','our account on the map (bright: playing)')+infoRow('Grey dot','another player')+(window.atlasOperator()?infoRow('⟦MAIN⟧ / Hidden','an account this page does not show'):'')+infoRow('~ before a rank','the last rank we read; it can be old')+'</div>'+
       '<div class="xp-box"><div class="xp-head"><span>Sources</span></div><p class="xp-muted">Client look: RuneLite (BSD 2-Clause), 3D view: rs-world, game data: the Lost City server content (MIT). Licences and image credits: <a href="'+asset('ATTRIBUTION.txt')+'" target="_blank" rel="noopener">ATTRIBUTION.txt</a>. RuneScape art belongs to Jagex.</p></div></div>';
@@ -525,7 +525,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const q=new URLSearchParams(location.hash.slice(1)),name=q.get('a');
     const linked=S.bots.find(b=>b.name===name);
     if(linked)pick(linked.name);
-    wallLinked=q.get('wall')==='1';
+    wallLinked=q.get('wall')==='1';wallLinkRead(q);
     const watch=q.get('watch');
     if(watch&&window.atlasFollow3d(watch,true))return;
     if(q.get('cam')==='free')focusFree(linked?.name);
@@ -537,10 +537,10 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       if(sel)q.set('a',sel);
       if(window.atlasFollowOther)q.set('watch',window.atlasFollowOther);
       else if(window.atlasFreeCamera)q.set('cam','free');
-      if(wall||wallLinked)q.set('wall','1');
+      if(wall||wallLinked)wallLinkWrite(q);
     }else{
       const pending=new URLSearchParams(location.hash.slice(1));
-      for(const key of ['a','watch','cam','wall'])if(pending.has(key))q.set(key,pending.get(key));
+      for(const key of ['a','watch','cam','wall','wl','wm'])if(pending.has(key))q.set(key,pending.get(key));
     }
     const hash='#'+q;if(location.hash!==hash)history.replaceState(null,'',location.pathname+location.search+hash);
   }
@@ -565,7 +565,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const focusTarget=()=>window.atlasFollowOther||(window.atlasFreeCamera?null:sel)||null;
   function focusState(){
     const other=window.atlasFollowOther,b=S.bots.find(x=>x.name===sel);
-    if(wall)return ['Wall · '+wall.shown+(phoneWidth.matches?'/'+wall.names.length:' of '+wall.names.length+' shown'),'wall','The fleet wall shows '+wall.names.length+' of our '+focusLive().length+' accounts in the world. Click a view to follow that account.'];
+    if(wall)return ['Wall · '+wall.shown+(phoneWidth.matches?'/'+wall.names.length:' of '+wall.names.length+' shown'),'wall','The fleet wall shows '+wall.names.length+' of our '+focusLive().length+' accounts in the world. Click a view to focus it; double click to follow that account.'];
     if(other)return [other,'on','The 3D camera follows this player, who is not one of our accounts.'];
     if(sel&&!window.atlasFreeCamera&&b?.inWorld)return [safeName(sel),'on','The 3D camera follows this account.'];
     if(b?.inWorld)return [safeName(sel),'idle','The camera is released. Choose this account again to follow it.'];
@@ -624,26 +624,103 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   focus.addEventListener('click',e=>{if(e.target.closest('.focus-wall')){wallToggle();return;}if(e.target.closest('[data-tour]')){focusOpen(false);wallEnd(false);tourSet(!tourTimer);return;}const s=e.target.closest('[data-focus-step]');if(s){focusOpen(false);focusStep(Number(s.dataset.focusStep));return;}if(e.target.closest('.focus-now')){focusOpen(!focus.classList.contains('open'));return;}const r=e.target.closest('[data-focus]');if(r&&!r.disabled)focusChoose(r.dataset.focus);});
   // Fleet wall: up to 16 of our accounts in the world, each in its own view of the one 3D viewer. A view needs the live
   // feed, so the page asks only for accounts in the world. It sends each name as it holds it: the hidden account is its mark.
+  // The views are tiled like the windows of a tiling window manager. The viewer lays the views out and moves them. The
+  // page chooses the layout, the main view, the order and the focused view, and draws a frame and a title strip over
+  // each view from the rectangles the viewer reports.
   const WALL_MAX=16,WALL_NAME=/^[A-Za-z0-9_-](?:[A-Za-z0-9_ -]{0,10}[A-Za-z0-9_-])?$/;
+  const WALL_LAYOUTS=['grid','main','focus','columns'],WALL_LAYOUT_NAMES={grid:'Grid',main:'Main and stack',focus:'Focus',columns:'Columns'};
+  // Pixels between views, the colour there (the title bar's), the localStorage key, and the longest time between the
+  // two clicks of a double click.
+  const WALL_GAP=4,WALL_GAP_COLOUR='#1e1e1e',WALL_STORE='atlas-wall',WALL_DOUBLE_MS=450;
   window.atlasWallOn=()=>!!wall;
   const wallPost=message=>$('#rsw')?.contentWindow?.postMessage(message,VIEWER.origin);
+  const wallIsName=n=>typeof n==='string'&&(n===MARK||WALL_NAME.test(n));
+  const wallSame=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.toLowerCase()===b.toLowerCase();
+  // No moves for a reader who asked the system for reduced motion: the viewer and the page then draw each change at once.
+  const wallStill=()=>!!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  // The clock the viewer stamps a move with: milliseconds since the Unix epoch, with fractions.
+  const wallClock=()=>performance.timeOrigin+performance.now();
+  // Runs fn at the start of the next frame with that frame's time on the same clock. A CSS transition that starts in
+  // that frame starts at that time, which is also the time the viewer draws its next frame for. A hidden tab has no
+  // frames: fn then runs 120 ms later.
+  function wallNextFrame(fn){let ran=false;const run=at=>{if(!ran){ran=true;fn(at);}};requestAnimationFrame(t=>run(performance.timeOrigin+t));setTimeout(()=>run(wallClock()),120);}
   // Playing accounts first, then the others in the world; each group in the order of the [ and ] steps.
   function wallNames(){
     const seen=new Set(),live=focusLive().filter(b=>(b.name===MARK||WALL_NAME.test(b.name))&&!seen.has(b.name.toLowerCase())&&seen.add(b.name.toLowerCase())),playing=b=>st(b)[1]==='playing';
     return [...live.filter(playing),...live.filter(b=>!playing(b))].slice(0,WALL_MAX).map(b=>b.name);
   }
   const wallKey=names=>names.map(n=>n.toLowerCase()).sort().join(',');
+  // The names of `names` in the order of `first` where that list has them, then the others as they are.
+  function wallOrdered(names,first){
+    const left=names.slice(),head=[];
+    for(const n of first){const i=left.findIndex(x=>wallSame(x,n));if(i>=0)head.push(left.splice(i,1)[0]);}
+    return [...head,...left];
+  }
+  // The layout, the main view and a hand-made order stay in this browser, and the share link carries the layout and the
+  // main view (wl, wm). A stored or linked value that is not a layout or a name is dropped.
+  const wallPrefs={layout:'grid',main:null,order:[]};
+  function wallPrefsRead(text){
+    let p;try{p=JSON.parse(text);}catch{return null;}
+    if(!p||typeof p!=='object')return null;
+    return {layout:WALL_LAYOUTS.includes(p.layout)?p.layout:'grid',main:wallIsName(p.main)?p.main:null,order:Array.isArray(p.order)?p.order.filter(wallIsName).slice(0,64):[]};
+  }
+  try{Object.assign(wallPrefs,wallPrefsRead(localStorage.getItem(WALL_STORE)));}catch{/* no storage: the wall starts as a grid */}
+  function wallLinkRead(q){const layout=q.get('wl'),main=q.get('wm');if(WALL_LAYOUTS.includes(layout))wallPrefs.layout=layout;if(wallIsName(main))wallPrefs.main=main;}
+  function wallLinkWrite(q){q.set('wall','1');q.set('wl',wall?wall.layout:wallPrefs.layout);const main=wall?wall.main:wallPrefs.main;if(main)q.set('wm',main);}
+  // After each choice: remember it and put it in the link.
+  function wallKeep(){
+    if(!wall)return;
+    wallPrefs.layout=wall.layout;wallPrefs.main=wall.main;if(wall.ordered)wallPrefs.order=wall.names.slice();
+    try{localStorage.setItem(WALL_STORE,JSON.stringify(wallPrefs));}catch{/* the choice lasts for this page only */}
+    writeLink();wallPaint();
+  }
+  // The views in the order the layout places them: the main view first.
+  const wallShown=()=>wall?[wall.main,...wall.names.filter(n=>n!==wall.main)]:[];
+  // The view next to view `from` in a direction: one that starts past the far edge of `from`. A view level with
+  // `from` wins over one that is only diagonal; then the nearest; then the one whose centre is closest in line.
+  function wallNeighbour(rects,from,dir){
+    const a=rects[from];if(!a)return -1;
+    const across=dir==='left'||dir==='right',back=dir==='left'||dir==='up';let best=-1,bestScore=Infinity;
+    rects.forEach((b,i)=>{
+      if(i===from||!b)return;
+      const [a0,a1,b0,b1]=across?[a.x,a.x+a.w,b.x,b.x+b.w]:[a.y,a.y+a.h,b.y,b.y+b.h],[c0,c1,d0,d1]=across?[a.y,a.y+a.h,b.y,b.y+b.h]:[a.x,a.x+a.w,b.x,b.x+b.w];
+      const gap=back?a0-b1:b0-a1;if(gap<-1)return;
+      const score=(Math.min(c1,d1)-Math.max(c0,d0)>0?0:1e6)+gap*1000+Math.abs((c0+c1)/2-(d0+d1)/2);
+      if(score<bestScore){bestScore=score;best=i;}
+    });
+    return best;
+  }
+  const wallNext=dir=>wall?.rects?wall.names[wallNeighbour(wall.rects,wall.names.indexOf(wall.focus),dir)]??null:null;
+  // A viewer rectangle list is taken only whole: one rectangle for each asked name, in the asked order, inside 8192 px.
+  function wallRects(list,names){
+    if(!Array.isArray(list)||list.length!==names.length)return null;
+    const out=[];
+    for(let i=0;i<list.length;i++){
+      const r=list[i];
+      if(!r||typeof r!=='object'||typeof r.name!=='string'||r.name!==MARK&&!wallSame(r.name,names[i])||![r.x,r.y,r.w,r.h].every(v=>Number.isFinite(v)&&v>=-8192&&v<=8192)||r.w<0||r.h<0)return null;
+      out.push({x:r.x,y:r.y,w:r.w,h:r.h});
+    }
+    return out;
+  }
   function wallStart(){
     if(wall||mode!=='3d'||VIEWER.state!=='ready')return false;
-    const names=wallNames();
+    const names=wallOrdered(wallNames(),wallPrefs.order);
     if(!names.length){focusSay('None of our accounts is in the world. The wall has nothing to show.',3200);return false;}
     focusOpen(false);
+    const main=names.find(n=>wallSame(n,wallPrefs.main))??names[0];
     // The wall keeps the page's follow state and the tour, and gives them back when it closes.
-    wall={names,sent:wallKey(names),shown:0,tour:!!tourTimer,state:{sel,free:window.atlasFreeCamera,other:window.atlasFollowOther}};
+    wall={names,sent:wallKey(names),shown:0,tour:!!tourTimer,state:{sel,free:window.atlasFreeCamera,other:window.atlasFollowOther},
+      layout:wallPrefs.layout,back:'grid',main,focus:main,ordered:wallPrefs.order.length>0,rects:null,move:null,moving:false,seen:new Set(),offline:new Set(),hover:null,click:null};
     clearInterval(tourTimer);tourTimer=null;focusRowsHtml='';flightTo=null;focus.classList.remove('flying');focusNote.classList.remove('flying');
     window.atlasOpponentClear?.();
+    // The layout goes first, so the views open in it.
+    wallPost({multiChrome:false});
+    wallPost({multiLayout:{mode:wall.layout,main,gap:WALL_GAP,color:WALL_GAP_COLOUR,animate:!wallStill()}});
     wallPost({multi:names});
-    focusSay('Fleet wall · click a view to follow that account',2600);
+    wallPost({multiFocus:main});
+    wallButton.blur?.();
+    focusSay('Fleet wall · click a view to focus it, double click to follow · ? shows the keys',3600);
+    wallPaint();
     return true;
   }
   // The viewer returns to its single view before any follow message: a follow sent to the wall moves its first view.
@@ -651,6 +728,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function wallEnd(restore=true){
     if(!wall)return false;
     const w=wall,ready=mode==='3d'&&VIEWER.state==='ready';wall=null;
+    wallPaint();
     if(ready)wallPost({multi:[]});
     sentMaxLevel=null;warmSent='';rswFor=null;
     if(!restore)return true;
@@ -663,27 +741,196 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   }
   function wallToggle(){if(wall?wallEnd():wallStart())render();}
   // Each page update: open a wall that a link asked for, close a wall that lost the 3D view, and ask again when an
-  // account enters or leaves the world. The same accounts are not asked for twice.
+  // account enters or leaves the world. The same accounts are not asked for twice. The views that stay keep their
+  // order, and a new view goes last. When the main or the focused view leaves, the next view in the order takes its place.
   function wallSync(){
     if(wallLinked&&mode==='3d'&&VIEWER.state==='ready'&&(window.atlasLiveRoster?.()||wallNames().length)){wallLinked=false;wallStart();}
     if(!wall)return;
     if(mode!=='3d'||VIEWER.state!=='ready'){wallEnd();return;}
-    const names=wallNames();
-    if(!names.length){wallEnd();focusSay('None of our accounts is in the world now. The wall is closed.',3200);return;}
-    const key=wallKey(names);if(key===wall.sent)return;
-    wall.names=names;wall.sent=key;wall.shown=Math.min(wall.shown,names.length);wallPost({multi:names});
+    const now=wallNames();
+    if(!now.length){wallEnd();focusSay('None of our accounts is in the world now. The wall is closed.',3200);return;}
+    const key=wallKey(now);if(key===wall.sent){wallPaint();return;}
+    const was=wall.names,names=wallOrdered(now,was),heir=name=>{const i=was.indexOf(name);return [...was.slice(i+1),...was.slice(0,Math.max(i,0)).reverse()].find(n=>names.includes(n))??names[0];};
+    const main=names.includes(wall.main)?wall.main:heir(wall.main),to=names.includes(wall.focus)?wall.focus:heir(wall.focus);
+    wall.names=names;wall.sent=key;wall.shown=Math.min(wall.shown,names.length);wall.rects=null;
+    wallPost({multi:names});
+    if(main!==wall.main){wall.main=main;wallPost({multiLayout:{main}});}
+    if(to!==wall.focus){wall.focus=to;wallPost({multiFocus:to});}
+    wallKeep();
   }
-  // The viewer's replies. The status gives the count of views with their player on screen. A click gives a view number:
-  // the page follows the name it asked for in that view, through pick().
+  // The tiling commands. Each one is a message to the viewer, which moves the views.
+  function wallFocus(name){if(!wall||!wall.names.includes(name)||wall.focus===name)return;wall.focus=name;wallPost({multiFocus:name});wallPaint();}
+  // Leaves the wall and follows the account of one view. That view becomes the viewer's single view, so no flight follows.
+  function wallOpen(name){
+    if(!wall||!wall.names.includes(name))return;
+    wallPost({multiFocus:name});
+    pick(name);
+    if(focusTarget()===name){flightTo=null;focus.classList.remove('flying');focusNote.classList.remove('flying');focusSay('Now watching '+safeName(name),1400);}
+  }
+  // Enter: the focused view becomes the main view. On the main view it follows that account.
+  function wallPromote(){
+    if(!wall)return;
+    if(wall.main===wall.focus){wallOpen(wall.focus);return;}
+    wall.main=wall.focus;wallPost({multiLayout:{main:wall.main}});wallKeep();
+  }
+  // With zoom, the focused view becomes the main view of the new layout in the same move.
+  function wallLayout(layout,zoom=false){
+    if(!wall||!WALL_LAYOUTS.includes(layout)||layout===wall.layout)return;
+    const message={mode:layout};
+    if(zoom&&wall.main!==wall.focus){wall.main=wall.focus;message.main=wall.main;}
+    wall.back=wall.layout;wall.layout=layout;wallPost({multiLayout:message});
+    focusSay('Wall layout · '+WALL_LAYOUT_NAMES[layout],1200);wallKeep();
+  }
+  function wallCycle(step=1){if(wall)wallLayout(WALL_LAYOUTS[(WALL_LAYOUTS.indexOf(wall.layout)+step+WALL_LAYOUTS.length)%WALL_LAYOUTS.length]);}
+  // f: the focused view at full size over the others, and back to the layout before.
+  function wallZoom(){if(!wall)return;if(wall.layout==='focus')wallLayout(wall.back==='focus'?'grid':wall.back);else wallLayout('focus',true);}
+  // Shift and a direction: the focused view and its neighbour change places. A view that takes the first place is the main view.
+  function wallSwap(dir){
+    const to=wallNext(dir);if(!to)return;
+    const order=wallShown(),i=order.indexOf(wall.focus),j=order.indexOf(to);
+    [order[i],order[j]]=[order[j],order[i]];
+    wall.names=order;wall.ordered=true;if(wall.rects)wall.rects=null;
+    wallPost({multiOrder:order});
+    if(order[0]!==wall.main){wall.main=order[0];wallPost({multiLayout:{main:wall.main}});}
+    wallKeep();
+  }
+  const WALL_DIRS={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down',h:'left',j:'down',k:'up',l:'right',H:'left',J:'down',K:'up',L:'right'};
+  // The keys of the wall, from the page and from the viewer frame. True when the key was one of them.
+  function wallPress(key,shift){
+    if(!wall)return false;
+    const dir=WALL_DIRS[key];
+    if(dir){if(shift)wallSwap(dir);else{const to=wallNext(dir);if(to)wallFocus(to);}return true;}
+    if(key==='Enter'){wallPromote();return true;}
+    if(key===' '){wallCycle(shift?-1:1);return true;}
+    if(key==='f'||key==='F'){wallZoom();return true;}
+    if(key==='?'){wallHelp();return true;}
+    if(/^[1-9]$/.test(key)){const name=wallShown()[Number(key)-1];if(name)wallFocus(name);return true;}
+    return false;
+  }
+  // The viewer's replies. The status gives the views that show their player. The layout gives the rectangle of each
+  // view. A click gives a view number: the page focuses the name it asked for in that view, and a second click on the
+  // same view follows that account through pick(). Text in a reply never becomes a name.
   function wallMessage(data){
     if(!wall)return;
     const list=v=>Array.isArray(v)&&v.length<=WALL_MAX&&v.every(n=>typeof n==='string'&&n.length<=12),m=data.viewerMulti;
-    if(m&&typeof m==='object'&&list(m.names)&&list(m.shown)&&m.names.length===wall.names.length&&m.shown.length<=m.names.length&&m.shown.length!==wall.shown){wall.shown=m.shown.length;focusPaint();}
+    if(m&&typeof m==='object'&&list(m.names)&&list(m.shown)&&m.names.length===wall.names.length&&m.shown.length<=m.names.length){
+      const own=v=>new Set(list(v)?wall.names.filter(n=>v.some(x=>x===n||wallSame(x,n))):[]);
+      wall.seen=own(m.shown);wall.offline=own(m.offline);
+      if(m.shown.length!==wall.shown){wall.shown=m.shown.length;focusPaint();}
+      wallPaint();
+    }
+    const l=data.viewerMultiLayout;
+    if(l&&typeof l==='object'&&typeof l.animating==='boolean'&&Number.isFinite(l.ms)&&l.ms>=0&&l.ms<=1000&&Number.isFinite(l.at)){
+      const rects=wallRects(l.rects,wall.names);
+      if(rects){
+        wall.rects=rects;wall.move={ms:l.animating?l.ms:0,at:l.at};
+        // The last report before a frame is the one that frame shows.
+        if(!wall.moving){wall.moving=true;const w=wall;wallNextFrame(now=>{w.moving=false;if(wall===w)wallPaint(w.move,now);});}
+      }
+    }
+    if(Number.isInteger(data.viewerMultiHover)){const name=wall.names[data.viewerMultiHover]??null;if(name!==wall.hover){wall.hover=name;wallPaint();}}
+    const k=data.atlasWallKey;
+    if(k&&typeof k==='object'&&typeof k.key==='string'&&k.key.length<=10&&k.key!=='\\'&&k.key!=='Escape')wallPress(k.key,k.shift===true);
     const picked=data.viewerMultiPick,name=Number.isInteger(data.index)?wall.names[data.index]:null;
     if(typeof picked!=='string'||!name||picked!==MARK&&picked.toLowerCase()!==name.toLowerCase())return;
-    pick(name);
-    // The view of that account becomes the single view: the camera is there, and no flight follows.
-    if(focusTarget()===name){flightTo=null;focus.classList.remove('flying');focusNote.classList.remove('flying');focusSay('Now watching '+safeName(name),1400);}
+    wallClick(name);
+  }
+  // A click on a view or on its title strip focuses the view. A second click on the same view within WALL_DOUBLE_MS
+  // follows that account.
+  function wallClick(name){
+    const now=Date.now(),twice=wall.click&&wall.click.name===name&&now-wall.click.at<=WALL_DOUBLE_MS;
+    wall.click=twice?null:{name,at:now};
+    if(twice)wallOpen(name);else wallFocus(name);
+  }
+  // The page's frames over the viewer: one element for each view, with a title strip. Only the strip takes the
+  // pointer, so a click in a view reaches the viewer. An element moves with a CSS transition of the viewer's own time
+  // and curve, started as far in as the viewer's move already is. The transition is of left, top, width, height and a
+  // registered custom property for the fade: the browser runs these in the page's own frames, so the start is the
+  // frame it was set in. (A transform or opacity transition starts when the compositor takes it, which can be a frame
+  // later.)
+  const wallRoot=document.createElement('div');wallRoot.className='wall-chrome';hud.append(wallRoot);
+  const wallTiles=new Map(),wallIcon={grid:'M1 1h4.5v4.5H1zM6.5 1H11v4.5H6.5zM1 6.5h4.5V11H1zM6.5 6.5H11V11H6.5z',main:'M1 1h5.5v10H1zM7.5 1H11v2.7H7.5zM7.5 4.65H11v2.7H7.5zM7.5 8.3H11V11H7.5z',focus:'M1 1h10v6.5H1zM1 8.5h2.7V11H1zM4.65 8.5h2.7V11h-2.7zM8.3 8.5H11V11H8.3z',columns:'M1 1h2.7v10H1zM4.65 1h2.7v10h-2.7zM8.3 1H11v10H8.3z'};
+  const wallSvg=path=>'<svg viewBox="0 0 12 12" aria-hidden="true"><path d="'+path+'"/></svg>';
+  function wallTile(name){
+    const make=(tag,cls)=>{const e=document.createElement(tag);e.className=cls;return e;};
+    const t={el:make('div','wall-tile'),strip:make('div','wall-strip'),dot:make('i','wall-dot'),name:make('b','wall-name'),note:make('span','wall-note'),num:make('span','wall-num'),open:make('button','wall-open')};
+    t.open.innerHTML=wallSvg('M7 1h4v4h-1.5V3.56L6.56 6.5 5.5 5.44 8.44 2.5H7zM1 3h4v1.5H2.5v5h5V7H9v4H1z');
+    t.open.title='Follow this account and leave the wall';t.open.setAttribute('aria-label','Follow this account');
+    t.strip.append(t.dot,t.name,t.note,t.num,t.open);t.el.append(t.strip);
+    t.strip.addEventListener('click',e=>{if(e.target.closest?.('.wall-open'))wallOpen(name);else if(wall)wallClick(name);});
+    return t;
+  }
+  // With `move` (the time and the start of the viewer's move, 0 ms for none) the frames go to the reported rectangles;
+  // `now` is the time of the frame that starts the transition. Without `move` only the text and the marks of each
+  // frame are brought up to date.
+  function wallPaint(move,now=wallClock()){
+    wallTools.hidden=!wall;
+    if(!wall){
+      // The frames fade while the viewer returns to its single view.
+      for(const t of wallTiles.values()){if(wallStill())t.el.remove();else{t.el.style.transition='opacity .16s';t.el.style.opacity='0';setTimeout(()=>t.el.remove(),200);}}
+      wallTiles.clear();wallHelp(false);return;
+    }
+    for(const b of wallLayoutButtons)b.setAttribute('aria-pressed',String(b.dataset.wallLayout===wall.layout));
+    if(wallCycleButton.dataset.wallShows!==wall.layout){wallCycleButton.dataset.wallShows=wall.layout;wallCycleButton.innerHTML=wallSvg(wallIcon[wall.layout]);wallCycleButton.title='Layout: '+WALL_LAYOUT_NAMES[wall.layout]+' · Space for the next';}
+    const still=!move||!(move.ms>0)||wallStill(),delay=still?'':'-'+Math.round(Math.min(Math.max(now-move.at,0),move.ms))+'ms';
+    let dx=0,dy=0;
+    // A frame at a rectangle, or shrunk about its centre as the viewer shrinks a view that opens or closes.
+    const put=(s,r,k=1)=>{const w=Math.round(r.w*k),h=Math.round(r.h*k);s.left=(r.x+dx+Math.round((r.w-w)/2))+'px';s.top=(r.y+dy+Math.round((r.h-h)/2))+'px';s.width=w+'px';s.height=h+'px';};
+    if(move){
+      const frame=$('#rsw').getBoundingClientRect(),box=wallRoot.getBoundingClientRect();dx=Math.round(frame.left-box.left);dy=Math.round(frame.top-box.top);
+      wallRoot.classList.toggle('still',still);if(!still)wallRoot.style.setProperty('--wall-ms',move.ms+'ms');
+      // A frame whose view closed shrinks and fades as the view does.
+      for(const [name,t] of wallTiles)if(!wall.names.includes(name)){
+        wallTiles.delete(name);
+        if(still)t.el.remove();else{t.el.classList.add('out');t.el.style.transitionDelay=delay;put(t.el.style,t.at,.6);t.el.style.setProperty('--wall-fade','0');setTimeout(()=>t.el.remove(),move.ms+80);}
+      }
+    }
+    const shown=wallShown();
+    wall.names.forEach((name,i)=>{
+      const r=wall.rects?.[i];let t=wallTiles.get(name);
+      if(move&&r){
+        const s=(t??(t=wallTile(name))).el.style;
+        if(!wallTiles.has(name)){
+          wallTiles.set(name,t);wallRoot.append(t.el);
+          // A new frame grows and fades in at its place, as its view does.
+          if(!still){s.transition='none';put(s,r,.6);s.setProperty('--wall-fade','0');void t.el.offsetWidth;s.transition='';}
+        }
+        s.transitionDelay=delay;put(s,r);s.setProperty('--wall-fade','1');t.at=r;
+      }
+      if(!t)return;
+      const b=S.bots.find(x=>x.name===name),place=shown.indexOf(name)+1;
+      const state=wall.offline.has(name)?'off':!wall.seen.has(name)?'finding':b&&st(b)[1]==='playing'?'on':'idle';
+      const note=state==='off'?'not online':state==='finding'?'finding…':String(b?.phaseShort||b?.goal||(b?.combat?'level-'+b.combat:'')).slice(0,40);
+      const cls='wall-tile'+(name===wall.focus?' wall-focus':'')+(name===wall.main?' wall-main':'')+(name===wall.hover?' wall-hover':'');
+      if(t.el.className!==cls)t.el.className=cls;
+      if(t.dot.className!=='wall-dot '+state)t.dot.className='wall-dot '+state;
+      const label=safeName(name);if(t.name.textContent!==label)t.name.textContent=label;
+      if(t.note.textContent!==note)t.note.textContent=note;
+      const num=place<=9?String(place):'';if(t.num.textContent!==num)t.num.textContent=num;
+    });
+  }
+  // The layout switcher and the key list, in the title bar's focus group after the Wall button. A narrow title bar
+  // shows one button that steps through the layouts.
+  const wallButtonOf=(cls,label,title,html)=>{const b=document.createElement('button');b.className=cls;b.setAttribute('aria-label',label);b.title=title;b.innerHTML=html;return b;};
+  const wallTools=document.createElement('span');wallTools.className='wall-tools';wallTools.hidden=true;wallTools.setAttribute('role','group');wallTools.setAttribute('aria-label','Wall layout');
+  const wallLayoutButtons=WALL_LAYOUTS.map(l=>{const b=wallButtonOf('wall-layout',WALL_LAYOUT_NAMES[l]+' layout',WALL_LAYOUT_NAMES[l]+(l==='focus'?' · f':'')+' · Space for the next layout',wallSvg(wallIcon[l]));b.dataset.wallLayout=l;b.setAttribute('aria-pressed','false');return b;});
+  const wallCycleButton=wallButtonOf('wall-cycle','Next wall layout','',''),wallHelpButton=wallButtonOf('wall-help-button','Wall keys','Wall keys · ?','?');
+  wallHelpButton.setAttribute('aria-expanded','false');wallTools.append(...wallLayoutButtons,wallCycleButton,wallHelpButton);wallButton.after(wallTools);
+  const wallHelpBox=document.createElement('div');wallHelpBox.className='wall-help';wallHelpBox.hidden=true;wallHelpBox.setAttribute('role','dialog');wallHelpBox.setAttribute('aria-label','Wall keys');
+  wallHelpBox.innerHTML='<h6>Fleet wall keys</h6>'+[['← ↑ ↓ →','or h j k l: move the focus'],['Shift + arrow','swap the view with its neighbour'],['Enter','make the view the main view; on the main view, follow it'],['Space','next layout'],['f','focus layout on and off'],['1 – 9','focus view 1 to 9'],['Click','focus a view'],['Double click','follow that account'],['Esc','leave the wall']].map(([k,v])=>'<p><kbd>'+k+'</kbd><span>'+v+'</span></p>').join('');
+  hud.append(wallHelpBox);
+  function wallHelp(open=wallHelpBox.hidden){wallHelpBox.hidden=!(open&&wall);wallHelpButton.setAttribute('aria-expanded',String(!wallHelpBox.hidden));}
+  wallTools.addEventListener('click',e=>{
+    const b=e.target.closest?.('button');if(!b||!wall)return;
+    e.stopPropagation();b.blur?.();
+    if(b.dataset.wallLayout)wallLayout(b.dataset.wallLayout);else if(b===wallCycleButton)wallCycle();else wallHelp();
+  });
+  // A wall key pressed in the viewer frame arrives as a message. \ opens or closes the wall and Escape closes it, as
+  // on the page; the other keys go through wallMessage while the wall is open.
+  function wallFrameKey(k){
+    if(!k||typeof k!=='object')return;
+    if(k.key==='\\'){if(!wallButton.hidden&&!wallButton.disabled)wallToggle();}
+    else if(k.key==='Escape'&&wallEnd())render();
   }
   // A change between the 3D view and the 2D map shows or hides the button at once, and closes an open wall.
   const previousSetMode=setMode;setMode=function(m,preserve){previousSetMode(m,preserve);if(S){wallSync();focusPaint();}};
@@ -773,11 +1020,13 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     let el=hud.querySelector('.game-opponent');if(!el){el=document.createElement('div');el.className='game-opponent';el.setAttribute('aria-live','polite');hud.append(el);}
     el.hidden=false;el.innerHTML='<b>'+E(name)+(lvl?' <small>(level-'+lvl+')</small>':'')+'</b><div class="opponent-hp"><i style="width:'+Math.max(0,Math.min(100,Math.round(cur/Math.max(1,max)*100)))+'%"></i><span>'+cur+' / '+max+'</span></div>';
   }
-  window.addEventListener('message',e=>{if(e.origin!==location.origin||e.source!==$('#rsw').contentWindow||!e.data||typeof e.data!=='object')return;if(e.data?.viewerTiming&&!wall)focusLanded();wallMessage(e.data);if(e.data?.viewerState&&S){wallSync();focusPaint();}if(e.data?.atlasStep===1||e.data?.atlasStep===-1)focusStep(e.data.atlasStep);if(e.data?.atlasRoster)window.atlasRosterIn(e.data.atlasRoster);if(e.data&&'atlasOpponent' in e.data){const o=e.data.atlasOpponent;opponentBox(o&&Array.isArray(o.hp)&&o.hp.length===2&&o.hp.every(Number.isFinite)&&(o.kind==='npc'?Number.isInteger(o.type):typeof o.name==='string')?o:null);}const c3=e.data?.atlasCamera3d;if(c3&&[c3.x,c3.z,c3.yaw].every(Number.isFinite)){window.atlasCam3d={x:c3.x,z:c3.z,yaw:c3.yaw,at:Date.now()};minimap();}const m=e.data?.atlasChat;if(typeof e.data?.atlasWorldMap==='boolean')hud.classList.toggle('worldmap-open',e.data.atlasWorldMap);if(!m||typeof m.text!=='string'||typeof m.name!=='string'||typeof m.key!=='string'||seenChat.has(m.key))return;seenChat.add(m.key);if(seenChat.size>500)seenChat.delete(seenChat.values().next().value);chat.push({kind:'Public',name:m.name.slice(0,32),text:m.text.slice(0,500),at:Date.now()});if(chat.length>200)chat.shift();renderChat();});
+  window.addEventListener('message',e=>{if(e.origin!==location.origin||e.source!==$('#rsw').contentWindow||!e.data||typeof e.data!=='object')return;if(e.data?.viewerTiming&&!wall)focusLanded();wallMessage(e.data);wallFrameKey(e.data.atlasWallKey);if(e.data?.viewerState&&S){wallSync();focusPaint();}if(e.data?.atlasStep===1||e.data?.atlasStep===-1)focusStep(e.data.atlasStep);if(e.data?.atlasRoster)window.atlasRosterIn(e.data.atlasRoster);if(e.data&&'atlasOpponent' in e.data){const o=e.data.atlasOpponent;opponentBox(o&&Array.isArray(o.hp)&&o.hp.length===2&&o.hp.every(Number.isFinite)&&(o.kind==='npc'?Number.isInteger(o.type):typeof o.name==='string')?o:null);}const c3=e.data?.atlasCamera3d;if(c3&&[c3.x,c3.z,c3.yaw].every(Number.isFinite)){window.atlasCam3d={x:c3.x,z:c3.z,yaw:c3.yaw,at:Date.now()};minimap();}const m=e.data?.atlasChat;if(typeof e.data?.atlasWorldMap==='boolean')hud.classList.toggle('worldmap-open',e.data.atlasWorldMap);if(!m||typeof m.text!=='string'||typeof m.name!=='string'||typeof m.key!=='string'||seenChat.has(m.key))return;seenChat.add(m.key);if(seenChat.size>500)seenChat.delete(seenChat.values().next().value);chat.push({kind:'Public',name:m.name.slice(0,32),text:m.text.slice(0,500),at:Date.now()});if(chat.length>200)chat.shift();renderChat();});
   window.addEventListener('keydown',e=>{
     if(e.key==='Tab'&&e.target===document.body)e.stopPropagation();
     if((e.key==='['||e.key===']')&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();focusStep(e.key===']'?1:-1);}
     if(e.key==='\\'&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)&&!wallButton.hidden&&!wallButton.disabled){e.preventDefault();wallToggle();}
+    // The wall's keys. Enter and Space on a button or a link stay that control's own.
+    if(window.atlasWallOn?.()&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)&&!(/^(?:BUTTON|A|SUMMARY)$/.test(e.target.tagName)&&(e.key==='Enter'||e.key===' '))&&wallPress(e.key,e.shiftKey)){e.preventDefault();e.stopPropagation();return;}
     if(e.key==='Escape'){if(wallEnd())render();context?.remove();hud.querySelector('.game-bank')?.remove();hud.querySelector('.game-toast')?.remove();}
     const F_KEYS={F2:'skills',F3:'quests',F4:'inventory',F5:'equipment',F8:'friends',F10:'settings'};
     if(F_KEYS[e.key]&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();e.stopPropagation();selectedTab=F_KEYS[e.key];hud.classList.remove('game-panel-hidden');gamePanel();}
