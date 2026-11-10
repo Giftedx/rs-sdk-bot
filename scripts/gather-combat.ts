@@ -1,5 +1,6 @@
 // Combat Monster Gatherer: fights Chaos Druids (herbs, runes) or Hill Giants (big bones, limpwurt) and banks drops.
 // Usage: bun scripts/gather-combat.ts <bot> [CAP ticks, default 15000] [TARGET: druid | giant | cow]
+// COW_STAGE=1 with cow first walks to the Ardougne north bank and takes the cow kit and food (scripts/cow-stage.ts).
 // Environment: DEMO_OK=1 for live server. TARGET=giant with TRAIN_SKILL and TARGET_LEVEL trains one combat skill
 // with the wielded weapon to a finite level (GIANT_FOOD sharks carried, default 5); without them giant keeps the
 // legacy gatherer. GIANT_KILLS overrides the level goal with a finite credited kill count.
@@ -542,6 +543,9 @@ const dungeonTravel=(TARGET_KEY==='druid'||dungeonGiant)&&!alch?.route?createEdg
 const cleanupScope=(potionPolicy||maximum!==undefined)&&TARGET_KEY!=='cow'?combatPotionSession(ownedSession,cowStop.stop,CAP):undefined;
 const s=cleanupScope??ownedSession;
 if(TARGET_KEY==='cow'){
+    if(process.env.COW_STAGE==='1')try{const {stageCows}=await import('./cow-stage'),{walkTarget}=await import('./walk-to');
+        const r=await stageCows(s,{stop:cowStop.stop,walk:async(x,z)=>(await walkTarget(s,{x,z,level:0},false)).ok});console.log(`COW_STAGE ${JSON.stringify(r)}`);}
+        catch(e){await finish([s],false,String(e));}
     try{const r=await runCows(s,{cap:CAP,maximum:Number(process.env.MAX_KILLS??5),trainSkill:process.env.TRAIN_SKILL,targetLevel:process.env.TARGET_LEVEL===undefined?undefined:Number(process.env.TARGET_LEVEL),bankProfile:process.env.COW_BANK_PROFILE,foodMode:process.env.COW_FOOD_MODE,potions:potionPolicy,diagnostics:process.env.COW_DIAGNOSTICS==='1',stop:cowStop.stop});console.log(`COW_RESULT ${JSON.stringify(r)}`);await finish([s],r.ok&&cowStop.reason()!=='died',`mode=cow ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
     catch(e){await finish([s],false,String(e));}
 }
