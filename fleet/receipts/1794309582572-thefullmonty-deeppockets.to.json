@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794309582572-thefullmonty-deeppockets",
  "account": "Deeppockets",
  "partner": "TheFullMonty",
@@ -12,6 +12,11 @@
  "claim": "b80d7f37-c90d-4d35-9be7-20e873b515f5",
  "count": 0,
  "ok": false,
- "at": 1794309586309,
- "detail": "trade claimed"
+ "at": 1794309954697,
+ "detail": "no progress: 900 ticks without xp, items, dialog or a journey",
+ "logout": {
+  "attemptId": "1794309586312-0000023423-0000000001",
+  "at": 1794309954691,
+  "sha256": "9e20515a874e84c337a5d67b2eda4109c8bf3d7c3266bb986551836c9eb743db"
+ }
 }
