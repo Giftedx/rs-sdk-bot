@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794312964347-trousersnake-deeppockets",
  "account": "Deeppockets",
  "partner": "TrouserSnake",
@@ -10,8 +10,21 @@
  "item": "Cake",
  "requested": 6,
  "claim": "0f8f2eb1-68fd-46f6-b689-515fa6457213",
- "count": 0,
- "ok": false,
- "at": 1794313391305,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1794313412982,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 7
+ },
+ "bank": {
+  "count": 6,
+  "at": 1794313412160
+ },
+ "logout": {
+  "attemptId": "1794313391307-0000027232-0000000001",
+  "at": 1794313412975,
+  "sha256": "9e9818fa025f0da915ae1429fba02b49aa951c7f659ae0ab89cf30ffda0c1707"
+ }
 }
