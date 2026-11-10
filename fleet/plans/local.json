@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794311267827,
+ "at": 1794311340271,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -371,25 +371,6 @@
    "role": "pk"
   },
   {
-   "account": "NabTheKnob",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
-   "autopilot": "local",
-   "resources": [
-    "knight:2671,3313"
-   ]
-  },
-  {
    "account": "Billionaire",
    "script": "scripts/session-check.ts",
    "args": [],
@@ -435,27 +416,6 @@
    ]
   },
   {
-   "account": "Magicwanda",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "385",
-    "QUANTITY": "30",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "810",
-    "CASH_RESERVE": "200000",
-    "ORDER_KEY": "magicwanda-sharks30-blood-food",
-    "FILL_WAIT_TICKS": "40",
-    "ORDER_MS": "360000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-31206a65-dc8a-41f6-9e08-018d34e0acd0"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-ge-magicwanda-sharks30-blood-food [task-31206a65-dc8a-41f6-9e08-018d34e0acd0]",
-   "role": "supply"
-  },
-  {
    "account": "Pocketpython",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -467,6 +427,36 @@
    "repeat": true,
    "goal": "coins for route supplies: Ardougne knights",
    "role": "supply"
+  },
+  {
+   "account": "Magicwanda",
+   "script": "scripts/blood-chest.ts",
+   "args": [
+    "24000"
+   ],
+   "env": {
+    "MAX_LOOTS": "100",
+    "CAP": "24000",
+    "BANK_EVERY": "5",
+    "COORDINATOR_RUN_ID": "task-c95e3b7f-a701-4638-9cfb-980eb7129d62"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-blood-magicwanda-loot100 [task-c95e3b7f-a701-4638-9cfb-980eb7129d62]",
+   "role": "supply"
+  },
+  {
+   "account": "NabTheKnob",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-d5da97bf-045b-43d7-b24e-5674cbcbe944"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-session-recovery-nabtheknob-serial [task-d5da97bf-045b-43d7-b24e-5674cbcbe944]",
+   "role": "thieving"
   }
  ]
 }
