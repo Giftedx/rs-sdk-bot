@@ -41,3 +41,12 @@ test('the RESULT line carries progress fields the planner reads', async () => {
     expect(progressed(`RESULT fail ${alchResultLine(r)}`)).toBe(true);
     expect(progressed(`RESULT fail ${alchResultLine({ ...r, gained: 0, magicXp: 0 })}`)).toBe(false);
 });
+
+test('a run that could not pay for one cast ends as no progress, which the supervisor stops instead of retrying', async () => {
+    const { alchResultLine } = await import('./alch-train');
+    const { isNoProgressFailure } = await import('../packages/practice/src/supervise');
+    const dry = { ok: false, stop: 'supplies', failure: 'no alch progress: the bank holds no supplies for one cast', level: 75, gained: 0, magicXp: 0, casts: { 'low-alch': 0, 'high-alch': 0 }, ticks: 5 };
+    expect(isNoProgressFailure(`RESULT fail ${alchResultLine(dry)}`)).toBe(true);
+    const spent = { ...dry, ok: true, failure: '', gained: 14, magicXp: 120250, casts: { 'low-alch': 0, 'high-alch': 74 } };
+    expect(isNoProgressFailure(`RESULT ok ${alchResultLine(spent)}`)).toBe(false);
+});
