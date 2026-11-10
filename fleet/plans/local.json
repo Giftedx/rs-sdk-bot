@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794341446426,
+ "at": 1794342683783,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -18,6 +18,41 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
+   "role": "supply"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/fletch-arrows.ts",
+   "args": [
+    "3000",
+    "arrows",
+    "rune"
+   ],
+   "enabled": false,
+   "standing": true,
+   "repeat": false,
+   "goal": "rune arrows (826 short) from headless arrows and rune arrowtips",
+   "role": "supply"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby",
+    "6000"
+   ],
+   "env": {
+    "ITEMS": "arrowtips",
+    "BANK_PACK": "1",
+    "MAX_SPEND": "200000",
+    "COIN_RESERVE": "10000",
+    "FLOAT": "210000",
+    "NO_BUY_TICKS": "50"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "rune, adamant, mithril and steel arrowtips from Hickton",
    "role": "supply"
   },
   {
@@ -456,48 +491,6 @@
    "role": "helper"
   },
   {
-   "account": "Pocketrocket",
-   "script": "scripts/handoff-inputs.ts",
-   "args": [
-    "500:Rune arrowtips",
-    "--bank-x=2619",
-    "--bank-z=3332",
-    "--approach-ms=1800000",
-    "--request-ms=60000",
-    "--timeout-ms=600000",
-    "--grace-ms=45000"
-   ],
-   "env": {
-    "HANDOFF_ORDER": "bowbeforeme-rune-arrowtips500-r3",
-    "CAP": "4000",
-    "COORDINATOR_RUN_ID": "task-af1eef14-528b-46d3-a42c-cb0d487b12a3"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-handoff-pocketrocket-bowbeforeme-runetips500-r3 [task-af1eef14-528b-46d3-a42c-cb0d487b12a3]",
-   "role": "supply"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/fletch-arrows.ts",
-   "args": [
-    "6000",
-    "native-arrows",
-    "rune"
-   ],
-   "env": {
-    "CAP": "6000",
-    "MAX_MAKE": "495",
-    "TIP_RESERVE": "5",
-    "HEADLESS_RESERVE": "200",
-    "COORDINATOR_RUN_ID": "task-62f76570-1e5c-41f3-9e18-442a2463a6de"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-fletch-bowbeforeme-rune495 [task-62f76570-1e5c-41f3-9e18-442a2463a6de]",
-   "role": "supply"
-  },
-  {
    "accounts": [
     "MineYourBiz",
     "Magicwanda"
@@ -517,7 +510,7 @@
     "CAP": "4000",
     "COORDINATOR_RUN_ID": "task-291d8671-655b-4ed3-96dc-5c894a46a9ac"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-handoff-mineyourbiz-magicwanda-lobster80 [task-291d8671-655b-4ed3-96dc-5c894a46a9ac]",
    "role": "supply"
