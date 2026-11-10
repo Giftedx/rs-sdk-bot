@@ -363,3 +363,27 @@ test('fired arrows are taken from the stacks within reach, the largest first; sm
     expect(ammoPiles(ground,884,at,AMMO_WORTH).map(i=>i.count)).toEqual([30]);
     expect(ammoPiles(ground,886,at)).toEqual([]);
 });
+
+test('every eat of a run waits out the game\'s eat delay: a low-HP account on cooked meat eats up to its eat level before the walk, and the walk\'s sustain has no eat dropped',async()=>{
+    const site={label:'trooper',npcs:[117],foods:[2142],bank:GIANT.bank,spot:GIANT.spot,room:GIANT.room,drops:[]};
+    const f=giantFixture(),sdk=f.session.sdk as any,bot=f.session.bot as any,session=f.session as any;
+    f.inv.splice(f.inv.findIndex(i=>i.id===385),1);f.bank.push({id:2142,name:'Cooked meat',count:30,slot:f.bank.length});
+    let hp=30,lastEat=-Infinity,dropped=0;const bites:number[]=[];
+    // consume.rs2 player_consume_item: an eat within 2 ticks of the last one does nothing. Cooked meat heals 3.
+    const bite=()=>{
+        const item=f.inv.find(i=>i.id===2142);if(!item)return false;
+        if(session.tick()-lastEat<=2){dropped++;return true;}
+        item.count--;if(!item.count)f.inv.splice(f.inv.indexOf(item),1);hp=Math.min(75,hp+3);lastEat=session.tick();bites.push(lastEat);return true;
+    };
+    bot.eatFood=async()=>({success:bite()});session.direct=async()=>({success:bite()});
+    const state=sdk.getState.bind(sdk),skill=sdk.getSkill.bind(sdk);
+    sdk.getState=()=>{const st=state();return {...st,player:{...st.player,hp},skills:[{name:'Hitpoints',level:hp,baseLevel:75}]};};
+    sdk.getSkill=(n:string)=>n==='Hitpoints'?{level:hp,baseLevel:75}:skill(n);
+    try{
+        // Its eat level is 38: from 30 HP it takes three bites before the walk out, and the walk's sustain eats none.
+        const r=await runGiants(f.session,{cap:500,trainSkill:'Strength',targetLevel:89,maximum:1,site,walk:async(x,z)=>{await waitTicks(f.session,8);return f.walk(x,z);}}) as any;
+        expect(r.failure).toBe('-');expect(r.ok).toBe(true);expect(dropped).toBe(0);
+        expect(bites.length).toBe(3);expect(bites.every((t,i)=>i===0||t-bites[i-1]!>=3)).toBe(true);
+        expect(r.eaten).toBe(3);expect(r.foodAccounted).toBe(true);
+    }finally{f.dispose();}
+});
