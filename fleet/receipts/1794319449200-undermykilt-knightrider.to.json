@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794319449200-undermykilt-knightrider",
+ "account": "KnightRider",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 10,
+ "claim": "61d7d93c-5c40-4c4c-8f09-a862468f4ed4",
+ "count": 0,
+ "ok": false,
+ "at": 1794319455157,
+ "detail": "trade claimed"
+}
