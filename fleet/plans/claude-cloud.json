@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794322286465,
+ "at": 1794322341272,
  "jobs": [
   {
    "account": "Fingerblastr",
@@ -23,22 +23,22 @@
   },
   {
    "account": "Quickhandjob",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=1 EXPECTED_OWNED=4 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=quickhandjob-kit1-385-4to5 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=882 QUANTITY=975 EXPECTED_OWNED=25 LIMIT_PRICE=20 CASH_RESERVE=1000 ORDER_KEY=quickhandjob-kit1-882-25to1000 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "repeat": false,
+   "goal": "buy 1 Shark, 975 Bronze arrow on the Grand Exchange to train Ranged to 99 on the Khazard troopers",
+   "role": "supply",
+   "template": "kit-buy:army-trooper-ranged-99",
    "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2582,3297"
-   ]
+   "resources": []
   },
   {
    "account": "TrouserSnake",
@@ -205,26 +205,21 @@
   },
   {
    "account": "KnightRider",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "10",
-    "GIANT_BURY": "1"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-strength-99",
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "knight:2582,3297"
    ]
   }
  ]
