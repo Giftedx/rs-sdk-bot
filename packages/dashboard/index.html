@@ -486,7 +486,9 @@ function liveRosterIn(r){
   else if(followedLive!==sel&&mode==='3d'&&VIEWER.state==='ready'&&!window.atlasFreeCamera&&!window.atlasFollowOther&&!window.atlasWallOn?.()){followedLive=sel;rswFor=sel;$('#rsw').contentWindow?.postMessage({follow:sel},VIEWER.origin);}
 }
 window.atlasRosterIn=liveRosterIn;
-function receive(j){SNAPSHOT=j;S=withLiveRoster(j,LIVE_ROSTER,Date.now());lastReceived=Date.now();connected=true;render()}
+// A published state can hold one account twice, from two machines: the page keeps the row with the newer time.
+function oneRowPerName(bots){const at=new Map(),out=[],time=b=>b.at??b.snapshotAt??0;for(const b of bots||[]){const k=String(b.name).toLowerCase()+(b.practice?' practice':''),i=at.get(k);if(i===undefined){at.set(k,out.length);out.push(b);}else if(time(b)>time(out[i]))out[i]=b;}return out;}
+function receive(j){if(Array.isArray(j?.bots))j.bots=oneRowPerName(j.bots);SNAPSHOT=j;S=withLiveRoster(j,LIVE_ROSTER,Date.now());lastReceived=Date.now();connected=true;render()}
 if(STATIC)setInterval(()=>{if(SNAPSHOT&&LIVE_ROSTER&&!window.atlasLiveRoster()){LIVE_ROSTER=null;S=SNAPSHOT;render();}},5000);
 if(STATIC)fetch('/api/state').then(r=>r.json()).then(receive);else{let version=null;const es=new EventSource('/events');es.onmessage=e=>{const j=JSON.parse(e.data);if(version&&j.pageVersion!==version){location.reload();return}version=j.pageVersion;receive(j)};es.onerror=()=>{connected=false;connectionState()};setInterval(connectionState,2000)}
 
