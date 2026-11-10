@@ -1,0 +1,22 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1794302268914-thefullmonty-trousersnake",
+ "account": "TheFullMonty",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "50d38ff6-984d-4d0d-aab4-e7f04b6e1231",
+ "count": 0,
+ "ok": false,
+ "at": 1794302445930,
+ "detail": "Error: stock short: 0 banked + 0 held < 1",
+ "logout": {
+  "attemptId": "1794302436354-0000003558-0000000001",
+  "at": 1794302445924,
+  "sha256": "06a2671a6f493f7f9f4d0d2da6c3aa4ab34880c9d3891ba9f1e131ba81116f4e"
+ }
+}
