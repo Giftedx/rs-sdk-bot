@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794316990103,
+ "at": 1794317001675,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -504,7 +504,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-924bd164-2061-4843-b9c8-cc1a7e2306a6"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-session-recovery-magicwanda-courier [task-924bd164-2061-4843-b9c8-cc1a7e2306a6]",
    "role": "supply"

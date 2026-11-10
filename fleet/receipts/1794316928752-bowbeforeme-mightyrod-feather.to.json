@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794316928752-bowbeforeme-mightyrod-feather",
  "account": "Mightyrod",
  "partner": "BowBeforeMe",
@@ -12,6 +12,11 @@
  "claim": "46cc3e98-065f-494b-8b58-8d896b68dd43",
  "count": 0,
  "ok": false,
- "at": 1794316944897,
- "detail": "trade claimed"
+ "at": 1794316995806,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1794316944906-0000007204-0000000001",
+  "at": 1794316995791,
+  "sha256": "37246a2f3838844692752af184a54c3930229501d7d3806ae95623bed11d07a6"
+ }
 }
