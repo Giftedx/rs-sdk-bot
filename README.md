@@ -73,7 +73,7 @@ git -C .practice/fleet-data config rebase.autoStash true
 DEMO_OK=1 bun scripts/fleet-agent.ts --daemon
 ```
 
-Create that plan before starting the agent; an unreadable or malformed plan stops trading. Preserve the repository's admission limits and include only cloud-owned jobs. The agent excludes enabled jobs in `SWARM_PLAN` and pins each trade child to the current source. Inspect `.practice/fleet-agent.lock` for an existing owner before starting another daemon. Completed finite jobs stay disabled until a new useful assignment is authorized.
+Create that plan before starting the agent; an unreadable or malformed plan stops trading. Preserve the repository's admission limits and include only cloud-owned jobs. The agent excludes enabled jobs in `SWARM_PLAN` and pins each trade child to the current source. Before a trade it removes a stop file the swarm itself wrote for the account (`scripts/swarm.ts` `SWARM_STOP`, left when the planner takes the account off its job for the order), once the account is offline; an owner's stop file holds the trade. Inspect `.practice/fleet-agent.lock` for an existing owner before starting another daemon. Completed finite jobs stay disabled until a new useful assignment is authorized.
 
 Rebuild each cloud account with `bun scripts/fleet.ts create <name>` at session startup, preserving the spelling in `fleet/owners.json`; Linux credential directory names are case sensitive. A tutorial account needs mainland entry before its first production job. Confirm a useful result and `LOGOUT logged-out` separately; a gathered item with a logout timeout is a failed run.
 

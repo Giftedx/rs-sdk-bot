@@ -5,6 +5,7 @@ import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
 import {xpForLevel} from '../packages/planner/src/curve';
 import {walkPath,sessionWalker,goTo,type PathPoint} from '../packages/core/src/walk';
+import {ferryWalk} from './walk-to';
 
 const BONE=526,PRAYER=14;
 // Server XP per bury at 25x: bones 4.5, big bones 15 (bury_bone.rs2).
@@ -34,7 +35,7 @@ type Approach=(s:Session,points:PathPoint[],cap:number,stop:()=>boolean)=>Promis
 const approach:Approach=async(s,points,cap,stop)=>{
     const last=points.at(-1)!,p=s.sdk.getState()?.player;
     if(points.length===1&&p&&Math.max(Math.abs(p.worldX-last.x),Math.abs(p.worldZ-last.z))>60
-        &&!(await goTo(s,await getWorld(),{x:last.x,z:last.z,level:0},accountOf(s),{legTimeoutTicks:100})).ok)return false;
+        &&!(await ferryWalk(s,{x:last.x,z:last.z,level:0},async(tile,planBudgetMs)=>goTo(s,await getWorld(),tile,accountOf(s),{legTimeoutTicks:100,planBudgetMs}))).ok)return false;
     return (await walkPath(await sessionWalker(s),points,{maxTicks:cap,stop})).ok;
 };
 export async function runPrayer(s:Session,o:PrayerOptions,walk:Approach=approach){

@@ -212,10 +212,13 @@ export type EndRecord = { at: number; reason: string; revision?: string };
 export function persistentEnd(reason: string): boolean {
     return /^(?:died|blocked|gave-up)(?:\b|$)/.test(reason);
 }
-// The stop files this controller writes itself: a run whose job left the plan, stop-swarm, a job turned off. They are
-// not an owner's pause: the planner (scripts/autopilot.ts) plans such an account again and removes the file with the
-// job that replaces it. A stop file with any other text is the owner's and holds the account.
-export const SWARM_STOP = { removed: 'swarm plan removed or stopped', all: 'swarm stopped', job: 'swarm', recovery: 'swarm recovery stopped', inherited: 'inherited recovery stopped' } as const;
+// The stop files this controller writes itself: a run whose job left the plan, stop-swarm, a job turned off, a lost
+// controller lease. They are not an owner's pause: the planner (scripts/autopilot.ts) plans such an account again and
+// removes the file with the job that replaces it. A stop file with any other text is the owner's and holds the account.
+// `lease` logs the runs out when a renewal fails; the lease fence, not the file, keeps them out until a controller
+// holds the lease again (live claude-cloud: five accounts stayed down behind the file after the next swarm took it).
+export const SWARM_STOP = { removed: 'swarm plan removed or stopped', all: 'swarm stopped', job: 'swarm', recovery: 'swarm recovery stopped', inherited: 'inherited recovery stopped',
+    lease: 'fleet controller lease unavailable' } as const;
 export function swarmWroteStop(text: string | undefined): boolean {
     return text !== undefined && (Object.values(SWARM_STOP) as string[]).includes(text.trim());
 }
@@ -666,7 +669,7 @@ if (import.meta.main) {
             if (recoveryDispatch.active) accounts.add(recoveryDispatch.active.account);
             for (const held of heldRecoveryOwners(root)) accounts.add(held.account);
             for (const account of accounts) {
-                try { writeSwarmStop(stopFile(account), 'fleet controller lease unavailable'); }
+                try { writeSwarmStop(stopFile(account), SWARM_STOP.lease); }
                 catch (error) {
                     if ((error as NodeJS.ErrnoException).code !== 'EEXIST') console.log('SWARM could not request lease-loss logout for ' + account);
                 }

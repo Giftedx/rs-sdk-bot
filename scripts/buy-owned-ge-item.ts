@@ -6,6 +6,7 @@ import {waitUntil} from '../packages/core/src/ticks';import {depositObserved} fr
 import type {GEOffer,GEActionResult} from '../vendor/rs-sdk/sdk/ge-types';
 import {marketProgress,type MarketProgress} from '../packages/planner/src/market-progress';
 import {LUMBRIDGE_TO_DRAYNOR,DRAYNOR_BANK} from './courier-route';
+import {ferryWalk} from './walk-to';
 import {equipmentObserved} from '../packages/core/src/container-observation';
 import {productionMode} from './earth-production';
 // quantity is absent in journals written before bulk orders; those orders are quantity 1.
@@ -176,7 +177,9 @@ export async function prepareMarketEntry(s:Session,stop:()=>boolean,travel:(sign
   return result;
  }};
  const account=accountOf(s);marketEntryTrace(s,'go-to-start');
- return goTo(s,observedWorld,{...BANK,level:0},account,{signal,maxRetriesPerLeg:1,legTimeoutTicks:1200});
+ // The planner has no route from Ardougne to Varrock (live: every army kit buy failed "no route to 3185,3436,0").
+ // ferryWalk (scripts/walk-to.ts) then takes the two ferries, with the 60-coin fare from the nearest bank.
+ return ferryWalk(s,{...BANK,level:0},(tile,planBudgetMs)=>goTo(s,observedWorld,tile,account,{signal,maxRetriesPerLeg:1,legTimeoutTicks:1200,planBudgetMs}));
 }){
  const hp=()=>s.sdk.getSkill('Hitpoints')?.level??0,initial=s.sdk.getState()?.player,p0=initial?{...initial}:undefined,hp0=hp();
  const health=marketHealthFailure(p0,hp0);if(health||p0?.isDead)throw Error(health??'market entry: living actor required');

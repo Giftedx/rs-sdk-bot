@@ -75,7 +75,7 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('thieving', 'stun-bury', 'stun_bury', ['600', 'MODE=bury'], {presetConfig: {...PRESETS.stun_bury!, skills: {...PRESETS.stun_bury!.skills, Hitpoints: 99}}}),
   skiller('thieving', 'stun-enchant', 'stun_enchant', ['600', 'MODE=enchant'], {presetConfig: {...PRESETS.stun_enchant!, skills: {...PRESETS.stun_enchant!.skills, Hitpoints: 99}}}),
   skiller('fletching', 'arrows', 'fletch_arrows_bank', ['600', 'arrows', 'rune']),
-  skiller('mining', 'ore', 'gather_ore_varrock', ['1500', '5', 'MAX_TRIPS=1'], {presetConfig: {position: {x: 3286, z: 3368, level: 0}, skills: {Mining: 50, Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}, inventory: [{id: 1275, count: 1}]}}),
+  skiller('mining', 'ore', 'gather_ore_varrock', ['1500', '27', 'MAX_TRIPS=3'], {presetConfig: {position: {x: 3286, z: 3368, level: 0}, skills: {Mining: 50, Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}, inventory: [{id: 1275, count: 1}]}}),
   // scripts/measure/fleet-practice.ts `flax`
   skiller('crafting', 'bowstrings', 'spin_bowstrings_seers', ['1250', 'MAX_MAKE=56', 'RAW_RESERVE=50', 'MAX_TRIPS=4'], {presetConfig: {position: {x: 2727, z: 3492, level: 0}, skills: {Crafting: 13}, inventory: [{id: 1735, count: 1}, {id: 315, count: 1}, {id: 2309, count: 1}], bank: [{id: 1779, count: 106}, {id: 1737, count: 40}, {id: 1759, count: 25}, {id: 995, count: 5}]}}),
   skiller('crafting', 'legacy-jewelry', 'craft_jewelry_bank', ['300', 'cut', 'sapphire']),

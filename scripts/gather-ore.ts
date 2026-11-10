@@ -45,8 +45,17 @@ export async function mineRock(s: Session, rock: NearbyLoc, over: () => boolean,
     const progress = () => ores() > before && (s.sdk.getSkillXp('mining') ?? 0) > xp0;
     if (over() || !active()) return { ore: 0, xp: 0, ticks: 0, reason: 'rock-gone' };
     const option = rock.optionsWithIndex.find(o => /^mine$/i.test(o.text))!;
-    const sent = await s.sdk.sendInteractLoc(rock.x, rock.z, rock.id, option.opIndex);
-    if (sent.success) await waitUntil(s, () => over() || progress() || !!refusal() || !active(), { timeoutTicks });
+    // A level-up window holds the mine action in the engine (the trace shows access=false while the window is open),
+    // and it can open in the tick of the click, after the caller looked for one. The wait ends when a window opens;
+    // the window is closed and the rock is clicked again. Without this each level-up cost the whole timeout.
+    const windowOpen = () => !!(s.sdk.getState()?.dialog?.isOpen || s.sdk.getState()?.modalOpen);
+    let sent = await s.sdk.sendInteractLoc(rock.x, rock.z, rock.id, option.opIndex);
+    for (let closes = 0; sent.success; closes++) {
+        await waitUntil(s, () => over() || progress() || !!refusal() || !active() || windowOpen(), { timeoutTicks: Math.max(1, timeoutTicks - (s.tick() - start)) });
+        if (over() || progress() || refusal() || !active() || !windowOpen() || closes >= 3 || s.tick() - start >= timeoutTicks) break;
+        await s.direct({ type: 'closeModal', reason: 'SDK' });
+        sent = await s.sdk.sendInteractLoc(rock.x, rock.z, rock.id, option.opIndex);
+    }
     // Product and XP can arrive in separate publications. Give a depletion observation one tick to settle.
     if (sent.success && !progress() && !over() && !active()) await waitTicks(s, 1);
     const ore = ores() - before, xp = (s.sdk.getSkillXp('mining') ?? 0) - xp0;

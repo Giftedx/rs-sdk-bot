@@ -144,6 +144,26 @@ Ranged it adds is not needed at that point.
   `scripts/gather-combat-giant.test.ts` (with GIANT_BURY a trooper kill's bones are taken and buried).
 - **Gap.** Practice only; Strength only: a bow kills at range, so the walk to the bones is longer and that cost is
   not measured. Where the 9 ticks go is not measured.
+- **Claim.** A cow leaver trains on the troopers on its own raw beef: with `TROOPER_COOK=1` the trooper job first
+  cooks banked raw beef at the range north-east of the Ardougne north bank (2642,3355, cooked from the tile north of
+  it) and the trainer eats the cooked meat, 3 HP a piece. A 1,500-tick run eats 5-7 pieces.
+- **Conditions.** Three accounts at once, each Attack, Strength and Defence 62, Hitpoints 63, Cooking 1, a bronze
+  sword, 300 raw beef banked and no other trooper food, `GIANT_FOOD=20`, `GIANT_BURY=1`, cap 1,500:
+
+  | Account | Cook stage: cooked, burnt, ticks | Strength XP per tick | Kills | Meat eaten | Lowest HP |
+  |---|---|---|---|---|---|
+  | 1 | 79, 5, 528 | 46.1 | 35 | 5 | 31 |
+  | 2 | 82, 2, 523 | 42.4 | 34 | 7 | 31 |
+  | 3 | 81, 3, 523 | 51.0 | 37 | 6 | 30 |
+
+  All three ended `RESULT ok`, Strength 62 to 71-72. The stage cooks three packs when the account owns fewer than 20
+  pieces of trooper food, about 40 ticks to the range, 31 back and 3-4 ticks a cook; 84 raw beef last about 13 runs.
+  The range in the house south of the bank (2617,3317) is behind a locked door and has no route.
+- **Evidence.** `.practice/troopers/cook.ts` (`cook-b.out`, `cook-c.out`, `cook-d.out`), `.practice/troopers/range.ts`;
+  `scripts/trooper-food.test.ts`; `scripts/gather-combat-giant.test.ts` (a bite whose heal a hit hides; out of food
+  at low HP).
+- **Gap.** Practice only, one set of three; Ranged on cooked meat and a run that starts under Defence 60 are not
+  measured.
 - **Claim.** The trainer banks pack coins with its drops before every walk out, so a death on the field cannot lose
   them. **Conditions.** The same run from 5,000 coins in the pack, cap 400: `RESULT ok`, 8 kills, 2 bank trips; the
   pack held 0 coins and the bank 5,000 afterwards. **Evidence.** `.practice/troopers/coins.ts` and `peek.ts`;
@@ -280,6 +300,28 @@ TrouserSnake and UnderMyKilt hold about 15,000 feathers and 1,500-1,700 bones ea
   leg from where it stopped while it gets closer. The ferry fallback now starts in Varrock too: Draynor, Port Sarim,
   Karamja, Ardougne. Practice from Varrock West with 200 coins in the pack: north bank reached and Magic 50 -> 52 in
   820 ticks. The ferries need 60 coins in the pack.
+- **Between Ardougne and the east, both ways.** The route planner takes the two ferries itself when the pack holds the
+  60-coin fare (eastbound Ardougne -> Brimhaven, then Musa Point -> Port Sarim; 7 legs). With no coins it returns "no
+  route" (live, every Grand Exchange kit buy from Ardougne: `no route to 3185,3436,0`) or a route up the Ardougne
+  castle stairs that cannot be walked (practice: `walk rejected 3 times`). So `walkWithFerryFallback`
+  (`scripts/walk-to.ts`) fetches the fare from the nearest bank before the first plan (`bankFare`), and keeps the fixed
+  ferry corridor for a plan that still finds no route. `ferryWalk` carries it into `walkTarget`, fleet trades, the
+  Grand Exchange purchase script, the trooper trainer and the Prayer trainer. Practice, accounts with Hitpoints 10:
+
+  | Start | Target | Pack coins | Bank coins | Result | Ticks |
+  |---|---|---|---|---|---|
+  | Ardougne north bank | Varrock West | 60 | 0 | arrived | 750 |
+  | 2584,3293 (Ardougne) | Varrock West | 60 | 0 | arrived | 664 |
+  | 2653,3300 (knights) | Varrock West | 60 | 0 | arrived | 635 |
+  | 3071,3347 | Ardougne bank meeting tile | 60 | 0 | arrived | 621 |
+  | Ardougne north bank | Varrock West | 0 | 500 | arrived, fare fetched first | 666 |
+  | Ardougne north bank | Varrock West | 0 | 0 | refused: `ferry needs 60 coins and the bank holds 0` | 10 |
+
+  Each trip includes about 300 ticks of world loading at the 150 ms practice tick. A trooper run that starts at Varrock
+  West with no coins in the pack and 500 banked ended `RESULT ok` twice (41 and 36 kills, 2,283 ticks each, the trip
+  included). Evidence: `.practice/goldfarm-travel/east.ts`, `plan.ts`; `.practice/troopers/shape.ts`;
+  `scripts/walk-to.test.ts`. Gap: practice only; the purchase after the trip needs the Grand Exchange service and is
+  not practised; the planner's unwalkable route with no coins remains.
 - **Magic Guild store (Yanille, upstairs, Magic 66 at the door).** It stocks fire runes 3,000, nature runes 1,000
   (base 20), law, death and blood runes 1,000 each, and 2 staffs of fire, on shelves separate from Zaff's and Aubury's.
   Profile `magic_guild`; shop-buyer walks to an upstairs shop with the world walker. Practice at Magic 99 from the
