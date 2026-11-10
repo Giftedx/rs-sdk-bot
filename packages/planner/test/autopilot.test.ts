@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { CAPACITY, COW_BANDS, COW_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
+import { CAPACITY, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -411,4 +411,25 @@ test('the Ardougne cow bands train army accounts from Hitpoints 32 with 14 HP of
     // Cow mode runs a fixed 8 kills, so its job repeats until the band's target moves the account on.
     const job = jobFor(run([fighter('Cowhand', { Hitpoints: 35 })])[0]!, side);
     expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['3000', 'cow'], env: { TRAIN_SKILL: 'Strength', COW_BANK_PROFILE: 'north', MAX_KILLS: '8', COW_STAGE: '1' }, repeat: true, resources: ['cow:ardougne-north'] });
+});
+
+test('army accounts at 60 in all three melee skills train to 99 on the Khazard troopers when they hold 10 fish', () => {
+    const army = new Set(['soldier', 'second', 'third', 'fourth', 'young']);
+    const kit = { 'bronze sword': 1, 'wooden shield': 1, cake: 2 };
+    const soldier = (name: string, items: Record<string, number> = { ...kit, shark: 10 }, skills: Record<string, number> = {}) =>
+        acct(name, { Thieving: 99, Attack: 69, Strength: 60, Defence: 61, Hitpoints: 84, ...skills }, items);
+    const pick = (accounts: Acct[]) => ids(plan(inputs(accounts, { army, capacity: CAPACITY })));
+    expect(pick([soldier('Soldier')])).toEqual({ Soldier: 'army-trooper-strength-99' });
+    // Any mix of the four fish counts; cake does not, and an account short of fish stays on the cows.
+    expect(pick([soldier('Soldier', { ...kit, shark: 4, lobster: 3, swordfish: 2, trout: 1 })])).toEqual({ Soldier: 'army-trooper-strength-99' });
+    expect(pick([soldier('Soldier', { ...kit, shark: 9 })])).toEqual({ Soldier: 'army-cow-strength-70' });
+    // Strength, Attack, then Defence; an account under 60 in any of them finishes the cow passes to 60 first.
+    expect(pick([soldier('Soldier', undefined, { Strength: 99 })])).toEqual({ Soldier: 'army-trooper-attack-99' });
+    expect(pick([soldier('Young', undefined, { Attack: 45, Strength: 45, Defence: 45 })])).toEqual({ Young: 'army-cow-strength-60' });
+    // The battlefield takes TROOPER_FIELD_CAPACITY; one more ready account trains on the cows.
+    const four = pick(['Soldier', 'Second', 'Third', 'Fourth'].map(n => soldier(n)));
+    expect(Object.values(four).filter(id => id.startsWith('army-trooper-'))).toHaveLength(TROOPER_FIELD_CAPACITY);
+    expect(Object.values(four).filter(id => id === 'army-cow-strength-70')).toHaveLength(1);
+    const job = jobFor(plan(inputs([soldier('Soldier')], { army, capacity: CAPACITY }))[0]!, side);
+    expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'], env: { TRAIN_SKILL: 'Strength', TARGET_LEVEL: '99', GIANT_FOOD: '10' }, repeat: true, resources: ['trooper:battlefield'] });
 });
