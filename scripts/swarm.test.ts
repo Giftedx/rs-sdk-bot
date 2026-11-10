@@ -705,10 +705,15 @@ test('the controller knows its own stop files, and a standing job retries the en
     expect(swarmWroteStop(undefined)).toBe(false);
     for (const r of ['blocked: no food', 'gave-up after 3 runs', 'exit unknown']) expect(standingRetryable(r)).toBe(true);
     for (const r of ['died', 'done after 1 runs', 'exit 1', 'release-paused: pin missing', 'stopped after 3 runs and more']) expect(standingRetryable(r)).toBe(false);
-    // A stopped end is retried only when the account's own RESULT names a stop file; a supervisor also ends stopped on no food.
+    // A stopped end is the stop file's unless the account's RESULT says no food, the supervisor's other stopped end.
     expect(standingRetryable('stopped after 3 runs', 'fail stop file ticks=6888 picks=1550')).toBe(true);
     expect(standingRetryable('stopped after 3 runs', 'RESULT fail stop file ticks=10')).toBe(true);
+    // Trooper and cow mode word a stop-file end their own way; a run that ended ok under the file is stopped too.
+    expect(standingRetryable('stopped after 2 runs', 'fail mode=giant ok=false creditedKills=12 trainSkill=Strength stop=stop-file failure=no trooper progress: bounded target unmet')).toBe(true);
+    expect(standingRetryable('stopped after 0 runs', 'ok mode=cow ok=true creditedKills=8 stop=max-kills')).toBe(true);
+    expect(standingRetryable('stopped after 1 runs', 'fail fleet controller lease unavailable ticks=40')).toBe(true);
     expect(standingRetryable('stopped after 1 runs', 'fail no food')).toBe(false);
+    expect(standingRetryable('stopped after 1 runs', 'RESULT fail no food ticks=900')).toBe(false);
     expect(standingRetryable('stopped after 1 runs')).toBe(false);
 });
 
