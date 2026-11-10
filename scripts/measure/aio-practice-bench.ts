@@ -141,7 +141,8 @@ const OUT = process.env.BENCH_OUT ?? '.practice/aio-bench/last.json';
 const LOCKSTEP = process.env.BENCH_LOCKSTEP === '1';
 const SEED = Number(process.env.BENCH_SEED ?? 1);
 // BENCH_FRESH=1 starts a new engine for each case, so one case cannot change the world the next case meets.
-// BENCH_TRACE=<dir> writes the lockstep engine's per-tick world trace for each case there (needs BENCH_FRESH=1).
+// BENCH_TRACE=<dir> writes two lockstep engine files for each case there (needs BENCH_FRESH=1): <case>.trace, the
+// per-tick world hash, and <case>.actions, what the engine did with each message from a bot.
 const FRESH = process.env.BENCH_FRESH === '1';
 // BENCH_PARALLEL=<n> (with BENCH_FRESH=1) runs n cases at once, each on its own engine and ports. One case uses
 // about 1.5 GB; the cases share no world, so their ticks stay the same as in a serial run.
@@ -336,7 +337,7 @@ async function main() {
   const start = (label?: string, slot?: number) => startStack({ tickMs: Number(process.env.BENCH_TICK_MS ?? 150), xpRate: 25, readyTimeoutMs: 120_000,
     ...(slot === undefined ? {} : { instance: `aiobench-${slot}`, gateway: false as const, ports: { engine: slotPort(slot), gateway: slotPort(slot) + 1 },
       engineEnv: { WEB_MANAGEMENT_PORT: String(slotPort(slot) + 2), NODE_PORT: String(slotPort(slot) + 3), GE_DATABASE: `data/market-aiobench-${slot}.sqlite` } }),
-    ...(LOCKSTEP ? { lockstep: { seed: SEED, anchor: '^aiob', ...(TRACE_DIR && label ? { traceFile: resolve(TRACE_DIR, `${label.replace(/[^a-z0-9-]/gi, '_')}.trace`) } : {}) } } : {}) });
+    ...(LOCKSTEP ? { lockstep: { seed: SEED, anchor: '^aiob', ...(TRACE_DIR && label ? { traceFile: resolve(TRACE_DIR, `${label.replace(/[^a-z0-9-]/gi, '_')}.trace`), actionFile: resolve(TRACE_DIR, `${label.replace(/[^a-z0-9-]/gi, '_')}.actions`) } : {}) } } : {}) });
   if (TRACE_DIR) mkdirSync(TRACE_DIR, { recursive: true });
   if (FRESH && CONCURRENCY !== 1) throw new Error('BENCH_FRESH=1 uses BENCH_PARALLEL, not BENCH_CONCURRENCY');
   if (!FRESH && PARALLEL !== 1) throw new Error('BENCH_PARALLEL needs BENCH_FRESH=1');

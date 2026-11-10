@@ -21,7 +21,7 @@ export interface StackOptions {
     xpRate?: number;
     // Lockstep engine (patches/rs-sdk.md item 10): no wall clock, a tick runs when every bot has answered the last one.
     // `seed` makes the world's random rolls repeat, counted from the login of an account that matches `anchor`.
-    lockstep?: { seed?: number; anchor?: string; ackMs?: number; traceFile?: string };
+    lockstep?: { seed?: number; anchor?: string; ackMs?: number; traceFile?: string; actionFile?: string };
     ports?: { engine: number; gateway: number };
     // Extra engine environment for a stack on its own ports (WEB_MANAGEMENT_PORT, NODE_PORT, GE_DATABASE).
     engineEnv?: Record<string, string>;
@@ -48,6 +48,7 @@ export function engineCommand(opts: StackOptions, port: number): { cmd: string[]
         if (opts.lockstep.seed !== undefined) env.SIM_SEED = String(opts.lockstep.seed);
         if (opts.lockstep.anchor) env.SIM_SEED_ANCHOR = opts.lockstep.anchor;
         if (opts.lockstep.traceFile) env.SIM_TRACE_FILE = opts.lockstep.traceFile;
+        if (opts.lockstep.actionFile) env.SIM_ACTION_FILE = opts.lockstep.actionFile;
     }
     for (const [key, value] of Object.entries(opts.engineEnv ?? {})) {
         if (key in env) throw new Error(`engineEnv cannot replace ${key}`);

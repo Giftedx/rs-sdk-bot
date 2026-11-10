@@ -8,7 +8,7 @@ index ec3ce9f7c..aa345480d 100644
  import { Worker } from 'worker_threads';
  
 diff --git a/server/engine/src/engine/World.ts b/server/engine/src/engine/World.ts
-index 4cc01105e..23fb9fddb 100644
+index 4cc01105e..2510f085e 100644
 --- a/server/engine/src/engine/World.ts
 +++ b/server/engine/src/engine/World.ts
 @@ -72,6 +72,9 @@ import UpdateFriendList from '#/network/game/server/model/UpdateFriendList.js';
@@ -16,7 +16,7 @@ index 4cc01105e..23fb9fddb 100644
  import UpdateRebootTimer from '#/network/game/server/model/UpdateRebootTimer.js';
  import ClientSocket from '#/server/ClientSocket.js';
 +import NullClientSocket from '#/server/NullClientSocket.js';
-+import { simSeed, simSeedAnchor, simReseed, simRandDraws } from '#/simseed.js';
++import { simSeed, simSeedAnchor, simReseed, simRandDraws, simActionFlush } from '#/simseed.js';
 +import JavaRandom from '#/util/JavaRandom.js';
  import { FriendsServerOpcodes } from '#/server/friend/FriendServer.js';
  import { FriendThreadMessage } from '#/server/friend/FriendThread.js';
@@ -40,7 +40,7 @@ index 4cc01105e..23fb9fddb 100644
  class World {
      private loginThread = new Worker(new URL('../server/login/LoginThread.ts', import.meta.url));
      private friendThread = new Worker(new URL('../server/friend/FriendThread.ts', import.meta.url));
-@@ -381,9 +396,89 @@ class World {
+@@ -381,9 +396,90 @@ class World {
  
      // ----
  
@@ -126,11 +126,12 @@ index 4cc01105e..23fb9fddb 100644
          try {
              const start: number = Date.now();
 +            if (SIM_LOCKSTEP && process.env.SIM_TRACE_FILE) this.simTrace();
++            simActionFlush();
 +            if (simSeed !== null) JavaRandom.setSeed(simReseed(this.currentTick - this.simAnchorTick));
              // rs-sdk: cap catch-up at 2 ticks of backlog. Sustained overload (many bots)
              // otherwise makes the world sprint at max speed until the full backlog replays.
              this.nextTick = Math.max(this.nextTick, start - this.tickRate * 2);
-@@ -590,7 +685,8 @@ class World {
+@@ -590,7 +686,8 @@ class World {
  
              // ----
  
@@ -140,7 +141,7 @@ index 4cc01105e..23fb9fddb 100644
          } catch (err) {
              if (err instanceof Error) {
                  printError('eep eep cabbage! An unhandled error occurred during the cycle: ' + err.message);
-@@ -2339,6 +2435,7 @@ class World {
+@@ -2339,6 +2436,7 @@ class World {
                      player.teleport(3221, 3219, 0);
                  }
  
@@ -148,6 +149,56 @@ index 4cc01105e..23fb9fddb 100644
                  this.newPlayers.add(player);
                  client.state = 1;
              } catch (err) {
+diff --git a/server/engine/src/engine/entity/NetworkPlayer.ts b/server/engine/src/engine/entity/NetworkPlayer.ts
+index c4b3935f5..797c82632 100644
+--- a/server/engine/src/engine/entity/NetworkPlayer.ts
++++ b/server/engine/src/engine/entity/NetworkPlayer.ts
+@@ -5,6 +5,7 @@ import { CoordGrid } from '#/engine/CoordGrid.js';
+ import { ModalState } from '#/engine/entity/ModalState.js';
+ import Player from '#/engine/entity/Player.js';
+ import World from '#/engine/World.js';
++import { simAction, simActionOn } from '#/simseed.js';
+ import { WorldStat } from '#/engine/WorldStat.js';
+ import Zone from '#/engine/zone/Zone.js';
+ import Packet from '#/io/Packet.js';
+@@ -136,6 +137,7 @@ export class NetworkPlayer extends Player {
+             if (decoder) {
+                 const message = decoder.decode(NetworkPlayer.inBuf, this.client.waiting);
+                 const success: boolean = ClientGameProtRepository.getHandler(packetType)?.handle(message, this) ?? false;
++                if (simActionOn && message.constructor.name !== 'NoTimeout') simAction(`t=${World.currentTick} ${this.username} in ${message.constructor.name} ok=${success} delayed=${this.delayed} modal=${this.modalState} protect=${this.protect} target=${this.target ? this.target.constructor.name : '-'} at=${this.x},${this.z}`);
+ 
+                 // todo: move out of model
+                 if (success && message.category === ClientGameProtCategory.USER_EVENT) {
+diff --git a/server/engine/src/engine/entity/Player.ts b/server/engine/src/engine/entity/Player.ts
+index 9bfc1057f..337595e9e 100644
+--- a/server/engine/src/engine/entity/Player.ts
++++ b/server/engine/src/engine/entity/Player.ts
+@@ -43,6 +43,7 @@ import ScriptRunner from '#/engine/script/ScriptRunner.js';
+ import ScriptState from '#/engine/script/ScriptState.js';
+ import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
+ import World from '#/engine/World.js';
++import { simAction, simActionOn } from '#/simseed.js';
+ import Packet from '#/io/Packet.js';
+ import ChatFilterSettings from '#/network/game/server/model/ChatFilterSettings.js';
+ import HintArrow from '#/network/game/server/model/HintArrow.js';
+@@ -1367,6 +1368,8 @@ export default class Player extends PathingEntity {
+         const followOp = this.targetOp === ServerTriggerType.APPLAYER3 || this.targetOp === ServerTriggerType.OPPLAYER3;
+ 
+         let interacted = false;
++        const simTarget = simActionOn && this.target ? this.target.constructor.name : null;
++        const simAccess = simTarget ? this.canAccess() : false;
+ 
+         // If there is a target and p_access is available, try to interact before movement
+         if (this.target && this.canAccess()) {
+@@ -1412,6 +1415,8 @@ export default class Player extends PathingEntity {
+             }
+         }
+ 
++        if (simTarget) simAction(`t=${World.currentTick} ${this.username} act target=${simTarget} op=${this.targetOp} access=${simAccess} delayed=${this.delayed} modal=${this.modalState} protect=${this.protect} ran=${interacted} steps=${this.stepsTaken} waypoints=${this.hasWaypoints()} kept=${!!this.target} at=${this.x},${this.z}`);
++
+         // If a script called p_op*, then nextTarget is prepped for next cycle
+         if (this.nextTarget) {
+             this.target = this.nextTarget;
 diff --git a/server/engine/src/engine/script/ScriptRunner.ts b/server/engine/src/engine/script/ScriptRunner.ts
 index b568cf587..51f89e861 100644
 --- a/server/engine/src/engine/script/ScriptRunner.ts
@@ -182,6 +233,20 @@ index b568cf587..51f89e861 100644
          const state = new ScriptState(script, args);
          state.self = self;
  
+diff --git a/server/engine/src/engine/script/handlers/PlayerOps.ts b/server/engine/src/engine/script/handlers/PlayerOps.ts
+index 4920db978..c43046b63 100644
+--- a/server/engine/src/engine/script/handlers/PlayerOps.ts
++++ b/server/engine/src/engine/script/handlers/PlayerOps.ts
+@@ -1114,7 +1114,8 @@ const PlayerOps: CommandHandlers = {
+     },
+ 
+     [ScriptOpcode.AFK_EVENT]: state => {
+-        state.pushInt((Environment.node.debug || state.activePlayer.staffModLevel < 2) && state.activePlayer.afkEventReady ? 1 : 0);
++        // rs-sdk: with random events off, a skill action must not be dropped for an event that cannot spawn.
++        state.pushInt(Environment.NODE_RANDOM_EVENTS && (Environment.node.debug || state.activePlayer.staffModLevel < 2) && state.activePlayer.afkEventReady ? 1 : 0);
+         state.activePlayer.afkEventReady = false;
+     },
+ 
 diff --git a/server/engine/src/server/ClientSocket.ts b/server/engine/src/server/ClientSocket.ts
 index edee06da3..b469b240a 100644
 --- a/server/engine/src/server/ClientSocket.ts
@@ -208,10 +273,10 @@ index edee06da3..b469b240a 100644
      // available bytes we can read
 diff --git a/server/engine/src/simseed.ts b/server/engine/src/simseed.ts
 new file mode 100644
-index 000000000..14ef40ce1
+index 000000000..f68277e40
 --- /dev/null
 +++ b/server/engine/src/simseed.ts
-@@ -0,0 +1,33 @@
+@@ -0,0 +1,48 @@
 +// Lockstep sim (SIM_LOCKSTEP=1 only): SIM_SEED=<int> makes the world's randomness repeatable. app.ts imports this
 +// first, so Math.random is replaced before any module draws from it. The World reseeds Math.random and JavaRandom at
 +// the start of every cycle from (seed, ticks since the anchor login): the rolls of tick N after the measured account
@@ -244,6 +309,21 @@ index 000000000..14ef40ce1
 +        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 +    };
 +    console.log(`[sim] SIM_SEED=${simSeed}: world randomness reseeded every tick (anchor ${simSeedAnchor})`);
++}
++
++// SIM_ACTION_FILE: one line for each message a client sends and one for each tick in which a player holds a
++// target, with the state that decides if the engine runs the action (delayed, modal, protect, reach). A bot sees
++// only that its action had no effect; this file shows what the engine did with it.
++import fs from 'fs';
++const actionFile = process.env.SIM_ACTION_FILE;
++let actionLines: string[] = [];
++export const simActionOn = !!actionFile;
++export function simAction(line: string): void {
++    actionLines.push(line);
++    if (actionLines.length >= 20) simActionFlush();
++}
++export function simActionFlush(): void {
++    if (actionFile && actionLines.length) { fs.appendFileSync(actionFile, actionLines.join('\n') + '\n'); actionLines = []; }
 +}
 diff --git a/server/engine/tools/pack/config/PackShared.ts b/server/engine/tools/pack/config/PackShared.ts
 index 2812a3ec5..519b1df50 100644
