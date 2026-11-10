@@ -243,3 +243,16 @@ test('a retirement lapses when its script changes, except a death or a gone temp
         lapsed: ['trousersnake:army-cow-strength-45'],
     });
 });
+
+test('a retirement whose last fail is now a drain lapses, whatever its script', () => {
+    const scriptOf = () => 'same';
+    const noRoute = '2 fail RESULTs: RESULT fail travel to Ardougne from 3185,3436 failed: precondition no route to 2654,3283,0';
+    expect(liveRetirements({
+        'thefullmonty:army-cow-strength-70': { reason: noRoute, script: 'same' },
+        'quickhandjob:army-cow-defence-45': noRoute,
+        'trousersnake:army-cow-strength-45': { reason: '2 fail RESULTs: RESULT fail no cow progress: insufficient slots', script: 'same' },
+    }, scriptOf)).toEqual({
+        retired: { 'trousersnake:army-cow-strength-45': { reason: '2 fail RESULTs: RESULT fail no cow progress: insufficient slots', script: 'same' } },
+        lapsed: ['thefullmonty:army-cow-strength-70', 'quickhandjob:army-cow-defence-45'],
+    });
+});
