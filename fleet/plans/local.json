@@ -1,25 +1,7 @@
 {
  "side": "local",
- "at": 1794311633196,
+ "at": 1794311784542,
  "jobs": [
-  {
-   "account": "FishAndChips",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts harry 600 MAX_ITEMS=1 MAX_SPEND=500 NO_BUY_TICKS=25 BANK_PACK=1",
-    "scripts/gather-fish.ts cage 3000",
-    "scripts/cook-food.ts 1500 lobster"
-   ],
-   "env": {
-    "ROUNDS": "0",
-    "RUN": "2"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
-   "role": "supply"
-  },
   {
    "account": "MineYourBiz",
    "script": "scripts/chain.ts",
@@ -144,6 +126,26 @@
    "repeat": true,
    "goal": "Strength 30 on chickens so it can hit hard enough to PK",
    "role": "pk-trainee"
+  },
+  {
+   "account": "Masterbaiter",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
+   "env": {
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
+   ]
   },
   {
    "account": "mmtha0205",
@@ -363,25 +365,6 @@
    "role": "thieving"
   },
   {
-   "account": "mmsmk1232",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
-   "autopilot": "local",
-   "resources": [
-    "knight:2671,3313"
-   ]
-  },
-  {
    "account": "Pocketpython",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -448,6 +431,37 @@
    "enabled": false,
    "repeat": false,
    "goal": "run-session-recovery-pocketrocket-serial [task-49e2248b-b05e-4c93-917e-1e2c05d87b61]",
+   "role": "supply"
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-74101a8d-385c-4d39-a5b3-1babee02034f"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-session-recovery-mmsmk1232-serial3 [task-74101a8d-385c-4d39-a5b3-1babee02034f]",
+   "role": "thieving"
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts harry 600 MAX_ITEMS=1 MAX_SPEND=500 NO_BUY_TICKS=25 BANK_PACK=1",
+    "scripts/gather-fish.ts cage 3000",
+    "scripts/cook-food.ts 1500 lobster"
+   ],
+   "env": {
+    "ROUNDS": "0",
+    "RUN": "2"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
    "role": "supply"
   }
  ]
