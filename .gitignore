@@ -16,3 +16,8 @@ bot.env
 *.log
 swarm.generated.json
 swarm.validate.json
+
+# Local tool output and downloads
+.playwright-cli/
+bun-linux-x64/
+/data/
