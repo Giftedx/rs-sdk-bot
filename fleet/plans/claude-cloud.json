@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794296059168,
+ "at": 1794296611397,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -23,26 +23,20 @@
   },
   {
    "account": "Quickhandjob",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/alch-train.ts",
    "args": [
-    "3000",
-    "cow"
+    "99",
+    "5000"
    ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "train Strength to 70 on the Ardougne cows",
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
    "role": "combat",
-   "template": "army-cow-strength-70",
-   "resources": [
-    "cow:ardougne-north"
-   ]
+   "template": "army-alch-magic-99",
+   "autopilot": "claude-cloud",
+   "resources": []
   },
   {
    "account": "TheFullMonty",
@@ -69,20 +63,16 @@
   },
   {
    "account": "UnderMyKilt",
-   "script": "scripts/alch-train.ts",
-   "args": [
-    "99",
-    "5000"
-   ],
-   "env": {},
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-b5ab85ff-c132-4d35-939a-78db4e88e48c"
+   },
    "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "combat",
-   "template": "army-alch-magic-99",
-   "autopilot": "claude-cloud",
-   "resources": []
+   "repeat": false,
+   "goal": "claude-cloud-recover-undermykilt-20261110t073641z [task-b5ab85ff-c132-4d35-939a-78db4e88e48c]",
+   "role": "combat"
   }
  ]
 }
