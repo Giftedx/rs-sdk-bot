@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { SIDE_NAME } from './fleet';
-import { appendFleetGitRecord, fleetCheckoutId, fleetGitWindow, readFleetGitRefs } from './fleet-lease';
+import { appendFleetGitRecord, fleetCheckoutId, fleetGitWindow, fleetLeaseLastSeen, readFleetGitRefs } from './fleet-lease';
 import { listAttempts, readLogoutProof } from './session-lifecycle';
 import { pidAlive } from './session-takeover';
 
@@ -196,6 +196,19 @@ export function acquireFleetTradeClaim(root: string, input: TradeClaimInput, now
     };
 }
 
+// A swarm claim outlives its container: only the owning checkout can prove the logout, and a container that is gone
+// never will. The claim of ANOTHER side may be replaced once that side's controller lease has gone unrenewed, and the
+// claim itself has stood, for ORPHAN_CLAIM_MS. By then the side's workers have refused logins for most of that time
+// (FLEET_LEASE_TTL_MS is 10 minutes) and the game server has dropped a session with no client. A claim of the caller's
+// own side is never orphaned here: its lease is live, and session recovery owns that case. Trade claims never qualify.
+// openBot admits only accounts fleet/owners.json gives to the caller's side (fleet.ts assertSideOwns).
+export const ORPHAN_CLAIM_MS = 60 * 60_000;
+function orphanedSwarmClaim(git: ReturnType<typeof fleetGitWindow>, claim: FleetSwarmClaim, side: string, now: number): boolean {
+    if (claim.side === side || now - claim.at < ORPHAN_CLAIM_MS) return false;
+    const seen = fleetLeaseLastSeen(git, claim.side);
+    return seen !== null && now - seen >= ORPHAN_CLAIM_MS;
+}
+
 export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { recover = false, now = Date.now } = {}) {
     const { account, server } = identity(input), { side } = input;
     if (!SIDE_NAME.test(side)) throw Error('invalid fleet swarm claim side');
@@ -203,18 +216,19 @@ export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { rec
     const { ref, head, claim: current } = loadClaim(git, account, server);
     const pending = current?.phase === 'held' ? abandonedPending(root, current, input) : undefined;
     const claim = pending ? pending.inherited : current;
-    let inheritedHold: FleetSwarmClaim | undefined;
+    let inheritedHold: FleetSwarmClaim | undefined, orphan: FleetSwarmClaim | undefined;
     if (claim?.phase === 'held') {
         if (!isSwarmClaim(claim)) throw Error('fleet trade claim held for order ' + claim.orderId);
         const prior = matchedWorkerProof(root, claim, input);
-        if (!prior || (prior.state !== 'confirmed' && !(recover && !pidAlive(claim.pid)))) {
+        if (!prior && orphanedSwarmClaim(git, claim, side, now())) orphan = claim;
+        else if (!prior || (prior.state !== 'confirmed' && !(recover && !pidAlive(claim.pid)))) {
             throw Error('fleet account claim held by swarm');
         }
-        if (prior.state === 'held') inheritedHold = claim;
+        if (prior?.state === 'held') inheritedHold = claim;
     }
     const record: FleetSwarmClaim = { kind: 'swarm', account, server, side, ...claimOwner(root), nonce: randomUUID(), phase: 'held', at: now() };
     writePending(root, record, inheritedHold);
-    const owned = appendClaim(git, ref, head, 'Fleet swarm attempt', record);
+    const owned = appendClaim(git, ref, head, orphan ? `Fleet swarm attempt, replacing the orphaned ${orphan.side} claim ${orphan.nonce}` : 'Fleet swarm attempt', record);
     if (pending && current) cleanPending(root, current.nonce);
     let released = false;
     const release = (restore?: FleetSwarmClaim) => {
