@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { CAPACITY, COW_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
+import { CAPACITY, COW_BANDS, COW_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -378,12 +378,16 @@ test('the Ardougne cow bands train army accounts from Hitpoints 32 with 14 HP of
     const army = new Set(['cowhand', 'pure', 'broke', ...holders.map(h => h.toLowerCase())]);
     const run = (accounts: Acct[]) => plan(inputs(accounts, { army, capacity: CAPACITY }));
     const pick = (accounts: Acct[]) => ids(run(accounts));
-    // Strength, Attack, then Defence to 45; then each on to 60; then the coin tier.
+    // Strength, Attack, then Defence to 45; then each on through 60, 70, 80, 90 and 99; then the coin tier.
     expect(pick([fighter('Cowhand', { Hitpoints: 35 })])).toEqual({ Cowhand: 'army-cow-strength-45' });
     expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 45 })])).toEqual({ Cowhand: 'army-cow-attack-45' });
     expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 45, Attack: 45 })])).toEqual({ Cowhand: 'army-cow-defence-45' });
     expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 45, Attack: 45, Defence: 45 })])).toEqual({ Cowhand: 'army-cow-strength-60' });
-    expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 60, Attack: 60, Defence: 60 })]).Cowhand).toMatch(/^goldfarm@/);
+    expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 60, Attack: 60, Defence: 60 })])).toEqual({ Cowhand: 'army-cow-strength-70' });
+    expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 70, Attack: 61, Defence: 60 })])).toEqual({ Cowhand: 'army-cow-attack-70' });
+    expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 99, Attack: 99, Defence: 90 })])).toEqual({ Cowhand: 'army-cow-defence-99' });
+    expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 99, Attack: 99, Defence: 99 })]).Cowhand).toMatch(/^goldfarm@/);
+    expect(COW_BANDS.map(b => b.band)).toEqual([0, 1, 5, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]);
     // A first pass outranks a second: a fresh account takes a place from a holder training past 45.
     const second = { Hitpoints: 50, Strength: 50, Attack: 45, Defence: 45 };
     const current = new Map(holders.map(h => [h.toLowerCase(), 'army-cow-strength-60']));
