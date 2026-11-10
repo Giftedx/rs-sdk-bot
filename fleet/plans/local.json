@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794309386126,
+ "at": 1794310116746,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -234,25 +234,6 @@
    ]
   },
   {
-   "account": "mmthv2350",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
-   ]
-  },
-  {
    "account": "NabTheKnob",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -482,6 +463,25 @@
    "repeat": false,
    "goal": "run-ge-woodpecker-sharks30-blood-food [task-ba7ddac9-17e0-497c-a16c-321de8f810d5]",
    "role": "helper"
+  },
+  {
+   "account": "mmthv2350",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
+   ]
   }
  ]
 }
