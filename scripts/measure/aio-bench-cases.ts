@@ -67,7 +67,8 @@ const ROUTE_CASES: BenchCase[] = [
   // Start states and arguments below come from each worker's proof or fleet fixture (the source is named per case).
   skiller('fishing', 'harpoon', 'gather_fish_catherby', ['harpoon', '1500'], {presetConfig: {position: {x: 2840, z: 3432, level: 0}, skills: {Fishing: 70}, inventory: [{id: 311, count: 1}]}}),
   skiller('cooking', 'food', 'cook_food_catherby', ['600', 'lobster']),
-  skiller('woodcutting', 'yews', 'gather_yews', ['1500', '5', 'MAX_TRIPS=1']),
+  // The default route of each skill runs for about 1,000 ticks, so its XP for each 1,000 ticks is a rate and not one unit of work.
+  skiller('woodcutting', 'yews', 'gather_yews', ['1000', '200', 'MAX_TRIPS=4']),
   skiller('woodcutting', 'fresh45', 'wc_fresh', [], {timeoutMs: 900_000}),
   // The same 600 ticks at the knights with no guest action, with a bone buried in each stun, and with an enchant cast in each stun. Hitpoints 99, so a run of failed picks does not kill the account before the cap.
   skiller('thieving', 'stun-base', 'stun_base', ['600', 'MODE=base'], {presetConfig: {...PRESETS.stun_base!, skills: {...PRESETS.stun_base!.skills, Hitpoints: 99}}}),
@@ -78,7 +79,7 @@ const ROUTE_CASES: BenchCase[] = [
   // scripts/measure/fleet-practice.ts `flax`
   skiller('crafting', 'bowstrings', 'spin_bowstrings_seers', ['1250', 'MAX_MAKE=56', 'RAW_RESERVE=50', 'MAX_TRIPS=4'], {presetConfig: {position: {x: 2727, z: 3492, level: 0}, skills: {Crafting: 13}, inventory: [{id: 1735, count: 1}, {id: 315, count: 1}, {id: 2309, count: 1}], bank: [{id: 1779, count: 106}, {id: 1737, count: 40}, {id: 1759, count: 25}, {id: 995, count: 5}]}}),
   skiller('crafting', 'legacy-jewelry', 'craft_jewelry_bank', ['300', 'cut', 'sapphire']),
-  skiller('herblore', 'potions', 'brew_potions_bank', ['1500', 'auto', 'TARGET_LEVEL=51']),
+  skiller('herblore', 'potions', 'brew_potions_bank', ['1000', 'auto', 'TARGET_LEVEL=78']),
   // packages/practice/src/agility-order-proof.ts
   skiller('agility', 'order', 'agility_gnome_1', ['gnome', '20', 'AGI_POTION=0', 'AGI_MAX_LAPS=100', 'AGI_MAX_TICKS=2500', 'AGI_PROGRESS_TICKS=150', 'AGI_ENTRY_TICKS=400'], {presetConfig: agilityFixturePreset(PRESETS.agility_gnome_1!)}),
   // packages/practice/src/shark-supply-order-proof.ts
@@ -94,14 +95,14 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('firemaking', 'order', 'fresh_lumbridge', ['TARGET_LEVEL=15', 'LOG=normal', 'TOOL_BUDGET=0', 'CASH_RESERVE=0', 'CAP=2000', 'MAX_LOGS=2'], {presetConfig: firemakingFixture('entry')}),
   // packages/practice/src/glass-supply-proof.ts `owned`
   skiller('crafting', 'glass', 'fresh_lumbridge', ['SUPPLY_MODE=1', 'MEMBERS=1', 'MAX_MAKE=1', 'MAX_SPEND=0', 'CASH_RESERVE=1000', 'CAP=4000'], {timeoutMs: 900_000, presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Crafting: 51, Hitpoints: 39}, varps: {160: 2}, inventory: [{id: 995, count: 17}, {id: 590, count: 1}, {id: 1775, count: 1}], equipment: [{id: 1205, count: 1, slot: 3}], bank: [{id: 995, count: 2000}, {id: 314, count: 23}, {id: 1775, count: 2}]}}),
-  skiller('crafting', 'inventory', 'bank_gems', ['cut-dragonstone', 'MAX_MAKE=10', 'CAP=500', 'MEMBERS=1']),
+  skiller('crafting', 'inventory', 'bank_gems', ['cut-dragonstone', 'MAX_MAKE=180', 'CAP=1100', 'MEMBERS=1']),
   // packages/practice/src/druid-meats-proof.ts
   skiller('herblore', 'meats', 'fresh_lumbridge', ['CAP=4000'], {timeoutMs: 900_000, presetConfig: {position: {x: 3092, z: 3242, level: 0}, skills: {Attack: 94, Strength: 83, Defence: 76, Hitpoints: 75}, equipment: [{id: 1289, count: 1, slot: 3}, {id: 1171, count: 1, slot: 5}], inventory: [{id: 954, count: 1}, {id: 329, count: 2}], bank: [{id: 995, count: 1000}, {id: 590, count: 1}, {id: 1511, count: 13}, {id: 2132, count: 265}]}}),
   // packages/practice/src/rune-bank-craft-proof.ts
   skiller('runecraft', 'bank-craft', 'fresh_lumbridge', ['99', 'CAP=4000'], {presetConfig: {position: {x: 3013, z: 3355, level: 0}, varps: {63: 6, 101: 1, 281: 1000}, skills: {Attack: 47, Hitpoints: 33, Runecraft: 1}, bank: [{id: 1436, count: 30}, {id: 556, count: 25}, {id: 1438, count: 1}, {id: 1448, count: 1}], inventory: [{id: 556, count: 5}]}}),
   // packages/practice/src/magic-order-proof.ts `varrock`
   skiller('magic', 'order', 'fresh_lumbridge', ['TARGET_LEVEL=32', 'MAX_CASTS=5', 'RUNE_BUDGET=1000', 'CASH_RESERVE=10000', 'CAP=1500'], {presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Magic: 31}, inventory: [{id: 333, count: 1}, {id: 333, count: 1}, {id: 333, count: 1}, {id: 1351, count: 1}], bank: [{id: 556, count: 25}, {id: 557, count: 4}, {id: 563, count: 5}, {id: 995, count: 14911}, {id: 1511, count: 5}]}}),
-  skiller('prayer', 'bury', 'fresh_lumbridge', ['43', 'CAP=1500', 'MAX_BURY=175', 'BONE_RESERVE=6'], {presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Prayer: 42}, bank: [{id: 526, count: 200}]}}),
+  skiller('prayer', 'bury', 'fresh_lumbridge', ['46', 'CAP=1000', 'MAX_BURY=175', 'BONE_RESERVE=6'], {presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Prayer: 42}, bank: [{id: 526, count: 200}]}}),
   // packages/practice/src/goldfarm-order-proof.ts `entry99`
   skiller('thieving', 'knights-stable', 'fresh_lumbridge', ['TICKS=600', 'BANK_AT=50000'], {output: /coinsGained=(\d+)/, presetConfig: {position: {x: 2654, z: 3283, level: 0}, skills: {Thieving: 99, Hitpoints: 10}, inventory: [{id: 1265, count: 1}, {id: 590, count: 1}, {id: 995, count: 37}], equipment: [{id: 1277, count: 1, slot: 3}, {id: 1171, count: 1, slot: 5}], bank: [{id: 995, count: 1000}, {id: 440, count: 5}, {id: 333, count: 10}, {id: 329, count: 4}, {id: 385, count: 3}]}}),
   // The baker spawns at 2654,3311, west of the stall. The start tile is east of the stall, so the stall blocks the baker's sight.
