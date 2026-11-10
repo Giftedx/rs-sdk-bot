@@ -385,6 +385,18 @@ export function giantKillLimit(value?:string|number){
     return maximum;
 }
 const COINS=995;
+// The free target one account takes on open ground it shares. Accounts that stand together would all take the
+// nearest free trooper and split every kill (practice, six at once: a median 45 XP per tick an account against 62
+// alone). In company each account ranks the free targets by distance plus its own fixed offset of 0-7 tiles, so they
+// pick different ones (57 a tick, research/combat-measure.md). `free` is nearest first.
+export function roamTarget<T extends {index:number;distance:number}>(account:string,free:readonly T[],company:boolean):T|undefined{
+    if(!company)return free[0];
+    const offset=(index:number)=>{let h=2166136261;for(const c of `${account}:${index}`)h=Math.imul(h^c.charCodeAt(0),16777619);return (h>>>0)%8;};
+    return [...free].sort((a,b)=>a.distance+offset(a.index)-(b.distance+offset(b.index)))[0];
+}
+// A target that fights another player: in combat and facing a player slot that is not this account's.
+export const anothersFight=(npc:{inCombat?:boolean;targetIndex?:number}|undefined,selfSlot:number|undefined)=>
+    !!npc?.inCombat&&selfSlot!==undefined&&(npc.targetIndex??-1)>=32768&&npc.targetIndex!==32768+selfSlot;
 export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targetLevel?:number;maximum?:number;food?:number;ammo?:number;eatAt?:number;noProgress?:number;stop?:()=>boolean;walk?:(x:number,z:number,tol:number,signal?:AbortSignal)=>Promise<boolean>;site?:CombatSite}){
     const site=o.site??GIANT_SITE,label=site.label;
     const maximum=giantKillLimit(o.maximum);
@@ -532,7 +544,6 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
         lastProgress=s.tick(); // Transit is bounded by CAP, not the target-wait window.
         const retry=new Map<number,number>();
         const selfSlot=(s as {client?:{selfSlot?:number}}).client?.selfSlot;
-        const spread=(index:number)=>{let h=2166136261;for(const c of `${s.name}:${index}`)h=Math.imul(h^c.charCodeAt(0),16777619);return (h>>>0)%8;};
         while(!goalReached()&&!over()){
             if(hp()<=eatAt&&!await eat()){if(bankFood<1){stop='low-hp';throw new Error(`no ${label} progress: low HP and no owned shark`);}await trip();continue;}
             if(ranged&&quiver()<1){if(ammoBank<1){stop='ammo';break;}await trip();continue;}
@@ -540,11 +551,7 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
             if(s.tick()-lastProgress>=(o.noProgress??200))throw new Error(`no ${label} progress: target/loot timeout`);
             const free=(state()?.nearbyNpcs??[]).filter(n=>site.npcs.includes(n.id)&&inBox(site.room,n.tileX??n.x,n.tileZ??n.z)&&!n.inCombat&&n.reachable!==false
                 &&(n.hp==null||n.maxHp==null||n.hp>=n.maxHp)&&(retry.get(n.index)??0)<=s.tick());
-            // Accounts that stand together would all take the nearest free trooper and split every kill (practice, six
-            // at once: 45 XP per tick an account against 62 alone). With another player within 20 tiles, each account
-            // ranks the free troopers by distance plus its own fixed offset of 0-7 tiles, so they pick different ones.
-            const company=roam&&(state()?.nearbyPlayers??[]).some(p=>p.distance<=20);
-            const target=company?[...free].sort((a,b)=>a.distance+spread(a.index)-(b.distance+spread(b.index)))[0]:free[0];
+            const target=roamTarget(s.name,free,roam&&(state()?.nearbyPlayers??[]).some(p=>p.distance<=20));
             // With no trooper in view for 10 ticks it walks back to the spot (practice: two bow runs idled 307 ticks at
             // 2505,3242 and ended on the no-progress timeout).
             if(!target){if(roam&&s.tick()-lastProgress>=10&&!near(site.spot.x,site.spot.z,3))await walk(site.spot.x,site.spot.z,3,true);else await waitTicks(s,1);continue;}
@@ -564,8 +571,8 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
                 // Give up a target that 40 ticks of own attacks have not hit, as cow mode releases a cow. A bow needs line of
                 // sight (practice: one stood 289 ticks at 2521,3247 and the run ended on the no-progress timeout).
                 if(roam&&!gone&&s.tick()-lastXp>=GIANT_RANGED_RELEASE){retry.set(target.index,s.tick()+50);released=true;break;}
-                // Another player's fight: the trooper faces someone else and no own hit has landed. Take a different one.
-                if(roam&&current?.inCombat&&selectedXp()===beforeXp&&selfSlot!==undefined&&(current.targetIndex??-1)>=32768&&current.targetIndex!==32768+selfSlot){retry.set(target.index,s.tick()+20);released=true;break;}
+                // Another player's fight, and no own hit has landed: take a different trooper.
+                if(roam&&selectedXp()===beforeXp&&anothersFight(current,selfSlot)){retry.set(target.index,s.tick()+20);released=true;break;}
                 // A trooper another player or a gnome killed is gone with no own XP: the credit above never comes (practice: 290
                 // idle ticks; live melee: TheFullMonty's first run ended on the no-progress timeout after 32 kills).
                 if(roam&&gone){released=true;break;}

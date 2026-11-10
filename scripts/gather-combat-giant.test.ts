@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {GIANT,CONFIGS,giantStyle,giantTraining,giantCredit,giantKillLimit,runGiants,selectGiantWeapon,selectGiantBow,selectGiantArrows} from './gather-combat';
+import {GIANT,CONFIGS,giantStyle,giantTraining,giantCredit,giantKillLimit,runGiants,selectGiantWeapon,selectGiantBow,selectGiantArrows,roamTarget,anothersFight} from './gather-combat';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks} from '../packages/core/src/ticks';
 
@@ -176,6 +176,26 @@ test('coins held at entry are banked before the walk out, so a death on the fiel
         expect(r.ok).toBe(true);expect(carried.every(([x,z])=>x===GIANT.bank.x&&z===GIANT.bank.z)).toBe(true);
         expect(f.bank.find(i=>i.id===995).count).toBe(50);expect(f.inv.some(i=>i.id===995)).toBe(false);expect(r.preserved).toBe(true);
     }finally{f.dispose();}
+});
+
+test('accounts in company spread over the free troopers; alone, an account takes the nearest',()=>{
+    const free=Array.from({length:8},(_,i)=>({index:100+i,distance:3+i%2}));
+    expect(roamTarget('Soldier',free,false)).toBe(free[0]);expect(roamTarget('Soldier',[],true)).toBeUndefined();
+    const picks=['Fatstack','Fingerblastr','Deeppockets','Dipstick','KnightRider','Fingersmith'].map(n=>roamTarget(n,free,true)!.index);
+    // Six accounts that see the same eight troopers do not all take one, and each choice is stable.
+    expect(new Set(picks).size).toBeGreaterThanOrEqual(3);
+    expect(['Fatstack','Fingerblastr','Deeppockets','Dipstick','KnightRider','Fingersmith'].map(n=>roamTarget(n,free,true)!.index)).toEqual(picks);
+    // The offset is at most 7 tiles: a trooper 8 or more tiles nearer than the rest is always taken.
+    for(const n of ['Fatstack','Dipstick'])expect(roamTarget(n,[{index:1,distance:1},...free.map(f=>({...f,distance:f.distance+8}))],true)!.index).toBe(1);
+});
+
+test('a trooper that faces another player is someone else\'s fight; one that faces this account or an NPC is not',()=>{
+    expect(anothersFight({inCombat:true,targetIndex:32768+5},4)).toBe(true);
+    expect(anothersFight({inCombat:true,targetIndex:32768+4},4)).toBe(false);
+    expect(anothersFight({inCombat:true,targetIndex:77},4)).toBe(false);
+    expect(anothersFight({inCombat:false,targetIndex:32768+5},4)).toBe(false);
+    expect(anothersFight({inCombat:true,targetIndex:32768+5},undefined)).toBe(false);
+    expect(anothersFight(undefined,4)).toBe(false);
 });
 
 test('banked supplies absent or equip without effect cannot start a giant fight',async()=>{
