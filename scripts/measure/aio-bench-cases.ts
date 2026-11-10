@@ -225,7 +225,7 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, bank: [{id: 1944, count: 1}, {id: 1927, count: 1}, {id: 1933, count: 1}], varps: {4: -1, 9: -1, 13: -1, 16: -1, 28: -1, 64: -1, 181: -1, 209: -1}}},
   {key: 'quester:mode:seaslug-leave', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['seaslug-leave', 'CAP=600'], pass: ok,
     presetConfig: {position: {x: 2782, z: 3273, level: 0}, skills: {Hitpoints: 60}, varps: {159: 12}}},
-  {key: 'quester:mode:tbwt-owned', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['tbwt-owned', '6000'], pass: ok, timeoutMs: 900_000, known: 'the jogre bones on the permanent fire give no cooking effect in 12 ticks, at tick 817',
+  {key: 'quester:mode:tbwt-owned', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['tbwt-owned', '6000'], pass: ok, timeoutMs: 900_000, known: 'at tick 805 the game gives no reply to the first use of the pasted bones on the fire (no cook message in 12 ticks); the same action sent after that wait cooks the bones',
     presetConfig: {position: {x: 2781, z: 3086, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Magic: 99, Prayer: 99, Agility: 99, Cooking: 99, Fishing: 99}, varps: {175: 12},
       equipment: [{id: 579, count: 1, slot: 0}, {id: 1381, count: 1, slot: 3}, {id: 577, count: 1, slot: 4}, {id: 1540, count: 1, slot: 5}, {id: 1011, count: 1, slot: 7}],
       inventory: [{id: 3150, count: 21}, {id: 3032, count: 1}, {id: 3171, count: 1}, {id: 3128, count: 1}, {id: 3164, count: 1}, {id: 401, count: 1}, {id: 379, count: 1}, {id: 558, count: 25}]}},
