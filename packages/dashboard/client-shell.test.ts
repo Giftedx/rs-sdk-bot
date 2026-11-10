@@ -217,7 +217,7 @@ function fleetWall(bots:any[],start:{sel?:string|null,free?:boolean,other?:strin
   ${live}${state}${code}
   return {start:wallStart,end:wallEnd,toggle:wallToggle,sync:wallSync,message:wallMessage,names:wallNames,on:()=>!!wall,label:()=>focusState(),link:()=>{wallLinked=true;},
    press:wallPress,frameKey:wallFrameKey,neighbour:wallNeighbour,rects:wallRects,prefs:wallPrefs,prefsRead:wallPrefsRead,linkRead:wallLinkRead,linkWrite:wallLinkWrite,layoutTo:wallLayout,
-   wall:()=>wall&&{layout:wall.layout,main:wall.main,focus:wall.focus,names:wall.names.slice(),hover:wall.hover},tiles:()=>new Map([...wallTiles].map(([n,t])=>[n,t])),root:wallRoot,tools:wallTools,keysOpened:()=>keysOpened,pin:wallPin,ratioAt:wallRatioAt,grip:wallGrip,ghost:wallGhost,
+   wall:()=>wall&&{layout:wall.layout,main:wall.main,focus:wall.focus,names:wall.names.slice(),hover:wall.hover},tiles:()=>new Map([...wallTiles].map(([n,t])=>[n,t])),root:wallRoot,tools:wallTools,keysOpened:()=>keysOpened,pin:wallPin,sharesAt:wallSharesAt,edges:wallEdges,ratioAt:wallRatioAt,grip:wallGrip,ghost:wallGhost,
    page:()=>({sel,free:window.atlasFreeCamera,other:window.atlasFollowOther,touring:!!tourTimer,sentMaxLevel,warmSent,rswFor,renders}),setMode:m=>setMode(m),stopTour:()=>clearInterval(tourTimer)};`)
   (S,VIEWER,window,'⟦MAIN⟧',st,()=>frame,(t:string)=>said.push(t),()=>{},{classList:classes},{classList:classes},log,(n:string)=>String(n).replaceAll('⟦MAIN⟧','Main · reserved'),phone,{createElement:dom.createElement},hud,wallButton,store,()=>links.push(1),(f:Function)=>frames.push(f));
  // The viewer's report of the layout for the asked names, and the frame that shows it. Times are ms after the page's time origin.
@@ -366,11 +366,11 @@ test('the layout, the main view and a hand-made order stay in the browser storag
  const w=fleetWall(bots(),{store});w.start();w.laid(w.grid(['Ann','Bob','Cat','Dan']));
  expect(store.data['atlas-wall']).toBeUndefined();
  w.press('f',false);
- expect(JSON.parse(store.data['atlas-wall'])).toEqual({layout:'focus',main:'Ann',order:[],ratio:0.62,locked:[]});
+ expect(JSON.parse(store.data['atlas-wall'])).toEqual({layout:'focus',main:'Ann',order:[],ratio:0.62,locked:[],shares:{grid:{rows:[],cols:[]},columns:{rows:[],cols:[]}},strip:0});
  w.press('f',false);w.laid(w.grid(['Ann','Bob','Cat','Dan']));
  // Dan goes to Bob's place: the order is now the user's.
  w.press('4',false);w.press('ArrowUp',true);
- expect(JSON.parse(store.data['atlas-wall'])).toEqual({layout:'grid',main:'Ann',order:['Ann','Dan','Cat','Bob'],ratio:0.62,locked:[]});
+ expect(JSON.parse(store.data['atlas-wall'])).toEqual({layout:'grid',main:'Ann',order:['Ann','Dan','Cat','Bob'],ratio:0.62,locked:[],shares:{grid:{rows:[],cols:[]},columns:{rows:[],cols:[]}},strip:0});
  w.end();
  // The next wall, with one account gone and one new: the stored order, then the new account.
  const next=fleetWall([inWorld('Eve'),inWorld('Dan'),inWorld('Cat'),inWorld('Ann')],{store});next.start();
@@ -381,7 +381,7 @@ test('the layout, the main view and a hand-made order stay in the browser storag
  for(const text of ['{','null','[1]','{"layout":"spiral","main":"<b>","order":["Ann",5,"<i>"]}']){
   const odd=fleetWall(bots(),{store:fakeStore({'atlas-wall':text})});odd.start();expect(odd.log).toEqual(opening(['Ann','Bob','Cat','Dan']));
  }
- expect(w.prefsRead('{"layout":"columns","main":"⟦MAIN⟧","order":["Bob","⟦MAIN⟧"]}')).toEqual({layout:'columns',main:'⟦MAIN⟧',order:['Bob','⟦MAIN⟧'],ratio:0.62,locked:[]});
+ expect(w.prefsRead('{"layout":"columns","main":"⟦MAIN⟧","order":["Bob","⟦MAIN⟧"]}')).toEqual({layout:'columns',main:'⟦MAIN⟧',order:['Bob','⟦MAIN⟧'],ratio:0.62,locked:[],shares:{grid:{rows:[],cols:[]},columns:{rows:[],cols:[]}},strip:0});
  expect(w.prefsRead('{"ratio":0.7,"locked":["Bob",5,"<i>"]}')).toMatchObject({ratio:0.7,locked:['bob']});
  expect(w.prefsRead('{"ratio":0.95}')).toMatchObject({ratio:0.62});
 });
@@ -653,4 +653,32 @@ test('while the wall is open the page sends no step, roof, prewarm or follow mes
  expect(shell).toContain('if(e.data?.viewerTiming&&!wall)focusLanded();');
  expect(shell).toContain('const stuck=!!wall||');
  expect(readFileSync(new URL('./map-shell.js',import.meta.url),'utf8')).toContain("if(typeof name!=='string'||!S?.bots||window.atlasWallOn?.())return;");
+});
+
+test('a gap between rows or columns of the grid sizes its two neighbours; the strip of the focus layout has a gap too',()=>{
+ // The neighbours share their space again, the others keep theirs; near the middle the gap stops there.
+ expect(w0.sharesAt([300,300,300],0,150,false)).toEqual([0.5,0.1667,0.3333]);
+ expect(w0.sharesAt([500,500],0,8,false)).toEqual([0.5,0.5]);expect(w0.sharesAt([500,500],0,8,true)).toEqual([0.508,0.492]);
+ expect(w0.sharesAt([500,500],0,900,false)).toEqual([0.85,0.15]);
+ const names=['Ann','Bob','Cat','Dan'],store=fakeStore(),w=fleetWall(names.map(n=>inWorld(n)),{store});w.start();w.laid(w.grid(names));
+ // Two rows and two columns: one gap of each kind.
+ const shown=()=>w.edges.filter((e:any)=>!e.hidden).map((e:any)=>[e.gap.kind,e.dataset.side,e.style.left,e.style.top]);
+ expect(shown()).toEqual([['rows','row','0px','317px'],['cols','col','497px','20px']]);
+ const col=w.edges[1],ev=(x:number,y:number)=>({button:0,pointerId:4,clientX:x,clientY:y,altKey:false});
+ let mark=w.log.length;col.listeners.pointerdown(ev(502,200));col.listeners.pointermove(ev(602,200));for(const f of w.frames.splice(0))f(0);col.listeners.pointerup(ev(602,200));
+ expect(w.since(mark)).toEqual([{multiLayout:{animate:false}},{multiLayout:{cols:[0.6,0.4]}},{multiLayout:{cols:[0.6,0.4],animate:true}}]);
+ expect(JSON.parse(store.data['atlas-wall']).shares.grid).toEqual({rows:[],cols:[0.6,0.4]});
+ // Another layout gets its own sizes, and the grid gets its sizes back.
+ mark=w.log.length;w.press(' ',false);
+ expect(w.since(mark)).toEqual([{multiLayout:{mode:'main',rows:[],cols:[],strip:0}}]);
+ mark=w.log.length;w.layoutTo('grid');
+ expect(w.since(mark)).toEqual([{multiLayout:{mode:'grid',rows:[],cols:[0.6,0.4],strip:0}}]);
+ // The focus layout: the gap over the strip gives the strip 10 to 45 percent of the height.
+ w.layoutTo('focus');w.laid([{name:'Ann',x:0,y:0,w:1048,h:632},{name:'Bob',x:0,y:636,w:346,h:121},{name:'Cat',x:350,y:636,w:347,h:121},{name:'Dan',x:701,y:636,w:347,h:121}]);
+ expect(shown()).toEqual([['strip','row','0px','649px']]);
+ const strip=w.edges[0];mark=w.log.length;strip.listeners.pointerdown(ev(300,682));strip.listeners.pointermove(ev(300,48+757-229));for(const f of w.frames.splice(0))f(0);strip.listeners.pointerup(ev(300,48+757-229));
+ expect(w.since(mark)).toEqual([{multiLayout:{animate:false}},{multiLayout:{strip:0.3}},{multiLayout:{strip:0.3,animate:true}}]);
+ // The next wall opens with the stored sizes.
+ w.end();const next=fleetWall(names.map(n=>inWorld(n)),{store});next.start();
+ expect(next.log[1]).toEqual({multiLayout:{mode:'focus',main:'Ann',gap:4,rows:[],cols:[],strip:0.3,color:'#1e1e1e',animate:true}});
 });

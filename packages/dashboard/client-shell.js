@@ -197,7 +197,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const link=(href,text)=>'<a href="'+href+'" target="_blank" rel="noopener">'+text+'</a>';
     return '<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>RuneLite — Swarm</span></div><p class="xp-muted">Our bot team on the rs-sdk demo world, a 2004 RuneScape server. Not the RuneLite client. Not affiliated with Jagex or RuneLite.</p><div class="info-data">'+infoData()+'</div></div>'+
       (owner?'':'<div class="xp-box"><div class="xp-head"><span>Controls</span></div>'+infoRow(keys('[',']'),'previous or next account',true)+infoRow(keys('W','A','S','D'),'fly free',true)+infoRow(keys('Drag'),'turn the camera',true)+infoRow(keys('Wheel'),'zoom',true)+infoRow(keys('Ctrl','K'),'find anything',true)+'</div>')+
-      '<div class="xp-box info-wall"><div class="xp-head"><span>Fleet wall</span></div>'+infoRow(keys('\\'),'our accounts side by side',true)+infoRow(keys('←','↑','↓','→')+' '+keys('H','J','K','L'),'move the focus',true)+infoRow(keys('1')+' – '+keys('9')+' '+keys('Click'),'focus that view',true)+infoRow(keys('Shift','Arrow')+' '+keys('Drag a title'),'swap two views',true)+infoRow(keys('P')+' '+keys('Pin'),'keep a view in its place',true)+infoRow(keys('Drag the gap'),'size the main view',true)+infoRow(keys('Enter'),'make it the main view, then follow it',true)+infoRow(keys('Double click'),'follow that account',true)+infoRow(keys('Space'),'next layout',true)+infoRow(keys('F'),'focus layout',true)+infoRow(keys('Esc'),'leave the wall',true)+'</div>'+
+      '<div class="xp-box info-wall"><div class="xp-head"><span>Fleet wall</span></div>'+infoRow(keys('\\'),'our accounts side by side',true)+infoRow(keys('←','↑','↓','→')+' '+keys('H','J','K','L'),'move the focus',true)+infoRow(keys('1')+' – '+keys('9')+' '+keys('Click'),'focus that view',true)+infoRow(keys('Shift','Arrow')+' '+keys('Drag a title'),'swap two views',true)+infoRow(keys('P')+' '+keys('Pin'),'keep a view in its place',true)+infoRow(keys('Drag a gap'),'size the views',true)+infoRow(keys('Enter'),'make it the main view, then follow it',true)+infoRow(keys('Double click'),'follow that account',true)+infoRow(keys('Space'),'next layout',true)+infoRow(keys('F'),'focus layout',true)+infoRow(keys('Esc'),'leave the wall',true)+'</div>'+
       '<div class="xp-box"><div class="xp-head"><span>Marks</span></div>'+
       infoRow('Ours','<b class="mark-name">Name</b> <i class="mark-dot on"></i> playing <i class="mark-dot"></i> not playing')+infoRow('Others','<i class="mark-dot other"></i> on the map')+(owner?infoRow('⟦MAIN⟧ / Hidden','an account this page does not show')+infoRow('~ before a rank','the last rank we read; it can be old'):'')+'</div>'+
       '<div class="xp-box info-sources"><div class="xp-head"><span>Sources</span></div>'+
@@ -715,14 +715,17 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     for(const n of first){const i=left.findIndex(x=>wallSame(x,n));if(i>=0)head.push(left.splice(i,1)[0]);}
     return [...head,...left];
   }
-  // The layout, the main view, a hand-made order, the main view's share and the pinned views stay in this browser, and
+  // The layout, the main view, a hand-made order, the sizes and the pinned views stay in this browser, and
   // the share link carries the layout and the main view (wl, wm). A stored or linked value that is not a layout or a name is dropped.
-  const wallPrefs={layout:'grid',main:null,order:[],ratio:0.62,locked:[]};
+  // Row and column shares from storage: at most 16 numbers over 0 and up to 1 each, or none.
+  const wallSharesOf=p=>{const list=v=>Array.isArray(v)&&v.length<=WALL_MAX&&v.every(n=>typeof n==='number'&&n>0&&n<=1)?v.slice():[];return {rows:list(p?.rows),cols:list(p?.cols)};};
+  const wallPrefs={layout:'grid',main:null,order:[],ratio:0.62,locked:[],shares:{grid:wallSharesOf(),columns:wallSharesOf()},strip:0};
   function wallPrefsRead(text){
     let p;try{p=JSON.parse(text);}catch{return null;}
     if(!p||typeof p!=='object')return null;
     return {layout:WALL_LAYOUTS.includes(p.layout)?p.layout:'grid',main:wallIsName(p.main)?p.main:null,order:Array.isArray(p.order)?p.order.filter(wallIsName).slice(0,64):[],
-      ratio:typeof p.ratio==='number'&&p.ratio>=0.5&&p.ratio<=0.8?p.ratio:0.62,locked:Array.isArray(p.locked)?p.locked.filter(wallIsName).slice(0,64).map(n=>n.toLowerCase()):[]};
+      ratio:typeof p.ratio==='number'&&p.ratio>=0.5&&p.ratio<=0.8?p.ratio:0.62,locked:Array.isArray(p.locked)?p.locked.filter(wallIsName).slice(0,64).map(n=>n.toLowerCase()):[],
+      shares:{grid:wallSharesOf(p.shares?.grid),columns:wallSharesOf(p.shares?.columns)},strip:typeof p.strip==='number'&&p.strip>=0.1&&p.strip<=0.45?p.strip:0};
   }
   try{Object.assign(wallPrefs,wallPrefsRead(localStorage.getItem(WALL_STORE)));}catch{/* no storage: the wall starts as a grid */}
   function wallLinkRead(q){const layout=q.get('wl'),main=q.get('wm');if(WALL_LAYOUTS.includes(layout))wallPrefs.layout=layout;if(wallIsName(main))wallPrefs.main=main;}
@@ -730,7 +733,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // After each choice: remember it and put it in the link.
   function wallKeep(){
     if(!wall)return;
-    wallPrefs.layout=wall.layout;wallPrefs.main=wall.main;if(wall.ordered)wallPrefs.order=wall.names.slice();wallPrefs.ratio=wall.ratio;wallPrefs.locked=[...wall.locked];
+    wallPrefs.layout=wall.layout;wallPrefs.main=wall.main;if(wall.ordered)wallPrefs.order=wall.names.slice();wallPrefs.ratio=wall.ratio;wallPrefs.locked=[...wall.locked];wallPrefs.shares=wall.shares;wallPrefs.strip=wall.strip;
     try{localStorage.setItem(WALL_STORE,JSON.stringify(wallPrefs));}catch{/* the choice lasts for this page only */}
     writeLink();wallPaint();
   }
@@ -771,12 +774,12 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const main=names.find(n=>wallSame(n,wallPrefs.main))??names[0];
     // The wall keeps the page's follow state and the tour, and gives them back when it closes.
     wall={names,sent:wallKey(names),shown:0,tour:!!tourTimer,state:{sel,free:window.atlasFreeCamera,other:window.atlasFollowOther},
-      layout:wallPrefs.layout,back:'grid',main,focus:main,ordered:wallPrefs.order.length>0,ratio:wallPrefs.ratio,locked:new Set(wallPrefs.locked),rects:null,move:null,moving:false,seen:new Set(),offline:new Set(),hover:null,click:null};
+      layout:wallPrefs.layout,back:'grid',main,focus:main,ordered:wallPrefs.order.length>0,ratio:wallPrefs.ratio,locked:new Set(wallPrefs.locked),shares:{grid:wallSharesOf(wallPrefs.shares.grid),columns:wallSharesOf(wallPrefs.shares.columns)},strip:wallPrefs.strip,custom:false,rects:null,move:null,moving:false,seen:new Set(),offline:new Set(),hover:null,click:null};
     clearInterval(tourTimer);tourTimer=null;focusRowsHtml='';flightTo=null;focus.classList.remove('flying');focusNote.classList.remove('flying');
     window.atlasOpponentClear?.();
     // The layout goes first, so the views open in it.
     wallPost({multiChrome:false});
-    wallPost({multiLayout:{mode:wall.layout,main,gap:WALL_GAP,...(wall.ratio!==WALL_RATIO?{ratio:wall.ratio}:{}),color:WALL_GAP_COLOUR,animate:!wallStill()}});
+    wallPost({multiLayout:{mode:wall.layout,main,gap:WALL_GAP,...(wall.ratio!==WALL_RATIO?{ratio:wall.ratio}:{}),...wallSizes(wall.layout),color:WALL_GAP_COLOUR,animate:!wallStill()}});
     wallPost({multi:names});
     wallPost({multiFocus:main});
     wallButton.blur?.();
@@ -788,7 +791,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // With restore, the page follows what it followed when the wall opened. Without, the caller chooses the next follow.
   function wallEnd(restore=true){
     if(!wall)return false;
-    const w=wall,ready=mode==='3d'&&VIEWER.state==='ready';wallDragEnd(null,false);wallSizeEnd(null);wall=null;
+    const w=wall,ready=mode==='3d'&&VIEWER.state==='ready';wallDragEnd(null,false);wallSizeEnd(null);wallEdgeEnd(null);wall=null;
     wallPaint();
     if(ready)wallPost({multi:[]});
     sentMaxLevel=null;warmSent='';rswFor=null;
@@ -840,7 +843,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // With zoom, the focused view becomes the main view of the new layout in the same move.
   function wallLayout(layout,zoom=false){
     if(!wall||!WALL_LAYOUTS.includes(layout)||layout===wall.layout)return;
-    const message={mode:layout};
+    const message={mode:layout,...wallSizes(layout)};
     if(zoom&&wall.main!==wall.focus&&!wallLocked(wall.main)&&!wallLocked(wall.focus)){wall.main=wall.focus;message.main=wall.main;}
     wall.back=wall.layout;wall.layout=layout;wallPost({multiLayout:message});
     focusSay('Wall layout · '+WALL_LAYOUT_NAMES[layout],1200);wallKeep();
@@ -918,6 +921,79 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function wallRatioAt(at,size,free){
     const raw=Math.min(Math.max((at-WALL_GAP/2)/Math.max(size-WALL_GAP,1),0.5),0.8),stop=free?null:WALL_RATIOS.find(s=>Math.abs(s-raw)<=0.012);
     return wallRatioOf(stop??raw);
+  }
+  // The gaps of the Grid and Columns layouts, and the gap over the strip of the Focus layout. A drag of a gap between
+  // two rows or two columns moves it: the two neighbours share their space again and the others keep theirs. No row
+  // or column goes under WALL_SHARE_MIN of an even one. The gap stops where the two neighbours are equal unless Alt is
+  // down. A second press within the double click time gives the even sizes back.
+  const WALL_SHARE_MIN=0.3,WALL_STRIP=[0.1,0.45];
+  const wallEdges=[];let wallEdge=null;
+  // The rows of the reported rectangles, top to bottom, each with its rectangles left to right.
+  function wallRows(rects){
+    const rows=[];
+    for(const r of rects.slice().sort((a,b)=>a.y-b.y||a.x-b.x)){const last=rows[rows.length-1];if(last&&last.y===r.y)last.cells.push(r);else rows.push({y:r.y,h:r.h,cells:[r]});}
+    return rows;
+  }
+  // The gaps a pointer can move in the current layout, from the reported rectangles. sizes: the px of every row, or
+  // of every column of a full row, so a move changes two of them and keeps the sum.
+  function wallGaps(){
+    if(!wall?.rects||wall.names.length<2)return [];
+    const out=[];
+    if(wall.layout==='focus'){const m=wall.rects[wall.names.indexOf(wall.main)];if(m)out.push({kind:'strip',i:0,x:m.x,y:m.y+m.h,w:m.w,h:WALL_GAP});return out;}
+    if(wall.layout!=='grid'&&wall.layout!=='columns')return out;
+    const rows=wallRows(wall.rects),first=rows[0],n=first.cells.length,right=first.cells[n-1],full=rows.filter(r=>r.cells.length===n),bottom=full[full.length-1];
+    for(let r=0;r<rows.length-1;r++)out.push({kind:'rows',i:r,x:first.cells[0].x,y:rows[r].y+rows[r].h,w:right.x+right.w-first.cells[0].x,h:WALL_GAP,sizes:rows.map(q=>q.h)});
+    for(let c=0;c<n-1;c++)out.push({kind:'cols',i:c,x:first.cells[c].x+first.cells[c].w,y:first.y,w:WALL_GAP,h:bottom.y+bottom.h-first.y,sizes:first.cells.map(q=>q.w)});
+    return out;
+  }
+  // The shares after the gap between parts i and i+1 of `sizes` moved by `by` px. `free` is true with Alt.
+  function wallSharesAt(sizes,i,by,free){
+    const total=sizes.reduce((a,b)=>a+b,0),pair=sizes[i]+sizes[i+1],min=Math.min(total*WALL_SHARE_MIN/sizes.length,pair/2);
+    let a=Math.min(Math.max(sizes[i]+by,min),pair-min);
+    if(!free&&Math.abs(a-pair/2)<=total*0.012)a=pair/2;
+    const next=sizes.slice();next[i]=a;next[i+1]=pair-a;
+    return next.map(v=>Math.round(v/total*10000)/10000);
+  }
+  // The sizes the viewer needs with a layout: the shares of that layout's rows and columns, and the strip. Nothing
+  // when the viewer holds none and the layout has none.
+  function wallSizes(layout){
+    const s=wall.shares[layout]??{rows:[],cols:[]},any=s.rows.length>0||s.cols.length>0||wall.strip>0;
+    if(!any&&!wall.custom)return {};
+    wall.custom=any;return {rows:s.rows,cols:s.cols,strip:wall.strip||0};
+  }
+  const wallEdgeValue=kind=>kind==='strip'?{strip:wall.strip}:{[kind]:wall.shares[wall.layout][kind]};
+  function wallEdgeEl(){
+    const el=document.createElement('div');el.className='wall-grip wall-edge';el.hidden=true;el.title='Drag to size these views · press twice for even sizes';wallRoot.append(el);
+    el.addEventListener('pointerdown',e=>wallEdgeStart(e,el));el.addEventListener('pointermove',wallEdgeMove);el.addEventListener('pointerup',wallEdgeEnd);el.addEventListener('pointercancel',wallEdgeEnd);
+    return el;
+  }
+  function wallEdgeStart(e,el){
+    const g=el.gap;if(!wall||!g||e.button>0)return;
+    const now=Date.now(),twice=el.pressed&&now-el.pressed<=WALL_DOUBLE_MS;el.pressed=twice?0:now;
+    if(twice){if(g.kind==='strip')wall.strip=0;else wall.shares[wall.layout][g.kind]=[];wallPost({multiLayout:wallEdgeValue(g.kind)});wallKeep();return;}
+    wallEdge={el,id:e.pointerId,gap:g,down:g.kind==='cols'?e.clientX:e.clientY,frame:$('#rsw').getBoundingClientRect(),wait:false};
+    el.setPointerCapture?.(e.pointerId);el.classList.add('sizing');wall.custom=true;
+    // The views follow the pointer with no move of their own.
+    wallPost({multiLayout:{animate:false}});
+  }
+  function wallEdgeMove(e){
+    const d=wallEdge;if(!d||e.pointerId!==d.id||!wall)return;
+    const g=d.gap,at=g.kind==='cols'?e.clientX:e.clientY;
+    if(g.kind==='strip'){
+      const share=Math.round(Math.min(Math.max((d.frame.top+d.frame.height-at-WALL_GAP/2)/Math.max(d.frame.height,1),WALL_STRIP[0]),WALL_STRIP[1])*1000)/1000;
+      if(share===wall.strip)return;
+      wall.strip=share;d.el.dataset.share=Math.round(share*100)+'%';
+    }else{
+      const shares=wallSharesAt(g.sizes,g.i,at-d.down,e.altKey===true);
+      if(String(shares)===String(wall.shares[wall.layout][g.kind]))return;
+      wall.shares[wall.layout][g.kind]=shares;d.el.dataset.share=Math.round(shares[g.i]*100)+' : '+Math.round(shares[g.i+1]*100);
+    }
+    if(!d.wait){d.wait=true;const kind=g.kind;requestAnimationFrame(()=>{d.wait=false;if(wall)wallPost({multiLayout:wallEdgeValue(kind)});});}
+  }
+  function wallEdgeEnd(e){
+    const d=wallEdge;if(!d||e&&e.pointerId!==d.id)return;
+    wallEdge=null;d.el.classList.remove('sizing');
+    if(wall){wallPost({multiLayout:{...wallEdgeValue(d.gap.kind),animate:!wallStill()}});wallKeep();}
   }
   let wallSize=null;
   function wallSizeTo(ratio){
@@ -1028,7 +1104,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(!wall){
       // The frames fade while the viewer returns to its single view.
       for(const t of wallTiles.values()){if(wallStill())t.el.remove();else{t.el.style.transition='opacity .16s';t.el.style.opacity='0';setTimeout(()=>t.el.remove(),200);}}
-      wallTiles.clear();wallGrip.hidden=true;wallGhost.hidden=true;return;
+      wallTiles.clear();wallGrip.hidden=true;wallGhost.hidden=true;for(const el of wallEdges)el.hidden=true;return;
     }
     for(const b of wallLayoutButtons)b.setAttribute('aria-pressed',String(b.dataset.wallLayout===wall.layout));
     if(wallCycleButton.dataset.wallShows!==wall.layout){wallCycleButton.dataset.wallShows=wall.layout;wallCycleButton.innerHTML=wallSvg(wallIcon[wall.layout]);wallCycleButton.title='Layout: '+WALL_LAYOUT_NAMES[wall.layout]+' · Space for the next';}
@@ -1078,6 +1154,15 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       else{g.left=(m.x+m.w+dx-3)+'px';g.top=(m.y+dy)+'px';g.width=(WALL_GAP+6)+'px';g.height=m.h+'px';}
       wallGrip.hidden=false;
     }else if(!m)wallGrip.hidden=true;
+    // One grip on each gap between rows and between columns, and one over the strip.
+    if(move){
+      const gaps=wallGaps();
+      gaps.forEach((g,k)=>{
+        const el=wallEdges[k]??(wallEdges[k]=wallEdgeEl()),s=el.style,col=g.kind==='cols';el.gap=g;el.dataset.side=col?'col':'row';
+        s.left=(g.x+dx-(col?3:0))+'px';s.top=(g.y+dy-(col?0:3))+'px';s.width=(col?WALL_GAP+6:g.w)+'px';s.height=(col?g.h:WALL_GAP+6)+'px';el.hidden=false;
+      });
+      for(let k=gaps.length;k<wallEdges.length;k++)if(wallEdges[k]!==wallEdge?.el){wallEdges[k].hidden=true;wallEdges[k].gap=null;}
+    }
   }
   // The layout switcher and the key list, in the title bar's focus group after the Wall button. A narrow title bar
   // shows one button that steps through the layouts.
