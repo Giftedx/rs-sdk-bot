@@ -1,46 +1,41 @@
 {
  "side": "claude-cloud",
- "at": 1794289423872,
+ "at": 1794289624962,
  "jobs": [
   {
    "account": "Quickhandjob",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/alch-train.ts",
    "args": [
-    "3000",
-    "cow"
+    "99",
+    "5000"
    ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 60 on the Ardougne cows",
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
    "role": "combat",
-   "template": "army-cow-defence-60",
+   "template": "army-alch-magic-99",
    "autopilot": "claude-cloud",
-   "resources": [
-    "cow:ardougne-north"
-   ]
+   "resources": []
   },
   {
    "account": "TrouserSnake",
-   "script": "scripts/goldfarm.ts",
+   "script": "scripts/train-prayer.ts",
    "args": [
     "99"
    ],
    "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
    "goal": "train Prayer to 99 burying the held bones",
    "role": "combat",
+   "template": "army-bury-prayer-99",
    "autopilot": "claude-cloud",
    "resources": []
   },
@@ -69,21 +64,18 @@
   },
   {
    "account": "UnderMyKilt",
-   "script": "scripts/train-prayer.ts",
+   "script": "scripts/alch-train.ts",
    "args": [
-    "99"
+    "99",
+    "5000"
    ],
-   "env": {
-    "BURY_HELD": "1",
-    "BONE_RESERVE": "6",
-    "CAP": "4000"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying the held bones",
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
    "role": "combat",
-   "template": "army-bury-prayer-99",
+   "template": "army-alch-magic-99",
    "autopilot": "claude-cloud",
    "resources": []
   }
