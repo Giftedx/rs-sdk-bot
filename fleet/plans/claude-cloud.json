@@ -1,53 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794292439229,
+ "at": 1794293042168,
  "jobs": [
-  {
-   "account": "UnderMyKilt",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Strength to 60 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-60",
-   "resources": [
-    "cow:ardougne-north"
-   ]
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Strength to 60 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-60",
-   "resources": [
-    "cow:ardougne-north"
-   ]
-  },
   {
    "account": "TrouserSnake",
    "script": "scripts/goldfarm.ts",
@@ -78,7 +32,7 @@
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "10"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": false,
    "goal": "train Strength to 99 on the Khazard troopers",
@@ -86,6 +40,53 @@
    "template": "army-trooper-strength-99",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 60 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-60",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Defence to 60 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-defence-60",
+   "resources": [
+    "cow:ardougne-north"
    ]
   }
  ]
