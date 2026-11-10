@@ -295,3 +295,6 @@ button.op-kpi:hover{filter:brightness(1.15)}
 .info-data{margin-top:6px}
 @media(hover:none){.info-row .k{display:none}.info-row:has(kbd):not(:has(kbd.p)){display:none}}
 @media(max-width:479px){.client-title>img+span{display:none}}
+/* An item name wraps to a second line, so a narrow panel shows it whole. */
+.ge-name{white-space:normal;overflow-wrap:anywhere;line-height:1.15}
+.ge-row.ge-owner{grid-template-columns:26px minmax(0,1fr) 42px 42px 40px 44px;gap:5px}
