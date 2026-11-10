@@ -237,6 +237,15 @@ test('a busy pen ends a run that has kills as crowded and banks them; a run with
         expect(r.ok).toBe(false);expect(r.creditedKills).toBe(0);expect(r.failure).toContain('no cow progress: target/loot timeout cows=1 inCombat=1 besidePlayer=0 players=0');
     }finally{g.dispose();}
 });
+test('a cow another account kills is given up at once, and the run goes on to its own kills',async()=>{
+    const f=fixture(),sdk=f.session.sdk as any,bot=f.session.bot as any,state=sdk.getState.bind(sdk),attack=bot.attack.bind(bot);let calls=0,hideUntil=-1;
+    // The first cow goes with no own XP and no drops, and a cow with the same index is back three ticks later.
+    bot.attack=async(...args:any[])=>{calls++;if(calls===1){hideUntil=f.session.tick()+3;return{success:true};}return attack(...args);};
+    sdk.getState=()=>{const st=state();return f.session.tick()<hideUntil?{...st,nearbyNpcs:[]}:st;};
+    try{const r=await runCows(f.session,{cap:500,maximum:5,walk:async()=>true,noProgress:40});
+        expect(r.ok).toBe(true);expect(r.creditedKills).toBe(5);expect(calls).toBe(6);expect(r.banked).toEqual({hide:5,bones:5,beef:5});
+    }finally{f.dispose();}
+});
 test('low HP with no food retreats and banks; a changed life stops without another attack',async()=>{
     for(const injury of ['low-nofood','death'] as const){const f=fixture(false,injury);try{const r=await runCows(f.session,{cap:120,maximum:5,walk:async()=>true,noProgress:20});
         expect(r.ok).toBe(false);expect(r.creditedKills).toBe(0);expect(f.kills()).toBe(1);

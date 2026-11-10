@@ -278,13 +278,13 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
             activeIndex=target.index;attackStarted=s.tick();capture('before-attack',x,z);
             if(!(await s.bot.attack(attackTarget)).success){await waitTicks(s,1);continue;}
             let observedXp=beforeXp;lastProgress=s.tick();
-            let gone=false,released=false,lastEngaged=s.tick(),lastActive=s.tick();
+            let gone=false,goneAt=0,released=false,lastEngaged=s.tick(),lastActive=s.tick();
             while(!over()){
                 if(healthCutoff)throw new Error('no cow progress: banked-food HP40 cutoff; retreat');
                 if(hp()<=6)await eat();
                 if(potions&&state()?.player?.combat.targetType==='npc'&&state()?.player?.combat.targetIndex===target.index)await potions.poll(target);
-                const current=state()?.nearbyNpcs.find(n=>n.index===target.index);
-                if(current){x=current.tileX??current.x;z=current.tileZ??current.z;}else gone=true;
+                const current=gone?undefined:state()?.nearbyNpcs.find(n=>n.index===target.index);
+                if(current){x=current.tileX??current.x;z=current.tileZ??current.z;}else if(!gone){gone=true;goneAt=s.tick();}
                 // Own selected-skill XP is productive combat progress. Animation,
                 // dispatch success and other players' hits do not renew this wait.
                 if(selectedXp()>observedXp){observedXp=selectedXp();lastProgress=s.tick();lastActive=s.tick();}
@@ -295,6 +295,10 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
                 const drops=ids.map(id=>count((state()?.groundItems??[]).filter(i=>i.x===x&&i.z===z),id)-(groundBefore.get(`${id}:${x}:${z}`)??0));
                 if(cowCredit(gone,selectedXp()-beforeXp,drops))break;
                 if(!gone&&cowReleased(s.tick()-lastEngaged,s.tick()-lastActive)){released=true;break;}
+                // A cow another account killed leaves this one no drops, and a new cow takes its index: the credit never
+                // comes (practice, six at once: 2 of 18 runs waited out the window). Give it up at once with no own XP
+                // on it, or 10 ticks after it went with XP but no drops.
+                if(gone&&(selectedXp()===beforeXp||s.tick()-goneAt>=10)){released=true;break;}
                 if(s.tick()-lastProgress>=(o.noProgress??200))throw new Error('no cow progress: target/loot timeout');await waitTicks(s,1);
             }
             if(over())break;
