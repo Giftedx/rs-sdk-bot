@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794324815435-moneyshot-thefullmonty-bronzesword",
+ "account": "TheFullMonty",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bronze sword",
+ "requested": 1,
+ "claim": "fca51388-7179-4915-986c-7d5b64e5c339",
+ "count": 0,
+ "ok": false,
+ "at": 1794324820140,
+ "detail": "trade claimed"
+}
