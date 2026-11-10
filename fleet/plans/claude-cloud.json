@@ -1,25 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794343361441,
+ "at": 1794343835245,
  "jobs": [
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=884 QUANTITY=1000 LIMIT_PRICE=40 CASH_RESERVE=1000 ORDER_KEY=thefullmonty-kit0-884-0to1000 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1000 Iron arrow on the Grand Exchange to train Ranged to 99 on the Khazard troopers",
-   "role": "supply",
-   "template": "kit-buy:army-trooper-ranged-99",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
   {
    "account": "Quickhandjob",
    "script": "scripts/gather-combat.ts",
@@ -65,6 +47,28 @@
    "autopilot": "claude-cloud",
    "resources": [
     "shop:catherby"
+   ]
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "sarim"
+   ],
+   "env": {
+    "ITEMS": "feather",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy feathers at Gerrant",
+   "role": "bank",
+   "template": "shop-feathers",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:sarim"
    ]
   },
   {
@@ -294,27 +298,23 @@
   },
   {
    "account": "Dipstick",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/train-prayer.ts",
    "args": [
-    "3000",
-    "cow"
+    "99"
    ],
    "env": {
-    "TRAIN_SKILL": "Attack",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Attack to 60 on the Ardougne cows",
+   "goal": "train Prayer to 99 burying the held bones",
    "role": "combat",
-   "template": "army-cow-attack-60",
+   "template": "army-bury-prayer-99",
    "autopilot": "claude-cloud",
-   "resources": [
-    "cow:ardougne-north"
-   ]
+   "resources": []
   },
   {
    "account": "KnightRider",
