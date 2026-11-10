@@ -1,0 +1,30 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794306752941-thefullmonty-fatstack",
+ "account": "TheFullMonty",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 10,
+ "claim": "ffe4f765-b01a-4b53-a59f-9a8b4cf14ba8",
+ "count": 10,
+ "ok": true,
+ "at": 1794306776276,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1794306769287
+ },
+ "logout": {
+  "attemptId": "1794306756237-0000001306-0000000001",
+  "at": 1794306776271,
+  "sha256": "35fa89b38a19f13b01a8c172f02c5214c2ba15de19d4cd753d6deeb3f61f465c"
+ }
+}

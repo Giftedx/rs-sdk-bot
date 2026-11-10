@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794306752941-thefullmonty-fatstack",
+ "account": "Fatstack",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 10,
+ "claim": "cd489e25-9809-47c0-9480-06c5c4285e2d",
+ "count": 0,
+ "ok": false,
+ "at": 1794306758496,
+ "detail": "trade claimed"
+}
