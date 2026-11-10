@@ -21,7 +21,7 @@ import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { matchingJobLines } from '../packages/core/src/job-log';
 import { CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, freshest, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, coinValueFor, type Assignment, type ItemFunding, type Market, type Stock } from '../packages/planner/src/autopilot';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
-import { tradeSettlement, validOrder, type Order, type Receipt, type TradeReceipt } from './fleet-trade-settlement';
+import { tradeSettlement, validOrder, windowClosures, type Order, type Receipt, type TradeReceipt } from './fleet-trade-settlement';
 import { readHeldFleetTradeClaims } from '../packages/core/src/fleet-trade-claim';
 import { liveHelperStatuses, overallSupplyDemand, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
 import { tickWaste, wasteShare } from './tick-waste';
@@ -131,12 +131,14 @@ export function kitBuyRunning(job: any, assigned: { template: string; offset: nu
 }
 // Accounts with an enabled job, as scripts/fleet-agent.ts swarmBusy counts them: the agent trades for no other account.
 const enabledAccounts = (jobs: readonly any[]) => new Set(jobs.filter(j => j?.enabled).flatMap(j => [j.account, ...(j.accounts ?? [])]).filter((n): n is string => typeof n === 'string').map(n => n.toLowerCase()));
-// New receipts hold both parties through a matched settlement or explicit reconciliation, even after the window.
+// New receipts hold both parties through a matched settlement or explicit reconciliation, even after the window. An
+// order the receipts close after its window (scripts/fleet-trade-settlement.ts windowClosures) holds no one, beyond
+// the stock check on a settled transfer: live, two such orders kept TrouserSnake and Deeppockets jobless for hours.
 export function inOpenOrder(orders: readonly Order[], receipts: readonly Receipt[], now: number,
     stockReady: (receipt: TradeReceipt) => boolean = () => true): Set<string> {
-    const held = new Set<string>();
+    const held = new Set<string>(), closed = windowClosures(orders, receipts, now);
     for (const order of orders) {
-        const settlement = tradeSettlement(order, receipts, now);
+        const settlement = closed.get(order.id) ?? tradeSettlement(order, receipts, now);
         if (settlement.state !== 'settled' && settlement.state !== 'failed') {
             if (order.end > now || settlement.state !== 'legacy') {
                 held.add(order.from.toLowerCase());

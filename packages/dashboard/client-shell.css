@@ -197,3 +197,29 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 @media(max-width:740px){.client-title button,.client-title .focus-now,.client-plugin-title button{position:relative}.client-title button::after,.chat-toggle::after,.client-plugin-title button::after{content:'';position:absolute;inset:-8px -3px}.game-panel select{min-height:30px}.op-wide-setting{min-height:34px}}
 /* The wall's notes go to the foot of the view, clear of the title strips at the top. */
 .game-hud.wall-on .focus-note{top:auto;bottom:14px}
+/* The race lines of the overlay box, under a thin rule. */
+.game-overlay h4.race{margin:3px 0 1px;padding-top:2px;border-top:1px solid #0007}
+/* As the 2004 client draws them: every stack count is yellow, also K and M; a quest name is white under the pointer. */
+.game-hud .qty-k,.game-hud .qty-m,.game-bank .qty-k,.game-bank .qty-m{color:#ff0}
+.game-list button[data-quest]:hover{color:#fff!important}
+/* The side tabs as in the 2004 client: stats, quests, inventory and worn items above; friends, logout and options below. */
+.game-hud .game-tabs .tab-row:first-of-type{grid-template-columns:repeat(4,34px)!important}
+/* The side panels in the 2004 client's colours: yellow text and titles, a cyan title on the options, white friend names. */
+.game-panel{color:#ff0}
+.game-panel h3{font:16px RSBold;color:#ff0}
+.game-panel h3.cyan{color:#0ff}
+.game-hud .game-panel .friends-list button{color:#fff}
+/* Worn items: 36 px slots at the 2004 places; an empty slot shows the 2004 picture of what it holds. */
+.equipment-doll{width:190px;height:204px;margin:0 auto}
+.equipment-slot{width:36px;height:36px;background:#5b5142}
+.worn-icon{display:block;width:32px;height:32px;background:url('/client-assets/wornicons.png') no-repeat;image-rendering:pixelated}
+/* The chat buttons of the 2004 client: a white label with On in green or Off in red under it. A public sender's name is black. */
+.game-hud .game-chat .chat-channels{height:auto;flex:none}
+.game-hud .chat-channels button{color:#fff;line-height:13px}
+.game-hud .chat-channels small{color:#0f0;line-height:11px}
+.game-hud .chat-channels small.off{color:#f00}
+.game-hud .chat-public b{color:#000}
+/* The right-click menu of the 2004 client: a black title bar with the title in the body colour, bold options 15 px apart. */
+.game-context{font:16px RSBold;box-shadow:none;padding:1px}
+.game-context strong{background:#000;color:#5d5447;font:16px RSBold;height:16px;line-height:16px;padding:0 3px}
+.game-context button{font:16px RSBold;line-height:15px;padding:0 4px}
