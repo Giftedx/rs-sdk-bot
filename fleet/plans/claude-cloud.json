@@ -1,306 +1,162 @@
 {
  "side": "claude-cloud",
- "at": 1794327397070,
+ "at": 1794333089979,
  "jobs": [
   {
    "account": "Quickhandjob",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-3f5ef24c-09f7-4bc0-846e-8f0d01acab73"
    },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-strength-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-quickhandjob-20261110t173913z [task-3f5ef24c-09f7-4bc0-846e-8f0d01acab73]",
+   "role": "combat"
   },
   {
    "account": "TrouserSnake",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-50e82555-7663-4770-b5c1-b71c21caa087"
    },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-defence-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-trousersnake-20261110t173913z [task-50e82555-7663-4770-b5c1-b71c21caa087]",
+   "role": "combat"
   },
   {
    "account": "TheFullMonty",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Attack",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-e8f6088a-01b8-4dfe-94f3-aff5bc89bc55"
    },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Attack to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-attack-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-thefullmonty-20261110t173913z [task-e8f6088a-01b8-4dfe-94f3-aff5bc89bc55]",
+   "role": "combat"
   },
   {
    "account": "Deeppockets",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-9933ab95-22a5-4120-87e2-53a1fab84604"
    },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-strength-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-deeppockets-20261110t173913z [task-9933ab95-22a5-4120-87e2-53a1fab84604]",
+   "role": "combat"
   },
   {
    "account": "Fatstack",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-ff8ea979-baee-4978-9408-3f105386618f"
    },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-strength-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-strength-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-fatstack-20261110t173913z [task-ff8ea979-baee-4978-9408-3f105386618f]",
+   "role": "combat"
   },
   {
    "account": "Kiltlifter",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-740b3d0c-dd11-4dd1-bcab-cd16dff42b7e"
    },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-strength-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-kiltlifter-20261110t173943z [task-740b3d0c-dd11-4dd1-bcab-cd16dff42b7e]",
+   "role": "combat"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-eb049207-d945-46a5-8768-0162b6937b1b"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-fingerblastr-20261110t173913z [task-eb049207-d945-46a5-8768-0162b6937b1b]",
+   "role": "combat"
   },
   {
    "account": "Knightstick",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-ba8b4418-4e6c-4bb4-b7af-fc0ffca3b8a4"
    },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-strength-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-knightstick-20261110t173943z [task-ba8b4418-4e6c-4bb4-b7af-fc0ffca3b8a4]",
+   "role": "combat"
   },
   {
    "account": "PocketPool",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-4c8383af-c7eb-4af9-940c-c92ec501cb51"
    },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-strength-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-pocketpool-20261110t173943z [task-4c8383af-c7eb-4af9-940c-c92ec501cb51]",
+   "role": "combat"
   },
   {
    "account": "SporranDip",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-db1ab9a6-cf51-4b41-8a13-c3f1be3ad0cc"
    },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-strength-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-sporrandip-20261110t173943z [task-db1ab9a6-cf51-4b41-8a13-c3f1be3ad0cc]",
+   "role": "combat"
   },
   {
    "account": "Fingersmith",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-4dc38dde-df9b-4c90-b0eb-3587f4987da4"
    },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-strength-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-fingersmith-20261110t173943z [task-4dc38dde-df9b-4c90-b0eb-3587f4987da4]",
+   "role": "combat"
   },
   {
    "account": "KnightRider",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-0b9880dd-6a32-43b2-b136-f8ef69bf3a74"
    },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-strength-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-knightrider-20261110t173943z [task-0b9880dd-6a32-43b2-b136-f8ef69bf3a74]",
+   "role": "combat"
   }
  ]
 }
