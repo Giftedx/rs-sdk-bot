@@ -234,11 +234,14 @@ export function clearSwarmStop(file: string): boolean {
     return true;
 }
 // The ends a standing job retries by itself once the account is offline: a block or give-up, a stop that a stop file
-// caused (the account's own RESULT says so; an owner's file still blocks the start, the controller's own is gone), or a
-// process the controller lost track of (its own restart). A supervisor also ends `stopped` on `RESULT fail no food`,
-// which only a resupply repairs, so that stop is not retried. A death waits for a person; done is not a pause.
+// caused (an owner's file still blocks the start, the controller's own is gone), or a process the controller lost
+// track of (its own restart). A supervisor ends `stopped` for a stop file or for `RESULT fail no food`
+// (packages/practice/src/supervise.ts). Only a resupply repairs no food, so that stop is not retried; every other
+// stopped end with a result is the stop file's. A worker words its stop its own way (trooper and cow mode end
+// `fail mode=giant ... stop=stop-file`), so the rule does not look for one wording: live claude-cloud, five accounts
+// vacated for a fleet order stood 24 to 72 minutes with an enabled job. A death waits for a person; done is not a pause.
 export function standingRetryable(reason: string, result?: string): boolean {
-    if (/^stopped after \d+ runs$/.test(reason)) return typeof result === 'string' && /^(?:RESULT )?fail stop file\b/.test(result);
+    if (/^stopped after \d+ runs$/.test(reason)) return typeof result === 'string' && !/^(?:RESULT )?fail no food\b/.test(result);
     return /^(?:blocked|gave-up)\b|^exit unknown$/.test(reason);
 }
 export function endedForGood(end: { reason: string } | undefined, repeat: boolean | undefined): boolean {
