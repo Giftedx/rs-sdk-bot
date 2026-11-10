@@ -149,6 +149,12 @@ test('planner jobs carry the marker, repeat and standing, and the merge keeps un
     // An owner pause on the old template stays on the new one.
     const paused = { ...stale, account: 'ThiefA', enabled: false, repeat: false };
     expect(mergeJobs([paused], side, [x!]).jobs).toEqual([{ ...job, enabled: false, repeat: false }]);
+    // A job carrying the template's id but another script, args or env (a hand edit, or a template changed in code) is
+    // replaced by the template's own job; an owner pause on it holds.
+    for (const drift of [{ script: 'scripts/gather-combat.ts' }, { env: { ...job.env, KNIGHT_SPOT: '0,0' } }, { args: ['5000'] }]) {
+        expect(mergeJobs([{ ...job, ...drift }], side, [x!])).toEqual({ jobs: [job], fresh: ['ThiefA'] });
+        expect(mergeJobs([{ ...job, ...drift, enabled: false, repeat: false }], side, [x!]).jobs).toEqual([{ ...job, enabled: false, repeat: false }]);
+    }
 });
 
 test('a training job does not repeat, and its ok RESULT names the account for an early pass', () => {
