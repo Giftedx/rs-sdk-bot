@@ -7,8 +7,13 @@ import { LEASE_MAX_AGE_MS, SIDE_NAME } from './fleet';
 
 export const FLEET_LEASE_TTL_MS = 10 * 60_000;
 export const FLEET_LEASE_RENEW_MS = 3 * 60_000;
+// How soon a renewal that did not land is tried again. The lease stands for eight minutes after its last confirmed
+// record, so a controller has about fifteen tries before it must stop.
+export const FLEET_LEASE_RETRY_MS = 20_000;
 // Stop locally before another host may claim. This leaves time for logout and clock skew.
 const DRAIN_MS = 2 * 60_000;
+// The budget of the ref check after a failed renewal.
+const REF_CHECK_MS = 5_000;
 const GIT_DEADLINE_MS = 11_000;
 const HOLDER = /^[0-9a-f-]{36}$/;
 const WORKER_HOLDER = /^[a-z][a-z0-9-]{0,23}:[0-9a-f-]{36}$/;
@@ -53,10 +58,16 @@ export function readFleetGitRefs(git: FleetGit, refs: readonly string[]) {
 }
 
 // Publishing a child of the observed head gives one winner without forcing the remote ref.
-export function appendFleetGitRecord(git: FleetGit, ref: string, head: string | undefined, tree: string, message: string) {
-    const next = git(['-c', 'user.name=Fleet Controller', '-c', 'user.email=fleet-controller@users.noreply.github.com',
+export function commitFleetGitRecord(git: FleetGit, head: string | undefined, tree: string, message: string) {
+    return git(['-c', 'user.name=Fleet Controller', '-c', 'user.email=fleet-controller@users.noreply.github.com',
         'commit-tree', tree, ...(head ? ['-p', head] : []), '-F', '-'], message + '\n');
-    git(['-c', 'push.followTags=false', 'push', '--quiet', 'origin', next + ':' + ref]);
+}
+export function pushFleetGitRecord(git: FleetGit, ref: string, commit: string) {
+    git(['-c', 'push.followTags=false', 'push', '--quiet', 'origin', commit + ':' + ref]);
+}
+export function appendFleetGitRecord(git: FleetGit, ref: string, head: string | undefined, tree: string, message: string) {
+    const next = commitFleetGitRecord(git, head, tree, message);
+    pushFleetGitRecord(git, ref, next);
     return next;
 }
 
@@ -128,12 +139,13 @@ export function fleetLeaseLastSeen(git: FleetGit, side: string): number | null {
 // The remote ref is the authority. A contender writes a child of the exact head it read.
 // An ordinary fast-forward push lets only one child of that head win. No local branch,
 // worktree, remote-tracking ref, or fleet-data index is changed by an acquisition or renewal.
-export function acquireFleetLease(root: string, side: string, now = Date.now) {
+// `window` makes the Git runner of each acquisition, renewal and ref check; tests pass one that fails on purpose.
+export function acquireFleetLease(root: string, side: string, now = Date.now, window: typeof fleetGitWindow = fleetGitWindow) {
     if (!SIDE_NAME.test(side)) throw Error('invalid fleet lease side');
     const holder = fleetCheckoutId(root), host = hostname(), pid = process.pid;
     let epoch: string = randomUUID();
     const ref = 'refs/heads/fleet-lease/' + side;
-    const git = fleetGitWindow(root);
+    const git = window(root);
     const refs = readFleetGitRefs(git, [ref, LEGACY_REF]);
     let head = refs.get(ref);
     if (head) {
@@ -162,30 +174,60 @@ export function acquireFleetLease(root: string, side: string, now = Date.now) {
     const workerHolder = side + ':' + epoch;
     const tree = git(['hash-object', '-w', '-t', 'tree', '--stdin'], '');
     let at = 0, deadline = 0, lost = false;
-    const publish = (runGit: FleetGit) => {
-        const proposed = now();
-        const proposedDeadline = performance.now() + FLEET_LEASE_TTL_MS - DRAIN_MS;
+    type Proposal = { at: number; deadline: number; commit: string };
+    const propose = (runGit: FleetGit): Proposal => {
+        const proposed = now(), proposedDeadline = performance.now() + FLEET_LEASE_TTL_MS - DRAIN_MS;
         const record: RemoteLease = { side, host, holder, epoch, pid, at: proposed };
-        const next = appendFleetGitRecord(runGit, ref, head, tree, JSON.stringify(record));
-        writeFence(root, workerHolder, proposed + FLEET_LEASE_TTL_MS - DRAIN_MS);
-        head = next;
-        at = proposed;
-        deadline = proposedDeadline;
+        return { at: proposed, deadline: proposedDeadline, commit: commitFleetGitRecord(runGit, head, tree, JSON.stringify(record)) };
     };
-    publish(git);
+    const confirm = (p: Proposal) => {
+        writeFence(root, workerHolder, p.at + FLEET_LEASE_TTL_MS - DRAIN_MS);
+        head = p.commit;
+        at = p.at;
+        deadline = p.deadline;
+    };
+    { const first = propose(git); pushFleetGitRecord(git, ref, first.commit); confirm(first); }
     const allows = () => !lost && performance.now() < deadline && now() < at + FLEET_LEASE_TTL_MS - DRAIN_MS
         && fleetLeaseAllowsWorker(root, workerHolder, now());
+    // Records sent whose push was not seen to land. One of them can turn up on the ref later, when the remote applied
+    // the push after the check read the ref; it is then this controller's own record, not a takeover.
+    const unseen = new Map<string, Proposal>();
+    const lose = () => {
+        lost = true;
+        // A failed invalidation leaves the previous conservative deadline in place.
+        try { writeFence(root, workerHolder, 0); } catch { /* expiry remains the fence */ }
+    };
     return {
         holder: workerHolder,
         allows,
+        // A renewal that does not land is not a lost lease. Another checkout may take the lease only ten minutes after
+        // this controller's last record, and this controller stops at eight, so until then the ref decides: it still
+        // ends in this controller's last record (nothing landed, renew again), it ends in the record just sent (the
+        // push landed and its answer was lost), or it shows another record (lost). An unreadable ref says nothing, and
+        // the deadline stands. Live claude-cloud: one renewal failed beside a `git pull`, and every account logged out.
         renew() {
+            if (!allows()) { lose(); throw Error('fleet controller lease expired'); }
+            let sent: Proposal | undefined;
             try {
-                if (!allows()) throw Error('fleet controller lease expired');
-                publish(fleetGitWindow(root));
+                const runGit = window(root);
+                sent = propose(runGit);
+                pushFleetGitRecord(runGit, ref, sent.commit);
+                confirm(sent);
+                unseen.clear();
             } catch (error) {
-                lost = true;
-                // A failed invalidation leaves the previous conservative deadline in place.
-                try { writeFence(root, workerHolder, 0); } catch { /* expiry remains the fence */ }
+                let remote: string | undefined | null;
+                try { remote = readFleetGitRefs(window(root, undefined, REF_CHECK_MS), [ref]).get(ref); } catch { remote = null; }
+                const pending = Error('fleet controller lease renewal did not land; the lease stands until its deadline');
+                if (sent && remote === sent.commit) {
+                    try { confirm(sent); unseen.clear(); return; } catch { /* the fence could not be written: lost, below */ }
+                } else if (typeof remote === 'string' && unseen.has(remote)) {
+                    // An earlier record landed late. It becomes the head; the record just sent was its sibling.
+                    try { confirm(unseen.get(remote)!); unseen.clear(); if (allows()) throw pending; } catch (e) { if (e === pending) throw e; }
+                } else if (allows() && (remote === null || remote === head)) {
+                    if (sent) unseen.set(sent.commit, sent);
+                    throw pending;
+                }
+                lose();
                 throw error;
             }
         },

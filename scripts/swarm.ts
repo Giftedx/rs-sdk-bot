@@ -34,7 +34,7 @@ import { readLogoutProof, listAttempts, verifyLegacyLogout, type LegacyLogoutCla
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 import { mergedPlan, readCoordinatorJobs, emptyCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { loadOwners, mySide, sideOf, type Owner } from '../packages/core/src/fleet';
-import { acquireFleetLease, FLEET_LEASE_RENEW_MS } from '../packages/core/src/fleet-lease';
+import { acquireFleetLease, FLEET_LEASE_RENEW_MS, FLEET_LEASE_RETRY_MS } from '../packages/core/src/fleet-lease';
 
 export type Job = { autopilot?: string; template?: string; account?: string; accounts?: string[]; host?: boolean; orchestrate?:boolean; args?:string[]; maxRestarts?:number; script: string; role?: string; goal?: string; env?: Record<string, string>; envByAccount?: Record<string, Record<string, string>>; enabled: boolean; repeat?: boolean; note?: string; whenCargoFrom?: string[]; demandNear?: {x:number;z:number;radius:number};whenFoodLowFrom?:string[];foodLowBelow?:number;foodSourceAccount?:string;foodSourceAccounts?:string[];sourceFoodMinimum?:number };
 type Plan = { maxBots: number; minFreeGB: number; jobs: Job[] };
@@ -662,9 +662,11 @@ if (import.meta.main) {
 
     const tick = () => {
         if (performance.now() >= renewAt && lease.allows()) {
+            // A renewal that did not land leaves the lease standing: it is tried again soon, not in three minutes.
+            let landed = true;
             try { lease.renew(); }
-            catch (error) { console.log('SWARM ' + String(error)); }
-            renewAt = performance.now() + FLEET_LEASE_RENEW_MS;
+            catch (error) { landed = false; console.log('SWARM ' + String(error)); }
+            renewAt = performance.now() + (landed || !lease.allows() ? FLEET_LEASE_RENEW_MS : FLEET_LEASE_RETRY_MS);
         }
         if (!lease.allows()) {
             // Also stop adopted runs from code that predates the worker fence. Preserve owner stop files.
