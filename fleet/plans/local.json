@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794316042546,
+ "at": 1794316130818,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -499,24 +499,21 @@
    "role": "supply"
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
+   "accounts": [
+    "MineYourBiz",
+    "Mightyrod"
+   ],
+   "script": "scripts/coin-courier.ts",
+   "args": [
+    "340000"
+   ],
    "env": {
-    "ITEM_ID": "892",
-    "QUANTITY": "533",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "600",
-    "CASH_RESERVE": "100000",
-    "ORDER_KEY": "mineyourbiz-rune-arrows533-route",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "600000",
     "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-2038c2d8-20c9-4212-953f-c8db16de51f7"
+    "COORDINATOR_RUN_ID": "task-415eda60-00e8-4f73-b1ef-1e28527e4a3f"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "run-ge-mineyourbiz-rune-arrows533 [task-2038c2d8-20c9-4212-953f-c8db16de51f7]",
+   "goal": "run-coin-mineyourbiz-mightyrod-340k-r2 [task-415eda60-00e8-4f73-b1ef-1e28527e4a3f]",
    "role": "supply"
   }
  ]
