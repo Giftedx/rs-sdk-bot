@@ -22,7 +22,7 @@ On Windows every background subprocess uses `windowsHide:true`. Run only the ser
 
 Several agents work at once: sessions on this PC (Claude Code, Codex) and cloud sessions (Codex, Claude Code). Each takes work from the lane the [plan](docs/plans/joined-plan.md) Lanes table gives it.
 
-- One change, one branch `<agent>/<topic>`, one PR to `master`. Before work, check `gh pr list` and open a draft PR, so two agents never edit the same files. Merge when `bun run typecheck` and `bun test ./scripts ./packages` pass; never force-push `master`. The local gate proves this: `bun scripts/ci-gate.ts --post` runs the checks on the PC and posts the `local-gate` status on the commit. The hosted `linux` workflow uses paid minutes and starts only by hand (`gh workflow run CI --ref <branch>`).
+- One change, one branch `<agent>/<topic>`, one PR to `master`. Before work, check `gh pr list` and open a draft PR, so two agents never edit the same files. Merge when `bun run typecheck` and `bun test ./scripts ./packages` pass; never force-push `master`. The local gate proves this: `bun scripts/ci-gate.ts --post` runs the checks on the PC and posts the `local-gate` status on the commit. It runs the test files that the change can reach, in 12 processes; `--full` runs every test file. The hosted `linux` workflow uses paid minutes and starts only by hand (`gh workflow run CI --ref <branch>`).
 - A local agent works in its own worktree (`git worktree add ../rs-sdk-bot-<agent> -b <agent>/<topic>`). Only the main checkout runs the local swarm, coordinator and fleet agent.
 - Each machine runs bots only for its own fleet side (Accounts, below). Cross-side resources move through fleet orders, never by logging in another side's account.
 
