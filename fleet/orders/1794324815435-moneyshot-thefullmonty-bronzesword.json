@@ -1,0 +1,22 @@
+{
+ "id": "1794324815435-moneyshot-thefullmonty-bronzesword",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Moneyshot",
+ "to": "TheFullMonty",
+ "item": "Bronze sword",
+ "count": 1,
+ "start": 1794324815435,
+ "end": 1794327215435,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
