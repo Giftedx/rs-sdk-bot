@@ -23,6 +23,7 @@ import {loadContentTable,readWorn} from './appearance';
 import {createOperatorControl} from './operator-control';
 import { xpForLevel } from '../planner/src/curve';
 import { isLocalServer } from '../core/src/localserver';
+import { RosterFeed } from '../core/src/roster-feed';
 import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, scheduleOverall, overallRequirementsFor, TRICKS } from '../planner/src/haggis';
 
 const root = resolve(import.meta.dir, '..', '..');
@@ -383,11 +384,12 @@ function connectFeed() {
         const ws = new WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');
         feedSocket = ws;
         feedHeardAt = Date.now();
+        const feed = new RosterFeed();
         ws.onopen = () => { world.connected = true; ws.send(JSON.stringify({ t: 'roster', on: true })); };
         ws.onmessage = e => {
             try {
                 if (feedSocket !== ws) return;
-                const m = JSON.parse(String(e.data));
+                const m = feed.expand(JSON.parse(String(e.data)));
                 const now = Date.now();
                 feedHeardAt = now;
                 if (m.t === 'hello') { world.players = m.players ?? world.players; world.tick = m.tick ?? world.tick; world.tickAt = now; world.tickMs = m.tickMs ?? 400; world.rev = m.rev ?? 0; }
@@ -402,7 +404,7 @@ function connectFeed() {
                     if (!firstSeen.has(n)) firstSeen.set(n, now);
                     roster.set(n, { name: String(p[1]), x: p[2], z: p[3], level: p[4], combat: p[5], seen: now });
                 }
-                // Each roster packet is the full visible player set, not a delta.
+                // RosterFeed makes each roster message the full player set, so an absent name has left.
                 for(const name of roster.keys())if(!present.has(name))roster.delete(name);
             } catch (err) {
                 console.error(`world feed message failed: ${String(err)}`);

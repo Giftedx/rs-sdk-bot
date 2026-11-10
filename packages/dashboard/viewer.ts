@@ -155,7 +155,26 @@ export function installViewerBridge(host:any) {
                 this.addEventListener('error',()=>{feedConnected=false;emit();});
                 // The viewer reads the feed through onmessage: it gets each message with hash-listed names renamed.
                 let accessor:any=null;for(let p=Socket.prototype;p&&!accessor;p=Object.getPrototypeOf(p))accessor=Object.getOwnPropertyDescriptor(p,'onmessage');
-                const rename=(event:any)=>{
+                // The feed sends one full roster (p), then changes: lv slots that left, j rows that joined or changed,
+                // m [slot,x,z,level] moves. The viewer reads full rosters only, so each change becomes a full roster.
+                // The two listeners get the same event; the last result is kept so the rows change once per event.
+                const rosterRows=new Map<number,any[]>();let rosterFrom:any=null,rosterTo:any=null;
+                const fullRoster=(event:any)=>{
+                    if(event===rosterFrom)return rosterTo;
+                    rosterFrom=rosterTo=event;
+                    if(typeof event?.data!=='string'||event.data.length>2_000_000||!event.data.includes('"roster"'))return event;
+                    try{
+                        const m=JSON.parse(event.data);if(m.t!=='roster')return event;
+                        if(Array.isArray(m.p)){rosterRows.clear();for(const r of m.p)if(Array.isArray(r))rosterRows.set(r[0],r);return event;}
+                        for(const slot of Array.isArray(m.lv)?m.lv:[])rosterRows.delete(slot);
+                        for(const r of Array.isArray(m.j)?m.j:[])if(Array.isArray(r))rosterRows.set(r[0],r);
+                        for(const r of Array.isArray(m.m)?m.m:[]){const row=Array.isArray(r)?rosterRows.get(r[0]):undefined;if(row){row[2]=r[1];row[3]=r[2];row[4]=r[3];}}
+                        rosterTo=new host.MessageEvent('message',{data:JSON.stringify({t:'roster',k:m.k,p:[...rosterRows.values()],npcs:m.npcs}),origin:event.origin});
+                    }catch{/* not JSON: left as it is */}
+                    return rosterTo;
+                };
+                const rename=(raw:any)=>{
+                    const event=fullRoster(raw);
                     if(!hiddenHashes.size||typeof event?.data!=='string')return event;
                     let data:string=event.data;
                     if(data.includes('"roster"'))try{const m=JSON.parse(data);if(m.t==='roster'&&Array.isArray(m.p))for(const p of m.p)if(Array.isArray(p)&&typeof p[1]==='string'&&/^[A-Za-z0-9_ -]{1,12}$/.test(p[1])&&hiddenHashes.has(fnv(p[1].toLowerCase()))){learned.add(p[1].toLowerCase());hiddenNames.add(p[1].toLowerCase());}}catch{/* not JSON: left as it is */}
@@ -169,7 +188,8 @@ export function installViewerBridge(host:any) {
                 const faces=new Map<number,number>(),npcs=new Map<number,{t?:number;hp?:[number,number]}>(),playerHp=new Map<number,[number,number]>();let publishedOpponent='null';
                 const hp=(v:any):[number,number]|undefined=>Array.isArray(v)&&v.length===2&&v.every((n:any)=>Number.isFinite(n))?[v[0],v[1]]:undefined;
                 const mask=(value:string)=>{for(const name of hiddenNames)value=value.replace(new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'),'⟦MAIN⟧');return value;};
-                this.addEventListener('message',(event:any)=>{
+                this.addEventListener('message',(raw:any)=>{
+                    const event=fullRoster(raw);
                     if(typeof event.data!=='string'||event.data.length>2_000_000)return;
                     let message:any;try{message=JSON.parse(event.data);}catch{return;}
                     if(message.t==='roster'&&Array.isArray(message.p)){

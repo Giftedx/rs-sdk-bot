@@ -265,3 +265,17 @@ test('the roster reaches the page live, with the hidden account as the mark only
  for(const r of rosters)expect(r.data.atlasRoster.players).toEqual([['⟦MAIN⟧',3200,3200,0,126],['Worker',3201,3201,0,50]]);
  expect(JSON.stringify(rosters)).not.toContain('HiddenActor');
 });
+test('a roster change frame reaches the viewer and the page as a full roster',async()=>{
+ const b=browser();class Socket {
+  listeners:Function[]=[];handler:any=null;constructor(..._args:any[]){}
+  addEventListener(t:string,fn:Function){if(t==='message')this.listeners.push(fn);}
+  get onmessage(){return this.handler;}set onmessage(fn:any){this.handler=fn;}
+  message(m:any){const e={data:JSON.stringify(m),origin:'wss://x'};for(const f of this.listeners)f(e);this.handler?.(e);}}
+ b.host.WebSocket=Socket;b.host.MessageEvent??=class{data:any;origin:any;constructor(_t:string,i:any){this.data=i.data;this.origin=i.origin;}};
+ installViewerBridge(b.host);const socket:any=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed'),seen:any[]=[];socket.onmessage=(e:any)=>seen.push(JSON.parse(e.data));
+ await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();
+ socket.message({t:'roster',k:10,p:[[7,'Leaver',3200,3200,0,126],[8,'Worker',3201,3201,0,50]],npcs:4});
+ socket.message({t:'roster',k:20,d:1,lv:[7],j:[[9,'Joiner',3100,3100,0,3]],m:[[8,3205,3206,1]],npcs:5});
+ expect(seen.at(-1)).toEqual({t:'roster',k:20,p:[[8,'Worker',3205,3206,1,50],[9,'Joiner',3100,3100,0,3]],npcs:5});
+ expect(b.messages.filter(m=>m.data.atlasRoster).at(-1)!.data.atlasRoster.players).toEqual([['Worker',3205,3206,1,50],['Joiner',3100,3100,0,3]]);
+});
