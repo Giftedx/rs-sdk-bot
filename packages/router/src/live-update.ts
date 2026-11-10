@@ -5,6 +5,8 @@
 //   - the checkout is on master and has no commit that origin/master lacks;
 //   - no qualification runs, no build waits to publish and no build lock is held (a source change fails those);
 //   - no running coordinator build owns a file that the update changes (its publish would refuse);
+//   - no live coordinator run loads a file that the update changes. Such a run keeps the release it started on, and
+//     every new coordinator run then refuses to start until it ends (assertCompatibleWorkers, worker-release.ts);
 //   - no dependency manifest changes (that needs `bun install` by a person);
 //   - each changed file that is edited or untracked here already holds the bytes of origin/master. A coordinator build
 //     publishes its files here before its pull request merges, so that state is usual. Such a file is adopted.
@@ -16,15 +18,17 @@
 // This file is tooling: runtime code starts it as a process and never imports it (packages/core/src/worker-release.ts).
 //
 // Usage: bun packages/router/src/live-update.ts [--dry]   Env: LIVE_UPDATE=0 turns it off. .practice/stop-live-update pauses it.
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { liveUpdateFile, type LiveUpdateMark } from '../../core/src/live-reload';
+import { releaseEntries, standingAccounts, standingPeer } from '../../core/src/worker-release';
 
 export type Dirty = { path: string; sameAsTarget: boolean; untracked: boolean };
-export type UpdateInput = { branch: string; ahead: number; behind: number; incoming: readonly string[]; dirty: readonly Dirty[]; holds: readonly string[]; heldFiles: readonly string[] };
+export type UpdateInput = { branch: string; ahead: number; behind: number; incoming: readonly string[]; dirty: readonly Dirty[]; holds: readonly string[]; heldFiles: readonly string[]; liveRuns?: readonly LiveRun[] };
+export type LiveRun = { name: string; files: readonly string[] };
 export type UpdatePlan = { action: 'none' | 'wait'; reason: string } | { action: 'update'; adopt: Dirty[] };
 
-const MANIFEST = /(?:^|\/)(?:package\.json|bun\.lock|bunfig\.toml)$/;
+const MANIFEST = /(?:^|\/)(?:package\.json|bun\.lock|bunfig\.toml|tsconfig\.json)$/;
 const few = (files: readonly string[]) => files.slice(0, 3).join(', ') + (files.length > 3 ? ` and ${files.length - 3} more` : '');
 
 export function planUpdate(i: UpdateInput): UpdatePlan {
@@ -37,6 +41,10 @@ export function planUpdate(i: UpdateInput): UpdatePlan {
     if (manifests.length) return { action: 'wait', reason: `dependency change needs bun install: ${few(manifests)}` };
     const owned = i.heldFiles.filter(f => incoming.has(f));
     if (owned.length) return { action: 'wait', reason: `a running build owns ${few(owned)}` };
+    for (const run of i.liveRuns ?? []) {
+        const loaded = run.files.filter(f => incoming.has(f));
+        if (loaded.length) return { action: 'wait', reason: `the live run of ${run.name} loads ${few(loaded)}` };
+    }
     const touched = i.dirty.filter(d => incoming.has(d.path));
     const differs = touched.filter(d => !d.sameAsTarget).map(d => d.path);
     if (differs.length) return { action: 'wait', reason: `local edit differs from master: ${few(differs)}` };
@@ -120,6 +128,22 @@ export function coordinatorHolds(root: string, workspace: (capability: string) =
     return { holds, heldFiles };
 }
 
+// The unfinished live sessions that are not standing jobs, each with the files its entry loads. A standing job is
+// exempt from release equality, so an update never holds for it.
+export function liveRuns(root: string, server: string, closure: (entries: string[]) => string[], now = Date.now()): LiveRun[] {
+    const dir = join(root, '.practice', 'status'), owners = standingAccounts(root), runs: LiveRun[] = [];
+    if (!existsSync(dir)) return runs;
+    for (const file of readdirSync(dir)) {
+        if (!file.endsWith('.json')) continue;
+        let row: any; try { row = JSON.parse(readFileSync(join(dir, file), 'utf8')); } catch { continue; }
+        if (row?.server !== server || row.result || !Number.isFinite(row.at) || now - row.at >= LIVE_ROW_MS || standingPeer(row, owners)) continue;
+        runs.push({ name: String(row.name), files: closure(releaseEntries(row.workEntry)) });
+    }
+    return runs;
+}
+// A live session rewrites its status every few seconds, and the server drops a lost session after 200 s.
+export const LIVE_ROW_MS = 200_000, LIVE_SERVER = 'rs-sdk-demo.fly.dev';
+
 const DAEMONS: Record<string, string[]> = {
     coordinator: ['packages/router/src/coordinator-cli.ts'],
     autopilot: ['scripts/autopilot.ts'],
@@ -141,7 +165,7 @@ if (import.meta.main) {
         const { workspaceRoot } = await import('./build-workspace');
         const { importClosure } = await import('./delivery-cli');
         const checkout = readCheckout(git, root, target);
-        const plan = planUpdate({ ...checkout, ...(checkout.behind ? coordinatorHolds(root, c => workspaceRoot(root, c)) : { holds: [], heldFiles: [] }) });
+        const plan = planUpdate({ ...checkout, ...(checkout.behind ? { ...coordinatorHolds(root, c => workspaceRoot(root, c)), liveRuns: liveRuns(root, LIVE_SERVER, entries => importClosure(entries, root)) } : { holds: [], heldFiles: [] }) });
         if (plan.action !== 'update') done(`RESULT ok live-update ${plan.action}: ${plan.reason}${plan.action === 'wait' ? ` (behind ${checkout.behind})` : ''}`);
         else {
             if (dry) done(`RESULT ok live-update dry: would move ${checkout.behind} commits, ${checkout.incoming.length} files, adopt ${plan.adopt.length}`);

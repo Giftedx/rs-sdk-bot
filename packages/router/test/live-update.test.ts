@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
-import { applyUpdate, coordinatorHolds, gitIn, parseStatus, planUpdate, readCheckout, reloadsFor, type UpdateInput } from '../src/live-update';
+import { applyUpdate, coordinatorHolds, gitIn, liveRuns, parseStatus, planUpdate, readCheckout, reloadsFor, type UpdateInput } from '../src/live-update';
 import { liveUpdateFile, reloadDue } from '../../core/src/live-reload';
 
 const base: UpdateInput = { branch: 'master', ahead: 0, behind: 2, incoming: ['scripts/swarm.ts', 'docs/a.md'], dirty: [], holds: [], heldFiles: [] };
@@ -15,7 +15,22 @@ test('an update moves only a clean master checkout that nothing holds', () => {
     expect(planUpdate({ ...base, holds: ['qualification q runs'] })).toEqual({ action: 'wait', reason: 'qualification q runs' });
     expect(planUpdate({ ...base, heldFiles: ['scripts/swarm.ts'] })).toEqual({ action: 'wait', reason: 'a running build owns scripts/swarm.ts' });
     expect(planUpdate({ ...base, heldFiles: ['scripts/other.ts'] }).action).toBe('update');
+    expect(planUpdate({ ...base, incoming: ['tsconfig.json'] }).action).toBe('wait');
     expect(planUpdate({ ...base, incoming: ['packages/core/package.json'] })).toEqual({ action: 'wait', reason: 'dependency change needs bun install: packages/core/package.json' });
+});
+
+test('a live coordinator run holds an update that changes a file it loads; a standing job does not', () => {
+    expect(planUpdate({ ...base, liveRuns: [{ name: 'Runner', files: ['scripts/blood-chest.ts', 'scripts/swarm.ts'] }] })).toEqual({ action: 'wait', reason: 'the live run of Runner loads scripts/swarm.ts' });
+    expect(planUpdate({ ...base, liveRuns: [{ name: 'Runner', files: ['scripts/blood-chest.ts'] }] }).action).toBe('update');
+    scratch('rsbot-live-runs-', dir => {
+        const status = join(dir, '.practice', 'status'), rev = 'a'.repeat(64), now = 1_000_000;
+        mkdirSync(status, { recursive: true });
+        writeFileSync(join(dir, 'swarm.json'), JSON.stringify({ jobs: [{ account: 'Farmer', standing: true }] }));
+        const row = (name: string, more: object) => writeFileSync(join(status, name + '.json'), JSON.stringify({ name, server: 'live', at: now - 1000, workEntry: 'scripts/a.ts,scripts/b.ts', workRevision: rev, ...more }));
+        row('Runner', { coordinatorRunId: 'task-1' }); row('Farmer', {}); row('Done', { coordinatorRunId: 'task-2', result: 'ok' });
+        row('Gone', { coordinatorRunId: 'task-3', at: now - 300_000 }); row('Practice', { coordinatorRunId: 'task-4', server: 'localhost' });
+        expect(liveRuns(dir, 'live', entries => entries.map(e => e + '+imports'), now)).toEqual([{ name: 'Runner', files: ['scripts/a.ts+imports', 'scripts/b.ts+imports'] }]);
+    });
 });
 
 test('a local edit holds the update unless it already has the bytes of master', () => {
