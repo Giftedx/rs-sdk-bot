@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794320094238,
+ "at": 1794320239569,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -509,7 +509,7 @@
     "CAP": "4000",
     "COORDINATOR_RUN_ID": "task-45f3b4ae-79b5-4b81-92ea-abc546a05b98"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-handoff-shaftsinker-mightyrod-shortbow-arrows [task-45f3b4ae-79b5-4b81-92ea-abc546a05b98]",
    "role": "pk-trainee"
