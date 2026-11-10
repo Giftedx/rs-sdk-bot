@@ -1,6 +1,9 @@
 /* OSRS game chrome and RuneLite plugin workspace. All game data is observed. */
 (() => {
   const app=document.querySelector('.app'),asset=n=>'/client-assets/'+n;
+  // The plugin panel and the toolbar stay hidden until operations.js has added its parts and chosen the first plugin,
+  // so the first paint does not show a half-built panel. The timer covers a page where operations.js did not load.
+  app.classList.add('shell-starting');window.atlasShellStarted=()=>app.classList.remove('shell-starting');setTimeout(window.atlasShellStarted,3000);
   // The local page is the operator's console. Hosted, the shim (window.FleetShim) says whether the owner signed in;
   // a spectator sees the game and the viewing plugins only.
   window.atlasOperator=()=>!window.FleetShim||!!window.FleetShim.signedIn?.();
@@ -22,11 +25,11 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // A visitor on a phone starts on the world. The inventory opens from its tab buttons.
   if(phoneWidth.matches&&!window.atlasOperator())hud.classList.add('game-panel-hidden');
   phoneWidth.addEventListener('change',e=>hud.classList.toggle('chat-hidden',e.matches));
-  hud.innerHTML=`<button class="game-xp" title="XP Tracker" aria-label="XP Tracker">XP</button><div class="game-orbs" aria-label="Player status"></div><div class="xp-drops" aria-hidden="true"></div><div class="xp-globes" aria-label="XP globes"></div><div class="game-overlay" aria-label="Overlay"></div><div class="game-infoboxes" aria-label="Infoboxes"></div><div class="game-tip" hidden></div><div class="game-screen" id="game-loading"><div class="game-screen-box"><h2>Welcome to RuneScape</h2><p>Loading - please wait.</p></div></div><div class="game-screen" id="game-lost" hidden><div class="game-screen-box"><p>Connection lost.</p><p>Please wait - attempting to reestablish.</p></div></div><div class="game-minimap" aria-label="Minimap"><canvas width="146" height="146"></canvas><canvas class="minimap-frame" aria-hidden="true"></canvas><img class="minimap-compass" src="${asset('compass.png')}" alt="" title="Compass"><button class="game-worldmap" data-places title="Places: move the camera" aria-label="Places"><img src="${asset('worldmap-icon.png')}" alt=""></button></div><button class="game-logout" title="Logout menu">⏻</button><section class="game-tabs" aria-label="Game interface"><nav class="tab-row" aria-label="Primary game tabs"></nav><div class="game-panel" id="game-panel"></div><nav class="tab-row" aria-label="Social and settings tabs"></nav></section><button class="chat-toggle" aria-label="Toggle chat">▾ Chat</button><section class="game-chat" aria-label="In-game chat"><div class="game-chat-lines" role="log" aria-live="polite"></div><form class="chat-input"><span id="chat-name">Spectator:</span><input aria-label="Chat message or local command" autocomplete="off" placeholder="*"></form><nav class="chat-channels" aria-label="Chat channels"></nav></section>`;
+  hud.innerHTML=`<button class="game-xp" title="XP Tracker" aria-label="XP Tracker">XP</button><div class="game-orbs" aria-label="Player status"></div><div class="xp-drops" aria-hidden="true"></div><div class="xp-globes" aria-label="XP globes"></div><div class="game-overlay" aria-label="Overlay"></div><div class="game-infoboxes" aria-label="Infoboxes"></div><div class="game-tip" hidden></div><div class="game-screen" id="game-loading"><div class="game-screen-box"><h2>Welcome to RuneScape</h2><p>Loading - please wait.</p></div></div><div class="game-screen" id="game-lost" hidden><div class="game-screen-box"><p>Connection lost.</p><p>Please wait - attempting to reestablish.</p></div></div><div class="game-minimap" aria-label="Minimap"><canvas width="146" height="146"></canvas><canvas class="minimap-frame" aria-hidden="true"></canvas><img class="minimap-compass" src="${asset('compass.png')}" alt="" title="Compass"><button class="game-worldmap" data-places title="Places: move the camera" aria-label="Places"><img src="${asset('worldmap-icon.png')}" alt=""></button></div><button class="game-logout" title="Logout menu" aria-label="Logout menu">⏻</button><section class="game-tabs" aria-label="Game interface"><nav class="tab-row" aria-label="Primary game tabs"></nav><div class="game-panel" id="game-panel"></div><nav class="tab-row" aria-label="Social and settings tabs"></nav></section><button class="chat-toggle" aria-label="Toggle chat">▾ Chat</button><section class="game-chat" aria-label="In-game chat"><div class="game-chat-lines" role="log" aria-live="polite"></div><form class="chat-input"><span id="chat-name">Spectator:</span><input aria-label="Chat message or local command" autocomplete="off" placeholder="*"></form><nav class="chat-channels" aria-label="Chat channels"></nav></section>`;
   app.append(hud);
-  const title=document.createElement('div');title.className='client-title';title.innerHTML=`<img src="${asset('runelite.png')}" alt=""><span>RuneLite — Swarm</span><span class="connection">● Live world</span><div class="focus" id="client-focus" role="group" aria-label="3D camera focus" data-state="free"><button class="focus-step" data-focus-step="-1" aria-label="Previous account in the world" title="Previous account in the world · [">‹</button><button class="focus-now" aria-haspopup="listbox" aria-expanded="false"><i class="focus-dot"></i><span class="focus-name">Free camera</span><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg></button><button class="focus-step" data-focus-step="1" aria-label="Next account in the world" title="Next account in the world · ]">›</button><button class="focus-wall" aria-pressed="false" hidden title="Fleet wall: up to 16 of our accounts in the world, each in its own 3D view. Click a view to follow that account. · \\">Wall</button><div class="focus-menu"><input class="focus-find" aria-label="Find an account" placeholder="Find an account…" autocomplete="off" spellcheck="false"><div class="focus-list" role="listbox" aria-label="Accounts"></div></div></div><button id="client-sidebar" title="Toggle plugin sidebar" aria-label="Toggle plugin sidebar">❯</button>`;app.append(title);
+  const title=document.createElement('div');title.className='client-title';title.innerHTML=`<img src="${asset('runelite.png')}" alt=""><span>RuneLite — Swarm</span><span class="connection">● Live world</span><div class="focus" id="client-focus" role="group" aria-label="3D camera focus" data-state="free"><button class="focus-step" data-focus-step="-1" aria-label="Previous account in the world" title="Previous account in the world · [">‹</button><button class="focus-now" aria-haspopup="listbox" aria-expanded="false"><i class="focus-dot"></i><span class="focus-name">Free camera</span><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg></button><button class="focus-step" data-focus-step="1" aria-label="Next account in the world" title="Next account in the world · ]">›</button><button class="focus-wall" aria-pressed="false" hidden title="Fleet wall: up to 16 of our accounts in the world, each in its own 3D view, tiled. Click a view to focus it, double click to follow that account. · \\">Wall</button><div class="focus-menu"><input class="focus-find" aria-label="Find an account" placeholder="Find an account…" autocomplete="off" spellcheck="false"><div class="focus-list" role="listbox" aria-label="Accounts"></div></div></div><button id="client-sidebar" title="Toggle plugin sidebar" aria-label="Toggle plugin sidebar" aria-expanded="true">❯</button>`;app.append(title);
   const followTitle=()=>{const name=document.getElementById('client-plugin-name')?.textContent;document.title='RuneLite — Swarm'+(name?' · '+name:'');writeLink();};
-  const plugin=document.createElement('aside');plugin.className='client-plugin';plugin.setAttribute('aria-label','RuneLite plugins');plugin.innerHTML='<div class="client-plugin-title"><span id="client-plugin-name">Fleet</span><select id="client-more" aria-label="More plugins"><option value="">⋮</option><option value="raw">Raw evidence</option></select><button id="client-share" aria-label="Copy a link to this view" title="Copy a link to this view">⧉</button><button aria-label="Close plugin">×</button></div><div class="client-plugin-body"></div>';app.append(plugin);
+  const plugin=document.createElement('aside');plugin.className='client-plugin';plugin.setAttribute('aria-label','RuneLite plugins');plugin.innerHTML='<div class="client-plugin-title"><span id="client-plugin-name">Fleet</span><select id="client-more" aria-label="More plugins" hidden><option value="">⋮</option><option value="raw">Raw evidence</option></select><button id="client-share" aria-label="Copy a link to this view" title="Copy a link to this view">⧉</button><button aria-label="Close plugin">×</button></div><div class="client-plugin-body"></div>';app.append(plugin);
   const body=plugin.querySelector('.client-plugin-body'),rail=document.createElement('nav');rail.className='client-rail';rail.setAttribute('aria-label','RuneLite plugin toolbar');
   const oldRail=document.querySelector('.plugin-rail');
   const plugins=[['fleet','Fleet'],['xp','XP Tracker'],['boards','Hiscores'],['world','World'],['ge','Grand Exchange'],['prs','Pull requests'],['jobs','Agents & jobs'],['goals','Project goals'],['account','Account overview'],['stock','Supply ledger'],['activity','Activity'],['machine','Host resources'],['info','Info']];
@@ -44,6 +47,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const chat=[],seen=new Set(),seenChat=new Set();
   let tourTimer=null,touring=false;
   const account=()=>window.atlasFollowOther?null:S?.bots?.find(b=>b.name===sel);
+  // A text node is replaced only when its text changes.
+  const setText=(el,text)=>{if(el.textContent!==text)el.textContent=text;};
   const notify=text=>{chat.push({kind:'Game',text,at:Date.now()});if(chat.length>200)chat.shift();renderChat();};
   const stamp=at=>at?`<span class="chat-time">[${new Date(at).toTimeString().slice(0,5)}]</span> `:'';
   const KV=/(^|\s)([A-Za-z][A-Za-z0-9]*)=(\S+)/g;const kvWord=k=>k==='t'?'tick':k.replace(/([a-z0-9])([A-Z])/g,'$1 $2').toLowerCase();const kvValue=v=>/^\d{4,}$/.test(v)?Number(v).toLocaleString():v;
@@ -51,7 +56,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function renderChat(){const rows=chat.filter(r=>channel==='All'||r.kind===channel);hud.querySelector('.game-chat-lines').innerHTML=rows.map(r=>`<p class="${r.kind==='Public'?'chat-public':r.kind==='Private'?'chat-private':'chat-system'}">${stamp(r.at)}${r.name?'<b>'+E(r.name)+'</b>: ':''}${pretty(r.text)}</p>`).join('')||`<p class="chat-system">${channel==='Public'?'No public chat is overheard here.':channel==='Private'?(window.atlasOperator()?'No job has stopped since this page opened.':'No private messages.'):'No fleet events yet.'}</p>`;const log=hud.querySelector('.game-chat-lines');log.scrollTop=log.scrollHeight;}
   // Game: fleet events and finished jobs. Private: stopped jobs and deaths. Public: chat the 3D viewer overhears.
   const channels=['All','Game','Public','Private'];
-  hud.querySelector('.chat-channels').innerHTML=channels.map(c=>`<button data-chat="${c}" class="${c==='All'?'active':''}">${c}</button>`).join('');
+  hud.querySelector('.chat-channels').innerHTML=channels.map(c=>`<button data-chat="${c}" class="${c==='All'?'active':''}" aria-pressed="${c==='All'}">${c}</button>`).join('');
   const rows=hud.querySelectorAll('.tab-row');tabs.forEach(([id,label],i)=>rows[i<3?0:1].insertAdjacentHTML('beforeend',`<button data-game-tab="${id}" aria-label="${label}" title="${label}" class="${id===selectedTab?'active':''}"><img class="game-tab-icon" src="${asset('tab-'+id+'.png')}" alt=""></button>`));
   function level(name){return account()?.skills?.find(s=>s.name.toLowerCase()===name.toLowerCase()||(name==='Runecraft'&&/runecraft/i.test(s.name)));}
   const qty=n=>n>=10000000?`<span class="qty qty-m">${Math.floor(n/1e6)}M</span>`:n>=100000?`<span class="qty qty-k">${Math.floor(n/1000)}K</span>`:`<span class="qty">${n}</span>`;
@@ -189,7 +194,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function infoPanel(){
     return '<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>RuneLite — Swarm</span></div><p class="xp-muted">A team of bot accounts on the rs-sdk demo world (the Lost City 2004 engine), shown in a RuneLite-style client. The 3D view and the map show every player online; gold names are our accounts.</p></div>'+
       '<div class="xp-box"><div class="xp-head"><span>Data</span></div><div class="info-data">'+infoData()+'</div></div>'+
-      (window.atlasOperator()?'':'<div class="xp-box"><div class="xp-head"><span>Controls</span></div>'+infoRow('[ and ]','watch the previous or next account')+infoRow('Wall','watch all our accounts in the world at once')+infoRow('Title bar','choose an account, or start the tour')+infoRow('Drag','turn the camera')+infoRow('Wheel','zoom in or out')+infoRow('W A S D','leave the account and fly free')+'</div>')+
+      (window.atlasOperator()?'':'<div class="xp-box"><div class="xp-head"><span>Controls</span></div>'+infoRow('[ and ]','watch the previous or next account')+infoRow('Wall','our accounts in the world side by side; click a view to focus it, double click to follow it, ? for the keys')+infoRow('Title bar','choose an account, or start the tour')+infoRow('Drag','turn the camera')+infoRow('Wheel','zoom in or out')+infoRow('W A S D','leave the account and fly free')+'</div>')+
       '<div class="xp-box"><div class="xp-head"><span>Marks</span></div>'+
       infoRow('Gold name','one of our accounts')+infoRow('Green dot','our account on the map (bright: playing)')+infoRow('Grey dot','another player')+(window.atlasOperator()?infoRow('⟦MAIN⟧ / Hidden','an account this page does not show'):'')+infoRow('~ before a rank','the last rank we read; it can be old')+'</div>'+
       '<div class="xp-box"><div class="xp-head"><span>Sources</span></div><p class="xp-muted">Client look: RuneLite (BSD 2-Clause), 3D view: rs-world, game data: the Lost City server content (MIT). Licences and image credits: <a href="'+asset('ATTRIBUTION.txt')+'" target="_blank" rel="noopener">ATTRIBUTION.txt</a>. RuneScape art belongs to Jagex.</p></div></div>';
@@ -241,12 +246,13 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // Infoboxes (RuneLite): the watched account's session and time to target, or one box per playing bot.
   function infoboxes(){
     const el=hud.querySelector('.game-infoboxes'),b=account();
+    const set=html=>{if(el._h!==html){el._h=html;el.innerHTML=html;}};
     const box=(img,text,title,name)=>`<button class="infobox" title="${E(title)}" ${name?'data-xp-focus="'+E(name)+'"':''}><img src="${img}" alt=""><span>${E(text)}</span></button>`;
     const short=ms=>ms==null?'':ms<3600e3?Math.floor(ms/6e4)+'m':Math.floor(ms/36e5)+'h'+String(Math.floor(ms%36e5/6e4)).padStart(2,'0');
-    if(b){el.innerHTML=(b.uptime?box(asset('rl-activity.png'),short(b.uptime),'Session: '+dur(b.uptime)):'')+(b.goalSkill&&!(b.goalNow>=b.goalLevel)?box(asset('skill-'+skillFile(b.goalSkill)+'.png'),b.eta||String(b.goalNow??''),b.goalSkill+' '+(b.goalNow??'?')+' → '+b.goalLevel+(b.eta?' in '+b.eta:'')):'')+(b.death?box(asset('skill-hitpoints.png'),'died','Died '+age(b.death.at)+' ago: '+b.death.text):'')
+    if(b){set((b.uptime?box(asset('rl-activity.png'),short(b.uptime),'Session: '+dur(b.uptime)):'')+(b.goalSkill&&!(b.goalNow>=b.goalLevel)?box(asset('skill-'+skillFile(b.goalSkill)+'.png'),b.eta||String(b.goalNow??''),b.goalSkill+' '+(b.goalNow??'?')+' → '+b.goalLevel+(b.eta?' in '+b.eta:'')):'')+(b.death?box(asset('skill-hitpoints.png'),'died','Died '+age(b.death.at)+' ago: '+b.death.text):'')
       // Boosts (RuneLite boosts): a skill whose current level differs from its base; Hitpoints and Prayer are the orbs.
-      +(b.skills||[]).filter(s=>realSkill(s)&&s.name!=='Hitpoints'&&s.name!=='Prayer'&&s.currentLevel!=null&&s.currentLevel!==s.level).map(s=>box(asset('skill-'+skillFile(s.name)+'.png'),s.currentLevel+'/'+s.level,s.name+(s.currentLevel>s.level?' boosted':' drained')+': '+s.currentLevel+' / '+s.level).replace('class="infobox"','class="infobox '+(s.currentLevel>s.level?'boost-up':'boost-down')+'"')).join('');return;}
-    el.innerHTML=S.bots.filter(x=>x.fresh&&!x.practice&&!x.reserved).slice(0,12).map(x=>{const t=trainedSkill(x);return box(asset(t?'skill-'+skillFile(t)+'.png':'rl-activity.png'),short(x.uptime),safeName(x.name)+(t?' · '+t+(x.goalNow!=null&&t===x.goalSkill?' '+x.goalNow:''):'')+(x.phaseShort?' · '+String(x.phaseShort).slice(0,60):'')+' · '+dur(x.uptime||0),x.name);}).join('');
+      +(b.skills||[]).filter(s=>realSkill(s)&&s.name!=='Hitpoints'&&s.name!=='Prayer'&&s.currentLevel!=null&&s.currentLevel!==s.level).map(s=>box(asset('skill-'+skillFile(s.name)+'.png'),s.currentLevel+'/'+s.level,s.name+(s.currentLevel>s.level?' boosted':' drained')+': '+s.currentLevel+' / '+s.level).replace('class="infobox"','class="infobox '+(s.currentLevel>s.level?'boost-up':'boost-down')+'"')).join(''));return;}
+    set(S.bots.filter(x=>x.fresh&&!x.practice&&!x.reserved).slice(0,12).map(x=>{const t=trainedSkill(x);return box(asset(t?'skill-'+skillFile(t)+'.png':'rl-activity.png'),short(x.uptime),safeName(x.name)+(t?' · '+t+(x.goalNow!=null&&t===x.goalSkill?' '+x.goalNow:''):'')+(x.phaseShort?' · '+String(x.phaseShort).slice(0,60):'')+' · '+dur(x.uptime||0),x.name);}).join(''));
   }
   // Board progress (the coordinator's scoreboard): what remains, the fleet's best live level per skill, quests and items.
   function progressPanel(){
@@ -259,17 +265,18 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   let geQuery='';
   let geAll=false;
   function gePanel(){
-    return `<div class="ge-panel"><input id="ge-search" class="rl-search" placeholder="Search for an item..." value="${E(geQuery)}" aria-label="Search items"><div class="ge-results">${geResults()}</div></div>`;
+    const [head,rows]=geResults();return `<div class="ge-panel"><input id="ge-search" class="rl-search" placeholder="Search for an item..." value="${E(geQuery)}" aria-label="Search items"><div class="ge-results"><div class="ge-head">${head}</div><div class="ge-rows">${rows}</div></div></div>`;
   }
   function refreshGe(){
     const results=body.querySelector('.ge-results');
     if(!results)return;
     const toggleFocused=results.contains(document.activeElement)&&document.activeElement.matches('[data-ge-all]');
-    put(results,geResults());
+    const [head,rows]=geResults();put(results.querySelector('.ge-head'),head);put(results.querySelector('.ge-rows'),rows);
     if(toggleFocused)results.querySelector('[data-ge-all]')?.focus({preventScroll:true});
   }
+  // The head (counts and the price age) and the rows are written apart: a new age does not rebuild the rows.
   function geResults(){
-    if(!S)return '<p class="xp-muted">Waiting for market data…</p>';
+    if(!S)return ['<p class="xp-muted" role="status">Waiting for market data…</p>',''];
     const offered=i=>i.ask!=null||i.bid!=null,owner=window.atlasOperator(),held=new Map(),nameOnly=new Map();
     if(owner)for(const b of S.bots)if(!b.practice&&!b.reserved&&Array.isArray(b.bank))for(const it of b.bank){const id=it.baseId??it.id,target=Number.isInteger(id)?held:nameOnly,key=Number.isInteger(id)?id:it.name;target.set(key,(target.get(key)||0)+(it.count||0));}
     const heldCount=i=>{const known=held.get(i.id)||0,unknown=nameOnly.get(i.name)||0;if(unknown&&(S.economy?.supplies||[]).filter(x=>x.name===i.name).length>1)return known?nf(known)+' + ?':'?';return nf(known+unknown);};
@@ -277,8 +284,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const all=(S.economy?.supplies||[]).filter(i=>i.name&&i.name.toLowerCase().includes(query)),hidden=all.filter(i=>!offered(i)).length;
     const rows=all.filter(i=>geAll||offered(i)).sort((a,b)=>Number(b.ask!=null||b.bid!=null)-Number(a.ask!=null||a.bid!=null)||(b.stock||0)-(a.stock||0)||a.name.localeCompare(b.name));
     const price=v=>v==null?'—':nf(Math.round(v))+' gp';
-    return `<div class="xp-meta"><span>${all.length-hidden} ${owner?'route supplies':'items'} with offers</span><span>prices ${S.economy?.pricesAt?age(S.economy.pricesAt)+' old':'unknown'}</span></div>${hidden?`<button class="game-control" data-ge-all>${geAll?'Hide':'Show'} the ${hidden} with no offer</button>`:''}`+
-      rows.slice(0,80).map(i=>`<div class="ge-row" title="${E(i.name)}: buy ${price(i.ask)}, sell ${price(i.bid)}, stock ${nf(i.stock||0)}, average ${price(i.vwap)}, shop ${price(i.base)}"><span class="ge-icon">${icon(i.name,32)}</span><div class="ge-main"><div class="ge-name">${E(i.name)}</div><div class="ge-prices"><span>Buy <b>${price(i.ask)}</b></span><span>Sell <b>${price(i.bid)}</b></span><span>Stock <b>${nf(i.stock||0)}</b></span>${owner?`<span>We hold <b>${heldCount(i)}</b></span>`:''}</div></div></div>`).join('')+(rows.length?'':'<p class="xp-muted">No item matches.</p>');
+    return [`<div class="xp-meta"><span>${all.length-hidden} ${owner?'route supplies':'items'} with offers</span><span>prices ${S.economy?.pricesAt?age(S.economy.pricesAt)+' old':'unknown'}</span></div>${hidden?`<button class="game-control" data-ge-all>${geAll?'Hide':'Show'} the ${hidden} with no offer</button>`:''}`,
+      rows.slice(0,80).map(i=>`<div class="ge-row" title="${E(i.name)}: buy ${price(i.ask)}, sell ${price(i.bid)}, stock ${nf(i.stock||0)}, average ${price(i.vwap)}, shop ${price(i.base)}"><span class="ge-icon">${icon(i.name,32)}</span><div class="ge-main"><div class="ge-name">${E(i.name)}</div><div class="ge-prices"><span>Buy <b>${price(i.ask)}</b></span><span>Sell <b>${price(i.bid)}</b></span><span>Stock <b>${nf(i.stock||0)}</b></span>${owner?`<span>We hold <b>${heldCount(i)}</b></span>`:''}</div></div></div>`).join('')+(rows.length?'':'<p class="xp-muted">No item matches.</p>')];
   }
   // Pull requests plugin: the bot repository's open and lately merged pull requests, by the agent whose branch they are.
   const AGENT_OF=b=>/^claude-cloud\//.test(b)?'Claude cloud':/^cloud\//.test(b)?'Codex cloud':/^claude\//.test(b)?'Claude on the PC':/^codex\//.test(b)?'Codex on the PC':'Other';
@@ -298,9 +305,15 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     else if(id==='xp'){body.innerHTML='<div class="xp-tracker"></div>';refreshXp();}
     else body.innerHTML=infoPanel();
   }
-  function showPlugin(id){if(!window.atlasOperator()&&OPERATOR_PLUGINS.includes(id)){toast('Sign in as owner for the command tools.');id='fleet';}const priorPlugin=selectedPlugin;window.atlasBeforePluginChange?.(priorPlugin,id);selectedPlugin=id;app.classList.remove('client-collapsed');app.classList.add('mobile-plugin');for(const el of [fleet,inspect,boards,allocation,journal])parked.append(el);body.replaceChildren();$('#client-plugin-name').textContent=window.atlasPlugins?.[id]?.label||window.atlasPluginNames?.[id]||plugins.find(p=>p[0]===id)?.[1]||({raw:'Raw evidence'}[id]||'Settings');
+  // Starts the enter animation of a container again (client-shell.css .enter-a and .enter-b: the same keyframes under
+  // two names, so a change of class starts it with no forced layout). The class goes when the animation is over, so
+  // content written after that does not animate.
+  const enterTimers=new WeakMap();
+  function enter(el){const next=el.classList.contains('enter-a')?'enter-b':'enter-a';el.classList.remove('enter-a','enter-b');el.classList.add(next);clearTimeout(enterTimers.get(el));enterTimers.set(el,setTimeout(()=>el.classList.remove('enter-a','enter-b'),320));}
+  const syncSidebar=()=>$('#client-sidebar').setAttribute('aria-expanded',String(!app.classList.contains('client-collapsed')));
+  function showPlugin(id){if(!window.atlasOperator()&&OPERATOR_PLUGINS.includes(id)){toast('Sign in as owner for the command tools.');id='fleet';}const priorPlugin=selectedPlugin;window.atlasBeforePluginChange?.(priorPlugin,id);selectedPlugin=id;app.classList.remove('client-collapsed');app.classList.add('mobile-plugin');for(const el of [fleet,inspect,boards,allocation,journal])parked.append(el);body.replaceChildren();body._h=null;if(priorPlugin!==id)enter(body);$('#client-plugin-name').textContent=window.atlasPlugins?.[id]?.label||window.atlasPluginNames?.[id]||plugins.find(p=>p[0]===id)?.[1]||({raw:'Raw evidence'}[id]||'Settings');
     body.dataset.plugin=id;plugin.dataset.plugin=id;if(window.atlasPlugins?.[id]){window.atlasPlugins[id].render(body);}else if(['xp','boards','info'].includes(id))renderSnapshotPlugin(id);else if(id==='ge')body.innerHTML=gePanel();else if(id==='prs')body.innerHTML=prsPanel();else if(id==='fleet')body.append(fleet);else if(id==='world')body.innerHTML=worldPanel();else if(id==='activity'){body.append(journal);journal.style.setProperty('display','block','important');journal.style.position='static';journal.style.width='100%';journal.style.height='auto';}else{body.append(inspect);choose(id==='settings'?'machine':id);if(id==='goals'&&window.atlasOperator()){const form=document.createElement('form');form.className='goal-request';form.innerHTML='<input name="text" maxlength="500" placeholder="Tell the agents what you want next..." aria-label="New owner request"><button>Send</button><small>Goes to research/owner-requests.md as the next numbered row.</small>';body.prepend(form);}}
-    rail.querySelectorAll('[data-client-plugin]').forEach(b=>b.classList.toggle('on',b.dataset.clientPlugin===id));if(S&&id==='fleet')roster();window.atlasAfterPluginChange?.(priorPlugin,id);
+    rail.querySelectorAll('[data-client-plugin]').forEach(b=>{b.classList.toggle('on',b.dataset.clientPlugin===id);b.setAttribute('aria-pressed',String(b.dataset.clientPlugin===id));});syncSidebar();if(S&&id==='fleet')roster();window.atlasAfterPluginChange?.(priorPlugin,id);
   }
   function openBank(){
     if(!window.atlasOperator()){toast('Sign in as owner to see banks.');return;}
@@ -382,14 +395,16 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // The overlay panel (RuneLite): the watched account's goal, phase and pace, or the fleet in free camera.
   function overlay(){
     const b=account(),el=hud.querySelector('.game-overlay');
+    // The box is written only when its text changes.
+    const set=html=>{if(el._h!==html){el._h=html;el.innerHTML=html;}};
     const line=(k,v)=>`<div><span>${E(k)}</span><b>${E(v)}</b></div>`;
     // The 3D camera on another player (a lookup's Follow in 3D): what the page knows of them, from the lookup.
     const other=window.atlasFollowOther;
     if(other){const l=S.lookups?.[other.toLowerCase()],ov=l?.rows?.find(r=>r.board==='Overall'),seen=S.roster?.find(r=>String(r[0]).toLowerCase()===other.toLowerCase());
-      el.innerHTML='<h4>'+E(other)+'</h4>'+line('Status',seen?'online':'not in the roster')+line('Combat',String(l?.combat??seen?.[4]??'—'))+(ov?line('Overall','#'+nf(ov.rank)+' · '+ov.level):'')+(l?.worn?.length?line('Wears',l.worn.map(w=>w.name).join(', ').slice(0,60)):'')+line('Account','not ours');return;}
-    if(!b){const fleet=S.bots.filter(x=>!x.practice&&!x.reserved),live=fleet.filter(x=>x.operation==='observed'),stuck=fleet.filter(x=>['blocked','failed','died','active-stale'].includes(x.operation)),c=S.coordination?.counts;el.innerHTML='<h4>Fleet</h4>'+line('Playing',live.length+' / '+fleet.length)+line('Stopped',String(stuck.length))+(c&&window.atlasOperator()?line('AI jobs',(c.running??0)+' marked running · '+(c.pending??0)+' queued'):'')+(window.atlasOperator()&&S.vault?.coins?line('Vault coins',gp(S.vault.coins)):'')+(S.worldPlayers?line('Online',nf(S.worldPlayers)):'');return;}
+      set('<h4>'+E(other)+'</h4>'+line('Status',seen?'online':'not in the roster')+line('Combat',String(l?.combat??seen?.[4]??'—'))+(ov?line('Overall','#'+nf(ov.rank)+' · '+ov.level):'')+(l?.worn?.length?line('Wears',l.worn.map(w=>w.name).join(', ').slice(0,60)):'')+line('Account','not ours'));return;}
+    if(!b){const fleet=S.bots.filter(x=>!x.practice&&!x.reserved),live=fleet.filter(x=>x.operation==='observed'),stuck=fleet.filter(x=>['blocked','failed','died','active-stale'].includes(x.operation)),c=S.coordination?.counts;set('<h4>Fleet</h4>'+line('Playing',live.length+' / '+fleet.length)+line('Stopped',String(stuck.length))+(c&&window.atlasOperator()?line('AI jobs',(c.running??0)+' marked running · '+(c.pending??0)+' queued'):'')+(window.atlasOperator()&&S.vault?.coins?line('Vault coins',gp(S.vault.coins)):'')+(S.worldPlayers?line('Online',nf(S.worldPlayers)):''));return;}
     const [,state]=st(b);
-    el.innerHTML='<h4>'+E(safeName(b.name))+'</h4>'+(b.practice?line('World','practice · 2D'):'')+line('Status',state)+line('Goal',(b.goalSkill&&!(b.goalNow>=b.goalLevel)?b.goalSkill+' '+b.goalLevel:'')||String(b.goal||'').slice(0,60)||'—')+(b.phaseShort?line('Phase',String(b.phaseShort).slice(0,60)):'')+(b.xpPerHour?line('XP/hr',nf(Math.round(b.xpPerHour))):'')+(b.eta&&b.xpLeft>0?line('To target',b.eta):'')+(b.uptime&&b.inWorld?line('Session',dur(b.uptime)):'')+(!b.inWorld&&b.at?line('Last seen',age(b.at)+' ago'):'');
+    set('<h4>'+E(safeName(b.name))+'</h4>'+(b.practice?line('World','practice · 2D'):'')+line('Status',state)+line('Goal',(b.goalSkill&&!(b.goalNow>=b.goalLevel)?b.goalSkill+' '+b.goalLevel:'')||String(b.goal||'').slice(0,60)||'—')+(b.phaseShort?line('Phase',String(b.phaseShort).slice(0,60)):'')+(b.xpPerHour?line('XP/hr',nf(Math.round(b.xpPerHour))):'')+(b.eta&&b.xpLeft>0?line('To target',b.eta):'')+(b.uptime&&b.inWorld?line('Session',dur(b.uptime)):'')+(!b.inWorld&&b.at?line('Last seen',age(b.at)+' ago'):''));
   }
   // Skills tab tooltip (OSRS): XP, next level at, remaining.
   hud.addEventListener('mouseover',e=>{const sk=e.target.closest('[data-skill]');const tip=hud.querySelector('.game-tip');if(!sk){tip.hidden=true;return;}const s=level(sk.dataset.skill),X=window.atlasXp;if(!s||!X){tip.hidden=true;return;}const lvl=Math.min(99,s.level),next=X.xpForLevel(Math.min(99,lvl+1));
@@ -525,7 +540,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const q=new URLSearchParams(location.hash.slice(1)),name=q.get('a');
     const linked=S.bots.find(b=>b.name===name);
     if(linked)pick(linked.name);
-    wallLinked=q.get('wall')==='1';
+    wallLinked=q.get('wall')==='1';wallLinkRead(q);
     const watch=q.get('watch');
     if(watch&&window.atlasFollow3d(watch,true))return;
     if(q.get('cam')==='free')focusFree(linked?.name);
@@ -537,10 +552,10 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       if(sel)q.set('a',sel);
       if(window.atlasFollowOther)q.set('watch',window.atlasFollowOther);
       else if(window.atlasFreeCamera)q.set('cam','free');
-      if(wall||wallLinked)q.set('wall','1');
+      if(wall||wallLinked)wallLinkWrite(q);
     }else{
       const pending=new URLSearchParams(location.hash.slice(1));
-      for(const key of ['a','watch','cam','wall'])if(pending.has(key))q.set(key,pending.get(key));
+      for(const key of ['a','watch','cam','wall','wl','wm'])if(pending.has(key))q.set(key,pending.get(key));
     }
     const hash='#'+q;if(location.hash!==hash)history.replaceState(null,'',location.pathname+location.search+hash);
   }
@@ -548,14 +563,14 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function refresh(){if(!S)return;followLinkedAccount();wallSync();writeLink();
     const b=account(),name=b?.name??null;
     if(name!==questAccount){questAccount=name;questDetail=null;}
-    if(body.firstElementChild?.hasAttribute('data-snapshot-loading'))renderSnapshotPlugin(selectedPlugin);syncNotifyControls();$('#client-more').hidden=!window.atlasOperator();hud.querySelector('.game-bank')?.refreshObservation?.();camUpdate();screens();minimap();xpDrops(b);overlay();chatFeed();idleNotifier(b);levelUps();deaths();if(selectedPlugin==='xp')refreshXp();if(selectedPlugin==='boards'&&body.dataset.plugin==='boards'){const head=body.querySelector('.progress-head');if(head)head.innerHTML=boardSummary()+progressPanel();const rw=body.querySelector('.rivals-wrap');if(rw&&!rw.contains(document.activeElement))rw.innerHTML=rivalsPanel();refreshHiscoreAccount();}const data=body.querySelector('.info-data');if(data)put(data,infoData());if(selectedPlugin==='ge')refreshGe();if(selectedPlugin==='world'&&body.dataset.plugin==='world'&&!(body.contains(document.activeElement)&&document.activeElement.matches('input,select,textarea'))){const top=body.scrollTop;body.innerHTML=worldPanel();body.scrollTop=top;}else if(selectedPlugin==='world')refreshWorldLookup();infoboxes();title.querySelector('.connection').textContent=$('#connection').textContent;focusPaint();warmPlaces();welcomeCard();$('#chat-name').textContent=(b?safeName(b.name):'Spectator')+':';
-    const orbBox=hud.querySelector('.game-orbs');orbBox.innerHTML=[['hp','Hitpoints',b?.hp?.now,b?.hp?.max],['prayer','Prayer',level('Prayer')?.currentLevel,level('Prayer')?.level]].map(([id,label,value,max])=>`<div class="game-orb orb-${id}" title="${label}: ${value??'not reported'}${max?' / '+max:''}"><span class="orb-num" style="color:${orbColour(value,max)}">${value??'—'}</span><canvas class="orb-art" data-orb="${id}" data-frac="${value!=null&&max?Math.max(0,Math.min(1,value/max)):0}"></canvas></div>`).join('');orbBox.querySelectorAll('canvas').forEach(drawOrb);if(!(selectedTab==='settings'&&$('#game-panel').contains(document.activeElement)))gamePanel();}
+    if(body.firstElementChild?.hasAttribute('data-snapshot-loading'))renderSnapshotPlugin(selectedPlugin);syncNotifyControls();$('#client-more').hidden=!window.atlasOperator();hud.querySelector('.game-bank')?.refreshObservation?.();camUpdate();screens();minimap();xpDrops(b);overlay();chatFeed();idleNotifier(b);levelUps();deaths();if(selectedPlugin==='xp')refreshXp();if(selectedPlugin==='boards'&&body.dataset.plugin==='boards'){const head=body.querySelector('.progress-head');if(head)put(head,boardSummary()+progressPanel());const rw=body.querySelector('.rivals-wrap');if(rw&&!rw.contains(document.activeElement))put(rw,rivalsPanel());refreshHiscoreAccount();}const data=body.querySelector('.info-data');if(data)put(data,infoData());if(selectedPlugin==='ge')refreshGe();if(selectedPlugin==='world'&&body.dataset.plugin==='world'&&!(body.contains(document.activeElement)&&document.activeElement.matches('input,select,textarea'))){const top=body.scrollTop;put(body,worldPanel());body.scrollTop=top;}else if(selectedPlugin==='world')refreshWorldLookup();infoboxes();setText(title.querySelector('.connection'),$('#connection').textContent);focusPaint();warmPlaces();welcomeCard();setText($('#chat-name'),(b?safeName(b.name):'Spectator')+':');
+    const orbBox=hud.querySelector('.game-orbs'),orbHtml=[['hp','Hitpoints',b?.hp?.now,b?.hp?.max],['prayer','Prayer',level('Prayer')?.currentLevel,level('Prayer')?.level]].map(([id,label,value,max])=>`<div class="game-orb orb-${id}" title="${label}: ${value??'not reported'}${max?' / '+max:''}"><span class="orb-num" style="color:${orbColour(value,max)}">${value??'—'}</span><canvas class="orb-art" data-orb="${id}" data-frac="${value!=null&&max?Math.max(0,Math.min(1,value/max)):0}"></canvas></div>`).join('');if(orbBox._h!==orbHtml){orbBox._h=orbHtml;orbBox.innerHTML=orbHtml;orbBox.querySelectorAll('canvas').forEach(drawOrb);}if(!(selectedTab==='settings'&&$('#game-panel').contains(document.activeElement)))gamePanel();}
   const previousRender=render;render=function(){previousRender();refresh();};
   const previousDrawMap=drawMap;drawMap=function(){previousDrawMap();minimap();};
   const previousPick=pick;pick=function(name){wallEnd(false);if(!touring)tourSet(false);const from=focusTarget(),b=S?.bots?.find(b=>b.name===name);previousPick(name);cam.user=false;if(mode==='2d'&&window.atlasFreeCamera&&b?.pos)window.atlasCamera.goto(b.pos.x,b.pos.z);focusMoved(from,name);refresh();};
   rail.onclick=e=>{const b=e.target.closest('[data-client-plugin]');if(b){showPlugin(b.dataset.clientPlugin);writeLink();}};
   $('#client-share').onclick=async()=>{writeLink();try{await navigator.clipboard.writeText(location.href);toast('Link copied.');}catch{toast('Copy this link from the address bar.');}};
-  const togglePlugin=()=>{app.classList.toggle('client-collapsed');app.classList.toggle('mobile-plugin',!app.classList.contains('client-collapsed'));};$('#client-sidebar').onclick=togglePlugin;plugin.querySelector('[aria-label="Close plugin"]').onclick=togglePlugin;
+  const togglePlugin=()=>{app.classList.toggle('client-collapsed');app.classList.toggle('mobile-plugin',!app.classList.contains('client-collapsed'));syncSidebar();};$('#client-sidebar').onclick=togglePlugin;plugin.querySelector('[aria-label="Close plugin"]').onclick=togglePlugin;
   $('#client-more').onchange=e=>{if(e.target.value)showPlugin(e.target.value);e.target.value='';};
   // The focus switcher: the one control for what the 3D camera watches. Every account click on the page ends in pick().
   const focus=title.querySelector('#client-focus'),focusNow=focus.querySelector('.focus-now'),focusName=focus.querySelector('.focus-name'),focusFind=focus.querySelector('.focus-find'),focusList=focus.querySelector('.focus-list'),wallButton=focus.querySelector('.focus-wall');
@@ -565,7 +580,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const focusTarget=()=>window.atlasFollowOther||(window.atlasFreeCamera?null:sel)||null;
   function focusState(){
     const other=window.atlasFollowOther,b=S.bots.find(x=>x.name===sel);
-    if(wall)return ['Wall · '+wall.shown+(phoneWidth.matches?'/'+wall.names.length:' of '+wall.names.length+' shown'),'wall','The fleet wall shows '+wall.names.length+' of our '+focusLive().length+' accounts in the world. Click a view to follow that account.'];
+    if(wall)return ['Wall · '+wall.shown+(phoneWidth.matches?'/'+wall.names.length:' of '+wall.names.length+' shown'),'wall','The fleet wall shows '+wall.names.length+' of our '+focusLive().length+' accounts in the world. Click a view to focus it; double click to follow that account.'];
     if(other)return [other,'on','The 3D camera follows this player, who is not one of our accounts.'];
     if(sel&&!window.atlasFreeCamera&&b?.inWorld)return [safeName(sel),'on','The 3D camera follows this account.'];
     if(b?.inWorld)return [safeName(sel),'idle','The camera is released. Choose this account again to follow it.'];
@@ -624,26 +639,103 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   focus.addEventListener('click',e=>{if(e.target.closest('.focus-wall')){wallToggle();return;}if(e.target.closest('[data-tour]')){focusOpen(false);wallEnd(false);tourSet(!tourTimer);return;}const s=e.target.closest('[data-focus-step]');if(s){focusOpen(false);focusStep(Number(s.dataset.focusStep));return;}if(e.target.closest('.focus-now')){focusOpen(!focus.classList.contains('open'));return;}const r=e.target.closest('[data-focus]');if(r&&!r.disabled)focusChoose(r.dataset.focus);});
   // Fleet wall: up to 16 of our accounts in the world, each in its own view of the one 3D viewer. A view needs the live
   // feed, so the page asks only for accounts in the world. It sends each name as it holds it: the hidden account is its mark.
+  // The views are tiled like the windows of a tiling window manager. The viewer lays the views out and moves them. The
+  // page chooses the layout, the main view, the order and the focused view, and draws a frame and a title strip over
+  // each view from the rectangles the viewer reports.
   const WALL_MAX=16,WALL_NAME=/^[A-Za-z0-9_-](?:[A-Za-z0-9_ -]{0,10}[A-Za-z0-9_-])?$/;
+  const WALL_LAYOUTS=['grid','main','focus','columns'],WALL_LAYOUT_NAMES={grid:'Grid',main:'Main and stack',focus:'Focus',columns:'Columns'};
+  // Pixels between views, the colour there (the title bar's), the localStorage key, and the longest time between the
+  // two clicks of a double click.
+  const WALL_GAP=4,WALL_GAP_COLOUR='#1e1e1e',WALL_STORE='atlas-wall',WALL_DOUBLE_MS=450;
   window.atlasWallOn=()=>!!wall;
   const wallPost=message=>$('#rsw')?.contentWindow?.postMessage(message,VIEWER.origin);
+  const wallIsName=n=>typeof n==='string'&&(n===MARK||WALL_NAME.test(n));
+  const wallSame=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.toLowerCase()===b.toLowerCase();
+  // No moves for a reader who asked the system for reduced motion: the viewer and the page then draw each change at once.
+  const wallStill=()=>!!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  // The clock the viewer stamps a move with: milliseconds since the Unix epoch, with fractions.
+  const wallClock=()=>performance.timeOrigin+performance.now();
+  // Runs fn at the start of the next frame with that frame's time on the same clock. A CSS transition that starts in
+  // that frame starts at that time, which is also the time the viewer draws its next frame for. A hidden tab has no
+  // frames: fn then runs 120 ms later.
+  function wallNextFrame(fn){let ran=false;const run=at=>{if(!ran){ran=true;fn(at);}};requestAnimationFrame(t=>run(performance.timeOrigin+t));setTimeout(()=>run(wallClock()),120);}
   // Playing accounts first, then the others in the world; each group in the order of the [ and ] steps.
   function wallNames(){
     const seen=new Set(),live=focusLive().filter(b=>(b.name===MARK||WALL_NAME.test(b.name))&&!seen.has(b.name.toLowerCase())&&seen.add(b.name.toLowerCase())),playing=b=>st(b)[1]==='playing';
     return [...live.filter(playing),...live.filter(b=>!playing(b))].slice(0,WALL_MAX).map(b=>b.name);
   }
   const wallKey=names=>names.map(n=>n.toLowerCase()).sort().join(',');
+  // The names of `names` in the order of `first` where that list has them, then the others as they are.
+  function wallOrdered(names,first){
+    const left=names.slice(),head=[];
+    for(const n of first){const i=left.findIndex(x=>wallSame(x,n));if(i>=0)head.push(left.splice(i,1)[0]);}
+    return [...head,...left];
+  }
+  // The layout, the main view and a hand-made order stay in this browser, and the share link carries the layout and the
+  // main view (wl, wm). A stored or linked value that is not a layout or a name is dropped.
+  const wallPrefs={layout:'grid',main:null,order:[]};
+  function wallPrefsRead(text){
+    let p;try{p=JSON.parse(text);}catch{return null;}
+    if(!p||typeof p!=='object')return null;
+    return {layout:WALL_LAYOUTS.includes(p.layout)?p.layout:'grid',main:wallIsName(p.main)?p.main:null,order:Array.isArray(p.order)?p.order.filter(wallIsName).slice(0,64):[]};
+  }
+  try{Object.assign(wallPrefs,wallPrefsRead(localStorage.getItem(WALL_STORE)));}catch{/* no storage: the wall starts as a grid */}
+  function wallLinkRead(q){const layout=q.get('wl'),main=q.get('wm');if(WALL_LAYOUTS.includes(layout))wallPrefs.layout=layout;if(wallIsName(main))wallPrefs.main=main;}
+  function wallLinkWrite(q){q.set('wall','1');q.set('wl',wall?wall.layout:wallPrefs.layout);const main=wall?wall.main:wallPrefs.main;if(main)q.set('wm',main);}
+  // After each choice: remember it and put it in the link.
+  function wallKeep(){
+    if(!wall)return;
+    wallPrefs.layout=wall.layout;wallPrefs.main=wall.main;if(wall.ordered)wallPrefs.order=wall.names.slice();
+    try{localStorage.setItem(WALL_STORE,JSON.stringify(wallPrefs));}catch{/* the choice lasts for this page only */}
+    writeLink();wallPaint();
+  }
+  // The views in the order the layout places them: the main view first.
+  const wallShown=()=>wall?[wall.main,...wall.names.filter(n=>n!==wall.main)]:[];
+  // The view next to view `from` in a direction: one that starts past the far edge of `from`. A view level with
+  // `from` wins over one that is only diagonal; then the nearest; then the one whose centre is closest in line.
+  function wallNeighbour(rects,from,dir){
+    const a=rects[from];if(!a)return -1;
+    const across=dir==='left'||dir==='right',back=dir==='left'||dir==='up';let best=-1,bestScore=Infinity;
+    rects.forEach((b,i)=>{
+      if(i===from||!b)return;
+      const [a0,a1,b0,b1]=across?[a.x,a.x+a.w,b.x,b.x+b.w]:[a.y,a.y+a.h,b.y,b.y+b.h],[c0,c1,d0,d1]=across?[a.y,a.y+a.h,b.y,b.y+b.h]:[a.x,a.x+a.w,b.x,b.x+b.w];
+      const gap=back?a0-b1:b0-a1;if(gap<-1)return;
+      const score=(Math.min(c1,d1)-Math.max(c0,d0)>0?0:1e6)+gap*1000+Math.abs((c0+c1)/2-(d0+d1)/2);
+      if(score<bestScore){bestScore=score;best=i;}
+    });
+    return best;
+  }
+  const wallNext=dir=>wall?.rects?wall.names[wallNeighbour(wall.rects,wall.names.indexOf(wall.focus),dir)]??null:null;
+  // A viewer rectangle list is taken only whole: one rectangle for each asked name, in the asked order, inside 8192 px.
+  function wallRects(list,names){
+    if(!Array.isArray(list)||list.length!==names.length)return null;
+    const out=[];
+    for(let i=0;i<list.length;i++){
+      const r=list[i];
+      if(!r||typeof r!=='object'||typeof r.name!=='string'||r.name!==MARK&&!wallSame(r.name,names[i])||![r.x,r.y,r.w,r.h].every(v=>Number.isFinite(v)&&v>=-8192&&v<=8192)||r.w<0||r.h<0)return null;
+      out.push({x:r.x,y:r.y,w:r.w,h:r.h});
+    }
+    return out;
+  }
   function wallStart(){
     if(wall||mode!=='3d'||VIEWER.state!=='ready')return false;
-    const names=wallNames();
+    const names=wallOrdered(wallNames(),wallPrefs.order);
     if(!names.length){focusSay('None of our accounts is in the world. The wall has nothing to show.',3200);return false;}
     focusOpen(false);
+    const main=names.find(n=>wallSame(n,wallPrefs.main))??names[0];
     // The wall keeps the page's follow state and the tour, and gives them back when it closes.
-    wall={names,sent:wallKey(names),shown:0,tour:!!tourTimer,state:{sel,free:window.atlasFreeCamera,other:window.atlasFollowOther}};
+    wall={names,sent:wallKey(names),shown:0,tour:!!tourTimer,state:{sel,free:window.atlasFreeCamera,other:window.atlasFollowOther},
+      layout:wallPrefs.layout,back:'grid',main,focus:main,ordered:wallPrefs.order.length>0,rects:null,move:null,moving:false,seen:new Set(),offline:new Set(),hover:null,click:null};
     clearInterval(tourTimer);tourTimer=null;focusRowsHtml='';flightTo=null;focus.classList.remove('flying');focusNote.classList.remove('flying');
     window.atlasOpponentClear?.();
+    // The layout goes first, so the views open in it.
+    wallPost({multiChrome:false});
+    wallPost({multiLayout:{mode:wall.layout,main,gap:WALL_GAP,color:WALL_GAP_COLOUR,animate:!wallStill()}});
     wallPost({multi:names});
-    focusSay('Fleet wall · click a view to follow that account',2600);
+    wallPost({multiFocus:main});
+    wallButton.blur?.();
+    focusSay('Fleet wall · click a view to focus it, double click to follow · ? shows the keys',3600);
+    wallPaint();
     return true;
   }
   // The viewer returns to its single view before any follow message: a follow sent to the wall moves its first view.
@@ -651,6 +743,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function wallEnd(restore=true){
     if(!wall)return false;
     const w=wall,ready=mode==='3d'&&VIEWER.state==='ready';wall=null;
+    wallPaint();
     if(ready)wallPost({multi:[]});
     sentMaxLevel=null;warmSent='';rswFor=null;
     if(!restore)return true;
@@ -663,27 +756,196 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   }
   function wallToggle(){if(wall?wallEnd():wallStart())render();}
   // Each page update: open a wall that a link asked for, close a wall that lost the 3D view, and ask again when an
-  // account enters or leaves the world. The same accounts are not asked for twice.
+  // account enters or leaves the world. The same accounts are not asked for twice. The views that stay keep their
+  // order, and a new view goes last. When the main or the focused view leaves, the next view in the order takes its place.
   function wallSync(){
     if(wallLinked&&mode==='3d'&&VIEWER.state==='ready'&&(window.atlasLiveRoster?.()||wallNames().length)){wallLinked=false;wallStart();}
     if(!wall)return;
     if(mode!=='3d'||VIEWER.state!=='ready'){wallEnd();return;}
-    const names=wallNames();
-    if(!names.length){wallEnd();focusSay('None of our accounts is in the world now. The wall is closed.',3200);return;}
-    const key=wallKey(names);if(key===wall.sent)return;
-    wall.names=names;wall.sent=key;wall.shown=Math.min(wall.shown,names.length);wallPost({multi:names});
+    const now=wallNames();
+    if(!now.length){wallEnd();focusSay('None of our accounts is in the world now. The wall is closed.',3200);return;}
+    const key=wallKey(now);if(key===wall.sent){wallPaint();return;}
+    const was=wall.names,names=wallOrdered(now,was),heir=name=>{const i=was.indexOf(name);return [...was.slice(i+1),...was.slice(0,Math.max(i,0)).reverse()].find(n=>names.includes(n))??names[0];};
+    const main=names.includes(wall.main)?wall.main:heir(wall.main),to=names.includes(wall.focus)?wall.focus:heir(wall.focus);
+    wall.names=names;wall.sent=key;wall.shown=Math.min(wall.shown,names.length);wall.rects=null;
+    wallPost({multi:names});
+    if(main!==wall.main){wall.main=main;wallPost({multiLayout:{main}});}
+    if(to!==wall.focus){wall.focus=to;wallPost({multiFocus:to});}
+    wallKeep();
   }
-  // The viewer's replies. The status gives the count of views with their player on screen. A click gives a view number:
-  // the page follows the name it asked for in that view, through pick().
+  // The tiling commands. Each one is a message to the viewer, which moves the views.
+  function wallFocus(name){if(!wall||!wall.names.includes(name)||wall.focus===name)return;wall.focus=name;wallPost({multiFocus:name});wallPaint();}
+  // Leaves the wall and follows the account of one view. That view becomes the viewer's single view, so no flight follows.
+  function wallOpen(name){
+    if(!wall||!wall.names.includes(name))return;
+    wallPost({multiFocus:name});
+    pick(name);
+    if(focusTarget()===name){flightTo=null;focus.classList.remove('flying');focusNote.classList.remove('flying');focusSay('Now watching '+safeName(name),1400);}
+  }
+  // Enter: the focused view becomes the main view. On the main view it follows that account.
+  function wallPromote(){
+    if(!wall)return;
+    if(wall.main===wall.focus){wallOpen(wall.focus);return;}
+    wall.main=wall.focus;wallPost({multiLayout:{main:wall.main}});wallKeep();
+  }
+  // With zoom, the focused view becomes the main view of the new layout in the same move.
+  function wallLayout(layout,zoom=false){
+    if(!wall||!WALL_LAYOUTS.includes(layout)||layout===wall.layout)return;
+    const message={mode:layout};
+    if(zoom&&wall.main!==wall.focus){wall.main=wall.focus;message.main=wall.main;}
+    wall.back=wall.layout;wall.layout=layout;wallPost({multiLayout:message});
+    focusSay('Wall layout · '+WALL_LAYOUT_NAMES[layout],1200);wallKeep();
+  }
+  function wallCycle(step=1){if(wall)wallLayout(WALL_LAYOUTS[(WALL_LAYOUTS.indexOf(wall.layout)+step+WALL_LAYOUTS.length)%WALL_LAYOUTS.length]);}
+  // f: the focused view at full size over the others, and back to the layout before.
+  function wallZoom(){if(!wall)return;if(wall.layout==='focus')wallLayout(wall.back==='focus'?'grid':wall.back);else wallLayout('focus',true);}
+  // Shift and a direction: the focused view and its neighbour change places. A view that takes the first place is the main view.
+  function wallSwap(dir){
+    const to=wallNext(dir);if(!to)return;
+    const order=wallShown(),i=order.indexOf(wall.focus),j=order.indexOf(to);
+    [order[i],order[j]]=[order[j],order[i]];
+    wall.names=order;wall.ordered=true;if(wall.rects)wall.rects=null;
+    wallPost({multiOrder:order});
+    if(order[0]!==wall.main){wall.main=order[0];wallPost({multiLayout:{main:wall.main}});}
+    wallKeep();
+  }
+  const WALL_DIRS={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down',h:'left',j:'down',k:'up',l:'right',H:'left',J:'down',K:'up',L:'right'};
+  // The keys of the wall, from the page and from the viewer frame. True when the key was one of them.
+  function wallPress(key,shift){
+    if(!wall)return false;
+    const dir=WALL_DIRS[key];
+    if(dir){if(shift)wallSwap(dir);else{const to=wallNext(dir);if(to)wallFocus(to);}return true;}
+    if(key==='Enter'){wallPromote();return true;}
+    if(key===' '){wallCycle(shift?-1:1);return true;}
+    if(key==='f'||key==='F'){wallZoom();return true;}
+    if(key==='?'){wallHelp();return true;}
+    if(/^[1-9]$/.test(key)){const name=wallShown()[Number(key)-1];if(name)wallFocus(name);return true;}
+    return false;
+  }
+  // The viewer's replies. The status gives the views that show their player. The layout gives the rectangle of each
+  // view. A click gives a view number: the page focuses the name it asked for in that view, and a second click on the
+  // same view follows that account through pick(). Text in a reply never becomes a name.
   function wallMessage(data){
     if(!wall)return;
     const list=v=>Array.isArray(v)&&v.length<=WALL_MAX&&v.every(n=>typeof n==='string'&&n.length<=12),m=data.viewerMulti;
-    if(m&&typeof m==='object'&&list(m.names)&&list(m.shown)&&m.names.length===wall.names.length&&m.shown.length<=m.names.length&&m.shown.length!==wall.shown){wall.shown=m.shown.length;focusPaint();}
+    if(m&&typeof m==='object'&&list(m.names)&&list(m.shown)&&m.names.length===wall.names.length&&m.shown.length<=m.names.length){
+      const own=v=>new Set(list(v)?wall.names.filter(n=>v.some(x=>x===n||wallSame(x,n))):[]);
+      wall.seen=own(m.shown);wall.offline=own(m.offline);
+      if(m.shown.length!==wall.shown){wall.shown=m.shown.length;focusPaint();}
+      wallPaint();
+    }
+    const l=data.viewerMultiLayout;
+    if(l&&typeof l==='object'&&typeof l.animating==='boolean'&&Number.isFinite(l.ms)&&l.ms>=0&&l.ms<=1000&&Number.isFinite(l.at)){
+      const rects=wallRects(l.rects,wall.names);
+      if(rects){
+        wall.rects=rects;wall.move={ms:l.animating?l.ms:0,at:l.at};
+        // The last report before a frame is the one that frame shows.
+        if(!wall.moving){wall.moving=true;const w=wall;wallNextFrame(now=>{w.moving=false;if(wall===w)wallPaint(w.move,now);});}
+      }
+    }
+    if(Number.isInteger(data.viewerMultiHover)){const name=wall.names[data.viewerMultiHover]??null;if(name!==wall.hover){wall.hover=name;wallPaint();}}
+    const k=data.atlasWallKey;
+    if(k&&typeof k==='object'&&typeof k.key==='string'&&k.key.length<=10&&k.key!=='\\'&&k.key!=='Escape')wallPress(k.key,k.shift===true);
     const picked=data.viewerMultiPick,name=Number.isInteger(data.index)?wall.names[data.index]:null;
     if(typeof picked!=='string'||!name||picked!==MARK&&picked.toLowerCase()!==name.toLowerCase())return;
-    pick(name);
-    // The view of that account becomes the single view: the camera is there, and no flight follows.
-    if(focusTarget()===name){flightTo=null;focus.classList.remove('flying');focusNote.classList.remove('flying');focusSay('Now watching '+safeName(name),1400);}
+    wallClick(name);
+  }
+  // A click on a view or on its title strip focuses the view. A second click on the same view within WALL_DOUBLE_MS
+  // follows that account.
+  function wallClick(name){
+    const now=Date.now(),twice=wall.click&&wall.click.name===name&&now-wall.click.at<=WALL_DOUBLE_MS;
+    wall.click=twice?null:{name,at:now};
+    if(twice)wallOpen(name);else wallFocus(name);
+  }
+  // The page's frames over the viewer: one element for each view, with a title strip. Only the strip takes the
+  // pointer, so a click in a view reaches the viewer. An element moves with a CSS transition of the viewer's own time
+  // and curve, started as far in as the viewer's move already is. The transition is of left, top, width, height and a
+  // registered custom property for the fade: the browser runs these in the page's own frames, so the start is the
+  // frame it was set in. (A transform or opacity transition starts when the compositor takes it, which can be a frame
+  // later.)
+  const wallRoot=document.createElement('div');wallRoot.className='wall-chrome';hud.append(wallRoot);
+  const wallTiles=new Map(),wallIcon={grid:'M1 1h4.5v4.5H1zM6.5 1H11v4.5H6.5zM1 6.5h4.5V11H1zM6.5 6.5H11V11H6.5z',main:'M1 1h5.5v10H1zM7.5 1H11v2.7H7.5zM7.5 4.65H11v2.7H7.5zM7.5 8.3H11V11H7.5z',focus:'M1 1h10v6.5H1zM1 8.5h2.7V11H1zM4.65 8.5h2.7V11h-2.7zM8.3 8.5H11V11H8.3z',columns:'M1 1h2.7v10H1zM4.65 1h2.7v10h-2.7zM8.3 1H11v10H8.3z'};
+  const wallSvg=path=>'<svg viewBox="0 0 12 12" aria-hidden="true"><path d="'+path+'"/></svg>';
+  function wallTile(name){
+    const make=(tag,cls)=>{const e=document.createElement(tag);e.className=cls;return e;};
+    const t={el:make('div','wall-tile'),strip:make('div','wall-strip'),dot:make('i','wall-dot'),name:make('b','wall-name'),note:make('span','wall-note'),num:make('span','wall-num'),open:make('button','wall-open')};
+    t.open.innerHTML=wallSvg('M7 1h4v4h-1.5V3.56L6.56 6.5 5.5 5.44 8.44 2.5H7zM1 3h4v1.5H2.5v5h5V7H9v4H1z');
+    t.open.title='Follow this account and leave the wall';t.open.setAttribute('aria-label','Follow this account');
+    t.strip.append(t.dot,t.name,t.note,t.num,t.open);t.el.append(t.strip);
+    t.strip.addEventListener('click',e=>{if(e.target.closest?.('.wall-open'))wallOpen(name);else if(wall)wallClick(name);});
+    return t;
+  }
+  // With `move` (the time and the start of the viewer's move, 0 ms for none) the frames go to the reported rectangles;
+  // `now` is the time of the frame that starts the transition. Without `move` only the text and the marks of each
+  // frame are brought up to date.
+  function wallPaint(move,now=wallClock()){
+    wallTools.hidden=!wall;
+    if(!wall){
+      // The frames fade while the viewer returns to its single view.
+      for(const t of wallTiles.values()){if(wallStill())t.el.remove();else{t.el.style.transition='opacity .16s';t.el.style.opacity='0';setTimeout(()=>t.el.remove(),200);}}
+      wallTiles.clear();wallHelp(false);return;
+    }
+    for(const b of wallLayoutButtons)b.setAttribute('aria-pressed',String(b.dataset.wallLayout===wall.layout));
+    if(wallCycleButton.dataset.wallShows!==wall.layout){wallCycleButton.dataset.wallShows=wall.layout;wallCycleButton.innerHTML=wallSvg(wallIcon[wall.layout]);wallCycleButton.title='Layout: '+WALL_LAYOUT_NAMES[wall.layout]+' · Space for the next';}
+    const still=!move||!(move.ms>0)||wallStill(),delay=still?'':'-'+Math.round(Math.min(Math.max(now-move.at,0),move.ms))+'ms';
+    let dx=0,dy=0;
+    // A frame at a rectangle, or shrunk about its centre as the viewer shrinks a view that opens or closes.
+    const put=(s,r,k=1)=>{const w=Math.round(r.w*k),h=Math.round(r.h*k);s.left=(r.x+dx+Math.round((r.w-w)/2))+'px';s.top=(r.y+dy+Math.round((r.h-h)/2))+'px';s.width=w+'px';s.height=h+'px';};
+    if(move){
+      const frame=$('#rsw').getBoundingClientRect(),box=wallRoot.getBoundingClientRect();dx=Math.round(frame.left-box.left);dy=Math.round(frame.top-box.top);
+      wallRoot.classList.toggle('still',still);if(!still)wallRoot.style.setProperty('--wall-ms',move.ms+'ms');
+      // A frame whose view closed shrinks and fades as the view does.
+      for(const [name,t] of wallTiles)if(!wall.names.includes(name)){
+        wallTiles.delete(name);
+        if(still)t.el.remove();else{t.el.classList.add('out');t.el.style.transitionDelay=delay;put(t.el.style,t.at,.6);t.el.style.setProperty('--wall-fade','0');setTimeout(()=>t.el.remove(),move.ms+80);}
+      }
+    }
+    const shown=wallShown();
+    wall.names.forEach((name,i)=>{
+      const r=wall.rects?.[i];let t=wallTiles.get(name);
+      if(move&&r){
+        const s=(t??(t=wallTile(name))).el.style;
+        if(!wallTiles.has(name)){
+          wallTiles.set(name,t);wallRoot.append(t.el);
+          // A new frame grows and fades in at its place, as its view does.
+          if(!still){s.transition='none';put(s,r,.6);s.setProperty('--wall-fade','0');void t.el.offsetWidth;s.transition='';}
+        }
+        s.transitionDelay=delay;put(s,r);s.setProperty('--wall-fade','1');t.at=r;
+      }
+      if(!t)return;
+      const b=S.bots.find(x=>x.name===name),place=shown.indexOf(name)+1;
+      const state=wall.offline.has(name)?'off':!wall.seen.has(name)?'finding':b&&st(b)[1]==='playing'?'on':'idle';
+      const note=state==='off'?'not online':state==='finding'?'finding…':String(b?.phaseShort||b?.goal||(b?.combat?'level-'+b.combat:'')).slice(0,40);
+      const cls='wall-tile'+(name===wall.focus?' wall-focus':'')+(name===wall.main?' wall-main':'')+(name===wall.hover?' wall-hover':'');
+      if(t.el.className!==cls)t.el.className=cls;
+      if(t.dot.className!=='wall-dot '+state)t.dot.className='wall-dot '+state;
+      const label=safeName(name);if(t.name.textContent!==label)t.name.textContent=label;
+      if(t.note.textContent!==note)t.note.textContent=note;
+      const num=place<=9?String(place):'';if(t.num.textContent!==num)t.num.textContent=num;
+    });
+  }
+  // The layout switcher and the key list, in the title bar's focus group after the Wall button. A narrow title bar
+  // shows one button that steps through the layouts.
+  const wallButtonOf=(cls,label,title,html)=>{const b=document.createElement('button');b.className=cls;b.setAttribute('aria-label',label);b.title=title;b.innerHTML=html;return b;};
+  const wallTools=document.createElement('span');wallTools.className='wall-tools';wallTools.hidden=true;wallTools.setAttribute('role','group');wallTools.setAttribute('aria-label','Wall layout');
+  const wallLayoutButtons=WALL_LAYOUTS.map(l=>{const b=wallButtonOf('wall-layout',WALL_LAYOUT_NAMES[l]+' layout',WALL_LAYOUT_NAMES[l]+(l==='focus'?' · f':'')+' · Space for the next layout',wallSvg(wallIcon[l]));b.dataset.wallLayout=l;b.setAttribute('aria-pressed','false');return b;});
+  const wallCycleButton=wallButtonOf('wall-cycle','Next wall layout','',''),wallHelpButton=wallButtonOf('wall-help-button','Wall keys','Wall keys · ?','?');
+  wallHelpButton.setAttribute('aria-expanded','false');wallTools.append(...wallLayoutButtons,wallCycleButton,wallHelpButton);wallButton.after(wallTools);
+  const wallHelpBox=document.createElement('div');wallHelpBox.className='wall-help';wallHelpBox.hidden=true;wallHelpBox.setAttribute('role','dialog');wallHelpBox.setAttribute('aria-label','Wall keys');
+  wallHelpBox.innerHTML='<h6>Fleet wall keys</h6>'+[['← ↑ ↓ →','or h j k l: move the focus'],['Shift + arrow','swap the view with its neighbour'],['Enter','make the view the main view; on the main view, follow it'],['Space','next layout'],['f','focus layout on and off'],['1 – 9','focus view 1 to 9'],['Click','focus a view'],['Double click','follow that account'],['Esc','leave the wall']].map(([k,v])=>'<p><kbd>'+k+'</kbd><span>'+v+'</span></p>').join('');
+  hud.append(wallHelpBox);
+  function wallHelp(open=wallHelpBox.hidden){wallHelpBox.hidden=!(open&&wall);wallHelpButton.setAttribute('aria-expanded',String(!wallHelpBox.hidden));}
+  wallTools.addEventListener('click',e=>{
+    const b=e.target.closest?.('button');if(!b||!wall)return;
+    e.stopPropagation();b.blur?.();
+    if(b.dataset.wallLayout)wallLayout(b.dataset.wallLayout);else if(b===wallCycleButton)wallCycle();else wallHelp();
+  });
+  // A wall key pressed in the viewer frame arrives as a message. \ opens or closes the wall and Escape closes it, as
+  // on the page; the other keys go through wallMessage while the wall is open.
+  function wallFrameKey(k){
+    if(!k||typeof k!=='object')return;
+    if(k.key==='\\'){if(!wallButton.hidden&&!wallButton.disabled)wallToggle();}
+    else if(k.key==='Escape'&&wallEnd())render();
   }
   // A change between the 3D view and the 2D map shows or hides the button at once, and closes an open wall.
   const previousSetMode=setMode;setMode=function(m,preserve){previousSetMode(m,preserve);if(S){wallSync();focusPaint();}};
@@ -707,13 +969,13 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function toast(text){hud.querySelector('.game-toast')?.remove();const el=document.createElement('div');el.className='game-toast';el.textContent=text;hud.append(el);setTimeout(()=>el.remove(),5000);}
   hud.addEventListener('input',e=>{if(!e.target.matches('[data-quest-search]'))return;questQuery=e.target.value;gamePanel();});
   body.addEventListener('click',e=>{if(e.target.closest('[data-notify-test]'))testNotify();if(e.target.closest('[data-notify-cancel]'))void setNotify(false);});
-  hud.onclick=e=>{const t=e.target.closest('[data-game-tab]');if(t){if(t.dataset.gameTab===selectedTab)hud.classList.toggle('game-panel-hidden');else{selectedTab=t.dataset.gameTab;hud.classList.remove('game-panel-hidden');gamePanel();}}const c=e.target.closest('[data-chat]');if(c){channel=c.dataset.chat;hud.querySelectorAll('[data-chat]').forEach(b=>b.classList.toggle('active',b===c));renderChat();}if(e.target.closest('.chat-toggle,[data-toggle-chat]'))hud.classList.toggle('chat-hidden');const to3d=msg=>$('#rsw')?.contentWindow?.postMessage(msg,location.origin);if(e.target.closest('.minimap-compass')){if(typeof mode!=='undefined'&&mode==='3d')to3d({atlasCompass:true});else toast('The 2D map always faces north.');}if(e.target.closest('[data-viewer-worldmap]')){to3d({atlasOpenWorldMap:true});placesBox.hidden=true;}else if(e.target.closest('[data-places]')){placesBox.hidden=!placesBox.hidden;placesBox.querySelector('[data-viewer-worldmap]').hidden=!(typeof mode!=='undefined'&&mode==='3d');}else if(!e.target.closest('.game-places'))placesBox.hidden=true;const p=e.target.closest('[data-open-plugin]');if(p)showPlugin(p.dataset.openPlugin);if(e.target.closest('.game-logout')){selectedTab='logout';hud.classList.remove('game-panel-hidden');gamePanel();}if(e.target.closest('[data-logout]')){if(window.FleetShim?.signedIn?.())window.FleetShim.signOut();else toast('Nothing to log out of: this is the spectator view.');}if(e.target.closest('.game-xp'))showPlugin('xp');const a=e.target.closest('[data-view-action]');if(a)toast(a.dataset.viewAction+' · spectator view; no game input sent');const q=e.target.closest('[data-quest]');if(q){questDetail=q.dataset.quest;gamePanel();}const fr=e.target.closest('[data-friend]');if(fr){pick(fr.dataset.friend);}if(e.target.closest('[data-quest-back]')){questDetail=null;gamePanel();}const qf=e.target.closest('[data-quest-filter]');if(qf){questFilter=qf.dataset.questFilter;gamePanel();}const sk=e.target.closest('[data-skill]');if(sk){const st=level(sk.dataset.skill);toast(sk.dataset.skill+(st?' · Level '+st.level+(st.xp!=null?' · '+st.xp.toLocaleString()+' XP':''):' · not reported by this game'));}};
+  hud.onclick=e=>{const t=e.target.closest('[data-game-tab]');if(t){if(t.dataset.gameTab===selectedTab)hud.classList.toggle('game-panel-hidden');else{selectedTab=t.dataset.gameTab;hud.classList.remove('game-panel-hidden');gamePanel();enter($('#game-panel'));}}const c=e.target.closest('[data-chat]');if(c){channel=c.dataset.chat;hud.querySelectorAll('[data-chat]').forEach(b=>{b.classList.toggle('active',b===c);b.setAttribute('aria-pressed',String(b===c));});renderChat();}if(e.target.closest('.chat-toggle,[data-toggle-chat]'))hud.classList.toggle('chat-hidden');const to3d=msg=>$('#rsw')?.contentWindow?.postMessage(msg,location.origin);if(e.target.closest('.minimap-compass')){if(typeof mode!=='undefined'&&mode==='3d')to3d({atlasCompass:true});else toast('The 2D map always faces north.');}if(e.target.closest('[data-viewer-worldmap]')){to3d({atlasOpenWorldMap:true});placesBox.hidden=true;}else if(e.target.closest('[data-places]')){placesBox.hidden=!placesBox.hidden;placesBox.querySelector('[data-viewer-worldmap]').hidden=!(typeof mode!=='undefined'&&mode==='3d');}else if(!e.target.closest('.game-places'))placesBox.hidden=true;const p=e.target.closest('[data-open-plugin]');if(p)showPlugin(p.dataset.openPlugin);if(e.target.closest('.game-logout')){selectedTab='logout';hud.classList.remove('game-panel-hidden');gamePanel();}if(e.target.closest('[data-logout]')){if(window.FleetShim?.signedIn?.())window.FleetShim.signOut();else toast('Nothing to log out of: this is the spectator view.');}if(e.target.closest('.game-xp'))showPlugin('xp');const a=e.target.closest('[data-view-action]');if(a)toast(a.dataset.viewAction+' · spectator view; no game input sent');const q=e.target.closest('[data-quest]');if(q){questDetail=q.dataset.quest;gamePanel();}const fr=e.target.closest('[data-friend]');if(fr){pick(fr.dataset.friend);}if(e.target.closest('[data-quest-back]')){questDetail=null;gamePanel();}const qf=e.target.closest('[data-quest-filter]');if(qf){questFilter=qf.dataset.questFilter;gamePanel();}const sk=e.target.closest('[data-skill]');if(sk){const st=level(sk.dataset.skill);toast(sk.dataset.skill+(st?' · Level '+st.level+(st.xp!=null?' · '+st.xp.toLocaleString()+' XP':''):' · not reported by this game'));}};
   body.addEventListener('submit',e=>{if(e.target.id==='wp-form'){e.preventDefault();lookup(e.target.querySelector('#wp-name').value);return;}const f=e.target.closest('.goal-request');if(!f)return;e.preventDefault();const text=f.text.value.trim();if(!text)return;if(!window.atlasCommand){notify('The command desk is not loaded.');return;}f.querySelector('button').disabled=true;window.atlasCommand('request',{text}).then(r=>{notify('request: '+String(r?.status||'sent').replaceAll('-',' '));f.text.value='';},err=>notify('Refused: '+(err?.message||err))).finally(()=>{f.querySelector('button').disabled=false;});});
   body.addEventListener('change',e=>{if(e.target.id==='rival-board'){rivalBoard=e.target.value;const w=body.querySelector('.rivals-wrap');if(w)w.innerHTML=rivalsPanel();return;}if(e.target.dataset.notify!==undefined){void setNotify(e.target.checked);}});
   body.addEventListener('input',e=>{if(e.target.id==='wp-name')worldLookupName=e.target.value;if(e.target.id==='ge-search'){geQuery=e.target.value;refreshGe();}if(e.target.id==='hs-name'){hiscoreName=e.target.value.trim();refreshHiscoreAccount();}});
   hud.addEventListener('click',e=>{const f=e.target.closest('.infobox[data-xp-focus]');if(f){pick(f.dataset.xpFocus);}});
   body.addEventListener('click',e=>{const lk=e.target.closest('[data-lookup]');if(lk){lookup(lk.dataset.lookup);return;}const fw=e.target.closest('[data-world-follow]');if(fw){const name=fw.dataset.worldFollow,ours=S.bots.find(b=>b.name.toLowerCase()===name.toLowerCase()&&!b.practice),from=focusTarget();if(ours)pick(ours.name);else if(window.atlasFollow3d?.(name))focusMoved(from,name);else toast('The 3D view is not ready, so the camera cannot watch a player.');return;}if(e.target.closest('[data-ge-all]')){geAll=!geAll;refreshGe();return;}const hm=e.target.closest('[data-hs-mode]');if(hm){hiscoresMode=hm.dataset.hsMode;hiscores();return;}if(e.target.closest('[data-xp-reset]')){const store=xpStore();delete store[sel];saveXpStore(store);refreshXp();}if(e.target.closest('[data-xp-pause]')){const store=xpStore(),b=account(),base=b&&store[b.name];if(base){if(base.paused){const gap=Date.now()-base.paused.at;base.at+=gap;for(const k of b.skills||[])if(typeof k.xp==='number'&&base.paused.xp[k.name]!=null)base.xp[k.name]=(base.xp[k.name]??base.paused.xp[k.name])+(k.xp-base.paused.xp[k.name]);delete base.paused;}else base.paused={at:Date.now(),xp:Object.fromEntries((b.skills||[]).map(k=>[k.name,k.xp]))};saveXpStore(store);}refreshXp();}const hm2=e.target.closest('[data-xp-hide-maxed]');if(hm2){xpHideMaxed=hm2.checked;refreshXp();}const f=e.target.closest('[data-xp-focus]');if(f){pick(f.dataset.xpFocus);showPlugin('xp');}});
-  hud.onchange=e=>{if(e.target.id==='game-display'){app.classList.toggle('client-collapsed',e.target.value==='closed');}if(e.target.id==='game-quality'){$('#atlas-quality').value=e.target.value;$('#atlas-quality').onchange();}if(e.target.id==='game-roofs')window.atlasSetRoofsOff(e.target.value==='off');};
+  hud.onchange=e=>{if(e.target.id==='game-display'){app.classList.toggle('client-collapsed',e.target.value==='closed');syncSidebar();}if(e.target.id==='game-quality'){$('#atlas-quality').value=e.target.value;$('#atlas-quality').onchange();}if(e.target.id==='game-roofs')window.atlasSetRoofsOff(e.target.value==='off');};
   hud.addEventListener('contextmenu',e=>{const cell=e.target.closest('[data-item],[data-equipment]');if(!cell)return;e.preventDefault();const b=account(),it=cell.dataset.item!==undefined?b?.inventory?.[Number(cell.dataset.item)]:b?.equipment?.find(i=>i.slot===Number(cell.dataset.equipment));if(!it)return;context?.remove();context=document.createElement('div');context.className='game-context';context.style.left=Math.min(e.clientX,innerWidth-220)+'px';context.style.top=Math.min(e.clientY,innerHeight-110)+'px';const worn=cell.dataset.equipment!==undefined,n=String(it.name),verb=worn?'Remove':/\b(sword|axe|bow|dagger|mace|staff|scimitar|pickaxe|harpoon|rod|net|hammer|chisel|knife|spear|halberd|whip|wand|crossbow|blade|club|warhammer)\b/i.test(n)?'Wield':/\b(helm|hat|cape|amulet|body|chainbody|platebody|platelegs|plateskirt|legs|boots|gloves|shield|ring|coif|robe|hood|vambraces|chaps|mask|kiteshield|sq shield|necklace)\b/i.test(n)?'Wear':/\b(potion|brew|beer|wine|tea|milk|juice|water)\b/i.test(n)?'Drink':/\b(bread|cake|pie|stew|fish|shark|lobster|trout|salmon|tuna|swordfish|shrimps|anchovies|sardine|herring|pike|cod|bass|meat|chicken|kebab|pizza|cheese|apple|banana|bananas|peach|onion|tomato|cabbage|potato|egg|monkfish)\b/i.test(n)?'Eat':null;
     const options=worn?[['Remove',null]]:[['Use',null],...(verb?[[verb,null]]:[]),['Drop',null]];
     context.innerHTML='<strong>Choose Option</strong>'+options.map(([o])=>'<button data-view-action="'+E(o)+'">'+E(o)+' <span>'+E(n)+'</span></button>').join('')+'<button data-examine>Examine <span>'+E(n)+'</span></button><button data-cancel>Cancel</button>';context.onclick=e=>{if(e.target.closest('[data-examine]')){const p=price(n),desc=S.economy?.itemExamine?.[n];notify((desc||n)+(p&&!/^coins$/i.test(n)?' Price of '+(it.count>1?nf(it.count)+' x ':'')+n+': '+gp(Math.round(p.value*(it.count||1)))+' gp'+(it.count>1?' ('+nf(Math.round(p.value))+' each)':'')+'.':''));}else{const v=e.target.closest('[data-view-action]');if(v)toast(v.dataset.viewAction+' · spectator view; no game input sent');}context.remove();};document.body.append(context);});
@@ -773,11 +1035,13 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     let el=hud.querySelector('.game-opponent');if(!el){el=document.createElement('div');el.className='game-opponent';el.setAttribute('aria-live','polite');hud.append(el);}
     el.hidden=false;el.innerHTML='<b>'+E(name)+(lvl?' <small>(level-'+lvl+')</small>':'')+'</b><div class="opponent-hp"><i style="width:'+Math.max(0,Math.min(100,Math.round(cur/Math.max(1,max)*100)))+'%"></i><span>'+cur+' / '+max+'</span></div>';
   }
-  window.addEventListener('message',e=>{if(e.origin!==location.origin||e.source!==$('#rsw').contentWindow||!e.data||typeof e.data!=='object')return;if(e.data?.viewerTiming&&!wall)focusLanded();wallMessage(e.data);if(e.data?.viewerState&&S){wallSync();focusPaint();}if(e.data?.atlasStep===1||e.data?.atlasStep===-1)focusStep(e.data.atlasStep);if(e.data?.atlasRoster)window.atlasRosterIn(e.data.atlasRoster);if(e.data&&'atlasOpponent' in e.data){const o=e.data.atlasOpponent;opponentBox(o&&Array.isArray(o.hp)&&o.hp.length===2&&o.hp.every(Number.isFinite)&&(o.kind==='npc'?Number.isInteger(o.type):typeof o.name==='string')?o:null);}const c3=e.data?.atlasCamera3d;if(c3&&[c3.x,c3.z,c3.yaw].every(Number.isFinite)){window.atlasCam3d={x:c3.x,z:c3.z,yaw:c3.yaw,at:Date.now()};minimap();}const m=e.data?.atlasChat;if(typeof e.data?.atlasWorldMap==='boolean')hud.classList.toggle('worldmap-open',e.data.atlasWorldMap);if(!m||typeof m.text!=='string'||typeof m.name!=='string'||typeof m.key!=='string'||seenChat.has(m.key))return;seenChat.add(m.key);if(seenChat.size>500)seenChat.delete(seenChat.values().next().value);chat.push({kind:'Public',name:m.name.slice(0,32),text:m.text.slice(0,500),at:Date.now()});if(chat.length>200)chat.shift();renderChat();});
+  window.addEventListener('message',e=>{if(e.origin!==location.origin||e.source!==$('#rsw').contentWindow||!e.data||typeof e.data!=='object')return;if(e.data?.viewerTiming&&!wall)focusLanded();wallMessage(e.data);wallFrameKey(e.data.atlasWallKey);if(e.data?.viewerState&&S){wallSync();focusPaint();}if(e.data?.atlasStep===1||e.data?.atlasStep===-1)focusStep(e.data.atlasStep);if(e.data?.atlasRoster)window.atlasRosterIn(e.data.atlasRoster);if(e.data&&'atlasOpponent' in e.data){const o=e.data.atlasOpponent;opponentBox(o&&Array.isArray(o.hp)&&o.hp.length===2&&o.hp.every(Number.isFinite)&&(o.kind==='npc'?Number.isInteger(o.type):typeof o.name==='string')?o:null);}const c3=e.data?.atlasCamera3d;if(c3&&[c3.x,c3.z,c3.yaw].every(Number.isFinite)){window.atlasCam3d={x:c3.x,z:c3.z,yaw:c3.yaw,at:Date.now()};minimap();}const m=e.data?.atlasChat;if(typeof e.data?.atlasWorldMap==='boolean')hud.classList.toggle('worldmap-open',e.data.atlasWorldMap);if(!m||typeof m.text!=='string'||typeof m.name!=='string'||typeof m.key!=='string'||seenChat.has(m.key))return;seenChat.add(m.key);if(seenChat.size>500)seenChat.delete(seenChat.values().next().value);chat.push({kind:'Public',name:m.name.slice(0,32),text:m.text.slice(0,500),at:Date.now()});if(chat.length>200)chat.shift();renderChat();});
   window.addEventListener('keydown',e=>{
     if(e.key==='Tab'&&e.target===document.body)e.stopPropagation();
     if((e.key==='['||e.key===']')&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();focusStep(e.key===']'?1:-1);}
     if(e.key==='\\'&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)&&!wallButton.hidden&&!wallButton.disabled){e.preventDefault();wallToggle();}
+    // The wall's keys. Enter and Space on a button or a link stay that control's own.
+    if(window.atlasWallOn?.()&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)&&!(/^(?:BUTTON|A|SUMMARY)$/.test(e.target.tagName)&&(e.key==='Enter'||e.key===' '))&&wallPress(e.key,e.shiftKey)){e.preventDefault();e.stopPropagation();return;}
     if(e.key==='Escape'){if(wallEnd())render();context?.remove();hud.querySelector('.game-bank')?.remove();hud.querySelector('.game-toast')?.remove();}
     const F_KEYS={F2:'skills',F3:'quests',F4:'inventory',F5:'equipment',F8:'friends',F10:'settings'};
     if(F_KEYS[e.key]&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();e.stopPropagation();selectedTab=F_KEYS[e.key];hud.classList.remove('game-panel-hidden');gamePanel();}

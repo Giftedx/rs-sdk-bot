@@ -317,14 +317,21 @@ function multiBridge(href=''){
  const b=browser(),on:Record<string,any[]>={};
  b.host.location.href+=href;
  b.host.addEventListener=(t:string,fn:any)=>{(on[t]??=[]).push(fn);};
- const panes=(n:number)=>Array.from({length:n},(_,i)=>({getBoundingClientRect:()=>({left:i*100,right:i*100+100,top:0,bottom:100})}));
- let shown=0;b.host.document={querySelector:()=>null,querySelectorAll:(q:string)=>q==='.multi-view .multi-pane'?panes(shown):[]};
+ // View i stands at x = i * 100. numbers[i] is the view's number in the asked order (data-pane), as the viewer sets it.
+ let shown=0,numbers:number[]|null=null,extra:any[]=[];
+ const panes=(n:number)=>[...Array.from({length:n},(_,i)=>({dataset:{pane:String(numbers?numbers[i]:i)},style:{zIndex:String(i)},getBoundingClientRect:()=>({left:i*100,right:i*100+100,top:0,bottom:100})})),...extra];
+ b.host.document={querySelector:()=>null,querySelectorAll:(q:string)=>q==='.multi-view .multi-pane[data-pane]'?panes(shown):[]};
  installViewerBridge(b.host);
  // True when the message goes on to the viewer's own listener.
  const send=(data:any,from:any=b.host.parent,origin='http://localhost:3102')=>{let stopped=false;for(const f of on.message)f({origin,source:from,data,stopImmediatePropagation:()=>{stopped=true;}});return !stopped;};
  const click=(x:number,up=x,target='CANVAS',button=0)=>{for(const f of on.pointerdown??[])f({clientX:x,clientY:50,button,target:{tagName:target}});for(const f of on.pointerup??[])f({clientX:up,clientY:50,button,target:{tagName:target}});};
  const ready=async()=>{await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();};
- return {...b,send,click,ready,panes:(n:number)=>{shown=n;},picks:()=>b.messages.filter(m=>'viewerMultiPick' in m.data).map(m=>m.data)};
+ const move=(x:number,target='CANVAS')=>{for(const f of on.pointermove??[])f({clientX:x,clientY:50,target:{tagName:target}});};
+ const leave=()=>{for(const f of on.pointerout??[])f({relatedTarget:null});};
+ // True when the key stops at the bridge.
+ const key=(k:string,more:any={})=>{let stopped=false;for(const f of on.keydown??[])f({key:k,shiftKey:false,ctrlKey:false,altKey:false,metaKey:false,target:{tagName:'CANVAS'},...more,stopImmediatePropagation:()=>{stopped=true;},preventDefault:()=>{}});return stopped;};
+ const of=(k:string)=>b.messages.filter(m=>k in m.data).map(m=>m.data[k]);
+ return {...b,send,click,move,leave,key,of,ready,panes:(n:number,order:number[]|null=null,over:any[]=[])=>{shown=n;numbers=order;extra=over;},picks:()=>b.messages.filter(m=>'viewerMultiPick' in m.data).map(m=>m.data)};
 }
 
 test('the multi-view messages reach the viewer only from the page and only as a list of at most 16 names',()=>{
@@ -359,6 +366,74 @@ test('a click in a view of the wall tells the page the asked name and the view n
  // The views must be the asked ones: no report while the count differs, and none after the wall closes.
  b.panes(2);b.click(50);b.panes(3);b.send({multi:[]});b.click(50);
  expect(b.picks()).toHaveLength(3);
+});
+
+test('the tiling messages reach the viewer only from the page and only with values in range',()=>{
+ const b=multiBridge();
+ for(const good of [{mode:'grid'},{mode:'main',main:'Ann',gap:4,ratio:0.62,animate:true,color:'#1e1e1e'},{main:'⟦MAIN⟧'},{main:3},{gap:0},{gap:24},{ratio:0.5},{ratio:0.8},{animate:false},{}])expect(b.send({multiLayout:good})).toBe(true);
+ for(const bad of [{mode:'spiral'},{mode:1},{main:'<b>'},{main:16},{main:-1},{main:1.5},{gap:25},{gap:-1},{gap:2.5},{gap:'4'},{ratio:0.49},{ratio:0.81},{ratio:'0.6'},{animate:1},{color:'red'},{color:'#12345'},{color:'#1e1e1e;x'},{mode:'grid',extra:1},{__proto__:null,toString:1},['grid'],'grid',null,5])expect(b.send({multiLayout:bad})).toBe(false);
+ expect(b.send({multiOrder:['Bob','Ann','⟦MAIN⟧']})).toBe(true);
+ for(const bad of [['Ann','ann'],['<b>'],'Ann',null,Array.from({length:17},(_,i)=>'Bot'+i)])expect(b.send({multiOrder:bad})).toBe(false);
+ for(const good of ['Ann','⟦MAIN⟧',0,15])expect(b.send({multiFocus:good})).toBe(true);
+ for(const bad of ['<b>','ThirteenChars',16,-1,1.5,null,['Ann']])expect(b.send({multiFocus:bad})).toBe(false);
+ expect(b.send({multiChrome:false})).toBe(true);expect(b.send({multiChrome:true})).toBe(true);
+ for(const bad of [0,'false',null])expect(b.send({multiChrome:bad})).toBe(false);
+ // One bad part stops the whole message, and so does another sender.
+ expect(b.send({multiLayout:{mode:'main'},multiFocus:'<b>'})).toBe(false);
+ expect(b.send({multiLayout:{mode:'main'}},{})).toBe(false);expect(b.send({multiOrder:['Ann']},b.host.parent,'https://example.com')).toBe(false);
+ expect(b.send({multiFocus:'Ann'},{})).toBe(false);expect(b.send({multiChrome:false},b.host.parent,'https://example.com')).toBe(false);
+});
+
+test('a click names the view by its number in the asked order, after a new order and while views cross',async()=>{
+ const b=multiBridge();await b.ready();
+ b.send({multi:['Ann','Bob','Cat']});b.panes(3);
+ // The viewer puts the listed views first and keeps the others: Cat, Ann, Bob. The view at x = 0 is still Ann's.
+ b.send({multiOrder:['Cat']});b.panes(3,[1,2,0]);
+ b.click(50);b.click(250);
+ expect(b.picks()).toEqual([{viewerMultiPick:'Ann',index:1},{viewerMultiPick:'Cat',index:0}]);
+ // A refused order changes nothing.
+ b.send({multiOrder:['Bob','bob']});b.send({multiOrder:['Bob']},{});b.click(150);
+ expect(b.picks().at(-1)).toEqual({viewerMultiPick:'Bob',index:2});
+ // Two views over one point while they move: the one drawn last (the higher z-index) is the one clicked.
+ const over={dataset:{pane:'2'},style:{zIndex:'9'},getBoundingClientRect:()=>({left:0,right:100,top:0,bottom:100})};
+ b.panes(2,[1,0],[over]);b.click(50);
+ expect(b.picks().at(-1)).toEqual({viewerMultiPick:'Bob',index:2});
+ // A view that closes has no number and is not counted; a number outside the asked list is no view.
+ b.panes(3,[1,7,0]);b.click(150);expect(b.picks()).toHaveLength(4);
+});
+
+test('the view under the pointer is reported to the page when it changes',async()=>{
+ const b=multiBridge();
+ b.send({multi:['Ann','Bob']});b.panes(2);b.move(50);
+ expect(b.of('viewerMultiHover')).toEqual([]);
+ await b.ready();
+ b.move(60);b.move(70);b.move(150);b.move(150,'INPUT');b.move(50);b.leave();b.leave();
+ expect(b.of('viewerMultiHover')).toEqual([1,-1,0,-1]);
+ expect(b.messages.at(-1)!.origin).toBe('http://localhost:3102');
+ // No wall: no report.
+ b.send({multi:[]});b.move(50);b.leave();
+ expect(b.of('viewerMultiHover')).toHaveLength(4);
+});
+
+test('the wall keys pressed in the viewer go to the page and not to the camera, only while the wall is open',()=>{
+ const b=multiBridge();
+ // No wall: the arrows are the camera's. The wall key and the step keys go to the page.
+ for(const k of ['ArrowLeft','h','Enter',' ','1','f','Escape','?'])expect(b.key(k)).toBe(false);
+ expect(b.key('\\')).toBe(true);expect(b.key(']')).toBe(true);
+ expect(b.of('atlasWallKey')).toEqual([{key:'\\',shift:false}]);expect(b.of('atlasStep')).toEqual([1]);
+ b.send({multi:['Ann','Bob']});
+ const keys=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','h','j','k','l','Enter',' ','1','9','f','?','Escape'];
+ for(const k of keys)expect(b.key(k)).toBe(true);
+ expect(b.key('ArrowLeft',{shiftKey:true})).toBe(true);expect(b.key('H',{shiftKey:true})).toBe(true);
+ expect(b.of('atlasWallKey').slice(1)).toEqual([...keys.map(key=>({key,shift:false})),{key:'ArrowLeft',shift:true},{key:'H',shift:true}]);
+ expect(b.messages.at(-1)!.origin).toBe('http://localhost:3102');
+ // Other keys, keys with Ctrl, Alt or Meta, and keys typed in a field stay in the viewer.
+ const before=b.of('atlasWallKey').length;
+ for(const k of ['w','a','0','x','Tab','F5'])expect(b.key(k)).toBe(false);
+ expect(b.key('ArrowLeft',{ctrlKey:true})).toBe(false);expect(b.key('f',{metaKey:true})).toBe(false);expect(b.key('Enter',{altKey:true})).toBe(false);
+ expect(b.key('Enter',{target:{tagName:'INPUT'}})).toBe(false);expect(b.key('\\',{target:{tagName:'TEXTAREA'}})).toBe(false);
+ expect(b.of('atlasWallKey')).toHaveLength(before);
+ b.send({multi:[]});expect(b.key('ArrowLeft')).toBe(false);
 });
 
 test('a refused multi-view message does not change the names the bridge reports, and embed=1 leaves the report to the viewer',async()=>{

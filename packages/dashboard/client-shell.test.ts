@@ -184,32 +184,57 @@ test('Connection lost stays off the 3D view while the hosted stale bar reports o
  expect(lostFor(true,60_000)).toBe(false);
 });
 
+// A stand-in for the few DOM calls the wall makes: elements keep what the code sets on them.
+function fakeDom(){
+ const all:any[]=[];
+ const createElement=(tag:string)=>{
+  const el:any={tagName:tag.toUpperCase(),className:'',children:[] as any[],parent:null,next:null,dataset:{},attrs:{} as Record<string,string>,listeners:{} as Record<string,Function>,hidden:false,textContent:'',innerHTML:'',title:'',rect:{left:0,top:0,width:0,height:0},offsetWidth:0,
+   style:{setProperty(k:string,v:string){this[k]=v;}} as any,
+   classList:{contains:(c:string)=>el.className.split(' ').includes(c),add:(...c:string[])=>{for(const x of c)if(!el.classList.contains(x))el.className=(el.className+' '+x).trim();},remove:(...c:string[])=>{el.className=el.className.split(' ').filter((x:string)=>!c.includes(x)).join(' ');},toggle:(c:string,on:boolean)=>on?el.classList.add(c):el.classList.remove(c)},
+   append:(...c:any[])=>{for(const x of c){x.parent=el;el.children.push(x);}},remove:()=>{if(el.parent)el.parent.children=el.parent.children.filter((x:any)=>x!==el);el.parent=null;},after:(x:any)=>{el.next=x;},
+   setAttribute:(k:string,v:string)=>{el.attrs[k]=v;},getAttribute:(k:string)=>el.attrs[k]??null,addEventListener:(t:string,f:Function)=>{el.listeners[t]=f;},blur:()=>{},getBoundingClientRect:()=>el.rect};
+  all.push(el);return el;
+ };
+ return {createElement,all,byClass:(c:string)=>all.filter(e=>e.className.split(' ').includes(c))};
+}
+const fakeStore=(start:Record<string,string>={})=>{const data={...start};return {data,getItem:(k:string)=>data[k]??null,setItem:(k:string,v:string)=>{data[k]=String(v);}};};
 // The Fleet wall code with the page state it reads. Every message to the viewer and every pick() lands in one log.
-function fleetWall(bots:any[],start:{sel?:string|null,free?:boolean,other?:string|null,mode?:string,state?:string,touring?:boolean}={}){
+function fleetWall(bots:any[],start:{sel?:string|null,free?:boolean,other?:string|null,mode?:string,state?:string,touring?:boolean,store?:any,still?:boolean}={}){
  const live=shell.slice(shell.indexOf('  const focusLive='),shell.indexOf('  function focusState('));
  const state=shell.slice(shell.indexOf('  function focusState('),shell.indexOf('  function focusRows('));
  const code=shell.slice(shell.indexOf('  // Fleet wall:'),shell.indexOf("  focusFind.addEventListener('input',focusRows);"));
- const phone={matches:false},log:any[]=[],said:string[]=[],classes={add:()=>{},remove:()=>{}},window:any={atlasFreeCamera:!!start.free,atlasFollowOther:start.other??null,atlasFollow3d:()=>true};
- const S={bots},VIEWER={state:start.state??'ready',origin:'http://localhost'};
+ const phone={matches:false},log:any[]=[],said:string[]=[],classes={add:()=>{},remove:()=>{}},dom=fakeDom(),frames:Function[]=[],links:number[]=[];
+ const window:any={atlasFreeCamera:!!start.free,atlasFollowOther:start.other??null,atlasFollow3d:()=>true,matchMedia:(q:string)=>({matches:!!start.still&&q.includes('reduce')})};
+ const S={bots},VIEWER={state:start.state??'ready',origin:'http://localhost'},store=start.store??fakeStore();
  const st=(b:any)=>b.inWorld&&b.fresh&&b.action!=='idle'?['on','playing']:['wd','in world'];
- const api=new Function('S','VIEWER','window','MARK','st','$','focusSay','focusOpen','focus','focusNote','log','safeName','phoneWidth',`
+ const frame={contentWindow:{postMessage:(m:any)=>log.push(m)},rect:{left:0,top:48,width:1048,height:757},getBoundingClientRect(){return this.rect;}};
+ const hud=dom.createElement('div'),wallButton=dom.createElement('button');
+ const api=new Function('S','VIEWER','window','MARK','st','$','focusSay','focusOpen','focus','focusNote','log','safeName','phoneWidth','document','hud','wallButton','localStorage','writeLink','requestAnimationFrame',`
   let mode=${JSON.stringify(start.mode??'3d')},sel=${JSON.stringify(start.sel??null)},wall=null,wallLinked=false,tourTimer=${start.touring?'setInterval(()=>{},1e9)':'null'},focusRowsHtml='',flightTo=null,sentMaxLevel=2,warmSent='x',rswFor=sel,paints=0,renders=0;
   const TOUR_MS=45000,tourStep=()=>{},focusPaint=()=>{paints++;},render=()=>{renders++;};
   let pick=name=>{wallEnd(false);log.push({pick:name});sel=name;window.atlasFreeCamera=false;},setMode=m=>{mode=m;};
   ${live}${state}${code}
   return {start:wallStart,end:wallEnd,toggle:wallToggle,sync:wallSync,message:wallMessage,names:wallNames,on:()=>!!wall,label:()=>focusState(),link:()=>{wallLinked=true;},
+   press:wallPress,frameKey:wallFrameKey,neighbour:wallNeighbour,rects:wallRects,prefs:wallPrefs,prefsRead:wallPrefsRead,linkRead:wallLinkRead,linkWrite:wallLinkWrite,layoutTo:wallLayout,
+   wall:()=>wall&&{layout:wall.layout,main:wall.main,focus:wall.focus,names:wall.names.slice(),hover:wall.hover},tiles:()=>new Map([...wallTiles].map(([n,t])=>[n,t])),root:wallRoot,tools:wallTools,help:wallHelpBox,
    page:()=>({sel,free:window.atlasFreeCamera,other:window.atlasFollowOther,touring:!!tourTimer,sentMaxLevel,warmSent,rswFor,renders}),setMode:m=>setMode(m),stopTour:()=>clearInterval(tourTimer)};`)
-  (S,VIEWER,window,'⟦MAIN⟧',st,()=>({contentWindow:{postMessage:(m:any)=>log.push(m)}}),(t:string)=>said.push(t),()=>{},{classList:classes},{classList:classes},log,(n:string)=>String(n).replaceAll('⟦MAIN⟧','Main · reserved'),phone);
- return {...api,log,said,S,VIEWER,window,phone};
+  (S,VIEWER,window,'⟦MAIN⟧',st,()=>frame,(t:string)=>said.push(t),()=>{},{classList:classes},{classList:classes},log,(n:string)=>String(n).replaceAll('⟦MAIN⟧','Main · reserved'),phone,{createElement:dom.createElement},hud,wallButton,store,()=>links.push(1),(f:Function)=>frames.push(f));
+ // The viewer's report of the layout for the asked names, and the frame that shows it. Times are ms after the page's time origin.
+ const grid=(names:string[],cols=2,w=500,h=300)=>names.map((name,i)=>({name,x:(i%cols)*(w+4),y:Math.floor(i/cols)*(h+4),w,h}));
+ const laid=(rects:any[],more:any={})=>{api.message({viewerMultiLayout:{mode:'grid',main:null,focus:null,rects,animating:false,ms:0,at:performance.timeOrigin,...more}});for(const f of frames.splice(0))f(more.frameAt??0);};
+ // The frame of the 3D view starts 48 px down the page and the frames' box 28 px down: a view at y is drawn at y + 20.
+ api.root.rect={left:0,top:28,width:0,height:0};
+ return {...api,log,said,S,VIEWER,window,phone,dom,store,frame,hud,wallButton,links,grid,laid,multis:()=>log.filter(m=>'multi' in m),since:(n:number)=>log.slice(n)};
 }
 const inWorld=(name:string,more:any={})=>({name,inWorld:true,...more});
+const opening=(names:string[],layout='grid',main=names[0],animate=true)=>[{multiChrome:false},{multiLayout:{mode:layout,main,gap:4,color:'#1e1e1e',animate}},{multi:names},{multiFocus:main}];
 
 test('the wall asks for our accounts in the world: playing ones first, then name order, at most 16',()=>{
  const bots=[inWorld('Zed'),inWorld('Ann'),{name:'Away',inWorld:false,fresh:true},inWorld('Lab',{practice:true}),inWorld('Mid',{fresh:true}),inWorld('Bee',{fresh:true,action:'idle'}),inWorld('Cat',{fresh:true}),inWorld('bad<name>'),inWorld('ThirteenChars')];
  expect(fleetWall(bots).names()).toEqual(['Cat','Mid','Ann','Bee','Zed']);
  const many=Array.from({length:20},(_,i)=>inWorld('Bot'+String(i).padStart(2,'0'),{fresh:i>=17}));
  const w=fleetWall(many);expect(w.names()).toHaveLength(16);expect(w.names().slice(0,4)).toEqual(['Bot17','Bot18','Bot19','Bot00']);
- expect(w.start()).toBe(true);expect(w.log).toEqual([{multi:w.names()}]);
+ expect(w.start()).toBe(true);expect(w.multis()).toEqual([{multi:w.names()}]);
  expect(w.label()[0]).toBe('Wall · 0 of 16 shown');expect(w.label()[2]).toContain('16 of our 20 accounts');
 });
 
@@ -219,17 +244,39 @@ test('the wall does not open with none of our accounts in the world, in the 2D m
  for(const start of [{mode:'2d'},{state:'loading'},{state:'unavailable'}]){const w=fleetWall([inWorld('Ann')],start);expect(w.start()).toBe(false);expect(w.log).toEqual([]);expect(w.said).toEqual([]);}
 });
 
-test('the wall asks again only when an account enters or leaves the world',()=>{
+test('the wall opens with the layout first, then the names, then the focus; the viewer draws no names of its own',()=>{
+ const w=fleetWall([inWorld('Ann'),inWorld('Bob')]);w.start();
+ expect(w.log).toEqual(opening(['Ann','Bob']));
+ expect(w.wall()).toEqual({layout:'grid',main:'Ann',focus:'Ann',names:['Ann','Bob'],hover:null});
+ expect(w.tools.hidden).toBe(false);expect(w.said.at(-1)).toContain('double click to follow');
+});
+
+test('the wall asks again only when an account enters or leaves the world; the views that stay keep their order',()=>{
  const w=fleetWall([inWorld('Ann'),inWorld('Bob')]);w.start();
  w.sync();w.S.bots[1].fresh=true;w.sync();w.S.bots.reverse();w.sync();
- expect(w.log).toEqual([{multi:['Ann','Bob']}]);
- w.S.bots.push(inWorld('Cat'));w.sync();w.sync();
- expect(w.log).toEqual([{multi:['Ann','Bob']},{multi:['Bob','Ann','Cat']}]);
+ expect(w.multis()).toEqual([{multi:['Ann','Bob']}]);
+ // A new account goes last, whatever its place in the page's own order.
+ w.S.bots.push(inWorld('Aaa',{fresh:true}));w.sync();w.sync();
+ expect(w.multis()).toEqual([{multi:['Ann','Bob']},{multi:['Ann','Bob','Aaa']}]);
+ let mark=w.log.length;
+ // The focused main view leaves: the next view in the order is the main view and has the focus.
  w.S.bots.find((b:any)=>b.name==='Ann').inWorld=false;w.sync();
- expect(w.log.at(-1)).toEqual({multi:['Bob','Cat']});expect(w.log).toHaveLength(3);
+ expect(w.since(mark)).toEqual([{multi:['Bob','Aaa']},{multiLayout:{main:'Bob'}},{multiFocus:'Bob'}]);
+ expect(w.wall()).toMatchObject({main:'Bob',focus:'Bob',names:['Bob','Aaa']});
+ // A view that is neither leaves: the main view and the focus stay.
+ mark=w.log.length;w.S.bots.find((b:any)=>b.name==='Aaa').inWorld=false;w.sync();
+ expect(w.since(mark)).toEqual([{multi:['Bob']}]);
  // The last account leaves: the wall closes and says why.
- for(const b of w.S.bots)b.inWorld=false;w.sync();
- expect(w.on()).toBe(false);expect(w.log.slice(3)).toEqual([{multi:[]},{atlasFreeCamera:true}]);expect(w.said.at(-1)).toContain('The wall is closed');
+ mark=w.log.length;for(const b of w.S.bots)b.inWorld=false;w.sync();
+ expect(w.on()).toBe(false);expect(w.since(mark)).toEqual([{multi:[]},{atlasFreeCamera:true}]);expect(w.said.at(-1)).toContain('The wall is closed');
+});
+
+test('when the last view of the order leaves as main, the view before it takes the main place',()=>{
+ const w=fleetWall([inWorld('Ann'),inWorld('Bob'),inWorld('Cat')]);w.start();
+ w.laid(w.grid(['Ann','Bob','Cat'],3));w.press('3',false);w.press('Enter',false);
+ expect(w.wall()).toMatchObject({main:'Cat',focus:'Cat'});
+ w.S.bots.pop();w.sync();
+ expect(w.wall()).toMatchObject({main:'Bob',focus:'Bob',names:['Ann','Bob']});
 });
 
 test('the wall status counts the views that show their player, from a viewer status for the asked list only',()=>{
@@ -239,17 +286,33 @@ test('the wall status counts the views that show their player, from a viewer sta
  expect(w.label()[0]).toBe('Wall · 2 of 3 shown');
  // A phone has a narrow switcher.
  w.phone.matches=true;expect(w.label()[0]).toBe('Wall · 2/3');
+ // Each frame shows the state of its view: found, still being found, or not online.
+ w.laid(w.grid(['Ann','Bob','Cat'],3));
+ w.S.bots[0].fresh=true;w.S.bots[0].phaseShort='Fishing sharks';
+ w.message({viewerMulti:{names:['Ann','Bob','Cat'],shown:['ann'],offline:['Cat','Eve']}});
+ const t=w.tiles();
+ expect([t.get('Ann').dot.className,t.get('Bob').dot.className,t.get('Cat').dot.className]).toEqual(['wall-dot on','wall-dot finding','wall-dot off']);
+ expect([t.get('Ann').note.textContent,t.get('Bob').note.textContent,t.get('Cat').note.textContent]).toEqual(['Fishing sharks','finding…','not online']);
 });
 
-test('a click on a view closes the wall first, then follows that account through pick()',()=>{
- const w=fleetWall([inWorld('Ann'),inWorld('Bob')],{sel:'Ann'});w.start();
+test('a click on a view focuses it; a second click on the same view follows that account through pick()',()=>{
+ const w=fleetWall([inWorld('Ann'),inWorld('Bob')],{sel:'Ann'});w.start();const mark=w.log.length;
  // A reply that names another account, or no view of the wall, is not a click.
  for(const bad of [{viewerMultiPick:'Eve',index:1},{viewerMultiPick:'Bob',index:5},{viewerMultiPick:'Bob',index:'1'},{viewerMultiPick:1,index:1},{index:1}])w.message(bad);
- expect(w.on()).toBe(true);expect(w.log).toHaveLength(1);
+ expect(w.on()).toBe(true);expect(w.since(mark)).toEqual([]);
  w.message({viewerMultiPick:'bob',index:1});
- expect(w.log).toEqual([{multi:['Ann','Bob']},{multi:[]},{pick:'Bob'}]);expect(w.on()).toBe(false);expect(w.said.at(-1)).toBe('Now watching Bob');
+ expect(w.since(mark)).toEqual([{multiFocus:'Bob'}]);expect(w.on()).toBe(true);expect(w.wall()).toMatchObject({focus:'Bob',main:'Ann'});
+ // A click on another view starts again: one click each is no double click.
+ w.message({viewerMultiPick:'Ann',index:0});w.message({viewerMultiPick:'Bob',index:1});
+ expect(w.on()).toBe(true);expect(w.since(mark)).toEqual([{multiFocus:'Bob'},{multiFocus:'Ann'},{multiFocus:'Bob'}]);
+ // Two slow clicks are two clicks.
+ const now=Date.now;try{Date.now=()=>now()+5000;w.message({viewerMultiPick:'Bob',index:1});}finally{Date.now=now;}
+ expect(w.on()).toBe(true);
+ // The double click: the viewer keeps that view as its single view, the wall closes, then the page follows.
+ const at=w.log.length;w.message({viewerMultiPick:'Bob',index:1});w.message({viewerMultiPick:'Bob',index:1});
+ expect(w.since(at)).toEqual([{multiFocus:'Bob'},{multi:[]},{pick:'Bob'}]);expect(w.on()).toBe(false);expect(w.said.at(-1)).toBe('Now watching Bob');
  // The viewer build's own report of the same click finds no wall.
- w.message({viewerMultiPick:'Bob',index:1});expect(w.log).toHaveLength(3);
+ const end=w.log.length;w.message({viewerMultiPick:'Bob',index:1});expect(w.log).toHaveLength(end);
  // The roof and prewarm messages start again from nothing.
  expect(w.page()).toMatchObject({sentMaxLevel:null,warmSent:''});
 });
@@ -257,39 +320,265 @@ test('a click on a view closes the wall first, then follows that account through
 test('closing the wall returns to what the page followed, and the tour runs on',()=>{
  const followed=fleetWall([inWorld('Ann'),inWorld('Bob')],{sel:'Bob',touring:true});followed.start();
  expect(followed.page().touring).toBe(false);
- followed.window.atlasFreeCamera=true;followed.end();
- expect(followed.log).toEqual([{multi:['Ann','Bob']},{multi:[]},{follow:'Bob'}]);
+ followed.window.atlasFreeCamera=true;const mark=followed.log.length;followed.end();
+ expect(followed.since(mark)).toEqual([{multi:[]},{follow:'Bob'}]);
  expect(followed.page()).toMatchObject({sel:'Bob',free:false,other:null,touring:true,rswFor:'Bob'});followed.stopTour();
+ expect(followed.tools.hidden).toBe(true);expect(followed.tiles().size).toBe(0);
  const free=fleetWall([inWorld('Ann')],{sel:'Ann',free:true});free.toggle();free.toggle();
- expect(free.log).toEqual([{multi:['Ann']},{multi:[]},{atlasFreeCamera:true}]);expect(free.page()).toMatchObject({free:true,renders:2});
+ expect(free.log).toEqual([...opening(['Ann']),{multi:[]},{atlasFreeCamera:true}]);expect(free.page()).toMatchObject({free:true,renders:2});
  const other=fleetWall([inWorld('Ann')],{sel:'Ann',other:'Stranger'});other.start();other.end();
- expect(other.log.slice(1)).toEqual([{multi:[]},{follow:'Stranger'}]);
+ expect(other.log.slice(-2)).toEqual([{multi:[]},{follow:'Stranger'}]);
  // The 3D view went away: nothing is left to tell.
  const lost=fleetWall([inWorld('Ann')],{sel:'Ann'});lost.start();lost.setMode('2d');
- expect(lost.on()).toBe(false);expect(lost.log).toEqual([{multi:['Ann']}]);
+ expect(lost.on()).toBe(false);expect(lost.log).toEqual(opening(['Ann']));
 });
 
 test('a link with wall=1 opens the wall when the viewer is ready and an account is in the world',()=>{
  const w=fleetWall([inWorld('Ann')],{state:'loading'});w.link();w.sync();expect(w.on()).toBe(false);
- w.VIEWER.state='ready';w.sync();expect(w.on()).toBe(true);expect(w.log).toEqual([{multi:['Ann']}]);
+ w.VIEWER.state='ready';w.sync();expect(w.on()).toBe(true);expect(w.multis()).toEqual([{multi:['Ann']}]);
  // With the live roster in and nobody of ours on it, the link opens no wall and the page says so once.
  const none=fleetWall([],{});none.window.atlasLiveRoster=()=>true;none.link();none.sync();none.sync();
  expect(none.on()).toBe(false);expect(none.said).toHaveLength(1);
  const link=shell.slice(shell.indexOf('  function writeLink(){'),shell.indexOf('  let questAccount=null;'));
- expect(link).toContain("if(wall||wallLinked)q.set('wall','1');");expect(link).toContain("['a','watch','cam','wall']");
+ expect(link).toContain('if(wall||wallLinked)wallLinkWrite(q);');expect(link).toContain("['a','watch','cam','wall','wl','wm']");
+ expect(shell).toContain("wallLinked=q.get('wall')==='1';wallLinkRead(q);");
+});
+
+test('the share link carries the layout and the main view, and a load of it opens the wall the same way',()=>{
+ const bots=()=>[inWorld('Ann'),inWorld('Bob'),inWorld('Cat')];
+ const w=fleetWall(bots());w.start();w.laid(w.grid(['Ann','Bob','Cat'],3));
+ w.press('ArrowRight',false);w.press('Enter',false);w.press(' ',false);
+ expect(w.wall()).toMatchObject({layout:'main',main:'Bob'});expect(w.links.length).toBeGreaterThan(0);
+ const q=new URLSearchParams({p:'fleet'});w.linkWrite(q);
+ expect(q.toString()).toBe('p=fleet&wall=1&wl=main&wm=Bob');
+ const loaded=fleetWall(bots());loaded.linkRead(new URLSearchParams(q.toString()));loaded.start();
+ expect(loaded.log).toEqual(opening(['Ann','Bob','Cat'],'main','Bob'));
+ // A value that is no layout or no name is dropped; a main view that is not in the world gives the first view.
+ const bad=fleetWall(bots());bad.linkRead(new URLSearchParams('wall=1&wl=spiral&wm=%3Cb%3E'));bad.start();
+ expect(bad.log).toEqual(opening(['Ann','Bob','Cat']));
+ const gone=fleetWall(bots());gone.linkRead(new URLSearchParams('wall=1&wl=focus&wm=Zed'));gone.start();
+ expect(gone.log).toEqual(opening(['Ann','Bob','Cat'],'focus','Ann'));
+});
+
+test('the layout, the main view and a hand-made order stay in the browser storage',()=>{
+ const bots=()=>[inWorld('Ann'),inWorld('Bob'),inWorld('Cat'),inWorld('Dan')],store=fakeStore();
+ const w=fleetWall(bots(),{store});w.start();w.laid(w.grid(['Ann','Bob','Cat','Dan']));
+ expect(store.data['atlas-wall']).toBeUndefined();
+ w.press('f',false);
+ expect(JSON.parse(store.data['atlas-wall'])).toEqual({layout:'focus',main:'Ann',order:[]});
+ w.press('f',false);w.laid(w.grid(['Ann','Bob','Cat','Dan']));
+ // Dan goes to Bob's place: the order is now the user's.
+ w.press('4',false);w.press('ArrowUp',true);
+ expect(JSON.parse(store.data['atlas-wall'])).toEqual({layout:'grid',main:'Ann',order:['Ann','Dan','Cat','Bob']});
+ w.end();
+ // The next wall, with one account gone and one new: the stored order, then the new account.
+ const next=fleetWall([inWorld('Eve'),inWorld('Dan'),inWorld('Cat'),inWorld('Ann')],{store});next.start();
+ expect(next.log).toEqual(opening(['Ann','Dan','Cat','Eve']));
+ // Storage that fails, or holds something else, leaves the wall as a grid in the page's order.
+ const broken=fleetWall(bots(),{store:{getItem(){throw Error('denied');},setItem(){throw Error('denied');}}});
+ broken.start();broken.press(' ',false);expect(broken.wall()).toMatchObject({layout:'main'});
+ for(const text of ['{','null','[1]','{"layout":"spiral","main":"<b>","order":["Ann",5,"<i>"]}']){
+  const odd=fleetWall(bots(),{store:fakeStore({'atlas-wall':text})});odd.start();expect(odd.log).toEqual(opening(['Ann','Bob','Cat','Dan']));
+ }
+ expect(w.prefsRead('{"layout":"columns","main":"⟦MAIN⟧","order":["Bob","⟦MAIN⟧"]}')).toEqual({layout:'columns',main:'⟦MAIN⟧',order:['Bob','⟦MAIN⟧']});
 });
 
 test('the hidden account goes to the viewer and comes back as its mark only',()=>{
- const w=fleetWall([inWorld('⟦MAIN⟧',{fresh:true}),inWorld('Ann')]);w.start();
- expect(w.log).toEqual([{multi:['⟦MAIN⟧','Ann']}]);
+ const store=fakeStore(),w=fleetWall([inWorld('⟦MAIN⟧',{fresh:true}),inWorld('Ann')],{store});w.start();
+ expect(w.log).toEqual(opening(['⟦MAIN⟧','Ann']));
  w.message({viewerMulti:{names:['⟦MAIN⟧','Ann'],shown:['⟦MAIN⟧'],offline:[]}});
  expect(w.label().join(' ')).not.toContain('MAIN');
- w.message({viewerMultiPick:'⟦MAIN⟧',index:0});
- expect(w.log.slice(1)).toEqual([{multi:[]},{pick:'⟦MAIN⟧'}]);
- // The page takes the name from its own list: text in a reply never becomes a follow target.
- const own=fleetWall([inWorld('Ann'),inWorld('Bob')]);own.start();own.message({viewerMultiPick:'⟦MAIN⟧',index:1});
- expect(own.log.at(-1)).toEqual({pick:'Bob'});
+ // The frame of that view shows the reserved label. A reply that puts another name in its place is not taken.
+ w.laid([{name:'Secret',x:0,y:0,w:500,h:300},{name:'Ann',x:504,y:0,w:500,h:300}]);expect(w.tiles().size).toBe(0);
+ w.laid(w.grid(['⟦MAIN⟧','Ann']));
+ expect([...w.tiles().values()].map((t:any)=>t.name.textContent)).toEqual(['Main · reserved','Ann']);
+ // The keys, the storage and the link hold the mark and nothing else for that account.
+ w.press('ArrowRight',false);w.press('ArrowLeft',true);w.press(' ',false);
+ const q=new URLSearchParams();w.linkWrite(q);
+ expect(q.get('wm')).toBe('Ann');expect(JSON.parse(store.data['atlas-wall']).order).toEqual(['Ann','⟦MAIN⟧']);
+ const seen=JSON.stringify([w.log,store.data,q.toString(),w.dom.all.map((e:any)=>[e.textContent,e.title,e.innerHTML,e.dataset,e.attrs])]);
+ expect(seen).not.toContain('Secret');expect(seen.replaceAll('⟦MAIN⟧','')).not.toMatch(/MAIN/);
+ w.message({viewerMultiPick:'⟦MAIN⟧',index:1});w.message({viewerMultiPick:'⟦MAIN⟧',index:1});
+ expect(w.log.slice(-3)).toEqual([{multiFocus:'⟦MAIN⟧'},{multi:[]},{pick:'⟦MAIN⟧'}]);
  expect(w.said.at(-1)).toBe('Now watching Main · reserved');
+ // The page takes the name from its own list: text in a reply never becomes a follow target.
+ const own=fleetWall([inWorld('Ann'),inWorld('Bob')]);own.start();own.message({viewerMultiPick:'⟦MAIN⟧',index:1});own.message({viewerMultiPick:'⟦MAIN⟧',index:1});
+ expect(own.log.at(-1)).toEqual({pick:'Bob'});
+});
+
+test('the focus moves to the view next to it in the direction of the key',()=>{
+ const w=fleetWall([inWorld('Ann')]);
+ // 3 x 3 grid of 300 x 200 views, 4 px apart. Views: 0 1 2 / 3 4 5 / 6 7 8.
+ const g=Array.from({length:9},(_,i)=>({x:(i%3)*304,y:Math.floor(i/3)*204,w:300,h:200}));
+ expect([w.neighbour(g,4,'left'),w.neighbour(g,4,'right'),w.neighbour(g,4,'up'),w.neighbour(g,4,'down')]).toEqual([3,5,1,7]);
+ expect([w.neighbour(g,0,'left'),w.neighbour(g,0,'up'),w.neighbour(g,8,'right'),w.neighbour(g,8,'down')]).toEqual([-1,-1,-1,-1]);
+ expect(w.neighbour(g,9,'left')).toBe(-1);
+ // Main and stack: a 600 px main view, then two columns of three views. Right of the main view is the stack view
+ // level with its centre; left of any stack view in the first column is the main view.
+ const m=[{x:0,y:0,w:600,h:608},...Array.from({length:6},(_,i)=>({x:604+(i%2)*154,y:Math.floor(i/2)*204,w:150,h:200}))];
+ expect(w.neighbour(m,0,'right')).toBe(3);expect([1,3,5].map(i=>w.neighbour(m,i,'left'))).toEqual([0,0,0]);
+ expect(w.neighbour(m,2,'left')).toBe(1);expect(w.neighbour(m,2,'down')).toBe(4);expect(w.neighbour(m,0,'down')).toBe(-1);
+ // A stretched last row: down from the middle column goes to the view under it, and up comes back to a view over it.
+ const s=[...g.slice(0,6),{x:0,y:408,w:452,h:200},{x:456,y:408,w:452,h:200}];
+ expect([w.neighbour(s,3,'down'),w.neighbour(s,4,'down'),w.neighbour(s,5,'down')]).toEqual([6,6,7]);
+ expect(w.neighbour(s,7,'up')).toBe(5);
+ // With no view level with the start, the nearest view past the edge is taken.
+ expect(w.neighbour([{x:0,y:0,w:100,h:100},{x:104,y:104,w:100,h:100}],0,'right')).toBe(1);
+});
+
+test('the keys of the wall: each command is one message, in the order the viewer needs',()=>{
+ const names=['Ann','Bob','Cat','Dan'],w=fleetWall(names.map(n=>inWorld(n)));w.start();w.laid(w.grid(names));
+ const sent=(act:()=>void)=>{const mark=w.log.length;act();return w.since(mark);};
+ // Arrows and h j k l move the focus; an edge stops it; 1 to 9 pick a view by its place.
+ expect(sent(()=>w.press('ArrowRight',false))).toEqual([{multiFocus:'Bob'}]);
+ expect(sent(()=>w.press('j',false))).toEqual([{multiFocus:'Dan'}]);
+ expect(sent(()=>w.press('h',false))).toEqual([{multiFocus:'Cat'}]);
+ expect(sent(()=>w.press('k',false))).toEqual([{multiFocus:'Ann'}]);
+ expect(sent(()=>w.press('ArrowLeft',false))).toEqual([]);expect(sent(()=>w.press('l',false))).toEqual([{multiFocus:'Bob'}]);
+ expect(sent(()=>w.press('3',false))).toEqual([{multiFocus:'Cat'}]);expect(sent(()=>w.press('9',false))).toEqual([]);
+ // Enter makes the focused view the main view.
+ expect(sent(()=>w.press('Enter',false))).toEqual([{multiLayout:{main:'Cat'}}]);
+ // Space steps through the layouts, Shift+Space steps back.
+ expect(sent(()=>w.press(' ',false))).toEqual([{multiLayout:{mode:'main'}}]);
+ expect(sent(()=>w.press(' ',false))).toEqual([{multiLayout:{mode:'focus'}}]);
+ expect(sent(()=>w.press(' ',true))).toEqual([{multiLayout:{mode:'main'}}]);
+ // f puts the focused view at full size in the same move, and returns to the layout before.
+ w.press('2',false);
+ expect(sent(()=>w.press('f',false))).toEqual([{multiLayout:{mode:'focus',main:'Ann'}}]);
+ expect(sent(()=>w.press('F',false))).toEqual([{multiLayout:{mode:'main'}}]);
+ expect(w.wall()).toMatchObject({layout:'main',main:'Ann',focus:'Ann',names});
+ // Shift and a direction swap two views. Order first, then the main view when the first place changed.
+ w.laid([{name:'Ann',x:0,y:0,w:600,h:600},{name:'Bob',x:604,y:0,w:300,h:198},{name:'Cat',x:604,y:202,w:300,h:198},{name:'Dan',x:604,y:404,w:300,h:196}]);
+ w.press('ArrowRight',false);
+ expect(w.wall()!.focus).toBe('Cat');
+ expect(sent(()=>w.press('ArrowUp',true))).toEqual([{multiOrder:['Ann','Cat','Bob','Dan']}]);
+ // The rectangles are those of the old order until the viewer reports: a second swap waits for them.
+ expect(sent(()=>w.press('ArrowLeft',true))).toEqual([]);
+ w.laid([{name:'Ann',x:0,y:0,w:600,h:600},{name:'Cat',x:604,y:0,w:300,h:198},{name:'Bob',x:604,y:202,w:300,h:198},{name:'Dan',x:604,y:404,w:300,h:196}]);
+ expect(sent(()=>w.press('H',true))).toEqual([{multiOrder:['Cat','Ann','Bob','Dan']},{multiLayout:{main:'Cat'}}]);
+ expect(w.wall()).toMatchObject({main:'Cat',focus:'Cat',names:['Cat','Ann','Bob','Dan']});
+ // Other keys are not the wall's, and no key is while the wall is closed.
+ expect(w.press('x',false)).toBe(false);expect(w.press('Tab',false)).toBe(false);
+ // Enter on the main view follows that account.
+ expect(sent(()=>w.press('Enter',false))).toEqual([{multiFocus:'Cat'},{multi:[]},{pick:'Cat'}]);
+ expect(w.on()).toBe(false);expect(w.press('Enter',false)).toBe(false);expect(w.press(' ',false)).toBe(false);
+});
+
+test('keys pressed in the viewer frame do the same, and \\ and Escape open and close the wall',()=>{
+ const w=fleetWall([inWorld('Ann'),inWorld('Bob')]);
+ w.frameKey({key:'\\'});expect(w.on()).toBe(true);w.laid(w.grid(['Ann','Bob']));
+ w.message({atlasWallKey:{key:'ArrowRight',shift:false}});expect(w.wall()!.focus).toBe('Bob');
+ w.message({atlasWallKey:{key:' ',shift:false}});expect(w.wall()!.layout).toBe('main');
+ for(const bad of [{key:5},{key:'ArrowLeftArrowLeft'},null,'ArrowLeft',{shift:true}])w.message({atlasWallKey:bad});
+ expect(w.wall()).toMatchObject({focus:'Bob',layout:'main'});
+ // The open and close keys are the page's own: wallMessage leaves them to the one handler.
+ w.message({atlasWallKey:{key:'Escape'}});w.message({atlasWallKey:{key:'\\'}});expect(w.on()).toBe(true);
+ w.frameKey({key:'Escape'});expect(w.on()).toBe(false);
+ w.frameKey(undefined);w.frameKey({key:'Enter'});expect(w.on()).toBe(false);
+ // A wall button that is hidden (2D map) or disabled (viewer loading) does not open by key.
+ w.wallButton.disabled=true;w.frameKey({key:'\\'});expect(w.on()).toBe(false);
+ expect(shell).toContain("if(window.atlasWallOn?.()&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)&&!(/^(?:BUTTON|A|SUMMARY)$/.test(e.target.tagName)&&(e.key==='Enter'||e.key===' '))&&wallPress(e.key,e.shiftKey)){e.preventDefault();e.stopPropagation();return;}");
+ expect(shell).toContain('wallMessage(e.data);wallFrameKey(e.data.atlasWallKey);');
+});
+
+test('the page draws a frame over each view at the rectangle the viewer reports, moved to page pixels',()=>{
+ const w=fleetWall([inWorld('Ann'),inWorld('Bob'),inWorld('Cat')]);w.start();
+ expect(w.tiles().size).toBe(0);
+ // The harness puts the 3D view 20 px under the top of the frames' box: a view at y is drawn at y + 20.
+ const rects=[{name:'Ann',x:0,y:0,w:522,h:376},{name:'Bob',x:526,y:0,w:522,h:376},{name:'Cat',x:0,y:380,w:1048,h:377}];
+ w.laid(rects);
+ const tile=(n:string)=>w.tiles().get(n).el.style,box=(n:string)=>[tile(n).left,tile(n).top,tile(n).width,tile(n).height];
+ expect(box('Ann')).toEqual(['0px','20px','522px','376px']);expect(box('Bob')).toEqual(['526px','20px','522px','376px']);expect(box('Cat')).toEqual(['0px','400px','1048px','377px']);
+ expect(w.root.children.filter((e:any)=>e.className.includes('wall-tile'))).toHaveLength(3);
+ expect(w.root.className).toContain('still');
+ // The marks: the focused view, the main view, the place numbers, and the view under the pointer.
+ expect(w.tiles().get('Ann').el.className).toBe('wall-tile wall-focus wall-main');expect(w.tiles().get('Bob').el.className).toBe('wall-tile');
+ expect(['Ann','Bob','Cat'].map(n=>w.tiles().get(n).num.textContent)).toEqual(['1','2','3']);
+ w.message({viewerMultiHover:1});expect(w.tiles().get('Bob').el.className).toBe('wall-tile wall-hover');
+ w.message({viewerMultiHover:-1});expect(w.tiles().get('Bob').el.className).toBe('wall-tile');
+ w.message({viewerMultiHover:'1'});w.message({viewerMultiHover:1.5});expect(w.wall()!.hover).toBe(null);
+ // A report is taken only whole: every asked name in the asked order, numbers in range, the flags of a report.
+ const before=tile('Ann').left,moved=rects.map(r=>({...r,x:r.x+7}));
+ for(const bad of [moved.slice(0,2),[moved[1],moved[0],moved[2]],moved.map((r,i)=>i?r:{...r,x:NaN}),moved.map((r,i)=>i?r:{...r,w:-5}),moved.map((r,i)=>i?r:{...r,y:1e6}),moved.map((r,i)=>i?r:{...r,name:5}),'x',null])w.laid(bad as any);
+ w.laid(moved,{animating:'yes'});w.laid(moved,{ms:-1});w.laid(moved,{ms:5000,animating:true});w.laid(moved,{at:'now'});
+ expect(tile('Ann').left).toBe(before);
+ // A strip takes the pointer: a click focuses the view, a second click or the open button follows the account.
+ const strip=w.tiles().get('Cat').strip;
+ strip.listeners.click({target:{closest:()=>null}});expect(w.wall()!.focus).toBe('Cat');expect(w.on()).toBe(true);
+ strip.listeners.click({target:{closest:()=>null}});expect(w.on()).toBe(false);expect(w.log.at(-1)).toEqual({pick:'Cat'});
+ w.start();w.laid(rects);
+ w.tiles().get('Bob').strip.listeners.click({target:{closest:(q:string)=>q==='.wall-open'?{}:null}});expect(w.log.slice(-3)).toEqual([{multiFocus:'Bob'},{multi:[]},{pick:'Bob'}]);
+ expect(w.tiles().size).toBe(0);
+});
+
+test('a frame moves with the viewer: the same time and curve, started as far in as the move is at that frame',()=>{
+ const w=fleetWall([inWorld('Ann'),inWorld('Bob')]);w.start();
+ w.laid(w.grid(['Ann','Bob']));
+ // The viewer started a 240 ms move 1000 ms after the page's time origin; the next page frame is at 1050 ms.
+ const to=[{name:'Ann',x:504,y:0,w:500,h:300},{name:'Bob',x:0,y:0,w:500,h:300}];
+ w.laid(to,{animating:true,ms:240,at:performance.timeOrigin+1000,frameAt:1050});
+ const ann=w.tiles().get('Ann').el.style;
+ expect(w.root.className).not.toContain('still');expect(w.root.style['--wall-ms']).toBe('240ms');
+ expect([ann.left,ann.top,ann.transitionDelay]).toEqual(['504px','20px','-50ms']);
+ // A report that is older than the move is long, or from a clock ahead of the page's, stays inside the move.
+ w.laid(to,{animating:true,ms:240,at:performance.timeOrigin,frameAt:9000});expect(ann.transitionDelay).toBe('-240ms');
+ w.laid(to,{animating:true,ms:240,at:performance.timeOrigin+500,frameAt:100});expect(ann.transitionDelay).toBe('-0ms');
+ // The end of the move: the frames are set on the rectangles with no transition.
+ w.laid(to,{animating:false,ms:0,at:performance.timeOrigin+1240,frameAt:1250});
+ expect(w.root.className).toContain('still');expect(ann.transitionDelay).toBe('');
+ // Two reports before one frame: the frame shows the last one.
+ w.message({viewerMultiLayout:{mode:'grid',main:null,focus:null,rects:w.grid(['Ann','Bob']),animating:true,ms:240,at:performance.timeOrigin+2000}});
+ w.laid(to,{animating:true,ms:240,at:performance.timeOrigin+2010,frameAt:2020});
+ expect([ann.left,ann.transitionDelay]).toEqual(['504px','-10ms']);
+});
+
+test('a new view gets a frame that grows in, and the frame of a view that left shrinks out',()=>{
+ const w=fleetWall([inWorld('Ann'),inWorld('Bob')]);w.start();w.laid(w.grid(['Ann','Bob']));
+ const bob=w.tiles().get('Bob').el;
+ w.S.bots[1].inWorld=false;w.S.bots.push(inWorld('Cat'));w.sync();
+ expect(w.multis().at(-1)).toEqual({multi:['Ann','Cat']});
+ // Until the viewer reports the new layout the frames stay.
+ expect(bob.parent).toBe(w.root);
+ w.laid(w.grid(['Ann','Cat']),{animating:true,ms:240,at:performance.timeOrigin+100,frameAt:110});
+ // Bob's frame (504, 20, 500 x 300) shrinks to 0.6 of its size about its centre and fades, as the view does.
+ expect(w.tiles().has('Bob')).toBe(false);expect(bob.className).toContain('out');
+ expect([bob.style.left,bob.style.top,bob.style.width,bob.style.height,bob.style['--wall-fade'],bob.style.transitionDelay]).toEqual(['604px','80px','300px','180px','0','-10ms']);
+ const cat=w.tiles().get('Cat').el;
+ expect([cat.style.left,cat.style.top,cat.style.width,cat.style['--wall-fade'],cat.style.transitionDelay]).toEqual(['504px','20px','500px','1','-10ms']);
+ expect(w.tiles().get('Cat').name.textContent).toBe('Cat');
+});
+
+test('with reduced motion the viewer is told not to move the views and the frames have no transition',()=>{
+ const w=fleetWall([inWorld('Ann'),inWorld('Bob')],{still:true});w.start();
+ expect(w.log).toEqual(opening(['Ann','Bob'],'grid','Ann',false));
+ w.laid(w.grid(['Ann','Bob']),{animating:true,ms:240,at:performance.timeOrigin+100,frameAt:110});
+ expect(w.root.className).toContain('still');expect(w.tiles().get('Ann').el.style.transitionDelay).toBe('');
+ const css=readFileSync(new URL('./client-shell.css',import.meta.url),'utf8');
+ expect(css).toContain('@media(prefers-reduced-motion:reduce){.wall-tile,.wall-tile::after{transition:none!important}}');
+ expect(css).toContain('--wall-ease:cubic-bezier(.3333,1,.6667,1)');expect(css).toContain('.wall-chrome.still .wall-tile{transition:none}');
+ // The frames move with properties that the page's own frames drive, so the move starts in the frame it is set in.
+ expect(css).toContain("@property --wall-fade{syntax:'<number>';inherits:false;initial-value:1}");
+ expect(css).toMatch(/\.wall-tile\{[^}]*transition:left var\(--wall-ms\) var\(--wall-ease\),top [^}]*,--wall-fade var\(--wall-ms\) var\(--wall-ease\)\}/);
+});
+
+test('the layout switcher shows the layout, and one button steps through the layouts on a narrow title bar',()=>{
+ const w=fleetWall([inWorld('Ann'),inWorld('Bob')]);
+ expect(w.tools.hidden).toBe(true);expect(w.wallButton.next).toBe(w.tools);
+ w.start();
+ const buttons=w.dom.byClass('wall-layout'),cycle=w.dom.byClass('wall-cycle')[0],helpButton=w.dom.byClass('wall-help-button')[0];
+ expect(buttons.map((b:any)=>[b.dataset.wallLayout,b.attrs['aria-pressed']])).toEqual([['grid','true'],['main','false'],['focus','false'],['columns','false']]);
+ const click=(b:any)=>w.tools.listeners.click({target:{closest:()=>b},stopPropagation:()=>{}});
+ let mark=w.log.length;click(buttons[3]);
+ expect(w.since(mark)).toEqual([{multiLayout:{mode:'columns'}}]);expect(buttons.map((b:any)=>b.attrs['aria-pressed'])).toEqual(['false','false','false','true']);
+ mark=w.log.length;click(buttons[3]);expect(w.since(mark)).toEqual([]);
+ click(cycle);expect(w.wall()!.layout).toBe('grid');expect(cycle.title).toContain('Grid');
+ // The key list opens from its button and from ?, and closes with the wall.
+ expect(w.help.hidden).toBe(true);click(helpButton);expect(w.help.hidden).toBe(false);expect(helpButton.attrs['aria-expanded']).toBe('true');
+ w.press('?',false);expect(w.help.hidden).toBe(true);w.press('?',false);w.end();expect(w.help.hidden).toBe(true);
+ for(const key of ['Shift + arrow','Enter','Space','Double click','Esc'])expect(w.help.innerHTML).toContain('<kbd>'+key+'</kbd>');
+ const css=readFileSync(new URL('./client-shell.css',import.meta.url),'utf8');
+ expect(css).toContain('@media(max-width:740px){.client-title .focus .wall-tools .wall-layout{display:none}.client-title .focus .wall-tools .wall-cycle{display:grid}');
+ expect(shell).toContain("infoRow('Wall','our accounts in the world side by side; click a view to focus it, double click to follow it, ? for the keys')");
 });
 
 test('while the wall is open the page sends no step, roof, prewarm or follow message',()=>{
