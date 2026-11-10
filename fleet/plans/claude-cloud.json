@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794351216725,
+ "at": 1794351274693,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -128,6 +128,31 @@
    ]
   },
   {
+   "account": "Fatstack",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Defence to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-defence-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
    "account": "Fingerblastr",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -203,6 +228,31 @@
    ]
   },
   {
+   "account": "PocketPool",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Defence to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-defence-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
    "account": "SporranDip",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -229,27 +279,23 @@
   },
   {
    "account": "Fingersmith",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/train-prayer.ts",
    "args": [
-    "3000",
-    "cow"
+    "99"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 80 on the Ardougne cows",
+   "goal": "train Prayer to 99 burying the held bones",
    "role": "combat",
-   "template": "army-cow-defence-80",
+   "template": "army-bury-prayer-99",
    "autopilot": "claude-cloud",
-   "resources": [
-    "cow:ardougne-north"
-   ]
+   "resources": []
   },
   {
    "account": "Dipstick",
@@ -298,44 +344,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
-   ]
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-baf24b3b-ae35-4a73-8401-8b3ff913e409"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-fatstack-20261110t224942z [task-baf24b3b-ae35-4a73-8401-8b3ff913e409]",
-   "role": "combat"
-  },
-  {
-   "account": "PocketPool",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-defence-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
    ]
   }
  ]
