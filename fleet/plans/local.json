@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794340940383,
+ "at": 1794341446426,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -18,22 +18,6 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
-   "role": "supply"
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
-    "scripts/goldfarm.ts KNIGHT_SPOT=2582,3297"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "Thieving 55, then coins from Ardougne knights",
    "role": "supply"
   },
   {
@@ -450,10 +434,7 @@
    "role": "supply"
   },
   {
-   "accounts": [
-    "Masterbaiter",
-    "Magicwanda"
-   ],
+   "account": "Masterbaiter",
    "script": "scripts/handoff-inputs.ts",
    "args": [
     "80:Lobster",
@@ -514,6 +495,31 @@
    "enabled": false,
    "repeat": false,
    "goal": "run-fletch-bowbeforeme-rune495 [task-62f76570-1e5c-41f3-9e18-442a2463a6de]",
+   "role": "supply"
+  },
+  {
+   "accounts": [
+    "MineYourBiz",
+    "Magicwanda"
+   ],
+   "script": "scripts/handoff-inputs.ts",
+   "args": [
+    "80:Lobster",
+    "--bank-x=2619",
+    "--bank-z=3332",
+    "--approach-ms=1800000",
+    "--request-ms=60000",
+    "--timeout-ms=600000",
+    "--grace-ms=45000"
+   ],
+   "env": {
+    "HANDOFF_ORDER": "magicwanda-blood-lobster80-mineyourbiz",
+    "CAP": "4000",
+    "COORDINATOR_RUN_ID": "task-291d8671-655b-4ed3-96dc-5c894a46a9ac"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-handoff-mineyourbiz-magicwanda-lobster80 [task-291d8671-655b-4ed3-96dc-5c894a46a9ac]",
    "role": "supply"
   }
  ]
