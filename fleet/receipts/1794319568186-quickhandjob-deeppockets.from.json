@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794319568186-quickhandjob-deeppockets",
  "account": "Quickhandjob",
  "partner": "Deeppockets",
@@ -12,6 +12,11 @@
  "claim": "db2fe460-d91e-402d-a710-ae4970b88ea1",
  "count": 0,
  "ok": false,
- "at": 1794319858957,
- "detail": "trade claimed"
+ "at": 1794319912026,
+ "detail": "Error: route to 2618, 3333: precondition no route to 2618,3333,0",
+ "logout": {
+  "attemptId": "1794319858960-0000019808-0000000001",
+  "at": 1794319912019,
+  "sha256": "ed62fffba82f8f5d67f65225a248f6b81e10357ace2034575ed8e9ac8c86785c"
+ }
 }
