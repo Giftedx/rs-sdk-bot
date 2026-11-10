@@ -60,3 +60,19 @@ test('market holdings keep different item IDs with the same display name separat
  expect(result).toContain('class="ge-ours">2<');expect(result).toContain('class="ge-ours">9<');expect(result).not.toContain('class="ge-ours">11<');
  state.bots[0].bank=[{name:'Herb',count:4}];expect(run(state,{atlasOperator:()=>true},String,String,()=>'<i/>')).toContain('class="ge-ours">?<');
 });
+
+test('the asset route serves the item effect table that the item tooltip reads',()=>{
+ const start=server.indexOf("if(url.pathname.startsWith('/client-assets/'))"),end=server.indexOf("if (url.pathname === '/api/player')",start);
+ const run=new Function('url','Bun','join','BASE',transpile(server.slice(start,end)).replaceAll('import.meta.dir','BASE'));
+ expect(run(new URL('http://localhost/client-assets/item-stats.json'),Bun,join,import.meta.dir).status).toBe(200);
+});
+
+test('the rank change of a day starts from the rank held 24 hours ago',()=>{
+ const code=transpile(server.slice(server.indexOf('function rankDelta('),server.indexOf('// Live #1 per skill board')));
+ const now=Date.now(),hour=3_600_000,rankHist=new Map<string,any[]>();
+ const rankDelta=new Function('rankHist',`${code};return rankDelta;`)(rankHist);
+ rankHist.set('A|Mining',[{at:now-72*hour,rank:50},{at:now-hour,rank:40}]);
+ expect(rankDelta('A','Mining').delta).toBe(10);
+ rankHist.set('B|Mining',[{at:now-72*hour,rank:50},{at:now-48*hour,rank:40}]);
+ expect(rankDelta('B','Mining').delta).toBe(0);
+});

@@ -79,3 +79,10 @@ test('the goal bar runs from the floor of the level now to the goal level, with 
  expect(X.goalBar({level:50,next:51,xp:floor,rate:0},undefined)).toBeNull();
  expect(X.goalBar({level:50,next:51,xp:floor,rate:0},60).ttl).toBeNull();
 });
+
+test('a skill that the baseline did not hold is counted from its first reading',()=>{
+ const base={started:100,at:0,xp:{} as Record<string,number>};
+ xp.rows(bot([{name:'Mining',xp:1000}]),base,60_000,null);
+ expect(base.xp.Mining).toBe(1000);
+ expect(xp.rows(bot([{name:'Mining',xp:1400}]),base,120_000,null)[0].gained).toBe(400);
+});

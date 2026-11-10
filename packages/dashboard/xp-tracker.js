@@ -19,7 +19,9 @@
     function rows(bot, base, now, serverRate) {
         const hours = Math.max((now - base.at) / 3.6e6, 1 / 3600);
         return (bot.skills || []).filter(k => k.name !== 'Overall' && typeof k.xp === 'number').map(k => {
-            const start = base.xp[k.name] ?? k.xp, gained = Math.max(0, k.xp - start);
+            // A skill that the baseline did not hold starts its count here, and the baseline keeps it.
+            if (base.xp[k.name] == null) base.xp[k.name] = k.xp;
+            const start = base.xp[k.name], gained = Math.max(0, k.xp - start);
             const level = levelForXp(k.xp), next = Math.min(99, level + 1), floor = xpForLevel(level), ceil = xpForLevel(next);
             const rate = serverRate && serverRate.skill === k.name && serverRate.xpPerHour > 0 ? serverRate.xpPerHour : gained / hours;
             const left = Math.max(0, ceil - k.xp);

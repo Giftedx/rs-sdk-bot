@@ -102,3 +102,13 @@ test('practice bots and their runs stay with the owner; script file goals read a
  expect(p.bots.map((b:any)=>b.name)).toEqual(['CoinCock']);expect(p.bots[0].goal).toBe('magic order');
  expect(p.results).toEqual([{at:1,name:'CoinCock',ok:true,text:'smelt bars'}]);
 });
+
+test('the public view keeps only the icons of items it shows, and a death without the run text',()=>{
+ const s:any=state();
+ s.bots[0].inventory=[{name:'Lobster',count:2}];s.bots[0].equipment=[{name:'Rune scimitar'}];s.bots[0].death={at:5,text:'fail died=true coins=900'};
+ s.lookups.zezima.worn=[{name:'Dragon longsword'}];
+ s.icons={Lobster:1,'Rune scimitar':2,'Dragon longsword':3,'Banked thing':4};
+ const p=publicView(s);
+ expect(Object.keys(p.icons).sort()).toEqual(['Dragon longsword','Lobster','Rune scimitar']);
+ expect(p.bots[0].death).toEqual({at:5,text:'died'});
+});
