@@ -84,6 +84,11 @@ Ranged it adds is not needed at that point.
 - **Evidence.** `.practice/troopers/run.ts` in the Claude cloud container that ran them.
 - **Gap.** Practice only; one skill; a better weapon (section 1's rune gear gives 137 at band 70) is not available on
   the market.
+- **Claim.** The trainer banks pack coins with its drops before every walk out, so a death on the field cannot lose
+  them. **Conditions.** The same run from 5,000 coins in the pack, cap 400: `RESULT ok`, 8 kills, 2 bank trips; the
+  pack held 0 coins and the bank 5,000 afterwards. **Evidence.** `.practice/troopers/coins.ts` and `peek.ts`;
+  `scripts/gather-combat-giant.test.ts` (coins held at entry). **Gap.** One practice run; worn gear and carried
+  arrows still ride to the field.
 
 ## Ranged on the troopers
 
