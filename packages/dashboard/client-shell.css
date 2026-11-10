@@ -202,3 +202,5 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 /* As the 2004 client draws them: every stack count is yellow, also K and M; a quest name is white under the pointer. */
 .game-hud .qty-k,.game-hud .qty-m,.game-bank .qty-k,.game-bank .qty-m{color:#ff0}
 .game-list button[data-quest]:hover{color:#fff!important}
+/* The side tabs as in the 2004 client: stats, quests, inventory and worn items above; friends, logout and options below. */
+.game-hud .game-tabs .tab-row:first-of-type{grid-template-columns:repeat(4,34px)!important}
