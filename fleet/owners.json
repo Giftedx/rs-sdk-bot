@@ -149,15 +149,15 @@
    "server": "rs-sdk-demo.fly.dev"
   },
   "Deeppockets": {
-   "side": "claude-cloud-2",
+   "side": "claude-cloud",
    "server": "rs-sdk-demo.fly.dev"
   },
   "Fatstack": {
-   "side": "claude-cloud-2",
+   "side": "claude-cloud",
    "server": "rs-sdk-demo.fly.dev"
   },
   "Fingerblastr": {
-   "side": "claude-cloud-2",
+   "side": "claude-cloud",
    "server": "rs-sdk-demo.fly.dev"
   },
   "Porksword": {
@@ -189,19 +189,19 @@
    "server": "rs-sdk-demo.fly.dev"
   },
   "Kiltlifter": {
-   "side": "claude-cloud-3",
+   "side": "claude-cloud",
    "server": "rs-sdk-demo.fly.dev"
   },
   "Knightstick": {
-   "side": "claude-cloud-3",
+   "side": "claude-cloud",
    "server": "rs-sdk-demo.fly.dev"
   },
   "PocketPool": {
-   "side": "claude-cloud-3",
+   "side": "claude-cloud",
    "server": "rs-sdk-demo.fly.dev"
   },
   "SporranDip": {
-   "side": "claude-cloud-3",
+   "side": "claude-cloud",
    "server": "rs-sdk-demo.fly.dev"
   },
   "FullSporran": {
@@ -224,15 +224,15 @@
    "reservation": "task-668f79d3-8846-40af-8f7d-039b215124b5"
   },
   "Fingersmith": {
-   "side": "claude-cloud-4",
+   "side": "claude-cloud",
    "server": "rs-sdk-demo.fly.dev"
   },
   "Dipstick": {
-   "side": "claude-cloud-4",
+   "side": "claude-cloud",
    "server": "rs-sdk-demo.fly.dev"
   },
   "KnightRider": {
-   "side": "claude-cloud-4",
+   "side": "claude-cloud",
    "server": "rs-sdk-demo.fly.dev"
   },
   "Familyjewel": {
