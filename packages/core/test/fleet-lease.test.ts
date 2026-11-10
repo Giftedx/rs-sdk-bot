@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, renameSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { acquireFleetLease, fleetGitWindow, fleetLeaseAllowsWorker, FLEET_LEASE_RENEW_MS, FLEET_LEASE_TTL_MS } from '../src/fleet-lease';
@@ -85,3 +85,73 @@ test.skipIf(process.platform !== 'win32')('a fresh Git deadline works in a long-
     await Bun.sleep(12_500);
     expect(fleetGitWindow(process.cwd())(args, input)).toBe(expected);
 }, 25_000);
+
+test('a renewal that does not land leaves the lease standing until its deadline, and the next one lands', () => {
+    const base = mkdtempSync(join(tmpdir(), 'fleet-lease-'));
+    const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, stdio: 'pipe', timeout: 5000, windowsHide: true }).toString().trim();
+    try {
+        const remote = join(base, 'origin.git'), off = join(base, 'origin.off'), a = join(base, 'a');
+        git(base, 'init', '--bare', remote);
+        mkdirSync(a); git(a, 'init'); git(a, 'remote', 'add', 'origin', remote);
+        let clock = Date.now();
+        const lease = acquireFleetLease(a, 'local', () => clock);
+        const head = () => git(remote, 'rev-parse', 'refs/heads/fleet-lease/local');
+        const first = head();
+
+        // The remote cannot be reached: nothing landed and nobody else can hold the lease yet.
+        clock += FLEET_LEASE_RENEW_MS;
+        renameSync(remote, off);
+        expect(() => lease.renew()).toThrow('did not land');
+        expect(lease.allows()).toBe(true);
+        expect(fleetLeaseAllowsWorker(a, lease.holder, clock)).toBe(true);
+        renameSync(off, remote);
+        expect(head()).toBe(first);
+
+        // The remote is back: the retry lands as a child of the same head.
+        clock += 20_000;
+        lease.renew();
+        expect(head()).not.toBe(first);
+        expect(git(remote, 'rev-parse', 'refs/heads/fleet-lease/local^')).toBe(first);
+        expect(lease.allows()).toBe(true);
+
+        // Past the deadline with no confirmed record the lease is gone, and the workers are fenced.
+        renameSync(remote, off);
+        clock += FLEET_LEASE_TTL_MS;
+        expect(() => lease.renew()).toThrow('expired');
+        expect(lease.allows()).toBe(false);
+        expect(fleetLeaseAllowsWorker(a, lease.holder, clock)).toBe(false);
+    } finally {
+        if (dirname(base) === tmpdir()) rmSync(base, { recursive: true, force: true, maxRetries: 5 });
+    }
+}, 30_000);
+
+test('a renewal whose push landed but whose answer was lost is taken as landed', () => {
+    const base = mkdtempSync(join(tmpdir(), 'fleet-lease-'));
+    const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, stdio: 'pipe', timeout: 5000, windowsHide: true }).toString().trim();
+    try {
+        const remote = join(base, 'origin.git'), a = join(base, 'a');
+        git(base, 'init', '--bare', remote);
+        mkdirSync(a); git(a, 'init'); git(a, 'remote', 'add', 'origin', remote);
+        let clock = Date.now(), drop = false;
+        // The push runs, then its caller hears a failure, as when the answer times out.
+        const window: typeof fleetGitWindow = (root, authority, budget) => {
+            const run = fleetGitWindow(root, authority, budget);
+            return (args, input) => { const out = run(args, input); if (drop && args.includes('push')) { drop = false; throw Error('fleet controller lease authority unavailable or changed'); } return out; };
+        };
+        const lease = acquireFleetLease(a, 'local', () => clock, window);
+        const head = () => git(remote, 'rev-parse', 'refs/heads/fleet-lease/local');
+        const first = head();
+        clock += FLEET_LEASE_RENEW_MS; drop = true;
+        lease.renew();
+        const second = head();
+        expect(second).not.toBe(first);
+        expect(lease.allows()).toBe(true);
+        expect(fleetLeaseAllowsWorker(a, lease.holder, clock)).toBe(true);
+        // The controller holds the new head: its next record is a child of it, not a rejected sibling.
+        clock += FLEET_LEASE_RENEW_MS;
+        lease.renew();
+        expect(git(remote, 'rev-parse', 'refs/heads/fleet-lease/local^')).toBe(second);
+    } finally {
+        if (dirname(base) === tmpdir()) rmSync(base, { recursive: true, force: true, maxRetries: 5 });
+    }
+}, 30_000);
