@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794311623519,
+ "at": 1794311627292,
  "jobs": [
   {
    "account": "Fingerblastr",
@@ -46,6 +46,29 @@
    "template": "army-cow-defence-45",
    "resources": [
     "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "10"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-strength-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
    ]
   },
   {
