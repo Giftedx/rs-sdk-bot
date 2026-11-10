@@ -155,3 +155,41 @@ test('a renewal whose push landed but whose answer was lost is taken as landed',
         if (dirname(base) === tmpdir()) rmSync(base, { recursive: true, force: true, maxRetries: 5 });
     }
 }, 30_000);
+
+test('a record that lands after the ref was checked is taken up at the next renewal, not read as a takeover', () => {
+    const base = mkdtempSync(join(tmpdir(), 'fleet-lease-'));
+    const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, stdio: 'pipe', timeout: 5000, windowsHide: true }).toString().trim();
+    try {
+        const remote = join(base, 'origin.git'), a = join(base, 'a');
+        git(base, 'init', '--bare', remote);
+        mkdirSync(a); git(a, 'init'); git(a, 'remote', 'add', 'origin', remote);
+        let clock = Date.now(), hold: string | undefined, holding = false;
+        // The push is held back: the caller hears a failure and the ref check still reads the old head.
+        const window: typeof fleetGitWindow = (root, authority, budget) => {
+            const run = fleetGitWindow(root, authority, budget);
+            return (args, input) => {
+                if (holding && args.includes('push')) { hold = args.at(-1)!; holding = false; throw Error('fleet controller lease authority unavailable or changed'); }
+                return run(args, input);
+            };
+        };
+        const lease = acquireFleetLease(a, 'local', () => clock, window);
+        const ref = 'refs/heads/fleet-lease/local', first = git(remote, 'rev-parse', ref);
+        clock += FLEET_LEASE_RENEW_MS; holding = true;
+        expect(() => lease.renew()).toThrow('did not land');
+        expect(git(remote, 'rev-parse', ref)).toBe(first);
+        // The remote applies the held push now.
+        git(a, 'push', '--quiet', 'origin', hold!);
+        const late = git(remote, 'rev-parse', ref);
+        expect(late).not.toBe(first);
+        // The retry is a sibling of that record and is rejected; the controller sees its own record on the ref.
+        clock += 20_000;
+        expect(() => lease.renew()).toThrow('did not land');
+        expect(lease.allows()).toBe(true);
+        expect(fleetLeaseAllowsWorker(a, lease.holder, clock)).toBe(true);
+        clock += 20_000;
+        lease.renew();
+        expect(git(remote, 'rev-parse', ref + '^')).toBe(late);
+    } finally {
+        if (dirname(base) === tmpdir()) rmSync(base, { recursive: true, force: true, maxRetries: 5 });
+    }
+}, 30_000);

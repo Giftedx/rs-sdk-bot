@@ -189,6 +189,9 @@ export function acquireFleetLease(root: string, side: string, now = Date.now, wi
     { const first = propose(git); pushFleetGitRecord(git, ref, first.commit); confirm(first); }
     const allows = () => !lost && performance.now() < deadline && now() < at + FLEET_LEASE_TTL_MS - DRAIN_MS
         && fleetLeaseAllowsWorker(root, workerHolder, now());
+    // Records sent whose push was not seen to land. One of them can turn up on the ref later, when the remote applied
+    // the push after the check read the ref; it is then this controller's own record, not a takeover.
+    const unseen = new Map<string, Proposal>();
     const lose = () => {
         lost = true;
         // A failed invalidation leaves the previous conservative deadline in place.
@@ -210,13 +213,19 @@ export function acquireFleetLease(root: string, side: string, now = Date.now, wi
                 sent = propose(runGit);
                 pushFleetGitRecord(runGit, ref, sent.commit);
                 confirm(sent);
+                unseen.clear();
             } catch (error) {
                 let remote: string | undefined | null;
                 try { remote = readFleetGitRefs(window(root, undefined, REF_CHECK_MS), [ref]).get(ref); } catch { remote = null; }
+                const pending = Error('fleet controller lease renewal did not land; the lease stands until its deadline');
                 if (sent && remote === sent.commit) {
-                    try { confirm(sent); return; } catch { /* the fence could not be written: lost, below */ }
+                    try { confirm(sent); unseen.clear(); return; } catch { /* the fence could not be written: lost, below */ }
+                } else if (typeof remote === 'string' && unseen.has(remote)) {
+                    // An earlier record landed late. It becomes the head; the record just sent was its sibling.
+                    try { confirm(unseen.get(remote)!); unseen.clear(); if (allows()) throw pending; } catch (e) { if (e === pending) throw e; }
                 } else if (allows() && (remote === null || remote === head)) {
-                    throw Error('fleet controller lease renewal did not land; the lease stands until its deadline');
+                    if (sent) unseen.set(sent.commit, sent);
+                    throw pending;
                 }
                 lose();
                 throw error;
