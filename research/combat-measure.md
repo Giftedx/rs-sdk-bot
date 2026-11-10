@@ -84,6 +84,34 @@ Ranged it adds is not needed at that point.
 - **Evidence.** `.practice/troopers/run.ts` in the Claude cloud container that ran them.
 - **Gap.** Practice only; one skill; a better weapon (section 1's rune gear gives 137 at band 70) is not available on
   the market.
+- **Claim.** Nine accounts train on the troopers at once, each at about 80% of the solo rate, when each picks its own
+  trooper. Accounts that stand together otherwise all take the nearest free trooper and split every kill.
+- **Conditions.** The run above, six or nine accounts started together, 3 sets each. "Nearest" is the trainer taking
+  the nearest free trooper. "Spread" is `roamTarget`: with another player within 20 tiles, each account ranks the free
+  troopers by distance plus its own fixed offset of 0-7 tiles, and leaves a trooper that faces another player before
+  its own first hit lands (`anothersFight`). Strength XP per tick an account, sorted, cap 1,500:
+
+  | At once | Rule | Set | XP per tick an account | Field total | Sharks eaten |
+  |---|---|---|---|---|---|
+  | 6 | nearest | 1 | 37.8, 39.3, 40.8, 41.7, 50.4, 53.3 | 263.3 | 1 |
+  | 6 | nearest | 2 | 26.2, 26.4, 29.0, 42.1, 56.7, 59.9 | 240.3 | 1 |
+  | 6 | nearest | 3 | 45.3, 45.5, 46.8, 51.0, 54.0, 58.7 | 301.3 | 2 |
+  | 6 | spread | 1 | 55.2, 55.3, 56.5, 57.1, 58.7, 60.2 | 343.0 | 9 |
+  | 6 | spread | 2 | 53.7, 53.7, 54.6, 57.0, 60.1, 65.2 | 344.3 | 6 |
+  | 6 | spread | 3 | 51.0, 54.1, 55.4, 56.9, 60.8, 62.1 | 340.3 | 5 |
+  | 9 | nearest | 1 | 13.4, 14.8, 15.3, 33.9, 41.8, 45.0, 48.9, 54.7, 59.7 | 327.5 | 3 |
+  | 9 | nearest | 2 | 18.4, 22.7, 26.0, 31.3, 34.0, 35.4, 42.8, 50.1, 54.5 | 315.2 | 1 |
+  | 9 | nearest | 3 | 32.2, 35.3, 36.1, 37.8, 38.7, 39.5, 41.1, 48.8, 52.4 | 361.9 | 0 |
+  | 9 | spread | 1 | 48.6, 49.7, 50.2, 50.7, 50.8, 52.2, 55.1, 55.8, 57.4 | 470.5 | 7 |
+  | 9 | spread | 2 | 41.3, 45.2, 45.3, 46.0, 47.5, 49.0, 51.3, 53.4, 57.1 | 436.1 | 3 |
+  | 9 | spread | 3 | 42.0, 42.8, 43.7, 44.4, 48.8, 49.0, 50.3, 50.8, 54.5 | 426.3 | 7 |
+
+  All 90 runs ended `RESULT ok` on the cap; the lowest HP was 40. Medians: six 45.4 nearest and 56.7 spread, nine 37.8
+  nearest and 49.7 spread. Under "nearest" an account credited up to 97 kills a run, most of them shared; under
+  "spread" 40-50, its own.
+- **Evidence.** `.practice/troopers/run.ts`, six or nine started in one shell loop (`six.out`, `nine.out`,
+  `six-spread.out`, `nine-spread.out`); `scripts/gather-combat-giant.test.ts` (accounts in company spread).
+- **Gap.** Practice only; all melee Strength; more than nine at once and a mix with Ranged trainers are not measured.
 - **Claim.** The trainer banks pack coins with its drops before every walk out, so a death on the field cannot lose
   them. **Conditions.** The same run from 5,000 coins in the pack, cap 400: `RESULT ok`, 8 kills, 2 bank trips; the
   pack held 0 coins and the bank 5,000 afterwards. **Evidence.** `.practice/troopers/coins.ts` and `peek.ts`;

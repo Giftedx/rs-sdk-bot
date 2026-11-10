@@ -240,8 +240,10 @@ export const KNIGHT_SHARE = 4, KNIGHT_SHARED_RATE = 0.75;
 // farm packs: solo median 550 ticks; 3 pairs 6/6 RESULT ok, median about 556; 3 triples 9/9 RESULT ok, median 590 per
 // account (within 10% of solo), so the field's output nearly triples. A fourth account is not measured.
 export const COW_FIELD = 'cow:ardougne-north', COW_FIELD_CAPACITY = 3;
-// Gnome battlefield Khazard troopers: about 41 on multiway ground. Three accounts at once is not measured.
-export const TROOPER_FIELD = 'trooper:battlefield', TROOPER_FIELD_CAPACITY = 3;
+// Gnome battlefield Khazard troopers: about 41 on multiway ground. Practice, nine accounts at once, 3 sets: 27 of 27
+// RESULT ok at a median 49.7 Strength XP per tick an account (56.7 with six, 61-63 alone), the slowest 41.3
+// (research/combat-measure.md, troopers shared). Gap: more than nine at once is not measured.
+export const TROOPER_FIELD = 'trooper:battlefield', TROOPER_FIELD_CAPACITY = 9;
 // The Wind Strike tile north of the Ardougne north bank (scripts/alch-train.ts STRIKE): one Guard dog, fought by one
 // player at a time. Practice: of three accounts at once, one landed no cast in 200 ticks, in each of three sets.
 export const STRIKE_TILE = 'strike:ardougne-guard-dog';
@@ -272,7 +274,8 @@ export const COW_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence'; ban
 // It walks to the Ardougne north bank from anywhere, wields the best owned metal blade, carries GIANT_FOOD one-bite
 // food (shark, swordfish, lobster or trout; no cake) and eats at half HP. Bands 6-8 come after the first cow pass and
 // before the cow passes from 60, for accounts at 60 or more in all three skills; without the food an account stays on
-// the cows. Gap: not run live; field crowding is not measured.
+// the cows. Live, TheFullMonty trained Ranged 1 to 61 and Strength 61 to 78 there. Gap: live rates with several
+// accounts at once are not measured.
 export const TROOPER_FOOD = ['shark', 'swordfish', 'lobster', 'trout'] as const;
 export const TROOPER_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence'; band: number }[] = [
     { skill: 'Strength', band: 6 }, { skill: 'Attack', band: 7 }, { skill: 'Defence', band: 8 },

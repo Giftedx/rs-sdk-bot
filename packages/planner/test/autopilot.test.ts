@@ -424,7 +424,8 @@ test('the Ardougne cow bands train army accounts, fresh ones too, with 14 HP of 
 });
 
 test('army accounts at 60 in all three melee skills train to 99 on the Khazard troopers when they hold 10 fish', () => {
-    const army = new Set(['soldier', 'second', 'third', 'fourth', 'young']);
+    const ready = Array.from({ length: TROOPER_FIELD_CAPACITY + 1 }, (_, i) => `Ready${i + 1}`);
+    const army = new Set(['soldier', 'young', ...ready.map(n => n.toLowerCase())]);
     const kit = { 'bronze sword': 1, 'wooden shield': 1, cake: 2 };
     const soldier = (name: string, items: Record<string, number> = { ...kit, shark: 10 }, skills: Record<string, number> = {}) =>
         acct(name, { Thieving: 99, Attack: 69, Strength: 60, Defence: 61, Hitpoints: 84, ...skills }, items);
@@ -437,9 +438,10 @@ test('army accounts at 60 in all three melee skills train to 99 on the Khazard t
     expect(pick([soldier('Soldier', undefined, { Strength: 99 })])).toEqual({ Soldier: 'army-trooper-attack-99' });
     expect(pick([soldier('Young', undefined, { Attack: 45, Strength: 45, Defence: 45 })])).toEqual({ Young: 'army-cow-strength-60' });
     // The battlefield takes TROOPER_FIELD_CAPACITY; one more ready account trains on the cows.
-    const four = pick(['Soldier', 'Second', 'Third', 'Fourth'].map(n => soldier(n)));
-    expect(Object.values(four).filter(id => id.startsWith('army-trooper-'))).toHaveLength(TROOPER_FIELD_CAPACITY);
-    expect(Object.values(four).filter(id => id === 'army-cow-strength-70')).toHaveLength(1);
+    expect(TROOPER_FIELD_CAPACITY).toBe(9);
+    const full = pick(ready.map(n => soldier(n)));
+    expect(Object.values(full).filter(id => id.startsWith('army-trooper-'))).toHaveLength(TROOPER_FIELD_CAPACITY);
+    expect(Object.values(full).filter(id => id === 'army-cow-strength-70')).toHaveLength(1);
     const job = jobFor(plan(inputs([soldier('Soldier')], { army, capacity: CAPACITY }))[0]!, side);
     expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'], env: { TRAIN_SKILL: 'Strength', TARGET_LEVEL: '99', GIANT_FOOD: '10' }, repeat: true, resources: ['trooper:battlefield'] });
 });
