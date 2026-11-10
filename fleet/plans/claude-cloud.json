@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794351360508,
+ "at": 1794351506499,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -231,25 +231,24 @@
    "account": "PocketPool",
    "script": "scripts/gather-combat.ts",
    "args": [
-    "1500",
-    "trooper"
+    "3000",
+    "cow"
    ],
    "env": {
     "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
+   "goal": "train Defence to 90 on the Ardougne cows",
    "role": "combat",
-   "template": "army-trooper-defence-99",
+   "template": "army-cow-defence-90",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "cow:ardougne-north"
    ]
   },
   {
@@ -279,23 +278,28 @@
   },
   {
    "account": "Fingersmith",
-   "script": "scripts/train-prayer.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_RESERVE": "6",
-    "CAP": "4000"
+    "TRAIN_SKILL": "Attack",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying the held bones",
+   "goal": "train Attack to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-bury-prayer-99",
+   "template": "army-trooper-attack-99",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "Dipstick",
@@ -326,24 +330,25 @@
    "account": "KnightRider",
    "script": "scripts/gather-combat.ts",
    "args": [
-    "3000",
-    "cow"
+    "1500",
+    "trooper"
    ],
    "env": {
     "TRAIN_SKILL": "Defence",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 99 on the Ardougne cows",
+   "goal": "train Defence to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-cow-defence-99",
+   "template": "army-trooper-defence-99",
    "autopilot": "claude-cloud",
    "resources": [
-    "cow:ardougne-north"
+    "trooper:battlefield"
    ]
   }
  ]
