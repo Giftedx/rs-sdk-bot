@@ -755,3 +755,39 @@ test('an account row carries its combat level and its complete quests', () => {
     expect(bare.combat).toBeUndefined();
     expect(bare.quests).toBeUndefined();
 });
+
+import { PRAYER_FIELD_BAND } from '../src/autopilot';
+test('a melee-maxed army account buries trooper bones for Prayer when no band and no kit serves it', () => {
+    const army = new Set(['maxed']);
+    const melee = { Thieving: 99, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Magic: 99, Prayer: 89 };
+    const field = catalogue().find(t => t.id === 'army-trooper-prayer-99')!;
+    expect(field).toMatchObject({ band: PRAYER_FIELD_BAND, filler: true, resources: ['trooper:battlefield'] });
+    const pick = (skills: Record<string, number>, items: Record<string, number>, extra: Partial<Inputs> = {}) =>
+        plan(inputs([acct('Maxed', { ...melee, ...skills }, items)], { army, capacity: CAPACITY, ...extra }))[0]!;
+    // Short of the 100 bones the bones-held band needs, it kills troopers for theirs; no coin job takes it.
+    const x = pick({}, { shark: 30, bone: 63 });
+    expect(x.template!.id).toBe('army-trooper-prayer-99');
+    expect(jobFor(x, side)).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'],
+        env: { TRAIN_SKILL: 'Hitpoints', GIANT_KILLS: '500', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1' }, repeat: true, resources: ['trooper:battlefield'] });
+    // With the bones held, that band comes first; at Prayer 99 neither is a candidate; without food it has no place.
+    expect(pick({}, { shark: 30, bone: 100 }).template!.id).toBe('army-bury-prayer-99');
+    expect(pick({ Prayer: 99 }, { shark: 30, bone: 63 }).template?.id ?? 'vacant').not.toMatch(/^army-/);
+    expect(pick({}, { bone: 63 }).template?.id).not.toBe('army-trooper-prayer-99');
+    // An account with melee left takes its trooper band, never the filler.
+    expect(pick({ Defence: 82 }, { shark: 30 }).template!.id).toBe('army-trooper-defence-99');
+});
+
+test('the Prayer filler waits behind a kit buy and gives way to one while it runs', () => {
+    const army = new Set(['archer']);
+    const skills = { Thieving: 99, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 87, Magic: 99, Prayer: 74 };
+    const archer = acct('Archer', skills, { coin: 4_000_000, shark: 40, shortbow: 1 });
+    // Its Ranged band lacks only arrows the market sells: the buy comes before the filler.
+    expect(plan(inputs([archer], { army, market, capacity: CAPACITY }))[0]!.template!.id).toBe(KIT_BUY + 'army-trooper-ranged-99');
+    // The same while the filler is its running job: a kit buy replaces a filler, as it replaces a coin job.
+    const busy = { army, market, capacity: CAPACITY, unfundable: new Set(['archer']) };
+    expect(plan(inputs([archer], { ...busy, current: new Map([['archer', 'army-trooper-prayer-99']]) }))[0]!.template!.id).toBe(KIT_BUY + 'army-trooper-ranged-99');
+    // A band proper still keeps its place over a kit buy.
+    expect(plan(inputs([archer], { ...busy, current: new Map([['archer', 'army-trooper-defence-99']]) }))[0]!.template!.id).not.toBe(KIT_BUY + 'army-trooper-ranged-99');
+    // With no market for the arrows it fills the time on the field.
+    expect(plan(inputs([archer], { army, capacity: CAPACITY }))[0]!.template!.id).toBe('army-trooper-prayer-99');
+});
