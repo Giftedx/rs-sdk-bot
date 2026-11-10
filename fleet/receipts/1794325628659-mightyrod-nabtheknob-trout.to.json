@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794325628659-mightyrod-nabtheknob-trout",
+ "account": "NabTheKnob",
+ "partner": "Mightyrod",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Trout",
+ "requested": 2,
+ "claim": "301ba902-4f84-4c8a-aeb0-6075843f2181",
+ "count": 0,
+ "ok": false,
+ "at": 1794325637007,
+ "detail": "trade claimed"
+}
