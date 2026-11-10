@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794318607540-quickhandjob-dipstick",
  "account": "Dipstick",
  "partner": "Quickhandjob",
@@ -12,6 +12,11 @@
  "claim": "257a3466-8810-454a-a1df-fa2866f0f7cd",
  "count": 0,
  "ok": false,
- "at": 1794318616372,
- "detail": "trade claimed"
+ "at": 1794318667575,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1794318616376-0000032355-0000000001",
+  "at": 1794318667568,
+  "sha256": "caa4868be682b550781232fd83107e9a2ab9291282a2d92f1bdc242ebb0ae910"
+ }
 }
