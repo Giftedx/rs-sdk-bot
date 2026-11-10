@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794317001675,
+ "at": 1794317009676,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -187,24 +187,6 @@
    "resources": []
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=884 QUANTITY=1000 LIMIT_PRICE=40 CASH_RESERVE=1000 ORDER_KEY=wandwaver-kit2-884-0to1000 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1000 Iron arrow on the Grand Exchange to train Ranged to 99 on the Khazard troopers",
-   "role": "supply",
-   "template": "kit-buy:army-trooper-ranged-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "mmtha0205",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -266,6 +248,25 @@
    "autopilot": "local",
    "resources": [
     "pen:3197,3353"
+   ]
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "local",
+   "resources": [
+    "knight:2669,3298"
    ]
   },
   {
@@ -497,16 +498,21 @@
    "role": "supply"
   },
   {
-   "account": "Magicwanda",
-   "script": "scripts/session-check.ts",
-   "args": [],
+   "accounts": [
+    "Magicwanda",
+    "Mightyrod"
+   ],
+   "script": "scripts/coin-courier.ts",
+   "args": [
+    "240000"
+   ],
    "env": {
     "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-924bd164-2061-4843-b9c8-cc1a7e2306a6"
+    "COORDINATOR_RUN_ID": "task-d7f4b22d-35a5-4cc9-82d3-5acde5286ed6"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "run-session-recovery-magicwanda-courier [task-924bd164-2061-4843-b9c8-cc1a7e2306a6]",
+   "goal": "run-coin-magicwanda-mightyrod-240k-r2 [task-d7f4b22d-35a5-4cc9-82d3-5acde5286ed6]",
    "role": "supply"
   }
  ]
