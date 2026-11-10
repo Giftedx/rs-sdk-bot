@@ -105,6 +105,9 @@ export async function runAlch(s:Session,o:{target:number;cap:number;item:string;
             if(s.sdk.getState()?.dialog?.isOpen)throw new Error('alch: level-up dialog stayed open');
         }
     }catch(e){failure=e instanceof Error?e.message:String(e);stop='failure';}
+    // No cast at all: the supervisor reads "no ... progress" as blocked and stops, where a plain fail is retried at once
+    // (live: UnderMyKilt ran 42 four-tick fails with no fire runes until the planner moved it).
+    if(!failure&&stop==='supplies'&&casts['low-alch']+casts['high-alch']===0)failure='no alch progress: the bank holds no supplies for one cast';
     const gained=startLevel===undefined?0:level()-startLevel,met=level()>=o.target;
     return{ok:met||(!failure&&stop==='supplies'&&gained>0),stop:met?'target':stop,failure,level:level(),gained,magicXp:startXp===undefined?0:xp()-startXp,casts,ticks:s.tick()-start};
 }
