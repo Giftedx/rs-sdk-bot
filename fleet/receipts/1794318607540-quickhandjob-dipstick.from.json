@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794318607540-quickhandjob-dipstick",
+ "account": "Quickhandjob",
+ "partner": "Dipstick",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 20,
+ "claim": "eefc2865-2ef2-43a5-aa1c-d5d43f013a1c",
+ "count": 0,
+ "ok": false,
+ "at": 1794319656596,
+ "detail": "trade claimed"
+}

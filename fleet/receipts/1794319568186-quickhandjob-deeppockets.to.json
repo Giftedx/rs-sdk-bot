@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794319568186-quickhandjob-deeppockets",
+ "account": "Deeppockets",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 20,
+ "claim": "f3d4fe34-4ed3-41eb-ad54-bcdea3211d9a",
+ "count": 0,
+ "ok": false,
+ "at": 1794319652262,
+ "detail": "trade claimed"
+}
