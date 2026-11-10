@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794334903186,
+ "at": 1794335507415,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -10,7 +10,7 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
+    "TRAIN_SKILL": "Attack",
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
@@ -19,9 +19,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
+   "goal": "train Attack to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-strength-99",
+   "template": "army-trooper-attack-99",
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
@@ -60,7 +60,7 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Attack",
+    "TRAIN_SKILL": "Defence",
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
@@ -69,9 +69,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Attack to 99 on the Khazard troopers",
+   "goal": "train Defence to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-attack-99",
+   "template": "army-trooper-defence-99",
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
