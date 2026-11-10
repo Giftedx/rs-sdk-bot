@@ -1,32 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794354236524,
+ "at": 1794354840500,
  "jobs": [
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
   {
    "account": "Quickhandjob",
    "script": "scripts/gather-combat.ts",
@@ -47,6 +22,31 @@
    "goal": "train Defence to 99 on the Khazard troopers",
    "role": "combat",
    "template": "army-trooper-defence-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
@@ -153,6 +153,31 @@
    ]
   },
   {
+   "account": "Fingerblastr",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
    "account": "Kiltlifter",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -218,9 +243,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 90 on the Ardougne cows",
+   "goal": "train Defence to 99 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-defence-90",
+   "template": "army-cow-defence-99",
    "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
@@ -309,38 +334,13 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-defence-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
     "TRAIN_SKILL": "Hitpoints",
     "GIANT_KILLS": "500",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1"
    },
-   "enabled": false,
+   "enabled": true,
    "standing": true,
    "repeat": true,
    "goal": "train Prayer to 99 burying trooper bones on the field",
