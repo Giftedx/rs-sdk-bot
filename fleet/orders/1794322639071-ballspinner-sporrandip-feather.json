@@ -1,0 +1,22 @@
+{
+ "id": "1794322639071-ballspinner-sporrandip-feather",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Ballspinner",
+ "to": "SporranDip",
+ "item": "Feather",
+ "count": 50,
+ "start": 1794322639071,
+ "end": 1794325039071,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
