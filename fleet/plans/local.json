@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794316130818,
+ "at": 1794316204887,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -511,7 +511,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-415eda60-00e8-4f73-b1ef-1e28527e4a3f"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-coin-mineyourbiz-mightyrod-340k-r2 [task-415eda60-00e8-4f73-b1ef-1e28527e4a3f]",
    "role": "supply"
