@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794319087841-quickhandjob-knightrider",
  "account": "KnightRider",
  "partner": "Quickhandjob",
@@ -12,6 +12,11 @@
  "claim": "8043ada3-1042-4921-81c4-9ca52dd8ace0",
  "count": 0,
  "ok": false,
- "at": 1794319091301,
- "detail": "trade claimed"
+ "at": 1794319141595,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1794319091303-0000005611-0000000001",
+  "at": 1794319141590,
+  "sha256": "934fdccdc320c5f1189fa645f6f5cb0866acd0ccee021d9df2e6a96f55316fd2"
+ }
 }

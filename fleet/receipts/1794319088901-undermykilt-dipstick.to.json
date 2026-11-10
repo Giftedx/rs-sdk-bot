@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794319088901-undermykilt-dipstick",
  "account": "Dipstick",
  "partner": "UnderMyKilt",
@@ -12,6 +12,11 @@
  "claim": "0b9dfd05-13fb-4e70-a869-95756558f7b1",
  "count": 0,
  "ok": false,
- "at": 1794319093830,
- "detail": "trade claimed"
+ "at": 1794319143964,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1794319093832-0000007872-0000000001",
+  "at": 1794319143959,
+  "sha256": "9b4552b164201d4720030d649da121443e0813750fd7f60e8e9ba6aed03549dc"
+ }
 }
