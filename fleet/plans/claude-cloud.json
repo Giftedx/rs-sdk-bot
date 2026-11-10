@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794317941059,
+ "at": 1794318251500,
  "jobs": [
   {
    "account": "Deeppockets",
@@ -138,26 +138,22 @@
   },
   {
    "account": "PocketPool",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "PEN": "3187,3277",
+    "TICKS": "3000",
+    "TARGET": "2000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 70 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-70",
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
    "autopilot": "claude-cloud",
    "resources": [
-    "cow:ardougne-north"
+    "pen:3187,3277"
    ]
   },
   {
@@ -168,7 +164,7 @@
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Attack",
+    "TRAIN_SKILL": "Defence",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1"
@@ -176,9 +172,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Attack to 60 on the Ardougne cows",
+   "goal": "train Defence to 60 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-attack-60",
+   "template": "army-cow-defence-60",
    "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
