@@ -86,7 +86,7 @@ Use this for every new or changed part.
 | `context-menu` | `menuentryswapper`, `examine` | adapt | Item options (Use, Wield/Wear/Eat/Drink, Drop, Examine) and map-dot options (Follow, Account, XP Tracker, Pause, Examine). They act on the dashboard, not the game. Item Examine gives the game's examine text (the pinned server's obj configs) and the price line of RuneLite's examine plugin, at the vault's item value. | Reject the high alchemy value: no alchemy data is checked for this world. |
 | `opponent` | `opponentinfo` | adapt | In the 3D view, the followed player's target once it has taken a hit: the name and combat level (`client-assets/npc-names.json`, from the pinned server's npc configs) or the player's name, and exact hitpoints from the world feed's hitmarks (RuneLite only has a health ratio). It stays 5 seconds after combat ends. The main account shows as ⟦MAIN⟧. | Reject the 2D map: it has no detail feed, so no hitmarks. |
 | `name-tags` | `playerindicators`, `tileindicators` | adapt | Name tags for fleet bots and a tile under the followed account on the 2D map. Other players on the ground floor are small grey dots; right-click one to look it up. | none |
-| `3d` | none (the rs-world viewer) | own | The pinned rs-world viewer with the live world feed; the main account renamed "Hidden". | none |
+| `3d` | none (the rs-world viewer) | own | The rs-world viewer (branch `fleet-v2` build) with the live world feed; the main account renamed "Hidden". | none |
 | `screens` | `loginscreen` | adapt | The game's loading and connection-lost screens, driven by the state stream. | none |
 
 ## Not used

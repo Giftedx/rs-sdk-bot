@@ -24,7 +24,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   phoneWidth.addEventListener('change',e=>hud.classList.toggle('chat-hidden',e.matches));
   hud.innerHTML=`<button class="game-xp" title="XP Tracker" aria-label="XP Tracker">XP</button><div class="game-orbs" aria-label="Player status"></div><div class="xp-drops" aria-hidden="true"></div><div class="xp-globes" aria-label="XP globes"></div><div class="game-overlay" aria-label="Overlay"></div><div class="game-infoboxes" aria-label="Infoboxes"></div><div class="game-tip" hidden></div><div class="game-screen" id="game-loading"><div class="game-screen-box"><h2>Welcome to RuneScape</h2><p>Loading - please wait.</p></div></div><div class="game-screen" id="game-lost" hidden><div class="game-screen-box"><p>Connection lost.</p><p>Please wait - attempting to reestablish.</p></div></div><div class="game-minimap" aria-label="Minimap"><canvas width="146" height="146"></canvas><canvas class="minimap-frame" aria-hidden="true"></canvas><img class="minimap-compass" src="${asset('compass.png')}" alt="" title="Compass"><button class="game-worldmap" data-places title="Places: move the camera" aria-label="Places"><img src="${asset('worldmap-icon.png')}" alt=""></button></div><button class="game-logout" title="Logout menu">⏻</button><section class="game-tabs" aria-label="Game interface"><nav class="tab-row" aria-label="Primary game tabs"></nav><div class="game-panel" id="game-panel"></div><nav class="tab-row" aria-label="Social and settings tabs"></nav></section><button class="chat-toggle" aria-label="Toggle chat">▾ Chat</button><section class="game-chat" aria-label="In-game chat"><div class="game-chat-lines" role="log" aria-live="polite"></div><form class="chat-input"><span id="chat-name">Spectator:</span><input aria-label="Chat message or local command" autocomplete="off" placeholder="*"></form><nav class="chat-channels" aria-label="Chat channels"></nav></section>`;
   app.append(hud);
-  const title=document.createElement('div');title.className='client-title';title.innerHTML=`<img src="${asset('runelite.png')}" alt=""><span>RuneLite — Swarm</span><span class="connection">● Live world</span><div class="focus" id="client-focus" role="group" aria-label="3D camera focus" data-state="free"><button class="focus-step" data-focus-step="-1" aria-label="Previous account in the world" title="Previous account in the world · [">‹</button><button class="focus-now" aria-haspopup="listbox" aria-expanded="false"><i class="focus-dot"></i><span class="focus-name">Free camera</span><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg></button><button class="focus-step" data-focus-step="1" aria-label="Next account in the world" title="Next account in the world · ]">›</button><div class="focus-menu"><input class="focus-find" aria-label="Find an account" placeholder="Find an account…" autocomplete="off" spellcheck="false"><div class="focus-list" role="listbox" aria-label="Accounts"></div></div></div><button id="client-sidebar" title="Toggle plugin sidebar" aria-label="Toggle plugin sidebar">❯</button>`;app.append(title);
+  const title=document.createElement('div');title.className='client-title';title.innerHTML=`<img src="${asset('runelite.png')}" alt=""><span>RuneLite — Swarm</span><span class="connection">● Live world</span><div class="focus" id="client-focus" role="group" aria-label="3D camera focus" data-state="free"><button class="focus-step" data-focus-step="-1" aria-label="Previous account in the world" title="Previous account in the world · [">‹</button><button class="focus-now" aria-haspopup="listbox" aria-expanded="false"><i class="focus-dot"></i><span class="focus-name">Free camera</span><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg></button><button class="focus-step" data-focus-step="1" aria-label="Next account in the world" title="Next account in the world · ]">›</button><button class="focus-wall" aria-pressed="false" hidden title="Fleet wall: up to 16 of our accounts in the world, each in its own 3D view. Click a view to follow that account. · \\">Wall</button><div class="focus-menu"><input class="focus-find" aria-label="Find an account" placeholder="Find an account…" autocomplete="off" spellcheck="false"><div class="focus-list" role="listbox" aria-label="Accounts"></div></div></div><button id="client-sidebar" title="Toggle plugin sidebar" aria-label="Toggle plugin sidebar">❯</button>`;app.append(title);
   const followTitle=()=>{const name=document.getElementById('client-plugin-name')?.textContent;document.title='RuneLite — Swarm'+(name?' · '+name:'');writeLink();};
   const plugin=document.createElement('aside');plugin.className='client-plugin';plugin.setAttribute('aria-label','RuneLite plugins');plugin.innerHTML='<div class="client-plugin-title"><span id="client-plugin-name">Fleet</span><select id="client-more" aria-label="More plugins"><option value="">⋮</option><option value="raw">Raw evidence</option></select><button id="client-share" aria-label="Copy a link to this view" title="Copy a link to this view">⧉</button><button aria-label="Close plugin">×</button></div><div class="client-plugin-body"></div>';app.append(plugin);
   const body=plugin.querySelector('.client-plugin-body'),rail=document.createElement('nav');rail.className='client-rail';rail.setAttribute('aria-label','RuneLite plugin toolbar');
@@ -189,7 +189,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function infoPanel(){
     return '<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>RuneLite — Swarm</span></div><p class="xp-muted">A team of bot accounts on the rs-sdk demo world (the Lost City 2004 engine), shown in a RuneLite-style client. The 3D view and the map show every player online; gold names are our accounts.</p></div>'+
       '<div class="xp-box"><div class="xp-head"><span>Data</span></div><div class="info-data">'+infoData()+'</div></div>'+
-      (window.atlasOperator()?'':'<div class="xp-box"><div class="xp-head"><span>Controls</span></div>'+infoRow('[ and ]','watch the previous or next account')+infoRow('Title bar','choose an account, or start the tour')+infoRow('Drag','turn the camera')+infoRow('Wheel','zoom in or out')+infoRow('W A S D','leave the account and fly free')+'</div>')+
+      (window.atlasOperator()?'':'<div class="xp-box"><div class="xp-head"><span>Controls</span></div>'+infoRow('[ and ]','watch the previous or next account')+infoRow('Wall','watch all our accounts in the world at once')+infoRow('Title bar','choose an account, or start the tour')+infoRow('Drag','turn the camera')+infoRow('Wheel','zoom in or out')+infoRow('W A S D','leave the account and fly free')+'</div>')+
       '<div class="xp-box"><div class="xp-head"><span>Marks</span></div>'+
       infoRow('Gold name','one of our accounts')+infoRow('Green dot','our account on the map (bright: playing)')+infoRow('Grey dot','another player')+(window.atlasOperator()?infoRow('⟦MAIN⟧ / Hidden','an account this page does not show'):'')+infoRow('~ before a rank','the last rank we read; it can be old')+'</div>'+
       '<div class="xp-box"><div class="xp-head"><span>Sources</span></div><p class="xp-muted">Client look: RuneLite (BSD 2-Clause), 3D view: rs-world, game data: the Lost City server content (MIT). Licences and image credits: <a href="'+asset('ATTRIBUTION.txt')+'" target="_blank" rel="noopener">ATTRIBUTION.txt</a>. RuneScape art belongs to Jagex.</p></div></div>';
@@ -519,12 +519,13 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     showPlugin(id);
     return true;
   }
-  let linkRead=false;
+  let linkRead=false,wall=null,wallLinked=false;
   function followLinkedAccount(){
     if(linkRead)return;linkRead=true;
     const q=new URLSearchParams(location.hash.slice(1)),name=q.get('a');
     const linked=S.bots.find(b=>b.name===name);
     if(linked)pick(linked.name);
+    wallLinked=q.get('wall')==='1';
     const watch=q.get('watch');
     if(watch&&window.atlasFollow3d(watch,true))return;
     if(q.get('cam')==='free')focusFree(linked?.name);
@@ -536,33 +537,35 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       if(sel)q.set('a',sel);
       if(window.atlasFollowOther)q.set('watch',window.atlasFollowOther);
       else if(window.atlasFreeCamera)q.set('cam','free');
+      if(wall||wallLinked)q.set('wall','1');
     }else{
       const pending=new URLSearchParams(location.hash.slice(1));
-      for(const key of ['a','watch','cam'])if(pending.has(key))q.set(key,pending.get(key));
+      for(const key of ['a','watch','cam','wall'])if(pending.has(key))q.set(key,pending.get(key));
     }
     const hash='#'+q;if(location.hash!==hash)history.replaceState(null,'',location.pathname+location.search+hash);
   }
   let questAccount=null;
-  function refresh(){if(!S)return;followLinkedAccount();writeLink();
+  function refresh(){if(!S)return;followLinkedAccount();wallSync();writeLink();
     const b=account(),name=b?.name??null;
     if(name!==questAccount){questAccount=name;questDetail=null;}
     if(body.firstElementChild?.hasAttribute('data-snapshot-loading'))renderSnapshotPlugin(selectedPlugin);syncNotifyControls();$('#client-more').hidden=!window.atlasOperator();hud.querySelector('.game-bank')?.refreshObservation?.();camUpdate();screens();minimap();xpDrops(b);overlay();chatFeed();idleNotifier(b);levelUps();deaths();if(selectedPlugin==='xp')refreshXp();if(selectedPlugin==='boards'&&body.dataset.plugin==='boards'){const head=body.querySelector('.progress-head');if(head)head.innerHTML=boardSummary()+progressPanel();const rw=body.querySelector('.rivals-wrap');if(rw&&!rw.contains(document.activeElement))rw.innerHTML=rivalsPanel();refreshHiscoreAccount();}const data=body.querySelector('.info-data');if(data)put(data,infoData());if(selectedPlugin==='ge')refreshGe();if(selectedPlugin==='world'&&body.dataset.plugin==='world'&&!(body.contains(document.activeElement)&&document.activeElement.matches('input,select,textarea'))){const top=body.scrollTop;body.innerHTML=worldPanel();body.scrollTop=top;}else if(selectedPlugin==='world')refreshWorldLookup();infoboxes();title.querySelector('.connection').textContent=$('#connection').textContent;focusPaint();warmPlaces();welcomeCard();$('#chat-name').textContent=(b?safeName(b.name):'Spectator')+':';
     const orbBox=hud.querySelector('.game-orbs');orbBox.innerHTML=[['hp','Hitpoints',b?.hp?.now,b?.hp?.max],['prayer','Prayer',level('Prayer')?.currentLevel,level('Prayer')?.level]].map(([id,label,value,max])=>`<div class="game-orb orb-${id}" title="${label}: ${value??'not reported'}${max?' / '+max:''}"><span class="orb-num" style="color:${orbColour(value,max)}">${value??'—'}</span><canvas class="orb-art" data-orb="${id}" data-frac="${value!=null&&max?Math.max(0,Math.min(1,value/max)):0}"></canvas></div>`).join('');orbBox.querySelectorAll('canvas').forEach(drawOrb);if(!(selectedTab==='settings'&&$('#game-panel').contains(document.activeElement)))gamePanel();}
   const previousRender=render;render=function(){previousRender();refresh();};
   const previousDrawMap=drawMap;drawMap=function(){previousDrawMap();minimap();};
-  const previousPick=pick;pick=function(name){if(!touring)tourSet(false);const from=focusTarget(),b=S?.bots?.find(b=>b.name===name);previousPick(name);cam.user=false;if(mode==='2d'&&window.atlasFreeCamera&&b?.pos)window.atlasCamera.goto(b.pos.x,b.pos.z);focusMoved(from,name);refresh();};
+  const previousPick=pick;pick=function(name){wallEnd(false);if(!touring)tourSet(false);const from=focusTarget(),b=S?.bots?.find(b=>b.name===name);previousPick(name);cam.user=false;if(mode==='2d'&&window.atlasFreeCamera&&b?.pos)window.atlasCamera.goto(b.pos.x,b.pos.z);focusMoved(from,name);refresh();};
   rail.onclick=e=>{const b=e.target.closest('[data-client-plugin]');if(b){showPlugin(b.dataset.clientPlugin);writeLink();}};
   $('#client-share').onclick=async()=>{writeLink();try{await navigator.clipboard.writeText(location.href);toast('Link copied.');}catch{toast('Copy this link from the address bar.');}};
   const togglePlugin=()=>{app.classList.toggle('client-collapsed');app.classList.toggle('mobile-plugin',!app.classList.contains('client-collapsed'));};$('#client-sidebar').onclick=togglePlugin;plugin.querySelector('[aria-label="Close plugin"]').onclick=togglePlugin;
   $('#client-more').onchange=e=>{if(e.target.value)showPlugin(e.target.value);e.target.value='';};
   // The focus switcher: the one control for what the 3D camera watches. Every account click on the page ends in pick().
-  const focus=title.querySelector('#client-focus'),focusNow=focus.querySelector('.focus-now'),focusName=focus.querySelector('.focus-name'),focusFind=focus.querySelector('.focus-find'),focusList=focus.querySelector('.focus-list');
+  const focus=title.querySelector('#client-focus'),focusNow=focus.querySelector('.focus-now'),focusName=focus.querySelector('.focus-name'),focusFind=focus.querySelector('.focus-find'),focusList=focus.querySelector('.focus-list'),wallButton=focus.querySelector('.focus-wall');
   const focusNote=document.createElement('div');focusNote.className='focus-note';focusNote.setAttribute('role','status');hud.append(focusNote);
   let focusShown='',focusRowsHtml='',focusNoteTimer=0,flightTo=null;
   const focusLive=()=>(S?.bots||[]).filter(b=>b.inWorld&&!b.practice).sort((a,b)=>a.name.localeCompare(b.name));
   const focusTarget=()=>window.atlasFollowOther||(window.atlasFreeCamera?null:sel)||null;
   function focusState(){
     const other=window.atlasFollowOther,b=S.bots.find(x=>x.name===sel);
+    if(wall)return ['Wall · '+wall.shown+(phoneWidth.matches?'/'+wall.names.length:' of '+wall.names.length+' shown'),'wall','The fleet wall shows '+wall.names.length+' of our '+focusLive().length+' accounts in the world. Click a view to follow that account.'];
     if(other)return [other,'on','The 3D camera follows this player, who is not one of our accounts.'];
     if(sel&&!window.atlasFreeCamera&&b?.inWorld)return [safeName(sel),'on','The 3D camera follows this account.'];
     if(b?.inWorld)return [safeName(sel),'idle','The camera is released. Choose this account again to follow it.'];
@@ -583,7 +586,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function focusPaint(){
     const [text,state,tip]=focusState(),key=text+'|'+state,live=focusLive();
     if(key!==focusShown){const swap=focusShown&&!focusShown.startsWith(text+'|');focusShown=key;focusName.textContent=text;focus.dataset.state=state;focusNow.title=tip+' Click to choose.';if(swap){focusName.classList.remove('swap');void focusName.offsetWidth;focusName.classList.add('swap');}}
-    const stuck=!live.length||live.length===1&&live[0].name===focusTarget();focus.querySelectorAll('.focus-step').forEach(b=>{b.disabled=stuck;});
+    const stuck=!!wall||!live.length||live.length===1&&live[0].name===focusTarget();focus.querySelectorAll('.focus-step').forEach(b=>{b.disabled=stuck;});
+    wallButton.hidden=mode!=='3d';wallButton.disabled=VIEWER.state!=='ready';wallButton.setAttribute('aria-pressed',String(!!wall));hud.classList.toggle('wall-on',!!wall);
     if(focus.classList.contains('open'))focusRows();
   }
   function focusOpen(open){focus.classList.toggle('open',open);focusNow.setAttribute('aria-expanded',String(open));if(open){focusFind.value='';focusRows();focusList.querySelector('.on')?.scrollIntoView({block:'nearest'});focusFind.focus({preventScroll:true});}else focusList.querySelector('.hot')?.classList.remove('hot');}
@@ -603,7 +607,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   let warmSent='';
   const TOUR_MS=45000;
   function warmPlaces(first){
-    if(mode!=='3d'||VIEWER.state!=='ready')return;
+    if(wall||mode!=='3d'||VIEWER.state!=='ready')return;
     const live=focusLive(),now=focusTarget()||sel,i=live.findIndex(b=>b.name===now),order=[];
     if(first)order.push(live.find(b=>b.name===first));
     for(let d=1;d<=live.length;d++)order.push(live[(i+d)%live.length],live[(i-d+live.length*2)%live.length]);
@@ -615,9 +619,75 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // The tour moves the camera to the next account in the world every 45 s. Any choice of account or camera ends it.
   function tourStep(){if(globalThis.atlasFollowOther){tourSet(false);return;}if(document.hidden||mode!=='3d'||VIEWER.state!=='ready')return;touring=true;focusStep(1);touring=false;}
   function tourSet(on){clearInterval(tourTimer);tourTimer=on?setInterval(tourStep,TOUR_MS):null;focusRowsHtml='';if(on)tourStep();}
-  function focusStep(step){const live=focusLive();if(!live.length)return;const i=live.findIndex(b=>b.name===(focusTarget()||sel));pick(live[i<0?(step>0?0:live.length-1):(i+step+live.length)%live.length].name);}
-  function focusChoose(name){focusOpen(false);focusNow.focus({preventScroll:true});if(name)pick(name);else{tourSet(false);const from=focusTarget();focusFree();if(from)focusSay('Free camera',1400);}}
-  focus.addEventListener('click',e=>{if(e.target.closest('[data-tour]')){focusOpen(false);tourSet(!tourTimer);return;}const s=e.target.closest('[data-focus-step]');if(s){focusOpen(false);focusStep(Number(s.dataset.focusStep));return;}if(e.target.closest('.focus-now')){focusOpen(!focus.classList.contains('open'));return;}const r=e.target.closest('[data-focus]');if(r&&!r.disabled)focusChoose(r.dataset.focus);});
+  function focusStep(step){if(window.atlasWallOn?.())return;const live=focusLive();if(!live.length)return;const i=live.findIndex(b=>b.name===(focusTarget()||sel));pick(live[i<0?(step>0?0:live.length-1):(i+step+live.length)%live.length].name);}
+  function focusChoose(name){focusOpen(false);focusNow.focus({preventScroll:true});if(name)pick(name);else{wallEnd(false);tourSet(false);const from=focusTarget();focusFree();if(from)focusSay('Free camera',1400);}}
+  focus.addEventListener('click',e=>{if(e.target.closest('.focus-wall')){wallToggle();return;}if(e.target.closest('[data-tour]')){focusOpen(false);wallEnd(false);tourSet(!tourTimer);return;}const s=e.target.closest('[data-focus-step]');if(s){focusOpen(false);focusStep(Number(s.dataset.focusStep));return;}if(e.target.closest('.focus-now')){focusOpen(!focus.classList.contains('open'));return;}const r=e.target.closest('[data-focus]');if(r&&!r.disabled)focusChoose(r.dataset.focus);});
+  // Fleet wall: up to 16 of our accounts in the world, each in its own view of the one 3D viewer. A view needs the live
+  // feed, so the page asks only for accounts in the world. It sends each name as it holds it: the hidden account is its mark.
+  const WALL_MAX=16,WALL_NAME=/^[A-Za-z0-9_-](?:[A-Za-z0-9_ -]{0,10}[A-Za-z0-9_-])?$/;
+  window.atlasWallOn=()=>!!wall;
+  const wallPost=message=>$('#rsw')?.contentWindow?.postMessage(message,VIEWER.origin);
+  // Playing accounts first, then the others in the world; each group in the order of the [ and ] steps.
+  function wallNames(){
+    const seen=new Set(),live=focusLive().filter(b=>(b.name===MARK||WALL_NAME.test(b.name))&&!seen.has(b.name.toLowerCase())&&seen.add(b.name.toLowerCase())),playing=b=>st(b)[1]==='playing';
+    return [...live.filter(playing),...live.filter(b=>!playing(b))].slice(0,WALL_MAX).map(b=>b.name);
+  }
+  const wallKey=names=>names.map(n=>n.toLowerCase()).sort().join(',');
+  function wallStart(){
+    if(wall||mode!=='3d'||VIEWER.state!=='ready')return false;
+    const names=wallNames();
+    if(!names.length){focusSay('None of our accounts is in the world. The wall has nothing to show.',3200);return false;}
+    focusOpen(false);
+    // The wall keeps the page's follow state and the tour, and gives them back when it closes.
+    wall={names,sent:wallKey(names),shown:0,tour:!!tourTimer,state:{sel,free:window.atlasFreeCamera,other:window.atlasFollowOther}};
+    clearInterval(tourTimer);tourTimer=null;focusRowsHtml='';flightTo=null;focus.classList.remove('flying');focusNote.classList.remove('flying');
+    window.atlasOpponentClear?.();
+    wallPost({multi:names});
+    focusSay('Fleet wall · click a view to follow that account',2600);
+    return true;
+  }
+  // The viewer returns to its single view before any follow message: a follow sent to the wall moves its first view.
+  // With restore, the page follows what it followed when the wall opened. Without, the caller chooses the next follow.
+  function wallEnd(restore=true){
+    if(!wall)return false;
+    const w=wall,ready=mode==='3d'&&VIEWER.state==='ready';wall=null;
+    if(ready)wallPost({multi:[]});
+    sentMaxLevel=null;warmSent='';rswFor=null;
+    if(!restore)return true;
+    sel=w.state.sel;window.atlasFreeCamera=w.state.free;window.atlasFollowOther=w.state.other;
+    const to=focusTarget();
+    if(ready&&to){wallPost({follow:to});if(!w.state.other)rswFor=sel;}
+    else if(ready)wallPost({atlasFreeCamera:true});
+    if(w.tour){clearInterval(tourTimer);tourTimer=setInterval(tourStep,TOUR_MS);focusRowsHtml='';}
+    return true;
+  }
+  function wallToggle(){if(wall?wallEnd():wallStart())render();}
+  // Each page update: open a wall that a link asked for, close a wall that lost the 3D view, and ask again when an
+  // account enters or leaves the world. The same accounts are not asked for twice.
+  function wallSync(){
+    if(wallLinked&&mode==='3d'&&VIEWER.state==='ready'&&(window.atlasLiveRoster?.()||wallNames().length)){wallLinked=false;wallStart();}
+    if(!wall)return;
+    if(mode!=='3d'||VIEWER.state!=='ready'){wallEnd();return;}
+    const names=wallNames();
+    if(!names.length){wallEnd();focusSay('None of our accounts is in the world now. The wall is closed.',3200);return;}
+    const key=wallKey(names);if(key===wall.sent)return;
+    wall.names=names;wall.sent=key;wall.shown=Math.min(wall.shown,names.length);wallPost({multi:names});
+  }
+  // The viewer's replies. The status gives the count of views with their player on screen. A click gives a view number:
+  // the page follows the name it asked for in that view, through pick().
+  function wallMessage(data){
+    if(!wall)return;
+    const list=v=>Array.isArray(v)&&v.length<=WALL_MAX&&v.every(n=>typeof n==='string'&&n.length<=12),m=data.viewerMulti;
+    if(m&&typeof m==='object'&&list(m.names)&&list(m.shown)&&m.names.length===wall.names.length&&m.shown.length<=m.names.length&&m.shown.length!==wall.shown){wall.shown=m.shown.length;focusPaint();}
+    const picked=data.viewerMultiPick,name=Number.isInteger(data.index)?wall.names[data.index]:null;
+    if(typeof picked!=='string'||!name||picked!==MARK&&picked.toLowerCase()!==name.toLowerCase())return;
+    pick(name);
+    // The view of that account becomes the single view: the camera is there, and no flight follows.
+    if(focusTarget()===name){flightTo=null;focus.classList.remove('flying');focusNote.classList.remove('flying');focusSay('Now watching '+safeName(name),1400);}
+  }
+  // A change between the 3D view and the 2D map shows or hides the button at once, and closes an open wall.
+  const previousSetMode=setMode;setMode=function(m,preserve){previousSetMode(m,preserve);if(S){wallSync();focusPaint();}};
+  const follow3d=window.atlasFollow3d;window.atlasFollow3d=(name,allowLoading)=>{wallEnd(false);return follow3d(name,allowLoading);};
   focusFind.addEventListener('input',focusRows);
   focusList.addEventListener('pointerover',e=>{const r=e.target.closest('[data-focus]');if(r&&r.dataset.focus&&!r.disabled)warmPlaces(r.dataset.focus);});
   focusFind.addEventListener('keydown',e=>{const rows=[...focusList.querySelectorAll('.focus-row:not([disabled])')],hot=focusList.querySelector('.hot');if(e.key==='Escape'){e.stopPropagation();focusOpen(false);focusNow.focus({preventScroll:true});}else if(e.key==='Enter'){e.preventDefault();const r=hot||rows[0];if(r)focusChoose(r.dataset.focus);}else if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(!rows.length)return;const i=rows.indexOf(hot),next=rows[i<0?(e.key==='ArrowDown'?0:rows.length-1):(i+(e.key==='ArrowDown'?1:-1)+rows.length)%rows.length];hot?.classList.remove('hot');next.classList.add('hot');next.scrollIntoView({block:'nearest'});}});
@@ -703,15 +773,16 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     let el=hud.querySelector('.game-opponent');if(!el){el=document.createElement('div');el.className='game-opponent';el.setAttribute('aria-live','polite');hud.append(el);}
     el.hidden=false;el.innerHTML='<b>'+E(name)+(lvl?' <small>(level-'+lvl+')</small>':'')+'</b><div class="opponent-hp"><i style="width:'+Math.max(0,Math.min(100,Math.round(cur/Math.max(1,max)*100)))+'%"></i><span>'+cur+' / '+max+'</span></div>';
   }
-  window.addEventListener('message',e=>{if(e.origin!==location.origin||e.source!==$('#rsw').contentWindow||!e.data||typeof e.data!=='object')return;if(e.data?.viewerTiming)focusLanded();if(e.data?.atlasStep===1||e.data?.atlasStep===-1)focusStep(e.data.atlasStep);if(e.data?.atlasRoster)window.atlasRosterIn(e.data.atlasRoster);if(e.data&&'atlasOpponent' in e.data){const o=e.data.atlasOpponent;opponentBox(o&&Array.isArray(o.hp)&&o.hp.length===2&&o.hp.every(Number.isFinite)&&(o.kind==='npc'?Number.isInteger(o.type):typeof o.name==='string')?o:null);}const c3=e.data?.atlasCamera3d;if(c3&&[c3.x,c3.z,c3.yaw].every(Number.isFinite)){window.atlasCam3d={x:c3.x,z:c3.z,yaw:c3.yaw,at:Date.now()};minimap();}const m=e.data?.atlasChat;if(typeof e.data?.atlasWorldMap==='boolean')hud.classList.toggle('worldmap-open',e.data.atlasWorldMap);if(!m||typeof m.text!=='string'||typeof m.name!=='string'||typeof m.key!=='string'||seenChat.has(m.key))return;seenChat.add(m.key);if(seenChat.size>500)seenChat.delete(seenChat.values().next().value);chat.push({kind:'Public',name:m.name.slice(0,32),text:m.text.slice(0,500),at:Date.now()});if(chat.length>200)chat.shift();renderChat();});
+  window.addEventListener('message',e=>{if(e.origin!==location.origin||e.source!==$('#rsw').contentWindow||!e.data||typeof e.data!=='object')return;if(e.data?.viewerTiming&&!wall)focusLanded();wallMessage(e.data);if(e.data?.viewerState&&S){wallSync();focusPaint();}if(e.data?.atlasStep===1||e.data?.atlasStep===-1)focusStep(e.data.atlasStep);if(e.data?.atlasRoster)window.atlasRosterIn(e.data.atlasRoster);if(e.data&&'atlasOpponent' in e.data){const o=e.data.atlasOpponent;opponentBox(o&&Array.isArray(o.hp)&&o.hp.length===2&&o.hp.every(Number.isFinite)&&(o.kind==='npc'?Number.isInteger(o.type):typeof o.name==='string')?o:null);}const c3=e.data?.atlasCamera3d;if(c3&&[c3.x,c3.z,c3.yaw].every(Number.isFinite)){window.atlasCam3d={x:c3.x,z:c3.z,yaw:c3.yaw,at:Date.now()};minimap();}const m=e.data?.atlasChat;if(typeof e.data?.atlasWorldMap==='boolean')hud.classList.toggle('worldmap-open',e.data.atlasWorldMap);if(!m||typeof m.text!=='string'||typeof m.name!=='string'||typeof m.key!=='string'||seenChat.has(m.key))return;seenChat.add(m.key);if(seenChat.size>500)seenChat.delete(seenChat.values().next().value);chat.push({kind:'Public',name:m.name.slice(0,32),text:m.text.slice(0,500),at:Date.now()});if(chat.length>200)chat.shift();renderChat();});
   window.addEventListener('keydown',e=>{
     if(e.key==='Tab'&&e.target===document.body)e.stopPropagation();
     if((e.key==='['||e.key===']')&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();focusStep(e.key===']'?1:-1);}
-    if(e.key==='Escape'){context?.remove();hud.querySelector('.game-bank')?.remove();hud.querySelector('.game-toast')?.remove();}
+    if(e.key==='\\'&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)&&!wallButton.hidden&&!wallButton.disabled){e.preventDefault();wallToggle();}
+    if(e.key==='Escape'){if(wallEnd())render();context?.remove();hud.querySelector('.game-bank')?.remove();hud.querySelector('.game-toast')?.remove();}
     const F_KEYS={F2:'skills',F3:'quests',F4:'inventory',F5:'equipment',F8:'friends',F10:'settings'};
     if(F_KEYS[e.key]&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();e.stopPropagation();selectedTab=F_KEYS[e.key];hud.classList.remove('game-panel-hidden');gamePanel();}
     if(e.key==='/'&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();e.stopPropagation();showPlugin('fleet');($('#op-fleet-search')||$('#search'))?.focus();}
   },true);
-  window.atlasClient={follow:name=>{tourSet(false);previousPick(name);},openPlugin:showPlugin,restoreLinkedPlugin,openBank,selectedPlugin:()=>selectedPlugin,gameTab:id=>{selectedTab=id;hud.classList.remove('game-panel-hidden');gamePanel();}};
+  window.atlasClient={follow:name=>{wallEnd(false);tourSet(false);previousPick(name);},openPlugin:showPlugin,restoreLinkedPlugin,openBank,selectedPlugin:()=>selectedPlugin,gameTab:id=>{selectedTab=id;hud.classList.remove('game-panel-hidden');gamePanel();}};
   app.classList.remove('focus-map','right-hidden','left-hidden');showPlugin('fleet');renderChat();if(S)refresh();
 })();
