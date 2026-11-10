@@ -1,0 +1,22 @@
+{
+ "id": "1794316928752-bowbeforeme-mightyrod-feather",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "BowBeforeMe",
+ "to": "Mightyrod",
+ "item": "Feather",
+ "count": 21,
+ "start": 1794316928752,
+ "end": 1794319328752,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
