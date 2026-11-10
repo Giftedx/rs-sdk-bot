@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794338204428,
+ "at": 1794338367326,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -491,7 +491,7 @@
     "CAP": "4000",
     "COORDINATOR_RUN_ID": "task-d5ff2c23-7322-40f0-b736-9bfb597cdd77"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-handoff-pocketrocket-bowbeforeme-runetips500-r2 [task-d5ff2c23-7322-40f0-b736-9bfb597cdd77]",
    "role": "supply"
