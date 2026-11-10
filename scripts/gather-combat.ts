@@ -6,9 +6,9 @@
 // legacy gatherer. GIANT_KILLS overrides the level goal with a finite credited kill count. TARGET=trooper trains the same
 // way on the Khazard troopers of the Gnome battlefield from the Ardougne north bank (TROOPER_SITE). TRAIN_SKILL=Ranged
 // wields the best owned bow and arrows for the Ranged level on rapid, with GIANT_AMMO arrows in the quiver (default 500).
-// GIANT_BURY=1 buries the bones each trooper kill leaves, on the field. TROOPER_COOK=1 first cooks banked raw beef into
-// cooked meat when the account owns little trooper food (scripts/trooper-food.ts). A trooper run out of food at low HP
-// ends stop=food, ok after kills.
+// GIANT_BURY=1 buries the bones each trooper kill leaves, on the field. TROOPER_COOK=1 first makes trooper food when
+// the account owns little: it cooks banked raw beef and, still short, steals a pack at the Ardougne baker's stalls
+// (scripts/trooper-food.ts). A trooper run out of food at low HP ends stop=food, ok after kills.
 import { openBot, finish, countItems, getWorld, accountOf } from '../packages/core/src/bot';
 import {startQuestSustain} from './quest-sustain';
 import {ownedLoadout,fireWeaponSlot} from '../packages/planner/src/owned-loadout';
@@ -339,7 +339,10 @@ export const GIANT_SITE:CombatSite={label:'giant',npcs:[GIANT.npc],foods:[GIANT.
 // and defence 12, and no huntmode, so they never attack first (quests/quest_tree/configs/gnome_battlefield.npc). They
 // spawn at x 2502-2544, z 3232-3255 (maps/m39_50.jm2) and wander 9 tiles. Style XP there is 81 per tick at band 40 and
 // 137 at band 70 in rune gear (research/combat-measure.md section 1), against 16 at the cows.
-export const TROOPER_SITE:CombatSite={label:'trooper',npcs:[475,476],foods:[385,373,379,333,2142],bank:{x:2619,z:3332},spot:{x:2525,z:3242},room:[2493,3223,2553,3264],drops:[]};
+// Trooper food in pick order: the four fish, cooked meat, then the Ardougne baker's stall food (bread, chocolate slice,
+// and cake by its smallest piece first, so a started cake is finished and its slot freed).
+export const TROOPER_FOODS:readonly number[]=[385,373,379,333,2142,2309,1901,1895,1893,1891];
+export const TROOPER_SITE:CombatSite={label:'trooper',npcs:[475,476],foods:TROOPER_FOODS,bank:{x:2619,z:3332},spot:{x:2525,z:3242},room:[2493,3223,2553,3264],drops:[]};
 // Reuse counted owned-loadout selection with level-gated metal blades.
 // Preference follows tier then the shared scimitar/sword/longsword order.
 // An observed wield still decides access for special swords.
@@ -421,7 +424,10 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
     const inv=()=>s.sdk.getInventory(),state=()=>s.sdk.getState();
     const count=(items:readonly {id:number;count:number}[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
     const held=(id:number)=>count(inv(),id),hp=()=>s.sdk.getSkill('Hitpoints')?.level??0;
-    const heldFood=()=>site.foods.reduce((n,id)=>n+held(id),0);
+    // Food is counted in bites: a cake is three, its 2/3 two, everything else one (COW_FOOD_BITES). A bite debits the
+    // count whether the item goes or turns into its next piece. The pack limit `carry` counts items.
+    const bitesOf=(id:number)=>COW_FOOD_BITES[id]??1;
+    const heldFood=()=>site.foods.reduce((n,id)=>n+held(id)*bitesOf(id),0),heldPieces=()=>site.foods.reduce((n,id)=>n+held(id),0);
     // Base level is the trained level: client and engine share the level/10 XP curve (Player.ts levelExperience).
     // The current level can be drained or boosted and restores without XP, so it never counts as training.
     const selectedXp=()=>s.sdk.getSkillXp(training.skill)??0,level=()=>s.sdk.getSkill(training.skill)?.baseLevel??0;
@@ -448,7 +454,7 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
         // fails (live: Knightstick ended a run on "did not heal" with 80 cooked meat held). A stop or the cap during
         // the wait is not a failed bite.
         for(let attempt=0;attempt<3;attempt++){
-            const food=inv().find(i=>site.foods.includes(i.id));if(!food)return false;
+            const food=site.foods.map(id=>inv().find(i=>i.id===id)).find(i=>!!i);if(!food)return false;
             const before=heldFood(),beforeHp=hp();await s.bot.eatFood(food);
             await waitUntil(s,()=>heldFood()<before||over(),{timeoutTicks:6});
             eaten+=Math.max(0,before-heldFood());
@@ -508,14 +514,14 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
     const restock=async()=>{
         // Each owned kind in site order until the pack carries `carry` pieces.
         for(const id of site.foods){
-            const take=Math.min(carry-heldFood(),bankCount(id),28-inv().length);
+            const take=Math.min(carry-heldPieces(),bankCount(id),28-inv().length);
             if(take<1)continue;
             const row=state()?.bank?.items.find(i=>i.id===id),before=held(id);
             if(!row||!(await s.bot.withdrawItem(row,take,{asNote:false})).success||!await waitUntil(s,()=>held(id)===before+take,{timeoutTicks:20}))throw new Error(`no ${label} progress: shark withdraw failed`);
         }
-        bankFood=site.foods.reduce((n,id)=>n+bankCount(id),0);
+        bankFood=site.foods.reduce((n,id)=>n+bankCount(id)*bitesOf(id),0);
     };
-    const ownedFood=()=>s.bankObservation?.()?heldFood()+site.foods.reduce((n,id)=>n+bankCount(id),0):undefined;
+    const ownedFood=()=>s.bankObservation?.()?heldFood()+site.foods.reduce((n,id)=>n+bankCount(id)*bitesOf(id),0):undefined;
     const baseline:Record<number,number>={},picked:Record<number,number>={};let initialFood:number|undefined,initialAssets:Map<number,number>|undefined;
     const assetTotals=()=>{const m=new Map<number,number>();for(const i of [...(s.bankObservation?.()?.items??[]),...allKit()])m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
     const withdrawAmmo=async()=>{

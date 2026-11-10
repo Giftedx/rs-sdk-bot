@@ -431,14 +431,21 @@ test('army accounts at 60 in all three melee skills train to 99 on the Khazard t
         acct(name, { Thieving: 99, Attack: 69, Strength: 60, Defence: 61, Hitpoints: 84, ...skills }, items);
     const pick = (accounts: Acct[]) => ids(plan(inputs(accounts, { army, capacity: CAPACITY })));
     expect(pick([soldier('Soldier')])).toEqual({ Soldier: 'army-trooper-strength-99' });
-    // Any mix of the four fish and cooked meat counts; cake does not, and an account short of food stays on the cows.
-    expect(pick([soldier('Soldier', { ...kit, shark: 4, lobster: 3, swordfish: 2, trout: 1 })])).toEqual({ Soldier: 'army-trooper-strength-99' });
-    expect(pick([soldier('Soldier', { ...kit, shark: 4, 'cooked meat': 6 })])).toEqual({ Soldier: 'army-trooper-strength-99' });
-    expect(pick([soldier('Soldier', { ...kit, shark: 9 })])).toEqual({ Soldier: 'army-cow-strength-70' });
-    expect(pick([soldier('Soldier', { ...kit, cake: 30, 'slice of cake': 30 })])).toEqual({ Soldier: 'army-cow-strength-70' });
+    // An account that cannot steal (Thieving under 5) needs 10 pieces of stock. Any mix of the fish, cooked meat and
+    // the baker's stall food counts; short of that it stays on the cows.
+    const honest = { Thieving: 1 };
+    expect(pick([soldier('Soldier', { ...kit, shark: 4, lobster: 3, swordfish: 2, trout: 1 }, honest)])).toEqual({ Soldier: 'army-trooper-strength-99' });
+    expect(pick([soldier('Soldier', { ...kit, shark: 4, 'cooked meat': 6 }, honest)])).toEqual({ Soldier: 'army-trooper-strength-99' });
+    expect(pick([soldier('Soldier', { ...kit, bread: 4, 'slice of cake': 6 }, honest)])).toEqual({ Soldier: 'army-trooper-strength-99' });
+    // The kit's two cakes count as two pieces.
+    expect(pick([soldier('Soldier', { ...kit, shark: 7 }, honest)])).toEqual({ Soldier: 'army-cow-strength-70' });
+    expect(pick([soldier('Soldier', { ...kit, shark: 8 }, honest)])).toEqual({ Soldier: 'army-trooper-strength-99' });
     // The raw beef a cow leaver banked counts: the trooper job cooks it first (TROOPER_COOK).
-    expect(pick([soldier('Soldier', { ...kit, 'raw beef': 300 })])).toEqual({ Soldier: 'army-trooper-strength-99' });
-    expect(pick([soldier('Soldier', { ...kit, 'raw beef': 9 })])).toEqual({ Soldier: 'army-cow-strength-70' });
+    expect(pick([soldier('Soldier', { ...kit, 'raw beef': 300 }, honest)])).toEqual({ Soldier: 'army-trooper-strength-99' });
+    expect(pick([soldier('Soldier', { ...kit, 'raw beef': 7 }, honest)])).toEqual({ Soldier: 'army-cow-strength-70' });
+    // With Thieving 5 the job steals its food at the baker's stalls, so it starts with none.
+    expect(pick([soldier('Soldier', kit, { Thieving: 5 })])).toEqual({ Soldier: 'army-trooper-strength-99' });
+    expect(pick([soldier('Soldier', kit, { Thieving: 4 })])).toEqual({ Soldier: 'army-cow-strength-70' });
     // Strength, Attack, then Defence; an account under 60 in any of them finishes the cow passes to 60 first.
     expect(pick([soldier('Soldier', undefined, { Strength: 99 })])).toEqual({ Soldier: 'army-trooper-attack-99' });
     expect(pick([soldier('Young', undefined, { Attack: 45, Strength: 45, Defence: 45 })])).toEqual({ Young: 'army-cow-strength-60' });
@@ -492,7 +499,9 @@ test('army accounts train Ranged to 99 on the troopers with a bow they wield and
     expect(pick({ Ranged: 40 }, { ...fish, 'yew shortbow': 1, 'rune arrow': 500 })).toBe('army-trooper-ranged-99');
     expect(pick({}, { ...fish, shortbow: 1, 'rune arrow': 500 })).toBe('army-trooper-strength-99');
     expect(pick({}, { ...fish, shortbow: 1, 'iron arrow': 99 })).toBe('army-trooper-strength-99');
-    expect(pick({}, { shortbow: 1, 'iron arrow': 500 })).not.toBe('army-trooper-ranged-99');
+    expect(pick({ Thieving: 1 }, { shortbow: 1, 'iron arrow': 500 })).not.toBe('army-trooper-ranged-99');
+    // A thief feeds itself, so the bow and arrows are all it needs.
+    expect(pick({}, { shortbow: 1, 'iron arrow': 500 })).toBe('army-trooper-ranged-99');
     expect(pick({ Ranged: 99 }, { ...fish, shortbow: 1, 'iron arrow': 500 })).toBe('army-trooper-strength-99');
     const job = jobFor(plan(inputs([acct('Archer', base, { ...fish, shortbow: 1, 'iron arrow': 500 })], { army, capacity: CAPACITY }))[0]!, side);
     expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'], env: { TRAIN_SKILL: 'Ranged', TARGET_LEVEL: '99', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1' }, repeat: true, resources: ['trooper:battlefield'] });
@@ -511,8 +520,11 @@ test('kit lines: what an account lacks, the smallest of several kits, and null w
     expect(kitLacks(acct('A', {}, { 'mind rune': 35, 'air rune': 35 }), band.needs)).toEqual([]);
     // Hitpoints 40 is a level, not a kit line.
     expect(kitLacks(acct('A', { Hitpoints: 39 }, {}), ranged.needs)).toBeNull();
-    // A shortbow with 25 bronze arrows is the nearest ranged kit: 75 arrows and 10 pieces of food short.
-    expect(kitLacks(acct('A', { Hitpoints: 40 }, { shortbow: 1, 'bronze arrow': 25 }), ranged.needs)).toEqual([{ of: ['shark', 'swordfish', 'lobster', 'trout', 'cooked meat', 'raw beef'], count: 10 }, { of: ['bronze arrow'], count: 75 }]);
+    // A shortbow with 25 bronze arrows is the nearest ranged kit: 75 arrows short, and 10 pieces of food for an account
+    // that cannot steal them.
+    const stock = ['shark', 'swordfish', 'lobster', 'trout', 'cooked meat', 'bread', 'chocolate slice', 'slice of cake', '2/3 cake', 'cake', 'raw beef'];
+    expect(kitLacks(acct('A', { Hitpoints: 40 }, { shortbow: 1, 'bronze arrow': 25 }), ranged.needs)).toEqual([{ of: ['bronze arrow'], count: 75 }, { of: stock, count: 10 }]);
+    expect(kitLacks(acct('A', { Hitpoints: 40, Thieving: 5 }, { shortbow: 1, 'bronze arrow': 25 }), ranged.needs)).toEqual([{ of: ['bronze arrow'], count: 75 }]);
     expect(kitReserve(catalogue())).toMatchObject({ 'mind rune': 35, 'air rune': 35, 'nature rune': 50, feather: 50, bone: 100 });
 });
 
@@ -772,7 +784,8 @@ test('a melee-maxed army account buries trooper bones for Prayer when no band an
     // With the bones held, that band comes first; at Prayer 99 neither is a candidate; without food it has no place.
     expect(pick({}, { shark: 30, bone: 100 }).template!.id).toBe('army-bury-prayer-99');
     expect(pick({ Prayer: 99 }, { shark: 30, bone: 63 }).template?.id ?? 'vacant').not.toMatch(/^army-/);
-    expect(pick({}, { bone: 63 }).template?.id).not.toBe('army-trooper-prayer-99');
+    expect(pick({ Thieving: 1 }, { bone: 63 }).template?.id).not.toBe('army-trooper-prayer-99');
+    expect(pick({}, { bone: 63 }).template!.id).toBe('army-trooper-prayer-99');
     // An account with melee left takes its trooper band, never the filler.
     expect(pick({ Defence: 82 }, { shark: 30 }).template!.id).toBe('army-trooper-defence-99');
 });

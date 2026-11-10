@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {GIANT,CONFIGS,giantStyle,giantTraining,giantCredit,giantKillLimit,runGiants,selectGiantWeapon,selectGiantBow,selectGiantArrows,roamTarget,anothersFight} from './gather-combat';
+import {GIANT,CONFIGS,TROOPER_FOODS,giantStyle,giantTraining,giantCredit,giantKillLimit,runGiants,selectGiantWeapon,selectGiantBow,selectGiantArrows,roamTarget,anothersFight} from './gather-combat';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks} from '../packages/core/src/ticks';
 
@@ -285,6 +285,30 @@ test('out of food at low HP a trooper run ends stop=food, ok after its kills; th
         const r=await runGiants(camp.session,{cap:500,trainSkill:'Strength',targetLevel:99,walk:camp.walk}) as any;
         expect(r.ok).toBe(false);expect(r.stop).toBe('low-hp');expect(r.failure).toContain('low HP in combat and no carried shark');
     }finally{camp.dispose();}
+});
+test('trooper food is counted in bites: a cake is eaten a piece at a time and the smallest piece goes first',async()=>{
+    const site={label:'trooper',npcs:[117],foods:TROOPER_FOODS,bank:GIANT.bank,spot:GIANT.spot,room:GIANT.room,drops:[]};
+    // The stall's food follows the fish and the meat, cake by its smallest piece first.
+    expect(TROOPER_FOODS.slice(-5)).toEqual([2309,1901,1895,1893,1891]);
+    // One fight that costs one bite, with the given cake pieces in the pack and no food banked.
+    const fight=async(pieces:number[])=>{
+        const f=giantFixture(),sdk=f.session.sdk as any,bot=f.session.bot as any;let low=false;const ate:number[]=[];
+        const skill=sdk.getSkill.bind(sdk),attack=bot.attack.bind(bot);
+        f.inv.splice(f.inv.findIndex(i=>i.id===385),1);f.bank.splice(f.bank.findIndex(i=>i.id===385),1);
+        pieces.forEach((id,k)=>f.inv.push({id,name:'Cake',count:1,slot:10+k,optionsWithIndex:[{text:'Eat',opIndex:1}]}));
+        bot.attack=async(...a:any[])=>{low=true;return attack(...a);};
+        bot.eatFood=async(item:any)=>{ate.push(item.id);const next=({1891:1893,1893:1895} as Record<number,number>)[item.id];if(next)item.id=next;else f.inv.splice(f.inv.indexOf(item),1);low=false;return{success:true};};
+        sdk.getSkill=(n:string)=>n==='Hitpoints'&&low?{level:30,baseLevel:75}:skill(n);
+        try{return{r:await runGiants(f.session,{cap:500,trainSkill:'Strength',targetLevel:99,maximum:1,site,walk:f.walk}) as any,ate,left:f.inv.map(i=>i.id).filter(id=>TROOPER_FOODS.includes(id))};}
+        finally{f.dispose();}
+    };
+    // A whole cake is three bites: one is eaten and its 2/3 stays in the slot.
+    const whole=await fight([1891]);
+    expect(whole.r.ok).toBe(true);expect(whole.ate).toEqual([1891]);expect(whole.r.eaten).toBe(1);
+    expect(whole.r.initialFood).toBe(3);expect(whole.r.finalFood).toBe(2);expect(whole.r.foodAccounted).toBe(true);expect(whole.left).toEqual([1893]);
+    // With a slice beside it the slice goes first and the cake is not started.
+    const mixed=await fight([1891,1895]);
+    expect(mixed.r.ok).toBe(true);expect(mixed.ate).toEqual([1895]);expect(mixed.r.initialFood).toBe(4);expect(mixed.r.finalFood).toBe(3);expect(mixed.left).toEqual([1891]);
 });
 test('banked supplies absent or equip without effect cannot start a giant fight',async()=>{
  for(const mode of ['food','weapon','equip'] as const){
