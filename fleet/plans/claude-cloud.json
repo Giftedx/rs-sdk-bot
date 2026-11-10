@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794317065546,
+ "at": 1794317120765,
  "jobs": [
   {
    "account": "Fingersmith",
@@ -109,26 +109,22 @@
   },
   {
    "account": "Deeppockets",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "PEN": "3187,3277",
+    "TICKS": "3000",
+    "TARGET": "2000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 70 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-70",
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
    "autopilot": "claude-cloud",
    "resources": [
-    "cow:ardougne-north"
+    "pen:3187,3277"
    ]
   },
   {
@@ -157,23 +153,27 @@
   },
   {
    "account": "Fingerblastr",
-   "script": "scripts/train-prayer.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99"
+    "3000",
+    "cow"
    ],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_RESERVE": "6",
-    "CAP": "4000"
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying the held bones",
+   "goal": "train Strength to 70 on the Ardougne cows",
    "role": "combat",
-   "template": "army-bury-prayer-99",
+   "template": "army-cow-strength-70",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "cow:ardougne-north"
+   ]
   },
   {
    "account": "Kiltlifter",
