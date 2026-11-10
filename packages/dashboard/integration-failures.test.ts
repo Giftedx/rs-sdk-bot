@@ -57,6 +57,6 @@ test('market holdings keep different item IDs with the same display name separat
  const state:any={bots:[{bank:[{id:200,baseId:199,name:'Herb (noted)',count:2},{id:201,name:'Herb',count:9}]}],economy:{supplies:[{id:199,name:'Herb',ask:1},{id:201,name:'Herb',ask:2}]}};
  const run=new Function('S','window','E','nf','icon',`let geQuery='',geAll=true;const age=()=>'';${code};return gePanel();`);
  const result=run(state,{atlasOperator:()=>true},String,String,()=>'<i/>');
- expect(result).toContain('We hold <b>2</b>');expect(result).toContain('We hold <b>9</b>');expect(result).not.toContain('We hold <b>11</b>');
- state.bots[0].bank=[{name:'Herb',count:4}];expect(run(state,{atlasOperator:()=>true},String,String,()=>'<i/>')).toContain('We hold <b>?</b>');
+ expect(result).toContain('class="ge-ours">2<');expect(result).toContain('class="ge-ours">9<');expect(result).not.toContain('class="ge-ours">11<');
+ state.bots[0].bank=[{name:'Herb',count:4}];expect(run(state,{atlasOperator:()=>true},String,String,()=>'<i/>')).toContain('class="ge-ours">?<');
 });
