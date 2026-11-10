@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794314781266-mineyourbiz-mightyrod",
+ "account": "Mightyrod",
+ "partner": "MineYourBiz",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 39637,
+ "claim": "7a5d0ef1-3fba-4dfd-b6bc-d0434e2a1c05",
+ "count": 0,
+ "ok": false,
+ "at": 1794314790986,
+ "detail": "trade claimed"
+}
