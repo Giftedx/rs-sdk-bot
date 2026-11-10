@@ -102,8 +102,8 @@ if (import.meta.main) {
     };
     const startedAt = Date.now();
     for (;;) {
-        // Bring this checkout to current master first (scripts/live-update.ts), so the sync and the trades run merged fixes.
-        const update = Bun.spawnSync(['bun', 'scripts/live-update.ts'], { cwd: root, windowsHide: true, env: process.env, stdout: 'pipe', stderr: 'pipe' });
+        // Bring this checkout to current master first (packages/router/src/live-update.ts), so the sync and the trades run merged fixes.
+        const update = Bun.spawnSync(['bun', 'packages/router/src/live-update.ts'], { cwd: root, windowsHide: true, env: process.env, stdout: 'pipe', stderr: 'pipe' });
         const updateLine = lastResult(update.stdout.toString());
         if (!/ live-update (?:none|off|paused)/.test(updateLine)) console.log(`FLEET_AGENT ${updateLine} at ${new Date().toISOString()}`);
         // The update changed this agent's code: a copy on the current code takes over once no trade runs.

@@ -2,8 +2,8 @@ import { expect, test } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
-import { applyUpdate, coordinatorHolds, gitIn, parseStatus, planUpdate, readCheckout, reloadsFor, type UpdateInput } from './live-update';
-import { liveUpdateFile, reloadDue } from '../packages/core/src/live-reload';
+import { applyUpdate, coordinatorHolds, gitIn, parseStatus, planUpdate, readCheckout, reloadsFor, type UpdateInput } from '../src/live-update';
+import { liveUpdateFile, reloadDue } from '../../core/src/live-reload';
 
 const base: UpdateInput = { branch: 'master', ahead: 0, behind: 2, incoming: ['scripts/swarm.ts', 'docs/a.md'], dirty: [], holds: [], heldFiles: [] };
 

@@ -447,7 +447,7 @@ if (import.meta.main) {
     await once(); setInterval(once, PASS_EVERY_MS);
     const seen = new Set<string>();
     setInterval(() => {
-        // A live update that changed this daemon's code (scripts/live-update.ts): a copy on the current code takes over.
+        // A live update that changed this daemon's code (packages/router/src/live-update.ts): a copy on the current code takes over.
         if (!inFlight && reloadDue(root, 'autopilot', startedAt)) {
             const pid = respawnDaemon(root, [join(root, 'scripts', 'autopilot.ts'), ...args], join(prac, 'autopilot', `daemon-${Date.now()}.out.log`));
             console.log(`AUTOPILOT reload after a live update: successor pid ${pid}`);

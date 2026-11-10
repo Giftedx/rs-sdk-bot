@@ -13,11 +13,12 @@
 // After the move it writes .practice/live-update.json (packages/core/src/live-reload.ts). The fleet agent and the
 // autopilot restart themselves from it. The coordinator gets its reload request (`coordinator-cli.ts --restart`,
 // which keeps its children). The coordinator restarts the swarm itself when the swarm's files change (ensureSwarm).
+// This file is tooling: runtime code starts it as a process and never imports it (packages/core/src/worker-release.ts).
 //
-// Usage: bun scripts/live-update.ts [--dry]   Env: LIVE_UPDATE=0 turns it off. .practice/stop-live-update pauses it.
+// Usage: bun packages/router/src/live-update.ts [--dry]   Env: LIVE_UPDATE=0 turns it off. .practice/stop-live-update pauses it.
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { liveUpdateFile, type LiveUpdateMark } from '../packages/core/src/live-reload';
+import { liveUpdateFile, type LiveUpdateMark } from '../../core/src/live-reload';
 
 export type Dirty = { path: string; sameAsTarget: boolean; untracked: boolean };
 export type UpdateInput = { branch: string; ahead: number; behind: number; incoming: readonly string[]; dirty: readonly Dirty[]; holds: readonly string[]; heldFiles: readonly string[] };
@@ -126,7 +127,7 @@ const DAEMONS: Record<string, string[]> = {
 };
 
 if (import.meta.main) {
-    const root = resolve(import.meta.dir, '..'), dry = process.argv.includes('--dry'), target = 'origin/master';
+    const root = resolve(import.meta.dir, '../../..'), dry = process.argv.includes('--dry'), target = 'origin/master';
     const done = (line: string, code = 0): never => { console.log(line); process.exit(code); };
     if (process.env.LIVE_UPDATE === '0') done('RESULT ok live-update off (LIVE_UPDATE=0)');
     if (existsSync(join(root, '.practice', 'stop-live-update'))) done('RESULT ok live-update paused by stop file');
@@ -137,8 +138,8 @@ if (import.meta.main) {
     const fetch = git('fetch', '--quiet', '--no-tags', 'origin', 'master');
     if (!fetch.ok) done(`RESULT fail live-update fetch: ${fetch.out.slice(0, 200)}`, 1);
     try {
-        const { workspaceRoot } = await import('../packages/router/src/build-workspace');
-        const { importClosure } = await import('../packages/router/src/delivery-cli');
+        const { workspaceRoot } = await import('./build-workspace');
+        const { importClosure } = await import('./delivery-cli');
         const checkout = readCheckout(git, root, target);
         const plan = planUpdate({ ...checkout, ...(checkout.behind ? coordinatorHolds(root, c => workspaceRoot(root, c)) : { holds: [], heldFiles: [] }) });
         if (plan.action !== 'update') done(`RESULT ok live-update ${plan.action}: ${plan.reason}${plan.action === 'wait' ? ` (behind ${checkout.behind})` : ''}`);
