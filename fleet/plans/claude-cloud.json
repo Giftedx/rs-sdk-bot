@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794351274693,
+ "at": 1794351304551,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -324,27 +324,23 @@
   },
   {
    "account": "KnightRider",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/train-prayer.ts",
    "args": [
-    "3000",
-    "cow"
+    "99"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 99 on the Ardougne cows",
+   "goal": "train Prayer to 99 burying the held bones",
    "role": "combat",
-   "template": "army-cow-defence-99",
+   "template": "army-bury-prayer-99",
    "autopilot": "claude-cloud",
-   "resources": [
-    "cow:ardougne-north"
-   ]
+   "resources": []
   }
  ]
 }
