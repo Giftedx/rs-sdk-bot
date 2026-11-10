@@ -13,6 +13,9 @@ export type BenchCase = {
   scriptArgs: string[];
   pass: (stdout: string) => boolean;
   timeoutMs?: number;
+  // Files the worker reads, written before each run: path to JSON value. In a path, in the JSON and in `scriptArgs`,
+  // `{bot}` is the account name of the run, `{bot:b}` the partner with suffix `b`, and `{save}` the account's save file.
+  jobFiles?: Record<string, unknown>;
   // Partner accounts the worker opens itself, named `<bot><suffix>` (one letter: a bench name has 11 characters).
   companions?: {suffix: string; preset: string; presetConfig?: SaveConfig}[];
   // A case that ends at a tick cap shows no speed in its ticks. `output` reads the useful amount from the RESULT

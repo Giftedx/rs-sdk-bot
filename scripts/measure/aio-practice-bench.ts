@@ -278,7 +278,11 @@ async function runCase(c: BenchCase, bot: string, enginePort = 8888) {
         pinLoopbackToIpv4(account.envPath, enginePort);
       },
       run: async (script, name, timeoutMs, args = []) => {
-        const proc = Bun.spawn(['bun', resolve(script), name, ...args], { cwd: root, stdout: 'pipe', stderr: 'pipe', windowsHide: true, env: { ...process.env } }); // Bun.spawn does not pass env set at run time unless given
+        // A case can name the account of this run, a partner and the save file in its arguments and job files.
+        const fill = (text: string) => text.replaceAll('{bot}', name).replace(/\{bot:(\w)\}/g, (_all, suffix) => name + suffix)
+          .replaceAll('{save}', `vendor/rs-sdk/server/engine/data/players/main/${name.toLowerCase()}.sav`);
+        for (const [path, value] of Object.entries(c.jobFiles ?? {})) { mkdirSync(dirname(fill(path)), { recursive: true }); writeFileSync(fill(path), fill(JSON.stringify(value, null, 1))); }
+        const proc = Bun.spawn(['bun', resolve(script), name, ...args.map(fill)], { cwd: root, stdout: 'pipe', stderr: 'pipe', windowsHide: true, env: { ...process.env } }); // Bun.spawn does not pass env set at run time unless given
         // An AIO dispatcher owns a worker child; a timeout must stop the whole tree or the worker keeps its session.
         const timer = setTimeout(() => {
           if (process.platform === 'win32') Bun.spawn(['taskkill', '/PID', String(proc.pid), '/T', '/F'], { stdout: 'ignore', stderr: 'ignore', windowsHide: true });

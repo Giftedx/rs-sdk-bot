@@ -14,6 +14,8 @@ Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). 
 
 **Claim:** a shorter client loop is not usable. **Conditions:** `LOOP_MS` 1 and 5 against 20 in `vendor/rs-sdk/server/webclient/src/lite/session.ts`. **Evidence:** `biohazard` 1626 and 1595 ticks against 1294; wall time 25% lower. The client counts one frame for each loop, and animations end by frame count.
 
+**Claim:** when a case gives two tick counts with one seed, the engine is not the cause. **Conditions:** `troll`, seed 7, two runs, each on a new engine with the per-tick world trace. **Evidence:** the two traces are byte-identical over 852 ticks (player and npc tile hashes, random draws for each tick), and the script reports 703 ticks in one run and 551 in the other (`.practice/aio-bench/trollA/`, `trollB/`). From about tick 400 the player tile does not change and the draw count is the same in both: the fight step makes no progress in either run. **Gap:** the part of the fight step that ends on the wall clock is not found; `bot.attack` in the SDK has limits in milliseconds.
+
 ## Routes
 
 **Claim:** 109 bench cases pass at seed 7; they cover 107 of 221 catalog routes. **Evidence:** `.practice/aio-bench/baseline-seed7.json`; `bun run bench --coverage` lists the routes with a cause and the routes with no case.
