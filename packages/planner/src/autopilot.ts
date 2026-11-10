@@ -402,10 +402,11 @@ export const KNIGHT_SHARE = 4, KNIGHT_SHARED_RATE = 0.75;
 // runs: solo median 550 ticks; 3 triples 9/9 RESULT ok, median 590 per account; 3 sets of six fresh accounts 18/18
 // RESULT ok, median 779, so six make about 1.5 times the field output of three. More than six is not measured.
 export const COW_FIELD = 'cow:ardougne-north', COW_FIELD_CAPACITY = 6;
-// Gnome battlefield Khazard troopers: about 41 on multiway ground. Practice, nine accounts at once, 3 sets: 27 of 27
-// RESULT ok at a median 49.7 Strength XP per tick an account (56.7 with six, 61-63 alone), the slowest 41.3
-// (research/combat-measure.md, troopers shared). Gap: more than nine at once is not measured.
-export const TROOPER_FIELD = 'trooper:battlefield', TROOPER_FIELD_CAPACITY = 9;
+// Gnome battlefield Khazard troopers: about 41 on multiway ground. Practice, fourteen accounts at once, 3 sets: 42 of
+// 42 RESULT ok at a median 38.4 Strength XP per tick an account (49.7 with nine, 56.7 with six, 61-63 alone), the
+// slowest 29.5, and a field total 20% over nine (research/combat-measure.md, troopers shared). The cows give about 16,
+// so every army account trains there. Gap: more than fourteen at once is not measured.
+export const TROOPER_FIELD = 'trooper:battlefield', TROOPER_FIELD_CAPACITY = 14;
 // The Wind Strike tile north of the Ardougne north bank (scripts/alch-train.ts STRIKE): one Guard dog, fought by one
 // player at a time. Practice: of three accounts at once, one landed no cast in 200 ticks, in each of three sets.
 export const STRIKE_TILE = 'strike:ardougne-guard-dog';

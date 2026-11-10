@@ -443,7 +443,7 @@ test('army accounts at 60 in all three melee skills train to 99 on the Khazard t
     expect(pick([soldier('Soldier', undefined, { Strength: 99 })])).toEqual({ Soldier: 'army-trooper-attack-99' });
     expect(pick([soldier('Young', undefined, { Attack: 45, Strength: 45, Defence: 45 })])).toEqual({ Young: 'army-cow-strength-60' });
     // The battlefield takes TROOPER_FIELD_CAPACITY; one more ready account trains on the cows.
-    expect(TROOPER_FIELD_CAPACITY).toBe(9);
+    expect(TROOPER_FIELD_CAPACITY).toBe(14);
     const full = pick(ready.map(n => soldier(n)));
     expect(Object.values(full).filter(id => id.startsWith('army-trooper-'))).toHaveLength(TROOPER_FIELD_CAPACITY);
     expect(Object.values(full).filter(id => id === 'army-cow-strength-70')).toHaveLength(1);
