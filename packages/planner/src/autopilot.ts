@@ -32,11 +32,23 @@ export type Template = {
     tier?: 'goal'; band?: number;
     // A trainer whose script runs a fixed amount (not to its target level) repeats until the planner moves it on.
     repeats?: boolean;
+    // The stock a kit buy brings an item up to, by item name: more than the start minimum in `needs`, so one login
+    // buys a batch (nature runes for many alchemy casts) and not one start's worth.
+    batch?: Record<string, number>;
 };
+// One missing kit line: `count` more units of any one item of `of`.
+export type Lack = { of: readonly string[]; count: number };
+// `send`: a free account (this side first, then another side) gives the item; scripts/autopilot.ts places the fleet
+// order, and the account takes the band on the pass after the item arrives.
+export type ItemFunding = { from: string; to: string; item: string; count: number; template: string };
+// A free account that can give: no enabled job on its side, no stop file, no open order. `items` by norm() name.
+export type Stock = { name: string; side: string; items: Record<string, number> };
+// Items a kit buy may order on the Grand Exchange, by norm() name: the item id, its display name and the unit price cap.
+export type Market = Readonly<Record<string, { id: number; name: string; limit: number }>>;
 // `fund`: the template needs coins the account lacks; a donor of this side sends them first (scripts/autopilot.ts
 // places the fleet order), and the account takes the job on the pass after the coins arrive.
 export type Funding = { from: string; to: string; coins: number; template: string };
-export type Assignment = { account: string; template?: Template; value: number; reason: string; resources: string[]; fund?: Funding };
+export type Assignment = { account: string; template?: Template; value: number; reason: string; resources: string[]; fund?: Funding; send?: ItemFunding };
 export type Inputs = {
     side: string; accounts: readonly Acct[]; owners: ReadonlyMap<string, { side: string }>; bill: readonly BillRow[];
     templates: readonly Template[]; prices: Readonly<Record<string, number>>; waste?: Readonly<Record<string, number>>;
@@ -53,8 +65,28 @@ export type Inputs = {
     // Lower-case names of the accounts on this side's army roster: only they take goal bands. A specialist's board
     // time counts every tick it plays, so combat training is opt-in per account, never global.
     army?: ReadonlySet<string>;
+    // Free accounts of every side with their holdings: item and coin donors for an army account's kit. This side's
+    // donors give first; another side's give only when none of this side can.
+    stock?: readonly Stock[];
+    // The items a kit buy may order. Absent: the planner plans no buy.
+    market?: Market;
 };
 export const FUND_RESERVE = 50_000;
+// The template id of a kit buy for a goal band: `kit-buy:<band id>`. A retired pair (two fail RESULTs with no
+// progress: no stock under the cap) sends the account to the donors instead.
+export const KIT_BUY = 'kit-buy:', KIT_BUY_SCRIPT = 'scripts/buy-owned-ge-item.ts';
+// The coins a kit buy leaves in the bank (the buy script's CASH_RESERVE). A kit costs far less than FUND_RESERVE, which
+// guards a coin donor, so a buyer keeps only this.
+export const KIT_CASH_RESERVE = 1_000;
+// Unit price caps for kit buys, in coins. Estimates: the owner's hand jobs cap a law rune at 1,600 (shop value 40) and
+// a shark at 810 to 1,200 (shop value 300), so a rune caps at about 40 times and food at about 4 times its shop value.
+// An offer fills at or under its cap, and scripts/buy-owned-ge-item.ts refunds what does not fill. Gap: no measured
+// Grand Exchange price for these items.
+export const KIT_PRICE_CAPS: Readonly<Record<string, number>> = {
+    'mind rune': 120, 'air rune': 160, 'fire rune': 160, 'nature rune': 800, feather: 20,
+    'bronze arrow': 20, 'iron arrow': 40, 'steel arrow': 100, 'mithril arrow': 200, 'adamant arrow': 400, 'rune arrow': 1200,
+    trout: 100, lobster: 500, swordfish: 700, shark: 1200,
+};
 
 // A bill line still short is worth twice its shop value: it is acquisition work the route needs. A unit nobody needs
 // is worth half, the price a sale would fetch. A share of a job a training run unlocks counts for the training.
@@ -89,6 +121,56 @@ const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: strin
 const coinShort = (a: Acct, needs: Template['needs']) => Math.max(0, (Object.entries(needs?.items ?? {}).find(([i]) => norm(i) === 'coin')?.[1] ?? 0) - (a.items.coin ?? 0));
 const withoutCoins = (needs: Template['needs']): Template['needs'] => ({ ...needs, items: Object.fromEntries(Object.entries(needs?.items ?? {}).filter(([i]) => norm(i) !== 'coin')) });
 
+// The kit lines an account still lacks for these needs, or null when a level it does not have (or a holding it must
+// not have) stops the job: no item fixes that. The coin line is not a kit line (coinShort). Of several `anyOf`
+// kits the account takes the one with the fewest missing units.
+export function kitLacks(a: Acct, needs: Template['needs']): Lack[] | null {
+    if (!Object.entries(needs?.skills ?? {}).every(([s, l]) => (a.skills[s] ?? 1) >= l)
+        || !Object.entries(needs?.under ?? {}).every(([s, l]) => (a.skills[s] ?? 1) < l)
+        || !Object.entries(needs?.holdsUnder ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) < n)) return null;
+    const out: Lack[] = [];
+    for (const [i, n] of Object.entries(needs?.items ?? {})) {
+        const short = n - (a.items[norm(i)] ?? 0);
+        if (norm(i) !== 'coin' && short > 0) out.push({ of: [norm(i)], count: short });
+    }
+    const hp = (needs?.food ?? 0) - foodHeal(a);
+    if (hp > 0) out.push({ of: ['trout'], count: Math.ceil(hp / FOOD_HEAL.trout!) });
+    const pieces = (needs?.pieces?.count ?? 0) - (needs?.pieces?.of ?? []).reduce((n, i) => n + (a.items[norm(i)] ?? 0), 0);
+    if (pieces > 0) out.push({ of: needs!.pieces!.of.map(norm), count: pieces });
+    if (needs?.anyOf) {
+        const units = (lacks: readonly Lack[]) => lacks.reduce((n, l) => n + l.count, 0);
+        const kits = needs.anyOf.map(alt => kitLacks(a, alt)).filter((k): k is Lack[] => k !== null).sort((x, y) => units(x) - units(y));
+        if (!kits.length) return null;
+        out.push(...kits[0]!);
+    }
+    return out;
+}
+// The most of each item any goal band needs to start, by norm() name: a donor keeps that many, so it never gives away
+// its own kit.
+export function kitReserve(templates: readonly Template[]): Record<string, number> {
+    const reserve: Record<string, number> = {};
+    const count = (needs: Template['needs']) => {
+        for (const [i, n] of Object.entries(needs?.items ?? {})) reserve[norm(i)] = Math.max(reserve[norm(i)] ?? 0, n);
+        for (const i of needs?.pieces?.of ?? []) reserve[norm(i)] = Math.max(reserve[norm(i)] ?? 0, needs!.pieces!.count);
+        for (const alt of needs?.anyOf ?? []) count(alt);
+    };
+    for (const t of templates) if (t.tier === 'goal') count(t.needs);
+    delete reserve.coin;
+    return reserve;
+}
+// One Grand Exchange order of a kit buy. `held` is what the account holds now: the buy script tops up exactly that many.
+export type KitLine = { item: string; id: number; quantity: number; held: number; limit: number };
+// The job that buys an army account's missing kit for a goal band: one login, one capped order per item
+// (scripts/chain.ts runs scripts/buy-owned-ge-item.ts once per line). The order key names the holding before and
+// after, so a rerun continues the same order and a later top-up is a new one. Not a trainer: it does not repeat, and
+// the account takes the band on the pass after its RESULT.
+export function kitBuyTemplate(band: Template, account: string, lines: readonly KitLine[]): Template {
+    const step = (l: KitLine) => [KIT_BUY_SCRIPT, `ITEM_ID=${l.id}`, `QUANTITY=${l.quantity}`, ...(l.held > 0 ? [`EXPECTED_OWNED=${l.held}`] : []), `LIMIT_PRICE=${l.limit}`,
+        `CASH_RESERVE=${KIT_CASH_RESERVE}`, `ORDER_KEY=${account.toLowerCase()}-kit-${l.id}-${l.held}to${l.held + l.quantity}`, 'ORDER_MS=900000', 'FILL_WAIT_TICKS=200'].join(' ');
+    return { id: KIT_BUY + band.id, family: 'kit-buy', script: 'scripts/chain.ts', args: lines.map(step), env: { ROUNDS: '1' }, role: 'supply',
+        goal: `buy ${lines.map(l => `${l.quantity} ${l.item}`).join(', ')} on the Grand Exchange to ${band.goal}`, repeats: false, yields: () => [] };
+}
+
 export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'prices' | 'waste'>): number {
     const gross = t.yields(a).reduce((v, f) => v + f.perTick * unitValue(f.item, inp.bill, inp.prices), 0);
     const cost = (t.spends?.(a) ?? []).reduce((v, f) => v + f.perTick * (norm(f.item) === 'coin' ? 1 : (inp.prices[norm(f.item)] ?? 0)), 0);
@@ -98,7 +180,7 @@ export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'price
 export function plan(inp: Inputs): Assignment[] {
     const byId = new Map(inp.templates.map(t => [t.id, t]));
     const mine = inp.accounts.filter(a => (inp.owners.get(a.name.toLowerCase())?.side ?? 'local') === inp.side && a.side === inp.side);
-    type Cand = { account: string; template: Template; value: number; resources: string[]; reason: string; coins?: number; goal?: { band: number; left: number } };
+    type Cand = { account: string; template: Template; value: number; resources: string[]; reason: string; coins?: number; goal?: { band: number; left: number }; lacks?: Lack[] };
     const cands: Cand[] = [];
     for (const a of mine) for (const t of inp.templates) {
         if (inp.retired?.has(pairKey(a.name, t.id))) continue;
@@ -109,6 +191,11 @@ export function plan(inp: Inputs): Assignment[] {
             if (meets(a, t.needs)) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal });
             else if (inp.donors?.length && !inp.unfundable?.has(a.name.toLowerCase()) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs)))
                 cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, coins: coinShort(a, t.needs) });
+            else if (coinShort(a, t.needs) === 0) {
+                // The band lacks only kit items: a buy with the account's own coins, or a free account's spare stock.
+                const lacks = kitLacks(a, t.needs);
+                if (lacks?.length) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, lacks });
+            }
             continue;
         }
         if (t.trains) {
@@ -140,8 +227,10 @@ export function plan(inp: Inputs): Assignment[] {
     // Donor coins above the reserve, spent as funded candidates take them; a funded account gives nothing.
     // A donor that gives stays free this pass, so the fleet agent can log it in for the trade.
     const pool = new Map((inp.donors ?? []).map(d => [d.name, Math.max(0, d.coins - FUND_RESERVE)])), gave = new Set<string>();
+    // Accounts that give an item this pass, and accounts that leave a coin job so a kit order can reach them.
+    const gaveItems = new Set<string>(), vacated = new Map<string, string>();
     const take = (c: Cand, value: number) => {
-        if (done.has(c.account) || gave.has(c.account) || c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
+        if (done.has(c.account) || gave.has(c.account) || gaveItems.has(c.account) || vacated.has(c.account) || c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
         let fund: Funding | undefined;
         if (c.coins) {
             const from = [...pool].filter(([n, left]) => n.toLowerCase() !== c.account.toLowerCase() && !done.has(n) && left >= c.coins!).sort((x, y) => y[1] - x[1])[0]?.[0];
@@ -156,7 +245,52 @@ export function plan(inp: Inputs): Assignment[] {
     // The goal tier first: each army account takes the earliest band it can (a full band's resource sends it to the
     // next), the account nearest its target first; it never competes with coin jobs on coins per tick.
     const goalOrder = (x: Cand, y: Cand) => x.goal!.band - y.goal!.band || x.goal!.left - y.goal!.left || keeps(y) - keeps(x) || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id);
-    for (const c of cands.filter(c => c.goal).sort(goalOrder)) take(c, 0);
+    for (const c of cands.filter(c => c.goal && !c.lacks).sort(goalOrder)) take(c, 0);
+    // Then the kit tier: an army account with no band it can start gets the kit of its earliest band, before any coin
+    // job, so banked gold becomes a band and not more gold. A buy is one login with the account's own coins. A send
+    // takes a partner off its work for a trade window, so it comes second: this side's donors, then another side's.
+    const reserve = kitReserve(inp.templates), byName = new Map(mine.map(a => [a.name, a]));
+    const stock = [...(inp.stock ?? [])].sort((x, y) => Number(y.side === inp.side) - Number(x.side === inp.side));
+    const spare = (s: Stock, item: string) => (s.items[item] ?? 0) - (reserve[item] ?? 0);
+    const goalNow = (account: string) => { const id = inp.current?.get(account.toLowerCase()); return !!id && (id.startsWith(KIT_BUY) || byId.get(id)?.tier === 'goal'); };
+    const acquire = (c: Cand) => {
+        const a = byName.get(c.account)!, busy = !!inp.unfundable?.has(c.account.toLowerCase()), buyId = KIT_BUY + c.template.id;
+        if (done.has(c.account) || gave.has(c.account) || gaveItems.has(c.account) || vacated.has(c.account)) return;
+        // No kit for a band whose place is full: the account tries its next band.
+        if (c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
+        const picks = c.lacks!.map(l => { const item = l.of.filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]; return item ? { item, count: l.count } : null; });
+        if (picks.every(p => p !== null) && !inp.retired?.has(pairKey(c.account, buyId))) {
+            const lines: KitLine[] = picks.map(p => { const held = a.items[p!.item] ?? 0, m = inp.market![p!.item]!; return { item: m.name, id: m.id, held, limit: m.limit, quantity: Math.max(p!.count, (c.template.batch?.[p!.item] ?? 0) - held) }; });
+            const template = kitBuyTemplate(c.template, c.account, lines), cost = lines.reduce((n, l) => n + l.quantity * l.limit, 0), short = cost + KIT_CASH_RESERVE - (a.items.coin ?? 0);
+            const what = lines.map(l => `${l.quantity} ${l.item}`).join(', ');
+            if (short <= 0) { done.set(c.account, { account: c.account, template, value: 0, reason: `buys ${what} for ${c.template.id}, at most ${cost} coins`, resources: [] }); return; }
+            if (!busy) {
+                // A coin donor of this side, else a free account of another side with coins above the reserve.
+                const coinsOf = (s: Stock) => Math.max(0, (s.items.coin ?? 0) - FUND_RESERVE);
+                const own = [...pool].filter(([n, left]) => n.toLowerCase() !== c.account.toLowerCase() && !done.has(n) && left >= short).sort((x, y) => y[1] - x[1])[0]?.[0];
+                const far = own ? undefined : stock.filter(s => s.side !== inp.side && !gave.has(s.name) && !gaveItems.has(s.name) && coinsOf(s) >= short).sort((x, y) => coinsOf(y) - coinsOf(x))[0]?.name;
+                const from = own ?? far;
+                if (from) {
+                    if (own) pool.set(own, pool.get(own)! - short);
+                    gave.add(from); pool.delete(c.account);
+                    done.set(c.account, { account: c.account, template, value: 0, reason: `${c.reason}, funded ${short} coins by ${from} to buy ${what}`, resources: [], fund: { from, to: c.account, coins: short, template: template.id } });
+                    return;
+                }
+            }
+        }
+        for (const l of c.lacks!) for (const item of l.of) {
+            const from = stock.find(s => s.name.toLowerCase() !== c.account.toLowerCase() && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= l.count);
+            if (!from) continue;
+            // A trade needs the account offline with no stop file (scripts/fleet-agent.ts). One in a coin job leaves that
+            // job on this pass and gets the order on the next; one already on a band or a kit buy keeps it.
+            // The donor is held for this account, so a second account does not leave its job for the same stock.
+            if (busy) { if (!goalNow(c.account)) { vacated.set(c.account, `vacant: leaves its job for ${l.count} ${item} from ${from.name} for ${c.template.id}`); gaveItems.add(from.name); } return; }
+            gaveItems.add(from.name); pool.delete(from.name); pool.delete(c.account);
+            done.set(c.account, { account: c.account, template: c.template, value: 0, reason: `${c.reason}, sent ${l.count} ${item} by ${from.name}`, resources: [], send: { from: from.name, to: c.account, item, count: l.count, template: c.template.id } });
+            return;
+        }
+    };
+    for (const c of cands.filter(c => c.goal && c.lacks).sort(goalOrder)) acquire(c);
     // The coin tier, re-sorted after every assignment: one more holder lowers the worth of the candidates that share
     // its resource.
     for (const rest = cands.filter(c => !c.goal); rest.length;) {
@@ -164,7 +298,8 @@ export function plan(inp: Inputs): Assignment[] {
         const c = rest.shift()!;
         take(c, worth(c));
     }
-    return mine.map(a => done.get(a.name) ?? { account: a.name, value: 0, resources: [], reason: gave.has(a.name) ? 'vacant: gives coins this pass' : 'vacant: no template meets its skills and holdings with a free resource' });
+    return mine.map(a => done.get(a.name) ?? { account: a.name, value: 0, resources: [], reason: gave.has(a.name) ? 'vacant: gives coins this pass'
+        : gaveItems.has(a.name) ? 'vacant: gives a kit item this pass' : vacated.get(a.name) ?? 'vacant: no template meets its skills and holdings with a free resource' });
 }
 
 // The swarm job for an assignment. `autopilot` marks it as this side's planner job; the CLI replaces only marked jobs.
@@ -320,11 +455,14 @@ export function catalogue(): Template[] {
         env: { TRAIN_SKILL: skill, TARGET_LEVEL: '99', GIANT_FOOD: '10' }, role: 'combat', goal: `train ${skill} to 99 on the Khazard troopers`,
         tier: 'goal', band, repeats: true, trains: { skill, to: 99, unlocks: [] }, resources: [TROOPER_FIELD], yields: () => [],
         needs: { skills: { Attack: 60, Strength: 60, Defence: 60, Hitpoints: 40 }, pieces: { of: TROOPER_FOOD, count: 10 } },
+        batch: { trout: 100 },
     }));
     const magic: Template = {
         id: 'army-alch-magic-99', family: 'combat-train', script: 'scripts/alch-train.ts', args: ['99', '5000'], role: 'combat', goal: 'train Magic to 99 with alchemy at the Ardougne north bank',
         tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: 99, unlocks: [] }, yields: () => [],
         needs: { skills: { Magic: 21 }, items: { 'nature rune': 50, feather: 50 }, anyOf: [{ items: { 'fire rune': 250 } }, ...['staff of fire', 'fire battlestaff', 'mystic fire staff'].map(staff => ({ items: { [staff]: 1 } }))] },
+        // High Alchemy gives 1,625 XP a cast at xpRate 25, so Magic 99 takes about 8,000 nature runes; a buy brings 1,000.
+        batch: { 'nature rune': 1000 },
     };
     // Magic 1 to 21 for Low Alchemy: Wind Strike on the fenced Guard dog (scripts/alch-train.ts strikeStart). Practice,
     // fresh accounts started at the goldfarm knights: Magic 1 to 21-23 in 17-22 casts, no damage taken, about 180 ticks alone.
@@ -343,6 +481,7 @@ export function catalogue(): Template[] {
         env: { TRAIN_SKILL: 'Ranged', TARGET_LEVEL: '99', GIANT_FOOD: '10' }, role: 'combat', goal: 'train Ranged to 99 on the Khazard troopers',
         tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: [TROOPER_FIELD], yields: () => [],
         needs: { skills: { Hitpoints: 40 }, pieces: { of: TROOPER_FOOD, count: 10 }, anyOf: RANGED_KIT },
+        batch: { trout: 100, ...Object.fromEntries(ARROWS.map(([arrow]) => [arrow, 1000])) },
     };
     return [
         ...goldfarm,

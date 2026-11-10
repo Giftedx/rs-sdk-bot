@@ -256,3 +256,39 @@ test('a retirement whose last fail is now a drain lapses, whatever its script', 
         lapsed: ['thefullmonty:army-cow-strength-70', 'quickhandjob:army-cow-defence-45'],
     });
 });
+
+import { ARMY_MEET, itemOrder, sideStock } from './autopilot';
+import { meetingTiles } from './coin-courier';
+import { validOrder } from './fleet-trade-settlement';
+test('a kit item order fits the fleet order format and meets at the army bank', () => {
+    const o = itemOrder('TheFullMonty', 'Masterbaiter', 'Mind rune', 20, 'rs-sdk-demo.fly.dev', 1_000_000);
+    expect(validOrder(o)).toBe(true);
+    expect(o).toMatchObject({ id: '1900000-thefullmonty-masterbaiter-mindrune', item: 'Mind rune', count: 20, start: 1_900_000, end: 1_900_000 + 40 * 60_000, meet: ARMY_MEET });
+    expect(itemOrder('TheFullMonty', 'Masterbaiter', 'Air rune', 10, 'rs-sdk-demo.fly.dev', 1_000_000).id).not.toBe(o.id);
+    expect(meetingTiles({ x: 2619, z: 3332 })).toEqual(ARMY_MEET);
+});
+
+test('a kit send becomes an item order and a vacant account; a party to an open order waits', () => {
+    const band = catalogue().find(t => t.id === 'army-strike-magic-21')!;
+    const out = [{ account: 'Needy', template: band, value: 0, reason: 'army band', resources: [], send: { from: 'Near', to: 'Needy', item: 'mind rune', count: 20, template: band.id } }];
+    const order = (s: { from: string; to: string; item: string; count: number }) => itemOrder(s.from, s.to, 'Mind rune', s.count, 'rs-sdk-demo.fly.dev', 0);
+    const placed = fundOrders(out, new Set(), () => { throw Error('no coin order'); }, order);
+    expect(placed.orders.map(o => [o.from, o.to, o.item, o.count])).toEqual([['Near', 'Needy', 'Mind rune', 20]]);
+    expect(placed.assignments).toEqual([{ account: 'Needy', value: 0, resources: [], reason: 'vacant: awaits 20 mind rune from Near for army-strike-magic-21' }]);
+    expect(placed.log).toEqual(['AUTOPILOT send Needy 20 mind rune from Near for army-strike-magic-21']);
+    const waiting = fundOrders(out, new Set(['near']), () => { throw Error('no coin order'); }, order);
+    expect(waiting.orders).toEqual([]);
+    expect(waiting.log).toEqual(['AUTOPILOT send Needy 20 mind rune from Near for army-strike-magic-21: waits for an open order']);
+});
+
+test('another side gives only from accounts its fresh plan leaves free and no open order holds', () => {
+    const snapshot = { accounts: [
+        { name: 'Free', inventory: [{ name: 'Mind rune', count: 374 }], bank: [{ name: 'Coins', count: 4_000_000 }] },
+        { name: 'Working', bank: [{ name: 'Mind rune', count: 335 }] }, { name: 'Trading', bank: [{ name: 'Mind rune', count: 50 }] }, { name: 'Haggis', bank: [] }] };
+    const plan = { at: 1_000_000, jobs: [{ account: 'Working', enabled: true }, { account: 'Free', enabled: false }] };
+    const stock = (at: number) => sideStock('claude-cloud', snapshot, { ...plan, at }, new Set(['trading']), 1_000_000 + 60_000, 30 * 60_000, () => undefined);
+    expect(stock(1_000_000)).toEqual([{ name: 'Free', side: 'claude-cloud', items: { 'mind rune': 374, coin: 4_000_000 } }]);
+    // A side with no fresh plan has no running fleet agent to trade.
+    expect(stock(1_000_000 - 31 * 60_000)).toEqual([]);
+    expect(sideStock('claude-cloud', snapshot, null, new Set(), 0, 1, () => undefined)).toEqual([]);
+});
