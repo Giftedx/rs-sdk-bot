@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794311562860,
+ "at": 1794311633196,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -406,7 +406,7 @@
     "BANK_EVERY": "5",
     "COORDINATOR_RUN_ID": "task-c95e3b7f-a701-4638-9cfb-980eb7129d62"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-blood-magicwanda-loot100 [task-c95e3b7f-a701-4638-9cfb-980eb7129d62]",
    "role": "supply"
