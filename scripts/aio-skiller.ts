@@ -159,6 +159,9 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  // Thieving
  {skill:'thieving',method:'knights',script:'scripts/goldfarm.ts',description:'Pickpocket Knights of Ardougne with bank food refill and Baker stall fallback'},
  {skill:'thieving',method:'knights-stable',script:'scripts/goldfarm-stable.ts',description:'Bounded Ardougne knight pickpocketing batch'},
+ {skill:'thieving',method:'stun-base',script:'scripts/measure/stun-guest.ts',description:'Ardougne knights with no action inside a stun (MODE=base)'},
+ {skill:'thieving',method:'stun-bury',script:'scripts/measure/stun-guest.ts',description:'Ardougne knights with a bone buried inside each stun (MODE=bury)'},
+ {skill:'thieving',method:'stun-enchant',script:'scripts/measure/stun-guest.ts',description:'Ardougne knights with an enchant cast inside each stun (MODE=enchant)'},
  {skill:'thieving',method:'bootstrap55',script:'scripts/generated/thieving60.ts',description:'Fresh-account Men -> Cake stall -> Guards -> Knights to 55/60 Thieving'},
  {skill:'thieving',method:'pickpocket',script:'scripts/microbot-pickpocket-trip.ts',description:'Bank-staged pickpocket trip for any native NPC profile'},
  {skill:'thieving',method:'pickpocket-at-site',script:'scripts/microbot-a-pickpocket.ts',description:'At-site NPC pickpocketing'},
