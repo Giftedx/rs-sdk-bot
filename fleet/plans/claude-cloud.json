@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794305248266,
+ "at": 1794305257424,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -124,6 +124,25 @@
    "template": "army-trooper-strength-99",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Deeppockets",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2669,3298"
    ]
   },
   {
@@ -273,19 +292,6 @@
    "resources": [
     "cow:ardougne-north"
    ]
-  },
-  {
-   "account": "Deeppockets",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-a319b369-93d2-4cd3-a872-225e57dc6f02"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "claude-cloud-recover-deeppockets-20261110t100326z [task-a319b369-93d2-4cd3-a872-225e57dc6f02]",
-   "role": "thieving"
   }
  ]
 }
