@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794336715613,
+ "at": 1794337282576,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -29,27 +29,24 @@
   },
   {
    "account": "TrouserSnake",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "1500",
-    "trooper"
+    "catherby"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "ITEMS": "rune arrowtips|adamant arrowtips",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-defence-99",
+   "goal": "buy rune and adamant arrowtips at Catherby",
+   "role": "bank",
+   "template": "shop-arrowtips",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "shop:catherby"
    ]
   },
   {
@@ -110,7 +107,7 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
+    "TRAIN_SKILL": "Attack",
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
@@ -119,9 +116,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
+   "goal": "train Attack to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-strength-99",
+   "template": "army-trooper-attack-99",
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
