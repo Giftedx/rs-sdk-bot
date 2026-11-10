@@ -98,29 +98,30 @@ const inArdougne = (t: Tile) => t.level === 0 && t.x >= 2550 && t.x <= 2700 && t
 
 export async function walkWithFerryFallback(from: Tile, to: Tile, walk: (to: Tile, budgetMs?: number) => Promise<Outcome>,
     sail: (boat: Travel) => Promise<Outcome>, coins: () => number, stageFare?: (need: number) => Promise<Outcome>): Promise<Outcome> {
-    const direct = await walk(to);
-    if (direct.ok || direct.reason !== 'precondition' || !direct.detail.startsWith('no route to ')) return direct;
-    // The planner has no land route between the Varrock side and Ardougne, in either direction (practice: "no route to
-    // 2619,3332,0" from Varrock West; live: "no route to 3185,3436,0" from Ardougne). Westbound walks to Draynor and
-    // sails Port Sarim -> Musa Point, then Brimhaven -> Ardougne. Eastbound sails Ardougne -> Brimhaven, then
-    // Musa Point -> Port Sarim. The walk across Karamja between the two docks is the same ground both ways.
+    // Between the Varrock side and Ardougne the way is two ferries: westbound Port Sarim -> Musa Point, then Brimhaven
+    // -> Ardougne; eastbound Ardougne -> Brimhaven, then Musa Point -> Port Sarim. The walk across Karamja between the
+    // docks is the same ground both ways.
     const west = inEast(from) && to.level === 0 && to.x >= 2600 && to.x <= 2690 && to.z >= 3260 && to.z <= 3360;
     const east = !west && inArdougne(from) && inEast(to);
-    if (!west && !east) return direct;
-
-    const travel = loadTravel(), first = travel.find(t => t.id === (west ? PORT_SARIM_FERRY : BRIMHAVEN_FERRY)), second = travel.find(t => t.id === (west ? ARDOUGNE_FERRY : MUSA_POINT_FERRY));
-    if (!first?.from || !second?.from) return direct;
+    const travel = west || east ? loadTravel() : [], first = travel.find(t => t.id === (west ? PORT_SARIM_FERRY : BRIMHAVEN_FERRY)), second = travel.find(t => t.id === (west ? ARDOUGNE_FERRY : MUSA_POINT_FERRY));
     const toll = west && from.x >= 3250 && from.z <= 3230 ? travel.find(t => t.id === AL_KHARID_TOLL) : undefined;
-    let ticks = direct.ticks, fare = first.coins + second.coins;
-    const missingFare = (need: number): Outcome => ({ ok: false, reason: 'precondition', detail: `${west ? 'westbound' : 'eastbound'} ferry needs ${need} coins in the pack`, ticks });
-    // An account that banks its coins has no fare in the pack: `stageFare` fetches it (walkTarget takes it from the
-    // nearest bank). Without it, or when it brings too little, the walk is refused before any step.
-    if (coins() < fare + (toll?.coins ?? 0)) {
-        const need = fare + (toll?.coins ?? 0), staged = stageFare ? await stageFare(need) : undefined;
-        if (staged) ticks += staged.ticks;
-        if (staged && !staged.ok) return { ...staged, ticks };
-        if (coins() < need) return missingFare(need);
+    const need = first?.from && second?.from ? first.coins + second.coins + (toll?.coins ?? 0) : 0;
+    let ticks = 0;
+    // The planner routes over the ferries itself when the pack holds the fare. Without it, it finds no route, or one
+    // that cannot be walked (practice: from the Ardougne north bank with no coins it sent the account up the castle
+    // stairs and the walk was rejected). An account that banks its coins has no fare, so `stageFare` fetches it before
+    // the first plan (walkTarget takes it from the nearest bank).
+    if (need && coins() < need && stageFare) {
+        const staged = await stageFare(need); ticks += staged.ticks;
+        if (!staged.ok) return { ...staged, ticks };
     }
+    const direct = await walk(to);
+    if (direct.ok || direct.reason !== 'precondition' || !direct.detail.startsWith('no route to ') || !need || !first?.from || !second?.from)
+        return ticks ? { ...direct, ticks: ticks + direct.ticks } : direct;
+    ticks += direct.ticks;
+    let fare = first.coins + second.coins;
+    const missingFare = (wanted: number): Outcome => ({ ok: false, reason: 'precondition', detail: `${west ? 'westbound' : 'eastbound'} ferry needs ${wanted} coins in the pack`, ticks });
+    if (coins() < need) return missingFare(need);
     // A start west of Draynor walks straight to the Port Sarim dock.
     const through = !west || from.x < 3060 ? [] : from.x >= 3200 ? [LUMBRIDGE, DRAYNOR] : Math.max(Math.abs(from.x - DRAYNOR.x), Math.abs(from.z - DRAYNOR.z)) <= 3 ? [] : [DRAYNOR];
     for (const tile of through) {
