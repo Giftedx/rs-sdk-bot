@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794314079284,
+ "at": 1794314150379,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -515,7 +515,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-2038c2d8-20c9-4212-953f-c8db16de51f7"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-ge-mineyourbiz-rune-arrows533 [task-2038c2d8-20c9-4212-953f-c8db16de51f7]",
    "role": "supply"
