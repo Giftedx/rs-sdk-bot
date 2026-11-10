@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794283726435,
+ "at": 1794283996461,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -36,35 +36,28 @@
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
+   "repeat": false,
    "goal": "goldfarm knights at 2652,3318",
    "role": "thieving",
    "template": "goldfarm@2652,3318",
-   "autopilot": "claude-cloud",
    "resources": [
     "knight:2652,3318"
    ]
   },
   {
    "account": "TheFullMonty",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
+   "repeat": false,
    "goal": "train Strength to 70 on the Ardougne cows",
    "role": "combat",
    "template": "army-cow-strength-70",
-   "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
    ]
