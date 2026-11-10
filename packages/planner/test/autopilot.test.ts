@@ -443,7 +443,7 @@ test('army accounts at 60 in all three melee skills train to 99 on the Khazard t
     expect(Object.values(full).filter(id => id.startsWith('army-trooper-'))).toHaveLength(TROOPER_FIELD_CAPACITY);
     expect(Object.values(full).filter(id => id === 'army-cow-strength-70')).toHaveLength(1);
     const job = jobFor(plan(inputs([soldier('Soldier')], { army, capacity: CAPACITY }))[0]!, side);
-    expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'], env: { TRAIN_SKILL: 'Strength', TARGET_LEVEL: '99', GIANT_FOOD: '10' }, repeat: true, resources: ['trooper:battlefield'] });
+    expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'], env: { TRAIN_SKILL: 'Strength', TARGET_LEVEL: '99', GIANT_FOOD: '10', GIANT_BURY: '1' }, repeat: true, resources: ['trooper:battlefield'] });
 });
 
 test('army accounts alch Magic to 99 with natures, feathers and fire, then bury held bones for Prayer', () => {
@@ -490,7 +490,7 @@ test('army accounts train Ranged to 99 on the troopers with a bow they wield and
     expect(pick({}, { shortbow: 1, 'iron arrow': 500 })).not.toBe('army-trooper-ranged-99');
     expect(pick({ Ranged: 99 }, { ...fish, shortbow: 1, 'iron arrow': 500 })).toBe('army-trooper-strength-99');
     const job = jobFor(plan(inputs([acct('Archer', base, { ...fish, shortbow: 1, 'iron arrow': 500 })], { army, capacity: CAPACITY }))[0]!, side);
-    expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'], env: { TRAIN_SKILL: 'Ranged', TARGET_LEVEL: '99', GIANT_FOOD: '10' }, repeat: true, resources: ['trooper:battlefield'] });
+    expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'], env: { TRAIN_SKILL: 'Ranged', TARGET_LEVEL: '99', GIANT_FOOD: '10', GIANT_BURY: '1' }, repeat: true, resources: ['trooper:battlefield'] });
 });
 
 import { KIT_BUY, KIT_CASH_RESERVE, KIT_PRICE_CAPS, kitLacks, kitReserve, type Market, type Stock } from '../src/autopilot';

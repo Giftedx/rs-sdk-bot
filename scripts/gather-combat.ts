@@ -412,7 +412,8 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
     // A site credited by XP alone (the troopers) shares its targets with gnomes and other players: it lets go of a lost
     // target and walks back to the spot when none is in view. The giants' big-bone credit keeps the strict wait.
     const roam=site.creditDrop===undefined;
-    const bury=roam&&!!o.bury,prayerXp=()=>s.sdk.getSkillXp('Prayer')??0,prayerStart=prayerXp();let buried=0;
+    // Burying stops at Prayer 99: from there it only costs kills.
+    const bury=roam&&!!o.bury&&(s.sdk.getSkill('Prayer')?.baseLevel??1)<99,prayerXp=()=>s.sdk.getSkillXp('Prayer')??0,prayerStart=prayerXp();let buried=0;
     if(ranged&&(!Number.isSafeInteger(ammoCarry)||ammoCarry<1||ammoCarry>100000))throw new Error('giant GIANT_AMMO must be1..100000');
     const inv=()=>s.sdk.getInventory(),state=()=>s.sdk.getState();
     const count=(items:readonly {id:number;count:number}[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
