@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794325628659-mightyrod-nabtheknob-trout",
  "account": "NabTheKnob",
  "partner": "Mightyrod",
@@ -12,6 +12,11 @@
  "claim": "301ba902-4f84-4c8a-aeb0-6075843f2181",
  "count": 0,
  "ok": false,
- "at": 1794325637007,
- "detail": "trade claimed"
+ "at": 1794325697530,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1794325637357-0000030536-0000000001",
+  "at": 1794325697444,
+  "sha256": "8b8aab02fa446f53f3f3c68abf25a179ad14c2293ed5200f5904db30fe6e7663"
+ }
 }
