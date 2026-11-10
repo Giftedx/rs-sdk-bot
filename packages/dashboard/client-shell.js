@@ -9,7 +9,7 @@
   window.atlasOperator=()=>!window.FleetShim||!!window.FleetShim.signedIn?.();
   // A visitor does not see housekeeping runs, and reads a job name as words, without a trailing map position.
   window.atlasHousekeeping=text=>/^(?:read-bank|recover-|chain-)/.test(String(text??''));
-  window.atlasJobName=text=>String(text??'').replace(/([a-z])-(?=[a-z])/g,'$1 ').replace(/\s+\d{3,4},\s?\d{3,4}\b/g,'');
+  window.atlasJobName=text=>String(text??'').replace(/([a-z])-(?=[a-z])/g,'$1 ').replace(/(?:\s+at)?\s+\d{3,4},\s?\d{3,4}\b/g,'');
   // Owner-only: commands, jobs, banks, host resources, the plan (goals) and the private repository's pull requests.
   const OPERATOR_PLUGINS=['operations','dispatch','raw','jobs','machine','stock','goals','prs'];
   // One home per fact for a spectator: the open row in Fleet holds the account summary and its last run, so these two
