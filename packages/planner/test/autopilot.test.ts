@@ -374,18 +374,27 @@ test('the Ardougne cow bands train army accounts from Hitpoints 32 with 14 HP of
     const army = new Set(['cowhand', 'pure', 'broke', 'second', 'third']);
     const run = (accounts: Acct[]) => plan(inputs(accounts, { army, capacity: CAPACITY }));
     const pick = (accounts: Acct[]) => ids(run(accounts));
-    expect(pick([fighter('Cowhand', { Hitpoints: 35 })])).toEqual({ Cowhand: 'army-cow-strength' });
-    expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 40 })])).toEqual({ Cowhand: 'army-cow-attack' });
-    expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 40, Attack: 40 })])).toEqual({ Cowhand: 'army-cow-defence' });
+    // Strength, Attack, then Defence to 45; then each on to 60; then the coin tier.
+    expect(pick([fighter('Cowhand', { Hitpoints: 35 })])).toEqual({ Cowhand: 'army-cow-strength-45' });
+    expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 45 })])).toEqual({ Cowhand: 'army-cow-attack-45' });
+    expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 45, Attack: 45 })])).toEqual({ Cowhand: 'army-cow-defence-45' });
+    expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 45, Attack: 45, Defence: 45 })])).toEqual({ Cowhand: 'army-cow-strength-60' });
+    expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 60, Attack: 60, Defence: 60 })]).Cowhand).toMatch(/^goldfarm@/);
+    // A first pass outranks a second: a fresh account takes a place from a holder training past 45.
+    const second = { Hitpoints: 50, Strength: 50, Attack: 45, Defence: 45 };
+    const current = new Map([['second', 'army-cow-strength-60'], ['third', 'army-cow-strength-60']]);
+    const pass = ids(plan(inputs([fighter('Cowhand', { Hitpoints: 35 }), fighter('Second', second), fighter('Third', second)], { army, capacity: CAPACITY, current })));
+    expect(pass.Cowhand).toBe('army-cow-strength-45');
+    expect(Object.values(pass).filter(id => id === 'army-cow-strength-60')).toHaveLength(1);
     // With no giant band, a range pure at Hitpoints 82 trains Strength on the cows too; Hitpoints 10 has too little
     // food margin and farms.
-    expect(pick([fighter('Pure', { Hitpoints: 82 })])).toEqual({ Pure: 'army-cow-strength' });
+    expect(pick([fighter('Pure', { Hitpoints: 82 })])).toEqual({ Pure: 'army-cow-strength-45' });
     expect(pick([fighter('Cowhand', { Hitpoints: 10 })]).Cowhand).toMatch(/^goldfarm@/);
     // Cake counts by its bites: a 2/3 cake and a slice heal 12 HP, short of 14, and the account farms; add a whole cake
     // (pack or bank) and it trains.
     const bronze = { 'bronze sword': 1, 'wooden shield': 1 };
     expect(pick([fighter('Broke', { Hitpoints: 35 }, { ...bronze, '2/3 cake': 1, 'slice of cake': 1 })]).Broke).toMatch(/^goldfarm@/);
-    expect(pick([fighter('Broke', { Hitpoints: 35 }, { ...bronze, '2/3 cake': 1, 'slice of cake': 1, cake: 1 })])).toEqual({ Broke: 'army-cow-strength' });
+    expect(pick([fighter('Broke', { Hitpoints: 35 }, { ...bronze, '2/3 cake': 1, 'slice of cake': 1, cake: 1 })])).toEqual({ Broke: 'army-cow-strength-45' });
     expect(pick([fighter('Broke', { Hitpoints: 35 }, { trout: 2 })]).Broke).toMatch(/^goldfarm@/);
     // The field takes two; a third army account farms.
     const three = pick([fighter('Cowhand', { Hitpoints: 35 }), fighter('Second', { Hitpoints: 36 }), fighter('Third', { Hitpoints: 37 })]);

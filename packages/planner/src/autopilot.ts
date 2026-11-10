@@ -231,17 +231,19 @@ export const COW_FIELD = 'cow:ardougne-north', COW_FIELD_CAPACITY = 2;
 export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [COW_FIELD]: COW_FIELD_CAPACITY, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // Army goal bands (AGENTS.md goals: maxed tribrids), in PK-value order: Strength, Attack, then Ranged, Magic and
-// Prayer, Defence last. Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile) qualified 3/3 on practice
-// with MAX_KILLS=8: no death, logged out, RESULT ok stop=max-kills, about 700 ticks a run, trained skill 0.38 and
-// Hitpoints 0.12 XP per tick at practice XP rate 1, 2 trout carried and none eaten, from Attack 45 and Hitpoints 32
-// (claude-cloud-4 .practice/combat-ladder); 3/3 again with cake and no trout (cow-dip-cake-final). Cow mode needs 14 HP
-// of trout or cake held (COW_FOOD_HP) and the bronze sword and wooden shield held or worn, starts at the north bank and
-// never wields better gear. Below Hitpoints 32 the food runs out. Hill giants for Hitpoints 43 and up are not
-// qualified, so the cows take every army account from 32. COW_STAGE=1 (scripts/cow-stage.ts) walks the account to the
-// north bank and takes the sword, shield and food from its bank first. Gap: staging, the live XP factor and field
-// crowding are not measured on practice or live.
+// Prayer, Defence last. Bands 6-9 are left for faster trainers above Hitpoints 43 (hill giants, ice warriors), which
+// are not qualified. Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile, MAX_KILLS=8): live 4/4 runs
+// RESULT ok at 15.7 Strength XP per tick from Strength 1 to 46 (research/combat-measure.md, live cow training);
+// practice 3/3 from Hitpoints 32 with trout and 3/3 with cake only (claude-cloud-4 .practice/combat-ladder). This
+// server's level table puts 45 at 22,767 XP and 60 at 66,193, so the cows take each skill to 45 (about 1,450 ticks)
+// and, while nothing faster is qualified, on to 60 (about 2,800 more; an estimate, as XP per kill is fixed). Cow mode
+// needs 14 HP of trout or cake held (COW_FOOD_HP) and the bronze sword and wooden shield held or worn, starts at the
+// north bank and never wields better gear; COW_STAGE=1 (scripts/cow-stage.ts) walks the account there and takes the
+// sword, shield and food from its bank first. Below Hitpoints 32 the food runs out. Gap: staging is unit-tested only,
+// and the rate above 46 and field crowding are not measured.
 export const COW_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence'; band: number; to: number }[] = [
-    { skill: 'Strength', band: 0, to: 40 }, { skill: 'Attack', band: 1, to: 40 }, { skill: 'Defence', band: 5, to: 40 },
+    { skill: 'Strength', band: 0, to: 45 }, { skill: 'Attack', band: 1, to: 45 }, { skill: 'Defence', band: 5, to: 45 },
+    { skill: 'Strength', band: 10, to: 60 }, { skill: 'Attack', band: 11, to: 60 }, { skill: 'Defence', band: 12, to: 60 },
 ];
 
 // Proven job templates. Rates are estimates from each script's header model; tick-waste discounts them by measurement.
@@ -252,7 +254,7 @@ export function catalogue(): Template[] {
         yields: a => [{ item: 'coins', perTick: knightCoinsPerTick(a.skills.Thieving ?? 1) }],
     }));
     const cows = COW_BANDS.map(({ skill, band, to }): Template => ({
-        id: `army-cow-${skill.toLowerCase()}`, family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['3000', 'cow'],
+        id: `army-cow-${skill.toLowerCase()}-${to}`, family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['3000', 'cow'],
         env: { TRAIN_SKILL: skill, COW_BANK_PROFILE: 'north', MAX_KILLS: '8', COW_STAGE: '1' }, role: 'combat', goal: `train ${skill} to ${to} on the Ardougne cows`,
         tier: 'goal', band, repeats: true, trains: { skill, to, unlocks: [] }, resources: [COW_FIELD], yields: () => [],
         needs: { skills: { Hitpoints: 32 }, food: 14, items: { 'bronze sword': 1, 'wooden shield': 1 } },
