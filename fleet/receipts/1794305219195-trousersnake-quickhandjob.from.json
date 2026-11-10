@@ -1,0 +1,30 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794305219195-trousersnake-quickhandjob",
+ "account": "TrouserSnake",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 30,
+ "claim": "27a48bf9-7a7d-457d-b6fc-895bd9dc055a",
+ "count": 30,
+ "ok": true,
+ "at": 1794305246426,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 30,
+  "after": 0
+ },
+ "bank": {
+  "count": 30,
+  "at": 1794305237696
+ },
+ "logout": {
+  "attemptId": "1794305227243-0000021013-0000000001",
+  "at": 1794305246421,
+  "sha256": "32528912b38c1f4f8743ad88f9084b829d91b33fc3a2a726ca79c48425ae7032"
+ }
+}
