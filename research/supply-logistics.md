@@ -55,6 +55,22 @@ The [market refresh](../.practice/ge-qualification/quote-1793057494187/market.js
 
 [Installed qualification](../.practice/ge-qualification/scimitar/release/qualified.json):15focused checks,root typecheck and one full canonical native route pass. Hypothetical1331was added to the actual Mightyrod profile. The run equipped1331,credited one Fire110corpse,banked one herb201and bone532,used4Salmon for initial healing,and retained other assets. Fight94ticks,total532,minimumHP44,final69,clean logout. Separate CRC-save accounting confirms stock. This is one native observation,not live ownership or a comparative rate. Mightyrod block1792955012008 remains. Live procurement,delivery,kill and repeat proof are still required.
 
+### Rune scimitars from our own runite
+
+- **Claim.** A side with a Smithing 90 account makes rune scimitars from banked runite ore and coal with two existing
+  routes: `scripts/smelt-bars.ts <account> <cap> runite` at Al Kharid, then the anvil order `ORDER_ACTION=smith
+  PRODUCT_ID=1333` at the Varrock West anvils. A bar takes one runite ore and 8 coal; a blade takes 2 bars and a hammer.
+- **Conditions.** Practice, one account, Smithing 99, at the Al Kharid bank with 12 runite ore, 96 coal, a hammer and
+  5,000 coins: 12 bars in 198 ticks (`RESULT ok`, exact order), then 6 scimitars in 463 ticks, 337 of them the walk
+  through the toll gate (10 coins) to Varrock West (`RESULT ok`). The planner offers both as pilot routes,
+  `aio-runite-bars` and `aio-rune-scimitars`, to a plan whose `aio` list names them. The trooper trainer already
+  wields the best owned scimitar for the Attack level (`selectGiantWeapon`).
+- **Evidence.** `.practice/gear/chain.ts` (`chain-a.out`, `smelt-a.log`, `smith-a.log`);
+  `packages/planner/test/autopilot.test.ts` (a smith with runite ore and coal).
+- **Gap.** One practice run; no live run. The local side's snapshot shows a Smithing 99 account with 13 runite ore
+  and a Mining 99 account with 57, and no coal: 28 bars for 14 blades need 224. Delivery to another side is a fleet
+  order per blade and is not run.
+
 ### Owned GE consumer
 
 [Source/reuse decision](../.practice/ge-qualification/owned-item/source-decision.json):reuse pinned SDK transactions,observed bank deposits and the earlier GE fill fixture. Existing private order IDs and persistent intent survive logout;pending bids are not stock. The installed `scripts/buy-owned-ge-item.ts` handles one item with a cap,reserve,review/deadline and no automatic retry of unknown mutations. [Releasecba6a021](../.practice/ge-qualification/owned-item/release/qualified.json):19focused tests/46assertions,root/fixture typechecks and nine installed native stages pass. A separate [raw CRC audit](../.practice/ge-qualification/owned-item/native-recovery-1793068865429/independent-audit.json) confirms saved assets,health and logout.

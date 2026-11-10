@@ -667,7 +667,7 @@ const sweepKit = { 'law rune': 2, 'air rune': 6, 'fire rune': 1, 'earth rune': 1
 
 test('every AIO template is in the catalogue as a pilot that runs the dispatcher with its category first', () => {
     const all = new Map(catalogue().map(t => [t.id, t]));
-    expect(aioIds).toEqual(['aio-flax', 'aio-bowstrings', 'aio-yews', 'aio-shafts', 'aio-ore', 'aio-essence', 'aio-air-runes', 'aio-quest-runemysteries']);
+    expect(aioIds).toEqual(['aio-flax', 'aio-bowstrings', 'aio-yews', 'aio-shafts', 'aio-ore', 'aio-essence', 'aio-air-runes', 'aio-runite-bars', 'aio-rune-scimitars', 'aio-quest-runemysteries']);
     for (const t of aioTemplates()) {
         expect(all.get(t.id)).toBeDefined();
         expect(t.pilot).toBe(true);
@@ -790,4 +790,24 @@ test('the Prayer filler waits behind a kit buy and gives way to one while it run
     expect(plan(inputs([archer], { ...busy, current: new Map([['archer', 'army-trooper-defence-99']]) }))[0]!.template!.id).not.toBe(KIT_BUY + 'army-trooper-ranged-99');
     // With no market for the arrows it fills the time on the field.
     expect(plan(inputs([archer], { army, capacity: CAPACITY }))[0]!.template!.id).toBe('army-trooper-prayer-99');
+});
+
+test('a smith with runite ore and coal smelts bars, then smiths rune scimitars, once the plan admits the routes', () => {
+    const gear = ['aio-runite-bars', 'aio-rune-scimitars'], gearPrices = { ...aioPrices, 'runite bar': 5000, 'rune scimitar': 25600, 'runite ore': 3200, coal: 45 };
+    const run = (a: Acct, pilots = gear) => plan(aioInputs([a], pilots, { prices: gearPrices }))[0]!;
+    const smith = (items: Record<string, number>, skills: Record<string, number> = { Smithing: 99 }) => acct('Smith', skills, items);
+    // The PC smith's stock: 13 runite ore, a hammer, and coal once mined.
+    expect(run(smith({ 'runite ore': 13, coal: 104, hammer: 1 })).template!.id).toBe('aio-runite-bars');
+    expect(jobFor(run(smith({ 'runite ore': 13, coal: 104, hammer: 1 })), side)).toMatchObject({ script: 'scripts/aio.ts', args: ['skiller', 'smithing', 'smelt', '1500', 'runite', 'MAX_MAKE=28', 'ORE_RESERVE=0'] });
+    // Without 8 coal a bar, under Smithing 85, or not admitted: no smelt.
+    expect(run(smith({ 'runite ore': 13, coal: 15, hammer: 1 })).template).toBeUndefined();
+    expect(run(smith({ 'runite ore': 13, coal: 104 }, { Smithing: 84 })).template).toBeUndefined();
+    expect(run(smith({ 'runite ore': 13, coal: 104 }), []).template).toBeUndefined();
+    // Bars banked: the anvil order, one blade a run, with the hammer and the toll.
+    const bars = smith({ 'runite bar': 12, hammer: 1, coin: 5000 });
+    expect(run(bars).template!.id).toBe('aio-rune-scimitars');
+    expect(jobFor(run(bars), side)).toMatchObject({ script: 'scripts/aio.ts', args: ['skiller', 'smithing', 'anvil', '1500', 'PRODUCT_ID=1333', 'MAX_MAKE=1', 'BAR_RESERVE=0'] });
+    expect(run(smith({ 'runite bar': 1, hammer: 1, coin: 5000 })).template).toBeUndefined();
+    expect(run(smith({ 'runite bar': 12, coin: 5000 })).template).toBeUndefined();
+    expect(run(smith({ 'runite bar': 12, hammer: 1, coin: 5000 }, { Smithing: 89 })).template).toBeUndefined();
 });

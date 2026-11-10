@@ -542,6 +542,13 @@ export const RANGED_KIT: readonly Needs[] = BOWS.flatMap(([bow, level]) =>
 //   preset's pack from the bank and ends `missing id:count` without it: 2 law, 6 air, 1 fire and 1 earth rune and 4
 //   meals. The quest has no fight and no level check, and walks where a teleport fails. Gap: the bench runs the sweep
 //   on Cook's Assistant, and this quest script from a preset with every skill 99; the two together are not run.
+// - runite bars (scripts/smelt-bars.ts runite): Smithing 85, one runite ore and 8 coal a bar, banked at Al Kharid.
+//   The bench case smelts iron; practice with Smithing 99 at the Al Kharid bank: 12 bars in 198 ticks
+//   (research/combat-measure.md, rune scimitars).
+// - rune scimitars (scripts/smelt-bars.ts, the anvil order): Smithing 90, a hammer, 2 runite bars a blade and 10
+//   coins for the Al Kharid toll gate; it stages to the Varrock West anvils. The bench case smiths a bronze dagger;
+//   practice: 6 blades in 463 ticks, 337 of them the walk from Al Kharid. The PK army's fight loop wants rune weapons
+//   and the live market has no rune scimitar sellers (docs/plans/joined-plan.md, PK army).
 const PICKAXES = ['bronze pickaxe', 'iron pickaxe', 'steel pickaxe', 'mithril pickaxe', 'adamant pickaxe', 'rune pickaxe'] as const;
 const AXES = ['bronze axe', 'iron axe', 'steel axe', 'black axe', 'mithril axe', 'adamant axe', 'rune axe'] as const;
 // scripts/quest-sweep.ts MEALS, by item name (scripts/autopilot.test.ts checks the two agree).
@@ -574,6 +581,12 @@ export function aioTemplates(): Template[] {
         aio('aio-air-runes', 'skiller:runecraft:bank-craft', 'scripts/rune-bank-craft.ts', ['runecraft', 'bank-craft', '99', 'CAP=4000'], {
             role: 'magic', goal: 'craft banked rune essence into air runes', resources: [AIO_PLACES.air],
             needs: { items: { 'air talisman': 1, 'rune essence': 28 } }, yields: () => [{ item: 'air rune', perTick: 0.09 }] }),
+        aio('aio-runite-bars', 'skiller:smithing:smelt', 'scripts/smelt-bars.ts', ['smithing', 'smelt', '1500', 'runite', 'MAX_MAKE=28', 'ORE_RESERVE=0'], {
+            role: 'smithing', goal: 'smelt banked runite ore and coal into runite bars at Al Kharid',
+            needs: { skills: { Smithing: 85 }, items: { 'runite ore': 2, coal: 16 } }, yields: () => [{ item: 'runite bar', perTick: 0.06 }] }),
+        aio('aio-rune-scimitars', 'skiller:smithing:anvil', 'scripts/smelt-bars.ts', ['smithing', 'anvil', '1500', 'PRODUCT_ID=1333', 'MAX_MAKE=1', 'BAR_RESERVE=0'], {
+            role: 'smithing', goal: 'smith a rune scimitar from two banked runite bars at the Varrock West anvils',
+            needs: { skills: { Smithing: 90 }, items: { hammer: 1, 'runite bar': 2, coins: 10 } }, yields: () => [{ item: 'rune scimitar', perTick: 0.003 }] }),
         aio('aio-quest-runemysteries', 'quester:mode:sweep', 'scripts/quest-sweep.ts', ['sweep', 'runemysteries'], {
             role: 'quest', goal: 'complete Rune Mysteries for the essence mine', quest: { name: 'Rune Mysteries Quest', unlocks: [essence.id] },
             needs: { items: { 'law rune': 2, 'air rune': 6, 'fire rune': 1, 'earth rune': 1 }, pieces: { of: SWEEP_MEALS, count: 4 } }, yields: () => [] }),
