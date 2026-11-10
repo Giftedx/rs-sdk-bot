@@ -198,11 +198,12 @@ export function finishedTrainers(jobs: readonly any[], side: string, assigned: R
 // pack. Counting these as failures retired every knight spot of every account in one server outage. A login refused
 // because a dropped session still holds the account's fleet claim (the worker logs `RESULT fail login: Error: fleet
 // account claim held by swarm` until an authenticated recovery confirms the logout) is a drain too: the job never ran,
-// and the recovered account resumes it.
+// and the recovered account resumes it. So is a world planner `precondition no route to`: it says where the account
+// stands, not whether the job works, and a routing fix makes the same job run.
 export const RETIRE_FAILS = 2, WASTE_LIMIT = 0.9;
 // Cow mode reports its progress as selectedXp, damageXp and creditedKills.
 export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked|selectedXp|damageXp|creditedKills)=[1-9]\d*\b/.test(result);
-export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b)/;
+export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|.*\bprecondition no route to\b)/;
 export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number; drains: number } {
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
     const drains = clean.filter(l => DRAIN_RESULT.test(l)).length;

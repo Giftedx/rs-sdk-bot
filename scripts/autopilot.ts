@@ -17,7 +17,7 @@ import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { clearSwarmStop, swarmWroteStop } from './swarm';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { matchingJobLines } from '../packages/core/src/job-log';
-import { CAPACITY, CLAIM_MAX_AGE_MS, SHARED, accountFrom, assess, catalogue, finishedTrainers, freshest, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, type Assignment } from '../packages/planner/src/autopilot';
+import { CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, freshest, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, type Assignment } from '../packages/planner/src/autopilot';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { tradeSettlement, validOrder, type Order, type Receipt, type TradeReceipt } from './fleet-trade-settlement';
 import { readHeldFleetTradeClaims } from '../packages/core/src/fleet-trade-claim';
@@ -38,12 +38,15 @@ type Retirement = string | { reason: string; script: string };
 type State = { assigned: Record<string, { template: string; offset: number; at: number }>; retired: Record<string, Retirement> };
 // A retirement holds while its template's script is unchanged, so a fix to the script gives the pair its retries back.
 // A death holds until a person clears it, and so does a pair whose template is gone. A bare reason takes the current
-// script, so nothing comes back on the pass that first reads it.
+// script, so nothing comes back on the pass that first reads it. One whose last RESULT is now a drain (DRAIN_RESULT)
+// lapses: it was not the job's failure.
 export function liveRetirements(retired: Readonly<Record<string, Retirement>>, scriptOf: (template: string) => string | undefined): { retired: Record<string, Retirement>; lapsed: string[] } {
     const out: Record<string, Retirement> = {}, lapsed: string[] = [];
     for (const [key, r] of Object.entries(retired)) {
         const reason = typeof r === 'string' ? r : r.reason, script = scriptOf(key.slice(key.indexOf(':') + 1));
-        if (/^death\b/.test(reason) || script === undefined) out[key] = r;
+        const result = reason.indexOf('RESULT ');
+        if (!/^death\b/.test(reason) && result >= 0 && DRAIN_RESULT.test(reason.slice(result))) lapsed.push(key);
+        else if (/^death\b/.test(reason) || script === undefined) out[key] = r;
         else if (typeof r === 'string') out[key] = { reason, script };
         else if (r.script === script) out[key] = r;
         else lapsed.push(key);
@@ -208,7 +211,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     };
     const live = liveRetirements(state.retired, scriptOf);
     state.retired = live.retired;
-    for (const key of live.lapsed) log.push(`AUTOPILOT unretire ${key}: its script changed`);
+    for (const key of live.lapsed) log.push(`AUTOPILOT unretire ${key}: its script changed, or its fails were drains`);
     for (const j of swarm.jobs.filter(mineMarked)) {
         if (jobAccounts(j).some(account => held.has(account.toLowerCase()))) {
             log.push(`AUTOPILOT hold ${jobAccounts(j).join(',')}: coordinator owns the assignment`);

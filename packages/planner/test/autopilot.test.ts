@@ -183,6 +183,10 @@ test('assess retires repeated fails, a death and near-total waste, and keeps pro
     expect(assess(['RESULT ok feathers=30 gained=30', 'RESULT fail no chickens']).retire).toBe(false);
     expect(assess(['[x] RESULT fail no chickens', '| RESULT fail no chickens'])).toMatchObject({ retire: true, fail: 2 });
     expect(assess(['RESULT fail died at 2652,3318']).reason).toMatch(/^death/);
+    // A world planner `no route` is where the account stands, not the job's failure: a drain, never a retirement.
+    const noRoute = 'RESULT fail travel to Ardougne from 3185,3436 failed: precondition no route to 2654,3283,0';
+    expect(assess([noRoute, noRoute])).toMatchObject({ retire: false, drains: 2, fail: 0 });
+    expect(assess(['RESULT fail no combat progress: cow stage: walk to Ardougne north bank failed: precondition no route to 2619,3332,0', noRoute]).retire).toBe(false);
     // A cow run that killed and trained before failing made progress; two runs with no kill did not.
     expect(assess(['RESULT fail mode=cow ok=false creditedKills=6 selectedXp=5200', 'RESULT fail mode=cow ok=false creditedKills=2 selectedXp=1600']).retire).toBe(false);
     expect(assess(['RESULT fail mode=cow ok=false creditedKills=0 selectedXp=0', 'RESULT fail mode=cow ok=false creditedKills=0 selectedXp=0']).retire).toBe(true);
