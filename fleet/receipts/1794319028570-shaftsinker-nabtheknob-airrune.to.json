@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794319028570-shaftsinker-nabtheknob-airrune",
  "account": "NabTheKnob",
  "partner": "Shaftsinker",
@@ -12,6 +12,11 @@
  "claim": "5e5fabd8-b0a6-48ae-a249-787d3741dbcb",
  "count": 0,
  "ok": false,
- "at": 1794319041589,
- "detail": "trade claimed"
+ "at": 1794319095938,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1794319041943-0000007560-0000000001",
+  "at": 1794319095927,
+  "sha256": "c928630ed25059e756f19f763e512a82ffcf9686338b6429e46274b796fe8b0c"
+ }
 }

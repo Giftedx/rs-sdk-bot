@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794319028570-shaftmaker-masterbaiter-airrune",
  "account": "Masterbaiter",
  "partner": "Shaftmaker",
@@ -12,6 +12,11 @@
  "claim": "a3b72dd8-b6e2-4231-9771-f9a7cbb941ea",
  "count": 0,
  "ok": false,
- "at": 1794319036997,
- "detail": "trade claimed"
+ "at": 1794319095535,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1794319037005-0000004668-0000000001",
+  "at": 1794319095524,
+  "sha256": "b17cea84d05ad70625eb665d6ec1a2c38ec225d03efaf3e83e2af84f02ec81c7"
+ }
 }
