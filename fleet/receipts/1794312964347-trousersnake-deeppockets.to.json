@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794312964347-trousersnake-deeppockets",
+ "account": "Deeppockets",
+ "partner": "TrouserSnake",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cake",
+ "requested": 6,
+ "claim": "0f8f2eb1-68fd-46f6-b689-515fa6457213",
+ "count": 0,
+ "ok": false,
+ "at": 1794313391305,
+ "detail": "trade claimed"
+}

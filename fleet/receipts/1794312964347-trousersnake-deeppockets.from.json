@@ -1,0 +1,30 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794312964347-trousersnake-deeppockets",
+ "account": "TrouserSnake",
+ "partner": "Deeppockets",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cake",
+ "requested": 6,
+ "claim": "8636c49b-2225-470b-9ae1-6e2679b22c57",
+ "count": 6,
+ "ok": true,
+ "at": 1794313411287,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1794313399350
+ },
+ "logout": {
+  "attemptId": "1794313389136-0000027221-0000000001",
+  "at": 1794313411280,
+  "sha256": "4b71832ea6afbe1e335647d78cdb67654c227fbdc7878690bd08acfb40244163"
+ }
+}
