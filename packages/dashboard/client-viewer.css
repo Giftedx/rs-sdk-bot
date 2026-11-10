@@ -6,3 +6,7 @@
 /* One minimap: the page draws it (client-shell.js) and turns it with the 3D camera; the viewer's stays in the page,
    hidden, so its compass and world-map buttons can still be pressed for the page. */
 .minimap-container{visibility:hidden!important;pointer-events:none!important}
+/* Fleet wall: the page owns the views. A view has no close button, no name box to type in and no selection frame. */
+.multi-pane-close{display:none!important}.multi-pane-label.editable{pointer-events:none!important}
+.multi-pane-label input{border:0!important;background:none!important;padding:0!important;color:#ffc21a!important;text-shadow:1px 1px 0 #000}
+.multi-pane.active{outline:1px solid rgba(0,0,0,.9)!important;outline-offset:0!important}

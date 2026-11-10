@@ -27,6 +27,8 @@ export const VIEWER_FEATURES: [what: string, text: string][] = [
     ['flight from free camera', 'visibleMapCount'],
     ['steps without a tile', 'moveCode('],
     ['follow change timing', 'viewerTiming'],
+    ['multi-view status', 'viewerMulti'],                                   // {multi:[names]}, the Fleet wall
+    ['multi-view frame', 'multi-pane'],                                     // the bridge finds a clicked view by it
 ];
 export function checkViewerBundle(text: string) {
     for (const [what, feature] of VIEWER_FEATURES) if (!text.includes(feature)) throw Error(`${what}: the rs-world build lacks ${feature}`);
@@ -215,13 +217,43 @@ export function installViewerBridge(host:any) {
         if(host.history?.replaceState){url.searchParams.delete('follow');host.history.replaceState(host.history.state,'',url.href);publishedFollow=null;}
         return true;
     };
+    // Multi-view (the page's Fleet wall). {multi} is a list of at most 16 different names, each a player name or the
+    // hidden-name mark; {multiDistance} is 16 to 128 tiles. This listener runs before the viewer's own: a message from
+    // another sender, or with another value, stops here.
+    let multiAsked:string[]=[],multiDown:{x:number;y:number;pane:number}|null=null;
+    const validMulti=(list:any)=>Array.isArray(list)&&list.length<=16&&list.every((n:any)=>typeof n==='string'&&(n==='⟦MAIN⟧'||/^[A-Za-z0-9_-](?:[A-Za-z0-9_ -]{0,10}[A-Za-z0-9_-])?$/.test(n)))&&new Set(list.map((n:string)=>n.toLowerCase())).size===list.length;
     host.addEventListener('message',(event:any)=>{
+        const data=event.data;
+        if(data&&typeof data==='object'&&('multi' in data||'multiDistance' in data)){
+            const ours=event.origin===host.location.origin&&event.source===host.parent;
+            if(!ours||'multi' in data&&!validMulti(data.multi)||'multiDistance' in data&&!(Number.isInteger(data.multiDistance)&&data.multiDistance>=16&&data.multiDistance<=128)){event.stopImmediatePropagation();return;}
+            if('multi' in data)multiAsked=data.multi.slice();
+        }
         if(event.origin!==host.location.origin||event.source!==host.parent||!event.data||typeof event.data!=='object')return;
         if(event.data.atlasCompass===true)host.document?.querySelector('.minimap-container .compass')?.click();
         if(event.data.atlasOpenWorldMap===true)host.document?.querySelector('.minimap-container .worldmap-icon')?.click();
-        if(typeof event.data.follow==='string'){freeCameraPolls=0;publishedFollow=null;pageFollow=event.data.follow.toLowerCase();pageFollowPolls=20;}
-        if(event.data.atlasFreeCamera===true){freeCameraPolls=10;releaseFollow();}
+        // The viewer writes its URL only when its camera rests. The name in the URL at a page follow is the old one.
+        if(typeof event.data.follow==='string'){freeCameraPolls=0;publishedFollow=new host.URL(host.location.href).searchParams.get('follow');pageFollow=event.data.follow.toLowerCase();pageFollowPolls=20;}
+        if(event.data.atlasFreeCamera===true){freeCameraPolls=10;pageFollow='';releaseFollow();}
     });
+    // The viewer reports a click on a view only to a page that loads it with embed=1. This page loads it with embed=0,
+    // so the bridge reports it: the main button pressed and released in one view, within 8 px. The views stand in the
+    // asked order. The page gets the name it asked for, and the mark for a hidden name.
+    const paneAt=(event:any)=>{
+        const panes=[...(host.document?.querySelectorAll?.('.multi-view .multi-pane')??[])];
+        if(event.target?.tagName!=='CANVAS'||panes.length!==multiAsked.length)return -1;
+        return panes.findIndex((p:any)=>{const r=p.getBoundingClientRect();return event.clientX>=r.left&&event.clientX<r.right&&event.clientY>=r.top&&event.clientY<r.bottom;});
+    };
+    if(url.searchParams.get('embed')!=='1'){
+        host.addEventListener('pointerdown',(event:any)=>{multiDown=multiAsked.length&&event.button===0?{x:event.clientX,y:event.clientY,pane:paneAt(event)}:null;},true);
+        host.addEventListener('pointerup',(event:any)=>{
+            const down=multiDown;multiDown=null;
+            if(!down||down.pane<0||down.pane!==paneAt(event)||Math.hypot(event.clientX-down.x,event.clientY-down.y)>8)return;
+            if(!privacyReady||!renderReady||failed||host.parent===host)return;
+            const name=multiAsked[down.pane];
+            host.parent.postMessage({viewerMultiPick:hiddenNames.has(name.toLowerCase())?'⟦MAIN⟧':name,index:down.pane},host.location.origin);
+        },true);
+    }
     // The page owns the account order: [ and ] step through its accounts, not through every online player.
     host.addEventListener('keydown',(event:any)=>{
         if(event.key!=='['&&event.key!==']')return;
@@ -248,6 +280,8 @@ export function installViewerBridge(host:any) {
         const params=new host.URL(host.location.href).searchParams,cx=Number(params.get('cx')),cz=Number(params.get('cz')),yaw=Number(params.get('y'));
         if(params.has('cx')&&Number.isFinite(cx)&&Number.isFinite(cz)&&Number.isFinite(yaw)){const key=cx+','+cz+','+yaw;if(key!==publishedCamera){publishedCamera=key;host.parent.postMessage({atlasCamera3d:{x:cx,z:cz,yaw:yaw&2047}},host.location.origin);}}
         const follow=params.get('follow');
+        // The views of a wall are the page's choice: a name that the viewer URL holds then is not a new follow.
+        if(multiAsked.length){publishedFollow=follow;return;}
         // The viewer writes its URL late. Until the URL names the page's choice, the old name there is not a new follow.
         if(pageFollowPolls){
             if(follow?.toLowerCase()===pageFollow){pageFollowPolls=0;publishedFollow=follow;return;}
@@ -255,6 +289,8 @@ export function installViewerBridge(host:any) {
         }
         if(!follow||follow===publishedFollow||!/^[A-Za-z0-9_ -]{1,12}$/.test(follow))return;
         publishedFollow=follow;
+        // The page's own choice, written late, is not news to the page.
+        if(follow.toLowerCase()===pageFollow)return;
         host.parent.postMessage({atlasFollow:hiddenNames.has(follow.toLowerCase())?'⟦MAIN⟧':follow},host.location.origin);
     },500);
 }

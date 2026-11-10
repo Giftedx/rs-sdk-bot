@@ -214,7 +214,7 @@ test('a page follow change cannot be undone by the old name still in the viewer 
  installViewerBridge(b.host);await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();relay();
  const before=b.messages.filter(m=>m.data.atlasFollow).length;
  for(const f of listeners)f({origin:'http://localhost:3102',source:b.host.parent,data:{follow:'Other'}});
- relay();relay();expect(b.messages.filter(m=>m.data.atlasFollow)).toHaveLength(before);
+ for(let i=0;i<30;i++)relay();expect(b.messages.filter(m=>m.data.atlasFollow)).toHaveLength(before);
  b.host.location.href=b.host.location.href.replace('follow=Worker','follow=Other');relay();relay();
  expect(b.messages.filter(m=>m.data.atlasFollow)).toHaveLength(before);
  b.host.location.href=b.host.location.href.replace('follow=Other','follow=Third');relay();
@@ -311,4 +311,73 @@ test('a hidden tab gets no roster from the feed: the bridge sends none and keeps
  expect(sent()).toBe(before);expect(b.states().filter(Boolean).at(-1).state).toBe('ready');
  socket.message({t:'roster',k:40,d:1,lv:[],j:[],m:[[8,3300,3300,0]],npcs:0});
  expect(b.messages.filter(m=>m.data.atlasRoster).at(-1)!.data.atlasRoster.players).toEqual([['Worker',3300,3300,0,50]]);
+});
+
+function multiBridge(href=''){
+ const b=browser(),on:Record<string,any[]>={};
+ b.host.location.href+=href;
+ b.host.addEventListener=(t:string,fn:any)=>{(on[t]??=[]).push(fn);};
+ const panes=(n:number)=>Array.from({length:n},(_,i)=>({getBoundingClientRect:()=>({left:i*100,right:i*100+100,top:0,bottom:100})}));
+ let shown=0;b.host.document={querySelector:()=>null,querySelectorAll:(q:string)=>q==='.multi-view .multi-pane'?panes(shown):[]};
+ installViewerBridge(b.host);
+ // True when the message goes on to the viewer's own listener.
+ const send=(data:any,from:any=b.host.parent,origin='http://localhost:3102')=>{let stopped=false;for(const f of on.message)f({origin,source:from,data,stopImmediatePropagation:()=>{stopped=true;}});return !stopped;};
+ const click=(x:number,up=x,target='CANVAS',button=0)=>{for(const f of on.pointerdown??[])f({clientX:x,clientY:50,button,target:{tagName:target}});for(const f of on.pointerup??[])f({clientX:up,clientY:50,button,target:{tagName:target}});};
+ const ready=async()=>{await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();};
+ return {...b,send,click,ready,panes:(n:number)=>{shown=n;},picks:()=>b.messages.filter(m=>'viewerMultiPick' in m.data).map(m=>m.data)};
+}
+
+test('the multi-view messages reach the viewer only from the page and only as a list of at most 16 names',()=>{
+ const b=multiBridge();
+ expect(b.send({multi:['Ann','Bob 2','⟦MAIN⟧']})).toBe(true);
+ expect(b.send({multi:[]})).toBe(true);
+ expect(b.send({multi:Array.from({length:16},(_,i)=>'Bot'+i),multiDistance:48})).toBe(true);
+ expect(b.send({multi:Array.from({length:17},(_,i)=>'Bot'+i)})).toBe(false);
+ for(const bad of ['Ann',[1],[''],['Ann','ann'],[' Ann'],['ThirteenChars'],['<b>'],[['Ann']],null,{0:'Ann',length:1}])expect(b.send({multi:bad})).toBe(false);
+ for(const bad of [15,129,48.5,'48',null])expect(b.send({multiDistance:bad})).toBe(false);
+ for(const good of [16,48,128])expect(b.send({multiDistance:good})).toBe(true);
+ expect(b.send({multi:['Ann']},{})).toBe(false);
+ expect(b.send({multi:['Ann']},b.host.parent,'https://example.com')).toBe(false);
+ // Other messages are not this rule's business.
+ expect(b.send({follow:'Ann'})).toBe(true);
+});
+
+test('a click in a view of the wall tells the page the asked name and the view number, after the viewer is ready',async()=>{
+ const b=multiBridge();
+ b.send({multi:['Ann','HiddenActor','Cat']});b.panes(3);
+ b.click(150);expect(b.picks()).toEqual([]);
+ await b.ready();
+ b.click(50);b.click(250);
+ expect(b.picks()).toEqual([{viewerMultiPick:'Ann',index:0},{viewerMultiPick:'Cat',index:2}]);
+ expect(b.messages.at(-1)!.origin).toBe('http://localhost:3102');
+ // A drag, a press on a control, another button, and a press that ends in another view are not clicks.
+ b.click(50,70);b.click(50,50,'INPUT');b.click(50,50,'CANVAS',2);b.click(50,150);
+ expect(b.picks()).toHaveLength(2);
+ // A hidden name leaves the viewer as the mark.
+ b.click(150);expect(b.picks().at(-1)).toEqual({viewerMultiPick:'⟦MAIN⟧',index:1});
+ expect(JSON.stringify(b.picks())).not.toContain('HiddenActor');
+ // The views must be the asked ones: no report while the count differs, and none after the wall closes.
+ b.panes(2);b.click(50);b.panes(3);b.send({multi:[]});b.click(50);
+ expect(b.picks()).toHaveLength(3);
+});
+
+test('a refused multi-view message does not change the names the bridge reports, and embed=1 leaves the report to the viewer',async()=>{
+ const b=multiBridge();await b.ready();
+ b.send({multi:['Ann','Bob']});b.send({multi:['Eve','Mal','Mal']});b.send({multi:['Eve','Bob']},{});b.panes(2);
+ b.click(50);expect(b.picks()).toEqual([{viewerMultiPick:'Ann',index:0}]);
+ const e=multiBridge('&embed=1');await e.ready();e.send({multi:['Ann','Bob']});e.panes(2);e.click(50);
+ expect(e.picks()).toEqual([]);
+});
+
+test('a name in the viewer URL is not relayed as a follow while the wall is open',async()=>{
+ const d=browser(),on:any[]=[];let relay:any;d.host.location.href+='&follow=Worker';d.host.setInterval=(fn:any)=>{relay=fn;};
+ d.host.addEventListener=(t:string,fn:any)=>{if(t==='message')on.push(fn);};
+ installViewerBridge(d.host);await d.consume();d.geometry();d.present();d.frame();d.frame();d.frame();
+ const send=(data:any)=>{for(const f of on)f({origin:'http://localhost:3102',source:d.host.parent,data,stopImmediatePropagation:()=>{}});};
+ const follows=()=>d.messages.filter(m=>'atlasFollow' in m.data).map(m=>m.data.atlasFollow);
+ send({multi:['Ann','Bob']});for(let i=0;i<30;i++)relay();
+ expect(follows()).toEqual([]);
+ send({multi:[]});relay();expect(follows()).toEqual([]);
+ d.host.location.href=d.host.location.href.replace('follow=Worker','follow=Third');relay();
+ expect(follows()).toEqual(['Third']);
 });
