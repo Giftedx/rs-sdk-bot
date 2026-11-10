@@ -197,3 +197,5 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 @media(max-width:740px){.client-title button,.client-title .focus-now,.client-plugin-title button{position:relative}.client-title button::after,.chat-toggle::after,.client-plugin-title button::after{content:'';position:absolute;inset:-8px -3px}.game-panel select{min-height:30px}.op-wide-setting{min-height:34px}}
 /* The wall's notes go to the foot of the view, clear of the title strips at the top. */
 .game-hud.wall-on .focus-note{top:auto;bottom:14px}
+/* The race lines of the overlay box, under a thin rule. */
+.game-overlay h4.race{margin:3px 0 1px;padding-top:2px;border-top:1px solid #0007}
