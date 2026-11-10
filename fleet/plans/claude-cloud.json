@@ -1,7 +1,26 @@
 {
  "side": "claude-cloud",
- "at": 1794319643353,
+ "at": 1794319880239,
  "jobs": [
+  {
+   "account": "SporranDip",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=20 EXPECTED_OWNED=15 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=sporrandip-kit0-558-15to35 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=10 EXPECTED_OWNED=25 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=sporrandip-kit0-556-25to35 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 20 Mind rune, 10 Air rune on the Grand Exchange to train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
+   "role": "supply",
+   "template": "kit-buy:army-strike-magic-21",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
   {
    "account": "TrouserSnake",
    "script": "scripts/gather-combat.ts",
@@ -54,8 +73,7 @@
    "account": "Fingerblastr",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=333 QUANTITY=100 LIMIT_PRICE=100 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit0-333-0to100 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=882 QUANTITY=975 EXPECTED_OWNED=25 LIMIT_PRICE=20 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit0-882-25to1000 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=333 QUANTITY=100 LIMIT_PRICE=100 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit1-333-0to100 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
@@ -63,9 +81,9 @@
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 100 Trout, 975 Bronze arrow on the Grand Exchange to train Ranged to 99 on the Khazard troopers",
+   "goal": "buy 100 Trout on the Grand Exchange to train Strength to 99 on the Khazard troopers",
    "role": "supply",
-   "template": "kit-buy:army-trooper-ranged-99",
+   "template": "kit-buy:army-trooper-strength-99",
    "autopilot": "claude-cloud",
    "resources": []
   },
@@ -119,29 +137,10 @@
   },
   {
    "account": "PocketPool",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2652,3318"
-   ]
-  },
-  {
-   "account": "SporranDip",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=20 EXPECTED_OWNED=15 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=sporrandip-kit0-558-15to35 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=10 EXPECTED_OWNED=25 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=sporrandip-kit0-556-25to35 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=333 QUANTITY=100 LIMIT_PRICE=100 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit1-333-0to100 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=882 QUANTITY=975 EXPECTED_OWNED=25 LIMIT_PRICE=20 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit1-882-25to1000 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
@@ -149,9 +148,9 @@
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 20 Mind rune, 10 Air rune on the Grand Exchange to train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
+   "goal": "buy 100 Trout, 975 Bronze arrow on the Grand Exchange to train Ranged to 99 on the Khazard troopers",
    "role": "supply",
-   "template": "kit-buy:army-strike-magic-21",
+   "template": "kit-buy:army-trooper-ranged-99",
    "autopilot": "claude-cloud",
    "resources": []
   }
