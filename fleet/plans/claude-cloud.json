@@ -1,28 +1,28 @@
 {
  "side": "claude-cloud",
- "at": 1794308623550,
+ "at": 1794308927294,
  "jobs": [
   {
-   "account": "Quickhandjob",
+   "account": "Fingerblastr",
    "script": "scripts/gather-combat.ts",
    "args": [
-    "1500",
-    "trooper"
+    "3000",
+    "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "10"
+    "TRAIN_SKILL": "Defence",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
+   "repeat": false,
+   "goal": "train Defence to 45 on the Ardougne cows",
    "role": "combat",
-   "template": "army-trooper-strength-99",
-   "autopilot": "claude-cloud",
+   "template": "army-cow-defence-45",
    "resources": [
-    "trooper:battlefield"
+    "cow:ardougne-north"
    ]
   },
   {
@@ -50,54 +50,26 @@
   },
   {
    "account": "Deeppockets",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/train-prayer.ts",
    "args": [
-    "3000",
-    "cow"
+    "99"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 45 on the Ardougne cows",
+   "goal": "train Prayer to 99 burying the held bones",
    "role": "combat",
-   "template": "army-cow-defence-45",
+   "template": "army-bury-prayer-99",
    "autopilot": "claude-cloud",
-   "resources": [
-    "cow:ardougne-north"
-   ]
+   "resources": []
   },
   {
    "account": "Fatstack",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Defence to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-defence-45",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "cow:ardougne-north"
-   ]
-  },
-  {
-   "account": "Fingerblastr",
    "script": "scripts/gather-combat.ts",
    "args": [
     "3000",
@@ -232,40 +204,73 @@
   },
   {
    "account": "Dipstick",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "goal": "train Strength to 60 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-60",
    "autopilot": "claude-cloud",
    "resources": [
-    "knight:2669,3298"
+    "cow:ardougne-north"
    ]
   },
   {
    "account": "KnightRider",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
+    "TRAIN_SKILL": "Attack",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
+   "goal": "train Attack to 60 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-attack-60",
    "autopilot": "claude-cloud",
    "resources": [
-    "knight:2652,3318"
+    "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "10"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-strength-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
    ]
   }
  ]
