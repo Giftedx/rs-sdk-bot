@@ -453,3 +453,21 @@ test('army accounts alch Magic to 99 with natures, feathers and fire, then bury 
     const job = jobFor(plan(inputs([acct('Caster', { ...melee, Magic: 99 }, { bone: 500 })], { army, capacity: CAPACITY }))[0]!, side);
     expect(job).toMatchObject({ script: 'scripts/train-prayer.ts', args: ['99'], env: { BURY_HELD: '1', BONE_RESERVE: '6', CAP: '4000' }, repeat: true, resources: [] });
 });
+
+test('army accounts train Ranged to 99 on the troopers with a bow they wield and 100 arrows it fires', () => {
+    const army = new Set(['archer']);
+    const base = { Thieving: 99, Attack: 69, Strength: 60, Defence: 61, Hitpoints: 62, Magic: 99, Prayer: 99, Ranged: 1 };
+    const pick = (skills: Record<string, number>, items: Record<string, number>) => ids(plan(inputs([acct('Archer', { ...base, ...skills }, items)], { army, capacity: CAPACITY }))).Archer;
+    const fish = { shark: 20 };
+    expect(pick({}, { ...fish, shortbow: 1, 'iron arrow': 500 })).toBe('army-trooper-ranged-99');
+    expect(pick({}, { ...fish, longbow: 1, 'bronze arrow': 100 })).toBe('army-trooper-ranged-99');
+    // A yew bow needs Ranged 40; a shortbow cannot fire rune arrows; 99 arrows are too few; no fish, no band.
+    expect(pick({}, { ...fish, 'yew shortbow': 1, 'rune arrow': 500 })).toBe('army-trooper-strength-99');
+    expect(pick({ Ranged: 40 }, { ...fish, 'yew shortbow': 1, 'rune arrow': 500 })).toBe('army-trooper-ranged-99');
+    expect(pick({}, { ...fish, shortbow: 1, 'rune arrow': 500 })).toBe('army-trooper-strength-99');
+    expect(pick({}, { ...fish, shortbow: 1, 'iron arrow': 99 })).toBe('army-trooper-strength-99');
+    expect(pick({}, { shortbow: 1, 'iron arrow': 500 })).not.toBe('army-trooper-ranged-99');
+    expect(pick({ Ranged: 99 }, { ...fish, shortbow: 1, 'iron arrow': 500 })).toBe('army-trooper-strength-99');
+    const job = jobFor(plan(inputs([acct('Archer', base, { ...fish, shortbow: 1, 'iron arrow': 500 })], { army, capacity: CAPACITY }))[0]!, side);
+    expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'], env: { TRAIN_SKILL: 'Ranged', TARGET_LEVEL: '99', GIANT_FOOD: '10' }, repeat: true, resources: ['trooper:battlefield'] });
+});

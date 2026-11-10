@@ -13,14 +13,17 @@ import type { BillRow } from './supply-bill';
 
 export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number> };
 export type Flow = { item: string; perTick: number };
+// `under`: skills that must stay below a level (a band hands an account on to the next band at that level).
+// `holdsUnder`: holdings that end the job at once. The account must hold fewer, or the run finds its target met and fails.
+// `food`: HP the account's food heals, pack and bank (FOOD_HEAL). `pieces`: at least `count` items of any of `of`.
+// `anyOf`: at least one of these needs met in full (fire runes or a fire staff; a bow the account wields with arrows it fires).
+export type Needs = {
+    skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number>; holdsUnder?: Record<string, number>; food?: number;
+    pieces?: { of: readonly string[]; count: number }; anyOf?: readonly Needs[];
+};
 export type Template = {
     id: string; family: string; script: string; args?: string[]; env?: Record<string, string>; role: string; goal: string;
-    // `under`: skills that must stay below a level (a band hands an account on to the next band at that level).
-    // `holdsUnder`: holdings that end the job at once. The account must hold fewer, or the run finds its target met and fails.
-    // `food`: HP the account's food heals, pack and bank (FOOD_HEAL). `pieces`: at least `count` items of any of `of`.
-    // `anyOf`: at least one of these holdings in full (fire runes or a fire staff).
-    needs?: { skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number>; holdsUnder?: Record<string, number>; food?: number;
-        pieces?: { of: readonly string[]; count: number }; anyOf?: readonly Record<string, number>[] };
+    needs?: Needs;
     yields: (a: Acct) => Flow[]; spends?: (a: Acct) => Flow[];
     resources?: string[]; trains?: { skill: string; to: number; unlocks: string[] };
     // A goal band (AGENTS.md goals: the PK army of maxed tribrids) trains an army account toward its target and is
@@ -73,14 +76,14 @@ export function unitValue(item: string, bill: readonly BillRow[], prices: Readon
     return (prices[k] ?? 0) * (short.has(k) || (FEEDS[k] ?? []).some(f => short.has(f)) ? BILL_PREMIUM : SURPLUS);
 }
 
-const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: string; to: number }) =>
+const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: string; to: number }): boolean =>
     Object.entries(needs?.skills ?? {}).every(([s, l]) => (skillOverride?.skill === s ? Math.max(skillOverride.to, a.skills[s] ?? 1) : a.skills[s] ?? 1) >= l)
     && Object.entries(needs?.items ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n)
     && Object.entries(needs?.under ?? {}).every(([s, l]) => (a.skills[s] ?? 1) < l)
     && Object.entries(needs?.holdsUnder ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) < n)
     && foodHeal(a) >= (needs?.food ?? 0)
     && (needs?.pieces?.of ?? []).reduce((n, i) => n + (a.items[norm(i)] ?? 0), 0) >= (needs?.pieces?.count ?? 0)
-    && (needs?.anyOf === undefined || needs.anyOf.some(set => Object.entries(set).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n)));
+    && (needs?.anyOf === undefined || needs.anyOf.some(alt => meets(a, alt, skillOverride)));
 // The coins a template needs beyond what the account holds, and its needs without the coin line.
 const coinShort = (a: Acct, needs: Template['needs']) => Math.max(0, (Object.entries(needs?.items ?? {}).find(([i]) => norm(i) === 'coin')?.[1] ?? 0) - (a.items.coin ?? 0));
 const withoutCoins = (needs: Template['needs']): Template['needs'] => ({ ...needs, items: Object.fromEntries(Object.entries(needs?.items ?? {}).filter(([i]) => norm(i) !== 'coin')) });
@@ -239,8 +242,8 @@ export const COW_FIELD = 'cow:ardougne-north', COW_FIELD_CAPACITY = 3;
 export const TROOPER_FIELD = 'trooper:battlefield', TROOPER_FIELD_CAPACITY = 3;
 export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
-// Army goal bands (AGENTS.md goals: maxed tribrids), in order: Strength, Attack, Magic, Prayer, Ranged (band 4, no
-// trainer yet), Defence last. Bands 6-8 are the Khazard troopers (TROOPER_BANDS), 9 is free. Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile, MAX_KILLS=8): live 4/4 runs
+// Army goal bands (AGENTS.md goals: maxed tribrids), in order: Strength, Attack, Magic, Prayer, Ranged, Defence
+// last. Bands 6-8 are the Khazard troopers (TROOPER_BANDS), 9 is free. Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile, MAX_KILLS=8): live 4/4 runs
 // RESULT ok at 15.7 Strength XP per tick from Strength 1 to 46 (research/combat-measure.md, live cow training);
 // practice 3/3 from Hitpoints 32 with trout and 3/3 with cake only (claude-cloud-4 .practice/combat-ladder). This
 // server's level table puts 45 at 22,767 XP, 60 at 66,193, 70 at 133,230, 80 at 267,169, 90 at 534,888 and 99 at
@@ -276,6 +279,18 @@ export const TROOPER_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence';
 // out after a level; practice from the knights buried 114 of 120 bones in 282 ticks to Prayer 75, about 2.2 ticks a
 // bone. Gap: neither is run live.
 export const MAGIC_BAND = 2, PRAYER_BAND = 3;
+// Ranged, band 4: trooper mode with TRAIN_SKILL=Ranged wields the best owned bow for the Ranged level and the best
+// owned arrows that bow fires (an arrow's level may not exceed the bow's), on rapid, and restocks arrows on bank trips;
+// out of arrows it ends stop=ammo, ok after kills. Practice 3/3 RESULT ok: Ranged 1 to 63-66 in about 1,690 ticks,
+// 49.6-59.9 XP a tick, 0-2 sharks, about 5.4 iron arrows per 1,000 XP (about 5,400 for 1 to 99). It shares the
+// battlefield with the melee trooper bands. Gap: not run live.
+export const RANGED_BAND = 4;
+const BOWS: readonly (readonly [string, number])[] = [['shortbow', 1], ['longbow', 1], ['oak shortbow', 5], ['oak longbow', 5], ['willow shortbow', 20],
+    ['willow longbow', 20], ['maple shortbow', 30], ['maple longbow', 30], ['yew shortbow', 40], ['yew longbow', 40], ['magic shortbow', 50], ['magic longbow', 50]];
+const ARROWS: readonly (readonly [string, number])[] = [['bronze arrow', 1], ['iron arrow', 1], ['steel arrow', 5], ['mithril arrow', 20], ['adamant arrow', 30], ['rune arrow', 40]];
+// A bow the account's Ranged level wields, with 100 arrows of one kind that bow fires.
+export const RANGED_KIT: readonly Needs[] = BOWS.flatMap(([bow, level]) =>
+    ARROWS.filter(([, arrowLevel]) => arrowLevel <= level).map(([arrow]) => ({ skills: { Ranged: level }, items: { [bow]: 1, [arrow]: 100 } })));
 
 // Proven job templates. Rates are estimates from each script's header model; tick-waste discounts them by measurement.
 export function catalogue(): Template[] {
@@ -299,12 +314,18 @@ export function catalogue(): Template[] {
     const magic: Template = {
         id: 'army-alch-magic-99', family: 'combat-train', script: 'scripts/alch-train.ts', args: ['99', '5000'], role: 'combat', goal: 'train Magic to 99 with alchemy at the Ardougne north bank',
         tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: 99, unlocks: [] }, yields: () => [],
-        needs: { skills: { Magic: 21 }, items: { 'nature rune': 50, feather: 50 }, anyOf: [{ 'fire rune': 250 }, { 'staff of fire': 1 }, { 'fire battlestaff': 1 }, { 'mystic fire staff': 1 }] },
+        needs: { skills: { Magic: 21 }, items: { 'nature rune': 50, feather: 50 }, anyOf: [{ items: { 'fire rune': 250 } }, ...['staff of fire', 'fire battlestaff', 'mystic fire staff'].map(staff => ({ items: { [staff]: 1 } }))] },
     };
     const prayer: Template = {
         id: 'army-bury-prayer-99', family: 'combat-train', script: 'scripts/train-prayer.ts', args: ['99'], env: { BURY_HELD: '1', BONE_RESERVE: '6', CAP: '4000' }, role: 'combat',
         goal: 'train Prayer to 99 burying the held bones', tier: 'goal', band: PRAYER_BAND, repeats: true, trains: { skill: 'Prayer', to: 99, unlocks: [] }, yields: () => [],
         needs: { items: { bones: 100 } },
+    };
+    const ranged: Template = {
+        id: 'army-trooper-ranged-99', family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'],
+        env: { TRAIN_SKILL: 'Ranged', TARGET_LEVEL: '99', GIANT_FOOD: '10' }, role: 'combat', goal: 'train Ranged to 99 on the Khazard troopers',
+        tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: [TROOPER_FIELD], yields: () => [],
+        needs: { skills: { Hitpoints: 40 }, pieces: { of: TROOPER_FOOD, count: 10 }, anyOf: RANGED_KIT },
     };
     return [
         ...goldfarm,
@@ -312,6 +333,7 @@ export function catalogue(): Template[] {
         ...troopers,
         magic,
         prayer,
+        ranged,
         { id: 'thieving55', family: 'thieving60', script: 'scripts/generated/thieving60.ts', env: { TARGET: '55', CAP: '2500', CLEAN_FOOD: '1' }, role: 'thieving',
             goal: 'train Thieving to 55 for a knight spot', trains: { skill: 'Thieving', to: 55, unlocks: goldfarm.map(g => g.id) }, yields: () => [] },
         ...CHICKEN_PENS.map((pen): Template => ({
