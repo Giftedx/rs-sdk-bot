@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794302268914-thefullmonty-trousersnake",
  "account": "TrouserSnake",
  "partner": "TheFullMonty",
@@ -10,8 +10,21 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "e1e279de-335a-4eac-914a-33f34e0b74cd",
- "count": 0,
- "ok": false,
- "at": 1794302272279,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794302383167,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794302382344
+ },
+ "logout": {
+  "attemptId": "1794302272281-0000002488-0000000001",
+  "at": 1794302383162,
+  "sha256": "8716b4d238e755d8b7f468281704b6ac798f44794279d1cec9526852f6d492dc"
+ }
 }
