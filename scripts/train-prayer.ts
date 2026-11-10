@@ -9,10 +9,12 @@ import {walkPath,sessionWalker,type PathPoint} from '../packages/core/src/walk';
 const BONE=526,PRAYER=14;
 // Server XP per bury at 25x: bones 4.5, big bones 15 (bury_bone.rs2).
 export const BONE_XP:Record<number,number>={526:112.5,532:375};
-export interface PrayerOptions{target?:number;cap:number;maximum:number;reserve:number;bone?:number;stop?:()=>boolean}
+// held (BURY_HELD=1): bury the bones the account holds above the reserve, up to the target; ok after at least one level
+// when they run out. The PK army's Prayer band runs this with a static target of 99.
+export interface PrayerOptions{target?:number;cap:number;maximum:number;reserve:number;bone?:number;held?:boolean;stop?:()=>boolean}
 export function prayerOptions(argv:string[]=process.argv,env:Record<string,string|undefined>=process.env):PrayerOptions{
-    const bone=Number(env.BONE_ID??BONE);
-    return{target:Number(argv[3]??env.TARGET_LEVEL??43),cap:Number(env.CAP??1500),maximum:Number(env.MAX_BURY??175),reserve:Number(env.BONE_RESERVE??6),...bone===BONE?{}:{bone}};
+    const bone=Number(env.BONE_ID??BONE),held=env.BURY_HELD==='1';
+    return{target:Number(argv[3]??env.TARGET_LEVEL??43),cap:Number(env.CAP??1500),maximum:Number(env.MAX_BURY??(held?1000000:175)),reserve:Number(env.BONE_RESERVE??6),...bone===BONE?{}:{bone},...held?{held}:{}};
 }
 export function planPrayer(bones:number,xp:number,maximum=175,reserve=6,target=43,each=BONE_XP[BONE]!){return Math.max(0,Math.min(maximum,bones-reserve,Math.ceil((xpForLevel(target)-xp)/each)));}
 // The ordinary Lumbridge road uses the shared collision, door and danger-aware walker.
@@ -20,6 +22,8 @@ export function planPrayer(bones:number,xp:number,maximum=175,reserve=6,target=4
 export function prayerBank(p:{worldX:number;worldZ:number;level:number}){
     const near=(x:number,z:number,n:number)=>p.level===0&&Math.max(Math.abs(p.worldX-x),Math.abs(p.worldZ-z))<=n;
     if(near(2655,3283,3))return{x:2655,z:3283};
+    // Ardougne north, the PK army's home bank (scripts/cow-stage.ts); from the market knights and the cow field it walks there.
+    if(near(2619,3332,60))return{x:2619,z:3332};
     if(near(3185,3436,3))return{x:3185,z:3436}; // Varrock West, where GE purchases settle
     if(near(3092,3243,220))return{x:3092,z:3243};
     throw Error('no prayer progress: unsupported ordinary bank entry');
@@ -34,7 +38,7 @@ export async function runPrayer(s:Session,o:PrayerOptions,walk:Approach=approach
     const count=(items:readonly{id:number;count:number}[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
     const held=()=>count(inv(),BONE),xp=()=>s.sdk.getSkillXp('Prayer')??0,level=()=>s.sdk.getSkill('Prayer')?.baseLevel??0,hp=()=>s.sdk.getSkill('Hitpoints')?.level??0;
     if(!await waitUntil(s,()=>!!state()?.player&&hp()>0&&level()>0&&s.sdk.getSkillXp('Prayer')!==null,{timeoutTicks:15}))throw new Error('no prayer progress: unknown skills');
-    const p0=state()?.player,start=s.tick(),initialXp=xp(),initialHp=hp();
+    const p0=state()?.player,start=s.tick(),initialXp=xp(),initialHp=hp(),initialLevel=level();
     if(!p0)throw new Error('no prayer progress: unknown entry');
     const bank=prayerBank(p0),nearBank=()=>{const p=state()?.player;return !!p&&p.level===0&&Math.max(Math.abs(p.worldX-bank.x),Math.abs(p.worldZ-bank.z))<=2;};
     const carried=()=>[...inv(),...s.sdk.getEquipment()].map(i=>({id:i.id,count:i.count,slot:i.slot}));
@@ -84,8 +88,8 @@ export async function runPrayer(s:Session,o:PrayerOptions,walk:Approach=approach
         if(JSON.stringify(carried())!==entryCarried)throw Error('no prayer progress: entry assets changed during travel');
         await open();initial=totals();await deposit();
         const demand=Math.max(0,Math.ceil((targetXp-initialXp)/XP));
-        if(bankCount()-o.reserve<demand)throw Error(`no prayer progress: insufficient owned bones: need ${demand}, available ${Math.max(0,bankCount()-o.reserve)}`);
-        if(o.maximum<demand)throw Error(`no prayer progress: MAX_BURY ${o.maximum} below demand ${demand}`);
+        if(!o.held&&bankCount()-o.reserve<demand)throw Error(`no prayer progress: insufficient owned bones: need ${demand}, available ${Math.max(0,bankCount()-o.reserve)}`);
+        if(!o.held&&o.maximum<demand)throw Error(`no prayer progress: MAX_BURY ${o.maximum} below demand ${demand}`);
         const planned=planPrayer(bankCount(),initialXp,o.maximum,o.reserve,goal,XP);
         while(buried<planned&&!goalReached()&&!over()){
             const batch=Math.min(planned-buried,28-inv().length);
@@ -137,7 +141,10 @@ export async function runPrayer(s:Session,o:PrayerOptions,walk:Approach=approach
     const equipmentPreserved=JSON.stringify(worn())===entryEquipment;
     if(!preserved||!equipmentPreserved||held()>0||bankCount()<o.reserve)failure||='no prayer progress: final bank/reserve/asset proof failed';
     const targetMet=!failure&&!ended&&!died&&!unsafe&&!stopped()&&level()>=goal&&xp()>=targetXp&&nearBank()&&toggledOn&&toggledOff&&preserved;
-    return{ok:targetMet,targetMet,target:goal,buried,attempts,initialBones,boneBank:bankCount(),heldBones:held(),consumed:initialBones-(final.get(BONE)??0),xpGain:xp()-initialXp,initialXp,finalXp:xp(),finalLevel:level(),firstBoneXp:firstBoneXp??0,rateVerified:firstBoneXp!==undefined&&!failure,toggledOn,toggledOff,prayerPointsOn,prayerPointsFinal:state()?.prayers?.prayerPoints??0,bankObservedAt,preserved,equipmentPreserved,hpMin,died,stop,ticks:s.tick()-start,failure:failure||(!targetMet?'no prayer progress: bounded goal unmet':'-')};
+    // Held mode: the bones ran out after at least one level, with the same safety and asset proof as a met target.
+    const gained=level()-initialLevel,bonesOut=!!o.held&&stop==='input-insufficient'&&buried>0&&held()===0;
+    const heldOk=bonesOut&&gained>0&&!failure&&!ended&&!died&&!unsafe&&!stopped()&&nearBank()&&preserved;
+    return{ok:targetMet||heldOk,gained,targetMet,target:goal,buried,attempts,initialBones,boneBank:bankCount(),heldBones:held(),consumed:initialBones-(final.get(BONE)??0),xpGain:xp()-initialXp,initialXp,finalXp:xp(),finalLevel:level(),firstBoneXp:firstBoneXp??0,rateVerified:firstBoneXp!==undefined&&!failure,toggledOn,toggledOff,prayerPointsOn,prayerPointsFinal:state()?.prayers?.prayerPoints??0,bankObservedAt,preserved,equipmentPreserved,hpMin,died,stop,ticks:s.tick()-start,failure:failure||(!targetMet&&!heldOk?'no prayer progress: bounded goal unmet':'-')};
 }
 if(import.meta.main){
     const name=process.argv[2];if(!name)throw new Error('prayer account required');let stopped=false;

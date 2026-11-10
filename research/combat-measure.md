@@ -85,6 +85,38 @@ Ranged it adds is not needed at that point.
 - **Gap.** Practice only; one skill; a better weapon (section 1's rune gear gives 137 at band 70) is not available on
   the market.
 
+## Magic and Prayer from the army's home bank
+
+The tribrid target also needs Magic and Prayer at 99. The claude-cloud army holds Magic 48-62 and Prayer 47-76.
+TrouserSnake and UnderMyKilt hold about 15,000 feathers and 1,500-1,700 bones each, and every army account holds 1-4.7M coins
+(`fleet/snapshots/claude-cloud.json` on `fleet-data`).
+
+- **Claim.** Alchemy on feathers is the fastest Magic the army can buy: 1,625 Magic XP per High Alchemy cast (65 base at
+  xpRate 25) and 775 per Low Alchemy cast (31 base). From Magic 50 to 99 that is 18 Low and about 594 High Alchemy casts,
+  about 4,000 ticks at the measured 6.5-7 ticks per cast. A feather is worth 2, so High Alchemy pays 1 coin for it,
+  and the cost is the nature runes (1 per cast) plus 5 fire runes per cast, or nothing for fire with a fire staff
+  (Zaff, Varrock, stocks 2).
+- **Conditions.** Practice, xpRate 25. `scripts/alch-train.ts` started at the Ardougne market knights (the goldfarm spot)
+  with a sword and lobsters in the pack. It walked to the north bank, banked the pack, took the supplies and cast there.
+
+  | Run | Magic | Casts (Low / High) | Fire | Ticks | Magic XP per tick |
+  |---|---|---|---|---|---|
+  | 1 | 50 -> 60 | 18 / 13 | runes | 257 | 136.5 |
+  | 2 | 50 -> 60 | 18 / 13 | runes | 257 | 136.5 |
+  | 3 | 55 -> 75 | 0 / 88 | staff of fire | 614 | 232.9 |
+
+  The worker in place: 20 High Alchemy casts at Magic 55, 130 ticks (6.5 per cast, 250 XP per tick); 5 Low Alchemy casts
+  at Magic 50, 28 ticks.
+- **Claim.** Burying the held bones from the north bank takes TrouserSnake Prayer 74 -> 84 and UnderMyKilt 76 -> 84
+  (112.5 XP per bone). Practice: `scripts/train-prayer.ts` at the north bank, Prayer 74 -> 75, 113 bones in 251 ticks
+  (2.2 ticks per bone with banking), so about 3,700 ticks per account. With `BURY_HELD=1` from the market knights it
+  walked to the north bank, buried 114 of 120 bones (6 kept) in 282 ticks and ended ok at Prayer 75 when they ran out.
+- **Evidence.** `.practice/magic-alch/` and `.practice/army-prayer/` in the Claude cloud container that ran them.
+- **Gap.** Practice only. The level-up dialog drops a spell sent under it. The trainer clears it between the Low and
+  High Alchemy phases. The worker waits 1-2 ticks more per cast than the 5-tick High Alchemy cycle
+  (`alchemy.rs2` `p_delay(3)`). The live nature rune price is not checked: the last read was 621 each with about 627,000 for sale
+  (`research/supply-costs.md`), so the 612 natures for 50 -> 99 cost about 380,000 coins.
+
 ## 1. Melee, no cannon
 
 Script `scripts/measure/combat-melee.ts`, runner `scripts/measure/floor-run.ts`, 300 ticks per run,
