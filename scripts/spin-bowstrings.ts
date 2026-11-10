@@ -241,7 +241,7 @@ try {
     const stringsBank=bankItems.filter(i=>/^bow string$/i.test(i.name)).reduce((n,i)=>n+i.count,0);
     const finalStock=bankSnapshot();
     const reconciled=!!initialStock&&spinConversion(initialStock,finalStock,MAX_MAKE)===made;
-    spunTotal=stringsBank-(initialStock?.items[1777]??stringsBank);
+    spunTotal=initialStock?stringsBank-(initialStock.items[1777]??0):0;
     const preserved=protectedKit.every(i=>s.sdk.getInventory().filter(j=>j.id===i.id).reduce((n,j)=>n+j.count,0)===i.count);
     const xpGain=(s.sdk.getSkillXp('Crafting')??0)-xp0;
     const ok=!over()&&reconciled&&made===MAX_MAKE&&spunTotal===made&&rawBank>=RAW_RESERVE&&preserved&&!died&&hpMin>=7&&xpGain>0;
