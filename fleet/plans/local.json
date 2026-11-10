@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794318930300,
+ "at": 1794319281497,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -62,22 +62,6 @@
    "repeat": true,
    "goal": "PK hunts of 10 minutes at Wilderness 20 or less, with GE and shop rune restock",
    "role": "pk"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/walk-to.ts 3253 3420",
-    "scripts/train-chickens.ts TRAIN_BANK=varrock TRAIN_SKILL=Strength TARGET_LEVEL=30 CAP=3000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "Strength 30 on chickens so it can hit hard enough to PK",
-   "role": "pk-trainee"
   },
   {
    "account": "OreElse",
@@ -480,25 +464,29 @@
    "role": "supply"
   },
   {
-   "account": "Mightyrod",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
+   "accounts": [
+    "Shaftsinker",
+    "Mightyrod"
+   ],
+   "script": "scripts/handoff-inputs.ts",
+   "args": [
+    "2500:Air rune",
+    "--bank-x=3253",
+    "--bank-z=3420",
+    "--approach-ms=600000",
+    "--request-ms=60000",
+    "--timeout-ms=600000",
+    "--grace-ms=45000"
+   ],
    "env": {
-    "ITEM_ID": "556",
-    "QUANTITY": "1420",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "35",
-    "CASH_RESERVE": "2000",
-    "ORDER_KEY": "mightyrod-air1420-magic99",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "900000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-2d730646-cf44-4e05-aa57-e3f11e648026"
+    "HANDOFF_ORDER": "mightyrod-magic99-air2500-r2",
+    "CAP": "3000",
+    "COORDINATOR_RUN_ID": "task-e3e669e3-a2a7-4c0d-b21c-66b4c4a4cc5d"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "run-ge-mightyrod-air1420-magic99 [task-2d730646-cf44-4e05-aa57-e3f11e648026]",
-   "role": "helper"
+   "goal": "run-handoff-shaftsinker-mightyrod-air2500-r2 [task-e3e669e3-a2a7-4c0d-b21c-66b4c4a4cc5d]",
+   "role": "pk-trainee"
   }
  ]
 }
