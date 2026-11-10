@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794311627292,
+ "at": 1794311690996,
  "jobs": [
   {
    "account": "Fingerblastr",
@@ -73,21 +73,26 @@
   },
   {
    "account": "UnderMyKilt",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
+    "TRAIN_SKILL": "Defence",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
+   "goal": "train Defence to 70 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-defence-70",
    "autopilot": "claude-cloud",
    "resources": [
-    "knight:2652,3318"
+    "cow:ardougne-north"
    ]
   },
   {
@@ -178,27 +183,23 @@
   },
   {
    "account": "SporranDip",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/train-prayer.ts",
    "args": [
-    "3000",
-    "cow"
+    "99"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 45 on the Ardougne cows",
+   "goal": "train Prayer to 99 burying the held bones",
    "role": "combat",
-   "template": "army-cow-defence-45",
+   "template": "army-bury-prayer-99",
    "autopilot": "claude-cloud",
-   "resources": [
-    "cow:ardougne-north"
-   ]
+   "resources": []
   },
   {
    "account": "Fingersmith",
