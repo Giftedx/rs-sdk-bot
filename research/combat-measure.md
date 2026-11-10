@@ -132,6 +132,35 @@ Ranged it adds is not needed at that point.
 - **Gap.** Practice only. The rate above Ranged 66 is not measured, and better bows and arrows (willow to yew,
   mithril to rune) are not in the army's hands. At the cap a trooper still fighting holds the retreat about 100 ticks.
 
+## Fresh accounts: cows from Hitpoints 10, Magic from 1
+
+Ten Claude-cloud accounts hold Thieving 99 and 0.5M-8.4M coins; seven of them have every combat skill at 1 and
+Hitpoints 10 (`fleet/snapshots/` on `fleet-data`).
+
+- **Claim.** A fresh account runs the army cow band as it is. Practice, `scripts/gather-combat.ts <bot> 3000 cow` with
+  `COW_STAGE=1 TRAIN_SKILL=Strength COW_BANK_PROFILE=north MAX_KILLS=8`, started at the goldfarm knights with the bronze
+  sword, wooden shield and food banked: 7 of 7 `RESULT ok` with 8 kills, Strength 1 -> 28, 550-659 ticks, at most one
+  bite eaten, lowest HP 6, no deaths. Four runs held trout and three held cake only; the last six ran three at once.
+- **Claim.** A fresh account reaches Low Alchemy (Magic 21) from the bank with no damage. From the tile 2621,3327, north
+  of the Ardougne north bank, the Guard dog (id 99, combat 44) behind the mansion fence takes Wind Strike and cannot
+  reach the caster. `scripts/alch-train.ts` casts there below Magic 21 (`strikeStart`), 1 mind and 1 air rune and 137 XP
+  a cast, then walks back and alchs.
+
+  | Run | Accounts at once | Magic | Wind Strikes | Low Alchemy | Ticks | Hitpoints |
+  |---|---|---|---|---|---|---|
+  | j | 1 | 1 -> 31 | 19 | 6 | 258 | 10 -> 13 |
+  | k | 2 | 1 -> 31 | 19 | 6 | 415 | 10 -> 13 |
+  | l | 2 | 1 -> 31 | 19 | 6 | 338 | 10 -> 13 |
+
+  Ticks include the walk from the knights and the bank stage.
+- **Limits found.**
+  - Inside the yard the dogs reach the caster: from 2629,3329 and 2624,3322 two casts cost 3 and 6 of 10 HP. The
+    trainer stands only on 2621,3327, casts only at a dog it cannot reach, and walks back on any lost Hitpoint.
+  - One player at a time can fight the dog. Of three accounts at once, one landed no cast in 200 ticks, in each of three
+    sets; the other two took 228-394 ticks. The planner gives the tile to one account (`STRIKE_TILE`, capacity 1).
+- **Evidence.** `.practice/starter/` in the Claude cloud container that ran them.
+- **Gap.** Practice only.
+
 ## Magic and Prayer from the army's home bank
 
 The tribrid target also needs Magic and Prayer at 99. The claude-cloud army holds Magic 48-62 and Prayer 47-76.
