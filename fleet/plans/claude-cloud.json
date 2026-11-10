@@ -1,47 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794294126505,
+ "at": 1794294247963,
  "jobs": [
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/goldfarm.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Prayer to 99 burying the held bones",
-   "role": "combat",
-   "template": "army-bury-prayer-99",
-   "resources": []
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "10"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
   {
    "account": "Quickhandjob",
    "script": "scripts/gather-combat.ts",
@@ -64,6 +24,46 @@
    "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-magic-99",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "10"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
    ]
   },
   {
