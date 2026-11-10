@@ -952,12 +952,14 @@ export const fluffsExit=(castable:boolean,p?:YardPos|null):'teleport'|'fence'=>!
 // process runs the quest's top-level code again.
 let handoff:Promise<void>=Promise.resolve();
 export function handOver(s:Session,script:string,fresh?:string):Promise<unknown>{
- const g=globalThis as {QUEST_SESSION?:Session;QUEST_SESSION_TAKEN?:()=>void};
+ const g=globalThis as {QUEST_SESSION?:Session;QUEST_SESSION_TAKEN?:()=>void;QUEST_SCRIPT_ID?:string};
  let started!:(p:Promise<unknown>)=>void;const run=new Promise<Promise<unknown>>(r=>{started=r;});
  handoff=handoff.then(()=>new Promise<void>(release=>{
   const done=()=>{clearTimeout(timer);if(g.QUEST_SESSION===s)delete g.QUEST_SESSION;if(g.QUEST_SESSION_TAKEN===done)delete g.QUEST_SESSION_TAKEN;release();};
   const timer=setTimeout(done,60_000);
   g.QUEST_SESSION=s;g.QUEST_SESSION_TAKEN=done;
+  // quest-lib reads the talk plans of the quest script by this name.
+  g.QUEST_SCRIPT_ID=String(script).replace(/^.*[\\/]/,'').replace(/\.ts$/,'');
   started(import(fresh?`${script}?${fresh}`:script).finally(()=>{if(g.QUEST_SESSION_TAKEN===done)done();}));
  }));
  return run.then(p=>p);
