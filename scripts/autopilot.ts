@@ -38,7 +38,9 @@ const swarmPaused = () => existsSync(join(prac, 'stop-swarm'));
 // A retirement records the hash of its template's script; an entry from before that is a bare reason.
 type Retirement = string | { reason: string; script: string };
 // `kitSeq`: each account's kit-buy count, which names its Grand Exchange order keys (kitBuyTemplate).
-type State = { assigned: Record<string, { template: string; offset: number; at: number }>; retired: Record<string, Retirement>; kitSeq?: Record<string, number> };
+type State = { assigned: Record<string, { template: string; offset: number; at: number }>; retired: Record<string, Retirement>; kitSeq?: Record<string, number>;
+    // `unsold`: when a kit buy last got none of an item, by item id. The market leaves the item out for UNSOLD_RETRY_MS.
+    unsold?: Record<string, number> };
 // A retirement holds while its template's script is unchanged, so a fix to the script gives the pair its retries back.
 // A death holds until a person clears it, and so does a pair whose template is gone. A bare reason takes the current
 // script, so nothing comes back on the pass that first reads it. One whose last RESULT is now a drain (DRAIN_RESULT)
@@ -121,6 +123,20 @@ export function failedSends(orders: readonly Order[], receipts: readonly Receipt
         if (state === 'failed' || state === 'reconcile') out.add(`${o.from}>${o.to}`.toLowerCase());
     }
     return out;
+}
+// Item ids a kit buy offered for and got none of: its failed RESULT holds "acquired":0 and the offer's "itemId"
+// (scripts/buy-owned-ge-item.ts refunds the whole offer). That says the Grand Exchange has no seller under the price
+// cap, not that the buy job is broken: the pair is not retired, and the item leaves the market for a day, so the next
+// pass buys the other lines and asks a donor for this one.
+export const UNSOLD_RETRY_MS = 24 * 3600_000;
+export function unfilledItems(lines: readonly string[]): number[] {
+    const out = new Set<number>();
+    for (const l of lines) {
+        if (!/RESULT fail \{/.test(l) || !/"acquired":0\b/.test(l)) continue;
+        const id = l.match(/"itemId":(\d+)/);
+        if (id) out.add(Number(id[1]));
+    }
+    return [...out];
 }
 // A kit buy that has started and printed no RESULT yet holds an open Grand Exchange offer: its coins are in the
 // exchange, so the account's live status shows them gone. The pass leaves such a job as it is.
@@ -273,7 +289,13 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
         }
         const a = state.assigned[j.account];
         if (!a || a.template !== j.template) continue;
-        const r = assess(readJobResultLines(join(prac, 'swarm-logs', `${j.account}.log`), a.offset, j));
+        const jobLines = readJobResultLines(join(prac, 'swarm-logs', `${j.account}.log`), a.offset, j), r = assess(jobLines);
+        const none = String(j.template).startsWith(KIT_BUY) ? unfilledItems(jobLines) : [];
+        if (none.length) {
+            for (const id of none) (state.unsold ??= {})[id] = Date.now();
+            log.push(`AUTOPILOT unsold ${j.account} ${j.template}: no seller under the cap for ${none.map(id => byId.get(id) ?? id).join(', ')}`);
+            continue;
+        }
         if (r.retire) { const script = scriptOf(j.template); state.retired[pairKey(j.account, j.template)] = script === undefined ? r.reason : { reason: r.reason, script }; log.push(`AUTOPILOT retire ${j.account} ${j.template}: ${r.reason}`); }
     }
 
@@ -324,7 +346,8 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
             .filter(s => owners.get(s.name.toLowerCase())?.side === other));
     }
     const market: Record<string, { id: number; name: string; limit: number }> = {};
-    for (const i of items) if (typeof i.name === 'string' && Number.isSafeInteger(i.id) && !/^cert_/.test(i.debugname ?? '') && norm(i.name) in KIT_PRICE_CAPS && !(norm(i.name) in market))
+    for (const i of items) if (typeof i.name === 'string' && Number.isSafeInteger(i.id) && !/^cert_/.test(i.debugname ?? '') && norm(i.name) in KIT_PRICE_CAPS && !(norm(i.name) in market)
+        && !(now - (state.unsold?.[i.id] ?? -Infinity) < UNSOLD_RETRY_MS))
         market[norm(i.name)] = { id: i.id, name: i.name, limit: KIT_PRICE_CAPS[norm(i.name)]! };
     // This side's banked coins, over every account it owns: above the glut level a coin job ranks last.
     const sideCoins = listed.filter(n => owners.get(n.toLowerCase())?.side === side).reduce((n, name) => n + (accountFrom(name, side, observed(name), id => byId.get(id)).items.coin ?? 0), 0);
@@ -378,7 +401,12 @@ export function trainersDone(planFile: string): string[] {
     let effectiveJobs: any[];
     try { effectiveJobs = withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs); }
     catch { return []; } // An unreadable overlay cannot establish which trainer owns the account.
-    return finishedTrainers(effectiveJobs, side, state.assigned, catalogue(), (a, offset, job) => readJobResultLines(join(prac, 'swarm-logs', `${a}.log`), offset, job))
+    const since = (a: string, offset: number, job: any) => readJobResultLines(join(prac, 'swarm-logs', `${a}.log`), offset, job);
+    // A kit buy with a RESULT, ok or fail, also wants its next pass now: the band waits for the kit, and a failed buy
+    // must not be restarted by the controller until the 10-minute timer.
+    const buys = effectiveJobs.filter(j => j?.autopilot === side && typeof j.account === 'string' && typeof j.template === 'string' && j.template.startsWith(KIT_BUY)
+        && j.enabled && state.assigned[j.account]?.template === j.template && !kitBuyRunning(j, state.assigned[j.account], offset => since(j.account, offset, j))).map(j => j.account as string);
+    return [...finishedTrainers(effectiveJobs, side, state.assigned, catalogue(), since), ...buys]
         .map(a => `${a}:${state.assigned[a]!.template}:${state.assigned[a]!.offset}`);
 }
 
