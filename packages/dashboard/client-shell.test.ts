@@ -146,7 +146,7 @@ test('infoboxes: boosted and drained skills of the followed account; Hitpoints a
 function lookupHarness(fetch:typeof globalThis.fetch){
  const code=shell.slice(shell.indexOf('  function refreshWorldLookup(){'),shell.indexOf('  window.atlasLookup=lookup;'));
  const target={innerHTML:''};
- return new Function('fetch','body','lookupCard','put',`let worldLookup=null,worldLookupRequest=0,selectedPlugin='boards',hiscoreName='',hiscoresMode='fleet';const S=null,showPlugin=()=>{},refreshHiscoreAccount=()=>{};${code};return{lookup,value:()=>worldLookup};`)(fetch,{querySelector:()=>target},JSON.stringify,(el:{innerHTML:string},html:string)=>el.innerHTML=html);
+ return new Function('fetch','body','lookupCard','put',`let worldLookup=null,worldLookupRequest=0,selectedPlugin='boards',hiscoreName='',hiscoreSel=null,sel=null,hiscoresMode='fleet';const S=null,showPlugin=()=>{},refreshHiscoreAccount=()=>{};${code};return{lookup,value:()=>worldLookup};`)(fetch,{querySelector:()=>target},JSON.stringify,(el:{innerHTML:string},html:string)=>el.innerHTML=html);
 }
 
 test('player lookup shows HTTP errors instead of an unnamed empty player',async()=>{
@@ -638,7 +638,7 @@ test('the layout switcher shows the layout, and one button steps through the lay
  expect(w.keysOpened()).toBe(0);click(helpButton);expect(w.keysOpened()).toBe(1);
  w.press('?',false);expect(w.keysOpened()).toBe(2);w.end();w.press('?',false);expect(w.keysOpened()).toBe(2);
  expect(shell).not.toContain('wall-help\'');
- for(const row of ["keys('Shift','Arrow')","keys('Enter')","keys('Space')","keys('Double click')","keys('Esc')"])expect(shell).toContain('infoRow('+row);
+ for(const row of ["keys('Shift','Arrow')","keys('Enter')","keys('Space')","ptr('Double click')","keys('Esc')"])expect(shell).toContain('infoRow('+row);
  const css=readFileSync(new URL('./client-shell.css',import.meta.url),'utf8');
  expect(css).toContain('@media(max-width:740px){.client-title .focus .wall-tools .wall-layout{display:none}.client-title .focus .wall-tools .wall-cycle{display:grid}');
  expect(shell).toContain("infoRow(keys('\\\\'),'our accounts side by side',true)");

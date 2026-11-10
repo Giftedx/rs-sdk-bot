@@ -281,9 +281,9 @@ button.op-kpi:hover{filter:brightness(1.15)}
 .info-row{grid-template-columns:9em 1fr;align-items:center}
 .info-row kbd{display:inline-block;min-width:18px;padding:1px 5px;border:1px solid var(--fin-line-2);border-bottom-width:2px;border-radius:4px;background:#00000040;color:var(--fin-tx);font:10.5px var(--fin-font);text-align:center}
 .mark-name{color:#ffd700;font-weight:600}
-.mark-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#2c7a2c}
-.mark-dot.on{background:#3ddc3d}
-.mark-dot.other{background:#9a9a9a}
+.mark-dot{display:inline-block;width:7px;height:7px;border:1px solid #000;background:#3d8a33}
+.mark-dot.on{background:#2bff2b}
+.mark-dot.other{background:#fff}
 .lookup-worn{grid-template-columns:repeat(auto-fill,40px)}
 .public-view .client-plugin-body .boards>.bar{display:none}
 .public-view .client-plugin-body .board-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
@@ -293,3 +293,5 @@ button.op-kpi:hover{filter:brightness(1.15)}
 .info-row .mark-dot{margin:0 2px 0 6px;vertical-align:0}
 .info-row .mark-dot:first-child{margin-left:0}
 .info-data{margin-top:6px}
+@media(hover:none){.info-row .k{display:none}.info-row:has(kbd):not(:has(kbd.p)){display:none}}
+@media(max-width:479px){.client-title>img+span{display:none}}

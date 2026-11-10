@@ -124,21 +124,24 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     put(panel.querySelector('.xp-results'),rows.length?rows.map(r=>`<div class="xp-box xp-row"><img src="${asset('skill-'+skillFile(r.skill)+'.png')}" alt="" title="${E(r.skill)}"><div class="xp-main"><div class="xp-head"><span>${E(r.skill)}</span><span class="xp-gain">+${nf(r.gained)} xp</span></div><div class="xp-bar"><i style="width:${Math.round(r.progress*100)}%"></i><span>${r.level} → ${r.next} · ${Math.round(r.progress*100)}%</span></div><div class="xp-meta"><span>${nf(r.rate)} XP/hr</span><span>${r.ttl!=null?'TTL '+dur(r.ttl):nf(r.left)+' xp to level'}</span></div></div></div>`).join(''):'<div class="xp-box"><span class="xp-muted">'+(window.atlasOperator()?'No XP gained since tracking started.':'No XP gained since you opened the page.')+'</span></div>');
   }
   // Hiscore plugin (RuneLite's layout): any fleet account's levels per skill with rank and XP on hover.
-  let hiscoreName='';
+  // hiscoreSel: the watched account when a name was looked up or typed. A new watched account takes the tab back.
+  let hiscoreName='',hiscoreSel=null;
   function hiscoreResults(name){
     const b=S.bots.find(x=>x.name.toLowerCase()===name.toLowerCase());
     const rank=(board)=>b?.ranks?.find(r=>r.board===board);
     const cell=(skill,label,levelText,title)=>`<div class="hs-cell" title="${E(title)}"><img src="${asset('skill-'+skillFile(skill)+'.png')}" alt="${E(label)}"><span>${levelText}</span></div>`;
     const grid=b?skills.filter(n=>reported(b,n)).map(n=>{const k=b.skills?.find(x=>x.name===n),r=rank(n);return cell(n,n,k?String(k.level):'--',n+(k?'\nLevel: '+k.level+(k.xp!=null?'\nExperience: '+nf(k.xp):''):' is not reported')+(r?'\nRank: '+nf(r.rank)+(r.delta?' ('+(r.delta>0?'+':'')+r.delta+' today)':''):''));}).join(''):'';
     const overall=b?.ranks?.find(r=>r.board==='Overall');const total=b?.skills?.filter(realSkill).reduce((n,k)=>n+k.level,0);
-    const extra=(b?.ranks||[]).filter(r=>['Quest Points','Equipment','Bank','Runite'].includes(r.board)).map(r=>`<div class="hs-row"><span>${E(r.board)}</span><span>Rank ${nf(r.rank)}</span><span>${E(r.level)}</span></div>`).join('');
+    const extra=(b?.ranks||[]).filter(r=>['Quest Points','Equipment','Bank','Runite'].includes(r.board)).map(r=>`<div class="hs-row"><span>${E(r.board)}</span><span>Rank ${nf(r.rank)}</span><span>${E(r.level)}${r.board==='Quest Points'?' QP':''}</span></div>`).join('');
     return b?`<div class="hs-head"><span>${E(safeName(b.name))}</span><span>${overall?'Rank '+nf(overall.rank):''}</span></div><div class="hs-grid">${grid}<div class="hs-cell hs-overall" title="${E('Overall\nTotal level: '+total+(overall?'\nRank: '+nf(overall.rank)+'\nTime: '+overall.time:''))}"><img src="${asset('rl-xp.png')}" alt="Overall"><span>${total??'--'}</span></div></div>${extra?'<div class="hs-extra">'+extra+'</div>':''}`
         :worldLookup&&worldLookup.name.toLowerCase()===name.toLowerCase()?lookupCard(worldLookup):'<p class="xp-muted">'+(name?'Press Enter to look up '+E(name)+'.':'Type a player name.')+'</p>';
   }
   function refreshHiscoreAccount(){
     const panel=body.querySelector('.hs-wrap');
     if(!panel)return;
-    const name=hiscoreName||sel||'',input=panel.querySelector('#hs-name');
+    const input=panel.querySelector('#hs-name');
+    if(hiscoreName&&hiscoreSel!==null&&sel!==hiscoreSel&&input!==document.activeElement)hiscoreName='';
+    const name=hiscoreName||sel||'';
     if(input!==document.activeElement&&input.value!==name)input.value=name;
     put(panel.querySelector('#hs-names'),S.bots.filter(b=>!b.practice).map(b=>`<option value="${E(b.name)}"></option>`).join('')+(S.roster||[]).slice(0,400).map(r=>`<option value="${E(r[0])}"></option>`).join(''));
     put(panel.querySelector('.hs-results'),hiscoreResults(name));
@@ -193,13 +196,15 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // One home per fact: the first box says what the page is and how fresh each part is, each key and each mark has
   // one row, and Sources names each origin with its licence. ATTRIBUTION.txt lists every file.
   function infoPanel(){
-    const keys=(...k)=>k.map(x=>'<kbd>'+E(x)+'</kbd>').join(' '),owner=window.atlasOperator();
+    // keys: keyboard keys. ptr: what a mouse or a finger does. A screen with no keyboard pointer (hover: none) shows the
+    // ptr parts only, and no row that has keys alone.
+    const keys=(...k)=>k.map(x=>'<kbd class="k">'+E(x)+'</kbd>').join(' '),ptr=(...k)=>k.map(x=>'<kbd class="p">'+E(x)+'</kbd>').join(' '),owner=window.atlasOperator();
     const link=(href,text)=>'<a href="'+href+'" target="_blank" rel="noopener">'+text+'</a>';
     return '<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>RuneLite — Swarm</span></div><p class="xp-muted">Our bot team on the rs-sdk demo world, a 2004 RuneScape server. Not the RuneLite client. Not affiliated with Jagex or RuneLite.</p><div class="info-data">'+infoData()+'</div></div>'+
-      (owner?'':'<div class="xp-box"><div class="xp-head"><span>Controls</span></div>'+infoRow(keys('[',']'),'previous or next account',true)+infoRow(keys('W','A','S','D'),'fly free',true)+infoRow(keys('Drag'),'turn the camera',true)+infoRow(keys('Wheel'),'zoom',true)+infoRow(keys('Ctrl','K'),'find anything',true)+'</div>')+
-      '<div class="xp-box info-wall"><div class="xp-head"><span>Fleet wall</span></div>'+infoRow(keys('\\'),'our accounts side by side',true)+infoRow(keys('←','↑','↓','→')+' '+keys('H','J','K','L'),'move the focus',true)+infoRow(keys('1')+' – '+keys('9')+' '+keys('Click'),'focus that view',true)+infoRow(keys('Shift','Arrow')+' '+keys('Drag a title'),'swap two views',true)+infoRow(keys('P')+' '+keys('Pin'),'keep a view in its place',true)+infoRow(keys('Drag a gap'),'size the views',true)+infoRow(keys('Enter'),'make it the main view, then follow it',true)+infoRow(keys('Double click'),'follow that account',true)+infoRow(keys('Space'),'next layout',true)+infoRow(keys('F'),'focus layout',true)+infoRow(keys('Esc'),'leave the wall',true)+'</div>'+
+      (owner?'':'<div class="xp-box"><div class="xp-head"><span>Controls</span></div>'+infoRow(keys('[',']'),'previous or next account',true)+infoRow(keys('W','A','S','D'),'fly free',true)+infoRow(ptr('Drag'),'turn the camera',true)+infoRow(ptr('Wheel','Pinch'),'zoom',true)+infoRow(keys('Ctrl','K'),'find anything',true)+'</div>')+
+      '<div class="xp-box info-wall"><div class="xp-head"><span>Fleet wall</span></div>'+infoRow(keys('\\'),'our accounts side by side',true)+infoRow(keys('←','↑','↓','→')+' '+keys('H','J','K','L'),'move the focus',true)+infoRow(keys('1')+'<span class="k"> – </span>'+keys('9')+' '+ptr('Click'),'focus that view',true)+infoRow(keys('Shift','Arrow')+' '+ptr('Drag a title'),'swap two views',true)+infoRow(keys('P')+' '+ptr('Pin'),'keep a view in its place',true)+infoRow(ptr('Drag a gap'),'size the views',true)+infoRow(keys('Enter'),'make it the main view, then follow it',true)+infoRow(ptr('Double click'),'follow that account',true)+infoRow(keys('Space'),'next layout',true)+infoRow(keys('F'),'focus layout',true)+infoRow(keys('Esc'),'leave the wall',true)+'</div>'+
       '<div class="xp-box"><div class="xp-head"><span>Marks</span></div>'+
-      infoRow('Ours','<b class="mark-name">Name</b> <i class="mark-dot on"></i> playing <i class="mark-dot"></i> not playing')+infoRow('Others','<i class="mark-dot other"></i> on the map')+(owner?infoRow('⟦MAIN⟧ / Hidden','an account this page does not show')+infoRow('~ before a rank','the last rank we read; it can be old'):'')+'</div>'+
+      infoRow('Ours','<b class="mark-name">Name</b> <i class="mark-dot on"></i> playing <i class="mark-dot"></i> not playing')+infoRow('Others','<i class="mark-dot other"></i> on the minimap')+(owner?infoRow('⟦MAIN⟧ / Hidden','an account this page does not show')+infoRow('~ before a rank','the last rank we read; it can be old'):'')+'</div>'+
       '<div class="xp-box info-sources"><div class="xp-head"><span>Sources</span></div>'+
       infoRow('Client look, icons',link('https://github.com/runelite/runelite','RuneLite')+' · '+link(asset('RUNELITE-FULL-LICENSE.txt'),'BSD 2-Clause'))+
       infoRow('3D view, fonts, minimap',link('https://github.com/MaxBittker/rs-world','rs-world')+' · '+link(asset('RS-WORLD-LICENSE.txt'),'BSD 2-Clause'))+
@@ -275,7 +280,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // player from the player service.
   function lookup(name){
     name=String(name||'').trim();if(!/^[A-Za-z0-9_ -]{1,12}$/.test(name))return;const request=++worldLookupRequest,ours=S?.bots?.find(b=>!b.practice&&b.name.toLowerCase()===name.toLowerCase());
-    hiscoreName=ours?ours.name:name;hiscoresMode='account';worldLookup=ours?null:{name,rows:null,note:'Looking up…'};
+    hiscoreName=ours?ours.name:name;hiscoreSel=sel;hiscoresMode='account';worldLookup=ours?null:{name,rows:null,note:'Looking up…'};
     if(selectedPlugin!=='boards'||!body.querySelector('.hs-wrap'))showPlugin('boards');else refreshHiscoreAccount();
     if(ours)return;
     fetch('/api/player?name='+encodeURIComponent(name)).then(async r=>{const j=await r.json();if(!r.ok)throw Error(j.error||'Player service returned HTTP '+r.status);return j;}).then(j=>{if(worldLookupRequest!==request)return;worldLookup=j;refreshWorldLookup();}).catch(e=>{if(worldLookupRequest!==request)return;worldLookup={name,rows:null,note:'Lookup failed: '+(e?.message||e)};refreshWorldLookup();});
@@ -354,7 +359,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const syncSidebar=()=>$('#client-sidebar').setAttribute('aria-expanded',String(!app.classList.contains('client-collapsed')));
   function showPlugin(id){if(!window.atlasOperator()&&OPERATOR_PLUGINS.includes(id)){toast('Sign in as owner for the command tools.');id='fleet';}
     // A spectator's click on a board opens that board's top 10 (Hiscores, Rivals); a board with no top 10 has no more to show.
-    if(!window.atlasOperator()){if(PUBLIC_HIDDEN.includes(id))id='fleet';else if(id==='board'){const name=typeof chosenBoard==='string'?chosenBoard:'';if(!(S?.rivals||[]).some(x=>x.board===name))return;rivalBoard=name;hiscoresMode='rivals';id='boards';}}
+    if(!window.atlasOperator()){if(PUBLIC_HIDDEN.includes(id))id='fleet';else if(id==='board'){const key=typeof chosenBoard==='string'&&typeof boardKey==='function'?boardKey(chosenBoard):'',top=(S?.rivals||[]).find(x=>boardKey(x.board)===key);if(!top)return;rivalBoard=top.board;hiscoresMode='rivals';id='boards';}}
     const priorPlugin=selectedPlugin;window.atlasBeforePluginChange?.(priorPlugin,id);selectedPlugin=id;app.classList.remove('client-collapsed');app.classList.add('mobile-plugin');for(const el of [fleet,inspect,boards,allocation,journal])parked.append(el);body.replaceChildren();body._h=null;if(priorPlugin!==id)enter(body);$('#client-plugin-name').textContent=window.atlasPlugins?.[id]?.label||window.atlasPluginNames?.[id]||plugins.find(p=>p[0]===id)?.[1]||({raw:'Raw evidence'}[id]||'Settings');
     body.dataset.plugin=id;plugin.dataset.plugin=id;if(window.atlasPlugins?.[id]){window.atlasPlugins[id].render(body);}else if(['xp','boards','info'].includes(id))renderSnapshotPlugin(id);else if(id==='ge')body.innerHTML=gePanel();else if(id==='prs')body.innerHTML=prsPanel();else if(id==='fleet')body.append(fleet);else if(id==='world')body.innerHTML=worldPanel();else if(id==='activity'){body.append(journal);journal.style.setProperty('display','block','important');journal.style.position='static';journal.style.width='100%';journal.style.height='auto';}else{body.append(inspect);choose(id==='settings'?'machine':id);if(id==='goals'&&window.atlasOperator()){const form=document.createElement('form');form.className='goal-request';form.innerHTML='<input name="text" maxlength="500" placeholder="Tell the agents what you want next..." aria-label="New owner request"><button>Send</button><small>Goes to research/owner-requests.md as the next numbered row.</small>';body.prepend(form);}}
     rail.querySelectorAll('[data-client-plugin]').forEach(b=>{b.classList.toggle('on',b.dataset.clientPlugin===id);b.setAttribute('aria-pressed',String(b.dataset.clientPlugin===id));});syncSidebar();if(S&&id==='fleet')roster();window.atlasAfterPluginChange?.(priorPlugin,id);
@@ -448,7 +453,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       set('<h4>'+E(other)+'</h4>'+line('Status',seen?'online':'not in the roster')+line('Combat',String(l?.combat??seen?.[4]??'—'))+(ov?line('Overall','#'+nf(ov.rank)+' · '+ov.level):'')+(l?.worn?.length?line('Wears',l.worn.map(w=>w.name).join(', ').slice(0,60)):'')+line('Account','not ours'));return;}
     if(!b){const fleet=S.bots.filter(x=>!x.practice&&!x.reserved),live=fleet.filter(x=>x.operation==='observed'),stuck=fleet.filter(x=>['blocked','failed','died','active-stale'].includes(x.operation)),c=S.coordination?.counts;set('<h4>Fleet</h4>'+line('Playing',live.length+' / '+fleet.length)+line('Stopped',String(stuck.length))+(c&&window.atlasOperator()?line('AI jobs',(c.running??0)+' marked running · '+(c.pending??0)+' queued'):'')+(window.atlasOperator()&&S.vault?.coins?line('Vault coins',gp(S.vault.coins)):'')+(S.worldPlayers?line('Online',nf(S.worldPlayers)):''));return;}
     const [,state]=st(b);
-    set('<h4>'+E(safeName(b.name))+'</h4>'+(b.practice?line('World','practice · 2D'):'')+line('Status',state)+line('Goal',(b.goalSkill&&!(b.goalNow>=b.goalLevel)?b.goalSkill+' '+b.goalLevel:'')||String(b.goal||'').slice(0,60)||'—')+(b.phaseShort?line('Phase',String(b.phaseShort).slice(0,60)):'')+(b.xpPerHour?line('XP/hr',nf(Math.round(b.xpPerHour))):'')+(b.eta&&b.xpLeft>0?line('To target',b.eta):'')+(b.uptime&&b.inWorld?line('Session',dur(b.uptime)):'')+(!b.inWorld&&b.at?line('Last seen',age(b.at)+' ago'):''));
+    const goalText=(b.goalSkill&&!(b.goalNow>=b.goalLevel)?b.goalSkill+' '+b.goalLevel:'')||String(b.goal||'').slice(0,60);
+    set('<h4>'+E(safeName(b.name))+'</h4>'+(b.practice?line('World','practice · 2D'):'')+line('Status',state)+(goalText||window.atlasOperator()?line('Goal',goalText||'—'):'')+(b.phaseShort?line('Phase',String(b.phaseShort).slice(0,60)):'')+(b.xpPerHour?line('XP/hr',nf(Math.round(b.xpPerHour))):'')+(b.eta&&b.xpLeft>0?line('To target',b.eta):'')+(b.uptime&&b.inWorld?line('Session',dur(b.uptime)):'')+(!b.inWorld&&b.at?line('Last seen',age(b.at)+' ago'):''));
   }
   // Skills tab tooltip (OSRS): XP, next level at, remaining.
   hud.addEventListener('mouseover',e=>{const sk=e.target.closest('[data-skill]');const tip=hud.querySelector('.game-tip');if(!sk){tip.hidden=true;return;}const s=level(sk.dataset.skill),X=window.atlasXp;if(!s||!X){tip.hidden=true;return;}const lvl=Math.min(99,s.level),next=X.xpForLevel(Math.min(99,lvl+1));
@@ -843,6 +849,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // With zoom, the focused view becomes the main view of the new layout in the same move.
   function wallLayout(layout,zoom=false){
     if(!wall||!WALL_LAYOUTS.includes(layout)||layout===wall.layout)return;
+    wallSizeEnd(null);wallEdgeEnd(null);
     const message={mode:layout,...wallSizes(layout)};
     if(zoom&&wall.main!==wall.focus&&!wallLocked(wall.main)&&!wallLocked(wall.focus)){wall.main=wall.focus;message.main=wall.main;}
     wall.back=wall.layout;wall.layout=layout;wallPost({multiLayout:message});
@@ -961,15 +968,15 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(!any&&!wall.custom)return {};
     wall.custom=any;return {rows:s.rows,cols:s.cols,strip:wall.strip||0};
   }
-  const wallEdgeValue=kind=>kind==='strip'?{strip:wall.strip}:{[kind]:wall.shares[wall.layout][kind]};
+  const wallEdgeValue=kind=>kind==='strip'?{strip:wall.strip}:{[kind]:wall.shares[wall.layout]?.[kind]??[]};
   function wallEdgeEl(){
     const el=document.createElement('div');el.className='wall-grip wall-edge';el.hidden=true;el.title='Drag to size these views · press twice for even sizes';wallRoot.append(el);
-    el.addEventListener('pointerdown',e=>wallEdgeStart(e,el));el.addEventListener('pointermove',wallEdgeMove);el.addEventListener('pointerup',wallEdgeEnd);el.addEventListener('pointercancel',wallEdgeEnd);
+    el.addEventListener('pointerdown',e=>wallEdgeStart(e,el));el.addEventListener('pointermove',wallEdgeMove);el.addEventListener('pointerup',wallEdgeEnd);el.addEventListener('pointercancel',wallEdgeEnd);el.addEventListener('lostpointercapture',wallEdgeEnd);
     return el;
   }
   function wallEdgeStart(e,el){
     const g=el.gap;if(!wall||!g||e.button>0)return;
-    const now=Date.now(),twice=el.pressed&&now-el.pressed<=WALL_DOUBLE_MS;el.pressed=twice?0:now;
+    const now=Date.now(),on=wall.layout+g.kind+g.i,twice=el.pressed&&el.pressedOn===on&&now-el.pressed<=WALL_DOUBLE_MS;el.pressed=twice?0:now;el.pressedOn=on;
     if(twice){if(g.kind==='strip')wall.strip=0;else wall.shares[wall.layout][g.kind]=[];wallPost({multiLayout:wallEdgeValue(g.kind)});wallKeep();return;}
     wallEdge={el,id:e.pointerId,gap:g,down:g.kind==='cols'?e.clientX:e.clientY,frame:$('#rsw').getBoundingClientRect(),wait:false};
     el.setPointerCapture?.(e.pointerId);el.classList.add('sizing');wall.custom=true;
@@ -982,11 +989,11 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(g.kind==='strip'){
       const share=Math.round(Math.min(Math.max((d.frame.top+d.frame.height-at-WALL_GAP/2)/Math.max(d.frame.height,1),WALL_STRIP[0]),WALL_STRIP[1])*1000)/1000;
       if(share===wall.strip)return;
-      wall.strip=share;d.el.dataset.share=Math.round(share*100)+'%';
+      wall.strip=share;d.el.dataset.share=Math.round(share*100)+'%';d.el.pressed=0;
     }else{
       const shares=wallSharesAt(g.sizes,g.i,at-d.down,e.altKey===true);
       if(String(shares)===String(wall.shares[wall.layout][g.kind]))return;
-      wall.shares[wall.layout][g.kind]=shares;d.el.dataset.share=Math.round(shares[g.i]*100)+' : '+Math.round(shares[g.i+1]*100);
+      wall.shares[wall.layout][g.kind]=shares;d.el.pressed=0;d.el.dataset.share=Math.round(shares[g.i]*100)+' : '+Math.round(shares[g.i+1]*100);
     }
     if(!d.wait){d.wait=true;const kind=g.kind;requestAnimationFrame(()=>{d.wait=false;if(wall)wallPost({multiLayout:wallEdgeValue(kind)});});}
   }
@@ -998,7 +1005,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   let wallSize=null;
   function wallSizeTo(ratio){
     if(!wall||ratio===wall.ratio)return;
-    wall.ratio=ratio;wallGrip.dataset.share=Math.round(ratio*100)+'%';
+    wall.ratio=ratio;wallGrip.dataset.share=Math.round(ratio*100)+'%';if(wallSize)wallGrip.pressed=0;
     if(wallSize&&!wallSize.wait){wallSize.wait=true;requestAnimationFrame(()=>{if(wallSize)wallSize.wait=false;if(wall)wallPost({multiLayout:{ratio:wall.ratio}});});}
     else if(!wallSize)wallPost({multiLayout:{ratio}});
   }
@@ -1080,7 +1087,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const wallGhost=document.createElement('div');wallGhost.className='wall-ghost';wallGhost.hidden=true;
   const wallGrip=document.createElement('div');wallGrip.className='wall-grip';wallGrip.hidden=true;wallGrip.title='Drag to size the main view · press twice for the first size';
   wallRoot.append(wallGrip,wallGhost);
-  wallGrip.addEventListener('pointerdown',wallSizeStart);wallGrip.addEventListener('pointermove',wallSizeMove);wallGrip.addEventListener('pointerup',wallSizeEnd);wallGrip.addEventListener('pointercancel',wallSizeEnd);
+  wallGrip.addEventListener('pointerdown',wallSizeStart);wallGrip.addEventListener('pointermove',wallSizeMove);wallGrip.addEventListener('pointerup',wallSizeEnd);wallGrip.addEventListener('pointercancel',wallSizeEnd);wallGrip.addEventListener('lostpointercapture',wallSizeEnd);
   const wallTiles=new Map(),wallIcon={grid:'M1 1h4.5v4.5H1zM6.5 1H11v4.5H6.5zM1 6.5h4.5V11H1zM6.5 6.5H11V11H6.5z',main:'M1 1h5.5v10H1zM7.5 1H11v2.7H7.5zM7.5 4.65H11v2.7H7.5zM7.5 8.3H11V11H7.5z',focus:'M1 1h10v6.5H1zM1 8.5h2.7V11H1zM4.65 8.5h2.7V11h-2.7zM8.3 8.5H11V11H8.3z',columns:'M1 1h2.7v10H1zM4.65 1h2.7v10h-2.7zM8.3 1H11v10H8.3z'};
   const wallSvg=path=>'<svg viewBox="0 0 12 12" aria-hidden="true"><path d="'+path+'"/></svg>';
   function wallTile(name){
@@ -1093,7 +1100,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     t.strip.append(t.dot,t.name,t.note,t.num,t.pin,t.open);t.el.append(t.strip);
     t.strip.addEventListener('click',e=>{if(t.dragged){t.dragged=false;return;}if(e.target.closest?.('.wall-open'))wallOpen(name);else if(e.target.closest?.('.wall-pin'))wallPin(name);else if(wall)wallClick(name);});
     t.strip.addEventListener('pointerdown',e=>wallDragStart(e,name,t));t.strip.addEventListener('pointermove',wallDragMove);
-    t.strip.addEventListener('pointerup',e=>wallDragEnd(e,true));t.strip.addEventListener('pointercancel',e=>wallDragEnd(e,false));
+    t.strip.addEventListener('pointerup',e=>wallDragEnd(e,true));t.strip.addEventListener('pointercancel',e=>wallDragEnd(e,false));t.strip.addEventListener('lostpointercapture',e=>wallDragEnd(e,false));
     return t;
   }
   // With `move` (the time and the start of the viewer's move, 0 ms for none) the frames go to the reported rectangles;
@@ -1153,7 +1160,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       if(row){g.left=(m.x+dx)+'px';g.top=(m.y+m.h+dy-3)+'px';g.width=m.w+'px';g.height=(WALL_GAP+6)+'px';}
       else{g.left=(m.x+m.w+dx-3)+'px';g.top=(m.y+dy)+'px';g.width=(WALL_GAP+6)+'px';g.height=m.h+'px';}
       wallGrip.hidden=false;
-    }else if(!m)wallGrip.hidden=true;
+    }else if(!m&&!wallSize)wallGrip.hidden=true;
     // One grip on each gap between rows and between columns, and one over the strip.
     if(move){
       const gaps=wallGaps();
@@ -1210,7 +1217,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   hud.onclick=e=>{const t=e.target.closest('[data-game-tab]');if(t){if(t.dataset.gameTab===selectedTab)hud.classList.toggle('game-panel-hidden');else{selectedTab=t.dataset.gameTab;hud.classList.remove('game-panel-hidden');gamePanel();enter($('#game-panel'));}}const c=e.target.closest('[data-chat]');if(c){channel=c.dataset.chat;hud.querySelectorAll('[data-chat]').forEach(b=>{b.classList.toggle('active',b===c);b.setAttribute('aria-pressed',String(b===c));});renderChat();}if(e.target.closest('.chat-toggle,[data-toggle-chat]'))hud.classList.toggle('chat-hidden');const to3d=msg=>$('#rsw')?.contentWindow?.postMessage(msg,location.origin);if(e.target.closest('.minimap-compass')){if(typeof mode!=='undefined'&&mode==='3d')to3d({atlasCompass:true});else toast('The 2D map always faces north.');}if(e.target.closest('[data-viewer-worldmap]')){to3d({atlasOpenWorldMap:true});placesBox.hidden=true;}else if(e.target.closest('[data-places]')){placesBox.hidden=!placesBox.hidden;placesBox.querySelector('[data-viewer-worldmap]').hidden=!(typeof mode!=='undefined'&&mode==='3d');}else if(!e.target.closest('.game-places'))placesBox.hidden=true;const p=e.target.closest('[data-open-plugin]');if(p)showPlugin(p.dataset.openPlugin);if(e.target.closest('.game-logout')){selectedTab='logout';hud.classList.remove('game-panel-hidden');gamePanel();}if(e.target.closest('[data-logout]')){if(window.FleetShim?.signedIn?.())window.FleetShim.signOut();else toast('Nothing to log out of: this is the spectator view.');}if(e.target.closest('.game-xp'))showPlugin('xp');const a=e.target.closest('[data-view-action]');if(a)toast(a.dataset.viewAction+' · spectator view; no game input sent');const q=e.target.closest('[data-quest]');if(q){questDetail=q.dataset.quest;gamePanel();}const fr=e.target.closest('[data-friend]');if(fr){pick(fr.dataset.friend);}if(e.target.closest('[data-quest-back]')){questDetail=null;gamePanel();}const qf=e.target.closest('[data-quest-filter]');if(qf){questFilter=qf.dataset.questFilter;gamePanel();}const sk=e.target.closest('[data-skill]');if(sk){const st=level(sk.dataset.skill);toast(sk.dataset.skill+(st?' · Level '+st.level+(st.xp!=null?' · '+st.xp.toLocaleString()+' XP':''):' · not reported by this game'));}};
   body.addEventListener('submit',e=>{if(e.target.id==='hs-form'){e.preventDefault();lookup(e.target.querySelector('#hs-name').value);return;}const f=e.target.closest('.goal-request');if(!f)return;e.preventDefault();const text=f.text.value.trim();if(!text)return;if(!window.atlasCommand){notify('The command desk is not loaded.');return;}f.querySelector('button').disabled=true;window.atlasCommand('request',{text}).then(r=>{notify('request: '+String(r?.status||'sent').replaceAll('-',' '));f.text.value='';},err=>notify('Refused: '+(err?.message||err))).finally(()=>{f.querySelector('button').disabled=false;});});
   body.addEventListener('change',e=>{if(e.target.id==='rival-board'){rivalBoard=e.target.value;const w=body.querySelector('.rivals-wrap');if(w)w.innerHTML=rivalsPanel();return;}if(e.target.dataset.notify!==undefined){void setNotify(e.target.checked);}});
-  body.addEventListener('input',e=>{if(e.target.id==='ge-search'){geQuery=e.target.value;refreshGe();}if(e.target.id==='hs-name'){hiscoreName=e.target.value.trim();refreshHiscoreAccount();}});
+  body.addEventListener('input',e=>{if(e.target.id==='ge-search'){geQuery=e.target.value;refreshGe();}if(e.target.id==='hs-name'){hiscoreName=e.target.value.trim();hiscoreSel=sel;refreshHiscoreAccount();}});
   hud.addEventListener('click',e=>{const f=e.target.closest('.infobox[data-xp-focus]');if(f){pick(f.dataset.xpFocus);}});
   body.addEventListener('click',e=>{const lk=e.target.closest('[data-lookup]');if(lk){lookup(lk.dataset.lookup);return;}const fw=e.target.closest('[data-world-follow]');if(fw){const name=fw.dataset.worldFollow,ours=S.bots.find(b=>b.name.toLowerCase()===name.toLowerCase()&&!b.practice),from=focusTarget();if(ours)pick(ours.name);else if(window.atlasFollow3d?.(name))focusMoved(from,name);else toast('The 3D view is not ready, so the camera cannot watch a player.');return;}if(e.target.closest('[data-ge-all]')){geAll=!geAll;refreshGe();return;}const hm=e.target.closest('[data-hs-mode]');if(hm){hiscoresMode=hm.dataset.hsMode;hiscores();return;}if(e.target.closest('[data-xp-reset]')){const store=xpStore();delete store[sel];saveXpStore(store);refreshXp();}if(e.target.closest('[data-xp-pause]')){const store=xpStore(),b=account(),base=b&&store[b.name];if(base){if(base.paused){const gap=Date.now()-base.paused.at;base.at+=gap;for(const k of b.skills||[])if(typeof k.xp==='number'&&base.paused.xp[k.name]!=null)base.xp[k.name]=(base.xp[k.name]??base.paused.xp[k.name])+(k.xp-base.paused.xp[k.name]);delete base.paused;}else base.paused={at:Date.now(),xp:Object.fromEntries((b.skills||[]).map(k=>[k.name,k.xp]))};saveXpStore(store);}refreshXp();}const hm2=e.target.closest('[data-xp-hide-maxed]');if(hm2){xpHideMaxed=hm2.checked;refreshXp();}const f=e.target.closest('[data-xp-focus]');if(f){pick(f.dataset.xpFocus);showPlugin('xp');}});
   hud.onchange=e=>{if(e.target.id==='game-display'){app.classList.toggle('client-collapsed',e.target.value==='closed');syncSidebar();}if(e.target.id==='game-quality'){$('#atlas-quality').value=e.target.value;$('#atlas-quality').onchange();}if(e.target.id==='game-roofs')window.atlasSetRoofsOff(e.target.value==='off');};
