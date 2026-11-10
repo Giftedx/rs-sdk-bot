@@ -370,7 +370,7 @@ async function main() {
             rows.push(row);
           }
         }
-        catch (e) { const row = { case: c.key, ok: false, passes: 0, runs: RUNS, elapsedMs: 0, ledgerTicks: [], rivalTicks: null, output: null, result: `bench error ${String((e as Error)?.message ?? e).slice(0, 300)}` }; console.log(`AIO_BENCH_RESULT ${JSON.stringify(row)}`); rows.push(row); }
+        catch (e) { const row = { case: c.key, ok: false, passes: 0, runs: RUNS, elapsedMs: 0, ledgerTicks: [], rivalTicks: null, output: null, xp: null, result: `bench error ${String((e as Error)?.message ?? e).slice(0, 300)}` }; console.log(`AIO_BENCH_RESULT ${JSON.stringify(row)}`); rows.push(row); }
         await own?.stop();
         writeFileSync(OUT, JSON.stringify({ coverage, concurrency: CONCURRENCY, runs: RUNS, rows }, null, 2));
       }
