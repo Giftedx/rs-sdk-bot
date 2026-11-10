@@ -32,7 +32,7 @@ export function classifyTick(before: any, now: any, stunned = false): TickKind {
     return stunned ? 'stun' : 'idle';
 }
 
-export function summarize(rows: TickRow[]) {
+export function summarize(rows: TickRow[], xpGain = 0) {
     const counts: Record<TickKind, number> = { xp: 0, inventory: 0, move: 0, anim: 0, dialog: 0, stun: 0, idle: 0 };
     for (const r of rows) counts[r.kind]++;
     const streaks: { start: number; length: number; at: string }[] = [];
@@ -44,7 +44,7 @@ export function summarize(rows: TickRow[]) {
         i = j;
     }
     streaks.sort((x, y) => y.length - x.length || x.start - y.start);
-    return { ticks: rows.length, counts, idlePct: rows.length ? (100 * counts.idle) / rows.length : 0, longestIdle: streaks.slice(0, 5) };
+    return { ticks: rows.length, counts, idlePct: rows.length ? (100 * counts.idle) / rows.length : 0, longestIdle: streaks.slice(0, 5), xpGain };
 }
 
 export function startLedger(s: { sdk: { getState(): any; getDialog?(): any }; onTick(cb: () => void): () => void; tick(): number }) {
@@ -57,6 +57,8 @@ export function startLedger(s: { sdk: { getState(): any; getDialog?(): any }; on
             dialog: { isOpen: !!(s.sdk.getDialog?.()?.isOpen ?? st?.dialog?.isOpen) } };
     };
     let last = snap();
+    // Total XP over all skills at the start, so the summary can state the XP the run gained.
+    const xpStart = xpSum(last);
     // The message list keeps only the newest messages, so its length stops growing: track the newest tick seen.
     let seenTick = Math.max(-1, ...(s.sdk.getState()?.gameMessages ?? []).map((m: any) => m.tick ?? -1));
     let stunUntil = -1;
@@ -68,12 +70,12 @@ export function startLedger(s: { sdk: { getState(): any; getDialog?(): any }; on
         rows.push({ tick: s.tick(), kind: classifyTick(last, now, s.tick() <= stunUntil), at: `${now.player?.worldX},${now.player?.worldZ}` });
         last = now;
     });
-    return { stop: () => { off(); return summarize(rows); }, rows };
+    return { stop: () => { off(); return summarize(rows, Math.max(0, xpSum(last) - xpStart)); }, rows };
 }
 
 export function formatLedger(sum: ReturnType<typeof summarize>): string {
     const c = sum.counts;
-    return `LEDGER ticks=${sum.ticks} xp=${c.xp} inventory=${c.inventory} move=${c.move} anim=${c.anim} dialog=${c.dialog} stun=${c.stun} idle=${c.idle} idlePct=${sum.idlePct.toFixed(1)} `
+    return `LEDGER ticks=${sum.ticks} xp=${c.xp} inventory=${c.inventory} move=${c.move} anim=${c.anim} dialog=${c.dialog} stun=${c.stun} idle=${c.idle} idlePct=${sum.idlePct.toFixed(1)} xpGain=${sum.xpGain} `
         + `longestIdle=${sum.longestIdle.map(x => `${x.length}@t${x.start}(${x.at})`).join(',')}`;
 }
 

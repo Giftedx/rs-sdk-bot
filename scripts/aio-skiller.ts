@@ -102,6 +102,7 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  // Woodcutting
  {skill:'woodcutting',method:'edgeville',script:'scripts/edgeville-woodcut-order.ts',description:'Edgeville tree/oak/yew woodcutting order'},
  {skill:'woodcutting',method:'yews',script:'scripts/gather-yews.ts',description:'Chop and bank yew logs'},
+ {skill:'woodcutting',method:'fresh45',script:'scripts/generated/woodcutting.ts',description:'Fresh account to Woodcutting 45 with the knife reset (axe from Bob, trees then willows)'},
  {skill:'woodcutting',method:'loop',script:'scripts/wc-loop.ts',description:'Continuous woodcutting loop'},
  // Firemaking
  {skill:'firemaking',method:'order',script:'scripts/firemaking-order.ts',description:'Line firemaking order from banked logs (normal/oak/willow/maple/yew/magic)'},

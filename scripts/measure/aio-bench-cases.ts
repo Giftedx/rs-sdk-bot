@@ -68,6 +68,7 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('fishing', 'harpoon', 'gather_fish_catherby', ['harpoon', '1500'], {presetConfig: {position: {x: 2840, z: 3432, level: 0}, skills: {Fishing: 70}, inventory: [{id: 311, count: 1}]}}),
   skiller('cooking', 'food', 'cook_food_catherby', ['600', 'lobster']),
   skiller('woodcutting', 'yews', 'gather_yews', ['1500', '5', 'MAX_TRIPS=1']),
+  skiller('woodcutting', 'fresh45', 'wc_fresh', [], {timeoutMs: 900_000}),
   skiller('fletching', 'arrows', 'fletch_arrows_bank', ['600', 'arrows', 'rune']),
   skiller('mining', 'ore', 'gather_ore_varrock', ['1500', '5', 'MAX_TRIPS=1'], {presetConfig: {position: {x: 3286, z: 3368, level: 0}, skills: {Mining: 50, Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}, inventory: [{id: 1275, count: 1}]}}),
   // scripts/measure/fleet-practice.ts `flax`
