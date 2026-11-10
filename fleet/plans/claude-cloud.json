@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794302234414,
+ "at": 1794302494701,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -96,11 +96,10 @@
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
+   "repeat": false,
    "goal": "goldfarm knights at 2582,3297",
    "role": "thieving",
    "template": "goldfarm@2582,3297",
-   "autopilot": "claude-cloud",
    "resources": [
     "knight:2582,3297"
    ]
