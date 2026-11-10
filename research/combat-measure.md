@@ -57,7 +57,13 @@ Ranged it adds is not needed at that point.
   banked. `COW_STAGE=1` banked the pack, keeping 2 whole cakes. All 6 runs ended `RESULT ok` with 8 kills, Strength
   1 -> 28 or 29 and no food eaten, in 558/702, 487/554 and 562/552 ticks. This needs the target rule that skips only a
   cow with another player within 2 tiles: with a 12-tile rule, live claude-cloud TrouserSnake sat 198 ticks with no
-  target beside TheFullMonty. Gap: practice only; a third account in the field is not measured.
+  target beside TheFullMonty.
+- **Three accounts share the north field.** Practice, 3 triples at once, same start. All 9 runs ended `RESULT ok` with 8
+  kills, no deaths and no food eaten, in 600/611/544, 590/550/620 and 618/514/551 ticks. The per-bot median is 590,
+  against 550 solo (3 solo runs: 550, 594, 550). This needs cow mode to give a cow up and pick another. It releases one
+  that has been in someone else's combat for 12 ticks, or one with no own XP and no combat for 40. Without the release,
+  one bot in each triple stopped on `target/loot timeout` after another account took its cow. Gap: practice only; four
+  accounts are not measured.
 - **Gap.** One account and one skill; the rate at levels above 46 is not measured.
 
 ## 1. Melee, no cannon
