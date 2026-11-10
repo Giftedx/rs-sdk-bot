@@ -13,6 +13,8 @@ import { pickOrder, readAgentJobs, swarmBusy, validOrder, type Order, type Recei
 import { lastResult } from '../packages/core/src/run-child';
 import { mergeJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import {capabilityRevision} from '../packages/core/src/worker-release';
+import { clearSwarmStop, swarmWroteStop } from './swarm';
+import { stopClearable } from './autopilot';
 
 const root = resolve(import.meta.dir, '..'), lock = join(root, '.practice', 'fleet-agent.lock');
 const CYCLE = Number(process.env.CYCLE ?? 10) * 60_000, LEAD = Number(process.env.LEAD ?? 15) * 60_000;
@@ -41,6 +43,28 @@ const TRADE_SCRIPT=resolve(import.meta.dir,'../scripts/fleet-trade.ts');
 // trade claim then stayed held (live: TheFullMonty waited for a PC account that could not log in).
 export function tradeEnvironment(dir:string,env:Record<string,string|undefined>=process.env,release=capabilityRevision([TRADE_SCRIPT],root)){
     return {...env,FLEET_DIR:dir,WORKER_RELEASE:release,WORKER_ENTRY:TRADE_SCRIPT,STALL_TICKS:'0'};
+}
+
+// The swarm leaves its own stop file when an account's job leaves the plan, as when the planner takes the account off
+// its job for a fleet order (scripts/swarm.ts SWARM_STOP). A live login refuses while any stop file exists
+// (packages/core/src/inprocess.ts "live admission paused by stop file"), so the trade for that order could not log in:
+// live, 86 refused trade logins and none of nine same-side orders settled. Before a trade the agent removes that file
+// once the account is offline (scripts/autopilot.ts stopClearable). An owner's stop file holds the trade, and so does
+// the swarm's while a run of the account is still live: `held` names why.
+export function tradeStop(base: string, account: string, now = Date.now()): { held?: string; cleared: boolean } {
+    let cleared = false;
+    for (const name of new Set([account, account.toLowerCase()])) {
+        const file = join(base, '.practice', `stop-${name}`);
+        if (!existsSync(file)) continue;
+        let text: string;
+        try { text = readFileSync(file, 'utf8'); } catch { return { held: 'stop file unreadable', cleared }; }
+        if (!swarmWroteStop(text)) return { held: 'owner stop file', cleared };
+        let status: any = null;
+        try { status = JSON.parse(readFileSync(join(base, '.practice', 'status', `${account}.json`), 'utf8')); } catch { /* No status row: the account is offline. */ }
+        if (!stopClearable(status, now)) return { held: 'its last run is still ending', cleared };
+        if (clearSwarmStop(file)) cleared = true;
+    }
+    return { cleared };
 }
 
 // The sync child's own RESULT line; a child that printed none reports its exit code.
@@ -83,6 +107,9 @@ if (import.meta.main) {
         const busy = swarmBusy(mergeJobs(readAgentJobs(), readCoordinatorJobs(root).jobs));
         for (const t of dueTrades(orders, receipts, mySide(), loadOwners(), busy, running, now)) {
             if (t.busy) { console.log(`FLEET_AGENT busy ${t.account}: order ${t.order.id} waits (enabled swarm job)`); continue; }
+            const stop = tradeStop(root, t.account, now);
+            if (stop.cleared) console.log(`FLEET_AGENT removed the swarm's own stop file for ${t.account}`);
+            if (stop.held) { console.log(`FLEET_AGENT held ${t.account}: order ${t.order.id} waits (${stop.held})`); continue; }
             running.add(t.account.toLowerCase());
             console.log(`FLEET_AGENT start ${t.account} order ${t.order.id}`);
             const p = Bun.spawn(['bun', TRADE_SCRIPT, t.account, t.order.id], { cwd: root, stdout: 'pipe', stderr: 'inherit', windowsHide: true, env: tradeEnvironment(dir) });
