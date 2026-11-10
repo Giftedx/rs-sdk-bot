@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794299682643,
+ "at": 1794299803469,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -211,72 +211,63 @@
   },
   {
    "account": "Deeppockets",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [
     "3000",
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
+   "repeat": false,
    "goal": "train Strength to 45 on the Ardougne cows",
    "role": "combat",
    "template": "army-cow-strength-45",
-   "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
    ]
   },
   {
    "account": "Fatstack",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [
     "3000",
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
+   "repeat": false,
    "goal": "train Strength to 45 on the Ardougne cows",
    "role": "combat",
    "template": "army-cow-strength-45",
-   "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
    ]
   },
   {
    "account": "Fingerblastr",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [
     "3000",
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
+   "repeat": false,
    "goal": "train Strength to 45 on the Ardougne cows",
    "role": "combat",
    "template": "army-cow-strength-45",
-   "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
    ]
