@@ -1,0 +1,22 @@
+{
+ "id": "1794312761844-thefullmonty-masterbaiter",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TheFullMonty",
+ "to": "Masterbaiter",
+ "item": "Air rune",
+ "count": 10,
+ "start": 1794312761844,
+ "end": 1794315161844,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794308783485,
+ "at": 1794309386126,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -18,6 +18,22 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
+   "role": "supply"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
+    "scripts/goldfarm.ts KNIGHT_SPOT=2582,3297"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Thieving 55, then coins from Ardougne knights",
    "role": "supply"
   },
   {
@@ -178,26 +194,6 @@
    "repeat": true,
    "goal": "Strength 30 on chickens so it can hit hard enough to PK",
    "role": "pk-trainee"
-  },
-  {
-   "account": "Masterbaiter",
-   "script": "scripts/generated/thieving60.ts",
-   "args": [],
-   "env": {
-    "TARGET": "55",
-    "CAP": "2500",
-    "CLEAN_FOOD": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Thieving to 55 for a knight spot",
-   "role": "thieving",
-   "template": "thieving55",
-   "autopilot": "local",
-   "resources": [
-    "knight:2669,3298"
-   ]
   },
   {
    "account": "mmsmk1232",
@@ -486,27 +482,6 @@
    "repeat": false,
    "goal": "run-ge-woodpecker-sharks30-blood-food [task-ba7ddac9-17e0-497c-a16c-321de8f810d5]",
    "role": "helper"
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "385",
-    "QUANTITY": "30",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "810",
-    "CASH_RESERVE": "420000",
-    "ORDER_KEY": "mineyourbiz-sharks30-blood-food",
-    "FILL_WAIT_TICKS": "40",
-    "ORDER_MS": "360000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-8e037899-bd25-44dc-9697-c454dd3b7263"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-mineyourbiz-sharks30-after-claim-fault [task-8e037899-bd25-44dc-9697-c454dd3b7263]",
-   "role": "supply"
   }
  ]
 }
