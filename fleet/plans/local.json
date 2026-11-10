@@ -1,7 +1,25 @@
 {
  "side": "local",
- "at": 1794312242355,
+ "at": 1794312855515,
  "jobs": [
+  {
+   "account": "FishAndChips",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts harry 600 MAX_ITEMS=1 MAX_SPEND=500 NO_BUY_TICKS=25 BANK_PACK=1",
+    "scripts/gather-fish.ts cage 3000",
+    "scripts/cook-food.ts 1500 lobster"
+   ],
+   "env": {
+    "ROUNDS": "0",
+    "RUN": "2"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
+   "role": "supply"
+  },
   {
    "account": "MineYourBiz",
    "script": "scripts/chain.ts",
@@ -62,6 +80,53 @@
    "role": "pk-trainee"
   },
   {
+   "account": "Mightyrod",
+   "script": "scripts/pk-live/live-pilot.ts",
+   "args": [
+    "15",
+    "20"
+   ],
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "PK hunts of 15 minutes at Wilderness 20 or less, with GE and shop rune restock",
+   "role": "pk"
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=10 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=oreelse-law10 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1333 QUANTITY=1 LIMIT_PRICE=30000 CASH_RESERVE=1000 ORDER_KEY=oreelse-runescim ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=20 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=oreelse-shark20 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/pk-live/live-pilot.ts 10 20"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "Buy law runes, a rune scimitar and sharks on the GE, then a 10-minute PK pilot at Wilderness 20 or less",
+   "role": "pk"
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/walk-to.ts 3092 3243",
+    "scripts/train-chickens.ts TRAIN_BANK=draynor TRAIN_SKILL=Strength TARGET_LEVEL=30 CAP=3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "Strength 30 on chickens so it can hit hard enough to PK",
+   "role": "pk-trainee"
+  },
+  {
    "account": "Wandwaver",
    "script": "scripts/chain.ts",
    "args": [
@@ -94,6 +159,102 @@
    "role": "pk-trainee"
   },
   {
+   "account": "mmthv2350",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "NabTheKnob",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
+   "autopilot": "local",
+   "resources": [
+    "knight:2671,3313"
+   ]
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "local",
+   "resources": [
+    "knight:2669,3298"
+   ]
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
+   "autopilot": "local",
+   "resources": [
+    "knight:2671,3313"
+   ]
+  },
+  {
+   "account": "Masterbaiter",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
+   "env": {
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
+   ]
+  },
+  {
    "account": "mmtha0205",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -110,6 +271,25 @@
    "autopilot": "local",
    "resources": [
     "knight:2653,3300"
+   ]
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "local",
+   "resources": [
+    "knight:2669,3298"
    ]
   },
   {
@@ -266,32 +446,6 @@
    "role": "helper"
   },
   {
-   "account": "Billionaire",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-4c6352c9-38e6-4b08-9dff-c208176100a7"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-billionaire-serial [task-4c6352c9-38e6-4b08-9dff-c208176100a7]",
-   "role": "thieving"
-  },
-  {
-   "account": "mmthv2350",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-a9054d6e-5e5f-4cf3-8574-54090cbad246"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-mmthv2350-serial [task-a9054d6e-5e5f-4cf3-8574-54090cbad246]",
-   "role": "thieving"
-  },
-  {
    "account": "Pocketpython",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -322,71 +476,6 @@
    "role": "supply"
   },
   {
-   "account": "NabTheKnob",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-d5da97bf-045b-43d7-b24e-5674cbcbe944"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-nabtheknob-serial [task-d5da97bf-045b-43d7-b24e-5674cbcbe944]",
-   "role": "thieving"
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-faaa2c11-3329-434c-ab20-5bffe05f11a7"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-mightyrod-serial [task-faaa2c11-3329-434c-ab20-5bffe05f11a7]",
-   "role": "pk"
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-74101a8d-385c-4d39-a5b3-1babee02034f"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-mmsmk1232-serial3 [task-74101a8d-385c-4d39-a5b3-1babee02034f]",
-   "role": "thieving"
-  },
-  {
-   "account": "FishAndChips",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-534caa65-249a-4158-ace4-33e095eb7124"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-fishandchips-serial3 [task-534caa65-249a-4158-ace4-33e095eb7124]",
-   "role": "supply"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-8b0224c6-c1d5-4c54-8f14-0a68762f7cf9"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-oreelse-serial3 [task-8b0224c6-c1d5-4c54-8f14-0a68762f7cf9]",
-   "role": "pk"
-  },
-  {
    "account": "Pocketrocket",
    "script": "scripts/buy-owned-ge-item.ts",
    "args": [],
@@ -406,52 +495,6 @@
    "repeat": false,
    "goal": "run-ge-pocketrocket-rune-arrows533 [task-a92fe9c7-4fbb-4d38-8279-cb797dfe7be6]",
    "role": "supply"
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-940c28a9-a0ac-4505-874c-2b7d9534febc"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-yewfirst-serial3 [task-940c28a9-a0ac-4505-874c-2b7d9534febc]",
-   "role": "pk-trainee"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-79a53715-7b0b-40fa-89a8-508272bf45e2"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-woodenstaff-serial3 [task-79a53715-7b0b-40fa-89a8-508272bf45e2]",
-   "role": "thieving"
-  },
-  {
-   "account": "Masterbaiter",
-   "script": "scripts/generated/thieving60.ts",
-   "args": [],
-   "env": {
-    "TARGET": "55",
-    "CAP": "2500",
-    "CLEAN_FOOD": "1"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Thieving to 55 for a knight spot",
-   "role": "thieving",
-   "template": "thieving55",
-   "autopilot": "local",
-   "resources": [
-    "knight:2653,3300"
-   ]
   }
  ]
 }
