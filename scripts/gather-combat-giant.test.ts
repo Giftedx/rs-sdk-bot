@@ -97,6 +97,17 @@ test('giant shark eating at the HP floor is observed and owned food reconciles',
         expect(r.banked).toEqual({bigBones:2,limpwurt:0});expect(r.hpMin).toBe(30);
     }finally{f.dispose();}
 });
+test('a bite whose heal a hit hides is still a bite: the debit is the proof and the trainer eats again',async()=>{
+    const f=giantFixture({injure:true}),sdk=f.session.sdk as any,bot=f.session.bot as any;let bites=0;
+    const eatFood=bot.eatFood.bind(bot),skill=sdk.getSkill.bind(sdk);
+    bot.eatFood=async(item:any)=>{bites++;return eatFood(item);};
+    // After the first bite HP still reads 30, as when a hit lands with it; the second bite shows its rise.
+    sdk.getSkill=(n:string)=>n==='Hitpoints'&&bites===1?{level:30,baseLevel:75}:skill(n);
+    try{
+        const r=await runGiants(f.session,{cap:500,trainSkill:'Strength',targetLevel:90,walk:f.walk});
+        expect(r.ok).toBe(true);expect(r.eaten).toBe(2);expect(r.initialFood).toBe(11);expect(r.finalFood).toBe(9);expect(r.foodAccounted).toBe(true);
+    }finally{f.dispose();}
+});
 test('GIANT_KILLS overrides an already met level and banks exactly two credited kills',async()=>{
     const f=giantFixture({herbs:true,injure:true});try{
         const r=await runGiants(f.session,{cap:500,trainSkill:'Strength',targetLevel:89,maximum:2,walk:f.walk});
@@ -223,6 +234,41 @@ test('with GIANT_BURY a trooper kill\'s bones are taken and buried on the field;
     }finally{max.f.dispose();}
 });
 
+test('a restock takes each owned food kind in site order until the pack carries GIANT_FOOD pieces',async()=>{
+    const site={label:'trooper',npcs:[117],foods:[385,2142],bank:GIANT.bank,spot:GIANT.spot,room:GIANT.room,drops:[]};
+    const f=giantFixture();try{
+        f.bank.find(i=>i.id===385)!.count=2;f.bank.push({id:2142,name:'Cooked meat',count:10,slot:f.bank.length});
+        const r=await runGiants(f.session,{cap:500,trainSkill:'Strength',targetLevel:99,maximum:1,food:5,site,walk:f.walk}) as any;
+        expect(r.ok).toBe(true);expect(r.initialFood).toBe(13);expect(r.finalFood).toBe(13);
+        // One shark carried, the two banked sharks, then cooked meat up to five pieces.
+        const held=(id:number)=>f.inv.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
+        expect(held(385)).toBe(3);expect(held(2142)).toBe(2);
+    }finally{f.dispose();}
+});
+test('out of food at low HP a trooper run ends stop=food, ok after its kills; the giants still fail',async()=>{
+    // The first fight costs the one carried shark; in the second HP is low again with no food in the pack or the bank.
+    const hungry=(site:any)=>{
+        const f=giantFixture(),sdk=f.session.sdk as any,bot=f.session.bot as any;let low=false,fights=0;
+        const state=sdk.getState.bind(sdk),attack=bot.attack.bind(bot),eatFood=bot.eatFood.bind(bot),skill=sdk.getSkill.bind(sdk);
+        f.bank.splice(f.bank.findIndex(i=>i.id===385),1);
+        const next={id:117,index:10,name:'Giant',x:2545,z:3144,tileX:2545,tileZ:3144,hp:35,maxHp:35,inCombat:false,reachable:true};
+        sdk.getState=()=>{const st=state();return fights>=1&&site?{...st,nearbyNpcs:[next]}:st;};
+        bot.attack=async(...a:any[])=>{fights++;low=true;return fights===1?attack(...a):{success:true};};
+        bot.eatFood=async(item:any)=>{low=false;return eatFood(item);};
+        sdk.getSkill=(n:string)=>n==='Hitpoints'&&low?{level:30,baseLevel:75}:skill(n);
+        return f;
+    };
+    const site={label:'trooper',npcs:[117],foods:[385,2142],bank:GIANT.bank,spot:GIANT.spot,room:GIANT.room,drops:[]};
+    const field=hungry(site);try{
+        const r=await runGiants(field.session,{cap:500,trainSkill:'Strength',targetLevel:99,site,walk:field.walk}) as any;
+        expect(r.stop).toBe('food');expect(r.ok).toBe(true);expect(r.partial).toBe(true);expect(r.creditedKills).toBe(1);expect(r.eaten).toBe(1);
+        expect(r.failure).toBe('-');expect(r.foodAccounted).toBe(true);expect(r.preserved).toBe(true);
+    }finally{field.dispose();}
+    const camp=hungry(undefined);try{
+        const r=await runGiants(camp.session,{cap:500,trainSkill:'Strength',targetLevel:99,walk:camp.walk}) as any;
+        expect(r.ok).toBe(false);expect(r.stop).toBe('low-hp');expect(r.failure).toContain('low HP in combat and no carried shark');
+    }finally{camp.dispose();}
+});
 test('banked supplies absent or equip without effect cannot start a giant fight',async()=>{
  for(const mode of ['food','weapon','equip'] as const){
     const f=giantFixture({bankedKit:true});try{

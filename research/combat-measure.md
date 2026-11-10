@@ -144,6 +144,26 @@ Ranged it adds is not needed at that point.
   `scripts/gather-combat-giant.test.ts` (with GIANT_BURY a trooper kill's bones are taken and buried).
 - **Gap.** Practice only; Strength only: a bow kills at range, so the walk to the bones is longer and that cost is
   not measured. Where the 9 ticks go is not measured.
+- **Claim.** A cow leaver trains on the troopers on its own raw beef: with `TROOPER_COOK=1` the trooper job first
+  cooks banked raw beef at the range north-east of the Ardougne north bank (2642,3355, cooked from the tile north of
+  it) and the trainer eats the cooked meat, 3 HP a piece. A 1,500-tick run eats 5-7 pieces.
+- **Conditions.** Three accounts at once, each Attack, Strength and Defence 62, Hitpoints 63, Cooking 1, a bronze
+  sword, 300 raw beef banked and no other trooper food, `GIANT_FOOD=20`, `GIANT_BURY=1`, cap 1,500:
+
+  | Account | Cook stage: cooked, burnt, ticks | Strength XP per tick | Kills | Meat eaten | Lowest HP |
+  |---|---|---|---|---|---|
+  | 1 | 79, 5, 528 | 46.1 | 35 | 5 | 31 |
+  | 2 | 82, 2, 523 | 42.4 | 34 | 7 | 31 |
+  | 3 | 81, 3, 523 | 51.0 | 37 | 6 | 30 |
+
+  All three ended `RESULT ok`, Strength 62 to 71-72. The stage cooks three packs when the account owns fewer than 20
+  pieces of trooper food, about 40 ticks to the range, 31 back and 3-4 ticks a cook; 84 raw beef last about 13 runs.
+  The range in the house south of the bank (2617,3317) is behind a locked door and has no route.
+- **Evidence.** `.practice/troopers/cook.ts` (`cook-b.out`, `cook-c.out`, `cook-d.out`), `.practice/troopers/range.ts`;
+  `scripts/trooper-food.test.ts`; `scripts/gather-combat-giant.test.ts` (a bite whose heal a hit hides; out of food
+  at low HP).
+- **Gap.** Practice only, one set of three; Ranged on cooked meat and a run that starts under Defence 60 are not
+  measured.
 - **Claim.** The trainer banks pack coins with its drops before every walk out, so a death on the field cannot lose
   them. **Conditions.** The same run from 5,000 coins in the pack, cap 400: `RESULT ok`, 8 kills, 2 bank trips; the
   pack held 0 coins and the bank 5,000 afterwards. **Evidence.** `.practice/troopers/coins.ts` and `peek.ts`;
