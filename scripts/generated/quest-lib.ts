@@ -46,12 +46,13 @@ export const CHOICE: Readonly<Record<2 | 3 | 4 | 5, readonly number[]>> = { 2: [
 // Recorded plans: talk-plans.json holds, for a quest script and a talk label, the clicks that talk took in a passing
 // run. `talk` sends them as its plan the first time the label runs. TALK_PLANS=off ignores the file. TALK_RECORD=<dir>
 // writes the clicks of this run to <dir>/<quest>.json; `bun scripts/measure/talk-plans.ts` moves them into the file.
-const QUEST_ID = basename(process.argv[1] ?? '', '.ts');
+// The quest script in use: the sweep runs a quest script inside its own process and names it in QUEST_SCRIPT_ID.
+const questId = (): string => (globalThis as { QUEST_SCRIPT_ID?: string }).QUEST_SCRIPT_ID ?? basename(process.argv[1] ?? '', '.ts');
 const PLAN_FILE = join(import.meta.dir, 'talk-plans.json');
 const TALK_PLANS: Record<string, Record<string, PlanToken[]>> = process.env.TALK_PLANS !== 'off' && existsSync(PLAN_FILE) ? JSON.parse(readFileSync(PLAN_FILE, 'utf8')) : {};
 const TALK_RECORD = process.env.TALK_RECORD;
 const recordedPlans: Record<string, PlanToken[]> = {};
-if (TALK_RECORD) process.on('exit', () => { try { mkdirSync(TALK_RECORD, { recursive: true }); writeFileSync(join(TALK_RECORD, `${QUEST_ID}.json`), JSON.stringify(recordedPlans)); } catch { /* a record is optional */ } });
+if (TALK_RECORD) process.on('exit', () => { try { mkdirSync(TALK_RECORD, { recursive: true }); writeFileSync(join(TALK_RECORD, `${questId()}.json`), JSON.stringify(recordedPlans)); } catch { /* a record is optional */ } });
 export let recorded = 0;
 // Q_BURST=1: blind dialogue bursts (research/quest-plan.md "Dialogue burst"); off by default.
 const BURST = process.env.Q_BURST === '1';
@@ -385,7 +386,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
             // recorded plan the first time it runs: a later talk with the same label can be at another stage.
             const first = i === 0 && !plannedLabels.has(label);
             plannedLabels.add(label);
-            const planned = first ? plan ?? TALK_PLANS[QUEST_ID]?.[label] : undefined;
+            const planned = first ? plan ?? TALK_PLANS[questId()]?.[label] : undefined;
             if (planned && dialogOpen()) await waitTicks(s, sendPlan(planned));
             recording = TALK_RECORD && first && !planned ? [] : null;
             let shut = 0;
