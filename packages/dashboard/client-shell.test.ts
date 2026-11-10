@@ -682,3 +682,17 @@ test('a gap between rows or columns of the grid sizes its two neighbours; the st
  w.end();const next=fleetWall(names.map(n=>inWorld(n)),{store});next.start();
  expect(next.log[1]).toEqual({multiLayout:{mode:'focus',main:'Ann',gap:4,rows:[],cols:[],strip:0.3,color:'#1e1e1e',animate:true}});
 });
+
+test('logins, logouts and rank moves become chat lines after the first snapshot',()=>{
+ const code=shell.slice(shell.indexOf('  const worldSeen=new Map()'),shell.indexOf('  function levelUps(){'));
+ const chat:any[]=[],S:any={bots:[{name:'A',inWorld:true},{name:'B',inWorld:false}],boards:[{board:'Fishing',best:{rank:5,name:'A'}}]};
+ let renders=0;
+ const moments=new Function('S','chat','safeName','renderChat',`${code};return moments;`)(S,chat,String,()=>renders++);
+ moments();expect(chat).toEqual([]);
+ S.bots[0].inWorld=false;S.bots[1].inWorld=true;S.boards[0].best.rank=3;moments();
+ expect(chat.map(r=>r.kind+':'+r.text)).toEqual(['Private:B has logged in.','Private:A has logged out.','Game:A is now rank 3 on Fishing (up from 5).']);
+ expect(renders).toBe(1);
+ moments();expect(chat.length).toBe(3);
+ S.bots=['a','b','c','d','e'].map(name=>({name,inWorld:false}));moments();for(const b of S.bots)b.inWorld=true;moments();
+ expect(chat.at(-1).text).toBe('5 accounts have logged in.');
+});
