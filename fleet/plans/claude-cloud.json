@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794319880239,
+ "at": 1794319941858,
  "jobs": [
   {
    "account": "SporranDip",
@@ -18,6 +18,60 @@
    "goal": "buy 20 Mind rune, 10 Air rune on the Grand Exchange to train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
    "role": "supply",
    "template": "kit-buy:army-strike-magic-21",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=333 QUANTITY=100 LIMIT_PRICE=100 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit1-333-0to100 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 100 Trout on the Grand Exchange to train Strength to 99 on the Khazard troopers",
+   "role": "supply",
+   "template": "kit-buy:army-trooper-strength-99",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "PocketPool",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=333 QUANTITY=100 LIMIT_PRICE=100 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit1-333-0to100 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=882 QUANTITY=975 EXPECTED_OWNED=25 LIMIT_PRICE=20 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit1-882-25to1000 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 100 Trout, 975 Bronze arrow on the Grand Exchange to train Ranged to 99 on the Khazard troopers",
+   "role": "supply",
+   "template": "kit-buy:army-trooper-ranged-99",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-magic-99",
    "autopilot": "claude-cloud",
    "resources": []
   },
@@ -70,24 +124,6 @@
    ]
   },
   {
-   "account": "Fingerblastr",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=333 QUANTITY=100 LIMIT_PRICE=100 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit1-333-0to100 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 100 Trout on the Grand Exchange to train Strength to 99 on the Khazard troopers",
-   "role": "supply",
-   "template": "kit-buy:army-trooper-strength-99",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
    "account": "Kiltlifter",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -134,25 +170,6 @@
    "resources": [
     "cow:ardougne-north"
    ]
-  },
-  {
-   "account": "PocketPool",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=333 QUANTITY=100 LIMIT_PRICE=100 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit1-333-0to100 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=882 QUANTITY=975 EXPECTED_OWNED=25 LIMIT_PRICE=20 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit1-882-25to1000 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 100 Trout, 975 Bronze arrow on the Grand Exchange to train Ranged to 99 on the Khazard troopers",
-   "role": "supply",
-   "template": "kit-buy:army-trooper-ranged-99",
-   "autopilot": "claude-cloud",
-   "resources": []
   }
  ]
 }
