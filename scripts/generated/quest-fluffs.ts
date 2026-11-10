@@ -82,12 +82,27 @@ try {
         await down('ladder down');
         // The npc list lags the level change by a tick or two (a trial saw only the level-1 cat right after the ladder).
         await q.waitUntil(() => (q.st()?.nearbyNpcs ?? []).some((m: any) => /crate/i.test(m.name)), 8);
+        // A crate is an npc, so the map does not block its tile and a route can go through it. The engine then refuses
+        // the step and the bot stands still (seed 9: the west crate from 3307,3506, behind the crate at 3307,3507). So
+        // the planner gets each crate tile as blocked, and the bot walks to a tile beside the crate before the search.
+        const pfm = await import('../../vendor/rs-sdk/sdk/pathfinding'), grid = await import('../../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
+        pfm.initPathfinding();
+        for (const k of CRATES) {
+            pfm.isTileWalkable(0, k.x, k.z);
+            let mask = 0;
+            for (let bit = 0; bit < 32; bit++) if (grid.isFlagged(k.x, k.z, 0, 1 << bit)) mask |= 1 << bit;
+            grid.__set(k.x, k.z, 0, mask | 2097152);
+        }
         const order = [...CRATES].sort((a, b) => q.cheb(a.x, a.z) - q.cheb(b.x, b.z));
         for (const c of order) {
             if (q.has(ITEM.kitten)) break;
             await q.guard('crates');
             const n = (q.st()?.nearbyNpcs ?? []).find((m: any) => m.x === c.x && m.z === c.z && /crate/i.test(m.name));
             if (!n) { console.log(`WARN no crate npc at ${c.x},${c.z}`); continue; }
+            for (const [dx, dz] of [[0, -1], [-1, 0], [1, 0], [0, 1]]) {
+                if (q.cheb(c.x, c.z) <= 1) break;
+                await q.s.bot.walkTo(c.x + dx!, c.z + dz!, 0);
+            }
             const m0 = q.msgCount(/you find nothing/i);
             await q.s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.[0]?.opIndex ?? 1, reason: 'SDK' });
             await q.waitUntil(() => q.has(ITEM.kitten) || q.msgCount(/you find nothing/i) > m0, 25);
