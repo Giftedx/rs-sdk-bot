@@ -110,7 +110,6 @@ RuneLite features the page lacks and can build from the public state. Each claim
 
 | Feature | RuneLite source | Data in the public state | Gap |
 |---|---|---|---|
-| Wilderness attack range in the overlay box | `combatlevel/CombatLevelConfig.java` `wildernessAttackLevelRange`; `CombatLevelPlugin.combatAttackRange()` | `bots[].pos`, `bots[].combat`, roster combat | The Wilderness level formula is not checked against the pinned server. |
 | Minimap dot colours by player class | `minimap/MinimapConfig.java` `player`, `friend`, `team` | `rivals` names, `farms` | Whether `farms` rows carry every member name on the public page is not checked. |
 | Report button clock | `reportbutton/ReportButtonConfig.java` `time`; `TimeStyle.java` | `bots[].uptime`, browser clock, `snapshotAt` | none |
 | XP bar to the goal level with level marks | `xptracker/XpTrackerConfig.java` `intermediateLevelMarkers`; `XpInfoBox.java` | `bots[].goalSkill`, `goalLevel`, `skills[].xp` | XP is in the state for local-side accounts only. |
@@ -118,5 +117,4 @@ RuneLite features the page lacks and can build from the public state. Each claim
 | Ammo infobox and count on the doll | `ammo/AmmoPlugin.java` | `bots[].equipment[]` with `slot` and `count` | Cloud snapshots carry no slot numbers. |
 | Inventory viewer overlay | `inventoryviewer/InventoryViewerOverlay.java` | `bots[].inventory` | none |
 | `!price` chat command | `chatcommands/ChatCommandsConfig.java` `price` | `economy.supplies`, `economy.itemValues` | Items outside the route supplies have no public price. |
-| Nearby players counter | `team/TeamConfig.java` `friendsChatMemberCounter` | roster tiles, `bots[].name`, `rivals` | none |
 | Item stats on food | `itemstats/ItemStatChanges.java` | none | Needs a heal table for the 2004 items, checked against the pinned server. |
