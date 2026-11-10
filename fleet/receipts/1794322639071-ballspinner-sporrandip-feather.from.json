@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794322639071-ballspinner-sporrandip-feather",
  "account": "Ballspinner",
  "partner": "SporranDip",
@@ -12,6 +12,11 @@
  "claim": "781784a2-9434-42bb-a4fd-03fd05332bb0",
  "count": 0,
  "ok": false,
- "at": 1794322647399,
- "detail": "trade claimed"
+ "at": 1794322698707,
+ "detail": "Error: route to 2618, 3333: precondition no route to 2618,3333,0",
+ "logout": {
+  "attemptId": "1794322647407-0000025352-0000000001",
+  "at": 1794322698695,
+  "sha256": "10f176e1b17074ad1470e7ea18b70377a75354c576cd747229439195e6043187"
+ }
 }
