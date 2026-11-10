@@ -81,6 +81,27 @@ test('a failed east-to-Ardougne plan uses the funded corridor and stops when fun
     expect(await walkWithFerryFallback(from,to,async()=>aborted,sail,()=>100)).toBe(aborted);
 });
 
+test('a failed Ardougne-to-east plan sails to Brimhaven and from Musa Point, with the fare checked first', async () => {
+    const from = { x: 2584, z: 3293, level: 0 }, to = { x: 3185, z: 3436, level: 0 };
+    const noRoute: Outcome = { ok: false, reason: 'precondition', detail: 'no route to 3185,3436,0', ticks: 0 };
+    const calls: string[] = [];
+    let coins = 60;
+    const walk = async ({x,z}: {x:number;z:number}): Promise<Outcome> => { calls.push(x+','+z); return calls.length === 1 ? noRoute : {ok:true,ticks:1}; };
+    const sail = async (boat: ReturnType<typeof loadTravel>[number]): Promise<Outcome> => { calls.push(boat.id); coins -= boat.coins; return {ok:true,ticks:1}; };
+    expect(await walkWithFerryFallback(from,to,walk,sail,()=>coins)).toEqual({ok:true,ticks:5});
+    expect(calls).toEqual(['3185,3436','2679,3275','npc:captain_barnaby:brimhaven@2679,3275','2953,3147','npc:customs_officer:port-sarim@2953,3147','3185,3436']);
+    expect(coins).toBe(0);
+
+    calls.length = 0;coins = 59;
+    expect(await walkWithFerryFallback(from,to,walk,sail,()=>coins)).toMatchObject({ok:false,detail:'eastbound ferry needs 60 coins in the pack'});
+    expect(calls).toEqual(['3185,3436']);
+    // A start outside Ardougne, or a target outside the east, keeps the plain refusal.
+    calls.length = 0;coins = 60;
+    expect(await walkWithFerryFallback({ x: 2440, z: 3090, level: 0 },to,walk,sail,()=>coins)).toBe(noRoute);
+    calls.length = 0;
+    expect(await walkWithFerryFallback(from,{ x: 2900, z: 3550, level: 0 },walk,sail,()=>coins)).toBe(noRoute);
+});
+
 test('a persistent walk retries from where a leg stopped while it gets closer, and stops when it does not', async () => {
     const player = { worldX: 3185, worldZ: 3436, level: 0 };
     const s = { sdk: { getState: () => ({ player }) } } as any;

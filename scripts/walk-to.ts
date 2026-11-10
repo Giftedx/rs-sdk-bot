@@ -53,29 +53,37 @@ export async function walkTargetPersist(s: Session, to: Tile, tries = 4,
     return last;
 }
 
-// The known mainland and Karamja approach to Ardougne uses two ferry edges.
+// The known mainland and Karamja approach to Ardougne uses two ferry edges, and so does the way back east.
 const PORT_SARIM_FERRY = 'npc:captain_tobias:karamja-musa-point@3028,3216';
 const ARDOUGNE_FERRY = 'npc:customs_officer:ardougne@2772,3225';
+const BRIMHAVEN_FERRY = 'npc:captain_barnaby:brimhaven@2679,3275';
+const MUSA_POINT_FERRY = 'npc:customs_officer:port-sarim@2953,3147';
 const AL_KHARID_TOLL = 'npc:borderguard2:lumbridge-side-west-of-the-toll-gate@3268,3226';
 const LUMBRIDGE: Tile = { x: 3222, z: 3218, level: 0 }, DRAYNOR: Tile = { x: 3092, z: 3243, level: 0 };
 const FERRY_LEG_PLAN_MS = 15_000;
+// Lumbridge, Draynor and Varrock (z up to 3510), and East Ardougne with its north bank and cow field.
+const inEast = (t: Tile) => t.level === 0 && t.x >= 3080 && t.x <= 3280 && t.z >= 3150 && t.z <= 3510;
+const inArdougne = (t: Tile) => t.level === 0 && t.x >= 2550 && t.x <= 2700 && t.z >= 3240 && t.z <= 3400;
 
 export async function walkWithFerryFallback(from: Tile, to: Tile, walk: (to: Tile, budgetMs?: number) => Promise<Outcome>,
     sail: (boat: Travel) => Promise<Outcome>, coins: () => number): Promise<Outcome> {
     const direct = await walk(to);
     if (direct.ok || direct.reason !== 'precondition' || !direct.detail.startsWith('no route to ')) return direct;
-    // From Lumbridge, Draynor and Varrock (z up to 3510): the planner has no westbound land route from Varrock West to the
-    // Ardougne north bank (practice: "no route to 2619,3332,0"), so Varrock walks to Draynor and takes the ferries too.
-    if (from.level !== 0 || to.level !== 0 || from.x < 3080 || from.x > 3280 || from.z < 3150 || from.z > 3510
-        || to.x < 2600 || to.x > 2690 || to.z < 3260 || to.z > 3360) return direct;
+    // The planner has no land route between the Varrock side and Ardougne, in either direction (practice: "no route to
+    // 2619,3332,0" from Varrock West; live: "no route to 3185,3436,0" from Ardougne). Westbound walks to Draynor and
+    // sails Port Sarim -> Musa Point, then Brimhaven -> Ardougne. Eastbound sails Ardougne -> Brimhaven, then
+    // Musa Point -> Port Sarim. The walk across Karamja between the two docks is the same ground both ways.
+    const west = inEast(from) && to.level === 0 && to.x >= 2600 && to.x <= 2690 && to.z >= 3260 && to.z <= 3360;
+    const east = !west && inArdougne(from) && inEast(to);
+    if (!west && !east) return direct;
 
-    const travel = loadTravel(), first = travel.find(t => t.id === PORT_SARIM_FERRY), second = travel.find(t => t.id === ARDOUGNE_FERRY);
+    const travel = loadTravel(), first = travel.find(t => t.id === (west ? PORT_SARIM_FERRY : BRIMHAVEN_FERRY)), second = travel.find(t => t.id === (west ? ARDOUGNE_FERRY : MUSA_POINT_FERRY));
     if (!first?.from || !second?.from) return direct;
-    const toll = from.x >= 3250 && from.z <= 3230 ? travel.find(t => t.id === AL_KHARID_TOLL) : undefined;
+    const toll = west && from.x >= 3250 && from.z <= 3230 ? travel.find(t => t.id === AL_KHARID_TOLL) : undefined;
     let ticks = direct.ticks, fare = first.coins + second.coins;
-    const missingFare = (need: number): Outcome => ({ ok: false, reason: 'precondition', detail: `westbound ferry needs ${need} coins in the pack`, ticks });
+    const missingFare = (need: number): Outcome => ({ ok: false, reason: 'precondition', detail: `${west ? 'westbound' : 'eastbound'} ferry needs ${need} coins in the pack`, ticks });
     if (coins() < fare + (toll?.coins ?? 0)) return missingFare(fare + (toll?.coins ?? 0));
-    const through = from.x >= 3200 ? [LUMBRIDGE, DRAYNOR] : Math.max(Math.abs(from.x - DRAYNOR.x), Math.abs(from.z - DRAYNOR.z)) <= 3 ? [] : [DRAYNOR];
+    const through = !west ? [] : from.x >= 3200 ? [LUMBRIDGE, DRAYNOR] : Math.max(Math.abs(from.x - DRAYNOR.x), Math.abs(from.z - DRAYNOR.z)) <= 3 ? [] : [DRAYNOR];
     for (const tile of through) {
         const leg = await walk(tile, FERRY_LEG_PLAN_MS); ticks += leg.ticks;
         if (!leg.ok) return { ...leg, ticks };
