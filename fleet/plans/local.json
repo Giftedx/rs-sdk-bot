@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794343233937,
+ "at": 1794343939426,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -201,24 +201,21 @@
   },
   {
    "account": "mmthv2350",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "sarim"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "ITEMS": "feather",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy feathers at Gerrant",
-   "role": "bank",
-   "template": "shop-feathers",
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
    "autopilot": "local",
    "resources": [
-    "shop:sarim"
+    "knight:2669,3298"
    ]
   },
   {
@@ -420,21 +417,6 @@
    "role": "supply"
   },
   {
-   "account": "Ballspinner",
-   "script": "scripts/quest-sweep.ts",
-   "args": [
-    "itgronigen"
-   ],
-   "env": {
-    "CAP": "6000",
-    "COORDINATOR_RUN_ID": "task-0199e6be-a99c-4f3a-8b82-41052a32a005"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-observatory-ballspinner-furnace-glass [task-0199e6be-a99c-4f3a-8b82-41052a32a005]",
-   "role": "supply"
-  },
-  {
    "account": "Woodpecker",
    "script": "scripts/buy-owned-ge-item.ts",
    "args": [],
@@ -454,19 +436,6 @@
    "repeat": false,
    "goal": "run-ge-woodpecker-sharks30-blood-food [task-ba7ddac9-17e0-497c-a16c-321de8f810d5]",
    "role": "helper"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "coins for route supplies: Ardougne knights",
-   "role": "supply"
   },
   {
    "account": "Masterbaiter",
@@ -491,6 +460,42 @@
    "role": "helper"
   },
   {
+   "account": "Ballspinner",
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "itgronigen"
+   ],
+   "env": {
+    "CAP": "6000",
+    "COORDINATOR_RUN_ID": "task-9bd323a2-805e-4b4c-ae0c-db6c7474fe25"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-observatory-ballspinner-after-proof-fix [task-9bd323a2-805e-4b4c-ae0c-db6c7474fe25]",
+   "role": "supply"
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "564",
+    "QUANTITY": "183",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "400",
+    "CASH_RESERVE": "200000",
+    "ORDER_KEY": "haggis-route-pocketpython-cosmic183",
+    "FILL_WAIT_TICKS": "200",
+    "ORDER_MS": "900000",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-b76ebde6-4d0c-49e0-94b1-4f70e437be72"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-ge-pocketpython-cosmic183 [task-b76ebde6-4d0c-49e0-94b1-4f70e437be72]",
+   "role": "supply"
+  },
+  {
    "accounts": [
     "MineYourBiz",
     "Magicwanda"
@@ -498,6 +503,7 @@
    "script": "scripts/handoff-inputs.ts",
    "args": [
     "80:Lobster",
+    "--notes",
     "--bank-x=2619",
     "--bank-z=3332",
     "--approach-ms=1800000",
@@ -506,13 +512,13 @@
     "--grace-ms=45000"
    ],
    "env": {
-    "HANDOFF_ORDER": "magicwanda-blood-lobster80-mineyourbiz",
+    "HANDOFF_ORDER": "magicwanda-blood-lobster80-notes-mineyourbiz",
     "CAP": "4000",
-    "COORDINATOR_RUN_ID": "task-291d8671-655b-4ed3-96dc-5c894a46a9ac"
+    "COORDINATOR_RUN_ID": "task-23c1852e-2298-477a-903c-cf7bffa95940"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "run-handoff-mineyourbiz-magicwanda-lobster80 [task-291d8671-655b-4ed3-96dc-5c894a46a9ac]",
+   "goal": "run-handoff-mineyourbiz-magicwanda-lobster80-notes [task-23c1852e-2298-477a-903c-cf7bffa95940]",
    "role": "supply"
   }
  ]
