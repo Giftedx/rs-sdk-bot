@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794305867258,
+ "at": 1794305895593,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -106,6 +106,27 @@
    "template": "army-trooper-strength-99",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/goldfarm.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Defence to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-defence-45",
+   "resources": [
+    "cow:ardougne-north"
    ]
   },
   {
@@ -278,19 +299,6 @@
    "resources": [
     "cow:ardougne-north"
    ]
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-dc5ba438-1d1e-4e47-ab48-48c584499d58"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "claude-cloud-recover-fatstack-20261110t101348z [task-dc5ba438-1d1e-4e47-ab48-48c584499d58]",
-   "role": "combat"
   }
  ]
 }
