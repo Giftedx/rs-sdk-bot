@@ -425,20 +425,20 @@
       "script": "scripts/gather-feathers.ts",
       "args": [],
       "env": {
-        "PEN": "3017,3288",
+        "PEN": "3187,3277",
         "TICKS": "3000"
       },
       "role": "helper",
-      "goal": "feathers at the chicken pen 3017,3288",
+      "goal": "feathers at the chicken pen 3187,3277",
       "enabled": true,
       "repeat": true,
       "standing": true,
       "autopilot": "local",
-      "template": "feathers@3017,3288",
+      "template": "feathers@3187,3277",
       "resources": [
-        "pen:3017,3288"
+        "pen:3187,3277"
       ],
-      "note": "autopilot feathers@3017,3288: feather, 0.11 coins/tick (estimate)"
+      "note": "autopilot feathers@3187,3277: feather, 0.11 coins/tick (estimate)"
     },
     {
       "account": "NabTheKnob",
@@ -479,26 +479,6 @@
         "pen:3229,3298"
       ],
       "note": "autopilot feathers@3229,3298: feather, 0.11 coins/tick (estimate)"
-    },
-    {
-      "account": "Woodenstaff",
-      "script": "scripts/gather-feathers.ts",
-      "args": [],
-      "env": {
-        "PEN": "3187,3277",
-        "TICKS": "3000"
-      },
-      "role": "helper",
-      "goal": "feathers at the chicken pen 3187,3277",
-      "enabled": true,
-      "repeat": true,
-      "standing": true,
-      "autopilot": "local",
-      "template": "feathers@3187,3277",
-      "resources": [
-        "pen:3187,3277"
-      ],
-      "note": "autopilot feathers@3187,3277: feather, 0.11 coins/tick (estimate)"
     },
     {
       "account": "Billionaire",
