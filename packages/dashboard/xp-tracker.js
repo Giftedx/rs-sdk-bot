@@ -26,6 +26,13 @@
             return { skill: k.name, xp: k.xp, level, next, gained, rate: Math.round(rate), progress: ceil > floor ? Math.min(1, (k.xp - floor) / (ceil - floor)) : 1, left, ttl: rate > 0 && level < 99 ? left / rate * 3.6e6 : null };
         }).filter(r => r.gained > 0 || r.rate > 0).sort((a, b) => b.gained - a.gained || b.rate - a.rate);
     }
+    // The bar of a row to a goal level past the next one (RuneLite's XP tracker goal with level markers): the progress from the floor of the level now to the goal, the XP left, the time left, and a mark at each level between. Null when the goal is not past the next level.
+    function goalBar(row, goalLevel) {
+        if (!(goalLevel > row.next) || goalLevel > 99) return null;
+        const floor = xpForLevel(row.level), ceil = xpForLevel(goalLevel), span = ceil - floor, left = Math.max(0, ceil - row.xp), marks = [];
+        for (let level = row.level + 1; level < goalLevel; level++) marks.push(Math.round((xpForLevel(level) - floor) / span * 1000) / 10);
+        return { goal: goalLevel, progress: Math.min(1, (row.xp - floor) / span), left, ttl: row.rate > 0 ? left / row.rate * 3.6e6 : null, marks };
+    }
     const total = list => list.reduce((n, r) => n + r.gained, 0);
     // Combat level and the levels each style needs for the next one (RuneLite's combatlevel plugin). The base is
     // a quarter of Defence + Hitpoints + half Prayer; the best of melee (Attack + Strength), Ranged x 1.5 or
@@ -50,5 +57,5 @@
     }
     // Virtual levels (RuneLite's virtual levels): the level this server's XP formula gives past 99. RuneLite stops at 126. This server's curve reaches 126 at 6.5M XP, so the count goes on to the level of the 200M XP cap (175).
     const virtualLevel = xp => { let acc = 0, level = 1; while (level < 175) { acc += Math.floor(level + Math.pow(2, level / 10) * 300); if (xp < Math.floor(acc / 4)) break; level++; } return level; };
-    global.atlasXp = { TABLE, xpForLevel, levelForXp, virtualLevel, baseline, rows, total, combat };
+    global.atlasXp = { TABLE, xpForLevel, levelForXp, virtualLevel, baseline, rows, goalBar, total, combat };
 })(globalThis);
