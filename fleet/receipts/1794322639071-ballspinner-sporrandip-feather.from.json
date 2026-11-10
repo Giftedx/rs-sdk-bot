@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794322639071-ballspinner-sporrandip-feather",
+ "account": "Ballspinner",
+ "partner": "SporranDip",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 50,
+ "claim": "781784a2-9434-42bb-a4fd-03fd05332bb0",
+ "count": 0,
+ "ok": false,
+ "at": 1794322647399,
+ "detail": "trade claimed"
+}
