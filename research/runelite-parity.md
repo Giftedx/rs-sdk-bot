@@ -116,5 +116,4 @@ RuneLite features the page lacks and can build from the public state. Each claim
 | DPS counter | `dpscounter/DpsOverlay.java`, `DpsConfig.java` | The world feed in the 3D viewer (`playerHp`, npc hp per tick), not the public state | Needs a message from the viewer wrapper; counts every attacker's damage on the target. |
 | Ammo infobox and count on the doll | `ammo/AmmoPlugin.java` | `bots[].equipment[]` with `slot` and `count` | Cloud snapshots carry no slot numbers. |
 | Inventory viewer overlay | `inventoryviewer/InventoryViewerOverlay.java` | `bots[].inventory` | none |
-| `!price` chat command | `chatcommands/ChatCommandsConfig.java` `price` | `economy.supplies`, `economy.itemValues` | Items outside the route supplies have no public price. |
 | Item stats on food | `itemstats/ItemStatChanges.java` | none | Needs a heal table for the 2004 items, checked against the pinned server. |
