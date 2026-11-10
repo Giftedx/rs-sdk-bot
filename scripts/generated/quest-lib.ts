@@ -265,8 +265,21 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
             await guard(label);
             if (ok()) return;
             if (i > 0) stats.retries++;
-            await send();
-            await waitUntil(s, () => ok() || stats.died || retreating || !!sustain.failure(), { timeoutTicks: ticks });
+            // The engine refuses an action sent while it holds the player (the tick after a gate, a placement, a
+            // knockback) and sends no message. opFeedback counts the refusal. Without this the step waited its whole
+            // bound: the trace showed 10 to 15 lost ticks each time. The step waits 2 ticks for an effect, because an
+            // accepted action that stops the walk raises the count too, and then sends again, at most 4 times.
+            const rejected = () => (s.sdk.getState() as any)?.opFeedback?.opRejectedCount ?? 0;
+            const until = () => ok() || stats.died || retreating || !!sustain.failure();
+            const sentAt = s.tick();
+            for (let quick = 0; ; quick++) {
+                const r0 = rejected();
+                await send();
+                await waitUntil(s, () => until() || rejected() > r0, { timeoutTicks: Math.max(1, ticks - (s.tick() - sentAt)) });
+                if (until() || rejected() <= r0 || quick >= 4 || s.tick() - sentAt >= ticks) break;
+                await waitUntil(s, until, { timeoutTicks: 2 });
+                if (until()) break;
+            }
             await guard(label);
             if (ok()) return;
             const d: any = s.sdk.getDialog();
