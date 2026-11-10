@@ -1,26 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794286410510,
+ "at": 1794286531222,
  "jobs": [
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 70 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-70",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "cow:ardougne-north"
-   ]
-  },
   {
    "account": "UnderMyKilt",
    "script": "scripts/gather-combat.ts",
@@ -45,27 +26,6 @@
    ]
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "99",
-    "5000"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "combat",
-   "template": "army-alch-magic-99",
-   "resources": []
-  },
-  {
    "account": "TrouserSnake",
    "script": "scripts/goldfarm.ts",
    "args": [
@@ -81,6 +41,48 @@
    "goal": "train Prayer to 99 burying the held bones",
    "role": "combat",
    "template": "army-bury-prayer-99",
+   "resources": []
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-magic-99",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying the held bones",
+   "role": "combat",
+   "template": "army-bury-prayer-99",
+   "autopilot": "claude-cloud",
    "resources": []
   }
  ]
