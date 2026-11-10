@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794319449200-undermykilt-knightrider",
  "account": "KnightRider",
  "partner": "UnderMyKilt",
@@ -12,6 +12,11 @@
  "claim": "61d7d93c-5c40-4c4c-8f09-a862468f4ed4",
  "count": 0,
  "ok": false,
- "at": 1794319455157,
- "detail": "trade claimed"
+ "at": 1794319504436,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1794319455159-0000012532-0000000001",
+  "at": 1794319504431,
+  "sha256": "46c1028bcf552d34a24c6265554908a0b97e4d9472bdc70a2821fe0f9d43fdf4"
+ }
 }
