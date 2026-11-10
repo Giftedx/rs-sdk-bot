@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {GIANT,CONFIGS,TROOPER_FOODS,giantStyle,giantTraining,giantCredit,giantKillLimit,runGiants,selectGiantWeapon,selectGiantBow,selectGiantArrows,roamTarget,anothersFight} from './gather-combat';
+import {GIANT,CONFIGS,TROOPER_FOODS,giantStyle,giantTraining,giantCredit,giantKillLimit,runGiants,selectGiantWeapon,selectGiantBow,selectGiantArrows,roamTarget,anothersFight,ammoPiles,AMMO_REACH,AMMO_WORTH} from './gather-combat';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks} from '../packages/core/src/ticks';
 
@@ -350,4 +350,16 @@ test('Ranged takes the best owned bow for the level, a shortbow first, and arrow
     expect(selectGiantArrows([{id:892,count:5}],99,5)).toBeUndefined();
     const bow=[{index:0,name:'Accurate',trainsSkills:['Ranged']},{index:1,name:'Rapid',trainsSkills:['Ranged']},{index:2,name:'Longrange',trainsSkills:['Ranged','Defence']}];
     expect(giantStyle({known:true,weaponName:'Shortbow',currentStyle:0,styles:bow},'Ranged')).toEqual({index:1,name:'Rapid',weapon:'Shortbow'});
+});
+
+test('fired arrows are taken from the stacks within reach, the largest first; small stacks, other arrows, far stacks and missed tiles are left',()=>{
+    const at={x:2520,z:3245},ground=[
+        {id:882,x:2520,z:3245+AMMO_REACH+1,count:9},{id:882,x:2522,z:3246,count:2},{id:882,x:2521,z:3245,count:7},{id:882,x:2519,z:3246,count:11},{id:882,x:2520,z:3245,count:7},
+        {id:884,x:2520,z:3245,count:30},{id:526,x:2521,z:3245,count:1}];
+    // With the quiver empty every stack counts; on equal size the nearer goes first.
+    expect(ammoPiles(ground,882,at).map(i=>[i.x,i.z,i.count])).toEqual([[2519,3246,11],[2520,3245,7],[2521,3245,7],[2522,3246,2]]);
+    expect(ammoPiles(ground,882,at,AMMO_WORTH).map(i=>i.count)).toEqual([11,7,7]);
+    expect(ammoPiles(ground,882,at,AMMO_WORTH,new Set(['2519,3246'])).map(i=>i.count)).toEqual([7,7]);
+    expect(ammoPiles(ground,884,at,AMMO_WORTH).map(i=>i.count)).toEqual([30]);
+    expect(ammoPiles(ground,886,at)).toEqual([]);
 });

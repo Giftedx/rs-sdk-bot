@@ -6,6 +6,7 @@
 // legacy gatherer. GIANT_KILLS overrides the level goal with a finite credited kill count. TARGET=trooper trains the same
 // way on the Khazard troopers of the Gnome battlefield from the Ardougne north bank (TROOPER_SITE). TRAIN_SKILL=Ranged
 // wields the best owned bow and arrows for the Ranged level on rapid, with GIANT_AMMO arrows in the quiver (default 500).
+// After each kill it takes the fired arrows that lie near and puts them back in the quiver (GIANT_AMMO_PICKUP=0 leaves them).
 // GIANT_BURY=1 buries the bones each trooper kill leaves, on the field. TROOPER_COOK=1 first makes trooper food when
 // the account owns little: it cooks banked raw beef and, still short, steals a pack at the Ardougne baker's stalls
 // (scripts/trooper-food.ts). A trooper run out of food at low HP ends stop=food, ok after kills.
@@ -372,6 +373,19 @@ export function selectGiantBow(stock:readonly {id:number;count:number}[],ranged:
 export function selectGiantArrows(stock:readonly {id:number;count:number}[],ranged:number,bowLevel:number){
     return GIANT_ARROWS.find(a=>a.level<=Math.min(ranged,bowLevel)&&stockOf(stock,a.id)>0)?.id;
 }
+// A fired arrow lands on the target's tile four times in five (player_ranged.rs2 ranged_dropammo_npc, ^dropammo_chance
+// 5) and lies there 200 ticks (^lootdrop_duration), one stack a tile for its owner (World.addObj). After a kill the bow
+// trainer takes the stacks of its arrows within AMMO_REACH tiles, the largest first and at most AMMO_PICKS of them: a
+// trooper closes on the archer, so most of a fight's arrows lie on one or two tiles. A pick costs about 4 ticks
+// whatever it holds (practice: 30 picks, 3-5 ticks each but one), so a stack under AMMO_WORTH arrows is left: a third of
+// the picks brought a twentieth of the arrows. With the quiver empty it takes any stack. Arrows go back in the quiver
+// when it holds fewer than AMMO_LOW.
+export const AMMO_REACH=3,AMMO_PICKS=2,AMMO_WORTH=3,AMMO_LOW=50;
+export function ammoPiles<T extends {id:number;x:number;z:number;count:number}>(ground:readonly T[],id:number,at:{x:number;z:number},least=1,missed:ReadonlySet<string>=new Set()):T[]{
+    const far=(i:{x:number;z:number})=>Math.max(Math.abs(i.x-at.x),Math.abs(i.z-at.z));
+    return ground.filter(i=>i.id===id&&i.count>=least&&far(i)<=AMMO_REACH&&!missed.has(`${i.x},${i.z}`)).sort((a,b)=>b.count-a.count||far(a)-far(b));
+}
+
 const inBox=(b:readonly number[],x:number,z:number)=>x>=b[0]!&&x<=b[2]!&&z>=b[1]!&&z<=b[3]!;
 export function giantTraining(skill?:string,targetLevel?:number){
     if(!skill||!['Attack','Strength','Defence','Hitpoints','Ranged'].includes(skill))throw new Error('giant TRAIN_SKILL must be Attack, Strength, Defence, Hitpoints or Ranged');
@@ -408,7 +422,7 @@ export function roamTarget<T extends {index:number;distance:number}>(account:str
 // A target that fights another player: in combat and facing a player slot that is not this account's.
 export const anothersFight=(npc:{inCombat?:boolean;targetIndex?:number}|undefined,selfSlot:number|undefined)=>
     !!npc?.inCombat&&selfSlot!==undefined&&(npc.targetIndex??-1)>=32768&&npc.targetIndex!==32768+selfSlot;
-export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targetLevel?:number;maximum?:number;food?:number;ammo?:number;bury?:boolean;eatAt?:number;noProgress?:number;stop?:()=>boolean;walk?:(x:number,z:number,tol:number,signal?:AbortSignal)=>Promise<boolean>;site?:CombatSite}){
+export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targetLevel?:number;maximum?:number;food?:number;ammo?:number;ammoPickup?:boolean;bury?:boolean;eatAt?:number;noProgress?:number;stop?:()=>boolean;walk?:(x:number,z:number,tol:number,signal?:AbortSignal)=>Promise<boolean>;site?:CombatSite}){
     const site=o.site??GIANT_SITE,label=site.label;
     const maximum=giantKillLimit(o.maximum);
     const training=giantTraining(o.trainSkill,o.targetLevel);
@@ -534,6 +548,22 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
         if(ammoId===undefined)return;const id=ammoId,item=inv().find(i=>i.id===id);if(!item)return;const before=quiver();
         if(!(await s.bot.equipItem(item)).success||!await waitUntil(s,()=>quiver()>before&&held(id)===0,{timeoutTicks:10}))throw new Error(`no ${label} progress: arrows not in the quiver`);
     };
+    // Takes the fired arrows that lie near (ammoPiles). Every step is bounded and a miss is skipped: a stack another
+    // account took, or an arrow that stays in the pack, never holds the fight. `leaving`: the last pass before the walk
+    // to the bank, which the tick cap does not stop (practice: a run that ended on its cap with no kill left 102 arrows).
+    let ammoPicked=0;
+    const gatherAmmo=async(leaving=false)=>{
+        if(ammoId===undefined||o.ammoPickup===false)return;const id=ammoId,missed=new Set<string>(),empty=quiver()<1;
+        for(let n=0;n<AMMO_PICKS&&(leaving||!over())&&hp()>eatAt;n++){
+            const p=state()?.player;if(!p||inv().length>=28&&held(id)<1)break;
+            const pile=ammoPiles(state()?.groundItems??[],id,{x:p.worldX,z:p.worldZ},empty?1:AMMO_WORTH,missed)[0];if(!pile)break;
+            const before=held(id);
+            if(!(await s.bot.pickupItem(pile)).success||!await waitUntil(s,()=>held(id)>before,{timeoutTicks:6})){missed.add(`${pile.x},${pile.z}`);continue;}
+            ammoPicked+=held(id)-before;
+        }
+        const item=quiver()<AMMO_LOW?inv().find(i=>i.id===id):undefined,before=quiver();
+        if(item&&(await s.bot.equipItem(item)).success)await waitUntil(s,()=>quiver()>before,{timeoutTicks:5});
+    };
     const rangedKit=()=>{
         const stock=[...(s.bankObservation?.()?.items??[]),...allKit()],level=s.sdk.getSkill('Ranged')?.baseLevel??1;
         const bow=selectGiantBow(stock,level);if(!bow)throw new Error('giant prerequisite: no owned bow for the Ranged level');
@@ -541,7 +571,7 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
         ammoStart=bankCount(ammoId)+count(allKit(),ammoId);
         return bow.id;
     };
-    const trip=async()=>{await leave();await open();await deposit();await restock();if(ranged)await withdrawAmmo();await s.bot.closeBank();if(ranged)await equipAmmo();if(over())return;await enter();lastProgress=s.tick();};
+    const trip=async()=>{if(ranged)await gatherAmmo(true);await leave();await open();await deposit();await restock();if(ranged)await withdrawAmmo();await s.bot.closeBank();if(ranged)await equipAmmo();if(over())return;await enter();lastProgress=s.tick();};
     try{
         if(!near(site.bank.x,site.bank.z,6))await leave();
         await open();initialAssets=assetTotals();for(const id of site.drops){baseline[id]=bankCount(id)+held(id);picked[id]=0;}initialFood=ownedFood();if(initialFood!==undefined)initialFood+=eaten;
@@ -589,6 +619,7 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
         while(!goalReached()&&!over()){
             // Out of food at low HP: a roam site (the troopers) ends the run there, ok after kills, as an empty quiver does.
             if(hp()<=eatAt&&!await eat()){if(bankFood<1){if(roam){stop='food';break;}stop='low-hp';throw new Error(`no ${label} progress: low HP and no owned shark`);}await trip();continue;}
+            if(ranged&&quiver()<1)await gatherAmmo();
             if(ranged&&quiver()<1){if(ammoBank<1){stop='ammo';break;}await trip();continue;}
             if(28-inv().length<2){await trip();continue;}
             if(s.tick()-lastProgress>=(o.noProgress??200))throw new Error(`no ${label} progress: target/loot timeout`);
@@ -633,9 +664,11 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
                 if(!item||!(await s.bot.pickupItem(item)).success||!await waitUntil(s,()=>held(id)===before+amount,{timeoutTicks:10}))throw new Error(`no ${label} progress: credited loot pickup mismatch`);
                 picked[id]=(picked[id]??0)+amount;
             }
+            if(ranged)await gatherAmmo();
             creditedKills++;if(roots)limpwurt++;lastProgress=s.tick();
             console.log(`MILESTONE ${label} credited=${creditedKills} trainSkill=${training.skill} selectedXp=${selectedXp()-initialSelectedXp} level=${level()} HP=${hp()} sharks=${heldFood()} limpwurt=${limpwurt}`);
         }
+        if(ranged&&!died&&!ended&&!o.stop?.())await gatherAmmo(true);
         stop=goalReached()?(maximum===undefined?'target-level':'max-kills'):died?'died':o.stop?.()?'stop-file':stop==='ammo'||stop==='food'?stop:'cap';
     }catch(e){failure=String(e);if(stop==='cap'&&o.stop?.())stop='stop-file';}
     finally{if(!died&&!ended)try{if(!near(site.bank.x,site.bank.z,6))await leave();await open();await deposit();}catch(e){failure=[failure,String(e)].filter(Boolean).join('; ');}off();}
@@ -650,7 +683,7 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
     const targetMet=goalReached()&&bankedAll;
     const partial=!targetMet&&creditedKills>0&&(stop==='cap'||stop==='ammo'||stop==='food')&&bankedAll&&!failure&&!died&&!ended&&preserved&&foodAccounted;
     return {ok:!failure&&!died&&!ended&&(targetMet||partial)&&preserved&&foodAccounted,creditedKills,banked,bankedHerbs,limpwurt,trainSkill:training.skill,targetLevel:training.targetLevel,
-        ...ammoId===undefined?{}:{ammoId,ammoUsed:ammoStart-bankCount(ammoId)-count(allKit(),ammoId)},
+        ...ammoId===undefined?{}:{ammoId,ammoUsed:ammoStart-bankCount(ammoId)-count(allKit(),ammoId),ammoPicked},
         ...bury?{buried,prayerXp:prayerXp()-prayerStart}:{},
         style,startLevel,finalLevel:level(),selectedXp:selectedXp()-initialSelectedXp,eatAt,eaten,initialFood:initialFood??null,finalFood:finalFood??null,foodAccounted,bankTrips,hpMin,died,
         lifeId:state()?.player?.lifeId,respawns:state()?.player?.respawnCount,ticks:s.tick()-start,preserved,targetMet,partial,stop,failure:failure||(!targetMet&&!partial?`no ${label} progress: bounded target unmet`:'-')};
@@ -724,7 +757,7 @@ if(giantTrained){
     if(TARGET_KEY==='trooper'&&process.env.TROOPER_COOK==='1')try{const {stageTrooperFood}=await import('./trooper-food'),{walkTargetPersist}=await import('./walk-to');
         const r=await stageTrooperFood(ownedSession,{stop:cowStop.stop,walk:async(x,z)=>(await walkTargetPersist(ownedSession,{x,z,level:0})).ok});console.log(`TROOPER_FOOD ${JSON.stringify(r)}`);}
     catch(e){await finish([ownedSession],false,String(e));}
-    try{const r=await runGiants(ownedSession,{cap:CAP,site:TARGET_KEY==='trooper'?TROOPER_SITE:undefined,trainSkill:giantSkill,targetLevel:giantLevel,maximum:giantMaximum,food:process.env.GIANT_FOOD===undefined?undefined:Number(process.env.GIANT_FOOD),ammo:process.env.GIANT_AMMO===undefined?undefined:Number(process.env.GIANT_AMMO),bury:process.env.GIANT_BURY==='1',stop:cowStop.stop});console.log(`GIANT_RESULT ${JSON.stringify(r)}`);await finish([ownedSession],r.ok&&cowStop.reason()!=='died',`mode=giant ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
+    try{const r=await runGiants(ownedSession,{cap:CAP,site:TARGET_KEY==='trooper'?TROOPER_SITE:undefined,trainSkill:giantSkill,targetLevel:giantLevel,maximum:giantMaximum,food:process.env.GIANT_FOOD===undefined?undefined:Number(process.env.GIANT_FOOD),ammo:process.env.GIANT_AMMO===undefined?undefined:Number(process.env.GIANT_AMMO),ammoPickup:process.env.GIANT_AMMO_PICKUP!=='0',bury:process.env.GIANT_BURY==='1',stop:cowStop.stop});console.log(`GIANT_RESULT ${JSON.stringify(r)}`);await finish([ownedSession],r.ok&&cowStop.reason()!=='died',`mode=giant ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
     catch(e){await finish([ownedSession],false,String(e));}
 }
 const dungeonTravel=(TARGET_KEY==='druid'||dungeonGiant)&&!alch?.route?createEdgevilleTravel(ownedSession):undefined;

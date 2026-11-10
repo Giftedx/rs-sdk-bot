@@ -336,7 +336,10 @@ try {
     const coins = () => countItems(s, /^coins$/i);
     const t0 = s.tick();
     const used = () => s.tick() - t0;
-    const over = () => used() >= CAP;
+    // `closing`: the last bank trip runs past the cap, so a run that ends on its cap still banks what it bought
+    // (practice: 250 arrows stayed in the pack, "No banker NPC or bank booth found nearby").
+    let closing = false;
+    const over = () => !closing && used() >= CAP;
 
     let boughtTotal = 0, bankedTotal = 0, spentTotal = 0, stopReason = 'cap';
     let noBuySince: number | undefined, noBuyTicks = 0;
@@ -517,6 +520,7 @@ try {
         }
     }
 
+    closing = true;
     if (!ended) await bank(false);
     const targetMet = shopTargetsMet(conf.items, s.sdk.getInventory(), stock, Number(process.env.STOCK_TARGET ?? 500));
     await finish([s], shopFinishOk(boughtTotal, targetMet, stopReason), `ticks=${used()} boughtTotal=${boughtTotal} bankedTotal=${bankedTotal} bankTrips=${bankTrips} shopTrips=${shopTrips} coinsLeft=${coins()} spentTotal=${spentTotal} coinReserve=${COIN_RESERVE} maxSpend=${MAX_SPEND} maxItems=${MAX_ITEMS} stop=${stopReason} targetMet=${targetMet ? 1 : 0} noBuyTicks=${noBuyTicks} noBuyLimit=${NO_BUY_TICKS}`);

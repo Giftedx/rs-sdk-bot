@@ -412,7 +412,8 @@ export function finishedTrainers(jobs: readonly any[], side: string, assigned: R
 // stands, not whether the job works, and a routing fix makes the same job run.
 export const RETIRE_FAILS = 2, WASTE_LIMIT = 0.9;
 // Cow mode reports its progress as selectedXp, damageXp and creditedKills.
-export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked|selectedXp|damageXp|creditedKills)=[1-9]\d*\b/.test(result);
+// A shop run reports what it bought as boughtTotal (scripts/shop-buyer.ts).
+export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked|selectedXp|damageXp|creditedKills|boughtTotal)=[1-9]\d*\b/.test(result);
 export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|.*\bprecondition no route to\b)/;
 export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number; drains: number } {
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
@@ -520,16 +521,18 @@ export const MAGIC_BAND = 2, PRAYER_BAND = 3;
 export const PRAYER_FIELD_BAND = 9;
 // Ranged, band 4: trooper mode with TRAIN_SKILL=Ranged wields the best owned bow for the Ranged level and the best
 // owned arrows that bow fires (an arrow's level may not exceed the bow's), on rapid, and restocks arrows on bank trips;
-// out of arrows it ends stop=ammo, ok after kills. Practice 3/3 RESULT ok: Ranged 1 to 63-66 in about 1,690 ticks,
-// 49.6-59.9 XP a tick, 0-2 sharks, about 5.4 iron arrows per 1,000 XP (about 5,400 for 1 to 99). It shares the
-// battlefield with the melee trooper bands. Gap: not run live.
+// out of arrows it ends stop=ammo, ok after kills. It takes its fired arrows back after each kill. Practice 3/3
+// RESULT ok with bronze arrows: Ranged 1 to 59-62 in about 1,600 ticks, 41.1-46.7 XP a tick, 0.67-2.02 arrows lost
+// per 1,000 XP (research/combat-measure.md). It shares the battlefield with the melee trooper bands.
 export const RANGED_BAND = 4;
 const BOWS: readonly (readonly [string, number])[] = [['shortbow', 1], ['longbow', 1], ['oak shortbow', 5], ['oak longbow', 5], ['willow shortbow', 20],
     ['willow longbow', 20], ['maple shortbow', 30], ['maple longbow', 30], ['yew shortbow', 40], ['yew longbow', 40], ['magic shortbow', 50], ['magic longbow', 50]];
 const ARROWS: readonly (readonly [string, number])[] = [['bronze arrow', 1], ['iron arrow', 1], ['steel arrow', 5], ['mithril arrow', 20], ['adamant arrow', 30], ['rune arrow', 40]];
-// A bow the account's Ranged level wields, with 100 arrows of one kind that bow fires.
+// ARROW_LOW: the arrows of one kind the Ranged band needs to start. ARROW_STOCK: what a shop run brings the account up to.
+export const ARROW_LOW = 100, ARROW_STOCK = 500;
+// A bow the account's Ranged level wields, with ARROW_LOW arrows of one kind that bow fires.
 export const RANGED_KIT: readonly Needs[] = BOWS.flatMap(([bow, level]) =>
-    ARROWS.filter(([, arrowLevel]) => arrowLevel <= level).map(([arrow]) => ({ skills: { Ranged: level }, items: { [bow]: 1, [arrow]: 100 } })));
+    ARROWS.filter(([, arrowLevel]) => arrowLevel <= level).map(([arrow]) => ({ skills: { Ranged: level }, items: { [bow]: 1, [arrow]: ARROW_LOW } })));
 
 // AIO routes (scripts/aio.ts <account> <category> <route> [arguments]) as planner options. Each one names its bench
 // key; the arguments are those of the bench case with a longer tick cap, unless the line says otherwise. Every one is
@@ -660,6 +663,19 @@ export function catalogue(): Template[] {
         needs: { skills: { Hitpoints: 40 }, anyOf: RANGED_KIT.flatMap(kit => TROOPER_FED.map(fed => ({ ...kit, ...fed, skills: { ...kit.skills, ...fed.skills } }))) },
         batch: { trout: 100, ...Object.fromEntries(ARROWS.map(([arrow]) => [arrow, 1000])) },
     };
+    // The Ranged band's arrows, band 4. The market lists no arrow under the kit caps (live claude-cloud: every arrow
+    // line of a kit buy "unsold"), and each army account holds a shortbow and 25 bronze arrows, so the band never
+    // started. An account whose bow has fewer than ARROW_LOW bronze and iron arrows buys bronze arrows at Aemad's shop in
+    // East Ardougne (adventurershop: 500 in stock, one back every 10 ticks, shared by every player) and banks them at the
+    // south bank. One account shops at a time (shop:ardy). The run ends at ARROW_STOCK arrows owned or at its cap; the
+    // planner gives the account the Ranged band on the pass that sees ARROW_LOW arrows.
+    const arrows: Template = {
+        id: 'army-arrows-ardy', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['ardy', '400'],
+        env: { ITEMS: 'bronze arrow', STOCK_TARGET: String(ARROW_STOCK), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '5000', COIN_RESERVE: '500', MAX_SPEND: '4000' },
+        role: 'supply', goal: 'buy bronze arrows at Aemad in East Ardougne for the Ranged band',
+        tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: ['shop:ardy'], yields: () => [],
+        needs: { items: { coins: 5000 }, pieces: { of: BOWS.map(([bow]) => bow), count: 1 }, holdsUnder: { 'bronze arrow': ARROW_LOW, 'iron arrow': ARROW_LOW } },
+    };
     return [
         ...goldfarm,
         ...cows,
@@ -667,6 +683,7 @@ export function catalogue(): Template[] {
         strike,
         magic,
         prayer,
+        arrows,
         ranged,
         prayerField,
         { id: 'thieving55', family: 'thieving60', script: 'scripts/generated/thieving60.ts', env: { TARGET: '55', CAP: '2500', CLEAN_FOOD: '1' }, role: 'thieving',
