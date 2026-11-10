@@ -226,9 +226,10 @@ export const FEATHER_TARGET = 2000;
 // 8.1 near-solo. Gap: one live run per condition, not three matched, so KNIGHT_SHARED_RATE is an estimate, applied
 // once per holder; the planner's tick-waste discount and retirement still apply per job.
 export const KNIGHT_SHARE = 4, KNIGHT_SHARED_RATE = 0.75;
-// Ardougne north cow field: two army accounts at once. Practice: 3 pairs with full farm packs shared the field, 6/6
-// RESULT ok with 8 kills in 487-702 ticks (research/combat-measure.md); a third account is not measured.
-export const COW_FIELD = 'cow:ardougne-north', COW_FIELD_CAPACITY = 2;
+// Ardougne north cow field: three army accounts at once. Practice (research/combat-measure.md), 8-kill runs with full
+// farm packs: solo median 550 ticks; 3 pairs 6/6 RESULT ok, median about 556; 3 triples 9/9 RESULT ok, median 590 per
+// account (within 10% of solo), so the field's output nearly triples. A fourth account is not measured.
+export const COW_FIELD = 'cow:ardougne-north', COW_FIELD_CAPACITY = 3;
 export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [COW_FIELD]: COW_FIELD_CAPACITY, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // Army goal bands (AGENTS.md goals: maxed tribrids), in PK-value order: Strength, Attack, then Ranged, Magic and
