@@ -95,6 +95,16 @@ test('a failed Ardougne-to-east plan sails to Brimhaven and from Musa Point, wit
     calls.length = 0;coins = 59;
     expect(await walkWithFerryFallback(from,to,walk,sail,()=>coins)).toMatchObject({ok:false,detail:'eastbound ferry needs 60 coins in the pack'});
     expect(calls).toEqual(['3185,3436']);
+    // With no fare in the pack the walker fetches it first; a fetch that fails or brings too little refuses the walk.
+    calls.length = 0;coins = 0;
+    expect(await walkWithFerryFallback(from,to,walk,sail,()=>coins,async need=>{calls.push('fare '+need);coins=need;return{ok:true,ticks:4};})).toEqual({ok:true,ticks:9});
+    expect(calls.slice(0,3)).toEqual(['3185,3436','fare 60','2679,3275']);
+    calls.length = 0;coins = 0;
+    const empty: Outcome = { ok: false, reason: 'precondition', detail: 'ferry needs 60 coins and the bank holds 12', ticks: 3 };
+    expect(await walkWithFerryFallback(from,to,walk,sail,()=>coins,async()=>empty)).toEqual(empty);
+    calls.length = 0;coins = 0;
+    expect(await walkWithFerryFallback(from,to,walk,sail,()=>coins,async()=>({ok:true,ticks:2}))).toMatchObject({ok:false,detail:'eastbound ferry needs 60 coins in the pack'});
+    expect(calls.some(c=>c.startsWith('npc:'))).toBe(false);
     // Westbound from Falador's side (live: an account parked at 3071,3347 with a trade at the Ardougne bank): no Draynor leg.
     calls.length = 0;coins = 60;
     const bank = { x: 2618, z: 3333, level: 0 };

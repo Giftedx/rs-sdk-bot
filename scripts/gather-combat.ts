@@ -20,6 +20,7 @@ import {existsSync} from 'node:fs';
 import {resolve} from 'node:path';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { goTo, walkPath, sessionWalker, expandPath, type PathDeps, type PathPoint, type PathTile } from '../packages/core/src/walk';
+import { ferryWalk } from './walk-to';
 
 // Local bear spawn clusters from rev289 maps / cow-path-probe.json. Expand by7:
 // actual Bear105 wander4 + hunt1 + size2 footprint1 + one tile margin.
@@ -454,7 +455,8 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
         const signal=outbound?AbortSignal.any([sustain.aborted,cancel.signal]):sustain.aborted;
         try{
             const ok=o.walk?await o.walk(x,z,tol,signal):
-                (await goTo(s,await getWorld(),{x,z,level:0},accountOf(s),{maxRetriesPerLeg:2,legTimeoutTicks:150,signal})).ok;
+                // From the Varrock side the planner has no route to Ardougne: ferryWalk takes the ferries then.
+                (await ferryWalk(s,{x,z,level:0},async(tile,planBudgetMs)=>goTo(s,await getWorld(),tile,accountOf(s),{maxRetriesPerLeg:2,legTimeoutTicks:150,signal,planBudgetMs}))).ok;
             await sustain.settle();
             if(sustain.failure())throw new Error(sustain.failure()!);
             return ok&&near(x,z,tol);
