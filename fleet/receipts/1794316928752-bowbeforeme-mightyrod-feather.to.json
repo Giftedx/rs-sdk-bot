@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794316928752-bowbeforeme-mightyrod-feather",
+ "account": "Mightyrod",
+ "partner": "BowBeforeMe",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 21,
+ "claim": "46cc3e98-065f-494b-8b58-8d896b68dd43",
+ "count": 0,
+ "ok": false,
+ "at": 1794316944897,
+ "detail": "trade claimed"
+}
