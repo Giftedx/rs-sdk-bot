@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794301016068,
+ "at": 1794301272510,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -186,53 +186,6 @@
    ]
   },
   {
-   "account": "UnderMyKilt",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "10"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-strength-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "Deeppockets",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "cow:ardougne-north"
-   ]
-  },
-  {
    "account": "Fatstack",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -270,6 +223,43 @@
     "COW_STAGE": "1"
    },
    "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-805ed394-4b7a-4d98-8ceb-584886fa1d19"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-undermykilt-20261110t085704z [task-805ed394-4b7a-4d98-8ceb-584886fa1d19]",
+   "role": "combat"
+  },
+  {
+   "account": "Deeppockets",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
+   },
+   "enabled": false,
    "standing": true,
    "repeat": true,
    "goal": "train Strength to 45 on the Ardougne cows",
