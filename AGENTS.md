@@ -9,7 +9,7 @@ Goals (owner): the main account Haggis rank 1 on the Overall board under the cur
 1. Check branch, dirty files, process ownership and fresh state. Preserve others' edits. One owner per account, server and generated output.
 2. Pick the task that moves a scoreboard most per hour (`bun packages/router/src/coverage.ts`, the plan's scoreboards). Name its useful game outcome and consumer. Every build needs a finite live consumer.
 3. Read the exact code path before changing it. After two similar failures, change the method or get a new observation.
-4. Run the cheapest check that reaches the change, with a timeout. Do not run game suites for docs.
+4. Run the cheapest check that reaches the change, with a timeout. Do not run game suites for docs. For a change to a worker or a shared helper, run its bench cases (`bun run bench <pattern>`), and `bun run bench --smoke` before a pull request ([the AIO bench](docs/script-contract.md#the-aio-bench)).
 5. Report source, proof level (unit, practice, live), useful output, cost, blocker and next action. Tests, practice and live prove different things. Tools, notes and tests are not game progress.
 
 Ask only for a decision that changes the result. Do not add design docs, approval rounds or task boards.

@@ -8,7 +8,7 @@ Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). 
 
 **Claim:** a shared engine makes one case change the result of the next. **Conditions:** seed 7, same engine build. **Evidence:** `dwarfcannon` 823 ticks after 20 earlier cases (`lockfull1.json`), 762 ticks on a new engine (`fresh1.json` to `fresh3.json`).
 
-**Claim:** the lockstep tick counts agree with the 150 ms engine. **Conditions:** quests, one account, seed 7 against one 150 ms run. **Evidence:** `walk-to` 84 against 85; `barcrawl` 1401 against 1398; `biohazard` 1293 against 1292; `blackknight` 287 against 291 (`quests-base-s7.json`, `pass1.json`). **Gap:** combat quests differ by the random rolls, and no run on a 400 ms engine exists.
+**Claim:** the lockstep tick counts agree with the 150 ms engine. **Conditions:** quests, one account, seed 7 against one 150 ms run. **Evidence:** `walk-to` 84 against 85; `barcrawl` 1401 against 1398; `biohazard` 1293 against 1292; `blackknight` 287 against 291 (`quests-base-s7.json`, `pass1.json`). On a wall-clock engine at 400 ms a tick, the live tick length, `biohazard` takes 1315 ticks against 1293 on lockstep, `blackknight` 292 against 287 and `imp` 9 against 9 (`.practice/aio-bench/bio400.json`, one run, `BENCH_TICK_MS=400 bun run bench <pattern> --wall-clock`). **Gap:** three quests and one run; combat quests differ by the random rolls.
 
 **Claim:** 64 quests run in under 10 minutes. **Conditions:** six engines, this PC, no other load. **Evidence:** 588 s and 571 s wall (`quests-base-s7.log`, `quests-burst-s7.log`). The same quests took about 70 minutes on one 150 ms engine with four accounts in one world.
 
