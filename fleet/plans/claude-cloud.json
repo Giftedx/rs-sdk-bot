@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794301594005,
+ "at": 1794302234414,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -76,7 +76,7 @@
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "10"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": false,
    "goal": "train Ranged to 99 on the Khazard troopers",
@@ -136,7 +136,7 @@
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
+    "TRAIN_SKILL": "Attack",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1"
@@ -144,9 +144,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
+   "goal": "train Attack to 45 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-strength-45",
+   "template": "army-cow-attack-45",
    "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
