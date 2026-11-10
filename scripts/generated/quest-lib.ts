@@ -39,6 +39,10 @@ export const teleportRefusal = (comp: string, magic: number, laws: number, level
     return undefined;
 };
 export let bursts = 0;
+// A planned conversation token: 'R' continue, 'F' fence to the next tick, or a choice component id.
+export type PlanToken = 'R' | 'F' | number;
+// Choice components of the multi-option dialogs: CHOICE[4][0] is option 1 of a four-option page.
+export const CHOICE: Readonly<Record<2 | 3 | 4 | 5, readonly number[]>> = { 2: [2461, 2462], 3: [2471, 2472, 2473], 4: [2482, 2483, 2484, 2485], 5: [2494, 2495, 2496, 2497, 2498] };
 export let recorded = 0;
 // Q_BURST=1: blind dialogue bursts (research/quest-plan.md "Dialogue burst"); off by default.
 const BURST = process.env.Q_BURST === '1';
@@ -283,6 +287,26 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         return ok();
     };
 
+    // A planned conversation, adapted from TestingPurposes/rs-stun-toolkit q-lib.ts `talk` (MIT). The whole token list
+    // leaves in one write on the tick the first page shows: 'R' continues a page, a number clicks that choice
+    // component (CHOICE below), and 'F' pads with CHAT_SETMODE, a counted packet with no game effect, to the next
+    // multiple of five. The engine reads five user events a tick and carries the rest to the next tick in order, so a
+    // fence puts the token after it on a later tick. A continue sent to a choice page is refused, never applied.
+    // Returns the number of ticks the plan needs to drain.
+    const sendPlan = (plan: readonly PlanToken[]): number => {
+        const c: any = (s as any).client;
+        let n = 0;
+        for (const t of plan) {
+            if (t === 'R') { c.writeOpcode(RESUME); c.out.p2(c.chatModalId !== -1 ? c.chatModalId : 0); n++; }
+            else if (t === 'F') { while (n % 5 !== 0) { c.writeOpcode(ClientProt.CHAT_SETMODE); c.out.p1(0); c.out.p1(0); c.out.p1(0); n++; } }
+            else { c.writeOpcode(ClientProt.IF_BUTTON); c.out.p2(t); n++; }
+        }
+        c.flush?.();
+        bursts++;
+        answeredSeq = textSeq;
+        return Math.ceil(n / 5);
+    };
+
     const walker = await sessionWalker(s as any);
     // A locked door the SDK plans through (collision treats doors as open) becomes a wall for this session.
     const blockDoor = (level: number, x: number, z: number): boolean => !!(s.sdk as any).blockDoorTemporarily?.(level, x, z, 3_600_000);
@@ -309,7 +333,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         await opLoc(d, opIndex(d, /^open$/i));
         await waitTicks(s, 3);
     };
-    const talk = async (label: string, re: RegExp, pats: RegExp[], ok: () => boolean, home: { x: number; z: number }, maxTicks = 60, stopOpen = false): Promise<void> => {
+    const talk = async (label: string, re: RegExp, pats: RegExp[], ok: () => boolean, home: { x: number; z: number }, maxTicks = 60, stopOpen = false, plan?: readonly PlanToken[]): Promise<void> => {
         for (let i = 0; i < 3; i++) {
             await guard(label);
             if (i > 0) stats.retries++;
@@ -336,6 +360,8 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
                 if (!dialogOpen() && (msgCount(/can't reach that/i) > blocked0 || npc(re)?.reachable === false)) await openDoorNear(npc(re) ?? n, label);
             }
             if (!dialogOpen()) { const m: any = npc(re); const p = pos(); console.log(`WARN talk ${label} no dialog: npc ${m?.x},${m?.z} d=${m?.distance} me ${p?.worldX},${p?.worldZ} op=${JSON.stringify(st()?.opFeedback ?? {})}`); }
+            // The plan goes out once, on the first open page; converse() answers whatever it leaves.
+            if (plan && i === 0 && dialogOpen()) await waitTicks(s, sendPlan(plan));
             let shut = 0;
             await converse(pats, () => { shut = dialogOpen() ? 0 : shut + 1; return (ok() && (stopOpen || !dialogOpen())) || shut >= 3; }, maxTicks);
             if (ok()) return;

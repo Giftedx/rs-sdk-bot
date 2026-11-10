@@ -1,11 +1,13 @@
 // Cook's Assistant with supplied ingredients, including the quest-items-order Draynor endpoint.
 // Server truth: maps/m50_50.jm2, areas/area_lumbridge/scripts/cook.rs2,
 // quests/quest_cook/scripts/quest_cook.rs2. The parent quest-order verifies saved QP and banks assets.
-import { openQuest } from './quest-lib';
+import { openQuest, CHOICE, type PlanToken } from './quest-lib';
 import { questFlags } from '../../packages/core/src/quest-status';
 
 const COOK = { x: 3209, z: 3215 };
 const INGREDIENTS = [1944, 1927, 1933] as const;
+// COOK_PLAN=off runs the first talk a page a tick, for a bench comparison.
+const COOK_PLAN: Record<string, readonly PlanToken[] | undefined> = { off: undefined, plan: ['R', CHOICE[4][0]!, 'R', 'R', 'R', 'R', CHOICE[2][0]!, 'R', 'R', 'R'] };
 type Quest = Awaited<ReturnType<typeof openQuest>>;
 type CookIO = Pick<Quest, 'pos' | 'lvl' | 'near' | 'walk' | 'openDoor' | 'waitUntil' |
     'cnt' | 'talk' | 'converse' | 'dialogOpen' | 'milestone'> & {
@@ -47,8 +49,9 @@ export async function completeCook(q: CookIO): Promise<{ ok: true; detail: strin
 
     const done = () => q.questState() === 'complete';
     if (initial === 'not started') {
+        // quest_cook.rs2: one page, "What's wrong?" of four, three pages, "Yes, I'll help you." of two, two pages.
         await q.talk('cook 1', /^cook$/i, [/^what's wrong\?$/i, /yes, i'll help you/i],
-            () => q.questState() === 'started', COOK);
+            () => q.questState() === 'started', COOK, 60, false, COOK_PLAN[process.env.COOK_PLAN ?? 'plan']);
         q.milestone(1);
     }
     // Completion is queued after all three inv_del calls. A message or lost inputs alone is insufficient.

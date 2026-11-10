@@ -21,6 +21,8 @@ export interface QuesterModeSpec {
  mode: string;
  script: string;
  description: string;
+ // The worker takes an order file that names its accounts as its first argument, and no account argument.
+ orderFile?: true;
 }
 
 export const QUESTER_MODES: readonly QuesterModeSpec[] = [
@@ -29,15 +31,9 @@ export const QUESTER_MODES: readonly QuesterModeSpec[] = [
  {mode:'chain',script:'scripts/quest-chain.ts',description:'Run a sequence of quests in order on one account'},
  {mode:'items',script:'scripts/quest-items-order.ts',description:'Acquire and bank prerequisite items for upcoming quests'},
  {mode:'cook-job',script:'scripts/quest-cook-job.ts',description:'Self-contained Cook\'s Assistant acquisition + completion'},
- {mode:'runemysteries-route',script:'scripts/rune-mysteries-route.ts',description:'Self-contained Rune Mysteries route'},
- {mode:'totem-route',script:'scripts/tribal-totem-route.ts',description:'Self-contained Tribal Totem route'},
- {mode:'zanaris-plan',script:'scripts/quest-zanaris-plan.ts',description:'Lost City / Zanaris quest preparation and execution'},
- {mode:'ghost-exit',script:'scripts/ghost-basement-exit.ts',description:'Recover from Wizards\' Tower basement with/without Restless Ghost skull'},
- {mode:'ghost-skull',script:'scripts/ghost-skull-entry.ts',description:'Restless Ghost basement skull entry and escape'},
  {mode:'seaslug-leave',script:'scripts/seaslug-leave.ts',description:'Return from Fishing Platform after Sea Slug'},
- {mode:'mm-puzzle',script:'scripts/generated/mm-puzzle.ts',description:'Monkey Madness sliding puzzle solver'},
- {mode:'hero-owned',script:'scripts/generated/quest-hero-owned.ts',description:'Two-account owned Heroes\' Quest runner'},
- {mode:'legends-owned',script:'scripts/generated/quest-legends-owned.ts',description:'Owned-account Legends\' Quest runner'},
+ {mode:'hero-owned',script:'scripts/generated/quest-hero-owned.ts',orderFile:true,description:'Two-account owned Heroes\' Quest runner'},
+ {mode:'legends-owned',script:'scripts/generated/quest-legends-owned.ts',orderFile:true,description:'Owned-account Legends\' Quest runner'},
  {mode:'tbwt-owned',script:'scripts/generated/quest-tbwt-owned.ts',description:'Owned-account Tai Bwo Wannai Trio runner'},
  {mode:'watchtower-owned',script:'scripts/generated/quest-itwatchtower-owned.ts',description:'Owned-account Watchtower runner'},
  {mode:'clue',script:'scripts/microbot-c-clues.ts',description:'Solve coordinate, anagram, map, and simple clue scroll steps'},
@@ -149,7 +145,9 @@ export async function runAioQuester(account: string, args: readonly string[], en
  const [first, ...rest] = args;
  if (!first) throw Error('aio-quester requires <mode|quest>');
  const step = resolveQuesterStep(first, rest);
- return runDirectChild([step.script, account, ...step.args], { ...env, ...step.env });
+ const orderFile = QUESTER_MODES.find(m => m.mode === first.toLowerCase())?.orderFile;
+ if (orderFile && !step.args.length) throw Error(`aio-quester ${first} requires <order.json>`);
+ return runDirectChild(orderFile ? [step.script, ...step.args] : [step.script, account, ...step.args], { ...env, ...step.env });
 }
 
 if (import.meta.main) {

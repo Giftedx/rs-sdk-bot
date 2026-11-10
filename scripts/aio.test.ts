@@ -310,7 +310,7 @@ test('every AIO bench case names a catalog route once and a real preset', () => 
 test('every AIO route points at a script that exists and can be started from a command line', () => {
  const root = resolve(import.meta.dir, '..');
  const c = aioCatalog().categories;
- const scripts = [...c.skiller.routes, ...c.fighter.profiles, ...c.boss.encounters, ...c.pvp.modes, ...c.market.modes, ...c.logistics.roles].map(r => r.script);
- const unstartable = [...new Set(scripts)].filter(script => !existsSync(join(root, script)) || !/import\.meta\.main|process\.argv|runScript\(/.test(readFileSync(join(root, script), 'utf8')));
+ const scripts = [...c.skiller.routes, ...c.fighter.profiles, ...c.boss.encounters, ...c.pvp.modes, ...c.quester.modes, ...c.market.modes, ...c.logistics.roles].map(r => r.script);
+ const unstartable = [...new Set(scripts)].filter(script => !existsSync(join(root, script)) || !/import\.meta\.main|process\.argv|runScript\(|^const \w+ = await openQuest\(/m.test(readFileSync(join(root, script), 'utf8')));
  expect(unstartable).toEqual([]);
 });
