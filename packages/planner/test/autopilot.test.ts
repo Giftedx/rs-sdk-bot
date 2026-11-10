@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
+import { CAPACITY, COW_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -371,7 +371,8 @@ test('goal bands go only to army accounts, before any coin job, earliest band fi
 test('the Ardougne cow bands train army accounts from Hitpoints 32 with 14 HP of food and the bronze kit, as repeating jobs', () => {
     const kit = { trout: 2, 'bronze sword': 1, 'wooden shield': 1 };
     const fighter = (name: string, skills: Record<string, number>, items: Record<string, number> = kit) => acct(name, { Thieving: 99, ...skills }, items);
-    const army = new Set(['cowhand', 'pure', 'broke', 'second', 'third']);
+    const holders = Array.from({ length: COW_FIELD_CAPACITY }, (_, i) => `Holder${i + 1}`);
+    const army = new Set(['cowhand', 'pure', 'broke', ...holders.map(h => h.toLowerCase())]);
     const run = (accounts: Acct[]) => plan(inputs(accounts, { army, capacity: CAPACITY }));
     const pick = (accounts: Acct[]) => ids(run(accounts));
     // Strength, Attack, then Defence to 45; then each on to 60; then the coin tier.
@@ -382,10 +383,10 @@ test('the Ardougne cow bands train army accounts from Hitpoints 32 with 14 HP of
     expect(pick([fighter('Cowhand', { Hitpoints: 35, Strength: 60, Attack: 60, Defence: 60 })]).Cowhand).toMatch(/^goldfarm@/);
     // A first pass outranks a second: a fresh account takes a place from a holder training past 45.
     const second = { Hitpoints: 50, Strength: 50, Attack: 45, Defence: 45 };
-    const current = new Map([['second', 'army-cow-strength-60'], ['third', 'army-cow-strength-60']]);
-    const pass = ids(plan(inputs([fighter('Cowhand', { Hitpoints: 35 }), fighter('Second', second), fighter('Third', second)], { army, capacity: CAPACITY, current })));
+    const current = new Map(holders.map(h => [h.toLowerCase(), 'army-cow-strength-60']));
+    const pass = ids(plan(inputs([fighter('Cowhand', { Hitpoints: 35 }), ...holders.map(h => fighter(h, second))], { army, capacity: CAPACITY, current })));
     expect(pass.Cowhand).toBe('army-cow-strength-45');
-    expect(Object.values(pass).filter(id => id === 'army-cow-strength-60')).toHaveLength(1);
+    expect(Object.values(pass).filter(id => id === 'army-cow-strength-60')).toHaveLength(COW_FIELD_CAPACITY - 1);
     // With no giant band, a range pure at Hitpoints 82 trains Strength on the cows too; Hitpoints 10 has too little
     // food margin and farms.
     expect(pick([fighter('Pure', { Hitpoints: 82 })])).toEqual({ Pure: 'army-cow-strength-45' });
@@ -396,9 +397,10 @@ test('the Ardougne cow bands train army accounts from Hitpoints 32 with 14 HP of
     expect(pick([fighter('Broke', { Hitpoints: 35 }, { ...bronze, '2/3 cake': 1, 'slice of cake': 1 })]).Broke).toMatch(/^goldfarm@/);
     expect(pick([fighter('Broke', { Hitpoints: 35 }, { ...bronze, '2/3 cake': 1, 'slice of cake': 1, cake: 1 })])).toEqual({ Broke: 'army-cow-strength-45' });
     expect(pick([fighter('Broke', { Hitpoints: 35 }, { trout: 2 })]).Broke).toMatch(/^goldfarm@/);
-    // The field takes two; a third army account farms.
-    const three = pick([fighter('Cowhand', { Hitpoints: 35 }), fighter('Second', { Hitpoints: 36 }), fighter('Third', { Hitpoints: 37 })]);
-    expect(Object.values(three).filter(id => id.startsWith('army-cow-'))).toHaveLength(2);
+    // The field takes COW_FIELD_CAPACITY (three); one more army account farms.
+    expect(COW_FIELD_CAPACITY).toBe(3);
+    const full = pick([fighter('Cowhand', { Hitpoints: 35 }), ...holders.map((h, i) => fighter(h, { Hitpoints: 36 + i }))]);
+    expect(Object.values(full).filter(id => id.startsWith('army-cow-'))).toHaveLength(COW_FIELD_CAPACITY);
     // Cow mode runs a fixed 8 kills, so its job repeats until the band's target moves the account on.
     const job = jobFor(run([fighter('Cowhand', { Hitpoints: 35 })])[0]!, side);
     expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['3000', 'cow'], env: { TRAIN_SKILL: 'Strength', COW_BANK_PROFILE: 'north', MAX_KILLS: '8', COW_STAGE: '1' }, repeat: true, resources: ['cow:ardougne-north'] });
