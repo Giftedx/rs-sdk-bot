@@ -266,7 +266,6 @@ const EXTRA_CASES: BenchCase[] = [
 ];
 
 const KNOWN_QUEST: Readonly<Record<string, string>> = {
-  mm: 'RESULT fail talk garkor at tick 838: the bot is jailed a second time on the way to Garkor and the talk does not start',
 };
 
 // Pair quests open their partners themselves: quest-arrav.ts and quest-hero.ts use `<main>p`, quest-legends.ts `<main>b` and `<main>c`.
