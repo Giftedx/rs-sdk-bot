@@ -192,7 +192,7 @@ First slice (offline): `goalRequirementsFor` retains shared consumers; preparati
 | UberMouse `conductor/tools/replay.ts`, `*.ticks.ndjson.gz` | `packages/core/src/{bot,act,ticks}.ts`, `packages/router/src/coordinator-worker.ts` | adapt | a no-behaviour refactor replays clean on 3 recorded runs |
 | MaxBittker/rs-sdk `97725db3`, `2c7d4607`, `db0cc51e` (MIT) | `vendor/rs-sdk` pin `db0cc51e`, `packages/core/src/session-takeover.ts` | reused: pin moved; live gate off | practice: a killed client's re-login attached (`research/community-and-upstream.md` 8.6); demo behaviour unproven |
 | Cairn `build` recipe, no review node (910 runs) | `docs/script-contract.md` Review, `packages/router/src/coordinator-planner.ts:107` | adapt: owner decision | build-done to first pilot time on the next 3 builds |
-| Supalosa `codex/lockstep-clock` `40358da0` (MIT) | `packages/practice/src/stack.ts` | trial after the above | practice ticks per wall second against 150 ms ticks |
+| Supalosa `codex/lockstep-clock` `40358da0` (MIT) | `packages/practice/src/stack.ts` | reject: the rs-stun-toolkit lockstep engine is adapted (`research/aio-bench.md`) | none |
 | Spenny12 `walk-speed` `46cdcb1e` (MIT) | `packages/core/src/walk.ts` | reject: `walk.ts:295` already avoids per-corner `walkTo` waits | none |
 
 ### 2. Quests, progression and goal planning
