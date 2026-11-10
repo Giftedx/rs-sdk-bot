@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile,cowStopControl,genericCombatNpc,bankCombatLoot,cowFoodBites,cowFoodPick,cowFoodHeal,COW_FOOD_HP} from './gather-combat';
+import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile,cowStopControl,genericCombatNpc,bankCombatLoot,cowFoodBites,cowFoodPick,cowFoodHeal,COW_FOOD_HP,cowReleased,COW_RELEASE} from './gather-combat';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks} from '../packages/core/src/ticks';
 import {existsSync,readFileSync} from 'node:fs';
@@ -278,4 +278,11 @@ test('held cow food must cover the trout rule in HP, not in pieces', () => {
     expect(cowFoodHeal([{id:1895,count:3}])<COW_FOOD_HP).toBe(true);
     expect(cowFoodHeal([{id:1891,count:1},{id:1895,count:1}])).toBe(16);
     expect(cowFoodHeal([{id:1901,count:3}])).toBe(15);
+});
+
+test('cow mode gives a cow up after 12 ticks in someone else\'s combat, or 40 ticks with no own XP and no combat', () => {
+    expect(COW_RELEASE).toBe(12);
+    expect(cowReleased(11, 39)).toBe(false);
+    expect(cowReleased(12, 0)).toBe(true);
+    expect(cowReleased(0, 40)).toBe(true);
 });

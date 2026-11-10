@@ -119,6 +119,12 @@ export const cowFoodBites=(items:readonly {id:number;count:number}[])=>items.red
 // held food must cover the same HP whatever it is made of.
 const COW_BITE_HEAL:Readonly<Record<number,number>>={333:7,1891:4,1893:4,1895:4,1897:5,1899:5,1901:5};
 export const COW_FOOD_HP=14;
+// When cow mode gives a cow up and picks another. In a shared field another account can take the cow over after our
+// first swing (live claude-cloud: 190 idle ticks until the no-progress throw): release after COW_RELEASE ticks with the
+// cow in someone else's combat. A cow we stopped fighting is released after COW_IDLE_RELEASE ticks with no own XP and
+// no combat; a slow fight keeps earning own XP or shows the cow as our target, so it is never released.
+export const COW_RELEASE=12,COW_IDLE_RELEASE=40;
+export const cowReleased=(ticksTakenOver:number,ticksIdle=0)=>ticksTakenOver>=COW_RELEASE||ticksIdle>=COW_IDLE_RELEASE;
 export const cowFoodHeal=(items:readonly {id:number;count:number}[])=>items.reduce((n,i)=>n+(COW_FOOD_BITES[i.id]??0)*(COW_BITE_HEAL[i.id]??0)*i.count,0);
 // The next piece to eat: the fewest bites first, so partial cakes go before whole ones and slots free up.
 export const cowFoodPick=<T extends {id:number}>(items:readonly T[])=>items.filter(i=>COW_FOOD_BITES[i.id]).sort((a,b)=>COW_FOOD_BITES[a.id]!-COW_FOOD_BITES[b.id]!)[0];
@@ -264,7 +270,7 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
             activeIndex=target.index;attackStarted=s.tick();capture('before-attack',x,z);
             if(!(await s.bot.attack(attackTarget)).success){await waitTicks(s,1);continue;}
             let observedXp=beforeXp;lastProgress=s.tick();
-            let gone=false;
+            let gone=false,released=false,lastEngaged=s.tick(),lastActive=s.tick();
             while(!over()){
                 if(healthCutoff)throw new Error('no cow progress: banked-food HP40 cutoff; retreat');
                 if(hp()<=6)await eat();
@@ -273,13 +279,18 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
                 if(current){x=current.tileX??current.x;z=current.tileZ??current.z;}else gone=true;
                 // Own selected-skill XP is productive combat progress. Animation,
                 // dispatch success and other players' hits do not renew this wait.
-                if(selectedXp()>observedXp){observedXp=selectedXp();lastProgress=s.tick();}
+                if(selectedXp()>observedXp){observedXp=selectedXp();lastProgress=s.tick();lastActive=s.tick();}
+                const combat=state()?.player?.combat,ours=combat?.targetType==='npc'&&combat.targetIndex===target.index;
+                if(!current?.inCombat||ours)lastEngaged=s.tick();
+                if(ours)lastActive=s.tick();
                 capture('await-credit',x,z,gone);
                 const drops=ids.map(id=>count((state()?.groundItems??[]).filter(i=>i.x===x&&i.z===z),id)-(groundBefore.get(`${id}:${x}:${z}`)??0));
                 if(cowCredit(gone,selectedXp()-beforeXp,drops))break;
+                if(!gone&&cowReleased(s.tick()-lastEngaged,s.tick()-lastActive)){released=true;break;}
                 if(s.tick()-lastProgress>=(o.noProgress??200))throw new Error('no cow progress: target/loot timeout');await waitTicks(s,1);
             }
             if(over())break;
+            if(released){capture('released',x,z);continue;}
             for(const id of ids){const item=state()?.groundItems.find(i=>i.id===id&&i.x===x&&i.z===z);const before=held(id);
                 if(!item||!(await s.bot.pickupItem(item)).success||held(id)!==before+1)throw new Error('no cow progress: credited loot pickup mismatch');}
             creditedKills++;damageXp+=selectedXp()-beforeXp;lastProgress=s.tick();console.log(`MILESTONE cow credited=${creditedKills} trainSkill=${training.skill} selectedXp=${selectedXp()-initialSelectedXp} level=${level()} attackXp=${xp()-initialXp} HP=${hp()} heldHide=${held(1739)}`);
