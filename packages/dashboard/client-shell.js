@@ -189,11 +189,13 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       infoRow('Accounts',(hosted?'every 10 minutes':'live')+(sides.length&&window.atlasOperator()?' · '+sides.length+' machines':''))+
       infoRow('Hiscores','every 5 to 15 minutes');
   }
+  window.atlasWallKeys=()=>{showPlugin('info');body.querySelector('.info-wall')?.scrollIntoView({block:'nearest'});};
   function infoPanel(){
     const keys=(...k)=>k.map(x=>'<kbd>'+E(x)+'</kbd>').join(' '),owner=window.atlasOperator();
     return '<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>RuneLite — Swarm</span></div><p class="xp-muted">A team of bot accounts on the rs-sdk demo world (the Lost City 2004 engine). The 3D view and the map show every player online.</p></div>'+
       '<div class="xp-box"><div class="xp-head"><span>New data</span></div><div class="info-data">'+infoData()+'</div></div>'+
-      (owner?'':'<div class="xp-box"><div class="xp-head"><span>Controls</span></div>'+infoRow(keys('[',']'),'previous or next account',true)+infoRow(keys('W','A','S','D'),'fly free',true)+infoRow(keys('Drag'),'turn the camera',true)+infoRow(keys('Wheel'),'zoom',true)+infoRow(keys('\\'),'our accounts side by side',true)+infoRow(keys('Ctrl','K'),'find anything',true)+'</div>')+
+      (owner?'':'<div class="xp-box"><div class="xp-head"><span>Controls</span></div>'+infoRow(keys('[',']'),'previous or next account',true)+infoRow(keys('W','A','S','D'),'fly free',true)+infoRow(keys('Drag'),'turn the camera',true)+infoRow(keys('Wheel'),'zoom',true)+infoRow(keys('Ctrl','K'),'find anything',true)+'</div>')+
+      '<div class="xp-box info-wall"><div class="xp-head"><span>Fleet wall</span></div>'+infoRow(keys('\\'),'our accounts side by side',true)+infoRow(keys('←','↑','↓','→'),'move the focus, also H J K L',true)+infoRow(keys('Shift','Arrow'),'swap the view with its neighbour',true)+infoRow(keys('Enter'),'make the view the main view; on the main view, follow it',true)+infoRow(keys('Space'),'next layout',true)+infoRow(keys('F'),'focus layout on and off',true)+infoRow(keys('1')+' – '+keys('9'),'focus view 1 to 9',true)+infoRow(keys('Click'),'focus a view',true)+infoRow(keys('Double click'),'follow that account',true)+infoRow(keys('Esc'),'leave the wall',true)+'</div>'+
       '<div class="xp-box"><div class="xp-head"><span>Marks</span></div>'+
       infoRow('<b class="mark-name">Name</b>','our account',true)+infoRow('<i class="mark-dot on"></i>','our account on the map, playing',true)+infoRow('<i class="mark-dot"></i>','our account on the map, not playing',true)+infoRow('<i class="mark-dot other"></i>','another player',true)+(owner?infoRow('⟦MAIN⟧ / Hidden','an account this page does not show')+infoRow('~ before a rank','the last rank we read; it can be old'):'')+'</div>'+
       '<div class="xp-box"><div class="xp-head"><span>Sources</span></div><p class="xp-muted">Client look: RuneLite (BSD 2-Clause), 3D view: rs-world, game data: the Lost City server content (MIT). Licences and image credits: <a href="'+asset('ATTRIBUTION.txt')+'" target="_blank" rel="noopener">ATTRIBUTION.txt</a>. RuneScape art belongs to Jagex.</p></div></div>';
@@ -916,7 +918,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(!wall){
       // The frames fade while the viewer returns to its single view.
       for(const t of wallTiles.values()){if(wallStill())t.el.remove();else{t.el.style.transition='opacity .16s';t.el.style.opacity='0';setTimeout(()=>t.el.remove(),200);}}
-      wallTiles.clear();wallHelp(false);return;
+      wallTiles.clear();return;
     }
     for(const b of wallLayoutButtons)b.setAttribute('aria-pressed',String(b.dataset.wallLayout===wall.layout));
     if(wallCycleButton.dataset.wallShows!==wall.layout){wallCycleButton.dataset.wallShows=wall.layout;wallCycleButton.innerHTML=wallSvg(wallIcon[wall.layout]);wallCycleButton.title='Layout: '+WALL_LAYOUT_NAMES[wall.layout]+' · Space for the next';}
@@ -963,11 +965,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const wallTools=document.createElement('span');wallTools.className='wall-tools';wallTools.hidden=true;wallTools.setAttribute('role','group');wallTools.setAttribute('aria-label','Wall layout');
   const wallLayoutButtons=WALL_LAYOUTS.map(l=>{const b=wallButtonOf('wall-layout',WALL_LAYOUT_NAMES[l]+' layout',WALL_LAYOUT_NAMES[l]+(l==='focus'?' · f':'')+' · Space for the next layout',wallSvg(wallIcon[l]));b.dataset.wallLayout=l;b.setAttribute('aria-pressed','false');return b;});
   const wallCycleButton=wallButtonOf('wall-cycle','Next wall layout','',''),wallHelpButton=wallButtonOf('wall-help-button','Wall keys','Wall keys · ?','?');
-  wallHelpButton.setAttribute('aria-expanded','false');wallTools.append(...wallLayoutButtons,wallCycleButton,wallHelpButton);wallButton.after(wallTools);
-  const wallHelpBox=document.createElement('div');wallHelpBox.className='wall-help';wallHelpBox.hidden=true;wallHelpBox.setAttribute('role','dialog');wallHelpBox.setAttribute('aria-label','Wall keys');
-  wallHelpBox.innerHTML='<h6>Fleet wall keys</h6>'+[['← ↑ ↓ →','or h j k l: move the focus'],['Shift + arrow','swap the view with its neighbour'],['Enter','make the view the main view; on the main view, follow it'],['Space','next layout'],['f','focus layout on and off'],['1 – 9','focus view 1 to 9'],['Click','focus a view'],['Double click','follow that account'],['Esc','leave the wall']].map(([k,v])=>'<p><kbd>'+k+'</kbd><span>'+v+'</span></p>').join('');
-  hud.append(wallHelpBox);
-  function wallHelp(open=wallHelpBox.hidden){wallHelpBox.hidden=!(open&&wall);wallHelpButton.setAttribute('aria-expanded',String(!wallHelpBox.hidden));}
+  wallTools.append(...wallLayoutButtons,wallCycleButton,wallHelpButton);wallButton.after(wallTools);
+  // The wall's keys are in the Info plugin with the other controls; the ? button and the ? key open them there.
+  function wallHelp(){if(wall)window.atlasWallKeys?.();}
   wallTools.addEventListener('click',e=>{
     const b=e.target.closest?.('button');if(!b||!wall)return;
     e.stopPropagation();b.blur?.();

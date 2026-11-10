@@ -210,13 +210,14 @@ function fleetWall(bots:any[],start:{sel?:string|null,free?:boolean,other?:strin
  const frame={contentWindow:{postMessage:(m:any)=>log.push(m)},rect:{left:0,top:48,width:1048,height:757},getBoundingClientRect(){return this.rect;}};
  const hud=dom.createElement('div'),wallButton=dom.createElement('button');
  const api=new Function('S','VIEWER','window','MARK','st','$','focusSay','focusOpen','focus','focusNote','log','safeName','phoneWidth','document','hud','wallButton','localStorage','writeLink','requestAnimationFrame',`
+  let keysOpened=0;window.atlasWallKeys=()=>{keysOpened++;};
   let mode=${JSON.stringify(start.mode??'3d')},sel=${JSON.stringify(start.sel??null)},wall=null,wallLinked=false,tourTimer=${start.touring?'setInterval(()=>{},1e9)':'null'},focusRowsHtml='',flightTo=null,sentMaxLevel=2,warmSent='x',rswFor=sel,paints=0,renders=0;
   const TOUR_MS=45000,tourStep=()=>{},focusPaint=()=>{paints++;},render=()=>{renders++;};
   let pick=name=>{wallEnd(false);log.push({pick:name});sel=name;window.atlasFreeCamera=false;},setMode=m=>{mode=m;};
   ${live}${state}${code}
   return {start:wallStart,end:wallEnd,toggle:wallToggle,sync:wallSync,message:wallMessage,names:wallNames,on:()=>!!wall,label:()=>focusState(),link:()=>{wallLinked=true;},
    press:wallPress,frameKey:wallFrameKey,neighbour:wallNeighbour,rects:wallRects,prefs:wallPrefs,prefsRead:wallPrefsRead,linkRead:wallLinkRead,linkWrite:wallLinkWrite,layoutTo:wallLayout,
-   wall:()=>wall&&{layout:wall.layout,main:wall.main,focus:wall.focus,names:wall.names.slice(),hover:wall.hover},tiles:()=>new Map([...wallTiles].map(([n,t])=>[n,t])),root:wallRoot,tools:wallTools,help:wallHelpBox,
+   wall:()=>wall&&{layout:wall.layout,main:wall.main,focus:wall.focus,names:wall.names.slice(),hover:wall.hover},tiles:()=>new Map([...wallTiles].map(([n,t])=>[n,t])),root:wallRoot,tools:wallTools,keysOpened:()=>keysOpened,
    page:()=>({sel,free:window.atlasFreeCamera,other:window.atlasFollowOther,touring:!!tourTimer,sentMaxLevel,warmSent,rswFor,renders}),setMode:m=>setMode(m),stopTour:()=>clearInterval(tourTimer)};`)
   (S,VIEWER,window,'⟦MAIN⟧',st,()=>frame,(t:string)=>said.push(t),()=>{},{classList:classes},{classList:classes},log,(n:string)=>String(n).replaceAll('⟦MAIN⟧','Main · reserved'),phone,{createElement:dom.createElement},hud,wallButton,store,()=>links.push(1),(f:Function)=>frames.push(f));
  // The viewer's report of the layout for the asked names, and the frame that shows it. Times are ms after the page's time origin.
@@ -572,10 +573,11 @@ test('the layout switcher shows the layout, and one button steps through the lay
  expect(w.since(mark)).toEqual([{multiLayout:{mode:'columns'}}]);expect(buttons.map((b:any)=>b.attrs['aria-pressed'])).toEqual(['false','false','false','true']);
  mark=w.log.length;click(buttons[3]);expect(w.since(mark)).toEqual([]);
  click(cycle);expect(w.wall()!.layout).toBe('grid');expect(cycle.title).toContain('Grid');
- // The key list opens from its button and from ?, and closes with the wall.
- expect(w.help.hidden).toBe(true);click(helpButton);expect(w.help.hidden).toBe(false);expect(helpButton.attrs['aria-expanded']).toBe('true');
- w.press('?',false);expect(w.help.hidden).toBe(true);w.press('?',false);w.end();expect(w.help.hidden).toBe(true);
- for(const key of ['Shift + arrow','Enter','Space','Double click','Esc'])expect(w.help.innerHTML).toContain('<kbd>'+key+'</kbd>');
+ // The key list is in the Info plugin. Its button and ? open it there while the wall is on.
+ expect(w.keysOpened()).toBe(0);click(helpButton);expect(w.keysOpened()).toBe(1);
+ w.press('?',false);expect(w.keysOpened()).toBe(2);w.end();w.press('?',false);expect(w.keysOpened()).toBe(2);
+ expect(shell).not.toContain('wall-help\'');
+ for(const row of ["keys('Shift','Arrow')","keys('Enter')","keys('Space')","keys('Double click')","keys('Esc')"])expect(shell).toContain('infoRow('+row);
  const css=readFileSync(new URL('./client-shell.css',import.meta.url),'utf8');
  expect(css).toContain('@media(max-width:740px){.client-title .focus .wall-tools .wall-layout{display:none}.client-title .focus .wall-tools .wall-cycle{display:grid}');
  expect(shell).toContain("infoRow(keys('\\\\'),'our accounts side by side',true)");

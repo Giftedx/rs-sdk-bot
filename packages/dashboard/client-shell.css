@@ -141,13 +141,13 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .client-title .focus .focus-wall{padding:0 8px;border-left:1px solid #3c3c3c;border-radius:0 3px 3px 0;color:#aaa;transition:background .14s,color .14s}.client-title .focus .focus-wall:hover:not(:disabled){background:#3a3a3a;color:#ff981f}.client-title .focus .focus-wall:disabled{color:#555;cursor:default}
 .client-title .focus .focus-wall[aria-pressed=true]{background:#3a2f1c;color:#ff981f}.client-title .focus-now+.focus-step:has(+.focus-wall:not([hidden])){border-radius:0}
 /* The wall fills the 3D view: the panels of the one followed account stay out of it. */
-.game-hud.wall-on>:not(.focus-note):not(.game-toast):not(.game-screen):not(.wall-chrome):not(.wall-help){display:none!important}
+.game-hud.wall-on>:not(.focus-note):not(.game-toast):not(.game-screen):not(.wall-chrome){display:none!important}
 /* ==== Fleet wall tiling (start): the layout switcher, the frames the page draws over the views, and the key list ==== */
-.client-title .focus .wall-tools{display:flex;align-items:stretch;border-left:1px solid #3c3c3c}.client-title .focus .wall-tools[hidden],.wall-help[hidden]{display:none!important}
+.client-title .focus .wall-tools{display:flex;align-items:stretch;border-left:1px solid #3c3c3c}.client-title .focus .wall-tools[hidden]{display:none!important}
 .client-title .focus .focus-wall:has(+.wall-tools:not([hidden])){border-radius:0}
 .client-title .focus .wall-tools button{display:grid;place-items:center;width:24px;padding:0;border-radius:0;color:#8f8f8f;transition:background .14s,color .14s,box-shadow .14s}.client-title .focus .wall-tools button:last-child{border-radius:0 3px 3px 0}
 .client-title .focus .wall-tools button:hover{background:#3a3a3a;color:#ff981f}.client-title .focus .wall-tools button[aria-pressed=true]{background:#3a2f1c;color:#ff981f;box-shadow:inset 0 -2px #ff981f}
-.wall-tools svg{width:12px;height:12px;fill:currentColor;pointer-events:none}.client-title .focus .wall-tools .wall-cycle{display:none}.client-title .focus .wall-tools .wall-help-button{border-left:1px solid #3c3c3c;font:700 12px Arial,sans-serif}.client-title .focus .wall-tools .wall-help-button[aria-expanded=true]{background:#3a2f1c;color:#ff981f}
+.wall-tools svg{width:12px;height:12px;fill:currentColor;pointer-events:none}.client-title .focus .wall-tools .wall-cycle{display:none}.client-title .focus .wall-tools .wall-help-button{border-left:1px solid #3c3c3c;font:700 12px Arial,sans-serif}
 /* The frames. A frame is placed with left, top, width and height; the time (--wall-ms) and the start come from the viewer's
    move, and the curve is the viewer's ease-out cubic. --wall-fade is the opacity of a frame that opens or closes: a
    registered number, so it has a transition that runs in the page's frames like the others. Only the title strip takes
@@ -168,8 +168,6 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 @container (max-width:180px){.wall-note{display:none}.wall-name{flex:1 1 auto}}
 @container (max-width:132px){.wall-num{display:none}}
 @container (max-width:104px){.game-hud .wall-open{display:none}.wall-strip{gap:4px;padding:0 4px 0 5px;font-size:15px}}
-.game-hud .wall-help{position:absolute;right:10px;top:28px;z-index:3;width:min(310px,calc(100% - 20px));padding:9px 12px 10px;border:2px ridge #5b5243;border-radius:4px;background:#1e1a14f5;color:#e8dcc4;font:13px/1.35 var(--ui,sans-serif);text-shadow:none;pointer-events:auto}
-.wall-help h6{margin:0 0 6px;color:#ff981f;font:16px RS,serif;text-shadow:1px 1px #000}.wall-help p{display:flex;gap:10px;margin:3px 0}.wall-help kbd{flex:0 0 88px;color:#ff981f;font:600 12px var(--ui,sans-serif)}
 @media(max-width:740px){.client-title .focus .wall-tools .wall-layout{display:none}.client-title .focus .wall-tools .wall-cycle{display:grid}.client-title .focus .wall-tools button{width:26px}}
 /* A phone has no keyboard for the key list and no room for its button. The step buttons do nothing while the wall is
    open: they make room for the layout button. */
