@@ -71,3 +71,33 @@ export function tradeSettlement(order: Order, receipts: readonly Receipt[], now:
         || from.length > 0 && to.length > 0 || matching.length > 2;
     return { state: reconcile ? 'reconcile' : 'pending', receipts: matching };
 }
+
+// Orders that close after their window without a matched pair of receipts, because the receipts they have prove what
+// moved. tradeSettlement leaves both in `reconcile`, and the planner then holds their accounts with no job.
+// - One party failed with nothing moved and the other has no receipt: nothing moved, and the window is over. A party
+//   that started and went silent still holds its trade claim, which holds the order for the planner.
+// - A retry overlapped the first order (README: a retry takes a new order id). Of two orders with the same parties,
+//   item and count, one has the giver's settled receipt and the taker's failed one, the other the reverse. Together
+//   they are one transfer: the giver gave once and the taker took once. `receipts` are the two settled ones.
+export type WindowClosure = { state: 'failed'; receipts: [] } | { state: 'settled'; receipts: [TradeReceipt, TradeReceipt] };
+export function windowClosures(orders: readonly Order[], receipts: readonly Receipt[], now: number): Map<string, WindowClosure> {
+    const closed = new Map<string, WindowClosure>(), halves: { order: Order; giver: boolean; receipt: TradeReceipt }[] = [];
+    for (const order of orders) {
+        if (now < order.end || tradeSettlement(order, receipts, now).state !== 'reconcile') continue;
+        const matching = receipts.filter(r => r?.id === order.id);
+        const terminal = (role: TradeRole) => matching.filter(r => terminalTradeReceipt(order, role, r, now)) as TradeReceipt[];
+        const from = terminal('from'), to = terminal('to');
+        if (matching.length === 1 && from.length + to.length === 1 && [...from, ...to][0]!.state === 'failed') closed.set(order.id, { state: 'failed', receipts: [] });
+        else if (matching.length === 2 && from.length === 1 && to.length === 1 && from[0]!.state !== to[0]!.state)
+            halves.push(from[0]!.state === 'settled' ? { order, giver: true, receipt: from[0]! } : { order, giver: false, receipt: to[0]! });
+    }
+    const same = (a: Order, b: Order) => a.server === b.server && a.from.toLowerCase() === b.from.toLowerCase() && a.to.toLowerCase() === b.to.toLowerCase()
+        && a.item.toLowerCase() === b.item.toLowerCase() && a.count === b.count;
+    for (const gave of halves.filter(h => h.giver)) {
+        const took = halves.find(h => !h.giver && !closed.has(h.order.id) && same(h.order, gave.order));
+        if (!took) continue;
+        const closure: WindowClosure = { state: 'settled', receipts: [gave.receipt, took.receipt] };
+        closed.set(gave.order.id, closure); closed.set(took.order.id, closure);
+    }
+    return closed;
+}

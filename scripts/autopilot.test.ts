@@ -77,6 +77,35 @@ test('funding holds past expiry on incomplete proof and releases each party only
     expect([...inOpenOrder([o], [giver, receiver], now, observed)]).toEqual([]);
 });
 
+test('after its window an order holds no one when one party failed and the other never started, or when a retry completed it', () => {
+    const receipt = (o: ReturnType<typeof order>, role: 'from' | 'to', state: 'settled' | 'failed'): TradeReceipt => ({
+        version: 2, state, id: o.id, role, account: o[role], partner: role === 'from' ? o.to : o.from, side: 'local',
+        server: o.server, item: o.item, requested: o.count, claim: '12345678-1234-1234-1234-123456789012', at: 2700,
+        ok: state === 'settled', detail: '', count: state === 'settled' ? o.count : 0,
+        inventory: state === 'failed' ? { before: 7, after: 7 } : role === 'from' ? { before: o.count, after: 0 } : { before: 0, after: o.count },
+        ...(role === 'to' && state === 'settled' ? { bank: { count: o.count, at: 2300 } } : {}),
+        logout: { attemptId: '0000000002400-1-1', at: 2600, sha256: 'a'.repeat(64) },
+    });
+    const first = order('a', 'Big', 'Poor', 3000), retry = order('b', 'Big', 'Poor', 4000), now = 5000;
+    const held = (orders: ReturnType<typeof order>[], r: TradeReceipt[], at = now) => [...inOpenOrder(orders, r, at)].sort();
+    // The taker failed and the giver never ran: closed once the window is over, held while it is open.
+    expect(held([first], [receipt(first, 'to', 'failed')])).toEqual([]);
+    expect(held([first], [receipt(first, 'to', 'failed')], 2900)).toEqual(['big', 'poor']);
+    // A party that is still uncertain keeps the hold.
+    expect(held([first], [{ ...receipt(first, 'to', 'failed'), state: 'reconcile' }])).toEqual(['big', 'poor']);
+    // One order alone with a settled giver and a failed taker is a real mismatch.
+    const gaveFirst = [receipt(first, 'from', 'settled'), receipt(first, 'to', 'failed')];
+    expect(held([first], gaveFirst)).toEqual(['big', 'poor']);
+    // The retry holds the other half: the taker's settled receipt and the giver's failure. Together, one transfer.
+    const tookRetry = [receipt(retry, 'from', 'failed'), receipt(retry, 'to', 'settled')];
+    expect(held([first, retry], [...gaveFirst, ...tookRetry])).toEqual([]);
+    // A retry for another count does not complete it.
+    const other = { ...retry, count: 9 };
+    expect(held([first, other], [...gaveFirst, receipt(other, 'from', 'failed'), receipt(other, 'to', 'settled')])).toEqual(['big', 'poor']);
+    // The settled halves still wait for a status that shows the stock.
+    expect([...inOpenOrder([first, retry], [...gaveFirst, ...tookRetry], now, r => r.role !== 'to')]).toEqual(['poor']);
+});
+
 test('a funded assignment becomes a coin order and a vacant account; an account in an open order waits', () => {
     const shop = { id: 'shop-feathers' } as any;
     const out = [
