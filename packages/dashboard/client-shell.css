@@ -229,3 +229,5 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .equipment-slot .qty{position:absolute;top:0;left:1px;font:14px RS;text-shadow:1px 1px #000}
 /* The inventory value line under the grid. */
 .game-panel .inv-worth{margin:-3px 0 0;text-align:center;line-height:12px;color:#ff0;pointer-events:auto}
+/* One of our names in a public chat line (RuneLite's chat notifications highlight). */
+.game-hud .chat-hl{color:#f00}

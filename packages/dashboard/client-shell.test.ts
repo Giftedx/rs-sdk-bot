@@ -727,3 +727,11 @@ test('the inventory value is the sum of the item values, and the tooltip counts 
  expect(invWorth([{name:'Coins',count:1000},{name:'Lobster',count:2},undefined,{name:'Odd thing',count:1}])).toBe('<p class="game-muted inv-worth" title="The sum of the item values · 1 item has no value">Worth 1300 gp</p>');
  expect(invWorth([{name:'Odd thing',count:1}])).toBe('');
 });
+
+test('one of our names in a public chat line is marked, and the mark does not touch other text',()=>{
+ const code=shell.slice(shell.indexOf('  function mention(html){'),shell.indexOf('  function renderChat(){'));
+ const S={bots:[{name:'Woodenstaff'},{name:'Amp'},{name:'Practice1',practice:true},{name:'Main'}]};
+ const mention=new Function('S','safeName',`${code};return mention;`)(S,(n:string)=>n==='Main'?'Hidden':n);
+ expect(mention('is woodenstaff a bot? &amp; Main, Practice1')).toBe('is <span class="chat-hl">woodenstaff</span> a bot? &amp; Main, Practice1');
+ expect(mention('Woodenstaffs')).toBe('Woodenstaffs');
+});
