@@ -1,31 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794291891693,
+ "at": 1794292439229,
  "jobs": [
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 60 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-60",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "cow:ardougne-north"
-   ]
-  },
   {
    "account": "UnderMyKilt",
    "script": "scripts/gather-combat.ts",
@@ -50,6 +26,47 @@
    ]
   },
   {
+   "account": "Quickhandjob",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Strength to 60 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-60",
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/goldfarm.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Prayer to 99 burying the held bones",
+   "role": "combat",
+   "template": "army-bury-prayer-99",
+   "resources": []
+  },
+  {
    "account": "TheFullMonty",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -57,32 +74,19 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
+    "TRAIN_SKILL": "Strength",
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "10"
    },
-   "enabled": false,
+   "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "train Ranged to 99 on the Khazard troopers",
+   "goal": "train Strength to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "template": "army-trooper-strength-99",
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-e50eed46-67ff-4059-98c0-2c630c7ff659"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "claude-cloud-recover-trousersnake-20261110t062048z [task-e50eed46-67ff-4059-98c0-2c630c7ff659]",
-   "role": "combat"
   }
  ]
 }
