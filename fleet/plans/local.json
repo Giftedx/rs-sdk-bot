@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794311116461,
+ "at": 1794311138082,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -466,7 +466,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-a9054d6e-5e5f-4cf3-8574-54090cbad246"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-session-recovery-mmthv2350-serial [task-a9054d6e-5e5f-4cf3-8574-54090cbad246]",
    "role": "thieving"
