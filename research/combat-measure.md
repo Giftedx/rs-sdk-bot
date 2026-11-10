@@ -120,6 +120,30 @@ Ranged it adds is not needed at that point.
 - **Evidence.** `.practice/troopers/run.ts`, six or nine started in one shell loop (`six.out`, `nine.out`,
   `six-spread.out`, `nine-spread.out`); `scripts/gather-combat-giant.test.ts` (accounts in company spread).
 - **Gap.** Practice only; all melee Strength; more than nine at once and a mix with Ranged trainers are not measured.
+- **Claim.** Bones buried on the field: with `GIANT_BURY=1` the trooper trainer buries the bones of almost every own
+  kill, about 2.5 Prayer XP per tick an account, for 16% of the Strength rate. Troopers drop bones on every kill
+  (`npc_combat.param` `death_drop`), 112 or 113 Prayer XP each at this server's rate.
+- **Conditions.** Six accounts at once with the spread rule, 3 sets, cap 1,500, Prayer 74 at the start. "Wait" takes
+  the bones with the bot's pickup, buries them and waits for the Prayer XP before the next attack. "No wait" sends the
+  pickup itself and the next attack at once. Strength XP per tick an account, sorted:
+
+  | Burying | Set | XP per tick an account | Bones buried a run | Prayer XP a run |
+  |---|---|---|---|---|
+  | off | 1-3 | median 56.7 (the spread rows above) | 0 | 0 |
+  | wait | 1 | 43.8, 47.6, 48.1, 48.2, 49.6, 51.2 | 34-36 | 3,825-4,050 |
+  | wait | 2 | 45.0, 46.7, 47.5, 47.7, 48.0, 52.3 | 34-37 | 3,825-4,162 |
+  | wait | 3 | 44.4, 45.7, 46.1, 47.8, 51.2, 52.0 | 32-38 | 3,600-4,275 |
+  | no wait | 1 | 31.3, 32.2, 33.3, 33.7, 35.0, 41.2 | 24-29 | 2,700-3,262 |
+  | no wait | 2 | 33.3, 33.8, 34.8, 35.8, 37.5, 39.3 | 26-30 | 2,925-3,375 |
+  | no wait | 3 | 36.7, 37.7, 38.9, 39.3, 40.3, 40.7 | 29-33 | 3,262-3,712 |
+
+  All 36 burying runs ended `RESULT ok`. Medians: 47.8 with the wait, 36.2 without it, so the trainer waits: the
+  attack sent during the dig is lost. A run credits 32-39 kills with the wait against 40-49 with burying off, about 9
+  more ticks a kill. The trainer stops burying at Prayer 99.
+- **Evidence.** `.practice/troopers/run.ts` with `GIANT_BURY=1` (`six-bury.out`, `six-bury2.out`);
+  `scripts/gather-combat-giant.test.ts` (with GIANT_BURY a trooper kill's bones are taken and buried).
+- **Gap.** Practice only; Strength only: a bow kills at range, so the walk to the bones is longer and that cost is
+  not measured. Where the 9 ticks go is not measured.
 - **Claim.** The trainer banks pack coins with its drops before every walk out, so a death on the field cannot lose
   them. **Conditions.** The same run from 5,000 coins in the pack, cap 400: `RESULT ok`, 8 kills, 2 bank trips; the
   pack held 0 coins and the bank 5,000 afterwards. **Evidence.** `.practice/troopers/coins.ts` and `peek.ts`;

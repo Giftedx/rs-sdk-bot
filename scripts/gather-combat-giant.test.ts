@@ -198,6 +198,31 @@ test('a trooper that faces another player is someone else\'s fight; one that fac
     expect(anothersFight(undefined,4)).toBe(false);
 });
 
+test('with GIANT_BURY a trooper kill\'s bones are taken and buried on the field; at Prayer 99 they are left',async()=>{
+    // Open ground with no credit drop, as the trooper site: a kill is the target gone with own XP.
+    const site={label:'trooper',npcs:[117],foods:[385],bank:GIANT.bank,spot:GIANT.spot,room:GIANT.room,drops:[]};
+    const field=(prayer:number)=>{
+        const f=giantFixture(),sdk=f.session.sdk as any,bot=f.session.bot as any;let bones=false,prayerXp=0,sent=0;
+        const state=sdk.getState.bind(sdk),attack=bot.attack.bind(bot),pickup=bot.pickupItem.bind(bot),skill=sdk.getSkill.bind(sdk),xp=sdk.getSkillXp.bind(sdk);
+        bot.attack=async(...a:any[])=>{bones=true;return attack(...a);};
+        sdk.getState=()=>{const st=state();return bones?{...st,groundItems:[...st.groundItems,{id:526,name:'Bones',count:1,x:2545,z:3144}]}:st;};
+        bot.pickupItem=async(item:any)=>{if(item.id!==526)return pickup(item);bones=false;f.inv.push({id:526,name:'Bones',count:1,slot:f.inv.length,optionsWithIndex:[{text:'Bury',opIndex:1}]});return{success:true};};
+        sdk.sendUseItem=async(slot:number,op:number)=>{const i=f.inv.findIndex(x=>x.slot===slot&&x.id===526);if(i<0||op!==1)return{success:false};f.inv.splice(i,1);prayerXp+=112;sent++;return{success:true};};
+        sdk.getSkill=(n:string)=>n==='Prayer'?{level:prayer,baseLevel:prayer}:skill(n);
+        sdk.getSkillXp=(n:string)=>n==='Prayer'?prayerXp:xp(n);
+        return {f,sent:()=>sent};
+    };
+    const low=field(40);try{
+        const r=await runGiants(low.f.session,{cap:500,trainSkill:'Strength',targetLevel:99,maximum:1,bury:true,site,walk:low.f.walk}) as any;
+        expect(r.ok).toBe(true);expect(r.creditedKills).toBe(1);expect(r.buried).toBe(1);expect(r.prayerXp).toBe(112);
+        expect(low.f.inv.some(i=>i.id===526)).toBe(false);expect(r.preserved).toBe(true);
+    }finally{low.f.dispose();}
+    const max=field(99);try{
+        const r=await runGiants(max.f.session,{cap:500,trainSkill:'Strength',targetLevel:99,maximum:1,bury:true,site,walk:max.f.walk}) as any;
+        expect(r.ok).toBe(true);expect(r.creditedKills).toBe(1);expect(r.buried).toBeUndefined();expect(max.sent()).toBe(0);
+    }finally{max.f.dispose();}
+});
+
 test('banked supplies absent or equip without effect cannot start a giant fight',async()=>{
  for(const mode of ['food','weapon','equip'] as const){
     const f=giantFixture({bankedKit:true});try{
