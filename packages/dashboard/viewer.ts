@@ -1,5 +1,5 @@
 // Adapter for the reviewed rs-world build. The build runs as it is: the page talks to it by URL and message.
-export const VIEWER_MANIFEST_SHA256='58464CB843BA4B0E7CA298496F9B50CB14A4648B11301682068412D737D47EFE';
+export const VIEWER_MANIFEST_SHA256='E8653F3E8C51AE68BE200F83DA4B58D2C2C5EC5BD5F475F51F550ED0F0C1AF4D';
 
 export function viewerAssetRoute(pathname:string):{root:'static'|'caches';relative:string}|'bad'|null {
     let decoded:string;try{decoded=decodeURIComponent(pathname);}catch{return 'bad';}
@@ -30,7 +30,8 @@ export const VIEWER_FEATURES: [what: string, text: string][] = [
     ['multi-view status', 'viewerMulti'],                                   // {multi:[names]}, the Fleet wall
     ['multi-view frame', 'multi-pane'],                                     // the bridge finds a clicked view by it
     ['multi-view number', 'dataset.pane'],                                  // the view's place in the asked order
-    ['tiling message', 'setMultiLayout('],                                  // {multiLayout:{mode,main,gap,ratio,animate,color}}
+    ['tiling message', 'setMultiLayout('],                                  // {multiLayout:{mode,main,gap,ratio,rows,cols,strip,animate,color}}
+    ['sizes of rows and columns', 'rowShares'],                             // rows, cols: the shares; strip: the Focus strip
     ['view order message', 'setMultiOrder('],                               // {multiOrder:[names]}
     ['view focus message', 'setMultiFocus('],                               // {multiFocus:name}
     ['page-drawn frames', 'setMultiChrome('],                               // {multiChrome:false}
@@ -233,7 +234,8 @@ export function installViewerBridge(host:any) {
     const multiName=(n:any)=>typeof n==='string'&&(n==='⟦MAIN⟧'||/^[A-Za-z0-9_-](?:[A-Za-z0-9_ -]{0,10}[A-Za-z0-9_-])?$/.test(n));
     const validMulti=(list:any)=>Array.isArray(list)&&list.length<=16&&list.every(multiName)&&new Set(list.map((n:string)=>n.toLowerCase())).size===list.length;
     const multiView=(v:any)=>multiName(v)||Number.isInteger(v)&&v>=0&&v<16;
-    const layoutRules:Record<string,(v:any)=>boolean>={mode:v=>['grid','main','focus','columns'].includes(v),main:multiView,gap:v=>Number.isInteger(v)&&v>=0&&v<=24,ratio:v=>typeof v==='number'&&v>=0.5&&v<=0.8,animate:v=>typeof v==='boolean',color:v=>typeof v==='string'&&/^#[0-9a-f]{6}$/i.test(v)};
+    const multiShares=(v:any)=>Array.isArray(v)&&v.length<=16&&v.every((n:any)=>typeof n==='number'&&n>0&&n<=1);
+    const layoutRules:Record<string,(v:any)=>boolean>={rows:multiShares,cols:multiShares,strip:v=>v===0||typeof v==='number'&&v>=0.1&&v<=0.45,mode:v=>['grid','main','focus','columns'].includes(v),main:multiView,gap:v=>Number.isInteger(v)&&v>=0&&v<=24,ratio:v=>typeof v==='number'&&v>=0.5&&v<=0.8,animate:v=>typeof v==='boolean',color:v=>typeof v==='string'&&/^#[0-9a-f]{6}$/i.test(v)};
     const multiRules:Record<string,(v:any)=>boolean>={multi:validMulti,multiOrder:validMulti,multiDistance:v=>Number.isInteger(v)&&v>=16&&v<=128,multiFocus:multiView,multiChrome:v=>typeof v==='boolean',
         multiLayout:v=>!!v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).every(k=>Object.hasOwn(layoutRules,k)&&layoutRules[k]!(v[k]))};
     host.addEventListener('message',(event:any)=>{
