@@ -30,18 +30,20 @@ test('persisted hunt kit survives equip closing the bank; missing1171 still refu
  try{for(const missing of [false,true]){
   const persisted=parsePracticeSave(createSaveData({position:{x:3185,z:3436},skills:{Attack:49,Strength:10,Defence:11,Hitpoints:35},
    bank:[{id:995,count:352288},{id:554,count:1482},{id:557,count:3},{id:1277,count:1},...missing?[]:[{id:1171,count:1}],{id:1115,count:1},{id:1891,count:8}]}));
-  const stock=persisted.inventories[95]!.map(i=>({...i})),pack:any[]=[],equipment:any[]=[],client={};
+  // The session names every item; the cleanup after a refusal banks the pack again by name.
+  const stock:any[]=persisted.inventories[95]!.map(i=>({...i,name:`item${i.id}`})),pack:any[]=[],equipment:any[]=[],client={};
   if(missing)equipment.push(stock.splice(stock.findIndex(i=>i.id===1277),1)[0]);
   setEquipmentObserved(client,true);
   let generation=0,stopped=false,styleSet=false;
-  const state={player:{worldX:3185,worldZ:3436,level:0},bank:{isOpen:false,items:[] as any[]},combatStyle:{currentStyle:0},autoRetaliateEnabled:false};
+  const state={player:{worldX:3185,worldZ:3436,level:0},inventory:pack,bank:{isOpen:false,items:[] as any[]},combatStyle:{currentStyle:0},autoRetaliateEnabled:false};
   const visible=()=>{state.bank.items=state.bank.isOpen?stock:[];};
   const s={client,name:'flkitentry',tick:()=>0,ended:new Promise(()=>{}),onTick:()=>()=>{},
    bankObservation:()=>state.bank.isOpen?{generation,items:stock}:null,
    sdk:{getState:()=>state,getInventory:()=>pack,getEquipment:()=>equipment,getSkill:()=>({level:35,baseLevel:49}),
     sendSetCombatStyle:async(n:number)=>{styleSet=true;state.combatStyle.currentStyle=n;stopped=true;return{success:true};}},
    bot:{dismissBlockingUI:async()=>{},openBank:async()=>{state.bank.isOpen=true;generation++;visible();return{success:true};},
-    withdrawItem:async(item:any,n:number)=>{expect(state.bank.isOpen).toBe(true);item.count-=n;generation++;pack.push({id:item.id,count:n});return{success:true};},
+    withdrawItem:async(item:any,n:number)=>{expect(state.bank.isOpen).toBe(true);item.count-=n;generation++;pack.push({id:item.id,name:item.name,count:n,slot:pack.length});return{success:true};},
+    depositItem:async(item:any)=>{expect(state.bank.isOpen).toBe(true);const row=stock.find(i=>i.id===item.id);if(row)row.count+=item.count;else stock.push({...item});pack.splice(pack.indexOf(item),1);generation++;return{success:true};},
     equipItem:async(item:any)=>{state.bank.isOpen=false;visible();equipment.push(item);pack.splice(pack.indexOf(item),1);return{success:true};},
     closeBank:async()=>{state.bank.isOpen=false;visible();}},
   } as any;
@@ -54,7 +56,7 @@ test('persisted hunt kit survives equip closing the bank; missing1171 still refu
    expect(result.failure).not.toContain('missing owned');
    expect(equipment.map(i=>i.id)).toEqual([1277,1171,1115]);
    expect(styleSet).toBe(true);
-   expect(pack).toContainEqual({id:1891,count:8});
+   expect(pack.map(i=>({id:i.id,count:i.count}))).toContainEqual({id:1891,count:8});
   }
  }}finally{travel.mockRestore();account.mockRestore();world.mockRestore();}
 });
