@@ -551,18 +551,15 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
         const retry=new Map<number,number>();
         const selfSlot=(s as {client?:{selfSlot?:number}}).client?.selfSlot;
         // Troopers leave bones on every kill (npc_combat.param death_drop). With GIANT_BURY the trainer takes the bones
-        // its own kill left on the death tile and buries them. Each step is bounded and a miss skips the bone: the
-        // fight never waits on it, and a bone left in the pack is banked on the next trip.
+        // its own kill left on the death tile and buries one. It does not wait for the bury: the dig holds the player
+        // one tick (bury_bone.rs2 p_delay) and the next attack follows it. A miss skips the bone, and one left in the
+        // pack is banked on the next trip.
         const buryOwn=async(x:number,z:number,fresh:number)=>{
-            const item=fresh>0?state()?.groundItems.find(i=>i.id===BONES&&i.x===x&&i.z===z):undefined;
-            if(!item||inv().length>=28)return;
+            if(fresh<1||inv().length>=28)return;
             const before=held(BONES);
-            if(!(await s.bot.pickupItem(item)).success||!await waitUntil(s,()=>held(BONES)>before,{timeoutTicks:8}))return;
+            if(!(await s.sdk.sendPickup(x,z,BONES)).success||!await waitUntil(s,()=>held(BONES)>before,{timeoutTicks:6}))return;
             const bone=inv().find(i=>i.id===BONES),option=bone?.optionsWithIndex?.find(op=>/^bury$/i.test(op.text));
-            if(!bone||!option)return;
-            const xp=prayerXp();
-            if((await s.sdk.sendUseItem(bone.slot,option.opIndex)).success&&await waitUntil(s,()=>prayerXp()>xp,{timeoutTicks:6}))buried++;
-            if(state()?.dialog?.isOpen)await s.bot.dismissBlockingUI();
+            if(bone&&option&&(await s.sdk.sendUseItem(bone.slot,option.opIndex)).success)buried++;
         };
         while(!goalReached()&&!over()){
             if(hp()<=eatAt&&!await eat()){if(bankFood<1){stop='low-hp';throw new Error(`no ${label} progress: low HP and no owned shark`);}await trip();continue;}
