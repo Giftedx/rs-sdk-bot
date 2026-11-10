@@ -84,6 +84,7 @@ test('BONE_ID=532 plans owned big bones at375XP and banks at Varrock West',()=>{
     expect(BONE_XP[532]).toBe(375);
     expect(planPrayer(1400,xpForLevel(74),1500,6,90,375)).toBe(Math.ceil((xpForLevel(90)-xpForLevel(74))/375));
     expect(prayerBank({worldX:3186,worldZ:3437,level:0})).toEqual({x:3185,z:3436});
+    expect(prayerBank({worldX:2620,worldZ:3330,level:0})).toEqual({x:2619,z:3332});
 });
 test('an unknown bone id refuses before any bank work',async()=>{
     const f=fixture({});try{await expect(runPrayer(f.s,{...options,bone:999})).rejects.toThrow('unsupported bone id');expect(f.burials()).toBe(0);}finally{f.dispose();}

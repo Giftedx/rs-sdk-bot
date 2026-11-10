@@ -20,6 +20,7 @@ export function planPrayer(bones:number,xp:number,maximum=175,reserve=6,target=4
 export function prayerBank(p:{worldX:number;worldZ:number;level:number}){
     const near=(x:number,z:number,n:number)=>p.level===0&&Math.max(Math.abs(p.worldX-x),Math.abs(p.worldZ-z))<=n;
     if(near(2655,3283,3))return{x:2655,z:3283};
+    if(near(2619,3332,3))return{x:2619,z:3332}; // Ardougne north, the PK army's home bank (scripts/cow-stage.ts)
     if(near(3185,3436,3))return{x:3185,z:3436}; // Varrock West, where GE purchases settle
     if(near(3092,3243,220))return{x:3092,z:3243};
     throw Error('no prayer progress: unsupported ordinary bank entry');
