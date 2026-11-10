@@ -1,0 +1,30 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794309031268-thefullmonty-fingerblastr",
+ "account": "TheFullMonty",
+ "partner": "Fingerblastr",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 20,
+ "claim": "4731f04d-c0ee-4425-990d-6e406a069b27",
+ "count": 20,
+ "ok": true,
+ "at": 1794309261954,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 20,
+  "after": 0
+ },
+ "bank": {
+  "count": 20,
+  "at": 1794309243655
+ },
+ "logout": {
+  "attemptId": "1794309235266-0000019253-0000000001",
+  "at": 1794309261940,
+  "sha256": "c1030ffafe6c5e45c4ff2e19ee9673dea526c13e45d6979c80f2133350b9daed"
+ }
+}

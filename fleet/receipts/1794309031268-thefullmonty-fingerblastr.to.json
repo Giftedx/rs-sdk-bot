@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794309031268-thefullmonty-fingerblastr",
+ "account": "Fingerblastr",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 20,
+ "claim": "cc8adcd8-a3f2-43b8-ac63-d3712345cc25",
+ "count": 0,
+ "ok": false,
+ "at": 1794309237285,
+ "detail": "trade claimed"
+}
