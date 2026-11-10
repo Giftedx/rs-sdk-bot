@@ -1,5 +1,5 @@
 // Adapter for the reviewed rs-world build. The build runs as it is: the page talks to it by URL and message.
-export const VIEWER_MANIFEST_SHA256='ABE9EF2EA6C2EA4D3516875176B7423803B63F5CD54AFB11168F8B1539F56A4F';
+export const VIEWER_MANIFEST_SHA256='4C62C8CD72B5D1B3F5605CF405A4A5BD84943E369B0AA9B63E06549031ECB418';
 
 export function viewerAssetRoute(pathname:string):{root:'static'|'caches';relative:string}|'bad'|null {
     let decoded:string;try{decoded=decodeURIComponent(pathname);}catch{return 'bad';}
