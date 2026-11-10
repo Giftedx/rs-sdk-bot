@@ -71,7 +71,7 @@ test('an open bank redraws newer observations and closes when its account change
  let current:any={name:'Worker',bankAt:1,bank:[{name:'Coins',count:10}]},removed=false;
  const nodes:any={};const node=(s:string)=>nodes[s]??=(s==='input'?{value:''}:{insertAdjacentHTML:()=>{},innerHTML:'',textContent:''});
  const modal:any={dataset:{},setAttribute:()=>{},querySelector:node,remove:()=>removed=true};
- new Function('account','document','hud','window','E','safeName','age','stackValue','gp','icon','qty','priceTip',`${code};openBank();`)(()=>current,{createElement:()=>modal},{querySelector:()=>null,append:()=>{}},{atlasOperator:()=>true},String,String,String,()=>({value:10,unpriced:0}),String,()=>'',String,()=> '');
+ new Function('account','document','hud','window','E','safeName','age','stackValue','gp','icon','qty','priceTip','statTip',`${code};openBank();`)(()=>current,{createElement:()=>modal},{querySelector:()=>null,append:()=>{}},{atlasOperator:()=>true},String,String,String,()=>({value:10,unpriced:0}),String,()=>'',String,()=> '',()=>'');
  expect(node('.bank-items').innerHTML).toContain('× 10');
  current={...current,bankAt:2,bank:[{name:'Coins',count:25}]};node('input').oninput();
  expect(node('.bank-items').innerHTML).toContain('× 25');
