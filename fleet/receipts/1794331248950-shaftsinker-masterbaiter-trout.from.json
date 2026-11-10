@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794331248950-shaftsinker-masterbaiter-trout",
+ "account": "Shaftsinker",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Trout",
+ "requested": 2,
+ "claim": "b7b0c635-d44c-4756-9797-17e8ec7950d9",
+ "count": 0,
+ "ok": false,
+ "at": 1794331266659,
+ "detail": "trade claimed"
+}
