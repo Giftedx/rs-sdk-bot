@@ -238,17 +238,19 @@ export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGH
 // are not qualified. Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile, MAX_KILLS=8): live 4/4 runs
 // RESULT ok at 15.7 Strength XP per tick from Strength 1 to 46 (research/combat-measure.md, live cow training);
 // practice 3/3 from Hitpoints 32 with trout and 3/3 with cake only (claude-cloud-4 .practice/combat-ladder). This
-// server's level table puts 45 at 22,767 XP and 60 at 66,193, so the cows take each skill to 45 (about 1,450 ticks)
-// and, while nothing faster is qualified, on to 60 (about 2,800 more; an estimate, as XP per kill is fixed). Cow mode
+// server's level table puts 45 at 22,767 XP, 60 at 66,193, 70 at 133,230, 80 at 267,169, 90 at 534,888 and 99 at
+// 998,458, so the cows take each skill to 45 (about 1,450 ticks) and, while nothing faster is qualified, on through 60,
+// 70, 80, 90 and 99 (about 2,800, 4,200, 8,400, 16,700 and 29,000 more ticks a pass; estimates, as XP per kill is
+// fixed). Live, TrouserSnake and TheFullMonty finished the 45 and 60 passes with RESULT ok runs. Cow mode
 // needs 14 HP of trout or cake held (COW_FOOD_HP) and the bronze sword and wooden shield held or worn, starts at the
 // north bank and never wields better gear; COW_STAGE=1 (scripts/cow-stage.ts) walks the account there and takes the
 // sword, shield and food from its bank first, banking the rest of the pack: 3/3 on practice from the knight spot
 // with the kit and 8 HP of cake banked, RESULT ok with 8 kills and logged out (.practice/cow-stage-proof). Below
 // Hitpoints 32 the food runs out. Gap: the rate above level 46 is not measured.
-export const COW_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence'; band: number; to: number }[] = [
-    { skill: 'Strength', band: 0, to: 45 }, { skill: 'Attack', band: 1, to: 45 }, { skill: 'Defence', band: 5, to: 45 },
-    { skill: 'Strength', band: 10, to: 60 }, { skill: 'Attack', band: 11, to: 60 }, { skill: 'Defence', band: 12, to: 60 },
-];
+// The first pass takes bands 0, 1 and 5; each later pass takes the next three bands from 10.
+export const COW_PASSES = [45, 60, 70, 80, 90, 99] as const;
+export const COW_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence'; band: number; to: number }[] = COW_PASSES.flatMap((to, k) =>
+    (['Strength', 'Attack', 'Defence'] as const).map((skill, i) => ({ skill, to, band: k === 0 ? [0, 1, 5][i]! : 7 + 3 * k + i })));
 
 // Proven job templates. Rates are estimates from each script's header model; tick-waste discounts them by measurement.
 export function catalogue(): Template[] {
