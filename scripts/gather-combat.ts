@@ -380,6 +380,7 @@ export function selectGiantArrows(stock:readonly {id:number;count:number}[],rang
 // whatever it holds (practice: 30 picks, 3-5 ticks each but one), so a stack under AMMO_WORTH arrows is left: a third of
 // the picks brought a twentieth of the arrows. With the quiver empty it takes any stack. Arrows go back in the quiver
 // when it holds fewer than AMMO_LOW.
+export const EAT_DELAY=2;
 export const AMMO_REACH=3,AMMO_PICKS=2,AMMO_WORTH=3,AMMO_LOW=50;
 export function ammoPiles<T extends {id:number;x:number;z:number;count:number}>(ground:readonly T[],id:number,at:{x:number;z:number},least=1,missed:ReadonlySet<string>=new Set()):T[]{
     const far=(i:{x:number;z:number})=>Math.max(Math.abs(i.x-at.x),Math.abs(i.z-at.z));
@@ -460,6 +461,13 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
     const observeLife=()=>{const p=state()?.player;hpMin=Math.min(hpMin,hp());if(hp()<=0||p?.isDead||(p?.respawnCount??0)>(p0.respawnCount??0)||p?.lifeId!==p0.lifeId)died=true;};
     const off=s.onTick(observeLife);
     const over=()=>{observeLife();return ended||died||!!o.stop?.()||s.tick()-start>=o.cap;};
+    // The game drops an eat sent within EAT_DELAY ticks of the last one (consume.rs2 player_consume_item sets %eat_delay
+    // to map_clock + 2 and returns on an eat at or under it). Every eat of the run waits it out: the trainer's own
+    // bites and the first eat of a walk's sustain. Live: PocketPool started three runs at low HP on cooked meat (3 HP a
+    // bite). Its one bite before the walk left it under its eat level, the sustain's eat came a tick later, the game
+    // dropped it and the run ended "quest sustain: food debit unobserved".
+    let lastEat=-Infinity;
+    const eatGap=async()=>{const wait=EAT_DELAY+1-(s.tick()-lastEat);if(wait>0)await waitTicks(s,wait);};
     const eat=async()=>{
         // The debit proves the bite. SDK eat can finish on inventory debit before the HP packet arrives, so it waits
         // for the rise; a hit that lands with the bite hides it (practice: cooked meat heals 3 and a run ended on
@@ -469,18 +477,20 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
         // the wait is not a failed bite.
         for(let attempt=0;attempt<3;attempt++){
             const food=site.foods.map(id=>inv().find(i=>i.id===id)).find(i=>!!i);if(!food)return false;
+            await eatGap();
             const before=heldFood(),beforeHp=hp();await s.bot.eatFood(food);
             await waitUntil(s,()=>heldFood()<before||over(),{timeoutTicks:6});
             eaten+=Math.max(0,before-heldFood());
-            if(heldFood()<before){await waitUntil(s,()=>hp()>beforeHp||over(),{timeoutTicks:3});return true;}
+            if(heldFood()<before){lastEat=s.tick();await waitUntil(s,()=>hp()>beforeHp||over(),{timeoutTicks:3});return true;}
             if(over())return true;
         }
         throw new Error(`no ${label} progress: shark did not heal`);
     };
     // A stop or the cap cancels only the walk out to the camp: the retreat to the bank always runs.
     const walk=async(x:number,z:number,tol:number,outbound=false)=>{
+        await eatGap();
         const sustain=startQuestSustain({...s,direct:async a=>await s.direct(a) as {success:boolean;message?:string}},
-            {food:[...site.foods],eatAt,onConsumed:()=>eaten++});
+            {food:[...site.foods],eatAt,onConsumed:()=>{eaten++;lastEat=s.tick();}});
         const cancel=new AbortController(),offTick=outbound?s.onTick(()=>{if(over())cancel.abort('stop requested');}):undefined;
         const signal=outbound?AbortSignal.any([sustain.aborted,cancel.signal]):sustain.aborted;
         try{
@@ -596,7 +606,8 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
             if(heldFood()<1)throw new Error(`${label} prerequisite: no owned shark`);
             if(!(await s.sdk.sendSetCombatStyle(selectedStyle.index)).success||!await waitUntil(s,()=>{const c=state()?.combatStyle;return !!c?.known&&c.currentStyle===selectedStyle.index&&c.weaponName===selectedStyle.weapon;},{timeoutTicks:10}))
                 throw new Error(`no ${label} progress: selected combat style unobserved`);
-            if(hp()<=eatAt&&!await eat())throw new Error('giant prerequisite: no carried shark before transit');
+            // Up to its eat level before the walk out: one bite of a small food (cooked meat heals 3) leaves it low.
+            while(hp()<=eatAt&&!over())if(!await eat())throw new Error('giant prerequisite: no carried shark before transit');
             await enter();
         }
         lastProgress=s.tick(); // Transit is bounded by CAP, not the target-wait window.

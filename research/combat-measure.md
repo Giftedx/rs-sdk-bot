@@ -208,13 +208,23 @@ Ranged it adds is not needed at that point.
   bones there serve one account at most.
 - **Evidence.** `.practice/troopers/prayer.ts` (`prayer.out`); `packages/planner/test/autopilot.test.ts` (a
   melee-maxed army account buries trooper bones).
-- **Gap.** Practice only; one set of three. A faster bone source for many accounts at once is not found; where the
-  9 ticks a buried kill costs go is not measured.
+- **Gap.** Practice only; one set of three. A faster bone source for many accounts at once is not found. Of the
+  ticks a buried kill costs, about 4 go to the pickup and 2 to the bury; sending the pickup packet directly gave no
+  gain (median 3.75 against 3.84 Prayer XP per tick).
 - **Claim.** The trainer banks pack coins with its drops before every walk out, so a death on the field cannot lose
   them. **Conditions.** The same run from 5,000 coins in the pack, cap 400: `RESULT ok`, 8 kills, 2 bank trips; the
   pack held 0 coins and the bank 5,000 afterwards. **Evidence.** `.practice/troopers/coins.ts` and `peek.ts`;
   `scripts/gather-combat-giant.test.ts` (coins held at entry). **Gap.** One practice run; worn gear and carried
   arrows still ride to the field.
+- **Claim.** The game drops an eat sent within 2 ticks of the last one, with no message. The trainer therefore
+  spaces every eat of a run by 3 ticks, its own bites and the first eat of a walk's sustain, and eats up to its eat
+  level before it walks out. **Conditions.** `consume.rs2` `player_consume_item` sets `%eat_delay` to
+  `map_clock + 2` and returns on an eat at or under it. A small food shows it: cooked meat heals 3, so one bite leaves
+  a low account under its eat level and the next eat follows at once. **Evidence.** Live claude-cloud: PocketPool
+  started three trooper runs at low HP after a dropped session and each ended `quest sustain: food debit unobserved`
+  within 28 ticks. `scripts/gather-combat-giant.test.ts` reproduces that error with an account at 30 of 75 HP on
+  cooked meat, and with the spacing it takes three bites 3 ticks apart and none is dropped. **Gap.** Not rerun
+  live. A practice save cannot set current HP, so no practice run starts low.
 
 ## Ranged on the troopers
 
