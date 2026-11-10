@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794309877099,
+ "at": 1794310428320,
  "jobs": [
   {
    "account": "Fingerblastr",
@@ -165,30 +165,6 @@
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "cow:ardougne-north"
-   ]
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
     "TRAIN_SKILL": "Attack",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
@@ -206,14 +182,14 @@
    ]
   },
   {
-   "account": "Dipstick",
+   "account": "Fingersmith",
    "script": "scripts/gather-combat.ts",
    "args": [
     "3000",
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
+    "TRAIN_SKILL": "Defence",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1"
@@ -221,12 +197,31 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 60 on the Ardougne cows",
+   "goal": "train Defence to 45 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-strength-60",
+   "template": "army-cow-defence-45",
    "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "Dipstick",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2582,3297"
    ]
   },
   {
