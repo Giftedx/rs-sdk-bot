@@ -1,0 +1,22 @@
+{
+ "id": "1794326828665-magicwanda-nabtheknob-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Magicwanda",
+ "to": "NabTheKnob",
+ "item": "Air rune",
+ "count": 10,
+ "start": 1794326828665,
+ "end": 1794329228665,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

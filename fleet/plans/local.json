@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794324140640,
+ "at": 1794325939885,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -271,6 +271,26 @@
    "autopilot": "local",
    "resources": [
     "knight:2671,3313"
+   ]
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3017,3288",
+    "TICKS": "3000",
+    "TARGET": "2000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3017,3288",
+   "role": "helper",
+   "template": "feathers@3017,3288",
+   "autopilot": "local",
+   "resources": [
+    "pen:3017,3288"
    ]
   },
   {
