@@ -112,7 +112,6 @@ RuneLite features the page lacks and can build from the public state. Each claim
 |---|---|---|---|
 | Wilderness attack range in the overlay box | `combatlevel/CombatLevelConfig.java` `wildernessAttackLevelRange`; `CombatLevelPlugin.combatAttackRange()` | `bots[].pos`, `bots[].combat`, roster combat | The Wilderness level formula is not checked against the pinned server. |
 | Minimap dot colours by player class | `minimap/MinimapConfig.java` `player`, `friend`, `team` | `rivals` names, `farms` | Whether `farms` rows carry every member name on the public page is not checked. |
-| Login and logout chat lines | `friendlist/FriendListPlugin.java` (`LOGINLOGOUTNOTIFICATION`) | `bots[].inWorld` between snapshots, roster against `rivals` | none |
 | Report button clock | `reportbutton/ReportButtonConfig.java` `time`; `TimeStyle.java` | `bots[].uptime`, browser clock, `snapshotAt` | none |
 | XP bar to the goal level with level marks | `xptracker/XpTrackerConfig.java` `intermediateLevelMarkers`; `XpInfoBox.java` | `bots[].goalSkill`, `goalLevel`, `skills[].xp` | XP is in the state for local-side accounts only. |
 | DPS counter | `dpscounter/DpsOverlay.java`, `DpsConfig.java` | The world feed in the 3D viewer (`playerHp`, npc hp per tick), not the public state | Needs a message from the viewer wrapper; counts every attacker's damage on the target. |
