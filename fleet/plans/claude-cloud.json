@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794348080438,
+ "at": 1794348683207,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -122,50 +122,46 @@
    "account": "Fatstack",
    "script": "scripts/gather-combat.ts",
    "args": [
-    "1500",
-    "trooper"
+    "3000",
+    "cow"
    ],
    "env": {
     "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
+   "goal": "train Defence to 99 on the Ardougne cows",
    "role": "combat",
-   "template": "army-trooper-defence-99",
+   "template": "army-cow-defence-99",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "cow:ardougne-north"
    ]
   },
   {
    "account": "Fingerblastr",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "1500",
-    "trooper"
+    "betty"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "ITEMS": "fire rune|air rune|earth rune",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-defence-99",
+   "goal": "buy elemental runes at Betty",
+   "role": "bank",
+   "template": "shop-runes",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "shop:betty"
    ]
   },
   {
