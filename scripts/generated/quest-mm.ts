@@ -1117,7 +1117,9 @@ try {
             .sort((a: any, b: any) => a.distance - b.distance)[0];
         await talk1('zoo monkey', zooMonkey, [], () => q.has(ITEM.backpackMonkey) && !q.dialogOpen(), 60);
         await unwearGreegree();
-        await talk1('minder out', minder, [], () => !inCage() && !q.dialogOpen(), 40);
+        // From inside the cage the bot cannot walk to the minder: the talk starts only when his walk brings him beside
+        // the bars. At seed 9 he stayed away for 100 ticks, so the bot keeps trying for up to 20 talks.
+        await talk1('minder out', minder, [], () => !inCage() && !q.dialogOpen(), 40, undefined, 20);
         q.milestone('zoo');
         // The stronghold's south gate (gnome_areagate 190 at 2459,3383, gnome_gate.rs2) is not a door in the SDK
         // collision, so the walk goes to it, through it by op, then north to the Grand Tree.
