@@ -103,3 +103,21 @@ Use this for every new or changed part.
 | Boss, raid and minigame plugins (`barrows`, `raids`, `corp`, `zalcano`, `wintertodt`, `tithefarm` and others) | That content is not in a 2004 world. |
 | `slayer`, `herbiboars`, `hunter`, `poh` | Skills or content not in a 2004 world. |
 | `screenshot`, `discord`, `twitch`, `gpu` settings | Client features; the page is a viewer, not the game client. |
+
+## Candidates
+
+RuneLite features the page lacks and can build from the public state. Each claim: the RuneLite source read at the pinned commit; the data the page holds; the gap.
+
+| Feature | RuneLite source | Data in the public state | Gap |
+|---|---|---|---|
+| Wilderness attack range in the overlay box | `combatlevel/CombatLevelConfig.java` `wildernessAttackLevelRange`; `CombatLevelPlugin.combatAttackRange()` | `bots[].pos`, `bots[].combat`, roster combat | The Wilderness level formula is not checked against the pinned server. |
+| Minimap dot colours by player class | `minimap/MinimapConfig.java` `player`, `friend`, `team` | `rivals` names, `farms` | Whether `farms` rows carry every member name on the public page is not checked. |
+| Login and logout chat lines | `friendlist/FriendListPlugin.java` (`LOGINLOGOUTNOTIFICATION`) | `bots[].inWorld` between snapshots, roster against `rivals` | none |
+| Report button clock | `reportbutton/ReportButtonConfig.java` `time`; `TimeStyle.java` | `bots[].uptime`, browser clock, `snapshotAt` | none |
+| XP bar to the goal level with level marks | `xptracker/XpTrackerConfig.java` `intermediateLevelMarkers`; `XpInfoBox.java` | `bots[].goalSkill`, `goalLevel`, `skills[].xp` | XP is in the state for local-side accounts only. |
+| DPS counter | `dpscounter/DpsOverlay.java`, `DpsConfig.java` | The world feed in the 3D viewer (`playerHp`, npc hp per tick), not the public state | Needs a message from the viewer wrapper; counts every attacker's damage on the target. |
+| Ammo infobox and count on the doll | `ammo/AmmoPlugin.java` | `bots[].equipment[]` with `slot` and `count` | Cloud snapshots carry no slot numbers. |
+| Inventory viewer overlay | `inventoryviewer/InventoryViewerOverlay.java` | `bots[].inventory` | none |
+| `!price` chat command | `chatcommands/ChatCommandsConfig.java` `price` | `economy.supplies`, `economy.itemValues` | Items outside the route supplies have no public price. |
+| Nearby players counter | `team/TeamConfig.java` `friendsChatMemberCounter` | roster tiles, `bots[].name`, `rivals` | none |
+| Item stats on food | `itemstats/ItemStatChanges.java` | none | Needs a heal table for the 2004 items, checked against the pinned server. |
