@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794321325582,
+ "at": 1794321566278,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -164,25 +164,6 @@
    ]
   },
   {
-   "account": "SporranDip",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2652,3318"
-   ]
-  },
-  {
    "account": "Fingersmith",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -214,7 +195,7 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
+    "TRAIN_SKILL": "Ranged",
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "10",
     "GIANT_BURY": "1"
@@ -222,9 +203,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
+   "goal": "train Ranged to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-strength-99",
+   "template": "army-trooper-ranged-99",
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
