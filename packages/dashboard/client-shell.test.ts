@@ -735,3 +735,11 @@ test('one of our names in a public chat line is marked, and the mark does not to
  expect(mention('is woodenstaff a bot? &amp; Main, Practice1')).toBe('is <span class="chat-hl">woodenstaff</span> a bot? &amp; Main, Practice1');
  expect(mention('Woodenstaffs')).toBe('Woodenstaffs');
 });
+
+test('a line with key=value pairs keeps the words between them, and a marked name stays out of the tooltip',()=>{
+ const code=shell.slice(shell.indexOf('  const KV='),shell.indexOf('  function renderChat(){'));
+ const E=(s:unknown)=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]!));
+ const {pretty,mention}=new Function('S','safeName','E',`${code};return {pretty,mention};`)({bots:[{name:'Woodenstaff'}]},(n:string)=>n,E);
+ expect(pretty('t=1200 mined iron ore total=57 done')).toBe('<span title="t=1200 mined iron ore total=57 done">tick 1,200 mined iron ore · total 57 done</span>');
+ expect(mention(pretty('Woodenstaff hp=10 str=20'))).toBe('<span title="Woodenstaff hp=10 str=20"><span class="chat-hl">Woodenstaff</span> hp 10 · str 20</span>');
+});

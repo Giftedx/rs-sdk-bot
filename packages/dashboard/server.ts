@@ -164,7 +164,7 @@ function readStatuses(): Map<string, Status> {
 
 // XP rate samples, xp/tick history (sparkline), phase start times.
 // Each sample keeps every skill's XP, so a rate can be taken for one skill (the goal) and not the sum of all.
-type Sample = { at: number; tick: number; xp: number; sk: Record<string, number>; coins: number; food: number };
+type Sample = { at: number; tick: number; xp: number; sk: Record<string, number>; coins: number; food: number; bank: boolean };
 // Food a gold farmer eats: the pack items the thieving scripts eat (lobsters, cakes, bread, chocolate, fish).
 const FOOD_RE = /lobster|cake|bread|chocolate|shrimp|anchov|trout|salmon|tuna|swordfish|pike|herring|sardine|meat|chicken/i;
 const coinsOf = (s: Status) => [...(s.inventory ?? []), ...(s.bank ?? [])].filter((i: any) => i?.name === 'Coins').reduce((n: number, i: any) => n + i.count, 0);
@@ -194,7 +194,7 @@ function track(s: Status) {
     // A status written before the game state loaded has 0 XP in every skill; as a sample it would make the next
     // real one look like a jump of the account's whole XP (214M xp/h on a level-99 thief).
     if (xp > 0 && (!list.length || list[list.length - 1]!.tick !== s.tick)) {
-        list.push({ at: s.at, tick: s.tick, xp, sk, coins: coinsOf(s), food: foodOf(s.inventory) + foodOf(s.bank) });
+        list.push({ at: s.at, tick: s.tick, xp, sk, coins: coinsOf(s), food: foodOf(s.inventory) + foodOf(s.bank), bank: s.bank != null });
         const rk = s.name + '|' + s.started;
         // Only a status that lists the bank: before the first bank view, the whole old bank would count as "made".
         if (!runStartCoins.has(rk) && s.bank != null) runStartCoins.set(rk, coinsOf(s));
@@ -206,6 +206,7 @@ function track(s: Status) {
     const ph = s.phase ?? '';
     if (ph && lastPhase.get(s.name) !== ph) {
         if (lastPhase.has(s.name)) {
+            phaseSince.delete(s.name + NL + lastPhase.get(s.name));
             const ev = { at: s.at, name: s.name, text: ph };
             events.unshift(ev);
             append(FILES.events, ev);
@@ -231,6 +232,8 @@ function flowRate(name: string, key: 'coins' | 'food') {
     if (b.tick <= a.tick) return null;
     // Food is counted in the pack and the bank; a rise means a trade or a new bank view, not negative eating.
     if (key === 'food') return a.food >= b.food ? (a.food - b.food) / (b.tick - a.tick) : null;
+    // Coins are counted in the pack and the bank; a bank that is known in only one sample is not income.
+    if (a.bank !== b.bank) return null;
     return (b.coins - a.coins) / (b.tick - a.tick);
 }
 function goalSkillOf(s: Status): string | null {
@@ -241,19 +244,21 @@ function goalSkillOf(s: Status): string | null {
 }
 
 // ---------- RESULT lines: every new result a status file shows, with pass/fail streaks per script ----------
-type Res = { at: number; name: string; goal: string; ok: boolean; text: string };
+type Res = { at: number; name: string; goal: string; ok: boolean; text: string; started?: number };
 const allResults = tailJsonl<Res>(FILES.results, 100_000);
 const results: Res[] = allResults.slice(-300).reverse();
 const died = (text: string) => /\bdied=true\b/.test(text) || /\bdied (?!=)/.test(text);
 // Per account, the newest result and the newest death. They do not drop out of the 300-row list when practice runs
 // fill it (three live farmer deaths vanished from the page that way).
-const lastResult = new Map<string, string>(), newestRes = new Map<string, Res>(), newestDeath = new Map<string, Res>();
-const noteRes = (r: Res) => { lastResult.set(r.name, r.text); newestRes.set(r.name, r); if (died(r.text)) newestDeath.set(r.name, r); };
+const lastResult = new Map<string, { text: string; started?: number }>(), newestRes = new Map<string, Res>(), newestDeath = new Map<string, Res>();
+const noteRes = (r: Res) => { lastResult.set(r.name, { text: r.text, started: r.started }); newestRes.set(r.name, r); if (died(r.text)) newestDeath.set(r.name, r); };
 for (const r of allResults) noteRes(r);
 function trackResult(s: Status) {
     const text = String(s.result ?? '');
-    if (!text || lastResult.get(s.name) === text.slice(0, 240)) return;
-    const r = { at: s.at, name: s.name, goal: String(s.goal ?? '').replace(/\.ts$/, ''), ok: /^ok\b/.test(text), text: text.slice(0, 240) };
+    // Two runs can end with the same text: the run start tells them apart.
+    const last = lastResult.get(s.name), started = typeof s.started === 'number' ? s.started : undefined;
+    if (!text || (last?.text === text.slice(0, 240) && (last.started === undefined || started === undefined || last.started === started))) return;
+    const r: Res = { started, at: s.at, name: s.name, goal: String(s.goal ?? '').replace(/\.ts$/, ''), ok: /^ok\b/.test(text), text: text.slice(0, 240) };
     noteRes(r);
     results.unshift(r);
     results.length = Math.min(results.length, 300);
@@ -317,14 +322,17 @@ setInterval(() => {
     cpuPct = all ? 100 * busy / all : 0;
     cpuPrev = now;
 }, 4000);
-let procsAt = 0;
+let procsAt = 0, procsScanning = false;
 async function scanProcs(force = false) {
     if (!clients.size && !force) return; // nobody watching: no PowerShell
+    if (procsScanning) return; // a slow scan must not stack a second PowerShell
+    procsScanning = true;
     procsAt = Date.now();
     try {
         const ps = "Get-CimInstance Win32_Process -Filter \"Name='bun.exe'\" | ForEach-Object { '{0}|{1}|{2}|{3}' -f $_.ProcessId, $_.CreationDate.ToString('o'), $_.WorkingSetSize, $_.CommandLine }";
         const p = Bun.spawn(['powershell', '-NoProfile', '-Command', ps], { stdout: 'pipe', stderr: 'ignore' ,windowsHide:true});
-        const text = await new Response(p.stdout).text();
+        const hung = setTimeout(() => p.kill(), 20_000);
+        const text = await new Response(p.stdout).text().finally(() => clearTimeout(hung));
         procs.length = 0;
         for (const line of text.split(NL)) {
             const [pid, created, ws, ...cmd] = line.trim().split('|');
@@ -336,7 +344,7 @@ async function scanProcs(force = false) {
             procs.push({ pid: Number(pid), script, started: Date.parse(created), mb: Math.round(Number(ws) / 2 ** 20), accounts });
         }
         procs.sort((a, b) => a.started - b.started);
-    } catch { /* not Windows */ }
+    } catch { /* not Windows */ } finally { procsScanning = false; }
 }
 setInterval(() => void scanProcs(), 30_000);
 
@@ -458,7 +466,8 @@ void refreshRanks();
 function rankDelta(name: string, board: string) {
     const l = rankHist.get(name + '|' + board) ?? [];
     if (l.length < 2) return { delta: 0, since: null as number | null, hist: l.map(r => r.rank) };
-    const day = Date.now() - 86_400_000, base = l.find(r => r.at >= day) ?? l[l.length - 2]!, now = l[l.length - 1]!;
+    // A row is written only when a rank changes, so the rank held 24 hours ago is the newest row older than that.
+    const day = Date.now() - 86_400_000, base = l[Math.max(l.findLastIndex(r => r.at < day), 0)]!, now = l[l.length - 1]!;
     return { delta: base.rank - now.rank, since: base.at, hist: l.slice(-30).map(r => r.rank) };
 }
 // Live #1 per skill board (category = skill index + 1, Quest Points 100: packages/planner/src/scout-cli.ts),
@@ -520,7 +529,7 @@ function lookupPlayer(name: string): Promise<Lookup | null> {
             const rows = r.ok ? hiscoreRows(await r.text(), SKILL_BOARDS) : [], seen = roster.get(key), online = !!seen && Date.now() - seen.seen < ONLINE_MS;
             const worn = online ? await wornOf(name, seen) : null;
             const entry: Lookup = { name, at: Date.now(), rows, worn, wornAt: worn ? Date.now() : null };
-            lookups.set(key, entry);
+            lookups.delete(key); lookups.set(key, entry);
             if (lookups.size > 400) lookups.delete(lookups.keys().next().value!);
             return entry;
         } catch { return null; } finally { await Bun.sleep(1200); }
@@ -931,7 +940,7 @@ function race() {
             append(GAP_FILE, rec);
         }
         return value;
-    } catch (e) { return { error: String(e) }; }
+    } catch (e) { const value = { error: String(e) }; raceCache = { key, value }; return value; }
 }
 // Readiness report only: no --authorize here. A dashboard refresh must never authorize login.
 async function runGate() {
@@ -1004,7 +1013,7 @@ function buildState() {
         const s0 = st.get(name) ?? ({ name, at: 0, server: 'rs-sdk-demo.fly.dev', role: 'unknown', skills: [] } as Status);
         const live = roster.get(name.toLowerCase());
         const inWorld = !!live && now - live.seen < 30_000;
-        const fresh = now - s0.at < 20_000;
+        const fresh = now - s0.at < 20_000 && s0.at <= now + 5_000;
         const mine = accountJobs.filter(j => j.account.toLowerCase() === name.toLowerCase());
         // Running by hand: a fresh status from a known script while the swarm has no enabled job for the account.
         const byHand = fresh && !isLocalServer(s0.server) && !mine.some(j => j.enabled && j.script) ? SCRIPT_ROLE[String(s0.goal ?? '')] : undefined;
@@ -1013,7 +1022,8 @@ function buildState() {
         const guess = NO_ROLE.has(s.role) && name !== MAIN ? inferRole(s, rankRows) : null;
         const skill = byHand ? byHand.skill ?? null : ROLE_SKILL[s.role] ?? (guess && (s.skills ?? []).some((k: any) => k.name === guess) ? guess : null);
         const sk = skill ? (s.skills ?? []).find((k: any) => k.name === skill) : null;
-        const target = Number(s.env?.target ?? 99) || 99;
+        // TARGET is a level only when it is a whole number from 2 to 99; some scripts use it for a count or a name.
+        const targetRaw = Number(s.env?.target), target = Number.isInteger(targetRaw) && targetRaw >= 2 && targetRaw <= 99 ? targetRaw : 99;
         const r = fresh ? rate(name, skill) : null;
         // XP left to this run's TARGET level on this server's curve (packages/planner/src/curve.ts), not always 99.
         const xpLeft = sk ? Math.max(0, xpForLevel(target) - sk.xp) : null;
@@ -1073,7 +1083,7 @@ function buildState() {
     const boards = [...SKILL_BOARDS.map(b => {
         const top = topOf(b);
         let best: any = null;
-        for (const bot of bots) for (const r of bot.ranks) if (r.board === b && (!best || r.rank < best.rank)) best = { ...r, name: bot.name };
+        for (const bot of bots) if (bot.name !== MAIN) for (const r of bot.ranks) if (r.board === b && (!best || r.rank < best.rank)) best = { ...r, name: bot.name };
         const ours = best ? parseTime(best.time) : null;
         // close: 1 = level with #1 or faster, toward 0 = far behind (levels, then time).
         const gap = best && top ? (best.level >= top.level
@@ -1140,7 +1150,7 @@ function buildState() {
             const rivals = rivalsView(boardTops, roster, fleet, best, now);
             const contention = contentionView(fleetList(join(FILES.fleet, 'claims')), roster, fleet, now);
             lookupWanted = [...new Set([...rivals.flatMap(r => r.rows.filter(x => !x.fleet).map(x => x.name)), ...contention.flatMap(s => s.others)])];
-            const looked = Object.fromEntries([...lookups.values()].sort((a, b) => b.at - a.at).slice(0, 250).map(l => [l.name.toLowerCase(), lookupView(l.name, l.rows, l.at, roster.get(l.name.toLowerCase()), now, l.worn, l.wornAt)]));
+            const looked = Object.fromEntries([...lookups.values()].sort((a, b) => b.at - a.at).slice(0, 250).map(l => [l.name.toLowerCase().replace(SECRET_RE, SECRET_MARK), lookupView(l.name, l.rows, l.at, roster.get(l.name.toLowerCase()), now, l.worn, l.wornAt)]));
             return { roster: rosterView(roster, now), rivals, contention, lookups: looked, farms: farmsView(roster, fleet, contention, now), overtake: overtakeView(boardTops, bots as any, xpForLevel) };
         })(),
         prs: prRows,
@@ -1198,7 +1208,11 @@ function current() {
 setInterval(() => {
     if (!clients.size) return;
     const msg = `data: ${current()}\n\n`;
-    for (const c of clients) { try { c.enqueue(msg); } catch { clients.delete(c); } }
+    for (const c of clients) {
+        // A client that holds the socket open and does not read would queue each state without limit.
+        if ((c.desiredSize ?? 1) < -64) { clients.delete(c); try { c.close(); } catch { /* closed */ } continue; }
+        try { c.enqueue(msg); } catch { clients.delete(c); }
+    }
 }, 2000);
 
 // The page embeds the rs-world viewer (COEP require-corp); credentialless keeps Google Fonts loadable.
@@ -1236,14 +1250,14 @@ Bun.serve({
         if(['/map-shell.css','/map-shell.js','/client-shell.css','/client-shell.js','/client-viewer.css','/operations.css','/operations.js','/xp-tracker.js'].includes(url.pathname))return new Response(Bun.file(join(import.meta.dir,url.pathname.slice(1))),{headers:{'content-type':url.pathname.endsWith('.css')?'text/css':'text/javascript','cache-control':'no-store'}});
         if(url.pathname.startsWith('/client-assets/')) {
             const name=url.pathname.slice('/client-assets/'.length);
-            if(name!=='npc-names.json'&&!/^[a-zA-Z0-9_-]+\.(png|ttf|txt)$/.test(name))return new Response('Invalid asset',{status:400});
+            if(!['npc-names.json','item-stats.json'].includes(name)&&!/^[a-zA-Z0-9_-]+\.(png|ttf|txt)$/.test(name))return new Response('Invalid asset',{status:400});
             const file=Bun.file(join(import.meta.dir,'client-assets',name));
             return new Response(file,{headers:{'cache-control':'public,max-age=3600'}});
         }
         if (url.pathname === '/api/player') {
             const name = url.searchParams.get('name') ?? '';
             if (!/^[A-Za-z0-9_ -]{1,12}$/.test(name)) return Response.json({ error: 'a player name is 1-12 letters, digits, spaces, - or _' }, { status: 400 });
-            if (name.toLowerCase() === MAIN.toLowerCase()) return Response.json({ error: 'not available' }, { status: 404 });
+            if (name.replace(/[ _-]/g, '').toLowerCase().includes(MAIN.toLowerCase())) return Response.json({ error: 'not available' }, { status: 404 });
             return lookupPlayer(name).then(hit => hit ? Response.json(lookupView(name, hit.rows, hit.at, roster.get(name.toLowerCase()), Date.now(), hit.worn, hit.wornAt)) : Response.json({error:'Player service unavailable; try again'},{status:502}));
         }
         if (url.pathname === '/api/viewer-health') {const available=viewerAvailable();return Response.json({available,url:'/viewer/',reason:available?null:'Reviewed 3D viewer assets/cache are unavailable or the build version is unsupported; 2D remains available.'},{headers:{'cache-control':'no-store'}});}
@@ -1260,7 +1274,7 @@ Bun.serve({
         // The page relays the 3D viewer's follow-change timings (time until the destination is loaded).
         if (url.pathname === '/api/viewer-timing' && req.method === 'POST') {
             return req.json().then((t: any) => {
-                if (t && typeof t.ms === 'number') { viewerTimings.unshift({ at: Date.now(), mode: String(t.mode), ms: t.ms, tiles: Number(t.tiles) || 0, frames: Number(t.frames) || 0, blankFrames: Number(t.blankFrames) || 0, holdFrames: Number(t.holdFrames) || 0 }); viewerTimings.length = Math.min(viewerTimings.length, 40); }
+                if (t && Number.isFinite(t.ms)) { viewerTimings.unshift({ at: Date.now(), mode: String(t.mode).slice(0, 24), ms: t.ms, tiles: Number(t.tiles) || 0, frames: Number(t.frames) || 0, blankFrames: Number(t.blankFrames) || 0, holdFrames: Number(t.holdFrames) || 0 }); viewerTimings.length = Math.min(viewerTimings.length, 40); }
                 return new Response('ok');
             }).catch(() => new Response('bad', { status: 400 }));
         }
@@ -1269,7 +1283,7 @@ Bun.serve({
         // The 3D viewer (localhost:3000) fetches the names whose nameplates it must hide, so the dashboard page
         // never holds the name: the iframe URL carries only this endpoint.
         // Our live accounts, for the viewer's gold nameplates (the main account stays hidden, not highlighted).
-        if (url.pathname === '/api/our-names') return Response.json([...liveAccounts(), ...remoteNames()].filter(n => n !== MAIN), { headers: { 'access-control-allow-origin': 'http://localhost:3000', 'cross-origin-resource-policy': 'cross-origin', 'cache-control': 'no-store' } });
+        if (url.pathname === '/api/our-names') return Response.json([...liveAccounts(), ...remoteNames()].filter(n => n.toLowerCase() !== MAIN.toLowerCase()), { headers: { 'access-control-allow-origin': 'http://localhost:3000', 'cross-origin-resource-policy': 'cross-origin', 'cache-control': 'no-store' } });
         if (['/api/reveal', '/api/hidden-names'].includes(url.pathname) && !isLoopback(server.requestIP(req)?.address ?? '')) return new Response('forbidden', { status: 403 });
         if (url.pathname === '/api/hidden-names') return Response.json([MAIN], { headers: { 'access-control-allow-origin': 'http://localhost:3000', 'cross-origin-resource-policy': 'cross-origin', 'cache-control': 'no-store' } });
         // The server may listen on every address (DASH_HOST); only this PC may read the main account's name.

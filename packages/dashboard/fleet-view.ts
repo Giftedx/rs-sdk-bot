@@ -24,7 +24,7 @@ const coinsIn=(list:any)=>(Array.isArray(list)?list:[]).filter((i:any)=>i?.id===
 export function fleetSidesView(snapshots:any[],orders:any[],now:number,receipts:any[]=[]){
  const sides=snapshots.filter(s=>s&&typeof s.side==='string'&&Array.isArray(s.accounts)).map(s=>({
   side:s.side,at:Number.isFinite(s.at)?s.at:null,late:!Number.isFinite(s.at)||now-s.at>3*SIDE_SYNC_MS,
-  accounts:s.accounts.map((a:any)=>({name:String(a.name),at:Number.isFinite(a.at)?a.at:null,
+  accounts:s.accounts.filter((a:any)=>a&&typeof a==='object').map((a:any)=>({name:String(a.name),at:Number.isFinite(a.at)?a.at:null,
    total:Array.isArray(a.skills)?a.skills.filter((k:any)=>k?.name!=='Overall').reduce((n:number,k:any)=>n+(Number(k.level)||0),0):null,
    coins:coinsIn(a.bank)+coinsIn(a.inventory)})).sort((x:any,y:any)=>x.name.localeCompare(y.name))}))
   .sort((a,b)=>(a.side==='local'?-1:b.side==='local'?1:a.side.localeCompare(b.side)));

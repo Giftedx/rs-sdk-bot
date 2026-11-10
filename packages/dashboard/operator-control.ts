@@ -14,17 +14,18 @@ export function createOperatorControl(options:{root:string;readOnly?:boolean;non
  const read=(p:string)=>JSON.parse(readFileSync(p,'utf8'));
  const owned=()=>{const path=join(root,'vendor/rs-sdk/bots');return existsSync(path)?readdirSync(path,{withFileTypes:true}).filter(n=>n.isDirectory()&&/^[A-Za-z0-9]{1,12}$/.test(n.name)).map(n=>n.name):[];};
  function catalog(){return readdirSync(join(root,'packages/router/tasks')).filter(n=>/^[-a-z0-9]+\.json$/.test(n)).map(n=>{
-  const d=read(join(root,'packages/router/tasks',n));return{id:d.id,goal:d.goal,entry:d.entry,consumer:d.consumer,files:d.files,checks:(d.checks??[]).map((c:any)=>({id:c.id,phase:c.phase,timeoutMs:c.timeoutMs}))};
- });}
+  // A task file that another process is writing is not readable yet: the list leaves it out.
+  try{const d=read(join(root,'packages/router/tasks',n));return{id:d.id,goal:d.goal,entry:d.entry,consumer:d.consumer,files:d.files,checks:(d.checks??[]).map((c:any)=>({id:c.id,phase:c.phase,timeoutMs:c.timeoutMs}))};}catch{return null;}
+ }).filter(c=>c!==null);}
  function metadata(){
   const inbox=join(directory,'requests');
   let coordinatorRunning=false;
   try{const owner=read(join(directory,'owner.json'));coordinatorRunning=Number.isSafeInteger(owner.pid)&&owner.pid>0&&alive(owner.pid);}catch{}
   return{nonce,readOnly:!!options.readOnly,coordinatorRunning,goals:GOALS,roles:Object.keys(NAMES).filter(n=>n!=='main'),paused:existsSync(join(root,'.practice/stop-coordinator')),fleetPaused:existsSync(join(root,'.practice/stop-swarm')),capabilities:catalog(),
-   accountHolds:owned().filter(name=>existsSync(join(root,'.practice','stop-'+name))).map(name=>({name,owner:readFileSync(join(root,'.practice','stop-'+name),'utf8').startsWith('dashboard-stop:')?'dashboard':'other'})),
+   accountHolds:owned().filter(name=>existsSync(join(root,'.practice','stop-'+name))).map(name=>{let text='';try{text=readFileSync(join(root,'.practice','stop-'+name),'utf8');}catch{}return{name,owner:text.startsWith('dashboard-stop:')?'dashboard':'other'};}),
    requests:existsSync(audit)?readdirSync(audit).filter(n=>/^[a-f0-9-]+\.json$/.test(n)).map(n=>{
-    const r=read(join(audit,n)),file=join(inbox,r.id+'.request.json');return{id:r.id,action:r.action,at:r.at,taskId:r.taskId??null,status:r.action==='queue'?(existsSync(file+'.accepted')?'accepted':existsSync(file+'.rejected')?'rejected':'submitted'):r.status};
-   }).sort((a,b)=>b.at-a.at).slice(0,30):[]};
+    try{const r=read(join(audit,n)),file=join(inbox,r.id+'.request.json');return{id:r.id,action:r.action,at:r.at,taskId:r.taskId??null,status:r.action==='queue'?(existsSync(file+'.accepted')?'accepted':existsSync(file+'.rejected')?'rejected':'submitted'):r.status};}catch{return null;}
+   }).filter(r=>r!==null).sort((a,b)=>b.at-a.at).slice(0,30):[]};
  }
  return async(req:Request,remote:string)=>{
   if(!['127.0.0.1','::1','::ffff:127.0.0.1'].includes(remote))return Response.json({error:'Local operator access only'},{status:403});

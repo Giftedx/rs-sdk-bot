@@ -150,19 +150,25 @@ async function pollCommands(now:number,nonce:string|null):Promise<number>{
   if(entry?.type!=='file'||!/^[a-f0-9-]{36}\.json$/.test(String(entry.name)))continue;
   const path=`commands/${entry.name}`;
   let outcome:{status:string;note:string|null};
+  // A read that fails is not the command's fault: the file stays for the next cycle, and its age limit ends the retries.
+  let file:any,commits:any;
+  try{file=await ghJson('api',`repos/${REPO}/contents/${path}?ref=main`);commits=await ghJson('api',`repos/${REPO}/commits?path=${path}&sha=main&per_page=1`);}
+  catch(e){console.log(`PUBLISH command ${entry.name} not read: ${String(e instanceof Error?e.message:e).slice(0,160)}`);continue;}
+  let accepted:{id:string;action:string;account:string|null;at:number;login:string|null}|null=null;
   try{
-   const file=await ghJson('api',`repos/${REPO}/contents/${path}?ref=main`);
    const text=Buffer.from(String(file.content??''),'base64').toString('utf8'),raw=JSON.parse(text);
    if(typeof raw?.id!=='string'||!ID_RE.test(raw.id)||raw.id!==entry.name.slice(0,-5))throw Error('file name and command id differ');
    if(typeof raw.at!=='number')throw Error('command carries no time');
-   const commits=await ghJson('api',`repos/${REPO}/commits?path=${path}&sha=main&per_page=1`);
    const login:string|null=commits?.[0]?.committer?.login??commits?.[0]?.author?.login??null;
+   // The commit time is GitHub's clock; the time in the file is the phone's clock, which can be wrong.
+   const committedAt=Date.parse(commits?.[0]?.commit?.committer?.date??'');
    if(existsSync(receiptPath(root,raw.id)))outcome={status:'already-applied',note:null};
    else{
     const fleet=(ACTIONS as readonly string[]).includes(raw.action),console_=CONSOLE_ACTIONS.has(raw.action);
     if(!fleet&&!console_)throw Error(`unknown action ${String(raw.action).slice(0,40)}`);
     const cmd=fleet?validateCommand(raw):{id:raw.id,action:raw.action,at:raw.at,account:typeof raw.account==='string'?raw.account:undefined};
-    const gate=authorizeCommand(cmd as any,{via:'github-commit',login},{owner,now,owned,main:MAIN_ACCOUNT,applied:id=>existsSync(receiptPath(root,id)),maxAgeMs:MAX_AGE_MS});
+    const gate=authorizeCommand({...cmd,at:Number.isFinite(committedAt)?committedAt:cmd.at} as any,{via:'github-commit',login},{owner,now:Date.now(),owned,main:MAIN_ACCOUNT,applied:id=>existsSync(receiptPath(root,id)),maxAgeMs:MAX_AGE_MS});
+    accepted={id:raw.id,action:raw.action,account:cmd.account??null,at:raw.at,login};
     if(!gate.ok)outcome={status:'refused',note:gate.reason};
     else if(fleet)outcome=await applyCommand(cmd as any,{root,now});
     else if(!nonce)outcome={status:'refused',note:'the local dashboard gave no command session'};
@@ -174,7 +180,11 @@ async function pollCommands(now:number,nonce:string|null):Promise<number>{
     if(!existsSync(receiptPath(root,raw.id)))writeReceipt(root,{id:raw.id,action:raw.action,account:cmd.account??null,at:now,requestedAt:raw.at,by:login,status:outcome.status,note:outcome.note,source:'remote'});
     applied++;console.log(`PUBLISH command ${raw.action} ${cmd.account??''} by ${login}: ${outcome.status}${outcome.note?' ('+outcome.note+')':''}`);
    }
-  }catch(e){outcome={status:'invalid',note:String(e instanceof Error?e.message:e).slice(0,160)};console.log(`PUBLISH command ${entry.name} invalid: ${outcome.note}`);}
+  }catch(e){
+   outcome={status:accepted?'failed':'invalid',note:String(e instanceof Error?e.message:e).slice(0,160)};console.log(`PUBLISH command ${entry.name} ${outcome.status}: ${outcome.note}`);
+   // A valid command that failed while it ran still gets its answer on the page.
+   if(accepted&&!existsSync(receiptPath(root,accepted.id)))try{writeReceipt(root,{id:accepted.id,action:accepted.action,account:accepted.account,at:now,requestedAt:accepted.at,by:accepted.login,status:outcome.status,note:outcome.note,source:'remote'});}catch{/* the log line stands */}
+  }
   // Remove the command file whatever happened: the receipt in control.json is the answer.
   const del=await gh('api','-X','DELETE',`repos/${REPO}/contents/${path}`,'-f',`message=fleet command ${entry.name.slice(0,8)}: ${outcome.status}`,'-f',`sha=${entry.sha}`,'-f','branch=main');
   if(!del.ok)console.log(`PUBLISH command delete ${entry.name}: ${del.out.slice(0,160)}`);
@@ -193,15 +203,17 @@ async function cycle(){
   const applied=await pollCommands(now,meta?.nonce??null);
   if(applied){({state,meta}=await collect());note+=` commands=${applied}`;}
  }
- const control=JSON.stringify(controlView(state,meta)),pub=JSON.stringify(publicView(state));
- writeAtomic(join(DIR,'out','control.json'),control);writeAtomic(join(DIR,'out','public.json'),pub);
+ // The public view refuses a state that still names the main account. The owner's control view must still go out.
+ const control=JSON.stringify(controlView(state,meta));let pub:string|null=null,pubError:unknown=null;
+ try{pub=JSON.stringify(publicView(state));}catch(e){pubError=e;}
+ writeAtomic(join(DIR,'out','control.json'),control);if(pub!==null)writeAtomic(join(DIR,'out','public.json'),pub);
  if(REPO){
   const main=join(DIR,'repo');
   if(control!==lastControl){writeAtomic(join(DIR,'data','control.json'),control);note+=` data=${await pushSingleCommit(join(DIR,'data'),'data','fleet control state')}`;lastControl=control;}
   // A server that has just started has no market prices or board tops yet; that thin file would stay live for a
   // whole push period, so the push waits for a warm state, at most three periods from the first cold cycle.
   const warm=stateWarm(state);if(warm)coldSince=0;else if(!coldSince)coldSince=now;
-  if(pub!==lastPublic&&now-lastSitePush>=PUBLIC_MS&&(warm||now-coldSince>=3*PUBLIC_MS)){
+  if(pub!==null&&pub!==lastPublic&&now-lastSitePush>=PUBLIC_MS&&(warm||now-coldSince>=3*PUBLIC_MS)){
    const site=join(DIR,'site');
    for(const n of readdirSync(site))if(n!=='.git')rmSync(join(site,n),{recursive:true,force:true});
    if(existsSync(join(main,'site')))cpSync(join(main,'site'),site,{recursive:true});
@@ -210,6 +222,7 @@ async function cycle(){
    note+=` site=${await pushPublicCommit(site)}`;lastSitePush=now;lastPublic=pub;
   }
  }
+ if(pub===null)throw pubError;
  console.log(`PUBLISH ok ${new Date(now).toISOString()} ${note} control=${Math.round(control.length/1024)}K public=${Math.round(pub.length/1024)}K`);
 }
 
@@ -220,7 +233,7 @@ if(import.meta.main){
   const child=spawn(process.execPath,[join(root,'packages','dashboard','publish.ts')],{cwd:root,detached:true,windowsHide:true,stdio:['ignore',out,out],env:process.env});
   closeSync(out);child.unref();console.log(`PUBLISH started pid ${child.pid} (log .practice/dashboard-publish.log)`);process.exit(0);
  }
- if(existsSync(lock)){const pid=Number(readFileSync(lock,'utf8'));if(pid!==process.pid&&alive(pid)){console.log(`PUBLISH already running pid ${pid}`);process.exit(0);}}
+ if(existsSync(lock)){const pid=Number(readFileSync(lock,'utf8'));if(pid>0&&pid!==process.pid&&alive(pid)){console.log(`PUBLISH already running pid ${pid}`);process.exit(0);}}
  mkdirSync(prac,{recursive:true});writeFileSync(lock,String(process.pid));
  const release=()=>{try{if(readFileSync(lock,'utf8')===String(process.pid))rmSync(lock);}catch{/* gone */}};
  process.on('exit',release);process.on('SIGINT',()=>process.exit(0));process.on('SIGTERM',()=>process.exit(0));

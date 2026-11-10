@@ -55,7 +55,7 @@ export function publicView(state:any,main=MAIN_ACCOUNT){
  const isMain=(n:any)=>n===MAIN_MARK||String(n??'').toLowerCase()===main.toLowerCase();
  const pick=(o:any,keys:readonly string[])=>Object.fromEntries(keys.filter(k=>o&&k in o).map(k=>[k,o[k]]));
  // Practice bots play on this PC's local test server, not the public world: their runs are the owner's testing.
- const bots=(s.bots??[]).filter((b:any)=>!isMain(b?.name)&&!b?.reserved&&!b?.practice).map((b:any)=>{const copy:any=pick(b,PUBLIC_BOT);for(const k of ['goal','currentGoal'])if(k in copy)copy[k]=publicGoal(copy[k]);return copy;});
+ const bots=(s.bots??[]).filter((b:any)=>!isMain(b?.name)&&!b?.reserved&&!b?.practice).map((b:any)=>{const copy:any=pick(b,PUBLIC_BOT);for(const k of ['goal','currentGoal'])if(k in copy)copy[k]=publicGoal(copy[k]);if(copy.death)copy.death={at:copy.death.at,text:'died'};return copy;});
  const out:any=pick(s,PUBLIC_KEYS);
  out.bots=bots;
  // A finished or stopped run, by its goal: the run's counters (coins banked, items bought) are the owner's.
@@ -75,6 +75,9 @@ export function publicView(state:any,main=MAIN_ACCOUNT){
  if(Array.isArray(out.contention))out.contention=out.contention.map((c:any)=>({...c,others:(c.others??[]).filter((n:any)=>!isMain(n)),ours:(c.ours??[]).filter((n:any)=>!isMain(n))}));
  if(out.lookups&&typeof out.lookups==='object')out.lookups=Object.fromEntries(Object.entries(out.lookups).filter(([k,v]:any)=>!isMain(k)&&!isMain(v?.name)));
  if(Array.isArray(out.farms))out.farms=out.farms.map((g:any)=>({...g,names:(g.names??[]).filter((n:any)=>!isMain(n))}));
+ // An icon entry names an item. The public keeps the icons of items it can see: packs, worn items and lookups.
+ if(out.icons&&typeof out.icons==='object'){const seen=new Set<string>(),walk=(v:any)=>{if(Array.isArray(v))v.forEach(walk);else if(v&&typeof v==='object'){if(typeof v.name==='string')seen.add(v.name);for(const x of Object.values(v))if(x&&typeof x==='object')walk(x);}};
+  for(const b of out.bots)for(const k of ['inventory','equipment'])walk(b[k]);walk(out.lookups);out.icons=Object.fromEntries(Object.entries(out.icons).filter(([k])=>seen.has(k)));}
  out.hosted={at:Date.now(),kind:'public'};
  const text=JSON.stringify(out);
  if(new RegExp(main.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i').test(text))throw Error('public view still names the main account; nothing published');
