@@ -18,7 +18,7 @@ Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). 
 
 ## Routes
 
-**Claim:** every catalog route is in one of three groups: 181 of 216 have a case that passes at seed 7, 33 cannot run as one case and name the cause, and 2 have a case that fails with a recorded error (`waterfall`, `mm`). **Conditions:** lockstep, a new engine for each case; the start state of each case comes from the worker's entry checks, a proof or the map files. **Evidence:** `bun run bench --coverage`; `.practice/aio-bench/baseline-seed7.json`; the 105 non-quest cases run in 271 s on six engines. **Gap:** a case proves one small job from one start state, not the route at every level or place.
+**Claim:** every catalog route is in one of three groups: 184 of 219 have a case that passes at seed 7, 33 cannot run as one case and name the cause, and 2 have a case that fails with a recorded error (`waterfall`, `mm`). **Conditions:** lockstep, a new engine for each case; the start state of each case comes from the worker's entry checks, a proof or the map files. **Evidence:** `bun run bench --coverage`; `.practice/aio-bench/baseline-seed7.json`; the 105 non-quest cases run in 271 s on six engines. **Gap:** a case proves one small job from one start state, not the route at every level or place.
 
 **Claim:** `viking`, `squire` and `zanaris` pass at every seed tried. **Conditions:** seeds 7 to 10, a new engine for each case. **Evidence:** `viking` passes at 7, 8 and 9 (3001, 2727, 2787 ticks): the retreat rule fired in Koschei's fight, which ends at 0 hp by design, and `planLowHp` in `quest-lib` now switches the rule off for that fight. `squire` passes at four seeds with a wider bound on the cupboard search, and `zanaris` with a wider bound on the axe hunt.
 
@@ -63,3 +63,11 @@ Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). 
 ## XP for each 1,000 ticks
 
 **Claim:** each run prints `xpGain`, the XP over all skills that the account gained, on its `LEDGER` line, and the bench table shows it for each 1,000 ticks. Every case has this speed number with no pattern for each case. **Conditions:** XP rate 25 on practice; a case that ends after one unit of work has a rate that is mostly its walk. **Evidence:** `packages/core/src/ledger.ts`, `scripts/measure/aio-practice-bench.ts`. **Gap:** a route that makes gold or supplies and no XP shows 0.
+
+## A bone buried inside each pickpocket stun
+
+**Claim:** at the Ardougne knights, a bone buried inside each 8-tick stun costs no Thieving XP. In 600 ticks the account gains the same Thieving XP with and without the bones at each seed (432037, 446790 and 307695 at seeds 7, 8 and 9), and the 22 dragon bones in the pack add 39600 Prayer XP at each seed. An enchant cast in each stun adds 8750 Magic XP; its Thieving XP is 465757, 434145 and 432037. **Conditions:** lockstep, 600 ticks, Thieving 99, Hitpoints 99, XP rate 25; cases `skiller:thieving:stun-base`, `stun-bury`, `stun-enchant`. **Evidence:** `bun run bench '^skiller:thieving:stun-' --all --seed <n>` for seeds 7, 8 and 9; the `RESULT` line of each run in `.practice/aio-bench/output/`. **Gap:** the bury run ends its 22 bones before the cap, so the Prayer XP for each stun tick is higher than this total shows. The enchant casts change the random rolls of the picks, so its Thieving XP is not a matched comparison. No knight route (`goldfarm.ts`) buries bones yet.
+
+## A script that acts only in tick callbacks
+
+**Claim:** the lockstep client sends its tick acknowledgement at once only when the script waits for a tick through `watchTickStream`, `waitTicks` or a state wait. A script that acts only inside `onTick` callbacks is not seen as waiting, so each tick waits for `SIM_BUSY_MS` (2000 ms). Such a script raises `tickWaits.active` for its callback loop. **Conditions:** `SIM_LOCKSTEP=1`. **Evidence:** `scripts/measure/stun-guest.ts` took more than 500 s for 600 ticks and takes about 60 s with the counter raised; `packages/core/src/inprocess.ts`. **Gap:** no check finds other scripts of this kind.

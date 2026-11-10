@@ -12,6 +12,7 @@
 // else it sends a guest action when the action's delay ends before the stun does (bury: now + 1, enchant: now + 2).
 import { openBot, finish, countItems } from '../../packages/core/src/bot';
 import { waitTicks } from '../../packages/core/src/ticks';
+import { tickWaits } from '../../packages/core/src/tick-stream';
 
 const [bot, tArg] = process.argv.slice(2);
 const CAP = Number(tArg ?? 600);
@@ -48,10 +49,13 @@ try {
     const perStun: number[] = [];
     let guestThisStun = 0;
     let gx = xp('Prayer') + xp('Magic');
+    // The loop below acts only inside tick callbacks. This tells the lockstep client that the script waits for the
+    // next tick, so each tick is acknowledged at once and not after the busy limit.
+    tickWaits.active++;
     await new Promise<void>(resolve => {
         const off = s.onTick(() => {
             const now = s.tick();
-            if (now - t0 >= CAP || hp() <= 0) { off(); resolve(); return; }
+            if (now - t0 >= CAP || hp() <= 0) { off(); tickWaits.active--; resolve(); return; }
             for (; msgIdx < msgs.length; msgIdx++) {
                 if (/you've been stunned/i.test(msgs[msgIdx]!.text)) {
                     if (stunEnd > 0) perStun.push(guestThisStun);
