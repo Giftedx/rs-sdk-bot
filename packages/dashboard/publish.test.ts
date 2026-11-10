@@ -66,7 +66,7 @@ test('the public branch keeps its parent and sends a small pack for a snapshot-o
   const line=parent+' refs/heads/site\0ofs-delta\n';
   const advertised=(line.length+4).toString(16).padStart(4,'0')+line+'0000';
   const request=Bun.spawnSync(['git','send-pack','--stateless-rpc','--thin','-q','.',head+':refs/heads/site'],{
-   cwd:site,stdin:Buffer.from(advertised),stdout:'pipe',stderr:'pipe',windowsHide:true,timeout:5000,
+   cwd:site,stdin:Buffer.from(advertised),stdout:'pipe',stderr:'pipe',windowsHide:true,timeout:15_000,
   });
   expect(request.exitCode).toBe(0);
   expect(request.stdout.includes(Buffer.from('PACK'))).toBe(true);

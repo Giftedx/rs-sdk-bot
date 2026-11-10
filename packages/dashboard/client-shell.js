@@ -227,14 +227,20 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     for(const s of spots){const p=byName.get(s.label);if(!p)byName.set(s.label,{...s,others:[...s.others],ours:[...s.ours]});else{p.others=[...new Set([...p.others,...s.others])].sort();p.ours=[...new Set([...p.ours,...s.ours])].sort();}}
     return [...byName.values()].sort((a,b)=>b.others.length-a.others.length);
   }
-  // A spot's name: what the bots do there and the nearest named place within 128 tiles, with the side it is on when
-  // it is more than 48 tiles away.
+  // The nearest named place within 128 tiles of a tile, with the side the tile is on when it is more than 48 tiles
+  // away ("west of Ardougne"). Empty when no place is that near: a reader gets no bare coordinates.
+  function placeNear(x,z){
+    let best=null,bd=128*128;
+    for(const [n,px,pz] of (typeof PLACES!=='undefined'?PLACES:[])){const d=(px-x)**2+(pz-z)**2;if(d<bd){bd=d;best=[n,x-px,z-pz];}}
+    if(!best)return '';
+    const [n,dx,dz]=best;
+    return (bd>48*48?(Math.abs(dx)>Math.abs(dz)?(dx<0?'west of ':'east of '):(dz<0?'south of ':'north of ')):'')+n;
+  }
+  window.atlasPlaceNear=placeNear;
+  // A spot's name: what the bots do there and where.
   function spotName(s){
-    const kind=s.kind.replace(/^./,c=>c.toUpperCase());let best=null,bd=128*128;
-    for(const [n,px,pz] of (typeof PLACES!=='undefined'?PLACES:[])){const d=(px-s.x)**2+(pz-s.z)**2;if(d<bd){bd=d;best=[n,s.x-px,s.z-pz];}}
-    if(!best)return kind+' spot';
-    const [n,dx,dz]=best,far=bd>48*48;
-    return kind+' · '+(far?(Math.abs(dx)>Math.abs(dz)?(dx<0?'west of ':'east of '):(dz<0?'south of ':'north of ')):'')+n;
+    const kind=s.kind.replace(/^./,c=>c.toUpperCase()),place=placeNear(s.x,s.z);
+    return place?kind+' · '+place:kind+' spot';
   }
   const nameButtons=(names,max)=>names.slice(0,max).map(n=>`<button data-lookup="${E(n)}">${E(n)}</button>`).join('')+(names.length>max?`<span class="xp-muted">+${names.length-max} more</span>`:'');
   function worldPanel(){
@@ -288,7 +294,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(ours)return;
     fetch('/api/player?name='+encodeURIComponent(name)).then(async r=>{const j=await r.json();if(!r.ok)throw Error(j.error||'Player service returned HTTP '+r.status);return j;}).then(j=>{if(worldLookupRequest!==request)return;worldLookup=j;refreshWorldLookup();}).catch(e=>{if(worldLookupRequest!==request)return;worldLookup={name,rows:null,note:'Lookup failed: '+(e?.message||e)};refreshWorldLookup();});
   }
-  window.atlasLookup=lookup;window.atlasPlaceOf=placeOf;
+  window.atlasLookup=lookup;
   // Infoboxes (RuneLite): the watched account's session and time to target, or one box per playing bot.
   function infoboxes(){
     const el=hud.querySelector('.game-infoboxes'),b=account();
