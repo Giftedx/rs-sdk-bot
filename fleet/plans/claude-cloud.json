@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794313573910,
+ "at": 1794313701255,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -92,7 +92,7 @@
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
+    "TRAIN_SKILL": "Strength",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1"
@@ -100,9 +100,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 45 on the Ardougne cows",
+   "goal": "train Strength to 60 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-defence-45",
+   "template": "army-cow-strength-60",
    "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
