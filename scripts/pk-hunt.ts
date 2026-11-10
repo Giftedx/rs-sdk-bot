@@ -15,7 +15,8 @@ import { existsSync } from 'node:fs';
 import type { Session } from '../packages/core/src/inprocess';
 import { loadOwners } from '../packages/core/src/fleet';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { attackable, fightPlayer, ITEMS, nextTick, wildernessLevel, type FightResult, type Kit, type Style } from './pk';
+import { attackable, bestFood, castableFreeze, defaultSpec, fightPlayer, ITEMS, nextTick, wildernessLevel, type FightResult, type Kit, type Style } from './pk';
+import { itemCost } from './pk-roam';
 
 export const EDGEVILLE_BANK = { x: 3092, z: 3496 };
 // Wilderness levels 3-7 north of Edgeville, inside single-way combat (multiway.csv: east Wilderness starts at x 3136).
@@ -62,15 +63,27 @@ async function walk(s: Session, to: { x: number; z: number }, stop: () => boolea
     return walkPath(await sessionWalker(s), [{ ...to, tol: 2 }], { maxTicks, idleMs: 9000, stop });
 }
 
-// Bank everything but the worn set, then take the trip and the food.
-export async function restock(s: Session, food: number, trip: readonly { id: number; count: number }[] = TRIP): Promise<string | null> {
+// Re-equip the melee set and any unequipped body armour, bank everything else in the pack, then withdraw the trip and food.
+export async function restock(s: Session, food: number, trip: readonly { id: number; count: number }[] = TRIP, kit: Kit = TRIBRID_KIT): Promise<string | null> {
+    const equip = typeof s.sdk.getEquipment === 'function' ? () => s.sdk.getEquipment() : () => s.sdk.getState()?.equipment ?? [];
+    let switched = false;
+    for (const item of [...s.sdk.getInventory()]) {
+        if (!(kit.melee ?? []).includes(item.id) && !/(platebody|chainbody)/i.test(item.name)) continue;
+        if (equip().some(e => e.id === item.id)) continue;
+        const op = item.optionsWithIndex?.find(x => /^(Wield|Wear)$/i.test(x.text));
+        if (op) { await s.sdk.sendUseItem(item.slot, op.opIndex); switched = true; }
+    }
+    if (switched && typeof s.onTick === 'function') await nextTick(s);
     if (!(await s.bot.openBank()).success) return 'bank did not open';
-    for (const item of s.sdk.getInventory()) await s.bot.depositItem(item, -1);
+    for (const item of [...s.sdk.getInventory()]) await s.bot.depositItem(item, -1);
     const stock = () => s.bankObservation?.()?.items ?? [];
     for (const want of [...trip, { id: ITEMS.shark, count: food }]) {
+        const wornCount = equip().filter(e => e.id === want.id).reduce((n, e) => n + e.count, 0);
+        const need = want.count - wornCount;
+        if (need <= 0) continue;
         const row = s.sdk.getBankItems().find(b => b.id === want.id);
-        if (!row || row.count < want.count) { await s.bot.closeBank(); return `bank lacks ${want.count} of item ${want.id} (has ${stock().find(b => b.id === want.id)?.count ?? 0})`; }
-        await s.bot.withdrawItem(row, want.count, { asNote: false });
+        if (!row || row.count < need) { await s.bot.closeBank(); return `bank lacks ${need} of item ${want.id} (has ${stock().find(b => b.id === want.id)?.count ?? 0})`; }
+        await s.bot.withdrawItem(row, need, { asNote: false });
     }
     await s.bot.closeBank();
     return held(s, ITEMS.shark) >= food ? null : 'food withdrawal short';
@@ -112,7 +125,7 @@ export async function hunt(s: Session, o: HuntOptions) {
         if (held(s, ITEMS.shark) < o.minFood) {
             const back = await walk(s, EDGEVILLE_BANK, over, 600);
             if (!back.ok) return { ...tally, end: 'bank walk failed ' + JSON.stringify(back) };
-            const missing = await restock(s, o.food, o.trip);
+            const missing = await restock(s, o.food, o.trip, kit);
             if (missing) return { ...tally, end: missing };
             tally.trips++;
         }
@@ -127,12 +140,19 @@ export async function hunt(s: Session, o: HuntOptions) {
             await nextTick(s);
             const state = s.sdk.getState(), me = state?.player;
             if (!state || !me) continue;
-            for (const e of state.combatEvents) if ((e.observationId ?? e.tick) > seen) { seen = e.observationId ?? e.tick; if (hitByPlayer(e)) attackerIndex = e.sourceIndex; }
+            let maxSeen = seen;
+            for (const e of state.combatEvents) {
+                const id = e.observationId ?? e.tick;
+                if (id <= seen) continue;
+                if (id > maxSeen) maxSeen = id;
+                if (hitByPlayer(e)) attackerIndex = e.sourceIndex;
+            }
+            seen = maxSeen;
             // Heal between fights: eat while 20 or more under full, and start a fight only near full unless attacked.
-            const shark = state.inventory.find(i => i.id === ITEMS.shark);
-            if (me.hp <= me.maxHp - 20 && shark && s.tick() >= foodReady) {
-                const op = shark.optionsWithIndex.find(x => /^Eat$/i.test(x.text));
-                if (op) { void s.sdk.sendUseItem(shark.slot, op.opIndex); foodReady = s.tick() + 3; }
+            const meal = bestFood(state.inventory);
+            if (me.hp <= me.maxHp - 20 && meal && s.tick() >= foodReady) {
+                const op = meal.optionsWithIndex.find(x => /^Eat$/i.test(x.text));
+                if (op) { void s.sdk.sendUseItem(meal.slot, op.opIndex); foodReady = s.tick() + 3; }
             }
             const self = { z: me.worldZ, combatLevel: me.combatLevel };
             for (const p of state.nearbyPlayers) {
@@ -146,7 +166,11 @@ export async function hunt(s: Session, o: HuntOptions) {
             if (!target) continue;
             log(`HUNT engage ${target.name} (combat ${target.combatLevel}) at ${target.x},${target.z}`);
             tally.fights++;
-            const r: FightResult = await fightPlayer(s, target.name, { kit, escapeAt: o.escapeAt, escapeSpell: o.teleSpell, cap: 900, damageSpell: o.damageSpell, rotation: o.rotation, log });
+            const magicLevel = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
+            const r: FightResult = await fightPlayer(s, target.name, {
+                kit, spec: defaultSpec(kit), freeze: castableFreeze(magicLevel, state.inventory) !== null, exitOnDanger: true,
+                escapeAt: o.escapeAt, escapeSpell: o.teleSpell, cap: 900, damageSpell: o.damageSpell, rotation: o.rotation, stop: over, log,
+            });
             log(`HUNT fight ${r.outcome} ${JSON.stringify(r)}`);
             if (r.outcome === 'kill') {
                 tally.kills++; const n = await loot(s, r.targetAt ?? target, over); tally.looted += n;
@@ -161,17 +185,22 @@ export async function hunt(s: Session, o: HuntOptions) {
     return { ...tally, end: ended ? 'session ended' : o.stop() ? 'stopped' : 'cap' };
 }
 
-// Pick up what the loser dropped near where it stood, bones aside, while the inventory has room.
+// Pick up what the loser dropped near where it stood, most valuable stacks first, bones aside; eat food to free a slot for valuable drops.
 async function loot(s: Session, at: { x: number; z: number }, stop: () => boolean): Promise<number> {
     let taken = 0;
     // The drop lands after the death animation: wait up to 10 ticks for the first pile.
     const near = (g: { x: number; z: number; name: string }) => Math.max(Math.abs(g.x - at.x), Math.abs(g.z - at.z)) <= 3 && !/bones$/i.test(g.name);
     for (let wait = 0; wait < 10 && !stop() && !(s.sdk.getState()?.groundItems ?? []).some(near); wait++) await nextTick(s);
     for (let tries = 0; tries < 28 && !stop(); tries++) {
-        if (s.sdk.getInventory().length >= 28) break;
         const pile = (s.sdk.getState()?.groundItems ?? []).filter(near)
-            .sort((a, b) => a.distance - b.distance)[0];
+            .sort((a, b) => (itemCost(b.id) * b.count - itemCost(a.id) * a.count) || (a.distance - b.distance))[0];
         if (!pile) break;
+        const stacks = s.sdk.getInventory().some(i => i.id === pile.id && i.count > 1);
+        if (s.sdk.getInventory().length >= 28 && !stacks) {
+            const meal = bestFood(s.sdk.getInventory());
+            if (!meal || itemCost(pile.id) * pile.count < 1000) break;
+            await s.bot.eatFood(meal);
+        }
         const r = await s.bot.pickupItem(pile);
         if (!r.success) break;
         taken++;
