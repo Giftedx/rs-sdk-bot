@@ -1,0 +1,30 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794304678145-thefullmonty-quickhandjob",
+ "account": "TheFullMonty",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 250,
+ "claim": "586eeb62-0568-4ef1-8aef-efc0c2ef717a",
+ "count": 250,
+ "ok": true,
+ "at": 1794305023457,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 250,
+  "after": 0
+ },
+ "bank": {
+  "count": 250,
+  "at": 1794305006426
+ },
+ "logout": {
+  "attemptId": "1794304993661-0000017831-0000000001",
+  "at": 1794305023451,
+  "sha256": "bc785be01bba156f11a4b1f6e29445728cbfbfed7a36ff6db51fe2aac230dd4a"
+ }
+}

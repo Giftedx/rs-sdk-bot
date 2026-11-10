@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794304678145-thefullmonty-quickhandjob",
+ "account": "Quickhandjob",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 250,
+ "claim": "302ff783-b481-4463-bd0f-3c0723303aa1",
+ "count": 0,
+ "ok": false,
+ "at": 1794304995726,
+ "detail": "trade claimed"
+}
