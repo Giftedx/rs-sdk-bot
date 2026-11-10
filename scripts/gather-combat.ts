@@ -439,8 +439,27 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
         if(over())return;
         if(!arrived||!near(site.spot.x,site.spot.z,3))throw new Error(`no ${label} progress: surface camp arrival unobserved`);
     };
+    // The retreat turns auto-retaliate off: a trooper still fighting holds a bow user in place to shoot back, and live
+    // TheFullMonty's walk out failed ("bank retreat failed") and left it on the battlefield when the session dropped.
+    // It tries the walk up to three times while each try ends closer, then restores auto-retaliate.
+    const retaliate=async(on:boolean)=>{
+        if(state()?.autoRetaliateEnabled===on||state()?.autoRetaliateEnabled===undefined)return false;
+        await s.direct({type:'clickComponent',componentId:on?150:151,reason:`${label} retreat auto-retaliate ${on?'ON':'OFF'}`});
+        return await waitUntil(s,()=>state()?.autoRetaliateEnabled===on,{timeoutTicks:5});
+    };
     const leave=async()=>{
-        if(!await walk(site.bank.x,site.bank.z,3)||!near(site.bank.x,site.bank.z,3))throw new Error(`no ${label} progress: bank retreat failed`);
+        const off=await retaliate(false);
+        console.log(`RETREAT ${label} autoRetaliateOff=${off}`);
+        try{
+            let best=Infinity;
+            for(let n=0;n<3;n++){
+                if(await walk(site.bank.x,site.bank.z,3)&&near(site.bank.x,site.bank.z,3))return;
+                const p=state()?.player,d=p?Math.max(Math.abs(p.worldX-site.bank.x),Math.abs(p.worldZ-site.bank.z)):Infinity;
+                console.log(`WALK_RETRY ${label} retreat try=${n+1} distance=${d}`);
+                if(d>=best)break;best=d;
+            }
+            throw new Error(`no ${label} progress: bank retreat failed`);
+        }finally{if(off)console.log(`RETREAT ${label} autoRetaliateRestored=${await retaliate(true)}`);}
     };
     const open=async()=>{if(state()?.bank?.isOpen&&s.bankObservation?.())return;const gen=s.bankObservation?.()?.generation??0;
         if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>!!state()?.bank?.isOpen&&(s.bankObservation?.()?.generation??0)>gen,{timeoutTicks:20}))throw new Error(`no ${label} progress: bank readiness unknown`);bankTrips++;};

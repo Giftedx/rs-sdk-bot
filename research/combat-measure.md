@@ -115,6 +115,12 @@ Ranged it adds is not needed at that point.
     per tick, all ok.
   - A bot that stands to shoot drifted to the west edge with no trooper in view (two runs idled 307 ticks). After 10
     ticks without a target it walks back to the spot.
+- **Live (claude-cloud).** TheFullMonty's first Ranged run went Ranged 1 -> 61 in 1,507 ticks: 34 kills, 74,800 XP
+  (49.6 per tick), 409 bronze arrows, 3 sharks, lowest HP 34. Its retreat failed with a trooper still fighting
+  (`bank retreat failed`), and the session then dropped on the battlefield. The account next logged in at Lumbridge.
+  The retreat now turns auto-retaliate off, tries the walk up to three times while each ends closer, and turns it back
+  on (`RETREAT ... autoRetaliateRestored=true`). Practice, three bots at a 700-tick cap: all ok, retreats of 83-200
+  ticks.
 - **Arrow supply.** Live, the GE has no iron or adamant arrows listed. It asks 746 for mithril and 10,000 for rune, and
   Aemad's Ardougne shop holds 450 bronze. The shops hold more (`scripts/shop-buyer.ts` profiles; practice, 100 each):
   - `lowe` (Varrock): bronze 2,000, iron 1,500, steel 1,000 in stock. 100 iron for 399.
@@ -158,7 +164,8 @@ TrouserSnake and UnderMyKilt hold about 15,000 feathers and 1,500-1,700 bones ea
 - **Gap.** Practice only. The level-up dialog drops a spell sent under it. The trainer clears it between the Low and
   High Alchemy phases. The worker waits 1-2 ticks more per cast than the 5-tick High Alchemy cycle
   (`alchemy.rs2` `p_delay(3)`).
-- **Live first runs (claude-cloud).** Quickhandjob's first `BURY_HELD` run buried 118 of 124 bones and ended ok at
+- **Live first runs (claude-cloud).** Quickhandjob's first full alchemy run went Magic 62 -> 88 in 1,601 ticks (250
+  High Alchemy casts, `stop=supplies` when its 1,253 fire runes ran out). Quickhandjob's first `BURY_HELD` run buried 118 of 124 bones and ended ok at
   Prayer 47 -> 53 (`gained=6`). UnderMyKilt's alchemy stage took 598 natures, 598 feathers and 404 fire runes. Its first
   two runs failed: it started in Varrock after a fire-rune buy, and the planner has no westbound land route from Varrock
   West to the north bank (practice: "no route to 2619,3332,0"). The stages walk with `walkTargetPersist`, which retries a
