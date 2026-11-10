@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794295355511,
+ "at": 1794295858368,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -22,37 +22,28 @@
    "resources": []
   },
   {
-   "account": "UnderMyKilt",
-   "script": "scripts/alch-train.ts",
-   "args": [
-    "99",
-    "5000"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "combat",
-   "template": "army-alch-magic-99",
-   "resources": []
-  },
-  {
    "account": "Quickhandjob",
-   "script": "scripts/alch-train.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99",
-    "5000"
+    "3000",
+    "cow"
    ],
-   "env": {},
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "goal": "train Strength to 70 on the Ardougne cows",
    "role": "combat",
-   "template": "army-alch-magic-99",
+   "template": "army-cow-strength-70",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "cow:ardougne-north"
+   ]
   },
   {
    "account": "TheFullMonty",
@@ -76,6 +67,23 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-magic-99",
+   "autopilot": "claude-cloud",
+   "resources": []
   }
  ]
 }
