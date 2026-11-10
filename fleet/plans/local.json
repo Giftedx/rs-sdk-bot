@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794318742585,
+ "at": 1794318930300,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -495,7 +495,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-2d730646-cf44-4e05-aa57-e3f11e648026"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-ge-mightyrod-air1420-magic99 [task-2d730646-cf44-4e05-aa57-e3f11e648026]",
    "role": "helper"
