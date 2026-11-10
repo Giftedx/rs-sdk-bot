@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794310987821,
+ "at": 1794311044572,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -472,7 +472,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-4c6352c9-38e6-4b08-9dff-c208176100a7"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-session-recovery-billionaire-serial [task-4c6352c9-38e6-4b08-9dff-c208176100a7]",
    "role": "thieving"
