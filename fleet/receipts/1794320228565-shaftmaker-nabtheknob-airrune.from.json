@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794320228565-shaftmaker-nabtheknob-airrune",
+ "account": "Shaftmaker",
+ "partner": "NabTheKnob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 10,
+ "claim": "91281053-f0c8-4609-84ad-9da2370a3949",
+ "count": 0,
+ "ok": false,
+ "at": 1794320333807,
+ "detail": "trade claimed"
+}
