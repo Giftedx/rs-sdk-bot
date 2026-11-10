@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794300951728,
+ "at": 1794300956309,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -269,7 +269,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-4e7b46e6-5539-49bb-a0a8-1c9dbb2a8881"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "claude-cloud-recover-quickhandjob-20261110t085137z [task-4e7b46e6-5539-49bb-a0a8-1c9dbb2a8881]",
    "role": "thieving"
