@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794318140399,
+ "at": 1794318742585,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -131,26 +131,21 @@
   },
   {
    "account": "mmsmk1232",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
    "autopilot": "local",
    "resources": [
-    "cow:ardougne-north"
+    "knight:2669,3298"
    ]
   },
   {
@@ -486,19 +481,23 @@
   },
   {
    "account": "Mightyrod",
-   "script": "scripts/magic-order.ts",
+   "script": "scripts/buy-owned-ge-item.ts",
    "args": [],
    "env": {
-    "TARGET_LEVEL": "93",
-    "MAX_CASTS": "520",
-    "CAP": "12000",
-    "RUNE_BUDGET": "12000",
-    "CASH_RESERVE": "0",
-    "COORDINATOR_RUN_ID": "task-efc464e4-2a8f-4727-bbd5-ac960db5f26a"
+    "ITEM_ID": "556",
+    "QUANTITY": "1420",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "35",
+    "CASH_RESERVE": "2000",
+    "ORDER_KEY": "mightyrod-air1420-magic99",
+    "FILL_WAIT_TICKS": "200",
+    "ORDER_MS": "900000",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-2d730646-cf44-4e05-aa57-e3f11e648026"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "run-magic-mightyrod-camelot-93 [task-efc464e4-2a8f-4727-bbd5-ac960db5f26a]",
+   "goal": "run-ge-mightyrod-air1420-magic99 [task-2d730646-cf44-4e05-aa57-e3f11e648026]",
    "role": "helper"
   }
  ]
