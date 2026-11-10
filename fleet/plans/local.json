@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794311437556,
+ "at": 1794311491952,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -48,27 +48,6 @@
    "standing": true,
    "repeat": false,
    "goal": "rune arrows (826 short) from headless arrows and rune arrowtips",
-   "role": "supply"
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "catherby",
-    "6000"
-   ],
-   "env": {
-    "ITEMS": "arrowtips",
-    "BANK_PACK": "1",
-    "MAX_SPEND": "200000",
-    "COIN_RESERVE": "10000",
-    "FLOAT": "210000",
-    "NO_BUY_TICKS": "50"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "rune, adamant, mithril and steel arrowtips from Hickton",
    "role": "supply"
   },
   {
@@ -453,10 +432,31 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-faaa2c11-3329-434c-ab20-5bffe05f11a7"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-session-recovery-mightyrod-serial [task-faaa2c11-3329-434c-ab20-5bffe05f11a7]",
    "role": "pk"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby",
+    "6000"
+   ],
+   "env": {
+    "ITEMS": "arrowtips",
+    "BANK_PACK": "1",
+    "MAX_SPEND": "200000",
+    "COIN_RESERVE": "10000",
+    "FLOAT": "210000",
+    "NO_BUY_TICKS": "50"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "rune, adamant, mithril and steel arrowtips from Hickton",
+   "role": "supply"
   }
  ]
 }
