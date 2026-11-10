@@ -12,6 +12,7 @@
 // Run beside DEMO_OK=1 bun scripts/swarm.ts and bun scripts/fleet-agent.ts --daemon, with FLEET_SIDE set.
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync, openSync, readSync, closeSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { createHash } from 'node:crypto';
 import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { clearSwarmStop, swarmWroteStop } from './swarm';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
@@ -32,7 +33,23 @@ const PAUSED = 'AUTOPILOT hold: swarm is paused';
 export const CLAIM_CHANGED = 'AUTOPILOT claim changed: publishing it now';
 export const heldResources = (jobs: readonly any[]) => jobs.filter(j => j?.enabled !== false).flatMap(j => jobResources(j)).sort().join('|');
 const swarmPaused = () => existsSync(join(prac, 'stop-swarm'));
-type State = { assigned: Record<string, { template: string; offset: number; at: number }>; retired: Record<string, string> };
+// A retirement records the hash of its template's script; an entry from before that is a bare reason.
+type Retirement = string | { reason: string; script: string };
+type State = { assigned: Record<string, { template: string; offset: number; at: number }>; retired: Record<string, Retirement> };
+// A retirement holds while its template's script is unchanged, so a fix to the script gives the pair its retries back.
+// A death holds until a person clears it, and so does a pair whose template is gone. A bare reason takes the current
+// script, so nothing comes back on the pass that first reads it.
+export function liveRetirements(retired: Readonly<Record<string, Retirement>>, scriptOf: (template: string) => string | undefined): { retired: Record<string, Retirement>; lapsed: string[] } {
+    const out: Record<string, Retirement> = {}, lapsed: string[] = [];
+    for (const [key, r] of Object.entries(retired)) {
+        const reason = typeof r === 'string' ? r : r.reason, script = scriptOf(key.slice(key.indexOf(':') + 1));
+        if (/^death\b/.test(reason) || script === undefined) out[key] = r;
+        else if (typeof r === 'string') out[key] = { reason, script };
+        else if (r.script === script) out[key] = r;
+        else lapsed.push(key);
+    }
+    return { retired: out, lapsed };
+}
 
 const readJson = (f: string, fallback: any) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return fallback; } };
 const loadState = (side: string): State => ({ assigned: {}, retired: {}, ...readJson(join(prac, 'autopilot', `${side}.json`), {}) });
@@ -183,6 +200,15 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
 
     // Retire planner jobs whose own log lines show no progress.
     const log: string[] = [];
+    const scripts = new Map(catalogue().map(t => [t.id, t.script])), hashes = new Map<string, string>();
+    const scriptOf = (template: string) => {
+        const file = scripts.get(template);
+        if (file && !hashes.has(file)) try { hashes.set(file, createHash('sha1').update(readFileSync(join(root, file))).digest('hex')); } catch { /* missing: no hash */ }
+        return file ? hashes.get(file) : undefined;
+    };
+    const live = liveRetirements(state.retired, scriptOf);
+    state.retired = live.retired;
+    for (const key of live.lapsed) log.push(`AUTOPILOT unretire ${key}: its script changed`);
     for (const j of swarm.jobs.filter(mineMarked)) {
         if (jobAccounts(j).some(account => held.has(account.toLowerCase()))) {
             log.push(`AUTOPILOT hold ${jobAccounts(j).join(',')}: coordinator owns the assignment`);
@@ -191,7 +217,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
         const a = state.assigned[j.account];
         if (!a || a.template !== j.template) continue;
         const r = assess(readJobResultLines(join(prac, 'swarm-logs', `${j.account}.log`), a.offset, j));
-        if (r.retire) { state.retired[pairKey(j.account, j.template)] = r.reason; log.push(`AUTOPILOT retire ${j.account} ${j.template}: ${r.reason}`); }
+        if (r.retire) { const script = scriptOf(j.template); state.retired[pairKey(j.account, j.template)] = script === undefined ? r.reason : { reason: r.reason, script }; log.push(`AUTOPILOT retire ${j.account} ${j.template}: ${r.reason}`); }
     }
 
     const taken = reservedResources(swarm.jobs, side, keep);

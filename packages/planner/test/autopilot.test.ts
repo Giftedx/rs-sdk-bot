@@ -183,6 +183,9 @@ test('assess retires repeated fails, a death and near-total waste, and keeps pro
     expect(assess(['RESULT ok feathers=30 gained=30', 'RESULT fail no chickens']).retire).toBe(false);
     expect(assess(['[x] RESULT fail no chickens', '| RESULT fail no chickens'])).toMatchObject({ retire: true, fail: 2 });
     expect(assess(['RESULT fail died at 2652,3318']).reason).toMatch(/^death/);
+    // A cow run that killed and trained before failing made progress; two runs with no kill did not.
+    expect(assess(['RESULT fail mode=cow ok=false creditedKills=6 selectedXp=5200', 'RESULT fail mode=cow ok=false creditedKills=2 selectedXp=1600']).retire).toBe(false);
+    expect(assess(['RESULT fail mode=cow ok=false creditedKills=0 selectedXp=0', 'RESULT fail mode=cow ok=false creditedKills=0 selectedXp=0']).retire).toBe(true);
     expect(assess(['RESULT fail coinsGained=10 died=true banked=0']).reason).toMatch(/^death/);
     expect(assess(['RESULT ok coinsGained=1000 died=false banked=1000']).retire).toBe(false);
     expect(assess(['LEDGER ticks=1000 xp=0 move=500 anim=10 dialog=0 stun=0 idle=450', 'RESULT ok feathers=0 gained=0']).reason).toMatch(/^tick waste 95%/);
