@@ -12,6 +12,14 @@ Goals (owner): the main account Haggis rank 1 on the Overall board under the cur
 4. Run the cheapest check that reaches the change, with a timeout. Do not run game suites for docs. For a change to a worker or a shared helper, run its bench cases (`bun run bench <pattern>`), and `bun run bench --smoke` before a pull request ([the AIO bench](docs/script-contract.md#the-aio-bench)).
 5. Report source, proof level (unit, practice, live), useful output, cost, blocker and next action. Tests, practice and live prove different things. Tools, notes and tests are not game progress.
 
+Keep the loop fast:
+
+- While you edit, run one test file (`bun test <file>`) and the bench cases you changed. Run `bun run typecheck` once before you push.
+- Run one heavy job at a time on a machine: a gate, a bench or a test suite. Two at once give failures that are not real. If a test that the change does not touch fails, run that file alone before you debug it.
+- Start a slow step as one background command that ends in its result, and work on the next item until it ends. Do not poll.
+- When an action has no effect, read the saved output of the run (`.practice/aio-bench/output/<case>.log`) and the engine trace (`BENCH_TRACE=<dir>`) before you change the worker.
+- When the same wait repeats on each change, measure where the time goes and cut that first.
+
 Ask only for a decision that changes the result. Do not add design docs, approval rounds or task boards.
 
 The [coordinator](docs/script-contract.md#autonomous-coordination) owns its queue, assignments and children. Check its state and leases before taking those resources. Never start a second controller. Extend existing workers and capability definitions; do not copy a worker per account.
