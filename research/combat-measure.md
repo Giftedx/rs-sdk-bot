@@ -92,9 +92,10 @@ Ranged it adds is not needed at that point.
 - **Evidence.** `.practice/troopers/run.ts` in the Claude cloud container that ran them.
 - **Gap.** Practice only; one skill; a better weapon (section 1's rune gear gives 137 at band 70) is not available on
   the market.
-- **Claim.** Nine accounts train on the troopers at once, each at about 80% of the solo rate, when each picks its own
-  trooper. Accounts that stand together otherwise all take the nearest free trooper and split every kill.
-- **Conditions.** The run above, six or nine accounts started together, 3 sets each. "Nearest" is the trainer taking
+- **Claim.** Fourteen accounts train on the troopers at once, each at about 60% of the solo rate (nine at about
+  80%), when each picks its own trooper. Accounts that stand together otherwise all take the nearest free trooper and
+  split every kill. Each added account lowers the others' rate and raises the field total.
+- **Conditions.** The run above, six, nine or fourteen accounts started together, 3 sets each. "Nearest" is the trainer taking
   the nearest free trooper. "Spread" is `roamTarget`: with another player within 20 tiles, each account ranks the free
   troopers by distance plus its own fixed offset of 0-7 tiles, and leaves a trooper that faces another player before
   its own first hit lands (`anothersFight`). Strength XP per tick an account, sorted, cap 1,500:
@@ -113,13 +114,19 @@ Ranged it adds is not needed at that point.
   | 9 | spread | 1 | 48.6, 49.7, 50.2, 50.7, 50.8, 52.2, 55.1, 55.8, 57.4 | 470.5 | 7 |
   | 9 | spread | 2 | 41.3, 45.2, 45.3, 46.0, 47.5, 49.0, 51.3, 53.4, 57.1 | 436.1 | 3 |
   | 9 | spread | 3 | 42.0, 42.8, 43.7, 44.4, 48.8, 49.0, 50.3, 50.8, 54.5 | 426.3 | 7 |
+  | 14 | spread | 1 | 32.7, 35.0, 36.0, 36.0, 36.1, 36.8, 37.5, 38.1, 38.3, 40.0, 40.9, 41.0, 41.0, 44.3 | 533.7 | 1 |
+  | 14 | spread | 2 | 29.5, 32.3, 32.3, 33.7, 34.2, 35.8, 38.8, 39.6, 39.6, 41.0, 41.2, 43.8, 44.4, 44.5 | 530.7 | 1 |
+  | 14 | spread | 3 | 31.0, 34.4, 36.6, 37.3, 37.4, 37.7, 38.5, 39.0, 39.2, 39.2, 40.4, 42.1, 44.5, 45.5 | 542.8 | 2 |
 
-  All 90 runs ended `RESULT ok` on the cap; the lowest HP was 40. Medians: six 45.4 nearest and 56.7 spread, nine 37.8
-  nearest and 49.7 spread. Under "nearest" an account credited up to 97 kills a run, most of them shared; under
-  "spread" 40-50, its own.
-- **Evidence.** `.practice/troopers/run.ts`, six or nine started in one shell loop (`six.out`, `nine.out`,
-  `six-spread.out`, `nine-spread.out`); `scripts/gather-combat-giant.test.ts` (accounts in company spread).
-- **Gap.** Practice only; all melee Strength; more than nine at once and a mix with Ranged trainers are not measured.
+  All 132 runs ended `RESULT ok` on the cap; the lowest HP was 40. Medians: six 45.4 nearest and 56.7 spread, nine 37.8
+  nearest and 49.7 spread, fourteen 38.4 spread. Under "nearest" an account credited up to 97 kills a run, most of
+  them shared; under "spread" 40-50, its own, and 39-62 with fourteen. With fourteen about half the runs took 1,770
+  to 1,840 ticks against 1,575 to 1,610, the walk back included.
+- **Evidence.** `.practice/troopers/run.ts`, six, nine or fourteen started in one shell loop (`six.out`, `nine.out`,
+  `six-spread.out`, `nine-spread.out`, `fourteen.out`); `scripts/gather-combat-giant.test.ts` (accounts in company
+  spread).
+- **Gap.** Practice only; all melee Strength; more than fourteen at once and a mix with Ranged trainers are not
+  measured. Live, nine at once with burying and bronze swords gave 28-50 XP per tick an account.
 - **Claim.** Bones buried on the field: with `GIANT_BURY=1` the trooper trainer buries the bones of almost every own
   kill, about 2.5 Prayer XP per tick an account, for 16% of the Strength rate. Troopers drop bones on every kill
   (`npc_combat.param` `death_drop`), 112 or 113 Prayer XP each at this server's rate.
