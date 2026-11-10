@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794314829985,
+ "at": 1794314897382,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -97,23 +97,22 @@
   },
   {
    "account": "Quickhandjob",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=955 EXPECTED_OWNED=45 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=quickhandjob-kit0-561-45to1000 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=314 QUANTITY=45 EXPECTED_OWNED=5 LIMIT_PRICE=20 CASH_RESERVE=1000 ORDER_KEY=quickhandjob-kit0-314-5to50 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
    "env": {
-    "PEN": "3197,3353",
-    "TICKS": "3000",
-    "TARGET": "2000"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3197,3353",
-   "role": "helper",
-   "template": "feathers@3197,3353",
+   "repeat": false,
+   "goal": "buy 955 Nature rune, 45 Feather on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "supply",
+   "template": "kit-buy:army-alch-magic-99",
    "autopilot": "claude-cloud",
-   "resources": [
-    "pen:3197,3353"
-   ]
+   "resources": []
   },
   {
    "account": "TrouserSnake",
