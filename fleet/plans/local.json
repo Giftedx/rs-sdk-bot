@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794311491952,
+ "at": 1794311562860,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -439,23 +439,15 @@
   },
   {
    "account": "Pocketrocket",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "catherby",
-    "6000"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "ITEMS": "arrowtips",
-    "BANK_PACK": "1",
-    "MAX_SPEND": "200000",
-    "COIN_RESERVE": "10000",
-    "FLOAT": "210000",
-    "NO_BUY_TICKS": "50"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-49e2248b-b05e-4c93-917e-1e2c05d87b61"
    },
    "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "rune, adamant, mithril and steel arrowtips from Hickton",
+   "repeat": false,
+   "goal": "run-session-recovery-pocketrocket-serial [task-49e2248b-b05e-4c93-917e-1e2c05d87b61]",
    "role": "supply"
   }
  ]
