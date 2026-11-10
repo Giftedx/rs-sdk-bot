@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794293823053,
+ "at": 1794294126505,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -19,29 +19,6 @@
    "role": "combat",
    "template": "army-bury-prayer-99",
    "resources": []
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Strength to 60 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-60",
-   "resources": [
-    "cow:ardougne-north"
-   ]
   },
   {
    "account": "TheFullMonty",
@@ -66,21 +43,52 @@
    ]
   },
   {
-   "account": "UnderMyKilt",
-   "script": "scripts/alch-train.ts",
+   "account": "Quickhandjob",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99",
-    "5000"
+    "3000",
+    "cow"
    ],
-   "env": {},
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "goal": "train Defence to 60 on the Ardougne cows",
    "role": "combat",
-   "template": "army-alch-magic-99",
+   "template": "army-cow-defence-60",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Defence to 60 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-defence-60",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "cow:ardougne-north"
+   ]
   }
  ]
 }
