@@ -66,6 +66,25 @@ Ranged it adds is not needed at that point.
   accounts are not measured.
 - **Gap.** One account and one skill; the rate at levels above 46 is not measured.
 
+## Troopers with an army account's own kit
+
+- **Claim.** On practice at xpRate 25, an army-shaped account trains Strength 60 -> 72-73 on the Gnome battlefield Khazard
+  troopers in about 1,585 ticks (61-63 Strength XP per tick). That is about 4 times the cows' 16. It uses only a bronze
+  sword and wooden shield (the market has no rune scimitar sellers) and eats 0-3 sharks.
+- **Conditions.** `scripts/gather-combat.ts <bot> 1500 trooper` with `TRAIN_SKILL=Strength TARGET_LEVEL=99 GIANT_FOOD=10`
+  (runGiants with `TROOPER_SITE`). Start at the Ardougne north bank with Attack 69, Strength 60, Defence 61, Hitpoints
+  84, the sword, shield and 30 sharks banked. Ticks include the walk out from the bank.
+
+  | Run | Kills | Strength | XP | Ticks | XP per tick | Sharks eaten | Lowest HP |
+  |---|---|---|---|---|---|---|---|
+  | 1 | 43 | 60 -> 72 | 96,500 | 1,584 | 60.9 | 0 | 50 |
+  | 2 | 45 | 60 -> 73 | 98,800 | 1,585 | 62.3 | 2 | 41 |
+  | 3 | 46 | 60 -> 73 | 100,500 | 1,585 | 63.4 | 3 | 41 |
+
+- **Evidence.** `.practice/troopers/run.ts` in the Claude cloud container that ran them.
+- **Gap.** Practice only; one skill; a better weapon (section 1's rune gear gives 137 at band 70) is not available on
+  the market.
+
 ## 1. Melee, no cannon
 
 Script `scripts/measure/combat-melee.ts`, runner `scripts/measure/floor-run.ts`, 300 ticks per run,
