@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794293042168,
+ "at": 1794293108667,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -43,30 +43,6 @@
    ]
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 60 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-60",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "cow:ardougne-north"
-   ]
-  },
-  {
    "account": "UnderMyKilt",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -88,6 +64,26 @@
    "resources": [
     "cow:ardougne-north"
    ]
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying the held bones",
+   "role": "combat",
+   "template": "army-bury-prayer-99",
+   "autopilot": "claude-cloud",
+   "resources": []
   }
  ]
 }
