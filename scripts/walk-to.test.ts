@@ -95,6 +95,15 @@ test('a failed Ardougne-to-east plan sails to Brimhaven and from Musa Point, wit
     calls.length = 0;coins = 59;
     expect(await walkWithFerryFallback(from,to,walk,sail,()=>coins)).toMatchObject({ok:false,detail:'eastbound ferry needs 60 coins in the pack'});
     expect(calls).toEqual(['3185,3436']);
+    // Westbound from Falador's side (live: an account parked at 3071,3347 with a trade at the Ardougne bank): no Draynor leg.
+    calls.length = 0;coins = 60;
+    const bank = { x: 2618, z: 3333, level: 0 };
+    const west = async ({x,z}: {x:number;z:number}): Promise<Outcome> => { calls.push(x+','+z); return calls.length === 1 ? { ...noRoute, detail: 'no route to 2618,3333,0' } : {ok:true,ticks:1}; };
+    expect(await walkWithFerryFallback({ x: 3020, z: 3347, level: 0 },bank,west,sail,()=>coins)).toEqual({ok:true,ticks:5});
+    expect(calls).toEqual(['2618,3333','3028,3216','npc:captain_tobias:karamja-musa-point@3028,3216','2772,3225','npc:customs_officer:ardougne@2772,3225','2618,3333']);
+    calls.length = 0;coins = 60;
+    expect(await walkWithFerryFallback({ x: 3071, z: 3347, level: 0 },bank,west,sail,()=>coins)).toEqual({ok:true,ticks:6});
+    expect(calls[1]).toBe('3092,3243');
     // A start outside Ardougne, or a target outside the east, keeps the plain refusal.
     calls.length = 0;coins = 60;
     expect(await walkWithFerryFallback({ x: 2440, z: 3090, level: 0 },to,walk,sail,()=>coins)).toBe(noRoute);

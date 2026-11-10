@@ -61,8 +61,9 @@ const MUSA_POINT_FERRY = 'npc:customs_officer:port-sarim@2953,3147';
 const AL_KHARID_TOLL = 'npc:borderguard2:lumbridge-side-west-of-the-toll-gate@3268,3226';
 const LUMBRIDGE: Tile = { x: 3222, z: 3218, level: 0 }, DRAYNOR: Tile = { x: 3092, z: 3243, level: 0 };
 const FERRY_LEG_PLAN_MS = 15_000;
-// Lumbridge, Draynor and Varrock (z up to 3510), and East Ardougne with its north bank and cow field.
-const inEast = (t: Tile) => t.level === 0 && t.x >= 3080 && t.x <= 3280 && t.z >= 3150 && t.z <= 3510;
+// Falador, Port Sarim, Draynor, Lumbridge and Varrock (z up to 3510), and East Ardougne with its north bank and cow
+// field.
+const inEast = (t: Tile) => t.level === 0 && t.x >= 2930 && t.x <= 3280 && t.z >= 3150 && t.z <= 3510;
 const inArdougne = (t: Tile) => t.level === 0 && t.x >= 2550 && t.x <= 2700 && t.z >= 3240 && t.z <= 3400;
 
 export async function walkWithFerryFallback(from: Tile, to: Tile, walk: (to: Tile, budgetMs?: number) => Promise<Outcome>,
@@ -83,7 +84,8 @@ export async function walkWithFerryFallback(from: Tile, to: Tile, walk: (to: Til
     let ticks = direct.ticks, fare = first.coins + second.coins;
     const missingFare = (need: number): Outcome => ({ ok: false, reason: 'precondition', detail: `${west ? 'westbound' : 'eastbound'} ferry needs ${need} coins in the pack`, ticks });
     if (coins() < fare + (toll?.coins ?? 0)) return missingFare(fare + (toll?.coins ?? 0));
-    const through = !west ? [] : from.x >= 3200 ? [LUMBRIDGE, DRAYNOR] : Math.max(Math.abs(from.x - DRAYNOR.x), Math.abs(from.z - DRAYNOR.z)) <= 3 ? [] : [DRAYNOR];
+    // A start west of Draynor walks straight to the Port Sarim dock.
+    const through = !west || from.x < 3060 ? [] : from.x >= 3200 ? [LUMBRIDGE, DRAYNOR] : Math.max(Math.abs(from.x - DRAYNOR.x), Math.abs(from.z - DRAYNOR.z)) <= 3 ? [] : [DRAYNOR];
     for (const tile of through) {
         const leg = await walk(tile, FERRY_LEG_PLAN_MS); ticks += leg.ticks;
         if (!leg.ok) return { ...leg, ticks };
