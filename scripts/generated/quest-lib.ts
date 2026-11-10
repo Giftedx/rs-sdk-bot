@@ -9,7 +9,7 @@ import { walkQuestCorridor } from '../quest-walk';
 import { sessionWalker, walkPath, goTo, type PathPoint } from '../../packages/core/src/walk';
 import { componentId } from '../../packages/core/src/logout';
 import { ClientProt } from '../../vendor/rs-sdk/server/webclient/src/io/ClientProt';
-import { readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { castable } from '../teleport-runes';
 import { needs, reservedEdible, walkFar } from '../quest-sweep';
@@ -43,6 +43,15 @@ export let bursts = 0;
 export type PlanToken = 'R' | 'F' | number;
 // Choice components of the multi-option dialogs: CHOICE[4][0] is option 1 of a four-option page.
 export const CHOICE: Readonly<Record<2 | 3 | 4 | 5, readonly number[]>> = { 2: [2461, 2462], 3: [2471, 2472, 2473], 4: [2482, 2483, 2484, 2485], 5: [2494, 2495, 2496, 2497, 2498] };
+// Recorded plans: talk-plans.json holds, for a quest script and a talk label, the clicks that talk took in a passing
+// run. `talk` sends them as its plan the first time the label runs. TALK_PLANS=off ignores the file. TALK_RECORD=<dir>
+// writes the clicks of this run to <dir>/<quest>.json; `bun scripts/measure/talk-plans.ts` moves them into the file.
+const QUEST_ID = basename(process.argv[1] ?? '', '.ts');
+const PLAN_FILE = join(import.meta.dir, 'talk-plans.json');
+const TALK_PLANS: Record<string, Record<string, PlanToken[]>> = process.env.TALK_PLANS !== 'off' && existsSync(PLAN_FILE) ? JSON.parse(readFileSync(PLAN_FILE, 'utf8')) : {};
+const TALK_RECORD = process.env.TALK_RECORD;
+const recordedPlans: Record<string, PlanToken[]> = {};
+if (TALK_RECORD) process.on('exit', () => { try { mkdirSync(TALK_RECORD, { recursive: true }); writeFileSync(join(TALK_RECORD, `${QUEST_ID}.json`), JSON.stringify(recordedPlans)); } catch { /* a record is optional */ } });
 export let recorded = 0;
 // Q_BURST=1: blind dialogue bursts (research/quest-plan.md "Dialogue burst"); off by default.
 const BURST = process.env.Q_BURST === '1';
@@ -258,6 +267,9 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         if (!ok()) await fail(`step ${label}`);
     };
 
+    // The clicks of the talk under record, or null.
+    let recording: PlanToken[] | null = null;
+    const plannedLabels = new Set<string>();
     // One dialog page per tick: the first option matching a pattern, else "continue". Stops when ok() holds.
     const converse = async (pats: RegExp[], ok: () => boolean, maxTicks: number): Promise<boolean> => {
         const deadline=s.tick()+maxTicks;
@@ -279,7 +291,9 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
                     await waitTicks(s,1);continue;
                 }
                 const reply=await s.sdk.sendClickDialog(opt ? opt.index : 0);
-                if(!reply.success)await fail(`dialogue click refused: ${reply.message}`);
+                if(!reply.success){if(s.tick()-planSentAt<=8){await waitTicks(s,1);continue;}await fail(`dialogue click refused: ${reply.message}`);}
+                // A choice records its component; a choice with no component ends the record for this talk.
+                if(recording){const clicked=choice?(opt??d.options[0])?.componentId:'R';if(clicked===undefined)recording=null;else recording.push(clicked);}
                 if(s.tick()!==beforeClick)continue;
             }
             await waitTicks(s, 1);
@@ -293,6 +307,8 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     // multiple of five. The engine reads five user events a tick and carries the rest to the next tick in order, so a
     // fence puts the token after it on a later tick. A continue sent to a choice page is refused, never applied.
     // Returns the number of ticks the plan needs to drain.
+    // While a plan drains, the SDK can show a page that the plan has answered: a refused click then is not a fault.
+    let planSentAt = -100;
     const sendPlan = (plan: readonly PlanToken[]): number => {
         const c: any = (s as any).client;
         let n = 0;
@@ -304,6 +320,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         c.flush?.();
         bursts++;
         answeredSeq = textSeq;
+        planSentAt = s.tick();
         return Math.ceil(n / 5);
     };
 
@@ -360,11 +377,17 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
                 if (!dialogOpen() && (msgCount(/can't reach that/i) > blocked0 || npc(re)?.reachable === false)) await openDoorNear(npc(re) ?? n, label);
             }
             if (!dialogOpen()) { const m: any = npc(re); const p = pos(); console.log(`WARN talk ${label} no dialog: npc ${m?.x},${m?.z} d=${m?.distance} me ${p?.worldX},${p?.worldZ} op=${JSON.stringify(st()?.opFeedback ?? {})}`); }
-            // The plan goes out once, on the first open page; converse() answers whatever it leaves.
-            if (plan && i === 0 && dialogOpen()) await waitTicks(s, sendPlan(plan));
+            // The plan goes out once, on the first open page; converse() answers whatever it leaves. A label uses its
+            // recorded plan the first time it runs: a later talk with the same label can be at another stage.
+            const first = i === 0 && !plannedLabels.has(label);
+            plannedLabels.add(label);
+            const planned = first ? plan ?? TALK_PLANS[QUEST_ID]?.[label] : undefined;
+            if (planned && dialogOpen()) await waitTicks(s, sendPlan(planned));
+            recording = TALK_RECORD && first && !planned ? [] : null;
             let shut = 0;
             await converse(pats, () => { shut = dialogOpen() ? 0 : shut + 1; return (ok() && (stopOpen || !dialogOpen())) || shut >= 3; }, maxTicks);
-            if (ok()) return;
+            if (ok()) { if (recording?.length) recordedPlans[label] = recording; recording = null; return; }
+            recording = null;
         }
         await fail(`talk ${label}`);
     };
