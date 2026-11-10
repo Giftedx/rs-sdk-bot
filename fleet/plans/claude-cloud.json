@@ -1,7 +1,30 @@
 {
  "side": "claude-cloud",
- "at": 1794313525306,
+ "at": 1794313573910,
  "jobs": [
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "10"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-strength-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
   {
    "account": "TrouserSnake",
    "script": "scripts/alch-train.ts",
@@ -280,19 +303,6 @@
    "resources": [
     "knight:2652,3318"
    ]
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-9465c699-ba04-4392-8c54-1402a7fe5e90"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-quickhandjob-20261110t122051z [task-9465c699-ba04-4392-8c54-1402a7fe5e90]",
-   "role": "combat"
   }
  ]
 }
