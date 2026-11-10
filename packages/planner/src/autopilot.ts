@@ -395,6 +395,10 @@ export function finishedTrainers(jobs: readonly any[], side: string, assigned: R
 
 // Retirement from a job's own log lines (since the autopilot assigned it): the last RETIRE_FAILS RESULTs all fail with
 // no progress, a RESULT reports a death, or the last LEDGER spent WASTE_LIMIT or more of its ticks idle or walking.
+// The ledger counts the ticks between two hits of a fight as idle and the walk to the next target as move, so a
+// fighter on a shared field passes WASTE_LIMIT while it gains XP: a ledger whose own run ended ok with progress (the
+// RESULT printed after it) does not retire. Live claude-cloud, 12 accounts on the trooper field: ok trooper and cow
+// runs at 91-93% idle+move were retired and their accounts sent back to a lower band.
 // A trainer that hits its tick cap short of the target ends fail with the XP it gained (scripts/generated/thieving60.ts
 // prints xp=<gain>), so the supervisor runs it again; such a fail is progress and does not count toward retirement.
 // A run the server or the relayed gateway dropped says nothing about the job, so it is counted as a drain, never as a
@@ -421,8 +425,9 @@ export function assess(lines: readonly string[]): { retire: boolean; reason: str
     if (died) return { retire: true, reason: `death: ${died.slice(0, 120)}`, ok, fail, drains };
     const tail = results.slice(-RETIRE_FAILS);
     if (tail.length === RETIRE_FAILS && tail.every(l => l.startsWith('RESULT fail') && !progressed(l))) return { retire: true, reason: `${RETIRE_FAILS} fail RESULTs: ${tail.at(-1)!.slice(0, 120)}`, ok, fail, drains };
-    const ledger = clean.filter(l => l.startsWith('LEDGER ')).at(-1)?.match(/^LEDGER ticks=(\d+).* move=(\d+).* idle=(\d+)/);
-    if (ledger && +ledger[1]! >= 300 && (+ledger[2]! + +ledger[3]!) / +ledger[1]! >= WASTE_LIMIT)
+    const at = clean.reduce((last, l, i) => l.startsWith('LEDGER ') ? i : last, -1);
+    const ledger = clean[at]?.match(/^LEDGER ticks=(\d+).* move=(\d+).* idle=(\d+)/), ended = clean.slice(at + 1).find(l => /^RESULT (ok|fail)\b/.test(l));
+    if (ledger && +ledger[1]! >= 300 && (+ledger[2]! + +ledger[3]!) / +ledger[1]! >= WASTE_LIMIT && !(ended?.startsWith('RESULT ok') && progressed(ended)))
         return { retire: true, reason: `tick waste ${(100 * (+ledger[2]! + +ledger[3]!) / +ledger[1]!).toFixed(0)}% idle+move`, ok, fail, drains };
     return { retire: false, reason: '', ok, fail, drains };
 }

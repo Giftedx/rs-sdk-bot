@@ -201,6 +201,12 @@ test('assess retires repeated fails, a death and near-total waste, and keeps pro
     expect(assess(['LEDGER ticks=1000 xp=0 move=500 anim=10 dialog=0 stun=0 idle=450', 'RESULT ok feathers=0 gained=0']).reason).toMatch(/^tick waste 95%/);
     expect(assess(['LEDGER ticks=1000 xp=0 move=300 anim=600 dialog=0 stun=0 idle=100', 'RESULT ok feathers=90 gained=90']).retire).toBe(false);
     expect(assess(['LEDGER ticks=100 xp=0 move=50 anim=0 dialog=0 stun=0 idle=50']).retire).toBe(false);
+    // A fight is mostly ticks between hits: a run that ended ok with progress is not retired on its ledger.
+    const fight = 'LEDGER ticks=2000 xp=120 inventory=20 move=700 anim=20 dialog=0 stun=0 idle=1140 idlePct=57.0 xpGain=60000';
+    expect(assess([fight, 'RESULT ok mode=giant ok=true creditedKills=30 trainSkill=Defence selectedXp=52000']).retire).toBe(false);
+    expect(assess([fight, 'RESULT ok mode=giant ok=true creditedKills=0 trainSkill=Defence selectedXp=0']).reason).toMatch(/^tick waste 92%/);
+    expect(assess([fight, 'RESULT fail mode=giant ok=false creditedKills=30 selectedXp=52000 stop=cap']).reason).toMatch(/^tick waste 92%/);
+    expect(assess(['RESULT ok mode=giant creditedKills=30 selectedXp=52000', fight]).reason).toMatch(/^tick waste 92%/);
     // A trainer at its tick cap short of the target ends fail with the XP it gained: progress, not a fail toward retirement.
     expect(assess(['RESULT fail thieving 52 < 55 thieving=52 xp=16000 ticks=2500 died=false', 'RESULT fail thieving 54 < 55 thieving=54 xp=9000 ticks=2500 died=false'])).toMatchObject({ retire: false, fail: 2 });
     expect(assess(['RESULT fail thieving 52 < 55 thieving=52 xp=0 ticks=2500 died=false', 'RESULT fail stop file thieving=52 xp=0 ticks=3 died=false'])).toMatchObject({ retire: true, fail: 2 });
