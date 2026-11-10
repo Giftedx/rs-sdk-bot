@@ -441,16 +441,21 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
     const off=s.onTick(observeLife);
     const over=()=>{observeLife();return ended||died||!!o.stop?.()||s.tick()-start>=o.cap;};
     const eat=async()=>{
-        const food=inv().find(i=>site.foods.includes(i.id));if(!food)return false;
-        const before=heldFood(),beforeHp=hp();await s.bot.eatFood(food);
         // The debit proves the bite. SDK eat can finish on inventory debit before the HP packet arrives, so it waits
         // for the rise; a hit that lands with the bite hides it (practice: cooked meat heals 3 and a run ended on
-        // "did not heal" at the third bite), so no rise within 3 ticks is not a failure.
-        await waitUntil(s,()=>heldFood()<before||over(),{timeoutTicks:6});
-        eaten+=Math.max(0,before-heldFood());
-        if(heldFood()>=before)throw new Error(`no ${label} progress: shark did not heal`);
-        await waitUntil(s,()=>hp()>beforeHp||over(),{timeoutTicks:3});
-        return true;
+        // "did not heal" at the third bite), so no rise within 3 ticks is not a failure. The live server can drop an
+        // action sent during another one, so an eat with no debit is sent again, three times in all, before the run
+        // fails (live: Knightstick ended a run on "did not heal" with 80 cooked meat held). A stop or the cap during
+        // the wait is not a failed bite.
+        for(let attempt=0;attempt<3;attempt++){
+            const food=inv().find(i=>site.foods.includes(i.id));if(!food)return false;
+            const before=heldFood(),beforeHp=hp();await s.bot.eatFood(food);
+            await waitUntil(s,()=>heldFood()<before||over(),{timeoutTicks:6});
+            eaten+=Math.max(0,before-heldFood());
+            if(heldFood()<before){await waitUntil(s,()=>hp()>beforeHp||over(),{timeoutTicks:3});return true;}
+            if(over())return true;
+        }
+        throw new Error(`no ${label} progress: shark did not heal`);
     };
     // A stop or the cap cancels only the walk out to the camp: the retreat to the bank always runs.
     const walk=async(x:number,z:number,tol:number,outbound=false)=>{
