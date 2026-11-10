@@ -280,6 +280,28 @@ TrouserSnake and UnderMyKilt hold about 15,000 feathers and 1,500-1,700 bones ea
   leg from where it stopped while it gets closer. The ferry fallback now starts in Varrock too: Draynor, Port Sarim,
   Karamja, Ardougne. Practice from Varrock West with 200 coins in the pack: north bank reached and Magic 50 -> 52 in
   820 ticks. The ferries need 60 coins in the pack.
+- **Between Ardougne and the east, both ways.** The route planner takes the two ferries itself when the pack holds the
+  60-coin fare (eastbound Ardougne -> Brimhaven, then Musa Point -> Port Sarim; 7 legs). With no coins it returns "no
+  route" (live, every Grand Exchange kit buy from Ardougne: `no route to 3185,3436,0`) or a route up the Ardougne
+  castle stairs that cannot be walked (practice: `walk rejected 3 times`). So `walkWithFerryFallback`
+  (`scripts/walk-to.ts`) fetches the fare from the nearest bank before the first plan (`bankFare`), and keeps the fixed
+  ferry corridor for a plan that still finds no route. `ferryWalk` carries it into `walkTarget`, fleet trades, the
+  Grand Exchange purchase script, the trooper trainer and the Prayer trainer. Practice, accounts with Hitpoints 10:
+
+  | Start | Target | Pack coins | Bank coins | Result | Ticks |
+  |---|---|---|---|---|---|
+  | Ardougne north bank | Varrock West | 60 | 0 | arrived | 750 |
+  | 2584,3293 (Ardougne) | Varrock West | 60 | 0 | arrived | 664 |
+  | 2653,3300 (knights) | Varrock West | 60 | 0 | arrived | 635 |
+  | 3071,3347 | Ardougne bank meeting tile | 60 | 0 | arrived | 621 |
+  | Ardougne north bank | Varrock West | 0 | 500 | arrived, fare fetched first | 666 |
+  | Ardougne north bank | Varrock West | 0 | 0 | refused: `ferry needs 60 coins and the bank holds 0` | 10 |
+
+  Each trip includes about 300 ticks of world loading at the 150 ms practice tick. A trooper run that starts at Varrock
+  West with no coins in the pack and 500 banked ended `RESULT ok` twice (41 and 36 kills, 2,283 ticks each, the trip
+  included). Evidence: `.practice/goldfarm-travel/east.ts`, `plan.ts`; `.practice/troopers/shape.ts`;
+  `scripts/walk-to.test.ts`. Gap: practice only; the purchase after the trip needs the Grand Exchange service and is
+  not practised; the planner's unwalkable route with no coins remains.
 - **Magic Guild store (Yanille, upstairs, Magic 66 at the door).** It stocks fire runes 3,000, nature runes 1,000
   (base 20), law, death and blood runes 1,000 each, and 2 staffs of fire, on shelves separate from Zaff's and Aubury's.
   Profile `magic_guild`; shop-buyer walks to an upstairs shop with the world walker. Practice at Magic 99 from the

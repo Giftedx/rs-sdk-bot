@@ -81,6 +81,52 @@ test('a failed east-to-Ardougne plan uses the funded corridor and stops when fun
     expect(await walkWithFerryFallback(from,to,async()=>aborted,sail,()=>100)).toBe(aborted);
 });
 
+test('a failed Ardougne-to-east plan sails to Brimhaven and from Musa Point, with the fare checked first', async () => {
+    const from = { x: 2584, z: 3293, level: 0 }, to = { x: 3185, z: 3436, level: 0 };
+    const noRoute: Outcome = { ok: false, reason: 'precondition', detail: 'no route to 3185,3436,0', ticks: 0 };
+    const calls: string[] = [];
+    let coins = 60;
+    // The first plan of each walk finds no route; every later leg arrives.
+    const walk = async ({x,z}: {x:number;z:number}): Promise<Outcome> => { const first = !calls.some(c => /^\d+,\d+$/.test(c)); calls.push(x+','+z); return first ? noRoute : {ok:true,ticks:1}; };
+    const sail = async (boat: ReturnType<typeof loadTravel>[number]): Promise<Outcome> => { calls.push(boat.id); coins -= boat.coins; return {ok:true,ticks:1}; };
+    expect(await walkWithFerryFallback(from,to,walk,sail,()=>coins)).toEqual({ok:true,ticks:5});
+    expect(calls).toEqual(['3185,3436','2679,3275','npc:captain_barnaby:brimhaven@2679,3275','2953,3147','npc:customs_officer:port-sarim@2953,3147','3185,3436']);
+    expect(coins).toBe(0);
+
+    calls.length = 0;coins = 59;
+    expect(await walkWithFerryFallback(from,to,walk,sail,()=>coins)).toMatchObject({ok:false,detail:'eastbound ferry needs 60 coins in the pack'});
+    expect(calls).toEqual(['3185,3436']);
+    // With no fare in the pack the walker fetches it before the first plan; a fetch that fails refuses the walk with
+    // no step taken, and one that brings too little is refused after the plan.
+    calls.length = 0;coins = 0;
+    expect(await walkWithFerryFallback(from,to,walk,sail,()=>coins,async need=>{calls.push('fare '+need);coins=need;return{ok:true,ticks:4};})).toEqual({ok:true,ticks:9});
+    expect(calls.slice(0,3)).toEqual(['fare 60','3185,3436','2679,3275']);
+    calls.length = 0;coins = 0;
+    const empty: Outcome = { ok: false, reason: 'precondition', detail: 'ferry needs 60 coins and the bank holds 12', ticks: 3 };
+    expect(await walkWithFerryFallback(from,to,walk,sail,()=>coins,async()=>empty)).toEqual(empty);
+    expect(calls).toEqual([]);
+    expect(await walkWithFerryFallback(from,to,walk,sail,()=>coins,async()=>({ok:true,ticks:2}))).toMatchObject({ok:false,detail:'eastbound ferry needs 60 coins in the pack'});
+    expect(calls).toEqual(['3185,3436']);
+    // With the fare in the pack the planner's own route is used when it finds one, and nothing is fetched.
+    calls.length = 0;coins = 60;
+    expect(await walkWithFerryFallback(from,to,async({x,z})=>{calls.push(x+','+z);return{ok:true,ticks:7};},sail,()=>coins,async()=>{calls.push('fare');return{ok:true,ticks:1};})).toEqual({ok:true,ticks:7});
+    expect(calls).toEqual(['3185,3436']);
+    // Westbound from Falador's side (live: an account parked at 3071,3347 with a trade at the Ardougne bank): no Draynor leg.
+    calls.length = 0;coins = 60;
+    const bank = { x: 2618, z: 3333, level: 0 };
+    const west = async ({x,z}: {x:number;z:number}): Promise<Outcome> => { const first = !calls.length; calls.push(x+','+z); return first ? { ...noRoute, detail: 'no route to 2618,3333,0' } : {ok:true,ticks:1}; };
+    expect(await walkWithFerryFallback({ x: 3020, z: 3347, level: 0 },bank,west,sail,()=>coins)).toEqual({ok:true,ticks:5});
+    expect(calls).toEqual(['2618,3333','3028,3216','npc:captain_tobias:karamja-musa-point@3028,3216','2772,3225','npc:customs_officer:ardougne@2772,3225','2618,3333']);
+    calls.length = 0;coins = 60;
+    expect(await walkWithFerryFallback({ x: 3071, z: 3347, level: 0 },bank,west,sail,()=>coins)).toEqual({ok:true,ticks:6});
+    expect(calls[1]).toBe('3092,3243');
+    // A start outside Ardougne, or a target outside the east, keeps the plain refusal.
+    calls.length = 0;coins = 60;
+    expect(await walkWithFerryFallback({ x: 2440, z: 3090, level: 0 },to,walk,sail,()=>coins)).toBe(noRoute);
+    calls.length = 0;
+    expect(await walkWithFerryFallback(from,{ x: 2900, z: 3550, level: 0 },walk,sail,()=>coins)).toBe(noRoute);
+});
+
 test('a persistent walk retries from where a leg stopped while it gets closer, and stops when it does not', async () => {
     const player = { worldX: 3185, worldZ: 3436, level: 0 };
     const s = { sdk: { getState: () => ({ player }) } } as any;

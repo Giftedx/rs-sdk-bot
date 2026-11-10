@@ -8,8 +8,9 @@
 // and the session's idle guard would end it after 900 ticks.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { openBot, finish, getWorld, accountOf, countItems } from '../packages/core/src/bot';
-import { goTo } from '../packages/core/src/walk';
+import { openBot, finish, countItems } from '../packages/core/src/bot';
+import { walkTarget } from './walk-to';
+import type { Outcome } from '../packages/core/src/act';
 import { waitUntil } from '../packages/core/src/ticks';
 import { depositObserved } from '../packages/core/src/deposit';
 import { exactItem } from '../packages/core/src/cargo';
@@ -210,7 +211,9 @@ if (import.meta.main) {
     let ok = false, detail: string;
     try {
         const meet = order.meet ?? meetingTiles({ x: 3185, z: 3436 })!, tile = role === 'from' ? meet[0] : meet[1];
-        const there = await goTo(s, await getWorld(), tile, accountOf(s), { legTimeoutTicks: 100 });
+        // The planner has no land route between Ardougne and the east; walkTarget takes the ferries then (60 coins in the
+        // pack). Live: a taker in Ardougne failed "no route to 3182,3440" for a Varrock West meet.
+        const there = await walkTarget(s, tile, false) as Outcome;
         if (!there.ok) throw Error(`route to ${tile.x}, ${tile.z}: ${there.reason} ${there.detail}`);
         await s.bot.walkTo(tile.x, tile.z, 0);
         const item = exactItem(order.item), held = () => countItems(s, item);
