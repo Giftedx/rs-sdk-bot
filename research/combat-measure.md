@@ -115,7 +115,14 @@ Ranged it adds is not needed at that point.
     per tick, all ok.
   - A bot that stands to shoot drifted to the west edge with no trooper in view (two runs idled 307 ticks). After 10
     ticks without a target it walks back to the spot.
-- **Evidence.** `.practice/trooper-ranged/` in the Claude cloud container that ran them.
+- **Arrow supply.** Live, the GE has no iron or adamant arrows listed. It asks 746 for mithril and 10,000 for rune, and
+  Aemad's Ardougne shop holds 450 bronze. The shops hold more (`scripts/shop-buyer.ts` profiles; practice, 100 each):
+  - `lowe` (Varrock): bronze 2,000, iron 1,500, steel 1,000 in stock. 100 iron for 399.
+  - `catherby_arrows` (Hickton): bronze 1,000, iron 800. 100 iron for 399.
+  - `dargaud` (Ranging Guild, Ranged 40 at the door): every arrow to rune (mithril 500, adamant 450, rune 400 in stock)
+    and willow shortbows. 100 mithril for 4,711; 100 rune and 100 adamant for 71,600, about 600 a rune arrow. Below
+    Ranged 40 the door holds and the run ends `RESULT fail` at its cap.
+- **Evidence.** `.practice/trooper-ranged/` and `.practice/arrow-shops/` in the Claude cloud container that ran them.
 - **Gap.** Practice only. The rate above Ranged 66 is not measured, and better bows and arrows (willow to yew,
   mithril to rune) are not in the army's hands. At the cap a trooper still fighting holds the retreat about 100 ticks.
 

@@ -120,6 +120,43 @@ export const PROFILES: Record<string, {
             { re: /body rune/i, buyPerTick: 50 },
         ],
     },
+    // Arrows for the PK army's Ranged band (scripts/gather-combat.ts TRAIN_SKILL=Ranged, about 5,400 per account 1 -> 99).
+    // Lowe's Archery Emporium (varrock.inv, shared): bronze 2,000, iron 1,500, steel 1,000.
+    lowe: {
+        npc: /^lowe$/i,
+        npcSpot: { x: 3232, z: 3423 },
+        bankSpot: { x: 3253, z: 3420 }, // Varrock East Bank
+        items: [
+            { re: /^bronze arrow$/i, buyPerTick: 100 },
+            { re: /^iron arrow$/i, buyPerTick: 100 },
+            { re: /^steel arrow$/i, buyPerTick: 100 },
+        ],
+    },
+    // Hickton's arrows (catherby.inv): bronze 1,000, iron 800. The catherby profile keeps its arrowtips only.
+    catherby_arrows: {
+        npc: /^hickton$/i,
+        npcSpot: { x: 2821, z: 3444 },
+        bankSpot: { x: 2809, z: 3441 },
+        items: [
+            { re: /^bronze arrow$/i, buyPerTick: 100 },
+            { re: /^iron arrow$/i, buyPerTick: 100 },
+        ],
+    },
+    // Dargaud, the Ranging Guild's bow and arrow salesman (game_ranging/configs/ranging.inv ranging_guild_bowshop): every
+    // arrow from bronze to rune (mithril 500, adamant 450, rune 400 in stock) and willow shortbows, near base price.
+    // The guild door needs Ranged 40 (ranging_guild_door.rs2).
+    dargaud: {
+        npc: /^bow and arrow salesman$/i,
+        npcSpot: { x: 2673, z: 3434 },
+        bankSpot: { x: 2727, z: 3492 }, // Seers' Village Bank (preset spin_bowstrings_seers)
+        items: [
+            { re: /^rune arrow$/i, buyPerTick: 100 },
+            { re: /^adamant arrow$/i, buyPerTick: 100 },
+            { re: /^mithril arrow$/i, buyPerTick: 100 },
+            { re: /^steel arrow$/i, buyPerTick: 100 },
+            { re: /^willow shortbow$/i, buyPerTick: 1 },
+        ],
+    },
     zaff: {
         // Zaff's staff shop (area_varrock/configs/varrock.inv staffshop and memberstaffshop): staff_of_fire stock 2,
         // 1 back per 1,000 ticks. A fire staff replaces the fire runes of every alchemy cast (scripts/alch-train.ts).
