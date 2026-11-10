@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { parseTarget, walkTarget, stagedBoat, walkWithFerryFallback } from './walk-to';
+import { parseTarget, walkTarget, walkTargetPersist, stagedBoat, walkWithFerryFallback } from './walk-to';
 import { loadTravel } from '../packages/core/src/travel';
 import type { Outcome } from '../packages/core/src/act';
 
@@ -79,4 +79,18 @@ test('a failed east-to-Ardougne plan uses the funded corridor and stops when fun
     expect(calls).toEqual(['2615,3332']);
     const aborted: Outcome = {ok:false,reason:'aborted',detail:'stop',ticks:3};
     expect(await walkWithFerryFallback(from,to,async()=>aborted,sail,()=>100)).toBe(aborted);
+});
+
+test('a persistent walk retries from where a leg stopped while it gets closer, and stops when it does not', async () => {
+    const player = { worldX: 3185, worldZ: 3436, level: 0 };
+    const s = { sdk: { getState: () => ({ player }) } } as any;
+    const to = { x: 2619, z: 3332, level: 0 };
+    let calls = 0;
+    const closer = async () => { calls++; if (calls < 3) { player.worldX -= 200; return { ok: false, reason: 'timeout', detail: 'leg' }; } player.worldX = to.x; player.worldZ = to.z; return { ok: true }; };
+    expect((await walkTargetPersist(s, to, 4, closer)).ok).toBe(true);
+    expect(calls).toBe(3);
+    calls = 0; player.worldX = 3185; player.worldZ = 3436;
+    const stuck = async () => { calls++; return { ok: false, reason: 'blocked', detail: 'door' }; };
+    expect(await walkTargetPersist(s, to, 4, stuck)).toEqual({ ok: false, reason: 'blocked', detail: 'door' });
+    expect(calls).toBe(2);
 });

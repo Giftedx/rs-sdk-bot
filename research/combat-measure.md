@@ -147,6 +147,13 @@ TrouserSnake and UnderMyKilt hold about 15,000 feathers and 1,500-1,700 bones ea
 - **Gap.** Practice only. The level-up dialog drops a spell sent under it. The trainer clears it between the Low and
   High Alchemy phases. The worker waits 1-2 ticks more per cast than the 5-tick High Alchemy cycle
   (`alchemy.rs2` `p_delay(3)`).
+- **Live first runs (claude-cloud).** Quickhandjob's first `BURY_HELD` run buried 118 of 124 bones and ended ok at
+  Prayer 47 -> 53 (`gained=6`). UnderMyKilt's alchemy stage took 598 natures, 598 feathers and 404 fire runes. Its first
+  two runs failed: it started in Varrock after a fire-rune buy, and the planner has no westbound land route from Varrock
+  West to the north bank (practice: "no route to 2619,3332,0"). The stages walk with `walkTargetPersist`, which retries a
+  leg from where it stopped while it gets closer. The ferry fallback now starts in Varrock too: Draynor, Port Sarim,
+  Karamja, Ardougne. Practice from Varrock West with 200 coins in the pack: north bank reached and Magic 50 -> 52 in
+  820 ticks. The ferries need 60 coins in the pack.
 - **Supply (live market, claude-cloud read).** Nature runes ask 250 with 230,923 listed, so 612 natures cost about 153,000.
   Fire runes rose from 91 to 200 after 187 bought, and no fire staff is listed. Aubury's shop sells 2,000 fire runes
   at base 4 (`varrock.inv` `runeshop`; profile `aubury`, `ITEMS='fire rune'`). Zaff sells staffs of fire: practice,

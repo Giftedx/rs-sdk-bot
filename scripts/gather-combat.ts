@@ -635,8 +635,8 @@ const dungeonTravel=(TARGET_KEY==='druid'||dungeonGiant)&&!alch?.route?createEdg
 const cleanupScope=(potionPolicy||maximum!==undefined)&&TARGET_KEY!=='cow'?combatPotionSession(ownedSession,cowStop.stop,CAP):undefined;
 const s=cleanupScope??ownedSession;
 if(TARGET_KEY==='cow'){
-    if(process.env.COW_STAGE==='1')try{const {stageCows}=await import('./cow-stage'),{walkTarget}=await import('./walk-to');
-        const r=await stageCows(s,{stop:cowStop.stop,walk:async(x,z)=>(await walkTarget(s,{x,z,level:0},false)).ok});console.log(`COW_STAGE ${JSON.stringify(r)}`);}
+    if(process.env.COW_STAGE==='1')try{const {stageCows}=await import('./cow-stage'),{walkTargetPersist}=await import('./walk-to');
+        const r=await stageCows(s,{stop:cowStop.stop,walk:async(x,z)=>(await walkTargetPersist(s,{x,z,level:0})).ok});console.log(`COW_STAGE ${JSON.stringify(r)}`);}
         catch(e){await finish([s],false,String(e));}
     try{const r=await runCows(s,{cap:CAP,maximum:Number(process.env.MAX_KILLS??5),trainSkill:process.env.TRAIN_SKILL,targetLevel:process.env.TARGET_LEVEL===undefined?undefined:Number(process.env.TARGET_LEVEL),bankProfile:process.env.COW_BANK_PROFILE,foodMode:process.env.COW_FOOD_MODE,potions:potionPolicy,diagnostics:process.env.COW_DIAGNOSTICS==='1',stop:cowStop.stop});console.log(`COW_RESULT ${JSON.stringify(r)}`);await finish([s],r.ok&&cowStop.reason()!=='died',`mode=cow ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
     catch(e){await finish([s],false,String(e));}
