@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794339595853,
+ "at": 1794340217214,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -230,7 +230,7 @@
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Attack",
+    "TRAIN_SKILL": "Defence",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1"
@@ -238,9 +238,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Attack to 60 on the Ardougne cows",
+   "goal": "train Defence to 60 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-attack-60",
+   "template": "army-cow-defence-60",
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
@@ -482,21 +482,21 @@
    "script": "scripts/handoff-inputs.ts",
    "args": [
     "500:Rune arrowtips",
-    "--bank-x=2809",
-    "--bank-z=3441",
-    "--approach-ms=1500000",
+    "--bank-x=2619",
+    "--bank-z=3332",
+    "--approach-ms=1800000",
     "--request-ms=60000",
     "--timeout-ms=600000",
     "--grace-ms=45000"
    ],
    "env": {
-    "HANDOFF_ORDER": "bowbeforeme-rune-arrowtips500-r2",
+    "HANDOFF_ORDER": "bowbeforeme-rune-arrowtips500-r3",
     "CAP": "4000",
-    "COORDINATOR_RUN_ID": "task-d5ff2c23-7322-40f0-b736-9bfb597cdd77"
+    "COORDINATOR_RUN_ID": "task-af1eef14-528b-46d3-a42c-cb0d487b12a3"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "run-handoff-pocketrocket-bowbeforeme-runetips500-r2 [task-d5ff2c23-7322-40f0-b736-9bfb597cdd77]",
+   "goal": "run-handoff-pocketrocket-bowbeforeme-runetips500-r3 [task-af1eef14-528b-46d3-a42c-cb0d487b12a3]",
    "role": "supply"
   }
  ]
