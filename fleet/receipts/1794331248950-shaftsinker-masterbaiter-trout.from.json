@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794331248950-shaftsinker-masterbaiter-trout",
  "account": "Shaftsinker",
  "partner": "Masterbaiter",
@@ -12,6 +12,11 @@
  "claim": "b7b0c635-d44c-4756-9797-17e8ec7950d9",
  "count": 0,
  "ok": false,
- "at": 1794331266659,
- "detail": "trade claimed"
+ "at": 1794331318282,
+ "detail": "Error: route to 2618, 3333: precondition no route to 2618,3333,0",
+ "logout": {
+  "attemptId": "1794331266668-0000006572-0000000001",
+  "at": 1794331318271,
+  "sha256": "d955a819475f4f12d13f4524a8ccce080acda0feca44fecd09739c14a4cf2cdb"
+ }
 }
