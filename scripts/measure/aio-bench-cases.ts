@@ -267,7 +267,6 @@ const EXTRA_CASES: BenchCase[] = [
 
 const KNOWN_QUEST: Readonly<Record<string, string>> = {
   mm: 'RESULT fail talk garkor at tick 838: the bot is jailed a second time on the way to Garkor and the talk does not start',
-  waterfall: 'the walk to the Tree Gnome Village maze mouth 2505,3190 stops at 2509,3187, and the planner has no route from there to the first maze waypoint 2512,3190; the route search to the goal goes round the hedge to 2529,3140, where the client refuses the walk',
 };
 
 // Pair quests open their partners themselves: quest-arrav.ts and quest-hero.ts use `<main>p`, quest-legends.ts `<main>b` and `<main>c`.
