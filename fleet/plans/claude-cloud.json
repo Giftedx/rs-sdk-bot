@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794305895593,
+ "at": 1794306087139,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -137,16 +137,16 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
+    "TRAIN_SKILL": "Strength",
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "10"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
+   "goal": "train Strength to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "template": "army-trooper-strength-99",
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
