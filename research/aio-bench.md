@@ -18,7 +18,7 @@ Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). 
 
 ## Routes
 
-**Claim:** every catalog route is in one of three groups: 185 of 219 have a case that passes at seed 7, 33 cannot run as one case and name the cause, and 1 has a case that fails with a recorded error (`mm`). **Conditions:** lockstep, a new engine for each case; the start state of each case comes from the worker's entry checks, a proof or the map files. **Evidence:** `bun run bench --coverage`; `.practice/aio-bench/baseline-seed7.json`; the 105 non-quest cases run in 271 s on six engines. **Gap:** a case proves one small job from one start state, not the route at every level or place.
+**Claim:** every catalog route is in one of two groups: 186 of 219 have a case that passes at seed 7, and 33 cannot run as one case and name the cause. **Conditions:** lockstep, a new engine for each case; the start state of each case comes from the worker's entry checks, a proof or the map files. **Evidence:** `bun run bench --coverage`; `.practice/aio-bench/baseline-seed7.json`; the 105 non-quest cases run in 271 s on six engines. **Gap:** a case proves one small job from one start state, not the route at every level or place.
 
 **Claim:** `viking`, `squire` and `zanaris` pass at every seed tried. **Conditions:** seeds 7 to 10, a new engine for each case. **Evidence:** `viking` passes at 7, 8 and 9 (3001, 2727, 2787 ticks): the retreat rule fired in Koschei's fight, which ends at 0 hp by design, and `planLowHp` in `quest-lib` now switches the rule off for that fight. `squire` passes at four seeds with a wider bound on the cupboard search, and `zanaris` with a wider bound on the axe hunt.
 
@@ -75,3 +75,7 @@ Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). 
 ## The walk into the Tree Gnome Village maze
 
 **Claim:** one plan from outside the maze to the ladder at 2533,3156 goes round the hedge and stops at the nearest outside tile, and a tolerance of 2 at the mouth counts the closed pocket at 2504-2509,3186-3188 as arrived. A walk that enters on the exact tile 2502,3191 and then takes each maze point on its exact tile reaches the ladder. `waterfall` passes in 1364, 1353 and 1355 ticks at seeds 7, 8 and 9. **Conditions:** lockstep, `quester:quest:waterfall`. **Evidence:** `scripts/generated/waterfall.ts` (`walkMaze`); the planner finds every leg of `MAZE` and the whole route from the mouth (`findLongPath`, 51 waypoints). **Gap:** the rival states 980 ticks; this run ends with `hpMin=4`.
+
+## Garkor gives his first talk once
+
+**Claim:** in Monkey Madness, Garkor's varp moves on before his last page. If a hit or a jailing closes the pages after that, each later talk is the three-page reminder that Zooknock works beneath the atoll, and the line that the script waited for does not come again. The script accepts the reminder as the end of the talk. `mm` passes in 4620 ticks. **Conditions:** lockstep, seed 7, `quester:quest:mm`. **Evidence:** `.practice/aio-bench/trace/quester_quest_mm.actions` shows ten talks of three pages each; `mm_garkor.rs2:77-90`; `scripts/generated/quest-mm.ts` (`garkorDone`). **Gap:** one seed.
