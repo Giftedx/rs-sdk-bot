@@ -226,7 +226,8 @@ export const FEATHER_TARGET = 2000;
 // 8.1 near-solo. Gap: one live run per condition, not three matched, so KNIGHT_SHARED_RATE is an estimate, applied
 // once per holder; the planner's tick-waste discount and retirement still apply per job.
 export const KNIGHT_SHARE = 4, KNIGHT_SHARED_RATE = 0.75;
-// Ardougne north cow field: two army farmers to start, crowding not yet measured.
+// Ardougne north cow field: two army accounts at once. Practice: 3 pairs with full farm packs shared the field, 6/6
+// RESULT ok with 8 kills in 487-702 ticks (research/combat-measure.md); a third account is not measured.
 export const COW_FIELD = 'cow:ardougne-north', COW_FIELD_CAPACITY = 2;
 export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [COW_FIELD]: COW_FIELD_CAPACITY, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
@@ -239,9 +240,9 @@ export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGH
 // and, while nothing faster is qualified, on to 60 (about 2,800 more; an estimate, as XP per kill is fixed). Cow mode
 // needs 14 HP of trout or cake held (COW_FOOD_HP) and the bronze sword and wooden shield held or worn, starts at the
 // north bank and never wields better gear; COW_STAGE=1 (scripts/cow-stage.ts) walks the account there and takes the
-// sword, shield and food from its bank first: 3/3 on practice from the knight spot with the kit and 8 HP of cake
-// banked, RESULT ok with 8 kills and logged out (.practice/cow-stage-proof). Below Hitpoints 32 the food runs out.
-// Gap: staging is not run live, and the rate above 46 and field crowding are not measured.
+// sword, shield and food from its bank first, banking the rest of the pack: 3/3 on practice from the knight spot
+// with the kit and 8 HP of cake banked, RESULT ok with 8 kills and logged out (.practice/cow-stage-proof). Below
+// Hitpoints 32 the food runs out. Gap: the rate above level 46 is not measured.
 export const COW_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence'; band: number; to: number }[] = [
     { skill: 'Strength', band: 0, to: 45 }, { skill: 'Attack', band: 1, to: 45 }, { skill: 'Defence', band: 5, to: 45 },
     { skill: 'Strength', band: 10, to: 60 }, { skill: 'Attack', band: 11, to: 60 }, { skill: 'Defence', band: 12, to: 60 },
