@@ -13,7 +13,7 @@ test('pending or failed lookups do not assert that a player is offline',()=>{
 
 test('the current roster overrides cached online status without losing lookup details',()=>{
  const code=shell.slice(shell.indexOf('  function lookupCard(l){'),shell.indexOf('  function refreshWorldLookup(){'));
- const card=new Function('l','E','age','window','LIVE_ROSTER','placeOf',`${code};return lookupCard(l);`);
+ const card=new Function('l','E','age','window','LIVE_ROSTER','whereIs',`${code};return lookupCard(l);`);
  const snapshot={name:'Worker',rows:null,online:true,combat:20,note:'Published lookup'};
  const live={atlasLiveRoster:()=>true};
  const missing=card(snapshot,String,String,live,{players:[]},()=> 'Varrock');
