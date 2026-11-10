@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794322247638,
+ "at": 1794322286465,
  "jobs": [
   {
    "account": "Fingerblastr",
@@ -23,20 +23,22 @@
   },
   {
    "account": "Quickhandjob",
-   "script": "scripts/alch-train.ts",
-   "args": [
-    "99",
-    "5000"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "combat",
-   "template": "army-alch-magic-99",
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "knight:2582,3297"
+   ]
   },
   {
    "account": "TrouserSnake",
@@ -113,7 +115,7 @@
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
+    "TRAIN_SKILL": "Attack",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1"
@@ -121,9 +123,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 60 on the Ardougne cows",
+   "goal": "train Attack to 60 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-strength-60",
+   "template": "army-cow-attack-60",
    "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
