@@ -126,7 +126,8 @@ Ranged it adds is not needed at that point.
   `six-spread.out`, `nine-spread.out`, `fourteen.out`); `scripts/gather-combat-giant.test.ts` (accounts in company
   spread).
 - **Gap.** Practice only; all melee Strength; more than fourteen at once and a mix with Ranged trainers are not
-  measured. Live, nine at once with burying and bronze swords gave 28-50 XP per tick an account.
+  measured. Live, with burying on: nine at once with bronze swords gave 28-50 XP per tick an account, and twelve at
+  once gave 46.7-73.7 (the two at the top held adamant scimitars), every run `RESULT ok`.
 - **Claim.** Bones buried on the field: with `GIANT_BURY=1` the trooper trainer buries the bones of almost every own
   kill, about 2.5 Prayer XP per tick an account, for 16% of the Strength rate. Troopers drop bones on every kill
   (`npc_combat.param` `death_drop`), 112 or 113 Prayer XP each at this server's rate.
@@ -171,6 +172,25 @@ Ranged it adds is not needed at that point.
   at low HP).
 - **Gap.** Practice only, one set of three; Ranged on cooked meat and a run that starts under Defence 60 are not
   measured.
+- **Claim.** A melee-maxed account trains Prayer on the troopers at about 3.8 Prayer XP per tick: it kills them only
+  for their bones and buries each on the spot.
+- **Conditions.** Three accounts at once, every melee skill 99, an adamant scimitar, sharks banked, Prayer 89.
+  Trooper mode with `TRAIN_SKILL=Hitpoints GIANT_KILLS=500 GIANT_FOOD=20 GIANT_BURY=1`, cap 1,500 (the planner's
+  `army-trooper-prayer-99`):
+
+  | Account | Kills | Bones buried | Prayer XP | Ticks | Prayer XP per tick | Sharks eaten | Lowest HP |
+  |---|---|---|---|---|---|---|---|
+  | 1 | 54 | 54 | 6,075 | 1,584 | 3.84 | 0 | 78 |
+  | 2 | 56 | 55 | 6,187 | 1,684 | 3.67 | 0 | 81 |
+  | 3 | 59 | 58 | 6,525 | 1,680 | 3.88 | 0 | 89 |
+
+  All three ended `RESULT ok` on the cap. Prayer 89 to 99 is about 500,000 XP at this server's rate, about 130,000
+  ticks at this rate. The Hill Giant camp south of Ardougne has two giants in its room (`maps/m39_49.jm2`), so big
+  bones there serve one account at most.
+- **Evidence.** `.practice/troopers/prayer.ts` (`prayer.out`); `packages/planner/test/autopilot.test.ts` (a
+  melee-maxed army account buries trooper bones).
+- **Gap.** Practice only; one set of three. A faster bone source for many accounts at once is not found; where the
+  9 ticks a buried kill costs go is not measured.
 - **Claim.** The trainer banks pack coins with its drops before every walk out, so a death on the field cannot lose
   them. **Conditions.** The same run from 5,000 coins in the pack, cap 400: `RESULT ok`, 8 kills, 2 bank trips; the
   pack held 0 coins and the bank 5,000 afterwards. **Evidence.** `.practice/troopers/coins.ts` and `peek.ts`;

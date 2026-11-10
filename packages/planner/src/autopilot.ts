@@ -34,6 +34,9 @@ export type Template = {
     // A goal band (AGENTS.md goals: the PK army of maxed tribrids) trains an army account toward its target and is
     // assigned before any coin job; `band` orders the bands by PK value, lowest first. Gold only buys their kits.
     tier?: 'goal'; band?: number;
+    // A goal band that only fills time (burying trooper bones for Prayer): an account takes it after the kit tier,
+    // so a kit buy or a send for an earlier band comes first, and a kit buy replaces it while it runs.
+    filler?: boolean;
     // A trainer whose script runs a fixed amount (not to its target level) repeats until the planner moves it on.
     repeats?: boolean;
     // The stock a kit buy brings an item up to, by item name: more than the start minimum in `needs`, so one login
@@ -298,21 +301,22 @@ export function plan(inp: Inputs): Assignment[] {
     // The goal tier first: each army account takes the earliest band it can (a full band's resource sends it to the
     // next), the account nearest its target first; it never competes with coin jobs on coins per tick.
     const goalOrder = (x: Cand, y: Cand) => x.goal!.band - y.goal!.band || x.goal!.left - y.goal!.left || keeps(y) - keeps(x) || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id);
-    for (const c of cands.filter(c => c.goal && !c.lacks).sort(goalOrder)) take(c, 0);
+    for (const c of cands.filter(c => c.goal && !c.lacks && !c.template.filler).sort(goalOrder)) take(c, 0);
     // Then the kit tier: an army account with no band it can start gets the kit of its earliest band, before any coin
     // job, so banked gold becomes a band and not more gold. A buy is one login with the account's own coins. A send
     // takes a partner off its work for a trade window, so it comes second: this side's donors, then another side's.
     const reserve = kitReserve(inp.templates), byName = new Map(mine.map(a => [a.name, a]));
     const stock = [...(inp.stock ?? [])].sort((x, y) => Number(y.side === inp.side) - Number(x.side === inp.side));
     const spare = (s: Stock, item: string) => (s.items[item] ?? 0) - (reserve[item] ?? 0);
-    const goalNow = (account: string) => { const id = inp.current?.get(account.toLowerCase()); return !!id && (id.startsWith(KIT_BUY) || byId.get(id)?.tier === 'goal'); };
+    const banded = (id: string) => byId.get(id)?.tier === 'goal' && !byId.get(id)?.filler;
+    const goalNow = (account: string) => { const id = inp.current?.get(account.toLowerCase()); return !!id && (id.startsWith(KIT_BUY) || banded(id)); };
     const acquire = (c: Cand) => {
         const a = byName.get(c.account)!, busy = !!inp.unfundable?.has(c.account.toLowerCase()), buyId = KIT_BUY + c.template.id;
         if (done.has(c.account) || gave.has(c.account) || gaveItems.has(c.account) || vacated.has(c.account)) return;
         // An account in a running band job keeps the rule it had before the kit tier: its live holdings dip while it
         // works (food eaten, runes cast), and a kit buy must not replace a band that is still running.
         const now = inp.current?.get(c.account.toLowerCase());
-        if (busy && now && !now.startsWith(KIT_BUY) && byId.get(now)?.tier === 'goal') return;
+        if (busy && now && !now.startsWith(KIT_BUY) && banded(now)) return;
         // No kit for a band whose place is full: the account tries its next band.
         if (c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
         const picks = c.lacks!.map(l => { const item = l.of.filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]; return item ? { item, count: l.count } : null; });
@@ -354,6 +358,8 @@ export function plan(inp: Inputs): Assignment[] {
         }
     };
     for (const c of cands.filter(c => c.goal && c.lacks).sort(goalOrder)) acquire(c);
+    // Then the filler bands, for an army account that no band and no kit took.
+    for (const c of cands.filter(c => c.goal && !c.lacks && c.template.filler).sort(goalOrder)) take(c, 0);
     // The coin tier, re-sorted after every assignment: one more holder lowers the worth of the candidates that share
     // its resource.
     for (const rest = cands.filter(c => !c.goal); rest.length;) {
@@ -453,7 +459,7 @@ export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore:
 export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // Army goal bands (AGENTS.md goals: maxed tribrids), in order: Strength, Attack, Magic, Prayer, Ranged, Defence
-// last. Bands 6-8 are the Khazard troopers (TROOPER_BANDS), 9 is free. Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile, MAX_KILLS=8): live 4/4 runs
+// last. Bands 6-8 are the Khazard troopers (TROOPER_BANDS), 9 is Prayer on the field (PRAYER_FIELD_BAND). Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile, MAX_KILLS=8): live 4/4 runs
 // RESULT ok at 15.7 Strength XP per tick from Strength 1 to 46 (research/combat-measure.md, live cow training);
 // practice 3/3 from Hitpoints 32 with trout and 3/3 with cake only (claude-cloud-4 .practice/combat-ladder). This
 // server's level table puts 45 at 22,767 XP, 60 at 66,193, 70 at 133,230, 80 at 267,169, 90 at 534,888 and 99 at
@@ -496,6 +502,11 @@ export const TROOPER_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence';
 // out after a level; practice from the knights buried 114 of 120 bones in 282 ticks to Prayer 75, about 2.2 ticks a
 // bone. Gap: neither is run live.
 export const MAGIC_BAND = 2, PRAYER_BAND = 3;
+// Prayer on the field, band 9, a filler: an account with every melee skill at 99 kills troopers only for their bones
+// and buries each on the spot (trooper mode with TRAIN_SKILL=Hitpoints, which takes any style, and GIANT_KILLS past the
+// tick cap, so each run ends on the cap). An account takes it when no other band and no kit buy serves it; without it
+// a melee-maxed account short of 100 bones fell to a coin job (live: TrouserSnake at Prayer 89).
+export const PRAYER_FIELD_BAND = 9;
 // Ranged, band 4: trooper mode with TRAIN_SKILL=Ranged wields the best owned bow for the Ranged level and the best
 // owned arrows that bow fires (an arrow's level may not exceed the bow's), on rapid, and restocks arrows on bank trips;
 // out of arrows it ends stop=ammo, ok after kills. Practice 3/3 RESULT ok: Ranged 1 to 63-66 in about 1,690 ticks,
@@ -610,6 +621,13 @@ export function catalogue(): Template[] {
         goal: 'train Prayer to 99 burying the held bones', tier: 'goal', band: PRAYER_BAND, repeats: true, trains: { skill: 'Prayer', to: 99, unlocks: [] }, yields: () => [],
         needs: { items: { bones: 100 } },
     };
+    const prayerField: Template = {
+        id: 'army-trooper-prayer-99', family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'],
+        env: { TRAIN_SKILL: 'Hitpoints', GIANT_KILLS: '500', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1' }, role: 'combat', goal: 'train Prayer to 99 burying trooper bones on the field',
+        tier: 'goal', band: PRAYER_FIELD_BAND, filler: true, repeats: true, trains: { skill: 'Prayer', to: 99, unlocks: [] }, resources: [TROOPER_FIELD], yields: () => [],
+        needs: { skills: { Attack: 60, Strength: 60, Defence: 60, Hitpoints: 40 }, pieces: { of: TROOPER_STOCK, count: 10 } },
+        batch: { trout: 100 },
+    };
     const ranged: Template = {
         id: 'army-trooper-ranged-99', family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'],
         env: { TRAIN_SKILL: 'Ranged', TARGET_LEVEL: '99', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1' }, role: 'combat', goal: 'train Ranged to 99 on the Khazard troopers',
@@ -625,6 +643,7 @@ export function catalogue(): Template[] {
         magic,
         prayer,
         ranged,
+        prayerField,
         { id: 'thieving55', family: 'thieving60', script: 'scripts/generated/thieving60.ts', env: { TARGET: '55', CAP: '2500', CLEAN_FOOD: '1' }, role: 'thieving',
             goal: 'train Thieving to 55 for a knight spot', trains: { skill: 'Thieving', to: 55, unlocks: goldfarm.map(g => g.id) }, yields: () => [] },
         ...CHICKEN_PENS.map((pen): Template => ({
