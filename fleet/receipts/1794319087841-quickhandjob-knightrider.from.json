@@ -1,0 +1,22 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1794319087841-quickhandjob-knightrider",
+ "account": "Quickhandjob",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 20,
+ "claim": "aca06ce9-ff50-4d87-80d0-4682df030da7",
+ "count": 0,
+ "ok": false,
+ "at": 1794319840046,
+ "detail": "Error: route to 2618, 3333: precondition no route to 2618,3333,0",
+ "logout": {
+  "attemptId": "1794319788017-0000019206-0000000001",
+  "at": 1794319840039,
+  "sha256": "7c3c74581876d726786942cd9065903619a02b38ffa6eebc9a5288a8f55b108a"
+ }
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794319809439-undermykilt-deeppockets",
+ "account": "Deeppockets",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 10,
+ "claim": "104ddc62-a52b-4fd4-9e8e-5c11e5495af8",
+ "count": 0,
+ "ok": false,
+ "at": 1794319814821,
+ "detail": "trade claimed"
+}
