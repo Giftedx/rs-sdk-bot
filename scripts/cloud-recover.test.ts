@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { SWARM_STOP } from './swarm';
-import { archiveDir, clearSwarmStops, cloudSide, deadTasks, eligibility, lifecycleRoot, MAX_ATTEMPTS, MAX_TARGETS, recoveriesInFlight, recoveryBatch, recoveryProposal, releasableAccounts, releaseBlockers, spentAttempts, submitRejected, type ClaimView } from './cloud-recover';
+import { archiveDir, clearSwarmStops, cloudSide, deadTasks, eligibility, lifecycleRoot, MAX_ATTEMPTS, MAX_TARGETS, recoveriesInFlight, recoveryBatch, recoveryProposal, releasableAccounts, releaseBlockers, releasePlan, spentAttempts, submitRejected, type ClaimView } from './cloud-recover';
 import { DEFAULT_LIFECYCLE_ROOT } from '../packages/core/src/session-lifecycle';
 import type { LogoutProof } from '../packages/core/src/session-lifecycle';
 
@@ -74,12 +74,28 @@ test('a parked owner-job copy stays when swarm.json no longer names the account'
     expect(releasableAccounts([check, copy], v)).toEqual([]);
     expect(releaseBlockers([check, copy], v)).toEqual([copy]);
 });
-test('a parked owner-job copy stays unless the logout proof is confirmed: none, invalid and held all block', () => {
+test('a parked owner-job copy stays unless the logout proof is confirmed, and it no longer holds the other accounts', () => {
     for (const state of ['none', 'invalid', 'held']) {
         const v = { ...settled, confirmed: (a: string) => a !== 'Quickhandjob' || state === 'confirmed' };
-        expect(releasableAccounts([check, copy], v)).toEqual([]);
+        // The copy waits for its own account; the recovered account beside it is released.
+        expect(releasePlan([check, copy], v)).toEqual({ free: [check], keep: [copy] });
+        expect(releasableAccounts([check, copy], v)).toEqual(['TheFullMonty']);
+        expect(releasableAccounts([copy], v)).toEqual([]);
     }
-    expect(releasableAccounts([check, { ...copy, account: undefined, accounts: ['A', 'B'] }], { ...settled, confirmed: (a: string) => a === 'A' })).toEqual([]);
+    const pair = { ...copy, account: undefined, accounts: ['A', 'B'] };
+    expect(releasePlan([check, pair], { ...settled, confirmed: (a: string) => a === 'A' })).toEqual({ free: [check], keep: [pair] });
+    // Live claude-cloud: seven parked session checks and one unsettled copy of Fingersmith's planner job.
+    const seven = ['TrouserSnake', 'Kiltlifter', 'PocketPool', 'Quickhandjob', 'UnderMyKilt', 'Deeppockets', 'Knightstick'].map(account => ({ ...check, account }));
+    const stray = { account: 'Fingersmith', script: 'scripts/gather-combat.ts', enabled: false, standing: true, autopilot: 'army-cow-defence-80' };
+    const plan = releasePlan([...seven, stray], { ...settled, confirmed: (a: string) => a !== 'Fingersmith' });
+    expect(plan.free).toEqual(seven); expect(plan.keep).toEqual([stray]);
+});
+test('nothing is released around a blocker that is not a waiting copy: enabled work, a coordinator job, a copy with no owner job', () => {
+    const unsettled = { ...settled, confirmed: (a: string) => a !== 'Quickhandjob' };
+    expect(releasePlan([check, copy, { ...copy, account: 'Haggis', enabled: true }], unsettled).free).toEqual([]);
+    expect(releasePlan([check, copy, { account: 'Haggis', coordinatorOwner: 'coordinator', enabled: false, script: 'scripts/fight.ts' }], unsettled).free).toEqual([]);
+    expect(releasePlan([check, copy], { ...unsettled, ownerJob: (a: string) => a !== 'Quickhandjob' }).free).toEqual([]);
+    expect(releasePlan([check, copy], { ...unsettled, recovering: (a: string) => a === 'Quickhandjob' }).free).toEqual([]);
 });
 test('a parked owner-job copy stays while a recovery of its account is pending or running', () => {
     expect(releasableAccounts([check, copy], { ...settled, recovering: (a: string) => a === 'Quickhandjob' })).toEqual([]);

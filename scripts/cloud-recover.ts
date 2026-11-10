@@ -144,11 +144,23 @@ export type ReleaseView = { ownerJob: (account: string) => boolean; confirmed: (
 const releasable = (j: any, v: ReleaseView) => j?.enabled === false && (
     j.coordinatorOwner === 'coordinator' ? typeof j.account === 'string' && j.script === 'scripts/session-check.ts'
         : jobAccounts(j).length > 0 && jobAccounts(j).every(a => v.ownerJob(a) && v.confirmed(a) && !v.recovering(a)));
-// Jobs that keep the coordinator's file in place.
+// Jobs that may not be archived yet.
 export const releaseBlockers = (jobs: readonly any[], v: ReleaseView) => jobs.filter(j => !releasable(j, v));
-// The accounts a release frees: only when every job in the coordinator's file may be archived.
+// A blocker that only waits for its own account: a parked owner-job copy whose owner job is in swarm.json and that has
+// no recovery open, but whose logout is not confirmed yet. It stays in the file and no longer holds the others: live
+// claude-cloud, one such copy (Fingersmith) kept seven recovered accounts parked for 30 minutes.
+const waits = (j: any, v: ReleaseView) => j?.enabled === false && j.coordinatorOwner !== 'coordinator'
+    && jobAccounts(j).length > 0 && jobAccounts(j).every(a => v.ownerJob(a) && !v.recovering(a));
+// What a release does with the coordinator's file: the jobs it archives and the jobs it leaves in place. Any other
+// blocker (an enabled job, a coordinator job that is not a parked session check, a copy with no owner job) is work
+// this script does not understand, and nothing is released around it.
+export function releasePlan(jobs: readonly any[], v: ReleaseView): { free: any[]; keep: any[] } {
+    const keep = releaseBlockers(jobs, v);
+    return keep.every(j => waits(j, v)) ? { free: jobs.filter(j => !keep.includes(j)), keep } : { free: [], keep: [...jobs] };
+}
+// The accounts a release frees.
 export function releasableAccounts(jobs: readonly any[], v: ReleaseView): string[] {
-    return jobs.length && !releaseBlockers(jobs, v).length ? jobs.flatMap(jobAccounts) : [];
+    return releasePlan(jobs, v).free.flatMap(jobAccounts);
 }
 
 // The local side's coordinator owns real work in its jobs.json; only a cloud side runs this script.
@@ -221,11 +233,12 @@ async function main(root: string, dry: boolean): Promise<number> {
     const owned = new Set((readJson(join(root, 'swarm.json'), { jobs: [] }).jobs ?? []).flatMap(jobAccounts).map((n: string) => n.toLowerCase()));
     const view: ReleaseView = { ownerJob: a => owned.has(a.toLowerCase()), confirmed: a => readLogoutProof(a, LIVE_SERVER, { root: lifecycleRoot(root) }).state === 'confirmed',
         recovering: a => flying.some((t: any) => t.spec.sessionRecovery.account.toLowerCase() === a.toLowerCase()) };
-    const parked = releasableAccounts(jobs, view), blockers = releaseBlockers(jobs, view);
-    if (!parked.length && blockers.length && blockers.length < jobs.length) log(`release skipped: jobs.json also holds ${blockers.map((j: any) => `${jobAccounts(j).join('+')} ${j.script}${j.enabled === false ? '' : ' (enabled)'}`).join(', ')}`);
+    const { free, keep } = releasePlan(jobs, view), parked = free.flatMap(jobAccounts), blockers = releaseBlockers(jobs, view);
+    const named = (js: readonly any[]) => js.map((j: any) => `${jobAccounts(j).join('+')} ${j.script}${j.enabled === false ? '' : ' (enabled)'}`).join(', ');
+    if (!parked.length && blockers.length && blockers.length < jobs.length) log(`release skipped: jobs.json also holds ${named(blockers)}`);
     if (!parked.length) return failed ? 1 : 0;
-    if (dry) { log(`would release parked jobs for ${parked.join(', ')}`); return 0; }
-    return (await release(root, parked)) && !failed ? 0 : 1;
+    if (dry) { log(`would release parked jobs for ${parked.join(', ')}${keep.length ? `; would leave ${named(keep)}` : ''}`); return 0; }
+    return (await release(root, parked, keep)) && !failed ? 0 : 1;
 }
 
 async function run(root: string, args: string[]): Promise<boolean> {
@@ -234,14 +247,16 @@ async function run(root: string, args: string[]): Promise<boolean> {
 }
 
 // Stop the coordinator (its swarm and workers are detached and keep running), move its parked jobs and stop file into
-// an archive folder, then start it again; it adopts the running swarm.
-async function release(root: string, parked: string[]): Promise<boolean> {
+// an archive folder, then start it again; it adopts the running swarm. Jobs in `keep` go back into a new jobs.json.
+async function release(root: string, parked: string[], keep: readonly any[] = []): Promise<boolean> {
     const coord = join(root, '.practice', 'coordinator'), owner = readJson(join(coord, 'owner.json'), null);
     if (!(await run(root, ['--stop']))) { log('release: coordinator stop failed'); return false; }
     const deadline = Date.now() + 120_000;
     while (owner && pidAlive(owner.pid)) { if (Date.now() > deadline) { log('release: coordinator did not exit; jobs.json left in place'); return false; } await Bun.sleep(2000); }
     const dir = archiveDir(root, parked[0]!, Date.now()); mkdirSync(dir, { recursive: true });
-    for (const f of [join(coord, 'jobs.json'), join(root, '.practice', 'stop-coordinator')]) if (existsSync(f)) renameSync(f, join(dir, f.split('/').pop()!));
+    const file = join(coord, 'jobs.json'), whole = readJson(file, { jobs: [] });
+    for (const f of [file, join(root, '.practice', 'stop-coordinator')]) if (existsSync(f)) renameSync(f, join(dir, f.split('/').pop()!));
+    if (keep.length) { writeFileSync(file, JSON.stringify({ ...whole, jobs: keep }, null, 1) + '\n'); log(`release left in jobs.json: ${keep.map((j: any) => `${jobAccounts(j).join('+')} ${j.script}`).join(', ')}`); }
     const env = { ...process.env }; delete env.SWARM_PLAN;
     mkdirSync(join(root, '.practice', 'swarm-logs'), { recursive: true });
     const out = openSync(join(root, '.practice', 'swarm-logs', 'coordinator.log'), 'a');
