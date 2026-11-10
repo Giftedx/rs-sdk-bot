@@ -6,6 +6,8 @@
 // together never put more accounts on a spot than its capacity (CAPACITY in the planner).
 // A job that only lacks coins gets them from a free account of this side: the pass writes a fleet order
 // (fleet/orders), scripts/fleet-agent.ts runs the trade, and a later pass gives the job.
+// An army account that lacks only kit items for a goal band gets them first: a capped Grand Exchange buy with its own
+// coins, else an item order from a free account of this side, else of another side (fleet/snapshots and fleet/plans).
 // Usage: bun scripts/autopilot.ts [swarm.json] [--dry] [--daemon]
 // --daemon: a pass every 10 minutes, and one within TRAINER_POLL_MS of a planner trainer's ok RESULT (its target level
 // is met and its job does not repeat, so the account would otherwise sit ended until the timer).
@@ -17,7 +19,7 @@ import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { clearSwarmStop, swarmWroteStop } from './swarm';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { matchingJobLines } from '../packages/core/src/job-log';
-import { CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, freshest, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, type Assignment } from '../packages/planner/src/autopilot';
+import { CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, freshest, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, coinValueFor, type Assignment, type ItemFunding, type Market, type Stock } from '../packages/planner/src/autopilot';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { tradeSettlement, validOrder, windowClosures, type Order, type Receipt, type TradeReceipt } from './fleet-trade-settlement';
 import { readHeldFleetTradeClaims } from '../packages/core/src/fleet-trade-claim';
@@ -35,7 +37,8 @@ export const heldResources = (jobs: readonly any[]) => jobs.filter(j => j?.enabl
 const swarmPaused = () => existsSync(join(prac, 'stop-swarm'));
 // A retirement records the hash of its template's script; an entry from before that is a bare reason.
 type Retirement = string | { reason: string; script: string };
-type State = { assigned: Record<string, { template: string; offset: number; at: number }>; retired: Record<string, Retirement> };
+// `kitSeq`: each account's kit-buy count, which names its Grand Exchange order keys (kitBuyTemplate).
+type State = { assigned: Record<string, { template: string; offset: number; at: number }>; retired: Record<string, Retirement>; kitSeq?: Record<string, number> };
 // A retirement holds while its template's script is unchanged, so a fix to the script gives the pair its retries back.
 // A death holds until a person clears it, and so does a pair whose template is gone. A bare reason takes the current
 // script, so nothing comes back on the pass that first reads it. One whose last RESULT is now a drain (DRAIN_RESULT)
@@ -86,6 +89,46 @@ export function coinOrder(from: string, to: string, coins: number, server: strin
     const start = now + 15 * 60_000;
     return { id: `${start}-${from}-${to}`.toLowerCase(), server, from, to, item: 'coins', count: coins, start, end: start + 40 * 60_000 };
 }
+// The tile pair at the Ardougne north bank, the army's home bank: scripts/coin-courier.ts meetingTiles for the bank
+// tile 2619,3332 (scripts/autopilot.test.ts checks the two agree). A kit item order meets there.
+export const ARMY_MEET: NonNullable<Order['meet']> = [{ x: 2618, z: 3333, level: 0 }, { x: 2617, z: 3333, level: 0 }];
+// A kit item order: the same window as a coin order, at the army's home bank. The id carries the item, so two orders
+// for one pair in one pass differ.
+export function itemOrder(from: string, to: string, item: string, count: number, server: string, now: number): Order {
+    const start = now + 15 * 60_000;
+    return { id: `${start}-${from}-${to}-${item.replace(/[^A-Za-z0-9]+/g, '')}`.toLowerCase().slice(0, 64), server, from, to, item, count, start, end: start + 40 * 60_000, meet: ARMY_MEET };
+}
+// A side's free accounts as kit donors, from its published snapshot and plan (fleet/snapshots, fleet/plans): the side
+// published a plan within `maxAgeMs` (SIDE_STOCK_MAX_AGE_MS: its fleet agent syncs every 10 minutes, so it runs and
+// will trade), and the account has no enabled job in that
+// plan and is in no open order. That side's planner keeps a party to an open order vacant until the order closes.
+export const SIDE_STOCK_MAX_AGE_MS = 30 * 60_000;
+export function sideStock(side: string, snapshot: any, plan: any, open: ReadonlySet<string>, now: number, maxAgeMs: number, itemName: (id: number) => string | undefined): Stock[] {
+    if (!Array.isArray(snapshot?.accounts) || !Array.isArray(plan?.jobs) || !(now - plan.at < maxAgeMs)) return [];
+    const busy = enabledAccounts(plan.jobs);
+    return snapshot.accounts.filter((r: any) => typeof r?.name === 'string' && !busy.has(r.name.toLowerCase()) && !open.has(r.name.toLowerCase()) && r.name.toLowerCase() !== 'haggis')
+        .map((r: any) => { const a = accountFrom(r.name, side, r, itemName); return { name: a.name, side, items: a.items }; });
+}
+// Donor and recipient pairs whose item order failed or needs reconciliation in the last `windowMs`, as `from>to` in lower
+// case. The same donor would fail the same way (an owner pause the published plan does not show, a tile it cannot
+// reach), so the planner asks another donor.
+export const SEND_RETRY_MS = 24 * 3600_000;
+export function failedSends(orders: readonly Order[], receipts: readonly Receipt[], now: number, windowMs = SEND_RETRY_MS): Set<string> {
+    const out = new Set<string>();
+    for (const o of orders) {
+        if (o.item.toLowerCase() === 'coins' || now - o.start > windowMs) continue;
+        const state = tradeSettlement(o, receipts, now).state;
+        if (state === 'failed' || state === 'reconcile') out.add(`${o.from}>${o.to}`.toLowerCase());
+    }
+    return out;
+}
+// A kit buy that has started and printed no RESULT yet holds an open Grand Exchange offer: its coins are in the
+// exchange, so the account's live status shows them gone. The pass leaves such a job as it is.
+export function kitBuyRunning(job: any, assigned: { template: string; offset: number } | undefined, linesSince: (offset: number) => readonly string[]): boolean {
+    if (!job?.enabled || typeof job.template !== 'string' || !job.template.startsWith(KIT_BUY) || !assigned || assigned.template !== job.template) return false;
+    const r = assess(linesSince(assigned.offset));
+    return r.ok + r.fail + r.drains === 0;
+}
 // Accounts with an enabled job, as scripts/fleet-agent.ts swarmBusy counts them: the agent trades for no other account.
 const enabledAccounts = (jobs: readonly any[]) => new Set(jobs.filter(j => j?.enabled).flatMap(j => [j.account, ...(j.accounts ?? [])]).filter((n): n is string => typeof n === 'string').map(n => n.toLowerCase()));
 // New receipts hold both parties through a matched settlement or explicit reconciliation, even after the window. An
@@ -119,9 +162,16 @@ export function tradeStockReady(receipt: TradeReceipt, status: any): boolean {
 // A funded assignment becomes a coin order now and the job on a later pass, once the coins are in the account. Until
 // then the account is vacant, so the fleet agent can log it in for the trade. Every party to an open order, donor or
 // recipient, stays vacant until the order closes: the fleet agent trades only for accounts with no enabled job.
-export function fundOrders(out: readonly Assignment[], open: ReadonlySet<string>, order: (from: string, to: string, coins: number) => Order) {
+export function fundOrders(out: readonly Assignment[], open: ReadonlySet<string>, order: (from: string, to: string, coins: number) => Order, itemOrderFor?: (send: ItemFunding) => Order) {
     const orders: Order[] = [], log: string[] = [];
     const assignments = out.map(x => {
+        if (x.send && itemOrderFor) {
+            // A kit item order works as a coin order does: both parties stay vacant until it closes.
+            const s = x.send, busy = [s.from, s.to].some(n => open.has(n.toLowerCase()));
+            if (!busy) orders.push(itemOrderFor(s));
+            log.push(`AUTOPILOT send ${s.to} ${s.count} ${s.item} from ${s.from} for ${s.template}${busy ? ': waits for an open order' : ''}`);
+            return { account: x.account, value: 0, resources: [], reason: `vacant: awaits ${s.count} ${s.item} from ${s.from} for ${s.template}` };
+        }
         if (!x.fund) return open.has(x.account.toLowerCase()) ? { account: x.account, value: 0, resources: [], reason: 'vacant: in an open fleet order' } : x;
         const f = x.fund, busy = [f.from, f.to].some(n => open.has(n.toLowerCase()));
         if (!busy) orders.push(order(f.from, f.to, f.coins));
@@ -202,12 +252,14 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     const stopText = (n: string): string | undefined => { try { return readFileSync(join(prac, `stop-${n}`), 'utf8'); } catch { return undefined; } };
     const { paused, swarmStopped } = pauses(new Map(listedNames.flatMap(n => { const t = stopText(n); return t === undefined ? [] : [[n, t] as const]; })));
     const { held, keep, busy } = planningOwnership(swarm.jobs, readCoordinatorJobs(root).jobs, paused);
+    for (const j of swarm.jobs.filter(mineMarked)) if (typeof j.account === 'string'
+        && kitBuyRunning(j, state.assigned[j.account], offset => readJobResultLines(join(prac, 'swarm-logs', `${j.account}.log`), offset, j))) keep.add(j.account.toLowerCase());
 
     // Retire planner jobs whose own log lines show no progress.
     const log: string[] = [];
     const scripts = new Map(catalogue().map(t => [t.id, t.script])), hashes = new Map<string, string>();
     const scriptOf = (template: string) => {
-        const file = scripts.get(template);
+        const file = template.startsWith(KIT_BUY) ? KIT_BUY_SCRIPT : scripts.get(template);
         if (file && !hashes.has(file)) try { hashes.set(file, createHash('sha1').update(readFileSync(join(root, file))).digest('hex')); } catch { /* missing: no hash */ }
         return file ? hashes.get(file) : undefined;
     };
@@ -260,13 +312,35 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     }
     const donors = listed.filter(n => owners.get(n.toLowerCase())?.side === side && n.toLowerCase() !== 'haggis' && ![busy, keep, open].some(s => s.has(n.toLowerCase())))
         .map(n => ({ name: n, coins: accountFrom(n, side, observed(n), id => byId.get(id)).items.coin ?? 0 })).filter(d => d.coins > 0);
-    const planned = plan({ side, accounts, owners, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm) });
-    const funding = fundOrders(planned, open, (from, to, coins) => coinOrder(from, to, coins, owners.get(to.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev', now));
+    // Kit donors: this side's free accounts (the coin donors' rule), then each other side's, on the same server.
+    const free = (n: string) => owners.get(n.toLowerCase())?.side === side && n.toLowerCase() !== 'haggis' && ![busy, keep, open].some(s => s.has(n.toLowerCase()));
+    const stock: Stock[] = listed.filter(free).map(n => { const a = accountFrom(n, side, observed(n), id => byId.get(id)); return { name: a.name, side, items: a.items }; });
+    const snapshotDir = join(fleetDir, 'snapshots');
+    for (const f of existsSync(snapshotDir) ? readdirSync(snapshotDir).filter(f => f.endsWith('.json')) : []) {
+        const other = f.slice(0, -'.json'.length);
+        if (other !== side) stock.push(...sideStock(other, readJson(join(snapshotDir, f), null), readJson(join(fleetDir, 'plans', f), null), open, now, SIDE_STOCK_MAX_AGE_MS, id => byId.get(id))
+            .filter(s => owners.get(s.name.toLowerCase())?.side === other));
+    }
+    const market: Record<string, { id: number; name: string; limit: number }> = {};
+    for (const i of items) if (typeof i.name === 'string' && Number.isSafeInteger(i.id) && !/^cert_/.test(i.debugname ?? '') && norm(i.name) in KIT_PRICE_CAPS && !(norm(i.name) in market))
+        market[norm(i.name)] = { id: i.id, name: i.name, limit: KIT_PRICE_CAPS[norm(i.name)]! };
+    // This side's banked coins, over every account it owns: above the glut level a coin job ranks last.
+    const sideCoins = listed.filter(n => owners.get(n.toLowerCase())?.side === side).reduce((n, name) => n + (accountFrom(name, side, observed(name), id => byId.get(id)).items.coin ?? 0), 0);
+    const coinValue = coinValueFor(sideCoins);
+    if (coinValue !== 1) log.push(`AUTOPILOT coins: this side holds ${sideCoins}, so a coin counts as ${coinValue}`);
+    const planned = plan({ side, accounts, owners, coinValue, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), stock, market: market as Market,
+        kitSeq: new Map(Object.entries(state.kitSeq ?? {}).map(([a, n]) => [a.toLowerCase(), n])), noSend: failedSends(orders, receipts, now) });
+    const serverOf = (to: string) => owners.get(to.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev';
+    const funding = fundOrders(planned, open, (from, to, coins) => coinOrder(from, to, coins, serverOf(to), now),
+        s => itemOrder(s.from, s.to, market[s.item]?.name ?? items.find(i => typeof i.name === 'string' && norm(i.name) === s.item && !/^cert_/.test(i.debugname ?? ''))?.name ?? s.item, s.count, serverOf(s.to), now));
     const out = funding.assignments;
     log.push(...funding.log);
 
     const { jobs, fresh } = mergeJobs(swarm.jobs, side, out, keep);
     for (const x of out) {
+        // An account that leaves a kit buy (for its band, another job or none) starts a new order key next time.
+        const was = state.assigned[x.account]?.template;
+        if (was?.startsWith(KIT_BUY) && was !== x.template?.id) (state.kitSeq ??= {})[x.account.toLowerCase()] = (state.kitSeq?.[x.account.toLowerCase()] ?? 0) + 1;
         if (!x.template) { log.push(`AUTOPILOT vacant ${x.account}: ${x.reason}`); delete state.assigned[x.account]; continue; }
         if (fresh.includes(x.account) || state.assigned[x.account]?.template !== x.template.id) {
             const lf = join(prac, 'swarm-logs', `${x.account}.log`);
