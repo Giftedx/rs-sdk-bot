@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794340801339,
+ "at": 1794340940383,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -224,23 +224,27 @@
   },
   {
    "account": "Wandwaver",
-   "script": "scripts/train-prayer.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99"
+    "3000",
+    "cow"
    ],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_RESERVE": "6",
-    "CAP": "4000"
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying the held bones",
+   "goal": "train Strength to 70 on the Ardougne cows",
    "role": "combat",
-   "template": "army-bury-prayer-99",
+   "template": "army-cow-strength-70",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "cow:ardougne-north"
+   ]
   },
   {
    "account": "Woodenstaff",
@@ -465,7 +469,7 @@
     "CAP": "4000",
     "COORDINATOR_RUN_ID": "task-1bf17896-eb69-45ff-bbcb-77b5e2cee7a0"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-handoff-masterbaiter-magicwanda-lobster80 [task-1bf17896-eb69-45ff-bbcb-77b5e2cee7a0]",
    "role": "helper"
