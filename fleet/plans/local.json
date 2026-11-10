@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794316774144,
+ "at": 1794316917468,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -476,23 +476,6 @@
    "role": "supply"
   },
   {
-   "account": "Magicwanda",
-   "script": "scripts/blood-chest.ts",
-   "args": [
-    "24000"
-   ],
-   "env": {
-    "MAX_LOOTS": "100",
-    "CAP": "24000",
-    "BANK_EVERY": "5",
-    "COORDINATOR_RUN_ID": "task-c95e3b7f-a701-4638-9cfb-980eb7129d62"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-blood-magicwanda-loot100 [task-c95e3b7f-a701-4638-9cfb-980eb7129d62]",
-   "role": "supply"
-  },
-  {
    "account": "Pocketrocket",
    "script": "scripts/buy-owned-ge-item.ts",
    "args": [],
@@ -511,6 +494,22 @@
    "enabled": false,
    "repeat": false,
    "goal": "run-ge-pocketrocket-rune-arrows533 [task-a92fe9c7-4fbb-4d38-8279-cb797dfe7be6]",
+   "role": "supply"
+  },
+  {
+   "account": "Magicwanda",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/goldfarm.ts KNIGHT_SPOT=2669,3298"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "RUN": "2"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Thieving 55, then coins from Ardougne knights",
    "role": "supply"
   }
  ]
