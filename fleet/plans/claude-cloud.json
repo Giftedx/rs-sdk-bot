@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794305449757,
+ "at": 1794305831119,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -106,27 +106,6 @@
    "template": "army-trooper-strength-99",
    "resources": [
     "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/goldfarm.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Defence to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-defence-45",
-   "resources": [
-    "cow:ardougne-north"
    ]
   },
   {
@@ -291,6 +270,27 @@
    "role": "combat",
    "template": "army-cow-strength-45",
    "autopilot": "claude-cloud",
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/goldfarm.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Defence to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-defence-45",
    "resources": [
     "cow:ardougne-north"
    ]
