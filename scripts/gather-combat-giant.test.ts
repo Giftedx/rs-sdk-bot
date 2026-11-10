@@ -108,6 +108,23 @@ test('a bite whose heal a hit hides is still a bite: the debit is the proof and 
         expect(r.ok).toBe(true);expect(r.eaten).toBe(2);expect(r.initialFood).toBe(11);expect(r.finalFood).toBe(9);expect(r.foodAccounted).toBe(true);
     }finally{f.dispose();}
 });
+test('an eat the server drops is sent again; three eats with no debit end the run',async()=>{
+    const dropping=(drops:number)=>{
+        const f=giantFixture({injure:true}),bot=f.session.bot as any;let calls=0;
+        const eatFood=bot.eatFood.bind(bot);
+        bot.eatFood=async(item:any)=>++calls<=drops?{success:false,message:'Failed to eat Shark'}:eatFood(item);
+        return {f,calls:()=>calls};
+    };
+    const once=dropping(1);try{
+        const r=await runGiants(once.f.session,{cap:500,trainSkill:'Strength',targetLevel:90,walk:once.f.walk});
+        expect(r.ok).toBe(true);expect(r.eaten).toBe(1);expect(once.calls()).toBe(2);expect(r.foodAccounted).toBe(true);
+    }finally{once.f.dispose();}
+    const always=dropping(Infinity);try{
+        const r=await runGiants(always.f.session,{cap:500,trainSkill:'Strength',targetLevel:90,walk:always.f.walk});
+        // The walk back eats through the shared sustain, which this fixture does not drop.
+        expect(r.ok).toBe(false);expect(r.failure).toContain('shark did not heal');expect(always.calls()).toBe(3);
+    }finally{always.f.dispose();}
+});
 test('GIANT_KILLS overrides an already met level and banks exactly two credited kills',async()=>{
     const f=giantFixture({herbs:true,injure:true});try{
         const r=await runGiants(f.session,{cap:500,trainSkill:'Strength',targetLevel:89,maximum:2,walk:f.walk});
