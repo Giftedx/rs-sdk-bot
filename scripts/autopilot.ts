@@ -92,8 +92,8 @@ const enabledAccounts = (jobs: readonly any[]) => new Set(jobs.filter(j => j?.en
 // order the receipts close after its window (scripts/fleet-trade-settlement.ts windowClosures) holds no one, beyond
 // the stock check on a settled transfer: live, two such orders kept TrouserSnake and Deeppockets jobless for hours.
 export function inOpenOrder(orders: readonly Order[], receipts: readonly Receipt[], now: number,
-    stockReady: (receipt: TradeReceipt) => boolean = () => true): Set<string> {
-    const held = new Set<string>(), closed = windowClosures(orders, receipts, now);
+    stockReady: (receipt: TradeReceipt) => boolean = () => true, claimHeld: (nonce: string) => boolean = () => true): Set<string> {
+    const held = new Set<string>(), closed = windowClosures(orders, receipts, now, claimHeld);
     for (const order of orders) {
         const settlement = closed.get(order.id) ?? tradeSettlement(order, receipts, now);
         if (settlement.state !== 'settled' && settlement.state !== 'failed') {
@@ -248,12 +248,14 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     const fleetDir = FLEET_DIR(), now = Date.now();
     const orders: Order[] = existsSync(join(fleetDir, 'orders')) ? readdirSync(join(fleetDir, 'orders')).filter(f => f.endsWith('.json')).map(f => readJson(join(fleetDir, 'orders', f), null)).filter(validOrder) : [];
     const receipts: Receipt[] = existsSync(join(fleetDir, 'receipts')) ? readdirSync(join(fleetDir, 'receipts')).filter(f => f.endsWith('.json')).map(f => readJson(join(fleetDir, 'receipts', f), null)).filter(Boolean) : [];
-    const open = inOpenOrder(orders, receipts, now, r =>
-        owners.get(r.account.toLowerCase())?.side !== side || tradeStockReady(r, observed(r.account)));
     // The shared intent precedes the local journal. A crashed host may never publish that journal.
     // Keep the claimed account and both known participants held even after the order window.
     const claimedAccounts = [...new Set([...listed, ...orders.flatMap(o => [o.from, o.to])])];
-    if (claimedAccounts.length) for (const claim of readHeldFleetTradeClaims(root, claimedAccounts)) {
+    const heldClaims = claimedAccounts.length ? readHeldFleetTradeClaims(root, claimedAccounts) : [];
+    const heldNonces = new Set(heldClaims.map(c => c.nonce));
+    const open = inOpenOrder(orders, receipts, now, r =>
+        owners.get(r.account.toLowerCase())?.side !== side || tradeStockReady(r, observed(r.account)), nonce => heldNonces.has(nonce));
+    for (const claim of heldClaims) {
         open.add(claim.account);
         const order = orders.find(o => o.id === claim.orderId);
         if (order) for (const name of [order.from, order.to]) open.add(name.toLowerCase());
