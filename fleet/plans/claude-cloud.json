@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794309349592,
+ "at": 1794309355391,
  "jobs": [
   {
    "account": "Fingerblastr",
@@ -63,11 +63,10 @@
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
+   "repeat": false,
    "goal": "train Defence to 45 on the Ardougne cows",
    "role": "combat",
    "template": "army-cow-defence-45",
-   "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
    ]
@@ -246,7 +245,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-dea27901-5385-40e1-84d4-1743413d6db5"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "claude-cloud-recover-fatstack-20261110t111056z [task-dea27901-5385-40e1-84d4-1743413d6db5]",
    "role": "combat"

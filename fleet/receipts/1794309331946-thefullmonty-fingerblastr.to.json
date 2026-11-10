@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794309331946-thefullmonty-fingerblastr",
  "account": "Fingerblastr",
  "partner": "TheFullMonty",
@@ -10,8 +10,21 @@
  "item": "Air rune",
  "requested": 10,
  "claim": "c0aa99e3-9ce1-4804-85af-c63184ed2f44",
- "count": 0,
- "ok": false,
- "at": 1794309337485,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1794309349940,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1794309349330
+ },
+ "logout": {
+  "attemptId": "1794309337488-0000020276-0000000001",
+  "at": 1794309349934,
+  "sha256": "d7bc359c27e80a856ed806ca16e66d5ea31ab425644331d8215f1bc6dc8b973b"
+ }
 }
