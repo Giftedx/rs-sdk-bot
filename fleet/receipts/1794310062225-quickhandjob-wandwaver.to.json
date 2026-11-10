@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794310062225-quickhandjob-wandwaver",
  "account": "Wandwaver",
  "partner": "Quickhandjob",
@@ -12,6 +12,11 @@
  "claim": "28ce3967-7878-44f4-952f-a7cf4f781490",
  "count": 0,
  "ok": false,
- "at": 1794310072452,
- "detail": "trade claimed"
+ "at": 1794310132546,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1794310072461-0000013688-0000000001",
+  "at": 1794310132536,
+  "sha256": "29775700c455bcd0a081bfc724a4e12c318ec63527a64a22e39e1a83f0d6c52b"
+ }
 }
