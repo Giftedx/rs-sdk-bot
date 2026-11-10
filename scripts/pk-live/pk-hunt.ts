@@ -12,6 +12,7 @@ import { join, resolve } from 'node:path';
 import { openBot, serverFromEnv, settle } from '../../packages/core/src/bot';
 import type { Session } from '../../packages/core/src/inprocess';
 import { isLocalServer } from '../../packages/core/src/localserver';
+import { RosterFeed } from '../../packages/core/src/roster-feed';
 import { sessionWalker, walkPath } from '../../packages/core/src/walk';
 import { tradePartners } from '../../packages/core/src/tradeguard';
 import { readOpponent, readOpponents } from './opponent';
@@ -168,13 +169,13 @@ export class Radar {
 
 function connectRadar(server: string, radar: Radar) {
     const url = `${isLocalServer(server) ? 'ws' : 'wss'}://${server}/worldfeed`;
-    const socket = new WebSocket(url);
+    const socket = new WebSocket(url), feed = new RosterFeed();
     let beat: ReturnType<typeof setInterval> | undefined;
     socket.addEventListener('open', () => {
         socket.send(JSON.stringify({ t: 'roster', on: true }));
         beat = setInterval(() => { if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ t: 'ping' })); }, 30_000);
     });
-    socket.addEventListener('message', ({ data }) => { try { radar.accept(JSON.parse(String(data))); } catch { /* not a roster frame */ } });
+    socket.addEventListener('message', ({ data }) => { try { radar.accept(feed.expand(JSON.parse(String(data)))); } catch { /* not a roster frame */ } });
     socket.addEventListener('close', () => { if (beat) clearInterval(beat); });
     return () => { if (beat) clearInterval(beat); socket.close(); };
 }

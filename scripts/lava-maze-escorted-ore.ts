@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { openBot, settle, serverFromEnv } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import { depositObserved } from '../packages/core/src/deposit';
+import { RosterFeed } from '../packages/core/src/roster-feed';
 import { waitUntil, type TickSource } from '../packages/core/src/ticks';
 import { sessionWalker, walkPath, type PathDeps } from '../packages/core/src/walk';
 import { readLogoutProof } from '../packages/core/src/session-lifecycle';
@@ -83,13 +84,13 @@ export function readEscortRoute() {
         corridor:[...r.out.p,...r.back.p,CAMP,[3060,3884],[3059,3885]] as Tile[]};
 }
 function radar(url:string) {
-    const evidence=new RosterEvidence(),socket=new WebSocket(url);
+    const evidence=new RosterEvidence(),socket=new WebSocket(url),feed=new RosterFeed();
     let heartbeat:ReturnType<typeof setInterval>|undefined;
     socket.addEventListener('open',()=>{
         socket.send(JSON.stringify({t:'roster',on:true}));
         heartbeat=setInterval(()=>{if(socket.readyState===WebSocket.OPEN)socket.send(JSON.stringify({t:'ping'}));},30000);
     });
-    socket.addEventListener('message',({data})=>{try{evidence.accept(JSON.parse(String(data)));}catch{evidence.failure??='Invalid roster JSON';}});
+    socket.addEventListener('message',({data})=>{try{evidence.accept(feed.expand(JSON.parse(String(data))));}catch{evidence.failure??='Invalid roster JSON';}});
     socket.addEventListener('close',()=>{evidence.failure??='Roster socket closed';if(heartbeat)clearInterval(heartbeat);});
     socket.addEventListener('error',()=>{evidence.failure??='Roster socket failed';});
     return {evidence,fresh:()=>socket.readyState===WebSocket.OPEN?evidence.fresh():undefined,
