@@ -172,6 +172,12 @@ TrouserSnake and UnderMyKilt hold about 15,000 feathers and 1,500-1,700 bones ea
   leg from where it stopped while it gets closer. The ferry fallback now starts in Varrock too: Draynor, Port Sarim,
   Karamja, Ardougne. Practice from Varrock West with 200 coins in the pack: north bank reached and Magic 50 -> 52 in
   820 ticks. The ferries need 60 coins in the pack.
+- **Magic Guild store (Yanille, upstairs, Magic 66 at the door).** It stocks fire runes 3,000, nature runes 1,000
+  (base 20), law, death and blood runes 1,000 each, and 2 staffs of fire, on shelves separate from Zaff's and Aubury's.
+  Profile `magic_guild`; shop-buyer walks to an upstairs shop with the world walker. Practice at Magic 99 from the
+  Yanille bank: a staff of fire, 100 fire and 100 nature runes for 4,999 coins in all, `RESULT ok` in 193 ticks.
+  Below Magic 66 the planner finds no route and the run ends `RESULT fail` at its cap. Live, the GE fills about 80 fire
+  runes per order at 100 or less, and Aubury gives 35-42 a visit.
 - **Supply (live market, claude-cloud read).** Nature runes ask 250 with 230,923 listed, so 612 natures cost about 153,000.
   Fire runes rose from 91 to 200 after 187 bought, and no fire staff is listed. Aubury's shop sells 2,000 fire runes
   at base 4 (`varrock.inv` `runeshop`; profile `aubury`, `ITEMS='fire rune'`). Zaff sells staffs of fire: practice,

@@ -12,7 +12,7 @@ import { depositPack } from '../packages/core/src/deposit';
 
 export const PROFILES: Record<string, {
     npc: RegExp;
-    npcSpot: { x: number; z: number };
+    npcSpot: { x: number; z: number; level?: number };
     bankSpot: { x: number; z: number };
     items: { re: RegExp; buyPerTick: number }[];
 }> = {
@@ -156,6 +156,19 @@ export const PROFILES: Record<string, {
             { re: /^mithril arrow$/i, buyPerTick: 100 },
             { re: /^steel arrow$/i, buyPerTick: 100 },
             { re: /^willow shortbow$/i, buyPerTick: 1 },
+        ],
+    },
+    // The Magic Guild store in Yanille (magic_guild.inv magicguildshop), upstairs behind the Magic 66 door
+    // (magic_guild.rs2): fire runes 3,000, nature runes 1,000 at base 20, law, death and blood runes 1,000, staff of fire 2.
+    magic_guild: {
+        npc: /^magic store owner$/i,
+        npcSpot: { x: 2595, z: 3087, level: 1 },
+        bankSpot: { x: 2612, z: 3093 }, // Yanille Bank
+        items: [
+            { re: /^staff of fire$/i, buyPerTick: 1 },
+            { re: /^fire rune$/i, buyPerTick: 100 },
+            { re: /^nature rune$/i, buyPerTick: 100 },
+            { re: /^law rune$/i, buyPerTick: 50 },
         ],
     },
     zaff: {
@@ -332,28 +345,29 @@ try {
     void s.ended.then(() => { ended = true; });
     const stock = new Map<string, number>();
 
-    const walk = async (x: number, z: number, tol = 2): Promise<boolean> => {
+    // level: an upstairs shop (the Magic Guild store is on level 1). The world walker climbs; walkPath stays on one plane.
+    const walk = async (x: number, z: number, tol = 2, level = 0): Promise<boolean> => {
         const a = s.tick();
-        // From far away (another town, a boat ride) the world walker plans the trip; walkPath covers the last tiles.
+        const off = (p: ReturnType<typeof pos>) => !p ? Infinity : p.level !== level ? Infinity : Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z));
+        // From far away (another town, a boat ride) or another plane the world walker plans the trip; walkPath covers the last tiles.
         const p0 = pos();
-        if (p0 && Math.max(Math.abs(p0.worldX - x), Math.abs(p0.worldZ - z)) > 60) {
-            const r = await goTo(s, await getWorld(), { x, z, level: 0 }, accountOf(s), { legTimeoutTicks: 100 });
+        if (p0 && off(p0) > 60) {
+            const r = await goTo(s, await getWorld(), { x, z, level }, accountOf(s), { legTimeoutTicks: 100 });
             if (!r.ok) console.log(`WALK route fail ${r.reason} ${r.detail}`);
         }
         for (let i = 0; i < 3 && !over(); i++) {
             const p = pos();
-            if (p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol) break;
-            const r = await walkPath(await sessionWalker(s), [{ x, z, tol }], { stop: over });
+            if (off(p) <= tol) break;
+            const r = p?.level === level ? await walkPath(await sessionWalker(s), [{ x, z, tol }], { stop: over }) : { ok: false, detail: `on level ${p?.level}`, ticks: 0 };
             if (!r.ok) {
                 console.log(`WALK fail ${r.detail} ticks=${r.ticks}`);
                 // The local walk can be refused (a fence, a door the plan does not know): try the world walker.
-                const g = await goTo(s, await getWorld(), { x, z, level: 0 }, accountOf(s), { legTimeoutTicks: 100 });
+                const g = await goTo(s, await getWorld(), { x, z, level }, accountOf(s), { legTimeoutTicks: 100 });
                 if (!g.ok) { console.log(`WALK route fail ${g.reason} ${g.detail}`); await waitTicks(s, 1); }
             }
         }
         walkTicks += s.tick() - a;
-        const p = pos();
-        return !!p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol;
+        return off(pos()) <= tol;
     };
 
     const bank = async (loadFloat = true) => {
@@ -432,8 +446,8 @@ try {
 
         // Walk to shop
         const p = pos();
-        if (!p || Math.max(Math.abs(p.worldX - conf.npcSpot.x), Math.abs(p.worldZ - conf.npcSpot.z)) > 3) {
-            await walk(conf.npcSpot.x, conf.npcSpot.z, 2);
+        if (!p || p.level !== (conf.npcSpot.level ?? 0) || Math.max(Math.abs(p.worldX - conf.npcSpot.x), Math.abs(p.worldZ - conf.npcSpot.z)) > 3) {
+            await walk(conf.npcSpot.x, conf.npcSpot.z, 2, conf.npcSpot.level ?? 0);
         }
 
         if (!s.sdk.getState()?.shop?.isOpen) {
