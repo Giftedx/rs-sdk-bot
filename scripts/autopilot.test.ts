@@ -104,6 +104,20 @@ test('after its window an order holds no one when one party failed and the other
     expect(held([first, other], [...gaveFirst, receipt(other, 'from', 'failed'), receipt(other, 'to', 'settled')])).toEqual(['big', 'poor']);
     // The settled halves still wait for a status that shows the stock.
     expect([...inOpenOrder([first, retry], [...gaveFirst, ...tookRetry], now, r => r.role !== 'to')]).toEqual(['poor']);
+    // A giver that claimed and died leaves a prepared receipt. While its trade claim is held the order holds both;
+    // once the claim is released by hand the receipt counts as none, unless the taker shows a transfer.
+    const died: TradeReceipt = { ...receipt(first, 'from', 'failed'), state: 'prepared', inventory: undefined, logout: undefined, claim: '99999999-1234-1234-1234-123456789012' };
+    const released = (r: TradeReceipt[]) => [...inOpenOrder([first], r, now, () => true, () => false)].sort();
+    expect(held([first], [died])).toEqual(['big', 'poor']);
+    expect(released([died])).toEqual([]);
+    expect(released([died, receipt(first, 'to', 'failed')])).toEqual([]);
+    expect(released([died, receipt(first, 'to', 'settled')])).toEqual(['big', 'poor']);
+    expect([...inOpenOrder([first], [died], 2900, () => true, () => false)].sort()).toEqual(['big', 'poor']);
+    // The same for a giver whose session ended in reconcile with nothing given (live: its partner never came).
+    const unsure: TradeReceipt = { ...receipt(first, 'from', 'failed'), state: 'reconcile', inventory: undefined, claim: '99999999-1234-1234-1234-123456789012' };
+    expect(held([first], [unsure])).toEqual(['big', 'poor']);
+    expect(released([unsure])).toEqual([]);
+    expect(released([unsure, receipt(first, 'to', 'settled')])).toEqual(['big', 'poor']);
 });
 
 test('a funded assignment becomes a coin order and a vacant account; an account in an open order waits', () => {

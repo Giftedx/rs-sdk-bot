@@ -16,6 +16,10 @@ test('trade launch replaces a stale release pin while preserving fleet side and 
  const env=tradeEnvironment('/fleet',{FLEET_SIDE:'cloud',WORKER_RELEASE:'old'},'current');
  expect(env).toMatchObject({FLEET_SIDE:'cloud',FLEET_DIR:'/fleet',WORKER_RELEASE:'current'});
 });
+test('a trade runs with the idle guard off, whatever the agent inherited: its order window bounds the wait for its partner',()=>{
+ expect(tradeEnvironment('/fleet',{STALL_TICKS:'900'},'current').STALL_TICKS).toBe('0');
+ expect(tradeEnvironment('/fleet',{},'current').STALL_TICKS).toBe('0');
+});
 
 test('a sync child reports its own RESULT line, or its exit code when it printed none',()=>{
  expect(syncResult('pulling\nRESULT ok fleet-sync side=claude-cloud accounts=4 lease=none committed=false pushed=false\n',0)).toBe('RESULT ok fleet-sync side=claude-cloud accounts=4 lease=none committed=false pushed=false');

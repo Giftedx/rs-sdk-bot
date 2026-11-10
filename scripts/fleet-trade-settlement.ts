@@ -79,15 +79,20 @@ export function tradeSettlement(order: Order, receipts: readonly Receipt[], now:
 // - A retry overlapped the first order (README: a retry takes a new order id). Of two orders with the same parties,
 //   item and count, one has the giver's settled receipt and the taker's failed one, the other the reverse. Together
 //   they are one transfer: the giver gave once and the taker took once. `receipts` are the two settled ones.
+// A receipt that is not terminal (`prepared`, or `reconcile`) keeps its trade claim held: fleet sync releases a claim
+// only for a terminal receipt (scripts/fleet-sync.ts), so only the hand procedure in the README releases this one,
+// after someone reconciled the account. Such a receipt whose claim is no longer held counts as no receipt here.
+// `claimHeld` takes the receipt's claim nonce; without it every such receipt counts as still claimed.
 export type WindowClosure = { state: 'failed'; receipts: [] } | { state: 'settled'; receipts: [TradeReceipt, TradeReceipt] };
-export function windowClosures(orders: readonly Order[], receipts: readonly Receipt[], now: number): Map<string, WindowClosure> {
+export function windowClosures(orders: readonly Order[], receipts: readonly Receipt[], now: number,
+    claimHeld: (nonce: string) => boolean = () => true): Map<string, WindowClosure> {
     const closed = new Map<string, WindowClosure>(), halves: { order: Order; giver: boolean; receipt: TradeReceipt }[] = [];
     for (const order of orders) {
         if (now < order.end || tradeSettlement(order, receipts, now).state !== 'reconcile') continue;
-        const matching = receipts.filter(r => r?.id === order.id);
+        const matching = receipts.filter(r => r?.id === order.id && !(r.version === 2 && (r.state === 'prepared' || r.state === 'reconcile') && !claimHeld(r.claim)));
         const terminal = (role: TradeRole) => matching.filter(r => terminalTradeReceipt(order, role, r, now)) as TradeReceipt[];
         const from = terminal('from'), to = terminal('to');
-        if (matching.length === 1 && from.length + to.length === 1 && [...from, ...to][0]!.state === 'failed') closed.set(order.id, { state: 'failed', receipts: [] });
+        if (!matching.length || matching.length === 1 && from.length + to.length === 1 && [...from, ...to][0]!.state === 'failed') closed.set(order.id, { state: 'failed', receipts: [] });
         else if (matching.length === 2 && from.length === 1 && to.length === 1 && from[0]!.state !== to[0]!.state)
             halves.push(from[0]!.state === 'settled' ? { order, giver: true, receipt: from[0]! } : { order, giver: false, receipt: to[0]! });
     }

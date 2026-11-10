@@ -35,9 +35,12 @@ export function dueTrades(orders: readonly Order[], receipts: readonly Receipt[]
 }
 
 const TRADE_SCRIPT=resolve(import.meta.dir,'../scripts/fleet-trade.ts');
-// The trade worker's capability release (packages/core/src/worker-release.ts).
+// The trade worker's capability release (packages/core/src/worker-release.ts). STALL_TICKS=0 turns off the session's
+// idle guard (packages/core/src/bot.ts): a trade waits for its partner, and its own order window bounds it. With the
+// guard on, a side that waited 900 ticks was ended, a giver's receipt read `reconcile` with nothing given, and its
+// trade claim then stayed held (live: TheFullMonty waited for a PC account that could not log in).
 export function tradeEnvironment(dir:string,env:Record<string,string|undefined>=process.env,release=capabilityRevision([TRADE_SCRIPT],root)){
-    return {...env,FLEET_DIR:dir,WORKER_RELEASE:release,WORKER_ENTRY:TRADE_SCRIPT};
+    return {...env,FLEET_DIR:dir,WORKER_RELEASE:release,WORKER_ENTRY:TRADE_SCRIPT,STALL_TICKS:'0'};
 }
 
 // The sync child's own RESULT line; a child that printed none reports its exit code.
