@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794331351989,
+ "at": 1794332517522,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -128,26 +128,6 @@
    "repeat": true,
    "goal": "Strength 30 on chickens so it can hit hard enough to PK",
    "role": "pk-trainee"
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
-   "env": {
-    "PEN": "3017,3288",
-    "TICKS": "3000",
-    "TARGET": "2000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3017,3288",
-   "role": "helper",
-   "template": "feathers@3017,3288",
-   "autopilot": "local",
-   "resources": [
-    "pen:3017,3288"
-   ]
   },
   {
    "account": "mmsmk1232",
@@ -523,6 +503,26 @@
    "repeat": false,
    "goal": "run-blood-magicwanda-loot100-r2 [task-a37fc459-d12a-47f3-a0fd-90fdea60f7b4]",
    "role": "supply"
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3017,3288",
+    "TICKS": "3000",
+    "TARGET": "2000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3017,3288",
+   "role": "helper",
+   "template": "feathers@3017,3288",
+   "autopilot": "local",
+   "resources": [
+    "pen:3017,3288"
+   ]
   }
  ]
 }
