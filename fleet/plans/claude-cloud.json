@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794325118179,
+ "at": 1794325181197,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -25,25 +25,24 @@
    "account": "TrouserSnake",
    "script": "scripts/gather-combat.ts",
    "args": [
-    "1500",
-    "trooper"
+    "3000",
+    "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Attack",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "TRAIN_SKILL": "Defence",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Attack to 99 on the Khazard troopers",
+   "goal": "train Defence to 70 on the Ardougne cows",
    "role": "combat",
-   "template": "army-trooper-attack-99",
+   "template": "army-cow-defence-70",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "cow:ardougne-north"
    ]
   },
   {
@@ -173,21 +172,27 @@
   },
   {
    "account": "PocketPool",
-   "script": "scripts/alch-train.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "21",
-    "1500"
+    "1500",
+    "trooper"
    ],
-   "env": {},
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
+   "goal": "train Strength to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-strike-magic-21",
+   "template": "army-trooper-strength-99",
    "autopilot": "claude-cloud",
    "resources": [
-    "strike:ardougne-guard-dog"
+    "trooper:battlefield"
    ]
   },
   {
