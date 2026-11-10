@@ -1,26 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794296611397,
+ "at": 1794296930388,
  "jobs": [
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "BURY_HELD": "1",
-    "BONE_RESERVE": "6",
-    "CAP": "4000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Prayer to 99 burying the held bones",
-   "role": "combat",
-   "template": "army-bury-prayer-99",
-   "resources": []
-  },
   {
    "account": "Quickhandjob",
    "script": "scripts/alch-train.ts",
@@ -37,6 +18,28 @@
    "template": "army-alch-magic-99",
    "autopilot": "claude-cloud",
    "resources": []
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "TheFullMonty",
