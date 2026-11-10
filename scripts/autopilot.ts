@@ -125,7 +125,7 @@ export function failedSends(orders: readonly Order[], receipts: readonly Receipt
 // A kit buy that has started and printed no RESULT yet holds an open Grand Exchange offer: its coins are in the
 // exchange, so the account's live status shows them gone. The pass leaves such a job as it is.
 export function kitBuyRunning(job: any, assigned: { template: string; offset: number } | undefined, linesSince: (offset: number) => readonly string[]): boolean {
-    if (!job?.enabled || typeof job.template !== 'string' || !job.template.startsWith(KIT_BUY) || assigned?.template !== job.template) return false;
+    if (!job?.enabled || typeof job.template !== 'string' || !job.template.startsWith(KIT_BUY) || !assigned || assigned.template !== job.template) return false;
     const r = assess(linesSince(assigned.offset));
     return r.ok + r.fail + r.drains === 0;
 }
