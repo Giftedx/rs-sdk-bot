@@ -10,6 +10,7 @@
 // it after repeated fail RESULTs or a run that was nearly all idle and walking. finishedTrainers() names the accounts
 // whose trainer reached its target, so the next pass needs no timer. scripts/autopilot.ts applies it.
 import type { BillRow } from './supply-bill';
+import { missionSignature } from '../../core/src/session-admission';
 
 export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number> };
 export type Flow = { item: string; perTick: number };
@@ -463,8 +464,10 @@ export function mergeJobs(jobs: readonly any[], side: string, out: readonly Assi
     const next = jobs.filter(j => !mine(j) || kept(j)), fresh: string[] = [];
     for (const x of out) {
         if (!x.template) continue;
+        // A job keeps its run only while it still runs its template (script, args and env, as the swarm signs a mission):
+        // a hand edit, or a template changed in code, gets a fresh job.
         const prior = jobs.find(j => mine(j) && j.account === x.account && j.template === x.template!.id);
-        if (prior) { next.push(prior); continue; }
+        if (prior && missionSignature(prior) === missionSignature(jobFor(x, side))) { next.push(prior); continue; }
         fresh.push(x.account);
         // An owner pause belongs to the account: a new template keeps it disabled and keeps its repeat policy.
         const paused = jobs.find(j => mine(j) && j.account === x.account && j.enabled === false);
