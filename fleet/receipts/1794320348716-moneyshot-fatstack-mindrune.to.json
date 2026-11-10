@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794320348716-moneyshot-fatstack-mindrune",
  "account": "Fatstack",
  "partner": "Moneyshot",
@@ -12,6 +12,15 @@
  "claim": "0402f0c1-9416-463f-bf49-928ef0f1b05d",
  "count": 0,
  "ok": false,
- "at": 1794320566999,
- "detail": "trade claimed"
+ "at": 1794322749364,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794320567002-0000025693-0000000001",
+  "at": 1794322749358,
+  "sha256": "f3a6f90cbba2605c0196e0180e98f1d814c8d1a4968167bc2c08f9423be5e66f"
+ }
 }
