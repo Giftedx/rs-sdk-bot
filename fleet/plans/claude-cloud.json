@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794305260449,
+ "at": 1794305265281,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -87,24 +87,6 @@
    ]
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2582,3297"
-   ]
-  },
-  {
    "account": "UnderMyKilt",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -127,26 +109,30 @@
    ]
   },
   {
-   "account": "Deeppockets",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "account": "Quickhandjob",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "10"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
    "autopilot": "claude-cloud",
    "resources": [
-    "knight:2669,3298"
+    "trooper:battlefield"
    ]
   },
   {
-   "account": "Fatstack",
+   "account": "Deeppockets",
    "script": "scripts/gather-combat.ts",
    "args": [
     "3000",
@@ -165,6 +151,27 @@
    "role": "combat",
    "template": "army-cow-defence-45",
    "autopilot": "claude-cloud",
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/goldfarm.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Defence to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-defence-45",
    "resources": [
     "cow:ardougne-north"
    ]
@@ -247,26 +254,21 @@
   },
   {
    "account": "Dipstick",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-defence-45",
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
    "autopilot": "claude-cloud",
    "resources": [
-    "cow:ardougne-north"
+    "knight:2669,3298"
    ]
   },
   {
