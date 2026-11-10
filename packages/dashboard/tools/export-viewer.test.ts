@@ -12,13 +12,15 @@ test('the hosted viewer index loads relative files, the bridge first, and no ser
     expect(() => hostedIndex('<head><script src="/other.js"></script>')).toThrow();
 });
 // The anchors of the pinned bundle, in one short text.
-const BUNDLE = String.raw`x,n.p="/",y;de="/caches/";this.maxLevel=Tu.MAX_LEVELS-1;"number"===typeof t.scale&&t.scale>0&&(s.resolutionScale=t.scale)}setMaxLevel(e){const t=this.maxLevel!==e;this.maxLevel=e,t&&this.clearMaps()}maxLevel:this.maxLevel,e.maxLevel===this.maxLevel&&TE.FLOAT_VEC2,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT]).set(10,this.mapViewer.isNewTextureAnim)float u_isNewTextureAnim;float(modelInfo.priority)) * 0.0007;\n    gl_Position = u_projectionMatrix * gl_Position;\n}II.create(ee||!J?1:te?2:4)const F=this.mapsToLoad.shift();F&&this.isValidMapData(F)&&this.loadMap(this.mainProgram,this.mainAlphaProgram,this.npcProgram,this.textureArray,this.textureMaterials,this.sceneUniformBuffer,F,a),t.maps=this.mapManager,t.canvas=this.canvas,isValidMapData(e){i&&Gc&&void 0!==this.followName&&this.followName.toLowerCase()!==e.toLowerCase()step(e,t,n){const r=Math.min(128,n)+32,old}cancel(){`;
+const BUNDLE = String.raw`applyMovement(e,t,n){if(void 0!==t.l&&(e.level=t.l),void 0!==t.x&&void 0!==t.z){}}x,n.p="/",y;de="/caches/";this.maxLevel=Tu.MAX_LEVELS-1;"number"===typeof t.scale&&t.scale>0&&(s.resolutionScale=t.scale)}setMaxLevel(e){const t=this.maxLevel!==e;this.maxLevel=e,t&&this.clearMaps()}maxLevel:this.maxLevel,e.maxLevel===this.maxLevel&&TE.FLOAT_VEC2,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT]).set(10,this.mapViewer.isNewTextureAnim)float u_isNewTextureAnim;float(modelInfo.priority)) * 0.0007;\n    gl_Position = u_projectionMatrix * gl_Position;\n}II.create(ee||!J?1:te?2:4)const F=this.mapsToLoad.shift();F&&this.isValidMapData(F)&&this.loadMap(this.mainProgram,this.mainAlphaProgram,this.npcProgram,this.textureArray,this.textureMaterials,this.sceneUniformBuffer,F,a),t.maps=this.mapManager,t.canvas=this.canvas,isValidMapData(e){i&&Gc&&void 0!==this.followName&&this.followName.toLowerCase()!==e.toLowerCase()step(e,t,n){const r=Math.min(128,n)+32,old}cancel(){`;
 test('the viewer patches keep squares across floors, use more workers and load only around the new account', () => {
     const main = viewerBundle(BUNDLE);
     expect(main).toContain('setMaxLevel(e){this.maxLevel=e}');expect(main).not.toContain('clearMaps');
     expect(main).toContain('II.create(ee?1:!J||te?2:4)');expect(main).toContain('float u_maxPlane;');expect(main).toContain('float(modelInfo.plane) > u_maxPlane');
     expect(main).toContain('this.warmStep(t)');expect(main).not.toContain('old}cancel');expect(main).not.toContain('prefetch(this.from');
+    expect(main).toContain('(void 0===t.x||void 0===t.z)&&t.m&&!n){const r=t.m.length>1;for(const i of t.m)e.moveCode(r,i,this.abortsOnMove(e));return}');
     expect(() => viewerBundle(BUNDLE.replace('II.create', 'XX.create'))).toThrow('worker count');
+    expect(() => viewerBundle(BUNDLE.replace('applyMovement', 'otherMovement'))).toThrow('steps without a tile');
 });
 test('the pinned bundle takes every viewer patch and still parses', () => {
     const file = join(import.meta.dir, '..', '..', '..', 'vendor', 'rs-world', 'build', 'static', 'js', 'main.a8aba595.js');

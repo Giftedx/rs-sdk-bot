@@ -17,8 +17,9 @@ export type Template = {
     id: string; family: string; script: string; args?: string[]; env?: Record<string, string>; role: string; goal: string;
     // `under`: skills that must stay below a level (a band hands an account on to the next band at that level).
     // `holdsUnder`: holdings that end the job at once. The account must hold fewer, or the run finds its target met and fails.
-    // `food`: HP the account's food heals, pack and bank (FOOD_HEAL).
-    needs?: { skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number>; holdsUnder?: Record<string, number>; food?: number };
+    // `food`: HP the account's food heals, pack and bank (FOOD_HEAL). `pieces`: at least `count` items of any of `of`.
+    needs?: { skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number>; holdsUnder?: Record<string, number>; food?: number;
+        pieces?: { of: readonly string[]; count: number } };
     yields: (a: Acct) => Flow[]; spends?: (a: Acct) => Flow[];
     resources?: string[]; trains?: { skill: string; to: number; unlocks: string[] };
     // A goal band (AGENTS.md goals: the PK army of maxed tribrids) trains an army account toward its target and is
@@ -76,7 +77,8 @@ const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: strin
     && Object.entries(needs?.items ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n)
     && Object.entries(needs?.under ?? {}).every(([s, l]) => (a.skills[s] ?? 1) < l)
     && Object.entries(needs?.holdsUnder ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) < n)
-    && foodHeal(a) >= (needs?.food ?? 0);
+    && foodHeal(a) >= (needs?.food ?? 0)
+    && (needs?.pieces?.of ?? []).reduce((n, i) => n + (a.items[norm(i)] ?? 0), 0) >= (needs?.pieces?.count ?? 0);
 // The coins a template needs beyond what the account holds, and its needs without the coin line.
 const coinShort = (a: Acct, needs: Template['needs']) => Math.max(0, (Object.entries(needs?.items ?? {}).find(([i]) => norm(i) === 'coin')?.[1] ?? 0) - (a.items.coin ?? 0));
 const withoutCoins = (needs: Template['needs']): Template['needs'] => ({ ...needs, items: Object.fromEntries(Object.entries(needs?.items ?? {}).filter(([i]) => norm(i) !== 'coin')) });
@@ -231,7 +233,9 @@ export const KNIGHT_SHARE = 4, KNIGHT_SHARED_RATE = 0.75;
 // farm packs: solo median 550 ticks; 3 pairs 6/6 RESULT ok, median about 556; 3 triples 9/9 RESULT ok, median 590 per
 // account (within 10% of solo), so the field's output nearly triples. A fourth account is not measured.
 export const COW_FIELD = 'cow:ardougne-north', COW_FIELD_CAPACITY = 3;
-export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [COW_FIELD]: COW_FIELD_CAPACITY, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
+// Gnome battlefield Khazard troopers: about 41 on multiway ground. Three accounts at once is not measured.
+export const TROOPER_FIELD = 'trooper:battlefield', TROOPER_FIELD_CAPACITY = 3;
+export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // Army goal bands (AGENTS.md goals: maxed tribrids), in PK-value order: Strength, Attack, then Ranged, Magic and
 // Prayer, Defence last. Bands 6-9 are left for faster trainers above Hitpoints 43 (hill giants, ice warriors), which
@@ -251,6 +255,17 @@ export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGH
 export const COW_PASSES = [45, 60, 70, 80, 90, 99] as const;
 export const COW_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence'; band: number; to: number }[] = COW_PASSES.flatMap((to, k) =>
     (['Strength', 'Attack', 'Defence'] as const).map((skill, i) => ({ skill, to, band: k === 0 ? [0, 1, 5][i]! : 7 + 3 * k + i })));
+// Khazard troopers (scripts/gather-combat.ts TARGET=trooper): practice 3/3 RESULT ok at xpRate 25 for an account with
+// Attack 69, Strength 60, Defence 61, Hitpoints 84, a bronze sword and banked sharks, Strength 60 to 72-73 in 1,585
+// ticks (60.9-63.4 XP per tick, about 4 times the cows), 0-3 sharks eaten, lowest HP 41 (research/combat-measure.md).
+// It walks to the Ardougne north bank from anywhere, wields the best owned metal blade, carries GIANT_FOOD one-bite
+// food (shark, swordfish, lobster or trout; no cake) and eats at half HP. Bands 6-8 come after the first cow pass and
+// before the cow passes from 60, for accounts at 60 or more in all three skills; without the food an account stays on
+// the cows. Gap: not run live; field crowding is not measured.
+export const TROOPER_FOOD = ['shark', 'swordfish', 'lobster', 'trout'] as const;
+export const TROOPER_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence'; band: number }[] = [
+    { skill: 'Strength', band: 6 }, { skill: 'Attack', band: 7 }, { skill: 'Defence', band: 8 },
+];
 
 // Proven job templates. Rates are estimates from each script's header model; tick-waste discounts them by measurement.
 export function catalogue(): Template[] {
@@ -265,9 +280,16 @@ export function catalogue(): Template[] {
         tier: 'goal', band, repeats: true, trains: { skill, to, unlocks: [] }, resources: [COW_FIELD], yields: () => [],
         needs: { skills: { Hitpoints: 32 }, food: 14, items: { 'bronze sword': 1, 'wooden shield': 1 } },
     }));
+    const troopers = TROOPER_BANDS.map(({ skill, band }): Template => ({
+        id: `army-trooper-${skill.toLowerCase()}-99`, family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'],
+        env: { TRAIN_SKILL: skill, TARGET_LEVEL: '99', GIANT_FOOD: '10' }, role: 'combat', goal: `train ${skill} to 99 on the Khazard troopers`,
+        tier: 'goal', band, repeats: true, trains: { skill, to: 99, unlocks: [] }, resources: [TROOPER_FIELD], yields: () => [],
+        needs: { skills: { Attack: 60, Strength: 60, Defence: 60, Hitpoints: 40 }, pieces: { of: TROOPER_FOOD, count: 10 } },
+    }));
     return [
         ...goldfarm,
         ...cows,
+        ...troopers,
         { id: 'thieving55', family: 'thieving60', script: 'scripts/generated/thieving60.ts', env: { TARGET: '55', CAP: '2500', CLEAN_FOOD: '1' }, role: 'thieving',
             goal: 'train Thieving to 55 for a knight spot', trains: { skill: 'Thieving', to: 55, unlocks: goldfarm.map(g => g.id) }, yields: () => [] },
         ...CHICKEN_PENS.map((pen): Template => ({

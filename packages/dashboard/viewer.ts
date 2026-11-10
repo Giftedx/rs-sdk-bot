@@ -52,6 +52,9 @@ export function viewerBundle(text: string) {
     text = once(text, 'II.create(ee||!J?1:te?2:4)', 'II.create(ee?1:!J||te?2:4)', 'worker count');
     // The bundle adds one square per frame, which limits a swap to 20 squares a second at 20 frames a second.
     text = once(text, 'const F=this.mapsToLoad.shift();F&&this.isValidMapData(F)&&this.loadMap(this.mainProgram,this.mainAlphaProgram,this.npcProgram,this.textureArray,this.textureMaterials,this.sceneUniformBuffer,F,a),', 'for(const e=performance.now();;){const F=this.mapsToLoad.shift();if(!F)break;if(this.isValidMapData(F)&&this.loadMap(this.mainProgram,this.mainAlphaProgram,this.npcProgram,this.textureArray,this.textureMaterials,this.sceneUniformBuffer,F,a),performance.now()-e>6)break}', 'square uploads');
+    // The feed leaves the tile out of a step record when the steps start from the tile the viewer already has.
+    // The bundle drops a record that has no tile, so a walking player or npc stands still. This applies the steps.
+    text = once(text, 'applyMovement(e,t,n){if(void 0!==t.l&&(e.level=t.l),void 0!==t.x&&void 0!==t.z){', 'applyMovement(e,t,n){if(void 0!==t.l&&(e.level=t.l),(void 0===t.x||void 0===t.z)&&t.m&&!n){const r=t.m.length>1;for(const i of t.m)e.moveCode(r,i,this.abortsOnMove(e));return}if(void 0!==t.x&&void 0!==t.z){', 'steps without a tile');
     text = once(text, 't.maps=this.mapManager,t.canvas=this.canvas,', 't.maps=this.mapManager,this.warmStep(t),t.canvas=this.canvas,', 'warm call');
     text = once(text, 'isValidMapData(e){', WARM_STEP, 'warm step');
     // A swap from free camera flies too, once the scene has squares to hold on screen.
@@ -63,7 +66,7 @@ export function viewerBundle(text: string) {
 // A geometry draw followed by a screen present is not a promise that every tile loaded.
 export function installViewerBridge(host:any) {
     let privacyReady=false,renderReady=false,feedConnected:boolean|null=null,failed=false,announced=false;
-    // The feed sends the roster about every 30 s: one that arrives while the scene loads waits here for the ready state.
+    // The feed sends the roster every 10 ticks: one that arrives while the scene loads waits here for the ready state.
     // The page takes a roster as new, so one older than the page's 30 s limit is dropped.
     let heldRoster:(()=>void)|null=null,heldRosterAt=0;
     let hiddenNames=new Set<string>(),publishedFollow:string|null=null,publishedWorldMap=false,publishedCamera='',freeCameraPolls=0;
@@ -156,7 +159,7 @@ export function installViewerBridge(host:any) {
                 // The viewer reads the feed through onmessage: it gets each message with hash-listed names renamed.
                 let accessor:any=null;for(let p=Socket.prototype;p&&!accessor;p=Object.getPrototypeOf(p))accessor=Object.getOwnPropertyDescriptor(p,'onmessage');
                 // The feed sends one full roster (p), then changes: lv slots that left, j rows that joined or changed,
-                // m [slot,x,z,level] moves. The viewer reads full rosters only, so each change becomes a full roster.
+                // m [slot,x,z,level,combat?] moves. The viewer reads full rosters only, so each change becomes a full roster.
                 // The two listeners get the same event; the last result is kept so the rows change once per event.
                 const rosterRows=new Map<number,any[]>();let rosterFrom:any=null,rosterTo:any=null;
                 const fullRoster=(event:any)=>{
@@ -168,7 +171,7 @@ export function installViewerBridge(host:any) {
                         if(Array.isArray(m.p)){rosterRows.clear();for(const r of m.p)if(Array.isArray(r))rosterRows.set(r[0],r);return event;}
                         for(const slot of Array.isArray(m.lv)?m.lv:[])rosterRows.delete(slot);
                         for(const r of Array.isArray(m.j)?m.j:[])if(Array.isArray(r))rosterRows.set(r[0],r);
-                        for(const r of Array.isArray(m.m)?m.m:[]){const row=Array.isArray(r)?rosterRows.get(r[0]):undefined;if(row){row[2]=r[1];row[3]=r[2];row[4]=r[3];}}
+                        for(const r of Array.isArray(m.m)?m.m:[]){const row=Array.isArray(r)?rosterRows.get(r[0]):undefined;if(row){row[2]=r[1];row[3]=r[2];row[4]=r[3];if(r.length>4)row[5]=r[4];}}
                         rosterTo=new host.MessageEvent('message',{data:JSON.stringify({t:'roster',k:m.k,p:[...rosterRows.values()],npcs:m.npcs}),origin:event.origin});
                     }catch{/* not JSON: left as it is */}
                     return rosterTo;

@@ -20,3 +20,9 @@ test('a full frame replaces the rows; other messages and a change frame with no 
     feed.expand({ t: 'roster', k: 20, p: [[7, 'Eve', 2, 2, 0, 4]] });
     expect((feed.expand({ t: 'roster', k: 30, d: 1, m: [[7, 5, 6, 0]] }) as any).p).toEqual([[7, 'Eve', 5, 6, 0, 4]]);
 });
+
+test('a move row with a fifth value changes the combat level', () => {
+    const feed = new RosterFeed();
+    feed.expand({ t: 'roster', k: 1, p: [[2, 'Bob', 1, 1, 0, 50]] });
+    expect((feed.expand({ t: 'roster', k: 2, d: 1, m: [[2, 1, 1, 0, 51]] }) as any).p).toEqual([[2, 'Bob', 1, 1, 0, 51]]);
+});
