@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794305763092,
+ "at": 1794306991941,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -483,11 +483,11 @@
     "FILL_WAIT_TICKS": "40",
     "ORDER_MS": "360000",
     "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-f933bd89-c2fd-4bed-9ac7-4bbade07797f"
+    "COORDINATOR_RUN_ID": "task-8e037899-bd25-44dc-9697-c454dd3b7263"
    },
    "enabled": false,
    "repeat": false,
-   "goal": "run-ge-mineyourbiz-sharks30-requal [task-f933bd89-c2fd-4bed-9ac7-4bbade07797f]",
+   "goal": "run-ge-mineyourbiz-sharks30-after-claim-fault [task-8e037899-bd25-44dc-9697-c454dd3b7263]",
    "role": "supply"
   }
  ]
