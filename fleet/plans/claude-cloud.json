@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794285202151,
+ "at": 1794285806634,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -12,10 +12,11 @@
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
+   "repeat": true,
    "goal": "goldfarm knights at 2652,3318",
    "role": "thieving",
    "template": "goldfarm@2652,3318",
+   "autopilot": "claude-cloud",
    "resources": [
     "knight:2652,3318"
    ]
@@ -39,14 +40,14 @@
    ]
   },
   {
-   "account": "Quickhandjob",
+   "account": "UnderMyKilt",
    "script": "scripts/gather-combat.ts",
    "args": [
     "3000",
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
+    "TRAIN_SKILL": "Strength",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1"
@@ -54,15 +55,15 @@
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "train Defence to 45 on the Ardougne cows",
+   "goal": "train Strength to 60 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-defence-45",
+   "template": "army-cow-strength-60",
    "resources": [
     "cow:ardougne-north"
    ]
   },
   {
-   "account": "UnderMyKilt",
+   "account": "Quickhandjob",
    "script": "scripts/gather-combat.ts",
    "args": [
     "3000",
