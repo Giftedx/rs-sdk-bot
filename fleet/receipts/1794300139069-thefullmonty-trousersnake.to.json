@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794300139069-thefullmonty-trousersnake",
  "account": "TrouserSnake",
  "partner": "TheFullMonty",
@@ -12,6 +12,11 @@
  "claim": "45e5f1b3-644b-44eb-b1ce-dd96315e632f",
  "count": 0,
  "ok": false,
- "at": 1794300144142,
- "detail": "trade claimed"
+ "at": 1794300199429,
+ "detail": "Error: route to 3182, 3440: precondition no route to 3182,3440,0",
+ "logout": {
+  "attemptId": "1794300144144-0000014242-0000000001",
+  "at": 1794300199424,
+  "sha256": "14d4c446d1863e6f68092e6f53d3d89276edf657b2ca0e1107d5daa9bfa8ceed"
+ }
 }
