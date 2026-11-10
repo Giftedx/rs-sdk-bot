@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794301454807,
+ "at": 1794301528932,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -76,7 +76,7 @@
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "10"
    },
-   "enabled": false,
+   "enabled": true,
    "standing": true,
    "repeat": false,
    "goal": "train Ranged to 99 on the Khazard troopers",
