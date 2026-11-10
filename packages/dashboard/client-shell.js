@@ -197,7 +197,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const link=(href,text)=>'<a href="'+href+'" target="_blank" rel="noopener">'+text+'</a>';
     return '<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>RuneLite — Swarm</span></div><p class="xp-muted">Our bot team on the rs-sdk demo world, a 2004 RuneScape server. Not the RuneLite client. Not affiliated with Jagex or RuneLite.</p><div class="info-data">'+infoData()+'</div></div>'+
       (owner?'':'<div class="xp-box"><div class="xp-head"><span>Controls</span></div>'+infoRow(keys('[',']'),'previous or next account',true)+infoRow(keys('W','A','S','D'),'fly free',true)+infoRow(keys('Drag'),'turn the camera',true)+infoRow(keys('Wheel'),'zoom',true)+infoRow(keys('Ctrl','K'),'find anything',true)+'</div>')+
-      '<div class="xp-box info-wall"><div class="xp-head"><span>Fleet wall</span></div>'+infoRow(keys('\\'),'our accounts side by side',true)+infoRow(keys('←','↑','↓','→')+' '+keys('H','J','K','L'),'move the focus',true)+infoRow(keys('1')+' – '+keys('9')+' '+keys('Click'),'focus that view',true)+infoRow(keys('Shift','Arrow'),'swap two views',true)+infoRow(keys('Enter'),'make it the main view, then follow it',true)+infoRow(keys('Double click'),'follow that account',true)+infoRow(keys('Space'),'next layout',true)+infoRow(keys('F'),'focus layout',true)+infoRow(keys('Esc'),'leave the wall',true)+'</div>'+
+      '<div class="xp-box info-wall"><div class="xp-head"><span>Fleet wall</span></div>'+infoRow(keys('\\'),'our accounts side by side',true)+infoRow(keys('←','↑','↓','→')+' '+keys('H','J','K','L'),'move the focus',true)+infoRow(keys('1')+' – '+keys('9')+' '+keys('Click'),'focus that view',true)+infoRow(keys('Shift','Arrow')+' '+keys('Drag a title'),'swap two views',true)+infoRow(keys('P')+' '+keys('Pin'),'keep a view in its place',true)+infoRow(keys('Drag the gap'),'size the main view',true)+infoRow(keys('Enter'),'make it the main view, then follow it',true)+infoRow(keys('Double click'),'follow that account',true)+infoRow(keys('Space'),'next layout',true)+infoRow(keys('F'),'focus layout',true)+infoRow(keys('Esc'),'leave the wall',true)+'</div>'+
       '<div class="xp-box"><div class="xp-head"><span>Marks</span></div>'+
       infoRow('Ours','<b class="mark-name">Name</b> <i class="mark-dot on"></i> playing <i class="mark-dot"></i> not playing')+infoRow('Others','<i class="mark-dot other"></i> on the map')+(owner?infoRow('⟦MAIN⟧ / Hidden','an account this page does not show')+infoRow('~ before a rank','the last rank we read; it can be old'):'')+'</div>'+
       '<div class="xp-box info-sources"><div class="xp-head"><span>Sources</span></div>'+
@@ -715,13 +715,14 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     for(const n of first){const i=left.findIndex(x=>wallSame(x,n));if(i>=0)head.push(left.splice(i,1)[0]);}
     return [...head,...left];
   }
-  // The layout, the main view and a hand-made order stay in this browser, and the share link carries the layout and the
-  // main view (wl, wm). A stored or linked value that is not a layout or a name is dropped.
-  const wallPrefs={layout:'grid',main:null,order:[]};
+  // The layout, the main view, a hand-made order, the main view's share and the pinned views stay in this browser, and
+  // the share link carries the layout and the main view (wl, wm). A stored or linked value that is not a layout or a name is dropped.
+  const wallPrefs={layout:'grid',main:null,order:[],ratio:0.62,locked:[]};
   function wallPrefsRead(text){
     let p;try{p=JSON.parse(text);}catch{return null;}
     if(!p||typeof p!=='object')return null;
-    return {layout:WALL_LAYOUTS.includes(p.layout)?p.layout:'grid',main:wallIsName(p.main)?p.main:null,order:Array.isArray(p.order)?p.order.filter(wallIsName).slice(0,64):[]};
+    return {layout:WALL_LAYOUTS.includes(p.layout)?p.layout:'grid',main:wallIsName(p.main)?p.main:null,order:Array.isArray(p.order)?p.order.filter(wallIsName).slice(0,64):[],
+      ratio:typeof p.ratio==='number'&&p.ratio>=0.5&&p.ratio<=0.8?p.ratio:0.62,locked:Array.isArray(p.locked)?p.locked.filter(wallIsName).slice(0,64).map(n=>n.toLowerCase()):[]};
   }
   try{Object.assign(wallPrefs,wallPrefsRead(localStorage.getItem(WALL_STORE)));}catch{/* no storage: the wall starts as a grid */}
   function wallLinkRead(q){const layout=q.get('wl'),main=q.get('wm');if(WALL_LAYOUTS.includes(layout))wallPrefs.layout=layout;if(wallIsName(main))wallPrefs.main=main;}
@@ -729,12 +730,13 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // After each choice: remember it and put it in the link.
   function wallKeep(){
     if(!wall)return;
-    wallPrefs.layout=wall.layout;wallPrefs.main=wall.main;if(wall.ordered)wallPrefs.order=wall.names.slice();
+    wallPrefs.layout=wall.layout;wallPrefs.main=wall.main;if(wall.ordered)wallPrefs.order=wall.names.slice();wallPrefs.ratio=wall.ratio;wallPrefs.locked=[...wall.locked];
     try{localStorage.setItem(WALL_STORE,JSON.stringify(wallPrefs));}catch{/* the choice lasts for this page only */}
     writeLink();wallPaint();
   }
   // The views in the order the layout places them: the main view first.
   const wallShown=()=>wall?[wall.main,...wall.names.filter(n=>n!==wall.main)]:[];
+  const wallLocked=name=>!!wall&&wall.locked.has(String(name).toLowerCase());
   // The view next to view `from` in a direction: one that starts past the far edge of `from`. A view level with
   // `from` wins over one that is only diagonal; then the nearest; then the one whose centre is closest in line.
   function wallNeighbour(rects,from,dir){
@@ -769,16 +771,16 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const main=names.find(n=>wallSame(n,wallPrefs.main))??names[0];
     // The wall keeps the page's follow state and the tour, and gives them back when it closes.
     wall={names,sent:wallKey(names),shown:0,tour:!!tourTimer,state:{sel,free:window.atlasFreeCamera,other:window.atlasFollowOther},
-      layout:wallPrefs.layout,back:'grid',main,focus:main,ordered:wallPrefs.order.length>0,rects:null,move:null,moving:false,seen:new Set(),offline:new Set(),hover:null,click:null};
+      layout:wallPrefs.layout,back:'grid',main,focus:main,ordered:wallPrefs.order.length>0,ratio:wallPrefs.ratio,locked:new Set(wallPrefs.locked),rects:null,move:null,moving:false,seen:new Set(),offline:new Set(),hover:null,click:null};
     clearInterval(tourTimer);tourTimer=null;focusRowsHtml='';flightTo=null;focus.classList.remove('flying');focusNote.classList.remove('flying');
     window.atlasOpponentClear?.();
     // The layout goes first, so the views open in it.
     wallPost({multiChrome:false});
-    wallPost({multiLayout:{mode:wall.layout,main,gap:WALL_GAP,color:WALL_GAP_COLOUR,animate:!wallStill()}});
+    wallPost({multiLayout:{mode:wall.layout,main,gap:WALL_GAP,...(wall.ratio!==WALL_RATIO?{ratio:wall.ratio}:{}),color:WALL_GAP_COLOUR,animate:!wallStill()}});
     wallPost({multi:names});
     wallPost({multiFocus:main});
     wallButton.blur?.();
-    focusSay('Fleet wall · click a view to focus it, double click to follow · ? shows the keys',3600);
+    focusSay('Fleet wall · drag a title to move a view, double click to follow · ? shows the keys',3600);
     wallPaint();
     return true;
   }
@@ -786,7 +788,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // With restore, the page follows what it followed when the wall opened. Without, the caller chooses the next follow.
   function wallEnd(restore=true){
     if(!wall)return false;
-    const w=wall,ready=mode==='3d'&&VIEWER.state==='ready';wall=null;
+    const w=wall,ready=mode==='3d'&&VIEWER.state==='ready';wallDragEnd(null,false);wallSizeEnd(null);wall=null;
     wallPaint();
     if(ready)wallPost({multi:[]});
     sentMaxLevel=null;warmSent='';rswFor=null;
@@ -809,10 +811,12 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const now=wallNames();
     if(!now.length){wallEnd();focusSay('None of our accounts is in the world now. The wall is closed.',3200);return;}
     const key=wallKey(now);if(key===wall.sent){wallPaint();return;}
-    const was=wall.names,names=wallOrdered(now,was),heir=name=>{const i=was.indexOf(name);return [...was.slice(i+1),...was.slice(0,Math.max(i,0)).reverse()].find(n=>names.includes(n))??names[0];};
-    const main=names.includes(wall.main)?wall.main:heir(wall.main),to=names.includes(wall.focus)?wall.focus:heir(wall.focus);
+    const was=wall.names,before=wallShown(),plain=wallOrdered(now,was),heir=name=>{const i=was.indexOf(name);return [...was.slice(i+1),...was.slice(0,Math.max(i,0)).reverse()].find(n=>plain.includes(n))??plain[0];};
+    const next=plain.includes(wall.main)?wall.main:heir(wall.main),held=wallHold([next,...plain.filter(n=>n!==next)],before),names=held??plain;
+    const main=held?held[0]:next,to=names.includes(wall.focus)?wall.focus:heir(wall.focus);
     wall.names=names;wall.sent=key;wall.shown=Math.min(wall.shown,names.length);wall.rects=null;
     wallPost({multi:names});
+    if(held)wallPost({multiOrder:names});
     if(main!==wall.main){wall.main=main;wallPost({multiLayout:{main}});}
     if(to!==wall.focus){wall.focus=to;wallPost({multiFocus:to});}
     wallKeep();
@@ -830,28 +834,116 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function wallPromote(){
     if(!wall)return;
     if(wall.main===wall.focus){wallOpen(wall.focus);return;}
+    if(wallLocked(wall.main)||wallLocked(wall.focus)){focusSay('A pinned view keeps its place. Unpin it to move it.',2200);return;}
     wall.main=wall.focus;wallPost({multiLayout:{main:wall.main}});wallKeep();
   }
   // With zoom, the focused view becomes the main view of the new layout in the same move.
   function wallLayout(layout,zoom=false){
     if(!wall||!WALL_LAYOUTS.includes(layout)||layout===wall.layout)return;
     const message={mode:layout};
-    if(zoom&&wall.main!==wall.focus){wall.main=wall.focus;message.main=wall.main;}
+    if(zoom&&wall.main!==wall.focus&&!wallLocked(wall.main)&&!wallLocked(wall.focus)){wall.main=wall.focus;message.main=wall.main;}
     wall.back=wall.layout;wall.layout=layout;wallPost({multiLayout:message});
     focusSay('Wall layout · '+WALL_LAYOUT_NAMES[layout],1200);wallKeep();
   }
   function wallCycle(step=1){if(wall)wallLayout(WALL_LAYOUTS[(WALL_LAYOUTS.indexOf(wall.layout)+step+WALL_LAYOUTS.length)%WALL_LAYOUTS.length]);}
   // f: the focused view at full size over the others, and back to the layout before.
   function wallZoom(){if(!wall)return;if(wall.layout==='focus')wallLayout(wall.back==='focus'?'grid':wall.back);else wallLayout('focus',true);}
-  // Shift and a direction: the focused view and its neighbour change places. A view that takes the first place is the main view.
-  function wallSwap(dir){
-    const to=wallNext(dir);if(!to)return;
-    const order=wallShown(),i=order.indexOf(wall.focus),j=order.indexOf(to);
+  // Two views change places. A view that takes the first place is the main view. A pinned view keeps its place.
+  function wallTrade(a,b){
+    if(!wall||a===b)return false;
+    if(wallLocked(a)||wallLocked(b)){focusSay('A pinned view keeps its place. Unpin it to move it.',2200);return false;}
+    const order=wallShown(),i=order.indexOf(a),j=order.indexOf(b);if(i<0||j<0)return false;
     [order[i],order[j]]=[order[j],order[i]];
     wall.names=order;wall.ordered=true;if(wall.rects)wall.rects=null;
     wallPost({multiOrder:order});
     if(order[0]!==wall.main){wall.main=order[0];wallPost({multiLayout:{main:wall.main}});}
-    wallKeep();
+    wallKeep();return true;
+  }
+  // Shift and a direction: the focused view and its neighbour change places.
+  function wallSwap(dir){const to=wallNext(dir);if(to)wallTrade(wall.focus,to);}
+  // p, or the pin on a title strip: the view keeps its place. No drag, swap or new main view moves it, and it goes
+  // back to its place when other views open or close.
+  function wallPin(name){
+    if(!wall||!wall.names.includes(name))return;
+    const key=name.toLowerCase(),on=!wall.locked.has(key);
+    if(on)wall.locked.add(key);else wall.locked.delete(key);
+    focusSay(safeName(name)+(on?' · pinned in its place':' · unpinned'),1400);wallKeep();
+  }
+  // The views in `names` (the order the layout places them) with each pinned view back at the place it had in `before`.
+  // Null when no view of `names` is pinned.
+  function wallHold(names,before){
+    const held=names.filter(n=>wallLocked(n)&&before.includes(n)).sort((a,b)=>before.indexOf(a)-before.indexOf(b));
+    if(!held.length)return null;
+    const out=names.filter(n=>!held.includes(n));
+    for(const n of held)out.splice(Math.min(before.indexOf(n),out.length),0,n);
+    return out;
+  }
+  // Drag a title strip onto another view: the two views change places. A drag starts after 6 px, so a click stays a
+  // click. A label follows the pointer and the view under it is marked.
+  let wallDrag=null;
+  function wallDragStart(e,name,t){
+    if(!wall||e.button>0||e.target?.closest?.('button'))return;
+    wallDrag={name,t,x:e.clientX,y:e.clientY,id:e.pointerId,on:false,over:null};
+    t.strip.setPointerCapture?.(e.pointerId);
+  }
+  function wallDragOver(x,y){
+    const frame=$('#rsw').getBoundingClientRect(),px=x-frame.left,py=y-frame.top;
+    for(const [n,t] of wallTiles){const r=t.at;if(n!==wallDrag.name&&r&&px>=r.x&&px<r.x+r.w&&py>=r.y&&py<r.y+r.h)return n;}
+    return null;
+  }
+  function wallDragMove(e){
+    const d=wallDrag;if(!d||e.pointerId!==d.id||!wall)return;
+    if(!d.on){
+      if(Math.hypot(e.clientX-d.x,e.clientY-d.y)<6)return;
+      if(wallLocked(d.name)){wallDrag=null;focusSay('This view is pinned. Unpin it to move it.',2200);return;}
+      d.on=true;wallGhost.textContent=safeName(d.name);wallGhost.hidden=false;wallRoot.classList.add('dragging');
+    }
+    const box=wallRoot.getBoundingClientRect();wallGhost.style.left=Math.round(e.clientX-box.left+12)+'px';wallGhost.style.top=Math.round(e.clientY-box.top+14)+'px';
+    const over=wallDragOver(e.clientX,e.clientY);if(over!==d.over||!d.marked){d.over=over;d.marked=true;wallPaint();}
+  }
+  function wallDragEnd(e,drop){
+    const d=wallDrag;if(!d||e&&e.pointerId!==d.id)return;
+    wallDrag=null;wallGhost.hidden=true;wallRoot.classList.remove('dragging');
+    if(!d.on)return;
+    // The click that ends a drag is not a click on the view.
+    d.t.dragged=true;setTimeout(()=>{d.t.dragged=false;},0);
+    if(drop&&d.over&&wall&&!wallLocked(d.over)){wallFocus(d.name);wallTrade(d.name,d.over);}
+    else{if(drop&&d.over&&wall)focusSay('That view is pinned. Unpin it to move it.',2200);wallPaint();}
+  }
+  // The gap between the main view and the stack in the Main and stack layout: drag it to give the main view 50 to 80
+  // percent. It stops at the listed shares unless Alt is down.
+  const WALL_RATIO=0.62,WALL_RATIOS=[0.5,WALL_RATIO,2/3,0.75,0.8];
+  const wallRatioOf=v=>typeof v==='number'&&v>=0.5&&v<=0.8?Math.round(v*1000)/1000:WALL_RATIO;
+  // The share for a pointer at `at` px along a frame of `size` px. `free` is true with Alt.
+  function wallRatioAt(at,size,free){
+    const raw=Math.min(Math.max((at-WALL_GAP/2)/Math.max(size-WALL_GAP,1),0.5),0.8),stop=free?null:WALL_RATIOS.find(s=>Math.abs(s-raw)<=0.012);
+    return wallRatioOf(stop??raw);
+  }
+  let wallSize=null;
+  function wallSizeTo(ratio){
+    if(!wall||ratio===wall.ratio)return;
+    wall.ratio=ratio;wallGrip.dataset.share=Math.round(ratio*100)+'%';
+    if(wallSize&&!wallSize.wait){wallSize.wait=true;requestAnimationFrame(()=>{if(wallSize)wallSize.wait=false;if(wall)wallPost({multiLayout:{ratio:wall.ratio}});});}
+    else if(!wallSize)wallPost({multiLayout:{ratio}});
+  }
+  function wallSizeStart(e){
+    if(!wall||wall.layout!=='main'||e.button>0)return;
+    // A second press within the double click time gives the first share back.
+    const now=Date.now(),twice=wallGrip.pressed&&now-wallGrip.pressed<=WALL_DOUBLE_MS;wallGrip.pressed=twice?0:now;
+    if(twice){wallSizeTo(WALL_RATIO);wallKeep();return;}
+    wallSize={id:e.pointerId,wait:false};wallGrip.setPointerCapture?.(e.pointerId);wallGrip.classList.add('sizing');wallGrip.dataset.share=Math.round(wall.ratio*100)+'%';
+    // The views follow the pointer with no move of their own.
+    wallPost({multiLayout:{animate:false}});
+  }
+  function wallSizeMove(e){
+    if(!wallSize||e.pointerId!==wallSize.id||!wall)return;
+    const frame=$('#rsw').getBoundingClientRect(),across=wallGrip.dataset.side!=='row';
+    wallSizeTo(wallRatioAt(across?e.clientX-frame.left:e.clientY-frame.top,across?frame.width:frame.height,e.altKey===true));
+  }
+  function wallSizeEnd(e){
+    if(!wallSize||e&&e.pointerId!==wallSize.id)return;
+    wallSize=null;wallGrip.classList.remove('sizing');
+    if(wall){wallPost({multiLayout:{ratio:wall.ratio,animate:!wallStill()}});wallKeep();}
   }
   const WALL_DIRS={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down',h:'left',j:'down',k:'up',l:'right',H:'left',J:'down',K:'up',L:'right'};
   // The keys of the wall, from the page and from the viewer frame. True when the key was one of them.
@@ -862,6 +954,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(key==='Enter'){wallPromote();return true;}
     if(key===' '){wallCycle(shift?-1:1);return true;}
     if(key==='f'||key==='F'){wallZoom();return true;}
+    if(key==='p'||key==='P'){wallPin(wall.focus);return true;}
     if(key==='?'){wallHelp();return true;}
     if(/^[1-9]$/.test(key)){const name=wallShown()[Number(key)-1];if(name)wallFocus(name);return true;}
     return false;
@@ -908,15 +1001,23 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // frame it was set in. (A transform or opacity transition starts when the compositor takes it, which can be a frame
   // later.)
   const wallRoot=document.createElement('div');wallRoot.className='wall-chrome';hud.append(wallRoot);
+  const wallGhost=document.createElement('div');wallGhost.className='wall-ghost';wallGhost.hidden=true;
+  const wallGrip=document.createElement('div');wallGrip.className='wall-grip';wallGrip.hidden=true;wallGrip.title='Drag to size the main view · press twice for the first size';
+  wallRoot.append(wallGrip,wallGhost);
+  wallGrip.addEventListener('pointerdown',wallSizeStart);wallGrip.addEventListener('pointermove',wallSizeMove);wallGrip.addEventListener('pointerup',wallSizeEnd);wallGrip.addEventListener('pointercancel',wallSizeEnd);
   const wallTiles=new Map(),wallIcon={grid:'M1 1h4.5v4.5H1zM6.5 1H11v4.5H6.5zM1 6.5h4.5V11H1zM6.5 6.5H11V11H6.5z',main:'M1 1h5.5v10H1zM7.5 1H11v2.7H7.5zM7.5 4.65H11v2.7H7.5zM7.5 8.3H11V11H7.5z',focus:'M1 1h10v6.5H1zM1 8.5h2.7V11H1zM4.65 8.5h2.7V11h-2.7zM8.3 8.5H11V11H8.3z',columns:'M1 1h2.7v10H1zM4.65 1h2.7v10h-2.7zM8.3 1H11v10H8.3z'};
   const wallSvg=path=>'<svg viewBox="0 0 12 12" aria-hidden="true"><path d="'+path+'"/></svg>';
   function wallTile(name){
     const make=(tag,cls)=>{const e=document.createElement(tag);e.className=cls;return e;};
-    const t={el:make('div','wall-tile'),strip:make('div','wall-strip'),dot:make('i','wall-dot'),name:make('b','wall-name'),note:make('span','wall-note'),num:make('span','wall-num'),open:make('button','wall-open')};
+    const t={el:make('div','wall-tile'),strip:make('div','wall-strip'),dot:make('i','wall-dot'),name:make('b','wall-name'),note:make('span','wall-note'),num:make('span','wall-num'),pin:make('button','wall-pin'),open:make('button','wall-open')};
+    t.pin.innerHTML=wallSvg('M4 1h4v1l-.8.8v2.4L9.5 7v1H6.6v3L6 12l-.6-1V8H2.5V7l2.3-1.8V2.8L4 2z');
+    t.pin.title='Pin this view in its place · p';t.pin.setAttribute('aria-label','Pin this view in its place');t.pin.setAttribute('aria-pressed','false');
     t.open.innerHTML=wallSvg('M7 1h4v4h-1.5V3.56L6.56 6.5 5.5 5.44 8.44 2.5H7zM1 3h4v1.5H2.5v5h5V7H9v4H1z');
     t.open.title='Follow this account and leave the wall';t.open.setAttribute('aria-label','Follow this account');
-    t.strip.append(t.dot,t.name,t.note,t.num,t.open);t.el.append(t.strip);
-    t.strip.addEventListener('click',e=>{if(e.target.closest?.('.wall-open'))wallOpen(name);else if(wall)wallClick(name);});
+    t.strip.append(t.dot,t.name,t.note,t.num,t.pin,t.open);t.el.append(t.strip);
+    t.strip.addEventListener('click',e=>{if(t.dragged){t.dragged=false;return;}if(e.target.closest?.('.wall-open'))wallOpen(name);else if(e.target.closest?.('.wall-pin'))wallPin(name);else if(wall)wallClick(name);});
+    t.strip.addEventListener('pointerdown',e=>wallDragStart(e,name,t));t.strip.addEventListener('pointermove',wallDragMove);
+    t.strip.addEventListener('pointerup',e=>wallDragEnd(e,true));t.strip.addEventListener('pointercancel',e=>wallDragEnd(e,false));
     return t;
   }
   // With `move` (the time and the start of the viewer's move, 0 ms for none) the frames go to the reported rectangles;
@@ -927,7 +1028,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(!wall){
       // The frames fade while the viewer returns to its single view.
       for(const t of wallTiles.values()){if(wallStill())t.el.remove();else{t.el.style.transition='opacity .16s';t.el.style.opacity='0';setTimeout(()=>t.el.remove(),200);}}
-      wallTiles.clear();return;
+      wallTiles.clear();wallGrip.hidden=true;wallGhost.hidden=true;return;
     }
     for(const b of wallLayoutButtons)b.setAttribute('aria-pressed',String(b.dataset.wallLayout===wall.layout));
     if(wallCycleButton.dataset.wallShows!==wall.layout){wallCycleButton.dataset.wallShows=wall.layout;wallCycleButton.innerHTML=wallSvg(wallIcon[wall.layout]);wallCycleButton.title='Layout: '+WALL_LAYOUT_NAMES[wall.layout]+' · Space for the next';}
@@ -960,13 +1061,23 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       const b=S.bots.find(x=>x.name===name),place=shown.indexOf(name)+1;
       const state=wall.offline.has(name)?'off':!wall.seen.has(name)?'finding':b&&st(b)[1]==='playing'?'on':'idle';
       const note=state==='off'?'not online':state==='finding'?'finding…':String(b?.phaseShort||b?.goal||(b?.combat?'level-'+b.combat:'')).slice(0,40);
-      const cls='wall-tile'+(name===wall.focus?' wall-focus':'')+(name===wall.main?' wall-main':'')+(name===wall.hover?' wall-hover':'');
+      const locked=wallLocked(name),drag=wallDrag?.on?wallDrag:null;
+      const cls='wall-tile'+(name===wall.focus?' wall-focus':'')+(name===wall.main?' wall-main':'')+(name===wall.hover?' wall-hover':'')+(locked?' wall-locked':'')+(drag?.name===name?' wall-drag':'')+(drag&&drag.over===name?(locked?' wall-nodrop':' wall-drop'):'');
+      if(t.pin.getAttribute('aria-pressed')!==String(locked)){t.pin.setAttribute('aria-pressed',String(locked));t.pin.title=locked?'Pinned in its place · p to unpin':'Pin this view in its place · p';}
       if(t.el.className!==cls)t.el.className=cls;
       if(t.dot.className!=='wall-dot '+state)t.dot.className='wall-dot '+state;
       const label=safeName(name);if(t.name.textContent!==label)t.name.textContent=label;
       if(t.note.textContent!==note)t.note.textContent=note;
       const num=place<=9?String(place):'';if(t.num.textContent!==num)t.num.textContent=num;
     });
+    // The grip lies on the gap between the main view and the stack: to the right of the main view, or under it.
+    const m=wall.layout==='main'&&wall.names.length>1?wall.rects?.[wall.names.indexOf(wall.main)]:null,other=m&&wall.rects.find(r=>r!==m);
+    if(move&&m&&other){
+      const row=other.y>=m.y+m.h,g=wallGrip.style;wallGrip.dataset.side=row?'row':'col';
+      if(row){g.left=(m.x+dx)+'px';g.top=(m.y+m.h+dy-3)+'px';g.width=m.w+'px';g.height=(WALL_GAP+6)+'px';}
+      else{g.left=(m.x+m.w+dx-3)+'px';g.top=(m.y+dy)+'px';g.width=(WALL_GAP+6)+'px';g.height=m.h+'px';}
+      wallGrip.hidden=false;
+    }else if(!m)wallGrip.hidden=true;
   }
   // The layout switcher and the key list, in the title bar's focus group after the Wall button. A narrow title bar
   // shows one button that steps through the layouts.

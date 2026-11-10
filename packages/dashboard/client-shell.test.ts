@@ -217,7 +217,7 @@ function fleetWall(bots:any[],start:{sel?:string|null,free?:boolean,other?:strin
   ${live}${state}${code}
   return {start:wallStart,end:wallEnd,toggle:wallToggle,sync:wallSync,message:wallMessage,names:wallNames,on:()=>!!wall,label:()=>focusState(),link:()=>{wallLinked=true;},
    press:wallPress,frameKey:wallFrameKey,neighbour:wallNeighbour,rects:wallRects,prefs:wallPrefs,prefsRead:wallPrefsRead,linkRead:wallLinkRead,linkWrite:wallLinkWrite,layoutTo:wallLayout,
-   wall:()=>wall&&{layout:wall.layout,main:wall.main,focus:wall.focus,names:wall.names.slice(),hover:wall.hover},tiles:()=>new Map([...wallTiles].map(([n,t])=>[n,t])),root:wallRoot,tools:wallTools,keysOpened:()=>keysOpened,
+   wall:()=>wall&&{layout:wall.layout,main:wall.main,focus:wall.focus,names:wall.names.slice(),hover:wall.hover},tiles:()=>new Map([...wallTiles].map(([n,t])=>[n,t])),root:wallRoot,tools:wallTools,keysOpened:()=>keysOpened,pin:wallPin,ratioAt:wallRatioAt,grip:wallGrip,ghost:wallGhost,
    page:()=>({sel,free:window.atlasFreeCamera,other:window.atlasFollowOther,touring:!!tourTimer,sentMaxLevel,warmSent,rswFor,renders}),setMode:m=>setMode(m),stopTour:()=>clearInterval(tourTimer)};`)
   (S,VIEWER,window,'⟦MAIN⟧',st,()=>frame,(t:string)=>said.push(t),()=>{},{classList:classes},{classList:classes},log,(n:string)=>String(n).replaceAll('⟦MAIN⟧','Main · reserved'),phone,{createElement:dom.createElement},hud,wallButton,store,()=>links.push(1),(f:Function)=>frames.push(f));
  // The viewer's report of the layout for the asked names, and the frame that shows it. Times are ms after the page's time origin.
@@ -225,7 +225,7 @@ function fleetWall(bots:any[],start:{sel?:string|null,free?:boolean,other?:strin
  const laid=(rects:any[],more:any={})=>{api.message({viewerMultiLayout:{mode:'grid',main:null,focus:null,rects,animating:false,ms:0,at:performance.timeOrigin,...more}});for(const f of frames.splice(0))f(more.frameAt??0);};
  // The frame of the 3D view starts 48 px down the page and the frames' box 28 px down: a view at y is drawn at y + 20.
  api.root.rect={left:0,top:28,width:0,height:0};
- return {...api,log,said,S,VIEWER,window,phone,dom,store,frame,hud,wallButton,links,grid,laid,multis:()=>log.filter(m=>'multi' in m),since:(n:number)=>log.slice(n)};
+ return {...api,log,said,S,VIEWER,window,phone,dom,store,frame,frames,hud,wallButton,links,grid,laid,multis:()=>log.filter(m=>'multi' in m),since:(n:number)=>log.slice(n)};
 }
 const inWorld=(name:string,more:any={})=>({name,inWorld:true,...more});
 const opening=(names:string[],layout='grid',main=names[0],animate=true)=>[{multiChrome:false},{multiLayout:{mode:layout,main,gap:4,color:'#1e1e1e',animate}},{multi:names},{multiFocus:main}];
@@ -366,11 +366,11 @@ test('the layout, the main view and a hand-made order stay in the browser storag
  const w=fleetWall(bots(),{store});w.start();w.laid(w.grid(['Ann','Bob','Cat','Dan']));
  expect(store.data['atlas-wall']).toBeUndefined();
  w.press('f',false);
- expect(JSON.parse(store.data['atlas-wall'])).toEqual({layout:'focus',main:'Ann',order:[]});
+ expect(JSON.parse(store.data['atlas-wall'])).toEqual({layout:'focus',main:'Ann',order:[],ratio:0.62,locked:[]});
  w.press('f',false);w.laid(w.grid(['Ann','Bob','Cat','Dan']));
  // Dan goes to Bob's place: the order is now the user's.
  w.press('4',false);w.press('ArrowUp',true);
- expect(JSON.parse(store.data['atlas-wall'])).toEqual({layout:'grid',main:'Ann',order:['Ann','Dan','Cat','Bob']});
+ expect(JSON.parse(store.data['atlas-wall'])).toEqual({layout:'grid',main:'Ann',order:['Ann','Dan','Cat','Bob'],ratio:0.62,locked:[]});
  w.end();
  // The next wall, with one account gone and one new: the stored order, then the new account.
  const next=fleetWall([inWorld('Eve'),inWorld('Dan'),inWorld('Cat'),inWorld('Ann')],{store});next.start();
@@ -381,8 +381,69 @@ test('the layout, the main view and a hand-made order stay in the browser storag
  for(const text of ['{','null','[1]','{"layout":"spiral","main":"<b>","order":["Ann",5,"<i>"]}']){
   const odd=fleetWall(bots(),{store:fakeStore({'atlas-wall':text})});odd.start();expect(odd.log).toEqual(opening(['Ann','Bob','Cat','Dan']));
  }
- expect(w.prefsRead('{"layout":"columns","main":"⟦MAIN⟧","order":["Bob","⟦MAIN⟧"]}')).toEqual({layout:'columns',main:'⟦MAIN⟧',order:['Bob','⟦MAIN⟧']});
+ expect(w.prefsRead('{"layout":"columns","main":"⟦MAIN⟧","order":["Bob","⟦MAIN⟧"]}')).toEqual({layout:'columns',main:'⟦MAIN⟧',order:['Bob','⟦MAIN⟧'],ratio:0.62,locked:[]});
+ expect(w.prefsRead('{"ratio":0.7,"locked":["Bob",5,"<i>"]}')).toMatchObject({ratio:0.7,locked:['bob']});
+ expect(w.prefsRead('{"ratio":0.95}')).toMatchObject({ratio:0.62});
 });
+
+// A pointer on a title strip, at page coordinates. The frame of the 3D view starts 48 px down the page.
+const stripDrag=(w:any,name:string,to:{x:number,y:number}|null,from={x:20,y:58})=>{
+ const strip=w.tiles().get(name).strip,ev=(x:number,y:number)=>({button:0,pointerId:7,clientX:x,clientY:y,target:{closest:()=>null}});
+ strip.listeners.pointerdown(ev(from.x,from.y));
+ if(to){strip.listeners.pointermove(ev(to.x,to.y));strip.listeners.pointerup(ev(to.x,to.y));}else strip.listeners.pointerup(ev(from.x,from.y));
+};
+
+test('a drag of a title strip onto another view swaps the two views; a short move stays a click',()=>{
+ const names=['Ann','Bob','Cat','Dan'],w=fleetWall(names.map(n=>inWorld(n)));w.start();w.laid(w.grid(names));
+ // 3 px is not a drag: nothing is sent and the label stays hidden.
+ let mark=w.log.length;stripDrag(w,'Ann',{x:22,y:60});
+ expect(w.since(mark)).toEqual([]);expect(w.ghost.hidden).toBe(true);
+ // Bob (top right) dragged onto Cat (bottom left): Bob and Cat change places and Bob has the focus.
+ mark=w.log.length;stripDrag(w,'Bob',{x:100,y:48+304+100},{x:520,y:58});
+ expect(w.since(mark)).toEqual([{multiFocus:'Bob'},{multiOrder:['Ann','Cat','Bob','Dan']}]);
+ expect(w.wall()).toMatchObject({names:['Ann','Cat','Bob','Dan'],focus:'Bob',main:'Ann'});expect(w.ghost.hidden).toBe(true);
+ // A view dropped on the first place becomes the main view.
+ w.laid(w.grid(['Ann','Cat','Bob','Dan']));mark=w.log.length;stripDrag(w,'Dan',{x:100,y:48+100},{x:520,y:48+304+10});
+ expect(w.since(mark)).toEqual([{multiFocus:'Dan'},{multiOrder:['Dan','Cat','Bob','Ann']},{multiLayout:{main:'Dan'}}]);
+ // A drop outside every view moves nothing.
+ w.laid(w.grid(['Dan','Cat','Bob','Ann']));mark=w.log.length;stripDrag(w,'Cat',{x:5000,y:5000},{x:520,y:58});
+ expect(w.since(mark)).toEqual([]);
+});
+
+test('a pinned view keeps its place: no drag, swap or new main view moves it, and it returns to its place',()=>{
+ const names=['Ann','Bob','Cat','Dan'],store=fakeStore(),w=fleetWall(names.map(n=>inWorld(n)),{store});w.start();w.laid(w.grid(names));
+ w.press('2',false);w.press('p',false);
+ expect(w.tiles().get('Bob').pin.attrs['aria-pressed']).toBe('true');expect(w.tiles().get('Bob').el.className).toContain('wall-locked');
+ expect(JSON.parse(store.data['atlas-wall']).locked).toEqual(['bob']);
+ // Bob does not move by a drag, as the source or as the target, by Shift and an arrow, or by Enter.
+ let mark=w.log.length;stripDrag(w,'Bob',{x:100,y:48+304+100},{x:520,y:58});stripDrag(w,'Cat',{x:600,y:100},{x:20,y:48+304+10});
+ w.press('ArrowLeft',true);w.press('Enter',false);
+ expect(w.since(mark)).toEqual([]);expect(w.wall()!.names).toEqual(names);
+ // Ann leaves the world: Bob stays the second view, and the next view takes the first place.
+ w.S.bots.splice(0,1);mark=w.log.length;w.sync();
+ expect(w.since(mark)).toEqual([{multi:['Cat','Bob','Dan']},{multiOrder:['Cat','Bob','Dan']},{multiLayout:{main:'Cat'}}]);
+ // The pin on the title strip takes the pin off.
+ w.tiles().get('Bob').strip.listeners.click({target:{closest:(q:string)=>q==='.wall-pin'?{}:null}});
+ expect(JSON.parse(store.data['atlas-wall']).locked).toEqual([]);
+});
+
+test('the gap of the Main and stack layout sizes the main view between 50 and 80 percent, with stops',()=>{
+ expect(w0.ratioAt(0,1000,false)).toBe(0.5);expect(w0.ratioAt(990,1000,false)).toBe(0.8);
+ // 624 px of 1000 is within 1.2 percent of the first share; with Alt the pointer's own share is taken.
+ expect(w0.ratioAt(626,1000,false)).toBe(0.62);expect(w0.ratioAt(700,1000,true)).toBe(0.701);expect(w0.ratioAt(668,1000,false)).toBe(0.667);
+ const names=['Ann','Bob','Cat'],store=fakeStore(),w=fleetWall(names.map(n=>inWorld(n)),{store});w.start();w.press(' ',false);
+ w.laid([{name:'Ann',x:0,y:0,w:647,h:757},{name:'Bob',x:651,y:0,w:397,h:376},{name:'Cat',x:651,y:380,w:397,h:377}]);
+ expect(w.grip.hidden).toBe(false);expect(w.grip.dataset.side).toBe('col');expect(w.grip.style.left).toBe('644px');
+ const ev=(x:number)=>({button:0,pointerId:3,clientX:x,clientY:300,altKey:false});
+ let mark=w.log.length;w.grip.listeners.pointerdown(ev(649));w.grip.listeners.pointermove(ev(786));for(const f of w.frames.splice(0))f(0);w.grip.listeners.pointerup(ev(786));
+ expect(w.since(mark)).toEqual([{multiLayout:{animate:false}},{multiLayout:{ratio:0.75}},{multiLayout:{ratio:0.75,animate:true}}]);
+ expect(JSON.parse(store.data['atlas-wall']).ratio).toBe(0.75);
+ // The next wall opens with that share. In another layout there is no grip.
+ w.end();const next=fleetWall(names.map(n=>inWorld(n)),{store});next.start();
+ expect(next.log[1]).toEqual({multiLayout:{mode:'main',main:'Ann',gap:4,ratio:0.75,color:'#1e1e1e',animate:true}});
+ next.press(' ',false);next.laid(next.grid(names));expect(next.grip.hidden).toBe(true);
+});
+const w0=fleetWall([inWorld('Ann')]);
 
 test('the hidden account goes to the viewer and comes back as its mark only',()=>{
  const store=fakeStore(),w=fleetWall([inWorld('⟦MAIN⟧',{fresh:true}),inWorld('Ann')],{store});w.start();
