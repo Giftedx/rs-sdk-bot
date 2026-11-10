@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794310062225-quickhandjob-wandwaver",
+ "account": "Wandwaver",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 20,
+ "claim": "28ce3967-7878-44f4-952f-a7cf4f781490",
+ "count": 0,
+ "ok": false,
+ "at": 1794310072452,
+ "detail": "trade claimed"
+}
