@@ -121,4 +121,3 @@ RuneLite features the page lacks and can build from the public state. Each claim
 |---|---|---|---|
 | XP bar to the goal level with level marks | `xptracker/XpTrackerConfig.java` `intermediateLevelMarkers`; `XpInfoBox.java` | `bots[].goalSkill`, `goalLevel`, `skills[].xp` | XP is in the state for local-side accounts only. |
 | DPS counter | `dpscounter/DpsOverlay.java`, `DpsConfig.java` | The world feed in the 3D viewer (`playerHp`, npc hp per tick), not the public state | Needs a message from the viewer wrapper; counts every attacker's damage on the target. |
-| Item stats on food | `itemstats/ItemStatChanges.java` | none | Needs a heal table for the 2004 items, checked against the pinned server. |
