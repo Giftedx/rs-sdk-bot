@@ -75,7 +75,7 @@ const FROM = process.env.RG_FROM ?? 'start';
 const STAGES = ['start', 'tir1', 't8', 'falador', 'up2', 'tir2', 'home'];
 const from = (s: string) => STAGES.indexOf(FROM) <= STAGES.indexOf(s);
 
-const q = await openQuest({ cap: 12000, eatAt: 50, food: [385, 379, 2309, 2003] });
+const q = await openQuest({ cap: 12000, eatAt: 50, food: [385, 379, 2309, 2003], resend: false });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete|you have completed the/i) > 0) questDone = true; });

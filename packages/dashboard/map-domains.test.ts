@@ -47,3 +47,13 @@ test('failed map squares retry after a cooldown without a request on every redra
  const h=squareHarness();h.api(1,1);h.images[0].onerror();h.api(1,1);expect(h.images).toHaveLength(1);
  h.advance();h.api(1,1);expect(h.images).toHaveLength(2);
 });
+
+test('a minimap dot is blue for a ranked rival, grey for a bot farm account and white for any other player',()=>{
+ const start=shell.indexOf('  function minimap(){'),code=shell.slice(start,shell.indexOf('  // A click on the minimap',start));
+ const fills:string[]=[];let style='';
+ const g:any={clearRect(){},save(){},restore(){},beginPath(){},arc(){},clip(){},translate(){},rotate(){},drawImage(){},fillRect(_x:number,_y:number,w:number){if(w===2)fills.push(style);},set fillStyle(v:string){style=v;},get fillStyle(){return style;}};
+ const c={width:100,height:100,getContext:()=>g};
+ const S={bots:[],snapshotAt:1,rivals:[{rows:[{name:'Kingston',fleet:false},{name:'Ours',fleet:true}]}],farms:[{names:['Steve01']}],map:{x0:0,z0:0,w:100,h:100,scale:1}};
+ new Function('S','hud','mapWorld',`const account=()=>null,window={},mode='2d',st=()=>['off'];let miniView;${code};minimap();`)(S,{querySelector:(q:string)=>q.endsWith('canvas')?c:null},()=>({bots:[],roster:[['kingston',50,50],['steve01',51,51],['someone',52,52],['ours',53,53]]}));
+ expect(fills).toEqual(['#19b3ff','#9a9a9a','#fff','#fff']);
+});

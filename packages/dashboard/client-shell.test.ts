@@ -696,3 +696,26 @@ test('logins, logouts and rank moves become chat lines after the first snapshot'
  S.bots=['a','b','c','d','e'].map(name=>({name,inWorld:false}));moments();for(const b of S.bots)b.inWorld=true;moments();
  expect(chat.at(-1).text).toBe('5 accounts have logged in.');
 });
+
+test('!price answers from the market, then from the item value',()=>{
+ const code=shell.slice(shell.indexOf('  function priceLine(q){'),shell.indexOf('  function chatLookup(text){'));
+ const S={economy:{supplies:[{name:'Cannonball',ask:7320,bid:null,stock:18118},{name:'Law rune',ask:900,bid:800,stock:5}],itemValues:{'Rune scimitar':25600}}};
+ const priceLine=new Function('S','nf',`${code};return priceLine;`)(S,(n:number)=>n.toLocaleString('en-US'));
+ expect(priceLine('cannon')).toBe('Cannonball: ask 7,320 gp · bid none · 18,118 in stock.');
+ expect(priceLine('LAW RUNE')).toBe('Law rune: ask 900 gp · bid 800 gp · 5 in stock.');
+ expect(priceLine('rune scimitar')).toBe('Rune scimitar: value 25,600 gp · no market offer.');
+ expect(priceLine('nothing')).toBe('No price for nothing.');
+ expect(priceLine(' ')).toContain('Usage: !price');
+});
+
+test('the Wilderness level counts 8 tiles for each level from the south edge of each zone',()=>{
+ const code=shell.slice(shell.indexOf('  const wildLevel=p=>'),shell.indexOf('  function infoboxes(){'));
+ const wildLevel=new Function(`${code};return wildLevel;`)();
+ expect(wildLevel({x:3100,z:3519})).toBe(0);
+ expect(wildLevel({x:3100,z:3520})).toBe(1);
+ expect(wildLevel({x:3100,z:3527})).toBe(1);
+ expect(wildLevel({x:3100,z:3528})).toBe(2);
+ expect(wildLevel({x:3100,z:9920})).toBe(1);
+ expect(wildLevel({x:2666,z:3600})).toBe(0);
+ expect(wildLevel(null)).toBe(0);
+});
