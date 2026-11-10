@@ -18,7 +18,7 @@ Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). 
 
 ## Routes
 
-**Claim:** every catalog route is in one of three groups: 184 of 219 have a case that passes at seed 7, 33 cannot run as one case and name the cause, and 2 have a case that fails with a recorded error (`waterfall`, `mm`). **Conditions:** lockstep, a new engine for each case; the start state of each case comes from the worker's entry checks, a proof or the map files. **Evidence:** `bun run bench --coverage`; `.practice/aio-bench/baseline-seed7.json`; the 105 non-quest cases run in 271 s on six engines. **Gap:** a case proves one small job from one start state, not the route at every level or place.
+**Claim:** every catalog route is in one of three groups: 185 of 219 have a case that passes at seed 7, 33 cannot run as one case and name the cause, and 1 has a case that fails with a recorded error (`mm`). **Conditions:** lockstep, a new engine for each case; the start state of each case comes from the worker's entry checks, a proof or the map files. **Evidence:** `bun run bench --coverage`; `.practice/aio-bench/baseline-seed7.json`; the 105 non-quest cases run in 271 s on six engines. **Gap:** a case proves one small job from one start state, not the route at every level or place.
 
 **Claim:** `viking`, `squire` and `zanaris` pass at every seed tried. **Conditions:** seeds 7 to 10, a new engine for each case. **Evidence:** `viking` passes at 7, 8 and 9 (3001, 2727, 2787 ticks): the retreat rule fired in Koschei's fight, which ends at 0 hp by design, and `planLowHp` in `quest-lib` now switches the rule off for that fight. `squire` passes at four seeds with a wider bound on the cupboard search, and `zanaris` with a wider bound on the axe hunt.
 
@@ -71,3 +71,7 @@ Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). 
 ## A script that acts only in tick callbacks
 
 **Claim:** the lockstep client sends its tick acknowledgement at once only when the script waits for a tick through `watchTickStream`, `waitTicks` or a state wait. A script that acts only inside `onTick` callbacks is not seen as waiting, so each tick waits for `SIM_BUSY_MS` (2000 ms). Such a script raises `tickWaits.active` for its callback loop. **Conditions:** `SIM_LOCKSTEP=1`. **Evidence:** `scripts/measure/stun-guest.ts` took more than 500 s for 600 ticks and takes about 60 s with the counter raised; `packages/core/src/inprocess.ts`. **Gap:** no check finds other scripts of this kind.
+
+## The walk into the Tree Gnome Village maze
+
+**Claim:** one plan from outside the maze to the ladder at 2533,3156 goes round the hedge and stops at the nearest outside tile, and a tolerance of 2 at the mouth counts the closed pocket at 2504-2509,3186-3188 as arrived. A walk that enters on the exact tile 2502,3191 and then takes each maze point on its exact tile reaches the ladder. `waterfall` passes in 1364, 1353 and 1355 ticks at seeds 7, 8 and 9. **Conditions:** lockstep, `quester:quest:waterfall`. **Evidence:** `scripts/generated/waterfall.ts` (`walkMaze`); the planner finds every leg of `MAZE` and the whole route from the mouth (`findLongPath`, 51 waypoints). **Gap:** the rival states 980 ticks; this run ends with `hpMin=4`.

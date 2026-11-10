@@ -430,7 +430,17 @@ try {
     };
     // One long walkTo; if it stops short, follow the maze waypoints from the nearest one.
     const walkMaze = async (label: string, x: number, z: number, path: [number, number][], via: [number, number, number][] = []): Promise<void> => {
-        if (!near(x, z, 2)) await fast([...via.map(([vx, vz, tol]) => ({ x: vx, z: vz, tol })), { x, z, tol: 1 }]);
+        // From outside, one plan to the goal goes round the hedge and stops at the nearest outside tile. So the walk
+        // enters at the exact mouth tile, then takes the path points in order, each on its exact tile: a tolerance
+        // of one tile can count a tile on the far side of a hedge as arrived.
+        if (via.length && !near(x, z, 2)) {
+            const pts = [...via.map(([vx, vz, tol]) => ({ x: vx, z: vz, tol })), ...path.map(([px, pz]) => ({ x: px, z: pz, tol: 0 }))];
+            const done = await fast(pts);
+            if (done < pts.length) await fail(`maze ${label} ${pts[done]!.x},${pts[done]!.z}`);
+            await walk(label, [[x, z, 2]]);
+            return;
+        }
+        if (!near(x, z, 2)) await fast([{ x, z, tol: 1 }]);
         for (let i = 0; i < 2 && !near(x, z, 2); i++) {
             await guard(label);
             await s.bot.walkTo(x, z, 1, { timeout: 400_000 });
@@ -540,7 +550,7 @@ try {
         await climb('Hadley down', 2518, 3429, /climb-down/i, () => pos()?.level === 0);
 
         // Golrie under the Tree Gnome Village: key from the east crate (needs 3), key on the gate, pebble from Golrie.
-        await walkMaze('maze in', 2533, 3156, MAZE, [[2505, 3190, 2]]);
+        await walkMaze('maze in', 2533, 3156, MAZE, [[2502, 3191, 0]]);
         const inCellar = () => (pos()?.worldZ ?? 0) > 9500 && (pos()?.worldZ ?? 0) < 9600;
         await climb('gnome cellar down', 2533, 3155, /climb-down/i, inCellar);
         await step('golrie crate', () => opLoc(LOC.golrieCrate), () => has(ITEM.golrieKey), 40, 3);
