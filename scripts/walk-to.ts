@@ -37,6 +37,22 @@ export async function walkTarget(s: Session, to: Tile, ground: boolean, operatio
     return ground ? operations.ground(s, to) : operations.planned(s, to);
 }
 
+// A long planned walk can stop on one leg (live: Varrock West to the Ardougne north bank failed twice after about 114
+// ticks, then a third run arrived). Each try starts where the last stopped; it stops when a try ends no closer.
+export async function walkTargetPersist(s: Session, to: Tile, tries = 4,
+    walk: (to: Tile) => Promise<{ ok: boolean; reason?: string; detail?: string }> = t => walkTarget(s, t, false)) {
+    let best = Infinity, last: { ok: boolean; reason?: string; detail?: string } = { ok: false };
+    for (let n = 1; n <= tries; n++) {
+        last = await walk(to);
+        if (last.ok) return last;
+        const p = s.sdk.getState()?.player, distance = p && p.level === to.level ? Math.max(Math.abs(p.worldX - to.x), Math.abs(p.worldZ - to.z)) : Infinity;
+        console.log(`WALK_RETRY try=${n} reason=${last.reason ?? '-'} detail=${last.detail ?? '-'} distance=${distance}`);
+        if (distance >= best) break;
+        best = distance;
+    }
+    return last;
+}
+
 // The known mainland and Karamja approach to Ardougne uses two ferry edges.
 const PORT_SARIM_FERRY = 'npc:captain_tobias:karamja-musa-point@3028,3216';
 const ARDOUGNE_FERRY = 'npc:customs_officer:ardougne@2772,3225';
@@ -48,7 +64,9 @@ export async function walkWithFerryFallback(from: Tile, to: Tile, walk: (to: Til
     sail: (boat: Travel) => Promise<Outcome>, coins: () => number): Promise<Outcome> {
     const direct = await walk(to);
     if (direct.ok || direct.reason !== 'precondition' || !direct.detail.startsWith('no route to ')) return direct;
-    if (from.level !== 0 || to.level !== 0 || from.x < 3080 || from.x > 3280 || from.z < 3150 || from.z > 3260
+    // From Lumbridge, Draynor and Varrock (z up to 3510): the planner has no westbound land route from Varrock West to the
+    // Ardougne north bank (practice: "no route to 2619,3332,0"), so Varrock walks to Draynor and takes the ferries too.
+    if (from.level !== 0 || to.level !== 0 || from.x < 3080 || from.x > 3280 || from.z < 3150 || from.z > 3510
         || to.x < 2600 || to.x > 2690 || to.z < 3260 || to.z > 3360) return direct;
 
     const travel = loadTravel(), first = travel.find(t => t.id === PORT_SARIM_FERRY), second = travel.find(t => t.id === ARDOUGNE_FERRY);

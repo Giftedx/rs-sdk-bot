@@ -116,8 +116,8 @@ export const alchResultLine=(r:Awaited<ReturnType<typeof runAlch>>)=>
 if(import.meta.main){let s:Session|undefined,stopped=false;try{
     const [account,target,cap]=process.argv.slice(2);if(!account||!target)throw new Error('usage: alch-train.ts <account> <TARGET_LEVEL> [CAP]');
     s=await openBot(account,{onStop:async()=>{stopped=true;}});
-    const {walkTarget}=await import('./walk-to'),session=s;
+    const {walkTargetPersist}=await import('./walk-to'),session=s;
     const r=await runAlch(s,{target:Number(target),cap:Number(cap??5000),item:process.env.ALCH_ITEM??'feather',stop:()=>stopped,
-        walk:async(x,z)=>(await walkTarget(session,{x,z,level:0},false)).ok});
+        walk:async(x,z)=>(await walkTargetPersist(session,{x,z,level:0})).ok});
     console.log(`ALCH_RESULT ${JSON.stringify(r)}`);await finish([s],r.ok,alchResultLine(r));
 }catch(e){await finish(s?[s]:[],false,String(e));}}
