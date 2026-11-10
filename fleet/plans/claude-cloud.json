@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794299803469,
+ "at": 1794299930531,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -14,7 +14,7 @@
     "BONE_RESERVE": "6",
     "CAP": "4000"
    },
-   "enabled": false,
+   "enabled": true,
    "standing": true,
    "repeat": false,
    "goal": "train Ranged to 99 on the Khazard troopers",
@@ -177,11 +177,10 @@
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
+   "repeat": false,
    "goal": "train Ranged to 99 on the Khazard troopers",
    "role": "combat",
    "template": "army-trooper-ranged-99",
-   "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
    ]
