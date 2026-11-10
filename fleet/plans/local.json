@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794336452566,
+ "at": 1794336520067,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -173,28 +173,6 @@
    "autopilot": "local",
    "resources": [
     "shop:betty"
-   ]
-  },
-  {
-   "account": "mmthv2350",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "sarim"
-   ],
-   "env": {
-    "ITEMS": "feather",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy feathers at Gerrant",
-   "role": "bank",
-   "template": "shop-feathers",
-   "autopilot": "local",
-   "resources": [
-    "shop:sarim"
    ]
   },
   {
@@ -493,10 +471,32 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-aa371ef8-9a10-40b8-baeb-d24ce677713c"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-session-recovery-mightyrod-q1794336001 [task-aa371ef8-9a10-40b8-baeb-d24ce677713c]",
    "role": "helper"
+  },
+  {
+   "account": "mmthv2350",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "sarim"
+   ],
+   "env": {
+    "ITEMS": "feather",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy feathers at Gerrant",
+   "role": "bank",
+   "template": "shop-feathers",
+   "autopilot": "local",
+   "resources": [
+    "shop:sarim"
+   ]
   }
  ]
 }
