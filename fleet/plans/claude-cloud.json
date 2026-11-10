@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794327127839,
+ "at": 1794327397070,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -47,6 +47,31 @@
    "goal": "train Defence to 99 on the Khazard troopers",
    "role": "combat",
    "template": "army-trooper-defence-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Attack",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Attack to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-attack-99",
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
