@@ -719,3 +719,11 @@ test('the Wilderness level counts 8 tiles for each level from the south edge of 
  expect(wildLevel({x:2666,z:3600})).toBe(0);
  expect(wildLevel(null)).toBe(0);
 });
+
+test('the inventory value is the sum of the item values, and the tooltip counts the items with no value',()=>{
+ const code=shell.slice(shell.indexOf('  function invWorth(items){'),shell.indexOf('  function itemCell(item,i){'));
+ const vals:any={Coins:1,Lobster:150};
+ const invWorth=new Function('price','gp',`${code};return invWorth;`)((n:string)=>vals[n]!=null?{value:vals[n]}:null,(n:number)=>String(n));
+ expect(invWorth([{name:'Coins',count:1000},{name:'Lobster',count:2},undefined,{name:'Odd thing',count:1}])).toBe('<p class="game-muted inv-worth" title="The sum of the item values · 1 item has no value">Worth 1300 gp</p>');
+ expect(invWorth([{name:'Odd thing',count:1}])).toBe('');
+});
