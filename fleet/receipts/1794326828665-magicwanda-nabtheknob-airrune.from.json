@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794326828665-magicwanda-nabtheknob-airrune",
+ "account": "Magicwanda",
+ "partner": "NabTheKnob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 10,
+ "claim": "0b28e0a1-ab32-4d49-82a5-18c45ac8176f",
+ "count": 0,
+ "ok": false,
+ "at": 1794326839048,
+ "detail": "trade claimed"
+}
