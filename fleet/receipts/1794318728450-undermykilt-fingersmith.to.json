@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794318728450-undermykilt-fingersmith",
  "account": "Fingersmith",
  "partner": "UnderMyKilt",
@@ -12,6 +12,15 @@
  "claim": "dfae73ff-2637-43bb-84f4-55a572d21a9f",
  "count": 0,
  "ok": false,
- "at": 1794319654399,
- "detail": "trade claimed"
+ "at": 1794320528972,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794319654400-0000017727-0000000001",
+  "at": 1794320528961,
+  "sha256": "13f59a525182afe87af069500262e27ec4462e3f8943185f9b781f7fb373ac2a"
+ }
 }
