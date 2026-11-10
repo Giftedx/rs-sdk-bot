@@ -1,25 +1,31 @@
 {
  "side": "claude-cloud",
- "at": 1794325181197,
+ "at": 1794326170906,
  "jobs": [
   {
    "account": "Quickhandjob",
-   "script": "scripts/chain.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=1 EXPECTED_OWNED=4 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=quickhandjob-kit1-385-4to5 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=882 QUANTITY=975 EXPECTED_OWNED=25 LIMIT_PRICE=20 CASH_RESERVE=1000 ORDER_KEY=quickhandjob-kit1-882-25to1000 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Shark, 975 Bronze arrow on the Grand Exchange to train Ranged to 99 on the Khazard troopers",
-   "role": "supply",
-   "template": "kit-buy:army-trooper-ranged-99",
+   "repeat": true,
+   "goal": "train Strength to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-strength-99",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "TrouserSnake",
@@ -199,25 +205,24 @@
    "account": "SporranDip",
    "script": "scripts/gather-combat.ts",
    "args": [
-    "1500",
-    "trooper"
+    "3000",
+    "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "TRAIN_SKILL": "Attack",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
+   "goal": "train Attack to 70 on the Ardougne cows",
    "role": "combat",
-   "template": "army-trooper-strength-99",
+   "template": "army-cow-attack-70",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "cow:ardougne-north"
    ]
   },
   {
