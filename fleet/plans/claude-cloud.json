@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794348958714,
+ "at": 1794349404691,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -185,7 +185,7 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Attack",
+    "TRAIN_SKILL": "Defence",
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
@@ -194,9 +194,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Attack to 99 on the Khazard troopers",
+   "goal": "train Defence to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-attack-99",
+   "template": "army-trooper-defence-99",
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
@@ -228,31 +228,6 @@
   },
   {
    "account": "PocketPool",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-defence-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "SporranDip",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
@@ -326,28 +301,30 @@
    ]
   },
   {
-   "account": "KnightRider",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
+   "account": "SporranDip",
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-61f73724-1e7d-414a-abfb-c40b37d2b199"
    },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Defence to 99 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-defence-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "cow:ardougne-north"
-   ]
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-sporrandip-20261110t221634z [task-61f73724-1e7d-414a-abfb-c40b37d2b199]",
+   "role": "combat"
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-2a57d925-e752-433e-aaac-7fe6d080629b"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-knightrider-20261110t221634z [task-2a57d925-e752-433e-aaac-7fe6d080629b]",
+   "role": "combat"
   }
  ]
 }
