@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794318728450-undermykilt-fingersmith",
+ "account": "UnderMyKilt",
+ "partner": "Fingersmith",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 10,
+ "claim": "0351ffc9-e439-4f43-940d-8f917fff58c9",
+ "count": 0,
+ "ok": false,
+ "at": 1794318731145,
+ "detail": "trade claimed"
+}
