@@ -15,6 +15,7 @@ import { mergeJobs, readCoordinatorJobs } from '../packages/core/src/coordinator
 import {capabilityRevision} from '../packages/core/src/worker-release';
 import { clearSwarmStop, swarmWroteStop } from './swarm';
 import { stopClearable } from './autopilot';
+import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
 
 const root = resolve(import.meta.dir, '..'), lock = join(root, '.practice', 'fleet-agent.lock');
 const CYCLE = Number(process.env.CYCLE ?? 10) * 60_000, LEAD = Number(process.env.LEAD ?? 15) * 60_000;
@@ -99,7 +100,19 @@ if (import.meta.main) {
         const p = Bun.spawnSync(['bun', 'scripts/fleet-sync.ts'], { cwd: root, windowsHide: true, env: process.env, stdout: 'pipe', stderr: 'pipe' });
         console.log(`FLEET_AGENT sync ${syncResult(`${p.stdout.toString()}${p.stderr.toString()}`, p.exitCode)} at ${new Date().toISOString()}`);
     };
+    const startedAt = Date.now();
     for (;;) {
+        // Bring this checkout to current master first (scripts/live-update.ts), so the sync and the trades run merged fixes.
+        const update = Bun.spawnSync(['bun', 'scripts/live-update.ts'], { cwd: root, windowsHide: true, env: process.env, stdout: 'pipe', stderr: 'pipe' });
+        const updateLine = lastResult(update.stdout.toString());
+        if (!/ live-update (?:none|off|paused)/.test(updateLine)) console.log(`FLEET_AGENT ${updateLine} at ${new Date().toISOString()}`);
+        // The update changed this agent's code: a copy on the current code takes over once no trade runs.
+        if (!once && !running.size && reloadDue(root, 'fleet-agent', startedAt)) {
+            release();
+            const pid = respawnDaemon(root, [join(root, 'scripts', 'fleet-agent.ts')], join(root, '.practice', 'fleet-agent.log'));
+            console.log(`FLEET_AGENT reload after a live update: successor pid ${pid}`);
+            process.exit(0);
+        }
         sync();
         const dir = FLEET_DIR(), now = Date.now();
         const orders = readJson(join(dir, 'orders')).filter(validOrder), receipts = readJson(join(dir, 'receipts'));
