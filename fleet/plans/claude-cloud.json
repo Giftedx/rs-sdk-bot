@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794311220502,
+ "at": 1794311457104,
  "jobs": [
   {
    "account": "Fingerblastr",
@@ -50,25 +50,21 @@
   },
   {
    "account": "UnderMyKilt",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Attack",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "10"
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Attack to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-attack-99",
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "knight:2652,3318"
    ]
   },
   {
@@ -189,7 +185,7 @@
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
+    "TRAIN_SKILL": "Strength",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1"
@@ -197,9 +193,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 45 on the Ardougne cows",
+   "goal": "train Strength to 60 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-defence-45",
+   "template": "army-cow-strength-60",
    "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
