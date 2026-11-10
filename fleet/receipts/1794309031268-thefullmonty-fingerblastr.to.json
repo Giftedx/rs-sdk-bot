@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794309031268-thefullmonty-fingerblastr",
  "account": "Fingerblastr",
  "partner": "TheFullMonty",
@@ -10,8 +10,21 @@
  "item": "Mind rune",
  "requested": 20,
  "claim": "cc8adcd8-a3f2-43b8-ac63-d3712345cc25",
- "count": 0,
- "ok": false,
- "at": 1794309237285,
- "detail": "trade claimed"
+ "count": 20,
+ "ok": true,
+ "at": 1794309264331,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 20
+ },
+ "bank": {
+  "count": 20,
+  "at": 1794309262998
+ },
+ "logout": {
+  "attemptId": "1794309237287-0000019265-0000000001",
+  "at": 1794309264327,
+  "sha256": "fc5ba5523becda7a5ad56bb371f786af01aa02b7e3b9ce9839e5bb3f01acdbcf"
+ }
 }
