@@ -1,6 +1,9 @@
 import { expect, test } from 'bun:test';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { archiveDir, cloudSide, deadTasks, eligibility, lifecycleRoot, MAX_ATTEMPTS, recoveriesInFlight, recoveryProposal, releasableAccounts, releaseBlockers, spentAttempts, type ClaimView } from './cloud-recover';
+import { SWARM_STOP } from './swarm';
+import { archiveDir, clearSwarmStops, cloudSide, deadTasks, eligibility, lifecycleRoot, MAX_ATTEMPTS, recoveriesInFlight, recoveryProposal, releasableAccounts, releaseBlockers, spentAttempts, type ClaimView } from './cloud-recover';
 import { DEFAULT_LIFECYCLE_ROOT } from '../packages/core/src/session-lifecycle';
 import type { LogoutProof } from '../packages/core/src/session-lifecycle';
 
@@ -161,4 +164,21 @@ test('a run that never started behind a failed earlier run of its chain spends n
     const tasks = [task('q', 'succeeded', []), task('a', 'failed', ['q'], { account: 'Quickhandjob', endedAt: 7 }), task('b', 'pending', ['q', 'a'], target)];
     expect(recoveriesInFlight(tasks)).toEqual([]);
     expect(spentAttempts([...tasks, ...tasks.map(t => ({ ...t, spec: { ...t.spec, id: t.spec.id + '2', dependsOn: t.spec.dependsOn.map(d => d + '2') } }))], target)).toBe(0);
+});
+
+test('the swarm\'s own stop file is removed before a recovery is submitted; an owner\'s stays, and so do all under stop-swarm', () => {
+    const root = mkdtempSync(join(tmpdir(), 'cloud-recover-stops-')), prac = join(root, '.practice'), stop = (a: string) => join(prac, `stop-${a}`);
+    try {
+        mkdirSync(prac, { recursive: true });
+        writeFileSync(stop('Quickhandjob'), SWARM_STOP.removed);
+        writeFileSync(stop('TheFullMonty'), 'hold offline until the GE pilot');
+        // The planner took Quickhandjob off its job for a fleet order and the swarm left its stop file; PocketPool has none.
+        expect(clearSwarmStops(root, ['Quickhandjob', 'TheFullMonty', 'PocketPool'])).toEqual(['Quickhandjob']);
+        expect(existsSync(stop('Quickhandjob'))).toBe(false);
+        expect(readFileSync(stop('TheFullMonty'), 'utf8')).toBe('hold offline until the GE pilot');
+        // Under stop-swarm nothing is removed: the swarm wrote those files for that stop.
+        writeFileSync(stop('Quickhandjob'), SWARM_STOP.all); writeFileSync(join(prac, 'stop-swarm'), '');
+        expect(clearSwarmStops(root, ['Quickhandjob'])).toEqual([]);
+        expect(readFileSync(stop('Quickhandjob'), 'utf8')).toBe(SWARM_STOP.all);
+    } finally { rmSync(root, { recursive: true, force: true }); }
 });
