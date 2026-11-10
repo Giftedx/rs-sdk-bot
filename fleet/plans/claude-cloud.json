@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794304383649,
+ "at": 1794305052685,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -118,11 +118,10 @@
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
+   "repeat": false,
    "goal": "train Strength to 99 on the Khazard troopers",
    "role": "combat",
    "template": "army-trooper-strength-99",
-   "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
    ]
