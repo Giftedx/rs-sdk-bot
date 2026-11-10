@@ -47,7 +47,7 @@ export async function weedMiscellania(s:Session,maximum:number,cap:number,stop:(
   if((s.sdk.getSkill('Herblore')?.level??0)<35)throw Error('Miscellania weeding requires 35 Herblore');
   if(!s.sdk.getEquipment().some(i=>i.slot===3&&[3899,2961,2963].includes(i.id)))throw Error('Miscellania weeding requires worn sickle');
   while(made<maximum&&!over()){
-   const loc=()=>state()?.nearbyLocs.find(l=>[4677,4678,4679].includes(l.id));
+   const loc=()=>state()?.nearbyLocs.filter(l=>[4677,4678,4679].includes(l.id)&&l.reachable!==false).sort((a,b)=>a.distance-b.distance)[0];
    if(!loc())await waitUntil(s,()=>!!loc()||over(),{timeoutTicks:Math.min(60,Math.max(1,cap-(s.tick()-start)))});
    if(over())break;const target=loc(),before=approval(),beforeXp=skills()![15]!,cursor=marker(s);if(!target||before===undefined||before>=127)throw Error('Miscellania patch/approval unavailable or full');
    const success=()=>(state()?.gameMessages??[]).some(m=>m.type===0&&(m.observationId??m.tick)>cursor&&m.text==='You manage to weed some herbs and give them to Gardener Gunnhild.');
