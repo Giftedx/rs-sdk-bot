@@ -1,25 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794287615575,
+ "at": 1794287942711,
  "jobs": [
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/goldfarm.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Prayer to 99 burying the held bones",
-   "role": "combat",
-   "template": "army-bury-prayer-99",
-   "resources": []
-  },
   {
    "account": "Quickhandjob",
    "script": "scripts/gather-combat.ts",
@@ -45,24 +27,30 @@
    ]
   },
   {
-   "account": "UnderMyKilt",
-   "script": "scripts/alch-train.ts",
+   "account": "TheFullMonty",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99",
-    "5000"
+    "1500",
+    "trooper"
    ],
-   "env": {},
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "10"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "goal": "train Strength to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-alch-magic-99",
+   "template": "army-trooper-strength-99",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
-   "account": "TheFullMonty",
+   "account": "UnderMyKilt",
    "script": "scripts/train-prayer.ts",
    "args": [
     "99"
@@ -72,13 +60,31 @@
     "BONE_RESERVE": "6",
     "CAP": "4000"
    },
-   "enabled": false,
+   "enabled": true,
    "standing": true,
    "repeat": true,
    "goal": "train Prayer to 99 burying the held bones",
    "role": "combat",
    "template": "army-bury-prayer-99",
    "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/goldfarm.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Prayer to 99 burying the held bones",
+   "role": "combat",
+   "template": "army-bury-prayer-99",
    "resources": []
   }
  ]
