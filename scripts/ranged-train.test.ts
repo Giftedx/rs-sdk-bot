@@ -16,7 +16,7 @@ test('stock-only native continuation disables arrow buying without reducing admi
 test('native Ranged proof binds its actual worker closure and owned files',()=>{
  const s=rangedProofSource();expect(s.runtime).toBe(capabilityRevision(['scripts/ranged-train.ts']));
  expect(Object.keys(s.files)).toEqual(['scripts/ranged-train.ts','scripts/ranged-train.test.ts','packages/practice/src/ranged-train-proof.ts']);
-});
+},30_000); // Two closure hashes take about 3 s on an idle PC; the default 5 s limit fails under load.
 
 test('proof selects a whole isolated endpoint set and refuses eight exhausted candidates',()=>{
  const endpoints=(o:ReturnType<typeof rangedStackOptions>)=>[o.ports.engine,o.ports.gateway,...Object.values(o.enginePreload!.env).map(Number)];
