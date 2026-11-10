@@ -1,0 +1,22 @@
+{
+ "id": "1794309331946-thefullmonty-fingerblastr",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TheFullMonty",
+ "to": "Fingerblastr",
+ "item": "Air rune",
+ "count": 10,
+ "start": 1794309331946,
+ "end": 1794310831946,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
