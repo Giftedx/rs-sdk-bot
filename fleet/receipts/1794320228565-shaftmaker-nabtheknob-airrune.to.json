@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794320228565-shaftmaker-nabtheknob-airrune",
  "account": "NabTheKnob",
  "partner": "Shaftmaker",
@@ -12,6 +12,11 @@
  "claim": "7ed1a950-3916-4d1a-974a-54d79092f6f3",
  "count": 0,
  "ok": false,
- "at": 1794320241838,
- "detail": "trade claimed"
+ "at": 1794320296068,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1794320241847-0000027192-0000000001",
+  "at": 1794320296056,
+  "sha256": "475e92fac2c954f1fee2a81143a7803430cbc805de330d88d963f5be54e265e9"
+ }
 }
