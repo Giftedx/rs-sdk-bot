@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794311044572,
+ "at": 1794311116461,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -414,25 +414,6 @@
    "role": "helper"
   },
   {
-   "account": "mmthv2350",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
-   ]
-  },
-  {
    "account": "Mightyrod",
    "script": "scripts/pk-live/live-pilot.ts",
    "args": [
@@ -475,6 +456,19 @@
    "enabled": false,
    "repeat": false,
    "goal": "run-session-recovery-billionaire-serial [task-4c6352c9-38e6-4b08-9dff-c208176100a7]",
+   "role": "thieving"
+  },
+  {
+   "account": "mmthv2350",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-a9054d6e-5e5f-4cf3-8574-54090cbad246"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-session-recovery-mmthv2350-serial [task-a9054d6e-5e5f-4cf3-8574-54090cbad246]",
    "role": "thieving"
   }
  ]
