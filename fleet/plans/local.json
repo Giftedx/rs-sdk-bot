@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794344540514,
+ "at": 1794345151968,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -155,27 +155,23 @@
   },
   {
    "account": "mmsmk1232",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/train-prayer.ts",
    "args": [
-    "3000",
-    "cow"
+    "99"
    ],
    "env": {
-    "TRAIN_SKILL": "Attack",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Attack to 80 on the Ardougne cows",
+   "goal": "train Prayer to 99 burying the held bones",
    "role": "combat",
-   "template": "army-cow-attack-80",
+   "template": "army-bury-prayer-99",
    "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
+   "resources": []
   },
   {
    "account": "mmtha0205",
@@ -246,7 +242,7 @@
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Attack",
+    "TRAIN_SKILL": "Defence",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1"
@@ -254,9 +250,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Attack to 70 on the Ardougne cows",
+   "goal": "train Defence to 70 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-attack-70",
+   "template": "army-cow-defence-70",
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
@@ -509,11 +505,11 @@
     "MAX_LOOTS": "60",
     "CAP": "24000",
     "BANK_EVERY": "5",
-    "COORDINATOR_RUN_ID": "task-a44deffe-53e7-467c-8c99-a2814eaf925f"
+    "COORDINATOR_RUN_ID": "task-40b75809-4b37-4e51-8bed-f3b3d4d2d7a5"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "run-blood-magicwanda-loot60-r4 [task-a44deffe-53e7-467c-8c99-a2814eaf925f]",
+   "goal": "run-blood-magicwanda-loot60-r5 [task-40b75809-4b37-4e51-8bed-f3b3d4d2d7a5]",
    "role": "supply"
   }
  ]
