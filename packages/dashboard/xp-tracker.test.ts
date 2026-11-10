@@ -57,3 +57,14 @@ test('combat level and next-level needs match the 2004 formula and the world fee
  }
  expect(X.combat({Attack:99,Strength:99,Defence:99,Hitpoints:99,Ranged:99,Prayer:99,Magic:99})).toEqual({level:126,next:null});
 });
+
+test('the virtual level goes past 99 by the server XP formula, to the level of the XP cap',()=>{
+ const X=(globalThis as any).atlasXp;
+ expect(X.virtualLevel(0)).toBe(1);
+ expect(X.virtualLevel(998458)).toBe(99);
+ expect(X.virtualLevel(1070139)).toBe(99);
+ expect(X.virtualLevel(1070140)).toBe(100);
+ expect(X.virtualLevel(39856802)).toBe(152);
+ expect(X.virtualLevel(200000000)).toBe(175);
+ expect(X.virtualLevel(2000000000)).toBe(175);
+});

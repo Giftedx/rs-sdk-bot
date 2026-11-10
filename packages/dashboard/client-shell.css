@@ -227,3 +227,5 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .infobox.ammo .ico{pointer-events:none}
 /* A worn stack (arrows) shows its count as an inventory stack does. */
 .equipment-slot .qty{position:absolute;top:0;left:1px;font:14px RS;text-shadow:1px 1px #000}
+/* The inventory value line under the grid. */
+.game-panel .inv-worth{margin:-3px 0 0;text-align:center;line-height:12px;color:#ff0;pointer-events:auto}

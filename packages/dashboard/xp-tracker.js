@@ -48,5 +48,7 @@
         };
         return { level, next };
     }
-    global.atlasXp = { TABLE, xpForLevel, levelForXp, baseline, rows, total, combat };
+    // Virtual levels (RuneLite's virtual levels): the level this server's XP formula gives past 99. RuneLite stops at 126. This server's curve reaches 126 at 6.5M XP, so the count goes on to the level of the 200M XP cap (175).
+    const virtualLevel = xp => { let acc = 0, level = 1; while (level < 175) { acc += Math.floor(level + Math.pow(2, level / 10) * 300); if (xp < Math.floor(acc / 4)) break; level++; } return level; };
+    global.atlasXp = { TABLE, xpForLevel, levelForXp, virtualLevel, baseline, rows, total, combat };
 })(globalThis);
