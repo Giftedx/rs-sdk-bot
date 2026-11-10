@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794343939426,
+ "at": 1794344540514,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -283,21 +283,24 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "sarim"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "ITEMS": "feather",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "goal": "buy feathers at Gerrant",
+   "role": "bank",
+   "template": "shop-feathers",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "shop:sarim"
    ]
   },
   {
@@ -438,28 +441,6 @@
    "role": "helper"
   },
   {
-   "account": "Masterbaiter",
-   "script": "scripts/handoff-inputs.ts",
-   "args": [
-    "80:Lobster",
-    "--bank-x=2615",
-    "--bank-z=3332",
-    "--approach-ms=600000",
-    "--request-ms=60000",
-    "--timeout-ms=600000",
-    "--grace-ms=45000"
-   ],
-   "env": {
-    "HANDOFF_ORDER": "magicwanda-blood-lobster80",
-    "CAP": "4000",
-    "COORDINATOR_RUN_ID": "task-1bf17896-eb69-45ff-bbcb-77b5e2cee7a0"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-handoff-masterbaiter-magicwanda-lobster80 [task-1bf17896-eb69-45ff-bbcb-77b5e2cee7a0]",
-   "role": "helper"
-  },
-  {
    "account": "Ballspinner",
    "script": "scripts/quest-sweep.ts",
    "args": [
@@ -496,10 +477,7 @@
    "role": "supply"
   },
   {
-   "accounts": [
-    "MineYourBiz",
-    "Magicwanda"
-   ],
+   "account": "MineYourBiz",
    "script": "scripts/handoff-inputs.ts",
    "args": [
     "80:Lobster",
@@ -516,9 +494,26 @@
     "CAP": "4000",
     "COORDINATOR_RUN_ID": "task-23c1852e-2298-477a-903c-cf7bffa95940"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-handoff-mineyourbiz-magicwanda-lobster80-notes [task-23c1852e-2298-477a-903c-cf7bffa95940]",
+   "role": "supply"
+  },
+  {
+   "account": "Magicwanda",
+   "script": "scripts/blood-chest.ts",
+   "args": [
+    "24000"
+   ],
+   "env": {
+    "MAX_LOOTS": "60",
+    "CAP": "24000",
+    "BANK_EVERY": "5",
+    "COORDINATOR_RUN_ID": "task-a44deffe-53e7-467c-8c99-a2814eaf925f"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-blood-magicwanda-loot60-r4 [task-a44deffe-53e7-467c-8c99-a2814eaf925f]",
    "role": "supply"
   }
  ]
