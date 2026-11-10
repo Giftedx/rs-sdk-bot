@@ -242,7 +242,10 @@ export const KNIGHT_SHARE = 4, KNIGHT_SHARED_RATE = 0.75;
 export const COW_FIELD = 'cow:ardougne-north', COW_FIELD_CAPACITY = 3;
 // Gnome battlefield Khazard troopers: about 41 on multiway ground. Three accounts at once is not measured.
 export const TROOPER_FIELD = 'trooper:battlefield', TROOPER_FIELD_CAPACITY = 3;
-export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
+// The Wind Strike tile north of the Ardougne north bank (scripts/alch-train.ts STRIKE): one Guard dog, fought by one
+// player at a time. Practice: of three accounts at once, one landed no cast in 200 ticks, in each of three sets.
+export const STRIKE_TILE = 'strike:ardougne-guard-dog';
+export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // Army goal bands (AGENTS.md goals: maxed tribrids), in order: Strength, Attack, Magic, Prayer, Ranged, Defence
 // last. Bands 6-8 are the Khazard troopers (TROOPER_BANDS), 9 is free. Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile, MAX_KILLS=8): live 4/4 runs
@@ -255,8 +258,10 @@ export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGH
 // needs 14 HP of trout or cake held (COW_FOOD_HP) and the bronze sword and wooden shield held or worn, starts at the
 // north bank and never wields better gear; COW_STAGE=1 (scripts/cow-stage.ts) walks the account there and takes the
 // sword, shield and food from its bank first, banking the rest of the pack: 3/3 on practice from the knight spot
-// with the kit and 8 HP of cake banked, RESULT ok with 8 kills and logged out (.practice/cow-stage-proof). Below
-// Hitpoints 32 the food runs out. Gap: the rate above level 46 is not measured.
+// with the kit and 8 HP of cake banked, RESULT ok with 8 kills and logged out (.practice/cow-stage-proof). A fresh
+// account (every combat skill 1, Hitpoints 10) runs it too: practice 7/7 RESULT ok with 8 kills, Strength 1 to 28, at
+// most one bite eaten and lowest HP 6, with trout (4 runs) and with cake only (3 runs), three at once
+// (research/combat-measure.md, fresh accounts). Gap: the rate above level 46 is not measured.
 // The first pass takes bands 0, 1 and 5; each later pass takes the next three bands from 10.
 export const COW_PASSES = [45, 60, 70, 80, 90, 99] as const;
 export const COW_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence'; band: number; to: number }[] = COW_PASSES.flatMap((to, k) =>
@@ -305,7 +310,7 @@ export function catalogue(): Template[] {
         id: `army-cow-${skill.toLowerCase()}-${to}`, family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['3000', 'cow'],
         env: { TRAIN_SKILL: skill, COW_BANK_PROFILE: 'north', MAX_KILLS: '8', COW_STAGE: '1' }, role: 'combat', goal: `train ${skill} to ${to} on the Ardougne cows`,
         tier: 'goal', band, repeats: true, trains: { skill, to, unlocks: [] }, resources: [COW_FIELD], yields: () => [],
-        needs: { skills: { Hitpoints: 32 }, food: 14, items: { 'bronze sword': 1, 'wooden shield': 1 } },
+        needs: { food: 14, items: { 'bronze sword': 1, 'wooden shield': 1 } },
     }));
     const troopers = TROOPER_BANDS.map(({ skill, band }): Template => ({
         id: `army-trooper-${skill.toLowerCase()}-99`, family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'],
@@ -317,6 +322,13 @@ export function catalogue(): Template[] {
         id: 'army-alch-magic-99', family: 'combat-train', script: 'scripts/alch-train.ts', args: ['99', '5000'], role: 'combat', goal: 'train Magic to 99 with alchemy at the Ardougne north bank',
         tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: 99, unlocks: [] }, yields: () => [],
         needs: { skills: { Magic: 21 }, items: { 'nature rune': 50, feather: 50 }, anyOf: [{ items: { 'fire rune': 250 } }, ...['staff of fire', 'fire battlestaff', 'mystic fire staff'].map(staff => ({ items: { [staff]: 1 } }))] },
+    };
+    // Magic 1 to 21 for Low Alchemy: Wind Strike on the fenced Guard dog (scripts/alch-train.ts strikeStart). Practice,
+    // fresh accounts started at the goldfarm knights: Magic 1 to 21-23 in 17-22 casts, no damage taken, about 180 ticks alone.
+    const strike: Template = {
+        id: 'army-strike-magic-21', family: 'combat-train', script: 'scripts/alch-train.ts', args: ['21', '1500'], role: 'combat', goal: 'train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank',
+        tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: 21, unlocks: [magic.id] }, resources: [STRIKE_TILE], yields: () => [],
+        needs: { items: { 'mind rune': 35, 'air rune': 35 } },
     };
     const prayer: Template = {
         id: 'army-bury-prayer-99', family: 'combat-train', script: 'scripts/train-prayer.ts', args: ['99'], env: { BURY_HELD: '1', BONE_RESERVE: '6', CAP: '4000' }, role: 'combat',
@@ -333,6 +345,7 @@ export function catalogue(): Template[] {
         ...goldfarm,
         ...cows,
         ...troopers,
+        strike,
         magic,
         prayer,
         ranged,

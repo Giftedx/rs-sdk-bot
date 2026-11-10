@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { CAPACITY, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
+import { CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -381,7 +381,7 @@ test('goal bands go only to army accounts, before any coin job, earliest band fi
     expect(funded[0]).toMatchObject({ template: { id: 'str60' }, fund: { from: 'Bank', to: 'Nearer', coins: 100_000 } });
 });
 
-test('the Ardougne cow bands train army accounts from Hitpoints 32 with 14 HP of food and the bronze kit, as repeating jobs', () => {
+test('the Ardougne cow bands train army accounts, fresh ones too, with 14 HP of food and the bronze kit, as repeating jobs', () => {
     const kit = { trout: 2, 'bronze sword': 1, 'wooden shield': 1 };
     const fighter = (name: string, skills: Record<string, number>, items: Record<string, number> = kit) => acct(name, { Thieving: 99, ...skills }, items);
     const holders = Array.from({ length: COW_FIELD_CAPACITY }, (_, i) => `Holder${i + 1}`);
@@ -407,7 +407,7 @@ test('the Ardougne cow bands train army accounts from Hitpoints 32 with 14 HP of
     // With no giant band, a range pure at Hitpoints 82 trains Strength on the cows too; Hitpoints 10 has too little
     // food margin and farms.
     expect(pick([fighter('Pure', { Hitpoints: 82 })])).toEqual({ Pure: 'army-cow-strength-45' });
-    expect(pick([fighter('Cowhand', { Hitpoints: 10 })]).Cowhand).toMatch(/^goldfarm@/);
+    expect(pick([fighter('Cowhand', { Hitpoints: 10 })])).toEqual({ Cowhand: 'army-cow-strength-45' });
     // Cake counts by its bites: a 2/3 cake and a slice heal 12 HP, short of 14, and the account farms; add a whole cake
     // (pack or bank) and it trains.
     const bronze = { 'bronze sword': 1, 'wooden shield': 1 };
@@ -455,6 +455,15 @@ test('army accounts alch Magic to 99 with natures, feathers and fire, then bury 
     expect(pick({}, { ...alch, 'mystic fire staff': 1 })).toBe('army-alch-magic-99');
     expect(pick({}, { ...alch, 'fire rune': 249 })).not.toBe('army-alch-magic-99');
     expect(pick({}, { 'nature rune': 49, feather: 50, 'fire rune': 250 })).not.toBe('army-alch-magic-99');
+    // Below Magic 21 the Wind Strike start comes first, one account at a time on its tile; it needs only mind and air runes.
+    const strike = { 'mind rune': 35, 'air rune': 35 };
+    expect(pick({ Magic: 1 }, { ...alch, 'fire rune': 250, ...strike })).toBe('army-strike-magic-21');
+    expect(pick({ Magic: 20 }, strike)).toBe('army-strike-magic-21');
+    expect(pick({ Magic: 1 }, { ...alch, 'fire rune': 250, 'mind rune': 34, 'air rune': 35 })).not.toBe('army-strike-magic-21');
+    expect(pick({ Magic: 21 }, { ...alch, 'fire rune': 250, ...strike })).toBe('army-alch-magic-99');
+    const pair = ids(plan(inputs(['Caster', 'Second'].map(n => acct(n, { ...melee, Magic: 1 }, strike)), { army: new Set(['caster', 'second']), capacity: CAPACITY })));
+    expect(Object.values(pair).filter(id => id === 'army-strike-magic-21')).toHaveLength(1);
+    expect(CAPACITY[STRIKE_TILE]).toBe(1);
     // Prayer comes next and needs 100 bones (accountFrom keys items by norm, so Bones is 'bone'); with fewer it moves on.
     expect(pick({ Magic: 99 }, { bone: 1674 })).toBe('army-bury-prayer-99');
     expect(pick({}, { bone: 1674 })).toBe('army-bury-prayer-99');
