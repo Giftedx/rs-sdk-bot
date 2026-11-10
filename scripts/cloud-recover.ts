@@ -11,6 +11,7 @@ import { join, resolve } from 'node:path';
 import { loadOwners, mySide } from '../packages/core/src/fleet';
 import { readFleetAccountClaim } from '../packages/core/src/fleet-trade-claim';
 import { readLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
+import { heldRecoveryOwners } from '../packages/core/src/session-recovery-permit';
 import { jobAccounts } from '../packages/core/src/coordinator-jobs';
 import { clearSwarmStop, loadEnded, swarmWroteStop, type EndRecord } from './swarm';
 
@@ -163,6 +164,26 @@ export function releasableAccounts(jobs: readonly any[], v: ReleaseView): string
     return releasePlan(jobs, v).free.flatMap(jobAccounts);
 }
 
+// The account's recovery lease (packages/core/src/session-recovery-permit.ts recoveryPermitPaths). A recovery whose
+// child is held keeps it (session-recovery-dispatch.ts "recovery child held"), and while the file is there the swarm
+// refuses every later recovery of the account ("existing recovery lease held") and the account's own logins
+// (assertNoRecoveryLease). Live claude-cloud: one such lease (Fingersmith) made the retry of its end fail unseen.
+// A lease is stale when heldRecoveryOwners no longer counts it: its child's process is gone, or it recorded no child
+// and its permit has expired. A lease it cannot read, and one whose child still runs, are held.
+export type LeaseState = 'none' | 'held' | 'stale';
+const leaseFile = (root: string, account: string) => join(root, '.practice', 'coordinator', 'session-recovery', 'accounts', account.toLowerCase(), 'lease.json');
+export function recoveryLeaseState(root: string, account: string, alive?: (pid: number) => boolean, now = Date.now()): LeaseState {
+    if (!existsSync(leaseFile(root, account))) return 'none';
+    return heldRecoveryOwners(root, [], alive, now).some(h => h.account.toLowerCase() === account.toLowerCase()) ? 'held' : 'stale';
+}
+// Moves a stale lease aside in its own folder, so the retry that MAX_ATTEMPTS allows is a real recovery. The attempt
+// folder beside it keeps the held child's permit and output.
+export function archiveStaleLease(root: string, account: string, now: number): string {
+    const file = leaseFile(root, account), to = join(resolve(file, '..'), `lease-stale-${stamp(now)}.json`);
+    renameSync(file, to);
+    return to;
+}
+
 // The local side's coordinator owns real work in its jobs.json; only a cloud side runs this script.
 export const cloudSide = (side: string) => side !== 'local';
 
@@ -195,6 +216,7 @@ async function main(root: string, dry: boolean): Promise<number> {
         if (!e.eligible) { if (e.log) log(`${name}: refused: ${e.reason}`); continue; }
         const target = { account: name, endedAt: e.endedAt };
         if (spentAttempts(before, target) >= MAX_ATTEMPTS) { log(`${name}: refused: ${MAX_ATTEMPTS} recoveries of end ${e.endedAt} failed; recover by hand`); continue; }
+        if (recoveryLeaseState(root, name) === 'held') { log(`${name}: refused: a recovery child still holds the account's lease, or the lease is unreadable`); continue; }
         targets.push(target);
     }
     let failed = false;
@@ -203,7 +225,9 @@ async function main(root: string, dry: boolean): Promise<number> {
         if (later.length) log(`${later.length} more held accounts wait for the next call: ${later.map(t => t.account).join(', ')}`);
         const proposal = recoveryProposal(side, batch, Date.now()), runs = proposal.tasks.slice(1) as { id: string; account: string }[];
         log(`submitting ${proposal.tasks.map(t => t.id).join(', ')} (${batch.map(t => `${t.account} endedAt ${t.endedAt}`).join('; ')})`);
-        if (dry) return 0;
+        const stale = batch.map(t => t.account).filter(a => recoveryLeaseState(root, a) === 'stale');
+        if (dry) { if (stale.length) log(`would move aside the stale recovery lease of ${stale.join(', ')}`); return 0; }
+        for (const a of stale) log(`${a}: moved its stale recovery lease to ${archiveStaleLease(root, a, Date.now())}`);
         const cleared = clearSwarmStops(root, batch.map(t => t.account));
         if (cleared.length) log(`removed the swarm's own stop file for ${cleared.join(', ')}`);
         const file = join(root, '.practice', 'cloud-recover', `${proposal.tasks[0]!.id}.json`);
