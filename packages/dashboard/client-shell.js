@@ -15,6 +15,9 @@
   // One home per fact for a spectator: the open row in Fleet holds the account summary and its last run, so these two
   // plugins stay off the public toolbar.
   const PUBLIC_HIDDEN=['account','activity'];window.atlasPublicHidden=PUBLIC_HIDDEN;
+  // A plugin with nothing to show a spectator now stays off the toolbar until it has: the XP Tracker needs an account
+  // that plays with XP in its snapshot (the other machines share levels only).
+  window.atlasPluginIdle=id=>id==='xp'&&!window.atlasOperator()&&typeof S!=='undefined'&&!!S&&!S.bots.some(b=>b.fresh&&!b.practice&&!b.reserved&&!b.remote);
   // Only the tabs with observed data and no plugin that shows the same: Fleet holds the stopped accounts (the old
   // Ignore List) and Account overview the account summary (the old Account Management tab).
   const tabs=[['skills','Skills'],['quests','Quest List'],['inventory','Inventory'],['equipment','Worn Equipment'],['friends','Friends List'],['settings','Settings']];
