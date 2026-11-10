@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794294851280,
+ "at": 1794295262776,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -71,19 +71,17 @@
    "account": "UnderMyKilt",
    "script": "scripts/alch-train.ts",
    "args": [
-    "3000",
-    "cow"
+    "99",
+    "5000"
    ],
    "env": {},
-   "enabled": false,
+   "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "train Defence to 60 on the Ardougne cows",
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
    "role": "combat",
-   "template": "army-cow-defence-60",
-   "resources": [
-    "cow:ardougne-north"
-   ]
+   "template": "army-alch-magic-99",
+   "resources": []
   }
  ]
 }
