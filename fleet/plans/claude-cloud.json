@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794309683023,
+ "at": 1794309747816,
  "jobs": [
   {
    "account": "Fingerblastr",
@@ -158,6 +158,30 @@
    ]
   },
   {
+   "account": "SporranDip",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
    "account": "Fingersmith",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -206,19 +230,6 @@
    ]
   },
   {
-   "account": "SporranDip",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-5455d96c-f74b-4068-a4ff-500489066d6d"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-sporrandip-20261110t111658z [task-5455d96c-f74b-4068-a4ff-500489066d6d]",
-   "role": "combat"
-  },
-  {
    "account": "KnightRider",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -231,7 +242,7 @@
     "MAX_KILLS": "8",
     "COW_STAGE": "1"
    },
-   "enabled": false,
+   "enabled": true,
    "standing": true,
    "repeat": true,
    "goal": "train Attack to 60 on the Ardougne cows",
