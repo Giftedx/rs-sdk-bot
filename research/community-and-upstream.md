@@ -135,6 +135,7 @@ server -> {t:'hello', v, rev, tick, tickMs, players}
 server -> {t:'tick', k, ms, p?, n?, rp?, rn?, reset?}     every tick while subscribed
 server -> {t:'roster', k, p:[[slot,name,x,z,level,combat],...], npcs}
 ```
+The live demo server sends `hello` with `v:2`. Its first roster frame on a socket is the full frame above. Each later frame holds the changes: `{t:'roster', k, d:1, lv:[slot,...], j:[row,...], m:[[slot,x,z,level],...], npcs}`. `lv` lists the slots that left, `j` the rows that joined or changed, `m` the players that moved. The pinned `worldfeed.ts` sends full frames only. `packages/core/src/roster-feed.ts` (`RosterFeed`) gives each roster message back as a full frame; use it on each feed socket. Evidence: three live sockets where the rebuilt row count matched each frame and no move or leave named an unknown slot; gap: the fields come from observation, not from the server source.
 Entity record keys: `i` slot/nid, `f:1` first sight (full record), `t` npc type, `x z l` tile, `m` [walkDir, runDir], `tp` teleport/jump, `ap` appearance (base64), `an` [seq,delay], `sp` spotanim, `fe`/`fs` facing, `hm` hitmarks + `hp` [cur,max], `sy` forced text, `ch` public chat, `em` exact move.
 Env: `WORLD_FEED_TOKEN`, `WORLD_FEED_MAX_CLIENTS` (128), `WORLD_FEED_IDLE_TIMEOUT_MS` (120000). The roster interval is `ROSTER_INTERVAL_TICKS = 10` in code; DESIGN.md says "every 5 ticks". Measured cost: +4.0 ms average cycle time with 20 viewers. Separately, `/playerpositions` (`rs-sdk/server/engine/src/web/index.ts:133`) publishes every player's position.
 
