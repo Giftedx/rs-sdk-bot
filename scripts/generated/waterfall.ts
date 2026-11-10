@@ -711,7 +711,10 @@ try {
             const before = cnt(id);
             const seen0 = msgCount(/remember putting that type/i);
             await step(`pillar ${px},${pz} rune ${id}`, () => useOnLoc(id, { id: LOC.pillar, x: px, z: pz }),
-                () => cnt(id) < before || msgCount(/remember putting that type/i) > seen0, 15, 3);
+                () => cnt(id) < before || msgCount(/remember putting that type/i) > seen0, 4, 6);
+            // The placement holds the player for one tick (p_delay(0), waterfall_pillars.rs2:17). A rune sent in that
+            // tick is refused with no message, and the step then waited its whole bound: 16 ticks for each rune.
+            await waitTicks(s, 1);
             if (TRACE) console.log(`TRACE pillar ${px},${pz} rune ${id} at ${T()} pos=${pos()?.worldX},${pos()?.worldZ}`);
         }
     }
