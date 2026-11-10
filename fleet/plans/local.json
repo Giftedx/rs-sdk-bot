@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794224427467,
+ "at": 1794305763092,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -173,7 +173,7 @@
    "env": {
     "ROUNDS": "1"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true,
    "goal": "Strength 30 on chickens so it can hit hard enough to PK",
