@@ -12,13 +12,17 @@
 import type { BillRow } from './supply-bill';
 import { missionSignature } from '../../core/src/session-admission';
 
-export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number> };
+// `combat`: the combat level the account's status reports (absent: worked out from `skills`). `quests`: the quests its
+// status reports complete, by norm() name (absent: none known complete).
+export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number>; combat?: number; quests?: ReadonlySet<string> };
 export type Flow = { item: string; perTick: number };
 // `under`: skills that must stay below a level (a band hands an account on to the next band at that level).
 // `holdsUnder`: holdings that end the job at once. The account must hold fewer, or the run finds its target met and fails.
 // `food`: HP the account's food heals, pack and bank (FOOD_HEAL). `pieces`: at least `count` items of any of `of`.
 // `anyOf`: at least one of these needs met in full (fire runes or a fire staff; a bow the account wields with arrows it fires).
+// `combat`: the least combat level (a mine inside an aggressive monster's range). `quests`: quests that must be complete.
 export type Needs = {
+    combat?: number; quests?: readonly string[];
     skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number>; holdsUnder?: Record<string, number>; food?: number;
     pieces?: { of: readonly string[]; count: number }; anyOf?: readonly Needs[];
 };
@@ -35,6 +39,15 @@ export type Template = {
     // The stock a kit buy brings an item up to, by item name: more than the start minimum in `needs`, so one login
     // buys a batch (nature runes for many alchemy casts) and not one start's worth.
     batch?: Record<string, number>;
+    // A quest run: a candidate until the account's status reports the quest complete, and worth a share of each job
+    // the quest unlocks (as a trainer is). It does not repeat.
+    quest?: { name: string; unlocks: string[] };
+    // An AIO route (scripts/aio.ts): `aio` is its bench key (scripts/measure/aio-bench-cases.ts) and `worker` the script
+    // the dispatcher runs, so a retirement lapses when the worker changes, not only the dispatcher.
+    aio?: string; worker?: string;
+    // Proved on practice only. The planner gives it only while the plan's `aio` list names its id (Inputs.pilots), so
+    // each first live run is a bounded pilot the owner starts.
+    pilot?: true;
 };
 // One missing kit line: `count` more units of any one item of `of`.
 export type Lack = { of: readonly string[]; count: number };
@@ -76,6 +89,8 @@ export type Inputs = {
     kitSeq?: ReadonlyMap<string, number>;
     // Donor and recipient pairs whose item order failed lately, as `from>to` in lower case: no new order for them.
     noSend?: ReadonlySet<string>;
+    // The ids of the `pilot` templates this plan admits (its `aio` list). Absent: none.
+    pilots?: ReadonlySet<string>;
 };
 export const FUND_RESERVE = 50_000;
 // The template id of a kit buy for a goal band: `kit-buy:<band id>`. A retired pair (two fail RESULTs with no
@@ -98,7 +113,8 @@ export const KIT_PRICE_CAPS: Readonly<Record<string, number>> = {
 // is worth half, the price a sale would fetch. A share of a job a training run unlocks counts for the training.
 export const BILL_PREMIUM = 2, SURPLUS = 0.5, TRAIN_SHARE = 0.25;
 // Inputs that feed a bill line: a feather is needed while headless arrows are short, even with the feather line met.
-export const FEEDS: Record<string, string[]> = { feather: ['headless arrow'], 'arrow shaft': ['headless arrow'], 'raw lobster': ['lobster'] };
+export const FEEDS: Record<string, string[]> = { feather: ['headless arrow'], 'arrow shaft': ['headless arrow'], 'raw lobster': ['lobster'],
+    log: ['arrow shaft', 'headless arrow'], flax: ['bow string'], 'rune essence': ['air rune'] };
 export const norm = (s: string) => s.toLowerCase().replace(/\s*\((?:noted|quest)\)$/, '').trim().replace(/s$/, '');
 export const pairKey = (account: string, template: string) => `${account.toLowerCase()}:${template}`;
 // HP one held item heals over all its bites, by item name: scripts/gather-combat.ts COW_FOOD_BITES × COW_BITE_HEAL
@@ -121,8 +137,17 @@ export function unitValue(item: string, bill: readonly BillRow[], prices: Readon
     return (prices[k] ?? 0) * (short.has(k) || (FEEDS[k] ?? []).some(f => short.has(f)) ? BILL_PREMIUM : SURPLUS);
 }
 
+// The combat level of the 2004 game, from base levels. Used when a status row carries no `combat`.
+export function combatLevel(skills: Readonly<Record<string, number>>): number {
+    const s = (k: string, d = 1) => skills[k] ?? d;
+    const base = (s('Defence') + s('Hitpoints', 10) + Math.floor(s('Prayer') / 2)) / 4;
+    return Math.floor(base + 0.325 * Math.max(s('Attack') + s('Strength'), Math.floor(s('Ranged') * 1.5), Math.floor(s('Magic') * 1.5)));
+}
+export const questDone = (a: Acct, quest: string) => !!a.quests?.has(norm(quest));
 const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: string; to: number }): boolean =>
-    Object.entries(needs?.skills ?? {}).every(([s, l]) => (skillOverride?.skill === s ? Math.max(skillOverride.to, a.skills[s] ?? 1) : a.skills[s] ?? 1) >= l)
+    (a.combat ?? combatLevel(a.skills)) >= (needs?.combat ?? 0)
+    && (needs?.quests ?? []).every(q => questDone(a, q))
+    && Object.entries(needs?.skills ?? {}).every(([s, l]) => (skillOverride?.skill === s ? Math.max(skillOverride.to, a.skills[s] ?? 1) : a.skills[s] ?? 1) >= l)
     && Object.entries(needs?.items ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n)
     && Object.entries(needs?.under ?? {}).every(([s, l]) => (a.skills[s] ?? 1) < l)
     && Object.entries(needs?.holdsUnder ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) < n)
@@ -138,7 +163,8 @@ const withoutCoins = (needs: Template['needs']): Template['needs'] => ({ ...need
 // kits the account takes one whose every line it `can` get (a buy: 250 fire runes, not a fire staff no market sells),
 // then the one with the fewest missing units.
 export function kitLacks(a: Acct, needs: Template['needs'], can: (item: string) => boolean = () => true): Lack[] | null {
-    if (!Object.entries(needs?.skills ?? {}).every(([s, l]) => (a.skills[s] ?? 1) >= l)
+    if ((a.combat ?? combatLevel(a.skills)) < (needs?.combat ?? 0) || !(needs?.quests ?? []).every(q => questDone(a, q))
+        || !Object.entries(needs?.skills ?? {}).every(([s, l]) => (a.skills[s] ?? 1) >= l)
         || !Object.entries(needs?.under ?? {}).every(([s, l]) => (a.skills[s] ?? 1) < l)
         || !Object.entries(needs?.holdsUnder ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) < n)) return null;
     const out: Lack[] = [];
@@ -198,8 +224,19 @@ export function plan(inp: Inputs): Assignment[] {
     const mine = inp.accounts.filter(a => (inp.owners.get(a.name.toLowerCase())?.side ?? 'local') === inp.side && a.side === inp.side);
     type Cand = { account: string; template: Template; value: number; resources: string[]; reason: string; coins?: number; goal?: { band: number; left: number }; lacks?: Lack[] };
     const cands: Cand[] = [];
+    const admitted = (t: Template) => !t.pilot || !!inp.pilots?.has(t.id);
     for (const a of mine) for (const t of inp.templates) {
-        if (inp.retired?.has(pairKey(a.name, t.id))) continue;
+        if (inp.retired?.has(pairKey(a.name, t.id)) || !admitted(t)) continue;
+        if (t.quest) {
+            if (questDone(a, t.quest.name) || !meets(a, t.needs)) continue;
+            const after: Acct = { ...a, quests: new Set([...(a.quests ?? []), norm(t.quest.name)]) };
+            for (const u of t.quest.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u) && !inp.retired?.has(pairKey(a.name, u.id)))) {
+                if (!meets(after, u.needs)) continue;
+                const value = TRAIN_SHARE * jobValue(u, after, inp);
+                if (value > 0) cands.push({ account: a.name, template: t, value, resources: [...(t.resources ?? []), ...(u.resources ?? [])], reason: `completes ${t.quest.name} for ${u.id}` });
+            }
+            continue;
+        }
         if (t.tier === 'goal') {
             // One candidate per goal band whose target an army account has not met; never for anyone else.
             if (!inp.army?.has(a.name.toLowerCase()) || !t.trains || (a.skills[t.trains.skill] ?? 1) >= t.trains.to) continue;
@@ -217,7 +254,7 @@ export function plan(inp: Inputs): Assignment[] {
         if (t.trains) {
             if ((a.skills[t.trains.skill] ?? 1) >= t.trains.to || !meets(a, t.needs)) continue;
             const trained: Acct = { ...a, skills: { ...a.skills, [t.trains.skill]: t.trains.to } };
-            for (const u of t.trains.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && !inp.retired?.has(pairKey(a.name, u.id)))) {
+            for (const u of t.trains.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u) && !inp.retired?.has(pairKey(a.name, u.id)))) {
                 if (!meets(a, u.needs, t.trains)) continue;
                 const value = TRAIN_SHARE * jobValue(u, trained, inp);
                 if (value > 0) cands.push({ account: a.name, template: t, value, resources: [...(t.resources ?? []), ...(u.resources ?? [])], reason: `trains ${t.trains.skill} ${t.trains.to} for ${u.id}` });
@@ -329,14 +366,14 @@ export function plan(inp: Inputs): Assignment[] {
 }
 
 // The swarm job for an assignment. `autopilot` marks it as this side's planner job; the CLI replaces only marked jobs.
-// A training job does not repeat: its ok RESULT means the target level is met, and a rerun would log in, find the level
+// A training job or a quest job does not repeat: its ok RESULT means the target level is met (or the quest is done), and a rerun would log in, find the level
 // met and log out (a scored login for nothing). The swarm keeps the account's `done` end until the next pass hands it
 // a job with a different mission, which the met level unlocks. A run that ends short of the target is a fail RESULT,
 // which the supervisor retries and the swarm's standing retry resumes, with or without repeat.
 // finishedTrainers() brings that next pass forward.
 export function jobFor(x: Assignment, side: string) {
     const t = x.template!;
-    return { account: x.account, script: t.script, args: t.args ?? [], env: t.env ?? {}, role: t.role, goal: t.goal, enabled: true, repeat: t.repeats ?? !t.trains, standing: true,
+    return { account: x.account, script: t.script, args: t.args ?? [], env: t.env ?? {}, role: t.role, goal: t.goal, enabled: true, repeat: t.repeats ?? !(t.trains || t.quest), standing: true,
         autopilot: side, template: t.id, resources: x.resources, note: `autopilot ${t.id}: ${x.reason}, ${x.value.toFixed(2)} coins/tick (estimate)` };
 }
 
@@ -344,7 +381,8 @@ export function jobFor(x: Assignment, side: string) {
 // template, and the job's log since the assignment holds an ok RESULT. The daemon re-plans these accounts at once.
 export function finishedTrainers(jobs: readonly any[], side: string, assigned: Readonly<Record<string, { template: string; offset: number }>>, templates: readonly Template[],
     linesSince: (account: string, offset: number, job: any) => readonly string[]): string[] {
-    const trains = new Set(templates.filter(t => t.trains).map(t => t.id));
+    // A quest job ends as a trainer does: its ok RESULT frees the account for the job the quest unlocks.
+    const trains = new Set(templates.filter(t => t.trains || t.quest).map(t => t.id));
     return jobs.filter(j => j?.autopilot === side && typeof j.account === 'string' && trains.has(j.template) && assigned[j.account]?.template === j.template
         && assess(linesSince(j.account, assigned[j.account]!.offset, j)).ok > 0).map(j => j.account);
 }
@@ -410,7 +448,9 @@ export const TROOPER_FIELD = 'trooper:battlefield', TROOPER_FIELD_CAPACITY = 14;
 // The Wind Strike tile north of the Ardougne north bank (scripts/alch-train.ts STRIKE): one Guard dog, fought by one
 // player at a time. Practice: of three accounts at once, one landed no cast in 200 ticks, in each of three sets.
 export const STRIKE_TILE = 'strike:ardougne-guard-dog';
-export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
+// The places the AIO routes hold (aioTemplates). Each takes one account until a live pilot measures two.
+export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore: 'aio:varrock-east-mine', essence: 'aio:essence-mine', air: 'aio:air-altar' } as const;
+export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // Army goal bands (AGENTS.md goals: maxed tribrids), in order: Strength, Attack, Magic, Prayer, Ranged, Defence
 // last. Bands 6-8 are the Khazard troopers (TROOPER_BANDS), 9 is free. Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile, MAX_KILLS=8): live 4/4 runs
@@ -468,6 +508,66 @@ const ARROWS: readonly (readonly [string, number])[] = [['bronze arrow', 1], ['i
 // A bow the account's Ranged level wields, with 100 arrows of one kind that bow fires.
 export const RANGED_KIT: readonly Needs[] = BOWS.flatMap(([bow, level]) =>
     ARROWS.filter(([, arrowLevel]) => arrowLevel <= level).map(([arrow]) => ({ skills: { Ranged: level }, items: { [bow]: 1, [arrow]: 100 } })));
+
+// AIO routes (scripts/aio.ts <account> <category> <route> [arguments]) as planner options. Each one names its bench
+// key; the arguments are those of the bench case with a longer tick cap, unless the line says otherwise. Every one is
+// a `pilot`: the bench proves the route on practice from the start state of its case, and a live account starts
+// elsewhere with less. Rates are estimates from one bench run (`.practice/aio-bench/baseline-seed7.json`) or the
+// live trial named. The requirement of each route is the entry check its worker makes:
+// - flax (scripts/gather-flax.ts): none; the bench preset is a bare account in the field. 364 flax in 1,524 ticks.
+// - bow strings (scripts/spin-bowstrings.ts): Crafting 10 (`flax requires Crafting 10`); it ends ok only with
+//   MAX_MAKE made, so it needs that much flax banked at Seers. Bench: Crafting 13, 56 made in 457 ticks.
+// - yew logs (scripts/gather-yews.ts): Woodcutting 60 for a yew, and an axe. Bench: Woodcutting 99 with a rune axe,
+//   37 logs in 1,023 ticks; the rate here is half of that. BANK_AT is the worker's default 27, not the bench's 200.
+// - arrow shafts (scripts/fletch-arrows.ts, MODE=shafts): a knife and MAX_MAKE logs. Bench: a bare account at the
+//   Draynor bank, one log in 15 ticks. Gap: a start away from a bank is not run.
+// - ore (scripts/gather-ore.ts mixedOreCombatProblem): combat 13 (rats at the Varrock East mine hunt below it) and a
+//   pickaxe. Live trial: 75 ores banked in 1,169 ticks at combat 13 (scripts/fleet.ts, OreElse). Bench: Mining 50.
+// - rune essence (scripts/gather-essence.ts): Rune Mysteries complete (Aubury refuses the teleport without it) and a
+//   pickaxe. Bench: a bare account with the quest done, 6 essence in 189 ticks.
+// - air runes (scripts/rune-bank-craft.ts): an air talisman and banked essence. Bench: Runecraft 1, 30 essence
+//   crafted in 324 ticks.
+// - Rune Mysteries (scripts/quest-sweep.ts with scripts/generated/quest-runemysteries.ts): the sweep takes the
+//   preset's pack from the bank and ends `missing id:count` without it: 2 law, 6 air, 1 fire and 1 earth rune and 4
+//   meals. The quest has no fight and no level check, and walks where a teleport fails. Gap: the bench runs the sweep
+//   on Cook's Assistant, and this quest script from a preset with every skill 99; the two together are not run.
+const PICKAXES = ['bronze pickaxe', 'iron pickaxe', 'steel pickaxe', 'mithril pickaxe', 'adamant pickaxe', 'rune pickaxe'] as const;
+const AXES = ['bronze axe', 'iron axe', 'steel axe', 'black axe', 'mithril axe', 'adamant axe', 'rune axe'] as const;
+// scripts/quest-sweep.ts MEALS, by item name (scripts/autopilot.test.ts checks the two agree).
+export const SWEEP_MEALS = ['shark', 'swordfish', 'lobster', 'bass', 'tuna', 'trout', 'salmon', 'cake', '2/3 cake', 'slice of cake', 'bread'] as const;
+export const BOWSTRING_BATCH = 56, SHAFT_LOGS = 25;
+export function aioTemplates(): Template[] {
+    const aio = (id: string, key: string, worker: string, args: string[], rest: Omit<Template, 'id' | 'family' | 'script' | 'args' | 'aio' | 'worker' | 'pilot'>): Template =>
+        ({ id, family: `aio:${key}`, script: 'scripts/aio.ts', args: [key.split(':')[0]!, ...args], aio: key, worker, pilot: true, ...rest });
+    const essence = aio('aio-essence', 'skiller:mining:essence', 'scripts/gather-essence.ts', ['mining', 'essence', 'CAP=1800', 'BANK_AT=28'], {
+        role: 'mining', goal: 'mine rune essence through Aubury and bank it at Varrock East', resources: [AIO_PLACES.essence],
+        needs: { quests: ['Rune Mysteries Quest'], pieces: { of: PICKAXES, count: 1 } }, yields: () => [{ item: 'rune essence', perTick: 0.03 }] });
+    return [
+        aio('aio-flax', 'skiller:foraging:flax', 'scripts/gather-flax.ts', ['foraging', 'flax', '1800', '28'], {
+            role: 'crafting', goal: 'pick flax at Seers and bank it', resources: [AIO_PLACES.flax], yields: () => [{ item: 'flax', perTick: 0.24 }] }),
+        aio('aio-bowstrings', 'skiller:crafting:bowstrings', 'scripts/spin-bowstrings.ts', ['crafting', 'bowstrings', '1250', `MAX_MAKE=${BOWSTRING_BATCH}`, 'RAW_RESERVE=0', 'MAX_TRIPS=4'], {
+            role: 'crafting', goal: `spin ${BOWSTRING_BATCH} banked flax into bow strings at Seers`, needs: { skills: { Crafting: 10 }, items: { flax: BOWSTRING_BATCH } },
+            yields: () => [{ item: 'bow string', perTick: 0.12 }] }),
+        aio('aio-yews', 'skiller:woodcutting:yews', 'scripts/gather-yews.ts', ['woodcutting', 'yews', '1800', '27', 'MAX_TRIPS=4'], {
+            role: 'woodcutting', goal: 'cut yew logs at Seers and bank them', resources: [AIO_PLACES.yews],
+            needs: { skills: { Woodcutting: 60 }, pieces: { of: AXES, count: 1 } }, yields: () => [{ item: 'yew logs', perTick: 0.018 }] }),
+        aio('aio-shafts', 'skiller:fletching:shafts', 'scripts/fletch-arrows.ts', ['fletching', 'shafts', '600', `MAX_MAKE=${SHAFT_LOGS}`, 'LOG_RESERVE=0'], {
+            role: 'fletching', goal: `cut ${SHAFT_LOGS} banked logs into arrow shafts`, needs: { items: { knife: 1, logs: SHAFT_LOGS } },
+            yields: () => [{ item: 'arrow shaft', perTick: 1 }] }),
+        aio('aio-ore', 'skiller:mining:ore', 'scripts/gather-ore.ts', ['mining', 'ore', '1800', '25', 'MAX_TRIPS=3'], {
+            role: 'mining', goal: 'mine ore at Varrock East and bank three loads', resources: [AIO_PLACES.ore],
+            needs: { combat: 13, pieces: { of: PICKAXES, count: 1 } },
+            // Iron from Mining 15; copper and tin before it.
+            yields: a => (a.skills.Mining ?? 1) >= 15 ? [{ item: 'iron ore', perTick: 0.064 }] : [{ item: 'copper ore', perTick: 0.032 }, { item: 'tin ore', perTick: 0.032 }] }),
+        essence,
+        aio('aio-air-runes', 'skiller:runecraft:bank-craft', 'scripts/rune-bank-craft.ts', ['runecraft', 'bank-craft', '99', 'CAP=4000'], {
+            role: 'magic', goal: 'craft banked rune essence into air runes', resources: [AIO_PLACES.air],
+            needs: { items: { 'air talisman': 1, 'rune essence': 28 } }, yields: () => [{ item: 'air rune', perTick: 0.09 }] }),
+        aio('aio-quest-runemysteries', 'quester:mode:sweep', 'scripts/quest-sweep.ts', ['sweep', 'runemysteries'], {
+            role: 'quest', goal: 'complete Rune Mysteries for the essence mine', quest: { name: 'Rune Mysteries Quest', unlocks: [essence.id] },
+            needs: { items: { 'law rune': 2, 'air rune': 6, 'fire rune': 1, 'earth rune': 1 }, pieces: { of: SWEEP_MEALS, count: 4 } }, yields: () => [] }),
+    ];
+}
 
 // Proven job templates. Rates are estimates from each script's header model; tick-waste discounts them by measurement.
 export function catalogue(): Template[] {
@@ -548,6 +648,7 @@ export function catalogue(): Template[] {
         { id: 'fletch-headless', family: 'fletch', script: 'scripts/fletch-arrows.ts', args: ['15000', 'headless'], env: { BANK_PACK: '1', MAX_MAKE: '390' }, role: 'fletching',
             goal: 'headless arrows from owned shafts and feathers', needs: { items: { 'arrow shaft': 215, feather: 215 } },
             yields: () => [{ item: 'headless arrow', perTick: 5 }] },
+        ...aioTemplates(),
     ];
 }
 
@@ -591,7 +692,8 @@ export function accountFrom(name: string, side: string, status: any, itemName: (
         const n = typeof r?.name === 'string' ? r.name : itemName(r?.baseId ?? r?.id);
         if (n && Number.isFinite(r.count)) items[norm(n)] = (items[norm(n)] ?? 0) + r.count;
     }
-    return { name, side, skills, items };
+    const quests = Array.isArray(status?.quests) ? new Set<string>(status.quests.filter((q: any) => typeof q?.name === 'string' && q.state === 'complete').map((q: any) => norm(q.name))) : undefined;
+    return { name, side, skills, items, ...(Number.isFinite(status?.combat) ? { combat: status.combat } : {}), ...(quests ? { quests } : {}) };
 }
 
 // This side's new swarm job list: every job without this side's marker stays as it is; a planner job whose account
