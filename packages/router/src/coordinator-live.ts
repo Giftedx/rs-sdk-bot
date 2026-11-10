@@ -85,9 +85,11 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
  // Stop only the controller process: a tree kill would end the detached runs it adopted.
  const stopOne=deps.stopOne??deps.stop??safeKillOne;
  if(currentSource()!==source)throw Error('runtime changed before controller rollout');
- // A lock whose owner process is gone fences nothing: archive it into its run folder (a failed build can die holding it).
+ // A lock whose owner process is gone fences nothing: archive it into its run folder. A failed build can die holding
+ // it, and so can a controller a rollout could not confirm stopped: the fence then names that controller's pid. The
+ // process check below still refuses a second controller.
  if(existsSync(lock)){let held:any=null;try{held=JSON.parse(readFileSync(lock,'utf8'));}catch{/* unreadable lock stays a fence */}
-  if(held&&Number.isSafeInteger(held.pid)&&!pidExists(held.pid)&&typeof held.runId==='string'&&/^task-[0-9a-f-]+$/.test(held.runId)){const runDir=join(dir,'runs',held.runId);mkdirSync(runDir,{recursive:true});renameSync(lock,join(runDir,'expired-build-lock.json'));}}
+  if(held&&Number.isSafeInteger(held.pid)&&!pidExists(held.pid)&&typeof held.runId==='string'&&/^(?:task|rollout)-[0-9a-f-]+$/.test(held.runId)){const runDir=join(dir,'runs',held.runId);mkdirSync(runDir,{recursive:true});renameSync(lock,join(runDir,'expired-build-lock.json'));}}
  if(existsSync(lock))throw Error('runtime owner or unacknowledged controller remains fenced');
  let owner:any=null;if(existsSync(ownerFile))owner=JSON.parse(readFileSync(ownerFile,'utf8'));
  const alive=owner&&(pidExists(owner.pid)&&controllerStateFresh(owner,base,now())||matches(owner.pid,owner.nonce));

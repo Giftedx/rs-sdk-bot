@@ -213,6 +213,19 @@ test('actual rollout handles lock/repair refusals and failed new-controller ackn
   if(scenario==='pending'||scenario==='processing')expect(readFileSync(join(f.prac,'swarm-repair.json'+(scenario==='processing'?'.processing':'')),'utf8')).toBe('owned request');
  }
 });
+test('a rollout fence is archived once its controller is gone, and holds while it lives',async()=>{
+ const f=recoveryFixture(),dir=join(f.prac,'coordinator'),lock=join(dir,'build-lock.json'),runId='rollout-0f3c2b9e-1d2a-4c5b-8e7f-123456789abc';
+ const live=new Set<number>([44]),events:string[]=[];
+ const deps={base:f.base,currentSource:()=>'new',diskSource:()=>'new',matches:(pid:number,_nonce:string)=>live.has(pid),pidExists:(pid:number)=>live.has(pid),processes:()=>[...live].filter(p=>p!==44),rows:()=>[],now:()=>1000,
+  stop:async(pid:number)=>{live.delete(pid);return true;},spawn:(_source:string,_nonce:string)=>{events.push('spawn');live.add(33);return 33;},drain:async()=>{}};
+ atomicJson(lock,{pid:44,runId,nonce:'unconfirmed',source:'old',at:1,reason:'controller stop/acknowledgement unconfirmed; preserve admission fence'});
+ await expect(ensureSwarm('new',deps)).rejects.toThrow('remains fenced');
+ expect(events).not.toContain('spawn');
+ live.delete(44);
+ await ensureSwarm('new',deps);
+ expect(existsSync(join(dir,'runs',runId,'expired-build-lock.json'))).toBe(true);
+ expect(events).toContain('spawn');expect(existsSync(lock)).toBe(false);
+});
 test('recovery preflight leaves the block and assignments untouched on stop, session, binding or reservation refusal',()=>{
  for(const cause of ['stop','session','capability','time','reserved','composed']){
   const f=recoveryFixture(),path=join(f.base,'swarm.json');
