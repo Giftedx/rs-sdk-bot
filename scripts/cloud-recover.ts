@@ -12,7 +12,7 @@ import { loadOwners, mySide } from '../packages/core/src/fleet';
 import { readFleetAccountClaim } from '../packages/core/src/fleet-trade-claim';
 import { readLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
 import { jobAccounts } from '../packages/core/src/coordinator-jobs';
-import { loadEnded, swarmWroteStop, type EndRecord } from './swarm';
+import { clearSwarmStop, loadEnded, swarmWroteStop, type EndRecord } from './swarm';
 
 export const LIVE_SERVER = 'rs-sdk-demo.fly.dev';
 // The end reasons the recovery permit accepts (packages/core/src/session-recovery-permit.ts), less a death: a death
@@ -38,6 +38,16 @@ export function eligibility(v: { proof: LogoutProof; claim: ClaimView; end: EndR
     if (/^died\b/.test(v.end.reason)) return { eligible: false, reason: 'death needs a person', log: true };
     if (!RECOVERABLE_END.test(v.end.reason)) return { eligible: false, reason: `end reason not recoverable: ${v.end.reason}`, log: true };
     return { eligible: true, endedAt: v.end.at };
+}
+
+// The coordinator refuses a live task for an account that has any stop file (packages/router/src/coordinator-live.ts
+// runLiveTask: "live account owner stopped before controller setup"). A recovery target is offline, and its stop file,
+// if it has one, is the swarm's own (eligibility refuses an owner's): the swarm leaves it when the account's job leaves
+// the plan, as when the planner takes an account off its job for a fleet order. Remove those before the submit, or the
+// recovery fails and spends an attempt. While stop-swarm is in force they stay: no recovery runs under it.
+export function clearSwarmStops(root: string, accounts: readonly string[]): string[] {
+    if (existsSync(join(root, '.practice', 'stop-swarm'))) return [];
+    return accounts.filter(a => clearSwarmStop(join(root, '.practice', `stop-${a}`)));
 }
 
 const stamp = (now: number) => new Date(now).toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'z').toLowerCase();
@@ -163,6 +173,8 @@ async function main(root: string, dry: boolean): Promise<number> {
         const proposal = recoveryProposal(side, targets, Date.now()), runs = proposal.tasks.slice(1) as { id: string; account: string }[];
         log(`submitting ${proposal.tasks.map(t => t.id).join(', ')} (${targets.map(t => `${t.account} endedAt ${t.endedAt}`).join('; ')})`);
         if (dry) return 0;
+        const cleared = clearSwarmStops(root, targets.map(t => t.account));
+        if (cleared.length) log(`removed the swarm's own stop file for ${cleared.join(', ')}`);
         const file = join(root, '.practice', 'cloud-recover', `${proposal.tasks[0]!.id}.json`);
         mkdirSync(resolve(file, '..'), { recursive: true }); writeFileSync(file, JSON.stringify(proposal, null, 1) + '\n');
         if (!(await run(root, ['--submit', file]))) { log('submit failed'); return 1; }
