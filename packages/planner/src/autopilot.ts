@@ -239,8 +239,9 @@ export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGH
 // and, while nothing faster is qualified, on to 60 (about 2,800 more; an estimate, as XP per kill is fixed). Cow mode
 // needs 14 HP of trout or cake held (COW_FOOD_HP) and the bronze sword and wooden shield held or worn, starts at the
 // north bank and never wields better gear; COW_STAGE=1 (scripts/cow-stage.ts) walks the account there and takes the
-// sword, shield and food from its bank first. Below Hitpoints 32 the food runs out. Gap: staging is unit-tested only,
-// and the rate above 46 and field crowding are not measured.
+// sword, shield and food from its bank first: 3/3 on practice from the knight spot with the kit and 8 HP of cake
+// banked, RESULT ok with 8 kills and logged out (.practice/cow-stage-proof). Below Hitpoints 32 the food runs out.
+// Gap: staging is not run live, and the rate above 46 and field crowding are not measured.
 export const COW_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence'; band: number; to: number }[] = [
     { skill: 'Strength', band: 0, to: 45 }, { skill: 'Attack', band: 1, to: 45 }, { skill: 'Defence', band: 5, to: 45 },
     { skill: 'Strength', band: 10, to: 60 }, { skill: 'Attack', band: 11, to: 60 }, { skill: 'Defence', band: 12, to: 60 },
