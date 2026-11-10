@@ -3,6 +3,8 @@
 // Environment: COIN_RESERVE/MAX_SPEND/MAX_ITEMS bound one run; defaults preserve existing unbounded jobs.
 // NO_BUY_TICKS=25 opts into a clean bank-and-offline stop when shelves/budget yield no buys.
 // BANK_PACK=1 banks the whole pack first; without it a pack full of items the profile does not bank stops (pack-full).
+// STOCK_TARGET (default 500) is how many of each item the account may own, pack plus bank, before it stops buying
+// that item; the run stops as stock-target once every item is there. MAX_ITEMS caps the units bought in one run.
 // DEMO_OK=1 is required for live; funding and route admission are separate gates.
 import { openBot, finish, countItems, getWorld, accountOf } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
@@ -467,7 +469,7 @@ try {
         if (shop?.isOpen && shop.shopItems) {
             const purchases = planShopPurchases(conf.items, shop.shopItems, s.sdk.getInventory(), stock, Math.max(0, Math.min(coins() - COIN_RESERVE, MAX_SPEND - spentTotal)), Number(process.env.STOCK_TARGET ?? 500), MAX_ITEMS - boughtTotal);
             // Say why nothing is bought: the shelf as seen, the budget and the free slots.
-            if (!purchases.length && !loggedEmpty) { loggedEmpty = true; console.log('SHOP_NONE ' + JSON.stringify({ shelf: shop.shopItems.filter(i => conf.items.some(t => t.re.test(i.name))).map(i => ({ name: i.name, count: i.count, price: i.buyPrice })), coins: coins(), free: 28 - s.sdk.getInventory().length, bank: conf.items.map(t => [...stock].find(([n]) => t.re.test(n))) })); }
+            if (!purchases.length && !loggedEmpty) { loggedEmpty = true; console.log('SHOP_NONE ' + JSON.stringify({ shelf: shop.shopItems.filter(i => conf.items.some(t => t.re.test(i.name))).map(i => ({ name: i.name, count: i.count, price: i.buyPrice })), coins: coins(), free: 28 - s.sdk.getInventory().length, stockTarget: Number(process.env.STOCK_TARGET ?? 500), bank: conf.items.map(t => [...stock].find(([n]) => t.re.test(n))) })); }
             for (const purchase of purchases) {
                 const remaining = Math.min(purchase.amount, MAX_ITEMS - boughtTotal);
                 if (remaining <= 0) break;
@@ -502,6 +504,9 @@ try {
                 // A trip that added no coins cannot unblock the purchase, so the no-buy limit keeps running.
             }
             if (guarded && needed.length && NO_BUY_TICKS === 0) { stopReason = 'bounded-purchase-unaffordable'; break; }
+            // Every item owned to STOCK_TARGET: say so, rather than wait out NO_BUY_TICKS and report stock-wait with stock on the
+            // shelf (live: 500 fire runes bought, 2,533 left, "stock-wait").
+            if (shopTargetsMet(conf.items, s.sdk.getInventory(), stock, Number(process.env.STOCK_TARGET ?? 500))) { stopReason = 'stock-target'; break; }
             const waiting = stockWaitStatus(s.tick(), noBuySince, NO_BUY_TICKS);
             if (NO_BUY_TICKS > 0) noBuySince = waiting.since;
             if (waiting.done) { noBuyTicks = s.tick() - waiting.since; stopReason = 'stock-wait'; break; }
