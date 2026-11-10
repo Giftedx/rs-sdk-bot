@@ -4,6 +4,8 @@
 // takes the stack out of its bank (noted when it is not a stack) and serves one trade to the receiver only, the
 // receiver trades for exactly that offer and banks it. Each side writes its own receipt to fleet/receipts.
 // Usage: bun scripts/fleet-trade.ts <account> [order id]
+// Run it with STALL_TICKS=0, as scripts/fleet-agent.ts does: the wait for the partner is bounded by the order window,
+// and the session's idle guard would end it after 900 ticks.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { openBot, finish, getWorld, accountOf, countItems } from '../packages/core/src/bot';
