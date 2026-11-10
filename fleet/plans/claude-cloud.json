@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794290833226,
+ "at": 1794291232500,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -50,35 +50,28 @@
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
+   "repeat": false,
    "goal": "train Ranged to 99 on the Khazard troopers",
    "role": "combat",
    "template": "army-trooper-ranged-99",
-   "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
    ]
   },
   {
    "account": "UnderMyKilt",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/alch-train.ts",
    "args": [
     "3000",
     "cow"
    ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
-   "repeat": true,
+   "repeat": false,
    "goal": "train Strength to 60 on the Ardougne cows",
    "role": "combat",
    "template": "army-cow-strength-60",
-   "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
    ]
