@@ -619,7 +619,8 @@ export function catalogue(): Template[] {
         id: 'army-alch-magic-99', family: 'combat-train', script: 'scripts/alch-train.ts', args: ['99', '5000'], role: 'combat', goal: 'train Magic to 99 with alchemy at the Ardougne north bank',
         tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: 99, unlocks: [] }, yields: () => [],
         needs: { skills: { Magic: 21 }, items: { 'nature rune': 50, feather: 50 }, anyOf: [{ items: { 'fire rune': 250 } }, ...['staff of fire', 'fire battlestaff', 'mystic fire staff'].map(staff => ({ items: { [staff]: 1 } }))] },
-        // High Alchemy gives 1,625 XP a cast at xpRate 25, so Magic 99 takes about 8,000 nature runes; a buy brings 1,000.
+        // Magic 99 is 998,458 XP here. Low Alchemy gives 775 XP a cast to 55 and High Alchemy 1,625 from there (xpRate 25),
+        // so Magic 21 to 99 takes about 650 nature runes; a buy brings 1,000.
         batch: { 'nature rune': 1000 },
     };
     // Magic 1 to 21 for Low Alchemy: Wind Strike on the fenced Guard dog (scripts/alch-train.ts strikeStart). Practice,
