@@ -378,6 +378,7 @@ export function giantKillLimit(value?:string|number){
     if(!Number.isSafeInteger(maximum)||maximum<1)throw new Error('giant GIANT_KILLS must be a positive safe integer');
     return maximum;
 }
+const COINS=995;
 export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targetLevel?:number;maximum?:number;food?:number;ammo?:number;eatAt?:number;noProgress?:number;stop?:()=>boolean;walk?:(x:number,z:number,tol:number,signal?:AbortSignal)=>Promise<boolean>;site?:CombatSite}){
     const site=o.site??GIANT_SITE,label=site.label;
     const maximum=giantKillLimit(o.maximum);
@@ -464,7 +465,8 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
     const open=async()=>{if(state()?.bank?.isOpen&&s.bankObservation?.())return;const gen=s.bankObservation?.()?.generation??0;
         if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>!!state()?.bank?.isOpen&&(s.bankObservation?.()?.generation??0)>gen,{timeoutTicks:20}))throw new Error(`no ${label} progress: bank readiness unknown`);bankTrips++;};
     const bankCount=(id:number)=>count(s.bankObservation?.()?.items??[],id);
-    const deposit=async()=>{for(const id of site.drops){const item=inv().find(i=>i.id===id);if(!item)continue;const before=bankCount(id),amount=held(id);
+    // Coins never ride to the field: a death there loses the pack (live: TheFullMonty died on the Gnome battlefield).
+    const deposit=async()=>{for(const id of [...site.drops,COINS]){const item=inv().find(i=>i.id===id);if(!item)continue;const before=bankCount(id),amount=held(id);
         if(!(await s.bot.depositItem(item,-1)).success||!await waitUntil(s,()=>held(id)===0&&bankCount(id)===before+amount,{timeoutTicks:20}))throw new Error(`no ${label} progress: deposit failed`);}};
     const restock=async()=>{
         const id=site.foods.find(id=>bankCount(id)>0)??site.foods[0]!;

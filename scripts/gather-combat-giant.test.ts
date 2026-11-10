@@ -169,6 +169,15 @@ test('Herb drops are picked up and banked with exact credits, including carried 
     }finally{f.dispose();}
 });
 
+test('coins held at entry are banked before the walk out, so a death on the field cannot lose them',async()=>{
+    const f=giantFixture();const carried:number[][]=[];try{
+        expect(f.inv.find(i=>i.id===995).count).toBe(50);
+        const r=await runGiants(f.session,{cap:500,trainSkill:'Strength',targetLevel:90,walk:async(x,z)=>{if(f.inv.some(i=>i.id===995))carried.push([x,z]);return f.walk(x,z);}});
+        expect(r.ok).toBe(true);expect(carried.every(([x,z])=>x===GIANT.bank.x&&z===GIANT.bank.z)).toBe(true);
+        expect(f.bank.find(i=>i.id===995).count).toBe(50);expect(f.inv.some(i=>i.id===995)).toBe(false);expect(r.preserved).toBe(true);
+    }finally{f.dispose();}
+});
+
 test('banked supplies absent or equip without effect cannot start a giant fight',async()=>{
  for(const mode of ['food','weapon','equip'] as const){
     const f=giantFixture({bankedKit:true});try{
