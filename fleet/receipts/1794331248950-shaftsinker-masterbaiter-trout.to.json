@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794331248950-shaftsinker-masterbaiter-trout",
  "account": "Masterbaiter",
  "partner": "Shaftsinker",
@@ -12,6 +12,11 @@
  "claim": "ddc9d214-4e18-4560-9798-954631c93636",
  "count": 0,
  "ok": false,
- "at": 1794331261591,
- "detail": "trade claimed"
+ "at": 1794331647909,
+ "detail": "no progress: 900 ticks without xp, items, dialog or a journey",
+ "logout": {
+  "attemptId": "1794331261600-0000002736-0000000001",
+  "at": 1794331647894,
+  "sha256": "6de4321df18d01520fc69a7dc9a8a195cdebc9aa463311c64af6a6b9d903456c"
+ }
 }
