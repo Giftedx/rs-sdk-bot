@@ -1,4 +1,4 @@
-// Writes the pinned rs-world 3D viewer as static files for the hosted dashboard (rs-fleet-command site/), which
+// Writes the reviewed rs-world 3D viewer build as static files for the hosted dashboard (rs-fleet-command site/), which
 // GitHub Pages serves under a sub-path with no server: <out>/viewer/ (the build with every absolute path made relative
 // to where it is served, the coi service worker left out, the private-name bridge and the client style added),
 // <out>/viewer/caches/ (the rev 289 cache), <out>/api/hidden-names (the main account as a hash, never its name) and
@@ -9,7 +9,7 @@
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
-import { VIEWER_MANIFEST_SHA256, once, viewerBridgeSource, viewerBundle } from '../viewer';
+import { VIEWER_MANIFEST_SHA256, checkViewerBundle, once, viewerBridgeSource, viewerEntry } from '../viewer';
 import { MAIN_ACCOUNT } from '../publish-relay';
 
 // The same hash as the bridge (viewer.ts): FNV-1a over the lower-case name.
@@ -24,12 +24,14 @@ export function hostedIndex(html: string) {
     if (/(?:src|href)="\//.test(html)) throw Error('viewer index.html still has an absolute path');
     return once(html, '<head>', '<head><script src="bridge.js"></script><link rel="stylesheet" href="client-viewer.css">', 'head');
 }
-// The main bundle runs in the page (document), the worker chunk in a worker under static/js/.
-export function hostedScript(name: string, text: string) {
-    if (/^main\.[0-9a-f]+\.js$/.test(name)) {
-        text = once(text, /\bn\.p="\/"/, 'n.p=new URL(".",document.baseURI).pathname', 'main public path');
-        text = once(text, 'de="/caches/"', 'de=new URL("caches/",document.baseURI).pathname', 'cache path');
-        return viewerBundle(text);
+// The main bundle runs in the page (document), the worker chunk in a worker under static/js/. The build is made for
+// the site root, so its public path and its cache path become relative to where each script runs. main is true for
+// the entry script that asset-manifest.json names; that script must hold every feature the page drives.
+export function hostedScript(main: boolean, text: string) {
+    if (main) {
+        text = once(text, /\b([A-Za-z_$][\w$]*)\.p="\/"/, '$1.p=new URL(".",document.baseURI).pathname', 'main public path');
+        text = once(text, /\b([A-Za-z_$][\w$]*)="\/caches\/"/, '$1=new URL("caches/",document.baseURI).pathname', 'cache path');
+        return checkViewerBundle(text);
     }
     return text.replace(/\b([a-zA-Z_$][\w$]*)\.p="\/"/g, '$1.p=new URL("../../",self.location.href).pathname');
 }
@@ -39,13 +41,14 @@ export function exportViewer(out: string, world: string, ownersFile: string | nu
     const build = join(world, 'build'), caches = join(world, 'caches');
     const manifest = readFileSync(join(build, 'asset-manifest.json'), 'utf8');
     if (createHash('sha256').update(manifest).digest('hex').toUpperCase() !== VIEWER_MANIFEST_SHA256) throw Error('the rs-world build is not the reviewed version (asset-manifest.json hash differs)');
+    const mainName = viewerEntry(manifest).main.split('/').pop()!;
     const viewer = join(out, 'viewer');
     rmSync(viewer, { recursive: true, force: true });
     mkdirSync(viewer, { recursive: true });
     writeFileSync(join(viewer, 'index.html'), hostedIndex(readFileSync(join(build, 'index.html'), 'utf8')));
     for (const f of ['favicon.ico', 'favicon.png', 'robots.txt']) if (existsSync(join(build, f))) cpSync(join(build, f), join(viewer, f));
     cpSync(join(build, 'static'), join(viewer, 'static'), { recursive: true });
-    for (const f of readdirSync(join(viewer, 'static', 'js')).filter(f => f.endsWith('.js'))) writeFileSync(join(viewer, 'static', 'js', f), hostedScript(f, readFileSync(join(viewer, 'static', 'js', f), 'utf8')));
+    for (const f of readdirSync(join(viewer, 'static', 'js')).filter(f => f.endsWith('.js'))) writeFileSync(join(viewer, 'static', 'js', f), hostedScript(f === mainName, readFileSync(join(viewer, 'static', 'js', f), 'utf8')));
     for (const f of readdirSync(join(viewer, 'static', 'css')).filter(f => f.endsWith('.css'))) writeFileSync(join(viewer, 'static', 'css', f), hostedStyle(readFileSync(join(viewer, 'static', 'css', f), 'utf8')));
     for (const f of readdirSync(join(viewer, 'static', 'js')).filter(f => f.endsWith('.map'))) rmSync(join(viewer, 'static', 'js', f));
     cpSync(caches, join(viewer, 'caches'), { recursive: true });

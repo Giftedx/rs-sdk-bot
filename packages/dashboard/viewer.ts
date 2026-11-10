@@ -1,5 +1,5 @@
-// Adapter for the reviewed, already-built viewer. No vendor rebuild or service worker.
-export const VIEWER_MANIFEST_SHA256='277B2245634318664CE4A1D8D9C14D3DF2F7B6AAC6E74E5AD39A376E57FFF87C';
+// Adapter for the reviewed rs-world build. The build runs as it is: the page talks to it by URL and message.
+export const VIEWER_MANIFEST_SHA256='0C3E7D0864925704627928D8973F2AC2980AFF34F987A39EF022E4D796A4E439';
 
 export function viewerAssetRoute(pathname:string):{root:'static'|'caches';relative:string}|'bad'|null {
     let decoded:string;try{decoded=decodeURIComponent(pathname);}catch{return 'bad';}
@@ -16,50 +16,27 @@ export const once = (text: string, from: string | RegExp, to: string, what: stri
     return text.replace(from, () => to.replace(/\$1/g, () => (typeof from === 'string' ? '$1' : text.match(from)![1]!)));
 };
 
-// The area a swap waits for around the new account, and the area a prewarm loads: a prewarmed account needs no load.
-export const WARM_RADIUS = 56;
-// The account swap in the pinned viewer. It holds the old view while the squares around the new account load, then
-// moves. A hop up to 64 tiles flies straight across. A longer hop blurs for 300 ms and settles into the orbit.
-// It loads nothing around the old account: those squares only served a climb that this flight does not make.
-// Jc is the bundle's ease function.
-const FLIGHT_STEP = 'step(e,t,n){const i=performance.now(),s=e=>Math.min(1,(i-this.phaseStart)/e),o=e=>{this.phase=e,this.phaseStart=i};t&&t.prefetch(this.toX,this.toZ,' + WARM_RADIUS + ');switch(this.phase){'
-    + 'case"prep":this.apply(e,this.from),(!t||t.ready(this.toX,this.toZ,' + WARM_RADIUS + ')||i-this.phaseStart>6e3)&&o(this.glide?"glide":"warp");break;'
-    + 'case"glide":{const t=Jc(s(Math.min(1400,500+6*this.distance))),n=this.mix(this.from,this.end,t);if(n.y-=Math.sin(Math.PI*t)*Math.min(10,.1*this.distance),this.apply(e,n),t>=1)return this.done=!0,!0;break}'
-    + 'case"warp":{const t=s(300),n=14*Math.sin(Math.PI*t);this.near=this.near||{...this.end,x:this.toX+1.35*(this.end.x-this.toX),y:1.35*this.end.y,z:this.toZ+1.35*(this.end.z-this.toZ)},this.canvas&&(this.canvas.style.filter=n>.2?"blur("+n.toFixed(1)+"px) brightness("+(1+n/40).toFixed(2)+")":""),this.apply(e,t>=.5?this.near:this.from),t>=1&&(this.canvas&&(this.canvas.style.filter=""),o("descend"));break}'
-    + 'case"descend":{const t=Jc(s(450));if(this.apply(e,this.mix(this.near,this.end,t)),t>=1)return this.done=!0,!0;break}'
-    + '}return!1}cancel(){';
-// Idle work: when nothing is loading, the renderer loads the squares around the next place the page listed.
-const WARM_STEP = 'warmStep(e){const t=this.warmTiles,n=this.mapManager;if(!t||!t.length||e.flight||n.loadingMapIds.size||this.mapsToLoad.length||n.blankOnScreen)return;this.warmNext=((this.warmNext??-1)+1)%t.length;n.prefetch(t[this.warmNext][0],t[this.warmNext][1],' + WARM_RADIUS + ')}isValidMapData(e){';
-
-// Changes to the reviewed main bundle. Every anchor must match, so a different bundle stops the export.
-export function viewerBundle(text: string) {
-    // Roof removal: ?ml=<floor> sets the highest floor drawn at the start, a {maxLevel} message changes it.
-    text = once(text, /this\.maxLevel=([A-Za-z_$][\w$]*)\.MAX_LEVELS-1/, 'this.maxLevel=(e=>e>=0&&e<=3?e:$1.MAX_LEVELS-1)(parseInt(new URLSearchParams(location.search).get("ml")))', 'first floor limit');
-    // {warm:[[x,z],...]} lists the places the page may swap to next.
-    text = once(text, '"number"===typeof t.scale&&t.scale>0&&(s.resolutionScale=t.scale)', '"number"===typeof t.scale&&t.scale>0&&(s.resolutionScale=t.scale),Number.isInteger(t.maxLevel)&&t.maxLevel>=0&&t.maxLevel<=3&&s.setMaxLevel&&s.setMaxLevel(t.maxLevel),Array.isArray(t.warm)&&(s.warmTiles=t.warm.filter((e=>Array.isArray(e)&&Number.isFinite(e[0])&&Number.isFinite(e[1]))).slice(0,16),s.warmNext=-1)', 'floor limit message');
-    // Every square holds all floors and the shader hides those above the limit, so a floor change reloads nothing.
-    // The bundle's own setMaxLevel deletes every loaded square.
-    text = once(text, 'setMaxLevel(e){const t=this.maxLevel!==e;this.maxLevel=e,t&&this.clearMaps()}', 'setMaxLevel(e){this.maxLevel=e}', 'floor change');
-    text = once(text, 'maxLevel:this.maxLevel,', 'maxLevel:3,', 'square floors');
-    text = once(text, 'e.maxLevel===this.maxLevel&&', '3===e.maxLevel&&', 'square floor check');
-    text = once(text, 'TE.FLOAT_VEC2,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT])', 'TE.FLOAT_VEC2,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT])', 'scene uniforms');
-    text = once(text, '.set(10,this.mapViewer.isNewTextureAnim)', '.set(10,this.mapViewer.isNewTextureAnim).set(11,this.maxLevel)', 'floor uniform');
-    if (!text.includes('float u_isNewTextureAnim;')) throw Error('scene uniform block: not found');
-    text = text.replaceAll('float u_isNewTextureAnim;', String.raw`float u_isNewTextureAnim;\r\n    float u_maxPlane;`);
-    text = once(text, String.raw`float(modelInfo.priority)) * 0.0007;\n    gl_Position = u_projectionMatrix * gl_Position;\n}`, String.raw`float(modelInfo.priority)) * 0.0007;\n    gl_Position = u_projectionMatrix * gl_Position;\n    if (float(modelInfo.plane) > u_maxPlane) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);\n}`, 'floor cut');
-    // A hosted page has no shared memory, and the bundle then uses one worker. Each worker there holds its own cache
-    // copy, so it gets two: with prewarm they swap as fast as four, for 70 MB more memory, not 660 MB.
-    text = once(text, 'II.create(ee||!J?1:te?2:4)', 'II.create(ee?1:!J||te?2:4)', 'worker count');
-    // The bundle adds one square per frame, which limits a swap to 20 squares a second at 20 frames a second.
-    text = once(text, 'const F=this.mapsToLoad.shift();F&&this.isValidMapData(F)&&this.loadMap(this.mainProgram,this.mainAlphaProgram,this.npcProgram,this.textureArray,this.textureMaterials,this.sceneUniformBuffer,F,a),', 'for(const e=performance.now();;){const F=this.mapsToLoad.shift();if(!F)break;if(this.isValidMapData(F)&&this.loadMap(this.mainProgram,this.mainAlphaProgram,this.npcProgram,this.textureArray,this.textureMaterials,this.sceneUniformBuffer,F,a),performance.now()-e>6)break}', 'square uploads');
-    // The feed leaves the tile out of a step record when the steps start from the tile the viewer already has.
-    // The bundle drops a record that has no tile, so a walking player or npc stands still. This applies the steps.
-    text = once(text, 'applyMovement(e,t,n){if(void 0!==t.l&&(e.level=t.l),void 0!==t.x&&void 0!==t.z){', 'applyMovement(e,t,n){if(void 0!==t.l&&(e.level=t.l),(void 0===t.x||void 0===t.z)&&t.m&&!n){const r=t.m.length>1;for(const i of t.m)e.moveCode(r,i,this.abortsOnMove(e));return}if(void 0!==t.x&&void 0!==t.z){', 'steps without a tile');
-    text = once(text, 't.maps=this.mapManager,t.canvas=this.canvas,', 't.maps=this.mapManager,this.warmStep(t),t.canvas=this.canvas,', 'warm call');
-    text = once(text, 'isValidMapData(e){', WARM_STEP, 'warm step');
-    // A swap from free camera flies too, once the scene has squares to hold on screen.
-    text = once(text, 'i&&Gc&&void 0!==this.followName&&this.followName.toLowerCase()!==e.toLowerCase()', 'i&&Gc&&(void 0===this.followName?this.maps&&this.maps.visibleMapCount>0:this.followName.toLowerCase()!==e.toLowerCase())', 'flight from free camera');
-    return once(text, /step\(e,t,n\)\{const r=Math\.min\(128,n\)\+32,[\s\S]*?\}cancel\(\)\{/, FLIGHT_STEP, 'flight step');
+// What the dashboard needs from the rs-world build, each as a text that the viewer source leaves in the main bundle
+// (branch fleet-v2). The page drives these; a build without one stops the export.
+export const VIEWER_FEATURES: [what: string, text: string][] = [
+    ['floor limit in the shader', 'float(modelInfo.plane) > u_maxPlane'],   // a floor change reloads no square
+    ['first floor limit', '.get("ml")'],                                    // ?ml=<floor>
+    ['floor limit message', 'setFloorLimit('],                              // {maxLevel}
+    ['prewarm message', 'setWarmTiles('],                                   // {warm:[[x,z],...]}
+    ['prewarm step', 'warmStep('],
+    ['flight from free camera', 'visibleMapCount'],
+    ['steps without a tile', 'moveCode('],
+    ['follow change timing', 'viewerTiming'],
+];
+export function checkViewerBundle(text: string) {
+    for (const [what, feature] of VIEWER_FEATURES) if (!text.includes(feature)) throw Error(`${what}: the rs-world build lacks ${feature}`);
+    return text;
+}
+// The build's own names for its entry files: asset-manifest.json is the one place that holds them.
+export function viewerEntry(manifestText: string) {
+    const files = JSON.parse(manifestText).files ?? {}, main = files['main.js'], css = files['main.css'];
+    for (const p of [main, css]) if (typeof p !== 'string' || !/^\/static\/(?:js|css)\/[\w.-]+$/.test(p)) throw Error('asset-manifest.json names no main.js or main.css under /static/');
+    return { main: main as string, css: css as string };
 }
 
 // Kept self-contained: only this function is serialized into the /viewer/ entry.
@@ -141,7 +118,7 @@ export function installViewerBridge(host:any) {
             for(const key of ['multiDrawElementsInstancedWEBGL','multiDrawArraysInstancedWEBGL'])patch(ext,key,draw=>function(this:any,...args:any[]){
                 const result=draw.apply(this,args),arrays=key.includes('Arrays');
                 const counts=args[arrays?3:1],instances=args[arrays?5:6],countOffset=args[arrays?4:2],instanceOffset=args[arrays?6:7],draws=args[arrays?7:8];
-                // The pinned PicoGL adapter supplies offsets0 for both arrays.
+                // The viewer's PicoGL adapter supplies offset 0 for both arrays.
                 if(countOffset===0&&instanceOffset===0&&counts&&instances)for(let i=0;i<Math.min(Number(draws),counts.length);i++)record(gl,Number(counts[i]),Number(instances[i]));
                 return result;
             });
@@ -158,13 +135,11 @@ export function installViewerBridge(host:any) {
                 this.addEventListener('error',()=>{feedConnected=false;emit();});
                 // The viewer reads the feed through onmessage: it gets each message with hash-listed names renamed.
                 let accessor:any=null;for(let p=Socket.prototype;p&&!accessor;p=Object.getPrototypeOf(p))accessor=Object.getOwnPropertyDescriptor(p,'onmessage');
-                // The feed sends one full roster (p), then changes: lv slots that left, j rows that joined or changed,
-                // m [slot,x,z,level,combat?] moves. The viewer reads full rosters only, so each change becomes a full roster.
-                // The two listeners get the same event; the last result is kept so the rows change once per event.
-                const rosterRows=new Map<number,any[]>();let rosterFrom:any=null,rosterTo:any=null;
+                // The feed sends one full roster (p), then changes (d:1): lv slots that left, j rows that joined or changed,
+                // m [slot,x,z,level,combat?] moves. The viewer applies changes itself. The bridge's own listener needs every
+                // player, so there each change becomes a full roster.
+                const rosterRows=new Map<number,any[]>();
                 const fullRoster=(event:any)=>{
-                    if(event===rosterFrom)return rosterTo;
-                    rosterFrom=rosterTo=event;
                     if(typeof event?.data!=='string'||event.data.length>2_000_000||!event.data.includes('"roster"'))return event;
                     try{
                         const m=JSON.parse(event.data);if(m.t!=='roster')return event;
@@ -172,15 +147,15 @@ export function installViewerBridge(host:any) {
                         for(const slot of Array.isArray(m.lv)?m.lv:[])rosterRows.delete(slot);
                         for(const r of Array.isArray(m.j)?m.j:[])if(Array.isArray(r))rosterRows.set(r[0],r);
                         for(const r of Array.isArray(m.m)?m.m:[]){const row=Array.isArray(r)?rosterRows.get(r[0]):undefined;if(row){row[2]=r[1];row[3]=r[2];row[4]=r[3];if(r.length>4)row[5]=r[4];}}
-                        rosterTo=new host.MessageEvent('message',{data:JSON.stringify({t:'roster',k:m.k,p:[...rosterRows.values()],npcs:m.npcs}),origin:event.origin});
+                        return new host.MessageEvent('message',{data:JSON.stringify({t:'roster',k:m.k,p:[...rosterRows.values()],npcs:m.npcs}),origin:event.origin});
                     }catch{/* not JSON: left as it is */}
-                    return rosterTo;
+                    return event;
                 };
-                const rename=(raw:any)=>{
-                    const event=fullRoster(raw);
+                // A hash-listed name enters in a full roster (p) or in a change (j).
+                const rename=(event:any)=>{
                     if(!hiddenHashes.size||typeof event?.data!=='string')return event;
                     let data:string=event.data;
-                    if(data.includes('"roster"'))try{const m=JSON.parse(data);if(m.t==='roster'&&Array.isArray(m.p))for(const p of m.p)if(Array.isArray(p)&&typeof p[1]==='string'&&/^[A-Za-z0-9_ -]{1,12}$/.test(p[1])&&hiddenHashes.has(fnv(p[1].toLowerCase()))){learned.add(p[1].toLowerCase());hiddenNames.add(p[1].toLowerCase());}}catch{/* not JSON: left as it is */}
+                    if(data.includes('"roster"'))try{const m=JSON.parse(data);if(m.t==='roster')for(const p of [...(Array.isArray(m.p)?m.p:[]),...(Array.isArray(m.j)?m.j:[])])if(Array.isArray(p)&&typeof p[1]==='string'&&/^[A-Za-z0-9_ -]{1,12}$/.test(p[1])&&hiddenHashes.has(fnv(p[1].toLowerCase()))){learned.add(p[1].toLowerCase());hiddenNames.add(p[1].toLowerCase());}}catch{/* not JSON: left as it is */}
                     for(const name of learned)data=data.replace(new RegExp('\\b'+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','gi'),HIDDEN_ALIAS);
                     return data===event.data?event:new host.MessageEvent('message',{data,origin:event.origin});
                 };
@@ -257,7 +232,7 @@ export function installViewerBridge(host:any) {
     // A graphics reset leaves a black canvas. The page reloads the viewer after this failure. The event does not bubble.
     host.document?.addEventListener?.('webglcontextlost',()=>fail('The 3D view lost its graphics context.'),true);
     host.addEventListener('unhandledrejection',(event:any)=>{if(event.reason?.name!=='AbortError')fail('The 3D viewer could not finish loading; use the 2D map.');});
-    // The pinned viewer publishes its current follow target in its URL. Relay
+    // The viewer publishes its current follow target in its URL. Relay
     // that documented state; do not depend on unbuilt debug globals.
     host.setInterval?.(()=>{
         if(!privacyReady||!renderReady||failed||host.parent===host)return;

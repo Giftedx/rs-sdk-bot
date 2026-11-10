@@ -31,7 +31,7 @@ function browser(list:unknown=['HiddenActor'],hide='http://localhost:3102/api/hi
 }
 
 test('viewer routes only explicit roots and rejects decoded or double-encoded traversal',()=>{
-    expect(viewerAssetRoute('/static/js/main.a8aba595.js')).toEqual({root:'static',relative:'js/main.a8aba595.js'});
+    expect(viewerAssetRoute('/static/js/main.0123abcd.js')).toEqual({root:'static',relative:'js/main.0123abcd.js'});
     expect(viewerAssetRoute('/caches/rs-sdk-289/main_file_cache.dat')).toEqual({root:'caches',relative:'rs-sdk-289/main_file_cache.dat'});
     expect(viewerAssetRoute('/api/state')).toBeNull();
     for(const path of ['/static/../server.ts','/static/%2e%2e%2fserver.ts','/caches/%252e%252e/file','/static/js%5csecret','/caches/C:/secret','/static/%00bad','/static/%zz','/static//js/x'])
@@ -265,7 +265,7 @@ test('the roster reaches the page live, with the hidden account as the mark only
  for(const r of rosters)expect(r.data.atlasRoster.players).toEqual([['⟦MAIN⟧',3200,3200,0,126],['Worker',3201,3201,0,50]]);
  expect(JSON.stringify(rosters)).not.toContain('HiddenActor');
 });
-test('a roster change frame reaches the viewer and the page as a full roster',async()=>{
+test('a roster change frame reaches the viewer as it is and the page as a full roster',async()=>{
  const b=browser();class Socket {
   listeners:Function[]=[];handler:any=null;constructor(..._args:any[]){}
   addEventListener(t:string,fn:Function){if(t==='message')this.listeners.push(fn);}
@@ -275,7 +275,40 @@ test('a roster change frame reaches the viewer and the page as a full roster',as
  installViewerBridge(b.host);const socket:any=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed'),seen:any[]=[];socket.onmessage=(e:any)=>seen.push(JSON.parse(e.data));
  await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();
  socket.message({t:'roster',k:10,p:[[7,'Leaver',3200,3200,0,126],[8,'Worker',3201,3201,0,50]],npcs:4});
- socket.message({t:'roster',k:20,d:1,lv:[7],j:[[9,'Joiner',3100,3100,0,3]],m:[[8,3205,3206,1]],npcs:5});
- expect(seen.at(-1)).toEqual({t:'roster',k:20,p:[[8,'Worker',3205,3206,1,50],[9,'Joiner',3100,3100,0,3]],npcs:5});
+ const change={t:'roster',k:20,d:1,lv:[7],j:[[9,'Joiner',3100,3100,0,3]],m:[[8,3205,3206,1]],npcs:5};
+ socket.message(change);
+ expect(seen.at(-1)).toEqual(change);
  expect(b.messages.filter(m=>m.data.atlasRoster).at(-1)!.data.atlasRoster.players).toEqual([['Worker',3205,3206,1,50],['Joiner',3100,3100,0,3]]);
+ // A second change builds on the rows the bridge holds.
+ socket.message({t:'roster',k:30,d:1,lv:[],j:[],m:[[9,3101,3102,0,4]],npcs:5});
+ expect(b.messages.filter(m=>m.data.atlasRoster).at(-1)!.data.atlasRoster.players).toEqual([['Worker',3205,3206,1,50],['Joiner',3101,3102,0,4]]);
+});
+test('a hash-listed player who joins in a change frame is renamed before the viewer reads it',async()=>{
+ const b=browser(['h:afac05c6'],'http://localhost:3102/sub/api/hidden-names');
+ class Socket {listeners:Function[]=[];handler:any=null;constructor(..._args:any[]){}addEventListener(t:string,fn:Function){if(t==='message')this.listeners.push(fn);}
+  get onmessage(){return this.handler;}set onmessage(fn:any){this.handler=fn;}
+  message(m:any){const e={data:JSON.stringify(m),origin:'wss://x'};for(const f of this.listeners)f(e);this.handler?.(e);}}
+ b.host.WebSocket=Socket;b.host.MessageEvent=class {data:string;origin:string;constructor(_t:string,init:any){this.data=init.data;this.origin=init.origin;}};
+ installViewerBridge(b.host);await (await b.host.fetch('http://localhost:3102/sub/api/hidden-names')).json();
+ const socket:any=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed'),seen:string[]=[];socket.onmessage=(e:any)=>seen.push(e.data);
+ b.frame();b.frame();b.geometry();b.present();b.frame();
+ socket.message({t:'roster',k:10,p:[[8,'Worker',1,1,0,3]],npcs:0});
+ socket.message({t:'roster',k:20,d:1,lv:[],j:[[7,'HiddenActor',2,2,0,3]],m:[],npcs:0});
+ socket.message({t:'tick',k:21,p:[{i:7,ch:'hi hiddenactor'}]});
+ expect(JSON.parse(seen[1]!).j[0][1]).toBe('Hidden');expect(seen.join('')).not.toMatch(/hiddenactor/i);
+ expect(b.messages.filter(m=>m.data.atlasRoster).at(-1)!.data.atlasRoster.players).toEqual([['Worker',1,1,0,3],['⟦MAIN⟧',2,2,0,3]]);
+ expect(JSON.stringify(b.messages)).not.toMatch(/hiddenactor/i);
+});
+test('a hidden tab gets no roster from the feed: the bridge sends none and keeps its rows for the next change',async()=>{
+ const b=browser();class Socket {listeners=new Map<string,Function[]>();constructor(..._args:any[]){}addEventListener(t:string,fn:Function){this.listeners.set(t,[...(this.listeners.get(t)||[]),fn]);}message(m:any){for(const f of this.listeners.get('message')||[])f({data:JSON.stringify(m),origin:'wss://x'});}}
+ b.host.WebSocket=Socket;b.host.MessageEvent??=class{data:any;origin:any;constructor(_t:string,i:any){this.data=i.data;this.origin=i.origin;}};
+ installViewerBridge(b.host);const socket=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');
+ await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();
+ socket.message({t:'roster',k:10,p:[[8,'Worker',3201,3201,0,50]],npcs:0});
+ const sent=()=>b.messages.filter(m=>m.data.atlasRoster).length,before=sent();
+ // Hidden: the viewer unsubscribes, so the feed sends ticks with no players and no roster.
+ socket.message({t:'tick',k:11,ms:1});socket.message({t:'tick',k:12,ms:1});
+ expect(sent()).toBe(before);expect(b.states().filter(Boolean).at(-1).state).toBe('ready');
+ socket.message({t:'roster',k:40,d:1,lv:[],j:[],m:[[8,3300,3300,0]],npcs:0});
+ expect(b.messages.filter(m=>m.data.atlasRoster).at(-1)!.data.atlasRoster.players).toEqual([['Worker',3300,3300,0,50]]);
 });
