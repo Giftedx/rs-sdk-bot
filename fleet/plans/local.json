@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794317009676,
+ "at": 1794317121432,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -498,10 +498,7 @@
    "role": "supply"
   },
   {
-   "accounts": [
-    "Magicwanda",
-    "Mightyrod"
-   ],
+   "account": "Magicwanda",
    "script": "scripts/coin-courier.ts",
    "args": [
     "240000"
@@ -510,10 +507,31 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-d7f4b22d-35a5-4cc9-82d3-5acde5286ed6"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-coin-magicwanda-mightyrod-240k-r2 [task-d7f4b22d-35a5-4cc9-82d3-5acde5286ed6]",
    "role": "supply"
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "563",
+    "QUANTITY": "495",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "1140",
+    "CASH_RESERVE": "5000",
+    "ORDER_KEY": "mightyrod-law495-magic93",
+    "FILL_WAIT_TICKS": "200",
+    "ORDER_MS": "900000",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-9ae39bcd-6c53-463e-8caf-1e949a918fb6"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-ge-mightyrod-law495-magic93 [task-9ae39bcd-6c53-463e-8caf-1e949a918fb6]",
+   "role": "helper"
   }
  ]
 }

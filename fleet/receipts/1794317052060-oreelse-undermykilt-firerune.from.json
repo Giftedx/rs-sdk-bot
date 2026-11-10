@@ -1,0 +1,22 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1794317052060-oreelse-undermykilt-firerune",
+ "account": "OreElse",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 130,
+ "claim": "711b21ab-2c1e-4da8-a6c5-94f11c2264a6",
+ "count": 0,
+ "ok": false,
+ "at": 1794317116019,
+ "detail": "Error: route to 2618, 3333: precondition no route to 2618,3333,0",
+ "logout": {
+  "attemptId": "1794317063752-0000031728-0000000001",
+  "at": 1794317116002,
+  "sha256": "3d96c5802424ac2b761f77f208c3f2609b70e315c84156f30eb91fd273bc9b97"
+ }
+}
