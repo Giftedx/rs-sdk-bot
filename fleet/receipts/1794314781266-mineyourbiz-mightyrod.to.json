@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794314781266-mineyourbiz-mightyrod",
  "account": "Mightyrod",
  "partner": "MineYourBiz",
@@ -10,8 +10,21 @@
  "item": "coins",
  "requested": 39637,
  "claim": "7a5d0ef1-3fba-4dfd-b6bc-d0434e2a1c05",
- "count": 0,
- "ok": false,
- "at": 1794314790986,
- "detail": "trade claimed"
+ "count": 39637,
+ "ok": true,
+ "at": 1794314851914,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 39637
+ },
+ "bank": {
+  "count": 39637,
+  "at": 1794314850473
+ },
+ "logout": {
+  "attemptId": "1794314790994-0000018296-0000000001",
+  "at": 1794314851902,
+  "sha256": "64e4e6dacdd0aee849cff573a81e01558c0c92e1a1a647122b2ef67cc89e76da"
+ }
 }
