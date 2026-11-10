@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794324815435-moneyshot-thefullmonty-bronzesword",
  "account": "TheFullMonty",
  "partner": "Moneyshot",
@@ -12,6 +12,15 @@
  "claim": "fca51388-7179-4915-986c-7d5b64e5c339",
  "count": 0,
  "ok": false,
- "at": 1794324820140,
- "detail": "trade claimed"
+ "at": 1794327216318,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794324820142-0000022905-0000000001",
+  "at": 1794327216313,
+  "sha256": "993f9fe0ea419131ca27635802e7c1ebb6cff7f55e5d343c930869130a2851b3"
+ }
 }
