@@ -43,7 +43,7 @@ test('no demand cannot hide a retained failure, stop marker or release hold',()=
  // A release pause starts again; the swarm checks the release pin itself before a non-standing start.
  expect(startable(['Courier'],true,new Map([['Courier',{reason:'release-paused'}]]),()=>Infinity).start).toEqual(['Courier']);
 });
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { hasPayout } from '../packages/core/src/bank-demand';
@@ -698,6 +698,9 @@ test('a run another job of the account started is foreign to a job that is off o
 import { SWARM_STOP, clearSwarmStop, swarmWroteStop, standingRetryable, writeSwarmStop } from './swarm';
 test('the controller knows its own stop files, and a standing job retries the ends a plan removal or a lost process leaves', () => {
     for (const t of Object.values(SWARM_STOP)) expect(swarmWroteStop(t)).toBe(true);
+    // A lost lease logs the runs out with the worker's own refusal text; the next controller's planner clears it.
+    expect(SWARM_STOP.lease).toBe('fleet controller lease unavailable');
+    expect(swarmWroteStop(`${SWARM_STOP.lease}\n`)).toBe(true);
     expect(swarmWroteStop('hold offline until the GE pilot')).toBe(false);
     expect(swarmWroteStop(undefined)).toBe(false);
     for (const r of ['blocked: no food', 'gave-up after 3 runs', 'exit unknown']) expect(standingRetryable(r)).toBe(true);
@@ -722,6 +725,9 @@ test('controller stop and resume preserve a stop file the owner wrote', () => {
         expect(readFileSync(file, 'utf8')).toBe('owner pause');
         writeFileSync(file, SWARM_STOP.job);
         expect(clearSwarmStop(file)).toBe(true);
+        writeSwarmStop(file, SWARM_STOP.lease);
+        expect(clearSwarmStop(file)).toBe(true);
+        expect(existsSync(file)).toBe(false);
     } finally {
         if (/^rsbot-stop-owner-[^\\/]+$/.test(relative(parent, base))) rmSync(base, { recursive: true });
     }
