@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794302494701,
+ "at": 1794303461416,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -129,13 +129,32 @@
   },
   {
    "account": "Deeppockets",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2669,3298"
+   ]
+  },
+  {
+   "account": "Fatstack",
    "script": "scripts/gather-combat.ts",
    "args": [
     "3000",
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Attack",
+    "TRAIN_SKILL": "Defence",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1"
@@ -143,31 +162,12 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Attack to 45 on the Ardougne cows",
+   "goal": "train Defence to 45 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-attack-45",
+   "template": "army-cow-defence-45",
    "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
-   ]
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2652,3318"
    ]
   },
   {
@@ -253,32 +253,13 @@
   },
   {
    "account": "Dipstick",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2669,3298"
-   ]
-  },
-  {
-   "account": "KnightRider",
    "script": "scripts/gather-combat.ts",
    "args": [
     "3000",
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
+    "TRAIN_SKILL": "Defence",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1"
@@ -286,12 +267,31 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
+   "goal": "train Defence to 45 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-strength-45",
+   "template": "army-cow-defence-45",
    "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2652,3318"
    ]
   }
  ]
