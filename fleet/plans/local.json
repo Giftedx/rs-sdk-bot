@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794316338737,
+ "at": 1794316414000,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -18,6 +18,22 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
+   "role": "supply"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
+    "scripts/goldfarm.ts KNIGHT_SPOT=2582,3297"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Thieving 55, then coins from Ardougne knights",
    "role": "supply"
   },
   {
@@ -496,24 +512,6 @@
    "enabled": false,
    "repeat": false,
    "goal": "run-ge-pocketrocket-rune-arrows533 [task-a92fe9c7-4fbb-4d38-8279-cb797dfe7be6]",
-   "role": "supply"
-  },
-  {
-   "accounts": [
-    "MineYourBiz",
-    "Mightyrod"
-   ],
-   "script": "scripts/coin-courier.ts",
-   "args": [
-    "340000"
-   ],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-415eda60-00e8-4f73-b1ef-1e28527e4a3f"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-coin-mineyourbiz-mightyrod-340k-r2 [task-415eda60-00e8-4f73-b1ef-1e28527e4a3f]",
    "role": "supply"
   }
  ]
