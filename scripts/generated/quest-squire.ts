@@ -1,5 +1,5 @@
 // The Knight's Sword from preset quest_squire (beside the squire in Falador castle courtyard; every skill 99; a
-// redberry pie, 2 iron bars, a rune pickaxe and runes for a Varrock and two Falador teleports from a helper).
+// redberry pie, 2 iron bars, a rune pickaxe and runes for a Varrock and three Falador teleports from a helper).
 // Reward: 1 QP, 12,725 Smithing XP before 25x (quests/quest_squire/scripts/quest_squire.rs2:220-224).
 // Varp %squire: 0 -> 1 the squire, 2 Reldo, 3 the pie to Thurgo, 4 "special sword", 5 the squire (portrait), 6 the
 // portrait to Thurgo; the blurite and 2 bars give the sword, the sword to the squire queues the completion.
@@ -13,7 +13,6 @@ const SQUIRE = { x: 2977, z: 3342 };
 const RELDO = { x: 3209, z: 3495 };
 const THURGO = { x: 3001, z: 3144 };
 const CELLAR_DOWN = { x: 3008, z: 3150 };                  // ladder_cellar_inside_down 1759
-const CELLAR_UP = { x: 3008, z: 9550 };                    // ladder_from_cellar 1755
 const BLURITE = [{ x: 3049, z: 9566 }, { x: 3059, z: 9564 }, { x: 3067, z: 9581 }, { x: 3067, z: 9582 }];
 const TOWER_LADDER = { x: 2994, z: 3341 };                 // ladder 1747 (level 0 -> 1)
 const VYVIN_STAIRS = { x: 2984, z: 3337 };                 // stairs 1722 on level 1
@@ -57,11 +56,11 @@ try {
     }
     if (!q.has(ITEM.blurite)) await q.fail('no blurite');
     q.milestone('blurite');
-    await q.walk('to cellar up', [{ x: 3030, z: 9560, tol: 3 }, { x: CELLAR_UP.x + 1, z: CELLAR_UP.z, tol: 1 }]);
-    await q.climb('cellar up', () => q.findLoc(l => l.x === CELLAR_UP.x && l.z === CELLAR_UP.z), /climb-up|climb up/i, () => (q.pos()?.worldZ ?? 9999) < 9000);
+    // A Falador teleport from the rock: the walk back from the cellar to the castle took about 200 ticks.
+    await q.teleport('falador teleport back', 'magic:falador_teleport', 2965, 3378);
 
     // 5. Back to the squire: the portrait is in Vyvin's cupboard (5, quest_squire.rs2:75-78).
-    await q.walk('to squire', [{ x: 3007, z: 3220, tol: 3 }, { x: 3007, z: 3320, tol: 3 }, { x: SQUIRE.x + 1, z: SQUIRE.z, tol: 2 }]);
+    await q.walk('to squire', [{ x: SQUIRE.x + 1, z: SQUIRE.z, tol: 2 }]);
     await q.talk('squire 2', squire, [], () => q.sawText(/keeps it in a cupboard in his room/i), SQUIRE, 40);
     q.milestone(5);
 
