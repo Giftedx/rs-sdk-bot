@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794340513818,
+ "at": 1794340801339,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -224,27 +224,23 @@
   },
   {
    "account": "Wandwaver",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/train-prayer.ts",
    "args": [
-    "3000",
-    "cow"
+    "99"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 60 on the Ardougne cows",
+   "goal": "train Prayer to 99 burying the held bones",
    "role": "combat",
-   "template": "army-cow-defence-60",
+   "template": "army-bury-prayer-99",
    "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
+   "resources": []
   },
   {
    "account": "Woodenstaff",
@@ -475,10 +471,7 @@
    "role": "helper"
   },
   {
-   "accounts": [
-    "Pocketrocket",
-    "BowBeforeMe"
-   ],
+   "account": "Pocketrocket",
    "script": "scripts/handoff-inputs.ts",
    "args": [
     "500:Rune arrowtips",
@@ -494,9 +487,29 @@
     "CAP": "4000",
     "COORDINATOR_RUN_ID": "task-af1eef14-528b-46d3-a42c-cb0d487b12a3"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-handoff-pocketrocket-bowbeforeme-runetips500-r3 [task-af1eef14-528b-46d3-a42c-cb0d487b12a3]",
+   "role": "supply"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/fletch-arrows.ts",
+   "args": [
+    "6000",
+    "native-arrows",
+    "rune"
+   ],
+   "env": {
+    "CAP": "6000",
+    "MAX_MAKE": "495",
+    "TIP_RESERVE": "5",
+    "HEADLESS_RESERVE": "200",
+    "COORDINATOR_RUN_ID": "task-62f76570-1e5c-41f3-9e18-442a2463a6de"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-fletch-bowbeforeme-rune495 [task-62f76570-1e5c-41f3-9e18-442a2463a6de]",
    "role": "supply"
   }
  ]
