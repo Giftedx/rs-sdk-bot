@@ -204,3 +204,12 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .game-list button[data-quest]:hover{color:#fff!important}
 /* The side tabs as in the 2004 client: stats, quests, inventory and worn items above; friends, logout and options below. */
 .game-hud .game-tabs .tab-row:first-of-type{grid-template-columns:repeat(4,34px)!important}
+/* The side panels in the 2004 client's colours: yellow text and titles, a cyan title on the options, white friend names. */
+.game-panel{color:#ff0}
+.game-panel h3{font:16px RSBold;color:#ff0}
+.game-panel h3.cyan{color:#0ff}
+.game-hud .game-panel .friends-list button{color:#fff}
+/* Worn items: 36 px slots at the 2004 places; an empty slot shows the 2004 picture of what it holds. */
+.equipment-doll{width:190px;height:204px;margin:0 auto}
+.equipment-slot{width:36px;height:36px;background:#5b5142}
+.worn-icon{display:block;width:32px;height:32px;background:url('/client-assets/wornicons.png') no-repeat;image-rendering:pixelated}
