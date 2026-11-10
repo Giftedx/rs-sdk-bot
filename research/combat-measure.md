@@ -253,7 +253,7 @@ Ranged it adds is not needed at that point.
   on (`RETREAT ... autoRetaliateRestored=true`). Practice, three bots at a 700-tick cap: all ok, retreats of 83-200
   ticks.
 - **Arrow supply.** Live, the GE has no iron or adamant arrows listed. It asks 746 for mithril and 10,000 for rune, and
-  Aemad's Ardougne shop holds 450 bronze. The shops hold more (`scripts/shop-buyer.ts` profiles; practice, 100 each):
+  Aemad's Ardougne shop holds 450 bronze (the planner's source, below). The shops hold more (`scripts/shop-buyer.ts` profiles; practice, 100 each):
   - `lowe` (Varrock): bronze 2,000, iron 1,500, steel 1,000 in stock. 100 iron for 399.
   - `catherby_arrows` (Hickton): bronze 1,000, iron 800. 100 iron for 399.
   - `dargaud` (Ranging Guild, Ranged 40 at the door): every arrow to rune (mithril 500, adamant 450, rune 400 in stock)
@@ -262,6 +262,62 @@ Ranged it adds is not needed at that point.
 - **Evidence.** `.practice/trooper-ranged/` and `.practice/arrow-shops/` in the Claude cloud container that ran them.
 - **Gap.** Practice only. The rate above Ranged 66 is not measured, and better bows and arrows (willow to yew,
   mithril to rune) are not in the army's hands. At the cap a trooper still fighting holds the retreat about 100 ticks.
+
+### Fired arrows taken back
+
+- **Claim.** The bow trainer takes its fired arrows back after each kill. It loses about two fifths as many arrows
+  for the same XP (median 1.90 against 4.90 per 1,000 XP) at about 15% less XP per tick (median 44.7 against 52.3).
+- **Why it works.** A fired arrow lands on the target's tile four times in five (`player_ranged.rs2`
+  `ranged_dropammo_npc`, `^dropammo_chance` 5) and lies there 200 ticks (`^lootdrop_duration`), one stack a tile for
+  its owner (`World.addObj`). A trooper closes on the archer, so most of a fight's arrows lie on one or two tiles.
+- **Conditions.** Practice at xpRate 25. `scripts/gather-combat.ts <bot> 1500 trooper` with `TRAIN_SKILL=Ranged
+  TARGET_LEVEL=99 GIANT_FOOD=10`, no burying. Attack 69, Strength 61, Defence 62, Hitpoints 62, Ranged 1; a shortbow,
+  600 bronze arrows and 30 sharks banked; start at the north bank. Three bots at once for each condition.
+  `GIANT_AMMO_PICKUP=0` turns the pickup off. Arrows lost is the owned count before less the owned count after.
+
+  | Pickup | Run | Kills | Ranged | XP | Ticks | XP per tick | Arrows lost | Taken back | Lost per 1,000 XP |
+  |---|---|---|---|---|---|---|---|---|---|
+  | off | n1 | 40 | 1 -> 63 | 87,000 | 1,659 | 52.4 | 408 | 0 | 4.69 |
+  | off | n2 | 32 | 1 -> 60 | 69,100 | 1,585 | 43.6 | 405 | 0 | 5.86 |
+  | off | n3 | 38 | 1 -> 63 | 82,600 | 1,578 | 52.3 | 405 | 0 | 4.90 |
+  | on | q1 | 29 | 1 -> 59 | 65,000 | 1,582 | 41.1 | 131 | 250 | 2.02 |
+  | on | q2 | 35 | 1 -> 62 | 77,500 | 1,660 | 46.7 | 52 | 297 | 0.67 |
+  | on | q3 | 32 | 1 -> 60 | 70,700 | 1,583 | 44.7 | 134 | 237 | 1.90 |
+
+- **The rule.** After a kill it takes at most 2 stacks of 3 or more arrows within 3 tiles, the largest first, and puts
+  arrows back in the quiver only when it holds fewer than 50. With the quiver empty, and once more before it leaves
+  the field, it takes any stack. A pick costs 3-5 ticks whatever it holds: in two instrumented runs 12 of 30 picks
+  brought 14 of 247 arrows. Taking every stack and re-equipping after every kill gave 34.1, 39.6 and 43.3 XP per tick
+  for 1.81, 1.59 and 0.70 arrows lost per 1,000 XP: slower for little more.
+- **Evidence.** `.practice/arrows/` (`run.ts`, sets `n1-n3`, `q1-q3`, `p1-p3`, `d1-d2`) in the Claude cloud container
+  that ran them; `scripts/gather-combat-giant.test.ts` (the stack choice).
+- **Gap.** Practice only, three accounts on the field, no burying. The rate with 12 accounts and burying is not
+  measured. Arrows fired at a trooper the trainer lets go lie where they fell until a later kill is near them.
+
+### The first arrows
+
+- **Claim.** An army account buys its Ranged band's arrows at Aemad's shop in East Ardougne (`army-arrows-ardy`:
+  `scripts/shop-buyer.ts <bot> ardy 400` with `ITEMS='bronze arrow' STOCK_TARGET=500 BANK_AT=0`), and the Ranged
+  template then starts from the south bank where the shop run ends.
+- **Conditions.** Practice. The account above at the north bank with 50,000 coins, a shortbow, 25 bronze arrows and 30
+  cooked meat banked. The shelf holds 500 bronze arrows and gives one back every 10 ticks (`adventurershop`), shared
+  by every player. Each shop run was followed by the Ranged template at a 700-tick cap.
+
+  | Run | Shelf | Bought | Ticks | Coins | Stop | Ranged run after it |
+  |---|---|---|---|---|---|---|
+  | s4 | full | 475 | 161 | 2,166 | stock-target | ok, 5 kills, 82 lost, 94 taken back |
+  | s3 | emptied | 141 | 433 | 846 | cap | ok, 8 kills, 49 lost, 110 taken back |
+  | s5 | emptied | 164 | 438 | 984 | cap | ok, 10 kills, 37 lost, 122 taken back |
+
+  Every shop run ended `RESULT ok` with the arrows banked. An arrow costs 4.6 coins from a full shelf and 6 from an
+  emptied one.
+- **What the shop run needed.** With the default `BANK_AT` it banked after every 100 arrows (373 ticks for 475). At
+  its cap it skipped the last bank trip and logged out with the arrows in the pack; the last trip now runs past the cap.
+- **Estimate.** At 1.90 arrows lost per 1,000 XP and 44.7 XP per tick an archer loses about 510 arrows in 6,000
+  ticks. The shelf gives back 600 in that time, so this shop carries about one archer once its first 500 are sold.
+- **Evidence.** `.practice/arrows/shop.ts` and its `s3`, `s4`, `s5` logs in the Claude cloud container that ran them;
+  `packages/planner/test/autopilot.test.ts` (the band order, one account at the shop).
+- **Gap.** Practice only. The Ranging Guild shelf (Ranged 40) and Hickton's are not in the planner.
 
 ## Sharing stock between army accounts
 
