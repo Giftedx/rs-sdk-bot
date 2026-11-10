@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794284599084,
+ "at": 1794285202151,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -53,11 +53,10 @@
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
+   "repeat": false,
    "goal": "train Defence to 45 on the Ardougne cows",
    "role": "combat",
    "template": "army-cow-defence-45",
-   "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
    ]
