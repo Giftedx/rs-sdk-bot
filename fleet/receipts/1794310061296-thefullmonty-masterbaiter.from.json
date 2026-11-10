@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1794310061296-thefullmonty-masterbaiter",
  "account": "TheFullMonty",
  "partner": "Masterbaiter",
@@ -12,6 +12,15 @@
  "claim": "3be9366a-11da-4f41-8cd8-4578a720e2b9",
  "count": 0,
  "ok": false,
- "at": 1794310064858,
- "detail": "trade claimed"
+ "at": 1794310448695,
+ "detail": "no progress: 900 ticks without xp, items, dialog or a journey",
+ "bank": {
+  "count": 20,
+  "at": 1794310072397
+ },
+ "logout": {
+  "attemptId": "1794310064862-0000022929-0000000001",
+  "at": 1794310448690,
+  "sha256": "de1debfe3321a44ab156d7aaf7e25cdc010a6256f8dd73bd9229a962765e48ff"
+ }
 }
