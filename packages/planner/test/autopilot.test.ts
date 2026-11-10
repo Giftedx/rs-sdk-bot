@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
+import { AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -656,4 +656,102 @@ test('an account that cannot pay for the batch buys only the start kit', () => {
     const [x] = plan(inputs([thin], { templates: alch, army, market, unfundable: new Set(['thin']) }));
     expect(x!.template!.args![0]).toContain('QUANTITY=40 EXPECTED_OWNED=10 LIMIT_PRICE=800');
     expect(x!.reason).toContain('at most 32000 coins');
+});
+
+// AIO routes (aioTemplates): practice-proved options the plan's `aio` list admits.
+const aioIds = aioTemplates().map(t => t.id);
+const aioPrices = { flax: 5, 'iron ore': 17, 'copper ore': 3, 'tin ore': 3, 'rune essence': 4, 'air rune': 4, 'bow string': 10, 'arrow shaft': 1, 'yew log': 160 };
+const aioInputs = (accounts: Acct[], pilots: string[], extra: Partial<Inputs> = {}): Inputs =>
+    inputs(accounts, { templates: aioTemplates(), bill: [], prices: aioPrices, pilots: new Set(pilots), capacity: CAPACITY, ...extra });
+const sweepKit = { 'law rune': 2, 'air rune': 6, 'fire rune': 1, 'earth rune': 1, trout: 4, 'bronze pickaxe': 1 };
+
+test('every AIO template is in the catalogue as a pilot that runs the dispatcher with its category first', () => {
+    const all = new Map(catalogue().map(t => [t.id, t]));
+    expect(aioIds).toEqual(['aio-flax', 'aio-bowstrings', 'aio-yews', 'aio-shafts', 'aio-ore', 'aio-essence', 'aio-air-runes', 'aio-quest-runemysteries']);
+    for (const t of aioTemplates()) {
+        expect(all.get(t.id)).toBeDefined();
+        expect(t.pilot).toBe(true);
+        expect(t.script).toBe('scripts/aio.ts');
+        expect(t.args![0]).toBe(t.aio!.split(':')[0]!);
+        expect(t.worker).toMatch(/^scripts\/[a-z-]+\.ts$/);
+        for (const r of t.resources ?? []) expect(CAPACITY[r]).toBe(1);
+    }
+});
+
+test('no AIO route is planned until the plan admits its id', () => {
+    const rich = acct('A', { Crafting: 20, Woodcutting: 70, Attack: 30, Strength: 30 }, { flax: 100, knife: 1, log: 50, 'rune axe': 1, 'rune pickaxe': 1, 'air talisman': 1, 'rune essence': 100, ...sweepKit });
+    expect(ids(plan(aioInputs([rich], [])))).toEqual({ A: 'vacant' });
+    expect(ids(plan(inputs([rich], { prices: { ...prices, ...aioPrices }, bill: [] }))).A).not.toMatch(/^aio-/);
+    expect(ids(plan(aioInputs([rich], ['aio-flax'])))).toEqual({ A: 'aio-flax' });
+});
+
+test('an AIO job runs scripts/aio.ts with its category and route as arguments', () => {
+    const [x] = plan(aioInputs([acct('A')], ['aio-flax']));
+    const job = jobFor(x!, side);
+    expect(job).toMatchObject({ account: 'A', script: 'scripts/aio.ts', args: ['skiller', 'foraging', 'flax', '1800', '28'], repeat: true, standing: true, template: 'aio-flax', resources: [AIO_PLACES.flax] });
+});
+
+test('the ore route needs combat 13 and a pickaxe; the status combat level wins over the one worked out from skills', () => {
+    const run = (a: Acct) => ids(plan(aioInputs([a], ['aio-ore']))).A;
+    expect(combatLevel({ Hitpoints: 10 })).toBe(3);
+    expect(combatLevel({ Attack: 20, Strength: 20, Hitpoints: 10 })).toBe(15);
+    expect(run(acct('A', {}, { 'bronze pickaxe': 1 }))).toBe('vacant');
+    expect(run(acct('A', { Attack: 20, Strength: 20 }, {}))).toBe('vacant');
+    expect(run(acct('A', { Attack: 20, Strength: 20 }, { 'bronze pickaxe': 1 }))).toBe('aio-ore');
+    expect(run({ ...acct('A', { Attack: 20, Strength: 20 }, { 'bronze pickaxe': 1 }), combat: 12 })).toBe('vacant');
+    expect(run({ ...acct('A', {}, { 'rune pickaxe': 1 }), combat: 13 })).toBe('aio-ore');
+});
+
+test('the production routes need their level and a whole batch of the input', () => {
+    const run = (a: Acct, id: string) => ids(plan(aioInputs([a], [id]))).A;
+    expect(run(acct('A', { Crafting: 9 }, { flax: 56 }), 'aio-bowstrings')).toBe('vacant');
+    expect(run(acct('A', { Crafting: 10 }, { flax: 55 }), 'aio-bowstrings')).toBe('vacant');
+    expect(run(acct('A', { Crafting: 10 }, { flax: 56 }), 'aio-bowstrings')).toBe('aio-bowstrings');
+    expect(run(acct('A', {}, { knife: 1, log: 24 }), 'aio-shafts')).toBe('vacant');
+    expect(run(acct('A', {}, { knife: 1, log: 25 }), 'aio-shafts')).toBe('aio-shafts');
+    expect(run(acct('A', { Woodcutting: 59 }, { 'bronze axe': 1 }), 'aio-yews')).toBe('vacant');
+    expect(run(acct('A', { Woodcutting: 60 }, { 'bronze axe': 1 }), 'aio-yews')).toBe('aio-yews');
+    expect(run(acct('A', {}, { 'air talisman': 1, 'rune essence': 27 }), 'aio-air-runes')).toBe('vacant');
+    expect(run(acct('A', {}, { 'air talisman': 1, 'rune essence': 28 }), 'aio-air-runes')).toBe('aio-air-runes');
+});
+
+test('Rune Mysteries is planned for the essence mine it unlocks, once, and only with the sweep pack', () => {
+    const both = ['aio-quest-runemysteries', 'aio-essence'];
+    const [x] = plan(aioInputs([acct('A', {}, sweepKit)], both));
+    expect(x!.template!.id).toBe('aio-quest-runemysteries');
+    expect(x!.reason).toBe('completes Rune Mysteries Quest for aio-essence');
+    expect(x!.value).toBeCloseTo(TRAIN_SHARE * 0.03 * 4 * 0.5);
+    expect(x!.resources).toEqual([AIO_PLACES.essence]);
+    expect(jobFor(x!, side)).toMatchObject({ args: ['quester', 'sweep', 'runemysteries'], repeat: false });
+    // No essence route admitted, a missing rune, three meals, or no pickaxe for the mine: no quest run.
+    expect(ids(plan(aioInputs([acct('A', {}, sweepKit)], ['aio-quest-runemysteries'])))).toEqual({ A: 'vacant' });
+    expect(ids(plan(aioInputs([acct('A', {}, { ...sweepKit, 'law rune': 1 })], both)))).toEqual({ A: 'vacant' });
+    expect(ids(plan(aioInputs([acct('A', {}, { ...sweepKit, trout: 3 })], both)))).toEqual({ A: 'vacant' });
+    expect(ids(plan(aioInputs([acct('A', {}, { ...sweepKit, 'bronze pickaxe': 0 })], both)))).toEqual({ A: 'vacant' });
+    // The status reports the quest complete: the account mines essence, and the quest is never run again.
+    const done: Acct = { ...acct('A', {}, sweepKit), quests: new Set(['rune mysteries quest']) };
+    expect(ids(plan(aioInputs([done], both)))).toEqual({ A: 'aio-essence' });
+    expect(ids(plan(aioInputs([done], ['aio-quest-runemysteries'])))).toEqual({ A: 'vacant' });
+    expect(ids(plan(aioInputs([acct('A', {}, { 'bronze pickaxe': 1 })], ['aio-essence'])))).toEqual({ A: 'vacant' });
+});
+
+test('a place takes one AIO account, and a retired pair stays out', () => {
+    expect(ids(plan(aioInputs([acct('A'), acct('B')], ['aio-flax'])))).toEqual({ A: 'aio-flax', B: 'vacant' });
+    expect(ids(plan(aioInputs([acct('A')], ['aio-flax'], { retired: new Set([pairKey('A', 'aio-flax')]) })))).toEqual({ A: 'vacant' });
+});
+
+test('a quest job with an ok RESULT is re-planned at once, as a finished trainer is', () => {
+    const [x] = plan(aioInputs([acct('A', {}, sweepKit)], ['aio-quest-runemysteries', 'aio-essence']));
+    const job = jobFor(x!, side), assigned = { A: { template: job.template, offset: 0 } };
+    expect(finishedTrainers([job], side, assigned, aioTemplates(), () => ['RESULT ok quest-sweep runemysteries'])).toEqual(['A']);
+    expect(finishedTrainers([job], side, assigned, aioTemplates(), () => [])).toEqual([]);
+});
+
+test('an account row carries its combat level and its complete quests', () => {
+    const a = accountFrom('A', side, { combat: 23, quests: [{ name: 'Rune Mysteries Quest', state: 'complete' }, { name: 'Imp Catcher', state: 'not started' }], skills: [], inventory: [] }, () => undefined);
+    expect(a.combat).toBe(23);
+    expect([...a.quests!]).toEqual(['rune mysteries quest']);
+    const bare = accountFrom('B', side, null, () => undefined);
+    expect(bare.combat).toBeUndefined();
+    expect(bare.quests).toBeUndefined();
 });

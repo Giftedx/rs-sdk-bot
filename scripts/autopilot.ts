@@ -8,6 +8,7 @@
 // (fleet/orders), scripts/fleet-agent.ts runs the trade, and a later pass gives the job.
 // An army account that lacks only kit items for a goal band gets them first: a capped Grand Exchange buy with its own
 // coins, else an item order from a free account of this side, else of another side (fleet/snapshots and fleet/plans).
+// An AIO route proved on practice only (a `pilot` template) is planned only while the plan's `aio` array names its id.
 // Usage: bun scripts/autopilot.ts [swarm.json] [--dry] [--daemon]
 // --daemon: a pass every 10 minutes, and one within TRAINER_POLL_MS of a planner trainer's ok RESULT (its target level
 // is met and its job does not repeat, so the account would otherwise sit ended until the timer).
@@ -251,6 +252,12 @@ export function armyRoster(plan: any): Set<string> {
     return new Set(names.map((n: string) => n.toLowerCase()).filter((n: string) => n !== 'haggis'));
 }
 
+// The practice-proved templates this plan admits: the plan's `aio` array of template ids (the `pilot` templates of the
+// planner's catalogue). The owner adds an id to start that route's live pilot and removes it to end the route.
+export function aioPilots(plan: any): Set<string> {
+    return new Set(Array.isArray(plan?.aio) ? plan.aio.filter((id: unknown): id is string => typeof id === 'string') : []);
+}
+
 export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): string[] {
     if (!dry && isPaused()) return [PAUSED];
     const side = mySide(), owners = loadOwners(), swarm = readJson(planFile, null);
@@ -273,7 +280,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
 
     // Retire planner jobs whose own log lines show no progress.
     const log: string[] = [];
-    const scripts = new Map(catalogue().map(t => [t.id, t.script])), hashes = new Map<string, string>();
+    const scripts = new Map(catalogue().map(t => [t.id, t.worker ?? t.script])), hashes = new Map<string, string>();
     const scriptOf = (template: string) => {
         const file = template.startsWith(KIT_BUY) ? KIT_BUY_SCRIPT : scripts.get(template);
         if (file && !hashes.has(file)) try { hashes.set(file, createHash('sha1').update(readFileSync(join(root, file))).digest('hex')); } catch { /* missing: no hash */ }
@@ -353,7 +360,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     const sideCoins = listed.filter(n => owners.get(n.toLowerCase())?.side === side).reduce((n, name) => n + (accountFrom(name, side, observed(name), id => byId.get(id)).items.coin ?? 0), 0);
     const coinValue = coinValueFor(sideCoins);
     if (coinValue !== 1) log.push(`AUTOPILOT coins: this side holds ${sideCoins}, so a coin counts as ${coinValue}`);
-    const planned = plan({ side, accounts, owners, coinValue, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), stock, market: market as Market,
+    const planned = plan({ side, accounts, owners, coinValue, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), pilots: aioPilots(swarm), stock, market: market as Market,
         kitSeq: new Map(Object.entries(state.kitSeq ?? {}).map(([a, n]) => [a.toLowerCase(), n])), noSend: failedSends(orders, receipts, now) });
     const serverOf = (to: string) => owners.get(to.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev';
     const funding = fundOrders(planned, open, (from, to, coins) => coinOrder(from, to, coins, serverOf(to), now),

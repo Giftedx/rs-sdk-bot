@@ -3,11 +3,15 @@ import { appendFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { jobLogStart } from '../packages/core/src/job-log';
-import { catalogue, finishedTrainers, FOOD_HEAL, jobFor, mergeJobs, norm, plan, plannableAccounts, reservedResources, type Acct, type Inputs } from '../packages/planner/src/autopilot';
+import { aioTemplates, SWEEP_MEALS, catalogue, finishedTrainers, FOOD_HEAL, jobFor, mergeJobs, norm, plan, plannableAccounts, reservedResources, type Acct, type Inputs } from '../packages/planner/src/autopilot';
 import { COW_FOOD_BITES, COW_FOOD_HP, cowFoodHeal } from './gather-combat';
 import { missionSignature, startable } from './swarm';
-import { armyRoster, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, newestClaims, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { aioPilots, armyRoster, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, newestClaims, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import type { TradeReceipt } from './fleet-trade-settlement';
+import { existsSync } from 'node:fs';
+import { resolveAioStep } from './aio';
+import { benchCases } from './measure/aio-bench-cases';
+import { MEALS, presetFor } from './quest-sweep';
 
 const side = 'claude-cloud';
 const inputs = (a: Acct): Inputs => ({ side, accounts: [a], owners: new Map([[a.name.toLowerCase(), { side }]]), bill: [], templates: catalogue(), prices: {} });
@@ -369,4 +373,36 @@ test('a kit buy that got none of an item names that item; a filled or broken buy
     // A part fill and a failure with no offer are not an empty market.
     expect(unfilledItems([none.replace('"acquired":0', '"acquired":7')])).toEqual([]);
     expect(unfilledItems(['RESULT fail walk-to {"ok":false,"reason":"timeout"}', 'RESULT fail chain rounds=1 ok=1 failed=1'])).toEqual([]);
+});
+
+test('each AIO template dispatches to the worker it names, and its route has a bench case that can pass', () => {
+    const cases = new Map(benchCases().map(c => [c.key, c]));
+    for (const t of aioTemplates()) {
+        const step = resolveAioStep(t.args![0]!, t.args!.slice(1));
+        expect(`${t.id} ${step.script}`).toBe(`${t.id} ${t.worker}`);
+        expect(existsSync(resolve(import.meta.dir, '..', t.worker!))).toBe(true);
+        expect(`${t.id} ${cases.has(t.aio!)}`).toBe(`${t.id} true`);
+        expect(cases.get(t.aio!)!.known).toBeUndefined();
+    }
+    // The quest the sweep template names has its own bench case.
+    expect(cases.has('quester:quest:runemysteries')).toBe(true);
+    expect(resolveAioStep('quester', ['sweep', 'runemysteries'])).toEqual({ script: 'scripts/quest-sweep.ts', args: ['runemysteries'], env: {} });
+    expect(resolveAioStep('skiller', ['fletching', 'shafts', '600', 'MAX_MAKE=25', 'LOG_RESERVE=0']).env).toEqual({ MODE: 'shafts', MAX_MAKE: '25', LOG_RESERVE: '0' });
+});
+
+test('the Rune Mysteries template needs the pack the sweep takes: the preset runes and its meals', () => {
+    const items: { id: number; name: string; debugname?: string }[] = JSON.parse(readFileSync(resolve(import.meta.dir, '../knowledge/items.json'), 'utf8'));
+    const name = (id: number) => norm(items.find(i => i.id === id && !/^cert_/.test(i.debugname ?? ''))!.name);
+    const t = aioTemplates().find(t => t.id === 'aio-quest-runemysteries')!, pack: Record<string, number> = {};
+    let meals = 0;
+    for (const i of presetFor('runemysteries').inventory ?? []) { if (MEALS.includes(i.id)) meals += i.count; else pack[name(i.id)] = (pack[name(i.id)] ?? 0) + i.count; }
+    expect(Object.fromEntries(Object.entries(t.needs!.items!).map(([i, n]) => [norm(i), n]))).toEqual(pack);
+    expect(t.needs!.pieces!.count).toBe(meals);
+    expect([...SWEEP_MEALS].map(norm).sort()).toEqual(MEALS.map(name).sort());
+});
+
+test('the aio list of the plan admits pilot templates by id; anything else admits none', () => {
+    expect([...aioPilots({ aio: ['aio-flax', 7, 'aio-ore'] })]).toEqual(['aio-flax', 'aio-ore']);
+    expect(aioPilots({}).size).toBe(0);
+    expect(aioPilots({ aio: 'aio-flax' }).size).toBe(0);
 });
