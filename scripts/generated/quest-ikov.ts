@@ -33,7 +33,7 @@ const FROM = process.env.IK_FROM ?? 'start';
 const STAGES = ['start', 'low', 'arrows', 'warrior'];
 const from = (s: string) => STAGES.indexOf(FROM) <= STAGES.indexOf(s);
 
-const q = await openQuest({ cap: 7000, eatAt: 40, food: [385] });
+const q = await openQuest({ cap: 7000, eatAt: 40, food: [385], resend: false });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

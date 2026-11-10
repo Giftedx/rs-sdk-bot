@@ -67,7 +67,7 @@ export const SKILLS = ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged', '
 // lumbridgeOk: the script teleports to Lumbridge, so a jump there is not a death (respawn and life id still count).
 // name: the account (default process.argv[2]). others: more sessions of a two-account quest (quest-arrav.ts); fail()
 // and end() log them out too.
-export async function openQuest(opts: { session?: Session; stop?:()=>boolean; cap?: number; eatAt?: number; food?: number[]; reservedFood?: Readonly<Record<number,number>>|(()=>Readonly<Record<number,number>>); trace?: boolean; lumbridgeOk?: boolean; name?: string; others?: () => Session[] } = {}) {
+export async function openQuest(opts: { session?: Session; stop?:()=>boolean; cap?: number; eatAt?: number; food?: number[]; reservedFood?: Readonly<Record<number,number>>|(()=>Readonly<Record<number,number>>); trace?: boolean; lumbridgeOk?: boolean; name?: string; others?: () => Session[]; resend?: boolean } = {}) {
     const CAP = opts.cap ?? 3000;
     const EAT_AT = opts.eatAt ?? defaultEatAt;
     // Without a list of its own a quest eats anything that heals: a live account carries swordfish, cake slices or
@@ -265,8 +265,23 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
             await guard(label);
             if (ok()) return;
             if (i > 0) stats.retries++;
-            await send();
-            await waitUntil(s, () => ok() || stats.died || retreating || !!sustain.failure(), { timeoutTicks: ticks });
+            // The engine refuses an action sent while it holds the player (the tick after a gate, a placement, a
+            // knockback) and sends no message. opFeedback counts the refusal. Without this the step waited its whole
+            // bound: the trace showed 10 to 15 lost ticks each time. The step waits 2 ticks for an effect, because an
+            // accepted action that stops the walk raises the count too, and then sends again, at most 4 times.
+            // `resend: false` in openQuest keeps one send for each try: ikov, tree and grandtree are slower with it.
+            const fast = opts.resend !== false;
+            const rejected = () => (s.sdk.getState() as any)?.opFeedback?.opRejectedCount ?? 0;
+            const until = () => ok() || stats.died || retreating || !!sustain.failure();
+            const sentAt = s.tick();
+            for (let quick = 0; ; quick++) {
+                const r0 = rejected();
+                await send();
+                await waitUntil(s, () => until() || (fast && rejected() > r0), { timeoutTicks: Math.max(1, ticks - (s.tick() - sentAt)) });
+                if (!fast || until() || rejected() <= r0 || quick >= 4 || s.tick() - sentAt >= ticks) break;
+                await waitUntil(s, until, { timeoutTicks: 2 });
+                if (until()) break;
+            }
             await guard(label);
             if (ok()) return;
             const d: any = s.sdk.getDialog();
