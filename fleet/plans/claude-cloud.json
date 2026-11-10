@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794300632887,
+ "at": 1794300637543,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -189,6 +189,30 @@
    ]
   },
   {
+   "account": "Fatstack",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
    "account": "Quickhandjob",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -254,19 +278,6 @@
    "resources": [
     "cow:ardougne-north"
    ]
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-31d6af70-9d7a-4f6b-ac0d-7e76faa8a0d7"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-fatstack-20261110t084626z [task-31d6af70-9d7a-4f6b-ac0d-7e76faa8a0d7]",
-   "role": "combat"
   }
  ]
 }
