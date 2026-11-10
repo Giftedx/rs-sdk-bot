@@ -1,7 +1,25 @@
 {
  "side": "claude-cloud",
- "at": 1794342544131,
+ "at": 1794342756998,
  "jobs": [
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=882 QUANTITY=1000 LIMIT_PRICE=20 CASH_RESERVE=1000 ORDER_KEY=thefullmonty-kit0-882-0to1000 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1000 Bronze arrow on the Grand Exchange to train Ranged to 99 on the Khazard troopers",
+   "role": "supply",
+   "template": "kit-buy:army-trooper-ranged-99",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
   {
    "account": "Quickhandjob",
    "script": "scripts/gather-combat.ts",
@@ -48,24 +66,6 @@
    "resources": [
     "shop:catherby"
    ]
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=882 QUANTITY=1000 LIMIT_PRICE=20 CASH_RESERVE=1000 ORDER_KEY=thefullmonty-kit0-882-0to1000 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1000 Bronze arrow on the Grand Exchange to train Ranged to 99 on the Khazard troopers",
-   "role": "supply",
-   "template": "kit-buy:army-trooper-ranged-99",
-   "autopilot": "claude-cloud",
-   "resources": []
   },
   {
    "account": "UnderMyKilt",
