@@ -146,7 +146,7 @@ test('infoboxes: boosted and drained skills of the followed account; Hitpoints a
 function lookupHarness(fetch:typeof globalThis.fetch){
  const code=shell.slice(shell.indexOf('  function refreshWorldLookup(){'),shell.indexOf('  window.atlasLookup=lookup;'));
  const target={innerHTML:''};
- return new Function('fetch','body','lookupCard','put',`let worldLookupName='',worldLookup=null,worldLookupRequest=0,selectedPlugin='world';const showPlugin=()=>{};${code};return{lookup,value:()=>worldLookup};`)(fetch,{querySelector:()=>target},JSON.stringify,(el:{innerHTML:string},html:string)=>el.innerHTML=html);
+ return new Function('fetch','body','lookupCard','put',`let worldLookup=null,worldLookupRequest=0,selectedPlugin='boards',hiscoreName='',hiscoresMode='fleet';const S=null,showPlugin=()=>{},refreshHiscoreAccount=()=>{};${code};return{lookup,value:()=>worldLookup};`)(fetch,{querySelector:()=>target},JSON.stringify,(el:{innerHTML:string},html:string)=>el.innerHTML=html);
 }
 
 test('player lookup shows HTTP errors instead of an unnamed empty player',async()=>{
@@ -578,7 +578,7 @@ test('the layout switcher shows the layout, and one button steps through the lay
  for(const key of ['Shift + arrow','Enter','Space','Double click','Esc'])expect(w.help.innerHTML).toContain('<kbd>'+key+'</kbd>');
  const css=readFileSync(new URL('./client-shell.css',import.meta.url),'utf8');
  expect(css).toContain('@media(max-width:740px){.client-title .focus .wall-tools .wall-layout{display:none}.client-title .focus .wall-tools .wall-cycle{display:grid}');
- expect(shell).toContain("infoRow('Wall','our accounts in the world side by side; click a view to focus it, double click to follow it, ? for the keys')");
+ expect(shell).toContain("infoRow(keys('\\\\'),'our accounts side by side',true)");
 });
 
 test('while the wall is open the page sends no step, roof, prewarm or follow message',()=>{

@@ -29,7 +29,7 @@ test('the current roster overrides cached online status without losing lookup de
 test('an older lookup cannot overwrite a newer request for the same player',async()=>{
  const code=shell.slice(shell.indexOf('  let worldLookup=null'),shell.indexOf('  // Info'))+shell.slice(shell.indexOf('  function refreshWorldLookup(){'),shell.indexOf('  window.atlasLookup=lookup;'));
  const pending:Array<(r:Response)=>void>=[];
- const run=new Function('fetch','body','put',`const selectedPlugin='world',lookupCard=JSON.stringify;${code};return {lookup,value:()=>worldLookup};`)(()=>new Promise<Response>(r=>pending.push(r)),{querySelector:()=>({innerHTML:''})},(el:{innerHTML:string},html:string)=>el.innerHTML=html);
+ const run=new Function('fetch','body','put',`let hiscoreName='',hiscoresMode='fleet';const S=null,selectedPlugin='boards',lookupCard=JSON.stringify,refreshHiscoreAccount=()=>{};${code};return {lookup,value:()=>worldLookup};`)(()=>new Promise<Response>(r=>pending.push(r)),{querySelector:()=>({innerHTML:''})},(el:{innerHTML:string},html:string)=>el.innerHTML=html);
  run.lookup('Worker');run.lookup('Other');run.lookup('Worker');
  pending[2]!(Response.json({name:'Worker',marker:'new'}));await Bun.sleep(0);
  pending[0]!(Response.json({name:'Worker',marker:'old'}));await Bun.sleep(0);
