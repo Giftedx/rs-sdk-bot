@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794311263442-thefullmonty-deeppockets",
+ "account": "Deeppockets",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 10,
+ "claim": "cacb65a7-83fc-4b9f-a2f6-491ea32fdd93",
+ "count": 0,
+ "ok": false,
+ "at": 1794311267102,
+ "detail": "trade claimed"
+}
