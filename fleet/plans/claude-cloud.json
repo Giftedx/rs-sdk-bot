@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794348683207,
+ "at": 1794348800478,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -289,31 +289,6 @@
    ]
   },
   {
-   "account": "Dipstick",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-strength-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
    "account": "KnightRider",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -336,6 +311,19 @@
    "resources": [
     "cow:ardougne-north"
    ]
+  },
+  {
+   "account": "Dipstick",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-feb128c2-aefe-471c-8dd5-a21ae105a79c"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-dipstick-20261110t220927z [task-feb128c2-aefe-471c-8dd5-a21ae105a79c]",
+   "role": "combat"
   }
  ]
 }
