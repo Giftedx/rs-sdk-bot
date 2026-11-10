@@ -1,32 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794346382881,
+ "at": 1794346987587,
  "jobs": [
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-defence-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
   {
    "account": "TheFullMonty",
    "script": "scripts/goldfarm.ts",
@@ -44,56 +19,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "knight:2582,3297"
-   ]
-  },
-  {
-   "account": "UnderMyKilt",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-defence-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "Deeppockets",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-defence-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
    ]
   },
   {
@@ -147,31 +72,6 @@
    ]
   },
   {
-   "account": "Knightstick",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Attack",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Attack to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-attack-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
    "account": "SporranDip",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -179,7 +79,7 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Attack",
+    "TRAIN_SKILL": "Defence",
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
@@ -188,9 +88,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Attack to 99 on the Khazard troopers",
+   "goal": "train Defence to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-attack-99",
+   "template": "army-trooper-defence-99",
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
@@ -307,6 +207,58 @@
    "enabled": false,
    "repeat": false,
    "goal": "claude-cloud-recover-pocketpool-20261110t212320z [task-ed391f97-e511-4ffa-80ee-2f66d3f1bc21]",
+   "role": "combat"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-514931c4-41e5-4461-bf0b-fc52bd454f8a"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-quickhandjob-20261110t212945z [task-514931c4-41e5-4461-bf0b-fc52bd454f8a]",
+   "role": "combat"
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-de069054-91ba-4ea5-b2a4-05544d040790"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-undermykilt-20261110t212945z [task-de069054-91ba-4ea5-b2a4-05544d040790]",
+   "role": "combat"
+  },
+  {
+   "account": "Deeppockets",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-c55af9b9-a292-4aa2-976e-5aa217fb8727"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-deeppockets-20261110t212945z [task-c55af9b9-a292-4aa2-976e-5aa217fb8727]",
+   "role": "combat"
+  },
+  {
+   "account": "Knightstick",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-b72cd660-731f-4aca-94af-7c290d4e6666"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-knightstick-20261110t212945z [task-b72cd660-731f-4aca-94af-7c290d4e6666]",
    "role": "combat"
   }
  ]
