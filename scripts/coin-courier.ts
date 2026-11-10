@@ -42,8 +42,12 @@ export async function prepareCoinSlot(s: Session, check: () => void) {
 // Varrock West bank: the booths stand at x 3186 and the counter cuts the public floor (x 3180-3185) off from
 // x 3186-3190. The meeting pair is open floor 3 tiles west of the booths, clear of the x 3180 tables.
 // A bank without a known pair keeps its bank tile and still needs the reachability check.
+// Ardougne north bank (2619,3332), the PK army's home: the pair is open floor inside the bank. Practice: two bots walked
+// there from the goldfarm knights and each opened the bank from its tile.
 export function meetingTiles(bank: { x: number; z: number }): [Tile, Tile] | null {
-    return bank.x === 3185 && bank.z === 3436 ? [{ x: 3183, z: 3440, level: 0 }, { x: 3182, z: 3440, level: 0 }] : null;
+    if (bank.x === 3185 && bank.z === 3436) return [{ x: 3183, z: 3440, level: 0 }, { x: 3182, z: 3440, level: 0 }];
+    if (bank.x === 2619 && bank.z === 3332) return [{ x: 2618, z: 3333, level: 0 }, { x: 2617, z: 3333, level: 0 }];
+    return null;
 }
 
 export function coinTradeObservation(s: Session, partnerName: string) {

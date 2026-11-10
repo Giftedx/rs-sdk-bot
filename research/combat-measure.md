@@ -132,6 +132,20 @@ Ranged it adds is not needed at that point.
 - **Gap.** Practice only. The rate above Ranged 66 is not measured, and better bows and arrows (willow to yew,
   mithril to rune) are not in the army's hands. At the cap a trooper still fighting holds the retreat about 100 ticks.
 
+## Sharing stock between army accounts
+
+- **Claim.** The fourteen claude-cloud accounts hold what the others lack (`fleet/snapshots/` on `fleet-data`):
+  TheFullMonty (Magic 99) a staff of fire and 500 fire, 374 mind and 757 air runes; TrouserSnake and UnderMyKilt about
+  30,000 feathers and about 900 nature runes beyond their own casts; Fingerblastr, Deeppockets and Fatstack 6.1M-8.4M coins
+  each. Every adopted account banks a bronze sword, a wooden shield, a shortbow, 25 air and 15 mind runes.
+- **Conditions.** A transfer is a fleet order (`scripts/fleet-order.ts`, run by `scripts/fleet-trade.ts`). Its default
+  meeting pair is Varrock West, a ferry round trip for an Ardougne account. `MEET=2619,3332` meets at the Ardougne north
+  bank instead (`scripts/coin-courier.ts` `meetingTiles`: tiles 2618,3333 and 2617,3333).
+- **Evidence.** Practice: two bots walked from the goldfarm knights to that pair, and each opened the bank from its
+  tile (`.practice/meet/` in the Claude cloud container). Unit: `scripts/fleet-order.test.ts`.
+- **Gap.** `fleet-trade.ts` refuses a local server, so no trade ran at this pair on practice; the exchange itself is the
+  one proved live at Varrock West.
+
 ## Fresh accounts: cows from Hitpoints 10, Magic from 1
 
 Ten Claude-cloud accounts hold Thieving 99 and 0.5M-8.4M coins; seven of them have every combat skill at 1 and
