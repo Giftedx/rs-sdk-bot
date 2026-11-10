@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794342153255,
+ "at": 1794342156746,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -316,7 +316,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-5e195a1f-a431-4a6a-9b10-d721ccb41cca"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "claude-cloud-recover-dipstick-20261110t201751z [task-5e195a1f-a431-4a6a-9b10-d721ccb41cca]",
    "role": "combat"
