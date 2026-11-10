@@ -1,31 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794283996461,
+ "at": 1794284599084,
  "jobs": [
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Attack",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Attack to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-attack-45",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "cow:ardougne-north"
-   ]
-  },
   {
    "account": "TrouserSnake",
    "script": "scripts/goldfarm.ts",
@@ -63,7 +39,7 @@
    ]
   },
   {
-   "account": "UnderMyKilt",
+   "account": "Quickhandjob",
    "script": "scripts/gather-combat.ts",
    "args": [
     "3000",
@@ -81,6 +57,30 @@
    "goal": "train Defence to 45 on the Ardougne cows",
    "role": "combat",
    "template": "army-cow-defence-45",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 60 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-60",
    "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
