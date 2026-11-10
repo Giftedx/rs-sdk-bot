@@ -135,7 +135,7 @@
   const rankTip=rank?'Overall rank'+(rank.delta?(rank.delta>0?', up ':', down ')+nf(Math.abs(rank.delta))+(rank.since?' in '+age(rank.since):''):''):'';
   let more='';
   if(open){
-   const place=b.inWorld&&b.pos?String(window.atlasPlaceOf?.(b.pos.x,b.pos.z)||''):'',seen=b.lastSeen||b.at,last=(S?.results||[]).filter(r=>r.name===b.name&&!r.practice).sort((x,y)=>y.at-x.at)[0];
+   const near=b.inWorld&&b.pos?String(window.atlasPlaceNear?.(b.pos.x,b.pos.z)||''):'',place=!near?'':/^(north|south|east|west) of /.test(near)?near:'near '+near,seen=b.lastSeen||b.at,last=(S?.results||[]).filter(r=>r.name===b.name&&!r.practice).sort((x,y)=>y.at-x.at)[0];
    const facts=[b.combat!=null?'Combat '+b.combat:'',place,!b.inWorld&&seen?'seen '+age(seen)+' ago':''].filter(Boolean).map(E).join(' · ');
    const link=(op,id,label)=>'<button class="fl-link" data-op="'+op+'" data-value="'+E(b.name)+'" title="'+label+'" aria-label="'+label+'">'+(window.atlasRailIcon?.(id)||label)+'</button>';
    more='<div class="fl-more">'+(facts?'<span>'+facts+'</span>':'')+
