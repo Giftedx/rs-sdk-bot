@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794310183572,
+ "at": 1794310239084,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -279,25 +279,6 @@
    ]
   },
   {
-   "account": "Billionaire",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "local",
-   "resources": [
-    "knight:2669,3298"
-   ]
-  },
-  {
    "account": "Hocuspokeus",
    "script": "scripts/quest-cook-job.ts",
    "args": [
@@ -482,6 +463,25 @@
    "repeat": true,
    "goal": "PK hunts of 15 minutes at Wilderness 20 or less, with GE and shop rune restock",
    "role": "pk"
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "local",
+   "resources": [
+    "knight:2669,3298"
+   ]
   }
  ]
 }
