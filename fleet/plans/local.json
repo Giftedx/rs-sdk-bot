@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794319939537,
+ "at": 1794320021940,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -51,6 +51,22 @@
    "role": "supply"
   },
   {
+   "account": "Magicwanda",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/goldfarm.ts KNIGHT_SPOT=2669,3298"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "RUN": "2"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Thieving 55, then coins from Ardougne knights",
+   "role": "supply"
+  },
+  {
    "account": "Shaftmaker",
    "script": "scripts/pk-live/live-pilot.ts",
    "args": [
@@ -62,6 +78,22 @@
    "repeat": true,
    "goal": "PK hunts of 10 minutes at Wilderness 20 or less, with GE and shop rune restock",
    "role": "pk"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/walk-to.ts 3253 3420",
+    "scripts/train-chickens.ts TRAIN_BANK=varrock TRAIN_SKILL=Strength TARGET_LEVEL=30 CAP=3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Strength 30 on chickens so it can hit hard enough to PK",
+   "role": "pk-trainee"
   },
   {
    "account": "OreElse",
@@ -471,60 +503,6 @@
    "repeat": false,
    "goal": "run-ge-pocketrocket-rune-arrows533 [task-a92fe9c7-4fbb-4d38-8279-cb797dfe7be6]",
    "role": "supply"
-  },
-  {
-   "account": "Magicwanda",
-   "script": "scripts/coin-courier.ts",
-   "args": [
-    "240000"
-   ],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-d7f4b22d-35a5-4cc9-82d3-5acde5286ed6"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-coin-magicwanda-mightyrod-240k-r2 [task-d7f4b22d-35a5-4cc9-82d3-5acde5286ed6]",
-   "role": "supply"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/handoff-inputs.ts",
-   "args": [
-    "2500:Air rune",
-    "--bank-x=3253",
-    "--bank-z=3420",
-    "--approach-ms=600000",
-    "--request-ms=60000",
-    "--timeout-ms=600000",
-    "--grace-ms=45000"
-   ],
-   "env": {
-    "HANDOFF_ORDER": "mightyrod-magic99-air2500-r2",
-    "CAP": "3000",
-    "COORDINATOR_RUN_ID": "task-e3e669e3-a2a7-4c0d-b21c-66b4c4a4cc5d"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-handoff-shaftsinker-mightyrod-air2500-r2 [task-e3e669e3-a2a7-4c0d-b21c-66b4c4a4cc5d]",
-   "role": "pk-trainee"
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/magic-order.ts",
-   "args": [],
-   "env": {
-    "TARGET_LEVEL": "99",
-    "MAX_CASTS": "284",
-    "CAP": "16000",
-    "RUNE_BUDGET": "0",
-    "CASH_RESERVE": "0",
-    "COORDINATOR_RUN_ID": "task-2a0bb512-b80b-4bc7-b9b5-8564c39f0245"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-magic-mightyrod-camelot-99-handoff [task-2a0bb512-b80b-4bc7-b9b5-8564c39f0245]",
-   "role": "helper"
   }
  ]
 }
