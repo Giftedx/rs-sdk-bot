@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794317121432,
+ "at": 1794317186738,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -130,25 +130,6 @@
    "role": "pk-trainee"
   },
   {
-   "account": "Masterbaiter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=20 EXPECTED_OWNED=15 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=masterbaiter-kit0-558-15to35 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=10 EXPECTED_OWNED=25 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=masterbaiter-kit0-556-25to35 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 20 Mind rune, 10 Air rune on the Grand Exchange to train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-strike-magic-21",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "mmsmk1232",
    "script": "scripts/chain.ts",
    "args": [
@@ -168,23 +149,23 @@
    "resources": []
   },
   {
-   "account": "NabTheKnob",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=10 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=nabtheknob-kit0-385-0to10 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=882 QUANTITY=975 EXPECTED_OWNED=25 LIMIT_PRICE=20 CASH_RESERVE=1000 ORDER_KEY=nabtheknob-kit0-882-25to1000 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
+   "account": "Masterbaiter",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy 10 Shark, 975 Bronze arrow on the Grand Exchange to train Ranged to 99 on the Khazard troopers",
-   "role": "supply",
-   "template": "kit-buy:army-trooper-ranged-99",
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "knight:2582,3297"
+   ]
   },
   {
    "account": "mmtha0205",
@@ -231,6 +212,25 @@
    ]
   },
   {
+   "account": "NabTheKnob",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "local",
+   "resources": [
+    "knight:2669,3298"
+   ]
+  },
+  {
    "account": "Swordinhand",
    "script": "scripts/gather-feathers.ts",
    "args": [],
@@ -248,25 +248,6 @@
    "autopilot": "local",
    "resources": [
     "pen:3197,3353"
-   ]
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "local",
-   "resources": [
-    "knight:2669,3298"
    ]
   },
   {
@@ -514,23 +495,19 @@
   },
   {
    "account": "Mightyrod",
-   "script": "scripts/buy-owned-ge-item.ts",
+   "script": "scripts/magic-order.ts",
    "args": [],
    "env": {
-    "ITEM_ID": "563",
-    "QUANTITY": "495",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "1140",
-    "CASH_RESERVE": "5000",
-    "ORDER_KEY": "mightyrod-law495-magic93",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "900000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-9ae39bcd-6c53-463e-8caf-1e949a918fb6"
+    "TARGET_LEVEL": "93",
+    "MAX_CASTS": "520",
+    "CAP": "12000",
+    "RUNE_BUDGET": "12000",
+    "CASH_RESERVE": "0",
+    "COORDINATOR_RUN_ID": "task-efc464e4-2a8f-4727-bbd5-ac960db5f26a"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "run-ge-mightyrod-law495-magic93 [task-9ae39bcd-6c53-463e-8caf-1e949a918fb6]",
+   "goal": "run-magic-mightyrod-camelot-93 [task-efc464e4-2a8f-4727-bbd5-ac960db5f26a]",
    "role": "helper"
   }
  ]
