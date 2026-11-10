@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794318105450-bigchopper-undermykilt-bones",
+ "account": "UnderMyKilt",
+ "partner": "Bigchopper",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 22,
+ "claim": "938b385f-5713-49d7-82f7-97e051ae4e6d",
+ "count": 0,
+ "ok": false,
+ "at": 1794318110181,
+ "detail": "trade claimed"
+}
