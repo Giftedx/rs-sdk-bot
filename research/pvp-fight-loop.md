@@ -6,6 +6,16 @@ in-process client's player entities (`webclient/src/dash3d/ClientPlayer.ts`, `Cl
 (`sendInteractPlayer`, `sendSpellOnPlayer`, `sendTogglePrayer`, `sendUseItem`) and read head icons, worn items and the health bar from
 `Session.client`, which leaves the SDK state and the swarm's launch release unchanged -> `scripts/pk.test.ts` and the duels below.
 
+## Spar and ladder
+
+`scripts/pk-spar.ts` puts the fight loop on both sides: two own accounts fight each other, each with a named profile
+(a set of fight options; `PROFILES`). The bench case `pvp:spar` stages a mirror: both sides get the duel conditions
+below, with freeze runes and full special energy. The score is for side A: 100 for a kill, -100 for a death, plus the
+damage margin held inside 99 each way. `scripts/measure/pk-spar-ladder.ts <challenger> [champion]` runs the case for
+each seed with the challenger on each side and prints wins, losses, draws and the mean score; a profile that wins the
+ladder is the next champion. Gap: no spar result is recorded here; the spar stands on open ground, so movement, line
+of sight, escapes and a second attacker are not measured.
+
 ## Server rules the loop follows
 
 - Protect prayers cut a player's max hit by 40%, not 100% (`pvp_melee.rs2:32`, `pvp_ranged.rs2:38`, `pvp_magic.rs2:182`).

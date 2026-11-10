@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
 import { componentId } from '../packages/core/src/logout';
+import { tickWaits } from '../packages/core/src/tick-stream';
 import type { NearbyPlayer } from '../vendor/rs-sdk/sdk/types';
 
 export const ITEMS = {
@@ -201,11 +202,16 @@ export function dangerReason(o: { hp: number; maxHp: number; food: boolean; pray
 }
 
 // The next game tick, or false once the session has ended: a dropped session publishes no more ticks, so a plain
-// onTick wait would hang and a loop around it would spin on failed actions.
+// onTick wait would hang and a loop around it would spin on failed actions. The wait counts as an open tick stream,
+// so a lockstep practice engine runs its next tick at once (inprocess.ts acknowledgeTick) and does not hold each tick
+// for the busy limit.
 export function nextTick(s: Pick<Session, 'onTick' | 'ended'>): Promise<boolean> {
     return new Promise(resolve => {
-        const off = s.onTick(() => { off(); resolve(true); });
-        void s.ended.then(() => { off(); resolve(false); });
+        let open = true;
+        const end = (ticked: boolean) => { if (!open) return; open = false; tickWaits.active--; off(); resolve(ticked); };
+        tickWaits.active++;
+        const off = s.onTick(() => end(true));
+        void s.ended.then(() => end(false));
     });
 }
 

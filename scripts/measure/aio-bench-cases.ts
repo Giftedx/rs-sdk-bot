@@ -58,6 +58,18 @@ const CHICKEN_FIXTURE: SaveConfig = {
   bank: [{id: 1351, count: 1}],
 };
 
+// One side of the mirror spar: 99 combat stats, Lost City done (dragon weapons wield, levelrequire.rs2:156), special
+// energy 1000 (varp 300), rune full helm, cape of legends, glory, rune platebody, platelegs, ranger boots, dragon
+// dagger (p), rune kiteshield and 300 rune arrows worn; staff, bow, runes, 2 prayer potions and 18 sharks carried.
+export const sparFixture = (x: number): SaveConfig => ({
+  position: {x, z: 3555, level: 0},
+  skills: {Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99, Prayer: 99, Hitpoints: 99},
+  varps: {147: 6, 300: 1000},
+  equipment: [[1163, 0], [1052, 1], [1712, 2], [1231, 3], [1127, 4], [1201, 5], [1079, 7], [2577, 10], [892, 13]].map(([id, slot]) => ({id: id!, count: id === 892 ? 300 : 1, slot: slot!})),
+  inventory: [{id: 1401, count: 1}, {id: 861, count: 1}, {id: 556, count: 500}, {id: 565, count: 100}, {id: 557, count: 200}, {id: 555, count: 200}, {id: 561, count: 100},
+    {id: 2434, count: 1}, {id: 2434, count: 1}, ...Array.from({length: 18}, () => ({id: 385, count: 1}))],
+});
+
 const skiller = (skill: string, method: string, preset: string, args: string[] = [], extra: Partial<BenchCase> = {}): BenchCase =>
   ({key: `skiller:${skill}:${method}`, script: 'scripts/aio-skiller.ts', preset, scriptArgs: [skill, method, ...args], pass: ok, ...extra});
 
@@ -223,6 +235,11 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {position: {x: 3222, z: 3218, level: 0}, skills: {Hitpoints: 99}, varps: {172: 1}},
     companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3223, z: 3218, level: 0}, skills: {Hitpoints: 99}, varps: {172: 1}}}],
     jobFiles: {'.practice/aio-bench/jobs/{bot}-pvp-plan.json': {cap: 60, hpFloor: 10, steps: [{kind: 'tank'}]}}},
+  // Mirror spar at Wilderness level 5 (scripts/measure/pk-duel.ts start state): both sides maxed, in rune armour, with the
+  // tribrid switches, Fire Wave and freeze runes, 2 prayer potions, 18 sharks and full special energy. SPAR_A and SPAR_B
+  // (--set) choose the profile of each side.
+  {key: 'pvp:spar', script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900'], pass: ok,
+    presetConfig: sparFixture(3094), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3096)}]},
   {key: 'quester:mode:order', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['order', 'cook', '--save={save}', '--timeout-ms=300000'], pass: s => ok(s) && /QUEST_ORDER_RESULT \{"ok":true/.test(s),
     presetConfig: {position: {x: 3208, z: 3214, level: 0}, inventory: [{id: 1944, count: 1}, {id: 1927, count: 1}, {id: 1933, count: 1}, {id: 1351, count: 1}, {id: 995, count: 37}], bank: [{id: 1351, count: 2}, {id: 995, count: 100}, {id: 1511, count: 8}], equipment: [{id: 1205, count: 1, slot: 3}]}},
   {key: 'quester:mode:items', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['items', 'cook', '--save={save}', 'CAP=600'], pass: s => ok(s) && /QUEST_ITEMS_ORDER_RESULT \{"ok":true/.test(s),
