@@ -18,7 +18,7 @@ Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). 
 
 ## Routes
 
-**Claim:** every catalog route is in one of three groups: 180 of 215 have a case that passes at seed 7, 33 cannot run as one case and name the cause, and 2 have a case that fails with a recorded error (`waterfall`, `mm`). **Conditions:** lockstep, a new engine for each case; the start state of each case comes from the worker's entry checks, a proof or the map files. **Evidence:** `bun run bench --coverage`; `.practice/aio-bench/baseline-seed7.json`; the 105 non-quest cases run in 271 s on six engines. **Gap:** a case proves one small job from one start state, not the route at every level or place.
+**Claim:** every catalog route is in one of three groups: 181 of 216 have a case that passes at seed 7, 33 cannot run as one case and name the cause, and 2 have a case that fails with a recorded error (`waterfall`, `mm`). **Conditions:** lockstep, a new engine for each case; the start state of each case comes from the worker's entry checks, a proof or the map files. **Evidence:** `bun run bench --coverage`; `.practice/aio-bench/baseline-seed7.json`; the 105 non-quest cases run in 271 s on six engines. **Gap:** a case proves one small job from one start state, not the route at every level or place.
 
 **Claim:** `viking`, `squire` and `zanaris` pass at every seed tried. **Conditions:** seeds 7 to 10, a new engine for each case. **Evidence:** `viking` passes at 7, 8 and 9 (3001, 2727, 2787 ticks): the retreat rule fired in Koschei's fight, which ends at 0 hp by design, and `planLowHp` in `quest-lib` now switches the rule off for that fight. `squire` passes at four seeds with a wider bound on the cupboard search, and `zanaris` with a wider bound on the axe hunt.
 
@@ -55,3 +55,11 @@ Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). 
 ## A shade attack locks out other shades for 100 ticks
 
 **Claim:** a shadow that attacks sets bit 4 of `%morttonmulti` on the player, and the hunt rule of every shadow skips a player with that bit set until `shadeattack_reset` clears it 100 ticks later. A shadow by the entrance door of the Fiyr lair can set it while the bot walks in, so no shadow in the hunt room attacks for up to 100 ticks. The worker waits `SHADE_INCOMING_TICKS` (125) for its first shade. **Conditions:** lockstep, seed 7, `fighter:shade`. **Evidence:** `.practice/aio-bench/trace/fighter_shade.actions` has `hunt npc=shadeshadow_level5 ... candidate` at tick 277 at the door and `skip=var 340&16:536870928` on each later tick in the hunt room; `vendor/rs-sdk/server/content/scripts/minigames/game_mortton/scripts/mortton_shades.rs2`; the case passes in 744 ticks. **Gap:** one seed.
+
+## The knife reset on a fresh woodcutter
+
+**Claim:** from a fresh account to Woodcutting 45, the knife reset takes 6.9% fewer ticks than plain chopping: 984, 880 and 716 ticks against 1064, 948 and 758 at seeds 7, 8 and 9 (2580 against 2770). **Conditions:** lockstep, `skiller:woodcutting:fresh45`, preset `wc_fresh`, XP rate 25; plain chopping is the same case with `--set WC_KNIFE=0`. **Evidence:** `bun run bench '^skiller:woodcutting:fresh45$' --all --seeds 7,8,9`, then the same with `--set WC_KNIFE=0`. **Gap:** the run includes the walk, the pickpocket for coins and the axe purchase, so the saving on the chop alone is larger than 6.9%.
+
+## XP for each 1,000 ticks
+
+**Claim:** each run prints `xpGain`, the XP over all skills that the account gained, on its `LEDGER` line, and the bench table shows it for each 1,000 ticks. Every case has this speed number with no pattern for each case. **Conditions:** XP rate 25 on practice; a case that ends after one unit of work has a rate that is mostly its walk. **Evidence:** `packages/core/src/ledger.ts`, `scripts/measure/aio-practice-bench.ts`. **Gap:** a route that makes gold or supplies and no XP shows 0.

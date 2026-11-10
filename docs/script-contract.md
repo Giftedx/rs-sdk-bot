@@ -110,7 +110,7 @@ Bind results to source, server, tick speed and starting state. Speed claims need
 
 ### The AIO bench
 
-`bun run bench [pattern]` measures AIO routes on practice and prints one table: the ticks of each case, the stored baseline, the change, and the rival's stated ticks where one is known.
+`bun run bench [pattern]` measures AIO routes on practice and prints one table: the ticks of each case, the stored baseline, the change, the XP over all skills for each 1,000 ticks, and the rival's stated ticks where one is known.
 
 - **Cases.** `scripts/measure/aio-bench-cases.ts` holds one case for each AIO catalog route that has one: the dispatcher, its arguments and the start preset. A case marked `known` cannot pass and names the cause; a default run skips it and coverage does not count it. `bun run bench --coverage` lists the routes with no case.
 - **Engine.** A run uses the lockstep engine ([patches/rs-sdk.md](../patches/rs-sdk.md) item 10) with one seed and a new engine for each case. With these conditions a case gives the same tick count on each run, so one run for each condition is a comparison. The three-run rule above applies to a wall-clock engine (`--wall-clock`; `BENCH_TICK_MS` sets its tick length, 150 by default and 400 for the live length).
