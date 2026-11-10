@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794327140979,
+ "at": 1794329843249,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -48,22 +48,6 @@
    "standing": true,
    "repeat": false,
    "goal": "rune arrows (826 short) from headless arrows and rune arrowtips",
-   "role": "supply"
-  },
-  {
-   "account": "Magicwanda",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/goldfarm.ts KNIGHT_SPOT=2669,3298"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "RUN": "2"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "Thieving 55, then coins from Ardougne knights",
    "role": "supply"
   },
   {
@@ -541,6 +525,23 @@
    "enabled": false,
    "repeat": false,
    "goal": "run-ge-pocketrocket-rune-arrows533 [task-a92fe9c7-4fbb-4d38-8279-cb797dfe7be6]",
+   "role": "supply"
+  },
+  {
+   "account": "Magicwanda",
+   "script": "scripts/blood-chest.ts",
+   "args": [
+    "24000"
+   ],
+   "env": {
+    "MAX_LOOTS": "100",
+    "CAP": "24000",
+    "BANK_EVERY": "5",
+    "COORDINATOR_RUN_ID": "task-a37fc459-d12a-47f3-a0fd-90fdea60f7b4"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-blood-magicwanda-loot100-r2 [task-a37fc459-d12a-47f3-a0fd-90fdea60f7b4]",
    "role": "supply"
   }
  ]
