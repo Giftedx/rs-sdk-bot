@@ -6,6 +6,7 @@
 // legacy gatherer. GIANT_KILLS overrides the level goal with a finite credited kill count. TARGET=trooper trains the same
 // way on the Khazard troopers of the Gnome battlefield from the Ardougne north bank (TROOPER_SITE). TRAIN_SKILL=Ranged
 // wields the best owned bow and arrows for the Ranged level on rapid, with GIANT_AMMO arrows in the quiver (default 500).
+// GIANT_BURY=1 buries the bones each trooper kill leaves, on the field.
 import { openBot, finish, countItems, getWorld, accountOf } from '../packages/core/src/bot';
 import {startQuestSustain} from './quest-sustain';
 import {ownedLoadout,fireWeaponSlot} from '../packages/planner/src/owned-loadout';
@@ -388,7 +389,7 @@ export function giantKillLimit(value?:string|number){
     if(!Number.isSafeInteger(maximum)||maximum<1)throw new Error('giant GIANT_KILLS must be a positive safe integer');
     return maximum;
 }
-const COINS=995;
+const COINS=995,BONES=526;
 // The free target one account takes on open ground it shares. Accounts that stand together would all take the
 // nearest free trooper and split every kill (practice, six at once: a median 45 XP per tick an account against 62
 // alone). In company each account ranks the free targets by distance plus its own fixed offset of 0-7 tiles, so they
@@ -401,7 +402,7 @@ export function roamTarget<T extends {index:number;distance:number}>(account:str
 // A target that fights another player: in combat and facing a player slot that is not this account's.
 export const anothersFight=(npc:{inCombat?:boolean;targetIndex?:number}|undefined,selfSlot:number|undefined)=>
     !!npc?.inCombat&&selfSlot!==undefined&&(npc.targetIndex??-1)>=32768&&npc.targetIndex!==32768+selfSlot;
-export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targetLevel?:number;maximum?:number;food?:number;ammo?:number;eatAt?:number;noProgress?:number;stop?:()=>boolean;walk?:(x:number,z:number,tol:number,signal?:AbortSignal)=>Promise<boolean>;site?:CombatSite}){
+export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targetLevel?:number;maximum?:number;food?:number;ammo?:number;bury?:boolean;eatAt?:number;noProgress?:number;stop?:()=>boolean;walk?:(x:number,z:number,tol:number,signal?:AbortSignal)=>Promise<boolean>;site?:CombatSite}){
     const site=o.site??GIANT_SITE,label=site.label;
     const maximum=giantKillLimit(o.maximum);
     const training=giantTraining(o.trainSkill,o.targetLevel);
@@ -411,6 +412,7 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
     // A site credited by XP alone (the troopers) shares its targets with gnomes and other players: it lets go of a lost
     // target and walks back to the spot when none is in view. The giants' big-bone credit keeps the strict wait.
     const roam=site.creditDrop===undefined;
+    const bury=roam&&!!o.bury,prayerXp=()=>s.sdk.getSkillXp('Prayer')??0,prayerStart=prayerXp();let buried=0;
     if(ranged&&(!Number.isSafeInteger(ammoCarry)||ammoCarry<1||ammoCarry>100000))throw new Error('giant GIANT_AMMO must be1..100000');
     const inv=()=>s.sdk.getInventory(),state=()=>s.sdk.getState();
     const count=(items:readonly {id:number;count:number}[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
@@ -488,7 +490,7 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
         if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>!!state()?.bank?.isOpen&&(s.bankObservation?.()?.generation??0)>gen,{timeoutTicks:20}))throw new Error(`no ${label} progress: bank readiness unknown`);bankTrips++;};
     const bankCount=(id:number)=>count(s.bankObservation?.()?.items??[],id);
     // Coins never ride to the field: a death there loses the pack (live: TheFullMonty died on the Gnome battlefield).
-    const deposit=async()=>{for(const id of [...site.drops,COINS]){const item=inv().find(i=>i.id===id);if(!item)continue;const before=bankCount(id),amount=held(id);
+    const deposit=async()=>{for(const id of [...site.drops,COINS,...bury?[BONES]:[]]){const item=inv().find(i=>i.id===id);if(!item)continue;const before=bankCount(id),amount=held(id);
         if(!(await s.bot.depositItem(item,-1)).success||!await waitUntil(s,()=>held(id)===0&&bankCount(id)===before+amount,{timeoutTicks:20}))throw new Error(`no ${label} progress: deposit failed`);}};
     const restock=async()=>{
         const id=site.foods.find(id=>bankCount(id)>0)??site.foods[0]!;
@@ -548,6 +550,20 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
         lastProgress=s.tick(); // Transit is bounded by CAP, not the target-wait window.
         const retry=new Map<number,number>();
         const selfSlot=(s as {client?:{selfSlot?:number}}).client?.selfSlot;
+        // Troopers leave bones on every kill (npc_combat.param death_drop). With GIANT_BURY the trainer takes the bones
+        // its own kill left on the death tile and buries them. Each step is bounded and a miss skips the bone: the
+        // fight never waits on it, and a bone left in the pack is banked on the next trip.
+        const buryOwn=async(x:number,z:number,fresh:number)=>{
+            const item=fresh>0?state()?.groundItems.find(i=>i.id===BONES&&i.x===x&&i.z===z):undefined;
+            if(!item||inv().length>=28)return;
+            const before=held(BONES);
+            if(!(await s.bot.pickupItem(item)).success||!await waitUntil(s,()=>held(BONES)>before,{timeoutTicks:8}))return;
+            const bone=inv().find(i=>i.id===BONES),option=bone?.optionsWithIndex?.find(op=>/^bury$/i.test(op.text));
+            if(!bone||!option)return;
+            const xp=prayerXp();
+            if((await s.sdk.sendUseItem(bone.slot,option.opIndex)).success&&await waitUntil(s,()=>prayerXp()>xp,{timeoutTicks:6}))buried++;
+            if(state()?.dialog?.isOpen)await s.bot.dismissBlockingUI();
+        };
         while(!goalReached()&&!over()){
             if(hp()<=eatAt&&!await eat()){if(bankFood<1){stop='low-hp';throw new Error(`no ${label} progress: low HP and no owned shark`);}await trip();continue;}
             if(ranged&&quiver()<1){if(ammoBank<1){stop='ammo';break;}await trip();continue;}
@@ -586,6 +602,7 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
             }
             if(over())break;
             if(dry||released)continue;
+            if(bury)await buryOwn(x,z,fresh(BONES));
             const roots=fresh(GIANT.limpwurt)>0;
             for(const id of site.drops.filter(id=>fresh(id)>0)){
                 const amount=fresh(id),item=state()?.groundItems.find(i=>i.id===id&&i.x===x&&i.z===z),before=held(id);
@@ -603,13 +620,14 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
     const bankedOf=(id:number)=>bankCount(id)-(baseline[id]??bankCount(id));
     const bankedAll=(site.creditDrop===undefined||bankedOf(site.creditDrop)===creditedKills)&&(site!==GIANT_SITE||banked.limpwurt===limpwurt)&&site.drops.every(id=>bankedOf(id)===(picked[id]??0));
     const finalAssets=assetTotals();
-    const preserved=initialAssets!==undefined&&[...new Set([...initialAssets.keys(),...finalAssets.keys()])].every(id=>site.drops.includes(id)||site.foods.includes(id)||id===ammoId||(finalAssets.get(id)??0)===(initialAssets!.get(id)??0))&&site.drops.every(id=>held(id)===0);
+    const preserved=initialAssets!==undefined&&[...new Set([...initialAssets.keys(),...finalAssets.keys()])].every(id=>site.drops.includes(id)||site.foods.includes(id)||id===ammoId||bury&&id===BONES||(finalAssets.get(id)??0)===(initialAssets!.get(id)??0))&&site.drops.every(id=>held(id)===0);
     // Owned sharks in pack and bank change only by observed eating.
     const finalFood=ownedFood(),foodAccounted=initialFood!==undefined&&finalFood===initialFood-eaten;
     const targetMet=goalReached()&&bankedAll;
     const partial=!targetMet&&creditedKills>0&&(stop==='cap'||stop==='ammo')&&bankedAll&&!failure&&!died&&!ended&&preserved&&foodAccounted;
     return {ok:!failure&&!died&&!ended&&(targetMet||partial)&&preserved&&foodAccounted,creditedKills,banked,bankedHerbs,limpwurt,trainSkill:training.skill,targetLevel:training.targetLevel,
         ...ammoId===undefined?{}:{ammoId,ammoUsed:ammoStart-bankCount(ammoId)-count(allKit(),ammoId)},
+        ...bury?{buried,prayerXp:prayerXp()-prayerStart}:{},
         style,startLevel,finalLevel:level(),selectedXp:selectedXp()-initialSelectedXp,eatAt,eaten,initialFood:initialFood??null,finalFood:finalFood??null,foodAccounted,bankTrips,hpMin,died,
         lifeId:state()?.player?.lifeId,respawns:state()?.player?.respawnCount,ticks:s.tick()-start,preserved,targetMet,partial,stop,failure:failure||(!targetMet&&!partial?`no ${label} progress: bounded target unmet`:'-')};
 }
@@ -679,7 +697,7 @@ const cowStop=cowStopControl(TARGET_KEY,()=>existsSync(resolve(import.meta.dir,'
 const ownedSession=await openBot(botName,cowStop.options).catch(e=>finish([],false,`login: ${String(e)}`));
 if(giantTrained){
 
-    try{const r=await runGiants(ownedSession,{cap:CAP,site:TARGET_KEY==='trooper'?TROOPER_SITE:undefined,trainSkill:giantSkill,targetLevel:giantLevel,maximum:giantMaximum,food:process.env.GIANT_FOOD===undefined?undefined:Number(process.env.GIANT_FOOD),ammo:process.env.GIANT_AMMO===undefined?undefined:Number(process.env.GIANT_AMMO),stop:cowStop.stop});console.log(`GIANT_RESULT ${JSON.stringify(r)}`);await finish([ownedSession],r.ok&&cowStop.reason()!=='died',`mode=giant ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
+    try{const r=await runGiants(ownedSession,{cap:CAP,site:TARGET_KEY==='trooper'?TROOPER_SITE:undefined,trainSkill:giantSkill,targetLevel:giantLevel,maximum:giantMaximum,food:process.env.GIANT_FOOD===undefined?undefined:Number(process.env.GIANT_FOOD),ammo:process.env.GIANT_AMMO===undefined?undefined:Number(process.env.GIANT_AMMO),bury:process.env.GIANT_BURY==='1',stop:cowStop.stop});console.log(`GIANT_RESULT ${JSON.stringify(r)}`);await finish([ownedSession],r.ok&&cowStop.reason()!=='died',`mode=giant ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
     catch(e){await finish([ownedSession],false,String(e));}
 }
 const dungeonTravel=(TARGET_KEY==='druid'||dungeonGiant)&&!alch?.route?createEdgevilleTravel(ownedSession):undefined;
