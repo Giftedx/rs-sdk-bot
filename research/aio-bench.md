@@ -18,7 +18,7 @@ Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). 
 
 ## Routes
 
-**Claim:** 109 bench cases pass at seed 7; they cover 107 of 221 catalog routes. **Evidence:** `.practice/aio-bench/baseline-seed7.json`; `bun run bench --coverage` lists the routes with a cause and the routes with no case.
+**Claim:** every catalog route is in one of three groups: 169 of 215 have a case that passes at seed 7, 33 cannot run as one case and name the cause, and 13 have a case that fails with a recorded error. **Conditions:** lockstep, a new engine for each case; the start state of each case comes from the worker's entry checks, a proof or the map files. **Evidence:** `bun run bench --coverage`; `.practice/aio-bench/baseline-seed7.json`; the 105 non-quest cases run in 271 s on six engines. **Gap:** a case proves one small job from one start state, not the route at every level or place.
 
 **Claim:** `viking`, `squire` and `zanaris` pass at every seed tried. **Conditions:** seeds 7 to 10, a new engine for each case. **Evidence:** `viking` passes at 7, 8 and 9 (3001, 2727, 2787 ticks): the retreat rule fired in Koschei's fight, which ends at 0 hp by design, and `planLowHp` in `quest-lib` now switches the rule off for that fight. `squire` passes at four seeds with a wider bound on the cupboard search, and `zanaris` with a wider bound on the axe hunt.
 
