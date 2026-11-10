@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794322639071-ballspinner-sporrandip-feather",
  "account": "SporranDip",
  "partner": "Ballspinner",
@@ -12,6 +12,15 @@
  "claim": "644badbf-bf34-43f4-89c2-a6f84f1b05c9",
  "count": 0,
  "ok": false,
- "at": 1794322643259,
- "detail": "trade claimed"
+ "at": 1794325040203,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794322643262-0000003562-0000000001",
+  "at": 1794325040199,
+  "sha256": "51d37c91b87188beb3e9efa7b2b2f1e8dee52987a38677621554a0f18c5e7239"
+ }
 }
