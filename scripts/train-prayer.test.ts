@@ -89,3 +89,16 @@ test('BONE_ID=532 plans owned big bones at375XP and banks at Varrock West',()=>{
 test('an unknown bone id refuses before any bank work',async()=>{
     const f=fixture({});try{await expect(runPrayer(f.s,{...options,bone:999})).rejects.toThrow('unsupported bone id');expect(f.burials()).toBe(0);}finally{f.dispose();}
 });
+test('BURY_HELD buries the held bones above the reserve and is ok after a level when they run out',async()=>{
+    expect(prayerOptions(['bun','script','any','99'],{BURY_HELD:'1'})).toEqual({target:99,cap:1500,maximum:1000000,reserve:6,held:true});
+    const f=fixture({bones:60,rawXp:196875});
+    try{const r=await runPrayer(f.s,{target:99,cap:5000,maximum:1000000,reserve:6,held:true});
+        expect(r).toMatchObject({ok:true,targetMet:false,buried:54,boneBank:6,heldBones:0,preserved:true,stop:'input-insufficient',failure:'-'});
+        expect(r.gained).toBeGreaterThan(0);}finally{f.dispose();}
+    const g=fixture({bones:60,rawXp:196875});
+    try{expect(await runPrayer(g.s,{target:99,cap:5000,maximum:1000000,reserve:6})).toMatchObject({ok:false,buried:0});}finally{g.dispose();}
+});
+test('the market knights and the cow field walk to the Ardougne north bank; the south bank stays its own entry',()=>{
+    expect(prayerBank({worldX:2654,worldZ:3304,level:0})).toEqual({x:2619,z:3332});
+    expect(prayerBank({worldX:2655,worldZ:3284,level:0})).toEqual({x:2655,z:3283});
+});

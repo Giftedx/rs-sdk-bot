@@ -109,7 +109,8 @@ TrouserSnake and UnderMyKilt hold about 15,000 feathers and 1,500-1,700 bones ea
   at Magic 50, 28 ticks.
 - **Claim.** Burying the held bones from the north bank takes TrouserSnake Prayer 74 -> 84 and UnderMyKilt 76 -> 84
   (112.5 XP per bone). Practice: `scripts/train-prayer.ts` at the north bank, Prayer 74 -> 75, 113 bones in 251 ticks
-  (2.2 ticks per bone with banking), so about 3,700 ticks per account.
+  (2.2 ticks per bone with banking), so about 3,700 ticks per account. With `BURY_HELD=1` from the market knights it
+  walked to the north bank, buried 114 of 120 bones (6 kept) in 282 ticks and ended ok at Prayer 75 when they ran out.
 - **Evidence.** `.practice/magic-alch/` and `.practice/army-prayer/` in the Claude cloud container that ran them.
 - **Gap.** Practice only. The level-up dialog drops a spell sent under it. The trainer clears it between the Low and
   High Alchemy phases. The worker waits 1-2 ticks more per cast than the 5-tick High Alchemy cycle

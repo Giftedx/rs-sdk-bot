@@ -2,7 +2,8 @@
 // bun scripts/alch-train.ts <account> <TARGET_LEVEL> [CAP ticks=5000]. Env: ALCH_ITEM (debugname, default feather).
 // Low Alchemy until Magic 55, then High Alchemy to the target. It walks to the bank from anywhere, banks the pack,
 // takes the nature runes, the fire runes (none with a fire staff, which it wields) and the item, and casts in place.
-// Prints ALCH_RESULT; ok when the target is met, or when the bank's supplies ran out after at least one level.
+// Prints ALCH_RESULT and a RESULT line with level=, gained= and xp=; ok when the target is met, or when the bank's
+// supplies ran out after at least one level. A failure after real casts still reports their XP.
 // Rates: High Alchemy 65 and Low Alchemy 31 base XP (skill_magic/configs/magic_spells.dbrow) at xpRate 25.
 import {openBot,finish} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
@@ -82,28 +83,35 @@ export async function stageAlch(s:Session,o:{target:number;item:number;walk:(x:n
 export async function runAlch(s:Session,o:{target:number;cap:number;item:string;stop?:()=>boolean;walk:(x:number,z:number)=>Promise<boolean>}){
     if(!Number.isSafeInteger(o.target)||o.target<22||o.target>99||!Number.isSafeInteger(o.cap)||o.cap<1||o.cap>100000)throw new Error('alch: invalid target or cap');
     const item=itemMagicRecipe('high-alch',o.item).target,start=s.tick(),level=()=>s.sdk.getSkill('Magic')?.baseLevel??0,xp=()=>s.sdk.getSkillXp('Magic')??0;
-    const staged=await stageAlch(s,{target:o.target,item,walk:o.walk,stop:o.stop});
-    console.log(`ALCH_STAGE ${JSON.stringify(staged)}`);
-    const startLevel=level(),startXp=xp(),casts={'low-alch':0,'high-alch':0};let stop='target';
-    while(level()<o.target){
-        const mode=level()<HIGH_LEVEL?'low-alch':'high-alch',left=o.cap-(s.tick()-start);
-        if(left<1){stop='cap';break;}
-        if(o.stop?.()){stop='stopped';break;}
-        const carried=[...s.sdk.getInventory(),...(s.sdk.getState()?.equipment??[])];
-        const need=alchCasts(xp(),o.target),n=Math.min(mode==='low-alch'?need.low:need.high,castsHeld(mode,carried,item,staged.staff));
-        if(n<1){stop='supplies';break;}
-        const r=await runItemMagic(s,itemMagicRecipe(mode,o.item),{count:n,cap:left,stop:o.stop});
-        casts[mode]+=r.casts;
-        if(!r.ok){stop=r.stop;break;}
-        // The last cast's level-up dialog stays open: a dismiss sent inside the spell's delay is dropped, and the next
-        // spell under the open dialog does nothing (practice: the switch to High Alchemy at 55).
-        await waitTicks(s,4);
-        for(let n=0;n<5&&s.sdk.getState()?.dialog?.isOpen;n++){await s.bot.dismissBlockingUI();await waitTicks(s,2);}
-        if(s.sdk.getState()?.dialog?.isOpen)throw new Error('alch: level-up dialog stayed open');
-    }
-    const gained=level()-startLevel,met=level()>=o.target;
-    return{ok:met||(stop==='supplies'&&gained>0),stop:met?'target':stop,level:level(),gained,magicXp:xp()-startXp,casts,ticks:s.tick()-start};
+    const casts={'low-alch':0,'high-alch':0};let stop='target',failure='',startLevel:number|undefined,startXp:number|undefined;
+    try{
+        const staged=await stageAlch(s,{target:o.target,item,walk:o.walk,stop:o.stop});
+        console.log(`ALCH_STAGE ${JSON.stringify(staged)}`);
+        startLevel=level();startXp=xp();
+        while(level()<o.target){
+            const mode=level()<HIGH_LEVEL?'low-alch':'high-alch',left=o.cap-(s.tick()-start);
+            if(left<1){stop='cap';break;}
+            if(o.stop?.()){stop='stopped';break;}
+            const carried=[...s.sdk.getInventory(),...(s.sdk.getState()?.equipment??[])];
+            const need=alchCasts(xp(),o.target),n=Math.min(mode==='low-alch'?need.low:need.high,castsHeld(mode,carried,item,staged.staff));
+            if(n<1){stop='supplies';break;}
+            const r=await runItemMagic(s,itemMagicRecipe(mode,o.item),{count:n,cap:left,stop:o.stop});
+            casts[mode]+=r.casts;
+            if(!r.ok){stop=r.stop;break;}
+            // The last cast's level-up dialog stays open: a dismiss sent inside the spell's delay is dropped, and the next
+            // spell under the open dialog does nothing (practice: the switch to High Alchemy at 55).
+            await waitTicks(s,4);
+            for(let n=0;n<5&&s.sdk.getState()?.dialog?.isOpen;n++){await s.bot.dismissBlockingUI();await waitTicks(s,2);}
+            if(s.sdk.getState()?.dialog?.isOpen)throw new Error('alch: level-up dialog stayed open');
+        }
+    }catch(e){failure=e instanceof Error?e.message:String(e);stop='failure';}
+    const gained=startLevel===undefined?0:level()-startLevel,met=level()>=o.target;
+    return{ok:met||(!failure&&stop==='supplies'&&gained>0),stop:met?'target':stop,failure,level:level(),gained,magicXp:startXp===undefined?0:xp()-startXp,casts,ticks:s.tick()-start};
 }
+
+// The planner reads progress from the RESULT line's key=value fields (packages/planner/src/autopilot.ts `progressed`).
+export const alchResultLine=(r:Awaited<ReturnType<typeof runAlch>>)=>
+    `alch level=${r.level} gained=${r.gained} xp=${r.magicXp} low=${r.casts['low-alch']} high=${r.casts['high-alch']} stop=${r.stop} ticks=${r.ticks}${r.failure?` failure=${r.failure}`:''}`;
 
 if(import.meta.main){let s:Session|undefined,stopped=false;try{
     const [account,target,cap]=process.argv.slice(2);if(!account||!target)throw new Error('usage: alch-train.ts <account> <TARGET_LEVEL> [CAP]');
@@ -111,5 +119,5 @@ if(import.meta.main){let s:Session|undefined,stopped=false;try{
     const {walkTarget}=await import('./walk-to'),session=s;
     const r=await runAlch(s,{target:Number(target),cap:Number(cap??5000),item:process.env.ALCH_ITEM??'feather',stop:()=>stopped,
         walk:async(x,z)=>(await walkTarget(session,{x,z,level:0},false)).ok});
-    console.log(`ALCH_RESULT ${JSON.stringify(r)}`);await finish([s],r.ok,JSON.stringify(r));
+    console.log(`ALCH_RESULT ${JSON.stringify(r)}`);await finish([s],r.ok,alchResultLine(r));
 }catch(e){await finish(s?[s]:[],false,String(e));}}
