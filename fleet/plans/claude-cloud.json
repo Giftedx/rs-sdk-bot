@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794313948649,
+ "at": 1794314190444,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -97,25 +97,22 @@
   },
   {
    "account": "Quickhandjob",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "10"
+    "PEN": "3187,3277",
+    "TICKS": "3000",
+    "TARGET": "2000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-strength-99",
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "pen:3187,3277"
    ]
   },
   {
