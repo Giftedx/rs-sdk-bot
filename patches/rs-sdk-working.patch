@@ -169,6 +169,77 @@ index c4b3935f5..797c82632 100644
  
                  // todo: move out of model
                  if (success && message.category === ClientGameProtCategory.USER_EVENT) {
+diff --git a/server/engine/src/engine/entity/Npc.ts b/server/engine/src/engine/entity/Npc.ts
+index b115cfc38..449ce6902 100644
+--- a/server/engine/src/engine/entity/Npc.ts
++++ b/server/engine/src/engine/entity/Npc.ts
+@@ -35,6 +35,7 @@ import ScriptRunner from '#/engine/script/ScriptRunner.js';
+ import ScriptState from '#/engine/script/ScriptState.js';
+ import ServerTriggerType from '#/engine/script/ServerTriggerType.js';
+ import World from '#/engine/World.js';
++import { simAction, simActionOn } from '#/simseed.js';
+ import LinkList from '#/datastruct/LinkList.js';
+ import { printError } from '#/util/Logger.js';
+ 
+@@ -990,6 +991,11 @@ export default class Npc extends PathingEntity {
+         }
+     }
+ 
++    // SIM_ACTION_FILE: why this npc does or does not take a player it could hunt.
++    private simHunt(player: Player, result: string): void {
++        simAction(`t=${World.currentTick} ${player.username} hunt npc=${NpcType.get(this.type).debugname} at=${this.x},${this.z} range=${this.huntrange} ${result}`);
++    }
++
+     private huntPlayers(hunt: HuntType): Entity[] {
+         const type: NpcType = NpcType.get(this.type);
+         const players: Entity[] = [];
+@@ -1001,21 +1007,26 @@ export default class Npc extends PathingEntity {
+             }
+ 
+             if (hunt.checkNotBusy && player.busy()) {
++                if (simActionOn) this.simHunt(player, 'skip=player-busy');
+                 continue;
+             }
+ 
+             if (hunt.checkAfk && player.zonesAfk()) {
++                if (simActionOn) this.simHunt(player, 'skip=player-afk');
+                 continue;
+             }
+ 
+             if (hunt.checkNotTooStrong === HuntCheckNotTooStrong.OUTSIDE_WILDERNESS && !player.isInWilderness() && player.combatLevel > type.vislevel * 2) {
++                if (simActionOn) this.simHunt(player, `skip=too-strong combat=${player.combatLevel} vislevel=${type.vislevel}`);
+                 continue;
+             }
+             if (this.target !== player && !World.gameMap.isMulti(CoordGrid.packCoord(player.level, player.x, player.z))) {
+                 if (hunt.checkNotCombat !== -1 && (player.getVar(hunt.checkNotCombat) as number) + 8 > World.currentTick) {
++                    if (simActionOn) this.simHunt(player, 'skip=player-in-combat');
+                     continue;
+                 }
+                 if (hunt.checkNotCombatSelf !== -1 && (this.getVar(hunt.checkNotCombatSelf) as number) + 8 > World.currentTick) {
++                    if (simActionOn) this.simHunt(player, 'skip=npc-in-combat');
+                     continue;
+                 }
+             }
+@@ -1025,6 +1036,7 @@ export default class Npc extends PathingEntity {
+                     return checkVar.varId === -1 || hunt.checkHuntCondition(player.getVar(checkVar.varId) as number, checkVar.condition, checkVar.val);
+                 })
+             ) {
++                if (simActionOn) this.simHunt(player, `skip=var ${hunt.checkVars.map(v => `${v.varId}${v.condition}${v.val}:${player.getVar(v.varId)}`).join(',')}`);
+                 continue;
+             }
+ 
+@@ -1038,9 +1050,11 @@ export default class Npc extends PathingEntity {
+                     quantity = player.invTotalCat(hunt.checkInv, hunt.checkObjCat);
+                 }
+                 if (!hunt.checkHuntCondition(quantity, hunt.checkInvCondition, hunt.checkInvVal)) {
++                    if (simActionOn) this.simHunt(player, `skip=inv quantity=${quantity}`);
+                     continue;
+                 }
+             }
++            if (simActionOn) this.simHunt(player, 'candidate');
+             players.push(player);
+         }
+         return players;
 diff --git a/server/engine/src/engine/entity/Player.ts b/server/engine/src/engine/entity/Player.ts
 index 9bfc1057f..337595e9e 100644
 --- a/server/engine/src/engine/entity/Player.ts
