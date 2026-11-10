@@ -4,16 +4,26 @@
 // that side's fleet agent skips such an account until the job is off, and for a coin donor whose published snapshot
 // holds fewer coins than the order: an order that no agent can run lapses at the end of its window unnoticed.
 // Usage: bun scripts/fleet-order.ts <from> <to> <count> <item name...>   Env: IN (default 15), MINUTES (default 40)
+// MEET=<bank x>,<bank z> meets at that bank's tile pair (scripts/coin-courier.ts meetingTiles) instead of Varrock West:
+// MEET=2619,3332 is the Ardougne north bank, where the PK army's accounts already stand.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { FLEET_DIR, loadOwners } from '../packages/core/src/fleet';
 import { validOrder, type Order } from './fleet-trade';
+import { meetingTiles } from './coin-courier';
 
-export function makeOrder(from: string, to: string, count: number, item: string, now: number, inMin: number, minutes: number, owners = loadOwners()): Order {
+export function orderMeet(text: string | undefined): Order['meet'] {
+    if (text === undefined || text === '') return undefined;
+    const m = text.match(/^(\d+),(\d+)$/), pair = m ? meetingTiles({ x: Number(m[1]), z: Number(m[2]) }) : null;
+    if (!pair) throw Error(`MEET must be a bank tile with a known meeting pair (3185,3436 or 2619,3332), not ${text}`);
+    return pair;
+}
+
+export function makeOrder(from: string, to: string, count: number, item: string, now: number, inMin: number, minutes: number, owners = loadOwners(), meet?: Order['meet']): Order {
     const a = owners.get(from.toLowerCase()), b = owners.get(to.toLowerCase());
     if (!a || !b) throw Error(`both accounts must be listed in fleet/owners.json: ${!a ? from : to}`);
     if (a.server !== b.server) throw Error('both accounts must use one server');
-    const start = now + inMin * 60_000, order = { id: `${start}-${from}-${to}`.toLowerCase(), server: a.server, from, to, item, count, start, end: start + minutes * 60_000 };
+    const start = now + inMin * 60_000, order: Order = { id: `${start}-${from}-${to}`.toLowerCase(), server: a.server, from, to, item, count, start, end: start + minutes * 60_000, ...(meet ? { meet } : {}) };
     if (!validOrder(order)) throw Error('invalid order');
     return order;
 }
@@ -38,7 +48,7 @@ const readJson = (f: string) => { try { return JSON.parse(readFileSync(f, 'utf8'
 
 if (import.meta.main) {
     const [from, to, countText, ...name] = process.argv.slice(2);
-    const order = makeOrder(from ?? '', to ?? '', Number(countText), name.join(' '), Date.now(), Number(process.env.IN ?? 15), Number(process.env.MINUTES ?? 40));
+    const order = makeOrder(from ?? '', to ?? '', Number(countText), name.join(' '), Date.now(), Number(process.env.IN ?? 15), Number(process.env.MINUTES ?? 40), undefined, orderMeet(process.env.MEET));
     mkdirSync(join(FLEET_DIR(), 'orders'), { recursive: true });
     writeFileSync(join(FLEET_DIR(), 'orders', `${order.id}.json`), JSON.stringify(order, null, 1) + '\n');
     console.log(`FLEET_ORDER ${JSON.stringify(order)}`);

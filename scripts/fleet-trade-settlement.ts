@@ -19,7 +19,8 @@ export function validOrder(o: any): o is Order {
         && [o.from, o.to].every(n => typeof n === 'string' && /^[A-Za-z0-9]{1,12}$/.test(n))
         && o.from.toLowerCase() !== o.to.toLowerCase() && typeof o.item === 'string' && o.item.trim().length > 0
         && Number.isSafeInteger(o.count) && o.count > 0 && o.count <= 2147483647
-        && Number.isSafeInteger(o.start) && Number.isSafeInteger(o.end) && o.end > o.start;
+        && Number.isSafeInteger(o.start) && Number.isSafeInteger(o.end) && o.end > o.start
+        && (o.meet === undefined || Array.isArray(o.meet) && o.meet.length === 2 && o.meet.every((t: any) => !!t && [t.x, t.z, t.level].every(Number.isSafeInteger)));
 }
 
 export function writeTradeReceipt(dir: string, receipt: TradeReceipt) {

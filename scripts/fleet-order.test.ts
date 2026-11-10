@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
-import { makeOrder, orderWarnings } from './fleet-order';
+import { makeOrder, orderMeet, orderWarnings } from './fleet-order';
+import { validOrder } from './fleet-trade-settlement';
 
 const server = 'rs-sdk-demo.fly.dev';
 const owners = new Map([['mmthv2350', { side: 'local', server }], ['pocketpython', { side: 'local', server }], ['thefullmonty', { side: 'claude-cloud', server }]]) as any;
@@ -18,4 +19,16 @@ test('an order warns for a party in an enabled job on its side and for a donor s
     const hosted = makeOrder('Pocketpython', 'TheFullMonty', 10, 'Big bones', 1_000_000, 0, 60, owners);
     expect(orderWarnings(hosted, { 'claude-cloud': { jobs: [{ accounts: ['TrouserSnake', 'TheFullMonty'], script: 'scripts/quest-chain.ts', enabled: true }] } }, {}, owners)).toEqual(['TheFullMonty has an enabled job on the claude-cloud side (scripts/quest-chain.ts): its fleet agent waits until that job is off']);
     expect(orderWarnings(hosted, {}, {}, owners)).toEqual([]);
+});
+
+test('MEET puts the trade at a known bank pair: the Ardougne north bank for the army, Varrock West by default', () => {
+    const owners = new Map([['thefullmonty', { side: 'claude-cloud', server: 'rs-sdk-demo.fly.dev' }], ['underMyKilt'.toLowerCase(), { side: 'claude-cloud', server: 'rs-sdk-demo.fly.dev' }]]);
+    expect(orderMeet(undefined)).toBeUndefined();
+    expect(orderMeet('2619,3332')).toEqual([{ x: 2618, z: 3333, level: 0 }, { x: 2617, z: 3333, level: 0 }]);
+    expect(() => orderMeet('2654,3283')).toThrow('MEET must be a bank tile');
+    const home = makeOrder('TheFullMonty', 'UnderMyKilt', 1, 'Staff of fire', 1_000_000, 0, 60, owners, orderMeet('2619,3332'));
+    expect(home.meet).toEqual([{ x: 2618, z: 3333, level: 0 }, { x: 2617, z: 3333, level: 0 }]);
+    expect(validOrder(home)).toBe(true);
+    expect(validOrder({ ...home, meet: [{ x: 1, z: 2 }] })).toBe(false);
+    expect(makeOrder('TheFullMonty', 'UnderMyKilt', 1, 'Staff of fire', 1_000_000, 0, 60, owners).meet).toBeUndefined();
 });
