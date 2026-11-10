@@ -77,11 +77,22 @@ try {
     // ---- Moves between the hubs ----
     // Taverley (or Falador) to the stronghold's back door (level 0, 2823,10050): the Death Plateau rocks, the troll
     // rocks south and north of the plateau path, the secret door (open after Troll Stronghold, quest_troll.rs2:105-110).
+    // The thrower trolls on the plateau path (2851-2870, 3598-3600) took the bot from 99 to 40 hp in 10 ticks at seed 9,
+    // and the storeroom guards then killed it. Protect from Missiles stays on for that crossing when the level allows.
+    const MISSILES = 13;
+    const missiles = async (on: boolean) => {
+        const p: any = q.st()?.prayers;
+        if ((q.s.sdk.getSkill('Prayer')?.level ?? 0) < 40 || !!p?.activePrayers?.[MISSILES] === on || (on && (p?.prayerPoints ?? 0) <= 0)) return;
+        await q.step(`missiles ${on}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: MISSILES, reason: 'SDK' }), () => !!(q.st() as any)?.prayers?.activePrayers?.[MISSILES] === on, 3, 3);
+    };
     const toStronghold = async () => {
+        // On before the walk to the rocks: the throwers reach the last tiles of that walk.
+        await missiles(true);
         await q.walk('to death rocks', [{ x: DEATH_ROCKS_BOTTOM.x, z: DEATH_ROCKS_BOTTOM.z - 1, tol: 0 }]);
         await op('death rocks up', DEATH_ROCKS_BOTTOM, () => z() >= 3596);
         await q.walk('to troll rocks', [{ x: ROCKS_S.x, z: ROCKS_S.z - 1, tol: 0 }]);
         await op('troll rocks', ROCKS_S, () => z() >= 3613);
+        await missiles(false);
         await q.walk('to back rocks', [{ x: ROCKS_BACK.x, z: ROCKS_BACK.z - 1, tol: 0 }]);
         await op('back rocks', ROCKS_BACK, () => z() >= 3629);
         await q.walk('to secret door', [{ x: SECRET.x, z: SECRET.z - 1, tol: 1 }]);
