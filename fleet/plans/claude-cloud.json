@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794342756998,
+ "at": 1794342995049,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -271,24 +271,25 @@
    "account": "Fingersmith",
    "script": "scripts/gather-combat.ts",
    "args": [
-    "3000",
-    "cow"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "TRAIN_SKILL": "Attack",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 70 on the Ardougne cows",
+   "goal": "train Attack to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-cow-defence-70",
+   "template": "army-trooper-attack-99",
    "autopilot": "claude-cloud",
    "resources": [
-    "cow:ardougne-north"
+    "trooper:battlefield"
    ]
   },
   {
