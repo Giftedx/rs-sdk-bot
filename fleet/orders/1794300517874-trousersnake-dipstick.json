@@ -1,0 +1,10 @@
+{
+ "id": "1794300517874-trousersnake-dipstick",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TrouserSnake",
+ "to": "Dipstick",
+ "item": "coins",
+ "count": 20000,
+ "start": 1794300517874,
+ "end": 1794302917874
+}

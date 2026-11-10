@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794299073652,
+ "at": 1794299619928,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -92,6 +92,183 @@
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Deeppockets",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2652,3318"
+   ]
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2653,3300"
+   ]
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
+   "env": {
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2671,3313"
+   ]
+  },
+  {
+   "account": "Knightstick",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
+   "env": {
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2669,3298"
+   ]
+  },
+  {
+   "account": "PocketPool",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
+   "env": {
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2653,3300"
+   ]
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
+   "env": {
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2652,3318"
+   ]
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
+   "env": {
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2669,3298"
+   ]
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
+   "env": {
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2671,3313"
    ]
   }
  ]
