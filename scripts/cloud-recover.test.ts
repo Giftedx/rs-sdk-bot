@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { SWARM_STOP } from './swarm';
-import { archiveDir, clearSwarmStops, cloudSide, deadTasks, eligibility, lifecycleRoot, MAX_ATTEMPTS, recoveriesInFlight, recoveryProposal, releasableAccounts, releaseBlockers, spentAttempts, type ClaimView } from './cloud-recover';
+import { archiveDir, clearSwarmStops, cloudSide, deadTasks, eligibility, lifecycleRoot, MAX_ATTEMPTS, MAX_TARGETS, recoveriesInFlight, recoveryBatch, recoveryProposal, releasableAccounts, releaseBlockers, spentAttempts, submitRejected, type ClaimView } from './cloud-recover';
 import { DEFAULT_LIFECYCLE_ROOT } from '../packages/core/src/session-lifecycle';
 import type { LogoutProof } from '../packages/core/src/session-lifecycle';
 
@@ -181,4 +181,33 @@ test('the swarm\'s own stop file is removed before a recovery is submitted; an o
         expect(clearSwarmStops(root, ['Quickhandjob'])).toEqual([]);
         expect(readFileSync(stop('Quickhandjob'), 'utf8')).toBe(SWARM_STOP.all);
     } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('a call recovers at most 11 accounts, the most one proposal of 12 tasks holds; the rest wait for the next call', () => {
+    const dropped = ['Quickhandjob', 'TrouserSnake', 'TheFullMonty', 'Deeppockets', 'Fatstack', 'Fingerblastr', 'Kiltlifter', 'Knightstick', 'PocketPool', 'SporranDip', 'Fingersmith', 'KnightRider']
+        .map((account, endedAt) => ({ account, endedAt }));
+    const { now, later } = recoveryBatch(dropped);
+    expect(MAX_TARGETS).toBe(11);
+    expect(now.map(t => t.account)).toEqual(dropped.slice(0, 11).map(t => t.account));
+    expect(later.map(t => t.account)).toEqual(['KnightRider']);
+    // The coordinator refuses a proposal of more than 12 tasks (coordinator-planner.ts prepareProposal).
+    expect(recoveryProposal('claude-cloud', now, Date.UTC(2026, 10, 10, 17, 12)).tasks).toHaveLength(12);
+    expect(recoveryBatch(dropped.slice(0, 3))).toEqual({ now: dropped.slice(0, 3), later: [] });
+});
+
+test('a rejected submit is seen at once: the coordinator renames the request file and it carries the qualify id', () => {
+    const base = mkdtempSync(join(tmpdir(), 'rsbot-recover-rejected-')), requests = join(base, 'requests');
+    try {
+        expect(submitRejected(requests, 'q-1')).toBe(false);
+        mkdirSync(requests);
+        const proposal = recoveryProposal('claude-cloud', [{ account: 'Kiltlifter', endedAt: 99 }], Date.UTC(2026, 10, 10, 17, 12)), id = proposal.tasks[0]!.id;
+        // Queued and not yet read: not a rejection.
+        writeFileSync(join(requests, 'a.request.json'), JSON.stringify(proposal));
+        expect(submitRejected(requests, id)).toBe(false);
+        writeFileSync(join(requests, 'b.request.json.rejected'), JSON.stringify(proposal));
+        writeFileSync(join(requests, 'c.request.json.rejected'), '{ not json');
+        expect(submitRejected(requests, id)).toBe(true);
+        // Another proposal's rejection is not this one's.
+        expect(submitRejected(requests, 'claude-cloud-recovery-qualified-other')).toBe(false);
+    } finally { rmSync(base, { recursive: true }); }
 });

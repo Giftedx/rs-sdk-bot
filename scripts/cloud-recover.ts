@@ -5,7 +5,7 @@
 // The coordinator it restarts inherits this process's environment without SWARM_PLAN, so the caller's PATH must carry
 // the model stub (README "Claude Code cloud fleet side").
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, openSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join, resolve } from 'node:path';
 import { loadOwners, mySide } from '../packages/core/src/fleet';
@@ -59,6 +59,23 @@ const stamp = (now: number) => new Date(now).toISOString().replace(/[-:]/g, '').
 // requestAuthenticatedRecovery), which four parallel runs overran. A run behind a failed one never starts; it counts
 // as a spent attempt and the next call submits its account again.
 export type Target = { account: string; endedAt: number };
+// The coordinator takes at most 12 tasks in one proposal (packages/router/src/coordinator-planner.ts prepareProposal)
+// and one of them is the qualify, so a call recovers at most 11 accounts; the rest wait for the next call. Live
+// claude-cloud: a container restart dropped 12 sessions, the 13-task proposal was rejected and nothing recovered for
+// 27 minutes.
+export const MAX_TARGETS = 11;
+export function recoveryBatch(targets: readonly Target[]): { now: Target[]; later: Target[] } {
+    return { now: targets.slice(0, MAX_TARGETS), later: targets.slice(MAX_TARGETS) };
+}
+// A proposal the coordinator rejects never becomes tasks: it renames the request file `.rejected`
+// (packages/router/src/coordinator-cli.ts intakeRequests). The request's own name is random, so it is found by the
+// qualify id it carries.
+export function submitRejected(requests: string, qualifyId: string): boolean {
+    if (!existsSync(requests)) return false;
+    return readdirSync(requests).filter(f => f.endsWith('.rejected')).some(f => {
+        try { return JSON.parse(readFileSync(join(requests, f), 'utf8'))?.tasks?.[0]?.id === qualifyId; } catch { return false; }
+    });
+}
 export function recoveryProposal(side: string, targets: readonly Target[], now: number) {
     const s = stamp(now), qualify = `${side}-recovery-qualified-${s}`, runId = (account: string) => `${side}-recover-${account.toLowerCase()}-${s}`;
     return {
@@ -170,10 +187,12 @@ async function main(root: string, dry: boolean): Promise<number> {
     }
     let failed = false;
     if (targets.length) {
-        const proposal = recoveryProposal(side, targets, Date.now()), runs = proposal.tasks.slice(1) as { id: string; account: string }[];
-        log(`submitting ${proposal.tasks.map(t => t.id).join(', ')} (${targets.map(t => `${t.account} endedAt ${t.endedAt}`).join('; ')})`);
+        const { now: batch, later } = recoveryBatch(targets);
+        if (later.length) log(`${later.length} more held accounts wait for the next call: ${later.map(t => t.account).join(', ')}`);
+        const proposal = recoveryProposal(side, batch, Date.now()), runs = proposal.tasks.slice(1) as { id: string; account: string }[];
+        log(`submitting ${proposal.tasks.map(t => t.id).join(', ')} (${batch.map(t => `${t.account} endedAt ${t.endedAt}`).join('; ')})`);
         if (dry) return 0;
-        const cleared = clearSwarmStops(root, targets.map(t => t.account));
+        const cleared = clearSwarmStops(root, batch.map(t => t.account));
         if (cleared.length) log(`removed the swarm's own stop file for ${cleared.join(', ')}`);
         const file = join(root, '.practice', 'cloud-recover', `${proposal.tasks[0]!.id}.json`);
         mkdirSync(resolve(file, '..'), { recursive: true }); writeFileSync(file, JSON.stringify(proposal, null, 1) + '\n');
@@ -183,6 +202,7 @@ async function main(root: string, dry: boolean): Promise<number> {
         for (;;) {
             const tasks = tasksNow(), status = (id: string) => tasks.find((t: any) => t.spec?.id === id)?.status, open = new Set(recoveriesInFlight(tasks).map((t: any) => t.spec.id));
             if (runs.every(r => status(r.id) && !open.has(r.id))) break;
+            if (submitRejected(join(coord, 'requests'), proposal.tasks[0]!.id)) { log(`submit rejected by the coordinator (queue-submit-failed in its events): ${proposal.tasks[0]!.id}`); return 1; }
             if (Date.now() > deadline) { log(`recovery timed out (${runs.map(r => `${r.id} ${status(r.id) ?? 'unseen'}`).join(', ')}); no retry`); return 1; }
             await Bun.sleep(5000);
         }
