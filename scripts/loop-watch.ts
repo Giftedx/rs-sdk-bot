@@ -4,6 +4,8 @@
 // (the controller's end records) and the shared fleet orders and receipts (FLEET_DIR, every side).
 // Findings, one LOOP line each:
 //   fail-loop      the last FAIL_REPEATS RESULT lines of an account are the same failure
+//   empty-loop     the last EMPTY_REPEATS runs of a job each ended ok with under EMPTY_TICKS ticks of work: a repeating
+//                  job whose target is already met logs in, finds nothing to do and logs out, again and again
 //   retry-loop     the controller restarted a standing job RETRY_REPEATS times or more in its newest RETRY_WINDOW lines
 //   pacing         PACING_TICKS ticks of only walking and idling, inside a PACING_BOX-tile box over PACING_SAMPLES samples
 //   trade-stuck    a party waits in a fleet order whose partner did not come (a `prepared` receipt TRADE_WAIT_MS old
@@ -12,14 +14,15 @@
 // Usage: bun scripts/loop-watch.ts [--watch] [--stop]
 // --watch: a pass every 30 s; new findings also go to .practice/alerts.jsonl (the dashboard reads it). Pacing needs
 //          --watch, because one pass has one position sample.
-// --stop:  for a fail-loop or a retry-loop of this side, write the account's stop file with the finding as its text.
+// --stop:  for a fail-loop, an empty-loop or a retry-loop of this side, write the account's stop file with the finding as its text.
 //          The file is an owner pause: the planner and the controller leave the account alone until a person removes it.
 import { appendFileSync, existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 
+export const EMPTY_REPEATS = 3, EMPTY_TICKS = 20;
 export const FAIL_REPEATS = 3, RETRY_REPEATS = 5, RETRY_WINDOW = 400, PACING_TICKS = 100, PACING_BOX = 3, PACING_SAMPLES = 4, TRADE_WAIT_MS = 5 * 60_000;
-export type Finding = { kind: 'fail-loop' | 'retry-loop' | 'pacing' | 'trade-stuck' | 'needs-recovery'; account: string; text: string };
+export type Finding = { kind: 'fail-loop' | 'empty-loop' | 'retry-loop' | 'pacing' | 'trade-stuck' | 'needs-recovery'; account: string; text: string };
 
 // A failure with its numbers removed, so two runs of one fault compare equal (ticks, tiles and ids differ per run).
 export const faultKey = (result: string) => result.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, '').replace(/\d+/g, '#').trim().slice(0, 160);
@@ -31,6 +34,20 @@ export function failLoop(lines: readonly string[], repeats = FAIL_REPEATS): { fa
     let count = 0;
     for (let i = results.length - 1; i >= 0 && faultKey(results[i]!) === faultKey(last); i--) count++;
     return count >= repeats ? { fault: last.slice(0, 160), count } : null;
+}
+// The supervisor writes one `SUPERVISE run <n> exit <code>: <result>` line per run. A run is empty when it exits 0 and
+// no line of it reports EMPTY_TICKS ticks or more (a `ticks=` or `"ticks":` field of a RESULT, CHAIN or LEDGER line).
+export function emptyLoop(lines: readonly string[], repeats = EMPTY_REPEATS, ticks = EMPTY_TICKS): number {
+    const runs: { ok: boolean; ticks: number }[] = [];
+    let most = 0;
+    for (const l of lines) {
+        for (const m of l.matchAll(/\bticks"?[=:]\s*(\d+)/g)) most = Math.max(most, Number(m[1]));
+        const end = l.match(/^SUPERVISE run \d+ exit (\d+):/);
+        if (end) { runs.push({ ok: end[1] === '0', ticks: most }); most = 0; }
+    }
+    let count = 0;
+    for (let i = runs.length - 1; i >= 0 && runs[i]!.ok && runs[i]!.ticks < ticks; i--) count++;
+    return count >= repeats ? count : 0;
 }
 // Accounts the controller restarted `repeats` times or more in its newest `window` lines, with their last end reason.
 export function retryLoops(controllerLines: readonly string[], repeats = RETRY_REPEATS, window = RETRY_WINDOW): { account: string; count: number; reason: string }[] {
@@ -83,7 +100,9 @@ export function scan(history: Map<string, Sample[]>, now = Date.now()): Finding[
     for (const f of logs) {
         const account = f.slice(0, -'.log'.length);
         if (!mine.includes(account.toLowerCase())) continue;
-        const loop = failLoop(lines(join(prac, 'swarm-logs', f)));
+        const log = lines(join(prac, 'swarm-logs', f)), empty = emptyLoop(log);
+        if (empty) out.push({ kind: 'empty-loop', account, text: `${empty} runs in a row ended ok with under ${EMPTY_TICKS} ticks of work` });
+        const loop = failLoop(log);
         if (!loop) continue;
         if (needsRecovery(loop.fault)) out.push({ kind: 'needs-recovery', account, text: `${loop.count} logins refused: ${loop.fault}` });
         else out.push({ kind: 'fail-loop', account, text: `the same failure ${loop.count} times: ${loop.fault}` });
@@ -119,7 +138,7 @@ if (import.meta.main) {
             console.log(`LOOP ${f.kind} ${f.account}: ${f.text}`);
             if (watch) appendFileSync(join(prac, 'alerts.jsonl'), JSON.stringify({ at: now, level: 'warn', key, bot: f.account, text: `${f.account} ${f.kind}: ${f.text}` }) + '\n');
             const file = join(prac, `stop-${f.account}`);
-            if (stop && (f.kind === 'fail-loop' || f.kind === 'retry-loop') && owners.get(f.account.toLowerCase())?.side === side && !existsSync(file)) {
+            if (stop && (f.kind === 'fail-loop' || f.kind === 'empty-loop' || f.kind === 'retry-loop') && owners.get(f.account.toLowerCase())?.side === side && !existsSync(file)) {
                 writeFileSync(file, `loop-watch ${f.kind}: ${f.text}\n`);
                 console.log(`LOOP stopped ${f.account}: wrote ${file}`);
             }
