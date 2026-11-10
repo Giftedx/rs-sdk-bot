@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794345173917,
+ "at": 1794345778552,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -226,7 +226,7 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Attack",
+    "TRAIN_SKILL": "Defence",
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
@@ -235,9 +235,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Attack to 99 on the Khazard troopers",
+   "goal": "train Defence to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-attack-99",
+   "template": "army-trooper-defence-99",
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
@@ -266,30 +266,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Defence to 80 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-defence-80",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "cow:ardougne-north"
    ]
   },
   {
@@ -340,6 +316,30 @@
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Defence to 80 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-defence-80",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "cow:ardougne-north"
    ]
   }
  ]
