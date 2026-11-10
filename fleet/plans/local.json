@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794311340271,
+ "at": 1794311437556,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -358,19 +358,6 @@
    "role": "helper"
   },
   {
-   "account": "Mightyrod",
-   "script": "scripts/pk-live/live-pilot.ts",
-   "args": [
-    "15",
-    "20"
-   ],
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "PK hunts of 15 minutes at Wilderness 20 or less, with GE and shop rune restock",
-   "role": "pk"
-  },
-  {
    "account": "Billionaire",
    "script": "scripts/session-check.ts",
    "args": [],
@@ -457,6 +444,19 @@
    "repeat": false,
    "goal": "run-session-recovery-nabtheknob-serial [task-d5da97bf-045b-43d7-b24e-5674cbcbe944]",
    "role": "thieving"
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-faaa2c11-3329-434c-ab20-5bffe05f11a7"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-session-recovery-mightyrod-serial [task-faaa2c11-3329-434c-ab20-5bffe05f11a7]",
+   "role": "pk"
   }
  ]
 }
