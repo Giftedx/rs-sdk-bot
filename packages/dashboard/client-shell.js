@@ -181,24 +181,33 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     return `<div class="xp-box"><div class="xp-head"><span>Overtake · ${E(safeName(o.account))}</span><span class="xp-gain">#${nf(o.rank)} · level ${o.level}</span></div>${o.targets.length?o.targets.map(line).join(''):'<span class="xp-muted">Already #1 on this board.</span>'}</div>`;
   }
   let worldLookup=null,worldLookupRequest=0;
-  // Info (RuneLite info): what this page is, how often each part gets new data, the keys, and the marks as they look.
+  // Info (RuneLite info): what this page is, how fresh each part is, the keys, the marks as they look, the sources.
   const infoRow=(label,value,raw)=>`<div class="info-row"><span>${raw?label:E(label)}</span><span>${value}</span></div>`;
   function infoData(){
     const sides=S.fleetSides?.sides||[],hosted=S.hosted?.kind==='public';
-    return infoRow('Game view','live')+
-      infoRow('Accounts',(hosted?'every 10 minutes':'live')+(sides.length&&window.atlasOperator()?' · '+sides.length+' machines':''))+
-      infoRow('Hiscores','every 5 to 15 minutes');
+    return infoRow('Game view','every player, live')+
+      infoRow('Accounts',(hosted?'new every 10 minutes':'live')+(sides.length&&window.atlasOperator()?' · '+sides.length+' machines':''))+
+      infoRow('Hiscores','new every 5 to 15 minutes');
   }
   window.atlasWallKeys=()=>{showPlugin('info');body.querySelector('.info-wall')?.scrollIntoView({block:'nearest'});};
+  // One home per fact: the first box says what the page is and how fresh each part is, each key and each mark has
+  // one row, and Sources names each origin with its licence. ATTRIBUTION.txt lists every file.
   function infoPanel(){
     const keys=(...k)=>k.map(x=>'<kbd>'+E(x)+'</kbd>').join(' '),owner=window.atlasOperator();
-    return '<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>RuneLite — Swarm</span></div><p class="xp-muted">A team of bot accounts on the rs-sdk demo world (the Lost City 2004 engine). The 3D view and the map show every player online.</p></div>'+
-      '<div class="xp-box"><div class="xp-head"><span>New data</span></div><div class="info-data">'+infoData()+'</div></div>'+
+    const link=(href,text)=>'<a href="'+href+'" target="_blank" rel="noopener">'+text+'</a>';
+    return '<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>RuneLite — Swarm</span></div><p class="xp-muted">Our bot team on the rs-sdk demo world, a 2004 RuneScape server. Not the RuneLite client. Not affiliated with Jagex or RuneLite.</p><div class="info-data">'+infoData()+'</div></div>'+
       (owner?'':'<div class="xp-box"><div class="xp-head"><span>Controls</span></div>'+infoRow(keys('[',']'),'previous or next account',true)+infoRow(keys('W','A','S','D'),'fly free',true)+infoRow(keys('Drag'),'turn the camera',true)+infoRow(keys('Wheel'),'zoom',true)+infoRow(keys('Ctrl','K'),'find anything',true)+'</div>')+
-      '<div class="xp-box info-wall"><div class="xp-head"><span>Fleet wall</span></div>'+infoRow(keys('\\'),'our accounts side by side',true)+infoRow(keys('←','↑','↓','→'),'move the focus, also H J K L',true)+infoRow(keys('Shift','Arrow'),'swap the view with its neighbour',true)+infoRow(keys('Enter'),'make the view the main view; on the main view, follow it',true)+infoRow(keys('Space'),'next layout',true)+infoRow(keys('F'),'focus layout on and off',true)+infoRow(keys('1')+' – '+keys('9'),'focus view 1 to 9',true)+infoRow(keys('Click'),'focus a view',true)+infoRow(keys('Double click'),'follow that account',true)+infoRow(keys('Esc'),'leave the wall',true)+'</div>'+
+      '<div class="xp-box info-wall"><div class="xp-head"><span>Fleet wall</span></div>'+infoRow(keys('\\'),'our accounts side by side',true)+infoRow(keys('←','↑','↓','→')+' '+keys('H','J','K','L'),'move the focus',true)+infoRow(keys('1')+' – '+keys('9')+' '+keys('Click'),'focus that view',true)+infoRow(keys('Shift','Arrow'),'swap two views',true)+infoRow(keys('Enter'),'make it the main view, then follow it',true)+infoRow(keys('Double click'),'follow that account',true)+infoRow(keys('Space'),'next layout',true)+infoRow(keys('F'),'focus layout',true)+infoRow(keys('Esc'),'leave the wall',true)+'</div>'+
       '<div class="xp-box"><div class="xp-head"><span>Marks</span></div>'+
-      infoRow('<b class="mark-name">Name</b>','our account',true)+infoRow('<i class="mark-dot on"></i>','our account on the map, playing',true)+infoRow('<i class="mark-dot"></i>','our account on the map, not playing',true)+infoRow('<i class="mark-dot other"></i>','another player',true)+(owner?infoRow('⟦MAIN⟧ / Hidden','an account this page does not show')+infoRow('~ before a rank','the last rank we read; it can be old'):'')+'</div>'+
-      '<div class="xp-box"><div class="xp-head"><span>Sources</span></div><p class="xp-muted">Client look: RuneLite (BSD 2-Clause), 3D view: rs-world, game data: the Lost City server content (MIT). Licences and image credits: <a href="'+asset('ATTRIBUTION.txt')+'" target="_blank" rel="noopener">ATTRIBUTION.txt</a>. RuneScape art belongs to Jagex.</p></div></div>';
+      infoRow('Ours','<b class="mark-name">Name</b> <i class="mark-dot on"></i> playing <i class="mark-dot"></i> not playing')+infoRow('Others','<i class="mark-dot other"></i> on the map')+(owner?infoRow('⟦MAIN⟧ / Hidden','an account this page does not show')+infoRow('~ before a rank','the last rank we read; it can be old'):'')+'</div>'+
+      '<div class="xp-box info-sources"><div class="xp-head"><span>Sources</span></div>'+
+      infoRow('Client look, icons',link('https://github.com/runelite/runelite','RuneLite')+' · '+link(asset('RUNELITE-FULL-LICENSE.txt'),'BSD 2-Clause'))+
+      infoRow('3D view, fonts, minimap',link('https://github.com/MaxBittker/rs-world','rs-world')+' · '+link(asset('RS-WORLD-LICENSE.txt'),'BSD 2-Clause'))+
+      infoRow('Items, NPCs, sprites',link('https://github.com/MaxBittker/rs-sdk','rs-sdk')+', Lost City content · MIT')+
+      infoRow('Tab, orb, prayer, spell icons',link('https://oldschool.runescape.wiki','OSRS Wiki'))+
+      infoRow('Players, hiscores, prices',link('https://rs-sdk-demo.fly.dev','rs-sdk demo server'))+
+      infoRow('Game art','© Jagex')+
+      infoRow('Every file',link(asset('ATTRIBUTION.txt'),'ATTRIBUTION.txt'))+'</div></div>';
   }
   // World plugin: how many players are online, how crowded the spots our bots use are, and the bot farms online.
   // A spectator gets one row per tile: several machines can use one tile, and which machine is the owner's detail.
