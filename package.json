@@ -9,6 +9,7 @@
     "deliver": "bun packages/router/src/delivery-cli.ts",
     "test": "bun test ./scripts ./packages",
     "typecheck": "tsc --noEmit",
+    "bench": "bun scripts/measure/aio-practice-bench.ts",
     "check-pin": "bun scripts/check-pin.ts",
     "coordinate": "bun packages/router/src/coordinator-cli.ts"
   },
