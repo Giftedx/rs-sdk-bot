@@ -19,6 +19,7 @@ import { createHash } from 'node:crypto';
 import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { clearSwarmStop, swarmWroteStop } from './swarm';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
+import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
 import { matchingJobLines } from '../packages/core/src/job-log';
 import { CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, freshest, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, coinValueFor, type Assignment, type ItemFunding, type Market, type Stock } from '../packages/planner/src/autopilot';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
@@ -449,9 +450,16 @@ if (import.meta.main) {
         })();
     };
     if (!args.includes('--daemon')) process.exit(await once() === 'failed' ? 1 : 0);
+    const startedAt = Date.now();
     await once(); setInterval(once, PASS_EVERY_MS);
     const seen = new Set<string>();
     setInterval(() => {
+        // A live update that changed this daemon's code (packages/router/src/live-update.ts): a copy on the current code takes over.
+        if (!inFlight && reloadDue(root, 'autopilot', startedAt)) {
+            const pid = respawnDaemon(root, [join(root, 'scripts', 'autopilot.ts'), ...args], join(prac, 'autopilot', `daemon-${Date.now()}.out.log`));
+            console.log(`AUTOPILOT reload after a live update: successor pid ${pid}`);
+            process.exit(0);
+        }
         if ((!dry && swarmPaused()) || inFlight) return;
         const due = trainersDone(planFile).filter(k => !seen.has(k));
         if (!due.length) return;
