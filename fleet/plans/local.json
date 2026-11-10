@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794330138468,
+ "at": 1794331351989,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -157,7 +157,7 @@
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
+    "TRAIN_SKILL": "Defence",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1"
@@ -165,9 +165,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
+   "goal": "train Defence to 45 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-strength-45",
+   "template": "army-cow-defence-45",
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
@@ -264,7 +264,7 @@
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
+    "TRAIN_SKILL": "Defence",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1"
@@ -272,9 +272,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
+   "goal": "train Defence to 45 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-strength-45",
+   "template": "army-cow-defence-45",
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
