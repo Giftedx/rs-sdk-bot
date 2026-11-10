@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {GIANT,CONFIGS,giantStyle,giantTraining,giantCredit,giantKillLimit,runGiants,selectGiantWeapon} from './gather-combat';
+import {GIANT,CONFIGS,giantStyle,giantTraining,giantCredit,giantKillLimit,runGiants,selectGiantWeapon,selectGiantBow,selectGiantArrows} from './gather-combat';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks} from '../packages/core/src/ticks';
 
@@ -11,7 +11,7 @@ test('giant style comes from the wielded tab: exact single skill only, unknown o
     const controlled=[{index:0,name:'Lunge',trainsSkills:['Attack','Strength','Defence']}];
     expect(()=>giantStyle({known:true,weaponName:'Odd',currentStyle:0,styles:controlled},'Strength')).toThrow('Odd has no style that trains only Strength');
     expect(()=>giantStyle({known:false,weaponName:'Silverlight',currentStyle:0,styles:SWORD_TAB},'Strength')).toThrow('styles unknown');
-    expect(()=>giantTraining('Ranged',90)).toThrow('TRAIN_SKILL');expect(()=>giantTraining('Strength')).toThrow('TARGET_LEVEL');expect(()=>giantTraining('Strength',100)).toThrow('TARGET_LEVEL');
+    expect(()=>giantTraining('Magic',90)).toThrow('TRAIN_SKILL');expect(()=>giantTraining('Strength')).toThrow('TARGET_LEVEL');expect(()=>giantTraining('Strength',100)).toThrow('TARGET_LEVEL');
     expect(giantCredit(true,3500,1)).toBe(true);expect(giantCredit(false,3500,1)).toBe(false);expect(giantCredit(true,0,1)).toBe(false);expect(giantCredit(true,3500,0)).toBe(false);
     expect(giantKillLimit(undefined)).toBeUndefined();expect(giantKillLimit('2')).toBe(2);
     for(const value of ['', '0', '-1', '1.5', 'NaN', 'Infinity', '9007199254740992'])
@@ -192,4 +192,21 @@ test('shared sustain eats on an active route and the final food account includes
     }});
     expect(r.ok).toBe(true);expect(r.eaten).toBe(1);expect(r.foodAccounted).toBe(true);expect(f.bank.find(i=>i.id===385).count+f.inv.filter(i=>i.id===385).reduce((n,i)=>n+i.count,0)).toBe(10);
  }finally{f.dispose();}
+});
+
+test('Ranged takes the best owned bow for the level, a shortbow first, and arrows that bow fires, on rapid',()=>{
+    expect(giantTraining('Ranged',99)).toEqual({skill:'Ranged',targetLevel:99});
+    const stock=[{id:841,count:1},{id:839,count:1},{id:849,count:1},{id:857,count:1},{id:882,count:50},{id:884,count:300},{id:888,count:200},{id:892,count:66}];
+    expect(selectGiantBow(stock,1)).toEqual({id:841,level:1});
+    expect(selectGiantBow(stock,25)).toEqual({id:849,level:20});
+    expect(selectGiantBow(stock,99)).toEqual({id:857,level:40});
+    expect(selectGiantBow([{id:839,count:1}],10)).toEqual({id:839,level:1});
+    expect(selectGiantBow([{id:861,count:1}],49)).toBeUndefined();
+    expect(selectGiantArrows(stock,1,1)).toBe(884);
+    expect(selectGiantArrows(stock,25,20)).toBe(888);
+    expect(selectGiantArrows(stock,99,40)).toBe(892);
+    expect(selectGiantArrows(stock,99,20)).toBe(888);
+    expect(selectGiantArrows([{id:892,count:5}],99,5)).toBeUndefined();
+    const bow=[{index:0,name:'Accurate',trainsSkills:['Ranged']},{index:1,name:'Rapid',trainsSkills:['Ranged']},{index:2,name:'Longrange',trainsSkills:['Ranged','Defence']}];
+    expect(giantStyle({known:true,weaponName:'Shortbow',currentStyle:0,styles:bow},'Ranged')).toEqual({index:1,name:'Rapid',weapon:'Shortbow'});
 });

@@ -4,7 +4,8 @@
 // Environment: DEMO_OK=1 for live server. TARGET=giant with TRAIN_SKILL and TARGET_LEVEL trains one combat skill
 // with the wielded weapon to a finite level (GIANT_FOOD sharks carried, default 5); without them giant keeps the
 // legacy gatherer. GIANT_KILLS overrides the level goal with a finite credited kill count. TARGET=trooper trains the same
-// way on the Khazard troopers of the Gnome battlefield from the Ardougne north bank (TROOPER_SITE).
+// way on the Khazard troopers of the Gnome battlefield from the Ardougne north bank (TROOPER_SITE). TRAIN_SKILL=Ranged
+// wields the best owned bow and arrows for the Ranged level on rapid, with GIANT_AMMO arrows in the quiver (default 500).
 import { openBot, finish, countItems, getWorld, accountOf } from '../packages/core/src/bot';
 import {startQuestSustain} from './quest-sustain';
 import {ownedLoadout,fireWeaponSlot} from '../packages/planner/src/owned-loadout';
@@ -340,9 +341,23 @@ export function selectGiantWeapon(stock:readonly {id:number;count:number}[],atta
     const choice=ownedLoadout([slot],stock);
     return choice.state==='ready'?choice.selected[0]!.id:0;
 }
+// Ranged (TRAIN_SKILL=Ranged): the best owned bow for the Ranged level, a shortbow before a longbow in a tier (a longbow's
+// attackrate is 6, ranged/bows.obj), and the best owned arrows it fires: an arrow's levelrequire may not exceed the
+// bow's (player_ranged.rs2 player_ranged_check_ammo).
+export const GIANT_RANGED_RELEASE=40;
+export const GIANT_BOWS=[{level:50,ids:[861,859]},{level:40,ids:[857,855]},{level:30,ids:[853,851]},{level:20,ids:[849,847]},{level:5,ids:[843,845]},{level:1,ids:[841,839]}] as const;
+export const GIANT_ARROWS=[{level:40,id:892},{level:30,id:890},{level:20,id:888},{level:5,id:886},{level:1,id:884},{level:1,id:882}] as const;
+const stockOf=(stock:readonly {id:number;count:number}[],id:number)=>stock.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
+export function selectGiantBow(stock:readonly {id:number;count:number}[],ranged:number){
+    for(const tier of GIANT_BOWS)if(tier.level<=ranged)for(const id of tier.ids)if(stockOf(stock,id)>0)return{id,level:tier.level};
+    return undefined;
+}
+export function selectGiantArrows(stock:readonly {id:number;count:number}[],ranged:number,bowLevel:number){
+    return GIANT_ARROWS.find(a=>a.level<=Math.min(ranged,bowLevel)&&stockOf(stock,a.id)>0)?.id;
+}
 const inBox=(b:readonly number[],x:number,z:number)=>x>=b[0]!&&x<=b[2]!&&z>=b[1]!&&z<=b[3]!;
 export function giantTraining(skill?:string,targetLevel?:number){
-    if(!skill||!['Attack','Strength','Defence','Hitpoints'].includes(skill))throw new Error('giant TRAIN_SKILL must be Attack, Strength, Defence or Hitpoints');
+    if(!skill||!['Attack','Strength','Defence','Hitpoints','Ranged'].includes(skill))throw new Error('giant TRAIN_SKILL must be Attack, Strength, Defence, Hitpoints or Ranged');
     if(targetLevel===undefined||!Number.isSafeInteger(targetLevel)||targetLevel<2||targetLevel>99)throw new Error('giant TARGET_LEVEL must be2..99');
     return {skill,targetLevel};
 }
@@ -350,7 +365,9 @@ type StyleTab={known:boolean;weaponName:string;currentStyle:number;styles:readon
 // The wielded weapon's own tab decides the index: Strength is1 on a sword, scimitar or 2h; controlled never counts.
 export function giantStyle(tab:StyleTab|undefined,skill:string){
     if(!tab?.known)throw new Error('giant prerequisite: wielded weapon combat styles unknown');
-    const style=skill==='Hitpoints'?(tab.styles.find(s=>s.index===tab.currentStyle)??tab.styles[0]):tab.styles.find(s=>s.trainsSkills.length===1&&s.trainsSkills[0]===skill);
+    const only=tab.styles.filter(s=>s.trainsSkills.length===1&&s.trainsSkills[0]===skill);
+    // A bow's rapid style fires a tick sooner than accurate and trains only Ranged.
+    const style=skill==='Hitpoints'?(tab.styles.find(s=>s.index===tab.currentStyle)??tab.styles[0]):only.find(s=>/rapid/i.test(s.name))??only[0];
     if(!style)throw new Error(`giant prerequisite: ${tab.weaponName} has no style that trains only ${skill}`);
     return {index:style.index,name:style.name,weapon:tab.weaponName};
 }
@@ -361,12 +378,14 @@ export function giantKillLimit(value?:string|number){
     if(!Number.isSafeInteger(maximum)||maximum<1)throw new Error('giant GIANT_KILLS must be a positive safe integer');
     return maximum;
 }
-export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targetLevel?:number;maximum?:number;food?:number;eatAt?:number;noProgress?:number;stop?:()=>boolean;walk?:(x:number,z:number,tol:number,signal?:AbortSignal)=>Promise<boolean>;site?:CombatSite}){
+export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targetLevel?:number;maximum?:number;food?:number;ammo?:number;eatAt?:number;noProgress?:number;stop?:()=>boolean;walk?:(x:number,z:number,tol:number,signal?:AbortSignal)=>Promise<boolean>;site?:CombatSite}){
     const site=o.site??GIANT_SITE,label=site.label;
     const maximum=giantKillLimit(o.maximum);
     const training=giantTraining(o.trainSkill,o.targetLevel);
     if(!Number.isSafeInteger(o.cap)||o.cap<1)throw new Error('giant needs positive CAP');
     const carry=o.food??5;if(!Number.isSafeInteger(carry)||carry<1||carry>20)throw new Error('giant GIANT_FOOD must be1..20');
+    const ranged=training.skill==='Ranged',ammoCarry=o.ammo??500;
+    if(ranged&&(!Number.isSafeInteger(ammoCarry)||ammoCarry<1||ammoCarry>100000))throw new Error('giant GIANT_AMMO must be1..100000');
     const inv=()=>s.sdk.getInventory(),state=()=>s.sdk.getState();
     const count=(items:readonly {id:number;count:number}[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
     const held=(id:number)=>count(inv(),id),hp=()=>s.sdk.getSkill('Hitpoints')?.level??0;
@@ -381,6 +400,9 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
     const near=(x:number,z:number,tol:number)=>{const p=state()?.player;return !!p&&p.level===0&&Math.max(Math.abs(p.worldX-x),Math.abs(p.worldZ-z))<=tol;};
     let style:ReturnType<typeof giantStyle>|undefined;
     const allKit=()=>[...inv(),...(state()?.equipment??[])];
+    // Ranged: the chosen arrows ride in the quiver (wearpos 13) and are spent, so the asset proof excludes them.
+    let ammoId:number|undefined,ammoBank=0,ammoStart=0;
+    const quiver=()=>count((state()?.equipment??[]).filter(i=>i.slot===13),ammoId??-1);
     let ended=false,died=false,hpMin=hp(),creditedKills=0,limpwurt=0,eaten=0,bankTrips=0,failure='',stop='cap',lastProgress=start,bankFood=0;
     void s.ended.then(()=>{ended=true;});
     const observeLife=()=>{const p=state()?.player;hpMin=Math.min(hpMin,hp());if(hp()<=0||p?.isDead||(p?.respawnCount??0)>(p0.respawnCount??0)||p?.lifeId!==p0.lifeId)died=true;};
@@ -432,24 +454,43 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
     const ownedFood=()=>s.bankObservation?.()?heldFood()+site.foods.reduce((n,id)=>n+bankCount(id),0):undefined;
     const baseline:Record<number,number>={},picked:Record<number,number>={};let initialFood:number|undefined,initialAssets:Map<number,number>|undefined;
     const assetTotals=()=>{const m=new Map<number,number>();for(const i of [...(s.bankObservation?.()?.items??[]),...allKit()])m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
-    const trip=async()=>{await leave();await open();await deposit();await restock();await s.bot.closeBank();if(over())return;await enter();lastProgress=s.tick();};
+    const withdrawAmmo=async()=>{
+        if(ammoId===undefined)return;const id=ammoId,take=Math.min(ammoCarry-quiver()-held(id),bankCount(id));
+        if(take>0){const row=state()?.bank?.items.find(i=>i.id===id),before=held(id);
+            if(!row||!(await s.bot.withdrawItem(row,take,{asNote:false})).success||!await waitUntil(s,()=>held(id)===before+take,{timeoutTicks:20}))throw new Error(`no ${label} progress: arrow withdraw failed`);}
+        ammoBank=bankCount(id);
+    };
+    const equipAmmo=async()=>{
+        if(ammoId===undefined)return;const id=ammoId,item=inv().find(i=>i.id===id);if(!item)return;const before=quiver();
+        if(!(await s.bot.equipItem(item)).success||!await waitUntil(s,()=>quiver()>before&&held(id)===0,{timeoutTicks:10}))throw new Error(`no ${label} progress: arrows not in the quiver`);
+    };
+    const rangedKit=()=>{
+        const stock=[...(s.bankObservation?.()?.items??[]),...allKit()],level=s.sdk.getSkill('Ranged')?.baseLevel??1;
+        const bow=selectGiantBow(stock,level);if(!bow)throw new Error('giant prerequisite: no owned bow for the Ranged level');
+        ammoId=selectGiantArrows(stock,level,bow.level);if(ammoId===undefined)throw new Error('giant prerequisite: no owned arrows the bow fires');
+        ammoStart=bankCount(ammoId)+count(allKit(),ammoId);
+        return bow.id;
+    };
+    const trip=async()=>{await leave();await open();await deposit();await restock();if(ranged)await withdrawAmmo();await s.bot.closeBank();if(ranged)await equipAmmo();if(over())return;await enter();lastProgress=s.tick();};
     try{
         if(!near(site.bank.x,site.bank.z,6))await leave();
         await open();initialAssets=assetTotals();for(const id of site.drops){baseline[id]=bankCount(id)+held(id);picked[id]=0;}initialFood=ownedFood();if(initialFood!==undefined)initialFood+=eaten;
         await deposit();
         if(!goalReached()&&!over()){
             await restock();
-            const weapon=selectGiantWeapon([...(s.bankObservation?.()?.items??[]),...allKit()],s.sdk.getSkill('Attack')?.baseLevel??null);
+            const weapon=ranged?rangedKit():selectGiantWeapon([...(s.bankObservation?.()?.items??[]),...allKit()],s.sdk.getSkill('Attack')?.baseLevel??null);
             if(!weapon)throw new Error('giant prerequisite: no owned equippable melee weapon');
             if(!allKit().some(i=>i.id===weapon)){
                 const row=state()?.bank?.items.find(i=>i.id===weapon),before=bankCount(weapon);
                 if(!row||!(await s.bot.withdrawItem(row,1,{asNote:false})).success||!await waitUntil(s,()=>held(weapon)===1&&bankCount(weapon)===before-1,{timeoutTicks:20}))throw new Error('giant prerequisite: weapon withdrawal unobserved');
             }
+            if(ranged)await withdrawAmmo();
             await s.bot.closeBank();
             if(!state()?.equipment?.some(i=>i.slot===3&&i.id===weapon)){
                 const item=inv().find(i=>i.id===weapon);
                 if(!item||!(await s.bot.equipItem(item)).success||!await waitUntil(s,()=>!!state()?.equipment?.some(i=>i.slot===3&&i.id===weapon),{timeoutTicks:10}))throw new Error('giant prerequisite: melee weapon equip unobserved');
             }
+            if(ranged){await equipAmmo();if(quiver()<1)throw new Error('giant prerequisite: no arrows in the quiver');}
             if(!await waitUntil(s,()=>!!state()?.combatStyle?.known&&state()?.combatStyle?.weaponName===state()?.equipment?.find(i=>i.slot===3)?.name,{timeoutTicks:10}))throw new Error('giant prerequisite: equipped combat styles unknown');
             const selectedStyle=giantStyle(state()?.combatStyle,training.skill);style=selectedStyle;
             if(heldFood()<1)throw new Error(`${label} prerequisite: no owned shark`);
@@ -462,25 +503,38 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
         const retry=new Map<number,number>();
         while(!goalReached()&&!over()){
             if(hp()<=eatAt&&!await eat()){if(bankFood<1){stop='low-hp';throw new Error(`no ${label} progress: low HP and no owned shark`);}await trip();continue;}
+            if(ranged&&quiver()<1){if(ammoBank<1){stop='ammo';break;}await trip();continue;}
             if(28-inv().length<2){await trip();continue;}
             if(s.tick()-lastProgress>=(o.noProgress??200))throw new Error(`no ${label} progress: target/loot timeout`);
             const target=state()?.nearbyNpcs.find(n=>site.npcs.includes(n.id)&&inBox(site.room,n.tileX??n.x,n.tileZ??n.z)&&!n.inCombat&&n.reachable!==false
                 &&(n.hp==null||n.maxHp==null||n.hp>=n.maxHp)&&(retry.get(n.index)??0)<=s.tick());
-            if(!target){await waitTicks(s,1);continue;}
+            // A bow stands to shoot and can drift to an edge with no trooper in view (practice: two runs idled 307 ticks at
+            // 2505,3242 and ended on the no-progress timeout); after 10 ticks without a target it walks back to the spot.
+            if(!target){if(ranged&&s.tick()-lastProgress>=10&&!near(site.spot.x,site.spot.z,3))await walk(site.spot.x,site.spot.z,3,true);else await waitTicks(s,1);continue;}
             const beforeXp=selectedXp(),groundBefore=cowGroundCounts(state()?.groundItems??[]);
             if(!(await s.bot.attack(target)).success){retry.set(target.index,s.tick()+20);await waitTicks(s,1);continue;}
-            let x=target.tileX??target.x,z=target.tileZ??target.z,observedXp=beforeXp,gone=false;lastProgress=s.tick();
+            let x=target.tileX??target.x,z=target.tileZ??target.z,observedXp=beforeXp,gone=false,dry=false,released=false,lastXp=s.tick();lastProgress=s.tick();
             const fresh=(id:number)=>count((state()?.groundItems??[]).filter(i=>i.x===x&&i.z===z),id)-(groundBefore.get(`${id}:${x}:${z}`)??0);
             while(!over()){
                 if(hp()<=eatAt&&!await eat()){stop='low-hp';throw new Error(`no ${label} progress: low HP in combat and no carried shark`);}
                 const current=state()?.nearbyNpcs.find(n=>n.index===target.index);
                 if(current){x=current.tileX??current.x;z=current.tileZ??current.z;}else gone=true;
                 // Own selected-skill XP is productive combat progress; dispatch success is not.
-                if(selectedXp()>observedXp){observedXp=selectedXp();lastProgress=s.tick();}
+                if(selectedXp()>observedXp){observedXp=selectedXp();lastProgress=s.tick();lastXp=s.tick();}
                 if(site.creditDrop===undefined?gone&&selectedXp()>beforeXp:giantCredit(gone,selectedXp()-beforeXp,fresh(site.creditDrop)))break;
+                // An empty quiver stops the bow mid-fight: restock instead of waiting out the no-progress window.
+                if(ranged&&quiver()<1){dry=true;break;}
+                // A bow needs line of sight: give up a trooper that 40 ticks of own fire have not hit (practice: one stood
+                // 289 ticks at 2521,3247 and the run ended on the no-progress timeout), as cow mode releases a cow.
+                if(ranged&&!gone&&s.tick()-lastXp>=GIANT_RANGED_RELEASE){retry.set(target.index,s.tick()+50);released=true;break;}
+                // A trooper another player or a gnome killed is gone with no own XP: the credit above never comes (practice: 290 idle ticks).
+                if(ranged&&gone){released=true;break;}
+                // A level-up dialog holds the attack until dismissed (practice, Ranged 1 -> 29: 337 of 681 ticks under one).
+                if(state()?.dialog?.isOpen){await s.bot.dismissBlockingUI();const again=state()?.nearbyNpcs.find(n=>n.index===target.index);if(again)await s.bot.attack(again);}
                 if(s.tick()-lastProgress>=(o.noProgress??200))throw new Error(`no ${label} progress: target/loot timeout`);await waitTicks(s,1);
             }
             if(over())break;
+            if(dry||released)continue;
             const roots=fresh(GIANT.limpwurt)>0;
             for(const id of site.drops.filter(id=>fresh(id)>0)){
                 const amount=fresh(id),item=state()?.groundItems.find(i=>i.id===id&&i.x===x&&i.z===z),before=held(id);
@@ -490,7 +544,7 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
             creditedKills++;if(roots)limpwurt++;lastProgress=s.tick();
             console.log(`MILESTONE ${label} credited=${creditedKills} trainSkill=${training.skill} selectedXp=${selectedXp()-initialSelectedXp} level=${level()} HP=${hp()} sharks=${heldFood()} limpwurt=${limpwurt}`);
         }
-        stop=goalReached()?(maximum===undefined?'target-level':'max-kills'):died?'died':o.stop?.()?'stop-file':'cap';
+        stop=goalReached()?(maximum===undefined?'target-level':'max-kills'):died?'died':o.stop?.()?'stop-file':stop==='ammo'?'ammo':'cap';
     }catch(e){failure=String(e);if(stop==='cap'&&o.stop?.())stop='stop-file';}
     finally{if(!died&&!ended)try{if(!near(site.bank.x,site.bank.z,6))await leave();await open();await deposit();}catch(e){failure=[failure,String(e)].filter(Boolean).join('; ');}off();}
     const banked={bigBones:bankCount(GIANT.bigBones)-(baseline[GIANT.bigBones]??bankCount(GIANT.bigBones)),limpwurt:bankCount(GIANT.limpwurt)-(baseline[GIANT.limpwurt]??bankCount(GIANT.limpwurt))};
@@ -498,12 +552,13 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
     const bankedOf=(id:number)=>bankCount(id)-(baseline[id]??bankCount(id));
     const bankedAll=(site.creditDrop===undefined||bankedOf(site.creditDrop)===creditedKills)&&(site!==GIANT_SITE||banked.limpwurt===limpwurt)&&site.drops.every(id=>bankedOf(id)===(picked[id]??0));
     const finalAssets=assetTotals();
-    const preserved=initialAssets!==undefined&&[...new Set([...initialAssets.keys(),...finalAssets.keys()])].every(id=>site.drops.includes(id)||site.foods.includes(id)||(finalAssets.get(id)??0)===(initialAssets!.get(id)??0))&&site.drops.every(id=>held(id)===0);
+    const preserved=initialAssets!==undefined&&[...new Set([...initialAssets.keys(),...finalAssets.keys()])].every(id=>site.drops.includes(id)||site.foods.includes(id)||id===ammoId||(finalAssets.get(id)??0)===(initialAssets!.get(id)??0))&&site.drops.every(id=>held(id)===0);
     // Owned sharks in pack and bank change only by observed eating.
     const finalFood=ownedFood(),foodAccounted=initialFood!==undefined&&finalFood===initialFood-eaten;
     const targetMet=goalReached()&&bankedAll;
-    const partial=!targetMet&&creditedKills>0&&stop==='cap'&&bankedAll&&!failure&&!died&&!ended&&preserved&&foodAccounted;
+    const partial=!targetMet&&creditedKills>0&&(stop==='cap'||stop==='ammo')&&bankedAll&&!failure&&!died&&!ended&&preserved&&foodAccounted;
     return {ok:!failure&&!died&&!ended&&(targetMet||partial)&&preserved&&foodAccounted,creditedKills,banked,bankedHerbs,limpwurt,trainSkill:training.skill,targetLevel:training.targetLevel,
+        ...ammoId===undefined?{}:{ammoId,ammoUsed:ammoStart-bankCount(ammoId)-count(allKit(),ammoId)},
         style,startLevel,finalLevel:level(),selectedXp:selectedXp()-initialSelectedXp,eatAt,eaten,initialFood:initialFood??null,finalFood:finalFood??null,foodAccounted,bankTrips,hpMin,died,
         lifeId:state()?.player?.lifeId,respawns:state()?.player?.respawnCount,ticks:s.tick()-start,preserved,targetMet,partial,stop,failure:failure||(!targetMet&&!partial?`no ${label} progress: bounded target unmet`:'-')};
 }
@@ -573,7 +628,7 @@ const cowStop=cowStopControl(TARGET_KEY,()=>existsSync(resolve(import.meta.dir,'
 const ownedSession=await openBot(botName,cowStop.options).catch(e=>finish([],false,`login: ${String(e)}`));
 if(giantTrained){
 
-    try{const r=await runGiants(ownedSession,{cap:CAP,site:TARGET_KEY==='trooper'?TROOPER_SITE:undefined,trainSkill:giantSkill,targetLevel:giantLevel,maximum:giantMaximum,food:process.env.GIANT_FOOD===undefined?undefined:Number(process.env.GIANT_FOOD),stop:cowStop.stop});console.log(`GIANT_RESULT ${JSON.stringify(r)}`);await finish([ownedSession],r.ok&&cowStop.reason()!=='died',`mode=giant ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
+    try{const r=await runGiants(ownedSession,{cap:CAP,site:TARGET_KEY==='trooper'?TROOPER_SITE:undefined,trainSkill:giantSkill,targetLevel:giantLevel,maximum:giantMaximum,food:process.env.GIANT_FOOD===undefined?undefined:Number(process.env.GIANT_FOOD),ammo:process.env.GIANT_AMMO===undefined?undefined:Number(process.env.GIANT_AMMO),stop:cowStop.stop});console.log(`GIANT_RESULT ${JSON.stringify(r)}`);await finish([ownedSession],r.ok&&cowStop.reason()!=='died',`mode=giant ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
     catch(e){await finish([ownedSession],false,String(e));}
 }
 const dungeonTravel=(TARGET_KEY==='druid'||dungeonGiant)&&!alch?.route?createEdgevilleTravel(ownedSession):undefined;
