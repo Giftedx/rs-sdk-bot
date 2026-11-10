@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794314651162,
+ "at": 1794314811348,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -121,20 +121,27 @@
   },
   {
    "account": "TrouserSnake",
-   "script": "scripts/alch-train.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99",
-    "5000"
+    "1500",
+    "trooper"
    ],
-   "env": {},
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "10",
+    "GIANT_BURY": "1"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "goal": "train Ranged to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-alch-magic-99",
+   "template": "army-trooper-ranged-99",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "TheFullMonty",
@@ -210,22 +217,26 @@
   },
   {
    "account": "Kiltlifter",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
    "env": {
-    "PEN": "3187,3277",
-    "TICKS": "3000",
-    "TARGET": "2000"
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
-   "role": "helper",
-   "template": "feathers@3187,3277",
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
    "autopilot": "claude-cloud",
    "resources": [
-    "pen:3187,3277"
+    "cow:ardougne-north"
    ]
   },
   {
