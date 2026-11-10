@@ -1,32 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794336111625,
+ "at": 1794336715613,
  "jobs": [
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-strength-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
   {
    "account": "Quickhandjob",
    "script": "scripts/gather-combat.ts",
@@ -172,6 +147,31 @@
    "goal": "train Attack to 99 on the Khazard troopers",
    "role": "combat",
    "template": "army-trooper-attack-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-strength-99",
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
