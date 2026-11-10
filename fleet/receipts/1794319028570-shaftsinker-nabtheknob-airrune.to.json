@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794319028570-shaftsinker-nabtheknob-airrune",
+ "account": "NabTheKnob",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 10,
+ "claim": "5e5fabd8-b0a6-48ae-a249-787d3741dbcb",
+ "count": 0,
+ "ok": false,
+ "at": 1794319041589,
+ "detail": "trade claimed"
+}
