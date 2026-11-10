@@ -36,6 +36,9 @@ test('other sides become fleet rows with snapshot levels and items, a world-feed
  const r=rows[0];
  expect(r.side).toBe('cloud');expect(r.remote).toBe(true);expect(r.fresh).toBe(true);expect(r.operation).toBe('observed');
  expect(r.pos).toEqual({x:3200,z:3200,level:0});expect(r.combat).toBe(30);expect(r.skills).toEqual([{name:'Attack',level:22,xp:null}]);
+ // The same account in two sides' snapshots is one row: the newer account time wins, in the first row's place.
+ const moved=remoteBots([{side:'cloud',at:now-9000,accounts:[{name:'Mover',at:now-9000,skills:[{name:'Attack',level:5}]},{name:'Stay',at:now-9000}]},{side:'cloud-2',at:now-100,accounts:[{name:'mover',at:now-100,skills:[{name:'Attack',level:9}]}]}],new Set(),new Map(),new Map(),now);
+ expect(moved.map(r=>[r.name,r.side,r.skills[0]?.level])).toEqual([['mover','cloud-2',9],['Stay','cloud',undefined]]);
  const late=remoteBots(snaps,new Set(),new Map([['tossthecaber',{x:1,z:2,level:0,combat:3,seen:now-60_000}]]),new Map(),now);
  expect(late.find(x=>x.name==='TossTheCaber').fresh).toBe(false);expect(late.find(x=>x.name==='TossTheCaber').pos).toEqual({x:1,z:2,level:0});
 });
