@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794304678145-thefullmonty-quickhandjob",
  "account": "Quickhandjob",
  "partner": "TheFullMonty",
@@ -10,8 +10,21 @@
  "item": "Fire rune",
  "requested": 250,
  "claim": "302ff783-b481-4463-bd0f-3c0723303aa1",
- "count": 0,
- "ok": false,
- "at": 1794304995726,
- "detail": "trade claimed"
+ "count": 250,
+ "ok": true,
+ "at": 1794305025046,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 250
+ },
+ "bank": {
+  "count": 250,
+  "at": 1794305024323
+ },
+ "logout": {
+  "attemptId": "1794304995728-0000017842-0000000001",
+  "at": 1794305025042,
+  "sha256": "be178023b5d295c2ee50e622516fbac2dcd559b64cccc9894bdc858ef711b958"
+ }
 }
