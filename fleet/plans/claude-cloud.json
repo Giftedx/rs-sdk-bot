@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794323768100,
+ "at": 1794324399746,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -125,24 +125,25 @@
    "account": "Kiltlifter",
    "script": "scripts/gather-combat.ts",
    "args": [
-    "3000",
-    "cow"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 60 on the Ardougne cows",
+   "goal": "train Strength to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-cow-defence-60",
+   "template": "army-trooper-strength-99",
    "autopilot": "claude-cloud",
    "resources": [
-    "cow:ardougne-north"
+    "trooper:battlefield"
    ]
   },
   {
