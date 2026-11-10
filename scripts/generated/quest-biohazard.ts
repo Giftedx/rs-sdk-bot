@@ -141,7 +141,7 @@ try {
         await q.guard('sick mourner');
         const m = (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^mourner$/i.test(n.name) && n.combatLevel === 13).sort((a: any, b: any) => a.distance - b.distance)[0];
         if (!m) { await q.waitTicks(2); continue; }
-        await q.s.bot.attack(m as any);
+        await q.attack(m);
         await q.waitUntil(() => q.has(ITEM.key) || !(q.st()?.nearbyNpcs ?? []).some((n: any) => n.index === m.index), 60);
         await q.waitUntil(() => q.has(ITEM.key), 4);
     }

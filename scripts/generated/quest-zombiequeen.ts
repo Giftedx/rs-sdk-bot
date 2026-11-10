@@ -77,7 +77,7 @@ try {
             if (!n) return;
             for (let j = 0; j < 8 && (q.st()?.nearbyNpcs ?? []).some((m: any) => m.index === n.index); j++) {
                 await q.guard(label);
-                await q.s.bot.attack(n as any);
+                await q.attack(n);
                 await q.waitUntil(() => !(q.st()?.nearbyNpcs ?? []).some((m: any) => m.index === n.index), 6);
             }
             await q.waitTicks(1);
@@ -337,7 +337,7 @@ try {
                 await q.guard(label);
                 const n = q.npc(/^nazastarool$/i);
                 if (!n) return;
-                await q.s.bot.attack(n as any);
+                await q.attack(n);
                 await q.waitUntil(() => !(q.st()?.nearbyNpcs ?? []).some((m: any) => m.index === n.index), 6);
                 if (q.dialogOpen()) await q.converse([], () => !q.dialogOpen(), 6);
             }

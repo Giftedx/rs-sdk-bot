@@ -250,6 +250,10 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     const locAt = (x: number, z: number, re?: RegExp): any => findLoc(l => l.x === x && l.z === z && (!re || re.test(l.name)));
     const opIndex = (l: any, re: RegExp): number => l?.optionsWithIndex?.find((o: any) => re.test(o.text))?.opIndex ?? 1;
     const npc = (re: RegExp): any => (st()?.nearbyNpcs ?? []).filter((n: any) => re.test(n.name)).sort((a: any, b: any) => a.distance - b.distance)[0];
+    // One attack click, with no wait. bot.attack waits for the fight to start, and after a click that the engine
+    // refuses (a knockback or a placement holds the player for a tick) it waited about 110 ticks while the bot stood
+    // idle. A fight loop calls this again every few ticks.
+    const attack = (n: any) => s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
     const talkTo = (n: any) => s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.find((o: any) => /talk/i.test(o.text))?.opIndex ?? 1, reason: 'SDK' });
     const useOnLoc = (item: number, l: Loc) => s.direct({ type: 'useItemOnLoc', itemSlot: slot(item)!, x: l.x, z: l.z, locId: l.id, reason: 'SDK' });
     const useOnNpc = (item: number, n: any) => s.direct({ type: 'useItemOnNpc', itemSlot: slot(item)!, npcIndex: n.index, reason: 'SDK' });
@@ -501,7 +505,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     };
     return {
         s, st, pos, inv, hp, xp, cnt, has, slot, cheb, near, lvl, dialogOpen, sawText, msgCount, T, stats, milestone, dispose,
-        blockDoor, guard, planLowHp, fail, end, gains, detail, opLoc, locs, findLoc, locAt, opIndex, npc, talkTo, useOnLoc, useOnNpc, useOnItem,
+        blockDoor, guard, planLowHp, fail, end, gains, detail, opLoc, locs, findLoc, locAt, opIndex, npc, talkTo, attack, useOnLoc, useOnNpc, useOnItem,
         step, converse, walk, talk, climb, teleport, canCast, openDoor, shutAt, dash, wieldBow, attackNpc,
         waitTicks: async (n: number) => { const until=s.tick()+n;if(n>0)await waitUntil(s,()=>s.tick()>=until||stats.died||retreating||T()>CAP,{timeoutTicks:n,signal:sustain.aborted});await guard('wait'); },
         waitUntil: async (f: () => boolean, ticks: number) => {const reached=await waitUntil(s, () => f() || stats.died||retreating||T()>CAP, { timeoutTicks: ticks,signal:sustain.aborted });await guard('wait condition');return reached;},
