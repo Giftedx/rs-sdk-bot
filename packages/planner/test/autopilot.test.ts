@@ -433,3 +433,23 @@ test('army accounts at 60 in all three melee skills train to 99 on the Khazard t
     const job = jobFor(plan(inputs([soldier('Soldier')], { army, capacity: CAPACITY }))[0]!, side);
     expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'], env: { TRAIN_SKILL: 'Strength', TARGET_LEVEL: '99', GIANT_FOOD: '10' }, repeat: true, resources: ['trooper:battlefield'] });
 });
+
+test('army accounts alch Magic to 99 with natures, feathers and fire, then bury held bones for Prayer', () => {
+    const army = new Set(['caster']);
+    const melee = { Thieving: 99, Attack: 69, Strength: 60, Defence: 61, Hitpoints: 84, Magic: 48, Prayer: 74 };
+    const pick = (skills: Record<string, number>, items: Record<string, number>) => ids(plan(inputs([acct('Caster', { ...melee, ...skills }, items)], { army, capacity: CAPACITY }))).Caster;
+    const alch = { 'nature rune': 50, feather: 50 };
+    // Magic comes before the troopers and the later cow passes; fire is 250 runes or any fire staff.
+    expect(pick({}, { ...alch, 'fire rune': 250, shark: 20 })).toBe('army-alch-magic-99');
+    expect(pick({}, { ...alch, 'staff of fire': 1 })).toBe('army-alch-magic-99');
+    expect(pick({}, { ...alch, 'mystic fire staff': 1 })).toBe('army-alch-magic-99');
+    expect(pick({}, { ...alch, 'fire rune': 249 })).not.toBe('army-alch-magic-99');
+    expect(pick({}, { 'nature rune': 49, feather: 50, 'fire rune': 250 })).not.toBe('army-alch-magic-99');
+    // Prayer comes next and needs 100 bones (accountFrom keys items by norm, so Bones is 'bone'); with fewer it moves on.
+    expect(pick({ Magic: 99 }, { bone: 1674 })).toBe('army-bury-prayer-99');
+    expect(pick({}, { bone: 1674 })).toBe('army-bury-prayer-99');
+    expect(pick({ Magic: 99 }, { bone: 99 })).not.toBe('army-bury-prayer-99');
+    expect(pick({ Magic: 99, Prayer: 99 }, { bone: 1674 })).not.toBe('army-bury-prayer-99');
+    const job = jobFor(plan(inputs([acct('Caster', { ...melee, Magic: 99 }, { bone: 500 })], { army, capacity: CAPACITY }))[0]!, side);
+    expect(job).toMatchObject({ script: 'scripts/train-prayer.ts', args: ['99'], env: { BURY_HELD: '1', BONE_RESERVE: '6', CAP: '4000' }, repeat: true, resources: [] });
+});
