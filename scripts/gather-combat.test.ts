@@ -227,6 +227,16 @@ test('vanished NPC without credited drops/XP blocks rather than claiming kills',
         expect(r.diagnostics.length).toBeLessThanOrEqual(16);expect(r.diagnostics[0]?.index).toBe(7);expect(r.diagnostics.some(d=>d.gone===true&&d.npc===null)).toBe(true);
     }finally{f.dispose();}
 });
+test('a busy pen ends a run that has kills as crowded and banks them; a run with no kills fails and says what the pen held',async()=>{
+    const busy=(f:ReturnType<typeof fixture>,after:number)=>{const sdk=f.session.sdk as any,state=sdk.getState.bind(sdk);
+        sdk.getState=()=>{const st=state();return f.kills()>=after?{...st,nearbyNpcs:st.nearbyNpcs.map((n:any)=>({...n,inCombat:true}))}:st;};};
+    const f=fixture();busy(f,2);try{const r=await runCows(f.session,{cap:500,maximum:5,walk:async()=>true,noProgress:20});
+        expect(r.ok).toBe(true);expect(r.stop).toBe('crowded');expect(r.partial).toBe(true);expect(r.creditedKills).toBe(2);expect(r.banked).toEqual({hide:2,bones:2,beef:2});expect(r.failure).toBe('-');
+    }finally{f.dispose();}
+    const g=fixture();busy(g,0);try{const r=await runCows(g.session,{cap:500,maximum:5,walk:async()=>true,noProgress:20});
+        expect(r.ok).toBe(false);expect(r.creditedKills).toBe(0);expect(r.failure).toContain('no cow progress: target/loot timeout cows=1 inCombat=1 besidePlayer=0 players=0');
+    }finally{g.dispose();}
+});
 test('low HP with no food retreats and banks; a changed life stops without another attack',async()=>{
     for(const injury of ['low-nofood','death'] as const){const f=fixture(false,injury);try{const r=await runCows(f.session,{cap:120,maximum:5,walk:async()=>true,noProgress:20});
         expect(r.ok).toBe(false);expect(r.creditedKills).toBe(0);expect(f.kills()).toBe(1);

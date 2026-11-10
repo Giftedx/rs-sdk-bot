@@ -148,7 +148,7 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
     const allKit=()=>[...inv(),...(state()?.equipment??[])];
     for(const id of [1277,1171]) if(count(allKit(),id)<1) throw new Error(`cow prerequisite: missing kit${id}`);
     const kit=new Map<number,number>();for(const i of allKit())if(!ids.includes(i.id)&&!COW_FOOD_BITES[i.id])kit.set(i.id,(kit.get(i.id)??0)+i.count);
-    let ended=false,died=false,healthCutoff=false,retreating=false,hpMin=hp(),creditedKills=0,damageXp=0,eaten=0,bankTrips=0,failure='',stop='cap',lastProgress=start;
+    let ended=false,died=false,healthCutoff=false,retreating=false,hpMin=hp(),creditedKills=0,damageXp=0,eaten=0,bankTrips=0,failure='',stop='cap',lastProgress=start,crowded=false;
     const diagnostics:Record<string,unknown>[]=[];
     let diagnosticKey='',diagnosticTick=-Infinity,activeIndex:number|undefined,attackStarted:number|undefined;
     const capture=(phase:string,x?:number,z?:number,gone=false)=>{
@@ -254,12 +254,18 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
             if(profile.north&&28-inv().length<3)throw new Error('no cow progress: insufficient slots for three cow drops');
             if(hp()<=6)await eat();
             if(potions)await potions.poll();
-            if(s.tick()-lastProgress>=(o.noProgress??200))throw new Error('no cow progress: target/loot timeout');
-            // The nearest free cow with no other player within 2 tiles (one about to attack it). The planner puts up to
-            // 2 army accounts in this field (autopilot COW_BANDS); a 12-tile gap left the second one 198 ticks idle.
+            // The nearest free cow with no other player within 2 tiles (one about to attack it). The planner puts
+            // COW_FIELD_CAPACITY army accounts in this field (autopilot); a 12-tile gap left a second one 198 ticks idle.
             const players=state()?.nearbyPlayers??[];
-            const target=(state()?.nearbyNpcs??[]).filter(n=>n.id===81&&n.x>=2655&&n.x<=2676&&n.z>=3338&&n.z<=3357&&!n.inCombat&&(n.hp==null||n.maxHp==null||n.hp>=n.maxHp)
-                &&!players.some(p=>Math.max(Math.abs(p.x-n.x),Math.abs(p.z-n.z))<=2)).sort((a,b)=>a.distance-b.distance)[0];
+            const pen=(state()?.nearbyNpcs??[]).filter(n=>n.id===81&&n.x>=2655&&n.x<=2676&&n.z>=3338&&n.z<=3357);
+            const beside=(n:{x:number;z:number})=>players.some(p=>Math.max(Math.abs(p.x-n.x),Math.abs(p.z-n.z))<=2);
+            const target=pen.filter(n=>!n.inCombat&&(n.hp==null||n.maxHp==null||n.hp>=n.maxHp)&&!beside(n)).sort((a,b)=>a.distance-b.distance)[0];
+            // No attack started for the whole window. A run that has kills banks them and ends (the field is busy);
+            // one with none fails and says what the pen held.
+            if(s.tick()-lastProgress>=(o.noProgress??200)){
+                if(creditedKills>0){crowded=true;break;}
+                throw new Error(`no cow progress: target/loot timeout cows=${pen.length} inCombat=${pen.filter(n=>n.inCombat).length} besidePlayer=${pen.filter(n=>!n.inCombat&&beside(n)).length} players=${players.length}`);
+            }
             if(!target){await waitTicks(s,1);continue;}
             const beforeXp=selectedXp(),groundBefore=cowGroundCounts(state()?.groundItems??[]);
             let x=target.tileX??target.x,z=target.tileZ??target.z;
@@ -297,7 +303,7 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
                 if(!item||!(await s.bot.pickupItem(item)).success||held(id)!==before+1)throw new Error('no cow progress: credited loot pickup mismatch');}
             creditedKills++;damageXp+=selectedXp()-beforeXp;lastProgress=s.tick();console.log(`MILESTONE cow credited=${creditedKills} trainSkill=${training.skill} selectedXp=${selectedXp()-initialSelectedXp} level=${level()} attackXp=${xp()-initialXp} HP=${hp()} heldHide=${held(1739)}`);
         }
-        stop=goalReached()?'target-level':creditedKills===o.maximum?'max-kills':died?'died':o.stop?.()?'stop-file':'cap';
+        stop=goalReached()?'target-level':creditedKills===o.maximum?'max-kills':died?'died':o.stop?.()?'stop-file':crowded?'crowded':'cap';
     } catch(e){failure=String(e);if(stop==='cap'&&o.stop?.())stop='stop-file';capture('failure');console.log(`COW_DIAGNOSTIC ${JSON.stringify(diagnostics)}`);}
     finally {if(!died&&!ended)try{if(potionScope)await potionScope.withCombatPotionCleanup(bank);else await bank();}catch(e){failure=[failure,String(e)].filter(Boolean).join('; ');}off();offMetrics();}
     const banked={hide:bankCount(1739)-(baseline[1739]??bankCount(1739)),bones:bankCount(526)-(baseline[526]??bankCount(526)),beef:bankCount(2132)-(baseline[2132]??bankCount(2132))};
@@ -306,7 +312,7 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
     // Owned food (in bites) in pack and bank changes only by observed eating.
     const finalFood=ownedFood(),foodAccounted=initialFood!==undefined&&finalFood===initialFood-eaten;
     const targetMet=(training.targetLevel!==undefined?goalReached():creditedKills===o.maximum)&&Object.values(banked).every(n=>n===creditedKills);
-    const partial=training.targetLevel!==undefined&&!targetMet&&creditedKills>0&&['max-kills','cap'].includes(stop)
+    const partial=(training.targetLevel!==undefined&&['max-kills','cap'].includes(stop)||stop==='crowded')&&!targetMet&&creditedKills>0
         &&Object.values(banked).every(n=>n===creditedKills)&&!failure&&!died&&!ended&&preserved&&foodAccounted;
     if(o.diagnostics&&!failure)console.log(`COW_DIAGNOSTIC ${JSON.stringify(diagnostics)}`);
     return {...potions?{potions:{doses:potions.doses,delta:potions.delta,receipts:potions.receipts,blocked:potions.blocked,resumes:potions.resumes}}:{},ok:!failure&&!died&&!ended&&(targetMet||partial)&&preserved&&foodAccounted,creditedKills,banked,trainSkill:training.skill,targetLevel:training.targetLevel??null,startLevel,finalLevel:level(),selectedXp:selectedXp()-initialSelectedXp,attackXp:xp()-initialXp,damageXp,eaten,initialFood:initialFood??null,finalFood:finalFood??null,foodAccounted,bankTrips,hpMin,died,lifeId:state()?.player?.lifeId,respawns:state()?.player?.respawnCount,ticks:s.tick()-start,preserved,targetMet,partial,stop,failure:failure||(!targetMet&&!partial?'no cow progress: bounded target unmet':'-'),diagnostics:failure||o.diagnostics?diagnostics:[],bankProfile:profile.north?'north':'south',foodMode:profile.foodBanked?'banked':'held',healthCutoff,walkTicks,walkedTiles,detourTiles,doorInteractions,houseInteractions,maxPackSlots,bankDistances,walkLegs};
