@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794345778552,
+ "at": 1794346382881,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -25,28 +25,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "catherby"
-   ],
-   "env": {
-    "ITEMS": "rune arrowtips|adamant arrowtips",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy rune and adamant arrowtips at Catherby",
-   "role": "bank",
-   "template": "shop-arrowtips",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "shop:catherby"
    ]
   },
   {
@@ -169,31 +147,6 @@
    ]
   },
   {
-   "account": "Kiltlifter",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Attack",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Attack to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-attack-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
    "account": "Knightstick",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -213,31 +166,6 @@
    "goal": "train Attack to 99 on the Khazard troopers",
    "role": "combat",
    "template": "army-trooper-attack-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "PocketPool",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-defence-99",
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
@@ -341,6 +269,45 @@
    "resources": [
     "cow:ardougne-north"
    ]
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-f1914345-5105-4a5a-b73d-db36be74ad5b"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-trousersnake-20261110t212320z [task-f1914345-5105-4a5a-b73d-db36be74ad5b]",
+   "role": "bank"
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-2fecac9c-edae-43a6-a92a-ee4ec8a665f3"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-kiltlifter-20261110t212320z [task-2fecac9c-edae-43a6-a92a-ee4ec8a665f3]",
+   "role": "combat"
+  },
+  {
+   "account": "PocketPool",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-ed391f97-e511-4ffa-80ee-2f66d3f1bc21"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-pocketpool-20261110t212320z [task-ed391f97-e511-4ffa-80ee-2f66d3f1bc21]",
+   "role": "combat"
   }
  ]
 }
