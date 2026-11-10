@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794317540067,
+ "at": 1794318140399,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -131,21 +131,26 @@
   },
   {
    "account": "mmsmk1232",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "cow:ardougne-north"
    ]
   },
   {
@@ -214,21 +219,26 @@
   },
   {
    "account": "Wandwaver",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
    "autopilot": "local",
    "resources": [
-    "knight:2671,3313"
+    "cow:ardougne-north"
    ]
   },
   {
