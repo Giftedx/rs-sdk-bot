@@ -314,3 +314,7 @@ test('every AIO route points at a script that exists and can be started from a c
  const unstartable = [...new Set(scripts)].filter(script => !existsSync(join(root, script)) || !/import\.meta\.main|process\.argv|runScript\(|^const \w+ = await openQuest\(/m.test(readFileSync(join(root, script), 'utf8')));
  expect(unstartable).toEqual([]);
 });
+
+test('every AIO route has a bench case, a cause that blocks one, or a recorded failure', () => {
+ expect(benchCoverage().gaps).toEqual([]);
+});
