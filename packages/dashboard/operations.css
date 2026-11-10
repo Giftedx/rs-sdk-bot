@@ -289,3 +289,7 @@ button.op-kpi:hover{filter:brightness(1.15)}
 .public-view .client-plugin-body .board-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
 .public-view .client-plugin-body .board .bname{display:none}
 .public-view .client-plugin-body .board .ico{flex:none}
+.info-row a,.info-sources a{color:#ff981f}
+.info-row .mark-dot{margin:0 2px 0 6px;vertical-align:0}
+.info-row .mark-dot:first-child{margin-left:0}
+.info-data{margin-top:6px}
