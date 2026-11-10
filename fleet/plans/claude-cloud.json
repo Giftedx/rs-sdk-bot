@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794322829452,
+ "at": 1794322959468,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -78,54 +78,6 @@
    "resources": []
   },
   {
-   "account": "TrouserSnake",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Attack",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "10",
-    "GIANT_BURY": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Attack to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-attack-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Attack",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "10",
-    "GIANT_BURY": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Attack to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-attack-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
    "account": "Deeppockets",
    "script": "scripts/chain.ts",
    "args": [
@@ -161,6 +113,56 @@
    "template": "kit-buy:army-strike-magic-21",
    "autopilot": "claude-cloud",
    "resources": []
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Attack",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Attack to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-attack-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Attack",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Attack to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-attack-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "Kiltlifter",
