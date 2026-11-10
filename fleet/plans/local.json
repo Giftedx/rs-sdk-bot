@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794345151968,
+ "at": 1794346996624,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -85,24 +85,6 @@
    "role": "pk-trainee"
   },
   {
-   "account": "OreElse",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=10 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=oreelse-law10 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1333 QUANTITY=1 LIMIT_PRICE=30000 CASH_RESERVE=1000 ORDER_KEY=oreelse-runescim ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=20 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=oreelse-shark20 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/pk-live/live-pilot.ts 10 20"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": false,
-   "goal": "Buy law runes, a rune scimitar and sharks on the GE, then a 10-minute PK pilot at Wilderness 20 or less",
-   "role": "pk"
-  },
-  {
    "account": "YewFirst",
    "script": "scripts/chain.ts",
    "args": [
@@ -155,23 +137,27 @@
   },
   {
    "account": "mmsmk1232",
-   "script": "scripts/train-prayer.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99"
+    "3000",
+    "cow"
    ],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_RESERVE": "6",
-    "CAP": "4000"
+    "TRAIN_SKILL": "Attack",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying the held bones",
+   "goal": "train Attack to 80 on the Ardougne cows",
    "role": "combat",
-   "template": "army-bury-prayer-99",
+   "template": "army-cow-attack-80",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "cow:ardougne-north"
+   ]
   },
   {
    "account": "mmtha0205",
@@ -236,27 +222,23 @@
   },
   {
    "account": "Wandwaver",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/train-prayer.ts",
    "args": [
-    "3000",
-    "cow"
+    "99"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 70 on the Ardougne cows",
+   "goal": "train Prayer to 99 burying the held bones",
    "role": "combat",
-   "template": "army-cow-defence-70",
+   "template": "army-bury-prayer-99",
    "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
+   "resources": []
   },
   {
    "account": "Woodenstaff",
@@ -437,21 +419,6 @@
    "role": "helper"
   },
   {
-   "account": "Ballspinner",
-   "script": "scripts/quest-sweep.ts",
-   "args": [
-    "itgronigen"
-   ],
-   "env": {
-    "CAP": "6000",
-    "COORDINATOR_RUN_ID": "task-9bd323a2-805e-4b4c-ae0c-db6c7474fe25"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-observatory-ballspinner-after-proof-fix [task-9bd323a2-805e-4b4c-ae0c-db6c7474fe25]",
-   "role": "supply"
-  },
-  {
    "account": "Pocketpython",
    "script": "scripts/buy-owned-ge-item.ts",
    "args": [],
@@ -473,29 +440,6 @@
    "role": "supply"
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/handoff-inputs.ts",
-   "args": [
-    "80:Lobster",
-    "--notes",
-    "--bank-x=2619",
-    "--bank-z=3332",
-    "--approach-ms=1800000",
-    "--request-ms=60000",
-    "--timeout-ms=600000",
-    "--grace-ms=45000"
-   ],
-   "env": {
-    "HANDOFF_ORDER": "magicwanda-blood-lobster80-notes-mineyourbiz",
-    "CAP": "4000",
-    "COORDINATOR_RUN_ID": "task-23c1852e-2298-477a-903c-cf7bffa95940"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-handoff-mineyourbiz-magicwanda-lobster80-notes [task-23c1852e-2298-477a-903c-cf7bffa95940]",
-   "role": "supply"
-  },
-  {
    "account": "Magicwanda",
    "script": "scripts/blood-chest.ts",
    "args": [
@@ -511,6 +455,45 @@
    "repeat": false,
    "goal": "run-blood-magicwanda-loot60-r5 [task-40b75809-4b37-4e51-8bed-f3b3d4d2d7a5]",
    "role": "supply"
+  },
+  {
+   "accounts": [
+    "MineYourBiz",
+    "Ballspinner"
+   ],
+   "script": "scripts/handoff-inputs.ts",
+   "args": [
+    "80:Lobster",
+    "--notes",
+    "--bank-x=2619",
+    "--bank-z=3332",
+    "--approach-ms=1800000",
+    "--request-ms=60000",
+    "--timeout-ms=600000",
+    "--grace-ms=45000"
+   ],
+   "env": {
+    "HANDOFF_ORDER": "ballspinner-blood-lobster80-notes-mineyourbiz",
+    "CAP": "4000",
+    "COORDINATOR_RUN_ID": "task-6460642a-ad15-4d4e-b423-d645eaba6c98"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-handoff-mineyourbiz-ballspinner-lobster80-notes [task-6460642a-ad15-4d4e-b423-d645eaba6c98]",
+   "role": "supply"
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-babbc942-9ad6-4e01-9ec2-85443e776922"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-session-recovery-oreelse-elemental [task-babbc942-9ad6-4e01-9ec2-85443e776922]",
+   "role": "pk"
   }
  ]
 }
