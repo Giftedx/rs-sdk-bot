@@ -15,6 +15,9 @@ export type BenchCase = {
   timeoutMs?: number;
   // Partner accounts the worker opens itself, named `<bot><suffix>` (one letter: a bench name has 11 characters).
   companions?: {suffix: string; preset: string; presetConfig?: SaveConfig}[];
+  // A case that ends at a tick cap shows no speed in its ticks. `output` reads the useful amount from the RESULT
+  // line (coins, items, kills); the bench then compares the amount for each 1,000 ticks.
+  output?: RegExp;
   // Why the case cannot pass today. A default run skips it and coverage does not count it; BENCH_ALL=1 runs it.
   known?: string;
 };
@@ -56,7 +59,7 @@ const skiller = (skill: string, method: string, preset: string, args: string[] =
   ({key: `skiller:${skill}:${method}`, script: 'scripts/aio-skiller.ts', preset, scriptArgs: [skill, method, ...args], pass: ok, ...extra});
 
 const ROUTE_CASES: BenchCase[] = [
-  skiller('fishing', 'cage', 'gather_fish_catherby', ['cage', '1500']),
+  skiller('fishing', 'cage', 'gather_fish_catherby', ['cage', '1500'], {output: /totalCaught=(\d+)/}),
   skiller('smithing', 'smelt', 'smelt_bars_alkharid'),
   // Start states and arguments below come from each worker's proof or fleet fixture (the source is named per case).
   skiller('fishing', 'harpoon', 'gather_fish_catherby', ['harpoon', '1500'], {presetConfig: {position: {x: 2840, z: 3432, level: 0}, skills: {Fishing: 70}, inventory: [{id: 311, count: 1}]}}),
@@ -92,25 +95,25 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('magic', 'order', 'fresh_lumbridge', ['TARGET_LEVEL=32', 'MAX_CASTS=5', 'RUNE_BUDGET=1000', 'CASH_RESERVE=10000', 'CAP=1500'], {presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Magic: 31}, inventory: [{id: 333, count: 1}, {id: 333, count: 1}, {id: 333, count: 1}, {id: 1351, count: 1}], bank: [{id: 556, count: 25}, {id: 557, count: 4}, {id: 563, count: 5}, {id: 995, count: 14911}, {id: 1511, count: 5}]}}),
   skiller('prayer', 'bury', 'fresh_lumbridge', ['43', 'CAP=1500', 'MAX_BURY=175', 'BONE_RESERVE=6'], {presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Prayer: 42}, bank: [{id: 526, count: 200}]}}),
   // packages/practice/src/goldfarm-order-proof.ts `entry99`
-  skiller('thieving', 'knights-stable', 'fresh_lumbridge', ['TICKS=600', 'BANK_AT=50000'], {presetConfig: {position: {x: 2654, z: 3283, level: 0}, skills: {Thieving: 99, Hitpoints: 10}, inventory: [{id: 1265, count: 1}, {id: 590, count: 1}, {id: 995, count: 37}], equipment: [{id: 1277, count: 1, slot: 3}, {id: 1171, count: 1, slot: 5}], bank: [{id: 995, count: 1000}, {id: 440, count: 5}, {id: 333, count: 10}, {id: 329, count: 4}, {id: 385, count: 3}]}}),
+  skiller('thieving', 'knights-stable', 'fresh_lumbridge', ['TICKS=600', 'BANK_AT=50000'], {output: /coinsGained=(\d+)/, presetConfig: {position: {x: 2654, z: 3283, level: 0}, skills: {Thieving: 99, Hitpoints: 10}, inventory: [{id: 1265, count: 1}, {id: 590, count: 1}, {id: 995, count: 37}], equipment: [{id: 1277, count: 1, slot: 3}, {id: 1171, count: 1, slot: 5}], bank: [{id: 995, count: 1000}, {id: 440, count: 5}, {id: 333, count: 10}, {id: 329, count: 4}, {id: 385, count: 3}]}}),
   skiller('thieving', 'stalls', 'cake_stall', ['stealing_bakery_stall', '1', '120'], {known: 'the steal does not complete from the preset tile in 120 ticks'}),
   // packages/practice/src/blood-chest-proof.ts `entry`
   skiller('thieving', 'blood-chest', 'fresh_lumbridge', ['2500', 'MAX_LOOTS=2', 'CAP=2500'], {timeoutMs: 900_000, presetConfig: {position: {x: 2584, z: 3337, level: 0}, skills: {Thieving: 99, Attack: 72, Hitpoints: 56, Agility: 60}, inventory: [{id: 1895, count: 1}, {id: 1895, count: 1}, {id: 1895, count: 1}, {id: 995, count: 40}], bank: [{id: 995, count: 1000}, {id: 314, count: 7}]}}),
   // scripts/measure/fleet-practice.ts `wool`
   skiller('foraging', 'wool', 'fresh_lumbridge', ['CAP=2200', 'MAX_TRIPS=3'], {presetConfig: {position: {x: 3207, z: 3218, level: 2}, inventory: [{id: 1735, count: 1}]}}),
   skiller('runecraft', 'air', 'rc_air_inside'),
-  skiller('thieving', 'knights', 'goldfarm_knights', ['TICKS=1500']),
-  skiller('foraging', 'flax', 'gather_flax', ['1500']),
+  skiller('thieving', 'knights', 'goldfarm_knights', ['TICKS=1500'], {output: /coinsGained=(\d+)/}),
+  skiller('foraging', 'flax', 'gather_flax', ['1500'], {output: /banked=(\d+)/}),
   skiller('foraging', 'grapes', 'grapes_cooksguild'),
   {key: 'fighter:chicken', script: 'scripts/aio-fighter.ts', preset: 'bank_draynor', presetConfig: CHICKEN_FIXTURE, scriptArgs: ['chicken', 'TARGET_LEVEL=25', 'CAP=1500'], pass: s => ok(s) && s.includes('chicken-qualification'), timeoutMs: 300_000},
-  {key: 'fighter:druid', script: 'scripts/aio-fighter.ts', preset: 'gather_combat_druid', scriptArgs: ['druid', '1500', 'druid'], pass: ok},
+  {key: 'fighter:druid', script: 'scripts/aio-fighter.ts', preset: 'gather_combat_druid', scriptArgs: ['druid', '1500', 'druid'], pass: ok, output: /kills=(\d+)/},
   // packages/practice/src/cow-progress-order-proof.ts
   {key: 'fighter:cow', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['cow', '1500', 'cow', 'MAX_KILLS=5', 'TRAIN_SKILL=Attack', 'TARGET_LEVEL=20', 'COW_BANK_PROFILE=south', 'COW_FOOD_MODE=held'], pass: ok,
     presetConfig: {position: {x: 2655, z: 3283, level: 0}, skills: {Attack: 9, Defence: 20, Strength: 20, Hitpoints: 20},
       inventory: [{id: 995, count: 140}, {id: 333, count: 1}, {id: 315, count: 1}, {id: 333, count: 1}, {id: 333, count: 1}, {id: 2309, count: 1}, {id: 333, count: 1}, {id: 333, count: 1}, {id: 333, count: 1}, {id: 1277, count: 1}, {id: 1171, count: 1}],
       equipment: [{id: 1277, count: 1, slot: 3}, {id: 1171, count: 1, slot: 5}],
       bank: [{id: 995, count: 25}, {id: 1351, count: 1}, {id: 590, count: 1}, {id: 303, count: 1}, {id: 1925, count: 1}, {id: 1931, count: 1}, {id: 1265, count: 1}, {id: 1205, count: 1}, {id: 841, count: 1}, {id: 882, count: 25}, {id: 556, count: 25}, {id: 558, count: 15}, {id: 555, count: 6}, {id: 557, count: 4}, {id: 559, count: 2}, {id: 1739, count: 8}, {id: 526, count: 8}, {id: 2132, count: 8}]}},
-  {key: 'fighter:giant', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['giant', '1500', 'giant'], pass: ok,
+  {key: 'fighter:giant', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['giant', '1500', 'giant'], pass: ok, output: /kills=(\d+)/,
     presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: [{id: 379, count: 5}]}},
   {key: 'fighter:ranged-gather', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['ranged-gather', 'CAP=1500', 'MAX_KILLS=2', 'AMMO=90', 'FOOD=3', 'FOOD_ID=333'], pass: s => ok(s) && s.includes('RANGED_BANK'),
     presetConfig: {position: {x: 3253, z: 3421, level: 0}, skills: {Ranged: 30, Hitpoints: 30}, bank: [{id: 841, count: 1}, {id: 884, count: 90}, {id: 333, count: 5}]}},
@@ -141,8 +144,7 @@ const EXTRA_CASES: BenchCase[] = [
 ];
 
 const KNOWN_QUEST: Readonly<Record<string, string>> = {
-  waterfall: 'script fault: stops in the maze at 2538,3145 with every seed',
-  viking: 'script fault: retreats with no food with every seed',
+  waterfall: 'the walk to the Tree Gnome Village maze mouth 2505,3190 stops at 2509,3187, and the planner has no route from there to the first maze waypoint 2512,3190; the route search to the goal goes round the hedge to 2529,3140, where the client refuses the walk',
 };
 
 // Pair quests open their partners themselves: quest-arrav.ts and quest-hero.ts use `<main>p`, quest-legends.ts `<main>b` and `<main>c`.

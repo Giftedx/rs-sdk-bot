@@ -74,7 +74,8 @@ try {
     // Vyvin's room is south of the stairs behind the door loc_1530 at 2982,3337 (maps/m46_52.jm2); shut, the search gets
     // "I can't reach that!".
     await q.openDoor('vyvin door', 2982, 3337);
-    for (let i = 0; i < 40 && !q.has(ITEM.portrait); i++) {
+    // Sir Vyvin wanders; a search waits while he stands within 2 tiles, so the bound is wide.
+    for (let i = 0; i < 200 && !q.has(ITEM.portrait); i++) {
         await q.guard('cupboard');
         if (q.dialogOpen()) { await q.converse([], () => !q.dialogOpen(), 6); continue; }
         const v = q.npc(/^sir vyvin$/i);

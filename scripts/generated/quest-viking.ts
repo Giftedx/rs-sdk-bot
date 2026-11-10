@@ -428,6 +428,8 @@ try {
         const ko = () => (q.st()?.nearbyNpcs ?? []).find((n: any) => KOSCHEI.includes(n.id));
         const t1 = q.T();
         let lastId = 0, lastHit = -99;
+        // Peer banked the food, and the fight ends at 0 hp by design: no retreat here.
+        q.planLowHp(true);
         while (z() > 9000 && q.T() - t1 < 1500) {
             await q.guard('koschei');
             if (q.dialogOpen()) { await closeDlg(); continue; }
@@ -443,6 +445,7 @@ try {
         if (z() > 9000) await q.fail('koschei');
         q.milestone('koschei');
         await q.waitTicks(4);
+        q.planLowHp(false);
         await closeDlg();
         await op('balcony down', LOC.warriorDown, /climb-down/i, () => lv() === 0, 10);
         q.milestone('thorvald');
