@@ -1,5 +1,5 @@
 // Adapter for the reviewed rs-world build. The build runs as it is: the page talks to it by URL and message.
-export const VIEWER_MANIFEST_SHA256='4C62C8CD72B5D1B3F5605CF405A4A5BD84943E369B0AA9B63E06549031ECB418';
+export const VIEWER_MANIFEST_SHA256='58464CB843BA4B0E7CA298496F9B50CB14A4648B11301682068412D737D47EFE';
 
 export function viewerAssetRoute(pathname:string):{root:'static'|'caches';relative:string}|'bad'|null {
     let decoded:string;try{decoded=decodeURIComponent(pathname);}catch{return 'bad';}
@@ -29,6 +29,14 @@ export const VIEWER_FEATURES: [what: string, text: string][] = [
     ['follow change timing', 'viewerTiming'],
     ['multi-view status', 'viewerMulti'],                                   // {multi:[names]}, the Fleet wall
     ['multi-view frame', 'multi-pane'],                                     // the bridge finds a clicked view by it
+    ['multi-view number', 'dataset.pane'],                                  // the view's place in the asked order
+    ['tiling message', 'setMultiLayout('],                                  // {multiLayout:{mode,main,gap,ratio,animate,color}}
+    ['view order message', 'setMultiOrder('],                               // {multiOrder:[names]}
+    ['view focus message', 'setMultiFocus('],                               // {multiFocus:name}
+    ['page-drawn frames', 'setMultiChrome('],                               // {multiChrome:false}
+    ['tiling report', 'layoutInfo('],                                       // {viewerMultiLayout}: the rectangles for the page's frames
+    ['moves at the display rate', 'needsEveryFrame('],                      // no frame limit while views move
+    ['way back to the single view', 'onClosed'],                            // the kept view grows to the full frame
 ];
 export function checkViewerBundle(text: string) {
     for (const [what, feature] of VIEWER_FEATURES) if (!text.includes(feature)) throw Error(`${what}: the rs-world build lacks ${feature}`);
@@ -217,17 +225,25 @@ export function installViewerBridge(host:any) {
         if(host.history?.replaceState){url.searchParams.delete('follow');host.history.replaceState(host.history.state,'',url.href);publishedFollow=null;}
         return true;
     };
-    // Multi-view (the page's Fleet wall). {multi} is a list of at most 16 different names, each a player name or the
-    // hidden-name mark; {multiDistance} is 16 to 128 tiles. This listener runs before the viewer's own: a message from
-    // another sender, or with another value, stops here.
-    let multiAsked:string[]=[],multiDown:{x:number;y:number;pane:number}|null=null;
-    const validMulti=(list:any)=>Array.isArray(list)&&list.length<=16&&list.every((n:any)=>typeof n==='string'&&(n==='⟦MAIN⟧'||/^[A-Za-z0-9_-](?:[A-Za-z0-9_ -]{0,10}[A-Za-z0-9_-])?$/.test(n)))&&new Set(list.map((n:string)=>n.toLowerCase())).size===list.length;
+    // Multi-view (the page's Fleet wall). {multi} and {multiOrder} are lists of at most 16 different names, each a player
+    // name or the hidden-name mark; {multiDistance} is 16 to 128 tiles; {multiFocus} and the main view are a name or a
+    // view number; {multiLayout} holds only the keys below, each in its range; {multiChrome} is true or false. This
+    // listener runs before the viewer's own: a message from another sender, or with another value, stops here.
+    let multiAsked:string[]=[],multiDown:{x:number;y:number;pane:number}|null=null,multiHover=-1;
+    const multiName=(n:any)=>typeof n==='string'&&(n==='⟦MAIN⟧'||/^[A-Za-z0-9_-](?:[A-Za-z0-9_ -]{0,10}[A-Za-z0-9_-])?$/.test(n));
+    const validMulti=(list:any)=>Array.isArray(list)&&list.length<=16&&list.every(multiName)&&new Set(list.map((n:string)=>n.toLowerCase())).size===list.length;
+    const multiView=(v:any)=>multiName(v)||Number.isInteger(v)&&v>=0&&v<16;
+    const layoutRules:Record<string,(v:any)=>boolean>={mode:v=>['grid','main','focus','columns'].includes(v),main:multiView,gap:v=>Number.isInteger(v)&&v>=0&&v<=24,ratio:v=>typeof v==='number'&&v>=0.5&&v<=0.8,animate:v=>typeof v==='boolean',color:v=>typeof v==='string'&&/^#[0-9a-f]{6}$/i.test(v)};
+    const multiRules:Record<string,(v:any)=>boolean>={multi:validMulti,multiOrder:validMulti,multiDistance:v=>Number.isInteger(v)&&v>=16&&v<=128,multiFocus:multiView,multiChrome:v=>typeof v==='boolean',
+        multiLayout:v=>!!v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).every(k=>Object.hasOwn(layoutRules,k)&&layoutRules[k]!(v[k]))};
     host.addEventListener('message',(event:any)=>{
-        const data=event.data;
-        if(data&&typeof data==='object'&&('multi' in data||'multiDistance' in data)){
+        const data=event.data,keys=data&&typeof data==='object'?Object.keys(multiRules).filter(k=>k in data):[];
+        if(keys.length){
             const ours=event.origin===host.location.origin&&event.source===host.parent;
-            if(!ours||'multi' in data&&!validMulti(data.multi)||'multiDistance' in data&&!(Number.isInteger(data.multiDistance)&&data.multiDistance>=16&&data.multiDistance<=128)){event.stopImmediatePropagation();return;}
-            if('multi' in data)multiAsked=data.multi.slice();
+            if(!ours||keys.some(k=>!multiRules[k]!(data[k]))){event.stopImmediatePropagation();return;}
+            if('multi' in data){multiAsked=data.multi.slice();multiHover=-1;}
+            // The viewer puts the listed views first and keeps the others in their order: the view numbers follow.
+            if('multiOrder' in data){const left=multiAsked.slice(),first:string[]=[];for(const n of data.multiOrder){const i=left.findIndex(a=>a.toLowerCase()===n.toLowerCase());if(i>=0)first.push(left.splice(i,1)[0]!);}multiAsked=[...first,...left];}
         }
         if(event.origin!==host.location.origin||event.source!==host.parent||!event.data||typeof event.data!=='object')return;
         if(event.data.atlasCompass===true)host.document?.querySelector('.minimap-container .compass')?.click();
@@ -237,13 +253,26 @@ export function installViewerBridge(host:any) {
         if(event.data.atlasFreeCamera===true){freeCameraPolls=10;pageFollow='';releaseFollow();}
     });
     // The viewer reports a click on a view only to a page that loads it with embed=1. This page loads it with embed=0,
-    // so the bridge reports it: the main button pressed and released in one view, within 8 px. The views stand in the
-    // asked order. The page gets the name it asked for, and the mark for a hidden name.
+    // so the bridge reports it: the main button pressed and released in one view, within 8 px. A view carries its number
+    // in the asked order (data-pane); a view that closes carries none. Views that move can cross: the one drawn last
+    // (the highest z-index) is on top. The page gets the name it asked for, and the mark for a hidden name.
     const paneAt=(event:any)=>{
-        const panes=[...(host.document?.querySelectorAll?.('.multi-view .multi-pane')??[])];
+        const panes=[...(host.document?.querySelectorAll?.('.multi-view .multi-pane[data-pane]')??[])];
         if(event.target?.tagName!=='CANVAS'||panes.length!==multiAsked.length)return -1;
-        return panes.findIndex((p:any)=>{const r=p.getBoundingClientRect();return event.clientX>=r.left&&event.clientX<r.right&&event.clientY>=r.top&&event.clientY<r.bottom;});
+        let hit=-1,top=-1;
+        for(const p of panes as any[]){
+            const r=p.getBoundingClientRect(),i=Number(p.dataset?.pane),z=Number(p.style?.zIndex)||0;
+            if(event.clientX>=r.left&&event.clientX<r.right&&event.clientY>=r.top&&event.clientY<r.bottom&&Number.isInteger(i)&&i>=0&&i<multiAsked.length&&z>=top){hit=i;top=z;}
+        }
+        return hit;
     };
+    // The page highlights the view under the pointer: it gets the view number when that changes, and -1 for none.
+    const hover=(pane:number)=>{
+        if(pane===multiHover)return;multiHover=pane;
+        if(privacyReady&&renderReady&&!failed&&host.parent!==host)host.parent.postMessage({viewerMultiHover:pane},host.location.origin);
+    };
+    host.addEventListener('pointermove',(event:any)=>{if(multiAsked.length)hover(paneAt(event));},true);
+    host.addEventListener('pointerout',(event:any)=>{if(multiAsked.length&&!event.relatedTarget)hover(-1);},true);
     if(url.searchParams.get('embed')!=='1'){
         host.addEventListener('pointerdown',(event:any)=>{multiDown=multiAsked.length&&event.button===0?{x:event.clientX,y:event.clientY,pane:paneAt(event)}:null;},true);
         host.addEventListener('pointerup',(event:any)=>{
@@ -255,10 +284,16 @@ export function installViewerBridge(host:any) {
         },true);
     }
     // The page owns the account order: [ and ] step through its accounts, not through every online player.
+    // While the wall is open its keys go to the page and not to the viewer's camera: arrows and h j k l, Enter, Space,
+    // 1 to 9, f, ? and Escape. The \ key opens and closes the wall.
     host.addEventListener('keydown',(event:any)=>{
-        if(event.key!=='['&&event.key!==']')return;
+        const plain=!event.ctrlKey&&!event.altKey&&!event.metaKey&&!/^(?:INPUT|SELECT|TEXTAREA)$/.test(event.target?.tagName??'');
+        const wallKey=plain&&typeof event.key==='string'&&(event.key==='\\'||multiAsked.length>0&&/^(?:Arrow(?:Left|Right|Up|Down)|[hjklfHJKLF1-9? ]|Enter|Escape)$/.test(event.key));
+        if(event.key!=='['&&event.key!==']'&&!wallKey)return;
         event.stopImmediatePropagation();event.preventDefault();
-        if(host.parent!==host)host.parent.postMessage({atlasStep:event.key===']'?1:-1},host.location.origin);
+        if(host.parent===host)return;
+        if(wallKey)host.parent.postMessage({atlasWallKey:{key:event.key,shift:!!event.shiftKey}},host.location.origin);
+        else host.parent.postMessage({atlasStep:event.key===']'?1:-1},host.location.origin);
     },true);
     host.addEventListener('error',()=>fail('The 3D viewer reported an error; use the 2D map.'));
     // A graphics reset leaves a black canvas. The page reloads the viewer after this failure. The event does not bubble.
