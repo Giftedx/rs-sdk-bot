@@ -142,9 +142,12 @@ export async function trainChickens(s:Session,cap=1800,bank='varrock',target=13,
         return totals;
     };
     const xp=()=>['Attack','Strength','Defence'].reduce((n,name)=>n+(s.sdk.getSkillXp(name)??0),0);
-    const walk=async(points:typeof ROUTE)=>{
+    // A run that reaches its tick cap with nothing else wrong (no damage, threat, stop request or lost session) and
+    // with melee XP gained is a partial success: it walks back and banks like a finished one.
+    const halted=()=>ended||hurt||!!options.stop?.()||!!threat()||existsSync(`.practice/stop-${s.name}`);
+    const walk=async(points:typeof ROUTE,homeward=false)=>{
         const base=await sessionWalker(s),guarded=bank==='ardougne'?guardArdougneTrainingWalker(base):null;
-        const r=await walkPath(guarded?.deps??base,points,{maxTicks:Math.max(1,Math.min(650,cap-(s.tick()-start))),stop:over});
+        const r=await walkPath(guarded?.deps??base,points,homeward?{maxTicks:650,stop:halted}:{maxTicks:Math.max(1,Math.min(650,cap-(s.tick()-start))),stop:over});
         if(!r.ok)throw Error(`no training progress: route ${r.detail}; hurt=${hurt} threat=${threat()?.name??'-'}`);
     };
     try {
@@ -168,7 +171,7 @@ export async function trainChickens(s:Session,cap=1800,bank='varrock',target=13,
         }
         console.log(`MILESTONE training-outbound combat=${combat()} kit=${kit.join(',')}`);
         await walk(route.slice(1));
-        let progress=s.tick(),lastXp=xp();
+        let progress=s.tick(),lastXp=xp();const startXp=lastXp;
         while((!goal()||raw()<rawTarget)&&!over()){
             if(xp()>lastXp){lastXp=xp();progress=s.tick();}
             if(s.tick()-progress>120)throw Error('no training progress: no melee XP for120ticks');
@@ -199,9 +202,10 @@ export async function trainChickens(s:Session,cap=1800,bank='varrock',target=13,
             }
             console.log(`MILESTONE training combat=${combat()} kills=${kills} xp=${xp()} hp=${hp()}`);
         }
-        if(!goal()||raw()<rawTarget||over())throw Error(`training incomplete combat=${combat()} target=${target} raw=${raw()}/${rawTarget} hurt=${hurt} threat=${threat()?.name??'-'}`);
+        const partial=!goal()&&raw()>=rawTarget&&s.tick()-start>=cap&&!halted()&&xp()>startXp;
+        if(!partial&&(!goal()||raw()<rawTarget||over()))throw Error(`training incomplete combat=${combat()} target=${target} raw=${raw()}/${rawTarget} hurt=${hurt} threat=${threat()?.name??'-'}`);
         console.log(`MILESTONE training-return combat=${combat()}`);
-        await walk([...route.slice(0,-1)].reverse());
+        await walk([...route.slice(0,-1)].reverse(),true);
         const wornPick=s.sdk.getEquipment().find(i=>i.id===1265);
         if(wornPick&&(!(await s.bot.unequipItem(wornPick)).success||!await waitUntil(s,()=>s.sdk.getInventory().some(i=>i.id===1265),{timeoutTicks:6})))
             throw Error('training pickaxe not returned to inventory');
@@ -213,7 +217,7 @@ export async function trainChickens(s:Session,cap=1800,bank='varrock',target=13,
         const after=assets(),preserved=[...before].every(([id,n])=>(after.get(id)??0)>=n);
         await s.bot.closeBank();
         const p=pos(),atBank=!!p&&p.level===0&&Math.max(Math.abs(p.worldX-home.x),Math.abs(p.worldZ-home.z))<=3;
-        return{ok:goal()&&atBank&&!hurt&&preserved,combat:combat(),strength:s.sdk.getSkill('Strength')?.baseLevel,defence:s.sdk.getSkill('Defence')?.baseLevel,unlockPlan,ticks:s.tick()-start,kills,hpMin,preserved,atBank,position:p&&{x:p.worldX,z:p.worldZ,level:p.level}};
+        return{ok:(goal()||partial)&&atBank&&!hurt&&preserved,partial,combat:combat(),strength:s.sdk.getSkill('Strength')?.baseLevel,defence:s.sdk.getSkill('Defence')?.baseLevel,unlockPlan,ticks:s.tick()-start,kills,hpMin,preserved,atBank,position:p&&{x:p.worldX,z:p.worldZ,level:p.level}};
     } finally {off();}
 }
 
