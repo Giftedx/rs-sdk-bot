@@ -85,6 +85,36 @@ Ranged it adds is not needed at that point.
 - **Gap.** Practice only; one skill; a better weapon (section 1's rune gear gives 137 at band 70) is not available on
   the market.
 
+## Ranged on the troopers
+
+- **Claim.** On practice at xpRate 25, an army-shaped account trains Ranged 1 -> 63-66 on the Khazard troopers in about
+  1,690 ticks (49.6-59.9 Ranged XP per tick) with a shortbow and iron arrows. It eats 0-2 sharks and uses about 5.4
+  arrows per 1,000 XP, so 1 -> 99 needs about 5,400 iron arrows at that rate.
+- **Conditions.** `scripts/gather-combat.ts <bot> 1500 trooper` with `TRAIN_SKILL=Ranged TARGET_LEVEL=99 GIANT_FOOD=10`
+  (default `GIANT_AMMO=500`). TheFullMonty's shape: Attack 69, Strength 61, Defence 62, Hitpoints 62, Ranged 1, a bronze
+  sword worn. A shortbow, 600 iron arrows and 30 sharks banked; start at the north bank. Three bots ran at once. Ticks
+  include the walk out and the retreat.
+
+  | Run | Kills | Ranged | XP | Ticks | XP per tick | Sharks eaten | Lowest HP |
+  |---|---|---|---|---|---|---|---|
+  | k | 52 | 1 -> 66 | 101,600 | 1,696 | 59.9 | 0 | 35 |
+  | l | 41 | 1 -> 64 | 91,800 | 1,687 | 54.4 | 1 | 29 |
+  | n | 43 | 1 -> 63 | 84,100 | 1,696 | 49.6 | 2 | 31 |
+
+  A fourth run on the same code: 35 kills, 1 -> 62, 78,200 XP, 424 arrows used.
+- **What the bow needed.** Each was a failure in an earlier practice set; the trainer handles it now.
+  - From Ranged 1, every kill gives several levels, and the level-up dialog held the attack (337 of 681 ticks under one).
+    The fight loop dismisses it and attacks again. This applies to melee too: Strength 60 -> 73 at 60.6 XP per tick,
+    against 60.9-63.4 before.
+  - A bow needs line of sight. One run stood 289 ticks on a trooper it could not hit, so a target with no own XP for
+    40 ticks is given up.
+  - A trooper killed by someone else (a gnome, another bot) never pays the XP the credit waits for, so it is let go.
+  - A bot that stands to shoot drifted to the west edge with no trooper in view (two runs idled 307 ticks). After 10
+    ticks without a target it walks back to the spot.
+- **Evidence.** `.practice/trooper-ranged/` in the Claude cloud container that ran them.
+- **Gap.** Practice only. The rate above Ranged 66 is not measured, and better bows and arrows (willow to yew,
+  mithril to rune) are not in the army's hands. At the cap a trooper still fighting holds the retreat about 100 ticks.
+
 ## Magic and Prayer from the army's home bank
 
 The tribrid target also needs Magic and Prayer at 99. The claude-cloud army holds Magic 48-62 and Prayer 47-76.
