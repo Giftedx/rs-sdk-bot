@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794315705866,
+ "at": 1794315853753,
  "jobs": [
   {
    "account": "Fatstack",
@@ -146,26 +146,21 @@
   },
   {
    "account": "UnderMyKilt",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 70 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-defence-70",
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "claude-cloud",
    "resources": [
-    "cow:ardougne-north"
+    "knight:2582,3297"
    ]
   },
   {
@@ -200,7 +195,7 @@
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
+    "TRAIN_SKILL": "Strength",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1"
@@ -208,9 +203,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 60 on the Ardougne cows",
+   "goal": "train Strength to 70 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-defence-60",
+   "template": "army-cow-strength-70",
    "autopilot": "claude-cloud",
    "resources": [
     "cow:ardougne-north"
@@ -218,22 +213,26 @@
   },
   {
    "account": "Kiltlifter",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
    "env": {
-    "PEN": "3187,3277",
-    "TICKS": "3000",
-    "TARGET": "2000"
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
-   "role": "helper",
-   "template": "feathers@3187,3277",
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
    "autopilot": "claude-cloud",
    "resources": [
-    "pen:3187,3277"
+    "cow:ardougne-north"
    ]
   },
   {
