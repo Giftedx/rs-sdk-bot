@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794306991941,
+ "at": 1794308178587,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -78,7 +78,7 @@
     "10",
     "20"
    ],
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true,
    "goal": "PK hunts of 10 minutes at Wilderness 20 or less, with GE and shop rune restock",
@@ -181,21 +181,22 @@
   },
   {
    "account": "Masterbaiter",
-   "script": "scripts/gather-feathers.ts",
+   "script": "scripts/generated/thieving60.ts",
    "args": [],
    "env": {
-    "PEN": "3197,3353",
-    "TICKS": "3000"
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3197,3353",
-   "role": "helper",
-   "template": "feathers@3197,3353",
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
    "autopilot": "local",
    "resources": [
-    "pen:3197,3353"
+    "knight:2669,3298"
    ]
   },
   {
@@ -238,21 +239,21 @@
   },
   {
    "account": "mmthv2350",
-   "script": "scripts/gather-feathers.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "PEN": "3187,3277",
-    "TICKS": "3000"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
-   "role": "helper",
-   "template": "feathers@3187,3277",
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "pen:3187,3277"
+    "knight:2582,3297"
    ]
   },
   {
@@ -276,43 +277,61 @@
   },
   {
    "account": "Swordinhand",
-   "script": "scripts/gather-feathers.ts",
+   "script": "scripts/generated/thieving60.ts",
    "args": [],
    "env": {
-    "PEN": "3229,3298",
-    "TICKS": "3000"
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3229,3298",
-   "role": "helper",
-   "template": "feathers@3229,3298",
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
    "autopilot": "local",
    "resources": [
-    "pen:3229,3298"
+    "knight:2652,3318"
+   ]
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
+   "env": {
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
    ]
   },
   {
    "account": "Billionaire",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "catherby"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "ITEMS": "rune arrowtips|adamant arrowtips",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy rune and adamant arrowtips at Catherby",
-   "role": "bank",
-   "template": "shop-arrowtips",
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
    "autopilot": "local",
    "resources": [
-    "shop:catherby"
+    "knight:2669,3298"
    ]
   },
   {
