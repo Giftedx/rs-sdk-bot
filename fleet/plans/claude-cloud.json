@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794309293389,
+ "at": 1794309349592,
  "jobs": [
   {
    "account": "Fingerblastr",
@@ -50,30 +50,6 @@
   },
   {
    "account": "Deeppockets",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Defence to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-defence-45",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "cow:ardougne-north"
-   ]
-  },
-  {
-   "account": "Fatstack",
    "script": "scripts/gather-combat.ts",
    "args": [
     "3000",
@@ -257,9 +233,22 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-60ecd421-b370-4651-b1e8-a67ee5fa4dc9"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "claude-cloud-recover-undermykilt-20261110t111056z [task-60ecd421-b370-4651-b1e8-a67ee5fa4dc9]",
+   "role": "combat"
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-dea27901-5385-40e1-84d4-1743413d6db5"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-fatstack-20261110t111056z [task-dea27901-5385-40e1-84d4-1743413d6db5]",
    "role": "combat"
   }
  ]

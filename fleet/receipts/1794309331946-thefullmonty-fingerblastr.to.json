@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794309331946-thefullmonty-fingerblastr",
+ "account": "Fingerblastr",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 10,
+ "claim": "c0aa99e3-9ce1-4804-85af-c63184ed2f44",
+ "count": 0,
+ "ok": false,
+ "at": 1794309337485,
+ "detail": "trade claimed"
+}

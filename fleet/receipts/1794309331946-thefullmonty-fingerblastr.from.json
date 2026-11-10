@@ -1,0 +1,30 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794309331946-thefullmonty-fingerblastr",
+ "account": "TheFullMonty",
+ "partner": "Fingerblastr",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 10,
+ "claim": "c25e20fe-1fec-43f5-a1bb-92a1404b9321",
+ "count": 10,
+ "ok": true,
+ "at": 1794309348353,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1794309341985
+ },
+ "logout": {
+  "attemptId": "1794309335407-0000020262-0000000001",
+  "at": 1794309348348,
+  "sha256": "c908ddd8bb96840c6c4cb5e70c929a3ec522517aa3d36d0c095aa122a3e9e720"
+ }
+}
