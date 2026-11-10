@@ -396,6 +396,20 @@ try {
         q.milestone('bowl');
         await beltSouth('in B');
         await walk('bless spot', GUJUO_SPOT, 1);
+        // The blessing fails on stat_random(prayer, 80, 250) (gujuo.rs2): 98 in 100 at 99 prayer points, 59 in 100 at
+        // 42, and each failure takes 5 points. So the bot burns its points down to 57 first, with six prayers on,
+        // and then has three tries (57, 52, 47) before it must drink.
+        const BURN = [9, 10, 11, 12, 13, 14];
+        const active = (i: number) => !!(q.st() as any)?.prayers?.activePrayers?.[i];
+        for (let t = 0; t < 200 && prayer() > 57; t++) {
+            await q.guard('burn prayer');
+            if (t % 4 === 0) for (const i of BURN) if (!active(i)) await q.s.direct({ type: 'togglePrayer', prayerIndex: i, reason: 'SDK' });
+            await q.waitTicks(1);
+        }
+        for (let t = 0; t < 4 && BURN.some(active); t++) {
+            for (const i of BURN) if (active(i)) await q.s.direct({ type: 'togglePrayer', prayerIndex: i, reason: 'SDK' });
+            await q.waitTicks(1);
+        }
         for (let k = 0; k < 20 && !q.has(ITEM.bowlBless); k++) {
             await q.guard('bless');
             if (prayer() < 42) await drinkPrayer();
