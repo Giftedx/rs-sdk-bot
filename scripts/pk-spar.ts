@@ -50,6 +50,8 @@ const GOD_HUNTER: Profile = { kit: { ...TRIBRID_KIT, magic: [2417] }, damageSpel
 export const SCENARIOS: Readonly<Record<string, { a?: Profile; b?: Profile }>> = {
     open: {},
     escape: { b: { escapeAt: 60 } },
+    // The same chase with the sides turned: side A is the runner, so a climb tunes how our own account gets away.
+    flee: { a: { escapeAt: 60 } },
     // The hunter casts Flames of Zamorak under Charge, with the Zamorak staff as its magic weapon (the start state
     // wears the Zamorak cape and has the Mage Arena done).
     'escape-god': { a: GOD_HUNTER, b: { escapeAt: 60 } },

@@ -291,6 +291,7 @@ const ROUTE_CASES: BenchCase[] = [
   sparBatch('extra:spar-escape-spell-pots-x8', 8, sparFixture(3125, 3790, {potions: true}), sparFixture(3127, 3790, {food: 3, teleport: true}), ['SPAR_SCENARIO=escape-spell']),
   sparBatch('extra:spar-escape-god-x8', 8, sparFixture(3125, 3790, {god: true}), sparFixture(3127, 3790, {food: 3, glory: true}), ['SPAR_SCENARIO=escape-god']),
   sparBatch('extra:spar-escape-spell-god-x8', 8, sparFixture(3125, 3790, {god: true}), sparFixture(3127, 3790, {food: 3, teleport: true}), ['SPAR_SCENARIO=escape-spell-god']),
+  sparBatch('extra:spar-flee-x8', 8, sparFixture(3125, 3790, {food: 3, glory: true}), sparFixture(3127, 3790, {potions: true}), ['SPAR_SCENARIO=flee']),
   sparBatch('extra:spar-escape-pots-x8', 8, sparFixture(3125, 3790, {potions: true}), sparFixture(3127, 3790, {food: 3, glory: true}), ['SPAR_SCENARIO=escape']),
   // The glory chase with boost potions on the hunter.
   sparCase('extra:spar-escape-pots', sparFixture(3125, 3790, {potions: true}), sparFixture(3127, 3790, {food: 3, glory: true}), ['SPAR_SCENARIO=escape']),
