@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794363470782,
+ "at": 1794363535998,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -267,16 +267,23 @@
   },
   {
    "account": "KnightRider",
-   "script": "scripts/session-check.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts sarim 3000 ITEMS=feather STOCK_TARGET=700 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
+   ],
    "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-7a331eb1-d43d-48c4-bb32-04216519dd0b"
+    "ROUNDS": "1"
    },
    "enabled": true,
-   "repeat": false,
-   "goal": "claude-cloud-recover-knightrider-20261111t021402z [task-7a331eb1-d43d-48c4-bb32-04216519dd0b]",
-   "role": "supply"
+   "standing": true,
+   "repeat": true,
+   "goal": "buy feathers at Gerrant's in Port Sarim for the alchemy band",
+   "role": "supply",
+   "template": "army-feathers-sarim",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:sarim"
+   ]
   }
  ]
 }
