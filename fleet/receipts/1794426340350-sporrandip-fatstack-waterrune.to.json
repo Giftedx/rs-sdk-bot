@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794426340350-sporrandip-fatstack-waterrune",
+ "account": "Fatstack",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 6,
+ "claim": "957e2ab4-1178-4103-8bc5-f3ecc1e3159d",
+ "count": 6,
+ "ok": true,
+ "at": 1794426371803,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 6
+ },
+ "bank": {
+  "count": 6,
+  "at": 1794426371073
+ },
+ "logout": {
+  "attemptId": "1794426347427-0000027041-0000000001",
+  "at": 1794426371796,
+  "sha256": "8a0fba85bedcefc23a8b65f48117f63b8e5ab7f44e606a46e3c0b1cab3ac804d"
+ },
+ "screen": true
+}

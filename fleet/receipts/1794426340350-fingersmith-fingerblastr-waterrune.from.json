@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794426340350-fingersmith-fingerblastr-waterrune",
+ "account": "Fingersmith",
+ "partner": "Fingerblastr",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 4,
+ "claim": "5bb7880a-e167-4f90-aa35-774aeff9b606",
+ "count": 0,
+ "ok": false,
+ "at": 1794426353557,
+ "detail": "trade claimed"
+}
