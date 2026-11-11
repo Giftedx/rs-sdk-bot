@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794373868324-abracadickra-knightstick-feather",
+ "account": "Abracadickra",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 50,
+ "claim": "bb17db18-0d59-4ce3-b9eb-422a7ef6a59a",
+ "count": 0,
+ "ok": false,
+ "at": 1794373876307,
+ "detail": "trade claimed"
+}
