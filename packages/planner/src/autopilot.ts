@@ -99,6 +99,15 @@ export const FUND_RESERVE = 50_000;
 // The template id of a kit buy for a goal band: `kit-buy:<band id>`. A retired pair (two fail RESULTs with no
 // progress: no stock under the cap) sends the account to the donors instead.
 export const KIT_BUY = 'kit-buy:', KIT_BUY_SCRIPT = 'scripts/buy-owned-ge-item.ts';
+// The army's melee weapon. Most army accounts fight with the bronze sword they started with: at Strength 99 it hits 12
+// at most, an adamant scimitar 15 or 16 by style (combat.rs2 combat_maxhit: (effective * (64 + strength bonus) + 320) /
+// 640, effective 107 to 110, bonus 5 and 28). The trainer wields the best blade the account owns (scripts/gather-combat.ts selectGiantWeapon), so the
+// planner only has to put one in the bank: an army account with Attack 30 and no blade of WEAPON_HELD buys one adamant
+// scimitar on the Grand Exchange, as a kit buy, at WEAPON_BAND: after its Ranged band and before the troopers and the
+// Prayer filler, which are the melee work. WEAPON_BUYERS accounts are away for it at a time.
+export const WEAPON = { id: 'army-weapon', item: 'adamant scimitar', attack: 30, goal: 'fight with an adamant scimitar' } as const;
+export const WEAPON_HELD = ['adamant scimitar', 'adamant sword', 'adamant longsword', 'rune scimitar', 'rune sword', 'rune longsword', 'dragon longsword'] as const;
+export const WEAPON_BAND = 5.5, WEAPON_BUYERS = 2, WEAPON_MARKET = 'ge:weapon';
 // The coins a kit buy leaves in the bank (the buy script's CASH_RESERVE). A kit costs far less than FUND_RESERVE, which
 // guards a coin donor, so a buyer keeps only this.
 export const KIT_CASH_RESERVE = 1_000;
@@ -110,6 +119,8 @@ export const KIT_PRICE_CAPS: Readonly<Record<string, number>> = {
     'mind rune': 120, 'air rune': 160, 'fire rune': 160, 'nature rune': 800, feather: 20,
     'bronze arrow': 20, 'iron arrow': 40, 'steel arrow': 100, 'mithril arrow': 200, 'adamant arrow': 400, 'rune arrow': 1200,
     trout: 100, lobster: 500, swordfish: 700, shark: 1200,
+    // Live claude-cloud read: 42 listed at 72,000, bids at 33,068, volume-weighted price 38,089.
+    'adamant scimitar': 80_000,
 };
 
 // A bill line still short is worth twice its shop value: it is acquisition work the route needs. A unit nobody needs
@@ -269,6 +280,17 @@ export function plan(inp: Inputs): Assignment[] {
             const value = jobValue(t, a, inp);
             if (value > 0) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+'), coins: coinShort(a, t.needs) });
         }
+    }
+    // The weapon buy (WEAPON): a kit buy made for the account, offered as a goal candidate so it comes before the melee
+    // bands even while one of them can start. The buy script refuses a second scimitar (scripts/buy-owned-ge-item.ts
+    // ownedBaseline), so a stale status cannot buy twice.
+    for (const a of mine) {
+        const lower = a.name.toLowerCase(), m = inp.market?.[WEAPON.item];
+        if (!m || !inp.army?.has(lower) || (a.skills.Attack ?? 1) < WEAPON.attack || WEAPON_HELD.some(w => (a.items[w] ?? 0) > 0)
+            || (a.items.coin ?? 0) < m.limit + KIT_CASH_RESERVE || inp.retired?.has(pairKey(a.name, KIT_BUY + WEAPON.id))) continue;
+        const template = kitBuyTemplate({ ...WEAPON, family: 'kit-buy', script: KIT_BUY_SCRIPT, role: 'supply', yields: () => [] }, a.name,
+            [{ item: m.name, id: m.id, held: 0, limit: m.limit, quantity: 1 }], inp.kitSeq?.get(lower) ?? 0);
+        cands.push({ account: a.name, template, value: 0, resources: [WEAPON_MARKET], reason: `army band ${WEAPON_BAND}: buys 1 ${m.name}, at most ${m.limit} coins`, goal: { band: WEAPON_BAND, left: 0 } });
     }
     // On a value tie an account keeps the template it holds: a level change must not move it to another spot of the
     // same worth, which would replace a running job with a fresh one that changes nothing useful.
@@ -463,7 +485,7 @@ export const TROOPER_FIELD = 'trooper:battlefield', TROOPER_FIELD_CAPACITY = 14;
 export const STRIKE_TILE = 'strike:ardougne-guard-dog';
 // The places the AIO routes hold (aioTemplates). Each takes one account until a live pilot measures two.
 export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore: 'aio:varrock-east-mine', essence: 'aio:essence-mine', air: 'aio:air-altar' } as const;
-export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
+export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // Army goal bands (AGENTS.md goals: maxed tribrids), in order: Strength, Attack, Magic, Prayer, Ranged, Defence
 // last. Bands 6-8 are the Khazard troopers (TROOPER_BANDS), 9 is Prayer on the field (PRAYER_FIELD_BAND). Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile, MAX_KILLS=8): live 4/4 runs

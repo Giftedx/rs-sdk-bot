@@ -226,6 +226,23 @@ Ranged it adds is not needed at that point.
   cooked meat, and with the spacing it takes three bites 3 ticks apart and none is dropped. **Gap.** Not rerun
   live. A practice save cannot set current HP, so no practice run starts low.
 
+## The army's blade
+
+- **Claim.** An army account that fights with a bronze sword gains a quarter to a third in maximum hit from an
+  adamant scimitar, and the planner buys it one (`kit-buy:army-weapon`, at band 5.5, two accounts away at a time).
+- **Conditions.** `combat.rs2` `combat_maxhit`: (effective level x (64 + strength bonus) + 320) / 640, effective level
+  107 on an accurate or defensive style and 110 on an aggressive one at Strength 99. Strength bonus: bronze sword 5,
+  mithril sword 17, adamant sword 24, adamant scimitar 28, rune scimitar 44 (`melee/scimitars.obj`). That gives 12
+  for the bronze sword, 15 or 16 for the adamant scimitar and 18 for the rune scimitar on the accurate style, all at
+  the same attack rate. The trainer already wields the best blade an account owns.
+- **Market (live claude-cloud read).** Adamant scimitar: 42 listed at 72,000, bids at 33,068, volume-weighted
+  price 38,089. Rune scimitar: one listed at 567,227. Mithril scimitar: one at 49,999. No adamant or mithril sword
+  or longsword is listed. The Varrock sword shop holds 2 adamant swords (one back per 12,000 ticks) and 3 mithril.
+- **Evidence.** `packages/planner/test/autopilot.test.ts` (who buys, the order, two at a time). The trooper results on
+  claude-cloud name the weapon: `"weapon":"Bronze sword"` on Deeppockets, Fatstack, KnightRider and PocketPool.
+- **Gap.** The buy is not run live and the Grand Exchange is not on practice. Kills per tick with each blade are
+  not measured.
+
 ## Ranged on the troopers
 
 - **Claim.** On practice at xpRate 25, an army-shaped account trains Ranged 1 -> 63-66 on the Khazard troopers in about
