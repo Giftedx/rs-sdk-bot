@@ -1,0 +1,22 @@
+{
+ "id": "1794440087263-fingerblastr-deeppockets-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fingerblastr",
+ "to": "Deeppockets",
+ "item": "Air rune",
+ "count": 18,
+ "start": 1794440087263,
+ "end": 1794442487263,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
