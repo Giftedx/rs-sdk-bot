@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794382996198-oreelse-fingersmith",
  "account": "Fingersmith",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Rune scimitar",
  "requested": 1,
  "claim": "58733f61-2342-4019-8e43-d3aadf76f3d8",
- "count": 0,
- "ok": false,
- "at": 1794383000603,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794383334110,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794383333406
+ },
+ "logout": {
+  "attemptId": "1794383000608-0000029905-0000000001",
+  "at": 1794383334102,
+  "sha256": "27b167a5753180ffed9bbde572e1df41bbbe889608555e644ad9aa8a30bacab1"
+ },
+ "screen": true
 }
