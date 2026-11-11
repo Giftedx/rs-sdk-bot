@@ -96,6 +96,9 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     assertServerAllowed(server);
     assertLiveWorkerRelease(server);
     const trade = opts.trade;
+    // The prayer guard reads two NPC tables, and the first read takes about 1 s. It runs before the connection: a
+    // connected client that does not answer holds the tick of a lockstep world for every other client.
+    const guardTables = process.env.PRAYER_GUARD !== '0' ? { protect: protectByStyle(npcAttackStyles()), hunters: npcHunters() } : null;
     const s = await connectInProcess({ name, password, server, ...(trade ? {
         trade: {...trade, check: server => { assertSideOwns(name); trade.check(server); }},
     } : {}) });
@@ -118,8 +121,7 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     if (process.env.RANDOM_EVENTS !== '0') randomEvents.set(s, watchRandomEvents(s));
     // Free prayers and protection from NPCs and Wilderness players (packages/core/src/prayer-guard.ts); PRAYER_GUARD=0
     // turns the guard off.
-    // The two NPC tables are read here, at login: the reads take about 1 s and must not run inside a tick.
-    if (process.env.PRAYER_GUARD !== '0') prayerGuards.set(s, startPrayerGuard(s, { log: line => log(`${line} bot=${name}`), protect: protectByStyle(npcAttackStyles()), hunters: npcHunters(),
+    if (guardTables) prayerGuards.set(s, startPrayerGuard(s, { log: line => log(`${line} bot=${name}`), ...guardTables,
         players: { ignore: new Set(loadOwners().keys()), style: q => { const seen = readOpponents(s.client).find(v => v.index === q.index); return seen ? wornWeaponStyle(seen.worn.rhand) : null; } } }));
     // Eats when Hitpoints are low and damage arrives (packages/core/src/eat-guard.ts); EAT_GUARD=0 turns the guard off.
     // It starts after the prayer guard: its tick callback then counts the prayer inputs of the tick before it sends.

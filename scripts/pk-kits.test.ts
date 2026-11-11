@@ -1,8 +1,9 @@
 import { expect, test } from 'bun:test';
-import { combatLevel, itemId, kitCost, kitItems, kitOptions, KITS, kitSkills, kitSwitches, kitVarps } from './pk-kits';
+import { combatLevel, itemId, kitCost, kitItems, kitOptions, KITS, kitSkills, kitSwitches, kitVarps, trained } from './pk-kits';
 import { KNOBS, readNets, stats, verdict } from './measure/pk-spar-climb';
 import { matrix, readList } from './measure/pk-spar-matrix';
-import { benchCases } from './measure/aio-bench-cases';
+import { mayRun } from './measure/pk-spar-wait';
+import { benchCases, BUILD_BRACKETS, BUILD_PAIRS } from './measure/aio-bench-cases';
 import { flipped, netRate, sparScore } from './pk-spar';
 import type { FightResult } from './pk';
 
@@ -58,6 +59,21 @@ test('a swapped pair is turned back to the candidate side, and the matrix groups
     expect(matrix(['a:b', 'a:c', 'a:b'], [{ nets: [10, -4, 20], scores: [250, -120, 30] }, { nets: [0, 6, 10], scores: [-300, 99, 150] }])).toEqual([
         { matchup: 'a:b', fights: 4, kills: 2, deaths: 1, net: 10 }, { matchup: 'a:c', fights: 2, kills: 0, deaths: 1, net: 1 },
     ]);
+    // A case that failed in one seed leaves its places empty: the other cases of the seed still count.
+    const holes = { nets: [] as number[], scores: [] as number[] };
+    holes.nets[1] = 8; holes.scores[1] = 220;
+    expect(matrix(['a:b', 'a:c'], [{ nets: [10, -4], scores: [250, -120] }, holes])).toEqual([
+        { matchup: 'a:b', fights: 1, kills: 1, deaths: 0, net: 10 }, { matchup: 'a:c', fights: 2, kills: 1, deaths: 1, net: 2 },
+    ]);
+});
+
+test('the memory wait asks for the memory of every run that starts at the same time', () => {
+    expect(mayRun(6.3, 0, false)).toBe(true);
+    expect(mayRun(6.3, 0, false, 2)).toBe(false);
+    expect(mayRun(8, 0, false, 2)).toBe(true);
+    expect(mayRun(9, 3, false)).toBe(true);
+    expect(mayRun(9, 3, false, 2)).toBe(false);
+    expect(mayRun(20, 0, true, 2)).toBe(false);
 });
 
 test('each pure has its combat level, stays at Defence 1 and Hitpoints 10, and meets a skiller where the game lets it attack', () => {
@@ -74,4 +90,23 @@ test('each pure has its combat level, stays at Defence 1 and Hitpoints 10, and m
     }
     expect(kitVarps('pure-iban')).toMatchObject({ 288: 120, 300: 1000 });
     expect(kitVarps('tribrid')).toEqual({ 147: 6, 176: 10, 300: 1000 });
+});
+
+test('a trained build has the Hitpoints of its combat XP, and each bracket fits in Wilderness level 34', () => {
+    expect(trained({ Attack: 99, Strength: 99, Defence: 99 }).Hitpoints).toBe(99);
+    expect(trained({}).Hitpoints).toBe(10);
+    expect(combatLevel(kitSkills('zerker'))).toBe(92);
+    expect(kitSkills('zerker').Defence).toBe(45);
+    const cases = benchCases().filter(c => c.key.startsWith('extra:spar-builds-'));
+    const staged = new Set(cases.flatMap(c => c.scriptArgs.find(a => a.startsWith('SPAR_KITS='))!.slice(10).split(',')).map(p => p.split(':').sort().join(':')));
+    for (const kits of Object.values(BUILD_BRACKETS)) {
+        const levels = kits.map(k => combatLevel(kitSkills(k)));
+        expect(Math.max(...levels) - Math.min(...levels)).toBeLessThanOrEqual(34);
+        kits.forEach((a, i) => kits.slice(i + 1).forEach(b => expect(staged.has([a, b].sort().join(':'))).toBe(true)));
+    }
+    // 28 pairs for each bracket of 8, less the 3 pairs that both brackets hold; each case in 8 processes.
+    expect(staged.size).toBe(53);
+    expect(BUILD_PAIRS.length).toBe(53);
+    expect(cases.length).toBe(4);
+    for (const c of cases) expect(c.scriptArgs).toContain('SPAR_PROCS=8');
 });
