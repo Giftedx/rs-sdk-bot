@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794414936502-fatstack-knightstick",
  "account": "Knightstick",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 90120,
  "claim": "745c489a-4a30-44b6-b350-5629cdacffae",
- "count": 0,
- "ok": false,
- "at": 1794415048935,
- "detail": "trade claimed"
+ "count": 90120,
+ "ok": true,
+ "at": 1794415169957,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 90120
+ },
+ "bank": {
+  "count": 90120,
+  "at": 1794415169181
+ },
+ "logout": {
+  "attemptId": "1794415048937-0000010500-0000000001",
+  "at": 1794415169950,
+  "sha256": "1501c85c994482899644b2217dfde9fc028e6e1cce471eda56fbde0f74a75a21"
+ },
+ "screen": true
 }
