@@ -1,25 +1,7 @@
 {
  "side": "local",
- "at": 1794368068066,
+ "at": 1794368143203,
  "jobs": [
-  {
-   "account": "FishAndChips",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts harry 600 MAX_ITEMS=1 MAX_SPEND=500 NO_BUY_TICKS=25 BANK_PACK=1",
-    "scripts/gather-fish.ts cage 3000",
-    "scripts/cook-food.ts 1500 lobster"
-   ],
-   "env": {
-    "ROUNDS": "0",
-    "RUN": "2"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
-   "role": "supply"
-  },
   {
    "account": "MineYourBiz",
    "script": "scripts/chain.ts",
@@ -490,10 +472,28 @@
     "CAP": "600",
     "COORDINATOR_RUN_ID": "task-f43cdb11-0043-457b-9f12-29d2bdcca1c4"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-session-recovery-billionaire-orphan-1794367220 [task-f43cdb11-0043-457b-9f12-29d2bdcca1c4]",
    "role": "bank"
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts harry 600 MAX_ITEMS=1 MAX_SPEND=500 NO_BUY_TICKS=25 BANK_PACK=1",
+    "scripts/gather-fish.ts cage 3000",
+    "scripts/cook-food.ts 1500 lobster"
+   ],
+   "env": {
+    "ROUNDS": "0",
+    "RUN": "2"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
+   "role": "supply"
   }
  ]
 }
