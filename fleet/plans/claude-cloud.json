@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794369768110,
+ "at": 1794369826709,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -36,27 +36,31 @@
   },
   {
    "account": "Deeppockets",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "1500",
-    "trooper"
+    "catherby_arrows",
+    "600"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "ITEMS": "iron arrow|bronze arrow",
+    "STOCK_TARGET": "1000",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "21000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "20000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "goal": "buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-catherby",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "shop:catherby_arrows"
    ]
   },
   {
@@ -142,8 +146,8 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1"
@@ -151,9 +155,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-trooper-defence-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
