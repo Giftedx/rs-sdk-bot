@@ -1,0 +1,22 @@
+{
+ "id": "1794362761677-shaftmaker-undermykilt-staffoffire",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Shaftmaker",
+ "to": "UnderMyKilt",
+ "item": "Staff of fire",
+ "count": 1,
+ "start": 1794362761677,
+ "end": 1794365161677,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
