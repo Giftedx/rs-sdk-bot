@@ -14,6 +14,7 @@ import { startStatus } from './status';
 import { watchRandomEvents, type RandomEventWatch } from './randomevents';
 import { protectByStyle, startPrayerGuard } from './prayer-guard';
 import { npcAttackStyles } from '../../knowledge/src/npc-attack-styles';
+import { npcHunters } from '../../knowledge/src/npc-hunters';
 import { createWorld, rsPathLength, type Account, type World } from './world';
 import {assertLiveWorkerRelease} from './worker-release';
 import { createTickRecorder } from './tick-record';
@@ -114,8 +115,8 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // Random events (dryad, genie, lost axe...): handled on every tick unless RANDOM_EVENTS=0 (packages/core/src/randomevents.ts).
     if (process.env.RANDOM_EVENTS !== '0') randomEvents.set(s, watchRandomEvents(s));
     // Free prayers and protection from attacking NPCs with PRAYER_GUARD=1 (packages/core/src/prayer-guard.ts).
-    // The style table is read here, at login: the read takes about 0.7 s and must not run inside a tick.
-    if (process.env.PRAYER_GUARD === '1') prayerGuards.set(s, startPrayerGuard(s, { log: line => log(`${line} bot=${name}`), protect: protectByStyle(npcAttackStyles()) }));
+    // The two NPC tables are read here, at login: the reads take about 1 s and must not run inside a tick.
+    if (process.env.PRAYER_GUARD === '1') prayerGuards.set(s, startPrayerGuard(s, { log: line => log(`${line} bot=${name}`), protect: protectByStyle(npcAttackStyles()), hunters: npcHunters() }));
     // Any bot stops cleanly when .practice/stop-<name> appears (checked every 25 ticks): a script that never checks
     // it (seen: fishing30 under the supervisor) still logs out in game.
     let stopTicks = 0;

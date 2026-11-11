@@ -35,7 +35,18 @@ export const protectByStyle = (table: ReadonlyMap<number, readonly AttackStyle[]
     return styles.includes('magic') ? PROTECT.magic : styles.includes('ranged') ? PROTECT.missiles : PROTECT.melee;
 };
 
+// One NPC that attacks first (packages/knowledge/src/npc-hunters.ts).
+export interface Hunter { range: number; wander: number; level: number; tooStrong: boolean }
+// Engine Player.ts isInWilderness.
+const inWilderness = (x: number, z: number) => x >= 2944 && x < 3392 && ((z >= 3520 && z < 6400) || (z >= 9920 && z < 12800));
+// The farthest NPC the guard treats as a threat before it attacks.
+const HUNT_VIEW = 15;
+
 export interface PrayerGuardOptions {
+    // The NPCs that attack first. With a table, the guard turns protection on when such an NPC can reach the player:
+    // the player is within the NPC's hunt range plus its wander range, and the NPC's too-strong rule does not
+    // exclude the player's combat level. Without a table, the guard waits for an NPC that targets the player.
+    hunters?: ReadonlyMap<number, Hunter>;
     // false: never turn a protection prayer on; only keep the script's prayers free.
     // A function: the protection prayer for one attacking NPC (null when only a hit was seen). Default: melee.
     protect?: false | ((npc: any | null) => number | null);
@@ -100,6 +111,19 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         stats.resends++;
     };
 
+    const nearestHunter = (st: any, p: any): any | null => {
+        if (!o.hunters) return null;
+        const wild = inWilderness(p.worldX, p.worldZ);
+        let best: any | null = null;
+        for (const n of st.nearbyNpcs ?? []) {
+            const h = o.hunters.get(n.id);
+            if (!h || n.hp === 0 || n.distance > Math.min(HUNT_VIEW, h.range + h.wander)) continue;
+            if (h.tooStrong && !wild && p.combatLevel > h.level * 2) continue;
+            if (!best || n.distance < best.distance) best = n;
+        }
+        return best;
+    };
+
     const off = s.onTick(() => {
         if (stopped) return;
         const st = s.sdk.getState(), p = st?.player, prayers = st?.prayers;
@@ -126,8 +150,9 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         if (o.protect !== false) {
             const self = (s.client as any)?.selfSlot;
             const me = Number.isSafeInteger(self) ? 32768 + self : undefined;
-            const npc = (st.nearbyNpcs ?? []).find((n: any) => me !== undefined && n.targetIndex === me && n.hp !== 0
+            const attacker = (st.nearbyNpcs ?? []).find((n: any) => me !== undefined && n.targetIndex === me && n.hp !== 0
                 && (n.optionsWithIndex ?? []).some((op: any) => /^Attack$/i.test(op.text))) ?? null;
+            const npc = attacker ?? nearestHunter(st, p);
             const hit = (st.combatEvents ?? []).some((e: any) => e.type === 'damage_taken' && e.sourceType === 'npc' && now - e.tick <= 8);
             if (npc || hit) {
                 threatAt = now;

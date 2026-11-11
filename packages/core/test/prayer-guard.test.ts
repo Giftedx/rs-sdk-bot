@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { protectByStyle, startPrayerGuard, PROTECT, type AttackStyle } from '../src/prayer-guard';
+import { protectByStyle, startPrayerGuard, PROTECT, type AttackStyle, type Hunter } from '../src/prayer-guard';
 
 // A model of the server rules the guard depends on (skill_prayer/scripts/prayer.rs2 and prayers/*.rs2): a prayer
 // button closes the open window and clears the interaction; the drain timer starts at 5 when the first prayer goes
@@ -10,13 +10,13 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
     let tick = 0, timer: number | null = active.some(Boolean) ? 5 : null;
     const w = {
         active, drains: 0, toggles: 0, windowsClosed: 0, cleared: 0, window: false, anim: -1,
-        interaction: null as string | null, npcs: [] as any[], events: [] as any[], offSeen: 0,
+        interaction: null as string | null, z: 3200, combat: 50, npcs: [] as any[], events: [] as any[], offSeen: 0,
     };
     const inbox: any[] = [];
     const listeners = new Set<() => void>();
     const client = { selfSlot: 7, executeBotAction(a: any) { inbox.push(a); return { success: true }; } };
     const state = () => ({
-        player: { worldX: 3200, worldZ: 3200, level: 0, animId: w.anim, isDead: false },
+        player: { worldX: 3200, worldZ: w.z, level: 0, animId: w.anim, isDead: false, combatLevel: w.combat },
         prayers: { activePrayers: [...active], prayerPoints: init.points ?? 50, prayerLevel: init.level ?? 50 },
         nearbyNpcs: w.npcs, nearbyPlayers: [], combatEvents: w.events, modalOpen: w.window,
         dialog: { isOpen: false }, interface: { isOpen: false }, bank: { isOpen: false }, shop: { isOpen: false },
@@ -209,4 +209,68 @@ test('Prayer 40 protects from a ranged NPC and not from a melee NPC', () => {
     w.npcs = [npc(66, 6)];
     advance(10);
     expect(w.active[PROTECT.missiles]).toBe(true);
+});
+
+// 82: hunt range 2, wander 5, level 20, too-strong rule. 934: no too-strong rule.
+const hunters = new Map<number, Hunter>([[82, { range: 2, wander: 5, level: 20, tooStrong: true }], [934, { range: 5, wander: 2, level: 20, tooStrong: false }]]);
+const idle = (id: number, distance: number) => ({ ...cow(-1), id, distance, size: 1 });
+
+test('an NPC that attacks first turns protection on before it attacks', () => {
+    const { w, s, advance } = world();
+    w.combat = 40;
+    startPrayerGuard(s, { hunters });
+    w.npcs = [idle(82, 9)];
+    advance(10);
+    expect(w.toggles).toBe(0);
+    w.npcs = [idle(82, 7)];
+    advance(60);
+    expect(w.active[PROTECT.melee]).toBe(true);
+    expect(w.drains).toBe(0);
+});
+
+test('the too-strong rule: no protection above two times the NPC level, except in the Wilderness', () => {
+    const { w, s, advance } = world();
+    w.combat = 41;
+    startPrayerGuard(s, { hunters });
+    w.npcs = [idle(82, 2)];
+    advance(10);
+    expect(w.toggles).toBe(0);
+    w.z = 3600;
+    advance(10);
+    expect(w.active[PROTECT.melee]).toBe(true);
+});
+
+test('an NPC without the too-strong rule is a threat at each combat level', () => {
+    const { w, s, advance } = world();
+    w.combat = 126;
+    startPrayerGuard(s, { hunters });
+    w.npcs = [idle(934, 7)];
+    advance(10);
+    expect(w.active[PROTECT.melee]).toBe(true);
+});
+
+test('an NPC that does not attack first is no threat', () => {
+    const { w, s, advance } = world();
+    startPrayerGuard(s, { hunters });
+    w.npcs = [idle(81, 1)];
+    advance(20);
+    expect(w.toggles).toBe(0);
+});
+
+test('near an NPC that attacks first, a window and a skill action still get no prayer input', () => {
+    const { w, s, client, advance } = world();
+    w.combat = 30;
+    startPrayerGuard(s, { hunters });
+    w.npcs = [idle(82, 2)];
+    w.window = true;
+    advance(20);
+    expect(w.toggles).toBe(0);
+    expect(w.windowsClosed).toBe(0);
+    w.anim = 625;
+    client.executeBotAction({ type: 'interactLoc', x: 1, z: 1, locId: 2090, optionIndex: 1 });
+    advance(1);
+    w.window = false;
+    advance(20);
+    expect(w.toggles).toBe(0);
+    expect(w.interaction).toBe('interactLoc:2090');
 });
