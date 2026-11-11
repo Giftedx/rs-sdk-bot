@@ -1,25 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794384694384,
+ "at": 1794384838529,
  "jobs": [
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=kiltlifter-kit9-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones",
-   "role": "supply",
-   "template": "kit-buy:army-hunt-black-dragons",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
   {
    "account": "PocketPool",
    "script": "scripts/chain.ts",
@@ -148,6 +130,25 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=97 EXPECTED_OWNED=53 LIMIT_PRICE=200 CASH_RESERVE=1000 ORDER_KEY=kiltlifter-kit9-559-53to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=291 EXPECTED_OWNED=134 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=kiltlifter-kit9-557-134to425 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 97 Body rune, 291 Earth rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "supply",
+   "template": "kit-buy:army-splash-magic-66",
+   "autopilot": "claude-cloud",
+   "resources": []
   },
   {
    "account": "Knightstick",
