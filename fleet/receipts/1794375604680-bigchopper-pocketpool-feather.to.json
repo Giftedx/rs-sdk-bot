@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794375604680-bigchopper-pocketpool-feather",
+ "account": "PocketPool",
+ "partner": "Bigchopper",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 50,
+ "claim": "55a2338e-3ed4-468d-a325-c9d3873ec87e",
+ "count": 0,
+ "ok": false,
+ "at": 1794375607562,
+ "detail": "trade claimed"
+}
