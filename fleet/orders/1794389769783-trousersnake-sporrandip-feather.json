@@ -1,0 +1,22 @@
+{
+ "id": "1794389769783-trousersnake-sporrandip-feather",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TrouserSnake",
+ "to": "SporranDip",
+ "item": "Feather",
+ "count": 49,
+ "start": 1794389769783,
+ "end": 1794392169783,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
