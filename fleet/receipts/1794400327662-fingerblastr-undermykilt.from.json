@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794400327662-fingerblastr-undermykilt",
  "account": "Fingerblastr",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Bronze arrow",
  "requested": 500,
  "claim": "017e9a9d-765f-43ff-86e2-aaeaf7263f66",
- "count": 0,
- "ok": false,
- "at": 1794402803708,
- "detail": "trade claimed"
+ "count": 500,
+ "ok": true,
+ "at": 1794403028435,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 500,
+  "after": 0
+ },
+ "bank": {
+  "count": 500,
+  "at": 1794403019676
+ },
+ "logout": {
+  "attemptId": "1794402803712-0000021884-0000000001",
+  "at": 1794403028429,
+  "sha256": "9988ae09b8bfbe9dabadad44f3d1054c17e38aaae5da65f6d8dcecef47a4c5f1"
+ },
+ "screen": true
 }
