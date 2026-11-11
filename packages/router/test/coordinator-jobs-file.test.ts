@@ -2,7 +2,7 @@ import {test,expect} from 'bun:test';
 import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,existsSync,appendFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {migrateCoordinatorJobs,currentRevision,REVISION_FRESH_MS,rulePassDue} from '../src/coordinator-cli';
+import {migrateCoordinatorJobs,migrateJobsAtStart,currentRevision,REVISION_FRESH_MS,rulePassDue} from '../src/coordinator-cli';
 import {PLAN_GAP_MS,plannerDue} from '../src/coordinator-decisions';
 import {disableOwnJob,ensureSwarm,controllerStateFresh,CONTROLLER_STATE_FRESH_MS} from '../src/coordinator-live';
 import {atomicJson,saveState,loadState} from '../src/coordinator-store';
@@ -29,6 +29,15 @@ test('migration moves coordinator jobs and focus settings out of swarm.json once
  expect(readMergedPlan(base).jobs.map((j:any)=>j.account??j.accounts.join('+'))).toEqual(['Haggis','A+B','Rod','Cod']);
  expect(migrateCoordinatorJobs(base)).toBeNull();
  expect(readFileSync(path,'utf8')).toBe(after);
+});
+test('the start step archives a dead writer\'s lock and then migrates',async()=>{
+ const base=fixture(),dir=join(base,'.practice/coordinator'),lock=join(dir,'plan-write-lock.json');
+ writeFileSync(join(base,'swarm.json'),JSON.stringify({maxBots:17,minFreeGB:4,jobs:[owner[0],coordinatorJob('Rod','run-1')],coordination:{enabled:true}},null,2)+'\n');
+ // No process has this pid: the writer died with the machine.
+ writeFileSync(lock,JSON.stringify({pid:2147483646,nonce:'48102401-620e-49d2-8a54-1157afdde362',at:1}));
+ expect(await migrateJobsAtStart(base)).toMatchObject({jobs:1});
+ expect(existsSync(lock)).toBe(false);
+ expect(readCoordinatorJobs(base).jobs).toEqual([coordinatorJob('Rod','run-1')]);
 });
 test('disabling an own job touches only the coordinator file',async()=>{
  const base=fixture(),path=join(base,'swarm.json'),raw=JSON.stringify({maxBots:17,minFreeGB:4,jobs:owner},null,2)+'\n';
