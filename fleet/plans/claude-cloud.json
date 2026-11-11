@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794422193659,
+ "at": 1794422199571,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -108,24 +108,16 @@
   },
   {
    "account": "Fingersmith",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_ID": "536",
-    "BONE_RESERVE": "6",
-    "CAP": "4000"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-38d5d17c-ce29-45ec-8e76-3387e2171737"
    },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying bought dragon bones",
-   "role": "combat",
-   "template": "army-bury-dragon-99",
-   "autopilot": "claude-cloud",
-   "resources": []
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-fingersmith-20261111t183200z [task-38d5d17c-ce29-45ec-8e76-3387e2171737]",
+   "role": "combat"
   }
  ]
 }
