@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794386629885-oreelse-thefullmonty",
+ "account": "TheFullMonty",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune platelegs",
+ "requested": 1,
+ "claim": "9ea91e50-d401-4530-9a32-60289f1801e8",
+ "count": 1,
+ "ok": true,
+ "at": 1794387026377,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794387025371
+ },
+ "logout": {
+  "attemptId": "1794387009058-0000016849-0000000001",
+  "at": 1794387026369,
+  "sha256": "49a710e5de6535ff8b7d7dbafc5f0119364aa6d04b2806f220f999f8182bf829"
+ },
+ "screen": true
+}
