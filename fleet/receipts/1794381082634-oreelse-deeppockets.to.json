@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794381082634-oreelse-deeppockets",
  "account": "Deeppockets",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Rune scimitar",
  "requested": 1,
  "claim": "5186ea13-3c65-43f3-bed7-536ad6247897",
- "count": 0,
- "ok": false,
- "at": 1794381086375,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794381330934,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794381329878
+ },
+ "logout": {
+  "attemptId": "1794381086377-0000011414-0000000001",
+  "at": 1794381330926,
+  "sha256": "9346ee6894046fcbcfbf0a516f3cf9d749b16d7b87eec23b290c44ebf0db7c96"
+ },
+ "screen": true
 }
