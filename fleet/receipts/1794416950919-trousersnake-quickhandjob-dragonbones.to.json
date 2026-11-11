@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794416950919-trousersnake-quickhandjob-dragonbones",
+ "account": "Quickhandjob",
+ "partner": "TrouserSnake",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 16,
+ "claim": "0e48bf9b-b491-4924-a99e-cd8a602a1182",
+ "count": 0,
+ "ok": false,
+ "at": 1794416961783,
+ "detail": "trade claimed"
+}
