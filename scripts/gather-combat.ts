@@ -370,8 +370,14 @@ export function selectGiantBow(stock:readonly {id:number;count:number}[],ranged:
     for(const tier of GIANT_BOWS)if(tier.level<=ranged)for(const id of tier.ids)if(stockOf(stock,id)>0)return{id,level:tier.level};
     return undefined;
 }
+// A run fires one kind of arrow and ends stop=ammo when it is gone. So it takes the best kind the bow fires that it
+// holds a run's worth of (GIANT_AMMO_RUN), and only with no such kind the largest stack. Practice: an account back
+// from an emptied Ranging Guild shelf with 10 mithril, 14 steel, 45 iron and 245 bronze arrows took the mithril and
+// ended on ammo after 2 kills.
+export const GIANT_AMMO_RUN=50;
 export function selectGiantArrows(stock:readonly {id:number;count:number}[],ranged:number,bowLevel:number){
-    return GIANT_ARROWS.find(a=>a.level<=Math.min(ranged,bowLevel)&&stockOf(stock,a.id)>0)?.id;
+    const fires=GIANT_ARROWS.filter(a=>a.level<=Math.min(ranged,bowLevel)&&stockOf(stock,a.id)>0);
+    return (fires.find(a=>stockOf(stock,a.id)>=GIANT_AMMO_RUN)??[...fires].sort((a,b)=>stockOf(stock,b.id)-stockOf(stock,a.id))[0])?.id;
 }
 // A fired arrow lands on the target's tile four times in five (player_ranged.rs2 ranged_dropammo_npc, ^dropammo_chance
 // 5) and lies there 200 ticks (^lootdrop_duration), one stack a tile for its owner (World.addObj). After a kill the bow

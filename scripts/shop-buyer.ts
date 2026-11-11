@@ -147,7 +147,8 @@ export const PROFILES: Record<string, {
         ],
     },
     // Dargaud, the Ranging Guild's bow and arrow salesman (game_ranging/configs/ranging.inv ranging_guild_bowshop): every
-    // arrow from bronze to rune (mithril 500, adamant 450, rune 400 in stock) and willow shortbows, near base price.
+    // arrow from bronze to rune (bronze 1,000, iron, steel and mithril 500, adamant 450, rune 400 in stock) and willow
+    // shortbows, near base price.
     // The guild door needs Ranged 40 (ranging_guild_door.rs2).
     dargaud: {
         npc: /^bow and arrow salesman$/i,
@@ -158,6 +159,8 @@ export const PROFILES: Record<string, {
             { re: /^adamant arrow$/i, buyPerTick: 100 },
             { re: /^mithril arrow$/i, buyPerTick: 100 },
             { re: /^steel arrow$/i, buyPerTick: 100 },
+            { re: /^iron arrow$/i, buyPerTick: 100 },
+            { re: /^bronze arrow$/i, buyPerTick: 100 },
             { re: /^willow shortbow$/i, buyPerTick: 1 },
         ],
     },
