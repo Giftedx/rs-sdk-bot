@@ -1076,3 +1076,42 @@ test('an army account without Lost City takes the quest chain as a pilot, before
     expect(many.filter(a => a.template!.id === 'army-quest-lostcity').length).toBe(LOST_CITY_PLACES);
     expect(many.filter(a => a.template!.id === 'army-trooper-ranged-99').length).toBe(4 - LOST_CITY_PLACES);
 });
+
+import { MAGIC_BAND, SPLASH_FENCE, SPLASH_KIT, SPLASH_PLACES, SPLASH_TO } from '../src/autopilot';
+test('an army account under the Magic Guild level buys curse runes, then water at the shop, then casts over the fence', () => {
+    const maxed = { Thieving: 99, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 80, Magic: 21, Prayer: 99 };
+    const kit = { shark: 40, 'adamant scimitar': 1, shortbow: 1, 'bronze arrow': 500, coin: 500_000, 'mind rune': 15, 'air rune': 15 };
+    const soldier = (name: string, items: Record<string, number> = {}, s: Record<string, number> = {}): Acct => acct(name, { ...maxed, ...s }, { ...kit, ...items });
+    const pilots = new Set(['army-splash-magic-66', 'army-water-aubury']);
+    const runes: Market = { 'body rune': { id: 559, name: 'Body rune', limit: KIT_PRICE_CAPS['body rune']! }, 'earth rune': { id: 557, name: 'Earth rune', limit: KIT_PRICE_CAPS['earth rune']! } };
+    const run = (accounts: Acct[], extra: Partial<Inputs> = {}) => plan(inputs(accounts, { army: new Set(accounts.map(a => a.name.toLowerCase())), capacity: CAPACITY, pilots, market: runes, ...extra }));
+    // With no runes: one buy of the body and earth runes, as a candidate of the band (the account could train
+    // Ranged). The water line is the shop job's and holds nothing back.
+    const [buy] = run([soldier('Kilt', { 'body rune': 2, 'water rune': 6, 'earth rune': 4 })]);
+    expect(buy!.template!.id).toBe(KIT_BUY + 'army-splash-magic-66');
+    expect(buy!.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).map(Number))).toEqual([[559, SPLASH_KIT['body rune'] - 2], [557, SPLASH_KIT['earth rune'] - 4]]);
+    // Holding those, short of water: the shop run at Aubury's, up to the kit's water.
+    const stocked = { 'body rune': SPLASH_KIT['body rune'], 'earth rune': SPLASH_KIT['earth rune'] };
+    const [shop] = run([soldier('Kilt', { ...stocked, 'water rune': 6 })]);
+    expect(shop!.template!.id).toBe('army-water-aubury');
+    expect(jobFor(shop!, side)).toMatchObject({ script: 'scripts/chain.ts', resources: ['shop:aubury'] });
+    expect(shop!.template!.args![0]).toContain(`scripts/shop-buyer.ts aubury 3000 ITEMS=water.rune STOCK_TARGET=${SPLASH_KIT['water rune']} `);
+    // With the whole kit: the band, to the Magic Guild's level, on the fence tile.
+    const full = { ...stocked, 'water rune': SPLASH_KIT['water rune'] };
+    const [cast] = run([soldier('Kilt', full)]);
+    expect(cast!.template!.id).toBe('army-splash-magic-66');
+    expect(cast!.reason).toBe(`army band ${MAGIC_BAND}: Magic to ${SPLASH_TO}`);
+    expect(jobFor(cast!, side)).toMatchObject({ script: 'scripts/splash-train.ts', args: [String(SPLASH_TO), '6000'], repeat: true, resources: [SPLASH_FENCE] });
+    // A fresh account casts too: Wind Strike needs the two mind and air runes it holds.
+    expect(run([soldier('Kilt', full, { Magic: 1 })])[0]!.template!.id).toBe('army-splash-magic-66');
+    // At the level, with the pilot off, or with the buy retired and no runes: Ranged.
+    const ranged = (accounts: Acct[], extra: Partial<Inputs> = {}) => run(accounts, extra)[0]!.template!.id;
+    expect(ranged([soldier('Kilt', full, { Magic: SPLASH_TO })])).toBe('army-trooper-ranged-99');
+    expect(ranged([soldier('Kilt', full)], { pilots: new Set() })).toBe('army-trooper-ranged-99');
+    expect(ranged([soldier('Kilt')], { pilots: new Set() })).toBe('army-trooper-ranged-99');
+    expect(ranged([soldier('Kilt')], { retired: new Set([pairKey('Kilt', KIT_BUY + 'army-splash-magic-66')]) })).toBe('army-trooper-ranged-99');
+    // SPLASH_PLACES accounts cast at a time; the rest keep training.
+    const many = run(['A', 'B', 'C', 'D'].map(n => soldier(n, full)));
+    expect(many.filter(a => a.template!.id === 'army-splash-magic-66').length).toBe(SPLASH_PLACES);
+    expect(many.filter(a => a.template!.id === 'army-trooper-ranged-99').length).toBe(4 - SPLASH_PLACES);
+});

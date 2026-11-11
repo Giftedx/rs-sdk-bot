@@ -104,7 +104,7 @@ const inKandarin = (t: Tile) => t.level === 0 && t.x >= 2440 && t.x < 2870 && t.
 // Zanaris (map square 50,149, under the Lumbridge swamp), where Lost City ends. Its exit by the entrance is a known
 // transport to the swamp shed, but the planner finds no route from inside to anywhere farther (practice: "no route to
 // 2619,3332,0" after 304 idle ticks, and the shed reached in 5). A trip out starts with that step.
-const ZANARIS_SHED: Tile = { x: 3201, z: 3169, level: 0 };
+export const ZANARIS_SHED: Tile = { x: 3201, z: 3169, level: 0 };
 export const inZanaris = (t: Tile) => t.level === 0 && t.x >= 3200 && t.x < 3264 && t.z >= 9536 && t.z < 9600;
 
 export async function walkWithFerryFallback(from: Tile, to: Tile, walk: (to: Tile, budgetMs?: number) => Promise<Outcome>,
