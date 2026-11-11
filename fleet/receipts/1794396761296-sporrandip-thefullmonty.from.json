@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794396761296-sporrandip-thefullmonty",
+ "account": "SporranDip",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 52387,
+ "claim": "ac89fa5f-25fd-4aa4-88ee-38b6e1b9ea67",
+ "count": 0,
+ "ok": false,
+ "at": 1794396766272,
+ "detail": "trade claimed"
+}

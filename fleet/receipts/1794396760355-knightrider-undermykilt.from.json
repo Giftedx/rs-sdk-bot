@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794396760355-knightrider-undermykilt",
+ "account": "KnightRider",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bronze arrow",
+ "requested": 600,
+ "claim": "f33f5b71-2a93-4311-bf7d-8864562d7190",
+ "count": 0,
+ "ok": false,
+ "at": 1794396764139,
+ "detail": "trade claimed"
+}
