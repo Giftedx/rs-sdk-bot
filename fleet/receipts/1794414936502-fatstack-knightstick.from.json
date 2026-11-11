@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794414936502-fatstack-knightstick",
+ "account": "Fatstack",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 90120,
+ "claim": "b032f98c-7489-4ed1-80f2-ece383b7674d",
+ "count": 0,
+ "ok": false,
+ "at": 1794415051817,
+ "detail": "trade claimed"
+}
