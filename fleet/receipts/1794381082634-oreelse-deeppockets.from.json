@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794381082634-oreelse-deeppockets",
+ "account": "OreElse",
+ "partner": "Deeppockets",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "a33d4cf7-7b97-4afe-9ed5-988ee4b87a3f",
+ "count": 0,
+ "ok": false,
+ "at": 1794381183969,
+ "detail": "trade claimed"
+}
