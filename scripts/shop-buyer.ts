@@ -9,6 +9,7 @@
 import { openBot, finish, countItems, getWorld, accountOf } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker, goTo } from '../packages/core/src/walk';
+import { walkTargetPersist } from './walk-to';
 import { bankCargo, courierWaiting, exactItem } from '../packages/core/src/cargo';
 import { depositPack } from '../packages/core/src/deposit';
 
@@ -355,9 +356,11 @@ try {
         const a = s.tick();
         const off = (p: ReturnType<typeof pos>) => !p ? Infinity : p.level !== level ? Infinity : Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z));
         // From far away (another town, a boat ride) or another plane the world walker plans the trip; walkPath covers the last tiles.
+        // The planner has no route between Ardougne and Varrock: walkTarget takes the two ferries then, with the fare
+        // from the nearest bank (scripts/walk-to.ts ferryWalk).
         const p0 = pos();
         if (p0 && off(p0) > 60) {
-            const r = await goTo(s, await getWorld(), { x, z, level }, accountOf(s), { legTimeoutTicks: 100 });
+            const r = await walkTargetPersist(s, { x, z, level });
             if (!r.ok) console.log(`WALK route fail ${r.reason} ${r.detail}`);
         }
         for (let i = 0; i < 3 && !over(); i++) {

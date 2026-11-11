@@ -646,6 +646,32 @@ test('with no fire staff the alchemy kit buys fire runes, not a staff no market 
     expect(kitLacks(mage('Rich', {}, { Magic: 30 }), band.needs, i => !/staff/.test(i))!.at(-1)).toEqual({ of: ['fire rune'], count: 250 });
 });
 
+test('with no fire on the market the alchemy kit buys its other lines, then the account buys a staff of fire at Zaff\'s', () => {
+    const templates = catalogue().filter(t => t.id === 'army-alch-magic-99' || t.id === 'army-staff-zaff'), army = new Set(['rich']);
+    const pick = (items: Record<string, number>, skills: Record<string, number> = { Magic: 30 }) => plan(inputs([mage('Rich', items, skills)], { templates, army, market, capacity: CAPACITY }))[0];
+    // The market sells nature runes and no fire: the buy takes the nature runes and leaves the fire line to the shop job.
+    const buy = pick({ coin: 5_000_000, feather: 500 })!;
+    expect(buy.template!.id).toBe(KIT_BUY + 'army-alch-magic-99');
+    expect(buy.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).join('x'))).toEqual(['561x1000']);
+    // With the nature runes and feathers held and no fire, the staff job; with a staff or 250 fire runes, the band.
+    const held = { coin: 4_000_000, feather: 500, 'nature rune': 1000 };
+    const shop = pick(held)!;
+    expect(shop.template!.id).toBe('army-staff-zaff');
+    expect(jobFor(shop, side)).toMatchObject({ script: 'scripts/shop-buyer.ts', args: ['zaff', '3000'], repeat: true, resources: ['shop:zaff'],
+        env: { ITEMS: 'staff of fire', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', NO_BUY_TICKS: '200' } });
+    expect(pick({ ...held, 'fire rune': 249 })!.template!.id).toBe('army-staff-zaff');
+    expect(pick({ ...held, 'staff of fire': 1 })!.template!.id).toBe('army-alch-magic-99');
+    expect(pick({ ...held, 'mystic fire staff': 1 })!.template!.id).toBe('army-alch-magic-99');
+    expect(pick({ ...held, 'fire rune': 250 })!.template!.id).toBe('army-alch-magic-99');
+    // Under Magic 21, short of coins, or with nothing else of the kit held: no trip to the shop.
+    expect(pick(held, { Magic: 20 })?.template?.id).not.toBe('army-staff-zaff');
+    expect(pick({ ...held, coin: 14_000 })?.template?.id).not.toBe('army-staff-zaff');
+    expect(pick({ coin: 4_000_000, feather: 500, 'nature rune': 49 })?.template?.id).not.toBe('army-staff-zaff');
+    // Only the fire line is short and no market sells it: there is nothing to buy on the Grand Exchange.
+    expect(plan(inputs([mage('Rich', { coin: 5_000, feather: 500, 'nature rune': 1000 }, { Magic: 30 })], { templates, army, market, capacity: CAPACITY }))
+        .some(x => x.template?.id.startsWith(KIT_BUY))).toBe(false);
+});
+
 test('a line no market sells is sent first; a pair whose order failed is not asked again', () => {
     const cow = catalogue().filter(t => t.id === 'army-cow-strength-45' || t.family === 'goldfarm'), army = new Set(['needy']);
     const needy = acct('Needy', { Thieving: 99, Hitpoints: 35 }, { 'wooden shield': 1, coin: 100_000 });
