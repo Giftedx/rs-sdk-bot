@@ -132,7 +132,8 @@ const backFirst = (prayer: number) => prayer >= 12 ? 0 : [0, 3, 9].includes(pray
 // ahead when it is in the past (skill_combat/scripts/player/auto_retaliate.rs2), and the next click on a rock then
 // rolls after those 2 ticks, not after the full rate of the pickaxe. Measured on `extra:guard-mine` at seeds 1 to 3,
 // 25 iron ore: auto-retaliate off takes 263, 280 and 272 ticks against 265, 281 and 252 with a rune pickaxe, and 392,
-// 400 and 392 against 333, 356 and 314 with a bronze pickaxe at Mining 15.
+// 400 and 392 against 333, 356 and 314 with a bronze pickaxe at Mining 15. Willows with a bronze axe under dark wizards
+// (`extra:guard-chop-wizard`, 12 logs): 409, 473 and over 500 ticks against 454, 450 and 362.
 const REPEATABLE = /^(mine|chop down|chop)$/i, FISHING_SPOT = /^fishing spot$/i;
 // The level-up message (content levelup/configs/levelup.dbrow). A prayer button closes it, which costs the script nothing.
 const LEVEL_UP = /^Congratulations, you just advanced/;

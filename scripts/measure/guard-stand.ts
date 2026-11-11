@@ -3,8 +3,10 @@
 //   PRAYERS=9,10,11   the script turns these prayers on at the start, so the guard only keeps them free
 //   FISH=fly:8        the script fishes with this method of scripts/microbot-b-fishing.ts until it has this many fish
 //   CHOP=oak:6        the script chops this tree of TREES until it has this many logs
+//   RETALIATE=off     the script turns auto-retaliate off at the start (button 151 of the controls tab)
+//                     (also the environment variable GUARD_STAND_RETALIATE=off, for the bench's `--set`)
 //   RIVAL=<account>   a second account logs in and attacks this one (both must stand in the Wilderness)
-// Usage: bun scripts/measure/guard-stand.ts <bot> <ticks> [PRAYERS=..] [FISH=method:count] [CHOP=tree:count] [RIVAL=account]
+// Usage: bun scripts/measure/guard-stand.ts <bot> <ticks> [PRAYERS=..] [FISH=method:count] [CHOP=tree:count] [RETALIATE=off] [RIVAL=account]
 import { finish, openBot } from '../../packages/core/src/bot';
 import type { Session } from '../../packages/core/src/inprocess';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
@@ -14,7 +16,7 @@ const [name, ticks = '300', ...rest] = process.argv.slice(2);
 const option = (key: string) => rest.find(a => a.startsWith(key + '='))?.slice(key.length + 1);
 if (!name || !Number.isSafeInteger(Number(ticks)) || Number(ticks) < 1) throw new Error('usage: guard-stand.ts <bot> <ticks> [PRAYERS=..] [FISH=method:count] [CHOP=tree:count] [RIVAL=account]');
 // Loc and log ids (content pack/loc.pack, pack/obj.pack).
-const TREES: Record<string, { locs: number[]; log: number }> = { tree: { locs: [1276, 1278], log: 1511 }, oak: { locs: [1281], log: 1521 } };
+const TREES: Record<string, { locs: number[]; log: number }> = { tree: { locs: [1276, 1278], log: 1511 }, oak: { locs: [1281], log: 1521 }, willow: { locs: [1308], log: 1519 } };
 const cap = Number(ticks);
 const s = await openBot(name);
 const sessions: Session[] = [s];
@@ -34,6 +36,11 @@ if (process.env.GUARD_STAND_DEBUG) console.log('NPCS', (state()?.nearbyNpcs ?? [
 for (const prayer of (option('PRAYERS') ?? '').split(',').filter(Boolean).map(Number)) {
     await s.sdk.sendTogglePrayer(prayer);
     if (!await waitUntil(s, () => !!state()?.prayers?.activePrayers[prayer], { timeoutTicks: 6 })) throw new Error(`prayer ${prayer} did not come on`);
+}
+
+if ((option('RETALIATE') ?? process.env.GUARD_STAND_RETALIATE) === 'off') {
+    await s.direct({ type: 'clickComponent', componentId: 151, reason: 'bench condition' });
+    if (!await waitUntil(s, () => state()?.autoRetaliateEnabled === false, { timeoutTicks: 8 })) throw new Error('auto-retaliate did not go off');
 }
 
 const rivalName = option('RIVAL');
@@ -96,5 +103,5 @@ if (fish) {
 watch();
 const after = hitpoints(), alive = !state()?.player?.isDead, short = parts.includes('short=1');
 const sets = [...seen].sort((a, b) => b[1] - a[1]).map(([key, n]) => `${key}:${n}`).join(',');
-console.log(`RESULT ${alive && !short ? 'ok' : 'fail'} ticks=${s.tick() - start} hp=${before}->${after} points=${pointsBefore}->${points()} prayers=${sets} targeted=${targeted} ${parts.join(' ')}`);
+console.log(`RESULT ${alive && !short ? 'ok' : 'fail'} ticks=${s.tick() - start} hp=${before}->${after} points=${pointsBefore}->${points()} prayers=${sets} targeted=${targeted} combat=${state()?.player?.combatLevel} ${parts.join(' ')}`);
 await finish(sessions, alive && !short, 'stood');

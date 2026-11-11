@@ -333,6 +333,11 @@ const ROUTE_CASES: BenchCase[] = [
   // click on the tree again. With `--set PRAYER_GUARD=0` the prayer is held at the normal point cost.
   {key: 'extra:guard-chop', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['500', 'PRAYERS=14', 'CHOP=oak:8'], pass: ok,
     presetConfig: {position: {x: 3205, z: 3243, level: 0}, skills: {Woodcutting: 50, Hitpoints: 60, Prayer: 60}, inventory: [{id: 1359, count: 1}]}},
+  // Draynor (maps/m48_50.jm2) at combat level 13: two young dark wizards (level 7, hunt range 3) stand at the
+  // willows. Willows with a bronze axe under their spells. With `--set GUARD_STAND_RETALIATE=off` the run shows the
+  // same work with auto-retaliate off.
+  {key: 'extra:guard-chop-wizard', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['500', 'CHOP=willow:12'], pass: ok,
+    presetConfig: {position: {x: 3086, z: 3238, level: 0}, skills: {Woodcutting: 30, Hitpoints: 30, Prayer: 45}, inventory: [{id: 1351, count: 1}]}},
   sparCase('extra:spar-no-slayer', sparFixture(3094, 3555, {noDragonSlayer: true}), sparFixture(3096, 3555, {noDragonSlayer: true})),
   // The tribrid against every build of scripts/pk-kits.ts in one run, and a mirror of 8 for each build: the cases that
   // the hill climb and the kit matrix run (scripts/measure/pk-spar-climb.ts, pk-spar-matrix.ts).
