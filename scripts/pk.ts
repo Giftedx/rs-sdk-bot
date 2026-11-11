@@ -59,6 +59,9 @@ export type FightOptions = {
     // already held.
     freeze?: boolean | 'flee' | 'low';
     freezeBelow?: number;
+    // With 'low': at most this many freeze casts on a target that has not run (default no limit). Each cast takes a
+    // turn of 5 ticks, and against a target that stands and fights the turns cost more than the freeze gives.
+    freezeEarlyMax?: number;
     // Once the target has fled (it is out of food): the style turns to use, and whether every special goes out at
     // once (default true). Unset, the rotation stays as it is.
     fledRotation?: Style[];
@@ -377,7 +380,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
     let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = false, rapidSet = false, pjedByNpc = false;
     let target: NearbyPlayer | undefined, rubbed = -1, ranAt = -10, prevSelf: { x: number; z: number } | null = null;
     const predictor = new StylePredictor();
-    let oppStyle: Style | null = null, oppChangedAt = start;
+    let oppStyle: Style | null = null, oppChangedAt = start, earlyFreezes = 0;
     const rand = o.mixSeed === undefined ? Math.random : seededRandom(o.mixSeed);
     let charged = false, chargeAt = -10, stepAt = -10, flickAt = start, lastSpecStyle: Style | null = null;
     const splatSeen: { cycles: number[] | null } = { cycles: null };
@@ -693,7 +696,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         const freeze = freezeRule ? (hasFreezeRunes ? castableFreeze(magicLevel, inv) : freezeSpell(magicLevel)) : null;
         // A kit with the runes of a freeze and no staff still casts it: the cast keeps the weapon in hand.
         const castFreeze = freeze !== null && (hasStyle(o.kit, 'magic') || hasFreezeRunes) && now >= freezeReady && now >= frozenUntil
-            && (freezeRule === true || now < fleeingUntil || (freezeRule === 'low' && lowHealth(seen, o.freezeBelow ?? 0.62)));
+            && (freezeRule === true || now < fleeingUntil || (freezeRule === 'low' && earlyFreezes < (o.freezeEarlyMax ?? Infinity) && lowHealth(seen, o.freezeBelow ?? 0.62)));
         // A target that has fled is out of food: from then on every special goes out at once, whatever its health bar
         // shows, and past melee reach the bow special replaces a melee one.
         const energy = special(s.client);
@@ -790,6 +793,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             if (castFreeze) {
                 log(`PK freeze cast at distance ${cheb(at, target)}, target health ${seen?.health}/${seen?.totalHealth}, target protects ${[...guarded].join('+') || 'nothing'}`);
                 result.freezes++;
+                if (now >= fleeingUntil) earlyFreezes++;
                 const dur = freezeDuration(freeze!, guarded.has('magic'));
                 frozenUntil = now + dur;
                 freezeReady = now + dur + 5;

@@ -321,6 +321,7 @@ const ROUTE_CASES: BenchCase[] = [
     companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3540, {food: 0})}]})),
   // A hunter in each kit against a target that leaves by its glory at 60 health, at Wilderness level 34.
   ...['tribrid-pots', 'tribrid-snare'].map(kit => sparMatrix(`extra:spar-escape-${kit}-x8`, Array.from({length: 8}, () => [kit, 'runner'] as const), ['SPAR_SCENARIO=escape'], {x: 3125, z: 3790})),
+  sparMatrix('extra:spar-escape-tribrid-snare-x12', Array.from({length: 12}, () => ['tribrid-snare', 'runner'] as const), ['SPAR_SCENARIO=escape'], {x: 3125, z: 3790}),
   // The same rivals against the kits with more food.
   ...['tribrid-snare', 'tribrid-snare-addy', 'hybrid'].map(kit => sparMatrix(`extra:spar-rivals-${kit}-x12`, Array.from({length: 12}, (_, i) => [kit, ['melee', 'hybrid', 'ranger'][i % 3]!] as const))),
   sparMatrix('extra:spar-league-lean-x8', LEAGUE.map(o => ['tribrid-lean', o.kit] as const), [`SPAR_B_PROFILES=${LEAGUE.map(o => o.profile).join(',')}`]),

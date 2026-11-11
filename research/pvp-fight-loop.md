@@ -445,14 +445,19 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     kit passes the same case (`extra:hunt-trip-staff`, 24 s). `PK_KIT=snare` selects the kit and its trip for
     `scripts/pk-hunt.ts`. Gap: the target stands and has no food, so the case proves the trip and not the fight;
     the live hunter keeps the staff trip until a side's bank holds the snare runes.
-27. **An early freeze does not yet separate from the freeze on a target that runs.** The hunter in the snare kit against
-    a target that leaves by glory at 60 health from Wilderness level 34 (`extra:spar-escape-tribrid-snare-x8`): with
-    the freeze only when the target runs, 11 kills in 32 spars (seeds 1 to 4); with the freeze from 70% health
-    (`freeze: 'low'`, `freezeBelow: 0.7`), 15 in 32; from 80%, 11 in 24; from 80% with the armour off for each cast
-    (`castArmour: 'strip'`), 8 in 16. The bow special as a burst lost: `hunter-burst` 1 in 8, and the burst from 70%
-    with the dagger special kept for 20%, 2 in 8. The hunter casts 6 or 7 freezes in a fight, and each takes a turn
-    of 5 ticks. The hunter keeps the freeze on a target that runs. Gap: 46% against 34% needs about 100 spars for
-    each rule to settle.
+27. **An early freeze kills more targets that run and loses fights against targets that stay.** The hunter in the
+    snare kit against a target that leaves by glory at 60 health from Wilderness level 34
+    (`extra:spar-escape-tribrid-snare-x8` and `-x12`, seeds 1 to 10): with the freeze only when the target runs, 33
+    kills in 104 spars; with the freeze from 70% health (`freeze: 'low'`, `freezeBelow: 0.7`), 56 in 104. Against
+    the melee build, the hybrid and the ranger the same rule has 18 kills and 18 deaths in 36 spars, where the freeze
+    on a target that runs has 30 and 6 (`extra:spar-rivals-tribrid-snare-x12`, seeds 1 to 3): the hunter cast 188
+    freezes in those 36 spars, and each takes a turn of 5 ticks. A cap on the early casts (`freezeEarlyMax`) lands
+    between the two on both: cap 2 has 10 kills in 24 against the target that runs and 15 kills to 9 against the
+    three builds; cap 3 has 9 in 24 and 15 to 9. Other rules against the target that runs: the freeze from 80%, 11 in
+    24; from 80% with the armour off for each cast, 8 in 16; the bow special as a burst, 1 in 8 and 2 in 8. The
+    hunter keeps the freeze on a target that runs: at its hunt spots (Wilderness levels 3 to 7) a glory works at
+    once and no freeze stops it. Gap: no rule that tells a target that will run from one that will stay before it
+    runs; the target of the case fights back until it leaves, as a fighter does.
 28. **Adamant arrows cost a quarter of the kit less and lose little.** 300 rune arrows are 120,000 of the snare kit's
     392,715 coins; 300 adamant arrows are 24,000. `tribrid-snare-addy` on the champion profile has 27 kills, 8
     deaths and a draw in 36 spars against the melee build, the hybrid and the ranger; the snare kit with rune arrows
