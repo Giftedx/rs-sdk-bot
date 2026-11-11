@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794372164003-shaftmaker-knightrider-staffoffire",
+ "account": "Shaftmaker",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "5e5beefd-c891-4f86-bc6c-4399d9b8b428",
+ "count": 0,
+ "ok": false,
+ "at": 1794372172542,
+ "detail": "trade claimed"
+}
