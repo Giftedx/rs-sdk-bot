@@ -173,6 +173,10 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('crafting', 'jewellery-trip', 'fresh_lumbridge', ['.practice/aio-bench/jobs/{bot}-jewel.json'], {presetConfig: {position: {x: 3269, z: 3167, level: 0}, skills: {Crafting: 10}, bank: [{id: 2357, count: 1}, {id: 1592, count: 1}]},
     jobFiles: {'.practice/aio-bench/jobs/{bot}-jewel.json': {recipe: 'gold_ring', target: 1, batch: 1, cap: 800, returnTicks: 100, reserve: 0, members: false, stringAmulet: false, bank: {x: 3269, z: 3167, level: 0}, furnace: {x: 3275, z: 3186, level: 0}}}}),
   skiller('crafting', 'tanning', 'fresh_lumbridge', ['soft', '1', '80'], {presetConfig: {position: {x: 3276, z: 3193, level: 0}, inventory: [{id: 1739, count: 1}, {id: 995, count: 5}]}}),
+  // From the Al Kharid bank with seven banked hides: six tanned, a needle and thread from Dommik, one set crafted and
+  // banked, one hide left (scripts/black-dhide-sets.ts).
+  skiller('crafting', 'black-dhide-sets', 'fresh_lumbridge', [], {pass: s => ok(s) && /sets=1 banked=1 bodies=1 chaps=1 vambraces=1 tanned=6 .*hidesLeft=1 /.test(s), timeoutMs: 600_000,
+    presetConfig: {position: {x: 3269, z: 3167, level: 0}, skills: {Crafting: 84}, inventory: [{id: 385, count: 2}], bank: [{id: 1747, count: 7}, {id: 995, count: 400}]}}),
   skiller('crafting', 'soften-clay', 'fresh_lumbridge', ['CAP=500', 'MAX_MAKE=1', 'RAW_RESERVE=0'], {presetConfig: {position: {x: 3185, z: 3436, level: 0}, inventory: [{id: 1925, count: 1}], bank: [{id: 434, count: 1}]}}),
   skiller('crafting', 'progressive', 'fresh_lumbridge', ['.practice/aio-bench/jobs/{bot}-prog.json'], {presetConfig: {position: {x: 3092, z: 3243, level: 0}, bank: [{id: 1511, count: 1}, {id: 946, count: 1}]},
     jobFiles: {'.practice/aio-bench/jobs/{bot}-prog.json': {mode: 'fletch', targetLevel: 99, maximum: 1, batch: 1, reserve: 0, cap: 600, members: false, bank: {x: 3092, z: 3243, level: 0}}}}),
@@ -249,6 +253,10 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {position: {x: 2717, z: 9802, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Magic: 99, Prayer: 99},
       equipment: [{id: 1289, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1540, count: 1, slot: 5}, {id: 1079, count: 1, slot: 7}],
       inventory: [{id: 2448, count: 1}, {id: 2452, count: 1}, {id: 2436, count: 1}, {id: 2440, count: 1}, {id: 2434, count: 1}, {id: 2434, count: 1}, {id: 563, count: 1}, {id: 556, count: 3}, {id: 554, count: 1}, ...Array.from({length: 12}, () => ({id: 385, count: 1}))]}},
+  // One kill from the corridor south of the cave, the hide and bones fetched (scripts/black-dragon-camp.ts STAGED=1).
+  {key: 'boss:black-dragon', script: 'scripts/aio-boss.ts', preset: 'fresh_lumbridge', scriptArgs: ['black-dragon', '1500', 'STAGED=1', 'KILLS=1'], pass: s => ok(s) && /kills=1 hides=1 bones=1/.test(s), timeoutMs: 900_000,
+    presetConfig: {position: {x: 2835, z: 9820, level: 0}, skills: {Ranged: 99, Hitpoints: 99, Defence: 99, Prayer: 60},
+      equipment: [{id: 861, count: 1, slot: 3}, {id: 888, count: 400, slot: 13}], inventory: [{id: 385, count: 1}, {id: 385, count: 1}, {id: 385, count: 1}]}},
   {key: 'boss:trawler', script: 'scripts/aio-boss.ts', preset: 'fresh_lumbridge', scriptArgs: ['trawler', '2200'], pass: ok, timeoutMs: 900_000,
     presetConfig: {position: {x: 2675, z: 3170, level: 0}, skills: {Fishing: 99, Crafting: 99, Hitpoints: 50}, inventory: [{id: 1941, count: 200}, {id: 583, count: 1}, ...Array.from({length: 10}, () => ({id: 954, count: 1}))]}},
   {key: 'boss:trawler-at-site', script: 'scripts/aio-boss.ts', preset: 'fresh_lumbridge', scriptArgs: ['trawler-at-site', 'trip', '2200'], pass: ok, timeoutMs: 900_000,
@@ -304,6 +312,13 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, bank: [{id: 1944, count: 1}, {id: 1927, count: 1}, {id: 1933, count: 1}]}},
   {key: 'quester:mode:cook-job', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['cook-job', 'CAP=1500'], pass: s => ok(s) && /QUEST_COOK_JOB_RESULT \{"ok":true/.test(s),
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, bank: [{id: 1944, count: 1}, {id: 1927, count: 1}, {id: 1933, count: 1}], varps: {4: -1, 9: -1, 13: -1, 16: -1, 28: -1, 64: -1, 181: -1, 209: -1}}},
+  // From the Draynor bank: the dramen staff, the shed, the market door's diamond, one dragon longsword from Jakut, the
+  // ladder, the Al Kharid bank (scripts/jakut-swords.ts).
+  {key: 'market:jakut-swords', script: 'scripts/aio-market.ts', preset: 'fresh_lumbridge', scriptArgs: ['jakut-swords', 'SWORDS=1'], pass: s => ok(s) && /swords=1 banked=1/.test(s), timeoutMs: 900_000,
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Attack: 60}, equipment: [{id: 1333, count: 1, slot: 3}], bank: [{id: 772, count: 1}, {id: 1601, count: 1}, {id: 995, count: 110_000}]}},
+  // From the Taverley dungeon ladder: the Jailer, Velrak's cell, the key, back up (scripts/dusty-key.ts).
+  {key: 'quester:mode:dusty-key', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['dusty-key'], pass: s => ok(s) && s.includes('dustyKey=1'), timeoutMs: 900_000,
+    presetConfig: {position: {x: 2884, z: 3398, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99}, equipment: [{id: 1331, count: 1, slot: 3}], inventory: Array.from({length: 4}, () => ({id: 385, count: 1}))}},
   {key: 'quester:mode:seaslug-leave', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['seaslug-leave', 'CAP=600'], pass: ok,
     presetConfig: {position: {x: 2782, z: 3273, level: 0}, skills: {Hitpoints: 60}, varps: {159: 12}}},
   {key: 'quester:mode:tbwt-owned', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['tbwt-owned', '6000'], pass: ok, timeoutMs: 900_000,

@@ -15,7 +15,7 @@ Acceptance for workers, shared helpers and accounts. Authority, pauses and accou
 | All-in-one dispatcher & catalog | `scripts/aio.ts` |
 | Skilling (15 skills, gathering, artisan, RC, support) | `scripts/aio-skiller.ts`, `scripts/microbot-bank-jobs.ts` |
 | Combat & monster drop farming | `scripts/aio-fighter.ts`, `scripts/gather-combat.ts` |
-| Bosses & minigames (KBD, Blue Dragon, Trawler) | `scripts/aio-boss.ts`, `scripts/microbot-combat-trip.ts` |
+| Bosses & minigames (KBD, Blue Dragon, Black Dragon, Trawler) | `scripts/aio-boss.ts`, `scripts/microbot-combat-trip.ts`, `scripts/black-dragon-camp.ts` |
 | Wilderness PvP, tribrid & escort | `scripts/aio-pvp.ts`, `scripts/{pk,pk-hunt,pk-roam}.ts` |
 | Quests & clues (dialogue, steps, sweep, burst) | `scripts/aio-quester.ts`, `scripts/generated/quest-lib.ts` |
 | Shops & Grand Exchange | `scripts/aio-market.ts`, `scripts/{shop-buyer,buy-owned-ge-item}.ts` |

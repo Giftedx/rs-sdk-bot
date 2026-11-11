@@ -43,7 +43,9 @@ export function spinOwnedSession(raw:Session,requested:()=>boolean=()=>false,cle
  let lost=false,cleaning=false,endedNow=false,loggedOut=false;void ended.then(e=>{endedNow=true;loggedOut=e.reason==='logged-out';});
  const owns=()=>{
   const player=sdk.getState()?.player;
-  if(raw.sdk!==sdk||raw.client!==client||raw.direct!==direct||raw.close!==close||raw.ended!==ended||raw.name!==name||sdk.config!==config||JSON.stringify([config?.host,config?.port,config?.gatewayUrl])!==endpoint||client?.selfSlot!==slot||client?.executeBotAction!==executor||(!loggedOut||player!=null)&&(player?.lifeId!==life||(player?.respawnCount??0)!==respawns))lost=true;
+  // The random event gate (packages/core/src/randomevents.ts) puts the session's own `direct` back when the run
+  // settles, after cleanup began: that is not another owner.
+  if(raw.sdk!==sdk||raw.client!==client||!cleaning&&raw.direct!==direct||raw.close!==close||raw.ended!==ended||raw.name!==name||sdk.config!==config||JSON.stringify([config?.host,config?.port,config?.gatewayUrl])!==endpoint||client?.selfSlot!==slot||client?.executeBotAction!==executor||(!loggedOut||player!=null)&&(player?.lifeId!==life||(player?.respawnCount??0)!==respawns))lost=true;
   return !lost&&typeof executor==='function'&&Number.isSafeInteger(slot)&&Number.isSafeInteger(life);
  };
  const stopped=()=>!owns()||endedNow||productionStopRequested(name,requested,undefined,process.env.STOP_FILE??'.practice/stop-spin-bowstrings')||!sdk.getState()?.player||sdk.getState()?.player?.isDead||hp<1||(sdk.getSkill('Hitpoints')?.level??0)<hp||!Number.isFinite(sdk.getStateAge())||sdk.getStateAge()<0||sdk.getStateAge()>5000;

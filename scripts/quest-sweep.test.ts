@@ -1548,3 +1548,36 @@ test('a quest that boards the Entrana ship banks every pack row it does not use'
     const pack = [1331, 841, 882, 1387, 1351, 946, 2434, 563, 556, 379, 385, 995, 771].map(id => ({ id, count: 1 }));
     expect(bareDeposits('zanaris', pack, need, food, tradeable)).toEqual([1331, 841, 882, 1387]);
 });
+
+import {shopCoinTake} from './quest-sweep';
+test('the shop money of a pass comes on top of the coins the quest itself asks for',()=>{
+ // Practice: Merlin's Crystal asks 500 coins; bread and a tinderbox cost 13. The pass took 500, paid 13 and failed its own check.
+ expect(shopCoinTake(13,0,500,500)).toBe(13);
+ // A quest that asks no coins: the coins carried and planned pay for the shops first.
+ expect(shopCoinTake(25,0,0,0)).toBe(25);
+ expect(shopCoinTake(25,40,0,0)).toBe(0);
+ expect(shopCoinTake(25,10,0,0)).toBe(15);
+ // Coins carried beyond the quest's own are shop money; coins short of it are not.
+ expect(shopCoinTake(60,520,0,500)).toBe(40);
+ expect(shopCoinTake(60,200,300,500)).toBe(60);
+ expect(shopCoinTake(60,100,0,500)).toBe(60);
+});
+
+import {PRAYER_QUESTS,SEERS_ALTAR,prayerShort,BARE as BARE_QUESTS} from './quest-sweep';
+test('an account short of prayer points prays at the Seers altar before the Camelot quests, and Holy Grail goes bare',()=>{
+ // Practice: with no points Merlin's Crystal ended `step protect from melee on` in Keep Le Faye.
+ expect(Object.keys(PRAYER_QUESTS).sort()).toEqual(['grail','merlin']);
+ expect(prayerShort(0,77,PRAYER_QUESTS.merlin!)).toBe(true);
+ expect(prayerShort(PRAYER_QUESTS.merlin!-1,77,PRAYER_QUESTS.merlin!)).toBe(true);
+ expect(prayerShort(PRAYER_QUESTS.merlin!,77,PRAYER_QUESTS.merlin!)).toBe(false);
+ // The Titan's three prayers want more than Merlin's one; an account whose level is under the mark is full at its level.
+ expect(PRAYER_QUESTS.grail!).toBeGreaterThan(PRAYER_QUESTS.merlin!);
+ expect(prayerShort(45,45,PRAYER_QUESTS.grail!)).toBe(false);
+ expect(prayerShort(44,45,PRAYER_QUESTS.grail!)).toBe(true);
+ // The altar is prayed at from the tile east of it.
+ expect([SEERS_ALTAR.id,SEERS_ALTAR.x,SEERS_ALTAR.z]).toEqual([409,2694,3462]);
+ expect([SEERS_ALTAR.stand.x as number,SEERS_ALTAR.stand.z as number]).toEqual([SEERS_ALTAR.x+1,SEERS_ALTAR.z]);
+ // The Entrana ship of Holy Grail takes nothing worn.
+ expect(BARE_QUESTS.has('grail')).toBe(true);
+});
+
