@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { firstKitTally, parseJob } from './pk-spar-jobs';
+import { firstKitTally, parseJob, procsFor } from './pk-spar-jobs';
 
 test('parseJob reads the case, the profiles, the swap, the seed and the options of each side', () => {
     expect(parseJob('extra:spar-x16|champion|base|1|3')).toEqual({ key: 'extra:spar-x16', a: 'champion', b: 'base', swap: true, seed: '3' });
@@ -13,4 +13,13 @@ test('firstKitTally counts the first kit of a duel case, which is on side B in p
     expect(firstKitTally([299, -299, 299, -299])).toEqual({ kills: 2, deaths: 2 });
     expect(firstKitTally([299, 299, -299, -299])).toEqual({ kills: 4, deaths: 0 });
     expect(firstKitTally([50, -100, 0, 250])).toEqual({ kills: 0, deaths: 1 });
+});
+
+test('procsFor keeps 4 GB free: 8 processes from 9.9 GB, fewer below, none under 6.1 GB', () => {
+    expect(procsFor(12)).toBe(8);
+    expect(procsFor(9.9)).toBe(8);
+    expect(procsFor(8.7)).toBe(5);
+    expect(procsFor(6.7)).toBe(2);
+    expect(procsFor(6)).toBe(0);
+    expect(procsFor(3)).toBe(0);
 });
