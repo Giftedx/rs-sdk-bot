@@ -372,10 +372,22 @@ export function plan(inp: Inputs): Assignment[] {
     // another side's.
     const reserve = kitReserve(inp.templates), byName = new Map(mine.map(a => [a.name, a]));
     const stock = [...(inp.stock ?? [])].sort((x, y) => Number(y.side === inp.side) - Number(x.side === inp.side));
-    const spare = (s: Stock, item: string) => (s.items[item] ?? 0) - (reserve[item] ?? 0);
+    // What a donor keeps of an item: the most a band needs to start. An army account of this side keeps that only for
+    // the bands it has still to do, so a maxed account gives all it holds (live: two maxed accounts held 41 dragon
+    // bones, 1,900 nature runes and 29,000 feathers while others waited for a donor of another side). The levels of
+    // another side's account are not read here: it keeps the reserve of every band.
+    const leftOf = (t: Template, a: Acct) => t.trains ? t.trains.to - (a.skills[t.trains.skill] ?? 1) : t.quest && a.quests && !questDone(a, t.quest.name) ? 1 : 0;
+    const ownReserve = new Map<string, Record<string, number>>();
+    const keepsOf = (s: Stock) => {
+        const a = s.side === inp.side ? byName.get(s.name) : undefined;
+        if (!a || !inp.army?.has(a.name.toLowerCase())) return reserve;
+        if (!ownReserve.has(a.name)) ownReserve.set(a.name, kitReserve(inp.templates.filter(t => t.tier !== 'goal' || leftOf(t, a) > 0)));
+        return ownReserve.get(a.name)!;
+    };
+    const spare = (s: Stock, item: string) => (s.items[item] ?? 0) - (keepsOf(s)[item] ?? 0);
     const banded = (id: string) => byId.get(id)?.tier === 'goal' && !byId.get(id)?.filler;
     const goalNow = (account: string) => { const id = inp.current?.get(account.toLowerCase()); return !!id && (id.startsWith(KIT_BUY) || banded(id)); };
-    const acquire = (c: Cand, step: 'buy' | 'send') => {
+    const acquire = (c: Cand, step: 'buy' | 'send', far: boolean) => {
         const a = byName.get(c.account)!, busy = !!inp.unfundable?.has(c.account.toLowerCase()), buyId = KIT_BUY + c.template.id;
         if (done.has(c.account) || gave.has(c.account) || gaveItems.has(c.account) || vacated.has(c.account)) return;
         // An account in a running band job keeps the rule it had before the kit tier: its live holdings dip while it
@@ -402,8 +414,8 @@ export function plan(inp: Inputs): Assignment[] {
                 // A coin donor of this side, else a free account of another side with coins above the reserve.
                 const coinsOf = (s: Stock) => Math.max(0, (s.items.coin ?? 0) - FUND_RESERVE);
                 const own = [...pool].filter(([n, left]) => n.toLowerCase() !== c.account.toLowerCase() && !done.has(n) && !gaveItems.has(n) && left >= short).sort((x, y) => y[1] - x[1])[0]?.[0];
-                const far = own ? undefined : stock.filter(s => s.side !== inp.side && !gave.has(s.name) && !gaveItems.has(s.name) && coinsOf(s) >= short).sort((x, y) => coinsOf(y) - coinsOf(x))[0]?.name;
-                const from = own ?? far;
+                const other = own || !far ? undefined : stock.filter(s => s.side !== inp.side && !gave.has(s.name) && !gaveItems.has(s.name) && coinsOf(s) >= short).sort((x, y) => coinsOf(y) - coinsOf(x))[0]?.name;
+                const from = own ?? other;
                 if (from) {
                     if (own) pool.set(own, pool.get(own)! - short);
                     gave.add(from); pool.delete(c.account);
@@ -416,20 +428,27 @@ export function plan(inp: Inputs): Assignment[] {
         // One order per pass. A line no market sells goes first, so the lines left at the end are one buy.
         const sold = (l: Lack) => Number(l.of.some(i => !!inp.market?.[i]));
         for (const l of [...c.lacks!].sort((x, y) => sold(x) - sold(y))) for (const item of l.of) {
-            const from = stock.find(s => s.name.toLowerCase() !== c.account.toLowerCase() && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= l.count
+            const from = stock.find(s => (s.side !== inp.side) === far && s.name.toLowerCase() !== c.account.toLowerCase() && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= l.count
                 && !inp.noSend?.has(`${s.name}>${c.account}`.toLowerCase()));
             if (!from) continue;
+            // A donor of this side sends the band's batch, as a buy would bring it, as far as its spare stock goes: one
+            // trade, not one for every start amount. Another side's donor sends what the band needs to start.
+            const batchOf = c.template.batchFor?.(a) ?? c.template.batch;
+            const count = far ? l.count : Math.min(spare(from, item), Math.max(l.count, (batchOf?.[item] ?? 0) - (a.items[item] ?? 0)));
             // A trade needs the account offline with no stop file (scripts/fleet-agent.ts). One in a coin job leaves that
             // job on this pass and gets the order on the next; one already on a band or a kit buy keeps it.
             // The donor is held for this account, so a second account does not leave its job for the same stock.
-            if (busy) { if (!goalNow(c.account)) { vacated.set(c.account, `vacant: leaves its job for ${l.count} ${item} from ${from.name} for ${c.template.id}`); gaveItems.add(from.name); pool.delete(from.name); } return; }
+            if (busy) { if (!goalNow(c.account)) { vacated.set(c.account, `vacant: leaves its job for ${count} ${item} from ${from.name} for ${c.template.id}`); gaveItems.add(from.name); pool.delete(from.name); } return; }
             gaveItems.add(from.name); pool.delete(from.name); pool.delete(c.account);
-            done.set(c.account, { account: c.account, template: c.template, value: 0, reason: `${c.reason}, sent ${l.count} ${item} by ${from.name}`, resources: [], send: { from: from.name, to: c.account, item, count: l.count, template: c.template.id } });
+            done.set(c.account, { account: c.account, template: c.template, value: 0, reason: `${c.reason}, sent ${count} ${item} by ${from.name}`, resources: [], send: { from: from.name, to: c.account, item, count, template: c.template.id } });
             return;
         }
     };
+    // This side's own coins and stock before another side's: a trade across sides waits on the other side's agent,
+    // and the account stands vacant meanwhile (live: five accounts parked for donors of another side, one for 22
+    // bones, while this side's maxed accounts held what they needed).
     const kits = cands.filter(c => c.goal && c.lacks).sort(goalOrder);
-    for (const step of ['buy', 'send'] as const) for (const c of kits) acquire(c, step);
+    for (const far of [false, true]) for (const step of ['buy', 'send'] as const) for (const c of kits) acquire(c, step, far);
     // Then the filler bands, for an army account that no band and no kit took.
     for (const c of cands.filter(c => c.goal && !c.lacks && c.template.filler).sort(goalOrder)) take(c, 0);
     // The coin tier, re-sorted after every assignment: one more holder lowers the worth of the candidates that share
