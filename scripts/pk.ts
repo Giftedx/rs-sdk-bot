@@ -79,6 +79,11 @@ export type FightOptions = {
     // before: the roll then goes against a bare 99 Defence, about 83% to hit where full rune gives about 27%. Both
     // arrows land on one tick from 3 tiles or less.
     bowBurst?: number;
+    // Prayer flick: prayer points drain on a 5-tick timer that starts when the first prayer goes on and is cleared when
+    // none is on (skill_prayer/scripts/prayer.rs2:30-43). Every 4 ticks, on a cooldown tick, the loop turns every
+    // active prayer off and on again in one tick, so the timer never fires and the prayers cost no points. One tick
+    // holds 5 inputs: with three prayers on, the third comes back on the next tick.
+    prayerFlick?: boolean;
     // true: eat a carried karambwan on each tick where it costs no attack (see the loop). Default off.
     freeFood?: boolean;
     // Tiles to keep from the target between turns that are not melee: on a cooldown tick the loop steps away to this
@@ -107,7 +112,7 @@ export type FightOptions = {
     cap?: number;
     log?: (line: string) => void;
 };
-export type FightResult = { outcome: 'kill' | 'died' | 'escaped' | 'lost' | 'timeout' | 'danger' | 'session ended'; danger?: string; ticks: number; dealt: number; taken: number; eaten: number; attacks: Record<Style, number>; freezes: number; specs: number; targetAt?: { x: number; z: number } };
+export type FightResult = { outcome: 'kill' | 'died' | 'escaped' | 'lost' | 'timeout' | 'danger' | 'session ended'; danger?: string; ticks: number; dealt: number; taken: number; eaten: number; attacks: Record<Style, number>; freezes: number; specs: number; flicks?: number; prayerLeft?: number; targetAt?: { x: number; z: number } };
 
 // Overhead protect prayers from the head icon bits (content player/configs/headicon.constant: 3 melee, 4 missiles, 5 magic).
 export function protectedStyles(headicons: number | undefined): Set<Style> {
@@ -337,7 +342,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
     let freezeReady = start, frozenUntil = start, freezeCastAt = -10, frozenTile: { x: number; z: number } | null = null, selfFrozenUntil = start;
     let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = false, rapidSet = false, pjedByNpc = false;
     let target: NearbyPlayer | undefined, rubbed = -1, ranAt = -10, prevSelf: { x: number; z: number } | null = null;
-    let charged = false, chargeAt = -10, stepAt = -10, lastSpecStyle: Style | null = null;
+    let charged = false, chargeAt = -10, stepAt = -10, flickAt = start, lastSpecStyle: Style | null = null;
     const splatSeen: { cycles: number[] | null } = { cycles: null };
     let prevTarget: { x: number; z: number } | null = null, prevGap = 0, fleeingUntil = start, heading = { x: 0, z: 0 }, chaseAt = -10, fled = false;
     const hits: { tick: number; damage: number; src: number }[] = [], dealtLog: { tick: number; damage: number }[] = [];
@@ -570,6 +575,19 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         if (now < nextAttack || unattackableSince >= 0) {
             let budget = 5;
             const walkingToMelee = now <= lastAttackAt + lastWalkTicks;
+            // Not on the tick before our own attack: that tick sets the prayers of the turn.
+            if (o.prayerFlick && now - flickAt >= 4 && now < nextAttack - 1 && !walkingToMelee) {
+                const active = prayers.activePrayers.flatMap((on, p) => (on ? [p] : []));
+                if (active.length > 0 && active.length <= 4) {
+                    // The overhead first: it is the one that must be back on in this tick.
+                    const order = [...active].sort((a, b) => Number(b >= PRAYER.magic && b <= PRAYER.melee) - Number(a >= PRAYER.magic && a <= PRAYER.melee));
+                    for (const p of order) void sdk.sendTogglePrayer(p);
+                    for (const p of order.slice(0, 5 - order.length)) void sdk.sendTogglePrayer(p);
+                    flickAt = now;
+                    result.flicks = (result.flicks ?? 0) + 1;
+                    continue;
+                }
+            }
             if (o.standOff && !walkingToMelee && upcomingTurn?.style !== 'melee' && now > lastAttackAt && now >= selfFrozenUntil && now - stepAt >= 2 && cheb(at, target) < o.standOff) {
                 const dx = Math.sign(at.x - target.x) || 1, dz = Math.sign(at.z - target.z);
                 void sdk.sendWalk(target.x + dx * o.standOff, target.z + dz * o.standOff);
