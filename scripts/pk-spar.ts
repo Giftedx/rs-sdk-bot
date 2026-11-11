@@ -219,6 +219,12 @@ if (import.meta.main) {
         // The fight loop sends its actions by index and reads no `reachable` flag; the flood fill behind that flag
         // was 9% of a 16-account run.
         for (const s of [a, b]) (s.client as { setReachabilityEnabled?: (on: boolean) => void } | undefined)?.setReachabilityEnabled?.(false);
+        // The fight loop reads no loc and no ground item, and their scan is part of the state of every tick.
+        // SPAR_FULL_STATE=1 keeps them.
+        if (env.SPAR_FULL_STATE !== '1') for (const s of [a, b]) {
+            const collector = (s.client as { collector?: Record<string, unknown> } | undefined)?.collector;
+            if (collector && typeof collector.collectNearbyLocs === 'function') { collector.collectNearbyLocs = () => []; collector.collectGroundItems = () => []; }
+        }
         return [a, b];
     })).finally(() => { tickWaits.active--; });
     const t1 = Date.now();
