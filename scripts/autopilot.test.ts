@@ -3,8 +3,9 @@ import { appendFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { jobLogStart } from '../packages/core/src/job-log';
-import { aioTemplates, SWEEP_MEALS, catalogue, finishedTrainers, FOOD_HEAL, jobFor, mergeJobs, norm, plan, plannableAccounts, reservedResources, type Acct, type Inputs } from '../packages/planner/src/autopilot';
+import { aioTemplates, BOUGHT_BONE_XP, SWEEP_MEALS, catalogue, finishedTrainers, FOOD_HEAL, jobFor, mergeJobs, norm, plan, plannableAccounts, reservedResources, type Acct, type Inputs } from '../packages/planner/src/autopilot';
 import { COW_FOOD_BITES, COW_FOOD_HP, cowFoodHeal } from './gather-combat';
+import { BONE_XP } from './train-prayer';
 import { missionSignature, startable } from './swarm';
 import { aioPilots, armyRoster, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, newestClaims, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import type { TradeReceipt } from './fleet-trade-settlement';
@@ -270,6 +271,10 @@ test('the planner heals food by the same table as cow mode, and the cow bands ne
     const ids = Object.keys(COW_FOOD_BITES).map(Number);
     expect(Object.fromEntries(ids.map(id => [norm(names.get(id)!), cowFoodHeal([{ id, count: 1 }])]))).toEqual({ ...FOOD_HEAL });
     for (const t of catalogue().filter(t => t.id.startsWith('army-cow-'))) expect(t.needs?.food).toBe(COW_FOOD_HP);
+});
+
+test('the planner sizes a bone buy by the XP the Prayer trainer checks on each bury', () => {
+    for (const [id, xp] of Object.entries(BOUGHT_BONE_XP)) expect(BONE_XP[Number(id)]).toBe(xp);
 });
 
 test('a retirement lapses when its script changes, except a death or a gone template', () => {

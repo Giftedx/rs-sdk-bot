@@ -540,6 +540,36 @@ TrouserSnake and UnderMyKilt hold about 15,000 feathers and 1,500-1,700 bones ea
   799 ticks. **Gap.** A wait of the full 1,000 ticks is not practised; the session's idle guard ends a wait at 900
   ticks unless `STALL_TICKS=0`.
 
+### Prayer from bought bones
+
+- **Claim.** A bought dragon bone buried at the bank is worth 1,800 Prayer XP and a big bone 375, at about 815 and 172
+  XP a tick, against 3.84 a tick for burying trooper bones on the field. The planner buys them for an account with
+  no other band to start (`kit-buy:army-bury-dragon-99`, then `army-bury-big-99`) and the bury band runs where the
+  Grand Exchange buy leaves the account.
+- **Conditions.** Practice at xpRate 25, the planner's bury templates (`scripts/train-prayer.ts 99` with
+  `BURY_HELD=1 BONE_ID=536|532 BONE_RESERVE=6`). Every melee skill, Ranged and Magic 99; the bones banked.
+
+  | Run | Bones banked | Start | Buried | XP | Prayer | Ticks | XP per tick | Stop |
+  |---|---|---|---|---|---|---|---|---|
+  | d2 | 264 dragon | Varrock West | 258 | 464,400 | 90 -> 99 | 571 | 813.3 | target-level |
+  | d1 | 169 dragon | Varrock West | 163 | 293,400 | 90 -> 96 | 358 | 819.6 | input-insufficient |
+  | d3 | 60 dragon | Ardougne north | 54 | 97,200 | 97 -> 98 | 119 | 816.8 | input-insufficient |
+  | b1 | 400 big | Ardougne north | 394 | 147,750 | 74 -> 82 | 858 | 172.2 | input-insufficient |
+
+  All four ended `RESULT ok`. The trainer keeps 6 bones and checks the XP of every bury. A held batch ends ok when
+  it runs out, with or without a level: from 96 a level is 58,000 to 67,000 XP.
+- **Market (live claude-cloud read).** Dragon bones: 1,009 listed from 9,000, mean 9,687. Big bones: 1,686 listed
+  from 2,399, mean 2,526. Bones: no real seller (ask 45,125). That is about 2.4 million Prayer XP for about 14
+  million coins, about 5.2 coins an XP for dragon bones and 6.5 for big bones; Prayer 74 to 99 is about 820,000 XP an
+  account. The side holds 36 million coins.
+- **Sizing.** A buy takes what the account's Prayer still needs from its level, or what it can pay for under the
+  caps (10,000 and 2,600). An account with Ranged or Magic still to train keeps 500,000 coins back for its other kits.
+- **Evidence.** `.practice/bones/run.ts` and its `d1`-`d3`, `b1` logs in the Claude cloud container that ran them;
+  `packages/planner/test/autopilot.test.ts` (who buys, how many, the order of the two bones);
+  `scripts/train-prayer.test.ts` (dragon bone XP, a batch with no level).
+- **Gap.** The buy is not run live and the Grand Exchange is not on practice. The listings above the caps are not
+  bought, so less than the listed total is in reach.
+
 ## 1. Melee, no cannon
 
 Script `scripts/measure/combat-melee.ts`, runner `scripts/measure/floor-run.ts`, 300 ticks per run,
