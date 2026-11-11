@@ -1,27 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794381404343,
+ "at": 1794381620923,
  "jobs": [
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=10 EXPECTED_OWNED=140 LIMIT_PRICE=200 CASH_RESERVE=1000 ORDER_KEY=kiltlifter-kit7-559-140to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=30 EXPECTED_OWNED=395 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=kiltlifter-kit7-557-395to425 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=20 EXPECTED_OWNED=280 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=kiltlifter-kit7-555-280to300 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 10 Body rune, 30 Earth rune, 20 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
   {
    "account": "PocketPool",
    "script": "scripts/chain.ts",
@@ -43,35 +23,28 @@
    "resources": []
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
    "account": "Fatstack",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=294 EXPECTED_OWNED=6 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=fatstack-kit8-555-6to300 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 294 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "supply",
+   "template": "kit-buy:army-splash-magic-66",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "Deeppockets",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=294 EXPECTED_OWNED=6 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=deeppockets-kit8-555-6to300 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
