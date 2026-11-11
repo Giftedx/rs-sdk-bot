@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { ARROW_LOW, ARROW_STOCK, BONE_KEEP, BONE_PURSE, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
+import { ARROW_LOW, ARROW_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -662,10 +662,17 @@ test('an army account with no other band to start buys the bones its Prayer stil
     expect(order(rich)).toEqual([[536, need]]);
     // An account that cannot pay for all of it buys what it can pay for, with the kit reserve left.
     expect(order(pick({}, { coin: 1_700_398 }))).toEqual([[536, 169]]);
-    // An account with Ranged or Magic still to train keeps BONE_PURSE back for their kits. Its arrow shops are taken here.
+    // An account with Ranged or Magic still to finish keeps BONE_PURSE back for their kits (Magic 92 here, with no fire
+    // for alchemy, so it has no other band).
+    expect(order(pick({ Magic: 92 }, { coin: 830_492 }))).toEqual([[536, Math.floor((830_492 - BONE_PURSE - 1_000) / 10_000)]]);
+    expect(pick({ Magic: 92 }, { coin: BONE_PURSE + 100_000 }).template!.id).not.toBe(KIT_BUY + 'army-bury-dragon-99');
+    // The listed bones finish about three accounts: one with Ranged or Magic under BONE_SKILL buys none, even with its
+    // arrow shops taken and millions of coins, and does not bury a stack it happens to hold before those skills.
     const busyShops = { ...CAPACITY, 'shop:ardy': 0, 'shop:catherby_arrows': 0, 'shop:dargaud': 0, 'shop:lowe': 0 };
-    expect(order(pick({ Ranged: 1 }, { coin: 1_700_398, shortbow: 1 }, { capacity: busyShops }))).toEqual([[536, Math.floor((1_700_398 - BONE_PURSE - 1_000) / 10_000)]]);
-    expect(pick({ Ranged: 1 }, { coin: BONE_PURSE + 100_000, shortbow: 1 }, { capacity: busyShops }).template!.id).not.toBe(KIT_BUY + 'army-bury-dragon-99');
+    const { 'bronze arrow': _arrow, 'nature rune': _nature, ...bonesOnly } = bones;
+    expect(pick({ Ranged: BONE_SKILL - 1 }, { coin: 8_000_000, shortbow: 1 }, { capacity: busyShops, market: bonesOnly }).template!.id).toBe('army-trooper-prayer-99');
+    expect(pick({ Magic: BONE_SKILL - 1 }, { coin: 8_000_000 }, { market: bonesOnly }).template!.id).toBe('army-trooper-prayer-99');
+    expect(pick({ Magic: BONE_SKILL - 1 }, { coin: 8_000_000, 'dragon bone': 300 }, { market: bonesOnly }).template!.id).toBe('army-trooper-prayer-99');
     // The buy replaces the Prayer filler while it runs, as any kit buy does.
     expect(pick({}, { coin: 5_000_000 }, { unfundable: new Set(['monk']), current: new Map([['monk', 'army-trooper-prayer-99']]) }).template!.id).toBe(KIT_BUY + 'army-bury-dragon-99');
     // With the bones held, a part-filled order too, it buries them before anything else.
@@ -684,7 +691,7 @@ test('an army account with no other band to start buys the bones its Prayer stil
     expect(pick({ Prayer: 99 }, { coin: 5_000_000 }).template?.id.startsWith(KIT_BUY)).not.toBe(true);
 });
 
-test('an army account with no better blade buys one adamant scimitar before its melee bands, two accounts at a time', () => {
+test('an army account with no better blade buys one adamant scimitar before its Ranged and melee bands, two accounts at a time', () => {
     const army = new Set(['blade', 'edge', 'point']);
     const sold: Market = { ...market, 'adamant scimitar': { id: 1331, name: 'Adamant scimitar', limit: KIT_PRICE_CAPS['adamant scimitar']! } };
     const skills = { Thieving: 99, Attack: 99, Strength: 99, Defence: 80, Hitpoints: 90, Ranged: 99, Magic: 99, Prayer: 99 };
@@ -704,8 +711,9 @@ test('an army account with no better blade buys one adamant scimitar before its 
     expect(pick({}, { ...kit, coin: KIT_PRICE_CAPS['adamant scimitar']! }).template!.id).toBe('army-trooper-defence-99');
     expect(pick({}, kit, { market }).template!.id).toBe('army-trooper-defence-99');
     expect(pick({}, kit, { retired: new Set([pairKey('Blade', KIT_BUY + WEAPON.id)]) }).template!.id).toBe('army-trooper-defence-99');
-    // The Ranged band does not use the blade and comes first; the buy comes before the troopers and the Prayer filler.
-    expect(pick({ Ranged: 30 }, { ...kit, shortbow: 1, 'iron arrow': 500 }).template!.id).toBe('army-trooper-ranged-99');
+    // Every account gets one now: the buy comes before the Ranged band too, and before the Prayer filler.
+    expect(pick({ Ranged: 30 }, { ...kit, shortbow: 1, 'iron arrow': 500 }).template!.id).toBe(KIT_BUY + WEAPON.id);
+    expect(pick({ Ranged: 30 }, { ...kit, shortbow: 1, 'iron arrow': 500, 'adamant scimitar': 1 }).template!.id).toBe('army-trooper-ranged-99');
     expect(pick({ Defence: 99, Prayer: 80 }, kit).template!.id).toBe(KIT_BUY + WEAPON.id);
     // Two accounts are away for it at a time; the third keeps its band.
     const three = ids(plan(inputs(['Blade', 'Edge', 'Point'].map(n => acct(n, skills, kit)), { army, market: sold, capacity: CAPACITY })));
@@ -716,7 +724,9 @@ test('an army account with no better blade buys one adamant scimitar before its 
 
 test('with no fire on the market the alchemy kit buys its other lines, then the account buys a staff of fire at Zaff\'s', () => {
     const templates = catalogue().filter(t => t.id === 'army-alch-magic-99' || t.id === 'army-staff-zaff'), army = new Set(['rich']);
-    const pick = (items: Record<string, number>, skills: Record<string, number> = { Magic: 30 }) => plan(inputs([mage('Rich', items, skills)], { templates, army, market, capacity: CAPACITY }))[0];
+    // The staff job is a pilot: a plan names it to turn it on.
+    const pilots = new Set(['army-staff-zaff']);
+    const pick = (items: Record<string, number>, skills: Record<string, number> = { Magic: 30 }) => plan(inputs([mage('Rich', items, skills)], { templates, army, market, capacity: CAPACITY, pilots }))[0];
     // The market sells nature runes and no fire: the buy takes the nature runes and leaves the fire line to the shop job.
     const buy = pick({ coin: 5_000_000, feather: 500 })!;
     expect(buy.template!.id).toBe(KIT_BUY + 'army-alch-magic-99');
@@ -736,8 +746,10 @@ test('with no fire on the market the alchemy kit buys its other lines, then the 
     expect(pick({ ...held, coin: 14_000 })?.template?.id).not.toBe('army-staff-zaff');
     expect(pick({ coin: 4_000_000, feather: 500, 'nature rune': 49 })?.template?.id).not.toBe('army-staff-zaff');
     // Only the fire line is short and no market sells it: there is nothing to buy on the Grand Exchange.
-    expect(plan(inputs([mage('Rich', { coin: 5_000, feather: 500, 'nature rune': 1000 }, { Magic: 30 })], { templates, army, market, capacity: CAPACITY }))
+    expect(plan(inputs([mage('Rich', { coin: 5_000, feather: 500, 'nature rune': 1000 }, { Magic: 30 })], { templates, army, market, capacity: CAPACITY, pilots }))
         .some(x => x.template?.id.startsWith(KIT_BUY))).toBe(false);
+    // Unnamed, the staff job is not given.
+    expect(plan(inputs([mage('Rich', held, { Magic: 30 })], { templates, army, market, capacity: CAPACITY })).some(x => x.template?.id === 'army-staff-zaff')).toBe(false);
 });
 
 test('a line no market sells is sent first; a pair whose order failed is not asked again', () => {
@@ -950,6 +962,11 @@ test('an army account whose bow is short of arrows buys bronze arrows at the Ard
         env: { ITEMS: 'iron arrow|bronze arrow', STOCK_TARGET: String(LOWE_STOCK), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0' } });
     // Lowe's trip needs more coins than Aemad's.
     expect(plan(inputs([acct('Archer', skills, { ...kit, coin: 24_000 })], { army, capacity: { ...CAPACITY, 'shop:ardy': 0, 'shop:catherby_arrows': 0 } }))[0]!.template!.id).toBe('army-trooper-defence-99');
+    // A Grand Exchange buy that acquired its items made progress, however long the trip; one that acquired none did not.
+    const trip = 'LEDGER ticks=1400 xp=0 inventory=8 move=600 anim=0 dialog=4 stun=0 idle=780';
+    expect(assess([trip, 'RESULT ok {"ok":true,"phase":"settled","quantity":1000,"targetMet":true,"acquired":1000,"refund":554000}', 'RESULT ok chain rounds=1 ok=1 failed=0']).retire).toBe(false);
+    expect(assess([trip, 'RESULT ok {"ok":true,"phase":"settled","quantity":1,"acquired":1,"cashDeltaThisSession":-72000}']).retire).toBe(false);
+    expect(assess([trip, 'RESULT fail {"ok":false,"phase":"settled","quantity":50,"acquired":0,"refund":1000}']).reason).toMatch(/^tick waste/);
     // A shop run that bought arrows made progress; one that bought none on a long wait is retired as waste.
     const wait = 'LEDGER ticks=1000 xp=0 inventory=12 move=120 anim=0 dialog=0 stun=0 idle=868';
     expect(assess([wait, 'RESULT ok ticks=1000 boughtTotal=96 bankedTotal=96 stop=cap targetMet=0']).retire).toBe(false);

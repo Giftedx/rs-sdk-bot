@@ -110,11 +110,11 @@ export const KIT_BUY = 'kit-buy:', KIT_BUY_SCRIPT = 'scripts/buy-owned-ge-item.t
 // at most, an adamant scimitar 15 or 16 by style (combat.rs2 combat_maxhit: (effective * (64 + strength bonus) + 320) /
 // 640, effective 107 to 110, bonus 5 and 28). The trainer wields the best blade the account owns (scripts/gather-combat.ts selectGiantWeapon), so the
 // planner only has to put one in the bank: an army account with Attack 30 and no blade of WEAPON_HELD buys one adamant
-// scimitar on the Grand Exchange, as a kit buy, at WEAPON_BAND: after its Ranged band and before the troopers and the
-// Prayer filler, which are the melee work. WEAPON_BUYERS accounts are away for it at a time.
+// scimitar on the Grand Exchange, as a kit buy, at WEAPON_BAND: before its Ranged band, so every account gets one now
+// (owner: all of them, until rune blades arrive), WEAPON_BUYERS accounts away for it at a time.
 export const WEAPON = { id: 'army-weapon', item: 'adamant scimitar', attack: 30, goal: 'fight with an adamant scimitar' } as const;
 export const WEAPON_HELD = ['adamant scimitar', 'adamant sword', 'adamant longsword', 'rune scimitar', 'rune sword', 'rune longsword', 'dragon longsword'] as const;
-export const WEAPON_BAND = 5.5, WEAPON_BUYERS = 2, WEAPON_MARKET = 'ge:weapon';
+export const WEAPON_BAND = 3.5, WEAPON_BUYERS = 2, WEAPON_MARKET = 'ge:weapon';
 // The coins a kit buy leaves in the bank (the buy script's CASH_RESERVE). A kit costs far less than FUND_RESERVE, which
 // guards a coin donor, so a buyer keeps only this.
 export const KIT_CASH_RESERVE = 1_000;
@@ -449,8 +449,11 @@ export function finishedTrainers(jobs: readonly any[], side: string, assigned: R
 // stands, not whether the job works, and a routing fix makes the same job run.
 export const RETIRE_FAILS = 2, WASTE_LIMIT = 0.9;
 // Cow mode reports its progress as selectedXp, damageXp and creditedKills.
-// A shop run reports what it bought as boughtTotal (scripts/shop-buyer.ts).
-export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked|selectedXp|damageXp|creditedKills|boughtTotal)=[1-9]\d*\b/.test(result);
+// A shop run reports what it bought as boughtTotal (scripts/shop-buyer.ts), and a Grand Exchange buy as "acquired" in
+// its JSON result (scripts/buy-owned-ge-item.ts). Without the second, a kit buy that ended ok after its long trip read
+// as tick waste and its pair was retired, so the account's next buy for that band never came (live claude-cloud: the
+// alchemy kit buys of KnightRider, Deeppockets and Fatstack, one of them after 1,000 nature runes bought).
+export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked|selectedXp|damageXp|creditedKills|boughtTotal)=[1-9]\d*\b|"acquired":[1-9]/.test(result);
 export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|.*\bprecondition no route to\b)/;
 export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number; drains: number } {
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
@@ -554,7 +557,7 @@ export const MAGIC_BAND = 2, PRAYER_BAND = 3;
 // Bought bones: Prayer XP a bury (scripts/train-prayer.ts BONE_XP; a test keeps the two tables equal), the bones the
 // trainer keeps (its BONE_RESERVE floor) and the bones a bury band starts with.
 export const BOUGHT_BONE_XP: Readonly<Record<number, number>> = { 536: 1800, 532: 375 };
-export const BONE_KEEP = 6, BONE_START = 16, BONE_PURSE = 500_000;
+export const BONE_KEEP = 6, BONE_START = 16, BONE_PURSE = 100_000, BONE_SKILL = 90;
 // Prayer on the field, band 9, a filler: an account with every melee skill at 99 kills troopers only for their bones
 // and buries each on the spot (trooper mode with TRAIN_SKILL=Hitpoints, which takes any style, and GIANT_KILLS past the
 // tick cap, so each run ends on the cap). An account takes it when no other band and no kit buy serves it; without it
@@ -698,13 +701,15 @@ export function catalogue(): Template[] {
     // and a cast takes 3 or 5 of them; a staff of fire stands for all of them (scripts/alch-train.ts). An account that
     // holds the band's nature runes and feathers but no fire buys one staff at Zaff's shop in Varrock (staffshop: 2 in
     // stock, one back every 1,000 ticks) and banks it at Varrock West. A kit buy on the Grand Exchange leaves the
-    // account next to the shop; from Ardougne scripts/shop-buyer.ts takes the ferries. On an empty shelf the run waits
+    // account next to the shop; from Ardougne scripts/shop-buyer.ts takes the ferries. A pilot (off unless a plan's
+    // `aio` list names it): live, the shelf stood at 0 through five visits, one of 1,100 ticks, so another player takes
+    // each staff as it comes back. On an empty shelf the run waits
     // ZAFF_WAIT ticks, a little over the 1,000 a staff takes to come back, so one visit brings a staff: a run that
     // waits less ends ok with nothing bought, and a long one of those reads as tick waste (live claude-cloud:
     // UnderMyKilt, 799 ticks, boughtTotal=0 after a 200-tick wait). STALL_TICKS=0: the session's idle guard would end
     // the wait at 900 ticks (packages/core/src/bot.ts); the run's own cap bounds it.
     const staff: Template = {
-        id: 'army-staff-zaff', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['zaff', '3000'],
+        id: 'army-staff-zaff', pilot: true, family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['zaff', '3000'],
         env: { ITEMS: 'staff of fire', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: String(ZAFF_WAIT), STALL_TICKS: '0', FLOAT: '13000', COIN_RESERVE: '500', MAX_SPEND: '12000' },
         role: 'supply', goal: "buy a staff of fire at Zaff's shop in Varrock for the alchemy band",
         tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: 99, unlocks: [magic.id] }, resources: ['shop:zaff'], yields: () => [],
@@ -721,12 +726,14 @@ export function catalogue(): Template[] {
     // bones under the caps (KIT_PRICE_CAPS), about 2.4 million XP in all, so the kit tier buys them for an account
     // with no other band to start, the account nearest 99 first: each takes what its Prayer still needs (BONE_KEEP
     // more, which the trainer never buries), or what it can pay for. The band starts with BONE_START bones held, so
-    // a part-filled order is buried too. Dragon bones come first: about 5.2 coins an XP against 6.5.
+    // a part-filled order is buried too. Dragon bones come first: about 5.2 coins an XP against 6.5. The listed bones
+    // finish about three accounts, so only an account with Ranged and Magic at BONE_SKILL buys them: they go where
+    // they complete a tribrid, not to an account with a day of Ranged ahead of it.
     const boneBand = (id: string, bone: string, boneId: number, band: number): Template => ({
         id, family: 'combat-train', script: 'scripts/train-prayer.ts', args: ['99'], env: { BURY_HELD: '1', BONE_ID: String(boneId), BONE_RESERVE: String(BONE_KEEP), CAP: '4000' }, role: 'combat',
         goal: `train Prayer to 99 burying bought ${bone}`, tier: 'goal', band, repeats: true, trains: { skill: 'Prayer', to: 99, unlocks: [] }, yields: () => [],
-        needs: { items: { [bone]: BONE_START } }, partBatch: true,
-        // An account with Ranged or Magic still to train keeps BONE_PURSE for nature runes, arrows, a staff and a blade.
+        needs: { skills: { Ranged: BONE_SKILL, Magic: BONE_SKILL }, items: { [bone]: BONE_START } }, partBatch: true,
+        // An account with Ranged or Magic still to finish keeps BONE_PURSE for arrows, a staff and a blade.
         keepCoins: a => (a.skills.Ranged ?? 1) < 99 || (a.skills.Magic ?? 1) < 99 ? BONE_PURSE : 0,
         batchFor: a => ({ [norm(bone)]: BONE_KEEP + Math.ceil((xpForLevel(99) - xpForLevel(a.skills.Prayer ?? 1)) / BOUGHT_BONE_XP[boneId]!) }),
     });
