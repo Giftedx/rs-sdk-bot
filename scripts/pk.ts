@@ -271,6 +271,8 @@ export function bestDamageSpell(magic: number, carried: readonly { id: number; c
     if (has(ITEMS.mindRune)) return SPELLS.fireStrike;
     return SPELLS.fireWave;
 }
+// The attack range of a shortbow (skill_combat/configs/ranged/bows.obj attackrange).
+const BOW_RANGE = 7;
 // Adjacent, not diagonal: where a melee attack lands.
 const adjacent = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.abs(a.x - b.x) + Math.abs(a.z - b.z) === 1;
 const cheb = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
@@ -535,11 +537,21 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         const attackPackets = adjacent(at, target) ? 1 : 2;
         // The special: equip its kit, toggle its specbar, and attack in the same tick (OpHeldHandler updates tabs[0]
         // during decodeIn before IfButtonHandler checks isComponentVisible). Keep total USER_EVENT packets <= 5.
+        const magicLevel = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
+        const hasFreezeRunes = inv.some(i => i.id === ITEMS.natureRune || i.id === ITEMS.earthRune || i.id === ITEMS.waterRune);
+        const freeze = o.freeze ? (hasFreezeRunes ? castableFreeze(magicLevel, inv) : freezeSpell(magicLevel)) : null;
+        const castFreeze = freeze !== null && hasStyle(o.kit, 'magic') && now >= freezeReady && now >= frozenUntil
+            && (o.freeze === true || now < fleeingUntil || (o.freeze === 'low' && lowHealth(seen, o.freezeBelow ?? 0.62)));
         // A target that has fled is out of food: from then on every special goes out at once, whatever its health bar
         // shows, and past melee reach the bow special replaces a melee one.
         const spec = o.spec && fled && o.spec.style !== 'ranged' && !canReachMelee ? bowSpec(o.kit, names) ?? o.spec : o.spec;
         const energy = special(s.client), specStyle: Style = spec?.style ?? 'melee';
-        if (spec && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || lowHealth(seen, spec.below)) && (specStyle !== 'melee' || canReachMelee)
+        // A target that runs is held first: while a freeze is ready the special waits for it. A bow special on a target
+        // that runs beyond the bow's range (7 tiles for a shortbow, bows.obj attackrange) never leaves the bow: the
+        // special stays armed with its energy, and each such turn is lost.
+        const running = now < fleeingUntil;
+        const specWaits = running && (castFreeze || (specStyle === 'ranged' && cheb(at, target) > BOW_RANGE));
+        if (spec && !specWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || lowHealth(seen, spec.below)) && (specStyle !== 'melee' || canReachMelee)
             && (!guarded.has(specStyle) || lowHealth(seen, 0.25))) {
             let budget = 5 - attackPackets - (energy.on ? 0 : 1);
             const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
@@ -570,11 +582,6 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             hasAttacked = true;
             continue;
         }
-        const magicLevel = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
-        const hasFreezeRunes = inv.some(i => i.id === ITEMS.natureRune || i.id === ITEMS.earthRune || i.id === ITEMS.waterRune);
-        const freeze = o.freeze ? (hasFreezeRunes ? castableFreeze(magicLevel, inv) : freezeSpell(magicLevel)) : null;
-        const castFreeze = freeze !== null && hasStyle(o.kit, 'magic') && now >= freezeReady && now >= frozenUntil
-            && (o.freeze === true || now < fleeingUntil || (o.freeze === 'low' && lowHealth(seen, o.freezeBelow ?? 0.62)));
         // Hit off the opponent's overhead: a style they protect against loses 40% of its max hit.
         const turn = castFreeze ? { style: 'magic' as Style, index: last } : upcomingTurn;
         if (!turn) continue;

@@ -251,6 +251,59 @@ test('fightPlayer records same-tick multi-hit events/messages, executes same-tic
     expect(actions.length).toBeLessThanOrEqual(5); // respects 5-packet USER_EVENT limit
 });
 
+test('fightPlayer holds its special while the target runs: the freeze goes first, and a bow special waits for bow range', async () => {
+    // The target starts 3 tiles east and runs 2 tiles east each tick, so it is beyond a shortbow's 7 tiles at the next turn.
+    const run = async (freeze: 'flee' | undefined) => {
+        let tick = 10;
+        const actions: string[] = [];
+        const target = { index: 1, name: 'Dummy', combatLevel: 126, x: 3097, z: 3555, distance: 3 };
+        const rune = (slot: number, id: number, count: number) => ({ slot, id, name: 'Rune', count, optionsWithIndex: [] });
+        const state: any = {
+            player: { worldX: 3094, worldZ: 3555, combatLevel: 126, hp: 99, maxHp: 99, runEnergy: 100, lifeId: 1 },
+            skills: [{ name: 'Magic', level: 99, baseLevel: 99 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+            prayers: { prayerPoints: 99, activePrayers: new Array(20).fill(false) },
+            inventory: [
+                { slot: 0, id: 1231, name: 'Dragon dagger(p)', count: 1, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+                { slot: 1, id: 861, name: 'Magic shortbow', count: 1, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+                rune(2, 557, 50), rune(3, 555, 50), rune(4, 561, 50),
+            ],
+            equipment: [{ slot: 3, id: 1401, name: 'Mystic fire staff', count: 1, optionsWithIndex: [] }],
+            nearbyPlayers: [target],
+            combatEvents: [],
+            gameMessages: [],
+        };
+        const session: any = {
+            client: { var: { 300: 1000, 301: 0, 172: 1 }, players: [null, { headicons: 0, appearance: new Uint16Array(12), health: 50, totalHealth: 99 }] },
+            tick: () => tick,
+            ended: new Promise(() => {}),
+            onTick: (cb: () => void) => { setTimeout(() => { tick++; target.x += 2; target.distance += 2; cb(); }, 0); return () => {}; },
+            sdk: {
+                getState: () => state,
+                sendUseItem: (slot: number, op: number) => { actions.push(`use:${slot}:${op}`); },
+                sendClickComponent: (id: number) => { actions.push(`click:${id}`); },
+                sendInteractPlayer: (idx: number, op: number) => { actions.push(`attack:${idx}:${op}`); },
+                sendSpellOnPlayer: (idx: number, spell: number) => { actions.push(`spell:${idx}:${spell}`); },
+                sendTogglePrayer: (p: number) => { state.prayers.activePrayers[p] = !state.prayers.activePrayers[p]; },
+                sendWalk: () => {},
+            },
+        };
+        const res = await fightPlayer(session, 'Dummy', {
+            kit: { magic: [1401], ranged: [861], melee: [1231] }, freeze, cap: 8, log: () => {},
+            spec: { kit: [1231], bar: 'combat_stabsword:specbar', cost: 250, below: 0.4 },
+        });
+        return { res, actions };
+    };
+    const held = await run('flee');
+    expect(held.res.specs).toBe(0);
+    expect(held.res.freezes).toBe(1);
+    expect(held.actions).toContain(`spell:1:${SPELLS.entangle}`);
+    expect(held.actions.some(a => a.startsWith('click:'))).toBe(false);
+    const far = await run(undefined);
+    expect(far.res.specs).toBe(0); // 13 tiles away: the bow special would stay armed with its energy
+    expect(far.actions.some(a => a.startsWith('click:'))).toBe(false);
+    expect(far.res.attacks.magic + far.res.attacks.ranged).toBe(2);
+});
+
 test('fightPlayer reserves 2 USER_EVENT packets for non-adjacent attack and re-equips inventory tank body on melee turns', async () => {
     let tick = 10;
     const perTick: string[][] = [];
