@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794378489596-pocketrocket-masterbaiter-trout",
  "account": "Pocketrocket",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "Trout",
  "requested": 2,
  "claim": "7d97c179-d1ee-4a7c-8ef0-59dd7f0a734b",
- "count": 0,
- "ok": false,
- "at": 1794378590438,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1794378611473,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1794378598768
+ },
+ "logout": {
+  "attemptId": "1794378590446-0000024568-0000000001",
+  "at": 1794378611462,
+  "sha256": "b1545137a9cdcb8794af59458769387a5099992711bc96aba6a1eed045fc4292"
+ },
+ "screen": true
 }
