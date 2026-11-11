@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794409006194,
+ "at": 1794409339100,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -25,6 +25,26 @@
    "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
+    "PEN": "3197,3353",
+    "TICKS": "3000",
+    "TARGET": "2000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3197,3353",
+   "role": "helper",
+   "template": "feathers@3197,3353",
+   "autopilot": "local",
+   "resources": [
+    "pen:3197,3353"
+   ]
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
     "PEN": "3187,3277",
     "TICKS": "3000",
     "TARGET": "2000"
@@ -38,26 +58,6 @@
    "autopilot": "local",
    "resources": [
     "pen:3187,3277"
-   ]
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
-   "env": {
-    "PEN": "3017,3288",
-    "TICKS": "3000",
-    "TARGET": "2000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3017,3288",
-   "role": "helper",
-   "template": "feathers@3017,3288",
-   "autopilot": "local",
-   "resources": [
-    "pen:3017,3288"
    ]
   },
   {
@@ -125,27 +125,21 @@
   },
   {
    "account": "mmsmk1232",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/alch-train.ts",
    "args": [
-    "1500",
-    "trooper"
+    "21",
+    "1500"
    ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "goal": "train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
    "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "template": "army-strike-magic-21",
    "autopilot": "local",
    "resources": [
-    "trooper:battlefield"
+    "strike:ardougne-guard-dog"
    ]
   },
   {
@@ -340,19 +334,19 @@
    "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
-    "PEN": "3197,3353",
+    "PEN": "3017,3288",
     "TICKS": "3000",
     "TARGET": "2000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3197,3353",
+   "goal": "feathers at the chicken pen 3017,3288",
    "role": "helper",
-   "template": "feathers@3197,3353",
+   "template": "feathers@3017,3288",
    "autopilot": "local",
    "resources": [
-    "pen:3197,3353"
+    "pen:3017,3288"
    ]
   },
   {
