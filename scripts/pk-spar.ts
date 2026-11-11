@@ -154,7 +154,9 @@ if (import.meta.main) {
         // SPAR_B_PROFILES gives side B of each pair its own profile: a league of opponents that each play their own way.
         const league = env.SPAR_B_PROFILES?.split(',');
         const name = profile === 'a' ? nameA : league?.[pair % league.length] ?? nameB;
-        return sparOptions(name, profile === 'a' ? env.SPAR_A_OPTS : env.SPAR_B_OPTS, kit ? kitSwitches(kit) : TRIBRID_KIT, cap, base);
+        // A random style choice (mixStyles) repeats with the bench seed: the seed, the pair and the side make its seed.
+        const seed = env.BENCH_SEED === undefined ? {} : { mixSeed: Number(env.BENCH_SEED) * 1000 + pair * 2 + side };
+        return { ...sparOptions(name, profile === 'a' ? env.SPAR_A_OPTS : env.SPAR_B_OPTS, kit ? kitSwitches(kit) : TRIBRID_KIT, cap, base), ...seed };
     };
     // A death is the expected end of a spar, so it must not end the run as openBot does by default. Any other stop
     // (a stop file, a stalled tick stream) halts every side and fails the run.

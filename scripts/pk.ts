@@ -82,6 +82,9 @@ export type FightOptions = {
     styleByArmour?: boolean;
     // mixStyles: choose the next style at random among the usable ones, so an opponent cannot learn the order.
     mixStyles?: boolean;
+    // The seed of that random choice. A practice spar sets it from the bench seed and the fighter's place, so the same
+    // seed gives the same fight; unset (live), the choice is not repeatable.
+    mixSeed?: number;
     // adapt: an opponent that has hit us 6 times or more and has shown a melee weapon only cannot answer from range:
     // the loop then freezes it whenever it is free and keeps 3 tiles away while it is held.
     adapt?: boolean;
@@ -326,6 +329,16 @@ export function bestDamageSpell(magic: number, carried: readonly { id: number; c
     if (has(ITEMS.mindRune)) return SPELLS.fireStrike;
     return SPELLS.fireWave;
 }
+// A repeatable random number source (mulberry32): the same seed gives the same numbers.
+export function seededRandom(seed: number): () => number {
+    let a = seed >>> 0;
+    return () => {
+        a = (a + 0x6d2b79f5) >>> 0;
+        let t = Math.imul(a ^ (a >>> 15), a | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
 // The attack range of a shortbow (skill_combat/configs/ranged/bows.obj attackrange).
 const BOW_RANGE = 7;
 // Adjacent, not diagonal: where a melee attack lands.
@@ -359,6 +372,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
     let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = false, rapidSet = false, pjedByNpc = false;
     let target: NearbyPlayer | undefined, rubbed = -1, ranAt = -10, prevSelf: { x: number; z: number } | null = null;
     const predictor = new StylePredictor();
+    const rand = o.mixSeed === undefined ? Math.random : seededRandom(o.mixSeed);
     let charged = false, chargeAt = -10, stepAt = -10, flickAt = start, lastSpecStyle: Style | null = null;
     const splatSeen: { cycles: number[] | null } = { cycles: null };
     let prevTarget: { x: number; z: number } | null = null, prevGap = 0, fleeingUntil = start, heading = { x: 0, z: 0 }, chaseAt = -10, fled = false;
@@ -558,7 +572,10 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         const predicted = o.predictPrayer && !hitter ? predictor.predict() : null;
         const overhead = hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : predicted ? PROTECT_FROM[predicted] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
         // An opponent that only has melee: hold it and stay out of its reach.
-        const meleeOnly = !!o.adapt && hits.filter(h => h.src === target!.index).length >= 6 && [...predictor.seen()].every(st => st === 'melee');
+        // Only with a freeze that the carried runes can cast: with none, the loop would spend turns on a spell that
+        // does not go out and kite an opponent that is not held.
+        const meleeOnly = !!o.adapt && hits.filter(h => h.src === target!.index).length >= 6 && [...predictor.seen()].every(st => st === 'melee')
+            && castableFreeze(state.skills.find(k => k.name === 'Magic')?.level ?? 1, inv) !== null;
         const kiteTiles = o.kiteFrozen ?? (meleeOnly ? 3 : 0), freezeRule: FightOptions['freeze'] = o.freeze || (meleeOnly ? true : false);
         // A chase: the target flees, or stands frozen more than 2 tiles away. A melee turn then spends the freeze on a
         // walk, so an account with a ranged or magic kit attacks from where it stands. Within 2 tiles a melee turn or
@@ -575,7 +592,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         const open = [...new Set(turns)].filter(st => styleUsable(st) && !guarded.has(st));
         const chosen = !open.length ? null
             : o.styleByArmour && seen ? weakestFirst(armourDefence(seen.worn.map(id => names.get(id) ?? ''))).find(st => open.includes(st)) ?? null
-            : o.mixStyles ? open[Math.floor(Math.random() * open.length)]! : null;
+            : o.mixStyles ? open[Math.floor(rand() * open.length)]! : null;
         const upcomingTurn = chosen ? { style: chosen, index: Math.max(0, turns.indexOf(chosen)) } : rotationTurn;
         const burstBow = o.bowBurst !== undefined ? bowSpec(o.kit, names) : undefined;
         const bursting = !!burstBow && special(s.client).energy >= burstBow.cost && (fled || lowHealth(seen, o.bowBurst!)) && cheb(at, target) <= BOW_RANGE;
