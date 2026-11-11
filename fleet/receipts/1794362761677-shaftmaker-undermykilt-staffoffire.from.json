@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794362761677-shaftmaker-undermykilt-staffoffire",
  "account": "Shaftmaker",
  "partner": "UnderMyKilt",
@@ -12,6 +12,15 @@
  "claim": "b1b63254-c565-4fd9-9880-30dd62e661e0",
  "count": 0,
  "ok": false,
- "at": 1794364217433,
- "detail": "trade claimed"
+ "at": 1794365161960,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 1,
+  "after": 1
+ },
+ "logout": {
+  "attemptId": "1794364217441-0000018752-0000000001",
+  "at": 1794365161948,
+  "sha256": "7929e1df7edc347b65812cb7af7c2b04b73275a82dd8d196d9bb55cd50536fa6"
+ }
 }
