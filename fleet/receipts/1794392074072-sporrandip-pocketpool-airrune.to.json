@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794392074072-sporrandip-pocketpool-airrune",
+ "account": "PocketPool",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 31,
+ "claim": "7478969c-9c97-4c98-8611-62a801a4699e",
+ "count": 0,
+ "ok": false,
+ "at": 1794392080734,
+ "detail": "trade claimed"
+}
