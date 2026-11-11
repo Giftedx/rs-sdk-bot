@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794385555764,
+ "at": 1794385628667,
  "jobs": [
   {
    "account": "Fingersmith",
@@ -36,23 +36,6 @@
    "goal": "buy 97 Body rune, 291 Earth rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
    "role": "supply",
    "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/aio.ts",
-   "args": [
-    "quester",
-    "dusty-key"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "get the dusty key from Velrak for Taverley dungeon's inner gate",
-   "role": "quest",
-   "template": "army-dusty-key",
    "autopilot": "claude-cloud",
    "resources": []
   },
@@ -216,6 +199,23 @@
    "resources": [
     "quest:lostcity"
    ]
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/aio.ts",
+   "args": [
+    "quester",
+    "dusty-key"
+   ],
+   "env": {},
+   "enabled": false,
+   "standing": true,
+   "repeat": false,
+   "goal": "get the dusty key from Velrak for Taverley dungeon's inner gate",
+   "role": "quest",
+   "template": "army-dusty-key",
+   "autopilot": "claude-cloud",
+   "resources": []
   }
  ]
 }
