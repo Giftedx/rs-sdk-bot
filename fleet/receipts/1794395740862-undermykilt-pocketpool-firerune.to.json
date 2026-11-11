@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794395740862-undermykilt-pocketpool-firerune",
  "account": "PocketPool",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Fire rune",
  "requested": 1,
  "claim": "ed2b3767-8dd1-43b9-85b9-7a7150ff5cb6",
- "count": 0,
- "ok": false,
- "at": 1794395746864,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794396095535,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794396094775
+ },
+ "logout": {
+  "attemptId": "1794395746869-0000014520-0000000001",
+  "at": 1794396095519,
+  "sha256": "a0bdbae0ba23ab8f0866f51930adbf0ca333054f5e98eebf4bf869b50c500a78"
+ },
+ "screen": true
 }
