@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794432044093,
+ "at": 1794437445342,
  "jobs": [
   {
    "account": "Abracadickra",
@@ -230,29 +230,6 @@
    "enabled": false,
    "repeat": false,
    "goal": "run-handoff-mineyourbiz-ballspinner-lobster80-notes [task-6460642a-ad15-4d4e-b423-d645eaba6c98]",
-   "role": "supply"
-  },
-  {
-   "account": "NabTheKnob",
-   "script": "scripts/handoff-inputs.ts",
-   "args": [
-    "80:Lobster",
-    "--notes",
-    "--bank-x=2619",
-    "--bank-z=3332",
-    "--approach-ms=1800000",
-    "--request-ms=60000",
-    "--timeout-ms=600000",
-    "--grace-ms=45000"
-   ],
-   "env": {
-    "HANDOFF_ORDER": "nabtheknob-blood-lobster80-notes-mineyourbiz",
-    "CAP": "4000",
-    "COORDINATOR_RUN_ID": "task-3b3b300a-9b1e-45fe-a6c4-5d6196c74a1c"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-handoff-mineyourbiz-nabtheknob-lobster80-notes [task-3b3b300a-9b1e-45fe-a6c4-5d6196c74a1c]",
    "role": "supply"
   },
   {
@@ -509,6 +486,19 @@
    "repeat": false,
    "goal": "run-session-recovery-mightyrod-expired-lease-r21 [task-5d62d9d4-2949-4f48-952d-debf6005cdb9]",
    "role": "thieving"
+  },
+  {
+   "account": "NabTheKnob",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-f379e4fa-e9be-4529-844f-5b4834ca8e0f"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-session-recovery-nabtheknob-gaveup-r2 [task-f379e4fa-e9be-4529-844f-5b4834ca8e0f]",
+   "role": "helper"
   }
  ]
 }
