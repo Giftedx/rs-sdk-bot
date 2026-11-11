@@ -251,6 +251,13 @@ Ranged it adds is not needed at that point.
   Varrock West (`travel-returned` ok, 951 ticks from the start); the order was then placed and found no seller on
   practice. **Evidence.** `.practice/travel/ge.ts` (`f1`, `g1`-`g3`) in the Claude cloud container that ran them;
   `scripts/buy-owned-ge-item.test.ts`.
+- **Claim.** A trip east from elsewhere in Kandarin (the Catherby, Seers' Village and Yanille banks, the battlefield)
+  first walks to the Ardougne north bank, then takes the fare and the two ferries (`scripts/walk-to.ts`
+  `walkWithFerryFallback`). **Conditions.** The eastbound ferry step knew only a start inside Ardougne; from anywhere
+  else the pack held no fare and the planner found no route (live: UnderMyKilt's scimitar buy failed twice from
+  2807,3441 near the Catherby bank). Practice with the walk home: a market buy from the Catherby bank reached Varrock
+  West at tick 1,039, from the Seers' Village bank at 974 and from the Yanille bank at 1,041. **Evidence.**
+  `.practice/travel/ge.ts` (`k1`-`k3`); `scripts/walk-to.test.ts`.
 - **Gap.** No seller on practice, so a fill is proved live only. Kills per tick with each blade are not measured.
 
 ## Ranged on the troopers
@@ -553,6 +560,29 @@ TrouserSnake and UnderMyKilt hold about 15,000 feathers and 1,500-1,700 bones ea
   a wait of 1,100 ticks (`RESULT ok ticks=1145 boughtTotal=0 stop=stock-wait`). **Evidence.** The cloud side's swarm
   logs for those accounts. **Gap.** The Magic Guild's shelf (2 staffs, Magic 66 at the door) and Aubury's fire runes
   are not tried live; no account under Magic 99 has fire for alchemy.
+
+- **Claim.** The alchemy band gets its feathers and fire from three shelves the army can reach, each a planner job
+  that runs after the account holds its nature runes: feathers at Gerrant's in Port Sarim (`army-feathers-sarim`),
+  fire runes at Aubury's in Varrock under Magic 66 (`army-fire-aubury`), and from Magic 66 a staff of fire and fire
+  runes at the Magic Guild in Yanille (`army-staff-guild`).
+- **Conditions.** Practice. Every other combat skill 99, at the Ardougne north bank with 60,000 coins and 1,000
+  nature runes banked. Chains f: Magic 21, no feathers. Chains y: Magic 92, 700 feathers, three at once on the guild's
+  shelf of 2 staffs. The alchemy template followed (cap 2,500 for f, 1,500 for y).
+
+  | Chain | Shop runs | Alchemy run after them |
+  |---|---|---|
+  | f1 | 700 feathers, 674 ticks, 5,219 coins; 500 fire runes, 614 ticks, 6,684 coins | ok, Magic 21 -> 72, 56 low and 66 high casts, 1,834 ticks, `stop=supplies` |
+  | f2 | 500 feathers, 796 ticks, 6,000 coins (spend cap); 375 fire runes, 672 ticks, 8,987 coins | ok, Magic 21 -> 67, 1,499 ticks, `stop=supplies` |
+  | y2 | staff 1,515 coins, 314 ticks; 375 fire runes, 237 ticks, 8,994 coins | Magic 92 -> 97 with the staff, 174 high casts, ended on the 1,500-tick cap |
+  | y3 | staff 1,500 coins, 216 ticks; 500 fire runes, 234 ticks, 6,710 coins | Magic 92 -> 97 with the staff, 174 high casts, ended on the 1,500-tick cap |
+  | y1 | no staff left (`SHOP_NONE`, count 0), 339 ticks; 375 fire runes, 214 ticks, 9,000 coins | ok, Magic 92 -> 94 on the fire runes, 75 high casts, `stop=supplies` |
+
+  Two accounts on one shelf pay more: the price of feathers and fire runes rises as the shelf empties. 375 to 500
+  fire runes take Magic 21 past 66, the Magic Guild door. An account that finds the staff shelf empty still leaves
+  with fire runes and comes back when they run under 250.
+- **Evidence.** `.practice/magic/chain.ts` and its `f1`, `f2`, `y1`-`y3` logs in the Claude cloud container that ran
+  them; `packages/planner/test/autopilot.test.ts` (the order of the three jobs).
+- **Gap.** Practice only. Whether another player empties the Magic Guild's staff shelf as Zaff's is not known.
 
 ### Prayer from bought bones
 

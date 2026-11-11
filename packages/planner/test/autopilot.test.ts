@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { ARROW_LOW, ARROW_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
+import { ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -662,10 +662,14 @@ test('an army account with no other band to start buys the bones its Prayer stil
     expect(order(rich)).toEqual([[536, need]]);
     // An account that cannot pay for all of it buys what it can pay for, with the kit reserve left.
     expect(order(pick({}, { coin: 1_700_398 }))).toEqual([[536, 169]]);
-    // An account with Ranged or Magic still to finish keeps BONE_PURSE back for their kits (Magic 92 here, with no fire
-    // for alchemy, so it has no other band).
-    expect(order(pick({ Magic: 92 }, { coin: 830_492 }))).toEqual([[536, Math.floor((830_492 - BONE_PURSE - 1_000) / 10_000)]]);
-    expect(pick({ Magic: 92 }, { coin: BONE_PURSE + 100_000 }).template!.id).not.toBe(KIT_BUY + 'army-bury-dragon-99');
+    // An account with Ranged or Magic still to finish keeps BONE_PURSE back for their kits (Magic 92 here, with its
+    // alchemy runes and feathers but no fire, and the Magic Guild shop taken, so it has no other band).
+    const mage = { 'nature rune': 604, feather: 500 }, guildBusy = { capacity: { ...CAPACITY, 'shop:magic_guild': 0 } };
+    expect(order(pick({ Magic: 92 }, { ...mage, coin: 830_492 }, guildBusy))).toEqual([[536, Math.floor((830_492 - BONE_PURSE - 1_000) / 10_000)]]);
+    expect(pick({ Magic: 92 }, { ...mage, coin: BONE_PURSE + 100_000 }, guildBusy).template!.id).not.toBe(KIT_BUY + 'army-bury-dragon-99');
+    // With the shop free it fetches its staff first; with no nature runes it buys those first.
+    expect(pick({ Magic: 92 }, { ...mage, coin: 830_492 }).template!.id).toBe('army-staff-guild');
+    expect(order(pick({ Magic: 92 }, { coin: 830_492 }))).toEqual([[561, 1000]]);
     // The listed bones finish about three accounts: one with Ranged or Magic under BONE_SKILL buys none, even with its
     // arrow shops taken and millions of coins, and does not bury a stack it happens to hold before those skills.
     const busyShops = { ...CAPACITY, 'shop:ardy': 0, 'shop:catherby_arrows': 0, 'shop:dargaud': 0, 'shop:lowe': 0 };
@@ -689,6 +693,38 @@ test('an army account with no other band to start buys the bones its Prayer stil
     expect(pick({ Defence: 80 }, { coin: 5_000_000 }).template!.id).toBe('army-trooper-defence-99');
     // Prayer 99 buys none.
     expect(pick({ Prayer: 99 }, { coin: 5_000_000 }).template?.id.startsWith(KIT_BUY)).not.toBe(true);
+});
+
+test('the alchemy band gets its feathers at Port Sarim, its fire runes at Aubury under Magic 66 and its staff at the Magic Guild from 66', () => {
+    const army = new Set(['mage']);
+    const skills = { Thieving: 99, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Prayer: 99, Magic: 21 };
+    const base = { coin: 900_000, shark: 40, 'adamant scimitar': 1, 'nature rune': 1000 };
+    const pick = (s: Record<string, number>, items: Record<string, number>, extra: Partial<Inputs> = {}) =>
+        plan(inputs([acct('Mage', { ...skills, ...s }, { ...base, ...items })], { army, market, capacity: CAPACITY, ...extra }))[0]!;
+    const step = (profile: string, cap: number, items: string, target: number, spend: number) =>
+        `scripts/shop-buyer.ts ${profile} ${cap} ITEMS=${items} STOCK_TARGET=${target} STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=${spend + 1000} COIN_RESERVE=500 MAX_SPEND=${spend}`;
+    // No feathers: Port Sarim first.
+    const feathers = pick({}, {});
+    expect(feathers.template!.id).toBe('army-feathers-sarim');
+    expect(jobFor(feathers, side)).toMatchObject({ script: 'scripts/chain.ts', args: [step('sarim', 3000, 'feather', FEATHER_STOCK, 10000)], env: { ROUNDS: '1' }, repeat: true, resources: ['shop:sarim'] });
+    // Feathers held, no fire, under Magic 66: fire runes at Aubury.
+    const fire = pick({}, { feather: 700 });
+    expect(fire.template!.id).toBe('army-fire-aubury');
+    expect(jobFor(fire, side)).toMatchObject({ args: [step('aubury', 3000, 'fire.rune', FIRE_STOCK, 9000)], resources: ['shop:aubury'] });
+    // With the fire runes it casts; when they run under 250 at Magic 66 or more it goes to the Magic Guild.
+    expect(pick({}, { feather: 700, 'fire rune': 500 }).template!.id).toBe('army-alch-magic-99');
+    const guild = pick({ Magic: 66 }, { feather: 700, 'fire rune': 249 });
+    expect(guild.template!.id).toBe('army-staff-guild');
+    expect(jobFor(guild, side)).toMatchObject({ args: [step('magic_guild', 1500, 'staff.of.fire', 1, 12000), step('magic_guild', 600, 'fire.rune', FIRE_STOCK, 9000)], resources: ['shop:magic_guild'] });
+    expect(pick({ Magic: 65 }, { feather: 700, 'fire rune': 249 }).template!.id).toBe('army-fire-aubury');
+    expect(pick({ Magic: 66 }, { feather: 700, 'staff of fire': 1 }).template!.id).toBe('army-alch-magic-99');
+    // The trips follow the kit buy: with no nature runes held none of them is given, and the buy leaves feathers and
+    // fire to them.
+    const none = pick({}, { 'nature rune': 0 });
+    expect(none.template!.id).toBe(KIT_BUY + 'army-alch-magic-99');
+    expect(none.template!.args!.map(a => a.match(/ITEM_ID=(\d+)/)![1])).toEqual(['561']);
+    // Magic 99 needs none of it.
+    expect(['army-feathers-sarim', 'army-fire-aubury', 'army-staff-guild']).not.toContain(pick({ Magic: 99 }, {}).template?.id);
 });
 
 test('an army account with no better blade buys one adamant scimitar before its Ranged and melee bands, two accounts at a time', () => {

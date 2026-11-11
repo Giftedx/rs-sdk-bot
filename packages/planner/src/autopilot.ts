@@ -574,12 +574,14 @@ const BOWS: readonly (readonly [string, number])[] = [['shortbow', 1], ['longbow
 const ARROWS: readonly (readonly [string, number])[] = [['bronze arrow', 1], ['iron arrow', 1], ['steel arrow', 5], ['mithril arrow', 20], ['adamant arrow', 30], ['rune arrow', 40]];
 // A staff that stands for the fire runes of a cast.
 export const FIRE_STAFFS = ['staff of fire', 'fire battlestaff', 'mystic fire staff'] as const;
-// Kit items a goal-tier shop job brings (army-staff-zaff and the army-arrows jobs). A kit line of these that no market sells
+// Kit items a goal-tier shop job brings (the alchemy supply jobs and the army-arrows jobs). A kit line of these that no market sells
 // does not hold back the market buy of the band's other lines: the shop job follows once those are held.
-export const SHOP_SUPPLIED: ReadonlySet<string> = new Set(['fire rune', ...FIRE_STAFFS, 'bronze arrow', 'iron arrow', 'steel arrow', 'mithril arrow']);
+export const SHOP_SUPPLIED: ReadonlySet<string> = new Set(['fire rune', ...FIRE_STAFFS, 'feather', 'bronze arrow', 'iron arrow', 'steel arrow', 'mithril arrow']);
 // ARROW_LOW: the arrows of one kind the Ranged band needs to start. ARROW_STOCK: what a shop run brings the account up to.
 export const ARROW_LOW = 100, ARROW_STOCK = 500, LOWE_STOCK = 1000;
 export const ZAFF_WAIT = 1100;
+// What the alchemy supply jobs bring an account up to: feathers for every cast to 99, fire runes for Magic 21 to 66.
+export const FEATHER_STOCK = 700, FIRE_STOCK = 500;
 // An account short of arrows of every kind: what sends it to an arrow shop. One with ARROW_LOW of any kind is left to
 // the Ranged band, or to a kit line when its bow cannot fire them.
 const NO_ARROWS: Readonly<Record<string, number>> = Object.fromEntries(ARROWS.map(([arrow]) => [arrow, ARROW_LOW]));
@@ -715,6 +717,28 @@ export function catalogue(): Template[] {
         tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: 99, unlocks: [magic.id] }, resources: ['shop:zaff'], yields: () => [],
         needs: { skills: { Magic: 21 }, items: { coins: 15000, 'nature rune': 50, feather: 50 }, holdsUnder: { ...Object.fromEntries(FIRE_STAFFS.map(item => [item, 1])), 'fire rune': 250 } },
     };
+    // Fire and feathers for the alchemy band from shelves the army can reach, each a goal job at the Magic band for an
+    // account that already holds the band's nature runes (so the trips follow its kit buy and never come early):
+    // - feathers, the item the band casts on, at Gerrant's in Port Sarim, for an account with fewer than the band needs
+    //   (six army accounts hold none, and the market's feather line ends "unsold");
+    // - under Magic 66, FIRE_STOCK fire runes at Aubury's in Varrock: about 360 take Magic 21 to 66;
+    // - from Magic 66, the level the Magic Guild door in Yanille asks, a staff of fire there (2 in stock) and
+    //   FIRE_STOCK fire runes in case the staff shelf is empty. Yanille is a walk from Ardougne.
+    // Practice from the Ardougne north bank: 700 feathers in 674 ticks, 500 fire runes in 614 more, then Magic 21 to 72
+    // on them; the staff in 216 to 314 ticks (research/combat-measure.md).
+    const noFire = { ...Object.fromEntries(FIRE_STAFFS.map(item => [item, 1])), 'fire rune': 250 };
+    const shopRun = (profile: string, cap: number, items: string, target: number, spend: number) => ['scripts/shop-buyer.ts', profile, String(cap), `ITEMS=${items}`, `STOCK_TARGET=${target}`,
+        'STOP_AT_TARGET=1', 'BANK_PACK=1', 'BANK_AT=0', 'NO_BUY_TICKS=25', `FLOAT=${spend + 1000}`, 'COIN_RESERVE=500', `MAX_SPEND=${spend}`].join(' ');
+    const supply = (id: string, goal: string, shop: string, steps: string[], needs: Needs): Template => ({
+        id, family: 'shop-buyer', script: 'scripts/chain.ts', args: steps, env: { ROUNDS: '1' }, role: 'supply', goal,
+        tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: 99, unlocks: [magic.id] }, resources: [`shop:${shop}`], yields: () => [], needs });
+    const feathers = supply('army-feathers-sarim', "buy feathers at Gerrant's in Port Sarim for the alchemy band", 'sarim',
+        [shopRun('sarim', 3000, 'feather', FEATHER_STOCK, 10000)], { items: { coins: 12000, 'nature rune': 50 }, holdsUnder: { feather: 50 } });
+    const fireRunes = supply('army-fire-aubury', "buy fire runes at Aubury's in Varrock for the alchemy band", 'aubury',
+        [shopRun('aubury', 3000, 'fire.rune', FIRE_STOCK, 9000)], { skills: { Magic: 21 }, under: { Magic: 66 }, items: { coins: 11000, 'nature rune': 50, feather: 50 }, holdsUnder: noFire });
+    const staffGuild = supply('army-staff-guild', 'buy a staff of fire and fire runes at the Magic Guild in Yanille for the alchemy band', 'magic_guild',
+        [shopRun('magic_guild', 1500, 'staff.of.fire', 1, 12000), shopRun('magic_guild', 600, 'fire.rune', FIRE_STOCK, 9000)],
+        { skills: { Magic: 66 }, items: { coins: 24000, 'nature rune': 50, feather: 50 }, holdsUnder: noFire });
     const prayer: Template = {
         id: 'army-bury-prayer-99', family: 'combat-train', script: 'scripts/train-prayer.ts', args: ['99'], env: { BURY_HELD: '1', BONE_RESERVE: '6', CAP: '4000' }, role: 'combat',
         goal: 'train Prayer to 99 burying the held bones', tier: 'goal', band: PRAYER_BAND, repeats: true, trains: { skill: 'Prayer', to: 99, unlocks: [] }, yields: () => [],
@@ -808,6 +832,9 @@ export function catalogue(): Template[] {
         strike,
         magic,
         staff,
+        feathers,
+        fireRunes,
+        staffGuild,
         prayer,
         dragonBones,
         bigBones,
