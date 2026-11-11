@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794370104985,
+ "at": 1794370181441,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -187,19 +187,6 @@
    "resources": [
     "ge:weapon"
    ]
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "jukat",
-    "9000"
-   ],
-   "enabled": false,
-   "standing": false,
-   "repeat": false,
-   "goal": "reserved by the orchestrating session: buy 14 dragon longswords at Jakut in Zanaris for the PK army (owner request)",
-   "role": "supply"
   },
   {
    "account": "mmtha0205",
@@ -569,6 +556,19 @@
    "enabled": false,
    "repeat": false,
    "goal": "run-session-recovery-pocketpython-coin [task-dc6e6976-0856-4956-a80d-6aff1adb9a60]",
+   "role": "supply"
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "jukat",
+    "9000"
+   ],
+   "enabled": false,
+   "standing": false,
+   "repeat": false,
+   "goal": "reserved by the orchestrating session: buy 14 dragon longswords at Jakut in Zanaris for the PK army (owner request)",
    "role": "supply"
   }
  ]
