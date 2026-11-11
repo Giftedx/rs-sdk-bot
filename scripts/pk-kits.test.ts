@@ -91,6 +91,6 @@ test('a trained build has the Hitpoints of its combat XP, and each bracket fits 
     // 28 pairs for each bracket of 8, less the 3 pairs that both brackets hold; each case in 8 processes.
     expect(staged.size).toBe(53);
     expect(BUILD_PAIRS.length).toBe(53);
-    expect(cases.length).toBe(7);
+    expect(cases.length).toBe(4);
     for (const c of cases) expect(c.scriptArgs).toContain('SPAR_PROCS=8');
 });

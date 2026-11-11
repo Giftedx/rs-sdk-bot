@@ -101,6 +101,9 @@ export type Inputs = {
     // Lower-case names of the accounts on this side's army roster: only they take goal bands. A specialist's board
     // time counts every tick it plays, so combat training is opt-in per account, never global.
     army?: ReadonlySet<string>;
+    // Lower-case account name -> the levels of its PK build (scripts/pk-kits.ts kitSkills): an army account that
+    // trains to those levels and no further (buildBand). An account with no entry trains every band to its end.
+    builds?: ReadonlyMap<string, Readonly<Record<string, number>>>;
     // Free accounts of every side with their holdings: item and coin donors for an army account's kit. This side's
     // donors give first; another side's give only when none of this side can.
     stock?: readonly Stock[];
@@ -286,6 +289,25 @@ export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'price
     return (gross - cost) * Math.max(0.1, 1 - (inp.waste?.[t.family] ?? 0));
 }
 
+// A goal band for an account with a PK build, or null when the account must not take it. A build is its levels: one
+// level over the Defence or Prayer of a build is a different build, and no account goes back. So such an account
+// takes only bands that train one skill, and a band stops at the level of the build:
+// - a skill at its level takes no band;
+// - a band of scripts/gather-combat.ts stops at the level (TARGET_LEVEL; the style of TRAIN_SKILL gives XP to that
+//   skill and to Hitpoints only);
+// - a band of another script that ends above the level is refused: that script has no proved stop;
+// - a quest band and a stock band are refused: a quest reward and a fight for loot give XP in skills nobody chose.
+export function buildBand(t: Template, a: Acct, build?: Readonly<Record<string, number>>): Template | null {
+    if (!build || t.tier !== 'goal') return t;
+    if (!t.trains) return null;
+    const level = build[t.trains.skill];
+    if (level === undefined) return t;
+    if ((a.skills[t.trains.skill] ?? 1) >= level) return null;
+    const to = Math.min(t.trains.to, level);
+    if (t.script === 'scripts/gather-combat.ts') return { ...t, env: { ...t.env, TARGET_LEVEL: String(to) }, trains: { ...t.trains, to } };
+    return t.trains.to <= level ? t : null;
+}
+
 export function plan(inp: Inputs): Assignment[] {
     const byId = new Map(inp.templates.map(t => [t.id, t]));
     const mine = inp.accounts.filter(a => (inp.owners.get(a.name.toLowerCase())?.side ?? 'local') === inp.side && a.side === inp.side);
@@ -293,8 +315,9 @@ export function plan(inp: Inputs): Assignment[] {
     const cands: Cand[] = [];
     const admitted = (t: Template) => !t.pilot || !!inp.pilots?.has(t.id);
     const shopLine = (l: Lack) => !l.of.some(i => inp.market?.[i]) && l.of.some(i => SHOP_SUPPLIED.has(i));
-    for (const a of mine) for (const t of inp.templates) {
-        if (inp.retired?.has(pairKey(a.name, t.id)) || !admitted(t)) continue;
+    for (const a of mine) for (const listed of inp.templates) {
+        const t = buildBand(listed, a, inp.builds?.get(a.name.toLowerCase()));
+        if (!t || inp.retired?.has(pairKey(a.name, t.id)) || !admitted(t)) continue;
         if (t.quest && t.tier !== 'goal') {
             if (questDone(a, t.quest.name) || !meets(a, t.needs)) continue;
             const after: Acct = { ...a, quests: new Set([...(a.quests ?? []), norm(t.quest.name)]) };

@@ -27,6 +27,7 @@ import { tradeSettlement, validOrder, windowClosures, type Order, type Receipt, 
 import { readHeldFleetTradeClaims } from '../packages/core/src/fleet-trade-claim';
 import { liveHelperStatuses, overallSupplyDemand, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
 import { tickWaste, wasteShare } from './tick-waste';
+import { kitSkills } from './pk-kits';
 
 const root = resolve(import.meta.dir, '..'), prac = join(root, '.practice');
 const PASS_EVERY_MS = 10 * 60_000, TRAINER_POLL_MS = 30_000;
@@ -272,6 +273,16 @@ export function armyRoster(plan: any): Set<string> {
     return new Set(names.map((n: string) => n.toLowerCase()).filter((n: string) => n !== 'haggis'));
 }
 
+// The PK builds of the side's army accounts: the plan's `builds` object, account name -> kit name of
+// scripts/pk-kits.ts. Such an account trains to the levels of the kit and no further (the planner's buildBand). A
+// name with an unknown kit gets level 1 in every combat skill, so it trains nothing until the plan names a real kit.
+export function buildCaps(plan: any, skillsOf: (kit: string) => Record<string, number> = kitSkills): Map<string, Record<string, number>> {
+    const none = { Attack: 1, Strength: 1, Defence: 1, Ranged: 1, Magic: 1, Prayer: 1 };
+    return new Map(Object.entries(plan?.builds && typeof plan.builds === 'object' && !Array.isArray(plan.builds) ? plan.builds as Record<string, unknown> : {}).map(([name, kit]) => {
+        try { return [name.toLowerCase(), skillsOf(String(kit))] as const; } catch { return [name.toLowerCase(), none] as const; }
+    }));
+}
+
 // The practice-proved templates this plan admits: the plan's `aio` array of template ids (the `pilot` templates of the
 // planner's catalogue). The owner adds an id to start that route's live pilot and removes it to end the route.
 export function aioPilots(plan: any): Set<string> {
@@ -380,7 +391,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     const sideCoins = listed.filter(n => owners.get(n.toLowerCase())?.side === side).reduce((n, name) => n + (accountFrom(name, side, observed(name), id => byId.get(id)).items.coin ?? 0), 0);
     const coinValue = coinValueFor(sideCoins);
     if (coinValue !== 1) log.push(`AUTOPILOT coins: this side holds ${sideCoins}, so a coin counts as ${coinValue}`);
-    const planned = plan({ side, accounts, owners, coinValue, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), pilots: aioPilots(swarm), stock, market: market as Market,
+    const planned = plan({ side, accounts, owners, coinValue, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), builds: buildCaps(swarm), pilots: aioPilots(swarm), stock, market: market as Market,
         kitSeq: new Map(Object.entries(state.kitSeq ?? {}).map(([a, n]) => [a.toLowerCase(), n])), noSend: failedSends(orders, receipts, now) });
     const serverOf = (to: string) => owners.get(to.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev';
     const funding = fundOrders(planned, open, (from, to, coins) => coinOrder(from, to, coins, serverOf(to), now),
