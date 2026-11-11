@@ -145,6 +145,13 @@ export const QUEST_BAND = 3.6, LOST_CITY = 'quest:lostcity', LOST_CITY_PLACES = 
 export const GRAIL_BAND = QUEST_BAND + 0.1, GRAIL_PLACE = 'quest:camelot', GRAIL_PLACES = 1, GRAIL_MEALS = 12;
 export const GRAIL_RUNES: Readonly<Record<string, number>> = { 'law rune': 12, 'air rune': 46, 'water rune': 6, 'fire rune': 1 };
 export const LOST_CITY_FOOD = ['lobster', 'swordfish', 'shark'] as const;
+// Lost City for an account with a Defence 1 build: the levels, the food and the prayer potions of the practice case
+// `extra:lostcity-pure-pray` (scripts/measure/aio-bench-cases.ts). Four seeds: 844 to 1,174 ticks, no food eaten, lowest
+// Hitpoints 73 of 93, XP in Strength and Hitpoints only (research/pvp-fight-loop.md, "Quest routes of the builds").
+// Under Defence 90 the sweep takes the two prayer potions of the quest pack and reports them when the bank has none.
+export const LOST_CITY_BUILD: Needs = {
+    skills: { Attack: 60, Strength: 99, Prayer: 43, Hitpoints: 93 }, items: { 'prayer potion(4)': 2 }, pieces: { of: LOST_CITY_FOOD, count: 6 },
+};
 // The coins a kit buy leaves in the bank (the buy script's CASH_RESERVE). A kit costs far less than FUND_RESERVE, which
 // guards a coin donor, so a buyer keeps only this.
 export const KIT_CASH_RESERVE = 1_000;
@@ -296,8 +303,8 @@ export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'price
 // and that give no XP over a level of the kit (research/pvp-fight-loop.md, "Quest routes of the builds"). A band of
 // the route runs every quest of its chain, so a quest stands here only when each quest of the band's chain passes.
 // - `pure-pray`: the dragon dagger needs Lost City. Monk's Friend, Murder Mystery and Lost City give no XP in a combat
-//   skill. Condition: the fights of the quest (zombies and the tree spirit, bronze axe) give their XP in the melee
-//   style the account has set, and scripts/generated/quest-zanaris.ts sets none.
+//   skill. The fights of the quest (the zombies with bare hands, the tree spirit with the bronze axe) give their XP
+//   to Strength and Hitpoints: the quest script sets that style before each fight (quest-lib.ts strengthStyle).
 // - `baby-pure`: no item of the kit needs a quest.
 // - `dragon`: no route. The rune platebody needs Dragon Slayer, which gives Defence 88 from level 1 (the build has 60).
 // - `tank-range`: no route. The Archer helm needs The Fremennik Trials, which give Attack 60 and Strength 60 (the
@@ -1000,7 +1007,9 @@ export function catalogue(): Template[] {
     // Entrana ship (scripts/quest-sweep.ts BARE), takes the quest pack from the bank and buys what a shop sells. The
     // tree spirit is level 101 and is fought bare-handed. An account with Hitpoints and Defence 90 goes without the
     // quest's prayer potions (no shop sells them) and carries LOST_CITY_MEALS of the food the quest script eats; the
-    // planner asks those levels and that food, and buys the food as the band's own candidate (`kitFirst`).
+    // planner asks those levels and that food, and buys the food as the band's own candidate (`kitFirst`). An account
+    // under those levels goes with the levels, the potions and the food of LOST_CITY_BUILD: the quest script sets a
+    // melee style that trains only Strength before each fight (scripts/generated/quest-lib.ts strengthStyle).
     // Practice: research/quest-points-board.md (Lost City 3/3 from its preset) and research/combat-measure.md (the
     // chain from an army account's state).
     // Black dragonhide for the army's ranged armour, band 10: nine kills a trip from the corridor south of the cave
@@ -1094,7 +1103,7 @@ export function catalogue(): Template[] {
         aio: 'quester:mode:chain', worker: 'scripts/quest-chain.ts', pilot: true, role: 'quest',
         goal: "complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons", tier: 'goal', band: QUEST_BAND,
         quest: { name: 'Lost City', unlocks: [] }, resources: [LOST_CITY], yields: () => [],
-        needs: { skills: { Prayer: 43, Hitpoints: 90, Defence: 90 }, items: { coins: 5000 }, pieces: { of: LOST_CITY_FOOD, count: LOST_CITY_MEALS } }, kitFirst: true,
+        needs: { items: { coins: 5000 }, anyOf: [{ skills: { Prayer: 43, Hitpoints: 90, Defence: 90 }, pieces: { of: LOST_CITY_FOOD, count: LOST_CITY_MEALS } }, LOST_CITY_BUILD] }, kitFirst: true,
     };
     // Merlin's Crystal and Holy Grail through the same chain. The quest sweep gathers Merlin's kit itself (insect
     // repellent, a bucket and the wax at the Catherby hives, bat bones from a giant bat, bread and a tinderbox from

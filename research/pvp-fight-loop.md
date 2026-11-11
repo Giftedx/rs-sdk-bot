@@ -470,7 +470,25 @@ Rewards in the seven combat skills (`knowledge/quests.json`; the line of each `s
 - The fights of Lost City give XP too: 4 XP times 25 for a point of damage, so the tree spirit (85 Hitpoints,
   `tree_spirit.npc`) gives 8,500 XP and an Entrana zombie (30 Hitpoints) 3,000 to the skill of the melee style the
   account has set. Attack 60 to 61 is 4,815 XP and Defence 1 to 2 is 80 XP. `scripts/generated/quest-zanaris.ts`
-  wields the bronze axe and sets no style. So the route of `pure-pray` holds only while that style trains Strength.
+  sets the style that trains only Strength before each fight (`strengthStyle` of `quest-lib.ts`, the choice of
+  `giantStyle`): Kick for the zombies, which it fights with bare hands, and Hack for the tree spirit with the bronze
+  axe. A weapon with no such style ends the quest before the first hit.
+- Lost City on a `pure-pray` account keeps the build. Conditions: practice, the levels of `kitSkills('pure-pray')`
+  with Woodcutting 56 and Crafting 51 (what Monk's Friend and Murder Mystery give), nothing worn, the pack of the
+  preset `quest_zanaris` (2 prayer potions, 6 lobsters, the runes of the Lumbridge teleport), lockstep engine.
+
+  | Seed | Ticks | Zombies | Food eaten | Lowest Hitpoints of 93 | XP |
+  |---|---|---|---|---|---|
+  | 7 | 1,174 | 4 | 0 | 87 | Strength 14,200, Hitpoints 4,692 |
+  | 1 | 844 | 3 | 0 | 73 | Strength 17,600, Hitpoints 5,812 |
+  | 2 | 911 | 3 | 0 | 88 | Strength 11,700, Hitpoints 3,870 |
+  | 3 | 955 | 5 | 0 | 84 | Strength 23,700, Hitpoints 7,842 |
+
+  Each run ended with the quest complete and no death. No run gave XP to Attack, Defence, Ranged, Magic or Prayer.
+  With Magic 1 the account does not cast the Lumbridge teleport: it walks from the Wilderness to the swamp shed.
+  The band `army-quest-lostcity` has a second set of needs for such an account (`LOST_CITY_BUILD`): Attack 60,
+  Strength 99, Prayer 43, Hitpoints 93, 2 prayer potions and 6 meals. Evidence: `bun run bench lostcity-pure-pray`
+  (case `extra:lostcity-pure-pray` of `scripts/measure/aio-bench-cases.ts`), one run for each seed.
 
 Planner: `BUILD_QUESTS` in `packages/planner/src/autopilot.ts` holds the routes by kit name, `scripts/autopilot.ts`
 `buildQuests` gives each account of the `builds` object the route of its kit, and `buildBand` passes a quest band
@@ -478,14 +496,15 @@ only when its quest is on that route. Every other quest band stays refused (Holy
 
 Evidence: `scripts/pk-kits.test.ts` ("no quest on the route of a build gives a level over the build") works the
 table out from `knowledge/quests.json`; `packages/planner/test/autopilot.test.ts` and `scripts/autopilot.test.ts`
-hold the planner rule. Proof level: unit.
+hold the planner rule. Proof level: unit, and practice for the Lost City run of `pure-pray`.
 
 Gaps:
 
-- No practice run and no live run of Lost City by an account with Defence 1. The band `army-quest-lostcity` asks for
-  Defence 90, Hitpoints 90 and Prayer 43, so the planner gives it to no Defence 1 account. The quest script has a
-  Wind Bolt route for a weak account, and that route needs Magic 31: over the Magic 1 of `pure-pray`.
-- The quest worker has no setting for the melee style of its fights.
+- No live run of Lost City by an account with Defence 1. The practice case starts at the warrior with the pack in
+  hand: no run of the chain `drunkmonk,murder,zanaris` through the quest sweep by such an account, so the bank pass
+  and Monk's Friend and Murder Mystery at those levels are not proved.
+- The Hitpoints XP of the fights (3,870 to 7,842 a run) can take a build account from Hitpoints 93 to 94.
+- No shop and no kit price holds a prayer potion: an account with none in the bank does not get the band.
 - Normal bones for the Prayer 43 of a build: 175 bones (19,684 XP at 112.5 a bone); the held-bones band starts at
   100. The Grand Exchange lists 2,549 at 45,125 coins each (bids at 150, last trade at 150), so 175 cost 7.9 million
   coins. `KIT_PRICE_CAPS` holds no price for normal bones for that reason: a buy at a cap near the bids fills

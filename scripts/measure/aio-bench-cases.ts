@@ -29,6 +29,11 @@ export type BenchCase = {
 };
 
 const ok = (s: string) => /^RESULT ok\b/m.test(s);
+// The RESULT line of a quest script lists the XP of the run as `xp=skill=n,...` (scripts/generated/quest-lib.ts gains).
+export const lostCityKeepsBuild = (s: string) => {
+  const line = s.match(/^RESULT ok\b.*$/m)?.[0];
+  return !!line && / milestones=\S*,6\b/.test(line) && / died=false /.test(line) && !/\b(attack|defence|ranged|magic|prayer)=\d/.test(line.match(/ xp=(\S*)/)?.[1] ?? 'attack=1');
+};
 const questSlug = (script: string) => script.replace('scripts/generated/', '').replace(/^quest-/, '').replace(/\.ts$/, '');
 
 // Every route the AIO catalog can dispatch. Owned-account quest runners are quester modes, not quest keys.
@@ -458,6 +463,11 @@ const EXTRA_CASES: BenchCase[] = [
   {key: 'extra:smith-rune-kiteshield', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'anvil', '600', 'PRODUCT_ID=1201', 'MAX_MAKE=1', 'BAR_RESERVE=0'], pass: s => ok(s) && /"made":1,"banked":1/.test(s),
     presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 99}, inventory: [{id: 2347, count: 1}], bank: [{id: 2363, count: 3}]}},
   {key: 'extra:bank-job-cut-dragonstone', script: 'scripts/aio-skiller.ts', preset: 'bank_gems', scriptArgs: ['bank-job', CUT_JOB_PATH], pass: s => ok(s) && s.includes('cut-dragonstone')},
+  // Lost City on an account of the `pure-pray` build: the levels of the kit, the Woodcutting and Crafting that Monk's
+  // Friend and Murder Mystery give before it in the chain, nothing worn and the pack of quest_zanaris. The build
+  // stays: the run passes only when the quest is complete and no XP went to Attack, Defence, Ranged, Magic or Prayer.
+  {key: 'extra:lostcity-pure-pray', script: 'scripts/aio-quester.ts', preset: 'quest_zanaris', scriptArgs: ['zanaris'], pass: lostCityKeepsBuild, timeoutMs: 900_000,
+    presetConfig: {...PRESETS.quest_zanaris!, skills: {...kitSkills('pure-pray'), Woodcutting: 56, Crafting: 51}}},
 ];
 
 const KNOWN_QUEST: Readonly<Record<string, string>> = {

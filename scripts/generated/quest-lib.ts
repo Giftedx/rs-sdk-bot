@@ -16,6 +16,7 @@ import { castable } from '../teleport-runes';
 import { needs, reservedEdible, walkFar } from '../quest-sweep';
 import { magicKit, type MagicKit } from '../../packages/core/src/gather';
 import { PRESETS } from '../../packages/practice/src/presets';
+import { giantStyle } from '../gather-combat';
 // Root interface ids of every interface interface_chat/scripts/chat.rs2 sets text on, from content/pack/interface.pack.
 const CHAT_NAMES = /^(chat[1-4]|npcchat[1-4]|message[1-5]|multi[2-5]|multiobj[2-4]|multiobj3_close|objbox[1-4]|doubleobjbox|inter_213|skill_multi[2-5])$/;
 const CHAT_ROOTS = new Set(readFileSync(join(import.meta.dir, '..', '..', 'vendor', 'rs-sdk', 'server', 'content', 'pack', 'interface.pack'), 'utf8')
@@ -522,8 +523,26 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         if (hasBow) await wieldBow();
         await s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
     };
+    // Before a melee fight of an account whose build has a level cap (a Defence 1 account): the style of the wielded
+    // weapon, or of the bare hands, that gives its XP to Strength and Hitpoints only (giantStyle). The engine keeps one
+    // style index for every weapon tab, so a fight needs this call after each change of the weapon. A tab with no such
+    // style, or one the client does not know, fails the quest before the first hit.
+    const strengthStyle = async (label: string): Promise<void> => {
+        const tab = () => st()?.combatStyle;
+        const wielded = (): string => s.sdk.getEquipment().find((i: any) => i.slot === 3)?.name || 'Unarmed';
+        await waitUntil(s, () => !!tab()?.known && tab()?.weaponName === wielded(), { timeoutTicks: 10 });
+        let style: ReturnType<typeof giantStyle>;
+        try {
+            if (tab()?.weaponName !== wielded()) throw Error(`combat tab shows ${tab()?.weaponName}, wielded ${wielded()}`);
+            style = giantStyle(tab(), 'Strength');
+        } catch (e) { return fail(`${label}: no Strength-only style: ${e instanceof Error ? e.message : String(e)}`); }
+        const set = () => { const c = tab(); return !!c?.known && c.currentStyle === style.index && c.weaponName === style.weapon; };
+        if (!set()) await s.sdk.sendSetCombatStyle(style.index);
+        if (!await waitUntil(s, set, { timeoutTicks: 10 })) await fail(`${label}: style ${style.name} of ${style.weapon} unobserved`);
+        console.log(`STYLE ${label} ${style.weapon} ${style.index} ${style.name} ${T()}`);
+    };
     return {
-        s, st, pos, inv, hp, xp, cnt, has, slot, cheb, near, lvl, dialogOpen, sawText, msgCount, T, stats, milestone, dispose,
+        s, st, pos, inv, hp, xp, cnt, has, slot, cheb, near, lvl, dialogOpen, sawText, msgCount, T, stats, milestone, dispose, strengthStyle,
         blockDoor, guard, planLowHp, fail, end, gains, detail, opLoc, locs, findLoc, locAt, opIndex, npc, talkTo, attack, useOnLoc, useOnNpc, useOnItem,
         step, converse, walk, talk, climb, teleport, canCast, openDoor, shutAt, dash, wieldBow, attackNpc,
         waitTicks: async (n: number) => { const until=s.tick()+n;if(n>0)await waitUntil(s,()=>s.tick()>=until||stats.died||retreating||T()>CAP,{timeoutTicks:n,signal:sustain.aborted});await guard('wait'); },

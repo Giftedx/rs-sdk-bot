@@ -1483,3 +1483,23 @@ test('an account with a PK build takes a quest band only on the quest route of i
     expect(run()).not.toBe('army-quest-lostcity');
     expect(run(new Map([['build', []]]))).not.toBe('army-quest-lostcity');
 });
+
+test('a Defence 1 build account takes Lost City with the levels, potions and food of the practice run', async () => {
+    const { LOST_CITY_BUILD, KIT_BUY, KIT_PRICE_CAPS } = await import('../src/autopilot');
+    // The levels of the `pure-pray` kit (scripts/pk-kits.ts kitSkills): Defence 1 and Magic 1.
+    const pure = { Attack: 60, Strength: 99, Defence: 1, Ranged: 99, Magic: 1, Prayer: 43, Hitpoints: 93 };
+    expect(LOST_CITY_BUILD).toEqual({ skills: { Attack: 60, Strength: 99, Prayer: 43, Hitpoints: 93 }, items: { 'prayer potion(4)': 2 }, pieces: { of: ['lobster', 'swordfish', 'shark'], count: 6 } });
+    for (const [skill, level] of Object.entries(LOST_CITY_BUILD.skills!)) expect(pure[skill as keyof typeof pure]).toBeGreaterThanOrEqual(level);
+    const kit = { coin: 100_000, 'prayer potion(4)': 2, lobster: 6, 'adamant scimitar': 1, shortbow: 1, 'bronze arrow': 500 };
+    const food: Market = { lobster: { id: 379, name: 'Lobster', limit: KIT_PRICE_CAPS.lobster! } };
+    const first = (skills: Record<string, number>, items: Record<string, number>, extra: Partial<Inputs> = {}) => plan(inputs([{ ...acct('Build', skills, items), quests: new Set<string>() }],
+        { army: new Set(['build']), builds: new Map([['build', pure]]), buildQuests: new Map([['build', ['Lost City']]]), pilots: new Set(['army-quest-lostcity']), capacity: CAPACITY, ...extra }))[0]!.template;
+    expect(first(pure, kit)!.id).toBe('army-quest-lostcity');
+    // One level short, or no prayer potion (no market sells one): no Lost City and no buy for it.
+    for (const short of [{ Hitpoints: 92 }, { Prayer: 42 }, { Strength: 98 }, { Attack: 59 }]) expect(first({ ...pure, ...short }, kit, { market: food })?.id ?? '').not.toContain('army-quest-lostcity');
+    expect(first(pure, { ...kit, 'prayer potion(4)': 1 }, { market: food })?.id ?? '').not.toContain('army-quest-lostcity');
+    // Short of food only: the band buys the 6 meals of the practice pack, not the 10 of an account with Defence 90.
+    const buy = first(pure, { ...kit, lobster: 0 }, { market: food })!;
+    expect(buy.id).toBe(KIT_BUY + 'army-quest-lostcity');
+    expect(buy.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).map(Number))).toEqual([[379, 6]]);
+});
