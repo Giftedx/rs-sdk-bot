@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794359538110,
+ "at": 1794359668150,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -155,24 +155,22 @@
     "3000"
    ],
    "env": {
-    "ITEMS": "staff of fire",
-    "STOCK_TARGET": "1",
+    "ITEMS": "iron arrow|bronze arrow",
+    "STOCK_TARGET": "1000",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "BANK_AT": "0",
-    "NO_BUY_TICKS": "1100",
-    "STALL_TICKS": "0",
-    "FLOAT": "13000",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "21000",
     "COIN_RESERVE": "500",
-    "MAX_SPEND": "12000"
+    "MAX_SPEND": "20000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
+   "repeat": false,
    "goal": "buy a staff of fire at Zaff's shop in Varrock for the alchemy band",
    "role": "supply",
    "template": "army-staff-zaff",
-   "autopilot": "claude-cloud",
    "resources": [
     "shop:zaff"
    ]
