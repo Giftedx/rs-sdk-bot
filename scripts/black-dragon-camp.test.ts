@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { BLACK_DRAGON, canShoot, footprintDistance, swTile } from './black-dragon-camp';
-import { BLACK_ENTRY, BLACK_KIT, blackKit, combatKitTotals, validateCombatKit } from './microbot-combat-trip';
+import { BLACK_ALTAR, BLACK_ENTRY, BLACK_KIT, BLACK_PRAYER, blackKit, blackPrayerShort, combatKitTotals, validateCombatKit } from './microbot-combat-trip';
 import { initPathfinding } from '../vendor/rs-sdk/sdk/pathfinding';
 import * as rsmod from '../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
 import { CollisionType } from '../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
@@ -73,4 +73,17 @@ test('the trip kit is a bow, arrows, the key, the escape runes and food, and ask
     expect(validateCombatKit(blackKit('iron_arrow', 1200))).toEqual([{ skill: 'Ranged', level: 50 }]);
     expect(() => blackKit('bolt', 700)).toThrow();
     expect(() => blackKit('iron_arrow', 50)).toThrow();
+});
+
+test('the trip prays at the Taverley altar when its prayer points would not last the camp', () => {
+    // Spent on another job (live: Lost City's tree spirit), or part used by the last trip.
+    expect(blackPrayerShort(0, 99)).toBe(true);
+    expect(blackPrayerShort(BLACK_PRAYER - 1, 99)).toBe(true);
+    expect(blackPrayerShort(BLACK_PRAYER, 99)).toBe(false);
+    expect(blackPrayerShort(99, 99)).toBe(false);
+    // An account whose Prayer level is under the threshold is full at its level.
+    expect(blackPrayerShort(45, 45)).toBe(false);
+    expect(blackPrayerShort(44, 45)).toBe(true);
+    // The altar is above ground in Taverley, between the Falador west bank and the dungeon ladder.
+    expect(BLACK_ALTAR).toEqual({ id: 410, x: 2925, z: 3483 });
 });

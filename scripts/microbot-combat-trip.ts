@@ -79,6 +79,14 @@ export async function blueDungeonEntry(io:{walk:(x:number,z:number)=>Promise<voi
 // west past the black demons, north to the poison spiders, then into the corridor from its south end. The corridor's
 // last row before the cave (z 9821) is beside dragon ground, so the walk ends two rows short of it (2835,9818, any
 // tile within one of it is safe) and the camp takes its tile.
+// Protect from Melee covers the walk from the gate to the corridor (about 80 ticks) and each pile the camp fetches
+// (scripts/black-dragon-camp.ts fetch, about 15 ticks a kill); it takes one prayer point in 5 ticks, so a nine-kill
+// trip uses about 45. With fewer than BLACK_PRAYER points (or than the account's Prayer level, if lower) the trip
+// prays at the Altar of Guthix in Taverley (loc guthix_altar 410, a prayer_altar: skill_prayer/scripts/altar.rs2) on
+// its way from the bank to the ladder. Live (claude-cloud): an account that had spent its points on Lost City's tree
+// spirit killed one dragon, left the pile and its arrows ("no prayer and a dragon beside it") and came back empty.
+export const BLACK_ALTAR={id:410,x:2925,z:3483},BLACK_PRAYER=50;
+export const blackPrayerShort=(points:number,level:number)=>points<Math.min(level,BLACK_PRAYER);
 export const BLACK_ENTRY:readonly (readonly [number,number])[]=[[2893,9788],[2893,9777],[2885,9769],[2878,9772],[2877,9788],[2870,9797],[2860,9799],[2850,9809],[2839,9814],[2835,9818]];
 export async function blackDragonEntry(io:Parameters<typeof blueDungeonEntry>[0]){
  await blueDungeonEntry(io);
@@ -125,6 +133,8 @@ export async function combatTrip(s:Session,kind:'blue'|'kbd'|'black',fight:(stop
   }else if(kind==='black'){
    // No shield or armour with a bow: Protect from Melee from the gate on, past the blue dragons, the black demons
    // and the poison spiders.
+   const points=()=>state()?.prayers.prayerPoints??0,level=state()?.prayers.prayerLevel??0;
+   if(blackPrayerShort(points(),level)){await walk(BLACK_ALTAR.x,BLACK_ALTAR.z-1);await interact(BLACK_ALTAR.id,BLACK_ALTAR.x,BLACK_ALTAR.z,()=>!blackPrayerShort(points(),level));mark('prayed '+points());}
    const pray=async(on:boolean)=>{if(!!state()?.prayers.activePrayers[14]===on||on&&((state()?.prayers.prayerLevel??0)<43||(state()?.prayers.prayerPoints??0)<=0))return;await s.sdk.sendTogglePrayer(14);await waitUntil(s,()=>!!state()?.prayers.activePrayers[14]===on,{timeoutTicks:5});};
    await blackDragonEntry({walk,interact,position:()=>state()?.player,settle:async()=>{await waitTicks(s,3);await pray(true);}});
    await pray(false);
