@@ -1,7 +1,6 @@
 import { expect, test } from 'bun:test';
 import { supervise } from '../packages/practice/src/supervise';
-import { planShopPurchases, maximumUnitCost, buyWithBudget, PROFILES, shopTargetsMet, stockWaitStatus, shopFinishOk, dialogClick, blindBuyNow, blindBuyObserved, BLIND_SETTLE_TICKS } from './shop-buyer';
-import { planShopPurchases, maximumUnitCost, buyWithBudget, PROFILES, shopTargetsMet, stockWaitStatus, shopFinishOk, selectItems, profileRefusal, approachLegs } from './shop-buyer';
+import { planShopPurchases, maximumUnitCost, buyWithBudget, PROFILES, shopTargetsMet, stockWaitStatus, shopFinishOk, dialogClick, blindBuyNow, blindBuyObserved, BLIND_SETTLE_TICKS, selectItems, profileRefusal, approachLegs } from './shop-buyer';
 
 const target = (name: string, buyPerTick: number) => ({ re: new RegExp(`^${name}$`, 'i'), buyPerTick });
 const item = (name: string, count = 100, buyPrice = 1) => ({ name, count, buyPrice });
