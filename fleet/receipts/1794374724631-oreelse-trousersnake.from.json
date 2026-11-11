@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794374724631-oreelse-trousersnake",
  "account": "OreElse",
  "partner": "TrouserSnake",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "a56cc538-1ad1-4f13-b13e-fe501695ba23",
- "count": 0,
- "ok": false,
- "at": 1794374732566,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794375236306,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794374934889
+ },
+ "logout": {
+  "attemptId": "1794374732574-0000016376-0000000001",
+  "at": 1794375236295,
+  "sha256": "460a3cf6370a404e5372451ee45b3862eb1aa30118366bca6bcfce6a8d245fd6"
+ },
+ "screen": true
 }
