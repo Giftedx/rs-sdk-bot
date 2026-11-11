@@ -8,7 +8,8 @@
 //   [--max-runs 3] [--kit <kit>] [--dry]. --dry prints the plan and runs nothing.
 // A run needs about 1.5 GB of free memory; the climber waits while the dashboard reports less headroom than
 // CLIMB_HEADROOM_GB (default 1), and while the file .practice/pk-climb-pause exists in the main checkout, so another
-// session can take the practice slot. Every evaluation is one line in .practice/pk-spar/climb.jsonl.
+// session can take the practice slot. Every evaluation is one line in .practice/pk-spar/climb.jsonl. The engines use
+// ports from 21600 (BENCH_PORT_BASE), apart from the bench's own 21000, so a bench of another session can run beside.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Profile } from '../pk-spar';
@@ -79,7 +80,7 @@ if (import.meta.main) {
         const out = '.practice/pk-spar/climb-run.json';
         const set = { SPAR_A: 'champion', SPAR_A_OPTS: JSON.stringify(patch), SPAR_B: 'champion', SPAR_SWAP: '1', SPAR_CAP: cap, ...(kit ? { SPAR_A_KIT: kit, SPAR_B_KIT: kit } : {}) };
         Bun.spawnSync(['bun', 'scripts/measure/aio-practice-bench.ts', `^${key}$`, '--parallel', '1', '--no-keep', '--seed', String(seed++), ...Object.entries(set).flatMap(([k, v]) => ['--set', `${k}=${v}`])],
-            { cwd: root, env: { ...process.env, BENCH_OUT: out }, stdout: 'ignore', stderr: 'inherit', windowsHide: true });
+            { cwd: root, env: { BENCH_PORT_BASE: '21600', ...process.env, BENCH_OUT: out }, stdout: 'ignore', stderr: 'inherit', windowsHide: true });
         try { const row = JSON.parse(readFileSync(resolve(root, out), 'utf8')).rows[0]; return row?.ok ? readNets(row.result) : null; } catch { return null; }
     };
     for (const knob of knobs) {
@@ -88,11 +89,13 @@ if (import.meta.main) {
             // A candidate equal to the champion's own value measures nothing.
             if (Object.entries(patch).every(([k, v]) => JSON.stringify((champion as Record<string, unknown>)[k]) === JSON.stringify(v))) continue;
             const nets: number[] = [];
-            let runs = 0, outcome: 'accept' | 'reject' | 'more' | 'invalid' = 'more';
+            let runs = 0, failed = 0, outcome: 'accept' | 'reject' | 'more' | 'invalid' = 'more';
             while (outcome === 'more') {
                 const got = await batch(patch);
-                runs++;
-                if (!got) { outcome = runs >= maxRuns ? 'invalid' : 'more'; continue; }
+                // A run that gave no fights (the engine did not start, a fight was not valid) is tried again after a
+                // pause; five in a row end the candidate as invalid.
+                if (!got) { if (++failed >= 5) outcome = 'invalid'; else await Bun.sleep(30_000); continue; }
+                runs++; failed = 0;
                 nets.push(...got);
                 outcome = verdict(nets, runs, maxRuns);
             }

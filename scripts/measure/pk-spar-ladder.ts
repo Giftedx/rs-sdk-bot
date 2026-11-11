@@ -74,7 +74,7 @@ if (import.meta.main) {
         const set: Record<string, string | undefined> = { SPAR_A: a[0], SPAR_A_OPTS: a[1], SPAR_B: b[0], SPAR_B_OPTS: b[1] };
         const sets = Object.entries(set).flatMap(([k, v]) => (v === undefined ? [] : ['--set', `${k}=${v}`]));
         const child = Bun.spawnSync(['bun', 'scripts/measure/aio-practice-bench.ts', `^${key}$`, '--seed', String(seed), '--parallel', '1', ...sets],
-            { cwd: root, env: { ...process.env, BENCH_OUT: out }, stdout: 'ignore', stderr: 'inherit', windowsHide: true });
+            { cwd: root, env: { BENCH_PORT_BASE: '21600', ...process.env, BENCH_OUT: out }, stdout: 'ignore', stderr: 'inherit', windowsHide: true });
         let row: { ok: boolean; result: string | null } | undefined;
         try { row = JSON.parse(readFileSync(resolve(root, out), 'utf8')).rows[0]; } catch { /* the bench wrote no row */ }
         const fight = readFight(seed, side, !!row?.ok, row?.result ?? `bench exit ${child.exitCode}`);
@@ -87,7 +87,7 @@ if (import.meta.main) {
         const set: Record<string, string | undefined> = { SPAR_A: a[0], SPAR_A_OPTS: a[1], SPAR_B: b[0], SPAR_B_OPTS: b[1] };
         const sets = Object.entries(set).flatMap(([k, v]) => (v === undefined ? [] : ['--set', `${k}=${v}`]));
         const child = Bun.spawnSync(['bun', 'scripts/measure/aio-practice-bench.ts', `^${key}$`, '--parallel', '1', '--no-keep', ...(seed === undefined ? [] : ['--seed', String(seed)]), ...sets],
-            { cwd: root, env: { ...process.env, BENCH_OUT: out }, stdout: 'ignore', stderr: 'inherit', windowsHide: true });
+            { cwd: root, env: { BENCH_PORT_BASE: '21600', ...process.env, BENCH_OUT: out }, stdout: 'ignore', stderr: 'inherit', windowsHide: true });
         let row: { ok: boolean; result: string | null } | undefined;
         try { row = JSON.parse(readFileSync(resolve(root, out), 'utf8')).rows[0]; } catch { /* the bench wrote no row */ }
         const got = readBatch(!!row?.ok, row?.result ?? `bench exit ${child.exitCode}`);

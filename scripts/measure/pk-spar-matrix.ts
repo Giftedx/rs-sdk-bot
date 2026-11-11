@@ -32,7 +32,7 @@ if (import.meta.main) {
     const runs: { nets: number[]; scores: number[] }[] = [];
     for (const seed of seeds) {
         Bun.spawnSync(['bun', 'scripts/measure/aio-practice-bench.ts', `^${key}$`, '--parallel', '1', '--no-keep', '--seed', String(seed), '--set', `SPAR_A=${a}`, '--set', `SPAR_B=${b}`],
-            { cwd: root, env: { ...process.env, BENCH_OUT: out }, stdout: 'ignore', stderr: 'inherit', windowsHide: true });
+            { cwd: root, env: { BENCH_PORT_BASE: '21600', ...process.env, BENCH_OUT: out }, stdout: 'ignore', stderr: 'inherit', windowsHide: true });
         let row: { ok: boolean; result: string | null } | undefined;
         try { row = JSON.parse(readFileSync(resolve(root, out), 'utf8')).rows[0]; } catch { /* the bench wrote no row */ }
         if (row?.ok) runs.push({ nets: readList(row.result, 'nets'), scores: readList(row.result, 'scores') });
