@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794364539655,
+ "at": 1794364599086,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -146,6 +146,35 @@
   },
   {
    "account": "PocketPool",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "ardy",
+    "400"
+   ],
+   "env": {
+    "ITEMS": "bronze arrow",
+    "STOCK_TARGET": "500",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "5000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "4000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy bronze arrows at Aemad in East Ardougne for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-ardy",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:ardy"
+   ]
+  },
+  {
+   "account": "SporranDip",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
@@ -167,26 +196,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "SporranDip",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts sarim 3000 ITEMS=feather STOCK_TARGET=700 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy feathers at Gerrant's in Port Sarim for the alchemy band",
-   "role": "supply",
-   "template": "army-feathers-sarim",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "shop:sarim"
    ]
   },
   {
