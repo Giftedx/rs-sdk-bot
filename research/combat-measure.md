@@ -571,7 +571,18 @@ fire runes, a staff of fire and nature runes, asks Magic 66.
   per tick as one: the cows' regrowth is the limit, about one cast in ten ticks for the field.
 - **Evidence.** `.practice/splash/run.ts` (`h`, `i`, `j`), `.practice/splash/probe2.ts` (the fence tile, ranges 5 to
   9), `.practice/splash/probe.ts` (a cow with no armour) in the Claude cloud container that ran them.
-- **Gap.** Practice only, one run per condition. More than two accounts at once is not measured. With a platebody,
+- **Claim.** From Magic 66 the Magic Guild's shelf is the whole kit of the alchemy band, and the band casts on air
+  runes. **Conditions.** `magic_guild.inv`, `runes.obj`, `staves.obj`: a staff of fire (2 in stock, base 1,500
+  coins), nature runes (1,000, base 20, one back every 300 ticks), air runes (3,000, base 4); alchemy refuses only
+  coins and a few quest items (`alchemy.rs2`). `army-staff-guild` buys the staff, 500 fire runes, nature runes up to
+  600 and air runes up to 600; `army-alch-air-magic-99` casts with `ALCH_ITEM=airrune`. Practice from the Ardougne
+  north bank, Magic 66, 100,000 coins and no rune of the band: the trip's four steps ended ok in 327, 226, 411 and 240
+  ticks (1 staff for 1,500 coins, 500 fire runes for 6,714, 585 nature runes for 44,950, the step's budget, 600 air
+  runes for 9,117), then `RESULT ok alch level=99 gained=33 xp=898625 strike=0 low=0 high=553 stop=target
+  ticks=3809`. **Evidence.** `.practice/guild/run.ts` (`a`).
+- **Gap.** Practice only, one run per condition. More than two accounts at once is not measured. The guild's nature
+  shelf holds 1,000 and a trip takes 585, so it serves two accounts in a row at most; five army accounts hold no
+  nature rune. With a platebody,
   platelegs, a full helm and a kiteshield of any metal the magic attack bonus is -65 and no cast hits (5 runs, 152
   casts, none refused, about 5 ticks a cast inside the field); the army owns none of those pieces, and the Grand
   Exchange lists one platebody.
