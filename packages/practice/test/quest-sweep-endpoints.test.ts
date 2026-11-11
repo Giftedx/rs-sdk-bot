@@ -84,6 +84,13 @@ test('Doric self-supply replay requires the bought pickaxe, exact mined ores, th
  expect(check(log.replace('"held":2,"target":2','"held":1,"target":2')).gathered).toBe(false);
  expect(check(log.replace('"coins":361','"coins":360')).bought).toBe(false);
  after.inventories[93]![0]!.count--;expect(check().assets).toBe(false);after.inventories[93]![0]!.count++;
+ for(const id of [1617,1619,1621,1623]){
+  after.inventories[93]!.push({slot:3,id,count:1});expect(check().assets).toBe(true);after.inventories[93]!.pop();
+ }
+ after.inventories[93]!.push({slot:3,id:1623,count:2});before.inventories[93]!.push({slot:2,id:1623,count:1});
+ expect(check().assets).toBe(true);after.inventories[93]!.find(i=>i.id===1623)!.count=0;expect(check().assets).toBe(false);
+ before.inventories[93]!.pop();after.inventories[93]!.pop();
+ after.inventories[93]!.push({slot:3,id:1511,count:1});expect(check().assets).toBe(false);after.inventories[93]!.pop();
  expect(check(log.replace('LOGOUT logged-out\n',''))).toMatchObject({logout:false});
  expect(check(log.replace('died=false','died=true')).alive).toBe(false);
  after.inventories[93]!.push({slot:3,id:440,count:1});expect(check()).toMatchObject({used:false,assets:false});after.inventories[93]!.pop();
