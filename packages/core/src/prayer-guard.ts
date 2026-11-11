@@ -39,10 +39,12 @@ export type AttackStyle = 'melee' | 'ranged' | 'magic';
 const PROTECT_FROM: Record<AttackStyle, number> = { melee: PROTECT.melee, ranged: PROTECT.missiles, magic: PROTECT.magic };
 // The protection prayer for one NPC, from a table of the styles its attack script can use
 // (packages/knowledge/src/npc-attack-styles.ts). An NPC that is not in the table uses melee. An NPC with melee and
-// another style uses melee while it stands next to the player.
+// another style uses melee while it stands next to the player. `magic` first in the list: a spell of the NPC binds or
+// drains, and magic protection comes first at each distance.
 export const protectByStyle = (table: ReadonlyMap<number, readonly AttackStyle[]>) => (npc: any | null): number => {
     const styles = npc ? table.get(npc.id) : undefined;
     if (!styles) return PROTECT.melee;
+    if (styles[0] === 'magic') return PROTECT.magic;
     if (styles.includes('melee') && npc.distance <= 1 + Math.floor((npc.size ?? 1) / 2)) return PROTECT.melee;
     return styles.includes('magic') ? PROTECT.magic : styles.includes('ranged') ? PROTECT.missiles : PROTECT.melee;
 };

@@ -814,3 +814,14 @@ test('no auto-retaliate attack from the guard when the NPC does not target the p
     advance(12);
     expect(guard.stats().resends).toBe(0);
 });
+
+test('an NPC whose spell binds: magic protection next to it too', () => {
+    const { w, s, advance } = world();
+    startPrayerGuard(s, { protect: protectByStyle(new Map<number, readonly AttackStyle[]>([[181, ['magic', 'melee']], [54, ['melee', 'magic']]])) });
+    w.npcs = [{ ...cow(32768 + 7), id: 181, distance: 1, size: 1 }];
+    advance(6);
+    expect(on(w)).toEqual([PROTECT.magic]);
+    w.npcs = [{ ...cow(32768 + 7), id: 54, distance: 1, size: 1 }];
+    advance(6);
+    expect(on(w)).toEqual([PROTECT.melee]);
+});
