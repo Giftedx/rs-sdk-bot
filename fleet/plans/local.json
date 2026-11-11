@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794370826931,
+ "at": 1794371296047,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -564,22 +564,16 @@
   },
   {
    "account": "SporranBulge",
-   "script": "scripts/goldfarm.ts",
+   "script": "scripts/session-check.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
+    "CAP": "600",
+    "COORDINATOR_RUN_ID": "task-802b1836-23a4-433e-865b-c72cc128f379"
    },
    "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
-   "autopilot": "local",
-   "resources": [
-    "knight:2653,3300"
-   ]
+   "repeat": false,
+   "goal": "run-session-recovery-sporranbulge-lease-r3-1794371164 [task-802b1836-23a4-433e-865b-c72cc128f379]",
+   "role": "thieving"
   }
  ]
 }
