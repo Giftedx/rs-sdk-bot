@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794370844114-pocketrocket-mightyrod",
  "account": "Mightyrod",
  "partner": "Pocketrocket",
@@ -10,8 +10,21 @@
  "item": "Coins",
  "requested": 500000,
  "claim": "633486d1-415c-4bf6-9a29-7684accf68d6",
- "count": 0,
- "ok": false,
- "at": 1794370852247,
- "detail": "trade claimed"
+ "count": 500000,
+ "ok": true,
+ "at": 1794370900266,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4850,
+  "after": 504850
+ },
+ "bank": {
+  "count": 500000,
+  "at": 1794370884247
+ },
+ "logout": {
+  "attemptId": "1794370852256-0000025896-0000000001",
+  "at": 1794370900253,
+  "sha256": "d9092a89c6ee49eab126b2b0d4de83f0d5b0b4b3097fdca5f952901fce2f4057"
+ }
 }
