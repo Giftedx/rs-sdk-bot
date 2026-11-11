@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794387658643,
+ "at": 1794387662105,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -19,18 +19,6 @@
    "template": "kit-buy:army-bury-big-99",
    "autopilot": "claude-cloud",
    "resources": []
-  },
-  {
-   "account": "Kiltlifter",
-   "script": ".practice/pk-pilot/disembark.ts",
-   "args": [],
-   "env": {},
-   "enabled": true,
-   "standing": false,
-   "repeat": false,
-   "goal": "hand: leave the Brimhaven ship deck",
-   "role": "hand",
-   "autopilot": "claude-cloud"
   },
   {
    "account": "Fingersmith",
@@ -52,22 +40,27 @@
   },
   {
    "account": "TheFullMonty",
-   "script": "scripts/aio.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "quester",
-    "chain",
-    "drunkmonk,murder,zanaris"
+    "1500",
+    "trooper"
    ],
-   "env": {},
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
-   "role": "quest",
-   "template": "army-quest-lostcity",
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
    "autopilot": "claude-cloud",
    "resources": [
-    "quest:lostcity"
+    "trooper:battlefield"
    ]
   },
   {
@@ -161,6 +154,25 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=97 EXPECTED_OWNED=53 LIMIT_PRICE=200 CASH_RESERVE=1000 ORDER_KEY=kiltlifter-kit10-559-53to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=291 EXPECTED_OWNED=134 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=kiltlifter-kit10-557-134to425 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 97 Body rune, 291 Earth rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "supply",
+   "template": "kit-buy:army-splash-magic-66",
+   "autopilot": "claude-cloud",
+   "resources": []
   },
   {
    "account": "Knightstick",
