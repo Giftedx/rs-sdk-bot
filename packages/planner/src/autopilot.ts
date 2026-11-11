@@ -299,19 +299,19 @@ export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'price
     return (gross - cost) * Math.max(0.1, 1 - (inp.waste?.[t.family] ?? 0));
 }
 
-// The quest route of each ranked PK build (scripts/pk-kits.ts), by kit name: the quests that the gear of the kit needs
-// and that give no XP over a level of the kit (research/pvp-fight-loop.md, "Quest routes of the builds"). A band of
-// the route runs every quest of its chain, so a quest stands here only when each quest of the band's chain passes.
-// - `pure-pray`: the dragon dagger needs Lost City. Monk's Friend, Murder Mystery and Lost City give no XP in a combat
-//   skill. The fights of the quest (the zombies with bare hands, the tree spirit with the bronze axe) give their XP
-//   to Strength and Hitpoints: the quest script sets that style before each fight (quest-lib.ts strengthStyle).
-// - `baby-pure`: no item of the kit needs a quest.
-// - `dragon`: no route. The rune platebody needs Dragon Slayer, which gives Defence 88 from level 1 (the build has 60).
-// - `tank-range`: no route. The Archer helm needs The Fremennik Trials, which give Attack 60 and Strength 60 (the
-//   build has 1 in each).
-// A kit with no entry has no route.
+// The quest route of each PK build (scripts/pk-kits.ts), by kit name: the quests that the items and varps of the kit
+// need. No reward of those quests, or of the quests they need, gives a level over the kit: scripts/pk-kits.ts
+// `kitRoute` works the route out from the wear rules and the quest rewards of the content, and scripts/pk-kits.test.ts
+// keeps this table equal to it (research/pvp-fight-loop.md, "Quest routes of the builds"). A band of the route runs
+// every quest of its chain. The fights of Lost City give their XP to Strength and Hitpoints: the quest script sets
+// that style before each fight (quest-lib.ts strengthStyle). A kit with no entry has no route.
+const LOST: readonly string[] = ['Lost City'], NONE: readonly string[] = [], TRIALS: readonly string[] = ['The Fremennik Trials'];
 export const BUILD_QUESTS: Readonly<Record<string, readonly string[]>> = {
-    'pure-pray': ['Lost City'], 'baby-pure': [], dragon: [], 'tank-range': [],
+    'pure-iban': ['Underground Pass'], 'pure-rock': ['Lost City', 'Mage Arena'], 'pure-bolt': NONE, 'pure-dds': LOST, 'pure-dds-msb': LOST, 'pure-r2h': NONE,
+    'pure-hally': ['Regicide'], 'pure-ranger': NONE, 'pure-mage': NONE, 'pure-tribrid': LOST, 'pure-pray': LOST, 'rune-pure': LOST,
+    zerker: ['Lost City', 'The Fremennik Trials'], dragon: LOST, 'range-tank': TRIALS, 'mage-tank': NONE, 'pure-scim': NONE, 'pure-dlong': LOST,
+    'pure-knives': LOST, 'pure-pray31': LOST, 'pure-god': ['Mage Arena'], 'pure-max': LOST, 'addy-pure': LOST, def50: LOST, 'tank-range': TRIALS,
+    'baby-pure': NONE, 'low-ranger': NONE, 'low-mage': NONE, 'low-addy': NONE, skiller: NONE,
 };
 // A goal band for an account with a PK build, or null when the account must not take it. A build is its levels: one
 // level over the Defence or Prayer of a build is a different build, and no account goes back. So such an account

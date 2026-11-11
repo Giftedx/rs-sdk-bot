@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { combatLevel, itemId, kitCost, kitItems, kitOptions, KITS, kitSkills, kitSwitches, kitVarps, trained } from './pk-kits';
+import { combatLevel, itemId, kitCost, kitItems, kitOptions, kitRoute, KITS, kitSkills, QUEST_CHAIN, kitSwitches, kitVarps, trained } from './pk-kits';
 import { KNOBS, readNets, stats, verdict } from './measure/pk-spar-climb';
 import { matrix, readList } from './measure/pk-spar-matrix';
 import { mayRun } from './measure/pk-spar-wait';
@@ -96,8 +96,8 @@ test('each pure has its combat level, stays at Defence 1 and Hitpoints 10, and m
 test('a trained build has the Hitpoints of its combat XP, and each bracket fits in Wilderness level 34', () => {
     expect(trained({ Attack: 99, Strength: 99, Defence: 99 }).Hitpoints).toBe(99);
     expect(trained({}).Hitpoints).toBe(10);
-    expect(combatLevel(kitSkills('zerker'))).toBe(92);
-    expect(kitSkills('zerker').Defence).toBe(45);
+    expect(combatLevel(kitSkills('zerker'))).toBe(96);
+    expect(kitSkills('zerker').Defence).toBe(60);
     const cases = benchCases().filter(c => c.key.startsWith('extra:spar-builds-'));
     const staged = new Set(cases.flatMap(c => c.scriptArgs.find(a => a.startsWith('SPAR_KITS='))!.slice(10).split(',')).map(p => p.split(':').sort().join(':')));
     for (const kits of Object.values(BUILD_BRACKETS)) {
@@ -114,31 +114,30 @@ test('a trained build has the Hitpoints of its combat XP, and each bracket fits 
 
 // The quest rewards of the server content (knowledge/quests.json, whole XP before the XP rate) and the quests that a
 // band of the planner runs for each quest of a route.
-test('no quest on the route of a build gives a level over the build', async () => {
+test('every kit has a quest route, and the planner holds the route of every build', async () => {
     const { BUILD_QUESTS } = await import('../packages/planner/src/autopilot');
+    // No reward of a quest that a kit needs gives a level over the kit.
+    for (const name of Object.keys(KITS)) expect([name, kitRoute(name).breaks]).toEqual([name, []]);
+    // The planner's table is the route of each kit with levels of its own.
+    const builds = Object.fromEntries(Object.entries(KITS).filter(([, kit]) => kit.skills).map(([name]) => [name, kitRoute(name).quests]));
+    expect(Object.fromEntries(Object.entries(BUILD_QUESTS).map(([kit, quests]) => [kit, [...quests].sort()]))).toEqual(builds);
+    for (const quest of Object.values(BUILD_QUESTS).flat()) expect(QUEST_CHAIN[quest]).toBeDefined();
+    expect(kitRoute('tribrid').quests).toEqual(['Dragon Slayer', 'Lost City']);
+    expect(kitRoute('tribrid-mace').quests).toEqual(['Dragon Slayer', "Heroes' Quest"]);
+    expect(kitRoute('zerker')).toEqual({ quests: ['Lost City', 'The Fremennik Trials'], breaks: [] });
+    // The gear that a build with a Defence level leaves out, and the levels that a quest brings with it.
     const { levelForXp } = await import('../packages/planner/src/curve');
-    const { readFileSync } = await import('node:fs');
-    const rewards = JSON.parse(readFileSync(new URL('../knowledge/quests.json', import.meta.url), 'utf8')) as { folder: string; xp: { skill: string; xp: number }[] }[];
-    const CHAIN: Record<string, string[]> = { 'Lost City': ['quest_drunkmonk', 'quest_murder', 'quest_zanaris'] };
-    const XP_RATE = 25, COMBAT = ['Attack', 'Strength', 'Defence', 'Ranged', 'Magic', 'Prayer', 'Hitpoints'];
-    // The first skill that a list of quests takes over the levels, from the levels of a new account.
-    const breaks = (folders: string[], levels: Record<string, number>) => {
-        for (const skill of COMBAT) {
-            const xp = folders.flatMap(f => rewards.filter(r => r.folder === f).flatMap(r => r.xp)).filter(x => x.skill === skill.toLowerCase()).reduce((n, x) => n + x.xp * XP_RATE, 0);
-            if (xp > 0 && levelForXp(xp) > (levels[skill] ?? 1)) return `${skill} ${levelForXp(xp)}`;
-        }
-        return null;
-    };
-    for (const f of Object.values(CHAIN).flat()) expect(rewards.some(r => r.folder === f)).toBe(true);
-    for (const [kit, route] of Object.entries(BUILD_QUESTS)) for (const quest of route) {
-        expect(CHAIN[quest]).toBeDefined();
-        if (kit in KITS) expect(breaks(CHAIN[quest]!, kitSkills(kit))).toBeNull();
+    expect(levelForXp(18650 * 25)).toBe(88);        // Dragon Slayer: Strength and Defence (quest_dragon.rs2:33-34)
+    expect(levelForXp(2812.4 * 25)).toBe(60);       // The Fremennik Trials: Attack, Strength, Defence, Hitpoints (quest_viking.rs2:135-138)
+    expect(levelForXp(3000 * 25)).toBe(61);         // Underground Pass: Attack (quest_upass.rs2:801)
+    for (const name of Object.keys(KITS)) if ((kitSkills(name).Defence ?? 1) < 88) {
+        const { equipment, inventory } = kitItems(name), held = new Set([...equipment, ...inventory].map(i => i.id));
+        for (const item of ['rune_platebody', 'dragon_sq_shield', 'dragon_mace', 'dragon_battleaxe']) expect([name, item, held.has(itemId(item))]).toEqual([name, item, false]);
     }
-    // Why the other builds have no route: the quest that the gear needs gives a level over the build.
-    expect(breaks(['quest_dragon'], kitSkills('dragon'))).toBe('Defence 88');
-    expect(breaks(['quest_hero'], kitSkills('dragon'))).toBe('Attack 62');
-    expect(breaks(['quest_viking'], kitSkills('range-tank'))).toBe('Attack 60');
-    expect(breaks(['quest_viking'], { ...kitSkills('range-tank'), Attack: 60, Strength: 60 })).toBeNull();
+    for (const name of ['zerker', 'range-tank', 'tank-range']) expect(kitSkills(name)).toMatchObject({ Attack: 60, Defence: name === 'tank-range' ? 99 : 60 });
+    expect(kitSkills('pure-hally').Attack).toBe(61);
+    // The two melee levels of the quest add no combat level to a range tank.
+    for (const name of ['range-tank', 'tank-range']) expect(combatLevel(kitSkills(name))).toBe(combatLevel({ ...kitSkills(name), Attack: 1, Strength: 1 }));
 });
 
 test('the second set of builds: levels, gear that the levels can wear, and one case place for each new pair', () => {
