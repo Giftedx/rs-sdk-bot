@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794373702314,
+ "at": 1794373767605,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -49,6 +49,27 @@
    "repeat": false,
    "goal": "black dragon pilot",
    "role": "hand"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_ID": "536",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying bought dragon bones",
+   "role": "combat",
+   "template": "army-bury-dragon-99",
+   "autopilot": "claude-cloud",
+   "resources": []
   },
   {
    "account": "Deeppockets",
@@ -194,19 +215,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-8b87454b-d288-4f58-806c-b6202be06f3b"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "claude-cloud-recover-quickhandjob-20261111t050402z [task-8b87454b-d288-4f58-806c-b6202be06f3b]",
-   "role": "combat"
   }
  ]
 }
