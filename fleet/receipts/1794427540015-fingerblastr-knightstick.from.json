@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794427540015-fingerblastr-knightstick",
  "account": "Fingerblastr",
  "partner": "Knightstick",
@@ -12,6 +12,20 @@
  "claim": "6258e153-bb00-4064-8675-deabad468231",
  "count": 0,
  "ok": false,
- "at": 1794427551181,
- "detail": "trade claimed"
+ "at": 1794429940238,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 83060,
+  "after": 83060
+ },
+ "bank": {
+  "count": 83060,
+  "at": 1794427787501
+ },
+ "logout": {
+  "attemptId": "1794427551183-0000008204-0000000001",
+  "at": 1794429940231,
+  "sha256": "71be3b976567626d8de66b3969ea0b072ddc09e05b3e4ea813206bbe293fe69e"
+ },
+ "screen": false
 }
