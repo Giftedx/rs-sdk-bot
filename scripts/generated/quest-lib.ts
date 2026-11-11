@@ -5,6 +5,7 @@ import { openBot, finish, getWorld, accountOf } from '../../packages/core/src/bo
 import type { Session } from '../../packages/core/src/inprocess';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { startQuestSustain, selectQuestFood, questFoodDefinitions, defaultEatAt } from '../quest-sustain';
+import { holdSessionEater } from '../../packages/core/src/sustain';
 import { walkQuestCorridor } from '../quest-walk';
 import { sessionWalker, walkPath, goTo, type PathPoint } from '../../packages/core/src/walk';
 import { componentId } from '../../packages/core/src/logout';
@@ -80,6 +81,9 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     const offered = handoff.QUEST_SESSION;
     const matching = offered && (!opts.name || offered.name.toLowerCase() === opts.name.toLowerCase());
     const s: Session = opts.session ?? (matching ? offered : undefined) ?? await openBot(opts.name ?? process.argv[2]!);
+    // A quest session has no eat guard (packages/core/src/eat-guard.ts): a fish can be a quest item here. Only the
+    // quest sustain below eats, with the reserve rules of the quest. The hold has no release.
+    holdSessionEater(s.sdk);
     // quest-sweep's handoff waits for this before another bot in the same process may hand over its session.
     if (s === offered) handoff.QUEST_SESSION_TAKEN?.();
     await waitTicks(s, 3);
