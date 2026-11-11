@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1794371442787-fingerblastr-trousersnake",
  "account": "TrouserSnake",
  "partner": "Fingerblastr",
@@ -12,6 +12,6 @@
  "claim": "0dc5fadb-6a91-4ef8-b0a9-a9f2b4091809",
  "count": 0,
  "ok": false,
- "at": 1794371446273,
- "detail": "trade claimed"
+ "at": 1794371704971,
+ "detail": "session ended: disconnected"
 }
