@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794396760355-knightrider-undermykilt",
  "account": "UnderMyKilt",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Bronze arrow",
  "requested": 600,
  "claim": "448906b2-cf67-41ef-87b8-93635ae49ffa",
- "count": 0,
- "ok": false,
- "at": 1794396772155,
- "detail": "trade claimed"
+ "count": 600,
+ "ok": true,
+ "at": 1794396787722,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 600
+ },
+ "bank": {
+  "count": 600,
+  "at": 1794396786783
+ },
+ "logout": {
+  "attemptId": "1794396772159-0000023846-0000000001",
+  "at": 1794396787714,
+  "sha256": "ebec8ff6208ce36a55d67c7753a6f00cee1357f6c5656fa71734b112bb8654bf"
+ },
+ "screen": true
 }
