@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794372667867-magicwanda-kiltlifter-airrune",
+ "account": "Kiltlifter",
+ "partner": "Magicwanda",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 10,
+ "claim": "3981c3a5-82bd-4ee8-b692-335cdddbd231",
+ "count": 0,
+ "ok": false,
+ "at": 1794372671453,
+ "detail": "trade claimed"
+}
