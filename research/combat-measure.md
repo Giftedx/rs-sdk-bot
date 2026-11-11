@@ -445,6 +445,24 @@ TrouserSnake and UnderMyKilt hold about 15,000 feathers and 1,500-1,700 bones ea
   at base 4 (`varrock.inv` `runeshop`; profile `aubury`, `ITEMS='fire rune'`). Zaff sells staffs of fire: practice,
   `MAX_ITEMS=1 bun scripts/shop-buyer.ts <bot> zaff` from Varrock West bought one for 1,500 coins in 45 ticks and banked
   it. Zaff stocks 2, with 1 back per 1,000 ticks.
+- **Claim.** An army account with the alchemy band's nature runes and feathers but no fire buys a staff of fire at
+  Zaff's from Ardougne and trains with it (`army-staff-zaff`, then `army-alch-magic-99`). **Conditions.** Practice.
+  Attack 69, Strength 61, Defence 62, Hitpoints 62, Magic 21 at the Ardougne north bank with 50,000 coins, 60 nature
+  runes and 200 feathers banked. `scripts/shop-buyer.ts <bot> zaff 3000` with `ITEMS='staff of fire' STOCK_TARGET=1
+  BANK_AT=0`; the shop run takes the two ferries (`scripts/walk-to.ts` `walkTarget`). The alchemy template then starts
+  at Varrock West, where the shop run banked.
+
+  | Run | Staff | Coins | Shop run ticks | Alchemy run after it |
+  |---|---|---|---|---|
+  | z1 | 1 | 1,500 | 914 | ok, Magic 21 -> 56, 60 casts, 1,325 ticks, `stop=supplies` |
+  | z2 | 1 | 1,500 | 916 | ok, Magic 21 -> 56, 60 casts, 1,259 ticks, `stop=supplies` |
+  | z3 | 1 | 1,530 | 915 | ok, Magic 21 -> 56, 60 casts, 1,259 ticks, `stop=supplies` |
+
+  Each shop run stood about 300 ticks at the start while the world loaded and 100 on each ferry. The alchemy run's
+  ticks include the trip back to Ardougne. **Evidence.** `.practice/staff/run.ts` and its `z1`-`z3` logs in the
+  Claude cloud container that ran them; `packages/planner/test/autopilot.test.ts` (the kit buy leaves the fire line
+  to the shop job; the job's needs). **Gap.** Practice only. Zaff's shelf serves one account per 1,000 ticks once its
+  2 staffs are sold; the Magic Guild's 2 are not in the planner.
 
 ## 1. Melee, no cannon
 
