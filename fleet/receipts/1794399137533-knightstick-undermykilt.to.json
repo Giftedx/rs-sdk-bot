@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794399137533-knightstick-undermykilt",
  "account": "UnderMyKilt",
  "partner": "Knightstick",
@@ -12,6 +12,16 @@
  "claim": "c9a72896-855d-48d5-a247-bf2e33103c4c",
  "count": 0,
  "ok": false,
- "at": 1794399620770,
- "detail": "trade claimed"
+ "at": 1794402738149,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794399620772-0000022437-0000000001",
+  "at": 1794402738142,
+  "sha256": "6d9050f72f5b387d9a56cdf0cb316244f8d2c3f0fb011630d89eca128ccce3ba"
+ },
+ "screen": false
 }
