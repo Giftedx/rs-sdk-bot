@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1794367763405-oreelse-thefullmonty",
  "account": "TheFullMonty",
  "partner": "OreElse",
@@ -12,6 +12,6 @@
  "claim": "cf0b4d07-3cd2-48b1-9043-b79ad6953cfc",
  "count": 0,
  "ok": false,
- "at": 1794367772274,
- "detail": "trade claimed"
+ "at": 1794367875168,
+ "detail": "session ended: disconnected"
 }

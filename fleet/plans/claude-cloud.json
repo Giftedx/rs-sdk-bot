@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794367850355,
+ "at": 1794367876266,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -101,31 +101,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "shop:ardy"
-   ]
-  },
-  {
-   "account": "Knightstick",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
    ]
   },
   {
@@ -261,10 +236,35 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-348946cb-c180-4863-b1c5-529fd29a2b1c"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "claude-cloud-recover-fatstack-20261111t032657z [task-348946cb-c180-4863-b1c5-529fd29a2b1c]",
    "role": "supply"
+  },
+  {
+   "account": "Knightstick",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
   }
  ]
 }
