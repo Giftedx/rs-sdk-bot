@@ -13,8 +13,20 @@ in-process client's player entities (`webclient/src/dash3d/ClientPlayer.ts`, `Cl
 below, with freeze runes and full special energy. The score is for side A: 100 for a kill, -100 for a death, plus the
 damage margin held inside 99 each way. `scripts/measure/pk-spar-ladder.ts <challenger> [champion]` runs the case for
 each seed with the challenger on each side and prints wins, losses, draws and the mean score; a profile that wins the
-ladder is the next champion. Gap: no spar result is recorded here; the spar stands on open ground, so movement, line
-of sight, escapes and a second attacker are not measured.
+ladder is the next champion. Gap: the spar stands on open ground, so movement, line of sight, escapes and a second
+attacker are not measured.
+
+Spar findings. Conditions: bench case `pvp:spar`, lockstep practice engine, cap 900 ticks; a seed repeats its fight.
+Evidence: `.practice/pk-spar/*.json` in the worktree that ran them.
+
+1. **A mirror fight is a food race.** base against base, seeds 1, 2, 3: kills at 648, 594 and 557 ticks; side B, side A,
+   side B won. The loser had eaten all 18 sharks in each fight; the winner 18, 17 and 15. Each side used 7-10 specials.
+   Gap: three fights; equal settings win or lose by the seed, so a small gain needs more seeds to show.
+2. **A freeze whenever the target is free loses a stand-up spar.** freeze against base, seeds 1, 2, 3 on each side: 2
+   wins, 4 losses, mean score -70.8 (scores -75, 26, 63, -168, -144, -127). Gap: six fights; no chase or escape, where
+   a freeze should matter.
+3. **The fight loop's `dealt` counter reads low.** One spar: side A `dealt` 102 where side B took 274. The spar
+   scores from damage taken. Gap: the cause in the SDK `damage_dealt` events is not found.
 
 ## Server rules the loop follows
 
