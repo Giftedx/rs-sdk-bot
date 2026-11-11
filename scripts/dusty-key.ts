@@ -23,14 +23,16 @@ if (import.meta.main) {
     const q = await openQuest({ cap: 3000, eatAt: 50, lumbridgeOk: false });
     try {
         const z = () => q.pos()?.worldZ ?? 0;
+        // Taverley dungeon's map squares. Another cave (Zanaris, where Lost City ends) is not this dungeon.
+        const inDungeon = () => { const p = q.pos(); return !!p && p.worldX >= 2816 && p.worldX < 2970 && p.worldZ >= 9664 && p.worldZ < 9920; };
         const ladderAt = (at: { x: number; z: number }, re: RegExp) => () => q.findLoc(l => /ladder/i.test(l.name) && Math.max(Math.abs(l.x - at.x), Math.abs(l.z - at.z)) <= 1 && (l.optionsWithIndex ?? []).some((o: any) => re.test(o.text)));
         const npc = (id: number): any => (q.st()?.nearbyNpcs ?? []).filter((n: any) => n.id === id).sort((a: any, b: any) => a.distance - b.distance)[0];
         const ground = (id: number): any => (q.st()?.groundItems ?? []).filter((g: any) => g.id === id).sort((a: any, b: any) => a.distance - b.distance)[0];
         if (q.has(DUSTY_KEY)) await q.end(true, 'dusty key held');
-        if (z() < 9000) {
+        if (!inDungeon()) {
             const there = await walkTargetPersist(q.s, { x: TAV_LADDER.x, z: TAV_LADDER.z + 1, level: 0 });
             if (!there.ok) await q.fail(`route to the Taverley ladder: ${there.reason ?? ''} ${there.detail ?? ''}`);
-            await q.climb('taverley ladder', ladderAt(TAV_LADDER, /climb-down/i), /climb-down/i, () => z() > 9000);
+            await q.climb('taverley ladder', ladderAt(TAV_LADDER, /climb-down/i), /climb-down/i, inDungeon);
         }
         q.milestone('dungeon');
         // The gate is locked from this side without the key: keep the router off it.

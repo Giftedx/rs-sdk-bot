@@ -306,7 +306,8 @@ Ranged it adds is not needed at that point.
   Taverley ladder (1759 at 2884,3397), the gate (2623 at 2924,9803, dusty key 1590), then `BLACK_ENTRY`. The lair has
   no way straight west: a walk from 2895,9793 to 2850,9809 stopped at 2881,9810. The key cannot be traded;
   `scripts/dusty-key.ts` gets it (the Jailer, Velrak's cell, the dialogue): practice from the Ardougne north bank,
-  `RESULT ok dustyKey=1`, 950 ticks, `hpMin=99`.
+  `RESULT ok dustyKey=1`, 950 ticks, `hpMin=99`; from inside Zanaris (3220,9592), 589 ticks. The worker takes only
+  Taverley dungeon's map squares for the dungeon: live, a run that started in Zanaris looked for the Jailer there.
 - **Claim.** One bank-owned trip brings the hides home. **Conditions.** `scripts/black-dragon-camp.ts` without
   `STAGED`: the shared walker to the Falador west bank, then `combatTrip` kind `black` (everything worn and carried
   banked, the bow, 700 arrows, the key, one Varrock teleport's runes and 6 sharks taken), the ground walk to the
@@ -518,6 +519,44 @@ Hitpoints 10 (`fleet/snapshots/` on `fleet-data`).
     sets; the other two took 228-394 ticks. The planner gives the tile to one account (`STRIKE_TILE`, capacity 1).
 - **Evidence.** `.practice/starter/` in the Claude cloud container that ran them.
 - **Gap.** Practice only.
+
+## Magic by a curse over the fence
+
+Nine army accounts hold Magic 1 or 21 and no fire rune (`fleet/snapshots/claude-cloud.json` on `fleet-data`); five of
+them hold no nature rune either. The alchemy band needs fire for every cast, and the Magic Guild in Yanille, which sells
+fire runes, a staff of fire and nature runes, asks Magic 66.
+
+- **Claim.** A stat-lowering spell gives its experience on every cast, hit or miss, and does no damage.
+  **Conditions.** `player_magic.rs2` `pvm_default_spell`: the runes go and the experience comes (`pvm_spell_cast`)
+  before the hit roll. Curse (Magic 19) costs 1 body, 2 water and 3 earth runes for 725 experience at xpRate 25; Weaken
+  (11) and Confuse (3) cost 1 body, 3 water and 2 earth for 525 and 325; Wind Strike (1) 1 mind and 1 air for 137.
+  On this server's curve Magic 66 is 100,775 experience: 135 curses from Magic 21, 144 casts from Magic 1 (2 strikes,
+  then Confuse, Weaken and Curse), at most 142 body, 291 water and 420 earth runes.
+- **Claim.** A cast that hits closes the target to the same spell until the stat grows back, one level every 100
+  ticks. **Conditions.** `pvm_debuff_allowed` refuses a cast on a monster whose stat is under its base ("Your foe's
+  defence has already been weakened."), with no rune taken; a monster regrows one level every `regenrate` ticks
+  (engine `NpcType`, default 100). A cow's magic defence roll is 430 (level 1, bonus -21), so with no armour 9 casts
+  in 10 hit at Magic 21. Practice, 40 curses on one cow with no armour: 12 cast, 28 refused, 282 ticks.
+- **Claim.** From the tile south of the Ardougne cow field's fence a cast reaches the cows and no cow reaches the
+  caster. **Conditions.** 2664,3339, 47 tiles from the north bank. The field holds ten cows (`maps/m41_52.jm2`); a
+  cow's footprint comes no nearer than two tiles to the tile (`scripts/splash-train.test.ts` recomputes it with the
+  engine's step rule). The run casts at the nearest cow in reach and in sight that it has not cast at or been refused
+  on for 25 ticks, and waits when there is none. Practice, no armour, hitpoints 99 of 99 in every run:
+
+  | Run | Accounts | Magic | Casts | Refused | Ticks | Ticks per cast |
+  |---|---|---|---|---|---|---|
+  | `j` | 1 | 21 -> 66 | 135 | 218 | 2,085 | 15.4 |
+  | `i` | 2 at once | 21 -> 66 | 135 | 453 | 4,011 | 29.7 |
+  | `h` | 2 at once | 1 -> 65 (tick cap 4,000) | 138 | 458 | 4,043 | 29.3 |
+
+  The ticks are the whole job: the bank, the walk both ways and the casts. Two accounts at once make the same casts
+  per tick as one: the cows' regrowth is the limit, about one cast in ten ticks for the field.
+- **Evidence.** `.practice/splash/run.ts` (`h`, `i`, `j`), `.practice/splash/probe2.ts` (the fence tile, ranges 5 to
+  9), `.practice/splash/probe.ts` (a cow with no armour) in the Claude cloud container that ran them.
+- **Gap.** Practice only, one run per condition. More than two accounts at once is not measured. With a platebody,
+  platelegs, a full helm and a kiteshield of any metal the magic attack bonus is -65 and no cast hits (5 runs, 152
+  casts, none refused, about 5 ticks a cast inside the field); the army owns none of those pieces, and the Grand
+  Exchange lists one platebody.
 
 ## Magic and Prayer from the army's home bank
 

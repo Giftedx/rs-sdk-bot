@@ -1256,10 +1256,14 @@ Findings:
   chain `drunkmonk,murder,zanaris` ran Monk's Friend in 252 quest ticks (Woodcutting 56) and Murder Mystery in 341
   (Crafting 51), gathering their items itself (a jug of water and logs from spawns, 3 pots of flour from a shop, the
   knife for Lost City from the Seers' Village spawn). Evidence: `.practice/lostcity/run.ts` (`c`).
-- **The way out of Zanaris.** The quest ends inside (3220,9592). From there the shared walker found no route to the
-  Ardougne north bank (304 idle ticks, "no route to 2619,3332,0") and reached the swamp shed in 5 ticks by the exit
-  beside the entrance. `walkWithFerryFallback` now takes that step first: the same walk arrived in 740 ticks, 302 of
-  them the planner's failed direct plan at the shed. Evidence: `.practice/lostcity/exit.ts`; `scripts/walk-to.test.ts`.
+- **The way out of Zanaris.** The quest completes inside (3220,9592). From there the shared walker found no route to
+  the Ardougne north bank (304 idle ticks, "no route to 2619,3332,0") and reached the swamp shed in 5 ticks by the
+  exit beside the entrance. `walkWithFerryFallback` takes that step first: the same walk arrived in 740 ticks, 302 of
+  them the planner's failed direct plan at the shed. The quest script itself ends with that step, so the account logs
+  out at the shed (3201,3169) and a next job with its own walker starts above ground: practice
+  `RESULT ok qp=3 ... at=3201,3169,0 ticks=1086`, milestone `shed` 9 ticks after the quest. Live (claude-cloud,
+  TrouserSnake): `RESULT ok quest-chain done=zanaris`, 774 quest ticks, `hpMin=83`, no food eaten. Evidence:
+  `.practice/lostcity/exit.ts`, `.practice/lostcity/run.ts` (`exit`); `scripts/walk-to.test.ts`.
 
 Planner: new row `quest-zanaris` (qp 3, 595 / 796 MEASURED, the same under `rival-dialogue-burst`). `quests-rest`:
 72 -> 69 QP, 31 -> 30 quests, one medium class less: 50,600 / 76,200 -> 49,700 / 74,900 (burst 46,795 / 70,470 ->
