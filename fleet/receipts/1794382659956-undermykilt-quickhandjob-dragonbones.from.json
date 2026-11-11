@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794382659956-undermykilt-quickhandjob-dragonbones",
  "account": "UnderMyKilt",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 22,
  "claim": "583b2475-9762-4a6c-844c-c6dc3a4712dd",
- "count": 0,
- "ok": false,
- "at": 1794382666589,
- "detail": "trade claimed"
+ "count": 22,
+ "ok": true,
+ "at": 1794382697489,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 22,
+  "after": 0
+ },
+ "bank": {
+  "count": 22,
+  "at": 1794382687507
+ },
+ "logout": {
+  "attemptId": "1794382666591-0000026454-0000000001",
+  "at": 1794382697483,
+  "sha256": "51badc502abba1608c76dc22e5d5e4fecae8011d3c88cc02d4927455fd0b0c5c"
+ },
+ "screen": true
 }
