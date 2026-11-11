@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794381138519-knightrider-thefullmonty",
+ "account": "KnightRider",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 52147,
+ "claim": "62ca8028-2f4c-4e97-9b58-61cd9912db27",
+ "count": 0,
+ "ok": false,
+ "at": 1794381142960,
+ "detail": "trade claimed"
+}
