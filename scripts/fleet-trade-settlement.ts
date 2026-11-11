@@ -80,8 +80,8 @@ export function tradeSettlement(order: Order, receipts: readonly Receipt[], now:
 //   item and count, one has the giver's settled receipt and the taker's failed one, the other the reverse. Together
 //   they are one transfer: the giver gave once and the taker took once. `receipts` are the two settled ones.
 // A receipt that is not terminal (`prepared`, or `reconcile`) keeps its trade claim held. Fleet sync releases a claim
-// for a terminal receipt, and for a dropped session whose partner's failed receipt proves nothing moved
-// (scripts/fleet-sync.ts droppedTradeClaims); any other is released by the hand procedure in the README, after
+// for a terminal receipt, and for a dropped session whose partner's failed receipt proves nothing moved or whose
+// partner took no claim (scripts/fleet-sync.ts droppedTradeClaims); any other is released by the hand procedure in the README, after
 // someone reconciled the account. Such a receipt whose claim is no longer held counts as no receipt here.
 // `claimHeld` takes the receipt's claim nonce; without it every such receipt counts as still claimed.
 export type WindowClosure = { state: 'failed'; receipts: [] } | { state: 'settled'; receipts: [TradeReceipt, TradeReceipt] };

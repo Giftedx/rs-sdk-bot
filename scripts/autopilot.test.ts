@@ -359,6 +359,26 @@ test('a failed item order stops new orders for that pair for a day; coin orders 
     expect(failedSends([order('b', 'Mind rune', now - 60_000)], [], now).size).toBe(0);
 });
 
+import { silentSides } from './autopilot';
+test('a side whose latest closed order its giver never answered gives no kit until it answers one', () => {
+    const now = 10 * 3600_000, sideOf = (n: string) => ({ far: 'local', far2: 'local', near: 'cloud' } as Record<string, string>)[n.toLowerCase()];
+    const order = (id: string, from: string, end: number) => ({ id, server: 's', from, to: 'Needy', item: 'Bones', count: 37, start: end - 40 * 60_000, end });
+    const gave = (id: string) => ({ id, role: 'from', account: 'Far', side: 'local', ok: false, count: 0, at: now, detail: '' });
+    const took = (id: string) => ({ ...gave(id), role: 'to', account: 'Needy', side: 'cloud' });
+    // The taker's receipt alone does not answer for the giver.
+    expect([...silentSides([order('a', 'Far', now - 1000)], [took('a')] as any, sideOf, now)]).toEqual(['local']);
+    expect(silentSides([order('a', 'Far', now - 1000)], [gave('a')] as any, sideOf, now).size).toBe(0);
+    // The latest closed order decides: an answered one after a silent one brings the side back, and the reverse.
+    expect(silentSides([order('a', 'Far', now - 5000), order('b', 'Far2', now - 1000)], [gave('b')] as any, sideOf, now).size).toBe(0);
+    expect([...silentSides([order('a', 'Far', now - 5000), order('b', 'Far2', now - 1000)], [gave('a')] as any, sideOf, now)]).toEqual(['local']);
+    // An order still in its window, one older than the retry window and an account of no listed side say nothing.
+    expect(silentSides([order('a', 'Far', now + 1000)], [], sideOf, now).size).toBe(0);
+    expect(silentSides([order('a', 'Far', now - SEND_RETRY_MS - 1)], [], sideOf, now).size).toBe(0);
+    expect(silentSides([order('a', 'Stranger', now - 1000)], [], sideOf, now).size).toBe(0);
+    // Each side by its own orders.
+    expect([...silentSides([order('a', 'Far', now - 1000), order('b', 'Near', now - 1000)], [gave('b')] as any, sideOf, now)]).toEqual(['local']);
+});
+
 test('a kit buy with no RESULT yet is running and stays as it is', () => {
     const job = { enabled: true, template: 'kit-buy:army-strike-magic-21' }, assigned = { template: job.template, offset: 0 };
     expect(kitBuyRunning(job, assigned, () => ['SUPERVISE start', 'LEDGER ticks=40 xp=0 move=30 idle=10'])).toBe(true);

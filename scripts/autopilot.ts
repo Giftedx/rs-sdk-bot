@@ -126,6 +126,21 @@ export function failedSends(orders: readonly Order[], receipts: readonly Receipt
     }
     return out;
 }
+// Sides that answer no orders: the giver of the side's latest closed order (window over, in the last `windowMs`) wrote
+// no receipt. A giver writes one when it takes its trade claim (scripts/fleet-trade.ts), so none means the side's
+// fleet agent ran no trade for it: its plan may be fresh while its trades do not run. The planner asks such a side for
+// nothing: a taker waits out the order's lead and window with no job for each ask (live claude-cloud: two army
+// accounts each stood with no job for a local giver that never logged in). An order the side later answers brings it
+// back.
+export function silentSides(orders: readonly Order[], receipts: readonly Receipt[], sideOf: (account: string) => string | undefined, now: number, windowMs = SEND_RETRY_MS): Set<string> {
+    const latest = new Map<string, Order>();
+    for (const o of orders) {
+        const side = sideOf(o.from);
+        if (!side || now < o.end || now - o.end > windowMs) continue;
+        if (!latest.has(side) || latest.get(side)!.end < o.end) latest.set(side, o);
+    }
+    return new Set([...latest].filter(([, o]) => !receipts.some(r => r?.id === o.id && r.role === 'from')).map(([side]) => side));
+}
 // Item ids a kit buy offered for and got none of: its failed RESULT holds "acquired":0 and the offer's "itemId"
 // (scripts/buy-owned-ge-item.ts refunds the whole offer). That says the Grand Exchange has no seller under the price
 // cap, not that the buy job is broken: the pair is not retired, and the item leaves the market for a day, so the next
@@ -347,10 +362,10 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     // Kit donors: this side's free accounts (the coin donors' rule), then each other side's, on the same server.
     const free = (n: string) => owners.get(n.toLowerCase())?.side === side && n.toLowerCase() !== 'haggis' && ![busy, keep, open].some(s => s.has(n.toLowerCase()));
     const stock: Stock[] = listed.filter(free).map(n => { const a = accountFrom(n, side, observed(n), id => byId.get(id)); return { name: a.name, side, items: a.items }; });
-    const snapshotDir = join(fleetDir, 'snapshots');
+    const snapshotDir = join(fleetDir, 'snapshots'), silent = silentSides(orders, receipts, n => owners.get(n.toLowerCase())?.side, now);
     for (const f of existsSync(snapshotDir) ? readdirSync(snapshotDir).filter(f => f.endsWith('.json')) : []) {
         const other = f.slice(0, -'.json'.length);
-        if (other !== side) stock.push(...sideStock(other, readJson(join(snapshotDir, f), null), readJson(join(fleetDir, 'plans', f), null), open, now, SIDE_STOCK_MAX_AGE_MS, id => byId.get(id))
+        if (other !== side && !silent.has(other)) stock.push(...sideStock(other, readJson(join(snapshotDir, f), null), readJson(join(fleetDir, 'plans', f), null), open, now, SIDE_STOCK_MAX_AGE_MS, id => byId.get(id))
             .filter(s => owners.get(s.name.toLowerCase())?.side === other));
     }
     const market: Record<string, { id: number; name: string; limit: number }> = {};
