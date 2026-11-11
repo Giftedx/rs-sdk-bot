@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794373868324-abracadickra-knightstick-feather",
  "account": "Knightstick",
  "partner": "Abracadickra",
@@ -10,8 +10,21 @@
  "item": "Feather",
  "requested": 50,
  "claim": "fdc33476-a971-41cb-a13e-7b0d37a8857a",
- "count": 0,
- "ok": false,
- "at": 1794373871865,
- "detail": "trade claimed"
+ "count": 50,
+ "ok": true,
+ "at": 1794374102403,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 50
+ },
+ "bank": {
+  "count": 50,
+  "at": 1794374100663
+ },
+ "logout": {
+  "attemptId": "1794373871867-0000026902-0000000001",
+  "at": 1794374102395,
+  "sha256": "0c1fa712698fd72308a00b2315337e06fb388ff4b269264f3e117669641ce920"
+ }
 }
