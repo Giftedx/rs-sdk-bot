@@ -509,6 +509,11 @@ const EXTRA_CASES: BenchCase[] = [
       presetConfig: {...PRESETS[preset]!, skills: {...PRESETS[preset]!.skills, ...before}},
       ...(stage ? {known: `a stage of the quest: run it with --set VK_FROM=${stage}`} : kit === 'zerker' ? {known: 'with Attack 7 the third form of Koschei outlasts its 1,000 ticks'} : {})};
   })),
+  // Fletching 1 to 25 for The Fremennik Trials, the planner's band army-fletch-25: 210 headless arrows from banked
+  // arrow shafts and feathers (25 XP an arrow at the server's rate; level 25 is 4,863 XP), 100 of each kept. The
+  // worker starts at the bank: 25 tiles away it ends "bank did not open", so the band walks there first.
+  {key: 'extra:fletch-headless-25', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['fletching', 'arrows', '3000', 'headless', 'MAX_MAKE=210', 'SHAFT_RESERVE=100', 'FEATHER_RESERVE=100', 'BANK_PACK=1'],
+    pass: s => ok(s) && / made=210 /.test(s) && / xpGain=5250 /.test(s), presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Fletching: 1}, bank: [{id: 52, count: 310}, {id: 314, count: 310}]}},
   // The two Magic trainers of the planner's army bands, from the Ardougne north bank. Alchemy: Magic 54 to 56 on
   // feathers with a staff of fire in the bank, so the run casts Low Alchemy and then High Alchemy. The curse trainer:
   // Magic 19 to 21 over the fence of the cow field.

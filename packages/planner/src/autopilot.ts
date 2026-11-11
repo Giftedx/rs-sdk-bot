@@ -73,6 +73,9 @@ export type Template = {
     shopKit?: true;
     // A goal band for accounts with a PK build only (buildBand): no other army account takes it.
     buildOnly?: true;
+    // A band that serves one quest of a build's route: only an account with that quest on its route and not done
+    // takes it (buildBand).
+    route?: string;
 };
 // One missing kit line: `count` more units of any one item of `of`.
 export type Lack = { of: readonly string[]; count: number };
@@ -153,6 +156,10 @@ export const LOST_CITY_FOOD = ['lobster', 'swordfish', 'shark'] as const;
 // The Fremennik Trials for a build with a Fremennik helm, just after Lost City. One account at a time: Koschei and
 // the Draugen are single fights. FREMENNIK_MEALS: the four sharks of the quest pack.
 export const FREMENNIK_BAND = QUEST_BAND + 0.05, FREMENNIK = 'quest:rellekka', FREMENNIK_PLACES = 1, FREMENNIK_MEALS = 4;
+// Fletching 25 for the lyre of The Fremennik Trials: FLETCH_MAKE headless arrows give 25 XP each at the server's
+// rate, 5,250 XP against the 4,863 of level 25. The worker keeps FLETCH_KEEP shafts and feathers in the bank
+// (scripts/fletch-arrows.ts planHeadless), so the band asks both amounts of each.
+export const FLETCH_TO = 25, FLETCH_MAKE = 210, FLETCH_KEEP = 100, ARMY_BANK = { x: 2615, z: 3332 } as const;
 // Lost City for an account with a Defence 1 build: the levels, the food and the prayer potions of the practice case
 // `extra:lostcity-pure-pray` (scripts/measure/aio-bench-cases.ts). Four seeds: 844 to 1,174 ticks, no food eaten, lowest
 // Hitpoints 73 of 93, XP in Strength and Hitpoints only (research/pvp-fight-loop.md, "Quest routes of the builds").
@@ -270,7 +277,8 @@ export function kitLacks(a: Acct, needs: Template['needs'], can: (item: string) 
     return out;
 }
 // The most of each item any goal band needs to start, by norm() name: a donor keeps that many, so it never gives away
-// its own kit. For `own`, also the batch a band works out for that account (the runes its Magic still casts).
+// its own kit. For `own`, also the batch a band works out for that account (the runes its Magic still casts). A band
+// for build accounts only is left out: its kit (310 arrow shafts and feathers) is not a kit of the donors.
 export function kitReserve(templates: readonly Template[], own?: Acct): Record<string, number> {
     const reserve: Record<string, number> = {};
     const count = (needs: Template['needs']) => {
@@ -278,7 +286,7 @@ export function kitReserve(templates: readonly Template[], own?: Acct): Record<s
         for (const i of needs?.pieces?.of ?? []) reserve[norm(i)] = Math.max(reserve[norm(i)] ?? 0, needs!.pieces!.count);
         for (const alt of needs?.anyOf ?? []) count(alt);
     };
-    for (const t of templates) if (t.tier === 'goal') {
+    for (const t of templates) if (t.tier === 'goal' && !t.buildOnly) {
         count(t.needs);
         if (own && t.batchFor) for (const [i, n] of Object.entries(t.batchFor(own))) reserve[norm(i)] = Math.max(reserve[norm(i)] ?? 0, n);
     }
@@ -344,6 +352,7 @@ export function buildBand(t: Template, a: Acct, build?: Readonly<Record<string, 
     if (t.tier !== 'goal') return t;
     if (t.quest) return quests.some(q => norm(q) === norm(t.quest!.name)) && Object.entries(before ?? {}).every(([skill, level]) => skill === 'Hitpoints' || (a.skills[skill] ?? 1) <= level) ? t : null;
     if (!t.trains) return null;
+    if (t.route && !(quests.some(q => norm(q) === norm(t.route!)) && !questDone(a, t.route))) return null;
     const open = quests.some(q => !questDone(a, q)), cap = build[t.trains.skill];
     const level = cap !== undefined && open && before?.[t.trains.skill] !== undefined ? Math.min(cap, before[t.trains.skill]!) : cap;
     const combat = t.script === 'scripts/gather-combat.ts';
@@ -1135,13 +1144,13 @@ export function catalogue(): Template[] {
             pieces: { of: LOST_CITY_FOOD, count: GRAIL_MEALS } }, kitFirst: true,
     };
     // The Fremennik Trials for a build with a Fremennik helm (BUILD_QUESTS), through the same chain: Monk's Friend gives
-    // the Woodcutting 40 and Murder Mystery the Crafting 40 that the lyre asks; Fletching 25 has no job, so the band
-    // asks it. The sweep banks what the account wears (scripts/quest-sweep.ts BARE) and takes the quest pack: 5,300
+    // the Woodcutting 40 and Murder Mystery the Crafting 40 that the lyre asks, and the band asks Fletching 25. The sweep banks what the account wears (scripts/quest-sweep.ts BARE) and takes the quest pack: 5,300
     // coins, a beer, a tinderbox, a rune axe, a knife, a cabbage, a potato, an onion, a raw shark and four sharks. The
     // quest script fights the Draugen and Koschei unarmed with the style that trains only Strength, under the prayer
     // guard's Protect from Melee. Practice at the levels of `range-tank` and `tank-range` before the quest (Attack
     // 68, Strength 60 to 62): 3,408 to 3,570 ticks in 8 runs, no death, Attack and Defence 60 from the reward
-    // (research/pvp-fight-loop.md, "Quest routes of the builds"). An account with Attack 7 loses Koschei's third form
+    // (research/pvp-fight-loop.md, "Quest routes of the builds"). The band army-fletch-25 brings the Fletching. An
+    // account with Attack 7 loses Koschei's third form
     // to its 1,000 tick limit, so the band asks Attack 60. A pilot.
     const fremennik: Template = {
         id: 'army-quest-fremennik', family: 'aio:quester:mode:chain', script: 'scripts/aio.ts', args: ['quester', 'chain', 'drunkmonk,murder,viking'],
@@ -1149,6 +1158,18 @@ export function catalogue(): Template[] {
         goal: "complete Monk's Friend, Murder Mystery and The Fremennik Trials to wear a Fremennik helm", tier: 'goal', band: FREMENNIK_BAND,
         quest: { name: 'The Fremennik Trials', unlocks: [] }, resources: [FREMENNIK], yields: () => [],
         needs: { skills: { Attack: 60, Strength: 60, Prayer: 43, Hitpoints: 90, Fletching: 25 }, items: { coins: 6000 }, pieces: { of: LOST_CITY_FOOD, count: FREMENNIK_MEALS } }, kitFirst: true,
+    };
+    // Fletching 25 for that quest, just before it: a walk to the Ardougne north bank, then headless arrows from banked
+    // arrow shafts and feathers with the fletching worker (scripts/fletch-arrows.ts, mode headless), which does not
+    // walk to a bank itself. The Grand Exchange lists no arrow shafts and no logs, so the kit comes from a donor: the
+    // sides hold about 42,000 shafts and 74,000 feathers in their banks. Practice: 210 arrows in 26 ticks, 5,250 XP
+    // (bench case extra:fletch-headless-25). A pilot.
+    const fletch: Template = {
+        id: 'army-fletch-25', family: 'fletch', script: 'scripts/chain.ts', pilot: true, buildOnly: true, route: 'The Fremennik Trials', role: 'fletching',
+        args: [`scripts/walk-to.ts ${ARMY_BANK.x} ${ARMY_BANK.z}`, `scripts/fletch-arrows.ts 3000 headless MAX_MAKE=${FLETCH_MAKE} SHAFT_RESERVE=${FLETCH_KEEP} FEATHER_RESERVE=${FLETCH_KEEP} BANK_PACK=1`],
+        env: { ROUNDS: '1' }, goal: 'make headless arrows to the Fletching 25 that The Fremennik Trials ask', tier: 'goal', band: FREMENNIK_BAND - 0.01, repeats: false,
+        trains: { skill: 'Fletching', to: FLETCH_TO, unlocks: [fremennik.id] }, yields: () => [],
+        needs: { items: { 'arrow shaft': FLETCH_MAKE + FLETCH_KEEP, feather: FLETCH_MAKE + FLETCH_KEEP } },
     };
     const prayerField: Template = {
         id: 'army-trooper-prayer-99', family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'],
@@ -1237,6 +1258,7 @@ export function catalogue(): Template[] {
         arrowsLowe,
         ranged,
         lostCity,
+        fletch,
         fremennik,
         holyGrail,
         dustyKey,

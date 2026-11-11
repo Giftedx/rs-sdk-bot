@@ -559,7 +559,14 @@ the route, and `buildBand` passes a quest band only when its quest is on that ro
 over its level before the route. While a quest of the route is open, a training band stops at the level before the
 route. Every other quest band stays refused (Holy Grail: Prayer 80 and Defence 85). The planner has two quest bands
 for a build: `army-quest-lostcity` and `army-quest-fremennik` (the chain `drunkmonk,murder,viking`; a pilot; for
-build accounts only; it asks Attack 60, Strength 60, Prayer 43, Hitpoints 90 and Fletching 25).
+build accounts only; it asks Attack 60, Strength 60, Prayer 43, Hitpoints 90 and Fletching 25). The band
+`army-fletch-25` brings that Fletching level to a build with the quest on its route: a walk to the Ardougne north
+bank, then 210 headless arrows from 310 banked arrow shafts and 310 feathers with the fletching worker
+(`scripts/fletch-arrows.ts`, mode `headless`). Practice: 210 arrows in 26 ticks and 5,250 XP, over the 4,863 of
+level 25 (`extra:fletch-headless-25`, one run). The worker does not walk: 25 tiles from the bank it ended "bank did
+not open", so the band has the walk step. The Grand Exchange lists no arrow shafts and no logs. The bank snapshots
+of the sides hold 42,000 arrow shafts (`local` 41,880) and 74,670 feathers, and the kit tier orders the band's
+items from a donor account.
 
 Evidence: `scripts/pk-kits.test.ts` ("every kit has a quest route, and the planner holds the route of every build")
 fails when a kit wears an item whose quest gives a level over the kit, and when `BUILD_QUESTS` differs from
@@ -570,11 +577,13 @@ Gaps:
 
 - `kitRoute` counts quest rewards and the fights of `FIGHT_XP`. Underground Pass, Regicide and the Mage Arena have
   fights with no style rule, and the Mage Arena fight gives Magic XP to `pure-rock`, which has Magic 80.
-- The planner has no band for Underground Pass, Regicide or the Mage Arena, and no quest script for the Mage Arena,
+- The planner has no band for Underground Pass, Regicide or the Mage Arena, and no script for the Mage Arena (a
+  search of `scripts`, `scripts/generated` and `packages` for Kolodion, the arena and the god capes finds the PK
+  kits and the knowledge tables only),
   so `pure-iban`, `pure-hally`, `pure-rock` and `pure-god` get those quests from no job. `zerker` gets The Fremennik
   Trials from no job: the band asks Attack 60.
-- Fletching 25 for The Fremennik Trials has no job in the planner. The Grand Exchange lists no logs, and a knife
-  costs 93,848 coins there; a general store sells the knife.
+- The band `army-fletch-25` has no run of its two steps together, and no live run. One account holds 41,640 of the
+  42,000 arrow shafts.
 - No live run of `army-quest-fremennik`, and no practice run of the chain `drunkmonk,murder,viking` through the quest
   sweep from an army account's state: the cases start at Brundt with the pack in hand.
 - The quest points that a quest asks (Dragon Slayer 32, Heroes' Quest 55, Legends' Quest 107) are not in the route:
