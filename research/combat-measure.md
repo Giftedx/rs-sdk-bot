@@ -328,6 +328,25 @@ Ranged it adds is not needed at that point.
 - **Evidence.** `.practice/arrows/shop.ts` and its `s3`, `s4`, `s5` logs in the Claude cloud container that ran them;
   `packages/planner/test/autopilot.test.ts` (the band order, one account at the shop).
 - **Gap.** Practice only. The Ranging Guild shelf (Ranged 40) and Hickton's are not in the planner.
+- **Claim.** A second account short of arrows buys them at Lowe's in Varrock (`army-arrows-lowe`:
+  `scripts/shop-buyer.ts <bot> lowe 2500` with `ITEMS='iron arrow|bronze arrow' STOCK_TARGET=1000 BANK_AT=0`), and
+  the Ranged template then walks back from Varrock East and trains with the iron arrows.
+- **Conditions.** Practice. The same account at the Ardougne north bank, three at once on one shelf (bronze 2,000,
+  iron 1,500). Each shop run was followed by the Ranged template at a 1,600-tick cap.
+
+  | Run | Bought | Coins | Shop run ticks | Stop | Ranged run after it |
+  |---|---|---|---|---|---|
+  | l1 | 1,107 | 10,797 | 1,431 | stock-wait | ok, 29 kills, Ranged 1 -> 59, 114 iron arrows lost, 233 taken back |
+  | l2 | 1,110 | 10,879 | 1,533 | cap (1,500) | ok, 33 kills, Ranged 1 -> 61, 109 lost, 240 taken back |
+  | l3 | 1,327 | 12,267 | 1,506 | stock-wait | ok, 24 kills, Ranged 1 -> 57, 147 lost, 213 taken back |
+
+  The three emptied the shelf. Each trip out stood about 300 ticks while the world loaded, 100 on each ferry and 400
+  at the Port Sarim dock, where the first plan to Varrock East found no route and the second did
+  (`WALK_RETRY try=1 ... no route to 3253,3420,0`). The trip back took 842-916 ticks, inside the Ranged run's food
+  stage.
+- **Evidence.** `.practice/arrows/shop2.ts` and its `l1`-`l3` logs in the Claude cloud container that ran them;
+  `packages/planner/test/autopilot.test.ts` (one account at each shop).
+- **Gap.** Practice only. Why the first plan from the Port Sarim dock to Varrock East fails is not found.
 
 ## Sharing stock between army accounts
 

@@ -531,11 +531,11 @@ const BOWS: readonly (readonly [string, number])[] = [['shortbow', 1], ['longbow
 const ARROWS: readonly (readonly [string, number])[] = [['bronze arrow', 1], ['iron arrow', 1], ['steel arrow', 5], ['mithril arrow', 20], ['adamant arrow', 30], ['rune arrow', 40]];
 // A staff that stands for the fire runes of a cast.
 export const FIRE_STAFFS = ['staff of fire', 'fire battlestaff', 'mystic fire staff'] as const;
-// Kit items a goal-tier shop job brings (army-staff-zaff, army-arrows-ardy). A kit line of these that no market sells
+// Kit items a goal-tier shop job brings (army-staff-zaff, army-arrows-ardy, army-arrows-lowe). A kit line of these that no market sells
 // does not hold back the market buy of the band's other lines: the shop job follows once those are held.
-export const SHOP_SUPPLIED: ReadonlySet<string> = new Set(['fire rune', ...FIRE_STAFFS, 'bronze arrow']);
+export const SHOP_SUPPLIED: ReadonlySet<string> = new Set(['fire rune', ...FIRE_STAFFS, 'bronze arrow', 'iron arrow']);
 // ARROW_LOW: the arrows of one kind the Ranged band needs to start. ARROW_STOCK: what a shop run brings the account up to.
-export const ARROW_LOW = 100, ARROW_STOCK = 500;
+export const ARROW_LOW = 100, ARROW_STOCK = 500, LOWE_STOCK = 1000;
 // A bow the account's Ranged level wields, with ARROW_LOW arrows of one kind that bow fires.
 export const RANGED_KIT: readonly Needs[] = BOWS.flatMap(([bow, level]) =>
     ARROWS.filter(([, arrowLevel]) => arrowLevel <= level).map(([arrow]) => ({ skills: { Ranged: level }, items: { [bow]: 1, [arrow]: ARROW_LOW } })));
@@ -694,6 +694,17 @@ export function catalogue(): Template[] {
         tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: ['shop:ardy'], yields: () => [],
         needs: { items: { coins: 5000 }, pieces: { of: BOWS.map(([bow]) => bow), count: 1 }, holdsUnder: { 'bronze arrow': ARROW_LOW, 'iron arrow': ARROW_LOW } },
     };
+    // The same need at Lowe's Archery Emporium in Varrock (archeryshop: bronze 2,000 and iron 1,500 in stock, one back
+    // every 10 and 15 ticks). The trip takes the ferries both ways (practice: about 1,300 ticks out, 900 back) and one
+    // run brings up to LOWE_STOCK of each, about ten Ranged runs' worth, where Aemad's shelf holds 500 and then gives
+    // one arrow every 10 ticks. A second account short of arrows goes here while the first holds Aemad's shop.
+    const arrowsLowe: Template = {
+        id: 'army-arrows-lowe', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['lowe', '2500'],
+        env: { ITEMS: 'iron arrow|bronze arrow', STOCK_TARGET: String(LOWE_STOCK), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '21000', COIN_RESERVE: '500', MAX_SPEND: '20000' },
+        role: 'supply', goal: "buy iron and bronze arrows at Lowe's in Varrock for the Ranged band",
+        tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: ['shop:lowe'], yields: () => [],
+        needs: { items: { coins: 25000 }, pieces: { of: BOWS.map(([bow]) => bow), count: 1 }, holdsUnder: { 'bronze arrow': ARROW_LOW, 'iron arrow': ARROW_LOW } },
+    };
     return [
         ...goldfarm,
         ...cows,
@@ -703,6 +714,7 @@ export function catalogue(): Template[] {
         staff,
         prayer,
         arrows,
+        arrowsLowe,
         ranged,
         prayerField,
         { id: 'thieving55', family: 'thieving60', script: 'scripts/generated/thieving60.ts', env: { TARGET: '55', CAP: '2500', CLEAN_FOOD: '1' }, role: 'thieving',
