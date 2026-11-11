@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794425335698-fingersmith-pocketpool-staffoffire",
+ "account": "Fingersmith",
+ "partner": "PocketPool",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "e47fcad7-8a6f-4eb6-846d-5e358325921b",
+ "count": 1,
+ "ok": true,
+ "at": 1794425364417,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794425347544-0000015410-0000000001",
+  "at": 1794425364410,
+  "sha256": "242b30ad80ffe9099696e125f20335215797f3f385b82689e8ead35025df6c39"
+ },
+ "screen": true
+}

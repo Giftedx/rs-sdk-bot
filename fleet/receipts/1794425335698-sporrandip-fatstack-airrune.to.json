@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794425335698-sporrandip-fatstack-airrune",
+ "account": "Fatstack",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 3,
+ "claim": "ce801907-30f7-4362-a55d-744c72256592",
+ "count": 3,
+ "ok": true,
+ "at": 1794425364816,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1794425364105
+ },
+ "logout": {
+  "attemptId": "1794425352137-0000015366-0000000001",
+  "at": 1794425364809,
+  "sha256": "4cc237a827f1c794602a8c3f5bbee795d32bb6a41dac4cd561f7634854f16e46"
+ },
+ "screen": true
+}

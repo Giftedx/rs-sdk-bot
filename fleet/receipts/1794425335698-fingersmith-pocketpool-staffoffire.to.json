@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794425335698-fingersmith-pocketpool-staffoffire",
+ "account": "PocketPool",
+ "partner": "Fingersmith",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "0a930cc2-8ec9-40e5-9f59-118a4609ba73",
+ "count": 0,
+ "ok": false,
+ "at": 1794425354816,
+ "detail": "trade claimed"
+}
