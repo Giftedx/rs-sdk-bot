@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { combatLevel, itemId, kitCost, kitItems, kitOptions, KITS, kitSkills, kitSwitches, kitVarps, trained } from './pk-kits';
 import { KNOBS, readNets, stats, verdict } from './measure/pk-spar-climb';
 import { matrix, readList } from './measure/pk-spar-matrix';
+import { mayRun } from './measure/pk-spar-wait';
 import { benchCases, BUILD_BRACKETS, BUILD_PAIRS } from './measure/aio-bench-cases';
 import { flipped, netRate, sparScore } from './pk-spar';
 import type { FightResult } from './pk';
@@ -58,6 +59,21 @@ test('a swapped pair is turned back to the candidate side, and the matrix groups
     expect(matrix(['a:b', 'a:c', 'a:b'], [{ nets: [10, -4, 20], scores: [250, -120, 30] }, { nets: [0, 6, 10], scores: [-300, 99, 150] }])).toEqual([
         { matchup: 'a:b', fights: 4, kills: 2, deaths: 1, net: 10 }, { matchup: 'a:c', fights: 2, kills: 0, deaths: 1, net: 1 },
     ]);
+    // A case that failed in one seed leaves its places empty: the other cases of the seed still count.
+    const holes = { nets: [] as number[], scores: [] as number[] };
+    holes.nets[1] = 8; holes.scores[1] = 220;
+    expect(matrix(['a:b', 'a:c'], [{ nets: [10, -4], scores: [250, -120] }, holes])).toEqual([
+        { matchup: 'a:b', fights: 1, kills: 1, deaths: 0, net: 10 }, { matchup: 'a:c', fights: 2, kills: 1, deaths: 1, net: 2 },
+    ]);
+});
+
+test('the memory wait asks for the memory of every run that starts at the same time', () => {
+    expect(mayRun(6.3, 0, false)).toBe(true);
+    expect(mayRun(6.3, 0, false, 2)).toBe(false);
+    expect(mayRun(8, 0, false, 2)).toBe(true);
+    expect(mayRun(9, 3, false)).toBe(true);
+    expect(mayRun(9, 3, false, 2)).toBe(false);
+    expect(mayRun(20, 0, true, 2)).toBe(false);
 });
 
 test('each pure has its combat level, stays at Defence 1 and Hitpoints 10, and meets a skiller where the game lets it attack', () => {

@@ -151,6 +151,7 @@ export function flipped(r: SparResult): SparResult {
 }
 
 if (import.meta.main) {
+    const bootMs = Math.round(performance.now());
     const [botA, botB, capArg, ...more] = process.argv.slice(2), env = process.env;
     if (!botA || !botB || more.length % 2) { console.log('RESULT fail usage: bun scripts/pk-spar.ts <bot a> <bot b> [CAP ticks] [<bot a> <bot b> ...]'); process.exit(2); }
     const { openBot, finish } = await import('../packages/core/src/bot');
@@ -208,7 +209,9 @@ if (import.meta.main) {
     const { tickWaits } = await import('../packages/core/src/tick-stream');
     tickWaits.active++;
     // The account of the run logs in first: the bench checks the first START line against that account's start tile.
+    const tFirst0 = Date.now();
     const first = env.SPAR_LOGIN === 'b' ? null as unknown as Session : await openBot(botA, { onStop });
+    const firstMs = Date.now() - tFirst0;
     const pairs: [Session, Session][] = await Promise.all(names.map(async ([x, y], i): Promise<[Session, Session]> => {
         // SPAR_LOGIN=b logs side B in before side A (after the first account, which the bench needs first): the engine
         // gives the earlier login the lower player index, and it acts on that player first in each tick.
@@ -235,7 +238,7 @@ if (import.meta.main) {
         ? flipped(await spar(a, b, options('b', i, 0), options('a', i, 1), undefined, () => halted !== undefined))
         : spar(a, b, options('a', i, 0), options('b', i, 1), undefined, () => halted !== undefined)); }));
     // Where the wall time of the run went: the logins, then the fights.
-    console.log(`SPAR_TIMING loginMs=${t1 - t0} fightMs=${Date.now() - t1} pairs=${pairs.length} ticks=${Math.max(...results.map(r => r.ticks))}`);
+    console.log(`SPAR_TIMING bootMs=${bootMs} firstLoginMs=${firstMs} loginMs=${t1 - t0} fightMs=${Date.now() - t1} pairs=${pairs.length} ticks=${Math.max(...results.map(r => r.ticks))}`);
     for (const r of results) console.log(`SPAR ${JSON.stringify({ scenario: scenarioName, profiles: { a: nameA, b: nameB }, ...r })}`);
     const ok = results.every(sparValid) && halted === undefined, sessions = pairs.flat(), r = results[0]!;
     if (results.length > 1) {

@@ -8,7 +8,7 @@ index ec3ce9f7c..aa345480d 100644
  import { Worker } from 'worker_threads';
  
 diff --git a/server/engine/src/engine/World.ts b/server/engine/src/engine/World.ts
-index 4cc0110..6a3bfd0 100644
+index 4cc0110..ba5e85c 100644
 --- a/server/engine/src/engine/World.ts
 +++ b/server/engine/src/engine/World.ts
 @@ -72,6 +72,9 @@ import UpdateFriendList from '#/network/game/server/model/UpdateFriendList.js';
@@ -43,7 +43,7 @@ index 4cc0110..6a3bfd0 100644
  class World {
      private loginThread = new Worker(new URL('../server/login/LoginThread.ts', import.meta.url));
      private friendThread = new Worker(new URL('../server/friend/FriendThread.ts', import.meta.url));
-@@ -381,9 +399,90 @@ class World {
+@@ -381,9 +399,91 @@ class World {
  
      // ----
  
@@ -57,6 +57,7 @@ index 4cc0110..6a3bfd0 100644
 +    private simStat = { ticks: 0, waitMs: 0, ackTicks: 0, ioTicks: 0, idleTicks: 0, cycleMs: 0 };
 +    simAnchorTick = 0; // SIM_SEED counts ticks from the last login whose name matches SIM_SEED_ANCHOR
 +    private simAwaitAcks(): void {
++        WSClientSocket.endBatch(); // the packets written after processClientsOut() (cleanup, logout) go out before the wait
 +        this.simTickSentAt = performance.now();
 +        const deadline = this.simTickSentAt + SIM_ACK_MS;
 +        const gen = ++this.simGen;
@@ -134,7 +135,7 @@ index 4cc0110..6a3bfd0 100644
              // rs-sdk: cap catch-up at 2 ticks of backlog. Sustained overload (many bots)
              // otherwise makes the world sprint at max speed until the full backlog replays.
              this.nextTick = Math.max(this.nextTick, start - this.tickRate * 2);
-@@ -590,7 +689,8 @@ class World {
+@@ -590,7 +690,8 @@ class World {
  
              // ----
  
@@ -144,7 +145,7 @@ index 4cc0110..6a3bfd0 100644
          } catch (err) {
              if (err instanceof Error) {
                  printError('eep eep cabbage! An unhandled error occurred during the cycle: ' + err.message);
-@@ -748,7 +848,18 @@ class World {
+@@ -748,7 +849,18 @@ class World {
      // - modes
      private processNpcs(): void {
          const start: number = Date.now();
@@ -163,7 +164,7 @@ index 4cc0110..6a3bfd0 100644
              try {
                  npc.turn();
              } catch (err) {
-@@ -2339,6 +2450,7 @@ class World {
+@@ -2339,6 +2451,7 @@ class World {
                      player.teleport(3221, 3219, 0);
                  }
  
@@ -364,6 +365,32 @@ index edee06da3..b469b240a 100644
      }
  
      // available bytes we can read
+diff --git a/server/engine/src/server/ws/WSClientSocket.ts b/server/engine/src/server/ws/WSClientSocket.ts
+index 0274867..70bdb14 100644
+--- a/server/engine/src/server/ws/WSClientSocket.ts
++++ b/server/engine/src/server/ws/WSClientSocket.ts
+@@ -25,7 +25,11 @@ export default class WSClientSocket extends ClientSocket {
+     // login/logout, anything mid-tick - packets go out immediately as before, so their
+     // latency is unchanged. Clients read the socket as a byte stream (ClientStream queues
+     // frames), so framing is not observable.
+-    static batching = false;
++    // Lockstep sim (SIM_LOCKSTEP=1, a local practice engine only): a client cannot act before the tick ends, so every
++    // packet of a tick goes out in one message. World flushes after processClientsOut() and before it waits for the
++    // acks. A spar tick sent about 1000 script packets (varps, sounds, texts), each as its own frame.
++    static readonly simBatchAll = process.env.SIM_LOCKSTEP === '1';
++    static batching = WSClientSocket.simBatchAll;
+     private pending: Uint8Array = new Uint8Array(4096);
+     private pendingLen = 0;
+ 
+@@ -84,7 +88,7 @@ export default class WSClientSocket extends ClientSocket {
+     }
+ 
+     static endBatch(): void {
+-        WSClientSocket.batching = false;
++        WSClientSocket.batching = WSClientSocket.simBatchAll;
+         for (const socket of pendingFlush) {
+             socket.flush();
+         }
 diff --git a/server/engine/src/simseed.ts b/server/engine/src/simseed.ts
 new file mode 100644
 index 000000000..f68277e40
