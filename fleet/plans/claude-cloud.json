@@ -1,17 +1,18 @@
 {
  "side": "claude-cloud",
- "at": 1794402596112,
+ "at": 1794402752726,
  "jobs": [
   {
    "account": "UnderMyKilt",
    "script": "scripts/chain.ts",
    "args": [],
    "env": {},
-   "enabled": false,
+   "enabled": true,
    "standing": false,
    "repeat": false,
    "goal": "hand: Lowe's arrows for the dragon hunt",
-   "role": "hand"
+   "role": "hand",
+   "autopilot": "claude-cloud"
   },
   {
    "account": "TheFullMonty",
