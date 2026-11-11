@@ -1,8 +1,10 @@
 import { expect, test } from 'bun:test';
-import { PLAIN_FOOD, questScript, startEatGuard } from '../src/eat-guard';
+import { PLAIN_FOOD, noGuardScript, startEatGuard, type EatGuardOptions, type EatGuardSession } from '../src/eat-guard';
 import { holdSessionEater, questFoodDefinitions, startQuestSustain } from '../src/sustain';
 
 const SHARK = 385, LOBSTER = 379;
+// The tests of the eat rules run with fightOnly off. The tests at the end of the file cover the default.
+const start = (s: EatGuardSession, o: EatGuardOptions = {}) => startEatGuard(s, { fightOnly: false, ...o });
 const food = (id: number, slot: number, count = 1) => ({ id, slot, count, name: `food ${id}`, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] });
 const giant = { index: 3, id: 117, hp: 35, optionsWithIndex: [{ text: 'Attack', opIndex: 2 }] };
 const attack = { type: 'interactNpc', npcIndex: 3, optionIndex: 2 };
@@ -65,7 +67,7 @@ function world(init: { hp?: number; max?: number; inventory?: any[] } = {}) {
 
 test('eats when a hit takes Hitpoints to the eat level', () => {
     const { w, s, advance, hit } = world();
-    const guard = startEatGuard(s);
+    const guard = start(s);
     advance(3);
     hit(50);
     advance(3);
@@ -80,14 +82,14 @@ test('eats when a hit takes Hitpoints to the eat level', () => {
 test('an account with low Hitpoints and no damage keeps its food and its open window', () => {
     for (const hp of [30, 20, 3]) {
         const { w, s, advance } = world({ hp });
-        startEatGuard(s);
+        start(s);
         w.window = true;
         advance(300);
         expect(w.eaten).toBe(0);
         expect(w.windowsClosed).toBe(0);
     }
     const { w, s, advance, hit } = world({ hp: 20 });
-    const guard = startEatGuard(s);
+    const guard = start(s);
     advance(300);
     hit(1);
     advance(2);
@@ -102,7 +104,7 @@ test('no item outside the plain food list is eaten, at any Hitpoints level', () 
     for (let from = 0; from < others.length; from += 28) {
         const inventory = others.slice(from, from + 28).map((id, slot) => food(id, slot));
         const { w, s, advance, hit } = world({ hp: 60, inventory });
-        const guard = startEatGuard(s);
+        const guard = start(s);
         for (let i = 0; i < 60; i++) { hit(1); advance(); }
         expect(w.hp).toBe(1);
         expect(w.eaten).toBe(0);
@@ -115,7 +117,7 @@ test('no item outside the plain food list is eaten, at any Hitpoints level', () 
 test('plain food among other items: only the plain food is eaten', () => {
     const CAKE = 1891, CHEESE = 1985, BREAD = 2309, REDBERRY_PIE = 2325, LAVA_EEL = 2149;
     const { w, s, advance, hit } = world({ hp: 60, inventory: [food(CAKE, 0), food(CHEESE, 1), food(BREAD, 2), food(REDBERRY_PIE, 3), food(LAVA_EEL, 4), food(LOBSTER, 5), food(SHARK, 6)] });
-    startEatGuard(s);
+    start(s);
     for (let i = 0; i < 80; i++) { hit(3); advance(); }
     expect(w.eaten).toBe(2);
     expect(w.inventory.map(i => i.id)).toEqual([CAKE, CHEESE, BREAD, REDBERRY_PIE, LAVA_EEL]);
@@ -125,7 +127,7 @@ test('a plain food item with no Eat option is not eaten', () => {
     const drink = { ...food(SHARK, 0), optionsWithIndex: [{ text: 'Drink', opIndex: 1 }] };
     const use = { ...food(SHARK, 1), optionsWithIndex: [{ text: 'Use', opIndex: 1 }] };
     const { w, s, advance, hit } = world({ hp: 60, inventory: [drink, use] });
-    startEatGuard(s);
+    start(s);
     for (let i = 0; i < 40; i++) { hit(1); advance(); }
     expect(w.eaten).toBe(0);
     expect(w.perTick.flat()).toEqual([]);
@@ -133,7 +135,7 @@ test('a plain food item with no Eat option is not eaten', () => {
 
 test('a hold with no release keeps the guard off for the whole session', () => {
     const { w, s, advance, hit } = world({ hp: 60 });
-    const guard = startEatGuard(s);
+    const guard = start(s);
     holdSessionEater(s.sdk);
     for (let i = 0; i < 59; i++) { hit(1); advance(); }
     expect(w.hp).toBe(1);
@@ -145,7 +147,7 @@ test('a hold with no release keeps the guard off for the whole session', () => {
 test('a script that eats an item outside the plain food list also turns the guard off', () => {
     const CAKE = 1891;
     const { w, s, client, advance, hit } = world({ hp: 99, inventory: [food(CAKE, 0), food(SHARK, 1)] });
-    const guard = startEatGuard(s);
+    const guard = start(s);
     hit(10);
     advance(2);
     client.executeBotAction({ type: 'useInventoryItem', slot: 0, optionIndex: 1 });
@@ -156,14 +158,15 @@ test('a script that eats an item outside the plain food list also turns the guar
     expect(w.inventory.map(i => i.id)).toEqual([SHARK]);
 });
 
-test('a script with quest in its file name gets no guard', () => {
-    for (const script of ['scripts/quest-sweep.ts', 'scripts/generated/quest-crest.ts', 'F:\\repo\\scripts\\quest-items-order.ts', 'scripts/aio-quester.ts', 'scripts/Quest-order.ts']) expect(questScript(script)).toBe(true);
-    for (const script of ['scripts/aio-fighter.ts', 'scripts/gather-combat.ts', 'quests/scripts/fishcook.ts', '']) expect(questScript(script)).toBe(false);
+test('a script with quest or microbot in its file name gets no guard', () => {
+    for (const script of ['scripts/quest-sweep.ts', 'scripts/generated/quest-crest.ts', 'F:\\repo\\scripts\\quest-items-order.ts', 'scripts/aio-quester.ts', 'scripts/Quest-order.ts',
+        'scripts/microbot-c-clue-guardian.ts', 'scripts/microbot-b-kbd.ts']) expect(noGuardScript(script)).toBe(true);
+    for (const script of ['scripts/aio-fighter.ts', 'scripts/gather-combat.ts', 'quests/scripts/fishcook.ts', 'microbot/cook-food.ts', '']) expect(noGuardScript(script)).toBe(false);
 });
 
 test('damage older than calmTicks no longer counts', () => {
     const { w, s, advance, hit } = world({ hp: 80, inventory: [] });
-    startEatGuard(s, { calmTicks: 10 });
+    start(s, { calmTicks: 10 });
     advance(2);
     hit(45);
     advance(20);
@@ -177,7 +180,7 @@ test('damage older than calmTicks no longer counts', () => {
 
 test('an open window is closed only at the urgent level', () => {
     const { w, s, advance, hit } = world({ hp: 60 });
-    const guard = startEatGuard(s);
+    const guard = start(s);
     w.window = true;
     advance(2);
     hit(25);
@@ -193,7 +196,7 @@ test('an open window is closed only at the urgent level', () => {
 
 test('an interaction that is not an attack is held until the player stands idle', () => {
     const { w, s, client, advance, hit } = world({ hp: 60 });
-    startEatGuard(s);
+    start(s);
     client.executeBotAction({ type: 'interactLoc', locId: 2090, optionIndex: 1 });
     w.anim = 625;
     advance(2);
@@ -208,7 +211,7 @@ test('an interaction that is not an attack is held until the player stands idle'
 
 test('the attack is sent again in the tick of the eat', () => {
     const { w, s, client, advance, hit } = world({ hp: 60 });
-    const guard = startEatGuard(s);
+    const guard = start(s);
     client.executeBotAction({ ...attack });
     advance(2);
     hit(25);
@@ -222,7 +225,7 @@ test('the attack is sent again in the tick of the eat', () => {
 
 test('an attack on a dead target is not sent again', () => {
     const { w, s, client, advance, hit } = world({ hp: 60 });
-    const guard = startEatGuard(s);
+    const guard = start(s);
     client.executeBotAction({ ...attack });
     advance(2);
     w.npcs = [];
@@ -234,7 +237,7 @@ test('an attack on a dead target is not sent again', () => {
 
 test('under constant damage the server refuses no eat', () => {
     const { w, s, advance, hit } = world({ hp: 30, inventory: Array.from({ length: 20 }, (_, i) => food(LOBSTER, i)) });
-    const guard = startEatGuard(s);
+    const guard = start(s);
     for (let i = 0; i < 40; i++) { hit(5); advance(); }
     expect(w.tooSoon).toBe(0);
     expect(w.eaten).toBeGreaterThan(10);
@@ -244,7 +247,7 @@ test('under constant damage the server refuses no eat', () => {
 
 test('an eat that the server dropped is counted and sent again', () => {
     const { w, s, advance, hit } = world({ hp: 60 });
-    const guard = startEatGuard(s);
+    const guard = start(s);
     advance(2);
     w.delayed = true;
     hit(25);
@@ -259,7 +262,7 @@ test('an eat that the server dropped is counted and sent again', () => {
 
 test('a script that eats on its own turns the guard off', () => {
     const { w, s, client, advance, hit } = world({ hp: 99 });
-    const guard = startEatGuard(s);
+    const guard = start(s);
     hit(10);
     advance(2);
     client.executeBotAction({ type: 'useInventoryItem', slot: 0, optionIndex: 1 });
@@ -273,7 +276,7 @@ test('a script that eats on its own turns the guard off', () => {
 
 test('a script eat in the food delay of a guard eat is sent when the delay ends', () => {
     const { w, s, client, advance, hit } = world({ hp: 60 });
-    const guard = startEatGuard(s);
+    const guard = start(s);
     advance(2);
     hit(50);
     advance(2);
@@ -292,7 +295,7 @@ test('a script eat in the food delay of a guard eat is sent when the delay ends'
 
 test('a late script eat is dropped when its slot holds another item', () => {
     const { w, s, client, advance, hit } = world({ hp: 60 });
-    startEatGuard(s);
+    start(s);
     advance(2);
     hit(50);
     advance(2);
@@ -304,7 +307,7 @@ test('a late script eat is dropped when its slot holds another item', () => {
 
 test('a script input on an item that is not food does not turn the guard off', () => {
     const { w, s, client, advance, hit } = world({ hp: 60, inventory: [{ id: 995, slot: 0, count: 5, name: 'Coins', optionsWithIndex: [{ text: 'Use', opIndex: 1 }] }, food(SHARK, 1)] });
-    const guard = startEatGuard(s);
+    const guard = start(s);
     client.executeBotAction({ type: 'useInventoryItem', slot: 0, optionIndex: 1 });
     advance(2);
     hit(25);
@@ -315,7 +318,7 @@ test('a script input on an item that is not food does not turn the guard off', (
 
 test('a quest sustain holds the guard, and the guard eats again after the sustain stops', async () => {
     const { w, s, advance, run, hit } = world({ hp: 60, inventory: Array.from({ length: 10 }, (_, i) => food(SHARK, i)) });
-    const guard = startEatGuard(s);
+    const guard = start(s);
     const sustain = startQuestSustain(s, { food: [SHARK], eatAt: 40 });
     await run(2);
     hit(25);
@@ -332,7 +335,7 @@ test('a quest sustain holds the guard, and the guard eats again after the sustai
 
 test('a quest sustain that starts after an eat of the guard waits for the food delay', async () => {
     const { w, s, advance, run, hit } = world({ hp: 60, inventory: Array.from({ length: 10 }, (_, i) => food(LOBSTER, i)) });
-    startEatGuard(s);
+    start(s);
     advance(2);
     hit(50);
     advance(1);
@@ -345,7 +348,7 @@ test('a quest sustain that starts after an eat of the guard waits for the food d
 
 test('reserved food is not eaten', () => {
     const { w, s, advance, hit } = world({ hp: 60, inventory: [food(SHARK, 0, 1), food(LOBSTER, 1, 1)] });
-    startEatGuard(s, { reserved: () => ({ [SHARK]: 1 }) });
+    start(s, { reserved: () => ({ [SHARK]: 1 }) });
     advance(2);
     hit(55);
     advance(10);
@@ -358,7 +361,7 @@ test('the eat waits one tick when the tick already holds 4 inputs', () => {
     // The prayer guard starts first, so its flick is sent before the eat guard runs: 4 inputs in one tick.
     let flick = false;
     s.onTick(() => { if (flick) { flick = false; for (let i = 0; i < 4; i++) client.executeBotAction({ type: 'togglePrayer', prayerIndex: 14 }); } });
-    const guard = startEatGuard(s);
+    const guard = start(s);
     client.executeBotAction({ ...attack });
     advance(2);
     hit(25);
@@ -374,7 +377,7 @@ test('stop prints one EAT_GUARD line and restores the client input function', ()
     const { s, client, advance, hit } = world({ hp: 60 });
     const original = client.executeBotAction;
     const lines: string[] = [];
-    const guard = startEatGuard(s, { log: l => lines.push(l) });
+    const guard = start(s, { log: l => lines.push(l) });
     expect(client.executeBotAction).not.toBe(original);
     advance(2);
     hit(25);
@@ -385,4 +388,59 @@ test('stop prints one EAT_GUARD line and restores the client input function', ()
     expect(lines).toHaveLength(1);
     expect(lines[0]).toStartWith('EAT_GUARD {"eats":1,');
     expect(JSON.parse(lines[0]!.slice('EAT_GUARD '.length))).toMatchObject({ held: false, hp: [60, 35, 55] });
+});
+
+test('by default the guard eats nothing in a session that sent no attack', () => {
+    const { w, s, client, advance, hit } = world({ hp: 60 });
+    const guard = startEatGuard(s);
+    // A cook: item inputs and a loc click, damage down to 1 Hitpoint, plain fish in the inventory.
+    client.executeBotAction({ type: 'interactLoc', locId: 2728, optionIndex: 1 });
+    client.executeBotAction({ type: 'useItemOnLoc', itemSlot: 0, locId: 2728 });
+    client.executeBotAction({ type: 'walkTo', x: 3200, z: 3201 });
+    for (let i = 0; i < 80; i++) { hit(1); advance(); }
+    expect(w.hp).toBe(1);
+    expect(w.eaten).toBe(0);
+    expect(w.inventory).toHaveLength(3);
+    expect(guard.stats().eats).toBe(0);
+});
+
+test('by default the guard eats after the script sent an attack', () => {
+    const { w, s, client, advance, hit } = world({ hp: 60 });
+    startEatGuard(s);
+    hit(25);
+    advance(5);
+    expect(w.eaten).toBe(0);
+    client.executeBotAction({ ...attack });
+    hit(1);
+    advance(3);
+    expect(w.eaten).toBe(1);
+    expect(w.interaction).toBe('interactNpc:3');
+});
+
+test('a talk to an NPC is not an attack, and a combat spell is one', () => {
+    const talk = world({ hp: 60 });
+    startEatGuard(talk.s);
+    talk.client.executeBotAction({ type: 'interactNpc', npcIndex: 3, optionIndex: 1 });
+    for (let i = 0; i < 59; i++) { talk.hit(1); talk.advance(); }
+    expect(talk.w.eaten).toBe(0);
+    const mage = world({ hp: 60 });
+    startEatGuard(mage.s);
+    mage.client.executeBotAction({ type: 'spellOnNpc', npcIndex: 3, spellComponent: 1152 });
+    for (let i = 0; i < 59; i++) { mage.hit(1); mage.advance(); }
+    expect(mage.w.eaten).toBeGreaterThan(0);
+});
+
+test('the EAT_GUARD line shows if the script fought', () => {
+    const lines: string[] = [];
+    const { s, client, advance } = world();
+    const guard = startEatGuard(s, { log: l => lines.push(l) });
+    advance(2);
+    guard.stop();
+    const fighter = world();
+    const second = startEatGuard(fighter.s, { log: l => lines.push(l) });
+    fighter.client.executeBotAction({ ...attack });
+    fighter.advance(2);
+    second.stop();
+    expect(lines.map(l => JSON.parse(l.slice('EAT_GUARD '.length)).fought)).toEqual([false, true]);
+    expect(client.executeBotAction).toBeFunction();
 });

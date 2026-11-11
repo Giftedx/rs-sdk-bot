@@ -1,6 +1,8 @@
 // Offline fight simulator: two builds of scripts/pk-kits.ts fight by the server's own combat rules, with no engine.
-// One spar on a practice engine takes about 4 seconds and 1.7 GB; this runs thousands of fights a second, so a search
-// over kits and fight options runs here first and only its best candidates go to the bench.
+// A batch of 12 full fights on a practice engine takes about 35 seconds and 2 to 3 GB; this runs thousands of fights a
+// second, so a wide search over kits runs here first and only its best candidates go to the bench. It does not play
+// the champion profile: no prayer flick, no overhead that changes on the opponent's attack tick (snapPrayer,
+// counterRead) and no learnt style choice (adaptStyles). Use it to rank kits, not fight options.
 // Rules it follows (vendor/rs-sdk/server/content/scripts):
 // - effective level = floor(level * prayer / 100) + 8 + style bonus; a roll is effective * (bonus + 64); a hit lands when
 //   randominc(attack roll) > randominc(defence roll) (skill_combat/scripts/combat.rs2, player/player_combat_stat.rs2).
@@ -13,7 +15,7 @@
 // - prayer points: each tick the drain counter grows by the drain of the prayers that are on (an overhead 12, Steel
 //   Skin 12, the two melee prayers 12 each); each 60 + 2 * prayer bonus of counter costs one point
 //   (skill_prayer/scripts/prayer.rs2, player/scripts/equip.rs2). A dose of prayer restore gives 31 points. At 0 points
-//   every prayer is off. On the bench both sides of a mirror end at 0 points: the points are the clock of a fight.
+//   every prayer is off. The fight loop flicks its prayers and keeps most of its points; the simulator does not.
 // What it leaves out: movement, freezes, poison. Fighters stand next to each other. Check a result on the bench before it goes into the fight loop.
 // Usage: bun scripts/pk-sim.ts <kit a> <kit b> [fights, default 2000] [options a as JSON] [options b as JSON]
 //        bun scripts/pk-sim.ts --table [fights]   every kit against the tribrid
@@ -21,7 +23,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { KITS, type KitSpec } from './pk-kits';
-import { seededRandom, SPELLS, type Style } from './pk';
+import { seededRandom, SPELLS, styleOfName, type Style } from './pk';
 
 type Bonus = { stab: number; slash: number; crush: number; magic: number; ranged: number; dStab: number; dSlash: number; dCrush: number; dMagic: number; dRanged: number; str: number; rangeStr: number; rate: number; prayer: number };
 const PARAM: Record<string, keyof Bonus> = { stabattack: 'stab', slashattack: 'slash', crushattack: 'crush', magicattack: 'magic', rangeattack: 'ranged',
@@ -74,7 +76,7 @@ const tier = (prayer: number, levels: [number, number, number]) => (prayer >= le
 const PROTECT_LEVEL: Record<Style, number> = { magic: 37, ranged: 40, melee: 43 };
 // Body armour that the fight loop takes off for a cast or a shot (scripts/pk.ts negativeCastArmour).
 const STRIP: Record<Style, RegExp> = { magic: /(platebody|chainbody|dragonhide_body|leather_body|studded_body)$/, ranged: /(platebody|chainbody)$/, melee: /^$/ };
-const styleOf = (weapon: string | undefined): Style => (/(shortbow|longbow|crossbow)/.test(weapon ?? '') ? 'ranged' : /staff/.test(weapon ?? '') ? 'magic' : 'melee');
+const styleOf = (weapon: string | undefined): Style => styleOfName(weapon ?? '');
 const carries = (kit: KitSpec, name: string) => kit.carried.some(c => (typeof c === 'string' ? c : c[0]) === name);
 function fighter(kit: KitSpec, o: SimOptions): Fighter {
     const worn: Record<string, string> = {};

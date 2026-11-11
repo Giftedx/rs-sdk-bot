@@ -50,7 +50,7 @@ export const PRESETS: Record<string, SaveConfig> = {
     cook_food_catherby: { position: { x: 2816, z: 3443, level: 0 }, skills: { Cooking: 70 }, inventory: [{ id: 377, count: 28 }], bank: [{ id: 377, count: 200 }] },
     brew_potions_bank: { position: { x: 3253, z: 3420, level: 0 }, skills: { Herblore: 50 }, inventory: [{ id: 99, count: 14 }, { id: 231, count: 14 }], bank: [{ id: 99, count: 100 }, { id: 231, count: 100 }] },
     craft_jewelry_bank: { position: { x: 3269, z: 3167, level: 0 }, skills: { Crafting: 50 }, inventory: [{ id: 1755, count: 1 }, { id: 1623, count: 27 }], bank: [{ id: 1623, count: 100 }] },
-    gather_combat_druid: { position: { x: 3115, z: 9928, level: 0 }, skills: { Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60 }, equipment: [{ id: 1333, count: 1, slot: 3 }, { id: 1113, count: 1, slot: 4 }, { id: 1079, count: 1, slot: 7 }], inventory: [{ id: 379, count: 5 }] },
+    gather_combat_druid: { position: { x: 3115, z: 9928, level: 0 }, skills: { Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60 }, equipment: [{ id: 1333, count: 1, slot: 3 }, { id: 1113, count: 1, slot: 4 }, { id: 1079, count: 1, slot: 7 }], inventory: Array.from({ length: 5 }, () => ({ id: 379, count: 1 })) },
     // Trees within reach, measured by the spike run.
     wc_lumbridge: { position: { x: 3224, z: 3245, level: 0 }, inventory: [{ id: 1351, count: 1 }] },
     // Lumbridge castle courtyard, ground floor (vendor/rs-sdk/learnings/walking.md: castle 3222,3218).
@@ -58,7 +58,7 @@ export const PRESETS: Record<string, SaveConfig> = {
     // Draynor bank (3092,3243) per vendor/rs-sdk/learnings/walking.md; trees stand north of it.
     bank_draynor: { position: { x: 3092, z: 3247, level: 0 }, inventory: [{ id: 1351, count: 1 }] },
     // Inside the Lumbridge cow field (centre 3253,3290 per learnings/combat.md). Sword 1277, shrimps 315.
-    fight_lumbridge: { position: { x: 3253, z: 3285, level: 0 }, inventory: [{ id: 1277, count: 1 }, { id: 315, count: 5 }] },
+    fight_lumbridge: { position: { x: 3253, z: 3285, level: 0 }, inventory: [{ id: 1277, count: 1 }, ...Array.from({ length: 5 }, () => ({ id: 315, count: 1 }))] },
     // Measurement spots from vendor/rs-sdk/learnings (woodcutting.md, mining.md, fishing.md).
     measure_trees: { position: { x: 3195, z: 3220, level: 0 }, inventory: [{ id: 1351, count: 1 }] },
     measure_oaks: { position: { x: 3190, z: 3458, level: 0 }, skills: { Woodcutting: 15 }, inventory: [{ id: 1351, count: 1 }] },
@@ -93,7 +93,7 @@ export const PRESETS: Record<string, SaveConfig> = {
     bank_gems: { position: { x: 3092, z: 3243, level: 0 }, skills: { Crafting: 55 }, inventory: [{ id: 1755, count: 1 }], bank: [{ id: 1631, count: 270 }] },
     // Thieving: south Varrock man/woman cluster (knowledge/npcs.json: man 3237,3406 / 3223,3398; woman2 3223,3401),
     // 5 shrimps (315) for stun damage.
-    thieve_varrock: { position: { x: 3235, z: 3403, level: 0 }, inventory: [{ id: 315, count: 5 }] },
+    thieve_varrock: { position: { x: 3235, z: 3403, level: 0 }, inventory: [...Array.from({ length: 5 }, () => ({ id: 315, count: 1 }))] },
     // Thieving tier 2: Varrock palace guards (knowledge/npcs.json guard1 at 3206-3213,3462-3465; combat 21).
     // Pickpocket guard needs Thieving 40 (46.8 XP); HP 30 and 20 shrimps (315) for harder stun hits.
     thieve_guards: { position: { x: 3210, z: 3459, level: 0 }, skills: { Thieving: 40, Hitpoints: 30 }, inventory: Array.from({ length: 20 }, () => ({ id: 315, count: 1 })) },

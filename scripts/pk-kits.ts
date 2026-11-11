@@ -21,7 +21,7 @@ let costs: Map<number, number> | undefined;
 const costOf = (id: number) => (costs ??= new Map((JSON.parse(readFileSync(join(root, 'knowledge/items.json'), 'utf8')) as { id: number; cost?: number }[]).map(i => [i.id, i.cost ?? 0]))).get(id) ?? 0;
 
 // Worn slots (vendor wearpos): 0 hat, 1 cape, 2 amulet, 3 weapon, 4 torso, 5 shield, 7 legs, 9 hands, 10 feet, 13 ammo.
-type Worn = Partial<Record<'hat' | 'cape' | 'amulet' | 'weapon' | 'torso' | 'shield' | 'legs' | 'hands' | 'feet', string>> & { ammo?: [string, number] };
+type Worn = Partial<Record<'hat' | 'cape' | 'amulet' | 'weapon' | 'torso' | 'shield' | 'legs' | 'hands' | 'feet', string>> & { ammo?: [string, number]; weaponCount?: number };
 const SLOT = { hat: 0, cape: 1, amulet: 2, weapon: 3, torso: 4, shield: 5, legs: 7, hands: 9, feet: 10 } as const;
 export type KitSpec = {
     worn: Worn;
@@ -200,6 +200,60 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     'mage-tank': { worn: { hat: 'splitbark_helm', torso: 'splitbark_body', legs: 'splitbark_legs', hands: 'splitbark_gauntlets', cape: 'black_cape', amulet: 'amulet_of_glory_4', weapon: 'staff_of_fire' },
         carried: [...WAVE, ...FREEZE, ...PRAYER_POTS], food: 20, switches: { magic: ['staff_of_fire'] }, options: { rotation: ['magic'] },
         skills: trained({ Defence: 60, Magic: 99, Prayer: 43 }) },
+    // More builds of the same lists (research/pvp-fight-loop.md, "Account builds", second set).
+    // Defence 1 with another melee weapon beside the bow: the rune scimitar (Attack 40, one hit each 4 ticks) and the
+    // dragon longsword (Attack 60 and Lost City; special 125% damage). The dragon mace needs Heroes' Quest, which
+    // gives Defence XP, so no pure wields it.
+    'pure-scim': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 300] },
+        carried: ['rune_scimitar', ...BOOSTS], food: 23, switches: { ranged: ['magic_shortbow'], melee: ['rune_scimitar'] }, options: { rotation: ['ranged', 'melee'] },
+        skills: trained({ Attack: 40, Strength: 99, Ranged: 99 }) },
+    'pure-dlong': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 300] },
+        carried: ['dragon_longsword', ...BOOSTS], food: 23, switches: { ranged: ['magic_shortbow'], melee: ['dragon_longsword'] }, options: { rotation: ['ranged', 'melee'] },
+        skills: trained({ Attack: 60, Strength: 99, Ranged: 99 }) },
+    // Rune knives (Ranged 40) in place of the bow: a thrown weapon with a short attack time.
+    'pure-knives': { worn: { ...PURE_RANGE, weapon: 'rune_knife', weaponCount: 500 },
+        carried: ['dragon_dagger_p', ...BOOSTS], food: 23, switches: { ranged: ['rune_knife'], melee: ['dragon_dagger_p'] }, options: { rotation: ['ranged', 'melee'] },
+        skills: trained({ Attack: 60, Strength: 99, Ranged: 99 }) },
+    // Prayer 31 for Ultimate Strength and no protect prayer: 3 combat levels over the bow and dagger pure.
+    'pure-pray31': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 300] },
+        carried: ['dragon_dagger_p', ...BOOSTS, '4doseprayerrestore'], food: 22, switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p'] }, options: { rotation: ['ranged', 'melee'] },
+        skills: trained({ Attack: 60, Strength: 99, Ranged: 99, Prayer: 31 }) },
+    // The magic pure with a god spell: Flames of Zamorak under Charge (max hit 30) with the Mage Arena done.
+    'pure-god': { worn: { weapon: 'zamorak_staff', cape: 'zamorak_cape', amulet: 'amulet_of_magic', feet: 'leather_boots' },
+        carried: [['firerune', 600], ['airrune', 500], ['bloodrune', 300], ...FREEZE], food: 21,
+        switches: { magic: ['zamorak_staff'] }, options: { rotation: ['magic'], damageSpell: SPELLS.flamesOfZamorak, charge: true },
+        skills: trained({ Magic: 99 }), varps: { 267: 8, 270: 99 } },
+    // Defence 1 with Attack 99: the bow and dagger pure with Prayer 43 at the combat level of the Defence 45 builds.
+    'pure-max': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 300] },
+        carried: ['dragon_dagger_p', ...BOOSTS, ...PRAYER_POTS], food: 21, switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p'] }, options: { rotation: ['ranged', 'melee'] },
+        skills: trained({ Attack: 99, Strength: 99, Ranged: 99, Prayer: 43 }) },
+    // The tribrid's kit at Defence 30 in adamant armour, and at Defence 50 with the granite shield (Strength 50;
+    // ranged defence 65). The Fremennik helms need a quest that gives Defence 60, so Defence 50 keeps the rune helm.
+    'addy-pure': { ...DEF_TRIBRID, worn: { ...DEF_TRIBRID.worn, hat: 'adamant_full_helm', torso: 'adamant_platebody', legs: 'adamant_platelegs', shield: 'adamant_kiteshield' },
+        switches: { ...DEF_TRIBRID.switches, melee: ['dragon_dagger_p', 'adamant_kiteshield'] },
+        skills: trained({ Attack: 60, Strength: 99, Defence: 30, Ranged: 99, Magic: 99, Prayer: 43 }) },
+    def50: { ...DEF_TRIBRID, worn: { ...DEF_TRIBRID.worn, shield: 'granite_shield' },
+        switches: { ...DEF_TRIBRID.switches, melee: ['dragon_dagger_p', 'granite_shield'] },
+        skills: trained({ Attack: 60, Strength: 99, Defence: 50, Ranged: 99, Magic: 99, Prayer: 43 }) },
+    // The range tank with Defence 99.
+    'tank-range': { worn: { hat: 'viking_helmet_range', torso: 'black_dragonhide_body', legs: 'black_dragonhide_chaps', hands: 'black_dragon_vambraces', cape: 'black_cape', amulet: 'amulet_of_glory_4', feet: 'boots_ranger', weapon: 'magic_shortbow', ammo: ['rune_arrow', 400] },
+        carried: ['staff_of_fire', ...WAVE, ...FREEZE, ...PRAYER_POTS, '4doserangerspotion'], food: 18,
+        switches: { magic: ['staff_of_fire'], ranged: ['magic_shortbow'] }, options: { rotation: ['ranged', 'magic'] },
+        skills: trained({ Defence: 99, Ranged: 99, Magic: 99, Prayer: 43 }), varps: { 347: 10 } },
+    // Low combat levels: the levels of the free-to-play lists at Strength, Ranged and Magic 70.
+    'baby-pure': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 300] },
+        carried: ['rune_scimitar', ...BOOSTS], food: 23, foodItem: 'lobster', switches: { ranged: ['magic_shortbow'], melee: ['rune_scimitar'] }, options: { rotation: ['ranged', 'melee'] },
+        skills: trained({ Attack: 40, Strength: 70, Ranged: 70 }) },
+    'low-ranger': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 500] },
+        carried: ['4doserangerspotion'], food: 26, foodItem: 'lobster', switches: { ranged: ['magic_shortbow'] }, options: { rotation: ['ranged'] }, skills: trained({ Ranged: 70 }) },
+    // Fire Blast (Magic 59, max hit 16).
+    'low-mage': { worn: { weapon: 'staff_of_fire', amulet: 'amulet_of_magic', cape: 'black_cape', feet: 'leather_boots' },
+        carried: [['airrune', 600], ['deathrune', 200], ...FREEZE], food: 22, foodItem: 'lobster',
+        switches: { magic: ['staff_of_fire'] }, options: { rotation: ['magic'], damageSpell: SPELLS.fireBlast }, skills: trained({ Magic: 59 }) },
+    'low-addy': { worn: { hat: 'adamant_full_helm', torso: 'adamant_platebody', legs: 'adamant_platelegs', amulet: 'amulet_of_power', feet: 'leather_boots', weapon: 'rune_scimitar', shield: 'adamant_kiteshield', ammo: ['adamant_arrow', 300] },
+        carried: ['staff_of_fire', 'maple_shortbow', ['airrune', 600], ['deathrune', 200], ...FREEZE], food: 19, foodItem: 'lobster',
+        switches: { magic: ['staff_of_fire'], ranged: ['maple_shortbow'], melee: ['rune_scimitar', 'adamant_kiteshield'] }, options: { damageSpell: SPELLS.fireBlast },
+        skills: trained({ Attack: 40, Strength: 70, Defence: 30, Ranged: 70, Magic: 70 }) },
     // The target of a pure: combat 3 with a pickaxe and a few lobsters.
     skiller: { worn: { weapon: 'bronze_pickaxe', feet: 'leather_boots' }, carried: [], food: 5, foodItem: 'lobster',
         switches: { melee: ['bronze_pickaxe'] }, options: { rotation: ['melee'] }, skills: { ...PURE } },
@@ -225,7 +279,8 @@ export function kitItems(name: string) {
     const k = kitOf(name);
     const equipment = Object.entries(k.worn).flatMap(([slot, item]) => (slot === 'ammo'
         ? [{ id: itemId((item as [string, number])[0]), count: (item as [string, number])[1], slot: 13 }]
-        : [{ id: itemId(item as string), count: 1, slot: SLOT[slot as keyof typeof SLOT] }]));
+        // A thrown weapon is a stack in the weapon slot (weaponCount).
+        : slot === 'weaponCount' ? [] : [{ id: itemId(item as string), count: slot === 'weapon' ? k.worn.weaponCount ?? 1 : 1, slot: SLOT[slot as keyof typeof SLOT] }]));
     const inventory = [...carried(k), ...Array.from({ length: k.food }, () => ({ id: itemId(k.foodItem ?? 'shark'), count: 1 }))];
     if (inventory.length > 27) throw Error(`pk-kits: kit ${name} carries ${inventory.length} items; 27 leave the free slot that a bow switch needs`);
     return { equipment, inventory };

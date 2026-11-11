@@ -143,7 +143,7 @@ test('infoboxes: boosted and drained skills of the followed account; Hitpoints a
  expect(el.innerHTML).not.toContain('Defence');expect(el.innerHTML).not.toContain('Hitpoints');expect(el.innerHTML).not.toContain('Prayer');
 });
 
-function lookupHarness(fetch:typeof globalThis.fetch){
+function lookupHarness(fetch:(url:any)=>Promise<unknown>){
  const code=shell.slice(shell.indexOf('  function refreshWorldLookup(){'),shell.indexOf('  window.atlasLookup=lookup;'));
  const target={innerHTML:''};
  return new Function('fetch','body','lookupCard','put',`let worldLookup=null,worldLookupRequest=0,selectedPlugin='boards',hiscoreName='',hiscoreSel=null,sel=null,hiscoresMode='fleet';const S=null,showPlugin=()=>{},refreshHiscoreAccount=()=>{};${code};return{lookup,value:()=>worldLookup};`)(fetch,{querySelector:()=>target},JSON.stringify,(el:{innerHTML:string},html:string)=>el.innerHTML=html);
