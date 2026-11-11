@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794395740862-trousersnake-deeppockets-bones",
+ "account": "TrouserSnake",
+ "partner": "Deeppockets",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 14,
+ "claim": "2ccb3c2d-4eee-4edf-b032-6ea959778ebb",
+ "count": 0,
+ "ok": false,
+ "at": 1794395749722,
+ "detail": "trade claimed"
+}
