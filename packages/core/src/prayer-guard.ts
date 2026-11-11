@@ -162,12 +162,16 @@ const STATE_LAG = 2;
 type Action = { type: string; [k: string]: unknown };
 type Pending = { kind: 'none' } | { kind: 'attack'; action: Action } | { kind: 'other'; type: string; still: number; need: number; item?: number; had?: number };
 
+// The state keeps `hp` 0 on an NPC slot after a death, until the next NPC in that slot shows its health. An NPC with
+// `hp` 0 is dead only when the state saw damage on it in the last DEAD_TICKS ticks.
+const DEAD_TICKS = 10;
+export const npcDead = (n: any, st: any): boolean => n?.hp === 0 && n.lastCombatTick != null && (st?.tick ?? 0) - n.lastCombatTick <= DEAD_TICKS;
 // True while the target of an attack input is in view and alive.
 export const attackTarget = (a: Action, st: any): boolean => {
     if (a.type === 'interactPlayer') return a.optionIndex === 2 && (st?.nearbyPlayers ?? []).some((p: any) => p.index === a.playerIndex);
     if (a.type !== 'interactNpc') return false;
     const n = (st?.nearbyNpcs ?? []).find((n: any) => n.index === a.npcIndex);
-    return !!n && n.hp !== 0 && (n.optionsWithIndex ?? []).some((op: any) => op.opIndex === a.optionIndex && /^Attack$/i.test(op.text));
+    return !!n && !npcDead(n, st) && (n.optionsWithIndex ?? []).some((op: any) => op.opIndex === a.optionIndex && /^Attack$/i.test(op.text));
 };
 
 export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
@@ -289,7 +293,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     const resend = (st: any) => {
         if (gameFight(s.tick()) && retaliate) {
             const n = (st?.nearbyNpcs ?? []).find((n: any) => n.index === retaliate!.action.npcIndex);
-            if (n && n.hp !== 0) { send({ ...retaliate.action }); stats.resends++; }
+            if (n && !npcDead(n, st)) { send({ ...retaliate.action }); stats.resends++; }
             return;
         }
         if (pending.kind !== 'attack') return;
@@ -377,7 +381,11 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         if (a.type === 'walkTo') { pending = { kind: 'none' }; walkAt = now; retaliate = null; return; }
         // `attack` also holds a mining or woodcutting click: the guard sends it again after its prayer inputs.
         if (attack || skillTarget(a, s.sdk.getState())) { pending = { kind: 'attack', action: { ...a } }; if (!attack && a.type === 'interactNpc') fishAt = now; return; }
+        // An attack click on a dying NPC starts no action. With `other` here, a fight by auto-retaliate that follows
+        // would count as that action, and the guard would hold its flicks for the whole fight.
+        if (a.type === 'interactNpc') { const st = s.sdk.getState(), n = (st?.nearbyNpcs ?? []).find((n: any) => n.index === a.npcIndex); if (n && npcDead(n, st) && (n.optionsWithIndex ?? []).some((op: any) => op.opIndex === a.optionIndex && /^Attack$/i.test(op.text))) { pending = { kind: 'none' }; return; } }
         if (a.type === 'pickupItem') { const item = a.itemId as number; pending = { kind: 'other', type: a.type, still: 0, need: PICKUP_IDLE_TICKS, item, had: held(s.sdk.getState(), item) }; return; }
+        if (o.trace && a.type === 'interactNpc') { const st = s.sdk.getState(), n = (st?.nearbyNpcs ?? []).find((n: any) => n.index === a.npcIndex); o.trace(`GUARD t=${now} other interactNpc:${a.npcIndex} option=${a.optionIndex} hp=${n?.hp} lastCombat=${n?.lastCombatTick} stateTick=${st?.tick} options=${(n?.optionsWithIndex ?? []).map((op: any) => op.text).join('/')}`); }
         pending = { kind: 'other', type: a.type, still: 0, need: IDLE_TICKS };
     };
 
@@ -406,7 +414,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         let best: any | null = null, bestReaches = false;
         for (const n of st.nearbyNpcs ?? []) {
             const h = o.hunters.get(n.id);
-            if (!h || n.hp === 0 || n.distance > Math.min(HUNT_VIEW, h.range + h.wander)) continue;
+            if (!h || npcDead(n, st) || n.distance > Math.min(HUNT_VIEW, h.range + h.wander)) continue;
             if (h.tooStrong && !wild && p.combatLevel > h.level * 2) continue;
             // An NPC whose hunt range reaches the player now comes before one that must walk first: its attack
             // style is the one that lands first.
@@ -471,7 +479,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         const selfSlot = (s.client as any)?.selfSlot;
         const attackOf = (n: any): Action | null => {
             const op = n?.optionsWithIndex?.find((op: any) => /^Attack$/i.test(op.text));
-            return n && op && n.hp !== 0 && Number.isSafeInteger(selfSlot) && n.targetIndex === 32768 + selfSlot ? { type: 'interactNpc', npcIndex: n.index, optionIndex: op.opIndex, reason: 'SDK' } : null;
+            return n && op && !npcDead(n, st) && Number.isSafeInteger(selfSlot) && n.targetIndex === 32768 + selfSlot ? { type: 'interactNpc', npcIndex: n.index, optionIndex: op.opIndex, reason: 'SDK' } : null;
         };
         let refused = false;
         for (const m of st.gameMessages ?? []) if ((m.tick ?? -1) > refusedSeen && /^I'm already under attack/.test(m.text ?? '')) refused = true;
@@ -506,7 +514,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
             const me = Number.isSafeInteger(self) ? 32768 + self : undefined;
             const rival = o.protect === false ? null : rivalPlayer(st, p, self);
             if (o.protect !== false) {
-                const attacker = (st.nearbyNpcs ?? []).find((n: any) => me !== undefined && n.targetIndex === me && n.hp !== 0
+                const attacker = (st.nearbyNpcs ?? []).find((n: any) => me !== undefined && n.targetIndex === me && !npcDead(n, st)
                     && (n.optionsWithIndex ?? []).some((op: any) => /^Attack$/i.test(op.text))) ?? null;
                 // A player that attacks comes first, then an NPC that attacks, then a player that can attack.
                 const npc = rival?.attacks ? null : attacker ?? (rival ? null : nearestHunter(st, p));

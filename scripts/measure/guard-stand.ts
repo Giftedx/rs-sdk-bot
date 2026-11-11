@@ -6,8 +6,11 @@
 //   RETALIATE=off     the script turns auto-retaliate off at the start (button 151 of the controls tab)
 //                     (also the environment variable GUARD_STAND_RETALIATE=off, for the bench's `--set`)
 //   RIVAL=<account>   a second account logs in and attacks this one (both must stand in the Wilderness)
+//   RIVAL_SPELL=magic:wind_strike   the second account casts this spell (a name of pack/interface.pack) each 5 ticks
+//   The environment variable GUARD_STAND_FISH takes the place of FISH (for the bench's `--set`).
 // Usage: bun scripts/measure/guard-stand.ts <bot> <ticks> [PRAYERS=..] [FISH=method:count] [CHOP=tree:count] [RETALIATE=off] [RIVAL=account]
 import { finish, openBot } from '../../packages/core/src/bot';
+import { componentId } from '../../packages/core/src/logout';
 import type { Session } from '../../packages/core/src/inprocess';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { FISH_PROFILES, pickFishSpot, type FishMethod } from '../microbot-b-fishing';
@@ -47,11 +50,13 @@ const rivalName = option('RIVAL');
 if (rivalName) {
     const rival = await openBot(rivalName);
     sessions.push(rival);
+    const spell = option('RIVAL_SPELL');
     let attacks = 0;
     while (left() > 0) {
         const target = rival.sdk.getState()?.nearbyPlayers.find(p => p.name.toLowerCase() === name.toLowerCase());
-        if (target && rival.sdk.getState()?.player?.combat.targetType !== 'player') { await rival.sdk.sendInteractPlayer(target.index, 2); attacks++; }
-        await waitTicks(s, Math.min(8, left()));
+        if (target && spell) { await rival.sdk.sendSpellOnPlayer(target.index, componentId(spell)); attacks++; }
+        else if (target && rival.sdk.getState()?.player?.combat.targetType !== 'player') { await rival.sdk.sendInteractPlayer(target.index, 2); attacks++; }
+        await waitTicks(s, Math.min(spell ? 5 : 8, left()));
     }
     parts.push(`rivalAttacks=${attacks}`);
 }
@@ -65,20 +70,20 @@ if (chop) {
     const first = count();
     let clicks = 0;
     while (left() > 0 && count() - first < Number(amount)) {
-        if (state()?.dialog?.isOpen) { await s.direct({ type: 'closeModal', reason: 'bench' }); await waitTicks(s, 1); }
+        if (state()?.dialog?.isOpen) { await s.sdk.sendClickDialog(0); await waitTicks(s, 1); }
         const loc = (state()?.nearbyLocs ?? []).filter(l => tree.locs.includes(l.id) && l.optionsWithIndex.some(o => /^chop/i.test(o.text))).sort((a, b) => a.distance - b.distance)[0];
         if (!loc) { await waitTicks(s, 1); continue; }
         const had = count();
         await s.sdk.sendInteractLoc(loc.x, loc.z, loc.id, loc.optionsWithIndex.find(o => /^chop/i.test(o.text))!.opIndex);
         clicks++;
         // One click chops until the tree falls; the wait ends at a log so the loop can count it.
-        await waitUntil(s, () => count() > had || left() <= 0, { timeoutTicks: 40 });
+        await waitUntil(s, () => count() > had || left() <= 0 || !!state()?.dialog?.isOpen, { timeoutTicks: 40 });
     }
     parts.push(`logs=${count() - first} clicks=${clicks} chopTicks=${s.tick() - start}`);
     if (count() - first < Number(amount)) parts.push('short=1');
 }
 
-const fish = option('FISH');
+const fish = process.env.GUARD_STAND_FISH ?? option('FISH');
 if (fish) {
     const [method, amount = '5'] = fish.split(':') as [FishMethod, string];
     const profile = FISH_PROFILES[method];
@@ -88,14 +93,14 @@ if (fish) {
     let clicks = 0;
     while (left() > 0 && count() - first < Number(amount)) {
         // A level-up message stops the fishing; the next click needs it closed.
-        if (state()?.dialog?.isOpen) { await s.direct({ type: 'closeModal', reason: 'bench' }); await waitTicks(s, 1); }
+        if (state()?.dialog?.isOpen) { await s.sdk.sendClickDialog(0); await waitTicks(s, 1); }
         const spot = state() ? pickFishSpot(state()!, method) : undefined;
         if (!spot) { await waitTicks(s, 1); continue; }
         const had = count();
         await s.sdk.sendInteractNpc(spot.index, profile.op);
         clicks++;
         // One click fishes until the spot moves; the wait ends at a catch so the loop can count it.
-        await waitUntil(s, () => count() > had || left() <= 0, { timeoutTicks: 40 });
+        await waitUntil(s, () => count() > had || left() <= 0 || !!state()?.dialog?.isOpen, { timeoutTicks: 40 });
     }
     parts.push(`caught=${count() - first} clicks=${clicks} fishTicks=${s.tick() - start}`);
     if (count() - first < Number(amount)) parts.push('short=1');

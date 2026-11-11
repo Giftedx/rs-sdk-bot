@@ -2,7 +2,7 @@
 // Public quest colours, dialogue, items and actual positions authorize this fresh-quest route.
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {openBot,settle,accountOf} from '../../packages/core/src/bot';
+import {openBot,settle,accountOf,releasePrayerGuard} from '../../packages/core/src/bot';
 import type {Session} from '../../packages/core/src/inprocess';
 import {BotActions} from '../../vendor/rs-sdk/sdk/actions';
 import {waitTicks,waitUntil} from '../../packages/core/src/ticks';
@@ -141,6 +141,8 @@ export async function runLegends(raw:Session,o:LegendsOrder,requested:()=>boolea
  validateLegendsOrder(o);if(raw.name.toLowerCase()!==o.account.toLowerCase()||raw.lifecycle?.server!==o.server)throw Error('Legends account/server identity mismatch');
  const flags=questFlags(raw.client);if(!flags||flag(raw)!=='not started'||!['Family Crest',"Hero's Quest",'Shilo Village','Underground Pass','Waterfall Quest'].every(name=>flags.some(q=>q.name===name&&q.state==='complete'))||(raw.client as any).membersAccount!==1)throw Error('fresh public Legends/prerequisite flags and member account required');
  for(const[name,n]of Object.entries(LEGENDS_SKILLS))if((raw.sdk.getSkill(name)?.level??0)<n)throw Error('Legends Native skill required '+name+' '+n);
+ // The prayer guard stops here: this script needs every prayer off now and owns the prayers from now on.
+ await releasePrayerGuard(raw);
  const initialHp=raw.sdk.getSkill('Hitpoints')?.level??0,maximumHp=raw.sdk.getSkill('Hitpoints')?.baseLevel??0,gear=raw.sdk.getEquipment().map(i=>({id:i.id,count:i.count,slot:i.slot})),style=raw.sdk.getState()?.combatStyle,retaliate=raw.sdk.getState()?.autoRetaliateEnabled,prayers=raw.sdk.getPrayerState();
  if(initialHp<90||maximumHp<initialHp||maximumHp>99||!style?.known||!Number.isSafeInteger(style.currentStyle)||retaliate!==false||!prayers||prayers.activePrayers.some(Boolean)||!gear.some(i=>i.slot===3))throw Error('Legends requires HP90+, observed melee kit/style, retaliationOFF and prayersOFF');
  const context=legendsContext(raw,o.cap),fatal=()=>!context.alive(),stop=()=>fatal()||productionStopRequested(raw.name,requested)||raw.tick()-context.start>=o.cap-o.returnTicks;let working=true,uncertain=false,prayerUnknown=false,food=0,fareSpent=0,stageName='admission',failure='',q:Awaited<ReturnType<typeof openQuest>>|undefined;

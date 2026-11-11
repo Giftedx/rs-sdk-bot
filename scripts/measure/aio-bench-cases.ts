@@ -351,6 +351,15 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'extra:guard-rival-bow', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['200', 'RIVAL={bot:b}'], pass: ok,
     presetConfig: {position: {x: 3200, z: 3600, level: 0}, skills: {Attack: 40, Strength: 40, Defence: 40, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}]},
     companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3203, z: 3600, level: 0}, skills: {Ranged: 50, Defence: 40, Hitpoints: 60}, equipment: [{id: 841, count: 1, slot: 3}, {id: 882, count: 500, slot: 13}]}}]},
+  // The second account wears a staff of air and casts Wind Strike from 3 tiles: the guard must turn Protect from
+  // Magic on.
+  {key: 'extra:guard-rival-staff', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['200', 'RIVAL={bot:b}', 'RIVAL_SPELL=magic:wind_strike'], pass: ok,
+    presetConfig: {position: {x: 3200, z: 3600, level: 0}, skills: {Attack: 40, Strength: 40, Defence: 40, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3203, z: 3600, level: 0}, skills: {Magic: 50, Defence: 40, Hitpoints: 60}, equipment: [{id: 1381, count: 1, slot: 3}], inventory: [{id: 558, count: 500}]}}]},
+  // Lobster cages on the Karamja dock (maps/m45_49.jm2) with Protect from Melee on: the fishing cycle on a spot with
+  // two options. With `--set GUARD_STAND_FISH=harpoon:4` the run uses the harpoon.
+  {key: 'extra:guard-fish-cage', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['500', 'PRAYERS=14', 'FISH=cage:6'], pass: ok,
+    presetConfig: {position: {x: 2924, z: 3178, level: 0}, skills: {Fishing: 60, Hitpoints: 60, Prayer: 60}, inventory: [{id: 301, count: 1}, {id: 311, count: 1}]}},
   // The dark wizards south of Varrock (maps/m50_52.jm2) at combat level 13: the young ones (level 7, hunt range 3)
   // and the bearded ones (level 20, hunt range 5) cast strike spells. The worker stands on an open tile of their circle: a hunt needs a line of sight
   // (hunt `ranged`, check_vis=lineofsight), and the centre tiles have none. With `--set PRAYER_GUARD=0` the worker dies.

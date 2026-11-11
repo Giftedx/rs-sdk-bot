@@ -15,7 +15,7 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
     const inbox: any[] = [];
     const listeners = new Set<() => void>();
     const client = { selfSlot: 7, executeBotAction(a: any) { inbox.push(a); return { success: true }; } };
-    const state = () => ({
+    const state = () => ({ tick,
         player: { worldX: w.x, worldZ: w.z, level: 0, animId: w.anim, isDead: false, combatLevel: w.combat, combat: w.interaction?.startsWith('interactNpc:') ? { inCombat: true, targetType: 'npc', targetIndex: Number(w.interaction.split(':')[1]) } : { inCombat: false, targetType: 'none', targetIndex: -1 } },
         prayers: { activePrayers: [...active], prayerPoints: init.points ?? 50, prayerLevel: init.level ?? 50 },
         nearbyNpcs: w.npcs, nearbyPlayers: w.players, gameMessages: w.messages, nearbyLocs: w.locs, inventory: w.pack, combatEvents: w.events, modalOpen: w.window, skills: [{ name: 'Fishing', level: 50, baseLevel: 50, experience: w.fish.xp }],
@@ -914,4 +914,27 @@ test('fishing with a prayer on: each cycle of 5 ticks rolls, on a sea spot and o
         expect(guard.stats().holds).toBe(0);
         expect(w.most).toBeLessThanOrEqual(5);
     }
+});
+
+test('an NPC slot with hp 0 and no damage seen is alive: the attack on it is an attack, and after seen damage it is dead', () => {
+    const { w, s, client, advance } = world({ level: 45 });
+    const guard = startPrayerGuard(s, { offence: true });
+    const fresh = { ...cow(32768 + 7), hp: 0, lastCombatTick: null as number | null };
+    w.npcs = [fresh];
+    advance(4);
+    client.executeBotAction({ type: 'interactNpc', npcIndex: 3, optionIndex: 2 });
+    for (let i = 0; i < 40; i++) { advance(); expect(w.interaction as string | null).toBe('interactNpc:3'); }
+    expect(guard.stats().holds).toBe(0);
+    expect(w.drains).toBe(0);
+    // The state saw damage on it one tick ago: it is dying, and the guard sends no attack on it.
+    fresh.lastCombatTick = 43;
+    w.interaction = null as string | null;
+    advance(6);
+    expect(w.interaction as string | null).toBe(null);
+    // An attack click of the script on the dying NPC is no action: the guard keeps its flicks.
+    client.executeBotAction({ type: 'interactNpc', npcIndex: 3, optionIndex: 2 });
+    const flicks = guard.stats().flicks;
+    advance(12);
+    expect(guard.stats().holds).toBe(0);
+    expect(guard.stats().flicks).toBeGreaterThan(flicks + 2);
 });
