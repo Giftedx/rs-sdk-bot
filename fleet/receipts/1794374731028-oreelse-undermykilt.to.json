@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794374731028-oreelse-undermykilt",
+ "account": "UnderMyKilt",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "ab754204-1044-4407-9a5c-dfaf7057dc3a",
+ "count": 0,
+ "ok": false,
+ "at": 1794378323247,
+ "detail": "trade claimed"
+}
