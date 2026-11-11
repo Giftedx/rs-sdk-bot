@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794416136257-pocketpool-deeppockets-waterrune",
+ "account": "Deeppockets",
+ "partner": "PocketPool",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 24,
+ "claim": "a6ce68c8-2c92-422c-97f3-60a05a5e948b",
+ "count": 24,
+ "ok": true,
+ "at": 1794416162765,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 24
+ },
+ "bank": {
+  "count": 24,
+  "at": 1794416161990
+ },
+ "logout": {
+  "attemptId": "1794416140341-0000016106-0000000001",
+  "at": 1794416162758,
+  "sha256": "ccd3ab4872afa250056b95dce24d2e692b0171500ae09123581da75596c9eb99"
+ },
+ "screen": true
+}
