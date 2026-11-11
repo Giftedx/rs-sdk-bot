@@ -1,0 +1,22 @@
+{
+ "id": "1794425335698-sporrandip-fatstack-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "SporranDip",
+ "to": "Fatstack",
+ "item": "Air rune",
+ "count": 3,
+ "start": 1794425335698,
+ "end": 1794427735698,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

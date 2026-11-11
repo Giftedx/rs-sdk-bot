@@ -1,25 +1,25 @@
 {
  "side": "claude-cloud",
- "at": 1794423846372,
+ "at": 1794424443890,
  "jobs": [
   {
    "account": "Quickhandjob",
    "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
-    "PEN": "3197,3353",
+    "PEN": "3229,3298",
     "TICKS": "3000",
     "TARGET": "2000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3197,3353",
+   "goal": "feathers at the chicken pen 3229,3298",
    "role": "helper",
-   "template": "feathers@3197,3353",
+   "template": "feathers@3229,3298",
    "autopilot": "claude-cloud",
    "resources": [
-    "pen:3197,3353"
+    "pen:3229,3298"
    ]
   },
   {
