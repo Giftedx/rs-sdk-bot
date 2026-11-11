@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794420041835,
+ "at": 1794420641697,
  "jobs": [
   {
    "account": "Abracadickra",
@@ -110,25 +110,6 @@
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
-   "autopilot": "local",
-   "resources": [
-    "knight:2653,3300"
    ]
   },
   {
@@ -517,9 +498,22 @@
     "CAP": "600",
     "COORDINATOR_RUN_ID": "task-3ea847cb-7069-4d9a-83f9-5b7f60efbf8e"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-session-recovery-shaftsinker-orphan-r18 [task-3ea847cb-7069-4d9a-83f9-5b7f60efbf8e]",
+   "role": "thieving"
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "600",
+    "COORDINATOR_RUN_ID": "task-71d187e0-6649-468c-9c7c-f24c0247ffcf"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-session-recovery-sporranbulge-orphan-r18 [task-71d187e0-6649-468c-9c7c-f24c0247ffcf]",
    "role": "thieving"
   }
  ]
