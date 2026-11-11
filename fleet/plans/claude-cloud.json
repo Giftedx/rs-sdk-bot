@@ -1,29 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794415846781,
+ "at": 1794415914170,
  "jobs": [
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts lowe 2500 ITEMS=iron.arrow|bronze.arrow STOCK_TARGET=1200 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=29000 COIN_RESERVE=500 MAX_SPEND=28000",
-    "scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=60 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=3000 COIN_RESERVE=500 MAX_SPEND=2000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy iron and bronze arrows at Lowe's and teleport runes at Aubury's in Varrock for the black dragon hunt",
-   "role": "supply",
-   "template": "army-hunt-supply",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "shop:lowe",
-    "shop:aubury"
-   ]
-  },
   {
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
@@ -59,28 +37,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "knight:2652,3318"
-   ]
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "foraging",
-    "flax",
-    "1800",
-    "28"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "pick flax at Seers to spin for the Crafting a black dragonhide body asks",
-   "role": "crafting",
-   "template": "army-leather-flax",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "aio:seers-flax"
    ]
   },
   {
@@ -135,23 +91,28 @@
   },
   {
    "account": "SporranDip",
-   "script": "scripts/train-prayer.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_RESERVE": "6",
-    "CAP": "4000"
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying the held bones",
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-bury-prayer-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "Fingersmith",
