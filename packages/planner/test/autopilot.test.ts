@@ -1433,6 +1433,13 @@ test('an account with a PK build trains to the levels of the build and no furthe
     expect(buildBand(byId('army-trooper-ranged-99'), fresh, pure)!.env!.GIANT_BURY).toBe('0');
     expect(trooper.env!.GIANT_BURY).toBe('0');
     expect(buildBand(byId('army-trooper-prayer-99'), acct('Build', { Prayer: 20 }), dragon)).toBeNull();
+    // Prayer comes from held normal bones only, to the level of the build: the worker's target argument.
+    const bury = buildBand(byId('army-bury-prayer-99'), acct('Build', { Prayer: 20 }), dragon)!;
+    expect(bury.args).toEqual(['43']); expect(bury.trains!.to).toBe(43); expect(bury.env!.BURY_HELD).toBe('1');
+    expect(buildBand(byId('army-bury-prayer-99'), acct('Build', { Prayer: 43 }), dragon)).toBeNull();
+    expect(buildBand(byId('army-bury-prayer-99'), fresh, pure)).toBeNull();
+    expect(buildBand(byId('army-bury-dragon-99'), acct('Build', { Prayer: 20 }), dragon)).toBeNull();
+    expect(buildBand(byId('army-bury-big-99'), acct('Build', { Prayer: 20 }), dragon)).toBeNull();
     for (const t of templates.filter(t => t.tier === 'goal')) for (const build of [pure, dragon]) {
         const got = buildBand(t, fresh, build);
         if (got?.script === 'scripts/gather-combat.ts') { expect(got.env!.GIANT_BURY).toBe('0'); expect(got.env!.GIANT_KILLS).toBeUndefined(); expect(got.env!.TRAIN_SKILL).toBe(got.trains!.skill); }

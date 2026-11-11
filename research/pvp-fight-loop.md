@@ -395,6 +395,10 @@ each pair 3 fights (seeds 1, 2, 3), `extra:spar-builds-1` to `-4`. Evidence:
   7-tick weapon; a loop that keeps the slow weapon for the kill is not measured.
 - The simulator and the bench agree on the first build of each bracket and on the last. They differ on
   `pure-ranger` (second in the simulator, 20 of 36 on the bench).
+- Control for the side of a pair: the same build on both sides (`extra:spar-kit-dragon-x8` and
+  `extra:spar-kit-pure-pray-x8`, profile `snap`, seeds 1, 2, 3, 48 fights). Side A won 27, lost 20 and drew 1
+  (`dragon` 12 to 12, `pure-pray` 15 to 8). 27 of 47 is inside the chance range of an even fight, so the table has
+  no side correction. Evidence: `.practice/pk-builds/control.txt`.
 - Gap: 3 fights for each pair say nothing about one pair. No fight against the maxed tribrid: combat 126 is out of
   range of these builds at Wilderness level 34.
 - Gap: Hitpoints assume trained levels. Quest XP gives no Hitpoints, so a quest route gives a lower combat level.
@@ -403,7 +407,15 @@ each pair 3 fights (seeds 1, 2, 3), `extra:spar-builds-1` to `-4`. Evidence:
   Quest gives 3,075 Defence XP: Defence 62. So an account with a Fremennik helm or a dragon battleaxe has Defence 60
   or more, and `zerker` is a reference for the comparison, not a build with a route. Its real form is `dragon` with
   the Berserker helm.
-- Gap: the quest route to each other build is not planned.
+- **A build in the plan.** The `builds` object of `swarm.json` names a kit for an army account
+  (`"builds": { "<account>": "pure-pray" }`). `scripts/autopilot.ts` `buildCaps` turns each kit into its levels, and
+  `packages/planner/src/autopilot.ts` `buildBand` gives such an account only bands that train one skill and stop at
+  the level of the build: the cow and trooper bands with `TARGET_LEVEL` and no buried bones, and the held-bones
+  Prayer band with the level as its target. It refuses quest bands, stock bands, kill-count bands and bought-bone
+  bands. Evidence: `packages/planner/test/autopilot.test.ts`, `scripts/autopilot.test.ts`. Proof level: unit.
+- Gap: no live run of a build account under the planner. The Prayer band needs 100 normal bones held; the
+  source of those bones for a build account is not checked. The quest route to each build is not planned, so no build account gets Lost City or Dragon Slayer
+  from the planner.
 
 ## Server rules the loop follows
 

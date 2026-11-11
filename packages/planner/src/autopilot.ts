@@ -298,6 +298,7 @@ export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'price
 //   bones give Prayer XP whatever the band trains;
 // - a gather-combat band with another TRAIN_SKILL or a kill count (GIANT_KILLS) is refused: the kill count replaces
 //   the level stop, and TRAIN_SKILL=Hitpoints keeps the style the account had, which can train any melee skill;
+// - the Prayer band that buries held normal bones (scripts/train-prayer.ts) stops at the level: its target argument;
 // - a band of another script that ends above the level is refused: that script has no proved stop;
 // - a quest band and a stock band are refused: a quest reward and a fight for loot give XP in skills nobody chose.
 export function buildBand(t: Template, a: Acct, build?: Readonly<Record<string, number>>): Template | null {
@@ -310,6 +311,10 @@ export function buildBand(t: Template, a: Acct, build?: Readonly<Record<string, 
     if ((a.skills[t.trains.skill] ?? 1) >= level) return null;
     const to = Math.min(t.trains.to, level);
     if (combat) return { ...t, env: { ...t.env, TARGET_LEVEL: String(to), GIANT_BURY: '0' }, trains: { ...t.trains, to } };
+    // Normal bones give 112.5 Prayer XP each, under the XP of one level from level 6 up, and the worker counts its
+    // buries from the XP still needed (planPrayer). A band of bought bones (BONE_ID) is refused: one dragon bone gives
+    // 1,800 XP, more than the level after 43.
+    if (t.script === 'scripts/train-prayer.ts' && t.env?.BONE_ID === undefined && !t.batchFor) return { ...t, args: [String(to)], trains: { ...t.trains, to } };
     return t.trains.to <= level ? t : null;
 }
 
