@@ -525,7 +525,11 @@ export function finishedTrainers(jobs: readonly any[], side: string, assigned: R
 // because a dropped session still holds the account's fleet claim (the worker logs `RESULT fail login: Error: fleet
 // account claim held by swarm` until an authenticated recovery confirms the logout) is a drain too: the job never ran,
 // and the recovered account resumes it. So is a world planner `precondition no route to`: it says where the account
-// stands, not whether the job works, and a routing fix makes the same job run.
+// stands, not whether the job works, and a routing fix makes the same job run. And so is a market buy that did not
+// reach the market bank (`market bank travel failed`, scripts/buy-owned-ge-item.ts): no order was placed, and the
+// account stands nearer the bank for its next try (live claude-cloud: after the second ferry a relayed session's
+// state went stale at Port Sarim, the route was planned from it, and two such trips retired an account's rune buy;
+// the same walk from that tile takes 249 ticks on practice).
 export const RETIRE_FAILS = 2, WASTE_LIMIT = 0.9;
 // Cow mode reports its progress as selectedXp, damageXp and creditedKills.
 // A shop run reports what it bought as boughtTotal (scripts/shop-buyer.ts), and a Grand Exchange buy as "acquired" in
@@ -536,7 +540,7 @@ export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked
 // A run that ended on a stop file is a drain as well: the owner paused the account or the controller removed the job,
 // which says nothing about whether the job works (live claude-cloud: a quest chain stopped for an open fleet order
 // logged two such fails, and the account's Lost City band was retired).
-export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|.*\bprecondition no route to\b|stop file\b|.*\bworker finished: stop file\b)/;
+export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|.*\bprecondition no route to\b|.*\bmarket bank travel failed\b|stop file\b|.*\bworker finished: stop file\b)/;
 export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number; drains: number } {
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
     const drains = clean.filter(l => DRAIN_RESULT.test(l)).length;
