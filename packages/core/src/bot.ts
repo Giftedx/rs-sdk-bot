@@ -8,10 +8,14 @@ import { logout } from './logout';
 import { waitUntil } from './ticks';
 import { stalled, startLedger, formatLedger } from './ledger';
 import { startTickStallWatch } from './tick-stall';
-import { assertSideOwns } from './fleet';
+import { assertSideOwns, loadOwners } from './fleet';
 import { fleetLeaseAllowsWorker } from './fleet-lease';
 import { startStatus } from './status';
 import { watchRandomEvents, type RandomEventWatch } from './randomevents';
+import { protectByStyle, startPrayerGuard } from './prayer-guard';
+import { npcAttackStyles } from '../../knowledge/src/npc-attack-styles';
+import { npcHunters } from '../../knowledge/src/npc-hunters';
+import { readOpponents, wornWeaponStyle } from './opponent';
 import { createWorld, rsPathLength, type Account, type World } from './world';
 import {assertLiveWorkerRelease} from './worker-release';
 import { createTickRecorder } from './tick-record';
@@ -111,6 +115,11 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     ledgers.set(s, led);
     // Random events (dryad, genie, lost axe...): handled on every tick unless RANDOM_EVENTS=0 (packages/core/src/randomevents.ts).
     if (process.env.RANDOM_EVENTS !== '0') randomEvents.set(s, watchRandomEvents(s));
+    // Free prayers and protection from NPCs and Wilderness players (packages/core/src/prayer-guard.ts); PRAYER_GUARD=0
+    // turns the guard off.
+    // The two NPC tables are read here, at login: the reads take about 1 s and must not run inside a tick.
+    if (process.env.PRAYER_GUARD !== '0') prayerGuards.set(s, startPrayerGuard(s, { log: line => log(`${line} bot=${name}`), protect: protectByStyle(npcAttackStyles()), hunters: npcHunters(),
+        players: { ignore: new Set(loadOwners().keys()), style: q => { const seen = readOpponents(s.client).find(v => v.index === q.index); return seen ? wornWeaponStyle(seen.worn.rhand) : null; } } }));
     // Any bot stops cleanly when .practice/stop-<name> appears (checked every 25 ticks): a script that never checks
     // it (seen: fishing30 under the supervisor) still logs out in game.
     let stopTicks = 0;
@@ -177,6 +186,9 @@ const ledgers = new Map<Session, ReturnType<typeof startLedger>>();
 const statuses = new Map<Session, ReturnType<typeof startStatus>>();
 const stallWatches = new Map<Session, { stop(): void }>();
 const randomEvents = new Map<Session, RandomEventWatch>();
+const prayerGuards = new Map<Session, ReturnType<typeof startPrayerGuard>>();
+// For a script that owns the prayers and needs them all off at its start (scripts/microbot-prayer-flick.ts).
+export const releasePrayerGuard = async (s: Session): Promise<void> => { const guard = prayerGuards.get(s); prayerGuards.delete(s); await guard?.release(); };
 const records = new Map<Session, NonNullable<ReturnType<typeof createTickRecorder>>>();
 // A record whose file is not complete in this time is left as it is; the exit does not wait longer.
 const RECORD_FLUSH_MS = 3000;
@@ -229,6 +241,7 @@ async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail
     const log = opts.log ?? ((l: string) => console.log(l));
     for (const s of sessions) {
         const l = ledgers.get(s); if (l) log(`${formatLedger(l.stop())} bot=${s.name}`);
+        prayerGuards.get(s)?.stop(); prayerGuards.delete(s);
         const e = randomEvents.get(s); if (e) { e.stop(); log(`EVENTS ${JSON.stringify(e.counts())} bot=${s.name}`); }
     }
     opts.onReported?.(() => ok);

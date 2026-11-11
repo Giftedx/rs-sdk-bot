@@ -7,7 +7,22 @@
 // - appearance[slot]: 0x200 + obj id when an item is worn in that wear position (engine Player.generateAppearance).
 // - health / totalHealth: real HP from the last hitmark seen; combatCycle is that cycle + 400 (lite entities.ts).
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { parsePack } from '../../knowledge/src/pack';
+import { contentRoot } from '../../knowledge/src/paths';
+
 export type CombatStyle = 'melee' | 'ranged' | 'magic';
+
+// The style a worn weapon attacks with, from its object name (content pack/obj.pack). No weapon is melee (fists).
+let objNames: Map<number, string> | undefined;
+export function wornWeaponStyle(id: number | undefined): CombatStyle {
+    objNames ??= parsePack(readFileSync(join(contentRoot(), 'pack/obj.pack'), 'utf8'));
+    const name = id !== undefined && id >= 0 ? objNames.get(id) ?? '' : '';
+    if (/(^|_)(shortbow|longbow|crossbow|dart|knife|thrownaxe|javelin)(_|$)|bow$/.test(name)) return 'ranged';
+    if (/staff|wand/.test(name)) return 'magic';
+    return 'melee';
+}
 
 const HEADICON_SKULL = 0;
 const PROTECT_BITS: readonly [number, CombatStyle][] = [[3, 'melee'], [4, 'ranged'], [5, 'magic']];

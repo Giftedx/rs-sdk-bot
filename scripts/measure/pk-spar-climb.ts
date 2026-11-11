@@ -38,7 +38,7 @@ export const KNOBS: readonly Knob[] = [
     { name: 'mixStyles', candidates: [{ mixStyles: true }] },
     { name: 'adapt', candidates: [{ adapt: true }] },
     { name: 'kite', candidates: [{ freeze: true, kiteFrozen: 3 }, { freeze: 'low', kiteFrozen: 3 }, { freeze: true, kiteFrozen: 6 }] },
-    { name: 'prayerFlick', candidates: [{ prayerFlick: true }] },
+    { name: 'prayerFlick', candidates: [{ prayerFlick: false }] },
     { name: 'freeFood', candidates: [{ freeFood: true }] },
     { name: 'bowBurst', candidates: [{ bowBurst: 0.6 }, { bowBurst: 0.45 }, { bowBurst: 0.8 }] },
 ];

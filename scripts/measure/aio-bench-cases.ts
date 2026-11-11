@@ -291,6 +291,10 @@ const ROUTE_CASES: BenchCase[] = [
   sparCase('pvp:spar', sparFixture(3094), sparFixture(3096)),
   // The mirror with Dragon Slayer not done: the loop must leave the rune platebody on, because the game does not let
   // such an account put it back.
+  // Hill giants with Prayer 60: the prayer guard (packages/core/src/prayer-guard.ts) shows its counts in the
+  // PRAYER_GUARD line; `--set PRAYER_GUARD=0` runs the comparison without it.
+  {key: 'extra:giant-prayer-guard', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['giant', '1500', 'giant'], pass: ok, output: /kills=(\d+)/,
+    presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: [{id: 379, count: 5}]}},
   sparCase('extra:spar-no-slayer', sparFixture(3094, 3555, {noDragonSlayer: true}), sparFixture(3096, 3555, {noDragonSlayer: true})),
   // The tribrid against every build of scripts/pk-kits.ts in one run, and a mirror of 8 for each build: the cases that
   // the hill climb and the kit matrix run (scripts/measure/pk-spar-climb.ts, pk-spar-matrix.ts).
