@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794382994659-oreelse-knightrider",
+ "account": "OreElse",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "27f2a0f7-6db7-47cd-97f9-b6bc91322fad",
+ "count": 0,
+ "ok": false,
+ "at": 1794383143106,
+ "detail": "trade claimed"
+}
