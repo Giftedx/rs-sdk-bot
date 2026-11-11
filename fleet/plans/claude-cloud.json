@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794384374539,
+ "at": 1794384440110,
  "jobs": [
   {
    "account": "SporranDip",
@@ -56,6 +56,26 @@
    "template": "kit-buy:army-hunt-black-dragons",
    "autopilot": "claude-cloud",
    "resources": []
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio.ts",
+   "args": [
+    "quester",
+    "chain",
+    "drunkmonk,murder,zanaris"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
+   "role": "quest",
+   "template": "army-quest-lostcity",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "quest:lostcity"
+   ]
   },
   {
    "account": "PocketPool",
@@ -141,32 +161,6 @@
    "template": "army-alch-air-magic-99",
    "autopilot": "claude-cloud",
    "resources": []
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-eb197151-8a5f-4759-bd55-6385a29d16a0"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-thefullmonty-20261111t080055z [task-eb197151-8a5f-4759-bd55-6385a29d16a0]",
-   "role": "helper"
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-115f5ccc-d31c-4538-ba41-cc9b8282b17d"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-fingerblastr-20261111t080055z [task-115f5ccc-d31c-4538-ba41-cc9b8282b17d]",
-   "role": "quest"
   }
  ]
 }

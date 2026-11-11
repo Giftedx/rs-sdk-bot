@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794384429618-deeppockets-dipstick-mindrune",
+ "account": "Deeppockets",
+ "partner": "Dipstick",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 20,
+ "claim": "a9bd6b2f-03ae-4842-a0ad-c763fce2653c",
+ "count": 0,
+ "ok": false,
+ "at": 1794384436461,
+ "detail": "trade claimed"
+}
