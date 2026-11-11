@@ -228,7 +228,10 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
     observeQuests();
     write();
     let n = 0;
-    const off = s.onTick(() => { observeBank(); observeQuests(); if (++n % 5 === 0) write(); });
+    // A lockstep practice world runs ticks as fast as its bots answer, and no dashboard follows a bench account tick
+    // by tick: there the file is written every 100 ticks, not every 5 (the write was 10% of a 16-account bench run).
+    const every = process.env.SIM_LOCKSTEP === '1' ? 100 : 5;
+    const off = s.onTick(() => { observeBank(); observeQuests(); if (++n % every === 0) write(); });
     // The row is also written on the clock, for the session's whole life: a session whose tick stream has frozen (a
     // hung quest script, a stalled client) otherwise stops refreshing `at`, and the release gate (worker-release.ts
     // assertCompatibleWorkers) then reads an unfinished row older than 30 s as an unknown peer and refuses every other

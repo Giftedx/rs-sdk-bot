@@ -6,6 +6,125 @@ in-process client's player entities (`webclient/src/dash3d/ClientPlayer.ts`, `Cl
 (`sendInteractPlayer`, `sendSpellOnPlayer`, `sendTogglePrayer`, `sendUseItem`) and read head icons, worn items and the health bar from
 `Session.client`, which leaves the SDK state and the swarm's launch release unchanged -> `scripts/pk.test.ts` and the duels below.
 
+## Spar and ladder
+
+`scripts/pk-spar.ts` puts the fight loop on both sides: two own accounts fight each other, each with a named profile
+(a set of fight options; `PROFILES`). The bench case `pvp:spar` stages a mirror: both sides get the duel conditions
+below, with freeze runes and full special energy. The score is for side A: 200 for a kill and -200 for a death, plus
+the damage margin held inside 99 each way; an escape is 100 for the side that got away and -100 for the other; a
+fight that reaches the cap scores the margin alone. `scripts/measure/pk-spar-ladder.ts <challenger> [champion]` runs
+a case for each seed with the challenger on each side and prints wins, losses, draws and the mean score; a profile
+that wins the ladder is the next champion. With `--against <profile>` each of the two plays side A against that
+profile, for a case whose sides have different jobs.
+
+Map cases (`--case <key>`), each with the mirror kit:
+
+- `extra:spar-gap`: the two start 12 tiles apart.
+- `extra:spar-trees`: the two start 6 tiles apart at Wilderness level 3, at (3099, 3536) and (3105, 3536), with a
+  blocker on tiles 3101-3103 between them, so neither has line of sight.
+- `extra:spar-escape`: Wilderness level 34 at (3125, 3790), with no monster in view. Side B, the runner, has 3 sharks and a glory; out of food at 60 HP or less
+  it runs south to level 30 and rubs the glory. Side A, the hunter, must kill it first.
+
+- `extra:spar-escape-spell`: the same chase with no glory on the runner; it runs about 110 tiles to level 20 and casts
+  Varrock Teleport.
+- `extra:spar-escape-pots`: the glory chase with a super attack, a super strength and a ranging potion on the hunter.
+- Batches of 8: `extra:spar-x8`, `extra:spar-escape-x8`, `extra:spar-escape-pots-x8`, `extra:spar-escape-spell-pots-x8`,
+  and with the god-spell kit on the hunter `extra:spar-escape-god-x8` and `extra:spar-escape-spell-god-x8`.
+
+Gap: the fight loop does not choose where to stand, so cover, line of sight as a defence and a second attacker are
+not measured.
+
+### Speed of a measurement
+
+Use a batch case for every comparison: `extra:spar-x8` and `extra:spar-escape-x8` run 8 spars at once in one world,
+at the same spot (a player blocks no tile, and a fight loop names its one target). The ladder takes a batch key as
+any other case.
+
+- Cost. One spar alone: about 62 ms for each game tick with 2 accounts, so 44 s for a 711-tick mirror fight and
+  about 20 s for an escape fight. A batch of 8 escape fights: 36 s, and a 16-fight ladder 69 s (4.3 s a fight).
+- Where the time went, from a CPU profile of the worker (`BUN_OPTIONS="--cpu-prof-md --cpu-prof-dir=<dir>"`) and the
+  engine's `.practice/logs/sim-stat.log`:
+  - A script that waits for its logins with no tick wait open holds each lockstep tick for the busy limit (2 s): 16
+    accounts took 38 s to log in. The spar counts the login wait as a tick wait and logs the accounts in together.
+  - The status file of each account, written every 5 ticks: 10% of the run. A lockstep world writes it every 100.
+  - The reach flood fill behind the `reachable` flag of the state: 9%. The spar turns it off on its clients.
+- A CPU profile gives each function its share of the CPU time, not of the run. The worker of an 8-pair run used
+  about 2.6 s of CPU in 32 s; the rest of the run is the wait between the engine and its 16 clients (the engine
+  waited 40-100 ms for each tick; a client held a tick 9 ms at the median and 24 ms at the 90th percentile).
+- One unpack of the game archives for all clients of a process (`bunzip2` in `webclient/src/io/JagFile.ts`, a third
+  of the worker's CPU time) gave no gain outside the noise: 34 s against 35-36 s for the batch. It is not in the
+  vendor patch.
+- Gap: where the 40-100 ms of each tick go between the engine and its clients is not measured.
+
+Spar findings. Conditions: lockstep practice engine, cap 900 ticks, both sides with Lost City and Dragon Slayer done
+unless a finding says otherwise; a seed repeats its fight. Evidence: `.practice/pk-spar/*.json` and the traces
+`.practice/pk-spar/trace-*.log` in the worktree that ran them.
+
+1. **A mirror fight is a food race.** `pvp:spar`, base against base, seeds 1, 2, 3: kills at 668, 535 and 570 ticks;
+   side A, side A, side B won. The loser had eaten all 18 sharks in each fight; the winner 18, 13 and 16.
+   Gap: three fights; equal settings win or lose by the seed, so a small gain needs more seeds to show.
+2. **A freeze whenever the target is free loses a stand-up spar.** freeze against base, seeds 1, 2, 3 on each side,
+   without Dragon Slayer on either side (the platebody stayed off after the first cast): 2 wins, 4 losses, mean score
+   -104.2 (scores -175, 126, 163, -268, -244, -227). Gap: six fights; not run with Dragon Slayer done.
+3. **The fight loop's `dealt` counter reads low.** One spar: side A `dealt` 102 where side B took 274. The spar
+   scores from damage taken. Gap: the cause in the SDK `damage_dealt` events is not found.
+4. **A hunter that chases, freezes on the flight and keeps its special kills 1 runner in 3; the plain hunter kills
+   none.** `extra:spar-escape`, seeds 1, 2, 3, runner on base. Base hunter: the runner got away 3 of 3. Hunter
+   `freeze-flee` (a freeze only while the target runs): 3 of 3 got away. `freeze-flee` with `specBelow` 0.4: 1 kill
+   (156 ticks), 2 got away. What a trace showed:
+   - A cast leaves the hunter where it stands until its next turn, 5 ticks for a spell, while the runner covers 2
+     tiles a tick and leaves view. The loop now runs after a fleeing target between turns.
+   - The first freeze on a runner can miss; the third landed and held the runner 12 ticks (half time under Protect
+     from Magic), 3 tiles short of level 30. In those 12 ticks the hunter dealt 6 damage: its 4 specials were spent
+     while the runner still had food.
+   - A melee turn against a frozen target spends the freeze on a walk. The loop now attacks from range unless the
+     target is within 2 tiles.
+
+   - The freeze misses often: in one trace the first three casts on a runner missed. Rune platelegs, kiteshield and
+     full helm take 21, 8 and 6 off the magic attack; the loop takes them off for a freeze on a target that has fled.
+
+   Kill rates from batch runs, 16 fights each (two batches of 8, seeds 1 and 2), runner on base. `hunter`: a freeze on
+   the flight, the special kept for 40% health or a target that has fled. `hunter-low`: the same with a freeze from
+   62% health. Potions: a super attack, a super strength and a ranging potion on the hunter, for 3 of its 18 sharks.
+
+   | Runner | Hunter | Potions | Kills in 16 |
+   |---|---|---|---|
+   | glory, about 30 tiles to level 30 | `hunter` | no | 1 |
+   | glory | `hunter-low` | no | 3 |
+   | glory | `hunter` | yes | 6 |
+   | glory | `hunter-low` | yes | 5 |
+   | glory | `hunter-low`, `specBelow` 0.25 | yes | 4 |
+   | no glory, about 110 tiles to level 20 | `hunter-low` | yes | 9 |
+   | glory | `hunter-low`, Flames of Zamorak under Charge | yes | 5 |
+   | no glory | `hunter-low`, Flames of Zamorak under Charge | yes | 10 |
+
+   Flames of Zamorak under Charge hits up to 30 where Fire Wave hits up to 20 (Zamorak staff and cape worn, the Mage
+   Arena done; `pvp/spells/scripts/flames_of_zamorak.rs2:27`). The loop casts Charge (`charge`); every hunter of a
+   batch got "You feel charged with magic power." The rate did not move at 16 fights: 5 against 5-6 for the glory
+   runner, 10 against 9 for the runner with no glory.
+
+   The base hunter killed 0 of 8 against the glory runner. Boost potions and the length of the run decide the rate;
+   the freeze and special settings do not separate at 16 fights. Variants that showed no gain at 5 fights each: magic
+   only or magic and ranged once the target has fled, with and without the specials; the freeze cast with the weapon
+   in hand, so that the runner has no Protect from Magic up. Each style alone against the base fighter dealt, for
+   each 100 ticks: magic 25.4 and 24.2, melee 15.1 and 14.3, ranged 8.0 and 18.3.
+   Gap: 16 fights for each row; the no-glory row has no run without potions; a bow special against a moving runner
+   logged full energy three turns in a row, so it did not fire, and the cause is not found.
+5. **A start out of sight or far apart does not stop the fight.** One run each at seed 7, base against base, without
+   Dragon Slayer: first damage at tick 19 from 2 tiles in the open, 31 from 12 tiles, 11 from 6 tiles with the blocker
+   between; kills at 528, 495 and 628 ticks. The server walks an attacker to a tile with line of sight. Gap: one run each.
+6. **A side that escapes must not end its fight when the target leaves its view.** In the first escape spar the runner
+   returned `lost` 219 ticks in, still deep in the Wilderness. The loop keeps going while it escapes.
+7. **An account without Dragon Slayer loses its rune platebody at the first cast.** The loop takes the platebody off
+   for a cast and puts it on for a melee turn; the game refused it 35 and 39 times in one spar ("You have not earned
+   the right to wear this yet.", `levelrequire.rs2:132`). A PK account needs Dragon Slayer, or a body with no quest.
+8. **"I'm already under attack." is not proof of a monster.** A new practice world sends it for the first 8 ticks
+   (`pvp_combat.rs2:110`), and both sides then left the fight to attack a monster 15 tiles away. The loop reacts only
+   to a monster within 8 tiles that faces a player, and the spar waits 10 ticks before the fight.
+9. **Monsters at the fight spot block player hits.** At (3094, 3800) green dragons attacked both sides: "Someone else
+   is already fighting your opponent." 14 and 17 times in one spar. The escape case stands at (3125, 3790), where a
+   probe saw no attackable monster.
+
 ## Server rules the loop follows
 
 - Protect prayers cut a player's max hit by 40%, not 100% (`pvp_melee.rs2:32`, `pvp_ranged.rs2:38`, `pvp_magic.rs2:182`).

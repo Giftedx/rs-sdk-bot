@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
 import { componentId } from '../packages/core/src/logout';
+import { tickWaits } from '../packages/core/src/tick-stream';
 import type { NearbyPlayer } from '../vendor/rs-sdk/sdk/types';
 
 export const ITEMS = {
@@ -50,9 +51,22 @@ export type FightOptions = {
     rotation?: Style[];
     eatAt?: number;
     restorePrayerAt?: number;
-    // Cast a freeze whenever the target is free (default off: in a stand-up practice duel it slowed the kill, median
-    // 358 against 305 ticks over 3 runs each; research/pvp-fight-loop.md).
-    freeze?: boolean;
+    // true: cast a freeze whenever the target is free (in a stand-up practice duel it slowed the kill, median 358
+    // against 305 ticks over 3 runs each; research/pvp-fight-loop.md). 'flee': cast it only while the target runs away.
+    // 'low': also while its health bar is at or under `freezeBelow` (default 0.62), so a target that is about to run is
+    // already held.
+    freeze?: boolean | 'flee' | 'low';
+    freezeBelow?: number;
+    // Once the target has fled (it is out of food): the style turns to use, and whether every special goes out at
+    // once (default true). Unset, the rotation stays as it is.
+    fledRotation?: Style[];
+    // true: wield the staff for a freeze as for any spell. Default false: with the freeze runes carried, the freeze is
+    // cast with the weapon in hand. An opponent that prays against the weapon it sees then has no Protect from Magic
+    // up, and the freeze lasts its full time (pvp_magic.rs2:156 halves it under that prayer).
+    freezeWithStaff?: boolean;
+    // false: a freeze on a fled target takes off the torso alone, as any cast does.
+    freezeStrip?: boolean;
+    fledSpec?: boolean;
     // Choose a style the opponent's overhead prayer does not cover (default on).
     readOverheads?: boolean;
     // A melee or ranged special with this kit and combat-tab bar once the target's health bar is at or under `below`:
@@ -65,6 +79,10 @@ export type FightOptions = {
     // Return outcome "danger" (with the reason) as soon as dangerReason fires, so the caller can escape.
     exitOnDanger?: boolean;
     damageSpell?: number;
+    // Cast Charge before the first attack and again when it fades. With a god staff and that god's cape worn, a god
+    // spell then hits up to 30, not 20 (pvp/spells/scripts/flames_of_zamorak.rs2:27; Charge needs Magic 80, 3 fire,
+    // 3 blood and 3 air runes, and the Mage Arena done, skill_magic/scripts/spells/charge.rs2).
+    charge?: boolean;
     maxWild?: number;
     maxDistance?: number;
     stop?: () => boolean;
@@ -124,6 +142,10 @@ export function defaultSpec(kit: Kit, names = getObjNames()): SpecConfig | undef
         if (n === 'dragon_mace') return { kit: kit.melee!, bar: 'combat_spiked:specbar', cost: 250, below: 0.6, style: 'melee' };
         if (n === 'rune_claws') return { kit: kit.melee!, bar: 'combat_claw:specbar', cost: 250, below: 0.6, style: 'melee' };
     }
+    return bowSpec(kit, names);
+}
+// The magic shortbow special of a kit: the burst against a target out of melee reach.
+export function bowSpec(kit: Kit, names = getObjNames()): SpecConfig | undefined {
     for (const id of kit.ranged ?? []) {
         if ((names.get(id) ?? '') === 'magic_shortbow') return { kit: kit.ranged!, bar: 'combat_bow:specbar', cost: 350, below: 0.5, style: 'ranged' };
     }
@@ -201,11 +223,16 @@ export function dangerReason(o: { hp: number; maxHp: number; food: boolean; pray
 }
 
 // The next game tick, or false once the session has ended: a dropped session publishes no more ticks, so a plain
-// onTick wait would hang and a loop around it would spin on failed actions.
+// onTick wait would hang and a loop around it would spin on failed actions. The wait counts as an open tick stream,
+// so a lockstep practice engine runs its next tick at once (inprocess.ts acknowledgeTick) and does not hold each tick
+// for the busy limit.
 export function nextTick(s: Pick<Session, 'onTick' | 'ended'>): Promise<boolean> {
     return new Promise(resolve => {
-        const off = s.onTick(() => { off(); resolve(true); });
-        void s.ended.then(() => { off(); resolve(false); });
+        let open = true;
+        const end = (ticked: boolean) => { if (!open) return; open = false; tickWaits.active--; off(); resolve(ticked); };
+        tickWaits.active++;
+        const off = s.onTick(() => end(true));
+        void s.ended.then(() => end(false));
     });
 }
 
@@ -274,6 +301,8 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
     let freezeReady = start, frozenUntil = start, freezeCastAt = -10, frozenTile: { x: number; z: number } | null = null, selfFrozenUntil = start;
     let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = false, rapidSet = false, pjedByNpc = false;
     let target: NearbyPlayer | undefined, rubbed = -1, ranAt = -10, prevSelf: { x: number; z: number } | null = null;
+    let charged = false, chargeAt = -10;
+    let prevTarget: { x: number; z: number } | null = null, prevGap = 0, fleeingUntil = start, heading = { x: 0, z: 0 }, chaseAt = -10, fled = false;
     const hits: { tick: number; damage: number; src: number }[] = [], dealtLog: { tick: number; damage: number }[] = [];
     // Tank torso worn or carried at fight start (unequipped for a cast/shot and re-equipped on melee turns).
     const names = getObjNames();
@@ -289,6 +318,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         const at = me ? { x: me.worldX, z: me.worldZ } : null;
         result.ticks = now - start;
         if (!state || !me || !at) continue;
+        const stoodStill = !!prevSelf && at.x === prevSelf.x && at.z === prevSelf.z;
         if (prevSelf && (at.x !== prevSelf.x || at.z !== prevSelf.z)) selfFrozenUntil = now;
         prevSelf = { x: at.x, z: at.z };
         let maxEvent = seenEvent;
@@ -312,6 +342,8 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
                 frozenUntil = Math.max(frozenUntil, now + 4);
             }
             if (/have been poisoned/i.test(m.text)) poisoned = true;
+            if (/feel charged with magic power/i.test(m.text)) charged = true;
+            if (/magical charge fades away/i.test(m.text)) charged = false;
             if (/already under attack/i.test(m.text)) pjedByNpc = true;
         }
         seenMessage = maxMessage;
@@ -322,6 +354,14 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         if (target) {
             lastSeen = now;
             result.targetAt = { x: target.x, z: target.z };
+            // The target flees when it moves and the gap grows past 2 tiles; the state holds for 6 ticks after the last such step.
+            const gap = cheb(at, target);
+            if (prevTarget && (target.x !== prevTarget.x || target.z !== prevTarget.z) && gap > prevGap && gap > 2) {
+                fleeingUntil = now + 6;
+                fled = true;
+                heading = { x: Math.sign(target.x - prevTarget.x), z: Math.sign(target.z - prevTarget.z) };
+            }
+            prevTarget = { x: target.x, z: target.z }; prevGap = gap;
             if (frozenTile && now > freezeCastAt + 1 && (target.x !== frozenTile.x || target.z !== frozenTile.z)) {
                 // Target moved after the freeze cast: if it moved right away the spell splashed (no immunity); else it wore off (5-tick immunity).
                 const splashed = now <= freezeCastAt + 3;
@@ -331,7 +371,10 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             }
             if (o.maxDistance !== undefined && target.distance > o.maxDistance) { result.outcome = 'lost'; return result; }
             if (o.maxWild !== undefined && (wildernessLevel(at.z) > o.maxWild || wildernessLevel(target.z) > o.maxWild)) { result.outcome = 'lost'; return result; }
-        } else if (now - lastSeen > 10) { result.outcome = 'lost'; log(`PK lost ${targetName} after ${result.ticks} ticks`); return result; }
+        } else if (now - lastSeen > 10 && !(o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(state.inventory))) {
+            // While it escapes, a target out of view is the aim: the loop goes on until it is out of the Wilderness.
+            result.outcome = 'lost'; log(`PK lost ${targetName} after ${result.ticks} ticks`); return result;
+        }
         if (result.ticks >= cap) { log(`PK timeout against ${targetName}`); return result; }
         const inv = state.inventory, slotOf = (ids: readonly number[]) => inv.find(i => ids.includes(i.id));
         const oppCombat = Math.max(target?.combatLevel ?? 0, ...state.nearbyPlayers.filter(p => hits.some(h => h.src === p.index && now - h.tick <= 10)).map(p => p.combatLevel));
@@ -374,7 +417,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         // Deeper than the teleports reach (glory 30, spells 20): run south first.
         const reach = slotOf(ITEMS.glory) ? 30 : o.escapeSpell !== undefined ? 20 : 0;
         if (o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(inv) && reach && wildernessLevel(at.z) > reach) {
-            if (now - ranAt > 3) { void sdk.sendWalk(at.x, at.z - 14); ranAt = now; }
+            if (now - ranAt > 3) { if (ranAt < 0) log(`PK run south at HP ${me.hp}`); void sdk.sendWalk(at.x, at.z - 14); ranAt = now; }
             continue;
         }
         if (o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(inv) && wildernessLevel(at.z) <= 30) {
@@ -411,6 +454,15 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
                 continue;
             }
         }
+        // Chase: a target that flees covers 2 tiles a tick, and an attack that is done leaves us where we stand until
+        // the next turn. While we stand, run after it: to its tile, or along its heading once it is out of view. A walk
+        // would cancel an approach that the server has in hand, so it is sent only while we stand still.
+        const ranged = hasStyle(o.kit, 'magic') || hasStyle(o.kit, 'ranged');
+        if (ranged && stoodStill && now >= selfFrozenUntil && now - chaseAt >= 2 && now < nextAttack && now < fleeingUntil + 12) {
+            const to = target && cheb(at, target) > 5 ? { x: target.x, z: target.z }
+                : !target && prevTarget ? { x: prevTarget.x + heading.x * 12, z: prevTarget.z + heading.z * 12 } : null;
+            if (to) { void sdk.sendWalk(to.x, to.z); chaseAt = now; }
+        }
         if (!target) continue;
         if (!attackable({ z: at.z, combatLevel: me.combatLevel }, target)) {
             if (wildernessLevel(target.z) === 0) { result.outcome = 'lost'; return result; }
@@ -422,15 +474,22 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         const lastHit = [...hits].reverse().find(h => now - h.tick <= 10);
         const hitter = lastHit && lastHit.src !== target.index ? observePlayer(s.client, lastHit.src) : null;
         const overhead = hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
-        const canReachMelee = !(now < selfFrozenUntil && !adjacent(at, target)) && (cheb(at, target) <= 6 || (!hasStyle(o.kit, 'magic') && !hasStyle(o.kit, 'ranged')));
+        // A chase: the target flees, or stands frozen more than 2 tiles away. A melee turn then spends the freeze on a
+        // walk, so an account with a ranged or magic kit attacks from where it stands. Within 2 tiles a melee turn or
+        // a melee special costs one step.
+        const chasing = (now < fleeingUntil || now < frozenUntil) && cheb(at, target) > 2 && ranged;
+        const canReachMelee = !chasing && !(now < selfFrozenUntil && !adjacent(at, target)) && (cheb(at, target) <= 6 || (!hasStyle(o.kit, 'magic') && !hasStyle(o.kit, 'ranged')));
         const guarded = o.readOverheads === false ? new Set<Style>() : protectedStyles(seen?.headicons);
         const styleUsable = (st: Style) => hasStyle(o.kit, st) && (st !== 'melee' || canReachMelee);
-        const upcomingTurn = nextStyle(rotation, last, st => styleUsable(st) && !guarded.has(st)) ?? nextStyle(rotation, last, styleUsable) ?? nextStyle(rotation, last, st => hasStyle(o.kit, st));
+        const turns = fled && o.fledRotation?.length ? o.fledRotation : rotation;
+        const upcomingTurn = nextStyle(turns, last, st => styleUsable(st) && !guarded.has(st)) ?? nextStyle(turns, last, styleUsable) ?? nextStyle(turns, last, st => hasStyle(o.kit, st));
         if (pjedByNpc) {
             pjedByNpc = false;
             if (!hitter && typeof sdk.sendInteractNpc === 'function') {
+                // Only an NPC that faces a player close by: the server also sends the message for a player's hit, and in
+                // the first 8 ticks of a new world (pvp_combat.rs2:110), and a far NPC is then no reason to leave the fight.
                 const npc = (state.nearbyNpcs ?? [])
-                    .filter(n => (n.hp === null || n.hp > 0) && n.optionsWithIndex?.some(op => /^attack$/i.test(op.text)))
+                    .filter(n => (n.hp === null || n.hp > 0) && n.targetIndex >= 32768 && n.distance <= 8 && n.optionsWithIndex?.some(op => /^attack$/i.test(op.text)))
                     .sort((a, b) => Number(b.inCombat) - Number(a.inCombat) || a.distance - b.distance)[0];
                 const op = npc?.optionsWithIndex.find(x => /^attack$/i.test(x.text));
                 if (npc && op) {
@@ -464,12 +523,23 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             }
             continue;
         }
+        // Charge goes out on an attack tick, in place of that attack: a button on a cooldown tick could clear an attack
+        // that the server still has in hand. One try each 6 ticks, until the game confirms it.
+        if (o.charge && !charged && now - chargeAt >= 6) {
+            log('PK cast Charge');
+            void sdk.sendClickComponent(SPELLS.charge);
+            chargeAt = now; nextAttack = now + 2;
+            continue;
+        }
         // When not cardinally adjacent, client interactPlayer/spellOnPlayer emits MOVE_OPCLICK + OPPLAYER* (2 USER_EVENT packets).
         const attackPackets = adjacent(at, target) ? 1 : 2;
         // The special: equip its kit, toggle its specbar, and attack in the same tick (OpHeldHandler updates tabs[0]
         // during decodeIn before IfButtonHandler checks isComponentVisible). Keep total USER_EVENT packets <= 5.
-        const spec = o.spec, energy = special(s.client), specStyle: Style = spec?.style ?? 'melee';
-        if (spec && energy.energy >= spec.cost && lowHealth(seen, spec.below) && (specStyle !== 'melee' || canReachMelee)
+        // A target that has fled is out of food: from then on every special goes out at once, whatever its health bar
+        // shows, and past melee reach the bow special replaces a melee one.
+        const spec = o.spec && fled && o.spec.style !== 'ranged' && !canReachMelee ? bowSpec(o.kit, names) ?? o.spec : o.spec;
+        const energy = special(s.client), specStyle: Style = spec?.style ?? 'melee';
+        if (spec && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || lowHealth(seen, spec.below)) && (specStyle !== 'melee' || canReachMelee)
             && (!guarded.has(specStyle) || lowHealth(seen, 0.25))) {
             let budget = 5 - attackPackets - (energy.on ? 0 : 1);
             const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
@@ -484,7 +554,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
                 for (const p of wantPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
             }
             for (const item of toWield) use(item, /^(Wield|Wear)$/i);
-            log(`PK special energy ${energy.energy} on ${energy.on} target ${seen!.health}/${seen!.totalHealth}`);
+            log(`PK special ${specStyle} energy ${energy.energy} on ${energy.on} target ${seen?.health}/${seen?.totalHealth}`);
             if (!energy.on) void sdk.sendClickComponent(componentId(spec.bar));
             void sdk.sendInteractPlayer(target.index, 2);
             result.specs++; result.attacks[specStyle]++;
@@ -503,7 +573,8 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         const magicLevel = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
         const hasFreezeRunes = inv.some(i => i.id === ITEMS.natureRune || i.id === ITEMS.earthRune || i.id === ITEMS.waterRune);
         const freeze = o.freeze ? (hasFreezeRunes ? castableFreeze(magicLevel, inv) : freezeSpell(magicLevel)) : null;
-        const castFreeze = freeze !== null && hasStyle(o.kit, 'magic') && now >= freezeReady && now >= frozenUntil;
+        const castFreeze = freeze !== null && hasStyle(o.kit, 'magic') && now >= freezeReady && now >= frozenUntil
+            && (o.freeze === true || now < fleeingUntil || (o.freeze === 'low' && lowHealth(seen, o.freezeBelow ?? 0.62)));
         // Hit off the opponent's overhead: a style they protect against loses 40% of its max hit.
         const turn = castFreeze ? { style: 'magic' as Style, index: last } : upcomingTurn;
         if (!turn) continue;
@@ -523,15 +594,20 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         }
         let budget = 5 - attackPackets;
         const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
-        for (const id of [...(o.kit[turn.style] ?? []), ...(turn.style === 'melee' ? tankIds : [])]) {
+        const keepWeapon = castFreeze && hasFreezeRunes && o.freezeWithStaff !== true;
+        for (const id of keepWeapon ? [] : [...(o.kit[turn.style] ?? []), ...(turn.style === 'melee' ? tankIds : [])]) {
             if (state.equipment.some(e => e.id === id)) continue;
             const item = slotOf([id]);
             if (item && toWield.length < budget) toWield.push(item);
         }
         budget -= toWield.length;
         const freeSlots = 28 - inv.length - (switching2H ? 1 : 0);
-        const toRemove = turn.style !== 'melee' && typeof sdk.sendUseEquipmentItem === 'function' && me.hp > oppMax + 12 && freeSlots >= 1 && budget >= 1
-            ? negativeCastArmour(state.equipment, turn.style, kitIds, names).filter(eq => eq.slot === 4).slice(0, 1)
+        // A freeze on a target that has fled decides the chase, and the runner does not hit back: every piece that
+        // cuts the magic attack roll comes off for it (platelegs -21, kiteshield -8, full helm -6), as far as the
+        // packets and free pack slots of this tick allow. Any other cast takes off the torso alone.
+        const strip = castFreeze && fled && o.freezeStrip !== false;
+        const toRemove = turn.style !== 'melee' && typeof sdk.sendUseEquipmentItem === 'function' && (strip || me.hp > oppMax + 12) && freeSlots >= 1 && budget >= 1
+            ? negativeCastArmour(state.equipment, turn.style, kitIds, names).filter(eq => strip || eq.slot === 4).slice(0, strip ? Math.min(budget, freeSlots) : 1)
             : [];
         budget -= toRemove.length;
         if (prayers.prayerPoints > 0 && budget > 0) {
@@ -547,6 +623,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             const spell = castFreeze ? freeze! : (o.damageSpell ?? bestDamageSpell(magicLevel, inv));
             void sdk.sendSpellOnPlayer(target.index, spell);
             if (castFreeze) {
+                log(`PK freeze cast at distance ${cheb(at, target)}, target health ${seen?.health}/${seen?.totalHealth}, target protects ${[...guarded].join('+') || 'nothing'}`);
                 result.freezes++;
                 const dur = freezeDuration(freeze!, guarded.has('magic'));
                 frozenUntil = now + dur;
