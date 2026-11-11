@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794383468730,
+ "at": 1794383550373,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -571,7 +571,7 @@
     "CAP": "4000",
     "COORDINATOR_RUN_ID": "task-d5810f0c-7423-4e51-8649-33eb64c6243a"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-coin-pocketrocket-shaftmaker-150k [task-d5810f0c-7423-4e51-8649-33eb64c6243a]",
    "role": "supply"
