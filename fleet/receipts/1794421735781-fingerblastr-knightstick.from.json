@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794421735781-fingerblastr-knightstick",
  "account": "Fingerblastr",
  "partner": "Knightstick",
@@ -12,6 +12,12 @@
  "claim": "917c44d8-0c8f-42a2-b66a-2bdb3361492a",
  "count": 0,
  "ok": false,
- "at": 1794421741973,
- "detail": "trade claimed"
+ "at": 1794421905762,
+ "detail": "Error: route to 3183, 3440: precondition no route to 3183,3440,0",
+ "logout": {
+  "attemptId": "1794421741975-0000009049-0000000001",
+  "at": 1794421905755,
+  "sha256": "23267fc14d77fbcd1546cf2bb5ed116beed9f0072f1ddb4253f89e95b67116f7"
+ },
+ "screen": false
 }
