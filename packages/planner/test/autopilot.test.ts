@@ -1157,3 +1157,32 @@ test('an army account under the Magic Guild level buys curse runes, then water a
     expect(many.filter(a => a.template!.id === 'army-splash-magic-66').length).toBe(SPLASH_PLACES);
     expect(many.filter(a => a.template!.id === 'army-trooper-ranged-99').length).toBe(4 - SPLASH_PLACES);
 });
+
+test('the kit tier uses this side\'s own stock first: a maxed account gives all it holds, and a send brings the batch', () => {
+    const maxed = { Thieving: 99, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Magic: 99, Prayer: 99 };
+    const kit = { shark: 40, 'adamant scimitar': 1 };
+    // Monk is at Prayer 97 with 6 dragon bones and too few coins for a buy; Done is maxed and holds 41.
+    const monk = acct('Monk', { ...maxed, Prayer: 97 }, { ...kit, coin: 20_000, 'dragon bone': 6 });
+    const done = acct('Done', maxed, { ...kit, 'dragon bone': 41, 'nature rune': 900 });
+    const army = new Set(['monk', 'done', 'half']);
+    const near: Stock = { name: 'Done', side, items: done.items }, other: Stock = { name: 'Far', side: 'local', items: { 'dragon bone': 500, coin: 9_000_000 } };
+    const bones: Market = { ...market, 'dragon bone': { id: 536, name: 'Dragon bones', limit: KIT_PRICE_CAPS['dragon bone']! } };
+    const run = (stock: Stock[], accounts: Acct[] = [monk, done], extra: Partial<Inputs> = {}) => plan(inputs(accounts, { army, market: bones, capacity: CAPACITY, stock, ...extra })).find(a => a.account === 'Monk')!;
+    // The maxed account of this side keeps nothing: Monk gets every bone it holds, up to what Prayer 99 still needs,
+    // in one send, though another side has more bones and the coins to fund a buy.
+    const need = BONE_KEEP + Math.ceil((xpForLevel(99) - xpForLevel(97)) / 1800) - 6;
+    expect(need).toBeGreaterThan(41);
+    expect(run([other, near]).send).toEqual({ from: 'Done', to: 'Monk', item: 'dragon bone', count: 41, template: 'army-bury-dragon-99' });
+    // A donor that holds more than the batch sends the batch.
+    expect(run([{ ...near, items: { ...near.items, 'dragon bone': 400 } }], [monk, acct('Done', maxed, { ...kit, 'dragon bone': 400 })]).send).toMatchObject({ from: 'Done', count: need });
+    // An account of this side outside the army keeps the reserve of every band: its levels say nothing here.
+    const mule = (n: number): Stock => ({ name: 'Mule', side, items: { 'dragon bone': n } });
+    expect(run([mule(BONE_START + 4)], [monk]).send).toBeUndefined();
+    expect(run([mule(BONE_START + 10)], [monk]).send).toEqual({ from: 'Mule', to: 'Monk', item: 'dragon bone', count: 10, template: 'army-bury-dragon-99' });
+    // With no stock on this side the other side's coins fund the buy, as before.
+    const funded = run([other], [monk]);
+    expect(funded.send).toBeUndefined();
+    expect(funded.fund).toMatchObject({ from: 'Far', to: 'Monk' });
+    // And with no market for bones the other side sends what the band needs to start, not its whole stock.
+    expect(run([other], [monk], { market }).send).toEqual({ from: 'Far', to: 'Monk', item: 'dragon bone', count: BONE_START - 6, template: 'army-bury-dragon-99' });
+});
