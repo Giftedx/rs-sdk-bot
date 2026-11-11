@@ -276,7 +276,9 @@ Ranged it adds is not needed at that point.
   at 110, in Al Kharid at 138), the scimitar wielded again. The first sword cost 100,000 and the second 101,000. A
   third was not on the shelf in 711 ticks of waiting (`SWORDS=3 WAIT=700`: `swords=2 ... shelf=0`). **Evidence.**
   `.practice/jakut/run.ts` (`a`, `b`), `.practice/jakut/probe.ts`.
-- **Gap.** Not run live. The shelf's restock on the live server is not measured. No army account holds a diamond.
+- **Gap.** Not run live. The shelf's restock on the live server is not measured. No army account holds a diamond:
+  `army-jakut-swords` buys one on the market (1,219 listed from 145,000, cap 150,000) for an account with Lost City
+  done and a dramen staff, then runs the visit with `SWORDS=2 WAIT=600`.
 - **Gap.** No seller on practice, so a fill is proved live only. Kills per tick with each blade are not measured.
 
 ## Black dragonhide from Taverley's black dragons

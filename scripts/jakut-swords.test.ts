@@ -19,3 +19,12 @@ test('the coins a run takes cover each sword at the shelf\'s dearest price, and 
     // Practice: two swords cost 201,000 and 202,000 (100,000 with two on the shelf, 101,000 with one).
     expect(jakutCoins(2)).toBeGreaterThanOrEqual(202_000 + JAKUT_RESERVE);
 });
+
+test('the planner asks the coins the worker takes for its two swords', async () => {
+    const { JAKUT_COINS, JAKUT_SWORDS, catalogue } = await import('../packages/planner/src/autopilot');
+    expect(JAKUT_COINS).toBe(jakutCoins(JAKUT_SWORDS));
+    const t = catalogue().find(t => t.id === 'army-jakut-swords')!;
+    expect(t.worker).toBe('scripts/jakut-swords.ts');
+    expect(t.args).toContain(`SWORDS=${JAKUT_SWORDS}`);
+});
+

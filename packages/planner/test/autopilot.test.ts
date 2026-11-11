@@ -198,6 +198,10 @@ test('assess retires repeated fails, a death and near-total waste, and keeps pro
     const budget = 'RESULT fail Error: market bank travel failed: position=3029,3217,0 currentHP=99 ticks=41; Error: market trip health/stop/tick budget';
     expect(assess([trip, budget])).toMatchObject({ retire: false, drains: 2, fail: 0 });
     expect(assess(['RESULT fail {"ok":false,"phase":"unplaced","acquired":0,"failure":"final bank/reserve/asset reconciliation failed"}', 'RESULT fail {"ok":false,"phase":"unplaced","acquired":0,"failure":"x"}']).retire).toBe(true);
+    // A buy refused because the planner's count of the item was stale placed no order either (live: baseline 104
+    // against EXPECTED_OWNED 140); the chain's result line carries the step's text.
+    const stale = 'RESULT fail {"ok":false,"phase":"unplaced","pending":false,"quantity":10,"acquired":0,"spent":0,"finalItems":104,"ticks":4,"failure":"Error: owned item baseline 104 differs from EXPECTED_OWNED 140"} chain rounds=1 ok=0 failed=1';
+    expect(assess([stale, stale])).toMatchObject({ retire: false, drains: 2, fail: 0 });
     expect(assess(['RESULT fail no combat progress: cow stage: walk to Ardougne north bank failed: precondition no route to 2619,3332,0', noRoute]).retire).toBe(false);
     // A cow run that killed and trained before failing made progress; two runs with no kill did not.
     expect(assess(['RESULT fail mode=cow ok=false creditedKills=6 selectedXp=5200', 'RESULT fail mode=cow ok=false creditedKills=2 selectedXp=1600']).retire).toBe(false);
@@ -1313,5 +1317,33 @@ test('a hunter makes its hides into armour: flax to Crafting 84 when it cannot h
         const out = first(a, { stock: [rich, far] });
         expect(out.send).toBeUndefined();
     }
+});
+
+import { JAKUT_COINS, JAKUT_SWORDS, JAKUT_WAIT } from '../src/autopilot';
+test('an account with Lost City buys its dragon longswords from Jakut: the diamond on the market first, then one visit', () => {
+    const maxed = { Thieving: 99, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Magic: 99, Prayer: 99 };
+    const done = new Set(['lost city']), pilots = new Set(['army-jakut-swords']);
+    const diamond: Market = { diamond: { id: 1601, name: 'Diamond', limit: KIT_PRICE_CAPS.diamond! } };
+    const who = (items: Record<string, number>, quests: ReadonlySet<string> | undefined = done): Acct => ({ ...acct('Snake', maxed, { 'dramen staff': 1, coin: 900_000, ...items }), ...(quests ? { quests } : {}) });
+    const first = (a: Acct, extra: Partial<Inputs> = {}) => plan(inputs([a], { army: new Set(['snake']), capacity: CAPACITY, pilots, market: diamond, ...extra }))[0]!;
+    // No diamond: the market buy of one, under its cap.
+    const buy = first(who({}));
+    expect(buy.template!.id).toBe(KIT_BUY + 'army-jakut-swords');
+    expect(buy.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+) .*LIMIT_PRICE=(\d+)/)!.slice(1).map(Number))).toEqual([[1601, 1, 150_000]]);
+    // With the diamond: the visit, two swords, waiting inside for the shelf's second.
+    const visit = first(who({ diamond: 1 }));
+    expect(visit.template!.id).toBe('army-jakut-swords');
+    expect(visit.reason).toBe(`army band ${HUNT_BAND + 0.05}: 1 dragon longsword`);
+    expect(jobFor(visit, side)).toMatchObject({ script: 'scripts/aio.ts', args: ['market', 'jakut-swords', `SWORDS=${JAKUT_SWORDS}`, `WAIT=${JAKUT_WAIT}`], repeat: false });
+    expect(catalogue().find(t => t.id === 'army-jakut-swords')!.needs!.items!.coins).toBe(JAKUT_COINS);
+    // Not with a sword held (one more would cost a second diamond), not without the quest, not without the pilot.
+    expect(first(who({ diamond: 1, 'dragon longsword': 1 })).template?.id).not.toBe('army-jakut-swords');
+    expect(first(who({ diamond: 1 }, new Set())).template?.id).not.toBe('army-jakut-swords');
+    expect(first(who({ diamond: 1 }), { pilots: new Set() }).template?.id).not.toBe('army-jakut-swords');
+    // A hunter with arrows hunts first; short of arrows it goes to Jakut before the shop run.
+    const kit = { 'dusty key': 1, 'magic shortbow': 1, 'iron arrow': HUNT_ARROWS, 'law rune': 1, 'air rune': 3, 'fire rune': 1, shark: HUNT_FOOD, diamond: 1 };
+    const both = new Set(['army-jakut-swords', 'army-hunt-black-dragons', 'army-hunt-supply']);
+    expect(first(who(kit), { pilots: both }).template!.id).toBe('army-hunt-black-dragons');
+    expect(first(who({ ...kit, 'iron arrow': 40 }), { pilots: both }).template!.id).toBe('army-jakut-swords');
 });
 
