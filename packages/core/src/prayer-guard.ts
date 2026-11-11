@@ -82,6 +82,9 @@ const NEUTRAL = new Set(['say', 'privateMessage', 'wait', 'none', 'scanGroundIte
     'shopBuy', 'shopSell']);
 // Ticks the player must stand with no animation before an interaction that is not an attack counts as ended.
 const IDLE_TICKS = 6;
+// A pickup ends when the item count in the pack goes up, or when the player has stood idle for this many ticks.
+const PICKUP_IDLE_TICKS = 2;
+const held = (st: any, id: number): number => (st?.inventory ?? []).reduce((n: number, i: any) => (i.id === id ? n + i.count : n), 0);
 // Prayers that turn each other off (skill_prayer/configs, prayer_deactivate): Defence, Strength, Attack, protection.
 const EXCLUSIVE = [[0, 3, 9], [1, 4, 10], [2, 5, 11], [12, 13, 14]];
 // The active prayers after one button, from the prayers that were active before it.
@@ -97,7 +100,7 @@ const MAX_FLICKED = 4;
 const backFirst = (prayer: number) => prayer >= 12 ? 0 : [0, 3, 9].includes(prayer) ? 1 : 2;
 
 type Action = { type: string; [k: string]: unknown };
-type Pending = { kind: 'none' } | { kind: 'attack'; action: Action } | { kind: 'other'; still: number };
+type Pending = { kind: 'none' } | { kind: 'attack'; action: Action } | { kind: 'other'; still: number; need: number; item?: number; had?: number };
 
 export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     const every = o.every ?? 3, calm = o.calmTicks ?? 20;
@@ -139,7 +142,8 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         if (NEUTRAL.has(a.type)) return;
         if (a.type === 'walkTo') { pending = { kind: 'none' }; return; }
         if ((a.type === 'interactNpc' || a.type === 'interactPlayer') && attackTarget(a, s.sdk.getState())) { pending = { kind: 'attack', action: { ...a } }; return; }
-        pending = { kind: 'other', still: 0 };
+        if (a.type === 'pickupItem') { const item = a.itemId as number; pending = { kind: 'other', still: 0, need: PICKUP_IDLE_TICKS, item, had: held(s.sdk.getState(), item) }; return; }
+        pending = { kind: 'other', still: 0, need: IDLE_TICKS };
     };
 
     const client = s.client as { executeBotAction?: (action: unknown) => unknown } | undefined;
@@ -193,11 +197,11 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         for (const e of st.combatEvents ?? []) if (e.type === 'damage_taken' && e.tick > lastEvent) { taken += e.damage; lastEvent = e.tick; }
         const active: number[] = prayers.activePrayers.flatMap((on: boolean, i: number) => (on ? [i] : []));
 
-        // An interaction that is not an attack ends when the player has stood idle for IDLE_TICKS ticks.
+        // An interaction that is not an attack ends when the player has stood idle for its number of ticks.
         const tile = `${p.worldX},${p.worldZ},${p.level}`;
         if (pending.kind === 'other') {
             pending.still = tile === lastTile && (p.animId ?? -1) === -1 ? pending.still + 1 : 0;
-            if (pending.still >= IDLE_TICKS) pending = { kind: 'none' };
+            if (pending.still >= pending.need || (pending.item !== undefined && held(st, pending.item) > pending.had!)) pending = { kind: 'none' };
         }
         lastTile = tile;
 

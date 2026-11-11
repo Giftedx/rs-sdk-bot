@@ -10,7 +10,7 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
     let tick = 0, timer: number | null = active.some(Boolean) ? 5 : null;
     const w = {
         active, drains: 0, toggles: 0, windowsClosed: 0, cleared: 0, window: false, anim: -1,
-        interaction: null as string | null, most: 0, z: 3200, combat: 50, players: [] as any[], npcs: [] as any[], events: [] as any[], offSeen: 0,
+        interaction: null as string | null, most: 0, pack: [] as { id: number; count: number }[], z: 3200, combat: 50, players: [] as any[], npcs: [] as any[], events: [] as any[], offSeen: 0,
     };
     const inbox: any[] = [];
     const listeners = new Set<() => void>();
@@ -18,7 +18,7 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
     const state = () => ({
         player: { worldX: 3200, worldZ: w.z, level: 0, animId: w.anim, isDead: false, combatLevel: w.combat },
         prayers: { activePrayers: [...active], prayerPoints: init.points ?? 50, prayerLevel: init.level ?? 50 },
-        nearbyNpcs: w.npcs, nearbyPlayers: w.players, combatEvents: w.events, modalOpen: w.window,
+        nearbyNpcs: w.npcs, nearbyPlayers: w.players, inventory: w.pack, combatEvents: w.events, modalOpen: w.window,
         dialog: { isOpen: false }, interface: { isOpen: false }, bank: { isOpen: false }, shop: { isOpen: false },
     });
     let published = state();
@@ -475,4 +475,33 @@ test('a player that attacks comes before an NPC that attacks', () => {
     w.players = [rival(50, 6, 3600, { combatTargetType: 'player', combatTargetIndex: 7 })];
     advance(10);
     expect(on(w)).toEqual([PROTECT.missiles]);
+});
+
+test('a pickup holds the prayer only until the item is in the pack', () => {
+    const { w, s, client, advance } = world({ prayers: [PROTECT.melee] });
+    startPrayerGuard(s, { protect: false });
+    advance(1);
+    for (let i = 0; i < 26; i++) {
+        w.anim = 422;
+        client.executeBotAction({ type: 'pickupItem', x: 1, z: 1, itemId: 532 });
+        advance(1);
+        const before = w.toggles;
+        advance(1);
+        // No prayer input before the item arrives.
+        expect(w.toggles).toBe(before);
+        w.pack = [{ id: 532, count: i + 1 }];
+        advance(8);
+    }
+    expect(w.drains).toBeLessThanOrEqual(2);
+});
+
+test('a pickup that fails ends after 2 idle ticks', () => {
+    const { w, s, client, advance } = world({ prayers: [PROTECT.melee] });
+    const guard = startPrayerGuard(s, { protect: false });
+    advance(1);
+    client.executeBotAction({ type: 'pickupItem', x: 1, z: 1, itemId: 532 });
+    advance(4);
+    const before = guard.stats().flicks;
+    advance(6);
+    expect(guard.stats().flicks).toBeGreaterThan(before);
 });
