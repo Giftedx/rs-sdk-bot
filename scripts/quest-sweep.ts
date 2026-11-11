@@ -170,6 +170,18 @@ export const QUEST_KEEP:Record<string,number[]>={runemysteries:[1438,290,291],to
  sheepherder:[278,279,284,285,280,281,282,283],
  // Pirate's Treasure's rum, chest key and message: a resumed run carries on from whichever the bank holds.
  hunt:[431,432,433]};
+// A preset's protective supply that an account with Hitpoints and Defence at STURDY does without: it rides as food
+// does (taken when the bank holds it, never reported missing). Lost City's two prayer potions keep Protect from
+// Melee up against the tree spirit after the cave ladder drains Prayer (cave_monk.rs2:14); no shop sells them.
+export const STURDY=90,STURDY_MEALS=10,STURDY_OPTIONAL:Record<string,number[]>={zanaris:[2434]};
+// Quests that board the Entrana ship: its monk carries nobody with a weapon or a piece of armour in the pack or worn
+// (monk_of_entrana.rs2 has_entrana_restricted_items; an arrow, a ring, an amulet and boots pass). The bank pass banks
+// everything the account wears and every pack item the quest does not use, and runs even with the pack complete.
+export const BARE=new Set(['zanaris']);
+// Pack rows a bare quest banks: all but its own pack, its food and runes, its kept items and coins.
+export function bareDeposits(quest:string,pack:readonly Item[],need:ReadonlyMap<number,number>,food:ReadonlyMap<number,number>,tradeable:(id:number)=>boolean|undefined):number[]{
+ return [...new Set(pack.map(i=>i.id))].filter(id=>id!==COINS&&!need.has(id)&&!food.has(id)&&!MEALS.includes(id)&&!keepsItem(quest,id,tradeable));
+}
 export function keepsItem(quest:string,id:number,tradeable:(id:number)=>boolean|undefined):boolean{
  return (QUEST_KEEP[quest]??[]).includes(id)||tradeable(id)===false;
 }
@@ -1048,6 +1060,13 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  try {
  const st=()=>s.sdk.getState();
  if(!await waitUntil(s,()=>!!st()?.player,{timeoutTicks:20}))return fail('entry state unavailable');
+ const baseLevel=(name:string)=>st()?.skills?.find((k:any)=>k.name===name)?.baseLevel??1;
+ for(const id of STURDY_OPTIONAL[quest]??[])if(base.has(id)&&baseLevel('Hitpoints')>=STURDY&&baseLevel('Defence')>=STURDY){
+  food.set(id,base.get(id)!);base.delete(id);
+  // Without the supply the fight is paid in food: the preset's meal count rises to STURDY_MEALS.
+  const meal=[...food.keys()].find(f=>MEALS.includes(f));
+  if(meal!==undefined)food.set(meal,Math.max(food.get(meal)!,STURDY_MEALS));
+ }
  let wornKit=wornKitPlan(quest,base,st()?.inventory??[],[],s.sdk.getEquipment()),need=wornKit.need;
  const maxHp=()=>st()?.skills?.find((k:any)=>k.name==='Hitpoints')?.baseLevel??10;
  const sustain=startQuestSustain({sdk:s.sdk,tick:()=>s.tick(),onTick:cb=>s.onTick(cb),ended:s.ended,direct:async action=>{
@@ -1129,7 +1148,9 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  const seekGhostSkull=quest==='priest'&&ghostState()==='started'&&s.sdk.getEquipment().some(i=>i.id===552);
  const skill=(name:string)=>st()?.skills?.find((k:any)=>k.name===name)?.baseLevel??1;
  // A skill the quest wants and the account lacks sends the account through the bank pass too, with every supply held.
- if(seekGhostSkull||WORN_KIT[quest]?.some(i=>!i.required&&!s.sdk.getEquipment().some(e=>e.id===i.id))||plan(need,pack(),[]).missing.length||plan(food,pack(),[]).missing.length||questSkillTraining(quest,skill)){
+ const tradeableId=(id:number)=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable;
+ const bare=BARE.has(quest)&&(s.sdk.getEquipment().length>0||bareDeposits(quest,pack(),need,food,tradeableId).length>0);
+ if(bare||seekGhostSkull||WORN_KIT[quest]?.some(i=>!i.required&&!s.sdk.getEquipment().some(e=>e.id===i.id))||plan(need,pack(),[]).missing.length||plan(food,pack(),[]).missing.length||questSkillTraining(quest,skill)){
   const exit=await leaveStronghold(s);
   if(!exit.ok)return fail(exit.detail!);
   // The nearest bank may be out of reach: try the next three.
@@ -1150,6 +1171,31 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
   const opened=await s.bot.openBank();
   if(!opened.success)return fail('bank did not open');
   await waitUntil(s,()=>(st()?.bank?.items?.length??0)>0,{timeoutTicks:10});
+  if(bare){
+   // Bank the spare pack rows, take off what is worn (taking an item off shuts the bank), then bank those too.
+   const bankRows=async()=>{
+    for(const id of bareDeposits(quest,pack(),need,food,tradeableId)){
+     const row=(st()?.inventory??[]).find((i:any)=>i.id===id);
+     if(!row)continue;
+     await s.bot.depositItem(row,-1);
+     if(!await waitUntil(s,()=>count(pack(),id)===0,{timeoutTicks:10}))return `bare deposit unobserved ${id}`;
+    }
+    return null;
+   };
+   const first=await bankRows();
+   if(first)return fail(first);
+   const worn=[...s.sdk.getEquipment()];
+   for(const item of worn){
+    await s.bot.unequipItem(item);
+    if(!await waitUntil(s,()=>!s.sdk.getEquipment().some(e=>e.slot===item.slot),{timeoutTicks:8}))return fail(`worn item ${item.id} did not come off`);
+   }
+   if(worn.length){
+    if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>!!st()?.bank?.isOpen,{timeoutTicks:10}))return fail('bank did not reopen for the worn items');
+    const second=await bankRows();
+    if(second)return fail(second);
+   }
+   console.log(`QUEST_SWEEP_BARE ${JSON.stringify({worn:worn.map(i=>i.id),left:s.sdk.getEquipment().length,pack:pack().map(i=>i.id)})}`);
+  }
   const rows=():Item[]=>(st()?.bank?.items??[]).map((i:any)=>({id:i.id,count:i.count}));
   wornKit=wornKitPlan(quest,base,pack(),rows(),s.sdk.getEquipment());need=wornKit.need;
   const p=plan(need,pack(),rows()),meal=mealPlan(food,pack(),rows(),p.withdraw,need);

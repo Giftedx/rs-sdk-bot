@@ -161,3 +161,25 @@ test('a persistent walk retries from where a leg stopped while it gets closer, a
     expect(await walkTargetPersist(s, to, 4, stuck)).toEqual({ ok: false, reason: 'blocked', detail: 'door' });
     expect(calls).toBe(2);
 });
+
+test('a trip out of Zanaris first takes its exit to the swamp shed, then plans from there', async () => {
+    const zanaris = { x: 3220, z: 9592, level: 0 }, shed = '3201,3169', bank = { x: 2619, z: 3332, level: 0 };
+    const calls: string[] = [];
+    let coins = 70;
+    // The planner has no route from the shed side to Ardougne without the ferries.
+    const walk = async ({ x, z }: { x: number; z: number }): Promise<Outcome> => {
+        calls.push(x + ',' + z);
+        return calls.length === 2 ? { ok: false, reason: 'precondition', detail: 'no route to 2619,3332,0', ticks: 0 } : { ok: true, ticks: 1 };
+    };
+    const sail = async (boat: ReturnType<typeof loadTravel>[number]): Promise<Outcome> => { calls.push(boat.id); coins -= boat.coins; return { ok: true, ticks: 1 }; };
+    expect(await walkWithFerryFallback(zanaris, bank, walk, sail, () => coins)).toMatchObject({ ok: true });
+    expect(calls.slice(0, 2)).toEqual([shed, '2619,3332']);
+    expect(calls.filter(c => c.startsWith('npc:'))).toEqual(['npc:captain_tobias:karamja-musa-point@3028,3216', 'npc:customs_officer:ardougne@2772,3225']);
+    // A failed exit ends the trip there; a walk inside Zanaris, or to the shed itself, goes direct.
+    const stuck: Outcome = { ok: false, reason: 'aborted', detail: 'stop', ticks: 2 };
+    expect(await walkWithFerryFallback(zanaris, bank, async () => stuck, sail, () => 70)).toEqual(stuck);
+    const direct: string[] = [], plain = async ({ x, z }: { x: number; z: number }): Promise<Outcome> => { direct.push(x + ',' + z); return { ok: true, ticks: 1 }; };
+    await walkWithFerryFallback(zanaris, { x: 3238, z: 9558, level: 0 }, plain, sail, () => 0);
+    await walkWithFerryFallback(zanaris, { x: 3201, z: 3169, level: 0 }, plain, sail, () => 0);
+    expect(direct).toEqual(['3238,9558', shed]);
+});
