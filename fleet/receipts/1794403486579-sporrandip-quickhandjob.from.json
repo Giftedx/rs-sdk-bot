@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794403486579-sporrandip-quickhandjob",
  "account": "SporranDip",
  "partner": "Quickhandjob",
@@ -12,6 +12,12 @@
  "claim": "a656fba0-ce70-4988-86d5-43ef57f1e004",
  "count": 0,
  "ok": false,
- "at": 1794403492801,
- "detail": "trade claimed"
+ "at": 1794403516217,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1794403492803-0000023550-0000000001",
+  "at": 1794403516207,
+  "sha256": "31f0443f65ae23e93fe4761fa9060c73f52aaf36099b2c361ba64f35e700c5dd"
+ },
+ "screen": false
 }
