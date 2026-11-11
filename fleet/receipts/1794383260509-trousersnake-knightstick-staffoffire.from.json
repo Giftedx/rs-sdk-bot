@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794383260509-trousersnake-knightstick-staffoffire",
+ "account": "TrouserSnake",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "c38eed1e-cb2e-4cf7-82c8-eef6027d5af7",
+ "count": 1,
+ "ok": true,
+ "at": 1794383278684,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794383272780
+ },
+ "logout": {
+  "attemptId": "1794383263542-0000032003-0000000001",
+  "at": 1794383278678,
+  "sha256": "640a8d51605192f8cc8b619aa646b9f1729e4fa137092032652c5166075cbc4e"
+ },
+ "screen": true
+}
