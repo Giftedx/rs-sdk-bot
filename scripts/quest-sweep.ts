@@ -31,6 +31,7 @@ import {walkQuestCorridor} from './quest-walk';
 import {crossStrongholdGate,STRONGHOLD_GATE,type GateDeps} from './agility-order';
 import {crossesSea} from '../packages/core/src/spawn-index';
 import {startQuestSustain,questFoodDefinitions} from './quest-sustain';
+import {holdSessionEater} from '../packages/core/src/sustain';
 
 type Item={id:number;count:number};
 type Tile={x:number;z:number;level:number};
@@ -1090,6 +1091,8 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  if(!existsSync(script))throw Error(`quest sweep: no script ${script}`);
  const preset=presetFor(quest);let base=needs(preset,false,quest);const food=needs(preset,true,quest);
  const s:Session=await openBot(account);
+ // A quest session has no eat guard (packages/core/src/eat-guard.ts): the staged items can be food. The hold has no release.
+ holdSessionEater(s.sdk);
  const fail=(why:string)=>finish([s],false,`quest-sweep ${quest} ${why}`);
  let handed=false;
  try {

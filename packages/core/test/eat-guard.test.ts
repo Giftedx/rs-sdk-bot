@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
-import { startEatGuard } from '../src/eat-guard';
-import { questFoodDefinitions, startQuestSustain } from '../src/sustain';
+import { PLAIN_FOOD, questScript, startEatGuard } from '../src/eat-guard';
+import { holdSessionEater, questFoodDefinitions, startQuestSustain } from '../src/sustain';
 
 const SHARK = 385, LOBSTER = 379;
 const food = (id: number, slot: number, count = 1) => ({ id, slot, count, name: `food ${id}`, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] });
@@ -77,18 +77,88 @@ test('eats when a hit takes Hitpoints to the eat level', () => {
     expect(guard.stats()).toMatchObject({ eats: 1, healed: 20, refused: 0, yielded: false });
 });
 
-test('an account with low Hitpoints and no damage keeps its food until the urgent level', () => {
-    const calm = world({ hp: 30 });
-    startEatGuard(calm.s);
-    calm.advance(300);
-    expect(calm.w.eaten).toBe(0);
-    const low = world({ hp: 20 });
-    const guard = startEatGuard(low.s);
-    low.advance(3);
-    expect(low.w.eaten).toBe(1);
+test('an account with low Hitpoints and no damage keeps its food and its open window', () => {
+    for (const hp of [30, 20, 3]) {
+        const { w, s, advance } = world({ hp });
+        startEatGuard(s);
+        w.window = true;
+        advance(300);
+        expect(w.eaten).toBe(0);
+        expect(w.windowsClosed).toBe(0);
+    }
+    const { w, s, advance, hit } = world({ hp: 20 });
+    const guard = startEatGuard(s);
+    advance(300);
+    hit(1);
+    advance(2);
+    expect(w.eaten).toBe(1);
     expect(guard.stats().urgent).toBe(1);
-    low.advance(300);
-    expect(low.w.eaten).toBe(1);
+});
+
+test('no item outside the plain food list is eaten, at any Hitpoints level', () => {
+    const others = [...questFoodDefinitions().keys()].filter(id => !PLAIN_FOOD.includes(id));
+    expect(others.length).toBeGreaterThan(80);
+    // 28 slots at a time: each item that heals and is not plain food, with an Eat option.
+    for (let from = 0; from < others.length; from += 28) {
+        const inventory = others.slice(from, from + 28).map((id, slot) => food(id, slot));
+        const { w, s, advance, hit } = world({ hp: 60, inventory });
+        const guard = startEatGuard(s);
+        for (let i = 0; i < 60; i++) { hit(1); advance(); }
+        expect(w.hp).toBe(1);
+        expect(w.eaten).toBe(0);
+        expect(w.perTick.flat()).toEqual([]);
+        expect(w.inventory.map(i => i.id)).toEqual(others.slice(from, from + 28));
+        expect(guard.stats().eats).toBe(0);
+    }
+});
+
+test('plain food among other items: only the plain food is eaten', () => {
+    const CAKE = 1891, CHEESE = 1985, BREAD = 2309, REDBERRY_PIE = 2325, LAVA_EEL = 2149;
+    const { w, s, advance, hit } = world({ hp: 60, inventory: [food(CAKE, 0), food(CHEESE, 1), food(BREAD, 2), food(REDBERRY_PIE, 3), food(LAVA_EEL, 4), food(LOBSTER, 5), food(SHARK, 6)] });
+    startEatGuard(s);
+    for (let i = 0; i < 80; i++) { hit(3); advance(); }
+    expect(w.eaten).toBe(2);
+    expect(w.inventory.map(i => i.id)).toEqual([CAKE, CHEESE, BREAD, REDBERRY_PIE, LAVA_EEL]);
+});
+
+test('a plain food item with no Eat option is not eaten', () => {
+    const drink = { ...food(SHARK, 0), optionsWithIndex: [{ text: 'Drink', opIndex: 1 }] };
+    const use = { ...food(SHARK, 1), optionsWithIndex: [{ text: 'Use', opIndex: 1 }] };
+    const { w, s, advance, hit } = world({ hp: 60, inventory: [drink, use] });
+    startEatGuard(s);
+    for (let i = 0; i < 40; i++) { hit(1); advance(); }
+    expect(w.eaten).toBe(0);
+    expect(w.perTick.flat()).toEqual([]);
+});
+
+test('a hold with no release keeps the guard off for the whole session', () => {
+    const { w, s, advance, hit } = world({ hp: 60 });
+    const guard = startEatGuard(s);
+    holdSessionEater(s.sdk);
+    for (let i = 0; i < 59; i++) { hit(1); advance(); }
+    expect(w.hp).toBe(1);
+    expect(w.eaten).toBe(0);
+    expect(w.perTick.flat()).toEqual([]);
+    expect(guard.stats()).toMatchObject({ eats: 0, yielded: false });
+});
+
+test('a script that eats an item outside the plain food list also turns the guard off', () => {
+    const CAKE = 1891;
+    const { w, s, client, advance, hit } = world({ hp: 99, inventory: [food(CAKE, 0), food(SHARK, 1)] });
+    const guard = startEatGuard(s);
+    hit(10);
+    advance(2);
+    client.executeBotAction({ type: 'useInventoryItem', slot: 0, optionIndex: 1 });
+    advance(2);
+    expect(guard.stats().yielded).toBe(true);
+    hit(70);
+    advance(20);
+    expect(w.inventory.map(i => i.id)).toEqual([SHARK]);
+});
+
+test('a script with quest in its file name gets no guard', () => {
+    for (const script of ['scripts/quest-sweep.ts', 'scripts/generated/quest-crest.ts', 'F:\\repo\\scripts\\quest-items-order.ts', 'scripts/aio-quester.ts', 'scripts/Quest-order.ts']) expect(questScript(script)).toBe(true);
+    for (const script of ['scripts/aio-fighter.ts', 'scripts/gather-combat.ts', 'quests/scripts/fishcook.ts', '']) expect(questScript(script)).toBe(false);
 });
 
 test('damage older than calmTicks no longer counts', () => {
@@ -314,5 +384,5 @@ test('stop prints one EAT_GUARD line and restores the client input function', ()
     expect(client.executeBotAction).toBe(original);
     expect(lines).toHaveLength(1);
     expect(lines[0]).toStartWith('EAT_GUARD {"eats":1,');
-    expect(JSON.parse(lines[0]!.slice('EAT_GUARD '.length)).hp).toEqual([60, 35, 55]);
+    expect(JSON.parse(lines[0]!.slice('EAT_GUARD '.length))).toMatchObject({ held: false, hp: [60, 35, 55] });
 });
