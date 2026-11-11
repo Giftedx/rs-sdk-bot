@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794362881518-bigchopper-trousersnake-bones",
+ "account": "Bigchopper",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 37,
+ "claim": "a217e331-0e63-42b4-ae1b-1cfd339b0241",
+ "count": 0,
+ "ok": false,
+ "at": 1794364222138,
+ "detail": "trade claimed"
+}
