@@ -10,13 +10,13 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
     let tick = 0, timer: number | null = active.some(Boolean) ? 5 : null;
     const w = {
         active, drains: 0, toggles: 0, windowsClosed: 0, cleared: 0, window: false, anim: -1,
-        interaction: null as string | null, most: 0, locs: [] as any[], dialog: { isOpen: false } as any, said: [] as any[], pack: [] as { id: number; count: number }[], z: 3200, combat: 50, players: [] as any[], npcs: [] as any[], events: [] as any[], offSeen: 0,
+        interaction: null as string | null, most: 0, x: 3200, locs: [] as any[], dialog: { isOpen: false } as any, said: [] as any[], pack: [] as { id: number; count: number }[], z: 3200, combat: 50, players: [] as any[], npcs: [] as any[], events: [] as any[], offSeen: 0,
     };
     const inbox: any[] = [];
     const listeners = new Set<() => void>();
     const client = { selfSlot: 7, executeBotAction(a: any) { inbox.push(a); return { success: true }; } };
     const state = () => ({
-        player: { worldX: 3200, worldZ: w.z, level: 0, animId: w.anim, isDead: false, combatLevel: w.combat },
+        player: { worldX: w.x, worldZ: w.z, level: 0, animId: w.anim, isDead: false, combatLevel: w.combat, combat: w.interaction?.startsWith('interactNpc:') ? { inCombat: true, targetType: 'npc', targetIndex: Number(w.interaction.split(':')[1]) } : { inCombat: false, targetType: 'none', targetIndex: -1 } },
         prayers: { activePrayers: [...active], prayerPoints: init.points ?? 50, prayerLevel: init.level ?? 50 },
         nearbyNpcs: w.npcs, nearbyPlayers: w.players, nearbyLocs: w.locs, inventory: w.pack, combatEvents: w.events, modalOpen: w.window,
         dialog: w.dialog, recentDialogs: w.said, interface: { isOpen: false }, bank: { isOpen: false }, shop: { isOpen: false },
@@ -771,4 +771,46 @@ test('a change of the prayer set is a flick: no late flick after it', () => {
     }
     expect(w.drains).toBe(0);
     expect(w.most).toBeLessThanOrEqual(5);
+});
+
+test('an auto-retaliate fight goes on through each flick', () => {
+    const { w, s, advance } = world();
+    const guard = startPrayerGuard(s);
+    w.npcs = [cow(32768 + 7)];
+    advance(4);
+    expect(on(w)).toEqual([PROTECT.melee]);
+    // The game starts the fight: the script sent no attack.
+    w.interaction = 'interactNpc:3';
+    let lost = 0;
+    // The game starts the fight again at the NPC's next hit, as in the first tick here: a flick was on its way
+    // before the state showed the fight.
+    for (let i = 0; i < 90; i++) { advance(); if (w.interaction !== 'interactNpc:3') { lost++; w.interaction = 'interactNpc:3'; } }
+    expect(lost).toBeLessThanOrEqual(1);
+    expect(w.drains).toBe(0);
+    expect(w.most).toBeLessThanOrEqual(5);
+    expect(guard.stats().resends).toBeGreaterThan(20);
+});
+
+test('a script that walks away from an auto-retaliate fight is not sent back into it', () => {
+    const { w, s, client, advance } = world();
+    const guard = startPrayerGuard(s);
+    w.npcs = [cow(32768 + 7)];
+    advance(4);
+    w.interaction = 'interactNpc:3';
+    advance(6);
+    const before = guard.stats().resends;
+    client.executeBotAction({ type: 'walkTo', x: 3210, z: 3200 });
+    w.interaction = null;
+    for (let i = 0; i < 12; i++) { w.x++; advance(); }
+    expect(guard.stats().resends).toBe(before);
+    expect(w.interaction).toBe(null);
+});
+
+test('no auto-retaliate attack from the guard when the NPC does not target the player or auto-retaliate is off', () => {
+    const { w, s, advance } = world({ prayers: [PROTECT.melee] });
+    const guard = startPrayerGuard(s, { protect: false });
+    w.npcs = [cow(-1)];
+    w.interaction = 'interactNpc:3';
+    advance(12);
+    expect(guard.stats().resends).toBe(0);
 });

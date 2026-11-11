@@ -149,6 +149,10 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     // Prayers of a flick that come back on in its second tick.
     let resume: number[] = [];
     let pointsFirst: number | undefined, pointsLast: number | undefined, taken = 0, lastEvent = -Infinity;
+    // The fight the game started by auto-retaliate, with no attack input from the script: the attack on that NPC and
+    // the tick the state last showed the fight. A prayer button clears the fight like each interaction, and the game
+    // starts it again only at the NPC's next hit. The guard sends this attack after its prayer inputs.
+    let retaliate: { action: Action; at: number } | null = null, walkAt = -Infinity, stillSince = 0;
     // Ticks of the last two hits the player dealt, for the tick of the next one.
     let swingAt = -Infinity, swingBefore = -Infinity;
 
@@ -215,7 +219,13 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     const send = (a: Action) => { const t = s.tick(); if (sentAt !== t) { sentAt = t; sent = 0; } sent++; own.add(a); holdWrites(); try { void Promise.resolve(s.direct(a)).catch(() => {}); } catch { /* session ended */ } };
     let why = '';
     const toggle = (prayerIndex: number) => { o.trace?.(`GUARD t=${s.tick()} prayer=${prayerIndex} ${why}`); send({ type: 'togglePrayer', prayerIndex, reason: 'SDK' }); };
+    const fights = (now: number): boolean => pending.kind === 'attack' || (pending.kind === 'none' && !!retaliate && now - retaliate.at <= 1);
     const resend = (st: any) => {
+        if (pending.kind === 'none' && retaliate && s.tick() - retaliate.at <= 1) {
+            const n = (st?.nearbyNpcs ?? []).find((n: any) => n.index === retaliate!.action.npcIndex);
+            if (n && n.hp !== 0) { send({ ...retaliate.action }); stats.resends++; }
+            return;
+        }
         if (pending.kind !== 'attack') return;
         if (!attackTarget(pending.action, st) && !skillTarget(pending.action, st)) { pending = { kind: 'none' }; return; }
         send({ ...pending.action });
@@ -297,7 +307,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         const attack = (a.type === 'interactNpc' || a.type === 'interactPlayer') && attackTarget(a, s.sdk.getState());
         beforeInput(a, attack);
         inputs++;
-        if (a.type === 'walkTo') { pending = { kind: 'none' }; return; }
+        if (a.type === 'walkTo') { pending = { kind: 'none' }; walkAt = now; retaliate = null; return; }
         // `attack` also holds a mining or woodcutting click: the guard sends it again after its prayer inputs.
         if (attack || skillTarget(a, s.sdk.getState())) { pending = { kind: 'attack', action: { ...a } }; return; }
         if (a.type === 'pickupItem') { const item = a.itemId as number; pending = { kind: 'other', type: a.type, still: 0, need: PICKUP_IDLE_TICKS, item, had: held(s.sdk.getState(), item) }; return; }
@@ -365,7 +375,16 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
             pending.still = tile === lastTile && (p.animId ?? -1) === -1 ? pending.still + 1 : 0;
             if (pending.still >= pending.need || (pending.item !== undefined && held(st, pending.item) > pending.had!)) pending = { kind: 'none' };
         }
+        stillSince = tile === lastTile ? stillSince : now;
         lastTile = tile;
+        // An auto-retaliate fight: the player targets an NPC that targets the player, the script has no action of
+        // its own, and the player has not walked on a script input in the last 3 ticks.
+        if (pending.kind === 'none' && st.autoRetaliateEnabled !== false && p.combat?.targetType === 'npc' && now - walkAt > 3) {
+            const self = (s.client as any)?.selfSlot;
+            const n = (st.nearbyNpcs ?? []).find((n: any) => n.index === p.combat.targetIndex);
+            const op = n?.optionsWithIndex?.find((op: any) => /^Attack$/i.test(op.text));
+            if (n && op && n.hp !== 0 && Number.isSafeInteger(self) && n.targetIndex === 32768 + self) retaliate = { action: { type: 'interactNpc', npcIndex: n.index, optionIndex: op.opIndex, reason: 'SDK' }, at: now };
+        } else if (pending.kind !== 'none') retaliate = null;
 
         // The state shows a prayer one tick after the server turned it on.
         if (active.length && !wasActive) flickAt = Math.max(flickAt, now - 1);
@@ -441,7 +460,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
             for (const i of missing) target = afterToggle(target, i);
             const order = [...target].sort((x, y) => backFirst(x) - backFirst(y));
             why = `set ${order.join('+') || 'none'} from ${active.join('+') || 'none'} threat=${threatNow}`;
-            if (active.length && active.length + order.length + (pending.kind === 'attack' ? 1 : 0) <= TICK_INPUTS) {
+            if (active.length && active.length + order.length + (fights(now) ? 1 : 0) <= TICK_INPUTS) {
                 // Every prayer off, then the new set on: the moment with no prayer on clears the drain timer, so a
                 // change of the set is a flick too.
                 for (const i of active) toggle(i);
@@ -463,7 +482,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
 
         if (!active.length) return;
         if (active.length > MAX_FLICKED) { hold('five'); return; }
-        const attack = pending.kind === 'attack' ? 1 : 0;
+        const attack = fights(now) ? 1 : 0;
         if (active.length <= 2) {
             if (now - flickAt < every) return;
             flickNow(active, now);
