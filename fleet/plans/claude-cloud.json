@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794361985501,
+ "at": 1794362087807,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -67,27 +67,22 @@
   },
   {
    "account": "Deeppockets",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "1500",
-    "trooper"
+    "scripts/shop-buyer.ts aubury 3000 ITEMS=fire.rune STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=10000 COIN_RESERVE=500 MAX_SPEND=9000"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "goal": "buy fire runes at Aubury's in Varrock for the alchemy band",
+   "role": "supply",
+   "template": "army-fire-aubury",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "shop:aubury"
    ]
   },
   {
@@ -263,27 +258,22 @@
   },
   {
    "account": "KnightRider",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "1500",
-    "trooper"
+    "scripts/shop-buyer.ts sarim 3000 ITEMS=feather STOCK_TARGET=700 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "goal": "buy feathers at Gerrant's in Port Sarim for the alchemy band",
+   "role": "supply",
+   "template": "army-feathers-sarim",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "shop:sarim"
    ]
   }
  ]
