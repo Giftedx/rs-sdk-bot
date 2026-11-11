@@ -104,6 +104,9 @@ export type Inputs = {
     // Lower-case account name -> the levels of its PK build (scripts/pk-kits.ts kitSkills): an army account that
     // trains to those levels and no further (buildBand). An account with no entry trains every band to its end.
     builds?: ReadonlyMap<string, Readonly<Record<string, number>>>;
+    // Lower-case account name -> the quests on the route of its build (BUILD_QUESTS of its kit). An account with a
+    // build and no entry takes no quest band.
+    buildQuests?: ReadonlyMap<string, readonly string[]>;
     // Free accounts of every side with their holdings: item and coin donors for an army account's kit. This side's
     // donors give first; another side's give only when none of this side can.
     stock?: readonly Stock[];
@@ -289,6 +292,20 @@ export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'price
     return (gross - cost) * Math.max(0.1, 1 - (inp.waste?.[t.family] ?? 0));
 }
 
+// The quest route of each ranked PK build (scripts/pk-kits.ts), by kit name: the quests that the gear of the kit needs
+// and that give no XP over a level of the kit (research/pvp-fight-loop.md, "Quest routes of the builds"). A band of
+// the route runs every quest of its chain, so a quest stands here only when each quest of the band's chain passes.
+// - `pure-pray`: the dragon dagger needs Lost City. Monk's Friend, Murder Mystery and Lost City give no XP in a combat
+//   skill. Condition: the fights of the quest (zombies and the tree spirit, bronze axe) give their XP in the melee
+//   style the account has set, and scripts/generated/quest-zanaris.ts sets none.
+// - `baby-pure`: no item of the kit needs a quest.
+// - `dragon`: no route. The rune platebody needs Dragon Slayer, which gives Defence 88 from level 1 (the build has 60).
+// - `tank-range`: no route. The Archer helm needs The Fremennik Trials, which give Attack 60 and Strength 60 (the
+//   build has 1 in each).
+// A kit with no entry has no route.
+export const BUILD_QUESTS: Readonly<Record<string, readonly string[]>> = {
+    'pure-pray': ['Lost City'], 'baby-pure': [], dragon: [], 'tank-range': [],
+};
 // A goal band for an account with a PK build, or null when the account must not take it. A build is its levels: one
 // level over the Defence or Prayer of a build is a different build, and no account goes back. So such an account
 // takes only bands that train one skill, and a band stops at the level of the build:
@@ -300,9 +317,12 @@ export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'price
 //   the level stop, and TRAIN_SKILL=Hitpoints keeps the style the account had, which can train any melee skill;
 // - the Prayer band that buries held normal bones (scripts/train-prayer.ts) stops at the level: its target argument;
 // - a band of another script that ends above the level is refused: that script has no proved stop;
-// - a quest band and a stock band are refused: a quest reward and a fight for loot give XP in skills nobody chose.
-export function buildBand(t: Template, a: Acct, build?: Readonly<Record<string, number>>): Template | null {
+// - a quest band is refused unless the quest is on the route of the build (BUILD_QUESTS): a quest reward gives XP in
+//   skills nobody chose;
+// - a stock band is refused: a fight for loot gives XP in skills nobody chose.
+export function buildBand(t: Template, a: Acct, build?: Readonly<Record<string, number>>, quests: readonly string[] = []): Template | null {
     if (!build || t.tier !== 'goal') return t;
+    if (t.quest) return quests.some(q => norm(q) === norm(t.quest!.name)) ? t : null;
     if (!t.trains) return null;
     const level = build[t.trains.skill];
     const combat = t.script === 'scripts/gather-combat.ts';
@@ -326,7 +346,7 @@ export function plan(inp: Inputs): Assignment[] {
     const admitted = (t: Template) => !t.pilot || !!inp.pilots?.has(t.id);
     const shopLine = (l: Lack) => !l.of.some(i => inp.market?.[i]) && l.of.some(i => SHOP_SUPPLIED.has(i));
     for (const a of mine) for (const listed of inp.templates) {
-        const t = buildBand(listed, a, inp.builds?.get(a.name.toLowerCase()));
+        const t = buildBand(listed, a, inp.builds?.get(a.name.toLowerCase()), inp.buildQuests?.get(a.name.toLowerCase()));
         if (!t || inp.retired?.has(pairKey(a.name, t.id)) || !admitted(t)) continue;
         if (t.quest && t.tier !== 'goal') {
             if (questDone(a, t.quest.name) || !meets(a, t.needs)) continue;

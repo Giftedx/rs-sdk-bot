@@ -413,11 +413,86 @@ each pair 3 fights (seeds 1, 2, 3), `extra:spar-builds-1` to `-4`. Evidence:
   (`"builds": { "<account>": "pure-pray" }`). `scripts/autopilot.ts` `buildCaps` turns each kit into its levels, and
   `packages/planner/src/autopilot.ts` `buildBand` gives such an account only bands that train one skill and stop at
   the level of the build: the cow and trooper bands with `TARGET_LEVEL` and no buried bones, and the held-bones
-  Prayer band with the level as its target. It refuses quest bands, stock bands, kill-count bands and bought-bone
-  bands. Evidence: `packages/planner/test/autopilot.test.ts`, `scripts/autopilot.test.ts`. Proof level: unit.
-- Gap: no live run of a build account under the planner. The Prayer band needs 100 normal bones held; the
-  source of those bones for a build account is not checked. The quest route to each build is not planned, so no build account gets Lost City or Dragon Slayer
-  from the planner.
+  Prayer band with the level as its target. It refuses stock bands, kill-count bands, bought-bone bands and every
+  quest band that is not on the route of the kit ("Quest routes of the builds"). Evidence: `packages/planner/test/autopilot.test.ts`, `scripts/autopilot.test.ts`. Proof level: unit.
+- Gap: no live run of a build account under the planner.
+
+### Quest routes of the builds
+
+Claim: of the four ranked builds, `pure-pray` has a quest route (Lost City), `baby-pure` needs no quest, and `dragon`
+and `tank-range` have no route at their levels. A route is valid when no quest reward of its chain takes Attack,
+Strength, Defence, Ranged, Magic, Prayer or Hitpoints over the level of the build.
+
+Conditions: XP rate 25 (`WorldConfig.ts` `xpRate`), the level curve of `packages/planner/src/curve.ts`, each reward
+counted from level 1. `stat_advance` takes tenths of XP. Levels of the builds: `kitSkills`; `tank-range` is Defence
+99, Ranged 99, Magic 99 and Prayer 43 with Attack 1 and Strength 1, and `baby-pure` is Attack 40, Strength 70 and
+Ranged 70.
+
+What each kit needs, from the wear rules (`levelrequire/scripts/levelrequire.rs2` and `tier*.rs2`):
+
+- Lost City: the dragon dagger (`tier60.rs2:3`). Of the four kits `pure-pray` and `dragon` carry one.
+- Dragon Slayer: the rune platebody (`tier40.rs2:26`), in `dragon`. The black dragonhide body needs Ranged 70 and
+  Defence 40 and no quest (`tier70.rs2:6`).
+- Legends' Quest: the dragon square shield (`tier60.rs2:13`), in `dragon`. The guard asks for Family Crest, Heroes'
+  Quest, Shilo Village, Underground Pass, Waterfall Quest and 107 quest points (`legends_guard.rs2:50-53`). Heroes'
+  Quest asks for Lost City, Dragon Slayer, Merlin's Crystal and Shield of Arrav (`quest_hero.rs2:2-4`).
+- The Fremennik Trials: the Archer helm (`levelrequire.rs2:124`), in `tank-range` and `range-tank`.
+- No kit of the four casts a god spell, so none needs the Mage Arena. `kitVarps` sets Lost City and Dragon Slayer
+  for every kit of the bench; `pure-pray`, `baby-pure` and `tank-range` wear nothing that needs Dragon Slayer.
+
+Rewards in the seven combat skills (`knowledge/quests.json`; the line of each `stat_advance`):
+
+| Quest | Reward XP at rate 25 | Level from 1 | Source |
+|---|---|---|---|
+| Monk's Friend, Murder Mystery | Woodcutting and Crafting only | none | `quest_drunkmonk.rs2:89`, `quest_murder.rs2:428` |
+| Lost City | none | none | `quest_zanaris.rs2:103-106` |
+| Dragon Slayer | Strength 466,250, Defence 466,250 | 88, 88 | `quest_dragon.rs2:33-34` |
+| The Fremennik Trials | Attack, Strength, Defence, Hitpoints 70,310 each | 60 each | `quest_viking.rs2:135-138` |
+| Heroes' Quest | Attack, Strength, Defence, Hitpoints 76,875 each; Ranged 51,875 | 62 each; 56 | `quest_hero.rs2:29-33` |
+| Underground Pass | Attack 75,000 | 61 | `quest_upass.rs2:801` |
+| Waterfall Quest | Attack 343,750, Strength 343,750 | 83, 83 | `quest_waterfall.rs2:491-492` |
+| Legends' Quest | four times 191,250 in a skill the player picks; Woodcutting and Crafting are on the list | none needed | `radimus_erkle.rs2:122` |
+| Merlin's Crystal, Shield of Arrav, Family Crest, Shilo Village, Jungle Potion, Biohazard | no combat skill | none | `knowledge/quests.json` |
+| Holy Grail | Prayer 275,000, Defence 382,500 | 80, 85 | `quest_grail.rs2:116-117` |
+
+| Kit | Result | Route, or the quest and skill that breaks it |
+|---|---|---|
+| `pure-pray` | valid | Monk's Friend, Murder Mystery, Lost City (the chain of `army-quest-lostcity`) |
+| `baby-pure` | valid, no quest | no item of the kit needs a quest |
+| `dragon` | no route | Dragon Slayer: Defence 88, the build has 60. Without the platebody the square shield still needs Legends' Quest, and so Heroes' Quest (Defence 62, Attack 62) and Dragon Slayer. The whole chain gives Attack 88, Strength 97 and Defence 90 |
+| `tank-range` | no route | The Fremennik Trials: Attack 60 and Strength 60, the build has 1 in each. Defence 60 and Hitpoints 60 are under the build |
+
+- `tank-range` with Attack 60 and Strength 60 has the same combat level, 102: the melee term (120) stays under the
+  Ranged term (148). The same holds for `range-tank`, 91. A kit with those two levels has the route "The Fremennik
+  Trials" and loses nothing in level. Gap: the bench ranked the kit with Attack 1 and Strength 1.
+- The Fremennik Trials leave 698 XP under Defence 61, so a Defence 60 build does the quest before any other Defence
+  XP. Dragon Slayer and The Fremennik Trials together give Defence 90.
+- The fights of Lost City give XP too: 4 XP times 25 for a point of damage, so the tree spirit (85 Hitpoints,
+  `tree_spirit.npc`) gives 8,500 XP and an Entrana zombie (30 Hitpoints) 3,000 to the skill of the melee style the
+  account has set. Attack 60 to 61 is 4,815 XP and Defence 1 to 2 is 80 XP. `scripts/generated/quest-zanaris.ts`
+  wields the bronze axe and sets no style. So the route of `pure-pray` holds only while that style trains Strength.
+
+Planner: `BUILD_QUESTS` in `packages/planner/src/autopilot.ts` holds the routes by kit name, `scripts/autopilot.ts`
+`buildQuests` gives each account of the `builds` object the route of its kit, and `buildBand` passes a quest band
+only when its quest is on that route. Every other quest band stays refused (Holy Grail: Prayer 80 and Defence 85).
+
+Evidence: `scripts/pk-kits.test.ts` ("no quest on the route of a build gives a level over the build") works the
+table out from `knowledge/quests.json`; `packages/planner/test/autopilot.test.ts` and `scripts/autopilot.test.ts`
+hold the planner rule. Proof level: unit.
+
+Gaps:
+
+- No practice run and no live run of Lost City by an account with Defence 1. The band `army-quest-lostcity` asks for
+  Defence 90, Hitpoints 90 and Prayer 43, so the planner gives it to no Defence 1 account. The quest script has a
+  Wind Bolt route for a weak account, and that route needs Magic 31: over the Magic 1 of `pure-pray`.
+- The quest worker has no setting for the melee style of its fights.
+- Normal bones for the Prayer 43 of a build: 175 bones (19,684 XP at 112.5 a bone); the held-bones band starts at
+  100. The Grand Exchange lists 2,549 at 45,125 coins each (bids at 150, last trade at 150), so 175 cost 7.9 million
+  coins. `KIT_PRICE_CAPS` holds no price for normal bones for that reason: a buy at a cap near the bids fills
+  nothing. The bank snapshots of the sides hold 611 normal bones (`local` 328, `claude-cloud` 229, `claude-cloud-4`
+  52, `cloud` 2), and the kit tier of the planner orders a missing band item from a donor account. A cow leaves
+  bones on each kill, and a build band runs with `GIANT_BURY=0`, which takes none. Evidence:
+  `/api/market/items/526` of the demo server and `fleet/snapshots/*.json` on the `fleet-data` branch, one read each.
 
 ## Server rules the loop follows
 
