@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794440087263-fingerblastr-deeppockets-airrune",
+ "account": "Fingerblastr",
+ "partner": "Deeppockets",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 18,
+ "claim": "c4767dcb-767c-4fc3-8661-9723d67a5e05",
+ "count": 0,
+ "ok": false,
+ "at": 1794440167498,
+ "detail": "trade claimed"
+}
