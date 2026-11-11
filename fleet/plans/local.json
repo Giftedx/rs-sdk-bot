@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794367834911,
+ "at": 1794367848657,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -506,7 +506,7 @@
     "CAP": "600",
     "COORDINATOR_RUN_ID": "task-a25e177c-c0aa-4495-b4cb-440068174a7c"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-session-recovery-mmsmk1232-orphan-1794367220 [task-a25e177c-c0aa-4495-b4cb-440068174a7c]",
    "role": "combat"
