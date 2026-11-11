@@ -18,3 +18,17 @@ test('status keeps base progress separate from drained or boosted gate stats',()
   }
  }finally{status.stop();rmSync(file,{force:true});rmSync(file+'.tmp',{force:true});}
 });
+
+test('status carries the run energy of the player, and null with no player',()=>{
+ const name=`StatusRun${process.pid}`,file=resolve(import.meta.dir,'../../../.practice/status',name+'.json');
+ const state:any={skills:[],inventory:[],equipment:[]};
+ const callbacks:(()=>void)[]=[];
+ const session:any={name,sdk:{getState:()=>state},tick:()=>1,onTick:(cb:()=>void)=>{callbacks.push(cb);return()=>{};}};
+ const status=startStatus(session,'localhost:8888');
+ const read=()=>JSON.parse(readFileSync(file,'utf8'));
+ try{
+  expect(read().runEnergy).toBeNull();
+  state.player={worldX:3200,worldZ:3200,level:0,runEnergy:64};for(let n=0;n<5;n++)callbacks.forEach(cb=>cb());
+  expect(read().runEnergy).toBe(64);
+ }finally{status.stop();rmSync(file,{force:true});rmSync(file+'.tmp',{force:true});}
+});

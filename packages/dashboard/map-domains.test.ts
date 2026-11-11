@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 const html=readFileSync(new URL('./index.html',import.meta.url),'utf8'),shell=readFileSync(new URL('./client-shell.js',import.meta.url),'utf8');
 const worldCode=html.slice(html.indexOf('function mapWorld(){'),html.indexOf('function drawMap(){'));
 const bots=[{name:'Live',practice:false,pos:{x:50,z:50}},{name:'Practice',practice:true,pos:{x:52,z:50}}];
-function canvas(){const dots:number[][]=[];const g:any=new Proxy({fillRect:(...args:number[])=>{if(args[2]===3&&args[3]===3)dots.push(args);}}, {get:(o:any,k)=>k in o?o[k]:()=>{}});return {dots,clientWidth:800,clientHeight:800,width:146,height:146,getContext:()=>g};}
+function canvas(){const dots:number[][]=[];const g:any=new Proxy({fillRect:(...args:number[])=>{if(args[2]===2&&args[3]===4)dots.push(args);}}, {get:(o:any,k)=>k in o?o[k]:()=>{}});return {dots,clientWidth:800,clientHeight:800,width:146,height:146,getContext:()=>g};}
 test('the live world map excludes practice markers and their click targets',()=>{
  const code=html.slice(html.indexOf('function drawMap(){'),html.indexOf("$('#map').onclick")),c=canvas();
  const run=new Function('S','sel','$',`const mode='2d',MAPI=null,window={},PLACES=[],st=()=>['off'],MARK='main';${worldCode}${code};drawMap();`);
@@ -12,12 +12,15 @@ test('the live world map excludes practice markers and their click targets',()=>
  run({bots,map:{x0:0,z0:0,w:100,h:100,scale:1}},'Practice',()=>c);
  expect((c as any)._p.map((p:any)=>p[2])).toEqual(['Practice']);
 });
-test('the live minimap excludes practice markers',()=>{
+// A minimap dot has the shape of the game's map dot; the fake canvas counts its body, 2 by 4 pixels.
+test('the live minimap draws a live fleet bot and excludes practice markers',()=>{
+ const withMate=[...bots,{name:'Mate',practice:false,pos:{x:51,z:50}}];
  const start=shell.indexOf('  function minimap(){'),code=shell.slice(start,shell.indexOf('  // A click on the minimap',start)),c=canvas();
  const run=new Function('S','hud','selected',`const account=()=>S.bots[selected],sel=account().name,window={},mode='2d',st=()=>['off'];let miniView;${worldCode}${code};minimap();`);
- run({bots,map:{x0:0,z0:0,w:100,h:100,scale:1}},{querySelector:(s:string)=>s.endsWith('canvas')?c:null},0);
- expect(c.dots).toHaveLength(0);
- run({bots,map:{x0:0,z0:0,w:100,h:100,scale:1}},{querySelector:(s:string)=>s.endsWith('canvas')?c:null},1);
+ run({bots:withMate,map:{x0:0,z0:0,w:100,h:100,scale:1}},{querySelector:(s:string)=>s.endsWith('canvas')?c:null},0);
+ expect(c.dots).toHaveLength(1);
+ c.dots.length=0;
+ run({bots:withMate,map:{x0:0,z0:0,w:100,h:100,scale:1}},{querySelector:(s:string)=>s.endsWith('canvas')?c:null},1);
  expect(c.dots).toHaveLength(0);
 });
 
