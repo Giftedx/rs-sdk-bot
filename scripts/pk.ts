@@ -12,6 +12,7 @@ import type { Session } from '../packages/core/src/inprocess';
 import { componentId } from '../packages/core/src/logout';
 import { questFlags } from '../packages/core/src/quest-status';
 import { tickWaits } from '../packages/core/src/tick-stream';
+import { armourDefence, StylePredictor, weakestFirst } from './pk-read';
 import type { NearbyPlayer } from '../vendor/rs-sdk/sdk/types';
 
 export const ITEMS = {
@@ -72,6 +73,18 @@ export type FightOptions = {
     castArmour?: 'torso' | 'keep' | 'strip';
     // false: no Defence prayer (Steel Skin and the lower ones). It saves prayer points and gives up their defence.
     defencePrayer?: boolean;
+    // Read the opponent, as a skilled player does. All off by default.
+    // predictPrayer: pray against the style the opponent will use next, learnt from the order of its weapons, in place
+    // of the weapon it holds now (which is its last attack, one step behind).
+    predictPrayer?: boolean;
+    // styleByArmour: among the styles the opponent does not protect against, attack with the one its worn armour is
+    // weakest to (the content's defence bonuses), in place of the fixed order.
+    styleByArmour?: boolean;
+    // mixStyles: choose the next style at random among the usable ones, so an opponent cannot learn the order.
+    mixStyles?: boolean;
+    // adapt: an opponent that has hit us 6 times or more and has shown a melee weapon only cannot answer from range:
+    // the loop then freezes it whenever it is free and keeps 3 tiles away while it is held.
+    adapt?: boolean;
     // Bow burst: the health fraction of the target at or under which the loop spends its special energy on magic
     // shortbow specials (and a melee special between two of them, so each lands off the overhead prayer). The server
     // rolls the bow special against the ATTACKER's own ranged defence (pvp_magic_shortbow.rs2:39 calls
@@ -345,6 +358,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
     let freezeReady = start, frozenUntil = start, freezeCastAt = -10, frozenTile: { x: number; z: number } | null = null, selfFrozenUntil = start;
     let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = false, rapidSet = false, pjedByNpc = false;
     let target: NearbyPlayer | undefined, rubbed = -1, ranAt = -10, prevSelf: { x: number; z: number } | null = null;
+    const predictor = new StylePredictor();
     let charged = false, chargeAt = -10, stepAt = -10, flickAt = start, lastSpecStyle: Style | null = null;
     const splatSeen: { cycles: number[] | null } = { cycles: null };
     let prevTarget: { x: number; z: number } | null = null, prevGap = 0, fleeingUntil = start, heading = { x: 0, z: 0 }, chaseAt = -10, fled = false;
@@ -540,18 +554,29 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         const prayerBase = state.skills.find(k => k.name === 'Prayer')?.baseLevel ?? 99;
         const lastHit = [...hits].reverse().find(h => now - h.tick <= 10);
         const hitter = lastHit && lastHit.src !== target.index ? observePlayer(s.client, lastHit.src) : null;
-        const overhead = hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
+        if (seen) predictor.observe(weaponStyle(seen.worn[3]));
+        const predicted = o.predictPrayer && !hitter ? predictor.predict() : null;
+        const overhead = hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : predicted ? PROTECT_FROM[predicted] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
+        // An opponent that only has melee: hold it and stay out of its reach.
+        const meleeOnly = !!o.adapt && hits.filter(h => h.src === target!.index).length >= 6 && [...predictor.seen()].every(st => st === 'melee');
+        const kiteTiles = o.kiteFrozen ?? (meleeOnly ? 3 : 0), freezeRule: FightOptions['freeze'] = o.freeze || (meleeOnly ? true : false);
         // A chase: the target flees, or stands frozen more than 2 tiles away. A melee turn then spends the freeze on a
         // walk, so an account with a ranged or magic kit attacks from where it stands. Within 2 tiles a melee turn or
         // a melee special costs one step.
         const chasing = (now < fleeingUntil || now < frozenUntil) && cheb(at, target) > 2 && ranged;
         // While we kite a frozen target, a melee turn would walk back into its reach.
-        const kiting = !!o.kiteFrozen && now < frozenUntil && weaponStyle(seen?.worn[3]) === 'melee' && ranged;
+        const kiting = !!kiteTiles && now < frozenUntil && weaponStyle(seen?.worn[3]) === 'melee' && ranged;
         const canReachMelee = !chasing && !kiting && !(now < selfFrozenUntil && !adjacent(at, target)) && (cheb(at, target) <= 6 || (!hasStyle(o.kit, 'magic') && !hasStyle(o.kit, 'ranged')));
         const guarded = o.readOverheads === false ? new Set<Style>() : protectedStyles(seen?.headicons);
         const styleUsable = (st: Style) => hasStyle(o.kit, st) && (st !== 'melee' || canReachMelee);
         const turns = fled && o.fledRotation?.length ? o.fledRotation : rotation;
-        const upcomingTurn = nextStyle(turns, last, st => styleUsable(st) && !guarded.has(st)) ?? nextStyle(turns, last, styleUsable) ?? nextStyle(turns, last, st => hasStyle(o.kit, st));
+        const rotationTurn = nextStyle(turns, last, st => styleUsable(st) && !guarded.has(st)) ?? nextStyle(turns, last, styleUsable) ?? nextStyle(turns, last, st => hasStyle(o.kit, st));
+        // The styles open now: usable and not under the opponent's overhead.
+        const open = [...new Set(turns)].filter(st => styleUsable(st) && !guarded.has(st));
+        const chosen = !open.length ? null
+            : o.styleByArmour && seen ? weakestFirst(armourDefence(seen.worn.map(id => names.get(id) ?? ''))).find(st => open.includes(st)) ?? null
+            : o.mixStyles ? open[Math.floor(Math.random() * open.length)]! : null;
+        const upcomingTurn = chosen ? { style: chosen, index: Math.max(0, turns.indexOf(chosen)) } : rotationTurn;
         const burstBow = o.bowBurst !== undefined ? bowSpec(o.kit, names) : undefined;
         const bursting = !!burstBow && special(s.client).energy >= burstBow.cost && (fled || lowHealth(seen, o.bowBurst!)) && cheb(at, target) <= BOW_RANGE;
         if (pjedByNpc) {
@@ -593,7 +618,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
                     continue;
                 }
             }
-            const keep = o.standOff ?? (o.kiteFrozen && now < frozenUntil && weaponStyle(seen?.worn[3]) === 'melee' ? o.kiteFrozen : 0);
+            const keep = o.standOff ?? (kiteTiles && now < frozenUntil && weaponStyle(seen?.worn[3]) === 'melee' ? kiteTiles : 0);
             if (keep && !walkingToMelee && (upcomingTurn?.style !== 'melee' || !o.standOff) && now > lastAttackAt && now >= selfFrozenUntil && now - stepAt >= 2 && cheb(at, target) < keep) {
                 const dx = Math.sign(at.x - target.x) || 1, dz = Math.sign(at.z - target.z);
                 void sdk.sendWalk(target.x + dx * keep, target.z + dz * keep);
@@ -635,9 +660,9 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         // during decodeIn before IfButtonHandler checks isComponentVisible). Keep total USER_EVENT packets <= 5.
         const magicLevel = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
         const hasFreezeRunes = inv.some(i => i.id === ITEMS.natureRune || i.id === ITEMS.earthRune || i.id === ITEMS.waterRune);
-        const freeze = o.freeze ? (hasFreezeRunes ? castableFreeze(magicLevel, inv) : freezeSpell(magicLevel)) : null;
+        const freeze = freezeRule ? (hasFreezeRunes ? castableFreeze(magicLevel, inv) : freezeSpell(magicLevel)) : null;
         const castFreeze = freeze !== null && hasStyle(o.kit, 'magic') && now >= freezeReady && now >= frozenUntil
-            && (o.freeze === true || now < fleeingUntil || (o.freeze === 'low' && lowHealth(seen, o.freezeBelow ?? 0.62)));
+            && (freezeRule === true || now < fleeingUntil || (freezeRule === 'low' && lowHealth(seen, o.freezeBelow ?? 0.62)));
         // A target that has fled is out of food: from then on every special goes out at once, whatever its health bar
         // shows, and past melee reach the bow special replaces a melee one.
         const energy = special(s.client);

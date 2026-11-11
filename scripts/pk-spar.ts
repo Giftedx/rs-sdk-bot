@@ -33,6 +33,13 @@ export const PROFILES: Readonly<Record<string, Profile>> = {
     // The special energy is kept for the burst: no melee special above 20% health outside it.
     burst: { bowBurst: 0.6, specBelow: 0.2 },
     flick: { prayerFlick: true },
+    // Readers of the opponent, one at a time and together.
+    predict: { predictPrayer: true },
+    weak: { styleByArmour: true },
+    mix: { mixStyles: true },
+    adapt: { adapt: true },
+    reader: { predictPrayer: true, styleByArmour: true, adapt: true },
+    'reader-mix': { predictPrayer: true, mixStyles: true, adapt: true },
     'hunter-burst': { freeze: 'low', specBelow: 0.2, bowBurst: 0.6 },
     'no-read': { readOverheads: false },
     'no-spec': { spec: undefined },
