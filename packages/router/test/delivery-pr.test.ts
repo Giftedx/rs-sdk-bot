@@ -301,4 +301,5 @@ test('the source set follows a worker that the entry starts as a subprocess',()=
  const set=deliverySourceSet('scripts/quest-order.ts',[],resolve(import.meta.dir,'../../..'));
  expect(set).toContain('scripts/generated/quest-cook.ts');
  expect(set).toContain('scripts/quest-order.ts');
-});
+ // The walk reads each file that the entry reaches. Beside a live fleet it takes 6 to 8 s, over the default 5 s limit.
+},30000);
