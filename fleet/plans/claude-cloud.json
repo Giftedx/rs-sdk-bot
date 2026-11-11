@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794436713400,
+ "at": 1794436779542,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -22,28 +22,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "shop:catherby"
-   ]
-  },
-  {
-   "account": "UnderMyKilt",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "sarim"
-   ],
-   "env": {
-    "ITEMS": "feather",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy feathers at Gerrant",
-   "role": "bank",
-   "template": "shop-feathers",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "shop:sarim"
    ]
   },
   {
@@ -205,25 +183,29 @@
   },
   {
    "account": "TheFullMonty",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts lowe 2500 ITEMS=iron.arrow|bronze.arrow STOCK_TARGET=1200 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=29000 COIN_RESERVE=500 MAX_SPEND=28000",
-    "scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=60 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=3000 COIN_RESERVE=500 MAX_SPEND=2000"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-3f9b06f0-e462-4b19-9735-affdfaf36c74"
    },
    "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy iron and bronze arrows at Lowe's and teleport runes at Aubury's in Varrock for the black dragon hunt",
-   "role": "supply",
-   "template": "army-hunt-supply",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "shop:lowe",
-    "shop:aubury"
-   ]
+   "repeat": false,
+   "goal": "claude-cloud-recover-thefullmonty-20261111t223311z [task-3f9b06f0-e462-4b19-9735-affdfaf36c74]",
+   "role": "supply"
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-0bc99939-1e2b-4258-af43-7f052545b1b2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-undermykilt-20261111t223311z [task-0bc99939-1e2b-4258-af43-7f052545b1b2]",
+   "role": "bank"
   }
  ]
 }
