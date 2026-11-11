@@ -818,11 +818,14 @@ export function catalogue(): Template[] {
         tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: SPLASH_TO, unlocks: [magic.id] }, resources: [SPLASH_FENCE], yields: () => [],
         needs: { items: { ...SPLASH_KIT, 'mind rune': 2, 'air rune': 2 } }, kitFirst: true,
     };
-    const water: Template = {
-        ...supply('army-water-aubury', "buy water runes at Aubury's in Varrock for the curse band", 'aubury', [shopRun('aubury', 3000, 'water.rune', SPLASH_KIT['water rune'], 12000)],
+    // Two shelves, one account at each: Aubury's (2,000 water runes in stock) read 0 on three live visits, so Betty's
+    // in Port Sarim (port_sarim.inv: 1,000, one back every 10 ticks, the ferry's own port) is the second.
+    const waterJob = (id: string, where: string, shop: string): Template => ({
+        ...supply(id, `buy water runes at ${where} for the curse band`, shop, [shopRun(shop, 3000, 'water.rune', SPLASH_KIT['water rune'], 12000)],
             { under: { Magic: SPLASH_TO }, items: { coins: 14000, 'body rune': SPLASH_KIT['body rune'], 'earth rune': SPLASH_KIT['earth rune'] }, holdsUnder: { 'water rune': SPLASH_KIT['water rune'] } }),
         pilot: true, trains: { skill: 'Magic', to: SPLASH_TO, unlocks: [splash.id] },
-    };
+    });
+    const water = waterJob('army-water-aubury', "Aubury's in Varrock", 'aubury'), waterBetty = waterJob('army-water-betty', "Betty's in Port Sarim", 'betty');
     const prayer: Template = {
         id: 'army-bury-prayer-99', family: 'combat-train', script: 'scripts/train-prayer.ts', args: ['99'], env: { BURY_HELD: '1', BONE_RESERVE: '6', CAP: '4000' }, role: 'combat',
         goal: 'train Prayer to 99 burying the held bones', tier: 'goal', band: PRAYER_BAND, repeats: true, trains: { skill: 'Prayer', to: 99, unlocks: [] }, yields: () => [],
@@ -934,6 +937,7 @@ export function catalogue(): Template[] {
         magic,
         splash,
         water,
+        waterBetty,
         staff,
         feathers,
         fireRunes,
