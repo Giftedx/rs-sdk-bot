@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794370251933,
+ "at": 1794370337161,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -301,25 +301,6 @@
    ]
   },
   {
-   "account": "Woodenstaff",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "local",
-   "resources": [
-    "knight:2669,3298"
-   ]
-  },
-  {
    "account": "Billionaire",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -566,10 +547,29 @@
     "CAP": "600",
     "COORDINATOR_RUN_ID": "task-f8f22067-4fed-4c29-88d7-f317a9495a77"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-session-recovery-mightyrod-lease-1794369700 [task-f8f22067-4fed-4c29-88d7-f317a9495a77]",
    "role": "supply"
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "local",
+   "resources": [
+    "knight:2669,3298"
+   ]
   }
  ]
 }
