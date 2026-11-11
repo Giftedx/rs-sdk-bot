@@ -307,8 +307,10 @@ export function settlePlanner(state:CoordinatorState,base=projectRoot,{save=save
  candidate.pendingSubmission={runId,count,sha256:submissionDigest(bytes),capabilities};
  save(candidate,directory);
  Object.assign(state,candidate);
+ // Object.assign copies keys. It does not remove the keys that finishPlan deleted from the candidate.
  delete state.planner;
  delete state.planFailures;
+ delete state.rejectedPlan;
  acknowledgeSubmission(state,base,publish);
 }
 async function tick(state:CoordinatorState,config:any){
