@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794375604680-bigchopper-pocketpool-feather",
+ "account": "Bigchopper",
+ "partner": "PocketPool",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 50,
+ "claim": "8ec3c1de-0dc4-46be-bd0c-3f4a6b17e44b",
+ "count": 50,
+ "ok": true,
+ "at": 1794375638577,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 50,
+  "after": 0
+ },
+ "bank": {
+  "count": 50,
+  "at": 1794375621508
+ },
+ "logout": {
+  "attemptId": "1794375612969-0000030472-0000000001",
+  "at": 1794375638566,
+  "sha256": "2f5d7277da2a3c1376efc31c59c3ea2687ed4cabbae98fd62de81688da33fbf0"
+ },
+ "screen": true
+}
