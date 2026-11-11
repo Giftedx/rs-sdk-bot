@@ -312,6 +312,10 @@ const ROUTE_CASES: BenchCase[] = [
   // The league for a fighter with three more sharks and no freeze runes.
   // The builds that beat the tribrid on food: four spars each against the melee build, the hybrid and the ranger.
   sparMatrix('extra:spar-rivals-x12', Array.from({length: 12}, (_, i) => ['tribrid-pots', ['melee', 'hybrid', 'ranger'][i % 3]!] as const)),
+  // A hunter in each kit against a target that leaves by its glory at 60 health, at Wilderness level 34.
+  ...['tribrid-pots', 'tribrid-snare'].map(kit => sparMatrix(`extra:spar-escape-${kit}-x8`, Array.from({length: 8}, () => [kit, 'runner'] as const), ['SPAR_SCENARIO=escape'], {x: 3125, z: 3790})),
+  // The same rivals against the kits with more food.
+  ...['tribrid-snare', 'hybrid'].map(kit => sparMatrix(`extra:spar-rivals-${kit}-x12`, Array.from({length: 12}, (_, i) => [kit, ['melee', 'hybrid', 'ranger'][i % 3]!] as const))),
   sparMatrix('extra:spar-league-lean-x8', LEAGUE.map(o => ['tribrid-lean', o.kit] as const), [`SPAR_B_PROFILES=${LEAGUE.map(o => o.profile).join(',')}`]),
   // A build against the standard tribrid, four pairs on each side of the map: what the build is worth by itself.
   ...Object.keys(KITS).filter(kit => kit !== 'melee' && !KITS[kit]!.skills).map(kit => sparMatrix(`extra:spar-duel-${kit}-vs-melee-x8`, Array.from({length: 8}, (_, i) => ((i >> 1) % 2 ? ['melee', kit] : [kit, 'melee']) as [string, string]))),

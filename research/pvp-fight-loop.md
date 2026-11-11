@@ -429,3 +429,12 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     champion. Three restore potions and 17 sharks: 11 kills and 11 deaths in 22 decided spars against the tribrid
     kit. Against the three rival builds, 12 spars each: body armour kept on for a shot or a cast 4 to 6, freeze and
     kite of a melee opponent (`adapt`) 4 to 8; the hybrid won all four spars in each.
+25. **A kit with no staff and no wave runes wins more.** `tribrid-snare` (bow, dagger, the freeze runes, boosts, 18
+    sharks) on the champion profile has 20 kills and 4 deaths in 24 spars against the melee build (6 to 2), the hybrid
+    (6 to 2) and the ranger (8 to 0); the hybrid kit (no freeze, 21 sharks) has 21 and 3; the potion kit (staff, wave
+    runes, 15 sharks) has 27 and 9 in 36 (`extra:spar-rivals-tribrid-snare-x12`, `extra:spar-rivals-hybrid-x12`,
+    seeds 1 and 2). Against a target that leaves by glory at 60 health from Wilderness level 34, the hunter in the
+    snare kit kills 9 of 24 and in the potion kit 7 of 24 (`extra:spar-escape-tribrid-snare-x8`,
+    `extra:spar-escape-tribrid-pots-x8`, seeds 1, 2 and 3). A kit with the runes of a freeze and no staff casts it
+    with the weapon in hand (`castFreeze` in `scripts/pk.ts`); before that rule the snare kit cast none and killed 0
+    of 16. Gap: the live hunter still restocks the staff kit; no whole hunter trip in the snare kit.

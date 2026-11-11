@@ -691,7 +691,8 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         const magicLevel = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
         const hasFreezeRunes = inv.some(i => i.id === ITEMS.natureRune || i.id === ITEMS.earthRune || i.id === ITEMS.waterRune);
         const freeze = freezeRule ? (hasFreezeRunes ? castableFreeze(magicLevel, inv) : freezeSpell(magicLevel)) : null;
-        const castFreeze = freeze !== null && hasStyle(o.kit, 'magic') && now >= freezeReady && now >= frozenUntil
+        // A kit with the runes of a freeze and no staff still casts it: the cast keeps the weapon in hand.
+        const castFreeze = freeze !== null && (hasStyle(o.kit, 'magic') || hasFreezeRunes) && now >= freezeReady && now >= frozenUntil
             && (freezeRule === true || now < fleeingUntil || (freezeRule === 'low' && lowHealth(seen, o.freezeBelow ?? 0.62)));
         // A target that has fled is out of food: from then on every special goes out at once, whatever its health bar
         // shows, and past melee reach the bow special replaces a melee one.
