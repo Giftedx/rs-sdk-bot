@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794362761677-shaftmaker-undermykilt-staffoffire",
+ "account": "UnderMyKilt",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "df45be89-1c3d-4148-9671-b2aa4838c867",
+ "count": 0,
+ "ok": false,
+ "at": 1794362764858,
+ "detail": "trade claimed"
+}
