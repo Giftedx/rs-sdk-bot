@@ -91,7 +91,14 @@ export function assertTradeAdmission(order: Order, account: string, server: stri
     }
 }
 
-type Progress = Pick<TradeReceipt, 'count' | 'inventory' | 'bank'> & { uncertain: boolean };
+type Progress = Pick<TradeReceipt, 'count' | 'inventory' | 'bank' | 'screen'> & { uncertain: boolean };
+// Records in `progress.screen` whether a trade screen is ever open in this session (TradeReceipt.screen). Call it
+// once, as soon as the session is open.
+export function watchTradeScreen(s: { onTick(cb: () => void): () => void; sdk: { getState(): { trade?: { isOpen: boolean } } | null } }, progress: Progress) {
+    const look = () => { const trade = s.sdk.getState()?.trade; if (trade) progress.screen = !!progress.screen || trade.isOpen; };
+    look();
+    return s.onTick(look);
+}
 const requestRefusal = (result: TradeResult) => !result.success && !result.partner
     && ['player_not_found', 'no_response', 'busy'].includes(result.reason ?? '')
     && !result.gave.length && !result.received.length && !result.possiblyDropped?.length;
@@ -167,7 +174,8 @@ export function fleetTradeOutcome(prepared: TradeReceipt, progress: Progress, ok
     const exactBank = prepared.role === 'from' || progress.bank?.count === prepared.requested;
     const state = proof && ok && progress.count === prepared.requested && exactBank ? 'settled'
         : proof && !progress.uncertain && progress.count === 0 ? 'failed' : 'reconcile';
-    return { ...prepared, state, ok: state === 'settled', count: progress.count, inventory: progress.inventory, bank: progress.bank, logout: proof, at, detail };
+    return { ...prepared, state, ok: state === 'settled', count: progress.count, inventory: progress.inventory, bank: progress.bank, logout: proof, at, detail,
+        ...(progress.screen === undefined ? {} : { screen: progress.screen }) };
 }
 
 if (import.meta.main) {
@@ -209,6 +217,7 @@ if (import.meta.main) {
         onSessionEnd: (session, detail) => complete(session, false, detail),
     }).catch(e => finish([], false, `login: ${String(e)}`));
     let ok = false, detail: string;
+    watchTradeScreen(s, progress);
     try {
         const meet = order.meet ?? meetingTiles({ x: 3185, z: 3436 })!, tile = role === 'from' ? meet[0] : meet[1];
         // The planner has no land route between Ardougne and the east; walkTarget takes the ferries then (60 coins in the

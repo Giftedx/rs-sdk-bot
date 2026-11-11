@@ -11,6 +11,10 @@ export type TradeReceipt = Omit<LegacyReceipt, 'version'> & {
     inventory?: { before: number; after: number };
     bank?: { count: number; at: number };
     logout?: { attemptId: string; at: number; sha256: string };
+    // Whether the account's worker saw a trade screen open in its session: sampled every tick from the client's trade
+    // state (scripts/fleet-trade.ts). `false` proves the trade did not connect: an offer is accepted only on a screen
+    // the worker has seen, and nothing moves without both accepts. Absent when the trade state was never observed.
+    screen?: boolean;
 };
 export type Receipt = LegacyReceipt | TradeReceipt;
 
