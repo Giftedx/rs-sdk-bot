@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794435724901,
+ "at": 1794435990249,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -227,6 +227,19 @@
    "repeat": false,
    "goal": "claude-cloud-recover-fatstack-20261111t221624z [task-c5fcaee5-3203-4d3b-881f-8a0447fad223]",
    "role": "thieving"
+  },
+  {
+   "account": "Knightstick",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-39e60598-58bc-4925-b73e-26855b7b985c"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-knightstick-20261111t221646z [task-39e60598-58bc-4925-b73e-26855b7b985c]",
+   "role": "helper"
   }
  ]
 }
