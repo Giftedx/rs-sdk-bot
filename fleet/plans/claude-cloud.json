@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794396640691,
+ "at": 1794396828157,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -12,6 +12,42 @@
    "repeat": false,
    "goal": "hand: Lowe's arrows for the dragon hunt",
    "role": "hand"
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fingersmith-kit21-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on bronze arrows",
+   "role": "supply",
+   "template": "kit-buy:army-hunt-black-dragons-bronze",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=10 EXPECTED_OWNED=6 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=quickhandjob-kit8-536-6to16 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 10 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-dragon-99",
+   "autopilot": "claude-cloud",
+   "resources": []
   },
   {
    "account": "Deeppockets",
@@ -78,22 +114,29 @@
    ]
   },
   {
-   "account": "Fingersmith",
-   "script": "scripts/chain.ts",
+   "account": "PocketPool",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fingersmith-kit21-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on bronze arrows",
-   "role": "supply",
-   "template": "kit-buy:army-hunt-black-dragons-bronze",
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "Dipstick",
@@ -119,6 +162,27 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_ID": "536",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying bought dragon bones",
+   "role": "combat",
+   "template": "army-bury-dragon-99",
+   "autopilot": "claude-cloud",
+   "resources": []
   }
  ]
 }
