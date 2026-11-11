@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { itemBonuses, league, series, simulate } from './pk-sim';
+import { styleOfName } from './pk';
 
 test('reads the combat bonuses of an item from the content configs', () => {
     const dagger = itemBonuses().get('dragon_dagger');
@@ -36,6 +37,14 @@ test('damage lands: a fight ends in a kill before the cap', () => {
 test('a build fights at its own levels: Defence 45 loses to Defence 99 in the same kit, and Prayer 43 beats Prayer 1', () => {
     expect(series('zerker', 'tribrid-pots', {}, {}, 300).winRateA).toBeLessThan(0.1);
     expect(series('pure-pray', 'pure-dds-msb', {}, {}, 300).winRateA).toBeGreaterThan(0.6);
+    // A thrown weapon is ranged, as in the fight loop: the knife build throws and the other side sees a ranged weapon.
+    const knives = simulate('pure-knives', 'pure-dds', {}, {}, 5, 600);
+    expect(knives.attacksA.ranged).toBeGreaterThan(0);
+    expect(styleOfName('rune_knife')).toBe('ranged');
+    expect(styleOfName('rune_dart_p')).toBe('ranged');
+    expect(styleOfName('magic_shortbow')).toBe('ranged');
+    expect(styleOfName('zamorak_staff')).toBe('magic');
+    expect(styleOfName('dragon_longsword')).toBe('melee');
     const table = league(['pure-pray', 'pure-mage'], 100);
     expect(table[0]!.kit).toBe('pure-pray');
 });

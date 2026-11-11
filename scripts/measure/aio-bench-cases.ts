@@ -98,14 +98,26 @@ export const BUILD_BRACKETS: Readonly<Record<string, readonly string[]>> = {
 // stand in the order of the Defence, Hitpoints and food of their two builds: fights of about the same length share a
 // case.
 export const BUILD_CASE_PAIRS = 14;
-export const BUILD_PAIRS: readonly (readonly [string, string])[] = (() => {
+const buildPairs = (brackets: Readonly<Record<string, readonly string[]>>, known: ReadonlySet<string> = new Set()): readonly (readonly [string, string])[] => {
   const bulk = (kit: string) => { const s = kitSkills(kit); return s.Defence! + s.Hitpoints! + 4 * KITS[kit]!.food; };
   const pairs = new Map<string, [string, string]>();
-  for (const kits of Object.values(BUILD_BRACKETS)) kits.forEach((a, i) => kits.slice(i + 1).forEach(b => pairs.set([a, b].sort().join(':'), [a, b])));
+  for (const kits of Object.values(brackets)) kits.forEach((a, i) => kits.slice(i + 1).forEach(b => { const key = [a, b].sort().join(':'); if (!known.has(key)) pairs.set(key, [a, b]); }));
   return [...pairs.values()].sort((x, y) => bulk(x[0]) + bulk(x[1]) - bulk(y[0]) - bulk(y[1]) || x.join().localeCompare(y.join()))
     // Each build stands on side A in every second pair of the list.
     .map((pair, i) => (i % 2 ? [pair[1], pair[0]] as const : pair));
-})();
+};
+export const BUILD_PAIRS = buildPairs(BUILD_BRACKETS);
+// The second set of builds, each bracket with the best builds of the first set for a reference. A pair of two
+// reference builds is in BUILD_PAIRS already and has no place here. `low` holds the builds under combat 61, and `top`
+// the best two builds with a Defence level against the maxed tribrid of the army (combat 126), with and without
+// boost potions.
+export const BUILD_BRACKETS_2: Readonly<Record<string, readonly string[]>> = {
+  pure: ['pure-scim', 'pure-dlong', 'pure-knives', 'pure-pray31', 'pure-god', 'pure-pray', 'pure-dds-msb', 'pure-ranger'],
+  def: ['addy-pure', 'def50', 'tank-range', 'pure-max', 'dragon', 'zerker', 'rune-pure', 'pure-pray'],
+  low: ['baby-pure', 'low-ranger', 'low-mage', 'low-addy'],
+  top: ['tank-range', 'dragon', 'tribrid-pots', 'tribrid'],
+};
+export const BUILD_PAIRS_2 = buildPairs(BUILD_BRACKETS_2, new Set(BUILD_PAIRS.map(p => [...p].sort().join(':'))));
 // An account in a kit of scripts/pk-kits.ts at the levels of the kit (default maxed), with Lost City and Dragon Slayer
 // done and full special energy.
 export const kitFixture = (kit: string, x: number, z = 3555): SaveConfig => ({
@@ -370,6 +382,9 @@ const ROUTE_CASES: BenchCase[] = [
   // about half of that is the start of the engine and the logins, so the 53 pairs stand in 4 cases. The pairs run in
   // 8 processes, and the cap is 600 ticks: the offline simulator has no fight of two of these builds that lasts so long.
   ...Array.from({length: Math.ceil(BUILD_PAIRS.length / BUILD_CASE_PAIRS)}, (_, n) => sparMatrix(`extra:spar-builds-${n + 1}`, BUILD_PAIRS.slice(n * BUILD_CASE_PAIRS, (n + 1) * BUILD_CASE_PAIRS), ['SPAR_PROCS=8', 'SPAR_CAP=600'], {x: 3125, z: 3790})),
+  // One pair 14 times, each build on side A in 7 of them: 3 fights of a pair in the build cases decide nothing.
+  sparMatrix('extra:spar-head-tank-dragon-x14', Array.from({length: 14}, (_, i) => (i % 2 ? ['dragon', 'tank-range'] : ['tank-range', 'dragon']) as [string, string]), ['SPAR_PROCS=8', 'SPAR_CAP=600'], {x: 3125, z: 3790}),
+  ...Array.from({length: Math.ceil(BUILD_PAIRS_2.length / BUILD_CASE_PAIRS)}, (_, n) => sparMatrix(`extra:spar-builds2-${n + 1}`, BUILD_PAIRS_2.slice(n * BUILD_CASE_PAIRS, (n + 1) * BUILD_CASE_PAIRS), ['SPAR_PROCS=8', 'SPAR_CAP=600'], {x: 3125, z: 3790})),
   // Map cases of the spar. Gap: the same mirror from 12 tiles apart. Trees: 6 tiles apart at Wilderness level 3 with a
   // blocker on tiles 3101-3103 between the two, so neither has line of sight at the start. Escape: Wilderness level 34
   // at a spot with no monster in view (green dragons at (3094, 3800) attack both sides and block their hits); side B
