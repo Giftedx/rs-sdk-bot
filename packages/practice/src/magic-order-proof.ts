@@ -14,7 +14,7 @@ import {runBotName} from './prove';
 import {killTree} from './proc';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {readPracticeSave,waitPracticeSave,setPracticeSkills} from '../../../scripts/measure/fleet-player-save';
-import {magicXpForLevel,CAST_SITE,TELE_RUNE_IDS,teleportEffect,TELEPORTS,type RuneCounts} from '../../../scripts/magic-order';
+import {magicXpForLevel,CAST_SITE,TELE_RUNE_IDS,teleportEffect,TELEPORTS,alchemyEffect,type RuneCounts} from '../../../scripts/magic-order';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 
 type Save=ReturnType<typeof readPracticeSave>;
@@ -27,6 +27,8 @@ export function sources(){return{runtime:workerSourceRevision(),files:Object.fro
  'vendor/rs-sdk/server/content/scripts/skill_magic/configs/magic_spells.dbrow',
  'vendor/rs-sdk/server/content/scripts/skill_magic/scripts/magic.rs2',
  'vendor/rs-sdk/server/content/scripts/skill_magic/scripts/spells/teleport.rs2',
+ 'vendor/rs-sdk/server/content/scripts/skill_magic/scripts/spells/alchemy.rs2',
+ 'vendor/rs-sdk/server/content/scripts/skill_combat/configs/ranged/bows.obj',
  'packages/core/src/travel.ts','knowledge/teleports.json','scripts/courier-route.ts',
  'vendor/rs-sdk/server/content/scripts/areas/area_varrock/configs/varrock.inv',
 ].map(p=>[p,createHash('sha256').update(readFileSync(join(root,p))).digest('hex')]))};}
@@ -36,6 +38,10 @@ export const CONFIG={tickMs:150,xpRate:25,childTimeoutMs:240000,saveWaitMs:20000
 const AIR=556,MIND=558,COINS=995,TROUT=333;
 const SPENT=new Set<number>([...Object.values(TELE_RUNE_IDS),COINS,TROUT]);
 export const FIXTURES={
+ alchemy:{position:{x:2721,z:3493,level:0},skills:{Magic:55},inventory:[],
+  bank:[{id:845,count:955},{id:561,count:29},{id:554,count:145},{id:COINS,count:18177},{id:590,count:1},{id:1511,count:5}]},
+ alchemyShort:{position:{x:2721,z:3493,level:0},skills:{Magic:55},inventory:[],
+  bank:[{id:845,count:955},{id:554,count:145},{id:COINS,count:18177},{id:590,count:1}]},
  // Ordinary bank entry missing one earth rune for five Lumbridge teleports, plus unrelated assets.
  // consume_effect_stat deletes the selected slot. Unstackable trout each need their own slot.
  varrock:{position:{x:3185,z:3436,level:0},skills:{Magic:31},inventory:[{id:TROUT,count:1},{id:TROUT,count:1},{id:TROUT,count:1},{id:1351,count:1}],
@@ -54,6 +60,9 @@ export const CASES=[
  {label:'rerun',fixture:'varrock',mode:'refusal',env:{TARGET_LEVEL:'37',MAX_CASTS:'5',RUNE_BUDGET:'1000',CASH_RESERVE:'10000'}},
  {label:'fallback',fixture:'fallback',mode:'progress',env:{TARGET_LEVEL:'71',MAX_CASTS:'1',RUNE_BUDGET:'300',CASH_RESERVE:'1000'}},
  {label:'short',fixture:'short',mode:'refusal',env:{TARGET_LEVEL:'75',RUNE_BUDGET:'0',CASH_RESERVE:'0'}},
+ {label:'alchemy',fixture:'alchemy',mode:'progress',env:{TARGET_LEVEL:'65',MAX_CASTS:'29',ALCH_ITEM_ID:'845',RUNE_BUDGET:'0'}},
+ {label:'alchemy-rerun',fixture:'alchemy',mode:'refusal',env:{TARGET_LEVEL:'65',MAX_CASTS:'29',ALCH_ITEM_ID:'845',RUNE_BUDGET:'0'}},
+ {label:'alchemy-short',fixture:'alchemyShort',mode:'refusal',env:{TARGET_LEVEL:'65',MAX_CASTS:'29',ALCH_ITEM_ID:'845',RUNE_BUDGET:'0'}},
 ] as const satisfies readonly {label:string;fixture:Fixture;mode:Mode;env:Record<string,string>}[];
 const CHILD_ENV={RANDOM_EVENTS:'0',MAX_CASTS:'200',CAP:'1500'};
 
@@ -108,9 +117,9 @@ export function totals(s:Save){const out=new Map<number,number>();for(const t of
 const total=(s:Save,id:number)=>totals(s).get(id)??0;
 const held=(s:Save,id:number,type=93)=>(s.inventories[type]??[]).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 export function lines(log:string,prefix:string):any[]{return log.split(/\r?\n/).filter(l=>l.startsWith(prefix+' ')).map(l=>{try{return JSON.parse(l.slice(prefix.length+1));}catch{return null;}});}
-export function unrelatedKept(before:Save,after:Save){
+export function unrelatedKept(before:Save,after:Save,spent:ReadonlySet<number>=SPENT){
  const a=totals(before),b=totals(after);
- return [...new Set([...a.keys(),...b.keys()])].every(id=>SPENT.has(id)||(a.get(id)??0)===(b.get(id)??0));
+ return [...new Set([...a.keys(),...b.keys()])].every(id=>spent.has(id)||(a.get(id)??0)===(b.get(id)??0));
 }
 const skillsEqual=(a:Save,b:Save)=>a.skills.every((s,i)=>s.rawExperience===b.skills[i]!.rawExperience&&s.level===b.skills[i]!.level);
 // A refusal moves nothing: each container keeps its exact items.
@@ -153,6 +162,33 @@ export function fallbackChecks(before:Save,after:Save,log:string){
 }
 export function progressChecks(before:Save,after:Save,log:string,child:Child,target:number,budget:number,reserve:number):Record<string,boolean>{
  const seg=segmentChecks(before,after,log),results=resultOf(log),r=results[0];
+ // Only the alchemy fixture owns oak longbows.
+ if(total(before,845)>0){
+  const casts=lines(log,'MAGIC_ORDER_CAST'),initial=lines(log,'MAGIC_ORDER_INITIAL')[0];
+  const spent=new Set([845,561,554,COINS]),used=r?.alchemy;
+  return {
+   exit:child.code===0&&!child.timedOut,oneResult:results.length===1&&r?.ok===true&&r.stop==='target',
+   authorized:initial?.options?.alchItemId===845&&initial.options.target===65&&initial.options.maxCasts===29,
+   level:target===65&&before.skills[6]!.xp===47825&&after.skills[6]!.level===65&&after.skills[6]!.rawExperience===478250+29*650*CONFIG.xpRate,
+   castsExact:r?.casts===29&&casts.length===29,
+   resultAccounting:used?.itemId===845&&used.itemsUsed===29&&used.natureUsed===29&&used.fireUsed===145&&used.coinsGained===2784
+    &&r?.coinsSpent===0&&r?.eats===0&&r?.magicXpGained===29*65*CONFIG.xpRate,
+   itemDebit:total(before,845)-total(after,845)===29&&total(after,845)===926,
+   runeDebit:total(before,561)-total(after,561)===29&&total(before,554)-total(after,554)===145,
+   coinCredit:total(after,COINS)-total(before,COINS)===2784,
+   observedCasts:casts.every((c,i)=>c?.cast===i+1&&c.spell==='highlvl_alchemy'&&c.itemId===845&&c.fireCost===5
+    &&c.before?.item===1&&c.before.nature===29-i&&c.before.fire===145-5*i&&c.before.coins===96*i
+    &&c.before.xp===47825+i*65*CONFIG.xpRate&&c.before.xp<magicXpForLevel(target)
+    &&c.after?.xp===c.before.xp+65*CONFIG.xpRate&&alchemyEffect(845,c.before,c.after)==='cast'
+    &&c.position?.level===0&&Math.max(Math.abs(c.position.x-2721),Math.abs(c.position.z-3493))<=1),
+   unrelatedAssets:unrelatedKept(before,after,spent)&&skillsEqualExceptMagic(before,after)
+    &&JSON.stringify(before.inventories[94])===JSON.stringify(after.inventories[94]),
+   leftoversBanked:[...spent].every(id=>held(after,id)===0&&held(after,id,95)===total(after,id)),
+   noPurchases:seg.purchases.length===0&&budget===0,
+   cleanupLocation:after.position.x===before.position.x&&after.position.z===before.position.z&&after.position.level===0,
+   logout:loggedOut(log),alive:after.skills[3]!.level>0&&!/\bdied\b/.test(log),
+  };
+ }
  if(total(before,TELE_RUNE_IDS.law)>0){
   const casts=lines(log,'MAGIC_ORDER_CAST'),spell=TELEPORTS.find(t=>t.name==='lumbridge')!;
   const costs={air:3,mind:0,earth:1,water:0,fire:0,law:1} satisfies RuneCounts;
@@ -207,9 +243,11 @@ export function fixtureChecks(save:Save,fixture:Fixture){
  const food=(save.inventories[93]??[]).filter(i=>i.id===TROUT);
  return save.position.x===f.position.x&&save.position.z===f.position.z&&save.position.level===0&&save.skills[3]!.level===10
   &&food.length===f.inventory.filter(i=>i.id===TROUT).length&&food.every(i=>i.count===1)
-  &&save.skills[6]!.level===(fixture==='varrock'?31:70)&&(fixture!=='varrock'||save.skills[6]!.rawExperience===81250)
+  &&save.skills[6]!.level===(fixture==='varrock'?31:fixture.startsWith('alchemy')?55:70)&&(fixture!=='varrock'||save.skills[6]!.rawExperience===81250)
   &&(fixture!=='fallback'||save.skills[6]!.rawExperience===(magicXpForLevel(71)-1)*10)
-  &&(fixture==='varrock'||total(save,TELE_RUNE_IDS.law)===0&&total(save,561)===0&&total(save,MIND)===0)
+  &&(!fixture.startsWith('alchemy')||save.skills[6]!.rawExperience===478250&&(save.inventories[93]??[]).length===0&&(save.inventories[94]??[]).length===0
+   &&(fixture!=='alchemyShort'||total(save,561)===0))
+  &&(fixture==='varrock'||fixture.startsWith('alchemy')||total(save,TELE_RUNE_IDS.law)===0&&total(save,561)===0&&total(save,MIND)===0)
   &&f.bank.every(i=>bank(i.id)===i.count)&&bank(COINS)>0;
 }
 type CaseRecord={label:string;name:string;fixture:Fixture;mode:Mode;env:Record<string,string>;child:Child;saveMatched:boolean;elapsedMs:number};
@@ -246,9 +284,18 @@ export function verify(directory:string,now=Date.now(),source:unknown=sources())
  add('short',refusalChecks(c.before,c.after,c.log,rec('short').child,'short runes'));
  checks['short.missing']=resultOf(c.log)[0]?.missing?.mind===1&&resultOf(c.log)[0]?.missing?.air===0;
  checks.uniqueAccounts=new Set(['varrock','fallback','short'].map(label=>rec(label).name)).size===3;
+ const a=read('alchemy'),ar=read('alchemy-rerun'),ash=read('alchemy-short');
+ checks['alchemy.fixture']=fixtureChecks(a.before,'alchemy');checks['alchemy-short.fixture']=fixtureChecks(ash.before,'alchemyShort');
+ {const e=env('alchemy');add('alchemy',progressChecks(a.before,a.after,a.log,rec('alchemy').child,e.target,e.budget,e.reserve));}
+ checks['alchemy.saveMatched']=rec('alchemy').saveMatched===true;
+ add('alchemy-rerun',refusalChecks(ar.before,ar.after,ar.log,rec('alchemy-rerun').child,'already at target'));
+ add('alchemy-short',refusalChecks(ash.before,ash.after,ash.log,rec('alchemy-short').child,'short alchemy supplies'));
+ checks['alchemy-rerun.sameAccount']=rec('alchemy-rerun').name===rec('alchemy').name;
+ checks['alchemy-rerun.fromSave']=sha(join(directory,'alchemy-rerun-before.sav'))===sha(join(directory,'alchemy-after.sav'));
+ checks['alchemy.uniqueAccounts']=new Set(['alchemy','alchemy-short','varrock','fallback','short'].map(label=>rec(label).name)).size===5;
  const report={ok:Object.values(checks).every(Boolean),at:now,
   scope:'One native 150ms/25x practice run of scripts/magic-order.ts on fresh fixtures. No live, unattended or speed claim.',checks,
-  magic:{varrock:v.after.skills[6]!.level,fallback:f.after.skills[6]!.level}};
+  magic:{varrock:v.after.skills[6]!.level,fallback:f.after.skills[6]!.level,alchemy:a.after.skills[6]!.level}};
  writeFileSync(join(directory,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
  return report;
 }
@@ -282,9 +329,9 @@ async function run(directory:string){
    const created=await createBot(name);
    writeFileSync(created.envPath,magicProofAccountEnv(readFileSync(created.envPath,'utf8'),endpoints));
    const a={name,path:await applyPreset(name,FIXTURES[fixture])};
-   if(fixture==='varrock'||fixture==='fallback'){
+   if(fixture==='varrock'||fixture==='fallback'||fixture.startsWith('alchemy')){
     const skills=readPracticeSave(a.path).skills.map(s=>({level:s.level,xp:s.xp}));
-    skills[6]=fixture==='varrock'?{level:31,xp:8125}:{level:70,xp:magicXpForLevel(71)-1};setPracticeSkills(a.path,skills);
+    skills[6]=fixture==='varrock'?{level:31,xp:8125}:fixture==='fallback'?{level:70,xp:magicXpForLevel(71)-1}:{level:55,xp:47825};setPracticeSkills(a.path,skills);
    }
    const stamp=statSync(a.path).mtimeMs;
    const auth=await child(directory,'auth-'+fixture,magicRegistrationArgs(name,endpoints),{},endpoints);

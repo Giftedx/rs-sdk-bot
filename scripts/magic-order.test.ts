@@ -281,7 +281,7 @@ function fakeSession(o:{x:number;z:number;level?:number;magic?:{level:number;xp:
  const s={name:'fake',client,tick:()=>tick,onTick:(cb:()=>void)=>{callbacks.add(cb);return()=>{callbacks.delete(cb);};},ended:new Promise<{reason:string}>(()=>{}),
   sdk:{getState:state,getInventory:()=>inventory,getEquipment:()=>[],getSkill:(n:string)=>skills.find(k=>k.name.toLowerCase()===n.toLowerCase())??null,
    getSkillXp:(n:string)=>skills.find(k=>k.name.toLowerCase()===n.toLowerCase())?.experience??null},
-  bankObservation:()=>generation?{generation,at:tick,items:bank.map(({id,name,count})=>({id,name,count}))}:null,
+  bankObservation:()=>bankOpen&&generation?{generation,at:tick,items:bank.map(({id,name,count})=>({id,name,count}))}:null,
   bot:{openBank:async()=>{calls.push('openBank');bankOpen=true;generation++;return{success:true}},closeBank:async()=>{calls.push('closeBank');bankOpen=false;return{success:true}},
    withdrawItem:async(item:{id:number},amount:number)=>{
     calls.push('withdraw');const stored=bank.find(i=>i.id===item.id)!;stored.count-=amount;
@@ -516,5 +516,91 @@ test('a budget held entirely by the cash reserve also refuses short runes',async
  try{
   const r=await runMagicOrder(f.s,{...options,budget:300,reserve:200});
   expect(r.stop).toBe('short runes');expect(r.missing).toEqual({air:0,mind:1});expect(f.calls).toEqual(['openBank','closeBank']);
+ }finally{f.stop();}
+});
+
+test('alchemy requires explicit priced item selection and exact item, rune, coin and XP effects',async()=>{
+ const {alchemyEffect,alchemyRefusal}=await import('./magic-order');
+ expect(magicOptions({TARGET_LEVEL:'65',ALCH_ITEM_ID:'845'})).toMatchObject({alchItemId:845});
+ expect(()=>magicOptions({TARGET_LEVEL:'65',ALCH_ITEM_ID:'0'})).toThrow('ALCH_ITEM_ID');
+ expect(alchemyRefusal(54,845,1,1,5)).toBe('high alchemy requires Magic 55');
+ expect(alchemyRefusal(55,995,1,1,5)).toBe('unpriced alchemy item');
+ expect(alchemyRefusal(55,845,0,1,5)).toBe('short alchemy supplies');
+ expect(alchemyRefusal(55,845,1,1,4)).toBe('short alchemy supplies');
+ expect(alchemyRefusal(55,845,1,1,5)).toBeNull();
+ const b={item:1,nature:2,fire:10,coins:13,xp:47825},a={item:0,nature:1,fire:5,coins:109,xp:49450};
+ expect(alchemyEffect(845,b,a)).toBe('cast');
+ expect(alchemyEffect(845,b,b)).toBe('none');
+ for(const field of ['item','nature','fire','coins','xp'] as const)expect(alchemyEffect(845,b,{...a,[field]:b[field]})).not.toBe('cast');
+ expect(alchemyEffect(845,b,{...a,coins:110})).not.toBe('cast');
+});
+
+test('alchemy selects Use-quickly and preserves the bank modal until fresh contents arrive for29 casts',async()=>{
+ const entry={x:2721,z:3493,magic:{level:55,xp:47825},pack:[{id:590,count:1}],bank:[{id:845,count:955},{id:561,count:29},{id:554,count:145},{id:COINS,count:18177}]};
+ const f=fakeSession(entry),s=f.s as any,oldDirect=s.direct,oldState=s.sdk.getState,oldOpen=s.bot.openBank;
+ const oldObservation=s.bankObservation,oldWithdraw=s.bot.withdrawItem;
+ let n=0,animationUntil=-1,readyAt=-1,alchModal=false,freshAt=-1,previousGeneration=0,dropped=0,reentries=0;
+ s.sdk.getState=()=>({...oldState(),dialog:{isOpen:alchModal},modalOpen:alchModal||oldState().bank.isOpen,
+  modalInterface:oldState().bank.isOpen?5292:-1,
+  nearbyLocs:[{id:2213,name:'Bank booth',x:2721,z:3494,distance:1,optionsWithIndex:[{text:'Use',opIndex:1},{text:'Use-quickly',opIndex:2}]}],
+  player:{...oldState().player,animId:s.tick()<animationUntil?713:-1}});
+ s.bankObservation=()=>{
+  const b=oldObservation();
+  if(b&&s.tick()<freshAt)return{...b,generation:previousGeneration};
+  if(b)previousGeneration=b.generation;
+  return b;
+ };
+ const bank=async()=>{
+  if(n){
+   expect(s.sdk.getState().player.animId).toBe(-1);expect(alchModal).toBe(false);
+   if(s.tick()<readyAt){dropped++;return{success:false,reason:'timeout',message:'Timeout waiting for bank interface to open'};}
+   // The main bank modal precedes the fresh inventory observation by more than one retry window.
+   freshAt=s.tick()+4;reentries++;
+  }
+  return oldOpen();
+ };
+ s.bot.openBank=bank;
+ s.bot.withdrawItem=async(item:any,amount:number)=>{expect(s.tick()).toBeGreaterThanOrEqual(freshAt);return oldWithdraw(item,amount);};
+ s.direct=async(a:any)=>{
+  if(a.type==='interactLoc'){
+   expect(a.locId).toBe(2213);
+   // Pinned booth op1 opens banker chat; op2 opens the bank directly.
+   if(a.optionIndex===1){alchModal=true;return{success:true};}
+   expect(a.optionIndex).toBe(2);expect(oldState().bank.isOpen).toBe(false);
+   await bank();return{success:true};
+  }
+  if(a.type!=='spellOnItem'){
+   if(a.type==='closeModal'){expect(oldState().bank.isOpen).toBe(false);alchModal=false;}
+   return oldDirect(a);
+  }
+  previousGeneration=oldObservation()?.generation??previousGeneration;
+  animationUntil=s.tick()+4;readyAt=animationUntil+3;alchModal=true;
+  expect(f.inventory.find(i=>i.slot===a.slot)?.id).toBe(845);
+  n++;
+  for(const [id,cost] of [[845,1],[561,1],[554,5]])f.inventory.find(i=>i.id===id)!.count-=cost!;
+  for(let i=f.inventory.length-1;i>=0;i--)if(!f.inventory[i]!.count)f.inventory.splice(i,1);
+  const coins=f.inventory.find(i=>i.id===COINS);if(coins)coins.count+=96;else f.inventory.push({id:COINS,count:96,slot:25,name:'Coins',optionsWithIndex:[]});
+  const m=s.sdk.getSkill('Magic');m.experience+=1625;
+  while(m.baseLevel<99&&m.experience>=magicXpForLevel(m.baseLevel+1))m.baseLevel++;
+  m.level=m.baseLevel;return{success:true};
+ };
+ try{
+  const r=await runMagicOrder(f.s,{target:65,maxCasts:29,cap:1500,budget:0,reserve:0,alchItemId:845});
+  expect(r.ok).toBe(true);expect(n).toBe(29);expect(r.level).toBe(65);
+  expect(r.alchemy).toEqual({itemId:845,itemsUsed:29,natureUsed:29,fireUsed:145,coinsGained:2784});
+  expect(f.bank.find(i=>i.id===845)?.count).toBe(926);expect(f.bank.find(i=>i.id===COINS)?.count).toBe(20961);
+  expect(f.bank.find(i=>i.id===590)?.count).toBe(1);expect(f.inventory).toHaveLength(0);
+  expect(dropped).toBe(29);expect(reentries).toBe(29);
+  expect(f.calls).not.toContain('openShop');expect(entry.x).toBe(2721);
+ }finally{f.stop();}
+});
+
+test('declared alchemy without nature refuses without buying or moving owned items',async()=>{
+ const f=fakeSession({x:2721,z:3493,magic:{level:55,xp:47825},bank:[{id:845,count:955},{id:554,count:145},{id:COINS,count:18177}]});
+ try{
+  const r=await runMagicOrder(f.s,{target:65,maxCasts:29,cap:1500,budget:1000,reserve:0,alchItemId:845});
+  expect(r.ok).toBe(false);expect(r.stop).toBe('short alchemy supplies');expect(r.casts).toBe(0);
+  expect(f.calls).toEqual(['openBank','closeBank']);expect(f.inventory).toHaveLength(0);
+  expect(f.bank.find(i=>i.id===845)?.count).toBe(955);expect(f.bank.find(i=>i.id===COINS)?.count).toBe(18177);
  }finally{f.stop();}
 });
