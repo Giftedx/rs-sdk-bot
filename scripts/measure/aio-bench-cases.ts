@@ -306,6 +306,18 @@ const ROUTE_CASES: BenchCase[] = [
   // in range. The worker stands still: the guard must turn Protect from Missiles on before the first rock.
   {key: 'extra:guard-thrower', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['300'], pass: ok,
     presetConfig: {position: {x: 2860, z: 3595, level: 0}, skills: {Hitpoints: 60, Defence: 60, Prayer: 60}}},
+  // The script turns three prayers on and stands: the guard keeps them free with its two-tick flick.
+  {key: 'extra:guard-three', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['300', 'PRAYERS=9,10,11'], pass: ok,
+    presetConfig: {position: {x: 3222, z: 3218, level: 0}, skills: {Hitpoints: 60, Prayer: 60}}},
+  // Fly fishing at Lumbridge with Protect from Melee on: the guard flicks and sends the click on the spot again.
+  // With `--set PRAYER_GUARD=0` the prayer is held and the run shows the same catch at the normal point cost.
+  {key: 'extra:guard-fish', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['500', 'PRAYERS=14', 'FISH=fly:8'], pass: ok,
+    presetConfig: {position: {x: 3239, z: 3251, level: 0}, skills: {Fishing: 50, Hitpoints: 60, Prayer: 60}, inventory: [{id: 309, count: 1}, {id: 314, count: 60}]}},
+  // Two accounts at Wilderness level 11, 7 combat levels apart. The second one attacks with a rune scimitar: the
+  // guard of the first must turn Protect Item and Protect from Melee on.
+  {key: 'extra:guard-rival', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['200', 'RIVAL={bot:b}'], pass: ok,
+    presetConfig: {position: {x: 3200, z: 3600, level: 0}, skills: {Attack: 40, Strength: 40, Defence: 40, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3201, z: 3600, level: 0}, skills: {Attack: 40, Strength: 40, Defence: 40, Hitpoints: 60}, equipment: [{id: 1333, count: 1, slot: 3}]}}]},
   sparCase('extra:spar-no-slayer', sparFixture(3094, 3555, {noDragonSlayer: true}), sparFixture(3096, 3555, {noDragonSlayer: true})),
   // The tribrid against every build of scripts/pk-kits.ts in one run, and a mirror of 8 for each build: the cases that
   // the hill climb and the kit matrix run (scripts/measure/pk-spar-climb.ts, pk-spar-matrix.ts).

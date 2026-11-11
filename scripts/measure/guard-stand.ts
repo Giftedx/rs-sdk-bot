@@ -1,15 +1,73 @@
-// Bench worker for the prayer guard (packages/core/src/prayer-guard.ts): stands on its start tile for a number of
-// ticks and sends no input, so each prayer input in the run is the guard's.
-// Usage: bun scripts/measure/guard-stand.ts <bot> <ticks>
+// Bench worker for the prayer guard (packages/core/src/prayer-guard.ts). It stands on its start tile for a number of
+// ticks. Options make one condition for the guard each:
+//   PRAYERS=9,10,11   the script turns these prayers on at the start, so the guard only keeps them free
+//   FISH=fly:8        the script fishes with this method of scripts/microbot-b-fishing.ts until it has this many fish
+//   RIVAL=<account>   a second account logs in and attacks this one (both must stand in the Wilderness)
+// Usage: bun scripts/measure/guard-stand.ts <bot> <ticks> [PRAYERS=..] [FISH=method:count] [RIVAL=account]
 import { finish, openBot } from '../../packages/core/src/bot';
-import { waitTicks } from '../../packages/core/src/ticks';
+import type { Session } from '../../packages/core/src/inprocess';
+import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
+import { FISH_PROFILES, pickFishSpot, type FishMethod } from '../microbot-b-fishing';
 
-const [name, ticks = '300'] = process.argv.slice(2);
-if (!name || !Number.isSafeInteger(Number(ticks)) || Number(ticks) < 1) throw new Error('usage: guard-stand.ts <bot> <ticks>');
+const [name, ticks = '300', ...rest] = process.argv.slice(2);
+const option = (key: string) => rest.find(a => a.startsWith(key + '='))?.slice(key.length + 1);
+if (!name || !Number.isSafeInteger(Number(ticks)) || Number(ticks) < 1) throw new Error('usage: guard-stand.ts <bot> <ticks> [PRAYERS=..] [FISH=method:count] [RIVAL=account]');
+const cap = Number(ticks);
 const s = await openBot(name);
-const hitpoints = () => s.sdk.getState()?.skills?.find((k: { name: string }) => k.name === 'Hitpoints')?.level ?? 0;
-const before = hitpoints();
-await waitTicks(s, Number(ticks));
-const after = hitpoints(), alive = !s.sdk.getState()?.player?.isDead;
-console.log(`RESULT ${alive ? 'ok' : 'fail'} ticks=${ticks} hp=${before}->${after}`);
-await finish([s], alive, 'stood');
+const sessions: Session[] = [s];
+const state = () => s.sdk.getState();
+const hitpoints = () => state()?.skills?.find((k: { name: string }) => k.name === 'Hitpoints')?.level ?? 0;
+const points = () => state()?.prayers?.prayerPoints ?? 0;
+const before = hitpoints(), pointsBefore = points(), start = s.tick();
+const left = () => cap - (s.tick() - start);
+// The prayers the state showed, with the number of ticks for each set.
+const seen = new Map<string, number>();
+const watch = s.onTick(() => { const key = (state()?.prayers?.activePrayers ?? []).flatMap((on: boolean, i: number) => (on ? [i] : [])).join('+') || 'none'; seen.set(key, (seen.get(key) ?? 0) + 1); });
+const parts: string[] = [];
+
+for (const prayer of (option('PRAYERS') ?? '').split(',').filter(Boolean).map(Number)) {
+    await s.sdk.sendTogglePrayer(prayer);
+    if (!await waitUntil(s, () => !!state()?.prayers?.activePrayers[prayer], { timeoutTicks: 6 })) throw new Error(`prayer ${prayer} did not come on`);
+}
+
+const rivalName = option('RIVAL');
+if (rivalName) {
+    const rival = await openBot(rivalName);
+    sessions.push(rival);
+    let attacks = 0;
+    while (left() > 0) {
+        const target = rival.sdk.getState()?.nearbyPlayers.find(p => p.name.toLowerCase() === name.toLowerCase());
+        if (target && rival.sdk.getState()?.player?.combat.targetType !== 'player') { await rival.sdk.sendInteractPlayer(target.index, 2); attacks++; }
+        await waitTicks(s, Math.min(8, left()));
+    }
+    parts.push(`rivalAttacks=${attacks}`);
+}
+
+const fish = option('FISH');
+if (fish) {
+    const [method, amount = '5'] = fish.split(':') as [FishMethod, string];
+    const profile = FISH_PROFILES[method];
+    if (!profile) throw new Error(`unknown fishing method ${method}`);
+    const count = () => (state()?.inventory ?? []).filter(i => (profile.products as readonly number[]).includes(i.id)).reduce((n, i) => n + i.count, 0);
+    const first = count();
+    let clicks = 0;
+    while (left() > 0 && count() - first < Number(amount)) {
+        const spot = state() ? pickFishSpot(state()!, method) : undefined;
+        if (!spot) { await waitTicks(s, 1); continue; }
+        const had = count();
+        await s.sdk.sendInteractNpc(spot.index, profile.op);
+        clicks++;
+        // One click fishes until the spot moves; the wait ends at a catch so the loop can count it.
+        await waitUntil(s, () => count() > had || left() <= 0, { timeoutTicks: 40 });
+    }
+    parts.push(`caught=${count() - first} clicks=${clicks} fishTicks=${s.tick() - start}`);
+    if (count() - first < Number(amount)) parts.push('fishShort=1');
+} else if (!rivalName) {
+    await waitTicks(s, cap);
+}
+
+watch();
+const after = hitpoints(), alive = !state()?.player?.isDead, short = parts.includes('fishShort=1');
+const sets = [...seen].sort((a, b) => b[1] - a[1]).map(([key, n]) => `${key}:${n}`).join(',');
+console.log(`RESULT ${alive && !short ? 'ok' : 'fail'} ticks=${s.tick() - start} hp=${before}->${after} points=${pointsBefore}->${points()} prayers=${sets} ${parts.join(' ')}`);
+await finish(sessions, alive && !short, 'stood');

@@ -853,3 +853,21 @@ test('another NPC attacks during the script fight: the guard sends the attack on
     client.executeBotAction({ type: 'interactNpc', npcIndex: 3, optionIndex: 2 });
     for (let i = 0; i < 30; i++) { advance(); expect(w.interaction as string | null).toBe('interactNpc:3'); }
 });
+
+test('fishing under attack costs nothing: the guard flicks and sends the same click on the spot again', () => {
+    const { w, s, client, advance } = world();
+    const guard = startPrayerGuard(s);
+    const spot = { index: 12, id: 309, name: 'Fishing spot', hp: null, targetIndex: -1, optionsWithIndex: [{ text: 'Lure', opIndex: 1 }, { text: 'Bait', opIndex: 3 }] };
+    w.npcs = [cow(32768 + 7), spot];
+    advance(4);
+    w.anim = 622;
+    client.executeBotAction({ type: 'interactNpc', npcIndex: 12, optionIndex: 1 });
+    for (let i = 0; i < 100; i++) { advance(); expect(w.interaction as string | null).toBe('interactNpc:12'); }
+    expect(w.drains).toBe(0);
+    expect(guard.stats().holds).toBe(0);
+    // The spot moves away: the click is not sent again.
+    w.npcs = [cow(32768 + 7)];
+    w.interaction = null;
+    advance(8);
+    expect(w.interaction as string | null).toBe(null);
+});

@@ -124,10 +124,11 @@ const TICK_INPUTS = 5;
 const MAX_FLICKED = 4;
 // The order prayers come back on: protection, then Defence, then the others.
 const backFirst = (prayer: number) => prayer >= 12 ? 0 : [0, 3, 9].includes(prayer) ? 1 : 2;
-// Skill actions that a second click on the same rock or tree does not start again: their timer is the player variable
-// %action_delay, which a click sets only when it is in the past (skill_mining/scripts/mining.rs2:76,
-// skill_woodcutting/scripts/woodcut.rs2:55). The guard treats them like an attack: it flicks, then sends the click again.
-const REPEATABLE = /^(mine|chop down|chop)$/i;
+// Skill actions that a second click on the same rock, tree or fishing spot does not start again: their timer is the
+// player variable %action_delay, which a click sets only when it is in the past (skill_mining/scripts/mining.rs2:76,
+// skill_woodcutting/scripts/woodcut.rs2:55, skill_fishing/scripts/fishing_spots/freshfish.rs2:37 and each other file
+// of that folder). The guard treats them like an attack: it flicks, then sends the click again.
+const REPEATABLE = /^(mine|chop down|chop)$/i, FISHING_SPOT = /^fishing spot$/i;
 // The level-up message (content levelup/configs/levelup.dbrow). A prayer button closes it, which costs the script nothing.
 const LEVEL_UP = /^Congratulations, you just advanced/;
 // The state shows a prayer input at most this many ticks after the guard saw it.
@@ -179,6 +180,10 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         return !!newest && LEVEL_UP.test((newest.text ?? []).join(' ').trim());
     };
     const skillTarget = (a: Action, st: any): boolean => {
+        if (a.type === 'interactNpc') {
+            const spot = (st?.nearbyNpcs ?? []).find((n: any) => n.index === a.npcIndex);
+            return !!spot && FISHING_SPOT.test(spot.name ?? '') && (spot.optionsWithIndex ?? []).some((op: any) => op.opIndex === a.optionIndex);
+        }
         if (a.type !== 'interactLoc') return false;
         const loc = (st?.nearbyLocs ?? []).find((l: any) => l.id === a.locId && l.x === a.x && l.z === a.z);
         return !!loc && (loc.optionsWithIndex ?? []).some((op: any) => op.opIndex === a.optionIndex && REPEATABLE.test(op.text ?? ''));
