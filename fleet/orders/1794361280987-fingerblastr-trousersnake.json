@@ -1,0 +1,22 @@
+{
+ "id": "1794361280987-fingerblastr-trousersnake",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fingerblastr",
+ "to": "TrouserSnake",
+ "item": "Coins",
+ "count": 700000,
+ "start": 1794361280987,
+ "end": 1794364880987,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

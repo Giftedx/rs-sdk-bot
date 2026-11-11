@@ -1,0 +1,22 @@
+{
+ "id": "1794361281214-deeppockets-undermykilt",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Deeppockets",
+ "to": "UnderMyKilt",
+ "item": "Coins",
+ "count": 2400000,
+ "start": 1794361281214,
+ "end": 1794364881214,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
