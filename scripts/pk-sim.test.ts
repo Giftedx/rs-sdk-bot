@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { itemBonuses, series, simulate } from './pk-sim';
+import { itemBonuses, league, series, simulate } from './pk-sim';
 
 test('reads the combat bonuses of an item from the content configs', () => {
     const dagger = itemBonuses().get('dragon_dagger');
@@ -31,4 +31,11 @@ test('damage lands: a fight ends in a kill before the cap', () => {
     const f = simulate('tribrid-bare', 'tribrid', {}, {}, 3, 2000);
     expect(f.winner).not.toBe('draw');
     expect(f.takenA + f.takenB).toBeGreaterThan(99);
+});
+
+test('a build fights at its own levels: Defence 45 loses to Defence 99 in the same kit, and Prayer 43 beats Prayer 1', () => {
+    expect(series('zerker', 'tribrid-pots', {}, {}, 300).winRateA).toBeLessThan(0.1);
+    expect(series('pure-pray', 'pure-dds-msb', {}, {}, 300).winRateA).toBeGreaterThan(0.6);
+    const table = league(['pure-pray', 'pure-mage'], 100);
+    expect(table[0]!.kit).toBe('pure-pray');
 });

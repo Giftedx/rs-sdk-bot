@@ -88,6 +88,12 @@ export const LEAGUE: readonly {kit: string; profile: string}[] = [
   {kit: 'mage', profile: 'base'},
   {kit: 'tribrid-food', profile: 'spec-mid'},   // 21 sharks, the special kept for half health
 ];
+// The trained builds of scripts/pk-kits.ts that can attack each other at Wilderness level 34: the Defence 1 builds,
+// and the builds with Defence 40 to 60 with the best three of the Defence 1 builds.
+export const BUILD_BRACKETS: Readonly<Record<string, readonly string[]>> = {
+  pure: ['pure-dds', 'pure-dds-msb', 'pure-r2h', 'pure-hally', 'pure-ranger', 'pure-mage', 'pure-tribrid', 'pure-pray'],
+  def: ['rune-pure', 'zerker', 'dragon', 'range-tank', 'mage-tank', 'pure-pray', 'pure-ranger', 'pure-dds-msb'],
+};
 // An account in a kit of scripts/pk-kits.ts at the levels of the kit (default maxed), with Lost City and Dragon Slayer
 // done and full special energy.
 export const kitFixture = (kit: string, x: number, z = 3555): SaveConfig => ({
@@ -319,6 +325,12 @@ const ROUTE_CASES: BenchCase[] = [
   // the mirror spot, so a build with its own levels has no duel against the tribrid or the melee kit.
   ...(['pure-iban', 'pure-bolt'] as const).map(kit => sparMatrix(`extra:spar-${kit}-vs-skiller-x4`, Array.from({length: 4}, () => [kit, 'skiller'] as const), [], {x: 3125, z: 3790})),
   sparMatrix('extra:spar-pure-rock-vs-skiller-x4', Array.from({length: 4}, () => ['pure-rock', 'skiller'] as const), [], {x: 3055, z: 3872}),
+  // The trained builds against each other: every pair of a bracket once, 8 pairs in a case, at Wilderness level 34
+  // (the widest combat gap of a bracket is 27). `bun scripts/measure/pk-spar-matrix.ts --case <key>` runs one.
+  ...Object.entries(BUILD_BRACKETS).flatMap(([name, kits]) => {
+    const pairs = kits.flatMap((a, i) => kits.slice(i + 1).map((b, j) => ((i + j) % 2 ? [b, a] : [a, b]) as [string, string]));
+    return Array.from({length: Math.ceil(pairs.length / 8)}, (_, n) => sparMatrix(`extra:spar-builds-${name}-${n + 1}`, pairs.slice(n * 8, n * 8 + 8), [], {x: 3125, z: 3790}));
+  }),
   // Map cases of the spar. Gap: the same mirror from 12 tiles apart. Trees: 6 tiles apart at Wilderness level 3 with a
   // blocker on tiles 3101-3103 between the two, so neither has line of sight at the start. Escape: Wilderness level 34
   // at a spot with no monster in view (green dragons at (3094, 3800) attack both sides and block their hits); side B

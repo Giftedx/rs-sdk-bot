@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
-import { combatLevel, itemId, kitCost, kitItems, kitOptions, KITS, kitSkills, kitSwitches, kitVarps } from './pk-kits';
+import { combatLevel, itemId, kitCost, kitItems, kitOptions, KITS, kitSkills, kitSwitches, kitVarps, trained } from './pk-kits';
 import { KNOBS, readNets, stats, verdict } from './measure/pk-spar-climb';
 import { matrix, readList } from './measure/pk-spar-matrix';
-import { benchCases } from './measure/aio-bench-cases';
+import { benchCases, BUILD_BRACKETS } from './measure/aio-bench-cases';
 import { flipped, netRate, sparScore } from './pk-spar';
 import type { FightResult } from './pk';
 
@@ -74,4 +74,18 @@ test('each pure has its combat level, stays at Defence 1 and Hitpoints 10, and m
     }
     expect(kitVarps('pure-iban')).toMatchObject({ 288: 120, 300: 1000 });
     expect(kitVarps('tribrid')).toEqual({ 147: 6, 176: 10, 300: 1000 });
+});
+
+test('a trained build has the Hitpoints of its combat XP, and each bracket fits in Wilderness level 34', () => {
+    expect(trained({ Attack: 99, Strength: 99, Defence: 99 }).Hitpoints).toBe(99);
+    expect(trained({}).Hitpoints).toBe(10);
+    expect(combatLevel(kitSkills('zerker'))).toBe(92);
+    expect(kitSkills('zerker').Defence).toBe(45);
+    const cases = benchCases();
+    for (const [name, kits] of Object.entries(BUILD_BRACKETS)) {
+        const levels = kits.map(k => combatLevel(kitSkills(k)));
+        expect(Math.max(...levels) - Math.min(...levels)).toBeLessThanOrEqual(34);
+        const pairs = cases.filter(c => c.key.startsWith(`extra:spar-builds-${name}-`)).flatMap(c => c.scriptArgs.find(a => a.startsWith('SPAR_KITS='))!.slice(10).split(','));
+        expect(new Set(pairs.map(p => p.split(':').sort().join(':'))).size).toBe((kits.length * (kits.length - 1)) / 2);
+    }
 });
