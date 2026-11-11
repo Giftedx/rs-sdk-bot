@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794423454199-quickhandjob-knightrider-firerune",
  "account": "Quickhandjob",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Fire rune",
  "requested": 1,
  "claim": "0f938154-79b0-43d6-90f5-fbbb14b33414",
- "count": 0,
- "ok": false,
- "at": 1794423468319,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794423506264,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794423491191
+ },
+ "logout": {
+  "attemptId": "1794423468324-0000028655-0000000001",
+  "at": 1794423506258,
+  "sha256": "a24e6589e19e457a4b348b7022b8db9560deff5554051f57c9e6fff3f13319b0"
+ },
+ "screen": true
 }
