@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794382993111-oreelse-dipstick",
+ "account": "OreElse",
+ "partner": "Dipstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "5e4bfec1-97a2-408a-8d81-a3d160775b1b",
+ "count": 1,
+ "ok": true,
+ "at": 1794383020059,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794383009727
+ },
+ "logout": {
+  "attemptId": "1794383001484-0000027996-0000000001",
+  "at": 1794383020050,
+  "sha256": "241cca47de2782b1559a1e93bcceb14ab331767d70fcd7cfe990a2f0fcc5b4e1"
+ },
+ "screen": true
+}
