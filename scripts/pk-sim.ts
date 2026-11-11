@@ -21,7 +21,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { KITS, type KitSpec } from './pk-kits';
-import { seededRandom, SPELLS, type Style } from './pk';
+import { seededRandom, SPELLS, styleOfName, type Style } from './pk';
 
 type Bonus = { stab: number; slash: number; crush: number; magic: number; ranged: number; dStab: number; dSlash: number; dCrush: number; dMagic: number; dRanged: number; str: number; rangeStr: number; rate: number; prayer: number };
 const PARAM: Record<string, keyof Bonus> = { stabattack: 'stab', slashattack: 'slash', crushattack: 'crush', magicattack: 'magic', rangeattack: 'ranged',
@@ -74,7 +74,7 @@ const tier = (prayer: number, levels: [number, number, number]) => (prayer >= le
 const PROTECT_LEVEL: Record<Style, number> = { magic: 37, ranged: 40, melee: 43 };
 // Body armour that the fight loop takes off for a cast or a shot (scripts/pk.ts negativeCastArmour).
 const STRIP: Record<Style, RegExp> = { magic: /(platebody|chainbody|dragonhide_body|leather_body|studded_body)$/, ranged: /(platebody|chainbody)$/, melee: /^$/ };
-const styleOf = (weapon: string | undefined): Style => (/(shortbow|longbow|crossbow)/.test(weapon ?? '') ? 'ranged' : /staff/.test(weapon ?? '') ? 'magic' : 'melee');
+const styleOf = (weapon: string | undefined): Style => styleOfName(weapon ?? '');
 const carries = (kit: KitSpec, name: string) => kit.carried.some(c => (typeof c === 'string' ? c : c[0]) === name);
 function fighter(kit: KitSpec, o: SimOptions): Fighter {
     const worn: Record<string, string> = {};

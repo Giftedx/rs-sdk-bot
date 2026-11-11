@@ -3,6 +3,7 @@ import { combatLevel, itemId, kitCost, kitItems, kitOptions, KITS, kitSkills, ki
 import { KNOBS, readNets, stats, verdict } from './measure/pk-spar-climb';
 import { matrix, readList } from './measure/pk-spar-matrix';
 import { mayRun } from './measure/pk-spar-wait';
+import { rankKits } from './measure/pk-build-rank';
 import { benchCases, BUILD_BRACKETS, BUILD_BRACKETS_2, BUILD_PAIRS, BUILD_PAIRS_2 } from './measure/aio-bench-cases';
 import { flipped, netRate, sparScore } from './pk-spar';
 import type { FightResult } from './pk';
@@ -139,7 +140,19 @@ test('the second set of builds: levels, gear that the levels can wear, and one c
     }
     // No pair of the first set runs again.
     for (const key of staged) expect(first.has(key)).toBe(false);
-    expect(BUILD_PAIRS_2.length).toBe(53);
-    expect(cases.length).toBe(4);
+    // 53 pairs of the three brackets and 5 of `top` (the pair of `tank-range` and `dragon` is in the Defence bracket).
+    expect(BUILD_PAIRS_2.length).toBe(58);
+    expect(cases.length).toBe(5);
     for (const c of cases) { expect(c.scriptArgs).toContain('SPAR_PROCS=8'); expect(c.scriptArgs).toContain('SPAR_CAP=600'); }
+});
+
+test('the build rank counts each pair for both kits and turns side B over', () => {
+    const line = (matchup: string, fights: number, kills: number, deaths: number, net: number) => `MATRIX ${JSON.stringify({ matchup, fights, kills, deaths, net, costA: 0, costB: 0 })}`;
+    const ranked = rankKits(['SPAR_WAIT free 9 GB', line('dragon:pure-pray', 3, 2, 1, 30), line('pure-pray:zerker', 2, 2, 0, 50), line('zerker:dragon', 1, 0, 0, -4), 'MATRIX_RUN_FAILED seed 2']);
+    expect(ranked.map(r => r.kit)).toEqual(['pure-pray', 'dragon', 'zerker']);
+    expect(ranked[0]).toMatchObject({ fights: 5, wins: 3, losses: 2, draws: 0, winRate: 0.6, net: 2, combat: 80, against: { dragon: '1-2', zerker: '2-0' } });
+    expect(ranked[1]).toMatchObject({ fights: 4, wins: 2, losses: 1, draws: 1, net: 23.5, against: { 'pure-pray': '2-1', zerker: '0-0' } });
+    expect(ranked[2]).toMatchObject({ fights: 3, wins: 0, losses: 2, draws: 1, net: -34.7 });
+    // The same kit on both sides is one row.
+    expect(rankKits([line('dragon:dragon', 8, 5, 3, 10)])).toMatchObject([{ kit: 'dragon', fights: 8, wins: 5, losses: 3, against: { dragon: '5-3' } }]);
 });

@@ -108,11 +108,14 @@ const buildPairs = (brackets: Readonly<Record<string, readonly string[]>>, known
 };
 export const BUILD_PAIRS = buildPairs(BUILD_BRACKETS);
 // The second set of builds, each bracket with the best builds of the first set for a reference. A pair of two
-// reference builds is in BUILD_PAIRS already and has no place here. `low` holds the builds under combat 60.
+// reference builds is in BUILD_PAIRS already and has no place here. `low` holds the builds under combat 61, and `top`
+// the best two builds with a Defence level against the maxed tribrid of the army (combat 126), with and without
+// boost potions.
 export const BUILD_BRACKETS_2: Readonly<Record<string, readonly string[]>> = {
   pure: ['pure-scim', 'pure-dlong', 'pure-knives', 'pure-pray31', 'pure-god', 'pure-pray', 'pure-dds-msb', 'pure-ranger'],
   def: ['addy-pure', 'def50', 'tank-range', 'pure-max', 'dragon', 'zerker', 'rune-pure', 'pure-pray'],
   low: ['baby-pure', 'low-ranger', 'low-mage', 'low-addy'],
+  top: ['tank-range', 'dragon', 'tribrid-pots', 'tribrid'],
 };
 export const BUILD_PAIRS_2 = buildPairs(BUILD_BRACKETS_2, new Set(BUILD_PAIRS.map(p => [...p].sort().join(':'))));
 // An account in a kit of scripts/pk-kits.ts at the levels of the kit (default maxed), with Lost City and Dragon Slayer

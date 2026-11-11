@@ -415,8 +415,9 @@ each pair 3 fights (seeds 1, 2, 3), `extra:spar-builds-1` to `-4`. Evidence:
   the level of the build: the cow and trooper bands with `TARGET_LEVEL` and no buried bones, and the held-bones
   Prayer band with the level as its target. It refuses quest bands, stock bands, kill-count bands and bought-bone
   bands. Evidence: `packages/planner/test/autopilot.test.ts`, `scripts/autopilot.test.ts`. Proof level: unit.
-- Gap: no live run of a build account under the planner. The Prayer band needs 100 normal bones held; the
-  source of those bones for a build account is not checked. The quest route to each build is not planned, so no build account gets Lost City or Dragon Slayer
+- Gap: no live run of a build account under the planner. The Prayer band needs 100 normal bones held, and
+  the planner buys none: `KIT_PRICE_CAPS` has no price for normal bones. A build account with no bones in its bank
+  gets no Prayer band. The quest route to each build is not planned, so no build account gets Lost City or Dragon Slayer
   from the planner.
 
 ### Second set of builds
