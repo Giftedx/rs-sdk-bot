@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794421135685-sporrandip-knightrider-waterrune",
  "account": "KnightRider",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Water rune",
  "requested": 2,
  "claim": "d8229af6-a75c-49d6-afb8-d5f287958f34",
- "count": 0,
- "ok": false,
- "at": 1794421139960,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1794421162550,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1794421161815
+ },
+ "logout": {
+  "attemptId": "1794421139963-0000002057-0000000001",
+  "at": 1794421162545,
+  "sha256": "afd9dc75a9243fc8c402ad0e4cdd409939c6064ba7df63df49fd436327c9e4f7"
+ },
+ "screen": true
 }
