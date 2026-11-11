@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794431444589,
+ "at": 1794432044093,
  "jobs": [
   {
    "account": "Abracadickra",
@@ -505,7 +505,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-5d62d9d4-2949-4f48-952d-debf6005cdb9"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-session-recovery-mightyrod-expired-lease-r21 [task-5d62d9d4-2949-4f48-952d-debf6005cdb9]",
    "role": "thieving"
