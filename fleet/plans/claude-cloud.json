@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794389477409,
+ "at": 1794389504301,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -243,21 +243,16 @@
   },
   {
    "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1601 QUANTITY=1 LIMIT_PRICE=150000 CASH_RESERVE=1000 ORDER_KEY=fatstack-kit9-1601-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-b3149ce5-b984-4a5b-a5c7-bc444e7a3400"
    },
-   "enabled": false,
-   "standing": true,
+   "enabled": true,
    "repeat": false,
-   "goal": "buy 1 Diamond on the Grand Exchange to buy dragon longswords from Jakut in the Zanaris market",
-   "role": "supply",
-   "template": "kit-buy:army-jakut-swords",
-   "autopilot": "claude-cloud",
-   "resources": []
+   "goal": "claude-cloud-recover-fatstack-20261111t092739z [task-b3149ce5-b984-4a5b-a5c7-bc444e7a3400]",
+   "role": "supply"
   }
  ]
 }
