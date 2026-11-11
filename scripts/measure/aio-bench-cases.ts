@@ -306,6 +306,10 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, bank: [{id: 1944, count: 1}, {id: 1927, count: 1}, {id: 1933, count: 1}]}},
   {key: 'quester:mode:cook-job', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['cook-job', 'CAP=1500'], pass: s => ok(s) && /QUEST_COOK_JOB_RESULT \{"ok":true/.test(s),
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, bank: [{id: 1944, count: 1}, {id: 1927, count: 1}, {id: 1933, count: 1}], varps: {4: -1, 9: -1, 13: -1, 16: -1, 28: -1, 64: -1, 181: -1, 209: -1}}},
+  // From the Draynor bank: the dramen staff, the shed, the market door's diamond, one dragon longsword from Jakut, the
+  // ladder, the Al Kharid bank (scripts/jakut-swords.ts).
+  {key: 'market:jakut-swords', script: 'scripts/aio-market.ts', preset: 'fresh_lumbridge', scriptArgs: ['jakut-swords', 'SWORDS=1'], pass: s => ok(s) && /swords=1 banked=1/.test(s), timeoutMs: 900_000,
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Attack: 60}, equipment: [{id: 1333, count: 1, slot: 3}], bank: [{id: 772, count: 1}, {id: 1601, count: 1}, {id: 995, count: 110_000}]}},
   // From the Taverley dungeon ladder: the Jailer, Velrak's cell, the key, back up (scripts/dusty-key.ts).
   {key: 'quester:mode:dusty-key', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['dusty-key'], pass: s => ok(s) && s.includes('dustyKey=1'), timeoutMs: 900_000,
     presetConfig: {position: {x: 2884, z: 3398, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99}, equipment: [{id: 1331, count: 1, slot: 3}], inventory: Array.from({length: 4}, () => ({id: 385, count: 1}))}},

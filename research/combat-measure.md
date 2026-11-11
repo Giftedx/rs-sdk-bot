@@ -265,9 +265,18 @@ Ranged it adds is not needed at that point.
   at 6 all three are worn. **Evidence.** `.practice/lostcity/wield.ts` in the Claude cloud container that ran it.
   **Consumer.** `army-quest-lostcity` (research/quest-points-board.md, Lost City, from an army account's state).
 - **Market and shop (live claude-cloud read).** No dragon longsword or dagger is listed (last trades 425,000 and
-  299,000). Jukat in the Zanaris market stocks 2 dragon longswords and 2 daggers, one back per 500 ticks
+  299,000). Jakut in the Zanaris market stocks 2 dragon longswords and 2 daggers, one back per 500 ticks
   (`area_lostcity/configs/lostcity.inv`), base cost 100,000 and 30,000; the market door asks one cut diamond an entry
   (`doorman.rs2`) and the market ladder leaves to Al Kharid (`ladder_fairy.rs2`).
+- **Claim.** One run brings two dragon longswords from Jakut to the Al Kharid bank. **Conditions.**
+  `scripts/jakut-swords.ts` (`market:jakut-swords`): the dramen staff, a diamond and the coins from the Draynor bank,
+  the swamp shed, the market door from the west (3237,9558; the engine refuses a walk round it: a walk from the entry
+  to Jakut stopped on 3237,9560), the doormen's dialogue, the shop, the ladder. Practice from the Draynor bank with a
+  rune scimitar wielded: `RESULT ok swords=2 banked=2 spent=201000`, 165 ticks (in Zanaris at tick 86, in the market
+  at 110, in Al Kharid at 138), the scimitar wielded again. The first sword cost 100,000 and the second 101,000. A
+  third was not on the shelf in 711 ticks of waiting (`SWORDS=3 WAIT=700`: `swords=2 ... shelf=0`). **Evidence.**
+  `.practice/jakut/run.ts` (`a`, `b`), `.practice/jakut/probe.ts`.
+- **Gap.** Not run live. The shelf's restock on the live server is not measured. No army account holds a diamond.
 - **Gap.** No seller on practice, so a fill is proved live only. Kills per tick with each blade are not measured.
 
 ## Black dragonhide from Taverley's black dragons
