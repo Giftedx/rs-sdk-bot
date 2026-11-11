@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { ARROW_LOW, ARROW_STOCK, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
+import { ARROW_LOW, ARROW_STOCK, LOWE_STOCK, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -826,15 +826,15 @@ test('the Prayer filler waits behind a kit buy and gives way to one while it run
     const army = new Set(['archer']);
     const skills = { Thieving: 99, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 87, Magic: 99, Prayer: 74 };
     const archer = acct('Archer', skills, { coin: 4_000_000, shark: 40, shortbow: 1 });
-    // Its Ranged band lacks only arrows, and another account holds the arrow shop: the market buy comes before the filler.
-    const capacity = { ...CAPACITY, 'shop:ardy': 0 };
+    // Its Ranged band lacks only arrows, and other accounts hold the arrow shops: the market buy comes before the filler.
+    const capacity = { ...CAPACITY, 'shop:ardy': 0, 'shop:lowe': 0 };
     expect(plan(inputs([archer], { army, market, capacity }))[0]!.template!.id).toBe(KIT_BUY + 'army-trooper-ranged-99');
     // The same while the filler is its running job: a kit buy replaces a filler, as it replaces a coin job.
     const busy = { army, market, capacity, unfundable: new Set(['archer']) };
     expect(plan(inputs([archer], { ...busy, current: new Map([['archer', 'army-trooper-prayer-99']]) }))[0]!.template!.id).toBe(KIT_BUY + 'army-trooper-ranged-99');
     // A band proper still keeps its place over a kit buy.
     expect(plan(inputs([archer], { ...busy, current: new Map([['archer', 'army-trooper-defence-99']]) }))[0]!.template!.id).not.toBe(KIT_BUY + 'army-trooper-ranged-99');
-    // With no market for the arrows and the shop taken it fills the time on the field.
+    // With no market for the arrows and the shops taken it fills the time on the field.
     expect(plan(inputs([archer], { army, capacity }))[0]!.template!.id).toBe('army-trooper-prayer-99');
 });
 
@@ -855,9 +855,14 @@ test('an army account whose bow is short of arrows buys bronze arrows at the Ard
     expect(pick({}, { ...kit, shortbow: 0 }).template!.id).toBe('army-trooper-defence-99');
     expect(pick({}, { ...kit, coin: 4_000 }).template!.id).toBe('army-trooper-defence-99');
     expect(pick({ Ranged: 99 }, kit).template!.id).toBe('army-trooper-defence-99');
-    // One account holds the shop; the next keeps its melee band until the shop is free.
-    const two = ids(plan(inputs([acct('Archer', skills, kit), acct('Bowman', skills, kit)], { army, capacity: CAPACITY })));
-    expect(Object.values(two).sort()).toEqual(['army-arrows-ardy', 'army-trooper-defence-99']);
+    // One account holds each shop: the second goes to Lowe's in Varrock, the third keeps its melee band until a shop is free.
+    const three = ids(plan(inputs([acct('Archer', skills, kit), acct('Bowman', skills, kit), acct('Crossbow', skills, kit)], { army: new Set(['archer', 'bowman', 'crossbow']), capacity: CAPACITY })));
+    expect(Object.values(three).sort()).toEqual(['army-arrows-ardy', 'army-arrows-lowe', 'army-trooper-defence-99']);
+    const lowe = plan(inputs([acct('Archer', skills, kit)], { army, capacity: { ...CAPACITY, 'shop:ardy': 0 } }))[0]!;
+    expect(jobFor(lowe, side)).toMatchObject({ script: 'scripts/shop-buyer.ts', args: ['lowe', '2500'], repeat: true, resources: ['shop:lowe'],
+        env: { ITEMS: 'iron arrow|bronze arrow', STOCK_TARGET: String(LOWE_STOCK), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0' } });
+    // Lowe's trip needs more coins than Aemad's.
+    expect(plan(inputs([acct('Archer', skills, { ...kit, coin: 24_000 })], { army, capacity: { ...CAPACITY, 'shop:ardy': 0 } }))[0]!.template!.id).toBe('army-trooper-defence-99');
     // A shop run that bought arrows made progress; one that bought none on a long wait is retired as waste.
     const wait = 'LEDGER ticks=1000 xp=0 inventory=12 move=120 anim=0 dialog=0 stun=0 idle=868';
     expect(assess([wait, 'RESULT ok ticks=1000 boughtTotal=96 bankedTotal=96 stop=cap targetMet=0']).retire).toBe(false);
