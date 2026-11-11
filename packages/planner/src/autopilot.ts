@@ -137,6 +137,9 @@ export const KIT_PRICE_CAPS: Readonly<Record<string, number>> = {
     'mind rune': 120, 'air rune': 160, 'fire rune': 160, 'nature rune': 800, feather: 20,
     // Live claude-cloud read: body runes 1,460 listed from 184 (bids at 38), earth runes 27,408 from 92 (bids at 39).
     'body rune': 200, 'earth rune': 110,
+    // Water runes: 310 listed from 78 in the same read, and Aubury's shelf read 0 on three visits, so the kit buy
+    // takes what the market lists and the shop job (army-water-aubury) is the way when a buy gets none.
+    'water rune': 110,
     'bronze arrow': 20, 'iron arrow': 40, 'steel arrow': 100, 'mithril arrow': 200, 'adamant arrow': 400, 'rune arrow': 1200,
     trout: 100, lobster: 500, swordfish: 700, shark: 1200,
     // Live claude-cloud read: 42 listed at 72,000, bids at 33,068, volume-weighted price 38,089.

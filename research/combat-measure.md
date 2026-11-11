@@ -303,9 +303,22 @@ Ranged it adds is not needed at that point.
 - **Evidence (practice, 150 ms ticks, Ranged 99, magic shortbow on rapid, mithril arrows, nothing else worn).**
   `scripts/black-dragon-camp.ts` with `STAGED=1`, four kills a run: 1,339 and 1,465 ticks (335 and 366 a kill, with
   the fetch of each pile), 4 hides and 4 dragon bones each, `hpMin` 89 and 77, no food, 271 and 311 arrows (about 70 a
-  kill net of the arrows taken back from the pile). The loss of hitpoints is dragon fire during a fetch, which runs
-  under Protect from Melee. Raw runs: `.practice/blackdragon/camp-run.ts` (`a`-`d`) in the Claude cloud container
-  that ran them.
+  kill net of the arrows taken back from the pile). Raw runs: `.practice/blackdragon/camp-run.ts` (`a`-`d`) in the
+  Claude cloud container that ran them.
+- **Claim.** The fetch of a pile is the camp's one exposure, and Protect from Magic bounds it. **Conditions.** The
+  other dragon comes as near the camp tile as it can, which is beside the pile (south-west tile 2835,9823 against a
+  pile on 2835,9822). `dragon.rs2`: one attack in four is a breath of up to 30, or 50 on a lost roll, and 10 under
+  Protect from Magic; the rest is melee (Strength 200, about 21 at most). Under Protect from Melee, six kills:
+  `DRAGON_CAMP hit t=595 hp=99->74 at=2835,9822 pray=1 by=["Black dragon@2835,9823"]`. The fetch runs under Protect
+  from Magic and starts at 75 hitpoints or more, so three attacks cost at most 63. Three six-kill camps with it, two
+  of them at once on the tile: 18 kills, 18 hides, `hpMin=99`. The camp logs every lost hitpoint (`DRAGON_CAMP hit`):
+  a steady 4 to 6 every 30 ticks on the tile with no attacker is the poison of the spiders on the way in (one trip
+  arrived at 89 and fell to 58 before its first kill, eating two sharks).
+- **Claim.** An attack on a dragon that walks out of the tile's reach walks the account after it.
+  **Conditions.** `DRAGON_CAMP stray t=1286 at=2834,9822 target=2828,9824 hp=99`: one step onto dragon ground in a
+  six-kill camp, the target seven tiles west by then. The camp checks the target's tile every tick and ends the
+  attack with a walk to its own tile when the dragon is out of reach; two six-kill camps after that, no stray.
+  Raw runs: `.practice/blackdragon/camp-run.ts` (`hit`, `mag`, `st1`, `st2`).
 - **Claim.** A shot at a dragon more than five tiles away can walk the shooter off its tile. **Conditions.** From
   2835,9820 the first shot at a dragon on 2828,9824, seven tiles west and in sight by the collision data, walked the
   account to 2834,9822. The camp shoots only a dragon whose south-west tile is within five tiles and in sight
@@ -329,15 +342,27 @@ Ranged it adds is not needed at that point.
   with the trip's law rune (and air from the bank), and the run made its three kills and could not leave. Raw runs:
   `.practice/blackdragon/trip-run.ts` (`a`-`d`).
 - **Claim.** The trip needs prayer points and gets them itself. **Conditions.** The camp fetches a pile only under
-  Protect from Melee when a dragon stands within two tiles of it, and takes its arrows back from the pile. Live
+  a protection prayer when a dragon stands within two tiles of it, and takes its arrows back from the pile. Live
   (claude-cloud, TrouserSnake, straight after Lost City, 215 arrows): `RESULT ok black-dragon-trip kills=1 hides=0
   bones=0 ammoUsed=176 hpMin=84 banked=true ticks=937`, `DRAGON_CAMP pile left at 2835,9822: no prayer and a dragon
   beside it`, no `stray` line. With fewer than 50 points (`BLACK_PRAYER`, about what nine kills use) the trip prays
   at the Altar of Guthix in Taverley (410 at 2925,3483) between the bank and the ladder. Practice from 0 points:
   prayed at tick 93, down the ladder at 146 (109 with no altar visit), `RESULT ok black-dragon-trip kills=3 hides=3
   bones=3 ammoUsed=185 hpMin=99 banked=true ticks=1323`. Raw run: `.practice/blackdragon/trip-run.ts` (`pray`).
-- **Gap.** One live run, with no loot. The camp was alone on the server: another player's kill, or a player on the
-  tile, is not run. Kills with arrows other than mithril are not measured (best hits by arrow: iron 12, mithril 14,
+- **Claim.** The way home is the Varrock teleport, clicked until the account is there, and an account found in the
+  dungeon at a trip's start leaves by it first. **Conditions.** `teleport.rs2`: the spell's button does nothing, with
+  no message, when the player is busy on the tick the click arrives. Live (claude-cloud, UnderMyKilt, 300 arrows):
+  the altar visit at tick 123, `DRAGON_CAMP kill 1 t=208 ... arrows=233`, `kill 2 t=538 ... arrows=169`, `kill 3
+  t=903 ... arrows=91`, no stray, `hpMin=99`, then `RESULT fail black-dragon-trip kills=3 hides=3 bones=3 ammoUsed=181
+  hpMin=99 banked=false ticks=1321 failure=Error: combat emergency return missing`: one click, 20 ticks of waiting,
+  and a logout on the camp tile with the loot and the teleport's runes in the pack. The trip clicks up to 6 times, 8
+  ticks apart (`varrockTeleport`). `scripts/black-dragon-camp.ts` run for an account that stands underground
+  teleports, banks its pack at Varrock West and then starts the trip; `LEAVE=1` ends there. Practice from the camp
+  tile with three hides: `RESULT ok black-dragon-leave hides=3 bones=3 banked=true`, 31 ticks; without `LEAVE`,
+  `RESULT ok black-dragon-trip kills=1 hides=1 bones=1 ... banked=true`. No walker plans a way out of the cave: a
+  planned route can cross dragon ground. Raw runs: `.practice/blackdragon/leave-run.ts` (`a`, `b`).
+- **Gap.** Two live runs, one with loot, none banked. A player of another fleet on the tile, or another player's
+  kill, is not run. Kills with arrows other than mithril are not measured (best hits by arrow: iron 12, mithril 14,
   rune 19).
 
 ## Ranged on the troopers

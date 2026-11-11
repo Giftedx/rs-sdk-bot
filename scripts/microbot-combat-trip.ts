@@ -79,8 +79,8 @@ export async function blueDungeonEntry(io:{walk:(x:number,z:number)=>Promise<voi
 // west past the black demons, north to the poison spiders, then into the corridor from its south end. The corridor's
 // last row before the cave (z 9821) is beside dragon ground, so the walk ends two rows short of it (2835,9818, any
 // tile within one of it is safe) and the camp takes its tile.
-// Protect from Melee covers the walk from the gate to the corridor (about 80 ticks) and each pile the camp fetches
-// (scripts/black-dragon-camp.ts fetch, about 15 ticks a kill); it takes one prayer point in 5 ticks, so a nine-kill
+// Protect from Melee covers the walk from the gate to the corridor (about 80 ticks) and Protect from Magic each pile
+// the camp fetches (scripts/black-dragon-camp.ts fetch, about 15 ticks a kill); each takes one prayer point in 5 ticks, so a nine-kill
 // trip uses about 45. With fewer than BLACK_PRAYER points (or than the account's Prayer level, if lower) the trip
 // prays at the Altar of Guthix in Taverley (loc guthix_altar 410, a prayer_altar: skill_prayer/scripts/altar.rs2) on
 // its way from the bank to the ladder. Live (claude-cloud): an account that had spent its points on Lost City's tree
@@ -91,6 +91,18 @@ export const BLACK_ENTRY:readonly (readonly [number,number])[]=[[2893,9788],[289
 export async function blackDragonEntry(io:Parameters<typeof blueDungeonEntry>[0]){
  await blueDungeonEntry(io);
  for(const [x,z] of BLACK_ENTRY)await io.walk(x,z);
+}
+// The Varrock teleport out of a trip, clicked until the account stands in Varrock. The spell's button does nothing,
+// with no message, when the player is busy on the tick the click arrives (skill_magic teleport.rs2: `p_finduid`).
+// Live (claude-cloud): a black dragon trip clicked once after its last pile, waited 20 ticks and logged out on the
+// camp tile with three hides in its pack and the teleport's runes unspent. A second cast cannot follow a first that
+// worked: the kit holds the runes of one.
+export const TELEPORT_TRIES=6,TELEPORT_WAIT=8;
+export const inVarrockSquare=(p:{worldX:number;worldZ:number;level:number}|null|undefined)=>!!p&&p.level===0&&Math.max(Math.abs(p.worldX-3213),Math.abs(p.worldZ-3424))<=5;
+export async function varrockTeleport(s:Session,stop:()=>boolean=()=>false){
+ const home=()=>inVarrockSquare(s.sdk.getState()?.player);
+ for(let i=0;i<TELEPORT_TRIES&&!home()&&!stop();i++){await s.sdk.sendCloseModal();await s.direct({type:'clickComponent',componentId:componentId('magic:varrock_teleport'),reason:'finite combat emergency return'});await waitUntil(s,()=>home()||stop(),{timeoutTicks:TELEPORT_WAIT});}
+ return home();
 }
 export async function combatTrip(s:Session,kind:'blue'|'kbd'|'black',fight:(stopped:()=>boolean)=>Promise<{ok:boolean;failure:string}>,o:{cap:number;stop:()=>boolean;kit?:readonly CombatKit[]}){
  if(!Number.isSafeInteger(o.cap)||o.cap<1||o.cap>10000)throw Error('invalid combat trip cap');
@@ -157,7 +169,7 @@ export async function combatTrip(s:Session,kind:'blue'|'kbd'|'black',fight:(stop
   if(alive())try{
    // Keep reserved runes until a surface return is observed, including on stop/cap.
    if(kind==='kbd'&&inKbdEntrancePit(state()?.player??undefined))await leaveKbdEntrancePit({position:()=>state()?.player??undefined,locs:()=>state()?.nearbyLocs??[],interact:async(x,z,id,op)=>{if(!alive())throw Error('combat cleanup life changed');await s.sdk.sendCloseModal();return(await s.sdk.sendInteractLoc(x,z,id,op)).success;},wait:(test,ticks)=>waitUntil(s,()=>test()||!alive(),{timeoutTicks:ticks})});
-   if(!near(3213,3424,5)&&state()!.player!.worldZ>4000){if(!combatTeleportAllowed(state()!.player!))throw Error('combat return blocked in high Wilderness; use observed exit');await s.sdk.sendCloseModal();await s.direct({type:'clickComponent',componentId:componentId('magic:varrock_teleport'),reason:'finite combat emergency return'});if(!await waitUntil(s,()=>near(3213,3424,5),{timeoutTicks:20}))throw Error('combat emergency return missing');escaped=true;}
+   if(!near(3213,3424,5)&&state()!.player!.worldZ>4000){if(!combatTeleportAllowed(state()!.player!))throw Error('combat return blocked in high Wilderness; use observed exit');if(!await varrockTeleport(s,()=>!alive()))throw Error('combat emergency return missing');escaped=true;}
    if(state()!.player!.worldZ<4000){
     if(kind==='kbd'&&state()!.player!.worldZ>3500){for(const [x,z] of [[3000,3805],[3000,3760],[3000,3715],[3025,3670],[3055,3625],[3080,3580],[3094,3535],[3096,3495]])if(z!<state()!.player!.worldZ)await walk(x!,z!,true);await walk(3185,3436,true);}
     else if(!near(p0.worldX,p0.worldZ,4))await walk(3185,3436,true);
