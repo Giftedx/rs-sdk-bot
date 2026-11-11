@@ -71,15 +71,21 @@ export function castReaches(from: { x: number; z: number }, sw: { x: number; z: 
     return Math.max(Math.abs(sw.x - from.x), Math.abs(sw.z - from.z)) <= range && rsmod.hasLineOfSight(0, from.x, from.z, sw.x, sw.z, 1, 1, COW_SIZE, COW_SIZE, 0);
 }
 
+// The stop of a run that made no cast for QUIET_TICKS: every cow in reach rests, is fought by another player or is dead.
+export const QUIET_TICKS = 300, QUIET_STOP = `no cast in ${QUIET_TICKS} ticks`;
+// A stop that ends a batch and not the band, when the run gained a level before it.
+export const splashBatchDone = (stop: string, gained: number) => gained > 0 && (stop === 'supplies' || stop === 'cap' || stop === QUIET_STOP);
+
 export async function runSplash(s: Session, o: { target: number; cap: number; stop?: () => boolean }) {
     const st = () => s.sdk.getState(), inv = () => s.sdk.getInventory();
     const level = () => s.sdk.getSkill('Magic')?.baseLevel ?? 0, xp = () => s.sdk.getSkillXp('Magic') ?? 0, hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
     if (!await waitUntil(s, () => !!st()?.player && s.sdk.getSkillXp('Magic') !== null, { timeoutTicks: 15 })) throw Error('splash: position unknown');
     const start = s.tick(), level0 = level(), xp0 = xp(), hp0 = hp();
     let ended = false; void s.ended.then(() => { ended = true; });
-    let casts = 0, refused = 0, missed = 0, waited = 0, stop = '', hpMin = hp0;
-    // Out of runes or at the tick cap after a gained level is a finished batch: the band takes the account again.
-    const result = () => ({ ok: level() >= o.target || (stop === 'supplies' || stop === 'cap') && level() > level0, level: level(), gained: level() - level0, xp: xp() - xp0, casts, refused, missed, waited, stop, hpMin, ticks: s.tick() - start });
+    let casts = 0, refused = 0, missed = 0, waited = 0, stop = '', hpMin = hp0, quietNote = '';
+    // Out of runes, at the tick cap or with no cow to cast on, after a gained level, is a finished batch: the band
+    // takes the account again.
+    const result = () => ({ ok: level() >= o.target || splashBatchDone(stop, level() - level0), level: level(), gained: level() - level0, xp: xp() - xp0, casts, refused, missed, waited, stop, quiet: quietNote, hpMin, ticks: s.tick() - start });
     if (level() >= o.target) return result();
     const walker = await sessionWalker(s);
     const toBank = async () => {
@@ -131,7 +137,13 @@ export async function runSplash(s: Session, o: { target: number; cap: number; st
             hpMin = Math.min(hpMin, hp());
             if (hp() < hp0) { stop = `lost hitpoints at the fence (${hp()} of ${hp0})`; break; }
             if (!affordable()) { stop = 'supplies'; break; }
-            if (s.tick() - quiet > 300) { stop = 'no cast in 300 ticks'; break; }
+            if (s.tick() - quiet > QUIET_TICKS) {
+                // What the field looked like: cows seen, cows a cast reaches, players near, and the last thing the server said.
+                const cows = (st()?.nearbyNpcs ?? []).filter(n => (COWS as readonly number[]).includes(n.id) && n.hp !== 0);
+                const said = (st()?.gameMessages ?? []).slice(-1)[0]?.text ?? '';
+                quietNote = `cows=${cows.length} reach=${cows.filter(n => castReaches(SPLASH_TILE, { x: n.tileX ?? n.x, z: n.tileZ ?? n.z })).length} players=${(st()?.nearbyPlayers ?? []).length} said=${JSON.stringify(said.slice(0, 60))}`;
+                stop = QUIET_STOP; break;
+            }
             // A cast the server cannot make from here walks the account along the fence: back to the tile first.
             if (!onTile() && (!(await walkPath(walker, [{ ...SPLASH_TILE, tol: 0 }], { maxTicks: 200, stop: () => ended })).ok || !onTile())) throw Error(`splash: fence tile ${SPLASH_TILE.x},${SPLASH_TILE.z} not reached`);
             const cow = (st()?.nearbyNpcs ?? []).filter(n => (COWS as readonly number[]).includes(n.id) && n.hp !== 0 && (rest.get(n.index) ?? 0) <= s.tick()
@@ -161,6 +173,6 @@ if (import.meta.main) {
         const stop = () => stopped || existsSync(`.practice/stop-${account}`) || existsSync('.practice/stop-all');
         const r = await runSplash(s, { target: Number(target), cap: Number(cap ?? 6000), stop });
         console.log('SPLASH_RESULT ' + JSON.stringify(r));
-        await finish([s], r.ok, `mode=splash level=${r.level} gained=${r.gained} xp=${r.xp} casts=${r.casts} refused=${r.refused} missed=${r.missed} waited=${r.waited} hpMin=${r.hpMin} ticks=${r.ticks}${r.stop ? ` stop=${r.stop}` : ''}`);
+        await finish([s], r.ok, `mode=splash level=${r.level} gained=${r.gained} xp=${r.xp} casts=${r.casts} refused=${r.refused} missed=${r.missed} waited=${r.waited} hpMin=${r.hpMin} ticks=${r.ticks}${r.stop ? ` stop=${r.stop}` : ''}${r.quiet ? ` ${r.quiet}` : ''}`);
     } catch (e) { await finish(s ? [s] : [], false, String(e)); }
 }
