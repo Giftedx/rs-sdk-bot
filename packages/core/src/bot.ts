@@ -12,6 +12,7 @@ import { assertSideOwns } from './fleet';
 import { fleetLeaseAllowsWorker } from './fleet-lease';
 import { startStatus } from './status';
 import { watchRandomEvents, type RandomEventWatch } from './randomevents';
+import { startPrayerGuard } from './prayer-guard';
 import { createWorld, rsPathLength, type Account, type World } from './world';
 import {assertLiveWorkerRelease} from './worker-release';
 import { createTickRecorder } from './tick-record';
@@ -111,6 +112,8 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     ledgers.set(s, led);
     // Random events (dryad, genie, lost axe...): handled on every tick unless RANDOM_EVENTS=0 (packages/core/src/randomevents.ts).
     if (process.env.RANDOM_EVENTS !== '0') randomEvents.set(s, watchRandomEvents(s));
+    // Free prayers and protection from attacking NPCs with PRAYER_GUARD=1 (packages/core/src/prayer-guard.ts).
+    if (process.env.PRAYER_GUARD === '1') startPrayerGuard(s);
     // Any bot stops cleanly when .practice/stop-<name> appears (checked every 25 ticks): a script that never checks
     // it (seen: fishing30 under the supervisor) still logs out in game.
     let stopTicks = 0;
