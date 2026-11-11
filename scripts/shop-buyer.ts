@@ -8,6 +8,11 @@
 // Profile jukat (Zanaris) enters by the Lumbridge swamp shed with a Dramen staff, pays the market doorman one cut
 // diamond, leaves by the ladder to Al Kharid and banks there. Wait for its shelf with NO_BUY_TICKS above the 500-tick
 // restock and STALL_TICKS=0.
+// BLIND_BUY=1 is for a shelf that other players empty: each profile item with a `shelf` value gets one buy request
+// each tick, whatever count the shelf shows, while the budget, the pack and the stock target allow one more unit.
+// The engine adds a restocked unit at the end of a tick (World.ts processCleanup) and runs a buy when it reads the
+// packet in the next tick (processClientsIn), so a request already on its way takes the unit one tick before a
+// buyer that looks first. Purchases are counted from the pack and the coins, never from the requests.
 // DEMO_OK=1 is required for live; funding and route admission are separate gates.
 import { openBot, finish, countItems, getWorld, accountOf } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
@@ -316,6 +321,34 @@ export function stockWaitStatus(now: number, since: number | undefined, limit: n
     return { since: started, done: remaining === 0, waitTicks: Math.min(Math.max(1, poll), remaining) };
 }
 
+// Ticks from a blind buy request to the pack change it can cause: the request runs in the next engine tick and the
+// pack update arrives with that tick's output. A request younger than this may still buy a unit.
+export const BLIND_SETTLE_TICKS = 2;
+
+// One more blind buy request this tick? Every request can buy one unit at up to `unit` coins, so the units that the
+// coins above the reserve, the spend cap, the item cap, the stock target and the free pack slots allow must exceed
+// the requests that are still open. With room for one unit a request goes out every BLIND_SETTLE_TICKS ticks; with
+// room for two or more, every tick.
+export function blindBuyNow(o: { unit: number; wallet: number; reserve: number; remainingSpend: number; remainingItems: number;
+    wanted: number; freeSlots: number; pending: number }): boolean {
+    if (!Number.isSafeInteger(o.unit) || o.unit <= 0) return false;
+    const room = Math.min(Math.floor(Math.min(o.wallet - o.reserve, o.remainingSpend) / o.unit), o.remainingItems, o.wanted, o.freeSlots);
+    return room - o.pending >= 1;
+}
+
+// What the pack and the coins show against the last counted state: units that arrived and coins that left. A purchase
+// is a higher count with fewer coins; a pack read can miss items for a tick (practice: a count that fell and came back
+// with the coins unchanged), so any other change counts nothing. A unit that cost more than `unit`, coins below the
+// reserve or a total above the spend cap is a broken bound.
+export function blindBuyObserved(base: { coins: number; held: number; unit: number }, now: { coins: number; held: number },
+    reserve: number, remainingSpend: number): { bought: number; spent: number } {
+    const bought = now.held - base.held, spent = base.coins - now.coins;
+    if (bought <= 0 || spent <= 0) return { bought: 0, spent: 0 };
+    if (spent > bought * base.unit || now.coins < reserve || spent > remainingSpend)
+        throw new Error(`shop budget violated: blind buy took ${spent} coins for ${bought} units, bound ${base.unit} each`);
+    return { bought, spent };
+}
+
 export function shopFinishOk(bought: number, targetMet: boolean, stop: string): boolean {
     // A clean stock-wait is quiescence, not target fulfillment. It must not trigger another login.
     return bought > 0 || targetMet || stop === 'stock-wait';
@@ -368,6 +401,7 @@ const MAX_SPEND = Number(process.env.MAX_SPEND ?? Infinity);
 const MAX_ITEMS = Number(process.env.MAX_ITEMS ?? Infinity);
 const FLOAT = Number(process.env.FLOAT ?? 20000);
 const NO_BUY_TICKS = Number(process.env.NO_BUY_TICKS ?? 0);
+const BLIND_BUY = process.env.BLIND_BUY === '1';
 const guarded = COIN_RESERVE > 0 || Number.isFinite(MAX_SPEND);
 for (const [key, value] of Object.entries({ COIN_RESERVE, MAX_SPEND, MAX_ITEMS, FLOAT, NO_BUY_TICKS })) {
     if ((!Number.isSafeInteger(value) && !(value === Infinity && ['MAX_SPEND', 'MAX_ITEMS'].includes(key))) || value < 0)
@@ -406,6 +440,32 @@ try {
     let ended = false;
     void s.ended.then(() => { ended = true; });
     const stock = new Map<string, number>();
+    const stockTarget = Number(process.env.STOCK_TARGET ?? 500);
+
+    // BLIND_BUY: the shelf items that take blind requests, the session ticks of the open requests, and the pack and
+    // coins at the last look (null away from the shop, where a bank trip changes both).
+    const blindTargets = BLIND_BUY ? conf.items.filter(t => t.shelf !== undefined) : [];
+    const planTargets = conf.items.filter(t => !blindTargets.includes(t));
+    let blindRequests = 0, blindSent: number[] = [];
+    let blindBase: { coins: number; held: number; unit: number } | null = null;
+    const blindHeld = () => s.sdk.getInventory().filter(i => blindTargets.some(t => t.re.test(i.name))).reduce((n, i) => n + i.count, 0);
+    const blindPending = () => (blindSent = blindSent.filter(t => s.tick() - t < BLIND_SETTLE_TICKS)).length;
+    const blindLook = (): number => {
+        if (!blindBase) return 0;
+        const now = { coins: coins(), held: blindHeld() };
+        const seen = blindBuyObserved(blindBase, now, COIN_RESERVE, MAX_SPEND - spentTotal);
+        if (seen.bought > 0) blindBase = { ...blindBase, ...now };
+        boughtTotal += seen.bought; spentTotal += seen.spent;
+        if (seen.bought > 0) console.log(`BOUGHT ${seen.bought}x ${s.sdk.getInventory().find(i => blindTargets.some(t => t.re.test(i.name)))?.name} blind t=${used()} paid=${seen.spent} requests=${blindRequests}`);
+        return seen.bought;
+    };
+    // Before the pack or the coins change for another reason: wait for the open requests, then count.
+    const blindSettle = async () => {
+        if (!blindBase) return;
+        while (blindPending() > 0 && !ended) await waitTicks(s, 1);
+        blindLook();
+        blindBase = null;
+    };
 
     // level: an upstairs shop (the Magic Guild store is on level 1). The world walker climbs; walkPath stays on one plane.
     const walk = async (x: number, z: number, tol = 2, level = 0): Promise<boolean> => {
@@ -435,6 +495,7 @@ try {
     };
 
     const bank = async (loadFloat = true) => {
+        await blindSettle();
         if (s.sdk.getState()?.shop?.isOpen) await s.bot.closeInterface();
         const spot = conf.realm && !conf.realm.inside(pos() ?? { worldX: 0, worldZ: 0 }) ? conf.realm.outBank : conf.bankSpot;
         await walk(spot.x, spot.z, 2);
@@ -539,7 +600,7 @@ try {
     await bank();
 
     while (!over() && !ended) {
-        if (process.env.STOP_AT_TARGET === '1' && shopTargetsMet(conf.items, s.sdk.getInventory(), stock, Number(process.env.STOCK_TARGET ?? 500))) {
+        if (process.env.STOP_AT_TARGET === '1' && shopTargetsMet(conf.items, s.sdk.getInventory(), stock, stockTarget)) {
             stopReason = 'stock-target'; break;
         }
         if (NO_BUY_TICKS > 0 && noBuySince !== undefined && stockWaitStatus(s.tick(), noBuySince, NO_BUY_TICKS).done) {
@@ -592,11 +653,30 @@ try {
         // Buy each configured item that has stock
         const shop = s.sdk.getState()?.shop;
         let boughtInRound = 0;
+        let blindWaits = false, blindUnit = 0;
+
+        if (shop?.isOpen && shop.shopItems && blindTargets.length) {
+            boughtInRound += blindLook();
+            for (const target of blindTargets) {
+                const item = shop.shopItems.find(i => target.re.test(i.name));
+                if (!item) continue;
+                const unit = maximumUnitCost(item, shop.shopConfig, target.shelf);
+                blindBase ??= { coins: coins(), held: blindHeld(), unit };
+                blindBase.unit = Math.max(blindBase.unit, unit);
+                const owned = s.sdk.getInventory().filter(i => target.re.test(i.name)).reduce((n, i) => n + i.count, 0) + (stock.get(item.name.toLowerCase()) ?? 0);
+                const wanted = stockTarget - owned;
+                if (wanted > 0 && boughtTotal < MAX_ITEMS) { blindWaits = true; blindUnit = Math.max(blindUnit, unit); }
+                if (!blindBuyNow({ unit, wallet: coins(), reserve: COIN_RESERVE, remainingSpend: MAX_SPEND - spentTotal, remainingItems: MAX_ITEMS - boughtTotal,
+                    wanted, freeSlots: 28 - s.sdk.getInventory().length, pending: blindPending() })) continue;
+                const sent = await s.direct({ type: 'shopBuy', slot: item.slot, amount: 1, reason: 'SDK' }) as { success?: boolean } | null;
+                if (sent?.success) { blindRequests++; blindSent.push(s.tick()); }
+            }
+        }
 
         if (shop?.isOpen && shop.shopItems) {
-            const purchases = planShopPurchases(conf.items, shop.shopItems, s.sdk.getInventory(), stock, Math.max(0, Math.min(coins() - COIN_RESERVE, MAX_SPEND - spentTotal)), Number(process.env.STOCK_TARGET ?? 500), MAX_ITEMS - boughtTotal);
+            const purchases = planShopPurchases(planTargets, shop.shopItems, s.sdk.getInventory(), stock, Math.max(0, Math.min(coins() - COIN_RESERVE, MAX_SPEND - spentTotal)), stockTarget, MAX_ITEMS - boughtTotal);
             // Say why nothing is bought: the shelf as seen, the budget and the free slots.
-            if (!purchases.length && !loggedEmpty) { loggedEmpty = true; console.log('SHOP_NONE ' + JSON.stringify({ shelf: shop.shopItems.filter(i => conf.items.some(t => t.re.test(i.name))).map(i => ({ name: i.name, count: i.count, price: i.buyPrice })), coins: coins(), free: 28 - s.sdk.getInventory().length, stockTarget: Number(process.env.STOCK_TARGET ?? 500), bank: conf.items.map(t => [...stock].find(([n]) => t.re.test(n))) })); }
+            if (!purchases.length && !loggedEmpty) { loggedEmpty = true; console.log('SHOP_NONE ' + JSON.stringify({ shelf: shop.shopItems.filter(i => conf.items.some(t => t.re.test(i.name))).map(i => ({ name: i.name, count: i.count, price: i.buyPrice })), coins: coins(), free: 28 - s.sdk.getInventory().length, stockTarget: stockTarget, bank: conf.items.map(t => [...stock].find(([n]) => t.re.test(n))) })); }
             for (const purchase of purchases) {
                 const remaining = Math.min(purchase.amount, MAX_ITEMS - boughtTotal);
                 if (remaining <= 0) break;
@@ -621,8 +701,8 @@ try {
 
         if (boughtInRound === 0) {
             // Refill only when banked coins can unblock an available, still-needed purchase.
-            const needed = planShopPurchases(conf.items, s.sdk.getState()?.shop?.shopItems ?? [], s.sdk.getInventory(), stock,
-                Number.MAX_SAFE_INTEGER, Number(process.env.STOCK_TARGET ?? 500));
+            const needed = planShopPurchases(planTargets, s.sdk.getState()?.shop?.shopItems ?? [], s.sdk.getInventory(), stock,
+                Number.MAX_SAFE_INTEGER, stockTarget);
             if ((needed.length && coins() < Math.max(1000, COIN_RESERVE + 1) && (stock.get('coins') ?? 0) > 0)
                 || (guarded && needed.length && coins() < Math.min(FLOAT, COIN_RESERVE + MAX_SPEND - spentTotal) && (stock.get('coins') ?? 0) > 0)) {
                 const before = coins();
@@ -637,25 +717,35 @@ try {
                 const item = shelves?.shopItems.find(i => i.name === n.name);
                 return shelfOf(n.name) !== undefined && !!item && coins() - COIN_RESERVE < maximumUnitCost(item, shelves?.shopConfig, shelfOf(n.name));
             })) { stopReason = 'coin-reserve'; break; }
+            // A blind item the coins cannot pay: the bank's coins, else stop. No wait brings the coins.
+            if (blindWaits && blindPending() === 0 && Math.min(coins() - COIN_RESERVE, MAX_SPEND - spentTotal) < blindUnit) {
+                if (MAX_SPEND - spentTotal < blindUnit) { stopReason = 'spend-cap'; break; }
+                const before = coins();
+                if ((stock.get('coins') ?? 0) > 0) await bank();
+                if (coins() > before) { noBuySince = undefined; continue; }
+                stopReason = 'coin-reserve'; break;
+            }
             // Every item owned to STOCK_TARGET: say so, rather than wait out NO_BUY_TICKS and report stock-wait with stock on the
             // shelf (live: 500 fire runes bought, 2,533 left, "stock-wait").
-            if (shopTargetsMet(conf.items, s.sdk.getInventory(), stock, Number(process.env.STOCK_TARGET ?? 500))) { stopReason = 'stock-target'; break; }
-            const waiting = stockWaitStatus(s.tick(), noBuySince, NO_BUY_TICKS, Number(process.env.STOCK_POLL_TICKS ?? 15));
+            if (shopTargetsMet(conf.items, s.sdk.getInventory(), stock, stockTarget)) { stopReason = 'stock-target'; break; }
+            // A blind request goes out each tick, so the loop comes back each tick.
+            const waiting = stockWaitStatus(s.tick(), noBuySince, NO_BUY_TICKS, blindWaits ? 1 : Number(process.env.STOCK_POLL_TICKS ?? 15));
             if (NO_BUY_TICKS > 0) noBuySince = waiting.since;
             if (waiting.done) { noBuyTicks = s.tick() - waiting.since; stopReason = 'stock-wait'; break; }
             await waitTicks(s, waiting.waitTicks);
         } else {
             noBuySince = undefined;
-            await waitTicks(s, 2);
+            await waitTicks(s, blindWaits ? 1 : 2);
         }
     }
 
     closing = true;
+    if (!ended) await blindSettle();
     // The ladder is on the shop's side of the toll door, so a realm run leaves first and banks at the ladder's top.
     if (!ended) await leaveRealm();
     if (!ended) await bank(false);
-    const targetMet = shopTargetsMet(conf.items, s.sdk.getInventory(), stock, Number(process.env.STOCK_TARGET ?? 500));
-    await finish([s], shopFinishOk(boughtTotal, targetMet, stopReason), `ticks=${used()} boughtTotal=${boughtTotal} bankedTotal=${bankedTotal} bankTrips=${bankTrips} shopTrips=${shopTrips} coinsLeft=${coins()} spentTotal=${spentTotal} coinReserve=${COIN_RESERVE} maxSpend=${MAX_SPEND} maxItems=${MAX_ITEMS} stop=${stopReason} targetMet=${targetMet ? 1 : 0} noBuyTicks=${noBuyTicks} noBuyLimit=${NO_BUY_TICKS}`);
+    const targetMet = shopTargetsMet(conf.items, s.sdk.getInventory(), stock, stockTarget);
+    await finish([s], shopFinishOk(boughtTotal, targetMet, stopReason), `ticks=${used()} boughtTotal=${boughtTotal} bankedTotal=${bankedTotal} bankTrips=${bankTrips} shopTrips=${shopTrips} coinsLeft=${coins()} spentTotal=${spentTotal} coinReserve=${COIN_RESERVE} maxSpend=${MAX_SPEND} maxItems=${MAX_ITEMS} stop=${stopReason} targetMet=${targetMet ? 1 : 0} noBuyTicks=${noBuyTicks} noBuyLimit=${NO_BUY_TICKS}${BLIND_BUY ? ` blindRequests=${blindRequests}` : ''}`);
 } catch (e) {
     await finish([s], false, String(e));
 }

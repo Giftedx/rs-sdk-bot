@@ -316,6 +316,16 @@ const EXTRA_CASES: BenchCase[] = [
   {key: 'extra:shop-jukat', script: 'scripts/aio-market.ts', preset: 'fresh_lumbridge', scriptArgs: ['shop-buy', 'jukat', '4000', 'STOCK_TARGET=3', 'STOP_AT_TARGET=1', 'BANK_AT=0', 'NO_BUY_TICKS=600', 'STALL_TICKS=0', 'COIN_RESERVE=5000', 'FLOAT=400000'],
     pass: s => ok(s) && /boughtTotal=3 bankedTotal=3 /.test(s) && s.includes('realm-leave') && s.includes('out=1'), timeoutMs: 900_000,
     presetConfig: {position: {x: 2581, z: 3298, level: 0}, varps: {147: 6}, bank: [{id: 772, count: 1}, {id: 995, count: 400000}, {id: 1601, count: 1}]}},
+  // The same shelf with a second buyer at Jakut that has taken both swords (scripts/measure/shop-rival.ts), and
+  // BLIND_BUY=1: the account buys the two units that come back. `rival-look`: the rival logged in first, so the engine
+  // runs it first in each tick, and buys in each tick that its shelf shows stock. `rival-blind`: the rival logged in
+  // second and sends a buy request each tick. `rival-ahead`: that rival logged in first, takes each unit in the tick the
+  // account's request arrives too, and the account ends its wait with nothing.
+  ...([['look', 'look', 'first', 2], ['blind', 'blind', 'last', 2], ['ahead', 'blind', 'first', 0]] as const).map(([name, mode, order, units]): BenchCase => ({key: `extra:shop-jukat-rival-${name}`, script: 'scripts/measure/shop-rival.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', order, mode, 'shop-buy', 'jukat', '4000', 'BLIND_BUY=1', 'STOCK_TARGET=2', 'STOP_AT_TARGET=1', 'BANK_AT=0', 'NO_BUY_TICKS=1200', 'STALL_TICKS=0', 'COIN_RESERVE=5000', 'FLOAT=400000'],
+    pass: s => ok(s) && s.includes(`boughtTotal=${units} bankedTotal=${units} `) && s.includes(units ? 'stop=stock-target' : 'stop=stock-wait') && s.includes('rival end') && s.includes('out=1'), timeoutMs: 900_000,
+    presetConfig: {position: {x: 2581, z: 3298, level: 0}, varps: {147: 6}, bank: [{id: 772, count: 1}, {id: 995, count: 400000}, {id: 1601, count: 1}]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3252, z: 9573, level: 0}, varps: {147: 6}, inventory: [{id: 995, count: 3000000}]}}]})),
   {key: 'extra:bank-job-cut-dragonstone', script: 'scripts/aio-skiller.ts', preset: 'bank_gems', scriptArgs: ['bank-job', CUT_JOB_PATH], pass: s => ok(s) && s.includes('cut-dragonstone')},
 ];
 

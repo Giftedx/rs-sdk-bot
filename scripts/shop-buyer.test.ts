@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { supervise } from '../packages/practice/src/supervise';
-import { planShopPurchases, maximumUnitCost, buyWithBudget, PROFILES, shopTargetsMet, stockWaitStatus, shopFinishOk, dialogClick } from './shop-buyer';
+import { planShopPurchases, maximumUnitCost, buyWithBudget, PROFILES, shopTargetsMet, stockWaitStatus, shopFinishOk, dialogClick, blindBuyNow, blindBuyObserved, BLIND_SETTLE_TICKS } from './shop-buyer';
 
 const target = (name: string, buyPerTick: number) => ({ re: new RegExp(`^${name}$`, 'i'), buyPerTick });
 const item = (name: string, count = 100, buyPrice = 1) => ({ name, count, buyPrice });
@@ -160,4 +160,76 @@ test('the ladder talk continues each line and takes the leave choice', () => {
     expect(dialogClick({ isOpen: true, isWaiting: true, options: [] }, say)).toBe(null);
     expect(dialogClick({ isOpen: true, isWaiting: false, options: [{ index: 0, text: 'Click here to continue' }] }, say)).toBe(0);
     expect(dialogClick({ isOpen: true, isWaiting: false, options: [{ index: 1, text: "I think I'll stay down here a bit longer." }, { index: 2, text: "Yes, I'm ready to leave." }] }, say)).toBe(2);
+});
+
+test('a blind request needs room for one more unit than the requests still open', () => {
+    const base = { unit: 101000, wallet: 400000, reserve: 5000, remainingSpend: Infinity, remainingItems: Infinity, wanted: 5, freeSlots: 20, pending: 0 };
+    expect(blindBuyNow(base)).toBe(true);
+    expect(blindBuyNow({ ...base, pending: 2 })).toBe(true); // coins for 3 units
+    expect(blindBuyNow({ ...base, pending: 3 })).toBe(false);
+    expect(blindBuyNow({ ...base, wallet: 105999 })).toBe(false); // the reserve leaves 100,999
+    expect(blindBuyNow({ ...base, wallet: 106000 })).toBe(true);
+    expect(blindBuyNow({ ...base, wallet: 106000, pending: 1 })).toBe(false);
+    expect(blindBuyNow({ ...base, remainingSpend: 100999 })).toBe(false);
+    expect(blindBuyNow({ ...base, remainingItems: 1, pending: 1 })).toBe(false);
+    expect(blindBuyNow({ ...base, wanted: 0 })).toBe(false);
+    expect(blindBuyNow({ ...base, freeSlots: 0 })).toBe(false);
+    expect(blindBuyNow({ ...base, unit: 0 })).toBe(false);
+});
+
+test('blind purchases are counted from the pack and the coins, and a broken bound throws', () => {
+    const base = { coins: 400000, held: 1, unit: 101000 };
+    expect(blindBuyObserved(base, { coins: 400000, held: 1 }, 5000, Infinity)).toEqual({ bought: 0, spent: 0 });
+    expect(blindBuyObserved(base, { coins: 299000, held: 2 }, 5000, Infinity)).toEqual({ bought: 1, spent: 101000 });
+    expect(blindBuyObserved(base, { coins: 199000, held: 3 }, 5000, 201000)).toEqual({ bought: 2, spent: 201000 });
+    expect(() => blindBuyObserved(base, { coins: 298999, held: 2 }, 5000, Infinity)).toThrow('shop budget violated');
+    // A pack read that misses items for a tick, and the read after it: nothing is counted.
+    expect(blindBuyObserved(base, { coins: 400000, held: 0 }, 5000, Infinity)).toEqual({ bought: 0, spent: 0 });
+    expect(blindBuyObserved(base, { coins: 400000, held: 2 }, 5000, Infinity)).toEqual({ bought: 0, spent: 0 });
+    expect(blindBuyObserved(base, { coins: 399000, held: 1 }, 5000, Infinity)).toEqual({ bought: 0, spent: 0 });
+    expect(() => blindBuyObserved(base, { coins: 299000, held: 2 }, 300000, Infinity)).toThrow('shop budget violated');
+    expect(() => blindBuyObserved(base, { coins: 299000, held: 2 }, 5000, 100000)).toThrow('shop budget violated');
+});
+
+// The engine's order (World.ts): a request sent after tick T's output runs in tick T+1, the pack update arrives with
+// tick T+1's output, and a unit comes back at the end of each tick that `restock` divides.
+function blindRun(o: { wallet: number; reserve: number; maxItems: number; wanted: number; shelf: number; restock: number; ticks: number; lag?: number }) { // lag: ticks a request is late
+    let coins = o.wallet, held = 0, shelf = o.shelf, requests = 0;
+    let seen = { coins, held }, sent: number[] = [];
+    const inFlight: number[] = [], updates: { at: number; coins: number; held: number }[] = [], boughtAt: number[] = [];
+    for (let tick = 1; tick <= o.ticks; tick++) {
+        // engine tick: the requests that arrive, then the restock
+        for (let i = inFlight.length - 1; i >= 0; i--) if (inFlight[i]! <= tick) {
+            inFlight.splice(i, 1);
+            const price = shelf >= 2 ? 100000 : 101000;
+            if (shelf > 0 && coins >= price) { shelf--; coins -= price; held++; boughtAt.push(tick); }
+        }
+        updates.push({ at: tick, coins, held });
+        if (tick % o.restock === 0 && shelf < 2) shelf++;
+        // worker tick: look, then decide
+        for (const u of updates.filter(u => u.at <= tick)) seen = { coins: u.coins, held: u.held };
+        sent = sent.filter(t => tick - t < BLIND_SETTLE_TICKS);
+        if (blindBuyNow({ unit: 101000, wallet: seen.coins, reserve: o.reserve, remainingSpend: Infinity, remainingItems: o.maxItems - seen.held,
+            wanted: o.wanted - seen.held, freeSlots: 27 - seen.held, pending: sent.length })) { requests++; sent.push(tick); inFlight.push(tick + 1 + (o.lag ?? 0)); }
+    }
+    return { coins, held, requests, boughtAt };
+}
+
+test('a blind run takes the full shelf, then each unit on the tick after it comes back', () => {
+    const run = blindRun({ wallet: 1_019_000, reserve: 5000, maxItems: Infinity, wanted: 10, shelf: 2, restock: 500, ticks: 1600 });
+    expect(run.boughtAt).toEqual([2, 3, 501, 1001, 1501]);
+    expect(run.requests).toBe(1600);
+});
+
+test('a blind run never passes the item cap, the stock target or the reserve, with a request one tick late too', () => {
+    for (const lag of [0, 1]) {
+        // room for one unit, two units on the shelf: one request open at a time
+        expect(blindRun({ wallet: 1_019_000, reserve: 5000, maxItems: 1, wanted: 10, shelf: 2, restock: 500, ticks: 40, lag }).held).toBe(1);
+        expect(blindRun({ wallet: 1_019_000, reserve: 5000, maxItems: Infinity, wanted: 1, shelf: 2, restock: 500, ticks: 40, lag }).held).toBe(1);
+        const poor = blindRun({ wallet: 207_000, reserve: 5000, maxItems: Infinity, wanted: 10, shelf: 2, restock: 5, ticks: 60, lag });
+        expect(poor.held).toBe(2);
+        expect(poor.coins).toBeGreaterThanOrEqual(5000);
+        const paid = blindRun({ wallet: 110_000, reserve: 5000, maxItems: Infinity, wanted: 10, shelf: 2, restock: 5, ticks: 60, lag });
+        expect(paid).toMatchObject({ held: 1, coins: 10000 });
+    }
 });
