@@ -15,7 +15,7 @@ import {FLEET_HEARTBEAT_MAX_MS,NATIVE_RECOVERY_CHECKS,RECOVERY_BINDING_MS,assert
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {createRecoveryDispatch} from '../../core/src/session-recovery-dispatch';
 import {admitRecovery} from '../../../scripts/swarm';
-import {CHECK_CASES,deriveChecks,reconcileSaves,reconcileNegativeControls,stockOf,authReplies,observeAuth,noRecoveryLogin,installAuthObserver,evidenceFiles,retainRequiredRecoveryCase,requireRecoveryRegistration,recoveryArtifactPresence,recoveryConsumptionBytes,claimStopArtifact,releaseStopArtifact,classifyCooldownWindow,ownerSessionEvidence,loginAfterTakeoverWindow,orphanServerEnd,latestOwnerLoginBefore,recoverySessionAuth,TAKEOVER_WINDOW_MS,installButtonObserver,buttonTraceFor} from '../src/session-recovery-proof';
+import {CHECK_CASES,deriveChecks,reconcileSaves,reconcileNegativeControls,stockOf,authReplies,observeAuth,noRecoveryLogin,installAuthObserver,evidenceFiles,retainRequiredRecoveryCase,requireRecoveryRegistration,recoveryArtifactPresence,recoveryConsumptionBytes,claimStopArtifact,releaseStopArtifact,classifyCooldownWindow,ownerSessionEvidence,loginAfterTakeoverWindow,orphanRecoveryReadyAt,orphanServerEnd,latestOwnerLoginBefore,recoverySessionAuth,TAKEOVER_WINDOW_MS,installButtonObserver,buttonTraceFor} from '../src/session-recovery-proof';
 
 test('recovery accepts player_kit and requires an observed modal close within the observation budget',async()=>{
  for(const [modalInterface,closes] of [[3559,true],[3559,false],[12,true]] as const){
@@ -838,6 +838,9 @@ test('owner logout observation waits for a delayed auth reply but refuses an abs
  expect(ownerSessionEvidence(await run([takeover]).result,'rod',o).ok).toBe(false);
 });
 
+test('orphan recovery waits for the takeover window after the observed server end',()=>{
+ expect(orphanRecoveryReadyAt(1794413771525,60000)).toBe(1794413832525);
+});
 test('orphan recovery is measured after the bound window from the latest prior login',()=>{
  const log=(at:number)=>[...authHead(),request(3,'owner'),reply(4,'owner'),request(at,'recovery'),reply(at+1,'recovery')].join('\n');
  expect(loginAfterTakeoverWindow(log(1004),'rod',100,1000)).toEqual({ok:true,gapMs:1000});
