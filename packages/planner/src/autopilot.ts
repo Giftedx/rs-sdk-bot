@@ -249,15 +249,18 @@ export function kitLacks(a: Acct, needs: Template['needs'], can: (item: string) 
     return out;
 }
 // The most of each item any goal band needs to start, by norm() name: a donor keeps that many, so it never gives away
-// its own kit.
-export function kitReserve(templates: readonly Template[]): Record<string, number> {
+// its own kit. For `own`, also the batch a band works out for that account (the runes its Magic still casts).
+export function kitReserve(templates: readonly Template[], own?: Acct): Record<string, number> {
     const reserve: Record<string, number> = {};
     const count = (needs: Template['needs']) => {
         for (const [i, n] of Object.entries(needs?.items ?? {})) reserve[norm(i)] = Math.max(reserve[norm(i)] ?? 0, n);
         for (const i of needs?.pieces?.of ?? []) reserve[norm(i)] = Math.max(reserve[norm(i)] ?? 0, needs!.pieces!.count);
         for (const alt of needs?.anyOf ?? []) count(alt);
     };
-    for (const t of templates) if (t.tier === 'goal') count(t.needs);
+    for (const t of templates) if (t.tier === 'goal') {
+        count(t.needs);
+        if (own && t.batchFor) for (const [i, n] of Object.entries(t.batchFor(own))) reserve[norm(i)] = Math.max(reserve[norm(i)] ?? 0, n);
+    }
     delete reserve.coin;
     return reserve;
 }
@@ -317,10 +320,13 @@ export function plan(inp: Inputs): Assignment[] {
                 // A line no market sells and a shop job brings (shopLine) is left to that job.
                 const lacks = kitLacks(a, t.needs, i => !!inp.market?.[i]), buys = t.kitFirst ? (lacks ?? []).filter(l => !shopLine(l)) : [];
                 const picks = buys.map(l => l.of.filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]);
-                const lines: KitLine[] = picks.length && picks.every(p => p !== undefined)
-                    ? picks.map((p, n) => ({ item: inp.market![p!]!.name, id: inp.market![p!]!.id, held: a.items[p!] ?? 0, limit: inp.market![p!]!.limit, quantity: buys[n]!.count })) : [];
-                const cost = lines.reduce((n, l) => n + l.quantity * l.limit, 0);
-                if (lines.length && (a.items.coin ?? 0) >= cost + KIT_CASH_RESERVE + (t.needs?.items?.coins ?? 0) && !inp.retired?.has(pairKey(a.name, KIT_BUY + t.id)))
+                // The band's batch for the account when it can pay for it, else what the band needs to start.
+                const batchOf = t.batchFor?.(a) ?? t.batch, price = (ls: readonly KitLine[]) => ls.reduce((n, l) => n + l.quantity * l.limit, 0);
+                const sized = (batch: boolean): KitLine[] => picks.length && picks.every(p => p !== undefined) ? picks.map((p, n) => { const held = a.items[p!] ?? 0, m = inp.market![p!]!;
+                    return { item: m.name, id: m.id, held, limit: m.limit, quantity: Math.max(buys[n]!.count, batch ? (batchOf?.[p!] ?? 0) - held : 0) }; }) : [];
+                const afford = (ls: readonly KitLine[]) => (a.items.coin ?? 0) >= price(ls) + KIT_CASH_RESERVE + (t.needs?.items?.coins ?? 0);
+                const lines = afford(sized(true)) ? sized(true) : sized(false), cost = price(lines);
+                if (lines.length && afford(lines) && !inp.retired?.has(pairKey(a.name, KIT_BUY + t.id)))
                     cands.push({ account: a.name, template: kitBuyTemplate(t, a.name, lines, inp.kitSeq?.get(a.name.toLowerCase()) ?? 0), value: 0, resources: [],
                         reason: `army band ${goal.band}: buys ${lines.map(l => `${l.quantity} ${l.item}`).join(', ')} for ${t.id}, at most ${cost} coins`, goal });
                 else if (lacks?.length && !t.shopKit) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, lacks });
@@ -405,7 +411,7 @@ export function plan(inp: Inputs): Assignment[] {
     const keepsOf = (s: Stock) => {
         const a = s.side === inp.side ? byName.get(s.name) : undefined;
         if (!a || !inp.army?.has(a.name.toLowerCase())) return reserve;
-        if (!ownReserve.has(a.name)) ownReserve.set(a.name, kitReserve(inp.templates.filter(t => t.tier !== 'goal' || bandLeft(t, a) > 0)));
+        if (!ownReserve.has(a.name)) ownReserve.set(a.name, kitReserve(inp.templates.filter(t => t.tier !== 'goal' || bandLeft(t, a) > 0), a));
         return ownReserve.get(a.name)!;
     };
     const spare = (s: Stock, item: string) => (s.items[item] ?? 0) - (keepsOf(s)[item] ?? 0);
@@ -618,9 +624,17 @@ export const LEATHER_LEVEL = 84, SET_HIDES = 6, TAN_COIN = 20, SET_SHOP = 100, A
 // rate (research/combat-measure.md, Magic by a curse over the fence). More than two at once is not measured.
 // SPLASH_TO is the level the Magic Guild's door in Yanille asks: behind it are fire runes, a staff of fire and nature
 // runes for the alchemy band. SPLASH_KIT covers the runes to that level from any start (144 casts from Magic 1: 142
-// body, 290 water, 420 earth; 135 curses from Magic 21).
+// body, 290 water, 420 earth; 135 curses from Magic 21). SPLASH_START is what a run needs to start: ten casts of any
+// of its spells, which is the last level's casts. splashKit is what an account's level still casts (a curse is 1
+// body, 2 water and 3 earth runes for CURSE_XP; under Curse's level the whole kit): the size of a buy or a send, and
+// what the account keeps of its own runes.
 export const SPLASH_FENCE = 'splash:ardougne-cow-fence', SPLASH_PLACES = 2, SPLASH_TO = 66;
 export const SPLASH_KIT = { 'body rune': 150, 'earth rune': 425, 'water rune': 300 } as const;
+export const SPLASH_START = { 'body rune': 10, 'earth rune': 30, 'water rune': 30 } as const, CURSE_LEVEL = 19, CURSE_XP = 725;
+export function splashKit(magic: number): Record<string, number> {
+    const casts = Math.max(SPLASH_START['body rune'], Math.ceil((xpForLevel(SPLASH_TO) - xpForLevel(magic)) / CURSE_XP));
+    return magic < CURSE_LEVEL ? { ...SPLASH_KIT } : { 'body rune': casts, 'earth rune': 3 * casts, 'water rune': Math.max(SPLASH_START['water rune'], 2 * casts) };
+}
 // The places the AIO routes hold (aioTemplates). Each takes one account until a live pilot measures two.
 export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore: 'aio:varrock-east-mine', essence: 'aio:essence-mine', air: 'aio:air-altar' } as const;
 export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
@@ -880,24 +894,25 @@ export function catalogue(): Template[] {
         needs: { skills: { Magic: 66 }, items: { 'nature rune': 50, 'air rune': 50 }, anyOf: magic.needs!.anyOf }, batch: undefined, shopKit: true };
     // Magic to SPLASH_TO with no fire rune, nature rune or feather, band 2: a curse cast over the fence of the Ardougne
     // cow field (scripts/splash-train.ts; Wind Strike, Confuse and Weaken under Magic 19). The kit is body, earth and
-    // water runes, under 80,000 coins at the caps. The market lists few water runes (live claude-cloud read: 310), so
-    // the kit buy takes the body and earth runes on the Grand Exchange and the account then buys its water runes at
-    // Aubury's, which is in the same town (varrock.inv: 2,000 in stock, one back every 10 ticks). The buy is a
-    // candidate of the band itself (`kitFirst`): an account that can train Ranged still goes for it, because five
-    // army accounts hold no rune of the alchemy band and four sit at Magic 1. Pilots (off unless a plan's `aio` list
-    // names them). Practice from an army account's state: Magic 21 to 66 in 135 casts and Magic 1 to 65 in 138, no
-    // hitpoint lost. Gap: not run live.
+    // water runes, under 80,000 coins at the caps for the whole of it. A run starts with ten casts' runes
+    // (SPLASH_START) and casts what the account holds, so an account with part of a kit trains at once; a buy or a
+    // send brings what its level still casts (splashKit). The market lists few water runes (live claude-cloud read:
+    // 310), so the kit buy takes the body and earth runes on the Grand Exchange and an account short of the start's
+    // water buys a kit's worth at Aubury's (varrock.inv: 2,000 in stock, one back every 10 ticks) or Betty's. The buy
+    // is a candidate of the band itself (`kitFirst`): an account that can train Ranged still goes for it. Pilots (off
+    // unless a plan's `aio` list names them). Practice from an army account's state: Magic 21 to 66 in 135 casts and
+    // Magic 1 to 65 in 138, no hitpoint lost.
     const splash: Template = {
         id: 'army-splash-magic-66', pilot: true, family: 'combat-train', script: 'scripts/splash-train.ts', args: [String(SPLASH_TO), '6000'], role: 'combat',
         goal: `train Magic to ${SPLASH_TO} with a curse cast over the fence of the Ardougne cow field`,
         tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: SPLASH_TO, unlocks: [magic.id] }, resources: [SPLASH_FENCE], yields: () => [],
-        needs: { items: { ...SPLASH_KIT, 'mind rune': 2, 'air rune': 2 } }, kitFirst: true,
+        needs: { items: { ...SPLASH_START, 'mind rune': 2, 'air rune': 2 } }, batchFor: a => splashKit(a.skills.Magic ?? 1), kitFirst: true,
     };
     // Two shelves, one account at each: Aubury's (2,000 water runes in stock) read 0 on three live visits, so Betty's
     // in Port Sarim (port_sarim.inv: 1,000, one back every 10 ticks, the ferry's own port) is the second.
     const waterJob = (id: string, where: string, shop: string): Template => ({
         ...supply(id, `buy water runes at ${where} for the curse band`, shop, [shopRun(shop, 3000, 'water.rune', SPLASH_KIT['water rune'], 12000)],
-            { under: { Magic: SPLASH_TO }, items: { coins: 14000, 'body rune': SPLASH_KIT['body rune'], 'earth rune': SPLASH_KIT['earth rune'] }, holdsUnder: { 'water rune': SPLASH_KIT['water rune'] } }),
+            { under: { Magic: SPLASH_TO }, items: { coins: 14000, 'body rune': SPLASH_START['body rune'], 'earth rune': SPLASH_START['earth rune'] }, holdsUnder: { 'water rune': SPLASH_START['water rune'] } }),
         pilot: true, trains: { skill: 'Magic', to: SPLASH_TO, unlocks: [splash.id] },
     });
     const water = waterJob('army-water-aubury', "Aubury's in Varrock", 'aubury'), waterBetty = waterJob('army-water-betty', "Betty's in Port Sarim", 'betty');
@@ -1027,13 +1042,14 @@ export function catalogue(): Template[] {
     // shops) and takes everything worn off for the Entrana ship of Holy Grail (scripts/quest-sweep.ts BARE), keeping
     // Excalibur and the rune scimitar in the pack: the Titan dies to the scimitar with Excalibur worn at the end. The
     // planner asks what no shop sells: the scimitar, the teleports' runes (and the Magic 45 Camelot's asks) and the
-    // meals. Merlin's Crystal walks to the chaos altar at Wilderness level 12 with what the account wears. A pilot.
+    // meals. Merlin's Crystal walks to the chaos altar at Wilderness level 12 with what the account wears. Only an
+    // account under Prayer 99 goes: the quests pay it nothing else. A pilot.
     const holyGrail: Template = {
         id: 'army-quest-holygrail', family: 'aio:quester:mode:chain', script: 'scripts/aio.ts', args: ['quester', 'chain', 'merlin,grail'],
         aio: 'quester:mode:chain', worker: 'scripts/quest-chain.ts', pilot: true, role: 'quest',
         goal: "complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience", tier: 'goal', band: GRAIL_BAND,
         quest: { name: 'Holy Grail', unlocks: [] }, resources: [GRAIL_PLACE], yields: () => [],
-        needs: { skills: { Prayer: 43, Magic: 45, Attack: 90, Strength: 90, Hitpoints: 90, Defence: 90 }, items: { coins: 2000, 'rune scimitar': 1, ...GRAIL_RUNES },
+        needs: { skills: { Prayer: 43, Magic: 45, Attack: 90, Strength: 90, Hitpoints: 90, Defence: 90 }, under: { Prayer: 99 }, items: { coins: 2000, 'rune scimitar': 1, ...GRAIL_RUNES },
             pieces: { of: LOST_CITY_FOOD, count: GRAIL_MEALS } }, kitFirst: true,
     };
     const prayerField: Template = {
@@ -1192,7 +1208,8 @@ export function freshest(...observations: readonly any[]): any {
 }
 
 // An account as the planner sees it, from its status file (.practice/status/<name>.json) or a fleet snapshot row:
-// base levels, and pack, bank and worn counts by item name. No status: a fresh account at level 1 (Hitpoints 10).
+// base levels, pack, bank and worn counts by item name, and its complete quests (a status lists every quest with a
+// state, a snapshot row the complete ones by name). No status: a fresh account at level 1 (Hitpoints 10).
 export function accountFrom(name: string, side: string, status: any, itemName: (id: number) => string | undefined): Acct {
     const skills: Record<string, number> = { Hitpoints: 10 }, items: Record<string, number> = {};
     for (const k of Array.isArray(status?.skills) ? status.skills : []) if (typeof k?.name === 'string' && Number.isFinite(k.level)) skills[k.name] = k.level;
@@ -1200,7 +1217,8 @@ export function accountFrom(name: string, side: string, status: any, itemName: (
         const n = typeof r?.name === 'string' ? r.name : itemName(r?.baseId ?? r?.id);
         if (n && Number.isFinite(r.count)) items[norm(n)] = (items[norm(n)] ?? 0) + r.count;
     }
-    const quests = Array.isArray(status?.quests) ? new Set<string>(status.quests.filter((q: any) => typeof q?.name === 'string' && q.state === 'complete').map((q: any) => norm(q.name))) : undefined;
+    const quests = Array.isArray(status?.quests)
+        ? new Set<string>(status.quests.flatMap((q: any) => typeof q === 'string' ? [norm(q)] : typeof q?.name === 'string' && q.state === 'complete' ? [norm(q.name)] : [])) : undefined;
     return { name, side, skills, items, ...(Number.isFinite(status?.combat) ? { combat: status.combat } : {}), ...(quests ? { quests } : {}) };
 }
 
