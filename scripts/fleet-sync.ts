@@ -103,9 +103,10 @@ export function releasePublishedTradeClaims(
 // above never frees its claim, a trade claim does not expire, and the account has no job until a person runs the hand
 // procedure (README: reconcile both accounts, confirm the logout, release the matching nonce). The records prove that
 // by themselves in one case, and only then is the claim released here:
-// - the order's window has been over for DROPPED_CLAIM_MS and the claim has stood that long. A trade worker waits no
-//   longer than its window, and by then the game server has dropped a session with no client (the premise of
-//   ORPHAN_CLAIM_MS for another side's swarm claim, packages/core/src/fleet-trade-claim.ts);
+// - this account's worker is gone. A worker that ended wrote `reconcile` as its session closed. One that died left
+//   `prepared`: then the order's window must have been over for DROPPED_CLAIM_MS and the claim have stood that long (a
+//   trade worker waits no longer than its window, and by then the game server has dropped a session with no client,
+//   the premise of ORPHAN_CLAIM_MS for another side's swarm claim, packages/core/src/fleet-trade-claim.ts);
 // - the partner's receipt is terminal and `failed`: its logout is proved and it moved nothing (terminalTradeReceipt).
 //   A trade moves both stacks at once, so nothing left this account either;
 // - this account's receipt names this claim, counts 0 and shows no change of its inventory.
@@ -132,7 +133,7 @@ export function droppedTradeClaims(claims: readonly FleetTradeClaim[], side: str
     return claims.filter(claim => {
         if (claim.phase !== 'held' || claim.side !== side) return false;
         const order = read(`orders/${claim.orderId}.json`), other = claim.role === 'from' ? 'to' : 'from';
-        if (!validOrder(order) || order.id !== claim.orderId || now < order.end) return false;
+        if (!validOrder(order) || order.id !== claim.orderId) return false;
         const own = read(`receipts/${claim.orderId}.${claim.role}.json`), partner = read(`receipts/${claim.orderId}.${other}.json`);
         const ownIdle = !!own && own.version === 2 && (own.state === 'prepared' || own.state === 'reconcile') && own.claim === claim.nonce && own.side === claim.side
             && typeof own.account === 'string' && own.account.toLowerCase() === claim.account && own.count === 0
@@ -140,9 +141,11 @@ export function droppedTradeClaims(claims: readonly FleetTradeClaim[], side: str
         if (!ownIdle) return false;
         if (!partner) {
             const partnerSide = sideOf(order[other]);
-            return own.state === 'reconcile' && (partnerSide === side ? now : publishedAt(partnerSide)) >= order.end + UNANSWERED_GRACE_MS;
+            return now >= order.end && own.state === 'reconcile' && (partnerSide === side ? now : publishedAt(partnerSide)) >= order.end + UNANSWERED_GRACE_MS;
         }
-        return now - claim.at >= DROPPED_CLAIM_MS && now - order.end >= DROPPED_CLAIM_MS && terminalTradeReceipt(order, other, partner, now) && partner.state === 'failed';
+        // A worker that ended wrote `reconcile`; one that died left `prepared`, and only the hour says its session is gone.
+        const ended = own.state === 'reconcile' || now - claim.at >= DROPPED_CLAIM_MS && now - order.end >= DROPPED_CLAIM_MS;
+        return ended && terminalTradeReceipt(order, other, partner, now) && partner.state === 'failed';
     });
 }
 
