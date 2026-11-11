@@ -1,0 +1,22 @@
+{
+ "id": "1794418758042-knightrider-fingersmith-staffoffire",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "Fingersmith",
+ "item": "Staff of fire",
+ "count": 1,
+ "start": 1794418758042,
+ "end": 1794421158042,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
