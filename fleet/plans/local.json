@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794367685474,
+ "at": 1794367759955,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -165,30 +165,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2582,3297"
-   ]
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Attack",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Attack to 80 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-attack-80",
-   "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
    ]
   },
   {
@@ -511,21 +487,39 @@
   },
   {
    "account": "mmthv2350",
-   "script": "scripts/goldfarm.ts",
+   "script": "scripts/session-check.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
+    "CAP": "600",
+    "COORDINATOR_RUN_ID": "task-02b81f9c-1385-4786-897c-a7a67c7d99b2"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-session-recovery-mmthv2350-orphan-1794367220 [task-02b81f9c-1385-4786-897c-a7a67c7d99b2]",
+   "role": "thieving"
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Attack",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1"
    },
    "enabled": false,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "goal": "train Attack to 80 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-attack-80",
    "autopilot": "local",
    "resources": [
-    "knight:2669,3298"
+    "cow:ardougne-north"
    ]
   }
  ]
