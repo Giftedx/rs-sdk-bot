@@ -31,8 +31,30 @@ Map cases (`--case <key>`), each with the mirror kit:
 - Batches of 8: `extra:spar-x8`, `extra:spar-escape-x8`, `extra:spar-escape-pots-x8`, `extra:spar-escape-spell-pots-x8`,
   and with the god-spell kit on the hunter `extra:spar-escape-god-x8` and `extra:spar-escape-spell-god-x8`.
 
-Gap: the fight loop does not choose where to stand, so cover, line of sight as a defence and a second attacker are
-not measured.
+Gap: cover, line of sight as a defence and a second attacker are not measured.
+
+### Builds, the kit matrix and the hill climb
+
+- Builds. `scripts/pk-kits.ts` names each build once: what it wears and carries, its switch weapons and style turns,
+  and its shop cost. The builds are `tribrid`, `tribrid-pots`, `melee`, `ranger`, `mage`, and the cheaper tribrids
+  `tribrid-adamant` and `tribrid-mithril`. Each build has a mirror batch `extra:spar-kit-<build>-x8`.
+- Matrix. `extra:spar-kits-x8` puts the tribrid against every build at once; `bun scripts/measure/pk-spar-matrix.ts`
+  runs it for each seed and prints kills, deaths, net damage and cost for each matchup (8 matchups in 65 s).
+- Climb. `bun scripts/measure/pk-spar-climb.ts` tries each value of each fight option (`KNOBS`) against the champion
+  options in `scripts/pk-champion.json`, in mirror batches with the candidate on side A in half of the pairs
+  (`SPAR_SWAP=1`). Its measure is the net damage for each 100 ticks (what the opponent took less what we took). A
+  candidate with a t statistic of 2 or more over 16 or more paired fights becomes the champion. One fight's net rate
+  has a standard deviation near 13, so 16 fights show a gain of about 6.5 and no less.
+- The climb waits for memory: a run needs about 1.7 GB for a minute, and it starts only with 1 GB of dashboard
+  headroom and no file `.practice/pk-climb-pause` in the main checkout.
+
+### Hit timing
+
+All three styles share one attack timer (`%action_delay`): a spell sets it 5 ticks ahead, a melee or ranged attack
+its weapon's rate. Damage lands later for a projectile: a spell after floor((46 + 10 * tiles) / 30) + 1 ticks, an
+arrow after floor((46 + 5 * tiles) / 30) ticks, a melee hit at once (`pvp_magic.rs2:230`, `pvp_ranged.rs2:50-72`,
+`projectile.rs2:25`). So a spell and a melee hit cannot land on one tick at melee range, and the two hits of a dragon
+dagger special are the burst of this content.
 
 ### Speed of a measurement
 
@@ -63,11 +85,23 @@ unless a finding says otherwise; a seed repeats its fight. Evidence: `.practice/
 1. **A mirror fight is a food race.** `pvp:spar`, base against base, seeds 1, 2, 3: kills at 668, 535 and 570 ticks;
    side A, side A, side B won. The loser had eaten all 18 sharks in each fight; the winner 18, 13 and 16.
    Gap: three fights; equal settings win or lose by the seed, so a small gain needs more seeds to show.
-2. **A freeze whenever the target is free loses a stand-up spar.** freeze against base, seeds 1, 2, 3 on each side,
-   without Dragon Slayer on either side (the platebody stayed off after the first cast): 2 wins, 4 losses, mean score
-   -104.2 (scores -175, 126, 163, -268, -244, -227). Gap: six fights; not run with Dragon Slayer done.
-3. **The fight loop's `dealt` counter reads low.** One spar: side A `dealt` 102 where side B took 274. The spar
-   scores from damage taken. Gap: the cause in the SDK `damage_dealt` events is not found.
+2. **No single setting beats the base loop in a stand-up mirror.** `extra:spar-x8`, 16 fights for each profile against
+   base (8 on each side):
+
+   | Profile | Change | Wins | Losses |
+   |---|---|---|---|
+   | `freeze` | a freeze whenever the target is free | 6 | 10 |
+   | `eat-40` | eat at 40 HP, not 50 | 6 | 10 |
+   | `eat-65` | eat at 65 HP | 8 | 8 |
+   | `spec-late` | special at 35% health, not 65% | 8 | 8 |
+   | `no-read` | no read of the overhead prayer | 7 | 9 |
+
+   The hunters (`scripts/pk-hunt.ts`, `scripts/pk-roam.ts`) cast the freeze only when the target runs (`freeze: 'flee'`).
+   Gap: 16 fights for each row separate a clear loss only; the climber measures the rest by net damage.
+3. **Damage dealt is read from the splats on the target.** The SDK publishes a `damage_dealt` event only while our
+   player faces the target at the tick the splat shows (`bot/StateCollector.ts`), so an arrow or a spell that lands
+   after a gear switch was not counted: one spar read 102 dealt where the other side took 274. The loop now reads the
+   target's splats from the client (`newSplats`): two spars read 109 against 116 taken and 140 against 140.
 4. **A hunter that chases, freezes on the flight and keeps its special kills 1 runner in 3; the plain hunter kills
    none.** `extra:spar-escape`, seeds 1, 2, 3, runner on base. Base hunter: the runner got away 3 of 3. Hunter
    `freeze-flee` (a freeze only while the target runs): 3 of 3 got away. `freeze-flee` with `specBelow` 0.4: 1 kill
@@ -95,6 +129,7 @@ unless a finding says otherwise; a seed repeats its fight. Evidence: `.practice/
    | glory | `hunter-low` | yes | 5 |
    | glory | `hunter-low`, `specBelow` 0.25 | yes | 4 |
    | no glory, about 110 tiles to level 20 | `hunter-low` | yes | 9 |
+   | no glory | `hunter-low` | no | 14 |
    | glory | `hunter-low`, Flames of Zamorak under Charge | yes | 5 |
    | no glory | `hunter-low`, Flames of Zamorak under Charge | yes | 10 |
 
@@ -108,7 +143,8 @@ unless a finding says otherwise; a seed repeats its fight. Evidence: `.practice/
    only or magic and ranged once the target has fled, with and without the specials; the freeze cast with the weapon
    in hand, so that the runner has no Protect from Magic up. Each style alone against the base fighter dealt, for
    each 100 ticks: magic 25.4 and 24.2, melee 15.1 and 14.3, ranged 8.0 and 18.3.
-   Gap: 16 fights for each row; the no-glory row has no run without potions.
+   Gap: 16 fights for each row. The no-glory rows disagree with the glory rows on potions (14 without, 9 with), so
+   either row can be chance, or the three turns that the potions take cost more in a long chase than they give.
 
    A special on a target that runs waits: for the freeze while one is ready, and for bow range (7 tiles for a
    shortbow, `bows.obj` attackrange) when it is a bow special. A bow special on a runner beyond that range stays
@@ -120,9 +156,10 @@ unless a finding says otherwise; a seed repeats its fight. Evidence: `.practice/
    between; kills at 528, 495 and 628 ticks. The server walks an attacker to a tile with line of sight. Gap: one run each.
 6. **A side that escapes must not end its fight when the target leaves its view.** In the first escape spar the runner
    returned `lost` 219 ticks in, still deep in the Wilderness. The loop keeps going while it escapes.
-7. **An account without Dragon Slayer loses its rune platebody at the first cast.** The loop takes the platebody off
-   for a cast and puts it on for a melee turn; the game refused it 35 and 39 times in one spar ("You have not earned
-   the right to wear this yet.", `levelrequire.rs2:132`). A PK account needs Dragon Slayer, or a body with no quest.
+7. **An account without Dragon Slayer keeps its rune platebody on.** The loop takes the torso off for a cast and puts
+   it on for a melee turn, and the game refuses such an account ("You have not earned the right to wear this yet.",
+   `levelrequire.rs2:132`): 35 and 39 refusals in one spar. The loop reads the quest journal and leaves the body on;
+   `extra:spar-no-slayer` had 0 refusals. Such an account casts at -30 magic attack, so Dragon Slayer is worth doing.
 8. **"I'm already under attack." is not proof of a monster.** A new practice world sends it for the first 8 ticks
    (`pvp_combat.rs2:110`), and both sides then left the fight to attack a monster 15 tiles away. The loop reacts only
    to a monster within 8 tiles that faces a player, and the spar waits 10 ticks before the fight.
