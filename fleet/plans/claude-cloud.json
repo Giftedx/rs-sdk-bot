@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794409974121,
+ "at": 1794410579346,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -160,6 +160,24 @@
    ]
   },
   {
+   "account": "Knightstick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=10 EXPECTED_OWNED=6 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=knightstick-kit8-536-6to16 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 10 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-dragon-99",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
    "account": "PocketPool",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -236,31 +254,6 @@
   },
   {
    "account": "Dipstick",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "KnightRider",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
