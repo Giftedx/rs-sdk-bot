@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794377738645-deeppockets-thefullmonty",
+ "account": "Deeppockets",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 52147,
+ "claim": "bfb2cddb-3d34-4098-8f49-96a42a1ebfbf",
+ "count": 0,
+ "ok": false,
+ "at": 1794377747045,
+ "detail": "trade claimed"
+}

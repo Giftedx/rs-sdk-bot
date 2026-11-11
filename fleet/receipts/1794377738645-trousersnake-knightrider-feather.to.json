@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794377738645-trousersnake-knightrider-feather",
+ "account": "KnightRider",
+ "partner": "TrouserSnake",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 50,
+ "claim": "356b17a3-65c0-442d-9d13-d53f7f313f88",
+ "count": 0,
+ "ok": false,
+ "at": 1794377742370,
+ "detail": "trade claimed"
+}
