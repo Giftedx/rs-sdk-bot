@@ -41,7 +41,7 @@ export const GOAL_RECEIPTS={
 // Pure, read-only projection. Historical receipts never become current staging or live promotion.
 export function goalProgress(state:any,input:GoalInputs):Lane[]{
  input={...input,items:Array.isArray(input.items)?input.items:[],quests:Array.isArray(input.quests)?input.quests:[],questConstants:typeof input.questConstants==='string'?input.questConstants:'',receipts:input.receipts??{}};
- const now=state.now,bots=(state.bots??[]).filter((b:any)=>!b.practice&&!b.reserved&&b.server==='rs-sdk-demo.fly.dev'),owned=new Set(bots.map((b:any)=>b.name.toLowerCase()));
+ const now=state.now,bots=(state.bots??[]).filter((b:any)=>!b.practice&&!b.reserved&&b.server==='rs-sdk-demo.fly.dev'),owned=new Set<string>(bots.map((b:any)=>String(b.name).toLowerCase()));
  const row=(label:string,value:unknown,source:string,at?:number,tone?:GoalRow['tone']):GoalRow=>({label,value:String(value),source,...(validAt(at,now)?{at}:{}),tone});
  const statusPath=(b:any)=>`.practice/status/${b.name}.json`;
  const snapshotBots=bots.filter((b:any)=>validAt(b.at,now)),banks=bots.filter((b:any)=>validAt(b.bankAt,now)&&Array.isArray(b.bank)&&b.bank.every((i:any)=>i&&Number.isSafeInteger(i.baseId??i.id)&&Number.isSafeInteger(i.count)&&i.count>0));
