@@ -293,18 +293,23 @@ export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'price
 // level over the Defence or Prayer of a build is a different build, and no account goes back. So such an account
 // takes only bands that train one skill, and a band stops at the level of the build:
 // - a skill at its level takes no band;
-// - a band of scripts/gather-combat.ts stops at the level (TARGET_LEVEL; the style of TRAIN_SKILL gives XP to that
-//   skill and to Hitpoints only);
+// - a band of scripts/gather-combat.ts whose TRAIN_SKILL is the skill of the band stops at the level (TARGET_LEVEL;
+//   giantStyle picks a style that gives XP to that skill and to Hitpoints only). It buries no bones (GIANT_BURY):
+//   bones give Prayer XP whatever the band trains;
+// - a gather-combat band with another TRAIN_SKILL or a kill count (GIANT_KILLS) is refused: the kill count replaces
+//   the level stop, and TRAIN_SKILL=Hitpoints keeps the style the account had, which can train any melee skill;
 // - a band of another script that ends above the level is refused: that script has no proved stop;
 // - a quest band and a stock band are refused: a quest reward and a fight for loot give XP in skills nobody chose.
 export function buildBand(t: Template, a: Acct, build?: Readonly<Record<string, number>>): Template | null {
     if (!build || t.tier !== 'goal') return t;
     if (!t.trains) return null;
     const level = build[t.trains.skill];
-    if (level === undefined) return t;
+    const combat = t.script === 'scripts/gather-combat.ts';
+    if (combat && (t.env?.TRAIN_SKILL !== t.trains.skill || t.env.GIANT_KILLS !== undefined)) return null;
+    if (level === undefined) return combat ? { ...t, env: { ...t.env, GIANT_BURY: '0' } } : t;
     if ((a.skills[t.trains.skill] ?? 1) >= level) return null;
     const to = Math.min(t.trains.to, level);
-    if (t.script === 'scripts/gather-combat.ts') return { ...t, env: { ...t.env, TARGET_LEVEL: String(to) }, trains: { ...t.trains, to } };
+    if (combat) return { ...t, env: { ...t.env, TARGET_LEVEL: String(to), GIANT_BURY: '0' }, trains: { ...t.trains, to } };
     return t.trains.to <= level ? t : null;
 }
 

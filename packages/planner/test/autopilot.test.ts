@@ -1427,6 +1427,16 @@ test('an account with a PK build trains to the levels of the build and no furthe
     expect(trooper.env!.TARGET_LEVEL).toBe('60');
     expect(trooper.trains!.to).toBe(60);
     expect(buildBand(byId('army-trooper-strength-99'), fresh, dragon)!.env!.TARGET_LEVEL).toBe('99');
+    // No band buries bones: bones give Prayer XP. The Prayer band of the trooper field counts kills and keeps the
+    // style of the account, so it is refused even for a build with Prayer above the account's level.
+    expect(byId('army-trooper-ranged-99').env!.GIANT_BURY).toBe('1');
+    expect(buildBand(byId('army-trooper-ranged-99'), fresh, pure)!.env!.GIANT_BURY).toBe('0');
+    expect(trooper.env!.GIANT_BURY).toBe('0');
+    expect(buildBand(byId('army-trooper-prayer-99'), acct('Build', { Prayer: 20 }), dragon)).toBeNull();
+    for (const t of templates.filter(t => t.tier === 'goal')) for (const build of [pure, dragon]) {
+        const got = buildBand(t, fresh, build);
+        if (got?.script === 'scripts/gather-combat.ts') { expect(got.env!.GIANT_BURY).toBe('0'); expect(got.env!.GIANT_KILLS).toBeUndefined(); expect(got.env!.TRAIN_SKILL).toBe(got.trains!.skill); }
+    }
     // A band of another script that ends above the level, a quest band and a stock band are refused.
     for (const t of templates.filter(t => t.tier === 'goal')) {
         const got = buildBand(t, fresh, pure);
