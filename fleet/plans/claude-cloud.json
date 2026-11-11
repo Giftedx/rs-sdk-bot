@@ -1,26 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794436382504,
+ "at": 1794436713400,
  "jobs": [
-  {
-   "account": "Fatstack",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2582,3297"
-   ]
-  },
   {
    "account": "Quickhandjob",
    "script": "scripts/shop-buyer.ts",
@@ -41,50 +22,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "shop:catherby"
-   ]
-  },
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "betty"
-   ],
-   "env": {
-    "ITEMS": "fire rune|air rune|earth rune",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy elemental runes at Betty",
-   "role": "bank",
-   "template": "shop-runes",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "shop:betty"
-   ]
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts lowe 2500 ITEMS=iron.arrow|bronze.arrow STOCK_TARGET=1200 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=29000 COIN_RESERVE=500 MAX_SPEND=28000",
-    "scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=60 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=3000 COIN_RESERVE=500 MAX_SPEND=2000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy iron and bronze arrows at Lowe's and teleport runes at Aubury's in Varrock for the black dragon hunt",
-   "role": "supply",
-   "template": "army-hunt-supply",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "shop:lowe",
-    "shop:aubury"
    ]
   },
   {
@@ -132,6 +69,25 @@
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2582,3297"
    ]
   },
   {
@@ -232,6 +188,41 @@
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-efdf5a00-de77-44a6-af72-9299750354f5"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-trousersnake-20261111t223311z [task-efdf5a00-de77-44a6-af72-9299750354f5]",
+   "role": "bank"
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts lowe 2500 ITEMS=iron.arrow|bronze.arrow STOCK_TARGET=1200 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=29000 COIN_RESERVE=500 MAX_SPEND=28000",
+    "scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=60 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=3000 COIN_RESERVE=500 MAX_SPEND=2000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy iron and bronze arrows at Lowe's and teleport runes at Aubury's in Varrock for the black dragon hunt",
+   "role": "supply",
+   "template": "army-hunt-supply",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:lowe",
+    "shop:aubury"
    ]
   }
  ]
