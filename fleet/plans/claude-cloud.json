@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794387512244,
+ "at": 1794387658643,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -25,11 +25,30 @@
    "script": ".practice/pk-pilot/disembark.ts",
    "args": [],
    "env": {},
-   "enabled": false,
+   "enabled": true,
    "standing": false,
    "repeat": false,
    "goal": "hand: leave the Brimhaven ship deck",
-   "role": "hand"
+   "role": "hand",
+   "autopilot": "claude-cloud"
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fingersmith-kit12-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on iron arrows",
+   "role": "supply",
+   "template": "kit-buy:army-hunt-black-dragons",
+   "autopilot": "claude-cloud",
+   "resources": []
   },
   {
    "account": "TheFullMonty",
@@ -144,7 +163,7 @@
    ]
   },
   {
-   "account": "PocketPool",
+   "account": "Knightstick",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
@@ -169,25 +188,7 @@
    ]
   },
   {
-   "account": "Fingersmith",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fingersmith-kit12-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on iron arrows",
-   "role": "supply",
-   "template": "kit-buy:army-hunt-black-dragons",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
-   "account": "KnightRider",
+   "account": "PocketPool",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
