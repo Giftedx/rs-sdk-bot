@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794395740862-trousersnake-deeppockets-bones",
  "account": "Deeppockets",
  "partner": "TrouserSnake",
@@ -10,8 +10,22 @@
  "item": "Bones",
  "requested": 14,
  "claim": "81ebb6a9-22d8-4f10-a097-1ba068fbac0f",
- "count": 0,
- "ok": false,
- "at": 1794395752489,
- "detail": "trade claimed"
+ "count": 14,
+ "ok": true,
+ "at": 1794395819696,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 14
+ },
+ "bank": {
+  "count": 14,
+  "at": 1794395818769
+ },
+ "logout": {
+  "attemptId": "1794395752492-0000014506-0000000001",
+  "at": 1794395819690,
+  "sha256": "7c8b686d4278f435255008b631dbbfbf9772981119dd795d6e75837dbda6cd33"
+ },
+ "screen": true
 }
