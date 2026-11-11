@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794362087807,
+ "at": 1794362194401,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -19,26 +19,6 @@
    "template": "kit-buy:army-bury-dragon-99",
    "autopilot": "claude-cloud",
    "resources": []
-  },
-  {
-   "account": "SporranDip",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=sporrandip-kit3-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
-   "role": "supply",
-   "template": "kit-buy:army-weapon",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "ge:weapon"
-   ]
   },
   {
    "account": "Quickhandjob",
@@ -137,23 +117,31 @@
   },
   {
    "account": "Kiltlifter",
-   "script": "scripts/chain.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "scripts/shop-buyer.ts dargaud 800 ITEMS=willow.shortbow STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=4000 COIN_RESERVE=500 MAX_SPEND=3000",
-    "scripts/shop-buyer.ts dargaud 800 ITEMS=mithril.arrow|steel.arrow|iron.arrow|bronze.arrow STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=51000 COIN_RESERVE=500 MAX_SPEND=50000"
+    "ardy",
+    "400"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEMS": "bronze arrow",
+    "STOCK_TARGET": "500",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "5000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "4000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy a willow shortbow and arrows up to mithril at the Ranging Guild for the Ranged band",
+   "goal": "buy bronze arrows at Aemad in East Ardougne for the Ranged band",
    "role": "supply",
-   "template": "army-arrows-guild",
+   "template": "army-arrows-ardy",
    "autopilot": "claude-cloud",
    "resources": [
-    "shop:dargaud"
+    "shop:ardy"
    ]
   },
   {
@@ -204,6 +192,27 @@
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts dargaud 800 ITEMS=willow.shortbow STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=4000 COIN_RESERVE=500 MAX_SPEND=3000",
+    "scripts/shop-buyer.ts dargaud 800 ITEMS=mithril.arrow|steel.arrow|iron.arrow|bronze.arrow STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=51000 COIN_RESERVE=500 MAX_SPEND=50000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy a willow shortbow and arrows up to mithril at the Ranging Guild for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-guild",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:dargaud"
    ]
   },
   {
