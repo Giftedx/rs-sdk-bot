@@ -10,7 +10,7 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
     let tick = 0, timer: number | null = active.some(Boolean) ? 5 : null;
     const w = {
         active, drains: 0, toggles: 0, windowsClosed: 0, cleared: 0, window: false, anim: -1,
-        interaction: null as string | null, most: 0, dialog: { isOpen: false } as any, said: [] as any[], pack: [] as { id: number; count: number }[], z: 3200, combat: 50, players: [] as any[], npcs: [] as any[], events: [] as any[], offSeen: 0,
+        interaction: null as string | null, most: 0, locs: [] as any[], dialog: { isOpen: false } as any, said: [] as any[], pack: [] as { id: number; count: number }[], z: 3200, combat: 50, players: [] as any[], npcs: [] as any[], events: [] as any[], offSeen: 0,
     };
     const inbox: any[] = [];
     const listeners = new Set<() => void>();
@@ -18,7 +18,7 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
     const state = () => ({
         player: { worldX: 3200, worldZ: w.z, level: 0, animId: w.anim, isDead: false, combatLevel: w.combat },
         prayers: { activePrayers: [...active], prayerPoints: init.points ?? 50, prayerLevel: init.level ?? 50 },
-        nearbyNpcs: w.npcs, nearbyPlayers: w.players, inventory: w.pack, combatEvents: w.events, modalOpen: w.window,
+        nearbyNpcs: w.npcs, nearbyPlayers: w.players, nearbyLocs: w.locs, inventory: w.pack, combatEvents: w.events, modalOpen: w.window,
         dialog: w.dialog, recentDialogs: w.said, interface: { isOpen: false }, bank: { isOpen: false }, shop: { isOpen: false },
     });
     let published = state();
@@ -711,4 +711,64 @@ test('a pickup in a fight: the attack prayers go off, and the protection prayer 
     expect(w.most).toBeLessThanOrEqual(5);
     expect(lines.some(l => /flick-after-off/.test(l))).toBe(true);
     expect(lines.every(l => /^GUARD t=\d+ prayer=\d+ \S/.test(l))).toBe(true);
+});
+
+test('a ranged NPC that reaches the player now comes before a nearer melee NPC that must walk first', () => {
+    const { w, s, advance } = world();
+    const table = new Map<number, Hunter>([[1101, { range: 8, wander: 0, level: 67, tooStrong: false }], [1106, { range: 1, wander: 9, level: 69, tooStrong: false }]]);
+    startPrayerGuard(s, { hunters: table, protect: protectByStyle(new Map<number, readonly AttackStyle[]>([[1101, ['ranged']]])) });
+    w.npcs = [idle(1106, 4), idle(1101, 5)];
+    advance(3);
+    expect(on(w)).toEqual([PROTECT.missiles]);
+    // The melee NPC arrives: it is the nearer one that reaches.
+    w.npcs = [idle(1106, 1), idle(1101, 5)];
+    advance(3);
+    expect(on(w)).toEqual([PROTECT.melee]);
+});
+
+test('mining under attack costs nothing: the guard flicks and sends the same click again', () => {
+    const { w, s, client, advance } = world();
+    const guard = startPrayerGuard(s);
+    w.npcs = [cow(32768 + 7)];
+    w.locs = [{ id: 2092, x: 3294, z: 3310, optionsWithIndex: [{ text: 'Mine', opIndex: 1 }] }];
+    advance(4);
+    w.anim = 625;
+    client.executeBotAction({ type: 'interactLoc', x: 3294, z: 3310, locId: 2092, optionIndex: 1 });
+    for (let i = 0; i < 100; i++) { advance(); expect(w.interaction).toBe('interactLoc:2092'); expect(w.active[PROTECT.melee]).toBe(true); }
+    expect(w.drains).toBe(0);
+    expect(guard.stats().holds).toBe(0);
+    expect(guard.stats().resends).toBeGreaterThan(20);
+    // The rock is empty: the click is not sent again.
+    w.locs = [{ id: 450, x: 3294, z: 3310, optionsWithIndex: [{ text: 'Mine', opIndex: 1 }] }];
+    w.interaction = null;
+    advance(8);
+    expect(w.interaction).toBe(null);
+});
+
+test('a click on a door is never sent again', () => {
+    const { w, s, client, advance } = world();
+    const guard = startPrayerGuard(s);
+    w.npcs = [cow(32768 + 7)];
+    w.locs = [{ id: 1530, x: 3200, z: 3201, optionsWithIndex: [{ text: 'Open', opIndex: 1 }] }];
+    advance(4);
+    w.anim = 625;
+    client.executeBotAction({ type: 'interactLoc', x: 3200, z: 3201, locId: 1530, optionIndex: 1 });
+    advance(20);
+    expect(guard.stats().resends).toBe(0);
+});
+
+test('a change of the prayer set is a flick: no late flick after it', () => {
+    const { w, s, client, advance } = world({ level: 45 });
+    w.npcs = [cow(-1)];
+    startPrayerGuard(s, { offence: true });
+    // The attack starts and stops again and again: the attack prayers come on and go off each time.
+    for (let i = 0; i < 40; i++) {
+        w.npcs = [cow(32768 + 7)];
+        client.executeBotAction({ type: 'interactNpc', npcIndex: 3, optionIndex: 2 });
+        advance(5);
+        client.executeBotAction({ type: 'walkTo', x: 1, z: 1 });
+        advance(9);
+    }
+    expect(w.drains).toBe(0);
+    expect(w.most).toBeLessThanOrEqual(5);
 });

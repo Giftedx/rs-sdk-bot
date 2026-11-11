@@ -121,6 +121,10 @@ const TICK_INPUTS = 5;
 const MAX_FLICKED = 4;
 // The order prayers come back on: protection, then Defence, then the others.
 const backFirst = (prayer: number) => prayer >= 12 ? 0 : [0, 3, 9].includes(prayer) ? 1 : 2;
+// Skill actions that a second click on the same rock or tree does not start again: their timer is the player variable
+// %action_delay, which a click sets only when it is in the past (skill_mining/scripts/mining.rs2:76,
+// skill_woodcutting/scripts/woodcut.rs2:55). The guard treats them like an attack: it flicks, then sends the click again.
+const REPEATABLE = /^(mine|chop down|chop)$/i;
 // The level-up message (content levelup/configs/levelup.dbrow). A prayer button closes it, which costs the script nothing.
 const LEVEL_UP = /^Congratulations, you just advanced/;
 // The state shows a prayer input at most this many ticks after the guard saw it.
@@ -162,6 +166,11 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         for (const entry of st.recentDialogs ?? []) if (!newest || entry.tick >= newest.tick) newest = entry;
         return !!newest && LEVEL_UP.test((newest.text ?? []).join(' ').trim());
     };
+    const skillTarget = (a: Action, st: any): boolean => {
+        if (a.type !== 'interactLoc') return false;
+        const loc = (st?.nearbyLocs ?? []).find((l: any) => l.id === a.locId && l.x === a.x && l.z === a.z);
+        return !!loc && (loc.optionsWithIndex ?? []).some((op: any) => op.opIndex === a.optionIndex && REPEATABLE.test(op.text ?? ''));
+    };
     const windowOpen = (st: any): boolean => {
         const other = !!(st.interface?.isOpen || st.bank?.isOpen || st.shop?.isOpen || st.modalOpen);
         return other || (!!st.dialog?.isOpen && !levelUp(st));
@@ -201,12 +210,14 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         });
     };
     // Sent in order: the server reads the inputs of one tick in the order they arrive.
-    const send = (a: Action) => { own.add(a); holdWrites(); try { void Promise.resolve(s.direct(a)).catch(() => {}); } catch { /* session ended */ } };
+    // The inputs the guard sent in the current tick: with the script's input they must not pass TICK_INPUTS.
+    let sentAt = -1, sent = 0;
+    const send = (a: Action) => { const t = s.tick(); if (sentAt !== t) { sentAt = t; sent = 0; } sent++; own.add(a); holdWrites(); try { void Promise.resolve(s.direct(a)).catch(() => {}); } catch { /* session ended */ } };
     let why = '';
     const toggle = (prayerIndex: number) => { o.trace?.(`GUARD t=${s.tick()} prayer=${prayerIndex} ${why}`); send({ type: 'togglePrayer', prayerIndex, reason: 'SDK' }); };
     const resend = (st: any) => {
         if (pending.kind !== 'attack') return;
-        if (!attackTarget(pending.action, st)) { pending = { kind: 'none' }; return; }
+        if (!attackTarget(pending.action, st) && !skillTarget(pending.action, st)) { pending = { kind: 'none' }; return; }
         send({ ...pending.action });
         stats.resends++;
     };
@@ -233,8 +244,9 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         if (stats.yielded || !st?.player || st.player.isDead || !prayers || prayers.prayerPoints < 1 || windowOpen(st)) return;
         const now = s.tick();
         if (resume.length) { finish(now); return; }
-        // One script input in a tick leaves four inputs for the guard.
-        if (inputs > 0 || flickAt === now) return;
+        // The script's input takes one of the tick's inputs; the guard has the rest, less what it sent in this tick.
+        const room = TICK_INPUTS - 1 - (sentAt === now ? sent : 0);
+        if (inputs > 0 || flickAt === now || room <= 0) return;
         // A flick of the last two ticks left these prayers on, and the state can show them late.
         const active = expect ?? believed(st, now);
         if (!active.length) return;
@@ -245,10 +257,10 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         if (drop.length) {
             why = 'off-before-input';
             let left: number[] = [...active];
-            for (const i of drop.slice(0, TICK_INPUTS - 1)) { toggle(i); owned.delete(i); left = intend(left, i, now); }
+            for (const i of drop.slice(0, room)) { toggle(i); owned.delete(i); left = intend(left, i, now); }
             // With inputs to spare, the prayers that stay on go off and on after them: for one moment no prayer is
             // on, which clears the drain timer.
-            if (left.length && drop.length + 2 * left.length <= TICK_INPUTS - 1) {
+            if (left.length && drop.length + 2 * left.length <= room) {
                 why = 'flick-after-off';
                 for (const i of left) toggle(i);
                 for (const i of left) toggle(i);
@@ -257,7 +269,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
             } else if (expect) { expect = left; expectAt = now; }
             return;
         }
-        if (!expect && active.length <= 2 && now - flickAt >= 1) { flickNow(active, now); stats.early++; }
+        if (!expect && 2 * active.length <= room && now - flickAt >= 1) { flickNow(active, now); stats.early++; }
     };
 
     // Every input of the script passes here before the client sends it.
@@ -286,7 +298,8 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         beforeInput(a, attack);
         inputs++;
         if (a.type === 'walkTo') { pending = { kind: 'none' }; return; }
-        if (attack) { pending = { kind: 'attack', action: { ...a } }; return; }
+        // `attack` also holds a mining or woodcutting click: the guard sends it again after its prayer inputs.
+        if (attack || skillTarget(a, s.sdk.getState())) { pending = { kind: 'attack', action: { ...a } }; return; }
         if (a.type === 'pickupItem') { const item = a.itemId as number; pending = { kind: 'other', type: a.type, still: 0, need: PICKUP_IDLE_TICKS, item, had: held(s.sdk.getState(), item) }; return; }
         pending = { kind: 'other', type: a.type, still: 0, need: IDLE_TICKS };
     };
@@ -313,12 +326,15 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     const nearestHunter = (st: any, p: any): any | null => {
         if (!o.hunters) return null;
         const wild = wildernessLevel(p.worldX, p.worldZ) > 0;
-        let best: any | null = null;
+        let best: any | null = null, bestReaches = false;
         for (const n of st.nearbyNpcs ?? []) {
             const h = o.hunters.get(n.id);
             if (!h || n.hp === 0 || n.distance > Math.min(HUNT_VIEW, h.range + h.wander)) continue;
             if (h.tooStrong && !wild && p.combatLevel > h.level * 2) continue;
-            if (!best || n.distance < best.distance) best = n;
+            // An NPC whose hunt range reaches the player now comes before one that must walk first: its attack
+            // style is the one that lands first.
+            const reaches = n.distance <= h.range + 1;
+            if (!best || (reaches && !bestReaches) || (reaches === bestReaches && n.distance < best.distance)) { best = n; bestReaches = reaches; }
         }
         return best;
     };
@@ -419,20 +435,28 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         if (!safe) { if (active.length) hold(windows ? 'window' : pending.kind === 'other' ? pending.type : 'other'); return; }
 
         const missing = wanted.filter(i => !active.includes(i));
-        if (missing.length) {
-            why = `on wanted=${wanted.join('+')} active=${active.join('+')} threat=${threatNow}`;
-            let next = active;
-            for (const i of missing) { toggle(i); owned.set(i, now); next = intend(next, i, now); }
-            stats.protects++;
-            if (!active.length) flickAt = now;
-            resend(st);
-            return;
-        }
         const stale = active.filter(i => owned.has(i) && !wanted.includes(i) && now > (keep.get(i) ?? -Infinity));
-        if (stale.length) {
-            why = 'off-not-wanted';
-            let next = active;
-            for (const i of stale) { toggle(i); owned.delete(i); next = intend(next, i, now); }
+        if (missing.length || stale.length) {
+            let target = active.filter(i => !stale.includes(i));
+            for (const i of missing) target = afterToggle(target, i);
+            const order = [...target].sort((x, y) => backFirst(x) - backFirst(y));
+            why = `set ${order.join('+') || 'none'} from ${active.join('+') || 'none'} threat=${threatNow}`;
+            if (active.length && active.length + order.length + (pending.kind === 'attack' ? 1 : 0) <= TICK_INPUTS) {
+                // Every prayer off, then the new set on: the moment with no prayer on clears the drain timer, so a
+                // change of the set is a flick too.
+                for (const i of active) toggle(i);
+                for (const i of order) toggle(i);
+                flickAt = now;
+                if (order.length) { stats.flicks++; expect = order; expectAt = now; }
+            } else {
+                for (const i of stale) toggle(i);
+                for (const i of missing) toggle(i);
+                if (!active.length) flickAt = now;
+            }
+            for (const i of new Set([...active, ...order])) intents.set(i, { on: order.includes(i), at: now });
+            for (const i of stale) owned.delete(i);
+            for (const i of missing) owned.set(i, now);
+            if (missing.length) stats.protects++;
             resend(st);
             return;
         }
