@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { VIEWER_FEATURES, VIEWER_MANIFEST_SHA256, checkViewerBundle, viewerEntry } from '../viewer';
-import { hostedIndex, hostedScript, hostedStyle, nameHash } from './export-viewer';
+import { earlyCacheScript, hostedIndex, hostedScript, hostedStyle, nameHash } from './export-viewer';
 
 test('the hosted viewer index loads relative files, the bridge first, and no service worker', () => {
     const html = hostedIndex('<!doctype html><html><head><script src="/coi-serviceworker.js"></script><link rel="icon" href="/favicon.ico"/><script defer="defer" src="/static/js/main.0123abcd.js"></script><link href="/static/css/main.4567cdef.css" rel="stylesheet"></head></html>');
@@ -11,6 +11,20 @@ test('the hosted viewer index loads relative files, the bridge first, and no ser
     expect(html).toContain('<head><script src="bridge.js"></script><link rel="stylesheet" href="client-viewer.css">');
     expect(html).toContain('src="static/js/main.0123abcd.js"');expect(html).toContain('href="favicon.ico"');
     expect(() => hostedIndex('<head><script src="/other.js"></script>')).toThrow();
+});
+test('the early cache script follows the bridge, fetches only files the browser store lacks, and refuses unsafe names', async () => {
+    const script = earlyCacheScript('rs-sdk-289', ['main_file_cache.dat', 'main_file_cache.idx0']);
+    const html = hostedIndex('<!doctype html><html><head><script src="/coi-serviceworker.js"></script><script defer="defer" src="/static/js/main.0123abcd.js"></script></head></html>', script);
+    expect(html).toContain('<head><script src="bridge.js"></script><link rel="stylesheet" href="client-viewer.css"><script>(async()=>');
+    expect(() => earlyCacheScript('a"b', [])).toThrow('unsafe');
+    expect(() => earlyCacheScript('ok', ['../x'])).toThrow('unsafe');
+    // Run the script body with a store that already holds the .dat file: only the index file is fetched.
+    const fetched: string[] = [], opened: string[] = [];
+    const body = script.slice('<script>'.length, -'</script>'.length);
+    const run = new Function('document', 'caches', 'fetch', `return ${body}`);
+    await run({ baseURI: 'https://example.test/site/viewer/' }, { open: async (n: string) => { opened.push(n); return { match: async (u: string) => u.endsWith('.dat') ? {} : undefined }; } }, (u: string) => { fetched.push(u); return Promise.resolve(); });
+    expect(opened).toEqual(['rs-sdk-289']);
+    expect(fetched).toEqual(['/site/viewer/caches/rs-sdk-289/main_file_cache.idx0']);
 });
 // A main bundle in one short text: its two root paths and every feature the page drives.
 const BUNDLE = 'x,n.p="/",y;const de="/caches/";' + VIEWER_FEATURES.map(f => f[1]).join(';');
