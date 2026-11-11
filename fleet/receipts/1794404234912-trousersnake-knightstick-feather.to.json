@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794404234912-trousersnake-knightstick-feather",
+ "account": "Knightstick",
+ "partner": "TrouserSnake",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 50,
+ "claim": "bf5c159d-8ac0-4fa6-ad62-bdf913865f40",
+ "count": 0,
+ "ok": false,
+ "at": 1794404238128,
+ "detail": "trade claimed"
+}
