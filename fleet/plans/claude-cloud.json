@@ -1,34 +1,30 @@
 {
  "side": "claude-cloud",
- "at": 1794356804456,
+ "at": 1794357165439,
  "jobs": [
   {
    "account": "Quickhandjob",
-   "script": "scripts/shop-buyer.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "ardy",
-    "400"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "ITEMS": "bronze arrow",
-    "STOCK_TARGET": "500",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "BANK_AT": "0",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "5000",
-    "COIN_RESERVE": "500",
-    "MAX_SPEND": "4000"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy bronze arrows at Aemad in East Ardougne for the Ranged band",
-   "role": "supply",
-   "template": "army-arrows-ardy",
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
    "autopilot": "claude-cloud",
    "resources": [
-    "shop:ardy"
+    "trooper:battlefield"
    ]
   },
   {
@@ -83,52 +79,61 @@
   },
   {
    "account": "UnderMyKilt",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "1500",
-    "trooper"
+    "zaff",
+    "3000"
    ],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "ITEMS": "staff of fire",
+    "STOCK_TARGET": "1",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "1100",
+    "STALL_TICKS": "0",
+    "FLOAT": "13000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "12000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "goal": "buy a staff of fire at Zaff's shop in Varrock for the alchemy band",
+   "role": "supply",
+   "template": "army-staff-zaff",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "shop:zaff"
    ]
   },
   {
    "account": "Deeppockets",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "1500",
-    "trooper"
+    "ardy",
+    "400"
    ],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "ITEMS": "bronze arrow",
+    "STOCK_TARGET": "500",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "5000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "4000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "goal": "buy bronze arrows at Aemad in East Ardougne for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-ardy",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "shop:ardy"
    ]
   },
   {
@@ -158,43 +163,14 @@
   },
   {
    "account": "Fingerblastr",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "zaff",
-    "3000"
-   ],
-   "env": {
-    "ITEMS": "staff of fire",
-    "STOCK_TARGET": "1",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "BANK_AT": "0",
-    "NO_BUY_TICKS": "200",
-    "FLOAT": "13000",
-    "COIN_RESERVE": "500",
-    "MAX_SPEND": "12000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy a staff of fire at Zaff's shop in Varrock for the alchemy band",
-   "role": "supply",
-   "template": "army-staff-zaff",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "shop:zaff"
-   ]
-  },
-  {
-   "account": "Kiltlifter",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1"
@@ -202,13 +178,32 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-trooper-defence-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=20 EXPECTED_OWNED=15 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=kiltlifter-kit0-558-15to35 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=10 EXPECTED_OWNED=25 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=kiltlifter-kit0-556-25to35 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 20 Mind rune, 10 Air rune on the Grand Exchange to train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
+   "role": "supply",
+   "template": "kit-buy:army-strike-magic-21",
+   "autopilot": "claude-cloud",
+   "resources": []
   },
   {
    "account": "Knightstick",
