@@ -1,4 +1,4 @@
-import {test,expect} from 'bun:test';import {shopFallbackSpent,earthShopFallback,reconcilePlacement,collectionApplied,collectionRetrySafe,validateRequest,marketTileSafe,observeOrderProgress,terminalOrderClaim,orderAccounting,orderItemMatcher,orderEscrow,placementRetrySafe,type ItemOrder,type OrderView} from './buy-owned-ge-item';
+import {test,expect} from 'bun:test';import {shopFallbackSpent,earthShopFallback,reconcilePlacement,collectionApplied,collectionRetrySafe,validateRequest,marketTileSafe,observeOrderProgress,terminalOrderClaim,orderAccounting,orderItemMatcher,orderEscrow,placementRetrySafe,type ItemOrder,type OrderView,leaveBattlefield,onBattlefield,ARDOUGNE_NORTH} from './buy-owned-ge-item';
 import type {GEOffer} from '../vendor/rs-sdk/sdk/ge-types';
 import {mock,spyOn} from 'bun:test';
 import {mkdtempSync,readFileSync,writeFileSync,rmSync,existsSync} from 'node:fs';
@@ -436,4 +436,31 @@ test('remainder collection preserves prior assets before and after the saved cla
  expect(collectionApplied(j,view([],701,300))).toBe(false);
  expect(reconcilePlacement({...j,phase:'placing',offerId:undefined},view([active],340,120))?.id).toBe(9);
  expect(()=>reconcilePlacement({...j,phase:'placing',offerId:undefined},view([active],340,0))).toThrow('baseline');
+});
+
+test('a buy that starts on the Gnome battlefield walks to the Ardougne north bank first, with auto-retaliate off for the walk',async()=>{
+ expect(onBattlefield({x:2529,z:3236,level:0})).toBe(true);
+ expect(onBattlefield({x:2619,z:3332,level:0})).toBe(false);expect(onBattlefield({x:2575,z:3269,level:1})).toBe(false);expect(onBattlefield({x:3185,z:3436,level:0})).toBe(false);
+ const fixture=(at:{worldX:number;worldZ:number;level:number},hp=60)=>{
+  const player={...at,lifeId:1,respawnCount:0},clicks:number[]=[];let retaliate=true,tick=0;
+  const s={sdk:{getState:()=>({player,autoRetaliateEnabled:retaliate}),getStateAge:()=>0,getSkill:()=>({level:hp})},tick:()=>tick++,ended:new Promise(()=>{}),onTick:()=>()=>{},
+   direct:async(a:{componentId:number})=>{clicks.push(a.componentId);retaliate=a.componentId===150;return{success:true};}} as unknown as Session;
+  return{s,player,clicks,retaliate:()=>retaliate};
+ };
+ const log=spyOn(console,'log').mockImplementation(()=>{});
+ try{
+  // From the field: retaliate off, the walk, retaliate back on.
+  const field=fixture({worldX:2529,worldZ:3236,level:0});let walks=0,during:boolean|undefined;
+  expect(await leaveBattlefield(field.s,()=>false,async to=>{walks++;during=field.retaliate();expect(to).toEqual(ARDOUGNE_NORTH);Object.assign(field.player,{worldX:2619,worldZ:3332});return{ok:true};})).toBe(true);
+  expect(walks).toBe(1);expect(during).toBe(false);expect(field.clicks).toEqual([151,150]);expect(field.retaliate()).toBe(true);
+  // Anywhere else nothing is done.
+  const bank=fixture({worldX:2619,worldZ:3332,level:0});
+  expect(await leaveBattlefield(bank.s,()=>false,async()=>{throw Error('no walk expected');})).toBe(false);expect(bank.clicks).toEqual([]);
+  // A walk that does not reach the bank fails the buy, and auto-retaliate is still restored.
+  const stuck=fixture({worldX:2529,worldZ:3236,level:0});
+  await expect(leaveBattlefield(stuck.s,()=>false,async()=>({ok:false,detail:'no route'}))).rejects.toThrow('walk from the battlefield to the Ardougne north bank failed: no route');
+  expect(stuck.retaliate()).toBe(true);
+  // At 10 HP or less it does not walk through the troopers.
+  await expect(leaveBattlefield(fixture({worldX:2529,worldZ:3236,level:0},10).s,()=>false,async()=>({ok:true}))).rejects.toThrow('10 HP or less');
+ }finally{log.mockRestore();}
 });
