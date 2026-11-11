@@ -21,12 +21,14 @@ import {fleetSidesView,remoteBots,scoreboardView} from './fleet-view';
 import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,rosterView,valueBoardRows,ONLINE_MS,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow,type ValueRow} from './world-view';
 import {loadContentTable,readWorn} from './appearance';
 import {createOperatorControl} from './operator-control';
+import {folderScan} from './folder-scan';
 import { xpForLevel } from '../planner/src/curve';
 import { isLocalServer } from '../core/src/localserver';
 import { RosterFeed } from '../core/src/roster-feed';
 import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, scheduleOverall, overallRequirementsFor, TRICKS } from '../planner/src/haggis';
 
-const root = resolve(import.meta.dir, '..', '..');
+// DASH_ROOT lets a server in a worktree read the data of another checkout.
+const root = resolve(process.env.DASH_ROOT ?? join(import.meta.dir, '..', '..'));
 const operatorControl=createOperatorControl({root,readOnly:process.env.DASH_READ_ONLY==='1'});
 const practice = join(root, '.practice');
 const statusDir = join(practice, 'status');
@@ -73,6 +75,15 @@ function tailJsonl<T>(file: string, n: number): T[] {
 function append(file: string, doc: unknown) {
     if (process.env.DASH_READ_ONLY === '1') return;
     try { appendFileSync(file, JSON.stringify(doc) + NL); } catch { /* locked or full: memory still has it */ }
+}
+// Runs a slow read at most once per `ms` for a key; between runs the last value is returned.
+const everyCache = new Map<string, { at: number; value: unknown }>();
+function every<T>(ms: number, key: string, read: () => T): T {
+    const hit = everyCache.get(key);
+    if (hit && Date.now() - hit.at < ms) return hit.value as T;
+    const value = read();
+    everyCache.set(key, { at: Date.now(), value });
+    return value;
 }
 // Re-reads a file only when its mtime changes.
 const fileCache = new Map<string, { mtime: number; value: unknown }>();
@@ -123,41 +134,48 @@ setTimeout(buildMap, 100);
 // ---------- bots ----------
 type Status = Record<string, any> & { name: string; at: number; server: string };
 type Item = { name: string; count: number };
+// The bots folder holds every practice bot ever made, so a bot.env is read once and then again only in the scan's slice.
+const accountScan = folderScan(botsDir, { cycle: 20, listMs: 0 }), accountLive = new Map<string, boolean>();
 let accountsCache = { at: 0, names: [] as string[] };
 function liveAccounts(): string[] {
     if (Date.now() - accountsCache.at < 30_000) return accountsCache.names;
-    const names = !existsSync(botsDir) ? [] : readdirSync(botsDir).filter(n => {
-        try { return n !== '_template' && /SERVER=rs-sdk-demo/.test(readFileSync(join(botsDir, n, 'bot.env'), 'utf8')); } catch { return false; }
-    });
-    accountsCache = { at: Date.now(), names };
-    return names;
+    const { check, gone } = accountScan();
+    for (const n of gone) accountLive.delete(n);
+    for (const n of check) {
+        if (n === '_template') continue;
+        try { accountLive.set(n, /SERVER=rs-sdk-demo/.test(readFileSync(join(botsDir, n, 'bot.env'), 'utf8'))); }
+        catch { if (existsSync(join(botsDir, n))) accountScan.retry(n); else accountLive.delete(n); }
+    }
+    accountsCache = { at: Date.now(), names: [...accountLive].filter(([, live]) => live).map(([n]) => n).sort() };
+    return accountsCache.names;
 }
-// Status files are parsed again only when their mtime changes; track() runs once per new version.
-const statusCache = new Map<string, { mtime: number; doc: Status }>();
+// A status file is parsed again only when its mtime changes; track() runs once per new version. The scan names
+// the files to stat, so a build does not stat the thousands of old practice files.
+const statusScan = folderScan(statusDir), statusCache = new Map<string, { mtime: number; doc: Status }>();
 function readStatuses(): Map<string, Status> {
-    const out = new Map<string, Status>();
-    if (!existsSync(statusDir)) return out;
-    for (const f of readdirSync(statusDir)) {
+    const { check, gone } = statusScan();
+    for (const f of gone) statusCache.delete(join(statusDir, f));
+    for (const f of check) {
         if (!f.endsWith('.json')) continue;
         const p = join(statusDir, f);
         try {
             const mtime = statSync(p).mtimeMs;
-            let hit = statusCache.get(p);
-            if (!hit || hit.mtime !== mtime) {
-                const doc = JSON.parse(readFileSync(p, 'utf8'));
-                if (!doc || typeof doc.name !== 'string' || !doc.name || typeof doc.server !== 'string'
-                    || !Number.isFinite(doc.at) || doc.at < 0
-                    || ['phase','role','goal','result','timeline'].some(k => doc[k] != null && typeof doc[k] !== 'string')
-                    || ['skills','inventory','bank','equipment','quests'].some(k => doc[k] != null && !Array.isArray(doc[k]))
-                    || (doc.skills ?? []).some((k: any) => !k || typeof k.name !== 'string')) continue;
-                hit = { mtime, doc };
-                track(hit.doc);
-                statusCache.set(p, hit);
-            }
-            const s = hit.doc;
-            if (isLocalServer(s.server) && Date.now() - s.at > 30 * 60_000) continue; // stale practice bots
-            out.set(s.name, s);
-        } catch { /* being written */ }
+            if (statusCache.get(p)?.mtime === mtime) continue;
+            const doc = JSON.parse(readFileSync(p, 'utf8'));
+            if (!doc || typeof doc.name !== 'string' || !doc.name || typeof doc.server !== 'string'
+                || !Number.isFinite(doc.at) || doc.at < 0
+                || ['phase','role','goal','result','timeline'].some(k => doc[k] != null && typeof doc[k] !== 'string')
+                || ['skills','inventory','bank','equipment','quests'].some(k => doc[k] != null && !Array.isArray(doc[k]))
+                || (doc.skills ?? []).some((k: any) => !k || typeof k.name !== 'string')) { statusCache.delete(p); continue; }
+            track(doc);
+            statusCache.set(p, { mtime, doc });
+        } catch { if (existsSync(p)) statusScan.retry(f); /* being written */ else statusCache.delete(p); }
+    }
+    const out = new Map<string, Status>(), now = Date.now();
+    for (const { doc: s } of statusCache.values()) {
+        if (isLocalServer(s.server) && now - s.at > 30 * 60_000) continue; // stale practice bots
+        const other = out.get(s.name);
+        if (!other || s.at >= other.at) out.set(s.name, s);
     }
     return out;
 }
@@ -1096,9 +1114,9 @@ function buildState() {
     })];
     const v = vault(bots, now);
     const cargoDir = join(practice, 'cargo');
-    const cargo = existsSync(cargoDir) ? readdirSync(cargoDir).filter(f => f.endsWith('.json') && !f.startsWith('request-')).flatMap(f => {
+    const cargo = every(10_000, cargoDir, () => existsSync(cargoDir) ? readdirSync(cargoDir).filter(f => f.endsWith('.json') && !f.startsWith('request-')).flatMap(f => {
         try { return [JSON.parse(readFileSync(join(cargoDir, f), 'utf8'))]; } catch { return []; }
-    }) : [];
+    }) : []);
     const collection = collectionState(bots, liveAccounts(), cargo, tailJsonl<any>(FILES.vault, 100_000), now);
     if (!vaultTrend.length || now - vaultTrend[vaultTrend.length - 1]!.at > 60_000) { vaultTrend.push({ at: now, value: Math.round(v.value), coins: v.coins }); if (vaultTrend.length > 240) vaultTrend.shift(); }
     const farmers = (bots as any[]).filter(b => b.role4?.kind === 'gold' && !b.practice);
@@ -1121,7 +1139,7 @@ function buildState() {
     see(v.items); see([{ name: 'Coins' }]); for (const t of v.log) see(t.items); for (const f of v.flow) see(f.items);
     const prac = practiceNames();
     const sys = {
-        freeGB: freemem() / 2 ** 30, totalGB: totalmem() / 2 ** 30, cpu: cpuPct, cores: cpus().length,
+        freeGB: freemem() / 2 ** 30, totalGB: totalmem() / 2 ** 30, cpu: cpuPct, cores: cpus().length, buildMs,
         procs: procs.map(p => ({ ...p, up: now - p.started })),
     };
     const objectives=cached(join(root,'docs/plans/joined-plan.md'),goalPlan,goalPlan(''));
@@ -1161,7 +1179,7 @@ function buildState() {
 
 // Each side's last fleet-data sync (snapshots) and the cross-side orders not yet done (orders and receipts); a side with no snapshot is not listed.
 // Declarations, not consts: refreshRanks runs at load, above this point.
-function fleetList(dir: string): any[] { return existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.json')).map(f => cached<any>(join(dir, f), JSON.parse, null)) : []; }
+function fleetList(dir: string): any[] { return every(10_000, dir, () => existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.json')).map(f => cached<any>(join(dir, f), JSON.parse, null)) : []); }
 function snapshotFiles() { return fleetList(join(FILES.fleet, 'snapshots')); }
 function remoteNames(): string[] { return snapshotFiles().filter(s => s?.side !== (process.env.FLEET_SIDE ?? 'local')).flatMap(s => (s?.accounts ?? []).map((a: any) => String(a?.name ?? ''))).filter(n => /^[A-Za-z0-9]{1,12}$/.test(n)); }
 function fleetSides(now: number) {
@@ -1173,12 +1191,21 @@ const viewerTimings: { at: number; mode: string; ms: number; tiles: number; fram
 // One state for everyone: built every 2 s only while a client watches, serialized once, sent to each SSE client.
 const clients = new Set<ReadableStreamDefaultController>();
 let latest = { at: 0, json: '' };
+// A page that connects gets the last built state at once, and the next tick sends a new one. A build holds the
+// server for 150 to 300 ms, and each other request of the loading page waits behind it. The publisher reads the
+// state each 60 s, so the last state is younger than this limit while the publisher runs.
+const FIRST_STATE_MAX_AGE_MS = 90_000;
+// The time the newest state took to build and write; the next state reports it in sys.
+let buildMs = 0;
 function current() {
     // The main account's name never leaves the server unasked: every string value has it swapped for a marker, which
     // the page draws as a blurred block (owner rule: screenshots must not show it). /api/reveal returns it on a click.
     if (Date.now() - latest.at > 1500) {
         try {
-            latest = { at: Date.now(), json: JSON.stringify(buildState(), (_k, v) => (typeof v === 'string' ? v.replace(SECRET_RE, SECRET_MARK) : v)) };
+            // One replace on the finished text masks every value and every key.
+            const t0 = performance.now(), json = JSON.stringify(buildState()).replace(SECRET_RE, SECRET_MARK);
+            buildMs = Math.round(performance.now() - t0);
+            latest = { at: Date.now(), json };
         } catch (e) {
             // A malformed status file or a transient read failure must not stop the dashboard for every client.
             // Keep the last good state, and expose the failure so the page can show it.
@@ -1215,9 +1242,14 @@ setInterval(() => {
     }
 }, 2000);
 
+// The first build reads every status file and every bot.env, which takes seconds. Do it at the start, so the
+// first page load does not wait for it.
+setTimeout(() => void current(), 1_000);
+
 // The page embeds the rs-world viewer (COEP require-corp); credentialless keeps Google Fonts loadable.
 const ISO = { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'credentialless' };
-const viewerRoot=join(root,'vendor','rs-world'),viewerBuild=join(viewerRoot,'build'),viewerCaches=join(viewerRoot,'caches');
+// DASH_VIEWER_ROOT names another rs-world folder (build/ and caches/), for a server whose pin differs from the build in root.
+const viewerRoot=resolve(process.env.DASH_VIEWER_ROOT??join(root,'vendor','rs-world')),viewerBuild=join(viewerRoot,'build'),viewerCaches=join(viewerRoot,'caches');
 const VIEWER_ISO={...ISO,'Cross-Origin-Embedder-Policy':'require-corp','Cross-Origin-Resource-Policy':'same-origin'};
 function viewerAvailable() {
     try {
@@ -1293,7 +1325,7 @@ Bun.serve({
         if (url.pathname === '/events') {
             let me: ReadableStreamDefaultController;
             const stream = new ReadableStream({
-                start(c) { me = c; clients.add(c); if (clients.size === 1) void scanProcs(); c.enqueue(`data: ${current()}\n\n`); },
+                start(c) { me = c; clients.add(c); if (clients.size === 1) void scanProcs(); c.enqueue(`data: ${latest.json && Date.now() - latest.at < FIRST_STATE_MAX_AGE_MS ? latest.json : current()}\n\n`); },
                 cancel() { clients.delete(me); },
             });
             return new Response(stream, { headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' } });

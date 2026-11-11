@@ -13,6 +13,7 @@ import { fleetLeaseAllowsWorker } from './fleet-lease';
 import { startStatus } from './status';
 import { watchRandomEvents, type RandomEventWatch } from './randomevents';
 import { protectByStyle, startPrayerGuard } from './prayer-guard';
+import { questScript, startEatGuard } from './eat-guard';
 import { npcAttackStyles } from '../../knowledge/src/npc-attack-styles';
 import { npcHunters } from '../../knowledge/src/npc-hunters';
 import { readOpponents, wornWeaponStyle } from './opponent';
@@ -95,6 +96,9 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     assertServerAllowed(server);
     assertLiveWorkerRelease(server);
     const trade = opts.trade;
+    // The prayer guard reads two NPC tables, and the first read takes about 1 s. It runs before the connection: a
+    // connected client that does not answer holds the tick of a lockstep world for every other client.
+    const guardTables = process.env.PRAYER_GUARD !== '0' ? { protect: protectByStyle(npcAttackStyles()), hunters: npcHunters() } : null;
     const s = await connectInProcess({ name, password, server, ...(trade ? {
         trade: {...trade, check: server => { assertSideOwns(name); trade.check(server); }},
     } : {}) });
@@ -119,10 +123,15 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     if (process.env.RANDOM_EVENTS !== '0') randomEvents.set(s, watchRandomEvents(s));
     // Free prayers and protection from NPCs and Wilderness players (packages/core/src/prayer-guard.ts); PRAYER_GUARD=0
     // turns the guard off, PRAYER_OFFENCE=0 turns its Strength and Attack prayers off.
-    // The two NPC tables are read here, at login: the reads take about 1 s and must not run inside a tick.
-    if (process.env.PRAYER_GUARD !== '0') prayerGuards.set(s, startPrayerGuard(s, { log: line => log(`${line} bot=${name}`), ...(process.env.PRAYER_GUARD_TRACE === '1' ? { trace: log } : {}), protect: protectByStyle(npcAttackStyles()), hunters: npcHunters(),
+    if (guardTables) prayerGuards.set(s, startPrayerGuard(s, { log: line => log(`${line} bot=${name}`), ...(process.env.PRAYER_GUARD_TRACE === '1' ? { trace: log } : {}), ...guardTables,
         offence: process.env.PRAYER_OFFENCE !== '0', melee: st => wornWeaponStyle((st?.equipment ?? []).find((i: any) => i.slot === 3)?.id) === 'melee',
         players: { ignore: new Set(loadOwners().keys()), style: q => { const seen = readOpponents(s.client).find(v => v.index === q.index); return seen ? wornWeaponStyle(seen.worn.rhand) : null; } } }));
+    // Eats plain food when Hitpoints are low and damage arrives (packages/core/src/eat-guard.ts); EAT_GUARD=0 turns
+    // the guard off. A script with `quest` in its file name gets no guard: a fish can be a quest item there.
+    // It starts after the prayer guard: its tick callback then counts the prayer inputs of the tick before it sends.
+    // quest-sweep marks the edible quest items on the session (questReserved); the guard never eats those.
+    if (process.env.EAT_GUARD !== '0' && !questScript(opts.record?.script ?? process.argv[1] ?? '')) eatGuards.set(s, startEatGuard(s, { log: line => log(`${line} bot=${name}`),
+        reserved: () => (s as { questReserved?: Record<number, number> }).questReserved ?? {} }));
     // Any bot stops cleanly when .practice/stop-<name> appears (checked every 25 ticks): a script that never checks
     // it (seen: fishing30 under the supervisor) still logs out in game.
     let stopTicks = 0;
@@ -190,6 +199,7 @@ const statuses = new Map<Session, ReturnType<typeof startStatus>>();
 const stallWatches = new Map<Session, { stop(): void }>();
 const randomEvents = new Map<Session, RandomEventWatch>();
 const prayerGuards = new Map<Session, ReturnType<typeof startPrayerGuard>>();
+const eatGuards = new Map<Session, ReturnType<typeof startEatGuard>>();
 // For a script that owns the prayers and needs them all off at its start (scripts/microbot-prayer-flick.ts).
 export const releasePrayerGuard = async (s: Session): Promise<void> => { const guard = prayerGuards.get(s); prayerGuards.delete(s); await guard?.release(); };
 const records = new Map<Session, NonNullable<ReturnType<typeof createTickRecorder>>>();
@@ -246,6 +256,7 @@ async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail
         const l = ledgers.get(s); if (l) log(`${formatLedger(l.stop())} bot=${s.name}`);
         // The guard's own prayers go off before the logout: a prayer that stays on drains until the session ends.
         void prayerGuards.get(s)?.release(); prayerGuards.delete(s);
+        eatGuards.get(s)?.stop(); eatGuards.delete(s);
         const e = randomEvents.get(s); if (e) { e.stop(); log(`EVENTS ${JSON.stringify(e.counts())} bot=${s.name}`); }
     }
     opts.onReported?.(() => ok);

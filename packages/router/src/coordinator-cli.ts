@@ -33,6 +33,12 @@ export function currentRevision(now=Date.now(),compute=cachedLaunchRevision):str
  if(!revisionCache||now-revisionCache.at>=REVISION_FRESH_MS||now<revisionCache.at)revisionCache={value:compute(),at:now};
  return revisionCache.value;
 }
+// The start step archives a dead writer's lock before it takes the lock: a crash can leave one, and the tick that
+// recovers locks runs only after this step.
+export async function migrateJobsAtStart(base=projectRoot){
+ const directory=join(base,'.practice/coordinator');recoverPlanWrite(directory);
+ return withPlanWrite(()=>migrateCoordinatorJobs(base),directory);
+}
 // Coordinator-owned jobs and settings written into swarm.json by an earlier coordinator move to the coordinator's
 // file; the owner's jobs keep their order. Returns what moved, or null when swarm.json holds none.
 export function migrateCoordinatorJobs(base=projectRoot){
@@ -287,7 +293,8 @@ export function settlePlanner(state:CoordinatorState,base=projectRoot,{save=save
   prepared=prepareProposal(state,JSON.parse(bytes.toString('utf8')),base,'model');
  }catch(error){
   if(typeof (error as NodeJS.ErrnoException)?.code==='string')throw error;
-  const failed={...state,lastPlanReason:'planner failed: '+String(error)};
+  // A refused proposal stays on disk. A planner that ended with no proposal leaves nothing to correct.
+  const failed={...state,lastPlanReason:'planner failed: '+String(error),...(hasProposal?{rejectedPlan:{runId,error:String(error)}}:{})};
   finishPlan(failed,Date.now(),false);
   save(failed,directory);
   Object.assign(state,failed);
@@ -300,8 +307,10 @@ export function settlePlanner(state:CoordinatorState,base=projectRoot,{save=save
  candidate.pendingSubmission={runId,count,sha256:submissionDigest(bytes),capabilities};
  save(candidate,directory);
  Object.assign(state,candidate);
+ // Object.assign copies keys. It does not remove the keys that finishPlan deleted from the candidate.
  delete state.planner;
  delete state.planFailures;
+ delete state.rejectedPlan;
  acknowledgeSubmission(state,base,publish);
 }
 async function tick(state:CoordinatorState,config:any){
@@ -465,7 +474,7 @@ async function main(){
  if(existsSync(stop)||existsSync(join(projectRoot,'.practice/stop-swarm')))throw Error('coordinator or swarm is paused; resume only under owner authority');
  if(!state.tasks.length){addTasks(state,config.bootstrap??[]);saveState(state);}
  event('coordinator-started',{pid:process.pid,nonce});
- {const moved=await withPlanWrite(()=>migrateCoordinatorJobs());if(moved)event('coordinator-jobs-moved',moved);}
+ {const moved=await migrateJobsAtStart();if(moved)event('coordinator-jobs-moved',moved);}
  do{
   try{await tick(state,config);}catch(error){event('loop-error',String(error));await Bun.sleep(7000);}
   if(mode==='--once')break;await waitForWork();

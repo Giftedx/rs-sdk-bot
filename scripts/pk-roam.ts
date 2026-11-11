@@ -463,7 +463,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 const fight = await fightPlayer(session, name, {
                     // eatAt is a percentage here and an HP value in fightPlayer. Live, a 26 HP account given 50 ate a shark every
                     // 3 ticks at full HP.
-                    kit, spec: defaultSpec(kit), freeze: freezeNow() !== null ? 'flee' : false, eatAt: Math.ceil((me()?.maxHp ?? 99) * cfg.eatAt / 100), exitOnDanger: true,
+                    kit, spec: defaultSpec(kit), freeze: freezeNow() !== null ? 'flee' : false, predictPrayer: true, snapPrayer: true, eatAt: Math.ceil((me()?.maxHp ?? 99) * cfg.eatAt / 100), exitOnDanger: true,
                     escapeAt: Math.ceil((me()?.maxHp ?? 99) * cfg.fleeAt / 100), damageSpell: cfg.spell.toUpperCase() === 'AUTO' ? bestFireSpell(magic, sdk.getInventory()) : spellId(cfg.spell),
                     cap: 120, maxWild: cfg.maxWild, maxDistance: 15, stop: () => stopped() || Date.now() >= end,
                     log: line => emit({ e: "fight", line }),

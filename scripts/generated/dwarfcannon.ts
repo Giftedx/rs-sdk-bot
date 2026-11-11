@@ -9,6 +9,7 @@
 // (mcannon_broken_cannon.rs2:89-96). Each roll is retried until it lands.
 // Travel: Falador teleport to Nulodion (154 tiles) and Camelot teleport back (265 tiles), instead of 741 tiles each way.
 import { openBot, finish } from '../../packages/core/src/bot';
+import { holdSessionEater } from '../../packages/core/src/sustain';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { sessionWalker, walkPath, type PathPoint } from '../../packages/core/src/walk';
 import { componentId } from '../../packages/core/src/logout';
@@ -40,6 +41,8 @@ const EAT_AT = 40;
 const TRACE = process.env.DC_TRACE === '1';
 
 const s = await openBot(process.argv[2]!);
+// A quest session has no eat guard (packages/core/src/eat-guard.ts). The hold has no release.
+holdSessionEater(s.sdk);
 try {
     await waitTicks(s, 3);
     const st = (): any => s.sdk.getState();

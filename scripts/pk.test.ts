@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import {
     attackable, bestDamageSpell, bestFood, castableFreeze, combatPrayers, dangerReason, defaultSpec,
     estMaxHit, fightPlayer, freezeDuration, freezeSpell, hasStyle, ITEMS, killMessage, lowHealth,
-    negativeCastArmour, newSplats, nextStyle, nextTick, observePlayer, PRAYER, protectedStyles, seededRandom, skulled, SPELLS,
+    kitRotation, negativeCastArmour, newSplats, nextStyle, nextTick, observePlayer, PRAYER, protectedStyles, seededRandom, skulled, SPELLS,
     weaponStyle, wildernessLevel,
 } from './pk';
 
@@ -394,3 +394,10 @@ test('fightPlayer reserves 2 USER_EVENT packets for non-adjacent attack and re-e
 });
 
 
+
+test('kitRotation keeps an order the kit can use and falls back to the full order for a kit with none of its styles', () => {
+    expect(kitRotation(['ranged', 'melee'], { ranged: [861], melee: [1231] })).toEqual(['ranged', 'melee']);
+    expect(kitRotation(['ranged', 'melee'], { magic: [1401], melee: [1231] })).toEqual(['ranged', 'melee']);
+    expect(kitRotation(['ranged', 'melee'], { magic: [1401] })).toEqual(['magic', 'ranged', 'melee']);
+    expect(kitRotation(undefined, { melee: [1231] })).toEqual(['magic', 'ranged', 'melee']);
+});

@@ -4,10 +4,12 @@ import {aioCatalog} from '../aio';
 import {PRESETS, type SaveConfig} from '../../packages/practice/src/presets';
 import {firemakingFixture} from '../../packages/practice/src/firemaking-order-proof';
 import {agilityFixturePreset} from '../../packages/practice/src/agility-order-proof';
-import {KITS, kitItems} from '../pk-kits';
+import {KITS, kitItems, kitSkills, kitVarps} from '../pk-kits';
 
 export type BenchCase = {
   key: string;
+  // Environment for the engine of the case. It takes effect when the case has its own engine (a fresh-engine run).
+  engineEnv?: Record<string, string>;
   script: string;
   preset: string;
   presetConfig?: SaveConfig;
@@ -86,28 +88,53 @@ export const LEAGUE: readonly {kit: string; profile: string}[] = [
   {kit: 'mage', profile: 'base'},
   {kit: 'tribrid-food', profile: 'spec-mid'},   // 21 sharks, the special kept for half health
 ];
-// A maxed account in a kit of scripts/pk-kits.ts, with Lost City and Dragon Slayer done and full special energy.
+// The trained builds of scripts/pk-kits.ts that can attack each other at Wilderness level 34: the Defence 1 builds,
+// and the builds with Defence 40 to 60 with the best three of the Defence 1 builds.
+export const BUILD_BRACKETS: Readonly<Record<string, readonly string[]>> = {
+  pure: ['pure-dds', 'pure-dds-msb', 'pure-r2h', 'pure-hally', 'pure-ranger', 'pure-mage', 'pure-tribrid', 'pure-pray'],
+  def: ['rune-pure', 'zerker', 'dragon', 'range-tank', 'mage-tank', 'pure-pray', 'pure-ranger', 'pure-dds-msb'],
+};
+// Every pair of a bracket once, a pair of both brackets once. A case lasts as long as its longest fight, so the pairs
+// stand in the order of the Defence, Hitpoints and food of their two builds: fights of about the same length share a
+// case.
+export const BUILD_CASE_PAIRS = 14;
+export const BUILD_PAIRS: readonly (readonly [string, string])[] = (() => {
+  const bulk = (kit: string) => { const s = kitSkills(kit); return s.Defence! + s.Hitpoints! + 4 * KITS[kit]!.food; };
+  const pairs = new Map<string, [string, string]>();
+  for (const kits of Object.values(BUILD_BRACKETS)) kits.forEach((a, i) => kits.slice(i + 1).forEach(b => pairs.set([a, b].sort().join(':'), [a, b])));
+  return [...pairs.values()].sort((x, y) => bulk(x[0]) + bulk(x[1]) - bulk(y[0]) - bulk(y[1]) || x.join().localeCompare(y.join()))
+    // Each build stands on side A in every second pair of the list.
+    .map((pair, i) => (i % 2 ? [pair[1], pair[0]] as const : pair));
+})();
+// An account in a kit of scripts/pk-kits.ts at the levels of the kit (default maxed), with Lost City and Dragon Slayer
+// done and full special energy.
 export const kitFixture = (kit: string, x: number, z = 3555): SaveConfig => ({
   position: {x, z, level: 0},
-  skills: {Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99, Prayer: 99, Hitpoints: 99},
-  varps: {147: 6, 176: 10, 300: 1000},
+  skills: kitSkills(kit),
+  varps: kitVarps(kit),
   ...kitItems(kit),
 });
 // One spar for each pair of kits, all at once at the mirror spot: `matchups` is side A's kit and side B's kit.
-const sparMatrix = (key: string, matchups: readonly (readonly [string, string])[], args: string[] = []): BenchCase => {
-  const letters = 'bcdefghijklmnopqrstuvwxyz'.slice(0, matchups.length * 2 - 1).split('');
-  return {key, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: kitFixture(matchups[0]![0], 3094),
+// A spar needs no npc far from its players: the engine of a spar case gives a turn only to an npc within about 64
+// tiles of a player (patches/rs-sdk.md, item 10).
+const SPAR_ENGINE = {SIM_NPC_NEAR: '64'};
+// `at` moves the spot: side A at x, side B two tiles east.
+const sparMatrix = (key: string, matchups: readonly (readonly [string, string])[], args: string[] = [], at: {x: number; z: number} = {x: 3094, z: 3555}): BenchCase => {
+  // One character for each account after the first: up to 18 pairs.
+  const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, matchups.length * 2 - 1).split('');
+  return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: kitFixture(matchups[0]![0], at.x, at.z),
     scriptArgs: ['spar', '{bot:b}', '900', ...letters.slice(1).map(l => `{bot:${l}}`), `SPAR_KITS=${matchups.map(m => m.join(':')).join(',')}`, ...args],
-    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: kitFixture(matchups[(i + 1) >> 1]![(i + 1) % 2]!, (i + 1) % 2 ? 3096 : 3094)}))};
+    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: kitFixture(matchups[(i + 1) >> 1]![(i + 1) % 2]!, (i + 1) % 2 ? at.x + 2 : at.x, at.z)}))};
 };
 // `pairs` spars at once: the account of the run and its partner `b`, then partners `c` and `d`, `e` and `f`, and so on.
 const sparBatch = (key: string, pairs: number, a: SaveConfig, b: SaveConfig, args: string[] = []): BenchCase => {
-  const letters = 'bcdefghijklmnopqrstuvwxyz'.slice(0, pairs * 2 - 1).split('');
-  return {key, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...letters.slice(1).map(l => `{bot:${l}}`), ...args], pass: ok, presetConfig: a,
+  // One character for each account after the first: up to 18 pairs.
+  const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, pairs * 2 - 1).split('');
+  return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...letters.slice(1).map(l => `{bot:${l}}`), ...args], pass: ok, presetConfig: a,
     companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i % 2 ? a : b}))};
 };
 const sparCase = (key: string, a: SaveConfig, b: SaveConfig, args: string[] = []): BenchCase =>
-  ({key, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...args], pass: ok, presetConfig: a, companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: b}]});
+  ({key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...args], pass: ok, presetConfig: a, companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: b}]});
 
 const skiller = (skill: string, method: string, preset: string, args: string[] = [], extra: Partial<BenchCase> = {}): BenchCase =>
   ({key: `skiller:${skill}:${method}`, script: 'scripts/aio-skiller.ts', preset, scriptArgs: [skill, method, ...args], pass: ok, ...extra});
@@ -342,6 +369,12 @@ const ROUTE_CASES: BenchCase[] = [
   // wanders to the fishing spots.
   {key: 'extra:guard-fish-scorpion', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['500', 'FISH=net:12'], pass: ok,
     presetConfig: {position: {x: 3278, z: 3143, level: 0}, skills: {Fishing: 50, Hitpoints: 30, Prayer: 45}, inventory: [{id: 303, count: 1}]}},
+  // Hill giants with Hitpoints 20, no armour and no eat input from the script: the eat guard
+  // (packages/core/src/eat-guard.ts) must eat lobsters, and the account must live. The first 5 slots hold edible
+  // items that are not plain food (cake, cheese, bread, redberry pie, stew): the guard must eat none of them.
+  // `--set EAT_GUARD=0` runs the comparison.
+  {key: 'extra:giant-eat-guard', script: 'scripts/measure/eat-guard-fight.ts', preset: 'fresh_lumbridge', scriptArgs: ['600'], pass: s => ok(s) && /^EAT_GUARD \{"eats":[1-9]/m.test(s) && / otherKept=5\/5 /.test(s), output: /kills=(\d+)/,
+    presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 40, Strength: 40, Hitpoints: 20}, equipment: [{id: 1333, count: 1, slot: 3}], inventory: [...[1891, 1985, 2309, 2325, 2003].map(id => ({id, count: 1})), ...Array.from({length: 20}, () => ({id: 379, count: 1}))]}},
   sparCase('extra:spar-no-slayer', sparFixture(3094, 3555, {noDragonSlayer: true}), sparFixture(3096, 3555, {noDragonSlayer: true})),
   // The tribrid against every build of scripts/pk-kits.ts in one run, and a mirror of 8 for each build: the cases that
   // the hill climb and the kit matrix run (scripts/measure/pk-spar-climb.ts, pk-spar-matrix.ts).
@@ -351,11 +384,39 @@ const ROUTE_CASES: BenchCase[] = [
   // The league: our fighter (the tribrid with potions, side A, profile SPAR_A) against eight opponents that each have
   // their own build and their own way to play (LEAGUE). A fighter is ready for a skilled player when it beats them all.
   sparMatrix('extra:spar-league-x8', LEAGUE.map(o => ['tribrid-pots', o.kit] as const), [`SPAR_B_PROFILES=${LEAGUE.map(o => o.profile).join(',')}`]),
+  // The champion against itself in the snare kit: the hardest opponent on the bench. Use SPAR_SWAP=1.
+  sparMatrix('extra:spar-mirror-snare-x12', Array.from({length: 12}, () => ['tribrid-snare', 'tribrid-snare'] as const)),
+  sparMatrix('extra:spar-league-snare-x8', LEAGUE.map(o => ['tribrid-snare', o.kit] as const), [`SPAR_B_PROFILES=${LEAGUE.map(o => o.profile).join(',')}`]),
   // The league for a fighter with three more sharks and no freeze runes.
+  // The builds that beat the tribrid on food: four spars each against the melee build, the hybrid and the ranger.
+  sparMatrix('extra:spar-rivals-x12', Array.from({length: 12}, (_, i) => ['tribrid-pots', ['melee', 'hybrid', 'ranger'][i % 3]!] as const)),
+  // One whole hunter trip (scripts/measure/pk-hunt-trip.ts): the hunter starts at Edgeville bank with an empty pack and
+  // its kit in the bank; the target stands at the first hunt spot with no food.
+  // `auto` has the snare stock and names no kit: the hunter must pick the snare trip from its bank.
+  ...(['staff', 'snare', 'auto'] as const).map((kit): BenchCase => ({key: `extra:hunt-trip-${kit}`, engineEnv: SPAR_ENGINE, script: 'scripts/measure/pk-hunt-trip.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', '900', kit], pass: kit === 'auto' ? s => ok(s) && /HUNT trip snare/.test(s) : ok, output: /kills=(\d+)/,
+    presetConfig: {...sparFixture(3092, 3496), inventory: [], bank: [{id: 861, count: 1}, {id: 557, count: 200}, {id: 555, count: 200}, {id: 561, count: 100}, {id: 2434, count: 4}, {id: 1712, count: 2},
+      {id: 2436, count: 2}, {id: 2440, count: 2}, {id: 2444, count: 2}, {id: 385, count: 60}, ...(kit === 'staff' ? [{id: 1401, count: 1}, {id: 556, count: 600}, {id: 565, count: 200}] : [])]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3540, {food: 0})}]})),
+  // A hunter in each kit against a target that leaves by its glory at 60 health, at Wilderness level 34.
+  ...['tribrid-pots', 'tribrid-snare'].map(kit => sparMatrix(`extra:spar-escape-${kit}-x8`, Array.from({length: 8}, () => [kit, 'runner'] as const), ['SPAR_SCENARIO=escape'], {x: 3125, z: 3790})),
+  sparMatrix('extra:spar-escape-tribrid-snare-x12', Array.from({length: 12}, () => ['tribrid-snare', 'runner'] as const), ['SPAR_SCENARIO=escape'], {x: 3125, z: 3790}),
+  // The same rivals against the kits with more food.
+  ...['tribrid-snare', 'tribrid-snare-addy', 'hybrid'].map(kit => sparMatrix(`extra:spar-rivals-${kit}-x12`, Array.from({length: 12}, (_, i) => [kit, ['melee', 'hybrid', 'ranger'][i % 3]!] as const))),
   sparMatrix('extra:spar-league-lean-x8', LEAGUE.map(o => ['tribrid-lean', o.kit] as const), [`SPAR_B_PROFILES=${LEAGUE.map(o => o.profile).join(',')}`]),
   // A build against the standard tribrid, four pairs on each side of the map: what the build is worth by itself.
-  ...Object.keys(KITS).filter(kit => kit !== 'melee').map(kit => sparMatrix(`extra:spar-duel-${kit}-vs-melee-x8`, Array.from({length: 8}, (_, i) => (i % 2 ? ['melee', kit] : [kit, 'melee']) as [string, string]))),
-  ...Object.keys(KITS).filter(kit => kit !== 'tribrid').map(kit => sparMatrix(`extra:spar-duel-${kit}-x8`, Array.from({length: 8}, (_, i) => (i % 2 ? ['tribrid', kit] : [kit, 'tribrid']) as [string, string]))),
+  ...Object.keys(KITS).filter(kit => kit !== 'melee' && !KITS[kit]!.skills).map(kit => sparMatrix(`extra:spar-duel-${kit}-vs-melee-x8`, Array.from({length: 8}, (_, i) => ((i >> 1) % 2 ? ['melee', kit] : [kit, 'melee']) as [string, string]))),
+  ...Object.keys(KITS).filter(kit => kit !== 'tribrid' && !KITS[kit]!.skills).map(kit => sparMatrix(`extra:spar-duel-${kit}-x8`, Array.from({length: 8}, (_, i) => ((i >> 1) % 2 ? ['tribrid', kit] : [kit, 'tribrid']) as [string, string]))),
+  // A pure against a combat-3 skiller, 4 pairs. The spot is deep enough for the combat gap (pvp_combat.rs2:32-41):
+  // Wilderness level 34 for combat 27 and 19, level 45 for combat 46. A maxed opponent is out of a pure's range at
+  // the mirror spot, so a build with its own levels has no duel against the tribrid or the melee kit.
+  ...(['pure-iban', 'pure-bolt'] as const).map(kit => sparMatrix(`extra:spar-${kit}-vs-skiller-x4`, Array.from({length: 4}, () => [kit, 'skiller'] as const), [], {x: 3125, z: 3790})),
+  sparMatrix('extra:spar-pure-rock-vs-skiller-x4', Array.from({length: 4}, () => ['pure-rock', 'skiller'] as const), [], {x: 3055, z: 3872}),
+  // The trained builds against each other, 14 pairs in a case, at Wilderness level 34 (the widest combat gap of a
+  // bracket is 27). `bun scripts/measure/pk-spar-matrix.ts --case <key>` runs one. A case of 8 pairs takes 34 s, and
+  // about half of that is the start of the engine and the logins, so the 53 pairs stand in 4 cases. The pairs run in
+  // 8 processes, and the cap is 600 ticks: the offline simulator has no fight of two of these builds that lasts so long.
+  ...Array.from({length: Math.ceil(BUILD_PAIRS.length / BUILD_CASE_PAIRS)}, (_, n) => sparMatrix(`extra:spar-builds-${n + 1}`, BUILD_PAIRS.slice(n * BUILD_CASE_PAIRS, (n + 1) * BUILD_CASE_PAIRS), ['SPAR_PROCS=8', 'SPAR_CAP=600'], {x: 3125, z: 3790})),
   // Map cases of the spar. Gap: the same mirror from 12 tiles apart. Trees: 6 tiles apart at Wilderness level 3 with a
   // blocker on tiles 3101-3103 between the two, so neither has line of sight at the start. Escape: Wilderness level 34
   // at a spot with no monster in view (green dragons at (3094, 3800) attack both sides and block their hits); side B
@@ -366,6 +427,8 @@ const ROUTE_CASES: BenchCase[] = [
   // Eight glory chases at once in one world, at the same spot: eight samples for the ticks of one.
   sparBatch('extra:spar-escape-x8', 8, sparFixture(3125, 3790), sparFixture(3127, 3790, {food: 3, glory: true}), ['SPAR_SCENARIO=escape']),
   sparBatch('extra:spar-x8', 8, sparFixture(3094), sparFixture(3096)),
+  // 16 pairs in 8 worker processes: twice the fights of the x8 batch in about the same time.
+  sparBatch('extra:spar-x16', 16, sparFixture(3094), sparFixture(3096), ['SPAR_PROCS=8']),
   sparBatch('extra:spar-escape-spell-x8', 8, sparFixture(3125, 3790), sparFixture(3127, 3790, {food: 3, teleport: true}), ['SPAR_SCENARIO=escape-spell']),
   sparBatch('extra:spar-escape-spell-pots-x8', 8, sparFixture(3125, 3790, {potions: true}), sparFixture(3127, 3790, {food: 3, teleport: true}), ['SPAR_SCENARIO=escape-spell']),
   sparBatch('extra:spar-escape-god-x8', 8, sparFixture(3125, 3790, {god: true}), sparFixture(3127, 3790, {food: 3, glory: true}), ['SPAR_SCENARIO=escape-god']),

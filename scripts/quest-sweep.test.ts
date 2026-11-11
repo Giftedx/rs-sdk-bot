@@ -1,6 +1,31 @@
 import {test,expect} from 'bun:test';
 import {heckelDustNeed,groundShopNeeds,fetchHeckelDust,heckelIO,type HeckelIO} from './quest-sweep';
 import {returnToAmik,finishBlackKnight,type AmikIO} from './quest-sweep';
+import {scorpionBarcrawlNeeds} from './quest-sweep';
+import {establishBarcrawlGate} from './generated/quest-barcrawl';
+import {questScriptId} from './quest-sweep';
+import {resolve} from 'node:path';
+
+test('the Barcrawl script starts under the name the sweep gives it',()=>{
+ const file=resolve(import.meta.dir,'generated','quest-barcrawl.ts');
+ expect(questScriptId(file)).toBe('quest-barcrawl');
+ expect(questScriptId('scripts/generated/quest-barcrawl.ts')).toBe('quest-barcrawl');
+ const guard=/QUEST_SCRIPT_ID === '([^']+)'\) await main\(\)/.exec(readFileSync(file,'utf8'));
+ expect(guard?.[1]).toBe(questScriptId(file));
+});
+
+test('Scorpion stages and establishes a missing Barcrawl gate before the outpost',async()=>{
+ const base=needs(presetFor('scorpion'),false,'scorpion');
+ expect([...scorpionBarcrawlNeeds(base,2)]).toEqual([...base]);
+ expect([...scorpionBarcrawlNeeds(base,0)]).toEqual([[995,268],[563,3],[556,11],[555,1],[554,1]]);
+ let gate=0,runs=0;
+ await establishBarcrawlGate(()=>gate,async()=>{runs++;gate=2;});
+ expect({gate,runs}).toEqual({gate:2,runs:1});
+ await establishBarcrawlGate(()=>gate,async()=>{runs++;});
+ expect(runs).toBe(1);
+ gate=0;
+ await expect(establishBarcrawlGate(()=>gate,async()=>{})).rejects.toThrow('Barcrawl gate state 2 unobserved');
+});
 
 test('only a started Black Knight journal selects the Amik return',()=>{
  expect(returnToAmik('blackknight','started')).toBe(true);
@@ -1497,6 +1522,20 @@ test('the meal takes the preset food kinds first, then the best other edibles th
  const beggar=new Map([[2309,1]]);
  expect(mealPlan(food,[],[{id:2309,count:1}],[{id:2309,count:1}],beggar)).toEqual([]);
  expect(mealPlan(food,[{id:2309,count:1}],[{id:385,count:2}],[],beggar)).toEqual([{id:385,count:2}]);
+});
+
+test('a rune the quest needs and the preset also carries is planned once against the same bank stock',()=>{
+ // Scorpion Catcher before the Barcrawl: the quest needs 3 law and 11 air runes, and the preset carries 5 law and 20 air.
+ const need=new Map([[563,3],[556,11]]),food=new Map([[563,5],[556,20]]);
+ const withdrawn=(bank:{id:number;count:number}[])=>{const quest=plan(need,[],bank).withdraw;return{quest,meal:mealPlan(food,[],bank,quest,need)};};
+ // Three law runes banked: the quest takes all three and the meal asks for none, so no withdrawal meets an empty row.
+ expect(withdrawn([{id:563,count:3},{id:556,count:40}])).toEqual({quest:[{id:563,count:3},{id:556,count:11}],meal:[{id:556,count:20}]});
+ // Six banked: the quest's three, then the three that are left toward the preset's five.
+ expect(withdrawn([{id:563,count:6},{id:556,count:25}]).meal).toEqual([{id:563,count:3},{id:556,count:14}]);
+ // Enough banked: the preset's count on top of the quest's.
+ expect(withdrawn([{id:563,count:50},{id:556,count:50}]).meal).toEqual([{id:563,count:5},{id:556,count:20}]);
+ // Runes the pack holds count toward the quest first, then toward the preset.
+ expect(mealPlan(food,[{id:563,count:4}],[{id:563,count:50}],[],need)).toEqual([{id:563,count:4}]);
 });
 
 test('Plague City\'s buckets of water are filled at the sink by the Ardougne bank, not fetched from the Catherby spawn',()=>{

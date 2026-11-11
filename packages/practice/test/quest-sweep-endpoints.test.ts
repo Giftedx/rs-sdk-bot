@@ -1,6 +1,36 @@
 import {test,expect} from 'bun:test';
-import {readFileSync} from 'node:fs';
-import {questSweepProofAccountEnv,questSweepProofEndpoints,questSweepChecks,questSweepChildConfiguration,QUEST_SWEEP_PROOF_CASE_IDS} from '../src/quest-sweep-proof';
+import {readFileSync,writeFileSync,mkdtempSync,existsSync,rmSync} from 'node:fs';
+import {join} from 'node:path';
+import {tmpdir} from 'node:os';
+import {questSweepProofAccountEnv,questSweepProofEndpoints,questSweepChecks,questSweepChildConfiguration,runQuestSweepProofCase,QUEST_SWEEP_PROOF_CASE_IDS} from '../src/quest-sweep-proof';
+
+test('a required case child that exits nonzero writes its log and snapshot, then rejects before any later case',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'qsw-nonzero-')),save=join(dir,'live.sav');
+ try{
+  writeFileSync(save,'after');
+  const stream=(text:string,open=false)=>new ReadableStream<Uint8Array>({start(c){c.enqueue(new TextEncoder().encode(text));if(!open)c.close();}});
+  const child=(id:string,exit:number,open=false)=>({id,exit:-1,timedOut:false,saveMatched:false,seconds:0,
+   spawn:()=>({pid:1,stdout:stream('START 2947 3368 0\nRESULT fail quest-sweep ball\n',open),stderr:stream(''),exited:Promise.resolve(exit)})});
+  let retained=0,killed=0;
+  const run=(c:ReturnType<typeof child>)=>{const {spawn,...record}=c;return{record,done:runQuestSweepProofCase({dir,record,save,timeoutMs:60000,drainMs:50,spawn,
+   matched:async()=>false,retain:()=>{retained++;},kill:async()=>{killed++;}})};};
+  // The native.json record: ball-worn-kit is required to exit 0. Its stdout stays open after exit, as a held pipe would.
+  const ball=run(child('ball-worn-kit',255,true));
+  await expect(ball.done).rejects.toThrow('quest-sweep proof case ball-worn-kit failed: exit=255 expected=0 timedOut=false saveMatched=false');
+  expect(ball.record).toMatchObject({exit:255,timedOut:false,saveMatched:false});
+  expect(readFileSync(join(dir,'ball-worn-kit.log'),'utf8')).toContain('RESULT fail quest-sweep ball');
+  expect(readFileSync(join(dir,'ball-worn-kit-after.sav'),'utf8')).toBe('after');
+  expect([retained,killed]).toEqual([1,0]);
+  // A refusal case owns exit 1 and continues; exit 0 there is the unexpected path.
+  await expect(run(child('ball-missing-gloves',1)).done).resolves.toMatchObject({exit:1});
+  await expect(run(child('doric-no-cash',0)).done).rejects.toThrow('expected=1');
+  // A spawn failure still leaves the log and snapshot and rejects.
+  const record={id:'imp-surplus-beads',exit:-1,timedOut:false,saveMatched:false,seconds:0};
+  await expect(runQuestSweepProofCase({dir,record,save,timeoutMs:60000,spawn:()=>{throw Error('spawn ENOENT');},matched:async()=>false,retain:()=>{}})).rejects.toThrow('spawn ENOENT');
+  expect(readFileSync(join(dir,'imp-surplus-beads.log'),'utf8')).toContain('spawn ENOENT');
+  expect(existsSync(join(dir,'imp-surplus-beads-after.sav'))).toBe(true);
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
 test('a newly created Windows local bot gets both owned endpoints even when SDK newline replacement omitted the gateway',()=>{
  const p=questSweepProofEndpoints({engine:22100,gateway:22101,management:22102,tcp:22103},'quest-sweep-12345678901234567890');
  const env=questSweepProofAccountEnv('SERVER=localhost\r\nTELEMETRY=false\r\n',p);
@@ -84,6 +114,13 @@ test('Doric self-supply replay requires the bought pickaxe, exact mined ores, th
  expect(check(log.replace('"held":2,"target":2','"held":1,"target":2')).gathered).toBe(false);
  expect(check(log.replace('"coins":361','"coins":360')).bought).toBe(false);
  after.inventories[93]![0]!.count--;expect(check().assets).toBe(false);after.inventories[93]![0]!.count++;
+ for(const id of [1617,1619,1621,1623]){
+  after.inventories[93]!.push({slot:3,id,count:1});expect(check().assets).toBe(true);after.inventories[93]!.pop();
+ }
+ after.inventories[93]!.push({slot:3,id:1623,count:2});before.inventories[93]!.push({slot:2,id:1623,count:1});
+ expect(check().assets).toBe(true);after.inventories[93]!.find(i=>i.id===1623)!.count=0;expect(check().assets).toBe(false);
+ before.inventories[93]!.pop();after.inventories[93]!.pop();
+ after.inventories[93]!.push({slot:3,id:1511,count:1});expect(check().assets).toBe(false);after.inventories[93]!.pop();
  expect(check(log.replace('LOGOUT logged-out\n',''))).toMatchObject({logout:false});
  expect(check(log.replace('died=false','died=true')).alive).toBe(false);
  after.inventories[93]!.push({slot:3,id:440,count:1});expect(check()).toMatchObject({used:false,assets:false});after.inventories[93]!.pop();
@@ -213,7 +250,7 @@ LOGOUT logged-out
  }
  expect(check(log.replace('eats=24','eats=23'))).toMatchObject({budget:true,assets:false});
  expect(check(log.replace('eats=24','eats=25'))).toMatchObject({budget:false,assets:false});
- expect(check(log.replace('eats=24','eats=0')).budget).toBe(false);
+ expect(check(log.replace('eats=24','eats=0'))).toMatchObject({budget:true,assets:false});
  expect(check(log.replace('MILESTONE bananas 1','')).bananas).toBe(false);
  expect(check(log+'QUEST_SWEEP_BUY {"item":1963}\n').bananas).toBe(false);
  expect(check(log.replace('"free":16','"free":11')).capacity).toBe(false);
@@ -235,4 +272,12 @@ LOGOUT logged-out
  leftover[3]!.id=1895;leftover[3]!.count=6;expect(check(log.replace('eats=24','eats=11')).assets).toBe(false);
  leftover[3]!.count=1;leftover[0]!.count=2;expect(check(log.replace('eats=24','eats=13')).assets).toBe(true);
  leftover[0]!.count=1;leftover[1]!.id=995;expect(check(ate16).assets).toBe(false);
+ // No damage: zero bites eaten leave all eight carried cakes, and the proof passes.
+ after.inventories[93]!.splice(-leftover.length);
+ after.inventories[93]!.push(...Array.from({length:8},(_,i)=>({id:1891,slot:7+i,count:1})));
+ const ate0=log.replace('eats=24','eats=0');
+ expect(Object.entries(check(ate0)).filter(([,ok])=>!ok)).toEqual([]);
+ expect(check(ate0.replace('RESULT ok','QUEST_SWEEP_FARE {"coins":30}\nRESULT ok')).budget).toBe(false);
+ expect(check(log.replace('eats=24','eats=25'))).toMatchObject({budget:false,assets:false});
+ expect(check(log.replace('eats=24','eats=1')).assets).toBe(false);
 });

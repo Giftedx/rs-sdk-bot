@@ -5,7 +5,7 @@ import * as bot from '../packages/core/src/bot';
 import {setEquipmentObserved} from '../packages/core/src/container-observation';
 import * as trips from '../packages/core/src/route-plan';
 import type {Session} from '../packages/core/src/inprocess';
-import {rangedProofSource,rangedChildConfiguration,rangedMemoryFloor,rangedSaveSettled,rangedStackOptions} from '../packages/practice/src/ranged-train-proof';
+import {rangedProofSource,rangedChildConfiguration,rangedMemoryFloor,rangedSaveSettled,rangedStackOptions,rangedLevelXp,RANGED_SEED_XP} from '../packages/practice/src/ranged-train-proof';
 import {capabilityRevision} from '../packages/core/src/worker-release';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../packages/core/src/memory';
 
@@ -286,6 +286,43 @@ test('a stronger arrow stack too small for a trip gives way to a usable weaker s
  expect(chooseArrow(owned,1,1)?.id).toBe(882);
  expect(chooseArrow([{id:884,count:40},{id:882,count:500}] as any,1,1)?.id).toBe(884);
  expect(chooseArrow([{id:884,count:2}] as any,1,1)).toBeUndefined();
+});
+
+test('the practice seed starts at Ranged 70 with 3000 XP, ten chickens, to level 71',()=>{
+ expect(rangedLevelXp(70)).toBe(133230);expect(rangedLevelXp(71)).toBe(142847);expect(rangedLevelXp(99)).toBe(998458);
+ expect(RANGED_SEED_XP).toBe(139847);expect(RANGED_SEED_XP).toBeGreaterThanOrEqual(rangedLevelXp(70));
+});
+
+// Idle cause: the cold route worker plans the cellar exit, then each food-run leg again, while the account stands still.
+test('underground entry queues both food-run legs before its own walk starts',async()=>{
+ const f=trainingFixture(['kill','kill'],false,false,true);
+ try{
+  const r=await f.run();expect(r.ok).toBe(true);
+  expect(f.planner.mock.calls.map(c=>[c[0],c[1]])).toEqual([[{x:3113,z:9555,level:0},{x:3253,z:3421,level:0}],[{x:3253,z:3421,level:0},{x:3015,z:3206,level:0}],[{x:3015,z:3206,level:0},{x:3253,z:3421,level:0}]]);
+  expect(Math.max(...f.planner.mock.invocationCallOrder)).toBeLessThan(f.worldRoute.mock.invocationCallOrder[0]!);
+ }finally{f.close();}
+});
+
+// Idle cause: the shop leg back to the bank waited for a fresh plan at Wydin.
+test('the food run plans its return leg during the outbound walk and uses it at the shop',async()=>{
+ const f=trainingFixture(['kill','kill'],true);
+ try{
+  const r=await f.run();expect(r).toMatchObject({ok:true,foodBought:3,travelSpent:60,accounting:true});
+  expect(f.planner.mock.calls.map(c=>[c[0],c[1]])).toEqual([[{x:2807,z:3441,level:0},{x:3015,z:3206,level:0}],[{x:3015,z:3206,level:0},{x:3253,z:3421,level:0}]]);
+  expect(f.planner.mock.invocationCallOrder[1]!).toBeLessThan(f.worldRoute.mock.invocationCallOrder[0]!);
+  expect(f.worldRoute).toHaveBeenCalledTimes(2);
+ }finally{f.close();}
+});
+
+// Idle cause: outside pen gate 1551 no chicken was selectable, and the worker waited out the 120-tick bound.
+test('an empty target list outside the pen walks back to the pen entry instead of waiting out the bound',async()=>{
+ const f=trainingFixture(['kill','kill']),bot=(f.s as any).bot,pickup=bot.pickupItem;let moved=false;
+ bot.pickupItem=async(i:any)=>{await pickup(i);if(!moved){moved=true;const p=f.s.sdk.getState()!.player as any;p.worldX=3239;p.worldZ=3301;}};
+ try{
+  const r=await f.run();
+  expect(r).toMatchObject({ok:true,kills:2,failure:'-',accounting:true});
+  expect(f.attacks).toHaveLength(2);expect(f.attacks[1]!.tick-f.attacks[0]!.tick).toBeLessThan(120);
+ }finally{f.close();}
 });
 
 test('banking recovered arrows between trips does not count as firing',async()=>{

@@ -4,7 +4,8 @@
 // `cost` is the shop value of a kit (knowledge/items.json), the measure for "the same kills with a cheaper kit".
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import type { FightOptions, Kit, Style } from './pk';
+import { SPELLS, type FightOptions, type Kit, type Style } from './pk';
+import { levelForXp, xpForLevel } from '../packages/planner/src/curve';
 
 const root = resolve(import.meta.dir, '..');
 let byName: Map<string, number> | undefined;
@@ -31,11 +32,30 @@ export type KitSpec = {
     foodItem?: string;
     // Switch weapons for each style the build fights with, by name.
     switches: Partial<Record<Style, string[]>>;
-    options?: Pick<FightOptions, 'rotation' | 'damageSpell'>;
+    options?: Pick<FightOptions, 'rotation' | 'damageSpell' | 'charge'>;
+    // Base levels of the build (default: 99 in the seven combat skills) and the varps it needs besides Lost City,
+    // Dragon Slayer and full special energy.
+    skills?: Record<string, number>;
+    varps?: Record<number, number>;
 };
+// Defence 1 and Hitpoints 10 with Prayer 1: the base of every pure, 2.75 combat levels (Player.ts getCombatLevel).
+const PURE = { Attack: 1, Strength: 1, Defence: 1, Ranged: 1, Magic: 1, Prayer: 1, Hitpoints: 10 } as const;
 const RUNE = { hat: 'rune_full_helm', torso: 'rune_platebody', legs: 'rune_platelegs', cape: 'cape_of_legends', amulet: 'amulet_of_glory_4', feet: 'boots_ranger' } as const;
 const WAVE: [string, number][] = [['airrune', 500], ['bloodrune', 100]], FREEZE: [string, number][] = [['earthrune', 200], ['waterrune', 200], ['naturerune', 100]];
 const PRAYER_POTS = ['4doseprayerrestore', '4doseprayerrestore'], BOOSTS = ['4dose2attack', '4dose2strength', '4doserangerspotion'];
+// The levels of a trained build. Hitpoints come from its combat XP: a point of damage gives 4 XP to the style and 1.33
+// to Hitpoints, so Hitpoints hold a third of the XP of the five combat skills. Gap: quest XP gives no Hitpoints, so
+// an account that takes its levels from quests has fewer.
+export function trained(levels: Record<string, number>): Record<string, number> {
+    const xp = ['Attack', 'Strength', 'Defence', 'Ranged', 'Magic'].reduce((n, k) => n + xpForLevel(levels[k] ?? 1), 0);
+    return { ...PURE, ...levels, Hitpoints: levels.Hitpoints ?? Math.max(10, levelForXp(Math.floor(xp / 3))) };
+}
+// What a build with Ranged 70 and Defence 1 wears: no body, because a dragonhide body needs Defence 40.
+const PURE_RANGE = { hat: 'coif', legs: 'black_dragonhide_chaps', hands: 'black_dragon_vambraces', cape: 'black_cape', amulet: 'amulet_of_glory_4', feet: 'boots_ranger' } as const;
+// The tribrid's kit with the three boost potions, for a build with its own Defence level.
+const DEF_TRIBRID: KitSpec = { worn: { ...RUNE, cape: 'black_cape', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+    carried: ['mystic_fire_staff', 'magic_shortbow', ...WAVE, ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 15,
+    switches: { magic: ['mystic_fire_staff'], ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] } };
 export const KITS: Readonly<Record<string, KitSpec>> = {
     // The army's kit: rune armour, dragon dagger, magic shortbow, Fire Wave.
     tribrid: { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
@@ -43,6 +63,13 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
         switches: { magic: ['mystic_fire_staff'], ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] } },
     'tribrid-pots': { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
         carried: ['mystic_fire_staff', 'magic_shortbow', ...WAVE, ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 15,
+        switches: { magic: ['mystic_fire_staff'], ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] } },
+    // More prayer restore for less food: the first side with no prayer points takes full hits.
+    'tribrid-pray': { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['mystic_fire_staff', 'magic_shortbow', ...WAVE, ...FREEZE, ...PRAYER_POTS, '4doseprayerrestore'], food: 17,
+        switches: { magic: ['mystic_fire_staff'], ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] } },
+    'tribrid-pray4': { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['mystic_fire_staff', 'magic_shortbow', ...WAVE, ...FREEZE, ...PRAYER_POTS, ...PRAYER_POTS], food: 16,
         switches: { magic: ['mystic_fire_staff'], ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] } },
     // The tribrid with no helm, body or legs: the bow special rolls against its own ranged defence (scripts/pk.ts
     // bowBurst), and this build has almost none.
@@ -73,6 +100,19 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     'tribrid-food': { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
         carried: ['mystic_fire_staff', 'magic_shortbow', ...WAVE, ...PRAYER_POTS], food: 21,
         switches: { magic: ['mystic_fire_staff'], ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] } },
+    // Bow and dagger for the fight and the freeze runes for a target that runs: no staff and no wave runes, so three
+    // more sharks than the potion kit.
+    'tribrid-snare': { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 18,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The snare kit with adamant arrows: 300 rune arrows are 120,000 of the kit's 392,715 coins, 300 adamant arrows 24,000.
+    'tribrid-snare-addy': { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['adamant_arrow', 300] },
+        carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 18,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // A target that runs: the tribrid with three sharks and its glory to leave with.
+    runner: { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['mystic_fire_staff', 'magic_shortbow', ...WAVE, ...PRAYER_POTS, 'amulet_of_glory_4'], food: 3,
+        switches: { magic: ['mystic_fire_staff'], ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] } },
     'tribrid-lean': { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
         carried: ['mystic_fire_staff', 'magic_shortbow', ...WAVE, ...PRAYER_POTS, ...BOOSTS], food: 18,
         switches: { magic: ['mystic_fire_staff'], ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] } },
@@ -93,7 +133,87 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     'tribrid-mithril': { worn: { hat: 'mithril_full_helm', torso: 'mithril_platebody', legs: 'mithril_platelegs', amulet: 'amulet_of_power', feet: 'leather_boots', weapon: 'mithril_scimitar', shield: 'mithril_kiteshield', ammo: ['steel_arrow', 300] },
         carried: ['staff_of_fire', 'willow_shortbow', ['airrune', 500], ['chaosrune', 200], ...FREEZE, ...PRAYER_POTS], food: 18,
         switches: { magic: ['staff_of_fire'], ranged: ['willow_shortbow'], melee: ['mithril_scimitar', 'mithril_kiteshield'] } },
+    // Pures. Each level is the lowest that wields the weapon or casts the spell, and a second style stays under the
+    // combat level of the first (research/pvp-fight-loop.md, "Pure builds").
+    // Combat 27: Iban Blast (Magic 50 and Attack 50 for the staff, max hit 25; 1 death and 5 fire runes and 2 staff
+    // charges a cast, varp 288) with a magic shortbow (Ranged 50). Underground Pass gives Attack 61.
+    'pure-iban': { worn: { weapon: 'ibanstaff', amulet: 'amulet_of_magic', feet: 'leather_boots', ammo: ['rune_arrow', 100] },
+        carried: ['magic_shortbow', ['deathrune', 100], ['firerune', 500]], food: 20, foodItem: 'lobster',
+        switches: { magic: ['ibanstaff'], ranged: ['magic_shortbow'] }, options: { rotation: ['magic', 'ranged'], damageSpell: SPELLS.ibanBlast },
+        skills: { ...PURE, Attack: 61, Ranged: 50, Magic: 50 }, varps: { 288: 120 } },
+    // Combat 46, the highest that can attack combat 3 at the rune rocks (Wilderness level 46): dragon dagger special
+    // (Attack 61, Strength 73) with Flames of Zamorak under Charge (Magic 80, max hit 30) and Entangle (79).
+    'pure-rock': { worn: { weapon: 'dragon_dagger_p', cape: 'zamorak_cape', amulet: 'amulet_of_strength', feet: 'leather_boots' },
+        carried: ['zamorak_staff', ['firerune', 400], ['airrune', 500], ['bloodrune', 100], ...FREEZE, '4dose2strength'], food: 16, foodItem: 'lobster',
+        switches: { magic: ['zamorak_staff'], melee: ['dragon_dagger_p'] }, options: { rotation: ['magic', 'melee'], damageSpell: SPELLS.flamesOfZamorak, charge: true },
+        skills: { ...PURE, Attack: 61, Strength: 73, Magic: 80 }, varps: { 267: 8, 270: 99 } },
+    // Combat 19: Fire Bolt (Magic 35, max hit 12) and nothing else.
+    'pure-bolt': { worn: { weapon: 'staff_of_fire', amulet: 'amulet_of_magic', feet: 'leather_boots' },
+        carried: [['airrune', 500], ['chaosrune', 200]], food: 20, foodItem: 'lobster',
+        switches: { magic: ['staff_of_fire'] }, options: { rotation: ['magic'] }, skills: { ...PURE, Magic: 35 } },
+    // Trained builds (research/pvp-fight-loop.md, "Account builds"). Each has the levels that name the build and the
+    // Hitpoints that the training gives (`trained`). Ranged 99 and Magic 99 add no combat level to a build with
+    // Attack 60 and Strength 99, so the melee builds carry them.
+    // Defence 1. The dagger alone, with the two melee potions.
+    'pure-dds': { worn: { weapon: 'dragon_dagger_p', amulet: 'amulet_of_strength', cape: 'black_cape', feet: 'death_climbingboots' },
+        carried: ['4dose2attack', '4dose2strength'], food: 25, switches: { melee: ['dragon_dagger_p'] }, options: { rotation: ['melee'] },
+        skills: trained({ Attack: 60, Strength: 99 }) },
+    // The bow for damage and a melee weapon for the kill: the dagger special, a rune two-handed sword (Attack 40,
+    // strength bonus 70, one hit each 7 ticks) or a dragon halberd (strength bonus 89, Regicide done).
+    'pure-dds-msb': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 300] },
+        carried: ['dragon_dagger_p', ...BOOSTS], food: 23, switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p'] }, options: { rotation: ['ranged', 'melee'] },
+        skills: trained({ Attack: 60, Strength: 99, Ranged: 99 }) },
+    'pure-r2h': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 300] },
+        carried: ['rune_2h_sword', ...BOOSTS], food: 23, switches: { ranged: ['magic_shortbow'], melee: ['rune_2h_sword'] }, options: { rotation: ['ranged', 'melee'] },
+        skills: trained({ Attack: 40, Strength: 99, Ranged: 99 }) },
+    'pure-hally': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 300] },
+        carried: ['dragon_halberd', ...BOOSTS], food: 23, switches: { ranged: ['magic_shortbow'], melee: ['dragon_halberd'] }, options: { rotation: ['ranged', 'melee'] },
+        skills: trained({ Attack: 60, Strength: 99, Ranged: 99 }), varps: { 328: 15 } },
+    // One style from range.
+    'pure-ranger': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 500] },
+        carried: ['4doserangerspotion'], food: 26, switches: { ranged: ['magic_shortbow'] }, options: { rotation: ['ranged'] }, skills: trained({ Ranged: 99 }) },
+    'pure-mage': { worn: { weapon: 'staff_of_fire', amulet: 'amulet_of_magic', cape: 'black_cape', feet: 'leather_boots' },
+        carried: [...WAVE, ...FREEZE], food: 22, switches: { magic: ['staff_of_fire'] }, options: { rotation: ['magic'] }, skills: trained({ Magic: 99 }) },
+    // All three styles at Defence 1.
+    'pure-tribrid': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 300] },
+        carried: ['dragon_dagger_p', 'staff_of_fire', ...WAVE, ...FREEZE, ...BOOSTS], food: 17,
+        switches: { magic: ['staff_of_fire'], ranged: ['magic_shortbow'], melee: ['dragon_dagger_p'] }, skills: trained({ Attack: 60, Strength: 99, Ranged: 99, Magic: 99 }) },
+    // The bow and dagger pure with Prayer 43: the three protect prayers and the 15% prayers, for 5 combat levels.
+    'pure-pray': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 300] },
+        carried: ['dragon_dagger_p', ...BOOSTS, ...PRAYER_POTS], food: 21, switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p'] }, options: { rotation: ['ranged', 'melee'] },
+        skills: trained({ Attack: 60, Strength: 99, Ranged: 99, Prayer: 43 }) },
+    // The tribrid's kit at a lower Defence: 40 for rune armour, 45 for the Berserker helm (The Fremennik Trials
+    // done), 60 for the dragon helm, legs and square shield (Legends' Quest done). The Fremennik Trials give Defence
+    // 60 from level 1 at this server's XP rate, so `zerker` is a reference for the comparison and has no quest route.
+    'rune-pure': { ...DEF_TRIBRID, skills: trained({ Attack: 60, Strength: 99, Defence: 40, Ranged: 99, Magic: 99, Prayer: 43 }) },
+    zerker: { ...DEF_TRIBRID, worn: { ...DEF_TRIBRID.worn, hat: 'viking_helmet_crush' },
+        skills: trained({ Attack: 60, Strength: 99, Defence: 45, Ranged: 99, Magic: 99, Prayer: 43 }), varps: { 347: 10 } },
+    dragon: { ...DEF_TRIBRID, worn: { ...DEF_TRIBRID.worn, hat: 'dragon_med_helm', legs: 'dragon_platelegs', shield: 'dragon_sq_shield' },
+        switches: { ...DEF_TRIBRID.switches, melee: ['dragon_dagger_p', 'dragon_sq_shield'] },
+        skills: trained({ Attack: 60, Strength: 99, Defence: 60, Ranged: 99, Magic: 99, Prayer: 43 }), varps: { 139: 75 } },
+    // Defence 60 with no melee levels: black dragonhide and the Archer helm with a bow and Fire Wave, or splitbark
+    // with Fire Wave alone.
+    'range-tank': { worn: { hat: 'viking_helmet_range', torso: 'black_dragonhide_body', legs: 'black_dragonhide_chaps', hands: 'black_dragon_vambraces', cape: 'black_cape', amulet: 'amulet_of_glory_4', feet: 'boots_ranger', weapon: 'magic_shortbow', ammo: ['rune_arrow', 400] },
+        carried: ['staff_of_fire', ...WAVE, ...FREEZE, ...PRAYER_POTS, '4doserangerspotion'], food: 18,
+        switches: { magic: ['staff_of_fire'], ranged: ['magic_shortbow'] }, options: { rotation: ['ranged', 'magic'] },
+        skills: trained({ Defence: 60, Ranged: 99, Magic: 99, Prayer: 43 }), varps: { 347: 10 } },
+    'mage-tank': { worn: { hat: 'splitbark_helm', torso: 'splitbark_body', legs: 'splitbark_legs', hands: 'splitbark_gauntlets', cape: 'black_cape', amulet: 'amulet_of_glory_4', weapon: 'staff_of_fire' },
+        carried: [...WAVE, ...FREEZE, ...PRAYER_POTS], food: 20, switches: { magic: ['staff_of_fire'] }, options: { rotation: ['magic'] },
+        skills: trained({ Defence: 60, Magic: 99, Prayer: 43 }) },
+    // The target of a pure: combat 3 with a pickaxe and a few lobsters.
+    skiller: { worn: { weapon: 'bronze_pickaxe', feet: 'leather_boots' }, carried: [], food: 5, foodItem: 'lobster',
+        switches: { melee: ['bronze_pickaxe'] }, options: { rotation: ['melee'] }, skills: { ...PURE } },
 };
+// The combat level the server gives a set of base levels (Player.ts getCombatLevel).
+export function combatLevel(s: Record<string, number>): number {
+    const lv = (k: string) => s[k] ?? 1;
+    return Math.floor(0.25 * (lv('Defence') + lv('Hitpoints') + Math.floor(lv('Prayer') / 2))
+        + 0.325 * Math.max(lv('Attack') + lv('Strength'), Math.floor(lv('Ranged') * 1.5), Math.floor(lv('Magic') * 1.5)));
+}
+const MAXED = { Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99, Prayer: 99, Hitpoints: 99 };
+export const kitSkills = (name: string): Record<string, number> => ({ ...(kitOf(name).skills ?? MAXED) });
+// Lost City done, Dragon Slayer done and full special energy, then the varps of the build.
+export const kitVarps = (name: string): Record<number, number> => ({ 147: 6, 176: 10, 300: 1000, ...kitOf(name).varps });
 
 const kitOf = (name: string): KitSpec => { const k = KITS[name]; if (!k) throw Error(`pk-kits: unknown kit "${name}"; known: ${Object.keys(KITS).join(', ')}`); return k; };
 const carried = (k: KitSpec) => k.carried.map(c => (typeof c === 'string' ? { id: itemId(c), count: 1 } : { id: itemId(c[0]), count: c[1] }));

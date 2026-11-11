@@ -107,7 +107,9 @@ Gap: 16 spars for each row; the builds that trade the freeze runes for sharks or
 
 The climb, mirror and matrix, 16 or more paired spars for each candidate: no option beat the base loop in the tribrid
 mirror (style orders, eat level 35 to 66, prayer restore level, special threshold 0.3 to 1, freeze rule, kiting a
-frozen target, standing 2 or 5 tiles off, prayer flick, free karambwans, the bow burst at three thresholds). Clearly
+frozen target, standing 2 or 5 tiles off, free karambwans, the bow burst at three thresholds). Those spars read the
+damage from hit splats, which show half of it (finding 15), and their batches of 8 do not separate two profiles
+(Speed of a measurement); findings 19 to 28 are the measured rules. Clearly
 worse: every armour piece off for each cast (net -18.3), kiting a frozen target (-7.2 to -9.1), no Defence prayer
 (-4.3), the torso kept on for casts (-6.0). In the `tribrid-pots` mirror the special at 50% health was accepted
 (+7.5, t 2.07); with about sixty candidates tried, one such result is expected by chance.
@@ -140,7 +142,35 @@ any other case.
 - One unpack of the game archives for all clients of a process (`bunzip2` in `webclient/src/io/JagFile.ts`, a third
   of the worker's CPU time) gave no gain outside the noise: 34 s against 35-36 s for the batch. It is not in the
   vendor patch.
-- Gap: where the 40-100 ms of each tick go between the engine and its clients is not measured.
+- The wait of a tick is the clients of one worker process: they share one thread, and each held a tick 12 to 20 ms
+  behind the others (`SIM_ACK_FILE`). With 16 clients in one process the engine waits 54 ms for each tick; with the
+  pairs in 8 processes (`SPAR_PROCS=8`) it waits 12 ms. `extra:spar-x8`, seed 1: 89 s in one process, 64 s in 4, 54 s
+  in 8.
+- A lockstep client reads its socket as soon as bytes arrive (`packages/core/src/inprocess.ts`), not on the 20 ms
+  loop of the session: 60 ms to 50 ms for each tick with 16 clients in one process.
+- `extra:spar-x16` runs 16 pairs in 8 processes: 16 full fights in 71 s (4.4 s a fight; the x8 batch in one process
+  takes 11.1 s a fight). It takes about 3.5 GB of memory while it runs.
+- The engine's own tick is the rest: 24 to 41 ms with 32 players (`NODE_DEBUG_PROFILE=true`), of which 11 to 15 ms move
+  every NPC of the world and 4 to 9 ms read the clients.
+- The order of the logins changes with the number of processes, so a seed gives one fight only at one `SPAR_PROCS`.
+  Compare two profiles at the same setting.
+- Two batches of 8 fights of base against base gave 7 kills to 1 and 2 kills to 5. A batch of 8 does not separate two
+  profiles; use 16 pairs and three seeds.
+- The state of a tick was 2.0 ms for each client, and the scans of locs and ground items were 1.35 ms of it. The fight
+  loop reads neither, so the spar turns the two scans off on its clients (`SPAR_FULL_STATE=1` keeps them): 0.65 ms.
+  `extra:spar-x16`: 55 to 67 s for 16 fights (3.4 to 4.2 s a fight), by the load of the PC.
+- The spar cases give a turn only to an npc within about 64 tiles of a player (`SIM_NPC_NEAR=64`, `engineEnv` of the
+  case): the npc part of an engine tick is 2 ms, against 11 to 15 ms. It gave no gain in wall time on its own.
+- A timer of 1 ms takes 15 ms in bun on Windows (`setTimeout(1)` and `Bun.sleep(1)`: median 15.3 ms). Keep timers
+  off the path of a tick. A client that checks a busy tick on every turn of the event loop for 50 ms made the batch
+  slower (74 s): eight processes that spin take the cores from the engine.
+- The rest of a tick, with 32 players: the engine reads the clients in 11 to 17 ms (the scripts of their packets), and
+  waits 20 to 35 ms for the clients while the live fleet loads the PC (79% CPU, 36 bun processes).
+- The bench makes the account folders of a case with 5 or more accounts 8 at a time and every save in one process.
+  A batch of 8 full fights with `SPAR_PROCS=8` takes 34 to 42 s; four batches in one list take about 3 minutes.
+- `pk-spar-matrix.ts` and `pk-spar-climb.ts` wait while `.practice/pk-climb-pause` exists. A session that makes that
+  file must not start them before it removes the file: the run then waits for itself.
+- Gap: no run on an idle PC; a seed does not repeat a fight when the pairs run in several processes.
 
 Spar findings. Conditions: lockstep practice engine, cap 900 ticks, both sides with Lost City and Dragon Slayer done
 unless a finding says otherwise; a seed repeats its fight. Evidence: `.practice/pk-spar/*.json` and the traces
@@ -231,6 +261,164 @@ unless a finding says otherwise; a seed repeats its fight. Evidence: `.practice/
    is already fighting your opponent." 14 and 17 times in one spar. The escape case stands at (3125, 3790), where a
    probe saw no attackable monster.
 
+## Pure builds
+
+A pure has Defence 1 and Hitpoints 10. The kits are `pure-iban`, `pure-rock` and `pure-bolt` in `scripts/pk-kits.ts`;
+`skiller` is their target. Evidence for every row is the server code. Gap: no practice run and no live run.
+
+- **Combat level.** 0.25 x (Defence + Hitpoints + half Prayer) + 0.325 x the largest of Attack + Strength, 1.5 x Ranged and
+  1.5 x Magic (`Player.ts` `getCombatLevel`). A second style is free while its term stays under the first. Prayer 43
+  adds 5 levels, so the kits keep Prayer 1.
+- **Quest XP sets the levels.** The server multiplies XP by 25 (`WorldConfig.ts` `xpRate`), and a quest reward gives no
+  Hitpoints XP. Underground Pass or Death Plateau gives Attack 61 from level 1. Scorpion Catcher gives Strength 73.
+  No quest reward stops at Attack 40, so a rune scimitar pure has no quest route.
+- **Hitpoints rise in PvP.** Each point of damage on a player gives 1.33 Hitpoints XP times 25 (`pvp_combat.rs2:175`).
+  Level 11 needs 152 XP, so the first 5 damage end Hitpoints 10. About 64 damage give Hitpoints 20 and about 445 give
+  Hitpoints 40. Four Hitpoints levels add 1 combat level. The cannon gives no Hitpoints XP (`cannon_fire.rs2:119`).
+- **Weapons in the content pack.** Dragon dagger, longsword, mace, battleaxe, spear and halberd, magic shortbow and
+  Iban's staff exist. There is no dragon scimitar, abyssal whip, granite maul, crystal bow or Ancient Magicks.
+
+| Kit | Levels | Combat | Attack | Attacks combat 3 from Wilderness level |
+|---|---|---|---|---|
+| `pure-iban` | Attack 61, Ranged 50, Magic 50 | 27 | Iban Blast, max hit 25 (Magic 50 and Attack 50 for the staff, `levelrequire.rs2:172`); magic shortbow | 24 |
+| `pure-rock` | Attack 61, Strength 73, Magic 80 | 46 | dragon dagger special; Flames of Zamorak under Charge, max hit 30; Entangle | 43 (the rune rocks are level 46) |
+| `pure-bolt` | Magic 35 | 19 | Fire Bolt, max hit 12 | 16 |
+
+Bench cases: `extra:spar-pure-iban-vs-skiller-x4`, `extra:spar-pure-bolt-vs-skiller-x4` and
+`extra:spar-pure-rock-vs-skiller-x4`. Gaps: the Hitpoints of real skillers; Underground Pass at Hitpoints 10 with no
+Hitpoints XP; the Mage Arena fight for the god spell gives Hitpoints XP; the tile east of (3055, 3872) is not checked.
+
+## Account builds
+
+The trained builds of `scripts/pk-kits.ts`. Sources for the list of builds: the Old School RuneScape Wiki pages
+"Account builds" and "One-defence pure" and theoatrix.net "Types of pures in OSRS". Source -> local consumer -> adapt
+-> check: those pages -> `KITS` -> each build keeps its levels and takes the gear that this content has ->
+`scripts/pk-kits.test.ts`, `bun scripts/pk-sim.ts --league`, the bench cases `extra:spar-builds-1` to `-4`.
+
+The bench cases hold each of the 53 pairs once, 14 pairs in a case, in 8 processes (`SPAR_PROCS=8`) with a cap of 600
+ticks. A case lasts as long as its longest fight, so the pairs stand in the order of the Defence, Hitpoints and food
+of their builds (`BUILD_PAIRS`). `bun scripts/measure/pk-spar-matrix.ts --case <case>,<case>,... --parallel 2` runs
+two cases at the same time, each on its own engine. Measured: the 4 cases at one seed take 61 to 65 s, and 3 seeds
+(159 fights) took 190 s, 1.2 s a fight. One case alone takes about 19 s: 3.6 s of logins and 9 to 13 s of fights.
+
+Where the time of a case went, on `extra:spar-builds-4` (22 clients), from `SPAR_TIMING`, `SIM_ACK_FILE` and a
+count of the engine's tick phases:
+
+- The clients take about 3 ms of a tick. The engine's own tick was 27 to 34 ms, 11 to 14 ms of it the read of the
+  client messages: 29 prayer clicks a tick (`IfButton`, the prayer guard and the fight loop) at 0.28 ms each.
+- The cost of a click was its packets. Outside `processClientsOut()` the engine sent each script packet (varp, sound,
+  text; about 1000 a tick) as its own WebSocket frame. A lockstep engine sends one message for each client each tick
+  (`patches/rs-sdk.md`, item 10): tick 16 to 19 ms, logins 5.0 s to 3.6 s, the case 34 s to 19 s.
+- `openBot` reads the two NPC tables of the prayer guard (1.2 s, synchronous) before the connection. After the
+  connection the read held the tick of every other client: logins 6.4 s to 4.9 s.
+- One pair in each process (`SPAR_PROCS=11`) gave no gain over 8 processes: 30.2 s against 30.7 s. The logins of 11
+  processes took 6.9 s against 5.0 s.
+
+- **What this content has.** The Fremennik helms (Berserker `viking_helmet_crush`, Archer, Warrior, Farseer: Defence
+  45 and The Fremennik Trials), the dragon medium helm, chainbody and platelegs (Defence 60), the dragon square
+  shield (Legends' Quest), the granite shield (Defence 50 and Strength 50), the dragon battleaxe (Heroes' Quest), the
+  dragon halberd (Regicide, Attack 60, strength bonus 89, one hit each 7 ticks), the rune two-handed sword (Attack
+  40, strength bonus 70, 7 ticks) and black dragonhide (Ranged 70; the body needs Defence 40) (`levelrequire/scripts/tier*.rs2`).
+- **What it lacks.** No obsidian maul, granite maul, rune defender, Barrows armour, Void armour, Initiate armour,
+  metal gloves, rune crossbow, mystic robes, Ancient Magicks, Vengeance, Smite or Piety. So the obsidian mauler, the
+  Initiate pure, the Void pure, the 13 Defence pure and the Piety build have no kit.
+- **Free levels.** With Attack 60 and Strength 99 the melee term of the combat level is 159. Ranged 99 and Magic 99
+  give 148, so they add no combat level; they add Hitpoints.
+- **Prayer.** Prayer 43 opens the three protect prayers and the 15% prayers for 5 combat levels.
+
+| Kit | Levels besides 1 | Combat | Hitpoints | Fights with | Shop cost |
+|---|---|---|---|---|---|
+| `pure-dds` | Attack 60, Strength 99 | 72 | 84 | dragon dagger, super attack and strength | 34,044 |
+| `pure-dds-msb` | Attack 60, Strength 99, Ranged 99 | 75 | 93 | magic shortbow, dragon dagger | 181,932 |
+| `pure-r2h` | Attack 40, Strength 99, Ranged 99 | 71 | 93 | magic shortbow, rune two-handed sword | 221,932 |
+| `pure-hally` | Attack 60, Strength 99, Ranged 99 | 75 | 93 | magic shortbow, dragon halberd | 407,932 |
+| `pure-ranger` | Ranged 99 | 69 | 83 | magic shortbow | 238,332 |
+| `pure-mage` | Magic 99 | 69 | 83 | Fire Wave, Entangle | 19,613 |
+| `pure-tribrid` | Attack 60, Strength 99, Ranged 99, Magic 99 | 76 | 99 | Fire Wave, magic shortbow, dragon dagger | 192,232 |
+| `pure-pray` | `pure-dds-msb` with Prayer 43 | 80 | 93 | magic shortbow, dragon dagger | 181,712 |
+| `rune-pure` | Attack 60, Strength 99, Defence 40, Ranged 99, Magic 99, Prayer 43 | 91 | 99 | the tribrid kit in rune | 440,872 |
+| `zerker` | the same with Defence 45 | 92 | 99 | the same with the Berserker helm | 465,672 |
+| `dragon` | the same with Defence 60 | 96 | 99 | the same with dragon helm, legs and square shield | 1,157,272 |
+| `range-tank` | Defence 60, Ranged 99, Magic 99, Prayer 43 | 91 | 93 | magic shortbow and Fire Wave in black dragonhide | 281,692 |
+| `mage-tank` | Defence 60, Magic 99, Prayer 43 | 89 | 84 | Fire Wave in splitbark | 136,112 |
+
+Simulator ranking, 1,000 fights for each pair (`bun scripts/pk-sim.ts --league`; `.practice/pk-builds/sim-pure.txt`
+and `sim-def.txt` in the worktree that ran it). Mean is the mean win rate against the other kits of the list.
+
+| Defence 1 bracket | Mean | | Defence 40 to 60 bracket, with three pures and `tribrid-pots` | Mean |
+|---|---|---|---|---|
+| `pure-pray` | 0.964 | | `tribrid-pots` (combat 126, for scale) | 0.987 |
+| `pure-ranger` | 0.784 | | `dragon` | 0.724 |
+| `pure-dds-msb` | 0.716 | | `range-tank` | 0.681 |
+| `pure-dds` | 0.620 | | `zerker` | 0.519 |
+| `pure-hally` | 0.348 | | `rune-pure` | 0.454 |
+| `pure-tribrid` | 0.311 | | `pure-pray` | 0.413 |
+| `pure-r2h` | 0.232 | | `mage-tank` | 0.104 |
+| `pure-mage` | 0.002 | | `pure-tribrid` | 0.095 |
+
+- Candidates from the simulator: Prayer 43 is the largest gain at Defence 1 (`pure-pray` beats `pure-dds-msb` in 75%
+  of fights, 5 combat levels higher). Each Defence step wins: `dragon` beats `zerker` in 88% and `zerker` beats
+  `rune-pure` in 62%. `range-tank` beats `dragon` in 62% and loses to no build of its bracket by more than 54%.
+- Gap: the simulator has no freeze and no movement, and it alternates the bow and a 7-tick weapon where a player
+  keeps the slow weapon for the kill. Its ranger result is higher than the bench (finding 18).
+
+Bench ranking. Conditions: lockstep practice engine, Wilderness level 34 at (3125, 3790), both sides on the profile
+`snap` (`predictPrayer`, `snapPrayer`; it sets no rotation, so each kit attacks with its own styles), cap 600 ticks,
+each pair 3 fights (seeds 1, 2, 3), `extra:spar-builds-1` to `-4`. Evidence:
+`.practice/pk-builds/seed<s>.txt` and `rank.txt` in the worktree that ran them. A build of both brackets has
+36 fights, the others 21. Net is the net damage for each 100 ticks.
+
+| Kit | Combat | Fights | Wins | Losses | Draws | Net |
+|---|---|---|---|---|---|---|
+| `dragon` | 96 | 21 | 20 | 1 | 0 | +76.7 |
+| `pure-pray` | 80 | 36 | 29 | 7 | 0 | +78.8 |
+| `pure-dds` | 72 | 21 | 14 | 7 | 0 | +4.1 |
+| `rune-pure` | 91 | 21 | 13 | 8 | 0 | +50.3 |
+| `pure-ranger` | 69 | 36 | 20 | 16 | 0 | -17.6 |
+| `pure-dds-msb` | 75 | 36 | 19 | 17 | 0 | +2.1 |
+| `zerker` | 92 | 21 | 11 | 10 | 0 | +40.6 |
+| `range-tank` | 91 | 21 | 11 | 9 | 1 | +29.6 |
+| `pure-tribrid` | 76 | 21 | 8 | 13 | 0 | +7.8 |
+| `pure-hally` | 75 | 21 | 7 | 14 | 0 | -67.2 |
+| `pure-r2h` | 71 | 21 | 4 | 17 | 0 | -79.4 |
+| `mage-tank` | 89 | 21 | 2 | 18 | 1 | -62.8 |
+| `pure-mage` | 69 | 21 | 0 | 21 | 0 | -108.1 |
+
+- **Defence 1: the bow and dagger pure with Prayer 43 wins.** `pure-pray` won 20 of 21 against the other Defence 1
+  builds and 9 of 15 against the builds with Defence 40 to 60, 11 to 16 combat levels above it. Without the
+  prayer the same weapons lose: `pure-dds-msb` lost 3 of 3 to `pure-pray` and 7 of 9 to the rune, zerker and dragon
+  builds.
+- **Defence 40 to 60: the dragon build wins.** `dragon` won 20 of 21, with 3 of 3 against `rune-pure`, `zerker` and
+  `pure-pray`. Its one loss was to `range-tank`.
+- **A build with one style from range loses.** `pure-mage` won 0 of 21 and `mage-tank` 2 of 21. `pure-ranger` won
+  every fight against the slow weapons and the mages, and 1 of 12 against the rune, zerker, dragon and range-tank
+  builds.
+- **The slow weapons lose.** `pure-r2h` and `pure-hally` won 4 and 7 of 21. The loop alternates the bow and the
+  7-tick weapon; a loop that keeps the slow weapon for the kill is not measured.
+- The simulator and the bench agree on the first build of each bracket and on the last. They differ on
+  `pure-ranger` (second in the simulator, 20 of 36 on the bench).
+- Control for the side of a pair: the same build on both sides (`extra:spar-kit-dragon-x8` and
+  `extra:spar-kit-pure-pray-x8`, profile `snap`, seeds 1, 2, 3, 48 fights). Side A won 27, lost 20 and drew 1
+  (`dragon` 12 to 12, `pure-pray` 15 to 8). 27 of 47 is inside the chance range of an even fight, so the table has
+  no side correction. Evidence: `.practice/pk-builds/control.txt`.
+- Gap: 3 fights for each pair say nothing about one pair. No fight against the maxed tribrid: combat 126 is out of
+  range of these builds at Wilderness level 34.
+- Gap: Hitpoints assume trained levels. Quest XP gives no Hitpoints, so a quest route gives a lower combat level.
+- **The Berserker helm quest ends Defence 45.** The Fremennik Trials give 2,812.4 XP each in Attack, Defence,
+  Strength and Hitpoints (`quest_viking`), 70,310 at the server's rate of 25: Defence 60 from level 1. Heroes'
+  Quest gives 3,075 Defence XP: Defence 62. So an account with a Fremennik helm or a dragon battleaxe has Defence 60
+  or more, and `zerker` is a reference for the comparison, not a build with a route. Its real form is `dragon` with
+  the Berserker helm.
+- **A build in the plan.** The `builds` object of `swarm.json` names a kit for an army account
+  (`"builds": { "<account>": "pure-pray" }`). `scripts/autopilot.ts` `buildCaps` turns each kit into its levels, and
+  `packages/planner/src/autopilot.ts` `buildBand` gives such an account only bands that train one skill and stop at
+  the level of the build: the cow and trooper bands with `TARGET_LEVEL` and no buried bones, and the held-bones
+  Prayer band with the level as its target. It refuses quest bands, stock bands, kill-count bands and bought-bone
+  bands. Evidence: `packages/planner/test/autopilot.test.ts`, `scripts/autopilot.test.ts`. Proof level: unit.
+- Gap: no live run of a build account under the planner. The Prayer band needs 100 normal bones held; the
+  source of those bones for a build account is not checked. The quest route to each build is not planned, so no build account gets Lost City or Dragon Slayer
+  from the planner.
+
 ## Server rules the loop follows
 
 - Protect prayers cut a player's max hit by 40%, not 100% (`pvp_melee.rs2:32`, `pvp_ranged.rs2:38`, `pvp_magic.rs2:182`).
@@ -315,3 +503,136 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     the fight loop and the hunter now stop on it. On practice, closing the hunter's session mid-run ended the hunt at once
     (`end: session ended`, 13 log lines). Gap: a hand run outside the swarm leaves no supervisor end record, so
     cloud-recover waits on it. Restoring the account's swarm job lets the swarm write one, and cloud-recover takes it.
+15. **The client's hit splats show about half of the damage.** In a traced mirror spar of 520 ticks, the HP of side A fell
+    436 in total and the splat count of the fight loop gave 244; side B fell 387 against 194. The spar takes the damage
+    of a side from its HP drops tick by tick (`spar` in `scripts/pk-spar.ts`), and the net damage of the climb uses that.
+    Evidence: `SPAR_TRACE=1` on `extra:spar-x8`, then the sum of the HP drops in the `TRACE` lines against `taken` in
+    the `SPAR` line. Gap: a hit in the tick of a bite of food shows a smaller drop.
+16. **An overhead prayer that follows the weapon is late for most hits of a side that switches styles.** The weapon change
+    and the hit come in one tick. In the tick of the roll a ranger build had the right overhead for 32 of 196 hits of a
+    tribrid (magic 12 of 54, ranged 3 of 66, melee 17 of 76; four spars of `extra:spar-duel-ranger-x8`, seed 1). The
+    drops under a right overhead stay at or below 60% of the max hit (magic 11, melee 12), and the other drops reach
+    the full max hit (20, 22, 23). By the tick of the HP drop the overhead is right for 188 of 196, so the prayer at
+    the drop says nothing. Gap: the roll tick comes from the hit delay of each style, one tick before the drop for
+    melee, two for ranged, three for magic at one tile.
+17. **With no flick, prayer points are the clock of a fight; with the flick, food is.** With `prayerFlick: false` both
+    sides of a spar that ends in a kill near tick 670 hold 0 prayer points (`prayerLeft` in the `SPAR` lines of
+    `extra:spar-duel-melee-x8`): the overhead, Steel Skin and the two melee prayers drain 12 each for a tick, 60 + 2
+    x prayer bonus of drain costs one point, so 99 points and eight doses of restore last about 700 ticks, and the
+    first side with no points takes full hits. The fight loop flicks by default (every prayer off and on in one tick,
+    each 4 ticks): the sides of `extra:spar-rivals-tribrid-snare-x12` end with 23 to 46 points after 54 to 150
+    flicks, and more restore potions for less food do not win (finding 22). Gap: the flick does not hold every
+    point; where the rest drains is not measured.
+18. **The offline simulator agrees with the bench on tribrid kits, not on one-style builds.** `bun scripts/pk-sim.ts --table 1000`
+    runs 16,000 fights in seconds with the server's hit, prayer, food and special rules. Against the tribrid it gives the
+    potion kit, the lean kit and the hybrid a win and the mage, adamant and mithril kits a loss, as the bench does, and
+    its mirror lasts 694 ticks where the bench mirror lasts about 650. It uses the levels of each kit, so it ranks
+    the trained builds too (`--league <kit,kit,...>`). Gap: it gives the ranger 87% where the bench gives it 14 of
+    24, and the melee build 37% with 27% of fights at the cap where the bench gives it 18 of 24. It has no movement
+    and no freeze. A result from it is a candidate for the bench, not a measurement.
+19. **An overhead that changes one tick before the opponent's attack wins the mirror.** The `snap` profile (`predictPrayer`
+    with `snapPrayer`) holds the overhead for the weapon the opponent shows and changes to the predicted style one
+    tick before the opponent's next attack is due. Against the base profile it has 42 kills and 6 deaths in 48 spars
+    (15 to 1, 14 to 2, 13 to 3); base against base has 24 and 24 (8 to 8, 7 to 9, 9 to 7) (`extra:spar-x16`, seeds 1,
+    2 and 3, `SPAR_SWAP=1`). The tick decides it: in batches of 8, a change two ticks before has 10 kills and 6
+    deaths in 16 spars, and a change in the tick of the attack has 8 and 8. Against the `mix` profile, which picks its
+    style at random, it has 9 kills and 7 deaths in 16 spars, the same as base. The hunter, the roamer and the
+    champion profile use it. Gap: 16 spars each against the melee build (10 to 6; base 8 to 8) and the ranger (11 to
+    5; base 10 to 6) do not separate it from base.
+20. **Random attack styles beat an overhead that predicts.** Both sides hold the `snap` profile; side A also picks each
+    style at random among the open ones (`mixStyles`). Side A has 29 kills and 3 deaths in 32 spars (15 to 1, 14 to 2;
+    `extra:spar-x16`, seeds 1 and 2). Against an opponent that only follows the weapon, random styles gave no gain
+    (mean net +1.65, t 0.56, 24 spars). The champion profile is `predictPrayer`, `snapPrayer` and `mixStyles`.
+    Gap: the champion against itself is even (7 to 9), so the mirror gives no more gain from the overhead.
+21. **The place of a pair in a batch moves its result.** With the `snap` profile on both sides and 2 pairs in each
+    of 8 worker processes, side B won 11 of 16 even pairs and side A won 12 of 16 odd pairs (two batches). A swap of
+    the profiles on every second pair put one profile on the weak place of every pair: base against base read as 9
+    kills to 23. The swap goes by two pairs at a time (`scripts/pk-spar.ts`), and the duel cases put their kits the
+    same way; the control then reads 8 to 8 and 7 to 9. Results before this rule that favoured side A stand (the
+    fault worked against side A); a result that favoured side B does not. Gap: the cause of the place effect.
+22. **More prayer restore for less food does not win.** The kit with four restore potions and 16 sharks has 5 kills and
+    10 deaths in 16 spars against the tribrid kit, both on the `snap` profile (`extra:spar-duel-tribrid-pray4-x8`,
+    seeds 1 and 2, kits on the weak place of each pair).
+23. **Bow and dagger only beat the three-style rotation.** The champion with the rotation ranged, melee (no spell turn)
+    has 26 kills and 6 deaths in 32 spars against the champion with all three styles (15 to 1, 11 to 5;
+    `extra:spar-x16`, seeds 1 and 2). In the potion kit against the builds that beat the tribrid on food
+    (`extra:spar-rivals-x12`, seeds 1, 2 and 3) it has 27 kills and 9 deaths: 10 to 2 against the melee build, 5 to 7
+    against the hybrid, 12 to 0 against the ranger. With all three styles the champion had 2 kills and 10 deaths
+    there, and none in 16 spars against the hybrid over four profiles. A spell takes 5 ticks; the bow takes 3 and
+    the dagger 4. The champion profile and the hunter use the two-style rotation; the hunter keeps magic for the
+    freeze. Gap: the hybrid still wins 7 of 12; no kit yet that trades the wave runes and the staff for food.
+24. **Changes that did not win.** The special attack from 50% health: 4 kills and 12 deaths in 16 spars against the
+    champion. Three restore potions and 17 sharks: 11 kills and 11 deaths in 22 decided spars against the tribrid
+    kit. Against the three rival builds, 12 spars each: body armour kept on for a shot or a cast 4 to 6, freeze and
+    kite of a melee opponent (`adapt`) 4 to 8; the hybrid won all four spars in each.
+25. **A kit with no staff and no wave runes wins more.** `tribrid-snare` (bow, dagger, the freeze runes, boosts, 18
+    sharks) on the champion profile has 20 kills and 4 deaths in 24 spars against the melee build (6 to 2), the hybrid
+    (6 to 2) and the ranger (8 to 0); the hybrid kit (no freeze, 21 sharks) has 21 and 3; the potion kit (staff, wave
+    runes, 15 sharks) has 27 and 9 in 36 (`extra:spar-rivals-tribrid-snare-x12`, `extra:spar-rivals-hybrid-x12`,
+    seeds 1 and 2). Against a target that leaves by glory at 60 health from Wilderness level 34, the hunter in the
+    snare kit kills 9 of 24 and in the potion kit 7 of 24 (`extra:spar-escape-tribrid-snare-x8`,
+    `extra:spar-escape-tribrid-pots-x8`, seeds 1, 2 and 3). A kit with the runes of a freeze and no staff casts it
+    with the weapon in hand (`castFreeze` in `scripts/pk.ts`); before that rule the snare kit cast none and killed 0
+    of 16. Gap: the live hunter still restocks the staff kit; no whole hunter trip in the snare kit.
+26. **A whole hunter trip passes in the snare kit.** From Edgeville bank with an empty pack, the hunter restocks the
+    snare trip (`SNARE_TRIP` in `scripts/pk-hunt.ts`: bow, 50 earth, 50 water and 40 nature runes, two prayer
+    potions, a glory, the boosts and the sharks), walks to the first hunt spot, kills the target that stands there in
+    173 ticks with 24 shots and 25 dagger hits, and takes 12 piles (`extra:hunt-trip-snare`, seed 1, 27 s). The staff
+    kit passes the same case (`extra:hunt-trip-staff`, 24 s). `PK_KIT=snare` selects the kit and its trip for
+    `scripts/pk-hunt.ts`. Gap: the target stands and has no food, so the case proves the trip and not the fight;
+    the live hunter keeps the staff trip until a side's bank holds the snare runes.
+27. **An early freeze kills more targets that run and loses fights against targets that stay.** The hunter in the
+    snare kit against a target that leaves by glory at 60 health from Wilderness level 34
+    (`extra:spar-escape-tribrid-snare-x8` and `-x12`, seeds 1 to 10): with the freeze only when the target runs, 33
+    kills in 104 spars; with the freeze from 70% health (`freeze: 'low'`, `freezeBelow: 0.7`), 56 in 104. Against
+    the melee build, the hybrid and the ranger the same rule has 18 kills and 18 deaths in 36 spars, where the freeze
+    on a target that runs has 30 and 6 (`extra:spar-rivals-tribrid-snare-x12`, seeds 1 to 3): the hunter cast 188
+    freezes in those 36 spars, and each takes a turn of 5 ticks. A cap on the early casts (`freezeEarlyMax`) lands
+    between the two on both: cap 2 has 10 kills in 24 against the target that runs and 15 kills to 9 against the
+    three builds; cap 3 has 9 in 24 and 15 to 9. Other rules against the target that runs: the freeze from 80%, 11 in
+    24; from 80% with the armour off for each cast, 8 in 16; the bow special as a burst, 1 in 8 and 2 in 8. The
+    hunter keeps the freeze on a target that runs: at its hunt spots (Wilderness levels 3 to 7) a glory works at
+    once and no freeze stops it. Gap: no rule that tells a target that will run from one that will stay before it
+    runs; the target of the case fights back until it leaves, as a fighter does.
+28. **Adamant arrows cost a quarter of the kit less and lose about 12 points.** 300 rune arrows are 120,000 of the snare
+    kit's 392,715 coins; 300 adamant arrows are 24,000. On the champion profile against the melee build, the hybrid
+    and the ranger, the snare kit with rune arrows has 55 kills and 17 deaths in 72 spars (76%) and
+    `tribrid-snare-addy` has 54 kills, 29 deaths and a draw in 84 (64%) (`extra:spar-rivals-tribrid-snare-x12`,
+    `extra:spar-rivals-tribrid-snare-addy-x12`, seeds 1 to 7). Gap: z is 1.6, so the 12 points are likely and not
+    sure; two more rune batches (8 to 4 and 12 to 0) ran beside a second bench and are left out.
+29. **The champion in the snare kit beats every build of the league.** 16 kills and no death in 16 spars against the
+    eight league opponents (`extra:spar-league-snare-x8`, seeds 1 and 2): the tribrid with potions on the base and
+    reader profiles, the lean tribrid with random styles, the melee build, the hybrid, the ranger, the mage and the
+    food tribrid. Gap: two spars for each opponent; every opponent is our own fight loop, and none plays the
+    champion profile.
+30. **The eat level does not move the mirror.** Champion against champion with side A eating at 40 health has 9 kills and
+    7 deaths in 16 spars; at 60 it has 6 kills, 8 deaths and 2 draws (`extra:spar-x16`, seed 1; the default is 50).
+31. **The hunter takes the snare trip where its bank holds it.** With no kit named, each restock reads the bank and takes
+    the snare trip when the bank holds all of `SNARE_TRIP`, else the staff trip (`pickTrip` in
+    `scripts/pk-hunt.ts`). `extra:hunt-trip-auto` has the snare stock and passes with `HUNT trip snare` in 29 s.
+    Gap: no live run.
+32. **Against an opponent that reads our overhead, its next attack is the style our overhead does not show.** The fight
+    loop does not attack with a style the opponent's overhead covers. An opponent with two styles then has one left.
+    `counterRead` predicts that style for an opponent that has shown two styles, and the overhead changes to it one
+    tick before the attack. The champion with it has 33 kills and 3 deaths in 36 spars against the champion without it
+    (10 to 2, 12 to 0, 11 to 1; `extra:spar-mirror-snare-x12`, seeds 1 to 3, `SPAR_SWAP=1`), where the control has
+    13 and 11 in 24. Against the melee build, the hybrid and the ranger it has 23 kills and 1 death in 24 spars
+    (`extra:spar-rivals-tribrid-snare-x12`, seeds 1 and 2), where the champion without it has 55 and 17 in 72;
+    against the league, 16 and 0. The champion profile and the hunter use it. Gap: every bench opponent reads the
+    overhead; against one that ignores it and picks at random the rule guards half of its attacks.
+33. **The attack learns in the fight which way the opponent's overhead goes.** Our own attack had the hole of finding 32:
+    it never used a style the opponent's overhead covered, so an opponent with `counterRead` met most of it.
+    `adaptStyles` keeps, for two ways to choose a style, the share of attacks that met the right overhead in the
+    tick after the attack: `avoid` (a style the overhead does not show) and `into` (the style it shows, which an
+    opponent that predicts is about to leave). The next attack takes the way with the lower share, and one attack in
+    ten tries the other (`StyleArms` in `scripts/pk-read.ts`). The champion with it has 34 kills and 2 deaths in 36
+    spars against the champion without it (11 to 1, 11 to 1, 12 to 0; `extra:spar-mirror-snare-x12`, seeds 1 to 3).
+    Against an opponent whose overhead follows the weapon it has 12 kills and no death in 12, where the champion
+    without it has 10 and 2. Against the melee build, the hybrid and the ranger it has 22 kills and 2 deaths in 24
+    (23 and 1 without it); against the league 7 and 1 in 8 (16 and 0 in 16 without it); against itself 7 and 5. The
+    champion profile and the hunter use it. A fixed rule lost: the style the overhead shows after 4 of 6 guarded
+    attacks had 16 kills and 8 deaths against a counter-reader and 7 and 5 against the champion without `counterRead`, which
+    `counterRead` alone beat 33 to 3. Other rules against the champion, 12 spars each: the bow alone 2 to 10; the
+    bow alone from 3 tiles 4 to 8; the special from 30% health 7 to 5; the special as soon as it is ready 5 to 7.
+    Gap: the one attack in ten that tries the other way may cost a little against an opponent that never predicts
+    (22 to 2 against 23 to 1, and one league loss): not settled.

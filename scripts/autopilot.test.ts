@@ -441,3 +441,12 @@ test('a kept job is handed work too, so the controller\'s stale stop file is cle
     expect(handedAccounts(out, []).has('vacant')).toBe(false);
 });
 
+
+test('the plan names a PK build for an army account; an unknown kit trains nothing', async () => {
+    const { buildCaps } = await import('./autopilot');
+    const caps = buildCaps({ builds: { Tosser: 'dragon', Wrong: 'no-such-kit' } });
+    expect(caps.get('tosser')).toMatchObject({ Attack: 60, Defence: 60, Prayer: 43, Strength: 99 });
+    expect(caps.get('wrong')).toEqual({ Attack: 1, Strength: 1, Defence: 1, Ranged: 1, Magic: 1, Prayer: 1 });
+    expect(buildCaps({}).size).toBe(0);
+    expect(buildCaps({ builds: ['dragon'] }).size).toBe(0);
+});

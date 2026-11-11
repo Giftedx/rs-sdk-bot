@@ -10,9 +10,11 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
 import { componentId } from '../packages/core/src/logout';
+import { weaponNameStyle } from '../packages/core/src/opponent';
 import { questFlags } from '../packages/core/src/quest-status';
+import { holdSessionEater } from '../packages/core/src/sustain';
 import { tickWaits } from '../packages/core/src/tick-stream';
-import { armourDefence, StylePredictor, weakestFirst } from './pk-read';
+import { armourDefence, StyleArms, StylePredictor, weakestFirst, type StyleArm } from './pk-read';
 import type { NearbyPlayer } from '../vendor/rs-sdk/sdk/types';
 
 export const ITEMS = {
@@ -59,6 +61,9 @@ export type FightOptions = {
     // already held.
     freeze?: boolean | 'flee' | 'low';
     freezeBelow?: number;
+    // With 'low': at most this many freeze casts on a target that has not run (default no limit). Each cast takes a
+    // turn of 5 ticks, and against a target that stands and fights the turns cost more than the freeze gives.
+    freezeEarlyMax?: number;
     // Once the target has fled (it is out of food): the style turns to use, and whether every special goes out at
     // once (default true). Unset, the rotation stays as it is.
     fledRotation?: Style[];
@@ -77,6 +82,17 @@ export type FightOptions = {
     // predictPrayer: pray against the style the opponent will use next, learnt from the order of its weapons, in place
     // of the weapon it holds now (which is its last attack, one step behind).
     predictPrayer?: boolean;
+    // snapPrayer: with predictPrayer, hold the overhead for the weapon the opponent shows and change to the predicted
+    // style only snapLead ticks (default 1) before its next attack is due. The opponent chooses its style from the
+    // overhead it saw the tick before, so a change that late arrives with its hit and it cannot go round it.
+    snapPrayer?: boolean;
+    // counterRead: with predictPrayer, against an opponent that has shown two styles, predict the style our overhead
+    // does not show now (see the loop). Off by default.
+    counterRead?: boolean;
+    // adaptStyles: learn from the overhead each attack met whether to attack with a style the opponent's overhead does
+    // not show or with the one it shows (see the loop). Off by default.
+    adaptStyles?: boolean;
+    snapLead?: number;
     // styleByArmour: among the styles the opponent does not protect against, attack with the one its worn armour is
     // weakest to (the content's defence bonuses), in place of the fixed order.
     styleByArmour?: boolean;
@@ -148,10 +164,7 @@ let objNames: Map<number, string> | undefined;
 const getObjNames = () => (objNames ??= new Map(readFileSync(join(resolve(import.meta.dir, '..'), 'vendor/rs-sdk/server/content/pack/obj.pack'), 'utf8')
     .split(/\r?\n/).flatMap(l => { const m = l.match(/^(\d+)=(.+)$/); return m ? [[Number(m[1]), m[2]!] as const] : []; })));
 export function weaponStyle(id: number | undefined, names = getObjNames()): Style {
-    const name = id !== undefined && id >= 0 ? names.get(id) ?? '' : '';
-    if (/(^|_)(shortbow|longbow|crossbow|dart|knife|thrownaxe|javelin)(_|$)|bow$/.test(name)) return 'ranged';
-    if (/staff|wand/.test(name)) return 'magic';
-    return 'melee';
+    return weaponNameStyle(id !== undefined && id >= 0 ? names.get(id) ?? '' : '');
 }
 const PROTECT_FROM: Record<Style, number> = { melee: 14, ranged: 13, magic: 12 };
 
@@ -359,21 +372,38 @@ export function nextStyle(rotation: readonly Style[], last: number, usable: (s: 
     return null;
 }
 
+// The style order of a fight: the order asked for, or the full order where the kit has no style of it. A profile
+// with the order ranged, melee on a kit that only casts would never attack.
+export function kitRotation(asked: readonly Style[] | undefined, kit: Kit): readonly Style[] {
+    const full: readonly Style[] = ['magic', 'ranged', 'melee'];
+    return asked?.some(st => hasStyle(kit, st)) ? asked : full;
+}
+
+// The fight loop times each eat against its attacks, so it holds the session's eat guard (packages/core/src/eat-guard.ts)
+// for the fight.
 export async function fightPlayer(s: Session, targetName: string, o: FightOptions): Promise<FightResult> {
+    const eater = holdSessionEater(s.sdk);
+    try { return await fightLoop(s, targetName, o, eater.ateAt + 3); } finally { eater.release(); }
+}
+
+async function fightLoop(s: Session, targetName: string, o: FightOptions, guardFoodReady: number): Promise<FightResult> {
     const log = o.log ?? ((line: string) => console.log(line));
-    const rotation = o.rotation ?? ['magic', 'ranged', 'melee'];
+    const rotation = kitRotation(o.rotation, o.kit);
     const eatAt = o.eatAt ?? 50, restoreAt = o.restorePrayerAt ?? 20, cap = o.cap ?? 600;
     const result: FightResult = { outcome: 'timeout', ticks: 0, dealt: 0, taken: 0, eaten: 0, attacks: { magic: 0, ranged: 0, melee: 0 }, freezes: 0, specs: 0 };
     const sdk = s.sdk, start = s.tick(), want = targetName.toLowerCase();
     const startLife = sdk.getState()?.player?.lifeId;
     let last = -1, nextAttack = start, lastAttackAt = -10, lastWalkTicks = 0, hasAttacked = false, delayedUntil = start;
-    let foodReady = start, karambwanReady = start, potionReady = start;
+    let foodReady = Math.max(start, guardFoodReady), karambwanReady = start, potionReady = start;
     let freezeReady = start, frozenUntil = start, freezeCastAt = -10, frozenTile: { x: number; z: number } | null = null, selfFrozenUntil = start;
     let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = false, rapidSet = false, pjedByNpc = false;
     let target: NearbyPlayer | undefined, rubbed = -1, ranAt = -10, prevSelf: { x: number; z: number } | null = null;
     const predictor = new StylePredictor();
+    let oppStyle: Style | null = null, oppChangedAt = start, earlyFreezes = 0;
     const rand = o.mixSeed === undefined ? Math.random : seededRandom(o.mixSeed);
     let charged = false, chargeAt = -10, stepAt = -10, flickAt = start, lastSpecStyle: Style | null = null;
+    let lastStyle: Style | null = null, arm: StyleArm = 'avoid', lastArm: StyleArm = 'avoid';
+    const arms = new StyleArms();
     const splatSeen: { cycles: number[] | null } = { cycles: null };
     let prevTarget: { x: number; z: number } | null = null, prevGap = 0, fleeingUntil = start, heading = { x: 0, z: 0 }, chaseAt = -10, fled = false;
     const hits: { tick: number; damage: number; src: number }[] = [], dealtLog: { tick: number; damage: number }[] = [];
@@ -487,7 +517,8 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             continue;
         }
         // Food before anything, any food best first; eating adds 3 ticks to %action_delay on the server (consume.rs2:130).
-        if (me.hp <= Math.max(eatAt, oppMax + 8) && now >= foodReady) {
+        // An account with few Hitpoints is under every threshold at full health, so full health never eats.
+        if (me.hp < me.maxHp && me.hp <= Math.max(eatAt, oppMax + 8) && now >= foodReady) {
             const food = bestFood(inv);
             if (food) {
                 use(food, /^Eat$/i);
@@ -568,8 +599,19 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         const prayerBase = state.skills.find(k => k.name === 'Prayer')?.baseLevel ?? 99;
         const lastHit = [...hits].reverse().find(h => now - h.tick <= 10);
         const hitter = lastHit && lastHit.src !== target.index ? observePlayer(s.client, lastHit.src) : null;
-        if (seen) predictor.observe(weaponStyle(seen.worn[3]));
-        const predicted = o.predictPrayer && !hitter ? predictor.predict() : null;
+        if (seen) {
+            const shown = weaponStyle(seen.worn[3]);
+            predictor.observe(shown);
+            if (shown !== oppStyle) { oppStyle = shown; oppChangedAt = now; }
+        }
+        // An opponent that changes weapon attacks in the tick of the change, so its next attack is one attack delay later.
+        const oppDue = oppChangedAt + (oppStyle === 'magic' ? 5 : oppStyle === 'ranged' ? 3 : 4);
+        // counterRead: an opponent that reads our overhead does not attack with the style it covers. One that has shown
+        // two styles then has one left, so its next attack is the style our overhead does not show now.
+        const shownGuard: Style | null = prayers.activePrayers[PRAYER.melee] ? 'melee' : prayers.activePrayers[PRAYER.missiles] ? 'ranged' : prayers.activePrayers[PRAYER.magic] ? 'magic' : null;
+        const left = [...predictor.seen()].filter(st => st !== shownGuard);
+        const countered = o.counterRead && shownGuard && predictor.seen().size === 2 && left.length === 1 ? left[0]! : null;
+        const predicted = o.predictPrayer && !hitter && (!o.snapPrayer || now >= oppDue - (o.snapLead ?? 1)) ? countered ?? predictor.predict() : null;
         const overhead = hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : predicted ? PROTECT_FROM[predicted] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
         // An opponent that only has melee: hold it and stay out of its reach.
         // Only with a freeze that the carried runes can cast: with none, the loop would spend turns on a spell that
@@ -590,7 +632,15 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         const rotationTurn = nextStyle(turns, last, st => styleUsable(st) && !guarded.has(st)) ?? nextStyle(turns, last, styleUsable) ?? nextStyle(turns, last, st => hasStyle(o.kit, st));
         // The styles open now: usable and not under the opponent's overhead.
         const open = [...new Set(turns)].filter(st => styleUsable(st) && !guarded.has(st));
-        const chosen = !open.length ? null
+        // adaptStyles: the tick after an attack shows the overhead it met. The loop learns from that which way to
+        // choose the next style (StyleArms in pk-read.ts): one its overhead does not show, or the one it shows, which
+        // an opponent that predicts is about to leave. The way is set once for each attack.
+        if (lastStyle && now === lastAttackAt + 1) {
+            arms.record(lastArm, protectedStyles(seen?.headicons).has(lastStyle));
+            arm = o.adaptStyles ? arms.pick(rand) : 'avoid';
+        }
+        const shownStyle = arm === 'into' ? [...protectedStyles(seen?.headicons)].find(st => turns.includes(st) && styleUsable(st)) : undefined;
+        const chosen = shownStyle ? shownStyle : !open.length ? null
             : o.styleByArmour && seen ? weakestFirst(armourDefence(seen.worn.map(id => names.get(id) ?? ''))).find(st => open.includes(st)) ?? null
             : o.mixStyles ? open[Math.floor(rand() * open.length)]! : null;
         const upcomingTurn = chosen ? { style: chosen, index: Math.max(0, turns.indexOf(chosen)) } : rotationTurn;
@@ -678,8 +728,9 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         const magicLevel = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
         const hasFreezeRunes = inv.some(i => i.id === ITEMS.natureRune || i.id === ITEMS.earthRune || i.id === ITEMS.waterRune);
         const freeze = freezeRule ? (hasFreezeRunes ? castableFreeze(magicLevel, inv) : freezeSpell(magicLevel)) : null;
-        const castFreeze = freeze !== null && hasStyle(o.kit, 'magic') && now >= freezeReady && now >= frozenUntil
-            && (freezeRule === true || now < fleeingUntil || (freezeRule === 'low' && lowHealth(seen, o.freezeBelow ?? 0.62)));
+        // A kit with the runes of a freeze and no staff still casts it: the cast keeps the weapon in hand.
+        const castFreeze = freeze !== null && (hasStyle(o.kit, 'magic') || hasFreezeRunes) && now >= freezeReady && now >= frozenUntil
+            && (freezeRule === true || now < fleeingUntil || (freezeRule === 'low' && earlyFreezes < (o.freezeEarlyMax ?? Infinity) && lowHealth(seen, o.freezeBelow ?? 0.62)));
         // A target that has fled is out of food: from then on every special goes out at once, whatever its health bar
         // shows, and past melee reach the bow special replaces a melee one.
         const energy = special(s.client);
@@ -776,6 +827,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             if (castFreeze) {
                 log(`PK freeze cast at distance ${cheb(at, target)}, target health ${seen?.health}/${seen?.totalHealth}, target protects ${[...guarded].join('+') || 'nothing'}`);
                 result.freezes++;
+                if (now >= fleeingUntil) earlyFreezes++;
                 const dur = freezeDuration(freeze!, guarded.has('magic'));
                 frozenUntil = now + dur;
                 freezeReady = now + dur + 5;
@@ -784,6 +836,8 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             }
         } else void sdk.sendInteractPlayer(target.index, 2);
         result.attacks[turn.style]++;
+        lastStyle = turn.style;
+        lastArm = shownStyle !== undefined && turn.style === shownStyle ? 'into' : 'avoid';
         last = turn.index;
         const walkTicks = turn.style === 'melee' ? ((me.runEnergy ?? 100) >= 100 ? Math.ceil(Math.max(0, cheb(at, target) - 1) / 2) : Math.max(0, cheb(at, target) - 1)) : 0;
         const delay = turn.style === 'ranged' && rapidSet ? 3 : turn.style === 'melee' ? meleeWeaponDelay(o.kit.melee, names) : TURN[turn.style];

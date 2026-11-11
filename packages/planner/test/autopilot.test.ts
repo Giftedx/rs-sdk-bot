@@ -1411,3 +1411,51 @@ test('an army account takes Merlin\'s Crystal and Holy Grail for its Prayer: the
     expect(run([who('Monk', { ...kit, 'law rune': 2 }, { Prayer: 99 })])[0]!.template?.id).not.toBe(KIT_BUY + 'army-quest-holygrail');
 });
 
+
+test('an account with a PK build trains to the levels of the build and no further', async () => {
+    const { buildBand, catalogue: all } = await import('../src/autopilot');
+    const dragon = { Attack: 60, Strength: 99, Defence: 60, Ranged: 99, Magic: 99, Prayer: 43 }, pure = { ...dragon, Defence: 1, Prayer: 1 };
+    const templates = all(), byId = (id: string) => templates.find(t => t.id === id)!;
+    const fresh = acct('Build', { Attack: 1, Strength: 1, Defence: 1 });
+    // No build: the band as listed. A skill at its level: no band. Defence 1 never trains Defence.
+    expect(buildBand(byId('army-cow-defence-45'), fresh)).toBe(byId('army-cow-defence-45'));
+    expect(buildBand(byId('army-cow-defence-45'), fresh, pure)).toBeNull();
+    expect(buildBand(byId('army-cow-attack-45'), acct('Build', { Attack: 60 }), dragon)).toBeNull();
+    // A cow band stops at its own end, and the trooper band at the level of the build.
+    expect(buildBand(byId('army-cow-defence-45'), fresh, dragon)!.env!.TARGET_LEVEL).toBe('45');
+    const trooper = buildBand(byId('army-trooper-defence-99'), acct('Build', { Defence: 55 }), dragon)!;
+    expect(trooper.env!.TARGET_LEVEL).toBe('60');
+    expect(trooper.trains!.to).toBe(60);
+    expect(buildBand(byId('army-trooper-strength-99'), fresh, dragon)!.env!.TARGET_LEVEL).toBe('99');
+    // No band buries bones: bones give Prayer XP. The Prayer band of the trooper field counts kills and keeps the
+    // style of the account, so it is refused even for a build with Prayer above the account's level.
+    expect(byId('army-trooper-ranged-99').env!.GIANT_BURY).toBe('1');
+    expect(buildBand(byId('army-trooper-ranged-99'), fresh, pure)!.env!.GIANT_BURY).toBe('0');
+    expect(trooper.env!.GIANT_BURY).toBe('0');
+    expect(buildBand(byId('army-trooper-prayer-99'), acct('Build', { Prayer: 20 }), dragon)).toBeNull();
+    // Prayer comes from held normal bones only, to the level of the build: the worker's target argument.
+    const bury = buildBand(byId('army-bury-prayer-99'), acct('Build', { Prayer: 20 }), dragon)!;
+    expect(bury.args).toEqual(['43']); expect(bury.trains!.to).toBe(43); expect(bury.env!.BURY_HELD).toBe('1');
+    expect(buildBand(byId('army-bury-prayer-99'), acct('Build', { Prayer: 43 }), dragon)).toBeNull();
+    expect(buildBand(byId('army-bury-prayer-99'), fresh, pure)).toBeNull();
+    expect(buildBand(byId('army-bury-dragon-99'), acct('Build', { Prayer: 20 }), dragon)).toBeNull();
+    expect(buildBand(byId('army-bury-big-99'), acct('Build', { Prayer: 20 }), dragon)).toBeNull();
+    for (const t of templates.filter(t => t.tier === 'goal')) for (const build of [pure, dragon]) {
+        const got = buildBand(t, fresh, build);
+        if (got?.script === 'scripts/gather-combat.ts') { expect(got.env!.GIANT_BURY).toBe('0'); expect(got.env!.GIANT_KILLS).toBeUndefined(); expect(got.env!.TRAIN_SKILL).toBe(got.trains!.skill); }
+    }
+    // A band of another script that ends above the level, a quest band and a stock band are refused.
+    for (const t of templates.filter(t => t.tier === 'goal')) {
+        const got = buildBand(t, fresh, pure);
+        if (t.quest || t.stock || t.trains?.skill === 'Defence' || t.trains?.skill === 'Prayer') expect(got).toBeNull();
+        if (got && got.trains && pure[got.trains.skill as keyof typeof pure] !== undefined) expect(got.trains.to).toBeLessThanOrEqual(pure[got.trains.skill as keyof typeof pure]);
+    }
+    // In a plan: the build account gets no Defence band, the plain army account does.
+    const melee = { Attack: 45, Strength: 45, Defence: 1, Hitpoints: 40 }, kit = { 'bronze sword': 1, 'wooden shield': 1, trout: 30 };
+    const army = new Set(['build', 'plain']);
+    const planned = plan(inputs([acct('Build', melee, kit), acct('Plain', melee, kit)], { army, builds: new Map([['build', pure]]), capacity: CAPACITY }));
+    const of = (name: string) => planned.find(x => x.account === name)?.template;
+    expect(of('Plain')?.trains?.skill).toBe('Defence');
+    expect(of('Build')?.trains?.skill).not.toBe('Defence');
+    if (of('Build')?.script === 'scripts/gather-combat.ts') expect(Number(of('Build')!.env!.TARGET_LEVEL)).toBeLessThanOrEqual(99);
+});

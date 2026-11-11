@@ -65,6 +65,7 @@ if (chop) {
     const first = count();
     let clicks = 0;
     while (left() > 0 && count() - first < Number(amount)) {
+        if (state()?.dialog?.isOpen) { await s.direct({ type: 'closeModal', reason: 'bench' }); await waitTicks(s, 1); }
         const loc = (state()?.nearbyLocs ?? []).filter(l => tree.locs.includes(l.id) && l.optionsWithIndex.some(o => /^chop/i.test(o.text))).sort((a, b) => a.distance - b.distance)[0];
         if (!loc) { await waitTicks(s, 1); continue; }
         const had = count();
@@ -86,6 +87,8 @@ if (fish) {
     const first = count();
     let clicks = 0;
     while (left() > 0 && count() - first < Number(amount)) {
+        // A level-up message stops the fishing; the next click needs it closed.
+        if (state()?.dialog?.isOpen) { await s.direct({ type: 'closeModal', reason: 'bench' }); await waitTicks(s, 1); }
         const spot = state() ? pickFishSpot(state()!, method) : undefined;
         if (!spot) { await waitTicks(s, 1); continue; }
         const had = count();

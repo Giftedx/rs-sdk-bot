@@ -5,6 +5,7 @@
 import {existsSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {openBot,settle,getWorld,accountOf} from '../packages/core/src/bot';
+import {holdSessionEater} from '../packages/core/src/sustain';
 import type {Session,BankObservation} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
 import {depositObserved} from '../packages/core/src/deposit';
@@ -337,7 +338,7 @@ export async function runQuestItemsOrder(name:string,key:string,options:{save?:s
  if(!options.save||!existsSync(options.save))return {ok:false,refused:'save required or not found',login:false};
  const before=readPracticeSave(options.save),refused=itemEntry(key,before);
  if(refused)return {ok:false,refused,login:false};
- const s=await openBot(name);let child:Awaited<ReturnType<typeof gatherQuestItems>>|undefined,detail='';
+ const s=await openBot(name);holdSessionEater(s.sdk);let child:Awaited<ReturnType<typeof gatherQuestItems>>|undefined,detail='';
  try{child=await gatherQuestItems(s,key,before,options.cap);detail=`quest-items ${key} ticks=${child.ticks}`;}
  catch(e){detail=String(e);}
  // settle's return includes work success. Its logout receipt is a separate fact.

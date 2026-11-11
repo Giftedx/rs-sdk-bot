@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { fleetNames, hitByPlayer, pickTarget, restock, TRIBRID_KIT, verdict } from './pk-hunt';
+import { fleetNames, hitByPlayer, pickTarget, pickTrip, restock, SNARE_TRIP, TRIBRID_KIT, TRIP, verdict } from './pk-hunt';
 
 const me = { z: 3556, combatLevel: 126 };
 const p = (index: number, name: string, combatLevel: number, distance: number, extra: object = {}) => ({ index, name, combatLevel, z: 3556, distance, ...extra });
@@ -99,3 +99,11 @@ test('restock takes one of each boost potion the bank holds, each in place of on
     expect(inventory.find(i => i.id === 385)?.count).toBe(8);
 });
 
+
+test('pickTrip takes the snare trip where the bank holds all of it, else the staff trip', () => {
+    const snare = SNARE_TRIP.map(w => ({ id: w.id, count: w.count }));
+    expect(pickTrip(snare).name).toBe('snare');
+    expect(pickTrip(snare.slice(1)).name).toBe('staff');
+    expect(pickTrip(snare.map((w, i) => (i === 1 ? { ...w, count: w.count - 1 } : w))).name).toBe('staff');
+    expect(pickTrip([]).trip).toBe(TRIP);
+});

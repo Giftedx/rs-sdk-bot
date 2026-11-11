@@ -101,11 +101,11 @@ export interface PrayerGuardStats {
 }
 
 // Script inputs that start no action the guard could cancel. Every other input is an interaction.
-const NEUTRAL = new Set(['say', 'privateMessage', 'wait', 'none', 'scanGroundItems', 'scanNearbyLocs', 'setTab', 'setCombatStyle',
+export const NEUTRAL = new Set(['say', 'privateMessage', 'wait', 'none', 'scanGroundItems', 'scanNearbyLocs', 'setTab', 'setCombatStyle',
     'searchGE', 'closeModal', 'closeShop', 'useInventoryItem', 'useEquipmentItem', 'dropItem', 'bankDeposit', 'bankWithdraw',
     'shopBuy', 'shopSell']);
 // Ticks the player must stand with no animation before an interaction that is not an attack counts as ended.
-const IDLE_TICKS = 6;
+export const IDLE_TICKS = 6;
 // A pickup ends when the item count in the pack goes up, or when the player has stood idle for this many ticks.
 const PICKUP_IDLE_TICKS = 2;
 // Ticks the Strength and Attack prayers stay on after the last tick with an attack pending.
@@ -143,7 +143,8 @@ const REPEATABLE = /^(mine|chop down|chop)$/i, FISHING_SPOT = /^fishing spot$/i;
 // The server refuses the hidden option from a client (engine OpNpcHandler.ts). So during fishing the guard flicks
 // and clicks on two ticks of a cycle of FISH_CYCLE ticks only: on the tick that starts the timer and on the next
 // one. The roll on tick 4 runs with no input, and the next cycle starts on tick 5, the longest gap the drain timer
-// allows.
+// allows. With 3 or 4 prayers on, the two-tick flick needs a start each 4 ticks, which no 5-tick cycle has: the guard
+// then keeps the prayer points and loses most rolls.
 // A cycle whose first click comes on the roll tick stays there: the second click then starts the timer, and the
 // next first click is on the roll tick again. A click on a river spot (freshfish.rs2) on that tick takes the place
 // of the roll, so no fish comes. Three rules move the cycle to the right tick. The state shows the game's message
@@ -160,6 +161,14 @@ const STATE_LAG = 2;
 
 type Action = { type: string; [k: string]: unknown };
 type Pending = { kind: 'none' } | { kind: 'attack'; action: Action } | { kind: 'other'; type: string; still: number; need: number; item?: number; had?: number };
+
+// True while the target of an attack input is in view and alive.
+export const attackTarget = (a: Action, st: any): boolean => {
+    if (a.type === 'interactPlayer') return a.optionIndex === 2 && (st?.nearbyPlayers ?? []).some((p: any) => p.index === a.playerIndex);
+    if (a.type !== 'interactNpc') return false;
+    const n = (st?.nearbyNpcs ?? []).find((n: any) => n.index === a.npcIndex);
+    return !!n && n.hp !== 0 && (n.optionsWithIndex ?? []).some((op: any) => op.opIndex === a.optionIndex && /^Attack$/i.test(op.text));
+};
 
 export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     const every = o.every ?? 3, calm = o.calmTicks ?? 20;
@@ -215,12 +224,6 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     let swingAt = -Infinity, swingBefore = -Infinity;
 
     const hold = (cause: string) => { stats.holds++; stats.holdsBy[cause] = (stats.holdsBy[cause] ?? 0) + 1; };
-    const attackTarget = (a: Action, st: any): boolean => {
-        if (a.type === 'interactPlayer') return a.optionIndex === 2 && (st?.nearbyPlayers ?? []).some((p: any) => p.index === a.playerIndex);
-        if (a.type !== 'interactNpc') return false;
-        const n = (st?.nearbyNpcs ?? []).find((n: any) => n.index === a.npcIndex);
-        return !!n && n.hp !== 0 && (n.optionsWithIndex ?? []).some((op: any) => op.opIndex === a.optionIndex && /^Attack$/i.test(op.text));
-    };
     // The open dialog is the level-up message: the state has its text in the newest entry of `recentDialogs`.
     const levelUp = (st: any): boolean => {
         if (!st?.dialog?.isOpen) return false;

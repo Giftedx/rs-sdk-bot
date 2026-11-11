@@ -10,6 +10,7 @@ import {existsSync,readFileSync,writeFileSync,renameSync,realpathSync} from 'nod
 import {resolve,basename} from 'node:path';
 import {acquireExclusiveLease} from './payout-order';
 import {openBot,settle,serverFromEnv} from '../packages/core/src/bot';
+import {holdSessionEater} from '../packages/core/src/sustain';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
 import {depositObserved} from '../packages/core/src/deposit';
@@ -121,7 +122,7 @@ async function runChild(spec:QuestSpec,name:string,timeoutMs:number){
 
 // Confirm the quest flag in game, then bank every pack item. Session cleanup stays with settle().
 async function bankSession(name:string,spec:QuestSpec){
- const s=await openBot(name);let ok=false,detail='',banked=0;
+ const s=await openBot(name);holdSessionEater(s.sdk);let ok=false,detail='',banked=0;
  try{
   const flag=await observeFlag(s,spec.label);
   if(flag!=='complete')throw Error(`quest flag ${flag??'unknown'} after quest`);

@@ -31,6 +31,15 @@ export const TRIP: readonly { id: number; count: number }[] = [
     { id: ITEMS.airRune, count: 300 }, { id: ITEMS.bloodRune, count: 60 }, { id: 2434, count: 2 }, { id: ITEMS.glory[0], count: 1 },
 ] as const;
 
+// The snare kit (scripts/pk-kits.ts tribrid-snare): bow and dagger for the fight, the runes of Entangle for a target that
+// runs (5 earth, 5 water and 4 nature a cast), no staff and no wave runes. It beat the staff kit against the melee
+// build, the hybrid and the ranger (research/pvp-fight-loop.md). PK_KIT=snare selects the kit and this trip.
+export const SNARE_KIT: Kit = { ranged: [KIT_IDS.magicShortbow], melee: [KIT_IDS.dragonDaggerP, KIT_IDS.runeKiteshield] };
+export const SNARE_TRIP: readonly { id: number; count: number }[] = [
+    { id: KIT_IDS.magicShortbow, count: 1 }, { id: ITEMS.earthRune, count: 50 }, { id: ITEMS.waterRune, count: 50 }, { id: ITEMS.natureRune, count: 40 },
+    { id: 2434, count: 2 }, { id: ITEMS.glory[0], count: 1 },
+] as const;
+
 // Never fight our own accounts: every fleet side's owners plus the main account.
 export function fleetNames(owners = loadOwners()): Set<string> {
     return new Set([...owners.keys(), 'haggis'].map(n => n.toLowerCase()));
@@ -66,7 +75,15 @@ async function walk(s: Session, to: { x: number; z: number }, stop: () => boolea
 // One of each boost the fight loop drinks, in any dose.
 export const BOOST_POTIONS = [ITEMS.superAttack, ITEMS.superStrength, ITEMS.rangingPotion] as const;
 // Re-equip the melee set and any unequipped body armour, bank everything else in the pack, then withdraw the trip and food.
-export async function restock(s: Session, food: number, trip: readonly { id: number; count: number }[] = TRIP, kit: Kit = TRIBRID_KIT): Promise<string | null> {
+// The trip a bank can fill: the snare trip where the bank holds all of it, else the staff trip.
+export function pickTrip(bank: readonly { id: number; count: number }[]): { name: 'snare' | 'staff'; kit: Kit; trip: readonly { id: number; count: number }[] } {
+    const holds = (want: { id: number; count: number }) => (bank.find(b => b.id === want.id)?.count ?? 0) >= want.count;
+    return SNARE_TRIP.every(holds) ? { name: 'snare', kit: SNARE_KIT, trip: SNARE_TRIP } : { name: 'staff', kit: TRIBRID_KIT, trip: TRIP };
+}
+
+// `choose` picks the trip from the bank once the pack is banked (the hunter with no kit named: pickTrip).
+export async function restock(s: Session, food: number, trip: readonly { id: number; count: number }[] = TRIP, kit: Kit = TRIBRID_KIT,
+    choose?: (bank: readonly { id: number; count: number }[]) => readonly { id: number; count: number }[]): Promise<string | null> {
     const equip = typeof s.sdk.getEquipment === 'function' ? () => s.sdk.getEquipment() : () => s.sdk.getState()?.equipment ?? [];
     let switched = false;
     for (const item of [...s.sdk.getInventory()]) {
@@ -78,6 +95,7 @@ export async function restock(s: Session, food: number, trip: readonly { id: num
     if (switched && typeof s.onTick === 'function') await nextTick(s);
     if (!(await s.bot.openBank()).success) return 'bank did not open';
     for (const item of [...s.sdk.getInventory()]) await s.bot.depositItem(item, -1);
+    if (choose) trip = choose(s.sdk.getBankItems());
     const stock = () => s.bankObservation?.()?.items ?? [];
     // Boost potions where the bank holds them, each for one shark: a tribrid with a super attack, a super strength and a
     // ranging potion won 11 of 16 spars against the same kit with three more sharks (research/pvp-fight-loop.md). The
@@ -110,7 +128,10 @@ export async function hunt(s: Session, o: HuntOptions) {
     let ended = false;
     void s.ended.then(() => { ended = true; });
     const over = () => ended || o.stop() || s.tick() - start >= o.cap;
-    const kit = o.kit ?? TRIBRID_KIT, sighted = new Map<string, string>();
+    // With no kit and no trip named, each restock takes the snare trip where the bank holds it: it won more spars than
+    // the staff trip (research/pvp-fight-loop.md, finding 25).
+    const auto = !o.kit && !o.trip, sighted = new Map<string, string>();
+    let kit = o.kit ?? TRIBRID_KIT;
     let spot = 0;
     const far = () => { const p = s.sdk.getState()?.player; return !p || Math.max(Math.abs(p.worldX - EDGEVILLE_BANK.x), Math.abs(p.worldZ - EDGEVILLE_BANK.z)) > 60; };
     if (far()) {
@@ -137,7 +158,7 @@ export async function hunt(s: Session, o: HuntOptions) {
         if (held(s, ITEMS.shark) < o.minFood) {
             const back = await walk(s, EDGEVILLE_BANK, over, 600);
             if (!back.ok) return { ...tally, end: 'bank walk failed ' + JSON.stringify(back) };
-            const missing = await restock(s, o.food, o.trip, kit);
+            const missing = await restock(s, o.food, o.trip, kit, auto ? bank => { const pick = pickTrip(bank); kit = pick.kit; log(`HUNT trip ${pick.name}`); return pick.trip; } : undefined);
             if (missing) return { ...tally, end: missing };
             tally.trips++;
         }
@@ -182,8 +203,12 @@ export async function hunt(s: Session, o: HuntOptions) {
             const r: FightResult = await fightPlayer(s, target.name, {
                 // The freeze goes out when the target runs: cast whenever the target was free, it lost a stand-up spar (2 wins,
                 // 4 losses), and a hunter with it killed no more runners (research/pvp-fight-loop.md).
-                kit, spec: defaultSpec(kit), freeze: castableFreeze(magicLevel, state.inventory) !== null ? 'flee' : false, exitOnDanger: true,
-                escapeAt: o.escapeAt, escapeSpell: o.teleSpell, cap: 900, damageSpell: o.damageSpell, rotation: o.rotation, stop: over, log,
+                // The overhead changes one tick before the target's next attack: 42 kills to 6 in mirror spars against 24 to 24.
+                kit, spec: defaultSpec(kit), freeze: castableFreeze(magicLevel, state.inventory) !== null ? 'flee' : false, exitOnDanger: true, predictPrayer: true, snapPrayer: true, counterRead: true, adaptStyles: true,
+                escapeAt: o.escapeAt, escapeSpell: o.teleSpell, cap: 900, damageSpell: o.damageSpell, stop: over, log,
+                // A stand-up fight with bow and dagger only: a spell takes 5 ticks, the bow 3 and the dagger 4. Magic stays
+                // for the freeze. Random styles: an overhead that predicts cannot follow them.
+                rotation: o.rotation ?? (kit.ranged?.length && kit.melee?.length ? ['ranged', 'melee'] : undefined), mixStyles: true,
             });
             log(`HUNT fight ${r.outcome} ${JSON.stringify(r)}`);
             if (r.outcome === 'kill') {
@@ -230,7 +255,7 @@ if (import.meta.main) {
     const s = await openBot(bot);
     const env = process.env;
     const r = await hunt(s, { cap: Number(capArg ?? 6000), food: Number(env.HUNT_FOOD ?? 18), minFood: Number(env.MIN_FOOD ?? 6), escapeAt: Number(env.ESCAPE_AT ?? 35), stop,
-        kit: env.PK_KIT ? JSON.parse(env.PK_KIT) as Kit : undefined, trip: env.PK_TRIP ? JSON.parse(env.PK_TRIP) : undefined, damageSpell: env.PK_SPELL ? Number(env.PK_SPELL) : undefined,
+        kit: env.PK_KIT === 'snare' ? SNARE_KIT : env.PK_KIT ? JSON.parse(env.PK_KIT) as Kit : undefined, trip: env.PK_TRIP ? JSON.parse(env.PK_TRIP) : env.PK_KIT === 'snare' ? SNARE_TRIP : undefined, damageSpell: env.PK_SPELL ? Number(env.PK_SPELL) : undefined,
         rotation: env.PK_ROTATION ? env.PK_ROTATION.split(',') as Style[] : undefined, teleSpell: env.PK_TELE ? Number(env.PK_TELE) : undefined,
         spots: env.PK_SPOTS ? JSON.parse(env.PK_SPOTS) as Spot[] : undefined, observe: env.PK_OBSERVE === '1' });
     console.log('HUNT ' + JSON.stringify(r));

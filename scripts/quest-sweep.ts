@@ -26,11 +26,12 @@ import {BotActions} from '../vendor/rs-sdk/sdk/actions';
 import {runOwnedLoadout,validateOwnedKit,type OwnedKit} from './microbot-owned-loadout';
 import {productionStopRequested} from './microbot-c-lifetime';
 import {createShiloTransit,NATURE} from './microbot-rune-trip';
-import {retainedGhostSkull,retainedGhostBankSkull,leaveGhostBasement,inGhostBasement} from './ghost-basement-exit';
+import {retainedGhostSkull,retainedGhostBankSkull,leaveGhostBasement,inGhostBasement,dashThroughDoor} from './ghost-basement-exit';
 import {walkQuestCorridor} from './quest-walk';
 import {crossStrongholdGate,STRONGHOLD_GATE,type GateDeps} from './agility-order';
 import {crossesSea} from '../packages/core/src/spawn-index';
 import {startQuestSustain,questFoodDefinitions} from './quest-sustain';
+import {holdSessionEater} from '../packages/core/src/sustain';
 
 type Item={id:number;count:number};
 type Tile={x:number;z:number;level:number};
@@ -100,6 +101,13 @@ export function needs(preset:SaveConfig,food=false,quest=''):Map<number,number>{
  if(!food&&preset.coins)m.set(COINS,(m.get(COINS)??0)+preset.coins);
  return m;
 }
+const SCORPION_BARCRAWL = new Map([[COINS,268],[563,3],[556,11],[555,1],[554,1]]);
+export function scorpionBarcrawlNeeds(base:ReadonlyMap<number,number>,barcrawlState:number):Map<number,number>{
+ const staged=new Map(base);
+ if(barcrawlState===2)return staged;
+ for(const [id,n] of SCORPION_BARCRAWL)staged.set(id,(staged.get(id)??0)+n);
+ return staged;
+}
 const count=(rows:readonly Item[],id:number)=>rows.filter(r=>r.id===id).reduce((n,r)=>n+r.count,0);
 const WORN_KIT:Record<string,readonly {id:number;required:boolean}[]>={ball:[{id:1059,required:true},{id:1331,required:false}]};
 export function wornKitPlan(quest:string,base:ReadonlyMap<number,number>,pack:readonly Item[],bank:readonly Item[],equipment:readonly Item[]){
@@ -137,7 +145,12 @@ export const MEALS=[385,373,379,365,361,333,329,1891,1893,1895,2309];
 // pack already carries (a ranger with sharks banked and a preset of lobsters leaves with sharks). The quest's own
 // withdrawals and needs are not meals: Merlin's Crystal's bread for the beggar stays the beggar's.
 export function mealPlan(food:ReadonlyMap<number,number>,pack:readonly Item[],bank:readonly Item[],questWithdraw:readonly Item[]=[],need:ReadonlyMap<number,number>=new Map()):Item[]{
- const exact=plan(food,pack,bank),withdraw=[...exact.withdraw];
+ // An item on both lists (Scorpion Catcher's law runes for the Barcrawl beside the preset's) is wanted on top of the
+ // quest's count. The quest's withdrawals count as held, and the bank is read less them, as in toolPlan. Otherwise both
+ // plans take the same bank stock and the second withdrawal meets an empty row.
+ const want=new Map([...food].map(([id,n])=>[id,n+(need.get(id)??0)] as const));
+ const stock=[...food.keys()].map(id=>({id,count:Math.max(0,count(bank,id)-count(questWithdraw,id))}));
+ const exact=plan(want,[...pack,...questWithdraw],stock),withdraw=[...exact.withdraw];
  const edible=(id:number)=>MEALS.includes(id)&&!food.has(id);
  const spare=(id:number)=>Math.max(0,count(pack,id)-(need.get(id)??0));
  let left=exact.missing.filter(m=>MEALS.includes(m.id)).reduce((n,m)=>n+m.count,0)-MEALS.filter(edible).reduce((n,id)=>n+spare(id),0);
@@ -989,6 +1002,7 @@ export const fluffsExit=(castable:boolean,p?:YardPos|null):'teleport'|'fence'=>!
 // One bot at a time hands its session over through globalThis.QUEST_SESSION, until quest-lib's openQuest has taken
 // it (QUEST_SESSION_TAKEN) or 60 s pass. `fresh` imports the quest module under a unique query, so every bot in one
 // process runs the quest's top-level code again.
+export const questScriptId=(script:string)=>String(script).replace(/^.*[\\/]/,'').replace(/\.ts$/,'');
 let handoff:Promise<void>=Promise.resolve();
 export function handOver(s:Session,script:string,fresh?:string):Promise<unknown>{
  const g=globalThis as {QUEST_SESSION?:Session;QUEST_SESSION_TAKEN?:()=>void;QUEST_SCRIPT_ID?:string};
@@ -998,7 +1012,7 @@ export function handOver(s:Session,script:string,fresh?:string):Promise<unknown>
   const timer=setTimeout(done,60_000);
   g.QUEST_SESSION=s;g.QUEST_SESSION_TAKEN=done;
   // quest-lib reads the talk plans of the quest script by this name.
-  g.QUEST_SCRIPT_ID=String(script).replace(/^.*[\\/]/,'').replace(/\.ts$/,'');
+  g.QUEST_SCRIPT_ID=questScriptId(script);
   started(import(fresh?`${script}?${fresh}`:script).finally(()=>{if(g.QUEST_SESSION_TAKEN===done)done();}));
  }));
  return run.then(p=>p);
@@ -1080,13 +1094,20 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  if(quest==='hero'||quest==='heroes')throw Error('Heroes requires the explicit owned pair CLI quest-hero-owned.ts or runHeroesPair(original sessions, validated order); no single-actor partner login');
  const script=resolve(import.meta.dir,'generated',`quest-${quest}.ts`);
  if(!existsSync(script))throw Error(`quest sweep: no script ${script}`);
- const preset=presetFor(quest),base=needs(preset,false,quest),food=needs(preset,true,quest);
+ const preset=presetFor(quest);let base=needs(preset,false,quest);const food=needs(preset,true,quest);
  const s:Session=await openBot(account);
+ // A quest session has no eat guard (packages/core/src/eat-guard.ts): the staged items can be food. The hold has no release.
+ holdSessionEater(s.sdk);
  const fail=(why:string)=>finish([s],false,`quest-sweep ${quest} ${why}`);
  let handed=false;
  try {
  const st=()=>s.sdk.getState();
  if(!await waitUntil(s,()=>!!st()?.player,{timeoutTicks:20}))return fail('entry state unavailable');
+ if(quest==='scorpion'){
+  const state=()=>Number((s.client as any).var?.[77]);
+  if(!await waitUntil(s,()=>Number.isSafeInteger(state()),{timeoutTicks:20}))return fail('Barcrawl gate state unavailable');
+  base=scorpionBarcrawlNeeds(base,state());
+ }
  const baseLevel=(name:string)=>st()?.skills?.find((k:any)=>k.name===name)?.baseLevel??1;
  for(const id of STURDY_OPTIONAL[quest]??[])if(base.has(id)&&baseLevel('Hitpoints')>=STURDY&&baseLevel('Defence')>=STURDY){
   food.set(id,base.get(id)!);base.delete(id);
@@ -1111,7 +1132,11 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
   const near=(x:number,z:number,tol:number)=>{const p=st()?.player;return!!p&&Math.max(Math.abs(p.worldX-x),Math.abs(p.worldZ-z))<=tol;};
   await leaveGhostBasement({pos:()=>st()?.player,
    openDoor:async(_l,x,z)=>{const d=locAt(x,z),op=ops(d).find(o=>/^open$/i.test(o.text));if(d&&op){await s.bot.interactLoc(d,op.opIndex);await waitUntil(s,()=>!ops(locAt(x,z)).some(o=>/^open$/i.test(o.text)),{timeoutTicks:12});}},
-   dash:async(_l,x,z,tol)=>{for(let i=0;i<3&&!near(x,z,tol);i++){await s.direct({type:'walkTo',x,z,running:true,reason:'SDK'});await waitUntil(s,()=>near(x,z,tol),{timeoutTicks:30});}},
+   dash:(l,x,z,tol)=>dashThroughDoor({pos:()=>st()?.player,
+    walk:async(x,z)=>{await s.direct({type:'walkTo',x,z,running:true,reason:'SDK'});},
+    arrived:(x,z,tol)=>waitUntil(s,()=>near(x,z,tol),{timeoutTicks:30}),
+    closedDoor:within=>(st()?.nearbyLocs??[]).filter((d:any)=>/door|gate/i.test(d.name)&&near(d.x,d.z,within)&&ops(d).some(o=>/^open$/i.test(o.text))).sort((a:any,b:any)=>a.distance-b.distance)[0],
+    open:async d=>{const l=locAt(d.x,d.z),op=ops(l).find(o=>/^open$/i.test(o.text));if(l&&op){await s.bot.interactLoc(l,op.opIndex);await waitUntil(s,()=>!ops(locAt(d.x,d.z)).some(o=>/^open$/i.test(o.text)),{timeoutTicks:12});}}},l,x,z,tol),
    waitForLadder:()=>waitUntil(s,()=>!!locAt(3104,9576)||!!(st()?.nearbyLocs??[]).find((l:any)=>ops(l).some(o=>/climb-up|climb$/i.test(o.text))&&l.distance<=3),{timeoutTicks:15}),
    climbLadder:async()=>{const l=(st()?.nearbyLocs??[]).filter((l:any)=>ops(l).some(o=>/climb-up|^climb$/i.test(o.text))).sort((a:any,b:any)=>a.distance-b.distance)[0],op=ops(l).find(o=>/climb-up|^climb$/i.test(o.text));if(l&&op){const z0=st()?.player?.worldZ??0;await s.bot.interactLoc(l,op.opIndex);await waitUntil(s,()=>(st()?.player?.worldZ??z0)<UNDERGROUND,{timeoutTicks:30});}},
    waitForLanding:()=>waitUntil(s,()=>(st()?.player?.worldZ??UNDERGROUND)<UNDERGROUND,{timeoutTicks:15})});
