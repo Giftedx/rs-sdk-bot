@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1794418158036-fatstack-knightstick",
  "account": "Knightstick",
  "partner": "Fatstack",
@@ -12,6 +12,7 @@
  "claim": "a43156c2-072f-42f4-8276-4a3f21dca426",
  "count": 0,
  "ok": false,
- "at": 1794418164751,
- "detail": "trade claimed"
+ "at": 1794418221997,
+ "detail": "session ended: disconnected",
+ "screen": false
 }
