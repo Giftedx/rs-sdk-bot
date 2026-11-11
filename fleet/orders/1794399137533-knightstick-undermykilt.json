@@ -1,0 +1,22 @@
+{
+ "id": "1794399137533-knightstick-undermykilt",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Knightstick",
+ "to": "UnderMyKilt",
+ "item": "Bronze arrow",
+ "count": 560,
+ "start": 1794399137533,
+ "end": 1794402737533,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
