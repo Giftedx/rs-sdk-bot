@@ -368,6 +368,13 @@ export function nextStyle(rotation: readonly Style[], last: number, usable: (s: 
     return null;
 }
 
+// The style order of a fight: the order asked for, or the full order where the kit has no style of it. A profile
+// with the order ranged, melee on a kit that only casts would never attack.
+export function kitRotation(asked: readonly Style[] | undefined, kit: Kit): readonly Style[] {
+    const full: readonly Style[] = ['magic', 'ranged', 'melee'];
+    return asked?.some(st => hasStyle(kit, st)) ? asked : full;
+}
+
 // The fight loop times each eat against its attacks, so it holds the session's eat guard (packages/core/src/eat-guard.ts)
 // for the fight.
 export async function fightPlayer(s: Session, targetName: string, o: FightOptions): Promise<FightResult> {
@@ -377,7 +384,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
 
 async function fightLoop(s: Session, targetName: string, o: FightOptions, guardFoodReady: number): Promise<FightResult> {
     const log = o.log ?? ((line: string) => console.log(line));
-    const rotation = o.rotation ?? ['magic', 'ranged', 'melee'];
+    const rotation = kitRotation(o.rotation, o.kit);
     const eatAt = o.eatAt ?? 50, restoreAt = o.restorePrayerAt ?? 20, cap = o.cap ?? 600;
     const result: FightResult = { outcome: 'timeout', ticks: 0, dealt: 0, taken: 0, eaten: 0, attacks: { magic: 0, ranged: 0, melee: 0 }, freezes: 0, specs: 0 };
     const sdk = s.sdk, start = s.tick(), want = targetName.toLowerCase();
