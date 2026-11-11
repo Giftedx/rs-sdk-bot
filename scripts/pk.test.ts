@@ -2,9 +2,16 @@ import { expect, test } from 'bun:test';
 import {
     attackable, bestDamageSpell, bestFood, castableFreeze, combatPrayers, dangerReason, defaultSpec,
     estMaxHit, fightPlayer, freezeDuration, freezeSpell, hasStyle, ITEMS, killMessage, lowHealth,
-    negativeCastArmour, newSplats, nextStyle, nextTick, observePlayer, PRAYER, protectedStyles, skulled, SPELLS,
+    negativeCastArmour, newSplats, nextStyle, nextTick, observePlayer, PRAYER, protectedStyles, seededRandom, skulled, SPELLS,
     weaponStyle, wildernessLevel,
 } from './pk';
+
+test('a seeded random source repeats for one seed and differs for another', () => {
+    const draw = (seed: number) => { const r = seededRandom(seed); return [r(), r(), r()]; };
+    expect(draw(7)).toEqual(draw(7));
+    expect(draw(7)).not.toEqual(draw(8));
+    for (const v of draw(7)) { expect(v).toBeGreaterThanOrEqual(0); expect(v).toBeLessThan(1); }
+});
 
 test('newSplats counts each new hit splat on a player once, whoever our player faces', () => {
     const entity = { damageCycles: [0, 0, 0, 0], damageValues: [0, 0, 0, 0] }, client = { players: [null, entity] };

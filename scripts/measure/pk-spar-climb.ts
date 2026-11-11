@@ -10,13 +10,12 @@
 // --measure scores takes the spar score (a kill is above 100) where kills matter more than damage.
 // Usage: bun scripts/measure/pk-spar-climb.ts [--case extra:spar-x8] [--knobs eatAt,rotation] [--cap 500]
 //   [--max-runs 3] [--against <profile>] [--measure nets|scores] [--dry]. --dry prints the plan and runs nothing.
-// A run needs about 1.5 GB of free memory; the climber waits while the dashboard reports less headroom than
-// CLIMB_HEADROOM_GB (default 1), and while the file .practice/pk-climb-pause exists in the main checkout, so another
-// session can take the practice slot. Every evaluation is one line in .practice/pk-spar/climb.jsonl. The engines use
+// A run takes only the memory that the live fleet does not need (scripts/measure/pk-spar-wait.ts). Every evaluation is one line in .practice/pk-spar/climb.jsonl. The engines use
 // ports from 21600 (BENCH_PORT_BASE), apart from the bench's own 21000, so a bench of another session can run beside.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Profile } from '../pk-spar';
+import { waitForMemory } from './pk-spar-wait';
 
 export type Knob = { name: string; candidates: Profile[] };
 // Every option that can change during a fight, with the values worth a try. A candidate is a patch on the champion.
@@ -34,6 +33,10 @@ export const KNOBS: readonly Knob[] = [
     { name: 'defencePrayer', candidates: [{ defencePrayer: false }] },
     { name: 'standOff', candidates: [{ standOff: 2 }, { standOff: 5 }] },
     { name: 'escapeAt', candidates: [{ escapeAt: 45 }, { escapeAt: 75 }, { escapeAt: 90 }] },
+    { name: 'predictPrayer', candidates: [{ predictPrayer: true }] },
+    { name: 'styleByArmour', candidates: [{ styleByArmour: true }] },
+    { name: 'mixStyles', candidates: [{ mixStyles: true }] },
+    { name: 'adapt', candidates: [{ adapt: true }] },
     { name: 'kite', candidates: [{ freeze: true, kiteFrozen: 3 }, { freeze: 'low', kiteFrozen: 3 }, { freeze: true, kiteFrozen: 6 }] },
     { name: 'prayerFlick', candidates: [{ prayerFlick: true }] },
     { name: 'freeFood', candidates: [{ freeFood: true }] },
@@ -75,18 +78,7 @@ if (import.meta.main) {
     mkdirSync(dir, { recursive: true });
     const knobs = KNOBS.filter(k => !only || only.includes(k.name));
     if (dry) { for (const k of knobs) console.log(`${k.name}: ${k.candidates.map(c => JSON.stringify(c)).join(' ')}`); process.exit(0); }
-    // The main checkout holds the pause file and the dashboard: a worktree under .claude/worktrees is three levels down.
-    const main = /[\\/]\.claude[\\/]worktrees[\\/]/.test(root) ? resolve(root, '..', '..', '..') : root;
-    const wait = async () => {
-        for (;;) {
-            let headroom = Infinity;
-            try { headroom = (await (await fetch('http://127.0.0.1:3100/api/state', { signal: AbortSignal.timeout(4000) })).json() as { capacity?: { headroomGB?: number } }).capacity?.headroomGB ?? Infinity; } catch { /* no dashboard: no limit known */ }
-            const paused = existsSync(resolve(main, '.practice/pk-climb-pause'));
-            if (!paused && headroom >= Number(process.env.CLIMB_HEADROOM_GB ?? 1)) return;
-            console.log(`CLIMB wait ${paused ? 'pause file' : `headroom ${headroom.toFixed(2)} GB`}`);
-            await Bun.sleep(30_000);
-        }
-    };
+    const wait = () => waitForMemory(root);
     const firstSeed = Number(process.env.CLIMB_SEED ?? 1);
     const sample = async (patch: Profile, seed: number): Promise<number[] | null> => {
         await wait();

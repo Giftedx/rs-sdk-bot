@@ -6,6 +6,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { benchCases } from './aio-bench-cases';
 import { kitCost } from '../pk-kits';
+import { waitForMemory } from './pk-spar-wait';
 
 export type Cell = { matchup: string; fights: number; kills: number; deaths: number; net: number };
 // The numbers of one `key=a,b,c` list in a batch RESULT line.
@@ -27,10 +28,15 @@ if (import.meta.main) {
     const key = value('--case') ?? 'extra:spar-kits-x8', seeds = (value('--seeds') ?? '1,2').split(',').map(Number), a = value('--a') ?? 'champion', b = value('--b') ?? 'champion';
     const root = resolve(import.meta.dir, '..', '..'), out = '.practice/pk-spar/matrix-run.json';
     mkdirSync(resolve(root, '.practice/pk-spar'), { recursive: true });
-    const kits = benchCases().find(c => c.key === key)?.scriptArgs.find(arg => arg.startsWith('SPAR_KITS='))?.slice('SPAR_KITS='.length).split(',');
-    if (!kits) { console.log(`no matrix case ${key}`); process.exit(2); }
+    const args = benchCases().find(c => c.key === key)?.scriptArgs ?? [];
+    const list = (name: string) => args.find(arg => arg.startsWith(`${name}=`))?.slice(name.length + 1).split(',');
+    const pairs = list('SPAR_KITS'), league = list('SPAR_B_PROFILES');
+    if (!pairs) { console.log(`no matrix case ${key}`); process.exit(2); }
+    // A league case names side B's profile after its kit: tribrid-pots:melee/base.
+    const kits = pairs.map((pair, i) => (league ? `${pair}/${league[i % league.length]}` : pair));
     const runs: { nets: number[]; scores: number[] }[] = [];
     for (const seed of seeds) {
+        await waitForMemory(root);
         Bun.spawnSync(['bun', 'scripts/measure/aio-practice-bench.ts', `^${key}$`, '--parallel', '1', '--no-keep', '--seed', String(seed), '--set', `SPAR_A=${a}`, '--set', `SPAR_B=${b}`],
             { cwd: root, env: { BENCH_PORT_BASE: '21600', ...process.env, BENCH_OUT: out }, stdout: 'ignore', stderr: 'inherit', windowsHide: true });
         let row: { ok: boolean; result: string | null } | undefined;
@@ -39,7 +45,7 @@ if (import.meta.main) {
         else console.log(`MATRIX_RUN_FAILED seed ${seed}: ${String(row?.result).slice(0, 200)}`);
     }
     for (const cell of matrix(kits, runs)) {
-        const [ka, kb] = cell.matchup.split(':');
+        const [ka, kb] = cell.matchup.split('/')[0]!.split(':');
         console.log(`MATRIX ${JSON.stringify({ ...cell, costA: kitCost(ka!), costB: kitCost(kb!) })}`);
     }
     process.exit(runs.length === seeds.length ? 0 : 1);
