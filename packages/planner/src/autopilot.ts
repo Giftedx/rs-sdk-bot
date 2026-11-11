@@ -155,6 +155,8 @@ export const KIT_PRICE_CAPS: Readonly<Record<string, number>> = {
     // The hunters' kit (army-hunt-black-dragons). Live claude-cloud: 5 law runes for 5,260 coins and 7 sharks for 7,189;
     // magic shortbows 108 listed from 51,000.
     'law rune': 1_600, 'magic shortbow': 60_000,
+    // The Zanaris market door's tax (army-jakut-swords). Live claude-cloud read: 1,219 listed from 145,000.
+    diamond: 150_000,
     // Live claude-cloud read: dragon bones 1,009 listed from 9,000 (mean 9,687); big bones 1,686 from 2,399 (mean 2,526).
     'dragon bone': 10_000, 'big bone': 2_600,
 };
@@ -529,7 +531,10 @@ export function finishedTrainers(jobs: readonly any[], side: string, assigned: R
 // reach the market bank (`market bank travel failed`, scripts/buy-owned-ge-item.ts): no order was placed, and the
 // account stands nearer the bank for its next try (live claude-cloud: after the second ferry a relayed session's
 // state went stale at Port Sarim, the route was planned from it, and two such trips retired an account's rune buy;
-// the same walk from that tile takes 249 ticks on practice).
+// the same walk from that tile takes 249 ticks on practice). And so is a market buy refused at the bank because the
+// account owns another count of the item than the planner read (`owned item baseline N differs from EXPECTED_OWNED
+// M`): no order was placed, the run's bank visit gives the planner the count, and the next pass sizes the buy from it
+// (live: three accounts' rune buys retired on a count 36 to 124 over the bank's).
 export const RETIRE_FAILS = 2, WASTE_LIMIT = 0.9;
 // Cow mode reports its progress as selectedXp, damageXp and creditedKills.
 // A shop run reports what it bought as boughtTotal (scripts/shop-buyer.ts), and a Grand Exchange buy as "acquired" in
@@ -540,7 +545,7 @@ export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked
 // A run that ended on a stop file is a drain as well: the owner paused the account or the controller removed the job,
 // which says nothing about whether the job works (live claude-cloud: a quest chain stopped for an open fleet order
 // logged two such fails, and the account's Lost City band was retired).
-export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|.*\bprecondition no route to\b|.*\bmarket bank travel failed\b|stop file\b|.*\bworker finished: stop file\b)/;
+export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|.*\bprecondition no route to\b|.*\bmarket bank travel failed\b|.*\bowned item baseline \d+ differs from EXPECTED_OWNED \d+|stop file\b|.*\bworker finished: stop file\b)/;
 export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number; drains: number } {
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
     const drains = clean.filter(l => DRAIN_RESULT.test(l)).length;
@@ -594,6 +599,9 @@ export const BLACK_CAVE = 'cave:taverley-black-dragons', BLACK_CAVE_PLACES = 2, 
 export const HUNT_ARROWS = 600, HUNT_KILLS = 9, HUNT_FOOD = 6;
 // What a hunter's supply run brings it up to: the arrows of two trips, and the air and fire runes of twenty teleports.
 export const HUNT_ARROW_STOCK = 1200, HUNT_RUNE_STOCK = 60;
+// Dragon longswords from Jakut (scripts/jakut-swords.ts): the swords one visit buys (his shelf holds two), the coins
+// the worker takes for them (its jakutCoins) and the ticks it waits inside for the shelf's second sword.
+export const JAKUT_SWORDS = 2, JAKUT_COINS = JAKUT_SWORDS * 105_000 + 1_000, JAKUT_WAIT = 600;
 // The armour of the hides (scripts/black-dhide-sets.ts): a set is a body, chaps and vambraces of SET_HIDES hides, the
 // body asks Crafting LEATHER_LEVEL, a hide costs TAN_COIN to tan and a run takes SET_SHOP coins for a needle and
 // thread. ARMOUR_SETS: the bodies one account makes, half the army's. FLAX_SPIN: the flax one spinning run takes.
@@ -957,12 +965,23 @@ export function catalogue(): Template[] {
         tier: 'goal', band: HUNT_BAND + 0.3, filler: true, repeats: true, stock: { item: 'dragonhide', to: HIDE_TARGET }, resources: ['shop:lowe', 'shop:aubury'], yields: () => [],
         needs: { skills: hunt.needs!.skills, items: { coins: 25000 }, shortOf: { 'iron arrow': HUNT_ARROWS, 'air rune': 3, 'fire rune': 1 } },
     };
+    // Dragon longswords, which an account wields once Lost City is done. Jakut in the Zanaris market sells two at
+    // 100,000 coins (one back every 500 ticks); the way in is the dramen staff the quest leaves the account, and the
+    // market door takes one cut diamond, which the kit tier buys. One visit buys JAKUT_SWORDS: the account's own and
+    // one to give. The band stands only while the account holds no sword: a second visit for one more would cost a
+    // second diamond. It comes after the hunt and before the flax, in the time a hunter is short of arrows. A pilot.
+    const jakut: Template = {
+        id: 'army-jakut-swords', pilot: true, family: 'aio:market:jakut-swords', script: 'scripts/aio.ts', args: ['market', 'jakut-swords', `SWORDS=${JAKUT_SWORDS}`, `WAIT=${JAKUT_WAIT}`],
+        aio: 'market:jakut-swords', worker: 'scripts/jakut-swords.ts', role: 'supply', goal: 'buy dragon longswords from Jakut in the Zanaris market',
+        tier: 'goal', band: HUNT_BAND + 0.05, filler: true, repeats: false, stock: { item: 'dragon longsword', to: 1 }, yields: () => [],
+        needs: { quests: ['Lost City'], items: { 'dramen staff': 1, diamond: 1, coins: JAKUT_COINS } },
+    };
     // The hides made into armour by the accounts that hunt them, so no hide is traded. To wear a black dragonhide
     // piece asks Ranged 70, the body Defence 40 and no quest (levelrequire tier70.rs2); to make the body asks Crafting
     // 84. An account the hunt serves spins flax at Seers to that level (15 Crafting XP a flax at the server's rate of
     // 25: 825 flax from level 54, where Murder Mystery leaves it), one account in the flax field at a time, and then
     // tans its hides at Al Kharid and crafts whole sets, SET_HIDES hides each, until it holds ARMOUR_SETS bodies.
-    // After a trip the order is: the next trip, a set, the flax, the shop run. So an account short of arrows spins
+    // After a trip the order is: the next trip, Jakut's swords, a set, the flax, the shop run. So an account short of arrows spins
     // while the other hunter has Lowe's shelf, which gives back fewer arrows than two hunters fire. Pilots.
     const leatherNeeds = { ...hunt.needs!.skills, Crafting: 10 };
     const leatherTrain = { skill: 'Crafting', to: LEATHER_LEVEL, unlocks: [] };
@@ -1082,6 +1101,7 @@ export function catalogue(): Template[] {
         dustyKey,
         hunt,
         huntSupply,
+        jakut,
         dhideSets,
         leatherFlax,
         leatherSpin,
