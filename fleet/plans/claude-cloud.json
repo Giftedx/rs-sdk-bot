@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794389895146,
+ "at": 1794389959988,
  "jobs": [
   {
    "account": "Fingersmith",
@@ -194,23 +194,29 @@
   },
   {
    "account": "Kiltlifter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts aubury 3000 ITEMS=water.rune STOCK_TARGET=300 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=13000 COIN_RESERVE=500 MAX_SPEND=12000"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-ebf834b6-66ed-42e3-b5ad-220b9a38c05c"
    },
    "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy water runes at Aubury's in Varrock for the curse band",
-   "role": "supply",
-   "template": "army-water-aubury",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "shop:aubury"
-   ]
+   "repeat": false,
+   "goal": "claude-cloud-recover-kiltlifter-20261111t093349z [task-ebf834b6-66ed-42e3-b5ad-220b9a38c05c]",
+   "role": "supply"
+  },
+  {
+   "account": "Knightstick",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-e7a4f380-bb0b-43c0-a623-8467beab5df1"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-knightstick-20261111t093349z [task-e7a4f380-bb0b-43c0-a623-8467beab5df1]",
+   "role": "helper"
   }
  ]
 }
