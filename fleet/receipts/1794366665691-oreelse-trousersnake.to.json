@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794366665691-oreelse-trousersnake",
  "account": "TrouserSnake",
  "partner": "OreElse",
@@ -10,8 +10,21 @@
  "item": "Rune scimitar",
  "requested": 1,
  "claim": "262cab5c-eb5b-42a7-9cfd-22df60e4a46f",
- "count": 0,
- "ok": false,
- "at": 1794366823025,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794367060672,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794367059269
+ },
+ "logout": {
+  "attemptId": "1794366823027-0000017538-0000000001",
+  "at": 1794367060666,
+  "sha256": "bebbaeac3050e8b7ed152869fe0595cae46ecdb14859d72237438761555fc85f"
+ }
 }
