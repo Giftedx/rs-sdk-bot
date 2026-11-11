@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794380549938,
+ "at": 1794380561014,
  "jobs": [
   {
    "account": "Fingersmith",
@@ -63,25 +63,6 @@
    "resources": []
   },
   {
-   "account": "UnderMyKilt",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2582,3297"
-   ]
-  },
-  {
    "account": "Fingerblastr",
    "script": "scripts/aio.ts",
    "args": [
@@ -128,8 +109,8 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1"
@@ -137,9 +118,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-trooper-defence-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
@@ -153,7 +134,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-0e148191-6786-4251-b741-b1157efc0d97"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "claude-cloud-recover-knightstick-20261111t065835z [task-0e148191-6786-4251-b741-b1157efc0d97]",
    "role": "supply"
