@@ -1,0 +1,22 @@
+{
+ "id": "1794392074072-sporrandip-pocketpool-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "SporranDip",
+ "to": "PocketPool",
+ "item": "Air rune",
+ "count": 31,
+ "start": 1794392074072,
+ "end": 1794394474072,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

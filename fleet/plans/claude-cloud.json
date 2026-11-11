@@ -1,12 +1,12 @@
 {
  "side": "claude-cloud",
- "at": 1794391091250,
+ "at": 1794391179265,
  "jobs": [
   {
-   "account": "Fingersmith",
+   "account": "Fingerblastr",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fingersmith-kit14-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit12-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
@@ -14,9 +14,9 @@
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on iron arrows",
+   "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on bronze arrows",
    "role": "supply",
-   "template": "kit-buy:army-hunt-black-dragons",
+   "template": "kit-buy:army-hunt-black-dragons-bronze",
    "autopilot": "claude-cloud",
    "resources": []
   },
@@ -25,22 +25,22 @@
    "script": "scripts/aio.ts",
    "args": [
     "skiller",
-    "foraging",
-    "flax",
-    "1800",
-    "28"
+    "crafting",
+    "bowstrings",
+    "2500",
+    "MAX_MAKE=168",
+    "RAW_RESERVE=0",
+    "MAX_TRIPS=8"
    ],
    "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "pick flax at Seers to spin for the Crafting a black dragonhide body asks",
+   "goal": "spin flax at Seers to the Crafting a black dragonhide body asks",
    "role": "crafting",
-   "template": "army-leather-flax",
+   "template": "army-leather-spin",
    "autopilot": "claude-cloud",
-   "resources": [
-    "aio:seers-flax"
-   ]
+   "resources": []
   },
   {
    "account": "TheFullMonty",
@@ -131,24 +131,6 @@
    ]
   },
   {
-   "account": "Fingerblastr",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit12-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on bronze arrows",
-   "role": "supply",
-   "template": "kit-buy:army-hunt-black-dragons-bronze",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
    "account": "Kiltlifter",
    "script": "scripts/chain.ts",
    "args": [
@@ -166,6 +148,31 @@
    "autopilot": "claude-cloud",
    "resources": [
     "shop:aubury"
+   ]
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
    ]
   },
   {
