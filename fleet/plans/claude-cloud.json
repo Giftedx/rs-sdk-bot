@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794364085363,
+ "at": 1794364119181,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -19,6 +19,26 @@
    "template": "kit-buy:army-bury-big-99",
    "autopilot": "claude-cloud",
    "resources": []
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=sporrandip-kit4-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
+   "role": "supply",
+   "template": "kit-buy:army-weapon",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "ge:weapon"
+   ]
   },
   {
    "account": "Quickhandjob",
@@ -184,26 +204,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "SporranDip",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=sporrandip-kit4-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
-   "role": "supply",
-   "template": "kit-buy:army-weapon",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "ge:weapon"
    ]
   },
   {
