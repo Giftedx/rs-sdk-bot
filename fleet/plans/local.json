@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794401721272,
+ "at": 1794408723280,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -25,6 +25,26 @@
    "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
+    "PEN": "3187,3277",
+    "TICKS": "3000",
+    "TARGET": "2000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
+   "autopilot": "local",
+   "resources": [
+    "pen:3187,3277"
+   ]
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
     "PEN": "3017,3288",
     "TICKS": "3000",
     "TARGET": "2000"
@@ -39,26 +59,6 @@
    "resources": [
     "pen:3017,3288"
    ]
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/fletch-arrows.ts",
-   "args": [
-    "15000",
-    "headless"
-   ],
-   "env": {
-    "BANK_PACK": "1",
-    "MAX_MAKE": "390"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "headless arrows from owned shafts and feathers",
-   "role": "fletching",
-   "template": "fletch-headless",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "Masterbaiter",
@@ -106,23 +106,40 @@
   },
   {
    "account": "MineYourBiz",
-   "script": "scripts/gather-feathers.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "PEN": "3197,3353",
-    "TICKS": "3000",
-    "TARGET": "2000"
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3197,3353",
-   "role": "helper",
-   "template": "feathers@3197,3353",
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
    "autopilot": "local",
    "resources": [
-    "pen:3197,3353"
+    "knight:2652,3318"
    ]
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=20 EXPECTED_OWNED=15 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=mmsmk1232-kit3-558-15to35 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 20 Mind rune on the Grand Exchange to train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
+   "role": "supply",
+   "template": "kit-buy:army-strike-magic-21",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "mmtha0205",
@@ -272,22 +289,21 @@
   },
   {
    "account": "YewFirst",
-   "script": "scripts/generated/thieving60.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "TARGET": "55",
-    "CAP": "2500",
-    "CLEAN_FOOD": "1"
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "train Thieving to 55 for a knight spot",
+   "repeat": true,
+   "goal": "goldfarm knights at 2671,3313",
    "role": "thieving",
-   "template": "thieving55",
+   "template": "goldfarm@2671,3313",
    "autopilot": "local",
    "resources": [
-    "knight:2669,3298"
+    "knight:2671,3313"
    ]
   },
   {
@@ -310,6 +326,45 @@
    "autopilot": "local",
    "resources": [
     "shop:betty"
+   ]
+  },
+  {
+   "account": "Magicwanda",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3197,3353",
+    "TICKS": "3000",
+    "TARGET": "2000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3197,3353",
+   "role": "helper",
+   "template": "feathers@3197,3353",
+   "autopilot": "local",
+   "resources": [
+    "pen:3197,3353"
+   ]
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "local",
+   "resources": [
+    "knight:2669,3298"
    ]
   },
   {
