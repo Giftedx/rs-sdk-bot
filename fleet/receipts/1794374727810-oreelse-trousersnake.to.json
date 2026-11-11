@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794374727810-oreelse-trousersnake",
+ "account": "TrouserSnake",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune full helm",
+ "requested": 1,
+ "claim": "5abfda20-1a36-4fb3-9e33-05c3a9d0c6bd",
+ "count": 0,
+ "ok": false,
+ "at": 1794375357674,
+ "detail": "trade claimed"
+}
