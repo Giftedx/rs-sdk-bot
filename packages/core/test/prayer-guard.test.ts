@@ -710,7 +710,7 @@ test('a pickup in a fight: the attack prayers go off, and the protection prayer 
     expect(w.drains).toBe(0);
     expect(w.most).toBeLessThanOrEqual(5);
     expect(lines.some(l => /flick-after-off/.test(l))).toBe(true);
-    expect(lines.every(l => /^GUARD t=\d+ prayer=\d+ \S/.test(l))).toBe(true);
+    expect(lines.every(l => /^GUARD t=\d+ (prayer=\d+ \S|hit |levels |message |fight )/.test(l))).toBe(true);
 });
 
 test('a ranged NPC that reaches the player now comes before a nearer melee NPC that must walk first', () => {

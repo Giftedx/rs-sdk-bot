@@ -83,7 +83,8 @@ export interface PrayerGuardOptions {
     calmTicks?: number;
     // Receives one PRAYER_GUARD line with the counts and the prayer points when the guard stops.
     log?: (line: string) => void;
-    // Receives one line for each prayer input the guard sends: the tick, the prayer and the reason.
+    // Receives one line for each prayer input the guard sends (the tick, the prayer and the reason), for each hit the
+    // player dealt or took, for each change of the Attack and Strength levels and for each new game message.
     trace?: (line: string) => void;
 }
 
@@ -219,7 +220,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     // The inputs the guard sent in the current tick: with the script's input they must not pass TICK_INPUTS.
     let sentAt = -1, sent = 0;
     const send = (a: Action) => { const t = s.tick(); if (sentAt !== t) { sentAt = t; sent = 0; } sent++; own.add(a); holdWrites(); try { void Promise.resolve(s.direct(a)).catch(() => {}); } catch { /* session ended */ } };
-    let why = '';
+    let why = '', tracedLevels = '', tracedMessage = -1, tracedView = '';
     const toggle = (prayerIndex: number) => { o.trace?.(`GUARD t=${s.tick()} prayer=${prayerIndex} ${why}`); send({ type: 'togglePrayer', prayerIndex, reason: 'SDK' }); };
     const fights = (now: number): boolean => pending.kind === 'attack' || (pending.kind === 'none' && !!retaliate && now - retaliate.at <= 1);
     const resend = (st: any) => {
@@ -358,6 +359,19 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         const now = s.tick();
         if (pointsLast !== undefined && prayers.prayerPoints < pointsLast) stats.spent += pointsLast - prayers.prayerPoints;
         pointsFirst ??= prayers.prayerPoints; pointsLast = prayers.prayerPoints;
+        if (o.trace) {
+            for (const e of st.combatEvents ?? []) if (e.tick > lastEvent) o.trace(`GUARD t=${now} hit ${e.type} damage=${e.damage} target=${e.targetType}:${e.targetIndex} at=${e.tick}`);
+            const level = (name: string) => { const k = (st.skills ?? []).find((k: any) => k.name === name); return k ? `${k.level}/${k.baseLevel}` : '?'; };
+            const levels = `attack=${level('Attack')} strength=${level('Strength')}`;
+            if (levels !== tracedLevels) { tracedLevels = levels; o.trace(`GUARD t=${now} levels ${levels}`); }
+            let newestMessage = tracedMessage;
+            for (const m of st.gameMessages ?? []) if ((m.tick ?? -1) > tracedMessage) { newestMessage = Math.max(newestMessage, m.tick); o.trace(`GUARD t=${now} message ${String(m.text ?? '').slice(0, 80)}`); }
+            tracedMessage = newestMessage;
+            const target = p.combat?.targetType === 'npc' ? `npc:${p.combat.targetIndex}` : 'none';
+            const wantsNpc = pending.kind === 'attack' ? `${pending.action.type}:${pending.action.npcIndex ?? pending.action.locId}` : pending.kind;
+            const view = `target=${target} pending=${wantsNpc}`;
+            if (view !== tracedView) { tracedView = view; o.trace(`GUARD t=${now} fight ${view}`); }
+        }
         // A hit on the player has the player as its target: a hit of another player on an NPC is `damage_taken` too.
         let newest = lastEvent, hit = false;
         for (const e of st.combatEvents ?? []) {
