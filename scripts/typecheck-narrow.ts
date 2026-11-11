@@ -23,8 +23,13 @@ if(import.meta.main){
     const root=join(import.meta.dir,'..'),argv=process.argv.slice(2),h=argv.indexOf('--heap');
     const heap=h>=0?Number(argv.splice(h,2)[1]):2560;
     if(!Number.isInteger(heap)||heap<256){console.error('typecheck-narrow: --heap needs a number of MB, 256 or more');process.exit(2);}
-    const git=(...a:string[])=>Bun.spawnSync(['git','-C',root,...a],{stdout:'pipe',stderr:'pipe',windowsHide:true}).stdout.toString();
-    const base=git('merge-base','origin/master','HEAD').trim()||'origin/master';
+    // A git command that fails must stop the check. An empty file list from a failed command reads as "nothing to check".
+    const git=(...a:string[])=>{
+        const r=Bun.spawnSync(['git','-C',root,...a],{stdout:'pipe',stderr:'pipe',windowsHide:true});
+        if(r.exitCode!==0){console.error(`typecheck-narrow: git ${a.join(' ')} failed: ${r.stderr.toString().trim()}\nFetch origin/master (git fetch origin master), or name the files to check.`);process.exit(2);}
+        return r.stdout.toString();
+    };
+    const base=argv.length?'':git('merge-base','origin/master','HEAD').trim();
     const listed=argv.length?argv:[...git('diff','--name-only','--diff-filter=d',base).split('\n'),...git('ls-files','--others','--exclude-standard').split('\n')];
     const files=tsFiles(listed).filter(f=>existsSync(resolve(root,f)));
     if(!files.length){console.log('typecheck-narrow: no changed .ts file, nothing to check');process.exit(0);}
