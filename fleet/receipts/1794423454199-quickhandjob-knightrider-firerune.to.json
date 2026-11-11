@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794423454199-quickhandjob-knightrider-firerune",
+ "account": "KnightRider",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 1,
+ "claim": "2dfc73e7-75e4-421c-93d8-d165f3fea92a",
+ "count": 0,
+ "ok": false,
+ "at": 1794423465142,
+ "detail": "trade claimed"
+}

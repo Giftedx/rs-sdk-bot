@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794423454199-undermykilt-pocketpool-firerune",
+ "account": "PocketPool",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 1,
+ "claim": "1120506a-921f-4bc9-8d1f-9bf00b943fc1",
+ "count": 1,
+ "ok": true,
+ "at": 1794423481460,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794423480748
+ },
+ "logout": {
+  "attemptId": "1794423460057-0000028694-0000000001",
+  "at": 1794423481453,
+  "sha256": "c94138794cdb113df6b7a3b2e79e968df820a6cab78c052506523265d018c73d"
+ },
+ "screen": true
+}
