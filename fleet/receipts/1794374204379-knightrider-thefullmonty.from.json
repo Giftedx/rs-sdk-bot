@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794374204379-knightrider-thefullmonty",
  "account": "KnightRider",
  "partner": "TheFullMonty",
@@ -12,6 +12,12 @@
  "claim": "26c5fff5-9338-4ce8-8011-724858d77cd2",
  "count": 0,
  "ok": false,
- "at": 1794374230636,
- "detail": "trade claimed"
+ "at": 1794374396651,
+ "detail": "Error: route to 3183, 3440: precondition no route to 3183,3440,0",
+ "logout": {
+  "attemptId": "1794374230638-0000007283-0000000001",
+  "at": 1794374396645,
+  "sha256": "a0afbc8f6570e720b23f89201fb7f443bb1aa70bc59db90ec437f23eb99cfe87"
+ },
+ "screen": false
 }
