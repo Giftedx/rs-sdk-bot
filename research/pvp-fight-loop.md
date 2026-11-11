@@ -164,6 +164,10 @@ any other case.
   slower (74 s): eight processes that spin take the cores from the engine.
 - The rest of a tick, with 32 players: the engine reads the clients in 11 to 17 ms (the scripts of their packets), and
   waits 20 to 35 ms for the clients while the live fleet loads the PC (79% CPU, 36 bun processes).
+- The bench makes the account folders of a case with 5 or more accounts 8 at a time and every save in one process.
+  A batch of 8 full fights with `SPAR_PROCS=8` takes 34 to 42 s; four batches in one list take about 3 minutes.
+- `pk-spar-matrix.ts` and `pk-spar-climb.ts` wait while `.practice/pk-climb-pause` exists. A session that makes that
+  file must not start them before it removes the file: the run then waits for itself.
 - Gap: no run on an idle PC; a seed does not repeat a fight when the pairs run in several processes.
 
 Spar findings. Conditions: lockstep practice engine, cap 900 ticks, both sides with Lost City and Dragon Slayer done
@@ -399,3 +403,29 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     style at random, it has 9 kills and 7 deaths in 16 spars, the same as base. The hunter, the roamer and the
     champion profile use it. Gap: 16 spars each against the melee build (10 to 6; base 8 to 8) and the ranger (11 to
     5; base 10 to 6) do not separate it from base.
+20. **Random attack styles beat an overhead that predicts.** Both sides hold the `snap` profile; side A also picks each
+    style at random among the open ones (`mixStyles`). Side A has 29 kills and 3 deaths in 32 spars (15 to 1, 14 to 2;
+    `extra:spar-x16`, seeds 1 and 2). Against an opponent that only follows the weapon, random styles gave no gain
+    (mean net +1.65, t 0.56, 24 spars). The champion profile is `predictPrayer`, `snapPrayer` and `mixStyles`.
+    Gap: the champion against itself is even (7 to 9), so the mirror gives no more gain from the overhead.
+21. **The place of a pair in a batch moves its result.** With the `snap` profile on both sides and 2 pairs in each
+    of 8 worker processes, side B won 11 of 16 even pairs and side A won 12 of 16 odd pairs (two batches). A swap of
+    the profiles on every second pair put one profile on the weak place of every pair: base against base read as 9
+    kills to 23. The swap goes by two pairs at a time (`scripts/pk-spar.ts`), and the duel cases put their kits the
+    same way; the control then reads 8 to 8 and 7 to 9. Results before this rule that favoured side A stand (the
+    fault worked against side A); a result that favoured side B does not. Gap: the cause of the place effect.
+22. **More prayer restore for less food does not win.** The kit with four restore potions and 16 sharks has 5 kills and
+    10 deaths in 16 spars against the tribrid kit, both on the `snap` profile (`extra:spar-duel-tribrid-pray4-x8`,
+    seeds 1 and 2, kits on the weak place of each pair).
+23. **Bow and dagger only beat the three-style rotation.** The champion with the rotation ranged, melee (no spell turn)
+    has 26 kills and 6 deaths in 32 spars against the champion with all three styles (15 to 1, 11 to 5;
+    `extra:spar-x16`, seeds 1 and 2). In the potion kit against the builds that beat the tribrid on food
+    (`extra:spar-rivals-x12`, seeds 1, 2 and 3) it has 27 kills and 9 deaths: 10 to 2 against the melee build, 5 to 7
+    against the hybrid, 12 to 0 against the ranger. With all three styles the champion had 2 kills and 10 deaths
+    there, and none in 16 spars against the hybrid over four profiles. A spell takes 5 ticks; the bow takes 3 and
+    the dagger 4. The champion profile and the hunter use the two-style rotation; the hunter keeps magic for the
+    freeze. Gap: the hybrid still wins 7 of 12; no kit yet that trades the wave runes and the staff for food.
+24. **Changes that did not win.** The special attack from 50% health: 4 kills and 12 deaths in 16 spars against the
+    champion. Three restore potions and 17 sharks: 11 kills and 11 deaths in 22 decided spars against the tribrid
+    kit. Against the three rival builds, 12 spars each: body armour kept on for a shot or a cast 4 to 6, freeze and
+    kite of a melee opponent (`adapt`) 4 to 8; the hybrid won all four spars in each.
