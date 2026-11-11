@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794395740862-undermykilt-pocketpool-firerune",
+ "account": "UnderMyKilt",
+ "partner": "PocketPool",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 1,
+ "claim": "d63cf029-dd25-43a6-8a7f-27e451e6e7ee",
+ "count": 0,
+ "ok": false,
+ "at": 1794395860205,
+ "detail": "trade claimed"
+}
