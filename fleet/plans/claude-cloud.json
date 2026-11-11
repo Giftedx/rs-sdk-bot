@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794403554182,
+ "at": 1794403674086,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -73,21 +73,21 @@
   },
   {
    "account": "Fatstack",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
+   "script": "scripts/splash-train.ts",
+   "args": [
+    "66",
+    "6000"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "combat",
+   "template": "army-splash-magic-66",
    "autopilot": "claude-cloud",
    "resources": [
-    "knight:2582,3297"
+    "splash:ardougne-cow-fence"
    ]
   },
   {
@@ -111,21 +111,25 @@
   },
   {
    "account": "PocketPool",
-   "script": "scripts/splash-train.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "66",
-    "6000"
+    "scripts/shop-buyer.ts magic_guild 1500 ITEMS=staff.of.fire STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=13000 COIN_RESERVE=500 MAX_SPEND=12000",
+    "scripts/shop-buyer.ts magic_guild 600 ITEMS=fire.rune STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=10000 COIN_RESERVE=500 MAX_SPEND=9000",
+    "scripts/shop-buyer.ts magic_guild 900 ITEMS=nature.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=46000 COIN_RESERVE=500 MAX_SPEND=45000",
+    "scripts/shop-buyer.ts magic_guild 600 ITEMS=air.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
    ],
-   "env": {},
+   "env": {
+    "ROUNDS": "1"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "combat",
-   "template": "army-splash-magic-66",
+   "goal": "buy a staff of fire, fire, nature and air runes at the Magic Guild in Yanille for the alchemy band",
+   "role": "supply",
+   "template": "army-staff-guild",
    "autopilot": "claude-cloud",
    "resources": [
-    "splash:ardougne-cow-fence"
+    "shop:magic_guild"
    ]
   },
   {
@@ -157,7 +161,7 @@
    "account": "Dipstick",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/shop-buyer.ts aubury 3000 ITEMS=water.rune STOCK_TARGET=300 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=13000 COIN_RESERVE=500 MAX_SPEND=12000"
+    "scripts/shop-buyer.ts aubury 3000 ITEMS=fire.rune STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=10000 COIN_RESERVE=500 MAX_SPEND=9000"
    ],
    "env": {
     "ROUNDS": "1"
@@ -165,12 +169,37 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy water runes at Aubury's in Varrock for the curse band",
+   "goal": "buy fire runes at Aubury's in Varrock for the alchemy band",
    "role": "supply",
-   "template": "army-water-aubury",
+   "template": "army-fire-aubury",
    "autopilot": "claude-cloud",
    "resources": [
     "shop:aubury"
+   ]
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
    ]
   }
  ]
