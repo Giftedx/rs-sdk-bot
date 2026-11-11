@@ -16,6 +16,7 @@
 // Each engine needs about 1.5 GB of free memory. Raw rows go to .practice/pk-spar/.
 import { mkdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { waitForMemory } from './pk-spar-wait';
 
 export type Fight = { seed: number; side: 'a' | 'b'; ok: boolean; winner?: 'a' | 'b' | 'draw'; score?: number; ticks?: number; result: string | null };
 // One bench RESULT line of scripts/pk-spar.ts, read for the side the challenger played.
@@ -67,6 +68,8 @@ if (import.meta.main) {
     if (!challenger || seeds.some(n => !Number.isSafeInteger(n))) { console.log('usage: bun scripts/measure/pk-spar-ladder.ts <challenger> [champion] [--seeds 1,2,3] [--case key] [--against profile] [--opts json] [--champion-opts json]'); process.exit(2); }
     const root = resolve(import.meta.dir, '..', '..'), dir = '.practice/pk-spar';
     mkdirSync(resolve(root, dir), { recursive: true });
+    // The ladder waits once for memory that the live fleet does not need; its runs then follow each other.
+    await waitForMemory(root);
     const label = key.replace(/[^a-z0-9-]/gi, '_');
     // One fight: the profile and the options of each side, on one seed.
     const run = (seed: number, side: 'a' | 'b', a: [string, string | undefined], b: [string, string | undefined], tag: string): Fight => {
