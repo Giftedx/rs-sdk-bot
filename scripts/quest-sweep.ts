@@ -100,6 +100,13 @@ export function needs(preset:SaveConfig,food=false,quest=''):Map<number,number>{
  if(!food&&preset.coins)m.set(COINS,(m.get(COINS)??0)+preset.coins);
  return m;
 }
+const SCORPION_BARCRAWL = new Map([[COINS,268],[563,3],[556,11],[555,1],[554,1]]);
+export function scorpionBarcrawlNeeds(base:ReadonlyMap<number,number>,barcrawlState:number):Map<number,number>{
+ const staged=new Map(base);
+ if(barcrawlState===2)return staged;
+ for(const [id,n] of SCORPION_BARCRAWL)staged.set(id,(staged.get(id)??0)+n);
+ return staged;
+}
 const count=(rows:readonly Item[],id:number)=>rows.filter(r=>r.id===id).reduce((n,r)=>n+r.count,0);
 const WORN_KIT:Record<string,readonly {id:number;required:boolean}[]>={ball:[{id:1059,required:true},{id:1331,required:false}]};
 export function wornKitPlan(quest:string,base:ReadonlyMap<number,number>,pack:readonly Item[],bank:readonly Item[],equipment:readonly Item[]){
@@ -1080,13 +1087,18 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  if(quest==='hero'||quest==='heroes')throw Error('Heroes requires the explicit owned pair CLI quest-hero-owned.ts or runHeroesPair(original sessions, validated order); no single-actor partner login');
  const script=resolve(import.meta.dir,'generated',`quest-${quest}.ts`);
  if(!existsSync(script))throw Error(`quest sweep: no script ${script}`);
- const preset=presetFor(quest),base=needs(preset,false,quest),food=needs(preset,true,quest);
+ const preset=presetFor(quest);let base=needs(preset,false,quest);const food=needs(preset,true,quest);
  const s:Session=await openBot(account);
  const fail=(why:string)=>finish([s],false,`quest-sweep ${quest} ${why}`);
  let handed=false;
  try {
  const st=()=>s.sdk.getState();
  if(!await waitUntil(s,()=>!!st()?.player,{timeoutTicks:20}))return fail('entry state unavailable');
+ if(quest==='scorpion'){
+  const state=()=>Number((s.client as any).var?.[77]);
+  if(!await waitUntil(s,()=>Number.isSafeInteger(state()),{timeoutTicks:20}))return fail('Barcrawl gate state unavailable');
+  base=scorpionBarcrawlNeeds(base,state());
+ }
  const baseLevel=(name:string)=>st()?.skills?.find((k:any)=>k.name===name)?.baseLevel??1;
  for(const id of STURDY_OPTIONAL[quest]??[])if(base.has(id)&&baseLevel('Hitpoints')>=STURDY&&baseLevel('Defence')>=STURDY){
   food.set(id,base.get(id)!);base.delete(id);
