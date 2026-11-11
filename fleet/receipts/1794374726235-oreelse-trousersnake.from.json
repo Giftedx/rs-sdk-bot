@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794374726235-oreelse-trousersnake",
+ "account": "OreElse",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune platelegs",
+ "requested": 1,
+ "claim": "98e879d2-b852-42b9-9cba-be3b51ca4cd8",
+ "count": 1,
+ "ok": true,
+ "at": 1794375312276,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794375299014
+ },
+ "logout": {
+  "attemptId": "1794375289205-0000028584-0000000001",
+  "at": 1794375312267,
+  "sha256": "b89ed4c5404d0a3c54d13d0ad207ac8bcedf49f1da2a263201b6b5f3ff02327a"
+ },
+ "screen": true
+}
