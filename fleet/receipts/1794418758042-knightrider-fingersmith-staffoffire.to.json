@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794418758042-knightrider-fingersmith-staffoffire",
+ "account": "Fingersmith",
+ "partner": "KnightRider",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "c88a91c9-c23c-4945-a5cc-1d16cfc2907c",
+ "count": 0,
+ "ok": false,
+ "at": 1794418761490,
+ "detail": "trade claimed"
+}
