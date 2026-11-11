@@ -62,3 +62,23 @@ export class StylePredictor {
     // Every style the opponent has shown.
     seen(): Set<Style> { return new Set([...(this.last ? [this.last] : []), ...this.counts.keys()]); }
 }
+
+// Which way to choose the next attack style, learnt from what the opponent's overhead did to the last attacks.
+// `avoid`: a style its overhead does not show (right against an overhead that follows our weapon). `into`: the style
+// its overhead shows (right against an opponent that changes its overhead to the style it expects next). Each way
+// keeps a count of its attacks and of those that met the right overhead, with older attacks fading; the next attack
+// takes the way with the lower share, and one attack in ten tries the other way.
+export type StyleArm = 'avoid' | 'into';
+export class StyleArms {
+    private stats: Record<StyleArm, { n: number; guarded: number }> = { avoid: { n: 1, guarded: 0.3 }, into: { n: 1, guarded: 0.5 } };
+    record(arm: StyleArm, guarded: boolean): void {
+        const s = this.stats[arm];
+        s.n = s.n * 0.85 + 1;
+        s.guarded = s.guarded * 0.85 + (guarded ? 1 : 0);
+    }
+    rate(arm: StyleArm): number { return this.stats[arm].guarded / this.stats[arm].n; }
+    pick(rand: () => number): StyleArm {
+        const best: StyleArm = this.rate('avoid') <= this.rate('into') ? 'avoid' : 'into';
+        return rand() < 0.1 ? (best === 'avoid' ? 'into' : 'avoid') : best;
+    }
+}

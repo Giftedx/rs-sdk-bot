@@ -13,7 +13,7 @@ import { fleetLeaseAllowsWorker } from './fleet-lease';
 import { startStatus } from './status';
 import { watchRandomEvents, type RandomEventWatch } from './randomevents';
 import { protectByStyle, startPrayerGuard } from './prayer-guard';
-import { startEatGuard } from './eat-guard';
+import { questScript, startEatGuard } from './eat-guard';
 import { npcAttackStyles } from '../../knowledge/src/npc-attack-styles';
 import { npcHunters } from '../../knowledge/src/npc-hunters';
 import { readOpponents, wornWeaponStyle } from './opponent';
@@ -123,10 +123,11 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // turns the guard off.
     if (guardTables) prayerGuards.set(s, startPrayerGuard(s, { log: line => log(`${line} bot=${name}`), ...guardTables,
         players: { ignore: new Set(loadOwners().keys()), style: q => { const seen = readOpponents(s.client).find(v => v.index === q.index); return seen ? wornWeaponStyle(seen.worn.rhand) : null; } } }));
-    // Eats when Hitpoints are low and damage arrives (packages/core/src/eat-guard.ts); EAT_GUARD=0 turns the guard off.
+    // Eats plain food when Hitpoints are low and damage arrives (packages/core/src/eat-guard.ts); EAT_GUARD=0 turns
+    // the guard off. A script with `quest` in its file name gets no guard: a fish can be a quest item there.
     // It starts after the prayer guard: its tick callback then counts the prayer inputs of the tick before it sends.
     // quest-sweep marks the edible quest items on the session (questReserved); the guard never eats those.
-    if (process.env.EAT_GUARD !== '0') eatGuards.set(s, startEatGuard(s, { log: line => log(`${line} bot=${name}`),
+    if (process.env.EAT_GUARD !== '0' && !questScript(opts.record?.script ?? process.argv[1] ?? '')) eatGuards.set(s, startEatGuard(s, { log: line => log(`${line} bot=${name}`),
         reserved: () => (s as { questReserved?: Record<number, number> }).questReserved ?? {} }));
     // Any bot stops cleanly when .practice/stop-<name> appears (checked every 25 ticks): a script that never checks
     // it (seen: fishing30 under the supervisor) still logs out in game.

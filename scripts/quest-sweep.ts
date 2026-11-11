@@ -31,6 +31,7 @@ import {walkQuestCorridor} from './quest-walk';
 import {crossStrongholdGate,STRONGHOLD_GATE,type GateDeps} from './agility-order';
 import {crossesSea} from '../packages/core/src/spawn-index';
 import {startQuestSustain,questFoodDefinitions} from './quest-sustain';
+import {holdSessionEater} from '../packages/core/src/sustain';
 
 type Item={id:number;count:number};
 type Tile={x:number;z:number;level:number};
@@ -144,7 +145,12 @@ export const MEALS=[385,373,379,365,361,333,329,1891,1893,1895,2309];
 // pack already carries (a ranger with sharks banked and a preset of lobsters leaves with sharks). The quest's own
 // withdrawals and needs are not meals: Merlin's Crystal's bread for the beggar stays the beggar's.
 export function mealPlan(food:ReadonlyMap<number,number>,pack:readonly Item[],bank:readonly Item[],questWithdraw:readonly Item[]=[],need:ReadonlyMap<number,number>=new Map()):Item[]{
- const exact=plan(food,pack,bank),withdraw=[...exact.withdraw];
+ // An item on both lists (Scorpion Catcher's law runes for the Barcrawl beside the preset's) is wanted on top of the
+ // quest's count. The quest's withdrawals count as held, and the bank is read less them, as in toolPlan. Otherwise both
+ // plans take the same bank stock and the second withdrawal meets an empty row.
+ const want=new Map([...food].map(([id,n])=>[id,n+(need.get(id)??0)] as const));
+ const stock=[...food.keys()].map(id=>({id,count:Math.max(0,count(bank,id)-count(questWithdraw,id))}));
+ const exact=plan(want,[...pack,...questWithdraw],stock),withdraw=[...exact.withdraw];
  const edible=(id:number)=>MEALS.includes(id)&&!food.has(id);
  const spare=(id:number)=>Math.max(0,count(pack,id)-(need.get(id)??0));
  let left=exact.missing.filter(m=>MEALS.includes(m.id)).reduce((n,m)=>n+m.count,0)-MEALS.filter(edible).reduce((n,id)=>n+spare(id),0);
@@ -1090,6 +1096,8 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  if(!existsSync(script))throw Error(`quest sweep: no script ${script}`);
  const preset=presetFor(quest);let base=needs(preset,false,quest);const food=needs(preset,true,quest);
  const s:Session=await openBot(account);
+ // A quest session has no eat guard (packages/core/src/eat-guard.ts): the staged items can be food. The hold has no release.
+ holdSessionEater(s.sdk);
  const fail=(why:string)=>finish([s],false,`quest-sweep ${quest} ${why}`);
  let handed=false;
  try {

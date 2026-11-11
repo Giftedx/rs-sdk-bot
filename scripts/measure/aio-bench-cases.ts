@@ -332,9 +332,11 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'extra:giant-prayer-guard', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['giant', '1500', 'giant'], pass: ok, output: /kills=(\d+)/,
     presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: [{id: 379, count: 5}]}},
   // Hill giants with Hitpoints 20, no armour and no eat input from the script: the eat guard
-  // (packages/core/src/eat-guard.ts) must eat, and the account must live. `--set EAT_GUARD=0` runs the comparison.
-  {key: 'extra:giant-eat-guard', script: 'scripts/measure/eat-guard-fight.ts', preset: 'fresh_lumbridge', scriptArgs: ['600'], pass: s => ok(s) && /^EAT_GUARD \{"eats":[1-9]/m.test(s), output: /kills=(\d+)/,
-    presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 40, Strength: 40, Hitpoints: 20}, equipment: [{id: 1333, count: 1, slot: 3}], inventory: Array.from({length: 20}, () => ({id: 379, count: 1}))}},
+  // (packages/core/src/eat-guard.ts) must eat lobsters, and the account must live. The first 5 slots hold edible
+  // items that are not plain food (cake, cheese, bread, redberry pie, stew): the guard must eat none of them.
+  // `--set EAT_GUARD=0` runs the comparison.
+  {key: 'extra:giant-eat-guard', script: 'scripts/measure/eat-guard-fight.ts', preset: 'fresh_lumbridge', scriptArgs: ['600'], pass: s => ok(s) && /^EAT_GUARD \{"eats":[1-9]/m.test(s) && / otherKept=5\/5 /.test(s), output: /kills=(\d+)/,
+    presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 40, Strength: 40, Hitpoints: 20}, equipment: [{id: 1333, count: 1, slot: 3}], inventory: [...[1891, 1985, 2309, 2325, 2003].map(id => ({id, count: 1})), ...Array.from({length: 20}, () => ({id: 379, count: 1}))]}},
   sparCase('extra:spar-no-slayer', sparFixture(3094, 3555, {noDragonSlayer: true}), sparFixture(3096, 3555, {noDragonSlayer: true})),
   // The tribrid against every build of scripts/pk-kits.ts in one run, and a mirror of 8 for each build: the cases that
   // the hill climb and the kit matrix run (scripts/measure/pk-spar-climb.ts, pk-spar-matrix.ts).
@@ -345,6 +347,8 @@ const ROUTE_CASES: BenchCase[] = [
   // their own build and their own way to play (LEAGUE). A fighter is ready for a skilled player when it beats them all.
   sparMatrix('extra:spar-league-x8', LEAGUE.map(o => ['tribrid-pots', o.kit] as const), [`SPAR_B_PROFILES=${LEAGUE.map(o => o.profile).join(',')}`]),
   // The champion against itself in the snare kit: the hardest opponent on the bench. Use SPAR_SWAP=1.
+  // The snare kit against the hybrid kit, sides by two pairs at a time.
+  sparMatrix('extra:spar-duel-snare-hybrid-x12', Array.from({length: 12}, (_, i) => ((i >> 1) % 2 ? ['hybrid', 'tribrid-snare'] : ['tribrid-snare', 'hybrid']) as [string, string])),
   sparMatrix('extra:spar-mirror-snare-x12', Array.from({length: 12}, () => ['tribrid-snare', 'tribrid-snare'] as const)),
   sparMatrix('extra:spar-league-snare-x8', LEAGUE.map(o => ['tribrid-snare', o.kit] as const), [`SPAR_B_PROFILES=${LEAGUE.map(o => o.profile).join(',')}`]),
   // The league for a fighter with three more sharks and no freeze runes.
@@ -352,9 +356,10 @@ const ROUTE_CASES: BenchCase[] = [
   sparMatrix('extra:spar-rivals-x12', Array.from({length: 12}, (_, i) => ['tribrid-pots', ['melee', 'hybrid', 'ranger'][i % 3]!] as const)),
   // One whole hunter trip (scripts/measure/pk-hunt-trip.ts): the hunter starts at Edgeville bank with an empty pack and
   // its kit in the bank; the target stands at the first hunt spot with no food.
-  // `auto` has the snare stock and names no kit: the hunter must pick the snare trip from its bank.
+  // `auto` has the snare stock and names no kit: at the first hunt spot (Wilderness level 3) the hunter must pick the
+  // bow trip from its bank.
   ...(['staff', 'snare', 'auto'] as const).map((kit): BenchCase => ({key: `extra:hunt-trip-${kit}`, engineEnv: SPAR_ENGINE, script: 'scripts/measure/pk-hunt-trip.ts', preset: 'fresh_lumbridge',
-    scriptArgs: ['{bot:b}', '900', kit], pass: kit === 'auto' ? s => ok(s) && /HUNT trip snare/.test(s) : ok, output: /kills=(\d+)/,
+    scriptArgs: ['{bot:b}', '900', kit], pass: kit === 'auto' ? s => ok(s) && /HUNT trip bow/.test(s) : ok, output: /kills=(\d+)/,
     presetConfig: {...sparFixture(3092, 3496), inventory: [], bank: [{id: 861, count: 1}, {id: 557, count: 200}, {id: 555, count: 200}, {id: 561, count: 100}, {id: 2434, count: 4}, {id: 1712, count: 2},
       {id: 2436, count: 2}, {id: 2440, count: 2}, {id: 2444, count: 2}, {id: 385, count: 60}, ...(kit === 'staff' ? [{id: 1401, count: 1}, {id: 556, count: 600}, {id: 565, count: 200}] : [])]},
     companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3540, {food: 0})}]})),

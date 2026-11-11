@@ -124,6 +124,10 @@ dagger special are the burst of this content.
 
 ### Speed of a measurement
 
+Run a list of batches with `bun scripts/measure/pk-spar-jobs.ts "<case>|<profile a>|<profile b>|<swap>|<seed>|<options a>" ...`:
+it runs each batch in 8 worker processes, takes turns with the matrix and the climb of other sessions, and prints one
+result line for each batch.
+
 Use a batch case for every comparison: `extra:spar-x8` and `extra:spar-escape-x8` run 8 spars at once in one world,
 at the same spot (a player blocks no tile, and a fight loop names its one target). The ladder takes a batch key as
 any other case.
@@ -615,7 +619,8 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     its mirror lasts 694 ticks where the bench mirror lasts about 650. It uses the levels of each kit, so it ranks
     the trained builds too (`--league <kit,kit,...>`). Gap: it gives the ranger 87% where the bench gives it 14 of
     24, and the melee build 37% with 27% of fights at the cap where the bench gives it 18 of 24. It has no movement
-    and no freeze. A result from it is a candidate for the bench, not a measurement.
+    and no freeze, and it does not play the champion profile (no prayer flick, no `snapPrayer`, `counterRead` or
+    `adaptStyles`). A result from it is a candidate for the bench, not a measurement.
 19. **An overhead that changes one tick before the opponent's attack wins the mirror.** The `snap` profile (`predictPrayer`
     with `snapPrayer`) holds the overhead for the weapon the opponent shows and changes to the predicted style one
     tick before the opponent's next attack is due. Against the base profile it has 42 kills and 6 deaths in 48 spars
@@ -628,8 +633,8 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
 20. **Random attack styles beat an overhead that predicts.** Both sides hold the `snap` profile; side A also picks each
     style at random among the open ones (`mixStyles`). Side A has 29 kills and 3 deaths in 32 spars (15 to 1, 14 to 2;
     `extra:spar-x16`, seeds 1 and 2). Against an opponent that only follows the weapon, random styles gave no gain
-    (mean net +1.65, t 0.56, 24 spars). The champion profile is `predictPrayer`, `snapPrayer` and `mixStyles`.
-    Gap: the champion against itself is even (7 to 9), so the mirror gives no more gain from the overhead.
+    (mean net +1.65, t 0.56, 24 spars). The champion profile has `mixStyles`; findings 32 and 33 give what an
+    opponent can read from a random choice among the open styles, and the rule that answers it.
 21. **The place of a pair in a batch moves its result.** With the `snap` profile on both sides and 2 pairs in each
     of 8 worker processes, side B won 11 of 16 even pairs and side A won 12 of 16 odd pairs (two batches). A swap of
     the profiles on every second pair put one profile on the weak place of every pair: base against base read as 9
@@ -706,11 +711,32 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     (`extra:spar-rivals-tribrid-snare-x12`, seeds 1 and 2), where the champion without it has 55 and 17 in 72;
     against the league, 16 and 0. The champion profile and the hunter use it. Gap: every bench opponent reads the
     overhead; against one that ignores it and picks at random the rule guards half of its attacks.
-33. **Our own attack has the same hole, and the first answer costs more than it gives.** `adaptStyles` attacks with the
-    style the opponent's overhead shows once 4 of our last 6 attacks met the right overhead. With `counterRead` on
-    both sides it has 16 kills and 8 deaths in 24 spars, where the control has 4 and 8 in 12. Against the champion
-    without `counterRead` it has 7 kills and 5 deaths in 12, where `counterRead` alone has 33 and 3 in 36: an
-    overhead that follows the weapon also meets 4 of 6 by chance, and the rule then attacks into it. It is off.
-    Other rules against the champion, 12 spars each: the bow alone 2 to 10; the bow alone from 3 tiles 4 to 8; the
-    special from 30% health 7 to 5; the special as soon as it is ready 5 to 7. Gap: a style choice that a
-    counter-reader cannot predict and that does not attack into a following overhead.
+33. **The attack learns in the fight which way the opponent's overhead goes.** Our own attack had the hole of finding 32:
+    it never used a style the opponent's overhead covered, so an opponent with `counterRead` met most of it.
+    `adaptStyles` keeps, for two ways to choose a style, the share of attacks that met the right overhead in the
+    tick after the attack: `avoid` (a style the overhead does not show) and `into` (the style it shows, which an
+    opponent that predicts is about to leave). The next attack takes the way with the lower share, and one attack in
+    ten tries the other (`StyleArms` in `scripts/pk-read.ts`). The champion with it has 34 kills and 2 deaths in 36
+    spars against the champion without it (11 to 1, 11 to 1, 12 to 0; `extra:spar-mirror-snare-x12`, seeds 1 to 3).
+    Against an opponent whose overhead follows the weapon it has 12 kills and no death in 12, where the champion
+    without it has 10 and 2. Against the melee build, the hybrid and the ranger it has 22 kills and 2 deaths in 24
+    (23 and 1 without it); against the league 7 and 1 in 8 (16 and 0 in 16 without it); against itself 7 and 5. The
+    champion profile and the hunter use it. A fixed rule lost: the style the overhead shows after 4 of 6 guarded
+    attacks had 16 kills and 8 deaths against a counter-reader and 7 and 5 against the champion without `counterRead`, which
+    `counterRead` alone beat 33 to 3. Other rules against the champion, 12 spars each: the bow alone 2 to 10; the
+    bow alone from 3 tiles 4 to 8; the special from 30% health 7 to 5; the special as soon as it is ready 5 to 7.
+    Gap: the one attack in ten that tries the other way may cost a little against an opponent that never predicts
+    (22 to 2 against 23 to 1, and one league loss): not settled.
+34. **In a stand-up fight three more sharks beat the freeze runes.** The hybrid kit (bow, dagger, boosts, 21 sharks, no
+    runes) has 33 kills and 13 deaths against the snare kit (the same with the runes of Entangle and 18 sharks), both
+    on the champion profile (`extra:spar-duel-snare-hybrid-x12`, seeds 1 to 5, kits placed by two pairs at a time).
+    Up to Wilderness level 30 a glory works at once and no freeze holds a target, and the hunt spots are at levels 3
+    to 7. The hunter with no kit named takes the bow trip at such spots (`BOW_TRIP` in `scripts/pk-hunt.ts`: bow, two
+    prayer potions, a glory, three more sharks), the snare trip at deeper spots where the bank holds it, else the
+    staff trip. `extra:hunt-trip-auto` passes with `HUNT trip bow` and a kill in 81 ticks. Gap: no live run; no run
+    at a spot deeper than level 30.
+35. **The learnt style choice costs nothing against the builds that do not predict, and the special at 50% does nothing.**
+    The champion with `adaptStyles` has 23 kills and 1 death in 24 spars against the league (seeds 1 to 3) and 33
+    kills and 3 deaths in 36 against the melee build, the hybrid and the ranger (seeds 1 to 3); without it the
+    champion has 16 and 0 in 16 and 23 and 1 in 24. The special from 50% health against the champion: 8 to 4 and 3
+    to 9, 11 kills and 13 deaths in 24 (`extra:spar-mirror-snare-x12`, seeds 1 and 2).

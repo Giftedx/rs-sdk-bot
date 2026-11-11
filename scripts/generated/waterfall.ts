@@ -8,6 +8,7 @@
 // with hunt range 1-2. The bot never fights; it eats a lobster at 7 HP or less.
 import type { Session } from '../../packages/core/src/inprocess';
 import { openBot, finish, countItems } from '../../packages/core/src/bot';
+import { holdSessionEater } from '../../packages/core/src/sustain';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { sessionWalker, walkPath, type PathPoint } from '../../packages/core/src/walk';
 
@@ -198,6 +199,8 @@ if (RESUME_HUDON && !MIGHTY) throw new Error('WF_RESUME_HUDON requires WF_MIGHTY
 const FOOD = waterfallFood(process.env.WF_FOOD ?? 'lobster', process.env.WF_EAT_AT ? Number(process.env.WF_EAT_AT) : undefined, Number(process.env.WF_FOOD_COUNT ?? 16));
 if (!process.argv[2] || /^(haggis|main)$/i.test(process.argv[2])) throw new Error('explicit non-reserved Waterfall account required');
 const s = await openBot(process.argv[2]!);
+// A quest session has no eat guard (packages/core/src/eat-guard.ts). The hold has no release.
+holdSessionEater(s.sdk);
 try {
     await waitTicks(s, 5);
     const st = (): any => s.sdk.getState();

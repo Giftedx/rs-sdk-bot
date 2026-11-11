@@ -2,6 +2,7 @@
 // quest-items-order + completeCook -> one ordinary actor -> observed
 // bank/quest/XP deltas and settle logout. The harness checks the server's saved result.
 import {openBot,settle} from '../packages/core/src/bot';
+import {holdSessionEater} from '../packages/core/src/sustain';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
 import {equipmentObserved} from '../packages/core/src/container-observation';
@@ -65,7 +66,7 @@ export function observeCookJobSnapshot(s:Session,requireBank=true,key='cook'):Co
 
 export async function runQuestCookJob(name:string,cap:number){
  parseCookJobArgs([name],String(cap));
- const s=await openBot(name),deadline=s.tick()+cap;
+ const s=await openBot(name),deadline=s.tick()+cap;holdSessionEater(s.sdk);
  let before:CookJobSnapshot|undefined,after:CookJobSnapshot|undefined;
  let gather:Awaited<ReturnType<typeof gatherQuestItems>>|undefined,quest:Awaited<ReturnType<typeof completeCook>>|undefined;
  let checks:ReturnType<typeof cookJobChecks>|undefined,detail='',workOk=false,ended=false,dead=false,life:number|undefined,respawns:number|undefined;
@@ -163,7 +164,7 @@ export function hettyJobChecks(before:CookJobSnapshot,after:CookJobSnapshot,purc
 
 export async function runQuestHettyJob(name:string,cap:number){
  parseCookJobArgs([name,'hetty'],String(cap));
- const s=await openBot(name),deadline=s.tick()+cap;
+ const s=await openBot(name),deadline=s.tick()+cap;holdSessionEater(s.sdk);
  // Reserve bounded recovery inside CAP. The parent owns retreat and logout.
  const workDeadline=deadline-Math.min(64,cap-1);
  let before:CookJobSnapshot|undefined,after:CookJobSnapshot|undefined;
