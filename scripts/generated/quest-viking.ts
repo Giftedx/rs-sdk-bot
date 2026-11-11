@@ -97,6 +97,9 @@ const RIDDLES: Array<[RegExp, number[]]> = [
 ];
 const DRAUGEN = 1279;
 const KOSCHEI = [1290, 1291, 1292, 1293];
+// The longest Koschei fight the bot waits for. An account with Attack 7 and the Kick style (a build before the
+// quest's Attack reward) lands about 9 damage in 100 ticks, and the three forms before the last have 171 Hitpoints.
+const KOSCHEI_TICKS = 4000;
 const DIRS: Record<string, [number, number]> = {
     'north-west': [-1, 1], 'north-east': [1, 1], 'south-west': [-1, -1], 'south-east': [1, -1],
     north: [0, 1], south: [0, -1], east: [1, 0], west: [-1, 0],
@@ -277,6 +280,10 @@ try {
         // The Butterfly NPC near the bot is not the one the talisman tracks (proof trial 1: it sat on the bot's tile),
         // so only the talisman's direction is used. Its 8 directions give the sign of each axis, so each axis has its own
         // hop: 14 tiles, halved when that axis turns back, doubled when it holds (the butterfly moves), 2 when it reads level.
+        // The Draugen fight gives its XP to the style the account has set. The style that trains only Strength keeps
+        // the Attack and Defence of a build account, and it stays set for Koschei.
+        await closeDlg();
+        await q.strengthStyle('draugen');
         const dr = () => (q.st()?.nearbyNpcs ?? []).find((n: any) => n.id === DRAUGEN);
         let seen = false, hop = [14, 14], prev: [number, number] | undefined, stuck = 0;
         for (let i = 0; i < 300 && !q.has(ITEM.talisman); i++) {
@@ -423,22 +430,35 @@ try {
     if (from('thorvald')) {
         // 26. Thorvald's ladder (level 2 arena); Koschei after 20-70 ticks; 4 forms; the bot fights until its own
         // "death", which passes the trial and puts it on the balcony (2667,3692 level 1).
+        // Unarmed, the fight gives its XP to the style the account has set: Kick trains only Strength, so a build
+        // account keeps its Attack and Defence (research/pvp-fight-loop.md, "Quest routes of the builds").
+        await closeDlg();
+        await q.strengthStyle('koschei');
         await q.walk('to warrior ladder', [{ x: LOC.warriorLadder.x, z: LOC.warriorLadder.z - 1, tol: 1 }]);
         await op('warrior ladder', LOC.warriorLadder, /climb-down/i, () => z() > 9000, 12);
         const ko = () => (q.st()?.nearbyNpcs ?? []).find((n: any) => KOSCHEI.includes(n.id));
         const t1 = q.T();
-        let lastId = 0, lastHit = -99;
+        let lastId = 0, lastHit = -99, blind = false;
         // Peer banked the food, and the fight ends at 0 hp by design: no retreat here.
         q.planLowHp(true);
-        while (z() > 9000 && q.T() - t1 < 1500) {
+        while (z() > 9000 && q.T() - t1 < KOSCHEI_TICKS) {
             await q.guard('koschei');
-            if (q.dialogOpen()) { await closeDlg(); continue; }
+            // A level-up window opens in the fight of an account under Strength 99. The bot does not stop to close it:
+            // the wait cost about 300 ticks in which the form healed and the prayer guard, which does not flick with a
+            // window open, held Protect from Melee until the points ran out (practice: a build with Defence 7 died to
+            // the third form). The next attack closes the window.
             const n = ko();
             if (!n) { await q.waitTicks(1); continue; }
-            if (n.id !== lastId || q.T() - lastHit >= 6) {
+            // A new form shows the empty health bar of the form before it until the first hit. The prayer guard reads an
+            // attack on such a target as an input that is not an attack, and then holds Protect from Melee until the
+            // points run out (packages/core/src/prayer-guard.ts attackTarget). So the bot sends the attack again in
+            // the tick the bar is live.
+            const live = (n as any).hp !== 0;
+            if (n.id !== lastId || q.T() - lastHit >= 6 || (blind && live)) {
+                blind = !live;
                 if (n.id !== lastId) console.log(`KOSCHEI ${n.id} at ${q.T()} hp=${q.hp()}`);
                 lastId = n.id; lastHit = q.T();
-                await q.s.bot.attack(n as any);
+                await q.attack(n);
             }
             await q.waitTicks(1);
         }

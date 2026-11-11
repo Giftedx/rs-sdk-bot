@@ -1,10 +1,10 @@
 import { expect, test } from 'bun:test';
-import { combatLevel, itemId, kitCost, kitItems, kitOptions, kitRoute, KITS, kitSkills, QUEST_CHAIN, kitSwitches, kitVarps, trained } from './pk-kits';
+import { combatLevel, itemId, kitCost, kitItems, kitOptions, kitRoute, KITS, kitSkills, levelsBeforeRoute, overBuild, QUEST_CHAIN, kitSwitches, kitVarps, trained } from './pk-kits';
 import { KNOBS, readNets, stats, verdict } from './measure/pk-spar-climb';
 import { matrix, readList } from './measure/pk-spar-matrix';
 import { mayRun } from './measure/pk-spar-wait';
 import { rankKits } from './measure/pk-build-rank';
-import { benchCases, BUILD_BRACKETS, BUILD_BRACKETS_2, BUILD_PAIRS, BUILD_PAIRS_2 } from './measure/aio-bench-cases';
+import { benchCases, BUILD_BRACKETS, BUILD_BRACKETS_2, BUILD_PAIRS, BUILD_PAIRS_2, questKeepsBuild } from './measure/aio-bench-cases';
 import { flipped, netRate, sparScore } from './pk-spar';
 import type { FightResult } from './pk';
 
@@ -134,10 +134,28 @@ test('every kit has a quest route, and the planner holds the route of every buil
         const { equipment, inventory } = kitItems(name), held = new Set([...equipment, ...inventory].map(i => i.id));
         for (const item of ['rune_platebody', 'dragon_sq_shield', 'dragon_mace', 'dragon_battleaxe']) expect([name, item, held.has(itemId(item))]).toEqual([name, item, false]);
     }
-    for (const name of ['zerker', 'range-tank', 'tank-range']) expect(kitSkills(name)).toMatchObject({ Attack: 60, Defence: name === 'tank-range' ? 99 : 60 });
+    expect(kitSkills('zerker')).toMatchObject({ Attack: 60, Defence: 60 });
     expect(kitSkills('pure-hally').Attack).toBe(61);
-    // The two melee levels of the quest add no combat level to a range tank.
-    for (const name of ['range-tank', 'tank-range']) expect(combatLevel(kitSkills(name))).toBe(combatLevel({ ...kitSkills(name), Attack: 1, Strength: 1 }));
+    // The melee levels of a range tank add no combat level: Attack 74 and Strength 73 stay under Ranged 99.
+    for (const name of ['range-tank', 'tank-range']) {
+        expect(kitSkills(name)).toMatchObject({ Attack: 74, Strength: 73, Defence: name === 'tank-range' ? 99 : 60 });
+        expect(combatLevel(kitSkills(name))).toBe(combatLevel({ ...kitSkills(name), Attack: 1, Strength: 1 }));
+    }
+    // Before the route a build has the levels that the rewards and the fights of its quests complete. The Fremennik
+    // Trials give 70,310 XP in Attack, Strength and Defence, and their fights up to 35,000 XP in Strength.
+    expect(levelsBeforeRoute('range-tank')).toMatchObject({ Attack: 68, Strength: 60, Defence: 7, Ranged: 99, Prayer: 43 });
+    expect(levelsBeforeRoute('zerker')).toMatchObject({ Attack: 7, Strength: 99, Defence: 7 });
+    expect(levelsBeforeRoute('pure-pray')).toEqual(kitSkills('pure-pray'));
+    // A run keeps the build when its XP, on top of the levels before, ends at or under the kit.
+    const before = levelsBeforeRoute('range-tank');
+    expect(overBuild('range-tank', before, { attack: 70310, strength: 93410, defence: 70310, hitpoints: 77922 })).toBeNull();
+    expect(overBuild('range-tank', before, { attack: 76710, strength: 70310, defence: 70310 })).toBe('Attack 75');
+    expect(overBuild('range-tank', before, { defence: 76000 })).toBe('Defence 62');
+    const keeps = questKeepsBuild('range-tank', before);
+    expect(keeps('RESULT ok qp=3  xp=attack=70310,strength=93410,defence=70310,hitpoints=77922 at=1,1,0 ticks=3430 hpMin=1 eats=0 died=false milestones=a')).toBe(true);
+    expect(keeps('RESULT ok qp=3  xp=attack=76710,strength=70310,defence=70310 at=1,1,0 ticks=3430 died=false milestones=a')).toBe(false);
+    expect(keeps('RESULT ok qp=3  xp=attack=70310 at=1,1,0 ticks=3430 died=true milestones=a')).toBe(false);
+    expect(keeps('RESULT fail died')).toBe(false);
 });
 
 test('the second set of builds: levels, gear that the levels can wear, and one case place for each new pair', () => {
