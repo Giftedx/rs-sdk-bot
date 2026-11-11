@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794398134294-fingerblastr-thefullmonty",
+ "account": "Fingerblastr",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 60,
+ "claim": "12e65203-32e5-4c4a-9b88-05245be3ebad",
+ "count": 0,
+ "ok": false,
+ "at": 1794398141780,
+ "detail": "trade claimed"
+}
