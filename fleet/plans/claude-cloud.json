@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794373548786,
+ "at": 1794373569759,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -78,22 +78,17 @@
   },
   {
    "account": "UnderMyKilt",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2582,3297"
-   ]
+   "script": "scripts/aio.ts",
+   "args": [
+    "boss",
+    "black-dragon"
+   ],
+   "env": {},
+   "enabled": false,
+   "standing": false,
+   "repeat": false,
+   "goal": "black dragon pilot",
+   "role": "hand"
   },
   {
    "account": "Deeppockets",
