@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794399311812-undermykilt-knightstick-feather",
+ "account": "Knightstick",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 50,
+ "claim": "8e1bfd8b-4b36-4167-b496-b9fd490167f2",
+ "count": 0,
+ "ok": false,
+ "at": 1794399317693,
+ "detail": "trade claimed"
+}
