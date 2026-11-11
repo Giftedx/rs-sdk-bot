@@ -122,8 +122,8 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
  type Stop={x:number;z:number};
  const same=(a:Stop,b:Stop)=>a.x===b.x&&a.z===b.z;
  const tripAccount=()=>{const actor=accountOf(s);return{...actor,skills:{...actor.skills,magic:0},items:[],counts:{},worn:[],coins:coins()};};
- // The route worker starts cold and closes 30 s after its last plan, so each food-run leg stood 246-289 ticks for its
- // plan. A trip queues the legs known to follow it; travel from that stop takes the ready plan, or plans again if it is null.
+ // The route worker starts cold and closes 30 s after its last plan, so a food-run leg that plans alone waits some
+ // hundreds of ticks. A trip queues the legs known to follow it; travel from that stop takes the ready plan, or plans again if it is null.
  const queued:{from:Stop;to:Stop;plan:ReturnType<typeof planTripOffThread>}[]=[];
  const queue=(from:Stop,to:Stop)=>{if(queued.some(q=>same(q.from,from)&&same(q.to,to)))return;const plan=planTripOffThread({...from,level:0},{...to,level:0},tripAccount());plan.catch(()=>{});queued.push({from,to,plan});};
  const travel=async(to:Stop,next:readonly (readonly [Stop,Stop])[]=[])=>{
@@ -217,8 +217,8 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
     await heal();if(sum(inv(),ARROW_IDS)+sum(eq(),ARROW_IDS)<3)break;
     if(held(arrow.id)>0)await equip(arrow.id);
     const target=selectRangedTarget(st()?.nearbyNpcs??[],st()?.player?.level);
-    // A chase or pickup can leave the account east of pen gate 1551 (3236,3296). There it stood 113 ticks at 3239,3301
-    // with no selectable chicken. Walk back to the pen entry once per empty streak, then wait for a respawn.
+    // A chase or pickup can leave the account east of pen gate 1551 (3236,3296), where no chicken is selectable.
+    // Walk back to the pen entry once per empty streak, then wait for a respawn.
     if(!target){if(s.tick()-lastProgress>120)throw Error('ranged-train no target progress');if(!penReturn&&!near(PEN,0)){penReturn=true;await walk([{...PEN,tol:0}]);continue;}await waitTicks(s,1);continue;}
     if(target.distance>5)await walk([{x:target.tileX??target.x,z:target.tileZ??target.z,tol:3}]);
     const fresh=st()?.nearbyNpcs.find(n=>n.index===target.index&&n.id===target.id);if(!fresh||fresh.inCombat)continue;

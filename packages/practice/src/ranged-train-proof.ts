@@ -24,7 +24,7 @@ const ARROWS=[882,884,886,888,890,892],COINS=995,BONES=526,CHICKEN=2138,FEATHER=
 const TARGET=71,MAX_SPEND=5000,COIN_RESERVE=400000;
 // Engine levelExperience (Player.ts, demo curve 2^(level/10)) in whole XP. Level 70 to 71 is 9617 XP, 33 chickens at 300 XP.
 export const rangedLevelXp=(level:number)=>{let acc=0;for(let l=1;l<level;l++)acc+=Math.floor(l+300*2**(l/10));return Math.floor(acc/4);};
-// Ranged 70 with 3000 XP to go: 10 chickens. The failed order gained 3900 XP in 2086 ticks, inside the 10000-tick CAP.
+// Ranged 70 with 3000 XP to go: 10 chickens at 300 XP.
 export const RANGED_SEED_XP=rangedLevelXp(TARGET)-3000;
 // Observed underground entry and protected quest kit. Bank contents are fixture stock, not a live snapshot.
 export const RANGED_FIXTURE:SaveConfig={position:{x:3113,z:9555,level:0},
