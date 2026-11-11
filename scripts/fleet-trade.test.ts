@@ -7,7 +7,7 @@ import { beginSessionAttempt } from '../packages/core/src/session-lifecycle';
 import type { Session } from '../packages/core/src/inprocess';
 import { terminalTradeReceipt, writeTradeReceipt, type TradeReceipt } from './fleet-trade-settlement';
 import { makeOrder } from './fleet-order';
-import { releasePublishedTradeClaims, snapshot } from './fleet-sync';
+import { DROPPED_CLAIM_MS, droppedTradeClaims, releasePublishedTradeClaims, snapshot } from './fleet-sync';
 
 const order = (o: Partial<Order>): Order => ({ id: 'o1', server: 's', from: 'Giver', to: 'Taker', item: 'Lobster', count: 500, start: 1000, end: 5000, ...o });
 
@@ -107,6 +107,38 @@ test('a prepared receipt is exclusive, and only a published matched terminal rec
         expect(sync()).toBe(1);
         expect(releases).toEqual([nonce]);
     } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('a dropped trade session frees its claim only when the partner\'s failed receipt proves nothing moved, an hour after the window', () => {
+    const trade = order({}), late = trade.end + DROPPED_CLAIM_MS;
+    const claim = { account: 'giver', server: 's', side: 'cloud', orderId: 'o1', role: 'from', nonce, phase: 'held', at: 2000 } as const;
+    // The giver's session dropped: no logout proof, so its receipt reads reconcile with nothing given.
+    const own = { ...claimedReceipt('from'), side: 'cloud', state: 'reconcile', at: 2500, inventory: { before: 500, after: 500 } } as TradeReceipt;
+    // The taker logged out with nothing received.
+    const partner = { ...claimedReceipt('to'), claim: '87654321-1234-1234-1234-123456789012', state: 'failed', at: 2500,
+        inventory: { before: 0, after: 0 }, logout: { attemptId, at: 2400, sha256 } } as TradeReceipt;
+    expect(terminalTradeReceipt(trade, 'to', partner, late)).toBe(true);
+    const files = (o: Record<string, unknown>) => (path: string) => path.startsWith('orders/') ? trade : o[path] ?? null;
+    const both = { 'receipts/o1.from.json': own, 'receipts/o1.to.json': partner };
+    const freed = (o: Record<string, unknown>, now = late, c: any = claim, side = 'cloud') => droppedTradeClaims([c], side, files(o), now).length;
+    expect(freed(both)).toBe(1);
+    expect(freed({ ...both, 'receipts/o1.from.json': { ...own, state: 'prepared', inventory: undefined } })).toBe(1);
+    // Too early: the window, then the hour after it, must have passed, and the claim must be that old.
+    expect(freed(both, trade.end + DROPPED_CLAIM_MS - 1)).toBe(0);
+    expect(freed(both, late, { ...claim, at: late - DROPPED_CLAIM_MS + 1 })).toBe(0);
+    // No partner receipt, a partner that settled or still needs reconciling, or one with no logout proof: a person decides.
+    expect(freed({ 'receipts/o1.from.json': own })).toBe(0);
+    expect(freed({ ...both, 'receipts/o1.to.json': { ...partner, state: 'reconcile' } })).toBe(0);
+    expect(freed({ ...both, 'receipts/o1.to.json': { ...partner, logout: undefined } })).toBe(0);
+    expect(freed({ ...both, 'receipts/o1.to.json': { ...partner, state: 'settled', ok: true, count: 500, inventory: { before: 0, after: 500 }, bank: { count: 500, at: 2300 } } })).toBe(0);
+    // The account's own receipt must be this claim's, count nothing and show no change of its stack.
+    expect(freed({ 'receipts/o1.to.json': partner })).toBe(0);
+    expect(freed({ ...both, 'receipts/o1.from.json': { ...own, claim: 'a'.repeat(36) } })).toBe(0);
+    expect(freed({ ...both, 'receipts/o1.from.json': { ...own, count: 500 } })).toBe(0);
+    expect(freed({ ...both, 'receipts/o1.from.json': { ...own, inventory: { before: 500, after: 0 } } })).toBe(0);
+    // Another side's claim, and a released one, are not this side's to free.
+    expect(freed(both, late, claim, 'local')).toBe(0);
+    expect(freed(both, late, { ...claim, phase: 'released' })).toBe(0);
 });
 
 test('each side picks its own open order once, in or near its window', () => {
