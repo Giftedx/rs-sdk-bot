@@ -38,6 +38,7 @@ export const PROFILES: Readonly<Record<string, Profile>> = {
     'no-spec': { spec: undefined },
     'spec-early': { specBelow: 0.8 },
     'spec-late': { specBelow: 0.35 },
+    'spec-mid': { specBelow: 0.5 },
     'eat-40': { eatAt: 40 },
     'eat-65': { eatAt: 65 },
     'melee-first': { rotation: ['melee', 'ranged', 'magic'] },
