@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794346996624,
+ "at": 1794360824643,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -18,6 +18,22 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
+   "role": "supply"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
+    "scripts/goldfarm.ts KNIGHT_SPOT=2582,3297"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Thieving 55, then coins from Ardougne knights",
    "role": "supply"
   },
   {
@@ -161,24 +177,22 @@
   },
   {
    "account": "mmtha0205",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "betty"
-   ],
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
    "env": {
-    "ITEMS": "fire rune|air rune|earth rune",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
+    "PEN": "3017,3288",
+    "TICKS": "3000",
+    "TARGET": "2000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy elemental runes at Betty",
-   "role": "bank",
-   "template": "shop-runes",
+   "goal": "feathers at the chicken pen 3017,3288",
+   "role": "helper",
+   "template": "feathers@3017,3288",
    "autopilot": "local",
    "resources": [
-    "shop:betty"
+    "pen:3017,3288"
    ]
   },
   {
@@ -440,27 +454,7 @@
    "role": "supply"
   },
   {
-   "account": "Magicwanda",
-   "script": "scripts/blood-chest.ts",
-   "args": [
-    "24000"
-   ],
-   "env": {
-    "MAX_LOOTS": "60",
-    "CAP": "24000",
-    "BANK_EVERY": "5",
-    "COORDINATOR_RUN_ID": "task-40b75809-4b37-4e51-8bed-f3b3d4d2d7a5"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-blood-magicwanda-loot60-r5 [task-40b75809-4b37-4e51-8bed-f3b3d4d2d7a5]",
-   "role": "supply"
-  },
-  {
-   "accounts": [
-    "MineYourBiz",
-    "Ballspinner"
-   ],
+   "account": "Ballspinner",
    "script": "scripts/handoff-inputs.ts",
    "args": [
     "80:Lobster",
@@ -483,17 +477,65 @@
    "role": "supply"
   },
   {
-   "account": "OreElse",
-   "script": "scripts/session-check.ts",
-   "args": [],
+   "account": "NabTheKnob",
+   "script": "scripts/handoff-inputs.ts",
+   "args": [
+    "80:Lobster",
+    "--notes",
+    "--bank-x=2619",
+    "--bank-z=3332",
+    "--approach-ms=1800000",
+    "--request-ms=60000",
+    "--timeout-ms=600000",
+    "--grace-ms=45000"
+   ],
    "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-babbc942-9ad6-4e01-9ec2-85443e776922"
+    "HANDOFF_ORDER": "nabtheknob-blood-lobster80-notes-mineyourbiz",
+    "CAP": "4000",
+    "COORDINATOR_RUN_ID": "task-3b3b300a-9b1e-45fe-a6c4-5d6196c74a1c"
    },
    "enabled": false,
    "repeat": false,
-   "goal": "run-session-recovery-oreelse-elemental [task-babbc942-9ad6-4e01-9ec2-85443e776922]",
+   "goal": "run-handoff-mineyourbiz-nabtheknob-lobster80-notes [task-3b3b300a-9b1e-45fe-a6c4-5d6196c74a1c]",
+   "role": "supply"
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "453",
+    "QUANTITY": "4",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "300",
+    "CASH_RESERVE": "200000",
+    "ORDER_KEY": "oreelse-elemental-coal4-r2",
+    "FILL_WAIT_TICKS": "200",
+    "ORDER_MS": "900000",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-84509b3b-2b75-4501-a6c4-7fff64e6b1b2"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-ge-oreelse-coal4-elemental-r2 [task-84509b3b-2b75-4501-a6c4-7fff64e6b1b2]",
    "role": "pk"
+  },
+  {
+   "account": "Magicwanda",
+   "script": "scripts/blood-chest.ts",
+   "args": [
+    "24000"
+   ],
+   "env": {
+    "MAX_LOOTS": "60",
+    "CAP": "24000",
+    "BANK_EVERY": "5",
+    "COORDINATOR_RUN_ID": "task-9df88551-102d-45bb-b660-3ad046788708"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-blood-magicwanda-loot60-r7 [task-9df88551-102d-45bb-b660-3ad046788708]",
+   "role": "supply"
   }
  ]
 }
