@@ -16,7 +16,13 @@ try {
     const life = s.sdk.getState()!.player!.lifeId, food0 = food(), t0 = s.tick();
     const alive = () => { const p = s.sdk.getState()?.player; return !!p && !p.isDead && p.lifeId === life; };
     let kills = 0, hpMin = hp();
-    const off = s.onTick(() => { const h = hp(); if (h > 0) hpMin = Math.min(hpMin, h); });
+    // EAT_TRACE=1 prints one line for each tick where Hitpoints or the food count changed.
+    let seen = '';
+    const off = s.onTick(() => {
+        const h = hp(); if (h > 0) hpMin = Math.min(hpMin, h);
+        const st = s.sdk.getState(), now = `${h} food=${food()} dialog=${!!st?.dialog?.isOpen} modal=${!!st?.modalOpen}`;
+        if (process.env.EAT_TRACE === '1' && now !== seen) { seen = now; console.log(`EAT_TRACE ${s.tick() - t0} hp=${now}`); }
+    });
     while (alive() && s.tick() - t0 < CAP) {
         const target = (s.sdk.getState()?.nearbyNpcs ?? []).filter(n => n.id === HILL_GIANT && n.hp !== 0).sort((a, b) => a.distance - b.distance)[0];
         if (!target) { await waitTicks(s, 2); continue; }
