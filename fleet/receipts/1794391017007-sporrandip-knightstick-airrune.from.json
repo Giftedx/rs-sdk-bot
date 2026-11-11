@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794391017007-sporrandip-knightstick-airrune",
  "account": "SporranDip",
  "partner": "Knightstick",
@@ -10,8 +10,18 @@
  "item": "Air rune",
  "requested": 31,
  "claim": "30384406-d93c-48ab-b6cc-5ace13e34518",
- "count": 0,
- "ok": false,
- "at": 1794391027464,
- "detail": "trade claimed"
+ "count": 31,
+ "ok": true,
+ "at": 1794391066713,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 325,
+  "after": 294
+ },
+ "logout": {
+  "attemptId": "1794391027469-0000027489-0000000001",
+  "at": 1794391066707,
+  "sha256": "e8a236d7a00a8b879ddbbb828473a413647bbdbd1fc4730fa507d0459234d55f"
+ },
+ "screen": true
 }
