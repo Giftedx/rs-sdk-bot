@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794380100486,
+ "at": 1794380236777,
  "jobs": [
   {
    "account": "Fatstack",
@@ -10,11 +10,12 @@
     "3000"
    ],
    "env": {},
-   "enabled": false,
+   "enabled": true,
    "standing": false,
    "repeat": false,
    "goal": "Betty water rune probe",
-   "role": "hand"
+   "role": "hand",
+   "autopilot": "claude-cloud"
   },
   {
    "account": "Fingersmith",
