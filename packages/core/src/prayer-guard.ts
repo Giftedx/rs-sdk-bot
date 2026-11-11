@@ -128,6 +128,11 @@ const backFirst = (prayer: number) => prayer >= 12 ? 0 : [0, 3, 9].includes(pray
 // player variable %action_delay, which a click sets only when it is in the past (skill_mining/scripts/mining.rs2:76,
 // skill_woodcutting/scripts/woodcut.rs2:55, skill_fishing/scripts/fishing_spots/freshfish.rs2:37 and each other file
 // of that folder). The guard treats them like an attack: it flicks, then sends the click again.
+// The guard leaves auto-retaliate on during these actions. A hit with auto-retaliate on sets %action_delay to 2 ticks
+// ahead when it is in the past (skill_combat/scripts/player/auto_retaliate.rs2), and the next click on a rock then
+// rolls after those 2 ticks, not after the full rate of the pickaxe. Measured on `extra:guard-mine` at seeds 1 to 3,
+// 25 iron ore: auto-retaliate off takes 263, 280 and 272 ticks against 265, 281 and 252 with a rune pickaxe, and 392,
+// 400 and 392 against 333, 356 and 314 with a bronze pickaxe at Mining 15.
 const REPEATABLE = /^(mine|chop down|chop)$/i, FISHING_SPOT = /^fishing spot$/i;
 // The level-up message (content levelup/configs/levelup.dbrow). A prayer button closes it, which costs the script nothing.
 const LEVEL_UP = /^Congratulations, you just advanced/;
