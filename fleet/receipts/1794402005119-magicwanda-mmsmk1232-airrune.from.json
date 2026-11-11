@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794402005119-magicwanda-mmsmk1232-airrune",
+ "account": "Magicwanda",
+ "partner": "mmsmk1232",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 10,
+ "claim": "90402812-7402-4983-b04d-a33a2a0fe3ac",
+ "count": 10,
+ "ok": true,
+ "at": 1794402046663,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1794402026715
+ },
+ "logout": {
+  "attemptId": "1794402014907-0000007016-0000000001",
+  "at": 1794402046652,
+  "sha256": "f9c1cb77a1d6e3a48f8a26c95df60f3108d78c5ec1fee9c02aeb8fd89df5196b"
+ },
+ "screen": true
+}
