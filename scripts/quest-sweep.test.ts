@@ -1524,6 +1524,20 @@ test('the meal takes the preset food kinds first, then the best other edibles th
  expect(mealPlan(food,[{id:2309,count:1}],[{id:385,count:2}],[],beggar)).toEqual([{id:385,count:2}]);
 });
 
+test('a rune the quest needs and the preset also carries is planned once against the same bank stock',()=>{
+ // Scorpion Catcher before the Barcrawl: the quest needs 3 law and 11 air runes, and the preset carries 5 law and 20 air.
+ const need=new Map([[563,3],[556,11]]),food=new Map([[563,5],[556,20]]);
+ const withdrawn=(bank:{id:number;count:number}[])=>{const quest=plan(need,[],bank).withdraw;return{quest,meal:mealPlan(food,[],bank,quest,need)};};
+ // Three law runes banked: the quest takes all three and the meal asks for none, so no withdrawal meets an empty row.
+ expect(withdrawn([{id:563,count:3},{id:556,count:40}])).toEqual({quest:[{id:563,count:3},{id:556,count:11}],meal:[{id:556,count:20}]});
+ // Six banked: the quest's three, then the three that are left toward the preset's five.
+ expect(withdrawn([{id:563,count:6},{id:556,count:25}]).meal).toEqual([{id:563,count:3},{id:556,count:14}]);
+ // Enough banked: the preset's count on top of the quest's.
+ expect(withdrawn([{id:563,count:50},{id:556,count:50}]).meal).toEqual([{id:563,count:5},{id:556,count:20}]);
+ // Runes the pack holds count toward the quest first, then toward the preset.
+ expect(mealPlan(food,[{id:563,count:4}],[{id:563,count:50}],[],need)).toEqual([{id:563,count:4}]);
+});
+
 test('Plague City\'s buckets of water are filled at the sink by the Ardougne bank, not fetched from the Catherby spawn',()=>{
  const ardougne={x:2655,z:3283,level:0};
  // One empty-bucket spawn by the bank cannot give four buckets: they come from the shop.
