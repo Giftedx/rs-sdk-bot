@@ -127,6 +127,15 @@ function receiptBuildEvidence(output:any){
   ...(resumable?{resumeSource:source}:{}),
  };
 }
+// The planner names an ended job by account and time. From the launch signature it needs only the script and the
+// coordinator run, so the argument and environment lists stay in .practice/swarm-deaths.json.
+export function briefEnded(ended:Record<string,any>){
+ return Object.fromEntries(Object.entries(ended??{}).map(([account,end])=>{
+  const {revision,...rest}=end??{};let script:unknown,runId:unknown;
+  try{const r=JSON.parse(revision??'');if(Array.isArray(r)){script=r[0];runId=(Array.isArray(r[3])?r[3]:[]).find((e:any)=>Array.isArray(e)&&e[0]==='COORDINATOR_RUN_ID')?.[1];}}catch{/* no launch signature */}
+  return[account,{...rest,...(typeof script==='string'?{script}:{}),...(typeof runId==='string'?{runId}:{})}];
+ }));
+}
 export function briefSpec(spec:CoordTask){
  const {why,env,args,...rest}=spec as any;
  return{...rest,why:clip(why,200),...(env?{env:Object.keys(env)}:{}),...(args?{args:args.length}:{})};
@@ -251,7 +260,7 @@ export function fleetLeads(rows:any[],side:string){
  });
 }
 export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof readWorld>,worldFile='',held:readonly HeldRuns[]=[],publicationConflicts:ReturnType<typeof deliveryConflictRoots>=[]){
- const compact={...world,coverage:{...world.coverage,quests:undefined,scriptCandidates:world.coverage.scriptCandidates.length},statuses:world.statuses.map((s:any)=>({name:s.name,at:s.at,result:clip(s.result,160),goal:clip(s.goal,120),skills:Object.fromEntries((s.skills??[]).filter((v:any)=>v.level>1).map((v:any)=>[v.name,v.level])),bankAt:s.bankAt})),jobs:world.jobs.map((j:any)=>({account:j.account,accounts:j.accounts,script:j.script,goal:j.goal,enabled:j.enabled})),capabilities:world.capabilities.map((d:any)=>({id:d.id,entry:d.entry,goal:d.goal}))};
+ const compact={...world,ended:briefEnded(world.ended),coverage:{...world.coverage,quests:undefined,scriptCandidates:world.coverage.scriptCandidates.length},statuses:world.statuses.map((s:any)=>({name:s.name,at:s.at,result:clip(s.result,160),goal:clip(s.goal,120),skills:Object.fromEntries((s.skills??[]).filter((v:any)=>v.level>1).map((v:any)=>[v.name,v.level])),bankAt:s.bankAt})),jobs:world.jobs.map((j:any)=>({account:j.account,accounts:j.accounts,script:j.script,goal:j.goal,enabled:j.enabled})),capabilities:world.capabilities.map((d:any)=>({id:d.id,entry:d.entry,goal:d.goal}))};
  const recent=state.tasks.filter(r=>r.status==='succeeded'||r.status==='failed').sort((a,b)=>finishedAt(b)-finishedAt(a)).slice(0,48);
  return[
   'You are the autonomous director of this RuneScape project, working with Codex and Claude through one claimed task queue. Return ONLY a JSON object {reason:string,tasks:CoordTask[],capabilities:DeliveryTask[]}. Both tasks and capabilities must be JSON arrays, including when empty: {"reason":"No new work","tasks":[],"capabilities":[]}. Never use {} or null for either collection; capabilities is not a map of existing definitions.',
