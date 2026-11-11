@@ -76,8 +76,10 @@ export function chestEffect(before:BotWorldState,after:BotWorldState){
 export function bloodRefusal(s:BotWorldState,o:BloodOptions){
  const thieving=skill(s,'Thieving')?.level??0;
  if(thieving<THIEVING_LEVEL)return`blood chest refused: Thieving ${thieving} is below level ${THIEVING_LEVEL}`;
- if(bloodZone(s)==='other')return'blood chest refused: start on the ground floor, or in the chest dungeon';
- if(hp(s)*2<baseHp(s)&&!edible(s))return'blood chest refused: Hitpoints are below half';
+ const zone=bloodZone(s);
+ if(zone==='other')return'blood chest refused: start on the ground floor, or in the chest dungeon';
+ // A surface start eats bank food before the door. Below the door, no bank is in reach.
+ if(zone!=='surface'&&hp(s)*2<baseHp(s)&&!edible(s))return'blood chest refused: Hitpoints are below half';
  if(s.inventory.length+Number(total(s,BLOOD_RUNE)===0)+Number(total(s,COINS)===0)>28)return'blood chest refused: the pack has no room for the reward';
  if(o.maxLoots*COINS_PER_LOOT+total(s,COINS)>2147483647)return'blood chest refused: the coin stack would overflow';
  return null;
