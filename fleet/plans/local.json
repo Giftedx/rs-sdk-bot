@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794367759955,
+ "at": 1794367834911,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -500,27 +500,16 @@
   },
   {
    "account": "mmsmk1232",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Attack",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
+    "CAP": "600",
+    "COORDINATOR_RUN_ID": "task-a25e177c-c0aa-4495-b4cb-440068174a7c"
    },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Attack to 80 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-attack-80",
-   "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-session-recovery-mmsmk1232-orphan-1794367220 [task-a25e177c-c0aa-4495-b4cb-440068174a7c]",
+   "role": "combat"
   }
  ]
 }
