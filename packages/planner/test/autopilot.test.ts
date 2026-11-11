@@ -1346,7 +1346,7 @@ test('a hunter makes its hides into armour: flax to Crafting 84 when it cannot h
     }
 });
 
-import { JAKUT_COINS, JAKUT_SWORDS, JAKUT_WAIT } from '../src/autopilot';
+import { JAKUT_CAP, JAKUT_COINS, JAKUT_RESERVE, JAKUT_SWORDS, JAKUT_WAIT } from '../src/autopilot';
 test('an account with Lost City buys its dragon longswords from Jakut: the diamond on the market first, then one visit', () => {
     const maxed = { Thieving: 99, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Magic: 99, Prayer: 99 };
     const done = new Set(['lost city']), pilots = new Set(['army-jakut-swords']);
@@ -1357,12 +1357,19 @@ test('an account with Lost City buys its dragon longswords from Jakut: the diamo
     const buy = first(who({}));
     expect(buy.template!.id).toBe(KIT_BUY + 'army-jakut-swords');
     expect(buy.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+) .*LIMIT_PRICE=(\d+)/)!.slice(1).map(Number))).toEqual([[1601, 1, 150_000]]);
-    // With the diamond: the visit, two swords, waiting inside for the shelf's second.
+    // With the diamond: the visit by the shop run, two swords, a buy request each tick on a shelf other players
+    // empty, the coins of two units of an emptied shelf over the run's reserve.
     const visit = first(who({ diamond: 1 }));
     expect(visit.template!.id).toBe('army-jakut-swords');
     expect(visit.reason).toBe(`army band ${HUNT_BAND + 0.05}: 1 dragon longsword`);
-    expect(jobFor(visit, side)).toMatchObject({ script: 'scripts/aio.ts', args: ['market', 'jakut-swords', `SWORDS=${JAKUT_SWORDS}`, `WAIT=${JAKUT_WAIT}`], repeat: false });
+    expect(jobFor(visit, side)).toMatchObject({ script: 'scripts/chain.ts', repeat: false, resources: ['shop:jukat'],
+        args: [`scripts/shop-buyer.ts jukat ${JAKUT_CAP} BLIND_BUY=1 STOCK_TARGET=${JAKUT_SWORDS} STOP_AT_TARGET=1 BANK_AT=0 NO_BUY_TICKS=${JAKUT_WAIT} STALL_TICKS=0 COIN_RESERVE=${JAKUT_RESERVE} FLOAT=${JAKUT_COINS}`] });
     expect(catalogue().find(t => t.id === 'army-jakut-swords')!.needs!.items!.coins).toBe(JAKUT_COINS);
+    expect(JAKUT_COINS - JAKUT_RESERVE).toBeGreaterThanOrEqual(JAKUT_SWORDS * 101_000);
+    expect(JAKUT_WAIT).toBeGreaterThan(500);
+    // One account at the shelf at a time.
+    const pair = plan(inputs([who({ diamond: 1 }), { ...who({ diamond: 1 }), name: 'Adder' }], { army: new Set(['snake', 'adder']), capacity: CAPACITY, pilots, market: diamond }));
+    expect(pair.filter(a => a.template?.id === 'army-jakut-swords').length).toBe(1);
     // Not with a sword held (one more would cost a second diamond), not without the quest, not without the pilot.
     expect(first(who({ diamond: 1, 'dragon longsword': 1 })).template?.id).not.toBe('army-jakut-swords');
     expect(first(who({ diamond: 1 }, new Set())).template?.id).not.toBe('army-jakut-swords');

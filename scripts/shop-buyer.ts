@@ -6,8 +6,8 @@
 // STOCK_TARGET (default 500) is how many of each item the account may own, pack plus bank, before it stops buying
 // that item; the run stops as stock-target once every item is there. MAX_ITEMS caps the units bought in one run.
 // Profile jukat (Zanaris) enters by the Lumbridge swamp shed with a Dramen staff, pays the market doorman one cut
-// diamond, leaves by the ladder to Al Kharid and banks there. Wait for its shelf with NO_BUY_TICKS above the 500-tick
-// restock and STALL_TICKS=0.
+// diamond, leaves by the ladder to Al Kharid, wields the weapon the staff took the place of and banks there. Wait for
+// its shelf with NO_BUY_TICKS above the 500-tick restock and STALL_TICKS=0.
 // BLIND_BUY=1 is for a shelf that other players empty: each profile item with a `shelf` value gets one buy request
 // each tick, whatever count the shelf shows, while the budget, the pack and the stock target allow one more unit.
 // The engine adds a restocked unit at the end of a tick (World.ts processCleanup) and runs a buy when it reads the
@@ -577,6 +577,9 @@ try {
 
     const realm = conf.realm;
     const inRealm = () => { const p = pos(); return !!p && !!realm && realm.inside(p); };
+    // The weapon the realm's worn item took the place of (0: none, or the item was worn at the start).
+    let ownWeapon = 0;
+    const weapon = () => s.sdk.getEquipment().find(i => i.slot === 3)?.id ?? 0;
     // Into the realm: the worn item from the pack, or from the nearest bank, then the door from its stand tile.
     const enterRealm = async () => {
         if (!realm || inRealm()) return;
@@ -590,7 +593,7 @@ try {
             if ((await s.bot.openBank()).success) { await s.bot.withdrawItem(realm.wear, 1); await s.bot.closeInterface(); }
         }
         const item = held();
-        if (!worn() && item) { await s.bot.equipItem(item); await waitUntil(s, worn, { timeoutTicks: 5 }); }
+        if (!worn() && item) { ownWeapon = weapon(); await s.bot.equipItem(item); await waitUntil(s, worn, { timeoutTicks: 5 }); }
         if (!worn()) throw new Error(`realm entry: no ${realm.wear.source} worn, in the pack or in the bank`);
         await walk(realm.stand.x, realm.stand.z, 0);
         for (let i = 0; i < 4 && !inRealm() && !over(); i++) {
@@ -628,11 +631,15 @@ try {
         console.log(`MILESTONE realm-toll t=${used()} passed=${passed ? 1 : 0}`);
         return passed;
     };
-    // Out by the ladder, so the account banks and starts its next job where the walker has routes.
+    // Out by the ladder, so the account banks and starts its next job where the walker has routes. Outside it wields
+    // its own weapon again, so the realm's worn item goes to the bank with the pack and the next job fights with the
+    // weapon the account had.
     const leaveRealm = async () => {
         if (!realm || !inRealm()) return;
         if (await walk(realm.ladder.x, realm.ladder.z - 2, 2)) await talkThrough(realm.ladder, realm.ladder.say, () => !inRealm(), 100);
-        console.log(`MILESTONE realm-leave t=${used()} out=${inRealm() ? 0 : 1}`);
+        const own = !inRealm() && ownWeapon ? s.sdk.getInventory().find(i => i.id === ownWeapon) : undefined;
+        if (own && (await s.bot.equipItem(own)).success) await waitUntil(s, () => weapon() === ownWeapon, { timeoutTicks: 8 });
+        console.log(`MILESTONE realm-leave t=${used()} out=${inRealm() ? 0 : 1} weapon=${weapon()}`);
     };
     const shelfOf = (name: string) => conf.items.find(t => t.re.test(name))?.shelf;
 

@@ -361,12 +361,16 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
     // A session with a bank snapshot may stop at a bank for fares first (trip.ts).
     const name=(s as {name?:string}).name,banker=s as unknown as Parameters<typeof takeItems>[0];
     const stock=name&&typeof (banker.bot as {openBank?:unknown}).openBank==='function'?bankStock(name):undefined;
-    const budgetMs=opts.planBudgetMs??ROUTE_BUDGET_MS,deadline=performance.now()+budgetMs;
+    const budgetMs=opts.planBudgetMs??ROUTE_BUDGET_MS,planStart=performance.now(),deadline=planStart+budgetMs;
     let why='';
     const r = world.offThread?await planTripOffThread(from,to,acct,stock,budgetMs)
         :stock?planTrip(world,from,to,acct,stock,undefined,undefined,{deadline})
         :(()=>{const d=world.route(from,to,acct,{deadline});if(!d.ok)why=d.reason;return d.ok?{cost:d.cost,legs:d.legs} as TripPlan:null;})();
-    if (!r) return { ok: false, reason: 'precondition', detail: `no route${why==='budget'?` (search over ${budgetMs} ms)`:''} to ${to.x},${to.z},${to.level}`, ticks: 0 };
+    if (!r) {
+        // What the failed search started from: a live "no route" names only its target otherwise.
+        console.log(`WALK_NO_ROUTE ${JSON.stringify({ from, to, ms: Math.round(performance.now() - planStart), budgetMs, bank: !!stock, coins: acct.coins ?? 0 })}`);
+        return { ok: false, reason: 'precondition', detail: `no route${why==='budget'?` (search over ${budgetMs} ms)`:''} to ${to.x},${to.z},${to.level}`, ticks: 0 };
+    }
     // Actor prerequisites are synchronous query masks, not long-lived refusal
     // walls: gear/stat changes and allowed exits must be re-evaluated.
     let first = await walkRoute(s, r.legs, opts);

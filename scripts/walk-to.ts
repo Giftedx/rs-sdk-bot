@@ -34,7 +34,17 @@ export async function walkTarget(s: Session, to: Tile, ground: boolean, operatio
 // north and south banks.
 const FARE_BANKS: readonly Tile[] = [{ x: 3185, z: 3436, level: 0 }, { x: 3253, z: 3420, level: 0 }, { x: 3092, z: 3243, level: 0 },
     { x: 3013, z: 3355, level: 0 }, { x: 2946, z: 3368, level: 0 }, { x: 2619, z: 3332, level: 0 }, { x: 2655, z: 3283, level: 0 }];
-const COINS = 995;
+const COINS = 995, PACK_SLOTS = 28;
+// A full pack with no coin stack has no slot for the fare (live: 22 flax and 6 slices of cake, "ferry needs 60 coins
+// and the bank holds 11000"). The item to bank for one free slot: one of the kind that fills the most slots, or the
+// whole stack when every kind fills one slot.
+export function fareSpare(pack: readonly { id: number }[]): { id: number; all: boolean } | null {
+    if (pack.length < PACK_SLOTS || pack.some(i => i.id === COINS)) return null;
+    const rows = new Map<number, number>();
+    for (const i of pack) rows.set(i.id, (rows.get(i.id) ?? 0) + 1);
+    const [id, n] = [...rows].sort((x, y) => y[1] - x[1])[0]!;
+    return { id, all: n === 1 };
+}
 // Takes the missing coins of a ferry fare from the nearest of those banks, and no more.
 export async function bankFare(s: Session, need: number, walk: (to: Tile, budgetMs?: number) => Promise<Outcome>): Promise<Outcome> {
     const start = s.tick(), held = () => s.sdk.getInventory().filter(i => i.id === COINS).reduce((n, i) => n + i.count, 0);
@@ -48,6 +58,11 @@ export async function bankFare(s: Session, need: number, walk: (to: Tile, budget
     if (!(await s.bot.openBank()).success || !await waitUntil(s, () => !!s.sdk.getState()?.bank?.isOpen && (s.bankObservation?.()?.generation ?? 0) > generation, { timeoutTicks: 20 }))
         return done(false, `ferry fare: the bank at ${bank.x},${bank.z} did not open`);
     const missing = need - held(), row = s.sdk.getState()?.bank?.items.find(i => i.id === COINS);
+    const spare = missing > 0 ? fareSpare(s.sdk.getInventory()) : null, item = spare && s.sdk.getInventory().find(i => i.id === spare.id);
+    if (spare && (!item || !(await s.bot.depositItem(item, spare.all ? -1 : 1)).success || !await waitUntil(s, () => s.sdk.getInventory().length < PACK_SLOTS, { timeoutTicks: 10 }))) {
+        await s.bot.closeBank();
+        return done(false, `ferry fare: a full pack and the deposit of item ${spare.id} failed`);
+    }
     const took = missing <= 0 || !!row && row.count >= missing && (await s.bot.withdrawItem(row, missing, { asNote: false })).success
         && await waitUntil(s, () => held() >= need, { timeoutTicks: 20 });
     await s.bot.closeBank();

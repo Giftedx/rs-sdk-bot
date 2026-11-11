@@ -268,17 +268,20 @@ Ranged it adds is not needed at that point.
   299,000). Jakut in the Zanaris market stocks 2 dragon longswords and 2 daggers, one back per 500 ticks
   (`area_lostcity/configs/lostcity.inv`), base cost 100,000 and 30,000; the market door asks one cut diamond an entry
   (`doorman.rs2`) and the market ladder leaves to Al Kharid (`ladder_fairy.rs2`).
-- **Claim.** One run brings two dragon longswords from Jakut to the Al Kharid bank. **Conditions.**
-  `scripts/jakut-swords.ts` (`market:jakut-swords`): the dramen staff, a diamond and the coins from the Draynor bank,
-  the swamp shed, the market door from the west (3237,9558; the engine refuses a walk round it: a walk from the entry
-  to Jakut stopped on 3237,9560), the doormen's dialogue, the shop, the ladder. Practice from the Draynor bank with a
-  rune scimitar wielded: `RESULT ok swords=2 banked=2 spent=201000`, 165 ticks (in Zanaris at tick 86, in the market
-  at 110, in Al Kharid at 138), the scimitar wielded again. The first sword cost 100,000 and the second 101,000. A
-  third was not on the shelf in 711 ticks of waiting (`SWORDS=3 WAIT=700`: `swords=2 ... shelf=0`). **Evidence.**
-  `.practice/jakut/run.ts` (`a`, `b`), `.practice/jakut/probe.ts`.
-- **Gap.** Not run live. The shelf's restock on the live server is not measured. No army account holds a diamond:
-  `army-jakut-swords` buys one on the market (1,219 listed from 145,000, cap 150,000) for an account with Lost City
-  done and a dramen staff, then runs the visit with `SWORDS=2 WAIT=600`.
+- **Claim.** One run brings dragon longswords from Jakut to the Al Kharid bank. **Conditions.**
+  `scripts/shop-buyer.ts` profile `jukat`: the dramen staff, a diamond and the coins from the bank, the swamp shed,
+  the market door from the west (3237,9558; the engine refuses a walk round it: a walk from the entry to Jakut
+  stopped on 3237,9560), the doormen's dialogue, the shop, the ladder, the weapon the staff took the place of wielded
+  again outside. The first sword costs 100,000 and one from an emptied shelf 101,000. **Evidence.** Bench
+  `extra:shop-jukat` (three swords from Ardougne, a rune scimitar worn at the start and at the end).
+- **Claim.** Other players empty Jakut's shelf on the live server, and a buy request sent each tick takes a
+  restocked unit before a buyer that looks first. **Conditions.** A live run that looked every 15 ticks saw no sword
+  for 600 ticks. `BLIND_BUY=1` sends one request a tick; the engine adds a restocked unit at the end of a tick and
+  runs a buy when it reads the packet in the next. **Evidence.** Bench `extra:shop-jukat-rival-look`, `-blind`
+  (two swords each against a second buyer) and `-ahead` (none against a blind buyer that logged in first).
+- **Gap.** No live sword. `army-jakut-swords` buys a diamond on the market (1,219 listed from 145,000, cap 150,000)
+  for an account with Lost City done and a dramen staff, then runs the visit with `BLIND_BUY=1`, a stock target of 2
+  and 3,000 ticks of waiting with no buy. A visit that buys nothing still costs its diamond.
 - **Gap.** No seller on practice, so a fill is proved live only. Kills per tick with each blade are not measured.
 
 ## Black dragonhide from Taverley's black dragons
@@ -733,6 +736,15 @@ TrouserSnake and UnderMyKilt hold about 15,000 feathers and 1,500-1,700 bones ea
   | 3071,3347 | Ardougne bank meeting tile | 60 | 0 | arrived | 621 |
   | Ardougne north bank | Varrock West | 0 | 500 | arrived, fare fetched first | 666 |
   | Ardougne north bank | Varrock West | 0 | 0 | refused: `ferry needs 60 coins and the bank holds 0` | 10 |
+  | 2615,3332, pack full (22 flax, 6 cake slices) | Varrock West | 0 | 11,000 | arrived, one flax banked for the fare's slot | 667, 668, 864, 865 |
+
+  A full pack with no coin stack has no slot for the fare: the withdrawal fails and the walk ends `ferry needs 60 coins
+  and the bank holds 11000` (live, a fleet trade; practice, 46 ticks). `bankFare` banks one item of the kind that
+  fills the most slots first (`fareSpare`). Of five such trips one ended `no route to 3182,3440,0` on the Port Sarim
+  dock after both ferries, and two took the whole 45,000 ms of their first search and went by the fixed corridor. The
+  last leg alone, from the dock with a bank snapshot, planned in under 4 seconds in six runs. A failed search prints
+  `WALK_NO_ROUTE` with its start tile, its time and its budget. Evidence: `.practice/fare/run.ts`, `dock.ts`, `leg.ts`.
+  Gap: the cause of the dock's `no route` (live: 44 at 3029,3217,0) is not found.
 
   Each trip includes about 300 ticks of world loading at the 150 ms practice tick. A trooper run that starts at Varrock
   West with no coins in the pack and 500 banked ended `RESULT ok` twice (41 and 36 kills, 2,283 ticks each, the trip
