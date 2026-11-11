@@ -22,8 +22,8 @@ test('stranded dungeon step 2574,9742 reaches the chest stage despite an empty S
  expect(await stuck).toBe(false);expect(tick).toBeLessThanOrEqual(151);expect(listeners.size).toBe(0);
 });
 // A small model of the native route: door, ladders, chests with respawn, bank.
-function world(p:{thieving?:number;x?:number;z?:number;pickAfter?:number;hp?:number;coins?:number;cake?:number;hitAt?:number;bankCake?:number;hitPerLoot?:number;base?:number;lobster?:number}={}){
- const w={x:p.x??ARRIVAL.x,z:p.z??ARRIVAL.z,level:0,tick:0,xp:1000,hp:p.hp??56,base:p.base??56,runes:0,coins:p.coins??0,cake:p.cake??3,lobster:p.lobster??0,bankCake:p.bankCake??0,lifeId:1,
+function world(p:{thieving?:number;x?:number;z?:number;pickAfter?:number;hp?:number;coins?:number;cake?:number;hitAt?:number;bankCake?:number;hitPerLoot?:number;base?:number;lobster?:number;bankLobster?:number}={}){
+ const w={x:p.x??ARRIVAL.x,z:p.z??ARRIVAL.z,level:0,tick:0,xp:1000,hp:p.hp??56,base:p.base??56,runes:0,coins:p.coins??0,cake:p.cake??3,lobster:p.lobster??0,bankCake:p.bankCake??0,bankLobster:p.bankLobster??0,lifeId:1,
   bankRunes:0,bankCoins:0,bankCalls:0,fails:p.pickAfter??0,chestUntil:CHESTS.map(()=>0),acts:[] as {id:number;option:number;x:number;z:number;tick:number}[],
   messages:[] as {type:number;text:string;sender:string;tick:number}[],stopped:false,surfaceWalks:[] as string[],dungeonWalks:[] as string[],travels:[] as string[]};
  const state=()=>({player:{worldX:w.x,worldZ:w.z,level:w.level,lifeId:w.lifeId,isDead:false},
@@ -55,7 +55,7 @@ function world(p:{thieving?:number;x?:number;z?:number;pickAfter?:number;hp?:num
   },
   wait:async(check,ticks)=>{for(let i=0;i<ticks;i++){if(check())return true;await step();}return check();},
   step,
-  bank:async food=>{const taken=food?w.bankCake:0,r={runes:w.runes,coins:w.coins,food:taken};w.bankCalls++;w.bankRunes+=w.runes;w.bankCoins+=w.coins;w.runes=0;w.coins=0;w.cake+=taken;w.bankCake-=taken;return r;},
+  bank:async food=>{const cake=food?w.bankCake:0,lobster=food?w.bankLobster:0,r={runes:w.runes,coins:w.coins,food:cake+lobster};w.bankCalls++;w.bankRunes+=w.runes;w.bankCoins+=w.coins;w.runes=0;w.coins=0;w.cake+=cake;w.bankCake-=cake;w.lobster+=lobster;w.bankLobster-=lobster;return r;},
   eat:async item=>{if(item.id===379){w.lobster--;w.hp=Math.min(w.base,w.hp+12);}else{w.cake--;w.hp=Math.min(w.base,w.hp+20);}return{success:true};},
   log:()=>{}};
  return{w,d,state};
@@ -185,6 +185,30 @@ test('a 47 Hitpoints account eats before the door at 25 and leaves the dungeon a
  expect(left).toMatchObject({ok:false,stop:'hp',loots:0,hpMin:27});
  expect(low.w.acts.some(a=>a.id===CHEST)).toBe(false);
  expect(low.w.acts.map(a=>[a.id,a.option])).toEqual([[LADDER_UP.id,1],[DOOR.id,1]]);
+});
+// Magicwanda: Hitpoints base 39 at 2618,3332 beside the bank, no food in the pack, 80 Lobster in the bank.
+test('a low Hitpoints surface start with no pack food banks for Lobster, eats and loots to the target',async()=>{
+ const {w,d,state}=world({hp:15,base:39,cake:0,x:2618,z:3332,bankLobster:80}),order:string[]=[],bank=d.bank,eat=d.eat;
+ expect(bloodRefusal(state(),options)).toBeNull();
+ d.bank=async food=>{order.push(`bank ${food}`);return bank(food);};
+ d.eat=async item=>{order.push(`eat ${item.name}`);return eat(item);};
+ const r=await runBloodChest(d,options);
+ expect(order.slice(0,3)).toEqual(['bank true','eat Lobster','eat Lobster']);
+ expect(r).toMatchObject({ok:true,stop:'target',targetMet:true,conserved:true,loots:2,bankedRunes:4,bankedCoins:1000,meals:2});
+ expect(w.acts.filter(a=>a.id===CHEST)).toHaveLength(2);
+ expect(w.lobster).toBe(78);expect(w.runes).toBe(0);expect(w.coins).toBe(0);
+ // Below the door no bank is in reach, so the same Hitpoints there still refuse.
+ const tower=world({hp:15,base:39,cake:0,x:DOOR.x-1,z:DOOR.z,bankLobster:80});
+ await expect(runBloodChest(tower.d,options)).rejects.toThrow('Hitpoints are below half');
+ expect(tower.w.acts).toEqual([]);
+});
+test('a low Hitpoints surface start with no food in the bank ends at the hp stop and loses no loot',async()=>{
+ const {w,d}=world({hp:15,base:39,cake:0,x:2618,z:3332,coins:40});
+ w.runes=6;
+ const r=await runBloodChest(d,options);
+ expect(r).toMatchObject({ok:false,stop:'hp',targetMet:false,conserved:true,loots:0,meals:0,startRunes:6,startCoins:40,bankedRunes:6,bankedCoins:40});
+ expect(w.acts).toEqual([]);
+ expect(w.runes).toBe(0);expect(w.coins).toBe(0);expect(w.bankRunes).toBe(6);expect(w.bankCoins).toBe(40);
 });
 test('food with no observed effect fails the run',async()=>{
  const {d}=world({hp:20});
