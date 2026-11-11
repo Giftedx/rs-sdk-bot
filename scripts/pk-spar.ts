@@ -39,20 +39,21 @@ export function sparOptions(name: string, extraJson: string | undefined, kit: Ki
 export type SparResult = { winner: 'a' | 'b' | 'draw'; score: number; ticks: number; a: FightResult; b: FightResult };
 // The score of side A: 100 for a kill, -100 for a death, plus the damage margin held inside +-99, so a win always
 // scores above a draw and a draw above a loss. A draw is a fight that reached the cap, or one that killed both.
+// The margin is the damage each side took: in a mirror spar `dealt` read 102 where the other side took 274.
 export function sparScore(a: FightResult, b: FightResult): SparResult {
     const aWon = a.outcome === 'kill' || b.outcome === 'died', bWon = b.outcome === 'kill' || a.outcome === 'died';
     const winner = aWon === bWon ? 'draw' : aWon ? 'a' : 'b';
-    const margin = Math.max(-99, Math.min(99, a.dealt - b.dealt));
+    const margin = Math.max(-99, Math.min(99, b.taken - a.taken));
     return { winner, score: (winner === 'a' ? 100 : winner === 'b' ? -100 : 0) + margin, ticks: Math.max(a.ticks, b.ticks), a, b };
 }
 // A spar that measured something: both sides attacked, and the fight ended in a kill or at the cap.
 export const sparValid = (r: SparResult) => [r.a, r.b].every(f => f.attacks.magic + f.attacks.ranged + f.attacks.melee > 0
     && ['kill', 'died', 'timeout'].includes(f.outcome));
 
-export async function spar(a: Session, b: Session, optionsA: FightOptions, optionsB: FightOptions, log: (line: string) => void = l => console.log(l)): Promise<SparResult> {
+export async function spar(a: Session, b: Session, optionsA: FightOptions, optionsB: FightOptions, log: (line: string) => void = l => console.log(l), halt: () => boolean = () => false): Promise<SparResult> {
     // The first side to end stops the other: a fight has one end.
     let over = false;
-    const side = (s: Session, target: string, o: FightOptions) => fightPlayer(s, target, { ...o, stop: () => over, log: l => log(`[${s.name}] ${l}`) })
+    const side = (s: Session, target: string, o: FightOptions) => fightPlayer(s, target, { ...o, stop: () => over || halt(), log: l => log(`[${s.name}] ${l}`) })
         .finally(() => { over = true; });
     const [ra, rb] = await Promise.all([side(a, b.name, optionsA), side(b, a.name, optionsB)]);
     return sparScore(ra, rb);
@@ -64,9 +65,13 @@ if (import.meta.main) {
     const { openBot, finish } = await import('../packages/core/src/bot');
     const cap = Number(capArg ?? 900), nameA = env.SPAR_A ?? 'base', nameB = env.SPAR_B ?? 'base';
     const optionsA = sparOptions(nameA, env.SPAR_A_OPTS, TRIBRID_KIT, cap), optionsB = sparOptions(nameB, env.SPAR_B_OPTS, TRIBRID_KIT, cap);
-    const a = await openBot(botA), b = await openBot(botB);
-    const r = await spar(a, b, optionsA, optionsB);
+    // A death is the expected end of a spar, so it must not end the run as openBot does by default. Any other stop
+    // (a stop file, a stalled tick stream) halts both sides and fails the run.
+    let halted: string | undefined;
+    const onStop = async (_s: unknown, reason: string) => { if (reason !== 'died') halted ??= reason; };
+    const a = await openBot(botA, { onStop }), b = await openBot(botB, { onStop });
+    const r = await spar(a, b, optionsA, optionsB, undefined, () => halted !== undefined);
     console.log(`SPAR ${JSON.stringify({ profiles: { a: nameA, b: nameB }, ...r })}`);
-    await finish([a, b], sparValid(r), `spar winner=${r.winner} score=${r.score} ticks=${r.ticks} a=${nameA} b=${nameB} aOutcome=${r.a.outcome} bOutcome=${r.b.outcome} `
-        + `aDealt=${r.a.dealt} bDealt=${r.b.dealt} aEaten=${r.a.eaten} bEaten=${r.b.eaten} aSpecs=${r.a.specs} bSpecs=${r.b.specs}`);
+    await finish([a, b], sparValid(r) && halted === undefined, `spar winner=${r.winner} score=${r.score} ticks=${r.ticks} a=${nameA} b=${nameB} aOutcome=${r.a.outcome} bOutcome=${r.b.outcome} `
+        + `aTaken=${r.a.taken} bTaken=${r.b.taken} aEaten=${r.a.eaten} bEaten=${r.b.eaten} aSpecs=${r.a.specs} bSpecs=${r.b.specs}${halted ? ` halted=${halted}` : ''}`);
 }

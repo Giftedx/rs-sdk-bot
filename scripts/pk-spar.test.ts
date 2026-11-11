@@ -4,15 +4,15 @@ import { ladderSummary, readFight } from './measure/pk-spar-ladder';
 import { benchCases } from './measure/aio-bench-cases';
 import type { FightResult, Kit } from './pk';
 
-const fight = (outcome: FightResult['outcome'], dealt: number, attacks = 10): FightResult =>
-    ({ outcome, ticks: 200, dealt, taken: 0, eaten: 0, attacks: { magic: attacks, ranged: 0, melee: 0 }, freezes: 0, specs: 0 });
+const fight = (outcome: FightResult['outcome'], taken: number, attacks = 10): FightResult =>
+    ({ outcome, ticks: 200, dealt: 0, taken, eaten: 0, attacks: { magic: attacks, ranged: 0, melee: 0 }, freezes: 0, specs: 0 });
 const kit: Kit = { magic: [1401], ranged: [861], melee: [1231, 1201] };
 
 test('a win scores above a draw and a draw above a loss, whatever the damage margin', () => {
-    expect(sparScore(fight('kill', 99), fight('timeout', 400))).toMatchObject({ winner: 'a', score: 1 });
-    expect(sparScore(fight('timeout', 400), fight('timeout', 99))).toMatchObject({ winner: 'draw', score: 99 });
-    expect(sparScore(fight('died', 400), fight('timeout', 99))).toMatchObject({ winner: 'b', score: -1 });
-    expect(sparScore(fight('timeout', 150), fight('died', 120))).toMatchObject({ winner: 'a', score: 130 });
+    expect(sparScore(fight('kill', 400), fight('timeout', 99))).toMatchObject({ winner: 'a', score: 1 });
+    expect(sparScore(fight('timeout', 99), fight('timeout', 400))).toMatchObject({ winner: 'draw', score: 99 });
+    expect(sparScore(fight('died', 99), fight('timeout', 400))).toMatchObject({ winner: 'b', score: -1 });
+    expect(sparScore(fight('timeout', 120), fight('died', 150))).toMatchObject({ winner: 'a', score: 130 });
     expect(sparScore(fight('died', 99), fight('died', 99))).toMatchObject({ winner: 'draw', score: 0 });
 });
 
