@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794368237146,
+ "at": 1794368244102,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -267,24 +267,16 @@
   },
   {
    "account": "Deeppockets",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts dargaud 800 ITEMS=willow.shortbow STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=4000 COIN_RESERVE=500 MAX_SPEND=3000",
-    "scripts/shop-buyer.ts dargaud 800 ITEMS=mithril.arrow|steel.arrow|iron.arrow|bronze.arrow STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=51000 COIN_RESERVE=500 MAX_SPEND=50000"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-b6c3d0b6-09a5-4204-b615-e83e1c8466dc"
    },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy a willow shortbow and arrows up to mithril at the Ranging Guild for the Ranged band",
-   "role": "supply",
-   "template": "army-arrows-guild",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "shop:dargaud"
-   ]
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-deeppockets-20261111t033250z [task-b6c3d0b6-09a5-4204-b615-e83e1c8466dc]",
+   "role": "supply"
   }
  ]
 }
