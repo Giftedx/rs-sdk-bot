@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794356042339,
+ "at": 1794356162573,
  "jobs": [
   {
    "account": "Deeppockets",
@@ -33,25 +33,6 @@
    "standing": true,
    "repeat": false,
    "goal": "buy 1000 Nature rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=1000 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=knightrider-kit3-561-0to1000 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=314 QUANTITY=50 LIMIT_PRICE=20 CASH_RESERVE=1000 ORDER_KEY=knightrider-kit3-314-0to50 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1000 Nature rune, 50 Feather on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
    "role": "supply",
    "template": "kit-buy:army-alch-magic-99",
    "autopilot": "claude-cloud",
@@ -134,6 +115,31 @@
   },
   {
    "account": "UnderMyKilt",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Fingerblastr",
    "script": "scripts/shop-buyer.ts",
    "args": [
     "zaff",
@@ -159,31 +165,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "shop:zaff"
-   ]
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
    ]
   },
   {
@@ -313,6 +294,31 @@
   },
   {
    "account": "Dipstick",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Attack",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Attack to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-attack-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "KnightRider",
    "script": "scripts/shop-buyer.ts",
    "args": [
     "ardy",
