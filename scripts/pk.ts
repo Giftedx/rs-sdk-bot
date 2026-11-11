@@ -89,6 +89,9 @@ export type FightOptions = {
     // Tiles to keep from the target between turns that are not melee: on a cooldown tick the loop steps away to this
     // distance, so an opponent with a melee weapon must walk for each hit.
     standOff?: number;
+    // The same step back, but only while the target is frozen and holds a melee weapon: it cannot follow, so each of
+    // its turns is lost while ours land from range.
+    kiteFrozen?: number;
     fledSpec?: boolean;
     // Choose a style the opponent's overhead prayer does not cover (default on).
     readOverheads?: boolean;
@@ -542,7 +545,9 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         // walk, so an account with a ranged or magic kit attacks from where it stands. Within 2 tiles a melee turn or
         // a melee special costs one step.
         const chasing = (now < fleeingUntil || now < frozenUntil) && cheb(at, target) > 2 && ranged;
-        const canReachMelee = !chasing && !(now < selfFrozenUntil && !adjacent(at, target)) && (cheb(at, target) <= 6 || (!hasStyle(o.kit, 'magic') && !hasStyle(o.kit, 'ranged')));
+        // While we kite a frozen target, a melee turn would walk back into its reach.
+        const kiting = !!o.kiteFrozen && now < frozenUntil && weaponStyle(seen?.worn[3]) === 'melee' && ranged;
+        const canReachMelee = !chasing && !kiting && !(now < selfFrozenUntil && !adjacent(at, target)) && (cheb(at, target) <= 6 || (!hasStyle(o.kit, 'magic') && !hasStyle(o.kit, 'ranged')));
         const guarded = o.readOverheads === false ? new Set<Style>() : protectedStyles(seen?.headicons);
         const styleUsable = (st: Style) => hasStyle(o.kit, st) && (st !== 'melee' || canReachMelee);
         const turns = fled && o.fledRotation?.length ? o.fledRotation : rotation;
@@ -588,9 +593,10 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
                     continue;
                 }
             }
-            if (o.standOff && !walkingToMelee && upcomingTurn?.style !== 'melee' && now > lastAttackAt && now >= selfFrozenUntil && now - stepAt >= 2 && cheb(at, target) < o.standOff) {
+            const keep = o.standOff ?? (o.kiteFrozen && now < frozenUntil && weaponStyle(seen?.worn[3]) === 'melee' ? o.kiteFrozen : 0);
+            if (keep && !walkingToMelee && (upcomingTurn?.style !== 'melee' || !o.standOff) && now > lastAttackAt && now >= selfFrozenUntil && now - stepAt >= 2 && cheb(at, target) < keep) {
                 const dx = Math.sign(at.x - target.x) || 1, dz = Math.sign(at.z - target.z);
-                void sdk.sendWalk(target.x + dx * o.standOff, target.z + dz * o.standOff);
+                void sdk.sendWalk(target.x + dx * keep, target.z + dz * keep);
                 stepAt = now;
             }
             if (!walkingToMelee && !rapidSet && state.combatStyle && state.combatStyle.styles.length > 1 && state.combatStyle.currentStyle !== 1 && budget > 0) {

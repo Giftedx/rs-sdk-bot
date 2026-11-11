@@ -33,6 +33,7 @@ export const KNOBS: readonly Knob[] = [
     { name: 'castArmour', candidates: [{ castArmour: 'keep' }, { castArmour: 'strip' }] },
     { name: 'defencePrayer', candidates: [{ defencePrayer: false }] },
     { name: 'standOff', candidates: [{ standOff: 2 }, { standOff: 5 }] },
+    { name: 'kite', candidates: [{ freeze: true, kiteFrozen: 3 }, { freeze: 'low', kiteFrozen: 3 }, { freeze: true, kiteFrozen: 6 }] },
     { name: 'prayerFlick', candidates: [{ prayerFlick: true }] },
     { name: 'freeFood', candidates: [{ freeFood: true }] },
     { name: 'bowBurst', candidates: [{ bowBurst: 0.6 }, { bowBurst: 0.45 }, { bowBurst: 0.8 }] },
