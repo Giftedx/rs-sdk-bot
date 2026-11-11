@@ -300,6 +300,10 @@ const ROUTE_CASES: BenchCase[] = [
   // PRAYER_GUARD line; `--set PRAYER_GUARD=0` runs the comparison without it.
   {key: 'extra:giant-prayer-guard', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['giant', '1500', 'giant'], pass: ok, output: /kills=(\d+)/,
     presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: [{id: 379, count: 5}]}},
+  // Hill giants with Hitpoints 20, no armour and no eat input from the script: the eat guard
+  // (packages/core/src/eat-guard.ts) must eat, and the account must live. `--set EAT_GUARD=0` runs the comparison.
+  {key: 'extra:giant-eat-guard', script: 'scripts/measure/eat-guard-fight.ts', preset: 'fresh_lumbridge', scriptArgs: ['600'], pass: s => ok(s) && /^EAT_GUARD \{"eats":[1-9]/m.test(s), output: /kills=(\d+)/,
+    presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 40, Strength: 40, Hitpoints: 20}, equipment: [{id: 1333, count: 1, slot: 3}], inventory: [{id: 379, count: 20}]}},
   sparCase('extra:spar-no-slayer', sparFixture(3094, 3555, {noDragonSlayer: true}), sparFixture(3096, 3555, {noDragonSlayer: true})),
   // The tribrid against every build of scripts/pk-kits.ts in one run, and a mirror of 8 for each build: the cases that
   // the hill climb and the kit matrix run (scripts/measure/pk-spar-climb.ts, pk-spar-matrix.ts).
