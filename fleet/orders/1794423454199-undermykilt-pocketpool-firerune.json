@@ -1,0 +1,22 @@
+{
+ "id": "1794423454199-undermykilt-pocketpool-firerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "UnderMyKilt",
+ "to": "PocketPool",
+ "item": "Fire rune",
+ "count": 1,
+ "start": 1794423454199,
+ "end": 1794425854199,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
