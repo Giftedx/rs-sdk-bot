@@ -229,7 +229,8 @@ Ranged it adds is not needed at that point.
 ## The army's blade
 
 - **Claim.** An army account that fights with a bronze sword gains a quarter to a third in maximum hit from an
-  adamant scimitar, and the planner buys it one (`kit-buy:army-weapon`, at band 5.5, two accounts away at a time).
+  adamant scimitar, and the planner buys it one (`kit-buy:army-weapon`, before its Ranged band, two accounts away at
+  a time).
 - **Conditions.** `combat.rs2` `combat_maxhit`: (effective level x (64 + strength bonus) + 320) / 640, effective level
   107 on an accurate or defensive style and 110 on an aggressive one at Strength 99. Strength bonus: bronze sword 5,
   mithril sword 17, adamant sword 24, adamant scimitar 28, rune scimitar 44 (`melee/scimitars.obj`). That gives 12
@@ -240,8 +241,11 @@ Ranged it adds is not needed at that point.
   or longsword is listed. The Varrock sword shop holds 2 adamant swords (one back per 12,000 ticks) and 3 mithril.
 - **Evidence.** `packages/planner/test/autopilot.test.ts` (who buys, the order, two at a time). The trooper results on
   claude-cloud name the weapon: `"weapon":"Bronze sword"` on Deeppockets, Fatstack, KnightRider and PocketPool.
-- **Gap.** The buy is not run live and the Grand Exchange is not on practice. Kills per tick with each blade are
-  not measured.
+- **Live (claude-cloud).** Fingerblastr and Knightstick each bought one for 72,000 (`RESULT ok`, `acquired` 1,
+  8,000 refunded). Fatstack's buy failed twice on the trip: its last run had been cut on the trooper field and the
+  market travel found no route from 2529,3236.
+- **Gap.** The Grand Exchange is not on practice. Kills per tick with each blade are not measured. The market trip
+  from the trooper field fails.
 
 ## Ranged on the troopers
 
@@ -536,9 +540,13 @@ TrouserSnake and UnderMyKilt hold about 15,000 feathers and 1,500-1,700 bones ea
   **Conditions.** Practice, three accounts at once from Ardougne on a shelf of 2. Two bought on arrival (713 ticks
   each). The third logged `SHOP_NONE` with a count of 0, stood 255 ticks at the shop and bought the staff that came
   back: `RESULT ok`, `boughtTotal=1`, 969 ticks. **Evidence.** `.practice/staff/` `w1`-`w3` in the Claude cloud
-  container that ran them. Live claude-cloud, with a 200-tick wait: UnderMyKilt ended ok with `boughtTotal=0` after
-  799 ticks. **Gap.** A wait of the full 1,000 ticks is not practised; the session's idle guard ends a wait at 900
-  ticks unless `STALL_TICKS=0`.
+  container that ran them. **Gap.** The session's idle guard ends a wait at 900 ticks unless `STALL_TICKS=0`.
+- **Claim.** Live, Zaff's shelf does not serve the army: another player takes each staff as it comes back, so
+  `army-staff-zaff` is a pilot, off unless a plan names it. **Conditions.** claude-cloud, five visits in about an
+  hour by UnderMyKilt and Fingerblastr: every `SHOP_NONE` read `"Staff of fire","count":0,"price":1500`, the last after
+  a wait of 1,100 ticks (`RESULT ok ticks=1145 boughtTotal=0 stop=stock-wait`). **Evidence.** The cloud side's swarm
+  logs for those accounts. **Gap.** The Magic Guild's shelf (2 staffs, Magic 66 at the door) and Aubury's fire runes
+  are not tried live; no account under Magic 99 has fire for alchemy.
 
 ### Prayer from bought bones
 
@@ -563,7 +571,9 @@ TrouserSnake and UnderMyKilt hold about 15,000 feathers and 1,500-1,700 bones ea
   million coins, about 5.2 coins an XP for dragon bones and 6.5 for big bones; Prayer 74 to 99 is about 820,000 XP an
   account. The side holds 36 million coins.
 - **Sizing.** A buy takes what the account's Prayer still needs from its level, or what it can pay for under the
-  caps (10,000 and 2,600). An account with Ranged or Magic still to train keeps 500,000 coins back for its other kits.
+  caps (10,000 and 2,600). The listed dragon bones finish about three accounts (TrouserSnake 237, UnderMyKilt 314,
+  TheFullMonty 443 from their levels), so only an account with Ranged and Magic at 90 buys them; one with either
+  still under 99 keeps 100,000 coins back for arrows, a staff and a blade.
 - **Evidence.** `.practice/bones/run.ts` and its `d1`-`d3`, `b1` logs in the Claude cloud container that ran them;
   `packages/planner/test/autopilot.test.ts` (who buys, how many, the order of the two bones);
   `scripts/train-prayer.test.ts` (dragon bone XP, a batch with no level).
