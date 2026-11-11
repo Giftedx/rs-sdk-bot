@@ -98,7 +98,7 @@ export type FightOptions = {
     // Prayer flick: prayer points drain on a 5-tick timer that starts when the first prayer goes on and is cleared when
     // none is on (skill_prayer/scripts/prayer.rs2:30-43). Every 4 ticks, on a cooldown tick, the loop turns every
     // active prayer off and on again in one tick, so the timer never fires and the prayers cost no points. One tick
-    // holds 5 inputs: with three prayers on, the third comes back on the next tick.
+    // holds 5 inputs: with three prayers on, the third comes back on the next tick. false turns the flick off.
     prayerFlick?: boolean;
     // true: eat a carried karambwan on each tick where it costs no attack (see the loop). Default off.
     freeFood?: boolean;
@@ -623,7 +623,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             let budget = 5;
             const walkingToMelee = now <= lastAttackAt + lastWalkTicks;
             // Not on the tick before our own attack: that tick sets the prayers of the turn.
-            if (o.prayerFlick && now - flickAt >= 4 && now < nextAttack - 1 && !walkingToMelee) {
+            if (o.prayerFlick !== false && now - flickAt >= 4 && now < nextAttack - 1 && !walkingToMelee) {
                 const active = prayers.activePrayers.flatMap((on, p) => (on ? [p] : []));
                 if (active.length > 0 && active.length <= 4) {
                     // The overhead first: it is the one that must be back on in this tick.

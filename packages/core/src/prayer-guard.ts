@@ -12,7 +12,10 @@
 // A prayer button also clears the weak queue (engine Player.ts closeModal), which holds a skill batch. Each script
 // input that can start an action therefore counts as an interaction, except the single-item inputs in NEUTRAL.
 //
-// A script that sends its own prayer input owns the prayers: the guard sends nothing more in that session.
+// A script that sends its own prayer input chooses the prayers: from then on the guard turns no protection prayer
+// on or off, and only keeps the active prayers free. It sends nothing in the tick of a script prayer input or the
+// two ticks after: the state can show that input late. A script that turns one prayer off and on in one tick has its own flick: the guard then sends nothing
+// more in that session.
 
 export interface GuardSession {
     sdk: { getState(): any };
@@ -71,7 +74,7 @@ export interface PrayerGuardOptions {
     log?: (line: string) => void;
 }
 
-export interface PrayerGuardStats { flicks: number; holds: number; protects: number; repairs: number; resends: number; yielded: boolean }
+export interface PrayerGuardStats { flicks: number; holds: number; protects: number; repairs: number; resends: number; manual: boolean; yielded: boolean }
 
 // Script inputs that start no action the guard could cancel. Every other input is an interaction.
 const NEUTRAL = new Set(['say', 'privateMessage', 'wait', 'none', 'scanGroundItems', 'scanNearbyLocs', 'setTab', 'setCombatStyle',
@@ -79,6 +82,11 @@ const NEUTRAL = new Set(['say', 'privateMessage', 'wait', 'none', 'scanGroundIte
     'shopBuy', 'shopSell']);
 // Ticks the player must stand with no animation before an interaction that is not an attack counts as ended.
 const IDLE_TICKS = 6;
+// Prayers that turn each other off (skill_prayer/configs, prayer_deactivate): Defence, Strength, Attack, protection.
+const EXCLUSIVE = [[0, 3, 9], [1, 4, 10], [2, 5, 11], [12, 13, 14]];
+// The active prayers after one button, from the prayers that were active before it.
+export const afterToggle = (active: readonly number[], prayer: number): number[] => active.includes(prayer) ? active.filter(i => i !== prayer)
+    : [...active.filter(i => !EXCLUSIVE.find(group => group.includes(prayer))?.includes(i)), prayer];
 // One tick holds 5 inputs (scripts/pk.ts, prayerFlick): two prayers off and on, and one attack.
 const MAX_FLICKED = 2;
 
@@ -88,10 +96,11 @@ type Pending = { kind: 'none' } | { kind: 'attack'; action: Action } | { kind: '
 export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     const every = o.every ?? 3, calm = o.calmTicks ?? 20;
     if (!Number.isSafeInteger(every) || every < 1 || every > 4) throw new Error('prayer guard: every must be 1..4');
-    const stats: PrayerGuardStats = { flicks: 0, holds: 0, protects: 0, repairs: 0, resends: 0, yielded: false };
+    const stats: PrayerGuardStats = { flicks: 0, holds: 0, protects: 0, repairs: 0, resends: 0, manual: false, yielded: false };
     const own = new WeakSet<object>();
     const owned = new Map<number, number>();
-    let stopped = false, flickAt = -Infinity, threatAt = -Infinity, protectAt = -Infinity;
+    let stopped = false, flickAt = -Infinity, threatAt = -Infinity, protectAt = -Infinity, scriptPrayerAt = -Infinity;
+    let scriptPrayers: number[] = [];
     let pending: Pending = { kind: 'none' };
     let expect: number[] | null = null, expectAt = 0, wasActive = false, lastTile = '';
     let pointsFirst: number | undefined, pointsLast: number | undefined, taken = 0, lastEvent = -Infinity;
@@ -106,7 +115,18 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     const note = (action: unknown) => {
         const a = action as Action | null;
         if (stopped || !a || typeof a !== 'object' || own.has(a)) return;
-        if (a.type === 'togglePrayer') { stats.yielded = true; owned.clear(); expect = null; return; }
+        if (a.type === 'togglePrayer') {
+            const now = s.tick(), prayer = a.prayerIndex as number;
+            if (scriptPrayerAt !== now) scriptPrayers = [];
+            // The same prayer two times in one tick: the script has its own flick.
+            if (scriptPrayers.includes(prayer)) stats.yielded = true;
+            scriptPrayers.push(prayer);
+            scriptPrayerAt = now; stats.manual = true; owned.clear();
+            // The guard flicked in this tick and the script chose from the prayers before the flick: the inputs can
+            // cancel each other. The repair then makes the prayers the script chose.
+            expect = expect && expectAt === now ? afterToggle(expect, prayer) : null;
+            return;
+        }
         if (NEUTRAL.has(a.type)) return;
         if (a.type === 'walkTo') { pending = { kind: 'none' }; return; }
         if ((a.type === 'interactNpc' || a.type === 'interactPlayer') && attackTarget(a, s.sdk.getState())) { pending = { kind: 'attack', action: { ...a } }; return; }
@@ -178,7 +198,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         for (const [i, at] of owned) if (!active.includes(i) && now - at > 2) owned.delete(i);
 
         let wanted: number | null = null;
-        if (o.protect !== false) {
+        if (o.protect !== false && !stats.manual) {
             const self = (s.client as any)?.selfSlot;
             const me = Number.isSafeInteger(self) ? 32768 + self : undefined;
             const attacker = (st.nearbyNpcs ?? []).find((n: any) => me !== undefined && n.targetIndex === me && n.hp !== 0
@@ -199,6 +219,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         const windows = !!(st.modalOpen || st.dialog?.isOpen || st.interface?.isOpen || st.bank?.isOpen || st.shop?.isOpen);
         const safe = !windows && pending.kind !== 'other';
 
+        if (now - scriptPrayerAt < 3) return;
         // A flick must leave every prayer on. One that stayed off two ticks later is turned on again, once.
         if (expect) {
             if (now - expectAt < 2) return;

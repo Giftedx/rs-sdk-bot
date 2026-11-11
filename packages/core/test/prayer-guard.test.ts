@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { protectByStyle, startPrayerGuard, wildernessLevel, PROTECT, type AttackStyle, type Hunter } from '../src/prayer-guard';
+import { afterToggle, protectByStyle, startPrayerGuard, wildernessLevel, PROTECT, type AttackStyle, type Hunter } from '../src/prayer-guard';
 
 // A model of the server rules the guard depends on (skill_prayer/scripts/prayer.rs2 and prayers/*.rs2): a prayer
 // button closes the open window and clears the interaction; the drain timer starts at 5 when the first prayer goes
@@ -48,6 +48,7 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
     };
     return { w, s, client, advance };
 }
+const on = (w: { active: boolean[] }) => w.active.flatMap((v, i) => (v ? [i] : []));
 const cow = (target: number) => ({ index: 3, id: 81, hp: 8, targetIndex: target, optionsWithIndex: [{ text: 'Attack', opIndex: 2 }] });
 
 test('an active prayer costs no points over 200 ticks', () => {
@@ -150,18 +151,66 @@ test('a Prayer level below the protection prayer sends nothing', () => {
     expect(w.toggles).toBe(0);
 });
 
-test('a prayer input from the script ends the guard for the session', () => {
+test('after a prayer input from the script the guard keeps that prayer free and turns no protection on', () => {
     const { w, s, client, advance } = world();
     const guard = startPrayerGuard(s);
     advance(2);
-    client.executeBotAction({ type: 'togglePrayer', prayerIndex: 10 });
-    advance(1);
-    const after = w.toggles;
+    client.executeBotAction({ type: 'togglePrayer', prayerIndex: PROTECT.magic });
     w.npcs = [cow(32768 + 7)];
-    advance(60);
+    advance(100);
+    expect(on(w)).toEqual([PROTECT.magic]);
+    expect(w.drains).toBe(0);
+    expect(guard.stats()).toMatchObject({ manual: true, yielded: false, protects: 0 });
+    client.executeBotAction({ type: 'togglePrayer', prayerIndex: PROTECT.magic });
+    advance(30);
+    expect(w.toggles % 2).toBe(0);
+    expect(on(w)).toEqual([]);
+});
+
+test('no guard input in the tick of a script prayer input or the two ticks after', () => {
+    const { w, s, client, advance } = world({ prayers: [10] });
+    startPrayerGuard(s, { protect: false });
+    for (let i = 0; i < 12; i++) {
+        client.executeBotAction({ type: 'togglePrayer', prayerIndex: 4 + (i % 2) });
+        advance(1);
+    }
+    advance(1);
+    const quiet = w.toggles;
+    expect(quiet).toBe(12);
+});
+
+test('a script that changes the protection prayer in the tick of a flick gets the prayer it chose', () => {
+    for (let lead = 0; lead < 6; lead++) {
+        const { w, s, client, advance } = world({ prayers: [PROTECT.melee] });
+        startPrayerGuard(s, { protect: false });
+        advance(lead);
+        // The script acts after the guard in the tick: it saw melee on and turns missiles on.
+        client.executeBotAction({ type: 'togglePrayer', prayerIndex: PROTECT.missiles });
+        advance(6);
+        expect(on(w)).toEqual([PROTECT.missiles]);
+        advance(40);
+        expect(on(w)).toEqual([PROTECT.missiles]);
+    }
+});
+
+test('a script with its own flick ends the guard for the session', () => {
+    const { w, s, client, advance } = world({ prayers: [PROTECT.melee] });
+    const guard = startPrayerGuard(s, { protect: false });
+    advance(1);
+    client.executeBotAction({ type: 'togglePrayer', prayerIndex: PROTECT.melee });
+    client.executeBotAction({ type: 'togglePrayer', prayerIndex: PROTECT.melee });
+    advance(2);
+    const after = w.toggles;
+    advance(30);
     expect(w.toggles).toBe(after);
-    expect(w.active[10]).toBe(true);
     expect(guard.stats().yielded).toBe(true);
+});
+
+test('afterToggle: one button on the active prayers', () => {
+    expect(afterToggle([14], 14)).toEqual([]);
+    expect(afterToggle([14, 10], 13)).toEqual([10, 13]);
+    expect(afterToggle([9, 14], 3)).toEqual([14, 3]);
+    expect(afterToggle([8], 10)).toEqual([8, 10]);
 });
 
 test('release turns the guard prayer off and sends nothing after', async () => {
@@ -306,7 +355,6 @@ test('near an NPC that attacks first, a window and a skill action still get no p
 });
 
 const rival = (combatLevel: number, distance: number, z: number, more: object = {}) => ({ index: 9, name: 'Rival', combatLevel, distance, worldX: 3200, worldZ: z, ...more });
-const on = (w: { active: boolean[] }) => w.active.flatMap((v, i) => (v ? [i] : []));
 
 test('the Wilderness level of a tile', () => {
     expect(wildernessLevel(3200, 3519)).toBe(0);
