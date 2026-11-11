@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794388495010-sporrandip-dipstick-airrune",
  "account": "Dipstick",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Air rune",
  "requested": 10,
  "claim": "dff1010a-72f9-4a13-a3cf-0ee3865936c9",
- "count": 0,
- "ok": false,
- "at": 1794388517316,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1794388602230,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1794388601530
+ },
+ "logout": {
+  "attemptId": "1794388517318-0000003206-0000000001",
+  "at": 1794388602223,
+  "sha256": "12c4019afe1c0cd50afd2fd8da9e499d1e6893937a0352572b3eeed0691af935"
+ },
+ "screen": true
 }
