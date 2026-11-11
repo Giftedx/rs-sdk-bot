@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794390915452,
+ "at": 1794391036107,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -585,7 +585,7 @@
     "BANK_PACK": "1",
     "COORDINATOR_RUN_ID": "task-3b17c555-4ada-429f-9541-502cac93df38"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-shop-shaftmaker-blood776 [task-3b17c555-4ada-429f-9541-502cac93df38]",
    "role": "pk"
