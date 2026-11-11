@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794374956526,
+ "at": 1794375159764,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -104,6 +104,19 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-5b1aee1b-3788-46b2-bc96-69437c1f29ac"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-trousersnake-20261111t052849z [task-5b1aee1b-3788-46b2-bc96-69437c1f29ac]",
+   "role": "helper"
   }
  ]
 }
