@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794404448871-fingerblastr-quickhandjob",
  "account": "Fingerblastr",
  "partner": "Quickhandjob",
@@ -12,6 +12,16 @@
  "claim": "760d3311-b3c7-4eba-9a7e-24140b24220f",
  "count": 0,
  "ok": false,
- "at": 1794404455583,
- "detail": "trade claimed"
+ "at": 1794404656976,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 90000,
+  "at": 1794404656223
+ },
+ "logout": {
+  "attemptId": "1794404455585-0000031845-0000000001",
+  "at": 1794404656970,
+  "sha256": "2fc95b5d77cd2513eda95c7638a89ce1cf92e883e7fabcc93285b9b8204f746a"
+ },
+ "screen": false
 }
