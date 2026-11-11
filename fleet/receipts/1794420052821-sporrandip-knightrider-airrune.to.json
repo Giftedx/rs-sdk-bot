@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794420052821-sporrandip-knightrider-airrune",
  "account": "KnightRider",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Air rune",
  "requested": 46,
  "claim": "3a573467-19c1-43ad-b487-4a870bf5b1d0",
- "count": 0,
- "ok": false,
- "at": 1794420063735,
- "detail": "trade claimed"
+ "count": 46,
+ "ok": true,
+ "at": 1794420078407,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 46
+ },
+ "bank": {
+  "count": 46,
+  "at": 1794420076957
+ },
+ "logout": {
+  "attemptId": "1794420063738-0000024681-0000000001",
+  "at": 1794420078397,
+  "sha256": "665727a0634f20cc7a3f6921365e8a770e3e6e21921287cd808dc2f83f00acd8"
+ },
+ "screen": true
 }
