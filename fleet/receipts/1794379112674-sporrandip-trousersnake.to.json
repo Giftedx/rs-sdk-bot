@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794379112674-sporrandip-trousersnake",
+ "account": "TrouserSnake",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 100000,
+ "claim": "1bf59eb7-52b9-454a-9ee9-d1ee667dc54c",
+ "count": 0,
+ "ok": false,
+ "at": 1794379116735,
+ "detail": "trade claimed"
+}

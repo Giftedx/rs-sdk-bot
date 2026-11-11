@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794374735797-oreelse-undermykilt",
+ "account": "UnderMyKilt",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune kiteshield",
+ "requested": 1,
+ "claim": "9151de39-1ebb-463e-8cfe-eb6bf8da96a2",
+ "count": 0,
+ "ok": false,
+ "at": 1794379114251,
+ "detail": "trade claimed"
+}
