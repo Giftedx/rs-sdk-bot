@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794374735797-oreelse-undermykilt",
  "account": "OreElse",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Rune kiteshield",
  "requested": 1,
  "claim": "111141f1-ac86-482e-8cfb-d9651dc59ef5",
- "count": 0,
- "ok": false,
- "at": 1794379116081,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794379245411,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794379125896
+ },
+ "logout": {
+  "attemptId": "1794379116089-0000030488-0000000001",
+  "at": 1794379245399,
+  "sha256": "f2ba96ebae6c3ff2b5016eecc0c8b94fd3ccd91da0e57f6a8de0adf9cd453d95"
+ },
+ "screen": true
 }
