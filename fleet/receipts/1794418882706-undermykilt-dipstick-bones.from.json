@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794418882706-undermykilt-dipstick-bones",
  "account": "UnderMyKilt",
  "partner": "Dipstick",
@@ -10,8 +10,22 @@
  "item": "Bones",
  "requested": 38,
  "claim": "23964ee3-c7aa-4d5b-89b7-707dcf3069bc",
- "count": 0,
- "ok": false,
- "at": 1794418886542,
- "detail": "trade claimed"
+ "count": 38,
+ "ok": true,
+ "at": 1794418927573,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 38,
+  "after": 0
+ },
+ "bank": {
+  "count": 38,
+  "at": 1794418906016
+ },
+ "logout": {
+  "attemptId": "1794418886544-0000011796-0000000001",
+  "at": 1794418927565,
+  "sha256": "7b35ed2c6feebed0b7ecef1565a0468fc4f74bc30cbbedd1802b4fbd4090bc47"
+ },
+ "screen": true
 }
