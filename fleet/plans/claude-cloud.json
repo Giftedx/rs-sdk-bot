@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794386070465,
+ "at": 1794386088967,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -145,21 +145,16 @@
   },
   {
    "account": "Fingersmith",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fingersmith-kit10-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-d992e13e-28a9-4ced-bb68-19b826032781"
    },
-   "enabled": false,
-   "standing": true,
+   "enabled": true,
    "repeat": false,
-   "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones",
-   "role": "supply",
-   "template": "kit-buy:army-hunt-black-dragons",
-   "autopilot": "claude-cloud",
-   "resources": []
+   "goal": "claude-cloud-recover-fingersmith-20261111t082841z [task-d992e13e-28a9-4ced-bb68-19b826032781]",
+   "role": "supply"
   }
  ]
 }
