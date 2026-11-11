@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794376281619,
+ "at": 1794376541515,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -71,31 +71,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "quest:lostcity"
-   ]
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
    ]
   },
   {
@@ -188,6 +163,31 @@
    "goal": "train Defence to 99 on the Khazard troopers",
    "role": "combat",
    "template": "army-trooper-defence-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
