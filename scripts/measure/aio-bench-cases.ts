@@ -353,8 +353,9 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {position: {x: 3222, z: 3218, level: 0}, skills: {Hitpoints: 60, Prayer: 60}}},
   // Fly fishing at Lumbridge with Protect from Melee on: the guard flicks and sends the click on the spot again.
   // With `--set PRAYER_GUARD=0` the prayer is held and the run shows the same catch at the normal point cost.
+  // With `--set GUARD_STAND_FISH=riverBait:4` the run uses the rod and bait.
   {key: 'extra:guard-fish', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['500', 'PRAYERS=14', 'FISH=fly:8'], pass: ok,
-    presetConfig: {position: {x: 3239, z: 3251, level: 0}, skills: {Fishing: 50, Hitpoints: 60, Prayer: 60}, inventory: [{id: 309, count: 1}, {id: 314, count: 60}]}},
+    presetConfig: {position: {x: 3239, z: 3251, level: 0}, skills: {Fishing: 50, Hitpoints: 60, Prayer: 60}, inventory: [{id: 309, count: 1}, {id: 314, count: 60}, {id: 307, count: 1}, {id: 313, count: 60}]}},
   // Two accounts at Wilderness level 11, 7 combat levels apart. The second one attacks with a rune scimitar: the
   // guard of the first must turn Protect Item and Protect from Melee on.
   {key: 'extra:guard-rival', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['200', 'RIVAL={bot:b}'], pass: ok,

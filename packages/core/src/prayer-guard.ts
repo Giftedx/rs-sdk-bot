@@ -94,6 +94,9 @@ export interface PrayerGuardStats {
     // Ticks with a prayer on and no flick possible, in all and for each cause: `window`, `five` (five prayers or
     // more) or the type of the script input whose action runs.
     holds: number; holdsBy: Record<string, number>;
+    // Damage the player took, for each source and the protection prayer that was on: `<NPC name or player>/<prayer
+    // index or none>`. The source is the NPC that had the player as its target on the tick of the hit.
+    takenFrom: Record<string, number>;
     protects: number; repairs: number; resends: number;
     // Prayer points the state showed going down.
     spent: number;
@@ -122,6 +125,12 @@ export const afterToggle = (active: readonly number[], prayer: number): number[]
 // tick, and the others in the next tick. Five prayers or more would leave no input for the protection prayer.
 const TICK_INPUTS = 5;
 const MAX_FLICKED = 4;
+// Rapid Restore and Rapid Heal. Each button of these two sets the regen timer again: off sets it to 100 ticks and on
+// to 50 (skill_prayer/scripts/prayers/rapidrestore.rs2:18-19,35-36, rapidheal.rs2:17-18,34-35). A flick each 3 ticks
+// would keep that timer from its end: no Hitpoints and no stat would come back. With one of them on, the guard sends
+// no flick and the prayers drain.
+const REGEN_PRAYERS: readonly number[] = [6, 7];
+const regenOn = (active: readonly number[]): boolean => active.some(i => REGEN_PRAYERS.includes(i));
 // The order prayers come back on: protection, then Defence, then the others.
 const backFirst = (prayer: number) => prayer >= 12 ? 0 : [0, 3, 9].includes(prayer) ? 1 : 2;
 // Skill actions that a second click on the same rock, tree or fishing spot does not start again: their timer is the
@@ -177,7 +186,7 @@ export const attackTarget = (a: Action, st: any): boolean => {
 export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     const every = o.every ?? 3, calm = o.calmTicks ?? 20;
     if (!Number.isSafeInteger(every) || every < 1 || every > 4) throw new Error('prayer guard: every must be 1..4');
-    const stats: PrayerGuardStats = { flicks: 0, early: 0, holds: 0, holdsBy: {}, protects: 0, repairs: 0, resends: 0, spent: 0, manual: false, yielded: false };
+    const stats: PrayerGuardStats = { flicks: 0, early: 0, holds: 0, holdsBy: {}, takenFrom: {}, protects: 0, repairs: 0, resends: 0, spent: 0, manual: false, yielded: false };
     const own = new WeakSet<object>();
     // Prayers the guard turned on, with the tick, and the tick up to which each is still wanted.
     const owned = new Map<number, number>(), keep = new Map<number, number>();
@@ -340,7 +349,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
             for (const i of drop.slice(0, room)) { toggle(i); owned.delete(i); left = intend(left, i, now); }
             // With inputs to spare, the prayers that stay on go off and on after them: for one moment no prayer is
             // on, which clears the drain timer.
-            if (left.length && drop.length + 2 * left.length <= room) {
+            if (left.length && drop.length + 2 * left.length <= room && !regenOn(left)) {
                 why = 'flick-after-off';
                 for (const i of left) toggle(i);
                 for (const i of left) toggle(i);
@@ -349,7 +358,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
             } else if (expect) { expect = left; expectAt = now; }
             return;
         }
-        if (!expect && 2 * active.length <= room && now - flickAt >= 1) { flickNow(active, now); stats.early++; }
+        if (!expect && 2 * active.length <= room && now - flickAt >= 1 && !regenOn(active)) { flickNow(active, now); stats.early++; }
     };
 
     // Every input of the script passes here before the client sends it.
@@ -448,7 +457,15 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         let newest = lastEvent, hit = false;
         for (const e of st.combatEvents ?? []) {
             if (e.type === 'damage_taken' && e.targetType === 'player') {
-                if (e.tick > lastEvent) taken += e.damage;
+                if (e.tick > lastEvent) {
+                    taken += e.damage;
+                    if (e.damage > 0) {
+                        const slot = (s.client as any)?.selfSlot, by = (st.nearbyNpcs ?? []).find((n: any) => n.targetIndex === 32768 + slot);
+                        const worn = (prayers.activePrayers as boolean[]).findIndex((on, i) => on && i >= PROTECT.magic && i <= PROTECT.melee);
+                        const key = `${by?.name ?? (wildernessLevel(p.worldX, p.worldZ) > 0 ? 'player' : 'unknown')}/${worn < 0 ? 'none' : worn}`;
+                        stats.takenFrom[key] = (stats.takenFrom[key] ?? 0) + e.damage;
+                    }
+                }
                 if (now - e.tick <= 8) hit = true;
             }
             if (e.type === 'damage_dealt' && e.sourceType === 'player' && e.tick > swingAt) { swingBefore = swingAt; swingAt = e.tick; }
@@ -549,8 +566,8 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
                 // A script that sends a prayer input in each tick keeps this check waiting. A flick that is due goes
                 // to the prayers those inputs leave on.
                 // The second click of a fishing cycle, with its flick.
-                if (safe && expect.length && expect.length <= 2 && fishing(st) && (caught || now - fishAt === 1) && fishTick(now, caught)) { flickNow(expect, now); resend(st); return; }
-                if (now - flickAt < 4 || !safe || !expect.length || expect.length > 2) return;
+                if (safe && expect.length && expect.length <= 2 && fishing(st) && (caught || now - fishAt === 1) && !regenOn(expect) && fishTick(now, caught)) { flickNow(expect, now); resend(st); return; }
+                if (now - flickAt < 4 || !safe || !expect.length || expect.length > 2 || regenOn(expect)) return;
                 flickNow(expect, now);
                 resend(st);
                 return;
@@ -576,7 +593,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
             for (const i of missing) target = afterToggle(target, i);
             const order = [...target].sort((x, y) => backFirst(x) - backFirst(y));
             why = `set ${order.join('+') || 'none'} from ${active.join('+') || 'none'} threat=${threatNow}`;
-            if (active.length && active.length + order.length + (fights(now) ? 1 : 0) <= TICK_INPUTS) {
+            if (active.length && active.length + order.length + (fights(now) ? 1 : 0) <= TICK_INPUTS && !regenOn(active)) {
                 // Every prayer off, then the new set on: the moment with no prayer on clears the drain timer, so a
                 // change of the set is a flick too.
                 for (const i of active) toggle(i);
@@ -597,6 +614,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         }
 
         if (!active.length) return;
+        if (regenOn(active)) { hold('regen'); return; }
         if (active.length > MAX_FLICKED) { hold('five'); return; }
         const attack = fights(now) ? 1 : 0;
         if (active.length <= 2) {
@@ -652,5 +670,5 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         });
     };
     void s.ended?.then(stop);
-    return { stop, release, stats: () => ({ ...stats, holdsBy: { ...stats.holdsBy } }), note };
+    return { stop, release, stats: () => ({ ...stats, holdsBy: { ...stats.holdsBy }, takenFrom: { ...stats.takenFrom } }), note };
 }

@@ -938,3 +938,29 @@ test('an NPC slot with hp 0 and no damage seen is alive: the attack on it is an 
     expect(guard.stats().holds).toBe(0);
     expect(guard.stats().flicks).toBeGreaterThan(flicks + 2);
 });
+
+test('Rapid Restore or Rapid Heal on: the guard sends no flick, because each button of those two starts the regen timer again', () => {
+    for (const prayer of [6, 7]) {
+        const { w, s, client, advance } = world({ prayers: [prayer] });
+        const guard = startPrayerGuard(s);
+        w.npcs = [cow(32768 + 7)];
+        advance(3);
+        client.executeBotAction({ type: 'interactNpc', npcIndex: 3, optionIndex: 2 });
+        advance(60);
+        // The protection prayer comes on with one input; no prayer goes off.
+        expect([prayer, w.toggles]).toEqual([prayer, 1]);
+        expect(w.active[prayer] && w.active[PROTECT.melee]).toBe(true);
+        expect(guard.stats().flicks).toBe(0);
+        expect(guard.stats().holdsBy.regen).toBeGreaterThan(40);
+    }
+});
+
+test('the result names the source of each hit and the protection prayer that was on', () => {
+    const { w, s, advance } = world();
+    const guard = startPrayerGuard(s, { protect: false });
+    w.npcs = [{ ...cow(32768 + 7), name: 'Cow' }];
+    advance(3);
+    w.events.push({ type: 'damage_taken', targetType: 'player', damage: 4, tick: 3 });
+    advance(2);
+    expect(guard.stats().takenFrom).toEqual({ 'Cow/none': 4 });
+});
