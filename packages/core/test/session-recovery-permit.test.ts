@@ -2,7 +2,7 @@ import {test,expect} from 'bun:test';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,rmSync} from 'node:fs';
 import {join,dirname,resolve,relative} from 'node:path';
 import {createHash} from 'node:crypto';
-import {FLEET_HEARTBEAT_MAX_MS,RECOVERY_BINDING_MS,RECOVERY_SCRIPT,issueRecoveryPermit,bindRecoveryChild,consumeRecoveryPermit,consumeRecoveryConnection,spendRecoveryConnection,assertNoRecoveryLease,recoveryPermitPaths,finishRecoveryPermit,launchPermittedRecovery,launchObservations,recoveredSessionForRun,heldRecoveryOwners,assertRecoveryNotStopped,verifyNativeRecoveryProof,NATIVE_RECOVERY_CHECKS} from '../src/session-recovery-permit';
+import {FLEET_HEARTBEAT_MAX_MS,RECOVERY_BINDING_MS,RECOVERY_SCRIPT,issueRecoveryPermit,bindRecoveryChild,consumeRecoveryPermit,consumeRecoveryConnection,spendRecoveryConnection,assertNoRecoveryLease,recoveryPermitPaths,finishRecoveryPermit,launchPermittedRecovery,launchObservations,recoveredSessionForRun,heldRecoveryOwners,releaseExpiredRecoveryLease,releaseExpiredRecoveryLeases,assertRecoveryNotStopped,verifyNativeRecoveryProof,NATIVE_RECOVERY_CHECKS} from '../src/session-recovery-permit';
 import {beginSessionAttempt,readLogoutProof,listAttempts,accountDir} from '../src/session-lifecycle';
 import {installJob} from '../../router/src/coordinator-live';
 import {readMergedPlan,coordinatorJobsPath} from '../src/coordinator-jobs';
@@ -339,6 +339,45 @@ test('fleet state replaced between issuance and consumption holds the lease with
 test('an earlier retained fleet-unresolved diagnostic still parses',()=>{
  expect(recoveryDiagnosticFromLog('RECOVERY_HELD {"schema":"session-recovery-diagnostic/1","state":"held","phase":"permit-consumption","reason":"fleet-unresolved","authorizesConnection":false,"producerReceipt":false}'))
   .toEqual({phase:'permit-consumption',reason:'fleet-unresolved'});
+});
+test('the controller releases only an exact expired held lease with a dead bound child and its matching confirmed logout',()=>{
+ for(const fault of ['none','live-child','changed-lease','not-expired','mismatched-proof','newer-attempt','unbound','stopped','controller']){
+  const f=fixture();issueRecoveryPermit(f.request,f.base,f.options);bindRecoveryChild(f.request,process.pid,f.base,f.options);consumeRecoveryPermit(f.request,f.base,f.options);
+  const root=join(f.base,'.practice/session-lifecycle'),owner={pid:process.pid,coordinatorRunId:f.request.runId,workerRelease:source,script:RECOVERY_SCRIPT,role:'recovery',participants:null};
+  const attempt=beginSessionAttempt({account:'Rod',server:f.request.server},{root,owner,now:()=>now+5});attempt.record('ended','logged-out');
+  const proof=readLogoutProof('Rod',f.request.server,{root});if(proof.state!=='confirmed')throw Error('fixture');
+  const before={player:{name:'Rod',x:1,z:2,level:0,hp:43},inventory:[{id:995,count:100}],equipment:[],skills:[],bank:null,modalOpen:false};
+  const receipt:any={state:'held',request:f.request,logout:'logged-out',failure:'cleanup failed or unresolved',startedAt:now+5,endedAt:now+10,runnerSha256:f.runnerHash,
+   before,after:null,attemptId:attempt.attemptId,lifecycleSha256:proof.receiptSha256,proof,scope:{gameplay:false,production:0,repairsFailure:false,qualifiesScript:false}};
+  if(fault==='mismatched-proof')receipt.attemptId='other';
+  f.put('.practice/coordinator/session-recovery/accounts/rod/one/output/receipt.json',receipt);
+  const paths=recoveryPermitPaths(f.request,f.base),dir=dirname(paths.permit);
+  expect(()=>finishRecoveryPermit(f.request,0,f.base,{...f.options,now:()=>now+20})).toThrow('child did not confirm');
+  if(fault==='changed-lease'){const lease=readFileSync(paths.lease,'utf8');rmSync(paths.lease);writeFileSync(paths.lease,lease+' ');}
+  if(fault==='newer-attempt')beginSessionAttempt({account:'Rod',server:f.request.server},{root,owner:{...owner,pid:4321},now:()=>now+30}).record('ended','logged-out');
+  if(fault==='unbound')rmSync(paths.used);
+  if(fault==='stopped')f.put('.practice/stop-Rod',{});
+  if(fault==='controller')f.put('.practice/coordinator/swarm-owner.json',{pid:999,nonce:'other',source});
+  const checks={now:()=>fault==='not-expired'?now+149999:now+150000,matches:()=>true,childAlive:()=>fault==='live-child'};
+  const kept=Object.fromEntries([paths.permit,paths.child,paths.used,join(paths.output,'receipt.json'),join(f.base,'.practice/swarm-deaths.json'),join(f.base,'swarm.json')]
+   .filter(p=>existsSync(p)).map(p=>[p,readFileSync(p,'utf8')]));
+  const reasons:Record<string,string>={'live-child':'child still alive','changed-lease':'lease changed','not-expired':'not expired','mismatched-proof':'producer proof mismatched',
+   'newer-attempt':'producer proof mismatched',unbound:'child not bound',stopped:'owner stopped',controller:'needs the controller'};
+  if(fault==='none'){
+   const released=releaseExpiredRecoveryLease('Rod',f.base,checks);
+   expect(released).toMatchObject({account:'Rod',nonce:'one',childPid:process.pid,attemptId:attempt.attemptId,lifecycleSha256:proof.receiptSha256});
+   expect(existsSync(paths.lease)).toBe(false);expect(()=>assertNoRecoveryLease('Rod',f.base)).not.toThrow();
+   expect(JSON.parse(readFileSync(join(dir,'released.json'),'utf8'))).toEqual(released);
+   expect(existsSync(paths.completed)).toBe(false);expect(recoveredSessionForRun('Rod',f.request.server,f.request.runId,source,f.base)).toBe(false);
+   expect(()=>releaseExpiredRecoveryLease('Rod',f.base,checks)).toThrow('lease absent');
+  }else{
+   expect(()=>releaseExpiredRecoveryLease('Rod',f.base,checks),fault).toThrow(reasons[fault]);
+   expect(existsSync(paths.lease),fault).toBe(true);expect(existsSync(join(dir,'released.json')),fault).toBe(false);
+   expect(releaseExpiredRecoveryLeases(f.base,[],checks),fault).toEqual([{account:'rod',released:false,reason:expect.stringContaining(reasons[fault]!)}]);
+   expect(releaseExpiredRecoveryLeases(f.base,['Rod'],checks)).toEqual([]);
+  }
+  for(const [p,raw] of Object.entries(kept))expect(readFileSync(p,'utf8'),fault+' '+p).toBe(raw);
+ }
 });
 test('restart counts inherited children without replay, ignores dead children, and retains every lease',()=>{
  const f=fixture();issueRecoveryPermit(f.request,f.base,f.options);bindRecoveryChild(f.request,1234,f.base,f.options);

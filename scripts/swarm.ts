@@ -26,7 +26,7 @@ import { courierDeliveryWaiting } from './courier-cargo';
 import { deliveryResume, foodDeficit, selectFoodSource } from './courier-route';
 import {assertWorkerRelease,capabilityRevision,workerEntries} from '../packages/core/src/worker-release';
 import {withSessionAdmission,missionSignature as sharedMissionSignature,successfulEnd,BOOTSTRAP_STATUS_AGE_MS} from '../packages/core/src/session-admission';
-import {assertNoRecoveryLease,heldRecoveryOwners} from '../packages/core/src/session-recovery-permit';
+import {assertNoRecoveryLease,heldRecoveryOwners,releaseExpiredRecoveryLeases} from '../packages/core/src/session-recovery-permit';
 import {createRecoveryDispatch} from '../packages/core/src/session-recovery-dispatch';
 import { createHash } from 'node:crypto';
 import { jobLogStart } from '../packages/core/src/job-log';
@@ -545,6 +545,7 @@ if (import.meta.main) {
     const recoveryDispatch=createRecoveryDispatch({base:root,server:LIVE_SERVER});
     let inheritedRecoveries: ReturnType<typeof heldRecoveryOwners> = [];
     let orphanScanAt = 0;
+    const leaseRefusals = new Map<string, string>();
     const previousEnabled = new Map<string, boolean>();
     const pendingResume = new Set<string>();
     // Legacy filename retains success/revision, paused/unknown and hard ends.
@@ -696,6 +697,10 @@ if (import.meta.main) {
         const accountEnabled = enabledByAccount(planned);
         if (Date.now() - orphanScanAt >= 60_000) {
             orphanScanAt = Date.now();
+            for (const r of releaseExpiredRecoveryLeases(root, recoveryDispatch.active ? [recoveryDispatch.active.account] : [])) {
+                if (leaseRefusals.get(r.account) !== r.reason) console.log(`SWARM recovery lease ${r.account}: ${r.reason}`);
+                if (r.released) leaseRefusals.delete(r.account); else leaseRefusals.set(r.account, r.reason);
+            }
             const busy = [...runs.values()].flatMap(r => r.accounts).concat(inheritedRecoveries.map(r => r.account), recoveryDispatch.active ? [recoveryDispatch.active.account] : []);
             const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch (e) { return (e as NodeJS.ErrnoException).code !== 'ESRCH'; } };
             const producer = (a: string, id: string) => {
