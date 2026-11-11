@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794386628327-oreelse-thefullmonty",
+ "account": "OreElse",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "33952ca0-a016-4848-b783-52768c29b536",
+ "count": 1,
+ "ok": true,
+ "at": 1794386928577,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794386919536
+ },
+ "logout": {
+  "attemptId": "1794386909500-0000008876-0000000001",
+  "at": 1794386928541,
+  "sha256": "b6bbc245bd5d55e72c8b24a43d14bfffd6ea6e1cc904398e7b74d414c066b85d"
+ },
+ "screen": true
+}
