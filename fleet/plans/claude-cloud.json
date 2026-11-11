@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794371163417,
+ "at": 1794371171980,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -18,25 +18,46 @@
    "role": "hand"
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=10 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=fatstack-kit5-385-0to10 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
+   "account": "UnderMyKilt",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy 10 Shark on the Grand Exchange to complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
-   "role": "supply",
-   "template": "kit-buy:army-quest-lostcity",
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "knight:2582,3297"
+   ]
   },
   {
-   "account": "PocketPool",
+   "account": "Deeppockets",
+   "script": "scripts/aio.ts",
+   "args": [
+    "quester",
+    "chain",
+    "drunkmonk,murder,zanaris"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
+   "role": "quest",
+   "template": "army-quest-lostcity",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "quest:lostcity"
+   ]
+  },
+  {
+   "account": "Fatstack",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
@@ -61,47 +82,6 @@
    ]
   },
   {
-   "account": "UnderMyKilt",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "BURY_HELD": "1",
-    "BONE_ID": "536",
-    "BONE_RESERVE": "6",
-    "CAP": "4000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying bought dragon bones",
-   "role": "combat",
-   "template": "army-bury-dragon-99",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
-   "account": "Deeppockets",
-   "script": "scripts/aio.ts",
-   "args": [
-    "quester",
-    "chain",
-    "drunkmonk,murder,zanaris"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
-   "role": "quest",
-   "template": "army-quest-lostcity",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "quest:lostcity"
-   ]
-  },
-  {
    "account": "Knightstick",
    "script": "scripts/alch-train.ts",
    "args": [
@@ -118,6 +98,31 @@
    "autopilot": "claude-cloud",
    "resources": [
     "strike:ardougne-guard-dog"
+   ]
+  },
+  {
+   "account": "PocketPool",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
    ]
   },
   {
@@ -186,31 +191,6 @@
    "goal": "train Attack to 99 on the Khazard troopers",
    "role": "combat",
    "template": "army-trooper-attack-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
