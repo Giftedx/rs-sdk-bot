@@ -851,5 +851,5 @@ test('another NPC attacks during the script fight: the guard sends the attack on
     // The attacker dies and the script attacks NPC 3 again: the guard follows the script.
     w.aggressor = null; w.npcs = [cow(32768 + 7)];
     client.executeBotAction({ type: 'interactNpc', npcIndex: 3, optionIndex: 2 });
-    for (let i = 0; i < 30; i++) { advance(); expect(w.interaction).toBe('interactNpc:3'); }
+    for (let i = 0; i < 30; i++) { advance(); expect(w.interaction as string | null).toBe('interactNpc:3'); }
 });

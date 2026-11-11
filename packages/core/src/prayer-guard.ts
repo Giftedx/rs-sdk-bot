@@ -411,7 +411,8 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         for (const m of st.gameMessages ?? []) refusedSeen = Math.max(refusedSeen, m.tick ?? -1);
         if (pending.kind === 'attack' && pending.action.type === 'interactNpc') {
             if (refused && attackerIndex === null) {
-                const other = (st.nearbyNpcs ?? []).find((n: any) => n.index !== pending.action.npcIndex && attackOf(n));
+                const scriptTarget = pending.action.npcIndex;
+                const other = (st.nearbyNpcs ?? []).find((n: any) => n.index !== scriptTarget && attackOf(n));
                 if (other) attackerIndex = other.index;
             }
             const attack = attackerIndex === null ? null : attackOf((st.nearbyNpcs ?? []).find((n: any) => n.index === attackerIndex));
