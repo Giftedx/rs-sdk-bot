@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794421798616,
+ "at": 1794421805687,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -169,22 +169,16 @@
   },
   {
    "account": "Quickhandjob",
-   "script": "scripts/goldfarm.ts",
+   "script": "scripts/session-check.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-35979f65-3389-4af7-8d1b-c7d9c558ff5c"
    },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2582,3297"
-   ]
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-quickhandjob-20261111t182609z [task-35979f65-3389-4af7-8d1b-c7d9c558ff5c]",
+   "role": "thieving"
   }
  ]
 }
