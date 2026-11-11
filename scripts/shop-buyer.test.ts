@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { supervise } from '../packages/practice/src/supervise';
-import { planShopPurchases, maximumUnitCost, buyWithBudget, PROFILES, shopTargetsMet, stockWaitStatus, shopFinishOk } from './shop-buyer';
+import { planShopPurchases, maximumUnitCost, buyWithBudget, PROFILES, shopTargetsMet, stockWaitStatus, shopFinishOk, dialogClick } from './shop-buyer';
 
 const target = (name: string, buyPerTick: number) => ({ re: new RegExp(`^${name}$`, 'i'), buyPerTick });
 const item = (name: string, count = 100, buyPrice = 1) => ({ name, count, buyPrice });
@@ -124,4 +124,40 @@ test('quest-input profiles target only exact primary-source gloves and cheese, o
 test('existing shop profiles retain their NPC, route endpoints and commodity counts',()=>{
     const cases=[['ardy','Aemad',2613,3294,2654,3283,8],['catherby','Hickton',2821,3444,2809,3441,4],['sarim','Gerrant',3013,3225,3092,3243,4],['betty','Betty',3012,3259,3092,3243,9],['taverley','Jatix',2908,3443,2934,3376,4],['general_sarim','Shopkeeper',3014,3205,3092,3243,5],['aubury','Aubury',3253,3402,3253,3420,8],['zeke','Zeke',3288,3190,3269,3167,4],['nurmof','Nurmof',2998,9844,3013,3355,6]] as const;
     for(const [key,npc,x,z,bx,bz,n]of cases){const p=PROFILES[key]!;expect(p.npc.test(npc)).toBe(true);expect(p.npcSpot).toEqual({x,z});expect(p.bankSpot).toEqual({x:bx,z:bz});expect(p.items).toHaveLength(n);}
+});
+
+test("Jakut's shelf of 2 dragon longswords bounds the unit price, so a reserve allows the tenth sword of 1,019,000 coins", async () => {
+    const p = PROFILES.jukat!;
+    expect(p.npc.test('Jakut')).toBe(true);
+    expect(p.items).toEqual([{ re: /^dragon longsword$/i, buyPerTick: 2, shelf: 2 }]);
+    expect(p.realm!.inside({ worldX: 3220, worldZ: 9592 })).toBe(true);
+    expect(p.realm!.inside({ worldX: 3201, worldZ: 3169 })).toBe(false);
+    expect(p.realm!.wear.test('Dramen staff')).toBe(true);
+    const config = { sellMultiplier: 1000, haggle: 10 };
+    expect(maximumUnitCost({ baseCost: 100000 }, config)).toBe(600000);
+    expect(maximumUnitCost({ baseCost: 100000 }, config, 2)).toBe(101000);
+    expect(maximumUnitCost({ baseCost: 100000 }, { sellMultiplier: 1000 }, 2)).toBe(600000);
+    // Server prices (shop.rs2 calc_shop_value): 100,000 from a stock of 2, 101,000 from a stock of 1.
+    let coins = 1_019_000, held = 0, shelf = 2;
+    const sdk = {
+        getInventory: () => [{ name: 'Coins', count: coins }, ...Array.from({ length: held }, () => ({ name: 'Dragon longsword', count: 1 }))],
+        getState: () => ({ shop: { shopConfig: config, shopItems: [{ name: 'Dragon longsword', count: shelf, baseCost: 100000 }] } }),
+    };
+    const bot = { buyFromShop: async (_: RegExp, amount: number) => { for (let i = 0; i < amount && shelf > 0; i++) { coins -= shelf === 2 ? 100000 : 101000; shelf--; held++; } } };
+    for (let round = 0; round < 20; round++) {
+        await buyWithBudget(bot, sdk, 'Dragon longsword', 2, 5000, Infinity, 2);
+        shelf = Math.min(2, shelf + 1);
+    }
+    expect(held).toBe(10);
+    expect(coins).toBe(10000);
+    expect(shopTargetsMet(p.items, sdk.getInventory(), new Map([['dragon longsword', 4]]), 14)).toBe(true);
+    expect(shopTargetsMet(p.items, sdk.getInventory(), new Map(), 14)).toBe(false);
+});
+
+test('the ladder talk continues each line and takes the leave choice', () => {
+    const say = PROFILES.jukat!.realm!.ladder.say;
+    expect(dialogClick(null, say)).toBe(null);
+    expect(dialogClick({ isOpen: true, isWaiting: true, options: [] }, say)).toBe(null);
+    expect(dialogClick({ isOpen: true, isWaiting: false, options: [{ index: 0, text: 'Click here to continue' }] }, say)).toBe(0);
+    expect(dialogClick({ isOpen: true, isWaiting: false, options: [{ index: 1, text: "I think I'll stay down here a bit longer." }, { index: 2, text: "Yes, I'm ready to leave." }] }, say)).toBe(2);
 });

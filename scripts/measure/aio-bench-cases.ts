@@ -310,6 +310,12 @@ const EXTRA_CASES: BenchCase[] = [
   {key: 'extra:direct-quest-cook', script: 'scripts/generated/quest-cook.ts', preset: 'quest_cook', scriptArgs: [], pass: s => ok(s) && s.includes('Cook flag=complete')},
   {key: 'extra:master-quest-cook', script: 'scripts/aio.ts', preset: 'quest_cook', scriptArgs: ['quester', 'sweep', 'cook'], pass: ok},
   {key: 'extra:bank-job-cook-lobster', script: 'scripts/aio-skiller.ts', preset: 'cook_food_catherby', scriptArgs: ['bank-job', COOK_JOB_PATH], pass: s => ok(s) && s.includes('cooking_generic_lobster')},
+  // Jakut's dragon longswords in Zanaris (scripts/shop-buyer.ts profile jukat) from Ardougne with Lost City done: the
+  // Dramen staff, the coins and the doorman's diamond from the bank, the Lumbridge swamp shed door, the shelf of 2 and one restock for the
+  // third sword, the ladder out and the Al Kharid bank.
+  {key: 'extra:shop-jukat', script: 'scripts/aio-market.ts', preset: 'fresh_lumbridge', scriptArgs: ['shop-buy', 'jukat', '4000', 'STOCK_TARGET=3', 'STOP_AT_TARGET=1', 'BANK_AT=0', 'NO_BUY_TICKS=600', 'STALL_TICKS=0', 'COIN_RESERVE=5000', 'FLOAT=400000'],
+    pass: s => ok(s) && /boughtTotal=3 bankedTotal=3 /.test(s) && s.includes('realm-leave') && s.includes('out=1'), timeoutMs: 900_000,
+    presetConfig: {position: {x: 2581, z: 3298, level: 0}, varps: {147: 6}, bank: [{id: 772, count: 1}, {id: 995, count: 400000}, {id: 1601, count: 1}]}},
   {key: 'extra:bank-job-cut-dragonstone', script: 'scripts/aio-skiller.ts', preset: 'bank_gems', scriptArgs: ['bank-job', CUT_JOB_PATH], pass: s => ok(s) && s.includes('cut-dragonstone')},
 ];
 

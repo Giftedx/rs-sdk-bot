@@ -5,6 +5,9 @@
 // BANK_PACK=1 banks the whole pack first; without it a pack full of items the profile does not bank stops (pack-full).
 // STOCK_TARGET (default 500) is how many of each item the account may own, pack plus bank, before it stops buying
 // that item; the run stops as stock-target once every item is there. MAX_ITEMS caps the units bought in one run.
+// Profile jukat (Zanaris) enters by the Lumbridge swamp shed with a Dramen staff, pays the market doorman one cut
+// diamond, leaves by the ladder to Al Kharid and banks there. Wait for its shelf with NO_BUY_TICKS above the 500-tick
+// restock and STALL_TICKS=0.
 // DEMO_OK=1 is required for live; funding and route admission are separate gates.
 import { openBot, finish, countItems, getWorld, accountOf } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
@@ -12,12 +15,26 @@ import { walkPath, sessionWalker, goTo } from '../packages/core/src/walk';
 import { walkTargetPersist } from './walk-to';
 import { bankCargo, courierWaiting, exactItem } from '../packages/core/src/cargo';
 import { depositPack } from '../packages/core/src/deposit';
+import { knownBanks } from '../packages/core/src/trip';
 
 export const PROFILES: Record<string, {
     npc: RegExp;
     npcSpot: { x: number; z: number; level?: number };
     bankSpot: { x: number; z: number };
-    items: { re: RegExp; buyPerTick: number }[];
+    // shelf: the stock count of the item in the shop's .inv. It bounds the unit price (maximumUnitCost).
+    items: { re: RegExp; buyPerTick: number; shelf?: number }[];
+    // A shop in a region with no walk in or out: a door that takes the player in with `wear` worn, a toll door between
+    // the region's bank and its shop that takes one `item` for each pass, and beside the shop a ladder whose attendant
+    // asks before the player leaves. `outBank` is the bank next to the ladder's top.
+    realm?: {
+        inside: (p: { worldX: number; worldZ: number }) => boolean;
+        wear: RegExp;
+        stand: { x: number; z: number };
+        door: { id: number; x: number; z: number };
+        toll: { id: number; x: number; z: number; stand: { x: number; z: number }; item: RegExp; say: RegExp };
+        ladder: { id: number; x: number; z: number; say: RegExp };
+        outBank: { x: number; z: number };
+    };
 }> = {
     // khazardshop: NPC555 at2641,3171, swamp paste1941 stock500/restock20; actual observed price governs buys.
     khazard_paste: {
@@ -185,6 +202,29 @@ export const PROFILES: Record<string, {
         bankSpot: { x: 3185, z: 3436 }, // Varrock West Bank
         items: [{ re: /^staff of fire$/i, buyPerTick: 1 }],
     },
+    // Jakut's dragon sword shop in Zanaris (area_lostcity/configs/lostcity.inv dragonswordshop, shared): dragon_longsword
+    // stock 2, 1 back per 500 ticks, base cost 100,000 and shop_delta 10, so the first sword of a full shelf costs
+    // 100,000 and each later one 101,000. Jakut spawns at 3252,9572 and the fairy bankers at 3150-3154,9577-9580
+    // (maps/m50_149.jm2, m49_149.jm2). The Lumbridge swamp shed door (zanarisdoor, opened from its west side with a
+    // Dramen staff worn) moves the player to 3220,9592 (quest_zanaris.rs2). The market that holds Jakut is behind the
+    // doormen: the east market door at 3238,9558, opened from its west side, takes one cut diamond (doorman.rs2); from
+    // the east it opens free. The ladder beside the attendant at 3253,9590, inside the market, leaves for Al Kharid
+    // 3260,3171 after a choice (ladder_fairy.rs2); the shed is the only way in.
+    jukat: {
+        npc: /^jakut$/i,
+        npcSpot: { x: 3252, z: 9572 },
+        bankSpot: { x: 3152, z: 9578 },
+        items: [{ re: /^dragon longsword$/i, buyPerTick: 2, shelf: 2 }],
+        realm: {
+            inside: p => p.worldZ > 9000,
+            wear: /^dramen staff$/i,
+            stand: { x: 3201, z: 3169 },
+            door: { id: 2406, x: 3202, z: 3169 },
+            toll: { id: 2411, x: 3238, z: 9558, stand: { x: 3237, z: 9558 }, item: /^diamond$/i, say: /^okay/i },
+            ladder: { id: 2410, x: 3253, z: 9591, say: /ready to leave/i },
+            outBank: { x: 3269, z: 3167 }, // Al Kharid Bank
+        },
+    },
     thessalia: {
         // NPC548, Trade3 -> clotheshop; leather_gloves1059 stock10.
         npc: /^thessalia$/i,
@@ -281,21 +321,32 @@ export function shopFinishOk(bought: number, targetMet: boolean, stop: string): 
 
 // shop.rs2 clamps stock adjustment at -5000 before applying the sell multiplier.
 // SDK buyPrice uses stockDiff=0, so it cannot enforce a reserve when stock is depleted.
-export function maximumUnitCost(item: { baseCost: number }, config: { sellMultiplier: number } | undefined): number {
+// `shelf` is the item's stock count in the shop's .inv: a unit sells only from a stock of 1 or more, so price_mod is
+// at least 1 - shelf and the adjustment at most (shelf - 1) * haggle (shop.rs2 adjusted_item_cost_buying).
+export function maximumUnitCost(item: { baseCost: number }, config: { sellMultiplier: number; haggle?: number } | undefined, shelf?: number): number {
     if (!Number.isSafeInteger(item.baseCost) || item.baseCost <= 0 || !config || !Number.isSafeInteger(config.sellMultiplier) || config.sellMultiplier < 0)
         throw new Error('shop budget: missing validated baseCost or shop sellMultiplier');
-    return Math.min(2_000_000_000, Math.max(1, Math.ceil(item.baseCost * (config.sellMultiplier + 5000) / 1000)));
+    const haggle = config.haggle;
+    const adjustment = shelf !== undefined && Number.isSafeInteger(shelf) && shelf >= 1 && haggle !== undefined && Number.isSafeInteger(haggle) && haggle >= 0
+        ? Math.min(5000, (shelf - 1) * haggle) : 5000;
+    return Math.min(2_000_000_000, Math.max(1, Math.ceil(item.baseCost * (config.sellMultiplier + adjustment) / 1000)));
+}
+
+// One dialogue click of a doorman's or ladder attendant's talk: the choice that matches `say`, else the continue line.
+export function dialogClick(dialog: { isOpen: boolean; isWaiting: boolean; options: { index: number; text: string }[] } | null, say: RegExp): number | null {
+    if (!dialog?.isOpen || dialog.isWaiting) return null;
+    return dialog.options.find(o => say.test(o.text))?.index ?? 0;
 }
 
 export async function buyWithBudget(bot: { buyFromShop(item: RegExp, amount: number): Promise<unknown> },
-    sdk: { getInventory(): { name: string; count: number }[]; getState(): { shop?: { shopItems: { name: string; count: number; baseCost: number }[]; shopConfig?: { sellMultiplier: number } } } | null },
-    name: string, requested: number, reserve: number, remainingSpend: number): Promise<{ bought: number; spent: number }> {
+    sdk: { getInventory(): { name: string; count: number }[]; getState(): { shop?: { shopItems: { name: string; count: number; baseCost: number }[]; shopConfig?: { sellMultiplier: number; haggle?: number } } } | null },
+    name: string, requested: number, reserve: number, remainingSpend: number, shelf?: number): Promise<{ bought: number; spent: number }> {
     const count = (re: RegExp) => sdk.getInventory().filter(i => re.test(i.name)).reduce((n, i) => n + i.count, 0);
     const wallet = count(/^coins$/i), before = count(exactItem(name));
     const shop = sdk.getState()?.shop;
     const item = shop?.shopItems.find(i => i.name.toLowerCase() === name.toLowerCase());
     if (!item || item.count <= 0) return { bought: 0, spent: 0 };
-    const unit = maximumUnitCost(item, shop?.shopConfig);
+    const unit = maximumUnitCost(item, shop?.shopConfig, shelf);
     const amount = Math.max(0, Math.min(requested, item.count, Math.floor(Math.min(wallet - reserve, remainingSpend) / unit)));
     if (amount === 0) return { bought: 0, spent: 0 };
     const re = exactItem(name);
@@ -383,7 +434,8 @@ try {
 
     const bank = async (loadFloat = true) => {
         if (s.sdk.getState()?.shop?.isOpen) await s.bot.closeInterface();
-        await walk(conf.bankSpot.x, conf.bankSpot.z, 2);
+        const spot = conf.realm && !conf.realm.inside(pos() ?? { worldX: 0, worldZ: 0 }) ? conf.realm.outBank : conf.bankSpot;
+        await walk(spot.x, spot.z, 2);
         const b = await s.bot.openBank();
         if (!b.success) {
             console.log(`WARN openBank: ${b.message}`);
@@ -413,8 +465,70 @@ try {
         console.log(`MILESTONE bank t=${used()} boughtTotal=${boughtTotal} bankTrips=${bankTrips}`);
     };
 
+    const realm = conf.realm;
+    const inRealm = () => { const p = pos(); return !!p && !!realm && realm.inside(p); };
+    // Into the realm: the worn item from the pack, or from the nearest bank, then the door from its stand tile.
+    const enterRealm = async () => {
+        if (!realm || inRealm()) return;
+        const worn = () => (s.sdk.getState()?.equipment ?? []).some(e => realm.wear.test(e.name));
+        const held = () => s.sdk.getInventory().find(i => realm.wear.test(i.name));
+        if (!worn() && !held()) {
+            const p = pos()!;
+            const far = (t: { x: number; z: number }) => Math.max(Math.abs(t.x - p.worldX), Math.abs(t.z - p.worldZ));
+            const b = knownBanks().filter(t => t.level === 0).sort((m, n) => far(m) - far(n))[0];
+            if (b) await walk(b.x, b.z, 2);
+            if ((await s.bot.openBank()).success) { await s.bot.withdrawItem(realm.wear, 1); await s.bot.closeInterface(); }
+        }
+        const item = held();
+        if (!worn() && item) { await s.bot.equipItem(item); await waitUntil(s, worn, { timeoutTicks: 5 }); }
+        if (!worn()) throw new Error(`realm entry: no ${realm.wear.source} worn, in the pack or in the bank`);
+        await walk(realm.stand.x, realm.stand.z, 0);
+        for (let i = 0; i < 4 && !inRealm() && !over(); i++) {
+            await s.direct({ type: 'interactLoc', x: realm.door.x, z: realm.door.z, locId: realm.door.id, optionIndex: 1, reason: 'SDK' });
+            await waitUntil(s, inRealm, { timeoutTicks: 10 });
+        }
+        if (!inRealm()) throw new Error(`realm entry: the door at ${realm.door.x},${realm.door.z} did not take the player in`);
+        console.log(`MILESTONE realm-enter t=${used()}`);
+    };
+    // Operates a loc and answers the talk it starts until `done`, for at most `limit` ticks.
+    const talkThrough = async (loc: { id: number; x: number; z: number }, say: RegExp, done: () => boolean, limit: number) => {
+        const t = s.tick();
+        for (let sent = -10; !done() && s.tick() - t < limit;) {
+            const click = dialogClick(s.sdk.getDialog(), say);
+            if (click !== null) await s.sdk.sendClickDialog(click);
+            else if (s.tick() - sent >= 10) {
+                sent = s.tick();
+                await s.direct({ type: 'interactLoc', x: loc.x, z: loc.z, locId: loc.id, optionIndex: 1, reason: 'SDK' });
+            }
+            await waitTicks(s, 1);
+        }
+        return done();
+    };
+    // Through the toll door to the shop's side: the toll item from the pack, or from the realm's bank.
+    const payToll = async (): Promise<boolean> => {
+        if (!realm || !inRealm()) return false;
+        const toll = realm.toll, has = () => s.sdk.getInventory().some(i => toll.item.test(i.name));
+        if (!has()) {
+            await walk(conf.bankSpot.x, conf.bankSpot.z, 2);
+            if ((await s.bot.openBank()).success) { await s.bot.withdrawItem(toll.item, 1); await s.bot.closeInterface(); }
+        }
+        if (!has()) throw new Error(`realm toll: no ${toll.item.source} in the pack or in the bank`);
+        if (!await walk(toll.stand.x, toll.stand.z, 0)) return false;
+        const passed = await talkThrough(toll, toll.say, () => pos()?.worldX === toll.x && pos()?.worldZ === toll.z, 60);
+        console.log(`MILESTONE realm-toll t=${used()} passed=${passed ? 1 : 0}`);
+        return passed;
+    };
+    // Out by the ladder, so the account banks and starts its next job where the walker has routes.
+    const leaveRealm = async () => {
+        if (!realm || !inRealm()) return;
+        if (await walk(realm.ladder.x, realm.ladder.z - 2, 2)) await talkThrough(realm.ladder, realm.ladder.say, () => !inRealm(), 100);
+        console.log(`MILESTONE realm-leave t=${used()} out=${inRealm() ? 0 : 1}`);
+    };
+    const shelfOf = (name: string) => conf.items.find(t => t.re.test(name))?.shelf;
+
     console.log(`START shop-buyer ${botName} profile=${profileKey} coins=${coins()}`);
     let loggedEmpty = false;
+    await enterRealm();
     // BANK_PACK=1: bank everything but coins first; a pack left full by other jobs leaves no slot to buy into.
     if (process.env.BANK_PACK === '1') {
         await walk(conf.bankSpot.x, conf.bankSpot.z, 2);
@@ -458,7 +572,9 @@ try {
         // Walk to shop
         const p = pos();
         if (!p || p.level !== (conf.npcSpot.level ?? 0) || Math.max(Math.abs(p.worldX - conf.npcSpot.x), Math.abs(p.worldZ - conf.npcSpot.z)) > 3) {
-            await walk(conf.npcSpot.x, conf.npcSpot.z, 2, conf.npcSpot.level ?? 0);
+            // A walk that the realm's toll door stops: pay, then walk on.
+            if (!await walk(conf.npcSpot.x, conf.npcSpot.z, 2, conf.npcSpot.level ?? 0) && realm && !over() && await payToll())
+                await walk(conf.npcSpot.x, conf.npcSpot.z, 2, conf.npcSpot.level ?? 0);
         }
 
         if (!s.sdk.getState()?.shop?.isOpen) {
@@ -484,7 +600,7 @@ try {
                 if (remaining <= 0) break;
                 let countBought = 0;
                 if (guarded) {
-                    const result = await buyWithBudget(s.bot, s.sdk, purchase.name, remaining, COIN_RESERVE, MAX_SPEND - spentTotal);
+                    const result = await buyWithBudget(s.bot, s.sdk, purchase.name, remaining, COIN_RESERVE, MAX_SPEND - spentTotal, shelfOf(purchase.name));
                     countBought = result.bought;
                     spentTotal += result.spent;
                 } else {
@@ -513,6 +629,12 @@ try {
                 // A trip that added no coins cannot unblock the purchase, so the no-buy limit keeps running.
             }
             if (guarded && needed.length && NO_BUY_TICKS === 0) { stopReason = 'bounded-purchase-unaffordable'; break; }
+            // Items with a priced shelf that the wallet cannot pay after the refill above: no wait brings the coins.
+            const shelves = s.sdk.getState()?.shop;
+            if (guarded && needed.length && needed.every(n => {
+                const item = shelves?.shopItems.find(i => i.name === n.name);
+                return shelfOf(n.name) !== undefined && !!item && coins() - COIN_RESERVE < maximumUnitCost(item, shelves?.shopConfig, shelfOf(n.name));
+            })) { stopReason = 'coin-reserve'; break; }
             // Every item owned to STOCK_TARGET: say so, rather than wait out NO_BUY_TICKS and report stock-wait with stock on the
             // shelf (live: 500 fire runes bought, 2,533 left, "stock-wait").
             if (shopTargetsMet(conf.items, s.sdk.getInventory(), stock, Number(process.env.STOCK_TARGET ?? 500))) { stopReason = 'stock-target'; break; }
@@ -527,6 +649,8 @@ try {
     }
 
     closing = true;
+    // The ladder is on the shop's side of the toll door, so a realm run leaves first and banks at the ladder's top.
+    if (!ended) await leaveRealm();
     if (!ended) await bank(false);
     const targetMet = shopTargetsMet(conf.items, s.sdk.getInventory(), stock, Number(process.env.STOCK_TARGET ?? 500));
     await finish([s], shopFinishOk(boughtTotal, targetMet, stopReason), `ticks=${used()} boughtTotal=${boughtTotal} bankedTotal=${bankedTotal} bankTrips=${bankTrips} shopTrips=${shopTrips} coinsLeft=${coins()} spentTotal=${spentTotal} coinReserve=${COIN_RESERVE} maxSpend=${MAX_SPEND} maxItems=${MAX_ITEMS} stop=${stopReason} targetMet=${targetMet ? 1 : 0} noBuyTicks=${noBuyTicks} noBuyLimit=${NO_BUY_TICKS}`);
