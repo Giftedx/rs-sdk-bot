@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794406598137-trousersnake-fingersmith-feather",
+ "account": "Fingersmith",
+ "partner": "TrouserSnake",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 50,
+ "claim": "f1f632df-84d2-499d-893e-76adb6262d6b",
+ "count": 0,
+ "ok": false,
+ "at": 1794406602198,
+ "detail": "trade claimed"
+}
