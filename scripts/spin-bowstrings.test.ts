@@ -92,3 +92,16 @@ test('a stop received during initial sync ends actual main before stock setup or
  await main({open:async(_name,options)=>{stop=options!.onStop! as ()=>Promise<void>;return f.raw;},ready:async()=>{await stop();return true;},finalize:async(rows,ok,detail,options)=>{finalDetail=detail;expect(ok).toBe(false);return settle(rows,ok,detail,{...options,log:()=>{}});}});
  expect(finalDetail).toContain('spinning stopped before admission');expect(stockReads).toBe(0);expect(f.stats()).toEqual({inputs:1,closed:1});
 });
+
+test('the session own direct put back at settlement, after cleanup began, keeps the owner; a changed direct before it does not',()=>{
+ // Live shape: the random event gate swaps `direct` at open and puts the raw one back when the run settles
+ // (practice: `ACTION_SETTLEMENT_DEFERRED`, then no RESULT line, on a run that made its whole batch).
+ const fixture=()=>{const player={lifeId:1,respawnCount:0,isDead:false},client={selfSlot:1,executeBotAction:()=>{}};
+  const sdk={config:{host:'local'},getState:()=>({player}),getSkill:()=>({level:99}),getStateAge:()=>0};
+  const raw:any={name:'fixture',sdk,client,direct:async()=>{},close:async()=>{},ended:new Promise(()=>{})};return raw;};
+ const settled=fixture(),owned=spinOwnedSession(settled);
+ expect(owned.owns()).toBe(true);owned.cleanup();settled.direct=async()=>{};expect(owned.owns()).toBe(true);
+ // Cleanup does not excuse another client or another close.
+ settled.close=async()=>{};expect(owned.owns()).toBe(false);
+ const working=fixture(),busy=spinOwnedSession(working);working.direct=async()=>{};expect(busy.owns()).toBe(false);
+});

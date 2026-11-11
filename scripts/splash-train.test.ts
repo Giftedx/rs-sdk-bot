@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { AIR, BODY, CAST_RANGE, EARTH, MIND, SPLASH_SPELLS, SPLASH_TILE, WATER, castReaches, splashPlan, splashSpell } from './splash-train';
+import { AIR, BODY, CAST_RANGE, EARTH, MIND, QUIET_STOP, SPLASH_SPELLS, SPLASH_TILE, WATER, castReaches, splashBatchDone, splashPlan, splashSpell } from './splash-train';
 import { xpForLevel } from '../packages/planner/src/curve';
 import { SPLASH_KIT, SPLASH_TO } from '../packages/planner/src/autopilot';
 import { initPathfinding } from '../vendor/rs-sdk/sdk/pathfinding';
@@ -63,3 +63,15 @@ test('no cow can stand beside the fence tile, and a cast from it reaches the fie
     // Out of range.
     expect(castReaches(SPLASH_TILE, { x: 2664, z: SPLASH_TILE.z + CAST_RANGE + 1 })).toBe(false);
 });
+
+test('a run that gained a level and then ran out of runes, ticks or cows is a finished batch, not a failed band', () => {
+    // Live: two runs gained 37 and 15 levels and ended `RESULT fail ... stop=no cast in 300 ticks`.
+    for (const stop of ['supplies', 'cap', QUIET_STOP]) {
+        expect(splashBatchDone(stop, 1)).toBe(true);
+        expect(splashBatchDone(stop, 0)).toBe(false);
+    }
+    expect(QUIET_STOP).toBe('no cast in 300 ticks');
+    // A lost hitpoint, a stop file or a dropped session is never a finished batch.
+    for (const stop of ['lost hitpoints at the fence (98 of 99)', 'stopped', 'session ended', '']) expect(splashBatchDone(stop, 5)).toBe(false);
+});
+

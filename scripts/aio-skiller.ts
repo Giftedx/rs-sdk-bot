@@ -130,6 +130,7 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'crafting',method:'legacy-jewelry',script:'scripts/craft-jewelry.ts',description:'Legacy furnace jewelry crafting'},
  {skill:'crafting',method:'glass',script:'scripts/microbot-glass.ts',description:'Smelt soda ash + sand into molten glass and blow glass items'},
  {skill:'crafting',method:'tanning',script:'scripts/microbot-c-tanner.ts',description:'Tan cowhide and dragonhides at Al Kharid tanner'},
+ {skill:'crafting',method:'black-dhide-sets',script:'scripts/black-dhide-sets.ts',description:'Tan banked black dragonhide at Al Kharid and craft body, chaps and vambraces sets at the bank'},
  {skill:'crafting',method:'soften-clay',script:'scripts/soften-clay.ts',description:'Soften clay with water sources'},
  {skill:'crafting',method:'inventory',script:'scripts/microbot-production.ts',description:'Bank-staged inventory crafting (leather, gems, battle staves, pottery)'},
  {skill:'crafting',method:'progressive',script:'scripts/microbot-production-progressive.ts',description:'Progressive level-unlocked inventory crafting'},

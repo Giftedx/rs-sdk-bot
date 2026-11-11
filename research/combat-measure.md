@@ -370,8 +370,28 @@ Ranged it adds is not needed at that point.
   coins in 2,523 ticks, the shelf at 0 and the run buying one arrow every 15 ticks until its cap; (c) a 10-tick wait
   on the empty shelf: 31 arrows, `stop=stock-wait noBuyTicks=10`, 119 ticks, then the runes in 77. Raw runs:
   `.practice/huntsupply/run.ts` (`a`-`c`).
+- **Claim.** Six banked hides become a set of black dragonhide armour in one run at Al Kharid, and any account
+  with Ranged 70 and Defence 40 wears it. **Conditions.** `levelrequire/scripts/tier70.rs2`: the body asks Ranged 70
+  and Defence 40, the chaps and vambraces Ranged 70, and none a quest (the green body alone asks Dragon Slayer,
+  `tier40.rs2`). `leather.dbrow`: body 3 leather at Crafting 84, chaps 2 at 82, vambraces 1 at 79; the Tanner (804 at
+  3276,3193) takes 20 coins a hide; Dommik (545 at 3322,3194) sells needles and thread. `scripts/black-dhide-sets.ts`
+  on practice, Crafting 84: from the Al Kharid bank with 14 hides and 2,000 coins, `RESULT ok sets=2 banked=2
+  bodies=2 chaps=2 vambraces=2 tanned=12 spent=243`, 230 ticks, Crafting 84 to 85 (25,800 XP); from the Varrock west
+  bank with 20 hides and 300 coins, the one set the coins tan, `sets=1 ... tanned=6 spent=123 hidesLeft=14`, 374
+  ticks, 201 of them the walk; at Crafting 83, `RESULT fail Crafting 83, a set asks 84` at tick 0. Raw runs:
+  `.practice/dhide/run.ts` (`a`-`c`).
+- **Claim.** A hunter reaches Crafting 84 on flax in about 10,000 ticks (estimate from the runs below). **Conditions.**
+  Spinning gives 375 Crafting XP a flax at the server's rate, so 825 flax from level 54. Practice, a hunter-shaped
+  account with Crafting 54 at the Varrock west bank: `army-leather-flax` (`scripts/gather-flax.ts`, 1,800 ticks)
+  banked 338 flax, 975 of its ticks walking; `army-leather-spin` (`scripts/spin-bowstrings.ts`, `MAX_MAKE=168`) made
+  168 bow strings in 901 and 925 ticks for 63,000 XP each. The spinning worker refused its own logout when run as a
+  process of its own: the random event gate puts the session's `direct` back at settlement and the worker took that
+  for another owner (`ACTION_SETTLEMENT_DEFERRED`, no RESULT line; the lockstep bench has no gate swap). With the
+  swap allowed after cleanup began: `LOGOUT logged-out`, `RESULT ok ticks=205 made=28`. Raw runs:
+  `.practice/dhide/level-run.ts` (`a`), `.practice/dhide/spin-run.ts` (`a`-`h`).
 - **Gap.** One live trip with loot, brought home by a second run (`LEAVE=1`); no live trip has banked its own loot,
-  and the supply run has no live run. A player of another fleet on the tile, or another player's kill, is not run.
+  and neither the supply run nor the armour run has a live run. A player of another fleet on the tile, or another
+  player's kill, is not run.
   Kills with arrows other than mithril are not measured (best hits by arrow: iron 12, mithril 14, rune 19). Lowe's
   shelf gives back 4 iron arrows a minute at 0.6 s a tick, under what two hunters fire (estimate from 60 arrows a
   kill); the other iron arrow shelves (Hickton's, Dargaud's) and bronze arrows are not in the run.
@@ -616,7 +636,11 @@ fire runes, a staff of fire and nature runes, asks Magic 66.
   ticks (1 staff for 1,500 coins, 500 fire runes for 6,714, 585 nature runes for 44,950, the step's budget, 600 air
   runes for 9,117), then `RESULT ok alch level=99 gained=33 xp=898625 strike=0 low=0 high=553 stop=target
   ticks=3809`. **Evidence.** `.practice/guild/run.ts` (`a`).
-- **Gap.** Practice only, one run per condition. More than two accounts at once is not measured. The guild's nature
+- **Claim.** A live run stops when no cow takes a cast, and that ends its batch, not the band. **Conditions.** Live
+  (claude-cloud, two accounts at the fence): Magic 21 to 58 and 21 to 36, then each `RESULT fail ... stop=no cast in
+  300 ticks`. A run that gained a level and stopped so, or out of runes or ticks, ends ok (`splashBatchDone`), and its
+  RESULT carries `cows= reach= players= said=` from the stop. Why no cow took a cast there is not read yet.
+- **Gap.** Practice only for a full 21 to 66, one run per condition. More than two accounts at once is not measured. The guild's nature
   shelf holds 1,000 and a trip takes 585, so it serves two accounts in a row at most; five army accounts hold no
   nature rune. With a platebody,
   platelegs, a full helm and a kiteshield of any metal the magic attack bonus is -65 and no cast hits (5 runs, 152
