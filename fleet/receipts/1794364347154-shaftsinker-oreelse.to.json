@@ -1,0 +1,30 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794364347154-shaftsinker-oreelse",
+ "account": "OreElse",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Runite ore",
+ "requested": 57,
+ "claim": "2c91cc01-4be1-4de8-bacc-daea72f7c7ee",
+ "count": 57,
+ "ok": true,
+ "at": 1794364402335,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 57
+ },
+ "bank": {
+  "count": 57,
+  "at": 1794364401631
+ },
+ "logout": {
+  "attemptId": "1794364358381-0000016368-0000000001",
+  "at": 1794364402323,
+  "sha256": "ac1076c37c85eb13e46052f91f96c86ba0288c821641e4441bbae6c9cd587dd9"
+ }
+}
