@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794391017007-sporrandip-knightstick-airrune",
+ "account": "Knightstick",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 31,
+ "claim": "b8cb5c5b-8e2e-4c17-924f-d5eb0ef8bef1",
+ "count": 0,
+ "ok": false,
+ "at": 1794391024205,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794391017007-trousersnake-knightrider-feather",
+ "account": "TrouserSnake",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 50,
+ "claim": "01e1750a-8c2f-4cd8-93a5-e67cfc682c96",
+ "count": 50,
+ "ok": true,
+ "at": 1794391044829,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 50,
+  "after": 0
+ },
+ "bank": {
+  "count": 50,
+  "at": 1794391030309
+ },
+ "logout": {
+  "attemptId": "1794391022261-0000027509-0000000001",
+  "at": 1794391044821,
+  "sha256": "12a963aa58f2663371990c3bbe9f54dacd0ad46c5643f56232ec71692a748006"
+ },
+ "screen": true
+}
