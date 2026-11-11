@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794377467762,
+ "at": 1794378043311,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -15,6 +15,25 @@
    "repeat": false,
    "goal": "black dragon pilot",
    "role": "hand"
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2652,3318"
+   ]
   },
   {
    "account": "Fatstack",
@@ -174,6 +193,23 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-magic-99",
+   "autopilot": "claude-cloud",
+   "resources": []
   }
  ]
 }
