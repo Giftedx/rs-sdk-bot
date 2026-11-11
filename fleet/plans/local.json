@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794374720609,
+ "at": 1794376071760,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -147,19 +147,6 @@
    "repeat": true,
    "goal": "Strength 30 on chickens so it can hit hard enough to PK",
    "role": "pk-trainee"
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "jukat",
-    "9000"
-   ],
-   "enabled": false,
-   "standing": false,
-   "repeat": false,
-   "goal": "reserved by the orchestrating session: buy 14 dragon longswords at Jakut in Zanaris for the PK army (owner request)",
-   "role": "supply"
   },
   {
    "account": "Masterbaiter",
