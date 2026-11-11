@@ -52,6 +52,8 @@ export type Template = {
     // A quest run: a candidate until the account's status reports the quest complete, and worth a share of each job
     // the quest unlocks (as a trainer is). It does not repeat.
     quest?: { name: string; unlocks: string[] };
+    // A goal band whose target is a holding: it stands while the account holds fewer than `to` of `item`.
+    stock?: { item: string; to: number };
     // An AIO route (scripts/aio.ts): `aio` is its bench key (scripts/measure/aio-bench-cases.ts) and `worker` the script
     // the dispatcher runs, so a retirement lapses when the worker changes, not only the dispatcher.
     aio?: string; worker?: string;
@@ -144,6 +146,9 @@ export const KIT_PRICE_CAPS: Readonly<Record<string, number>> = {
     trout: 100, lobster: 500, swordfish: 700, shark: 1200,
     // Live claude-cloud read: 42 listed at 72,000, bids at 33,068, volume-weighted price 38,089.
     'adamant scimitar': 80_000,
+    // The hunters' kit (army-hunt-black-dragons). Live claude-cloud: 5 law runes for 5,260 coins and 7 sharks for 7,189;
+    // magic shortbows 108 listed from 51,000.
+    'law rune': 1_600, 'magic shortbow': 60_000,
     // Live claude-cloud read: dragon bones 1,009 listed from 9,000 (mean 9,687); big bones 1,686 from 2,399 (mean 2,526).
     'dragon bone': 10_000, 'big bone': 2_600,
 };
@@ -183,6 +188,10 @@ export function combatLevel(skills: Readonly<Record<string, number>>): number {
     return Math.floor(base + 0.325 * Math.max(s('Attack') + s('Strength'), Math.floor(s('Ranged') * 1.5), Math.floor(s('Magic') * 1.5)));
 }
 export const questDone = (a: Acct, quest: string) => !!a.quests?.has(norm(quest));
+// What a goal band still has to do for an account: levels to its skill target, 1 for a quest its status does not list
+// complete (0 with no quest list), or the items short of a stock target.
+export const bandLeft = (t: Template, a: Acct): number => t.trains ? t.trains.to - (a.skills[t.trains.skill] ?? 1)
+    : t.quest ? (a.quests && !questDone(a, t.quest.name) ? 1 : 0) : t.stock ? Math.max(0, t.stock.to - (a.items[norm(t.stock.item)] ?? 0)) : 0;
 const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: string; to: number }): boolean =>
     (a.combat ?? combatLevel(a.skills)) >= (needs?.combat ?? 0)
     && (needs?.quests ?? []).every(q => questDone(a, q))
@@ -281,9 +290,9 @@ export function plan(inp: Inputs): Assignment[] {
             // One candidate per goal band whose target an army account has not met; never for anyone else. A band's
             // target is a skill level, or a quest: that one stands until the account's status lists the quest complete,
             // and an account whose status names no quests gets none.
-            const left = t.trains ? t.trains.to - (a.skills[t.trains.skill] ?? 1) : t.quest && a.quests && !questDone(a, t.quest.name) ? 1 : 0;
+            const left = bandLeft(t, a);
             if (!inp.army?.has(a.name.toLowerCase()) || left <= 0) continue;
-            const goal = { band: t.band ?? 0, left }, reason = t.trains ? `army band ${goal.band}: ${t.trains.skill} to ${t.trains.to}` : `army band ${goal.band}: ${t.quest!.name}`;
+            const goal = { band: t.band ?? 0, left }, reason = t.trains ? `army band ${goal.band}: ${t.trains.skill} to ${t.trains.to}` : t.quest ? `army band ${goal.band}: ${t.quest.name}` : `army band ${goal.band}: ${t.stock!.to} ${t.stock!.item}`;
             if (meets(a, t.needs)) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal });
             else if (inp.donors?.length && !inp.unfundable?.has(a.name.toLowerCase()) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs)))
                 cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, coins: coinShort(a, t.needs) });
@@ -376,12 +385,11 @@ export function plan(inp: Inputs): Assignment[] {
     // the bands it has still to do, so a maxed account gives all it holds (live: two maxed accounts held 41 dragon
     // bones, 1,900 nature runes and 29,000 feathers while others waited for a donor of another side). The levels of
     // another side's account are not read here: it keeps the reserve of every band.
-    const leftOf = (t: Template, a: Acct) => t.trains ? t.trains.to - (a.skills[t.trains.skill] ?? 1) : t.quest && a.quests && !questDone(a, t.quest.name) ? 1 : 0;
     const ownReserve = new Map<string, Record<string, number>>();
     const keepsOf = (s: Stock) => {
         const a = s.side === inp.side ? byName.get(s.name) : undefined;
         if (!a || !inp.army?.has(a.name.toLowerCase())) return reserve;
-        if (!ownReserve.has(a.name)) ownReserve.set(a.name, kitReserve(inp.templates.filter(t => t.tier !== 'goal' || leftOf(t, a) > 0)));
+        if (!ownReserve.has(a.name)) ownReserve.set(a.name, kitReserve(inp.templates.filter(t => t.tier !== 'goal' || bandLeft(t, a) > 0)));
         return ownReserve.get(a.name)!;
     };
     const spare = (s: Stock, item: string) => (s.items[item] ?? 0) - (keepsOf(s)[item] ?? 0);
@@ -507,7 +515,7 @@ export const RETIRE_FAILS = 2, WASTE_LIMIT = 0.9;
 // its JSON result (scripts/buy-owned-ge-item.ts). Without the second, a kit buy that ended ok after its long trip read
 // as tick waste and its pair was retired, so the account's next buy for that band never came (live claude-cloud: the
 // alchemy kit buys of KnightRider, Deeppockets and Fatstack, one of them after 1,000 nature runes bought).
-export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked|selectedXp|damageXp|creditedKills|boughtTotal)=[1-9]\d*\b|"acquired":[1-9]/.test(result);
+export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked|selectedXp|damageXp|creditedKills|boughtTotal|hides)=[1-9]\d*\b|"acquired":[1-9]/.test(result);
 // A run that ended on a stop file is a drain as well: the owner paused the account or the controller removed the job,
 // which says nothing about whether the job works (live claude-cloud: a quest chain stopped for an open fleet order
 // logged two such fails, and the account's Lost City band was retired).
@@ -557,6 +565,12 @@ export const TROOPER_FIELD = 'trooper:battlefield', TROOPER_FIELD_CAPACITY = 14;
 // The Wind Strike tile north of the Ardougne north bank (scripts/alch-train.ts STRIKE): one Guard dog, fought by one
 // player at a time. Practice: of three accounts at once, one landed no cast in 200 ticks, in each of three sets.
 export const STRIKE_TILE = 'strike:ardougne-guard-dog';
+// Taverley's black dragons (scripts/black-dragon-camp.ts): two dragons, one camp tile. Practice: two accounts on the
+// tile at once made six kills each with no stray and no hitpoint lost; more than two is not run. HUNT_BAND comes after
+// every training band, so only an account with none of them left to start hunts. HIDE_TARGET is the hides one hunter
+// gathers before the band stands down: a set of body, chaps and vambraces takes six.
+export const BLACK_CAVE = 'cave:taverley-black-dragons', BLACK_CAVE_PLACES = 2, HUNT_BAND = 10, HIDE_TARGET = 42;
+export const HUNT_ARROWS = 600, HUNT_KILLS = 9, HUNT_FOOD = 6;
 // The tile south of the Ardougne cow field's fence (scripts/splash-train.ts SPLASH_TILE): a curse cast over the fence
 // reaches the cows and no cow reaches the caster. A cow whose stat a cast lowered refuses the next cast until the stat
 // grows back, one level every 100 ticks, so the ten cows give about one cast in ten ticks, shared by the casters.
@@ -569,7 +583,7 @@ export const SPLASH_FENCE = 'splash:ardougne-cow-fence', SPLASH_PLACES = 2, SPLA
 export const SPLASH_KIT = { 'body rune': 150, 'earth rune': 425, 'water rune': 300 } as const;
 // The places the AIO routes hold (aioTemplates). Each takes one account until a live pilot measures two.
 export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore: 'aio:varrock-east-mine', essence: 'aio:essence-mine', air: 'aio:air-altar' } as const;
-export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
+export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // Army goal bands (AGENTS.md goals: maxed tribrids), in order: Strength, Attack, Magic, Prayer, Ranged, Defence
 // last. Bands 6-8 are the Khazard troopers (TROOPER_BANDS), 9 is Prayer on the field (PRAYER_FIELD_BAND). Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile, MAX_KILLS=8): live 4/4 runs
@@ -643,7 +657,7 @@ const ARROWS: readonly (readonly [string, number])[] = [['bronze arrow', 1], ['i
 export const FIRE_STAFFS = ['staff of fire', 'fire battlestaff', 'mystic fire staff'] as const;
 // Kit items a goal-tier shop job brings (the alchemy supply jobs and the army-arrows jobs). A kit line of these that no market sells
 // does not hold back the market buy of the band's other lines: the shop job follows once those are held.
-export const SHOP_SUPPLIED: ReadonlySet<string> = new Set(['fire rune', ...FIRE_STAFFS, 'feather', 'water rune', 'bronze arrow', 'iron arrow', 'steel arrow', 'mithril arrow']);
+export const SHOP_SUPPLIED: ReadonlySet<string> = new Set(['fire rune', ...FIRE_STAFFS, 'feather', 'water rune', 'dusty key', 'bronze arrow', 'iron arrow', 'steel arrow', 'mithril arrow']);
 // ARROW_LOW: the arrows of one kind the Ranged band needs to start. ARROW_STOCK: what a shop run brings the account up to.
 export const ARROW_LOW = 100, ARROW_STOCK = 500, LOWE_STOCK = 1000;
 export const ZAFF_WAIT = 1100;
@@ -878,6 +892,24 @@ export function catalogue(): Template[] {
     // planner asks those levels and that food, and buys the food as the band's own candidate (`kitFirst`).
     // Practice: research/quest-points-board.md (Lost City 3/3 from its preset) and research/combat-measure.md (the
     // chain from an army account's state).
+    // Black dragonhide for the army's ranged armour, band 10: nine kills a trip from the corridor south of the cave
+    // (scripts/black-dragon-camp.ts), the hides and dragon bones banked at Varrock West. The kit is a magic shortbow,
+    // iron arrows (a kill uses about 60, and mithril costs about 745 coins an arrow), one Varrock teleport and six
+    // sharks; the dusty key cannot be traded and has its own job. Both are fillers: an account takes them, and the
+    // kit tier gets the kit, only when no training band and no kit of one serves it, so bones for Prayer come before
+    // arrows for dragons. Live (claude-cloud, by hand): three kills, three hides, no hitpoint lost, banked. Pilots.
+    const dustyKey: Template = {
+        id: 'army-dusty-key', pilot: true, family: 'aio:quester:mode:dusty-key', script: 'scripts/aio.ts', args: ['quester', 'dusty-key'], aio: 'quester:mode:dusty-key', worker: 'scripts/dusty-key.ts',
+        role: 'quest', goal: "get the dusty key from Velrak for Taverley dungeon's inner gate", tier: 'goal', band: HUNT_BAND, filler: true, repeats: false, stock: { item: 'dusty key', to: 1 }, yields: () => [],
+        needs: { skills: { Attack: 90, Strength: 90, Defence: 90, Hitpoints: 90, Ranged: 90, Prayer: 60, Magic: 25 } },
+    };
+    const hunt: Template = {
+        id: 'army-hunt-black-dragons', pilot: true, family: 'combat-train', script: 'scripts/black-dragon-camp.ts', args: ['9000'],
+        env: { KILLS: String(HUNT_KILLS), ARROW: 'iron_arrow', ARROWS: String(HUNT_ARROWS) }, role: 'combat', goal: "kill Taverley's black dragons for their hides and bones",
+        tier: 'goal', band: HUNT_BAND, filler: true, repeats: true, stock: { item: 'dragonhide', to: HIDE_TARGET }, resources: [BLACK_CAVE], yields: () => [],
+        needs: { skills: { Defence: 90, Hitpoints: 90, Ranged: 90, Prayer: 60, Magic: 25 },
+            items: { 'dusty key': 1, 'magic shortbow': 1, 'iron arrow': HUNT_ARROWS, 'law rune': 1, 'air rune': 3, 'fire rune': 1, shark: HUNT_FOOD } },
+    };
     const lostCity: Template = {
         id: 'army-quest-lostcity', family: 'aio:quester:mode:chain', script: 'scripts/aio.ts', args: ['quester', 'chain', 'drunkmonk,murder,zanaris'],
         aio: 'quester:mode:chain', worker: 'scripts/quest-chain.ts', pilot: true, role: 'quest',
@@ -972,6 +1004,8 @@ export function catalogue(): Template[] {
         arrowsLowe,
         ranged,
         lostCity,
+        dustyKey,
+        hunt,
         prayerField,
         { id: 'thieving55', family: 'thieving60', script: 'scripts/generated/thieving60.ts', env: { TARGET: '55', CAP: '2500', CLEAN_FOOD: '1' }, role: 'thieving',
             goal: 'train Thieving to 55 for a knight spot', trains: { skill: 'Thieving', to: 55, unlocks: goldfarm.map(g => g.id) }, yields: () => [] },

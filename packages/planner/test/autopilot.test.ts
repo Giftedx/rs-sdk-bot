@@ -1186,3 +1186,41 @@ test('the kit tier uses this side\'s own stock first: a maxed account gives all 
     // And with no market for bones the other side sends what the band needs to start, not its whole stock.
     expect(run([other], [monk], { market }).send).toEqual({ from: 'Far', to: 'Monk', item: 'dragon bone', count: BONE_START - 6, template: 'army-bury-dragon-99' });
 });
+
+import { BLACK_CAVE, BLACK_CAVE_PLACES, HIDE_TARGET, HUNT_ARROWS, HUNT_BAND, HUNT_FOOD, HUNT_KILLS, bandLeft } from '../src/autopilot';
+test('a maxed army account hunts black dragons for hides: the key first, the kit bought, two in the cave, and its kit is not spare stock', () => {
+    const maxed = { Thieving: 99, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Magic: 99, Prayer: 99 };
+    const kit = { 'dusty key': 1, 'magic shortbow': 1, 'iron arrow': HUNT_ARROWS, 'law rune': 1, 'air rune': 3, 'fire rune': 1, shark: HUNT_FOOD, coin: 200_000 };
+    const pilots = new Set(['army-hunt-black-dragons', 'army-dusty-key']);
+    const hunter = (name: string, items: Record<string, number> = kit, s: Record<string, number> = {}): Acct => acct(name, { ...maxed, ...s }, items);
+    const caps: Market = Object.fromEntries([['iron arrow', 884, 'Iron arrow'], ['law rune', 563, 'Law rune'], ['magic shortbow', 861, 'Magic shortbow'], ['shark', 385, 'Shark'], ['air rune', 556, 'Air rune'], ['fire rune', 554, 'Fire rune']]
+        .map(([k, id, name]) => [k, { id: id as number, name: name as string, limit: KIT_PRICE_CAPS[k as string]! }]));
+    const run = (accounts: Acct[], extra: Partial<Inputs> = {}) => plan(inputs(accounts, { army: new Set(accounts.map(a => a.name.toLowerCase())), capacity: CAPACITY, pilots, market: caps, ...extra }));
+    // With the kit: the trip, nine kills on iron arrows, in the cave.
+    const [trip] = run([hunter('Kilt')]);
+    expect(trip!.template!.id).toBe('army-hunt-black-dragons');
+    expect(trip!.reason).toBe(`army band ${HUNT_BAND}: ${HIDE_TARGET} dragonhide`);
+    expect(jobFor(trip!, side)).toMatchObject({ script: 'scripts/black-dragon-camp.ts', args: ['9000'], env: { KILLS: String(HUNT_KILLS), ARROW: 'iron_arrow', ARROWS: String(HUNT_ARROWS) }, repeat: true, resources: [BLACK_CAVE] });
+    // Without the key: the key job, once; the key is not a market line and holds no buy back.
+    const { 'dusty key': _key, ...keyless } = kit;
+    const [key] = run([hunter('Kilt', keyless)]);
+    expect(key!.template!.id).toBe('army-dusty-key');
+    expect(jobFor(key!, side)).toMatchObject({ script: 'scripts/aio.ts', args: ['quester', 'dusty-key'], repeat: false });
+    // Short of arrows after a trip: the buy tops them up.
+    const [buy] = run([hunter('Kilt', { ...kit, 'iron arrow': 60 })]);
+    expect(buy!.template!.id).toBe(KIT_BUY + 'army-hunt-black-dragons');
+    expect(buy!.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).map(Number))).toEqual([[884, HUNT_ARROWS - 60]]);
+    // The band stands down at its hides, is off without the pilot, and is not for an account with training left.
+    expect(bandLeft(trip!.template!, hunter('Kilt', { ...kit, dragonhide: HIDE_TARGET - 3 }))).toBe(3);
+    expect(run([hunter('Kilt', { ...kit, dragonhide: HIDE_TARGET })])[0]!.template?.id).not.toBe('army-hunt-black-dragons');
+    expect(run([hunter('Kilt')], { pilots: new Set() })[0]!.template?.id).not.toBe('army-hunt-black-dragons');
+    expect(run([hunter('Kilt', { ...kit, shortbow: 1, 'bronze arrow': 500 }, { Ranged: 95 })])[0]!.template!.id).toBe('army-trooper-ranged-99');
+    // Two hunters at a time.
+    expect(run(['A', 'B', 'C'].map(n => hunter(n))).filter(a => a.template?.id === 'army-hunt-black-dragons').length).toBe(BLACK_CAVE_PLACES);
+    // A hunter between trips is a free maxed account, and still keeps its kit: a Prayer account that lacks sharks
+    // for nothing of its own gets none of the hunter's six, and gets its spare dragon bones.
+    const monk = acct('Monk', { ...maxed, Prayer: 97 }, { 'adamant scimitar': 1, coin: 20_000, 'dragon bone': 6 });
+    const idle = hunter('Kilt', { ...kit, dragonhide: HIDE_TARGET - 1, 'dragon bone': 30 });
+    const sent = plan(inputs([monk, idle], { army: new Set(['monk', 'kilt']), capacity: { ...CAPACITY, [BLACK_CAVE]: 0 }, pilots, market: caps, stock: [{ name: 'Kilt', side, items: idle.items }] })).find(a => a.account === 'Monk')!;
+    expect(sent.send).toMatchObject({ from: 'Kilt', item: 'dragon bone', count: 30 });
+});
