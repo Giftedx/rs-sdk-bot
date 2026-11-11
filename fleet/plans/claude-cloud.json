@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794402050323,
+ "at": 1794402596112,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -15,21 +15,24 @@
   },
   {
    "account": "TheFullMonty",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "foraging",
+    "flax",
+    "1800",
+    "28"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
+   "goal": "pick flax at Seers to spin for the Crafting a black dragonhide body asks",
+   "role": "crafting",
+   "template": "army-leather-flax",
    "autopilot": "claude-cloud",
    "resources": [
-    "knight:2652,3318"
+    "aio:seers-flax"
    ]
   },
   {
