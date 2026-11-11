@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { npcAttackStyles } from '../src/npc-attack-styles';
+import { buildNpcAttackStyles, npcAttackStyles } from '../src/npc-attack-styles';
 import { parsePack } from '../src/pack';
 import { contentRoot } from '../src/paths';
 
@@ -32,4 +32,8 @@ test('a category script reaches each NPC of the category', () => {
     const table = npcAttackStyles();
     expect(table.size).toBeGreaterThan(60);
     for (const styles of table.values()) expect(styles.some(s => s !== 'melee')).toBe(true);
+});
+
+test('the kept table is the built table', () => {
+    expect([...npcAttackStyles()]).toEqual([...buildNpcAttackStyles()]);
 });

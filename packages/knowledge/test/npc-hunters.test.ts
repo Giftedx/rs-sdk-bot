@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { npcHunters } from '../src/npc-hunters';
+import { buildNpcHunters, npcHunters } from '../src/npc-hunters';
 import { parsePack } from '../src/pack';
 import { contentRoot } from '../src/paths';
 
@@ -29,4 +29,8 @@ test('each row has a hunt range above 0 and finite numbers', () => {
         expect(h.range).toBeGreaterThan(0);
         expect(Number.isFinite(h.level) && Number.isFinite(h.wander)).toBe(true);
     }
+});
+
+test('the kept table is the built table', () => {
+    expect([...npcHunters()]).toEqual([...buildNpcHunters()]);
 });

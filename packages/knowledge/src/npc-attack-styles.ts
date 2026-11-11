@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { listConfigFiles, parseConfigs } from './config';
 import { parsePack } from './pack';
 import { contentRoot } from './paths';
+import { cachedRows } from './table-cache';
 
 // The attack styles of each NPC that does not only use melee, read from the attack scripts of the pinned content.
 //
@@ -22,8 +23,12 @@ const SHARED = /^(npc_cast|npc_spell|npc_range|npc_melee|npc_default|playerhit|n
 
 let cached: ReadonlyMap<number, readonly AttackStyle[]> | undefined;
 
+// The table, from the kept file when the content version has one (table-cache.ts).
 export function npcAttackStyles(): ReadonlyMap<number, readonly AttackStyle[]> {
-    if (cached) return cached;
+    return cached ??= new Map(cachedRows('npc-attack-styles', 1, () => [...buildNpcAttackStyles()]));
+}
+
+export function buildNpcAttackStyles(): Map<number, AttackStyle[]> {
     const root = contentRoot();
     const attacks = new Map<string, string[]>();
     const procedures = new Map<string, string>();
@@ -70,6 +75,5 @@ export function npcAttackStyles(): ReadonlyMap<number, readonly AttackStyle[]> {
             }
         }
     }
-    cached = out;
     return out;
 }

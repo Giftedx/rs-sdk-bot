@@ -153,11 +153,16 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         const n = (st?.nearbyNpcs ?? []).find((n: any) => n.index === a.npcIndex);
         return !!n && n.hp !== 0 && (n.optionsWithIndex ?? []).some((op: any) => op.opIndex === a.optionIndex && /^Attack$/i.test(op.text));
     };
+    // The open dialog is the level-up message: the state has its text in the newest entry of `recentDialogs`.
+    const levelUp = (st: any): boolean => {
+        if (!st?.dialog?.isOpen) return false;
+        let newest: any = null;
+        for (const entry of st.recentDialogs ?? []) if (!newest || entry.tick >= newest.tick) newest = entry;
+        return !!newest && LEVEL_UP.test((newest.text ?? []).join(' ').trim());
+    };
     const windowOpen = (st: any): boolean => {
-        const other = !!(st.interface?.isOpen || st.bank?.isOpen || st.shop?.isOpen);
-        const dialog = st.dialog?.isOpen ? String(st.dialog.text ?? (st.dialog.allComponents ?? []).map((c: any) => c.text ?? '').join(' ')).trim() : null;
-        if (!other && dialog !== null && LEVEL_UP.test(dialog) && !(st.dialog.options ?? []).some((op: any) => !/continue/i.test(op.text ?? ''))) return false;
-        return other || dialog !== null || !!st.modalOpen;
+        const other = !!(st.interface?.isOpen || st.bank?.isOpen || st.shop?.isOpen || st.modalOpen);
+        return other || (!!st.dialog?.isOpen && !levelUp(st));
     };
     // The active prayers: the state, with each prayer input of the last STATE_LAG ticks applied.
     const believed = (st: any, now: number): number[] => {
@@ -188,7 +193,9 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         setImmediate(() => {
             holding = false;
             delete wire.flush;
-            if (wanted) wire.flush?.();
+            // The client's own flush, from its prototype again.
+            const flush = (s.client as { flush?: () => void }).flush;
+            if (wanted) flush?.call(s.client);
         });
     };
     // Sent in order: the server reads the inputs of one tick in the order they arrive.
@@ -259,7 +266,8 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
             if (expect) { expect = after; expectAt = now; }
             return;
         }
-        if (NEUTRAL.has(a.type)) { inputs++; return; }
+        // A click on the level-up message starts no action.
+        if (NEUTRAL.has(a.type) || (a.type === 'clickDialogOption' && levelUp(s.sdk.getState()))) { inputs++; return; }
         const attack = (a.type === 'interactNpc' || a.type === 'interactPlayer') && attackTarget(a, s.sdk.getState());
         beforeInput(a, attack);
         inputs++;

@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { listConfigFiles, parseConfigs } from './config';
 import { parsePack } from './pack';
 import { contentRoot } from './paths';
+import { cachedRows } from './table-cache';
 
 // Each NPC that attacks a player without being attacked first, read from the pinned content.
 //
@@ -25,8 +26,12 @@ export interface NpcHunter {
 
 let cached: ReadonlyMap<number, NpcHunter> | undefined;
 
+// The table, from the kept file when the content version has one (table-cache.ts).
 export function npcHunters(): ReadonlyMap<number, NpcHunter> {
-    if (cached) return cached;
+    return cached ??= new Map(cachedRows('npc-hunters', 1, () => [...buildNpcHunters()]));
+}
+
+export function buildNpcHunters(): Map<number, NpcHunter> {
     const root = contentRoot();
     const hunts = new Map<string, boolean>();
     for (const file of listConfigFiles('.hunt')) {
@@ -53,6 +58,5 @@ export function npcHunters(): ReadonlyMap<number, NpcHunter> {
         const level = Number(own?.vislevel ?? -1), wander = Number(own?.wanderrange ?? 5);
         out.set(id, { range, wander: Number.isFinite(wander) ? wander : 5, level: Number.isFinite(level) ? level : -1, tooStrong });
     }
-    cached = out;
     return out;
 }

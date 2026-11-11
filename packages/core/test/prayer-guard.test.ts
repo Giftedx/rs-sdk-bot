@@ -10,7 +10,7 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
     let tick = 0, timer: number | null = active.some(Boolean) ? 5 : null;
     const w = {
         active, drains: 0, toggles: 0, windowsClosed: 0, cleared: 0, window: false, anim: -1,
-        interaction: null as string | null, most: 0, dialog: { isOpen: false } as any, pack: [] as { id: number; count: number }[], z: 3200, combat: 50, players: [] as any[], npcs: [] as any[], events: [] as any[], offSeen: 0,
+        interaction: null as string | null, most: 0, dialog: { isOpen: false } as any, said: [] as any[], pack: [] as { id: number; count: number }[], z: 3200, combat: 50, players: [] as any[], npcs: [] as any[], events: [] as any[], offSeen: 0,
     };
     const inbox: any[] = [];
     const listeners = new Set<() => void>();
@@ -19,7 +19,7 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
         player: { worldX: 3200, worldZ: w.z, level: 0, animId: w.anim, isDead: false, combatLevel: w.combat },
         prayers: { activePrayers: [...active], prayerPoints: init.points ?? 50, prayerLevel: init.level ?? 50 },
         nearbyNpcs: w.npcs, nearbyPlayers: w.players, inventory: w.pack, combatEvents: w.events, modalOpen: w.window,
-        dialog: w.dialog, interface: { isOpen: false }, bank: { isOpen: false }, shop: { isOpen: false },
+        dialog: w.dialog, recentDialogs: w.said, interface: { isOpen: false }, bank: { isOpen: false }, shop: { isOpen: false },
     });
     let published = state();
     const s = {
@@ -548,12 +548,18 @@ test('with no threat, the guard prayer goes off right before a skill action, so 
 });
 
 test('a level-up message is no window: the flick goes on', () => {
-    const { w, s, advance } = world({ prayers: [PROTECT.melee] });
-    startPrayerGuard(s, { protect: false });
-    w.dialog = { isOpen: true, text: 'Congratulations, you just advanced a strength level.', options: [{ index: 0, text: 'Click here to continue' }] };
-    advance(60);
+    const { w, s, client, advance } = world({ prayers: [PROTECT.melee] });
+    const guard = startPrayerGuard(s, { protect: false });
+    w.dialog = { isOpen: true, options: [{ index: 0, text: 'Click here to continue' }] };
+    w.said = [{ tick: 0, interfaceId: 1, text: ['A wizard greets you.'] }, { tick: 1, interfaceId: 2, text: ['Congratulations, you just advanced a strength level.', 'Your Strength level is now 61.'] }];
+    advance(30);
+    // The script clicks the message away: that click holds nothing.
+    client.executeBotAction({ type: 'clickDialogOption', optionIndex: 0 });
+    advance(30);
     expect(w.drains).toBe(0);
-    w.dialog = { isOpen: true, text: 'Would you like to buy a ticket?', options: [{ index: 1, text: 'Yes' }, { index: 2, text: 'No' }] };
+    expect(guard.stats().holds).toBe(0);
+    w.dialog = { isOpen: true, options: [{ index: 1, text: 'Yes' }, { index: 2, text: 'No' }] };
+    w.said = [...w.said, { tick: 70, interfaceId: 3, text: ['Would you like to buy a ticket?'] }];
     const before = w.toggles;
     advance(1);
     const sent = w.toggles;
