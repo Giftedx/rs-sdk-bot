@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794426050769,
+ "at": 1794426115828,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -19,6 +19,26 @@
    "template": "kit-buy:army-jakut-swords",
    "autopilot": "claude-cloud",
    "resources": []
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3229,3298",
+    "TICKS": "3000",
+    "TARGET": "2000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3229,3298",
+   "role": "helper",
+   "template": "feathers@3229,3298",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "pen:3229,3298"
+   ]
   },
   {
    "account": "TheFullMonty",
@@ -203,26 +223,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
-   "env": {
-    "PEN": "3229,3298",
-    "TICKS": "3000",
-    "TARGET": "2000"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3229,3298",
-   "role": "helper",
-   "template": "feathers@3229,3298",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "pen:3229,3298"
    ]
   }
  ]
