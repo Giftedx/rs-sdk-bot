@@ -10,7 +10,7 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
     let tick = 0, timer: number | null = active.some(Boolean) ? 5 : null;
     const w = {
         active, drains: 0, toggles: 0, windowsClosed: 0, cleared: 0, window: false, anim: -1,
-        interaction: null as string | null, z: 3200, combat: 50, players: [] as any[], npcs: [] as any[], events: [] as any[], offSeen: 0,
+        interaction: null as string | null, most: 0, z: 3200, combat: 50, players: [] as any[], npcs: [] as any[], events: [] as any[], offSeen: 0,
     };
     const inbox: any[] = [];
     const listeners = new Set<() => void>();
@@ -29,7 +29,9 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
     };
     const advance = (n = 1) => {
         for (let k = 0; k < n; k++) {
-            for (const a of inbox.splice(0)) {
+            w.most = Math.max(w.most, inbox.length);
+            // The server reads 5 inputs in a tick and keeps the rest (engine NetworkPlayer.ts:70).
+            for (const a of inbox.splice(0, 5)) {
                 if (a.type === 'togglePrayer') {
                     w.toggles++;
                     if (w.window) { w.window = false; w.windowsClosed++; }
@@ -65,16 +67,60 @@ test('without the guard the same prayer drains', () => {
     expect(w.drains).toBe(40);
 });
 
-test('two prayers flick together; three are held', () => {
-    const two = world({ prayers: [10, PROTECT.melee] });
-    startPrayerGuard(two.s, { protect: false });
-    two.advance(100);
-    expect(two.w.drains).toBe(0);
-    const three = world({ prayers: [9, 10, 11] });
-    const guard = startPrayerGuard(three.s, { protect: false });
-    three.advance(100);
-    expect(three.w.toggles).toBe(0);
+test('two, three and four prayers cost no points; five are held', () => {
+    for (const prayers of [[10, PROTECT.melee], [9, 10, PROTECT.melee], [8, 9, 10, PROTECT.melee]]) {
+        const { w, s, advance } = world({ prayers });
+        startPrayerGuard(s, { protect: false });
+        let full = 0;
+        for (let i = 0; i < 200; i++) {
+            advance();
+            // The protection prayer is on at the end of each tick.
+            expect(w.active[PROTECT.melee]).toBe(true);
+            if (on(w).length === prayers.length) full++;
+        }
+        expect(w.drains).toBe(0);
+        expect(w.most).toBeLessThanOrEqual(5);
+        // Two prayers are all on at the end of each tick. Three and four have one tick in four with a prayer off.
+        expect(full).toBeGreaterThanOrEqual(prayers.length === 2 ? 200 : 148);
+    }
+    const five = world({ prayers: [6, 8, 9, 10, PROTECT.melee] });
+    const guard = startPrayerGuard(five.s, { protect: false });
+    five.advance(100);
+    expect(five.w.toggles).toBe(0);
     expect(guard.stats().holds).toBeGreaterThan(0);
+});
+
+test('three and four prayers in an attack: 5 inputs at most in a tick, the attack stays', () => {
+    for (const prayers of [[9, 10, PROTECT.melee], [8, 9, 10, PROTECT.melee]]) {
+        const { w, s, client, advance } = world({ prayers });
+        w.npcs = [cow(-1)];
+        startPrayerGuard(s, { protect: false });
+        advance();
+        client.executeBotAction({ type: 'interactNpc', npcIndex: 3, optionIndex: 2 });
+        let lost = 0;
+        for (let i = 0; i < 120; i++) { advance(); expect(w.active[PROTECT.melee]).toBe(true); if (w.interaction !== 'interactNpc:3') lost++; }
+        expect(w.drains).toBe(0);
+        expect(w.most).toBeLessThanOrEqual(5);
+        // Four prayers leave no input for the attack in the first tick: it is back one tick later.
+        expect(lost).toBeLessThanOrEqual(prayers.length === 4 ? 40 : 0);
+        advance(2);
+        expect(w.interaction).toBe('interactNpc:3');
+    }
+});
+
+test('a script prayer input between the two ticks of a flick: the prayers the script chose come back', () => {
+    const { w, s, client, advance } = world({ prayers: [9, 10, PROTECT.melee] });
+    startPrayerGuard(s, { protect: false });
+    let before = w.toggles;
+    for (let i = 0; i < 10 && w.toggles === before; i++) advance();
+    // The first tick of a flick has arrived at the server: Strength is off. The script turns Attack on.
+    expect(on(w)).not.toContain(10);
+    client.executeBotAction({ type: 'togglePrayer', prayerIndex: 11 });
+    // Four prayers are now on. A flick leaves three of them off for one tick, so the check reads 12 ticks.
+    let full = 0;
+    for (let i = 0; i < 12; i++) { advance(); expect(w.active[PROTECT.melee]).toBe(true); if (on(w).join() === [9, 10, 11, PROTECT.melee].join()) full++; }
+    expect(full).toBeGreaterThanOrEqual(6);
+    expect(w.drains).toBe(0);
 });
 
 test('an open window is never closed: the prayer is held', () => {

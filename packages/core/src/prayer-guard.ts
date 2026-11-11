@@ -87,8 +87,14 @@ const EXCLUSIVE = [[0, 3, 9], [1, 4, 10], [2, 5, 11], [12, 13, 14]];
 // The active prayers after one button, from the prayers that were active before it.
 export const afterToggle = (active: readonly number[], prayer: number): number[] => active.includes(prayer) ? active.filter(i => i !== prayer)
     : [...active.filter(i => !EXCLUSIVE.find(group => group.includes(prayer))?.includes(i)), prayer];
-// One tick holds 5 inputs (scripts/pk.ts, prayerFlick): two prayers off and on, and one attack.
-const MAX_FLICKED = 2;
+// The server reads 5 inputs of a player in one tick and keeps the rest for the next tick (engine NetworkPlayer.ts:70,
+// ClientGameProtCategory USER_EVENT). A flick never sends more than 5 in a tick. Two prayers go off and on in one tick
+// with one attack. Three or four prayers all go off in the first tick; the protection prayer comes back on in that
+// tick, and the others in the next tick. Five prayers or more would leave no input for the protection prayer.
+const TICK_INPUTS = 5;
+const MAX_FLICKED = 4;
+// The order prayers come back on: protection, then Defence, then the others.
+const backFirst = (prayer: number) => prayer >= 12 ? 0 : [0, 3, 9].includes(prayer) ? 1 : 2;
 
 type Action = { type: string; [k: string]: unknown };
 type Pending = { kind: 'none' } | { kind: 'attack'; action: Action } | { kind: 'other'; still: number };
@@ -103,6 +109,8 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     let scriptPrayers: number[] = [];
     let pending: Pending = { kind: 'none' };
     let expect: number[] | null = null, expectAt = 0, wasActive = false, lastTile = '';
+    // Prayers of a flick that come back on in its second tick.
+    let resume: number[] = [];
     let pointsFirst: number | undefined, pointsLast: number | undefined, taken = 0, lastEvent = -Infinity;
 
     const attackTarget = (a: Action, st: any): boolean => {
@@ -124,7 +132,8 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
             scriptPrayerAt = now; stats.manual = true; owned.clear();
             // The guard flicked in this tick and the script chose from the prayers before the flick: the inputs can
             // cancel each other. The repair then makes the prayers the script chose.
-            expect = expect && expectAt === now ? afterToggle(expect, prayer) : null;
+            expect = expect && (expectAt === now || resume.length) ? afterToggle(expect, prayer) : null;
+            resume = [];
             return;
         }
         if (NEUTRAL.has(a.type)) return;
@@ -220,6 +229,14 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         const safe = !windows && pending.kind !== 'other';
 
         if (now - scriptPrayerAt < 3) return;
+        // The second tick of a flick of three or four prayers.
+        if (resume.length) {
+            if (!safe) { if (now - expectAt >= 10) { resume = []; expect = null; } return; }
+            for (const i of resume) toggle(i);
+            resume = []; expectAt = now;
+            resend(st);
+            return;
+        }
         // A flick must leave every prayer on. One that stayed off two ticks later is turned on again, once.
         if (expect) {
             if (now - expectAt < 2) return;
@@ -253,13 +270,20 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
                 return;
             }
         }
-        if (!active.length || now - flickAt < every) return;
+        // Three or four prayers flick every 4 ticks, the longest gap the timer allows: each flick leaves the prayers of
+        // its second tick off for one tick.
+        if (!active.length || now - flickAt < (active.length > 2 ? 4 : every)) return;
         if (active.length > MAX_FLICKED) { stats.holds++; return; }
-        for (const i of active) toggle(i);
-        for (const i of active) toggle(i);
+        const order = [...active].sort((a, b) => backFirst(a) - backFirst(b));
+        const attack = pending.kind === 'attack' ? 1 : 0;
+        // With no input left for a prayer, the attack waits for the second tick and the first prayer comes back now.
+        const now1 = Math.max(1, TICK_INPUTS - order.length - attack);
+        for (const i of order) toggle(i);
+        for (const i of order.slice(0, now1)) toggle(i);
+        resume = order.slice(now1);
         expect = active; expectAt = now; flickAt = now;
         stats.flicks++;
-        resend(st);
+        if (order.length + Math.min(now1, order.length) + attack <= TICK_INPUTS) resend(st);
     });
 
     const stop = () => {
