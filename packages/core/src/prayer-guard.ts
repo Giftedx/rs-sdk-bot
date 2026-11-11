@@ -25,6 +25,7 @@ export const PROTECT = { magic: 12, missiles: 13, melee: 14 } as const;
 const PROTECT_LEVEL: Record<number, number> = { 12: 37, 13: 40, 14: 43 };
 
 export type AttackStyle = 'melee' | 'ranged' | 'magic';
+const PROTECT_FROM: Record<AttackStyle, number> = { melee: PROTECT.melee, ranged: PROTECT.missiles, magic: PROTECT.magic };
 // The protection prayer for one NPC, from a table of the styles its attack script can use
 // (packages/knowledge/src/npc-attack-styles.ts). An NPC that is not in the table uses melee. An NPC with melee and
 // another style uses melee while it stands next to the player.
@@ -37,8 +38,11 @@ export const protectByStyle = (table: ReadonlyMap<number, readonly AttackStyle[]
 
 // One NPC that attacks first (packages/knowledge/src/npc-hunters.ts).
 export interface Hunter { range: number; wander: number; level: number; tooStrong: boolean }
-// Engine Player.ts isInWilderness.
-const inWilderness = (x: number, z: number) => x >= 2944 && x < 3392 && ((z >= 3520 && z < 6400) || (z >= 9920 && z < 12800));
+// The Wilderness level of a tile, 0 outside: one level for each 8 tiles north of the south edge of a zone
+// (area_wilderness/scripts/wilderness_levels.rs2; zones in area_wilderness/configs/wilderness_zones.dbrow).
+export const wildernessLevel = (x: number, z: number): number => x < 2944 || x >= 3392 ? 0
+    : z >= 3520 && z < 6400 ? Math.floor((z - 3520) / 8) + 1
+    : z >= 9920 && z < 12800 ? Math.floor((z - 9920) / 8) + 1 : 0;
 // The farthest NPC the guard treats as a threat before it attacks.
 const HUNT_VIEW = 15;
 
@@ -47,6 +51,12 @@ export interface PrayerGuardOptions {
     // the player is within the NPC's hunt range plus its wander range, and the NPC's too-strong rule does not
     // exclude the player's combat level. Without a table, the guard waits for an NPC that targets the player.
     hunters?: ReadonlyMap<number, Hunter>;
+    // Players in the Wilderness. With this value, a player in view is a threat when the level rule lets that player
+    // attack: the combat level difference is not above the lower Wilderness level of the two tiles
+    // (skill_combat/scripts/pvp/pvp_combat.rs2:32, pvp_level_check).
+    // `ignore`: account names in lower case that are never a threat. `style`: the attack style of one player, null
+    // when it is not known; the guard then uses melee for a player on the next tile and magic for a farther one.
+    players?: { ignore?: ReadonlySet<string>; style?: (player: any) => AttackStyle | null };
     // false: never turn a protection prayer on; only keep the script's prayers free.
     // A function: the protection prayer for one attacking NPC (null when only a hit was seen). Default: melee.
     protect?: false | ((npc: any | null) => number | null);
@@ -111,9 +121,23 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         stats.resends++;
     };
 
+    const rivalPlayer = (st: any, p: any, self: unknown): { player: any; attacks: boolean } | null => {
+        const mine = o.players ? wildernessLevel(p.worldX, p.worldZ) : 0;
+        if (mine < 1) return null;
+        let best: { player: any; attacks: boolean } | null = null;
+        for (const q of st.nearbyPlayers ?? []) {
+            if (o.players!.ignore?.has(String(q.name).toLowerCase())) continue;
+            const level = Math.min(mine, wildernessLevel(q.worldX ?? q.x, q.worldZ ?? q.z));
+            if (level < 1 || Math.abs(q.combatLevel - p.combatLevel) > level) continue;
+            const attacks = q.combatTargetType === 'player' && q.combatTargetIndex === self;
+            if (!best || (attacks && !best.attacks) || (attacks === best.attacks && q.distance < best.player.distance)) best = { player: q, attacks };
+        }
+        return best;
+    };
+
     const nearestHunter = (st: any, p: any): any | null => {
         if (!o.hunters) return null;
-        const wild = inWilderness(p.worldX, p.worldZ);
+        const wild = wildernessLevel(p.worldX, p.worldZ) > 0;
         let best: any | null = null;
         for (const n of st.nearbyNpcs ?? []) {
             const h = o.hunters.get(n.id);
@@ -152,11 +176,14 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
             const me = Number.isSafeInteger(self) ? 32768 + self : undefined;
             const attacker = (st.nearbyNpcs ?? []).find((n: any) => me !== undefined && n.targetIndex === me && n.hp !== 0
                 && (n.optionsWithIndex ?? []).some((op: any) => /^Attack$/i.test(op.text))) ?? null;
-            const npc = attacker ?? nearestHunter(st, p);
-            const hit = (st.combatEvents ?? []).some((e: any) => e.type === 'damage_taken' && e.sourceType === 'npc' && now - e.tick <= 8);
-            if (npc || hit) {
+            // A player that attacks comes first, then an NPC that attacks, then a player that can attack.
+            const rival = rivalPlayer(st, p, self);
+            const npc = rival?.attacks ? null : attacker ?? (rival ? null : nearestHunter(st, p));
+            const hit = (st.combatEvents ?? []).some((e: any) => e.type === 'damage_taken' && e.sourceType !== 'player' && now - e.tick <= 8);
+            if (npc || rival || hit) {
                 threatAt = now;
-                const choice = o.protect ? o.protect(npc) : PROTECT.melee;
+                const choice = !npc && rival ? PROTECT_FROM[o.players?.style?.(rival.player) ?? (rival.player.distance <= 1 ? 'melee' : 'magic')]
+                    : o.protect ? o.protect(npc) : PROTECT.melee;
                 if (choice !== null && prayers.prayerLevel >= (PROTECT_LEVEL[choice] ?? Infinity)) wanted = choice;
             }
         }
