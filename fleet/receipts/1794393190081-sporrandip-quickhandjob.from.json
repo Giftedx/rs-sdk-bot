@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1794393190081-sporrandip-quickhandjob",
  "account": "SporranDip",
  "partner": "Quickhandjob",
@@ -12,6 +12,11 @@
  "claim": "61603ac4-f516-45e1-b798-844b607dba17",
  "count": 0,
  "ok": false,
- "at": 1794393199819,
- "detail": "trade claimed"
+ "at": 1794393468390,
+ "detail": "session ended: disconnected",
+ "bank": {
+  "count": 78749,
+  "at": 1794393233274
+ },
+ "screen": false
 }
