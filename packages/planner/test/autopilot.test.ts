@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { ARROW_LOW, ARROW_STOCK, LOWE_STOCK, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
+import { ARROW_LOW, ARROW_STOCK, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -644,6 +644,36 @@ test('with no fire staff the alchemy kit buys fire runes, not a staff no market 
     const band = alch[0]!;
     expect(kitLacks(mage('Rich', {}, { Magic: 30 }), band.needs)!.at(-1)).toEqual({ of: ['staff of fire'], count: 1 });
     expect(kitLacks(mage('Rich', {}, { Magic: 30 }), band.needs, i => !/staff/.test(i))!.at(-1)).toEqual({ of: ['fire rune'], count: 250 });
+});
+
+test('an army account with no better blade buys one adamant scimitar before its melee bands, two accounts at a time', () => {
+    const army = new Set(['blade', 'edge', 'point']);
+    const sold: Market = { ...market, 'adamant scimitar': { id: 1331, name: 'Adamant scimitar', limit: KIT_PRICE_CAPS['adamant scimitar']! } };
+    const skills = { Thieving: 99, Attack: 99, Strength: 99, Defence: 80, Hitpoints: 90, Ranged: 99, Magic: 99, Prayer: 99 };
+    const kit = { coin: 900_000, shark: 40, 'bronze sword': 1 };
+    const pick = (s: Record<string, number>, items: Record<string, number>, extra: Partial<Inputs> = {}) =>
+        plan(inputs([acct('Blade', { ...skills, ...s }, items)], { army, market: sold, capacity: CAPACITY, ...extra }))[0]!;
+    const buy = pick({}, kit);
+    expect(buy.template!.id).toBe(KIT_BUY + WEAPON.id);
+    expect(buy.template!.args).toEqual([`scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=${KIT_PRICE_CAPS['adamant scimitar']} CASH_RESERVE=1000 ORDER_KEY=blade-kit0-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200`]);
+    expect(jobFor(buy, side)).toMatchObject({ script: 'scripts/chain.ts', repeat: false, resources: [WEAPON_MARKET] });
+    // A later buy takes the account's next order key.
+    expect(pick({}, kit, { kitSeq: new Map([['blade', 2]]) }).template!.args![0]).toContain('ORDER_KEY=blade-kit2-1331-0to1');
+    // With an adamant or rune blade, worn or banked, it fights on.
+    for (const blade of WEAPON_HELD) expect(pick({}, { ...kit, [blade]: 1 }).template!.id).toBe('army-trooper-defence-99');
+    // Under Attack 30, short of coins, with no seller under the cap, or after the buy was retired: no buy.
+    expect(pick({ Attack: 29 }, kit).template!.id).not.toBe(KIT_BUY + WEAPON.id);
+    expect(pick({}, { ...kit, coin: KIT_PRICE_CAPS['adamant scimitar']! }).template!.id).toBe('army-trooper-defence-99');
+    expect(pick({}, kit, { market }).template!.id).toBe('army-trooper-defence-99');
+    expect(pick({}, kit, { retired: new Set([pairKey('Blade', KIT_BUY + WEAPON.id)]) }).template!.id).toBe('army-trooper-defence-99');
+    // The Ranged band does not use the blade and comes first; the buy comes before the troopers and the Prayer filler.
+    expect(pick({ Ranged: 50 }, { ...kit, shortbow: 1, 'iron arrow': 500 }).template!.id).toBe('army-trooper-ranged-99');
+    expect(pick({ Defence: 99, Prayer: 80 }, kit).template!.id).toBe(KIT_BUY + WEAPON.id);
+    // Two accounts are away for it at a time; the third keeps its band.
+    const three = ids(plan(inputs(['Blade', 'Edge', 'Point'].map(n => acct(n, skills, kit)), { army, market: sold, capacity: CAPACITY })));
+    expect(Object.values(three).sort()).toEqual(['army-trooper-defence-99', KIT_BUY + WEAPON.id, KIT_BUY + WEAPON.id]);
+    // An account outside the army is not armed.
+    expect(plan(inputs([acct('Blade', skills, kit)], { army: new Set(['other']), market: sold, capacity: CAPACITY })).some(x => x.template?.id === KIT_BUY + WEAPON.id)).toBe(false);
 });
 
 test('with no fire on the market the alchemy kit buys its other lines, then the account buys a staff of fire at Zaff\'s', () => {
