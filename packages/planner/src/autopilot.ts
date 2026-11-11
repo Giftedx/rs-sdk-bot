@@ -58,6 +58,9 @@ export type Template = {
     // Proved on practice only. The planner gives it only while the plan's `aio` list names its id (Inputs.pilots), so
     // each first live run is a bounded pilot the owner starts.
     pilot?: true;
+    // A goal band whose missing kit is bought as a candidate of the band itself, as the weapon buy is: an account that
+    // can start a later band still gets it. Without the flag a kit is bought only when no band can start.
+    kitFirst?: true;
 };
 // One missing kit line: `count` more units of any one item of `of`.
 export type Lack = { of: readonly string[]; count: number };
@@ -115,6 +118,12 @@ export const KIT_BUY = 'kit-buy:', KIT_BUY_SCRIPT = 'scripts/buy-owned-ge-item.t
 export const WEAPON = { id: 'army-weapon', item: 'adamant scimitar', attack: 30, goal: 'fight with an adamant scimitar' } as const;
 export const WEAPON_HELD = ['adamant scimitar', 'adamant sword', 'adamant longsword', 'rune scimitar', 'rune sword', 'rune longsword', 'dragon longsword'] as const;
 export const WEAPON_BAND = 3.5, WEAPON_BUYERS = 2, WEAPON_MARKET = 'ge:weapon';
+// The quest band of the army: after the blade, before Ranged, so an account does its quests once and goes back to
+// training. One account at a time does Lost City: its tree spirit serves one fighter (practice: of three accounts at
+// the dramen tree together one finished and two ended "Someone else is fighting that"). LOST_CITY_MEALS is the food
+// the run carries with no prayer potion (scripts/quest-sweep.ts STURDY_MEALS).
+export const QUEST_BAND = 3.6, LOST_CITY = 'quest:lostcity', LOST_CITY_PLACES = 1, LOST_CITY_MEALS = 10;
+export const LOST_CITY_FOOD = ['lobster', 'swordfish', 'shark'] as const;
 // The coins a kit buy leaves in the bank (the buy script's CASH_RESERVE). A kit costs far less than FUND_RESERVE, which
 // guards a coin donor, so a buyer keeps only this.
 export const KIT_CASH_RESERVE = 1_000;
@@ -250,7 +259,7 @@ export function plan(inp: Inputs): Assignment[] {
     const admitted = (t: Template) => !t.pilot || !!inp.pilots?.has(t.id);
     for (const a of mine) for (const t of inp.templates) {
         if (inp.retired?.has(pairKey(a.name, t.id)) || !admitted(t)) continue;
-        if (t.quest) {
+        if (t.quest && t.tier !== 'goal') {
             if (questDone(a, t.quest.name) || !meets(a, t.needs)) continue;
             const after: Acct = { ...a, quests: new Set([...(a.quests ?? []), norm(t.quest.name)]) };
             for (const u of t.quest.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u) && !inp.retired?.has(pairKey(a.name, u.id)))) {
@@ -261,16 +270,26 @@ export function plan(inp: Inputs): Assignment[] {
             continue;
         }
         if (t.tier === 'goal') {
-            // One candidate per goal band whose target an army account has not met; never for anyone else.
-            if (!inp.army?.has(a.name.toLowerCase()) || !t.trains || (a.skills[t.trains.skill] ?? 1) >= t.trains.to) continue;
-            const goal = { band: t.band ?? 0, left: t.trains.to - (a.skills[t.trains.skill] ?? 1) }, reason = `army band ${goal.band}: ${t.trains.skill} to ${t.trains.to}`;
+            // One candidate per goal band whose target an army account has not met; never for anyone else. A band's
+            // target is a skill level, or a quest: that one stands until the account's status lists the quest complete,
+            // and an account whose status names no quests gets none.
+            const left = t.trains ? t.trains.to - (a.skills[t.trains.skill] ?? 1) : t.quest && a.quests && !questDone(a, t.quest.name) ? 1 : 0;
+            if (!inp.army?.has(a.name.toLowerCase()) || left <= 0) continue;
+            const goal = { band: t.band ?? 0, left }, reason = t.trains ? `army band ${goal.band}: ${t.trains.skill} to ${t.trains.to}` : `army band ${goal.band}: ${t.quest!.name}`;
             if (meets(a, t.needs)) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal });
             else if (inp.donors?.length && !inp.unfundable?.has(a.name.toLowerCase()) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs)))
                 cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, coins: coinShort(a, t.needs) });
             else if (coinShort(a, t.needs) === 0) {
                 // The band lacks only kit items: a buy with the account's own coins, or a free account's spare stock.
                 const lacks = kitLacks(a, t.needs, i => !!inp.market?.[i]);
-                if (lacks?.length) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, lacks });
+                const picks = t.kitFirst && lacks?.length ? lacks.map(l => l.of.filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]) : [];
+                const lines: KitLine[] = picks.length && picks.every(p => p !== undefined)
+                    ? picks.map((p, n) => ({ item: inp.market![p!]!.name, id: inp.market![p!]!.id, held: a.items[p!] ?? 0, limit: inp.market![p!]!.limit, quantity: lacks![n]!.count })) : [];
+                const cost = lines.reduce((n, l) => n + l.quantity * l.limit, 0);
+                if (lines.length && (a.items.coin ?? 0) >= cost + KIT_CASH_RESERVE + (t.needs?.items?.coins ?? 0) && !inp.retired?.has(pairKey(a.name, KIT_BUY + t.id)))
+                    cands.push({ account: a.name, template: kitBuyTemplate(t, a.name, lines, inp.kitSeq?.get(a.name.toLowerCase()) ?? 0), value: 0, resources: [],
+                        reason: `army band ${goal.band}: buys ${lines.map(l => `${l.quantity} ${l.item}`).join(', ')} for ${t.id}, at most ${cost} coins`, goal });
+                else if (lacks?.length) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, lacks });
             }
             continue;
         }
@@ -507,7 +526,7 @@ export const TROOPER_FIELD = 'trooper:battlefield', TROOPER_FIELD_CAPACITY = 14;
 export const STRIKE_TILE = 'strike:ardougne-guard-dog';
 // The places the AIO routes hold (aioTemplates). Each takes one account until a live pilot measures two.
 export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore: 'aio:varrock-east-mine', essence: 'aio:essence-mine', air: 'aio:air-altar' } as const;
-export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
+export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // Army goal bands (AGENTS.md goals: maxed tribrids), in order: Strength, Attack, Magic, Prayer, Ranged, Defence
 // last. Bands 6-8 are the Khazard troopers (TROOPER_BANDS), 9 is Prayer on the field (PRAYER_FIELD_BAND). Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile, MAX_KILLS=8): live 4/4 runs
@@ -767,6 +786,23 @@ export function catalogue(): Template[] {
         batchFor: a => ({ [norm(bone)]: BONE_KEEP + Math.ceil((xpForLevel(99) - xpForLevel(a.skills.Prayer ?? 1)) / BOUGHT_BONE_XP[boneId]!) }),
     });
     const dragonBones = boneBand('army-bury-dragon-99', 'dragon bones', 536, PRAYER_BAND + 0.1), bigBones = boneBand('army-bury-big-99', 'big bones', 532, PRAYER_BAND + 0.2);
+    // Lost City, which a dragon weapon asks of its wielder (levelrequire.rs2 levelrequire_zanaris_quest), through the
+    // AIO quester's chain (scripts/quest-chain.ts): Monk's Friend first for Woodcutting 56 and Murder Mystery for
+    // Crafting 51 (the dramen tree wants 36 and the staff 31; the chain skips a quest the status shows complete and
+    // skips Lost City while either level is short). The sweep takes off and banks what the account wears before the
+    // Entrana ship (scripts/quest-sweep.ts BARE), takes the quest pack from the bank and buys what a shop sells. The
+    // tree spirit is level 101 and is fought bare-handed. An account with Hitpoints and Defence 90 goes without the
+    // quest's prayer potions (no shop sells them) and carries LOST_CITY_MEALS of the food the quest script eats; the
+    // planner asks those levels and that food, and buys the food as the band's own candidate (`kitFirst`).
+    // Practice: research/quest-points-board.md (Lost City 3/3 from its preset) and research/combat-measure.md (the
+    // chain from an army account's state).
+    const lostCity: Template = {
+        id: 'army-quest-lostcity', family: 'aio:quester:mode:chain', script: 'scripts/aio.ts', args: ['quester', 'chain', 'drunkmonk,murder,zanaris'],
+        aio: 'quester:mode:chain', worker: 'scripts/quest-chain.ts', pilot: true, role: 'quest',
+        goal: "complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons", tier: 'goal', band: QUEST_BAND,
+        quest: { name: 'Lost City', unlocks: [] }, resources: [LOST_CITY], yields: () => [],
+        needs: { skills: { Prayer: 43, Hitpoints: 90, Defence: 90 }, items: { coins: 5000 }, pieces: { of: LOST_CITY_FOOD, count: LOST_CITY_MEALS } }, kitFirst: true,
+    };
     const prayerField: Template = {
         id: 'army-trooper-prayer-99', family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'],
         env: { TRAIN_SKILL: 'Hitpoints', GIANT_KILLS: '500', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1' }, role: 'combat', goal: 'train Prayer to 99 burying trooper bones on the field',
@@ -848,6 +884,7 @@ export function catalogue(): Template[] {
         arrowsGuild,
         arrowsLowe,
         ranged,
+        lostCity,
         prayerField,
         { id: 'thieving55', family: 'thieving60', script: 'scripts/generated/thieving60.ts', env: { TARGET: '55', CAP: '2500', CLEAN_FOOD: '1' }, role: 'thieving',
             goal: 'train Thieving to 55 for a knight spot', trains: { skill: 'Thieving', to: 55, unlocks: goldfarm.map(g => g.id) }, yields: () => [] },

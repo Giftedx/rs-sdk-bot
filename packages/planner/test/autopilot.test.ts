@@ -1036,3 +1036,43 @@ test('a smith with runite ore and coal smelts bars, then smiths rune scimitars, 
     expect(run(smith({ 'runite bar': 12, coin: 5000 })).template).toBeUndefined();
     expect(run(smith({ 'runite bar': 12, hammer: 1, coin: 5000 }, { Smithing: 89 })).template).toBeUndefined();
 });
+
+import { LOST_CITY, LOST_CITY_MEALS, LOST_CITY_PLACES, QUEST_BAND } from '../src/autopilot';
+test('an army account without Lost City takes the quest chain as a pilot, before Ranged, a few at a time', () => {
+    const maxed = { Thieving: 99, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 80, Magic: 99, Prayer: 77 };
+    const kit = { shark: 40, 'adamant scimitar': 1, shortbow: 1, 'bronze arrow': 500, coin: 100_000 };
+    const quests = (...done: string[]) => new Set(done.map(q => q.toLowerCase()));
+    const soldier = (name: string, done: ReadonlySet<string> | undefined, s: Record<string, number> = {}, items: Record<string, number> = {}): Acct =>
+        ({ ...acct(name, { ...maxed, ...s }, { ...kit, ...items }), ...(done ? { quests: done } : {}) });
+    const pilots = new Set(['army-quest-lostcity']);
+    const run = (accounts: Acct[], extra: Partial<Inputs> = {}) => plan(inputs(accounts, { army: new Set(accounts.map(a => a.name.toLowerCase())), capacity: CAPACITY, pilots, ...extra }));
+    const [x] = run([soldier('Kilt', quests())]);
+    expect(x!.template!.id).toBe('army-quest-lostcity');
+    expect(x!.reason).toBe(`army band ${QUEST_BAND}: Lost City`);
+    expect(jobFor(x!, side)).toMatchObject({ script: 'scripts/aio.ts', args: ['quester', 'chain', 'drunkmonk,murder,zanaris'], repeat: false, resources: [LOST_CITY] });
+    // Not a pilot the plan names: the account trains Ranged. The same with the quest done, an unknown quest list,
+    // Prayer under Protect from Melee, or too few coins for the sweep's shop buys.
+    const ranged = (accounts: Acct[], extra: Partial<Inputs> = {}) => run(accounts, extra)[0]!.template!.id;
+    expect(ranged([soldier('Kilt', quests())], { pilots: new Set() })).toBe('army-trooper-ranged-99');
+    expect(ranged([soldier('Kilt', quests('Lost City'))])).toBe('army-trooper-ranged-99');
+    expect(ranged([soldier('Kilt', undefined)])).toBe('army-trooper-ranged-99');
+    expect(ranged([soldier('Kilt', quests(), { Prayer: 42 })])).toBe('army-trooper-ranged-99');
+    expect(ranged([soldier('Kilt', quests(), {}, { coin: 4_000 })])).toBe('army-trooper-ranged-99');
+    // With too little of the food the quest eats, the band buys the cheapest of it first, as a candidate of its own:
+    // the account could train Ranged, and still goes to the market. Sharks banked count as that food.
+    const food: Market = { lobster: { id: 379, name: 'Lobster', limit: KIT_PRICE_CAPS.lobster! }, shark: { id: 385, name: 'Shark', limit: KIT_PRICE_CAPS.shark! } };
+    const hungry = (items: Record<string, number>, extra: Partial<Inputs> = {}) => run([soldier('Kilt', quests(), {}, { shark: 0, trout: 200, ...items })], { market: food, ...extra })[0]!;
+    const buy = hungry({});
+    expect(buy.template!.id).toBe(KIT_BUY + 'army-quest-lostcity');
+    expect(buy.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).map(Number))).toEqual([[379, LOST_CITY_MEALS]]);
+    expect(buy.reason).toBe(`army band ${QUEST_BAND}: buys ${LOST_CITY_MEALS} Lobster for army-quest-lostcity, at most ${LOST_CITY_MEALS * KIT_PRICE_CAPS.lobster!} coins`);
+    expect(hungry({ shark: 4 }).template!.args!.map(a => a.match(/QUANTITY=(\d+)/)![1])).toEqual([String(LOST_CITY_MEALS - 4)]);
+    expect(hungry({ shark: LOST_CITY_MEALS }).template!.id).toBe('army-quest-lostcity');
+    // No such food on the market, or a retired buy: the account trains on.
+    expect(hungry({}, { market: {} }).template!.id).toBe('army-trooper-ranged-99');
+    expect(hungry({}, { retired: new Set([pairKey('Kilt', KIT_BUY + 'army-quest-lostcity')]) }).template!.id).toBe('army-trooper-ranged-99');
+    // LOST_CITY_PLACES accounts are away for it at a time; the rest keep training.
+    const many = run(['A', 'B', 'C', 'D'].map(n => soldier(n, quests())));
+    expect(many.filter(a => a.template!.id === 'army-quest-lostcity').length).toBe(LOST_CITY_PLACES);
+    expect(many.filter(a => a.template!.id === 'army-trooper-ranged-99').length).toBe(4 - LOST_CITY_PLACES);
+});

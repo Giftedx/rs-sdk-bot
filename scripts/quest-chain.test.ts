@@ -32,6 +32,9 @@ test('a quest whose skill check the account fails is named with the shortfall', 
     expect(questShortfall('seaslug', [{ name: 'Firemaking', level: 12 }])).toEqual(['firemaking 12/30']);
     expect(questShortfall('seaslug', [{ name: 'Firemaking', level: 30 }])).toEqual([]);
     expect(questShortfall('fishingcompo', undefined)).toEqual([]);   // the sweep trains Fishing to 10
+    // Lost City after Monk's Friend (Woodcutting 56) and Murder Mystery (Crafting 51) has both levels.
+    expect(questShortfall('zanaris', [{ name: 'Woodcutting', level: 1 }, { name: 'Crafting', level: 51 }])).toEqual(['woodcutting 1/36']);
+    expect(questShortfall('zanaris', [{ name: 'Woodcutting', level: 56 }, { name: 'Crafting', level: 51 }])).toEqual([]);
     // TheFullMonty: Thieving 99 and Crafting 52, every other skill 1.
     const monty = [{ name: 'Thieving', level: 99 }, { name: 'Crafting', level: 52 }, { name: 'Magic', level: 99 }];
     expect(questShortfall('dig', monty)).toEqual(['herblore 1/10', 'agility 1/10']);
