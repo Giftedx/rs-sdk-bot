@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794397526794,
+ "at": 1794398257943,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -575,15 +575,17 @@
   },
   {
    "account": "Bigchopper",
-   "script": "scripts/session-check.ts",
-   "args": [],
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "scorpion"
+   ],
    "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-5ab3ca64-d33b-4f7a-88e8-61844a65565b"
+    "CAP": "6000",
+    "COORDINATOR_RUN_ID": "task-ccd6a6a9-b7b8-43d1-9b5d-0a017e6d276e"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "run-session-recovery-bigchopper-scorpion-current [task-5ab3ca64-d33b-4f7a-88e8-61844a65565b]",
+   "goal": "run-scorpion-bigchopper-quest-sweep-r4 [task-ccd6a6a9-b7b8-43d1-9b5d-0a017e6d276e]",
    "role": "firemaking"
   }
  ]
