@@ -1,6 +1,36 @@
 import {test,expect} from 'bun:test';
-import {readFileSync} from 'node:fs';
-import {questSweepProofAccountEnv,questSweepProofEndpoints,questSweepChecks,questSweepChildConfiguration,QUEST_SWEEP_PROOF_CASE_IDS} from '../src/quest-sweep-proof';
+import {readFileSync,writeFileSync,mkdtempSync,existsSync,rmSync} from 'node:fs';
+import {join} from 'node:path';
+import {tmpdir} from 'node:os';
+import {questSweepProofAccountEnv,questSweepProofEndpoints,questSweepChecks,questSweepChildConfiguration,runQuestSweepProofCase,QUEST_SWEEP_PROOF_CASE_IDS} from '../src/quest-sweep-proof';
+
+test('a required case child that exits nonzero writes its log and snapshot, then rejects before any later case',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'qsw-nonzero-')),save=join(dir,'live.sav');
+ try{
+  writeFileSync(save,'after');
+  const stream=(text:string,open=false)=>new ReadableStream<Uint8Array>({start(c){c.enqueue(new TextEncoder().encode(text));if(!open)c.close();}});
+  const child=(id:string,exit:number,open=false)=>({id,exit:-1,timedOut:false,saveMatched:false,seconds:0,
+   spawn:()=>({pid:1,stdout:stream('START 2947 3368 0\nRESULT fail quest-sweep ball\n',open),stderr:stream(''),exited:Promise.resolve(exit)})});
+  let retained=0,killed=0;
+  const run=(c:ReturnType<typeof child>)=>{const {spawn,...record}=c;return{record,done:runQuestSweepProofCase({dir,record,save,timeoutMs:60000,drainMs:50,spawn,
+   matched:async()=>false,retain:()=>{retained++;},kill:async()=>{killed++;}})};};
+  // The native.json record: ball-worn-kit is required to exit 0. Its stdout stays open after exit, as a held pipe would.
+  const ball=run(child('ball-worn-kit',255,true));
+  await expect(ball.done).rejects.toThrow('quest-sweep proof case ball-worn-kit failed: exit=255 expected=0 timedOut=false saveMatched=false');
+  expect(ball.record).toMatchObject({exit:255,timedOut:false,saveMatched:false});
+  expect(readFileSync(join(dir,'ball-worn-kit.log'),'utf8')).toContain('RESULT fail quest-sweep ball');
+  expect(readFileSync(join(dir,'ball-worn-kit-after.sav'),'utf8')).toBe('after');
+  expect([retained,killed]).toEqual([1,0]);
+  // A refusal case owns exit 1 and continues; exit 0 there is the unexpected path.
+  await expect(run(child('ball-missing-gloves',1)).done).resolves.toMatchObject({exit:1});
+  await expect(run(child('doric-no-cash',0)).done).rejects.toThrow('expected=1');
+  // A spawn failure still leaves the log and snapshot and rejects.
+  const record={id:'imp-surplus-beads',exit:-1,timedOut:false,saveMatched:false,seconds:0};
+  await expect(runQuestSweepProofCase({dir,record,save,timeoutMs:60000,spawn:()=>{throw Error('spawn ENOENT');},matched:async()=>false,retain:()=>{}})).rejects.toThrow('spawn ENOENT');
+  expect(readFileSync(join(dir,'imp-surplus-beads.log'),'utf8')).toContain('spawn ENOENT');
+  expect(existsSync(join(dir,'imp-surplus-beads-after.sav'))).toBe(true);
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
 test('a newly created Windows local bot gets both owned endpoints even when SDK newline replacement omitted the gateway',()=>{
  const p=questSweepProofEndpoints({engine:22100,gateway:22101,management:22102,tcp:22103},'quest-sweep-12345678901234567890');
  const env=questSweepProofAccountEnv('SERVER=localhost\r\nTELEMETRY=false\r\n',p);

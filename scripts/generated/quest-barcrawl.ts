@@ -11,6 +11,14 @@
 // (Foresters Arms), the walk back to the outpost.
 import { openQuest } from './quest-lib';
 
+type Quest = Awaited<ReturnType<typeof openQuest>>;
+
+export async function establishBarcrawlGate(readState: () => number | undefined, run: () => Promise<void>): Promise<void> {
+    if (readState() === 2) return;
+    await run();
+    if (readState() !== 2) throw Error('Barcrawl gate state 2 unobserved');
+}
+
 const CARD = 455;
 const GUARD = { x: 2544, z: 3569 };
 const SIGN = /sign(s|ing)? (your|2) (barcrawl )?cards?|scrawls his signature/i;
@@ -36,8 +44,7 @@ const ARDY_DECK = { x: 2683, z: 3268 };        // 1_41_51_59_4
 const BLUR_LADDER = { x: 2466, z: 3495 };      // ladder (1747) in the Grand Tree, maps/m38_54.jm2; level 1 reaches Blurberry
 const GNOME_GATE = { id: 190, x: 2459, z: 3383 }; // gnome_areagate (areas/area_gnome/scripts/gnome_gate.rs2), entrances z 3382 / 3385
 
-const q = await openQuest({ cap: 4000, eatAt: 50, food: [379], lumbridgeOk: false });
-try {
+export async function runBarcrawl(q: Quest): Promise<{ done: boolean; signed: number }> {
     let signed = 0;
     const levelIs = (l: number) => () => q.lvl() === l;
     const gangplank = () => q.findLoc(l => /gangplank/i.test(l.name) && (l.optionsWithIndex ?? []).length > 0 && l.distance <= 8);
@@ -124,5 +131,16 @@ try {
     await q.converse([], () => !q.dialogOpen(), 10);
     const done = q.sawText(/you can come in now/i) && !q.has(CARD);
     q.milestone('complete');
-    await q.end(done && signed === 10, `bars=${signed} card=${q.has(CARD)}`);
-} catch (e) { await q.fail(String(e)); }
+    return { done: done && signed === 10, signed };
+}
+
+async function main(): Promise<void> {
+    const q = await openQuest({ cap: Number(process.env.CAP ?? 4000), eatAt: 50, food: [379], lumbridgeOk: false });
+    try {
+        const result = await runBarcrawl(q);
+        await q.end(result.done, `bars=${result.signed} card=${q.has(CARD)}`);
+    } catch (e) { await q.fail(String(e)); }
+}
+
+// The sweep imports this file and names it by its file name (scripts/quest-sweep.ts handOver).
+if (import.meta.main || (globalThis as { QUEST_SCRIPT_ID?: string }).QUEST_SCRIPT_ID === 'quest-barcrawl') await main();
