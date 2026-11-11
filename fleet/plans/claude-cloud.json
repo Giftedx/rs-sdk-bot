@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794432312162,
+ "at": 1794432995095,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -117,24 +117,21 @@
   },
   {
    "account": "Fatstack",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "foraging",
-    "flax",
-    "1800",
-    "28"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "pick flax at Seers to spin for the Crafting a black dragonhide body asks",
-   "role": "crafting",
-   "template": "army-leather-flax",
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "claude-cloud",
    "resources": [
-    "aio:seers-flax"
+    "knight:2582,3297"
    ]
   },
   {
