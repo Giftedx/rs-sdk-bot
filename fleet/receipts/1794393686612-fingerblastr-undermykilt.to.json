@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794393686612-fingerblastr-undermykilt",
+ "account": "UnderMyKilt",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bronze arrow",
+ "requested": 500,
+ "claim": "3ede254f-52ae-4a3c-b859-788e9ae5ea10",
+ "count": 0,
+ "ok": false,
+ "at": 1794393691049,
+ "detail": "trade claimed"
+}
