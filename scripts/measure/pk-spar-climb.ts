@@ -15,6 +15,7 @@
 // session can take the practice slot. Every evaluation is one line in .practice/pk-spar/climb.jsonl. The engines use
 // ports from 21600 (BENCH_PORT_BASE), apart from the bench's own 21000, so a bench of another session can run beside.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { freemem } from 'node:os';
 import { resolve } from 'node:path';
 import type { Profile } from '../pk-spar';
 
@@ -83,8 +84,9 @@ if (import.meta.main) {
     const main = /[\\/]\.claude[\\/]worktrees[\\/]/.test(root) ? resolve(root, '..', '..', '..') : root;
     const wait = async () => {
         for (;;) {
-            let headroom = Infinity;
-            try { headroom = (await (await fetch('http://127.0.0.1:3100/api/state', { signal: AbortSignal.timeout(4000) })).json() as { capacity?: { headroomGB?: number } }).capacity?.headroomGB ?? Infinity; } catch { /* no dashboard: no limit known */ }
+            // With no dashboard, the PC's own free memory less the dashboard's 8 GB floor.
+            let headroom = freemem() / 2 ** 30 - 8;
+            try { headroom = (await (await fetch('http://127.0.0.1:3100/api/state', { signal: AbortSignal.timeout(4000) })).json() as { capacity?: { headroomGB?: number } }).capacity?.headroomGB ?? headroom; } catch { /* no dashboard */ }
             const paused = existsSync(resolve(main, '.practice/pk-climb-pause'));
             if (!paused && headroom >= Number(process.env.CLIMB_HEADROOM_GB ?? 1)) return;
             console.log(`CLIMB wait ${paused ? 'pause file' : `headroom ${headroom.toFixed(2)} GB`}`);
