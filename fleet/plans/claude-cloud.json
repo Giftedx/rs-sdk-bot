@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794389569881,
+ "at": 1794389764172,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -75,24 +75,6 @@
    "resources": []
   },
   {
-   "account": "Fingerblastr",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit10-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on iron arrows",
-   "role": "supply",
-   "template": "kit-buy:army-hunt-black-dragons",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
    "account": "TheFullMonty",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -163,6 +145,24 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit10-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on bronze arrows",
+   "role": "supply",
+   "template": "kit-buy:army-hunt-black-dragons-bronze",
+   "autopilot": "claude-cloud",
+   "resources": []
   },
   {
    "account": "Kiltlifter",
