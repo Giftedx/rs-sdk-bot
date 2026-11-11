@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794372718716,
+ "at": 1794372783641,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -103,6 +103,31 @@
    ]
   },
   {
+   "account": "Dipstick",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Attack",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Attack to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-attack-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
    "account": "KnightRider",
    "script": "scripts/alch-train.ts",
    "args": [
@@ -118,19 +143,6 @@
    "template": "army-alch-magic-99",
    "autopilot": "claude-cloud",
    "resources": []
-  },
-  {
-   "account": "Dipstick",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-8ec831e8-d879-422e-9f73-7e0c83a4a589"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "claude-cloud-recover-dipstick-20261111t044758z [task-8ec831e8-d879-422e-9f73-7e0c83a4a589]",
-   "role": "combat"
   }
  ]
 }
