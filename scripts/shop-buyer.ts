@@ -308,10 +308,12 @@ export function shopTargetsMet(targets: ShopPurchaseTarget[], inventory: { name:
     });
 }
 
-export function stockWaitStatus(now: number, since: number | undefined, limit: number) {
+// poll is the ticks between two looks at an empty shelf. A shared shelf that other players also buy from needs 1:
+// the unit that comes back goes to the first buyer.
+export function stockWaitStatus(now: number, since: number | undefined, limit: number, poll = 15) {
     const started = since ?? now;
     const remaining = limit > 0 ? Math.max(0, limit - (now - started)) : Infinity;
-    return { since: started, done: remaining === 0, waitTicks: Math.min(15, remaining) };
+    return { since: started, done: remaining === 0, waitTicks: Math.min(Math.max(1, poll), remaining) };
 }
 
 export function shopFinishOk(bought: number, targetMet: boolean, stop: string): boolean {
@@ -638,7 +640,7 @@ try {
             // Every item owned to STOCK_TARGET: say so, rather than wait out NO_BUY_TICKS and report stock-wait with stock on the
             // shelf (live: 500 fire runes bought, 2,533 left, "stock-wait").
             if (shopTargetsMet(conf.items, s.sdk.getInventory(), stock, Number(process.env.STOCK_TARGET ?? 500))) { stopReason = 'stock-target'; break; }
-            const waiting = stockWaitStatus(s.tick(), noBuySince, NO_BUY_TICKS);
+            const waiting = stockWaitStatus(s.tick(), noBuySince, NO_BUY_TICKS, Number(process.env.STOCK_POLL_TICKS ?? 15));
             if (NO_BUY_TICKS > 0) noBuySince = waiting.since;
             if (waiting.done) { noBuyTicks = s.tick() - waiting.since; stopReason = 'stock-wait'; break; }
             await waitTicks(s, waiting.waitTicks);
