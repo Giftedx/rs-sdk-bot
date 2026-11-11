@@ -1,7 +1,26 @@
 {
  "side": "claude-cloud",
- "at": 1794422652525,
+ "at": 1794423250131,
  "jobs": [
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2582,3297"
+   ]
+  },
   {
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
@@ -22,25 +41,6 @@
    "resources": [
     "shop:lowe",
     "shop:aubury"
-   ]
-  },
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2582,3297"
    ]
   },
   {
