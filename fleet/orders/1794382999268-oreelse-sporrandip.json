@@ -1,0 +1,22 @@
+{
+ "id": "1794382999268-oreelse-sporrandip",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "OreElse",
+ "to": "SporranDip",
+ "item": "Rune scimitar",
+ "count": 1,
+ "start": 1794382999268,
+ "end": 1794397399268,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
