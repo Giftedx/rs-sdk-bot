@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794371171980,
+ "at": 1794371268469,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -83,21 +83,27 @@
   },
   {
    "account": "Knightstick",
-   "script": "scripts/alch-train.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "21",
-    "1500"
+    "1500",
+    "trooper"
    ],
-   "env": {},
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-strike-magic-21",
+   "template": "army-trooper-prayer-99",
    "autopilot": "claude-cloud",
    "resources": [
-    "strike:ardougne-guard-dog"
+    "trooper:battlefield"
    ]
   },
   {
@@ -127,48 +133,31 @@
   },
   {
    "account": "SporranDip",
-   "script": "scripts/chain.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "scripts/shop-buyer.ts dargaud 800 ITEMS=willow.shortbow STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=4000 COIN_RESERVE=500 MAX_SPEND=3000",
-    "scripts/shop-buyer.ts dargaud 800 ITEMS=mithril.arrow|steel.arrow|iron.arrow|bronze.arrow STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=51000 COIN_RESERVE=500 MAX_SPEND=50000"
+    "ardy",
+    "400"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ITEMS": "bronze arrow",
+    "STOCK_TARGET": "500",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "5000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "4000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy a willow shortbow and arrows up to mithril at the Ranging Guild for the Ranged band",
+   "goal": "buy bronze arrows at Aemad in East Ardougne for the Ranged band",
    "role": "supply",
-   "template": "army-arrows-guild",
+   "template": "army-arrows-ardy",
    "autopilot": "claude-cloud",
    "resources": [
-    "shop:dargaud"
-   ]
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
+    "shop:ardy"
    ]
   },
   {
