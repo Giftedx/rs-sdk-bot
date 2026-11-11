@@ -26,6 +26,20 @@ test('accounts with nothing to recover are skipped quietly', () => {
     expect(eligibility({ ...base, pidAlive: () => true })).toMatchObject({ eligible: false, reason: 'worker still alive', log: false });
 });
 
+test('a held logout with no claim is eligible once the swarm has recorded that attempt as orphaned', () => {
+    // A trade worker dropped and fleet sync released its claim: the swarm's orphan end names the held attempt.
+    const proof: LogoutProof = { ...held, attemptId: '1794362885215-0000001822-0000000001' };
+    const orphan = { at: 1794365516000, reason: `exit orphaned: attempt ${proof.attemptId} owner 1822 gone` };
+    for (const c of [null, { phase: 'released', kind: 'trade' }] as ClaimView[])
+        expect(eligibility({ ...base, proof, claim: c, end: orphan })).toEqual({ eligible: true, endedAt: orphan.at });
+    // An orphan end of another attempt, any other end, or no end: nothing to recover, quietly.
+    expect(eligibility({ ...base, proof, claim: null, end: { ...orphan, reason: 'exit orphaned: attempt 1794000000000-1-1 owner 9 gone' } })).toMatchObject({ eligible: false, reason: 'no held fleet account claim', log: false });
+    expect(eligibility({ ...base, proof, claim: null })).toMatchObject({ eligible: false, log: false });
+    expect(eligibility({ ...base, proof, claim: null, end: undefined })).toMatchObject({ eligible: false, log: false });
+    // An owner's stop file still holds the account.
+    expect(eligibility({ ...base, proof, claim: null, end: orphan, stopText: 'held: owner pause' })).toMatchObject({ eligible: false, log: true, reason: 'owner stop file holds the account' });
+});
+
 test('held sessions that cannot be recovered safely are refused with a logged reason', () => {
     expect(eligibility({ ...base, end: undefined })).toMatchObject({ eligible: false, log: true, reason: expect.stringContaining('end record gone') });
     expect(eligibility({ ...base, end: { at: 1, reason: 'died' } })).toMatchObject({ eligible: false, log: true, reason: 'death needs a person' });
