@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794372169382,
+ "at": 1794372330110,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -34,35 +34,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "knight:2582,3297"
-   ]
-  },
-  {
-   "account": "Deeppockets",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "catherby_arrows",
-    "600"
-   ],
-   "env": {
-    "ITEMS": "iron arrow|bronze arrow",
-    "STOCK_TARGET": "1000",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "BANK_AT": "0",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "21000",
-    "COIN_RESERVE": "500",
-    "MAX_SPEND": "20000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
-   "role": "supply",
-   "template": "army-arrows-catherby",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "shop:catherby_arrows"
    ]
   },
   {
@@ -172,6 +143,35 @@
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Deeppockets",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby_arrows",
+    "600"
+   ],
+   "env": {
+    "ITEMS": "iron arrow|bronze arrow",
+    "STOCK_TARGET": "1000",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "21000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "20000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-catherby",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:catherby_arrows"
    ]
   }
  ]
