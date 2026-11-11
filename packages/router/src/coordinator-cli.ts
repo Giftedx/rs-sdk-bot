@@ -293,7 +293,8 @@ export function settlePlanner(state:CoordinatorState,base=projectRoot,{save=save
   prepared=prepareProposal(state,JSON.parse(bytes.toString('utf8')),base,'model');
  }catch(error){
   if(typeof (error as NodeJS.ErrnoException)?.code==='string')throw error;
-  const failed={...state,lastPlanReason:'planner failed: '+String(error)};
+  // A refused proposal stays on disk. A planner that ended with no proposal leaves nothing to correct.
+  const failed={...state,lastPlanReason:'planner failed: '+String(error),...(hasProposal?{rejectedPlan:{runId,error:String(error)}}:{})};
   finishPlan(failed,Date.now(),false);
   save(failed,directory);
   Object.assign(state,failed);

@@ -151,6 +151,8 @@ test('an invalid model proposal is saved as a failed round and leaves definition
  expect(f.state.planFailures).toBe(2);
  settlePlanner(f.state,f.base);
  expect(loadState(f.directory).planFailures).toBe(3);
+ expect(loadState(f.directory).rejectedPlan?.runId).toBe('plan-test');
+ expect(loadState(f.directory).rejectedPlan?.error).toContain('Error');
  expect(loadState(f.directory).planner).toBeUndefined();
  expect(existsSync(f.addedPath)).toBe(false);
  expect(existsSync(f.accepted)).toBe(false);

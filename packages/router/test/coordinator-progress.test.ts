@@ -1,6 +1,6 @@
 import {test,expect} from 'bun:test';
-import {initialState,addTasks,startTask,finishTask,chooseTask,refreshQualifications,qualificationDemand,buildWorkOrder,fleetExpansion,activeBuildFocus,preparedNativeDelivery,compactState,ARCHIVE_AFTER_MS,type CoordTask} from '../src/coordinator';
-import {acceptProposal,gameCoverage,GAME_SKILLS,plannerPrompt,queueFacts} from '../src/coordinator-planner';
+import {initialState,addTasks,replaceTasks,startTask,finishTask,chooseTask,refreshQualifications,qualificationDemand,buildWorkOrder,fleetExpansion,activeBuildFocus,preparedNativeDelivery,compactState,ARCHIVE_AFTER_MS,type CoordTask} from '../src/coordinator';
+import {acceptProposal,gameCoverage,GAME_SKILLS,plannerPrompt,queueFacts,repairModelTask} from '../src/coordinator-planner';
 import {buildBrief} from '../src/author';
 import {fleetExpansionDemand,nativeDispatchReady} from '../src/coordinator-cli';
 import {reviewHold} from '../src/coordinator-decisions';
@@ -9,6 +9,27 @@ const task=(id:string,extra:Partial<CoordTask>={}):CoordTask=>({id,kind:'qualify
 const run=(id:string,deps:string[]=[])=>task(id,{kind:'run',account:'Helper',dependsOn:deps,accept:{quests:["Cook's Assistant"]}});
 function complete(s:ReturnType<typeof initialState>,id:string,ok:boolean,at:number,output:any={}){startTask(s,id,at-1,id);finishTask(s,{taskId:id,runId:id,ok,at,output});}
 
+test('a model task with one repairable field fault is repaired, and a fault with no safe repair names its rule and task',()=>{
+ const numbers=repairModelTask({...run('a'),args:[18000,'x'],env:null});
+ expect(numbers.args).toEqual(['18000','x']);expect('env' in numbers).toBe(false);
+ const short=repairModelTask({...run('b'),newEvidence:'Seen at the bank'});
+ expect(short.newEvidence).toBeUndefined();expect(short.why).toBe('Finish useful quest\n\nObservation\nSeen at the bank');
+ const build=task('c',{kind:'build',newEvidence:'New fault observed'});expect(repairModelTask(build)).toBe(build);
+ const good=run('d');expect(repairModelTask(good)).toBe(good);
+ const s=initialState();
+ expect(acceptProposal(s,{reason:'r',capabilities:[],tasks:[{...run('live'),args:[5]}]},undefined,'model')).toBe(1);
+ expect(s.tasks[0]!.spec.args).toEqual(['5']);
+ const refuse=(extra:any)=>()=>acceptProposal(initialState(),{reason:'r',capabilities:[],tasks:[{...run('live'),...extra}]},undefined,'model');
+ expect(refuse({env:['CAP']})).toThrow('env is an object of NAME:"string value" pairs, not a list of names (task live)');
+ expect(refuse({args:1})).toThrow('args is an array of strings, for example ["18000"], not a count or a number (task live)');
+});
+test('a refused replacement names the rule that the pair breaks',()=>{
+ const s=initialState();addTasks(s,[run('old'),task('other',{kind:'qualify'}),{...run('new'),account:'Second'}]);
+ expect(()=>replaceTasks(s,[{from:'old',to:'other'}])).toThrow('invalid task replacement: old (kind differs: run and qualify)');
+ expect(()=>replaceTasks(s,[{from:'old',to:'new'}])).toThrow('invalid task replacement: old (account, accountFrom or participants differ)');
+ expect(()=>replaceTasks(s,[{from:'old',to:'absent'}])).toThrow('to is not a task in the queue or in this proposal: absent');
+ expect(()=>replaceTasks(s,[{from:'gone',to:'new'}])).toThrow('invalid task replacement: gone (from is not a task in the queue)');
+});
 test('an exact repair and raw evidence reach the author brief, not only a generic goal',()=>{
  const t=task('repair',{kind:'build',why:'Repair generated save prefix; read retained failure.log',dependsOn:['old']});
  const work=buildWorkOrder(t,{old:{error:'requires generated fleet practice save'}},'/owned/run');
@@ -27,8 +48,10 @@ test('a long model observation reaches the build without changing manual proposa
  expect(saved.newEvidence?.length).toBeLessThanOrEqual(500);
  expect(buildWorkOrder(saved,{},'/owned/run')).toContain(evidence);
  expect(build.newEvidence).toBe(evidence);
- const invalid={...proposal,tasks:[{...run('unsafe'),newEvidence:evidence}]};
- expect(()=>acceptProposal(initialState(),invalid,undefined,'model')).toThrow('invalid new evidence');
+ const onRun={...proposal,tasks:[{...run('observed'),newEvidence:evidence}]};
+ expect(()=>acceptProposal(initialState(),onRun)).toThrow('newEvidence belongs to a build task only');
+ const moved=initialState();expect(acceptProposal(moved,onRun,undefined,'model')).toBe(1);
+ expect(moved.tasks[0]!.spec.newEvidence).toBeUndefined();expect(moved.tasks[0]!.spec.why).toContain(evidence.trim());
  const missingConsumer={...proposal,tasks:[build]};
  expect(()=>acceptProposal(initialState(),missingConsumer,undefined,'model')).toThrow('finite live consumer');
 });
