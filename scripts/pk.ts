@@ -337,7 +337,10 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             }
             if (o.maxDistance !== undefined && target.distance > o.maxDistance) { result.outcome = 'lost'; return result; }
             if (o.maxWild !== undefined && (wildernessLevel(at.z) > o.maxWild || wildernessLevel(target.z) > o.maxWild)) { result.outcome = 'lost'; return result; }
-        } else if (now - lastSeen > 10) { result.outcome = 'lost'; log(`PK lost ${targetName} after ${result.ticks} ticks`); return result; }
+        } else if (now - lastSeen > 10 && !(o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(state.inventory))) {
+            // While it escapes, a target out of view is the aim: the loop goes on until it is out of the Wilderness.
+            result.outcome = 'lost'; log(`PK lost ${targetName} after ${result.ticks} ticks`); return result;
+        }
         if (result.ticks >= cap) { log(`PK timeout against ${targetName}`); return result; }
         const inv = state.inventory, slotOf = (ids: readonly number[]) => inv.find(i => ids.includes(i.id));
         const oppCombat = Math.max(target?.combatLevel ?? 0, ...state.nearbyPlayers.filter(p => hits.some(h => h.src === p.index && now - h.tick <= 10)).map(p => p.combatLevel));

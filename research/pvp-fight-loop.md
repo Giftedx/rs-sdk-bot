@@ -10,11 +10,23 @@ in-process client's player entities (`webclient/src/dash3d/ClientPlayer.ts`, `Cl
 
 `scripts/pk-spar.ts` puts the fight loop on both sides: two own accounts fight each other, each with a named profile
 (a set of fight options; `PROFILES`). The bench case `pvp:spar` stages a mirror: both sides get the duel conditions
-below, with freeze runes and full special energy. The score is for side A: 100 for a kill, -100 for a death, plus the
-damage margin held inside 99 each way. `scripts/measure/pk-spar-ladder.ts <challenger> [champion]` runs the case for
-each seed with the challenger on each side and prints wins, losses, draws and the mean score; a profile that wins the
-ladder is the next champion. Gap: the spar stands on open ground, so movement, line of sight, escapes and a second
-attacker are not measured.
+below, with freeze runes and full special energy. The score is for side A: 200 for a kill and -200 for a death, plus
+the damage margin held inside 99 each way; an escape is 100 for the side that got away and -100 for the other; a
+fight that reaches the cap scores the margin alone. `scripts/measure/pk-spar-ladder.ts <challenger> [champion]` runs
+a case for each seed with the challenger on each side and prints wins, losses, draws and the mean score; a profile
+that wins the ladder is the next champion. With `--against <profile>` each of the two plays side A against that
+profile, for a case whose sides have different jobs.
+
+Map cases (`--case <key>`), each with the mirror kit:
+
+- `extra:spar-gap`: the two start 12 tiles apart.
+- `extra:spar-trees`: the two start 6 tiles apart at Wilderness level 3, at (3099, 3536) and (3105, 3536), with a
+  blocker on tiles 3101-3103 between them, so neither has line of sight.
+- `extra:spar-escape`: Wilderness level 36. Side B, the runner, has 3 sharks and a glory; out of food at 60 HP or less
+  it runs south to level 30 and rubs the glory. Side A, the hunter, must kill it first.
+
+Gap: the fight loop does not choose where to stand, so cover, line of sight as a defence and a second attacker are
+not measured.
 
 Spar findings. Conditions: bench case `pvp:spar`, lockstep practice engine, cap 900 ticks; a seed repeats its fight.
 Evidence: `.practice/pk-spar/*.json` in the worktree that ran them.
@@ -23,10 +35,18 @@ Evidence: `.practice/pk-spar/*.json` in the worktree that ran them.
    side B won. The loser had eaten all 18 sharks in each fight; the winner 18, 17 and 15. Each side used 7-10 specials.
    Gap: three fights; equal settings win or lose by the seed, so a small gain needs more seeds to show.
 2. **A freeze whenever the target is free loses a stand-up spar.** freeze against base, seeds 1, 2, 3 on each side: 2
-   wins, 4 losses, mean score -70.8 (scores -75, 26, 63, -168, -144, -127). Gap: six fights; no chase or escape, where
-   a freeze should matter.
+   wins, 4 losses, mean score -104.2 (scores -175, 126, 163, -268, -244, -227). Gap: six fights.
 3. **The fight loop's `dealt` counter reads low.** One spar: side A `dealt` 102 where side B took 274. The spar
    scores from damage taken. Gap: the cause in the SDK `damage_dealt` events is not found.
+4. **The hunter does not stop a runner, with or without a freeze.** `extra:spar-escape`, seeds 1, 2, 3, runner on
+   base: against a base hunter the runner got away 3 of 3 (glory escape at 246 and 247 ticks; the hunter lost sight of
+   it at 131); against a freeze hunter 3 of 3 (glory escape at 426 and 137; lost at 212). The hunter killed 0 of 6.
+   Gap: three seeds each; why the freeze does not hold the runner is not read from a trace.
+5. **A start out of sight or far apart does not stop the fight.** One run each at seed 7, base against base: first
+   damage at tick 19 from 2 tiles in the open, 31 from 12 tiles, 11 from 6 tiles with the blocker between; kills at
+   528, 495 and 628 ticks. The server walks an attacker to a tile with line of sight. Gap: one run each.
+6. **A side that escapes must not end its fight when the target leaves its view.** In the first escape spar the runner
+   returned `lost` 219 ticks in, still at Wilderness level 36. The loop keeps going while it escapes.
 
 ## Server rules the loop follows
 
