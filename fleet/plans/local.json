@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794372689414,
+ "at": 1794372901295,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -160,25 +160,6 @@
    "repeat": false,
    "goal": "reserved by the orchestrating session: buy 14 dragon longswords at Jakut in Zanaris for the PK army (owner request)",
    "role": "supply"
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
-   "autopilot": "local",
-   "resources": [
-    "knight:2653,3300"
-   ]
   },
   {
    "account": "Masterbaiter",
@@ -381,6 +362,25 @@
    "autopilot": "local",
    "resources": [
     "shop:betty"
+   ]
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
    ]
   },
   {
