@@ -26,7 +26,7 @@ import {BotActions} from '../vendor/rs-sdk/sdk/actions';
 import {runOwnedLoadout,validateOwnedKit,type OwnedKit} from './microbot-owned-loadout';
 import {productionStopRequested} from './microbot-c-lifetime';
 import {createShiloTransit,NATURE} from './microbot-rune-trip';
-import {retainedGhostSkull,retainedGhostBankSkull,leaveGhostBasement,inGhostBasement} from './ghost-basement-exit';
+import {retainedGhostSkull,retainedGhostBankSkull,leaveGhostBasement,inGhostBasement,dashThroughDoor} from './ghost-basement-exit';
 import {walkQuestCorridor} from './quest-walk';
 import {crossStrongholdGate,STRONGHOLD_GATE,type GateDeps} from './agility-order';
 import {crossesSea} from '../packages/core/src/spawn-index';
@@ -1111,7 +1111,11 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
   const near=(x:number,z:number,tol:number)=>{const p=st()?.player;return!!p&&Math.max(Math.abs(p.worldX-x),Math.abs(p.worldZ-z))<=tol;};
   await leaveGhostBasement({pos:()=>st()?.player,
    openDoor:async(_l,x,z)=>{const d=locAt(x,z),op=ops(d).find(o=>/^open$/i.test(o.text));if(d&&op){await s.bot.interactLoc(d,op.opIndex);await waitUntil(s,()=>!ops(locAt(x,z)).some(o=>/^open$/i.test(o.text)),{timeoutTicks:12});}},
-   dash:async(_l,x,z,tol)=>{for(let i=0;i<3&&!near(x,z,tol);i++){await s.direct({type:'walkTo',x,z,running:true,reason:'SDK'});await waitUntil(s,()=>near(x,z,tol),{timeoutTicks:30});}},
+   dash:(l,x,z,tol)=>dashThroughDoor({pos:()=>st()?.player,
+    walk:async(x,z)=>{await s.direct({type:'walkTo',x,z,running:true,reason:'SDK'});},
+    arrived:(x,z,tol)=>waitUntil(s,()=>near(x,z,tol),{timeoutTicks:30}),
+    closedDoor:within=>(st()?.nearbyLocs??[]).filter((d:any)=>/door|gate/i.test(d.name)&&near(d.x,d.z,within)&&ops(d).some(o=>/^open$/i.test(o.text))).sort((a:any,b:any)=>a.distance-b.distance)[0],
+    open:async d=>{const l=locAt(d.x,d.z),op=ops(l).find(o=>/^open$/i.test(o.text));if(l&&op){await s.bot.interactLoc(l,op.opIndex);await waitUntil(s,()=>!ops(locAt(d.x,d.z)).some(o=>/^open$/i.test(o.text)),{timeoutTicks:12});}}},l,x,z,tol),
    waitForLadder:()=>waitUntil(s,()=>!!locAt(3104,9576)||!!(st()?.nearbyLocs??[]).find((l:any)=>ops(l).some(o=>/climb-up|climb$/i.test(o.text))&&l.distance<=3),{timeoutTicks:15}),
    climbLadder:async()=>{const l=(st()?.nearbyLocs??[]).filter((l:any)=>ops(l).some(o=>/climb-up|^climb$/i.test(o.text))).sort((a:any,b:any)=>a.distance-b.distance)[0],op=ops(l).find(o=>/climb-up|^climb$/i.test(o.text));if(l&&op){const z0=st()?.player?.worldZ??0;await s.bot.interactLoc(l,op.opIndex);await waitUntil(s,()=>(st()?.player?.worldZ??z0)<UNDERGROUND,{timeoutTicks:30});}},
    waitForLanding:()=>waitUntil(s,()=>(st()?.player?.worldZ??UNDERGROUND)<UNDERGROUND,{timeoutTicks:15})});

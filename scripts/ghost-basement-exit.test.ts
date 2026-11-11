@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {leaveGhostBasement,retainedGhostSkull,retainedGhostBankSkull} from './ghost-basement-exit';
+import {leaveGhostBasement,retainedGhostSkull,retainedGhostBankSkull,dashThroughDoor} from './ghost-basement-exit';
 function fixture(){
  let position={worldX:3120,worldZ:9567,level:0},observed=false;
  const calls:string[]=[];
@@ -25,6 +25,25 @@ test('the banked skull route withdraws only from observed owned stock for the sa
 });
 test('the skull basement exits its room and observed ladder before the surface tower doors',async()=>{
  const f=fixture();await leaveGhostBasement(f.io);expect(f.calls).toEqual(['door:3111,9559','walk:3109,9560','walk:3104,9576','ladder observed','climb','surface observed','door:3107,3162','walk:3108,3164','door:3109,3166','walk:3109,3167']);
+});
+function doorDash(doorOpen:boolean){
+ let position={worldX:3111,worldZ:9559,level:0},open=doorOpen,first=true;
+ const calls:string[]=[];
+ const io={pos:()=>position,
+  walk:async(x:number,z:number)=>{calls.push(`walk:${x},${z}`);if(first){first=false;open=false;}if(open)position={worldX:x,worldZ:z,level:0};},
+  arrived:async(x:number,z:number,tol:number)=>Math.max(Math.abs(position.worldX-x),Math.abs(position.worldZ-z))<=tol,
+  closedDoor:(within:number)=>!open&&within>=1?{x:3110,z:9559}:undefined,
+  open:async(d:{x:number;z:number})=>{calls.push(`open:${d.x},${d.z}`);open=true;}};
+ return{io,calls,pos:()=>position,noDoor:()=>{io.closedDoor=()=>undefined;}};
+}
+test('a skull door that closes again on the first dash is re-opened before the next try',async()=>{
+ const f=doorDash(true);await dashThroughDoor(f.io,'skull exit corridor',3109,9560,1);
+ expect(f.calls).toEqual(['walk:3109,9560','open:3110,9559','walk:3109,9560']);expect(f.pos()).toEqual({worldX:3109,worldZ:9560,level:0});
+});
+test('a stalled dash with no closed door near fails at once instead of idling into the ladder wait',async()=>{
+ const f=doorDash(true);f.noDoor();
+ await expect(dashThroughDoor(f.io,'skull exit corridor',3109,9560,1)).rejects.toThrow('ghost exit: skull exit corridor blocked at 3111,9559 with no closed door within 2 tiles');
+ expect(f.calls).toEqual(['walk:3109,9560']);
 });
 test('an already surface account does not use the basement ladder',async()=>{
  const f=fixture();f.setPosition({worldX:3109,worldZ:3167,level:0});await leaveGhostBasement(f.io);expect(f.calls).toEqual([]);
