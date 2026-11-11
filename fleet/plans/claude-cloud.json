@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794368244102,
+ "at": 1794368308343,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -153,56 +153,6 @@
    ]
   },
   {
-   "account": "SporranDip",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
    "account": "Dipstick",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -273,10 +223,48 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-b6c3d0b6-09a5-4204-b615-e83e1c8466dc"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "claude-cloud-recover-deeppockets-20261111t033250z [task-b6c3d0b6-09a5-4204-b615-e83e1c8466dc]",
    "role": "supply"
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-3537dfc2-4041-45b0-bd94-d80108c6fac4"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-sporrandip-20261111t033250z [task-3537dfc2-4041-45b0-bd94-d80108c6fac4]",
+   "role": "combat"
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
   }
  ]
 }
