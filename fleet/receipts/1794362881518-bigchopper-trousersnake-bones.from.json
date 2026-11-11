@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794362881518-bigchopper-trousersnake-bones",
  "account": "Bigchopper",
  "partner": "TrouserSnake",
@@ -12,6 +12,19 @@
  "claim": "a217e331-0e63-42b4-ae1b-1cfd339b0241",
  "count": 0,
  "ok": false,
- "at": 1794364222138,
- "detail": "trade claimed"
+ "at": 1794365281911,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 37,
+  "after": 37
+ },
+ "bank": {
+  "count": 37,
+  "at": 1794364517715
+ },
+ "logout": {
+  "attemptId": "1794364222147-0000008788-0000000001",
+  "at": 1794365281897,
+  "sha256": "6dd079777223f4cf353982884343dd327e081002a6338ec38a0d08a13ebd31b5"
+ }
 }
