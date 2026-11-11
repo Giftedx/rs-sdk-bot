@@ -620,11 +620,19 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     (`extra:spar-rivals-tribrid-snare-x12`, seeds 1 and 2), where the champion without it has 55 and 17 in 72;
     against the league, 16 and 0. The champion profile and the hunter use it. Gap: every bench opponent reads the
     overhead; against one that ignores it and picks at random the rule guards half of its attacks.
-33. **Our own attack has the same hole, and the first answer costs more than it gives.** `adaptStyles` attacks with the
-    style the opponent's overhead shows once 4 of our last 6 attacks met the right overhead. With `counterRead` on
-    both sides it has 16 kills and 8 deaths in 24 spars, where the control has 4 and 8 in 12. Against the champion
-    without `counterRead` it has 7 kills and 5 deaths in 12, where `counterRead` alone has 33 and 3 in 36: an
-    overhead that follows the weapon also meets 4 of 6 by chance, and the rule then attacks into it. It is off.
-    Other rules against the champion, 12 spars each: the bow alone 2 to 10; the bow alone from 3 tiles 4 to 8; the
-    special from 30% health 7 to 5; the special as soon as it is ready 5 to 7. Gap: a style choice that a
-    counter-reader cannot predict and that does not attack into a following overhead.
+33. **The attack learns in the fight which way the opponent's overhead goes.** Our own attack had the hole of finding 32:
+    it never used a style the opponent's overhead covered, so an opponent with `counterRead` met most of it.
+    `adaptStyles` keeps, for two ways to choose a style, the share of attacks that met the right overhead in the
+    tick after the attack: `avoid` (a style the overhead does not show) and `into` (the style it shows, which an
+    opponent that predicts is about to leave). The next attack takes the way with the lower share, and one attack in
+    ten tries the other (`StyleArms` in `scripts/pk-read.ts`). The champion with it has 34 kills and 2 deaths in 36
+    spars against the champion without it (11 to 1, 11 to 1, 12 to 0; `extra:spar-mirror-snare-x12`, seeds 1 to 3).
+    Against an opponent whose overhead follows the weapon it has 12 kills and no death in 12, where the champion
+    without it has 10 and 2. Against the melee build, the hybrid and the ranger it has 22 kills and 2 deaths in 24
+    (23 and 1 without it); against the league 7 and 1 in 8 (16 and 0 in 16 without it); against itself 7 and 5. The
+    champion profile and the hunter use it. A fixed rule lost: the style the overhead shows after 4 of 6 guarded
+    attacks had 16 kills and 8 deaths against a counter-reader and 7 and 5 against the champion without `counterRead`, which
+    `counterRead` alone beat 33 to 3. Other rules against the champion, 12 spars each: the bow alone 2 to 10; the
+    bow alone from 3 tiles 4 to 8; the special from 30% health 7 to 5; the special as soon as it is ready 5 to 7.
+    Gap: the one attack in ten that tries the other way may cost a little against an opponent that never predicts
+    (22 to 2 against 23 to 1, and one league loss): not settled.

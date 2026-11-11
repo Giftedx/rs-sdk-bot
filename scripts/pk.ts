@@ -13,7 +13,7 @@ import { componentId } from '../packages/core/src/logout';
 import { questFlags } from '../packages/core/src/quest-status';
 import { holdSessionEater } from '../packages/core/src/sustain';
 import { tickWaits } from '../packages/core/src/tick-stream';
-import { armourDefence, StylePredictor, weakestFirst } from './pk-read';
+import { armourDefence, StyleArms, StylePredictor, weakestFirst, type StyleArm } from './pk-read';
 import type { NearbyPlayer } from '../vendor/rs-sdk/sdk/types';
 
 export const ITEMS = {
@@ -88,8 +88,8 @@ export type FightOptions = {
     // counterRead: with predictPrayer, against an opponent that has shown two styles, predict the style our overhead
     // does not show now (see the loop). Off by default.
     counterRead?: boolean;
-    // adaptStyles: when the opponent's overhead meets most of our attacks, attack with the style its overhead shows
-    // (see the loop). Off by default.
+    // adaptStyles: learn from the overhead each attack met whether to attack with a style the opponent's overhead does
+    // not show or with the one it shows (see the loop). Off by default.
     adaptStyles?: boolean;
     snapLead?: number;
     // styleByArmour: among the styles the opponent does not protect against, attack with the one its worn armour is
@@ -404,8 +404,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     let oppStyle: Style | null = null, oppChangedAt = start, earlyFreezes = 0;
     const rand = o.mixSeed === undefined ? Math.random : seededRandom(o.mixSeed);
     let charged = false, chargeAt = -10, stepAt = -10, flickAt = start, lastSpecStyle: Style | null = null;
-    let lastStyle: Style | null = null;
-    const guardLog: boolean[] = [];
+    let lastStyle: Style | null = null, arm: StyleArm = 'avoid', lastArm: StyleArm = 'avoid';
+    const arms = new StyleArms();
     const splatSeen: { cycles: number[] | null } = { cycles: null };
     let prevTarget: { x: number; z: number } | null = null, prevGap = 0, fleeingUntil = start, heading = { x: 0, z: 0 }, chaseAt = -10, fled = false;
     const hits: { tick: number; damage: number; src: number }[] = [], dealtLog: { tick: number; damage: number }[] = [];
@@ -634,12 +634,14 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const rotationTurn = nextStyle(turns, last, st => styleUsable(st) && !guarded.has(st)) ?? nextStyle(turns, last, styleUsable) ?? nextStyle(turns, last, st => hasStyle(o.kit, st));
         // The styles open now: usable and not under the opponent's overhead.
         const open = [...new Set(turns)].filter(st => styleUsable(st) && !guarded.has(st));
-        // adaptStyles: the tick after an attack shows the overhead it met. When 4 of the last 6 attacks met the right
-        // overhead, the opponent predicts the style we move to; the next attack then uses the style its overhead
-        // shows now, which it is about to leave.
-        if (lastStyle && now === lastAttackAt + 1) guardLog.push(protectedStyles(seen?.headicons).has(lastStyle));
-        const caught = !!o.adaptStyles && guardLog.length >= 6 && guardLog.slice(-6).filter(Boolean).length >= 4;
-        const shownStyle = caught ? [...protectedStyles(seen?.headicons)].find(st => turns.includes(st) && styleUsable(st)) : undefined;
+        // adaptStyles: the tick after an attack shows the overhead it met. The loop learns from that which way to
+        // choose the next style (StyleArms in pk-read.ts): one its overhead does not show, or the one it shows, which
+        // an opponent that predicts is about to leave. The way is set once for each attack.
+        if (lastStyle && now === lastAttackAt + 1) {
+            arms.record(lastArm, protectedStyles(seen?.headicons).has(lastStyle));
+            arm = o.adaptStyles ? arms.pick(rand) : 'avoid';
+        }
+        const shownStyle = arm === 'into' ? [...protectedStyles(seen?.headicons)].find(st => turns.includes(st) && styleUsable(st)) : undefined;
         const chosen = shownStyle ? shownStyle : !open.length ? null
             : o.styleByArmour && seen ? weakestFirst(armourDefence(seen.worn.map(id => names.get(id) ?? ''))).find(st => open.includes(st)) ?? null
             : o.mixStyles ? open[Math.floor(rand() * open.length)]! : null;
@@ -837,6 +839,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         } else void sdk.sendInteractPlayer(target.index, 2);
         result.attacks[turn.style]++;
         lastStyle = turn.style;
+        lastArm = shownStyle !== undefined && turn.style === shownStyle ? 'into' : 'avoid';
         last = turn.index;
         const walkTicks = turn.style === 'melee' ? ((me.runEnergy ?? 100) >= 100 ? Math.ceil(Math.max(0, cheb(at, target) - 1) / 2) : Math.max(0, cheb(at, target) - 1)) : 0;
         const delay = turn.style === 'ranged' && rapidSet ? 3 : turn.style === 'melee' ? meleeWeaponDelay(o.kit.melee, names) : TURN[turn.style];
