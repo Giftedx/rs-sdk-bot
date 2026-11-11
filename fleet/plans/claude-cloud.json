@@ -1,29 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794368114796,
+ "at": 1794368179222,
  "jobs": [
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "catherby"
-   ],
-   "env": {
-    "ITEMS": "rune arrowtips|adamant arrowtips",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy rune and adamant arrowtips at Catherby",
-   "role": "bank",
-   "template": "shop-arrowtips",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "shop:catherby"
-   ]
-  },
   {
    "account": "UnderMyKilt",
    "script": "scripts/chain.ts",
@@ -297,6 +275,28 @@
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby"
+   ],
+   "env": {
+    "ITEMS": "rune arrowtips|adamant arrowtips",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy rune and adamant arrowtips at Catherby",
+   "role": "bank",
+   "template": "shop-arrowtips",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:catherby"
    ]
   }
  ]
