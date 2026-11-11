@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794417095844,
+ "at": 1794417106097,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -197,7 +197,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-41c6cc8b-b8e5-472f-b1e5-f32d783a8907"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "claude-cloud-recover-fingersmith-20261111t170738z [task-41c6cc8b-b8e5-472f-b1e5-f32d783a8907]",
    "role": "combat"

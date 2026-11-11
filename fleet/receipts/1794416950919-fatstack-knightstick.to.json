@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794416950919-fatstack-knightstick",
  "account": "Knightstick",
  "partner": "Fatstack",
@@ -12,6 +12,12 @@
  "claim": "2cc570a8-110f-4714-8e09-d52bbf61f884",
  "count": 0,
  "ok": false,
- "at": 1794416956038,
- "detail": "trade claimed"
+ "at": 1794417104198,
+ "detail": "Error: route to 3182, 3440: precondition no route to 3182,3440,0",
+ "logout": {
+  "attemptId": "1794416956040-0000023010-0000000001",
+  "at": 1794417104192,
+  "sha256": "0287a664c5478580e613bd4bc82ae83c1d4248b047d334f777d9ddb679954eb7"
+ },
+ "screen": false
 }
