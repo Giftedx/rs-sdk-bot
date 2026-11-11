@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794389769783-trousersnake-sporrandip-feather",
  "account": "TrouserSnake",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Feather",
  "requested": 49,
  "claim": "bb8e1c4f-463c-4dc9-8790-c35b6231b7ed",
- "count": 0,
- "ok": false,
- "at": 1794389775176,
- "detail": "trade claimed"
+ "count": 49,
+ "ok": true,
+ "at": 1794389804702,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 49,
+  "after": 0
+ },
+ "bank": {
+  "count": 49,
+  "at": 1794389784764
+ },
+ "logout": {
+  "attemptId": "1794389775178-0000011777-0000000001",
+  "at": 1794389804694,
+  "sha256": "359d7a511221d44a6e36a98d0ccbd9fbd7a7e5e8e657a15c2e90a30bd7c896e6"
+ },
+ "screen": true
 }
