@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794379151062-abracadickra-knightrider-feather",
  "account": "KnightRider",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "Feather",
  "requested": 50,
  "claim": "7343741f-da61-4f5f-8f4d-88f79fe0f93b",
- "count": 0,
- "ok": false,
- "at": 1794379154090,
- "detail": "trade claimed"
+ "count": 50,
+ "ok": true,
+ "at": 1794379183534,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 50
+ },
+ "bank": {
+  "count": 50,
+  "at": 1794379182770
+ },
+ "logout": {
+  "attemptId": "1794379154093-0000024051-0000000001",
+  "at": 1794379183527,
+  "sha256": "c2d22cd50f303f8f8669eba59b98a143cc42c7cd660d069a48a51fcfeef8b345"
+ },
+ "screen": true
 }
