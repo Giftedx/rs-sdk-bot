@@ -1,0 +1,22 @@
+{
+ "id": "1794379112674-sporrandip-trousersnake",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "SporranDip",
+ "to": "TrouserSnake",
+ "item": "Coins",
+ "count": 100000,
+ "start": 1794379112674,
+ "end": 1794382712674,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
