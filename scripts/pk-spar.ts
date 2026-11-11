@@ -5,7 +5,8 @@
 // Practice only: openBot refuses a non-local server without DEMO_OK=1, and a spar kills one of the two accounts.
 // Usage: bun scripts/pk-spar.ts <bot a> <bot b> [CAP ticks, default 900] [<bot a> <bot b> ...]; more pairs fight at
 // the same time and the RESULT line counts them. Environment: SPAR_A and SPAR_B name a
-// profile (default base); SPAR_A_OPTS and SPAR_B_OPTS add fight options as JSON, e.g. {"eatAt":60}; SPAR_SCENARIO
+// profile (default base); SPAR_A_OPTS and SPAR_B_OPTS add fight options as JSON, e.g. {"eatAt":60}; SPAR_KITS names
+// the kit of each side of each pair (scripts/pk-kits.ts), e.g. tribrid:melee,tribrid:ranger; SPAR_SCENARIO
 // names a scenario (default open). The start state of a scenario is its bench case (scripts/measure/aio-bench-cases.ts).
 // Prints one `SPAR <json>` line. RESULT ok means that both sides attacked and the fight reached a kill, an escape or
 // the cap.
@@ -14,6 +15,7 @@ import { resolve } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
 import { defaultSpec, fightPlayer, nextTick, type FightOptions, type FightResult, type Kit } from './pk';
 import { TRIBRID_KIT } from './pk-hunt';
+import { kitOptions, kitSwitches } from './pk-kits';
 
 // `specBelow` moves the health fraction at which the kit's special fires.
 export type Profile = Partial<Omit<FightOptions, 'log' | 'stop'>> & { specBelow?: number };
@@ -127,7 +129,13 @@ if (import.meta.main) {
     const cap = Number(env.SPAR_CAP ?? capArg ?? 900), nameA = env.SPAR_A ?? 'base', nameB = env.SPAR_B ?? 'base', scenarioName = env.SPAR_SCENARIO ?? 'open';
     const scenario = SCENARIOS[scenarioName];
     if (!scenario) { console.log(`RESULT fail pk-spar: unknown scenario "${scenarioName}"; known: ${Object.keys(SCENARIOS).join(', ')}`); process.exit(2); }
-    const optionsA = sparOptions(nameA, env.SPAR_A_OPTS, TRIBRID_KIT, cap, scenario.a), optionsB = sparOptions(nameB, env.SPAR_B_OPTS, TRIBRID_KIT, cap, scenario.b);
+    // The kit of a side belongs to its account (the bench case staged it); the profile of a side can swap.
+    const kits = env.SPAR_KITS?.split(',').map(pair => pair.split(':'));
+    const options = (profile: 'a' | 'b', pair: number, side: 0 | 1): FightOptions => {
+        const kit = kits?.[pair % kits.length]?.[side];
+        const base = { ...(kit ? kitOptions(kit) : {}), ...(side === 0 ? scenario.a : scenario.b) };
+        return sparOptions(profile === 'a' ? nameA : nameB, profile === 'a' ? env.SPAR_A_OPTS : env.SPAR_B_OPTS, kit ? kitSwitches(kit) : TRIBRID_KIT, cap, base);
+    };
     // A death is the expected end of a spar, so it must not end the run as openBot does by default. Any other stop
     // (a stop file, a stalled tick stream) halts every side and fails the run.
     let halted: string | undefined;
@@ -155,8 +163,8 @@ if (import.meta.main) {
     // side A in the results is always the profile SPAR_A and the side of the map has no part in the comparison.
     const swap = env.SPAR_SWAP === '1';
     const results = await Promise.all(pairs.map(async ([a, b], i) => (swap && i % 2
-        ? flipped(await spar(a, b, optionsB, optionsA, undefined, () => halted !== undefined))
-        : spar(a, b, optionsA, optionsB, undefined, () => halted !== undefined))));
+        ? flipped(await spar(a, b, options('b', i, 0), options('a', i, 1), undefined, () => halted !== undefined))
+        : spar(a, b, options('a', i, 0), options('b', i, 1), undefined, () => halted !== undefined))));
     // Where the wall time of the run went: the logins, then the fights.
     console.log(`SPAR_TIMING loginMs=${t1 - t0} fightMs=${Date.now() - t1} pairs=${pairs.length} ticks=${Math.max(...results.map(r => r.ticks))}`);
     for (const r of results) console.log(`SPAR ${JSON.stringify({ scenario: scenarioName, profiles: { a: nameA, b: nameB }, ...r })}`);

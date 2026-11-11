@@ -36,9 +36,12 @@ export function stats(nets: readonly number[]) {
     const sd = n > 1 ? Math.sqrt(nets.reduce((a, b) => a + (b - mean) ** 2, 0) / (n - 1)) : 0;
     return { n, mean: Number(mean.toFixed(2)), sd: Number(sd.toFixed(2)), t: Number((sd > 0 ? mean / (sd / Math.sqrt(n)) : 0).toFixed(2)) };
 }
-// Accept at t of 2 or more with 16 or more samples; reject once the mean is not above 0 with 16 or more; else one more run.
+// Accept at t of 2 or more with 16 or more samples. Reject at once when the first batch is clearly worse (t of -1 or
+// less), and once the mean is not above 0 with 16 or more; else one more run. A run is the scarce thing: each needs
+// about 1.7 GB of free memory for a minute.
 export function verdict(nets: readonly number[], runs: number, maxRuns: number): 'accept' | 'reject' | 'more' {
     const s = stats(nets);
+    if (s.n >= 8 && s.t <= -1) return 'reject';
     if (s.n >= 16 && s.t >= 2) return 'accept';
     if (s.n >= 16 && (s.mean <= 0 || s.t < 1)) return 'reject';
     return runs >= maxRuns ? 'reject' : 'more';
