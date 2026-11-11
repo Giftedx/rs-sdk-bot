@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794383385547,
+ "at": 1794383468730,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -65,40 +65,6 @@
    "repeat": true,
    "goal": "Thieving 55, then coins from Ardougne knights",
    "role": "supply"
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "catherby",
-    "6000"
-   ],
-   "env": {
-    "ITEMS": "arrowtips",
-    "BANK_PACK": "1",
-    "MAX_SPEND": "200000",
-    "COIN_RESERVE": "10000",
-    "FLOAT": "210000",
-    "NO_BUY_TICKS": "50"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "rune, adamant, mithril and steel arrowtips from Hickton",
-   "role": "supply"
-  },
-  {
-   "account": "Shaftmaker",
-   "script": "scripts/pk-live/live-pilot.ts",
-   "args": [
-    "10",
-    "20"
-   ],
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "PK hunts of 10 minutes at Wilderness 20 or less, with GE and shop rune restock",
-   "role": "pk"
   },
   {
    "account": "Shaftsinker",
@@ -587,6 +553,27 @@
    "enabled": false,
    "repeat": false,
    "goal": "run-session-recovery-pocketpython-coin [task-dc6e6976-0856-4956-a80d-6aff1adb9a60]",
+   "role": "supply"
+  },
+  {
+   "accounts": [
+    "Pocketrocket",
+    "Shaftmaker"
+   ],
+   "script": "scripts/coin-courier.ts",
+   "args": [
+    "150000",
+    "--bank-x=2619",
+    "--bank-z=3332",
+    "--approach-ms=1200000"
+   ],
+   "env": {
+    "CAP": "4000",
+    "COORDINATOR_RUN_ID": "task-d5810f0c-7423-4e51-8649-33eb64c6243a"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-coin-pocketrocket-shaftmaker-150k [task-d5810f0c-7423-4e51-8649-33eb64c6243a]",
    "role": "supply"
   }
  ]
