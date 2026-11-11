@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794379112674-sporrandip-trousersnake",
  "account": "TrouserSnake",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 100000,
  "claim": "1bf59eb7-52b9-454a-9ee9-d1ee667dc54c",
- "count": 0,
- "ok": false,
- "at": 1794379116735,
- "detail": "trade claimed"
+ "count": 100000,
+ "ok": true,
+ "at": 1794379409089,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 13650,
+  "after": 113650
+ },
+ "bank": {
+  "count": 100000,
+  "at": 1794379408330
+ },
+ "logout": {
+  "attemptId": "1794379116738-0000026818-0000000001",
+  "at": 1794379409081,
+  "sha256": "1553e4c95ca80a3f65dcc3d5d8d8371c0efb4470ebeb6add1214a39f9c244979"
+ },
+ "screen": true
 }
