@@ -1489,6 +1489,32 @@ test('a build with a Fremennik helm takes The Fremennik Trials under its levels 
     expect(CAPACITY[FREMENNIK]).toBe(1);
 });
 
+test('a build with The Fremennik Trials on its route makes headless arrows to Fletching 25 before the quest', async () => {
+    const { buildBand, catalogue: all, FLETCH_MAKE, FLETCH_KEEP, FREMENNIK_BAND, ARMY_BANK } = await import('../src/autopilot');
+    const { xpForLevel } = await import('../src/curve');
+    const tank = { Attack: 74, Strength: 73, Defence: 60, Ranged: 99, Magic: 99, Prayer: 43 }, before = { Attack: 68, Strength: 60, Defence: 7, Ranged: 99, Magic: 99, Prayer: 43, Hitpoints: 94 };
+    const templates = all(), band = templates.find(t => t.id === 'army-fletch-25')!, route = ['The Fremennik Trials'];
+    expect(band).toMatchObject({ buildOnly: true, pilot: true, route: 'The Fremennik Trials', script: 'scripts/chain.ts', env: { ROUNDS: '1' }, repeats: false, trains: { skill: 'Fletching', to: 25, unlocks: ['army-quest-fremennik'] } });
+    expect(band.band!).toBeLessThan(FREMENNIK_BAND);
+    expect(band.args).toEqual([`scripts/walk-to.ts ${ARMY_BANK.x} ${ARMY_BANK.z}`, 'scripts/fletch-arrows.ts 3000 headless MAX_MAKE=210 SHAFT_RESERVE=100 FEATHER_RESERVE=100 BANK_PACK=1']);
+    // 25 XP an arrow at the server's rate reaches level 25 from level 1; the worker makes sets of 15 and keeps 100.
+    expect(FLETCH_MAKE * 25).toBeGreaterThanOrEqual(xpForLevel(25));
+    expect(FLETCH_MAKE % 15).toBe(0);
+    expect(band.needs).toEqual({ items: { 'arrow shaft': FLETCH_MAKE + FLETCH_KEEP, feather: FLETCH_MAKE + FLETCH_KEEP } });
+    const a = { ...acct('Tank', { Attack: 68, Strength: 60, Prayer: 43, Hitpoints: 94 }), quests: new Set<string>() };
+    // Only a build with the quest on its route and open: not a plain army account, not another build, not after the quest.
+    expect(buildBand(band, a)).toBeNull();
+    expect(buildBand(band, a, tank, route, before)).toBe(band);
+    expect(buildBand(band, a, tank, ['Lost City'], before)).toBeNull();
+    expect(buildBand(band, { ...a, quests: new Set(['the fremennik trial']) }, tank, route, before)).toBeNull();
+    // In a plan: with the shafts and the feathers the account takes the band; at Fletching 25 it does not.
+    const who = (fletching: number) => ({ ...acct('Tank', { ...a.skills, Ranged: 99, Magic: 99, Fletching: fletching }, { coin: 100_000, shark: 40, 'adamant scimitar': 1, shortbow: 1, 'bronze arrow': 500, 'arrow shaft': 310, feather: 310 }), quests: new Set(['lost city']) });
+    const run = (fletching: number) => plan(inputs([who(fletching)], { army: new Set(['tank']), pilots: new Set(['army-fletch-25', 'army-quest-fremennik']), capacity: CAPACITY,
+        builds: new Map([['tank', tank]]), buildQuests: new Map([['tank', route]]), buildBefore: new Map([['tank', before]]) }))[0]!.template?.id;
+    expect(run(1)).toBe('army-fletch-25');
+    expect(run(25)).toBe('army-quest-fremennik');
+});
+
 test('an account with a PK build takes a quest band only on the quest route of its kit', async () => {
     const { buildBand, BUILD_QUESTS, catalogue: all } = await import('../src/autopilot');
     const pure = { Attack: 60, Strength: 99, Defence: 1, Ranged: 99, Magic: 1, Prayer: 43 };
