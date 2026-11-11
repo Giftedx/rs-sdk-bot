@@ -6,6 +6,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { benchCases } from './aio-bench-cases';
 import { kitCost } from '../pk-kits';
+import { waitForMemory } from './pk-spar-wait';
 
 export type Cell = { matchup: string; fights: number; kills: number; deaths: number; net: number };
 // The numbers of one `key=a,b,c` list in a batch RESULT line.
@@ -35,6 +36,7 @@ if (import.meta.main) {
     const kits = pairs.map((pair, i) => (league ? `${pair}/${league[i % league.length]}` : pair));
     const runs: { nets: number[]; scores: number[] }[] = [];
     for (const seed of seeds) {
+        await waitForMemory(root);
         Bun.spawnSync(['bun', 'scripts/measure/aio-practice-bench.ts', `^${key}$`, '--parallel', '1', '--no-keep', '--seed', String(seed), '--set', `SPAR_A=${a}`, '--set', `SPAR_B=${b}`],
             { cwd: root, env: { BENCH_PORT_BASE: '21600', ...process.env, BENCH_OUT: out }, stdout: 'ignore', stderr: 'inherit', windowsHide: true });
         let row: { ok: boolean; result: string | null } | undefined;

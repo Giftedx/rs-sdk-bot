@@ -297,6 +297,8 @@ const ROUTE_CASES: BenchCase[] = [
   // The league: our fighter (the tribrid with potions, side A, profile SPAR_A) against eight opponents that each have
   // their own build and their own way to play (LEAGUE). A fighter is ready for a skilled player when it beats them all.
   sparMatrix('extra:spar-league-x8', LEAGUE.map(o => ['tribrid-pots', o.kit] as const), [`SPAR_B_PROFILES=${LEAGUE.map(o => o.profile).join(',')}`]),
+  // The league for a fighter with three more sharks and no freeze runes.
+  sparMatrix('extra:spar-league-lean-x8', LEAGUE.map(o => ['tribrid-lean', o.kit] as const), [`SPAR_B_PROFILES=${LEAGUE.map(o => o.profile).join(',')}`]),
   // A build against the standard tribrid, four pairs on each side of the map: what the build is worth by itself.
   ...Object.keys(KITS).filter(kit => kit !== 'melee').map(kit => sparMatrix(`extra:spar-duel-${kit}-vs-melee-x8`, Array.from({length: 8}, (_, i) => (i % 2 ? ['melee', kit] : [kit, 'melee']) as [string, string]))),
   ...Object.keys(KITS).filter(kit => kit !== 'tribrid').map(kit => sparMatrix(`extra:spar-duel-${kit}-x8`, Array.from({length: 8}, (_, i) => (i % 2 ? ['tribrid', kit] : [kit, 'tribrid']) as [string, string]))),
