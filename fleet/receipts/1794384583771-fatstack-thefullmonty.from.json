@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1794384583771-fatstack-thefullmonty",
  "account": "Fatstack",
  "partner": "TheFullMonty",
@@ -12,6 +12,11 @@
  "claim": "9f9935e9-2224-4ba8-bd4a-cc81f96b5922",
  "count": 0,
  "ok": false,
- "at": 1794384590015,
- "detail": "trade claimed"
+ "at": 1794385541705,
+ "detail": "session ended: disconnected",
+ "bank": {
+  "count": 52087,
+  "at": 1794384625347
+ },
+ "screen": false
 }
