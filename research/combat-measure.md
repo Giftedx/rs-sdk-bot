@@ -258,6 +258,16 @@ Ranged it adds is not needed at that point.
   2807,3441 near the Catherby bank). Practice with the walk home: a market buy from the Catherby bank reached Varrock
   West at tick 1,039, from the Seers' Village bank at 974 and from the Yanille bank at 1,041. **Evidence.**
   `.practice/travel/ge.ts` (`k1`-`k3`); `scripts/walk-to.test.ts`.
+- **Claim.** A dragon weapon is refused to an account without Lost City, whatever its Attack. **Conditions.**
+  `levelrequire.rs2` `levelrequire_zanaris_quest`: `%zanaris` under complete prints "You have not earned the right to
+  wear this yet." and "You need to complete the Lost City Of Zanaris Quest." before the Attack 60 check. Practice, an
+  account with Attack 99 and no quests: dragon longsword and dragon dagger not worn, rune scimitar worn; with varp 147
+  at 6 all three are worn. **Evidence.** `.practice/lostcity/wield.ts` in the Claude cloud container that ran it.
+  **Consumer.** `army-quest-lostcity` (research/quest-points-board.md, Lost City, from an army account's state).
+- **Market and shop (live claude-cloud read).** No dragon longsword or dagger is listed (last trades 425,000 and
+  299,000). Jukat in the Zanaris market stocks 2 dragon longswords and 2 daggers, one back per 500 ticks
+  (`area_lostcity/configs/lostcity.inv`), base cost 100,000 and 30,000; the market door asks one cut diamond an entry
+  (`doorman.rs2`) and the market ladder leaves to Al Kharid (`ladder_fairy.rs2`).
 - **Gap.** No seller on practice, so a fill is proved live only. Kills per tick with each blade are not measured.
 
 ## Ranged on the troopers

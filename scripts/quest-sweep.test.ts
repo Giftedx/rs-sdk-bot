@@ -1534,3 +1534,17 @@ test('Gertrude\'s Cat without Varrock Teleport climbs the yard fence, and a kitt
  expect(sweep.indexOf('QUEST_SWEEP_FLUFFS_RESUME')).toBeGreaterThan(0);
  expect(sweep.indexOf('QUEST_SWEEP_FLUFFS_RESUME')).toBeLessThan(sweep.indexOf('QUEST_SWEEP_BANK '));
 });
+
+import {BARE,bareDeposits,needs as questNeeds,presetFor as questPreset} from './quest-sweep';
+test('a quest that boards the Entrana ship banks every pack row it does not use', () => {
+    expect(BARE.has('zanaris')).toBe(true);
+    const preset = questPreset('zanaris'), need = questNeeds(preset, false, 'zanaris'), food = questNeeds(preset, true, 'zanaris');
+    // The quest's own pack: bronze axe, knife and prayer potions are needed; the teleport runes and lobsters ride as food.
+    expect([...need.keys()].sort((a, b) => a - b)).toEqual([946, 1351, 2434]);
+    expect([...food.keys()].sort((a, b) => a - b)).toEqual([379, 556, 557, 563]);
+    const tradeable = (id: number) => id === 771 || id === 772 ? false : true;
+    // An army account's pack: scimitar, shortbow, arrows and a staff go; the quest pack, coins, a meal and the
+    // untradeable dramen branch of a resumed run stay.
+    const pack = [1331, 841, 882, 1387, 1351, 946, 2434, 563, 556, 379, 385, 995, 771].map(id => ({ id, count: 1 }));
+    expect(bareDeposits('zanaris', pack, need, food, tradeable)).toEqual([1331, 841, 882, 1387]);
+});

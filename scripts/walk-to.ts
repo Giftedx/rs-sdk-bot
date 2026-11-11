@@ -101,6 +101,11 @@ const inArdougne = (t: Tile) => t.level === 0 && t.x >= 2550 && t.x <= 2700 && t
 // buys that started at the Catherby bank and on the battlefield ended "no route to 3185,3436,0").
 const ARDOUGNE_NORTH: Tile = { x: 2619, z: 3332, level: 0 };
 const inKandarin = (t: Tile) => t.level === 0 && t.x >= 2440 && t.x < 2870 && t.z >= 3040 && t.z <= 3530;
+// Zanaris (map square 50,149, under the Lumbridge swamp), where Lost City ends. Its exit by the entrance is a known
+// transport to the swamp shed, but the planner finds no route from inside to anywhere farther (practice: "no route to
+// 2619,3332,0" after 304 idle ticks, and the shed reached in 5). A trip out starts with that step.
+const ZANARIS_SHED: Tile = { x: 3201, z: 3169, level: 0 };
+export const inZanaris = (t: Tile) => t.level === 0 && t.x >= 3200 && t.x < 3264 && t.z >= 9536 && t.z < 9600;
 
 export async function walkWithFerryFallback(from: Tile, to: Tile, walk: (to: Tile, budgetMs?: number) => Promise<Outcome>,
     sail: (boat: Travel) => Promise<Outcome>, coins: () => number, stageFare?: (need: number) => Promise<Outcome>): Promise<Outcome> {
@@ -108,6 +113,11 @@ export async function walkWithFerryFallback(from: Tile, to: Tile, walk: (to: Til
     // -> Ardougne; eastbound Ardougne -> Brimhaven, then Musa Point -> Port Sarim. The walk across Karamja between the
     // docks is the same ground both ways.
     let ticks = 0;
+    if (inZanaris(from) && !inZanaris(to) && !(to.x === ZANARIS_SHED.x && to.z === ZANARIS_SHED.z)) {
+        const out = await walk(ZANARIS_SHED, FERRY_LEG_PLAN_MS); ticks += out.ticks;
+        if (!out.ok) return { ...out, ticks };
+        from = ZANARIS_SHED;
+    }
     if (!inArdougne(from) && inKandarin(from) && inEast(to)) {
         const home = await walk(ARDOUGNE_NORTH, FERRY_LEG_PLAN_MS); ticks += home.ticks;
         if (!home.ok) return { ...home, ticks };

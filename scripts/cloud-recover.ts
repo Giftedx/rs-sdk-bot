@@ -31,9 +31,16 @@ export type Eligibility = { eligible: true; endedAt: number } | { eligible: fals
 // silence and the retry MAX_ATTEMPTS allows was never submitted.
 export function eligibility(v: { proof: LogoutProof; claim: ClaimView; end: EndRecord | undefined; stopText: string | undefined; pidAlive: (pid: number) => boolean; host: string; retried?: boolean }): Eligibility {
     if (v.proof.state !== 'held') return { eligible: false, reason: `logout proof ${v.proof.state}`, log: false };
-    if (!v.claim || v.claim.phase !== 'held') return { eligible: false, reason: 'no held fleet account claim', log: false };
-    if (v.claim.kind !== 'swarm') return { eligible: false, reason: 'claim is held by a trade order', log: true };
-    if (v.claim.host === v.host && typeof v.claim.pid === 'number' && v.pidAlive(v.claim.pid)) return { eligible: false, reason: 'worker still alive', log: false };
+    if (!v.claim || v.claim.phase !== 'held') {
+        // No claim holds the account, and its logout is still unproved: a trade worker dropped and fleet sync released
+        // its claim (scripts/fleet-sync.ts droppedTradeClaims). The swarm's orphan end names the held attempt and its
+        // dead owner (scripts/swarm.ts orphanedSessionEnds), which is what a recovery needs. Live claude-cloud:
+        // TrouserSnake and UnderMyKilt stood with no job after such a release until a recovery was submitted by hand.
+        if (!v.end?.reason.startsWith(`exit orphaned: attempt ${v.proof.attemptId} `)) return { eligible: false, reason: 'no held fleet account claim', log: false };
+    } else {
+        if (v.claim.kind !== 'swarm') return { eligible: false, reason: 'claim is held by a trade order', log: true };
+        if (v.claim.host === v.host && typeof v.claim.pid === 'number' && v.pidAlive(v.claim.pid)) return { eligible: false, reason: 'worker still alive', log: false };
+    }
     if (v.stopText !== undefined && !swarmWroteStop(v.stopText)) return { eligible: false, reason: 'owner stop file holds the account', log: true };
     if (!v.end) return { eligible: false, reason: 'end record gone (standing retry window passed); recover by hand', log: true };
     // The supervisor retries the dropped session before it writes the end; until then the end record is an earlier

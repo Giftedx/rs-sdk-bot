@@ -109,7 +109,7 @@ test('a prepared receipt is exclusive, and only a published matched terminal rec
     } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
-test('a dropped trade session frees its claim only when the records prove nothing moved: the partner\'s failed receipt an hour after the window, or no claim by the partner at its end', () => {
+test('a dropped trade session frees its claim only when the records prove nothing moved: the partner\'s failed receipt, or no claim by the partner at the window\'s end', () => {
     const trade = order({}), late = trade.end + DROPPED_CLAIM_MS;
     const claim = { account: 'giver', server: 's', side: 'cloud', orderId: 'o1', role: 'from', nonce, phase: 'held', at: 2000 } as const;
     // The giver's session dropped: no logout proof, so its receipt reads reconcile with nothing given.
@@ -122,10 +122,13 @@ test('a dropped trade session frees its claim only when the records prove nothin
     const both = { 'receipts/o1.from.json': own, 'receipts/o1.to.json': partner };
     const freed = (o: Record<string, unknown>, now = late, c: any = claim, side = 'cloud') => droppedTradeClaims([c], side, files(o), now).length;
     expect(freed(both)).toBe(1);
-    expect(freed({ ...both, 'receipts/o1.from.json': { ...own, state: 'prepared', inventory: undefined } })).toBe(1);
-    // Too early: the window, then the hour after it, must have passed, and the claim must be that old.
-    expect(freed(both, trade.end + DROPPED_CLAIM_MS - 1)).toBe(0);
-    expect(freed(both, late, { ...claim, at: late - DROPPED_CLAIM_MS + 1 })).toBe(0);
+    const died = { ...both, 'receipts/o1.from.json': { ...own, state: 'prepared', inventory: undefined } };
+    expect(freed(died)).toBe(1);
+    // A worker that ended (`reconcile`) frees its claim as soon as the partner's failed receipt is in, inside the
+    // window too. One that died (`prepared`) waits: the window, then the hour after it, and the claim that old.
+    expect(freed(both, 3000, { ...claim, at: 2900 })).toBe(1);
+    expect(freed(died, trade.end + DROPPED_CLAIM_MS - 1)).toBe(0);
+    expect(freed(died, late, { ...claim, at: late - DROPPED_CLAIM_MS + 1 })).toBe(0);
     // No partner receipt and no word from the partner's side since the window: a person decides. The same for a
     // partner that settled or still needs reconciling, or one with no logout proof.
     expect(freed({ 'receipts/o1.from.json': own })).toBe(0);

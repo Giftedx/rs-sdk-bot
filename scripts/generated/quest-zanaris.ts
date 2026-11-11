@@ -24,7 +24,8 @@ const PFM = 14, ULT_STR = 10, INC_REF = 11;     // skill_prayer/configs/prayers.
 
 const route = lostCityRoute(process.env.LOST_CITY_ROUTE);
 const windBolt = route.windBolt;
-const q = await openQuest({ cap: 3000, eatAt: route.eatAt, food: [route.food], lumbridgeOk: true });
+// The default route eats lobster, swordfish or shark, whichever the pack holds (the sweep packs the best meals banked).
+const q = await openQuest({ cap: 3000, eatAt: route.eatAt, food: windBolt ? [route.food] : [route.food, 373, 385], lumbridgeOk: true });
 try {
     if (windBolt) {
         const casts = windBolt.axeCasts + windBolt.spiritCasts;
