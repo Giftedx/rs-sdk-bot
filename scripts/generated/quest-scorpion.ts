@@ -9,6 +9,7 @@
 // whose ladder needs the order (Prayer 31, areas/monastery/scripts/prayer_guild.rs2:5-40). Peksa and the Seer's
 // later hints are not needed. Thormac with the full cage queues the completion.
 import { openQuest } from './quest-lib';
+import { establishBarcrawlGate, runBarcrawl } from './quest-barcrawl';
 
 const THORMAC = { x: 2702, z: 3405 };
 const SEER = { x: 2702, z: 3475 };
@@ -32,7 +33,7 @@ const GATE = { id: 2623, x: 2924, z: 9803 };                 // deepdungeondoor,
 
 // The eater takes any edible in the pack: an account without the preset's lobsters carries its own cake or fish, and the
 // dungeon's poison and the Jailer bleed it either way.
-const q = await openQuest({ cap: 2500, eatAt: 50, lumbridgeOk: false });
+const q = await openQuest({ cap: Number(process.env.CAP ?? 2500), eatAt: 50, lumbridgeOk: false });
 try {
     const FROM = Number(process.env.SC_FROM ?? 0);   // 2: debug preset quest_scorpion_s2 (outside the outpost, stage 2, empty cage); 3: quest_scorpion_s3 (Taverley dungeon ladder, cage with B)
     let questDone = false;
@@ -95,6 +96,8 @@ try {
     if (FROM < 3) {
         if (!inOutpost()) {
             await q.walk('to outpost gate', [{ x: 2544, z: 3569, tol: 1 }]);
+            const barcrawlState = () => (q.s.client as any).var?.[77] as number | undefined;
+            await establishBarcrawlGate(barcrawlState, async () => { await runBarcrawl(q); });
             await q.step('outpost gate', () => { const g = q.findLoc(l => /gate/i.test(l.name) && l.x === 2545 && (l.z === 3569 || l.z === 3570) && (l.optionsWithIndex ?? []).length > 0); return g ? q.opLoc(g, 1) : q.waitTicks(1); }, inOutpost, 8, 4);
         }
         await q.openDoor('hut door', 2551, 3570);

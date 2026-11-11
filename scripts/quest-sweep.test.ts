@@ -1,6 +1,31 @@
 import {test,expect} from 'bun:test';
 import {heckelDustNeed,groundShopNeeds,fetchHeckelDust,heckelIO,type HeckelIO} from './quest-sweep';
 import {returnToAmik,finishBlackKnight,type AmikIO} from './quest-sweep';
+import {scorpionBarcrawlNeeds} from './quest-sweep';
+import {establishBarcrawlGate} from './generated/quest-barcrawl';
+import {questScriptId} from './quest-sweep';
+import {resolve} from 'node:path';
+
+test('the Barcrawl script starts under the name the sweep gives it',()=>{
+ const file=resolve(import.meta.dir,'generated','quest-barcrawl.ts');
+ expect(questScriptId(file)).toBe('quest-barcrawl');
+ expect(questScriptId('scripts/generated/quest-barcrawl.ts')).toBe('quest-barcrawl');
+ const guard=/QUEST_SCRIPT_ID === '([^']+)'\) await main\(\)/.exec(readFileSync(file,'utf8'));
+ expect(guard?.[1]).toBe(questScriptId(file));
+});
+
+test('Scorpion stages and establishes a missing Barcrawl gate before the outpost',async()=>{
+ const base=needs(presetFor('scorpion'),false,'scorpion');
+ expect([...scorpionBarcrawlNeeds(base,2)]).toEqual([...base]);
+ expect([...scorpionBarcrawlNeeds(base,0)]).toEqual([[995,268],[563,3],[556,11],[555,1],[554,1]]);
+ let gate=0,runs=0;
+ await establishBarcrawlGate(()=>gate,async()=>{runs++;gate=2;});
+ expect({gate,runs}).toEqual({gate:2,runs:1});
+ await establishBarcrawlGate(()=>gate,async()=>{runs++;});
+ expect(runs).toBe(1);
+ gate=0;
+ await expect(establishBarcrawlGate(()=>gate,async()=>{})).rejects.toThrow('Barcrawl gate state 2 unobserved');
+});
 
 test('only a started Black Knight journal selects the Amik return',()=>{
  expect(returnToAmik('blackknight','started')).toBe(true);
