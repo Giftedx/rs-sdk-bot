@@ -1,7 +1,27 @@
 {
  "side": "claude-cloud",
- "at": 1794359499528,
+ "at": 1794359538110,
  "jobs": [
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=undermykilt-kit1-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
+   "role": "supply",
+   "template": "kit-buy:army-weapon",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "ge:weapon"
+   ]
+  },
   {
    "account": "Quickhandjob",
    "script": "scripts/gather-combat.ts",
@@ -78,53 +98,24 @@
    ]
   },
   {
-   "account": "UnderMyKilt",
+   "account": "Deeppockets",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=undermykilt-kit1-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/shop-buyer.ts dargaud 800 ITEMS=willow.shortbow STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=4000 COIN_RESERVE=500 MAX_SPEND=3000",
+    "scripts/shop-buyer.ts dargaud 800 ITEMS=mithril.arrow|steel.arrow|iron.arrow|bronze.arrow STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=51000 COIN_RESERVE=500 MAX_SPEND=50000"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
-   "role": "supply",
-   "template": "kit-buy:army-weapon",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "ge:weapon"
-   ]
-  },
-  {
-   "account": "Deeppockets",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "zaff",
-    "3000"
-   ],
-   "env": {
-    "ITEMS": "staff of fire",
-    "STOCK_TARGET": "1",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "BANK_AT": "0",
-    "NO_BUY_TICKS": "1100",
-    "STALL_TICKS": "0",
-    "FLOAT": "13000",
-    "COIN_RESERVE": "500",
-    "MAX_SPEND": "12000"
-   },
-   "enabled": true,
-   "standing": true,
    "repeat": true,
-   "goal": "buy a staff of fire at Zaff's shop in Varrock for the alchemy band",
+   "goal": "buy a willow shortbow and arrows up to mithril at the Ranging Guild for the Ranged band",
    "role": "supply",
-   "template": "army-staff-zaff",
+   "template": "army-arrows-guild",
    "autopilot": "claude-cloud",
    "resources": [
-    "shop:zaff"
+    "shop:dargaud"
    ]
   },
   {
@@ -158,27 +149,32 @@
   },
   {
    "account": "Fingerblastr",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "1500",
-    "trooper"
+    "zaff",
+    "3000"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "ITEMS": "staff of fire",
+    "STOCK_TARGET": "1",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "1100",
+    "STALL_TICKS": "0",
+    "FLOAT": "13000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "12000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "goal": "buy a staff of fire at Zaff's shop in Varrock for the alchemy band",
+   "role": "supply",
+   "template": "army-staff-zaff",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "shop:zaff"
    ]
   },
   {
@@ -212,27 +208,31 @@
   },
   {
    "account": "Knightstick",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "1500",
-    "trooper"
+    "catherby_arrows",
+    "600"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "ITEMS": "iron arrow|bronze arrow",
+    "STOCK_TARGET": "1000",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "21000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "20000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-defence-99",
+   "goal": "buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-catherby",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "shop:catherby_arrows"
    ]
   },
   {
