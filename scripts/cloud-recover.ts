@@ -25,7 +25,11 @@ export type Eligibility = { eligible: true; endedAt: number } | { eligible: fals
 
 // Whether one account needs, and may get, an authenticated recovery now. `log` marks a held session that is refused,
 // as opposed to an account with nothing to recover.
-export function eligibility(v: { proof: LogoutProof; claim: ClaimView; end: EndRecord | undefined; stopText: string | undefined; pidAlive: (pid: number) => boolean; host: string }): Eligibility {
+// `retried`: a recovery of this exact end has already failed. The supervisor wrote that end before the recovery was
+// submitted, so a held attempt newer than it is the recovery child's own session, and no supervisor will write
+// another end for it. Live claude-cloud: Fingerblastr's failed recovery left such an attempt, the account waited in
+// silence and the retry MAX_ATTEMPTS allows was never submitted.
+export function eligibility(v: { proof: LogoutProof; claim: ClaimView; end: EndRecord | undefined; stopText: string | undefined; pidAlive: (pid: number) => boolean; host: string; retried?: boolean }): Eligibility {
     if (v.proof.state !== 'held') return { eligible: false, reason: `logout proof ${v.proof.state}`, log: false };
     if (!v.claim || v.claim.phase !== 'held') return { eligible: false, reason: 'no held fleet account claim', log: false };
     if (v.claim.kind !== 'swarm') return { eligible: false, reason: 'claim is held by a trade order', log: true };
@@ -35,7 +39,7 @@ export function eligibility(v: { proof: LogoutProof; claim: ClaimView; end: EndR
     // The supervisor retries the dropped session before it writes the end; until then the end record is an earlier
     // run's. The attempt id starts with its creation time (packages/core/src/session-lifecycle.ts).
     const started = /^\d{13}-/.test(v.proof.attemptId) ? Number(v.proof.attemptId.slice(0, 13)) : NaN;
-    if (v.end.at < started) return { eligible: false, reason: 'waiting: the supervisor has not ended the held attempt', log: false };
+    if (v.end.at < started && !v.retried) return { eligible: false, reason: 'waiting: the supervisor has not ended the held attempt', log: false };
     if (/^died\b/.test(v.end.reason)) return { eligible: false, reason: 'death needs a person', log: true };
     if (!RECOVERABLE_END.test(v.end.reason)) return { eligible: false, reason: `end reason not recoverable: ${v.end.reason}`, log: true };
     return { eligible: true, endedAt: v.end.at };
@@ -212,7 +216,8 @@ async function main(root: string, dry: boolean): Promise<number> {
         let claim: ClaimView = null;
         try { claim = readFleetAccountClaim(root, { account: name, server: LIVE_SERVER }) as ClaimView; } catch (e) { log(`${name}: refused: claim unreadable: ${String(e).slice(0, 120)}`); continue; }
         const stopFile = join(root, '.practice', `stop-${name}`), stopText = existsSync(stopFile) ? readFileSync(stopFile, 'utf8') : undefined;
-        const e = eligibility({ proof, claim, end: ended.get(name), stopText, pidAlive, host: hostname() });
+        const end = ended.get(name);
+        const e = eligibility({ proof, claim, end, stopText, pidAlive, host: hostname(), retried: !!end && spentAttempts(before, { account: name, endedAt: end.at }) > 0 });
         if (!e.eligible) { if (e.log) log(`${name}: refused: ${e.reason}`); continue; }
         const target = { account: name, endedAt: e.endedAt };
         if (spentAttempts(before, target) >= MAX_ATTEMPTS) { log(`${name}: refused: ${MAX_ATTEMPTS} recoveries of end ${e.endedAt} failed; recover by hand`); continue; }
