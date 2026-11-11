@@ -419,6 +419,83 @@ each pair 3 fights (seeds 1, 2, 3), `extra:spar-builds-1` to `-4`. Evidence:
   source of those bones for a build account is not checked. The quest route to each build is not planned, so no build account gets Lost City or Dragon Slayer
   from the planner.
 
+### Second set of builds
+
+Sources for the list: the Old School RuneScape Wiki pages "Account builds", "One-defence pure", "50 Defence Build"
+and "Free-to-play account builds", and theoatrix.net "Types of pures in OSRS". Those pages name about 60 builds.
+Source -> local consumer -> adapt -> check: those pages -> `KITS` -> a build gets a kit when this content has the
+gear that its level cap exists for -> `scripts/pk-kits.test.ts`, the bench cases `extra:spar-builds2-1` to `-4`.
+
+- **Builds with no kit, and the reason.** Attack 50 (granite maul), Attack 70 (whip) and Attack 75 (godsword): the
+  weapon is not in this content, so the levels add combat for nothing. The obsidian mauler and the free-to-play
+  Strength pure: no weapon with a high strength bonus at Attack 1. Defence 13, 20 and 25 (gloves, Initiate, infinity
+  robes) and Defence 42 (Void): the gear is not in this content. Defence 70 and 75 (Barrows, Piety): the same. A
+  pure with the dragon mace: the mace needs Heroes' Quest, which gives Defence XP (`levelrequire/scripts/tier60.rs2:4`).
+  Defence 50 with a Fremennik helm: The Fremennik Trials give Defence 60. The Defence pure and the skillers do not
+  attack.
+
+| Kit | Levels besides 1 | Combat | Fights with |
+|---|---|---|---|
+| `pure-scim` | Attack 40, Strength 99, Ranged 99 | 71 | magic shortbow, rune scimitar |
+| `pure-dlong` | Attack 60, Strength 99, Ranged 99 | 75 | magic shortbow, dragon longsword |
+| `pure-knives` | Attack 60, Strength 99, Ranged 99 | 75 | rune knives, dragon dagger |
+| `pure-pray31` | `pure-dds-msb` with Prayer 31 | 78 | magic shortbow, dragon dagger, Ultimate Strength |
+| `pure-god` | Magic 99 | 69 | Flames of Zamorak under Charge |
+| `pure-max` | Attack 99, Strength 99, Ranged 99, Prayer 43 | 94 | magic shortbow, dragon dagger |
+| `addy-pure` | the rune pure with Defence 30 | 89 | the tribrid kit in adamant |
+| `def50` | the rune pure with Defence 50 | 94 | the tribrid kit in rune with the granite shield |
+| `tank-range` | Defence 99, Ranged 99, Magic 99, Prayer 43 | 102 | magic shortbow and Fire Wave in black dragonhide |
+| `baby-pure` | Attack 40, Strength 70, Ranged 70 | 52 | magic shortbow, rune scimitar |
+| `low-ranger` | Ranged 70 | 47 | magic shortbow |
+| `low-mage` | Magic 59 | 39 | Fire Blast |
+| `low-addy` | Attack 40, Strength 70, Defence 30, Ranged 70, Magic 70 | 60 | maple shortbow, rune scimitar, Fire Blast in adamant |
+
+Bench ranking of the second set. Conditions: as the first set (profile `snap`, Wilderness level 34, cap 600 ticks,
+seeds 1, 2, 3). Three brackets (`BUILD_BRACKETS_2`): the five new Defence 1 builds with `pure-pray`, `pure-dds-msb`
+and `pure-ranger`; the four new builds of combat 89 to 102 with `dragon`, `zerker`, `rune-pure` and `pure-pray`; the
+four builds under combat 61. A pair of two builds of the first set does not run again. 53 pairs, 159 fights, 184 s
+of run time. Evidence: `.practice/pk-builds/b2seed<s>.txt` and `rank2.txt` in the worktree that ran them. The rows of
+the builds of the first set hold only their fights against the new builds.
+
+| Kit | Combat | Fights | Wins | Losses | Draws | Net |
+|---|---|---|---|---|---|---|
+| `tank-range` | 102 | 21 | 20 | 1 | 0 | +62.3 |
+| `baby-pure` | 52 | 9 | 8 | 1 | 0 | +51.7 |
+| `low-ranger` | 47 | 9 | 7 | 2 | 0 | +44.2 |
+| `pure-dds-msb` | 75 | 15 | 11 | 4 | 0 | +24.6 |
+| `pure-pray31` | 78 | 21 | 15 | 6 | 0 | +79.2 |
+| `pure-max` | 94 | 21 | 15 | 6 | 0 | -12.5 |
+| `dragon` | 96 | 12 | 8 | 4 | 0 | +28.7 |
+| `pure-ranger` | 69 | 15 | 10 | 3 | 2 | +8.1 |
+| `pure-pray` | 80 | 27 | 17 | 10 | 0 | +51.5 |
+| `pure-knives` | 75 | 21 | 12 | 8 | 1 | -65.6 |
+| `def50` | 94 | 21 | 9 | 12 | 0 | +6.7 |
+| `pure-scim` | 71 | 21 | 7 | 13 | 1 | +10.0 |
+| `low-addy` | 60 | 9 | 3 | 6 | 0 | +10.8 |
+| `rune-pure` | 91 | 12 | 4 | 8 | 0 | +3.8 |
+| `zerker` | 92 | 12 | 4 | 8 | 0 | -4.6 |
+| `pure-dlong` | 75 | 21 | 6 | 15 | 0 | -48.0 |
+| `pure-god` | 69 | 21 | 1 | 20 | 0 | -85.8 |
+| `low-mage` | 39 | 9 | 0 | 9 | 0 | -106.7 |
+| `addy-pure` | 89 | 21 | 0 | 21 | 0 | -51.9 |
+
+- **Combat 80 to 102: the range tank with Defence 99 wins.** `tank-range` won 20 of 21: 3 of 3 against `dragon`,
+  `zerker`, `rune-pure`, `def50`, `addy-pure` and `pure-pray`, and 2 of 3 against `pure-max`. It has no melee levels,
+  so it needs Defence, Ranged and Magic only.
+- **Attack 99 at Defence 1 beats the Defence 40 to 50 builds and loses to the dragon build.** `pure-max` won 3 of 3
+  against `rune-pure`, `zerker`, `def50` and `addy-pure`, 2 of 3 against `pure-pray`, and 0 of 3 against `dragon`.
+- **Defence 30 in adamant loses every fight.** `addy-pure` lost 21 of 21. It carries 15 sharks against 21 to 23 of
+  a pure, and in each fight it ate all 15.
+- **Defence 1: no new build beats the Prayer 43 pure.** `pure-pray31` is nearest: 15 of 21, and 1 of 3 against
+  `pure-pray`. Rune knives won 12 of 21 with a net damage of -65.6: they win on food, not on damage. The rune scimitar
+  (7 of 21) and the dragon longsword (6 of 21) are worse than the dragon dagger beside the bow.
+- **Magic alone loses again.** `pure-god` won 1 of 21 and `low-mage` 0 of 9.
+- **Under combat 61: bow and scimitar wins.** `baby-pure` won 8 of 9, `low-ranger` 7 of 9. `low-addy`, with 8 to 13
+  more combat levels, won 3 of 9.
+- Gap: 3 fights for each pair. The low bracket has 4 builds and 18 fights. `tank-range` wears the Archer helm, so it
+  needs The Fremennik Trials; a quest route is not planned. No fight of `tank-range` against the maxed tribrid:
+  combat 126 is in its range at Wilderness level 34 and is not in a case.
+
 ## Server rules the loop follows
 
 - Protect prayers cut a player's max hit by 40%, not 100% (`pvp_melee.rs2:32`, `pvp_ranged.rs2:38`, `pvp_magic.rs2:182`).

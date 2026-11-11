@@ -3,7 +3,7 @@ import { combatLevel, itemId, kitCost, kitItems, kitOptions, KITS, kitSkills, ki
 import { KNOBS, readNets, stats, verdict } from './measure/pk-spar-climb';
 import { matrix, readList } from './measure/pk-spar-matrix';
 import { mayRun } from './measure/pk-spar-wait';
-import { benchCases, BUILD_BRACKETS, BUILD_PAIRS } from './measure/aio-bench-cases';
+import { benchCases, BUILD_BRACKETS, BUILD_BRACKETS_2, BUILD_PAIRS, BUILD_PAIRS_2 } from './measure/aio-bench-cases';
 import { flipped, netRate, sparScore } from './pk-spar';
 import type { FightResult } from './pk';
 
@@ -109,4 +109,37 @@ test('a trained build has the Hitpoints of its combat XP, and each bracket fits 
     expect(BUILD_PAIRS.length).toBe(53);
     expect(cases.length).toBe(4);
     for (const c of cases) expect(c.scriptArgs).toContain('SPAR_PROCS=8');
+});
+
+test('the second set of builds: levels, gear that the levels can wear, and one case place for each new pair', () => {
+    expect(combatLevel(kitSkills('pure-scim'))).toBe(71);
+    expect(combatLevel(kitSkills('pure-pray31'))).toBe(78);
+    expect(combatLevel(kitSkills('pure-max'))).toBe(94);
+    expect(combatLevel(kitSkills('tank-range'))).toBe(102);
+    expect(combatLevel(kitSkills('baby-pure'))).toBe(52);
+    expect(kitSkills('addy-pure').Defence).toBe(30);
+    expect(kitSkills('def50').Defence).toBe(50);
+    // A thrown weapon is a stack in the weapon slot.
+    expect(kitItems('pure-knives').equipment.find(e => e.slot === 3)).toEqual({ id: itemId('rune_knife'), count: 500, slot: 3 });
+    expect(kitItems('pure-dds-msb').equipment.find(e => e.slot === 3)!.count).toBe(1);
+    // No Defence 1 build holds a weapon of Heroes' Quest, and no build under Defence 60 a Fremennik helm.
+    for (const [name, kit] of Object.entries(KITS)) {
+        if (!kit.skills) continue;
+        const items = [...Object.values(kit.worn).filter((v): v is string => typeof v === 'string'), ...kit.carried.map(c => (typeof c === 'string' ? c : c[0]))];
+        if (kit.skills.Defence! < 60 && name !== 'zerker') expect(items.filter(i => /^viking_helmet/.test(i))).toEqual([]);
+        if (kit.skills.Defence === 1) expect(items.filter(i => /^dragon_(mace|battleaxe)/.test(i))).toEqual([]);
+    }
+    const cases = benchCases().filter(c => c.key.startsWith('extra:spar-builds2-'));
+    const staged = new Set(cases.flatMap(c => c.scriptArgs.find(a => a.startsWith('SPAR_KITS='))!.slice(10).split(',')).map(p => p.split(':').sort().join(':')));
+    const first = new Set(BUILD_PAIRS.map(p => [...p].sort().join(':')));
+    for (const kits of Object.values(BUILD_BRACKETS_2)) {
+        const levels = kits.map(k => combatLevel(kitSkills(k)));
+        expect(Math.max(...levels) - Math.min(...levels)).toBeLessThanOrEqual(34);
+        kits.forEach((a, i) => kits.slice(i + 1).forEach(b => { const key = [a, b].sort().join(':'); expect(staged.has(key) || first.has(key)).toBe(true); }));
+    }
+    // No pair of the first set runs again.
+    for (const key of staged) expect(first.has(key)).toBe(false);
+    expect(BUILD_PAIRS_2.length).toBe(53);
+    expect(cases.length).toBe(4);
+    for (const c of cases) { expect(c.scriptArgs).toContain('SPAR_PROCS=8'); expect(c.scriptArgs).toContain('SPAR_CAP=600'); }
 });
