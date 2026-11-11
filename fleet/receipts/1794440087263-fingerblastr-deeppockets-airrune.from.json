@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1794440087263-fingerblastr-deeppockets-airrune",
  "account": "Fingerblastr",
  "partner": "Deeppockets",
@@ -12,6 +12,7 @@
  "claim": "c4767dcb-767c-4fc3-8661-9723d67a5e05",
  "count": 0,
  "ok": false,
- "at": 1794440167498,
- "detail": "trade claimed"
+ "at": 1794440291543,
+ "detail": "session ended: disconnected",
+ "screen": false
 }
