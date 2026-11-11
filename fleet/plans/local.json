@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794369871949,
+ "at": 1794369883596,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -149,7 +149,120 @@
    "role": "pk-trainee"
   },
   {
+   "account": "Masterbaiter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=masterbaiter-kit1-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
+   "role": "supply",
+   "template": "kit-buy:army-weapon",
+   "autopilot": "local",
+   "resources": [
+    "ge:weapon"
+   ]
+  },
+  {
    "account": "Mightyrod",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "ardy",
+    "400"
+   ],
+   "env": {
+    "ITEMS": "bronze arrow",
+    "STOCK_TARGET": "500",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "5000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "4000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy bronze arrows at Aemad in East Ardougne for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-ardy",
+   "autopilot": "local",
+   "resources": [
+    "shop:ardy"
+   ]
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=mmsmk1232-kit2-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
+   "role": "supply",
+   "template": "kit-buy:army-weapon",
+   "autopilot": "local",
+   "resources": [
+    "ge:weapon"
+   ]
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "betty"
+   ],
+   "env": {
+    "ITEMS": "fire rune|air rune|earth rune",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy elemental runes at Betty",
+   "role": "bank",
+   "template": "shop-runes",
+   "autopilot": "local",
+   "resources": [
+    "shop:betty"
+   ]
+  },
+  {
+   "account": "mmthv2350",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "sarim"
+   ],
+   "env": {
+    "ITEMS": "feather",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy feathers at Gerrant",
+   "role": "bank",
+   "template": "shop-feathers",
+   "autopilot": "local",
+   "resources": [
+    "shop:sarim"
+   ]
+  },
+  {
+   "account": "PickpockDick",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
@@ -165,69 +278,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2582,3297"
-   ]
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Attack",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Attack to 80 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-attack-80",
-   "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
-   "env": {
-    "PEN": "3017,3288",
-    "TICKS": "3000",
-    "TARGET": "2000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3017,3288",
-   "role": "helper",
-   "template": "feathers@3017,3288",
-   "autopilot": "local",
-   "resources": [
-    "pen:3017,3288"
-   ]
-  },
-  {
-   "account": "mmthv2350",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "local",
-   "resources": [
-    "knight:2669,3298"
    ]
   },
   {
@@ -275,6 +325,47 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "local",
+   "resources": [
+    "knight:2669,3298"
+   ]
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby"
+   ],
+   "env": {
+    "ITEMS": "rune arrowtips|adamant arrowtips",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy rune and adamant arrowtips at Catherby",
+   "role": "bank",
+   "template": "shop-arrowtips",
+   "autopilot": "local",
+   "resources": [
+    "shop:catherby"
+   ]
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
     "KNIGHT_SPOT": "2653,3300",
     "TICKS": "9000"
    },
@@ -287,47 +378,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2653,3300"
-   ]
-  },
-  {
-   "account": "Billionaire",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "sarim"
-   ],
-   "env": {
-    "ITEMS": "feather",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy feathers at Gerrant",
-   "role": "bank",
-   "template": "shop-feathers",
-   "autopilot": "local",
-   "resources": [
-    "shop:sarim"
-   ]
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
-   "autopilot": "local",
-   "resources": [
-    "knight:2671,3313"
    ]
   },
   {
