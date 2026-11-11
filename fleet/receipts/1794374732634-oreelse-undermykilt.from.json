@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794374732634-oreelse-undermykilt",
+ "account": "OreElse",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune platelegs",
+ "requested": 1,
+ "claim": "a3c13fa5-203b-45fa-b8f6-6645c44b072d",
+ "count": 0,
+ "ok": false,
+ "at": 1794378666086,
+ "detail": "trade claimed"
+}
