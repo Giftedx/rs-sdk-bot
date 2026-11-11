@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794389122830,
+ "at": 1794389179222,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -98,28 +98,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "UnderMyKilt",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "crafting",
-    "bowstrings",
-    "2500",
-    "MAX_MAKE=168",
-    "RAW_RESERVE=0",
-    "MAX_TRIPS=8"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "spin flax at Seers to the Crafting a black dragonhide body asks",
-   "role": "crafting",
-   "template": "army-leather-spin",
-   "autopilot": "claude-cloud",
-   "resources": []
   },
   {
    "account": "Deeppockets",
@@ -258,6 +236,19 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-41a141e6-c385-4ecb-8815-0fb9e0218d6e"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-undermykilt-20261111t092217z [task-41a141e6-c385-4ecb-8815-0fb9e0218d6e]",
+   "role": "crafting"
   }
  ]
 }
