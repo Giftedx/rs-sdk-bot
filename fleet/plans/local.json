@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794418852792,
+ "at": 1794419442643,
  "jobs": [
   {
    "account": "Abracadickra",
@@ -21,26 +21,6 @@
    "resources": [
     "knight:2652,3318"
    ]
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/fletch-arrows.ts",
-   "args": [
-    "15000",
-    "headless"
-   ],
-   "env": {
-    "BANK_PACK": "1",
-    "MAX_MAKE": "390"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "headless arrows from owned shafts and feathers",
-   "role": "fletching",
-   "template": "fletch-headless",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "Masterbaiter",
@@ -85,28 +65,6 @@
    "autopilot": "local",
    "resources": [
     "pen:3187,3277"
-   ]
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "catherby"
-   ],
-   "env": {
-    "ITEMS": "rune arrowtips|adamant arrowtips",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy rune and adamant arrowtips at Catherby",
-   "role": "bank",
-   "template": "shop-arrowtips",
-   "autopilot": "local",
-   "resources": [
-    "shop:catherby"
    ]
   },
   {
@@ -251,28 +209,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2671,3313"
-   ]
-  },
-  {
-   "account": "Billionaire",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "betty"
-   ],
-   "env": {
-    "ITEMS": "fire rune|air rune|earth rune",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy elemental runes at Betty",
-   "role": "bank",
-   "template": "shop-runes",
-   "autopilot": "local",
-   "resources": [
-    "shop:betty"
    ]
   },
   {
@@ -586,6 +522,54 @@
    "repeat": false,
    "goal": "run-session-recovery-mmsmk1232-magic-r17 [task-14ab771b-af5d-4e31-9611-952e6a9544c4]",
    "role": "supply"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "600",
+    "COORDINATOR_RUN_ID": "task-82a209f7-38db-43ab-9430-01d6d3545d80"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-session-recovery-bowbeforeme-orphan-r18 [task-82a209f7-38db-43ab-9430-01d6d3545d80]",
+   "role": "fletching"
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "600",
+    "COORDINATOR_RUN_ID": "task-206f8188-4a07-4c12-9e69-051dd3f58fe3"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-session-recovery-mmtha0205-orphan-r18 [task-206f8188-4a07-4c12-9e69-051dd3f58fe3]",
+   "role": "bank"
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "betty"
+   ],
+   "env": {
+    "ITEMS": "fire rune|air rune|earth rune",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy elemental runes at Betty",
+   "role": "bank",
+   "template": "shop-runes",
+   "autopilot": "local",
+   "resources": [
+    "shop:betty"
+   ]
   }
  ]
 }
