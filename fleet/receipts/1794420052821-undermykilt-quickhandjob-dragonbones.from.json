@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794420052821-undermykilt-quickhandjob-dragonbones",
+ "account": "UnderMyKilt",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 18,
+ "claim": "cd0cc3a6-4855-4aa6-8a7d-ba8a946ac17f",
+ "count": 0,
+ "ok": false,
+ "at": 1794420066193,
+ "detail": "trade claimed"
+}

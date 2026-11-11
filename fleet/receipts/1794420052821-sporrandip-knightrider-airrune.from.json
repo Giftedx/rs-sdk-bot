@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794420052821-sporrandip-knightrider-airrune",
+ "account": "SporranDip",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 46,
+ "claim": "850ac153-b732-4293-9202-4d74a2df7cc8",
+ "count": 46,
+ "ok": true,
+ "at": 1794420075738,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 249,
+  "after": 203
+ },
+ "logout": {
+  "attemptId": "1794420060848-0000024696-0000000001",
+  "at": 1794420075733,
+  "sha256": "4ab19fec8c8fa3cef606ee2ca707c3b6762ffb5e7739160dfa22137de23b47da"
+ },
+ "screen": true
+}
