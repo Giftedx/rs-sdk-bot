@@ -16,7 +16,10 @@ Keep the loop fast:
 
 - While you edit, run one test file (`bun test <file>`) and the bench cases you changed. Run `bun run typecheck` once before you push.
 - Run one heavy job at a time on a machine: a gate, a bench or a test suite. Two at once give failures that are not real. If a test that the change does not touch fails, run that file alone before you debug it.
-- Start a slow step as one background command that ends in its result, and work on the next item until it ends. Do not poll.
+- Start a slow step as one background command that ends in its result, and work on the next item until it ends. Do not poll. Do not wait in a `sleep` loop.
+- Use Bash for shell work. Use PowerShell only for one Windows cmdlet. The command checker refuses a PowerShell command that has `$()`, a `"$var"` string or a script block.
+- If a command needs a loop, a variable or code in a heredoc, write a script file in `.practice/<task>/` and run the file. The command checker refuses those shapes in a one-line command.
+- Do not search the `.practice` root with Glob or Grep. The folder holds hundreds of thousands of files and the search times out. List the exact folder: `ls .practice/coordinator/runs/<task>`.
 - When an action has no effect, read the saved output of the run (`.practice/aio-bench/output/<case>.log`) and the engine trace (`BENCH_TRACE=<dir>`) before you change the worker.
 - When the same wait repeats on each change, measure where the time goes and cut that first.
 
