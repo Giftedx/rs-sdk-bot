@@ -1,0 +1,22 @@
+{
+ "id": "1794385256769-trousersnake-knightrider-feather",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TrouserSnake",
+ "to": "KnightRider",
+ "item": "Feather",
+ "count": 50,
+ "start": 1794385256769,
+ "end": 1794387656769,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

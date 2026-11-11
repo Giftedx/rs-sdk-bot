@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794384327837,
+ "at": 1794384374539,
  "jobs": [
   {
    "account": "SporranDip",
@@ -58,6 +58,25 @@
    "resources": []
   },
   {
+   "account": "PocketPool",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=125 EXPECTED_OWNED=25 LIMIT_PRICE=200 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit10-559-25to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=375 EXPECTED_OWNED=50 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit10-557-50to425 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 125 Body rune, 375 Earth rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "supply",
+   "template": "kit-buy:army-splash-magic-66",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
    "account": "UnderMyKilt",
    "script": "scripts/aio.ts",
    "args": [
@@ -105,25 +124,6 @@
    ]
   },
   {
-   "account": "PocketPool",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=125 EXPECTED_OWNED=25 LIMIT_PRICE=200 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit10-559-25to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=375 EXPECTED_OWNED=50 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit10-557-50to425 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 125 Body rune, 375 Earth rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
    "account": "Fingersmith",
    "script": "scripts/alch-train.ts",
    "args": [
@@ -157,23 +157,16 @@
   },
   {
    "account": "Fingerblastr",
-   "script": "scripts/aio.ts",
-   "args": [
-    "quester",
-    "chain",
-    "drunkmonk,murder,zanaris"
-   ],
-   "env": {},
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-115f5ccc-d31c-4538-ba41-cc9b8282b17d"
+   },
    "enabled": false,
-   "standing": true,
    "repeat": false,
-   "goal": "complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
-   "role": "quest",
-   "template": "army-quest-lostcity",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "quest:lostcity"
-   ]
+   "goal": "claude-cloud-recover-fingerblastr-20261111t080055z [task-115f5ccc-d31c-4538-ba41-cc9b8282b17d]",
+   "role": "quest"
   }
  ]
 }
