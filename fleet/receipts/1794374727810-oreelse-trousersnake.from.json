@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794374727810-oreelse-trousersnake",
+ "account": "OreElse",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune full helm",
+ "requested": 1,
+ "claim": "8fd56fff-a325-4489-8a8d-d4cc6139acce",
+ "count": 1,
+ "ok": true,
+ "at": 1794375454647,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794375442863
+ },
+ "logout": {
+  "attemptId": "1794375430564-0000027876-0000000001",
+  "at": 1794375454561,
+  "sha256": "ba4496107eb45d33a38bbe7aaa7c1736614e30047b83d164c1a9faf8438cc2f0"
+ },
+ "screen": true
+}

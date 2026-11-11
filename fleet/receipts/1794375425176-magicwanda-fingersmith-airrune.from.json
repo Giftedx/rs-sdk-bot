@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794375425176-magicwanda-fingersmith-airrune",
+ "account": "Magicwanda",
+ "partner": "Fingersmith",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 10,
+ "claim": "c68c8bef-e5fc-4aeb-8172-e633bb20b6af",
+ "count": 10,
+ "ok": true,
+ "at": 1794375455750,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1794375444897
+ },
+ "logout": {
+  "attemptId": "1794375435231-0000015824-0000000001",
+  "at": 1794375455741,
+  "sha256": "056ccc952893cd6466aaa6dd330b5223c0372ada76758c818094bcf138ea3a8b"
+ },
+ "screen": true
+}
