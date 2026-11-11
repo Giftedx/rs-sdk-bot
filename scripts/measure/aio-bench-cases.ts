@@ -8,6 +8,8 @@ import {KITS, kitItems} from '../pk-kits';
 
 export type BenchCase = {
   key: string;
+  // Environment for the engine of the case. It takes effect when the case has its own engine (a fresh-engine run).
+  engineEnv?: Record<string, string>;
   script: string;
   preset: string;
   presetConfig?: SaveConfig;
@@ -94,9 +96,12 @@ export const kitFixture = (kit: string, x: number, z = 3555): SaveConfig => ({
   ...kitItems(kit),
 });
 // One spar for each pair of kits, all at once at the mirror spot: `matchups` is side A's kit and side B's kit.
+// A spar needs no npc far from its players: the engine of a spar case gives a turn only to an npc within about 64
+// tiles of a player (patches/rs-sdk.md, item 10).
+const SPAR_ENGINE = {SIM_NPC_NEAR: '64'};
 const sparMatrix = (key: string, matchups: readonly (readonly [string, string])[], args: string[] = []): BenchCase => {
   const letters = 'bcdefghijklmnopqrstuvwxyz'.slice(0, matchups.length * 2 - 1).split('');
-  return {key, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: kitFixture(matchups[0]![0], 3094),
+  return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: kitFixture(matchups[0]![0], 3094),
     scriptArgs: ['spar', '{bot:b}', '900', ...letters.slice(1).map(l => `{bot:${l}}`), `SPAR_KITS=${matchups.map(m => m.join(':')).join(',')}`, ...args],
     companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: kitFixture(matchups[(i + 1) >> 1]![(i + 1) % 2]!, (i + 1) % 2 ? 3096 : 3094)}))};
 };
@@ -104,11 +109,11 @@ const sparMatrix = (key: string, matchups: readonly (readonly [string, string])[
 const sparBatch = (key: string, pairs: number, a: SaveConfig, b: SaveConfig, args: string[] = []): BenchCase => {
   // One character for each account after the first: up to 18 pairs.
   const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, pairs * 2 - 1).split('');
-  return {key, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...letters.slice(1).map(l => `{bot:${l}}`), ...args], pass: ok, presetConfig: a,
+  return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...letters.slice(1).map(l => `{bot:${l}}`), ...args], pass: ok, presetConfig: a,
     companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i % 2 ? a : b}))};
 };
 const sparCase = (key: string, a: SaveConfig, b: SaveConfig, args: string[] = []): BenchCase =>
-  ({key, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...args], pass: ok, presetConfig: a, companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: b}]});
+  ({key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...args], pass: ok, presetConfig: a, companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: b}]});
 
 const skiller = (skill: string, method: string, preset: string, args: string[] = [], extra: Partial<BenchCase> = {}): BenchCase =>
   ({key: `skiller:${skill}:${method}`, script: 'scripts/aio-skiller.ts', preset, scriptArgs: [skill, method, ...args], pass: ok, ...extra});

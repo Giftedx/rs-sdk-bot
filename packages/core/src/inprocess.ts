@@ -141,7 +141,8 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     const lockstep = process.env.SIM_LOCKSTEP === '1';
     const busyMs = Number(process.env.SIM_BUSY_MS ?? 2000);
     const ackFile = process.env.SIM_ACK_FILE;
-    const ackStat = { ticks: 0, held: 0, heldMs: 0, capped: 0 };
+    // pumpMs: the packet reads of the client; stateMs: the state of a tick; scriptMs: the tick listeners (the script).
+    const ackStat = { ticks: 0, held: 0, heldMs: 0, capped: 0, pumpMs: 0, stateMs: 0, scriptMs: 0 };
     const sendNow = client.flush?.bind(client);
     let flushHeld = false, ackGeneration = 0, stateWaiters = 0, stateWaitersLow = Infinity;
     const holdFlush = () => { if (!flushHeld && sendNow) { flushHeld = true; client.flush = () => {}; } };
@@ -167,11 +168,14 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
         if (stopped) return;
         try {
             tick++;
+            const t0 = performance.now();
             pushState('s');
+            const t1 = performance.now();
             if (waitLeft > 0 && --waitLeft === 0) waitDone?.();
             // Like SDL_DispatchEventWatchList: freeze this dispatch's membership,
             // but respect removals. A new wait must start on the next game tick.
             for (const l of [...listeners]) if (listeners.has(l)) l();
+            ackStat.stateMs += t1 - t0; ackStat.scriptMs += performance.now() - t1;
         } catch (e) {
             console.error('[inprocess] tick handler error', e);
         }
@@ -185,9 +189,10 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     };
     const drainOnce = originalPacketPump ? async () => {
         pumpingPackets = true;
+        const t0 = performance.now();
         try { await originalPacketPump.call(client); }
         catch (error) { pendingTicks = 0; throw error; }
-        finally { pumpingPackets = false; }
+        finally { pumpingPackets = false; ackStat.pumpMs += performance.now() - t0; }
         const count = pendingTicks;
         pendingTicks = 0;
         for (let i = 0; i < count && !stopped; i++) publishTick();

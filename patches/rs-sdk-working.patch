@@ -8,7 +8,7 @@ index ec3ce9f7c..aa345480d 100644
  import { Worker } from 'worker_threads';
  
 diff --git a/server/engine/src/engine/World.ts b/server/engine/src/engine/World.ts
-index 4cc01105e..2510f085e 100644
+index 4cc0110..6a3bfd0 100644
 --- a/server/engine/src/engine/World.ts
 +++ b/server/engine/src/engine/World.ts
 @@ -72,6 +72,9 @@ import UpdateFriendList from '#/network/game/server/model/UpdateFriendList.js';
@@ -21,7 +21,7 @@ index 4cc01105e..2510f085e 100644
  import { FriendsServerOpcodes } from '#/server/friend/FriendServer.js';
  import { FriendThreadMessage } from '#/server/friend/FriendThread.js';
  import { LoggerEventType } from '#/server/logger/LoggerEventType.js';
-@@ -114,6 +117,18 @@ type LogoutRequest = {
+@@ -114,6 +117,21 @@ type LogoutRequest = {
      lastAttempt: number;
  };
  
@@ -34,13 +34,16 @@ index 4cc01105e..2510f085e 100644
 +// SIM_DET=1: no tick runs while no client is connected and no login or logout is in flight, so the world a login
 +// meets does not depend on how long the bot process took to start.
 +const SIM_DET = SIM_LOCKSTEP && process.env.SIM_DET === '1';
++// SIM_NPC_NEAR=<tiles> (lockstep only): an npc takes its turn only within about that many tiles of a player. The
++// turns of every npc of the world are a third of a tick with a few players in one place.
++const SIM_NPC_NEAR = SIM_LOCKSTEP ? Number(process.env.SIM_NPC_NEAR ?? 0) : 0;
 +// SIM_STAT_FILE: the lockstep gate appends one line per 25 ticks there (mean wait and its cause).
 +const simStatLine = (line: string) => { if (process.env.SIM_STAT_FILE) fs.appendFileSync(process.env.SIM_STAT_FILE, line + '\n'); };
 +
  class World {
      private loginThread = new Worker(new URL('../server/login/LoginThread.ts', import.meta.url));
      private friendThread = new Worker(new URL('../server/friend/FriendThread.ts', import.meta.url));
-@@ -381,9 +396,90 @@ class World {
+@@ -381,9 +399,90 @@ class World {
  
      // ----
  
@@ -131,7 +134,7 @@ index 4cc01105e..2510f085e 100644
              // rs-sdk: cap catch-up at 2 ticks of backlog. Sustained overload (many bots)
              // otherwise makes the world sprint at max speed until the full backlog replays.
              this.nextTick = Math.max(this.nextTick, start - this.tickRate * 2);
-@@ -590,7 +686,8 @@ class World {
+@@ -590,7 +689,8 @@ class World {
  
              // ----
  
@@ -141,7 +144,26 @@ index 4cc01105e..2510f085e 100644
          } catch (err) {
              if (err instanceof Error) {
                  printError('eep eep cabbage! An unhandled error occurred during the cycle: ' + err.message);
-@@ -2339,6 +2436,7 @@ class World {
+@@ -748,7 +848,18 @@ class World {
+     // - modes
+     private processNpcs(): void {
+         const start: number = Date.now();
++        // Cells of SIM_NPC_NEAR tiles: an npc in the cell of a player or in a cell next to it takes its turn.
++        let near: Set<number> | null = null;
++        if (SIM_NPC_NEAR > 0) {
++            near = new Set();
++            for (const player of this.players) {
++                if (!player) continue;
++                const cx = Math.floor(player.x / SIM_NPC_NEAR), cz = Math.floor(player.z / SIM_NPC_NEAR);
++                for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) near.add((cx + dx) * 65536 + cz + dz);
++            }
++        }
+         for (const npc of this.npcs) {
++            if (near && !near.has(Math.floor(npc.x / SIM_NPC_NEAR) * 65536 + Math.floor(npc.z / SIM_NPC_NEAR))) continue;
+             try {
+                 npc.turn();
+             } catch (err) {
+@@ -2339,6 +2450,7 @@ class World {
                      player.teleport(3221, 3219, 0);
                  }
  
