@@ -1,0 +1,22 @@
+{
+ "id": "1794386628327-oreelse-thefullmonty",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "OreElse",
+ "to": "TheFullMonty",
+ "item": "Rune chainbody",
+ "count": 1,
+ "start": 1794386628327,
+ "end": 1794398628327,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

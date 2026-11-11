@@ -1,0 +1,22 @@
+{
+ "id": "1794386629885-oreelse-thefullmonty",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "OreElse",
+ "to": "TheFullMonty",
+ "item": "Rune platelegs",
+ "count": 1,
+ "start": 1794386629885,
+ "end": 1794398629885,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
