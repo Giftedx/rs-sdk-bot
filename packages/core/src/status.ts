@@ -201,6 +201,8 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
             sessionAttemptId: (s as { lifecycle?: { attemptId?: unknown } }).lifecycle?.attemptId ?? null,
             pos: p ? { x: p.worldX, z: p.worldZ, level: p.level } : null,
             hp: hp ? { now: hp.level, max: hp.baseLevel } : null,
+            // Run energy in percent, as the game's Run orb shows it.
+            runEnergy: p ? p.runEnergy : null,
             combat: p?.combatLevel ?? null,
             // Progress uses base level; stat() route gates use the independently
             // observed current value (including drains/boosts), never a guess.
