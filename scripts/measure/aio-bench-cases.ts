@@ -4,6 +4,7 @@ import {aioCatalog} from '../aio';
 import {PRESETS, type SaveConfig} from '../../packages/practice/src/presets';
 import {firemakingFixture} from '../../packages/practice/src/firemaking-order-proof';
 import {agilityFixturePreset} from '../../packages/practice/src/agility-order-proof';
+import {KITS, kitItems} from '../pk-kits';
 
 export type BenchCase = {
   key: string;
@@ -66,14 +67,28 @@ const CHICKEN_FIXTURE: SaveConfig = {
 // runes of Varrock Teleport; `potions` swaps 3 sharks for a super attack, a super strength and a ranging potion;
 // `god` is the potion kit with the Zamorak cape and staff, fire runes, and the Mage Arena done with Flames of
 // Zamorak learnt (varps 267 and 270), for one more shark.
-export const sparFixture = (x: number, z = 3555, o: {food?: number; glory?: boolean; teleport?: boolean; potions?: boolean; god?: boolean} = {}): SaveConfig => ({
+export const sparFixture = (x: number, z = 3555, o: {food?: number; glory?: boolean; teleport?: boolean; potions?: boolean; god?: boolean; noDragonSlayer?: boolean} = {}): SaveConfig => ({
   position: {x, z, level: 0},
   skills: {Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99, Prayer: 99, Hitpoints: 99},
-  varps: o.god ? {147: 6, 176: 10, 300: 1000, 267: 8, 270: 99} : {147: 6, 176: 10, 300: 1000},
+  varps: o.god ? {147: 6, 176: 10, 300: 1000, 267: 8, 270: 99} : o.noDragonSlayer ? {147: 6, 300: 1000} : {147: 6, 176: 10, 300: 1000},
   equipment: [[1163, 0], [o.god ? 2414 : 1052, 1], [1712, 2], [1231, 3], [1127, 4], [1201, 5], [1079, 7], [2577, 10], [892, 13]].map(([id, slot]) => ({id: id!, count: id === 892 ? 300 : 1, slot: slot!})),
   inventory: [{id: o.god ? 2417 : 1401, count: 1}, ...(o.god ? [{id: 554, count: 400}] : []), {id: 861, count: 1}, {id: 556, count: 500}, {id: 565, count: 100}, {id: 557, count: 200}, {id: 555, count: 200}, {id: 561, count: 100},
     {id: 2434, count: 1}, {id: 2434, count: 1}, ...(o.glory ? [{id: 1712, count: 1}] : []), ...(o.teleport ? [{id: 563, count: 2}, {id: 554, count: 2}] : []), ...(o.potions || o.god ? [{id: 2436, count: 1}, {id: 2440, count: 1}, {id: 2444, count: 1}] : []), ...Array.from({length: o.food ?? (o.god ? 14 : o.potions ? 15 : 18)}, () => ({id: 385, count: 1}))],
 });
+// A maxed account in a kit of scripts/pk-kits.ts, with Lost City and Dragon Slayer done and full special energy.
+export const kitFixture = (kit: string, x: number, z = 3555): SaveConfig => ({
+  position: {x, z, level: 0},
+  skills: {Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99, Prayer: 99, Hitpoints: 99},
+  varps: {147: 6, 176: 10, 300: 1000},
+  ...kitItems(kit),
+});
+// One spar for each pair of kits, all at once at the mirror spot: `matchups` is side A's kit and side B's kit.
+const sparMatrix = (key: string, matchups: readonly (readonly [string, string])[]): BenchCase => {
+  const letters = 'bcdefghijklmnopqrstuvwxyz'.slice(0, matchups.length * 2 - 1).split('');
+  return {key, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: kitFixture(matchups[0]![0], 3094),
+    scriptArgs: ['spar', '{bot:b}', '900', ...letters.slice(1).map(l => `{bot:${l}}`), `SPAR_KITS=${matchups.map(m => m.join(':')).join(',')}`],
+    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: kitFixture(matchups[(i + 1) >> 1]![(i + 1) % 2]!, (i + 1) % 2 ? 3096 : 3094)}))};
+};
 // `pairs` spars at once: the account of the run and its partner `b`, then partners `c` and `d`, `e` and `f`, and so on.
 const sparBatch = (key: string, pairs: number, a: SaveConfig, b: SaveConfig, args: string[] = []): BenchCase => {
   const letters = 'bcdefghijklmnopqrstuvwxyz'.slice(0, pairs * 2 - 1).split('');
@@ -252,6 +267,16 @@ const ROUTE_CASES: BenchCase[] = [
   // tribrid switches, Fire Wave and freeze runes, 2 prayer potions, 18 sharks and full special energy. SPAR_A and SPAR_B
   // (--set) choose the profile of each side.
   sparCase('pvp:spar', sparFixture(3094), sparFixture(3096)),
+  // The mirror with Dragon Slayer not done: the loop must leave the rune platebody on, because the game does not let
+  // such an account put it back.
+  sparCase('extra:spar-no-slayer', sparFixture(3094, 3555, {noDragonSlayer: true}), sparFixture(3096, 3555, {noDragonSlayer: true})),
+  // The tribrid against every build of scripts/pk-kits.ts in one run, and a mirror of 8 for each build: the cases that
+  // the hill climb and the kit matrix run (scripts/measure/pk-spar-climb.ts, pk-spar-matrix.ts).
+  sparMatrix('extra:spar-kits-x8', [['tribrid', 'tribrid'], ['tribrid', 'tribrid-pots'], ['tribrid', 'melee'], ['tribrid', 'ranger'], ['tribrid', 'mage'],
+    ['tribrid', 'tribrid-adamant'], ['tribrid', 'tribrid-mithril'], ['tribrid-pots', 'tribrid-pots']]),
+  ...Object.keys(KITS).map(kit => sparMatrix(`extra:spar-kit-${kit}-x8`, Array.from({length: 8}, () => [kit, kit] as const))),
+  // A build against the standard tribrid, four pairs on each side of the map: what the build is worth by itself.
+  ...Object.keys(KITS).filter(kit => kit !== 'tribrid').map(kit => sparMatrix(`extra:spar-duel-${kit}-x8`, Array.from({length: 8}, (_, i) => (i % 2 ? ['tribrid', kit] : [kit, 'tribrid']) as [string, string]))),
   // Map cases of the spar. Gap: the same mirror from 12 tiles apart. Trees: 6 tiles apart at Wilderness level 3 with a
   // blocker on tiles 3101-3103 between the two, so neither has line of sight at the start. Escape: Wilderness level 34
   // at a spot with no monster in view (green dragons at (3094, 3800) attack both sides and block their hits); side B
@@ -262,6 +287,7 @@ const ROUTE_CASES: BenchCase[] = [
   // Eight glory chases at once in one world, at the same spot: eight samples for the ticks of one.
   sparBatch('extra:spar-escape-x8', 8, sparFixture(3125, 3790), sparFixture(3127, 3790, {food: 3, glory: true}), ['SPAR_SCENARIO=escape']),
   sparBatch('extra:spar-x8', 8, sparFixture(3094), sparFixture(3096)),
+  sparBatch('extra:spar-escape-spell-x8', 8, sparFixture(3125, 3790), sparFixture(3127, 3790, {food: 3, teleport: true}), ['SPAR_SCENARIO=escape-spell']),
   sparBatch('extra:spar-escape-spell-pots-x8', 8, sparFixture(3125, 3790, {potions: true}), sparFixture(3127, 3790, {food: 3, teleport: true}), ['SPAR_SCENARIO=escape-spell']),
   sparBatch('extra:spar-escape-god-x8', 8, sparFixture(3125, 3790, {god: true}), sparFixture(3127, 3790, {food: 3, glory: true}), ['SPAR_SCENARIO=escape-god']),
   sparBatch('extra:spar-escape-spell-god-x8', 8, sparFixture(3125, 3790, {god: true}), sparFixture(3127, 3790, {food: 3, teleport: true}), ['SPAR_SCENARIO=escape-spell-god']),

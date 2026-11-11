@@ -5,23 +5,34 @@
 // Practice only: openBot refuses a non-local server without DEMO_OK=1, and a spar kills one of the two accounts.
 // Usage: bun scripts/pk-spar.ts <bot a> <bot b> [CAP ticks, default 900] [<bot a> <bot b> ...]; more pairs fight at
 // the same time and the RESULT line counts them. Environment: SPAR_A and SPAR_B name a
-// profile (default base); SPAR_A_OPTS and SPAR_B_OPTS add fight options as JSON, e.g. {"eatAt":60}; SPAR_SCENARIO
+// profile (default base); SPAR_A_OPTS and SPAR_B_OPTS add fight options as JSON, e.g. {"eatAt":60}; SPAR_KITS names
+// the kit of each side of each pair (scripts/pk-kits.ts), e.g. tribrid:melee,tribrid:ranger; SPAR_SCENARIO
 // names a scenario (default open). The start state of a scenario is its bench case (scripts/measure/aio-bench-cases.ts).
 // Prints one `SPAR <json>` line. RESULT ok means that both sides attacked and the fight reached a kill, an escape or
 // the cap.
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
 import { defaultSpec, fightPlayer, nextTick, type FightOptions, type FightResult, type Kit } from './pk';
 import { TRIBRID_KIT } from './pk-hunt';
+import { kitOptions, kitSwitches } from './pk-kits';
 
 // `specBelow` moves the health fraction at which the kit's special fires.
 export type Profile = Partial<Omit<FightOptions, 'log' | 'stop'>> & { specBelow?: number };
+// The options that won the hill climb (scripts/measure/pk-spar-climb.ts writes the file).
+export const CHAMPION: Profile = JSON.parse(readFileSync(resolve(import.meta.dir, 'pk-champion.json'), 'utf8'));
 export const PROFILES: Readonly<Record<string, Profile>> = {
     base: {},
+    champion: CHAMPION,
     freeze: { freeze: true },
     'freeze-flee': { freeze: 'flee' },
     // Keeps its special for a target at 40% health or one that has fled, and freezes a target that runs.
     hunter: { freeze: 'flee', specBelow: 0.4 },
     'hunter-low': { freeze: 'low', specBelow: 0.4 },
+    // The bow burst from 60% health: bare of armour, magic shortbow specials with a dagger special between.
+    // The special energy is kept for the burst: no melee special above 20% health outside it.
+    burst: { bowBurst: 0.6, specBelow: 0.2 },
+    'hunter-burst': { freeze: 'low', specBelow: 0.2, bowBurst: 0.6 },
     'no-read': { readOverheads: false },
     'no-spec': { spec: undefined },
     'spec-early': { specBelow: 0.8 },
@@ -88,7 +99,7 @@ export async function spar(a: Session, b: Session, optionsA: FightOptions, optio
     const told = [0, 0];
     const trace = process.env.SPAR_TRACE === '1' ? a.onTick(() => { const x = self(a), y = self(b);
         [a, b].forEach((s, i) => { for (const m of s.sdk.getState()?.gameMessages ?? []) { const id = m.observationId ?? m.tick; if (id > told[i]! && m.tick >= start) { told[i] = id; log(`MSG ${s.name} ${m.text}`); } } });
-        log(`TRACE ${a.tick() - start} a=${x?.worldX},${x?.worldZ} hp=${x?.hp} run=${x?.runEnergy} b=${y?.worldX},${y?.worldZ} hp=${y?.hp} run=${y?.runEnergy}`); }) : undefined;
+        log(`TRACE ${a.name} ${a.tick() - start} a=${x?.worldX},${x?.worldZ} hp=${x?.hp} run=${x?.runEnergy} b=${y?.worldX},${y?.worldZ} hp=${y?.hp} run=${y?.runEnergy}`); }) : undefined;
     const unwatch = a.onTick(() => { if (opening === null && [a, b].some((s, i) => (self(s)?.hp ?? Infinity) < (hp0[i] ?? 0))) opening = a.tick() - start; });
     // The first side to end stops the other: a fight has one end.
     let over = false;
@@ -105,17 +116,30 @@ export function batchSummary(results: readonly SparResult[]) {
     const mean = results.length ? Number((results.reduce((n, r) => n + r.score, 0) / results.length).toFixed(1)) : 0;
     return { fights: results.length, kills: count(r => r.winner === 'a' && r.end === 'kill'), deaths: count(r => r.winner === 'b' && r.end === 'kill'),
         escapes: count(r => r.winner === 'b' && r.end === 'escape'), fled: count(r => r.winner === 'a' && r.end === 'escape'), draws: count(r => r.winner === 'draw'),
-        mean, ticks: Math.max(0, ...results.map(r => r.ticks)), scores: results.map(r => r.score) };
+        mean, ticks: Math.max(0, ...results.map(r => r.ticks)), scores: results.map(r => r.score), nets: results.map(netRate) };
+}
+// Net damage of side A for each 100 ticks of a spar: what side B took less what side A took. It moves with every hit,
+// so it separates two profiles in fewer fights than a count of kills.
+export const netRate = (r: SparResult) => Number((((r.b.taken - r.a.taken) * 100) / Math.max(1, r.ticks)).toFixed(1));
+// A spar seen from the other side: for a pair that fought with the two profiles on swapped sides.
+export function flipped(r: SparResult): SparResult {
+    return { ...r, winner: r.winner === 'a' ? 'b' : r.winner === 'b' ? 'a' : 'draw', score: r.score === 0 ? 0 : -r.score, a: r.b, b: r.a };
 }
 
 if (import.meta.main) {
     const [botA, botB, capArg, ...more] = process.argv.slice(2), env = process.env;
     if (!botA || !botB || more.length % 2) { console.log('RESULT fail usage: bun scripts/pk-spar.ts <bot a> <bot b> [CAP ticks] [<bot a> <bot b> ...]'); process.exit(2); }
     const { openBot, finish } = await import('../packages/core/src/bot');
-    const cap = Number(capArg ?? 900), nameA = env.SPAR_A ?? 'base', nameB = env.SPAR_B ?? 'base', scenarioName = env.SPAR_SCENARIO ?? 'open';
+    const cap = Number(env.SPAR_CAP ?? capArg ?? 900), nameA = env.SPAR_A ?? 'base', nameB = env.SPAR_B ?? 'base', scenarioName = env.SPAR_SCENARIO ?? 'open';
     const scenario = SCENARIOS[scenarioName];
     if (!scenario) { console.log(`RESULT fail pk-spar: unknown scenario "${scenarioName}"; known: ${Object.keys(SCENARIOS).join(', ')}`); process.exit(2); }
-    const optionsA = sparOptions(nameA, env.SPAR_A_OPTS, TRIBRID_KIT, cap, scenario.a), optionsB = sparOptions(nameB, env.SPAR_B_OPTS, TRIBRID_KIT, cap, scenario.b);
+    // The kit of a side belongs to its account (the bench case staged it); the profile of a side can swap.
+    const kits = env.SPAR_KITS?.split(',').map(pair => pair.split(':'));
+    const options = (profile: 'a' | 'b', pair: number, side: 0 | 1): FightOptions => {
+        const kit = kits?.[pair % kits.length]?.[side];
+        const base = { ...(kit ? kitOptions(kit) : {}), ...(side === 0 ? scenario.a : scenario.b) };
+        return sparOptions(profile === 'a' ? nameA : nameB, profile === 'a' ? env.SPAR_A_OPTS : env.SPAR_B_OPTS, kit ? kitSwitches(kit) : TRIBRID_KIT, cap, base);
+    };
     // A death is the expected end of a spar, so it must not end the run as openBot does by default. Any other stop
     // (a stop file, a stalled tick stream) halts every side and fails the run.
     let halted: string | undefined;
@@ -130,16 +154,26 @@ if (import.meta.main) {
     const { tickWaits } = await import('../packages/core/src/tick-stream');
     tickWaits.active++;
     // The account of the run logs in first: the bench checks the first START line against that account's start tile.
-    const first = await openBot(botA, { onStop });
+    const first = env.SPAR_LOGIN === 'b' ? null as unknown as Session : await openBot(botA, { onStop });
     const pairs: [Session, Session][] = await Promise.all(names.map(async ([x, y], i): Promise<[Session, Session]> => {
-        const [a, b] = await Promise.all([i === 0 ? first : openBot(x, { onStop }), openBot(y, { onStop })]);
+        // SPAR_LOGIN=b logs side B in before side A (after the first account, which the bench needs first): the engine
+        // gives the earlier login the lower player index, and it acts on that player first in each tick.
+        const order = env.SPAR_LOGIN === 'b';
+        const b0 = order ? await openBot(y, { onStop }) : null;
+        const a = i === 0 && first ? first : await openBot(x, { onStop });
+        const b = b0 ?? await openBot(y, { onStop });
         // The fight loop sends its actions by index and reads no `reachable` flag; the flood fill behind that flag
         // was 9% of a 16-account run.
         for (const s of [a, b]) (s.client as { setReachabilityEnabled?: (on: boolean) => void } | undefined)?.setReachabilityEnabled?.(false);
         return [a, b];
     })).finally(() => { tickWaits.active--; });
     const t1 = Date.now();
-    const results = await Promise.all(pairs.map(([a, b]) => spar(a, b, optionsA, optionsB, undefined, () => halted !== undefined)));
+    // SPAR_SWAP=1: every second pair fights with the two profiles on swapped sides, and its result is turned back, so
+    // side A in the results is always the profile SPAR_A and the side of the map has no part in the comparison.
+    const swap = env.SPAR_SWAP === '1';
+    const results = await Promise.all(pairs.map(async ([a, b], i) => (swap && i % 2
+        ? flipped(await spar(a, b, options('b', i, 0), options('a', i, 1), undefined, () => halted !== undefined))
+        : spar(a, b, options('a', i, 0), options('b', i, 1), undefined, () => halted !== undefined))));
     // Where the wall time of the run went: the logins, then the fights.
     console.log(`SPAR_TIMING loginMs=${t1 - t0} fightMs=${Date.now() - t1} pairs=${pairs.length} ticks=${Math.max(...results.map(r => r.ticks))}`);
     for (const r of results) console.log(`SPAR ${JSON.stringify({ scenario: scenarioName, profiles: { a: nameA, b: nameB }, ...r })}`);
@@ -147,7 +181,7 @@ if (import.meta.main) {
     if (results.length > 1) {
         const s = batchSummary(results);
         await finish(sessions, ok, `spar-batch fights=${s.fights} kills=${s.kills} deaths=${s.deaths} escapes=${s.escapes} fled=${s.fled} draws=${s.draws} mean=${s.mean} ticks=${s.ticks} a=${nameA} b=${nameB} `
-            + `valid=${results.filter(sparValid).length} scores=${s.scores.join(',')}${halted ? ` halted=${halted}` : ''}`);
+            + `valid=${results.filter(sparValid).length} nets=${s.nets.join(',')} scores=${s.scores.join(',')}${halted ? ` halted=${halted}` : ''}`);
     }
     await finish(sessions, ok, `spar winner=${r.winner} score=${r.score} ticks=${r.ticks} end=${r.end} opening=${r.opening} gap=${r.startGap} a=${nameA} b=${nameB} `
         + `aOutcome=${r.a.outcome} bOutcome=${r.b.outcome} aTaken=${r.a.taken} bTaken=${r.b.taken} aEaten=${r.a.eaten} bEaten=${r.b.eaten} aSpecs=${r.a.specs} bSpecs=${r.b.specs}${halted ? ` halted=${halted}` : ''}`);
