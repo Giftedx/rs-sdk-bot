@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794370557023,
+ "at": 1794370676242,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -192,31 +192,27 @@
   },
   {
    "account": "mmsmk1232",
-   "script": "scripts/shop-buyer.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "ardy",
-    "400"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "ITEMS": "bronze arrow",
-    "STOCK_TARGET": "500",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "BANK_AT": "0",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "5000",
-    "COIN_RESERVE": "500",
-    "MAX_SPEND": "4000"
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy bronze arrows at Aemad in East Ardougne for the Ranged band",
-   "role": "supply",
-   "template": "army-arrows-ardy",
+   "goal": "train Strength to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-strength-99",
    "autopilot": "local",
    "resources": [
-    "shop:ardy"
+    "trooper:battlefield"
    ]
   },
   {
