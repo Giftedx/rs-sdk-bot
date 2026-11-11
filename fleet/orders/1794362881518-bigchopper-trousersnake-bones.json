@@ -1,0 +1,22 @@
+{
+ "id": "1794362881518-bigchopper-trousersnake-bones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigchopper",
+ "to": "TrouserSnake",
+ "item": "Bones",
+ "count": 37,
+ "start": 1794362881518,
+ "end": 1794365281518,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
