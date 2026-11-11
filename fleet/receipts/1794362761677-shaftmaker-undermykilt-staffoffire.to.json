@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1794362761677-shaftmaker-undermykilt-staffoffire",
  "account": "UnderMyKilt",
  "partner": "Shaftmaker",
@@ -12,6 +12,6 @@
  "claim": "df45be89-1c3d-4148-9671-b2aa4838c867",
  "count": 0,
  "ok": false,
- "at": 1794362764858,
- "detail": "trade claimed"
+ "at": 1794362877201,
+ "detail": "session ended: disconnected"
 }

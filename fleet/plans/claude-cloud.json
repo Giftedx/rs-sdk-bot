@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794362874602,
+ "at": 1794362887961,
  "jobs": [
   {
    "account": "KnightRider",
@@ -154,28 +154,16 @@
   },
   {
    "account": "Dipstick",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-a27ba00a-2ba5-4cf0-8741-9cdaacf5afa8"
    },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-dipstick-20261111t015754z [task-a27ba00a-2ba5-4cf0-8741-9cdaacf5afa8]",
+   "role": "combat"
   }
  ]
 }
