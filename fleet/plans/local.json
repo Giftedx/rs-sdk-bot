@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794360824643,
+ "at": 1794361454201,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -433,27 +433,6 @@
    "role": "helper"
   },
   {
-   "account": "Pocketpython",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "564",
-    "QUANTITY": "183",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "400",
-    "CASH_RESERVE": "200000",
-    "ORDER_KEY": "haggis-route-pocketpython-cosmic183",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "900000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-b76ebde6-4d0c-49e0-94b1-4f70e437be72"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-pocketpython-cosmic183 [task-b76ebde6-4d0c-49e0-94b1-4f70e437be72]",
-   "role": "supply"
-  },
-  {
    "account": "Ballspinner",
    "script": "scripts/handoff-inputs.ts",
    "args": [
@@ -535,6 +514,19 @@
    "enabled": true,
    "repeat": false,
    "goal": "run-blood-magicwanda-loot60-r7 [task-9df88551-102d-45bb-b660-3ad046788708]",
+   "role": "supply"
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "600",
+    "COORDINATOR_RUN_ID": "task-dc6e6976-0856-4956-a80d-6aff1adb9a60"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-session-recovery-pocketpython-coin [task-dc6e6976-0856-4956-a80d-6aff1adb9a60]",
    "role": "supply"
   }
  ]
