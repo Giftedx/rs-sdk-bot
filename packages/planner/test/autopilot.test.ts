@@ -1110,6 +1110,11 @@ test('an army account under the Magic Guild level buys curse runes, then water a
     expect(ranged([soldier('Kilt', full)], { pilots: new Set() })).toBe('army-trooper-ranged-99');
     expect(ranged([soldier('Kilt')], { pilots: new Set() })).toBe('army-trooper-ranged-99');
     expect(ranged([soldier('Kilt')], { retired: new Set([pairKey('Kilt', KIT_BUY + 'army-splash-magic-66')]) })).toBe('army-trooper-ranged-99');
+    // An account in the middle of Lost City finishes the quest before the rune buy of the earlier band; one that has
+    // not started the quest buys first.
+    const questing: Acct = { ...soldier('Kilt'), quests: new Set<string>() }, both = new Set([...pilots, 'army-quest-lostcity']);
+    expect(ranged([questing], { pilots: both, current: new Map([['kilt', 'army-quest-lostcity']]) })).toBe('army-quest-lostcity');
+    expect(ranged([questing], { pilots: both })).toBe(KIT_BUY + 'army-splash-magic-66');
     // SPLASH_PLACES accounts cast at a time; the rest keep training.
     const many = run(['A', 'B', 'C', 'D'].map(n => soldier(n, full)));
     expect(many.filter(a => a.template!.id === 'army-splash-magic-66').length).toBe(SPLASH_PLACES);
