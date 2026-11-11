@@ -1,22 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794374552883,
+ "at": 1794374956526,
  "jobs": [
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/aio.ts",
-   "args": [
-    "quester",
-    "chain",
-    "zanaris"
-   ],
-   "env": {},
-   "enabled": false,
-   "standing": false,
-   "repeat": false,
-   "goal": "Lost City pilot",
-   "role": "hand"
-  },
   {
    "account": "UnderMyKilt",
    "script": "scripts/aio.ts",
