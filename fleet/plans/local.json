@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794367992110,
+ "at": 1794368068066,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -484,25 +484,16 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "sarim"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "ITEMS": "feather",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
+    "CAP": "600",
+    "COORDINATOR_RUN_ID": "task-f43cdb11-0043-457b-9f12-29d2bdcca1c4"
    },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy feathers at Gerrant",
-   "role": "bank",
-   "template": "shop-feathers",
-   "autopilot": "local",
-   "resources": [
-    "shop:sarim"
-   ]
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-session-recovery-billionaire-orphan-1794367220 [task-f43cdb11-0043-457b-9f12-29d2bdcca1c4]",
+   "role": "bank"
   }
  ]
 }
