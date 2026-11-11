@@ -107,7 +107,9 @@ Gap: 16 spars for each row; the builds that trade the freeze runes for sharks or
 
 The climb, mirror and matrix, 16 or more paired spars for each candidate: no option beat the base loop in the tribrid
 mirror (style orders, eat level 35 to 66, prayer restore level, special threshold 0.3 to 1, freeze rule, kiting a
-frozen target, standing 2 or 5 tiles off, prayer flick, free karambwans, the bow burst at three thresholds). Clearly
+frozen target, standing 2 or 5 tiles off, free karambwans, the bow burst at three thresholds). Those spars read the
+damage from hit splats, which show half of it (finding 15), and their batches of 8 do not separate two profiles
+(Speed of a measurement); findings 19 to 28 are the measured rules. Clearly
 worse: every armour piece off for each cast (net -18.3), kiting a frozen target (-7.2 to -9.1), no Defence prayer
 (-4.3), the torso kept on for casts (-6.0). In the `tribrid-pots` mirror the special at 50% health was accepted
 (+7.5, t 2.07); with about sixty candidates tried, one such result is expected by chance.
@@ -382,11 +384,14 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     the full max hit (20, 22, 23). By the tick of the HP drop the overhead is right for 188 of 196, so the prayer at
     the drop says nothing. Gap: the roll tick comes from the hit delay of each style, one tick before the drop for
     melee, two for ranged, three for magic at one tile.
-17. **Prayer points are the clock of a fight.** Both sides of a spar that ends in a kill near tick 670 hold 0 prayer points
-    (`prayerLeft` in the `SPAR` lines of `extra:spar-duel-melee-x8`). The overhead, Steel Skin and the two melee prayers
-    drain 12 each for a tick, and 60 + 2 x prayer bonus of drain costs one point, so 99 points and eight doses of
-    restore last about 700 ticks. The first side with no points takes full hits. Gap: no bench run with more restore
-    potions or with prayer bonus gear.
+17. **With no flick, prayer points are the clock of a fight; with the flick, food is.** With `prayerFlick: false` both
+    sides of a spar that ends in a kill near tick 670 hold 0 prayer points (`prayerLeft` in the `SPAR` lines of
+    `extra:spar-duel-melee-x8`): the overhead, Steel Skin and the two melee prayers drain 12 each for a tick, 60 + 2
+    x prayer bonus of drain costs one point, so 99 points and eight doses of restore last about 700 ticks, and the
+    first side with no points takes full hits. The fight loop flicks by default (every prayer off and on in one tick,
+    each 4 ticks): the sides of `extra:spar-rivals-tribrid-snare-x12` end with 23 to 46 points after 54 to 150
+    flicks, and more restore potions for less food do not win (finding 22). Gap: the flick does not hold every
+    point; where the rest drains is not measured.
 18. **The offline simulator agrees with the bench on tribrid kits, not on one-style builds.** `bun scripts/pk-sim.ts --table 1000`
     runs 16,000 fights in seconds with the server's hit, prayer, food and special rules. Against the tribrid it gives the
     potion kit, the lean kit and the hybrid a win and the mage, adamant and mithril kits a loss, as the bench does, and
@@ -458,8 +463,20 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     hunter keeps the freeze on a target that runs: at its hunt spots (Wilderness levels 3 to 7) a glory works at
     once and no freeze stops it. Gap: no rule that tells a target that will run from one that will stay before it
     runs; the target of the case fights back until it leaves, as a fighter does.
-28. **Adamant arrows cost a quarter of the kit less and lose little.** 300 rune arrows are 120,000 of the snare kit's
-    392,715 coins; 300 adamant arrows are 24,000. `tribrid-snare-addy` on the champion profile has 27 kills, 8
-    deaths and a draw in 36 spars against the melee build, the hybrid and the ranger; the snare kit with rune arrows
-    has 30 and 6 (`extra:spar-rivals-tribrid-snare-addy-x12`, `extra:spar-rivals-tribrid-snare-x12`, seeds 1, 2 and
-    3). Gap: 36 spars each do not separate 75% from 83%.
+28. **Adamant arrows cost a quarter of the kit less and lose about 12 points.** 300 rune arrows are 120,000 of the snare
+    kit's 392,715 coins; 300 adamant arrows are 24,000. On the champion profile against the melee build, the hybrid
+    and the ranger, the snare kit with rune arrows has 55 kills and 17 deaths in 72 spars (76%) and
+    `tribrid-snare-addy` has 54 kills, 29 deaths and a draw in 84 (64%) (`extra:spar-rivals-tribrid-snare-x12`,
+    `extra:spar-rivals-tribrid-snare-addy-x12`, seeds 1 to 7). Gap: z is 1.6, so the 12 points are likely and not
+    sure; two more rune batches (8 to 4 and 12 to 0) ran beside a second bench and are left out.
+29. **The champion in the snare kit beats every build of the league.** 16 kills and no death in 16 spars against the
+    eight league opponents (`extra:spar-league-snare-x8`, seeds 1 and 2): the tribrid with potions on the base and
+    reader profiles, the lean tribrid with random styles, the melee build, the hybrid, the ranger, the mage and the
+    food tribrid. Gap: two spars for each opponent; every opponent is our own fight loop, and none plays the
+    champion profile.
+30. **The eat level does not move the mirror.** Champion against champion with side A eating at 40 health has 9 kills and
+    7 deaths in 16 spars; at 60 it has 6 kills, 8 deaths and 2 draws (`extra:spar-x16`, seed 1; the default is 50).
+31. **The hunter takes the snare trip where its bank holds it.** With no kit named, each restock reads the bank and takes
+    the snare trip when the bank holds all of `SNARE_TRIP`, else the staff trip (`pickTrip` in
+    `scripts/pk-hunt.ts`). `extra:hunt-trip-auto` has the snare stock and passes with `HUNT trip snare` in 29 s.
+    Gap: no live run.

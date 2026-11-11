@@ -309,13 +309,15 @@ const ROUTE_CASES: BenchCase[] = [
   // The league: our fighter (the tribrid with potions, side A, profile SPAR_A) against eight opponents that each have
   // their own build and their own way to play (LEAGUE). A fighter is ready for a skilled player when it beats them all.
   sparMatrix('extra:spar-league-x8', LEAGUE.map(o => ['tribrid-pots', o.kit] as const), [`SPAR_B_PROFILES=${LEAGUE.map(o => o.profile).join(',')}`]),
+  sparMatrix('extra:spar-league-snare-x8', LEAGUE.map(o => ['tribrid-snare', o.kit] as const), [`SPAR_B_PROFILES=${LEAGUE.map(o => o.profile).join(',')}`]),
   // The league for a fighter with three more sharks and no freeze runes.
   // The builds that beat the tribrid on food: four spars each against the melee build, the hybrid and the ranger.
   sparMatrix('extra:spar-rivals-x12', Array.from({length: 12}, (_, i) => ['tribrid-pots', ['melee', 'hybrid', 'ranger'][i % 3]!] as const)),
   // One whole hunter trip (scripts/measure/pk-hunt-trip.ts): the hunter starts at Edgeville bank with an empty pack and
   // its kit in the bank; the target stands at the first hunt spot with no food.
-  ...(['staff', 'snare'] as const).map((kit): BenchCase => ({key: `extra:hunt-trip-${kit}`, engineEnv: SPAR_ENGINE, script: 'scripts/measure/pk-hunt-trip.ts', preset: 'fresh_lumbridge',
-    scriptArgs: ['{bot:b}', '900', kit], pass: ok, output: /kills=(\d+)/,
+  // `auto` has the snare stock and names no kit: the hunter must pick the snare trip from its bank.
+  ...(['staff', 'snare', 'auto'] as const).map((kit): BenchCase => ({key: `extra:hunt-trip-${kit}`, engineEnv: SPAR_ENGINE, script: 'scripts/measure/pk-hunt-trip.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', '900', kit], pass: kit === 'auto' ? s => ok(s) && /HUNT trip snare/.test(s) : ok, output: /kills=(\d+)/,
     presetConfig: {...sparFixture(3092, 3496), inventory: [], bank: [{id: 861, count: 1}, {id: 557, count: 200}, {id: 555, count: 200}, {id: 561, count: 100}, {id: 2434, count: 4}, {id: 1712, count: 2},
       {id: 2436, count: 2}, {id: 2440, count: 2}, {id: 2444, count: 2}, {id: 385, count: 60}, ...(kit === 'staff' ? [{id: 1401, count: 1}, {id: 556, count: 600}, {id: 565, count: 200}] : [])]},
     companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3540, {food: 0})}]})),

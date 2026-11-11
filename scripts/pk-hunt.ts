@@ -75,7 +75,15 @@ async function walk(s: Session, to: { x: number; z: number }, stop: () => boolea
 // One of each boost the fight loop drinks, in any dose.
 export const BOOST_POTIONS = [ITEMS.superAttack, ITEMS.superStrength, ITEMS.rangingPotion] as const;
 // Re-equip the melee set and any unequipped body armour, bank everything else in the pack, then withdraw the trip and food.
-export async function restock(s: Session, food: number, trip: readonly { id: number; count: number }[] = TRIP, kit: Kit = TRIBRID_KIT): Promise<string | null> {
+// The trip a bank can fill: the snare trip where the bank holds all of it, else the staff trip.
+export function pickTrip(bank: readonly { id: number; count: number }[]): { name: 'snare' | 'staff'; kit: Kit; trip: readonly { id: number; count: number }[] } {
+    const holds = (want: { id: number; count: number }) => (bank.find(b => b.id === want.id)?.count ?? 0) >= want.count;
+    return SNARE_TRIP.every(holds) ? { name: 'snare', kit: SNARE_KIT, trip: SNARE_TRIP } : { name: 'staff', kit: TRIBRID_KIT, trip: TRIP };
+}
+
+// `choose` picks the trip from the bank once the pack is banked (the hunter with no kit named: pickTrip).
+export async function restock(s: Session, food: number, trip: readonly { id: number; count: number }[] = TRIP, kit: Kit = TRIBRID_KIT,
+    choose?: (bank: readonly { id: number; count: number }[]) => readonly { id: number; count: number }[]): Promise<string | null> {
     const equip = typeof s.sdk.getEquipment === 'function' ? () => s.sdk.getEquipment() : () => s.sdk.getState()?.equipment ?? [];
     let switched = false;
     for (const item of [...s.sdk.getInventory()]) {
@@ -87,6 +95,7 @@ export async function restock(s: Session, food: number, trip: readonly { id: num
     if (switched && typeof s.onTick === 'function') await nextTick(s);
     if (!(await s.bot.openBank()).success) return 'bank did not open';
     for (const item of [...s.sdk.getInventory()]) await s.bot.depositItem(item, -1);
+    if (choose) trip = choose(s.sdk.getBankItems());
     const stock = () => s.bankObservation?.()?.items ?? [];
     // Boost potions where the bank holds them, each for one shark: a tribrid with a super attack, a super strength and a
     // ranging potion won 11 of 16 spars against the same kit with three more sharks (research/pvp-fight-loop.md). The
@@ -119,7 +128,10 @@ export async function hunt(s: Session, o: HuntOptions) {
     let ended = false;
     void s.ended.then(() => { ended = true; });
     const over = () => ended || o.stop() || s.tick() - start >= o.cap;
-    const kit = o.kit ?? TRIBRID_KIT, sighted = new Map<string, string>();
+    // With no kit and no trip named, each restock takes the snare trip where the bank holds it: it won more spars than
+    // the staff trip (research/pvp-fight-loop.md, finding 25).
+    const auto = !o.kit && !o.trip, sighted = new Map<string, string>();
+    let kit = o.kit ?? TRIBRID_KIT;
     let spot = 0;
     const far = () => { const p = s.sdk.getState()?.player; return !p || Math.max(Math.abs(p.worldX - EDGEVILLE_BANK.x), Math.abs(p.worldZ - EDGEVILLE_BANK.z)) > 60; };
     if (far()) {
@@ -146,7 +158,7 @@ export async function hunt(s: Session, o: HuntOptions) {
         if (held(s, ITEMS.shark) < o.minFood) {
             const back = await walk(s, EDGEVILLE_BANK, over, 600);
             if (!back.ok) return { ...tally, end: 'bank walk failed ' + JSON.stringify(back) };
-            const missing = await restock(s, o.food, o.trip, kit);
+            const missing = await restock(s, o.food, o.trip, kit, auto ? bank => { const pick = pickTrip(bank); kit = pick.kit; log(`HUNT trip ${pick.name}`); return pick.trip; } : undefined);
             if (missing) return { ...tally, end: missing };
             tally.trips++;
         }

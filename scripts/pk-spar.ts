@@ -99,9 +99,10 @@ export function sparScore(a: FightResult, b: FightResult): SparResult {
     if (aFled !== bFled) return { winner: aFled ? 'a' : 'b', end: 'escape', score: aFled ? 100 : -100, ticks, a, b };
     return { winner: 'draw', end: aWon ? 'kill' : 'cap', score: margin, ticks, a, b };
 }
-// A spar that measured something: both sides attacked, and the fight ended in a kill, an escape or at the cap.
+// A spar that measured something: both sides attacked, the fight ended in a kill, an escape or at the cap, and the two
+// stood within sight of each other at the start (two escape-spell spars began with the sides 261 and 270 tiles apart).
 export const sparValid = (r: SparResult) => [r.a, r.b].every(f => f.attacks.magic + f.attacks.ranged + f.attacks.melee > 0 && f.outcome !== 'session ended' && f.outcome !== 'danger')
-    && (r.end !== 'cap' || (r.a.outcome === 'timeout' && r.b.outcome === 'timeout'));
+    && (r.end !== 'cap' || (r.a.outcome === 'timeout' && r.b.outcome === 'timeout')) && (r.startGap === undefined || r.startGap <= 15);
 
 export async function spar(a: Session, b: Session, optionsA: FightOptions, optionsB: FightOptions, log: (line: string) => void = l => console.log(l), halt: () => boolean = () => false): Promise<SparResult> {
     const self = (s: Session) => s.sdk.getState()?.player;
