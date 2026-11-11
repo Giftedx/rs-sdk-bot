@@ -965,6 +965,8 @@ test('an account row carries its combat level and its complete quests', () => {
     const a = accountFrom('A', side, { combat: 23, quests: [{ name: 'Rune Mysteries Quest', state: 'complete' }, { name: 'Imp Catcher', state: 'not started' }], skills: [], inventory: [] }, () => undefined);
     expect(a.combat).toBe(23);
     expect([...a.quests!]).toEqual(['rune mysteries quest']);
+    // A fleet snapshot row lists the complete quests by name.
+    expect([...accountFrom('S', side, { quests: ['Lost City', "Merlin's Crystal"], skills: [] }, () => undefined).quests!]).toEqual(['lost city', "merlin's crystal"]);
     const bare = accountFrom('B', side, null, () => undefined);
     expect(bare.combat).toBeUndefined();
     expect(bare.quests).toBeUndefined();
@@ -1123,7 +1125,7 @@ test('an army account without Lost City takes the quest chain as a pilot, before
     expect(many.filter(a => a.template!.id === 'army-trooper-ranged-99').length).toBe(4 - LOST_CITY_PLACES);
 });
 
-import { MAGIC_BAND, SPLASH_FENCE, SPLASH_KIT, SPLASH_PLACES, SPLASH_TO } from '../src/autopilot';
+import { MAGIC_BAND, SPLASH_FENCE, SPLASH_KIT, SPLASH_PLACES, SPLASH_START, SPLASH_TO, splashKit } from '../src/autopilot';
 test('an army account under the Magic Guild level buys curse runes, then water at the shop, then casts over the fence', () => {
     const maxed = { Thieving: 99, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 80, Magic: 21, Prayer: 99 };
     const kit = { shark: 40, 'adamant scimitar': 1, shortbow: 1, 'bronze arrow': 500, coin: 500_000, 'mind rune': 15, 'air rune': 15 };
@@ -1131,15 +1133,29 @@ test('an army account under the Magic Guild level buys curse runes, then water a
     const pilots = new Set(['army-splash-magic-66', 'army-water-aubury']);
     const runes: Market = { 'body rune': { id: 559, name: 'Body rune', limit: KIT_PRICE_CAPS['body rune']! }, 'earth rune': { id: 557, name: 'Earth rune', limit: KIT_PRICE_CAPS['earth rune']! } };
     const run = (accounts: Acct[], extra: Partial<Inputs> = {}) => plan(inputs(accounts, { army: new Set(accounts.map(a => a.name.toLowerCase())), capacity: CAPACITY, pilots, market: runes, ...extra }));
-    // With no runes: one buy of the body and earth runes, as a candidate of the band (the account could train
-    // Ranged). The water line is the shop job's and holds nothing back.
+    // What a level still casts: 135 curses from Magic 21, ten from Magic 65, the whole kit under Curse's level.
+    const need = splashKit(21);
+    expect(need).toEqual({ 'body rune': 135, 'earth rune': 405, 'water rune': 270 });
+    expect(splashKit(65)).toEqual({ 'body rune': 10, 'earth rune': 30, 'water rune': 30 });
+    expect(splashKit(1)).toEqual({ ...SPLASH_KIT });
+    // With no runes: one buy of the body and earth runes its level still casts, as a candidate of the band (the
+    // account could train Ranged). The water line is the shop job's and holds nothing back.
     const [buy] = run([soldier('Kilt', { 'body rune': 2, 'water rune': 6, 'earth rune': 4 })]);
     expect(buy!.template!.id).toBe(KIT_BUY + 'army-splash-magic-66');
-    expect(buy!.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).map(Number))).toEqual([[559, SPLASH_KIT['body rune'] - 2], [557, SPLASH_KIT['earth rune'] - 4]]);
+    expect(buy!.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).map(Number))).toEqual([[559, need['body rune']! - 2], [557, need['earth rune']! - 4]]);
     // With water runes listed on the market the same buy takes them too.
     const wet = run([soldier('Kilt', { 'body rune': 2, 'water rune': 6, 'earth rune': 4 })], { market: { ...runes, 'water rune': { id: 555, name: 'Water rune', limit: KIT_PRICE_CAPS['water rune']! } } })[0]!;
-    expect(wet.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).map(Number)).sort((x, y) => x[0]! - y[0]!)).toEqual([[555, SPLASH_KIT['water rune'] - 6], [557, SPLASH_KIT['earth rune'] - 4], [559, SPLASH_KIT['body rune'] - 2]]);
-    // Holding those, short of water: the shop run at Aubury's, up to the kit's water.
+    expect(wet.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).map(Number)).sort((x, y) => x[0]! - y[0]!)).toEqual([[555, need['water rune']! - 6], [557, need['earth rune']! - 4], [559, need['body rune']! - 2]]);
+    // Part of a kit is enough to start: the band at once with 200 water runes at Magic 21, and with ten casts' runes
+    // at Magic 65, not a shop run for the rest.
+    const part = run([soldier('Kilt', { 'body rune': 150, 'earth rune': 425, 'water rune': 200 })], { pilots: new Set([...pilots, 'army-water-betty']) })[0]!;
+    expect(part.template!.id).toBe('army-splash-magic-66');
+    expect(run([soldier('Kilt', { 'body rune': 25, 'earth rune': 50, 'water rune': 50 }, { Magic: 65 })])[0]!.template!.id).toBe('army-splash-magic-66');
+    // An account keeps the runes its own level still casts: one at Magic 21 gives none of its 270 water runes, one
+    // past the band gives all.
+    const own = (magic: number) => kitReserve(catalogue().filter(t => t.id === 'army-splash-magic-66'), acct('K', { Magic: magic }))['water rune'];
+    expect([own(21), kitReserve(catalogue().filter(t => t.id === 'army-splash-magic-66'))['water rune']]).toEqual([270, SPLASH_START['water rune']]);
+    // Holding those, short of the start's water: the shop run at Aubury's, up to the kit's water.
     const stocked = { 'body rune': SPLASH_KIT['body rune'], 'earth rune': SPLASH_KIT['earth rune'] };
     const [shop] = run([soldier('Kilt', { ...stocked, 'water rune': 6 })]);
     expect(shop!.template!.id).toBe('army-water-aubury');
@@ -1383,5 +1399,8 @@ test('an army account takes Merlin\'s Crystal and Holy Grail for its Prayer: the
     expect(run([who('Monk', kit, {}, done('Lost City', "Merlin's Crystal", 'Holy Grail'))])[0]!.template?.id).not.toBe('army-quest-holygrail');
     expect(run([who('Monk', kit, { Magic: 40 })])[0]!.template?.id).not.toBe('army-quest-holygrail');
     expect(run([who('Monk')], { pilots: new Set() })[0]!.template?.id).not.toBe('army-quest-holygrail');
+    // Not at Prayer 99, with the kit or short of it: the quests pay a maxed account nothing.
+    expect(run([who('Monk', kit, { Prayer: 99 })])[0]!.template?.id).not.toBe('army-quest-holygrail');
+    expect(run([who('Monk', { ...kit, 'law rune': 2 }, { Prayer: 99 })])[0]!.template?.id).not.toBe(KIT_BUY + 'army-quest-holygrail');
 });
 

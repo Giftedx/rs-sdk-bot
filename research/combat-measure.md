@@ -609,9 +609,9 @@ Hitpoints 10 (`fleet/snapshots/` on `fleet-data`).
 
 ## Magic by a curse over the fence
 
-Nine army accounts hold Magic 1 or 21 and no fire rune (`fleet/snapshots/claude-cloud.json` on `fleet-data`); five of
-them hold no nature rune either. The alchemy band needs fire for every cast, and the Magic Guild in Yanille, which sells
-fire runes, a staff of fire and nature runes, asks Magic 66.
+Three army accounts hold Magic 21 and no fire rune (`fleet/snapshots/claude-cloud.json` on `fleet-data`). The alchemy
+band needs fire for every cast, and the Magic Guild in Yanille, which sells fire runes, a staff of fire and nature
+runes, asks Magic 66.
 
 - **Claim.** A stat-lowering spell gives its experience on every cast, hit or miss, and does no damage.
   **Conditions.** `player_magic.rs2` `pvm_default_spell`: the runes go and the experience comes (`pvm_spell_cast`)
@@ -640,6 +640,15 @@ fire runes, a staff of fire and nature runes, asks Magic 66.
   per tick as one: the cows' regrowth is the limit, about one cast in ten ticks for the field.
 - **Evidence.** `.practice/splash/run.ts` (`h`, `i`, `j`), `.practice/splash/probe2.ts` (the fence tile, ranges 5 to
   9), `.practice/splash/probe.ts` (a cow with no armour) in the Claude cloud container that ran them.
+- **Claim.** The band starts with ten casts' runes and casts what the account holds; a buy or a send brings what its
+  level still casts. **Conditions.** `army-splash-magic-66` needs `SPLASH_START` (10 body, 30 earth, 30 water runes:
+  ten casts of any of its spells, the casts of the last level) and `splashKit(level)` sizes the kit buy, a send and
+  what the account keeps of its own runes (135 curses from Magic 21, 42 from 61, ten from 65). The run takes from the
+  bank the runes its plan needs, as far as they go, and a batch that ran out of runes after a gained level ends `ok`.
+  A water shop run is for an account under the start's 30 water runes. A whole kit as the start need held back three
+  live accounts that could cast: Magic 61 with 258 water runes (84 needed), Magic 65 with 50 (20 needed) and Magic 21
+  with 200. **Evidence.** `packages/planner/test/autopilot.test.ts` (the curse band); the planner replayed on the
+  `claude-cloud` snapshot gives the first two the fence. **Gap.** No live run from a part kit.
 - **Claim.** From Magic 66 the Magic Guild's shelf is the whole kit of the alchemy band, and the band casts on air
   runes. **Conditions.** `magic_guild.inv`, `runes.obj`, `staves.obj`: a staff of fire (2 in stock, base 1,500
   coins), nature runes (1,000, base 20, one back every 300 ticks), air runes (3,000, base 4); alchemy refuses only
