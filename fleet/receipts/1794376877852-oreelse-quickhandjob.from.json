@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794376877852-oreelse-quickhandjob",
+ "account": "OreElse",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune kiteshield",
+ "requested": 1,
+ "claim": "73f9ef3b-f5ea-4b63-ae97-2cf6447c9eba",
+ "count": 1,
+ "ok": true,
+ "at": 1794379678663,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794379665860
+ },
+ "logout": {
+  "attemptId": "1794379658123-0000007480-0000000001",
+  "at": 1794379678653,
+  "sha256": "fdc48c53c2765526a9c04ab4b9c4a2b6ef777e3e2281ddd21728ef226251be7f"
+ },
+ "screen": true
+}
