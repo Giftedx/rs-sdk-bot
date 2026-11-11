@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794396079310,
+ "at": 1794396152235,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -566,21 +566,16 @@
   },
   {
    "account": "Bigchopper",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/walk-to.ts 2809 3441",
-    "scripts/firemaking-order.ts TARGET_LEVEL=15 LOG=normal MAX_LOGS=13 CAP=4000 TOOL_BUDGET=50",
-    "scripts/firemaking-order.ts TARGET_LEVEL=99 LOG=oak MAX_LOGS=9616 CAP=400000 TOOL_BUDGET=50"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-5ab3ca64-d33b-4f7a-88e8-61844a65565b"
    },
    "enabled": false,
-   "standing": true,
    "repeat": false,
-   "goal": "Firemaking 15 then 99 and rank XP from 9616 banked oak logs at Catherby",
-   "role": "firemaking",
-   "autopilot": "local"
+   "goal": "run-session-recovery-bigchopper-scorpion-current [task-5ab3ca64-d33b-4f7a-88e8-61844a65565b]",
+   "role": "firemaking"
   }
  ]
 }
