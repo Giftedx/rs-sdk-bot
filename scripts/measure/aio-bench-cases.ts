@@ -4,7 +4,7 @@ import {aioCatalog} from '../aio';
 import {PRESETS, type SaveConfig} from '../../packages/practice/src/presets';
 import {firemakingFixture} from '../../packages/practice/src/firemaking-order-proof';
 import {agilityFixturePreset} from '../../packages/practice/src/agility-order-proof';
-import {KITS, kitItems} from '../pk-kits';
+import {KITS, kitItems, kitSkills, kitVarps} from '../pk-kits';
 
 export type BenchCase = {
   key: string;
@@ -86,19 +86,21 @@ export const LEAGUE: readonly {kit: string; profile: string}[] = [
   {kit: 'mage', profile: 'base'},
   {kit: 'tribrid-food', profile: 'spec-mid'},   // 21 sharks, the special kept for half health
 ];
-// A maxed account in a kit of scripts/pk-kits.ts, with Lost City and Dragon Slayer done and full special energy.
+// An account in a kit of scripts/pk-kits.ts at the levels of the kit (default maxed), with Lost City and Dragon Slayer
+// done and full special energy.
 export const kitFixture = (kit: string, x: number, z = 3555): SaveConfig => ({
   position: {x, z, level: 0},
-  skills: {Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99, Prayer: 99, Hitpoints: 99},
-  varps: {147: 6, 176: 10, 300: 1000},
+  skills: kitSkills(kit),
+  varps: kitVarps(kit),
   ...kitItems(kit),
 });
 // One spar for each pair of kits, all at once at the mirror spot: `matchups` is side A's kit and side B's kit.
-const sparMatrix = (key: string, matchups: readonly (readonly [string, string])[], args: string[] = []): BenchCase => {
+// `at` moves the spot: side A at x, side B two tiles east.
+const sparMatrix = (key: string, matchups: readonly (readonly [string, string])[], args: string[] = [], at: {x: number; z: number} = {x: 3094, z: 3555}): BenchCase => {
   const letters = 'bcdefghijklmnopqrstuvwxyz'.slice(0, matchups.length * 2 - 1).split('');
-  return {key, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: kitFixture(matchups[0]![0], 3094),
+  return {key, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: kitFixture(matchups[0]![0], at.x, at.z),
     scriptArgs: ['spar', '{bot:b}', '900', ...letters.slice(1).map(l => `{bot:${l}}`), `SPAR_KITS=${matchups.map(m => m.join(':')).join(',')}`, ...args],
-    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: kitFixture(matchups[(i + 1) >> 1]![(i + 1) % 2]!, (i + 1) % 2 ? 3096 : 3094)}))};
+    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: kitFixture(matchups[(i + 1) >> 1]![(i + 1) % 2]!, (i + 1) % 2 ? at.x + 2 : at.x, at.z)}))};
 };
 // `pairs` spars at once: the account of the run and its partner `b`, then partners `c` and `d`, `e` and `f`, and so on.
 const sparBatch = (key: string, pairs: number, a: SaveConfig, b: SaveConfig, args: string[] = []): BenchCase => {
@@ -300,8 +302,13 @@ const ROUTE_CASES: BenchCase[] = [
   // The league for a fighter with three more sharks and no freeze runes.
   sparMatrix('extra:spar-league-lean-x8', LEAGUE.map(o => ['tribrid-lean', o.kit] as const), [`SPAR_B_PROFILES=${LEAGUE.map(o => o.profile).join(',')}`]),
   // A build against the standard tribrid, four pairs on each side of the map: what the build is worth by itself.
-  ...Object.keys(KITS).filter(kit => kit !== 'melee').map(kit => sparMatrix(`extra:spar-duel-${kit}-vs-melee-x8`, Array.from({length: 8}, (_, i) => (i % 2 ? ['melee', kit] : [kit, 'melee']) as [string, string]))),
-  ...Object.keys(KITS).filter(kit => kit !== 'tribrid').map(kit => sparMatrix(`extra:spar-duel-${kit}-x8`, Array.from({length: 8}, (_, i) => (i % 2 ? ['tribrid', kit] : [kit, 'tribrid']) as [string, string]))),
+  ...Object.keys(KITS).filter(kit => kit !== 'melee' && !KITS[kit]!.skills).map(kit => sparMatrix(`extra:spar-duel-${kit}-vs-melee-x8`, Array.from({length: 8}, (_, i) => (i % 2 ? ['melee', kit] : [kit, 'melee']) as [string, string]))),
+  ...Object.keys(KITS).filter(kit => kit !== 'tribrid' && !KITS[kit]!.skills).map(kit => sparMatrix(`extra:spar-duel-${kit}-x8`, Array.from({length: 8}, (_, i) => (i % 2 ? ['tribrid', kit] : [kit, 'tribrid']) as [string, string]))),
+  // A pure against a combat-3 skiller, 4 pairs. The spot is deep enough for the combat gap (pvp_combat.rs2:32-41):
+  // Wilderness level 34 for combat 27 and 19, level 45 for combat 46. A maxed opponent is out of a pure's range at
+  // the mirror spot, so a build with its own levels has no duel against the tribrid or the melee kit.
+  ...(['pure-iban', 'pure-bolt'] as const).map(kit => sparMatrix(`extra:spar-${kit}-vs-skiller-x4`, Array.from({length: 4}, () => [kit, 'skiller'] as const), [], {x: 3125, z: 3790})),
+  sparMatrix('extra:spar-pure-rock-vs-skiller-x4', Array.from({length: 4}, () => ['pure-rock', 'skiller'] as const), [], {x: 3055, z: 3872}),
   // Map cases of the spar. Gap: the same mirror from 12 tiles apart. Trees: 6 tiles apart at Wilderness level 3 with a
   // blocker on tiles 3101-3103 between the two, so neither has line of sight at the start. Escape: Wilderness level 34
   // at a spot with no monster in view (green dragons at (3094, 3800) attack both sides and block their hits); side B

@@ -487,7 +487,8 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             continue;
         }
         // Food before anything, any food best first; eating adds 3 ticks to %action_delay on the server (consume.rs2:130).
-        if (me.hp <= Math.max(eatAt, oppMax + 8) && now >= foodReady) {
+        // An account with few Hitpoints is under every threshold at full health, so full health never eats.
+        if (me.hp < me.maxHp && me.hp <= Math.max(eatAt, oppMax + 8) && now >= foodReady) {
             const food = bestFood(inv);
             if (food) {
                 use(food, /^Eat$/i);
