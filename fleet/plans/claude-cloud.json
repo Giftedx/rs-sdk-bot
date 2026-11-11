@@ -1,7 +1,97 @@
 {
  "side": "claude-cloud",
- "at": 1794386088967,
+ "at": 1794386154896,
  "jobs": [
+  {
+   "account": "Fingersmith",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fingersmith-kit10-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones",
+   "role": "supply",
+   "template": "kit-buy:army-hunt-black-dragons",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "foraging",
+    "flax",
+    "1800",
+    "28"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "pick flax at Seers to spin for the Crafting a black dragonhide body asks",
+   "role": "crafting",
+   "template": "army-leather-flax",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "aio:seers-flax"
+   ]
+  },
+  {
+   "account": "Deeppockets",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "PocketPool",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
   {
    "account": "Quickhandjob",
    "script": "scripts/goldfarm.ts",
@@ -103,58 +193,6 @@
    "resources": [
     "quest:lostcity"
    ]
-  },
-  {
-   "account": "UnderMyKilt",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-094d1680-2fc8-4781-a63f-a7b8629a2062"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-undermykilt-20261111t082841z [task-094d1680-2fc8-4781-a63f-a7b8629a2062]",
-   "role": "crafting"
-  },
-  {
-   "account": "Deeppockets",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-0fd7c37d-a313-4fa2-a8ac-d062ec959547"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-deeppockets-20261111t082841z [task-0fd7c37d-a313-4fa2-a8ac-d062ec959547]",
-   "role": "combat"
-  },
-  {
-   "account": "PocketPool",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-5294da28-69b8-4165-b008-f961fb9444d6"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-pocketpool-20261111t082841z [task-5294da28-69b8-4165-b008-f961fb9444d6]",
-   "role": "combat"
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-d992e13e-28a9-4ced-bb68-19b826032781"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "claude-cloud-recover-fingersmith-20261111t082841z [task-d992e13e-28a9-4ced-bb68-19b826032781]",
-   "role": "supply"
   }
  ]
 }
