@@ -213,7 +213,7 @@ LOGOUT logged-out
  }
  expect(check(log.replace('eats=24','eats=23'))).toMatchObject({budget:true,assets:false});
  expect(check(log.replace('eats=24','eats=25'))).toMatchObject({budget:false,assets:false});
- expect(check(log.replace('eats=24','eats=0')).budget).toBe(false);
+ expect(check(log.replace('eats=24','eats=0'))).toMatchObject({budget:true,assets:false});
  expect(check(log.replace('MILESTONE bananas 1','')).bananas).toBe(false);
  expect(check(log+'QUEST_SWEEP_BUY {"item":1963}\n').bananas).toBe(false);
  expect(check(log.replace('"free":16','"free":11')).capacity).toBe(false);
@@ -235,4 +235,12 @@ LOGOUT logged-out
  leftover[3]!.id=1895;leftover[3]!.count=6;expect(check(log.replace('eats=24','eats=11')).assets).toBe(false);
  leftover[3]!.count=1;leftover[0]!.count=2;expect(check(log.replace('eats=24','eats=13')).assets).toBe(true);
  leftover[0]!.count=1;leftover[1]!.id=995;expect(check(ate16).assets).toBe(false);
+ // No damage: zero bites eaten leave all eight carried cakes, and the proof passes.
+ after.inventories[93]!.splice(-leftover.length);
+ after.inventories[93]!.push(...Array.from({length:8},(_,i)=>({id:1891,slot:7+i,count:1})));
+ const ate0=log.replace('eats=24','eats=0');
+ expect(Object.entries(check(ate0)).filter(([,ok])=>!ok)).toEqual([]);
+ expect(check(ate0.replace('RESULT ok','QUEST_SWEEP_FARE {"coins":30}\nRESULT ok')).budget).toBe(false);
+ expect(check(log.replace('eats=24','eats=25'))).toMatchObject({budget:false,assets:false});
+ expect(check(log.replace('eats=24','eats=1')).assets).toBe(false);
 });

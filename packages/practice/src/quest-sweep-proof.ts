@@ -213,7 +213,7 @@ export function questSweepChecks(id:string,before:Save,after:Save,log:string,rec
     const next=log.indexOf(`MILESTONE ${step} `,at);return at<0||next<0?-1:next+1;
    },0)>0,
   bought:lines(log,'QUEST_SWEEP_BUY').some(r=>r.item===1005&&r.npc==='Thessalia'&&r.count===1&&r.before===0&&r.after===1&&r.coinsBefore-r.coins===2),
-  budget:Number.isSafeInteger(eaten)&&eaten>=1&&eaten<=24&&boats.length===0&&!/^QUEST_SWEEP_FARE /m.test(log),
+  budget:Number.isSafeInteger(eaten)&&eaten>=0&&eaten<=24&&boats.length===0&&!/^QUEST_SWEEP_FARE /m.test(log),
   quest:after.vars[71]===4&&(after.vars[101]??0)===(before.vars[101]??0)+2,
   questList:lines(log,'QUEST_SWEEP_FLAG').some(q=>q.name==="Pirate's Treasure"&&q.state==='complete'),
   reward:total(after,1635)===total(before,1635)+1&&total(after,1605)===total(before,1605)+1,
