@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794406039128-fingerblastr-quickhandjob",
  "account": "Quickhandjob",
  "partner": "Fingerblastr",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 90000,
  "claim": "17b057b3-1514-4773-ba9c-d25675de8daf",
- "count": 0,
- "ok": false,
- "at": 1794406048370,
- "detail": "trade claimed"
+ "count": 90000,
+ "ok": true,
+ "at": 1794406259747,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 90000
+ },
+ "bank": {
+  "count": 90000,
+  "at": 1794406258733
+ },
+ "logout": {
+  "attemptId": "1794406048373-0000015000-0000000001",
+  "at": 1794406259739,
+  "sha256": "b48296cb3242153244983a51655987f98c741d19bdf8819affda8503f924a03d"
+ },
+ "screen": true
 }
