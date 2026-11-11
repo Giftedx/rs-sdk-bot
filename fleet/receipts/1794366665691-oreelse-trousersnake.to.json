@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794366665691-oreelse-trousersnake",
+ "account": "TrouserSnake",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "262cab5c-eb5b-42a7-9cfd-22df60e4a46f",
+ "count": 0,
+ "ok": false,
+ "at": 1794366823025,
+ "detail": "trade claimed"
+}
