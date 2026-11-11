@@ -1,0 +1,22 @@
+{
+ "id": "1794402005119-magicwanda-mmsmk1232-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Magicwanda",
+ "to": "mmsmk1232",
+ "item": "Air rune",
+ "count": 10,
+ "start": 1794402005119,
+ "end": 1794404405119,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
