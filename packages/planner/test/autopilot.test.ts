@@ -1117,6 +1117,9 @@ test('an army account under the Magic Guild level buys curse runes, then water a
     const [buy] = run([soldier('Kilt', { 'body rune': 2, 'water rune': 6, 'earth rune': 4 })]);
     expect(buy!.template!.id).toBe(KIT_BUY + 'army-splash-magic-66');
     expect(buy!.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).map(Number))).toEqual([[559, SPLASH_KIT['body rune'] - 2], [557, SPLASH_KIT['earth rune'] - 4]]);
+    // With water runes listed on the market the same buy takes them too.
+    const wet = run([soldier('Kilt', { 'body rune': 2, 'water rune': 6, 'earth rune': 4 })], { market: { ...runes, 'water rune': { id: 555, name: 'Water rune', limit: KIT_PRICE_CAPS['water rune']! } } })[0]!;
+    expect(wet.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).map(Number)).sort((x, y) => x[0]! - y[0]!)).toEqual([[555, SPLASH_KIT['water rune'] - 6], [557, SPLASH_KIT['earth rune'] - 4], [559, SPLASH_KIT['body rune'] - 2]]);
     // Holding those, short of water: the shop run at Aubury's, up to the kit's water.
     const stocked = { 'body rune': SPLASH_KIT['body rune'], 'earth rune': SPLASH_KIT['earth rune'] };
     const [shop] = run([soldier('Kilt', { ...stocked, 'water rune': 6 })]);

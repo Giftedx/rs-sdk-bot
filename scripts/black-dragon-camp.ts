@@ -16,8 +16,12 @@
 // four tiles north (BLACK_DRAGON.safe; scripts/black-dragon-camp.test.ts recomputes both from the collision data). The row north of it, 9821, is beside dragon ground: practice, an account that stepped there fell from 96
 // to 22 hitpoints in 20 ticks. So the camp never lets an attack walk it: it shoots only a dragon it can see from the
 // tile, and a step off the tile is walked back before anything else.
-// The loot lies inside the cave. The camp fetches it under Protect from Melee, waiting first while the other dragon
-// stands near the pile, and takes its own arrows from the pile too.
+// The loot lies inside the cave, and the other dragon comes as near the camp tile as it can, which is beside the
+// pile. The camp fetches the pile under Protect from Magic: a breath is then 10 at most and a melee hit about 21
+// (Strength 200), so three attacks cost at most 63 of the 75 hitpoints a fetch starts with. Under Protect from Melee
+// a breath is up to 50 (practice: 99 to 74 in one, on the pile beside a dragon) and three could kill. It takes its own
+// arrows from the pile too. Every lost hitpoint is logged (`DRAGON_CAMP hit`): the steady 4 to 6 every 30 ticks on the
+// tile is the poison of the spiders on the way in.
 import { existsSync } from 'node:fs';
 import { openBot, finish } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
@@ -27,13 +31,13 @@ import { initPathfinding } from '../vendor/rs-sdk/sdk/pathfinding';
 import * as rsmod from '../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
 import type { NearbyNpc } from '../vendor/rs-sdk/sdk/types';
 import { giantStyle } from './gather-combat';
-import { BLACK_BANK, blackKit, combatTrip } from './microbot-combat-trip';
+import { BLACK_BANK, blackKit, combatTrip, varrockTeleport } from './microbot-combat-trip';
 import { walkTargetPersist } from './walk-to';
 
 export type Tile = { x: number; z: number };
 export const BLACK_DRAGON = { npc: 54, size: 4, hitpoints: 190, hide: 1747, bones: 536, safe: { x: 2835, z: 9820 } as Tile, range: 5, spawns: [{ x: 2829, z: 9826 }, { x: 2835, z: 9824 }] as Tile[] } as const;
-// Food the camp eats, best first; arrows it fires (bronze to rune); Protect from Melee (prayers.dbrow order).
-export const CAMP_FOOD = [385, 373, 379] as const, CAMP_ARROWS = [892, 890, 888, 886, 884, 882] as const, PROTECT_MELEE = 14;
+// Food the camp eats, best first; arrows it fires (bronze to rune); Protect from Magic (prayers.dbrow order).
+export const CAMP_FOOD = [385, 373, 379] as const, CAMP_ARROWS = [892, 890, 888, 886, 884, 882] as const, PROTECT_MAGIC = 12;
 export const EAT_AT = 60, DASH_HP = 75, MIN_ARROWS = 60, OTHER_CLEAR = 5, OTHER_WAIT = 40;
 // Ticks without Ranged experience before the attack is sent again. Practice, magic shortbow and mithril arrows at
 // Ranged 99: one kill took 432 ticks with the attack sent again after 20 quiet ticks, and about 235 with it sent every 5.
@@ -67,7 +71,7 @@ export async function runBlackDragonCamp(s: Session, o: { cap: number; kills: nu
     const inv = () => s.sdk.getInventory(), eq = () => s.sdk.getEquipment();
     const held = (id: number) => inv().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
     const quiver = () => eq().find(i => i.slot === 13 && (CAMP_ARROWS as readonly number[]).includes(i.id));
-    const points = () => st()?.prayers?.prayerPoints ?? 0, praying = () => !!st()?.prayers?.activePrayers?.[PROTECT_MELEE];
+    const points = () => st()?.prayers?.prayerPoints ?? 0, praying = () => !!st()?.prayers?.activePrayers?.[PROTECT_MAGIC];
     const own = (s.client as { selfSlot?: number } | undefined)?.selfSlot;
     const p0 = me();
     // The trip ends its walk in the corridor's south half; the camp takes the tile from there.
@@ -79,7 +83,13 @@ export async function runBlackDragonCamp(s: Session, o: { cap: number; kills: nu
     const alive = () => { const p = me(); return !ended && !!p && !p.isDead && p.lifeId === p0.lifeId && hp() > 0; };
     const over = () => !alive() || !!o.stop?.() || s.tick() - start >= o.cap;
     let kills = 0, hides = 0, bones = 0, strays = 0, hpMin = hp(), foods = 0, lostPiles = 0, failure = '', reason = '';
-    const off = s.onTick(() => { hpMin = Math.min(hpMin, hp()); });
+    // Every lost hitpoint is logged with where the account stood and what was aiming at it (the first 20 of a run).
+    let lastHp = hp(), hits = 0;
+    const off = s.onTick(() => {
+        const now = hp(), p = me();
+        if (now < lastHp && hits++ < 20) console.log(`DRAGON_CAMP hit t=${s.tick() - start} hp=${lastHp}->${now} at=${p?.worldX},${p?.worldZ} pray=${praying() ? 1 : 0} by=${JSON.stringify((st()?.nearbyNpcs ?? []).filter(n => Number.isInteger(own) && n.targetIndex === 32768 + own!).map(n => `${n.name}@${swTile(n).x},${swTile(n).z}`))}`);
+        lastHp = now; hpMin = Math.min(hpMin, now);
+    });
     const dragons = () => (st()?.nearbyNpcs ?? []).filter(n => n.id === BLACK_DRAGON.npc && n.hp !== 0);
     const attackOp = (n: NearbyNpc) => n.optionsWithIndex.find(v => /^attack$/i.test(v.text))?.opIndex;
     const backToSafe = async () => {
@@ -101,7 +111,7 @@ export async function runBlackDragonCamp(s: Session, o: { cap: number; kills: nu
     };
     const pray = async (on: boolean) => {
         if (praying() === on || on && points() <= 0) return;
-        await s.sdk.sendTogglePrayer(PROTECT_MELEE);
+        await s.sdk.sendTogglePrayer(PROTECT_MAGIC);
         await waitUntil(s, () => praying() === on, { timeoutTicks: 3 });
     };
     // A dragon the tile can shoot, one already on this account first. Never one another player fights.
@@ -155,6 +165,10 @@ export async function runBlackDragonCamp(s: Session, o: { cap: number; kills: nu
                 if (!at(SAFE)) { const p = me(), q = (st()?.nearbyNpcs ?? []).find(v => v.index === target.index); console.log(`DRAGON_CAMP stray t=${s.tick() - start} at=${p?.worldX},${p?.worldZ} target=${q ? `${swTile(q).x},${swTile(q).z}` : 'gone'} hp=${hp()}`); break; }
                 const n = (st()?.nearbyNpcs ?? []).find(v => v.index === target.index && v.id === target.id);
                 if (!n || n.hp === 0) { gone = true; break; }
+                // The dragon walked out of the tile's reach: the next shot would walk the account after it (practice: a
+                // step to 2834,9822 after a dragon that had gone seven tiles west). A walk to the tile it stands on
+                // ends the attack.
+                if (target.id === BLACK_DRAGON.npc && !canShoot(SAFE, swTile(n))) { await s.sdk.sendWalk(SAFE.x, SAFE.z); break; }
                 if (xp() > lastXp) { lastXp = xp(); lastHit = s.tick(); }
                 if (hp() < EAT_AT) { await eat(EAT_AT); lastHit = s.tick() - REATTACK; }
                 if (!foe && intruder()) break;
@@ -187,6 +201,30 @@ export async function runBlackDragonCamp(s: Session, o: { cap: number; kills: nu
     return { ok: !failure && alive() && kills > 0, kills, hides, bones, lostPiles, reason, failure, strays, hpMin, foods, ammo, ammoUsed, drops: { [BLACK_DRAGON.hide]: hides, [BLACK_DRAGON.bones]: bones }, rangedXp: xp() - xp0, ticks: s.tick() - start };
 }
 
+// An account that starts a trip inside the dungeon (a trip whose return failed left it on the camp tile with its
+// loot) leaves by the trip's own teleport and banks its pack at Varrock West. No walker plans a way out for it: a
+// planned route can cross dragon ground, the black demons or the blue dragons with a bow and no armour.
+export const VARROCK_WEST = { x: 3185, z: 3436 }, TELEPORT_RUNES = { 563: 1, 556: 3, 554: 1 } as const;
+export const underground = (p: { worldZ: number } | null | undefined) => !!p && p.worldZ > 9000;
+export async function leaveToVarrock(s: Session): Promise<{ banked: Record<number, number> }> {
+    const st = () => s.sdk.getState(), inv = () => s.sdk.getInventory(), held = (id: number) => inv().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+    for (const [id, n] of Object.entries(TELEPORT_RUNES)) if (held(Number(id)) < n) throw Error(`black dragon leave: ${held(Number(id))} of rune ${id} in the pack, the Varrock teleport needs ${n}; a person decides the way out`);
+    if (!await varrockTeleport(s)) throw Error('black dragon leave: the Varrock teleport did not take the account');
+    const walked = await walkPath(await sessionWalker(s), [{ ...VARROCK_WEST, tol: 1 }], { maxTicks: 200 });
+    if (!walked.ok) throw Error(`black dragon leave: walk to the Varrock West bank: ${walked.detail}`);
+    const generation = s.bankObservation?.()?.generation ?? 0;
+    if (!(await s.bot.openBank()).success || !await waitUntil(s, () => !!st()?.bank?.isOpen && (s.bankObservation?.()?.generation ?? 0) > generation, { timeoutTicks: 20 })) throw Error('black dragon leave: bank did not open');
+    const banked: Record<number, number> = {};
+    for (const id of new Set(inv().map(i => i.id))) {
+        const row = inv().find(i => i.id === id), n = held(id);
+        if (!row || !(await s.bot.depositItem(row, n)).success || !await waitUntil(s, () => held(id) === 0, { timeoutTicks: 10 })) throw Error(`black dragon leave: deposit of item ${id}`);
+        banked[id] = n;
+    }
+    await s.bot.closeBank();
+    await waitUntil(s, () => !st()?.bank?.isOpen, { timeoutTicks: 10 });
+    return { banked };
+}
+
 if (import.meta.main) {
     let s: Session | undefined, stopped = false;
     try {
@@ -202,7 +240,14 @@ if (import.meta.main) {
         } else {
             // The whole trip: to the Falador west bank by the shared walker (any teleport it likes, nothing is packed
             // yet), then kit out, Taverley, the dusty key gate, the camp, a Varrock teleport and the Varrock West bank.
+            // LEAVE=1 only brings an account home from the dungeon; a trip that starts there does that first.
             const live = s;
+            await waitUntil(live, () => !!live.sdk.getState()?.player, { timeoutTicks: 15 });
+            if (underground(live.sdk.getState()?.player)) {
+                const out = await leaveToVarrock(live);
+                console.log('DRAGON_CAMP left the dungeon ' + JSON.stringify(out));
+                if (process.env.LEAVE === '1') { await finish([s], true, `black-dragon-leave hides=${out.banked[BLACK_DRAGON.hide] ?? 0} bones=${out.banked[BLACK_DRAGON.bones] ?? 0} banked=true`); process.exit(0); }
+            } else if (process.env.LEAVE === '1') throw Error('black dragon leave: the account is not in the dungeon');
             const here = live.sdk.getState()?.player;
             if (!here || here.level !== 0 || Math.max(Math.abs(here.worldX - BLACK_BANK.x), Math.abs(here.worldZ - BLACK_BANK.z)) > 3) {
                 const there = await walkTargetPersist(live, BLACK_BANK);

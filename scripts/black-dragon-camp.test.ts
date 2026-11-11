@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
-import { BLACK_DRAGON, canShoot, footprintDistance, swTile } from './black-dragon-camp';
-import { BLACK_ALTAR, BLACK_ENTRY, BLACK_KIT, BLACK_PRAYER, blackKit, blackPrayerShort, combatKitTotals, validateCombatKit } from './microbot-combat-trip';
+import { BLACK_DRAGON, PROTECT_MAGIC, TELEPORT_RUNES, canShoot, footprintDistance, swTile, underground } from './black-dragon-camp';
+import { BLACK_ALTAR, BLACK_ENTRY, BLACK_KIT, BLACK_PRAYER, TELEPORT_TRIES, TELEPORT_WAIT, blackKit, blackPrayerShort, combatKitTotals, inVarrockSquare, validateCombatKit } from './microbot-combat-trip';
 import { initPathfinding } from '../vendor/rs-sdk/sdk/pathfinding';
 import * as rsmod from '../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
 import { CollisionType } from '../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
@@ -86,4 +86,21 @@ test('the trip prays at the Taverley altar when its prayer points would not last
     expect(blackPrayerShort(44, 45)).toBe(true);
     // The altar is above ground in Taverley, between the Falador west bank and the dungeon ladder.
     expect(BLACK_ALTAR).toEqual({ id: 410, x: 2925, z: 3483 });
+});
+
+test('the way home is the kit\'s Varrock teleport, tried for longer than one busy spell, and the fetch prays against fire', () => {
+    // The runes a leaving account must hold are the trip kit's own: one cast.
+    const kit = combatKitTotals(BLACK_KIT);
+    for (const [id, n] of Object.entries(TELEPORT_RUNES)) expect(kit[Number(id)]).toBe(n);
+    // Six clicks eight ticks apart: 48 ticks, against the 20 a single click waited live.
+    expect(TELEPORT_TRIES * TELEPORT_WAIT).toBeGreaterThanOrEqual(40);
+    expect(inVarrockSquare({ worldX: 3213, worldZ: 3422, level: 0 })).toBe(true);
+    expect(inVarrockSquare({ worldX: 2835, worldZ: 9820, level: 0 })).toBe(false);
+    expect(inVarrockSquare(null)).toBe(false);
+    // The camp tile is underground, the banks are not.
+    expect(underground({ worldZ: BLACK_DRAGON.safe.z })).toBe(true);
+    expect(underground({ worldZ: 3436 })).toBe(false);
+    expect(underground(undefined)).toBe(false);
+    // Protect from Magic: dragon.rs2 caps a breath at 10 under `%prayer12`.
+    expect(PROTECT_MAGIC).toBe(12);
 });
