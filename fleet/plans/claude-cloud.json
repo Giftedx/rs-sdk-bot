@@ -1,26 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794385115572,
+ "at": 1794385208123,
  "jobs": [
-  {
-   "account": "PocketPool",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=125 EXPECTED_OWNED=25 LIMIT_PRICE=200 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit10-559-25to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=375 EXPECTED_OWNED=50 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit10-557-50to425 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 125 Body rune, 375 Earth rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
   {
    "account": "Kiltlifter",
    "script": "scripts/chain.ts",
@@ -41,29 +22,39 @@
    "resources": []
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/gather-combat.ts",
+   "account": "Fingersmith",
+   "script": "scripts/chain.ts",
    "args": [
-    "1500",
-    "trooper"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fingersmith-kit10-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "repeat": false,
+   "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones",
+   "role": "supply",
+   "template": "kit-buy:army-hunt-black-dragons",
    "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "resources": []
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/aio.ts",
+   "args": [
+    "quester",
+    "dusty-key"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "get the dusty key from Velrak for Taverley dungeon's inner gate",
+   "role": "quest",
+   "template": "army-dusty-key",
+   "autopilot": "claude-cloud",
+   "resources": []
   },
   {
    "account": "UnderMyKilt",
@@ -163,6 +154,25 @@
    ]
   },
   {
+   "account": "PocketPool",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=125 EXPECTED_OWNED=25 LIMIT_PRICE=200 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit10-559-25to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=375 EXPECTED_OWNED=50 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit10-557-50to425 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 125 Body rune, 375 Earth rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "supply",
+   "template": "kit-buy:army-splash-magic-66",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
    "account": "SporranDip",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -186,24 +196,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fingersmith-kit10-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones",
-   "role": "supply",
-   "template": "kit-buy:army-hunt-black-dragons",
-   "autopilot": "claude-cloud",
-   "resources": []
   }
  ]
 }
