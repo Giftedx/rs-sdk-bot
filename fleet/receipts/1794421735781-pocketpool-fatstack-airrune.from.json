@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794421735781-pocketpool-fatstack-airrune",
  "account": "PocketPool",
  "partner": "Fatstack",
@@ -10,8 +10,18 @@
  "item": "Air rune",
  "requested": 42,
  "claim": "93e7714d-cd3b-440f-a6f2-5439795a5e29",
- "count": 0,
- "ok": false,
- "at": 1794421744276,
- "detail": "trade claimed"
+ "count": 42,
+ "ok": true,
+ "at": 1794421938205,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 453,
+  "after": 411
+ },
+ "logout": {
+  "attemptId": "1794421744278-0000009035-0000000001",
+  "at": 1794421938199,
+  "sha256": "251811c602578262b342881019ea55cbb1294fb0136be9f9246e8f27c0add514"
+ },
+ "screen": true
 }
