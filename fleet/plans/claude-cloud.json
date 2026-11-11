@@ -1,27 +1,28 @@
 {
  "side": "claude-cloud",
- "at": 1794367363129,
+ "at": 1794367451427,
  "jobs": [
   {
    "account": "TrouserSnake",
-   "script": "scripts/train-prayer.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "99"
+    "catherby"
    ],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_ID": "536",
-    "BONE_RESERVE": "6",
-    "CAP": "4000"
+    "ITEMS": "rune arrowtips|adamant arrowtips",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying bought dragon bones",
-   "role": "combat",
-   "template": "army-bury-dragon-99",
+   "goal": "buy rune and adamant arrowtips at Catherby",
+   "role": "bank",
+   "template": "shop-arrowtips",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "shop:catherby"
+   ]
   },
   {
    "account": "Deeppockets",
