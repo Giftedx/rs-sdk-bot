@@ -529,6 +529,8 @@ const market: Market = { 'mind rune': { id: 558, name: 'Mind rune', limit: KIT_P
     'nature rune': { id: 561, name: 'Nature rune', limit: KIT_PRICE_CAPS['nature rune']! }, trout: { id: 333, name: 'Trout', limit: KIT_PRICE_CAPS.trout! },
     'bronze arrow': { id: 882, name: 'Bronze arrow', limit: KIT_PRICE_CAPS['bronze arrow']! } };
 const strike = () => catalogue().filter(t => t.id === 'army-strike-magic-21' || t.family === 'goldfarm');
+// The band alone: an account with no other job to start.
+const bandOnly = () => strike().filter(t => t.tier === 'goal');
 const mage = (name: string, items: Record<string, number>, skills: Record<string, number> = {}) => acct(name, { Thieving: 99, ...skills }, items);
 
 test('kit lines: what an account lacks, the smallest of several kits, and null when a level stops the job', () => {
@@ -576,8 +578,10 @@ test('an account that cannot pay gets the coins first: from this side, else from
     const army = new Set(['poor']), poor = mage('Poor', { coin: 100, 'mind rune': 15, 'air rune': 25 }), cost = 20 * 120 + 10 * 160, short = cost + KIT_CASH_RESERVE - 100;
     const own = plan(inputs([poor], { templates: strike(), army, market, donors: [{ name: 'Bank', coins: 1_000_000 }] }))[0]!;
     expect(own.fund).toEqual({ from: 'Bank', to: 'Poor', coins: short, template: KIT_BUY + 'army-strike-magic-21' });
+    // Another side's coins only for an account with no job it can start: with a coin job open it keeps that.
     const far: Stock[] = [{ name: 'CloudBank', side: 'local', items: { coin: 2_000_000 } }];
-    expect(plan(inputs([poor], { templates: strike(), army, market, stock: far }))[0]!.fund).toEqual({ from: 'CloudBank', to: 'Poor', coins: short, template: KIT_BUY + 'army-strike-magic-21' });
+    expect(ids(plan(inputs([poor], { templates: strike(), army, market, stock: far })))).toEqual({ Poor: expect.stringMatching(/^goldfarm@/) });
+    expect(plan(inputs([poor], { templates: bandOnly(), army, market, stock: far }))[0]!.fund).toEqual({ from: 'CloudBank', to: 'Poor', coins: short, template: KIT_BUY + 'army-strike-magic-21' });
     // A running job is never funded: the trade could not reach the account.
     expect(ids(plan(inputs([poor], { templates: strike(), army, market, stock: far, unfundable: new Set(['poor']) })))).toEqual({ Poor: expect.stringMatching(/^goldfarm@/) });
 });
@@ -588,8 +592,10 @@ test('with no buy, a free account sends the item: this side first, another side 
     const run = (extra: Partial<Inputs>) => plan(inputs([needy], { templates: strike(), army, ...extra }))[0]!;
     // Near holds 60 and keeps the band's 35: 25 spare covers the 20.
     expect(run({ stock }).send).toEqual({ from: 'Near', to: 'Needy', item: 'mind rune', count: 20, template: 'army-strike-magic-21' });
-    // Thin holds 54: 19 spare is one short, so the other side gives.
-    expect(run({ stock: [stock[0]!, stock[2]!] }).send).toMatchObject({ from: 'Far' });
+    // Thin holds 54: 19 spare is one short. Another side gives only to an account with no job it can start (live:
+    // 13 of 14 accounts stood parked for another side's sends); with a coin job open the account keeps that.
+    expect(run({ stock: [stock[0]!, stock[2]!] }).template!.id).toMatch(/^goldfarm@/);
+    expect(run({ stock: [stock[0]!, stock[2]!], templates: bandOnly() }).send).toMatchObject({ from: 'Far' });
     expect(run({ stock: [stock[2]!] }).template!.id).toMatch(/^goldfarm@/);
     // A buy that failed twice is retired for the pair, and the donors take over.
     const paying = { accounts: [mage('Needy', { ...needy.items, coin: 1_000_000 })] };
@@ -679,7 +685,10 @@ test('an army account with no other band to start buys the bones its Prayer stil
     expect(near.template!.id).toBe(KIT_BUY + 'army-bury-dragon-99');
     expect(order(near)).toEqual([[536, BONE_KEEP + Math.ceil((xpForLevel(99) - xpForLevel(97)) / 1800)]]);
     expect(near.send).toBeUndefined();
-    expect(pick({ Prayer: 97 }, { coin: 879_278, bone: 63 }, { stock: donor, market }).send).toEqual({ from: 'Far', to: 'Monk', item: 'bone', count: 37, template: 'army-bury-prayer-99' });
+    const boneBands = catalogue().filter(t => /^army-bury-/.test(t.id));
+    expect(pick({ Prayer: 97 }, { coin: 879_278, bone: 63 }, { stock: donor, market, templates: boneBands }).send).toEqual({ from: 'Far', to: 'Monk', item: 'bone', count: 37, template: 'army-bury-prayer-99' });
+    // With a job it can start (the troopers' field, a coin job) it does not wait for another side.
+    expect(pick({ Prayer: 97 }, { coin: 879_278, bone: 63 }, { stock: donor, market }).send).toBeUndefined();
     // An account with Ranged or Magic still to finish keeps BONE_PURSE back for their kits (Magic 92 here, with its
     // alchemy runes and feathers but no fire, and the Magic Guild shop taken, so it has no other band).
     const mage = { 'nature rune': 604, feather: 500 }, guildBusy = { capacity: { ...CAPACITY, 'shop:magic_guild': 0 } };
@@ -1179,12 +1188,14 @@ test('the kit tier uses this side\'s own stock first: a maxed account gives all 
     const mule = (n: number): Stock => ({ name: 'Mule', side, items: { 'dragon bone': n } });
     expect(run([mule(BONE_START + 4)], [monk]).send).toBeUndefined();
     expect(run([mule(BONE_START + 10)], [monk]).send).toEqual({ from: 'Mule', to: 'Monk', item: 'dragon bone', count: 10, template: 'army-bury-dragon-99' });
-    // With no stock on this side the other side's coins fund the buy, as before.
-    const funded = run([other], [monk]);
+    // With no stock on this side the other side's coins fund the buy, for an account with no job it can start.
+    const boneBands = catalogue().filter(t => /^army-bury-/.test(t.id));
+    const funded = run([other], [monk], { templates: boneBands });
     expect(funded.send).toBeUndefined();
     expect(funded.fund).toMatchObject({ from: 'Far', to: 'Monk' });
+    expect(run([other], [monk]).fund).toBeUndefined();
     // And with no market for bones the other side sends what the band needs to start, not its whole stock.
-    expect(run([other], [monk], { market }).send).toEqual({ from: 'Far', to: 'Monk', item: 'dragon bone', count: BONE_START - 6, template: 'army-bury-dragon-99' });
+    expect(run([other], [monk], { market, templates: boneBands }).send).toEqual({ from: 'Far', to: 'Monk', item: 'dragon bone', count: BONE_START - 6, template: 'army-bury-dragon-99' });
 });
 
 import { BLACK_CAVE, BLACK_CAVE_PLACES, HIDE_TARGET, HUNT_ARROWS, HUNT_ARROW_STOCK, HUNT_BAND, HUNT_FOOD, HUNT_KILLS, HUNT_RUNE_STOCK, bandLeft } from '../src/autopilot';
@@ -1226,7 +1237,9 @@ test('a maxed army account hunts black dragons for hides: the key first, the kit
     const first = run([hungry], { market: noSharks, stock: donors('local') })[0]!;
     expect(first.template!.id).toBe('army-hunt-supply');
     expect(first.send).toBeUndefined();
-    expect(run([hunter('Kilt', { ...kit, shark: 1 })], { market: noSharks, stock: donors('local') })[0]!.send).toMatchObject({ from: 'Giver', item: 'shark', count: HUNT_FOOD - 1 });
+    const huntOnly = catalogue().filter(t => t.id === 'army-hunt-black-dragons');
+    expect(run([hunter('Kilt', { ...kit, shark: 1 })], { market: noSharks, stock: donors('local') })[0]!.send).toBeUndefined();
+    expect(run([hunter('Kilt', { ...kit, shark: 1 })], { market: noSharks, stock: donors('local'), templates: huntOnly })[0]!.send).toMatchObject({ from: 'Giver', item: 'shark', count: HUNT_FOOD - 1 });
     // With no market for iron arrows: the shop run, arrows at Lowe's and then the teleport's runes at Aubury's.
     const { 'iron arrow': _arrows, 'fire rune': _fire, ...noShopLines } = caps;
     const [shop] = run([hunter('Kilt', { ...kit, 'iron arrow': 60 })], { market: noShopLines });

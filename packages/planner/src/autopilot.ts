@@ -387,7 +387,7 @@ export function plan(inp: Inputs): Assignment[] {
     // takes a partner off its work for a trade window and keeps the account vacant until the order closes, so it comes
     // second: every band the account can buy for is tried before a donor is asked for any of them (an account at
     // Prayer 97 buys its dragon bones and does not wait for 37 bones from another side), this side's donors before
-    // another side's.
+    // another side's, and another side's only for an account with no job of any tier that it can start.
     const reserve = kitReserve(inp.templates), byName = new Map(mine.map(a => [a.name, a]));
     const stock = [...(inp.stock ?? [])].sort((x, y) => Number(y.side === inp.side) - Number(x.side === inp.side));
     // What a donor keeps of an item: the most a band needs to start. An army account of this side keeps that only for
@@ -407,6 +407,11 @@ export function plan(inp: Inputs): Assignment[] {
     const acquire = (c: Cand, step: 'buy' | 'send', far: boolean) => {
         const a = byName.get(c.account)!, busy = !!inp.unfundable?.has(c.account.toLowerCase()), buyId = KIT_BUY + c.template.id;
         if (done.has(c.account) || gave.has(c.account) || gaveItems.has(c.account) || vacated.has(c.account)) return;
+        // Another side's stock and coins are asked only for an account with no job it can start and none running: such
+        // a trade needs the account offline until the other side's agent runs it, up to the order's window (live: 13
+        // of 14 accounts stood parked at once, most for 1 to 13 items of another side, one with 123,028 coins for 3
+        // air runes that a shop sells).
+        if (far && (busy || ready.has(c.account))) return;
         // An account in a running band job keeps the rule it had before the kit tier: its live holdings dip while it
         // works (food eaten, runes cast), and a kit buy must not replace a band that is still running.
         const now = inp.current?.get(c.account.toLowerCase());
@@ -443,10 +448,6 @@ export function plan(inp: Inputs): Assignment[] {
             }
         }
         if (step === 'buy') return;
-        // A filler band's kit is not asked of another side while the account has a filler job it can start: for such
-        // an order the account stands offline until the other side's agent runs it (live: a hunter with 123,028
-        // coins waited for 3 air runes from another side, with its own shop run ready).
-        if (far && c.template.filler && fillerReady.has(c.account)) return;
         // One order per pass. A line no market sells goes first, so the lines left at the end are one buy.
         const sold = (l: Lack) => Number(l.of.some(i => !!inp.market?.[i]));
         for (const l of [...c.lacks!].filter(l => !own(l)).sort((x, y) => sold(x) - sold(y))) for (const item of l.of) {
@@ -470,7 +471,8 @@ export function plan(inp: Inputs): Assignment[] {
     // and the account stands vacant meanwhile (live: five accounts parked for donors of another side, one for 22
     // bones, while this side's maxed accounts held what they needed).
     const kits = cands.filter(c => c.goal && c.lacks).sort(goalOrder);
-    const fillerReady = new Set(cands.filter(c => c.goal && !c.lacks && c.template.filler).map(c => c.account));
+    // The accounts with a job of any tier that they can start now with what they hold.
+    const ready = new Set(cands.filter(c => !c.lacks && !c.coins).map(c => c.account));
     for (const far of [false, true]) for (const step of ['buy', 'send'] as const) for (const c of kits) acquire(c, step, far);
     // Then the filler bands, for an army account that no band and no kit took.
     for (const c of cands.filter(c => c.goal && !c.lacks && c.template.filler).sort(goalOrder)) take(c, 0);
