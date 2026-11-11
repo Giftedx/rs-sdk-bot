@@ -431,3 +431,13 @@ test('the aio list of the plan admits pilot templates by id; anything else admit
     expect(aioPilots({}).size).toBe(0);
     expect(aioPilots({ aio: 'aio-flax' }).size).toBe(0);
 });
+
+import { handedAccounts } from './autopilot';
+test('a kept job is handed work too, so the controller\'s stale stop file is cleared on a later pass', () => {
+    // Live: the pass that assigned the job found the last run still ending and held the file; every later pass kept
+    // the job, and the account stood 40 minutes with its job enabled and never started.
+    const out = [{ account: 'Fresh', template: { id: 'a' } }, { account: 'Kept', template: { id: 'b' } }, { account: 'Vacant' }];
+    expect([...handedAccounts(out, [{ from: 'Giver', to: 'Taker' }])].sort()).toEqual(['fresh', 'giver', 'kept', 'taker']);
+    expect(handedAccounts(out, []).has('vacant')).toBe(false);
+});
+
