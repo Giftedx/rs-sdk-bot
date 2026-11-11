@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794374731028-oreelse-undermykilt",
  "account": "OreElse",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "f43ce9a0-d7c2-4047-8f44-6543167287b9",
- "count": 0,
- "ok": false,
- "at": 1794375580889,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794378529085,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794375589065
+ },
+ "logout": {
+  "attemptId": "1794375580897-0000028052-0000000001",
+  "at": 1794378529073,
+  "sha256": "66e45c0a78a751c34ed3fd29cfaeb97e92e9b117952ebc42e2b5b1680f9e7e27"
+ },
+ "screen": true
 }
