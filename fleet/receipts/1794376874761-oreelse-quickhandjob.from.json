@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794376874761-oreelse-quickhandjob",
+ "account": "OreElse",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune platelegs",
+ "requested": 1,
+ "claim": "30f1693b-c29f-405b-880e-3fdb35b83fe4",
+ "count": 1,
+ "ok": true,
+ "at": 1794379523792,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794379511063
+ },
+ "logout": {
+  "attemptId": "1794379501364-0000008120-0000000001",
+  "at": 1794379523784,
+  "sha256": "a01b33970abdd6e49264dd6a67c40665a35e9ee3cc035406adeab2ffe2b88753"
+ },
+ "screen": true
+}
