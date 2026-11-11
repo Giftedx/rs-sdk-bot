@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794388495010-sporrandip-dipstick-airrune",
+ "account": "SporranDip",
+ "partner": "Dipstick",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 10,
+ "claim": "a7a0935f-d992-4e6f-8574-6455c6615b38",
+ "count": 0,
+ "ok": false,
+ "at": 1794388515340,
+ "detail": "trade claimed"
+}
