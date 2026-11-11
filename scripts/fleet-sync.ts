@@ -82,6 +82,20 @@ export function ensureWorktree(dir = FLEET_WORKTREE): string {
     return dir;
 }
 
+// A worktree on a detached HEAD commits each sync, but the push sends the branch, which does not move: the sync
+// reports ok and publishes nothing. This puts the branch on HEAD again. It does not touch a rebase in progress, and
+// it refuses when the branch holds a commit that HEAD lacks.
+export function reattach(dir: string, branch = BRANCH): boolean {
+    if (git(dir, 'symbolic-ref', '-q', 'HEAD').ok) return false;
+    const gitDir = git(dir, 'rev-parse', '--absolute-git-dir').out;
+    if (existsSync(join(gitDir, 'rebase-merge')) || existsSync(join(gitDir, 'rebase-apply'))) return false;
+    if (git(dir, 'rev-parse', '--verify', '-q', `refs/heads/${branch}`).ok && !git(dir, 'merge-base', '--is-ancestor', `refs/heads/${branch}`, 'HEAD').ok)
+        throw Error(`reattach: HEAD is detached and ${branch} holds commits that HEAD lacks`);
+    const moved = git(dir, 'checkout', '-B', branch);
+    if (!moved.ok) throw Error(`reattach: ${moved.out}`);
+    return true;
+}
+
 export function releasePublishedTradeClaims(
     claims: readonly FleetTradeClaim[], side: string, read: (path: string) => any,
     release: (claim: FleetTradeClaim) => void, now = Date.now(),
@@ -120,6 +134,12 @@ export function releasePublishedTradeClaims(
 // `reconcile` (written as its session ended), counts 0 and shows no change of its inventory. Live claude-cloud:
 // TrouserSnake and UnderMyKilt each waited for a local giver that never logged in, the relay cut both sessions, and
 // both stood with no job under a claim the first case never frees (it wants the partner's receipt).
+// A third case needs no word from the partner at all: the account's own worker saw no trade screen open in its whole
+// session (`screen: false` in its receipt, scripts/fleet-trade.ts watchTradeScreen). A worker accepts an offer only on
+// a screen it has seen and nothing moves without both accepts, so the trade did not connect, whatever the partner's
+// receipt reads. The worker has ended (`reconcile`) and the window is over, so nobody retries under this order. Live
+// claude-cloud: the relay cut both parties of a coin order of this side while they waited; both receipts read
+// `reconcile` 0, neither `failed`, and both accounts stood with no job.
 // Every other case keeps the claim for a person.
 export const DROPPED_CLAIM_MS = 60 * 60_000, UNANSWERED_GRACE_MS = 2 * 60_000;
 export function droppedTradeClaims(claims: readonly FleetTradeClaim[], side: string, read: (path: string) => any, now = Date.now()): FleetTradeClaim[] {
@@ -139,6 +159,7 @@ export function droppedTradeClaims(claims: readonly FleetTradeClaim[], side: str
             && typeof own.account === 'string' && own.account.toLowerCase() === claim.account && own.count === 0
             && (!own.inventory || own.inventory.before === own.inventory.after);
         if (!ownIdle) return false;
+        if (own.state === 'reconcile' && own.screen === false && now >= order.end) return true;
         if (!partner) {
             const partnerSide = sideOf(order[other]);
             return now >= order.end && own.state === 'reconcile' && (partnerSide === side ? now : publishedAt(partnerSide)) >= order.end + UNANSWERED_GRACE_MS;
@@ -174,6 +195,7 @@ function releaseSyncedTrades(dir: string, side: string) {
 
 export function runSync(push = true): string {
     const dir = ensureWorktree();
+    reattach(dir);
     const hasRemote = git(dir, 'ls-remote', '--exit-code', '--heads', 'origin', BRANCH).ok;
     if (hasRemote) { const pull = git(dir, 'pull', '--rebase', 'origin', BRANCH); if (!pull.ok) throw Error(`pull: ${pull.out}`); }
     const statusDir = join(root, '.practice', 'status');

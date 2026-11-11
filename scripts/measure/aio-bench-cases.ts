@@ -4,6 +4,7 @@ import {aioCatalog} from '../aio';
 import {PRESETS, type SaveConfig} from '../../packages/practice/src/presets';
 import {firemakingFixture} from '../../packages/practice/src/firemaking-order-proof';
 import {agilityFixturePreset} from '../../packages/practice/src/agility-order-proof';
+import {KITS, kitItems} from '../pk-kits';
 
 export type BenchCase = {
   key: string;
@@ -66,14 +67,28 @@ const CHICKEN_FIXTURE: SaveConfig = {
 // runes of Varrock Teleport; `potions` swaps 3 sharks for a super attack, a super strength and a ranging potion;
 // `god` is the potion kit with the Zamorak cape and staff, fire runes, and the Mage Arena done with Flames of
 // Zamorak learnt (varps 267 and 270), for one more shark.
-export const sparFixture = (x: number, z = 3555, o: {food?: number; glory?: boolean; teleport?: boolean; potions?: boolean; god?: boolean} = {}): SaveConfig => ({
+export const sparFixture = (x: number, z = 3555, o: {food?: number; glory?: boolean; teleport?: boolean; potions?: boolean; god?: boolean; noDragonSlayer?: boolean} = {}): SaveConfig => ({
   position: {x, z, level: 0},
   skills: {Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99, Prayer: 99, Hitpoints: 99},
-  varps: o.god ? {147: 6, 176: 10, 300: 1000, 267: 8, 270: 99} : {147: 6, 176: 10, 300: 1000},
+  varps: o.god ? {147: 6, 176: 10, 300: 1000, 267: 8, 270: 99} : o.noDragonSlayer ? {147: 6, 300: 1000} : {147: 6, 176: 10, 300: 1000},
   equipment: [[1163, 0], [o.god ? 2414 : 1052, 1], [1712, 2], [1231, 3], [1127, 4], [1201, 5], [1079, 7], [2577, 10], [892, 13]].map(([id, slot]) => ({id: id!, count: id === 892 ? 300 : 1, slot: slot!})),
   inventory: [{id: o.god ? 2417 : 1401, count: 1}, ...(o.god ? [{id: 554, count: 400}] : []), {id: 861, count: 1}, {id: 556, count: 500}, {id: 565, count: 100}, {id: 557, count: 200}, {id: 555, count: 200}, {id: 561, count: 100},
     {id: 2434, count: 1}, {id: 2434, count: 1}, ...(o.glory ? [{id: 1712, count: 1}] : []), ...(o.teleport ? [{id: 563, count: 2}, {id: 554, count: 2}] : []), ...(o.potions || o.god ? [{id: 2436, count: 1}, {id: 2440, count: 1}, {id: 2444, count: 1}] : []), ...Array.from({length: o.food ?? (o.god ? 14 : o.potions ? 15 : 18)}, () => ({id: 385, count: 1}))],
 });
+// A maxed account in a kit of scripts/pk-kits.ts, with Lost City and Dragon Slayer done and full special energy.
+export const kitFixture = (kit: string, x: number, z = 3555): SaveConfig => ({
+  position: {x, z, level: 0},
+  skills: {Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99, Prayer: 99, Hitpoints: 99},
+  varps: {147: 6, 176: 10, 300: 1000},
+  ...kitItems(kit),
+});
+// One spar for each pair of kits, all at once at the mirror spot: `matchups` is side A's kit and side B's kit.
+const sparMatrix = (key: string, matchups: readonly (readonly [string, string])[]): BenchCase => {
+  const letters = 'bcdefghijklmnopqrstuvwxyz'.slice(0, matchups.length * 2 - 1).split('');
+  return {key, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: kitFixture(matchups[0]![0], 3094),
+    scriptArgs: ['spar', '{bot:b}', '900', ...letters.slice(1).map(l => `{bot:${l}}`), `SPAR_KITS=${matchups.map(m => m.join(':')).join(',')}`],
+    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: kitFixture(matchups[(i + 1) >> 1]![(i + 1) % 2]!, (i + 1) % 2 ? 3096 : 3094)}))};
+};
 // `pairs` spars at once: the account of the run and its partner `b`, then partners `c` and `d`, `e` and `f`, and so on.
 const sparBatch = (key: string, pairs: number, a: SaveConfig, b: SaveConfig, args: string[] = []): BenchCase => {
   const letters = 'bcdefghijklmnopqrstuvwxyz'.slice(0, pairs * 2 - 1).split('');
@@ -158,6 +173,10 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('crafting', 'jewellery-trip', 'fresh_lumbridge', ['.practice/aio-bench/jobs/{bot}-jewel.json'], {presetConfig: {position: {x: 3269, z: 3167, level: 0}, skills: {Crafting: 10}, bank: [{id: 2357, count: 1}, {id: 1592, count: 1}]},
     jobFiles: {'.practice/aio-bench/jobs/{bot}-jewel.json': {recipe: 'gold_ring', target: 1, batch: 1, cap: 800, returnTicks: 100, reserve: 0, members: false, stringAmulet: false, bank: {x: 3269, z: 3167, level: 0}, furnace: {x: 3275, z: 3186, level: 0}}}}),
   skiller('crafting', 'tanning', 'fresh_lumbridge', ['soft', '1', '80'], {presetConfig: {position: {x: 3276, z: 3193, level: 0}, inventory: [{id: 1739, count: 1}, {id: 995, count: 5}]}}),
+  // From the Al Kharid bank with seven banked hides: six tanned, a needle and thread from Dommik, one set crafted and
+  // banked, one hide left (scripts/black-dhide-sets.ts).
+  skiller('crafting', 'black-dhide-sets', 'fresh_lumbridge', [], {pass: s => ok(s) && /sets=1 banked=1 bodies=1 chaps=1 vambraces=1 tanned=6 .*hidesLeft=1 /.test(s), timeoutMs: 600_000,
+    presetConfig: {position: {x: 3269, z: 3167, level: 0}, skills: {Crafting: 84}, inventory: [{id: 385, count: 2}], bank: [{id: 1747, count: 7}, {id: 995, count: 400}]}}),
   skiller('crafting', 'soften-clay', 'fresh_lumbridge', ['CAP=500', 'MAX_MAKE=1', 'RAW_RESERVE=0'], {presetConfig: {position: {x: 3185, z: 3436, level: 0}, inventory: [{id: 1925, count: 1}], bank: [{id: 434, count: 1}]}}),
   skiller('crafting', 'progressive', 'fresh_lumbridge', ['.practice/aio-bench/jobs/{bot}-prog.json'], {presetConfig: {position: {x: 3092, z: 3243, level: 0}, bank: [{id: 1511, count: 1}, {id: 946, count: 1}]},
     jobFiles: {'.practice/aio-bench/jobs/{bot}-prog.json': {mode: 'fletch', targetLevel: 99, maximum: 1, batch: 1, reserve: 0, cap: 600, members: false, bank: {x: 3092, z: 3243, level: 0}}}}),
@@ -234,6 +253,10 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {position: {x: 2717, z: 9802, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Magic: 99, Prayer: 99},
       equipment: [{id: 1289, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1540, count: 1, slot: 5}, {id: 1079, count: 1, slot: 7}],
       inventory: [{id: 2448, count: 1}, {id: 2452, count: 1}, {id: 2436, count: 1}, {id: 2440, count: 1}, {id: 2434, count: 1}, {id: 2434, count: 1}, {id: 563, count: 1}, {id: 556, count: 3}, {id: 554, count: 1}, ...Array.from({length: 12}, () => ({id: 385, count: 1}))]}},
+  // One kill from the corridor south of the cave, the hide and bones fetched (scripts/black-dragon-camp.ts STAGED=1).
+  {key: 'boss:black-dragon', script: 'scripts/aio-boss.ts', preset: 'fresh_lumbridge', scriptArgs: ['black-dragon', '1500', 'STAGED=1', 'KILLS=1'], pass: s => ok(s) && /kills=1 hides=1 bones=1/.test(s), timeoutMs: 900_000,
+    presetConfig: {position: {x: 2835, z: 9820, level: 0}, skills: {Ranged: 99, Hitpoints: 99, Defence: 99, Prayer: 60},
+      equipment: [{id: 861, count: 1, slot: 3}, {id: 888, count: 400, slot: 13}], inventory: [{id: 385, count: 1}, {id: 385, count: 1}, {id: 385, count: 1}]}},
   {key: 'boss:trawler', script: 'scripts/aio-boss.ts', preset: 'fresh_lumbridge', scriptArgs: ['trawler', '2200'], pass: ok, timeoutMs: 900_000,
     presetConfig: {position: {x: 2675, z: 3170, level: 0}, skills: {Fishing: 99, Crafting: 99, Hitpoints: 50}, inventory: [{id: 1941, count: 200}, {id: 583, count: 1}, ...Array.from({length: 10}, () => ({id: 954, count: 1}))]}},
   {key: 'boss:trawler-at-site', script: 'scripts/aio-boss.ts', preset: 'fresh_lumbridge', scriptArgs: ['trawler-at-site', 'trip', '2200'], pass: ok, timeoutMs: 900_000,
@@ -252,6 +275,17 @@ const ROUTE_CASES: BenchCase[] = [
   // tribrid switches, Fire Wave and freeze runes, 2 prayer potions, 18 sharks and full special energy. SPAR_A and SPAR_B
   // (--set) choose the profile of each side.
   sparCase('pvp:spar', sparFixture(3094), sparFixture(3096)),
+  // The mirror with Dragon Slayer not done: the loop must leave the rune platebody on, because the game does not let
+  // such an account put it back.
+  sparCase('extra:spar-no-slayer', sparFixture(3094, 3555, {noDragonSlayer: true}), sparFixture(3096, 3555, {noDragonSlayer: true})),
+  // The tribrid against every build of scripts/pk-kits.ts in one run, and a mirror of 8 for each build: the cases that
+  // the hill climb and the kit matrix run (scripts/measure/pk-spar-climb.ts, pk-spar-matrix.ts).
+  sparMatrix('extra:spar-kits-x8', [['tribrid', 'tribrid'], ['tribrid', 'tribrid-pots'], ['tribrid', 'melee'], ['tribrid', 'ranger'], ['tribrid', 'mage'],
+    ['tribrid', 'tribrid-adamant'], ['tribrid', 'tribrid-mithril'], ['tribrid-pots', 'tribrid-pots']]),
+  ...Object.keys(KITS).map(kit => sparMatrix(`extra:spar-kit-${kit}-x8`, Array.from({length: 8}, () => [kit, kit] as const))),
+  // A build against the standard tribrid, four pairs on each side of the map: what the build is worth by itself.
+  ...Object.keys(KITS).filter(kit => kit !== 'melee').map(kit => sparMatrix(`extra:spar-duel-${kit}-vs-melee-x8`, Array.from({length: 8}, (_, i) => (i % 2 ? ['melee', kit] : [kit, 'melee']) as [string, string]))),
+  ...Object.keys(KITS).filter(kit => kit !== 'tribrid').map(kit => sparMatrix(`extra:spar-duel-${kit}-x8`, Array.from({length: 8}, (_, i) => (i % 2 ? ['tribrid', kit] : [kit, 'tribrid']) as [string, string]))),
   // Map cases of the spar. Gap: the same mirror from 12 tiles apart. Trees: 6 tiles apart at Wilderness level 3 with a
   // blocker on tiles 3101-3103 between the two, so neither has line of sight at the start. Escape: Wilderness level 34
   // at a spot with no monster in view (green dragons at (3094, 3800) attack both sides and block their hits); side B
@@ -262,9 +296,11 @@ const ROUTE_CASES: BenchCase[] = [
   // Eight glory chases at once in one world, at the same spot: eight samples for the ticks of one.
   sparBatch('extra:spar-escape-x8', 8, sparFixture(3125, 3790), sparFixture(3127, 3790, {food: 3, glory: true}), ['SPAR_SCENARIO=escape']),
   sparBatch('extra:spar-x8', 8, sparFixture(3094), sparFixture(3096)),
+  sparBatch('extra:spar-escape-spell-x8', 8, sparFixture(3125, 3790), sparFixture(3127, 3790, {food: 3, teleport: true}), ['SPAR_SCENARIO=escape-spell']),
   sparBatch('extra:spar-escape-spell-pots-x8', 8, sparFixture(3125, 3790, {potions: true}), sparFixture(3127, 3790, {food: 3, teleport: true}), ['SPAR_SCENARIO=escape-spell']),
   sparBatch('extra:spar-escape-god-x8', 8, sparFixture(3125, 3790, {god: true}), sparFixture(3127, 3790, {food: 3, glory: true}), ['SPAR_SCENARIO=escape-god']),
   sparBatch('extra:spar-escape-spell-god-x8', 8, sparFixture(3125, 3790, {god: true}), sparFixture(3127, 3790, {food: 3, teleport: true}), ['SPAR_SCENARIO=escape-spell-god']),
+  sparBatch('extra:spar-flee-x8', 8, sparFixture(3125, 3790, {food: 3, glory: true}), sparFixture(3127, 3790, {potions: true}), ['SPAR_SCENARIO=flee']),
   sparBatch('extra:spar-escape-pots-x8', 8, sparFixture(3125, 3790, {potions: true}), sparFixture(3127, 3790, {food: 3, glory: true}), ['SPAR_SCENARIO=escape']),
   // The glory chase with boost potions on the hunter.
   sparCase('extra:spar-escape-pots', sparFixture(3125, 3790, {potions: true}), sparFixture(3127, 3790, {food: 3, glory: true}), ['SPAR_SCENARIO=escape']),
@@ -276,6 +312,13 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, bank: [{id: 1944, count: 1}, {id: 1927, count: 1}, {id: 1933, count: 1}]}},
   {key: 'quester:mode:cook-job', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['cook-job', 'CAP=1500'], pass: s => ok(s) && /QUEST_COOK_JOB_RESULT \{"ok":true/.test(s),
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, bank: [{id: 1944, count: 1}, {id: 1927, count: 1}, {id: 1933, count: 1}], varps: {4: -1, 9: -1, 13: -1, 16: -1, 28: -1, 64: -1, 181: -1, 209: -1}}},
+  // From the Draynor bank: the dramen staff, the shed, the market door's diamond, one dragon longsword from Jakut, the
+  // ladder, the Al Kharid bank (scripts/jakut-swords.ts).
+  {key: 'market:jakut-swords', script: 'scripts/aio-market.ts', preset: 'fresh_lumbridge', scriptArgs: ['jakut-swords', 'SWORDS=1'], pass: s => ok(s) && /swords=1 banked=1/.test(s), timeoutMs: 900_000,
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Attack: 60}, equipment: [{id: 1333, count: 1, slot: 3}], bank: [{id: 772, count: 1}, {id: 1601, count: 1}, {id: 995, count: 110_000}]}},
+  // From the Taverley dungeon ladder: the Jailer, Velrak's cell, the key, back up (scripts/dusty-key.ts).
+  {key: 'quester:mode:dusty-key', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['dusty-key'], pass: s => ok(s) && s.includes('dustyKey=1'), timeoutMs: 900_000,
+    presetConfig: {position: {x: 2884, z: 3398, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99}, equipment: [{id: 1331, count: 1, slot: 3}], inventory: Array.from({length: 4}, () => ({id: 385, count: 1}))}},
   {key: 'quester:mode:seaslug-leave', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['seaslug-leave', 'CAP=600'], pass: ok,
     presetConfig: {position: {x: 2782, z: 3273, level: 0}, skills: {Hitpoints: 60}, varps: {159: 12}}},
   {key: 'quester:mode:tbwt-owned', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['tbwt-owned', '6000'], pass: ok, timeoutMs: 900_000,
@@ -326,6 +369,15 @@ const EXTRA_CASES: BenchCase[] = [
     pass: s => ok(s) && s.includes(`boughtTotal=${units} bankedTotal=${units} `) && s.includes(units ? 'stop=stock-target' : 'stop=stock-wait') && s.includes('rival end') && s.includes('out=1'), timeoutMs: 900_000,
     presetConfig: {position: {x: 2581, z: 3298, level: 0}, varps: {147: 6}, bank: [{id: 772, count: 1}, {id: 995, count: 400000}, {id: 1601, count: 1}]},
     companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3252, z: 9573, level: 0}, varps: {147: 6}, inventory: [{id: 995, count: 3000000}]}}]})),
+  // Rune armour at the Varrock West anvils from banked runite bars: chainbody 3 bars, platelegs 3, full helm 2, kiteshield 3.
+  {key: 'extra:smith-rune-chainbody', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'anvil', '600', 'PRODUCT_ID=1113', 'MAX_MAKE=1', 'BAR_RESERVE=0'], pass: s => ok(s) && /"made":1,"banked":1/.test(s),
+    presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 99}, inventory: [{id: 2347, count: 1}], bank: [{id: 2363, count: 3}]}},
+  {key: 'extra:smith-rune-platelegs', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'anvil', '600', 'PRODUCT_ID=1079', 'MAX_MAKE=1', 'BAR_RESERVE=0'], pass: s => ok(s) && /"made":1,"banked":1/.test(s),
+    presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 99}, inventory: [{id: 2347, count: 1}], bank: [{id: 2363, count: 3}]}},
+  {key: 'extra:smith-rune-full-helm', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'anvil', '600', 'PRODUCT_ID=1163', 'MAX_MAKE=1', 'BAR_RESERVE=0'], pass: s => ok(s) && /"made":1,"banked":1/.test(s),
+    presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 99}, inventory: [{id: 2347, count: 1}], bank: [{id: 2363, count: 2}]}},
+  {key: 'extra:smith-rune-kiteshield', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'anvil', '600', 'PRODUCT_ID=1201', 'MAX_MAKE=1', 'BAR_RESERVE=0'], pass: s => ok(s) && /"made":1,"banked":1/.test(s),
+    presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 99}, inventory: [{id: 2347, count: 1}], bank: [{id: 2363, count: 3}]}},
   {key: 'extra:bank-job-cut-dragonstone', script: 'scripts/aio-skiller.ts', preset: 'bank_gems', scriptArgs: ['bank-job', CUT_JOB_PATH], pass: s => ok(s) && s.includes('cut-dragonstone')},
 ];
 

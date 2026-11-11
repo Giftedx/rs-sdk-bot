@@ -15,13 +15,29 @@ const nativeItems=new Map(readFileSync(resolve(content,'pack/obj.pack'),'utf8').
 const item=(native:string,count=1,slot?:number):CombatKit=>{const id=nativeItems.get(native);if(id===undefined)throw Error('native combat item missing '+native);return{id,count,native,...slot===undefined?{}:{slot}};};
 const escapeRunes=()=>[item('lawrune'),item('airrune',3),item('firerune')];
 export const BLUE_KIT:CombatKit[]=[item('crossbow',1,3),item('antidragonbreathshield',1,5),item('bolt',500,13),item('dusty_key'),...escapeRunes(),item('shark',6)];
+// Taverley's black dragons from the corridor south of their cave (scripts/black-dragon-camp.ts): a two-handed bow, so
+// no shield, and arrows for about nine kills (practice: 68 a kill net of the ones taken back).
+// The trip starts at the Falador west bank, as the blue dragon trip does: the walk to the Taverley ladder is then the
+// trip's own ground walk. From a far bank the shared planner would make that walk, and it spends the escape rune:
+// practice, from the Ardougne north bank with the kit packed it took a Camelot teleport with the trip's law rune and
+// air from the bank, and the trip had no way out of the dungeon (scripts/black-dragon-camp.ts walks to BLACK_BANK
+// before the kit is taken).
+export const BLACK_BANK={x:2946,z:3368,level:0} as const;
+// The arrow is the account's choice (blackKit): at Ranged 99 an iron arrow's best hit is 12 against a mithril
+// arrow's 14 and a rune arrow's 19 (ranged strength 10, 22 and 49, weapon.obj), and shops sell iron by the thousand.
+export const BLACK_ARROWS=['bronze_arrow','iron_arrow','steel_arrow','mithril_arrow','adamant_arrow','rune_arrow'] as const;
+export function blackKit(arrow:string='mithril_arrow',arrows=700):CombatKit[]{
+ if(!(BLACK_ARROWS as readonly string[]).includes(arrow)||!Number.isSafeInteger(arrows)||arrows<100||arrows>5000)throw Error('black dragon kit: an arrow of '+BLACK_ARROWS.join(', ')+' and 100 to 5000 of it');
+ return[item('magic_shortbow',1,3),item(arrow,arrows,13),item('dusty_key'),...escapeRunes(),item('shark',6)];
+}
+export const BLACK_KIT:CombatKit[]=blackKit();
 export const KBD_KIT:CombatKit[]=[item('rune_sword',1,3),item('antidragonbreathshield',1,5),item('rune_chainbody',1,4),item('rune_platelegs',1,7),item('4dose2antipoison'),item('4dose1antidragon'),item('4dose2attack'),item('4dose2strength'),item('4doseprayerrestore',2),...escapeRunes(),item('shark',12)];
 // Wield constraints come from the exact native handlers. These kits use no quest-gated equipment.
 export function validateCombatKit(kit:readonly CombatKit[]){
  const ids=new Set(nativeItems.values()),requirements:{skill:string;level:number}[]=[];
- const tiers=['tier1.rs2','tier40.rs2'].map(f=>readFileSync(resolve(content,'scripts/levelrequire/scripts',f),'utf8')).join('\n');
+ const tiers=['tier1.rs2','tier40.rs2','tier50.rs2'].map(f=>readFileSync(resolve(content,'scripts/levelrequire/scripts',f),'utf8')).join('\n');
  for(const i of kit){if(!ids.has(i.id)||i.native&&nativeItems.get(i.native)!==i.id||!Number.isSafeInteger(i.count)||i.count<1)throw Error('invalid native combat kit item '+i.id);
-  if(i.slot===undefined||i.native==='bolt'||i.native==='antidragonbreathshield')continue;
+  if(i.slot===undefined||i.slot===13||i.native==='antidragonbreathshield')continue;
   if(!i.native)throw Error('native equipped item name required '+i.id);
   const handler=tiers.match(new RegExp('\\[opheld2,'+i.native+'\\]\\s*@levelrequire_(attack|defence|ranged)\\((\\d+),'));
   if(!handler)throw Error('native kit wield handler unsupported '+i.native);
@@ -58,7 +74,37 @@ export async function blueDungeonEntry(io:{walk:(x:number,z:number)=>Promise<voi
  const gateX=io.position()!.worldX;await io.interact(2623,2924,9803,()=>{const p=io.position();return!!p&&p.worldX!==gateX&&[2923,2924].includes(p.worldX)&&p.worldZ===9803;},1590);
  await io.settle();await io.walk(2904,9803);await io.walk(2895,9792);
 }
-export async function combatTrip(s:Session,kind:'blue'|'kbd',fight:(stopped:()=>boolean)=>Promise<{ok:boolean;failure:string}>,o:{cap:number;stop:()=>boolean}){
+// On from the blue dragon lair to the corridor south of the black dragons' cave. The lair has no way straight west
+// (practice: a walk from 2895,9793 to 2850,9809 stopped at the wall on 2881,9810): the way is out of its south end,
+// west past the black demons, north to the poison spiders, then into the corridor from its south end. The corridor's
+// last row before the cave (z 9821) is beside dragon ground, so the walk ends two rows short of it (2835,9818, any
+// tile within one of it is safe) and the camp takes its tile.
+// Protect from Melee covers the walk from the gate to the corridor (about 80 ticks) and Protect from Magic each pile
+// the camp fetches (scripts/black-dragon-camp.ts fetch, about 15 ticks a kill); each takes one prayer point in 5 ticks, so a nine-kill
+// trip uses about 45. With fewer than BLACK_PRAYER points (or than the account's Prayer level, if lower) the trip
+// prays at the Altar of Guthix in Taverley (loc guthix_altar 410, a prayer_altar: skill_prayer/scripts/altar.rs2) on
+// its way from the bank to the ladder. Live (claude-cloud): an account that had spent its points on Lost City's tree
+// spirit killed one dragon, left the pile and its arrows ("no prayer and a dragon beside it") and came back empty.
+export const BLACK_ALTAR={id:410,x:2925,z:3483},BLACK_PRAYER=50;
+export const blackPrayerShort=(points:number,level:number)=>points<Math.min(level,BLACK_PRAYER);
+export const BLACK_ENTRY:readonly (readonly [number,number])[]=[[2893,9788],[2893,9777],[2885,9769],[2878,9772],[2877,9788],[2870,9797],[2860,9799],[2850,9809],[2839,9814],[2835,9818]];
+export async function blackDragonEntry(io:Parameters<typeof blueDungeonEntry>[0]){
+ await blueDungeonEntry(io);
+ for(const [x,z] of BLACK_ENTRY)await io.walk(x,z);
+}
+// The Varrock teleport out of a trip, clicked until the account stands in Varrock. The spell's button does nothing,
+// with no message, when the player is busy on the tick the click arrives (skill_magic teleport.rs2: `p_finduid`).
+// Live (claude-cloud): a black dragon trip clicked once after its last pile, waited 20 ticks and logged out on the
+// camp tile with three hides in its pack and the teleport's runes unspent. A second cast cannot follow a first that
+// worked: the kit holds the runes of one.
+export const TELEPORT_TRIES=6,TELEPORT_WAIT=8;
+export const inVarrockSquare=(p:{worldX:number;worldZ:number;level:number}|null|undefined)=>!!p&&p.level===0&&Math.max(Math.abs(p.worldX-3213),Math.abs(p.worldZ-3424))<=5;
+export async function varrockTeleport(s:Session,stop:()=>boolean=()=>false){
+ const home=()=>inVarrockSquare(s.sdk.getState()?.player);
+ for(let i=0;i<TELEPORT_TRIES&&!home()&&!stop();i++){await s.sdk.sendCloseModal();await s.direct({type:'clickComponent',componentId:componentId('magic:varrock_teleport'),reason:'finite combat emergency return'});await waitUntil(s,()=>home()||stop(),{timeoutTicks:TELEPORT_WAIT});}
+ return home();
+}
+export async function combatTrip(s:Session,kind:'blue'|'kbd'|'black',fight:(stopped:()=>boolean)=>Promise<{ok:boolean;failure:string}>,o:{cap:number;stop:()=>boolean;kit?:readonly CombatKit[]}){
  if(!Number.isSafeInteger(o.cap)||o.cap<1||o.cap>10000)throw Error('invalid combat trip cap');
  const start=s.tick(),state=()=>s.sdk.getState(),p0=state()?.player;
  if(!p0||p0.level!==0||p0.worldZ>4000)throw Error('combat trip needs a surface bank');
@@ -82,7 +128,7 @@ export async function combatTrip(s:Session,kind:'blue'|'kbd',fight:(stopped:()=>
  let initial:Record<number,number>|undefined,final:Record<number,number>|undefined,failure='',banked=false,escaped=false,result:Awaited<ReturnType<typeof fight>>|undefined;
  try{
   if(over())throw Error('combat trip stopped at bank');await open();initial=totals();
-  const kit=kind==='blue'?BLUE_KIT:KBD_KIT,needs=combatKitTotals(kit),requirements=validateCombatKit(kit);
+  const kit=o.kit??(kind==='blue'?BLUE_KIT:kind==='black'?BLACK_KIT:KBD_KIT),needs=combatKitTotals(kit),requirements=validateCombatKit(kit);
   for(const r of requirements)if((s.sdk.getSkill(r.skill)?.level??0)<r.level)throw Error('combat native wield requirement '+r.skill+r.level);
   for(const [id,n] of Object.entries(needs))if((initial[Number(id)]??0)<n)throw Error('combat OWN stock missing '+id+':'+n);
   if((s.sdk.getSkill('Hitpoints')?.level??0)<70)throw Error('combat needs HP70 staging');
@@ -96,6 +142,14 @@ export async function combatTrip(s:Session,kind:'blue'|'kbd',fight:(stopped:()=>
   mark('staged');
   if(kind==='blue'){
    await blueDungeonEntry({walk,interact,position:()=>state()?.player,settle:()=>waitTicks(s,3)});
+  }else if(kind==='black'){
+   // No shield or armour with a bow: Protect from Melee from the gate on, past the blue dragons, the black demons
+   // and the poison spiders.
+   const points=()=>state()?.prayers.prayerPoints??0,level=state()?.prayers.prayerLevel??0;
+   if(blackPrayerShort(points(),level)){await walk(BLACK_ALTAR.x,BLACK_ALTAR.z-1);await interact(BLACK_ALTAR.id,BLACK_ALTAR.x,BLACK_ALTAR.z,()=>!blackPrayerShort(points(),level));mark('prayed '+points());}
+   const pray=async(on:boolean)=>{if(!!state()?.prayers.activePrayers[14]===on||on&&((state()?.prayers.prayerLevel??0)<43||(state()?.prayers.prayerPoints??0)<=0))return;await s.sdk.sendTogglePrayer(14);await waitUntil(s,()=>!!state()?.prayers.activePrayers[14]===on,{timeoutTicks:5});};
+   await blackDragonEntry({walk,interact,position:()=>state()?.player,settle:async()=>{await waitTicks(s,3);await pray(true);}});
+   await pray(false);
   }else{
    for(const [x,z] of [[3094,3535],[3080,3580],[3055,3625],[3025,3670],[3000,3715],[3000,3760],[3000,3805],[3017,3849]])await walk(x!,z!);if(!state()!.prayers.activePrayers[14]){if(!(await s.sdk.sendTogglePrayer(14)).success||!await waitUntil(s,()=>!!state()?.prayers.activePrayers[14],{timeoutTicks:5}))throw Error('KBD route melee protection unobserved');}await interact(1765,3017,3849,()=>near(3069,10255));
    await walk(3067,10253);await interact(1816,3067,10253,()=>near(2717,9802));
@@ -115,16 +169,16 @@ export async function combatTrip(s:Session,kind:'blue'|'kbd',fight:(stopped:()=>
   if(alive())try{
    // Keep reserved runes until a surface return is observed, including on stop/cap.
    if(kind==='kbd'&&inKbdEntrancePit(state()?.player??undefined))await leaveKbdEntrancePit({position:()=>state()?.player??undefined,locs:()=>state()?.nearbyLocs??[],interact:async(x,z,id,op)=>{if(!alive())throw Error('combat cleanup life changed');await s.sdk.sendCloseModal();return(await s.sdk.sendInteractLoc(x,z,id,op)).success;},wait:(test,ticks)=>waitUntil(s,()=>test()||!alive(),{timeoutTicks:ticks})});
-   if(!near(3213,3424,5)&&state()!.player!.worldZ>4000){if(!combatTeleportAllowed(state()!.player!))throw Error('combat return blocked in high Wilderness; use observed exit');await s.sdk.sendCloseModal();await s.direct({type:'clickComponent',componentId:componentId('magic:varrock_teleport'),reason:'finite combat emergency return'});if(!await waitUntil(s,()=>near(3213,3424,5),{timeoutTicks:20}))throw Error('combat emergency return missing');escaped=true;}
+   if(!near(3213,3424,5)&&state()!.player!.worldZ>4000){if(!combatTeleportAllowed(state()!.player!))throw Error('combat return blocked in high Wilderness; use observed exit');if(!await varrockTeleport(s,()=>!alive()))throw Error('combat emergency return missing');escaped=true;}
    if(state()!.player!.worldZ<4000){
     if(kind==='kbd'&&state()!.player!.worldZ>3500){for(const [x,z] of [[3000,3805],[3000,3760],[3000,3715],[3025,3670],[3055,3625],[3080,3580],[3094,3535],[3096,3495]])if(z!<state()!.player!.worldZ)await walk(x!,z!,true);await walk(3185,3436,true);}
     else if(!near(p0.worldX,p0.worldZ,4))await walk(3185,3436,true);
     await deposit();final=totals();await close();banked=true;mark('banked');await setRetaliate(initialRetaliate);}
   }catch(e){failure+=[failure?'; ':'',String(e)].join('');}
  }
- const delta:Record<number,number>={},detail=result as {ammoUsed?:number;foods?:number;escaped?:boolean;loot?:number[];drops?:Record<number,number>;potions?:Record<number,number>}|undefined;
+ const delta:Record<number,number>={},detail=result as {ammo?:number;ammoUsed?:number;foods?:number;escaped?:boolean;loot?:number[];drops?:Record<number,number>;potions?:Record<number,number>}|undefined;
  if(escaped||detail?.escaped){delta[563]=-1;delta[556]=-3;delta[554]=-1;}
- if(detail?.ammoUsed)delta[877]=-detail.ammoUsed;
+ if(detail?.ammoUsed)delta[detail.ammo??877]=-detail.ammoUsed;
  if(routeFoods||detail?.foods)delta[385]=-routeFoods-(detail?.foods??0);
  if(detail?.drops)for(const [id,n] of Object.entries(detail.drops))delta[canonical(Number(id))]=(delta[canonical(Number(id))]??0)+n;
  if(kind==='kbd'){

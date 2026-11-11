@@ -98,3 +98,27 @@ test('disembark honours stop and deadline', async () => {
         expect((await disembark(f.s, { deadline: f.s.tick() })).outcome).toBe('deadline');
     } finally { f.stop(); }
 });
+
+import { leaveDeck, DECK_REACH } from '../src/walk';
+test('a walk that starts on a ship deck crosses the gangplank first, and nothing else on level 1 counts as a deck', async () => {
+    // Live: a session cut between the sail and the gangplank left an account on the Brimhaven deck (2775,3234,1), and
+    // no route leaves a deck. On the deck with the gangplank beside it: crossed, and on the ground.
+    const deck = fake({ deck: { x: 2775, z: 3234 } });
+    try {
+        Object.assign(deck.player, { worldX: 2775, worldZ: 3234, level: 1 });
+        expect(await leaveDeck(deck.s as any)).toBe('ground');
+        expect(deck.player.level).toBe(0);
+        expect(deck.crosses()).toBe(1);
+    } finally { deck.stop(); }
+    // On the ground, or upstairs with no gangplank in view: not a deck, nothing clicked.
+    const ground = fake();
+    try { expect(await leaveDeck(ground.s as any)).toBe('none'); expect(ground.crosses()).toBe(0); } finally { ground.stop(); }
+    const upstairs = fake({ plank: false });
+    try { Object.assign(upstairs.player, { level: 1 }); expect(await leaveDeck(upstairs.s as any)).toBe('none'); expect(upstairs.crosses()).toBe(0); } finally { upstairs.stop(); }
+    // A gangplank far from the account is another ship's: not this account's deck.
+    const far = fake({ deck: { x: 2775, z: 3234 } });
+    try { Object.assign(far.player, { worldX: 2775 + DECK_REACH + 1, worldZ: 3234, level: 1 }); expect(await leaveDeck(far.s as any)).toBe('none'); expect(far.crosses()).toBe(0); } finally { far.stop(); }
+    // A stop request while on the deck leaves the account there and says so.
+    const held = fake({ deck: { x: 2775, z: 3234 } });
+    try { Object.assign(held.player, { worldX: 2775, worldZ: 3234, level: 1 }); expect(await leaveDeck(held.s as any, () => true)).toBe('stuck'); } finally { held.stop(); }
+});

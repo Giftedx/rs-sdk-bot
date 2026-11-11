@@ -35,6 +35,7 @@ export const MARKET_MODES: readonly MarketModeSpec[] = [
  {mode:'shop-sell',script:'scripts/microbot-a-shop-sell.ts',description:'Sell inventory items to NPC shopkeeper with minimum stock/price rules'},
  {mode:'earth-shop',script:'scripts/earth-shop.ts',description:'Refill earth/elemental runes from magic shops'},
  {mode:'buy-sword',script:'scripts/buy-owned-sword.ts',description:'Buy owned training sword from Varrock sword shop'},
+ {mode:'jakut-swords',script:'scripts/jakut-swords.ts',description:'Buy dragon longswords from Jakut in the Zanaris market (dramen staff, one diamond for the door) and bank them at Al Kharid'},
  {mode:'ge-buy',script:'scripts/buy-owned-ge-item.ts',description:'Place, track, collect, and bank a finite Grand Exchange buy order with journal accounting'},
  {mode:'ge-sell',script:'scripts/sell-owned-ge-item.ts',description:'Place, track, collect, and bank a finite Grand Exchange sell order'},
  {mode:'ge-buy-list',script:'scripts/microbot-ge-buy-list.ts',description:'Execute a multi-item Grand Exchange shopping list'},

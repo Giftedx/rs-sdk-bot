@@ -1238,6 +1238,49 @@ Findings:
 - The SDK route from the Lumbridge teleport to the shed goes round the north of the castle and into the swamp from the
   west (96 ticks). A trial with waypoints south of the castle met a dead end at 3232,3215 and took 118.
 - Untradeable: the dramen branch and the dramen staff (`quest_zanaris.obj`); the run makes both. Helper items: bronze axe (1351), knife (946), 2 prayer potions (2434), runes for one Lumbridge teleport, lobsters.
+- **From an army account's state.** Claim: the AIO quester's chain (`quester chain zanaris`) completes Lost City for
+  an account that stands at the Ardougne north bank in its fighting kit. Conditions: Attack, Strength, Defence and
+  Hitpoints 99, Magic 21, Prayer 65 to 77, Woodcutting 56, Crafting 54; a scimitar, a helm and a shield worn, a bow and
+  arrows in the pack; practice at 150 ms ticks. The sweep banks what is worn and the spare pack rows first
+  (`QUEST_SWEEP_BARE {"worn":[1139,1331,1171],"left":0}`; the Entrana monk refuses weapons and armour in the pack too,
+  `monk_of_entrana.rs2` `has_entrana_restricted_items`). With the two prayer potions banked: `RESULT ok`, 772 quest
+  ticks, 1,148 for the job, `hpMin=96`. With none (Hitpoints and Defence at 90 the sweep does not ask for them and
+  packs ten meals), one account at a time, 3 of 3: 994, 909 and 820 quest ticks, `hpMin` 40, 42 and 37, 1 to 3
+  lobsters eaten, 1,191 to 1,363 ticks for the job. Magic 21 cannot cast the Lumbridge teleport, so each run walked
+  from Wilderness level 32 to the swamp (about 385 ticks). Evidence: `.practice/lostcity/run.ts` (`a`, `e1`-`e3`) in
+  the Claude cloud container that ran them. Gap: no live run; the Wilderness walk met no player.
+- **Merlin's Crystal and Holy Grail from an army account's state.** Claim: the chain `quester chain merlin,grail`
+  completes both quests for an account that stands at the Ardougne north bank in a full rune set, and Holy Grail
+  gives 275,000 Prayer experience. Conditions: Attack, Strength, Defence, Hitpoints and Ranged 99; coins, sharks, a
+  bow and the teleports' runes banked and nothing of the quests' own kits; practice at 150 ms ticks, one account at a
+  time. The sweep gathers Merlin's kit itself (insect repellent 2807,3450, a bucket, the wax at the Catherby hives, bat
+  bones from a giant bat at 2749,3406, bread and a tinderbox from Ardougne shops for 13 coins) and for Holy Grail
+  takes off everything worn at the Seers' Village bank with Excalibur and the rune scimitar kept in the pack
+  (`QUEST_SWEEP_BARE {"worn":[1163,1333,1113,1201,1079],"left":0,"pack":[385,995,1333,35,...]}`). Magic 66, Prayer 78
+  with its points: Merlin's Crystal `RESULT ok qp=6 excalibur=true`, 720 quest ticks and 1,081 for the job; Holy Grail
+  `RESULT ok qp=2 grail=true ... defence=382500 ... prayer=275000`, 1,221 and 1,321; `hpMin=99` in both. Magic 45,
+  Prayer 77 with no points: 693 and 1,249 quest ticks (1,093 and 1,396), the account praying first at the Seers'
+  Village church (`QUEST_SWEEP_PRAY {"quest":"merlin","before":0,"after":77}`, then `"grail","before":37`). Two
+  faults this found in the sweep: the shop money came out of the quest's own 500 coins (`withdraw short 995:13`), and
+  with no points the keep step `protect from melee on` ended Merlin's Crystal. Evidence: `.practice/grail/run.ts`
+  (`a`-`e`) in the Claude cloud container that ran them. Gap: no live run. Merlin's Crystal walks to the chaos altar
+  at Wilderness level 12 in what the account wears and met no player; Holy Grail leaves Excalibur and the scimitar on
+  the Port Sarim dock for the Entrana visit, where another player can take them.
+- **The tree spirit serves one fighter.** Three accounts at the dramen tree at once: one finished (`hpMin=38`, 5
+  lobsters) and two ended `RESULT fail tree spirit` with "Someone else is fighting that". The planner sends one army
+  account at a time (`LOST_CITY_PLACES`). Evidence: `.practice/lostcity/run.ts` (`d1`-`d3`).
+- **The two quests before it.** From Woodcutting 1 and Crafting 1 with coins, a bronze axe and a few runes banked, the
+  chain `drunkmonk,murder,zanaris` ran Monk's Friend in 252 quest ticks (Woodcutting 56) and Murder Mystery in 341
+  (Crafting 51), gathering their items itself (a jug of water and logs from spawns, 3 pots of flour from a shop, the
+  knife for Lost City from the Seers' Village spawn). Evidence: `.practice/lostcity/run.ts` (`c`).
+- **The way out of Zanaris.** The quest completes inside (3220,9592). From there the shared walker found no route to
+  the Ardougne north bank (304 idle ticks, "no route to 2619,3332,0") and reached the swamp shed in 5 ticks by the
+  exit beside the entrance. `walkWithFerryFallback` takes that step first: the same walk arrived in 740 ticks, 302 of
+  them the planner's failed direct plan at the shed. The quest script itself ends with that step, so the account logs
+  out at the shed (3201,3169) and a next job with its own walker starts above ground: practice
+  `RESULT ok qp=3 ... at=3201,3169,0 ticks=1086`, milestone `shed` 9 ticks after the quest. Live (claude-cloud,
+  TrouserSnake): `RESULT ok quest-chain done=zanaris`, 774 quest ticks, `hpMin=83`, no food eaten. Evidence:
+  `.practice/lostcity/exit.ts`, `.practice/lostcity/run.ts` (`exit`); `scripts/walk-to.test.ts`.
 
 Planner: new row `quest-zanaris` (qp 3, 595 / 796 MEASURED, the same under `rival-dialogue-burst`). `quests-rest`:
 72 -> 69 QP, 31 -> 30 quests, one medium class less: 50,600 / 76,200 -> 49,700 / 74,900 (burst 46,795 / 70,470 ->

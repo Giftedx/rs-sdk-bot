@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { supervise } from '../packages/practice/src/supervise';
 import { planShopPurchases, maximumUnitCost, buyWithBudget, PROFILES, shopTargetsMet, stockWaitStatus, shopFinishOk, dialogClick, blindBuyNow, blindBuyObserved, BLIND_SETTLE_TICKS } from './shop-buyer';
+import { planShopPurchases, maximumUnitCost, buyWithBudget, PROFILES, shopTargetsMet, stockWaitStatus, shopFinishOk, selectItems, profileRefusal, approachLegs } from './shop-buyer';
 
 const target = (name: string, buyPerTick: number) => ({ re: new RegExp(`^${name}$`, 'i'), buyPerTick });
 const item = (name: string, count = 100, buyPrice = 1) => ({ name, count, buyPrice });
@@ -121,6 +122,51 @@ test('quest-input profiles target only exact primary-source gloves and cheese, o
         expect(planShopPurchases(p.items,shop,inventory,bank,50,1,1)).toEqual([]);
     }
 });
+test("ITEMS='blood rune' selects exactly the magic guild blood line", () => {
+    const guild = PROFILES.magic_guild!;
+    const picked = selectItems(guild.items, 'blood rune');
+    expect(picked).toHaveLength(1);
+    expect(picked[0]!.re.test('Blood rune')).toBe(true);
+    expect(picked[0]!.buyPerTick).toBe(100);
+    for (const other of ['Death rune', 'Law rune', 'Fire rune', 'Nature rune', 'Staff of fire']) expect(picked[0]!.re.test(other)).toBe(false);
+    expect(selectItems(guild.items, 'death rune').map(i => i.re.source)).toEqual(['^death rune$']);
+    expect(selectItems(guild.items, undefined)).toBe(guild.items);
+    // 100 runes from 0 owned at the worst-stock price of 300 (blood rune cost 50, shop sell multiplier 1000) fit 30000.
+    expect(maximumUnitCost({ baseCost: 50 }, { sellMultiplier: 1000 })).toBe(300);
+    expect(planShopPurchases(picked, [item('Blood rune', 1000, 50), item('Death rune', 1000, 30)], [{ name: 'Coins', count: 20000 }], new Map(), 18000, 100, 100))
+        .toEqual([{ name: 'Blood rune', amount: 100 }]);
+});
+
+test('magic guild keeps its fire, nature, air, law and staff lines, endpoints and NPC', () => {
+    const guild = PROFILES.magic_guild!;
+    expect(guild.npc.test('Magic Store owner')).toBe(true);
+    expect(guild.npcSpot).toEqual({ x: 2595, z: 3087, level: 1 });
+    expect(guild.bankSpot).toEqual({ x: 2612, z: 3093 });
+    expect(guild.items.map(i => [i.re.source, i.buyPerTick])).toEqual([
+        ['^staff of fire$', 1], ['^fire rune$', 100], ['^nature rune$', 100], ['^air rune$', 100], ['^law rune$', 50], ['^blood rune$', 100], ['^death rune$', 100]]);
+    expect(selectItems(guild.items, 'fire rune|nature rune|law rune').map(i => i.re.source)).toEqual(['^fire rune$', '^nature rune$', '^law rune$']);
+});
+
+test('magic guild refuses below Magic 66 and when the level is unobserved; other profiles never refuse', () => {
+    const guild = PROFILES.magic_guild!;
+    expect(profileRefusal('magic_guild', guild, 60)).toBe('magic guild needs Magic 66');
+    expect(profileRefusal('magic_guild', guild, 65)).toBe('magic guild needs Magic 66');
+    expect(profileRefusal('magic_guild', guild, undefined)).toBe('magic guild needs Magic 66');
+    expect(profileRefusal('magic_guild', guild, 66)).toBeNull();
+    expect(profileRefusal('magic_guild', guild, 74)).toBeNull();
+    for (const key of ['catherby', 'sarim', 'ardy', 'zaff', 'khazard_paste', 'aubury', 'betty']) expect(profileRefusal(key, PROFILES[key]!, 1)).toBeNull();
+});
+
+test('magic guild far trip goes by the Port Sarim and Ardougne docks only from far away', () => {
+    const guild = PROFILES.magic_guild!;
+    expect(guild.fare).toBe(60);
+    expect(approachLegs(guild.via, { x: 3185, z: 3436 }, guild.bankSpot)).toEqual([{ x: 3028, z: 3221 }, { x: 2683, z: 3271 }]);
+    expect(approachLegs(guild.via, { x: 2654, z: 3283 }, guild.bankSpot)).toEqual([{ x: 2683, z: 3271 }]);
+    expect(approachLegs(guild.via, guild.bankSpot, guild.npcSpot)).toEqual([]);
+    expect(approachLegs(guild.via, { x: 2595, z: 3087 }, guild.bankSpot)).toEqual([]);
+    for (const key of ['catherby', 'sarim', 'ardy', 'zaff', 'khazard_paste']) expect(approachLegs(PROFILES[key]!.via, { x: 3185, z: 3436 }, PROFILES[key]!.bankSpot)).toEqual([]);
+});
+
 test('existing shop profiles retain their NPC, route endpoints and commodity counts',()=>{
     const cases=[['ardy','Aemad',2613,3294,2654,3283,8],['catherby','Hickton',2821,3444,2809,3441,4],['sarim','Gerrant',3013,3225,3092,3243,4],['betty','Betty',3012,3259,3092,3243,9],['taverley','Jatix',2908,3443,2934,3376,4],['general_sarim','Shopkeeper',3014,3205,3092,3243,5],['aubury','Aubury',3253,3402,3253,3420,8],['zeke','Zeke',3288,3190,3269,3167,4],['nurmof','Nurmof',2998,9844,3013,3355,6]] as const;
     for(const [key,npc,x,z,bx,bz,n]of cases){const p=PROFILES[key]!;expect(p.npc.test(npc)).toBe(true);expect(p.npcSpot).toEqual({x,z});expect(p.bankSpot).toEqual({x:bx,z:bz});expect(p.items).toHaveLength(n);}

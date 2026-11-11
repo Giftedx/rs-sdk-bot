@@ -128,9 +128,9 @@ test('fixtures match the work order shapes',()=>{
  expect(FIXTURES.varrock.bank).toContainEqual({id:COINS,count:14911});
  expect(FIXTURES.varrock.bank).toContainEqual({id:563,count:5});
  expect(FIXTURES.short.bank.some(i=>i.id===MIND)).toBe(false);
- for(const f of Object.values(FIXTURES)){expect(f.bank.some(i=>i.id===COINS&&i.count>0)).toBe(true);expect(f.inventory.some(i=>i.id===TROUT)).toBe(true);}
- expect(CASES.map(c=>c.label)).toEqual(['varrock','rerun','fallback','short']);
- expect(CASES.map(c=>c.mode)).toEqual(['progress','refusal','progress','refusal']);
+ for(const f of Object.values(FIXTURES)){expect(f.bank.some(i=>i.id===COINS&&i.count>0)).toBe(true);if(f.inventory.length)expect(f.inventory.some(i=>i.id===TROUT)).toBe(true);}
+ expect(CASES.map(c=>c.label)).toEqual(['varrock','rerun','fallback','short','alchemy','alchemy-rerun','alchemy-short']);
+ expect(CASES.map(c=>c.mode)).toEqual(['progress','refusal','progress','refusal','progress','refusal','refusal']);
  // The rerun repeats the varrock account and target, so it starts at the target.
  expect(CASES[1].fixture).toBe('varrock');expect(CASES[1].env.TARGET_LEVEL).toBe(CASES[0].env.TARGET_LEVEL);
  expect(CASES[0].env.TARGET_LEVEL).toBe('37');
@@ -207,4 +207,22 @@ test('a refusal leaves skills and every item unchanged and logs out',()=>{
  expect(refusalChecks(s,save({pack:[{id:TROUT,count:2}],bank:[{id:AIR,count:9},{id:COINS,count:300}]}),log,fail,'short runes').unchanged).toBe(false);
  expect(refusalChecks(s,s,log,ok,'short runes').exit).toBe(false);
  expect(refusalChecks(s,s,log,fail,'already at target').refused).toBe(false);
+});
+
+test('alchemy consumer checks29 real CLI effects, exact credits, selected item, assets and logout',()=>{
+ const f=FIXTURES.alchemy,b=save({at:f.position,bank:f.bank,magic:{xp:47825,level:55}});
+ const a=save({at:f.position,bank:[{id:845,count:926},{id:COINS,count:20961},{id:590,count:1},{id:1511,count:5}],magic:{xp:94950,level:65}});
+ const casts=Array.from({length:29},(_,i)=>'MAGIC_ORDER_CAST '+JSON.stringify({cast:i+1,spell:'highlvl_alchemy',itemId:845,fireCost:5,
+  before:{item:1,nature:29-i,fire:145-5*i,coins:96*i,xp:47825+1625*i},
+  after:{item:0,nature:28-i,fire:140-5*i,coins:96*(i+1),xp:47825+1625*(i+1)},position:f.position}));
+ const log=['MAGIC_ORDER_INITIAL '+JSON.stringify({options:{alchItemId:845,target:65,maxCasts:29}}),...casts,
+  result({casts:29,magicXpGained:47125,alchemy:{itemId:845,itemsUsed:29,natureUsed:29,fireUsed:145,coinsGained:2784}}),logout].join('\n');
+ const check=(after=a,text=log)=>progressChecks(b,after,text,ok,65,0,0);
+ expect(Object.values(check()).every(Boolean)).toBe(true);expect(fixtureChecks(b,'alchemy')).toBe(true);
+ for(const id of [845,561,554,COINS,590]){
+  const bad=structuredClone(a);bad.inventories[95]!.push({slot:10,id,count:1});
+  expect(Object.values(check(bad)).every(Boolean)).toBe(false);
+ }
+ for(const text of [log.replace('LOGOUT logged-out','LOGOUT timeout'),log.replace('"coins":96','"coins":97'),log.replace('"itemId":845','"itemId":841'),log.replace('"alchItemId":845','"alchItemId":841')])
+  expect(Object.values(check(a,text)).every(Boolean)).toBe(false);
 });

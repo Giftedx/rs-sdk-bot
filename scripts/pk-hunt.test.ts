@@ -85,3 +85,17 @@ test('restock re-equips melee weapon, shield, and platebody before depositing so
     expect(inventory.find(i => i.id === 385)?.count).toBe(2);
 });
 
+test('restock takes one of each boost potion the bank holds, each in place of one shark', async () => {
+    const inventory: any[] = [], bank: any[] = [{ id: 385, count: 30 }, { id: 2440, count: 2 }, { id: 169, count: 1 }, { id: 1401, count: 1 }];
+    const s: any = {
+        sdk: { getInventory: () => inventory, getEquipment: () => [], getBankItems: () => bank, sendUseItem: async () => {} },
+        bot: {
+            openBank: async () => ({ success: true }), closeBank: async () => {}, depositItem: async () => {},
+            withdrawItem: async (row: any, need: number) => { row.count -= need; inventory.push({ slot: inventory.length, id: row.id, count: need }); },
+        },
+    };
+    expect(await restock(s, 10, [{ id: 1401, count: 1 }], TRIBRID_KIT)).toBeNull();
+    expect(inventory.filter(i => i.id === 2440 || i.id === 169).map(i => i.id).sort((a, b) => a - b)).toEqual([169, 2440]); // super strength, a 3-dose ranging potion
+    expect(inventory.find(i => i.id === 385)?.count).toBe(8);
+});
+

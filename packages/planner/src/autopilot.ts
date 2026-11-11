@@ -21,10 +21,13 @@ export type Flow = { item: string; perTick: number };
 // `holdsUnder`: holdings that end the job at once. The account must hold fewer, or the run finds its target met and fails.
 // `food`: HP the account's food heals, pack and bank (FOOD_HEAL). `pieces`: at least `count` items of any of `of`.
 // `anyOf`: at least one of these needs met in full (fire runes or a fire staff; a bow the account wields with arrows it fires).
+// `shortOf`: holdings of which the account must be short of at least one (a supply run that brings several items).
+// `holds`: holdings the account gets by its own job (flax it picked): short of them the job waits, and nothing is
+// bought or sent for them.
 // `combat`: the least combat level (a mine inside an aggressive monster's range). `quests`: quests that must be complete.
 export type Needs = {
     combat?: number; quests?: readonly string[];
-    skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number>; holdsUnder?: Record<string, number>; food?: number;
+    skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number>; holdsUnder?: Record<string, number>; shortOf?: Record<string, number>; holds?: Record<string, number>; food?: number;
     pieces?: { of: readonly string[]; count: number }; anyOf?: readonly Needs[];
 };
 export type Template = {
@@ -52,12 +55,22 @@ export type Template = {
     // A quest run: a candidate until the account's status reports the quest complete, and worth a share of each job
     // the quest unlocks (as a trainer is). It does not repeat.
     quest?: { name: string; unlocks: string[] };
+    // A goal band whose target is a holding: it stands while the account holds fewer than `to` of `item`.
+    stock?: { item: string; to: number };
+    // Kit lines the band's own supply job brings (the hunt's shop run): the kit tier neither buys them on the market
+    // nor asks another account for them.
+    ownSupply?: readonly string[];
     // An AIO route (scripts/aio.ts): `aio` is its bench key (scripts/measure/aio-bench-cases.ts) and `worker` the script
     // the dispatcher runs, so a retirement lapses when the worker changes, not only the dispatcher.
     aio?: string; worker?: string;
     // Proved on practice only. The planner gives it only while the plan's `aio` list names its id (Inputs.pilots), so
     // each first live run is a bounded pilot the owner starts.
     pilot?: true;
+    // A goal band whose missing kit is bought as a candidate of the band itself, as the weapon buy is: an account that
+    // can start a later band still gets it. Without the flag a kit is bought only when no band can start.
+    kitFirst?: true;
+    // A band whose kit only a shop job of its own brings: the kit tier neither buys nor asks a donor for it.
+    shopKit?: true;
 };
 // One missing kit line: `count` more units of any one item of `of`.
 export type Lack = { of: readonly string[]; count: number };
@@ -115,6 +128,17 @@ export const KIT_BUY = 'kit-buy:', KIT_BUY_SCRIPT = 'scripts/buy-owned-ge-item.t
 export const WEAPON = { id: 'army-weapon', item: 'adamant scimitar', attack: 30, goal: 'fight with an adamant scimitar' } as const;
 export const WEAPON_HELD = ['adamant scimitar', 'adamant sword', 'adamant longsword', 'rune scimitar', 'rune sword', 'rune longsword', 'dragon longsword'] as const;
 export const WEAPON_BAND = 3.5, WEAPON_BUYERS = 2, WEAPON_MARKET = 'ge:weapon';
+// The quest band of the army: after the blade, before Ranged, so an account does its quests once and goes back to
+// training. One account at a time does Lost City: its tree spirit serves one fighter (practice: of three accounts at
+// the dramen tree together one finished and two ended "Someone else is fighting that"). LOST_CITY_MEALS is the food
+// the run carries with no prayer potion (scripts/quest-sweep.ts STURDY_MEALS).
+export const QUEST_BAND = 3.6, LOST_CITY = 'quest:lostcity', LOST_CITY_PLACES = 1, LOST_CITY_MEALS = 10;
+// Holy Grail after Merlin's Crystal: 275,000 Prayer experience at the server's rate (quest_grail; research/quest-plan.md
+// 1k), what about 150 bought dragon bones give. One account at a time: Sir Mordred and the Black Knight Titan are
+// single fights. GRAIL_RUNES: the two quests' teleports (Falador five times, Camelot five, Varrock once).
+export const GRAIL_BAND = QUEST_BAND + 0.1, GRAIL_PLACE = 'quest:camelot', GRAIL_PLACES = 1, GRAIL_MEALS = 12;
+export const GRAIL_RUNES: Readonly<Record<string, number>> = { 'law rune': 12, 'air rune': 46, 'water rune': 6, 'fire rune': 1 };
+export const LOST_CITY_FOOD = ['lobster', 'swordfish', 'shark'] as const;
 // The coins a kit buy leaves in the bank (the buy script's CASH_RESERVE). A kit costs far less than FUND_RESERVE, which
 // guards a coin donor, so a buyer keeps only this.
 export const KIT_CASH_RESERVE = 1_000;
@@ -124,10 +148,20 @@ export const KIT_CASH_RESERVE = 1_000;
 // Grand Exchange price for these items.
 export const KIT_PRICE_CAPS: Readonly<Record<string, number>> = {
     'mind rune': 120, 'air rune': 160, 'fire rune': 160, 'nature rune': 800, feather: 20,
+    // Live claude-cloud read: body runes 1,460 listed from 184 (bids at 38), earth runes 27,408 from 92 (bids at 39).
+    'body rune': 200, 'earth rune': 110,
+    // Water runes: 310 listed from 78 in the same read, and Aubury's shelf read 0 on three visits, so the kit buy
+    // takes what the market lists and the shop job (army-water-aubury) is the way when a buy gets none.
+    'water rune': 110,
     'bronze arrow': 20, 'iron arrow': 40, 'steel arrow': 100, 'mithril arrow': 200, 'adamant arrow': 400, 'rune arrow': 1200,
     trout: 100, lobster: 500, swordfish: 700, shark: 1200,
     // Live claude-cloud read: 42 listed at 72,000, bids at 33,068, volume-weighted price 38,089.
     'adamant scimitar': 80_000,
+    // The hunters' kit (army-hunt-black-dragons). Live claude-cloud: 5 law runes for 5,260 coins and 7 sharks for 7,189;
+    // magic shortbows 108 listed from 51,000.
+    'law rune': 1_600, 'magic shortbow': 60_000,
+    // The Zanaris market door's tax (army-jakut-swords). Live claude-cloud read: 1,219 listed from 145,000.
+    diamond: 150_000,
     // Live claude-cloud read: dragon bones 1,009 listed from 9,000 (mean 9,687); big bones 1,686 from 2,399 (mean 2,526).
     'dragon bone': 10_000, 'big bone': 2_600,
 };
@@ -167,6 +201,12 @@ export function combatLevel(skills: Readonly<Record<string, number>>): number {
     return Math.floor(base + 0.325 * Math.max(s('Attack') + s('Strength'), Math.floor(s('Ranged') * 1.5), Math.floor(s('Magic') * 1.5)));
 }
 export const questDone = (a: Acct, quest: string) => !!a.quests?.has(norm(quest));
+// What a goal band still has to do for an account: levels to its skill target, 1 for a quest its status does not list
+// complete (0 with no quest list), or the items short of a stock target.
+export const bandLeft = (t: Template, a: Acct): number => t.trains ? t.trains.to - (a.skills[t.trains.skill] ?? 1)
+    : t.quest ? (a.quests && !questDone(a, t.quest.name) ? 1 : 0) : t.stock ? Math.max(0, t.stock.to - (a.items[norm(t.stock.item)] ?? 0)) : 0;
+const isShort = (a: Acct, needs: Template['needs']) => (!needs?.shortOf || Object.entries(needs.shortOf).some(([i, n]) => (a.items[norm(i)] ?? 0) < n))
+    && Object.entries(needs?.holds ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n);
 const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: string; to: number }): boolean =>
     (a.combat ?? combatLevel(a.skills)) >= (needs?.combat ?? 0)
     && (needs?.quests ?? []).every(q => questDone(a, q))
@@ -174,6 +214,7 @@ const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: strin
     && Object.entries(needs?.items ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n)
     && Object.entries(needs?.under ?? {}).every(([s, l]) => (a.skills[s] ?? 1) < l)
     && Object.entries(needs?.holdsUnder ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) < n)
+    && isShort(a, needs)
     && foodHeal(a) >= (needs?.food ?? 0)
     && (needs?.pieces?.of ?? []).reduce((n, i) => n + (a.items[norm(i)] ?? 0), 0) >= (needs?.pieces?.count ?? 0)
     && (needs?.anyOf === undefined || needs.anyOf.some(alt => meets(a, alt, skillOverride)));
@@ -189,7 +230,7 @@ export function kitLacks(a: Acct, needs: Template['needs'], can: (item: string) 
     if ((a.combat ?? combatLevel(a.skills)) < (needs?.combat ?? 0) || !(needs?.quests ?? []).every(q => questDone(a, q))
         || !Object.entries(needs?.skills ?? {}).every(([s, l]) => (a.skills[s] ?? 1) >= l)
         || !Object.entries(needs?.under ?? {}).every(([s, l]) => (a.skills[s] ?? 1) < l)
-        || !Object.entries(needs?.holdsUnder ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) < n)) return null;
+        || !Object.entries(needs?.holdsUnder ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) < n) || !isShort(a, needs)) return null;
     const out: Lack[] = [];
     for (const [i, n] of Object.entries(needs?.items ?? {})) {
         const short = n - (a.items[norm(i)] ?? 0);
@@ -248,9 +289,10 @@ export function plan(inp: Inputs): Assignment[] {
     type Cand = { account: string; template: Template; value: number; resources: string[]; reason: string; coins?: number; goal?: { band: number; left: number }; lacks?: Lack[] };
     const cands: Cand[] = [];
     const admitted = (t: Template) => !t.pilot || !!inp.pilots?.has(t.id);
+    const shopLine = (l: Lack) => !l.of.some(i => inp.market?.[i]) && l.of.some(i => SHOP_SUPPLIED.has(i));
     for (const a of mine) for (const t of inp.templates) {
         if (inp.retired?.has(pairKey(a.name, t.id)) || !admitted(t)) continue;
-        if (t.quest) {
+        if (t.quest && t.tier !== 'goal') {
             if (questDone(a, t.quest.name) || !meets(a, t.needs)) continue;
             const after: Acct = { ...a, quests: new Set([...(a.quests ?? []), norm(t.quest.name)]) };
             for (const u of t.quest.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u) && !inp.retired?.has(pairKey(a.name, u.id)))) {
@@ -261,16 +303,27 @@ export function plan(inp: Inputs): Assignment[] {
             continue;
         }
         if (t.tier === 'goal') {
-            // One candidate per goal band whose target an army account has not met; never for anyone else.
-            if (!inp.army?.has(a.name.toLowerCase()) || !t.trains || (a.skills[t.trains.skill] ?? 1) >= t.trains.to) continue;
-            const goal = { band: t.band ?? 0, left: t.trains.to - (a.skills[t.trains.skill] ?? 1) }, reason = `army band ${goal.band}: ${t.trains.skill} to ${t.trains.to}`;
+            // One candidate per goal band whose target an army account has not met; never for anyone else. A band's
+            // target is a skill level, or a quest: that one stands until the account's status lists the quest complete,
+            // and an account whose status names no quests gets none.
+            const left = bandLeft(t, a);
+            if (!inp.army?.has(a.name.toLowerCase()) || left <= 0) continue;
+            const goal = { band: t.band ?? 0, left }, reason = t.trains ? `army band ${goal.band}: ${t.trains.skill} to ${t.trains.to}` : t.quest ? `army band ${goal.band}: ${t.quest.name}` : `army band ${goal.band}: ${t.stock!.to} ${t.stock!.item}`;
             if (meets(a, t.needs)) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal });
             else if (inp.donors?.length && !inp.unfundable?.has(a.name.toLowerCase()) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs)))
                 cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, coins: coinShort(a, t.needs) });
             else if (coinShort(a, t.needs) === 0) {
                 // The band lacks only kit items: a buy with the account's own coins, or a free account's spare stock.
-                const lacks = kitLacks(a, t.needs, i => !!inp.market?.[i]);
-                if (lacks?.length) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, lacks });
+                // A line no market sells and a shop job brings (shopLine) is left to that job.
+                const lacks = kitLacks(a, t.needs, i => !!inp.market?.[i]), buys = t.kitFirst ? (lacks ?? []).filter(l => !shopLine(l)) : [];
+                const picks = buys.map(l => l.of.filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]);
+                const lines: KitLine[] = picks.length && picks.every(p => p !== undefined)
+                    ? picks.map((p, n) => ({ item: inp.market![p!]!.name, id: inp.market![p!]!.id, held: a.items[p!] ?? 0, limit: inp.market![p!]!.limit, quantity: buys[n]!.count })) : [];
+                const cost = lines.reduce((n, l) => n + l.quantity * l.limit, 0);
+                if (lines.length && (a.items.coin ?? 0) >= cost + KIT_CASH_RESERVE + (t.needs?.items?.coins ?? 0) && !inp.retired?.has(pairKey(a.name, KIT_BUY + t.id)))
+                    cands.push({ account: a.name, template: kitBuyTemplate(t, a.name, lines, inp.kitSeq?.get(a.name.toLowerCase()) ?? 0), value: 0, resources: [],
+                        reason: `army band ${goal.band}: buys ${lines.map(l => `${l.quantity} ${l.item}`).join(', ')} for ${t.id}, at most ${cost} coins`, goal });
+                else if (lacks?.length && !t.shopKit) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, lacks });
             }
             continue;
         }
@@ -332,29 +385,48 @@ export function plan(inp: Inputs): Assignment[] {
     // The goal tier first: each army account takes the earliest band it can (a full band's resource sends it to the
     // next), the account nearest its target first; it never competes with coin jobs on coins per tick.
     const goalOrder = (x: Cand, y: Cand) => x.goal!.band - y.goal!.band || x.goal!.left - y.goal!.left || keeps(y) - keeps(x) || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id);
+    // A quest the account holds comes before every band: a stop in the middle of a quest leaves the account wherever
+    // the quest stood (live: an account on Lost City, band 3.6, was moved to the rune buy of band 2).
+    for (const c of cands.filter(c => c.goal && !c.lacks && !!c.template.quest && keeps(c)).sort(goalOrder)) take(c, 0);
     for (const c of cands.filter(c => c.goal && !c.lacks && !c.template.filler).sort(goalOrder)) take(c, 0);
     // Then the kit tier: an army account with no band it can start gets the kit of its earliest band, before any coin
     // job, so banked gold becomes a band and not more gold. A buy is one login with the account's own coins. A send
     // takes a partner off its work for a trade window and keeps the account vacant until the order closes, so it comes
     // second: every band the account can buy for is tried before a donor is asked for any of them (an account at
     // Prayer 97 buys its dragon bones and does not wait for 37 bones from another side), this side's donors before
-    // another side's.
+    // another side's, and another side's only for an account with no job of any tier that it can start.
     const reserve = kitReserve(inp.templates), byName = new Map(mine.map(a => [a.name, a]));
     const stock = [...(inp.stock ?? [])].sort((x, y) => Number(y.side === inp.side) - Number(x.side === inp.side));
-    const spare = (s: Stock, item: string) => (s.items[item] ?? 0) - (reserve[item] ?? 0);
+    // What a donor keeps of an item: the most a band needs to start. An army account of this side keeps that only for
+    // the bands it has still to do, so a maxed account gives all it holds (live: two maxed accounts held 41 dragon
+    // bones, 1,900 nature runes and 29,000 feathers while others waited for a donor of another side). The levels of
+    // another side's account are not read here: it keeps the reserve of every band.
+    const ownReserve = new Map<string, Record<string, number>>();
+    const keepsOf = (s: Stock) => {
+        const a = s.side === inp.side ? byName.get(s.name) : undefined;
+        if (!a || !inp.army?.has(a.name.toLowerCase())) return reserve;
+        if (!ownReserve.has(a.name)) ownReserve.set(a.name, kitReserve(inp.templates.filter(t => t.tier !== 'goal' || bandLeft(t, a) > 0)));
+        return ownReserve.get(a.name)!;
+    };
+    const spare = (s: Stock, item: string) => (s.items[item] ?? 0) - (keepsOf(s)[item] ?? 0);
     const banded = (id: string) => byId.get(id)?.tier === 'goal' && !byId.get(id)?.filler;
     const goalNow = (account: string) => { const id = inp.current?.get(account.toLowerCase()); return !!id && (id.startsWith(KIT_BUY) || banded(id)); };
-    const acquire = (c: Cand, step: 'buy' | 'send') => {
+    const acquire = (c: Cand, step: 'buy' | 'send', far: boolean) => {
         const a = byName.get(c.account)!, busy = !!inp.unfundable?.has(c.account.toLowerCase()), buyId = KIT_BUY + c.template.id;
         if (done.has(c.account) || gave.has(c.account) || gaveItems.has(c.account) || vacated.has(c.account)) return;
+        // Another side's stock and coins are asked only for an account with no job it can start and none running: such
+        // a trade needs the account offline until the other side's agent runs it, up to the order's window (live: 13
+        // of 14 accounts stood parked at once, most for 1 to 13 items of another side, one with 123,028 coins for 3
+        // air runes that a shop sells).
+        if (far && (busy || ready.has(c.account))) return;
         // An account in a running band job keeps the rule it had before the kit tier: its live holdings dip while it
         // works (food eaten, runes cast), and a kit buy must not replace a band that is still running.
         const now = inp.current?.get(c.account.toLowerCase());
         if (busy && now && !now.startsWith(KIT_BUY) && banded(now)) return;
         // No kit for a band whose place is full: the account tries its next band.
         if (c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
-        const shopLine = (l: Lack) => !l.of.some(i => inp.market?.[i]) && l.of.some(i => SHOP_SUPPLIED.has(i));
-        const picks = c.lacks!.filter(l => !shopLine(l)).map(l => { const item = l.of.filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]; return item ? { item, count: l.count } : null; });
+        const own = (l: Lack) => l.of.some(i => !!c.template.ownSupply?.includes(i));
+        const picks = c.lacks!.filter(l => !shopLine(l) && !own(l)).map(l => { const item = l.of.filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]; return item ? { item, count: l.count } : null; });
         if (step === 'buy' && picks.length && picks.every(p => p !== null) && !inp.retired?.has(pairKey(c.account, buyId))) {
             // The batch when the account can pay for it, else only what the band needs to start. A one-line band with
             // `partBatch` takes as much of its batch as the account can pay for.
@@ -372,8 +444,8 @@ export function plan(inp: Inputs): Assignment[] {
                 // A coin donor of this side, else a free account of another side with coins above the reserve.
                 const coinsOf = (s: Stock) => Math.max(0, (s.items.coin ?? 0) - FUND_RESERVE);
                 const own = [...pool].filter(([n, left]) => n.toLowerCase() !== c.account.toLowerCase() && !done.has(n) && !gaveItems.has(n) && left >= short).sort((x, y) => y[1] - x[1])[0]?.[0];
-                const far = own ? undefined : stock.filter(s => s.side !== inp.side && !gave.has(s.name) && !gaveItems.has(s.name) && coinsOf(s) >= short).sort((x, y) => coinsOf(y) - coinsOf(x))[0]?.name;
-                const from = own ?? far;
+                const other = own || !far ? undefined : stock.filter(s => s.side !== inp.side && !gave.has(s.name) && !gaveItems.has(s.name) && coinsOf(s) >= short).sort((x, y) => coinsOf(y) - coinsOf(x))[0]?.name;
+                const from = own ?? other;
                 if (from) {
                     if (own) pool.set(own, pool.get(own)! - short);
                     gave.add(from); pool.delete(c.account);
@@ -385,21 +457,30 @@ export function plan(inp: Inputs): Assignment[] {
         if (step === 'buy') return;
         // One order per pass. A line no market sells goes first, so the lines left at the end are one buy.
         const sold = (l: Lack) => Number(l.of.some(i => !!inp.market?.[i]));
-        for (const l of [...c.lacks!].sort((x, y) => sold(x) - sold(y))) for (const item of l.of) {
-            const from = stock.find(s => s.name.toLowerCase() !== c.account.toLowerCase() && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= l.count
+        for (const l of [...c.lacks!].filter(l => !own(l)).sort((x, y) => sold(x) - sold(y))) for (const item of l.of) {
+            const from = stock.find(s => (s.side !== inp.side) === far && s.name.toLowerCase() !== c.account.toLowerCase() && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= l.count
                 && !inp.noSend?.has(`${s.name}>${c.account}`.toLowerCase()));
             if (!from) continue;
+            // A donor of this side sends the band's batch, as a buy would bring it, as far as its spare stock goes: one
+            // trade, not one for every start amount. Another side's donor sends what the band needs to start.
+            const batchOf = c.template.batchFor?.(a) ?? c.template.batch;
+            const count = far ? l.count : Math.min(spare(from, item), Math.max(l.count, (batchOf?.[item] ?? 0) - (a.items[item] ?? 0)));
             // A trade needs the account offline with no stop file (scripts/fleet-agent.ts). One in a coin job leaves that
             // job on this pass and gets the order on the next; one already on a band or a kit buy keeps it.
             // The donor is held for this account, so a second account does not leave its job for the same stock.
-            if (busy) { if (!goalNow(c.account)) { vacated.set(c.account, `vacant: leaves its job for ${l.count} ${item} from ${from.name} for ${c.template.id}`); gaveItems.add(from.name); pool.delete(from.name); } return; }
+            if (busy) { if (!goalNow(c.account)) { vacated.set(c.account, `vacant: leaves its job for ${count} ${item} from ${from.name} for ${c.template.id}`); gaveItems.add(from.name); pool.delete(from.name); } return; }
             gaveItems.add(from.name); pool.delete(from.name); pool.delete(c.account);
-            done.set(c.account, { account: c.account, template: c.template, value: 0, reason: `${c.reason}, sent ${l.count} ${item} by ${from.name}`, resources: [], send: { from: from.name, to: c.account, item, count: l.count, template: c.template.id } });
+            done.set(c.account, { account: c.account, template: c.template, value: 0, reason: `${c.reason}, sent ${count} ${item} by ${from.name}`, resources: [], send: { from: from.name, to: c.account, item, count, template: c.template.id } });
             return;
         }
     };
+    // This side's own coins and stock before another side's: a trade across sides waits on the other side's agent,
+    // and the account stands vacant meanwhile (live: five accounts parked for donors of another side, one for 22
+    // bones, while this side's maxed accounts held what they needed).
     const kits = cands.filter(c => c.goal && c.lacks).sort(goalOrder);
-    for (const step of ['buy', 'send'] as const) for (const c of kits) acquire(c, step);
+    // The accounts with a job of any tier that they can start now with what they hold.
+    const ready = new Set(cands.filter(c => !c.lacks && !c.coins).map(c => c.account));
+    for (const far of [false, true]) for (const step of ['buy', 'send'] as const) for (const c of kits) acquire(c, step, far);
     // Then the filler bands, for an army account that no band and no kit took.
     for (const c of cands.filter(c => c.goal && !c.lacks && c.template.filler).sort(goalOrder)) take(c, 0);
     // The coin tier, re-sorted after every assignment: one more holder lowers the worth of the candidates that share
@@ -451,15 +532,25 @@ export function finishedTrainers(jobs: readonly any[], side: string, assigned: R
 // because a dropped session still holds the account's fleet claim (the worker logs `RESULT fail login: Error: fleet
 // account claim held by swarm` until an authenticated recovery confirms the logout) is a drain too: the job never ran,
 // and the recovered account resumes it. So is a world planner `precondition no route to`: it says where the account
-// stands, not whether the job works, and a routing fix makes the same job run.
+// stands, not whether the job works, and a routing fix makes the same job run. And so is a market buy that did not
+// reach the market bank (`market bank travel failed`, scripts/buy-owned-ge-item.ts): no order was placed, and the
+// account stands nearer the bank for its next try (live claude-cloud: after the second ferry a relayed session's
+// state went stale at Port Sarim, the route was planned from it, and two such trips retired an account's rune buy;
+// the same walk from that tile takes 249 ticks on practice). And so is a market buy refused at the bank because the
+// account owns another count of the item than the planner read (`owned item baseline N differs from EXPECTED_OWNED
+// M`): no order was placed, the run's bank visit gives the planner the count, and the next pass sizes the buy from it
+// (live: three accounts' rune buys retired on a count 36 to 124 over the bank's).
 export const RETIRE_FAILS = 2, WASTE_LIMIT = 0.9;
 // Cow mode reports its progress as selectedXp, damageXp and creditedKills.
 // A shop run reports what it bought as boughtTotal (scripts/shop-buyer.ts), and a Grand Exchange buy as "acquired" in
 // its JSON result (scripts/buy-owned-ge-item.ts). Without the second, a kit buy that ended ok after its long trip read
 // as tick waste and its pair was retired, so the account's next buy for that band never came (live claude-cloud: the
 // alchemy kit buys of KnightRider, Deeppockets and Fatstack, one of them after 1,000 nature runes bought).
-export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked|selectedXp|damageXp|creditedKills|boughtTotal)=[1-9]\d*\b|"acquired":[1-9]/.test(result);
-export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|.*\bprecondition no route to\b)/;
+export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked|selectedXp|damageXp|creditedKills|boughtTotal|hides)=[1-9]\d*\b|"acquired":[1-9]/.test(result);
+// A run that ended on a stop file is a drain as well: the owner paused the account or the controller removed the job,
+// which says nothing about whether the job works (live claude-cloud: a quest chain stopped for an open fleet order
+// logged two such fails, and the account's Lost City band was retired).
+export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|.*\bprecondition no route to\b|.*\bmarket bank travel failed\b|.*\bowned item baseline \d+ differs from EXPECTED_OWNED \d+|stop file\b|.*\bworker finished: stop file\b)/;
 export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number; drains: number } {
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
     const drains = clean.filter(l => DRAIN_RESULT.test(l)).length;
@@ -505,9 +596,34 @@ export const TROOPER_FIELD = 'trooper:battlefield', TROOPER_FIELD_CAPACITY = 14;
 // The Wind Strike tile north of the Ardougne north bank (scripts/alch-train.ts STRIKE): one Guard dog, fought by one
 // player at a time. Practice: of three accounts at once, one landed no cast in 200 ticks, in each of three sets.
 export const STRIKE_TILE = 'strike:ardougne-guard-dog';
+// Taverley's black dragons (scripts/black-dragon-camp.ts): two dragons, one camp tile. Practice: two accounts on the
+// tile at once made six kills each with no stray and no hitpoint lost; more than two is not run. HUNT_BAND comes after
+// every training band, so only an account with none of them left to start hunts. HIDE_TARGET is the hides one hunter
+// gathers before the band stands down: a set of body, chaps and vambraces takes six.
+export const BLACK_CAVE = 'cave:taverley-black-dragons', BLACK_CAVE_PLACES = 2, HUNT_BAND = 10, HIDE_TARGET = 42;
+export const HUNT_ARROWS = 600, HUNT_KILLS = 9, HUNT_FOOD = 6;
+// What a hunter's supply run brings it up to: the arrows of two trips, and the air and fire runes of twenty teleports.
+export const HUNT_ARROW_STOCK = 1200, HUNT_RUNE_STOCK = 60;
+// Dragon longswords from Jakut (scripts/jakut-swords.ts): the swords one visit buys (his shelf holds two), the coins
+// the worker takes for them (its jakutCoins) and the ticks it waits inside for the shelf's second sword.
+export const JAKUT_SWORDS = 2, JAKUT_COINS = JAKUT_SWORDS * 105_000 + 1_000, JAKUT_WAIT = 600;
+// The armour of the hides (scripts/black-dhide-sets.ts): a set is a body, chaps and vambraces of SET_HIDES hides, the
+// body asks Crafting LEATHER_LEVEL, a hide costs TAN_COIN to tan and a run takes SET_SHOP coins for a needle and
+// thread. ARMOUR_SETS: the bodies one account makes, half the army's. FLAX_SPIN: the flax one spinning run takes.
+export const LEATHER_LEVEL = 84, SET_HIDES = 6, TAN_COIN = 20, SET_SHOP = 100, ARMOUR_SETS = 7, FLAX_SPIN = 168;
+// The tile south of the Ardougne cow field's fence (scripts/splash-train.ts SPLASH_TILE): a curse cast over the fence
+// reaches the cows and no cow reaches the caster. A cow whose stat a cast lowered refuses the next cast until the stat
+// grows back, one level every 100 ticks, so the ten cows give about one cast in ten ticks, shared by the casters.
+// Practice: one account 40 casts in 608 ticks; two at once 138 and 135 casts in 4,043 and 4,011 ticks, the same field
+// rate (research/combat-measure.md, Magic by a curse over the fence). More than two at once is not measured.
+// SPLASH_TO is the level the Magic Guild's door in Yanille asks: behind it are fire runes, a staff of fire and nature
+// runes for the alchemy band. SPLASH_KIT covers the runes to that level from any start (144 casts from Magic 1: 142
+// body, 290 water, 420 earth; 135 curses from Magic 21).
+export const SPLASH_FENCE = 'splash:ardougne-cow-fence', SPLASH_PLACES = 2, SPLASH_TO = 66;
+export const SPLASH_KIT = { 'body rune': 150, 'earth rune': 425, 'water rune': 300 } as const;
 // The places the AIO routes hold (aioTemplates). Each takes one account until a live pilot measures two.
 export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore: 'aio:varrock-east-mine', essence: 'aio:essence-mine', air: 'aio:air-altar' } as const;
-export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
+export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // Army goal bands (AGENTS.md goals: maxed tribrids), in order: Strength, Attack, Magic, Prayer, Ranged, Defence
 // last. Bands 6-8 are the Khazard troopers (TROOPER_BANDS), 9 is Prayer on the field (PRAYER_FIELD_BAND). Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile, MAX_KILLS=8): live 4/4 runs
@@ -581,12 +697,15 @@ const ARROWS: readonly (readonly [string, number])[] = [['bronze arrow', 1], ['i
 export const FIRE_STAFFS = ['staff of fire', 'fire battlestaff', 'mystic fire staff'] as const;
 // Kit items a goal-tier shop job brings (the alchemy supply jobs and the army-arrows jobs). A kit line of these that no market sells
 // does not hold back the market buy of the band's other lines: the shop job follows once those are held.
-export const SHOP_SUPPLIED: ReadonlySet<string> = new Set(['fire rune', ...FIRE_STAFFS, 'feather', 'bronze arrow', 'iron arrow', 'steel arrow', 'mithril arrow']);
+export const SHOP_SUPPLIED: ReadonlySet<string> = new Set(['fire rune', ...FIRE_STAFFS, 'feather', 'water rune', 'dusty key', 'bronze arrow', 'iron arrow', 'steel arrow', 'mithril arrow']);
 // ARROW_LOW: the arrows of one kind the Ranged band needs to start. ARROW_STOCK: what a shop run brings the account up to.
 export const ARROW_LOW = 100, ARROW_STOCK = 500, LOWE_STOCK = 1000;
 export const ZAFF_WAIT = 1100;
 // What the alchemy supply jobs bring an account up to: feathers for every cast to 99, fire runes for Magic 21 to 66.
 export const FEATHER_STOCK = 700, FIRE_STOCK = 500;
+// What a Magic Guild trip brings an account up to: a nature rune and an air rune for every High Alchemy cast from
+// Magic 66 to 99 (553 casts of 1,625 XP).
+export const NATURE_STOCK = 600, AIR_STOCK = 600;
 // An account short of arrows of every kind: what sends it to an arrow shop. One with ARROW_LOW of any kind is left to
 // the Ranged band, or to a kit line when its bow cannot fire them.
 const NO_ARROWS: Readonly<Record<string, number>> = Object.fromEntries(ARROWS.map(([arrow]) => [arrow, ARROW_LOW]));
@@ -732,18 +851,56 @@ export function catalogue(): Template[] {
     // Practice from the Ardougne north bank: 700 feathers in 674 ticks, 500 fire runes in 614 more, then Magic 21 to 72
     // on them; the staff in 216 to 314 ticks (research/combat-measure.md).
     const noFire = { ...Object.fromEntries(FIRE_STAFFS.map(item => [item, 1])), 'fire rune': 250 };
-    const shopRun = (profile: string, cap: number, items: string, target: number, spend: number) => ['scripts/shop-buyer.ts', profile, String(cap), `ITEMS=${items}`, `STOCK_TARGET=${target}`,
-        'STOP_AT_TARGET=1', 'BANK_PACK=1', 'BANK_AT=0', 'NO_BUY_TICKS=25', `FLOAT=${spend + 1000}`, 'COIN_RESERVE=500', `MAX_SPEND=${spend}`].join(' ');
+    // `wait`: the ticks with no buy that end the run. Under the shelf's restock interval, the run leaves an emptied
+    // shelf; over it, the run stays and buys each unit as it comes back.
+    const shopRun = (profile: string, cap: number, items: string, target: number, spend: number, wait = 25) => ['scripts/shop-buyer.ts', profile, String(cap), `ITEMS=${items}`, `STOCK_TARGET=${target}`,
+        'STOP_AT_TARGET=1', 'BANK_PACK=1', 'BANK_AT=0', `NO_BUY_TICKS=${wait}`, `FLOAT=${spend + 1000}`, 'COIN_RESERVE=500', `MAX_SPEND=${spend}`].join(' ');
     const supply = (id: string, goal: string, shop: string, steps: string[], needs: Needs): Template => ({
         id, family: 'shop-buyer', script: 'scripts/chain.ts', args: steps, env: { ROUNDS: '1' }, role: 'supply', goal,
         tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: 99, unlocks: [magic.id] }, resources: [`shop:${shop}`], yields: () => [], needs });
     const feathers = supply('army-feathers-sarim', "buy feathers at Gerrant's in Port Sarim for the alchemy band", 'sarim',
-        [shopRun('sarim', 3000, 'feather', FEATHER_STOCK, 10000)], { items: { coins: 12000, 'nature rune': 50 }, holdsUnder: { feather: 50 } });
+        [shopRun('sarim', 3000, 'feather', FEATHER_STOCK, 10000)], { under: { Magic: 66 }, items: { coins: 12000, 'nature rune': 50 }, holdsUnder: { feather: 50 } });
     const fireRunes = supply('army-fire-aubury', "buy fire runes at Aubury's in Varrock for the alchemy band", 'aubury',
         [shopRun('aubury', 3000, 'fire.rune', FIRE_STOCK, 9000)], { skills: { Magic: 21 }, under: { Magic: 66 }, items: { coins: 11000, 'nature rune': 50, feather: 50 }, holdsUnder: noFire });
-    const staffGuild = supply('army-staff-guild', 'buy a staff of fire and fire runes at the Magic Guild in Yanille for the alchemy band', 'magic_guild',
-        [shopRun('magic_guild', 1500, 'staff.of.fire', 1, 12000), shopRun('magic_guild', 600, 'fire.rune', FIRE_STOCK, 9000)],
-        { skills: { Magic: 66 }, items: { coins: 24000, 'nature rune': 50, feather: 50 }, holdsUnder: noFire });
+    // From Magic 66 the Magic Guild's shelf is the whole kit of the band (magic_guild.inv, runes.obj, staves.obj): a
+    // staff of fire (2, base 1,500 coins), nature runes (1,000, base 20), and air runes (3,000, base 4) to cast on in
+    // place of feathers, whose Port Sarim shelf other players empty. So the trip asks for coins only, and an account
+    // that reaches 66 with no rune of the band (the curse band's accounts) goes straight on. `natureGuild` is the same
+    // trip for an account that has its fire and has run out of nature runes. Practice from the Ardougne north bank,
+    // Magic 66 and coins only: the trip and then Magic 66 to 99 on air runes (research/combat-measure.md, Magic by a
+    // curse over the fence).
+    const guildRunes = [shopRun('magic_guild', 900, 'nature.rune', NATURE_STOCK, 45000), shopRun('magic_guild', 600, 'air.rune', AIR_STOCK, 10000)];
+    const staffGuild = supply('army-staff-guild', 'buy a staff of fire, fire, nature and air runes at the Magic Guild in Yanille for the alchemy band', 'magic_guild',
+        [shopRun('magic_guild', 1500, 'staff.of.fire', 1, 12000), shopRun('magic_guild', 600, 'fire.rune', FIRE_STOCK, 9000), ...guildRunes],
+        { skills: { Magic: 66 }, items: { coins: 80000 }, holdsUnder: noFire });
+    const natureGuild = supply('army-nature-guild', 'buy nature and air runes at the Magic Guild in Yanille for the alchemy band', 'magic_guild', guildRunes,
+        { skills: { Magic: 66 }, items: { coins: 60000 }, holdsUnder: { 'nature rune': 50 }, anyOf: [{ items: { 'fire rune': 250 } }, ...FIRE_STAFFS.map(item => ({ items: { [item]: 1 } }))] });
+    // The alchemy band cast on air runes, for an account at Magic 66 or more that holds them (the guild trip's).
+    const magicAir: Template = { ...magic, id: 'army-alch-air-magic-99', env: { ALCH_ITEM: 'airrune' }, goal: 'train Magic to 99 with alchemy on air runes at the Ardougne north bank',
+        needs: { skills: { Magic: 66 }, items: { 'nature rune': 50, 'air rune': 50 }, anyOf: magic.needs!.anyOf }, batch: undefined, shopKit: true };
+    // Magic to SPLASH_TO with no fire rune, nature rune or feather, band 2: a curse cast over the fence of the Ardougne
+    // cow field (scripts/splash-train.ts; Wind Strike, Confuse and Weaken under Magic 19). The kit is body, earth and
+    // water runes, under 80,000 coins at the caps. The market lists few water runes (live claude-cloud read: 310), so
+    // the kit buy takes the body and earth runes on the Grand Exchange and the account then buys its water runes at
+    // Aubury's, which is in the same town (varrock.inv: 2,000 in stock, one back every 10 ticks). The buy is a
+    // candidate of the band itself (`kitFirst`): an account that can train Ranged still goes for it, because five
+    // army accounts hold no rune of the alchemy band and four sit at Magic 1. Pilots (off unless a plan's `aio` list
+    // names them). Practice from an army account's state: Magic 21 to 66 in 135 casts and Magic 1 to 65 in 138, no
+    // hitpoint lost. Gap: not run live.
+    const splash: Template = {
+        id: 'army-splash-magic-66', pilot: true, family: 'combat-train', script: 'scripts/splash-train.ts', args: [String(SPLASH_TO), '6000'], role: 'combat',
+        goal: `train Magic to ${SPLASH_TO} with a curse cast over the fence of the Ardougne cow field`,
+        tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: SPLASH_TO, unlocks: [magic.id] }, resources: [SPLASH_FENCE], yields: () => [],
+        needs: { items: { ...SPLASH_KIT, 'mind rune': 2, 'air rune': 2 } }, kitFirst: true,
+    };
+    // Two shelves, one account at each: Aubury's (2,000 water runes in stock) read 0 on three live visits, so Betty's
+    // in Port Sarim (port_sarim.inv: 1,000, one back every 10 ticks, the ferry's own port) is the second.
+    const waterJob = (id: string, where: string, shop: string): Template => ({
+        ...supply(id, `buy water runes at ${where} for the curse band`, shop, [shopRun(shop, 3000, 'water.rune', SPLASH_KIT['water rune'], 12000)],
+            { under: { Magic: SPLASH_TO }, items: { coins: 14000, 'body rune': SPLASH_KIT['body rune'], 'earth rune': SPLASH_KIT['earth rune'] }, holdsUnder: { 'water rune': SPLASH_KIT['water rune'] } }),
+        pilot: true, trains: { skill: 'Magic', to: SPLASH_TO, unlocks: [splash.id] },
+    });
+    const water = waterJob('army-water-aubury', "Aubury's in Varrock", 'aubury'), waterBetty = waterJob('army-water-betty', "Betty's in Port Sarim", 'betty');
     const prayer: Template = {
         id: 'army-bury-prayer-99', family: 'combat-train', script: 'scripts/train-prayer.ts', args: ['99'], env: { BURY_HELD: '1', BONE_RESERVE: '6', CAP: '4000' }, role: 'combat',
         goal: 'train Prayer to 99 burying the held bones', tier: 'goal', band: PRAYER_BAND, repeats: true, trains: { skill: 'Prayer', to: 99, unlocks: [] }, yields: () => [],
@@ -767,6 +924,118 @@ export function catalogue(): Template[] {
         batchFor: a => ({ [norm(bone)]: BONE_KEEP + Math.ceil((xpForLevel(99) - xpForLevel(a.skills.Prayer ?? 1)) / BOUGHT_BONE_XP[boneId]!) }),
     });
     const dragonBones = boneBand('army-bury-dragon-99', 'dragon bones', 536, PRAYER_BAND + 0.1), bigBones = boneBand('army-bury-big-99', 'big bones', 532, PRAYER_BAND + 0.2);
+    // Lost City, which a dragon weapon asks of its wielder (levelrequire.rs2 levelrequire_zanaris_quest), through the
+    // AIO quester's chain (scripts/quest-chain.ts): Monk's Friend first for Woodcutting 56 and Murder Mystery for
+    // Crafting 51 (the dramen tree wants 36 and the staff 31; the chain skips a quest the status shows complete and
+    // skips Lost City while either level is short). The sweep takes off and banks what the account wears before the
+    // Entrana ship (scripts/quest-sweep.ts BARE), takes the quest pack from the bank and buys what a shop sells. The
+    // tree spirit is level 101 and is fought bare-handed. An account with Hitpoints and Defence 90 goes without the
+    // quest's prayer potions (no shop sells them) and carries LOST_CITY_MEALS of the food the quest script eats; the
+    // planner asks those levels and that food, and buys the food as the band's own candidate (`kitFirst`).
+    // Practice: research/quest-points-board.md (Lost City 3/3 from its preset) and research/combat-measure.md (the
+    // chain from an army account's state).
+    // Black dragonhide for the army's ranged armour, band 10: nine kills a trip from the corridor south of the cave
+    // (scripts/black-dragon-camp.ts), the hides and dragon bones banked at Varrock West. The kit is a magic shortbow,
+    // iron arrows (a kill uses 60 to 100, more with two hunters in the cave; mithril costs about 745 coins an arrow), one Varrock teleport and six
+    // sharks; the dusty key cannot be traded and has its own job. Both are fillers: an account takes them, and the
+    // kit tier gets the kit, only when no training band and no kit of one serves it, so bones for Prayer come before
+    // arrows for dragons. The arrows and the teleport's air and fire runes are the shop run's (`ownSupply`); the kit
+    // tier gets the bow, the law rune and the sharks. Live (claude-cloud, by hand): three kills, three hides, no hitpoint lost, banked. Pilots.
+    const dustyKey: Template = {
+        id: 'army-dusty-key', pilot: true, family: 'aio:quester:mode:dusty-key', script: 'scripts/aio.ts', args: ['quester', 'dusty-key'], aio: 'quester:mode:dusty-key', worker: 'scripts/dusty-key.ts',
+        role: 'quest', goal: "get the dusty key from Velrak for Taverley dungeon's inner gate", tier: 'goal', band: HUNT_BAND, filler: true, repeats: false, stock: { item: 'dusty key', to: 1 }, yields: () => [],
+        needs: { skills: { Attack: 90, Strength: 90, Defence: 90, Hitpoints: 90, Ranged: 90, Prayer: 60, Magic: 25 } },
+    };
+    // The same trip on bronze arrows, for an account whose shop run found more bronze than iron: Lowe's bronze shelf
+    // holds 2,000 and gives one back every 10 ticks, the iron shelf 1,500 and one every 15. Practice, two hunters at
+    // once with 600 arrows each: 7 kills on bronze, 6 on iron.
+    const huntOn = (id: string, arrow: string): Template => ({
+        id, pilot: true, family: 'combat-train', script: 'scripts/black-dragon-camp.ts', args: ['9000'],
+        env: { KILLS: String(HUNT_KILLS), ARROW: arrow.replace(' ', '_'), ARROWS: String(HUNT_ARROWS) }, role: 'combat', goal: `kill Taverley's black dragons for their hides and bones, on ${arrow}s`,
+        tier: 'goal', band: HUNT_BAND, filler: true, repeats: true, stock: { item: 'dragonhide', to: HIDE_TARGET }, resources: [BLACK_CAVE], yields: () => [],
+        ownSupply: ['iron arrow', 'bronze arrow', 'air rune', 'fire rune'],
+        needs: { skills: { Defence: 90, Hitpoints: 90, Ranged: 90, Prayer: 60, Magic: 25 },
+            items: { 'dusty key': 1, 'magic shortbow': 1, [arrow]: HUNT_ARROWS, 'law rune': 1, 'air rune': 3, 'fire rune': 1, shark: HUNT_FOOD } },
+    });
+    const hunt = huntOn('army-hunt-black-dragons', 'iron arrow'), huntBronze = huntOn('army-hunt-black-dragons-bronze', 'bronze arrow');
+    // The hunt's shop lines. No market lists 600 iron arrows (live claude-cloud: 23 listed), and the arrow and rune
+    // shop jobs of the training bands end at Ranged 99 and Magic 66. Lowe's Archery Emporium (archeryshop: 1,500 iron
+    // arrows, one back every 15 ticks, and 2,000 bronze, one every 10) and Aubury's rune shop (2,000 air and fire
+    // runes, one back every 10 ticks) are both by the Varrock east bank, in the town a trip's teleport ends in. The
+    // run stands while the hunt does and the account is short of a trip's iron arrows or of one teleport's air or fire
+    // runes; with a trip's bronze arrows held the bronze hunt comes first. The arrows come first: a rune shelf found
+    // empty ends its step as a wait, not the run. An iron arrow costs 3 coins from the full shelf and 18 from a
+    // drained one, a bronze arrow 1 and 6 (shop.rs2: six times the base cost at most), so the spend covers both
+    // stocks at the dearest price. Each step leaves an emptied shelf (practice: with a wait of 25 ticks a run stood
+    // 2,500 ticks at Lowe's buying one arrow every 15), and the account hunts or shops again on the planner's next
+    // pass.
+    const huntSupply: Template = {
+        id: 'army-hunt-supply', pilot: true, family: 'shop-buyer', script: 'scripts/chain.ts',
+        args: [shopRun('lowe', 2500, 'iron.arrow|bronze.arrow', HUNT_ARROW_STOCK, 28000, 8), shopRun('aubury', 800, 'air.rune|fire.rune', HUNT_RUNE_STOCK, 2000, 8)],
+        env: { ROUNDS: '1' }, role: 'supply', goal: "buy iron and bronze arrows at Lowe's and teleport runes at Aubury's in Varrock for the black dragon hunt",
+        tier: 'goal', band: HUNT_BAND + 0.3, filler: true, repeats: true, stock: { item: 'dragonhide', to: HIDE_TARGET }, resources: ['shop:lowe', 'shop:aubury'], yields: () => [],
+        needs: { skills: hunt.needs!.skills, items: { coins: 32000 }, shortOf: { 'iron arrow': HUNT_ARROWS, 'air rune': 3, 'fire rune': 1 } },
+    };
+    // Dragon longswords, which an account wields once Lost City is done. Jakut in the Zanaris market sells two at
+    // 100,000 coins (one back every 500 ticks); the way in is the dramen staff the quest leaves the account, and the
+    // market door takes one cut diamond, which the kit tier buys. One visit buys JAKUT_SWORDS: the account's own and
+    // one to give. The band stands only while the account holds no sword: a second visit for one more would cost a
+    // second diamond. It comes after the hunt and before the flax, in the time a hunter is short of arrows. A pilot.
+    const jakut: Template = {
+        id: 'army-jakut-swords', pilot: true, family: 'aio:market:jakut-swords', script: 'scripts/aio.ts', args: ['market', 'jakut-swords', `SWORDS=${JAKUT_SWORDS}`, `WAIT=${JAKUT_WAIT}`],
+        aio: 'market:jakut-swords', worker: 'scripts/jakut-swords.ts', role: 'supply', goal: 'buy dragon longswords from Jakut in the Zanaris market',
+        tier: 'goal', band: HUNT_BAND + 0.05, filler: true, repeats: false, stock: { item: 'dragon longsword', to: 1 }, yields: () => [],
+        needs: { quests: ['Lost City'], items: { 'dramen staff': 1, diamond: 1, coins: JAKUT_COINS } },
+    };
+    // The hides made into armour by the accounts that hunt them, so no hide is traded. To wear a black dragonhide
+    // piece asks Ranged 70, the body Defence 40 and no quest (levelrequire tier70.rs2); to make the body asks Crafting
+    // 84. An account the hunt serves spins flax at Seers to that level (15 Crafting XP a flax at the server's rate of
+    // 25: 825 flax from level 54, where Murder Mystery leaves it), one account in the flax field at a time, and then
+    // tans its hides at Al Kharid and crafts whole sets, SET_HIDES hides each, until it holds ARMOUR_SETS bodies.
+    // After a trip the order is: the next trip, Jakut's swords, a set, the flax, the shop run. So an account short of arrows spins
+    // while the other hunter has Lowe's shelf, which gives back fewer arrows than two hunters fire. Pilots.
+    const leatherNeeds = { ...hunt.needs!.skills, Crafting: 10 };
+    const leatherTrain = { skill: 'Crafting', to: LEATHER_LEVEL, unlocks: [] };
+    const dhideSets: Template = {
+        id: 'army-black-dhide-sets', pilot: true, family: 'aio:skiller:crafting:black-dhide-sets', script: 'scripts/aio.ts', args: ['skiller', 'crafting', 'black-dhide-sets'],
+        aio: 'skiller:crafting:black-dhide-sets', worker: 'scripts/black-dhide-sets.ts', role: 'crafting', goal: 'tan black dragonhide at Al Kharid and craft sets of body, chaps and vambraces',
+        tier: 'goal', band: HUNT_BAND + 0.1, filler: true, repeats: true, stock: { item: 'dragonhide body', to: ARMOUR_SETS }, yields: () => [],
+        needs: { skills: { Crafting: LEATHER_LEVEL }, items: { coins: SET_HIDES * TAN_COIN + SET_SHOP }, holds: { dragonhide: SET_HIDES } },
+    };
+    const leatherFlax: Template = {
+        id: 'army-leather-flax', pilot: true, family: 'aio:skiller:foraging:flax', script: 'scripts/aio.ts', args: ['skiller', 'foraging', 'flax', '1800', '28'],
+        aio: 'skiller:foraging:flax', worker: 'scripts/gather-flax.ts', role: 'crafting', goal: 'pick flax at Seers to spin for the Crafting a black dragonhide body asks',
+        tier: 'goal', band: HUNT_BAND + 0.2, filler: true, repeats: true, trains: leatherTrain, resources: [AIO_PLACES.flax], yields: () => [],
+        needs: { skills: leatherNeeds, holdsUnder: { flax: FLAX_SPIN } },
+    };
+    const leatherSpin: Template = {
+        id: 'army-leather-spin', pilot: true, family: 'aio:skiller:crafting:bowstrings', script: 'scripts/aio.ts',
+        args: ['skiller', 'crafting', 'bowstrings', '2500', `MAX_MAKE=${FLAX_SPIN}`, 'RAW_RESERVE=0', 'MAX_TRIPS=8'],
+        aio: 'skiller:crafting:bowstrings', worker: 'scripts/spin-bowstrings.ts', role: 'crafting', goal: 'spin flax at Seers to the Crafting a black dragonhide body asks',
+        tier: 'goal', band: HUNT_BAND + 0.2, filler: true, repeats: true, trains: leatherTrain, yields: () => [],
+        needs: { skills: leatherNeeds, holds: { flax: FLAX_SPIN } },
+    };
+    const lostCity: Template = {
+        id: 'army-quest-lostcity', family: 'aio:quester:mode:chain', script: 'scripts/aio.ts', args: ['quester', 'chain', 'drunkmonk,murder,zanaris'],
+        aio: 'quester:mode:chain', worker: 'scripts/quest-chain.ts', pilot: true, role: 'quest',
+        goal: "complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons", tier: 'goal', band: QUEST_BAND,
+        quest: { name: 'Lost City', unlocks: [] }, resources: [LOST_CITY], yields: () => [],
+        needs: { skills: { Prayer: 43, Hitpoints: 90, Defence: 90 }, items: { coins: 5000 }, pieces: { of: LOST_CITY_FOOD, count: LOST_CITY_MEALS } }, kitFirst: true,
+    };
+    // Merlin's Crystal and Holy Grail through the same chain. The quest sweep gathers Merlin's kit itself (insect
+    // repellent, a bucket and the wax at the Catherby hives, bat bones from a giant bat, bread and a tinderbox from
+    // shops) and takes everything worn off for the Entrana ship of Holy Grail (scripts/quest-sweep.ts BARE), keeping
+    // Excalibur and the rune scimitar in the pack: the Titan dies to the scimitar with Excalibur worn at the end. The
+    // planner asks what no shop sells: the scimitar, the teleports' runes (and the Magic 45 Camelot's asks) and the
+    // meals. Merlin's Crystal walks to the chaos altar at Wilderness level 12 with what the account wears. A pilot.
+    const holyGrail: Template = {
+        id: 'army-quest-holygrail', family: 'aio:quester:mode:chain', script: 'scripts/aio.ts', args: ['quester', 'chain', 'merlin,grail'],
+        aio: 'quester:mode:chain', worker: 'scripts/quest-chain.ts', pilot: true, role: 'quest',
+        goal: "complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience", tier: 'goal', band: GRAIL_BAND,
+        quest: { name: 'Holy Grail', unlocks: [] }, resources: [GRAIL_PLACE], yields: () => [],
+        needs: { skills: { Prayer: 43, Magic: 45, Attack: 90, Strength: 90, Hitpoints: 90, Defence: 90 }, items: { coins: 2000, 'rune scimitar': 1, ...GRAIL_RUNES },
+            pieces: { of: LOST_CITY_FOOD, count: GRAIL_MEALS } }, kitFirst: true,
+    };
     const prayerField: Template = {
         id: 'army-trooper-prayer-99', family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'],
         env: { TRAIN_SKILL: 'Hitpoints', GIANT_KILLS: '500', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1' }, role: 'combat', goal: 'train Prayer to 99 burying trooper bones on the field',
@@ -836,10 +1105,15 @@ export function catalogue(): Template[] {
         ...troopers,
         strike,
         magic,
+        splash,
+        water,
+        waterBetty,
         staff,
         feathers,
         fireRunes,
         staffGuild,
+        natureGuild,
+        magicAir,
         prayer,
         dragonBones,
         bigBones,
@@ -848,6 +1122,16 @@ export function catalogue(): Template[] {
         arrowsGuild,
         arrowsLowe,
         ranged,
+        lostCity,
+        holyGrail,
+        dustyKey,
+        hunt,
+        huntBronze,
+        huntSupply,
+        jakut,
+        dhideSets,
+        leatherFlax,
+        leatherSpin,
         prayerField,
         { id: 'thieving55', family: 'thieving60', script: 'scripts/generated/thieving60.ts', env: { TARGET: '55', CAP: '2500', CLEAN_FOOD: '1' }, role: 'thieving',
             goal: 'train Thieving to 55 for a knight spot', trains: { skill: 'Thieving', to: 55, unlocks: goldfarm.map(g => g.id) }, yields: () => [] },

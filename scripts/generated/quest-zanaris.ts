@@ -9,6 +9,7 @@
 import { componentId } from '../../packages/core/src/logout';
 import { lostCityRoute } from '../quest-zanaris-plan';
 import { openQuest } from './quest-lib';
+import { walkTargetPersist, ZANARIS_SHED } from '../walk-to';
 
 const WARRIOR = { x: 3145, z: 3202 };
 const SHAMUS_TREE = { id: 2409, x: 3138, z: 3212 };        // leprechauntree, maps/m49_50.jm2 0 2 12
@@ -24,7 +25,8 @@ const PFM = 14, ULT_STR = 10, INC_REF = 11;     // skill_prayer/configs/prayers.
 
 const route = lostCityRoute(process.env.LOST_CITY_ROUTE);
 const windBolt = route.windBolt;
-const q = await openQuest({ cap: 3000, eatAt: route.eatAt, food: [route.food], lumbridgeOk: true });
+// The default route eats lobster, swordfish or shark, whichever the pack holds (the sweep packs the best meals banked).
+const q = await openQuest({ cap: 3000, eatAt: route.eatAt, food: windBolt ? [route.food] : [route.food, 373, 385], lumbridgeOk: true });
 try {
     if (windBolt) {
         const casts = windBolt.axeCasts + windBolt.spiritCasts;
@@ -186,5 +188,12 @@ try {
     await shut();
     q.milestone(6);
     off();
+    // The quest ends inside Zanaris, and a next job with its own walker may take that cave for another dungeon (live:
+    // the dusty key run started at 3220,9592 and looked for the Jailer there). Leave by the entrance to the swamp
+    // shed. A failed step out does not undo the quest: scripts/walk-to.ts takes the same step first.
+    if (questDone) {
+        const out = await walkTargetPersist(q.s, ZANARIS_SHED);
+        if (out.ok) q.milestone('shed'); else console.log(`LOST_CITY_EXIT failed ${out.reason ?? ''} ${out.detail ?? ''}`);
+    }
     await q.end(questDone, `qp=3 zombies=${zombies}`);
 } catch (e) { await q.fail(String(e)); }

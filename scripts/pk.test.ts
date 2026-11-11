@@ -2,9 +2,25 @@ import { expect, test } from 'bun:test';
 import {
     attackable, bestDamageSpell, bestFood, castableFreeze, combatPrayers, dangerReason, defaultSpec,
     estMaxHit, fightPlayer, freezeDuration, freezeSpell, hasStyle, ITEMS, killMessage, lowHealth,
-    negativeCastArmour, nextStyle, nextTick, observePlayer, PRAYER, protectedStyles, skulled, SPELLS,
+    negativeCastArmour, newSplats, nextStyle, nextTick, observePlayer, PRAYER, protectedStyles, skulled, SPELLS,
     weaponStyle, wildernessLevel,
 } from './pk';
+
+test('newSplats counts each new hit splat on a player once, whoever our player faces', () => {
+    const entity = { damageCycles: [0, 0, 0, 0], damageValues: [0, 0, 0, 0] }, client = { players: [null, entity] };
+    const seen = { cycles: null as number[] | null };
+    entity.damageCycles[0] = 170; entity.damageValues[0] = 9; // a splat from before the fight
+    expect(newSplats(client, 1, seen)).toEqual([]);
+    expect(newSplats(client, 1, seen)).toEqual([]);
+    entity.damageCycles[1] = 240; entity.damageValues[1] = 18;
+    entity.damageCycles[2] = 240; entity.damageValues[2] = 0; // a miss shows a splat of 0
+    expect(newSplats(client, 1, seen)).toEqual([18, 0]);
+    expect(newSplats(client, 1, seen)).toEqual([]);
+    entity.damageCycles[0] = 310; entity.damageValues[0] = 22; // the first slot is used again
+    expect(newSplats(client, 1, seen)).toEqual([22]);
+    expect(newSplats({ players: [null, { headicons: 0 }] }, 1, { cycles: null })).toBeNull();
+    expect(newSplats({}, 1, { cycles: null })).toBeNull();
+});
 
 test('Wilderness level follows wilderness_levels.rs2: surface from z 3520, the dungeon from z 9920', () => {
     expect(wildernessLevel(3519)).toBe(0);

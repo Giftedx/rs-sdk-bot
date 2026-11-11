@@ -37,9 +37,11 @@ export const QUEST_NAMES: Record<string, string> = {
 // workshop wants Mining, Smithing and Crafting 20 (quest_elemental_workshop stat_base checks). Jungle Potion: identifying
 // the snake weed wants Herblore 3 (skill_herblore identify.rs2; Druidic Ritual's reward), else "You need a higher Herblore
 // level" ends the quest at its first herb. Fishing Contest's Fishing 10 is not a gate: the sweep nets shrimps to it
-// (quest-sweep.ts questSkillTraining).
+// (quest-sweep.ts questSkillTraining). Lost City: the dramen tree wants Woodcutting 36 and the staff Crafting 31
+// (quest_zanaris.rs2:37,78); Monk's Friend gives Woodcutting 56 and Murder Mystery Crafting 51 at this server's 25
+// times experience (stat_advance 20000 and 14060 tenths), so a chain that runs them first meets both.
 export const QUEST_SKILLS: Record<string, Record<string, number>> = {
-    seaslug: { firemaking: 30 }, junglepotion: { herblore: 3 },
+    seaslug: { firemaking: 30 }, junglepotion: { herblore: 3 }, zanaris: { woodcutting: 36, crafting: 31 },
     dig: { herblore: 10, agility: 10, thieving: 25 }, elemental: { mining: 20, smithing: 20, crafting: 20 },
 };
 // The skills a quest needs that the account lacks, as "skill have/need"; empty when it can run.

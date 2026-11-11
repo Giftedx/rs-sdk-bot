@@ -170,6 +170,23 @@ export const QUEST_KEEP:Record<string,number[]>={runemysteries:[1438,290,291],to
  sheepherder:[278,279,284,285,280,281,282,283],
  // Pirate's Treasure's rum, chest key and message: a resumed run carries on from whichever the bank holds.
  hunt:[431,432,433]};
+// A preset's protective supply that an account with Hitpoints and Defence at STURDY does without: it rides as food
+// does (taken when the bank holds it, never reported missing). Lost City's two prayer potions keep Protect from
+// Melee up against the tree spirit after the cave ladder drains Prayer (cave_monk.rs2:14); no shop sells them.
+export const STURDY=90,STURDY_MEALS=10,STURDY_OPTIONAL:Record<string,number[]>={zanaris:[2434]};
+// Quests that board the Entrana ship: its monk carries nobody with a weapon or a piece of armour in the pack or worn
+// (monk_of_entrana.rs2 has_entrana_restricted_items; an arrow, a ring, an amulet and boots pass). The bank pass banks
+// everything the account wears and every pack item the quest does not use, and runs even with the pack complete.
+export const BARE=new Set(['zanaris','grail']);
+// The coins to take from the bank for the shops, fares and paid recipes of a pass: what they cost beyond the coins the
+// account carries over the quest's own need. The quest's coins are not shop money (practice: Merlin's Crystal asks 500
+// coins, the pass bought bread and a tinderbox for 13 of them and ended `withdraw short 995:13`).
+export const shopCoinTake=(shopCoins:number,packCoins:number,plannedCoins:number,questCoins:number)=>
+ Math.max(0,shopCoins-Math.max(0,packCoins+plannedCoins-questCoins));
+// Pack rows a bare quest banks: all but its own pack, its food and runes, its kept items and coins.
+export function bareDeposits(quest:string,pack:readonly Item[],need:ReadonlyMap<number,number>,food:ReadonlyMap<number,number>,tradeable:(id:number)=>boolean|undefined):number[]{
+ return [...new Set(pack.map(i=>i.id))].filter(id=>id!==COINS&&!need.has(id)&&!food.has(id)&&!MEALS.includes(id)&&!keepsItem(quest,id,tradeable));
+}
 export function keepsItem(quest:string,id:number,tradeable:(id:number)=>boolean|undefined):boolean{
  return (QUEST_KEEP[quest]??[]).includes(id)||tradeable(id)===false;
 }
@@ -600,6 +617,28 @@ export type Walked={ok:boolean;reason?:string;detail?:string;ticks?:number};
 export const SWEEP_PLAN_BUDGET_MS=15_000;
 // `signal`: a quest guard's abort (a death, the retreat threshold, a sustain failure, the tick cap) ends the walk between
 // legs and inside each leg's clicks; the result then says `stopped`.
+// Quests whose scripts fight under prayers: Merlin's Crystal turns Protect from Melee on in Keep Le Faye and at the
+// chaos altar, Holy Grail three prayers on the Black Knight Titan (99 points last them about 160 ticks). The value is
+// the points the quest wants at its start. An account that comes with fewer (spent in another job) prays first at the
+// Seers' Village church: altar 409 at 2694,3462, prayed at from the tile east of it, about 70 tiles from King Arthur.
+// Practice with no points: Merlin's Crystal ended `step protect from melee on` in the keep.
+export const SEERS_ALTAR={id:409,x:2694,z:3462,level:0,stand:{x:2695,z:3462,level:0}} as const;
+export const PRAYER_QUESTS:Record<string,number>={merlin:30,grail:60};
+export const prayerShort=(points:number,level:number,wanted:number)=>points<Math.min(level,wanted);
+export async function prayBefore(s:Session,world:World,quest:string):Promise<string|null>{
+ const wanted=PRAYER_QUESTS[quest];
+ if(wanted===undefined)return null;
+ const points=():number=>(s.sdk.getState() as any)?.prayers?.prayerPoints??0,level=s.sdk.getSkill('Prayer')?.baseLevel??1,before=points();
+ if(!prayerShort(before,level,wanted))return null;
+ const walked=await walkFar(s,world,SEERS_ALTAR.stand,150);
+ if(!walked.ok)return `walk to the Seers' Village altar failed: ${walked.reason} ${walked.detail}`;
+ for(let i=0;i<3&&points()<level;i++){
+  await s.direct({type:'interactLoc',x:SEERS_ALTAR.x,z:SEERS_ALTAR.z,locId:SEERS_ALTAR.id,optionIndex:1,reason:'SDK'});
+  await waitUntil(s,()=>points()>=level,{timeoutTicks:12});
+ }
+ console.log(`QUEST_SWEEP_PRAY ${JSON.stringify({quest,before,after:points(),level,wanted})}`);
+ return prayerShort(points(),level,wanted)?`prayer points ${points()} of ${level} after the Seers' Village altar`:null;
+}
 export async function walkFar(s:Session,world:World,to:Tile,legTimeoutTicks=150,opts:{signal?:AbortSignal}={}):Promise<Walked>{
  const from=at(s);
  const r=await walkFarLegs(s,world,to,legTimeoutTicks,opts.signal);
@@ -1048,6 +1087,13 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  try {
  const st=()=>s.sdk.getState();
  if(!await waitUntil(s,()=>!!st()?.player,{timeoutTicks:20}))return fail('entry state unavailable');
+ const baseLevel=(name:string)=>st()?.skills?.find((k:any)=>k.name===name)?.baseLevel??1;
+ for(const id of STURDY_OPTIONAL[quest]??[])if(base.has(id)&&baseLevel('Hitpoints')>=STURDY&&baseLevel('Defence')>=STURDY){
+  food.set(id,base.get(id)!);base.delete(id);
+  // Without the supply the fight is paid in food: the preset's meal count rises to STURDY_MEALS.
+  const meal=[...food.keys()].find(f=>MEALS.includes(f));
+  if(meal!==undefined)food.set(meal,Math.max(food.get(meal)!,STURDY_MEALS));
+ }
  let wornKit=wornKitPlan(quest,base,st()?.inventory??[],[],s.sdk.getEquipment()),need=wornKit.need;
  const maxHp=()=>st()?.skills?.find((k:any)=>k.name==='Hitpoints')?.baseLevel??10;
  const sustain=startQuestSustain({sdk:s.sdk,tick:()=>s.tick(),onTick:cb=>s.onTick(cb),ended:s.ended,direct:async action=>{
@@ -1129,7 +1175,9 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  const seekGhostSkull=quest==='priest'&&ghostState()==='started'&&s.sdk.getEquipment().some(i=>i.id===552);
  const skill=(name:string)=>st()?.skills?.find((k:any)=>k.name===name)?.baseLevel??1;
  // A skill the quest wants and the account lacks sends the account through the bank pass too, with every supply held.
- if(seekGhostSkull||WORN_KIT[quest]?.some(i=>!i.required&&!s.sdk.getEquipment().some(e=>e.id===i.id))||plan(need,pack(),[]).missing.length||plan(food,pack(),[]).missing.length||questSkillTraining(quest,skill)){
+ const tradeableId=(id:number)=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable;
+ const bare=BARE.has(quest)&&(s.sdk.getEquipment().length>0||bareDeposits(quest,pack(),need,food,tradeableId).length>0);
+ if(bare||seekGhostSkull||WORN_KIT[quest]?.some(i=>!i.required&&!s.sdk.getEquipment().some(e=>e.id===i.id))||plan(need,pack(),[]).missing.length||plan(food,pack(),[]).missing.length||questSkillTraining(quest,skill)){
   const exit=await leaveStronghold(s);
   if(!exit.ok)return fail(exit.detail!);
   // The nearest bank may be out of reach: try the next three.
@@ -1150,6 +1198,31 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
   const opened=await s.bot.openBank();
   if(!opened.success)return fail('bank did not open');
   await waitUntil(s,()=>(st()?.bank?.items?.length??0)>0,{timeoutTicks:10});
+  if(bare){
+   // Bank the spare pack rows, take off what is worn (taking an item off shuts the bank), then bank those too.
+   const bankRows=async()=>{
+    for(const id of bareDeposits(quest,pack(),need,food,tradeableId)){
+     const row=(st()?.inventory??[]).find((i:any)=>i.id===id);
+     if(!row)continue;
+     await s.bot.depositItem(row,-1);
+     if(!await waitUntil(s,()=>count(pack(),id)===0,{timeoutTicks:10}))return `bare deposit unobserved ${id}`;
+    }
+    return null;
+   };
+   const first=await bankRows();
+   if(first)return fail(first);
+   const worn=[...s.sdk.getEquipment()];
+   for(const item of worn){
+    await s.bot.unequipItem(item);
+    if(!await waitUntil(s,()=>!s.sdk.getEquipment().some(e=>e.slot===item.slot),{timeoutTicks:8}))return fail(`worn item ${item.id} did not come off`);
+   }
+   if(worn.length){
+    if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>!!st()?.bank?.isOpen,{timeoutTicks:10}))return fail('bank did not reopen for the worn items');
+    const second=await bankRows();
+    if(second)return fail(second);
+   }
+   console.log(`QUEST_SWEEP_BARE ${JSON.stringify({worn:worn.map(i=>i.id),left:s.sdk.getEquipment().length,pack:pack().map(i=>i.id)})}`);
+  }
   const rows=():Item[]=>(st()?.bank?.items??[]).map((i:any)=>({id:i.id,count:i.count}));
   wornKit=wornKitPlan(quest,base,pack(),rows(),s.sdk.getEquipment());need=wornKit.need;
   const p=plan(need,pack(),rows()),meal=mealPlan(food,pack(),rows(),p.withdraw,need);
@@ -1214,7 +1287,7 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
   shop.coins+=gather.coins+(heckelDust?HECKEL_DUST.coins:0)+fares(here(),[...shop.buys.map(b=>b.tile),preset.position,...gather.gathers.flatMap(g=>g.how==='npc'&&NPC_SOURCES[g.id]?[NPC_SOURCES[g.id]!.tile]:[])],accountOf(s))
    +(quest==='itgronigen'&&eastOfPass(here(),accountOf(s))?BOAT_FARES:0);
   if(shop.coins){
-   const take=Math.max(0,shop.coins-count(pack(),COINS)-(p.withdraw.find(w=>w.id===COINS)?.count??0));
+   const take=shopCoinTake(shop.coins,count(pack(),COINS),p.withdraw.find(w=>w.id===COINS)?.count??0,need.get(COINS)??0);
    if(count(rows(),COINS)<take){await s.bot.closeBank();return fail(`missing ${COINS}:${take} to buy ${[...shop.buys.map(b=>b.id),...(heckelDust?[1975]:[])].join(',')}`+(shop.buys.some(b=>wornKit.wear.some(i=>i.required&&i.id===b.id))?' (required worn kit unavailable)':''));}
    if(take>0){const c=p.withdraw.find(w=>w.id===COINS);if(c)c.count+=take;else p.withdraw.push({id:COINS,count:take});}
    console.log(`QUEST_SWEEP_SHOP_PLAN ${JSON.stringify({buys:shop.buys,coins:shop.coins})}`);
@@ -1266,6 +1339,8 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  const start=preset.position;
  const exit=await leaveStronghold(s);
  if(!exit.ok)return fail(exit.detail!);
+ const unprayed=await prayBefore(s,world,quest);
+ if(unprayed)return fail(unprayed);
  await reachStart(s,world,start,quest);
  if(wornKit.wear.some(i=>!s.sdk.getEquipment().some(e=>e.id===i.id&&e.count>0)))return fail('worn kit missing before handover');
  console.log(`MILESTONE quest-sweep ${quest} staged at ${JSON.stringify(here())}`);

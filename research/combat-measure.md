@@ -258,7 +258,156 @@ Ranged it adds is not needed at that point.
   2807,3441 near the Catherby bank). Practice with the walk home: a market buy from the Catherby bank reached Varrock
   West at tick 1,039, from the Seers' Village bank at 974 and from the Yanille bank at 1,041. **Evidence.**
   `.practice/travel/ge.ts` (`k1`-`k3`); `scripts/walk-to.test.ts`.
+- **Claim.** A dragon weapon is refused to an account without Lost City, whatever its Attack. **Conditions.**
+  `levelrequire.rs2` `levelrequire_zanaris_quest`: `%zanaris` under complete prints "You have not earned the right to
+  wear this yet." and "You need to complete the Lost City Of Zanaris Quest." before the Attack 60 check. Practice, an
+  account with Attack 99 and no quests: dragon longsword and dragon dagger not worn, rune scimitar worn; with varp 147
+  at 6 all three are worn. **Evidence.** `.practice/lostcity/wield.ts` in the Claude cloud container that ran it.
+  **Consumer.** `army-quest-lostcity` (research/quest-points-board.md, Lost City, from an army account's state).
+- **Market and shop (live claude-cloud read).** No dragon longsword or dagger is listed (last trades 425,000 and
+  299,000). Jakut in the Zanaris market stocks 2 dragon longswords and 2 daggers, one back per 500 ticks
+  (`area_lostcity/configs/lostcity.inv`), base cost 100,000 and 30,000; the market door asks one cut diamond an entry
+  (`doorman.rs2`) and the market ladder leaves to Al Kharid (`ladder_fairy.rs2`).
+- **Claim.** One run brings two dragon longswords from Jakut to the Al Kharid bank. **Conditions.**
+  `scripts/jakut-swords.ts` (`market:jakut-swords`): the dramen staff, a diamond and the coins from the Draynor bank,
+  the swamp shed, the market door from the west (3237,9558; the engine refuses a walk round it: a walk from the entry
+  to Jakut stopped on 3237,9560), the doormen's dialogue, the shop, the ladder. Practice from the Draynor bank with a
+  rune scimitar wielded: `RESULT ok swords=2 banked=2 spent=201000`, 165 ticks (in Zanaris at tick 86, in the market
+  at 110, in Al Kharid at 138), the scimitar wielded again. The first sword cost 100,000 and the second 101,000. A
+  third was not on the shelf in 711 ticks of waiting (`SWORDS=3 WAIT=700`: `swords=2 ... shelf=0`). **Evidence.**
+  `.practice/jakut/run.ts` (`a`, `b`), `.practice/jakut/probe.ts`.
+- **Gap.** Not run live. The shelf's restock on the live server is not measured. No army account holds a diamond:
+  `army-jakut-swords` buys one on the market (1,219 listed from 145,000, cap 150,000) for an account with Lost City
+  done and a dramen staff, then runs the visit with `SWORDS=2 WAIT=600`.
 - **Gap.** No seller on practice, so a fill is proved live only. Kills per tick with each blade are not measured.
+
+## Black dragonhide from Taverley's black dragons
+
+- **Claim.** Black dragonhide armour has to be made: no market lists it and no shop sells it. **Conditions.** Live
+  claude-cloud market read by item id (every colour of dragonhide shares the names "Dragonhide body", "Dragonhide
+  chaps" and "Dragon vambraces"): black body 2503, chaps 2497 and vambraces 2491 unlisted, last trades about 313,000
+  to 350,000, 250,000 to 300,000 and 120,000 to 145,000; black dragon leather 2509 never traded. Shops stock green
+  only (`edgeville.inv`, `champions_guild.inv`). The hide (1747) drops from every black dragon and from nothing else
+  bar the King Black Dragon (`drop tables/scripts/black_dragon.rs2`); the Al Kharid tanner makes leather of it for 20
+  coins (`scripts/microbot-c-tanner.ts black`); vambraces, chaps and body ask Crafting 79, 82 and 84 and 1, 2 and 3
+  leathers (`skill_crafting/configs/leather/leather.dbrow`, `scripts/microbot-production.ts`). Wearing it asks
+  Ranged 70, and the body Defence 40 (`levelrequire/scripts/tier70.rs2`).
+- **Claim.** A ranged account kills Taverley's black dragons from the corridor south of their cave and takes no
+  melee. **Conditions.** `black_dragon` (npc 54): size 4, level 227, 190 hitpoints, Defence 200, ranged defence 50,
+  respawn 60 ticks (`_unpack/225/all.npc`); two spawn, at 2829,9826 and 2835,9824 (`maps/m44_153.jm2`). A dragon
+  attacks only a player beside it, one attack in four with fire (up to 30, or 50 on a failed roll; 5 behind an
+  anti-dragon shield, 10 under Protect from Magic), and has no attack from a distance (`npc/scripts/dragon.rs2`). By
+  the engine's collision rules a 4x4 mover reaches 29 south-west tiles in the cave and none in the corridor, which is
+  three tiles wide (2834-2836, 9818-9821); from 2835,9820 the nearest dragon footprint is two tiles away
+  (`scripts/black-dragon-camp.test.ts`). The row north of it is beside dragon ground: an account that stepped to
+  2835,9821 fell from 96 to 22 hitpoints in 20 ticks, and one that stood east of the Obelisk ladder at 2843,9824 fell
+  from 99 to 13 in 25.
+- **Evidence (practice, 150 ms ticks, Ranged 99, magic shortbow on rapid, mithril arrows, nothing else worn).**
+  `scripts/black-dragon-camp.ts` with `STAGED=1`, four kills a run: 1,339 and 1,465 ticks (335 and 366 a kill, with
+  the fetch of each pile), 4 hides and 4 dragon bones each, `hpMin` 89 and 77, no food, 271 and 311 arrows (about 70 a
+  kill net of the arrows taken back from the pile). Raw runs: `.practice/blackdragon/camp-run.ts` (`a`-`d`) in the
+  Claude cloud container that ran them.
+- **Claim.** The fetch of a pile is the camp's one exposure, and Protect from Magic bounds it. **Conditions.** The
+  other dragon comes as near the camp tile as it can, which is beside the pile (south-west tile 2835,9823 against a
+  pile on 2835,9822). `dragon.rs2`: one attack in four is a breath of up to 30, or 50 on a lost roll, and 10 under
+  Protect from Magic; the rest is melee (Strength 200, about 21 at most). Under Protect from Melee, six kills:
+  `DRAGON_CAMP hit t=595 hp=99->74 at=2835,9822 pray=1 by=["Black dragon@2835,9823"]`. The fetch runs under Protect
+  from Magic and starts at 75 hitpoints or more, so three attacks cost at most 63. Three six-kill camps with it, two
+  of them at once on the tile: 18 kills, 18 hides, `hpMin=99`. The camp logs every lost hitpoint (`DRAGON_CAMP hit`):
+  a steady 4 to 6 every 30 ticks on the tile with no attacker is the poison of the spiders on the way in (one trip
+  arrived at 89 and fell to 58 before its first kill, eating two sharks).
+- **Claim.** An attack on a dragon that walks out of the tile's reach walks the account after it.
+  **Conditions.** `DRAGON_CAMP stray t=1286 at=2834,9822 target=2828,9824 hp=99`: one step onto dragon ground in a
+  six-kill camp, the target seven tiles west by then. The camp checks the target's tile every tick and ends the
+  attack with a walk to its own tile when the dragon is out of reach; two six-kill camps after that, no stray.
+  Raw runs: `.practice/blackdragon/camp-run.ts` (`hit`, `mag`, `st1`, `st2`).
+- **Claim.** A shot at a dragon more than five tiles away can walk the shooter off its tile. **Conditions.** From
+  2835,9820 the first shot at a dragon on 2828,9824, seven tiles west and in sight by the collision data, walked the
+  account to 2834,9822. The camp shoots only a dragon whose south-west tile is within five tiles and in sight
+  (`canShoot`); the dragon that spawns on 2835,9824 always is. With that rule, 1,339 ticks without a step off the tile.
+- **Claim.** The way in is the dusty key gate, the blue dragon lair, out of the lair's south end and round by the
+  black demons and the poison spiders. **Conditions.** `scripts/microbot-combat-trip.ts` `blackDragonEntry`: the
+  Taverley ladder (1759 at 2884,3397), the gate (2623 at 2924,9803, dusty key 1590), then `BLACK_ENTRY`. The lair has
+  no way straight west: a walk from 2895,9793 to 2850,9809 stopped at 2881,9810. The key cannot be traded;
+  `scripts/dusty-key.ts` gets it (the Jailer, Velrak's cell, the dialogue): practice from the Ardougne north bank,
+  `RESULT ok dustyKey=1`, 950 ticks, `hpMin=99`; from inside Zanaris (3220,9592), 589 ticks. The worker takes only
+  Taverley dungeon's map squares for the dungeon: live, a run that started in Zanaris looked for the Jailer there.
+- **Claim.** One bank-owned trip brings the hides home. **Conditions.** `scripts/black-dragon-camp.ts` without
+  `STAGED`: the shared walker to the Falador west bank, then `combatTrip` kind `black` (everything worn and carried
+  banked, the bow, 700 arrows, the key, one Varrock teleport's runes and 6 sharks taken), the ground walk to the
+  Taverley ladder, the gate, the lair's south end, the corridor, the camp, the teleport and the Varrock West bank.
+  Practice from the Ardougne north bank with `KILLS=3`: `RESULT ok black-dragon-trip kills=3 hides=3 bones=3
+  ammoUsed=196 hpMin=90 banked=true ticks=1337` (628 more for the walk to Falador before it); staged at tick 26,
+  down the ladder at 109, through the gate at 243, in the corridor at 318 with 90 hitpoints, banked at 1,336; the
+  bank then held 3 black dragonhides and 3 dragon bones and the kit's debit matched to the rune. The trip must not
+  start at a far bank with the kit packed: from the Ardougne north bank the shared planner took a Camelot teleport
+  with the trip's law rune (and air from the bank), and the run made its three kills and could not leave. Raw runs:
+  `.practice/blackdragon/trip-run.ts` (`a`-`d`).
+- **Claim.** The trip needs prayer points and gets them itself. **Conditions.** The camp fetches a pile only under
+  a protection prayer when a dragon stands within two tiles of it, and takes its arrows back from the pile. Live
+  (claude-cloud, TrouserSnake, straight after Lost City, 215 arrows): `RESULT ok black-dragon-trip kills=1 hides=0
+  bones=0 ammoUsed=176 hpMin=84 banked=true ticks=937`, `DRAGON_CAMP pile left at 2835,9822: no prayer and a dragon
+  beside it`, no `stray` line. With fewer than 50 points (`BLACK_PRAYER`, about what nine kills use) the trip prays
+  at the Altar of Guthix in Taverley (410 at 2925,3483) between the bank and the ladder. Practice from 0 points:
+  prayed at tick 93, down the ladder at 146 (109 with no altar visit), `RESULT ok black-dragon-trip kills=3 hides=3
+  bones=3 ammoUsed=185 hpMin=99 banked=true ticks=1323`. Raw run: `.practice/blackdragon/trip-run.ts` (`pray`).
+- **Claim.** The way home is the Varrock teleport, clicked until the account is there, and an account found in the
+  dungeon at a trip's start leaves by it first. **Conditions.** `teleport.rs2`: the spell's button does nothing, with
+  no message, when the player is busy on the tick the click arrives. Live (claude-cloud, UnderMyKilt, 300 arrows):
+  the altar visit at tick 123, `DRAGON_CAMP kill 1 t=208 ... arrows=233`, `kill 2 t=538 ... arrows=169`, `kill 3
+  t=903 ... arrows=91`, no stray, `hpMin=99`, then `RESULT fail black-dragon-trip kills=3 hides=3 bones=3 ammoUsed=181
+  hpMin=99 banked=false ticks=1321 failure=Error: combat emergency return missing`: one click, 20 ticks of waiting,
+  and a logout on the camp tile with the loot and the teleport's runes in the pack. The trip clicks up to 6 times, 8
+  ticks apart (`varrockTeleport`). `scripts/black-dragon-camp.ts` run for an account that stands underground
+  teleports, banks its pack at Varrock West and then starts the trip; `LEAVE=1` ends there. Practice from the camp
+  tile with three hides: `RESULT ok black-dragon-leave hides=3 bones=3 banked=true`, 31 ticks; without `LEAVE`,
+  `RESULT ok black-dragon-trip kills=1 hides=1 bones=1 ... banked=true`. No walker plans a way out of the cave: a
+  planned route can cross dragon ground. Raw runs: `.practice/blackdragon/leave-run.ts` (`a`, `b`).
+- **Claim.** A hunter's arrows and teleport runes come from two Varrock shops in one run, and the run leaves a
+  shelf it has emptied. **Conditions.** `army-hunt-supply` (`scripts/chain.ts`): `scripts/shop-buyer.ts lowe` to 1,200
+  iron and 1,200 bronze arrows owned (`archeryshop`: 1,500 iron in stock, one back every 15 ticks; 2,000 bronze, one
+  every 10), then `aubury` to 60 air and 60 fire runes, each banked at Varrock east. The first three runs below
+  bought iron alone. Practice from the Varrock west bank, 60 arrows banked, three runs in a row on
+  one shelf: (a) spend 12,000: 890 arrows for 11,984 coins in 260 ticks (3 coins an arrow from the full shelf, 18
+  from a drained one), then 120 runes for 569 coins in 79; (b) spend 21,000 and a 25-tick wait: 822 arrows for 14,796
+  coins in 2,523 ticks, the shelf at 0 and the run buying one arrow every 15 ticks until its cap; (c) a 10-tick wait
+  on the empty shelf: 31 arrows, `stop=stock-wait noBuyTicks=10`, 119 ticks, then the runes in 77. With bronze
+  arrows in the same step (`ITEMS=iron.arrow|bronze.arrow`, an 8-tick wait, spend 28,000), two runs in a row on fresh
+  shelves: (d) 2,340 arrows (1,140 iron, 1,200 bronze) for 22,132 coins in 357 ticks, `stop=stock-target`; (e) 1,261
+  arrows for 12,366 coins in 266 ticks, both shelves at 0, `stop=stock-wait noBuyTicks=8`. Raw runs:
+  `.practice/huntsupply/run.ts` (`a`-`e`).
+- **Claim.** Six banked hides become a set of black dragonhide armour in one run at Al Kharid, and any account
+  with Ranged 70 and Defence 40 wears it. **Conditions.** `levelrequire/scripts/tier70.rs2`: the body asks Ranged 70
+  and Defence 40, the chaps and vambraces Ranged 70, and none a quest (the green body alone asks Dragon Slayer,
+  `tier40.rs2`). `leather.dbrow`: body 3 leather at Crafting 84, chaps 2 at 82, vambraces 1 at 79; the Tanner (804 at
+  3276,3193) takes 20 coins a hide; Dommik (545 at 3322,3194) sells needles and thread. `scripts/black-dhide-sets.ts`
+  on practice, Crafting 84: from the Al Kharid bank with 14 hides and 2,000 coins, `RESULT ok sets=2 banked=2
+  bodies=2 chaps=2 vambraces=2 tanned=12 spent=243`, 230 ticks, Crafting 84 to 85 (25,800 XP); from the Varrock west
+  bank with 20 hides and 300 coins, the one set the coins tan, `sets=1 ... tanned=6 spent=123 hidesLeft=14`, 374
+  ticks, 201 of them the walk; at Crafting 83, `RESULT fail Crafting 83, a set asks 84` at tick 0. Raw runs:
+  `.practice/dhide/run.ts` (`a`-`c`).
+- **Claim.** A hunter reaches Crafting 84 on flax in about 10,000 ticks (estimate from the runs below). **Conditions.**
+  Spinning gives 375 Crafting XP a flax at the server's rate, so 825 flax from level 54. Practice, a hunter-shaped
+  account with Crafting 54 at the Varrock west bank: `army-leather-flax` (`scripts/gather-flax.ts`, 1,800 ticks)
+  banked 338 flax, 975 of its ticks walking; `army-leather-spin` (`scripts/spin-bowstrings.ts`, `MAX_MAKE=168`) made
+  168 bow strings in 901 and 925 ticks for 63,000 XP each. The spinning worker refused its own logout when run as a
+  process of its own: the random event gate puts the session's `direct` back at settlement and the worker took that
+  for another owner (`ACTION_SETTLEMENT_DEFERRED`, no RESULT line; the lockstep bench has no gate swap). With the
+  swap allowed after cleanup began: `LOGOUT logged-out`, `RESULT ok ticks=205 made=28`. Raw runs:
+  `.practice/dhide/level-run.ts` (`a`), `.practice/dhide/spin-run.ts` (`a`-`h`).
+- **Claim.** Bronze arrows kill as well as iron from the camp, and two hunters at once use about 90 arrows a kill.
+  **Conditions.** Practice, two accounts with Ranged 99 on the camp tile at once, each a whole trip from the Varrock
+  west bank with a magic shortbow, 600 arrows and `KILLS=9`: on iron, `RESULT ok black-dragon-trip kills=6 hides=6
+  bones=6 ammoUsed=600 hpMin=80 banked=true ticks=3844`; on bronze, `kills=7 hides=7 bones=7 ammoUsed=600 hpMin=56
+  banked=true ticks=4494`. Both ended on their arrows. The bronze account's lost hitpoints are the spiders' poison
+  from the way in (`DRAGON_CAMP hit` 2 to 3 every 30 ticks on the tile, `pray=0`), and the camp eats at 60. Raw
+  runs: `.practice/blackdragon/arrow-run.ts` (`ir`, `bz`). One run each: not a rate.
+- **Gap.** One live trip with loot, brought home by a second run (`LEAVE=1`); no live trip has banked its own loot,
+  and neither the supply run nor the armour run has a live run. A player of another fleet on the tile, or another
+  player's kill, is not run.
+  Lowe's shelves give back 4 iron and 6 bronze arrows a minute at 0.6 s a tick, under what two hunters fire
+  (about 1,200 arrows in 45 minutes, from the trips above); the other arrow shelves (Hickton's, Dargaud's) are not
+  in the run.
 
 ## Ranged on the troopers
 
@@ -458,6 +607,59 @@ Hitpoints 10 (`fleet/snapshots/` on `fleet-data`).
 - **Evidence.** `.practice/starter/` in the Claude cloud container that ran them.
 - **Gap.** Practice only.
 
+## Magic by a curse over the fence
+
+Nine army accounts hold Magic 1 or 21 and no fire rune (`fleet/snapshots/claude-cloud.json` on `fleet-data`); five of
+them hold no nature rune either. The alchemy band needs fire for every cast, and the Magic Guild in Yanille, which sells
+fire runes, a staff of fire and nature runes, asks Magic 66.
+
+- **Claim.** A stat-lowering spell gives its experience on every cast, hit or miss, and does no damage.
+  **Conditions.** `player_magic.rs2` `pvm_default_spell`: the runes go and the experience comes (`pvm_spell_cast`)
+  before the hit roll. Curse (Magic 19) costs 1 body, 2 water and 3 earth runes for 725 experience at xpRate 25; Weaken
+  (11) and Confuse (3) cost 1 body, 3 water and 2 earth for 525 and 325; Wind Strike (1) 1 mind and 1 air for 137.
+  On this server's curve Magic 66 is 100,775 experience: 135 curses from Magic 21, 144 casts from Magic 1 (2 strikes,
+  then Confuse, Weaken and Curse), at most 142 body, 291 water and 420 earth runes.
+- **Claim.** A cast that hits closes the target to the same spell until the stat grows back, one level every 100
+  ticks. **Conditions.** `pvm_debuff_allowed` refuses a cast on a monster whose stat is under its base ("Your foe's
+  defence has already been weakened."), with no rune taken; a monster regrows one level every `regenrate` ticks
+  (engine `NpcType`, default 100). A cow's magic defence roll is 430 (level 1, bonus -21), so with no armour 9 casts
+  in 10 hit at Magic 21. Practice, 40 curses on one cow with no armour: 12 cast, 28 refused, 282 ticks.
+- **Claim.** From the tile south of the Ardougne cow field's fence a cast reaches the cows and no cow reaches the
+  caster. **Conditions.** 2664,3339, 47 tiles from the north bank. The field holds ten cows (`maps/m41_52.jm2`); a
+  cow's footprint comes no nearer than two tiles to the tile (`scripts/splash-train.test.ts` recomputes it with the
+  engine's step rule). The run casts at the nearest cow in reach and in sight that it has not cast at or been refused
+  on for 25 ticks, and waits when there is none. Practice, no armour, hitpoints 99 of 99 in every run:
+
+  | Run | Accounts | Magic | Casts | Refused | Ticks | Ticks per cast |
+  |---|---|---|---|---|---|---|
+  | `j` | 1 | 21 -> 66 | 135 | 218 | 2,085 | 15.4 |
+  | `i` | 2 at once | 21 -> 66 | 135 | 453 | 4,011 | 29.7 |
+  | `h` | 2 at once | 1 -> 65 (tick cap 4,000) | 138 | 458 | 4,043 | 29.3 |
+
+  The ticks are the whole job: the bank, the walk both ways and the casts. Two accounts at once make the same casts
+  per tick as one: the cows' regrowth is the limit, about one cast in ten ticks for the field.
+- **Evidence.** `.practice/splash/run.ts` (`h`, `i`, `j`), `.practice/splash/probe2.ts` (the fence tile, ranges 5 to
+  9), `.practice/splash/probe.ts` (a cow with no armour) in the Claude cloud container that ran them.
+- **Claim.** From Magic 66 the Magic Guild's shelf is the whole kit of the alchemy band, and the band casts on air
+  runes. **Conditions.** `magic_guild.inv`, `runes.obj`, `staves.obj`: a staff of fire (2 in stock, base 1,500
+  coins), nature runes (1,000, base 20, one back every 300 ticks), air runes (3,000, base 4); alchemy refuses only
+  coins and a few quest items (`alchemy.rs2`). `army-staff-guild` buys the staff, 500 fire runes, nature runes up to
+  600 and air runes up to 600; `army-alch-air-magic-99` casts with `ALCH_ITEM=airrune`. Practice from the Ardougne
+  north bank, Magic 66, 100,000 coins and no rune of the band: the trip's four steps ended ok in 327, 226, 411 and 240
+  ticks (1 staff for 1,500 coins, 500 fire runes for 6,714, 585 nature runes for 44,950, the step's budget, 600 air
+  runes for 9,117), then `RESULT ok alch level=99 gained=33 xp=898625 strike=0 low=0 high=553 stop=target
+  ticks=3809`. **Evidence.** `.practice/guild/run.ts` (`a`).
+- **Claim.** A live run stops when no cow takes a cast, and that ends its batch, not the band. **Conditions.** Live
+  (claude-cloud, two accounts at the fence): Magic 21 to 58 and 21 to 36, then each `RESULT fail ... stop=no cast in
+  300 ticks`. A run that gained a level and stopped so, or out of runes or ticks, ends ok (`splashBatchDone`), and its
+  RESULT carries `cows= reach= players= said=` from the stop. Why no cow took a cast there is not read yet.
+- **Gap.** Practice only for a full 21 to 66, one run per condition. More than two accounts at once is not measured. The guild's nature
+  shelf holds 1,000 and a trip takes 585, so it serves two accounts in a row at most; five army accounts hold no
+  nature rune. With a platebody,
+  platelegs, a full helm and a kiteshield of any metal the magic attack bonus is -65 and no cast hits (5 runs, 152
+  casts, none refused, about 5 ticks a cast inside the field); the army owns none of those pieces, and the Grand
+  Exchange lists one platebody.
+
 ## Magic and Prayer from the army's home bank
 
 The tribrid target also needs Magic and Prayer at 99. The claude-cloud army holds Magic 48-62 and Prayer 47-76.
@@ -498,6 +700,14 @@ TrouserSnake and UnderMyKilt hold about 15,000 feathers and 1,500-1,700 bones ea
   leg from where it stopped while it gets closer. The ferry fallback now starts in Varrock too: Draynor, Port Sarim,
   Karamja, Ardougne. Practice from Varrock West with 200 coins in the pack: north bank reached and Magic 50 -> 52 in
   820 ticks. The ferries need 60 coins in the pack.
+- **A walk that starts on a ferry's deck crosses the gangplank first.** Each ferry lands on its ship's deck, level 1
+  (Brimhaven 2775,3234; Port Sarim 3032,3217; Ardougne 2683,3268; Musa Point 2956,3143; `knowledge/npc-travel.json`
+  `deck`), and the walk crosses the gangplank next. A session cut between the two starts its next walk on the deck,
+  and the planner has no route from there. Live (claude-cloud): Kiltlifter stood on the Brimhaven deck until it was
+  moved by hand to 2772,3234. Practice, a bot placed on the Brimhaven deck: `no route to 2772,3225,0` at tick 0.
+  `goTo` (`packages/core/src/walk.ts` `leaveDeck`) takes the gangplank when the account stands on level 1 within 3
+  tiles of one: from each of the four decks `WALK_DECK ... crossed ground at=...` and the walk arrived (4, 56, 54 and
+  18 ticks to targets near each dock). Raw runs: `.practice/dhide/deck-probe.ts`. Gap: not run live.
 - **Between Ardougne and the east, both ways.** The route planner takes the two ferries itself when the pack holds the
   60-coin fare (eastbound Ardougne -> Brimhaven, then Musa Point -> Port Sarim; 7 legs). With no coins it returns "no
   route" (live, every Grand Exchange kit buy from Ardougne: `no route to 3185,3436,0`) or a route up the Ardougne
