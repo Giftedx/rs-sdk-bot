@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794382996198-oreelse-fingersmith",
+ "account": "Fingersmith",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "58733f61-2342-4019-8e43-d3aadf76f3d8",
+ "count": 0,
+ "ok": false,
+ "at": 1794383000603,
+ "detail": "trade claimed"
+}

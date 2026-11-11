@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794383000794-oreelse-pocketpool",
+ "account": "PocketPool",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "79d8fddb-f6f8-41db-a7c9-853d2736bb5d",
+ "count": 0,
+ "ok": false,
+ "at": 1794383006487,
+ "detail": "trade claimed"
+}
