@@ -445,3 +445,16 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     kit passes the same case (`extra:hunt-trip-staff`, 24 s). `PK_KIT=snare` selects the kit and its trip for
     `scripts/pk-hunt.ts`. Gap: the target stands and has no food, so the case proves the trip and not the fight;
     the live hunter keeps the staff trip until a side's bank holds the snare runes.
+27. **An early freeze does not yet separate from the freeze on a target that runs.** The hunter in the snare kit against
+    a target that leaves by glory at 60 health from Wilderness level 34 (`extra:spar-escape-tribrid-snare-x8`): with
+    the freeze only when the target runs, 11 kills in 32 spars (seeds 1 to 4); with the freeze from 70% health
+    (`freeze: 'low'`, `freezeBelow: 0.7`), 15 in 32; from 80%, 11 in 24; from 80% with the armour off for each cast
+    (`castArmour: 'strip'`), 8 in 16. The bow special as a burst lost: `hunter-burst` 1 in 8, and the burst from 70%
+    with the dagger special kept for 20%, 2 in 8. The hunter casts 6 or 7 freezes in a fight, and each takes a turn
+    of 5 ticks. The hunter keeps the freeze on a target that runs. Gap: 46% against 34% needs about 100 spars for
+    each rule to settle.
+28. **Adamant arrows cost a quarter of the kit less and lose little.** 300 rune arrows are 120,000 of the snare kit's
+    392,715 coins; 300 adamant arrows are 24,000. `tribrid-snare-addy` on the champion profile has 27 kills, 8
+    deaths and a draw in 36 spars against the melee build, the hybrid and the ranger; the snare kit with rune arrows
+    has 30 and 6 (`extra:spar-rivals-tribrid-snare-addy-x12`, `extra:spar-rivals-tribrid-snare-x12`, seeds 1, 2 and
+    3). Gap: 36 spars each do not separate 75% from 83%.
