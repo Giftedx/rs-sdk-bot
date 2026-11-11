@@ -319,8 +319,17 @@ Ranged it adds is not needed at that point.
   start at a far bank with the kit packed: from the Ardougne north bank the shared planner took a Camelot teleport
   with the trip's law rune (and air from the bank), and the run made its three kills and could not leave. Raw runs:
   `.practice/blackdragon/trip-run.ts` (`a`-`d`).
-- **Gap.** No live run. The camp was alone on the server: another player's kill, or a player on the tile, is not
-  run. Kills with arrows other than mithril are not measured (best hits by arrow: iron 12, mithril 14, rune 19).
+- **Claim.** The trip needs prayer points and gets them itself. **Conditions.** The camp fetches a pile only under
+  Protect from Melee when a dragon stands within two tiles of it, and takes its arrows back from the pile. Live
+  (claude-cloud, TrouserSnake, straight after Lost City, 215 arrows): `RESULT ok black-dragon-trip kills=1 hides=0
+  bones=0 ammoUsed=176 hpMin=84 banked=true ticks=937`, `DRAGON_CAMP pile left at 2835,9822: no prayer and a dragon
+  beside it`, no `stray` line. With fewer than 50 points (`BLACK_PRAYER`, about what nine kills use) the trip prays
+  at the Altar of Guthix in Taverley (410 at 2925,3483) between the bank and the ladder. Practice from 0 points:
+  prayed at tick 93, down the ladder at 146 (109 with no altar visit), `RESULT ok black-dragon-trip kills=3 hides=3
+  bones=3 ammoUsed=185 hpMin=99 banked=true ticks=1323`. Raw run: `.practice/blackdragon/trip-run.ts` (`pray`).
+- **Gap.** One live run, with no loot. The camp was alone on the server: another player's kill, or a player on the
+  tile, is not run. Kills with arrows other than mithril are not measured (best hits by arrow: iron 12, mithril 14,
+  rune 19).
 
 ## Ranged on the troopers
 
