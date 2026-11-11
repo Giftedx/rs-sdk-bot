@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794379310615,
+ "at": 1794379345139,
  "jobs": [
   {
    "account": "Fatstack",
@@ -57,26 +57,6 @@
    "resources": []
   },
   {
-   "account": "Fingerblastr",
-   "script": "scripts/aio.ts",
-   "args": [
-    "quester",
-    "chain",
-    "drunkmonk,murder,zanaris"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
-   "role": "quest",
-   "template": "army-quest-lostcity",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "quest:lostcity"
-   ]
-  },
-  {
    "account": "Knightstick",
    "script": "scripts/chain.ts",
    "args": [
@@ -117,6 +97,26 @@
    "resources": []
   },
   {
+   "account": "Fingerblastr",
+   "script": "scripts/aio.ts",
+   "args": [
+    "quester",
+    "chain",
+    "drunkmonk,murder,zanaris"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
+   "role": "quest",
+   "template": "army-quest-lostcity",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "quest:lostcity"
+   ]
+  },
+  {
    "account": "Dipstick",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -143,20 +143,28 @@
   },
   {
    "account": "KnightRider",
-   "script": "scripts/alch-train.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99",
-    "5000"
+    "1500",
+    "trooper"
    ],
-   "env": {},
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-alch-magic-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   }
  ]
 }
