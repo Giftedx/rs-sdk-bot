@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794374729443-oreelse-trousersnake",
+ "account": "TrouserSnake",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune kiteshield",
+ "requested": 1,
+ "claim": "d62caac0-ca55-4e57-8d37-b15eb1ec3986",
+ "count": 0,
+ "ok": false,
+ "at": 1794375490917,
+ "detail": "trade claimed"
+}
