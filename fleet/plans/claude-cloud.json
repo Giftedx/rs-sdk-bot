@@ -1,7 +1,146 @@
 {
  "side": "claude-cloud",
- "at": 1794363991789,
+ "at": 1794364055191,
  "jobs": [
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=1704 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=thefullmonty-kit1-532-0to1704 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1704 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-big-99",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Deeppockets",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts dargaud 800 ITEMS=willow.shortbow STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=4000 COIN_RESERVE=500 MAX_SPEND=3000",
+    "scripts/shop-buyer.ts dargaud 800 ITEMS=mithril.arrow|steel.arrow|iron.arrow|bronze.arrow STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=51000 COIN_RESERVE=500 MAX_SPEND=50000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy a willow shortbow and arrows up to mithril at the Ranging Guild for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-guild",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:dargaud"
+   ]
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "PocketPool",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Dipstick",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
   {
    "account": "Fatstack",
    "script": "scripts/chain.ts",
@@ -141,84 +280,6 @@
    "resources": [
     "shop:sarim"
    ]
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-8ba0e474-b4c7-431e-8598-592d221a4e63"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-quickhandjob-20261111t021910z [task-8ba0e474-b4c7-431e-8598-592d221a4e63]",
-   "role": "combat"
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-a9ff5554-4ba7-46df-bad4-405e087696b0"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-thefullmonty-20261111t021910z [task-a9ff5554-4ba7-46df-bad4-405e087696b0]",
-   "role": "supply"
-  },
-  {
-   "account": "Deeppockets",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-12870111-5d3b-42c2-a5d0-1f245bb0edda"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-deeppockets-20261111t021910z [task-12870111-5d3b-42c2-a5d0-1f245bb0edda]",
-   "role": "supply"
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-e2daf30d-3f3b-4d2e-8a49-b1be2e3206de"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-kiltlifter-20261111t021910z [task-e2daf30d-3f3b-4d2e-8a49-b1be2e3206de]",
-   "role": "combat"
-  },
-  {
-   "account": "PocketPool",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-870acac7-55f4-45bb-9e87-9711b484f077"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-pocketpool-20261111t021910z [task-870acac7-55f4-45bb-9e87-9711b484f077]",
-   "role": "combat"
-  },
-  {
-   "account": "Dipstick",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-d8cbbf35-0d19-4700-8f9c-8b6a6e84accf"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-dipstick-20261111t021910z [task-d8cbbf35-0d19-4700-8f9c-8b6a6e84accf]",
-   "role": "combat"
   }
  ]
 }
