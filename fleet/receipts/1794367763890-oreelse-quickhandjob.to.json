@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1794367763890-oreelse-quickhandjob",
  "account": "Quickhandjob",
  "partner": "OreElse",
@@ -12,6 +12,6 @@
  "claim": "55d15381-a4da-4457-87cf-7526deb4304a",
  "count": 0,
  "ok": false,
- "at": 1794367769429,
- "detail": "trade claimed"
+ "at": 1794368018625,
+ "detail": "session ended: disconnected"
 }
