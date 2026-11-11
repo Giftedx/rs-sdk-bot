@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794387720302,
+ "at": 1794387800385,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -223,6 +223,19 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-8095e0ea-1024-42b0-ab19-23cd2cb9d1ab"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-sporrandip-20261111t085914z [task-8095e0ea-1024-42b0-ab19-23cd2cb9d1ab]",
+   "role": "helper"
   }
  ]
 }
