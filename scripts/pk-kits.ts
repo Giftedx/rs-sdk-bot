@@ -163,7 +163,8 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
         carried: ['dragon_dagger_p', ...BOOSTS, ...PRAYER_POTS], food: 21, switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p'] }, options: { rotation: ['ranged', 'melee'] },
         skills: trained({ Attack: 60, Strength: 99, Ranged: 99, Prayer: 43 }) },
     // The tribrid's kit at a lower Defence: 40 for rune armour, 45 for the Berserker helm (The Fremennik Trials
-    // done), 60 for the dragon helm, legs and square shield (Legends' Quest done).
+    // done), 60 for the dragon helm, legs and square shield (Legends' Quest done). The Fremennik Trials give Defence
+    // 60 from level 1 at this server's XP rate, so `zerker` is a reference for the comparison and has no quest route.
     'rune-pure': { ...DEF_TRIBRID, skills: trained({ Attack: 60, Strength: 99, Defence: 40, Ranged: 99, Magic: 99, Prayer: 43 }) },
     zerker: { ...DEF_TRIBRID, worn: { ...DEF_TRIBRID.worn, hat: 'viking_helmet_crush' },
         skills: trained({ Attack: 60, Strength: 99, Defence: 45, Ranged: 99, Magic: 99, Prayer: 43 }), varps: { 347: 10 } },

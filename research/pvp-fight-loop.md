@@ -282,6 +282,70 @@ Bench cases: `extra:spar-pure-iban-vs-skiller-x4`, `extra:spar-pure-bolt-vs-skil
 `extra:spar-pure-rock-vs-skiller-x4`. Gaps: the Hitpoints of real skillers; Underground Pass at Hitpoints 10 with no
 Hitpoints XP; the Mage Arena fight for the god spell gives Hitpoints XP; the tile east of (3055, 3872) is not checked.
 
+## Account builds
+
+The trained builds of `scripts/pk-kits.ts`. Sources for the list of builds: the Old School RuneScape Wiki pages
+"Account builds" and "One-defence pure" and theoatrix.net "Types of pures in OSRS". Source -> local consumer -> adapt
+-> check: those pages -> `KITS` -> each build keeps its levels and takes the gear that this content has ->
+`scripts/pk-kits.test.ts`, `bun scripts/pk-sim.ts --league`, the bench cases `extra:spar-builds-pure-1` to `-4` and
+`extra:spar-builds-def-1` to `-4`.
+
+- **What this content has.** The Fremennik helms (Berserker `viking_helmet_crush`, Archer, Warrior, Farseer: Defence
+  45 and The Fremennik Trials), the dragon medium helm, chainbody and platelegs (Defence 60), the dragon square
+  shield (Legends' Quest), the granite shield (Defence 50 and Strength 50), the dragon battleaxe (Heroes' Quest), the
+  dragon halberd (Regicide, Attack 60, strength bonus 89, one hit each 7 ticks), the rune two-handed sword (Attack
+  40, strength bonus 70, 7 ticks) and black dragonhide (Ranged 70; the body needs Defence 40) (`levelrequire/scripts/tier*.rs2`).
+- **What it lacks.** No obsidian maul, granite maul, rune defender, Barrows armour, Void armour, Initiate armour,
+  metal gloves, rune crossbow, mystic robes, Ancient Magicks, Vengeance, Smite or Piety. So the obsidian mauler, the
+  Initiate pure, the Void pure, the 13 Defence pure and the Piety build have no kit.
+- **Free levels.** With Attack 60 and Strength 99 the melee term of the combat level is 159. Ranged 99 and Magic 99
+  give 148, so they add no combat level; they add Hitpoints.
+- **Prayer.** Prayer 43 opens the three protect prayers and the 15% prayers for 5 combat levels.
+
+| Kit | Levels besides 1 | Combat | Hitpoints | Fights with | Shop cost |
+|---|---|---|---|---|---|
+| `pure-dds` | Attack 60, Strength 99 | 72 | 84 | dragon dagger, super attack and strength | 34,044 |
+| `pure-dds-msb` | Attack 60, Strength 99, Ranged 99 | 75 | 93 | magic shortbow, dragon dagger | 181,932 |
+| `pure-r2h` | Attack 40, Strength 99, Ranged 99 | 71 | 93 | magic shortbow, rune two-handed sword | 221,932 |
+| `pure-hally` | Attack 60, Strength 99, Ranged 99 | 75 | 93 | magic shortbow, dragon halberd | 407,932 |
+| `pure-ranger` | Ranged 99 | 69 | 83 | magic shortbow | 238,332 |
+| `pure-mage` | Magic 99 | 69 | 83 | Fire Wave, Entangle | 19,613 |
+| `pure-tribrid` | Attack 60, Strength 99, Ranged 99, Magic 99 | 76 | 99 | Fire Wave, magic shortbow, dragon dagger | 192,232 |
+| `pure-pray` | `pure-dds-msb` with Prayer 43 | 80 | 93 | magic shortbow, dragon dagger | 181,712 |
+| `rune-pure` | Attack 60, Strength 99, Defence 40, Ranged 99, Magic 99, Prayer 43 | 91 | 99 | the tribrid kit in rune | 440,872 |
+| `zerker` | the same with Defence 45 | 92 | 99 | the same with the Berserker helm | 465,672 |
+| `dragon` | the same with Defence 60 | 96 | 99 | the same with dragon helm, legs and square shield | 1,157,272 |
+| `range-tank` | Defence 60, Ranged 99, Magic 99, Prayer 43 | 91 | 93 | magic shortbow and Fire Wave in black dragonhide | 281,692 |
+| `mage-tank` | Defence 60, Magic 99, Prayer 43 | 89 | 84 | Fire Wave in splitbark | 136,112 |
+
+Simulator ranking, 1,000 fights for each pair (`bun scripts/pk-sim.ts --league`; `.practice/pk-builds/sim-pure.txt`
+and `sim-def.txt` in the worktree that ran it). Mean is the mean win rate against the other kits of the list.
+
+| Defence 1 bracket | Mean | | Defence 40 to 60 bracket, with three pures and `tribrid-pots` | Mean |
+|---|---|---|---|---|
+| `pure-pray` | 0.964 | | `tribrid-pots` (combat 126, for scale) | 0.987 |
+| `pure-ranger` | 0.784 | | `dragon` | 0.724 |
+| `pure-dds-msb` | 0.716 | | `range-tank` | 0.681 |
+| `pure-dds` | 0.620 | | `zerker` | 0.519 |
+| `pure-hally` | 0.348 | | `rune-pure` | 0.454 |
+| `pure-tribrid` | 0.311 | | `pure-pray` | 0.413 |
+| `pure-r2h` | 0.232 | | `mage-tank` | 0.104 |
+| `pure-mage` | 0.002 | | `pure-tribrid` | 0.095 |
+
+- Candidates from the simulator: Prayer 43 is the largest gain at Defence 1 (`pure-pray` beats `pure-dds-msb` in 75%
+  of fights, 5 combat levels higher). Each Defence step wins: `dragon` beats `zerker` in 88% and `zerker` beats
+  `rune-pure` in 62%. `range-tank` beats `dragon` in 62% and loses to no build of its bracket by more than 54%.
+- Gap: no bench run of a trained build. The simulator has no freeze and no movement, so it gives a mage and a
+  tribrid no gain from a frozen melee opponent, and it alternates the bow and a 7-tick weapon where a player keeps
+  the slow weapon for the kill. Its ranger result is higher than the bench (finding 18).
+- Gap: Hitpoints assume trained levels. Quest XP gives no Hitpoints, so a quest route gives a lower combat level.
+- **The Berserker helm quest ends Defence 45.** The Fremennik Trials give 2,812.4 XP each in Attack, Defence,
+  Strength and Hitpoints (`quest_viking`), 70,310 at the server's rate of 25: Defence 60 from level 1. Heroes'
+  Quest gives 3,075 Defence XP: Defence 62. So an account with a Fremennik helm or a dragon battleaxe has Defence 60
+  or more, and `zerker` is a reference for the comparison, not a build with a route. Its real form is `dragon` with
+  the Berserker helm.
+- Gap: the quest route to each other build is not planned.
+
 ## Server rules the loop follows
 
 - Protect prayers cut a player's max hit by 40%, not 100% (`pvp_melee.rs2:32`, `pvp_ranged.rs2:38`, `pvp_magic.rs2:182`).
@@ -386,10 +450,10 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
 18. **The offline simulator agrees with the bench on tribrid kits, not on one-style builds.** `bun scripts/pk-sim.ts --table 1000`
     runs 16,000 fights in seconds with the server's hit, prayer, food and special rules. Against the tribrid it gives the
     potion kit, the lean kit and the hybrid a win and the mage, adamant and mithril kits a loss, as the bench does, and
-    its mirror lasts 694 ticks where the bench mirror lasts about 650. Gap: it gives the ranger 17% where the bench
-    gives it 14 of 24, and the melee build an even fight where the bench gives it 18 of 24. In the simulator the
-    tribrid deals about 100 damage for each 100 ticks to the ranger; on the bench it deals 77 (eight spars). It has no
-    movement and no freeze. A result from it is a candidate for the bench, not a measurement.
+    its mirror lasts 694 ticks where the bench mirror lasts about 650. It uses the levels of each kit, so it ranks
+    the trained builds too (`--league <kit,kit,...>`). Gap: it gives the ranger 87% where the bench gives it 14 of
+    24, and the melee build 37% with 27% of fights at the cap where the bench gives it 18 of 24. It has no movement
+    and no freeze. A result from it is a candidate for the bench, not a measurement.
 19. **An overhead that changes one tick before the opponent's attack wins the mirror.** The `snap` profile (`predictPrayer`
     with `snapPrayer`) holds the overhead for the weapon the opponent shows and changes to the predicted style one
     tick before the opponent's next attack is due. Against the base profile it has 42 kills and 6 deaths in 48 spars
