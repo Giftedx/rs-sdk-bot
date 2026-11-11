@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794440749732,
+ "at": 1794441083687,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -66,28 +66,6 @@
    "resources": [
     "shop:lowe",
     "shop:aubury"
-   ]
-  },
-  {
-   "account": "UnderMyKilt",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "sarim"
-   ],
-   "env": {
-    "ITEMS": "feather",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy feathers at Gerrant",
-   "role": "bank",
-   "template": "shop-feathers",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "shop:sarim"
    ]
   },
   {
@@ -232,6 +210,28 @@
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "sarim"
+   ],
+   "env": {
+    "ITEMS": "feather",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy feathers at Gerrant",
+   "role": "bank",
+   "template": "shop-feathers",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:sarim"
    ]
   }
  ]
