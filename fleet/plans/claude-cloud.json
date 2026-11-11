@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794373609596,
+ "at": 1794373669774,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -37,25 +37,6 @@
    "resources": []
   },
   {
-   "account": "Dipstick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=148 EXPECTED_OWNED=2 LIMIT_PRICE=200 CASH_RESERVE=1000 ORDER_KEY=dipstick-kit2-559-2to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=421 EXPECTED_OWNED=4 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=dipstick-kit2-557-4to425 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 148 Body rune, 421 Earth rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
    "account": "UnderMyKilt",
    "script": "scripts/aio.ts",
    "args": [
@@ -68,27 +49,6 @@
    "repeat": false,
    "goal": "black dragon pilot",
    "role": "hand"
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "BURY_HELD": "1",
-    "BONE_ID": "536",
-    "BONE_RESERVE": "6",
-    "CAP": "4000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying bought dragon bones",
-   "role": "combat",
-   "template": "army-bury-dragon-99",
-   "autopilot": "claude-cloud",
-   "resources": []
   },
   {
    "account": "Deeppockets",
@@ -209,6 +169,52 @@
    "resources": [
     "shop:aubury"
    ]
+  },
+  {
+   "account": "Dipstick",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Attack",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Attack to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-attack-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_ID": "536",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying bought dragon bones",
+   "role": "combat",
+   "template": "army-bury-dragon-99",
+   "autopilot": "claude-cloud",
+   "resources": []
   }
  ]
 }
