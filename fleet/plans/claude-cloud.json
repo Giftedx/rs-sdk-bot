@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794412244819,
+ "at": 1794412402641,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -91,25 +91,6 @@
    ]
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2582,3297"
-   ]
-  },
-  {
    "account": "Fingerblastr",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -136,31 +117,6 @@
   },
   {
    "account": "Kiltlifter",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "PocketPool",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
@@ -261,20 +217,28 @@
   },
   {
    "account": "KnightRider",
-   "script": "scripts/alch-train.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99",
-    "5000"
+    "1500",
+    "trooper"
    ],
-   "env": {},
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-alch-magic-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   }
  ]
 }
