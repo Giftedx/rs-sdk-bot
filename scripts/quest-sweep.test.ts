@@ -3,6 +3,16 @@ import {heckelDustNeed,groundShopNeeds,fetchHeckelDust,heckelIO,type HeckelIO} f
 import {returnToAmik,finishBlackKnight,type AmikIO} from './quest-sweep';
 import {scorpionBarcrawlNeeds} from './quest-sweep';
 import {establishBarcrawlGate} from './generated/quest-barcrawl';
+import {questScriptId} from './quest-sweep';
+import {resolve} from 'node:path';
+
+test('the Barcrawl script starts under the name the sweep gives it',()=>{
+ const file=resolve(import.meta.dir,'generated','quest-barcrawl.ts');
+ expect(questScriptId(file)).toBe('quest-barcrawl');
+ expect(questScriptId('scripts/generated/quest-barcrawl.ts')).toBe('quest-barcrawl');
+ const guard=/QUEST_SCRIPT_ID === '([^']+)'\) await main\(\)/.exec(readFileSync(file,'utf8'));
+ expect(guard?.[1]).toBe(questScriptId(file));
+});
 
 test('Scorpion stages and establishes a missing Barcrawl gate before the outpost',async()=>{
  const base=needs(presetFor('scorpion'),false,'scorpion');

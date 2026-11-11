@@ -996,6 +996,7 @@ export const fluffsExit=(castable:boolean,p?:YardPos|null):'teleport'|'fence'=>!
 // One bot at a time hands its session over through globalThis.QUEST_SESSION, until quest-lib's openQuest has taken
 // it (QUEST_SESSION_TAKEN) or 60 s pass. `fresh` imports the quest module under a unique query, so every bot in one
 // process runs the quest's top-level code again.
+export const questScriptId=(script:string)=>String(script).replace(/^.*[\\/]/,'').replace(/\.ts$/,'');
 let handoff:Promise<void>=Promise.resolve();
 export function handOver(s:Session,script:string,fresh?:string):Promise<unknown>{
  const g=globalThis as {QUEST_SESSION?:Session;QUEST_SESSION_TAKEN?:()=>void;QUEST_SCRIPT_ID?:string};
@@ -1005,7 +1006,7 @@ export function handOver(s:Session,script:string,fresh?:string):Promise<unknown>
   const timer=setTimeout(done,60_000);
   g.QUEST_SESSION=s;g.QUEST_SESSION_TAKEN=done;
   // quest-lib reads the talk plans of the quest script by this name.
-  g.QUEST_SCRIPT_ID=String(script).replace(/^.*[\\/]/,'').replace(/\.ts$/,'');
+  g.QUEST_SCRIPT_ID=questScriptId(script);
   started(import(fresh?`${script}?${fresh}`:script).finally(()=>{if(g.QUEST_SESSION_TAKEN===done)done();}));
  }));
  return run.then(p=>p);

@@ -142,4 +142,5 @@ async function main(): Promise<void> {
     } catch (e) { await q.fail(String(e)); }
 }
 
-if (import.meta.main || (globalThis as { QUEST_SCRIPT_ID?: string }).QUEST_SCRIPT_ID === 'barcrawl') await main();
+// The sweep imports this file and names it by its file name (scripts/quest-sweep.ts handOver).
+if (import.meta.main || (globalThis as { QUEST_SCRIPT_ID?: string }).QUEST_SCRIPT_ID === 'quest-barcrawl') await main();
