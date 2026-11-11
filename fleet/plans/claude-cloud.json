@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794399198307,
+ "at": 1794399289518,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -12,24 +12,6 @@
    "repeat": false,
    "goal": "hand: Lowe's arrows for the dragon hunt",
    "role": "hand"
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fingersmith-kit23-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on bronze arrows",
-   "role": "supply",
-   "template": "kit-buy:army-hunt-black-dragons-bronze",
-   "autopilot": "claude-cloud",
-   "resources": []
   },
   {
    "account": "Fingerblastr",
@@ -164,7 +146,7 @@
    ]
   },
   {
-   "account": "Dipstick",
+   "account": "Fingersmith",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
@@ -189,7 +171,7 @@
    ]
   },
   {
-   "account": "KnightRider",
+   "account": "Dipstick",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
