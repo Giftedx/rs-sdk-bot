@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794424842699,
+ "at": 1794425442880,
  "jobs": [
   {
    "account": "Abracadickra",
@@ -503,21 +503,18 @@
   },
   {
    "account": "Bigchopper",
-   "script": "scripts/chain.ts",
+   "script": "scripts/quest-sweep.ts",
    "args": [
-    "scripts/walk-to.ts 2809 3441",
-    "scripts/firemaking-order.ts TARGET_LEVEL=15 LOG=normal MAX_LOGS=13 CAP=4000 TOOL_BUDGET=50",
-    "scripts/firemaking-order.ts TARGET_LEVEL=99 LOG=oak MAX_LOGS=9616 CAP=400000 TOOL_BUDGET=50"
+    "scorpion"
    ],
    "env": {
-    "ROUNDS": "1"
+    "CAP": "6000",
+    "COORDINATOR_RUN_ID": "task-171afee7-264a-4b31-bf71-ea099cf1d5b3"
    },
    "enabled": false,
-   "standing": true,
    "repeat": false,
-   "goal": "Firemaking 15 then 99 and rank XP from 9616 banked oak logs at Catherby",
-   "role": "firemaking",
-   "autopilot": "local"
+   "goal": "run-scorpion-bigchopper-quest-sweep-r6 [task-171afee7-264a-4b31-bf71-ea099cf1d5b3]",
+   "role": "firemaking"
   }
  ]
 }
