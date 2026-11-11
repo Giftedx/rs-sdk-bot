@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794378827245,
+ "at": 1794379072386,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -174,6 +174,35 @@
   },
   {
    "account": "Mightyrod",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "ardy",
+    "400"
+   ],
+   "env": {
+    "ITEMS": "bronze arrow",
+    "STOCK_TARGET": "500",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "5000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "4000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy bronze arrows at Aemad in East Ardougne for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-ardy",
+   "autopilot": "local",
+   "resources": [
+    "shop:ardy"
+   ]
+  },
+  {
+   "account": "mmsmk1232",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/shop-buyer.ts dargaud 800 ITEMS=willow.shortbow STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=4000 COIN_RESERVE=500 MAX_SPEND=3000",
@@ -191,31 +220,6 @@
    "autopilot": "local",
    "resources": [
     "shop:dargaud"
-   ]
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
-   "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
    ]
   },
   {
