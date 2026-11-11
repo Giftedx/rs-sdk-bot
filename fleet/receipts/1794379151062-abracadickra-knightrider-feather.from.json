@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794379151062-abracadickra-knightrider-feather",
+ "account": "Abracadickra",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 50,
+ "claim": "fa5f05c8-3d81-489a-9e1d-90d3024cc509",
+ "count": 0,
+ "ok": false,
+ "at": 1794379158289,
+ "detail": "trade claimed"
+}
