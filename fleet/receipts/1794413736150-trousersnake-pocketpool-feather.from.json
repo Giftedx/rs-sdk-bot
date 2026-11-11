@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794413736150-trousersnake-pocketpool-feather",
+ "account": "TrouserSnake",
+ "partner": "PocketPool",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 50,
+ "claim": "e77cf80d-4188-4ebd-8c03-77a925d490e1",
+ "count": 0,
+ "ok": false,
+ "at": 1794413748575,
+ "detail": "trade claimed"
+}
