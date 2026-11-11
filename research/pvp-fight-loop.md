@@ -46,9 +46,13 @@ any other case.
     accounts took 38 s to log in. The spar counts the login wait as a tick wait and logs the accounts in together.
   - The status file of each account, written every 5 ticks: 10% of the run. A lockstep world writes it every 100.
   - The reach flood fill behind the `reachable` flag of the state: 9%. The spar turns it off on its clients.
-- Gap: each client unpacks the same game archives at login (`bunzip2`, a third of the 8-pair run that is left). One
-  unpack for all clients of a process needs a change in `vendor/rs-sdk` (`webclient/src/io/JagFile.ts`), and so a new
-  `patches/rs-sdk-working.patch` on every checkout; it also ends every kept bench result.
+- A CPU profile gives each function its share of the CPU time, not of the run. The worker of an 8-pair run used
+  about 2.6 s of CPU in 32 s; the rest of the run is the wait between the engine and its 16 clients (the engine
+  waited 40-100 ms for each tick; a client held a tick 9 ms at the median and 24 ms at the 90th percentile).
+- One unpack of the game archives for all clients of a process (`bunzip2` in `webclient/src/io/JagFile.ts`, a third
+  of the worker's CPU time) gave no gain outside the noise: 34 s against 35-36 s for the batch. It is not in the
+  vendor patch.
+- Gap: where the 40-100 ms of each tick go between the engine and its clients is not measured.
 
 Spar findings. Conditions: lockstep practice engine, cap 900 ticks, both sides with Lost City and Dragon Slayer done
 unless a finding says otherwise; a seed repeats its fight. Evidence: `.practice/pk-spar/*.json` and the traces
