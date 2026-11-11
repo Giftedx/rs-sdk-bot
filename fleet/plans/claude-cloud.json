@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794385431206,
+ "at": 1794385555764,
  "jobs": [
   {
    "account": "Fingersmith",
@@ -199,20 +199,23 @@
   },
   {
    "account": "KnightRider",
-   "script": "scripts/alch-train.ts",
+   "script": "scripts/aio.ts",
    "args": [
-    "99",
-    "5000"
+    "quester",
+    "chain",
+    "drunkmonk,murder,zanaris"
    ],
    "env": {},
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "combat",
-   "template": "army-alch-magic-99",
+   "repeat": false,
+   "goal": "complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
+   "role": "quest",
+   "template": "army-quest-lostcity",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "quest:lostcity"
+   ]
   }
  ]
 }
