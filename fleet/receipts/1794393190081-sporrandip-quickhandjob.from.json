@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794393190081-sporrandip-quickhandjob",
+ "account": "SporranDip",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 80837,
+ "claim": "61603ac4-f516-45e1-b798-844b607dba17",
+ "count": 0,
+ "ok": false,
+ "at": 1794393199819,
+ "detail": "trade claimed"
+}
