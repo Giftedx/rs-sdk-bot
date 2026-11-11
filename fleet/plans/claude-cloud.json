@@ -1,29 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794435990249,
+ "at": 1794436317094,
  "jobs": [
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "catherby"
-   ],
-   "env": {
-    "ITEMS": "rune arrowtips|adamant arrowtips",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy rune and adamant arrowtips at Catherby",
-   "role": "bank",
-   "template": "shop-arrowtips",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "shop:catherby"
-   ]
-  },
   {
    "account": "TrouserSnake",
    "script": "scripts/shop-buyer.ts",
@@ -240,6 +218,19 @@
    "repeat": false,
    "goal": "claude-cloud-recover-knightstick-20261111t221646z [task-39e60598-58bc-4925-b73e-26855b7b985c]",
    "role": "helper"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-30355c7d-3243-4b53-ba23-73fa1bfef704"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-quickhandjob-20261111t222653z [task-30355c7d-3243-4b53-ba23-73fa1bfef704]",
+   "role": "bank"
   }
  ]
 }
