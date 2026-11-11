@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794364119181,
+ "at": 1794364358708,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -258,22 +258,27 @@
   },
   {
    "account": "KnightRider",
-   "script": "scripts/chain.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "scripts/shop-buyer.ts sarim 3000 ITEMS=feather STOCK_TARGET=700 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy feathers at Gerrant's in Port Sarim for the alchemy band",
-   "role": "supply",
-   "template": "army-feathers-sarim",
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
    "autopilot": "claude-cloud",
    "resources": [
-    "shop:sarim"
+    "trooper:battlefield"
    ]
   }
  ]
