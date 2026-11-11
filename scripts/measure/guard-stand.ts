@@ -2,8 +2,9 @@
 // ticks. Options make one condition for the guard each:
 //   PRAYERS=9,10,11   the script turns these prayers on at the start, so the guard only keeps them free
 //   FISH=fly:8        the script fishes with this method of scripts/microbot-b-fishing.ts until it has this many fish
+//   CHOP=oak:6        the script chops this tree of TREES until it has this many logs
 //   RIVAL=<account>   a second account logs in and attacks this one (both must stand in the Wilderness)
-// Usage: bun scripts/measure/guard-stand.ts <bot> <ticks> [PRAYERS=..] [FISH=method:count] [RIVAL=account]
+// Usage: bun scripts/measure/guard-stand.ts <bot> <ticks> [PRAYERS=..] [FISH=method:count] [CHOP=tree:count] [RIVAL=account]
 import { finish, openBot } from '../../packages/core/src/bot';
 import type { Session } from '../../packages/core/src/inprocess';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
@@ -11,7 +12,9 @@ import { FISH_PROFILES, pickFishSpot, type FishMethod } from '../microbot-b-fish
 
 const [name, ticks = '300', ...rest] = process.argv.slice(2);
 const option = (key: string) => rest.find(a => a.startsWith(key + '='))?.slice(key.length + 1);
-if (!name || !Number.isSafeInteger(Number(ticks)) || Number(ticks) < 1) throw new Error('usage: guard-stand.ts <bot> <ticks> [PRAYERS=..] [FISH=method:count] [RIVAL=account]');
+if (!name || !Number.isSafeInteger(Number(ticks)) || Number(ticks) < 1) throw new Error('usage: guard-stand.ts <bot> <ticks> [PRAYERS=..] [FISH=method:count] [CHOP=tree:count] [RIVAL=account]');
+// Loc and log ids (content pack/loc.pack, pack/obj.pack).
+const TREES: Record<string, { locs: number[]; log: number }> = { tree: { locs: [1276, 1278], log: 1511 }, oak: { locs: [1281], log: 1521 } };
 const cap = Number(ticks);
 const s = await openBot(name);
 const sessions: Session[] = [s];
@@ -22,8 +25,11 @@ const before = hitpoints(), pointsBefore = points(), start = s.tick();
 const left = () => cap - (s.tick() - start);
 // The prayers the state showed, with the number of ticks for each set.
 const seen = new Map<string, number>();
-const watch = s.onTick(() => { const key = (state()?.prayers?.activePrayers ?? []).flatMap((on: boolean, i: number) => (on ? [i] : [])).join('+') || 'none'; seen.set(key, (seen.get(key) ?? 0) + 1); });
+// The ticks on which an NPC had this player as its target.
+let targeted = 0;
+const watch = s.onTick(() => { const slot = (s.client as any)?.selfSlot; if ((state()?.nearbyNpcs ?? []).some(n => n.targetIndex === 32768 + slot)) targeted++; const key = (state()?.prayers?.activePrayers ?? []).flatMap((on: boolean, i: number) => (on ? [i] : [])).join('+') || 'none'; seen.set(key, (seen.get(key) ?? 0) + 1); });
 const parts: string[] = [];
+if (process.env.GUARD_STAND_DEBUG) console.log('NPCS', (state()?.nearbyNpcs ?? []).map(n => `${n.name}@${n.x},${n.z} d=${n.distance} lvl=${n.combatLevel}`).join(' | '), 'COMBAT', state()?.player?.combatLevel);
 
 for (const prayer of (option('PRAYERS') ?? '').split(',').filter(Boolean).map(Number)) {
     await s.sdk.sendTogglePrayer(prayer);
@@ -41,6 +47,27 @@ if (rivalName) {
         await waitTicks(s, Math.min(8, left()));
     }
     parts.push(`rivalAttacks=${attacks}`);
+}
+
+const chop = option('CHOP');
+if (chop) {
+    const [kind = '', amount = '5'] = chop.split(':');
+    const tree = TREES[kind];
+    if (!tree) throw new Error(`unknown tree ${kind}`);
+    const count = () => (state()?.inventory ?? []).filter(i => i.id === tree.log).reduce((n, i) => n + i.count, 0);
+    const first = count();
+    let clicks = 0;
+    while (left() > 0 && count() - first < Number(amount)) {
+        const loc = (state()?.nearbyLocs ?? []).filter(l => tree.locs.includes(l.id) && l.optionsWithIndex.some(o => /^chop/i.test(o.text))).sort((a, b) => a.distance - b.distance)[0];
+        if (!loc) { await waitTicks(s, 1); continue; }
+        const had = count();
+        await s.sdk.sendInteractLoc(loc.x, loc.z, loc.id, loc.optionsWithIndex.find(o => /^chop/i.test(o.text))!.opIndex);
+        clicks++;
+        // One click chops until the tree falls; the wait ends at a log so the loop can count it.
+        await waitUntil(s, () => count() > had || left() <= 0, { timeoutTicks: 40 });
+    }
+    parts.push(`logs=${count() - first} clicks=${clicks} chopTicks=${s.tick() - start}`);
+    if (count() - first < Number(amount)) parts.push('short=1');
 }
 
 const fish = option('FISH');
@@ -61,13 +88,13 @@ if (fish) {
         await waitUntil(s, () => count() > had || left() <= 0, { timeoutTicks: 40 });
     }
     parts.push(`caught=${count() - first} clicks=${clicks} fishTicks=${s.tick() - start}`);
-    if (count() - first < Number(amount)) parts.push('fishShort=1');
-} else if (!rivalName) {
+    if (count() - first < Number(amount)) parts.push('short=1');
+} else if (!rivalName && !chop) {
     await waitTicks(s, cap);
 }
 
 watch();
-const after = hitpoints(), alive = !state()?.player?.isDead, short = parts.includes('fishShort=1');
+const after = hitpoints(), alive = !state()?.player?.isDead, short = parts.includes('short=1');
 const sets = [...seen].sort((a, b) => b[1] - a[1]).map(([key, n]) => `${key}:${n}`).join(',');
-console.log(`RESULT ${alive && !short ? 'ok' : 'fail'} ticks=${s.tick() - start} hp=${before}->${after} points=${pointsBefore}->${points()} prayers=${sets} ${parts.join(' ')}`);
+console.log(`RESULT ${alive && !short ? 'ok' : 'fail'} ticks=${s.tick() - start} hp=${before}->${after} points=${pointsBefore}->${points()} prayers=${sets} targeted=${targeted} ${parts.join(' ')}`);
 await finish(sessions, alive && !short, 'stood');

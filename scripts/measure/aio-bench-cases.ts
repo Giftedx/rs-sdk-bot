@@ -318,6 +318,20 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'extra:guard-rival', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['200', 'RIVAL={bot:b}'], pass: ok,
     presetConfig: {position: {x: 3200, z: 3600, level: 0}, skills: {Attack: 40, Strength: 40, Defence: 40, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}]},
     companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3201, z: 3600, level: 0}, skills: {Attack: 40, Strength: 40, Defence: 40, Hitpoints: 60}, equipment: [{id: 1333, count: 1, slot: 3}]}}]},
+  // The same two accounts 3 tiles apart: the second one shoots with a shortbow, so the guard must turn Protect
+  // from Missiles on.
+  {key: 'extra:guard-rival-bow', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['200', 'RIVAL={bot:b}'], pass: ok,
+    presetConfig: {position: {x: 3200, z: 3600, level: 0}, skills: {Attack: 40, Strength: 40, Defence: 40, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3203, z: 3600, level: 0}, skills: {Ranged: 50, Defence: 40, Hitpoints: 60}, equipment: [{id: 841, count: 1, slot: 3}, {id: 882, count: 500, slot: 13}]}}]},
+  // The dark wizards south of Varrock (maps/m50_52.jm2) at combat level 13: the young ones (level 7, hunt range 3)
+  // and the bearded ones (level 20, hunt range 5) cast strike spells. The worker stands on an open tile of their circle: a hunt needs a line of sight
+  // (hunt `ranged`, check_vis=lineofsight), and the centre tiles have none. With `--set PRAYER_GUARD=0` the worker dies.
+  {key: 'extra:guard-wizard', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['300'], pass: ok,
+    presetConfig: {position: {x: 3226, z: 3372, level: 0}, skills: {Hitpoints: 30, Prayer: 45}}},
+  // Oaks west of Lumbridge castle (maps/m50_50.jm2) with Protect from Melee on: the guard flicks and sends the
+  // click on the tree again. With `--set PRAYER_GUARD=0` the prayer is held at the normal point cost.
+  {key: 'extra:guard-chop', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['500', 'PRAYERS=14', 'CHOP=oak:8'], pass: ok,
+    presetConfig: {position: {x: 3205, z: 3243, level: 0}, skills: {Woodcutting: 50, Hitpoints: 60, Prayer: 60}, inventory: [{id: 1359, count: 1}]}},
   sparCase('extra:spar-no-slayer', sparFixture(3094, 3555, {noDragonSlayer: true}), sparFixture(3096, 3555, {noDragonSlayer: true})),
   // The tribrid against every build of scripts/pk-kits.ts in one run, and a mirror of 8 for each build: the cases that
   // the hill climb and the kit matrix run (scripts/measure/pk-spar-climb.ts, pk-spar-matrix.ts).
