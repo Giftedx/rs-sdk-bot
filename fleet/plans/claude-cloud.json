@@ -1,7 +1,25 @@
 {
  "side": "claude-cloud",
- "at": 1794363065402,
+ "at": 1794363207375,
  "jobs": [
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=1704 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=thefullmonty-kit1-532-0to1704 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1704 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-big-99",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
   {
    "account": "Quickhandjob",
    "script": "scripts/gather-combat.ts",
@@ -26,24 +44,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=1704 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=thefullmonty-kit1-532-0to1704 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1704 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-big-99",
-   "autopilot": "claude-cloud",
-   "resources": []
   },
   {
    "account": "Deeppockets",
