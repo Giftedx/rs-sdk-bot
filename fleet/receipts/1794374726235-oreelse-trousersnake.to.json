@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794374726235-oreelse-trousersnake",
+ "account": "TrouserSnake",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune platelegs",
+ "requested": 1,
+ "claim": "e1e9077f-753d-461b-bcf5-653e72fe3393",
+ "count": 0,
+ "ok": false,
+ "at": 1794375292170,
+ "detail": "trade claimed"
+}
