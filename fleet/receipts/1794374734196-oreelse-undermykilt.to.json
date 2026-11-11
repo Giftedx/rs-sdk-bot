@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794374734196-oreelse-undermykilt",
  "account": "UnderMyKilt",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Rune full helm",
  "requested": 1,
  "claim": "3f9a2092-b966-4c49-bf8a-a3346ec31622",
- "count": 0,
- "ok": false,
- "at": 1794378981147,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794379074717,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794379073695
+ },
+ "logout": {
+  "attemptId": "1794378981150-0000028146-0000000001",
+  "at": 1794379074709,
+  "sha256": "f78390be9743bbb37d4d77493c30c4ce226fd26779558213dc34d8a6fb6071d1"
+ },
+ "screen": true
 }
