@@ -15,6 +15,7 @@ Goals (owner): the main account Haggis rank 1 on the Overall board under the cur
 Keep the loop fast:
 
 - While you edit, run one test file (`bun test <file>`) and the bench cases you changed. To type-check the change, run `bun scripts/typecheck-narrow.ts`: it checks the changed files and the files that they import, with a heap limit. Run `bun run typecheck` once before you push.
+- Read the pass count and the fail count of each test run. Do not send test output through a filter that can hide the fail line. Join a commit to its test with `&&`, so a failed test stops the commit.
 - Run one heavy job at a time on a machine: a gate, a bench or a test suite. Two at once give failures that are not real. If a test that the change does not touch fails, run that file alone before you debug it.
 - Start a slow step as one background command that ends in its result, and work on the next item until it ends. Do not poll. Do not wait in a `sleep` loop.
 - Use Bash for shell work. Use PowerShell only for one Windows cmdlet. The command checker refuses a PowerShell command that has `$()`, a `"$var"` string or a script block.
@@ -35,7 +36,7 @@ On Windows every background subprocess uses `windowsHide:true`. Run only the ser
 Several agents work at once: sessions on this PC (Claude Code, Codex) and cloud sessions (Codex, Claude Code). Each takes work from the lane the [plan](docs/plans/joined-plan.md) Lanes table gives it.
 
 - One change, one branch `<agent>/<topic>`, one PR to `master`. Before work, check `gh pr list` and open a draft PR, so two agents never edit the same files. Merge when `bun run typecheck` and `bun test ./scripts ./packages` pass; never force-push `master`. The local gate proves this: `bun scripts/ci-gate.ts --post` runs the checks on the PC and posts the `local-gate` status on the commit. It runs the test files that the change can reach, in 12 processes; `--full` runs every test file. The hosted `linux` workflow uses paid minutes and starts only by hand (`gh workflow run CI --ref <branch>`).
-- A local agent works in its own worktree (`git worktree add ../rs-sdk-bot-<agent> -b <agent>/<topic>`). Only the main checkout runs the local swarm, coordinator and fleet agent.
+- A local agent works in its own worktree (`git worktree add ../rs-sdk-bot-<agent> -b <agent>/<topic>`). Run `bun scripts/worktree-setup.ts` in a new worktree before the first test: it gets the SDK submodule, applies the SDK patch and installs the packages (`--bench` adds the engine packages, `--reset-vendor` replaces the SDK patch of a different commit). Only the main checkout runs the local swarm, coordinator and fleet agent.
 - Three repositories are public: `Giftedx/rs-world` (the viewer fork), `Giftedx/rs-sdk` (the fork for pull requests to MaxBittker/rs-sdk) and `Giftedx/rs-fleet-dashboard` (the dashboard page). A push to one of them is public: push no account name, no fleet data and no private session link. This repository and `Giftedx/rs-fleet-command` stay private.
 - Each machine runs bots only for its own fleet side (Accounts, below). Cross-side resources move through fleet orders, never by logging in another side's account.
 
