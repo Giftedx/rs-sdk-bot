@@ -108,8 +108,13 @@ unless a finding says otherwise; a seed repeats its fight. Evidence: `.practice/
    only or magic and ranged once the target has fled, with and without the specials; the freeze cast with the weapon
    in hand, so that the runner has no Protect from Magic up. Each style alone against the base fighter dealt, for
    each 100 ticks: magic 25.4 and 24.2, melee 15.1 and 14.3, ranged 8.0 and 18.3.
-   Gap: 16 fights for each row; the no-glory row has no run without potions; a bow special against a moving runner
-   logged full energy three turns in a row, so it did not fire, and the cause is not found.
+   Gap: 16 fights for each row; the no-glory row has no run without potions.
+
+   A special on a target that runs waits: for the freeze while one is ready, and for bow range (7 tiles for a
+   shortbow, `bows.obj` attackrange) when it is a bow special. A bow special on a runner beyond that range stays
+   armed with its energy, and the loop then spent each turn on it and cast no freeze: 3 such turns in one batch of 8,
+   0 in two batches with the wait. The rates did not move: 6 of 16 against the glory runner and 8 of 16 against the
+   runner with no glory, `hunter-low` with potions.
 5. **A start out of sight or far apart does not stop the fight.** One run each at seed 7, base against base, without
    Dragon Slayer: first damage at tick 19 from 2 tiles in the open, 31 from 12 tiles, 11 from 6 tiles with the blocker
    between; kills at 528, 495 and 628 ticks. The server walks an attacker to a tile with line of sight. Gap: one run each.
