@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794376871668-oreelse-quickhandjob",
  "account": "OreElse",
  "partner": "Quickhandjob",
@@ -10,8 +10,18 @@
  "item": "Rune scimitar",
  "requested": 1,
  "claim": "7caf2204-a094-4ae8-a599-18d397b435ee",
- "count": 0,
- "ok": false,
- "at": 1794379345506,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794379363571,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794379345514-0000018796-0000000001",
+  "at": 1794379363556,
+  "sha256": "dc62be15c48cf08d45275f210e0030e5f35bbb0134cae08ba38db164fe972a52"
+ },
+ "screen": true
 }
