@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794382997734-oreelse-kiltlifter",
  "account": "OreElse",
  "partner": "Kiltlifter",
@@ -10,8 +10,22 @@
  "item": "Rune scimitar",
  "requested": 1,
  "claim": "9111753a-91d1-4312-8378-d064fa55ab48",
- "count": 0,
- "ok": false,
- "at": 1794383364855,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794383387151,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794383373901
+ },
+ "logout": {
+  "attemptId": "1794383364865-0000027024-0000000001",
+  "at": 1794383387064,
+  "sha256": "f74f2e40153f9c29a78a1a7962f00f9e586db7c2d9f5858b45ed14ce2dbf3007"
+ },
+ "screen": true
 }
