@@ -1,0 +1,22 @@
+{
+ "id": "1794418882706-undermykilt-dipstick-bones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "UnderMyKilt",
+ "to": "Dipstick",
+ "item": "Bones",
+ "count": 38,
+ "start": 1794418882706,
+ "end": 1794421282706,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
