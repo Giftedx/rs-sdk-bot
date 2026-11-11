@@ -348,6 +348,12 @@ test('Ranged takes the best owned bow for the level, a shortbow first, and arrow
     expect(selectGiantArrows(stock,99,40)).toBe(892);
     expect(selectGiantArrows(stock,99,20)).toBe(888);
     expect(selectGiantArrows([{id:892,count:5}],99,5)).toBeUndefined();
+    // A handful of better arrows is not a run's worth: the best kind with 50, else the largest stack.
+    const mixed=[{id:888,count:10},{id:886,count:14},{id:884,count:45},{id:882,count:245}];
+    expect(selectGiantArrows(mixed,45,20)).toBe(882);
+    expect(selectGiantArrows([{id:888,count:50},{id:882,count:245}],45,20)).toBe(888);
+    expect(selectGiantArrows([{id:888,count:10},{id:884,count:20}],45,20)).toBe(884);
+    expect(selectGiantArrows([{id:888,count:10}],45,20)).toBe(888);
     const bow=[{index:0,name:'Accurate',trainsSkills:['Ranged']},{index:1,name:'Rapid',trainsSkills:['Ranged']},{index:2,name:'Longrange',trainsSkills:['Ranged','Defence']}];
     expect(giantStyle({known:true,weaponName:'Shortbow',currentStyle:0,styles:bow},'Ranged')).toEqual({index:1,name:'Rapid',weapon:'Shortbow'});
 });

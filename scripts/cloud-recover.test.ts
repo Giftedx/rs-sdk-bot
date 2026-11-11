@@ -41,6 +41,17 @@ test('an end record older than the held attempt is an earlier run: wait quietly 
     expect(eligibility({ ...base, proof: attempt, end: { at: 1794190845000, reason: 'done after 1 runs' } })).toMatchObject({ eligible: false, log: true });
 });
 
+test('after a failed recovery of an end, a held attempt newer than that end is the recovery\'s own session: the retry is not held back', () => {
+    // Fingerblastr: end 1794352171236 "gave-up after 21 runs", then the failed recovery's attempt 1794352434295.
+    const attempt: LogoutProof = { ...held, attemptId: '1794352434295-0000011731-0000000001' } as LogoutProof, end = { at: 1794352171236, reason: 'gave-up after 21 runs' };
+    expect(eligibility({ ...base, proof: attempt, end })).toEqual({ eligible: false, reason: 'waiting: the supervisor has not ended the held attempt', log: false });
+    expect(eligibility({ ...base, proof: attempt, end, retried: true })).toEqual({ eligible: true, endedAt: 1794352171236 });
+    // The other rules still hold for a retry: a live worker, a death, an end that is not recoverable.
+    expect(eligibility({ ...base, proof: attempt, end, retried: true, pidAlive: () => true })).toMatchObject({ eligible: false, reason: 'worker still alive' });
+    expect(eligibility({ ...base, proof: attempt, end: { at: 1794352171236, reason: 'died' }, retried: true })).toMatchObject({ eligible: false, log: true });
+    expect(eligibility({ ...base, proof: attempt, end: { at: 1794352171236, reason: 'done after 1 runs' }, retried: true })).toMatchObject({ eligible: false, log: true });
+});
+
 test('a worker pid on another host does not count as alive here', () => {
     expect(eligibility({ ...base, host: 'other', pidAlive: () => true })).toEqual({ eligible: true, endedAt: 1794183517222 });
 });

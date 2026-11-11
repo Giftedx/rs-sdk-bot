@@ -99,6 +99,32 @@ export function releasePublishedTradeClaims(
     return released;
 }
 
+// A trade session that dropped. Its own receipt stays `prepared` or reads `reconcile` (no logout proof), so the rule
+// above never frees its claim, a trade claim does not expire, and the account has no job until a person runs the hand
+// procedure (README: reconcile both accounts, confirm the logout, release the matching nonce). The records prove that
+// by themselves in one case, and only then is the claim released here:
+// - the order's window has been over for DROPPED_CLAIM_MS and the claim has stood that long. A trade worker waits no
+//   longer than its window, and by then the game server has dropped a session with no client (the premise of
+//   ORPHAN_CLAIM_MS for another side's swarm claim, packages/core/src/fleet-trade-claim.ts);
+// - the partner's receipt is terminal and `failed`: its logout is proved and it moved nothing (terminalTradeReceipt).
+//   A trade moves both stacks at once, so nothing left this account either;
+// - this account's receipt names this claim, counts 0 and shows no change of its inventory.
+// Live claude-cloud: UnderMyKilt had no job under such a claim (its receipt `reconcile` 0, the partner's `failed` 0)
+// until a person released it. Every other case keeps the claim for a person.
+export const DROPPED_CLAIM_MS = 60 * 60_000;
+export function droppedTradeClaims(claims: readonly FleetTradeClaim[], side: string, read: (path: string) => any, now = Date.now()): FleetTradeClaim[] {
+    return claims.filter(claim => {
+        if (claim.phase !== 'held' || claim.side !== side || now - claim.at < DROPPED_CLAIM_MS) return false;
+        const order = read(`orders/${claim.orderId}.json`), other = claim.role === 'from' ? 'to' : 'from';
+        if (!validOrder(order) || order.id !== claim.orderId || now - order.end < DROPPED_CLAIM_MS) return false;
+        const own = read(`receipts/${claim.orderId}.${claim.role}.json`), partner = read(`receipts/${claim.orderId}.${other}.json`);
+        if (!partner || !terminalTradeReceipt(order, other, partner, now) || partner.state !== 'failed') return false;
+        return !!own && own.version === 2 && (own.state === 'prepared' || own.state === 'reconcile') && own.claim === claim.nonce && own.side === claim.side
+            && typeof own.account === 'string' && own.account.toLowerCase() === claim.account && own.count === 0
+            && (!own.inventory || own.inventory.before === own.inventory.after);
+    });
+}
+
 function releaseSyncedTrades(dir: string, side: string) {
     const receiptDir = join(dir, 'fleet', 'receipts');
     if (!existsSync(receiptDir)) return;
@@ -106,7 +132,7 @@ function releaseSyncedTrades(dir: string, side: string) {
         try {
             const r = JSON.parse(readFileSync(join(receiptDir, name), 'utf8'));
             return r?.version === 2 && r.side === side && typeof r.account === 'string' && /^[A-Za-z0-9]{1,12}$/.test(r.account)
-                && (r.state === 'settled' || r.state === 'failed') ? [r.account] : [];
+                && ['settled', 'failed', 'prepared', 'reconcile'].includes(r.state) ? [r.account] : [];
         } catch { return []; }
     });
     if (!accounts.length) return;
@@ -114,7 +140,12 @@ function releaseSyncedTrades(dir: string, side: string) {
         const committed = git(dir, 'show', 'HEAD:fleet/' + path);
         try { return committed.ok ? JSON.parse(committed.out) : null; } catch { return null; }
     };
-    releasePublishedTradeClaims(readHeldFleetTradeClaims(root, [...new Set(accounts)]), side, read, claim => releaseFleetTradeClaim(root, claim));
+    const held = readHeldFleetTradeClaims(root, [...new Set(accounts)]);
+    releasePublishedTradeClaims(held, side, read, claim => releaseFleetTradeClaim(root, claim));
+    for (const claim of droppedTradeClaims(held, side, read)) {
+        releaseFleetTradeClaim(root, claim);
+        console.log(`FLEET_SYNC released the dropped trade claim of ${claim.account} for order ${claim.orderId}: the partner's receipt is failed with nothing moved`);
+    }
 }
 
 export function runSync(push = true): string {

@@ -81,7 +81,7 @@ test('failure to observe protection OFF cannot report goal fulfilled',async()=>{
 });
 test('BONE_ID=532 plans owned big bones at375XP and banks at Varrock West',()=>{
     expect(prayerOptions(['bun','script','any','90'],{BONE_ID:'532',MAX_BURY:'1500'})).toEqual({target:90,cap:1500,maximum:1500,reserve:6,bone:532});
-    expect(BONE_XP[532]).toBe(375);
+    expect(BONE_XP[532]).toBe(375);expect(BONE_XP[536]).toBe(1800);
     expect(planPrayer(1400,xpForLevel(74),1500,6,90,375)).toBe(Math.ceil((xpForLevel(90)-xpForLevel(74))/375));
     expect(prayerBank({worldX:3186,worldZ:3437,level:0})).toEqual({x:3185,z:3436});
     expect(prayerBank({worldX:2620,worldZ:3330,level:0})).toEqual({x:2619,z:3332});
@@ -89,7 +89,7 @@ test('BONE_ID=532 plans owned big bones at375XP and banks at Varrock West',()=>{
 test('an unknown bone id refuses before any bank work',async()=>{
     const f=fixture({});try{await expect(runPrayer(f.s,{...options,bone:999})).rejects.toThrow('unsupported bone id');expect(f.burials()).toBe(0);}finally{f.dispose();}
 });
-test('BURY_HELD buries the held bones above the reserve and is ok after a level when they run out',async()=>{
+test('BURY_HELD buries the held bones above the reserve and is ok when they run out, with or without a level',async()=>{
     expect(prayerOptions(['bun','script','any','99'],{BURY_HELD:'1'})).toEqual({target:99,cap:1500,maximum:1000000,reserve:6,held:true});
     const f=fixture({bones:60,rawXp:196875});
     try{const r=await runPrayer(f.s,{target:99,cap:5000,maximum:1000000,reserve:6,held:true});
@@ -97,6 +97,12 @@ test('BURY_HELD buries the held bones above the reserve and is ok after a level 
         expect(r.gained).toBeGreaterThan(0);}finally{f.dispose();}
     const g=fixture({bones:60,rawXp:196875});
     try{expect(await runPrayer(g.s,{target:99,cap:5000,maximum:1000000,reserve:6})).toMatchObject({ok:false,buried:0});}finally{g.dispose();}
+    // At Prayer 97 the 54 bones are 6,075 XP, far short of a level: still ok, every bury's XP was checked.
+    const h=fixture({bones:60,rawXp:xpForLevel(97)*10});
+    try{expect(await runPrayer(h.s,{target:99,cap:5000,maximum:1000000,reserve:6,held:true})).toMatchObject({ok:true,gained:0,buried:54,boneBank:6,xpGain:6075,stop:'input-insufficient',failure:'-'});}finally{h.dispose();}
+    // With nothing above the reserve there is nothing to prove.
+    const e=fixture({bones:6,rawXp:196875});
+    try{expect(await runPrayer(e.s,{target:99,cap:5000,maximum:1000000,reserve:6,held:true})).toMatchObject({ok:false,buried:0});}finally{e.dispose();}
 });
 test('the market knights, the cow field and the Gnome battlefield walk to the Ardougne north bank; the south bank stays its own entry',()=>{
     expect(prayerBank({worldX:2654,worldZ:3304,level:0})).toEqual({x:2619,z:3332});

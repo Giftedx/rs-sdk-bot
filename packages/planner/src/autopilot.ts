@@ -11,6 +11,7 @@
 // whose trainer reached its target, so the next pass needs no timer. scripts/autopilot.ts applies it.
 import type { BillRow } from './supply-bill';
 import { missionSignature } from '../../core/src/session-admission';
+import { xpForLevel } from './curve';
 
 // `combat`: the combat level the account's status reports (absent: worked out from `skills`). `quests`: the quests its
 // status reports complete, by norm() name (absent: none known complete).
@@ -42,6 +43,12 @@ export type Template = {
     // The stock a kit buy brings an item up to, by item name: more than the start minimum in `needs`, so one login
     // buys a batch (nature runes for many alchemy casts) and not one start's worth.
     batch?: Record<string, number>;
+    // The same, worked out for the account (bought bones: what its Prayer still needs). `partBatch`: a batch worth
+    // having in part, so an account that cannot pay for all of it buys what it can pay for, not only the start.
+    batchFor?: (a: Acct) => Record<string, number>;
+    partBatch?: true;
+    // Coins a kit buy for this band leaves the account, beyond the kit reserve: what its other bands still cost.
+    keepCoins?: (a: Acct) => number;
     // A quest run: a candidate until the account's status reports the quest complete, and worth a share of each job
     // the quest unlocks (as a trainer is). It does not repeat.
     quest?: { name: string; unlocks: string[] };
@@ -99,6 +106,15 @@ export const FUND_RESERVE = 50_000;
 // The template id of a kit buy for a goal band: `kit-buy:<band id>`. A retired pair (two fail RESULTs with no
 // progress: no stock under the cap) sends the account to the donors instead.
 export const KIT_BUY = 'kit-buy:', KIT_BUY_SCRIPT = 'scripts/buy-owned-ge-item.ts';
+// The army's melee weapon. Most army accounts fight with the bronze sword they started with: at Strength 99 it hits 12
+// at most, an adamant scimitar 15 or 16 by style (combat.rs2 combat_maxhit: (effective * (64 + strength bonus) + 320) /
+// 640, effective 107 to 110, bonus 5 and 28). The trainer wields the best blade the account owns (scripts/gather-combat.ts selectGiantWeapon), so the
+// planner only has to put one in the bank: an army account with Attack 30 and no blade of WEAPON_HELD buys one adamant
+// scimitar on the Grand Exchange, as a kit buy, at WEAPON_BAND: before its Ranged band, so every account gets one now
+// (owner: all of them, until rune blades arrive), WEAPON_BUYERS accounts away for it at a time.
+export const WEAPON = { id: 'army-weapon', item: 'adamant scimitar', attack: 30, goal: 'fight with an adamant scimitar' } as const;
+export const WEAPON_HELD = ['adamant scimitar', 'adamant sword', 'adamant longsword', 'rune scimitar', 'rune sword', 'rune longsword', 'dragon longsword'] as const;
+export const WEAPON_BAND = 3.5, WEAPON_BUYERS = 2, WEAPON_MARKET = 'ge:weapon';
 // The coins a kit buy leaves in the bank (the buy script's CASH_RESERVE). A kit costs far less than FUND_RESERVE, which
 // guards a coin donor, so a buyer keeps only this.
 export const KIT_CASH_RESERVE = 1_000;
@@ -110,6 +126,10 @@ export const KIT_PRICE_CAPS: Readonly<Record<string, number>> = {
     'mind rune': 120, 'air rune': 160, 'fire rune': 160, 'nature rune': 800, feather: 20,
     'bronze arrow': 20, 'iron arrow': 40, 'steel arrow': 100, 'mithril arrow': 200, 'adamant arrow': 400, 'rune arrow': 1200,
     trout: 100, lobster: 500, swordfish: 700, shark: 1200,
+    // Live claude-cloud read: 42 listed at 72,000, bids at 33,068, volume-weighted price 38,089.
+    'adamant scimitar': 80_000,
+    // Live claude-cloud read: dragon bones 1,009 listed from 9,000 (mean 9,687); big bones 1,686 from 2,399 (mean 2,526).
+    'dragon bone': 10_000, 'big bone': 2_600,
 };
 
 // A bill line still short is worth twice its shop value: it is acquisition work the route needs. A unit nobody needs
@@ -270,6 +290,17 @@ export function plan(inp: Inputs): Assignment[] {
             if (value > 0) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+'), coins: coinShort(a, t.needs) });
         }
     }
+    // The weapon buy (WEAPON): a kit buy made for the account, offered as a goal candidate so it comes before the melee
+    // bands even while one of them can start. The buy script refuses a second scimitar (scripts/buy-owned-ge-item.ts
+    // ownedBaseline), so a stale status cannot buy twice.
+    for (const a of mine) {
+        const lower = a.name.toLowerCase(), m = inp.market?.[WEAPON.item];
+        if (!m || !inp.army?.has(lower) || (a.skills.Attack ?? 1) < WEAPON.attack || WEAPON_HELD.some(w => (a.items[w] ?? 0) > 0)
+            || (a.items.coin ?? 0) < m.limit + KIT_CASH_RESERVE || inp.retired?.has(pairKey(a.name, KIT_BUY + WEAPON.id))) continue;
+        const template = kitBuyTemplate({ ...WEAPON, family: 'kit-buy', script: KIT_BUY_SCRIPT, role: 'supply', yields: () => [] }, a.name,
+            [{ item: m.name, id: m.id, held: 0, limit: m.limit, quantity: 1 }], inp.kitSeq?.get(lower) ?? 0);
+        cands.push({ account: a.name, template, value: 0, resources: [WEAPON_MARKET], reason: `army band ${WEAPON_BAND}: buys 1 ${m.name}, at most ${m.limit} coins`, goal: { band: WEAPON_BAND, left: 0 } });
+    }
     // On a value tie an account keeps the template it holds: a level change must not move it to another spot of the
     // same worth, which would replace a running job with a fresh one that changes nothing useful.
     const keeps = (c: Cand) => inp.current?.get(c.account.toLowerCase()) === c.template.id ? 1 : 0;
@@ -304,13 +335,16 @@ export function plan(inp: Inputs): Assignment[] {
     for (const c of cands.filter(c => c.goal && !c.lacks && !c.template.filler).sort(goalOrder)) take(c, 0);
     // Then the kit tier: an army account with no band it can start gets the kit of its earliest band, before any coin
     // job, so banked gold becomes a band and not more gold. A buy is one login with the account's own coins. A send
-    // takes a partner off its work for a trade window, so it comes second: this side's donors, then another side's.
+    // takes a partner off its work for a trade window and keeps the account vacant until the order closes, so it comes
+    // second: every band the account can buy for is tried before a donor is asked for any of them (an account at
+    // Prayer 97 buys its dragon bones and does not wait for 37 bones from another side), this side's donors before
+    // another side's.
     const reserve = kitReserve(inp.templates), byName = new Map(mine.map(a => [a.name, a]));
     const stock = [...(inp.stock ?? [])].sort((x, y) => Number(y.side === inp.side) - Number(x.side === inp.side));
     const spare = (s: Stock, item: string) => (s.items[item] ?? 0) - (reserve[item] ?? 0);
     const banded = (id: string) => byId.get(id)?.tier === 'goal' && !byId.get(id)?.filler;
     const goalNow = (account: string) => { const id = inp.current?.get(account.toLowerCase()); return !!id && (id.startsWith(KIT_BUY) || banded(id)); };
-    const acquire = (c: Cand) => {
+    const acquire = (c: Cand, step: 'buy' | 'send') => {
         const a = byName.get(c.account)!, busy = !!inp.unfundable?.has(c.account.toLowerCase()), buyId = KIT_BUY + c.template.id;
         if (done.has(c.account) || gave.has(c.account) || gaveItems.has(c.account) || vacated.has(c.account)) return;
         // An account in a running band job keeps the rule it had before the kit tier: its live holdings dip while it
@@ -319,13 +353,19 @@ export function plan(inp: Inputs): Assignment[] {
         if (busy && now && !now.startsWith(KIT_BUY) && banded(now)) return;
         // No kit for a band whose place is full: the account tries its next band.
         if (c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
-        const picks = c.lacks!.map(l => { const item = l.of.filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]; return item ? { item, count: l.count } : null; });
-        if (picks.every(p => p !== null) && !inp.retired?.has(pairKey(c.account, buyId))) {
-            // The batch when the account can pay for it, else only what the band needs to start.
-            const sized = (batch: boolean): KitLine[] => picks.map(p => { const held = a.items[p!.item] ?? 0, m = inp.market![p!.item]!; return { item: m.name, id: m.id, held, limit: m.limit, quantity: Math.max(p!.count, batch ? (c.template.batch?.[p!.item] ?? 0) - held : 0) }; });
+        const shopLine = (l: Lack) => !l.of.some(i => inp.market?.[i]) && l.of.some(i => SHOP_SUPPLIED.has(i));
+        const picks = c.lacks!.filter(l => !shopLine(l)).map(l => { const item = l.of.filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]; return item ? { item, count: l.count } : null; });
+        if (step === 'buy' && picks.length && picks.every(p => p !== null) && !inp.retired?.has(pairKey(c.account, buyId))) {
+            // The batch when the account can pay for it, else only what the band needs to start. A one-line band with
+            // `partBatch` takes as much of its batch as the account can pay for.
+            const batchOf = c.template.batchFor?.(a) ?? c.template.batch;
+            const sized = (batch: boolean): KitLine[] => picks.map(p => { const held = a.items[p!.item] ?? 0, m = inp.market![p!.item]!; return { item: m.name, id: m.id, held, limit: m.limit, quantity: Math.max(p!.count, batch ? (batchOf?.[p!.item] ?? 0) - held : 0) }; });
             const price = (ls: readonly KitLine[]) => ls.reduce((n, l) => n + l.quantity * l.limit, 0), coins = a.items.coin ?? 0;
-            const lines = price(sized(true)) + KIT_CASH_RESERVE <= coins ? sized(true) : sized(false);
-            const template = kitBuyTemplate(c.template, c.account, lines, inp.kitSeq?.get(c.account.toLowerCase()) ?? 0), cost = price(lines), short = cost + KIT_CASH_RESERVE - coins;
+            const free = coins - (c.template.keepCoins?.(a) ?? 0);
+            const full = sized(true), start = sized(false), part = Math.floor((free - KIT_CASH_RESERVE) / (full[0]?.limit ?? 1));
+            const lines = price(full) + KIT_CASH_RESERVE <= free ? full
+                : c.template.partBatch && full.length === 1 && part > start[0]!.quantity ? [{ ...full[0]!, quantity: Math.min(full[0]!.quantity, part) }] : start;
+            const template = kitBuyTemplate(c.template, c.account, lines, inp.kitSeq?.get(c.account.toLowerCase()) ?? 0), cost = price(lines), short = cost + KIT_CASH_RESERVE - free;
             const what = lines.map(l => `${l.quantity} ${l.item}`).join(', ');
             if (short <= 0) { done.set(c.account, { account: c.account, template, value: 0, reason: `buys ${what} for ${c.template.id}, at most ${cost} coins`, resources: [] }); return; }
             if (!busy) {
@@ -342,6 +382,7 @@ export function plan(inp: Inputs): Assignment[] {
                 }
             }
         }
+        if (step === 'buy') return;
         // One order per pass. A line no market sells goes first, so the lines left at the end are one buy.
         const sold = (l: Lack) => Number(l.of.some(i => !!inp.market?.[i]));
         for (const l of [...c.lacks!].sort((x, y) => sold(x) - sold(y))) for (const item of l.of) {
@@ -357,7 +398,8 @@ export function plan(inp: Inputs): Assignment[] {
             return;
         }
     };
-    for (const c of cands.filter(c => c.goal && c.lacks).sort(goalOrder)) acquire(c);
+    const kits = cands.filter(c => c.goal && c.lacks).sort(goalOrder);
+    for (const step of ['buy', 'send'] as const) for (const c of kits) acquire(c, step);
     // Then the filler bands, for an army account that no band and no kit took.
     for (const c of cands.filter(c => c.goal && !c.lacks && c.template.filler).sort(goalOrder)) take(c, 0);
     // The coin tier, re-sorted after every assignment: one more holder lowers the worth of the candidates that share
@@ -412,8 +454,11 @@ export function finishedTrainers(jobs: readonly any[], side: string, assigned: R
 // stands, not whether the job works, and a routing fix makes the same job run.
 export const RETIRE_FAILS = 2, WASTE_LIMIT = 0.9;
 // Cow mode reports its progress as selectedXp, damageXp and creditedKills.
-// A shop run reports what it bought as boughtTotal (scripts/shop-buyer.ts).
-export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked|selectedXp|damageXp|creditedKills|boughtTotal)=[1-9]\d*\b/.test(result);
+// A shop run reports what it bought as boughtTotal (scripts/shop-buyer.ts), and a Grand Exchange buy as "acquired" in
+// its JSON result (scripts/buy-owned-ge-item.ts). Without the second, a kit buy that ended ok after its long trip read
+// as tick waste and its pair was retired, so the account's next buy for that band never came (live claude-cloud: the
+// alchemy kit buys of KnightRider, Deeppockets and Fatstack, one of them after 1,000 nature runes bought).
+export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked|selectedXp|damageXp|creditedKills|boughtTotal)=[1-9]\d*\b|"acquired":[1-9]/.test(result);
 export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|.*\bprecondition no route to\b)/;
 export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number; drains: number } {
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
@@ -462,7 +507,7 @@ export const TROOPER_FIELD = 'trooper:battlefield', TROOPER_FIELD_CAPACITY = 14;
 export const STRIKE_TILE = 'strike:ardougne-guard-dog';
 // The places the AIO routes hold (aioTemplates). Each takes one account until a live pilot measures two.
 export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore: 'aio:varrock-east-mine', essence: 'aio:essence-mine', air: 'aio:air-altar' } as const;
-export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
+export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // Army goal bands (AGENTS.md goals: maxed tribrids), in order: Strength, Attack, Magic, Prayer, Ranged, Defence
 // last. Bands 6-8 are the Khazard troopers (TROOPER_BANDS), 9 is Prayer on the field (PRAYER_FIELD_BAND). Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile, MAX_KILLS=8): live 4/4 runs
@@ -514,6 +559,10 @@ export const TROOPER_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence';
 // out after a level; practice from the knights buried 114 of 120 bones in 282 ticks to Prayer 75, about 2.2 ticks a
 // bone. Gap: neither is run live.
 export const MAGIC_BAND = 2, PRAYER_BAND = 3;
+// Bought bones: Prayer XP a bury (scripts/train-prayer.ts BONE_XP; a test keeps the two tables equal), the bones the
+// trainer keeps (its BONE_RESERVE floor) and the bones a bury band starts with.
+export const BOUGHT_BONE_XP: Readonly<Record<number, number>> = { 536: 1800, 532: 375 };
+export const BONE_KEEP = 6, BONE_START = 16, BONE_PURSE = 100_000, BONE_SKILL = 90;
 // Prayer on the field, band 9, a filler: an account with every melee skill at 99 kills troopers only for their bones
 // and buries each on the spot (trooper mode with TRAIN_SKILL=Hitpoints, which takes any style, and GIANT_KILLS past the
 // tick cap, so each run ends on the cap). An account takes it when no other band and no kit buy serves it; without it
@@ -524,12 +573,23 @@ export const PRAYER_FIELD_BAND = 9;
 // out of arrows it ends stop=ammo, ok after kills. It takes its fired arrows back after each kill. Practice 3/3
 // RESULT ok with bronze arrows: Ranged 1 to 59-62 in about 1,600 ticks, 41.1-46.7 XP a tick, 0.67-2.02 arrows lost
 // per 1,000 XP (research/combat-measure.md). It shares the battlefield with the melee trooper bands.
-export const RANGED_BAND = 4;
+export const RANGED_BAND = 4, GUILD_BAND = 3.9;
 const BOWS: readonly (readonly [string, number])[] = [['shortbow', 1], ['longbow', 1], ['oak shortbow', 5], ['oak longbow', 5], ['willow shortbow', 20],
     ['willow longbow', 20], ['maple shortbow', 30], ['maple longbow', 30], ['yew shortbow', 40], ['yew longbow', 40], ['magic shortbow', 50], ['magic longbow', 50]];
 const ARROWS: readonly (readonly [string, number])[] = [['bronze arrow', 1], ['iron arrow', 1], ['steel arrow', 5], ['mithril arrow', 20], ['adamant arrow', 30], ['rune arrow', 40]];
+// A staff that stands for the fire runes of a cast.
+export const FIRE_STAFFS = ['staff of fire', 'fire battlestaff', 'mystic fire staff'] as const;
+// Kit items a goal-tier shop job brings (the alchemy supply jobs and the army-arrows jobs). A kit line of these that no market sells
+// does not hold back the market buy of the band's other lines: the shop job follows once those are held.
+export const SHOP_SUPPLIED: ReadonlySet<string> = new Set(['fire rune', ...FIRE_STAFFS, 'feather', 'bronze arrow', 'iron arrow', 'steel arrow', 'mithril arrow']);
 // ARROW_LOW: the arrows of one kind the Ranged band needs to start. ARROW_STOCK: what a shop run brings the account up to.
-export const ARROW_LOW = 100, ARROW_STOCK = 500;
+export const ARROW_LOW = 100, ARROW_STOCK = 500, LOWE_STOCK = 1000;
+export const ZAFF_WAIT = 1100;
+// What the alchemy supply jobs bring an account up to: feathers for every cast to 99, fire runes for Magic 21 to 66.
+export const FEATHER_STOCK = 700, FIRE_STOCK = 500;
+// An account short of arrows of every kind: what sends it to an arrow shop. One with ARROW_LOW of any kind is left to
+// the Ranged band, or to a kit line when its bow cannot fire them.
+const NO_ARROWS: Readonly<Record<string, number>> = Object.fromEntries(ARROWS.map(([arrow]) => [arrow, ARROW_LOW]));
 // A bow the account's Ranged level wields, with ARROW_LOW arrows of one kind that bow fires.
 export const RANGED_KIT: readonly Needs[] = BOWS.flatMap(([bow, level]) =>
     ARROWS.filter(([, arrowLevel]) => arrowLevel <= level).map(([arrow]) => ({ skills: { Ranged: level }, items: { [bow]: 1, [arrow]: ARROW_LOW } })));
@@ -632,7 +692,7 @@ export function catalogue(): Template[] {
     const magic: Template = {
         id: 'army-alch-magic-99', family: 'combat-train', script: 'scripts/alch-train.ts', args: ['99', '5000'], role: 'combat', goal: 'train Magic to 99 with alchemy at the Ardougne north bank',
         tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: 99, unlocks: [] }, yields: () => [],
-        needs: { skills: { Magic: 21 }, items: { 'nature rune': 50, feather: 50 }, anyOf: [{ items: { 'fire rune': 250 } }, ...['staff of fire', 'fire battlestaff', 'mystic fire staff'].map(staff => ({ items: { [staff]: 1 } }))] },
+        needs: { skills: { Magic: 21 }, items: { 'nature rune': 50, feather: 50 }, anyOf: [{ items: { 'fire rune': 250 } }, ...FIRE_STAFFS.map(item => ({ items: { [item]: 1 } }))] },
         // Magic 99 is 998,458 XP here. Low Alchemy gives 775 XP a cast to 55 and High Alchemy 1,625 from there (xpRate 25),
         // so Magic 21 to 99 takes about 650 nature runes; a buy brings 1,000.
         batch: { 'nature rune': 1000 },
@@ -644,11 +704,69 @@ export function catalogue(): Template[] {
         tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: 21, unlocks: [magic.id] }, resources: [STRIKE_TILE], yields: () => [],
         needs: { items: { 'mind rune': 35, 'air rune': 35 } },
     };
+    // The alchemy band's fire, band 2. The market lists no fire rune under the kit caps (live claude-cloud: "unsold"),
+    // and a cast takes 3 or 5 of them; a staff of fire stands for all of them (scripts/alch-train.ts). An account that
+    // holds the band's nature runes and feathers but no fire buys one staff at Zaff's shop in Varrock (staffshop: 2 in
+    // stock, one back every 1,000 ticks) and banks it at Varrock West. A kit buy on the Grand Exchange leaves the
+    // account next to the shop; from Ardougne scripts/shop-buyer.ts takes the ferries. A pilot (off unless a plan's
+    // `aio` list names it): live, the shelf stood at 0 through five visits, one of 1,100 ticks, so another player takes
+    // each staff as it comes back. On an empty shelf the run waits
+    // ZAFF_WAIT ticks, a little over the 1,000 a staff takes to come back, so one visit brings a staff: a run that
+    // waits less ends ok with nothing bought, and a long one of those reads as tick waste (live claude-cloud:
+    // UnderMyKilt, 799 ticks, boughtTotal=0 after a 200-tick wait). STALL_TICKS=0: the session's idle guard would end
+    // the wait at 900 ticks (packages/core/src/bot.ts); the run's own cap bounds it.
+    const staff: Template = {
+        id: 'army-staff-zaff', pilot: true, family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['zaff', '3000'],
+        env: { ITEMS: 'staff of fire', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: String(ZAFF_WAIT), STALL_TICKS: '0', FLOAT: '13000', COIN_RESERVE: '500', MAX_SPEND: '12000' },
+        role: 'supply', goal: "buy a staff of fire at Zaff's shop in Varrock for the alchemy band",
+        tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: 99, unlocks: [magic.id] }, resources: ['shop:zaff'], yields: () => [],
+        needs: { skills: { Magic: 21 }, items: { coins: 15000, 'nature rune': 50, feather: 50 }, holdsUnder: { ...Object.fromEntries(FIRE_STAFFS.map(item => [item, 1])), 'fire rune': 250 } },
+    };
+    // Fire and feathers for the alchemy band from shelves the army can reach, each a goal job at the Magic band for an
+    // account that already holds the band's nature runes (so the trips follow its kit buy and never come early):
+    // - feathers, the item the band casts on, at Gerrant's in Port Sarim, for an account with fewer than the band needs
+    //   (six army accounts hold none, and the market's feather line ends "unsold");
+    // - under Magic 66, FIRE_STOCK fire runes at Aubury's in Varrock: about 360 take Magic 21 to 66;
+    // - from Magic 66, the level the Magic Guild door in Yanille asks, a staff of fire there (2 in stock) and
+    //   FIRE_STOCK fire runes in case the staff shelf is empty. Yanille is a walk from Ardougne.
+    // Practice from the Ardougne north bank: 700 feathers in 674 ticks, 500 fire runes in 614 more, then Magic 21 to 72
+    // on them; the staff in 216 to 314 ticks (research/combat-measure.md).
+    const noFire = { ...Object.fromEntries(FIRE_STAFFS.map(item => [item, 1])), 'fire rune': 250 };
+    const shopRun = (profile: string, cap: number, items: string, target: number, spend: number) => ['scripts/shop-buyer.ts', profile, String(cap), `ITEMS=${items}`, `STOCK_TARGET=${target}`,
+        'STOP_AT_TARGET=1', 'BANK_PACK=1', 'BANK_AT=0', 'NO_BUY_TICKS=25', `FLOAT=${spend + 1000}`, 'COIN_RESERVE=500', `MAX_SPEND=${spend}`].join(' ');
+    const supply = (id: string, goal: string, shop: string, steps: string[], needs: Needs): Template => ({
+        id, family: 'shop-buyer', script: 'scripts/chain.ts', args: steps, env: { ROUNDS: '1' }, role: 'supply', goal,
+        tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: 99, unlocks: [magic.id] }, resources: [`shop:${shop}`], yields: () => [], needs });
+    const feathers = supply('army-feathers-sarim', "buy feathers at Gerrant's in Port Sarim for the alchemy band", 'sarim',
+        [shopRun('sarim', 3000, 'feather', FEATHER_STOCK, 10000)], { items: { coins: 12000, 'nature rune': 50 }, holdsUnder: { feather: 50 } });
+    const fireRunes = supply('army-fire-aubury', "buy fire runes at Aubury's in Varrock for the alchemy band", 'aubury',
+        [shopRun('aubury', 3000, 'fire.rune', FIRE_STOCK, 9000)], { skills: { Magic: 21 }, under: { Magic: 66 }, items: { coins: 11000, 'nature rune': 50, feather: 50 }, holdsUnder: noFire });
+    const staffGuild = supply('army-staff-guild', 'buy a staff of fire and fire runes at the Magic Guild in Yanille for the alchemy band', 'magic_guild',
+        [shopRun('magic_guild', 1500, 'staff.of.fire', 1, 12000), shopRun('magic_guild', 600, 'fire.rune', FIRE_STOCK, 9000)],
+        { skills: { Magic: 66 }, items: { coins: 24000, 'nature rune': 50, feather: 50 }, holdsUnder: noFire });
     const prayer: Template = {
         id: 'army-bury-prayer-99', family: 'combat-train', script: 'scripts/train-prayer.ts', args: ['99'], env: { BURY_HELD: '1', BONE_RESERVE: '6', CAP: '4000' }, role: 'combat',
         goal: 'train Prayer to 99 burying the held bones', tier: 'goal', band: PRAYER_BAND, repeats: true, trains: { skill: 'Prayer', to: 99, unlocks: [] }, yields: () => [],
         needs: { items: { bones: 100 } },
     };
+    // Prayer from bought bones, bands just after the held bones. On the field a buried trooper kill gives 3.84 Prayer XP
+    // a tick, about 130,000 ticks from Prayer 74 to 99 for every account; a dragon bone gives 1,800 XP and a big bone
+    // 375 at the bank (scripts/train-prayer.ts BONE_XP). The Grand Exchange lists about 1,000 dragon bones and 1,700 big
+    // bones under the caps (KIT_PRICE_CAPS), about 2.4 million XP in all, so the kit tier buys them for an account
+    // with no other band to start, the account nearest 99 first: each takes what its Prayer still needs (BONE_KEEP
+    // more, which the trainer never buries), or what it can pay for. The band starts with BONE_START bones held, so
+    // a part-filled order is buried too. Dragon bones come first: about 5.2 coins an XP against 6.5. The listed bones
+    // finish about three accounts, so only an account with Ranged and Magic at BONE_SKILL buys them: they go where
+    // they complete a tribrid, not to an account with a day of Ranged ahead of it.
+    const boneBand = (id: string, bone: string, boneId: number, band: number): Template => ({
+        id, family: 'combat-train', script: 'scripts/train-prayer.ts', args: ['99'], env: { BURY_HELD: '1', BONE_ID: String(boneId), BONE_RESERVE: String(BONE_KEEP), CAP: '4000' }, role: 'combat',
+        goal: `train Prayer to 99 burying bought ${bone}`, tier: 'goal', band, repeats: true, trains: { skill: 'Prayer', to: 99, unlocks: [] }, yields: () => [],
+        needs: { skills: { Ranged: BONE_SKILL, Magic: BONE_SKILL }, items: { [bone]: BONE_START } }, partBatch: true,
+        // An account with Ranged or Magic still to finish keeps BONE_PURSE for arrows, a staff and a blade.
+        keepCoins: a => (a.skills.Ranged ?? 1) < 99 || (a.skills.Magic ?? 1) < 99 ? BONE_PURSE : 0,
+        batchFor: a => ({ [norm(bone)]: BONE_KEEP + Math.ceil((xpForLevel(99) - xpForLevel(a.skills.Prayer ?? 1)) / BOUGHT_BONE_XP[boneId]!) }),
+    });
+    const dragonBones = boneBand('army-bury-dragon-99', 'dragon bones', 536, PRAYER_BAND + 0.1), bigBones = boneBand('army-bury-big-99', 'big bones', 532, PRAYER_BAND + 0.2);
     const prayerField: Template = {
         id: 'army-trooper-prayer-99', family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'],
         env: { TRAIN_SKILL: 'Hitpoints', GIANT_KILLS: '500', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1' }, role: 'combat', goal: 'train Prayer to 99 burying trooper bones on the field',
@@ -674,7 +792,43 @@ export function catalogue(): Template[] {
         env: { ITEMS: 'bronze arrow', STOCK_TARGET: String(ARROW_STOCK), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '5000', COIN_RESERVE: '500', MAX_SPEND: '4000' },
         role: 'supply', goal: 'buy bronze arrows at Aemad in East Ardougne for the Ranged band',
         tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: ['shop:ardy'], yields: () => [],
-        needs: { items: { coins: 5000 }, pieces: { of: BOWS.map(([bow]) => bow), count: 1 }, holdsUnder: { 'bronze arrow': ARROW_LOW, 'iron arrow': ARROW_LOW } },
+        needs: { items: { coins: 5000 }, pieces: { of: BOWS.map(([bow]) => bow), count: 1 }, holdsUnder: NO_ARROWS },
+    };
+    // The same need at Hickton's Archery Emporium in Catherby (archeryshop2: bronze 1,000 and iron 800 in stock, one back
+    // every 10 and 20 ticks). It is a walk from Ardougne with no ferry: practice, 1,785 arrows bought and banked at the
+    // Catherby bank 435 ticks after the start at the north bank. The second account short of arrows goes here.
+    const arrowsCatherby: Template = {
+        id: 'army-arrows-catherby', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['catherby_arrows', '600'],
+        env: { ITEMS: 'iron arrow|bronze arrow', STOCK_TARGET: String(LOWE_STOCK), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '21000', COIN_RESERVE: '500', MAX_SPEND: '20000' },
+        role: 'supply', goal: "buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
+        tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: ['shop:catherby_arrows'], yields: () => [],
+        needs: { items: { coins: 25000 }, pieces: { of: BOWS.map(([bow]) => bow), count: 1 }, holdsUnder: NO_ARROWS },
+    };
+    // The arrow shop of an account at Ranged 40, the level the Ranging Guild door asks: Dargaud's shop there sells
+    // willow shortbows (20 in stock) and every arrow (bronze 1,000, iron, steel and mithril 500 each; one back every 10,
+    // 20, 40 and 60 ticks). A shortbow fires bronze and iron only; a willow shortbow fires up to mithril. Two shop runs
+    // in one job (scripts/chain.ts): the bow, then the arrows, banked at Seers' Village. It comes just before the other
+    // arrow shops (GUILD_BAND), so accounts that can enter leave Aemad's, Hickton's and Lowe's shelves to those that
+    // cannot. The bronze shelf always gives something back, so a visit to an emptied shop still ends with arrows.
+    const guildRun = (items: string, target: number, spend: number) => ['scripts/shop-buyer.ts', 'dargaud', '800', `ITEMS=${items}`, `STOCK_TARGET=${target}`,
+        'STOP_AT_TARGET=1', 'BANK_PACK=1', 'BANK_AT=0', 'NO_BUY_TICKS=25', `FLOAT=${spend + 1000}`, 'COIN_RESERVE=500', `MAX_SPEND=${spend}`].join(' ');
+    const arrowsGuild: Template = {
+        id: 'army-arrows-guild', family: 'shop-buyer', script: 'scripts/chain.ts',
+        args: [guildRun('willow.shortbow', 1, 3000), guildRun('mithril.arrow|steel.arrow|iron.arrow|bronze.arrow', ARROW_STOCK, 50000)],
+        env: { ROUNDS: '1' }, role: 'supply', goal: 'buy a willow shortbow and arrows up to mithril at the Ranging Guild for the Ranged band',
+        tier: 'goal', band: GUILD_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: ['shop:dargaud'], yields: () => [],
+        needs: { skills: { Ranged: 40 }, items: { coins: 60000 }, pieces: { of: BOWS.map(([bow]) => bow), count: 1 }, holdsUnder: NO_ARROWS },
+    };
+    // The same need at Lowe's Archery Emporium in Varrock (archeryshop: bronze 2,000 and iron 1,500 in stock, one back
+    // every 10 and 15 ticks). The trip takes the ferries both ways (practice: about 1,300 ticks out, 900 back) and one
+    // run brings up to LOWE_STOCK of each, about ten Ranged runs' worth, where Aemad's shelf holds 500 and then gives
+    // one arrow every 10 ticks. A third account short of arrows goes here while others hold Aemad's and Hickton's shops.
+    const arrowsLowe: Template = {
+        id: 'army-arrows-lowe', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['lowe', '2500'],
+        env: { ITEMS: 'iron arrow|bronze arrow', STOCK_TARGET: String(LOWE_STOCK), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '21000', COIN_RESERVE: '500', MAX_SPEND: '20000' },
+        role: 'supply', goal: "buy iron and bronze arrows at Lowe's in Varrock for the Ranged band",
+        tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: ['shop:lowe'], yields: () => [],
+        needs: { items: { coins: 25000 }, pieces: { of: BOWS.map(([bow]) => bow), count: 1 }, holdsUnder: NO_ARROWS },
     };
     return [
         ...goldfarm,
@@ -682,8 +836,17 @@ export function catalogue(): Template[] {
         ...troopers,
         strike,
         magic,
+        staff,
+        feathers,
+        fireRunes,
+        staffGuild,
         prayer,
+        dragonBones,
+        bigBones,
         arrows,
+        arrowsCatherby,
+        arrowsGuild,
+        arrowsLowe,
         ranged,
         prayerField,
         { id: 'thieving55', family: 'thieving60', script: 'scripts/generated/thieving60.ts', env: { TARGET: '55', CAP: '2500', CLEAN_FOOD: '1' }, role: 'thieving',

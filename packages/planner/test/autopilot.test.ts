@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { ARROW_LOW, ARROW_STOCK, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
+import { ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -513,6 +513,7 @@ test('army accounts train Ranged to 99 on the troopers with a bow they wield and
     expect(job).toMatchObject({ script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'], env: { TRAIN_SKILL: 'Ranged', TARGET_LEVEL: '99', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1' }, repeat: true, resources: ['trooper:battlefield'] });
 });
 
+import { xpForLevel } from '../src/curve';
 import { KIT_BUY, KIT_CASH_RESERVE, KIT_PRICE_CAPS, kitLacks, kitReserve, type Market, type Stock } from '../src/autopilot';
 const market: Market = { 'mind rune': { id: 558, name: 'Mind rune', limit: KIT_PRICE_CAPS['mind rune']! }, 'air rune': { id: 556, name: 'Air rune', limit: KIT_PRICE_CAPS['air rune']! },
     'nature rune': { id: 561, name: 'Nature rune', limit: KIT_PRICE_CAPS['nature rune']! }, trout: { id: 333, name: 'Trout', limit: KIT_PRICE_CAPS.trout! },
@@ -644,6 +645,155 @@ test('with no fire staff the alchemy kit buys fire runes, not a staff no market 
     const band = alch[0]!;
     expect(kitLacks(mage('Rich', {}, { Magic: 30 }), band.needs)!.at(-1)).toEqual({ of: ['staff of fire'], count: 1 });
     expect(kitLacks(mage('Rich', {}, { Magic: 30 }), band.needs, i => !/staff/.test(i))!.at(-1)).toEqual({ of: ['fire rune'], count: 250 });
+});
+
+test('an army account with no other band to start buys the bones its Prayer still needs, dragon bones first, and buries them', () => {
+    const army = new Set(['monk']);
+    const bones: Market = { ...market, 'dragon bone': { id: 536, name: 'Dragon bones', limit: KIT_PRICE_CAPS['dragon bone']! }, 'big bone': { id: 532, name: 'Big bones', limit: KIT_PRICE_CAPS['big bone']! } };
+    const maxed = { Thieving: 99, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Magic: 99, Prayer: 90 };
+    const kit = { shark: 40, 'adamant scimitar': 1 };
+    const pick = (s: Record<string, number>, items: Record<string, number>, extra: Partial<Inputs> = {}) =>
+        plan(inputs([acct('Monk', { ...maxed, ...s }, { ...kit, ...items })], { army, market: bones, capacity: CAPACITY, ...extra }))[0]!;
+    const order = (x: { template?: Template }) => x.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).map(Number));
+    // What Prayer 90 still needs in dragon bones, and the 6 the trainer keeps.
+    const need = BONE_KEEP + Math.ceil((xpForLevel(99) - xpForLevel(90)) / 1800);
+    const rich = pick({}, { coin: 5_000_000 });
+    expect(rich.template!.id).toBe(KIT_BUY + 'army-bury-dragon-99');
+    expect(order(rich)).toEqual([[536, need]]);
+    // An account that cannot pay for all of it buys what it can pay for, with the kit reserve left.
+    expect(order(pick({}, { coin: 1_700_398 }))).toEqual([[536, 169]]);
+    // A buy for a later band comes before a donor's send for an earlier one: 63 bones held leave the held-bones band
+    // 37 short, and another side has them, but the account buys its dragon bones. With no bones on the market the
+    // donor sends.
+    const donor: Stock[] = [{ name: 'Far', side: 'local', items: { bone: 500 } }], near = pick({ Prayer: 97 }, { coin: 879_278, bone: 63 }, { stock: donor });
+    expect(near.template!.id).toBe(KIT_BUY + 'army-bury-dragon-99');
+    expect(order(near)).toEqual([[536, BONE_KEEP + Math.ceil((xpForLevel(99) - xpForLevel(97)) / 1800)]]);
+    expect(near.send).toBeUndefined();
+    expect(pick({ Prayer: 97 }, { coin: 879_278, bone: 63 }, { stock: donor, market }).send).toEqual({ from: 'Far', to: 'Monk', item: 'bone', count: 37, template: 'army-bury-prayer-99' });
+    // An account with Ranged or Magic still to finish keeps BONE_PURSE back for their kits (Magic 92 here, with its
+    // alchemy runes and feathers but no fire, and the Magic Guild shop taken, so it has no other band).
+    const mage = { 'nature rune': 604, feather: 500 }, guildBusy = { capacity: { ...CAPACITY, 'shop:magic_guild': 0 } };
+    expect(order(pick({ Magic: 92 }, { ...mage, coin: 830_492 }, guildBusy))).toEqual([[536, Math.floor((830_492 - BONE_PURSE - 1_000) / 10_000)]]);
+    expect(pick({ Magic: 92 }, { ...mage, coin: BONE_PURSE + 100_000 }, guildBusy).template!.id).not.toBe(KIT_BUY + 'army-bury-dragon-99');
+    // With the shop free it fetches its staff first; with no nature runes it buys those first.
+    expect(pick({ Magic: 92 }, { ...mage, coin: 830_492 }).template!.id).toBe('army-staff-guild');
+    expect(order(pick({ Magic: 92 }, { coin: 830_492 }))).toEqual([[561, 1000]]);
+    // The listed bones finish about three accounts: one with Ranged or Magic under BONE_SKILL buys none, even with its
+    // arrow shops taken and millions of coins, and does not bury a stack it happens to hold before those skills.
+    const busyShops = { ...CAPACITY, 'shop:ardy': 0, 'shop:catherby_arrows': 0, 'shop:dargaud': 0, 'shop:lowe': 0 };
+    const { 'bronze arrow': _arrow, 'nature rune': _nature, ...bonesOnly } = bones;
+    expect(pick({ Ranged: BONE_SKILL - 1 }, { coin: 8_000_000, shortbow: 1 }, { capacity: busyShops, market: bonesOnly }).template!.id).toBe('army-trooper-prayer-99');
+    expect(pick({ Magic: BONE_SKILL - 1 }, { coin: 8_000_000 }, { market: bonesOnly }).template!.id).toBe('army-trooper-prayer-99');
+    expect(pick({ Magic: BONE_SKILL - 1 }, { coin: 8_000_000, 'dragon bone': 300 }, { market: bonesOnly }).template!.id).toBe('army-trooper-prayer-99');
+    // The buy replaces the Prayer filler while it runs, as any kit buy does.
+    expect(pick({}, { coin: 5_000_000 }, { unfundable: new Set(['monk']), current: new Map([['monk', 'army-trooper-prayer-99']]) }).template!.id).toBe(KIT_BUY + 'army-bury-dragon-99');
+    // With the bones held, a part-filled order too, it buries them before anything else.
+    const bury = pick({}, { coin: 1_000, 'dragon bone': BONE_START });
+    expect(jobFor(bury, side)).toMatchObject({ script: 'scripts/train-prayer.ts', args: ['99'], env: { BURY_HELD: '1', BONE_ID: '536', BONE_RESERVE: String(BONE_KEEP) }, repeat: true });
+    // No dragon bones under the cap: big bones, sized by their own XP. Neither: the filler on the field.
+    const { 'dragon bone': _, ...onlyBig } = bones;
+    const big = pick({}, { coin: 5_000_000 }, { market: onlyBig });
+    expect(big.template!.id).toBe(KIT_BUY + 'army-bury-big-99');
+    expect(order(big)).toEqual([[532, BONE_KEEP + Math.ceil((xpForLevel(99) - xpForLevel(90)) / 375)]]);
+    expect(pick({}, { coin: 5_000_000, 'big bone': 300 }, { market: onlyBig }).template!.id).toBe('army-bury-big-99');
+    expect(pick({}, { coin: 5_000_000 }, { market }).template!.id).toBe('army-trooper-prayer-99');
+    // An account with a band it can start keeps to it: bones are for the account that has only the filler left.
+    expect(pick({ Defence: 80 }, { coin: 5_000_000 }).template!.id).toBe('army-trooper-defence-99');
+    // Prayer 99 buys none.
+    expect(pick({ Prayer: 99 }, { coin: 5_000_000 }).template?.id.startsWith(KIT_BUY)).not.toBe(true);
+});
+
+test('the alchemy band gets its feathers at Port Sarim, its fire runes at Aubury under Magic 66 and its staff at the Magic Guild from 66', () => {
+    const army = new Set(['mage']);
+    const skills = { Thieving: 99, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Prayer: 99, Magic: 21 };
+    const base = { coin: 900_000, shark: 40, 'adamant scimitar': 1, 'nature rune': 1000 };
+    const pick = (s: Record<string, number>, items: Record<string, number>, extra: Partial<Inputs> = {}) =>
+        plan(inputs([acct('Mage', { ...skills, ...s }, { ...base, ...items })], { army, market, capacity: CAPACITY, ...extra }))[0]!;
+    const step = (profile: string, cap: number, items: string, target: number, spend: number) =>
+        `scripts/shop-buyer.ts ${profile} ${cap} ITEMS=${items} STOCK_TARGET=${target} STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=${spend + 1000} COIN_RESERVE=500 MAX_SPEND=${spend}`;
+    // No feathers: Port Sarim first.
+    const feathers = pick({}, {});
+    expect(feathers.template!.id).toBe('army-feathers-sarim');
+    expect(jobFor(feathers, side)).toMatchObject({ script: 'scripts/chain.ts', args: [step('sarim', 3000, 'feather', FEATHER_STOCK, 10000)], env: { ROUNDS: '1' }, repeat: true, resources: ['shop:sarim'] });
+    // Feathers held, no fire, under Magic 66: fire runes at Aubury.
+    const fire = pick({}, { feather: 700 });
+    expect(fire.template!.id).toBe('army-fire-aubury');
+    expect(jobFor(fire, side)).toMatchObject({ args: [step('aubury', 3000, 'fire.rune', FIRE_STOCK, 9000)], resources: ['shop:aubury'] });
+    // With the fire runes it casts; when they run under 250 at Magic 66 or more it goes to the Magic Guild.
+    expect(pick({}, { feather: 700, 'fire rune': 500 }).template!.id).toBe('army-alch-magic-99');
+    const guild = pick({ Magic: 66 }, { feather: 700, 'fire rune': 249 });
+    expect(guild.template!.id).toBe('army-staff-guild');
+    expect(jobFor(guild, side)).toMatchObject({ args: [step('magic_guild', 1500, 'staff.of.fire', 1, 12000), step('magic_guild', 600, 'fire.rune', FIRE_STOCK, 9000)], resources: ['shop:magic_guild'] });
+    expect(pick({ Magic: 65 }, { feather: 700, 'fire rune': 249 }).template!.id).toBe('army-fire-aubury');
+    expect(pick({ Magic: 66 }, { feather: 700, 'staff of fire': 1 }).template!.id).toBe('army-alch-magic-99');
+    // The trips follow the kit buy: with no nature runes held none of them is given, and the buy leaves feathers and
+    // fire to them.
+    const none = pick({}, { 'nature rune': 0 });
+    expect(none.template!.id).toBe(KIT_BUY + 'army-alch-magic-99');
+    expect(none.template!.args!.map(a => a.match(/ITEM_ID=(\d+)/)![1])).toEqual(['561']);
+    // Magic 99 needs none of it.
+    expect(['army-feathers-sarim', 'army-fire-aubury', 'army-staff-guild']).not.toContain(pick({ Magic: 99 }, {}).template?.id);
+});
+
+test('an army account with no better blade buys one adamant scimitar before its Ranged and melee bands, two accounts at a time', () => {
+    const army = new Set(['blade', 'edge', 'point']);
+    const sold: Market = { ...market, 'adamant scimitar': { id: 1331, name: 'Adamant scimitar', limit: KIT_PRICE_CAPS['adamant scimitar']! } };
+    const skills = { Thieving: 99, Attack: 99, Strength: 99, Defence: 80, Hitpoints: 90, Ranged: 99, Magic: 99, Prayer: 99 };
+    const kit = { coin: 900_000, shark: 40, 'bronze sword': 1 };
+    const pick = (s: Record<string, number>, items: Record<string, number>, extra: Partial<Inputs> = {}) =>
+        plan(inputs([acct('Blade', { ...skills, ...s }, items)], { army, market: sold, capacity: CAPACITY, ...extra }))[0]!;
+    const buy = pick({}, kit);
+    expect(buy.template!.id).toBe(KIT_BUY + WEAPON.id);
+    expect(buy.template!.args).toEqual([`scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=${KIT_PRICE_CAPS['adamant scimitar']} CASH_RESERVE=1000 ORDER_KEY=blade-kit0-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200`]);
+    expect(jobFor(buy, side)).toMatchObject({ script: 'scripts/chain.ts', repeat: false, resources: [WEAPON_MARKET] });
+    // A later buy takes the account's next order key.
+    expect(pick({}, kit, { kitSeq: new Map([['blade', 2]]) }).template!.args![0]).toContain('ORDER_KEY=blade-kit2-1331-0to1');
+    // With an adamant or rune blade, worn or banked, it fights on.
+    for (const blade of WEAPON_HELD) expect(pick({}, { ...kit, [blade]: 1 }).template!.id).toBe('army-trooper-defence-99');
+    // Under Attack 30, short of coins, with no seller under the cap, or after the buy was retired: no buy.
+    expect(pick({ Attack: 29 }, kit).template!.id).not.toBe(KIT_BUY + WEAPON.id);
+    expect(pick({}, { ...kit, coin: KIT_PRICE_CAPS['adamant scimitar']! }).template!.id).toBe('army-trooper-defence-99');
+    expect(pick({}, kit, { market }).template!.id).toBe('army-trooper-defence-99');
+    expect(pick({}, kit, { retired: new Set([pairKey('Blade', KIT_BUY + WEAPON.id)]) }).template!.id).toBe('army-trooper-defence-99');
+    // Every account gets one now: the buy comes before the Ranged band too, and before the Prayer filler.
+    expect(pick({ Ranged: 30 }, { ...kit, shortbow: 1, 'iron arrow': 500 }).template!.id).toBe(KIT_BUY + WEAPON.id);
+    expect(pick({ Ranged: 30 }, { ...kit, shortbow: 1, 'iron arrow': 500, 'adamant scimitar': 1 }).template!.id).toBe('army-trooper-ranged-99');
+    expect(pick({ Defence: 99, Prayer: 80 }, kit).template!.id).toBe(KIT_BUY + WEAPON.id);
+    // Two accounts are away for it at a time; the third keeps its band.
+    const three = ids(plan(inputs(['Blade', 'Edge', 'Point'].map(n => acct(n, skills, kit)), { army, market: sold, capacity: CAPACITY })));
+    expect(Object.values(three).sort()).toEqual(['army-trooper-defence-99', KIT_BUY + WEAPON.id, KIT_BUY + WEAPON.id]);
+    // An account outside the army is not armed.
+    expect(plan(inputs([acct('Blade', skills, kit)], { army: new Set(['other']), market: sold, capacity: CAPACITY })).some(x => x.template?.id === KIT_BUY + WEAPON.id)).toBe(false);
+});
+
+test('with no fire on the market the alchemy kit buys its other lines, then the account buys a staff of fire at Zaff\'s', () => {
+    const templates = catalogue().filter(t => t.id === 'army-alch-magic-99' || t.id === 'army-staff-zaff'), army = new Set(['rich']);
+    // The staff job is a pilot: a plan names it to turn it on.
+    const pilots = new Set(['army-staff-zaff']);
+    const pick = (items: Record<string, number>, skills: Record<string, number> = { Magic: 30 }) => plan(inputs([mage('Rich', items, skills)], { templates, army, market, capacity: CAPACITY, pilots }))[0];
+    // The market sells nature runes and no fire: the buy takes the nature runes and leaves the fire line to the shop job.
+    const buy = pick({ coin: 5_000_000, feather: 500 })!;
+    expect(buy.template!.id).toBe(KIT_BUY + 'army-alch-magic-99');
+    expect(buy.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).join('x'))).toEqual(['561x1000']);
+    // With the nature runes and feathers held and no fire, the staff job; with a staff or 250 fire runes, the band.
+    const held = { coin: 4_000_000, feather: 500, 'nature rune': 1000 };
+    const shop = pick(held)!;
+    expect(shop.template!.id).toBe('army-staff-zaff');
+    expect(jobFor(shop, side)).toMatchObject({ script: 'scripts/shop-buyer.ts', args: ['zaff', '3000'], repeat: true, resources: ['shop:zaff'],
+        env: { ITEMS: 'staff of fire', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', NO_BUY_TICKS: '1100' } });
+    expect(pick({ ...held, 'fire rune': 249 })!.template!.id).toBe('army-staff-zaff');
+    expect(pick({ ...held, 'staff of fire': 1 })!.template!.id).toBe('army-alch-magic-99');
+    expect(pick({ ...held, 'mystic fire staff': 1 })!.template!.id).toBe('army-alch-magic-99');
+    expect(pick({ ...held, 'fire rune': 250 })!.template!.id).toBe('army-alch-magic-99');
+    // Under Magic 21, short of coins, or with nothing else of the kit held: no trip to the shop.
+    expect(pick(held, { Magic: 20 })?.template?.id).not.toBe('army-staff-zaff');
+    expect(pick({ ...held, coin: 14_000 })?.template?.id).not.toBe('army-staff-zaff');
+    expect(pick({ coin: 4_000_000, feather: 500, 'nature rune': 49 })?.template?.id).not.toBe('army-staff-zaff');
+    // Only the fire line is short and no market sells it: there is nothing to buy on the Grand Exchange.
+    expect(plan(inputs([mage('Rich', { coin: 5_000, feather: 500, 'nature rune': 1000 }, { Magic: 30 })], { templates, army, market, capacity: CAPACITY, pilots }))
+        .some(x => x.template?.id.startsWith(KIT_BUY))).toBe(false);
+    // Unnamed, the staff job is not given.
+    expect(plan(inputs([mage('Rich', held, { Magic: 30 })], { templates, army, market, capacity: CAPACITY })).some(x => x.template?.id === 'army-staff-zaff')).toBe(false);
 });
 
 test('a line no market sells is sent first; a pair whose order failed is not asked again', () => {
@@ -800,15 +950,15 @@ test('the Prayer filler waits behind a kit buy and gives way to one while it run
     const army = new Set(['archer']);
     const skills = { Thieving: 99, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 87, Magic: 99, Prayer: 74 };
     const archer = acct('Archer', skills, { coin: 4_000_000, shark: 40, shortbow: 1 });
-    // Its Ranged band lacks only arrows, and another account holds the arrow shop: the market buy comes before the filler.
-    const capacity = { ...CAPACITY, 'shop:ardy': 0 };
+    // Its Ranged band lacks only arrows, and other accounts hold the arrow shops: the market buy comes before the filler.
+    const capacity = { ...CAPACITY, 'shop:ardy': 0, 'shop:catherby_arrows': 0, 'shop:dargaud': 0, 'shop:lowe': 0 };
     expect(plan(inputs([archer], { army, market, capacity }))[0]!.template!.id).toBe(KIT_BUY + 'army-trooper-ranged-99');
     // The same while the filler is its running job: a kit buy replaces a filler, as it replaces a coin job.
     const busy = { army, market, capacity, unfundable: new Set(['archer']) };
     expect(plan(inputs([archer], { ...busy, current: new Map([['archer', 'army-trooper-prayer-99']]) }))[0]!.template!.id).toBe(KIT_BUY + 'army-trooper-ranged-99');
     // A band proper still keeps its place over a kit buy.
     expect(plan(inputs([archer], { ...busy, current: new Map([['archer', 'army-trooper-defence-99']]) }))[0]!.template!.id).not.toBe(KIT_BUY + 'army-trooper-ranged-99');
-    // With no market for the arrows and the shop taken it fills the time on the field.
+    // With no market for the arrows and the shops taken it fills the time on the field.
     expect(plan(inputs([archer], { army, capacity }))[0]!.template!.id).toBe('army-trooper-prayer-99');
 });
 
@@ -829,9 +979,38 @@ test('an army account whose bow is short of arrows buys bronze arrows at the Ard
     expect(pick({}, { ...kit, shortbow: 0 }).template!.id).toBe('army-trooper-defence-99');
     expect(pick({}, { ...kit, coin: 4_000 }).template!.id).toBe('army-trooper-defence-99');
     expect(pick({ Ranged: 99 }, kit).template!.id).toBe('army-trooper-defence-99');
-    // One account holds the shop; the next keeps its melee band until the shop is free.
-    const two = ids(plan(inputs([acct('Archer', skills, kit), acct('Bowman', skills, kit)], { army, capacity: CAPACITY })));
-    expect(Object.values(two).sort()).toEqual(['army-arrows-ardy', 'army-trooper-defence-99']);
+    // One account holds each shop: the second walks to Hickton's in Catherby, the third takes the ferries to Lowe's in
+    // Varrock, and the fourth keeps its melee band until a shop is free.
+    const names = ['Archer', 'Bowman', 'Crossbow', 'Dart'];
+    const four = ids(plan(inputs(names.map(n => acct(n, skills, kit)), { army: new Set(names.map(n => n.toLowerCase())), capacity: CAPACITY })));
+    expect(Object.values(four).sort()).toEqual(['army-arrows-ardy', 'army-arrows-catherby', 'army-arrows-lowe', 'army-trooper-defence-99']);
+    const hickton = plan(inputs([acct('Archer', skills, kit)], { army, capacity: { ...CAPACITY, 'shop:ardy': 0 } }))[0]!;
+    expect(jobFor(hickton, side)).toMatchObject({ script: 'scripts/shop-buyer.ts', args: ['catherby_arrows', '600'], repeat: true, resources: ['shop:catherby_arrows'],
+        env: { ITEMS: 'iron arrow|bronze arrow', STOCK_TARGET: String(LOWE_STOCK), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0' } });
+    // Arrows of any kind end the shop runs: steel arrows a shortbow cannot fire are a kit matter, not a reason to shop again.
+    expect(pick({}, { ...kit, 'steel arrow': ARROW_LOW }).template!.id).toBe('army-trooper-defence-99');
+    // From Ranged 40 an account short of arrows goes to the Ranging Guild before any other shop, for a willow shortbow
+    // and arrows up to mithril; with arrows of any kind it trains, and under 40 it uses the other shops.
+    const guild = pick({ Ranged: 40 }, kit);
+    expect(guild.template!.id).toBe('army-arrows-guild');
+    expect(jobFor(guild, side)).toMatchObject({ script: 'scripts/chain.ts', env: { ROUNDS: '1' }, repeat: true, resources: ['shop:dargaud'] });
+    expect(jobFor(guild, side).args).toEqual([
+        'scripts/shop-buyer.ts dargaud 800 ITEMS=willow.shortbow STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=4000 COIN_RESERVE=500 MAX_SPEND=3000',
+        `scripts/shop-buyer.ts dargaud 800 ITEMS=mithril.arrow|steel.arrow|iron.arrow|bronze.arrow STOCK_TARGET=${ARROW_STOCK} STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=51000 COIN_RESERVE=500 MAX_SPEND=50000`]);
+    expect(pick({ Ranged: 39 }, kit).template!.id).toBe('army-arrows-ardy');
+    expect(pick({ Ranged: 40 }, { ...kit, 'bronze arrow': 500 }).template!.id).toBe('army-trooper-ranged-99');
+    expect(pick({ Ranged: 40 }, { ...kit, 'willow shortbow': 1, 'mithril arrow': 500 }).template!.id).toBe('army-trooper-ranged-99');
+    expect(pick({ Ranged: 40 }, { ...kit, coin: 59_000 }).template!.id).toBe('army-arrows-ardy');
+    const lowe = plan(inputs([acct('Archer', skills, kit)], { army, capacity: { ...CAPACITY, 'shop:ardy': 0, 'shop:catherby_arrows': 0 } }))[0]!;
+    expect(jobFor(lowe, side)).toMatchObject({ script: 'scripts/shop-buyer.ts', args: ['lowe', '2500'], repeat: true, resources: ['shop:lowe'],
+        env: { ITEMS: 'iron arrow|bronze arrow', STOCK_TARGET: String(LOWE_STOCK), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0' } });
+    // Lowe's trip needs more coins than Aemad's.
+    expect(plan(inputs([acct('Archer', skills, { ...kit, coin: 24_000 })], { army, capacity: { ...CAPACITY, 'shop:ardy': 0, 'shop:catherby_arrows': 0 } }))[0]!.template!.id).toBe('army-trooper-defence-99');
+    // A Grand Exchange buy that acquired its items made progress, however long the trip; one that acquired none did not.
+    const trip = 'LEDGER ticks=1400 xp=0 inventory=8 move=600 anim=0 dialog=4 stun=0 idle=780';
+    expect(assess([trip, 'RESULT ok {"ok":true,"phase":"settled","quantity":1000,"targetMet":true,"acquired":1000,"refund":554000}', 'RESULT ok chain rounds=1 ok=1 failed=0']).retire).toBe(false);
+    expect(assess([trip, 'RESULT ok {"ok":true,"phase":"settled","quantity":1,"acquired":1,"cashDeltaThisSession":-72000}']).retire).toBe(false);
+    expect(assess([trip, 'RESULT fail {"ok":false,"phase":"settled","quantity":50,"acquired":0,"refund":1000}']).reason).toMatch(/^tick waste/);
     // A shop run that bought arrows made progress; one that bought none on a long wait is retired as waste.
     const wait = 'LEDGER ticks=1000 xp=0 inventory=12 move=120 anim=0 dialog=0 stun=0 idle=868';
     expect(assess([wait, 'RESULT ok ticks=1000 boughtTotal=96 bankedTotal=96 stop=cap targetMet=0']).retire).toBe(false);

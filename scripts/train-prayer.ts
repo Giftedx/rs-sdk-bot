@@ -1,5 +1,6 @@
 // bun scripts/train-prayer.ts <account> [target, default43]
-// Owned Bones526 by default; BONE_ID=532 buries owned big bones. MAX_BURY=175, BONE_RESERVE=6, CAP=1500 ticks by default.
+// Owned Bones526 by default; BONE_ID=532 buries owned big bones and BONE_ID=536 dragon bones. MAX_BURY=175,
+// BONE_RESERVE=6, CAP=1500 ticks by default.
 import {openBot,finish,getWorld,accountOf} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
@@ -8,10 +9,11 @@ import {walkPath,sessionWalker,goTo,type PathPoint} from '../packages/core/src/w
 import {ferryWalk} from './walk-to';
 
 const BONE=526,PRAYER=14;
-// Server XP per bury at 25x: bones 4.5, big bones 15 (bury_bone.rs2).
-export const BONE_XP:Record<number,number>={526:112.5,532:375};
-// held (BURY_HELD=1): bury the bones the account holds above the reserve, up to the target; ok after at least one level
-// when they run out. The PK army's Prayer band runs this with a static target of 99.
+// Server XP per bury at 25x: bones 4.5, big bones 15, dragon bones 72 (bones.obj bone_exp, in tenths).
+export const BONE_XP:Record<number,number>={526:112.5,532:375,536:1800};
+// held (BURY_HELD=1): bury the bones the account holds above the reserve, up to the target; ok when they run out
+// after at least one bury. Each bury's XP is checked, so a batch too small for a level is still proved work: from 96
+// a level is about 60,000 XP, more than 100 bones give. The PK army's Prayer bands run this with a static target of 99.
 export interface PrayerOptions{target?:number;cap:number;maximum:number;reserve:number;bone?:number;held?:boolean;stop?:()=>boolean}
 export function prayerOptions(argv:string[]=process.argv,env:Record<string,string|undefined>=process.env):PrayerOptions{
     const bone=Number(env.BONE_ID??BONE),held=env.BURY_HELD==='1';
@@ -149,9 +151,9 @@ export async function runPrayer(s:Session,o:PrayerOptions,walk:Approach=approach
     const equipmentPreserved=JSON.stringify(worn())===entryEquipment;
     if(!preserved||!equipmentPreserved||held()>0||bankCount()<o.reserve)failure||='no prayer progress: final bank/reserve/asset proof failed';
     const targetMet=!failure&&!ended&&!died&&!unsafe&&!stopped()&&level()>=goal&&xp()>=targetXp&&nearBank()&&toggledOn&&toggledOff&&preserved;
-    // Held mode: the bones ran out after at least one level, with the same safety and asset proof as a met target.
+    // Held mode: the bones ran out after at least one bury, with the same safety and asset proof as a met target.
     const gained=level()-initialLevel,bonesOut=!!o.held&&stop==='input-insufficient'&&buried>0&&held()===0;
-    const heldOk=bonesOut&&gained>0&&!failure&&!ended&&!died&&!unsafe&&!stopped()&&nearBank()&&preserved;
+    const heldOk=bonesOut&&!failure&&!ended&&!died&&!unsafe&&!stopped()&&nearBank()&&preserved;
     return{ok:targetMet||heldOk,gained,targetMet,target:goal,buried,attempts,initialBones,boneBank:bankCount(),heldBones:held(),consumed:initialBones-(final.get(BONE)??0),xpGain:xp()-initialXp,initialXp,finalXp:xp(),finalLevel:level(),firstBoneXp:firstBoneXp??0,rateVerified:firstBoneXp!==undefined&&!failure,toggledOn,toggledOff,prayerPointsOn,prayerPointsFinal:state()?.prayers?.prayerPoints??0,bankObservedAt,preserved,equipmentPreserved,hpMin,died,stop,ticks:s.tick()-start,failure:failure||(!targetMet&&!heldOk?'no prayer progress: bounded goal unmet':'-')};
 }
 if(import.meta.main){

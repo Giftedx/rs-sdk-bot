@@ -226,6 +226,40 @@ Ranged it adds is not needed at that point.
   cooked meat, and with the spacing it takes three bites 3 ticks apart and none is dropped. **Gap.** Not rerun
   live. A practice save cannot set current HP, so no practice run starts low.
 
+## The army's blade
+
+- **Claim.** An army account that fights with a bronze sword gains a quarter to a third in maximum hit from an
+  adamant scimitar, and the planner buys it one (`kit-buy:army-weapon`, before its Ranged band, two accounts away at
+  a time).
+- **Conditions.** `combat.rs2` `combat_maxhit`: (effective level x (64 + strength bonus) + 320) / 640, effective level
+  107 on an accurate or defensive style and 110 on an aggressive one at Strength 99. Strength bonus: bronze sword 5,
+  mithril sword 17, adamant sword 24, adamant scimitar 28, rune scimitar 44 (`melee/scimitars.obj`). That gives 12
+  for the bronze sword, 15 or 16 for the adamant scimitar and 18 for the rune scimitar on the accurate style, all at
+  the same attack rate. The trainer already wields the best blade an account owns.
+- **Market (live claude-cloud read).** Adamant scimitar: 42 listed at 72,000, bids at 33,068, volume-weighted
+  price 38,089. Rune scimitar: one listed at 567,227. Mithril scimitar: one at 49,999. No adamant or mithril sword
+  or longsword is listed. The Varrock sword shop holds 2 adamant swords (one back per 12,000 ticks) and 3 mithril.
+- **Evidence.** `packages/planner/test/autopilot.test.ts` (who buys, the order, two at a time). The trooper results on
+  claude-cloud name the weapon: `"weapon":"Bronze sword"` on Deeppockets, Fatstack, KnightRider and PocketPool.
+- **Live (claude-cloud).** Fingerblastr and Knightstick each bought one for 72,000 (`RESULT ok`, `acquired` 1,
+  8,000 refunded). Fatstack's buy failed twice on the trip: its last run had been cut on the trooper field and the
+  market travel found no route from 2529,3236.
+- **Claim.** A market buy that starts on the Gnome battlefield first walks to the Ardougne north bank with
+  auto-retaliate off, then makes its guarded trip. **Conditions.** The trip aborts on the first lost hit point, and a
+  trooper hits an account that stands on the field: practice, from 2529,3236, `travel-abort` at tick 64 and `no route
+  to 3185,3436,0`, as live. With the exit: three accounts from the same tile left the field in 90 ticks and reached
+  Varrock West (`travel-returned` ok, 951 ticks from the start); the order was then placed and found no seller on
+  practice. **Evidence.** `.practice/travel/ge.ts` (`f1`, `g1`-`g3`) in the Claude cloud container that ran them;
+  `scripts/buy-owned-ge-item.test.ts`.
+- **Claim.** A trip east from elsewhere in Kandarin (the Catherby, Seers' Village and Yanille banks, the battlefield)
+  first walks to the Ardougne north bank, then takes the fare and the two ferries (`scripts/walk-to.ts`
+  `walkWithFerryFallback`). **Conditions.** The eastbound ferry step knew only a start inside Ardougne; from anywhere
+  else the pack held no fare and the planner found no route (live: UnderMyKilt's scimitar buy failed twice from
+  2807,3441 near the Catherby bank). Practice with the walk home: a market buy from the Catherby bank reached Varrock
+  West at tick 1,039, from the Seers' Village bank at 974 and from the Yanille bank at 1,041. **Evidence.**
+  `.practice/travel/ge.ts` (`k1`-`k3`); `scripts/walk-to.test.ts`.
+- **Gap.** No seller on practice, so a fill is proved live only. Kills per tick with each blade are not measured.
+
 ## Ranged on the troopers
 
 - **Claim.** On practice at xpRate 25, an army-shaped account trains Ranged 1 -> 63-66 on the Khazard troopers in about
@@ -328,6 +362,58 @@ Ranged it adds is not needed at that point.
 - **Evidence.** `.practice/arrows/shop.ts` and its `s3`, `s4`, `s5` logs in the Claude cloud container that ran them;
   `packages/planner/test/autopilot.test.ts` (the band order, one account at the shop).
 - **Gap.** Practice only. The Ranging Guild shelf (Ranged 40) and Hickton's are not in the planner.
+- **Claim.** A second account short of arrows buys them at Lowe's in Varrock (`army-arrows-lowe`:
+  `scripts/shop-buyer.ts <bot> lowe 2500` with `ITEMS='iron arrow|bronze arrow' STOCK_TARGET=1000 BANK_AT=0`), and
+  the Ranged template then walks back from Varrock East and trains with the iron arrows.
+- **Conditions.** Practice. The same account at the Ardougne north bank, three at once on one shelf (bronze 2,000,
+  iron 1,500). Each shop run was followed by the Ranged template at a 1,600-tick cap.
+
+  | Run | Bought | Coins | Shop run ticks | Stop | Ranged run after it |
+  |---|---|---|---|---|---|
+  | l1 | 1,107 | 10,797 | 1,431 | stock-wait | ok, 29 kills, Ranged 1 -> 59, 114 iron arrows lost, 233 taken back |
+  | l2 | 1,110 | 10,879 | 1,533 | cap (1,500) | ok, 33 kills, Ranged 1 -> 61, 109 lost, 240 taken back |
+  | l3 | 1,327 | 12,267 | 1,506 | stock-wait | ok, 24 kills, Ranged 1 -> 57, 147 lost, 213 taken back |
+
+  The three emptied the shelf. Each trip out stood about 300 ticks while the world loaded, 100 on each ferry and 400
+  at the Port Sarim dock, where the first plan to Varrock East found no route and the second did
+  (`WALK_RETRY try=1 ... no route to 3253,3420,0`). The trip back took 842-916 ticks, inside the Ranged run's food
+  stage.
+- **Evidence.** `.practice/arrows/shop2.ts` and its `l1`-`l3` logs in the Claude cloud container that ran them;
+  `packages/planner/test/autopilot.test.ts` (one account at each shop).
+- **Gap.** Practice only. Why the first plan from the Port Sarim dock to Varrock East fails is not found.
+- **Claim.** Hickton's shop in Catherby is the nearest large shelf: a walk from Ardougne with no ferry
+  (`army-arrows-catherby`: `scripts/shop-buyer.ts <bot> catherby_arrows 600`, the same settings as Lowe's).
+- **Conditions.** Practice, the same account from the Ardougne north bank; shelf bronze 1,000 and iron 800. The
+  Ranged template followed each shop run.
+
+  | Run | On the shelf | Bought | Coins | Shop run ticks | Stop | Ranged run after it |
+  |---|---|---|---|---|---|---|
+  | h4 | alone | 1,791 | 14,963 | 526 | stock-wait | ok, 10 kills, Ranged 1 -> 44, iron arrows |
+  | h1 | one of three | 710 | 5,341 | 285 | stock-wait | ok, 11 kills, Ranged 1 -> 44 |
+  | h2 | one of three | 561 | 4,902 | 359 | stock-wait | ok, 15 kills, Ranged 1 -> 49 |
+  | h3 | one of three | 685 | 6,177 | 1,222 | cap (1,200) | ok, 12 kills, Ranged 1 -> 45 |
+
+  h3 stood on the emptied shelf to its cap for one arrow every 10 to 20 ticks, so the job's cap is 600. The walk back
+  to the north bank took 139-302 ticks, inside the Ranged run's food stage.
+- **Claim.** An account at Ranged 40 buys a willow shortbow and arrows up to mithril at the Ranging Guild
+  (`army-arrows-guild`, two shop runs in one `scripts/chain.ts` job) and then trains with them.
+- **Conditions.** Practice, the same account at Ranged 45, three at once on one shelf (bronze 1,000; iron, steel and
+  mithril 500 each). The door refuses under Ranged 40.
+
+  | Run | Bow | Arrows bought | Coins | Arrow run ticks | Ranged run after it |
+  |---|---|---|---|---|---|
+  | v2 | 1 for 202 | 1,143 (mithril 253, steel 251, iron 249, bronze 390) | 42,291 | 639 | ok, 28 kills, Ranged 45 -> 61, mithril arrows |
+  | v3 | 1 for 200 | 1,233 (mithril 252, steel 257, iron 249, bronze 475) | 44,086 | 531 | ok, 24 kills, Ranged 45 -> 61, mithril arrows |
+  | v1 | 1 for 200 | 289 (mithril 10, steel 14, iron 45, bronze 220) | 4,929 | 888, cap | ok, 2 kills, `stop=ammo` on its 10 mithril arrows |
+
+  v1 came last to an emptied shelf. Its Ranged run took the 10 mithril arrows and ended on ammo, so the trainer now
+  takes the best kind it holds 50 of, else its largest stack (`selectGiantArrows`). Each run logged two or three
+  `WALK fail ... walk rejected` lines at the guild door and went on.
+- **Evidence.** `.practice/arrows/shop3.ts` and its `h1`-`h4`, `v1`-`v3` logs in the Claude cloud container that ran
+  them; `packages/planner/test/autopilot.test.ts` (one account at each shop, the guild first from Ranged 40);
+  `scripts/gather-combat-giant.test.ts` (the arrow choice).
+- **Gap.** Practice only. The shelves together give back about 3,700 arrows in 6,000 ticks (Aemad 600, Hickton 900,
+  Lowe 1,000, the guild 1,150): an estimate of about seven archers at 510 lost each.
 
 ## Sharing stock between army accounts
 
@@ -445,6 +531,90 @@ TrouserSnake and UnderMyKilt hold about 15,000 feathers and 1,500-1,700 bones ea
   at base 4 (`varrock.inv` `runeshop`; profile `aubury`, `ITEMS='fire rune'`). Zaff sells staffs of fire: practice,
   `MAX_ITEMS=1 bun scripts/shop-buyer.ts <bot> zaff` from Varrock West bought one for 1,500 coins in 45 ticks and banked
   it. Zaff stocks 2, with 1 back per 1,000 ticks.
+- **Claim.** An army account with the alchemy band's nature runes and feathers but no fire buys a staff of fire at
+  Zaff's from Ardougne and trains with it (`army-staff-zaff`, then `army-alch-magic-99`). **Conditions.** Practice.
+  Attack 69, Strength 61, Defence 62, Hitpoints 62, Magic 21 at the Ardougne north bank with 50,000 coins, 60 nature
+  runes and 200 feathers banked. `scripts/shop-buyer.ts <bot> zaff 3000` with `ITEMS='staff of fire' STOCK_TARGET=1
+  BANK_AT=0`; the shop run takes the two ferries (`scripts/walk-to.ts` `walkTarget`). The alchemy template then starts
+  at Varrock West, where the shop run banked.
+
+  | Run | Staff | Coins | Shop run ticks | Alchemy run after it |
+  |---|---|---|---|---|
+  | z1 | 1 | 1,500 | 914 | ok, Magic 21 -> 56, 60 casts, 1,325 ticks, `stop=supplies` |
+  | z2 | 1 | 1,500 | 916 | ok, Magic 21 -> 56, 60 casts, 1,259 ticks, `stop=supplies` |
+  | z3 | 1 | 1,530 | 915 | ok, Magic 21 -> 56, 60 casts, 1,259 ticks, `stop=supplies` |
+
+  Each shop run stood about 300 ticks at the start while the world loaded and 100 on each ferry. The alchemy run's
+  ticks include the trip back to Ardougne. **Evidence.** `.practice/staff/run.ts` and its `z1`-`z3` logs in the
+  Claude cloud container that ran them; `packages/planner/test/autopilot.test.ts` (the kit buy leaves the fire line
+  to the shop job; the job's needs). **Gap.** Practice only. Zaff's shelf serves one account per 1,000 ticks once its
+  2 staffs are sold; the Magic Guild's 2 are not in the planner.
+- **Claim.** On an empty shelf the shop run waits for the staff to come back (`NO_BUY_TICKS=1100`, `STALL_TICKS=0`).
+  **Conditions.** Practice, three accounts at once from Ardougne on a shelf of 2. Two bought on arrival (713 ticks
+  each). The third logged `SHOP_NONE` with a count of 0, stood 255 ticks at the shop and bought the staff that came
+  back: `RESULT ok`, `boughtTotal=1`, 969 ticks. **Evidence.** `.practice/staff/` `w1`-`w3` in the Claude cloud
+  container that ran them. **Gap.** The session's idle guard ends a wait at 900 ticks unless `STALL_TICKS=0`.
+- **Claim.** Live, Zaff's shelf does not serve the army: another player takes each staff as it comes back, so
+  `army-staff-zaff` is a pilot, off unless a plan names it. **Conditions.** claude-cloud, five visits in about an
+  hour by UnderMyKilt and Fingerblastr: every `SHOP_NONE` read `"Staff of fire","count":0,"price":1500`, the last after
+  a wait of 1,100 ticks (`RESULT ok ticks=1145 boughtTotal=0 stop=stock-wait`). **Evidence.** The cloud side's swarm
+  logs for those accounts. **Gap.** The Magic Guild's shelf (2 staffs, Magic 66 at the door) and Aubury's fire runes
+  are not tried live; no account under Magic 99 has fire for alchemy.
+
+- **Claim.** The alchemy band gets its feathers and fire from three shelves the army can reach, each a planner job
+  that runs after the account holds its nature runes: feathers at Gerrant's in Port Sarim (`army-feathers-sarim`),
+  fire runes at Aubury's in Varrock under Magic 66 (`army-fire-aubury`), and from Magic 66 a staff of fire and fire
+  runes at the Magic Guild in Yanille (`army-staff-guild`).
+- **Conditions.** Practice. Every other combat skill 99, at the Ardougne north bank with 60,000 coins and 1,000
+  nature runes banked. Chains f: Magic 21, no feathers. Chains y: Magic 92, 700 feathers, three at once on the guild's
+  shelf of 2 staffs. The alchemy template followed (cap 2,500 for f, 1,500 for y).
+
+  | Chain | Shop runs | Alchemy run after them |
+  |---|---|---|
+  | f1 | 700 feathers, 674 ticks, 5,219 coins; 500 fire runes, 614 ticks, 6,684 coins | ok, Magic 21 -> 72, 56 low and 66 high casts, 1,834 ticks, `stop=supplies` |
+  | f2 | 500 feathers, 796 ticks, 6,000 coins (spend cap); 375 fire runes, 672 ticks, 8,987 coins | ok, Magic 21 -> 67, 1,499 ticks, `stop=supplies` |
+  | y2 | staff 1,515 coins, 314 ticks; 375 fire runes, 237 ticks, 8,994 coins | Magic 92 -> 97 with the staff, 174 high casts, ended on the 1,500-tick cap |
+  | y3 | staff 1,500 coins, 216 ticks; 500 fire runes, 234 ticks, 6,710 coins | Magic 92 -> 97 with the staff, 174 high casts, ended on the 1,500-tick cap |
+  | y1 | no staff left (`SHOP_NONE`, count 0), 339 ticks; 375 fire runes, 214 ticks, 9,000 coins | ok, Magic 92 -> 94 on the fire runes, 75 high casts, `stop=supplies` |
+
+  Two accounts on one shelf pay more: the price of feathers and fire runes rises as the shelf empties. 375 to 500
+  fire runes take Magic 21 past 66, the Magic Guild door. An account that finds the staff shelf empty still leaves
+  with fire runes and comes back when they run under 250.
+- **Evidence.** `.practice/magic/chain.ts` and its `f1`, `f2`, `y1`-`y3` logs in the Claude cloud container that ran
+  them; `packages/planner/test/autopilot.test.ts` (the order of the three jobs).
+- **Gap.** Practice only. Whether another player empties the Magic Guild's staff shelf as Zaff's is not known.
+
+### Prayer from bought bones
+
+- **Claim.** A bought dragon bone buried at the bank is worth 1,800 Prayer XP and a big bone 375, at about 815 and 172
+  XP a tick, against 3.84 a tick for burying trooper bones on the field. The planner buys them for an account with
+  no other band to start (`kit-buy:army-bury-dragon-99`, then `army-bury-big-99`) and the bury band runs where the
+  Grand Exchange buy leaves the account.
+- **Conditions.** Practice at xpRate 25, the planner's bury templates (`scripts/train-prayer.ts 99` with
+  `BURY_HELD=1 BONE_ID=536|532 BONE_RESERVE=6`). Every melee skill, Ranged and Magic 99; the bones banked.
+
+  | Run | Bones banked | Start | Buried | XP | Prayer | Ticks | XP per tick | Stop |
+  |---|---|---|---|---|---|---|---|---|
+  | d2 | 264 dragon | Varrock West | 258 | 464,400 | 90 -> 99 | 571 | 813.3 | target-level |
+  | d1 | 169 dragon | Varrock West | 163 | 293,400 | 90 -> 96 | 358 | 819.6 | input-insufficient |
+  | d3 | 60 dragon | Ardougne north | 54 | 97,200 | 97 -> 98 | 119 | 816.8 | input-insufficient |
+  | b1 | 400 big | Ardougne north | 394 | 147,750 | 74 -> 82 | 858 | 172.2 | input-insufficient |
+
+  All four ended `RESULT ok`. The trainer keeps 6 bones and checks the XP of every bury. A held batch ends ok when
+  it runs out, with or without a level: from 96 a level is 58,000 to 67,000 XP.
+- **Market (live claude-cloud read).** Dragon bones: 1,009 listed from 9,000, mean 9,687. Big bones: 1,686 listed
+  from 2,399, mean 2,526. Bones: no real seller (ask 45,125). That is about 2.4 million Prayer XP for about 14
+  million coins, about 5.2 coins an XP for dragon bones and 6.5 for big bones; Prayer 74 to 99 is about 820,000 XP an
+  account. The side holds 36 million coins.
+- **Sizing.** A buy takes what the account's Prayer still needs from its level, or what it can pay for under the
+  caps (10,000 and 2,600). The listed dragon bones finish about three accounts (TrouserSnake 237, UnderMyKilt 314,
+  TheFullMonty 443 from their levels), so only an account with Ranged and Magic at 90 buys them; one with either
+  still under 99 keeps 100,000 coins back for arrows, a staff and a blade.
+- **Evidence.** `.practice/bones/run.ts` and its `d1`-`d3`, `b1` logs in the Claude cloud container that ran them;
+  `packages/planner/test/autopilot.test.ts` (who buys, how many, the order of the two bones);
+  `scripts/train-prayer.test.ts` (dragon bone XP, a batch with no level).
+- **Gap.** The buy is not run live and the Grand Exchange is not on practice. The listings above the caps are not
+  bought, so less than the listed total is in reach.
 
 ## 1. Melee, no cannon
 

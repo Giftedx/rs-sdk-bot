@@ -95,18 +95,29 @@ const FERRY_LEG_PLAN_MS = 15_000;
 // field.
 const inEast = (t: Tile) => t.level === 0 && t.x >= 2930 && t.x <= 3280 && t.z >= 3150 && t.z <= 3510;
 const inArdougne = (t: Tile) => t.level === 0 && t.x >= 2550 && t.x <= 2700 && t.z >= 3240 && t.z <= 3400;
+// The rest of Kandarin west of White Wolf Mountain: Catherby, Seers' Village, the Ranging Guild, Yanille and the Gnome
+// battlefield. A trip east from there starts with a walk to the Ardougne north bank: the fare bank and the first dock
+// are known from Ardougne, and with no fare in the pack the planner finds no route east from those places (live: kit
+// buys that started at the Catherby bank and on the battlefield ended "no route to 3185,3436,0").
+const ARDOUGNE_NORTH: Tile = { x: 2619, z: 3332, level: 0 };
+const inKandarin = (t: Tile) => t.level === 0 && t.x >= 2440 && t.x < 2870 && t.z >= 3040 && t.z <= 3530;
 
 export async function walkWithFerryFallback(from: Tile, to: Tile, walk: (to: Tile, budgetMs?: number) => Promise<Outcome>,
     sail: (boat: Travel) => Promise<Outcome>, coins: () => number, stageFare?: (need: number) => Promise<Outcome>): Promise<Outcome> {
     // Between the Varrock side and Ardougne the way is two ferries: westbound Port Sarim -> Musa Point, then Brimhaven
     // -> Ardougne; eastbound Ardougne -> Brimhaven, then Musa Point -> Port Sarim. The walk across Karamja between the
     // docks is the same ground both ways.
+    let ticks = 0;
+    if (!inArdougne(from) && inKandarin(from) && inEast(to)) {
+        const home = await walk(ARDOUGNE_NORTH, FERRY_LEG_PLAN_MS); ticks += home.ticks;
+        if (!home.ok) return { ...home, ticks };
+        from = ARDOUGNE_NORTH;
+    }
     const west = inEast(from) && to.level === 0 && to.x >= 2600 && to.x <= 2690 && to.z >= 3260 && to.z <= 3360;
     const east = !west && inArdougne(from) && inEast(to);
     const travel = west || east ? loadTravel() : [], first = travel.find(t => t.id === (west ? PORT_SARIM_FERRY : BRIMHAVEN_FERRY)), second = travel.find(t => t.id === (west ? ARDOUGNE_FERRY : MUSA_POINT_FERRY));
     const toll = west && from.x >= 3250 && from.z <= 3230 ? travel.find(t => t.id === AL_KHARID_TOLL) : undefined;
     const need = first?.from && second?.from ? first.coins + second.coins + (toll?.coins ?? 0) : 0;
-    let ticks = 0;
     // The planner routes over the ferries itself when the pack holds the fare. Without it, it finds no route, or one
     // that cannot be walked (practice: from the Ardougne north bank with no coins it sent the account up the castle
     // stairs and the walk was rejected). An account that banks its coins has no fare, so `stageFare` fetches it before

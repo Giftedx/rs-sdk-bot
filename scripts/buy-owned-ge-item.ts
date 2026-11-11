@@ -6,7 +6,7 @@ import {waitUntil} from '../packages/core/src/ticks';import {depositObserved} fr
 import type {GEOffer,GEActionResult} from '../vendor/rs-sdk/sdk/ge-types';
 import {marketProgress,type MarketProgress} from '../packages/planner/src/market-progress';
 import {LUMBRIDGE_TO_DRAYNOR,DRAYNOR_BANK} from './courier-route';
-import {ferryWalk} from './walk-to';
+import {ferryWalk,walkTargetPersist} from './walk-to';
 import {equipmentObserved} from '../packages/core/src/container-observation';
 import {productionMode} from './earth-production';
 // quantity is absent in journals written before bulk orders; those orders are quantity 1.
@@ -165,6 +165,32 @@ function marketEntryTrace(s:Session,stage:string,detail:Record<string,unknown>={
  console.log('GE_MARKET_ENTRY '+JSON.stringify({stage,at:Date.now(),tick:s.tick(),position:p?{x:p.worldX,z:p.worldZ,level:p.level}:null,
   hp:s.sdk.getSkill('Hitpoints')?.level??null,stateAge:s.sdk.getStateAge(),...detail}));
 }
+// A run the relay cut on the Gnome battlefield leaves the account among the Khazard troopers, and the market trip
+// below aborts on the first lost hit point. So from the battlefield a buy first walks to the Ardougne north bank, with
+// auto-retaliate off as the trooper trainer retreats (scripts/gather-combat.ts leave), and starts the guarded trip
+// there. Live claude-cloud: Fatstack's scimitar buy, three runs from 2529,3236, "no route to 3185,3436,0".
+export const BATTLEFIELD=[2480,3200,2600,3290] as const,ARDOUGNE_NORTH={x:2619,z:3332,level:0};
+export const onBattlefield=(p:{x:number;z:number;level:number})=>p.level===0&&p.x>=BATTLEFIELD[0]&&p.z>=BATTLEFIELD[1]&&p.x<=BATTLEFIELD[2]&&p.z<=BATTLEFIELD[3];
+export async function leaveBattlefield(s:Session,stop:()=>boolean,walk:(to:{x:number;z:number;level:number})=>Promise<{ok:boolean;detail?:string}>=to=>walkTargetPersist(s,to)){
+ const at=()=>s.sdk.getState()?.player,p=at();
+ if(!p||!onBattlefield({x:p.worldX,z:p.worldZ,level:p.level}))return false;
+ if((s.sdk.getSkill('Hitpoints')?.level??0)<=10)throw Error(`market entry: on the battlefield at ${p.worldX},${p.worldZ} with 10 HP or less; the trooper trainer's retreat eats first`);
+ const retaliate=async(on:boolean)=>{
+  const state=()=>s.sdk.getState() as {autoRetaliateEnabled?:boolean}|null;
+  if(state()?.autoRetaliateEnabled===on||state()?.autoRetaliateEnabled===undefined)return false;
+  await s.direct({type:'clickComponent',componentId:on?150:151,reason:`market entry auto-retaliate ${on?'ON':'OFF'}`});
+  return await waitUntil(s,()=>state()?.autoRetaliateEnabled===on,{timeoutTicks:5});
+ };
+ const start=s.tick(),off=await retaliate(false);
+ marketEntryTrace(s,'battlefield-leave',{autoRetaliateOff:off});
+ try{
+  const result=stop()?{ok:false,detail:'stop requested'}:await walk(ARDOUGNE_NORTH);
+  const q=at(),near=!!q&&q.level===0&&Math.max(Math.abs(q.worldX-ARDOUGNE_NORTH.x),Math.abs(q.worldZ-ARDOUGNE_NORTH.z))<=6;
+  marketEntryTrace(s,'battlefield-left',{ok:result.ok&&near,ticks:s.tick()-start,detail:result.detail});
+  if(!result.ok||!near)throw Error(`market entry: walk from the battlefield to the Ardougne north bank failed: ${result.detail??'not at the bank'}`);
+  return true;
+ }finally{if(off)await retaliate(true);}
+}
 export async function prepareMarketEntry(s:Session,stop:()=>boolean,travel:(signal:AbortSignal)=>Promise<{ok:boolean;ticks:number;detail?:string}>=async signal=>{
  const at=s.sdk.getState()?.player;
  if(at&&northEntryTile({x:at.worldX,z:at.worldZ,level:at.level})){marketEntryTrace(s,'north-approach',{waypoints:NORTH_APPROACH});return northApproach(s,signal);}
@@ -314,6 +340,7 @@ export async function runOwnedItem(s:Session,request:ItemRequest,journalPath:str
   if(cancel)throw Error('cannot cancel unsubmitted rescue order');
   entryJournal=await rescueMarketEntry(s,request,journalPath,stop,rescueControl);
  }
+ await leaveBattlefield(s,()=>stop()||Date.now()>=request.deadline);
  await prepareMarketEntry(s,()=>stop()||Date.now()>=request.deadline);
  const state=()=>s.sdk.getState(),held=(id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0),hp=()=>s.sdk.getSkill('Hitpoints')?.level??0,start=s.tick(),hp0=hp(),p0=state()?.player;
  const entryFailure=marketEntryFailure(p0,hp0);if(entryFailure)throw Error(entryFailure);
