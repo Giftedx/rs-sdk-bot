@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794430079964,
+ "at": 1794430443933,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -28,22 +28,22 @@
    "account": "TrouserSnake",
    "script": "scripts/shop-buyer.ts",
    "args": [
-    "sarim"
+    "betty"
    ],
    "env": {
-    "ITEMS": "feather",
+    "ITEMS": "fire rune|air rune|earth rune",
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy feathers at Gerrant",
+   "goal": "buy elemental runes at Betty",
    "role": "bank",
-   "template": "shop-feathers",
+   "template": "shop-runes",
    "autopilot": "claude-cloud",
    "resources": [
-    "shop:sarim"
+    "shop:betty"
    ]
   },
   {
@@ -70,21 +70,24 @@
   },
   {
    "account": "UnderMyKilt",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "sarim"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "ITEMS": "feather",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "goal": "buy feathers at Gerrant",
+   "role": "bank",
+   "template": "shop-feathers",
    "autopilot": "claude-cloud",
    "resources": [
-    "knight:2582,3297"
+    "shop:sarim"
    ]
   },
   {
@@ -186,22 +189,27 @@
   },
   {
    "account": "Dipstick",
-   "script": "scripts/chain.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "scripts/shop-buyer.ts betty 3000 ITEMS=water.rune STOCK_TARGET=300 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=13000 COIN_RESERVE=500 MAX_SPEND=12000"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy water runes at Betty's in Port Sarim for the curse band",
-   "role": "supply",
-   "template": "army-water-betty",
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
    "autopilot": "claude-cloud",
    "resources": [
-    "shop:betty"
+    "trooper:battlefield"
    ]
   },
   {
