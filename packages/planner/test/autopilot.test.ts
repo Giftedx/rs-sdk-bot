@@ -209,7 +209,9 @@ test('assess retires repeated fails, a death and near-total waste, and keeps pro
     expect(assess(['RESULT ok mode=giant creditedKills=30 selectedXp=52000', fight]).reason).toMatch(/^tick waste 92%/);
     // A trainer at its tick cap short of the target ends fail with the XP it gained: progress, not a fail toward retirement.
     expect(assess(['RESULT fail thieving 52 < 55 thieving=52 xp=16000 ticks=2500 died=false', 'RESULT fail thieving 54 < 55 thieving=54 xp=9000 ticks=2500 died=false'])).toMatchObject({ retire: false, fail: 2 });
-    expect(assess(['RESULT fail thieving 52 < 55 thieving=52 xp=0 ticks=2500 died=false', 'RESULT fail stop file thieving=52 xp=0 ticks=3 died=false'])).toMatchObject({ retire: true, fail: 2 });
+    expect(assess(['RESULT fail thieving 52 < 55 thieving=52 xp=0 ticks=2500 died=false', 'RESULT fail thieving 52 < 55 thieving=52 xp=0 ticks=2500 died=false'])).toMatchObject({ retire: true, fail: 2 });
+    // A run stopped by a stop file after such a fail is not a second one.
+    expect(assess(['RESULT fail thieving 52 < 55 thieving=52 xp=0 ticks=2500 died=false', 'RESULT fail stop file thieving=52 xp=0 ticks=3 died=false'])).toMatchObject({ retire: false, fail: 1, drains: 1 });
 });
 
 test('a status file becomes base levels and held counts by name', () => {
