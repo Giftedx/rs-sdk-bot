@@ -1,7 +1,270 @@
 {
  "side": "claude-cloud",
- "at": 1794362887961,
+ "at": 1794362947166,
  "jobs": [
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=441 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=thefullmonty-kit1-536-0to441 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 441 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-dragon-99",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Deeppockets",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts aubury 3000 ITEMS=fire.rune STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=10000 COIN_RESERVE=500 MAX_SPEND=9000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy fire runes at Aubury's in Varrock for the alchemy band",
+   "role": "supply",
+   "template": "army-fire-aubury",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:aubury"
+   ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "ardy",
+    "400"
+   ],
+   "env": {
+    "ITEMS": "bronze arrow",
+    "STOCK_TARGET": "500",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "5000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "4000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy bronze arrows at Aemad in East Ardougne for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-ardy",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:ardy"
+   ]
+  },
+  {
+   "account": "Knightstick",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "PocketPool",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts dargaud 800 ITEMS=willow.shortbow STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=4000 COIN_RESERVE=500 MAX_SPEND=3000",
+    "scripts/shop-buyer.ts dargaud 800 ITEMS=mithril.arrow|steel.arrow|iron.arrow|bronze.arrow STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=51000 COIN_RESERVE=500 MAX_SPEND=50000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy a willow shortbow and arrows up to mithril at the Ranging Guild for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-guild",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:dargaud"
+   ]
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Dipstick",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
   {
    "account": "KnightRider",
    "script": "scripts/chain.ts",
@@ -21,149 +284,6 @@
    "resources": [
     "shop:sarim"
    ]
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-22c15779-5e7c-451d-9c7c-000b237114f0"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-quickhandjob-20261111t015754z [task-22c15779-5e7c-451d-9c7c-000b237114f0]",
-   "role": "combat"
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-4ef251fe-1996-42e6-9f0c-4899f2773ca9"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-thefullmonty-20261111t015754z [task-4ef251fe-1996-42e6-9f0c-4899f2773ca9]",
-   "role": "supply"
-  },
-  {
-   "account": "Deeppockets",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-8b841270-91cb-431b-921c-6ff21c91293c"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-deeppockets-20261111t015754z [task-8b841270-91cb-431b-921c-6ff21c91293c]",
-   "role": "supply"
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-28360007-90d2-4a46-88a1-e062874830a9"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-fatstack-20261111t015754z [task-28360007-90d2-4a46-88a1-e062874830a9]",
-   "role": "combat"
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-3782a765-dd99-4aed-9673-03d830c3eb92"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-fingerblastr-20261111t015754z [task-3782a765-dd99-4aed-9673-03d830c3eb92]",
-   "role": "combat"
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-b9ec9922-7495-4b2a-8720-7f7e07a03662"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-kiltlifter-20261111t015754z [task-b9ec9922-7495-4b2a-8720-7f7e07a03662]",
-   "role": "supply"
-  },
-  {
-   "account": "Knightstick",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-fa5c3937-17c4-4529-a3aa-dd22bf103291"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-knightstick-20261111t015754z [task-fa5c3937-17c4-4529-a3aa-dd22bf103291]",
-   "role": "combat"
-  },
-  {
-   "account": "PocketPool",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-2b83135f-2729-43e3-befc-df6e1576df40"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-pocketpool-20261111t015754z [task-2b83135f-2729-43e3-befc-df6e1576df40]",
-   "role": "combat"
-  },
-  {
-   "account": "SporranDip",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-609e0315-c51b-4ee2-afd5-38499f17234e"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-sporrandip-20261111t015754z [task-609e0315-c51b-4ee2-afd5-38499f17234e]",
-   "role": "supply"
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-a66cc486-7f20-4f10-aedc-d8ca929c8da9"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-fingersmith-20261111t015754z [task-a66cc486-7f20-4f10-aedc-d8ca929c8da9]",
-   "role": "combat"
-  },
-  {
-   "account": "Dipstick",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-a27ba00a-2ba5-4cf0-8741-9cdaacf5afa8"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "claude-cloud-recover-dipstick-20261111t015754z [task-a27ba00a-2ba5-4cf0-8741-9cdaacf5afa8]",
-   "role": "combat"
   }
  ]
 }
