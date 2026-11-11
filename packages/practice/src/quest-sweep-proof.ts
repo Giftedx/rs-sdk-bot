@@ -55,9 +55,10 @@ const total=(s:Save,id:number)=>[93,95].reduce((n,t)=>n+(s.inventories[t]??[]).f
 export const equipment=(s:Pick<Save,'inventories'>)=>JSON.stringify(Object.entries(s.inventories)
  .filter(([k,rows])=>!['93','95'].includes(k)&&(rows??[]).length).sort(([a],[b])=>Number(a)-Number(b))
  .map(([k,rows])=>[k,[...rows!].sort((a,b)=>a.slot-b.slot).map(i=>[i.slot,i.id,i.count])]));
-const sameAssets=(a:Save,b:Save,cost:Record<number,number>)=>{
+const sameAssets=(a:Save,b:Save,cost:Record<number,number>,allowedGains:readonly number[]=[])=>{
+ const gains=new Set(allowedGains);
  const ids=new Set([...Object.keys(cost).map(Number),...[a,b].flatMap(s=>[93,95].flatMap(t=>(s.inventories[t]??[]).map(i=>i.id)))]);
- return [...ids].every(id=>total(b,id)===total(a,id)+(cost[id]??0))&&equipment(a)===equipment(b);
+ return [...ids].every(id=>gains.has(id)?total(b,id)>=total(a,id)+(cost[id]??0):total(b,id)===total(a,id)+(cost[id]??0))&&equipment(a)===equipment(b);
 };
 function ballAssets(before:Save,after:Save,cost:Record<number,number>){
  const normalize=(s:Save)=>{
@@ -93,6 +94,7 @@ function elenaAssets(before:Save,after:Save){
 }
 
 const DORIC_ORES=[{id:434,count:6},{id:436,count:4},{id:440,count:2}],PICKAXES=[1265,1267,1269,1271,1273,1275];
+const MINING_GEM_BYPRODUCTS=[1617,1619,1621,1623] as const;
 const IMP_BEADS=[1470,1472,1474,1476];
 const carried=(s:Save,id:number)=>(s.inventories[93]??[]).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 const bankCount=(s:Save,id:number)=>(s.inventories[95]??[]).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
@@ -116,7 +118,7 @@ export function questSweepChecks(id:string,before:Save,after:Save,log:string,rec
   logout:(log.match(/^LOGOUT logged-out$/gm)??[]).length===1&&!/^WARN .*?(?:logout|session close)/m.test(log),
   alive:after.skills[3]!.level>0&&!/\bdied=true\b|^RESULT fail .*died/m.test(log),
   entryHp:before.skills[3]!.level===(ball||ballMissing?77:imp||elena||rj||clock||totem||hunt?40:ernest||vampire?75:ghost?26:fishing?47:10),
-  assets:blackknight?sameAssets(before,after,{995:2500}):elena?elenaAssets(before,after):ball?ballAssets(before,after,{1985:-1,2409:1,2411:1,379:-eaten}):hunt?huntAssets(before,after,eaten):sameAssets(before,after,rj?{753:-1}:totem?{995:-90,373:5,1891:-bites1,1893:bites1-bites2,1895:bites2-bites3}:clock?{995:440,1929:-1,1925:1,379:-eaten}:ernest?{995:300,273:-1,275:1,379:-eaten}:vampire?{1917:-1,379:-eaten}:ghost?{553:-1}:fishing?{995:-5,313:-2,1550:-1,27:1}:success?{1759:-20,995:0}:doric?{995:179,1265:1}:{}),
+  assets:blackknight?sameAssets(before,after,{995:2500}):elena?elenaAssets(before,after):ball?ballAssets(before,after,{1985:-1,2409:1,2411:1,379:-eaten}):hunt?huntAssets(before,after,eaten):sameAssets(before,after,rj?{753:-1}:totem?{995:-90,373:5,1891:-bites1,1893:bites1-bites2,1895:bites2-bites3}:clock?{995:440,1929:-1,1925:1,379:-eaten}:ernest?{995:300,273:-1,275:1,379:-eaten}:vampire?{1917:-1,379:-eaten}:ghost?{553:-1}:fishing?{995:-5,313:-2,1550:-1,27:1}:success?{1759:-20,995:0}:doric?{995:179,1265:1}:{},doric?MINING_GEM_BYPRODUCTS:[]),
   // The Count fight trains Attack (accurate style), Hitpoints, and Strength or Defence on another style.
   unrelatedXp:before.skills.every((s,i)=>(elena||doric)&&i===14||success&&i===12||fishing&&i===10||totem&&i===17||ghost&&i===5||(ball||vampire||hunt)&&i<=3||s.rawExperience===after.skills[i]!.rawExperience),
  };
