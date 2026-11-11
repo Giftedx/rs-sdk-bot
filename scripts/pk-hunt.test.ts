@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { fleetNames, hitByPlayer, pickTarget, pickTrip, restock, SNARE_TRIP, TRIBRID_KIT, TRIP, verdict } from './pk-hunt';
+import { BOW_TRIP, fleetNames, hitByPlayer, pickTarget, pickTrip, restock, SNARE_TRIP, TRIBRID_KIT, TRIP, verdict } from './pk-hunt';
 
 const me = { z: 3556, combatLevel: 126 };
 const p = (index: number, name: string, combatLevel: number, distance: number, extra: object = {}) => ({ index, name, combatLevel, z: 3556, distance, ...extra });
@@ -106,4 +106,12 @@ test('pickTrip takes the snare trip where the bank holds all of it, else the sta
     expect(pickTrip(snare.slice(1)).name).toBe('staff');
     expect(pickTrip(snare.map((w, i) => (i === 1 ? { ...w, count: w.count - 1 } : w))).name).toBe('staff');
     expect(pickTrip([]).trip).toBe(TRIP);
+});
+
+test('pickTrip takes the bow trip with three more sharks at shallow spots, where the bank holds it', () => {
+    const bow = BOW_TRIP.map(w => ({ id: w.id, count: w.count }));
+    expect(pickTrip(bow, true)).toMatchObject({ name: 'bow', moreFood: 3 });
+    expect(pickTrip(bow, false).name).toBe('staff');
+    expect(pickTrip(SNARE_TRIP.map(w => ({ id: w.id, count: w.count })), false)).toMatchObject({ name: 'snare', moreFood: 0 });
+    expect(pickTrip(bow.slice(1), true).name).toBe('staff');
 });
