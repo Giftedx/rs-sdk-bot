@@ -1,5 +1,8 @@
 // bun scripts/magic-order.ts <account>
 // TARGET_LEVEL (2..99, required), MAX_CASTS=1000, CAP=6000 ticks, RUNE_BUDGET=0 coins, CASH_RESERVE=0 coins.
+// ALCH_ITEM_ID=845 explicitly authorizes owned oak longbows for high alchemy at Magic55. Unpriced IDs refuse.
+// alchemy.rs2 + magic_spells.dbrow + bows.obj: one bow, one nature, five fire -> 96 coins, 65 baseXP.
+// floor-superheat.ts supplies only the spellOnItem dispatch shape. No items or runes are purchased for alchemy.
 // RANDOM_EVENTS=0 turns off the shared random-event handler in openBot. The server comes from the account's bot.env.
 // Source decision: scripts/measure/floor-teleport.ts wind strike dispatch -> this worker. Adapt: that CLI logs in at
 // module load, so the {type:'spellOnNpc'} literal is restated with the shared componentId. Pinned
@@ -111,14 +114,27 @@ export function magicXpForLevel(level:number){
  let acc=0;for(let l=1;l<level;l++)acc+=Math.floor(l+300*2**(l/10));
  return Math.floor(acc/4);
 }
-export interface MagicOptions{target:number;maxCasts:number;cap:number;budget:number;reserve:number}
+export interface MagicOptions{target:number;maxCasts:number;cap:number;budget:number;reserve:number;alchItemId?:number}
 export function magicOptions(env:Record<string,string|undefined>=process.env):MagicOptions{
  const int=(key:string,fallback:number|undefined,min:number,max:number)=>{
   const raw=env[key],n=raw===undefined||raw===''?fallback:Number(raw);
   if(n===undefined||!Number.isSafeInteger(n)||n<min||n>max)throw Error(`invalid ${key}`);return n;
  };
  return{target:int('TARGET_LEVEL',undefined,2,99),maxCasts:int('MAX_CASTS',1000,1,100000),cap:int('CAP',6000,1,1000000),
-  budget:int('RUNE_BUDGET',0,0,1_000_000_000),reserve:int('CASH_RESERVE',0,0,2_000_000_000)};
+  budget:int('RUNE_BUDGET',0,0,1_000_000_000),reserve:int('CASH_RESERVE',0,0,2_000_000_000),
+  ...(env.ALCH_ITEM_ID===undefined?{}:{alchItemId:int('ALCH_ITEM_ID',undefined,1,65535)})};
+}
+export const ALCH_VALUES:Readonly<Record<number,number>>={845:96};
+export type AlchemyState={item:number;nature:number;fire:number;coins:number;xp:number};
+export function alchemyRefusal(level:number,itemId:number,items:number,nature:number,fire:number,fireCost=5){
+ if(level<55)return 'high alchemy requires Magic 55';
+ if(!ALCH_VALUES[itemId])return 'unpriced alchemy item';
+ return items<1||nature<1||fire<fireCost?'short alchemy supplies':null;
+}
+export function alchemyEffect(itemId:number,b:AlchemyState,a:AlchemyState,fireCost=5):CastEffect{
+ if(Object.keys(b).every(k=>b[k as keyof AlchemyState]===a[k as keyof AlchemyState]))return 'none';
+ return !!ALCH_VALUES[itemId]&&b.item-a.item===1&&b.nature-a.nature===1&&b.fire-a.fire===fireCost
+  &&a.coins-b.coins===ALCH_VALUES[itemId]&&Number.isFinite(a.xp)&&a.xp>b.xp?'cast':'partial';
 }
 export function magicPreflight(o:Pick<MagicOptions,'target'>,level:number,plane:number){
  if(!Number.isSafeInteger(level)||level<1)return 'Magic state unknown';
@@ -241,7 +257,8 @@ const AIR_STAFF=/^(staff of air|air battlestaff|mystic air staff)$/i;
 export interface MagicResult{ok:boolean;stop:string;target:number;level:number;casts:number;runesUsed:{air:number;mind:number};
  bought:{air:number;mind:number};coinsSpent:number;magicXpGained:number;hpXpGained:number;hpMin:number;eats:number;
  missing?:{air:number;mind:number};banked?:{air:number;mind:number;coins:number};failure?:string;ticks:number;
- teleportRunesUsed?:RuneCounts;teleportRunesBought?:RuneCounts}
+ teleportRunesUsed?:RuneCounts;teleportRunesBought?:RuneCounts;
+ alchemy?:{itemId:number;itemsUsed:number;natureUsed:number;fireUsed:number;coinsGained:number}}
 
 export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>boolean=()=>false):Promise<MagicResult>{
  const start=s.tick();let ended=false;void s.ended.then(()=>{ended=true;});
@@ -309,16 +326,92 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
    throw Object.assign(Error(`route refusal ${label}: ${res.detail??'walk failed'} at ${JSON.stringify(at())}`),why?{stop:why}:{});
   }
  };
+ let lastBankGeneration=0,alchemyBankRequested=false,alchemyBankRequestedAt=-Infinity;
+ // StateCollector includes the bank in modalOpen. Its interface can arrive before
+ // inprocess.bankObservation publishes the fresh inventory packet generation.
+ const pendingAlchemyBank=()=>state()?.modalInterface===5292||!!state()?.bank?.isOpen;
+ const alchemyBlocked=()=>!pendingAlchemyBank()&&(!!state()?.dialog?.isOpen||!!state()?.modalOpen);
+ const alchemyInterrupted=()=>ended||(!cleanup&&over());
+ const checkAlchemy=()=>{
+  check();
+  if(alchemyInterrupted())throw Object.assign(Error(reason()??'stopped'),{stop:reason()});
+ };
  const openBank=async()=>{
+  if(r.alchemy&&r.casts>0){
+   // OpLocHandler clears chat itself. A late level dialogue does not cancel an
+   // already dispatched request. CloseModalHandler defers CLOSE_MODAL, so never
+   // send it across that request, even before the bank interface arrives.
+   const generation=lastBankGeneration,deadline=s.tick()+CAST.effectTicks;
+   const fresh=()=>!!state()?.bank?.isOpen&&(s.bankObservation?.()?.generation??0)>generation;
+   while(s.tick()<deadline){
+    checkAlchemy();
+    bankOpen=fresh();
+    if(bankOpen){
+     const observedAt=s.tick();
+     await waitUntil(s,()=>s.tick()>observedAt||alchemyInterrupted(),{timeoutTicks:Math.max(1,deadline-s.tick())});
+     checkAlchemy();
+     if(fresh()){alchemyBankRequested=false;return;}
+     // An observed bank that closes has resolved the request. Reconcile before
+     // another interaction instead of handing its stale slots to withdraw.
+     bankOpen=false;alchemyBankRequested=false;
+     continue;
+    }
+    if(pendingAlchemyBank()){
+     await waitUntil(s,()=>fresh()||!pendingAlchemyBank()||alchemyInterrupted(),{timeoutTicks:Math.max(1,deadline-s.tick())});
+     checkAlchemy();
+     continue;
+    }
+    if(alchemyBankRequested&&s.tick()<alchemyBankRequestedAt+3){
+     await waitUntil(s,()=>fresh()||pendingAlchemyBank()||alchemyInterrupted()||s.tick()>=alchemyBankRequestedAt+3,{timeoutTicks:Math.max(1,deadline-s.tick())});
+     continue;
+    }
+    // OpLoc/OpNpc reject player.delayed, independently of the visible animation.
+    // Dispatch success is not acceptance. Retry without CLOSE_MODAL while a
+    // request is unresolved; the handler clears chat when it accepts the action.
+    if(!alchemyBankRequested)await clearAlchemyModal(deadline);
+    if(!await waitUntil(s,()=>pendingAlchemyBank()||alchemyBankRequested||!alchemyBlocked()||alchemyInterrupted(),{timeoutTicks:Math.max(1,deadline-s.tick())}))break;
+    checkAlchemy();
+    if(s.tick()>=deadline)break;
+    if(pendingAlchemyBank())continue;
+    const booth=state()?.nearbyLocs.filter(l=>l.distance<=2&&/bank booth|bank chest/i.test(l.name)&&!/^closed/i.test(l.name))
+     .sort((a,b)=>a.distance-b.distance).find(l=>l.optionsWithIndex.some(o=>/^(bank|use-quickly)$/i.test(o.text)));
+    // Booth Use (op1) starts banker chat. Use-quickly (op2) opens the bank.
+    const option=booth?.optionsWithIndex.find(o=>/^(bank|use-quickly)$/i.test(o.text));
+    const banker=state()?.nearbyNpcs.find(n=>n.distance<=2&&/banker/i.test(n.name)&&n.optionsWithIndex.some(o=>/^bank$/i.test(o.text)));
+    const bankOption=banker?.optionsWithIndex.find(o=>/^bank$/i.test(o.text));
+    let reply:{success?:boolean}|undefined;
+    if(booth&&option)reply=await s.direct({type:'interactLoc',x:booth.x,z:booth.z,locId:booth.id,optionIndex:option.opIndex,reason:'SDK'}) as typeof reply;
+    else if(banker&&bankOption)reply=await s.direct({type:'interactNpc',npcIndex:banker.index,optionIndex:bankOption.opIndex,reason:'SDK'}) as typeof reply;
+    else throw Error('alchemy bank interaction unavailable');
+    alchemyBankRequested=reply?.success!==false;
+    alchemyBankRequestedAt=s.tick();
+    await waitUntil(s,()=>fresh()||pendingAlchemyBank()||alchemyInterrupted()||s.tick()>=alchemyBankRequestedAt+3,{timeoutTicks:Math.max(1,deadline-s.tick())});
+    checkAlchemy();
+   }
+   throw Error('alchemy bank readiness unobserved within bounded interactions');
+  }
   check();const generation=s.bankObservation?.()?.generation??0;
   const reply=await s.bot.openBank();
   if(!reply.success||!await waitUntil(s,()=>!!state()?.bank?.isOpen&&(s.bankObservation?.()?.generation??0)>generation,{timeoutTicks:15}))
    throw Error(`bank observation unavailable: ${reply.message??'open unobserved'}`);
   bankOpen=true;
  };
- const closeBank=async()=>{if(bankOpen){await s.bot.closeBank();bankOpen=false;}};
+ const closeBank=async()=>{if(bankOpen){lastBankGeneration=s.bankObservation?.()?.generation??lastBankGeneration;await s.bot.closeBank();bankOpen=false;}};
+ const clearAlchemyModal=async(deadline=s.tick()+CAST.effectTicks)=>{
+  checkAlchemy();
+  if(alchemyBlocked()){
+   if(alchemyBankRequested)throw Error('alchemy bank request still pending');
+   const sentAt=s.tick();
+   await s.direct({type:'closeModal',reason:'SDK'});
+   // The client's immediate local reset is not a server observation.
+   const cleared=await waitUntil(s,()=>(s.tick()>sentAt&&!alchemyBlocked())||alchemyInterrupted(),{timeoutTicks:Math.max(1,deadline-s.tick())});
+   checkAlchemy();
+   if(!cleared)throw Error('alchemy modal remained open');
+  }
+ };
  const withdraw=async(id:number,n:number)=>{
   if(n<=0)return;
+  if(r.alchemy&&(!state()?.bank?.isOpen||!s.bankObservation?.())){bankOpen=false;await openBank();}
   const item=state()?.bank?.items.find(i=>i.id===id),stored=banked(id),held=pack(id),generation=s.bankObservation?.()?.generation??0;
   if(!item||stored<n)throw Error(`withdraw item${id}: needs ${n}, bank has ${stored}`);
   await s.bot.withdrawItem(item,n);
@@ -330,6 +423,13 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
  const remaining=()=>castsNeeded(magicXp(),o.target,baseXpEstimate(casts),o.maxCasts-r.casts);
  // Leftover runes and withdrawn coins go back to the bank on every exit that can reach one safely.
  const secure=async()=>{
+  if(r.alchemy){
+   if(!moved||ended||hp()<=HEALTH.critical)return;
+   cleanup=true;bankOpen=!!state()?.bank?.isOpen&&!!s.bankObservation?.();
+   if(!bankOpen||r.casts>0)await openBank();
+   for(const id of [r.alchemy.itemId,561,554,COINS])await deposit(id);
+   await closeBank();return;
+  }
   const carried=(r.teleportRunesUsed?Object.values(TELE_RUNE_IDS):[AIR,MIND]).reduce((n,id)=>n+pack(id),0)+(coinsWithdrawn>0?pack(COINS):0);
   if(!moved||!carried||ended||hp()<=HEALTH.critical)return;
   cleanup=true;
@@ -381,7 +481,7 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
  try{
   // Entry bank: observe owned runes and coins before any purchase or cast.
   r.stop='entry-bank';
-  if(region==='falador'||region==='seers'){
+  if(o.alchItemId===undefined&&(region==='falador'||region==='seers')){
    const moved=await goTo(s,await getWorld(),{...BANKS.varrockEast,level:0},accountOf(s),{legTimeoutTicks:100});
    if(!moved.ok)throw Error(`no route from the ${region} cleanup bank to Varrock East bank: ${JSON.stringify(moved)}`);
    region='varrock-east';
@@ -392,6 +492,57 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
   const allowance0=spendAllowance(o.budget,0,owned.coins,o.reserve);
   console.log('MAGIC_ORDER_ENTRY '+JSON.stringify({tick:s.tick(),region,position:at(),hp:hp(),magic:{level:level(),xp:xp0},owned,
    pack:{air:pack(AIR),mind:pack(MIND),coins:pack(COINS)},bank:{air:banked(AIR),mind:banked(MIND),coins:banked(COINS)},allowance:allowance0,airCost}));
+  if(o.alchItemId!==undefined){
+   const itemId=o.alchItemId;
+   const members=(s.client as {membersAccount?:number}|undefined)?.membersAccount===1;
+   const fireCost=teleportCosts({...TELEPORTS[0]!,costs:{air:0,mind:0,earth:0,water:0,fire:5,law:0}},s.sdk.getEquipment(),members).fire;
+   const why=alchemyRefusal(Math.min(level(),s.sdk.getSkill('Magic')?.level??0),itemId,pack(itemId)+banked(itemId),pack(561)+banked(561),pack(554)+banked(554),fireCost);
+   if(why){r.stop=why;await closeBank();return r;}
+   r.alchemy={itemId,itemsUsed:0,natureUsed:0,fireUsed:0,coinsGained:0};
+   const assetTotals=()=>{
+    const m=new Map<number,number>();
+    for(const i of [...s.sdk.getInventory(),...(s.bankObservation?.()?.items??[]),...s.sdk.getEquipment()])m.set(i.id,(m.get(i.id)??0)+i.count);
+    return m;
+   };
+   const assets=assetTotals(),equipment=JSON.stringify(project(s.sdk.getEquipment()));
+   moved=true;
+   // Keep space for unstackable bows and the coin credit. Only explicitly selected bows can be consumed.
+   for(const id of new Set(s.sdk.getInventory().map(i=>i.id)))await deposit(id);
+   const limit=Math.min(o.maxCasts,castsNeeded(magicXp(),o.target,65,o.maxCasts),banked(itemId),banked(561),fireCost?Math.floor(banked(554)/fireCost):o.maxCasts);
+   await withdraw(561,limit);if(fireCost)await withdraw(554,limit*fireCost);
+   await closeBank();
+   const snapshot=():AlchemyState=>({item:pack(itemId),nature:pack(561),fire:pack(554),coins:pack(COINS),xp:magicXp()});
+   while(level()<o.target){
+    if(over()){stop=reason();break;}check();
+    if(r.casts>=o.maxCasts){stop='max casts';break;}
+    if(randomEventsOf(s)?.busy()){await waitTicks(s,1);continue;}
+    if(pack(561)<1||pack(554)<fireCost){stop='alchemy supply exhaustion';break;}
+    if(!pack(itemId)){
+     await openBank();
+     if(banked(itemId)<1){stop='alchemy supply exhaustion';await closeBank();break;}
+     await withdraw(itemId,1);await closeBank();
+    }
+    await clearAlchemyModal();
+    if(over()){stop=reason();break;}check();
+    const item=s.sdk.getInventory().find(i=>i.id===itemId);if(!item)throw Error('selected alchemy item unobserved');
+    const before=snapshot();
+    const reply=await s.direct({type:'spellOnItem',slot:item.slot,spellComponent:componentId('magic:highlvl_alchemy'),reason:'SDK'}) as {success?:boolean}|undefined;
+    if(reply?.success===false)throw Error('alchemy dispatch refused');
+    // Animation completion ends this cast observation. Bank readiness is checked by openBank.
+    await waitUntil(s,()=>ended||over()||(alchemyEffect(itemId,before,snapshot(),fireCost)!=='none'&&pos()?.animId===-1),{timeoutTicks:CAST.effectTicks});
+    check();const after=snapshot(),effect=alchemyEffect(itemId,before,after,fireCost);
+    if(effect!=='cast'||pos()?.animId!==-1)throw Error(`alchemy effect ${effect}: ${JSON.stringify({before,after,animation:pos()?.animId})}`);
+    r.casts++;r.alchemy.itemsUsed++;r.alchemy.natureUsed++;r.alchemy.fireUsed+=fireCost;r.alchemy.coinsGained+=ALCH_VALUES[itemId]!;
+    console.log('MAGIC_ORDER_CAST '+JSON.stringify({tick:s.tick(),cast:r.casts,spell:'highlvl_alchemy',itemId,fireCost,before,after,position:at(),magic:{level:level(),xp:after.xp}}));
+   }
+   r.stop=level()>=o.target?'target':stop??'stopped';
+   await openBank();
+   for(const id of [itemId,561,554,COINS])await deposit(id);
+   const final=assetTotals(),debits=new Map([[itemId,r.casts],[561,r.casts],[554,r.alchemy.fireUsed],[COINS,-r.alchemy.coinsGained]]);
+   if([...new Set([...assets.keys(),...final.keys()])].some(id=>(assets.get(id)??0)-(final.get(id)??0)!==(debits.get(id)??0))
+    ||equipment!==JSON.stringify(project(s.sdk.getEquipment())))throw Error('alchemy asset reconciliation failed');
+   await closeBank();moved=false;
+  }else{
    // UPDATE_PID reports account membership, not map_members. It only admits a bounded
    // candidate attempt. Debit, XP and destination must still prove the spell actually ran.
    let members=(s.client as {membersAccount?:number}|undefined)?.membersAccount===1;
@@ -584,6 +735,7 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
   r.stop=level()>=o.target?'target':stop??'stopped';
   if(r.stop==='rune exhaustion'){r.missing=runeShortfall(remaining(),pack(AIR),pack(MIND),airCost);}
   }
+  }
  }catch(error){
   r.failure=String(error);r.stop=(error as {stop?:string}).stop??(ended?'session ended':'failure');
  }finally{
@@ -594,7 +746,7 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
  }
  r.eats=eats;r.level=level();r.magicXpGained=Math.round((magicXp()-xp0)*10)/10;r.hpXpGained=Math.round((hpXp()-hpXp0)*10)/10;
  r.ticks=s.tick()-start;
- r.ok=r.stop==='target'&&r.level>=o.target&&r.casts>0&&!r.failure&&(r.teleportRunesUsed?Object.values(TELE_RUNE_IDS):[AIR,MIND]).every(id=>pack(id)===0);
+ r.ok=r.stop==='target'&&r.level>=o.target&&r.casts>0&&!r.failure&&(r.alchemy?[r.alchemy.itemId,561,554,COINS]:r.teleportRunesUsed?Object.values(TELE_RUNE_IDS):[AIR,MIND]).every(id=>pack(id)===0);
  return r;
 }
 
