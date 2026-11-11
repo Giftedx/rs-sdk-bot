@@ -438,3 +438,10 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     `extra:spar-escape-tribrid-pots-x8`, seeds 1, 2 and 3). A kit with the runes of a freeze and no staff casts it
     with the weapon in hand (`castFreeze` in `scripts/pk.ts`); before that rule the snare kit cast none and killed 0
     of 16. Gap: the live hunter still restocks the staff kit; no whole hunter trip in the snare kit.
+26. **A whole hunter trip passes in the snare kit.** From Edgeville bank with an empty pack, the hunter restocks the
+    snare trip (`SNARE_TRIP` in `scripts/pk-hunt.ts`: bow, 50 earth, 50 water and 40 nature runes, two prayer
+    potions, a glory, the boosts and the sharks), walks to the first hunt spot, kills the target that stands there in
+    173 ticks with 24 shots and 25 dagger hits, and takes 12 piles (`extra:hunt-trip-snare`, seed 1, 27 s). The staff
+    kit passes the same case (`extra:hunt-trip-staff`, 24 s). `PK_KIT=snare` selects the kit and its trip for
+    `scripts/pk-hunt.ts`. Gap: the target stands and has no food, so the case proves the trip and not the fight;
+    the live hunter keeps the staff trip until a side's bank holds the snare runes.
