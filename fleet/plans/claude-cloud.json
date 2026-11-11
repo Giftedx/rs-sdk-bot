@@ -1,9 +1,9 @@
 {
  "side": "claude-cloud",
- "at": 1794421865869,
+ "at": 1794422041876,
  "jobs": [
   {
-   "account": "Quickhandjob",
+   "account": "TrouserSnake",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
@@ -19,28 +19,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "knight:2582,3297"
-   ]
-  },
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "foraging",
-    "flax",
-    "1800",
-    "28"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "pick flax at Seers to spin for the Crafting a black dragonhide body asks",
-   "role": "crafting",
-   "template": "army-leather-flax",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "aio:seers-flax"
    ]
   },
   {
@@ -138,31 +116,6 @@
   },
   {
    "account": "Dipstick",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "KnightRider",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
