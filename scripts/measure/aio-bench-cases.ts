@@ -69,7 +69,7 @@ const CHICKEN_FIXTURE: SaveConfig = {
 export const sparFixture = (x: number, z = 3555, o: {food?: number; glory?: boolean; teleport?: boolean; potions?: boolean; god?: boolean} = {}): SaveConfig => ({
   position: {x, z, level: 0},
   skills: {Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99, Prayer: 99, Hitpoints: 99},
-  varps: {147: 6, 176: 10, 300: 1000, ...(o.god ? {267: 8, 270: 99} : {})},
+  varps: o.god ? {147: 6, 176: 10, 300: 1000, 267: 8, 270: 99} : {147: 6, 176: 10, 300: 1000},
   equipment: [[1163, 0], [o.god ? 2414 : 1052, 1], [1712, 2], [1231, 3], [1127, 4], [1201, 5], [1079, 7], [2577, 10], [892, 13]].map(([id, slot]) => ({id: id!, count: id === 892 ? 300 : 1, slot: slot!})),
   inventory: [{id: o.god ? 2417 : 1401, count: 1}, ...(o.god ? [{id: 554, count: 400}] : []), {id: 861, count: 1}, {id: 556, count: 500}, {id: 565, count: 100}, {id: 557, count: 200}, {id: 555, count: 200}, {id: 561, count: 100},
     {id: 2434, count: 1}, {id: 2434, count: 1}, ...(o.glory ? [{id: 1712, count: 1}] : []), ...(o.teleport ? [{id: 563, count: 2}, {id: 554, count: 2}] : []), ...(o.potions || o.god ? [{id: 2436, count: 1}, {id: 2440, count: 1}, {id: 2444, count: 1}] : []), ...Array.from({length: o.food ?? (o.god ? 14 : o.potions ? 15 : 18)}, () => ({id: 385, count: 1}))],
