@@ -1,50 +1,9 @@
 {
  "side": "claude-cloud",
- "at": 1794412843127,
+ "at": 1794413444719,
  "jobs": [
   {
    "account": "Quickhandjob",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2652,3318"
-   ]
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "crafting",
-    "bowstrings",
-    "2500",
-    "MAX_MAKE=168",
-    "RAW_RESERVE=0",
-    "MAX_TRIPS=8"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "spin flax at Seers to the Crafting a black dragonhide body asks",
-   "role": "crafting",
-   "template": "army-leather-spin",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
-   "account": "UnderMyKilt",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/shop-buyer.ts lowe 2500 ITEMS=iron.arrow|bronze.arrow STOCK_TARGET=1200 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=29000 COIN_RESERVE=500 MAX_SPEND=28000",
@@ -63,6 +22,47 @@
    "resources": [
     "shop:lowe",
     "shop:aubury"
+   ]
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "foraging",
+    "flax",
+    "1800",
+    "28"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "pick flax at Seers to spin for the Crafting a black dragonhide body asks",
+   "role": "crafting",
+   "template": "army-leather-flax",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "aio:seers-flax"
+   ]
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2652,3318"
    ]
   },
   {
