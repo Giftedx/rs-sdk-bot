@@ -1,0 +1,22 @@
+{
+ "id": "1794374729443-oreelse-trousersnake",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "OreElse",
+ "to": "TrouserSnake",
+ "item": "Rune kiteshield",
+ "count": 1,
+ "start": 1794374729443,
+ "end": 1794383729443,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

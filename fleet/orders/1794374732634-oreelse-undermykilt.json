@@ -1,0 +1,22 @@
+{
+ "id": "1794374732634-oreelse-undermykilt",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "OreElse",
+ "to": "UnderMyKilt",
+ "item": "Rune platelegs",
+ "count": 1,
+ "start": 1794374732634,
+ "end": 1794383732634,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
