@@ -92,16 +92,27 @@ export function selectQuestFood(state:any,policy:FoodPolicy){
  return choices.find(c=>c.definition.heal<=max-hp)??choices[0]??null;
 }
 
+// The eat guard of a session (eat-guard.ts) registers its hold here, by the session's SDK object. An eater with
+// timing or checks of its own holds the guard from its start to its stop: a quest sustain, whose debit check accepts
+// no second eater, and the PK fight loop (scripts/pk.ts). `ateAt` is the tick of the guard's last eat: the food delay
+// of that eat ends 3 ticks later.
+type EaterHold=()=>{ateAt:number;release():void};
+const sessionEaters=new WeakMap<object,EaterHold>();
+export const registerSessionEater=(sdk:object,hold:EaterHold):void=>{sessionEaters.set(sdk,hold);};
+export const holdSessionEater=(sdk:object):{ateAt:number;release():void}=>sessionEaters.get(sdk)?.()??{ateAt:-Infinity,release(){}};
+
 export function startQuestSustain(s:TickSource&{direct(action:any):Promise<{success:boolean;message?:string}>},options:Omit<FoodPolicy,'reserved'>&{reserved?:Readonly<Record<number,number>>|(()=>Readonly<Record<number,number>>);timeoutTicks?:number;onConsumed?:(effect:{id:number;hpBefore:number;hpAfter:number})=>void}){
  const timeout=options.timeoutTicks??6;
  if(!Number.isSafeInteger(timeout)||timeout<1)throw Error('invalid quest sustain deadline');
- let stopped=false,draining=false,failure:string|null=null,off=()=>{},lastSent=-Infinity;
+ const held=holdSessionEater(s.sdk);
+ // An eat of the guard in the last ticks still holds the food delay: the first eat here waits for it.
+ let stopped=false,draining=false,failure:string|null=null,off=()=>{},lastSent=held.ateAt;
  const ac=new AbortController();
  const initial=s.sdk.getState()?.player,lifeId=initial?.lifeId,respawns=initial?.respawnCount??0;
  const count=(st:any,id:number)=>(st?.inventory??[]).filter((i:any)=>i.id===id).reduce((n:number,i:any)=>n+i.count,0);
  type Pending={selected:NonNullable<ReturnType<typeof selectQuestFood>>;before:number;nextBefore:number;at:number;accepted:boolean};
  let pending:Pending|undefined;
- const stop=()=>{stopped=true;off();};
+ const stop=()=>{stopped=true;off();held.release();};
  const fail=(why:string)=>{failure='quest sustain: '+why;ac.abort(failure);stop();};
  off=s.onTick(()=>{
   if(stopped)return;

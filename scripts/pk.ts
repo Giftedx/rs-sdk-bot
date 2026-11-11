@@ -11,6 +11,7 @@ import { join, resolve } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
 import { componentId } from '../packages/core/src/logout';
 import { questFlags } from '../packages/core/src/quest-status';
+import { holdSessionEater } from '../packages/core/src/sustain';
 import { tickWaits } from '../packages/core/src/tick-stream';
 import { armourDefence, StylePredictor, weakestFirst } from './pk-read';
 import type { NearbyPlayer } from '../vendor/rs-sdk/sdk/types';
@@ -374,7 +375,14 @@ export function kitRotation(asked: readonly Style[] | undefined, kit: Kit): read
     return asked?.some(st => hasStyle(kit, st)) ? asked : full;
 }
 
+// The fight loop times each eat against its attacks, so it holds the session's eat guard (packages/core/src/eat-guard.ts)
+// for the fight.
 export async function fightPlayer(s: Session, targetName: string, o: FightOptions): Promise<FightResult> {
+    const eater = holdSessionEater(s.sdk);
+    try { return await fightLoop(s, targetName, o, eater.ateAt + 3); } finally { eater.release(); }
+}
+
+async function fightLoop(s: Session, targetName: string, o: FightOptions, guardFoodReady: number): Promise<FightResult> {
     const log = o.log ?? ((line: string) => console.log(line));
     const rotation = kitRotation(o.rotation, o.kit);
     const eatAt = o.eatAt ?? 50, restoreAt = o.restorePrayerAt ?? 20, cap = o.cap ?? 600;
@@ -382,7 +390,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
     const sdk = s.sdk, start = s.tick(), want = targetName.toLowerCase();
     const startLife = sdk.getState()?.player?.lifeId;
     let last = -1, nextAttack = start, lastAttackAt = -10, lastWalkTicks = 0, hasAttacked = false, delayedUntil = start;
-    let foodReady = start, karambwanReady = start, potionReady = start;
+    let foodReady = Math.max(start, guardFoodReady), karambwanReady = start, potionReady = start;
     let freezeReady = start, frozenUntil = start, freezeCastAt = -10, frozenTile: { x: number; z: number } | null = null, selfFrozenUntil = start;
     let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = false, rapidSet = false, pjedByNpc = false;
     let target: NearbyPlayer | undefined, rubbed = -1, ranAt = -10, prevSelf: { x: number; z: number } | null = null;
