@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794376871668-oreelse-quickhandjob",
+ "account": "OreElse",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "7caf2204-a094-4ae8-a599-18d397b435ee",
+ "count": 0,
+ "ok": false,
+ "at": 1794379345506,
+ "detail": "trade claimed"
+}
