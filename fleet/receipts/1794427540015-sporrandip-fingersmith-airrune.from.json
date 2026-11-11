@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794427540015-sporrandip-fingersmith-airrune",
+ "account": "SporranDip",
+ "partner": "Fingersmith",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 46,
+ "claim": "be7e503e-8be6-46b6-a276-53c024369849",
+ "count": 0,
+ "ok": false,
+ "at": 1794427556848,
+ "detail": "trade claimed"
+}
