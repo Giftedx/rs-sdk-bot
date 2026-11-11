@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794429900692,
+ "at": 1794430079964,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -117,22 +117,22 @@
    "script": "scripts/aio.ts",
    "args": [
     "skiller",
-    "foraging",
-    "flax",
-    "1800",
-    "28"
+    "crafting",
+    "bowstrings",
+    "2500",
+    "MAX_MAKE=168",
+    "RAW_RESERVE=0",
+    "MAX_TRIPS=8"
    ],
    "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "pick flax at Seers to spin for the Crafting a black dragonhide body asks",
+   "goal": "spin flax at Seers to the Crafting a black dragonhide body asks",
    "role": "crafting",
-   "template": "army-leather-flax",
+   "template": "army-leather-spin",
    "autopilot": "claude-cloud",
-   "resources": [
-    "aio:seers-flax"
-   ]
+   "resources": []
   },
   {
    "account": "Kiltlifter",
