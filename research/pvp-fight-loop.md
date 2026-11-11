@@ -77,6 +77,41 @@ Gap: in two batches of the mirror, side A won 7 of 8 with either profile on it; 
 (side A first, then side B first) the kills were 5 to 3 and 3 to 5. The cause of a side's advantage is not found. The
 climber and the ladder put each profile on both sides.
 
+### What each build is worth
+
+Each build against the standard tribrid, 16 spars (8 on each side of the map), both sides on the base profile
+(`extra:spar-duel-<build>-x8`, seeds 1 and 2). Net is the build's net damage for each 100 ticks.
+
+| Build | Shop cost | Sharks | Wins of 16 | Net |
+|---|---|---|---|---|
+| `melee` (dagger, strength amulet, super attack and strength) | 252,755 | 22 | 13 | -8.5 |
+| `tribrid-pots` (three boost potions) | 441,315 | 15 | 11 | +13.6 |
+| `ranger` (d'hide, magic shortbow, ranging potion) | 241,915 | 23 | 10 | -21.4 |
+| `tribrid-dlong` (dragon longsword) | 517,355 | 18 | 5 | +6.3 |
+| `tribrid-mace-pots` | 467,315 | 15 | 2 | +1.8 |
+| `tribrid-mace` (dragon mace) | 467,355 | 18 | 1 | -7.3 |
+| `tribrid-bare` (no helm, body or legs) | 222,755 | 18 | 1 | -25.1 |
+| `tribrid-bare-pots` | 222,715 | 15 | 1 | -15.5 |
+| `mage` (splitbark, Fire Wave) | 177,555 | 20 | 0 | -5.1 |
+| `tribrid-adamant` | 99,071 | 18 | 0 | -18.6 |
+| `tribrid-mithril` | 35,691 | 18 | 0 | -38.2 |
+
+- Food wins a stand-up fight. The melee and ranger builds deal less net damage than the tribrid and still win,
+  with 4 and 5 more sharks: the tribrid's staff, bow and five rune stacks take the slots.
+- The three boost potions are worth more than the three sharks they replace: 11 wins of 16, net +13.6.
+- The dagger is the best special weapon here: the mace and the longsword builds win less.
+- Rune armour is worth its cost: the bare, adamant and mithril builds win 0 or 1 of 16.
+
+Gap: 16 spars for each row; the builds that trade the freeze runes for sharks or potions (`tribrid-food`,
+`tribrid-lean`, `hybrid`) and every build against `melee` are not measured.
+
+The climb, mirror and matrix, 16 or more paired spars for each candidate: no option beat the base loop in the tribrid
+mirror (style orders, eat level 35 to 66, prayer restore level, special threshold 0.3 to 1, freeze rule, kiting a
+frozen target, standing 2 or 5 tiles off, prayer flick, free karambwans, the bow burst at three thresholds). Clearly
+worse: every armour piece off for each cast (net -18.3), kiting a frozen target (-7.2 to -9.1), no Defence prayer
+(-4.3), the torso kept on for casts (-6.0). In the `tribrid-pots` mirror the special at 50% health was accepted
+(+7.5, t 2.07); with about sixty candidates tried, one such result is expected by chance.
+
 ### Hit timing
 
 All three styles share one attack timer (`%action_delay`): a spell sets it 5 ticks ahead, a melee or ranged attack

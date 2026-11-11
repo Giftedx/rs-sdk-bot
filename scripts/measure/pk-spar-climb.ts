@@ -4,8 +4,12 @@
 // minute gives 8 paired samples with no side bias. The measure of a fight is the net damage for each 100 ticks (damage
 // the opponent took less damage we took): it moves with every hit, so it separates two settings in far fewer fights
 // than a count of kills. A candidate that beats the champion becomes the champion, and the next knob starts from it.
+// With --against <profile> the two sides of the case have different jobs or kits (the kit matrix, an escape case): the
+// candidate plays side A in every pair against that profile, and so does the champion on the same seed; a sample is
+// the candidate's value less the champion's value in the same pair, so a matchup is compared with itself.
+// --measure scores takes the spar score (a kill is above 100) where kills matter more than damage.
 // Usage: bun scripts/measure/pk-spar-climb.ts [--case extra:spar-x8] [--knobs eatAt,rotation] [--cap 500]
-//   [--max-runs 3] [--kit <kit>] [--dry]. --dry prints the plan and runs nothing.
+//   [--max-runs 3] [--against <profile>] [--measure nets|scores] [--dry]. --dry prints the plan and runs nothing.
 // A run needs about 1.5 GB of free memory; the climber waits while the dashboard reports less headroom than
 // CLIMB_HEADROOM_GB (default 1), and while the file .practice/pk-climb-pause exists in the main checkout, so another
 // session can take the practice slot. Every evaluation is one line in .practice/pk-spar/climb.jsonl. The engines use
@@ -29,6 +33,9 @@ export const KNOBS: readonly Knob[] = [
     { name: 'castArmour', candidates: [{ castArmour: 'keep' }, { castArmour: 'strip' }] },
     { name: 'defencePrayer', candidates: [{ defencePrayer: false }] },
     { name: 'standOff', candidates: [{ standOff: 2 }, { standOff: 5 }] },
+    { name: 'escapeAt', candidates: [{ escapeAt: 45 }, { escapeAt: 75 }, { escapeAt: 90 }] },
+    { name: 'kite', candidates: [{ freeze: true, kiteFrozen: 3 }, { freeze: 'low', kiteFrozen: 3 }, { freeze: true, kiteFrozen: 6 }] },
+    { name: 'prayerFlick', candidates: [{ prayerFlick: true }] },
     { name: 'freeFood', candidates: [{ freeFood: true }] },
     { name: 'bowBurst', candidates: [{ bowBurst: 0.6 }, { bowBurst: 0.45 }, { bowBurst: 0.8 }] },
 ];
@@ -49,16 +56,20 @@ export function verdict(nets: readonly number[], runs: number, maxRuns: number):
     if (s.n >= 16 && (s.mean <= 0 || s.t < 1)) return 'reject';
     return runs >= maxRuns ? 'reject' : 'more';
 }
-// The `nets=` list of a batch RESULT line: one net damage rate for each pair, from the candidate's side.
-export function readNets(result: string | null): number[] | null {
-    const m = /^RESULT ok spar-batch .* nets=([-\d.,]+)/.exec(result ?? '');
+// A number list of a batch RESULT line, one value for each pair from side A: `nets` (net damage rate) or `scores`.
+export function readNets(result: string | null, key = 'nets'): number[] | null {
+    const m = new RegExp(`^RESULT ok spar-batch .* ${key}=([-\\d.,]+)`).exec(result ?? '');
     return m ? m[1]!.split(',').map(Number).filter(Number.isFinite) : null;
 }
+// The candidate's value less the champion's in each pair of one seed.
+export const pairedGain = (candidate: readonly number[], champion: readonly number[]) => candidate.slice(0, champion.length).map((v, i) => Number((v - champion[i]!).toFixed(1)));
 
 if (import.meta.main) {
     const argv = process.argv.slice(2);
     const value = (flag: string) => { const i = argv.indexOf(flag); return i >= 0 ? argv.splice(i, 2)[1] : undefined; };
-    const key = value('--case') ?? 'extra:spar-x8', cap = value('--cap') ?? '500', maxRuns = Number(value('--max-runs') ?? 3), kit = value('--kit');
+    const key = value('--case') ?? 'extra:spar-x8', maxRuns = Number(value('--max-runs') ?? 3), against = value('--against'), measure = value('--measure') ?? 'nets';
+    // A mirror is cut at 500 ticks: the net rate needs no kill. A case with jobs runs to its end.
+    const cap = value('--cap') ?? (against ? '900' : '500');
     const only = value('--knobs')?.split(','), dry = argv.includes('--dry');
     const root = resolve(import.meta.dir, '..', '..'), dir = resolve(root, '.practice/pk-spar'), championFile = resolve(root, 'scripts/pk-champion.json');
     mkdirSync(dir, { recursive: true });
@@ -76,14 +87,23 @@ if (import.meta.main) {
             await Bun.sleep(30_000);
         }
     };
-    let seed = Number(process.env.CLIMB_SEED ?? 1);
-    const batch = async (patch: Profile): Promise<number[] | null> => {
+    const firstSeed = Number(process.env.CLIMB_SEED ?? 1);
+    const sample = async (patch: Profile, seed: number): Promise<number[] | null> => {
         await wait();
         const out = '.practice/pk-spar/climb-run.json';
-        const set = { SPAR_A: 'champion', SPAR_A_OPTS: JSON.stringify(patch), SPAR_B: 'champion', SPAR_SWAP: '1', SPAR_CAP: cap, ...(kit ? { SPAR_A_KIT: kit, SPAR_B_KIT: kit } : {}) };
-        Bun.spawnSync(['bun', 'scripts/measure/aio-practice-bench.ts', `^${key}$`, '--parallel', '1', '--no-keep', '--seed', String(seed++), ...Object.entries(set).flatMap(([k, v]) => ['--set', `${k}=${v}`])],
+        const set = { SPAR_A: 'champion', SPAR_A_OPTS: JSON.stringify(patch), SPAR_B: against ?? 'champion', ...(against ? {} : { SPAR_SWAP: '1' }), SPAR_CAP: cap };
+        Bun.spawnSync(['bun', 'scripts/measure/aio-practice-bench.ts', `^${key}$`, '--parallel', '1', '--no-keep', '--seed', String(seed), ...Object.entries(set).flatMap(([k, v]) => ['--set', `${k}=${v}`])],
             { cwd: root, env: { BENCH_PORT_BASE: '21600', ...process.env, BENCH_OUT: out }, stdout: 'ignore', stderr: 'inherit', windowsHide: true });
-        try { const row = JSON.parse(readFileSync(resolve(root, out), 'utf8')).rows[0]; return row?.ok ? readNets(row.result) : null; } catch { return null; }
+        try { const row = JSON.parse(readFileSync(resolve(root, out), 'utf8')).rows[0]; return row?.ok ? readNets(row.result, measure) : null; } catch { return null; }
+    };
+    // The champion's own values for each seed, kept until the champion changes.
+    let baseline = new Map<number, number[]>();
+    const batch = async (patch: Profile, run: number): Promise<number[] | null> => {
+        const seed = firstSeed + run;
+        if (!against) return sample(patch, seed);
+        if (!baseline.has(seed)) { const own = await sample({}, seed); if (!own) return null; baseline.set(seed, own); }
+        const got = await sample(patch, seed);
+        return got && pairedGain(got, baseline.get(seed)!);
     };
     for (const knob of knobs) {
         for (const patch of knob.candidates) {
@@ -93,7 +113,7 @@ if (import.meta.main) {
             const nets: number[] = [];
             let runs = 0, failed = 0, outcome: 'accept' | 'reject' | 'more' | 'invalid' = 'more';
             while (outcome === 'more') {
-                const got = await batch(patch);
+                const got = await batch(patch, runs);
                 // A run that gave no fights (the engine did not start, a fight was not valid) is tried again after a
                 // pause; five in a row end the candidate as invalid.
                 if (!got) { if (++failed >= 5) outcome = 'invalid'; else await Bun.sleep(30_000); continue; }
@@ -101,10 +121,10 @@ if (import.meta.main) {
                 nets.push(...got);
                 outcome = verdict(nets, runs, maxRuns);
             }
-            const line = { case: key, kit, knob: knob.name, patch, ...stats(nets), runs, outcome };
+            const line = { case: key, against, measure, knob: knob.name, patch, ...stats(nets), runs, outcome };
             appendFileSync(resolve(dir, 'climb.jsonl'), JSON.stringify({ at: new Date().toISOString(), ...line }) + '\n');
             console.log(`CLIMB ${JSON.stringify(line)}`);
-            if (outcome === 'accept') writeFileSync(championFile, JSON.stringify({ ...champion, ...patch }, null, 2) + '\n');
+            if (outcome === 'accept') { writeFileSync(championFile, JSON.stringify({ ...champion, ...patch }, null, 2) + '\n'); baseline = new Map(); }
         }
     }
     console.log(`CLIMB_DONE ${readFileSync(championFile, 'utf8').replace(/\s+/g, ' ')}`);

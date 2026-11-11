@@ -63,6 +63,8 @@ async function walk(s: Session, to: { x: number; z: number }, stop: () => boolea
     return walkPath(await sessionWalker(s), [{ ...to, tol: 2 }], { maxTicks, idleMs: 9000, stop });
 }
 
+// One of each boost the fight loop drinks, in any dose.
+export const BOOST_POTIONS = [ITEMS.superAttack, ITEMS.superStrength, ITEMS.rangingPotion] as const;
 // Re-equip the melee set and any unequipped body armour, bank everything else in the pack, then withdraw the trip and food.
 export async function restock(s: Session, food: number, trip: readonly { id: number; count: number }[] = TRIP, kit: Kit = TRIBRID_KIT): Promise<string | null> {
     const equip = typeof s.sdk.getEquipment === 'function' ? () => s.sdk.getEquipment() : () => s.sdk.getState()?.equipment ?? [];
@@ -77,6 +79,16 @@ export async function restock(s: Session, food: number, trip: readonly { id: num
     if (!(await s.bot.openBank()).success) return 'bank did not open';
     for (const item of [...s.sdk.getInventory()]) await s.bot.depositItem(item, -1);
     const stock = () => s.bankObservation?.()?.items ?? [];
+    // Boost potions where the bank holds them, each for one shark: a tribrid with a super attack, a super strength and a
+    // ranging potion won 11 of 16 spars against the same kit with three more sharks (research/pvp-fight-loop.md). The
+    // fight loop drinks them. A bank with none is no fault: the trip goes on with food alone.
+    let boosts = 0;
+    for (const doses of BOOST_POTIONS) {
+        if (boosts >= food - 1) break;
+        const row = s.sdk.getBankItems().find(b => (doses as readonly number[]).includes(b.id) && b.count > 0);
+        if (row) { await s.bot.withdrawItem(row, 1, { asNote: false }); boosts++; }
+    }
+    food -= boosts;
     for (const want of [...trip, { id: ITEMS.shark, count: food }]) {
         const wornCount = equip().filter(e => e.id === want.id).reduce((n, e) => n + e.count, 0);
         const need = want.count - wornCount;

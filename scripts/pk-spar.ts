@@ -32,11 +32,13 @@ export const PROFILES: Readonly<Record<string, Profile>> = {
     // The bow burst from 60% health: bare of armour, magic shortbow specials with a dagger special between.
     // The special energy is kept for the burst: no melee special above 20% health outside it.
     burst: { bowBurst: 0.6, specBelow: 0.2 },
+    flick: { prayerFlick: true },
     'hunter-burst': { freeze: 'low', specBelow: 0.2, bowBurst: 0.6 },
     'no-read': { readOverheads: false },
     'no-spec': { spec: undefined },
     'spec-early': { specBelow: 0.8 },
     'spec-late': { specBelow: 0.35 },
+    'spec-mid': { specBelow: 0.5 },
     'eat-40': { eatAt: 40 },
     'eat-65': { eatAt: 65 },
     'melee-first': { rotation: ['melee', 'ranged', 'magic'] },
@@ -49,6 +51,8 @@ const GOD_HUNTER: Profile = { kit: { ...TRIBRID_KIT, magic: [2417] }, damageSpel
 export const SCENARIOS: Readonly<Record<string, { a?: Profile; b?: Profile }>> = {
     open: {},
     escape: { b: { escapeAt: 60 } },
+    // The same chase with the sides turned: side A is the runner, so a climb tunes how our own account gets away.
+    flee: { a: { escapeAt: 60 } },
     // The hunter casts Flames of Zamorak under Charge, with the Zamorak staff as its magic weapon (the start state
     // wears the Zamorak cape and has the Mage Arena done).
     'escape-god': { a: GOD_HUNTER, b: { escapeAt: 60 } },
@@ -106,6 +110,7 @@ export async function spar(a: Session, b: Session, optionsA: FightOptions, optio
     const side = (s: Session, target: string, o: FightOptions) => fightPlayer(s, target, { ...o, stop: () => over || halt(), log: l => log(`[${s.name}] ${l}`) })
         .finally(() => { over = true; });
     const [ra, rb] = await Promise.all([side(a, b.name, optionsA), side(b, a.name, optionsB)]);
+    ra.prayerLeft = a.sdk.getState()?.prayers.prayerPoints; rb.prayerLeft = b.sdk.getState()?.prayers.prayerPoints;
     unwatch(); trace?.();
     return { ...sparScore(ra, rb), opening, ...(startGap === undefined ? {} : { startGap }) };
 }
