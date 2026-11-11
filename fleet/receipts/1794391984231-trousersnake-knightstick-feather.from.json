@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794391984231-trousersnake-knightstick-feather",
+ "account": "TrouserSnake",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 50,
+ "claim": "628f1453-5b69-4adf-8756-c064e041ab2b",
+ "count": 50,
+ "ok": true,
+ "at": 1794392004953,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 50,
+  "after": 0
+ },
+ "bank": {
+  "count": 50,
+  "at": 1794391998302
+ },
+ "logout": {
+  "attemptId": "1794391988364-0000006206-0000000001",
+  "at": 1794392004945,
+  "sha256": "6384f177b8c0858c80aa362d2737a1ce993b9542aebfb67ddef3f55ace8c1d32"
+ },
+ "screen": true
+}
