@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794384583771-fatstack-thefullmonty",
+ "account": "Fatstack",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 52147,
+ "claim": "9f9935e9-2224-4ba8-bd4a-cc81f96b5922",
+ "count": 0,
+ "ok": false,
+ "at": 1794384590015,
+ "detail": "trade claimed"
+}
