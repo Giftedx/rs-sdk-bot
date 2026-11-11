@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794377402816,
+ "at": 1794377467762,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -36,7 +36,27 @@
    ]
   },
   {
-   "account": "Knightstick",
+   "account": "Fingerblastr",
+   "script": "scripts/aio.ts",
+   "args": [
+    "quester",
+    "chain",
+    "drunkmonk,murder,zanaris"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
+   "role": "quest",
+   "template": "army-quest-lostcity",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "quest:lostcity"
+   ]
+  },
+  {
+   "account": "Kiltlifter",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
@@ -61,27 +81,7 @@
    ]
   },
   {
-   "account": "Fingerblastr",
-   "script": "scripts/aio.ts",
-   "args": [
-    "quester",
-    "chain",
-    "drunkmonk,murder,zanaris"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
-   "role": "quest",
-   "template": "army-quest-lostcity",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "quest:lostcity"
-   ]
-  },
-  {
-   "account": "Kiltlifter",
+   "account": "Knightstick",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
