@@ -1,0 +1,22 @@
+{
+ "id": "1794415536477-trousersnake-sporrandip-bones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TrouserSnake",
+ "to": "SporranDip",
+ "item": "Bones",
+ "count": 14,
+ "start": 1794415536477,
+ "end": 1794417936477,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
