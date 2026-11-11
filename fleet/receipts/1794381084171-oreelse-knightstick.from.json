@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794381084171-oreelse-knightstick",
+ "account": "OreElse",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "534b7efc-7392-4c23-abbd-bb4c6daad7f4",
+ "count": 1,
+ "ok": true,
+ "at": 1794381430360,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794381420244
+ },
+ "logout": {
+  "attemptId": "1794381409912-0000029544-0000000001",
+  "at": 1794381430322,
+  "sha256": "387337a29e0511ae7e149a91dd3218f72169666fcdd9935088b47b09d0d66ec5"
+ },
+ "screen": true
+}
