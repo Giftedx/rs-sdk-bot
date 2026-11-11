@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1794362881518-bigchopper-trousersnake-bones",
  "account": "TrouserSnake",
  "partner": "Bigchopper",
@@ -12,6 +12,6 @@
  "claim": "77342f87-6fb1-41fd-93b5-98b3b6bc62af",
  "count": 0,
  "ok": false,
- "at": 1794362885214,
- "detail": "trade claimed"
+ "at": 1794363461553,
+ "detail": "session ended: disconnected"
 }

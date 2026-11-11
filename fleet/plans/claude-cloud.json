@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794363307603,
+ "at": 1794363463377,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -274,7 +274,7 @@
    "env": {
     "ROUNDS": "1"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true,
    "goal": "buy feathers at Gerrant's in Port Sarim for the alchemy band",
