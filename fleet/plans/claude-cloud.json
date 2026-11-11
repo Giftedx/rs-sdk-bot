@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794394596945,
+ "at": 1794394661942,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -12,6 +12,67 @@
    "repeat": false,
    "goal": "hand: Lowe's arrows for the dragon hunt",
    "role": "hand"
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fingersmith-kit17-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on bronze arrows",
+   "role": "supply",
+   "template": "kit-buy:army-hunt-black-dragons-bronze",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=29 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=knightrider-kit8-536-0to29 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 29 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-dragon-99",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "Deeppockets",
@@ -126,50 +187,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-9e1fd55a-bcc7-4df2-8f3a-30d676bc6854"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-thefullmonty-20261111t105120z [task-9e1fd55a-bcc7-4df2-8f3a-30d676bc6854]",
-   "role": "combat"
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-2e8483c3-c342-49de-aa94-8241e1767b5e"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-fingersmith-20261111t105120z [task-2e8483c3-c342-49de-aa94-8241e1767b5e]",
-   "role": "supply"
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=29 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=knightrider-kit8-536-0to29 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 29 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-dragon-99",
-   "autopilot": "claude-cloud",
-   "resources": []
   }
  ]
 }
