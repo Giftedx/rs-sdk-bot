@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794392124864,
+ "at": 1794392343027,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -409,27 +409,6 @@
    "role": "supply"
   },
   {
-   "account": "Bigchopper",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "526",
-    "QUANTITY": "218",
-    "EXPECTED_OWNED": "137",
-    "LIMIT_PRICE": "100",
-    "CASH_RESERVE": "300000",
-    "ORDER_KEY": "bigchopper-prayer70-bones218",
-    "ORDER_MS": "600000",
-    "FILL_WAIT_TICKS": "200",
-    "CAP": "2400",
-    "COORDINATOR_RUN_ID": "task-a19eb255-0af8-4afd-803b-084b0b1eac89"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-bigchopper-prayer70-bones218 [task-a19eb255-0af8-4afd-803b-084b0b1eac89]",
-   "role": "firemaking"
-  },
-  {
    "account": "Moneyshot",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -593,6 +572,21 @@
    "repeat": false,
    "goal": "run-shop-shaftmaker-blood776 [task-3b17c555-4ada-429f-9541-502cac93df38]",
    "role": "pk"
+  },
+  {
+   "account": "Bigchopper",
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "scorpion"
+   ],
+   "env": {
+    "CAP": "6000",
+    "COORDINATOR_RUN_ID": "task-f012399f-dcd9-4ec5-80f1-9e310c6ce6ea"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-scorpion-bigchopper-quest-sweep [task-f012399f-dcd9-4ec5-80f1-9e310c6ce6ea]",
+   "role": "firemaking"
   }
  ]
 }
