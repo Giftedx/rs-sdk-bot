@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794400092889-sporrandip-quickhandjob",
  "account": "Quickhandjob",
  "partner": "SporranDip",
@@ -12,6 +12,12 @@
  "claim": "31dfb436-b8a9-4401-b188-40008511324a",
  "count": 0,
  "ok": false,
- "at": 1794400096842,
- "detail": "trade claimed"
+ "at": 1794400153106,
+ "detail": "Error: route to 3182, 3440: precondition ferry needs 60 coins and the bank holds 11000",
+ "logout": {
+  "attemptId": "1794400096845-0000021675-0000000001",
+  "at": 1794400153098,
+  "sha256": "6cbb396e9a230e5773ef560ffbf5f809a110190abbd21c2330b66833c55b623d"
+ },
+ "screen": false
 }
