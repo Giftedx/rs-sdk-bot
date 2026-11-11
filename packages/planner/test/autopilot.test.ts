@@ -1206,10 +1206,27 @@ test('a maxed army account hunts black dragons for hides: the key first, the kit
     const [key] = run([hunter('Kilt', keyless)]);
     expect(key!.template!.id).toBe('army-dusty-key');
     expect(jobFor(key!, side)).toMatchObject({ script: 'scripts/aio.ts', args: ['quester', 'dusty-key'], repeat: false });
-    // Short of arrows after a trip: the buy tops them up.
-    const [buy] = run([hunter('Kilt', { ...kit, 'iron arrow': 60 })]);
+    // Short of sharks: the market buy. Short of arrows after a trip: the shop run, though a market lists arrows.
+    const [buy] = run([hunter('Kilt', { ...kit, shark: 1, 'iron arrow': 60 })]);
     expect(buy!.template!.id).toBe(KIT_BUY + 'army-hunt-black-dragons');
-    expect(buy!.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).map(Number))).toEqual([[884, HUNT_ARROWS - 60]]);
+    expect(buy!.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).map(Number))).toEqual([[385, HUNT_FOOD - 1]]);
+    expect(run([hunter('Kilt', { ...kit, 'iron arrow': 60 })])[0]!.template!.id).toBe('army-hunt-supply');
+    // No account is asked for the shop run's lines (live: a hunter with 123,028 coins stood waiting for 3 air runes
+    // from another side). Short of sharks with no market for them: this side's donor at once, another side's only
+    // when the account has no job of its own to start.
+    const donors = (s: string) => [{ name: 'Giver', side: s, items: { 'air rune': 500, 'iron arrow': 5000, shark: 50 } }];
+    const noRunes = hunter('Kilt', { ...kit, 'air rune': 0, 'iron arrow': 60 }), { shark: _shark, ...noSharks } = caps;
+    for (const s of [side, 'local']) {
+        const out = run([noRunes], { stock: donors(s) })[0]!;
+        expect(out.template!.id).toBe('army-hunt-supply');
+        expect(out.send).toBeUndefined();
+    }
+    const hungry = hunter('Kilt', { ...kit, shark: 1, 'iron arrow': 60 });
+    expect(run([hungry], { market: noSharks, stock: donors(side) })[0]!.send).toMatchObject({ from: 'Giver', item: 'shark' });
+    const first = run([hungry], { market: noSharks, stock: donors('local') })[0]!;
+    expect(first.template!.id).toBe('army-hunt-supply');
+    expect(first.send).toBeUndefined();
+    expect(run([hunter('Kilt', { ...kit, shark: 1 })], { market: noSharks, stock: donors('local') })[0]!.send).toMatchObject({ from: 'Giver', item: 'shark', count: HUNT_FOOD - 1 });
     // With no market for iron arrows: the shop run, arrows at Lowe's and then the teleport's runes at Aubury's.
     const { 'iron arrow': _arrows, 'fire rune': _fire, ...noShopLines } = caps;
     const [shop] = run([hunter('Kilt', { ...kit, 'iron arrow': 60 })], { market: noShopLines });
@@ -1239,3 +1256,43 @@ test('a maxed army account hunts black dragons for hides: the key first, the kit
     const sent = plan(inputs([monk, idle], { army: new Set(['monk', 'kilt']), capacity: { ...CAPACITY, [BLACK_CAVE]: 0 }, pilots, market: caps, stock: [{ name: 'Kilt', side, items: idle.items }] })).find(a => a.account === 'Monk')!;
     expect(sent.send).toMatchObject({ from: 'Kilt', item: 'dragon bone', count: 30 });
 });
+
+import { ARMOUR_SETS, FLAX_SPIN, LEATHER_LEVEL, SET_HIDES, SET_SHOP, TAN_COIN } from '../src/autopilot';
+test('a hunter makes its hides into armour: flax to Crafting 84 when it cannot hunt, then whole sets, and no flax or hide is traded for it', () => {
+    const maxed = { Thieving: 99, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Magic: 99, Prayer: 99 };
+    const kit = { 'dusty key': 1, 'magic shortbow': 1, 'iron arrow': HUNT_ARROWS, 'law rune': 1, 'air rune': 3, 'fire rune': 1, shark: HUNT_FOOD, coin: 200_000 };
+    const pilots = new Set(['army-hunt-black-dragons', 'army-dusty-key', 'army-hunt-supply', 'army-black-dhide-sets', 'army-leather-flax', 'army-leather-spin']);
+    const hunter = (name: string, items: Record<string, number>, crafting: number): Acct => acct(name, { ...maxed, Crafting: crafting }, { ...kit, ...items });
+    const run = (accounts: Acct[], extra: Partial<Inputs> = {}) => plan(inputs(accounts, { army: new Set(accounts.map(a => a.name.toLowerCase())), capacity: CAPACITY, pilots, market: {}, ...extra }));
+    const first = (a: Acct, extra: Partial<Inputs> = {}) => run([a], extra)[0]!;
+    // With arrows it hunts, whatever its Crafting.
+    expect(first(hunter('Kilt', { dragonhide: 9 }, 54)).template!.id).toBe('army-hunt-black-dragons');
+    // Short of arrows and under Crafting 84: flax first, then the wheel once a run's flax is banked; before the shop.
+    const flax = first(hunter('Kilt', { 'iron arrow': 40, dragonhide: 9 }, 54));
+    expect(flax.template!.id).toBe('army-leather-flax');
+    expect(flax.reason).toBe(`army band ${HUNT_BAND + 0.2}: Crafting to ${LEATHER_LEVEL}`);
+    expect(jobFor(flax, side)).toMatchObject({ script: 'scripts/aio.ts', args: ['skiller', 'foraging', 'flax', '1800', '28'], repeat: true });
+    const spin = first(hunter('Kilt', { 'iron arrow': 40, dragonhide: 9, flax: FLAX_SPIN }, 54));
+    expect(spin.template!.id).toBe('army-leather-spin');
+    expect(jobFor(spin, side).args).toEqual(['skiller', 'crafting', 'bowstrings', '2500', `MAX_MAKE=${FLAX_SPIN}`, 'RAW_RESERVE=0', 'MAX_TRIPS=8']);
+    // Under the wheel's Crafting 10 the band is not for it: the shop run.
+    expect(first(hunter('Kilt', { 'iron arrow': 40, dragonhide: 9 }, 9)).template!.id).toBe('army-hunt-supply');
+    // At Crafting 84 with a set's hides: the sets, before the shop; with fewer hides, or its bodies made, the shop.
+    const sets = first(hunter('Kilt', { 'iron arrow': 40, dragonhide: SET_HIDES }, LEATHER_LEVEL));
+    expect(sets.template!.id).toBe('army-black-dhide-sets');
+    expect(sets.reason).toBe(`army band ${HUNT_BAND + 0.1}: ${ARMOUR_SETS} dragonhide body`);
+    expect(jobFor(sets, side)).toMatchObject({ script: 'scripts/aio.ts', args: ['skiller', 'crafting', 'black-dhide-sets'], repeat: true });
+    expect(first(hunter('Kilt', { 'iron arrow': 40, dragonhide: SET_HIDES - 1 }, LEATHER_LEVEL)).template!.id).toBe('army-hunt-supply');
+    expect(first(hunter('Kilt', { 'iron arrow': 40, dragonhide: SET_HIDES, 'dragonhide body': ARMOUR_SETS }, LEATHER_LEVEL)).template!.id).toBe('army-hunt-supply');
+    expect(catalogue().find(t => t.id === 'army-black-dhide-sets')!.needs!.items!.coins).toBe(SET_HIDES * TAN_COIN + SET_SHOP);
+    // One account in the flax field: the second, short of arrows too, takes the shop run.
+    const pair = run([hunter('Kilt', { 'iron arrow': 40 }, 54), hunter('Snake', { 'iron arrow': 40 }, 54)]);
+    expect(pair.map(a => a.template!.id).sort()).toEqual(['army-hunt-supply', 'army-leather-flax']);
+    // No trade for the band's flax or for a set's hides: an account with flax to spare and hides to spare gives none.
+    const rich = { name: 'Rich', side, items: { flax: 2000, dragonhide: 40 } }, far = { name: 'Far', side: 'local', items: { flax: 2000, dragonhide: 40 } };
+    for (const a of [hunter('Kilt', { 'iron arrow': 40 }, 54), hunter('Kilt', { 'iron arrow': 40, dragonhide: 2 }, LEATHER_LEVEL)]) {
+        const out = first(a, { stock: [rich, far] });
+        expect(out.send).toBeUndefined();
+    }
+});
+

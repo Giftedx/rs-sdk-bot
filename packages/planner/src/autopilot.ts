@@ -22,10 +22,12 @@ export type Flow = { item: string; perTick: number };
 // `food`: HP the account's food heals, pack and bank (FOOD_HEAL). `pieces`: at least `count` items of any of `of`.
 // `anyOf`: at least one of these needs met in full (fire runes or a fire staff; a bow the account wields with arrows it fires).
 // `shortOf`: holdings of which the account must be short of at least one (a supply run that brings several items).
+// `holds`: holdings the account gets by its own job (flax it picked): short of them the job waits, and nothing is
+// bought or sent for them.
 // `combat`: the least combat level (a mine inside an aggressive monster's range). `quests`: quests that must be complete.
 export type Needs = {
     combat?: number; quests?: readonly string[];
-    skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number>; holdsUnder?: Record<string, number>; shortOf?: Record<string, number>; food?: number;
+    skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number>; holdsUnder?: Record<string, number>; shortOf?: Record<string, number>; holds?: Record<string, number>; food?: number;
     pieces?: { of: readonly string[]; count: number }; anyOf?: readonly Needs[];
 };
 export type Template = {
@@ -55,6 +57,9 @@ export type Template = {
     quest?: { name: string; unlocks: string[] };
     // A goal band whose target is a holding: it stands while the account holds fewer than `to` of `item`.
     stock?: { item: string; to: number };
+    // Kit lines the band's own supply job brings (the hunt's shop run): the kit tier neither buys them on the market
+    // nor asks another account for them.
+    ownSupply?: readonly string[];
     // An AIO route (scripts/aio.ts): `aio` is its bench key (scripts/measure/aio-bench-cases.ts) and `worker` the script
     // the dispatcher runs, so a retirement lapses when the worker changes, not only the dispatcher.
     aio?: string; worker?: string;
@@ -193,7 +198,8 @@ export const questDone = (a: Acct, quest: string) => !!a.quests?.has(norm(quest)
 // complete (0 with no quest list), or the items short of a stock target.
 export const bandLeft = (t: Template, a: Acct): number => t.trains ? t.trains.to - (a.skills[t.trains.skill] ?? 1)
     : t.quest ? (a.quests && !questDone(a, t.quest.name) ? 1 : 0) : t.stock ? Math.max(0, t.stock.to - (a.items[norm(t.stock.item)] ?? 0)) : 0;
-const isShort = (a: Acct, needs: Template['needs']) => !needs?.shortOf || Object.entries(needs.shortOf).some(([i, n]) => (a.items[norm(i)] ?? 0) < n);
+const isShort = (a: Acct, needs: Template['needs']) => (!needs?.shortOf || Object.entries(needs.shortOf).some(([i, n]) => (a.items[norm(i)] ?? 0) < n))
+    && Object.entries(needs?.holds ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n);
 const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: string; to: number }): boolean =>
     (a.combat ?? combatLevel(a.skills)) >= (needs?.combat ?? 0)
     && (needs?.quests ?? []).every(q => questDone(a, q))
@@ -407,7 +413,8 @@ export function plan(inp: Inputs): Assignment[] {
         if (busy && now && !now.startsWith(KIT_BUY) && banded(now)) return;
         // No kit for a band whose place is full: the account tries its next band.
         if (c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
-        const picks = c.lacks!.filter(l => !shopLine(l)).map(l => { const item = l.of.filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]; return item ? { item, count: l.count } : null; });
+        const own = (l: Lack) => l.of.some(i => !!c.template.ownSupply?.includes(i));
+        const picks = c.lacks!.filter(l => !shopLine(l) && !own(l)).map(l => { const item = l.of.filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]; return item ? { item, count: l.count } : null; });
         if (step === 'buy' && picks.length && picks.every(p => p !== null) && !inp.retired?.has(pairKey(c.account, buyId))) {
             // The batch when the account can pay for it, else only what the band needs to start. A one-line band with
             // `partBatch` takes as much of its batch as the account can pay for.
@@ -436,9 +443,13 @@ export function plan(inp: Inputs): Assignment[] {
             }
         }
         if (step === 'buy') return;
+        // A filler band's kit is not asked of another side while the account has a filler job it can start: for such
+        // an order the account stands offline until the other side's agent runs it (live: a hunter with 123,028
+        // coins waited for 3 air runes from another side, with its own shop run ready).
+        if (far && c.template.filler && fillerReady.has(c.account)) return;
         // One order per pass. A line no market sells goes first, so the lines left at the end are one buy.
         const sold = (l: Lack) => Number(l.of.some(i => !!inp.market?.[i]));
-        for (const l of [...c.lacks!].sort((x, y) => sold(x) - sold(y))) for (const item of l.of) {
+        for (const l of [...c.lacks!].filter(l => !own(l)).sort((x, y) => sold(x) - sold(y))) for (const item of l.of) {
             const from = stock.find(s => (s.side !== inp.side) === far && s.name.toLowerCase() !== c.account.toLowerCase() && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= l.count
                 && !inp.noSend?.has(`${s.name}>${c.account}`.toLowerCase()));
             if (!from) continue;
@@ -459,6 +470,7 @@ export function plan(inp: Inputs): Assignment[] {
     // and the account stands vacant meanwhile (live: five accounts parked for donors of another side, one for 22
     // bones, while this side's maxed accounts held what they needed).
     const kits = cands.filter(c => c.goal && c.lacks).sort(goalOrder);
+    const fillerReady = new Set(cands.filter(c => c.goal && !c.lacks && c.template.filler).map(c => c.account));
     for (const far of [false, true]) for (const step of ['buy', 'send'] as const) for (const c of kits) acquire(c, step, far);
     // Then the filler bands, for an army account that no band and no kit took.
     for (const c of cands.filter(c => c.goal && !c.lacks && c.template.filler).sort(goalOrder)) take(c, 0);
@@ -576,6 +588,10 @@ export const BLACK_CAVE = 'cave:taverley-black-dragons', BLACK_CAVE_PLACES = 2, 
 export const HUNT_ARROWS = 600, HUNT_KILLS = 9, HUNT_FOOD = 6;
 // What a hunter's supply run brings it up to: the arrows of two trips, and the air and fire runes of twenty teleports.
 export const HUNT_ARROW_STOCK = 1200, HUNT_RUNE_STOCK = 60;
+// The armour of the hides (scripts/black-dhide-sets.ts): a set is a body, chaps and vambraces of SET_HIDES hides, the
+// body asks Crafting LEATHER_LEVEL, a hide costs TAN_COIN to tan and a run takes SET_SHOP coins for a needle and
+// thread. ARMOUR_SETS: the bodies one account makes, half the army's. FLAX_SPIN: the flax one spinning run takes.
+export const LEATHER_LEVEL = 84, SET_HIDES = 6, TAN_COIN = 20, SET_SHOP = 100, ARMOUR_SETS = 7, FLAX_SPIN = 168;
 // The tile south of the Ardougne cow field's fence (scripts/splash-train.ts SPLASH_TILE): a curse cast over the fence
 // reaches the cows and no cow reaches the caster. A cow whose stat a cast lowered refuses the next cast until the stat
 // grows back, one level every 100 ticks, so the ten cows give about one cast in ten ticks, shared by the casters.
@@ -904,7 +920,8 @@ export function catalogue(): Template[] {
     // iron arrows (a kill uses about 60, and mithril costs about 745 coins an arrow), one Varrock teleport and six
     // sharks; the dusty key cannot be traded and has its own job. Both are fillers: an account takes them, and the
     // kit tier gets the kit, only when no training band and no kit of one serves it, so bones for Prayer come before
-    // arrows for dragons. Live (claude-cloud, by hand): three kills, three hides, no hitpoint lost, banked. Pilots.
+    // arrows for dragons. The arrows and the teleport's air and fire runes are the shop run's (`ownSupply`); the kit
+    // tier gets the bow, the law rune and the sharks. Live (claude-cloud, by hand): three kills, three hides, no hitpoint lost, banked. Pilots.
     const dustyKey: Template = {
         id: 'army-dusty-key', pilot: true, family: 'aio:quester:mode:dusty-key', script: 'scripts/aio.ts', args: ['quester', 'dusty-key'], aio: 'quester:mode:dusty-key', worker: 'scripts/dusty-key.ts',
         role: 'quest', goal: "get the dusty key from Velrak for Taverley dungeon's inner gate", tier: 'goal', band: HUNT_BAND, filler: true, repeats: false, stock: { item: 'dusty key', to: 1 }, yields: () => [],
@@ -914,6 +931,7 @@ export function catalogue(): Template[] {
         id: 'army-hunt-black-dragons', pilot: true, family: 'combat-train', script: 'scripts/black-dragon-camp.ts', args: ['9000'],
         env: { KILLS: String(HUNT_KILLS), ARROW: 'iron_arrow', ARROWS: String(HUNT_ARROWS) }, role: 'combat', goal: "kill Taverley's black dragons for their hides and bones",
         tier: 'goal', band: HUNT_BAND, filler: true, repeats: true, stock: { item: 'dragonhide', to: HIDE_TARGET }, resources: [BLACK_CAVE], yields: () => [],
+        ownSupply: ['iron arrow', 'air rune', 'fire rune'],
         needs: { skills: { Defence: 90, Hitpoints: 90, Ranged: 90, Prayer: 60, Magic: 25 },
             items: { 'dusty key': 1, 'magic shortbow': 1, 'iron arrow': HUNT_ARROWS, 'law rune': 1, 'air rune': 3, 'fire rune': 1, shark: HUNT_FOOD } },
     };
@@ -930,8 +948,36 @@ export function catalogue(): Template[] {
         id: 'army-hunt-supply', pilot: true, family: 'shop-buyer', script: 'scripts/chain.ts',
         args: [shopRun('lowe', 2500, 'iron.arrow', HUNT_ARROW_STOCK, 21000, 10), shopRun('aubury', 800, 'air.rune|fire.rune', HUNT_RUNE_STOCK, 2000, 8)],
         env: { ROUNDS: '1' }, role: 'supply', goal: "buy iron arrows at Lowe's and teleport runes at Aubury's in Varrock for the black dragon hunt",
-        tier: 'goal', band: HUNT_BAND, filler: true, repeats: true, stock: { item: 'dragonhide', to: HIDE_TARGET }, resources: ['shop:lowe', 'shop:aubury'], yields: () => [],
+        tier: 'goal', band: HUNT_BAND + 0.3, filler: true, repeats: true, stock: { item: 'dragonhide', to: HIDE_TARGET }, resources: ['shop:lowe', 'shop:aubury'], yields: () => [],
         needs: { skills: hunt.needs!.skills, items: { coins: 25000 }, shortOf: { 'iron arrow': HUNT_ARROWS, 'air rune': 3, 'fire rune': 1 } },
+    };
+    // The hides made into armour by the accounts that hunt them, so no hide is traded. To wear a black dragonhide
+    // piece asks Ranged 70, the body Defence 40 and no quest (levelrequire tier70.rs2); to make the body asks Crafting
+    // 84. An account the hunt serves spins flax at Seers to that level (15 Crafting XP a flax at the server's rate of
+    // 25: 825 flax from level 54, where Murder Mystery leaves it), one account in the flax field at a time, and then
+    // tans its hides at Al Kharid and crafts whole sets, SET_HIDES hides each, until it holds ARMOUR_SETS bodies.
+    // After a trip the order is: the next trip, a set, the flax, the shop run. So an account short of arrows spins
+    // while the other hunter has Lowe's shelf, which gives back fewer arrows than two hunters fire. Pilots.
+    const leatherNeeds = { ...hunt.needs!.skills, Crafting: 10 };
+    const leatherTrain = { skill: 'Crafting', to: LEATHER_LEVEL, unlocks: [] };
+    const dhideSets: Template = {
+        id: 'army-black-dhide-sets', pilot: true, family: 'aio:skiller:crafting:black-dhide-sets', script: 'scripts/aio.ts', args: ['skiller', 'crafting', 'black-dhide-sets'],
+        aio: 'skiller:crafting:black-dhide-sets', worker: 'scripts/black-dhide-sets.ts', role: 'crafting', goal: 'tan black dragonhide at Al Kharid and craft sets of body, chaps and vambraces',
+        tier: 'goal', band: HUNT_BAND + 0.1, filler: true, repeats: true, stock: { item: 'dragonhide body', to: ARMOUR_SETS }, yields: () => [],
+        needs: { skills: { Crafting: LEATHER_LEVEL }, items: { coins: SET_HIDES * TAN_COIN + SET_SHOP }, holds: { dragonhide: SET_HIDES } },
+    };
+    const leatherFlax: Template = {
+        id: 'army-leather-flax', pilot: true, family: 'aio:skiller:foraging:flax', script: 'scripts/aio.ts', args: ['skiller', 'foraging', 'flax', '1800', '28'],
+        aio: 'skiller:foraging:flax', worker: 'scripts/gather-flax.ts', role: 'crafting', goal: 'pick flax at Seers to spin for the Crafting a black dragonhide body asks',
+        tier: 'goal', band: HUNT_BAND + 0.2, filler: true, repeats: true, trains: leatherTrain, resources: [AIO_PLACES.flax], yields: () => [],
+        needs: { skills: leatherNeeds, holdsUnder: { flax: FLAX_SPIN } },
+    };
+    const leatherSpin: Template = {
+        id: 'army-leather-spin', pilot: true, family: 'aio:skiller:crafting:bowstrings', script: 'scripts/aio.ts',
+        args: ['skiller', 'crafting', 'bowstrings', '2500', `MAX_MAKE=${FLAX_SPIN}`, 'RAW_RESERVE=0', 'MAX_TRIPS=8'],
+        aio: 'skiller:crafting:bowstrings', worker: 'scripts/spin-bowstrings.ts', role: 'crafting', goal: 'spin flax at Seers to the Crafting a black dragonhide body asks',
+        tier: 'goal', band: HUNT_BAND + 0.2, filler: true, repeats: true, trains: leatherTrain, yields: () => [],
+        needs: { skills: leatherNeeds, holds: { flax: FLAX_SPIN } },
     };
     const lostCity: Template = {
         id: 'army-quest-lostcity', family: 'aio:quester:mode:chain', script: 'scripts/aio.ts', args: ['quester', 'chain', 'drunkmonk,murder,zanaris'],
@@ -1030,6 +1076,9 @@ export function catalogue(): Template[] {
         dustyKey,
         hunt,
         huntSupply,
+        dhideSets,
+        leatherFlax,
+        leatherSpin,
         prayerField,
         { id: 'thieving55', family: 'thieving60', script: 'scripts/generated/thieving60.ts', env: { TARGET: '55', CAP: '2500', CLEAN_FOOD: '1' }, role: 'thieving',
             goal: 'train Thieving to 55 for a knight spot', trains: { skill: 'Thieving', to: 55, unlocks: goldfarm.map(g => g.id) }, yields: () => [] },
