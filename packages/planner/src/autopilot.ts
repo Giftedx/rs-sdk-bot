@@ -335,13 +335,16 @@ export function plan(inp: Inputs): Assignment[] {
     for (const c of cands.filter(c => c.goal && !c.lacks && !c.template.filler).sort(goalOrder)) take(c, 0);
     // Then the kit tier: an army account with no band it can start gets the kit of its earliest band, before any coin
     // job, so banked gold becomes a band and not more gold. A buy is one login with the account's own coins. A send
-    // takes a partner off its work for a trade window, so it comes second: this side's donors, then another side's.
+    // takes a partner off its work for a trade window and keeps the account vacant until the order closes, so it comes
+    // second: every band the account can buy for is tried before a donor is asked for any of them (an account at
+    // Prayer 97 buys its dragon bones and does not wait for 37 bones from another side), this side's donors before
+    // another side's.
     const reserve = kitReserve(inp.templates), byName = new Map(mine.map(a => [a.name, a]));
     const stock = [...(inp.stock ?? [])].sort((x, y) => Number(y.side === inp.side) - Number(x.side === inp.side));
     const spare = (s: Stock, item: string) => (s.items[item] ?? 0) - (reserve[item] ?? 0);
     const banded = (id: string) => byId.get(id)?.tier === 'goal' && !byId.get(id)?.filler;
     const goalNow = (account: string) => { const id = inp.current?.get(account.toLowerCase()); return !!id && (id.startsWith(KIT_BUY) || banded(id)); };
-    const acquire = (c: Cand) => {
+    const acquire = (c: Cand, step: 'buy' | 'send') => {
         const a = byName.get(c.account)!, busy = !!inp.unfundable?.has(c.account.toLowerCase()), buyId = KIT_BUY + c.template.id;
         if (done.has(c.account) || gave.has(c.account) || gaveItems.has(c.account) || vacated.has(c.account)) return;
         // An account in a running band job keeps the rule it had before the kit tier: its live holdings dip while it
@@ -352,7 +355,7 @@ export function plan(inp: Inputs): Assignment[] {
         if (c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
         const shopLine = (l: Lack) => !l.of.some(i => inp.market?.[i]) && l.of.some(i => SHOP_SUPPLIED.has(i));
         const picks = c.lacks!.filter(l => !shopLine(l)).map(l => { const item = l.of.filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]; return item ? { item, count: l.count } : null; });
-        if (picks.length && picks.every(p => p !== null) && !inp.retired?.has(pairKey(c.account, buyId))) {
+        if (step === 'buy' && picks.length && picks.every(p => p !== null) && !inp.retired?.has(pairKey(c.account, buyId))) {
             // The batch when the account can pay for it, else only what the band needs to start. A one-line band with
             // `partBatch` takes as much of its batch as the account can pay for.
             const batchOf = c.template.batchFor?.(a) ?? c.template.batch;
@@ -379,6 +382,7 @@ export function plan(inp: Inputs): Assignment[] {
                 }
             }
         }
+        if (step === 'buy') return;
         // One order per pass. A line no market sells goes first, so the lines left at the end are one buy.
         const sold = (l: Lack) => Number(l.of.some(i => !!inp.market?.[i]));
         for (const l of [...c.lacks!].sort((x, y) => sold(x) - sold(y))) for (const item of l.of) {
@@ -394,7 +398,8 @@ export function plan(inp: Inputs): Assignment[] {
             return;
         }
     };
-    for (const c of cands.filter(c => c.goal && c.lacks).sort(goalOrder)) acquire(c);
+    const kits = cands.filter(c => c.goal && c.lacks).sort(goalOrder);
+    for (const step of ['buy', 'send'] as const) for (const c of kits) acquire(c, step);
     // Then the filler bands, for an army account that no band and no kit took.
     for (const c of cands.filter(c => c.goal && !c.lacks && c.template.filler).sort(goalOrder)) take(c, 0);
     // The coin tier, re-sorted after every assignment: one more holder lowers the worth of the candidates that share

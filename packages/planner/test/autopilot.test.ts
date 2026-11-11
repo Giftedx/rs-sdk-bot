@@ -662,6 +662,14 @@ test('an army account with no other band to start buys the bones its Prayer stil
     expect(order(rich)).toEqual([[536, need]]);
     // An account that cannot pay for all of it buys what it can pay for, with the kit reserve left.
     expect(order(pick({}, { coin: 1_700_398 }))).toEqual([[536, 169]]);
+    // A buy for a later band comes before a donor's send for an earlier one: 63 bones held leave the held-bones band
+    // 37 short, and another side has them, but the account buys its dragon bones. With no bones on the market the
+    // donor sends.
+    const donor: Stock[] = [{ name: 'Far', side: 'local', items: { bone: 500 } }], near = pick({ Prayer: 97 }, { coin: 879_278, bone: 63 }, { stock: donor });
+    expect(near.template!.id).toBe(KIT_BUY + 'army-bury-dragon-99');
+    expect(order(near)).toEqual([[536, BONE_KEEP + Math.ceil((xpForLevel(99) - xpForLevel(97)) / 1800)]]);
+    expect(near.send).toBeUndefined();
+    expect(pick({ Prayer: 97 }, { coin: 879_278, bone: 63 }, { stock: donor, market }).send).toEqual({ from: 'Far', to: 'Monk', item: 'bone', count: 37, template: 'army-bury-prayer-99' });
     // An account with Ranged or Magic still to finish keeps BONE_PURSE back for their kits (Magic 92 here, with its
     // alchemy runes and feathers but no fire, and the Magic Guild shop taken, so it has no other band).
     const mage = { 'nature rune': 604, feather: 500 }, guildBusy = { capacity: { ...CAPACITY, 'shop:magic_guild': 0 } };
