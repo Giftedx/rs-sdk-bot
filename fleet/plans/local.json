@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794370337161,
+ "at": 1794370401873,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -149,10 +149,23 @@
    "role": "pk-trainee"
   },
   {
-   "account": "Masterbaiter",
+   "account": "Mightyrod",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "jukat",
+    "9000"
+   ],
+   "enabled": false,
+   "standing": false,
+   "repeat": false,
+   "goal": "reserved by the orchestrating session: buy 14 dragon longswords at Jakut in Zanaris for the PK army (owner request)",
+   "role": "supply"
+  },
+  {
+   "account": "Wandwaver",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=masterbaiter-kit1-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=wandwaver-kit3-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
@@ -166,6 +179,35 @@
    "autopilot": "local",
    "resources": [
     "ge:weapon"
+   ]
+  },
+  {
+   "account": "Masterbaiter",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby_arrows",
+    "600"
+   ],
+   "env": {
+    "ITEMS": "iron arrow|bronze arrow",
+    "STOCK_TARGET": "1000",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "21000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "20000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-catherby",
+   "autopilot": "local",
+   "resources": [
+    "shop:catherby_arrows"
    ]
   },
   {
@@ -281,26 +323,6 @@
    ]
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=wandwaver-kit3-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
-   "role": "supply",
-   "template": "kit-buy:army-weapon",
-   "autopilot": "local",
-   "resources": [
-    "ge:weapon"
-   ]
-  },
-  {
    "account": "Billionaire",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -320,25 +342,6 @@
    "autopilot": "local",
    "resources": [
     "shop:catherby"
-   ]
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
-   "autopilot": "local",
-   "resources": [
-    "knight:2653,3300"
    ]
   },
   {
@@ -540,35 +543,35 @@
    "role": "supply"
   },
   {
-   "account": "Mightyrod",
+   "account": "Woodenstaff",
    "script": "scripts/session-check.ts",
    "args": [],
    "env": {
     "CAP": "600",
-    "COORDINATOR_RUN_ID": "task-f8f22067-4fed-4c29-88d7-f317a9495a77"
+    "COORDINATOR_RUN_ID": "task-64403d1a-bc32-48a7-8db9-670379ab5d6b"
    },
    "enabled": false,
    "repeat": false,
-   "goal": "run-session-recovery-mightyrod-lease-1794369700 [task-f8f22067-4fed-4c29-88d7-f317a9495a77]",
-   "role": "supply"
+   "goal": "run-session-recovery-woodenstaff-lease-1794369700 [task-64403d1a-bc32-48a7-8db9-670379ab5d6b]",
+   "role": "thieving"
   },
   {
-   "account": "Woodenstaff",
+   "account": "SporranBulge",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
+    "KNIGHT_SPOT": "2653,3300",
     "TICKS": "9000"
    },
    "enabled": false,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
+   "goal": "goldfarm knights at 2653,3300",
    "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
    "resources": [
-    "knight:2669,3298"
+    "knight:2653,3300"
    ]
   }
  ]
