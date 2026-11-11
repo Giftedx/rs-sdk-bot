@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794386631448-oreelse-thefullmonty",
+ "account": "TheFullMonty",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune full helm",
+ "requested": 1,
+ "claim": "83849de3-fa00-4740-9757-a939e510c8c0",
+ "count": 1,
+ "ok": true,
+ "at": 1794387092361,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794387091467
+ },
+ "logout": {
+  "attemptId": "1794387075494-0000017382-0000000001",
+  "at": 1794387092355,
+  "sha256": "4fd9a029f0455019dcf81d3f926a8a7b1c02acfb68299ac8b10163f8885ac6a9"
+ },
+ "screen": true
+}
