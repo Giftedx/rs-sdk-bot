@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794367848657,
+ "at": 1794367910749,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -206,26 +206,6 @@
    "resources": [
     "pen:3229,3298"
    ]
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "BURY_HELD": "1",
-    "BONE_RESERVE": "6",
-    "CAP": "4000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying the held bones",
-   "role": "combat",
-   "template": "army-bury-prayer-99",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "Woodenstaff",
@@ -510,6 +490,26 @@
    "repeat": false,
    "goal": "run-session-recovery-mmsmk1232-orphan-1794367220 [task-a25e177c-c0aa-4495-b4cb-440068174a7c]",
    "role": "combat"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying the held bones",
+   "role": "combat",
+   "template": "army-bury-prayer-99",
+   "autopilot": "local",
+   "resources": []
   }
  ]
 }
