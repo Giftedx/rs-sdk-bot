@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794372667867-magicwanda-kiltlifter-airrune",
  "account": "Kiltlifter",
  "partner": "Magicwanda",
@@ -10,8 +10,21 @@
  "item": "Air rune",
  "requested": 10,
  "claim": "3981c3a5-82bd-4ee8-b692-335cdddbd231",
- "count": 0,
- "ok": false,
- "at": 1794372671453,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1794372901102,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 10
+ },
+ "bank": {
+  "count": 10,
+  "at": 1794372900437
+ },
+ "logout": {
+  "attemptId": "1794372671455-0000013293-0000000001",
+  "at": 1794372901095,
+  "sha256": "a20c3ecb095b5e50d884a3e60110528f4b4cbf81fbe0dff60ccb0e7852479647"
+ }
 }
