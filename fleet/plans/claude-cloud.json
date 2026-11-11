@@ -1,39 +1,24 @@
 {
  "side": "claude-cloud",
- "at": 1794402752726,
+ "at": 1794402757189,
  "jobs": [
   {
-   "account": "UnderMyKilt",
-   "script": "scripts/chain.ts",
-   "args": [],
-   "env": {},
-   "enabled": true,
-   "standing": false,
-   "repeat": false,
-   "goal": "hand: Lowe's arrows for the dragon hunt",
-   "role": "hand",
-   "autopilot": "claude-cloud"
-  },
-  {
    "account": "TheFullMonty",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "foraging",
-    "flax",
-    "1800",
-    "28"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "pick flax at Seers to spin for the Crafting a black dragonhide body asks",
-   "role": "crafting",
-   "template": "army-leather-flax",
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
    "autopilot": "claude-cloud",
    "resources": [
-    "aio:seers-flax"
+    "knight:2652,3318"
    ]
   },
   {
@@ -99,6 +84,23 @@
    "resources": [
     "shop:aubury"
    ]
+  },
+  {
+   "account": "Knightstick",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-magic-99",
+   "autopilot": "claude-cloud",
+   "resources": []
   },
   {
    "account": "PocketPool",
