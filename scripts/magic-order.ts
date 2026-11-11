@@ -326,7 +326,7 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
    throw Object.assign(Error(`route refusal ${label}: ${res.detail??'walk failed'} at ${JSON.stringify(at())}`),why?{stop:why}:{});
   }
  };
- let lastBankGeneration=0;
+ let lastBankGeneration=0,alchemyBankRequested=false,alchemyBankRequestedAt=-Infinity;
  // StateCollector includes the bank in modalOpen. Its interface can arrive before
  // inprocess.bankObservation publishes the fresh inventory packet generation.
  const pendingAlchemyBank=()=>state()?.modalInterface===5292||!!state()?.bank?.isOpen;
@@ -338,21 +338,38 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
  };
  const openBank=async()=>{
   if(r.alchemy&&r.casts>0){
-   // alchemy.rs2 gives the effect before p_delay(3). Retry only while no bank
-   // interface is pending; closing a pending modal discards the requested bank.
+   // OpLocHandler clears chat itself. A late level dialogue does not cancel an
+   // already dispatched request. CloseModalHandler defers CLOSE_MODAL, so never
+   // send it across that request, even before the bank interface arrives.
    const generation=lastBankGeneration,deadline=s.tick()+CAST.effectTicks;
    const fresh=()=>!!state()?.bank?.isOpen&&(s.bankObservation?.()?.generation??0)>generation;
    while(s.tick()<deadline){
     checkAlchemy();
-    if(fresh()){bankOpen=true;return;}
+    bankOpen=fresh();
+    if(bankOpen){
+     const observedAt=s.tick();
+     await waitUntil(s,()=>s.tick()>observedAt||alchemyInterrupted(),{timeoutTicks:Math.max(1,deadline-s.tick())});
+     checkAlchemy();
+     if(fresh()){alchemyBankRequested=false;return;}
+     // An observed bank that closes has resolved the request. Reconcile before
+     // another interaction instead of handing its stale slots to withdraw.
+     bankOpen=false;alchemyBankRequested=false;
+     continue;
+    }
     if(pendingAlchemyBank()){
      await waitUntil(s,()=>fresh()||!pendingAlchemyBank()||alchemyInterrupted(),{timeoutTicks:Math.max(1,deadline-s.tick())});
      checkAlchemy();
-     if(fresh()){bankOpen=true;return;}
      continue;
     }
-    if(alchemyBlocked())await s.direct({type:'closeModal',reason:'SDK'});
-    if(!await waitUntil(s,()=>pendingAlchemyBank()||(!alchemyBlocked()&&pos()?.animId===-1)||alchemyInterrupted(),{timeoutTicks:Math.max(1,deadline-s.tick())}))break;
+    if(alchemyBankRequested&&s.tick()<alchemyBankRequestedAt+3){
+     await waitUntil(s,()=>fresh()||pendingAlchemyBank()||alchemyInterrupted()||s.tick()>=alchemyBankRequestedAt+3,{timeoutTicks:Math.max(1,deadline-s.tick())});
+     continue;
+    }
+    // OpLoc/OpNpc reject player.delayed, independently of the visible animation.
+    // Dispatch success is not acceptance. Retry without CLOSE_MODAL while a
+    // request is unresolved; the handler clears chat when it accepts the action.
+    if(!alchemyBankRequested)await clearAlchemyModal(deadline);
+    if(!await waitUntil(s,()=>pendingAlchemyBank()||alchemyBankRequested||!alchemyBlocked()||alchemyInterrupted(),{timeoutTicks:Math.max(1,deadline-s.tick())}))break;
     checkAlchemy();
     if(s.tick()>=deadline)break;
     if(pendingAlchemyBank())continue;
@@ -362,12 +379,14 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
     const option=booth?.optionsWithIndex.find(o=>/^(bank|use-quickly)$/i.test(o.text));
     const banker=state()?.nearbyNpcs.find(n=>n.distance<=2&&/banker/i.test(n.name)&&n.optionsWithIndex.some(o=>/^bank$/i.test(o.text)));
     const bankOption=banker?.optionsWithIndex.find(o=>/^bank$/i.test(o.text));
-    if(booth&&option)await s.direct({type:'interactLoc',x:booth.x,z:booth.z,locId:booth.id,optionIndex:option.opIndex,reason:'SDK'});
-    else if(banker&&bankOption)await s.direct({type:'interactNpc',npcIndex:banker.index,optionIndex:bankOption.opIndex,reason:'SDK'});
+    let reply:{success?:boolean}|undefined;
+    if(booth&&option)reply=await s.direct({type:'interactLoc',x:booth.x,z:booth.z,locId:booth.id,optionIndex:option.opIndex,reason:'SDK'}) as typeof reply;
+    else if(banker&&bankOption)reply=await s.direct({type:'interactNpc',npcIndex:banker.index,optionIndex:bankOption.opIndex,reason:'SDK'}) as typeof reply;
     else throw Error('alchemy bank interaction unavailable');
-    await waitUntil(s,()=>fresh()||pendingAlchemyBank()||alchemyBlocked()||alchemyInterrupted(),{timeoutTicks:Math.min(3,Math.max(1,deadline-s.tick()))});
+    alchemyBankRequested=reply?.success!==false;
+    alchemyBankRequestedAt=s.tick();
+    await waitUntil(s,()=>fresh()||pendingAlchemyBank()||alchemyInterrupted()||s.tick()>=alchemyBankRequestedAt+3,{timeoutTicks:Math.max(1,deadline-s.tick())});
     checkAlchemy();
-    if(fresh()){bankOpen=true;return;}
    }
    throw Error('alchemy bank readiness unobserved within bounded interactions');
   }
@@ -378,17 +397,21 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
   bankOpen=true;
  };
  const closeBank=async()=>{if(bankOpen){lastBankGeneration=s.bankObservation?.()?.generation??lastBankGeneration;await s.bot.closeBank();bankOpen=false;}};
- const clearAlchemyModal=async()=>{
+ const clearAlchemyModal=async(deadline=s.tick()+CAST.effectTicks)=>{
   checkAlchemy();
   if(alchemyBlocked()){
+   if(alchemyBankRequested)throw Error('alchemy bank request still pending');
+   const sentAt=s.tick();
    await s.direct({type:'closeModal',reason:'SDK'});
-   const cleared=await waitUntil(s,()=>!alchemyBlocked()||alchemyInterrupted(),{timeoutTicks:CAST.effectTicks});
+   // The client's immediate local reset is not a server observation.
+   const cleared=await waitUntil(s,()=>(s.tick()>sentAt&&!alchemyBlocked())||alchemyInterrupted(),{timeoutTicks:Math.max(1,deadline-s.tick())});
    checkAlchemy();
    if(!cleared)throw Error('alchemy modal remained open');
   }
  };
  const withdraw=async(id:number,n:number)=>{
   if(n<=0)return;
+  if(r.alchemy&&(!state()?.bank?.isOpen||!s.bankObservation?.())){bankOpen=false;await openBank();}
   const item=state()?.bank?.items.find(i=>i.id===id),stored=banked(id),held=pack(id),generation=s.bankObservation?.()?.generation??0;
   if(!item||stored<n)throw Error(`withdraw item${id}: needs ${n}, bank has ${stored}`);
   await s.bot.withdrawItem(item,n);
@@ -402,7 +425,8 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
  const secure=async()=>{
   if(r.alchemy){
    if(!moved||ended||hp()<=HEALTH.critical)return;
-   cleanup=true;if(!bankOpen){await clearAlchemyModal();await openBank();}
+   cleanup=true;bankOpen=!!state()?.bank?.isOpen&&!!s.bankObservation?.();
+   if(!bankOpen||r.casts>0)await openBank();
    for(const id of [r.alchemy.itemId,561,554,COINS])await deposit(id);
    await closeBank();return;
   }
@@ -493,12 +517,12 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
     if(r.casts>=o.maxCasts){stop='max casts';break;}
     if(randomEventsOf(s)?.busy()){await waitTicks(s,1);continue;}
     if(pack(561)<1||pack(554)<fireCost){stop='alchemy supply exhaustion';break;}
-    await clearAlchemyModal();
     if(!pack(itemId)){
      await openBank();
      if(banked(itemId)<1){stop='alchemy supply exhaustion';await closeBank();break;}
      await withdraw(itemId,1);await closeBank();
     }
+    await clearAlchemyModal();
     if(over()){stop=reason();break;}check();
     const item=s.sdk.getInventory().find(i=>i.id===itemId);if(!item)throw Error('selected alchemy item unobserved');
     const before=snapshot();
@@ -512,7 +536,7 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
     console.log('MAGIC_ORDER_CAST '+JSON.stringify({tick:s.tick(),cast:r.casts,spell:'highlvl_alchemy',itemId,fireCost,before,after,position:at(),magic:{level:level(),xp:after.xp}}));
    }
    r.stop=level()>=o.target?'target':stop??'stopped';
-   await clearAlchemyModal();await openBank();
+   await openBank();
    for(const id of [itemId,561,554,COINS])await deposit(id);
    const final=assetTotals(),debits=new Map([[itemId,r.casts],[561,r.casts],[554,r.alchemy.fireUsed],[COINS,-r.alchemy.coinsGained]]);
    if([...new Set([...assets.keys(),...final.keys()])].some(id=>(assets.get(id)??0)-(final.get(id)??0)!==(debits.get(id)??0))

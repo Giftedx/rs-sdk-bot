@@ -567,7 +567,7 @@ test('alchemy selects Use-quickly and preserves the bank modal until fresh conte
    // Pinned booth op1 opens banker chat; op2 opens the bank directly.
    if(a.optionIndex===1){alchModal=true;return{success:true};}
    expect(a.optionIndex).toBe(2);expect(oldState().bank.isOpen).toBe(false);
-   await bank();return{success:true};
+   return bank();
   }
   if(a.type!=='spellOnItem'){
    if(a.type==='closeModal'){expect(oldState().bank.isOpen).toBe(false);alchModal=false;}
@@ -593,6 +593,105 @@ test('alchemy selects Use-quickly and preserves the bank modal until fresh conte
   expect(dropped).toBe(29);expect(reentries).toBe(29);
   expect(f.calls).not.toContain('openShop');expect(entry.x).toBe(2721);
  }finally{f.stop();}
+ // 29 casts of fake ticks at the Windows 15.6 ms timer floor run longer than the default 5 s.
+},20_000);
+
+test('delayed level dialogue cannot close a pending bank or strand retained alchemy runes during cleanup',async()=>{
+ const f=fakeSession({x:2721,z:3493,magic:{level:55,xp:47825},bank:[
+  {id:845,count:955},{id:561,count:29},{id:554,count:145},{id:COINS,count:18177},{id:590,count:1}]});
+ const s=f.s as any,oldState=s.sdk.getState,oldDirect=s.direct,oldOpen=s.bot.openBank,oldClose=s.bot.closeBank;
+ let casts=0,castAt=-100,requestAt=-1,closeAt=-1,dialog=false,crossed=0,requests=0;
+ const actions:{tick:number;type:string}[]=[];
+ s.sdk.getState=()=>({...oldState(),player:{...oldState().player,animId:-1},dialog:{isOpen:dialog},
+  modalOpen:dialog||oldState().bank.isOpen,modalInterface:oldState().bank.isOpen?5292:-1,
+  nearbyLocs:[{id:2213,name:'Bank booth',x:2721,z:3494,distance:1,optionsWithIndex:[{text:'Use-quickly',opIndex:2}]}]});
+ // OpLoc clears the dialogue and opens the bank. CLOSE_MODAL clears the client
+ // immediately but the server can apply it after the requested bank opens.
+ const off=s.onTick(()=>{
+  if(s.tick()===castAt+1)dialog=true;
+  if(requestAt>=0&&s.tick()===requestAt+2){dialog=false;void oldOpen();requestAt=-1;}
+  if(closeAt>=0&&s.tick()===closeAt+2){dialog=false;void oldClose();closeAt=-1;}
+ });
+ s.direct=async(a:any)=>{
+  actions.push({tick:s.tick(),type:a.type});
+  if(a.type==='interactLoc'){requests++;if(requestAt<0)requestAt=s.tick();return{success:true,phase:'dispatch'};}
+  if(a.type==='closeModal'){
+   if(requestAt>=0)crossed++;
+   dialog=false;closeAt=s.tick();return{success:true,phase:'dispatch'};
+  }
+  if(a.type!=='spellOnItem')return oldDirect(a);
+  casts++;castAt=s.tick();if(casts===1)dialog=true;
+  for(const [id,cost] of [[845,1],[561,1],[554,5]])f.inventory.find(i=>i.id===id)!.count-=cost!;
+  for(let i=f.inventory.length-1;i>=0;i--)if(!f.inventory[i]!.count)f.inventory.splice(i,1);
+  const coins=f.inventory.find(i=>i.id===COINS);
+  if(coins)coins.count+=96;else f.inventory.push({id:COINS,count:96,slot:25,name:'Coins',optionsWithIndex:[]});
+  const magic=s.sdk.getSkill('Magic');magic.experience+=1625;
+  while(magic.experience>=magicXpForLevel(magic.baseLevel+1))magic.baseLevel++;
+  magic.level=magic.baseLevel;return{success:true};
+ };
+ // A withdrawal whose modal is about to close gets no server debit or credit.
+ const oldWithdraw=s.bot.withdrawItem;
+ s.bot.withdrawItem=async(item:any,n:number)=>{
+  if(closeAt>=0){await new Promise<void>(resolve=>{const done=s.onTick(()=>{if(closeAt<0){done();resolve();}});});return{success:false};}
+  expect(oldState().bank.isOpen).toBe(true);return oldWithdraw(item,n);
+ };
+ try{
+  const r=await runMagicOrder(f.s,{target:57,maxCasts:29,cap:500,budget:0,reserve:0,alchItemId:845});
+  expect(crossed).toBe(0);expect(r.failure).toBeUndefined();expect(r.ok).toBe(true);expect(casts).toBe(4);
+  expect(requests).toBe(4);
+  expect(actions.some(a=>a.type==='closeModal')).toBe(true);
+  for(const close of actions.filter(a=>a.type==='closeModal')){
+   const next=actions.find(a=>a.type==='interactLoc'&&a.tick>=close.tick);
+   expect(next?.tick).toBeGreaterThan(close.tick);
+  }
+  expect(f.inventory).toHaveLength(0);
+  expect(f.bank.find(i=>i.id===561)?.count).toBe(25);expect(f.bank.find(i=>i.id===554)?.count).toBe(125);
+  expect(f.bank.find(i=>i.id===845)?.count).toBe(951);expect(f.bank.find(i=>i.id===COINS)?.count).toBe(18561);
+  expect(f.bank.find(i=>i.id===590)?.count).toBe(1);expect(oldState().bank.isOpen).toBe(false);
+ }finally{off();f.stop();}
+});
+
+test('a silently dropped post-cast bank dispatch retries for the next bow and cleanup',async()=>{
+ for(const maxCasts of [1,2]){
+  const f=fakeSession({x:2721,z:3493,magic:{level:55,xp:47825},bank:[
+   {id:845,count:955},{id:561,count:29},{id:554,count:145},{id:COINS,count:18177},{id:590,count:1}]});
+  const s=f.s as any,oldState=s.sdk.getState,oldOpen=s.bot.openBank,oldDirect=s.direct;
+  let casts=0,requests=0,firstRequestAt=-1,pendingAt=-1;
+  s.sdk.getState=()=>({...oldState(),player:{...oldState().player,animId:-1},
+   modalOpen:oldState().bank.isOpen,modalInterface:oldState().bank.isOpen?5292:-1,
+   nearbyLocs:[{id:2213,name:'Bank booth',x:2721,z:3494,distance:1,optionsWithIndex:[{text:'Use-quickly',opIndex:2}]}]});
+  const off=s.onTick(()=>{if(pendingAt>=0&&s.tick()>=pendingAt+2){pendingAt=-1;void oldOpen();}});
+  s.direct=async(a:any)=>{
+   if(a.type==='interactLoc'){
+    expect(a.optionIndex).toBe(2);requests++;
+    // OpLocHandler silently drops a delayed player even though dispatch succeeds.
+    if(requests===1)firstRequestAt=s.tick();
+    else{expect(s.tick()).toBeGreaterThan(firstRequestAt);if(pendingAt<0)pendingAt=s.tick();}
+    return{success:true,phase:'dispatch'};
+   }
+   if(a.type!=='spellOnItem')return oldDirect(a);
+   casts++;
+   for(const [id,cost] of [[845,1],[561,1],[554,5]])f.inventory.find(i=>i.id===id)!.count-=cost!;
+   for(let i=f.inventory.length-1;i>=0;i--)if(!f.inventory[i]!.count)f.inventory.splice(i,1);
+   const coins=f.inventory.find(i=>i.id===COINS);
+   if(coins)coins.count+=96;else f.inventory.push({id:COINS,count:96,slot:25,name:'Coins',optionsWithIndex:[]});
+   const magic=s.sdk.getSkill('Magic');magic.experience+=1625;
+   while(magic.experience>=magicXpForLevel(magic.baseLevel+1))magic.baseLevel++;
+   magic.level=magic.baseLevel;return{success:true};
+  };
+  try{
+   const r=await runMagicOrder(f.s,{target:56,maxCasts,cap:500,budget:0,reserve:0,alchItemId:845});
+   expect(r.failure).toBeUndefined();expect(casts).toBe(maxCasts);
+   expect(r.stop).toBe(maxCasts===1?'max casts':'target');expect(r.ok).toBe(maxCasts===2);
+   expect(requests).toBe(maxCasts+1);
+   expect(f.inventory).toHaveLength(0);expect(oldState().bank.isOpen).toBe(false);
+   expect(f.bank.find(i=>i.id===845)?.count).toBe(955-casts);
+   expect(f.bank.find(i=>i.id===561)?.count).toBe(29-casts);
+   expect(f.bank.find(i=>i.id===554)?.count).toBe(145-5*casts);
+   expect(f.bank.find(i=>i.id===COINS)?.count).toBe(18177+96*casts);
+   expect(f.bank.find(i=>i.id===590)?.count).toBe(1);
+  }finally{off();f.stop();}
+ }
 });
 
 test('declared alchemy without nature refuses without buying or moving owned items',async()=>{
