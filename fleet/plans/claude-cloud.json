@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794373311980,
+ "at": 1794373339120,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -132,6 +132,27 @@
    "resources": []
   },
   {
+   "account": "Quickhandjob",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_ID": "536",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying bought dragon bones",
+   "role": "combat",
+   "template": "army-bury-dragon-99",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
    "account": "UnderMyKilt",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -154,19 +175,21 @@
    "account": "SporranDip",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=421 EXPECTED_OWNED=4 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=sporrandip-kit6-557-4to425 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/shop-buyer.ts aubury 3000 ITEMS=water.rune STOCK_TARGET=300 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=13000 COIN_RESERVE=500 MAX_SPEND=12000"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy 421 Earth rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "repeat": true,
+   "goal": "buy water runes at Aubury's in Varrock for the curse band",
    "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
+   "template": "army-water-aubury",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "shop:aubury"
+   ]
   }
  ]
 }
