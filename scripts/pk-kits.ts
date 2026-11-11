@@ -202,7 +202,7 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     'range-tank': { worn: { hat: 'viking_helmet_range', torso: 'black_dragonhide_body', legs: 'black_dragonhide_chaps', hands: 'black_dragon_vambraces', cape: 'black_cape', amulet: 'amulet_of_glory_4', feet: 'boots_ranger', weapon: 'magic_shortbow', ammo: ['rune_arrow', 400] },
         carried: ['staff_of_fire', ...WAVE, ...FREEZE, ...PRAYER_POTS, '4doserangerspotion'], food: 18,
         switches: { magic: ['staff_of_fire'], ranged: ['magic_shortbow'] }, options: { rotation: ['ranged', 'magic'] },
-        skills: trained({ Attack: 60, Strength: 60, Defence: 60, Ranged: 99, Magic: 99, Prayer: 43 }), varps: { 347: 10 } },
+        skills: trained({ Attack: 74, Strength: 73, Defence: 60, Ranged: 99, Magic: 99, Prayer: 43, Hitpoints: 94 }), varps: { 347: 10 } },
     'mage-tank': { worn: { hat: 'splitbark_helm', torso: 'splitbark_body', legs: 'splitbark_legs', hands: 'splitbark_gauntlets', cape: 'black_cape', amulet: 'amulet_of_glory_4', weapon: 'staff_of_fire' },
         carried: [...WAVE, ...FREEZE, ...PRAYER_POTS], food: 20, switches: { magic: ['staff_of_fire'] }, options: { rotation: ['magic'] },
         skills: trained({ Defence: 60, Magic: 99, Prayer: 43 }) },
@@ -245,7 +245,7 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     'tank-range': { worn: { hat: 'viking_helmet_range', torso: 'black_dragonhide_body', legs: 'black_dragonhide_chaps', hands: 'black_dragon_vambraces', cape: 'black_cape', amulet: 'amulet_of_glory_4', feet: 'boots_ranger', weapon: 'magic_shortbow', ammo: ['rune_arrow', 400] },
         carried: ['staff_of_fire', ...WAVE, ...FREEZE, ...PRAYER_POTS, '4doserangerspotion'], food: 18,
         switches: { magic: ['staff_of_fire'], ranged: ['magic_shortbow'] }, options: { rotation: ['ranged', 'magic'] },
-        skills: trained({ Attack: 60, Strength: 60, Defence: 99, Ranged: 99, Magic: 99, Prayer: 43 }), varps: { 347: 10 } },
+        skills: trained({ Attack: 74, Strength: 73, Defence: 99, Ranged: 99, Magic: 99, Prayer: 43 }), varps: { 347: 10 } },
     // Low combat levels: the levels of the free-to-play lists at Strength, Ranged and Magic 70.
     'baby-pure': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 300] },
         carried: ['rune_scimitar', ...BOOSTS], food: 23, foodItem: 'lobster', switches: { ranged: ['magic_shortbow'], melee: ['rune_scimitar'] }, options: { rotation: ['ranged', 'melee'] },
@@ -299,12 +299,22 @@ export const QUEST_CHAIN: Readonly<Record<string, readonly string[]>> = {
 // The server's XP rate (WorldConfig.ts xpRate), and the rewards that knowledge/quests.json does not hold, in whole XP
 // (quest_waterfall.rs2:491-492).
 const XP_RATE = 25, MORE_REWARDS: Readonly<Record<string, { skill: string; xp: number }[]>> = { quest_waterfall: [{ skill: 'attack', xp: 13750 }, { skill: 'strength', xp: 13750 }] };
+// The most XP that the fights of a quest give to one skill, at the server's rate, where the quest script sets the
+// style: a route counts it with the rewards. The Fremennik Trials: the bot fights Koschei unarmed with Kick, which
+// trains only Strength, and the Draugen the same way; practice runs of the whole quest gave 23,100 to 29,400 XP (research/pvp-fight-loop.md, "Quest routes of the
+// builds"). Lost City gives its fight XP to Strength too, and every kit with a dragon weapon has Strength 99.
+const FIGHT_XP: Readonly<Record<string, { skill: string; xp: number }[]>> = { quest_viking: [{ skill: 'strength', xp: 35_000 }] };
 let rewards: Map<string, { skill: string; xp: number }[]> | undefined;
 const rewardsOf = (folder: string) => {
     rewards ??= (JSON.parse(readFileSync(join(root, 'knowledge/quests.json'), 'utf8')) as { folder: string; xp: { skill: string; xp: number }[] }[])
         .reduce((m, q) => m.set(q.folder, [...(m.get(q.folder) ?? []), ...q.xp]), new Map<string, { skill: string; xp: number }[]>());
     return [...(rewards.get(folder) ?? []), ...(MORE_REWARDS[folder] ?? [])];
 };
+// The XP that a list of quests, with the quests they need, gives in a combat skill at the server's rate: the
+// rewards and the fights with a set style.
+const routeXp = (quests: readonly string[], skill: string) => [...new Set(quests.flatMap(q => QUEST_CHAIN[q]!))]
+    .reduce((n, folder) => n + rewardsOf(folder).filter(x => x.skill === skill.toLowerCase()).reduce((m, x) => m + x.xp * XP_RATE, 0)
+        + (FIGHT_XP[folder] ?? []).filter(x => x.skill === skill.toLowerCase()).reduce((m, x) => m + x.xp, 0), 0);
 // The quest route of a kit: the quests that its items and varps need, and each combat skill that the rewards of
 // those quests and of the quests they need take over the level of the kit, counted from level 1. A kit with an
 // empty `breaks` has a route.
@@ -312,12 +322,31 @@ export function kitRoute(name: string): { quests: string[]; breaks: string[] } {
     const k = kitOf(name), levels = kitSkills(name);
     const items = [...Object.values(k.worn).flatMap(w => (typeof w === 'string' ? [w] : Array.isArray(w) ? [w[0]] : [])), ...k.carried.map(c => (typeof c === 'string' ? c : c[0]))];
     const quests = [...new Set([...items.map(i => ITEM_QUEST[i]), ...Object.keys(k.varps ?? {}).map(v => VARP_QUEST[Number(v)])].filter((q): q is string => !!q))].sort();
-    const given = [...new Set(quests.flatMap(q => QUEST_CHAIN[q]!))].flatMap(rewardsOf);
     const breaks = Object.keys(MAXED).flatMap(skill => {
-        const level = levelForXp(given.filter(x => x.skill === skill.toLowerCase()).reduce((n, x) => n + x.xp * XP_RATE, 0));
+        const level = levelForXp(routeXp(quests, skill));
         return level > 1 && level > (levels[skill] ?? 1) ? [`${skill} ${level}`] : [];
     });
     return { quests, breaks };
+}
+// The levels an account of a kit may have before the quests of its route: in each combat skill the highest level
+// from which the rewards of the route end at or under the level of the kit. Hitpoints stay as the kit has them.
+export function levelsBeforeRoute(name: string): Record<string, number> {
+    const levels = kitSkills(name), quests = kitRoute(name).quests;
+    return Object.fromEntries(Object.keys(MAXED).map(skill => {
+        let level = levels[skill] ?? 1;
+        if (skill !== 'Hitpoints') for (const xp = routeXp(quests, skill); level > 1 && levelForXp(xpForLevel(level) + xp) > (levels[skill] ?? 1);) level--;
+        return [skill, level];
+    }));
+}
+// Whether a run that gave `gains` XP (whole XP for each skill, lower-case names) to an account at `before` levels
+// leaves every combat skill at or under the level of the kit. The first skill over its level, or null.
+export function overBuild(name: string, before: Readonly<Record<string, number>>, gains: Readonly<Record<string, number>>): string | null {
+    const levels = kitSkills(name);
+    for (const skill of Object.keys(MAXED)) {
+        const after = levelForXp(xpForLevel(before[skill] ?? 1) + (gains[skill.toLowerCase()] ?? 0));
+        if (skill !== 'Hitpoints' && after > (levels[skill] ?? 1)) return `${skill} ${after}`;
+    }
+    return null;
 }
 // The fight loop's switch weapons for a kit.
 export const kitSwitches = (name: string): Kit => Object.fromEntries(Object.entries(kitOf(name).switches).map(([style, names]) => [style, names!.map(itemId)]));

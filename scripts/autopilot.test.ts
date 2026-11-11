@@ -451,6 +451,15 @@ test('the plan names a PK build for an army account; an unknown kit trains nothi
     expect(buildCaps({ builds: ['dragon'] }).size).toBe(0);
 });
 
+test('the plan gives a build account the levels it may have before its quest route', async () => {
+    const { buildBefore } = await import('./autopilot');
+    const before = buildBefore({ builds: { Tosser: 'tank-range', Caber: 'pure-pray', Wrong: 'no-such-kit' } });
+    expect(before.get('tosser')).toMatchObject({ Attack: 68, Strength: 60, Defence: 99 });
+    expect(before.get('caber')).toMatchObject({ Attack: 60, Defence: 1, Prayer: 43 });
+    expect(before.has('wrong')).toBe(false);
+    expect(buildBefore({}).size).toBe(0);
+});
+
 test('the plan gives a build account the quest route of its kit; a kit with no route gets none', async () => {
     const { buildQuests } = await import('./autopilot');
     const routes = buildQuests({ builds: { Tosser: 'pure-pray', Caber: 'baby-pure', Wrong: 'no-such-kit' } });

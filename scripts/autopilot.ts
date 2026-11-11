@@ -27,7 +27,7 @@ import { tradeSettlement, validOrder, windowClosures, type Order, type Receipt, 
 import { readHeldFleetTradeClaims } from '../packages/core/src/fleet-trade-claim';
 import { liveHelperStatuses, overallSupplyDemand, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
 import { tickWaste, wasteShare } from './tick-waste';
-import { kitSkills } from './pk-kits';
+import { kitSkills, levelsBeforeRoute } from './pk-kits';
 
 const root = resolve(import.meta.dir, '..'), prac = join(root, '.practice');
 const PASS_EVERY_MS = 10 * 60_000, TRAINER_POLL_MS = 30_000;
@@ -289,6 +289,12 @@ export function buildQuests(plan: any): Map<string, readonly string[]> {
         .map(([name, kit]) => [name.toLowerCase(), BUILD_QUESTS[String(kit)] ?? []] as const));
 }
 
+// Account -> the levels its build may have before the quests of its route. An unknown kit gives no entry.
+export function buildBefore(plan: any): Map<string, Record<string, number>> {
+    return new Map(Object.entries(plan?.builds && typeof plan.builds === 'object' && !Array.isArray(plan.builds) ? plan.builds as Record<string, unknown> : {})
+        .flatMap(([name, kit]) => { try { return [[name.toLowerCase(), levelsBeforeRoute(String(kit))] as const]; } catch { return []; } }));
+}
+
 // The practice-proved templates this plan admits: the plan's `aio` array of template ids (the `pilot` templates of the
 // planner's catalogue). The owner adds an id to start that route's live pilot and removes it to end the route.
 export function aioPilots(plan: any): Set<string> {
@@ -397,7 +403,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     const sideCoins = listed.filter(n => owners.get(n.toLowerCase())?.side === side).reduce((n, name) => n + (accountFrom(name, side, observed(name), id => byId.get(id)).items.coin ?? 0), 0);
     const coinValue = coinValueFor(sideCoins);
     if (coinValue !== 1) log.push(`AUTOPILOT coins: this side holds ${sideCoins}, so a coin counts as ${coinValue}`);
-    const planned = plan({ side, accounts, owners, coinValue, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), pilots: aioPilots(swarm), stock, market: market as Market,
+    const planned = plan({ side, accounts, owners, coinValue, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market,
         kitSeq: new Map(Object.entries(state.kitSeq ?? {}).map(([a, n]) => [a.toLowerCase(), n])), noSend: failedSends(orders, receipts, now) });
     const serverOf = (to: string) => owners.get(to.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev';
     const funding = fundOrders(planned, open, (from, to, coins) => coinOrder(from, to, coins, serverOf(to), now),

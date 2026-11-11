@@ -4,7 +4,7 @@ import {aioCatalog} from '../aio';
 import {PRESETS, type SaveConfig} from '../../packages/practice/src/presets';
 import {firemakingFixture} from '../../packages/practice/src/firemaking-order-proof';
 import {agilityFixturePreset} from '../../packages/practice/src/agility-order-proof';
-import {KITS, kitItems, kitSkills, kitVarps} from '../pk-kits';
+import {KITS, kitItems, kitSkills, kitVarps, levelsBeforeRoute, overBuild} from '../pk-kits';
 
 // Food that a bot eats has one inventory entry for each piece. An entry with count 5 is one slot of 5, and the server
 // deletes the whole slot on an eat (consume_effects.rs2, inv_delslot).
@@ -31,6 +31,15 @@ export type BenchCase = {
 };
 
 const ok = (s: string) => /^RESULT ok\b/m.test(s);
+export const VIKING_BUILDS = ['zerker', 'range-tank', 'tank-range'] as const;
+// A quest run on a build account passes when the quest script ends ok with no death and the XP of the run leaves
+// every combat skill at or under the level of the kit (scripts/pk-kits.ts overBuild).
+export const questKeepsBuild = (kit: string, before: Readonly<Record<string, number>>) => (s: string) => {
+  const line = s.match(/^RESULT ok\b.*$/m)?.[0];
+  if (!line || !/ died=false /.test(line)) return false;
+  const gains = Object.fromEntries((line.match(/ xp=(\S*)/)?.[1] ?? '').split(',').filter(Boolean).map(p => { const [k, v] = p.split('='); return [k!, Number(v)]; }));
+  return overBuild(kit, before, gains) === null;
+};
 // The RESULT line of a quest script lists the XP of the run as `xp=skill=n,...` (scripts/generated/quest-lib.ts gains).
 export const lostCityKeepsBuild = (s: string) => {
   const line = s.match(/^RESULT ok\b.*$/m)?.[0];
@@ -488,6 +497,30 @@ const EXTRA_CASES: BenchCase[] = [
   // stays: the run passes only when the quest is complete and no XP went to Attack, Defence, Ranged, Magic or Prayer.
   {key: 'extra:lostcity-pure-pray', script: 'scripts/aio-quester.ts', preset: 'quest_zanaris', scriptArgs: ['zanaris'], pass: lostCityKeepsBuild, timeoutMs: 900_000,
     presetConfig: {...PRESETS.quest_zanaris!, skills: {...kitSkills('pure-pray'), Woodcutting: 56, Crafting: 51}}},
+  // The Fremennik Trials on an account of a build with a Fremennik helm, at the levels the build has before the quest
+  // (levelsBeforeRoute). The whole quest, and for a short loop the two stages with a fight: `-draugen` starts at the
+  // Draugen hunt and `-thorvald` at Koschei (run those with `--set VK_FROM=draugen` or `--set VK_FROM=thorvald`).
+  ...VIKING_BUILDS.flatMap(kit => (['', 'draugen', 'thorvald'] as const).map(stage => {
+    const preset = stage ? `quest_viking_${stage}` : 'quest_viking', before = levelsBeforeRoute(kit);
+    return {key: `extra:viking-${kit}${stage ? `-${stage}` : ''}`, script: 'scripts/aio-quester.ts', preset, scriptArgs: ['viking'], pass: questKeepsBuild(kit, before), timeoutMs: 900_000,
+      presetConfig: {...PRESETS[preset]!, skills: {...PRESETS[preset]!.skills, ...before}},
+      ...(stage ? {known: `a stage of the quest: run it with --set VK_FROM=${stage}`} : kit === 'zerker' ? {known: 'with Attack 7 the third form of Koschei outlasts its 1,000 ticks'} : {})};
+  })),
+  // The two Magic trainers of the planner's army bands, from the Ardougne north bank. Alchemy: Magic 54 to 56 on
+  // feathers with a staff of fire in the bank, so the run casts Low Alchemy and then High Alchemy. The curse trainer:
+  // Magic 19 to 21 over the fence of the cow field.
+  {key: 'extra:alch-train', script: 'scripts/alch-train.ts', preset: 'fresh_lumbridge', scriptArgs: ['56', '1500'], pass: ok,
+    presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Magic: 54, Hitpoints: 40}, bank: [{id: 561, count: 60}, {id: 314, count: 60}, {id: 1387, count: 1}]}},
+  {key: 'extra:splash-train', script: 'scripts/splash-train.ts', preset: 'fresh_lumbridge', scriptArgs: ['21', '1500'], pass: ok,
+    presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Magic: 19, Hitpoints: 40}, bank: [{id: 559, count: 40}, {id: 557, count: 120}, {id: 555, count: 120}, {id: 558, count: 2}, {id: 556, count: 2}]}},
+  // Underground Pass on the Iban pure at its levels before the quest, and Regicide on the halberd pure with
+  // Underground Pass done (its Attack 61 is in the kit).
+  {key: 'extra:upass-pure-iban', script: 'scripts/aio-quester.ts', preset: 'quest_upass', scriptArgs: ['upass'], pass: questKeepsBuild('pure-iban', levelsBeforeRoute('pure-iban')), timeoutMs: 900_000,
+    known: 'the quest script wields a rune scimitar (Attack 40); the build has Attack 11 and Hitpoints 10 before the quest',
+    presetConfig: {...PRESETS.quest_upass!, skills: {...PRESETS.quest_upass!.skills, ...levelsBeforeRoute('pure-iban')}}},
+  {key: 'extra:regicide-pure-hally', script: 'scripts/aio-quester.ts', preset: 'quest_regicide', scriptArgs: ['regicide'], pass: questKeepsBuild('pure-hally', kitSkills('pure-hally')), timeoutMs: 900_000,
+    known: 'the fights give Attack XP (11,100 in a run) and the 10 meals of the pack end at Hitpoints 16 of 93 with Defence 1',
+    presetConfig: {...PRESETS.quest_regicide!, skills: {...PRESETS.quest_regicide!.skills, ...kitSkills('pure-hally')}}},
 ];
 
 const KNOWN_QUEST: Readonly<Record<string, string>> = {

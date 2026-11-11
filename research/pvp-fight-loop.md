@@ -349,7 +349,7 @@ count of the engine's tick phases:
 | `rune-pure` | Attack 60, Strength 99, Defence 40, Ranged 99, Magic 99, Prayer 43 | 91 | 99 | the tribrid kit in rune with a black dragonhide body | 389,352 |
 | `dragon` | the same with Defence 60 | 96 | 99 | the tribrid kit with dragon helm, chainbody and legs and the rune kiteshield | 896,672 |
 | `zerker` | the same with Defence 60 | 96 | 99 | `dragon` with the Berserker helm | 856,672 |
-| `range-tank` | Attack 60, Strength 60, Defence 60, Ranged 99, Magic 99, Prayer 43 | 91 | 94 | magic shortbow and Fire Wave in black dragonhide with the Archer helm | 281,692 |
+| `range-tank` | Attack 74, Strength 73, Defence 60, Ranged 99, Magic 99, Prayer 43 | 91 | 94 | magic shortbow and Fire Wave in black dragonhide with the Archer helm | 281,692 |
 | `mage-tank` | Defence 60, Magic 99, Prayer 43 | 89 | 84 | Fire Wave in splitbark | 136,112 |
 
 Simulator ranking, 1,000 fights for each pair (`bun scripts/pk-sim.ts --league`; `.practice/pk-builds/sim-pure.txt`
@@ -488,9 +488,14 @@ How a kit keeps its route:
 - A build under Defence 88 wears no rune platebody and carries no dragon square shield and no dragon mace: those
   need Dragon Slayer. Dragon Slayer and Heroes' Quest together give Attack 62, Strength 90 and Defence 90, and the
   whole chain of Legends' Quest Attack 88, Strength 97 and Defence 90.
-- A build with a Fremennik helm has Attack 60, Strength 60 and Defence 60 or more. For the range tanks the two melee
-  levels add no combat level: the melee term (120) stays under the Ranged term (148), so `range-tank` is 91 and
-  `tank-range` 102 with them and without them.
+- A build with a Fremennik helm has Attack 60, Strength 60 and Defence 60 or more. The range tanks have Attack 74
+  and Strength 73: the melee term (147) stays under the Ranged term (148), so `range-tank` is 91 and `tank-range`
+  102 with those levels and with Attack 1 and Strength 1. They need the levels for the quest: Koschei is an unarmed
+  fight, and each of his forms leaves after 1,000 ticks (`viking_thorvald.rs2:180,232,252,262`).
+- A route counts the XP of the fights of a quest where the quest script sets the style (`FIGHT_XP`): The Fremennik
+  Trials 35,000 Strength XP. `levelsBeforeRoute` gives the levels a build may have before its quests: `range-tank`
+  Attack 68, Strength 60 and Defence 7; `tank-range` the same with Defence 99; `zerker` Attack 7, Strength 99 and
+  Defence 7.
 - The halberd build has Attack 61, what Underground Pass gives. Its combat level stays 75.
 - The Fremennik Trials leave 698 XP under level 61, so a build with Attack 60 or Defence 60 does the quest before
   any other XP in that skill.
@@ -517,23 +522,61 @@ How a kit keeps its route:
   Strength 99, Prayer 43, Hitpoints 93, 2 prayer potions and 6 meals. Evidence: `bun run bench lostcity-pure-pray`
   (case `extra:lostcity-pure-pray` of `scripts/measure/aio-bench-cases.ts`), one run for each seed.
 
+- The Fremennik Trials on a range tank keep the build. Conditions: practice, lockstep engine, the whole quest from
+  the preset `quest_viking` (nothing worn, the quest pack, 4 sharks), the levels of `levelsBeforeRoute` with every
+  other skill 99, the bench cases `extra:viking-range-tank` and `extra:viking-tank-range`.
+
+  | Kit | Seed | Ticks | Strength XP of the fights | Result |
+  |---|---|---|---|---|
+  | `range-tank` | 1, 2, 3 | 3,433, 3,456, 3,455 | 23,100, 25,200, 24,200 | quest complete, no death |
+  | `tank-range` | 1, 2, 3 | 3,510, 3,476, 3,570 | 26,300, 24,700, 26,800 | quest complete, no death |
+
+  Each run gave 70,310 XP to Attack and to Defence, the reward alone. The maxed preset (`quester:quest:viking`)
+  passes with the same script in 2,921 ticks and 29,400 Strength XP from the fights. A run takes 72 to 90 s.
+- What the quest script does for a build (`scripts/generated/quest-viking.ts`), each from a failed practice run:
+  - It sets the style that trains only Strength (Kick) before the Draugen and before Koschei. Without it the fights
+    gave 17,100 and 6,400 Attack XP.
+  - It does not stop to close a level-up window in the Koschei fight. The wait cost about 300 ticks, the form healed
+    to full, and the prayer guard, which sends no prayer with a window open, held Protect from Melee until the points
+    ran out: a build with Defence 7 died to the third form.
+  - It sends each attack as one input and sends it again when the health bar of a new form is live. A new form shows
+    the empty bar of the form before it, the prayer guard reads an attack on such a target as an input that is not an
+    attack, and it then holds the prayer for the rest of the fight (`packages/core/src/prayer-guard.ts`
+    `attackTarget`). With the fix the guard flicked 289 to 332 times and the points stayed 43.
+  - It waits up to 4,000 ticks for the fight.
+- `zerker` does not pass. With Attack 7 it lands about 9 damage in 100 ticks. Two runs from the Koschei stage passed
+  with 725 ticks on the third form, and one run of the whole quest lost that form to the 1,000 tick limit. Weapons,
+  armour and runes are refused at the arena ladder (`can_enter_thorvald_trial`), and Peer banks every item before
+  it. The case `extra:viking-zerker` is marked `known`.
+- Underground Pass at the levels of `pure-iban` before the quest (Attack 11, Hitpoints 10) fails at once: the quest
+  script wields a rune scimitar (Attack 40). Regicide at the levels of `pure-hally` fails: the fights gave 11,100
+  Attack XP, and the 10 meals of the pack ended at Hitpoints 16 of 93. One run each; the cases `extra:upass-pure-iban`
+  and `extra:regicide-pure-hally` are marked `known`.
+
 Planner: `BUILD_QUESTS` in `packages/planner/src/autopilot.ts` holds the routes by kit name, `scripts/autopilot.ts`
-`buildQuests` gives each account of the `builds` object the route of its kit, and `buildBand` passes a quest band
-only when its quest is on that route. Every other quest band stays refused (Holy Grail: Prayer 80 and Defence 85).
-The planner has a band for Lost City only.
+`buildQuests` and `buildBefore` give each account of the `builds` object the route of its kit and its levels before
+the route, and `buildBand` passes a quest band only when its quest is on that route and no skill of the account is
+over its level before the route. While a quest of the route is open, a training band stops at the level before the
+route. Every other quest band stays refused (Holy Grail: Prayer 80 and Defence 85). The planner has two quest bands
+for a build: `army-quest-lostcity` and `army-quest-fremennik` (the chain `drunkmonk,murder,viking`; a pilot; for
+build accounts only; it asks Attack 60, Strength 60, Prayer 43, Hitpoints 90 and Fletching 25).
 
 Evidence: `scripts/pk-kits.test.ts` ("every kit has a quest route, and the planner holds the route of every build")
 fails when a kit wears an item whose quest gives a level over the kit, and when `BUILD_QUESTS` differs from
 `kitRoute`; `packages/planner/test/autopilot.test.ts` and `scripts/autopilot.test.ts` hold the planner rule. Proof
-level: unit, and practice for the Lost City run of `pure-pray`.
+level: unit, and practice for the Lost City run of `pure-pray` and the Fremennik runs of the two range tanks.
 
 Gaps:
 
-- `kitRoute` counts quest rewards. It does not count the XP of the fights inside a quest. Lost City is the one quest
-  with a set style. The Fremennik Trials, Underground Pass, Regicide and the Mage Arena have fights with no style
-  rule, and the Mage Arena fight gives Magic XP to `pure-rock`, which has Magic 80.
-- The planner has no band for The Fremennik Trials, Underground Pass, Regicide or the Mage Arena, so `zerker`,
-  `range-tank`, `tank-range`, `pure-iban`, `pure-hally`, `pure-rock` and `pure-god` get those quests from no job.
+- `kitRoute` counts quest rewards and the fights of `FIGHT_XP`. Underground Pass, Regicide and the Mage Arena have
+  fights with no style rule, and the Mage Arena fight gives Magic XP to `pure-rock`, which has Magic 80.
+- The planner has no band for Underground Pass, Regicide or the Mage Arena, and no quest script for the Mage Arena,
+  so `pure-iban`, `pure-hally`, `pure-rock` and `pure-god` get those quests from no job. `zerker` gets The Fremennik
+  Trials from no job: the band asks Attack 60.
+- Fletching 25 for The Fremennik Trials has no job in the planner. The Grand Exchange lists no logs, and a knife
+  costs 93,848 coins there; a general store sells the knife.
+- No live run of `army-quest-fremennik`, and no practice run of the chain `drunkmonk,murder,viking` through the quest
+  sweep from an army account's state: the cases start at Brundt with the pack in hand.
 - The quest points that a quest asks (Dragon Slayer 32, Heroes' Quest 55, Legends' Quest 107) are not in the route:
   only the maxed kits need those quests.
 - No live run of Lost City by an account with Defence 1. The practice case starts at the warrior with the pack in
@@ -548,6 +591,16 @@ Gaps:
   52, `cloud` 2), and the kit tier of the planner orders a missing band item from a donor account. A cow leaves
   bones on each kill, and a build band runs with `GIANT_BURY=0`, which takes none. Evidence:
   `/api/market/items/526` of the demo server and `fleet/snapshots/*.json` on the `fleet-data` branch, one read each.
+
+### Bench cases for the planner's jobs
+
+Claim: every worker script that a template of the planner's catalogue starts has a bench case or an AIO route with
+one. Conditions: the 77 templates of `catalogue()`; 17 name an AIO route with a case, and the 60 others start 11
+worker scripts. Two of those scripts had no case: `scripts/alch-train.ts` (3 bands) and `scripts/splash-train.ts`
+(1 band). Evidence: the cases `extra:alch-train` (Magic 54 to 56, Low Alchemy then High Alchemy, 64 ticks) and
+`extra:splash-train` (Magic 19 to 21, 80 ticks) pass, one run each; `bun run bench --smoke` passes 15 of 15. Gap:
+a case for a worker is not a case for each band of that worker, and the `chain` bands run only their first step's
+worker in a case of their own.
 
 ### Second set of builds
 
@@ -574,7 +627,7 @@ gear that its level cap exists for -> `scripts/pk-kits.test.ts`, the bench cases
 | `pure-max` | Attack 99, Strength 99, Ranged 99, Prayer 43 | 94 | magic shortbow, dragon dagger |
 | `addy-pure` | the rune pure with Defence 30 | 89 | the tribrid kit in adamant |
 | `def50` | the rune pure with Defence 50 | 94 | the rune pure's kit with the granite shield |
-| `tank-range` | Attack 60, Strength 60, Defence 99, Ranged 99, Magic 99, Prayer 43 | 102 | magic shortbow and Fire Wave in black dragonhide with the Archer helm |
+| `tank-range` | Attack 74, Strength 73, Defence 99, Ranged 99, Magic 99, Prayer 43 | 102 | magic shortbow and Fire Wave in black dragonhide with the Archer helm |
 | `baby-pure` | Attack 40, Strength 70, Ranged 70 | 52 | magic shortbow, rune scimitar |
 | `low-ranger` | Ranged 70 | 47 | magic shortbow |
 | `low-mage` | Magic 59 | 39 | Fire Blast |

@@ -190,7 +190,9 @@ export const STURDY=90,STURDY_MEALS=10,STURDY_OPTIONAL:Record<string,number[]>={
 // Quests that board the Entrana ship: its monk carries nobody with a weapon or a piece of armour in the pack or worn
 // (monk_of_entrana.rs2 has_entrana_restricted_items; an arrow, a ring, an amulet and boots pass). The bank pass banks
 // everything the account wears and every pack item the quest does not use, and runs even with the pack complete.
-export const BARE=new Set(['zanaris','grail']);
+// The Fremennik Trials start bare too: Peer banks everything worn before his trial, and the quest script fights the
+// Draugen and Koschei unarmed, with the style that trains only Strength (a bow has no such style).
+export const BARE=new Set(['zanaris','grail','viking']);
 // The coins to take from the bank for the shops, fares and paid recipes of a pass: what they cost beyond the coins the
 // account carries over the quest's own need. The quest's coins are not shop money (practice: Merlin's Crystal asks 500
 // coins, the pass bought bread and a tinderbox for 13 of them and ended `withdraw short 995:13`).

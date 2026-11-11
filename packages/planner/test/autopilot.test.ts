@@ -1460,6 +1460,35 @@ test('an account with a PK build trains to the levels of the build and no furthe
     if (of('Build')?.script === 'scripts/gather-combat.ts') expect(Number(of('Build')!.env!.TARGET_LEVEL)).toBeLessThanOrEqual(99);
 });
 
+test('a build with a Fremennik helm takes The Fremennik Trials under its levels before the quest, and trains to them first', async () => {
+    const { buildBand, catalogue: all, FREMENNIK, FREMENNIK_BAND } = await import('../src/autopilot');
+    const tank = { Attack: 74, Strength: 73, Defence: 60, Ranged: 99, Magic: 99, Prayer: 43 }, before = { Attack: 68, Strength: 61, Defence: 7, Ranged: 99, Magic: 99, Prayer: 43, Hitpoints: 94 };
+    const templates = all(), byId = (id: string) => templates.find(t => t.id === id)!, band = byId('army-quest-fremennik'), route = ['The Fremennik Trials'];
+    expect(band).toMatchObject({ buildOnly: true, pilot: true, band: FREMENNIK_BAND, resources: [FREMENNIK], args: ['quester', 'chain', 'drunkmonk,murder,viking'] });
+    const ready = { ...acct('Tank', { Attack: 68, Strength: 61, Defence: 1, Ranged: 99, Magic: 99, Prayer: 43, Hitpoints: 96, Fletching: 25 }), quests: new Set<string>() };
+    // No build: an army account never takes the band. A build with the route: at or under the levels before it.
+    expect(buildBand(band, ready)).toBeNull();
+    expect(buildBand(band, ready, tank, route, before)).toBe(band);
+    expect(buildBand(band, ready, tank, [], before)).toBeNull();
+    // One level over a level before the route: the reward would end over the build. Hitpoints are not a limit.
+    expect(buildBand(band, { ...ready, skills: { ...ready.skills, Attack: 69 } }, tank, route, before)).toBeNull();
+    expect(buildBand(band, { ...ready, skills: { ...ready.skills, Defence: 8 } }, tank, route, before)).toBeNull();
+    // While the quest is open a training band stops at the level before the route; with the quest done, at the build.
+    const low = { ...ready, skills: { ...ready.skills, Attack: 50, Strength: 50 } };
+    expect(buildBand(byId('army-trooper-attack-99'), low, tank, route, before)!.env!.TARGET_LEVEL).toBe('68');
+    expect(buildBand(byId('army-trooper-strength-99'), low, tank, route, before)!.env!.TARGET_LEVEL).toBe('61');
+    expect(buildBand(byId('army-trooper-attack-99'), ready, tank, route, before)).toBeNull();
+    expect(buildBand(byId('army-cow-defence-45'), ready, tank, route, before)!.env!.TARGET_LEVEL).toBe('7');
+    const done = { ...low, quests: new Set(['the fremennik trial']) };
+    expect(buildBand(byId('army-trooper-attack-99'), done, tank, route, before)!.env!.TARGET_LEVEL).toBe('74');
+    // In a plan: the build account with the levels, the coins and the meals is a candidate; a plain army account is not.
+    const who = (name: string) => ({ ...acct(name, { ...ready.skills, Hitpoints: 94 }, { coin: 100_000, shark: 40, 'adamant scimitar': 1, shortbow: 1, 'bronze arrow': 500 }), quests: new Set(['lost city']) });
+    const run = (extra: Partial<Inputs>) => plan(inputs([who('Tank')], { army: new Set(['tank']), pilots: new Set(['army-quest-fremennik']), capacity: CAPACITY, ...extra }))[0]!.template?.id;
+    expect(run({ builds: new Map([['tank', tank]]), buildQuests: new Map([['tank', route]]), buildBefore: new Map([['tank', before]]) })).toBe('army-quest-fremennik');
+    expect(run({})).not.toBe('army-quest-fremennik');
+    expect(CAPACITY[FREMENNIK]).toBe(1);
+});
+
 test('an account with a PK build takes a quest band only on the quest route of its kit', async () => {
     const { buildBand, BUILD_QUESTS, catalogue: all } = await import('../src/autopilot');
     const pure = { Attack: 60, Strength: 99, Defence: 1, Ranged: 99, Magic: 1, Prayer: 43 };

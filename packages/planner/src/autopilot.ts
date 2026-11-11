@@ -71,6 +71,8 @@ export type Template = {
     kitFirst?: true;
     // A band whose kit only a shop job of its own brings: the kit tier neither buys nor asks a donor for it.
     shopKit?: true;
+    // A goal band for accounts with a PK build only (buildBand): no other army account takes it.
+    buildOnly?: true;
 };
 // One missing kit line: `count` more units of any one item of `of`.
 export type Lack = { of: readonly string[]; count: number };
@@ -107,6 +109,9 @@ export type Inputs = {
     // Lower-case account name -> the quests on the route of its build (BUILD_QUESTS of its kit). An account with a
     // build and no entry takes no quest band.
     buildQuests?: ReadonlyMap<string, readonly string[]>;
+    // Lower-case account name -> the levels its build may have before the quests of its route
+    // (scripts/pk-kits.ts levelsBeforeRoute): a quest reward on top of a higher level ends over the build.
+    buildBefore?: ReadonlyMap<string, Readonly<Record<string, number>>>;
     // Free accounts of every side with their holdings: item and coin donors for an army account's kit. This side's
     // donors give first; another side's give only when none of this side can.
     stock?: readonly Stock[];
@@ -145,6 +150,9 @@ export const QUEST_BAND = 3.6, LOST_CITY = 'quest:lostcity', LOST_CITY_PLACES = 
 export const GRAIL_BAND = QUEST_BAND + 0.1, GRAIL_PLACE = 'quest:camelot', GRAIL_PLACES = 1, GRAIL_MEALS = 12;
 export const GRAIL_RUNES: Readonly<Record<string, number>> = { 'law rune': 12, 'air rune': 46, 'water rune': 6, 'fire rune': 1 };
 export const LOST_CITY_FOOD = ['lobster', 'swordfish', 'shark'] as const;
+// The Fremennik Trials for a build with a Fremennik helm, just after Lost City. One account at a time: Koschei and
+// the Draugen are single fights. FREMENNIK_MEALS: the four sharks of the quest pack.
+export const FREMENNIK_BAND = QUEST_BAND + 0.05, FREMENNIK = 'quest:rellekka', FREMENNIK_PLACES = 1, FREMENNIK_MEALS = 4;
 // Lost City for an account with a Defence 1 build: the levels, the food and the prayer potions of the practice case
 // `extra:lostcity-pure-pray` (scripts/measure/aio-bench-cases.ts). Four seeds: 844 to 1,174 ticks, no food eaten, lowest
 // Hitpoints 73 of 93, XP in Strength and Hitpoints only (research/pvp-fight-loop.md, "Quest routes of the builds").
@@ -325,13 +333,19 @@ export const BUILD_QUESTS: Readonly<Record<string, readonly string[]>> = {
 // - the Prayer band that buries held normal bones (scripts/train-prayer.ts) stops at the level: its target argument;
 // - a band of another script that ends above the level is refused: that script has no proved stop;
 // - a quest band is refused unless the quest is on the route of the build (BUILD_QUESTS): a quest reward gives XP in
-//   skills nobody chose;
+//   skills nobody chose. A quest of the route is refused too while a skill of the account is over its level before
+//   the route (`before`): the reward on top of that level ends over the build;
+// - while a quest of the route is open, a training band stops at the level before the route, not at the level of
+//   the build: the quest brings the rest;
 // - a stock band is refused: a fight for loot gives XP in skills nobody chose.
-export function buildBand(t: Template, a: Acct, build?: Readonly<Record<string, number>>, quests: readonly string[] = []): Template | null {
-    if (!build || t.tier !== 'goal') return t;
-    if (t.quest) return quests.some(q => norm(q) === norm(t.quest!.name)) ? t : null;
+// A `buildOnly` band goes to no account without a build.
+export function buildBand(t: Template, a: Acct, build?: Readonly<Record<string, number>>, quests: readonly string[] = [], before?: Readonly<Record<string, number>>): Template | null {
+    if (!build) return t.buildOnly ? null : t;
+    if (t.tier !== 'goal') return t;
+    if (t.quest) return quests.some(q => norm(q) === norm(t.quest!.name)) && Object.entries(before ?? {}).every(([skill, level]) => skill === 'Hitpoints' || (a.skills[skill] ?? 1) <= level) ? t : null;
     if (!t.trains) return null;
-    const level = build[t.trains.skill];
+    const open = quests.some(q => !questDone(a, q)), cap = build[t.trains.skill];
+    const level = cap !== undefined && open && before?.[t.trains.skill] !== undefined ? Math.min(cap, before[t.trains.skill]!) : cap;
     const combat = t.script === 'scripts/gather-combat.ts';
     if (combat && (t.env?.TRAIN_SKILL !== t.trains.skill || t.env.GIANT_KILLS !== undefined)) return null;
     if (level === undefined) return combat ? { ...t, env: { ...t.env, GIANT_BURY: '0' } } : t;
@@ -353,7 +367,7 @@ export function plan(inp: Inputs): Assignment[] {
     const admitted = (t: Template) => !t.pilot || !!inp.pilots?.has(t.id);
     const shopLine = (l: Lack) => !l.of.some(i => inp.market?.[i]) && l.of.some(i => SHOP_SUPPLIED.has(i));
     for (const a of mine) for (const listed of inp.templates) {
-        const t = buildBand(listed, a, inp.builds?.get(a.name.toLowerCase()), inp.buildQuests?.get(a.name.toLowerCase()));
+        const t = buildBand(listed, a, inp.builds?.get(a.name.toLowerCase()), inp.buildQuests?.get(a.name.toLowerCase()), inp.buildBefore?.get(a.name.toLowerCase()));
         if (!t || inp.retired?.has(pairKey(a.name, t.id)) || !admitted(t)) continue;
         if (t.quest && t.tier !== 'goal') {
             if (questDone(a, t.quest.name) || !meets(a, t.needs)) continue;
@@ -698,7 +712,7 @@ export function splashKit(magic: number): Record<string, number> {
 }
 // The places the AIO routes hold (aioTemplates). Each takes one account until a live pilot measures two.
 export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore: 'aio:varrock-east-mine', essence: 'aio:essence-mine', air: 'aio:air-altar' } as const;
-export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
+export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, [FREMENNIK]: FREMENNIK_PLACES, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // Army goal bands (AGENTS.md goals: maxed tribrids), in order: Strength, Attack, Magic, Prayer, Ranged, Defence
 // last. Bands 6-8 are the Khazard troopers (TROOPER_BANDS), 9 is Prayer on the field (PRAYER_FIELD_BAND). Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile, MAX_KILLS=8): live 4/4 runs
@@ -1120,6 +1134,22 @@ export function catalogue(): Template[] {
         needs: { skills: { Prayer: 43, Magic: 45, Attack: 90, Strength: 90, Hitpoints: 90, Defence: 90 }, under: { Prayer: 99 }, items: { coins: 2000, 'rune scimitar': 1, ...GRAIL_RUNES },
             pieces: { of: LOST_CITY_FOOD, count: GRAIL_MEALS } }, kitFirst: true,
     };
+    // The Fremennik Trials for a build with a Fremennik helm (BUILD_QUESTS), through the same chain: Monk's Friend gives
+    // the Woodcutting 40 and Murder Mystery the Crafting 40 that the lyre asks; Fletching 25 has no job, so the band
+    // asks it. The sweep banks what the account wears (scripts/quest-sweep.ts BARE) and takes the quest pack: 5,300
+    // coins, a beer, a tinderbox, a rune axe, a knife, a cabbage, a potato, an onion, a raw shark and four sharks. The
+    // quest script fights the Draugen and Koschei unarmed with the style that trains only Strength, under the prayer
+    // guard's Protect from Melee. Practice at the levels of `range-tank` and `tank-range` before the quest (Attack
+    // 68, Strength 60 to 62): 3,408 to 3,570 ticks in 8 runs, no death, Attack and Defence 60 from the reward
+    // (research/pvp-fight-loop.md, "Quest routes of the builds"). An account with Attack 7 loses Koschei's third form
+    // to its 1,000 tick limit, so the band asks Attack 60. A pilot.
+    const fremennik: Template = {
+        id: 'army-quest-fremennik', family: 'aio:quester:mode:chain', script: 'scripts/aio.ts', args: ['quester', 'chain', 'drunkmonk,murder,viking'],
+        aio: 'quester:mode:chain', worker: 'scripts/quest-chain.ts', pilot: true, buildOnly: true, role: 'quest',
+        goal: "complete Monk's Friend, Murder Mystery and The Fremennik Trials to wear a Fremennik helm", tier: 'goal', band: FREMENNIK_BAND,
+        quest: { name: 'The Fremennik Trials', unlocks: [] }, resources: [FREMENNIK], yields: () => [],
+        needs: { skills: { Attack: 60, Strength: 60, Prayer: 43, Hitpoints: 90, Fletching: 25 }, items: { coins: 6000 }, pieces: { of: LOST_CITY_FOOD, count: FREMENNIK_MEALS } }, kitFirst: true,
+    };
     const prayerField: Template = {
         id: 'army-trooper-prayer-99', family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'],
         env: { TRAIN_SKILL: 'Hitpoints', GIANT_KILLS: '500', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1' }, role: 'combat', goal: 'train Prayer to 99 burying trooper bones on the field',
@@ -1207,6 +1237,7 @@ export function catalogue(): Template[] {
         arrowsLowe,
         ranged,
         lostCity,
+        fremennik,
         holyGrail,
         dustyKey,
         hunt,
