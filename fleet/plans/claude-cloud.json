@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794394135981,
+ "at": 1794394141120,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -146,22 +146,16 @@
   },
   {
    "account": "Fatstack",
-   "script": "scripts/goldfarm.ts",
+   "script": "scripts/session-check.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-d730e283-f335-4590-8958-c8e26ea5b2ac"
    },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2582,3297"
-   ]
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-fatstack-20261111t104501z [task-d730e283-f335-4590-8958-c8e26ea5b2ac]",
+   "role": "thieving"
   }
  ]
 }
