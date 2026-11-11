@@ -29,6 +29,8 @@ export const KNOBS: readonly Knob[] = [
     { name: 'castArmour', candidates: [{ castArmour: 'keep' }, { castArmour: 'strip' }] },
     { name: 'defencePrayer', candidates: [{ defencePrayer: false }] },
     { name: 'standOff', candidates: [{ standOff: 2 }, { standOff: 5 }] },
+    { name: 'freeFood', candidates: [{ freeFood: true }] },
+    { name: 'bowBurst', candidates: [{ bowBurst: 0.6 }, { bowBurst: 0.45 }, { bowBurst: 0.8 }] },
 ];
 
 // Mean, standard deviation and t statistic of the paired samples: positive means that the candidate is better.

@@ -27,6 +27,8 @@ export type KitSpec = {
     // Carried besides food: a name, or a name and a count.
     carried: (string | [string, number])[];
     food: number;
+    // The food item (default shark, heals 20). A cooked karambwan heals 18 and costs no attack time.
+    foodItem?: string;
     // Switch weapons for each style the build fights with, by name.
     switches: Partial<Record<Style, string[]>>;
     options?: Pick<FightOptions, 'rotation' | 'damageSpell'>;
@@ -41,6 +43,15 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
         switches: { magic: ['mystic_fire_staff'], ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] } },
     'tribrid-pots': { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
         carried: ['mystic_fire_staff', 'magic_shortbow', ...WAVE, ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 15,
+        switches: { magic: ['mystic_fire_staff'], ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] } },
+    // The tribrid with no helm, body or legs: the bow special rolls against its own ranged defence (scripts/pk.ts
+    // bowBurst), and this build has almost none.
+    'tribrid-bare': { worn: { cape: 'cape_of_legends', amulet: 'amulet_of_glory_4', feet: 'boots_ranger', weapon: 'dragon_dagger_p', ammo: ['rune_arrow', 300] },
+        carried: ['mystic_fire_staff', 'magic_shortbow', ...WAVE, ...FREEZE, ...PRAYER_POTS], food: 18,
+        switches: { magic: ['mystic_fire_staff'], ranged: ['magic_shortbow'], melee: ['dragon_dagger_p'] } },
+    // The tribrid with cooked karambwans for food.
+    'tribrid-kara': { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['mystic_fire_staff', 'magic_shortbow', ...WAVE, ...FREEZE, ...PRAYER_POTS], food: 18, foodItem: 'tbwt_cooked_karambwan',
         switches: { magic: ['mystic_fire_staff'], ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] } },
     // One style each, in the armour of that style.
     melee: { worn: { ...RUNE, amulet: 'amulet_of_strength', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield' },
@@ -69,7 +80,7 @@ export function kitItems(name: string) {
     const equipment = Object.entries(k.worn).flatMap(([slot, item]) => (slot === 'ammo'
         ? [{ id: itemId((item as [string, number])[0]), count: (item as [string, number])[1], slot: 13 }]
         : [{ id: itemId(item as string), count: 1, slot: SLOT[slot as keyof typeof SLOT] }]));
-    const inventory = [...carried(k), ...Array.from({ length: k.food }, () => ({ id: itemId('shark'), count: 1 }))];
+    const inventory = [...carried(k), ...Array.from({ length: k.food }, () => ({ id: itemId(k.foodItem ?? 'shark'), count: 1 }))];
     if (inventory.length > 27) throw Error(`pk-kits: kit ${name} carries ${inventory.length} items; 27 leave the free slot that a bow switch needs`);
     return { equipment, inventory };
 }

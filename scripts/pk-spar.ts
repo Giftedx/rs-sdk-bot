@@ -29,6 +29,10 @@ export const PROFILES: Readonly<Record<string, Profile>> = {
     // Keeps its special for a target at 40% health or one that has fled, and freezes a target that runs.
     hunter: { freeze: 'flee', specBelow: 0.4 },
     'hunter-low': { freeze: 'low', specBelow: 0.4 },
+    // The bow burst from 60% health: bare of armour, magic shortbow specials with a dagger special between.
+    // The special energy is kept for the burst: no melee special above 20% health outside it.
+    burst: { bowBurst: 0.6, specBelow: 0.2 },
+    'hunter-burst': { freeze: 'low', specBelow: 0.2, bowBurst: 0.6 },
     'no-read': { readOverheads: false },
     'no-spec': { spec: undefined },
     'spec-early': { specBelow: 0.8 },
@@ -95,7 +99,7 @@ export async function spar(a: Session, b: Session, optionsA: FightOptions, optio
     const told = [0, 0];
     const trace = process.env.SPAR_TRACE === '1' ? a.onTick(() => { const x = self(a), y = self(b);
         [a, b].forEach((s, i) => { for (const m of s.sdk.getState()?.gameMessages ?? []) { const id = m.observationId ?? m.tick; if (id > told[i]! && m.tick >= start) { told[i] = id; log(`MSG ${s.name} ${m.text}`); } } });
-        log(`TRACE ${a.tick() - start} a=${x?.worldX},${x?.worldZ} hp=${x?.hp} run=${x?.runEnergy} b=${y?.worldX},${y?.worldZ} hp=${y?.hp} run=${y?.runEnergy}`); }) : undefined;
+        log(`TRACE ${a.name} ${a.tick() - start} a=${x?.worldX},${x?.worldZ} hp=${x?.hp} run=${x?.runEnergy} b=${y?.worldX},${y?.worldZ} hp=${y?.hp} run=${y?.runEnergy}`); }) : undefined;
     const unwatch = a.onTick(() => { if (opening === null && [a, b].some((s, i) => (self(s)?.hp ?? Infinity) < (hp0[i] ?? 0))) opening = a.tick() - start; });
     // The first side to end stops the other: a fight has one end.
     let over = false;
@@ -150,9 +154,14 @@ if (import.meta.main) {
     const { tickWaits } = await import('../packages/core/src/tick-stream');
     tickWaits.active++;
     // The account of the run logs in first: the bench checks the first START line against that account's start tile.
-    const first = await openBot(botA, { onStop });
+    const first = env.SPAR_LOGIN === 'b' ? null as unknown as Session : await openBot(botA, { onStop });
     const pairs: [Session, Session][] = await Promise.all(names.map(async ([x, y], i): Promise<[Session, Session]> => {
-        const [a, b] = await Promise.all([i === 0 ? first : openBot(x, { onStop }), openBot(y, { onStop })]);
+        // SPAR_LOGIN=b logs side B in before side A (after the first account, which the bench needs first): the engine
+        // gives the earlier login the lower player index, and it acts on that player first in each tick.
+        const order = env.SPAR_LOGIN === 'b';
+        const b0 = order ? await openBot(y, { onStop }) : null;
+        const a = i === 0 && first ? first : await openBot(x, { onStop });
+        const b = b0 ?? await openBot(y, { onStop });
         // The fight loop sends its actions by index and reads no `reachable` flag; the flood fill behind that flag
         // was 9% of a 16-account run.
         for (const s of [a, b]) (s.client as { setReachabilityEnabled?: (on: boolean) => void } | undefined)?.setReachabilityEnabled?.(false);

@@ -275,6 +275,8 @@ const ROUTE_CASES: BenchCase[] = [
   sparMatrix('extra:spar-kits-x8', [['tribrid', 'tribrid'], ['tribrid', 'tribrid-pots'], ['tribrid', 'melee'], ['tribrid', 'ranger'], ['tribrid', 'mage'],
     ['tribrid', 'tribrid-adamant'], ['tribrid', 'tribrid-mithril'], ['tribrid-pots', 'tribrid-pots']]),
   ...Object.keys(KITS).map(kit => sparMatrix(`extra:spar-kit-${kit}-x8`, Array.from({length: 8}, () => [kit, kit] as const))),
+  // A build against the standard tribrid, four pairs on each side of the map: what the build is worth by itself.
+  ...Object.keys(KITS).filter(kit => kit !== 'tribrid').map(kit => sparMatrix(`extra:spar-duel-${kit}-x8`, Array.from({length: 8}, (_, i) => (i % 2 ? ['tribrid', kit] : [kit, 'tribrid']) as [string, string]))),
   // Map cases of the spar. Gap: the same mirror from 12 tiles apart. Trees: 6 tiles apart at Wilderness level 3 with a
   // blocker on tiles 3101-3103 between the two, so neither has line of sight at the start. Escape: Wilderness level 34
   // at a spot with no monster in view (green dragons at (3094, 3800) attack both sides and block their hits); side B

@@ -72,6 +72,15 @@ export type FightOptions = {
     castArmour?: 'torso' | 'keep' | 'strip';
     // false: no Defence prayer (Steel Skin and the lower ones). It saves prayer points and gives up their defence.
     defencePrayer?: boolean;
+    // Bow burst: the health fraction of the target at or under which the loop spends its special energy on magic
+    // shortbow specials (and a melee special between two of them, so each lands off the overhead prayer). The server
+    // rolls the bow special against the ATTACKER's own ranged defence (pvp_magic_shortbow.rs2:39 calls
+    // ~player_defence_roll_specific with no dot), so the loop takes its armour off and drops its Defence prayer the tick
+    // before: the roll then goes against a bare 99 Defence, about 83% to hit where full rune gives about 27%. Both
+    // arrows land on one tick from 3 tiles or less.
+    bowBurst?: number;
+    // true: eat a carried karambwan on each tick where it costs no attack (see the loop). Default off.
+    freeFood?: boolean;
     // Tiles to keep from the target between turns that are not melee: on a cooldown tick the loop steps away to this
     // distance, so an opponent with a melee weapon must walk for each hit.
     standOff?: number;
@@ -328,7 +337,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
     let freezeReady = start, frozenUntil = start, freezeCastAt = -10, frozenTile: { x: number; z: number } | null = null, selfFrozenUntil = start;
     let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = false, rapidSet = false, pjedByNpc = false;
     let target: NearbyPlayer | undefined, rubbed = -1, ranAt = -10, prevSelf: { x: number; z: number } | null = null;
-    let charged = false, chargeAt = -10, stepAt = -10;
+    let charged = false, chargeAt = -10, stepAt = -10, lastSpecStyle: Style | null = null;
     const splatSeen: { cycles: number[] | null } = { cycles: null };
     let prevTarget: { x: number; z: number } | null = null, prevGap = 0, fleeingUntil = start, heading = { x: 0, z: 0 }, chaseAt = -10, fled = false;
     const hits: { tick: number; damage: number; src: number }[] = [], dealtLog: { tick: number; damage: number }[] = [];
@@ -428,6 +437,19 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             return true;
         };
         if (state.combatStyle?.currentStyle === 1) rapidSet = true;
+        // Free food: a cooked karambwan has no eat delay and adds nothing to the attack timer (consume.rs2:38 passes
+        // null for both); it only suspends the player for 2 ticks (consume_messages.dbrow message_delay). Eaten on a
+        // tick with 3 or more ticks to our next attack it costs no attack, where a shark costs 3 ticks each time. Off by
+        // default: the 2 ticks with no input also stop the prayer switch, and the karambwan build lost to the shark
+        // build (6 kills, 10 deaths in 16 spars).
+        const freeFood = o.freeFood === true ? slotOf([ITEMS.karambwan]) : undefined;
+        if (freeFood && hasAttacked && now >= karambwanReady && nextAttack - now >= 3 && me.hp <= me.maxHp - 18) {
+            use(freeFood, /^Eat$/i);
+            karambwanReady = now + 3;
+            delayedUntil = Math.max(delayedUntil, now + 3);
+            result.eaten++;
+            continue;
+        }
         // Food before anything, any food best first; eating adds 3 ticks to %action_delay on the server (consume.rs2:130).
         if (me.hp <= Math.max(eatAt, oppMax + 8) && now >= foodReady) {
             const food = bestFood(inv);
@@ -520,6 +542,8 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         const styleUsable = (st: Style) => hasStyle(o.kit, st) && (st !== 'melee' || canReachMelee);
         const turns = fled && o.fledRotation?.length ? o.fledRotation : rotation;
         const upcomingTurn = nextStyle(turns, last, st => styleUsable(st) && !guarded.has(st)) ?? nextStyle(turns, last, styleUsable) ?? nextStyle(turns, last, st => hasStyle(o.kit, st));
+        const burstBow = o.bowBurst !== undefined ? bowSpec(o.kit, names) : undefined;
+        const bursting = !!burstBow && special(s.client).energy >= burstBow.cost && (fled || lowHealth(seen, o.bowBurst!)) && cheb(at, target) <= BOW_RANGE;
         if (pjedByNpc) {
             pjedByNpc = false;
             if (!hitter && typeof sdk.sendInteractNpc === 'function') {
@@ -559,7 +583,15 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             if (prayers.prayerPoints > 0 && budget > 0) {
                 // Pre-activate melee prayers on the tick before a melee turn so the attack tick needs 0 prayer packets.
                 const nextIsMelee = now === nextAttack - 1 && (upcomingTurn?.style === 'melee' || (!!o.spec && lowHealth(seen, o.spec.below)));
-                const { want: wantPray, off: offPray } = combatPrayers(prayerBase, overhead, nextIsMelee, o.defencePrayer !== false);
+                const { want: wantPray, off: offPray } = combatPrayers(prayerBase, overhead, nextIsMelee, o.defencePrayer !== false && !bursting);
+                // The tick before a bow special of the burst: armour off, as far as packets and free pack slots allow.
+                if (bursting && now === nextAttack - 1 && typeof sdk.sendUseEquipmentItem === 'function') {
+                    const free = 28 - inv.length - 1;
+                    for (const eq of negativeCastArmour(state.equipment, 'magic', new Set(), names).filter(e => !(torsoLocked && DRAGON_SLAYER_BODY.test(names.get(e.id) ?? ''))).slice(0, Math.max(0, Math.min(budget - 1, free)))) {
+                        tankIds.add(eq.id); void sdk.sendUseEquipmentItem(eq.slot, 1); budget--;
+                        log(`PK burst takes off ${names.get(eq.id)}`);
+                    }
+                }
                 for (const p of wantPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
                 for (const p of offPray) if (prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
             }
@@ -584,14 +616,19 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             && (o.freeze === true || now < fleeingUntil || (o.freeze === 'low' && lowHealth(seen, o.freezeBelow ?? 0.62)));
         // A target that has fled is out of food: from then on every special goes out at once, whatever its health bar
         // shows, and past melee reach the bow special replaces a melee one.
-        const spec = o.spec && fled && o.spec.style !== 'ranged' && !canReachMelee ? bowSpec(o.kit, names) ?? o.spec : o.spec;
-        const energy = special(s.client), specStyle: Style = spec?.style ?? 'melee';
+        const energy = special(s.client);
+        // In a burst the bow special goes first, then a melee special if one is ready, then the bow again: the target
+        // prays against the weapon it saw last, so each lands off its prayer.
+        const meleeSpecReady = !!o.spec && o.spec.style !== 'ranged' && energy.energy >= o.spec.cost && canReachMelee;
+        const spec: SpecConfig | undefined = bursting ? (lastSpecStyle === 'ranged' && meleeSpecReady ? o.spec : burstBow)
+            : o.spec && fled && o.spec.style !== 'ranged' && !canReachMelee ? bowSpec(o.kit, names) ?? o.spec : o.spec;
+        const specStyle: Style = spec?.style ?? 'melee';
         // A target that runs is held first: while a freeze is ready the special waits for it. A bow special on a target
         // that runs beyond the bow's range (7 tiles for a shortbow, bows.obj attackrange) never leaves the bow: the
         // special stays armed with its energy, and each such turn is lost.
         const running = now < fleeingUntil;
         const specWaits = running && (castFreeze || (specStyle === 'ranged' && cheb(at, target) > BOW_RANGE));
-        if (spec && !specWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || lowHealth(seen, spec.below)) && (specStyle !== 'melee' || canReachMelee)
+        if (spec && !specWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || lowHealth(seen, spec.below)) && (specStyle !== 'melee' || canReachMelee)
             && (!guarded.has(specStyle) || lowHealth(seen, 0.25))) {
             let budget = 5 - attackPackets - (energy.on ? 0 : 1);
             const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
@@ -602,14 +639,14 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             }
             budget -= toWield.length;
             if (prayers.prayerPoints > 0 && budget > 0) {
-                const { want: wantPray } = combatPrayers(prayerBase, overhead, specStyle === 'melee', o.defencePrayer !== false);
+                const { want: wantPray } = combatPrayers(prayerBase, overhead, specStyle === 'melee', o.defencePrayer !== false && !bursting);
                 for (const p of wantPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
             }
             for (const item of toWield) use(item, /^(Wield|Wear)$/i);
             log(`PK special ${specStyle} energy ${energy.energy} on ${energy.on} target ${seen?.health}/${seen?.totalHealth}`);
             if (!energy.on) void sdk.sendClickComponent(componentId(spec.bar));
             void sdk.sendInteractPlayer(target.index, 2);
-            result.specs++; result.attacks[specStyle]++;
+            result.specs++; result.attacks[specStyle]++; lastSpecStyle = specStyle;
             last = Math.max(0, rotation.indexOf(specStyle));
             const walkTicks = specStyle === 'melee' ? ((me.runEnergy ?? 100) >= 100 ? Math.ceil(Math.max(0, cheb(at, target) - 1) / 2) : Math.max(0, cheb(at, target) - 1)) : 0;
             // pvp_special_attack.rs2:35 always uses oc_param($weapon, attackrate) (4 for MSB/DDS/claws, 5 for longsword/mace), ignoring Rapid.

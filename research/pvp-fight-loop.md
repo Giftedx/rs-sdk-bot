@@ -48,6 +48,35 @@ Gap: cover, line of sight as a defence and a second attacker are not measured.
 - The climb waits for memory: a run needs about 1.7 GB for a minute, and it starts only with 1 GB of dashboard
   headroom and no file `.practice/pk-climb-pause` in the main checkout.
 
+### Server rules found for the climb
+
+Read in the server scripts; each is a knob of the fight loop or a build of `scripts/pk-kits.ts`.
+
+- The magic shortbow special rolls its hit against the attacker's own ranged defence (`pvp_magic_shortbow.rs2:39`
+  calls `~player_defence_roll_specific` with no dot; every other special and attack uses the target's). Measured from
+  traces, damage for each special: the bow special 11.3 from a build with no helm, body or legs (15 of 16 hit) and
+  10.4 from full rune with the platebody off (18 of 24 hit); the dragon dagger special 4.7 against rune armour (8 of 22
+  hit) and 8.9 against the bare build. For each 100 special energy that is about 3 for the bow and 1.9 for the dagger
+  against rune. The loop's `bowBurst` spends the energy on bow specials with a dagger special between; profile
+  `burst` won 10 of 16 against base in the bare build and 8 of 16 in rune.
+- A cooked karambwan has no eat delay and adds nothing to the attack timer (`consume.rs2:38`); it suspends the eater
+  for 2 ticks (`consume_messages.dbrow` message_delay). Eaten on every free tick (`freeFood`) the karambwan build lost
+  to the shark build: 6 kills and 10 deaths in 16 spars, net damage -4.5 and -7.7 for each 100 ticks. In the suspended
+  ticks the loop cannot switch its prayer.
+- Prayer drain is a 5-tick timer that starts when the first prayer goes on and is cleared when none is on
+  (`skill_prayer/scripts/prayer.rs2:30-43`). All prayers off and on again inside 5 ticks would cost no points. Not in
+  the loop: gap.
+- The dragon spear special moves the target one tile and suspends it for 4 ticks (`pvp_dragon_spear.rs2`
+  `.p_delay(4)`): it cannot eat, walk or teleport. Not in the loop or a build: gap.
+- The dragon mace special is 150% damage at 125% accuracy against crush defence; the dragon longsword 125% damage.
+  Not measured: gap.
+- A freeze ends when its caster is more than 10 tiles from the target (`pvp_magic.rs2` walktrigger).
+- There is no Smite: the prayer list ends at Protect from Melee.
+
+Gap: in two batches of the mirror, side A won 7 of 8 with either profile on it; with the logins of a pair in order
+(side A first, then side B first) the kills were 5 to 3 and 3 to 5. The cause of a side's advantage is not found. The
+climber and the ladder put each profile on both sides.
+
 ### Hit timing
 
 All three styles share one attack timer (`%action_delay`): a spell sets it 5 ticks ahead, a melee or ranged attack
