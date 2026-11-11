@@ -1,0 +1,22 @@
+{
+ "id": "1794426340350-sporrandip-fatstack-waterrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "SporranDip",
+ "to": "Fatstack",
+ "item": "Water rune",
+ "count": 6,
+ "start": 1794426340350,
+ "end": 1794428740350,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
