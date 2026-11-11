@@ -8,6 +8,7 @@ import {depositObserved} from '../packages/core/src/deposit';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {goTo,sessionWalker,walkPath,type PathDeps} from '../packages/core/src/walk';
 import type {BotWorldState} from '../vendor/rs-sdk/sdk/types';
+import {walkFar} from './quest-sweep';
 
 export const CHEST=2569,BLOOD_RUNE=565,COINS=995,THIEVING_LEVEL=59,RUNES_PER_LOOT=2,COINS_PER_LOOT=500;
 export const CHESTS=[{x:2586,z:9734},{x:2586,z:9737}];
@@ -20,6 +21,9 @@ export const EXIT_TICKS=400;
 // stat_random(8,75) is 47/256 at Thieving59, so 80 tries fail about once in 10^7 entries.
 export const PICK_LIMIT=80;
 const WALK_FAILS=6;
+// The door and bank walks are short legs. A start farther than FAR_RADIUS from the bank and the door (the Varrock GE,
+// where the food buy leaves the account) first travels to the bank by the hub-to-hub far walk, inside TRAVEL_TICKS.
+export const FAR_RADIUS=100,TRAVEL_TICKS=3000;
 // The ogres and bats beside the chests hit on each visit, and regeneration cannot repay a long run.
 // A meal happens on the surface only. It raises Hitpoints to FED_SHARE of the base level before each trip.
 // One trip can cost 12 of 47 Hitpoints, so the player leaves the dungeon below LEAVE_SHARE of the base level.
@@ -32,7 +36,7 @@ export type BloodStop='target'|'cap'|'hp'|'idle';
 export interface BloodResult{ok:boolean;stop:BloodStop;targetMet:boolean;conserved:boolean;loots:number;runes:number;coins:number;bankedRunes:number;bankedCoins:number;startRunes:number;startCoins:number;bankTrips:number;picks:number;entries:number;meals:number;ticks:number;hpMin:number;died:false}
 export interface BloodDeps{
  state():BotWorldState|null;tick():number;stopped():boolean;
- walkSurface(x:number,z:number):Promise<boolean>;walkDungeon(x:number,z:number,tolerance:number):Promise<boolean>;
+ walkSurface(x:number,z:number):Promise<boolean>;travel(x:number,z:number,ticks:number):Promise<boolean>;walkDungeon(x:number,z:number,tolerance:number):Promise<boolean>;
  act(x:number,z:number,id:number,option:number):Promise<{success:boolean}>;
  wait(test:()=>boolean,ticks:number):Promise<boolean>;step():Promise<void>;
  bank(food:boolean):Promise<{runes:number;coins:number;food:number}>;eat(item:BotWorldState['inventory'][number]):Promise<{success:boolean}>;log(line:string):void;
@@ -155,6 +159,16 @@ export async function runBloodChest(d:BloodDeps,o:BloodOptions):Promise<BloodRes
   }
   return fed(observe());
  };
+ const from=initial.player!,where=`${from.worldX},${from.worldZ},${from.level}`;
+ if(bloodZone(initial)==='surface'&&cheb(initial,BANK)>FAR_RADIUS&&cheb(initial,DOOR)>FAR_RADIUS){
+  const budget=Math.min(TRAVEL_TICKS,o.cap-EXIT_TICKS);
+  d.log(`BLOOD_TRAVEL ${JSON.stringify({from:where,to:BANK,budget})}`);
+  const ok=await d.travel(BANK.x,BANK.z,budget),s=observe();
+  if(!ok||cheb(s,BANK)>FAR_RADIUS)throw Error(`blood chest travel failed: start ${where} did not reach the Ardougne bank, stopped at ${s.player!.worldX},${s.player!.worldZ},${s.player!.level}`);
+  d.log(`BLOOD_TRAVEL_ARRIVED ${JSON.stringify({at:`${s.player!.worldX},${s.player!.worldZ}`,tick:d.tick()-start})}`);
+  // The journey has its own budget: the idle allowance of the chest phase starts on arrival.
+  progress=d.tick();
+ }
  // Each pass ends on the surface. Only a meal starts another pass, so food and the tick cap bound this loop.
  for(let again=true;again;){
   stop='target';
@@ -218,6 +232,12 @@ export async function runBloodChestSession(s:Session,o:BloodOptions,stop:()=>boo
  return runBloodChest({state:()=>s.sdk.getState(),tick:()=>s.tick(),
    stopped:()=>ended||stop(),
    walkSurface:async(x,z)=>(await goTo(s,await getWorld(),{x,z,level:0},accountOf(s),{legTimeoutTicks:150})).ok,
+   // The far walk ends between legs and inside each leg when the budget, the session or a stop request ends.
+   travel:async(x,z,ticks)=>{
+    const ac=new AbortController(),end=s.tick()+ticks;
+    const off=s.onTick(()=>{if(s.tick()>=end||ended||stop())ac.abort('blood chest travel budget');});
+    try{return(await walkFar(s,await getWorld(),{x,z,level:0},150,{signal:ac.signal})).ok&&!ac.signal.aborted;}finally{off();}
+   },
    walkDungeon:async(x,z,tolerance)=>{
     const life=s.sdk.getState()?.player?.lifeId;
     return walkBloodDungeon(await sessionWalker(s),x,z,tolerance,()=>{

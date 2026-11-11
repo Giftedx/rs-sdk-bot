@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {ARRIVAL,BANK,BLOOD_RUNE,CHEST,CHESTS,COINS,DOOR,EXIT_TICKS,LADDER_DOWN,LADDER_FOOT,LADDER_UP,PICK_LIMIT,RESPAWN_TICKS,STAGE,bloodOptions,bloodRefusal,bloodZone,chestEffect,failureResult,runBloodChest,walkBloodDungeon,type BloodDeps} from './blood-chest';
+import {ARRIVAL,BANK,BLOOD_RUNE,CHEST,CHESTS,COINS,DOOR,EXIT_TICKS,LADDER_DOWN,LADDER_FOOT,LADDER_UP,PICK_LIMIT,RESPAWN_TICKS,STAGE,TRAVEL_TICKS,bloodOptions,bloodRefusal,bloodZone,chestEffect,failureResult,runBloodChest,walkBloodDungeon,type BloodDeps} from './blood-chest';
 import type {PathDeps} from '../packages/core/src/walk';
 import type {BotWorldState} from '../vendor/rs-sdk/sdk/types';
 
@@ -25,7 +25,7 @@ test('stranded dungeon step 2574,9742 reaches the chest stage despite an empty S
 function world(p:{thieving?:number;x?:number;z?:number;pickAfter?:number;hp?:number;coins?:number;cake?:number;hitAt?:number;bankCake?:number;hitPerLoot?:number;base?:number;lobster?:number}={}){
  const w={x:p.x??ARRIVAL.x,z:p.z??ARRIVAL.z,level:0,tick:0,xp:1000,hp:p.hp??56,base:p.base??56,runes:0,coins:p.coins??0,cake:p.cake??3,lobster:p.lobster??0,bankCake:p.bankCake??0,lifeId:1,
   bankRunes:0,bankCoins:0,bankCalls:0,fails:p.pickAfter??0,chestUntil:CHESTS.map(()=>0),acts:[] as {id:number;option:number;x:number;z:number;tick:number}[],
-  messages:[] as {type:number;text:string;sender:string;tick:number}[],stopped:false,surfaceWalks:[] as string[],dungeonWalks:[] as string[]};
+  messages:[] as {type:number;text:string;sender:string;tick:number}[],stopped:false,surfaceWalks:[] as string[],dungeonWalks:[] as string[],travels:[] as string[]};
  const state=()=>({player:{worldX:w.x,worldZ:w.z,level:w.level,lifeId:w.lifeId,isDead:false},
   skills:[{name:'Thieving',level:p.thieving??99,baseLevel:p.thieving??99,experience:w.xp},{name:'Hitpoints',level:w.hp,baseLevel:w.base,experience:1000}],
   inventory:[...(w.lobster?[{id:379,count:w.lobster,slot:3,name:'Lobster',optionsWithIndex:[{text:'Eat',opIndex:1}]}]:[]),...(w.cake?[{id:1895,count:w.cake,slot:0,name:'Slice of cake',optionsWithIndex:[{text:'Eat',opIndex:1}]}]:[]),...(w.coins?[{id:COINS,count:w.coins,slot:1,name:'Coins',optionsWithIndex:[]}]:[]),...(w.runes?[{id:BLOOD_RUNE,count:w.runes,slot:2,name:'Blood rune',optionsWithIndex:[]}]:[])],
@@ -35,6 +35,7 @@ function world(p:{thieving?:number;x?:number;z?:number;pickAfter?:number;hp?:num
  const step=async()=>{w.tick++;if(w.tick===p.hitAt)w.hp=20;};
  const d:BloodDeps={state,tick:()=>w.tick,stopped:()=>w.stopped,
   walkSurface:async(x,z)=>{w.surfaceWalks.push(`${x},${z}`);w.x=x;w.z=z;w.tick+=20;return true;},
+  travel:async(x,z)=>{w.travels.push(`${x},${z}`);w.x=x;w.z=z;w.tick+=600;return true;},
   walkDungeon:async(x,z)=>{w.dungeonWalks.push(`${x},${z}`);w.x=x;w.z=z;w.tick+=15;return true;},
   act:async(x,z,id,option)=>{
    w.acts.push({id,option,x,z,tick:w.tick});
@@ -218,7 +219,24 @@ test('a stop request, a death and a stuck door end the run',async()=>{
  expect(door.w.acts.filter(a=>a.id===DOOR.id).length).toBe(PICK_LIMIT);
 });
 test('a failed walk stops after the bound',async()=>{
- const {d}=world();
+ const {w,d}=world();
  d.walkSurface=async()=>false;
  await expect(runBloodChest(d,options)).rejects.toThrow('walk failed: door');
+ expect(w.travels).toEqual([]);
+});
+// MagicWanda started at 3185,3436 after the GE food buy, and six door walks ended with no move.
+test('a start at the Varrock GE 3185,3436 travels to the Ardougne bank once before the first door walk',async()=>{
+ const {w,d}=world({x:3185,z:3436}),order:string[]=[],travel=d.travel,walk=d.walkSurface;
+ d.travel=async(x,z,t)=>{order.push(`travel ${x},${z}`);expect(t).toBeLessThanOrEqual(TRAVEL_TICKS);return travel(x,z,t);};
+ d.walkSurface=async(x,z)=>{order.push(`walk ${x},${z}`);return walk(x,z);};
+ const r=await runBloodChest(d,options);
+ expect(r).toMatchObject({ok:true,stop:'target',conserved:true,loots:2,bankedRunes:4});
+ expect(w.travels).toEqual([`${BANK.x},${BANK.z}`]);
+ expect(order[0]).toBe(`travel ${BANK.x},${BANK.z}`);expect(order[1]).toBe(`walk ${DOOR.x},${DOOR.z}`);
+ const failed=world({x:3185,z:3436});failed.d.travel=async()=>false;
+ await expect(runBloodChest(failed.d,options)).rejects.toThrow('blood chest travel failed: start 3185,3436,0');
+ expect(failed.w.surfaceWalks).toEqual([]);expect(failed.w.acts).toEqual([]);
+ // An accepted travel with no arrival near the bank fails the same way.
+ const short=world({x:3185,z:3436});short.d.travel=async()=>{short.w.x=2900;return true;};
+ await expect(runBloodChest(short.d,options)).rejects.toThrow('start 3185,3436,0');
 });
