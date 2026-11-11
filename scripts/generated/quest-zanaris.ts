@@ -105,7 +105,9 @@ try {
     await shut();
     q.milestone('dungeon');
 
-    // 5. Zombies until a bronze axe drops (zombie.rs2:102-111).
+    // 5. Zombies until a bronze axe drops (zombie.rs2:102-111). The axe stayed at Port Sarim, so the bot kicks: the
+    // fight gives XP to Strength and Hitpoints only, and an account with a Defence 1 build keeps its build.
+    await q.strengthStyle('zombies');
     const axeOnGround = (): any => (q.st()?.groundItems ?? []).filter((g: any) => g.id === ITEM.axe).sort((a: any, b: any) => (a.distance ?? 0) - (b.distance ?? 0))[0];
     let zombies = 0;
     let lastZombie = -1;
@@ -134,6 +136,8 @@ try {
     if (!q.has(ITEM.axe)) await q.fail('no bronze axe');
     q.milestone('axe');
     await wield(ITEM.axe);
+    // The axe has its own style tab: Hack is its Strength style.
+    await q.strengthStyle('tree spirit');
 
     // 6. The dramen tree spawns the tree spirit (2860,9737), which attacks; kill it under Protect from Melee (3), then
     // chop a branch (4), the knife on the branch makes the staff (5).

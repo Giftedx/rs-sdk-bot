@@ -1459,3 +1459,47 @@ test('an account with a PK build trains to the levels of the build and no furthe
     expect(of('Build')?.trains?.skill).not.toBe('Defence');
     if (of('Build')?.script === 'scripts/gather-combat.ts') expect(Number(of('Build')!.env!.TARGET_LEVEL)).toBeLessThanOrEqual(99);
 });
+
+test('an account with a PK build takes a quest band only on the quest route of its kit', async () => {
+    const { buildBand, BUILD_QUESTS, catalogue: all } = await import('../src/autopilot');
+    const pure = { Attack: 60, Strength: 99, Defence: 1, Ranged: 99, Magic: 1, Prayer: 43 };
+    const templates = all(), byId = (id: string) => templates.find(t => t.id === id)!, fresh = acct('Build', { Attack: 1 });
+    const lostCity = byId('army-quest-lostcity'), grail = byId('army-quest-holygrail');
+    // The route table: Lost City for the Prayer pure, nothing for the three other ranked builds.
+    expect(BUILD_QUESTS).toEqual({ 'pure-pray': ['Lost City'], 'baby-pure': [], dragon: [], 'tank-range': [] });
+    // On the route: the band as listed. Off the route, with an empty route or with none: refused.
+    expect(buildBand(lostCity, fresh, pure, BUILD_QUESTS['pure-pray'])).toBe(lostCity);
+    expect(buildBand(grail, fresh, pure, BUILD_QUESTS['pure-pray'])).toBeNull();
+    for (const kit of ['baby-pure', 'dragon', 'tank-range']) expect(buildBand(lostCity, fresh, pure, BUILD_QUESTS[kit])).toBeNull();
+    expect(buildBand(lostCity, fresh, pure)).toBeNull();
+    // A route changes no other band: every band that is not a quest gets the same answer with it and without it.
+    for (const t of templates.filter(t => t.tier === 'goal' && !t.quest)) expect(buildBand(t, fresh, pure, ['Lost City'])).toEqual(buildBand(t, fresh, pure));
+    for (const t of templates.filter(t => t.tier === 'goal' && t.stock)) expect(buildBand(t, fresh, pure, ['Lost City'])).toBeNull();
+    // In a plan: the account with a route is a candidate for Lost City, the account with the same build and no route is not.
+    // The account has the levels that the Lost City band asks of every army account (Defence 90 and Hitpoints 90).
+    const who = (name: string) => ({ ...acct(name, { Attack: 60, Strength: 99, Ranged: 99, Magic: 99, Prayer: 43, Hitpoints: 93, Defence: 90 }, { coin: 100_000, shark: 40, 'adamant scimitar': 1, shortbow: 1, 'bronze arrow': 500 }), quests: new Set<string>() });
+    const run = (buildQuests?: Map<string, readonly string[]>) => plan(inputs([who('Build')], { army: new Set(['build']), builds: new Map([['build', pure]]), buildQuests, pilots: new Set(['army-quest-lostcity']), capacity: CAPACITY }))[0]!.template?.id;
+    expect(run(new Map([['build', ['Lost City']]]))).toBe('army-quest-lostcity');
+    expect(run()).not.toBe('army-quest-lostcity');
+    expect(run(new Map([['build', []]]))).not.toBe('army-quest-lostcity');
+});
+
+test('a Defence 1 build account takes Lost City with the levels, potions and food of the practice run', async () => {
+    const { LOST_CITY_BUILD, KIT_BUY, KIT_PRICE_CAPS } = await import('../src/autopilot');
+    // The levels of the `pure-pray` kit (scripts/pk-kits.ts kitSkills): Defence 1 and Magic 1.
+    const pure = { Attack: 60, Strength: 99, Defence: 1, Ranged: 99, Magic: 1, Prayer: 43, Hitpoints: 93 };
+    expect(LOST_CITY_BUILD).toEqual({ skills: { Attack: 60, Strength: 99, Prayer: 43, Hitpoints: 93 }, items: { 'prayer potion(4)': 2 }, pieces: { of: ['lobster', 'swordfish', 'shark'], count: 6 } });
+    for (const [skill, level] of Object.entries(LOST_CITY_BUILD.skills!)) expect(pure[skill as keyof typeof pure]).toBeGreaterThanOrEqual(level);
+    const kit = { coin: 100_000, 'prayer potion(4)': 2, lobster: 6, 'adamant scimitar': 1, shortbow: 1, 'bronze arrow': 500 };
+    const food: Market = { lobster: { id: 379, name: 'Lobster', limit: KIT_PRICE_CAPS.lobster! } };
+    const first = (skills: Record<string, number>, items: Record<string, number>, extra: Partial<Inputs> = {}) => plan(inputs([{ ...acct('Build', skills, items), quests: new Set<string>() }],
+        { army: new Set(['build']), builds: new Map([['build', pure]]), buildQuests: new Map([['build', ['Lost City']]]), pilots: new Set(['army-quest-lostcity']), capacity: CAPACITY, ...extra }))[0]!.template;
+    expect(first(pure, kit)!.id).toBe('army-quest-lostcity');
+    // One level short, or no prayer potion (no market sells one): no Lost City and no buy for it.
+    for (const short of [{ Hitpoints: 92 }, { Prayer: 42 }, { Strength: 98 }, { Attack: 59 }]) expect(first({ ...pure, ...short }, kit, { market: food })?.id ?? '').not.toContain('army-quest-lostcity');
+    expect(first(pure, { ...kit, 'prayer potion(4)': 1 }, { market: food })?.id ?? '').not.toContain('army-quest-lostcity');
+    // Short of food only: the band buys the 6 meals of the practice pack, not the 10 of an account with Defence 90.
+    const buy = first(pure, { ...kit, lobster: 0 }, { market: food })!;
+    expect(buy.id).toBe(KIT_BUY + 'army-quest-lostcity');
+    expect(buy.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).map(Number))).toEqual([[379, 6]]);
+});

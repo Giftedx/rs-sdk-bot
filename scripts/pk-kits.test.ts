@@ -112,6 +112,35 @@ test('a trained build has the Hitpoints of its combat XP, and each bracket fits 
     for (const c of cases) expect(c.scriptArgs).toContain('SPAR_PROCS=8');
 });
 
+// The quest rewards of the server content (knowledge/quests.json, whole XP before the XP rate) and the quests that a
+// band of the planner runs for each quest of a route.
+test('no quest on the route of a build gives a level over the build', async () => {
+    const { BUILD_QUESTS } = await import('../packages/planner/src/autopilot');
+    const { levelForXp } = await import('../packages/planner/src/curve');
+    const { readFileSync } = await import('node:fs');
+    const rewards = JSON.parse(readFileSync(new URL('../knowledge/quests.json', import.meta.url), 'utf8')) as { folder: string; xp: { skill: string; xp: number }[] }[];
+    const CHAIN: Record<string, string[]> = { 'Lost City': ['quest_drunkmonk', 'quest_murder', 'quest_zanaris'] };
+    const XP_RATE = 25, COMBAT = ['Attack', 'Strength', 'Defence', 'Ranged', 'Magic', 'Prayer', 'Hitpoints'];
+    // The first skill that a list of quests takes over the levels, from the levels of a new account.
+    const breaks = (folders: string[], levels: Record<string, number>) => {
+        for (const skill of COMBAT) {
+            const xp = folders.flatMap(f => rewards.filter(r => r.folder === f).flatMap(r => r.xp)).filter(x => x.skill === skill.toLowerCase()).reduce((n, x) => n + x.xp * XP_RATE, 0);
+            if (xp > 0 && levelForXp(xp) > (levels[skill] ?? 1)) return `${skill} ${levelForXp(xp)}`;
+        }
+        return null;
+    };
+    for (const f of Object.values(CHAIN).flat()) expect(rewards.some(r => r.folder === f)).toBe(true);
+    for (const [kit, route] of Object.entries(BUILD_QUESTS)) for (const quest of route) {
+        expect(CHAIN[quest]).toBeDefined();
+        if (kit in KITS) expect(breaks(CHAIN[quest]!, kitSkills(kit))).toBeNull();
+    }
+    // Why the other builds have no route: the quest that the gear needs gives a level over the build.
+    expect(breaks(['quest_dragon'], kitSkills('dragon'))).toBe('Defence 88');
+    expect(breaks(['quest_hero'], kitSkills('dragon'))).toBe('Attack 62');
+    expect(breaks(['quest_viking'], kitSkills('range-tank'))).toBe('Attack 60');
+    expect(breaks(['quest_viking'], { ...kitSkills('range-tank'), Attack: 60, Strength: 60 })).toBeNull();
+});
+
 test('the second set of builds: levels, gear that the levels can wear, and one case place for each new pair', () => {
     expect(combatLevel(kitSkills('pure-scim'))).toBe(71);
     expect(combatLevel(kitSkills('pure-pray31'))).toBe(78);
