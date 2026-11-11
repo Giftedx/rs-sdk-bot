@@ -1,0 +1,22 @@
+{
+ "id": "1794381084171-oreelse-knightstick",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "OreElse",
+ "to": "Knightstick",
+ "item": "Rune scimitar",
+ "count": 1,
+ "start": 1794381084171,
+ "end": 1794393084171,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
