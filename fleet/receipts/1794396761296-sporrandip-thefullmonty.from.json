@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794396761296-sporrandip-thefullmonty",
  "account": "SporranDip",
  "partner": "TheFullMonty",
@@ -10,8 +10,18 @@
  "item": "coins",
  "requested": 52387,
  "claim": "ac89fa5f-25fd-4aa4-88ee-38b6e1b9ea67",
- "count": 0,
- "ok": false,
- "at": 1794396766272,
- "detail": "trade claimed"
+ "count": 52387,
+ "ok": true,
+ "at": 1794396998700,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 80837,
+  "after": 28450
+ },
+ "logout": {
+  "attemptId": "1794396766275-0000023814-0000000001",
+  "at": 1794396998689,
+  "sha256": "df19f4ddc1fb4b212c82c12dacd8db5b4e69f384a5d1fa1f888d759d861cdf02"
+ },
+ "screen": true
 }
