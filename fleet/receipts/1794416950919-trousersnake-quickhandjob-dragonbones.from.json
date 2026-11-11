@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794416950919-trousersnake-quickhandjob-dragonbones",
  "account": "TrouserSnake",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 16,
  "claim": "e5528752-a851-460e-b40d-7600b63819b6",
- "count": 0,
- "ok": false,
- "at": 1794416958636,
- "detail": "trade claimed"
+ "count": 16,
+ "ok": true,
+ "at": 1794417224009,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 16,
+  "after": 0
+ },
+ "bank": {
+  "count": 16,
+  "at": 1794416967173
+ },
+ "logout": {
+  "attemptId": "1794416958638-0000022996-0000000001",
+  "at": 1794417224003,
+  "sha256": "8d0244afabf2df571e1a5d00f700a6d59f0058ff53e4b9bb7f0966a8fa68bc33"
+ },
+ "screen": true
 }
