@@ -363,15 +363,19 @@ Ranged it adds is not needed at that point.
   tile with three hides: `RESULT ok black-dragon-leave hides=3 bones=3 banked=true`, 31 ticks; without `LEAVE`,
   `RESULT ok black-dragon-trip kills=1 hides=1 bones=1 ... banked=true`. No walker plans a way out of the cave: a
   planned route can cross dragon ground. Raw runs: `.practice/blackdragon/leave-run.ts` (`a`, `b`).
-- **Claim.** A hunter's iron arrows and teleport runes come from two Varrock shops in one run, and the run leaves a
+- **Claim.** A hunter's arrows and teleport runes come from two Varrock shops in one run, and the run leaves a
   shelf it has emptied. **Conditions.** `army-hunt-supply` (`scripts/chain.ts`): `scripts/shop-buyer.ts lowe` to 1,200
-  iron arrows owned (`archeryshop`: 1,500 in stock, one back every 15 ticks), then `aubury` to 60 air and 60 fire
-  runes, each banked at Varrock east. Practice from the Varrock west bank, 60 arrows banked, three runs in a row on
+  iron and 1,200 bronze arrows owned (`archeryshop`: 1,500 iron in stock, one back every 15 ticks; 2,000 bronze, one
+  every 10), then `aubury` to 60 air and 60 fire runes, each banked at Varrock east. The first three runs below
+  bought iron alone. Practice from the Varrock west bank, 60 arrows banked, three runs in a row on
   one shelf: (a) spend 12,000: 890 arrows for 11,984 coins in 260 ticks (3 coins an arrow from the full shelf, 18
   from a drained one), then 120 runes for 569 coins in 79; (b) spend 21,000 and a 25-tick wait: 822 arrows for 14,796
   coins in 2,523 ticks, the shelf at 0 and the run buying one arrow every 15 ticks until its cap; (c) a 10-tick wait
-  on the empty shelf: 31 arrows, `stop=stock-wait noBuyTicks=10`, 119 ticks, then the runes in 77. Raw runs:
-  `.practice/huntsupply/run.ts` (`a`-`c`).
+  on the empty shelf: 31 arrows, `stop=stock-wait noBuyTicks=10`, 119 ticks, then the runes in 77. With bronze
+  arrows in the same step (`ITEMS=iron.arrow|bronze.arrow`, an 8-tick wait, spend 28,000), two runs in a row on fresh
+  shelves: (d) 2,340 arrows (1,140 iron, 1,200 bronze) for 22,132 coins in 357 ticks, `stop=stock-target`; (e) 1,261
+  arrows for 12,366 coins in 266 ticks, both shelves at 0, `stop=stock-wait noBuyTicks=8`. Raw runs:
+  `.practice/huntsupply/run.ts` (`a`-`e`).
 - **Claim.** Six banked hides become a set of black dragonhide armour in one run at Al Kharid, and any account
   with Ranged 70 and Defence 40 wears it. **Conditions.** `levelrequire/scripts/tier70.rs2`: the body asks Ranged 70
   and Defence 40, the chaps and vambraces Ranged 70, and none a quest (the green body alone asks Dragon Slayer,
@@ -391,12 +395,19 @@ Ranged it adds is not needed at that point.
   for another owner (`ACTION_SETTLEMENT_DEFERRED`, no RESULT line; the lockstep bench has no gate swap). With the
   swap allowed after cleanup began: `LOGOUT logged-out`, `RESULT ok ticks=205 made=28`. Raw runs:
   `.practice/dhide/level-run.ts` (`a`), `.practice/dhide/spin-run.ts` (`a`-`h`).
+- **Claim.** Bronze arrows kill as well as iron from the camp, and two hunters at once use about 90 arrows a kill.
+  **Conditions.** Practice, two accounts with Ranged 99 on the camp tile at once, each a whole trip from the Varrock
+  west bank with a magic shortbow, 600 arrows and `KILLS=9`: on iron, `RESULT ok black-dragon-trip kills=6 hides=6
+  bones=6 ammoUsed=600 hpMin=80 banked=true ticks=3844`; on bronze, `kills=7 hides=7 bones=7 ammoUsed=600 hpMin=56
+  banked=true ticks=4494`. Both ended on their arrows. The bronze account's lost hitpoints are the spiders' poison
+  from the way in (`DRAGON_CAMP hit` 2 to 3 every 30 ticks on the tile, `pray=0`), and the camp eats at 60. Raw
+  runs: `.practice/blackdragon/arrow-run.ts` (`ir`, `bz`). One run each: not a rate.
 - **Gap.** One live trip with loot, brought home by a second run (`LEAVE=1`); no live trip has banked its own loot,
   and neither the supply run nor the armour run has a live run. A player of another fleet on the tile, or another
   player's kill, is not run.
-  Kills with arrows other than mithril are not measured (best hits by arrow: iron 12, mithril 14, rune 19). Lowe's
-  shelf gives back 4 iron arrows a minute at 0.6 s a tick, under what two hunters fire (estimate from 60 arrows a
-  kill); the other iron arrow shelves (Hickton's, Dargaud's) and bronze arrows are not in the run.
+  Lowe's shelves give back 4 iron and 6 bronze arrows a minute at 0.6 s a tick, under what two hunters fire
+  (about 1,200 arrows in 45 minutes, from the trips above); the other arrow shelves (Hickton's, Dargaud's) are not
+  in the run.
 
 ## Ranged on the troopers
 
