@@ -166,6 +166,8 @@ export async function runBloodChest(d:BloodDeps,o:BloodOptions):Promise<BloodRes
   const ok=await d.travel(BANK.x,BANK.z,budget),s=observe();
   if(!ok||cheb(s,BANK)>FAR_RADIUS)throw Error(`blood chest travel failed: start ${where} did not reach the Ardougne bank, stopped at ${s.player!.worldX},${s.player!.worldZ},${s.player!.level}`);
   d.log(`BLOOD_TRAVEL_ARRIVED ${JSON.stringify({at:`${s.player!.worldX},${s.player!.worldZ}`,tick:d.tick()-start})}`);
+  // The journey has its own budget: the idle allowance of the chest phase starts on arrival.
+  progress=d.tick();
  }
  // Each pass ends on the surface. Only a meal starts another pass, so food and the tick cap bound this loop.
  for(let again=true;again;){
