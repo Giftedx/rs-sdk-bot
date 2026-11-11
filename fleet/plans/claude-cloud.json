@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794369617523,
+ "at": 1794369664141,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -11,7 +11,7 @@
     "zanaris"
    ],
    "env": {},
-   "enabled": true,
+   "enabled": false,
    "standing": false,
    "repeat": false,
    "goal": "Lost City pilot",
