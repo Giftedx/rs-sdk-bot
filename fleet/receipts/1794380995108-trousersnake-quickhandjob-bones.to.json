@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794380995108-trousersnake-quickhandjob-bones",
  "account": "Quickhandjob",
  "partner": "TrouserSnake",
@@ -10,8 +10,22 @@
  "item": "Bones",
  "requested": 22,
  "claim": "da5486ab-50fe-4f54-8607-63917d42dec1",
- "count": 0,
- "ok": false,
- "at": 1794380998783,
- "detail": "trade claimed"
+ "count": 22,
+ "ok": true,
+ "at": 1794381020360,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 22
+ },
+ "bank": {
+  "count": 22,
+  "at": 1794381019672
+ },
+ "logout": {
+  "attemptId": "1794380998786-0000010440-0000000001",
+  "at": 1794381020353,
+  "sha256": "37ae64ce42bec057d063c4431904ef32aa079ef2082e59a80dbf2dfb04cfbfb1"
+ },
+ "screen": true
 }
