@@ -10,7 +10,7 @@ import {createBot} from './bots';
 import {applyPreset,type SaveConfig} from './presets';
 import {runBotName} from './prove';
 import {killTree} from './proc';
-import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
+import {readPracticeSave,waitPracticeSave,setPracticeSkills} from '../../../scripts/measure/fleet-player-save';
 import {capabilityRevision} from '../../core/src/worker-release';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 
@@ -22,6 +22,10 @@ const source=rangedProofSource;
 const hash=(path:string)=>createHash('sha256').update(readFileSync(path)).digest('hex');
 const ARROWS=[882,884,886,888,890,892],COINS=995,BONES=526,CHICKEN=2138,FEATHER=314,FOOD=1985,BANK={x:3253,z:3421};
 const TARGET=71,MAX_SPEND=5000,COIN_RESERVE=400000;
+// Engine levelExperience (Player.ts, demo curve 2^(level/10)) in whole XP. Level 70 to 71 is 9617 XP, 33 chickens at 300 XP.
+export const rangedLevelXp=(level:number)=>{let acc=0;for(let l=1;l<level;l++)acc+=Math.floor(l+300*2**(l/10));return Math.floor(acc/4);};
+// Ranged 70 with 3000 XP to go: 10 chickens at 300 XP.
+export const RANGED_SEED_XP=rangedLevelXp(TARGET)-3000;
 // Observed underground entry and protected quest kit. Bank contents are fixture stock, not a live snapshot.
 export const RANGED_FIXTURE:SaveConfig={position:{x:3113,z:9555,level:0},
  skills:{Attack:65,Defence:10,Strength:11,Hitpoints:60,Ranged:70},
@@ -43,7 +47,7 @@ export function rangedSaveChecks(before:Save,after:Save,r:any){
  const free=new Set([...ARROWS,COINS,BONES,CHICKEN,FEATHER,FOOD]);
  const arrows=(s:Save)=>ARROWS.reduce((n,id)=>n+total(s,id),0);
  return {
-  entry:before.skills[4]!.level===70&&before.position.x===3113&&before.position.z===9555&&before.position.level===0&&total(before,553)===1&&total(before,552)===1&&total(before,556)===3&&total(before,557)===1&&total(before,841)===1&&arrows(before)===107&&total(before,COINS)===455452&&total(before,329)===0&&total(before,333)===0,
+  entry:before.skills[4]!.level===70&&before.skills[4]!.xp===RANGED_SEED_XP&&before.position.x===3113&&before.position.z===9555&&before.position.level===0&&total(before,553)===1&&total(before,552)===1&&total(before,556)===3&&total(before,557)===1&&total(before,841)===1&&arrows(before)===107&&total(before,COINS)===455452&&total(before,329)===0&&total(before,333)===0,
   target:r?.ok===true&&r.targetMet===true&&r.stop==='target-level'&&after.skills[4]!.level>=TARGET&&r.finalLevel===after.skills[4]!.level&&r.startLevel===70,
   xp:Number.isSafeInteger(r?.xpGain)&&r.xpGain>0&&after.skills[4]!.xp-before.skills[4]!.xp===r.xpGain,
   bow:r?.bow===841&&r.arrow===884&&total(after,841)===1,
@@ -113,7 +117,9 @@ async function run(directory:string){
   stack=await startStack(options);
   const {envPath}=await createBot(name);
   pointBotAt(envPath,options.ports.engine,options.ports.gateway);
-  const path=await applyPreset(name,RANGED_FIXTURE);copyFileSync(path,join(directory,'before.sav'));
+  const path=await applyPreset(name,RANGED_FIXTURE);
+  setPracticeSkills(path,readPracticeSave(path).skills.map(k=>k.index===4?{level:70,xp:RANGED_SEED_XP}:{level:k.level,xp:k.xp}));
+  copyFileSync(path,join(directory,'before.sav'));
   const log=join(directory,'worker.log'),config=rangedChildConfiguration(name);
   rangedMemoryFloor(freeGiB(),'before child');
   const child=Bun.spawn({...config,stdout:Bun.file(log),stderr:Bun.file(join(directory,'worker.err')),windowsHide:true});
