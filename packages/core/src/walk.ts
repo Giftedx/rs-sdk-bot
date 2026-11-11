@@ -315,6 +315,20 @@ function climbLegInner(s: Walker, leg: Extract<Leg, { kind: 'transport' }>, opts
     });
 }
 
+// Off a ship's deck by its gangplank: 'ground' when the account stood on a deck and now stands on level 0, 'none'
+// when it was not on a deck (level 1 with a gangplank within DECK_REACH tiles), 'stuck' when the crossing failed.
+export const DECK_REACH = 3;
+export async function leaveDeck(s: Walker, stop: () => boolean = () => false): Promise<'none' | 'ground' | 'stuck'> {
+    const p = s.sdk.getState()?.player, b = s as unknown as BoatSession;
+    if (!p || p.level !== 1 || typeof b.sdk.findNearbyLoc !== 'function') return 'none';
+    const plank = b.sdk.findNearbyLoc(/^gangplank$/i) as { x?: number; z?: number; distance?: number } | null | undefined;
+    const near = !!plank && (plank.distance ?? Math.max(Math.abs((plank.x ?? 0) - p.worldX), Math.abs((plank.z ?? 0) - p.worldZ))) <= DECK_REACH;
+    if (!near) return 'none';
+    const off = await disembark(b, { stop });
+    console.log(`WALK_DECK from=${p.worldX},${p.worldZ},${p.level} ${off.ok ? 'crossed' : 'stuck'} ${off.detail}`);
+    return off.ok ? 'ground' : 'stuck';
+}
+
 export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opts: WalkOptions = {}): Promise<Outcome> {
     const started=s.tick();
     let legendsEntry:'crossed'|'refused'|'unknown'|undefined;
@@ -330,6 +344,11 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
         if(requests.length){const fresh=await refreshGuildEvidence(s as any,requests as any);if(requests.includes('legends-entry'))legendsEntry=fresh.admission?.legendsEntry??'unknown';}
         acct=accountForSdk(s.sdk);
     }
+    // A ferry lands on its ship's deck, level 1, and the walk crosses the gangplank next (travelLeg). A session cut
+    // between the two starts its next walk on the deck, and no route leaves a deck (live: an account stood on the
+    // Brimhaven deck at 2775,3234,1 until it was moved by hand; practice: "no route" at tick 0 from that tile). So a
+    // walk that starts on level 1 beside a gangplank crosses it first.
+    if (await leaveDeck(s, () => opts.signal?.aborted === true) === 'stuck') return { ok: false, reason: 'precondition', detail: 'on a ship deck and the gangplank did not take the account off', ticks: s.tick() - started };
     // The prayer probe may itself climb. Capture start and actor after it returns.
     const p = s.sdk.getState()?.player;
     if (!p) return { ok: false, reason: 'precondition', detail: 'no player state', ticks: 0 };

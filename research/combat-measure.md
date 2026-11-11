@@ -700,6 +700,14 @@ TrouserSnake and UnderMyKilt hold about 15,000 feathers and 1,500-1,700 bones ea
   leg from where it stopped while it gets closer. The ferry fallback now starts in Varrock too: Draynor, Port Sarim,
   Karamja, Ardougne. Practice from Varrock West with 200 coins in the pack: north bank reached and Magic 50 -> 52 in
   820 ticks. The ferries need 60 coins in the pack.
+- **A walk that starts on a ferry's deck crosses the gangplank first.** Each ferry lands on its ship's deck, level 1
+  (Brimhaven 2775,3234; Port Sarim 3032,3217; Ardougne 2683,3268; Musa Point 2956,3143; `knowledge/npc-travel.json`
+  `deck`), and the walk crosses the gangplank next. A session cut between the two starts its next walk on the deck,
+  and the planner has no route from there. Live (claude-cloud): Kiltlifter stood on the Brimhaven deck until it was
+  moved by hand to 2772,3234. Practice, a bot placed on the Brimhaven deck: `no route to 2772,3225,0` at tick 0.
+  `goTo` (`packages/core/src/walk.ts` `leaveDeck`) takes the gangplank when the account stands on level 1 within 3
+  tiles of one: from each of the four decks `WALK_DECK ... crossed ground at=...` and the walk arrived (4, 56, 54 and
+  18 ticks to targets near each dock). Raw runs: `.practice/dhide/deck-probe.ts`. Gap: not run live.
 - **Between Ardougne and the east, both ways.** The route planner takes the two ferries itself when the pack holds the
   60-coin fare (eastbound Ardougne -> Brimhaven, then Musa Point -> Port Sarim; 7 legs). With no coins it returns "no
   route" (live, every Grand Exchange kit buy from Ardougne: `no route to 3185,3436,0`) or a route up the Ardougne
