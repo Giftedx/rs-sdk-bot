@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794384903692,
+ "at": 1794384908138,
  "jobs": [
   {
    "account": "PocketPool",
@@ -180,28 +180,16 @@
   },
   {
    "account": "Knightstick",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-46123468-8845-468f-ad7c-4305f0618c98"
    },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-knightstick-20261111t081048z [task-46123468-8845-468f-ad7c-4305f0618c98]",
+   "role": "combat"
   }
  ]
 }
