@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794386822205,
+ "at": 1794386942340,
  "jobs": [
   {
    "account": "Fingersmith",
@@ -40,25 +40,21 @@
   },
   {
    "account": "Quickhandjob",
-   "script": "scripts/aio.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "skiller",
-    "foraging",
-    "flax",
-    "1800",
-    "28"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=16 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=quickhandjob-kit6-532-0to16 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
-   "env": {},
+   "env": {
+    "ROUNDS": "1"
+   },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "pick flax at Seers to spin for the Crafting a black dragonhide body asks",
-   "role": "crafting",
-   "template": "army-leather-flax",
+   "repeat": false,
+   "goal": "buy 16 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-big-99",
    "autopilot": "claude-cloud",
-   "resources": [
-    "aio:seers-flax"
-   ]
+   "resources": []
   },
   {
    "account": "UnderMyKilt",
