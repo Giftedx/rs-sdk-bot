@@ -10,7 +10,7 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
     let tick = 0, timer: number | null = active.some(Boolean) ? 5 : null;
     const w = {
         active, drains: 0, toggles: 0, windowsClosed: 0, cleared: 0, window: false, anim: -1,
-        interaction: null as string | null, most: 0, pack: [] as { id: number; count: number }[], z: 3200, combat: 50, players: [] as any[], npcs: [] as any[], events: [] as any[], offSeen: 0,
+        interaction: null as string | null, most: 0, dialog: { isOpen: false } as any, pack: [] as { id: number; count: number }[], z: 3200, combat: 50, players: [] as any[], npcs: [] as any[], events: [] as any[], offSeen: 0,
     };
     const inbox: any[] = [];
     const listeners = new Set<() => void>();
@@ -19,7 +19,7 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
         player: { worldX: 3200, worldZ: w.z, level: 0, animId: w.anim, isDead: false, combatLevel: w.combat },
         prayers: { activePrayers: [...active], prayerPoints: init.points ?? 50, prayerLevel: init.level ?? 50 },
         nearbyNpcs: w.npcs, nearbyPlayers: w.players, inventory: w.pack, combatEvents: w.events, modalOpen: w.window,
-        dialog: { isOpen: false }, interface: { isOpen: false }, bank: { isOpen: false }, shop: { isOpen: false },
+        dialog: w.dialog, interface: { isOpen: false }, bank: { isOpen: false }, shop: { isOpen: false },
     });
     let published = state();
     const s = {
@@ -37,8 +37,8 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
                     if (w.window) { w.window = false; w.windowsClosed++; }
                     if (w.interaction) { w.interaction = null; w.cleared++; }
                     active[a.prayerIndex] = !active[a.prayerIndex];
-                    // One protection prayer turns the other two off (prayer.rs2:52, prayer_deactivate_conflicting).
-                    if (active[a.prayerIndex] && a.prayerIndex >= 12) for (const i of [12, 13, 14]) if (i !== a.prayerIndex) active[i] = false;
+                    // A prayer turns the others of its group off (prayer.rs2:52, prayer_deactivate_conflicting).
+                    if (active[a.prayerIndex]) for (const group of [[0, 3, 9], [1, 4, 10], [2, 5, 11], [12, 13, 14]]) if (group.includes(a.prayerIndex)) for (const i of group) if (i !== a.prayerIndex) active[i] = false;
                     if (active[a.prayerIndex]) { if (timer === null) timer = 5; } else if (!active.some(Boolean)) timer = null;
                 } else if (a.type === 'interactNpc' || a.type === 'interactLoc') w.interaction = `${a.type}:${a.npcIndex ?? a.locId}`;
             }
@@ -146,7 +146,7 @@ test('an attack is sent again in the tick of each flick', () => {
     client.executeBotAction({ type: 'interactNpc', npcIndex: 3, optionIndex: 2 });
     for (let i = 0; i < 60; i++) { advance(); expect(w.interaction).toBe('interactNpc:3'); }
     expect(w.drains).toBe(0);
-    expect(guard.stats().resends).toBe(guard.stats().flicks - before);
+    expect(guard.stats().resends).toBe(guard.stats().flicks - before - guard.stats().early);
     expect(guard.stats().resends).toBeGreaterThan(10);
 });
 
@@ -213,16 +213,22 @@ test('after a prayer input from the script the guard keeps that prayer free and 
     expect(on(w)).toEqual([]);
 });
 
-test('no guard input in the tick of a script prayer input or the two ticks after', () => {
+test('a script that sends a prayer input in each tick ends with the prayers it chose, at no cost', () => {
     const { w, s, client, advance } = world({ prayers: [10] });
     startPrayerGuard(s, { protect: false });
+    let chosen = [10];
     for (let i = 0; i < 12; i++) {
-        client.executeBotAction({ type: 'togglePrayer', prayerIndex: 4 + (i % 2) });
+        const prayer = [4, 5, PROTECT.melee, PROTECT.magic][i % 4]!;
+        client.executeBotAction({ type: 'togglePrayer', prayerIndex: prayer });
+        chosen = afterToggle(chosen, prayer);
         advance(1);
     }
-    advance(1);
-    const quiet = w.toggles;
-    expect(quiet).toBe(12);
+    advance(8);
+    let full = 0;
+    for (let i = 0; i < 12; i++) { advance(); if (on(w).join() === [...chosen].sort((x, y) => x - y).join()) full++; }
+    expect(full).toBeGreaterThanOrEqual(6);
+    // Three prayers and a script prayer input in each of 12 ticks: no two free ticks for a flick. One timer step.
+    expect(w.drains).toBeLessThanOrEqual(1);
 });
 
 test('a script that changes the protection prayer in the tick of a flick gets the prayer it chose', () => {
@@ -420,7 +426,7 @@ test('a player in the Wilderness inside the level range turns protection on', ()
     expect(w.toggles).toBe(0);
     w.players = [rival(61, 8, 3600)];
     advance(60);
-    expect(on(w)).toEqual([PROTECT.magic]);
+    expect(on(w)).toEqual([8, PROTECT.magic]);
     expect(w.drains).toBe(0);
 });
 
@@ -433,7 +439,7 @@ test('the lower Wilderness level of the two tiles sets the range', () => {
     expect(w.toggles).toBe(0);
     w.players = [rival(52, 8, 3528)];
     advance(10);
-    expect(on(w)).toEqual([PROTECT.magic]);
+    expect(on(w)).toEqual([8, PROTECT.magic]);
 });
 
 test('outside the Wilderness a player is no threat', () => {
@@ -460,7 +466,7 @@ test('the prayer follows the weapon of the player; without a weapon style, melee
         w.z = 3600;
         w.players = [rival(50, distance, 3600)];
         advance(10);
-        expect(on(w)).toEqual([prayer]);
+        expect(on(w)).toEqual([8, prayer]);
     }
 });
 
@@ -471,10 +477,10 @@ test('a player that attacks comes before an NPC that attacks', () => {
     w.npcs = [cow(32768 + 7)];
     w.players = [rival(50, 6, 3600)];
     advance(10);
-    expect(on(w)).toEqual([PROTECT.melee]);
+    expect(on(w)).toEqual([8, PROTECT.melee]);
     w.players = [rival(50, 6, 3600, { combatTargetType: 'player', combatTargetIndex: 7 })];
     advance(10);
-    expect(on(w)).toEqual([PROTECT.missiles]);
+    expect(on(w)).toEqual([8, PROTECT.missiles]);
 });
 
 test('a pickup holds the prayer only until the item is in the pack', () => {
@@ -504,4 +510,131 @@ test('a pickup that fails ends after 2 idle ticks', () => {
     const before = guard.stats().flicks;
     advance(6);
     expect(guard.stats().flicks).toBeGreaterThan(before);
+});
+
+test('a script that clicks a rock again and again under attack pays nothing: the flick goes right before each click', () => {
+    const { w, s, client, advance } = world();
+    const guard = startPrayerGuard(s);
+    w.npcs = [cow(32768 + 7)];
+    advance(4);
+    expect(on(w)).toEqual([PROTECT.melee]);
+    w.anim = 625;
+    for (let i = 0; i < 40; i++) {
+        client.executeBotAction({ type: 'interactLoc', x: 1, z: 1, locId: 2090, optionIndex: 1 });
+        advance(4);
+        // The click is never cancelled.
+        expect(w.interaction).toBe('interactLoc:2090');
+        expect(w.active[PROTECT.melee]).toBe(true);
+    }
+    expect(w.drains).toBe(0);
+    expect(guard.stats().early).toBeGreaterThanOrEqual(20);
+    expect(guard.stats().holds).toBeGreaterThan(0);
+});
+
+test('with no threat, the guard prayer goes off right before a skill action, so the action holds nothing', () => {
+    const { w, s, client, advance } = world();
+    startPrayerGuard(s, { calmTicks: 50 });
+    w.npcs = [cow(32768 + 7)];
+    advance(4);
+    expect(on(w)).toEqual([PROTECT.melee]);
+    w.npcs = [];
+    advance(10);
+    w.anim = 625;
+    client.executeBotAction({ type: 'interactLoc', x: 1, z: 1, locId: 2090, optionIndex: 1 });
+    advance(60);
+    expect(on(w)).toEqual([]);
+    expect(w.interaction).toBe('interactLoc:2090');
+    expect(w.drains).toBe(0);
+});
+
+test('a level-up message is no window: the flick goes on', () => {
+    const { w, s, advance } = world({ prayers: [PROTECT.melee] });
+    startPrayerGuard(s, { protect: false });
+    w.dialog = { isOpen: true, text: 'Congratulations, you just advanced a strength level.', options: [{ index: 0, text: 'Click here to continue' }] };
+    advance(60);
+    expect(w.drains).toBe(0);
+    w.dialog = { isOpen: true, text: 'Would you like to buy a ticket?', options: [{ index: 1, text: 'Yes' }, { index: 2, text: 'No' }] };
+    const before = w.toggles;
+    advance(1);
+    const sent = w.toggles;
+    advance(20);
+    expect(w.toggles).toBe(sent);
+    expect(sent - before).toBeLessThanOrEqual(2);
+});
+
+test('a hit of another player on an NPC is no hit on the account', () => {
+    const { w, s, advance } = world();
+    startPrayerGuard(s);
+    for (let i = 0; i < 20; i++) {
+        w.events = [{ tick: i, type: 'damage_taken', damage: 5, sourceType: 'other_player', targetType: 'npc', targetIndex: 3 }];
+        advance();
+    }
+    expect(w.toggles).toBe(0);
+    w.events = [{ tick: 20, type: 'damage_taken', damage: 5, sourceType: 'npc', targetType: 'player', targetIndex: -1 }];
+    advance(3);
+    expect(on(w)).toEqual([PROTECT.melee]);
+});
+
+test('attack prayers: on while the script attacks an NPC with a melee weapon, off after', () => {
+    const { w, s, client, advance } = world({ level: 45 });
+    w.npcs = [cow(-1)];
+    const guard = startPrayerGuard(s, { offence: true });
+    advance(2);
+    client.executeBotAction({ type: 'interactNpc', npcIndex: 3, optionIndex: 2 });
+    w.npcs = [cow(32768 + 7)];
+    let full = 0;
+    for (let i = 0; i < 120; i++) {
+        advance();
+        expect(w.interaction).toBe('interactNpc:3');
+        if (i > 3) expect(w.active[PROTECT.melee]).toBe(true);
+        if (on(w).join() === [10, 11, PROTECT.melee].join()) full++;
+    }
+    // Ultimate Strength and Incredible Reflexes are on for three ticks in four.
+    expect(full).toBeGreaterThanOrEqual(84);
+    expect(w.drains).toBe(0);
+    expect(w.most).toBeLessThanOrEqual(5);
+    // The NPC dies and the script walks off: the attack prayers go off, then the protection prayer.
+    w.npcs = [];
+    client.executeBotAction({ type: 'walkTo', x: 1, z: 1 });
+    advance(12);
+    expect(on(w)).toEqual([PROTECT.melee]);
+    advance(30);
+    expect(on(w)).toEqual([]);
+    expect(guard.stats().spent).toBe(0);
+});
+
+test('attack prayers follow the Prayer level and the weapon', () => {
+    for (const [level, melee, prayers] of [[20, true, [4, 5]], [8, true, [1, 2]], [45, false, [PROTECT.melee]], [3, true, []]] as const) {
+        const { w, s, client, advance } = world({ level });
+        w.npcs = [cow(-1)];
+        startPrayerGuard(s, { offence: true, melee: () => melee });
+        advance(2);
+        client.executeBotAction({ type: 'interactNpc', npcIndex: 3, optionIndex: 2 });
+        w.npcs = [cow(32768 + 7)];
+        let seen = false;
+        for (let i = 0; i < 12; i++) { advance(); if (on(w).join() === [...prayers].join()) seen = true; }
+        expect(seen).toBe(true);
+    }
+});
+
+test('a script input between the two ticks of a flick finishes the flick first', () => {
+    const { w, s, client, advance } = world({ prayers: [9, 10, PROTECT.melee] });
+    startPrayerGuard(s, { protect: false });
+    const before = w.toggles;
+    for (let i = 0; i < 10 && w.toggles === before; i++) advance();
+    expect(on(w)).not.toContain(10);
+    // The script starts a skill action in the second tick of the flick. Without the finish, Strength would stay off.
+    w.anim = 625;
+    client.executeBotAction({ type: 'interactLoc', x: 1, z: 1, locId: 2090, optionIndex: 1 });
+    advance(3);
+    expect(on(w)).toEqual([9, 10, PROTECT.melee]);
+    expect(w.interaction).toBe('interactLoc:2090');
+});
+
+test('the guard counts the points the state shows going down', () => {
+    const { w, s, advance } = world({ prayers: [9, 10, 11, 12, 6] });
+    const guard = startPrayerGuard(s, { protect: false });
+    advance(30);
+    expect(guard.stats().holds).toBeGreaterThan(0);
+    expect(guard.stats().spent).toBe(0);
 });

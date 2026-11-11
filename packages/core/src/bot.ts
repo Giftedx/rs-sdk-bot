@@ -116,9 +116,10 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // Random events (dryad, genie, lost axe...): handled on every tick unless RANDOM_EVENTS=0 (packages/core/src/randomevents.ts).
     if (process.env.RANDOM_EVENTS !== '0') randomEvents.set(s, watchRandomEvents(s));
     // Free prayers and protection from NPCs and Wilderness players (packages/core/src/prayer-guard.ts); PRAYER_GUARD=0
-    // turns the guard off.
+    // turns the guard off, PRAYER_OFFENCE=0 turns its Strength and Attack prayers off.
     // The two NPC tables are read here, at login: the reads take about 1 s and must not run inside a tick.
     if (process.env.PRAYER_GUARD !== '0') prayerGuards.set(s, startPrayerGuard(s, { log: line => log(`${line} bot=${name}`), protect: protectByStyle(npcAttackStyles()), hunters: npcHunters(),
+        offence: process.env.PRAYER_OFFENCE !== '0', melee: st => wornWeaponStyle((st?.equipment ?? []).find((i: any) => i.slot === 3)?.id) === 'melee',
         players: { ignore: new Set(loadOwners().keys()), style: q => { const seen = readOpponents(s.client).find(v => v.index === q.index); return seen ? wornWeaponStyle(seen.worn.rhand) : null; } } }));
     // Any bot stops cleanly when .practice/stop-<name> appears (checked every 25 ticks): a script that never checks
     // it (seen: fishing30 under the supervisor) still logs out in game.
@@ -241,7 +242,8 @@ async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail
     const log = opts.log ?? ((l: string) => console.log(l));
     for (const s of sessions) {
         const l = ledgers.get(s); if (l) log(`${formatLedger(l.stop())} bot=${s.name}`);
-        prayerGuards.get(s)?.stop(); prayerGuards.delete(s);
+        // The guard's own prayers go off before the logout: a prayer that stays on drains until the session ends.
+        void prayerGuards.get(s)?.release(); prayerGuards.delete(s);
         const e = randomEvents.get(s); if (e) { e.stop(); log(`EVENTS ${JSON.stringify(e.counts())} bot=${s.name}`); }
     }
     opts.onReported?.(() => ok);
