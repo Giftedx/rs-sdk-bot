@@ -1,61 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794362610195,
+ "at": 1794362675322,
  "jobs": [
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "ardy",
-    "400"
-   ],
-   "env": {
-    "ITEMS": "bronze arrow",
-    "STOCK_TARGET": "500",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "BANK_AT": "0",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "5000",
-    "COIN_RESERVE": "500",
-    "MAX_SPEND": "4000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy bronze arrows at Aemad in East Ardougne for the Ranged band",
-   "role": "supply",
-   "template": "army-arrows-ardy",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "shop:ardy"
-   ]
-  },
   {
    "account": "Knightstick",
    "script": "scripts/gather-combat.ts",
@@ -238,27 +184,57 @@
   },
   {
    "account": "Fatstack",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-28360007-90d2-4a46-88a1-e062874830a9"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-fatstack-20261111t015754z [task-28360007-90d2-4a46-88a1-e062874830a9]",
+   "role": "combat"
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-3782a765-dd99-4aed-9673-03d830c3eb92"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-fingerblastr-20261111t015754z [task-3782a765-dd99-4aed-9673-03d830c3eb92]",
+   "role": "combat"
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "1500",
-    "trooper"
+    "ardy",
+    "400"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "ITEMS": "bronze arrow",
+    "STOCK_TARGET": "500",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "5000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "4000"
    },
    "enabled": false,
    "standing": true,
    "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "goal": "buy bronze arrows at Aemad in East Ardougne for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-ardy",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "shop:ardy"
    ]
   }
  ]
