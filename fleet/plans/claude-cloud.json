@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794419636325,
+ "at": 1794420286048,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -103,15 +103,13 @@
     "99",
     "5000"
    ],
-   "env": {
-    "ALCH_ITEM": "airrune"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
    "role": "combat",
-   "template": "army-alch-air-magic-99",
+   "template": "army-alch-magic-99",
    "autopilot": "claude-cloud",
    "resources": []
   },
