@@ -307,6 +307,17 @@ Ranged it adds is not needed at that point.
   no way straight west: a walk from 2895,9793 to 2850,9809 stopped at 2881,9810. The key cannot be traded;
   `scripts/dusty-key.ts` gets it (the Jailer, Velrak's cell, the dialogue): practice from the Ardougne north bank,
   `RESULT ok dustyKey=1`, 950 ticks, `hpMin=99`.
+- **Claim.** One bank-owned trip brings the hides home. **Conditions.** `scripts/black-dragon-camp.ts` without
+  `STAGED`: the shared walker to the Falador west bank, then `combatTrip` kind `black` (everything worn and carried
+  banked, the bow, 700 arrows, the key, one Varrock teleport's runes and 6 sharks taken), the ground walk to the
+  Taverley ladder, the gate, the lair's south end, the corridor, the camp, the teleport and the Varrock West bank.
+  Practice from the Ardougne north bank with `KILLS=3`: `RESULT ok black-dragon-trip kills=3 hides=3 bones=3
+  ammoUsed=196 hpMin=90 banked=true ticks=1337` (628 more for the walk to Falador before it); staged at tick 26,
+  down the ladder at 109, through the gate at 243, in the corridor at 318 with 90 hitpoints, banked at 1,336; the
+  bank then held 3 black dragonhides and 3 dragon bones and the kit's debit matched to the rune. The trip must not
+  start at a far bank with the kit packed: from the Ardougne north bank the shared planner took a Camelot teleport
+  with the trip's law rune (and air from the bank), and the run made its three kills and could not leave. Raw runs:
+  `.practice/blackdragon/trip-run.ts` (`a`-`d`).
 - **Gap.** No live run. The camp was alone on the server: another player's kill, or a player on the tile, is not
   run. Kills with arrows other than mithril are not measured (best hits by arrow: iron 12, mithril 14, rune 19).
 
