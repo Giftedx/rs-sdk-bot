@@ -62,17 +62,24 @@ const CHICKEN_FIXTURE: SaveConfig = {
 // Slayer done (the rune platebody goes back on after a cast, levelrequire.rs2:132; without it the game refuses), special
 // energy 1000 (varp 300), rune full helm, cape of legends, glory, rune platebody, platelegs, ranger boots, dragon
 // dagger (p), rune kiteshield and 300 rune arrows worn; staff, bow, runes, 2 prayer potions and 18 sharks carried.
-// `food` changes the sharks; `glory` adds a charged glory to the pack for an escape.
-export const sparFixture = (x: number, z = 3555, o: {food?: number; glory?: boolean} = {}): SaveConfig => ({
+// `food` changes the sharks; `glory` adds a charged glory to the pack for an escape; `teleport` adds the law and fire
+// runes of Varrock Teleport; `potions` swaps 3 sharks for a super attack, a super strength and a ranging potion.
+export const sparFixture = (x: number, z = 3555, o: {food?: number; glory?: boolean; teleport?: boolean; potions?: boolean} = {}): SaveConfig => ({
   position: {x, z, level: 0},
   skills: {Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99, Prayer: 99, Hitpoints: 99},
   varps: {147: 6, 176: 10, 300: 1000},
   equipment: [[1163, 0], [1052, 1], [1712, 2], [1231, 3], [1127, 4], [1201, 5], [1079, 7], [2577, 10], [892, 13]].map(([id, slot]) => ({id: id!, count: id === 892 ? 300 : 1, slot: slot!})),
   inventory: [{id: 1401, count: 1}, {id: 861, count: 1}, {id: 556, count: 500}, {id: 565, count: 100}, {id: 557, count: 200}, {id: 555, count: 200}, {id: 561, count: 100},
-    {id: 2434, count: 1}, {id: 2434, count: 1}, ...(o.glory ? [{id: 1712, count: 1}] : []), ...Array.from({length: o.food ?? 18}, () => ({id: 385, count: 1}))],
+    {id: 2434, count: 1}, {id: 2434, count: 1}, ...(o.glory ? [{id: 1712, count: 1}] : []), ...(o.teleport ? [{id: 563, count: 2}, {id: 554, count: 2}] : []), ...(o.potions ? [{id: 2436, count: 1}, {id: 2440, count: 1}, {id: 2444, count: 1}] : []), ...Array.from({length: o.food ?? (o.potions ? 15 : 18)}, () => ({id: 385, count: 1}))],
 });
+// `pairs` spars at once: the account of the run and its partner `b`, then partners `c` and `d`, `e` and `f`, and so on.
+const sparBatch = (key: string, pairs: number, a: SaveConfig, b: SaveConfig, args: string[] = []): BenchCase => {
+  const letters = 'bcdefghijklmnopqrstuvwxyz'.slice(0, pairs * 2 - 1).split('');
+  return {key, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...letters.slice(1).map(l => `{bot:${l}}`), ...args], pass: ok, presetConfig: a,
+    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i % 2 ? a : b}))};
+};
 const sparCase = (key: string, a: SaveConfig, b: SaveConfig, args: string[] = []): BenchCase =>
-  ({key, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...args], pass: (s: string) => /^RESULT ok\b/m.test(s), presetConfig: a, companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: b}]});
+  ({key, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...args], pass: ok, presetConfig: a, companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: b}]});
 
 const skiller = (skill: string, method: string, preset: string, args: string[] = [], extra: Partial<BenchCase> = {}): BenchCase =>
   ({key: `skiller:${skill}:${method}`, script: 'scripts/aio-skiller.ts', preset, scriptArgs: [skill, method, ...args], pass: ok, ...extra});
@@ -250,6 +257,13 @@ const ROUTE_CASES: BenchCase[] = [
   sparCase('extra:spar-gap', sparFixture(3088), sparFixture(3100)),
   sparCase('extra:spar-trees', sparFixture(3099, 3536), sparFixture(3105, 3536)),
   sparCase('extra:spar-escape', sparFixture(3125, 3790), sparFixture(3127, 3790, {food: 3, glory: true}), ['SPAR_SCENARIO=escape']),
+  // Eight glory chases at once in one world, at the same spot: eight samples for the ticks of one.
+  sparBatch('extra:spar-escape-x8', 8, sparFixture(3125, 3790), sparFixture(3127, 3790, {food: 3, glory: true}), ['SPAR_SCENARIO=escape']),
+  sparBatch('extra:spar-x8', 8, sparFixture(3094), sparFixture(3096)),
+  // The glory chase with boost potions on the hunter.
+  sparCase('extra:spar-escape-pots', sparFixture(3125, 3790, {potions: true}), sparFixture(3127, 3790, {food: 3, glory: true}), ['SPAR_SCENARIO=escape']),
+  // The same chase with no glory on the runner: it runs about 110 tiles to level 20 and casts Varrock Teleport.
+  sparCase('extra:spar-escape-spell', sparFixture(3125, 3790), sparFixture(3127, 3790, {food: 3, teleport: true}), ['SPAR_SCENARIO=escape-spell']),
   {key: 'quester:mode:order', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['order', 'cook', '--save={save}', '--timeout-ms=300000'], pass: s => ok(s) && /QUEST_ORDER_RESULT \{"ok":true/.test(s),
     presetConfig: {position: {x: 3208, z: 3214, level: 0}, inventory: [{id: 1944, count: 1}, {id: 1927, count: 1}, {id: 1933, count: 1}, {id: 1351, count: 1}, {id: 995, count: 37}], bank: [{id: 1351, count: 2}, {id: 995, count: 100}, {id: 1511, count: 8}], equipment: [{id: 1205, count: 1, slot: 3}]}},
   {key: 'quester:mode:items', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['items', 'cook', '--save={save}', 'CAP=600'], pass: s => ok(s) && /QUEST_ITEMS_ORDER_RESULT \{"ok":true/.test(s),

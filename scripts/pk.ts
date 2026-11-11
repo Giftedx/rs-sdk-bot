@@ -53,7 +53,20 @@ export type FightOptions = {
     restorePrayerAt?: number;
     // true: cast a freeze whenever the target is free (in a stand-up practice duel it slowed the kill, median 358
     // against 305 ticks over 3 runs each; research/pvp-fight-loop.md). 'flee': cast it only while the target runs away.
-    freeze?: boolean | 'flee';
+    // 'low': also while its health bar is at or under `freezeBelow` (default 0.62), so a target that is about to run is
+    // already held.
+    freeze?: boolean | 'flee' | 'low';
+    freezeBelow?: number;
+    // Once the target has fled (it is out of food): the style turns to use, and whether every special goes out at
+    // once (default true). Unset, the rotation stays as it is.
+    fledRotation?: Style[];
+    // true: wield the staff for a freeze as for any spell. Default false: with the freeze runes carried, the freeze is
+    // cast with the weapon in hand. An opponent that prays against the weapon it sees then has no Protect from Magic
+    // up, and the freeze lasts its full time (pvp_magic.rs2:156 halves it under that prayer).
+    freezeWithStaff?: boolean;
+    // false: a freeze on a fled target takes off the torso alone, as any cast does.
+    freezeStrip?: boolean;
+    fledSpec?: boolean;
     // Choose a style the opponent's overhead prayer does not cover (default on).
     readOverheads?: boolean;
     // A melee or ranged special with this kit and combat-tab bar once the target's health bar is at or under `below`:
@@ -125,6 +138,10 @@ export function defaultSpec(kit: Kit, names = getObjNames()): SpecConfig | undef
         if (n === 'dragon_mace') return { kit: kit.melee!, bar: 'combat_spiked:specbar', cost: 250, below: 0.6, style: 'melee' };
         if (n === 'rune_claws') return { kit: kit.melee!, bar: 'combat_claw:specbar', cost: 250, below: 0.6, style: 'melee' };
     }
+    return bowSpec(kit, names);
+}
+// The magic shortbow special of a kit: the burst against a target out of melee reach.
+export function bowSpec(kit: Kit, names = getObjNames()): SpecConfig | undefined {
     for (const id of kit.ranged ?? []) {
         if ((names.get(id) ?? '') === 'magic_shortbow') return { kit: kit.ranged!, bar: 'combat_bow:specbar', cost: 350, below: 0.5, style: 'ranged' };
     }
@@ -280,7 +297,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
     let freezeReady = start, frozenUntil = start, freezeCastAt = -10, frozenTile: { x: number; z: number } | null = null, selfFrozenUntil = start;
     let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = false, rapidSet = false, pjedByNpc = false;
     let target: NearbyPlayer | undefined, rubbed = -1, ranAt = -10, prevSelf: { x: number; z: number } | null = null;
-    let prevTarget: { x: number; z: number } | null = null, prevGap = 0, fleeingUntil = start, heading = { x: 0, z: 0 }, chaseAt = -10;
+    let prevTarget: { x: number; z: number } | null = null, prevGap = 0, fleeingUntil = start, heading = { x: 0, z: 0 }, chaseAt = -10, fled = false;
     const hits: { tick: number; damage: number; src: number }[] = [], dealtLog: { tick: number; damage: number }[] = [];
     // Tank torso worn or carried at fight start (unequipped for a cast/shot and re-equipped on melee turns).
     const names = getObjNames();
@@ -334,6 +351,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             const gap = cheb(at, target);
             if (prevTarget && (target.x !== prevTarget.x || target.z !== prevTarget.z) && gap > prevGap && gap > 2) {
                 fleeingUntil = now + 6;
+                fled = true;
                 heading = { x: Math.sign(target.x - prevTarget.x), z: Math.sign(target.z - prevTarget.z) };
             }
             prevTarget = { x: target.x, z: target.z }; prevGap = gap;
@@ -456,7 +474,8 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         const canReachMelee = !chasing && !(now < selfFrozenUntil && !adjacent(at, target)) && (cheb(at, target) <= 6 || (!hasStyle(o.kit, 'magic') && !hasStyle(o.kit, 'ranged')));
         const guarded = o.readOverheads === false ? new Set<Style>() : protectedStyles(seen?.headicons);
         const styleUsable = (st: Style) => hasStyle(o.kit, st) && (st !== 'melee' || canReachMelee);
-        const upcomingTurn = nextStyle(rotation, last, st => styleUsable(st) && !guarded.has(st)) ?? nextStyle(rotation, last, styleUsable) ?? nextStyle(rotation, last, st => hasStyle(o.kit, st));
+        const turns = fled && o.fledRotation?.length ? o.fledRotation : rotation;
+        const upcomingTurn = nextStyle(turns, last, st => styleUsable(st) && !guarded.has(st)) ?? nextStyle(turns, last, styleUsable) ?? nextStyle(turns, last, st => hasStyle(o.kit, st));
         if (pjedByNpc) {
             pjedByNpc = false;
             if (!hitter && typeof sdk.sendInteractNpc === 'function') {
@@ -501,8 +520,11 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         const attackPackets = adjacent(at, target) ? 1 : 2;
         // The special: equip its kit, toggle its specbar, and attack in the same tick (OpHeldHandler updates tabs[0]
         // during decodeIn before IfButtonHandler checks isComponentVisible). Keep total USER_EVENT packets <= 5.
-        const spec = o.spec, energy = special(s.client), specStyle: Style = spec?.style ?? 'melee';
-        if (spec && energy.energy >= spec.cost && lowHealth(seen, spec.below) && (specStyle !== 'melee' || canReachMelee)
+        // A target that has fled is out of food: from then on every special goes out at once, whatever its health bar
+        // shows, and past melee reach the bow special replaces a melee one.
+        const spec = o.spec && fled && o.spec.style !== 'ranged' && !canReachMelee ? bowSpec(o.kit, names) ?? o.spec : o.spec;
+        const energy = special(s.client), specStyle: Style = spec?.style ?? 'melee';
+        if (spec && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || lowHealth(seen, spec.below)) && (specStyle !== 'melee' || canReachMelee)
             && (!guarded.has(specStyle) || lowHealth(seen, 0.25))) {
             let budget = 5 - attackPackets - (energy.on ? 0 : 1);
             const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
@@ -517,7 +539,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
                 for (const p of wantPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
             }
             for (const item of toWield) use(item, /^(Wield|Wear)$/i);
-            log(`PK special energy ${energy.energy} on ${energy.on} target ${seen!.health}/${seen!.totalHealth}`);
+            log(`PK special ${specStyle} energy ${energy.energy} on ${energy.on} target ${seen?.health}/${seen?.totalHealth}`);
             if (!energy.on) void sdk.sendClickComponent(componentId(spec.bar));
             void sdk.sendInteractPlayer(target.index, 2);
             result.specs++; result.attacks[specStyle]++;
@@ -536,7 +558,8 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         const magicLevel = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
         const hasFreezeRunes = inv.some(i => i.id === ITEMS.natureRune || i.id === ITEMS.earthRune || i.id === ITEMS.waterRune);
         const freeze = o.freeze ? (hasFreezeRunes ? castableFreeze(magicLevel, inv) : freezeSpell(magicLevel)) : null;
-        const castFreeze = freeze !== null && hasStyle(o.kit, 'magic') && now >= freezeReady && now >= frozenUntil && (o.freeze !== 'flee' || now < fleeingUntil);
+        const castFreeze = freeze !== null && hasStyle(o.kit, 'magic') && now >= freezeReady && now >= frozenUntil
+            && (o.freeze === true || now < fleeingUntil || (o.freeze === 'low' && lowHealth(seen, o.freezeBelow ?? 0.62)));
         // Hit off the opponent's overhead: a style they protect against loses 40% of its max hit.
         const turn = castFreeze ? { style: 'magic' as Style, index: last } : upcomingTurn;
         if (!turn) continue;
@@ -556,15 +579,20 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         }
         let budget = 5 - attackPackets;
         const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
-        for (const id of [...(o.kit[turn.style] ?? []), ...(turn.style === 'melee' ? tankIds : [])]) {
+        const keepWeapon = castFreeze && hasFreezeRunes && o.freezeWithStaff !== true;
+        for (const id of keepWeapon ? [] : [...(o.kit[turn.style] ?? []), ...(turn.style === 'melee' ? tankIds : [])]) {
             if (state.equipment.some(e => e.id === id)) continue;
             const item = slotOf([id]);
             if (item && toWield.length < budget) toWield.push(item);
         }
         budget -= toWield.length;
         const freeSlots = 28 - inv.length - (switching2H ? 1 : 0);
-        const toRemove = turn.style !== 'melee' && typeof sdk.sendUseEquipmentItem === 'function' && me.hp > oppMax + 12 && freeSlots >= 1 && budget >= 1
-            ? negativeCastArmour(state.equipment, turn.style, kitIds, names).filter(eq => eq.slot === 4).slice(0, 1)
+        // A freeze on a target that has fled decides the chase, and the runner does not hit back: every piece that
+        // cuts the magic attack roll comes off for it (platelegs -21, kiteshield -8, full helm -6), as far as the
+        // packets and free pack slots of this tick allow. Any other cast takes off the torso alone.
+        const strip = castFreeze && fled && o.freezeStrip !== false;
+        const toRemove = turn.style !== 'melee' && typeof sdk.sendUseEquipmentItem === 'function' && (strip || me.hp > oppMax + 12) && freeSlots >= 1 && budget >= 1
+            ? negativeCastArmour(state.equipment, turn.style, kitIds, names).filter(eq => strip || eq.slot === 4).slice(0, strip ? Math.min(budget, freeSlots) : 1)
             : [];
         budget -= toRemove.length;
         if (prayers.prayerPoints > 0 && budget > 0) {
@@ -580,7 +608,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             const spell = castFreeze ? freeze! : (o.damageSpell ?? bestDamageSpell(magicLevel, inv));
             void sdk.sendSpellOnPlayer(target.index, spell);
             if (castFreeze) {
-                log(`PK freeze cast at distance ${cheb(at, target)}, target health ${seen?.health}/${seen?.totalHealth}`);
+                log(`PK freeze cast at distance ${cheb(at, target)}, target health ${seen?.health}/${seen?.totalHealth}, target protects ${[...guarded].join('+') || 'nothing'}`);
                 result.freezes++;
                 const dur = freezeDuration(freeze!, guarded.has('magic'));
                 frozenUntil = now + dur;

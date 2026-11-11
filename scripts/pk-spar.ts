@@ -3,7 +3,8 @@
 // prays, switches gear and uses its special. The score is for side A; the ladder (scripts/measure/pk-spar-ladder.ts)
 // runs a challenger profile against a champion profile on several seeds.
 // Practice only: openBot refuses a non-local server without DEMO_OK=1, and a spar kills one of the two accounts.
-// Usage: bun scripts/pk-spar.ts <bot a> <bot b> [CAP ticks, default 900]. Environment: SPAR_A and SPAR_B name a
+// Usage: bun scripts/pk-spar.ts <bot a> <bot b> [CAP ticks, default 900] [<bot a> <bot b> ...]; more pairs fight at
+// the same time and the RESULT line counts them. Environment: SPAR_A and SPAR_B name a
 // profile (default base); SPAR_A_OPTS and SPAR_B_OPTS add fight options as JSON, e.g. {"eatAt":60}; SPAR_SCENARIO
 // names a scenario (default open). The start state of a scenario is its bench case (scripts/measure/aio-bench-cases.ts).
 // Prints one `SPAR <json>` line. RESULT ok means that both sides attacked and the fight reached a kill, an escape or
@@ -18,6 +19,9 @@ export const PROFILES: Readonly<Record<string, Profile>> = {
     base: {},
     freeze: { freeze: true },
     'freeze-flee': { freeze: 'flee' },
+    // Keeps its special for a target at 40% health or one that has fled, and freezes a target that runs.
+    hunter: { freeze: 'flee', specBelow: 0.4 },
+    'hunter-low': { freeze: 'low', specBelow: 0.4 },
     'no-read': { readOverheads: false },
     'no-spec': { spec: undefined },
     'spec-early': { specBelow: 0.8 },
@@ -33,6 +37,8 @@ export const PROFILES: Readonly<Record<string, Profile>> = {
 export const SCENARIOS: Readonly<Record<string, { a?: Profile; b?: Profile }>> = {
     open: {},
     escape: { b: { escapeAt: 60 } },
+    // The runner has no glory: it runs to Wilderness level 20 and casts Varrock Teleport (scripts/pk.ts SPELLS).
+    'escape-spell': { b: { escapeAt: 60, escapeSpell: 1164 } },
 };
 
 export function sparOptions(name: string, extraJson: string | undefined, kit: Kit, cap: number, scenario: Profile = {}): FightOptions {
@@ -87,21 +93,56 @@ export async function spar(a: Session, b: Session, optionsA: FightOptions, optio
     return { ...sparScore(ra, rb), opening, ...(startGap === undefined ? {} : { startGap }) };
 }
 
+// The result of several spars that ran at once, from the A sides: kills, deaths, the B sides that got away, and draws.
+export function batchSummary(results: readonly SparResult[]) {
+    const count = (f: (r: SparResult) => boolean) => results.filter(f).length;
+    const mean = results.length ? Number((results.reduce((n, r) => n + r.score, 0) / results.length).toFixed(1)) : 0;
+    return { fights: results.length, kills: count(r => r.winner === 'a' && r.end === 'kill'), deaths: count(r => r.winner === 'b' && r.end === 'kill'),
+        escapes: count(r => r.winner === 'b' && r.end === 'escape'), fled: count(r => r.winner === 'a' && r.end === 'escape'), draws: count(r => r.winner === 'draw'),
+        mean, ticks: Math.max(0, ...results.map(r => r.ticks)), scores: results.map(r => r.score) };
+}
+
 if (import.meta.main) {
-    const [botA, botB, capArg] = process.argv.slice(2), env = process.env;
-    if (!botA || !botB) { console.log('RESULT fail usage: bun scripts/pk-spar.ts <bot a> <bot b> [CAP ticks]'); process.exit(2); }
+    const [botA, botB, capArg, ...more] = process.argv.slice(2), env = process.env;
+    if (!botA || !botB || more.length % 2) { console.log('RESULT fail usage: bun scripts/pk-spar.ts <bot a> <bot b> [CAP ticks] [<bot a> <bot b> ...]'); process.exit(2); }
     const { openBot, finish } = await import('../packages/core/src/bot');
     const cap = Number(capArg ?? 900), nameA = env.SPAR_A ?? 'base', nameB = env.SPAR_B ?? 'base', scenarioName = env.SPAR_SCENARIO ?? 'open';
     const scenario = SCENARIOS[scenarioName];
     if (!scenario) { console.log(`RESULT fail pk-spar: unknown scenario "${scenarioName}"; known: ${Object.keys(SCENARIOS).join(', ')}`); process.exit(2); }
     const optionsA = sparOptions(nameA, env.SPAR_A_OPTS, TRIBRID_KIT, cap, scenario.a), optionsB = sparOptions(nameB, env.SPAR_B_OPTS, TRIBRID_KIT, cap, scenario.b);
     // A death is the expected end of a spar, so it must not end the run as openBot does by default. Any other stop
-    // (a stop file, a stalled tick stream) halts both sides and fails the run.
+    // (a stop file, a stalled tick stream) halts every side and fails the run.
     let halted: string | undefined;
     const onStop = async (_s: unknown, reason: string) => { if (reason !== 'died') halted ??= reason; };
-    const a = await openBot(botA, { onStop }), b = await openBot(botB, { onStop });
-    const r = await spar(a, b, optionsA, optionsB, undefined, () => halted !== undefined);
-    console.log(`SPAR ${JSON.stringify({ scenario: scenarioName, profiles: { a: nameA, b: nameB }, ...r })}`);
-    await finish([a, b], sparValid(r) && halted === undefined, `spar winner=${r.winner} score=${r.score} ticks=${r.ticks} end=${r.end} opening=${r.opening} gap=${r.startGap} a=${nameA} b=${nameB} `
+    // More pairs after the cap fight at the same time in the same world: each pair is one more sample for the cost of
+    // the same game ticks. A player does not block a tile, and a fight loop names its one target, so pairs share a spot.
+    const t0 = Date.now();
+    const names: [string, string][] = [[botA, botB]];
+    for (let i = 0; i < more.length; i += 2) names.push([more[i]!, more[i + 1]!]);
+    // Every account logs in at the same time, and the wait for the logins counts as a tick wait: an account that is
+    // in has no waiter until the fights start, and a lockstep world then holds each tick for the busy limit (2 s).
+    const { tickWaits } = await import('../packages/core/src/tick-stream');
+    tickWaits.active++;
+    // The account of the run logs in first: the bench checks the first START line against that account's start tile.
+    const first = await openBot(botA, { onStop });
+    const pairs: [Session, Session][] = await Promise.all(names.map(async ([x, y], i): Promise<[Session, Session]> => {
+        const [a, b] = await Promise.all([i === 0 ? first : openBot(x, { onStop }), openBot(y, { onStop })]);
+        // The fight loop sends its actions by index and reads no `reachable` flag; the flood fill behind that flag
+        // was 9% of a 16-account run.
+        for (const s of [a, b]) (s.client as { setReachabilityEnabled?: (on: boolean) => void } | undefined)?.setReachabilityEnabled?.(false);
+        return [a, b];
+    })).finally(() => { tickWaits.active--; });
+    const t1 = Date.now();
+    const results = await Promise.all(pairs.map(([a, b]) => spar(a, b, optionsA, optionsB, undefined, () => halted !== undefined)));
+    // Where the wall time of the run went: the logins, then the fights.
+    console.log(`SPAR_TIMING loginMs=${t1 - t0} fightMs=${Date.now() - t1} pairs=${pairs.length} ticks=${Math.max(...results.map(r => r.ticks))}`);
+    for (const r of results) console.log(`SPAR ${JSON.stringify({ scenario: scenarioName, profiles: { a: nameA, b: nameB }, ...r })}`);
+    const ok = results.every(sparValid) && halted === undefined, sessions = pairs.flat(), r = results[0]!;
+    if (results.length > 1) {
+        const s = batchSummary(results);
+        await finish(sessions, ok, `spar-batch fights=${s.fights} kills=${s.kills} deaths=${s.deaths} escapes=${s.escapes} fled=${s.fled} draws=${s.draws} mean=${s.mean} ticks=${s.ticks} a=${nameA} b=${nameB} `
+            + `valid=${results.filter(sparValid).length} scores=${s.scores.join(',')}${halted ? ` halted=${halted}` : ''}`);
+    }
+    await finish(sessions, ok, `spar winner=${r.winner} score=${r.score} ticks=${r.ticks} end=${r.end} opening=${r.opening} gap=${r.startGap} a=${nameA} b=${nameB} `
         + `aOutcome=${r.a.outcome} bOutcome=${r.b.outcome} aTaken=${r.a.taken} bTaken=${r.b.taken} aEaten=${r.a.eaten} bEaten=${r.b.eaten} aSpecs=${r.a.specs} bSpecs=${r.b.specs}${halted ? ` halted=${halted}` : ''}`);
 }

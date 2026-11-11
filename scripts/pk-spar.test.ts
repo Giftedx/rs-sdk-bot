@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
-import { PROFILES, sparOptions, sparScore, sparValid } from './pk-spar';
-import { againstSummary, ladderSummary, readFight } from './measure/pk-spar-ladder';
+import { batchSummary, PROFILES, sparOptions, sparScore, sparValid } from './pk-spar';
+import { againstSummary, batchLadder, ladderSummary, readBatch, readFight } from './measure/pk-spar-ladder';
 import { benchCases } from './measure/aio-bench-cases';
 import type { FightResult, Kit } from './pk';
 
@@ -49,6 +49,24 @@ test('the ladder counts each fight from the side the challenger played', () => {
     expect(readFight(3, 'a', false, 'RESULT fail spar')).toMatchObject({ ok: false });
     expect(ladderSummary([...fights, readFight(3, 'a', true, null)])).toMatchObject({ failed: 1, verdict: 'invalid' });
     expect(againstSummary([fights[0]!, fights[2]!], [fights[1]!, fights[3]!])).toMatchObject({ challenger: { mean: 85, wins: 1 }, champion: { mean: -15, wins: 1 }, verdict: 'challenger' });
+});
+
+test('a batch counts its fights from the A sides, and two batch runs make a head-to-head ladder', () => {
+    const s = batchSummary([sparScore(fight('kill', 10), fight('timeout', 60)), sparScore(fight('timeout', 10), fight('escaped', 60)), sparScore(fight('died', 60), fight('timeout', 10)), sparScore(fight('timeout', 5), fight('timeout', 9))]);
+    expect(s).toMatchObject({ fights: 4, kills: 1, deaths: 1, escapes: 1, fled: 0, draws: 1, scores: [250, -100, -250, 4], mean: -24 });
+    const line = (kills: number, deaths: number, mean: number) => `RESULT ok spar-batch fights=8 kills=${kills} deaths=${deaths} escapes=0 fled=0 draws=${8 - kills - deaths} mean=${mean} ticks=600 a=x b=y valid=8 scores=1`;
+    expect(readBatch(true, line(5, 2, 80.5))).toMatchObject({ ok: true, fights: 8, kills: 5, deaths: 2, draws: 1, mean: 80.5 });
+    expect(readBatch(true, 'RESULT ok spar winner=a score=1 ticks=2').ok).toBe(false);
+    expect(batchLadder(readBatch(true, line(5, 2, 80)), readBatch(true, line(3, 4, -20)))).toMatchObject({ fights: 16, wins: 9, losses: 5, draws: 2, mean: 50, verdict: 'challenger' });
+    expect(batchLadder(readBatch(true, line(2, 5, -80)), readBatch(false, null)).verdict).toBe('invalid');
+});
+
+test('a batch case stages each pair as the single case does', () => {
+    const cases = benchCases(), one = cases.find(k => k.key === 'extra:spar-escape')!, many = cases.find(k => k.key === 'extra:spar-escape-x8')!;
+    expect(many.companions!.map(c => c.suffix).join('')).toBe('bcdefghijklmnop');
+    expect(many.scriptArgs.slice(0, 5)).toEqual(['spar', '{bot:b}', '900', '{bot:c}', '{bot:d}']);
+    expect(many.presetConfig).toEqual(one.presetConfig);
+    many.companions!.forEach((c, i) => expect(c.presetConfig).toEqual(i % 2 ? one.presetConfig : one.companions![0]!.presetConfig));
 });
 
 test('the map cases change only the start tiles, and the runner of the escape case has 3 sharks and a glory', () => {

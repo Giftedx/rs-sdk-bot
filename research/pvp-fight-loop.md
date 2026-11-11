@@ -25,8 +25,30 @@ Map cases (`--case <key>`), each with the mirror kit:
 - `extra:spar-escape`: Wilderness level 34 at (3125, 3790), with no monster in view. Side B, the runner, has 3 sharks and a glory; out of food at 60 HP or less
   it runs south to level 30 and rubs the glory. Side A, the hunter, must kill it first.
 
+- `extra:spar-escape-spell`: the same chase with no glory on the runner; it runs about 110 tiles to level 20 and casts
+  Varrock Teleport.
+- `extra:spar-escape-pots`: the glory chase with a super attack, a super strength and a ranging potion on the hunter.
+
 Gap: the fight loop does not choose where to stand, so cover, line of sight as a defence and a second attacker are
 not measured.
+
+### Speed of a measurement
+
+Use a batch case for every comparison: `extra:spar-x8` and `extra:spar-escape-x8` run 8 spars at once in one world,
+at the same spot (a player blocks no tile, and a fight loop names its one target). The ladder takes a batch key as
+any other case.
+
+- Cost. One spar alone: about 62 ms for each game tick with 2 accounts, so 44 s for a 711-tick mirror fight and
+  about 20 s for an escape fight. A batch of 8 escape fights: 36 s, and a 16-fight ladder 69 s (4.3 s a fight).
+- Where the time went, from a CPU profile of the worker (`BUN_OPTIONS="--cpu-prof-md --cpu-prof-dir=<dir>"`) and the
+  engine's `.practice/logs/sim-stat.log`:
+  - A script that waits for its logins with no tick wait open holds each lockstep tick for the busy limit (2 s): 16
+    accounts took 38 s to log in. The spar counts the login wait as a tick wait and logs the accounts in together.
+  - The status file of each account, written every 5 ticks: 10% of the run. A lockstep world writes it every 100.
+  - The reach flood fill behind the `reachable` flag of the state: 9%. The spar turns it off on its clients.
+- Gap: each client unpacks the same game archives at login (`bunzip2`, a third of the 8-pair run that is left). One
+  unpack for all clients of a process needs a change in `vendor/rs-sdk` (`webclient/src/io/JagFile.ts`), and so a new
+  `patches/rs-sdk-working.patch` on every checkout; it also ends every kept bench result.
 
 Spar findings. Conditions: lockstep practice engine, cap 900 ticks, both sides with Lost City and Dragon Slayer done
 unless a finding says otherwise; a seed repeats its fight. Evidence: `.practice/pk-spar/*.json` and the traces
@@ -52,8 +74,17 @@ unless a finding says otherwise; a seed repeats its fight. Evidence: `.practice/
    - A melee turn against a frozen target spends the freeze on a walk. The loop now attacks from range unless the
      target is within 2 tiles.
 
-   Gap: three seeds each; the kill needs more damage inside the freeze (special energy kept for it, the fastest
-   ranged turn) and is not tuned.
+   - The freeze misses often: in one trace the first three casts on a runner missed. Rune platelegs, kiteshield and
+     full helm take 21, 8 and 6 off the magic attack; the loop takes them off for a freeze on a target that has fled.
+
+   Profile `hunter` (freeze on the flight, special kept for 40% health or a target that has fled), one batch of 8
+   against one batch of 8 for the base hunter: 3 kills and 5 escapes against 0 kills and 8 escapes. Variants that
+   showed no gain at 5 fights each (1 or 2 kills in 5, the same as `hunter`): magic only or magic and ranged once the
+   target has fled, with and without the specials; the freeze cast with the weapon in hand, so that the runner has no
+   Protect from Magic up; a freeze from 62% health (`hunter-low`); the long run with no glory. Each style alone
+   against the base fighter dealt, for each 100 ticks: magic 25.4 and 24.2, melee 15.1 and 14.3, ranged 8.0 and 18.3.
+   Gap: a kill needs one strong special on a held runner, so 5 fights do not separate two variants; none of the
+   variants is measured on a batch.
 5. **A start out of sight or far apart does not stop the fight.** One run each at seed 7, base against base, without
    Dragon Slayer: first damage at tick 19 from 2 tiles in the open, 31 from 12 tiles, 11 from 6 tiles with the blocker
    between; kills at 528, 495 and 628 ticks. The server walks an attacker to a tile with line of sight. Gap: one run each.
