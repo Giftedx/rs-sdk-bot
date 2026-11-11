@@ -154,7 +154,17 @@ any other case.
   Compare two profiles at the same setting.
 - Two batches of 8 fights of base against base gave 7 kills to 1 and 2 kills to 5. A batch of 8 does not separate two
   profiles; use 16 pairs and three seeds.
-- Gap: no engine change that leaves the far NPCs out of a tick.
+- The state of a tick was 2.0 ms for each client, and the scans of locs and ground items were 1.35 ms of it. The fight
+  loop reads neither, so the spar turns the two scans off on its clients (`SPAR_FULL_STATE=1` keeps them): 0.65 ms.
+  `extra:spar-x16`: 55 to 67 s for 16 fights (3.4 to 4.2 s a fight), by the load of the PC.
+- The spar cases give a turn only to an npc within about 64 tiles of a player (`SIM_NPC_NEAR=64`, `engineEnv` of the
+  case): the npc part of an engine tick is 2 ms, against 11 to 15 ms. It gave no gain in wall time on its own.
+- A timer of 1 ms takes 15 ms in bun on Windows (`setTimeout(1)` and `Bun.sleep(1)`: median 15.3 ms). Keep timers
+  off the path of a tick. A client that checks a busy tick on every turn of the event loop for 50 ms made the batch
+  slower (74 s): eight processes that spin take the cores from the engine.
+- The rest of a tick, with 32 players: the engine reads the clients in 11 to 17 ms (the scripts of their packets), and
+  waits 20 to 35 ms for the clients while the live fleet loads the PC (79% CPU, 36 bun processes).
+- Gap: no run on an idle PC; a seed does not repeat a fight when the pairs run in several processes.
 
 Spar findings. Conditions: lockstep practice engine, cap 900 ticks, both sides with Lost City and Dragon Slayer done
 unless a finding says otherwise; a seed repeats its fight. Evidence: `.practice/pk-spar/*.json` and the traces

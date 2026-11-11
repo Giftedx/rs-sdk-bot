@@ -340,9 +340,9 @@ async function main() {
   if (LOCKSTEP) process.env.SIM_LOCKSTEP = '1'; // bench bots inherit it and acknowledge each tick
   // A fresh-engine slot owns ports SLOT_PORT+10k .. +3 and its own market database, beside the shared stack's 8888.
   const slotPort = (slot: number) => SLOT_PORT + slot * 10;
-  const start = (label?: string, slot?: number) => startStack({ tickMs: Number(process.env.BENCH_TICK_MS ?? 150), xpRate: 25, readyTimeoutMs: 120_000,
+  const start = (label?: string, slot?: number, caseEnv: Record<string, string> = {}) => startStack({ tickMs: Number(process.env.BENCH_TICK_MS ?? 150), xpRate: 25, readyTimeoutMs: 120_000,
     ...(slot === undefined ? {} : { instance: `aiobench-${slot}`, gateway: false as const, ports: { engine: slotPort(slot), gateway: slotPort(slot) + 1 },
-      engineEnv: { WEB_MANAGEMENT_PORT: String(slotPort(slot) + 2), NODE_PORT: String(slotPort(slot) + 3), GE_DATABASE: `data/market-aiobench-${slot}.sqlite` } }),
+      engineEnv: { WEB_MANAGEMENT_PORT: String(slotPort(slot) + 2), NODE_PORT: String(slotPort(slot) + 3), GE_DATABASE: `data/market-aiobench-${slot}.sqlite`, ...caseEnv } }),
     ...(LOCKSTEP ? { lockstep: { seed: SEED, anchor: '^aiob', ...(TRACE_DIR && label ? { traceFile: resolve(TRACE_DIR, `${label.replace(/[^a-z0-9-]/gi, '_')}.trace`), actionFile: resolve(TRACE_DIR, `${label.replace(/[^a-z0-9-]/gi, '_')}.actions`) } : {}) } } : {}) });
   if (TRACE_DIR) mkdirSync(TRACE_DIR, { recursive: true });
   if (FRESH && CONCURRENCY !== 1) throw new Error('BENCH_FRESH=1 uses BENCH_PARALLEL, not BENCH_CONCURRENCY');
@@ -364,7 +364,7 @@ async function main() {
             console.log(`AIO_BENCH_RESULT ${JSON.stringify(row)}`);
             rows.push(row);
           } else {
-            if (FRESH) own = await start(c.key, slot);
+            if (FRESH) own = await start(c.key, slot, c.engineEnv);
             const row = await runCase(c, FRESH ? 'aiobf' : `aiob${i}`, FRESH ? slotPort(slot) : 8888);
             if (kept && row.ok) { mkdirSync(CACHE_DIR, { recursive: true }); writeFileSync(kept, JSON.stringify(row)); } // a failure is run again each time
             rows.push(row);
