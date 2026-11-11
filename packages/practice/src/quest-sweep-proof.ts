@@ -49,6 +49,43 @@ export function questSweepChildConfiguration(name:string,quest:string,p:ProofEnd
  return{cmd:['bun','scripts/quest-sweep.ts',name,quest],cwd:root,windowsHide:true,
   env:{...inherited,...p.env,GATEWAY_URL:p.gateway,QUEST_SWEEP_OBSERVE_BANK:'',RANDOM_EVENTS:'0'}};
 }
+// Refusal cases end with exit 1; every other case must exit 0. The checks below keep their own child rule.
+export const questSweepExpectedExit=(id:string)=>id==='ball-missing-gloves'||id==='doric-no-cash'?1:0;
+type ProofChild={pid:number;stdout:ReadableStream<Uint8Array>;stderr:ReadableStream<Uint8Array>;exited:Promise<number>};
+const delay=(ms:number)=>new Promise<void>(r=>setTimeout(r,ms));
+function collect(stream:ReadableStream<Uint8Array>){
+ const reader=stream.getReader(),decoder=new TextDecoder(),parts:string[]=[];
+ const done=(async()=>{try{for(;;){const {value,done}=await reader.read();if(done)break;parts.push(decoder.decode(value,{stream:true}));}}catch{}})();
+ return{done,text:()=>parts.join(''),cancel:()=>{reader.cancel().catch(()=>{});}};
+}
+// One case child: bounded exit and pipe drain, then the log, the saved match, the after snapshot and the retained record.
+// A child that times out or ends with an unexpected exit rejects here, so the caller's turn cleanup runs before any later case.
+export async function runQuestSweepProofCase(o:{dir:string;record:CaseRecord;save:string;timeoutMs:number;spawn:()=>ProofChild;
+ matched:()=>Promise<boolean>;retain:()=>void;kill?:(pid:number)=>Promise<void>;drainMs?:number}){
+ const {record}=o,t=Date.now(),drainMs=o.drainMs??10000,kill=o.kill??killTree;
+ let out:ReturnType<typeof collect>|undefined,err:ReturnType<typeof collect>|undefined,failure='';
+ try{
+  const p=o.spawn();out=collect(p.stdout);err=collect(p.stderr);
+  let timer:ReturnType<typeof setTimeout>|undefined;
+  const expired=new Promise<number>(resolve=>{timer=setTimeout(async()=>{
+   record.timedOut=true;await kill(p.pid).catch(()=>{});
+   resolve(await Promise.race([p.exited,delay(drainMs).then(()=>-1)]));
+  },o.timeoutMs);});
+  try{record.exit=await Promise.race([p.exited,expired]);}finally{clearTimeout(timer);}
+  await Promise.race([Promise.all([out.done,err.done]),delay(drainMs)]);
+ }catch(error){failure=String(error);}
+ finally{
+  out?.cancel();err?.cancel();
+  writeFileSync(join(o.dir,record.id+'.log'),(out?.text()??'')+'\n--stderr--\n'+(err?.text()??'')+(failure?'\n--proof--\n'+failure:''));
+  try{record.saveMatched=await o.matched();}catch(error){failure||=String(error);}
+  try{copyFileSync(o.save,join(o.dir,record.id+'-after.sav'));}catch(error){failure||=String(error);}
+  record.seconds=Math.round((Date.now()-t)/1000);o.retain();
+ }
+ const expected=questSweepExpectedExit(record.id);
+ if(failure||record.timedOut||record.exit!==expected)
+  throw Error(`quest-sweep proof case ${record.id} failed: exit=${record.exit} expected=${expected} timedOut=${record.timedOut} saveMatched=${record.saveMatched}${failure?' '+failure:''}; later cases skipped`);
+ return record;
+}
 const lines=(log:string,prefix:string)=>log.split(/\r?\n/).filter(l=>l.startsWith(prefix+' ')).map(l=>JSON.parse(l.slice(prefix.length+1)));
 const total=(s:Save,id:number)=>[93,95].reduce((n,t)=>n+(s.inventories[t]??[]).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0),0);
 // The server writes an empty worn row (94) on first logout; an empty row and an absent row hold the same items.
@@ -386,21 +423,13 @@ async function run(dir:string){
    const save=await applyPreset(name,totem?{position:{x:2571,z:3250,level:0},skills:{Thieving:99,Hitpoints:40,Magic:1},varps:{200:1,10:8,101:1},bank:c.bank,inventory:[{id:995,count:552}]}:fluffs?{position:FLUFFS_ENTRY,skills:{Hitpoints:10,Magic:1},varps:{180:5},bank:c.bank,inventory:[{id:995,count:25}]}:imp?{position:{x:3104,z:3163,level:2},skills:{Hitpoints:40,Magic:1},bank:c.bank,inventory:[{id:1470,count:1},{id:1470,count:1},{id:1472,count:1},{id:1474,count:1},{id:1476,count:1},{id:995,count:91},{id:433,count:1},{id:1351,count:1}]}:blackknight?{position:{x:3016,z:3512,level:0},skills:{Hitpoints:10,Magic:1},varps:{130:3,101:12,144:100,226:7,178:3},bank:c.bank,inventory:[{id:995,count:490},{id:433,count:1}]}:elena?{position:{x:2615,z:3332,level:0},skills:{Hitpoints:40,Magic:1},bank:c.bank,inventory:[2126,1929,1929,1929,1929,952,954,1927,231].map(id=>({id,count:1}))}:ball?{position:{x:2947,z:3368,level:0},skills:{Attack:94,Strength:83,Defence:76,Hitpoints:77,Magic:1},equipment:[{id:589,count:1,slot:2},{id:1381,count:1,slot:3}],bank:c.bank,inventory:[{id:1985,count:1},...Array.from({length:4},()=>({id:379,count:1}))]}:rj?{position:c.id==='rj-pirate-started'?{x:3210,z:3423,level:0}:{x:2999,z:3383,level:0},skills:{Attack:55,Hitpoints:40,Magic:1},varps:{144:c.id==='rj-pirate-started'?30:0},equipment:[{id:1005,count:1,slot:4}],bank:c.bank,inventory:[{id:995,count:754},{id:433,count:1},{id:753,count:1},{id:555,count:2},{id:556,count:6},{id:952,count:1},{id:1635,count:1},{id:1605,count:1},...Array.from({length:8},()=>({id:1891,count:1})),{id:1893,count:1},{id:1895,count:1},{id:1895,count:1}]}:hunt?{position:{x:2907,z:3147,level:0},skills:{Attack:55,Hitpoints:40,Magic:1,Thieving:99,Cooking:30,Fishing:20,Crafting:51},varps:{200:5,10:8,101:2},bank:c.bank,inventory:[{id:995,count:402},{id:1925,count:1},{id:555,count:2},...Array.from({length:8},()=>({id:1891,count:1})),{id:1893,count:1},...Array.from({length:2},()=>({id:1895,count:1})),...Array.from({length:5},()=>({id:373,count:1})),{id:952,count:1},{id:556,count:6},...Array.from({length:7},()=>({id:1963,count:1}))]}:vampire?{position:{x:3097,z:3267,level:0},skills:{Attack:94,Strength:83,Defence:76,Hitpoints:75,Magic:1},varps:{178:1},equipment:[[1139,0],[552,2],[2402,3],[1101,4],[1171,5]].map(([id,slot])=>({id:id!,count:1,slot:slot!})),bank:c.bank,inventory:[{id:1917,count:1},{id:2347,count:1},{id:1550,count:1},{id:563,count:2}]}:ernest?{position:{x:3029,z:3505,level:1},skills:{Attack:94,Strength:83,Defence:76,Hitpoints:75,Magic:1},varps:{130:2},equipment:[[1139,0],[552,2],[2402,3],[1101,4],[1171,5]].map(([id,slot])=>({id:id!,count:1,slot:slot!})),bank:c.bank,inventory:[{id:995,count:490}]}:clock?{position:{x:3239,z:3275,level:0},skills:{Magic:1,Hitpoints:40,Attack:55},bank:c.bank,inventory:[{id:995,count:112},{id:1929,count:1},{id:1351,count:1},...Array.from({length:4},()=>({id:379,count:1}))]}:fishing?{position:{x:2615,z:3332,level:0},skills:{Fishing:20,Magic:1,Hitpoints:47,Attack:62,Defence:10,Strength:12},bank:c.bank,inventory:[{id:995,count:7350},{id:1351,count:1}]}:ghost?{position:banked?{x:3094,z:3491,level:0}:{x:3113,z:9555,level:0},skills:{Hitpoints:26,Attack:37,Magic:1,Prayer:1},varps:{107:4},equipment:[{id:552,count:1,slot:2}],bank:c.bank,inventory:[...(!banked?[{id:553,count:1}]:[]),{id:556,count:3},{id:557,count:1}]}:{position:c.id==='bank-stage'?{x:2459,z:3385,level:0}:{x:2965,z:3380,level:0},skills:{Hitpoints:10},bank:c.bank,inventory:[...(doricRefused?[]:[{id:995,count:362}]),{id:1351,count:1}]});
    copyFileSync(save,before);
    if(freemem()/2**30<FREE_FLOOR_GB)throw Error('practice free memory below floor');
-   const stamp=statSync(save).mtimeMs,t=Date.now();
+   const stamp=statSync(save).mtimeMs;
    const record:CaseRecord={id:c.id,exit:-1,timedOut:false,saveMatched:false,seconds:0};cases.push(record);retain();
-   const p=Bun.spawn({...questSweepChildConfiguration(name,c.quest,endpoints,long||elena?{...process.env,CAP:'6000'}:process.env),windowsHide:true,stdout:'pipe',stderr:'pipe'});
-   let termination:Promise<void>|undefined;
-   // CAP 6000 ticks at 150 ms is 900 s: the Vampire child must reach its own tick-cap failure before this kill.
-   const kill=setTimeout(()=>{record.timedOut=true;termination=killTree(p.pid);},elena?300000:fluffs||ball||rj||hunt?5400000:vampire||totem||doric?1200000:long?900000:300000);
-   try{
-    const [out,err]=await Promise.all([new Response(p.stdout).text(),new Response(p.stderr).text()]);
-    record.exit=await p.exited;clearTimeout(kill);await termination;
-    writeFileSync(join(dir,c.id+'.log'),out+'\n--stderr--\n'+err);
-    const saved=await waitPracticeSave(save,s=>statSync(save).mtimeMs>stamp&&(doricRefused||ballMissing||(fluffs?s.vars[180]===6:imp?s.vars[160]===2:doric?s.vars[31]===100:blackknight?s.vars[130]===4:elena?s.vars[165]===29:ball?s.vars[226]===7:rj?s.vars[144]===100:hunt?s.vars[71]===4:totem?s.vars[200]===5:clock?((s.vars[10]??0)&15)===8:ernest?s.vars[32]===3:vampire?s.vars[178]===3:ghost?s.vars[107]===5:fishing?s.vars[11]===5:s.vars[179]===22)),{timeoutMs:6000});
-    record.saveMatched=saved.matched;
-   }finally{
-    clearTimeout(kill);copyFileSync(save,join(dir,c.id+'-after.sav'));record.seconds=Math.round((Date.now()-t)/1000);retain();
-   }
+   await runQuestSweepProofCase({dir,record,save,retain,
+    // CAP 6000 ticks at 150 ms is 900 s: the Vampire child must reach its own tick-cap failure before this kill.
+    timeoutMs:elena?300000:fluffs||ball||rj||hunt?5400000:vampire||totem||doric?1200000:long?900000:300000,
+    spawn:()=>Bun.spawn({...questSweepChildConfiguration(name,c.quest,endpoints!,long||elena?{...process.env,CAP:'6000'}:process.env),windowsHide:true,stdout:'pipe',stderr:'pipe'}),
+    matched:async()=>(await waitPracticeSave(save,s=>statSync(save).mtimeMs>stamp&&(doricRefused||ballMissing||(fluffs?s.vars[180]===6:imp?s.vars[160]===2:doric?s.vars[31]===100:blackknight?s.vars[130]===4:elena?s.vars[165]===29:ball?s.vars[226]===7:rj?s.vars[144]===100:hunt?s.vars[71]===4:totem?s.vars[200]===5:clock?((s.vars[10]??0)&15)===8:ernest?s.vars[32]===3:vampire?s.vars[178]===3:ghost?s.vars[107]===5:fishing?s.vars[11]===5:s.vars[179]===22)),{timeoutMs:6000})).matched});
   }
   return verify(dir);
  }finally{try{await stack?.stop();}finally{rmSync(lock,{force:true});retain();}}
