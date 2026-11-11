@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794407155259,
+ "at": 1794407273524,
  "jobs": [
   {
    "account": "Fatstack",
@@ -93,10 +93,10 @@
    "resources": []
   },
   {
-   "account": "Fingersmith",
+   "account": "Kiltlifter",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=379 QUANTITY=10 LIMIT_PRICE=500 CASH_RESERVE=1000 ORDER_KEY=fingersmith-kit27-379-0to10 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=373 QUANTITY=3 LIMIT_PRICE=700 CASH_RESERVE=1000 ORDER_KEY=kiltlifter-kit15-373-0to3 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
@@ -104,7 +104,25 @@
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 10 Lobster on the Grand Exchange to complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
+   "goal": "buy 3 Swordfish on the Grand Exchange to complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
+   "role": "supply",
+   "template": "kit-buy:army-quest-lostcity",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=373 QUANTITY=10 LIMIT_PRICE=700 CASH_RESERVE=1000 ORDER_KEY=quickhandjob-kit9-373-0to10 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 10 Swordfish on the Grand Exchange to complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
    "role": "supply",
    "template": "kit-buy:army-quest-lostcity",
    "autopilot": "claude-cloud",
@@ -158,10 +176,11 @@
    ]
   },
   {
-   "account": "Kiltlifter",
+   "account": "Fingerblastr",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=373 QUANTITY=3 LIMIT_PRICE=700 CASH_RESERVE=1000 ORDER_KEY=kiltlifter-kit15-373-0to3 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=12 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit17-563-0to12 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=373 QUANTITY=2 LIMIT_PRICE=700 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit17-373-0to2 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
@@ -169,9 +188,9 @@
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 3 Swordfish on the Grand Exchange to complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
+   "goal": "buy 12 Law rune, 2 Swordfish on the Grand Exchange to complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience",
    "role": "supply",
-   "template": "kit-buy:army-quest-lostcity",
+   "template": "kit-buy:army-quest-holygrail",
    "autopilot": "claude-cloud",
    "resources": []
   },
@@ -179,8 +198,7 @@
    "account": "SporranDip",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=9 EXPECTED_OWNED=3 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=sporrandip-kit9-563-3to12 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=373 QUANTITY=2 LIMIT_PRICE=700 CASH_RESERVE=1000 ORDER_KEY=sporrandip-kit9-373-0to2 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=373 QUANTITY=2 LIMIT_PRICE=700 CASH_RESERVE=1000 ORDER_KEY=sporrandip-kit10-373-0to2 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
@@ -188,9 +206,27 @@
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 9 Law rune, 2 Swordfish on the Grand Exchange to complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience",
+   "goal": "buy 2 Swordfish on the Grand Exchange to complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience",
    "role": "supply",
    "template": "kit-buy:army-quest-holygrail",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=373 QUANTITY=10 LIMIT_PRICE=700 CASH_RESERVE=1000 ORDER_KEY=fingersmith-kit28-373-0to10 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 10 Swordfish on the Grand Exchange to complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
+   "role": "supply",
+   "template": "kit-buy:army-quest-lostcity",
    "autopilot": "claude-cloud",
    "resources": []
   }
