@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794426340350-fingersmith-fingerblastr-waterrune",
  "account": "Fingersmith",
  "partner": "Fingerblastr",
@@ -10,8 +10,22 @@
  "item": "Water rune",
  "requested": 4,
  "claim": "5bb7880a-e167-4f90-aa35-774aeff9b606",
- "count": 0,
- "ok": false,
- "at": 1794426353557,
- "detail": "trade claimed"
+ "count": 4,
+ "ok": true,
+ "at": 1794426564924,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 0
+ },
+ "bank": {
+  "count": 4,
+  "at": 1794426364866
+ },
+ "logout": {
+  "attemptId": "1794426353558-0000027070-0000000001",
+  "at": 1794426564918,
+  "sha256": "09df0138db389d57c7a10a73fe6b11ca274f06c05722f48abc50879a00feb461"
+ },
+ "screen": true
 }
