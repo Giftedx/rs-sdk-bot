@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794378489596-pocketrocket-masterbaiter-trout",
+ "account": "Masterbaiter",
+ "partner": "Pocketrocket",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Trout",
+ "requested": 2,
+ "claim": "10fc0a31-d2a6-4baf-be2e-36587c477ac0",
+ "count": 0,
+ "ok": false,
+ "at": 1794378497826,
+ "detail": "trade claimed"
+}
