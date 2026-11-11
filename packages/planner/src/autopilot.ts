@@ -536,6 +536,7 @@ export const FIRE_STAFFS = ['staff of fire', 'fire battlestaff', 'mystic fire st
 export const SHOP_SUPPLIED: ReadonlySet<string> = new Set(['fire rune', ...FIRE_STAFFS, 'bronze arrow', 'iron arrow']);
 // ARROW_LOW: the arrows of one kind the Ranged band needs to start. ARROW_STOCK: what a shop run brings the account up to.
 export const ARROW_LOW = 100, ARROW_STOCK = 500, LOWE_STOCK = 1000;
+export const ZAFF_WAIT = 1100;
 // A bow the account's Ranged level wields, with ARROW_LOW arrows of one kind that bow fires.
 export const RANGED_KIT: readonly Needs[] = BOWS.flatMap(([bow, level]) =>
     ARROWS.filter(([, arrowLevel]) => arrowLevel <= level).map(([arrow]) => ({ skills: { Ranged: level }, items: { [bow]: 1, [arrow]: ARROW_LOW } })));
@@ -654,10 +655,14 @@ export function catalogue(): Template[] {
     // and a cast takes 3 or 5 of them; a staff of fire stands for all of them (scripts/alch-train.ts). An account that
     // holds the band's nature runes and feathers but no fire buys one staff at Zaff's shop in Varrock (staffshop: 2 in
     // stock, one back every 1,000 ticks) and banks it at Varrock West. A kit buy on the Grand Exchange leaves the
-    // account next to the shop; from Ardougne scripts/shop-buyer.ts takes the ferries.
+    // account next to the shop; from Ardougne scripts/shop-buyer.ts takes the ferries. On an empty shelf the run waits
+    // ZAFF_WAIT ticks, a little over the 1,000 a staff takes to come back, so one visit brings a staff: a run that
+    // waits less ends ok with nothing bought, and a long one of those reads as tick waste (live claude-cloud:
+    // UnderMyKilt, 799 ticks, boughtTotal=0 after a 200-tick wait). STALL_TICKS=0: the session's idle guard would end
+    // the wait at 900 ticks (packages/core/src/bot.ts); the run's own cap bounds it.
     const staff: Template = {
         id: 'army-staff-zaff', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['zaff', '3000'],
-        env: { ITEMS: 'staff of fire', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '200', FLOAT: '13000', COIN_RESERVE: '500', MAX_SPEND: '12000' },
+        env: { ITEMS: 'staff of fire', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: String(ZAFF_WAIT), STALL_TICKS: '0', FLOAT: '13000', COIN_RESERVE: '500', MAX_SPEND: '12000' },
         role: 'supply', goal: "buy a staff of fire at Zaff's shop in Varrock for the alchemy band",
         tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: 99, unlocks: [magic.id] }, resources: ['shop:zaff'], yields: () => [],
         needs: { skills: { Magic: 21 }, items: { coins: 15000, 'nature rune': 50, feather: 50 }, holdsUnder: { ...Object.fromEntries(FIRE_STAFFS.map(item => [item, 1])), 'fire rune': 250 } },
