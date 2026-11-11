@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794371771169,
+ "at": 1794372004491,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -55,26 +55,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "shop:dargaud"
-   ]
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/aio.ts",
-   "args": [
-    "quester",
-    "chain",
-    "drunkmonk,murder,zanaris"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
-   "role": "quest",
-   "template": "army-quest-lostcity",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "quest:lostcity"
    ]
   },
   {
@@ -170,6 +150,19 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-ddb04597-f203-4860-a840-a7be3ec28adb"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-fatstack-20261111t043606z [task-ddb04597-f203-4860-a840-a7be3ec28adb]",
+   "role": "quest"
   }
  ]
 }
