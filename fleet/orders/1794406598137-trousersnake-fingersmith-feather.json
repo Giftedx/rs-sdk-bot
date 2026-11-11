@@ -1,0 +1,22 @@
+{
+ "id": "1794406598137-trousersnake-fingersmith-feather",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TrouserSnake",
+ "to": "Fingersmith",
+ "item": "Feather",
+ "count": 50,
+ "start": 1794406598137,
+ "end": 1794408998137,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
