@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794398257943,
+ "at": 1794398331237,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -550,30 +550,6 @@
    "role": "supply"
   },
   {
-   "account": "Shaftmaker",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "magic_guild",
-    "12000"
-   ],
-   "env": {
-    "CAP": "12000",
-    "ITEMS": "blood rune",
-    "STOP_AT_TARGET": "1",
-    "STOCK_TARGET": "776",
-    "MAX_ITEMS": "776",
-    "MAX_SPEND": "140000",
-    "COIN_RESERVE": "2000",
-    "NO_BUY_TICKS": "25",
-    "BANK_PACK": "1",
-    "COORDINATOR_RUN_ID": "task-3b17c555-4ada-429f-9541-502cac93df38"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-shop-shaftmaker-blood776 [task-3b17c555-4ada-429f-9541-502cac93df38]",
-   "role": "pk"
-  },
-  {
    "account": "Bigchopper",
    "script": "scripts/quest-sweep.ts",
    "args": [
@@ -587,6 +563,30 @@
    "repeat": false,
    "goal": "run-scorpion-bigchopper-quest-sweep-r4 [task-ccd6a6a9-b7b8-43d1-9b5d-0a017e6d276e]",
    "role": "firemaking"
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "magic_guild",
+    "12000"
+   ],
+   "env": {
+    "CAP": "12000",
+    "ITEMS": "blood rune",
+    "STOP_AT_TARGET": "1",
+    "STOCK_TARGET": "624",
+    "MAX_ITEMS": "624",
+    "MAX_SPEND": "130000",
+    "COIN_RESERVE": "2000",
+    "NO_BUY_TICKS": "250",
+    "BANK_PACK": "1",
+    "COORDINATOR_RUN_ID": "task-da2a1a51-9beb-431d-9792-1283f17b15aa"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-shop-shaftmaker-blood624-restock [task-da2a1a51-9beb-431d-9792-1283f17b15aa]",
+   "role": "pk"
   }
  ]
 }
