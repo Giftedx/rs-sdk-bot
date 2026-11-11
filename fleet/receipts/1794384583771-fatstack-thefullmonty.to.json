@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794384583771-fatstack-thefullmonty",
  "account": "TheFullMonty",
  "partner": "Fatstack",
@@ -12,6 +12,12 @@
  "claim": "1ae54541-1ae3-41ff-b516-945fbc8accd8",
  "count": 0,
  "ok": false,
- "at": 1794384587517,
- "detail": "trade claimed"
+ "at": 1794384753586,
+ "detail": "Error: route to 3182, 3440: precondition no route to 3182,3440,0",
+ "logout": {
+  "attemptId": "1794384587519-0000011957-0000000001",
+  "at": 1794384753579,
+  "sha256": "6f01e7961401f6d2a2f2c539b8006700a18cfbf7e9a63cd8aa59a4285ceb718c"
+ },
+ "screen": false
 }
