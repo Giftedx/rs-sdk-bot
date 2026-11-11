@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794405307412,
+ "at": 1794405584846,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -17,24 +17,6 @@
    "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on iron arrows",
    "role": "supply",
    "template": "kit-buy:army-hunt-black-dragons",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
-   "account": "Knightstick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=71 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=knightstick-kit6-536-0to71 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 71 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-dragon-99",
    "autopilot": "claude-cloud",
    "resources": []
   },
@@ -61,22 +43,22 @@
    "script": "scripts/aio.ts",
    "args": [
     "skiller",
-    "foraging",
-    "flax",
-    "1800",
-    "28"
+    "crafting",
+    "bowstrings",
+    "2500",
+    "MAX_MAKE=168",
+    "RAW_RESERVE=0",
+    "MAX_TRIPS=8"
    ],
    "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "pick flax at Seers to spin for the Crafting a black dragonhide body asks",
+   "goal": "spin flax at Seers to the Crafting a black dragonhide body asks",
    "role": "crafting",
-   "template": "army-leather-flax",
+   "template": "army-leather-spin",
    "autopilot": "claude-cloud",
-   "resources": [
-    "aio:seers-flax"
-   ]
+   "resources": []
   },
   {
    "account": "Fatstack",
@@ -96,6 +78,27 @@
    "resources": [
     "splash:ardougne-cow-fence"
    ]
+  },
+  {
+   "account": "Knightstick",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_ID": "536",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying bought dragon bones",
+   "role": "combat",
+   "template": "army-bury-dragon-99",
+   "autopilot": "claude-cloud",
+   "resources": []
   },
   {
    "account": "PocketPool",
@@ -123,7 +126,7 @@
    ]
   },
   {
-   "account": "Fingersmith",
+   "account": "SporranDip",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
@@ -166,6 +169,23 @@
    "resources": [
     "shop:aubury"
    ]
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-magic-99",
+   "autopilot": "claude-cloud",
+   "resources": []
   }
  ]
 }
