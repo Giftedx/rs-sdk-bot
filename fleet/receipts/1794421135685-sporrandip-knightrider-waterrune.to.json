@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794421135685-sporrandip-knightrider-waterrune",
+ "account": "KnightRider",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 2,
+ "claim": "d8229af6-a75c-49d6-afb8-d5f287958f34",
+ "count": 0,
+ "ok": false,
+ "at": 1794421139960,
+ "detail": "trade claimed"
+}
