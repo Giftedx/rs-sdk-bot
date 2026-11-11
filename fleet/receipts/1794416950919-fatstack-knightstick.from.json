@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794416950919-fatstack-knightstick",
  "account": "Fatstack",
  "partner": "Knightstick",
@@ -12,6 +12,16 @@
  "claim": "7949f6be-e87b-4f98-84a1-abadf476649e",
  "count": 0,
  "ok": false,
- "at": 1794416964758,
- "detail": "trade claimed"
+ "at": 1794417178769,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 73470,
+  "at": 1794417177563
+ },
+ "logout": {
+  "attemptId": "1794416964763-0000023021-0000000001",
+  "at": 1794417178756,
+  "sha256": "4ea783760408064a0a335d15ed930a8406cb9b5524b7b2511411fd42099db97f"
+ },
+ "screen": false
 }
