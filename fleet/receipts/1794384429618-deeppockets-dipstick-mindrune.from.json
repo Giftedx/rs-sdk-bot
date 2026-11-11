@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794384429618-deeppockets-dipstick-mindrune",
  "account": "Deeppockets",
  "partner": "Dipstick",
@@ -10,8 +10,22 @@
  "item": "Mind rune",
  "requested": 20,
  "claim": "a9bd6b2f-03ae-4842-a0ad-c763fce2653c",
- "count": 0,
- "ok": false,
- "at": 1794384436461,
- "detail": "trade claimed"
+ "count": 20,
+ "ok": true,
+ "at": 1794384454381,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 20,
+  "after": 0
+ },
+ "bank": {
+  "count": 20,
+  "at": 1794384445680
+ },
+ "logout": {
+  "attemptId": "1794384436463-0000009758-0000000001",
+  "at": 1794384454374,
+  "sha256": "4050b6b767a93c0ae4201d266757f6a6c783b4da9b0f943d6b9ec461078e3674"
+ },
+ "screen": true
 }
