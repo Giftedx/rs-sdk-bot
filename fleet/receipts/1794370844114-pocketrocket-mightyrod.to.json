@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794370844114-pocketrocket-mightyrod",
+ "account": "Mightyrod",
+ "partner": "Pocketrocket",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 500000,
+ "claim": "633486d1-415c-4bf6-9a29-7684accf68d6",
+ "count": 0,
+ "ok": false,
+ "at": 1794370852247,
+ "detail": "trade claimed"
+}
