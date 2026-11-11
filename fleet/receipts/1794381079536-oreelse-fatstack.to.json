@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794381079536-oreelse-fatstack",
+ "account": "Fatstack",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "dc320715-ba65-4bc6-a809-11fe2c0d7ddc",
+ "count": 1,
+ "ok": true,
+ "at": 1794381123508,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794381113373
+ },
+ "logout": {
+  "attemptId": "1794381082877-0000011405-0000000001",
+  "at": 1794381123495,
+  "sha256": "3452242e97a04381d2bfd60c4dd5d84ec8ef9886a334a2c3bff0871f98904b92"
+ },
+ "screen": true
+}
