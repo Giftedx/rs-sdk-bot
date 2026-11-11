@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794427965442,
+ "at": 1794428245886,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -89,22 +89,21 @@
   },
   {
    "account": "Deeppockets",
-   "script": "scripts/chain.ts",
+   "script": "scripts/splash-train.ts",
    "args": [
-    "scripts/shop-buyer.ts betty 3000 ITEMS=water.rune STOCK_TARGET=300 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=13000 COIN_RESERVE=500 MAX_SPEND=12000"
+    "66",
+    "6000"
    ],
-   "env": {
-    "ROUNDS": "1"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy water runes at Betty's in Port Sarim for the curse band",
-   "role": "supply",
-   "template": "army-water-betty",
+   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "combat",
+   "template": "army-splash-magic-66",
    "autopilot": "claude-cloud",
    "resources": [
-    "shop:betty"
+    "splash:ardougne-cow-fence"
    ]
   },
   {
@@ -181,27 +180,22 @@
   },
   {
    "account": "Dipstick",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "1500",
-    "trooper"
+    "scripts/shop-buyer.ts betty 3000 ITEMS=water.rune STOCK_TARGET=300 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=13000 COIN_RESERVE=500 MAX_SPEND=12000"
    ],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "goal": "buy water runes at Betty's in Port Sarim for the curse band",
+   "role": "supply",
+   "template": "army-water-betty",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "shop:betty"
    ]
   },
   {
