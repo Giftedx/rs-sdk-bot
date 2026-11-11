@@ -31,7 +31,8 @@
     "scripts/generated/quest-imp.ts",
     "scripts/generated/quest-fluffs.ts",
     "scripts/generated/quest-scorpion.ts",
-    "scripts/generated/quest-barcrawl.ts"
+    "scripts/generated/quest-barcrawl.ts",
+    "scripts/shop-buyer.test.ts"
   ],
   "consumer": "run-scorpion-bigchopper-quest-sweep-r5 completes Scorpion Catcher on ordinary Bigchopper with args scorpion, CAP 6000 and quest completion acceptance. Practice invokes the real account-parameterized worker CLI from a save without Barcrawl varp 77=2 and checks that the worker stages and completes Barcrawl, passes the outpost gate, completes Scorpion Catcher, adds 1 quest point, reconciles assets, refuses an invalid start and logs out. Preserve existing quest callers and checks. The live result releases run-fight-arena-bigchopper-after-scorpion.",
   "checks": [
