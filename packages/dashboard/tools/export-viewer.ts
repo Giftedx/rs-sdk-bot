@@ -18,11 +18,19 @@ export function nameHash(name: string) {
     for (const c of name.toLowerCase()) { h ^= c.charCodeAt(0); h = Math.imul(h, 0x01000193) >>> 0; }
     return h.toString(16).padStart(8, '0');
 }
-export function hostedIndex(html: string) {
+// The viewer keeps its cache files in the browser (Cache API, one store per cache name), so only a first visit
+// downloads them, and that download starts after the main script has loaded and run. This script starts it with
+// the page. The viewer's own request for a file then takes the copy from the HTTP cache (Pages keeps a file for
+// 10 minutes). A later visit finds the files in the store and this script fetches nothing.
+export function earlyCacheScript(cacheName: string, files: string[]) {
+    for (const name of [cacheName, ...files]) if (!/^[\w.-]+$/.test(name) || name.includes('..')) throw Error(`cache name or file has an unsafe character: ${name}`);
+    return `<script>(async()=>{try{const b=new URL(${JSON.stringify(`caches/${cacheName}/`)},document.baseURI).pathname,c=await caches.open(${JSON.stringify(cacheName)});for(const f of ${JSON.stringify(files)})if(!await c.match(b+f))fetch(b+f).catch(()=>{})}catch{}})()</script>`;
+}
+export function hostedIndex(html: string, early = '') {
     html = once(html, /<script src="\/coi-serviceworker\.js"><\/script>/, '', 'coi service worker');
     html = html.replaceAll('href="/favicon.ico"', 'href="favicon.ico"').replaceAll('src="/static/', 'src="static/').replaceAll('href="/static/', 'href="static/');
     if (/(?:src|href)="\//.test(html)) throw Error('viewer index.html still has an absolute path');
-    return once(html, '<head>', '<head><script src="bridge.js"></script><link rel="stylesheet" href="client-viewer.css">', 'head');
+    return once(html, '<head>', '<head><script src="bridge.js"></script><link rel="stylesheet" href="client-viewer.css">' + early, 'head');
 }
 // The main bundle runs in the page (document), the worker chunk in a worker under static/js/. The build is made for
 // the site root, so its public path and its cache path become relative to where each script runs. main is true for
@@ -45,7 +53,10 @@ export function exportViewer(out: string, world: string, ownersFile: string | nu
     const viewer = join(out, 'viewer');
     rmSync(viewer, { recursive: true, force: true });
     mkdirSync(viewer, { recursive: true });
-    writeFileSync(join(viewer, 'index.html'), hostedIndex(readFileSync(join(build, 'index.html'), 'utf8')));
+    // With one cache in the list, that cache is the one the viewer loads; with more, the viewer chooses, so no early download.
+    const cacheList: { name: string }[] = JSON.parse(readFileSync(join(caches, 'caches.json'), 'utf8'));
+    const early = cacheList.length === 1 ? earlyCacheScript(cacheList[0]!.name, readdirSync(join(caches, cacheList[0]!.name)).filter(f => /^main_file_cache\.(?:dat|idx[0-4])$/.test(f)).sort()) : '';
+    writeFileSync(join(viewer, 'index.html'), hostedIndex(readFileSync(join(build, 'index.html'), 'utf8'), early));
     for (const f of ['favicon.ico', 'favicon.png', 'robots.txt']) if (existsSync(join(build, f))) cpSync(join(build, f), join(viewer, f));
     cpSync(join(build, 'static'), join(viewer, 'static'), { recursive: true });
     for (const f of readdirSync(join(viewer, 'static', 'js')).filter(f => f.endsWith('.js'))) writeFileSync(join(viewer, 'static', 'js', f), hostedScript(f === mainName, readFileSync(join(viewer, 'static', 'js', f), 'utf8')));
