@@ -82,6 +82,20 @@ export function ensureWorktree(dir = FLEET_WORKTREE): string {
     return dir;
 }
 
+// A worktree on a detached HEAD commits each sync, but the push sends the branch, which does not move: the sync
+// reports ok and publishes nothing. This puts the branch on HEAD again. It does not touch a rebase in progress, and
+// it refuses when the branch holds a commit that HEAD lacks.
+export function reattach(dir: string, branch = BRANCH): boolean {
+    if (git(dir, 'symbolic-ref', '-q', 'HEAD').ok) return false;
+    const gitDir = git(dir, 'rev-parse', '--absolute-git-dir').out;
+    if (existsSync(join(gitDir, 'rebase-merge')) || existsSync(join(gitDir, 'rebase-apply'))) return false;
+    if (git(dir, 'rev-parse', '--verify', '-q', `refs/heads/${branch}`).ok && !git(dir, 'merge-base', '--is-ancestor', `refs/heads/${branch}`, 'HEAD').ok)
+        throw Error(`reattach: HEAD is detached and ${branch} holds commits that HEAD lacks`);
+    const moved = git(dir, 'checkout', '-B', branch);
+    if (!moved.ok) throw Error(`reattach: ${moved.out}`);
+    return true;
+}
+
 export function releasePublishedTradeClaims(
     claims: readonly FleetTradeClaim[], side: string, read: (path: string) => any,
     release: (claim: FleetTradeClaim) => void, now = Date.now(),
@@ -181,6 +195,7 @@ function releaseSyncedTrades(dir: string, side: string) {
 
 export function runSync(push = true): string {
     const dir = ensureWorktree();
+    reattach(dir);
     const hasRemote = git(dir, 'ls-remote', '--exit-code', '--heads', 'origin', BRANCH).ok;
     if (hasRemote) { const pull = git(dir, 'pull', '--rebase', 'origin', BRANCH); if (!pull.ok) throw Error(`pull: ${pull.out}`); }
     const statusDir = join(root, '.practice', 'status');

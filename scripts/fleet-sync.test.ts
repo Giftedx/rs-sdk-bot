@@ -1,5 +1,8 @@
 import { test, expect } from 'bun:test';
-import { activeAccounts, keepPublished, planView, snapshot } from './fleet-sync';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { activeAccounts, keepPublished, planView, reattach, snapshot } from './fleet-sync';
 import { CLAIM_MAX_AGE_MS } from '../packages/planner/src/autopilot';
 import { mergeJobs } from '../packages/core/src/coordinator-jobs';
 
@@ -61,4 +64,23 @@ test('an empty plan keeps a fresh published claim that holds resources or a fres
     expect(keepPublished([], null, 1_000_000 + CLAIM_MAX_AGE_MS, plan)).toBe(false);
     expect(keepPublished([], null, 1_000_000 + 60_000, { ...plan, jobs: [] })).toBe(false);
     expect(keepPublished([{ account: 'Quickhandjob', script: 'scripts/goldfarm.ts', enabled: true }], null, 1_000_000 + 60_000, plan)).toBe(false);
+});
+
+test('a detached worktree goes back on its branch with its commits, and a diverged branch refuses', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'fleet-sync-reattach-'));
+    const run = (...args: string[]) => { const p = Bun.spawnSync(['git', '-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', ...args], { cwd: dir, windowsHide: true }); if (p.exitCode !== 0) throw Error(p.stderr.toString()); return p.stdout.toString().trim(); };
+    const commit = (text: string) => { writeFileSync(join(dir, 'f'), text); run('add', 'f'); run('commit', '-q', '-m', text); return run('rev-parse', 'HEAD'); };
+    try {
+        run('init', '-q', '-b', 'fleet-data');
+        const first = commit('one');
+        expect(reattach(dir, 'fleet-data')).toBe(false);
+        run('checkout', '-q', '--detach');
+        const second = commit('two');
+        expect(run('rev-parse', 'fleet-data')).toBe(first);
+        expect(reattach(dir, 'fleet-data')).toBe(true);
+        expect(run('symbolic-ref', 'HEAD')).toBe('refs/heads/fleet-data');
+        expect(run('rev-parse', 'fleet-data')).toBe(second);
+        run('checkout', '-q', '--detach', first);
+        expect(() => reattach(dir, 'fleet-data')).toThrow('holds commits that HEAD lacks');
+    } finally { rmSync(dir, { recursive: true, force: true }); }
 });
