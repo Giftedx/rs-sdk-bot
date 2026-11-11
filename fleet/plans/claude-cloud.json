@@ -1,22 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794378250424,
+ "at": 1794378256071,
  "jobs": [
-  {
-   "account": "UnderMyKilt",
-   "script": "scripts/aio.ts",
-   "args": [
-    "boss",
-    "black-dragon"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": false,
-   "repeat": false,
-   "goal": "black dragon pilot",
-   "role": "hand",
-   "autopilot": "claude-cloud"
-  },
   {
    "account": "Fatstack",
    "script": "scripts/shop-buyer.ts",
