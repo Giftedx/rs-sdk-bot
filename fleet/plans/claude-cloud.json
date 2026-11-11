@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794407601375,
+ "at": 1794407632335,
  "jobs": [
   {
    "account": "Fatstack",
@@ -53,24 +53,6 @@
    "goal": "buy 10 Lobster on the Grand Exchange to complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
    "role": "supply",
    "template": "kit-buy:army-quest-lostcity",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
-   "account": "SporranDip",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=373 QUANTITY=2 LIMIT_PRICE=700 CASH_RESERVE=1000 ORDER_KEY=sporrandip-kit10-373-0to2 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 2 Swordfish on the Grand Exchange to complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience",
-   "role": "supply",
-   "template": "kit-buy:army-quest-holygrail",
    "autopilot": "claude-cloud",
    "resources": []
   },
@@ -202,6 +184,31 @@
   },
   {
    "account": "PocketPool",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "SporranDip",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
