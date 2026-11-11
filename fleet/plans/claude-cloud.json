@@ -1,25 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794362482015,
+ "at": 1794362546098,
  "jobs": [
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=441 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=thefullmonty-kit1-536-0to441 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 441 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-dragon-99",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
   {
    "account": "Deeppockets",
    "script": "scripts/chain.ts",
@@ -262,28 +244,29 @@
   },
   {
    "account": "Quickhandjob",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-22c15779-5e7c-451d-9c7c-000b237114f0"
    },
    "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "repeat": false,
+   "goal": "claude-cloud-recover-quickhandjob-20261111t015754z [task-22c15779-5e7c-451d-9c7c-000b237114f0]",
+   "role": "combat"
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-4ef251fe-1996-42e6-9f0c-4899f2773ca9"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-thefullmonty-20261111t015754z [task-4ef251fe-1996-42e6-9f0c-4899f2773ca9]",
+   "role": "supply"
   }
  ]
 }
