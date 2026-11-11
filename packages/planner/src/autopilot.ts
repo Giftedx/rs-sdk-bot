@@ -21,10 +21,11 @@ export type Flow = { item: string; perTick: number };
 // `holdsUnder`: holdings that end the job at once. The account must hold fewer, or the run finds its target met and fails.
 // `food`: HP the account's food heals, pack and bank (FOOD_HEAL). `pieces`: at least `count` items of any of `of`.
 // `anyOf`: at least one of these needs met in full (fire runes or a fire staff; a bow the account wields with arrows it fires).
+// `shortOf`: holdings of which the account must be short of at least one (a supply run that brings several items).
 // `combat`: the least combat level (a mine inside an aggressive monster's range). `quests`: quests that must be complete.
 export type Needs = {
     combat?: number; quests?: readonly string[];
-    skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number>; holdsUnder?: Record<string, number>; food?: number;
+    skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number>; holdsUnder?: Record<string, number>; shortOf?: Record<string, number>; food?: number;
     pieces?: { of: readonly string[]; count: number }; anyOf?: readonly Needs[];
 };
 export type Template = {
@@ -192,6 +193,7 @@ export const questDone = (a: Acct, quest: string) => !!a.quests?.has(norm(quest)
 // complete (0 with no quest list), or the items short of a stock target.
 export const bandLeft = (t: Template, a: Acct): number => t.trains ? t.trains.to - (a.skills[t.trains.skill] ?? 1)
     : t.quest ? (a.quests && !questDone(a, t.quest.name) ? 1 : 0) : t.stock ? Math.max(0, t.stock.to - (a.items[norm(t.stock.item)] ?? 0)) : 0;
+const isShort = (a: Acct, needs: Template['needs']) => !needs?.shortOf || Object.entries(needs.shortOf).some(([i, n]) => (a.items[norm(i)] ?? 0) < n);
 const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: string; to: number }): boolean =>
     (a.combat ?? combatLevel(a.skills)) >= (needs?.combat ?? 0)
     && (needs?.quests ?? []).every(q => questDone(a, q))
@@ -199,6 +201,7 @@ const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: strin
     && Object.entries(needs?.items ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n)
     && Object.entries(needs?.under ?? {}).every(([s, l]) => (a.skills[s] ?? 1) < l)
     && Object.entries(needs?.holdsUnder ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) < n)
+    && isShort(a, needs)
     && foodHeal(a) >= (needs?.food ?? 0)
     && (needs?.pieces?.of ?? []).reduce((n, i) => n + (a.items[norm(i)] ?? 0), 0) >= (needs?.pieces?.count ?? 0)
     && (needs?.anyOf === undefined || needs.anyOf.some(alt => meets(a, alt, skillOverride)));
@@ -214,7 +217,7 @@ export function kitLacks(a: Acct, needs: Template['needs'], can: (item: string) 
     if ((a.combat ?? combatLevel(a.skills)) < (needs?.combat ?? 0) || !(needs?.quests ?? []).every(q => questDone(a, q))
         || !Object.entries(needs?.skills ?? {}).every(([s, l]) => (a.skills[s] ?? 1) >= l)
         || !Object.entries(needs?.under ?? {}).every(([s, l]) => (a.skills[s] ?? 1) < l)
-        || !Object.entries(needs?.holdsUnder ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) < n)) return null;
+        || !Object.entries(needs?.holdsUnder ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) < n) || !isShort(a, needs)) return null;
     const out: Lack[] = [];
     for (const [i, n] of Object.entries(needs?.items ?? {})) {
         const short = n - (a.items[norm(i)] ?? 0);
@@ -571,6 +574,8 @@ export const STRIKE_TILE = 'strike:ardougne-guard-dog';
 // gathers before the band stands down: a set of body, chaps and vambraces takes six.
 export const BLACK_CAVE = 'cave:taverley-black-dragons', BLACK_CAVE_PLACES = 2, HUNT_BAND = 10, HIDE_TARGET = 42;
 export const HUNT_ARROWS = 600, HUNT_KILLS = 9, HUNT_FOOD = 6;
+// What a hunter's supply run brings it up to: the arrows of two trips, and the air and fire runes of twenty teleports.
+export const HUNT_ARROW_STOCK = 1200, HUNT_RUNE_STOCK = 60;
 // The tile south of the Ardougne cow field's fence (scripts/splash-train.ts SPLASH_TILE): a curse cast over the fence
 // reaches the cows and no cow reaches the caster. A cow whose stat a cast lowered refuses the next cast until the stat
 // grows back, one level every 100 ticks, so the ten cows give about one cast in ten ticks, shared by the casters.
@@ -811,8 +816,10 @@ export function catalogue(): Template[] {
     // Practice from the Ardougne north bank: 700 feathers in 674 ticks, 500 fire runes in 614 more, then Magic 21 to 72
     // on them; the staff in 216 to 314 ticks (research/combat-measure.md).
     const noFire = { ...Object.fromEntries(FIRE_STAFFS.map(item => [item, 1])), 'fire rune': 250 };
-    const shopRun = (profile: string, cap: number, items: string, target: number, spend: number) => ['scripts/shop-buyer.ts', profile, String(cap), `ITEMS=${items}`, `STOCK_TARGET=${target}`,
-        'STOP_AT_TARGET=1', 'BANK_PACK=1', 'BANK_AT=0', 'NO_BUY_TICKS=25', `FLOAT=${spend + 1000}`, 'COIN_RESERVE=500', `MAX_SPEND=${spend}`].join(' ');
+    // `wait`: the ticks with no buy that end the run. Under the shelf's restock interval, the run leaves an emptied
+    // shelf; over it, the run stays and buys each unit as it comes back.
+    const shopRun = (profile: string, cap: number, items: string, target: number, spend: number, wait = 25) => ['scripts/shop-buyer.ts', profile, String(cap), `ITEMS=${items}`, `STOCK_TARGET=${target}`,
+        'STOP_AT_TARGET=1', 'BANK_PACK=1', 'BANK_AT=0', `NO_BUY_TICKS=${wait}`, `FLOAT=${spend + 1000}`, 'COIN_RESERVE=500', `MAX_SPEND=${spend}`].join(' ');
     const supply = (id: string, goal: string, shop: string, steps: string[], needs: Needs): Template => ({
         id, family: 'shop-buyer', script: 'scripts/chain.ts', args: steps, env: { ROUNDS: '1' }, role: 'supply', goal,
         tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: 99, unlocks: [magic.id] }, resources: [`shop:${shop}`], yields: () => [], needs });
@@ -910,6 +917,22 @@ export function catalogue(): Template[] {
         needs: { skills: { Defence: 90, Hitpoints: 90, Ranged: 90, Prayer: 60, Magic: 25 },
             items: { 'dusty key': 1, 'magic shortbow': 1, 'iron arrow': HUNT_ARROWS, 'law rune': 1, 'air rune': 3, 'fire rune': 1, shark: HUNT_FOOD } },
     };
+    // The hunt's shop lines. No market lists 600 iron arrows (live claude-cloud: 23 listed), and the arrow and rune
+    // shop jobs of the training bands end at Ranged 99 and Magic 66. Lowe's Archery Emporium (archeryshop: 1,500 iron
+    // arrows, one back every 15 ticks) and Aubury's rune shop (2,000 air and fire runes, one back every 10 ticks) are
+    // both by the Varrock east bank, in the town a trip's teleport ends in. The run stands while the hunt does and the
+    // account is short of a trip's arrows or of one teleport's air or fire runes. The arrows come first: a rune shelf
+    // found empty ends its step as a wait, not the run. An arrow costs 3 coins from the full shelf and 18 from a
+    // drained one (shop.rs2: six times the base cost at most), so the spend covers the whole stock at 18. Each step
+    // leaves an emptied shelf (practice: with a wait of 25 ticks a run stood 2,500 ticks at Lowe's buying one arrow
+    // every 15), and the account hunts or shops again on the planner's next pass.
+    const huntSupply: Template = {
+        id: 'army-hunt-supply', pilot: true, family: 'shop-buyer', script: 'scripts/chain.ts',
+        args: [shopRun('lowe', 2500, 'iron.arrow', HUNT_ARROW_STOCK, 21000, 10), shopRun('aubury', 800, 'air.rune|fire.rune', HUNT_RUNE_STOCK, 2000, 8)],
+        env: { ROUNDS: '1' }, role: 'supply', goal: "buy iron arrows at Lowe's and teleport runes at Aubury's in Varrock for the black dragon hunt",
+        tier: 'goal', band: HUNT_BAND, filler: true, repeats: true, stock: { item: 'dragonhide', to: HIDE_TARGET }, resources: ['shop:lowe', 'shop:aubury'], yields: () => [],
+        needs: { skills: hunt.needs!.skills, items: { coins: 25000 }, shortOf: { 'iron arrow': HUNT_ARROWS, 'air rune': 3, 'fire rune': 1 } },
+    };
     const lostCity: Template = {
         id: 'army-quest-lostcity', family: 'aio:quester:mode:chain', script: 'scripts/aio.ts', args: ['quester', 'chain', 'drunkmonk,murder,zanaris'],
         aio: 'quester:mode:chain', worker: 'scripts/quest-chain.ts', pilot: true, role: 'quest',
@@ -1006,6 +1029,7 @@ export function catalogue(): Template[] {
         lostCity,
         dustyKey,
         hunt,
+        huntSupply,
         prayerField,
         { id: 'thieving55', family: 'thieving60', script: 'scripts/generated/thieving60.ts', env: { TARGET: '55', CAP: '2500', CLEAN_FOOD: '1' }, role: 'thieving',
             goal: 'train Thieving to 55 for a knight spot', trains: { skill: 'Thieving', to: 55, unlocks: goldfarm.map(g => g.id) }, yields: () => [] },

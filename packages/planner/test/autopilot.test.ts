@@ -1187,11 +1187,11 @@ test('the kit tier uses this side\'s own stock first: a maxed account gives all 
     expect(run([other], [monk], { market }).send).toEqual({ from: 'Far', to: 'Monk', item: 'dragon bone', count: BONE_START - 6, template: 'army-bury-dragon-99' });
 });
 
-import { BLACK_CAVE, BLACK_CAVE_PLACES, HIDE_TARGET, HUNT_ARROWS, HUNT_BAND, HUNT_FOOD, HUNT_KILLS, bandLeft } from '../src/autopilot';
+import { BLACK_CAVE, BLACK_CAVE_PLACES, HIDE_TARGET, HUNT_ARROWS, HUNT_ARROW_STOCK, HUNT_BAND, HUNT_FOOD, HUNT_KILLS, HUNT_RUNE_STOCK, bandLeft } from '../src/autopilot';
 test('a maxed army account hunts black dragons for hides: the key first, the kit bought, two in the cave, and its kit is not spare stock', () => {
     const maxed = { Thieving: 99, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Magic: 99, Prayer: 99 };
     const kit = { 'dusty key': 1, 'magic shortbow': 1, 'iron arrow': HUNT_ARROWS, 'law rune': 1, 'air rune': 3, 'fire rune': 1, shark: HUNT_FOOD, coin: 200_000 };
-    const pilots = new Set(['army-hunt-black-dragons', 'army-dusty-key']);
+    const pilots = new Set(['army-hunt-black-dragons', 'army-dusty-key', 'army-hunt-supply']);
     const hunter = (name: string, items: Record<string, number> = kit, s: Record<string, number> = {}): Acct => acct(name, { ...maxed, ...s }, items);
     const caps: Market = Object.fromEntries([['iron arrow', 884, 'Iron arrow'], ['law rune', 563, 'Law rune'], ['magic shortbow', 861, 'Magic shortbow'], ['shark', 385, 'Shark'], ['air rune', 556, 'Air rune'], ['fire rune', 554, 'Fire rune']]
         .map(([k, id, name]) => [k, { id: id as number, name: name as string, limit: KIT_PRICE_CAPS[k as string]! }]));
@@ -1210,6 +1210,21 @@ test('a maxed army account hunts black dragons for hides: the key first, the kit
     const [buy] = run([hunter('Kilt', { ...kit, 'iron arrow': 60 })]);
     expect(buy!.template!.id).toBe(KIT_BUY + 'army-hunt-black-dragons');
     expect(buy!.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).map(Number))).toEqual([[884, HUNT_ARROWS - 60]]);
+    // With no market for iron arrows: the shop run, arrows at Lowe's and then the teleport's runes at Aubury's.
+    const { 'iron arrow': _arrows, 'fire rune': _fire, ...noShopLines } = caps;
+    const [shop] = run([hunter('Kilt', { ...kit, 'iron arrow': 60 })], { market: noShopLines });
+    expect(shop!.template!.id).toBe('army-hunt-supply');
+    const job = jobFor(shop!, side);
+    expect(job).toMatchObject({ script: 'scripts/chain.ts', env: { ROUNDS: '1' }, repeat: true, resources: ['shop:lowe', 'shop:aubury'] });
+    expect(job.args![0]).toContain(`scripts/shop-buyer.ts lowe 2500 ITEMS=iron.arrow STOCK_TARGET=${HUNT_ARROW_STOCK} `);
+    expect(job.args![1]).toContain(`scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=${HUNT_RUNE_STOCK} `);
+    // Each step leaves a shelf it has emptied: its wait is under the shelf's restock interval (15 and 10 ticks).
+    expect(job.args!.map(a => Number(a.match(/NO_BUY_TICKS=(\d+)/)![1]))).toEqual([10, 8]);
+    // The same for a teleport's fire rune alone; a full kit hunts, and the run ends with the hunt.
+    expect(run([hunter('Kilt', { ...kit, 'fire rune': 0 })], { market: noShopLines })[0]!.template!.id).toBe('army-hunt-supply');
+    expect(run([hunter('Kilt')], { market: noShopLines })[0]!.template!.id).toBe('army-hunt-black-dragons');
+    expect(run([hunter('Kilt', { ...kit, 'iron arrow': 60, dragonhide: HIDE_TARGET })], { market: noShopLines })[0]!.template?.id).not.toBe('army-hunt-supply');
+    expect(run([hunter('Kilt', { ...kit, 'iron arrow': 60 })], { market: noShopLines, pilots: new Set(['army-hunt-black-dragons']) })[0]!.template?.id).not.toBe('army-hunt-supply');
     // The band stands down at its hides, is off without the pilot, and is not for an account with training left.
     expect(bandLeft(trip!.template!, hunter('Kilt', { ...kit, dragonhide: HIDE_TARGET - 3 }))).toBe(3);
     expect(run([hunter('Kilt', { ...kit, dragonhide: HIDE_TARGET })])[0]!.template?.id).not.toBe('army-hunt-black-dragons');
