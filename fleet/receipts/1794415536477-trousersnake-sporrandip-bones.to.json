@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794415536477-trousersnake-sporrandip-bones",
  "account": "SporranDip",
  "partner": "TrouserSnake",
@@ -10,8 +10,22 @@
  "item": "Bones",
  "requested": 14,
  "claim": "141983b7-2e12-4acc-a194-d8ccd7b2633e",
- "count": 0,
- "ok": false,
- "at": 1794415540539,
- "detail": "trade claimed"
+ "count": 14,
+ "ok": true,
+ "at": 1794415561948,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 14
+ },
+ "bank": {
+  "count": 14,
+  "at": 1794415561260
+ },
+ "logout": {
+  "attemptId": "1794415540541-0000009756-0000000001",
+  "at": 1794415561942,
+  "sha256": "1d268f06a223ad3ee6ca3b2545a24b9452cdc5426633ae19e21b785ab52f68c3"
+ },
+ "screen": true
 }
