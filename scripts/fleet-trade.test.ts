@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { assertTradeAdmission, fleetTradeOutcome, performFleetTransfer, pickOrder, validOrder, watchTradeScreen, type Order, type Receipt } from './fleet-trade';
+import { assertTradeAdmission, fleetTradeOutcome, partnerFailed, performFleetTransfer, pickOrder, validOrder, watchTradeScreen, type Order, type Receipt } from './fleet-trade';
 import { beginSessionAttempt } from '../packages/core/src/session-lifecycle';
 import type { Session } from '../packages/core/src/inprocess';
 import { terminalTradeReceipt, writeTradeReceipt, type TradeReceipt } from './fleet-trade-settlement';
@@ -311,3 +311,44 @@ test('the agent acts only for its own side, skips busy and running accounts, and
     expect(dueTrades(orders, [], 'local', owners, busy, new Set(['giver']), 2000).map(d => d.account)).toEqual(['BusyOne']);
     expect(dueTrades(orders, [], 'cloud', owners, busy, new Set(), 2000).map(d => d.account)).toEqual(['Taker']);
 });
+
+test('a side leaves the meet when its partner\'s receipt says failed, with nothing uncertain and nothing traded', async () => {
+    // Live: a taker that could not pay its ferry fare failed at once; its giver waited out a 50-minute window.
+    const dir = mkdtempSync(join(tmpdir(), 'fleet-trade-partner-'));
+    try {
+        const trade = order({});
+        expect(partnerFailed(dir, trade, 'from')).toBe(false);
+        // The partner's claim alone, or its settled receipt, is not a failure; neither is this side's own receipt.
+        writeTradeReceipt(dir, claimedReceipt('to'));
+        expect(partnerFailed(dir, trade, 'from')).toBe(false);
+        writeTradeReceipt(dir, { ...claimedReceipt('from'), state: 'failed', detail: 'own side' });
+        expect(partnerFailed(dir, trade, 'from')).toBe(false);
+        writeTradeReceipt(dir, { ...claimedReceipt('to'), state: 'failed', detail: 'route to 3182, 3440: precondition ferry needs 60 coins' });
+        expect(partnerFailed(dir, trade, 'from')).toBe(true);
+        expect(partnerFailed(dir, { ...trade, id: 'other' }, 'from')).toBe(false);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+    // The giver: the serving window ends on the partner's failure, no trade was served, and the side fails cleanly.
+    const item = { id: 379, name: 'Lobster', count: 500, slot: 0 };
+    let asked = 0;
+    const giver = {
+        sdk: { getState: () => ({ inventory: [item] }), getInventory: () => [item] },
+        bot: { serveTrades: async (opts: Parameters<Session['bot']['serveTrades']>[0]) => { asked++; expect(opts!.until!()).toBe(true); return { trades: [], reason: 'until' }; } },
+    } as unknown as Session;
+    const giving = { uncertain: false, count: 0 };
+    await expect(performFleetTransfer(giver, order({}), 'from', giving, { now: () => 2200, gone: () => true })).rejects.toThrow('partner failed: no trade');
+    expect(asked).toBe(1);
+    expect(giving.uncertain).toBe(false);
+    expect(fleetTradeOutcome(claimedReceipt('from'), giving, true, { ...logout, account: 'Giver' }, attemptId, 2500, 'partner failed').state).toBe('failed');
+    // The taker: no trade request is sent once the partner has failed.
+    let requests = 0;
+    const taker = {
+        sdk: { getState: () => ({ inventory: [] }), getInventory: () => [] },
+        bot: { trade: async () => { requests++; return { success: false, reason: 'timeout', received: [], gave: [] }; } },
+        ended: new Promise(() => {}),
+    } as unknown as Session;
+    const taking = { uncertain: false, count: 0 };
+    await expect(performFleetTransfer(taker, order({}), 'to', taking, { now: () => 2200, gone: () => true })).rejects.toThrow('partner failed: no trade');
+    expect(requests).toBe(0);
+    expect(taking.uncertain).toBe(false);
+});
+

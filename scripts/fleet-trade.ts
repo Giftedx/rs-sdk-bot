@@ -103,9 +103,20 @@ const requestRefusal = (result: TradeResult) => !result.success && !result.partn
     && ['player_not_found', 'no_response', 'busy'].includes(result.reason ?? '')
     && !result.gave.length && !result.received.length && !result.possiblyDropped?.length;
 
+// The partner's own receipt says its side failed: it will not come to the meet. Live: a taker that could not pay its
+// ferry fare failed at once, and its giver stood at the meet to the end of a 50-minute window; two such sessions,
+// started on the release before a rollout, also held back every new trade login until they ended. A receipt of this
+// machine's side is on disk at once, another side's after its next sync.
+export function partnerFailed(dir: string, order: Order, role: TradeRole): boolean {
+    try {
+        const receipt = JSON.parse(readFileSync(join(dir, `${order.id}.${role === 'from' ? 'to' : 'from'}.json`), 'utf8'));
+        return receipt?.version === 2 && receipt.id === order.id && receipt.state === 'failed';
+    } catch { return false; }
+}
+
 export async function performFleetTransfer(s: Session, order: Order, role: TradeRole, progress: Progress, {
-    now = Date.now, wait = waitUntil, deposit = depositObserved,
-} = {}) {
+    now = Date.now, wait = waitUntil, deposit = depositObserved, gone = () => false,
+}: { now?: () => number; wait?: typeof waitUntil; deposit?: typeof depositObserved; gone?: () => boolean } = {}) {
     const item = exactItem(order.item), held = () => countItems(s, item), left = () => order.end - now();
     const partner = role === 'from' ? order.to : order.from, peer = exactItem(partner);
     const pack = () => s.sdk.getInventory().filter(i => item.test(i.name));
@@ -118,13 +129,15 @@ export async function performFleetTransfer(s: Session, order: Order, role: Trade
         progress.uncertain = true;
         const served = await s.bot.serveTrades({
             from: peer, give: [{ item, amount: order.count }], accept: offer => offer.length === 0,
-            maxTrades: 1, timeout: left(), onTrade: trade => { result = trade; }, until: () => result !== undefined,
+            maxTrades: 1, timeout: left(), onTrade: trade => { result = trade; }, until: () => result !== undefined || gone(),
         });
-        if (!result && served.reason === 'timeout' && !served.trades.length && diff() === 0) progress.uncertain = false;
+        if (!result && (served.reason === 'timeout' || served.reason === 'until') && !served.trades.length && diff() === 0) progress.uncertain = false;
+        if (!result && gone() && !progress.uncertain) throw Error('partner failed: no trade');
     } else {
         let ended = false;
         void s.ended.then(() => { ended = true; });
         for (let round = 0; !ended && left() > 0; round++) {
+            if (gone()) throw Error('partner failed: no trade');
             progress.uncertain = true;
             result = await s.bot.trade(peer, {
                 accept: offer => offer.length === 1 && item.test(offer[0]!.name) && offer[0]!.count === order.count,
@@ -249,7 +262,7 @@ if (import.meta.main) {
             await s.bot.closeBank();
             progress.uncertain = false;
         }
-        await performFleetTransfer(s, order, role, progress);
+        await performFleetTransfer(s, order, role, progress, { gone: () => partnerFailed(receipts, order, role) });
         ok = true;
         detail = 'transfer observed';
     } catch (error) { detail = String(error); }
