@@ -433,6 +433,10 @@ export function loginAfterTakeoverWindow(log:string,account:string,since:number,
   const gapMs=next[0]!.requestAt-prior.at;return {ok:gapMs>=windowMs,gapMs};
  }catch{return {ok:false,gapMs:null};}
 }
+export function orphanRecoveryReadyAt(serverEndAt:number,windowMs:number){
+ if(!Number.isSafeInteger(serverEndAt)||serverEndAt<0||!Number.isSafeInteger(windowMs)||windowMs<=0)throw Error('orphan recovery boundary invalid');
+ return serverEndAt+windowMs+1000;
+}
 // Pinned World.ts:2635 answers a login with 5 ('Account already logged in') while the killed owner's player sits in
 // logoutRequests, from its idle removal until the login server acknowledges that logout. The orphan's server-side end
 // is the single acknowledged logout requested after the kill.
@@ -916,7 +920,7 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
    while(!end.ok&&Date.now()<endBy){await Bun.sleep(100);end=orphanServerEnd(loginLog(),D.name,killedAt);}
    writeFileSync(join(dir,'orphan-server-end.json'),JSON.stringify({killedAt,...end}));
    if(!end.ok)throw Error('orphan server-side logout not observed');
-   const wait=o.ready.loggedInAt+TAKEOVER_WINDOW_MS+1000-Date.now();if(wait>0)await Bun.sleep(wait);
+   const wait=orphanRecoveryReadyAt(end.at!,TAKEOVER_WINDOW_MS)-Date.now();if(wait>0)await Bun.sleep(wait);
    const old=o.ready.attemptId,heldBefore=readLogoutProof(D.name,D.server,{root:lifeRoot}),since=Date.now();
    const pos=o.ready.state.player,c=await positive('orphan',D,{x:pos.x,z:pos.z,level:pos.level});
    const oldAttempt=listAttempts(D.name,D.server,{root:lifeRoot}).find(a=>a.attemptId===old),gap=loginAfterTakeoverWindow(loginLog(),D.name,since,TAKEOVER_WINDOW_MS);
