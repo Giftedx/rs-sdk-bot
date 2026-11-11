@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794403674086,
+ "at": 1794403885241,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -26,25 +26,21 @@
   },
   {
    "account": "UnderMyKilt",
-   "script": "scripts/black-dragon-camp.ts",
+   "script": "scripts/aio.ts",
    "args": [
-    "9000"
+    "skiller",
+    "crafting",
+    "black-dhide-sets"
    ],
-   "env": {
-    "KILLS": "9",
-    "ARROW": "bronze_arrow",
-    "ARROWS": "600"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "kill Taverley's black dragons for their hides and bones, on bronze arrows",
-   "role": "combat",
-   "template": "army-hunt-black-dragons-bronze",
+   "goal": "tan black dragonhide at Al Kharid and craft sets of body, chaps and vambraces",
+   "role": "crafting",
+   "template": "army-black-dhide-sets",
    "autopilot": "claude-cloud",
-   "resources": [
-    "cave:taverley-black-dragons"
-   ]
+   "resources": []
   },
   {
    "account": "Deeppockets",
@@ -92,25 +88,6 @@
   },
   {
    "account": "Kiltlifter",
-   "script": "scripts/splash-train.ts",
-   "args": [
-    "66",
-    "6000"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "combat",
-   "template": "army-splash-magic-66",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "splash:ardougne-cow-fence"
-   ]
-  },
-  {
-   "account": "PocketPool",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/shop-buyer.ts magic_guild 1500 ITEMS=staff.of.fire STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=13000 COIN_RESERVE=500 MAX_SPEND=12000",
@@ -130,6 +107,31 @@
    "autopilot": "claude-cloud",
    "resources": [
     "shop:magic_guild"
+   ]
+  },
+  {
+   "account": "PocketPool",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
    ]
   },
   {
