@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794361281214-deeppockets-undermykilt",
+ "account": "Deeppockets",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 2400000,
+ "claim": "e68743df-1865-42d6-8cfa-06d07bbaa6f9",
+ "count": 0,
+ "ok": false,
+ "at": 1794361289678,
+ "detail": "trade claimed"
+}

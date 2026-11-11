@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794361280987-fingerblastr-trousersnake",
+ "account": "Fingerblastr",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 700000,
+ "claim": "c9a4fbaa-8d87-48d8-a1d4-87076a726cb1",
+ "count": 0,
+ "ok": false,
+ "at": 1794361287813,
+ "detail": "trade claimed"
+}
