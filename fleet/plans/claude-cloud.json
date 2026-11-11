@@ -1,7 +1,50 @@
 {
  "side": "claude-cloud",
- "at": 1794368308343,
+ "at": 1794368371625,
  "jobs": [
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby"
+   ],
+   "env": {
+    "ITEMS": "rune arrowtips|adamant arrowtips",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy rune and adamant arrowtips at Catherby",
+   "role": "bank",
+   "template": "shop-arrowtips",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:catherby"
+   ]
+  },
+  {
+   "account": "Deeppockets",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts dargaud 800 ITEMS=willow.shortbow STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=4000 COIN_RESERVE=500 MAX_SPEND=3000",
+    "scripts/shop-buyer.ts dargaud 800 ITEMS=mithril.arrow|steel.arrow|iron.arrow|bronze.arrow STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=51000 COIN_RESERVE=500 MAX_SPEND=50000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy a willow shortbow and arrows up to mithril at the Ranging Guild for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-guild",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:dargaud"
+   ]
+  },
   {
    "account": "UnderMyKilt",
    "script": "scripts/chain.ts",
@@ -153,6 +196,56 @@
    ]
   },
   {
+   "account": "SporranDip",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
    "account": "Dipstick",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -192,70 +285,6 @@
     "TROOPER_COOK": "1"
    },
    "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-445e53fd-87c8-497b-8e4f-d88b6f44cba4"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-trousersnake-20261111t033250z [task-445e53fd-87c8-497b-8e4f-d88b6f44cba4]",
-   "role": "bank"
-  },
-  {
-   "account": "Deeppockets",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-b6c3d0b6-09a5-4204-b615-e83e1c8466dc"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-deeppockets-20261111t033250z [task-b6c3d0b6-09a5-4204-b615-e83e1c8466dc]",
-   "role": "supply"
-  },
-  {
-   "account": "SporranDip",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-3537dfc2-4041-45b0-bd94-d80108c6fac4"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-sporrandip-20261111t033250z [task-3537dfc2-4041-45b0-bd94-d80108c6fac4]",
-   "role": "combat"
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": false,
    "standing": true,
    "repeat": true,
    "goal": "train Ranged to 99 on the Khazard troopers",
