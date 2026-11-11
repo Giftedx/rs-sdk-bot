@@ -146,7 +146,8 @@ export async function proveInProcess(opts: InProcessOptions, deps: InProcessDeps
         const t0 = Date.now();
         try {
             await deps.prepare(bot, opts.preset);
-            for (const c of opts.companions ?? []) await deps.prepare(bot + c.suffix, c.preset);
+            // Each companion is its own account and save file, so they are prepared at the same time.
+            await Promise.all((opts.companions ?? []).map(c => deps.prepare(bot + c.suffix, c.preset)));
             let before: SaveSnapshot | undefined, outcome: OutcomeEvidence | undefined;
             if (opts.outcome) {
                 try {
@@ -172,7 +173,7 @@ export async function proveInProcess(opts: InProcessOptions, deps: InProcessDeps
             const tail = stdout.split(/\r?\n/).filter(l => /^(START|RESULT|ERR|WARN|MILESTONE|RATE|LEDGER)/.test(l) || l.includes('Error')).slice(-16).join('\n');
             results[i - 1] = { ok, logOk, outcome, seconds: (Date.now() - t0) / 1000, tail: (start.ok ? tail : `preset not loaded: ${start.detail}\n${tail}`) + (outcome ? `\nOUTCOME ${outcome.ok ? 'ok' : 'fail'} ${outcome.detail}` : '') };
         } finally {
-            for (const n of names) await deps.cleanup(n);
+            await Promise.all(names.map(n => deps.cleanup(n)));
         }
     };
     // Each run is its own account and process, so runs can share the server. `parallel` of them run at once.
