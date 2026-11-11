@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794393856900,
+ "at": 1794394135981,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -36,25 +36,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2582,3297"
    ]
   },
   {
@@ -162,6 +143,25 @@
    "template": "kit-buy:army-bury-dragon-99",
    "autopilot": "claude-cloud",
    "resources": []
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2582,3297"
+   ]
   }
  ]
 }
