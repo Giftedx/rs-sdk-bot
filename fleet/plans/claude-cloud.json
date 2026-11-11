@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794360358277,
+ "at": 1794360512209,
  "jobs": [
   {
    "account": "Fingerblastr",
@@ -185,8 +185,8 @@
    "account": "Kiltlifter",
    "script": "scripts/shop-buyer.ts",
    "args": [
-    "lowe",
-    "2500"
+    "catherby_arrows",
+    "600"
    ],
    "env": {
     "ITEMS": "iron arrow|bronze arrow",
@@ -202,12 +202,12 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy iron and bronze arrows at Lowe's in Varrock for the Ranged band",
+   "goal": "buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
    "role": "supply",
-   "template": "army-arrows-lowe",
+   "template": "army-arrows-catherby",
    "autopilot": "claude-cloud",
    "resources": [
-    "shop:lowe"
+    "shop:catherby_arrows"
    ]
   },
   {
