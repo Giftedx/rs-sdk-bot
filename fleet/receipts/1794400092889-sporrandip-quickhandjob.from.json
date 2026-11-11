@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794400092889-sporrandip-quickhandjob",
  "account": "SporranDip",
  "partner": "Quickhandjob",
@@ -12,6 +12,20 @@
  "claim": "ea9f62ac-beb1-4119-aa52-0d52281df28e",
  "count": 0,
  "ok": false,
- "at": 1794400099703,
- "detail": "trade claimed"
+ "at": 1794402493380,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 90000,
+  "after": 90000
+ },
+ "bank": {
+  "count": 61550,
+  "at": 1794400108356
+ },
+ "logout": {
+  "attemptId": "1794400099706-0000021645-0000000001",
+  "at": 1794402493373,
+  "sha256": "44806e514ec8cf9079b45d09afb4b08b2431d0cae2cbff559604234fde0439b6"
+ },
+ "screen": false
 }
