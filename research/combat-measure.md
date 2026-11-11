@@ -244,8 +244,14 @@ Ranged it adds is not needed at that point.
 - **Live (claude-cloud).** Fingerblastr and Knightstick each bought one for 72,000 (`RESULT ok`, `acquired` 1,
   8,000 refunded). Fatstack's buy failed twice on the trip: its last run had been cut on the trooper field and the
   market travel found no route from 2529,3236.
-- **Gap.** The Grand Exchange is not on practice. Kills per tick with each blade are not measured. The market trip
-  from the trooper field fails.
+- **Claim.** A market buy that starts on the Gnome battlefield first walks to the Ardougne north bank with
+  auto-retaliate off, then makes its guarded trip. **Conditions.** The trip aborts on the first lost hit point, and a
+  trooper hits an account that stands on the field: practice, from 2529,3236, `travel-abort` at tick 64 and `no route
+  to 3185,3436,0`, as live. With the exit: three accounts from the same tile left the field in 90 ticks and reached
+  Varrock West (`travel-returned` ok, 951 ticks from the start); the order was then placed and found no seller on
+  practice. **Evidence.** `.practice/travel/ge.ts` (`f1`, `g1`-`g3`) in the Claude cloud container that ran them;
+  `scripts/buy-owned-ge-item.test.ts`.
+- **Gap.** No seller on practice, so a fill is proved live only. Kills per tick with each blade are not measured.
 
 ## Ranged on the troopers
 
