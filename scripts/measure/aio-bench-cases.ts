@@ -377,6 +377,8 @@ const ROUTE_CASES: BenchCase[] = [
   // about half of that is the start of the engine and the logins, so the 53 pairs stand in 4 cases. The pairs run in
   // 8 processes, and the cap is 600 ticks: the offline simulator has no fight of two of these builds that lasts so long.
   ...Array.from({length: Math.ceil(BUILD_PAIRS.length / BUILD_CASE_PAIRS)}, (_, n) => sparMatrix(`extra:spar-builds-${n + 1}`, BUILD_PAIRS.slice(n * BUILD_CASE_PAIRS, (n + 1) * BUILD_CASE_PAIRS), ['SPAR_PROCS=8', 'SPAR_CAP=600'], {x: 3125, z: 3790})),
+  // One pair 14 times, each build on side A in 7 of them: 3 fights of a pair in the build cases decide nothing.
+  sparMatrix('extra:spar-head-tank-dragon-x14', Array.from({length: 14}, (_, i) => (i % 2 ? ['dragon', 'tank-range'] : ['tank-range', 'dragon']) as [string, string]), ['SPAR_PROCS=8', 'SPAR_CAP=600'], {x: 3125, z: 3790}),
   ...Array.from({length: Math.ceil(BUILD_PAIRS_2.length / BUILD_CASE_PAIRS)}, (_, n) => sparMatrix(`extra:spar-builds2-${n + 1}`, BUILD_PAIRS_2.slice(n * BUILD_CASE_PAIRS, (n + 1) * BUILD_CASE_PAIRS), ['SPAR_PROCS=8', 'SPAR_CAP=600'], {x: 3125, z: 3790})),
   // Map cases of the spar. Gap: the same mirror from 12 tiles apart. Trees: 6 tiles apart at Wilderness level 3 with a
   // blocker on tiles 3101-3103 between the two, so neither has line of sight at the start. Escape: Wilderness level 34
