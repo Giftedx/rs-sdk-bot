@@ -1,43 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794406910008,
+ "at": 1794407001302,
  "jobs": [
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=kiltlifter-kit13-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on bronze arrows",
-   "role": "supply",
-   "template": "kit-buy:army-hunt-black-dragons-bronze",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
-   "account": "Deeppockets",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=247 EXPECTED_OWNED=3 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=deeppockets-kit9-554-3to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 247 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
   {
    "account": "Fatstack",
    "script": "scripts/chain.ts",
@@ -115,119 +79,119 @@
    "script": "scripts/aio.ts",
    "args": [
     "skiller",
-    "foraging",
-    "flax",
-    "1800",
-    "28"
+    "crafting",
+    "bowstrings",
+    "2500",
+    "MAX_MAKE=168",
+    "RAW_RESERVE=0",
+    "MAX_TRIPS=8"
    ],
    "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "pick flax at Seers to spin for the Crafting a black dragonhide body asks",
+   "goal": "spin flax at Seers to the Crafting a black dragonhide body asks",
    "role": "crafting",
-   "template": "army-leather-flax",
+   "template": "army-leather-spin",
    "autopilot": "claude-cloud",
-   "resources": [
-    "aio:seers-flax"
-   ]
+   "resources": []
   },
   {
    "account": "UnderMyKilt",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/shop-buyer.ts lowe 2500 ITEMS=iron.arrow|bronze.arrow STOCK_TARGET=1200 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=29000 COIN_RESERVE=500 MAX_SPEND=28000",
-    "scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=60 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=3000 COIN_RESERVE=500 MAX_SPEND=2000"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=379 QUANTITY=9 LIMIT_PRICE=500 CASH_RESERVE=1000 ORDER_KEY=undermykilt-kit7-379-0to9 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "buy iron and bronze arrows at Lowe's and teleport runes at Aubury's in Varrock for the black dragon hunt",
+   "repeat": false,
+   "goal": "buy 9 Lobster on the Grand Exchange to complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
    "role": "supply",
-   "template": "army-hunt-supply",
+   "template": "kit-buy:army-quest-lostcity",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "Deeppockets",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
    "autopilot": "claude-cloud",
    "resources": [
-    "shop:lowe",
-    "shop:aubury"
+    "trooper:battlefield"
    ]
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=379 QUANTITY=3 LIMIT_PRICE=500 CASH_RESERVE=1000 ORDER_KEY=kiltlifter-kit13-379-0to3 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 3 Lobster on the Grand Exchange to complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
+   "role": "supply",
+   "template": "kit-buy:army-quest-lostcity",
+   "autopilot": "claude-cloud",
+   "resources": []
   },
   {
    "account": "Knightstick",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "1500",
-    "trooper"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=379 QUANTITY=10 LIMIT_PRICE=500 CASH_RESERVE=1000 ORDER_KEY=knightstick-kit7-379-0to10 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "repeat": false,
+   "goal": "buy 10 Lobster on the Grand Exchange to complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
+   "role": "supply",
+   "template": "kit-buy:army-quest-lostcity",
    "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "resources": []
   },
   {
    "account": "Dipstick",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "1500",
-    "trooper"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=379 QUANTITY=10 LIMIT_PRICE=500 CASH_RESERVE=1000 ORDER_KEY=dipstick-kit4-379-0to10 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "repeat": false,
+   "goal": "buy 10 Lobster on the Grand Exchange to complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
+   "role": "supply",
+   "template": "kit-buy:army-quest-lostcity",
    "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "resources": []
   }
  ]
 }
