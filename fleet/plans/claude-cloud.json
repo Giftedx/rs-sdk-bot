@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794420490660,
+ "at": 1794420809358,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -20,28 +20,6 @@
    "resources": [
     "knight:2582,3297"
    ]
-  },
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "crafting",
-    "bowstrings",
-    "2500",
-    "MAX_MAKE=168",
-    "RAW_RESERVE=0",
-    "MAX_TRIPS=8"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "spin flax at Seers to the Crafting a black dragonhide body asks",
-   "role": "crafting",
-   "template": "army-leather-spin",
-   "autopilot": "claude-cloud",
-   "resources": []
   },
   {
    "account": "TheFullMonty",
@@ -157,6 +135,19 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-3244daf9-18d4-46a9-bfdd-113b9f5d761e"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-trousersnake-20261111t180923z [task-3244daf9-18d4-46a9-bfdd-113b9f5d761e]",
+   "role": "crafting"
   }
  ]
 }
