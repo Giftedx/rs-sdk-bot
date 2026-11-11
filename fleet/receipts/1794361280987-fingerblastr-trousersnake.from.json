@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794361280987-fingerblastr-trousersnake",
  "account": "Fingerblastr",
  "partner": "TrouserSnake",
@@ -10,8 +10,21 @@
  "item": "Coins",
  "requested": 700000,
  "claim": "c9a4fbaa-8d87-48d8-a1d4-87076a726cb1",
- "count": 0,
- "ok": false,
- "at": 1794361287813,
- "detail": "trade claimed"
+ "count": 700000,
+ "ok": true,
+ "at": 1794361569456,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 700000,
+  "after": 0
+ },
+ "bank": {
+  "count": 686556,
+  "at": 1794361561996
+ },
+ "logout": {
+  "attemptId": "1794361287815-0000008353-0000000001",
+  "at": 1794361569446,
+  "sha256": "3c7bade3b4c35a357fec10ea7d83985f75bf24e17814f59d4b0809caa9ce5c81"
+ }
 }
