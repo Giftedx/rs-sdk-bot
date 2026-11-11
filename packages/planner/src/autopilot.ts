@@ -931,7 +931,7 @@ export function catalogue(): Template[] {
     // chain from an army account's state).
     // Black dragonhide for the army's ranged armour, band 10: nine kills a trip from the corridor south of the cave
     // (scripts/black-dragon-camp.ts), the hides and dragon bones banked at Varrock West. The kit is a magic shortbow,
-    // iron arrows (a kill uses about 60, and mithril costs about 745 coins an arrow), one Varrock teleport and six
+    // iron arrows (a kill uses 60 to 100, more with two hunters in the cave; mithril costs about 745 coins an arrow), one Varrock teleport and six
     // sharks; the dusty key cannot be traded and has its own job. Both are fillers: an account takes them, and the
     // kit tier gets the kit, only when no training band and no kit of one serves it, so bones for Prayer come before
     // arrows for dragons. The arrows and the teleport's air and fire runes are the shop run's (`ownSupply`); the kit
@@ -941,29 +941,35 @@ export function catalogue(): Template[] {
         role: 'quest', goal: "get the dusty key from Velrak for Taverley dungeon's inner gate", tier: 'goal', band: HUNT_BAND, filler: true, repeats: false, stock: { item: 'dusty key', to: 1 }, yields: () => [],
         needs: { skills: { Attack: 90, Strength: 90, Defence: 90, Hitpoints: 90, Ranged: 90, Prayer: 60, Magic: 25 } },
     };
-    const hunt: Template = {
-        id: 'army-hunt-black-dragons', pilot: true, family: 'combat-train', script: 'scripts/black-dragon-camp.ts', args: ['9000'],
-        env: { KILLS: String(HUNT_KILLS), ARROW: 'iron_arrow', ARROWS: String(HUNT_ARROWS) }, role: 'combat', goal: "kill Taverley's black dragons for their hides and bones",
+    // The same trip on bronze arrows, for an account whose shop run found more bronze than iron: Lowe's bronze shelf
+    // holds 2,000 and gives one back every 10 ticks, the iron shelf 1,500 and one every 15. Practice, two hunters at
+    // once with 600 arrows each: 7 kills on bronze, 6 on iron.
+    const huntOn = (id: string, arrow: string): Template => ({
+        id, pilot: true, family: 'combat-train', script: 'scripts/black-dragon-camp.ts', args: ['9000'],
+        env: { KILLS: String(HUNT_KILLS), ARROW: arrow.replace(' ', '_'), ARROWS: String(HUNT_ARROWS) }, role: 'combat', goal: `kill Taverley's black dragons for their hides and bones, on ${arrow}s`,
         tier: 'goal', band: HUNT_BAND, filler: true, repeats: true, stock: { item: 'dragonhide', to: HIDE_TARGET }, resources: [BLACK_CAVE], yields: () => [],
-        ownSupply: ['iron arrow', 'air rune', 'fire rune'],
+        ownSupply: ['iron arrow', 'bronze arrow', 'air rune', 'fire rune'],
         needs: { skills: { Defence: 90, Hitpoints: 90, Ranged: 90, Prayer: 60, Magic: 25 },
-            items: { 'dusty key': 1, 'magic shortbow': 1, 'iron arrow': HUNT_ARROWS, 'law rune': 1, 'air rune': 3, 'fire rune': 1, shark: HUNT_FOOD } },
-    };
+            items: { 'dusty key': 1, 'magic shortbow': 1, [arrow]: HUNT_ARROWS, 'law rune': 1, 'air rune': 3, 'fire rune': 1, shark: HUNT_FOOD } },
+    });
+    const hunt = huntOn('army-hunt-black-dragons', 'iron arrow'), huntBronze = huntOn('army-hunt-black-dragons-bronze', 'bronze arrow');
     // The hunt's shop lines. No market lists 600 iron arrows (live claude-cloud: 23 listed), and the arrow and rune
     // shop jobs of the training bands end at Ranged 99 and Magic 66. Lowe's Archery Emporium (archeryshop: 1,500 iron
-    // arrows, one back every 15 ticks) and Aubury's rune shop (2,000 air and fire runes, one back every 10 ticks) are
-    // both by the Varrock east bank, in the town a trip's teleport ends in. The run stands while the hunt does and the
-    // account is short of a trip's arrows or of one teleport's air or fire runes. The arrows come first: a rune shelf
-    // found empty ends its step as a wait, not the run. An arrow costs 3 coins from the full shelf and 18 from a
-    // drained one (shop.rs2: six times the base cost at most), so the spend covers the whole stock at 18. Each step
-    // leaves an emptied shelf (practice: with a wait of 25 ticks a run stood 2,500 ticks at Lowe's buying one arrow
-    // every 15), and the account hunts or shops again on the planner's next pass.
+    // arrows, one back every 15 ticks, and 2,000 bronze, one every 10) and Aubury's rune shop (2,000 air and fire
+    // runes, one back every 10 ticks) are both by the Varrock east bank, in the town a trip's teleport ends in. The
+    // run stands while the hunt does and the account is short of a trip's iron arrows or of one teleport's air or fire
+    // runes; with a trip's bronze arrows held the bronze hunt comes first. The arrows come first: a rune shelf found
+    // empty ends its step as a wait, not the run. An iron arrow costs 3 coins from the full shelf and 18 from a
+    // drained one, a bronze arrow 1 and 6 (shop.rs2: six times the base cost at most), so the spend covers both
+    // stocks at the dearest price. Each step leaves an emptied shelf (practice: with a wait of 25 ticks a run stood
+    // 2,500 ticks at Lowe's buying one arrow every 15), and the account hunts or shops again on the planner's next
+    // pass.
     const huntSupply: Template = {
         id: 'army-hunt-supply', pilot: true, family: 'shop-buyer', script: 'scripts/chain.ts',
-        args: [shopRun('lowe', 2500, 'iron.arrow', HUNT_ARROW_STOCK, 21000, 10), shopRun('aubury', 800, 'air.rune|fire.rune', HUNT_RUNE_STOCK, 2000, 8)],
-        env: { ROUNDS: '1' }, role: 'supply', goal: "buy iron arrows at Lowe's and teleport runes at Aubury's in Varrock for the black dragon hunt",
+        args: [shopRun('lowe', 2500, 'iron.arrow|bronze.arrow', HUNT_ARROW_STOCK, 28000, 8), shopRun('aubury', 800, 'air.rune|fire.rune', HUNT_RUNE_STOCK, 2000, 8)],
+        env: { ROUNDS: '1' }, role: 'supply', goal: "buy iron and bronze arrows at Lowe's and teleport runes at Aubury's in Varrock for the black dragon hunt",
         tier: 'goal', band: HUNT_BAND + 0.3, filler: true, repeats: true, stock: { item: 'dragonhide', to: HIDE_TARGET }, resources: ['shop:lowe', 'shop:aubury'], yields: () => [],
-        needs: { skills: hunt.needs!.skills, items: { coins: 25000 }, shortOf: { 'iron arrow': HUNT_ARROWS, 'air rune': 3, 'fire rune': 1 } },
+        needs: { skills: hunt.needs!.skills, items: { coins: 32000 }, shortOf: { 'iron arrow': HUNT_ARROWS, 'air rune': 3, 'fire rune': 1 } },
     };
     // Dragon longswords, which an account wields once Lost City is done. Jakut in the Zanaris market sells two at
     // 100,000 coins (one back every 500 ticks); the way in is the dramen staff the quest leaves the account, and the
@@ -1100,6 +1106,7 @@ export function catalogue(): Template[] {
         lostCity,
         dustyKey,
         hunt,
+        huntBronze,
         huntSupply,
         jakut,
         dhideSets,

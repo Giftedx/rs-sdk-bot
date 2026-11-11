@@ -1256,10 +1256,21 @@ test('a maxed army account hunts black dragons for hides: the key first, the kit
     expect(shop!.template!.id).toBe('army-hunt-supply');
     const job = jobFor(shop!, side);
     expect(job).toMatchObject({ script: 'scripts/chain.ts', env: { ROUNDS: '1' }, repeat: true, resources: ['shop:lowe', 'shop:aubury'] });
-    expect(job.args![0]).toContain(`scripts/shop-buyer.ts lowe 2500 ITEMS=iron.arrow STOCK_TARGET=${HUNT_ARROW_STOCK} `);
+    expect(job.args![0]).toContain(`scripts/shop-buyer.ts lowe 2500 ITEMS=iron.arrow|bronze.arrow STOCK_TARGET=${HUNT_ARROW_STOCK} `);
     expect(job.args![1]).toContain(`scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=${HUNT_RUNE_STOCK} `);
-    // Each step leaves a shelf it has emptied: its wait is under the shelf's restock interval (15 and 10 ticks).
-    expect(job.args!.map(a => Number(a.match(/NO_BUY_TICKS=(\d+)/)![1]))).toEqual([10, 8]);
+    // Each step leaves a shelf it has emptied: its wait is under the shelves' restock intervals (10 ticks the least).
+    expect(job.args!.map(a => Number(a.match(/NO_BUY_TICKS=(\d+)/)![1]))).toEqual([8, 8]);
+    // With a trip's bronze arrows and too few iron: the same trip on bronze, before another shop run. Iron first
+    // when both are held. A market that lists bronze arrows does not make them a kit buy.
+    const withBronze = new Set([...pilots, 'army-hunt-black-dragons-bronze']);
+    const bronze = run([hunter('Kilt', { ...kit, 'iron arrow': 60, 'bronze arrow': HUNT_ARROWS })], { market: noShopLines, pilots: withBronze })[0]!;
+    expect(bronze.template!.id).toBe('army-hunt-black-dragons-bronze');
+    expect(jobFor(bronze, side)).toMatchObject({ script: 'scripts/black-dragon-camp.ts', env: { KILLS: String(HUNT_KILLS), ARROW: 'bronze_arrow', ARROWS: String(HUNT_ARROWS) }, resources: [BLACK_CAVE] });
+    expect(run([hunter('Kilt', { ...kit, 'bronze arrow': HUNT_ARROWS })], { market: noShopLines, pilots: withBronze })[0]!.template!.id).toBe('army-hunt-black-dragons');
+    const bronzeListed: Market = { ...noShopLines, 'bronze arrow': { id: 882, name: 'Bronze arrow', limit: KIT_PRICE_CAPS['bronze arrow']! } };
+    expect(run([hunter('Kilt', { ...kit, 'iron arrow': 60 })], { market: bronzeListed, pilots: withBronze })[0]!.template!.id).toBe('army-hunt-supply');
+    // The two variants share the cave's two places.
+    expect(run(['A', 'B', 'C'].map(n => hunter(n, { ...kit, 'bronze arrow': HUNT_ARROWS, 'iron arrow': n === 'A' ? HUNT_ARROWS : 0 })), { market: noShopLines, pilots: withBronze }).filter(a => /^army-hunt-black-dragons/.test(a.template?.id ?? '')).length).toBe(BLACK_CAVE_PLACES);
     // The same for a teleport's fire rune alone; a full kit hunts, and the run ends with the hunt.
     expect(run([hunter('Kilt', { ...kit, 'fire rune': 0 })], { market: noShopLines })[0]!.template!.id).toBe('army-hunt-supply');
     expect(run([hunter('Kilt')], { market: noShopLines })[0]!.template!.id).toBe('army-hunt-black-dragons');

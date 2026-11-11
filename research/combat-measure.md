@@ -391,12 +391,19 @@ Ranged it adds is not needed at that point.
   for another owner (`ACTION_SETTLEMENT_DEFERRED`, no RESULT line; the lockstep bench has no gate swap). With the
   swap allowed after cleanup began: `LOGOUT logged-out`, `RESULT ok ticks=205 made=28`. Raw runs:
   `.practice/dhide/level-run.ts` (`a`), `.practice/dhide/spin-run.ts` (`a`-`h`).
+- **Claim.** Bronze arrows kill as well as iron from the camp, and two hunters at once use about 90 arrows a kill.
+  **Conditions.** Practice, two accounts with Ranged 99 on the camp tile at once, each a whole trip from the Varrock
+  west bank with a magic shortbow, 600 arrows and `KILLS=9`: on iron, `RESULT ok black-dragon-trip kills=6 hides=6
+  bones=6 ammoUsed=600 hpMin=80 banked=true ticks=3844`; on bronze, `kills=7 hides=7 bones=7 ammoUsed=600 hpMin=56
+  banked=true ticks=4494`. Both ended on their arrows. The bronze account's lost hitpoints are the spiders' poison
+  from the way in (`DRAGON_CAMP hit` 2 to 3 every 30 ticks on the tile, `pray=0`), and the camp eats at 60. Raw
+  runs: `.practice/blackdragon/arrow-run.ts` (`ir`, `bz`). One run each: not a rate.
 - **Gap.** One live trip with loot, brought home by a second run (`LEAVE=1`); no live trip has banked its own loot,
   and neither the supply run nor the armour run has a live run. A player of another fleet on the tile, or another
   player's kill, is not run.
-  Kills with arrows other than mithril are not measured (best hits by arrow: iron 12, mithril 14, rune 19). Lowe's
-  shelf gives back 4 iron arrows a minute at 0.6 s a tick, under what two hunters fire (estimate from 60 arrows a
-  kill); the other iron arrow shelves (Hickton's, Dargaud's) and bronze arrows are not in the run.
+  Lowe's shelves give back 4 iron and 6 bronze arrows a minute at 0.6 s a tick, under what two hunters fire
+  (about 1,200 arrows in 45 minutes, from the trips above); the other arrow shelves (Hickton's, Dargaud's) are not
+  in the run.
 
 ## Ranged on the troopers
 
