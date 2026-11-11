@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794376876311-oreelse-quickhandjob",
+ "account": "Quickhandjob",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune full helm",
+ "requested": 1,
+ "claim": "7b1f4e41-c972-4aab-9cc8-161dd8e8b762",
+ "count": 1,
+ "ok": true,
+ "at": 1794379606079,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794379605127
+ },
+ "logout": {
+  "attemptId": "1794379572327-0000001436-0000000001",
+  "at": 1794379606068,
+  "sha256": "4bb3ae03fc04e42aaf393790bc10724d14396566b083f2b288bd378c0d9ad06c"
+ },
+ "screen": true
+}
