@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794408529651,
+ "at": 1794408915285,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -43,6 +43,28 @@
    "script": "scripts/aio.ts",
    "args": [
     "skiller",
+    "crafting",
+    "bowstrings",
+    "2500",
+    "MAX_MAKE=168",
+    "RAW_RESERVE=0",
+    "MAX_TRIPS=8"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "spin flax at Seers to the Crafting a black dragonhide body asks",
+   "role": "crafting",
+   "template": "army-leather-spin",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
     "foraging",
     "flax",
     "1800",
@@ -58,25 +80,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "aio:seers-flax"
-   ]
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2582,3297"
    ]
   },
   {
