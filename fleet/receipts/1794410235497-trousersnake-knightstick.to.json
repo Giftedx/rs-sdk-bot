@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794410235497-trousersnake-knightstick",
  "account": "Knightstick",
  "partner": "TrouserSnake",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 27080,
  "claim": "30156e96-6e74-4f3f-8767-5f5347be9e85",
- "count": 0,
- "ok": false,
- "at": 1794410294625,
- "detail": "trade claimed"
+ "count": 27080,
+ "ok": true,
+ "at": 1794410395460,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 27080
+ },
+ "bank": {
+  "count": 27080,
+  "at": 1794410394687
+ },
+ "logout": {
+  "attemptId": "1794410294628-0000030023-0000000001",
+  "at": 1794410395452,
+  "sha256": "ca6860a1b9b877018c271d558784d8a8b3a83df1bcd4459ca1ee7a8d667efb6d"
+ },
+ "screen": true
 }
