@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794386626724-oreelse-thefullmonty",
  "account": "TheFullMonty",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Rune scimitar",
  "requested": 1,
  "claim": "a65b157d-e33a-4e2f-b44b-cade2eb999a3",
- "count": 0,
- "ok": false,
- "at": 1794386631555,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794386825946,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794386825193
+ },
+ "logout": {
+  "attemptId": "1794386631557-0000007547-0000000001",
+  "at": 1794386825937,
+  "sha256": "39b583d72b7c025e0ee2faf8f6922c033f6ed5ff3ca8e80c26471eb01d87f007"
+ },
+ "screen": true
 }
