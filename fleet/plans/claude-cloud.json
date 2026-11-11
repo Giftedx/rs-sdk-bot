@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794394141120,
+ "at": 1794394201304,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -102,31 +102,6 @@
    "resources": []
   },
   {
-   "account": "Dipstick",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
    "account": "KnightRider",
    "script": "scripts/chain.ts",
    "args": [
@@ -152,10 +127,23 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-d730e283-f335-4590-8958-c8e26ea5b2ac"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "claude-cloud-recover-fatstack-20261111t104501z [task-d730e283-f335-4590-8958-c8e26ea5b2ac]",
    "role": "thieving"
+  },
+  {
+   "account": "Dipstick",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-47ad91d5-839c-411a-9ebc-e0aef4d28f1b"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-dipstick-20261111t104501z [task-47ad91d5-839c-411a-9ebc-e0aef4d28f1b]",
+   "role": "combat"
   }
  ]
 }
