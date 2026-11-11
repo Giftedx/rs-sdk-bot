@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794377337393,
+ "at": 1794377402816,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -15,6 +15,50 @@
    "repeat": false,
    "goal": "black dragon pilot",
    "role": "hand"
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "Knightstick",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "Fingerblastr",
@@ -38,6 +82,31 @@
   },
   {
    "account": "Kiltlifter",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "PocketPool",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
@@ -101,57 +170,6 @@
    "goal": "train Defence to 99 on the Khazard troopers",
    "role": "combat",
    "template": "army-trooper-defence-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-baee0e12-5b81-460c-a0ad-cb4f6e6b7f7f"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-fatstack-20261111t060401z [task-baee0e12-5b81-460c-a0ad-cb4f6e6b7f7f]",
-   "role": "thieving"
-  },
-  {
-   "account": "Knightstick",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-6656297c-1488-4a5d-90b5-9759e01cb433"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-knightstick-20261111t060401z [task-6656297c-1488-4a5d-90b5-9759e01cb433]",
-   "role": "combat"
-  },
-  {
-   "account": "PocketPool",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
