@@ -20,7 +20,8 @@
 // A script that sends its own eat input chooses when to eat: from then on the guard sends nothing in that session.
 // The server would refuse a script eat in the 2 ticks after an eat of the guard, and a script that checks its eat
 // then reads a failure. The guard holds such an input and sends it when the food delay ends.
-// A quest sustain (sustain.ts startQuestSustain) holds the guard from its start to its stop.
+// A quest sustain (sustain.ts startQuestSustain) and the PK fight loop (scripts/pk.ts) hold the guard from start to
+// stop.
 
 import { attackTarget, IDLE_TICKS, NEUTRAL } from './prayer-guard';
 import { defaultEatAt, expandFoodStages, questFoodDefinitions, registerSessionEater, selectQuestFood } from './sustain';
@@ -74,17 +75,19 @@ export function startEatGuard(s: EatGuardSession, o: EatGuardOptions = {}) {
     let pending: Pending = { kind: 'none' };
     let lastHp: number | undefined, hpFirst: number | undefined, hpMin: number | undefined, lastTile = '';
     let sent: { id: number; before: number; hp: number; at: number } | null = null;
-    let lateEat: Action | null = null;
+    let lateEat: { action: Action; id: number } | null = null;
 
     const count = (st: any, id: number): number => (st?.inventory ?? []).filter((i: any) => i.id === id).reduce((n: number, i: any) => n + i.count, 0);
     const level = (v: Level, max: number): number => typeof v === 'function' ? v(max) : v;
 
-    // True for the eat input of a script. The eat inputs of a holder are not a script's own eater.
-    const scriptEat = (a: Action): boolean => {
-        if (a.type !== 'useInventoryItem' || own.has(a) || holders > 0) return false;
-        const item = (s.sdk.getState()?.inventory ?? []).find((i: any) => i.slot === a.slot);
+    const slotItem = (slot: unknown): any => (s.sdk.getState()?.inventory ?? []).find((i: any) => i.slot === slot);
+    // The food of a script's eat input, null for every other input. The eat inputs of a holder are not a script's own
+    // eater.
+    const scriptEat = (a: Action): { id: number } | null => {
+        if (a.type !== 'useInventoryItem' || own.has(a) || holders > 0) return null;
+        const item = slotItem(a.slot);
         const op = item?.optionsWithIndex?.find((v: any) => v.opIndex === a.optionIndex);
-        return !!item && edible.has(item.id) && !!op && /^(eat|drink)$/i.test(op.text);
+        return item && edible.has(item.id) && op && /^(eat|drink)$/i.test(op.text) ? item : null;
     };
 
     // Every input of the session passes here before the client sends it.
@@ -106,8 +109,9 @@ export function startEatGuard(s: EatGuardSession, o: EatGuardOptions = {}) {
     const original = client?.executeBotAction;
     const observer = typeof original === 'function' ? function (this: unknown, action: unknown) {
         const a = action as Action | null, since = s.tick() - ateAt;
-        if (!stopped && a && typeof a === 'object' && since > 0 && since < EAT_TICKS && scriptEat(a)) {
-            stats.yielded = true; stats.late++; lateEat = { ...a };
+        const eaten = !stopped && a && typeof a === 'object' && since > 0 && since < EAT_TICKS ? scriptEat(a) : null;
+        if (a && eaten) {
+            stats.yielded = true; stats.late++; lateEat = { action: { ...a }, id: eaten.id };
             return { success: true, message: 'Eat held for the food delay' };
         }
         note(action);
@@ -122,7 +126,8 @@ export function startEatGuard(s: EatGuardSession, o: EatGuardOptions = {}) {
         if (stopped) return;
         const now = s.tick();
         if (inputsAt !== now) { inputsAt = now; inputs = 0; }
-        if (lateEat && now - ateAt >= EAT_TICKS) { send(lateEat); lateEat = null; }
+        // A late eat is sent only while its slot still holds the same food.
+        if (lateEat && now - ateAt >= EAT_TICKS) { if (slotItem(lateEat.action.slot)?.id === lateEat.id) send(lateEat.action); lateEat = null; }
         const st = s.sdk.getState(), p = st?.player;
         if (!p || p.isDead) return;
         const skill = (st.skills ?? []).find((k: any) => k.name === 'Hitpoints'), hp = skill?.level, max = skill?.baseLevel;

@@ -220,6 +220,18 @@ test('a script eat in the food delay of a guard eat is sent when the delay ends'
     expect(w.eaten).toBe(2);
 });
 
+test('a late script eat is dropped when its slot holds another item', () => {
+    const { w, s, client, advance, hit } = world({ hp: 60 });
+    startEatGuard(s);
+    advance(2);
+    hit(50);
+    advance(2);
+    client.executeBotAction({ type: 'useInventoryItem', slot: 1, optionIndex: 1 });
+    w.inventory.find(i => i.slot === 1)!.id = LOBSTER;
+    advance(5);
+    expect(w.eaten).toBe(1);
+});
+
 test('a script input on an item that is not food does not turn the guard off', () => {
     const { w, s, client, advance, hit } = world({ hp: 60, inventory: [{ id: 995, slot: 0, count: 5, name: 'Coins', optionsWithIndex: [{ text: 'Use', opIndex: 1 }] }, food(SHARK, 1)] });
     const guard = startEatGuard(s);
