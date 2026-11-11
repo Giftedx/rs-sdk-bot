@@ -11,6 +11,7 @@
 // whose trainer reached its target, so the next pass needs no timer. scripts/autopilot.ts applies it.
 import type { BillRow } from './supply-bill';
 import { missionSignature } from '../../core/src/session-admission';
+import { xpForLevel } from './curve';
 
 // `combat`: the combat level the account's status reports (absent: worked out from `skills`). `quests`: the quests its
 // status reports complete, by norm() name (absent: none known complete).
@@ -42,6 +43,12 @@ export type Template = {
     // The stock a kit buy brings an item up to, by item name: more than the start minimum in `needs`, so one login
     // buys a batch (nature runes for many alchemy casts) and not one start's worth.
     batch?: Record<string, number>;
+    // The same, worked out for the account (bought bones: what its Prayer still needs). `partBatch`: a batch worth
+    // having in part, so an account that cannot pay for all of it buys what it can pay for, not only the start.
+    batchFor?: (a: Acct) => Record<string, number>;
+    partBatch?: true;
+    // Coins a kit buy for this band leaves the account, beyond the kit reserve: what its other bands still cost.
+    keepCoins?: (a: Acct) => number;
     // A quest run: a candidate until the account's status reports the quest complete, and worth a share of each job
     // the quest unlocks (as a trainer is). It does not repeat.
     quest?: { name: string; unlocks: string[] };
@@ -121,6 +128,8 @@ export const KIT_PRICE_CAPS: Readonly<Record<string, number>> = {
     trout: 100, lobster: 500, swordfish: 700, shark: 1200,
     // Live claude-cloud read: 42 listed at 72,000, bids at 33,068, volume-weighted price 38,089.
     'adamant scimitar': 80_000,
+    // Live claude-cloud read: dragon bones 1,009 listed from 9,000 (mean 9,687); big bones 1,686 from 2,399 (mean 2,526).
+    'dragon bone': 10_000, 'big bone': 2_600,
 };
 
 // A bill line still short is worth twice its shop value: it is acquisition work the route needs. A unit nobody needs
@@ -344,11 +353,16 @@ export function plan(inp: Inputs): Assignment[] {
         const shopLine = (l: Lack) => !l.of.some(i => inp.market?.[i]) && l.of.some(i => SHOP_SUPPLIED.has(i));
         const picks = c.lacks!.filter(l => !shopLine(l)).map(l => { const item = l.of.filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]; return item ? { item, count: l.count } : null; });
         if (picks.length && picks.every(p => p !== null) && !inp.retired?.has(pairKey(c.account, buyId))) {
-            // The batch when the account can pay for it, else only what the band needs to start.
-            const sized = (batch: boolean): KitLine[] => picks.map(p => { const held = a.items[p!.item] ?? 0, m = inp.market![p!.item]!; return { item: m.name, id: m.id, held, limit: m.limit, quantity: Math.max(p!.count, batch ? (c.template.batch?.[p!.item] ?? 0) - held : 0) }; });
+            // The batch when the account can pay for it, else only what the band needs to start. A one-line band with
+            // `partBatch` takes as much of its batch as the account can pay for.
+            const batchOf = c.template.batchFor?.(a) ?? c.template.batch;
+            const sized = (batch: boolean): KitLine[] => picks.map(p => { const held = a.items[p!.item] ?? 0, m = inp.market![p!.item]!; return { item: m.name, id: m.id, held, limit: m.limit, quantity: Math.max(p!.count, batch ? (batchOf?.[p!.item] ?? 0) - held : 0) }; });
             const price = (ls: readonly KitLine[]) => ls.reduce((n, l) => n + l.quantity * l.limit, 0), coins = a.items.coin ?? 0;
-            const lines = price(sized(true)) + KIT_CASH_RESERVE <= coins ? sized(true) : sized(false);
-            const template = kitBuyTemplate(c.template, c.account, lines, inp.kitSeq?.get(c.account.toLowerCase()) ?? 0), cost = price(lines), short = cost + KIT_CASH_RESERVE - coins;
+            const free = coins - (c.template.keepCoins?.(a) ?? 0);
+            const full = sized(true), start = sized(false), part = Math.floor((free - KIT_CASH_RESERVE) / (full[0]?.limit ?? 1));
+            const lines = price(full) + KIT_CASH_RESERVE <= free ? full
+                : c.template.partBatch && full.length === 1 && part > start[0]!.quantity ? [{ ...full[0]!, quantity: Math.min(full[0]!.quantity, part) }] : start;
+            const template = kitBuyTemplate(c.template, c.account, lines, inp.kitSeq?.get(c.account.toLowerCase()) ?? 0), cost = price(lines), short = cost + KIT_CASH_RESERVE - free;
             const what = lines.map(l => `${l.quantity} ${l.item}`).join(', ');
             if (short <= 0) { done.set(c.account, { account: c.account, template, value: 0, reason: `buys ${what} for ${c.template.id}, at most ${cost} coins`, resources: [] }); return; }
             if (!busy) {
@@ -537,6 +551,10 @@ export const TROOPER_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence';
 // out after a level; practice from the knights buried 114 of 120 bones in 282 ticks to Prayer 75, about 2.2 ticks a
 // bone. Gap: neither is run live.
 export const MAGIC_BAND = 2, PRAYER_BAND = 3;
+// Bought bones: Prayer XP a bury (scripts/train-prayer.ts BONE_XP; a test keeps the two tables equal), the bones the
+// trainer keeps (its BONE_RESERVE floor) and the bones a bury band starts with.
+export const BOUGHT_BONE_XP: Readonly<Record<number, number>> = { 536: 1800, 532: 375 };
+export const BONE_KEEP = 6, BONE_START = 16, BONE_PURSE = 500_000;
 // Prayer on the field, band 9, a filler: an account with every melee skill at 99 kills troopers only for their bones
 // and buries each on the spot (trooper mode with TRAIN_SKILL=Hitpoints, which takes any style, and GIANT_KILLS past the
 // tick cap, so each run ends on the cap). An account takes it when no other band and no kit buy serves it; without it
@@ -697,6 +715,22 @@ export function catalogue(): Template[] {
         goal: 'train Prayer to 99 burying the held bones', tier: 'goal', band: PRAYER_BAND, repeats: true, trains: { skill: 'Prayer', to: 99, unlocks: [] }, yields: () => [],
         needs: { items: { bones: 100 } },
     };
+    // Prayer from bought bones, bands just after the held bones. On the field a buried trooper kill gives 3.84 Prayer XP
+    // a tick, about 130,000 ticks from Prayer 74 to 99 for every account; a dragon bone gives 1,800 XP and a big bone
+    // 375 at the bank (scripts/train-prayer.ts BONE_XP). The Grand Exchange lists about 1,000 dragon bones and 1,700 big
+    // bones under the caps (KIT_PRICE_CAPS), about 2.4 million XP in all, so the kit tier buys them for an account
+    // with no other band to start, the account nearest 99 first: each takes what its Prayer still needs (BONE_KEEP
+    // more, which the trainer never buries), or what it can pay for. The band starts with BONE_START bones held, so
+    // a part-filled order is buried too. Dragon bones come first: about 5.2 coins an XP against 6.5.
+    const boneBand = (id: string, bone: string, boneId: number, band: number): Template => ({
+        id, family: 'combat-train', script: 'scripts/train-prayer.ts', args: ['99'], env: { BURY_HELD: '1', BONE_ID: String(boneId), BONE_RESERVE: String(BONE_KEEP), CAP: '4000' }, role: 'combat',
+        goal: `train Prayer to 99 burying bought ${bone}`, tier: 'goal', band, repeats: true, trains: { skill: 'Prayer', to: 99, unlocks: [] }, yields: () => [],
+        needs: { items: { [bone]: BONE_START } }, partBatch: true,
+        // An account with Ranged or Magic still to train keeps BONE_PURSE for nature runes, arrows, a staff and a blade.
+        keepCoins: a => (a.skills.Ranged ?? 1) < 99 || (a.skills.Magic ?? 1) < 99 ? BONE_PURSE : 0,
+        batchFor: a => ({ [norm(bone)]: BONE_KEEP + Math.ceil((xpForLevel(99) - xpForLevel(a.skills.Prayer ?? 1)) / BOUGHT_BONE_XP[boneId]!) }),
+    });
+    const dragonBones = boneBand('army-bury-dragon-99', 'dragon bones', 536, PRAYER_BAND + 0.1), bigBones = boneBand('army-bury-big-99', 'big bones', 532, PRAYER_BAND + 0.2);
     const prayerField: Template = {
         id: 'army-trooper-prayer-99', family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'],
         env: { TRAIN_SKILL: 'Hitpoints', GIANT_KILLS: '500', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1' }, role: 'combat', goal: 'train Prayer to 99 burying trooper bones on the field',
@@ -768,6 +802,8 @@ export function catalogue(): Template[] {
         magic,
         staff,
         prayer,
+        dragonBones,
+        bigBones,
         arrows,
         arrowsCatherby,
         arrowsGuild,
