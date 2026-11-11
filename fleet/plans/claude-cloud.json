@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794417106097,
+ "at": 1794417161815,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -140,6 +140,31 @@
    ]
   },
   {
+   "account": "Fingersmith",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
    "account": "Dipstick",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -188,19 +213,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-41c6cc8b-b8e5-472f-b1e5-f32d783a8907"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-fingersmith-20261111t170738z [task-41c6cc8b-b8e5-472f-b1e5-f32d783a8907]",
-   "role": "combat"
   }
  ]
 }
