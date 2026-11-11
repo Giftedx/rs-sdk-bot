@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794381084171-oreelse-knightstick",
  "account": "Knightstick",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Rune scimitar",
  "requested": 1,
  "claim": "76220433-6dc3-48dc-b0fe-98a742fa0a30",
- "count": 0,
- "ok": false,
- "at": 1794381089063,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794381436090,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794381435344
+ },
+ "logout": {
+  "attemptId": "1794381089065-0000015364-0000000001",
+  "at": 1794381436083,
+  "sha256": "faa5035e3a977b51a787e0f604fcab092f1aa1b33f091ba65903e199c24003f3"
+ },
+ "screen": true
 }
