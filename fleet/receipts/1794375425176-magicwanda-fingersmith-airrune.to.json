@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794375425176-magicwanda-fingersmith-airrune",
+ "account": "Fingersmith",
+ "partner": "Magicwanda",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 10,
+ "claim": "530e6f43-2090-4daf-b40d-e2a9a89506d5",
+ "count": 0,
+ "ok": false,
+ "at": 1794375428997,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794375425176-quickhandjob-kiltlifter-feather",
+ "account": "Kiltlifter",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 50,
+ "claim": "67ea71d4-fa4b-4476-9761-dbe666efe0e5",
+ "count": 0,
+ "ok": false,
+ "at": 1794375433525,
+ "detail": "trade claimed"
+}

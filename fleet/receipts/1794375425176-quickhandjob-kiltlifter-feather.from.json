@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794375425176-quickhandjob-kiltlifter-feather",
+ "account": "Quickhandjob",
+ "partner": "Kiltlifter",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 50,
+ "claim": "70851f38-0ff0-4e2b-98ec-f1837ef98783",
+ "count": 50,
+ "ok": true,
+ "at": 1794375454084,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 50,
+  "after": 0
+ },
+ "bank": {
+  "count": 50,
+  "at": 1794375441726
+ },
+ "logout": {
+  "attemptId": "1794375430876-0000015330-0000000001",
+  "at": 1794375454079,
+  "sha256": "40b1b92b23d3cb47bca2a9eb00356ea176a764178249d0184f89bb1d7e453822"
+ },
+ "screen": true
+}
