@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794437653086,
+ "at": 1794438903746,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -233,6 +233,19 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-5aa13289-57b6-4eac-a914-8eb4f325e617"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-fingerblastr-20261111t230934z [task-5aa13289-57b6-4eac-a914-8eb4f325e617]",
+   "role": "helper"
   }
  ]
 }
