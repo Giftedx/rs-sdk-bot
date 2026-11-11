@@ -178,6 +178,31 @@ if (import.meta.main) {
     const t0 = Date.now();
     const names: [string, string][] = [[botA, botB]];
     for (let i = 0; i < more.length; i += 2) names.push([more[i]!, more[i + 1]!]);
+    // SPAR_PROCS=n: the pairs of a batch run in n worker processes on the one engine. The clients of one process share
+    // one thread, and with 16 of them each tick waits about 50 ms for the last one. A child takes its share of the
+    // pairs and their place in the batch (SPAR_PAIR_OFFSET), so kits, swapped sides and seeds stay as in one process.
+    const procs = Math.min(names.length, Math.max(1, Number(env.SPAR_PROCS ?? 1)));
+    if (procs > 1 && env.SPAR_CHILD !== '1') {
+        const size = Math.ceil(names.length / procs), children: { out: Promise<string>; exited: Promise<number> }[] = [];
+        for (let at = 0; at < names.length; at += size) {
+            const child = Bun.spawn(['bun', import.meta.path, ...names.slice(at, at + size).flat().flatMap((n, i) => (i === 2 ? [String(cap), n] : [n]))],
+                { env: { ...env, SPAR_CHILD: '1', SPAR_PAIR_OFFSET: String(at), SPAR_CAP: String(cap) }, stdout: 'pipe', stderr: 'inherit', windowsHide: true });
+            children.push({ out: new Response(child.stdout).text(), exited: child.exited });
+        }
+        const outs = await Promise.all(children.map(c => c.out)), codes = await Promise.all(children.map(c => c.exited));
+        const results: SparResult[] = [];
+        for (const out of outs) for (const line of out.split(/\r?\n/)) {
+            if (line.startsWith('SPAR {')) results.push(JSON.parse(line.slice(5)) as SparResult);
+            // One RESULT line for the batch: the parent writes it.
+            if (line && !line.startsWith('RESULT ')) console.log(line);
+        }
+        const s = batchSummary(results), ok = results.length === names.length && results.every(sparValid) && codes.every(code => code === 0);
+        console.log(`SPAR_TIMING procs=${procs} wallMs=${Date.now() - t0} pairs=${results.length} ticks=${s.ticks}`);
+        console.log(`RESULT ${ok ? 'ok' : 'fail'} spar-batch fights=${s.fights} kills=${s.kills} deaths=${s.deaths} escapes=${s.escapes} fled=${s.fled} draws=${s.draws} mean=${s.mean} ticks=${s.ticks} a=${nameA} b=${nameB} `
+            + `valid=${results.filter(sparValid).length} nets=${s.nets.join(',')} scores=${s.scores.join(',')}`);
+        process.exit(ok ? 0 : 1);
+    }
+    const offset = Number(env.SPAR_PAIR_OFFSET ?? 0);
     // Every account logs in at the same time, and the wait for the logins counts as a tick wait: an account that is
     // in has no waiter until the fights start, and a lockstep world then holds each tick for the busy limit (2 s).
     const { tickWaits } = await import('../packages/core/src/tick-stream');
@@ -200,9 +225,9 @@ if (import.meta.main) {
     // SPAR_SWAP=1: every second pair fights with the two profiles on swapped sides, and its result is turned back, so
     // side A in the results is always the profile SPAR_A and the side of the map has no part in the comparison.
     const swap = env.SPAR_SWAP === '1';
-    const results = await Promise.all(pairs.map(async ([a, b], i) => (swap && i % 2
+    const results = await Promise.all(pairs.map(async ([a, b], j) => { const i = j + offset; return (swap && i % 2
         ? flipped(await spar(a, b, options('b', i, 0), options('a', i, 1), undefined, () => halted !== undefined))
-        : spar(a, b, options('a', i, 0), options('b', i, 1), undefined, () => halted !== undefined))));
+        : spar(a, b, options('a', i, 0), options('b', i, 1), undefined, () => halted !== undefined)); }));
     // Where the wall time of the run went: the logins, then the fights.
     console.log(`SPAR_TIMING loginMs=${t1 - t0} fightMs=${Date.now() - t1} pairs=${pairs.length} ticks=${Math.max(...results.map(r => r.ticks))}`);
     for (const r of results) console.log(`SPAR ${JSON.stringify({ scenario: scenarioName, profiles: { a: nameA, b: nameB }, ...r })}`);

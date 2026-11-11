@@ -140,7 +140,21 @@ any other case.
 - One unpack of the game archives for all clients of a process (`bunzip2` in `webclient/src/io/JagFile.ts`, a third
   of the worker's CPU time) gave no gain outside the noise: 34 s against 35-36 s for the batch. It is not in the
   vendor patch.
-- Gap: where the 40-100 ms of each tick go between the engine and its clients is not measured.
+- The wait of a tick is the clients of one worker process: they share one thread, and each held a tick 12 to 20 ms
+  behind the others (`SIM_ACK_FILE`). With 16 clients in one process the engine waits 54 ms for each tick; with the
+  pairs in 8 processes (`SPAR_PROCS=8`) it waits 12 ms. `extra:spar-x8`, seed 1: 89 s in one process, 64 s in 4, 54 s
+  in 8.
+- A lockstep client reads its socket as soon as bytes arrive (`packages/core/src/inprocess.ts`), not on the 20 ms
+  loop of the session: 60 ms to 50 ms for each tick with 16 clients in one process.
+- `extra:spar-x16` runs 16 pairs in 8 processes: 16 full fights in 71 s (4.4 s a fight; the x8 batch in one process
+  takes 11.1 s a fight). It takes about 3.5 GB of memory while it runs.
+- The engine's own tick is the rest: 24 to 41 ms with 32 players (`NODE_DEBUG_PROFILE=true`), of which 11 to 15 ms move
+  every NPC of the world and 4 to 9 ms read the clients.
+- The order of the logins changes with the number of processes, so a seed gives one fight only at one `SPAR_PROCS`.
+  Compare two profiles at the same setting.
+- Two batches of 8 fights of base against base gave 7 kills to 1 and 2 kills to 5. A batch of 8 does not separate two
+  profiles; use 16 pairs and three seeds.
+- Gap: no engine change that leaves the far NPCs out of a tick.
 
 Spar findings. Conditions: lockstep practice engine, cap 900 ticks, both sides with Lost City and Dragon Slayer done
 unless a finding says otherwise; a seed repeats its fight. Evidence: `.practice/pk-spar/*.json` and the traces
@@ -341,8 +355,10 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     movement and no freeze. A result from it is a candidate for the bench, not a measurement.
 19. **An overhead that changes one tick before the opponent's attack wins the mirror.** The `snap` profile (`predictPrayer`
     with `snapPrayer`) holds the overhead for the weapon the opponent shows and changes to the predicted style one
-    tick before the opponent's next attack is due. Against the base profile it has 15 kills and 1 death in 16 spars,
-    net damage +14.1 and +20.4 for each 100 ticks; base against base has 11 kills and 5 deaths, net +7.5 and +6.2
-    (`extra:spar-x8`, seeds 1 and 2, `SPAR_SWAP=1`). The tick decides it: a change two ticks before has 10 kills and 6
-    deaths, and a change in the tick of the attack has 8 and 8. Gap: two seeds; the opponent has a fixed order of
-    styles, and no run against the `mix` profile or a one-style build.
+    tick before the opponent's next attack is due. Against the base profile it has 42 kills and 6 deaths in 48 spars
+    (15 to 1, 14 to 2, 13 to 3); base against base has 24 and 24 (8 to 8, 7 to 9, 9 to 7) (`extra:spar-x16`, seeds 1,
+    2 and 3, `SPAR_SWAP=1`). The tick decides it: in batches of 8, a change two ticks before has 10 kills and 6
+    deaths in 16 spars, and a change in the tick of the attack has 8 and 8. Against the `mix` profile, which picks its
+    style at random, it has 9 kills and 7 deaths in 16 spars, the same as base. The hunter, the roamer and the
+    champion profile use it. Gap: 16 spars each against the melee build (10 to 6; base 8 to 8) and the ranger (11 to
+    5; base 10 to 6) do not separate it from base.

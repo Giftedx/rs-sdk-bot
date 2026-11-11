@@ -183,7 +183,7 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
         if (pumpingPackets) pendingTicks++;
         else publishTick();
     };
-    const drainPacketBatch = originalPacketPump ? async () => {
+    const drainOnce = originalPacketPump ? async () => {
         pumpingPackets = true;
         try { await originalPacketPump.call(client); }
         catch (error) { pendingTicks = 0; throw error; }
@@ -192,6 +192,13 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
         pendingTicks = 0;
         for (let i = 0; i < count && !stopped; i++) publishTick();
     } : undefined;
+    // One pump at a time: the session loop and the lockstep socket listener both ask for one.
+    let pumpTail: Promise<void> = Promise.resolve();
+    const drainPacketBatch = drainOnce ? () => { const run = pumpTail.then(drainOnce); pumpTail = run.catch(() => {}); return run; } : undefined;
+    // Lockstep: the session loop reads the socket every 20 ms, so with 16 clients each tick waits about 60 ms for the
+    // slowest read. A read as soon as bytes arrive takes that wait out. SIM_EAGER_READ=0 turns it off.
+    const eagerRead = () => { if (!stopped) void client.pumpPackets?.().catch(() => {}); };
+    let eagerSocket: { removeEventListener?(type: string, l: () => void): void } | undefined;
 
     const pump = async () => {
         if (running || stopped) return;
@@ -241,6 +248,10 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             }
             if (drainPacketBatch) client.pumpPackets = drainPacketBatch;
             client.setOnGameTickCallback(onGameTick);
+            if (lockstep && drainPacketBatch && process.env.SIM_EAGER_READ !== '0') {
+                const socket = transportParts(client).socket as { addEventListener?(type: string, l: () => void): void; removeEventListener?(type: string, l: () => void): void } | undefined;
+                if (typeof socket?.addEventListener === 'function') { socket.addEventListener('message', eagerRead); eagerSocket = socket; }
+            }
         },
         stop(reason: string) {
             if (stopped) return;
@@ -251,6 +262,7 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             setEquipmentObserved(client, false);
             if (trackedMutable && client.ifMutable === trackedMutable) client.ifMutable = originalMutable;
             client.setOnGameTickCallback(null);
+            eagerSocket?.removeEventListener?.('message', eagerRead);
             pendingTicks = 0;
             if (drainPacketBatch && client.pumpPackets === drainPacketBatch) client.pumpPackets = originalPacketPump;
             queue.length = 0;
