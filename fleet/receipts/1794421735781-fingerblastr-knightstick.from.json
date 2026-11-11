@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794421735781-fingerblastr-knightstick",
+ "account": "Fingerblastr",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 90120,
+ "claim": "917c44d8-0c8f-42a2-b66a-2bdb3361492a",
+ "count": 0,
+ "ok": false,
+ "at": 1794421741973,
+ "detail": "trade claimed"
+}

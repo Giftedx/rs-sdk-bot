@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794421735781-pocketpool-fatstack-airrune",
+ "account": "Fatstack",
+ "partner": "PocketPool",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 42,
+ "claim": "632469bd-e80d-4a7e-89cc-d56f034ee87d",
+ "count": 0,
+ "ok": false,
+ "at": 1794421739389,
+ "detail": "trade claimed"
+}
