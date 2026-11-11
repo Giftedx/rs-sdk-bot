@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794358045216,
+ "at": 1794358461944,
  "jobs": [
   {
    "account": "Fatstack",
@@ -23,23 +23,28 @@
    ]
   },
   {
-   "account": "Fingerblastr",
-   "script": "scripts/chain.ts",
+   "account": "Deeppockets",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit7-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
-   "role": "supply",
-   "template": "kit-buy:army-weapon",
+   "repeat": true,
+   "goal": "train Ranged to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-ranged-99",
    "autopilot": "claude-cloud",
    "resources": [
-    "ge:weapon"
+    "trooper:battlefield"
    ]
   },
   {
@@ -147,7 +152,7 @@
    ]
   },
   {
-   "account": "Deeppockets",
+   "account": "Fingerblastr",
    "script": "scripts/shop-buyer.ts",
    "args": [
     "zaff",
@@ -203,27 +208,22 @@
   },
   {
    "account": "Knightstick",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "1500",
-    "trooper"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=knightstick-kit0-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-defence-99",
+   "repeat": false,
+   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
+   "role": "supply",
+   "template": "kit-buy:army-weapon",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "ge:weapon"
    ]
   },
   {
