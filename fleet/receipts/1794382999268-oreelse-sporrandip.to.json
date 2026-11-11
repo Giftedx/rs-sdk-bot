@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794382999268-oreelse-sporrandip",
  "account": "SporranDip",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Rune scimitar",
  "requested": 1,
  "claim": "a3dac400-3573-47d4-af82-de005eb4df75",
- "count": 0,
- "ok": false,
- "at": 1794383003488,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794383469372,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794383468054
+ },
+ "logout": {
+  "attemptId": "1794383003490-0000030439-0000000001",
+  "at": 1794383469367,
+  "sha256": "0b4f7f657df35b1e90e119500ce33bbd6869511b937e3374edaf04015ded3c07"
+ },
+ "screen": true
 }
