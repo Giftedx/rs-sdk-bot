@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794375159764,
+ "at": 1794375184120,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -33,6 +33,26 @@
    "autopilot": "claude-cloud",
    "resources": [
     "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio.ts",
+   "args": [
+    "quester",
+    "chain",
+    "drunkmonk,murder,zanaris"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
+   "role": "quest",
+   "template": "army-quest-lostcity",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "quest:lostcity"
    ]
   },
   {
@@ -113,7 +133,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-5b1aee1b-3788-46b2-bc96-69437c1f29ac"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "claude-cloud-recover-trousersnake-20261111t052849z [task-5b1aee1b-3788-46b2-bc96-69437c1f29ac]",
    "role": "helper"
