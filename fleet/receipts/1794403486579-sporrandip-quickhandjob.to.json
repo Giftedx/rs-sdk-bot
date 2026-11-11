@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1794403486579-sporrandip-quickhandjob",
+ "account": "Quickhandjob",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 90000,
+ "claim": "3c129ab5-97e3-4ea0-af18-6e3e66769f09",
+ "count": 0,
+ "ok": false,
+ "at": 1794403504914,
+ "detail": "Error: route to 3182, 3440: precondition ferry needs 60 coins and the bank holds 11000",
+ "logout": {
+  "attemptId": "1794403489876-0000023564-0000000001",
+  "at": 1794403504908,
+  "sha256": "e5dc917608e8c25eb1e4b0f59c6eff41b61e8341f39907501e05ffbb8b91b267"
+ },
+ "screen": false
+}
