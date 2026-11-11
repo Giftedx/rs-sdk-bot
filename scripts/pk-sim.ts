@@ -54,8 +54,9 @@ export function itemBonuses(root = resolve(import.meta.dir, '..', 'vendor/rs-sdk
 // The fight options the simulator knows, by the names of scripts/pk.ts FightOptions.
 export type SimOptions = { rotation?: Style[]; eatAt?: number; specBelow?: number | null; readOverheads?: boolean; castArmour?: 'torso' | 'keep';
     defencePrayer?: boolean; predictPrayer?: boolean; mixStyles?: boolean; styleByArmour?: boolean; restorePrayerAt?: number;
-    // The share of the opponent's hits that find our overhead on their style already (default 0.9). On the bench a side
-    // sees the new weapon before the hit rolls: 188 of 196 hits of a tribrid met the right overhead of a ranger.
+    // The share of the opponent's hits that find our overhead on their style already (default 0.15). On the bench an
+    // overhead that follows the weapon was on the right style for 32 of 196 hits of a tribrid in the tick of the roll:
+    // the weapon change and the hit come in one tick.
     guardRate?: number };
 type Fighter = {
     kit: KitSpec; o: SimOptions; hp: number; food: number; eatReady: number; actionAt: number; energy: number; regenAt: number;
@@ -131,7 +132,7 @@ export function simulate(kitA: string, kitB: string, optionsA: SimOptions = {}, 
         if (style === 'melee') { if (me.torso) me.worn.torso = me.torso; const shield = me.kit.switches.melee?.[1] ?? me.shield; if (shield) me.worn.shield = shield; }
         else { if (me.o.castArmour !== 'keep' && me.hp > 40) delete me.worn.torso; if (style === 'ranged') delete me.worn.shield; }
         return () => {
-        if (opp.prayer > 0 && rand() < (opp.o.guardRate ?? 0.9)) guard = style;
+        if (opp.prayer > 0 && rand() < (opp.o.guardRate ?? 0.15)) guard = style;
         const defence = effDefence(opp) + 8;
         if (style === 'melee') {
             const pray = me.prayer > 0 ? 1.15 : 1, attack = Math.floor((99 + me.boost.attack) * pray) + 8, strength = Math.floor((99 + me.boost.strength) * pray) + 8 + 3;

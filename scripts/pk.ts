@@ -77,6 +77,11 @@ export type FightOptions = {
     // predictPrayer: pray against the style the opponent will use next, learnt from the order of its weapons, in place
     // of the weapon it holds now (which is its last attack, one step behind).
     predictPrayer?: boolean;
+    // snapPrayer: with predictPrayer, hold the overhead for the weapon the opponent shows and change to the predicted
+    // style only snapLead ticks (default 1) before its next attack is due. The opponent chooses its style from the
+    // overhead it saw the tick before, so a change that late arrives with its hit and it cannot go round it.
+    snapPrayer?: boolean;
+    snapLead?: number;
     // styleByArmour: among the styles the opponent does not protect against, attack with the one its worn armour is
     // weakest to (the content's defence bonuses), in place of the fixed order.
     styleByArmour?: boolean;
@@ -372,6 +377,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
     let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = false, rapidSet = false, pjedByNpc = false;
     let target: NearbyPlayer | undefined, rubbed = -1, ranAt = -10, prevSelf: { x: number; z: number } | null = null;
     const predictor = new StylePredictor();
+    let oppStyle: Style | null = null, oppChangedAt = start;
     const rand = o.mixSeed === undefined ? Math.random : seededRandom(o.mixSeed);
     let charged = false, chargeAt = -10, stepAt = -10, flickAt = start, lastSpecStyle: Style | null = null;
     const splatSeen: { cycles: number[] | null } = { cycles: null };
@@ -568,8 +574,14 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         const prayerBase = state.skills.find(k => k.name === 'Prayer')?.baseLevel ?? 99;
         const lastHit = [...hits].reverse().find(h => now - h.tick <= 10);
         const hitter = lastHit && lastHit.src !== target.index ? observePlayer(s.client, lastHit.src) : null;
-        if (seen) predictor.observe(weaponStyle(seen.worn[3]));
-        const predicted = o.predictPrayer && !hitter ? predictor.predict() : null;
+        if (seen) {
+            const shown = weaponStyle(seen.worn[3]);
+            predictor.observe(shown);
+            if (shown !== oppStyle) { oppStyle = shown; oppChangedAt = now; }
+        }
+        // An opponent that changes weapon attacks in the tick of the change, so its next attack is one attack delay later.
+        const oppDue = oppChangedAt + (oppStyle === 'magic' ? 5 : oppStyle === 'ranged' ? 3 : 4);
+        const predicted = o.predictPrayer && !hitter && (!o.snapPrayer || now >= oppDue - (o.snapLead ?? 1)) ? predictor.predict() : null;
         const overhead = hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : predicted ? PROTECT_FROM[predicted] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
         // An opponent that only has melee: hold it and stay out of its reach.
         // Only with a freeze that the carried runes can cast: with none, the loop would spend turns on a spell that

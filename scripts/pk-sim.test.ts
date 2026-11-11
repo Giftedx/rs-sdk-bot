@@ -17,8 +17,9 @@ test('the mirror is fair: neither side wins by its place', () => {
     expect(Math.abs(s.winsA - s.winsB) / s.fights).toBeLessThan(0.08);
 });
 
-test('the builds rank as on the bench: potions, the melee build and the ranger win, cheaper armour loses', () => {
-    for (const kit of ['tribrid-pots', 'melee', 'ranger']) { const s = series(kit, 'tribrid', {}, {}, 400); expect(s.winsA).toBeGreaterThan(s.winsB); }
+test('the builds rank as on the bench: potions and the lean kit win, the mage and cheaper armour lose', () => {
+    for (const kit of ['tribrid-pots', 'tribrid-lean']) { const s = series(kit, 'tribrid', {}, {}, 400); expect(s.winsA).toBeGreaterThan(s.winsB); }
+    expect(series('mage', 'tribrid', {}, {}, 400).winRateA).toBeLessThan(0.1);
     expect(series('tribrid-mithril', 'tribrid', {}, {}, 400).winRateA).toBeLessThan(0.1);
 });
 

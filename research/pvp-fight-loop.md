@@ -320,18 +320,29 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     of a side from its HP drops tick by tick (`spar` in `scripts/pk-spar.ts`), and the net damage of the climb uses that.
     Evidence: `SPAR_TRACE=1` on `extra:spar-x8`, then the sum of the HP drops in the `TRACE` lines against `taken` in
     the `SPAR` line. Gap: a hit in the tick of a bite of food shows a smaller drop.
-16. **An overhead prayer meets almost every hit of a side that switches styles.** A ranger build guarded 188 of 196 hits
-    of a tribrid with the overhead of the weapon the tribrid held in the tick of the hit (four spars of
-    `extra:spar-duel-ranger-x8`, seed 1). The weapon shows before the hit rolls. A switch does not get past a prayer
-    that follows the weapon. Gap: no run with the weapon change and the attack in one tick.
+16. **An overhead prayer that follows the weapon is late for most hits of a side that switches styles.** The weapon change
+    and the hit come in one tick. In the tick of the roll a ranger build had the right overhead for 32 of 196 hits of a
+    tribrid (magic 12 of 54, ranged 3 of 66, melee 17 of 76; four spars of `extra:spar-duel-ranger-x8`, seed 1). The
+    drops under a right overhead stay at or below 60% of the max hit (magic 11, melee 12), and the other drops reach
+    the full max hit (20, 22, 23). By the tick of the HP drop the overhead is right for 188 of 196, so the prayer at
+    the drop says nothing. Gap: the roll tick comes from the hit delay of each style, one tick before the drop for
+    melee, two for ranged, three for magic at one tile.
 17. **Prayer points are the clock of a fight.** Both sides of a spar that ends in a kill near tick 670 hold 0 prayer points
     (`prayerLeft` in the `SPAR` lines of `extra:spar-duel-melee-x8`). The overhead, Steel Skin and the two melee prayers
     drain 12 each for a tick, and 60 + 2 x prayer bonus of drain costs one point, so 99 points and eight doses of
     restore last about 700 ticks. The first side with no points takes full hits. Gap: no bench run with more restore
     potions or with prayer bonus gear.
-18. **The offline simulator ranks builds as the bench does, in less time.** `bun scripts/pk-sim.ts --table 1000` runs 16,000
-    fights in seconds with the server's hit, prayer, food and special rules. Against the tribrid it gives the melee
-    build, the ranger, the hybrid, the potion kit and the lean kit a win and the adamant and mithril kits a loss, as
-    the bench does. Gap: it gives the mage build 59% where the bench gives it 0 of 9, and its mirror lasts about 880
-    ticks where the bench mirror lasts about 650. It has no movement and no freeze. A result from it is a candidate for
-    the bench, not a measurement.
+18. **The offline simulator agrees with the bench on tribrid kits, not on one-style builds.** `bun scripts/pk-sim.ts --table 1000`
+    runs 16,000 fights in seconds with the server's hit, prayer, food and special rules. Against the tribrid it gives the
+    potion kit, the lean kit and the hybrid a win and the mage, adamant and mithril kits a loss, as the bench does, and
+    its mirror lasts 694 ticks where the bench mirror lasts about 650. Gap: it gives the ranger 17% where the bench
+    gives it 14 of 24, and the melee build an even fight where the bench gives it 18 of 24. In the simulator the
+    tribrid deals about 100 damage for each 100 ticks to the ranger; on the bench it deals 77 (eight spars). It has no
+    movement and no freeze. A result from it is a candidate for the bench, not a measurement.
+19. **An overhead that changes one tick before the opponent's attack wins the mirror.** The `snap` profile (`predictPrayer`
+    with `snapPrayer`) holds the overhead for the weapon the opponent shows and changes to the predicted style one
+    tick before the opponent's next attack is due. Against the base profile it has 15 kills and 1 death in 16 spars,
+    net damage +14.1 and +20.4 for each 100 ticks; base against base has 11 kills and 5 deaths, net +7.5 and +6.2
+    (`extra:spar-x8`, seeds 1 and 2, `SPAR_SWAP=1`). The tick decides it: a change two ticks before has 10 kills and 6
+    deaths, and a change in the tick of the attack has 8 and 8. Gap: two seeds; the opponent has a fixed order of
+    styles, and no run against the `mix` profile or a one-style build.

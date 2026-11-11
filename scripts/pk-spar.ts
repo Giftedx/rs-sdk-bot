@@ -36,6 +36,9 @@ export const PROFILES: Readonly<Record<string, Profile>> = {
     flick: { prayerFlick: true },
     // Readers of the opponent, one at a time and together.
     predict: { predictPrayer: true },
+    snap: { predictPrayer: true, snapPrayer: true },
+    'snap-2': { predictPrayer: true, snapPrayer: true, snapLead: 2 },
+    'snap-0': { predictPrayer: true, snapPrayer: true, snapLead: 0 },
     weak: { styleByArmour: true },
     mix: { mixStyles: true },
     adapt: { adapt: true },
