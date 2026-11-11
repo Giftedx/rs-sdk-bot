@@ -301,6 +301,10 @@ const ROUTE_CASES: BenchCase[] = [
   // Iron at the Al Kharid mine at combat level 14: the scorpions (level 14, hunt range 2) attack while the pick swings.
   {key: 'extra:guard-mine', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['mining', 'at-site', 'iron_rock_table', '6', '400'], pass: ok,
     presetConfig: {position: {x: 3298, z: 3310, level: 0}, skills: {Mining: 41, Hitpoints: 30, Prayer: 45}, inventory: [{id: 1275, count: 1}]}},
+  // Thrower trolls on the Death Plateau path (level 67, hunt range 8, no too-strong rule) throw rocks at each player
+  // in range. The worker stands still: the guard must turn Protect from Missiles on before the first rock.
+  {key: 'extra:guard-thrower', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['300'], pass: ok,
+    presetConfig: {position: {x: 2860, z: 3595, level: 0}, skills: {Hitpoints: 60, Defence: 60, Prayer: 60}}},
   sparCase('extra:spar-no-slayer', sparFixture(3094, 3555, {noDragonSlayer: true}), sparFixture(3096, 3555, {noDragonSlayer: true})),
   // The tribrid against every build of scripts/pk-kits.ts in one run, and a mirror of 8 for each build: the cases that
   // the hill climb and the kit matrix run (scripts/measure/pk-spar-climb.ts, pk-spar-matrix.ts).
