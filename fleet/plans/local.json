@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794387271437,
+ "at": 1794390890948,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -86,19 +86,6 @@
    "repeat": true,
    "goal": "rune, adamant, mithril and steel arrowtips from Hickton",
    "role": "supply"
-  },
-  {
-   "account": "Shaftmaker",
-   "script": "scripts/pk-live/live-pilot.ts",
-   "args": [
-    "10",
-    "20"
-   ],
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "PK hunts of 10 minutes at Wilderness 20 or less, with GE and shop rune restock",
-   "role": "pk"
   },
   {
    "account": "Shaftsinker",
@@ -582,6 +569,30 @@
    "repeat": false,
    "goal": "run-session-recovery-pocketpython-coin [task-dc6e6976-0856-4956-a80d-6aff1adb9a60]",
    "role": "supply"
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "magic_guild",
+    "12000"
+   ],
+   "env": {
+    "CAP": "12000",
+    "ITEMS": "blood rune",
+    "STOP_AT_TARGET": "1",
+    "STOCK_TARGET": "776",
+    "MAX_ITEMS": "776",
+    "MAX_SPEND": "140000",
+    "COIN_RESERVE": "2000",
+    "NO_BUY_TICKS": "25",
+    "BANK_PACK": "1",
+    "COORDINATOR_RUN_ID": "task-3b17c555-4ada-429f-9541-502cac93df38"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-shop-shaftmaker-blood776 [task-3b17c555-4ada-429f-9541-502cac93df38]",
+   "role": "pk"
   }
  ]
 }
