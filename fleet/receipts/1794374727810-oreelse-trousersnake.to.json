@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794374727810-oreelse-trousersnake",
  "account": "TrouserSnake",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Rune full helm",
  "requested": 1,
  "claim": "5abfda20-1a36-4fb3-9e33-05c3a9d0c6bd",
- "count": 0,
- "ok": false,
- "at": 1794375357674,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794375460056,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794375459382
+ },
+ "logout": {
+  "attemptId": "1794375357676-0000022283-0000000001",
+  "at": 1794375460049,
+  "sha256": "2b68d29db9ec7d5454b1d5fc146c7555253aadf2f1d5a8c09bb53a5dc31c0899"
+ },
+ "screen": true
 }
