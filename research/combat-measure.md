@@ -361,9 +361,20 @@ Ranged it adds is not needed at that point.
   tile with three hides: `RESULT ok black-dragon-leave hides=3 bones=3 banked=true`, 31 ticks; without `LEAVE`,
   `RESULT ok black-dragon-trip kills=1 hides=1 bones=1 ... banked=true`. No walker plans a way out of the cave: a
   planned route can cross dragon ground. Raw runs: `.practice/blackdragon/leave-run.ts` (`a`, `b`).
-- **Gap.** Two live runs, one with loot, none banked. A player of another fleet on the tile, or another player's
-  kill, is not run. Kills with arrows other than mithril are not measured (best hits by arrow: iron 12, mithril 14,
-  rune 19).
+- **Claim.** A hunter's iron arrows and teleport runes come from two Varrock shops in one run, and the run leaves a
+  shelf it has emptied. **Conditions.** `army-hunt-supply` (`scripts/chain.ts`): `scripts/shop-buyer.ts lowe` to 1,200
+  iron arrows owned (`archeryshop`: 1,500 in stock, one back every 15 ticks), then `aubury` to 60 air and 60 fire
+  runes, each banked at Varrock east. Practice from the Varrock west bank, 60 arrows banked, three runs in a row on
+  one shelf: (a) spend 12,000: 890 arrows for 11,984 coins in 260 ticks (3 coins an arrow from the full shelf, 18
+  from a drained one), then 120 runes for 569 coins in 79; (b) spend 21,000 and a 25-tick wait: 822 arrows for 14,796
+  coins in 2,523 ticks, the shelf at 0 and the run buying one arrow every 15 ticks until its cap; (c) a 10-tick wait
+  on the empty shelf: 31 arrows, `stop=stock-wait noBuyTicks=10`, 119 ticks, then the runes in 77. Raw runs:
+  `.practice/huntsupply/run.ts` (`a`-`c`).
+- **Gap.** One live trip with loot, brought home by a second run (`LEAVE=1`); no live trip has banked its own loot,
+  and the supply run has no live run. A player of another fleet on the tile, or another player's kill, is not run.
+  Kills with arrows other than mithril are not measured (best hits by arrow: iron 12, mithril 14, rune 19). Lowe's
+  shelf gives back 4 iron arrows a minute at 0.6 s a tick, under what two hunters fire (estimate from 60 arrows a
+  kill); the other iron arrow shelves (Hickton's, Dargaud's) and bronze arrows are not in the run.
 
 ## Ranged on the troopers
 
