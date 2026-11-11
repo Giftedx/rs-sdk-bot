@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794425442880,
+ "at": 1794431444589,
  "jobs": [
   {
    "account": "Abracadickra",
@@ -314,25 +314,6 @@
    "role": "pk"
   },
   {
-   "account": "Mightyrod",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
-   "autopilot": "local",
-   "resources": [
-    "knight:2671,3313"
-   ]
-  },
-  {
    "account": "FishAndChips",
    "script": "scripts/session-check.ts",
    "args": [],
@@ -515,6 +496,19 @@
    "repeat": false,
    "goal": "run-scorpion-bigchopper-quest-sweep-r6 [task-171afee7-264a-4b31-bf71-ea099cf1d5b3]",
    "role": "firemaking"
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-5d62d9d4-2949-4f48-952d-debf6005cdb9"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-session-recovery-mightyrod-expired-lease-r21 [task-5d62d9d4-2949-4f48-952d-debf6005cdb9]",
+   "role": "thieving"
   }
  ]
 }
