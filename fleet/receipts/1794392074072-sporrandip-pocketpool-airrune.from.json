@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794392074072-sporrandip-pocketpool-airrune",
  "account": "SporranDip",
  "partner": "PocketPool",
@@ -10,8 +10,18 @@
  "item": "Air rune",
  "requested": 31,
  "claim": "3a33ad70-2cb9-4167-86d8-c9973ba8281c",
- "count": 0,
- "ok": false,
- "at": 1794392078283,
- "detail": "trade claimed"
+ "count": 31,
+ "ok": true,
+ "at": 1794392090183,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 294,
+  "after": 263
+ },
+ "logout": {
+  "attemptId": "1794392078287-0000006767-0000000001",
+  "at": 1794392090176,
+  "sha256": "e3f07bee0a095f0b913baf0a01051b52745cb278c8a90b10d1466787df66c217"
+ },
+ "screen": true
 }
