@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794381079536-oreelse-fatstack",
+ "account": "OreElse",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "3a195a1f-49b5-4123-a854-f8a6314377af",
+ "count": 0,
+ "ok": false,
+ "at": 1794381087700,
+ "detail": "trade claimed"
+}
