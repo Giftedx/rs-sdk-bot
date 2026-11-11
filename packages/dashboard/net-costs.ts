@@ -67,7 +67,7 @@ export function netCosts(r:Record<string,any>,owned:Set<string>,now:number){
   for(const id of [329,333]){
    const singleGain=count(startSingle,[id])-count(get(foodSource,first.name),[id]);
    need(singleGain>=0&&count(get(foodSource,courier.name),[id])-count(firstCourier,[id])===singleGain,'Single delivery item mismatch');
-   const gains=starts.map(s=>count(s,[id])-count(get(batchSource,s.name),[id]));
+   const gains:number[]=starts.map((s:any)=>count(s,[id])-count(get(batchSource,s.name),[id]));
    need(gains.every(g=>g>=0)&&count(get(batchSource,courier.name),[id])-count(lastCourier,[id])===gains.reduce((a,b)=>a+b,0),'Batch delivery item mismatch');
    for(const [a,b] of [[upstream,cargoOpening],[courier,get(foodSource,courier.name)],[firstCourier,get(batchSource,courier.name)]])
     need(count(a,[id])===count(b,[id]),'Food item identity changed between receipts');
@@ -94,7 +94,7 @@ export function netCosts(r:Record<string,any>,owned:Set<string>,now:number){
   }
   const fishUsed=[startSingle,...starts].reduce((sum,s)=>sum+count(s,[329,333]),0)-[second,...host].reduce((sum,s)=>sum+count(s,[329,333]),0);
   need(fishUsed>=0,'Food stock increased outside delivery scope');
-  const recipientOpening=count(get(foodSource,first.name),[329,333])+starts.reduce((sum,s)=>sum+count(get(batchSource,s.name),[329,333]),0);
+  const recipientOpening=count(get(foodSource,first.name),[329,333])+starts.reduce((sum:number,s:any)=>sum+count(get(batchSource,s.name),[329,333]),0);
   const recipientRemaining=[second,...host].reduce((sum,s)=>sum+count(s,[329,333]),0);
   const courierOpening=count(courier,[329,333]),courierRemaining=count(lastCourier,[329,333]);
   need(recipientOpening+incoming===fishUsed+recipientRemaining,'Consumer food balance does not close');

@@ -1,6 +1,6 @@
 // Read-only projection. The dashboard never writes the queue or takes a lease.
 export function coordinationView(state:any,at:number,now:number,paused=false){
- if(!state||state.version!==1||!Array.isArray(state.tasks))return{available:false,at:null,fresh:false,tasks:[],agents:[],counts:{}};
+ if(!state||state.version!==1||!Array.isArray(state.tasks))return{available:false,at:null,fresh:false,tasks:[],agents:[],counts:{} as Record<string,number>};
  const tasks=state.tasks.filter((r:any)=>r?.spec&&r.status!=='superseded').map((r:any)=>({
   id:r.spec.id,goal:r.spec.goal,kind:r.spec.kind,capability:r.spec.capability??null,status:r.status,
   agent:r.agent??r.spec.agent??(r.spec.kind==='build'?'claude':null),account:r.spec.account??null,participants:r.spec.participants??[],
