@@ -1,0 +1,22 @@
+{
+ "id": "1794373868324-abracadickra-knightstick-feather",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Abracadickra",
+ "to": "Knightstick",
+ "item": "Feather",
+ "count": 50,
+ "start": 1794373868324,
+ "end": 1794376268324,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
