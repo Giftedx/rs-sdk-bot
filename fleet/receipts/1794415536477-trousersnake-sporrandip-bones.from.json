@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794415536477-trousersnake-sporrandip-bones",
+ "account": "TrouserSnake",
+ "partner": "SporranDip",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 14,
+ "claim": "9381c442-dff8-4f8c-a211-db7425c93d45",
+ "count": 14,
+ "ok": true,
+ "at": 1794415560328,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 14,
+  "after": 0
+ },
+ "bank": {
+  "count": 14,
+  "at": 1794415552149
+ },
+ "logout": {
+  "attemptId": "1794415544305-0000009741-0000000001",
+  "at": 1794415560323,
+  "sha256": "b3a3ee3477c7ac8ab6d8946317675562241746b3bb885de980aba896ea20de54"
+ },
+ "screen": true
+}

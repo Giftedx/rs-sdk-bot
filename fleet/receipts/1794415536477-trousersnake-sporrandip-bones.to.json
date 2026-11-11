@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794415536477-trousersnake-sporrandip-bones",
+ "account": "SporranDip",
+ "partner": "TrouserSnake",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 14,
+ "claim": "141983b7-2e12-4acc-a194-d8ccd7b2633e",
+ "count": 0,
+ "ok": false,
+ "at": 1794415540539,
+ "detail": "trade claimed"
+}
