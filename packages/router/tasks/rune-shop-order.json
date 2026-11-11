@@ -1,0 +1,46 @@
+{
+  "id": "rune-shop-order",
+  "goal": "Buy an exact finite rune order at an owned-account-reachable shop (the Magic Guild store in Yanille for blood, death and law runes) with the existing shop-buyer CLI, bank it, reconcile coins and assets, and confirm logout.",
+  "entry": "scripts/shop-buyer.ts",
+  "files": [
+    "scripts/shop-buyer.ts",
+    "scripts/shop-buyer.test.ts",
+    "packages/practice/src/rune-shop-order-proof.ts",
+    "packages/practice/test/rune-shop-order-proof.test.ts"
+  ],
+  "consumer": "run-shop-shaftmaker-blood776: Shaftmaker (Magic 74, 150000 coins after run-coin-pocketpython-shaftmaker-150k, at Varrock West bank 3185,3436) buys 776 blood runes 565 at the Magic Guild store with ITEMS='blood rune', STOCK_TARGET=776, MAX_ITEMS=776, MAX_SPEND=140000, COIN_RESERVE=2000, banks them at Yanille 2612,3093, reconciles spend and logs out. A Magic level below 66 refuses before any walk. Keep existing shop-buyer profiles and callers unchanged (catherby, sarim, ardy, zaff, khazard_paste, the magic_guild fire, nature and law lines, and the ge-bulk-order fallback).",
+  "checks": [
+    {
+      "id": "rune-shop-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/shop-buyer.test.ts",
+        "packages/practice/test/rune-shop-order-proof.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "native-rune-shop-order",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/rune-shop-order-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "saved-rune-shop-state",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/rune-shop-order-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
+  ]
+}
