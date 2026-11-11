@@ -192,6 +192,12 @@ test('assess retires repeated fails, a death and near-total waste, and keeps pro
     // A world planner `no route` is where the account stands, not the job's failure: a drain, never a retirement.
     const noRoute = 'RESULT fail travel to Ardougne from 3185,3436 failed: precondition no route to 2654,3283,0';
     expect(assess([noRoute, noRoute])).toMatchObject({ retire: false, drains: 2, fail: 0 });
+    // A market buy that did not reach the market bank placed no order (live: a stale state at Port Sarim, off the
+    // second ferry, in a relayed session). Its two forms are drains; a buy that reached the bank and failed is not.
+    const trip = 'RESULT fail market bank travel failed: position=3029,3217,0 currentHP=99 ticks=207; Error: no route to 3185,3436,0';
+    const budget = 'RESULT fail Error: market bank travel failed: position=3029,3217,0 currentHP=99 ticks=41; Error: market trip health/stop/tick budget';
+    expect(assess([trip, budget])).toMatchObject({ retire: false, drains: 2, fail: 0 });
+    expect(assess(['RESULT fail {"ok":false,"phase":"unplaced","acquired":0,"failure":"final bank/reserve/asset reconciliation failed"}', 'RESULT fail {"ok":false,"phase":"unplaced","acquired":0,"failure":"x"}']).retire).toBe(true);
     expect(assess(['RESULT fail no combat progress: cow stage: walk to Ardougne north bank failed: precondition no route to 2619,3332,0', noRoute]).retire).toBe(false);
     // A cow run that killed and trained before failing made progress; two runs with no kill did not.
     expect(assess(['RESULT fail mode=cow ok=false creditedKills=6 selectedXp=5200', 'RESULT fail mode=cow ok=false creditedKills=2 selectedXp=1600']).retire).toBe(false);
