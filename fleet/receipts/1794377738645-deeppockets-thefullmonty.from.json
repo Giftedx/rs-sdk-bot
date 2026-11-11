@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794377738645-deeppockets-thefullmonty",
  "account": "Deeppockets",
  "partner": "TheFullMonty",
@@ -12,6 +12,20 @@
  "claim": "bfb2cddb-3d34-4098-8f49-96a42a1ebfbf",
  "count": 0,
  "ok": false,
- "at": 1794377747045,
- "detail": "trade claimed"
+ "at": 1794380139276,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 52147,
+  "after": 52147
+ },
+ "bank": {
+  "count": 52147,
+  "at": 1794377966962
+ },
+ "logout": {
+  "attemptId": "1794377747047-0000010581-0000000001",
+  "at": 1794380139270,
+  "sha256": "bd23db362d090fa2fc42ad36ab64d8fc672c0e596ee8d2147bf5563f5a5e1e8c"
+ },
+ "screen": false
 }
