@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794374729443-oreelse-trousersnake",
+ "account": "OreElse",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune kiteshield",
+ "requested": 1,
+ "claim": "c4689bcb-6eab-44f1-a3f7-4fcaf447aad2",
+ "count": 1,
+ "ok": true,
+ "at": 1794375520228,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794375509008
+ },
+ "logout": {
+  "attemptId": "1794375502410-0000019988-0000000001",
+  "at": 1794375520144,
+  "sha256": "25f9fb55667b2ca5bb089f5ced935deea827d9d0ae369b4d22058ebd48d22e0e"
+ },
+ "screen": true
+}
