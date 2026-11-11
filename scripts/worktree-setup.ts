@@ -18,13 +18,6 @@ export function patchNewFiles(patch:string):string[]{
 }
 // What to do with the SDK patch. `reverseOk`: the patch comes off cleanly, so it is on. `forwardOk`: it goes on cleanly.
 export function patchState(reverseOk:boolean,forwardOk:boolean):PatchState{return reverseOk?'applied':forwardOk?'clean':'other';}
-// The nearest node_modules folder at or above `dir` that holds `name`, as module resolution finds it.
-export function findModule(dir:string,name:string,exists:(p:string)=>boolean=existsSync):string|null{
-    for(let d=resolve(dir);;d=dirname(d)){
-        if(exists(join(d,'node_modules',name)))return join(d,'node_modules');
-        if(dirname(d)===d)return null;
-    }
-}
 
 if(import.meta.main){
     const root=join(import.meta.dir,'..'),flags=new Set(process.argv.slice(2)),dry=flags.has('--check');
@@ -66,8 +59,9 @@ if(import.meta.main){
         }
     }else if(dry)step('SDK patch','would check after the submodule step');
 
-    // 3. The installs. A worktree under the main checkout finds the root packages of the main checkout.
-    if(findModule(root,'typescript'))step('root packages','present');
+    // 3. The installs. The root packages go in this worktree itself: a worktree under the main checkout can resolve the
+    // packages of the main checkout, but the gate needs node_modules in the checkout that it tests (scripts/ci-gate.ts).
+    if(existsSync(join(root,'node_modules','typescript')))step('root packages','present');
     else act('root packages',root,['bun','install','--no-save']);
     const installs:[string,string,string[]][]=[
         ['SDK packages',vendor,['bun','install','--frozen-lockfile','--production']],

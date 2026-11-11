@@ -1,7 +1,7 @@
 import {expect,test} from 'bun:test';
 import {readFileSync} from 'node:fs';
-import {join,resolve} from 'node:path';
-import {findModule,patchNewFiles,patchState} from './worktree-setup';
+import {join} from 'node:path';
+import {patchNewFiles,patchState} from './worktree-setup';
 
 test('patchNewFiles lists only the files that a patch creates',()=>{
     const patch=['diff --git a/a.ts b/a.ts','--- a/a.ts','+++ b/a.ts','@@ -1 +1 @@','-x','+y',
@@ -20,10 +20,4 @@ test('patchState names the patch as applied, clean to apply, or a different edit
     expect(patchState(true,false)).toBe('applied');
     expect(patchState(false,true)).toBe('clean');
     expect(patchState(false,false)).toBe('other');
-});
-
-test('findModule finds a package in a folder above, as a worktree under the main checkout does',()=>{
-    const has=(p:string)=>resolve(p)===resolve('/repo/node_modules/typescript');
-    expect(findModule('/repo/.claude/worktrees/x','typescript',has)).toBe(join(resolve('/repo'),'node_modules'));
-    expect(findModule('/elsewhere/x','typescript',has)).toBeNull();
 });
