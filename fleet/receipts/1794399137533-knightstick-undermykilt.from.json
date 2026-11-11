@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794399137533-knightstick-undermykilt",
  "account": "Knightstick",
  "partner": "UnderMyKilt",
@@ -12,6 +12,12 @@
  "claim": "b947e2d0-7328-4004-a01f-3748105f0750",
  "count": 0,
  "ok": false,
- "at": 1794399618130,
- "detail": "trade claimed"
+ "at": 1794399629949,
+ "detail": "Error: stock short: 122 banked + 0 held < 560",
+ "logout": {
+  "attemptId": "1794399618133-0000022426-0000000001",
+  "at": 1794399629944,
+  "sha256": "1e4963940cdf29e64c27eec2f646fcc47fa01e1f8a59f7faa244a7e6e536abca"
+ },
+ "screen": false
 }
