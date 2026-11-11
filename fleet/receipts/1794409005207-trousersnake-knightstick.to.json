@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794409005207-trousersnake-knightstick",
  "account": "Knightstick",
  "partner": "TrouserSnake",
@@ -12,6 +12,12 @@
  "claim": "c97cd79d-b137-474d-8a60-7520097b134f",
  "count": 0,
  "ok": false,
- "at": 1794409012231,
- "detail": "trade claimed"
+ "at": 1794409175370,
+ "detail": "Error: route to 3182, 3440: precondition no route to 3182,3440,0",
+ "logout": {
+  "attemptId": "1794409012234-0000014160-0000000001",
+  "at": 1794409175365,
+  "sha256": "1923e6ad0960dacd52d3f66b4e5ebfe37ee7ae3ef1a86568b0bc0a2b64613242"
+ },
+ "screen": false
 }
