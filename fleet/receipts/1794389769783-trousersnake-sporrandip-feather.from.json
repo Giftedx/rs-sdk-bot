@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794389769783-trousersnake-sporrandip-feather",
+ "account": "TrouserSnake",
+ "partner": "SporranDip",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 49,
+ "claim": "bb8e1c4f-463c-4dc9-8790-c35b6231b7ed",
+ "count": 0,
+ "ok": false,
+ "at": 1794389775176,
+ "detail": "trade claimed"
+}
