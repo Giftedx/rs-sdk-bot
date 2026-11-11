@@ -1,15 +1,19 @@
 // Eat guard: eats plain food when Hitpoints are low and damage arrives, in each session.
 //
-// The guard must never eat an item that a script needs for another purpose. Three rules give that:
+// The guard must never eat an item that a script needs for another purpose. Four rules give that:
 // - It eats only the cooked fish of PLAIN_FOOD, and only by the Eat option. It never eats a pie, a cake, bread, cheese,
 //   a fruit, a stew or a drink: those are ingredients and quest items.
 // - A quest session has no guard. Family Crest and Death Plateau take cooked fish from the inventory
 //   (quest_crest/scripts/crest_caleb.rs2, quest_death/scripts/death_sherpa.rs2), so a fish is a quest item there.
 //   The quest library, the quest sweep and each other quest script hold the guard for the whole session
 //   (scripts/generated/quest-lib.ts, scripts/quest-sweep.ts), and bot.ts starts no guard for a script with `quest`
-//   in its file name. The quest sustain eats there, with the reserve rules of the quest.
+//   in its file name (noGuardScript). The quest sustain eats there, with the reserve rules of the quest.
 // - It sends an eat only while damage arrives: Hitpoints fell in the last `calmTicks` ticks. An account that stands
 //   with low Hitpoints and takes no damage keeps its food, which can be cargo, and no window closes.
+// - It eats only in a session whose script has sent an attack. A cook, a courier and a trader carry cooked fish as
+//   product or cargo and send no attack (scripts/cook-food.ts counts each cooked fish), so the guard eats nothing there.
+//   The microbot scripts fight and count each piece of their food (scripts/microbot-c-clue-guardian.ts knownRotDelta):
+//   bot.ts starts no guard for a script with `microbot` in its file name.
 //
 // An item click is refused while the player is delayed (engine OpHeldHandler.ts, player.delayed). An accepted click
 // clears the pending interaction, closes every open window and clears the weak queue, which holds a skill batch
@@ -65,8 +69,9 @@ export const PLAIN_FOOD: readonly number[] = [
     385, // shark
 ];
 
-// True for a script that gets no eat guard: a quest script, by its file name.
-export const questScript = (script: string): boolean => /quest/i.test(basename(script));
+// True for a script that gets no eat guard, by its file name: a quest script, where a fish can be a quest item, and
+// a microbot script, which counts each piece of its food.
+export const noGuardScript = (script: string): boolean => /quest|microbot/i.test(basename(script));
 
 export interface EatGuardOptions {
     // Item ids the guard can eat. Default: PLAIN_FOOD.
@@ -80,8 +85,10 @@ export interface EatGuardOptions {
     reserved?: () => Readonly<Record<number, number>>;
     // Ticks after the last fall of Hitpoints in which the guard eats.
     calmTicks?: number;
-    // Receives one EAT_GUARD line with the counts when the guard stops. `held` is true when an eater of the script
-    // held the guard at that time.
+    // false: eat also in a session whose script has sent no attack. Default true.
+    fightOnly?: boolean;
+    // Receives one EAT_GUARD line with the counts when the guard stops. `fought` is true when the script sent an
+    // attack. `held` is true when an eater of the script held the guard at that time.
     log?: (line: string) => void;
 }
 
@@ -105,7 +112,8 @@ export function startEatGuard(s: EatGuardSession, o: EatGuardOptions = {}) {
     const edible = expandFoodStages([...questFoodDefinitions().keys()]);
     const stats: EatGuardStats = { eats: 0, urgent: 0, holds: 0, waits: 0, refused: 0, resends: 0, late: 0, healed: 0, yielded: false };
     const own = new WeakSet<object>();
-    let stopped = false, holders = 0, ateAt = -Infinity, damageAt = -Infinity, inputsAt = -Infinity, inputs = 0;
+    const fightOnly = o.fightOnly ?? true;
+    let stopped = false, fought = false, holders = 0, ateAt = -Infinity, damageAt = -Infinity, inputsAt = -Infinity, inputs = 0;
     let pending: Pending = { kind: 'none' };
     let lastHp: number | undefined, hpFirst: number | undefined, hpMin: number | undefined, lastTile = '';
     let sent: { id: number; before: number; hp: number; at: number } | null = null;
@@ -135,7 +143,9 @@ export function startEatGuard(s: EatGuardSession, o: EatGuardOptions = {}) {
         if (a.type === 'useInventoryItem') { if (scriptEat(a)) stats.yielded = true; return; }
         if (NEUTRAL.has(a.type) || a.type === 'togglePrayer') return;
         if (a.type === 'walkTo') { pending = { kind: 'none' }; return; }
-        if ((a.type === 'interactNpc' || a.type === 'interactPlayer') && attackTarget(a, s.sdk.getState())) { pending = { kind: 'attack', action: { ...a } }; return; }
+        if ((a.type === 'interactNpc' || a.type === 'interactPlayer') && attackTarget(a, s.sdk.getState())) { fought = true; pending = { kind: 'attack', action: { ...a } }; return; }
+        // A combat spell on a target is an attack of the script too.
+        if (a.type === 'spellOnNpc' || a.type === 'spellOnPlayer') fought = true;
         pending = { kind: 'other', still: 0 };
     };
 
@@ -187,6 +197,7 @@ export function startEatGuard(s: EatGuardSession, o: EatGuardOptions = {}) {
         const eatLevel = level(o.eatAt ?? defaultEatAt, max);
         if (hp > eatLevel) return;
         const urgent = hp <= (o.urgentAt === undefined ? Math.floor(eatLevel / 2) : level(o.urgentAt, max));
+        if (fightOnly && !fought) return;
         if (now - damageAt > calm) return;
         const choice = selectQuestFood(st, { food, eatAt: eatLevel, reserved: o.reserved?.() });
         if (!choice || !/^eat$/i.test(choice.item.optionsWithIndex?.find(v => v.opIndex === choice.opIndex)?.text ?? '')) return;
@@ -208,7 +219,7 @@ export function startEatGuard(s: EatGuardSession, o: EatGuardOptions = {}) {
         if (stopped) return;
         stopped = true;
         off();
-        o.log?.(`EAT_GUARD ${JSON.stringify({ ...stats, held: holders > 0, hp: [hpFirst, hpMin, lastHp] })}`);
+        o.log?.(`EAT_GUARD ${JSON.stringify({ ...stats, fought, held: holders > 0, hp: [hpFirst, hpMin, lastHp] })}`);
         if (client && observer && client.executeBotAction === observer) client.executeBotAction = original;
     };
     // For an eater with checks of its own (sustain.ts startQuestSustain): the guard sends nothing until the release.

@@ -6,6 +6,8 @@ import {firemakingFixture} from '../../packages/practice/src/firemaking-order-pr
 import {agilityFixturePreset} from '../../packages/practice/src/agility-order-proof';
 import {KITS, kitItems, kitSkills, kitVarps} from '../pk-kits';
 
+// Food that a bot eats has one inventory entry for each piece. An entry with count 5 is one slot of 5, and the server
+// deletes the whole slot on an eat (consume_effects.rs2, inv_delslot).
 export type BenchCase = {
   key: string;
   // Environment for the engine of the case. It takes effect when the case has its own engine (a fresh-engine run).
@@ -57,7 +59,7 @@ export const BENCH_JOB_FILES: Record<string, unknown> = {
 const CHICKEN_FIXTURE: SaveConfig = {
   position: {x: 3092, z: 3247, level: 0},
   skills: {Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30},
-  inventory: [{id: 1277, count: 1}, {id: 315, count: 5}],
+  inventory: [{id: 1277, count: 1}, ...Array.from({length: 5}, () => ({id: 315, count: 1}))],
   bank: [{id: 1351, count: 1}],
 };
 
@@ -252,7 +254,7 @@ const ROUTE_CASES: BenchCase[] = [
       equipment: [{id: 1277, count: 1, slot: 3}, {id: 1171, count: 1, slot: 5}],
       bank: [{id: 995, count: 25}, {id: 1351, count: 1}, {id: 590, count: 1}, {id: 303, count: 1}, {id: 1925, count: 1}, {id: 1931, count: 1}, {id: 1265, count: 1}, {id: 1205, count: 1}, {id: 841, count: 1}, {id: 882, count: 25}, {id: 556, count: 25}, {id: 558, count: 15}, {id: 555, count: 6}, {id: 557, count: 4}, {id: 559, count: 2}, {id: 1739, count: 8}, {id: 526, count: 8}, {id: 2132, count: 8}]}},
   {key: 'fighter:giant', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['giant', '1500', 'giant'], pass: ok, output: /kills=(\d+)/,
-    presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: [{id: 379, count: 5}]}},
+    presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: Array.from({length: 5}, () => ({id: 379, count: 1}))}},
   {key: 'fighter:ranged-gather', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['ranged-gather', 'CAP=1500', 'MAX_KILLS=2', 'AMMO=90', 'FOOD=3', 'FOOD_ID=333'], pass: s => ok(s) && s.includes('RANGED_BANK'),
     presetConfig: {position: {x: 3253, z: 3421, level: 0}, skills: {Ranged: 30, Hitpoints: 30}, bank: [{id: 841, count: 1}, {id: 884, count: 90}, {id: 333, count: 5}]}},
   {key: 'pvp:monitor', script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['monitor', '50', '12', 'stop'], pass: ok},
@@ -318,7 +320,7 @@ const ROUTE_CASES: BenchCase[] = [
   // Hill giants with Prayer 60: the prayer guard (packages/core/src/prayer-guard.ts) shows its counts in the
   // PRAYER_GUARD line; `--set PRAYER_GUARD=0` runs the comparison without it.
   {key: 'extra:giant-prayer-guard', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['giant', '1500', 'giant'], pass: ok, output: /kills=(\d+)/,
-    presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: [{id: 379, count: 5}]}},
+    presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: Array.from({length: 5}, () => ({id: 379, count: 1}))}},
   // Hill giants with Hitpoints 20, no armour and no eat input from the script: the eat guard
   // (packages/core/src/eat-guard.ts) must eat lobsters, and the account must live. The first 5 slots hold edible
   // items that are not plain food (cake, cheese, bread, redberry pie, stew): the guard must eat none of them.
