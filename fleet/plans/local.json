@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794419442643,
+ "at": 1794420041835,
  "jobs": [
   {
    "account": "Abracadickra",
@@ -48,48 +48,6 @@
    ]
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
-   "env": {
-    "PEN": "3187,3277",
-    "TICKS": "3000",
-    "TARGET": "2000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
-   "role": "helper",
-   "template": "feathers@3187,3277",
-   "autopilot": "local",
-   "resources": [
-    "pen:3187,3277"
-   ]
-  },
-  {
-   "account": "mmthv2350",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "sarim"
-   ],
-   "env": {
-    "ITEMS": "feather",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy feathers at Gerrant",
-   "role": "bank",
-   "template": "shop-feathers",
-   "autopilot": "local",
-   "resources": [
-    "shop:sarim"
-   ]
-  },
-  {
    "account": "PickpockDick",
    "script": "scripts/gather-feathers.ts",
    "args": [],
@@ -107,25 +65,6 @@
    "autopilot": "local",
    "resources": [
     "pen:3197,3353"
-   ]
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
-   "autopilot": "local",
-   "resources": [
-    "knight:2653,3300"
    ]
   },
   {
@@ -171,63 +110,6 @@
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "local",
-   "resources": [
-    "knight:2669,3298"
-   ]
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
-   "autopilot": "local",
-   "resources": [
-    "knight:2671,3313"
-   ]
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "local",
-   "resources": [
-    "knight:2669,3298"
    ]
   },
   {
@@ -551,25 +433,94 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "betty"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "ITEMS": "fire rune|air rune|earth rune",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
+    "CAP": "600",
+    "COORDINATOR_RUN_ID": "task-8bc442f3-7873-431c-8127-3508b3b124a0"
    },
    "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy elemental runes at Betty",
-   "role": "bank",
-   "template": "shop-runes",
-   "autopilot": "local",
-   "resources": [
-    "shop:betty"
-   ]
+   "repeat": false,
+   "goal": "run-session-recovery-billionaire-orphan-r18 [task-8bc442f3-7873-431c-8127-3508b3b124a0]",
+   "role": "bank"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "600",
+    "COORDINATOR_RUN_ID": "task-de5cf282-08d3-4124-bac0-7014dc8d6e7f"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-session-recovery-mineyourbiz-orphan-r18 [task-de5cf282-08d3-4124-bac0-7014dc8d6e7f]",
+   "role": "helper"
+  },
+  {
+   "account": "mmthv2350",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "600",
+    "COORDINATOR_RUN_ID": "task-2517c84c-de0e-4b1b-ba5c-11eb9a55d24e"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-session-recovery-mmthv2350-orphan-r18 [task-2517c84c-de0e-4b1b-ba5c-11eb9a55d24e]",
+   "role": "bank"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "600",
+    "COORDINATOR_RUN_ID": "task-399ef690-bc25-4ccb-8c5a-664a69d3f43d"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-session-recovery-pocketrocket-orphan-r18 [task-399ef690-bc25-4ccb-8c5a-664a69d3f43d]",
+   "role": "thieving"
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "600",
+    "COORDINATOR_RUN_ID": "task-a4e956ac-67d0-4e8e-a918-f1e7ef3e9cbd"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-session-recovery-woodenstaff-orphan-r18 [task-a4e956ac-67d0-4e8e-a918-f1e7ef3e9cbd]",
+   "role": "thieving"
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "600",
+    "COORDINATOR_RUN_ID": "task-4329d1b2-3bc5-4bc5-acd7-a4fe83529add"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-session-recovery-yewfirst-orphan-r18 [task-4329d1b2-3bc5-4bc5-acd7-a4fe83529add]",
+   "role": "thieving"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "600",
+    "COORDINATOR_RUN_ID": "task-3ea847cb-7069-4d9a-83f9-5b7f60efbf8e"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-session-recovery-shaftsinker-orphan-r18 [task-3ea847cb-7069-4d9a-83f9-5b7f60efbf8e]",
+   "role": "thieving"
   }
  ]
 }
