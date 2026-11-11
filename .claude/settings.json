@@ -5,7 +5,9 @@
       "Bash(stat *)",
       "Bash(bunx tsc --noEmit)",
       "Bash(bunx tsc --noEmit *)",
-      "Bash(bun run typecheck)"
+      "Bash(bun run typecheck)",
+      "Bash(bun scripts/typecheck-narrow.ts)",
+      "Bash(bun scripts/typecheck-narrow.ts *)"
     ]
   }
 }
