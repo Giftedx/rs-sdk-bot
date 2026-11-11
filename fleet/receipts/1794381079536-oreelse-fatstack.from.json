@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794381079536-oreelse-fatstack",
  "account": "OreElse",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Rune scimitar",
  "requested": 1,
  "claim": "3a195a1f-49b5-4123-a854-f8a6314377af",
- "count": 0,
- "ok": false,
- "at": 1794381087700,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794381119708,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794381097518
+ },
+ "logout": {
+  "attemptId": "1794381087709-0000019576-0000000001",
+  "at": 1794381119622,
+  "sha256": "3bbe94d8814abc602bf4cb510ce86fd6971d2786a98d5064a5ff55866b6e1152"
+ },
+ "screen": true
 }
