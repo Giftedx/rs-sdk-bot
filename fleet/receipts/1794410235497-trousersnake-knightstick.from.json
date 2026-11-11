@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794410235497-trousersnake-knightstick",
+ "account": "TrouserSnake",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 27080,
+ "claim": "d03b3196-7faf-4c24-a107-f7f62c7dae86",
+ "count": 0,
+ "ok": false,
+ "at": 1794410291591,
+ "detail": "trade claimed"
+}
