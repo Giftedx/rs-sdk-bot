@@ -110,18 +110,39 @@ export function releasePublishedTradeClaims(
 //   A trade moves both stacks at once, so nothing left this account either;
 // - this account's receipt names this claim, counts 0 and shows no change of its inventory.
 // Live claude-cloud: UnderMyKilt had no job under such a claim (its receipt `reconcile` 0, the partner's `failed` 0)
-// until a person released it. Every other case keeps the claim for a person.
-export const DROPPED_CLAIM_MS = 60 * 60_000;
+// until a person released it.
+// A second case needs no hour: the partner never came. A party writes its `prepared` receipt when it takes its claim,
+// before any trade, and takes no claim once the window is over (scripts/fleet-trade.ts assertTradeAdmission). So when
+// the partner's side has published its fleet data UNANSWERED_GRACE_MS or more after the window's end (the time stamp
+// of its claims, lease or snapshot file, written by the sync that commits its receipts) and no receipt of the partner
+// is there, the partner took no claim and nothing moved. This account's own worker has ended: its receipt reads
+// `reconcile` (written as its session ended), counts 0 and shows no change of its inventory. Live claude-cloud:
+// TrouserSnake and UnderMyKilt each waited for a local giver that never logged in, the relay cut both sessions, and
+// both stood with no job under a claim the first case never frees (it wants the partner's receipt).
+// Every other case keeps the claim for a person.
+export const DROPPED_CLAIM_MS = 60 * 60_000, UNANSWERED_GRACE_MS = 2 * 60_000;
 export function droppedTradeClaims(claims: readonly FleetTradeClaim[], side: string, read: (path: string) => any, now = Date.now()): FleetTradeClaim[] {
+    const publishedAt = (s: string) => Math.max(...['claims', 'leases', 'snapshots'].map(d => { const at = read(`${d}/${s}.json`)?.at; return Number.isSafeInteger(at) ? at as number : 0; }));
+    // An account with no owners entry is the local side's (packages/core/src/fleet.ts).
+    const sideOf = (account: string): string => {
+        const owners: Record<string, { side?: unknown }> = read('owners.json')?.accounts ?? {};
+        const entry = Object.entries(owners).find(([n]) => n.toLowerCase() === account.toLowerCase())?.[1];
+        return typeof entry?.side === 'string' ? entry.side : 'local';
+    };
     return claims.filter(claim => {
-        if (claim.phase !== 'held' || claim.side !== side || now - claim.at < DROPPED_CLAIM_MS) return false;
+        if (claim.phase !== 'held' || claim.side !== side) return false;
         const order = read(`orders/${claim.orderId}.json`), other = claim.role === 'from' ? 'to' : 'from';
-        if (!validOrder(order) || order.id !== claim.orderId || now - order.end < DROPPED_CLAIM_MS) return false;
+        if (!validOrder(order) || order.id !== claim.orderId || now < order.end) return false;
         const own = read(`receipts/${claim.orderId}.${claim.role}.json`), partner = read(`receipts/${claim.orderId}.${other}.json`);
-        if (!partner || !terminalTradeReceipt(order, other, partner, now) || partner.state !== 'failed') return false;
-        return !!own && own.version === 2 && (own.state === 'prepared' || own.state === 'reconcile') && own.claim === claim.nonce && own.side === claim.side
+        const ownIdle = !!own && own.version === 2 && (own.state === 'prepared' || own.state === 'reconcile') && own.claim === claim.nonce && own.side === claim.side
             && typeof own.account === 'string' && own.account.toLowerCase() === claim.account && own.count === 0
             && (!own.inventory || own.inventory.before === own.inventory.after);
+        if (!ownIdle) return false;
+        if (!partner) {
+            const partnerSide = sideOf(order[other]);
+            return own.state === 'reconcile' && (partnerSide === side ? now : publishedAt(partnerSide)) >= order.end + UNANSWERED_GRACE_MS;
+        }
+        return now - claim.at >= DROPPED_CLAIM_MS && now - order.end >= DROPPED_CLAIM_MS && terminalTradeReceipt(order, other, partner, now) && partner.state === 'failed';
     });
 }
 
@@ -144,7 +165,7 @@ function releaseSyncedTrades(dir: string, side: string) {
     releasePublishedTradeClaims(held, side, read, claim => releaseFleetTradeClaim(root, claim));
     for (const claim of droppedTradeClaims(held, side, read)) {
         releaseFleetTradeClaim(root, claim);
-        console.log(`FLEET_SYNC released the dropped trade claim of ${claim.account} for order ${claim.orderId}: the partner's receipt is failed with nothing moved`);
+        console.log(`FLEET_SYNC released the dropped trade claim of ${claim.account} for order ${claim.orderId}: the partner moved nothing (a failed receipt, or no claim by the end of the window)`);
     }
 }
 
