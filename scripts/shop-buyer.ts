@@ -165,7 +165,7 @@ export const PROFILES: Record<string, {
         ],
     },
     // The Magic Guild store in Yanille (magic_guild.inv magicguildshop), upstairs behind the Magic 66 door
-    // (magic_guild.rs2): fire runes 3,000, nature runes 1,000 at base 20, law, death and blood runes 1,000, staff of fire 2.
+    // (magic_guild.rs2): fire and air runes 3,000, nature runes 1,000 at base 20, law, death and blood runes 1,000, staff of fire 2.
     magic_guild: {
         npc: /^magic store owner$/i,
         npcSpot: { x: 2595, z: 3087, level: 1 },
@@ -174,6 +174,7 @@ export const PROFILES: Record<string, {
             { re: /^staff of fire$/i, buyPerTick: 1 },
             { re: /^fire rune$/i, buyPerTick: 100 },
             { re: /^nature rune$/i, buyPerTick: 100 },
+            { re: /^air rune$/i, buyPerTick: 100 },
             { re: /^law rune$/i, buyPerTick: 50 },
         ],
     },

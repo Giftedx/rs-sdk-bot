@@ -61,6 +61,8 @@ export type Template = {
     // A goal band whose missing kit is bought as a candidate of the band itself, as the weapon buy is: an account that
     // can start a later band still gets it. Without the flag a kit is bought only when no band can start.
     kitFirst?: true;
+    // A band whose kit only a shop job of its own brings: the kit tier neither buys nor asks a donor for it.
+    shopKit?: true;
 };
 // One missing kit line: `count` more units of any one item of `of`.
 export type Lack = { of: readonly string[]; count: number };
@@ -293,7 +295,7 @@ export function plan(inp: Inputs): Assignment[] {
                 if (lines.length && (a.items.coin ?? 0) >= cost + KIT_CASH_RESERVE + (t.needs?.items?.coins ?? 0) && !inp.retired?.has(pairKey(a.name, KIT_BUY + t.id)))
                     cands.push({ account: a.name, template: kitBuyTemplate(t, a.name, lines, inp.kitSeq?.get(a.name.toLowerCase()) ?? 0), value: 0, resources: [],
                         reason: `army band ${goal.band}: buys ${lines.map(l => `${l.quantity} ${l.item}`).join(', ')} for ${t.id}, at most ${cost} coins`, goal });
-                else if (lacks?.length) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, lacks });
+                else if (lacks?.length && !t.shopKit) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, lacks });
             }
             continue;
         }
@@ -625,6 +627,9 @@ export const ARROW_LOW = 100, ARROW_STOCK = 500, LOWE_STOCK = 1000;
 export const ZAFF_WAIT = 1100;
 // What the alchemy supply jobs bring an account up to: feathers for every cast to 99, fire runes for Magic 21 to 66.
 export const FEATHER_STOCK = 700, FIRE_STOCK = 500;
+// What a Magic Guild trip brings an account up to: a nature rune and an air rune for every High Alchemy cast from
+// Magic 66 to 99 (553 casts of 1,625 XP).
+export const NATURE_STOCK = 600, AIR_STOCK = 600;
 // An account short of arrows of every kind: what sends it to an arrow shop. One with ARROW_LOW of any kind is left to
 // the Ranged band, or to a kit line when its bow cannot fire them.
 const NO_ARROWS: Readonly<Record<string, number>> = Object.fromEntries(ARROWS.map(([arrow]) => [arrow, ARROW_LOW]));
@@ -776,12 +781,25 @@ export function catalogue(): Template[] {
         id, family: 'shop-buyer', script: 'scripts/chain.ts', args: steps, env: { ROUNDS: '1' }, role: 'supply', goal,
         tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: 99, unlocks: [magic.id] }, resources: [`shop:${shop}`], yields: () => [], needs });
     const feathers = supply('army-feathers-sarim', "buy feathers at Gerrant's in Port Sarim for the alchemy band", 'sarim',
-        [shopRun('sarim', 3000, 'feather', FEATHER_STOCK, 10000)], { items: { coins: 12000, 'nature rune': 50 }, holdsUnder: { feather: 50 } });
+        [shopRun('sarim', 3000, 'feather', FEATHER_STOCK, 10000)], { under: { Magic: 66 }, items: { coins: 12000, 'nature rune': 50 }, holdsUnder: { feather: 50 } });
     const fireRunes = supply('army-fire-aubury', "buy fire runes at Aubury's in Varrock for the alchemy band", 'aubury',
         [shopRun('aubury', 3000, 'fire.rune', FIRE_STOCK, 9000)], { skills: { Magic: 21 }, under: { Magic: 66 }, items: { coins: 11000, 'nature rune': 50, feather: 50 }, holdsUnder: noFire });
-    const staffGuild = supply('army-staff-guild', 'buy a staff of fire and fire runes at the Magic Guild in Yanille for the alchemy band', 'magic_guild',
-        [shopRun('magic_guild', 1500, 'staff.of.fire', 1, 12000), shopRun('magic_guild', 600, 'fire.rune', FIRE_STOCK, 9000)],
-        { skills: { Magic: 66 }, items: { coins: 24000, 'nature rune': 50, feather: 50 }, holdsUnder: noFire });
+    // From Magic 66 the Magic Guild's shelf is the whole kit of the band (magic_guild.inv, runes.obj, staves.obj): a
+    // staff of fire (2, base 1,500 coins), nature runes (1,000, base 20), and air runes (3,000, base 4) to cast on in
+    // place of feathers, whose Port Sarim shelf other players empty. So the trip asks for coins only, and an account
+    // that reaches 66 with no rune of the band (the curse band's accounts) goes straight on. `natureGuild` is the same
+    // trip for an account that has its fire and has run out of nature runes. Practice from the Ardougne north bank,
+    // Magic 66 and coins only: the trip and then Magic 66 to 99 on air runes (research/combat-measure.md, Magic by a
+    // curse over the fence).
+    const guildRunes = [shopRun('magic_guild', 900, 'nature.rune', NATURE_STOCK, 45000), shopRun('magic_guild', 600, 'air.rune', AIR_STOCK, 10000)];
+    const staffGuild = supply('army-staff-guild', 'buy a staff of fire, fire, nature and air runes at the Magic Guild in Yanille for the alchemy band', 'magic_guild',
+        [shopRun('magic_guild', 1500, 'staff.of.fire', 1, 12000), shopRun('magic_guild', 600, 'fire.rune', FIRE_STOCK, 9000), ...guildRunes],
+        { skills: { Magic: 66 }, items: { coins: 80000 }, holdsUnder: noFire });
+    const natureGuild = supply('army-nature-guild', 'buy nature and air runes at the Magic Guild in Yanille for the alchemy band', 'magic_guild', guildRunes,
+        { skills: { Magic: 66 }, items: { coins: 60000 }, holdsUnder: { 'nature rune': 50 }, anyOf: [{ items: { 'fire rune': 250 } }, ...FIRE_STAFFS.map(item => ({ items: { [item]: 1 } }))] });
+    // The alchemy band cast on air runes, for an account at Magic 66 or more that holds them (the guild trip's).
+    const magicAir: Template = { ...magic, id: 'army-alch-air-magic-99', env: { ALCH_ITEM: 'airrune' }, goal: 'train Magic to 99 with alchemy on air runes at the Ardougne north bank',
+        needs: { skills: { Magic: 66 }, items: { 'nature rune': 50, 'air rune': 50 }, anyOf: magic.needs!.anyOf }, batch: undefined, shopKit: true };
     // Magic to SPLASH_TO with no fire rune, nature rune or feather, band 2: a curse cast over the fence of the Ardougne
     // cow field (scripts/splash-train.ts; Wind Strike, Confuse and Weaken under Magic 19). The kit is body, earth and
     // water runes, under 80,000 coins at the caps. The market lists few water runes (live claude-cloud read: 310), so
@@ -917,6 +935,8 @@ export function catalogue(): Template[] {
         feathers,
         fireRunes,
         staffGuild,
+        natureGuild,
+        magicAir,
         prayer,
         dragonBones,
         bigBones,
