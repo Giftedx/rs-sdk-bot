@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794367571267,
+ "at": 1794367850355,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -47,27 +47,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts dargaud 800 ITEMS=willow.shortbow STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=4000 COIN_RESERVE=500 MAX_SPEND=3000",
-    "scripts/shop-buyer.ts dargaud 800 ITEMS=mithril.arrow|steel.arrow|iron.arrow|bronze.arrow STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=51000 COIN_RESERVE=500 MAX_SPEND=50000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy a willow shortbow and arrows up to mithril at the Ranging Guild for the Ranged band",
-   "role": "supply",
-   "template": "army-arrows-guild",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "shop:dargaud"
    ]
   },
   {
@@ -273,6 +252,19 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-348946cb-c180-4863-b1c5-529fd29a2b1c"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-fatstack-20261111t032657z [task-348946cb-c180-4863-b1c5-529fd29a2b1c]",
+   "role": "supply"
   }
  ]
 }
