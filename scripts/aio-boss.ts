@@ -4,13 +4,13 @@
 import {runDirectChild} from '../packages/core/src/run-child';
 import {parseStep,type Step} from '../packages/core/src/chain-step';
 import {
- BLUE_KIT,KBD_KIT,validateCombatKit,combatKitTotals,combatAssetIssues,
+ BLUE_KIT,BLACK_KIT,KBD_KIT,validateCombatKit,combatKitTotals,combatAssetIssues,
  inKbdEntrancePit,inNativeKbdLair,combatTeleportAllowed,leaveKbdEntrancePit,
  blueDungeonEntry,combatTrip,type CombatKit,
 } from './microbot-combat-trip';
 
 export {
- BLUE_KIT,KBD_KIT,validateCombatKit,combatKitTotals,combatAssetIssues,
+ BLUE_KIT,BLACK_KIT,KBD_KIT,validateCombatKit,combatKitTotals,combatAssetIssues,
  inKbdEntrancePit,inNativeKbdLair,combatTeleportAllowed,leaveKbdEntrancePit,
  blueDungeonEntry,combatTrip,type CombatKit,
 };
@@ -25,12 +25,13 @@ export interface BossEncounterSpec {
 
 export const BOSS_ENCOUNTERS: readonly BossEncounterSpec[] = [
  {boss:'kbd',script:'scripts/microbot-b-kbd.ts',description:'King Black Dragon full trip: KBD_KIT withdraw, Lava Maze lever entry, antifire/prayer/melee fight, loot, and escape'},
+ {boss:'black-dragon',script:'scripts/black-dragon-camp.ts',description:'Taverley black dragons from the corridor south of their cave: BLACK_KIT withdraw, dusty key gate, ranged camp that takes no melee, hides and bones banked'},
  {boss:'trawler',script:'scripts/microbot-trawler-trip.ts',description:'Port Khazard Fishing Trawler minigame trip (paste/bailing/net inspection)'},
  {boss:'trawler-at-site',script:'scripts/microbot-b-trawler.ts',description:'At-dock Fishing Trawler minigame loop'},
 ];
 
 export function assessBossReadiness(
- bossInput: 'kbd' | 'blue-dragon' | 'trawler',
+ bossInput: 'kbd' | 'blue-dragon' | 'black-dragon' | 'trawler',
  accountState: {
   skills: Readonly<Record<string, number>>;
   ownedItems: Readonly<Record<number, number>>;
@@ -53,7 +54,7 @@ export function assessBossReadiness(
    requiredKit: {},
   };
  }
- const kit = bossInput === 'kbd' ? KBD_KIT : BLUE_KIT;
+ const kit = bossInput === 'kbd' ? KBD_KIT : bossInput === 'black-dragon' ? BLACK_KIT : BLUE_KIT;
  const requiredSkills = validateCombatKit(kit);
  const requiredTotals = combatKitTotals(kit);
  const missingSkills = requiredSkills
