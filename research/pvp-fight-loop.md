@@ -287,8 +287,12 @@ Hitpoints XP; the Mage Arena fight for the god spell gives Hitpoints XP; the til
 The trained builds of `scripts/pk-kits.ts`. Sources for the list of builds: the Old School RuneScape Wiki pages
 "Account builds" and "One-defence pure" and theoatrix.net "Types of pures in OSRS". Source -> local consumer -> adapt
 -> check: those pages -> `KITS` -> each build keeps its levels and takes the gear that this content has ->
-`scripts/pk-kits.test.ts`, `bun scripts/pk-sim.ts --league`, the bench cases `extra:spar-builds-pure-1` to `-4` and
-`extra:spar-builds-def-1` to `-4`.
+`scripts/pk-kits.test.ts`, `bun scripts/pk-sim.ts --league`, the bench cases `extra:spar-builds-1` to `-7`.
+
+The bench cases hold each of the 53 pairs once, 8 pairs in a case, in 8 processes (`SPAR_PROCS=8`) with a cap of 600
+ticks. A case lasts as long as its longest fight, so the pairs stand in the order of the Defence, Hitpoints and food
+of their builds (`BUILD_PAIRS`). Estimate from the simulator: 2,230 game ticks for the 7 cases, against 2,540 for the
+pairs bracket by bracket; the longest fight of 5,300 was 553 ticks. Gap: no timed bench run.
 
 - **What this content has.** The Fremennik helms (Berserker `viking_helmet_crush`, Archer, Warrior, Farseer: Defence
   45 and The Fremennik Trials), the dragon medium helm, chainbody and platelegs (Defence 60), the dragon square

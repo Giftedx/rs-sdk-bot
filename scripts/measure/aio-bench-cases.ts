@@ -94,6 +94,17 @@ export const BUILD_BRACKETS: Readonly<Record<string, readonly string[]>> = {
   pure: ['pure-dds', 'pure-dds-msb', 'pure-r2h', 'pure-hally', 'pure-ranger', 'pure-mage', 'pure-tribrid', 'pure-pray'],
   def: ['rune-pure', 'zerker', 'dragon', 'range-tank', 'mage-tank', 'pure-pray', 'pure-ranger', 'pure-dds-msb'],
 };
+// Every pair of a bracket once, a pair of both brackets once. A case lasts as long as its longest fight, so the pairs
+// stand in the order of the Defence, Hitpoints and food of their two builds: fights of about the same length share a
+// case. The simulator gives 2,230 game ticks for the cases in this order and 2,540 for the pairs bracket by bracket.
+export const BUILD_PAIRS: readonly (readonly [string, string])[] = (() => {
+  const bulk = (kit: string) => { const s = kitSkills(kit); return s.Defence! + s.Hitpoints! + 4 * KITS[kit]!.food; };
+  const pairs = new Map<string, [string, string]>();
+  for (const kits of Object.values(BUILD_BRACKETS)) kits.forEach((a, i) => kits.slice(i + 1).forEach(b => pairs.set([a, b].sort().join(':'), [a, b])));
+  return [...pairs.values()].sort((x, y) => bulk(x[0]) + bulk(x[1]) - bulk(y[0]) - bulk(y[1]) || x.join().localeCompare(y.join()))
+    // Each build stands on side A in every second pair of the list.
+    .map((pair, i) => (i % 2 ? [pair[1], pair[0]] as const : pair));
+})();
 // An account in a kit of scripts/pk-kits.ts at the levels of the kit (default maxed), with Lost City and Dragon Slayer
 // done and full special energy.
 export const kitFixture = (kit: string, x: number, z = 3555): SaveConfig => ({
@@ -325,12 +336,10 @@ const ROUTE_CASES: BenchCase[] = [
   // the mirror spot, so a build with its own levels has no duel against the tribrid or the melee kit.
   ...(['pure-iban', 'pure-bolt'] as const).map(kit => sparMatrix(`extra:spar-${kit}-vs-skiller-x4`, Array.from({length: 4}, () => [kit, 'skiller'] as const), [], {x: 3125, z: 3790})),
   sparMatrix('extra:spar-pure-rock-vs-skiller-x4', Array.from({length: 4}, () => ['pure-rock', 'skiller'] as const), [], {x: 3055, z: 3872}),
-  // The trained builds against each other: every pair of a bracket once, 8 pairs in a case, at Wilderness level 34
-  // (the widest combat gap of a bracket is 27). `bun scripts/measure/pk-spar-matrix.ts --case <key>` runs one.
-  ...Object.entries(BUILD_BRACKETS).flatMap(([name, kits]) => {
-    const pairs = kits.flatMap((a, i) => kits.slice(i + 1).map((b, j) => ((i + j) % 2 ? [b, a] : [a, b]) as [string, string]));
-    return Array.from({length: Math.ceil(pairs.length / 8)}, (_, n) => sparMatrix(`extra:spar-builds-${name}-${n + 1}`, pairs.slice(n * 8, n * 8 + 8), [], {x: 3125, z: 3790}));
-  }),
+  // The trained builds against each other, 8 pairs in a case, at Wilderness level 34 (the widest combat gap of a
+  // bracket is 27). `bun scripts/measure/pk-spar-matrix.ts --case <key>` runs one. The pairs run in 8 processes, and
+  // the cap is 600 ticks: the offline simulator has no fight of two of these builds that lasts so long.
+  ...Array.from({length: Math.ceil(BUILD_PAIRS.length / 8)}, (_, n) => sparMatrix(`extra:spar-builds-${n + 1}`, BUILD_PAIRS.slice(n * 8, n * 8 + 8), ['SPAR_PROCS=8', 'SPAR_CAP=600'], {x: 3125, z: 3790})),
   // Map cases of the spar. Gap: the same mirror from 12 tiles apart. Trees: 6 tiles apart at Wilderness level 3 with a
   // blocker on tiles 3101-3103 between the two, so neither has line of sight at the start. Escape: Wilderness level 34
   // at a spot with no monster in view (green dragons at (3094, 3800) attack both sides and block their hits); side B

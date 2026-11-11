@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { combatLevel, itemId, kitCost, kitItems, kitOptions, KITS, kitSkills, kitSwitches, kitVarps, trained } from './pk-kits';
 import { KNOBS, readNets, stats, verdict } from './measure/pk-spar-climb';
 import { matrix, readList } from './measure/pk-spar-matrix';
-import { benchCases, BUILD_BRACKETS } from './measure/aio-bench-cases';
+import { benchCases, BUILD_BRACKETS, BUILD_PAIRS } from './measure/aio-bench-cases';
 import { flipped, netRate, sparScore } from './pk-spar';
 import type { FightResult } from './pk';
 
@@ -81,11 +81,16 @@ test('a trained build has the Hitpoints of its combat XP, and each bracket fits 
     expect(trained({}).Hitpoints).toBe(10);
     expect(combatLevel(kitSkills('zerker'))).toBe(92);
     expect(kitSkills('zerker').Defence).toBe(45);
-    const cases = benchCases();
-    for (const [name, kits] of Object.entries(BUILD_BRACKETS)) {
+    const cases = benchCases().filter(c => c.key.startsWith('extra:spar-builds-'));
+    const staged = new Set(cases.flatMap(c => c.scriptArgs.find(a => a.startsWith('SPAR_KITS='))!.slice(10).split(',')).map(p => p.split(':').sort().join(':')));
+    for (const kits of Object.values(BUILD_BRACKETS)) {
         const levels = kits.map(k => combatLevel(kitSkills(k)));
         expect(Math.max(...levels) - Math.min(...levels)).toBeLessThanOrEqual(34);
-        const pairs = cases.filter(c => c.key.startsWith(`extra:spar-builds-${name}-`)).flatMap(c => c.scriptArgs.find(a => a.startsWith('SPAR_KITS='))!.slice(10).split(','));
-        expect(new Set(pairs.map(p => p.split(':').sort().join(':'))).size).toBe((kits.length * (kits.length - 1)) / 2);
+        kits.forEach((a, i) => kits.slice(i + 1).forEach(b => expect(staged.has([a, b].sort().join(':'))).toBe(true)));
     }
+    // 28 pairs for each bracket of 8, less the 3 pairs that both brackets hold; each case in 8 processes.
+    expect(staged.size).toBe(53);
+    expect(BUILD_PAIRS.length).toBe(53);
+    expect(cases.length).toBe(7);
+    for (const c of cases) expect(c.scriptArgs).toContain('SPAR_PROCS=8');
 });
