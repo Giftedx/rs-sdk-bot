@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794394930807,
+ "at": 1794394936103,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -170,7 +170,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-fe43175e-f959-470e-ace2-ea4aafb3a006"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "claude-cloud-recover-deeppockets-20261111t105757z [task-fe43175e-f959-470e-ace2-ea4aafb3a006]",
    "role": "helper"
