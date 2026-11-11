@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794421735781-fingerblastr-knightstick",
  "account": "Knightstick",
  "partner": "Fingerblastr",
@@ -12,6 +12,12 @@
  "claim": "22c541be-4539-4721-9a11-d969a98676ca",
  "count": 0,
  "ok": false,
- "at": 1794423721686,
- "detail": "trade claimed"
+ "at": 1794423837473,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1794423721689-0000005178-0000000001",
+  "at": 1794423837468,
+  "sha256": "86e8337b5309e588ba3f7ebb1e66bb5c0e85ce17a66e21eb314068ec7e290047"
+ },
+ "screen": false
 }
