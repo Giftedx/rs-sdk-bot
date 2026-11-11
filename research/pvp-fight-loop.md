@@ -164,6 +164,10 @@ any other case.
   slower (74 s): eight processes that spin take the cores from the engine.
 - The rest of a tick, with 32 players: the engine reads the clients in 11 to 17 ms (the scripts of their packets), and
   waits 20 to 35 ms for the clients while the live fleet loads the PC (79% CPU, 36 bun processes).
+- The bench makes the account folders of a case with 5 or more accounts 8 at a time and every save in one process.
+  A batch of 8 full fights with `SPAR_PROCS=8` takes 34 to 42 s; four batches in one list take about 3 minutes.
+- `pk-spar-matrix.ts` and `pk-spar-climb.ts` wait while `.practice/pk-climb-pause` exists. A session that makes that
+  file must not start them before it removes the file: the run then waits for itself.
 - Gap: no run on an idle PC; a seed does not repeat a fight when the pairs run in several processes.
 
 Spar findings. Conditions: lockstep practice engine, cap 900 ticks, both sides with Lost City and Dragon Slayer done
@@ -503,3 +507,63 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     style at random, it has 9 kills and 7 deaths in 16 spars, the same as base. The hunter, the roamer and the
     champion profile use it. Gap: 16 spars each against the melee build (10 to 6; base 8 to 8) and the ranger (11 to
     5; base 10 to 6) do not separate it from base.
+20. **Random attack styles beat an overhead that predicts.** Both sides hold the `snap` profile; side A also picks each
+    style at random among the open ones (`mixStyles`). Side A has 29 kills and 3 deaths in 32 spars (15 to 1, 14 to 2;
+    `extra:spar-x16`, seeds 1 and 2). Against an opponent that only follows the weapon, random styles gave no gain
+    (mean net +1.65, t 0.56, 24 spars). The champion profile is `predictPrayer`, `snapPrayer` and `mixStyles`.
+    Gap: the champion against itself is even (7 to 9), so the mirror gives no more gain from the overhead.
+21. **The place of a pair in a batch moves its result.** With the `snap` profile on both sides and 2 pairs in each
+    of 8 worker processes, side B won 11 of 16 even pairs and side A won 12 of 16 odd pairs (two batches). A swap of
+    the profiles on every second pair put one profile on the weak place of every pair: base against base read as 9
+    kills to 23. The swap goes by two pairs at a time (`scripts/pk-spar.ts`), and the duel cases put their kits the
+    same way; the control then reads 8 to 8 and 7 to 9. Results before this rule that favoured side A stand (the
+    fault worked against side A); a result that favoured side B does not. Gap: the cause of the place effect.
+22. **More prayer restore for less food does not win.** The kit with four restore potions and 16 sharks has 5 kills and
+    10 deaths in 16 spars against the tribrid kit, both on the `snap` profile (`extra:spar-duel-tribrid-pray4-x8`,
+    seeds 1 and 2, kits on the weak place of each pair).
+23. **Bow and dagger only beat the three-style rotation.** The champion with the rotation ranged, melee (no spell turn)
+    has 26 kills and 6 deaths in 32 spars against the champion with all three styles (15 to 1, 11 to 5;
+    `extra:spar-x16`, seeds 1 and 2). In the potion kit against the builds that beat the tribrid on food
+    (`extra:spar-rivals-x12`, seeds 1, 2 and 3) it has 27 kills and 9 deaths: 10 to 2 against the melee build, 5 to 7
+    against the hybrid, 12 to 0 against the ranger. With all three styles the champion had 2 kills and 10 deaths
+    there, and none in 16 spars against the hybrid over four profiles. A spell takes 5 ticks; the bow takes 3 and
+    the dagger 4. The champion profile and the hunter use the two-style rotation; the hunter keeps magic for the
+    freeze. Gap: the hybrid still wins 7 of 12; no kit yet that trades the wave runes and the staff for food.
+24. **Changes that did not win.** The special attack from 50% health: 4 kills and 12 deaths in 16 spars against the
+    champion. Three restore potions and 17 sharks: 11 kills and 11 deaths in 22 decided spars against the tribrid
+    kit. Against the three rival builds, 12 spars each: body armour kept on for a shot or a cast 4 to 6, freeze and
+    kite of a melee opponent (`adapt`) 4 to 8; the hybrid won all four spars in each.
+25. **A kit with no staff and no wave runes wins more.** `tribrid-snare` (bow, dagger, the freeze runes, boosts, 18
+    sharks) on the champion profile has 20 kills and 4 deaths in 24 spars against the melee build (6 to 2), the hybrid
+    (6 to 2) and the ranger (8 to 0); the hybrid kit (no freeze, 21 sharks) has 21 and 3; the potion kit (staff, wave
+    runes, 15 sharks) has 27 and 9 in 36 (`extra:spar-rivals-tribrid-snare-x12`, `extra:spar-rivals-hybrid-x12`,
+    seeds 1 and 2). Against a target that leaves by glory at 60 health from Wilderness level 34, the hunter in the
+    snare kit kills 9 of 24 and in the potion kit 7 of 24 (`extra:spar-escape-tribrid-snare-x8`,
+    `extra:spar-escape-tribrid-pots-x8`, seeds 1, 2 and 3). A kit with the runes of a freeze and no staff casts it
+    with the weapon in hand (`castFreeze` in `scripts/pk.ts`); before that rule the snare kit cast none and killed 0
+    of 16. Gap: the live hunter still restocks the staff kit; no whole hunter trip in the snare kit.
+26. **A whole hunter trip passes in the snare kit.** From Edgeville bank with an empty pack, the hunter restocks the
+    snare trip (`SNARE_TRIP` in `scripts/pk-hunt.ts`: bow, 50 earth, 50 water and 40 nature runes, two prayer
+    potions, a glory, the boosts and the sharks), walks to the first hunt spot, kills the target that stands there in
+    173 ticks with 24 shots and 25 dagger hits, and takes 12 piles (`extra:hunt-trip-snare`, seed 1, 27 s). The staff
+    kit passes the same case (`extra:hunt-trip-staff`, 24 s). `PK_KIT=snare` selects the kit and its trip for
+    `scripts/pk-hunt.ts`. Gap: the target stands and has no food, so the case proves the trip and not the fight;
+    the live hunter keeps the staff trip until a side's bank holds the snare runes.
+27. **An early freeze kills more targets that run and loses fights against targets that stay.** The hunter in the
+    snare kit against a target that leaves by glory at 60 health from Wilderness level 34
+    (`extra:spar-escape-tribrid-snare-x8` and `-x12`, seeds 1 to 10): with the freeze only when the target runs, 33
+    kills in 104 spars; with the freeze from 70% health (`freeze: 'low'`, `freezeBelow: 0.7`), 56 in 104. Against
+    the melee build, the hybrid and the ranger the same rule has 18 kills and 18 deaths in 36 spars, where the freeze
+    on a target that runs has 30 and 6 (`extra:spar-rivals-tribrid-snare-x12`, seeds 1 to 3): the hunter cast 188
+    freezes in those 36 spars, and each takes a turn of 5 ticks. A cap on the early casts (`freezeEarlyMax`) lands
+    between the two on both: cap 2 has 10 kills in 24 against the target that runs and 15 kills to 9 against the
+    three builds; cap 3 has 9 in 24 and 15 to 9. Other rules against the target that runs: the freeze from 80%, 11 in
+    24; from 80% with the armour off for each cast, 8 in 16; the bow special as a burst, 1 in 8 and 2 in 8. The
+    hunter keeps the freeze on a target that runs: at its hunt spots (Wilderness levels 3 to 7) a glory works at
+    once and no freeze stops it. Gap: no rule that tells a target that will run from one that will stay before it
+    runs; the target of the case fights back until it leaves, as a fighter does.
+28. **Adamant arrows cost a quarter of the kit less and lose little.** 300 rune arrows are 120,000 of the snare kit's
+    392,715 coins; 300 adamant arrows are 24,000. `tribrid-snare-addy` on the champion profile has 27 kills, 8
+    deaths and a draw in 36 spars against the melee build, the hybrid and the ranger; the snare kit with rune arrows
+    has 30 and 6 (`extra:spar-rivals-tribrid-snare-addy-x12`, `extra:spar-rivals-tribrid-snare-x12`, seeds 1, 2 and
+    3). Gap: 36 spars each do not separate 75% from 83%.

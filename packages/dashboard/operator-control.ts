@@ -1,5 +1,5 @@
 // Operator requests use the coordinator's durable inbox, never its mutable state.
-import {existsSync,readFileSync,readdirSync,mkdirSync,writeFileSync,unlinkSync} from 'node:fs';
+import {existsSync,readFileSync,readdirSync,mkdirSync,statSync,writeFileSync,unlinkSync} from 'node:fs';
 import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {GOALS,addTasks,type CoordTask} from '../router/src/coordinator';
@@ -13,6 +13,8 @@ export function createOperatorControl(options:{root:string;readOnly?:boolean;non
  const alive=options.alive??((pid:number)=>{try{process.kill(pid,0);return true;}catch{return false;}}),spawn=options.spawn??spawnDetached;
  const read=(p:string)=>JSON.parse(readFileSync(p,'utf8'));
  const owned=()=>{const path=join(root,'vendor/rs-sdk/bots');return existsSync(path)?readdirSync(path,{withFileTypes:true}).filter(n=>n.isDirectory()&&/^[A-Za-z0-9]{1,12}$/.test(n.name)).map(n=>n.name):[];};
+ // The stop files of owned accounts, from one listing of .practice: the fleet has thousands of account folders and few holds.
+ const held=()=>{let names:string[]=[];try{names=readdirSync(join(root,'.practice'));}catch{/* no folder yet */}return names.filter(n=>/^stop-[A-Za-z0-9]{1,12}$/.test(n)).map(n=>n.slice(5)).filter(name=>{try{return statSync(join(root,'vendor/rs-sdk/bots',name)).isDirectory();}catch{return false;}});};
  function catalog(){return readdirSync(join(root,'packages/router/tasks')).filter(n=>/^[-a-z0-9]+\.json$/.test(n)).map(n=>{
   // A task file that another process is writing is not readable yet: the list leaves it out.
   try{const d=read(join(root,'packages/router/tasks',n));return{id:d.id,goal:d.goal,entry:d.entry,consumer:d.consumer,files:d.files,checks:(d.checks??[]).map((c:any)=>({id:c.id,phase:c.phase,timeoutMs:c.timeoutMs}))};}catch{return null;}
@@ -22,7 +24,7 @@ export function createOperatorControl(options:{root:string;readOnly?:boolean;non
   let coordinatorRunning=false;
   try{const owner=read(join(directory,'owner.json'));coordinatorRunning=Number.isSafeInteger(owner.pid)&&owner.pid>0&&alive(owner.pid);}catch{}
   return{nonce,readOnly:!!options.readOnly,coordinatorRunning,goals:GOALS,roles:Object.keys(NAMES).filter(n=>n!=='main'),paused:existsSync(join(root,'.practice/stop-coordinator')),fleetPaused:existsSync(join(root,'.practice/stop-swarm')),capabilities:catalog(),
-   accountHolds:owned().filter(name=>existsSync(join(root,'.practice','stop-'+name))).map(name=>{let text='';try{text=readFileSync(join(root,'.practice','stop-'+name),'utf8');}catch{}return{name,owner:text.startsWith('dashboard-stop:')?'dashboard':'other'};}),
+   accountHolds:held().map(name=>{let text='';try{text=readFileSync(join(root,'.practice','stop-'+name),'utf8');}catch{}return{name,owner:text.startsWith('dashboard-stop:')?'dashboard':'other'};}),
    requests:existsSync(audit)?readdirSync(audit).filter(n=>/^[a-f0-9-]+\.json$/.test(n)).map(n=>{
     try{const r=read(join(audit,n)),file=join(inbox,r.id+'.request.json');return{id:r.id,action:r.action,at:r.at,taskId:r.taskId??null,status:r.action==='queue'?(existsSync(file+'.accepted')?'accepted':existsSync(file+'.rejected')?'rejected':'submitted'):r.status};}catch{return null;}
    }).filter(r=>r!==null).sort((a,b)=>b.at-a.at).slice(0,30):[]};

@@ -329,10 +329,24 @@ const ROUTE_CASES: BenchCase[] = [
   // their own build and their own way to play (LEAGUE). A fighter is ready for a skilled player when it beats them all.
   sparMatrix('extra:spar-league-x8', LEAGUE.map(o => ['tribrid-pots', o.kit] as const), [`SPAR_B_PROFILES=${LEAGUE.map(o => o.profile).join(',')}`]),
   // The league for a fighter with three more sharks and no freeze runes.
+  // The builds that beat the tribrid on food: four spars each against the melee build, the hybrid and the ranger.
+  sparMatrix('extra:spar-rivals-x12', Array.from({length: 12}, (_, i) => ['tribrid-pots', ['melee', 'hybrid', 'ranger'][i % 3]!] as const)),
+  // One whole hunter trip (scripts/measure/pk-hunt-trip.ts): the hunter starts at Edgeville bank with an empty pack and
+  // its kit in the bank; the target stands at the first hunt spot with no food.
+  ...(['staff', 'snare'] as const).map((kit): BenchCase => ({key: `extra:hunt-trip-${kit}`, engineEnv: SPAR_ENGINE, script: 'scripts/measure/pk-hunt-trip.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', '900', kit], pass: ok, output: /kills=(\d+)/,
+    presetConfig: {...sparFixture(3092, 3496), inventory: [], bank: [{id: 861, count: 1}, {id: 557, count: 200}, {id: 555, count: 200}, {id: 561, count: 100}, {id: 2434, count: 4}, {id: 1712, count: 2},
+      {id: 2436, count: 2}, {id: 2440, count: 2}, {id: 2444, count: 2}, {id: 385, count: 60}, ...(kit === 'staff' ? [{id: 1401, count: 1}, {id: 556, count: 600}, {id: 565, count: 200}] : [])]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3540, {food: 0})}]})),
+  // A hunter in each kit against a target that leaves by its glory at 60 health, at Wilderness level 34.
+  ...['tribrid-pots', 'tribrid-snare'].map(kit => sparMatrix(`extra:spar-escape-${kit}-x8`, Array.from({length: 8}, () => [kit, 'runner'] as const), ['SPAR_SCENARIO=escape'], {x: 3125, z: 3790})),
+  sparMatrix('extra:spar-escape-tribrid-snare-x12', Array.from({length: 12}, () => ['tribrid-snare', 'runner'] as const), ['SPAR_SCENARIO=escape'], {x: 3125, z: 3790}),
+  // The same rivals against the kits with more food.
+  ...['tribrid-snare', 'tribrid-snare-addy', 'hybrid'].map(kit => sparMatrix(`extra:spar-rivals-${kit}-x12`, Array.from({length: 12}, (_, i) => [kit, ['melee', 'hybrid', 'ranger'][i % 3]!] as const))),
   sparMatrix('extra:spar-league-lean-x8', LEAGUE.map(o => ['tribrid-lean', o.kit] as const), [`SPAR_B_PROFILES=${LEAGUE.map(o => o.profile).join(',')}`]),
   // A build against the standard tribrid, four pairs on each side of the map: what the build is worth by itself.
-  ...Object.keys(KITS).filter(kit => kit !== 'melee' && !KITS[kit]!.skills).map(kit => sparMatrix(`extra:spar-duel-${kit}-vs-melee-x8`, Array.from({length: 8}, (_, i) => (i % 2 ? ['melee', kit] : [kit, 'melee']) as [string, string]))),
-  ...Object.keys(KITS).filter(kit => kit !== 'tribrid' && !KITS[kit]!.skills).map(kit => sparMatrix(`extra:spar-duel-${kit}-x8`, Array.from({length: 8}, (_, i) => (i % 2 ? ['tribrid', kit] : [kit, 'tribrid']) as [string, string]))),
+  ...Object.keys(KITS).filter(kit => kit !== 'melee' && !KITS[kit]!.skills).map(kit => sparMatrix(`extra:spar-duel-${kit}-vs-melee-x8`, Array.from({length: 8}, (_, i) => ((i >> 1) % 2 ? ['melee', kit] : [kit, 'melee']) as [string, string]))),
+  ...Object.keys(KITS).filter(kit => kit !== 'tribrid' && !KITS[kit]!.skills).map(kit => sparMatrix(`extra:spar-duel-${kit}-x8`, Array.from({length: 8}, (_, i) => ((i >> 1) % 2 ? ['tribrid', kit] : [kit, 'tribrid']) as [string, string]))),
   // A pure against a combat-3 skiller, 4 pairs. The spot is deep enough for the combat gap (pvp_combat.rs2:32-41):
   // Wilderness level 34 for combat 27 and 19, level 45 for combat 46. A maxed opponent is out of a pure's range at
   // the mirror spot, so a build with its own levels has no duel against the tribrid or the melee kit.

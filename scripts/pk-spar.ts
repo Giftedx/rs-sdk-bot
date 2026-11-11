@@ -234,7 +234,10 @@ if (import.meta.main) {
     // SPAR_SWAP=1: every second pair fights with the two profiles on swapped sides, and its result is turned back, so
     // side A in the results is always the profile SPAR_A and the side of the map has no part in the comparison.
     const swap = env.SPAR_SWAP === '1';
-    const results = await Promise.all(pairs.map(async ([a, b], j) => { const i = j + offset; return (swap && i % 2
+    // The place of a pair in the batch has a part of its own: with the same profile on both sides, side B won 11 of 16
+    // even pairs and side A won 12 of 16 odd pairs. So the swap goes by two pairs at a time (pairs 2, 3, 6, 7, ...):
+    // each profile then has side A of an even pair as often as side A of an odd pair.
+    const results = await Promise.all(pairs.map(async ([a, b], j) => { const i = j + offset; return (swap && (i >> 1) % 2
         ? flipped(await spar(a, b, options('b', i, 0), options('a', i, 1), undefined, () => halted !== undefined))
         : spar(a, b, options('a', i, 0), options('b', i, 1), undefined, () => halted !== undefined)); }));
     // Where the wall time of the run went: the logins, then the fights.

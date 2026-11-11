@@ -267,6 +267,7 @@ function report(rows: Row[]) {
 
 async function runCase(c: BenchCase, bot: string, enginePort = 8888) {
   const t0 = Date.now();
+  const bulkReady = new Set<string>();
   // proveInProcess checks the START line against the named preset's tile, so a case fixture is registered under its own name.
   const presetName = c.presetConfig ? `bench:${c.key}` : c.preset;
   if (c.presetConfig) PRESETS[presetName] = c.presetConfig;
@@ -275,12 +276,32 @@ async function runCase(c: BenchCase, bot: string, enginePort = 8888) {
       ...(c.companions ? { companions: c.companions.map(k => ({ suffix: k.suffix, preset: k.preset })) } : {}) },
     {
       prepare: async (name, preset) => {
-        const account = await createBot(name);
         // A partner account is `<bot><suffix>`; it takes its own start state, never the main account's fixture.
-        const partner = c.companions?.find(k => name.endsWith(k.suffix) && preset === k.preset);
+        const partner = name === bot ? undefined : c.companions?.find(k => name.endsWith(k.suffix) && preset === k.preset);
         const conf = partner ? partner.presetConfig ?? PRESETS[partner.preset] : c.presetConfig ?? PRESETS[preset!];
         if (!conf) throw new Error(`unknown preset ${preset}`);
-        await applyPreset(name, conf);
+        // A case with many accounts (a spar batch has 32): the account folders are made 8 at a time and every save in
+        // one process. One account at a time is two process starts each, 9 s for 32 accounts.
+        const everyConf = [conf, ...(c.companions ?? []).map(k => k.presetConfig ?? PRESETS[k.preset])];
+        // applyPreset writes the varps above 308 itself; a case that sets one keeps the one-account path.
+        const plain = everyConf.every(x => x && !Object.keys(x.varps ?? {}).some(k => Number(k) >= 309));
+        if (name === bot && (c.companions?.length ?? 0) >= 4 && plain) {
+          const all = [{ name: bot, conf }, ...c.companions!.map(k => ({ name: bot + k.suffix, conf: k.presetConfig ?? PRESETS[k.preset]! }))];
+          const missing = all.filter(a => !existsSync(join(rsSdkRoot(), 'bots', a.name, 'bot.env')));
+          for (let i = 0; i < missing.length; i += 8) await Promise.all(missing.slice(i, i + 8).map(a =>
+            Bun.spawn(['bun', 'bots/create-bot.ts', a.name, '--local', '--no-chat'], { cwd: rsSdkRoot(), stdout: 'ignore', stderr: 'ignore', windowsHide: true }).exited));
+          const code = `import { generateSave } from './sdk/test/utils/save-generator.ts';
+for (const a of JSON.parse(await Bun.file(process.env.BULK_FILE).text())) await generateSave(a.name, a.conf);
+console.log('SAVES_DONE');`;
+          const bulk = resolve('.practice/aio-bench', `bulk-${bot}.json`);
+          mkdirSync(dirname(bulk), { recursive: true });
+          writeFileSync(bulk, JSON.stringify(all));
+          const made = Bun.spawnSync(['bun', '-e', code], { cwd: rsSdkRoot(), env: { ...process.env, BULK_FILE: bulk }, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+          rmSync(bulk, { force: true });
+          if (made.stdout.toString().includes('SAVES_DONE')) for (const a of all) bulkReady.add(a.name);
+        }
+        const account = await createBot(name);
+        if (!bulkReady.has(name)) await applyPreset(name, conf);
         pinLoopbackToIpv4(account.envPath, enginePort);
       },
       run: async (script, name, timeoutMs, args = []) => {
