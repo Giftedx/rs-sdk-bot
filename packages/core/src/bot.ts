@@ -107,6 +107,8 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     let lastLife = born;
     s.lifecycle?.record('ready', `${p.worldX} ${p.worldZ} ${p.level}`);
     log(`START ${p.worldX} ${p.worldZ} ${p.level}`);
+    // On the lockstep practice engine: the time from the start of the worker process to its login, for the bench.
+    if (process.env.SIM_LOCKSTEP === '1') log(`BOOT ${Math.round(performance.now())} ms from process start to login`);
     const record = createTickRecorder({ account: name, server, script: opts.record?.script ?? process.argv[1] ?? 'unknown',
         argv: opts.record?.argv ?? process.argv.slice(2), startedAt: Date.now() });
     if (record && s.record) { s.record(record); records.set(s, record); }

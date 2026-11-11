@@ -86,8 +86,9 @@ export interface PrayerGuardOptions {
 export interface PrayerGuardStats {
     // Flicks in all, and those sent right before a script input.
     flicks: number; early: number;
-    // Ticks with a prayer on and no flick possible.
-    holds: number;
+    // Ticks with a prayer on and no flick possible, in all and for each cause: `window`, `five` (five prayers or
+    // more) or the type of the script input whose action runs.
+    holds: number; holdsBy: Record<string, number>;
     protects: number; repairs: number; resends: number;
     // Prayer points the state showed going down.
     spent: number;
@@ -124,12 +125,12 @@ const LEVEL_UP = /^Congratulations, you just advanced/;
 const STATE_LAG = 2;
 
 type Action = { type: string; [k: string]: unknown };
-type Pending = { kind: 'none' } | { kind: 'attack'; action: Action } | { kind: 'other'; still: number; need: number; item?: number; had?: number };
+type Pending = { kind: 'none' } | { kind: 'attack'; action: Action } | { kind: 'other'; type: string; still: number; need: number; item?: number; had?: number };
 
 export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     const every = o.every ?? 3, calm = o.calmTicks ?? 20;
     if (!Number.isSafeInteger(every) || every < 1 || every > 4) throw new Error('prayer guard: every must be 1..4');
-    const stats: PrayerGuardStats = { flicks: 0, early: 0, holds: 0, protects: 0, repairs: 0, resends: 0, spent: 0, manual: false, yielded: false };
+    const stats: PrayerGuardStats = { flicks: 0, early: 0, holds: 0, holdsBy: {}, protects: 0, repairs: 0, resends: 0, spent: 0, manual: false, yielded: false };
     const own = new WeakSet<object>();
     // Prayers the guard turned on, with the tick, and the tick up to which each is still wanted.
     const owned = new Map<number, number>(), keep = new Map<number, number>();
@@ -145,6 +146,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     // Ticks of the last two hits the player dealt, for the tick of the next one.
     let swingAt = -Infinity, swingBefore = -Infinity;
 
+    const hold = (cause: string) => { stats.holds++; stats.holdsBy[cause] = (stats.holdsBy[cause] ?? 0) + 1; };
     const attackTarget = (a: Action, st: any): boolean => {
         if (a.type === 'interactPlayer') return a.optionIndex === 2 && (st?.nearbyPlayers ?? []).some((p: any) => p.index === a.playerIndex);
         if (a.type !== 'interactNpc') return false;
@@ -172,8 +174,25 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         return after;
     };
 
+    // Each input is its own network write, and a server tick can start between two writes: the off and the on of a
+    // flick would then land in two ticks, with the prayer off for one tick. The guard therefore holds the client's
+    // writes from its first input of a moment to the next macrotask: its inputs, and a script input that follows them,
+    // leave in one write. The lockstep practice engine already sends one write for each tick (inprocess.ts).
+    const wire = s.client as { flush?: () => void } | undefined;
+    let holding = false;
+    const holdWrites = () => {
+        if (holding || process.env.SIM_LOCKSTEP === '1' || !wire || typeof wire.flush !== 'function' || Object.prototype.hasOwnProperty.call(wire, 'flush')) return;
+        holding = true;
+        let wanted = false;
+        wire.flush = () => { wanted = true; };
+        setImmediate(() => {
+            holding = false;
+            delete wire.flush;
+            if (wanted) wire.flush?.();
+        });
+    };
     // Sent in order: the server reads the inputs of one tick in the order they arrive.
-    const send = (a: Action) => { own.add(a); try { void Promise.resolve(s.direct(a)).catch(() => {}); } catch { /* session ended */ } };
+    const send = (a: Action) => { own.add(a); holdWrites(); try { void Promise.resolve(s.direct(a)).catch(() => {}); } catch { /* session ended */ } };
     const toggle = (prayerIndex: number) => send({ type: 'togglePrayer', prayerIndex, reason: 'SDK' });
     const resend = (st: any) => {
         if (pending.kind !== 'attack') return;
@@ -246,8 +265,8 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         inputs++;
         if (a.type === 'walkTo') { pending = { kind: 'none' }; return; }
         if (attack) { pending = { kind: 'attack', action: { ...a } }; return; }
-        if (a.type === 'pickupItem') { const item = a.itemId as number; pending = { kind: 'other', still: 0, need: PICKUP_IDLE_TICKS, item, had: held(s.sdk.getState(), item) }; return; }
-        pending = { kind: 'other', still: 0, need: IDLE_TICKS };
+        if (a.type === 'pickupItem') { const item = a.itemId as number; pending = { kind: 'other', type: a.type, still: 0, need: PICKUP_IDLE_TICKS, item, had: held(s.sdk.getState(), item) }; return; }
+        pending = { kind: 'other', type: a.type, still: 0, need: IDLE_TICKS };
     };
 
     const client = s.client as { executeBotAction?: (action: unknown) => unknown } | undefined;
@@ -374,7 +393,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
                 return;
             }
         }
-        if (!safe) { if (active.length) stats.holds++; return; }
+        if (!safe) { if (active.length) hold(windows ? 'window' : pending.kind === 'other' ? pending.type : 'other'); return; }
 
         const missing = wanted.filter(i => !active.includes(i));
         if (missing.length) {
@@ -394,7 +413,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         }
 
         if (!active.length) return;
-        if (active.length > MAX_FLICKED) { stats.holds++; return; }
+        if (active.length > MAX_FLICKED) { hold('five'); return; }
         const attack = pending.kind === 'attack' ? 1 : 0;
         if (active.length <= 2) {
             if (now - flickAt < every) return;
@@ -445,5 +464,5 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         });
     };
     void s.ended?.then(stop);
-    return { stop, release, stats: () => ({ ...stats }), note };
+    return { stop, release, stats: () => ({ ...stats, holdsBy: { ...stats.holdsBy } }), note };
 }

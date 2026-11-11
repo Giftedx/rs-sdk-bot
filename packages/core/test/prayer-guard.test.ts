@@ -638,3 +638,46 @@ test('the guard counts the points the state shows going down', () => {
     expect(guard.stats().holds).toBeGreaterThan(0);
     expect(guard.stats().spent).toBe(0);
 });
+
+test('held ticks are counted by cause', () => {
+    const { w, s, client, advance } = world({ prayers: [PROTECT.melee] });
+    const guard = startPrayerGuard(s, { protect: false });
+    w.window = true;
+    advance(5);
+    w.window = false; w.anim = 625;
+    client.executeBotAction({ type: 'interactLoc', x: 1, z: 1, locId: 2090, optionIndex: 1 });
+    advance(5);
+    const by = guard.stats().holdsBy;
+    expect(by.window).toBe(5);
+    expect(by.interactLoc).toBeGreaterThanOrEqual(4);
+    expect(guard.stats().holds).toBe(Object.values(by).reduce((a, b) => a + b, 0));
+});
+
+test('the inputs of a flick and the script input after them leave in one network write', async () => {
+    const lockstep = process.env.SIM_LOCKSTEP;
+    delete process.env.SIM_LOCKSTEP;
+    try {
+        const { w, s, client, advance } = world({ prayers: [PROTECT.melee] });
+        const writes: number[] = [];
+        let unsent = 0;
+        // The client's own flush is on the prototype, as in the lite client.
+        const proto = { flush() { writes.push(unsent); unsent = 0; } };
+        Object.setPrototypeOf(client, proto);
+        const inner = client.executeBotAction;
+        client.executeBotAction = function (a: any) { const r = inner.call(this, a); unsent++; (this as any).flush(); return r; };
+        startPrayerGuard(s, { protect: false });
+        w.npcs = [cow(-1)];
+        advance(2);
+        writes.length = 0;
+        client.executeBotAction({ type: 'interactNpc', npcIndex: 3, optionIndex: 2 });
+        await new Promise(done => setImmediate(done));
+        // Two prayer inputs and the attack: one write of three inputs.
+        expect(writes).toEqual([3]);
+        writes.length = 0;
+        advance(3);
+        await new Promise(done => setImmediate(done));
+        expect(writes.length).toBe(1);
+        expect(writes[0]).toBe(3);
+        expect(Object.prototype.hasOwnProperty.call(client, 'flush')).toBe(false);
+    } finally { if (lockstep !== undefined) process.env.SIM_LOCKSTEP = lockstep; }
+});

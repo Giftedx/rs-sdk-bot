@@ -265,8 +265,13 @@ function report(rows: Row[]) {
   }
 }
 
+// Where the wall time of the last case went, for AIO_BENCH_TIMING.
+const phase = { prepareMs: 0, scriptMs: 0, cleanupMs: 0 };
+const timed = async <T>(key: keyof typeof phase, work: () => Promise<T>): Promise<T> => { const t = Date.now(); try { return await work(); } finally { phase[key] += Date.now() - t; } };
+
 async function runCase(c: BenchCase, bot: string, enginePort = 8888) {
   const t0 = Date.now();
+  phase.prepareMs = phase.scriptMs = phase.cleanupMs = 0;
   // proveInProcess checks the START line against the named preset's tile, so a case fixture is registered under its own name.
   const presetName = c.presetConfig ? `bench:${c.key}` : c.preset;
   if (c.presetConfig) PRESETS[presetName] = c.presetConfig;
@@ -274,7 +279,7 @@ async function runCase(c: BenchCase, bot: string, enginePort = 8888) {
     { bot, script: c.script, runs: RUNS, preset: presetName, scriptArgs: c.scriptArgs, pass: c.pass, timeoutMs: c.timeoutMs ?? TIMEOUT,
       ...(c.companions ? { companions: c.companions.map(k => ({ suffix: k.suffix, preset: k.preset })) } : {}) },
     {
-      prepare: async (name, preset) => {
+      prepare: (name, preset) => timed('prepareMs', async () => {
         const account = await createBot(name);
         // A partner account is `<bot><suffix>`; it takes its own start state, never the main account's fixture.
         const partner = c.companions?.find(k => name.endsWith(k.suffix) && preset === k.preset);
@@ -282,8 +287,8 @@ async function runCase(c: BenchCase, bot: string, enginePort = 8888) {
         if (!conf) throw new Error(`unknown preset ${preset}`);
         await applyPreset(name, conf);
         pinLoopbackToIpv4(account.envPath, enginePort);
-      },
-      run: async (script, name, timeoutMs, args = []) => {
+      }),
+      run: (script, name, timeoutMs, args = []) => timed('scriptMs', async () => {
         // A case can name the account of this run, a partner and the save file in its arguments and job files.
         const fill = (text: string) => text.replaceAll('{bot}', name).replace(/\{bot:(\w)\}/g, (_all, suffix) => name + suffix)
           .replaceAll('{save}', `vendor/rs-sdk/server/engine/data/players/main/${name.toLowerCase()}.sav`);
@@ -301,10 +306,10 @@ async function runCase(c: BenchCase, bot: string, enginePort = 8888) {
         mkdirSync('.practice/aio-bench/output', { recursive: true });
         writeFileSync(`.practice/aio-bench/output/${c.key.replace(/[^a-z0-9-]/gi, '_')}.log`, out + err);
         return { stdout: out + err, exitCode };
-      },
-      cleanup: async (name) => {
+      }),
+      cleanup: name => timed('cleanupMs', async () => {
         rmSync(join(rsSdkRoot(), 'bots', name), { recursive: true, force: true });
-      },
+      }),
     },
   );
   const elapsedMs = Date.now() - t0;
@@ -364,8 +369,13 @@ async function main() {
             console.log(`AIO_BENCH_RESULT ${JSON.stringify(row)}`);
             rows.push(row);
           } else {
+            const engineAt = Date.now();
             if (FRESH) own = await start(c.key, slot);
+            const engineStartMs = Date.now() - engineAt;
             const row = await runCase(c, FRESH ? 'aiobf' : `aiob${i}`, FRESH ? slotPort(slot) : 8888);
+            // One line for each case that ran: the time to start the engine, to write the account, to run the worker
+            // script (login to logout) and to delete the account; `otherMs` is the rest of the case.
+            if (PARALLEL === 1) console.log(`AIO_BENCH_TIMING ${JSON.stringify({ case: c.key, engineStartMs, ...phase, otherMs: row.elapsedMs - phase.prepareMs - phase.scriptMs - phase.cleanupMs })}`);
             if (kept && row.ok) { mkdirSync(CACHE_DIR, { recursive: true }); writeFileSync(kept, JSON.stringify(row)); } // a failure is run again each time
             rows.push(row);
           }
