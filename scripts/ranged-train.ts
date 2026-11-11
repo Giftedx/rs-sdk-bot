@@ -22,7 +22,7 @@ export const BOWS=[{id:841,req:1,name:'Shortbow'},{id:839,req:1,name:'Longbow'},
  {id:857,req:40,name:'Yew shortbow'},{id:855,req:40,name:'Yew longbow'},{id:861,req:50,name:'Magic shortbow'},{id:859,req:50,name:'Magic longbow'}] as const;
 export const ARROWS=[{id:882,req:1,name:'Bronze arrow'},{id:884,req:1,name:'Iron arrow'},{id:886,req:5,name:'Steel arrow'},{id:888,req:20,name:'Mithril arrow'},{id:890,req:30,name:'Adamant arrow'},{id:892,req:40,name:'Rune arrow'}] as const;
 const ARROW_IDS:number[]=ARROWS.map(a=>a.id),BOW_IDS:number[]=BOWS.map(b=>b.id);
-const COINS=995,BONES=526,CHICKEN=2138,FEATHER=314,BANK={x:3253,z:3421},LOWE={x:3232,z:3423},LOOT_WINDOW=12;
+const COINS=995,BONES=526,CHICKEN=2138,FEATHER=314,BANK={x:3253,z:3421},LOWE={x:3232,z:3423},WYDIN={x:3015,z:3206},PEN={x:3233,z:3297},LOOT_WINDOW=12;
 // Lowe's archeryshop lists these arrows (server/content/scripts/areas/area_varrock/configs/varrock.inv).
 const LOWE_ARROWS=[882,884,886];
 const OUT:PathPoint[]=[{x:3280,z:3429,tol:2},{x:3275,z:3380,tol:2},{x:3260,z:3335,tol:2},{x:3233,z:3297,tol:0}];
@@ -119,10 +119,20 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
  const ground=()=>st()?.groundItems??[];
  const pickup=async(id:number,x:number,z:number,required=true)=>{const item=ground().find(i=>i.id===id&&i.x===x&&i.z===z),before=held(id);if(!item){if(required)throw Error('ranged-train fresh loot missing '+id);return 0;}await s.bot.pickupItem(item);const observed=await waitUntil(s,()=>held(id)>before||over(),{timeoutTicks:8});if(over())throw Error('ranged-train pickup stopped');if(!observed&&required)throw Error('ranged-train pickup effect missing '+id);return Math.max(0,held(id)-before);};
  // Shared trip search and execution; exclude consumable teleports so fares are the only travel debit.
- const travel=async(to:{x:number;z:number})=>{
+ type Stop={x:number;z:number};
+ const same=(a:Stop,b:Stop)=>a.x===b.x&&a.z===b.z;
+ const tripAccount=()=>{const actor=accountOf(s);return{...actor,skills:{...actor.skills,magic:0},items:[],counts:{},worn:[],coins:coins()};};
+ // The route worker starts cold and closes 30 s after its last plan, so each food-run leg stood 246-289 ticks for its
+ // plan. A trip queues the legs known to follow it; travel from that stop takes the ready plan, or plans again if it is null.
+ const queued:{from:Stop;to:Stop;plan:ReturnType<typeof planTripOffThread>}[]=[];
+ const queue=(from:Stop,to:Stop)=>{if(queued.some(q=>same(q.from,from)&&same(q.to,to)))return;const plan=planTripOffThread({...from,level:0},{...to,level:0},tripAccount());plan.catch(()=>{});queued.push({from,to,plan});};
+ const travel=async(to:Stop,next:readonly (readonly [Stop,Stop])[]=[])=>{
   const p=st()?.player;if(!p)throw Error('ranged-train travel state unknown');
-  const actor=accountOf(s),acct={...actor,skills:{...actor.skills,magic:0},items:[],counts:{},worn:[],coins:coins()};
-  const plan=await planTripOffThread({x:p.worldX,z:p.worldZ,level:p.level},{...to,level:0},acct);
+  const i=queued.findIndex(q=>same(q.to,to)&&p.level===0&&Math.max(Math.abs(p.worldX-q.from.x),Math.abs(p.worldZ-q.from.z))<=2);
+  const ready=i<0?undefined:queued.splice(i,1)[0]!.plan.catch(()=>null);
+  const fresh=()=>planTripOffThread({x:p.worldX,z:p.worldZ,level:p.level},{...to,level:0},tripAccount());
+  const first=ready??fresh();for(const [a,b] of next)queue(a,b);
+  const plan=(await first)??(ready?await fresh():null);
   if(over()||sustain.failure()||hp()<=6)throw Error('ranged-train travel deadline/health/stop');
   if(!plan||plan.bank||plan.legs.some(l=>l.kind==='travel'&&(l.travel.runes.length||l.travel.needs.some(n=>'held' in n))))throw Error('ranged-train funded travel unavailable');
   const fare=routeFares(plan.legs),wallet=coins();if(fare>preparationFunds(sum(owned(),[COINS]),coinsSpent,o.maxSpend,o.coinReserve)||fare>wallet)throw Error('ranged-train travel budget refused');
@@ -138,7 +148,7 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
   if(available){foodId=available;return;}
   // Pinned wydinstore: cheese1985 stock3. Observe the actual shelf before choosing or buying.
   foodId=1985;const need=Math.max(0,o.food-count(owned(),foodId));
-  await fund();await close();await travel({x:3015,z:3206});
+  await fund();await close();await travel(WYDIN,[[WYDIN,BANK]]);
   if(!(await s.bot.openShop(/^wydin$/i)).success||!await waitUntil(s,()=>!!st()?.shop?.isOpen,{timeoutTicks:10}))throw Error('ranged-train food shop unavailable');
   const shelf=st()?.shop?.shopItems.find(i=>i.id===foodId);
   console.log('RANGED_TRAIN_FOOD_STOCK '+JSON.stringify(shelf??null));
@@ -172,7 +182,8 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
   await walk([{...BANK,tol:1}]);await open();await deposit([arrow.id,...(coinsWithdrawn>0?[COINS]:[])]);
  };
  try{
-  if(!near(entry,6))await travel(entry);
+  // The bank is unread here, so the food-run legs are queued in case the bank holds too little food.
+  if(!near(entry,6))await travel(entry,[[entry,WYDIN],[WYDIN,BANK]]);
   await open();initial=[...snapshot,...entryItems];
   await deposit(inv().map(i=>i.id));
   if(sum(owned(),[COINS])<o.coinReserve)throw Error('ranged-train prerequisite: coin reserve short');
@@ -200,13 +211,15 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
    stopAmmo();let lastAmmo=sum(inv(),ARROW_IDS)+sum(eq(),ARROW_IDS);
    stopAmmo=s.onTick(()=>{const a=sum(inv(),ARROW_IDS)+sum(eq(),ARROW_IDS);shots+=Math.max(0,lastAmmo-a);lastAmmo=a;});
    console.log('RANGED_TRAIN_TRIP '+JSON.stringify({trip:trips,bow:bow.id,arrow:arrow.id,ammo:lastAmmo,level:level(),tick:s.tick()}));
-   await walk(OUT);if(!near({x:3233,z:3297},0))throw Error('ranged-train coop entry unobserved');
-   let tripKills=0,lostTargets=0,lastProgress=s.tick();
+   await walk(OUT);if(!near(PEN,0))throw Error('ranged-train coop entry unobserved');
+   let tripKills=0,lostTargets=0,lastProgress=s.tick(),penReturn=false;
    while(tripKills<o.killsPerTrip&&lostTargets<5&&level()<o.target&&!over()&&s.tick()-start<o.cap-500){
     await heal();if(sum(inv(),ARROW_IDS)+sum(eq(),ARROW_IDS)<3)break;
     if(held(arrow.id)>0)await equip(arrow.id);
     const target=selectRangedTarget(st()?.nearbyNpcs??[],st()?.player?.level);
-    if(!target){if(s.tick()-lastProgress>120)throw Error('ranged-train no target progress');await waitTicks(s,1);continue;}
+    // A chase or pickup can leave the account east of pen gate 1551 (3236,3296). There it stood 113 ticks at 3239,3301
+    // with no selectable chicken. Walk back to the pen entry once per empty streak, then wait for a respawn.
+    if(!target){if(s.tick()-lastProgress>120)throw Error('ranged-train no target progress');if(!penReturn&&!near(PEN,0)){penReturn=true;await walk([{...PEN,tol:0}]);continue;}await waitTicks(s,1);continue;}
     if(target.distance>5)await walk([{x:target.tileX??target.x,z:target.tileZ??target.z,tol:3}]);
     const fresh=st()?.nearbyNpcs.find(n=>n.index===target.index&&n.id===target.id);if(!fresh||fresh.inCombat)continue;
     const stacks=()=>{const m=new Map<string,number>();for(const i of ground())m.set(`${i.id}:${i.x}:${i.z}`,(m.get(`${i.id}:${i.x}:${i.z}`)??0)+i.count);return m;};
@@ -230,7 +243,7 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
      if(s.tick()-lastProgress>120)throw Error('ranged-train combat/credit stalled');await waitTicks(s,1);
     }
     if(!credited){lostTargets++;continue;}
-    bonesPicked+=await pickup(BONES,x,z,false);chickenPicked+=await pickup(CHICKEN,x,z,false);kills++;tripKills++;lastProgress=s.tick();
+    bonesPicked+=await pickup(BONES,x,z,false);chickenPicked+=await pickup(CHICKEN,x,z,false);kills++;tripKills++;lastProgress=s.tick();penReturn=false;
     if(ground().some(i=>i.id===FEATHER&&i.x===x&&i.z===z))await pickup(FEATHER,x,z,false);
     for(const item of ground().filter(i=>i.id===arrow.id&&i.distance<=7&&i.x>=3220&&i.x<=3248&&i.z>=3280&&i.z<=3310).slice(0,4))picked+=await pickup(item.id,item.x,item.z,false);
     console.log('RANGED_TRAIN_KILL '+JSON.stringify({kills,level:level(),xp:xp()-startXp,ammo:sum(inv(),ARROW_IDS)+sum(eq(),ARROW_IDS),picked,hp:hp(),tick:s.tick()}));
