@@ -73,8 +73,17 @@ export function isEntryRefusal(result: string): boolean {
     return /^RESULT fail\b/.test(result) && /\bticks=0\b/.test(result) && !/died=true/.test(result);
 }
 
+// A login refused because a dropped session still holds the account's fleet claim ("fleet account claim held"). Only
+// an authenticated recovery clears that (packages/core/src/fleet-trade-claim.ts acquireFleetSwarmClaim), and the
+// recovery starts from this supervisor's end. A release that is still being written clears within a try or two, so
+// HELD_CLAIM_TRIES such refusals in a row end the job as gave-up. Live claude-cloud: each cut of the relay cost its
+// account 20 more logins of this kind, about three minutes, before its recovery could start; 150 runs ended on a cut
+// in one night.
+export const HELD_CLAIM_TRIES = 3;
+export const isHeldClaimRefusal = (result: string) => /^RESULT fail (?:login: )?(?:Error: )?fleet account claim held\b/.test(result);
+
 export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up' | 'release-paused' | 'refused'; runs: number }> {
-    let fails = 0;
+    let fails = 0, held = 0;
     for (let runs = 1; ; runs++) {
         if (d.stopped()) return { reason: 'stopped', runs: runs - 1 };
         const r = await d.run();
@@ -90,6 +99,8 @@ export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 's
         // A worker that refuses before it acts (no game ticks) changed nothing: the account is free for its next job.
         if (isEntryRefusal(result)) return { reason: 'refused', runs };
         if (!isTransportStall(result) && (isNoProgressFailure(result) || isPrerequisiteFailure(result))) return { reason: 'blocked', runs };
+        held = isHeldClaimRefusal(result) ? held + 1 : 0;
+        if (held >= HELD_CLAIM_TRIES) return { reason: 'gave-up', runs };
         // A run with real work behind it is one failure, not one more: the streak toward gave-up restarts at it.
         fails = madeProgress(r.stdout) ? 1 : fails + 1;
         if (fails > d.maxRestarts) return { reason: 'gave-up', runs };

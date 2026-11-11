@@ -23,7 +23,7 @@ test('Rune Mysteries qualification failures block instead of relogging an untrai
  expect(isPrerequisiteFailure('RESULT fail Error: Rune Mysteries prerequisite: combat13 required for guarded route')).toBe(true);
  expect(isPrerequisiteFailure('RESULT ok Rune Mysteries prerequisite: qualified')).toBe(false);
 });
-import { supervise, isPrerequisiteFailure, isTransportStall } from '../src/supervise';
+import { supervise, isPrerequisiteFailure, isTransportStall, isHeldClaimRefusal, HELD_CLAIM_TRIES } from '../src/supervise';
 
 const out = (lines: string[], code: number) => async () => ({ stdout: lines.join('\n'), exitCode: code });
 
@@ -175,6 +175,25 @@ test('a refusal before any game tick frees the account instead of holding it', a
     expect(isEntryRefusal('RESULT fail ticks=0 died=true')).toBe(false);
     const r = await supervise({ run: async () => ({ exitCode: 1, stdout: shark }), stopped: () => false, maxRestarts: 20, pause: async () => {} } as any);
     expect(r).toEqual({ reason: 'refused', runs: 1 });
+});
+
+test('three logins in a row refused on a held fleet claim end the job at once, so its recovery can start; a release still being written does not', async () => {
+    const cut = out(['LEDGER ticks=900 xp=9000 inventory=0 move=100 anim=600 dialog=0 stun=0 idle=200 idlePct=22.0 ', 'RESULT fail session ended: disconnected'], 1);
+    const refused = out(['RESULT fail login: Error: fleet account claim held by swarm'], 1), ok = out(['RESULT ok ticks=1500'], 0);
+    expect(isHeldClaimRefusal('RESULT fail login: Error: fleet account claim held by swarm')).toBe(true);
+    expect(isHeldClaimRefusal('RESULT fail fleet account claim held by swarm')).toBe(true);
+    expect(isHeldClaimRefusal('RESULT fail login: Error: Unable to connect')).toBe(false);
+    let n = 0;
+    const dropped = [cut, refused, refused, refused, refused];
+    expect(await supervise({ run: () => dropped[n++]!(), stopped: () => false, pause: async () => {}, maxRestarts: 20 })).toEqual({ reason: 'gave-up', runs: 1 + HELD_CLAIM_TRIES });
+    // Two refusals, then the release lands and the login works.
+    n = 0;
+    const late = [refused, refused, ok];
+    expect(await supervise({ run: () => late[n++]!(), stopped: () => false, pause: async () => {}, maxRestarts: 20 })).toEqual({ reason: 'done', runs: 3 });
+    // The count is of refusals in a row: another failure between them starts it again.
+    n = 0;
+    const dead = out(['login: Error: Unable to connect'], 1), mixed = [refused, refused, dead, refused, refused, ok];
+    expect(await supervise({ run: () => mixed[n++]!(), stopped: () => false, pause: async () => {}, maxRestarts: 20 })).toEqual({ reason: 'done', runs: 6 });
 });
 
 test('a run the connection ended after real work restarts the streak toward gave-up; failures without work still add up', async () => {
