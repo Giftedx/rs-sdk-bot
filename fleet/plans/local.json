@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794393925776,
+ "at": 1794395577964,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -202,28 +202,6 @@
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "catherby"
-   ],
-   "env": {
-    "ITEMS": "rune arrowtips|adamant arrowtips",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy rune and adamant arrowtips at Catherby",
-   "role": "bank",
-   "template": "shop-arrowtips",
-   "autopilot": "local",
-   "resources": [
-    "shop:catherby"
    ]
   },
   {
@@ -587,6 +565,28 @@
    "repeat": false,
    "goal": "run-scorpion-bigchopper-quest-sweep [task-f012399f-dcd9-4ec5-80f1-9e310c6ce6ea]",
    "role": "firemaking"
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby"
+   ],
+   "env": {
+    "ITEMS": "rune arrowtips|adamant arrowtips",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy rune and adamant arrowtips at Catherby",
+   "role": "bank",
+   "template": "shop-arrowtips",
+   "autopilot": "local",
+   "resources": [
+    "shop:catherby"
+   ]
   }
  ]
 }
