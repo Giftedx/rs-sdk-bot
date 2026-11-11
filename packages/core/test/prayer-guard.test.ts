@@ -687,3 +687,28 @@ test('the inputs of a flick and the script input after them leave in one network
         expect(Object.prototype.hasOwnProperty.call(client, 'flush')).toBe(false);
     } finally { if (lockstep !== undefined) process.env.SIM_LOCKSTEP = lockstep; }
 });
+
+test('a pickup in a fight: the attack prayers go off, and the protection prayer is flicked in the same moment', () => {
+    const { w, s, client, advance } = world({ level: 45 });
+    w.npcs = [cow(-1)];
+    const lines: string[] = [];
+    const guard = startPrayerGuard(s, { offence: true, trace: line => lines.push(line) });
+    advance(2);
+    client.executeBotAction({ type: 'interactNpc', npcIndex: 3, optionIndex: 2 });
+    w.npcs = [cow(32768 + 7)];
+    for (let i = 0; i < 30; i++) {
+        advance(7);
+        const before = guard.stats().early;
+        client.executeBotAction({ type: 'pickupItem', x: 1, z: 1, itemId: 532 });
+        if (on(w).length === 3) expect(guard.stats().early).toBe(before + 1);
+        advance(1);
+        expect(w.active[PROTECT.melee]).toBe(true);
+        w.pack = [{ id: 532, count: i + 1 }];
+        advance(1);
+        client.executeBotAction({ type: 'interactNpc', npcIndex: 3, optionIndex: 2 });
+    }
+    expect(w.drains).toBe(0);
+    expect(w.most).toBeLessThanOrEqual(5);
+    expect(lines.some(l => /flick-after-off/.test(l))).toBe(true);
+    expect(lines.every(l => /^GUARD t=\d+ prayer=\d+ \S/.test(l))).toBe(true);
+});

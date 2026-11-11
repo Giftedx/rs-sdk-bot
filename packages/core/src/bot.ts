@@ -120,7 +120,7 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // Free prayers and protection from NPCs and Wilderness players (packages/core/src/prayer-guard.ts); PRAYER_GUARD=0
     // turns the guard off, PRAYER_OFFENCE=0 turns its Strength and Attack prayers off.
     // The two NPC tables are read here, at login: the reads take about 1 s and must not run inside a tick.
-    if (process.env.PRAYER_GUARD !== '0') prayerGuards.set(s, startPrayerGuard(s, { log: line => log(`${line} bot=${name}`), protect: protectByStyle(npcAttackStyles()), hunters: npcHunters(),
+    if (process.env.PRAYER_GUARD !== '0') prayerGuards.set(s, startPrayerGuard(s, { log: line => log(`${line} bot=${name}`), ...(process.env.PRAYER_GUARD_TRACE === '1' ? { trace: log } : {}), protect: protectByStyle(npcAttackStyles()), hunters: npcHunters(),
         offence: process.env.PRAYER_OFFENCE !== '0', melee: st => wornWeaponStyle((st?.equipment ?? []).find((i: any) => i.slot === 3)?.id) === 'melee',
         players: { ignore: new Set(loadOwners().keys()), style: q => { const seen = readOpponents(s.client).find(v => v.index === q.index); return seen ? wornWeaponStyle(seen.worn.rhand) : null; } } }));
     // Any bot stops cleanly when .practice/stop-<name> appears (checked every 25 ticks): a script that never checks

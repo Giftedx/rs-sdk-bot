@@ -298,9 +298,10 @@ const ROUTE_CASES: BenchCase[] = [
   // Chaos druids cast and hit in melee: the guard changes the protection prayer with the distance.
   {key: 'extra:guard-druid', script: 'scripts/aio-fighter.ts', preset: 'gather_combat_druid', scriptArgs: ['druid', '600', 'druid'], pass: ok, output: /kills=(\d+)/,
     presetConfig: {...PRESETS.gather_combat_druid!, skills: {...PRESETS.gather_combat_druid!.skills, Prayer: 60}}},
-  // Iron at the Al Kharid mine at combat level 14: the scorpions (level 14, hunt range 2) attack while the pick swings.
+  // Iron at the Al Kharid mine at combat level 14, on the tile between three iron rocks (maps/m51_51.jm2): the
+  // scorpions (level 14, hunt range 2) attack while the pick swings.
   {key: 'extra:guard-mine', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['mining', 'at-site', 'iron_rock_table', '6', '400'], pass: ok,
-    presetConfig: {position: {x: 3298, z: 3310, level: 0}, skills: {Mining: 41, Hitpoints: 30, Prayer: 45}, inventory: [{id: 1275, count: 1}]}},
+    presetConfig: {position: {x: 3295, z: 3310, level: 0}, skills: {Mining: 41, Hitpoints: 30, Prayer: 45}, inventory: [{id: 1275, count: 1}]}},
   // Thrower trolls on the Death Plateau path (level 67, hunt range 8, no too-strong rule) throw rocks at each player
   // in range. The worker stands still: the guard must turn Protect from Missiles on before the first rock.
   {key: 'extra:guard-thrower', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['300'], pass: ok,

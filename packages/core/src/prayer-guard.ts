@@ -81,6 +81,8 @@ export interface PrayerGuardOptions {
     calmTicks?: number;
     // Receives one PRAYER_GUARD line with the counts and the prayer points when the guard stops.
     log?: (line: string) => void;
+    // Receives one line for each prayer input the guard sends: the tick, the prayer and the reason.
+    trace?: (line: string) => void;
 }
 
 export interface PrayerGuardStats {
@@ -200,7 +202,8 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     };
     // Sent in order: the server reads the inputs of one tick in the order they arrive.
     const send = (a: Action) => { own.add(a); holdWrites(); try { void Promise.resolve(s.direct(a)).catch(() => {}); } catch { /* session ended */ } };
-    const toggle = (prayerIndex: number) => send({ type: 'togglePrayer', prayerIndex, reason: 'SDK' });
+    let why = '';
+    const toggle = (prayerIndex: number) => { o.trace?.(`GUARD t=${s.tick()} prayer=${prayerIndex} ${why}`); send({ type: 'togglePrayer', prayerIndex, reason: 'SDK' }); };
     const resend = (st: any) => {
         if (pending.kind !== 'attack') return;
         if (!attackTarget(pending.action, st)) { pending = { kind: 'none' }; return; }
@@ -209,6 +212,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     };
     // One flick in one tick, for at most two prayers.
     const flickNow = (active: readonly number[], now: number) => {
+        why = 'flick';
         for (const i of active) toggle(i);
         for (const i of active) toggle(i);
         expect = [...active]; expectAt = now; flickAt = now;
@@ -217,6 +221,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
 
     // The second tick of a flick of three or four prayers: the prayers that are still off come back on.
     const finish = (now: number) => {
+        why = 'flick-second-tick';
         for (const i of resume) { toggle(i); intents.set(i, { on: true, at: now }); }
         resume = []; expectAt = now;
     };
@@ -238,9 +243,18 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         // action runs.
         const drop = attack ? [] : active.filter(i => owned.has(i) && (i < 12 && i !== PROTECT_ITEM ? true : a.type !== 'walkTo' && !threatNow));
         if (drop.length) {
+            why = 'off-before-input';
             let left: number[] = [...active];
             for (const i of drop.slice(0, TICK_INPUTS - 1)) { toggle(i); owned.delete(i); left = intend(left, i, now); }
-            if (expect) { expect = left; expectAt = now; }
+            // With inputs to spare, the prayers that stay on go off and on after them: for one moment no prayer is
+            // on, which clears the drain timer.
+            if (left.length && drop.length + 2 * left.length <= TICK_INPUTS - 1) {
+                why = 'flick-after-off';
+                for (const i of left) toggle(i);
+                for (const i of left) toggle(i);
+                flickAt = now; stats.flicks++; stats.early++;
+                expect = left; expectAt = now;
+            } else if (expect) { expect = left; expectAt = now; }
             return;
         }
         if (!expect && active.length <= 2 && now - flickAt >= 1) { flickNow(active, now); stats.early++; }
@@ -395,6 +409,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
             if (missing.length && !safe && now - expectAt < 10) return;
             expect = null;
             if (missing.length && safe) {
+                why = 'repair';
                 for (const i of missing) { toggle(i); intents.set(i, { on: true, at: now }); }
                 stats.repairs++; flickAt = now;
                 resend(st);
@@ -405,6 +420,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
 
         const missing = wanted.filter(i => !active.includes(i));
         if (missing.length) {
+            why = `on wanted=${wanted.join('+')} active=${active.join('+')} threat=${threatNow}`;
             let next = active;
             for (const i of missing) { toggle(i); owned.set(i, now); next = intend(next, i, now); }
             stats.protects++;
@@ -414,6 +430,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         }
         const stale = active.filter(i => owned.has(i) && !wanted.includes(i) && now > (keep.get(i) ?? -Infinity));
         if (stale.length) {
+            why = 'off-not-wanted';
             let next = active;
             for (const i of stale) { toggle(i); owned.delete(i); next = intend(next, i, now); }
             resend(st);
@@ -438,6 +455,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         const since = now - flickAt;
         if (since < 3 || (since === 3 && !unbuffed(now + 1)) || (since === 3 && unbuffed(now))) return;
         const order = [...active].sort((a, b) => backFirst(a) - backFirst(b));
+        why = 'flick-first-tick';
         // The first tick sends 4 inputs when it can, which leaves one for the script: the protection prayer comes back
         // now. With no input left for the attack, the attack waits for the second tick.
         const now1 = Math.max(1, TICK_INPUTS - 1 - order.length - attack);
@@ -462,6 +480,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         const state = () => s.sdk.getState()?.prayers?.activePrayers as boolean[] | undefined;
         const mine = [...owned.keys()].filter(i => state()?.[i]);
         if (stopped) return;
+        why = 'release';
         for (const i of mine) toggle(i);
         stop();
         if (!mine.length) return;
