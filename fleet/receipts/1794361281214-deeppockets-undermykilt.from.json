@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794361281214-deeppockets-undermykilt",
  "account": "Deeppockets",
  "partner": "UnderMyKilt",
@@ -10,8 +10,21 @@
  "item": "Coins",
  "requested": 2400000,
  "claim": "e68743df-1865-42d6-8cfa-06d07bbaa6f9",
- "count": 0,
- "ok": false,
- "at": 1794361289678,
- "detail": "trade claimed"
+ "count": 2400000,
+ "ok": true,
+ "at": 1794361577833,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2400000,
+  "after": 0
+ },
+ "bank": {
+  "count": 2395914,
+  "at": 1794361309097
+ },
+ "logout": {
+  "attemptId": "1794361289679-0000008320-0000000001",
+  "at": 1794361577824,
+  "sha256": "5bacbdf20a760f96e8c77b2a1bc8340f462ec4ee52e61c6dce243a631fe67545"
+ }
 }
