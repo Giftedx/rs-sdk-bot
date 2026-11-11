@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794409005207-trousersnake-knightstick",
  "account": "TrouserSnake",
  "partner": "Knightstick",
@@ -12,6 +12,16 @@
  "claim": "bb721eac-13e2-4db5-8ef1-2db8d9e937db",
  "count": 0,
  "ok": false,
- "at": 1794409009114,
- "detail": "trade claimed"
+ "at": 1794409235739,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 27020,
+  "at": 1794409234847
+ },
+ "logout": {
+  "attemptId": "1794409009118-0000014140-0000000001",
+  "at": 1794409235732,
+  "sha256": "89ba547161344c14e0e51bd4c5e4fe47fede617fc004251a3e2635140a8a633e"
+ },
+ "screen": false
 }
