@@ -113,7 +113,7 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // Random events (dryad, genie, lost axe...): handled on every tick unless RANDOM_EVENTS=0 (packages/core/src/randomevents.ts).
     if (process.env.RANDOM_EVENTS !== '0') randomEvents.set(s, watchRandomEvents(s));
     // Free prayers and protection from attacking NPCs with PRAYER_GUARD=1 (packages/core/src/prayer-guard.ts).
-    if (process.env.PRAYER_GUARD === '1') startPrayerGuard(s);
+    if (process.env.PRAYER_GUARD === '1') prayerGuards.set(s, startPrayerGuard(s, { log: line => log(`${line} bot=${name}`) }));
     // Any bot stops cleanly when .practice/stop-<name> appears (checked every 25 ticks): a script that never checks
     // it (seen: fishing30 under the supervisor) still logs out in game.
     let stopTicks = 0;
@@ -180,6 +180,7 @@ const ledgers = new Map<Session, ReturnType<typeof startLedger>>();
 const statuses = new Map<Session, ReturnType<typeof startStatus>>();
 const stallWatches = new Map<Session, { stop(): void }>();
 const randomEvents = new Map<Session, RandomEventWatch>();
+const prayerGuards = new Map<Session, ReturnType<typeof startPrayerGuard>>();
 const records = new Map<Session, NonNullable<ReturnType<typeof createTickRecorder>>>();
 // A record whose file is not complete in this time is left as it is; the exit does not wait longer.
 const RECORD_FLUSH_MS = 3000;
@@ -232,6 +233,7 @@ async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail
     const log = opts.log ?? ((l: string) => console.log(l));
     for (const s of sessions) {
         const l = ledgers.get(s); if (l) log(`${formatLedger(l.stop())} bot=${s.name}`);
+        prayerGuards.get(s)?.stop(); prayerGuards.delete(s);
         const e = randomEvents.get(s); if (e) { e.stop(); log(`EVENTS ${JSON.stringify(e.counts())} bot=${s.name}`); }
     }
     opts.onReported?.(() => ok);

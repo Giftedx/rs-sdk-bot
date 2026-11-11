@@ -32,6 +32,8 @@ export interface PrayerGuardOptions {
     every?: number;
     // Ticks without a threat before the guard turns its own protection prayer off.
     calmTicks?: number;
+    // Receives one PRAYER_GUARD line with the counts and the prayer points when the guard stops.
+    log?: (line: string) => void;
 }
 
 export interface PrayerGuardStats { flicks: number; holds: number; protects: number; repairs: number; resends: number }
@@ -54,6 +56,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     let stopped = false, flickAt = -Infinity, scriptPrayerAt = -Infinity, threatAt = -Infinity, protectAt = -Infinity;
     let pending: Pending = { kind: 'none' };
     let expect: number[] | null = null, expectAt = 0, wasActive = false, lastTile = '';
+    let pointsFirst: number | undefined, pointsLast: number | undefined, taken = 0, lastEvent = -Infinity;
 
     const attackTarget = (a: Action, st: any): boolean => {
         if (a.type === 'interactPlayer') return a.optionIndex === 2 && (st?.nearbyPlayers ?? []).some((p: any) => p.index === a.playerIndex);
@@ -91,6 +94,8 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         const st = s.sdk.getState(), p = st?.player, prayers = st?.prayers;
         if (!p || p.isDead || !prayers || !Array.isArray(prayers.activePrayers)) return;
         const now = s.tick();
+        pointsFirst ??= prayers.prayerPoints; pointsLast = prayers.prayerPoints;
+        for (const e of st.combatEvents ?? []) if (e.type === 'damage_taken' && e.tick > lastEvent) { taken += e.damage; lastEvent = e.tick; }
         const active: number[] = prayers.activePrayers.flatMap((on: boolean, i: number) => (on ? [i] : []));
 
         // An interaction that is not an attack ends when the player has stood idle for 3 ticks.
@@ -170,6 +175,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         if (stopped) return;
         stopped = true;
         off();
+        o.log?.(`PRAYER_GUARD ${JSON.stringify({ ...stats, points: [pointsFirst, pointsLast], taken })}`);
         if (client && observer && client.executeBotAction === observer) client.executeBotAction = original;
     };
     void s.ended?.then(stop);
