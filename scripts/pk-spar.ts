@@ -9,14 +9,19 @@
 // names a scenario (default open). The start state of a scenario is its bench case (scripts/measure/aio-bench-cases.ts).
 // Prints one `SPAR <json>` line. RESULT ok means that both sides attacked and the fight reached a kill, an escape or
 // the cap.
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
 import { defaultSpec, fightPlayer, nextTick, type FightOptions, type FightResult, type Kit } from './pk';
 import { TRIBRID_KIT } from './pk-hunt';
 
 // `specBelow` moves the health fraction at which the kit's special fires.
 export type Profile = Partial<Omit<FightOptions, 'log' | 'stop'>> & { specBelow?: number };
+// The options that won the hill climb (scripts/measure/pk-spar-climb.ts writes the file).
+export const CHAMPION: Profile = JSON.parse(readFileSync(resolve(import.meta.dir, 'pk-champion.json'), 'utf8'));
 export const PROFILES: Readonly<Record<string, Profile>> = {
     base: {},
+    champion: CHAMPION,
     freeze: { freeze: true },
     'freeze-flee': { freeze: 'flee' },
     // Keeps its special for a target at 40% health or one that has fled, and freezes a target that runs.
@@ -105,14 +110,21 @@ export function batchSummary(results: readonly SparResult[]) {
     const mean = results.length ? Number((results.reduce((n, r) => n + r.score, 0) / results.length).toFixed(1)) : 0;
     return { fights: results.length, kills: count(r => r.winner === 'a' && r.end === 'kill'), deaths: count(r => r.winner === 'b' && r.end === 'kill'),
         escapes: count(r => r.winner === 'b' && r.end === 'escape'), fled: count(r => r.winner === 'a' && r.end === 'escape'), draws: count(r => r.winner === 'draw'),
-        mean, ticks: Math.max(0, ...results.map(r => r.ticks)), scores: results.map(r => r.score) };
+        mean, ticks: Math.max(0, ...results.map(r => r.ticks)), scores: results.map(r => r.score), nets: results.map(netRate) };
+}
+// Net damage of side A for each 100 ticks of a spar: what side B took less what side A took. It moves with every hit,
+// so it separates two profiles in fewer fights than a count of kills.
+export const netRate = (r: SparResult) => Number((((r.b.taken - r.a.taken) * 100) / Math.max(1, r.ticks)).toFixed(1));
+// A spar seen from the other side: for a pair that fought with the two profiles on swapped sides.
+export function flipped(r: SparResult): SparResult {
+    return { ...r, winner: r.winner === 'a' ? 'b' : r.winner === 'b' ? 'a' : 'draw', score: r.score === 0 ? 0 : -r.score, a: r.b, b: r.a };
 }
 
 if (import.meta.main) {
     const [botA, botB, capArg, ...more] = process.argv.slice(2), env = process.env;
     if (!botA || !botB || more.length % 2) { console.log('RESULT fail usage: bun scripts/pk-spar.ts <bot a> <bot b> [CAP ticks] [<bot a> <bot b> ...]'); process.exit(2); }
     const { openBot, finish } = await import('../packages/core/src/bot');
-    const cap = Number(capArg ?? 900), nameA = env.SPAR_A ?? 'base', nameB = env.SPAR_B ?? 'base', scenarioName = env.SPAR_SCENARIO ?? 'open';
+    const cap = Number(env.SPAR_CAP ?? capArg ?? 900), nameA = env.SPAR_A ?? 'base', nameB = env.SPAR_B ?? 'base', scenarioName = env.SPAR_SCENARIO ?? 'open';
     const scenario = SCENARIOS[scenarioName];
     if (!scenario) { console.log(`RESULT fail pk-spar: unknown scenario "${scenarioName}"; known: ${Object.keys(SCENARIOS).join(', ')}`); process.exit(2); }
     const optionsA = sparOptions(nameA, env.SPAR_A_OPTS, TRIBRID_KIT, cap, scenario.a), optionsB = sparOptions(nameB, env.SPAR_B_OPTS, TRIBRID_KIT, cap, scenario.b);
@@ -139,7 +151,12 @@ if (import.meta.main) {
         return [a, b];
     })).finally(() => { tickWaits.active--; });
     const t1 = Date.now();
-    const results = await Promise.all(pairs.map(([a, b]) => spar(a, b, optionsA, optionsB, undefined, () => halted !== undefined)));
+    // SPAR_SWAP=1: every second pair fights with the two profiles on swapped sides, and its result is turned back, so
+    // side A in the results is always the profile SPAR_A and the side of the map has no part in the comparison.
+    const swap = env.SPAR_SWAP === '1';
+    const results = await Promise.all(pairs.map(async ([a, b], i) => (swap && i % 2
+        ? flipped(await spar(a, b, optionsB, optionsA, undefined, () => halted !== undefined))
+        : spar(a, b, optionsA, optionsB, undefined, () => halted !== undefined))));
     // Where the wall time of the run went: the logins, then the fights.
     console.log(`SPAR_TIMING loginMs=${t1 - t0} fightMs=${Date.now() - t1} pairs=${pairs.length} ticks=${Math.max(...results.map(r => r.ticks))}`);
     for (const r of results) console.log(`SPAR ${JSON.stringify({ scenario: scenarioName, profiles: { a: nameA, b: nameB }, ...r })}`);
@@ -147,7 +164,7 @@ if (import.meta.main) {
     if (results.length > 1) {
         const s = batchSummary(results);
         await finish(sessions, ok, `spar-batch fights=${s.fights} kills=${s.kills} deaths=${s.deaths} escapes=${s.escapes} fled=${s.fled} draws=${s.draws} mean=${s.mean} ticks=${s.ticks} a=${nameA} b=${nameB} `
-            + `valid=${results.filter(sparValid).length} scores=${s.scores.join(',')}${halted ? ` halted=${halted}` : ''}`);
+            + `valid=${results.filter(sparValid).length} nets=${s.nets.join(',')} scores=${s.scores.join(',')}${halted ? ` halted=${halted}` : ''}`);
     }
     await finish(sessions, ok, `spar winner=${r.winner} score=${r.score} ticks=${r.ticks} end=${r.end} opening=${r.opening} gap=${r.startGap} a=${nameA} b=${nameB} `
         + `aOutcome=${r.a.outcome} bOutcome=${r.b.outcome} aTaken=${r.a.taken} bTaken=${r.b.taken} aEaten=${r.a.eaten} bEaten=${r.b.eaten} aSpecs=${r.a.specs} bSpecs=${r.b.specs}${halted ? ` halted=${halted}` : ''}`);

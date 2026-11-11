@@ -168,7 +168,9 @@ export async function hunt(s: Session, o: HuntOptions) {
             tally.fights++;
             const magicLevel = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
             const r: FightResult = await fightPlayer(s, target.name, {
-                kit, spec: defaultSpec(kit), freeze: castableFreeze(magicLevel, state.inventory) !== null, exitOnDanger: true,
+                // The freeze goes out when the target runs: cast whenever the target was free, it lost a stand-up spar (2 wins,
+                // 4 losses), and a hunter with it killed no more runners (research/pvp-fight-loop.md).
+                kit, spec: defaultSpec(kit), freeze: castableFreeze(magicLevel, state.inventory) !== null ? 'flee' : false, exitOnDanger: true,
                 escapeAt: o.escapeAt, escapeSpell: o.teleSpell, cap: 900, damageSpell: o.damageSpell, rotation: o.rotation, stop: over, log,
             });
             log(`HUNT fight ${r.outcome} ${JSON.stringify(r)}`);

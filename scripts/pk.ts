@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
 import { componentId } from '../packages/core/src/logout';
+import { questFlags } from '../packages/core/src/quest-status';
 import { tickWaits } from '../packages/core/src/tick-stream';
 import type { NearbyPlayer } from '../vendor/rs-sdk/sdk/types';
 
@@ -66,6 +67,14 @@ export type FightOptions = {
     freezeWithStaff?: boolean;
     // false: a freeze on a fled target takes off the torso alone, as any cast does.
     freezeStrip?: boolean;
+    // Armour that cuts the attack roll of a cast or a shot (negativeCastArmour). 'torso' (default) takes the torso off
+    // for the turn while HP is safe; 'keep' takes nothing off; 'strip' takes every such piece off.
+    castArmour?: 'torso' | 'keep' | 'strip';
+    // false: no Defence prayer (Steel Skin and the lower ones). It saves prayer points and gives up their defence.
+    defencePrayer?: boolean;
+    // Tiles to keep from the target between turns that are not melee: on a cooldown tick the loop steps away to this
+    // distance, so an opponent with a melee weapon must walk for each hit.
+    standOff?: number;
     fledSpec?: boolean;
     // Choose a style the opponent's overhead prayer does not cover (default on).
     readOverheads?: boolean;
@@ -116,11 +125,11 @@ const PROTECT_FROM: Record<Style, number> = { melee: 14, ranged: 13, magic: 12 }
 // Prayers for the current combat state (player_combat_stat.rs2:33-35, 62-67): Protect Item, the best Defence prayer
 // (boosts melee, ranged and 30% of magic defence), the overhead for the opponent's weapon, and on melee/spec turns the
 // best Strength and Attack prayers (+15% max hit and accuracy at 31/34), turned off on non-melee turns to save drain.
-export function combatPrayers(prayerBase: number, overhead: number | null, meleeTurn: boolean): { want: number[]; off: number[] } {
+export function combatPrayers(prayerBase: number, overhead: number | null, meleeTurn: boolean, defence = true): { want: number[]; off: number[] } {
     const want: number[] = [], off: number[] = [];
     if (prayerBase >= PRAYER_REQ[PRAYER.item]!) want.push(PRAYER.item);
     const def = prayerBase >= 28 ? PRAYER.steelSkin : prayerBase >= 10 ? PRAYER.rockSkin : prayerBase >= 1 ? PRAYER.thickSkin : null;
-    if (def !== null) want.push(def);
+    if (def !== null) (defence ? want : off).push(def);
     if (overhead !== null && prayerBase >= (PRAYER_REQ[overhead] ?? 99)) want.push(overhead);
     const str = prayerBase >= 31 ? PRAYER.ultimateStrength : prayerBase >= 13 ? PRAYER.superhumanStrength : prayerBase >= 4 ? PRAYER.burstOfStrength : null;
     const atk = prayerBase >= 34 ? PRAYER.incredibleReflexes : prayerBase >= 16 ? PRAYER.improvedReflexes : prayerBase >= 7 ? PRAYER.clarityOfThought : null;
@@ -181,6 +190,22 @@ export function observePlayer(client: unknown, index: number): Observed | null {
 const special = (client: unknown) => { const v = (client as { var?: number[] } | undefined)?.var; return { energy: v?.[300] ?? 0, on: v?.[301] === 1 }; };
 // A health bar at or under the fraction, from a hit that showed one.
 export const lowHealth = (seen: Observed | null, fraction: number) => !!seen && seen.totalHealth > 0 && seen.health / seen.totalHealth <= fraction;
+
+// The new hit splats on another player since the last call, read from the client's player entity (ClientEntity
+// damageCycles and damageValues, four slots). The SDK publishes a damage_dealt event only while our player faces the
+// target at the tick the splat shows (bot/StateCollector.ts), so an arrow or a spell that lands after a gear switch is
+// not counted: one spar read 102 dealt where the other side took 274. `seen` holds the cycle of each slot; the first
+// call only records them. Null when the client shows no splat data for the player.
+export function newSplats(client: unknown, index: number, seen: { cycles: number[] | null }): number[] | null {
+    const p = (client as { players?: ({ damageCycles?: ArrayLike<number>; damageValues?: ArrayLike<number> } | null)[] } | undefined)?.players?.[index];
+    if (!p?.damageCycles || !p.damageValues) return null;
+    const cycles = Array.from({ length: 4 }, (_, j) => p.damageCycles![j] ?? 0);
+    const out = seen.cycles ? cycles.flatMap((cycle, j) => (cycle > 0 && cycle > seen.cycles![j]! ? [p.damageValues![j] ?? 0] : [])) : [];
+    seen.cycles = cycles;
+    return out;
+}
+// Bodies the game lets only a Dragon Slayer finisher wear (levelrequire.rs2:94-101).
+const DRAGON_SLAYER_BODY = /^(rune_platebody|dragonhide_body)/;
 
 // The killer's message for a PvP death, with the loser's display name (skill_combat/scripts/pvp/pvp_combat.rs2:203-222).
 const KILL_MESSAGES = ['You have defeated {}.', '{} was no match for you.', 'With a crushing blow you finish {}.', 'Can anyone defeat you? Certainly not {}.',
@@ -303,12 +328,18 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
     let freezeReady = start, frozenUntil = start, freezeCastAt = -10, frozenTile: { x: number; z: number } | null = null, selfFrozenUntil = start;
     let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = false, rapidSet = false, pjedByNpc = false;
     let target: NearbyPlayer | undefined, rubbed = -1, ranAt = -10, prevSelf: { x: number; z: number } | null = null;
-    let charged = false, chargeAt = -10;
+    let charged = false, chargeAt = -10, stepAt = -10;
+    const splatSeen: { cycles: number[] | null } = { cycles: null };
     let prevTarget: { x: number; z: number } | null = null, prevGap = 0, fleeingUntil = start, heading = { x: 0, z: 0 }, chaseAt = -10, fled = false;
     const hits: { tick: number; damage: number; src: number }[] = [], dealtLog: { tick: number; damage: number }[] = [];
     // Tank torso worn or carried at fight start (unequipped for a cast/shot and re-equipped on melee turns).
     const names = getObjNames();
     const initState = sdk.getState();
+    // An account without Dragon Slayer cannot put its rune platebody back on after a cast ("You have not earned the
+    // right to wear this yet."), so the loop leaves such a body on. The quest journal gives the state; where it does
+    // not, the first refusal ends the removals.
+    const slayer = questFlags(s.client)?.find(q => /dragon slayer/i.test(q.name))?.state;
+    let torsoLocked = slayer === 'not started' || slayer === 'started';
     const tankIds = new Set<number>(
         [...(initState?.equipment ?? []).filter(e => e.slot === 4), ...(initState?.inventory ?? [])]
             .filter(e => /(^|_)(platebody|chainbody)(_|$)/.test(names.get(e.id) ?? '')).map(e => e.id),
@@ -324,11 +355,12 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         if (prevSelf && (at.x !== prevSelf.x || at.z !== prevSelf.z)) selfFrozenUntil = now;
         prevSelf = { x: at.x, z: at.z };
         let maxEvent = seenEvent;
+        const eventDealt: number[] = [];
         for (const e of state.combatEvents) {
             const id = e.observationId ?? e.tick;
             if (id <= seenEvent) continue;
             if (id > maxEvent) maxEvent = id;
-            if (e.type === 'damage_dealt' && e.targetType === 'other_player') { result.dealt += e.damage; dealtLog.push({ tick: now, damage: e.damage }); }
+            if (e.type === 'damage_dealt' && e.targetType === 'other_player') eventDealt.push(e.damage);
             if (e.type === 'damage_taken') { result.taken += e.damage; if (e.sourceType === 'other_player') hits.push({ tick: now, damage: e.damage, src: e.sourceIndex }); }
         }
         seenEvent = maxEvent;
@@ -344,6 +376,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
                 frozenUntil = Math.max(frozenUntil, now + 4);
             }
             if (/have been poisoned/i.test(m.text)) poisoned = true;
+            if (/not earned the right to wear/i.test(m.text)) torsoLocked = true;
             if (/feel charged with magic power/i.test(m.text)) charged = true;
             if (/magical charge fades away/i.test(m.text)) charged = false;
             if (/already under attack/i.test(m.text)) pjedByNpc = true;
@@ -353,6 +386,8 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         if (me.isDead || me.hp <= 0 || (startLife !== undefined && me.lifeId !== startLife)) { result.outcome = 'died'; log(`PK died to ${targetName} after ${result.ticks} ticks`); return result; }
         if (o.stop?.()) { log(`PK stopped against ${targetName}`); return result; }
         target = state.nearbyPlayers.find(p => p.name.toLowerCase() === want);
+        // Damage dealt: the splats on the target where the client shows them, else the SDK's events.
+        for (const damage of (target ? newSplats(s.client, target.index, splatSeen) : null) ?? eventDealt) { result.dealt += damage; dealtLog.push({ tick: now, damage }); }
         if (target) {
             lastSeen = now;
             result.targetAt = { x: target.x, z: target.z };
@@ -511,6 +546,11 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         if (now < nextAttack || unattackableSince >= 0) {
             let budget = 5;
             const walkingToMelee = now <= lastAttackAt + lastWalkTicks;
+            if (o.standOff && !walkingToMelee && upcomingTurn?.style !== 'melee' && now > lastAttackAt && now >= selfFrozenUntil && now - stepAt >= 2 && cheb(at, target) < o.standOff) {
+                const dx = Math.sign(at.x - target.x) || 1, dz = Math.sign(at.z - target.z);
+                void sdk.sendWalk(target.x + dx * o.standOff, target.z + dz * o.standOff);
+                stepAt = now;
+            }
             if (!walkingToMelee && !rapidSet && state.combatStyle && state.combatStyle.styles.length > 1 && state.combatStyle.currentStyle !== 1 && budget > 0) {
                 void sdk.sendSetCombatStyle?.(1);
                 rapidSet = true;
@@ -519,7 +559,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             if (prayers.prayerPoints > 0 && budget > 0) {
                 // Pre-activate melee prayers on the tick before a melee turn so the attack tick needs 0 prayer packets.
                 const nextIsMelee = now === nextAttack - 1 && (upcomingTurn?.style === 'melee' || (!!o.spec && lowHealth(seen, o.spec.below)));
-                const { want: wantPray, off: offPray } = combatPrayers(prayerBase, overhead, nextIsMelee);
+                const { want: wantPray, off: offPray } = combatPrayers(prayerBase, overhead, nextIsMelee, o.defencePrayer !== false);
                 for (const p of wantPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
                 for (const p of offPray) if (prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
             }
@@ -562,7 +602,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
             }
             budget -= toWield.length;
             if (prayers.prayerPoints > 0 && budget > 0) {
-                const { want: wantPray } = combatPrayers(prayerBase, overhead, specStyle === 'melee');
+                const { want: wantPray } = combatPrayers(prayerBase, overhead, specStyle === 'melee', o.defencePrayer !== false);
                 for (const p of wantPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
             }
             for (const item of toWield) use(item, /^(Wield|Wear)$/i);
@@ -612,13 +652,14 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
         // A freeze on a target that has fled decides the chase, and the runner does not hit back: every piece that
         // cuts the magic attack roll comes off for it (platelegs -21, kiteshield -8, full helm -6), as far as the
         // packets and free pack slots of this tick allow. Any other cast takes off the torso alone.
-        const strip = castFreeze && fled && o.freezeStrip !== false;
-        const toRemove = turn.style !== 'melee' && typeof sdk.sendUseEquipmentItem === 'function' && (strip || me.hp > oppMax + 12) && freeSlots >= 1 && budget >= 1
-            ? negativeCastArmour(state.equipment, turn.style, kitIds, names).filter(eq => strip || eq.slot === 4).slice(0, strip ? Math.min(budget, freeSlots) : 1)
+        const strip = (castFreeze && fled && o.freezeStrip !== false) || (o.castArmour === 'strip' && me.hp > oppMax + 12);
+        const toRemove = o.castArmour !== 'keep' && turn.style !== 'melee' && typeof sdk.sendUseEquipmentItem === 'function' && (strip || me.hp > oppMax + 12) && freeSlots >= 1 && budget >= 1
+            ? negativeCastArmour(state.equipment, turn.style, kitIds, names).filter(eq => !(torsoLocked && DRAGON_SLAYER_BODY.test(names.get(eq.id) ?? '')))
+                .filter(eq => strip || eq.slot === 4).slice(0, strip ? Math.min(budget, freeSlots) : 1)
             : [];
         budget -= toRemove.length;
         if (prayers.prayerPoints > 0 && budget > 0) {
-            const { want: wantPray } = combatPrayers(prayerBase, overhead, turn.style === 'melee');
+            const { want: wantPray } = combatPrayers(prayerBase, overhead, turn.style === 'melee', o.defencePrayer !== false);
             for (const p of wantPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
         }
         for (const item of toWield) use(item, /^(Wield|Wear)$/i);
