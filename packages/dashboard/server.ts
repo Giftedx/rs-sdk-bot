@@ -1191,6 +1191,10 @@ const viewerTimings: { at: number; mode: string; ms: number; tiles: number; fram
 // One state for everyone: built every 2 s only while a client watches, serialized once, sent to each SSE client.
 const clients = new Set<ReadableStreamDefaultController>();
 let latest = { at: 0, json: '' };
+// A page that connects gets the last built state at once, and the next tick sends a new one. A build holds the
+// server for 150 to 300 ms, and each other request of the loading page waits behind it. The publisher reads the
+// state each 60 s, so the last state is younger than this limit while the publisher runs.
+const FIRST_STATE_MAX_AGE_MS = 90_000;
 // The time the newest state took to build and write; the next state reports it in sys.
 let buildMs = 0;
 function current() {
@@ -1244,7 +1248,8 @@ setTimeout(() => void current(), 1_000);
 
 // The page embeds the rs-world viewer (COEP require-corp); credentialless keeps Google Fonts loadable.
 const ISO = { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'credentialless' };
-const viewerRoot=join(root,'vendor','rs-world'),viewerBuild=join(viewerRoot,'build'),viewerCaches=join(viewerRoot,'caches');
+// DASH_VIEWER_ROOT names another rs-world folder (build/ and caches/), for a server whose pin differs from the build in root.
+const viewerRoot=resolve(process.env.DASH_VIEWER_ROOT??join(root,'vendor','rs-world')),viewerBuild=join(viewerRoot,'build'),viewerCaches=join(viewerRoot,'caches');
 const VIEWER_ISO={...ISO,'Cross-Origin-Embedder-Policy':'require-corp','Cross-Origin-Resource-Policy':'same-origin'};
 function viewerAvailable() {
     try {
@@ -1320,7 +1325,7 @@ Bun.serve({
         if (url.pathname === '/events') {
             let me: ReadableStreamDefaultController;
             const stream = new ReadableStream({
-                start(c) { me = c; clients.add(c); if (clients.size === 1) void scanProcs(); c.enqueue(`data: ${current()}\n\n`); },
+                start(c) { me = c; clients.add(c); if (clients.size === 1) void scanProcs(); c.enqueue(`data: ${latest.json && Date.now() - latest.at < FIRST_STATE_MAX_AGE_MS ? latest.json : current()}\n\n`); },
                 cancel() { clients.delete(me); },
             });
             return new Response(stream, { headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' } });
