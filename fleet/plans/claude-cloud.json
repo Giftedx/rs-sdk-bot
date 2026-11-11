@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794394845590,
+ "at": 1794394930807,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -161,6 +161,19 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "Deeppockets",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-fe43175e-f959-470e-ace2-ea4aafb3a006"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-deeppockets-20261111t105757z [task-fe43175e-f959-470e-ace2-ea4aafb3a006]",
+   "role": "helper"
   }
  ]
 }
