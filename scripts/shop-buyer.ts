@@ -18,6 +18,12 @@ export const PROFILES: Record<string, {
     npcSpot: { x: number; z: number; level?: number };
     bankSpot: { x: number; z: number };
     items: { re: RegExp; buyPerTick: number }[];
+    // A shop behind a skill door: below this level the run refuses before any walk.
+    need?: { skill: string; level: number };
+    // Waypoints for a trip from far away, farthest from the shop first. Each keeps one route search inside its budget.
+    via?: { x: number; z: number }[];
+    // Coins the far trip spends on fares. The run takes its float at the bank it stands at before it leaves.
+    fare?: number;
 }> = {
     // khazardshop: NPC555 at2641,3171, swamp paste1941 stock500/restock20; actual observed price governs buys.
     khazard_paste: {
@@ -166,6 +172,8 @@ export const PROFILES: Record<string, {
     },
     // The Magic Guild store in Yanille (magic_guild.inv magicguildshop), upstairs behind the Magic 66 door
     // (magic_guild.rs2): fire runes 3,000, nature runes 1,000 at base 20, law, death and blood runes 1,000, staff of fire 2.
+    // From the east the route planner has no foot path past White Wolf Mountain, so a far trip goes by the Port Sarim
+    // and Brimhaven boats (30 coins each) through Port Sarim dock and Ardougne dock.
     magic_guild: {
         npc: /^magic store owner$/i,
         npcSpot: { x: 2595, z: 3087, level: 1 },
@@ -175,7 +183,12 @@ export const PROFILES: Record<string, {
             { re: /^fire rune$/i, buyPerTick: 100 },
             { re: /^nature rune$/i, buyPerTick: 100 },
             { re: /^law rune$/i, buyPerTick: 50 },
+            { re: /^blood rune$/i, buyPerTick: 100 },
+            { re: /^death rune$/i, buyPerTick: 100 },
         ],
+        need: { skill: 'Magic', level: 66 },
+        via: [{ x: 3028, z: 3221 }, { x: 2683, z: 3271 }],
+        fare: 60,
     },
     zaff: {
         // Zaff's staff shop (area_varrock/configs/varrock.inv staffshop and memberstaffshop): staff_of_fire stock 2,
@@ -287,6 +300,26 @@ export function maximumUnitCost(item: { baseCost: number }, config: { sellMultip
     return Math.min(2_000_000_000, Math.max(1, Math.ceil(item.baseCost * (config.sellMultiplier + 5000) / 1000)));
 }
 
+// ITEMS=<regex> keeps the profile lines whose pattern source it matches; no filter keeps every line.
+export function selectItems<T extends { re: RegExp }>(items: T[], filter: string | undefined): T[] {
+    const re = filter ? new RegExp(filter, 'i') : null;
+    return re ? items.filter(i => re.test(i.re.source)) : items;
+}
+
+// The refusal for a shop behind a skill door, or null when the observed level opens it. An unobserved level refuses.
+export function profileRefusal(key: string, conf: { need?: { skill: string; level: number } }, level: number | undefined): string | null {
+    if (!conf.need || (level !== undefined && level >= conf.need.level)) return null;
+    return `${key.replace(/_/g, ' ')} needs ${conf.need.skill} ${conf.need.level}`;
+}
+
+// The waypoints a trip from `from` walks first: only from far away, and only those that bring it nearer to `to`.
+export function approachLegs(via: { x: number; z: number }[] | undefined, from: { x: number; z: number }, to: { x: number; z: number }, far = 60) {
+    const d = (a: { x: number; z: number }) => Math.max(Math.abs(a.x - to.x), Math.abs(a.z - to.z));
+    let left = d(from);
+    if (left <= far) return [];
+    return (via ?? []).filter(w => d(w) < left && (left = d(w), true));
+}
+
 export async function buyWithBudget(bot: { buyFromShop(item: RegExp, amount: number): Promise<unknown> },
     sdk: { getInventory(): { name: string; count: number }[]; getState(): { shop?: { shopItems: { name: string; count: number; baseCost: number }[]; shopConfig?: { sellMultiplier: number } } } | null },
     name: string, requested: number, reserve: number, remainingSpend: number): Promise<{ bought: number; spent: number }> {
@@ -328,8 +361,7 @@ if (!botName || !PROFILES[profileKey]) {
 }
 
 // ITEMS=<regex> keeps only the profile items a run needs (ITEMS='fire rune' buys no other rune).
-const itemFilter = process.env.ITEMS ? new RegExp(process.env.ITEMS, 'i') : null;
-const conf = itemFilter ? { ...PROFILES[profileKey]!, items: PROFILES[profileKey]!.items.filter(i => itemFilter.test(i.re.source)) } : PROFILES[profileKey]!;
+const conf = { ...PROFILES[profileKey]!, items: selectItems(PROFILES[profileKey]!.items, process.env.ITEMS) };
 if (!conf.items.length) throw new Error(`ITEMS=${process.env.ITEMS} matches no ${profileKey} item`);
 const s = await openBot(botName).catch(e => finish([], false, `login: ${String(e)}`));
 try {
@@ -345,7 +377,15 @@ try {
     let closing = false;
     const over = () => !closing && used() >= CAP;
 
-    let boughtTotal = 0, bankedTotal = 0, spentTotal = 0, stopReason = 'cap';
+    if (conf.need) {
+        const skill = conf.need.skill;
+        await waitUntil(s, () => s.sdk.getSkill(skill) != null, { timeoutTicks: 10 });
+        const level = s.sdk.getSkill(skill)?.level;
+        const refused = profileRefusal(profileKey, conf, level);
+        if (refused) await finish([s], false, `${refused} (${skill} ${level ?? 'unobserved'}) boughtTotal=0 spentTotal=0 fareTotal=0 stop=refused`);
+    }
+
+    let boughtTotal = 0, bankedTotal = 0, spentTotal = 0, fareTotal = 0, stopReason = 'cap';
     let noBuySince: number | undefined, noBuyTicks = 0;
     let bankTrips = 0;
     let shopTrips = 0;
@@ -356,13 +396,17 @@ try {
 
     // level: an upstairs shop (the Magic Guild store is on level 1). The world walker climbs; walkPath stays on one plane.
     const walk = async (x: number, z: number, tol = 2, level = 0): Promise<boolean> => {
-        const a = s.tick();
+        const a = s.tick(), c0 = coins();
         const off = (p: ReturnType<typeof pos>) => !p ? Infinity : p.level !== level ? Infinity : Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z));
         // From far away (another town, a boat ride) or another plane the world walker plans the trip; walkPath covers the last tiles.
         // The planner has no route between Ardougne and Varrock: walkTarget takes the two ferries then, with the fare
         // from the nearest bank (scripts/walk-to.ts ferryWalk).
         const p0 = pos();
-        if (p0 && off(p0) > 60) {
+        for (const w of p0 && !over() ? approachLegs(conf.via, { x: p0.worldX, z: p0.worldZ }, { x, z }) : []) {
+            const r = await goTo(s, await getWorld(), { ...w, level: 0 }, accountOf(s), { legTimeoutTicks: 100 });
+            if (!r.ok) console.log(`WALK via ${w.x},${w.z} fail ${r.reason} ${r.detail}`);
+        }
+        if (p0 && off(pos()) > 60) {
             const r = await walkTargetPersist(s, { x, z, level });
             if (!r.ok) console.log(`WALK route fail ${r.reason} ${r.detail}`);
         }
@@ -378,6 +422,8 @@ try {
             }
         }
         walkTicks += s.tick() - a;
+        // A walk buys nothing: any coins it spends are fares.
+        fareTotal += Math.max(0, c0 - coins());
         return off(pos()) <= tol;
     };
 
@@ -415,6 +461,16 @@ try {
 
     console.log(`START shop-buyer ${botName} profile=${profileKey} coins=${coins()}`);
     let loggedEmpty = false;
+    const start = pos();
+    if (conf.fare && coins() < conf.fare && start && approachLegs(conf.via, { x: start.worldX, z: start.worldZ }, conf.bankSpot).length) {
+        const b = await s.bot.openBank();
+        if (b.success) {
+            const float = Math.min(FLOAT, COIN_RESERVE + MAX_SPEND);
+            if (float > coins()) await s.bot.withdrawItem(/^coins$/i, float - coins());
+            await s.bot.closeInterface();
+        }
+        if (coins() < conf.fare) console.log(`WARN far trip fares: ${conf.fare} coins needed, ${coins()} in pack${b.success ? '' : `; openBank: ${b.message}`}`);
+    }
     // BANK_PACK=1: bank everything but coins first; a pack left full by other jobs leaves no slot to buy into.
     if (process.env.BANK_PACK === '1') {
         await walk(conf.bankSpot.x, conf.bankSpot.z, 2);
@@ -529,7 +585,7 @@ try {
     closing = true;
     if (!ended) await bank(false);
     const targetMet = shopTargetsMet(conf.items, s.sdk.getInventory(), stock, Number(process.env.STOCK_TARGET ?? 500));
-    await finish([s], shopFinishOk(boughtTotal, targetMet, stopReason), `ticks=${used()} boughtTotal=${boughtTotal} bankedTotal=${bankedTotal} bankTrips=${bankTrips} shopTrips=${shopTrips} coinsLeft=${coins()} spentTotal=${spentTotal} coinReserve=${COIN_RESERVE} maxSpend=${MAX_SPEND} maxItems=${MAX_ITEMS} stop=${stopReason} targetMet=${targetMet ? 1 : 0} noBuyTicks=${noBuyTicks} noBuyLimit=${NO_BUY_TICKS}`);
+    await finish([s], shopFinishOk(boughtTotal, targetMet, stopReason), `ticks=${used()} boughtTotal=${boughtTotal} bankedTotal=${bankedTotal} bankTrips=${bankTrips} shopTrips=${shopTrips} coinsLeft=${coins()} spentTotal=${spentTotal} coinReserve=${COIN_RESERVE} maxSpend=${MAX_SPEND} maxItems=${MAX_ITEMS} stop=${stopReason} targetMet=${targetMet ? 1 : 0} noBuyTicks=${noBuyTicks} noBuyLimit=${NO_BUY_TICKS} fareTotal=${fareTotal}`);
 } catch (e) {
     await finish([s], false, String(e));
 }
