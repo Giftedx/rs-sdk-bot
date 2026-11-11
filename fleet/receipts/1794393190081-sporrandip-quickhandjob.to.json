@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794393190081-sporrandip-quickhandjob",
  "account": "Quickhandjob",
  "partner": "SporranDip",
@@ -12,6 +12,12 @@
  "claim": "ee8360be-e283-4898-a8de-6e732e593e5c",
  "count": 0,
  "ok": false,
- "at": 1794393195299,
- "detail": "trade claimed"
+ "at": 1794393399583,
+ "detail": "Error: route to 3182, 3440: precondition no route to 3182,3440,0",
+ "logout": {
+  "attemptId": "1794393195304-0000017494-0000000001",
+  "at": 1794393399575,
+  "sha256": "31c87e8f527de1ab65f04783a8a90fc44075c01e891400ca377dd7b6be796688"
+ },
+ "screen": false
 }
