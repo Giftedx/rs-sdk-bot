@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794418758042-knightrider-fingersmith-staffoffire",
+ "account": "KnightRider",
+ "partner": "Fingersmith",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "43d72b09-ddfd-4aa9-9be6-d2abadfbd08f",
+ "count": 1,
+ "ok": true,
+ "at": 1794418781289,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794418763903-0000009619-0000000001",
+  "at": 1794418781283,
+  "sha256": "5e3ace72ba8226bf7e2f1f28c92b798d73288620378ca695c866a788e98758d6"
+ },
+ "screen": true
+}

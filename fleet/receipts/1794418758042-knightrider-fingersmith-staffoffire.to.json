@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794418758042-knightrider-fingersmith-staffoffire",
  "account": "Fingersmith",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "c88a91c9-c23c-4945-a5cc-1d16cfc2907c",
- "count": 0,
- "ok": false,
- "at": 1794418761490,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794418781959,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794418780855
+ },
+ "logout": {
+  "attemptId": "1794418761491-0000009662-0000000001",
+  "at": 1794418781952,
+  "sha256": "6735045a54de6cd788b454ff58721cb908222aeaeb3b0276db4d26a924f372d8"
+ },
+ "screen": true
 }
