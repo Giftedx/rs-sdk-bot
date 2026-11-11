@@ -1465,12 +1465,14 @@ test('an account with a PK build takes a quest band only on the quest route of i
     const pure = { Attack: 60, Strength: 99, Defence: 1, Ranged: 99, Magic: 1, Prayer: 43 };
     const templates = all(), byId = (id: string) => templates.find(t => t.id === id)!, fresh = acct('Build', { Attack: 1 });
     const lostCity = byId('army-quest-lostcity'), grail = byId('army-quest-holygrail');
-    // The route table: Lost City for the Prayer pure, nothing for the three other ranked builds.
-    expect(BUILD_QUESTS).toEqual({ 'pure-pray': ['Lost City'], 'baby-pure': [], dragon: [], 'tank-range': [] });
+    // The route table: Lost City for a build with a dragon dagger, The Fremennik Trials for the Archer helm, no quest
+    // for a build whose gear needs none.
+    expect(BUILD_QUESTS).toMatchObject({ 'pure-pray': ['Lost City'], 'baby-pure': [], dragon: ['Lost City'], 'tank-range': ['The Fremennik Trials'] });
     // On the route: the band as listed. Off the route, with an empty route or with none: refused.
     expect(buildBand(lostCity, fresh, pure, BUILD_QUESTS['pure-pray'])).toBe(lostCity);
     expect(buildBand(grail, fresh, pure, BUILD_QUESTS['pure-pray'])).toBeNull();
-    for (const kit of ['baby-pure', 'dragon', 'tank-range']) expect(buildBand(lostCity, fresh, pure, BUILD_QUESTS[kit])).toBeNull();
+    for (const kit of ['baby-pure', 'tank-range', 'pure-ranger']) expect(buildBand(lostCity, fresh, pure, BUILD_QUESTS[kit])).toBeNull();
+    expect(buildBand(lostCity, fresh, pure, BUILD_QUESTS.dragon)).toBe(lostCity);
     expect(buildBand(lostCity, fresh, pure)).toBeNull();
     // A route changes no other band: every band that is not a quest gets the same answer with it and without it.
     for (const t of templates.filter(t => t.tier === 'goal' && !t.quest)) expect(buildBand(t, fresh, pure, ['Lost City'])).toEqual(buildBand(t, fresh, pure));

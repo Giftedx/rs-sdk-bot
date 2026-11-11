@@ -159,7 +159,8 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
         carried: ['4dose2attack', '4dose2strength'], food: 25, switches: { melee: ['dragon_dagger_p'] }, options: { rotation: ['melee'] },
         skills: trained({ Attack: 60, Strength: 99 }) },
     // The bow for damage and a melee weapon for the kill: the dagger special, a rune two-handed sword (Attack 40,
-    // strength bonus 70, one hit each 7 ticks) or a dragon halberd (strength bonus 89, Regicide done).
+    // strength bonus 70, one hit each 7 ticks) or a dragon halberd (strength bonus 89, Regicide done). Regicide needs
+    // Underground Pass, which gives Attack 61, so the halberd build has Attack 61.
     'pure-dds-msb': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 300] },
         carried: ['dragon_dagger_p', ...BOOSTS], food: 23, switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p'] }, options: { rotation: ['ranged', 'melee'] },
         skills: trained({ Attack: 60, Strength: 99, Ranged: 99 }) },
@@ -168,7 +169,7 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
         skills: trained({ Attack: 40, Strength: 99, Ranged: 99 }) },
     'pure-hally': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 300] },
         carried: ['dragon_halberd', ...BOOSTS], food: 23, switches: { ranged: ['magic_shortbow'], melee: ['dragon_halberd'] }, options: { rotation: ['ranged', 'melee'] },
-        skills: trained({ Attack: 60, Strength: 99, Ranged: 99 }), varps: { 328: 15 } },
+        skills: trained({ Attack: 61, Strength: 99, Ranged: 99 }), varps: { 328: 15 } },
     // One style from range.
     'pure-ranger': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 500] },
         carried: ['4doserangerspotion'], food: 26, switches: { ranged: ['magic_shortbow'] }, options: { rotation: ['ranged'] }, skills: trained({ Ranged: 99 }) },
@@ -182,21 +183,26 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     'pure-pray': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 300] },
         carried: ['dragon_dagger_p', ...BOOSTS, ...PRAYER_POTS], food: 21, switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p'] }, options: { rotation: ['ranged', 'melee'] },
         skills: trained({ Attack: 60, Strength: 99, Ranged: 99, Prayer: 43 }) },
-    // The tribrid's kit at a lower Defence: 40 for rune armour, 45 for the Berserker helm (The Fremennik Trials
-    // done), 60 for the dragon helm, legs and square shield (Legends' Quest done). The Fremennik Trials give Defence
-    // 60 from level 1 at this server's XP rate, so `zerker` is a reference for the comparison and has no quest route.
-    'rune-pure': { ...DEF_TRIBRID, skills: trained({ Attack: 60, Strength: 99, Defence: 40, Ranged: 99, Magic: 99, Prayer: 43 }) },
-    zerker: { ...DEF_TRIBRID, worn: { ...DEF_TRIBRID.worn, hat: 'viking_helmet_crush' },
-        skills: trained({ Attack: 60, Strength: 99, Defence: 45, Ranged: 99, Magic: 99, Prayer: 43 }), varps: { 347: 10 } },
-    dragon: { ...DEF_TRIBRID, worn: { ...DEF_TRIBRID.worn, hat: 'dragon_med_helm', legs: 'dragon_platelegs', shield: 'dragon_sq_shield' },
-        switches: { ...DEF_TRIBRID.switches, melee: ['dragon_dagger_p', 'dragon_sq_shield'] },
-        skills: trained({ Attack: 60, Strength: 99, Defence: 60, Ranged: 99, Magic: 99, Prayer: 43 }), varps: { 139: 75 } },
-    // Defence 60 with no melee levels: black dragonhide and the Archer helm with a bow and Fire Wave, or splitbark
+    // The tribrid's kit at a lower Defence: 40 for rune armour, 60 for the dragon helm, chainbody and legs, 60 for the
+    // Berserker helm. Each build wears only what its quest route allows (`kitRoute`): Dragon Slayer gives Defence 88,
+    // so no build under that wears the rune platebody (the body is black dragonhide, or the dragon chainbody), and
+    // none carries the dragon square shield, because Legends' Quest needs Heroes' Quest and Dragon Slayer. The
+    // Fremennik Trials give Attack, Strength and Defence 60 from level 1, so the Berserker helm build has Defence 60:
+    // `zerker` is `dragon` with that helm.
+    'rune-pure': { ...DEF_TRIBRID, worn: { ...DEF_TRIBRID.worn, torso: 'black_dragonhide_body' },
+        skills: trained({ Attack: 60, Strength: 99, Defence: 40, Ranged: 99, Magic: 99, Prayer: 43 }) },
+    zerker: { ...DEF_TRIBRID, worn: { ...DEF_TRIBRID.worn, hat: 'viking_helmet_crush', torso: 'dragon_chainbody', legs: 'dragon_platelegs' },
+        skills: trained({ Attack: 60, Strength: 99, Defence: 60, Ranged: 99, Magic: 99, Prayer: 43 }), varps: { 347: 10 } },
+    dragon: { ...DEF_TRIBRID, worn: { ...DEF_TRIBRID.worn, hat: 'dragon_med_helm', torso: 'dragon_chainbody', legs: 'dragon_platelegs' },
+        skills: trained({ Attack: 60, Strength: 99, Defence: 60, Ranged: 99, Magic: 99, Prayer: 43 }) },
+    // Defence 60 with no melee weapon: black dragonhide and the Archer helm with a bow and Fire Wave, or splitbark
+    // with Fire Wave alone. The Archer helm needs The Fremennik Trials, which give Attack 60 and Strength 60; the two
+    // levels add no combat level under Ranged 99.
     // with Fire Wave alone.
     'range-tank': { worn: { hat: 'viking_helmet_range', torso: 'black_dragonhide_body', legs: 'black_dragonhide_chaps', hands: 'black_dragon_vambraces', cape: 'black_cape', amulet: 'amulet_of_glory_4', feet: 'boots_ranger', weapon: 'magic_shortbow', ammo: ['rune_arrow', 400] },
         carried: ['staff_of_fire', ...WAVE, ...FREEZE, ...PRAYER_POTS, '4doserangerspotion'], food: 18,
         switches: { magic: ['staff_of_fire'], ranged: ['magic_shortbow'] }, options: { rotation: ['ranged', 'magic'] },
-        skills: trained({ Defence: 60, Ranged: 99, Magic: 99, Prayer: 43 }), varps: { 347: 10 } },
+        skills: trained({ Attack: 60, Strength: 60, Defence: 60, Ranged: 99, Magic: 99, Prayer: 43 }), varps: { 347: 10 } },
     'mage-tank': { worn: { hat: 'splitbark_helm', torso: 'splitbark_body', legs: 'splitbark_legs', hands: 'splitbark_gauntlets', cape: 'black_cape', amulet: 'amulet_of_glory_4', weapon: 'staff_of_fire' },
         carried: [...WAVE, ...FREEZE, ...PRAYER_POTS], food: 20, switches: { magic: ['staff_of_fire'] }, options: { rotation: ['magic'] },
         skills: trained({ Defence: 60, Magic: 99, Prayer: 43 }) },
@@ -232,14 +238,14 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     'addy-pure': { ...DEF_TRIBRID, worn: { ...DEF_TRIBRID.worn, hat: 'adamant_full_helm', torso: 'adamant_platebody', legs: 'adamant_platelegs', shield: 'adamant_kiteshield' },
         switches: { ...DEF_TRIBRID.switches, melee: ['dragon_dagger_p', 'adamant_kiteshield'] },
         skills: trained({ Attack: 60, Strength: 99, Defence: 30, Ranged: 99, Magic: 99, Prayer: 43 }) },
-    def50: { ...DEF_TRIBRID, worn: { ...DEF_TRIBRID.worn, shield: 'granite_shield' },
+    def50: { ...DEF_TRIBRID, worn: { ...DEF_TRIBRID.worn, torso: 'black_dragonhide_body', shield: 'granite_shield' },
         switches: { ...DEF_TRIBRID.switches, melee: ['dragon_dagger_p', 'granite_shield'] },
         skills: trained({ Attack: 60, Strength: 99, Defence: 50, Ranged: 99, Magic: 99, Prayer: 43 }) },
     // The range tank with Defence 99.
     'tank-range': { worn: { hat: 'viking_helmet_range', torso: 'black_dragonhide_body', legs: 'black_dragonhide_chaps', hands: 'black_dragon_vambraces', cape: 'black_cape', amulet: 'amulet_of_glory_4', feet: 'boots_ranger', weapon: 'magic_shortbow', ammo: ['rune_arrow', 400] },
         carried: ['staff_of_fire', ...WAVE, ...FREEZE, ...PRAYER_POTS, '4doserangerspotion'], food: 18,
         switches: { magic: ['staff_of_fire'], ranged: ['magic_shortbow'] }, options: { rotation: ['ranged', 'magic'] },
-        skills: trained({ Defence: 99, Ranged: 99, Magic: 99, Prayer: 43 }), varps: { 347: 10 } },
+        skills: trained({ Attack: 60, Strength: 60, Defence: 99, Ranged: 99, Magic: 99, Prayer: 43 }), varps: { 347: 10 } },
     // Low combat levels: the levels of the free-to-play lists at Strength, Ranged and Magic 70.
     'baby-pure': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 300] },
         carried: ['rune_scimitar', ...BOOSTS], food: 23, foodItem: 'lobster', switches: { ranged: ['magic_shortbow'], melee: ['rune_scimitar'] }, options: { rotation: ['ranged', 'melee'] },
@@ -271,6 +277,48 @@ export const kitVarps = (name: string): Record<number, number> => ({ 147: 6, 176
 
 const kitOf = (name: string): KitSpec => { const k = KITS[name]; if (!k) throw Error(`pk-kits: unknown kit "${name}"; known: ${Object.keys(KITS).join(', ')}`); return k; };
 const carried = (k: KitSpec) => k.carried.map(c => (typeof c === 'string' ? { id: itemId(c), count: 1 } : { id: itemId(c[0]), count: c[1] }));
+// The quest that an item of a kit needs to be worn (levelrequire/scripts/tier*.rs2) and the quest that a varp of a
+// kit stands for.
+const ITEM_QUEST: Readonly<Record<string, string>> = {
+    dragon_dagger: 'Lost City', dragon_dagger_p: 'Lost City', dragon_longsword: 'Lost City', dragon_mace: "Heroes' Quest", dragon_battleaxe: "Heroes' Quest",
+    dragon_halberd: 'Regicide', dragon_sq_shield: "Legends' Quest", rune_platebody: 'Dragon Slayer', dragonhide_body: 'Dragon Slayer',
+    viking_helmet_crush: 'The Fremennik Trials', viking_helmet_range: 'The Fremennik Trials', viking_helmet_slash: 'The Fremennik Trials', viking_helmet_magic: 'The Fremennik Trials',
+    ibanstaff: 'Underground Pass', zamorak_staff: 'Mage Arena', zamorak_cape: 'Mage Arena',
+};
+const VARP_QUEST: Readonly<Record<number, string>> = { 139: "Legends' Quest", 267: 'Mage Arena', 288: 'Underground Pass', 328: 'Regicide', 347: 'The Fremennik Trials' };
+// Each quest with the quests that it needs, as content folders (vendor/rs-sdk/server/content/scripts/quests). Lost
+// City stands with the two quests of the planner's chain, which give its Woodcutting and Crafting. The Mage Arena is
+// a minigame with no XP reward. Sources: quest_hero.rs2:2-4, legends_guard.rs2:50-53.
+const LOST_CITY = ['quest_drunkmonk', 'quest_murder', 'quest_zanaris'], UPASS = ['quest_elena', 'quest_biohazard', 'quest_upass'];
+const HEROES = [...LOST_CITY, 'quest_dragon', 'quest_arthur', 'quest_blackarmgang', 'quest_hero'];
+export const QUEST_CHAIN: Readonly<Record<string, readonly string[]>> = {
+    'Lost City': LOST_CITY, 'Dragon Slayer': ['quest_dragon'], 'The Fremennik Trials': ['quest_viking'], 'Mage Arena': [], 'Underground Pass': UPASS,
+    Regicide: [...UPASS, 'quest_regicide'], "Heroes' Quest": HEROES,
+    "Legends' Quest": [...HEROES, 'quest_crest', 'quest_junglepotion', 'quest_zombiequeen', ...UPASS, 'quest_waterfall', 'quest_legends'],
+};
+// The server's XP rate (WorldConfig.ts xpRate), and the rewards that knowledge/quests.json does not hold, in whole XP
+// (quest_waterfall.rs2:491-492).
+const XP_RATE = 25, MORE_REWARDS: Readonly<Record<string, { skill: string; xp: number }[]>> = { quest_waterfall: [{ skill: 'attack', xp: 13750 }, { skill: 'strength', xp: 13750 }] };
+let rewards: Map<string, { skill: string; xp: number }[]> | undefined;
+const rewardsOf = (folder: string) => {
+    rewards ??= (JSON.parse(readFileSync(join(root, 'knowledge/quests.json'), 'utf8')) as { folder: string; xp: { skill: string; xp: number }[] }[])
+        .reduce((m, q) => m.set(q.folder, [...(m.get(q.folder) ?? []), ...q.xp]), new Map<string, { skill: string; xp: number }[]>());
+    return [...(rewards.get(folder) ?? []), ...(MORE_REWARDS[folder] ?? [])];
+};
+// The quest route of a kit: the quests that its items and varps need, and each combat skill that the rewards of
+// those quests and of the quests they need take over the level of the kit, counted from level 1. A kit with an
+// empty `breaks` has a route.
+export function kitRoute(name: string): { quests: string[]; breaks: string[] } {
+    const k = kitOf(name), levels = kitSkills(name);
+    const items = [...Object.values(k.worn).flatMap(w => (typeof w === 'string' ? [w] : Array.isArray(w) ? [w[0]] : [])), ...k.carried.map(c => (typeof c === 'string' ? c : c[0]))];
+    const quests = [...new Set([...items.map(i => ITEM_QUEST[i]), ...Object.keys(k.varps ?? {}).map(v => VARP_QUEST[Number(v)])].filter((q): q is string => !!q))].sort();
+    const given = [...new Set(quests.flatMap(q => QUEST_CHAIN[q]!))].flatMap(rewardsOf);
+    const breaks = Object.keys(MAXED).flatMap(skill => {
+        const level = levelForXp(given.filter(x => x.skill === skill.toLowerCase()).reduce((n, x) => n + x.xp * XP_RATE, 0));
+        return level > 1 && level > (levels[skill] ?? 1) ? [`${skill} ${level}`] : [];
+    });
+    return { quests, breaks };
+}
 // The fight loop's switch weapons for a kit.
 export const kitSwitches = (name: string): Kit => Object.fromEntries(Object.entries(kitOf(name).switches).map(([style, names]) => [style, names!.map(itemId)]));
 export const kitOptions = (name: string) => kitOf(name).options ?? {};

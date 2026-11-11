@@ -319,10 +319,16 @@ count of the engine's tick phases:
   processes took 6.9 s against 5.0 s.
 
 - **What this content has.** The Fremennik helms (Berserker `viking_helmet_crush`, Archer, Warrior, Farseer: Defence
-  45 and The Fremennik Trials), the dragon medium helm, chainbody and platelegs (Defence 60), the dragon square
-  shield (Legends' Quest), the granite shield (Defence 50 and Strength 50), the dragon battleaxe (Heroes' Quest), the
-  dragon halberd (Regicide, Attack 60, strength bonus 89, one hit each 7 ticks), the rune two-handed sword (Attack
-  40, strength bonus 70, 7 ticks) and black dragonhide (Ranged 70; the body needs Defence 40) (`levelrequire/scripts/tier*.rs2`).
+  45 and The Fremennik Trials), the dragon medium helm, chainbody and platelegs (Defence 60, no quest), the dragon
+  square shield (Legends' Quest), the granite shield (Defence 50 and Strength 50), the dragon battleaxe (Heroes'
+  Quest), the dragon halberd (Regicide, Attack 60, strength bonus 89, one hit each 7 ticks), the rune two-handed
+  sword (Attack 40, strength bonus 70, 7 ticks) and black dragonhide (Ranged 70; the body needs Defence 40 and no
+  quest) (`levelrequire/scripts/tier*.rs2`).
+- **Gear that a quest keeps from a build.** Dragon Slayer gives Defence 88, so no build under Defence 88 wears the
+  rune platebody: the body is black dragonhide at Defence 40 and 50 and the dragon chainbody at Defence 60. Legends'
+  Quest needs Heroes' Quest and Dragon Slayer, so no such build carries the dragon square shield or the dragon mace.
+  The Fremennik Trials give Attack, Strength and Defence 60, so a build with a Fremennik helm has those three levels
+  ("Quest routes of the builds").
 - **What it lacks.** No obsidian maul, granite maul, rune defender, Barrows armour, Void armour, Initiate armour,
   metal gloves, rune crossbow, mystic robes, Ancient Magicks, Vengeance, Smite or Piety. So the obsidian mauler, the
   Initiate pure, the Void pure, the 13 Defence pure and the Piety build have no kit.
@@ -335,84 +341,83 @@ count of the engine's tick phases:
 | `pure-dds` | Attack 60, Strength 99 | 72 | 84 | dragon dagger, super attack and strength | 34,044 |
 | `pure-dds-msb` | Attack 60, Strength 99, Ranged 99 | 75 | 93 | magic shortbow, dragon dagger | 181,932 |
 | `pure-r2h` | Attack 40, Strength 99, Ranged 99 | 71 | 93 | magic shortbow, rune two-handed sword | 221,932 |
-| `pure-hally` | Attack 60, Strength 99, Ranged 99 | 75 | 93 | magic shortbow, dragon halberd | 407,932 |
+| `pure-hally` | Attack 61, Strength 99, Ranged 99 | 75 | 93 | magic shortbow, dragon halberd | 407,932 |
 | `pure-ranger` | Ranged 99 | 69 | 83 | magic shortbow | 238,332 |
 | `pure-mage` | Magic 99 | 69 | 83 | Fire Wave, Entangle | 19,613 |
 | `pure-tribrid` | Attack 60, Strength 99, Ranged 99, Magic 99 | 76 | 99 | Fire Wave, magic shortbow, dragon dagger | 192,232 |
 | `pure-pray` | `pure-dds-msb` with Prayer 43 | 80 | 93 | magic shortbow, dragon dagger | 181,712 |
-| `rune-pure` | Attack 60, Strength 99, Defence 40, Ranged 99, Magic 99, Prayer 43 | 91 | 99 | the tribrid kit in rune | 440,872 |
-| `zerker` | the same with Defence 45 | 92 | 99 | the same with the Berserker helm | 465,672 |
-| `dragon` | the same with Defence 60 | 96 | 99 | the same with dragon helm, legs and square shield | 1,157,272 |
-| `range-tank` | Defence 60, Ranged 99, Magic 99, Prayer 43 | 91 | 93 | magic shortbow and Fire Wave in black dragonhide | 281,692 |
+| `rune-pure` | Attack 60, Strength 99, Defence 40, Ranged 99, Magic 99, Prayer 43 | 91 | 99 | the tribrid kit in rune with a black dragonhide body | 389,352 |
+| `dragon` | the same with Defence 60 | 96 | 99 | the tribrid kit with dragon helm, chainbody and legs and the rune kiteshield | 896,672 |
+| `zerker` | the same with Defence 60 | 96 | 99 | `dragon` with the Berserker helm | 856,672 |
+| `range-tank` | Attack 60, Strength 60, Defence 60, Ranged 99, Magic 99, Prayer 43 | 91 | 94 | magic shortbow and Fire Wave in black dragonhide with the Archer helm | 281,692 |
 | `mage-tank` | Defence 60, Magic 99, Prayer 43 | 89 | 84 | Fire Wave in splitbark | 136,112 |
 
 Simulator ranking, 1,000 fights for each pair (`bun scripts/pk-sim.ts --league`; `.practice/pk-builds/sim-pure.txt`
 and `sim-def.txt` in the worktree that ran it). Mean is the mean win rate against the other kits of the list.
 
-| Defence 1 bracket | Mean | | Defence 40 to 60 bracket, with three pures and `tribrid-pots` | Mean |
+| Defence 1 bracket | Mean | | Defence 40 to 60 bracket, with two pures and `tribrid-pots` | Mean |
 |---|---|---|---|---|
-| `pure-pray` | 0.964 | | `tribrid-pots` (combat 126, for scale) | 0.987 |
-| `pure-ranger` | 0.784 | | `dragon` | 0.724 |
-| `pure-dds-msb` | 0.716 | | `range-tank` | 0.681 |
-| `pure-dds` | 0.620 | | `zerker` | 0.519 |
-| `pure-hally` | 0.348 | | `rune-pure` | 0.454 |
-| `pure-tribrid` | 0.311 | | `pure-pray` | 0.413 |
-| `pure-r2h` | 0.232 | | `mage-tank` | 0.104 |
-| `pure-mage` | 0.002 | | `pure-tribrid` | 0.095 |
+| `pure-pray` | 0.964 | | `tribrid-pots` (combat 126, for scale) | 0.986 |
+| `pure-ranger` | 0.784 | | `dragon` | 0.663 |
+| `pure-dds-msb` | 0.717 | | `zerker` | 0.642 |
+| `pure-dds` | 0.620 | | `range-tank` | 0.634 |
+| `pure-hally` | 0.348 | | `rune-pure` | 0.501 |
+| `pure-tribrid` | 0.311 | | `pure-pray` | 0.390 |
+| `pure-r2h` | 0.231 | | `pure-tribrid` | 0.092 |
+| `pure-mage` | 0.002 | | `mage-tank` | 0.089 |
 
 - Candidates from the simulator: Prayer 43 is the largest gain at Defence 1 (`pure-pray` beats `pure-dds-msb` in 75%
-  of fights, 5 combat levels higher). Each Defence step wins: `dragon` beats `zerker` in 88% and `zerker` beats
-  `rune-pure` in 62%. `range-tank` beats `dragon` in 62% and loses to no build of its bracket by more than 54%.
+  of fights, 5 combat levels higher). Defence 60 wins over Defence 40: `dragon` beats `rune-pure` in 84%. The two
+  Defence 60 helms are level: `dragon` beats `zerker` in 53%. `range-tank` beats `dragon` in 64% and `zerker` in 65%,
+  and loses to `pure-pray` in 55%.
 - Gap: the simulator has no freeze and no movement, and it alternates the bow and a 7-tick weapon where a player
   keeps the slow weapon for the kill. Its ranger result is higher than the bench (finding 18).
 
 Bench ranking. Conditions: lockstep practice engine, Wilderness level 34 at (3125, 3790), both sides on the profile
 `snap` (`predictPrayer`, `snapPrayer`; it sets no rotation, so each kit attacks with its own styles), cap 600 ticks,
-each pair 3 fights (seeds 1, 2, 3), `extra:spar-builds-1` to `-4`. Evidence:
-`.practice/pk-builds/seed<s>.txt` and `rank.txt` in the worktree that ran them. A build of both brackets has
-36 fights, the others 21. Net is the net damage for each 100 ticks.
+each pair 3 fights (seeds 1, 2, 3), `extra:spar-builds-1` to `-4`. Evidence: `.practice/pk-builds/set1.txt` and
+`rank1.txt` in the worktree that ran them. A build of both brackets has 36 fights, the others 21. Net is the net
+damage for each 100 ticks.
 
 | Kit | Combat | Fights | Wins | Losses | Draws | Net |
 |---|---|---|---|---|---|---|
-| `dragon` | 96 | 21 | 20 | 1 | 0 | +76.7 |
-| `pure-pray` | 80 | 36 | 29 | 7 | 0 | +78.8 |
-| `pure-dds` | 72 | 21 | 14 | 7 | 0 | +4.1 |
-| `rune-pure` | 91 | 21 | 13 | 8 | 0 | +50.3 |
-| `pure-ranger` | 69 | 36 | 20 | 16 | 0 | -17.6 |
-| `pure-dds-msb` | 75 | 36 | 19 | 17 | 0 | +2.1 |
-| `zerker` | 92 | 21 | 11 | 10 | 0 | +40.6 |
-| `range-tank` | 91 | 21 | 11 | 9 | 1 | +29.6 |
-| `pure-tribrid` | 76 | 21 | 8 | 13 | 0 | +7.8 |
-| `pure-hally` | 75 | 21 | 7 | 14 | 0 | -67.2 |
-| `pure-r2h` | 71 | 21 | 4 | 17 | 0 | -79.4 |
-| `mage-tank` | 89 | 21 | 2 | 18 | 1 | -62.8 |
-| `pure-mage` | 69 | 21 | 0 | 21 | 0 | -108.1 |
+| `pure-pray` | 80 | 36 | 30 | 6 | 0 | +90.8 |
+| `zerker` | 96 | 21 | 16 | 5 | 0 | +70.0 |
+| `dragon` | 96 | 21 | 16 | 5 | 0 | +64.6 |
+| `pure-dds` | 72 | 21 | 15 | 6 | 0 | -25.0 |
+| `range-tank` | 91 | 21 | 12 | 7 | 2 | +28.3 |
+| `pure-dds-msb` | 75 | 36 | 19 | 17 | 0 | -25.6 |
+| `rune-pure` | 91 | 21 | 11 | 10 | 0 | +26.7 |
+| `pure-ranger` | 69 | 36 | 18 | 18 | 0 | -3.0 |
+| `pure-tribrid` | 76 | 21 | 7 | 13 | 1 | +0.4 |
+| `pure-hally` | 75 | 21 | 7 | 14 | 0 | -53.9 |
+| `pure-r2h` | 71 | 21 | 4 | 16 | 1 | -52.0 |
+| `mage-tank` | 89 | 21 | 1 | 18 | 2 | -52.3 |
+| `pure-mage` | 69 | 21 | 0 | 21 | 0 | -113.3 |
 
 - **Defence 1: the bow and dagger pure with Prayer 43 wins.** `pure-pray` won 20 of 21 against the other Defence 1
-  builds and 9 of 15 against the builds with Defence 40 to 60, 11 to 16 combat levels above it. Without the
-  prayer the same weapons lose: `pure-dds-msb` lost 3 of 3 to `pure-pray` and 7 of 9 to the rune, zerker and dragon
-  builds.
-- **Defence 40 to 60: the dragon build wins.** `dragon` won 20 of 21, with 3 of 3 against `rune-pure`, `zerker` and
-  `pure-pray`. Its one loss was to `range-tank`.
-- **A build with one style from range loses.** `pure-mage` won 0 of 21 and `mage-tank` 2 of 21. `pure-ranger` won
-  every fight against the slow weapons and the mages, and 1 of 12 against the rune, zerker, dragon and range-tank
+  builds and 10 of 15 against the builds with Defence 40 to 60, 9 to 16 combat levels above it. Without the prayer
+  the same weapons lose: `pure-dds-msb` lost 3 of 3 to `pure-pray` and 8 of 9 to the rune, zerker and dragon builds.
+- **Defence 40 to 60: the two Defence 60 builds win, and the helm does not decide.** `dragon` and `zerker` each won
+  16 of 21. `dragon` won 2 of 3 against `zerker`. `zerker` won 3 of 3 against `rune-pure`, and `dragon` 2 of 3.
+  Each lost fights to `pure-pray` and to `range-tank`.
+- **A build with one style from range loses.** `pure-mage` won 0 of 21 and `mage-tank` 1 of 21. `pure-ranger` won
+  every fight against the slow weapons and the mages, and 0 of 12 against the rune, zerker, dragon and range-tank
   builds.
 - **The slow weapons lose.** `pure-r2h` and `pure-hally` won 4 and 7 of 21. The loop alternates the bow and the
   7-tick weapon; a loop that keeps the slow weapon for the kill is not measured.
-- The simulator and the bench agree on the first build of each bracket and on the last. They differ on
-  `pure-ranger` (second in the simulator, 20 of 36 on the bench).
+- The simulator and the bench agree on the first build of the Defence 1 bracket, on the first two of the Defence
+  bracket and on the last of each. They differ on `pure-ranger` (second in the simulator, 18 of 36 on the bench).
 - Control for the side of a pair: the same build on both sides (`extra:spar-kit-dragon-x8` and
-  `extra:spar-kit-pure-pray-x8`, profile `snap`, seeds 1, 2, 3, 48 fights). Side A won 27, lost 20 and drew 1
-  (`dragon` 12 to 12, `pure-pray` 15 to 8). 27 of 47 is inside the chance range of an even fight, so the table has
-  no side correction. Evidence: `.practice/pk-builds/control.txt`.
+  `extra:spar-kit-pure-pray-x8`, profile `snap`, seeds 1, 2, 3, 48 fights). Side A won 26, lost 21 and drew 1
+  (`dragon` 11 to 13, `pure-pray` 15 to 8). 26 of 47 is inside the chance range of an even fight, so the table has
+  no side correction. Evidence: `.practice/pk-builds/control.txt` and `control-dragon.txt`.
 - Gap: 3 fights for each pair say nothing about one pair. No fight against the maxed tribrid: combat 126 is out of
   range of these builds at Wilderness level 34.
 - Gap: Hitpoints assume trained levels. Quest XP gives no Hitpoints, so a quest route gives a lower combat level.
-- **The Berserker helm quest ends Defence 45.** The Fremennik Trials give 2,812.4 XP each in Attack, Defence,
-  Strength and Hitpoints (`quest_viking`), 70,310 at the server's rate of 25: Defence 60 from level 1. Heroes'
-  Quest gives 3,075 Defence XP: Defence 62. So an account with a Fremennik helm or a dragon battleaxe has Defence 60
-  or more, and `zerker` is a reference for the comparison, not a build with a route. Its real form is `dragon` with
-  the Berserker helm.
+- **The Berserker helm build has Defence 60.** The Fremennik Trials give 2,812.4 XP each in Attack, Defence,
+  Strength and Hitpoints (`quest_viking`), 70,310 at the server's rate of 25: level 60 from level 1. So no build
+  wears a Fremennik helm at Defence 45, and `zerker` is `dragon` with the Berserker helm.
 - **A build in the plan.** The `builds` object of `swarm.json` names a kit for an army account
   (`"builds": { "<account>": "pure-pray" }`). `scripts/autopilot.ts` `buildCaps` turns each kit into its levels, and
   `packages/planner/src/autopilot.ts` `buildBand` gives such an account only bands that train one skill and stop at
@@ -423,26 +428,28 @@ each pair 3 fights (seeds 1, 2, 3), `extra:spar-builds-1` to `-4`. Evidence:
 
 ### Quest routes of the builds
 
-Claim: of the four ranked builds, `pure-pray` has a quest route (Lost City), `baby-pure` needs no quest, and `dragon`
-and `tank-range` have no route at their levels. A route is valid when no quest reward of its chain takes Attack,
-Strength, Defence, Ranged, Magic, Prayer or Hitpoints over the level of the build.
+Claim: every kit of `scripts/pk-kits.ts` has a quest route. A route is the quests that the items and varps of the
+kit need, with the quests that those need. It is valid when the rewards of all those quests together take none of
+Attack, Strength, Defence, Ranged, Magic, Prayer and Hitpoints over the level of the kit.
 
-Conditions: XP rate 25 (`WorldConfig.ts` `xpRate`), the level curve of `packages/planner/src/curve.ts`, each reward
-counted from level 1. `stat_advance` takes tenths of XP. Levels of the builds: `kitSkills`; `tank-range` is Defence
-99, Ranged 99, Magic 99 and Prayer 43 with Attack 1 and Strength 1, and `baby-pure` is Attack 40, Strength 70 and
-Ranged 70.
+Conditions: XP rate 25 (`WorldConfig.ts` `xpRate`), the level curve of `packages/planner/src/curve.ts`, the rewards
+counted from level 1. `stat_advance` takes tenths of XP. `kitRoute` in `scripts/pk-kits.ts` works each route out
+from the wear rules (`ITEM_QUEST`, `VARP_QUEST`), the quest conditions (`QUEST_CHAIN`) and the rewards
+(`knowledge/quests.json`).
 
-What each kit needs, from the wear rules (`levelrequire/scripts/levelrequire.rs2` and `tier*.rs2`):
+What the wear rules ask (`levelrequire/scripts/levelrequire.rs2` and `tier*.rs2`):
 
-- Lost City: the dragon dagger (`tier60.rs2:3`). Of the four kits `pure-pray` and `dragon` carry one.
-- Dragon Slayer: the rune platebody (`tier40.rs2:26`), in `dragon`. The black dragonhide body needs Ranged 70 and
-  Defence 40 and no quest (`tier70.rs2:6`).
-- Legends' Quest: the dragon square shield (`tier60.rs2:13`), in `dragon`. The guard asks for Family Crest, Heroes'
-  Quest, Shilo Village, Underground Pass, Waterfall Quest and 107 quest points (`legends_guard.rs2:50-53`). Heroes'
-  Quest asks for Lost City, Dragon Slayer, Merlin's Crystal and Shield of Arrav (`quest_hero.rs2:2-4`).
-- The Fremennik Trials: the Archer helm (`levelrequire.rs2:124`), in `tank-range` and `range-tank`.
-- No kit of the four casts a god spell, so none needs the Mage Arena. `kitVarps` sets Lost City and Dragon Slayer
-  for every kit of the bench; `pure-pray`, `baby-pure` and `tank-range` wear nothing that needs Dragon Slayer.
+- Lost City: the dragon dagger and the dragon longsword (`tier60.rs2:2-5`).
+- Dragon Slayer: the rune platebody (`tier40.rs2:26`) and the green dragonhide body (`tier40.rs2:65`). The black
+  dragonhide body needs Ranged 70 and Defence 40 and no quest (`tier70.rs2:6`). The dragon medium helm, chainbody
+  and platelegs need Defence 60 and no quest (`tier60.rs2:12-15`).
+- Heroes' Quest: the dragon mace and the dragon battleaxe (`tier60.rs2:4,6`). It asks for Lost City, Dragon Slayer,
+  Merlin's Crystal and Shield of Arrav (`quest_hero.rs2:2-4`).
+- Legends' Quest: the dragon square shield (`tier60.rs2:13`). The guard asks for Family Crest, Heroes' Quest, Shilo
+  Village, Underground Pass, Waterfall Quest and 107 quest points (`legends_guard.rs2:50-53`).
+- The Fremennik Trials: the four Fremennik helms (`levelrequire.rs2:124`).
+- Regicide: the dragon halberd (`tier60.rs2:10`). It needs Underground Pass, as Iban's staff does.
+- The Mage Arena: the god staff and cape. It is a minigame with no XP reward.
 
 Rewards in the seven combat skills (`knowledge/quests.json`; the line of each `stat_advance`):
 
@@ -454,23 +461,39 @@ Rewards in the seven combat skills (`knowledge/quests.json`; the line of each `s
 | The Fremennik Trials | Attack, Strength, Defence, Hitpoints 70,310 each | 60 each | `quest_viking.rs2:135-138` |
 | Heroes' Quest | Attack, Strength, Defence, Hitpoints 76,875 each; Ranged 51,875 | 62 each; 56 | `quest_hero.rs2:29-33` |
 | Underground Pass | Attack 75,000 | 61 | `quest_upass.rs2:801` |
+| Regicide | Agility only | none | `knowledge/quests.json` |
 | Waterfall Quest | Attack 343,750, Strength 343,750 | 83, 83 | `quest_waterfall.rs2:491-492` |
 | Legends' Quest | four times 191,250 in a skill the player picks; Woodcutting and Crafting are on the list | none needed | `radimus_erkle.rs2:122` |
 | Merlin's Crystal, Shield of Arrav, Family Crest, Shilo Village, Jungle Potion, Biohazard | no combat skill | none | `knowledge/quests.json` |
 | Holy Grail | Prayer 275,000, Defence 382,500 | 80, 85 | `quest_grail.rs2:116-117` |
 
-| Kit | Result | Route, or the quest and skill that breaks it |
-|---|---|---|
-| `pure-pray` | valid | Monk's Friend, Murder Mystery, Lost City (the chain of `army-quest-lostcity`) |
-| `baby-pure` | valid, no quest | no item of the kit needs a quest |
-| `dragon` | no route | Dragon Slayer: Defence 88, the build has 60. Without the platebody the square shield still needs Legends' Quest, and so Heroes' Quest (Defence 62, Attack 62) and Dragon Slayer. The whole chain gives Attack 88, Strength 97 and Defence 90 |
-| `tank-range` | no route | The Fremennik Trials: Attack 60 and Strength 60, the build has 1 in each. Defence 60 and Hitpoints 60 are under the build |
+The route of each kit with levels of its own (`BUILD_QUESTS`):
 
-- `tank-range` with Attack 60 and Strength 60 has the same combat level, 102: the melee term (120) stays under the
-  Ranged term (148). The same holds for `range-tank`, 91. A kit with those two levels has the route "The Fremennik
-  Trials" and loses nothing in level. Gap: the bench ranked the kit with Attack 1 and Strength 1.
-- The Fremennik Trials leave 698 XP under Defence 61, so a Defence 60 build does the quest before any other Defence
-  XP. Dragon Slayer and The Fremennik Trials together give Defence 90.
+| Route | Kits |
+|---|---|
+| no quest | `pure-bolt`, `pure-r2h`, `pure-ranger`, `pure-mage`, `pure-scim`, `mage-tank`, `baby-pure`, `low-ranger`, `low-mage`, `low-addy`, `skiller` |
+| Lost City | `pure-dds`, `pure-dds-msb`, `pure-tribrid`, `pure-pray`, `pure-pray31`, `pure-dlong`, `pure-knives`, `pure-max`, `addy-pure`, `rune-pure`, `def50`, `dragon` |
+| Lost City, The Fremennik Trials | `zerker` |
+| The Fremennik Trials | `range-tank`, `tank-range` |
+| Underground Pass | `pure-iban` |
+| Regicide (with Underground Pass) | `pure-hally` |
+| Lost City, Mage Arena | `pure-rock` |
+| Mage Arena | `pure-god` |
+
+The kits with no levels of their own are maxed (`tribrid` and its forms, `melee`, `ranger`, `mage`): Dragon Slayer,
+Lost City and Heroes' Quest give nothing over 99.
+
+How a kit keeps its route:
+
+- A build under Defence 88 wears no rune platebody and carries no dragon square shield and no dragon mace: those
+  need Dragon Slayer. Dragon Slayer and Heroes' Quest together give Attack 62, Strength 90 and Defence 90, and the
+  whole chain of Legends' Quest Attack 88, Strength 97 and Defence 90.
+- A build with a Fremennik helm has Attack 60, Strength 60 and Defence 60 or more. For the range tanks the two melee
+  levels add no combat level: the melee term (120) stays under the Ranged term (148), so `range-tank` is 91 and
+  `tank-range` 102 with them and without them.
+- The halberd build has Attack 61, what Underground Pass gives. Its combat level stays 75.
+- The Fremennik Trials leave 698 XP under level 61, so a build with Attack 60 or Defence 60 does the quest before
+  any other XP in that skill.
 - The fights of Lost City give XP too: 4 XP times 25 for a point of damage, so the tree spirit (85 Hitpoints,
   `tree_spirit.npc`) gives 8,500 XP and an Entrana zombie (30 Hitpoints) 3,000 to the skill of the melee style the
   account has set. Attack 60 to 61 is 4,815 XP and Defence 1 to 2 is 80 XP. `scripts/generated/quest-zanaris.ts`
@@ -497,13 +520,22 @@ Rewards in the seven combat skills (`knowledge/quests.json`; the line of each `s
 Planner: `BUILD_QUESTS` in `packages/planner/src/autopilot.ts` holds the routes by kit name, `scripts/autopilot.ts`
 `buildQuests` gives each account of the `builds` object the route of its kit, and `buildBand` passes a quest band
 only when its quest is on that route. Every other quest band stays refused (Holy Grail: Prayer 80 and Defence 85).
+The planner has a band for Lost City only.
 
-Evidence: `scripts/pk-kits.test.ts` ("no quest on the route of a build gives a level over the build") works the
-table out from `knowledge/quests.json`; `packages/planner/test/autopilot.test.ts` and `scripts/autopilot.test.ts`
-hold the planner rule. Proof level: unit, and practice for the Lost City run of `pure-pray`.
+Evidence: `scripts/pk-kits.test.ts` ("every kit has a quest route, and the planner holds the route of every build")
+fails when a kit wears an item whose quest gives a level over the kit, and when `BUILD_QUESTS` differs from
+`kitRoute`; `packages/planner/test/autopilot.test.ts` and `scripts/autopilot.test.ts` hold the planner rule. Proof
+level: unit, and practice for the Lost City run of `pure-pray`.
 
 Gaps:
 
+- `kitRoute` counts quest rewards. It does not count the XP of the fights inside a quest. Lost City is the one quest
+  with a set style. The Fremennik Trials, Underground Pass, Regicide and the Mage Arena have fights with no style
+  rule, and the Mage Arena fight gives Magic XP to `pure-rock`, which has Magic 80.
+- The planner has no band for The Fremennik Trials, Underground Pass, Regicide or the Mage Arena, so `zerker`,
+  `range-tank`, `tank-range`, `pure-iban`, `pure-hally`, `pure-rock` and `pure-god` get those quests from no job.
+- The quest points that a quest asks (Dragon Slayer 32, Heroes' Quest 55, Legends' Quest 107) are not in the route:
+  only the maxed kits need those quests.
 - No live run of Lost City by an account with Defence 1. The practice case starts at the warrior with the pack in
   hand: no run of the chain `drunkmonk,murder,zanaris` through the quest sweep by such an account, so the bank pass
   and Monk's Friend and Murder Mystery at those levels are not proved.
@@ -541,8 +573,8 @@ gear that its level cap exists for -> `scripts/pk-kits.test.ts`, the bench cases
 | `pure-god` | Magic 99 | 69 | Flames of Zamorak under Charge |
 | `pure-max` | Attack 99, Strength 99, Ranged 99, Prayer 43 | 94 | magic shortbow, dragon dagger |
 | `addy-pure` | the rune pure with Defence 30 | 89 | the tribrid kit in adamant |
-| `def50` | the rune pure with Defence 50 | 94 | the tribrid kit in rune with the granite shield |
-| `tank-range` | Defence 99, Ranged 99, Magic 99, Prayer 43 | 102 | magic shortbow and Fire Wave in black dragonhide |
+| `def50` | the rune pure with Defence 50 | 94 | the rune pure's kit with the granite shield |
+| `tank-range` | Attack 60, Strength 60, Defence 99, Ranged 99, Magic 99, Prayer 43 | 102 | magic shortbow and Fire Wave in black dragonhide with the Archer helm |
 | `baby-pure` | Attack 40, Strength 70, Ranged 70 | 52 | magic shortbow, rune scimitar |
 | `low-ranger` | Ranged 70 | 47 | magic shortbow |
 | `low-mage` | Magic 59 | 39 | Fire Blast |
@@ -552,55 +584,53 @@ Bench ranking of the second set. Conditions: as the first set (profile `snap`, W
 seeds 1, 2, 3). Four brackets (`BUILD_BRACKETS_2`): the five new Defence 1 builds with `pure-pray`, `pure-dds-msb`
 and `pure-ranger`; the four new builds of combat 89 to 102 with `dragon`, `zerker`, `rune-pure` and `pure-pray`; the
 four builds under combat 61; and `top`, `tank-range` and `dragon` against the maxed tribrid with and without boost
-potions. A pair of two builds of the first set does not run again. 58 pairs in 5 cases, 174 fights, 289 s of run
-time. Rank the logs with `bun scripts/measure/pk-build-rank.ts <log> ...`. Evidence: `.practice/pk-builds/b2seed<s>.txt`
-and `head.txt` in the worktree that ran them. The rows of the builds of the first set hold only their fights of
-this set.
+potions. A pair of two builds of the first set does not run again. 58 pairs in 5 cases, 174 fights, 234 s of run
+time. Rank the logs with `bun scripts/measure/pk-build-rank.ts <log> ...`. Evidence: `.practice/pk-builds/set2.txt`,
+`rank2.txt` and `head.txt` in the worktree that ran them. The rows of the builds of the first set hold only their
+fights of this set.
 
 | Kit | Combat | Fights | Wins | Losses | Draws | Net |
 |---|---|---|---|---|---|---|
-| `low-ranger` | 47 | 9 | 8 | 1 | 0 | +81.2 |
-| `tribrid-pots` | 126 | 9 | 8 | 0 | 1 | +24.0 |
-| `pure-ranger` | 69 | 15 | 12 | 3 | 0 | +26.7 |
-| `tank-range` | 102 | 27 | 20 | 7 | 0 | +73.6 |
-| `pure-pray31` | 78 | 21 | 15 | 6 | 0 | +88.5 |
-| `baby-pure` | 52 | 9 | 6 | 3 | 0 | +29.3 |
-| `pure-dds-msb` | 75 | 15 | 10 | 4 | 1 | -24.4 |
-| `pure-knives` | 75 | 21 | 14 | 6 | 1 | -63.6 |
-| `pure-max` | 94 | 21 | 13 | 8 | 0 | -22.9 |
-| `dragon` | 96 | 18 | 10 | 8 | 0 | +12.0 |
-| `tribrid` | 126 | 9 | 5 | 3 | 1 | +8.4 |
-| `pure-pray` | 80 | 27 | 14 | 12 | 1 | +56.1 |
-| `low-addy` | 60 | 9 | 4 | 5 | 0 | +1.1 |
-| `def50` | 94 | 21 | 8 | 13 | 0 | -1.0 |
-| `rune-pure` | 91 | 12 | 4 | 8 | 0 | -15.6 |
-| `zerker` | 92 | 12 | 4 | 8 | 0 | -17.3 |
-| `pure-scim` | 71 | 21 | 6 | 15 | 0 | +0.2 |
-| `pure-dlong` | 75 | 21 | 5 | 16 | 0 | -38.9 |
-| `addy-pure` | 89 | 21 | 4 | 17 | 0 | -45.3 |
-| `pure-god` | 69 | 21 | 1 | 19 | 1 | -90.8 |
-| `low-mage` | 39 | 9 | 0 | 9 | 0 | -111.6 |
+| `baby-pure` | 52 | 9 | 8 | 1 | 0 | +68.7 |
+| `pure-ranger` | 69 | 15 | 12 | 3 | 0 | +11.4 |
+| `tribrid-pots` | 126 | 9 | 7 | 2 | 0 | +41.0 |
+| `pure-pray31` | 78 | 21 | 16 | 5 | 0 | +86.8 |
+| `pure-dds-msb` | 75 | 15 | 11 | 4 | 0 | +28.6 |
+| `pure-pray` | 80 | 27 | 19 | 8 | 0 | +41.5 |
+| `low-ranger` | 47 | 9 | 6 | 3 | 0 | +49.8 |
+| `zerker` | 96 | 12 | 8 | 4 | 0 | +32.6 |
+| `tank-range` | 102 | 27 | 16 | 11 | 0 | +39.9 |
+| `pure-max` | 94 | 21 | 12 | 9 | 0 | -33.3 |
+| `dragon` | 96 | 18 | 10 | 8 | 0 | +1.5 |
+| `tribrid` | 126 | 9 | 5 | 4 | 0 | -9.6 |
+| `pure-knives` | 75 | 21 | 11 | 10 | 0 | -90.8 |
+| `rune-pure` | 91 | 12 | 6 | 6 | 0 | +4.4 |
+| `def50` | 94 | 21 | 10 | 11 | 0 | -0.6 |
+| `low-addy` | 60 | 9 | 4 | 5 | 0 | +10.3 |
+| `pure-dlong` | 75 | 21 | 8 | 13 | 0 | -1.5 |
+| `pure-scim` | 71 | 21 | 5 | 16 | 0 | +7.4 |
+| `addy-pure` | 89 | 21 | 0 | 21 | 0 | -44.8 |
+| `pure-god` | 69 | 21 | 0 | 21 | 0 | -92.3 |
+| `low-mage` | 39 | 9 | 0 | 9 | 0 | -128.8 |
 
-- **Combat 80 to 102: the range tank with Defence 99 wins.** `tank-range` won 3 of 3 against each of `zerker`,
-  `rune-pure`, `def50`, `addy-pure`, `pure-max` and `pure-pray`. It has no melee levels, so it needs Defence, Ranged
-  and Magic only.
-- **`tank-range` beats `dragon`: 38 of 42.** The pair alone, 14 pairs in a case with each build on side A in 7
-  (`extra:spar-head-tank-dragon-x14`, seeds 1, 2, 3): 20 to 1 with `tank-range` on side A and 18 to 3 on side B. In
-  the build cases the same pair gave 3 to 0 in one run and 1 to 2 in the next: 3 fights decide nothing for one pair.
-- **Neither beats the maxed tribrid.** `tribrid-pots` won 3 of 3 against `tank-range` and against `dragon`. The
-  tribrid with no boost potions won 2 of 3 against `tank-range` and 3 of 3 against `dragon`.
-- **Attack 99 at Defence 1 beats the Defence 30 to 45 builds.** `pure-max` won 13 of 21: 3 of 3 against `addy-pure`,
-  `rune-pure` and `zerker`, 1 of 3 against `def50` and `dragon`, and 0 of 3 against `tank-range`.
-- **Defence 30 in adamant loses.** `addy-pure` won 4 of 21. It carries 15 sharks against 21 to 23 of a pure.
-- **Defence 1: no new build is clear of the Prayer 43 pure.** `pure-pray31` won 15 of 21. Rune knives won 14 of 21
-  with a net damage of -63.6: they win on food, not on damage. The rune scimitar (6 of 21) and the dragon longsword
-  (5 of 21) are worse than the dragon dagger beside the bow.
-- **Magic alone loses again.** `pure-god` won 1 of 21 and `low-mage` 0 of 9.
-- **Under combat 61: a bow wins.** `low-ranger` won 8 of 9 and `baby-pure` 6 of 9. A run before this one gave
-  `baby-pure` 8 of 9 and `low-ranger` 7 of 9, so the order of the two is not decided. `low-addy`, with 8 to 13 more
-  combat levels, won 4 of 9.
+- **Combat 80 to 102: no build is clear.** `tank-range` won 16 of 27: 3 of 3 against `def50` and `addy-pure`, 2 of
+  3 against `zerker`, `pure-max` and `pure-pray`, and 1 of 3 against `rune-pure` and `dragon`. `zerker` won 8 of 12
+  and `dragon` 10 of 18.
+- **`tank-range` beats `dragon`: 29 of 42.** The pair alone, 14 pairs in a case with each build on side A in 7
+  (`extra:spar-head-tank-dragon-x14`, seeds 1, 2, 3): 15 to 6 with `tank-range` on side A and 14 to 7 on side B. In
+  the build cases the same pair gave 1 to 2: 3 fights decide nothing for one pair.
+- **The maxed tribrid with boost potions beats both.** `tribrid-pots` won 3 of 3 against `tank-range` and against
+  `dragon`. The tribrid with no boost potions won 2 of 3 against `dragon` and 1 of 3 against `tank-range`.
+- **Attack 99 at Defence 1 holds against the Defence builds.** `pure-max` won 12 of 21: 3 of 3 against `addy-pure`
+  and `rune-pure`, 2 of 3 against `zerker`, and 1 of 3 against `def50`, `dragon`, `tank-range` and `pure-pray`.
+- **Defence 30 in adamant loses.** `addy-pure` won 0 of 21. It carries 15 sharks against 21 to 23 of a pure.
+- **Defence 1: no new build is clear of the Prayer 43 pure.** `pure-pray31` won 16 of 21 and lost 1 of 3 to
+  `pure-pray`. Rune knives won 11 of 21 with a net damage of -90.8: they win on food, not on damage. The dragon
+  longsword (8 of 21) and the rune scimitar (5 of 21) are worse than the dragon dagger beside the bow.
+- **Magic alone loses again.** `pure-god` won 0 of 21 and `low-mage` 0 of 9.
+- **Under combat 61: a bow wins.** `baby-pure` won 8 of 9 and `low-ranger` 6 of 9; `baby-pure` won 3 of 3 against
+  `low-ranger`. `low-addy`, with 8 to 13 more combat levels, won 4 of 9.
 - Gap: 3 fights for each pair outside the head-to-head case. The low bracket has 4 builds and 18 fights.
-  `tank-range` wears the Archer helm, so it needs The Fremennik Trials; a quest route is not planned.
 
 ## Server rules the loop follows
 

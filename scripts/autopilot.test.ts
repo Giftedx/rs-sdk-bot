@@ -453,7 +453,7 @@ test('the plan names a PK build for an army account; an unknown kit trains nothi
 
 test('the plan gives a build account the quest route of its kit; a kit with no route gets none', async () => {
     const { buildQuests } = await import('./autopilot');
-    const routes = buildQuests({ builds: { Tosser: 'pure-pray', Caber: 'dragon', Wrong: 'no-such-kit' } });
+    const routes = buildQuests({ builds: { Tosser: 'pure-pray', Caber: 'baby-pure', Wrong: 'no-such-kit' } });
     expect(routes.get('tosser')).toEqual(['Lost City']);
     expect(routes.get('caber')).toEqual([]);
     expect(routes.get('wrong')).toEqual([]);
