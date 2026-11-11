@@ -14,7 +14,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
-import { defaultSpec, fightPlayer, nextTick, type FightOptions, type FightResult, type Kit } from './pk';
+import { defaultSpec, fightPlayer, nextTick, PRAYER, weaponStyle, type FightOptions, type FightResult, type Kit } from './pk';
 import { TRIBRID_KIT } from './pk-hunt';
 import { kitOptions, kitSwitches } from './pk-kits';
 
@@ -107,12 +107,19 @@ export async function spar(a: Session, b: Session, optionsA: FightOptions, optio
     const pa = self(a), pb = self(b), start = a.tick(), hp0 = [pa?.hp, pb?.hp];
     const startGap = pa && pb ? Math.max(Math.abs(pa.worldX - pb.worldX), Math.abs(pa.worldZ - pb.worldZ)) : undefined;
     let opening: number | null = null;
-    // SPAR_TRACE=1 prints one line for each tick: where each side stands, its HP and its run energy.
+    // SPAR_TRACE=1 prints one line for each tick: where each side stands, its HP, its run energy, the style of its weapon
+    // and its overhead prayer.
+    const shows = (s: Session) => { const st = s.sdk.getState(), on = st?.prayers.activePrayers ?? [];
+        return `w=${weaponStyle(st?.equipment.find(e => e.slot === 3)?.id)} p=${on[PRAYER.melee] ? 'melee' : on[PRAYER.missiles] ? 'ranged' : on[PRAYER.magic] ? 'magic' : 'none'}`; };
     const told = [0, 0];
     const trace = process.env.SPAR_TRACE === '1' ? a.onTick(() => { const x = self(a), y = self(b);
         [a, b].forEach((s, i) => { for (const m of s.sdk.getState()?.gameMessages ?? []) { const id = m.observationId ?? m.tick; if (id > told[i]! && m.tick >= start) { told[i] = id; log(`MSG ${s.name} ${m.text}`); } } });
-        log(`TRACE ${a.name} ${a.tick() - start} a=${x?.worldX},${x?.worldZ} hp=${x?.hp} run=${x?.runEnergy} b=${y?.worldX},${y?.worldZ} hp=${y?.hp} run=${y?.runEnergy}`); }) : undefined;
-    const unwatch = a.onTick(() => { if (opening === null && [a, b].some((s, i) => (self(s)?.hp ?? Infinity) < (hp0[i] ?? 0))) opening = a.tick() - start; });
+        log(`TRACE ${a.name} ${a.tick() - start} a=${x?.worldX},${x?.worldZ} hp=${x?.hp} run=${x?.runEnergy} ${shows(a)} b=${y?.worldX},${y?.worldZ} hp=${y?.hp} run=${y?.runEnergy} ${shows(b)}`); }) : undefined;
+    // The damage a side took is the sum of its HP drops from tick to tick. The fight loop's own count reads hit splats
+    // from the client, and it sees about half of them.
+    const lost = [0, 0], lastHp = [hp0[0] ?? 0, hp0[1] ?? 0];
+    const unwatch = a.onTick(() => { [a, b].forEach((s, i) => { const hp = self(s)?.hp; if (hp === undefined) return; if (hp < lastHp[i]!) lost[i]! += lastHp[i]! - hp; lastHp[i] = hp; });
+        if (opening === null && [a, b].some((s, i) => (self(s)?.hp ?? Infinity) < (hp0[i] ?? 0))) opening = a.tick() - start; });
     // The first side to end stops the other: a fight has one end.
     let over = false;
     const side = (s: Session, target: string, o: FightOptions) => fightPlayer(s, target, { ...o, stop: () => over || halt(), log: l => log(`[${s.name}] ${l}`) })
@@ -120,6 +127,7 @@ export async function spar(a: Session, b: Session, optionsA: FightOptions, optio
     const [ra, rb] = await Promise.all([side(a, b.name, optionsA), side(b, a.name, optionsB)]);
     ra.prayerLeft = a.sdk.getState()?.prayers.prayerPoints; rb.prayerLeft = b.sdk.getState()?.prayers.prayerPoints;
     unwatch(); trace?.();
+    ra.taken = lost[0]!; rb.taken = lost[1]!;
     return { ...sparScore(ra, rb), opening, ...(startGap === undefined ? {} : { startGap }) };
 }
 
