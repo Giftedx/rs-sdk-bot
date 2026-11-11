@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794372330110,
+ "at": 1794372395189,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -16,6 +16,24 @@
    "repeat": false,
    "goal": "Lost City pilot",
    "role": "hand"
+  },
+  {
+   "account": "Knightstick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=314 QUANTITY=50 LIMIT_PRICE=20 CASH_RESERVE=1000 ORDER_KEY=knightstick-kit2-314-0to50 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 50 Feather on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "supply",
+   "template": "kit-buy:army-alch-magic-99",
+   "autopilot": "claude-cloud",
+   "resources": []
   },
   {
    "account": "UnderMyKilt",
@@ -37,6 +55,35 @@
    ]
   },
   {
+   "account": "Deeppockets",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby_arrows",
+    "600"
+   ],
+   "env": {
+    "ITEMS": "iron arrow|bronze arrow",
+    "STOCK_TARGET": "1000",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "21000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "20000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-catherby",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:catherby_arrows"
+   ]
+  },
+  {
    "account": "Fatstack",
    "script": "scripts/aio.ts",
    "args": [
@@ -55,24 +102,6 @@
    "resources": [
     "quest:lostcity"
    ]
-  },
-  {
-   "account": "Knightstick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=314 QUANTITY=50 LIMIT_PRICE=20 CASH_RESERVE=1000 ORDER_KEY=knightstick-kit2-314-0to50 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 50 Feather on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
-   "autopilot": "claude-cloud",
-   "resources": []
   },
   {
    "account": "PocketPool",
@@ -146,33 +175,21 @@
    ]
   },
   {
-   "account": "Deeppockets",
-   "script": "scripts/shop-buyer.ts",
+   "account": "KnightRider",
+   "script": "scripts/alch-train.ts",
    "args": [
-    "catherby_arrows",
-    "600"
+    "99",
+    "5000"
    ],
-   "env": {
-    "ITEMS": "iron arrow|bronze arrow",
-    "STOCK_TARGET": "1000",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "BANK_AT": "0",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "21000",
-    "COIN_RESERVE": "500",
-    "MAX_SPEND": "20000"
-   },
-   "enabled": false,
+   "env": {},
+   "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
-   "role": "supply",
-   "template": "army-arrows-catherby",
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-magic-99",
    "autopilot": "claude-cloud",
-   "resources": [
-    "shop:catherby_arrows"
-   ]
+   "resources": []
   }
  ]
 }
