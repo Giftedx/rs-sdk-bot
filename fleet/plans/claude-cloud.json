@@ -1,32 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794429422113,
+ "at": 1794429451722,
  "jobs": [
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
   {
    "account": "Quickhandjob",
    "script": "scripts/shop-buyer.ts",
@@ -114,27 +89,21 @@
   },
   {
    "account": "Deeppockets",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/splash-train.ts",
    "args": [
-    "1500",
-    "trooper"
+    "66",
+    "6000"
    ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
    "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "template": "army-splash-magic-66",
    "autopilot": "claude-cloud",
    "resources": [
-    "trooper:battlefield"
+    "splash:ardougne-cow-fence"
    ]
   },
   {
@@ -157,6 +126,31 @@
    "autopilot": "claude-cloud",
    "resources": [
     "aio:seers-flax"
+   ]
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
    ]
   },
   {
