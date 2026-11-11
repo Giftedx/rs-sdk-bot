@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794395129120,
+ "at": 1794395461418,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -144,27 +144,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "BURY_HELD": "1",
-    "BONE_ID": "536",
-    "BONE_RESERVE": "6",
-    "CAP": "4000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying bought dragon bones",
-   "role": "combat",
-   "template": "army-bury-dragon-99",
-   "autopilot": "claude-cloud",
-   "resources": []
   }
  ]
 }
