@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794374732634-oreelse-undermykilt",
  "account": "OreElse",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Rune platelegs",
  "requested": 1,
  "claim": "a3c13fa5-203b-45fa-b8f6-6645c44b072d",
- "count": 0,
- "ok": false,
- "at": 1794378666086,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794378942253,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794378673994
+ },
+ "logout": {
+  "attemptId": "1794378666094-0000009784-0000000001",
+  "at": 1794378942241,
+  "sha256": "5ed52aeaef4cb5c820da3f8be11bab21eb6b3b70b9a4e796c1088366d816652b"
+ },
+ "screen": true
 }
