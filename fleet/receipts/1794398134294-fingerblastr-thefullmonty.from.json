@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794398134294-fingerblastr-thefullmonty",
  "account": "Fingerblastr",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 60,
  "claim": "12e65203-32e5-4c4a-9b88-05245be3ebad",
- "count": 0,
- "ok": false,
- "at": 1794398141780,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1794398166533,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 60,
+  "after": 0
+ },
+ "bank": {
+  "count": 60,
+  "at": 1794398150616
+ },
+ "logout": {
+  "attemptId": "1794398141783-0000003961-0000000001",
+  "at": 1794398166527,
+  "sha256": "8a5d49133de58c3496d95075aa46c9ba19e133374a8e7049fbfe2914542e5edd"
+ },
+ "screen": true
 }
