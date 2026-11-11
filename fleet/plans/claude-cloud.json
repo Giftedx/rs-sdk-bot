@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794387205225,
+ "at": 1794387265298,
  "jobs": [
   {
    "account": "Fingersmith",
@@ -170,22 +170,14 @@
   },
   {
    "account": "Kiltlifter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=97 EXPECTED_OWNED=53 LIMIT_PRICE=200 CASH_RESERVE=1000 ORDER_KEY=kiltlifter-kit10-559-53to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=291 EXPECTED_OWNED=134 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=kiltlifter-kit10-557-134to425 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
+   "script": ".practice/pk-pilot/disembark.ts",
+   "args": [],
+   "env": {},
+   "enabled": false,
+   "standing": false,
    "repeat": false,
-   "goal": "buy 97 Body rune, 291 Earth rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "claude-cloud",
-   "resources": []
+   "goal": "hand: leave the Brimhaven ship deck",
+   "role": "hand"
   },
   {
    "account": "PocketPool",
