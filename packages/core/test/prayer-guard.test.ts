@@ -10,7 +10,7 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
     let tick = 0, timer: number | null = active.some(Boolean) ? 5 : null;
     const w = {
         active, drains: 0, toggles: 0, windowsClosed: 0, cleared: 0, window: false, anim: -1,
-        interaction: null as string | null, most: 0, aggressor: null as number | null, refused: 0, fought: 0, messages: [] as any[], x: 3200, locs: [] as any[], dialog: { isOpen: false } as any, said: [] as any[], pack: [] as { id: number; count: number }[], z: 3200, combat: 50, players: [] as any[], npcs: [] as any[], events: [] as any[], offSeen: 0,
+        interaction: null as string | null, most: 0, fish: { delay: -1, mode: null as null | 'start' | 'loop', rolls: 0, casts: 0, river: false, catchEach: 1, xp: 0, says: true }, aggressor: null as number | null, refused: 0, fought: 0, messages: [] as any[], x: 3200, locs: [] as any[], dialog: { isOpen: false } as any, said: [] as any[], pack: [] as { id: number; count: number }[], z: 3200, combat: 50, players: [] as any[], npcs: [] as any[], events: [] as any[], offSeen: 0,
     };
     const inbox: any[] = [];
     const listeners = new Set<() => void>();
@@ -18,7 +18,7 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
     const state = () => ({
         player: { worldX: w.x, worldZ: w.z, level: 0, animId: w.anim, isDead: false, combatLevel: w.combat, combat: w.interaction?.startsWith('interactNpc:') ? { inCombat: true, targetType: 'npc', targetIndex: Number(w.interaction.split(':')[1]) } : { inCombat: false, targetType: 'none', targetIndex: -1 } },
         prayers: { activePrayers: [...active], prayerPoints: init.points ?? 50, prayerLevel: init.level ?? 50 },
-        nearbyNpcs: w.npcs, nearbyPlayers: w.players, gameMessages: w.messages, nearbyLocs: w.locs, inventory: w.pack, combatEvents: w.events, modalOpen: w.window,
+        nearbyNpcs: w.npcs, nearbyPlayers: w.players, gameMessages: w.messages, nearbyLocs: w.locs, inventory: w.pack, combatEvents: w.events, modalOpen: w.window, skills: [{ name: 'Fishing', level: 50, baseLevel: 50, experience: w.fish.xp }],
         dialog: w.dialog, recentDialogs: w.said, interface: { isOpen: false }, bank: { isOpen: false }, shop: { isOpen: false },
     });
     let published = state();
@@ -34,6 +34,7 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
             for (const a of inbox.splice(0, 5)) {
                 if (a.type === 'togglePrayer') {
                     w.toggles++;
+                    w.fish.mode = null;
                     if (w.window) { w.window = false; w.windowsClosed++; }
                     if (w.interaction) { w.interaction = null; w.cleared++; }
                     active[a.prayerIndex] = !active[a.prayerIndex];
@@ -43,7 +44,23 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
                 } else if (a.type === 'interactNpc' && w.aggressor !== null && a.npcIndex !== w.aggressor) {
                     // skill_combat/scripts/player/player_combat.rs2:118
                     w.refused++; w.messages.push({ tick: tick + 1, text: "I'm already under attack!" });
-                } else if (a.type === 'interactNpc' || a.type === 'interactLoc') w.interaction = `${a.type}:${a.npcIndex ?? a.locId}`;
+                } else if (a.type === 'interactNpc' || a.type === 'interactLoc') {
+                    w.interaction = `${a.type}:${a.npcIndex ?? a.locId}`;
+                    w.fish.mode = w.npcs.some((n: any) => n.index === a.npcIndex && n.name === 'Fishing spot') ? 'start' : null;
+                }
+            }
+            // skill_fishing/scripts/fishing_spots: the click (`start`) and the hidden option (`loop`). saltfish.rs2: a
+            // click on a tick with nothing to do ends the fishing, and the loop starts its timer at 5. freshfish.rs2
+            // (`river`): such a click goes on to the loop with no roll, and the loop starts its timer at 4.
+            const roll = () => { if (++w.fish.rolls % w.fish.catchEach === 0) w.fish.xp += 50; };
+            if (w.fish.mode === 'start') {
+                if (w.fish.delay < tick) w.fish.delay = tick + 4;
+                else if (w.fish.delay === tick + 3) { w.fish.casts++; if (w.fish.says) w.messages.push({ tick: tick + 1, text: w.fish.river ? 'You cast out your line...' : 'You cast out your net...' }); if (!w.fish.river) w.fish.mode = 'loop'; }
+                else if (w.fish.river) w.fish.mode = 'loop';
+                else { if (w.fish.delay === tick) roll(); w.fish.mode = null; }
+            } else if (w.fish.mode === 'loop') {
+                if (w.fish.delay < tick) w.fish.delay = tick + (w.fish.river ? 4 : 5);
+                else if (w.fish.delay === tick) roll();
             }
             // The aggressor hits each 4 ticks, and auto-retaliate then fights it.
             if (w.aggressor !== null && tick % 4 === 0 && w.interaction === null) w.interaction = `interactNpc:${w.aggressor}`;
@@ -870,4 +887,31 @@ test('fishing under attack costs nothing: the guard flicks and sends the same cl
     w.interaction = null;
     advance(8);
     expect(w.interaction as string | null).toBe(null);
+});
+
+test('fishing with a prayer on: each cycle of 5 ticks rolls, on a sea spot and on a river spot, from each start of the timer', () => {
+    // `late`: the timer still runs at the script's click, for this number of ticks. `catchEach`: one catch in this
+    // number of rolls.
+    // `says`: the state shows the game's message for the cast.
+    for (const says of [true, false]) for (const river of [false, true]) for (const late of [-1, 0, 1, 2, 3, 4, 5]) for (const catchEach of [1, 3, 1000]) {
+        const { w, s, client, advance } = world();
+        const guard = startPrayerGuard(s);
+        const spot = { index: 12, id: 309, name: 'Fishing spot', hp: null, targetIndex: -1, optionsWithIndex: [{ text: 'Net', opIndex: 1 }] };
+        w.npcs = [cow(32768 + 7), spot];
+        w.fish.river = river; w.fish.catchEach = catchEach; w.fish.says = says;
+        advance(4);
+        // The click is read on tick 5.
+        w.fish.delay = 5 + late;
+        client.executeBotAction({ type: 'interactNpc', npcIndex: 12, optionIndex: 1 });
+        advance(60);
+        const before = w.fish.rolls;
+        advance(200);
+        // One roll in each 5 ticks. With no message and no catch the guard cannot find the roll tick, and some
+        // cycles lose their roll.
+        expect([says, river, late, catchEach, w.fish.rolls - before >= (catchEach === 1000 && !says ? 16 : 38)]).toEqual([says, river, late, catchEach, true]);
+        expect([river, late, catchEach, w.drains]).toEqual([river, late, catchEach, 0]);
+        expect(w.active[PROTECT.melee]).toBe(true);
+        expect(guard.stats().holds).toBe(0);
+        expect(w.most).toBeLessThanOrEqual(5);
+    }
 });

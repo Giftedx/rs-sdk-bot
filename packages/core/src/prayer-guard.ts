@@ -133,8 +133,26 @@ const backFirst = (prayer: number) => prayer >= 12 ? 0 : [0, 3, 9].includes(pray
 // rolls after those 2 ticks, not after the full rate of the pickaxe. Measured on `extra:guard-mine` at seeds 1 to 3,
 // 25 iron ore: auto-retaliate off takes 263, 280 and 272 ticks against 265, 281 and 252 with a rune pickaxe, and 392,
 // 400 and 392 against 333, 356 and 314 with a bronze pickaxe at Mining 15. Willows with a bronze axe under dark wizards
-// (`extra:guard-chop-wizard`, 12 logs): 409, 473 and over 500 ticks against 454, 450 and 362.
+// (`extra:guard-chop-wizard`, 12 logs): 409, 473 and over 500 ticks against 454, 450 and 362. Net fishing beside a scorpion
+// (`extra:guard-fish-scorpion`, 12 fish): 95, 110 and 100 ticks against 100, 106 and 103.
 const REPEATABLE = /^(mine|chop down|chop)$/i, FISHING_SPOT = /^fishing spot$/i;
+// A click on a fishing spot is different: it does something on three ticks of the timer only. With the timer in the
+// past it starts the timer at 4 ticks and goes on; one tick later (timer at 3) it casts and hands over to the hidden
+// option that rolls for the fish when the timer ends; on each other tick it does nothing and the fishing stops
+// (skill_fishing/scripts/fishing_spots/saltfish.rs2 `attempt_fish_shrimp`, and the same in each file of that folder).
+// The server refuses the hidden option from a client (engine OpNpcHandler.ts). So during fishing the guard flicks
+// and clicks on two ticks of a cycle of FISH_CYCLE ticks only: on the tick that starts the timer and on the next
+// one. The roll on tick 4 runs with no input, and the next cycle starts on tick 5, the longest gap the drain timer
+// allows.
+// A cycle whose first click comes on the roll tick stays there: the second click then starts the timer, and the
+// next first click is on the roll tick again. A click on a river spot (freshfish.rs2) on that tick takes the place
+// of the roll, so no fish comes. Three rules move the cycle to the right tick. The state shows the game's message
+// for the cast (FISH_START) two ticks after the click that started the timer: that click is the start of the cycle.
+// The state shows more Fishing experience one tick after a roll: that tick starts a cycle. With no such message
+// seen yet, after FISH_DRY cycles with no catch one cycle has a third click on its third tick, and the cycles
+// after it start one tick later.
+const FISH_CYCLE = 5, FISH_DRY = 4;
+const FISH_START = /^You (cast out your|start Harpooning|lower the Karambwan|attempt to catch (a Lobster|an eel))/;
 // The level-up message (content levelup/configs/levelup.dbrow). A prayer button closes it, which costs the script nothing.
 const LEVEL_UP = /^Congratulations, you just advanced/;
 // The state shows a prayer input at most this many ticks after the guard saw it.
@@ -163,6 +181,31 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     // the tick the state last showed the fight. A prayer button clears the fight like each interaction, and the game
     // starts it again only at the NPC's next hit. The guard sends this attack after its prayer inputs.
     let retaliate: { action: Action; at: number } | null = null, walkAt = -Infinity, stillSince = 0;
+    // The tick of the click that started the fishing cycle in progress: a click of the script or of the guard.
+    let fishAt = -Infinity, fishXp = -1, fishDry = 0, fishShift = false, fishSeen = -1, fishSynced = false, fishExtra = -1;
+    // True on a tick of the fishing cycle that has a flick and a click.
+    const fishTick = (now: number, caught: boolean): boolean => {
+        const tick = now - fishAt;
+        if (caught || tick >= FISH_CYCLE) {
+            if (!caught && !fishSynced && ++fishDry > FISH_DRY) { fishDry = 0; fishShift = true; }
+            fishAt = now;
+            return true;
+        }
+        if (now === fishExtra) return true;
+        // No cycle tick came in time (a window was open on it, or the start moved): a flick and a click now cost at
+        // most one roll, and a flick that comes late costs a prayer point.
+        if (tick !== 1) return now - flickAt >= FISH_CYCLE - 1;
+        if (fishShift) { fishShift = false; fishAt = now; }
+        return true;
+    };
+    // True on the tick the state shows more Fishing experience than on the tick before.
+    const fishCaught = (st: any): boolean => {
+        const xp = (st.skills ?? []).find((k: any) => k.name === 'Fishing')?.experience ?? -1, more = fishXp >= 0 && xp > fishXp;
+        fishXp = xp;
+        if (more) fishDry = 0;
+        return more;
+    };
+    const fishing = (st: any): boolean => pending.kind === 'attack' && pending.action.type === 'interactNpc' && skillTarget(pending.action, st);
     // Outside a multi-combat area the engine refuses an attack on an NPC while another NPC has hit the player in the
     // last 8 ticks: "I'm already under attack!" (skill_combat/scripts/player/player_combat.rs2:118). The game then
     // fights the attacker by auto-retaliate. After that message the attack the guard sends again goes to the
@@ -330,7 +373,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         attackerIndex = null;
         if (a.type === 'walkTo') { pending = { kind: 'none' }; walkAt = now; retaliate = null; return; }
         // `attack` also holds a mining or woodcutting click: the guard sends it again after its prayer inputs.
-        if (attack || skillTarget(a, s.sdk.getState())) { pending = { kind: 'attack', action: { ...a } }; return; }
+        if (attack || skillTarget(a, s.sdk.getState())) { pending = { kind: 'attack', action: { ...a } }; if (!attack && a.type === 'interactNpc') fishAt = now; return; }
         if (a.type === 'pickupItem') { const item = a.itemId as number; pending = { kind: 'other', type: a.type, still: 0, need: PICKUP_IDLE_TICKS, item, had: held(s.sdk.getState(), item) }; return; }
         pending = { kind: 'other', type: a.type, still: 0, need: IDLE_TICKS };
     };
@@ -402,6 +445,16 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         }
         lastEvent = newest;
         const active = believed(st, now);
+        const caught = fishCaught(st);
+        let cast = false;
+        for (const m of st.gameMessages ?? []) if ((m.tick ?? -1) > fishSeen && FISH_START.test(m.text ?? '')) cast = true;
+        for (const m of st.gameMessages ?? []) fishSeen = Math.max(fishSeen, m.tick ?? -1);
+        if (cast && fishing(st)) {
+            // A start that moves later leaves 5 ticks from the last flick to the next cycle. One more flick and click
+            // on tick 3 fills that gap; on a sea spot it costs the roll of this cycle.
+            if (now - 2 > fishAt) fishExtra = now + 1;
+            fishSynced = true; fishShift = false; fishAt = now - 2;
+        }
 
         // An interaction that is not an attack ends when the player has stood idle for its number of ticks.
         const tile = `${p.worldX},${p.worldZ},${p.level}`;
@@ -484,6 +537,8 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
             if (now - expectAt < STATE_LAG) {
                 // A script that sends a prayer input in each tick keeps this check waiting. A flick that is due goes
                 // to the prayers those inputs leave on.
+                // The second click of a fishing cycle, with its flick.
+                if (safe && expect.length && expect.length <= 2 && fishing(st) && (caught || now - fishAt === 1) && fishTick(now, caught)) { flickNow(expect, now); resend(st); return; }
                 if (now - flickAt < 4 || !safe || !expect.length || expect.length > 2) return;
                 flickNow(expect, now);
                 resend(st);
@@ -534,7 +589,9 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         if (active.length > MAX_FLICKED) { hold('five'); return; }
         const attack = fights(now) ? 1 : 0;
         if (active.length <= 2) {
-            if (now - flickAt < every) return;
+            if (fishing(st)) {
+                if (!fishTick(now, caught)) return;
+            } else if (now - flickAt < every) return;
             flickNow(active, now);
             resend(st);
             return;

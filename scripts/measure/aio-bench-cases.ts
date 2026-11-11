@@ -338,6 +338,10 @@ const ROUTE_CASES: BenchCase[] = [
   // same work with auto-retaliate off.
   {key: 'extra:guard-chop-wizard', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['500', 'CHOP=willow:12'], pass: ok,
     presetConfig: {position: {x: 3086, z: 3238, level: 0}, skills: {Woodcutting: 30, Hitpoints: 30, Prayer: 45}, inventory: [{id: 1351, count: 1}]}},
+  // Net fishing on the Al Kharid shore (maps/m51_49.jm2) at combat level 13, where a scorpion (level 14, hunt range 2)
+  // wanders to the fishing spots.
+  {key: 'extra:guard-fish-scorpion', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['500', 'FISH=net:12'], pass: ok,
+    presetConfig: {position: {x: 3278, z: 3143, level: 0}, skills: {Fishing: 50, Hitpoints: 30, Prayer: 45}, inventory: [{id: 303, count: 1}]}},
   sparCase('extra:spar-no-slayer', sparFixture(3094, 3555, {noDragonSlayer: true}), sparFixture(3096, 3555, {noDragonSlayer: true})),
   // The tribrid against every build of scripts/pk-kits.ts in one run, and a mirror of 8 for each build: the cases that
   // the hill climb and the kit matrix run (scripts/measure/pk-spar-climb.ts, pk-spar-matrix.ts).
