@@ -231,6 +231,33 @@ unless a finding says otherwise; a seed repeats its fight. Evidence: `.practice/
    is already fighting your opponent." 14 and 17 times in one spar. The escape case stands at (3125, 3790), where a
    probe saw no attackable monster.
 
+## Pure builds
+
+A pure has Defence 1 and Hitpoints 10. The kits are `pure-iban`, `pure-rock` and `pure-bolt` in `scripts/pk-kits.ts`;
+`skiller` is their target. Evidence for every row is the server code. Gap: no practice run and no live run.
+
+- **Combat level.** 0.25 x (Defence + Hitpoints + half Prayer) + 0.325 x the largest of Attack + Strength, 1.5 x Ranged and
+  1.5 x Magic (`Player.ts` `getCombatLevel`). A second style is free while its term stays under the first. Prayer 43
+  adds 5 levels, so the kits keep Prayer 1.
+- **Quest XP sets the levels.** The server multiplies XP by 25 (`WorldConfig.ts` `xpRate`), and a quest reward gives no
+  Hitpoints XP. Underground Pass or Death Plateau gives Attack 61 from level 1. Scorpion Catcher gives Strength 73.
+  No quest reward stops at Attack 40, so a rune scimitar pure has no quest route.
+- **Hitpoints rise in PvP.** Each point of damage on a player gives 1.33 Hitpoints XP times 25 (`pvp_combat.rs2:175`).
+  Level 11 needs 152 XP, so the first 5 damage end Hitpoints 10. About 64 damage give Hitpoints 20 and about 445 give
+  Hitpoints 40. Four Hitpoints levels add 1 combat level. The cannon gives no Hitpoints XP (`cannon_fire.rs2:119`).
+- **Weapons in the content pack.** Dragon dagger, longsword, mace, battleaxe, spear and halberd, magic shortbow and
+  Iban's staff exist. There is no dragon scimitar, abyssal whip, granite maul, crystal bow or Ancient Magicks.
+
+| Kit | Levels | Combat | Attack | Attacks combat 3 from Wilderness level |
+|---|---|---|---|---|
+| `pure-iban` | Attack 61, Ranged 50, Magic 50 | 27 | Iban Blast, max hit 25 (Magic 50 and Attack 50 for the staff, `levelrequire.rs2:172`); magic shortbow | 24 |
+| `pure-rock` | Attack 61, Strength 73, Magic 80 | 46 | dragon dagger special; Flames of Zamorak under Charge, max hit 30; Entangle | 43 (the rune rocks are level 46) |
+| `pure-bolt` | Magic 35 | 19 | Fire Bolt, max hit 12 | 16 |
+
+Bench cases: `extra:spar-pure-iban-vs-skiller-x4`, `extra:spar-pure-bolt-vs-skiller-x4` and
+`extra:spar-pure-rock-vs-skiller-x4`. Gaps: the Hitpoints of real skillers; Underground Pass at Hitpoints 10 with no
+Hitpoints XP; the Mage Arena fight for the god spell gives Hitpoints XP; the tile east of (3055, 3872) is not checked.
+
 ## Server rules the loop follows
 
 - Protect prayers cut a player's max hit by 40%, not 100% (`pvp_melee.rs2:32`, `pvp_ranged.rs2:38`, `pvp_magic.rs2:182`).

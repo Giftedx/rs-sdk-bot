@@ -4,7 +4,7 @@
 // `cost` is the shop value of a kit (knowledge/items.json), the measure for "the same kills with a cheaper kit".
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import type { FightOptions, Kit, Style } from './pk';
+import { SPELLS, type FightOptions, type Kit, type Style } from './pk';
 
 const root = resolve(import.meta.dir, '..');
 let byName: Map<string, number> | undefined;
@@ -31,8 +31,14 @@ export type KitSpec = {
     foodItem?: string;
     // Switch weapons for each style the build fights with, by name.
     switches: Partial<Record<Style, string[]>>;
-    options?: Pick<FightOptions, 'rotation' | 'damageSpell'>;
+    options?: Pick<FightOptions, 'rotation' | 'damageSpell' | 'charge'>;
+    // Base levels of the build (default: 99 in the seven combat skills) and the varps it needs besides Lost City,
+    // Dragon Slayer and full special energy.
+    skills?: Record<string, number>;
+    varps?: Record<number, number>;
 };
+// Defence 1 and Hitpoints 10 with Prayer 1: the base of every pure, 2.75 combat levels (Player.ts getCombatLevel).
+const PURE = { Attack: 1, Strength: 1, Defence: 1, Ranged: 1, Magic: 1, Prayer: 1, Hitpoints: 10 } as const;
 const RUNE = { hat: 'rune_full_helm', torso: 'rune_platebody', legs: 'rune_platelegs', cape: 'cape_of_legends', amulet: 'amulet_of_glory_4', feet: 'boots_ranger' } as const;
 const WAVE: [string, number][] = [['airrune', 500], ['bloodrune', 100]], FREEZE: [string, number][] = [['earthrune', 200], ['waterrune', 200], ['naturerune', 100]];
 const PRAYER_POTS = ['4doseprayerrestore', '4doseprayerrestore'], BOOSTS = ['4dose2attack', '4dose2strength', '4doserangerspotion'];
@@ -93,7 +99,38 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     'tribrid-mithril': { worn: { hat: 'mithril_full_helm', torso: 'mithril_platebody', legs: 'mithril_platelegs', amulet: 'amulet_of_power', feet: 'leather_boots', weapon: 'mithril_scimitar', shield: 'mithril_kiteshield', ammo: ['steel_arrow', 300] },
         carried: ['staff_of_fire', 'willow_shortbow', ['airrune', 500], ['chaosrune', 200], ...FREEZE, ...PRAYER_POTS], food: 18,
         switches: { magic: ['staff_of_fire'], ranged: ['willow_shortbow'], melee: ['mithril_scimitar', 'mithril_kiteshield'] } },
+    // Pures. Each level is the lowest that wields the weapon or casts the spell, and a second style stays under the
+    // combat level of the first (research/pvp-fight-loop.md, "Pure builds").
+    // Combat 27: Iban Blast (Magic 50 and Attack 50 for the staff, max hit 25; 1 death and 5 fire runes and 2 staff
+    // charges a cast, varp 288) with a magic shortbow (Ranged 50). Underground Pass gives Attack 61.
+    'pure-iban': { worn: { weapon: 'ibanstaff', amulet: 'amulet_of_magic', feet: 'leather_boots', ammo: ['rune_arrow', 100] },
+        carried: ['magic_shortbow', ['deathrune', 100], ['firerune', 500]], food: 20, foodItem: 'lobster',
+        switches: { magic: ['ibanstaff'], ranged: ['magic_shortbow'] }, options: { rotation: ['magic', 'ranged'], damageSpell: SPELLS.ibanBlast },
+        skills: { ...PURE, Attack: 61, Ranged: 50, Magic: 50 }, varps: { 288: 120 } },
+    // Combat 46, the highest that can attack combat 3 at the rune rocks (Wilderness level 46): dragon dagger special
+    // (Attack 61, Strength 73) with Flames of Zamorak under Charge (Magic 80, max hit 30) and Entangle (79).
+    'pure-rock': { worn: { weapon: 'dragon_dagger_p', cape: 'zamorak_cape', amulet: 'amulet_of_strength', feet: 'leather_boots' },
+        carried: ['zamorak_staff', ['firerune', 400], ['airrune', 500], ['bloodrune', 100], ...FREEZE, '4dose2strength'], food: 16, foodItem: 'lobster',
+        switches: { magic: ['zamorak_staff'], melee: ['dragon_dagger_p'] }, options: { rotation: ['magic', 'melee'], damageSpell: SPELLS.flamesOfZamorak, charge: true },
+        skills: { ...PURE, Attack: 61, Strength: 73, Magic: 80 }, varps: { 267: 8, 270: 99 } },
+    // Combat 19: Fire Bolt (Magic 35, max hit 12) and nothing else.
+    'pure-bolt': { worn: { weapon: 'staff_of_fire', amulet: 'amulet_of_magic', feet: 'leather_boots' },
+        carried: [['airrune', 500], ['chaosrune', 200]], food: 20, foodItem: 'lobster',
+        switches: { magic: ['staff_of_fire'] }, options: { rotation: ['magic'] }, skills: { ...PURE, Magic: 35 } },
+    // The target of a pure: combat 3 with a pickaxe and a few lobsters.
+    skiller: { worn: { weapon: 'bronze_pickaxe', feet: 'leather_boots' }, carried: [], food: 5, foodItem: 'lobster',
+        switches: { melee: ['bronze_pickaxe'] }, options: { rotation: ['melee'] }, skills: { ...PURE } },
 };
+// The combat level the server gives a set of base levels (Player.ts getCombatLevel).
+export function combatLevel(s: Record<string, number>): number {
+    const lv = (k: string) => s[k] ?? 1;
+    return Math.floor(0.25 * (lv('Defence') + lv('Hitpoints') + Math.floor(lv('Prayer') / 2))
+        + 0.325 * Math.max(lv('Attack') + lv('Strength'), Math.floor(lv('Ranged') * 1.5), Math.floor(lv('Magic') * 1.5)));
+}
+const MAXED = { Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99, Prayer: 99, Hitpoints: 99 };
+export const kitSkills = (name: string): Record<string, number> => ({ ...(kitOf(name).skills ?? MAXED) });
+// Lost City done, Dragon Slayer done and full special energy, then the varps of the build.
+export const kitVarps = (name: string): Record<number, number> => ({ 147: 6, 176: 10, 300: 1000, ...kitOf(name).varps });
 
 const kitOf = (name: string): KitSpec => { const k = KITS[name]; if (!k) throw Error(`pk-kits: unknown kit "${name}"; known: ${Object.keys(KITS).join(', ')}`); return k; };
 const carried = (k: KitSpec) => k.carried.map(c => (typeof c === 'string' ? { id: itemId(c), count: 1 } : { id: itemId(c[0]), count: c[1] }));
