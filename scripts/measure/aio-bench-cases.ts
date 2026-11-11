@@ -104,7 +104,8 @@ const sparMatrix = (key: string, matchups: readonly (readonly [string, string])[
 };
 // `pairs` spars at once: the account of the run and its partner `b`, then partners `c` and `d`, `e` and `f`, and so on.
 const sparBatch = (key: string, pairs: number, a: SaveConfig, b: SaveConfig, args: string[] = []): BenchCase => {
-  const letters = 'bcdefghijklmnopqrstuvwxyz'.slice(0, pairs * 2 - 1).split('');
+  // One character for each account after the first: up to 18 pairs.
+  const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, pairs * 2 - 1).split('');
   return {key, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...letters.slice(1).map(l => `{bot:${l}}`), ...args], pass: ok, presetConfig: a,
     companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i % 2 ? a : b}))};
 };
@@ -319,6 +320,8 @@ const ROUTE_CASES: BenchCase[] = [
   // Eight glory chases at once in one world, at the same spot: eight samples for the ticks of one.
   sparBatch('extra:spar-escape-x8', 8, sparFixture(3125, 3790), sparFixture(3127, 3790, {food: 3, glory: true}), ['SPAR_SCENARIO=escape']),
   sparBatch('extra:spar-x8', 8, sparFixture(3094), sparFixture(3096)),
+  // 16 pairs in 8 worker processes: twice the fights of the x8 batch in about the same time.
+  sparBatch('extra:spar-x16', 16, sparFixture(3094), sparFixture(3096), ['SPAR_PROCS=8']),
   sparBatch('extra:spar-escape-spell-x8', 8, sparFixture(3125, 3790), sparFixture(3127, 3790, {food: 3, teleport: true}), ['SPAR_SCENARIO=escape-spell']),
   sparBatch('extra:spar-escape-spell-pots-x8', 8, sparFixture(3125, 3790, {potions: true}), sparFixture(3127, 3790, {food: 3, teleport: true}), ['SPAR_SCENARIO=escape-spell']),
   sparBatch('extra:spar-escape-god-x8', 8, sparFixture(3125, 3790, {god: true}), sparFixture(3127, 3790, {food: 3, glory: true}), ['SPAR_SCENARIO=escape-god']),

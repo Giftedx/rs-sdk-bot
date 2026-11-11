@@ -140,7 +140,21 @@ any other case.
 - One unpack of the game archives for all clients of a process (`bunzip2` in `webclient/src/io/JagFile.ts`, a third
   of the worker's CPU time) gave no gain outside the noise: 34 s against 35-36 s for the batch. It is not in the
   vendor patch.
-- Gap: where the 40-100 ms of each tick go between the engine and its clients is not measured.
+- The wait of a tick is the clients of one worker process: they share one thread, and each held a tick 12 to 20 ms
+  behind the others (`SIM_ACK_FILE`). With 16 clients in one process the engine waits 54 ms for each tick; with the
+  pairs in 8 processes (`SPAR_PROCS=8`) it waits 12 ms. `extra:spar-x8`, seed 1: 89 s in one process, 64 s in 4, 54 s
+  in 8.
+- A lockstep client reads its socket as soon as bytes arrive (`packages/core/src/inprocess.ts`), not on the 20 ms
+  loop of the session: 60 ms to 50 ms for each tick with 16 clients in one process.
+- `extra:spar-x16` runs 16 pairs in 8 processes: 16 full fights in 71 s (4.4 s a fight; the x8 batch in one process
+  takes 11.1 s a fight). It takes about 3.5 GB of memory while it runs.
+- The engine's own tick is the rest: 24 to 41 ms with 32 players (`NODE_DEBUG_PROFILE=true`), of which 11 to 15 ms move
+  every NPC of the world and 4 to 9 ms read the clients.
+- The order of the logins changes with the number of processes, so a seed gives one fight only at one `SPAR_PROCS`.
+  Compare two profiles at the same setting.
+- Two batches of 8 fights of base against base gave 7 kills to 1 and 2 kills to 5. A batch of 8 does not separate two
+  profiles; use 16 pairs and three seeds.
+- Gap: no engine change that leaves the far NPCs out of a tick.
 
 Spar findings. Conditions: lockstep practice engine, cap 900 ticks, both sides with Lost City and Dragon Slayer done
 unless a finding says otherwise; a seed repeats its fight. Evidence: `.practice/pk-spar/*.json` and the traces
@@ -342,3 +356,36 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     the fight loop and the hunter now stop on it. On practice, closing the hunter's session mid-run ended the hunt at once
     (`end: session ended`, 13 log lines). Gap: a hand run outside the swarm leaves no supervisor end record, so
     cloud-recover waits on it. Restoring the account's swarm job lets the swarm write one, and cloud-recover takes it.
+15. **The client's hit splats show about half of the damage.** In a traced mirror spar of 520 ticks, the HP of side A fell
+    436 in total and the splat count of the fight loop gave 244; side B fell 387 against 194. The spar takes the damage
+    of a side from its HP drops tick by tick (`spar` in `scripts/pk-spar.ts`), and the net damage of the climb uses that.
+    Evidence: `SPAR_TRACE=1` on `extra:spar-x8`, then the sum of the HP drops in the `TRACE` lines against `taken` in
+    the `SPAR` line. Gap: a hit in the tick of a bite of food shows a smaller drop.
+16. **An overhead prayer that follows the weapon is late for most hits of a side that switches styles.** The weapon change
+    and the hit come in one tick. In the tick of the roll a ranger build had the right overhead for 32 of 196 hits of a
+    tribrid (magic 12 of 54, ranged 3 of 66, melee 17 of 76; four spars of `extra:spar-duel-ranger-x8`, seed 1). The
+    drops under a right overhead stay at or below 60% of the max hit (magic 11, melee 12), and the other drops reach
+    the full max hit (20, 22, 23). By the tick of the HP drop the overhead is right for 188 of 196, so the prayer at
+    the drop says nothing. Gap: the roll tick comes from the hit delay of each style, one tick before the drop for
+    melee, two for ranged, three for magic at one tile.
+17. **Prayer points are the clock of a fight.** Both sides of a spar that ends in a kill near tick 670 hold 0 prayer points
+    (`prayerLeft` in the `SPAR` lines of `extra:spar-duel-melee-x8`). The overhead, Steel Skin and the two melee prayers
+    drain 12 each for a tick, and 60 + 2 x prayer bonus of drain costs one point, so 99 points and eight doses of
+    restore last about 700 ticks. The first side with no points takes full hits. Gap: no bench run with more restore
+    potions or with prayer bonus gear.
+18. **The offline simulator agrees with the bench on tribrid kits, not on one-style builds.** `bun scripts/pk-sim.ts --table 1000`
+    runs 16,000 fights in seconds with the server's hit, prayer, food and special rules. Against the tribrid it gives the
+    potion kit, the lean kit and the hybrid a win and the mage, adamant and mithril kits a loss, as the bench does, and
+    its mirror lasts 694 ticks where the bench mirror lasts about 650. Gap: it gives the ranger 17% where the bench
+    gives it 14 of 24, and the melee build an even fight where the bench gives it 18 of 24. In the simulator the
+    tribrid deals about 100 damage for each 100 ticks to the ranger; on the bench it deals 77 (eight spars). It has no
+    movement and no freeze. A result from it is a candidate for the bench, not a measurement.
+19. **An overhead that changes one tick before the opponent's attack wins the mirror.** The `snap` profile (`predictPrayer`
+    with `snapPrayer`) holds the overhead for the weapon the opponent shows and changes to the predicted style one
+    tick before the opponent's next attack is due. Against the base profile it has 42 kills and 6 deaths in 48 spars
+    (15 to 1, 14 to 2, 13 to 3); base against base has 24 and 24 (8 to 8, 7 to 9, 9 to 7) (`extra:spar-x16`, seeds 1,
+    2 and 3, `SPAR_SWAP=1`). The tick decides it: in batches of 8, a change two ticks before has 10 kills and 6
+    deaths in 16 spars, and a change in the tick of the attack has 8 and 8. Against the `mix` profile, which picks its
+    style at random, it has 9 kills and 7 deaths in 16 spars, the same as base. The hunter, the roamer and the
+    champion profile use it. Gap: 16 spars each against the melee build (10 to 6; base 8 to 8) and the ranger (11 to
+    5; base 10 to 6) do not separate it from base.
