@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { parseTarget, walkTarget, walkTargetPersist, stagedBoat, walkWithFerryFallback } from './walk-to';
+import { parseTarget, walkTarget, walkTargetPersist, stagedBoat, walkWithFerryFallback, fareSpare } from './walk-to';
 import { loadTravel } from '../packages/core/src/travel';
 import type { Outcome } from '../packages/core/src/act';
 
@@ -182,4 +182,15 @@ test('a trip out of Zanaris first takes its exit to the swamp shed, then plans f
     await walkWithFerryFallback(zanaris, { x: 3238, z: 9558, level: 0 }, plain, sail, () => 0);
     await walkWithFerryFallback(zanaris, { x: 3201, z: 3169, level: 0 }, plain, sail, () => 0);
     expect(direct).toEqual(['3238,9558', shed]);
+});
+
+test('a full pack with no coins gives one item to the bank for the fare\'s slot', () => {
+    const rows = (...ids: number[]) => ids.map(id => ({ id }));
+    // 22 flax and 6 slices of cake: one flax goes, not the stack of anything.
+    expect(fareSpare(rows(...Array(22).fill(1779), ...Array(6).fill(1897)))).toEqual({ id: 1779, all: false });
+    // 28 different stacks: the whole of one.
+    expect(fareSpare(rows(...Array.from({ length: 28 }, (_, n) => 100 + n)))).toEqual({ id: 100, all: true });
+    // A free slot, or a coin stack the fare joins: nothing to bank.
+    expect(fareSpare(rows(...Array(27).fill(1779)))).toBeNull();
+    expect(fareSpare(rows(...Array(27).fill(1779), 995))).toBeNull();
 });

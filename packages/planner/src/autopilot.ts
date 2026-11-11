@@ -610,9 +610,10 @@ export const BLACK_CAVE = 'cave:taverley-black-dragons', BLACK_CAVE_PLACES = 2, 
 export const HUNT_ARROWS = 600, HUNT_KILLS = 9, HUNT_FOOD = 6;
 // What a hunter's supply run brings it up to: the arrows of two trips, and the air and fire runes of twenty teleports.
 export const HUNT_ARROW_STOCK = 1200, HUNT_RUNE_STOCK = 60;
-// Dragon longswords from Jakut (scripts/jakut-swords.ts): the swords one visit buys (his shelf holds two), the coins
-// the worker takes for them (its jakutCoins) and the ticks it waits inside for the shelf's second sword.
-export const JAKUT_SWORDS = 2, JAKUT_COINS = JAKUT_SWORDS * 105_000 + 1_000, JAKUT_WAIT = 600;
+// Dragon longswords from Jakut (scripts/shop-buyer.ts profile jukat): the swords one visit buys (his shelf holds two,
+// a unit of an emptied shelf costs 101,000), the coins the run takes for them with its reserve, the ticks it waits
+// inside with no buy (six restocks: one diamond pays for the wait) and the run's tick cap.
+export const JAKUT_SWORDS = 2, JAKUT_RESERVE = 5_000, JAKUT_COINS = JAKUT_SWORDS * 103_000 + JAKUT_RESERVE, JAKUT_WAIT = 3000, JAKUT_CAP = 9000;
 // The armour of the hides (scripts/black-dhide-sets.ts): a set is a body, chaps and vambraces of SET_HIDES hides, the
 // body asks Crafting LEATHER_LEVEL, a hide costs TAN_COIN to tan and a run takes SET_SHOP coins for a needle and
 // thread. ARMOUR_SETS: the bodies one account makes, half the army's. FLAX_SPIN: the flax one spinning run takes.
@@ -993,12 +994,17 @@ export function catalogue(): Template[] {
     };
     // Dragon longswords, which an account wields once Lost City is done. Jakut in the Zanaris market sells two at
     // 100,000 coins (one back every 500 ticks); the way in is the dramen staff the quest leaves the account, and the
-    // market door takes one cut diamond, which the kit tier buys. One visit buys JAKUT_SWORDS: the account's own and
-    // one to give. The band stands only while the account holds no sword: a second visit for one more would cost a
-    // second diamond. It comes after the hunt and before the flax, in the time a hunter is short of arrows. A pilot.
+    // market door takes one cut diamond, which the kit tier buys. Other players empty the shelf on the live server
+    // (a run that looked every 15 ticks saw none for 600), so the visit sends a buy request each tick (BLIND_BUY) and
+    // waits JAKUT_WAIT ticks with no buy before it leaves. One visit buys JAKUT_SWORDS: the account's own and one to
+    // give. The band stands only while the account holds no sword: a second visit for one more would cost a second
+    // diamond. One account at the shelf at a time. It comes after the hunt and before the flax, in the time a hunter
+    // is short of arrows. A pilot.
     const jakut: Template = {
-        id: 'army-jakut-swords', pilot: true, family: 'aio:market:jakut-swords', script: 'scripts/aio.ts', args: ['market', 'jakut-swords', `SWORDS=${JAKUT_SWORDS}`, `WAIT=${JAKUT_WAIT}`],
-        aio: 'market:jakut-swords', worker: 'scripts/jakut-swords.ts', role: 'supply', goal: 'buy dragon longswords from Jakut in the Zanaris market',
+        id: 'army-jakut-swords', pilot: true, family: 'shop-buyer', script: 'scripts/chain.ts', env: { ROUNDS: '1' },
+        args: [['scripts/shop-buyer.ts', 'jukat', String(JAKUT_CAP), 'BLIND_BUY=1', `STOCK_TARGET=${JAKUT_SWORDS}`, 'STOP_AT_TARGET=1', 'BANK_AT=0', `NO_BUY_TICKS=${JAKUT_WAIT}`, 'STALL_TICKS=0',
+            `COIN_RESERVE=${JAKUT_RESERVE}`, `FLOAT=${JAKUT_COINS}`].join(' ')],
+        role: 'supply', goal: 'buy dragon longswords from Jakut in the Zanaris market', resources: ['shop:jukat'],
         tier: 'goal', band: HUNT_BAND + 0.05, filler: true, repeats: false, stock: { item: 'dragon longsword', to: 1 }, yields: () => [],
         needs: { quests: ['Lost City'], items: { 'dramen staff': 1, diamond: 1, coins: JAKUT_COINS } },
     };

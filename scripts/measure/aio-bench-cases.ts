@@ -328,10 +328,6 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, bank: [{id: 1944, count: 1}, {id: 1927, count: 1}, {id: 1933, count: 1}]}},
   {key: 'quester:mode:cook-job', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['cook-job', 'CAP=1500'], pass: s => ok(s) && /QUEST_COOK_JOB_RESULT \{"ok":true/.test(s),
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, bank: [{id: 1944, count: 1}, {id: 1927, count: 1}, {id: 1933, count: 1}], varps: {4: -1, 9: -1, 13: -1, 16: -1, 28: -1, 64: -1, 181: -1, 209: -1}}},
-  // From the Draynor bank: the dramen staff, the shed, the market door's diamond, one dragon longsword from Jakut, the
-  // ladder, the Al Kharid bank (scripts/jakut-swords.ts).
-  {key: 'market:jakut-swords', script: 'scripts/aio-market.ts', preset: 'fresh_lumbridge', scriptArgs: ['jakut-swords', 'SWORDS=1'], pass: s => ok(s) && /swords=1 banked=1/.test(s), timeoutMs: 900_000,
-    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Attack: 60}, equipment: [{id: 1333, count: 1, slot: 3}], bank: [{id: 772, count: 1}, {id: 1601, count: 1}, {id: 995, count: 110_000}]}},
   // From the Taverley dungeon ladder: the Jailer, Velrak's cell, the key, back up (scripts/dusty-key.ts).
   {key: 'quester:mode:dusty-key', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['dusty-key'], pass: s => ok(s) && s.includes('dustyKey=1'), timeoutMs: 900_000,
     presetConfig: {position: {x: 2884, z: 3398, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99}, equipment: [{id: 1331, count: 1, slot: 3}], inventory: Array.from({length: 4}, () => ({id: 385, count: 1}))}},
@@ -371,10 +367,10 @@ const EXTRA_CASES: BenchCase[] = [
   {key: 'extra:bank-job-cook-lobster', script: 'scripts/aio-skiller.ts', preset: 'cook_food_catherby', scriptArgs: ['bank-job', COOK_JOB_PATH], pass: s => ok(s) && s.includes('cooking_generic_lobster')},
   // Jakut's dragon longswords in Zanaris (scripts/shop-buyer.ts profile jukat) from Ardougne with Lost City done: the
   // Dramen staff, the coins and the doorman's diamond from the bank, the Lumbridge swamp shed door, the shelf of 2 and one restock for the
-  // third sword, the ladder out and the Al Kharid bank.
+  // third sword, the ladder out, the rune scimitar it wore wielded again and the Al Kharid bank.
   {key: 'extra:shop-jukat', script: 'scripts/aio-market.ts', preset: 'fresh_lumbridge', scriptArgs: ['shop-buy', 'jukat', '4000', 'STOCK_TARGET=3', 'STOP_AT_TARGET=1', 'BANK_AT=0', 'NO_BUY_TICKS=600', 'STALL_TICKS=0', 'COIN_RESERVE=5000', 'FLOAT=400000'],
-    pass: s => ok(s) && /boughtTotal=3 bankedTotal=3 /.test(s) && s.includes('realm-leave') && s.includes('out=1'), timeoutMs: 900_000,
-    presetConfig: {position: {x: 2581, z: 3298, level: 0}, varps: {147: 6}, bank: [{id: 772, count: 1}, {id: 995, count: 400000}, {id: 1601, count: 1}]}},
+    pass: s => ok(s) && /boughtTotal=3 bankedTotal=3 /.test(s) && /realm-leave t=\d+ out=1 weapon=1333/.test(s), timeoutMs: 900_000,
+    presetConfig: {position: {x: 2581, z: 3298, level: 0}, varps: {147: 6}, skills: {Attack: 60}, equipment: [{id: 1333, count: 1, slot: 3}], bank: [{id: 772, count: 1}, {id: 995, count: 400000}, {id: 1601, count: 1}]}},
   // The same shelf with a second buyer at Jakut that has taken both swords (scripts/measure/shop-rival.ts), and
   // BLIND_BUY=1: the account buys the two units that come back. `rival-look`: the rival logged in first, so the engine
   // runs it first in each tick, and buys in each tick that its shelf shows stock. `rival-blind`: the rival logged in
