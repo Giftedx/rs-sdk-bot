@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794438247984-fingerblastr-knightstick",
  "account": "Knightstick",
  "partner": "Fingerblastr",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 83120,
  "claim": "24d07d4b-1a15-4ba3-904b-149306c92992",
- "count": 0,
- "ok": false,
- "at": 1794438251090,
- "detail": "trade claimed"
+ "count": 83120,
+ "ok": true,
+ "at": 1794438931983,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 83120
+ },
+ "bank": {
+  "count": 83120,
+  "at": 1794438930427
+ },
+ "logout": {
+  "attemptId": "1794438251094-0000018640-0000000001",
+  "at": 1794438931977,
+  "sha256": "47ddc9ed2472a0cfcc14542d4bcf1de11461b8ee82b3a34780c766bacb420f97"
+ },
+ "screen": true
 }
