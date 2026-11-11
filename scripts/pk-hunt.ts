@@ -31,6 +31,15 @@ export const TRIP: readonly { id: number; count: number }[] = [
     { id: ITEMS.airRune, count: 300 }, { id: ITEMS.bloodRune, count: 60 }, { id: 2434, count: 2 }, { id: ITEMS.glory[0], count: 1 },
 ] as const;
 
+// The snare kit (scripts/pk-kits.ts tribrid-snare): bow and dagger for the fight, the runes of Entangle for a target that
+// runs (5 earth, 5 water and 4 nature a cast), no staff and no wave runes. It beat the staff kit against the melee
+// build, the hybrid and the ranger (research/pvp-fight-loop.md). PK_KIT=snare selects the kit and this trip.
+export const SNARE_KIT: Kit = { ranged: [KIT_IDS.magicShortbow], melee: [KIT_IDS.dragonDaggerP, KIT_IDS.runeKiteshield] };
+export const SNARE_TRIP: readonly { id: number; count: number }[] = [
+    { id: KIT_IDS.magicShortbow, count: 1 }, { id: ITEMS.earthRune, count: 50 }, { id: ITEMS.waterRune, count: 50 }, { id: ITEMS.natureRune, count: 40 },
+    { id: 2434, count: 2 }, { id: ITEMS.glory[0], count: 1 },
+] as const;
+
 // Never fight our own accounts: every fleet side's owners plus the main account.
 export function fleetNames(owners = loadOwners()): Set<string> {
     return new Set([...owners.keys(), 'haggis'].map(n => n.toLowerCase()));
@@ -234,7 +243,7 @@ if (import.meta.main) {
     const s = await openBot(bot);
     const env = process.env;
     const r = await hunt(s, { cap: Number(capArg ?? 6000), food: Number(env.HUNT_FOOD ?? 18), minFood: Number(env.MIN_FOOD ?? 6), escapeAt: Number(env.ESCAPE_AT ?? 35), stop,
-        kit: env.PK_KIT ? JSON.parse(env.PK_KIT) as Kit : undefined, trip: env.PK_TRIP ? JSON.parse(env.PK_TRIP) : undefined, damageSpell: env.PK_SPELL ? Number(env.PK_SPELL) : undefined,
+        kit: env.PK_KIT === 'snare' ? SNARE_KIT : env.PK_KIT ? JSON.parse(env.PK_KIT) as Kit : undefined, trip: env.PK_TRIP ? JSON.parse(env.PK_TRIP) : env.PK_KIT === 'snare' ? SNARE_TRIP : undefined, damageSpell: env.PK_SPELL ? Number(env.PK_SPELL) : undefined,
         rotation: env.PK_ROTATION ? env.PK_ROTATION.split(',') as Style[] : undefined, teleSpell: env.PK_TELE ? Number(env.PK_TELE) : undefined,
         spots: env.PK_SPOTS ? JSON.parse(env.PK_SPOTS) as Spot[] : undefined, observe: env.PK_OBSERVE === '1' });
     console.log('HUNT ' + JSON.stringify(r));
