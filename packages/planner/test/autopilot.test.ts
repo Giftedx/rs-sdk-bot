@@ -1126,6 +1126,12 @@ test('an army account under the Magic Guild level buys curse runes, then water a
     expect(shop!.template!.id).toBe('army-water-aubury');
     expect(jobFor(shop!, side)).toMatchObject({ script: 'scripts/chain.ts', resources: ['shop:aubury'] });
     expect(shop!.template!.args![0]).toContain(`scripts/shop-buyer.ts aubury 3000 ITEMS=water.rune STOCK_TARGET=${SPLASH_KIT['water rune']} `);
+    // A second account short of water, or the first with Aubury's shop taken, goes to Betty's in Port Sarim.
+    const two = run(['A', 'B'].map(n => soldier(n, { ...stocked, 'water rune': 6 })), { pilots: new Set([...pilots, 'army-water-betty']) });
+    expect(two.map(a => a.template!.id).sort()).toEqual(['army-water-aubury', 'army-water-betty']);
+    const betty = run([soldier('Kilt', { ...stocked, 'water rune': 6 })], { pilots: new Set([...pilots, 'army-water-betty']), capacity: { ...CAPACITY, 'shop:aubury': 0 } })[0]!;
+    expect(jobFor(betty, side)).toMatchObject({ script: 'scripts/chain.ts', resources: ['shop:betty'] });
+    expect(betty.template!.args![0]).toContain(`scripts/shop-buyer.ts betty 3000 ITEMS=water.rune STOCK_TARGET=${SPLASH_KIT['water rune']} `);
     // With the whole kit: the band, to the Magic Guild's level, on the fence tile.
     const full = { ...stocked, 'water rune': SPLASH_KIT['water rune'] };
     const [cast] = run([soldier('Kilt', full)]);
