@@ -151,9 +151,22 @@ test('an invalid model proposal is saved as a failed round and leaves definition
  expect(f.state.planFailures).toBe(2);
  settlePlanner(f.state,f.base);
  expect(loadState(f.directory).planFailures).toBe(3);
+ expect(loadState(f.directory).rejectedPlan?.runId).toBe('plan-test');
+ expect(loadState(f.directory).rejectedPlan?.error).toContain('Error');
  expect(loadState(f.directory).planner).toBeUndefined();
  expect(existsSync(f.addedPath)).toBe(false);
  expect(existsSync(f.accepted)).toBe(false);
+});
+
+test('an accepted model proposal after a refused one clears the refusal from the live state and the next save',()=>{
+ const f=modelFixture();
+ f.state.rejectedPlan={runId:'plan-old',error:'Error: invalid task env'};saveState(f.state,f.directory);
+ settlePlanner(f.state,f.base);
+ expect(f.state.tasks.map(r=>r.spec.id)).toEqual(['check']);
+ expect(f.state.rejectedPlan).toBeUndefined();
+ expect(f.state.planFailures).toBeUndefined();
+ saveState(f.state,f.directory);
+ expect(loadState(f.directory).rejectedPlan).toBeUndefined();
 });
 
 test('a model restart finishes publication once and retains the next planning trigger',()=>{

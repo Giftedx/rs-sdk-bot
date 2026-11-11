@@ -53,7 +53,7 @@ export function plannerDue(state:CoordinatorState,now:number,intervalMs:number,r
 /** Record the end of a planning round. */
 export function finishPlan(state:CoordinatorState,now:number,accepted:boolean){
  state.lastPlanAt=now;delete state.planner;
- if(accepted)delete state.planFailures;else state.planFailures=(state.planFailures??0)+1;
+ if(accepted){delete state.planFailures;delete state.rejectedPlan;}else state.planFailures=(state.planFailures??0)+1;
 }
 
 /** The reason of the newest review of the current source, when it rejected. Same rule as rejectedReview (model-worker.ts). */

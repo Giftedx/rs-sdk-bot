@@ -138,7 +138,27 @@ export function briefEnded(ended:Record<string,any>){
 }
 export function briefSpec(spec:CoordTask){
  const {why,env,args,...rest}=spec as any;
- return{...rest,why:clip(why,200),...(env?{env:Object.keys(env)}:{}),...(args?{args:args.length}:{})};
+ // envKeys and argCount are not task fields. A brief under the names env and args reads as the schema, and a planner
+ // that copies it returns env as a list and args as a number.
+ return{...rest,why:clip(why,200),...(env?{envKeys:Object.keys(env)}:{}),...(args?{argCount:args.length}:{})};
+}
+// A field fault in a model task that has one safe repair. A whole proposal is refused for one fault, so each repair
+// here keeps the other tasks of that proposal.
+export function repairModelTask(task:any){
+ if(!task||typeof task!=='object'||Array.isArray(task))return task;
+ let t=task;
+ const evidence=t.newEvidence;
+ if(t.kind==='build'&&typeof t.why==='string'&&t.why.trim()&&typeof evidence==='string'&&evidence.length>NEW_EVIDENCE_MAX&&evidence.trim()){
+  // The build work order keeps the full observation. The hold check reads the short field.
+  t={...t,newEvidence:evidence.trim().slice(0,NEW_EVIDENCE_MAX-1)+'…',why:t.why.includes(evidence)?t.why:t.why+'\n\nNew evidence\n'+evidence};
+ }else if(t.kind!=='build'&&evidence!==undefined){
+  // Only a build reads newEvidence (buildHeld). On another kind the text is an observation, and why is its home.
+  const {newEvidence:_,...rest}=t,text=typeof evidence==='string'?evidence.trim():'';
+  t=text&&typeof rest.why==='string'&&!rest.why.includes(text)?{...rest,why:rest.why+'\n\nObservation\n'+text}:rest;
+ }
+ if(Array.isArray(t.args)&&t.args.some((a:unknown)=>typeof a==='number'&&Number.isFinite(a)))t={...t,args:t.args.map((a:unknown)=>typeof a==='number'&&Number.isFinite(a)?String(a):a)};
+ if(t.env===null){const {env:_,...rest}=t;t=rest;}
+ return t;
 }
 export function readPlannerControllerCapacity(base=projectRoot,now=Date.now()){
  try{
@@ -284,7 +304,7 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'FAST LANE: when a qualified capability needs only a different account, quest or argument, queue the run; do not queue a build. A failed live step that the runtime already handles (for example the quest talk door rule) gets a fresh qualify and a retry run, not a build.',
   'ASSETS (world.assets): recent shows coins and large stacks supported by observations from the past five minutes. verify shows additional last-seen stock that needs a new observation. Check statusAt, bankAt and reservations before staging stock. Turn confirmed stock into scoreboard progress before buying or gathering more. Move coins and items to the account that will use them with the courier and trade workers.',
   'NO DIARY (AGENTS.md): write why, reason and capability consumer text as the current work order and current facts only. No dates, no was/now, no history of earlier attempts or builds; cite the failed runId or evidence path instead. Git and runs/<runId>/ hold the history.',
-  'Task schema: {id,goal,kind,dependsOn,priority,estimatedMs,why,capability?,account?,accountFrom?,participants?,args?,acceptIndex?,role?,env?,accept?,timeoutMs?,launch?,agent?,newEvidence?}. IDs lower-case letters/digits/hyphens. priority1..100 is impact, estimatedMs is an estimate of total work incl. preparation/recovery. Priority orders the queue, so spread it: 90 and over only for the main run critical path or a chain with waiting consumers, 50 to 89 for a whole band or quest, under 50 for the rest. newEvidence is 1 to '+NEW_EVIDENCE_MAX+' characters. Put longer observations and the next consumer in why.',
+  'Task schema: {id,goal,kind,dependsOn,priority,estimatedMs,why,capability?,account?,accountFrom?,participants?,args?,acceptIndex?,role?,env?,accept?,timeoutMs?,launch?,agent?,newEvidence?}. IDs lower-case letters/digits/hyphens. priority1..100 is impact, estimatedMs is an estimate of total work incl. preparation/recovery. Priority orders the queue, so spread it: 90 and over only for the main run critical path or a chain with waiting consumers, 50 to 89 for a whole band or quest, under 50 for the rest. newEvidence belongs to a build task only and is 1 to '+NEW_EVIDENCE_MAX+' characters. Put longer observations, the observations of a run, qualify or review task, and the next consumer in why. args is an array of strings, for example ["18000"]. env is an object of NAME:"string value" pairs, for example {"CAP":"400"}. The task lists below are brief: envKeys names the env variables of a task and argCount counts its args, and neither is a task field. Read the full spec in .practice/coordinator/state.json before you copy env or args from a task.',
   'Kinds: review is a read-only cross-model source review of an existing delivered capability and can overlap independent authors. agent optionally selects codex or claude; the dispatcher balances builds and uses the other agent for review. qualify runs an existing capability native delivery. build authors named files, runs native delivery and a fresh reviewer. provision creates/registers one ordinary missing role. run installs a finite assignment in the coordinator job overlay, then checks fresh matched live status. Never set repeat:true yourself.',
   'For composed jobs use participants:[account or @provision-task-ID,...], at least2; args are passed after all account names. acceptIndex selects whose effects are checked (default0). No account/accountFrom with participants. Normal scripts use args too. '+
   'Include a pending first run for every new provision task. Bind the new account with accountFrom or @provision-task-ID in participants. Its other prerequisites may be pending but must have no terminal blocker.',
@@ -313,16 +333,13 @@ export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof rea
   'Full inventories, raw dated status and definitions: '+worldFile,
   'Task source, model/reviewer output, failures and complete receipts: .practice/coordinator/runs/<runId>/. Read these for any repair; do not re-diagnose from summaries.',
   'Task specs above are brief (work order why clipped to 200 characters, receipts to 240). Full specs and receipts: .practice/coordinator/state.json. Read the full why of any task you replace, repair or depend on.',
+  // Last, so the planner reads it after the data: a refused proposal adds no task, and the same fault repeats without this line.
+  ...(state.rejectedPlan?['VALIDATION REFUSED THE NEWEST PROPOSAL. No task from it is in the queue. Fault: '+clip(state.rejectedPlan.error,600)+'. Refused proposals in a row: '+(state.planFailures??1)+'. The refused proposal is .practice/coordinator/runs/'+state.rejectedPlan.runId+'/proposal.json. Read it, correct that exact fault, and check each task of the new proposal against the task schema before you return it. If the work of the refused proposal still matters, return it again with the fault corrected.']:[]),
  ].join('\n');
 }
 export function prepareProposal(state:CoordinatorState,raw:any,base=projectRoot,source:'manual'|'model'='manual'){
  if(!raw||typeof raw.reason!=='string'||!Array.isArray(raw.tasks)||!Array.isArray(raw.capabilities)||raw.tasks.length>12)throw Error('invalid planner proposal');
- const tasks:CoordTask[]=source==='model'?raw.tasks.map((task:CoordTask)=>{
-  const evidence=task?.newEvidence;
-  if(task?.kind!=='build'||typeof task.why!=='string'||!task.why.trim()||typeof evidence!=='string'||evidence.length<=NEW_EVIDENCE_MAX||!evidence.trim())return task;
-  const excerpt=evidence.trim().slice(0,NEW_EVIDENCE_MAX-1);
-  return {...task,newEvidence:excerpt+'…',why:task.why.includes(evidence)?task.why:task.why+'\n\nNew evidence\n'+evidence};
- }):raw.tasks;
+ const tasks:CoordTask[]=source==='model'?raw.tasks.map(repairModelTask):raw.tasks;
  const definitions=raw.capabilities as DeliveryTask[];
  if(new Set(definitions.map(d=>d.id)).size!==definitions.length)throw Error('duplicate proposed capability');
  const scope=(d:DeliveryTask)=>{validateDelivery(d);if(d.files.some(f=>! /^(scripts|packages\/(core|practice|planner))\//.test(f)))throw Error('capability scope must contain gameplay source/tests only');};

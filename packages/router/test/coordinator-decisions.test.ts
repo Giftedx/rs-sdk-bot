@@ -1,7 +1,7 @@
 import {test,expect} from 'bun:test';
 import {initialState,addTasks,chooseTask,startTask,finishTask,type CoordTask,type CoordinatorState} from '../src/coordinator';
 import {DEAD_TASK_MS,DISK_FLOOR_GB,IDLE_PLAN_MS,PLAN_GAP_MS,deadRoots,diskFreeGB,finishPlan,plannerDue,planRetryMs,retireDeadTasks,reviewHold} from '../src/coordinator-decisions';
-import {briefEnded,plannerPrompt,queueFacts} from '../src/coordinator-planner';
+import {briefEnded,briefSpec,plannerPrompt,queueFacts} from '../src/coordinator-planner';
 
 const task=(id:string,extra:Partial<CoordTask>={}):CoordTask=>({id,goal:'skills',kind:'qualify',capability:'wine-order',dependsOn:[],priority:5,estimatedMs:1000,why:'Close a useful consumer dependency',...extra});
 const run=(id:string,extra:Partial<CoordTask>={})=>task(id,{kind:'run',account:'Helper1',accept:{skills:{Cooking:99}},...extra});
@@ -126,10 +126,29 @@ test('the planner sees runs held by a rejected review',()=>{
  expect(queueFacts(s,[{capability:'wine-order',reason:'wrong item',runs:['live']}]).heldRuns).toEqual([{capability:'wine-order',reason:'wrong item',runs:['live']}]);
  expect(queueFacts(s).heldRuns).toEqual([]);
 });
+test('the planner prompt names a refused proposal last, until a proposal is accepted',()=>{
+ const world:any={scoreboard:null,coverage:{quests:[],scriptCandidates:[]},statuses:[],jobs:[],capabilities:[]};
+ const s=initialState();s.planFailures=2;s.rejectedPlan={runId:'plan-1',error:'Error: invalid task env: env is an object (task run-a)'};
+ const lines=plannerPrompt(s,world).split('\n'),last=lines.at(-1)!;
+ expect(last).toContain('VALIDATION REFUSED THE NEWEST PROPOSAL');
+ expect(last).toContain('invalid task env: env is an object (task run-a)');
+ expect(last).toContain('Refused proposals in a row: 2');
+ expect(last).toContain('.practice/coordinator/runs/plan-1/proposal.json');
+ finishPlan(s,2000,false);expect(s.rejectedPlan?.runId).toBe('plan-1');
+ finishPlan(s,3000,true);expect(s.rejectedPlan).toBeUndefined();
+ expect(plannerPrompt(s,world)).not.toContain('VALIDATION REFUSED');
+});
+test('a brief task names its env variables and counts its args under names that are not task fields',()=>{
+ const brief:any=briefSpec({id:'run-a',kind:'run',goal:'skills',capability:'c',dependsOn:[],priority:5,estimatedMs:1,why:'w',args:['18000','x'],env:{CAP:'400'}} as any);
+ expect(brief.envKeys).toEqual(['CAP']);expect(brief.argCount).toBe(2);
+ expect(brief.env).toBeUndefined();expect(brief.args).toBeUndefined();
+});
 test('the planner prompt gives the new-evidence limit, the retirement rule and the disk rule',()=>{
  const world:any={scoreboard:null,coverage:{quests:[],scriptCandidates:[]},statuses:[],jobs:[],capabilities:[]};
  const prompt=plannerPrompt(initialState(),world);
- expect(prompt).toContain('newEvidence is 1 to 500 characters');
+ expect(prompt).toContain('newEvidence belongs to a build task only and is 1 to 500 characters');
+ expect(prompt).toContain('env is an object of NAME:"string value" pairs');
+ expect(prompt).not.toContain('VALIDATION REFUSED');
  expect(prompt).toContain('retires after 24 hours');
  expect(prompt).toContain('world.capacity.diskFreeGB');
 });

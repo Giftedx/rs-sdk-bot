@@ -46,6 +46,8 @@ export interface CoordinatorState {
  planner?:{runId:string;startedAt:number;pid?:number;agent?:'codex'|'claude'};lastPlanAt:number;lastPlanReason:string;
  /** Failed planning rounds in a row (planRetryMs, coordinator-decisions.ts). */
  planFailures?:number;
+ /** The newest model proposal that validation refused, until a proposal is accepted. The next planner prompt names it. */
+ rejectedPlan?:{runId:string;error:string};
  latestReceiptSequence?:number; plannerReceiptSequence?:number;
  pendingSubmission?:{sha256:string;capabilities:CapabilityChange[]}&({file:string}|{runId:string;count:number});
 }
@@ -60,9 +62,15 @@ export function replaceTasks(state:CoordinatorState,replacements:{from:string;to
  const records=new Map(state.tasks.map(r=>[r.spec.id,r]));
  for(const {from,to} of replacements){
   const old=records.get(from),next=records.get(to);
-  if(!old||!next||from===to||!['pending','failed','superseded'].includes(old.status)||next.status==='failed'||next.status==='superseded'
-   ||old.spec.kind!==next.spec.kind||old.spec.kind==='provision'||old.spec.capability!==next.spec.capability||old.spec.goal!==next.spec.goal
-   ||JSON.stringify([old.spec.account,old.spec.accountFrom,old.spec.participants])!==JSON.stringify([next.spec.account,next.spec.accountFrom,next.spec.participants]))throw Error('invalid task replacement: '+from);
+  // The planner reads this reason in its next prompt, so it names the one rule that the pair breaks.
+  const fault=!old?'from is not a task in the queue':!next?'to is not a task in the queue or in this proposal: '+to:from===to?'from and to are the same task'
+   :!['pending','failed','superseded'].includes(old.status)?'from is '+old.status+'; only a pending, failed or superseded task can be replaced'
+   :next.status==='failed'||next.status==='superseded'?'to is '+next.status
+   :old.spec.kind!==next.spec.kind?'kind differs: '+old.spec.kind+' and '+next.spec.kind:old.spec.kind==='provision'?'a provision task cannot be replaced'
+   :old.spec.capability!==next.spec.capability?'capability differs: '+old.spec.capability+' and '+next.spec.capability
+   :old.spec.goal!==next.spec.goal?'goal differs: '+old.spec.goal+' and '+next.spec.goal
+   :JSON.stringify([old.spec.account,old.spec.accountFrom,old.spec.participants])!==JSON.stringify([next.spec.account,next.spec.accountFrom,next.spec.participants])?'account, accountFrom or participants differ':null;
+  if(fault||!old||!next)throw Error('invalid task replacement: '+from+' ('+fault+')');
   for(const r of state.tasks.filter(r=>r.status==='pending'))r.spec.dependsOn=[...new Set(r.spec.dependsOn.map(id=>id===from?to:id))];
   if(old.status==='pending')old.status='superseded';old.supersededBy=to;
  }
@@ -139,8 +147,8 @@ export function validateTask(t:CoordTask){
  if(t.participants!==undefined&&(!Array.isArray(t.participants)||!t.participants.length||t.participants.some(n=>typeof n!=='string'||!(n.startsWith('@')?TASK_ID.test(n.slice(1)):ACCOUNT.test(n)))
   ||new Set(t.participants.map(n=>n.toLowerCase())).size!==t.participants.length))throw Error('invalid participants');
  if(t.replayAllow!==undefined&&(t.kind!=='build'||!Array.isArray(t.replayAllow)||t.replayAllow.length>16||t.replayAllow.some(a=>typeof a!=='string'||!/^[A-Za-z]{1,40}$/.test(a))))throw Error('invalid replay allowance');
- if(t.newEvidence!==undefined&&(t.kind!=='build'||typeof t.newEvidence!=='string'||!t.newEvidence.trim()||t.newEvidence.length>NEW_EVIDENCE_MAX))throw Error('invalid new evidence: newEvidence is 1 to '+NEW_EVIDENCE_MAX+' characters');
- if(t.args!==undefined&&(!Array.isArray(t.args)||t.args.some(a=>typeof a!=='string'||a.includes('\0'))))throw Error('invalid task args');
+ if(t.newEvidence!==undefined&&(t.kind!=='build'||typeof t.newEvidence!=='string'||!t.newEvidence.trim()||t.newEvidence.length>NEW_EVIDENCE_MAX))throw Error('invalid new evidence: newEvidence belongs to a build task only and is 1 to '+NEW_EVIDENCE_MAX+' characters (task '+t.id+', kind '+t.kind+')');
+ if(t.args!==undefined&&(!Array.isArray(t.args)||t.args.some(a=>typeof a!=='string'||a.includes('\0'))))throw Error('invalid task args: args is an array of strings, for example ["18000"], not a count or a number (task '+t.id+')');
  if(t.acceptIndex!==undefined&&(!Number.isSafeInteger(t.acceptIndex)||t.acceptIndex<0||t.acceptIndex>=(t.participants?.length??1)))throw Error('invalid acceptance participant index');
  if(t.kind==='run'){
   if(Number(t.account!==undefined)+Number(t.accountFrom!==undefined)+Number(t.participants!==undefined)!==1)throw Error('run task needs one account binding');
@@ -148,7 +156,7 @@ export function validateTask(t:CoordTask){
  }
  for(const rows of [t.accept?.skills,t.accept?.bank,t.accept?.counters])for(const n of Object.values(rows??{}))if(!Number.isFinite(n)||n<=0)throw Error('invalid useful-effect target');
  if(t.env!==undefined){
-  if(!t.env||typeof t.env!=='object'||Array.isArray(t.env)||Object.entries(t.env).some(([k,v])=>!/^[_a-z][_a-z0-9]*$/i.test(k)||typeof v!=='string'||v.includes('\0')))throw Error('invalid task env');
+  if(!t.env||typeof t.env!=='object'||Array.isArray(t.env)||Object.entries(t.env).some(([k,v])=>!/^[_a-z][_a-z0-9]*$/i.test(k)||typeof v!=='string'||v.includes('\0')))throw Error('invalid task env: env is an object of NAME:"string value" pairs, not a list of names (task '+t.id+')');
   if(Object.keys(t.env).some(k=>/PASSWORD|SECRET|TOKEN|HAGGIS_RUN|WORKER_RELEASE|DEMO_OK/i.test(k)))throw Error('credentials and launch authority do not belong in task input');
  }
 }
