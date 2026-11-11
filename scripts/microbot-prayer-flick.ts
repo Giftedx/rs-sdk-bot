@@ -5,7 +5,7 @@ import {nativeNpcSpell,npcCastEffect,runNpcMagic} from './microbot-magic-npc';
 import {elementalRuneCost} from './microbot-magic-items';
 import {componentId} from '../packages/core/src/logout';
 import {nativeTeleport,runTeleportMagic} from './microbot-magic-teleport';
-import {openBot,settle} from '../packages/core/src/bot';
+import {openBot,releasePrayerGuard,settle} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
 import {PRAYER_LEVELS} from '../vendor/rs-sdk/sdk/types';
@@ -16,6 +16,7 @@ export type CombatPrayerOptions={prayer:number;cap:number;hpFloor:number;stop?:(
 // prayers stop. Each reset observes OFF before sending ON. This does not
 // predict attacks, promise uninterrupted buffs or flick incoming protection.
 export async function withCombatPrayer<T>(s:Session,o:CombatPrayerOptions,run:(stop:()=>boolean)=>Promise<T>){
+ await releasePrayerGuard(s);
  if(![1,2,4,5,10,11].includes(o.prayer)||!Number.isSafeInteger(o.cap)||o.cap<1||o.cap>15000||!Number.isSafeInteger(o.hpFloor)||o.hpFloor<1||o.mode!==undefined&&!['flick','hold'].includes(o.mode))throw Error('invalid finite offensive prayer');
  const initial=s.sdk.getState()?.player,life=initial?.lifeId,respawns=initial?.respawnCount??0,prayers=s.sdk.getPrayerState(),start=s.tick();
  if(!initial||life===undefined||!prayers||prayers.activePrayers.some(Boolean)||prayers.prayerPoints<1||prayers.prayerLevel<PRAYER_LEVELS[o.prayer]!||(s.sdk.getSkill('Hitpoints')?.level??0)<o.hpFloor)throw Error('offensive prayer requires original healthy life, eligible level and all prayers off');
@@ -82,6 +83,7 @@ export function incomingFarmerProfile(){
  if(rate!==6||anim!==433||!/^param=damagetype,\^stab_style$/m.test(row))throw Error('native Farmer incoming profile changed');return{npc:7,prayer:14,rate,anim,lead:2,source:'_unpack/225/all.npc farmer1; melee protection before queue0'}as const;
 }
 export async function withIncomingProtection<T>(s:Session,o:{cap:number;hpFloor:number;spell:string;stop?:()=>boolean},run:(owned:Session,stop:()=>boolean,finishCombat:()=>void)=>Promise<T>){
+ await releasePrayerGuard(s);
  const profile=incomingFarmerProfile(),spell=nativeNpcSpell(o.spell),initial=s.sdk.getState()?.player,client=s.client as any,executor=client.executeBotAction,life=initial?.lifeId,respawns=initial?.respawnCount??0,start=s.tick(),prayers=s.sdk.getPrayerState(),points=prayers?.prayerPoints;
  if(!Number.isSafeInteger(o.cap)||o.cap<1||o.cap>5000||!Number.isSafeInteger(o.hpFloor)||o.hpFloor<1||!initial||!Number.isSafeInteger(life)||!Number.isSafeInteger(client.selfSlot)||typeof executor!=='function'||!prayers||prayers.activePrayers.some(Boolean)||prayers.prayerLevel<PRAYER_LEVELS[profile.prayer]!||prayers.prayerPoints<1||(s.sdk.getSkill('Hitpoints')?.level??0)<o.hpFloor||spell.debuff)throw Error('incoming protection needs finite healthy original life, eligible all-off prayers and damaging native spell');
  let ended=false,failure='',uncertain=false,retiring=false,pending:Promise<void>|undefined,result:T|undefined,error:unknown,toggles=0,cycles=0,attacks=0,protectedAttacks=0,lastAnim=-1,lastEdge=-Infinity;

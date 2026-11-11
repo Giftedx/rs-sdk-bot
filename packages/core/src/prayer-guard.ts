@@ -9,7 +9,10 @@
 // interaction that is not an attack is pending: the prayer stays on and drains at the normal rate. After a prayer
 // input during an attack, the guard sends the same attack again in the same tick.
 //
-// A script that sends its own prayer input keeps control: the guard sends nothing for SCRIPT_PRAYER_QUIET ticks after.
+// A prayer button also clears the weak queue (engine Player.ts closeModal), which holds a skill batch. Each script
+// input that can start an action therefore counts as an interaction, except the single-item inputs in NEUTRAL.
+//
+// A script that sends its own prayer input owns the prayers: the guard sends nothing more in that session.
 
 export interface GuardSession {
     sdk: { getState(): any };
@@ -68,11 +71,14 @@ export interface PrayerGuardOptions {
     log?: (line: string) => void;
 }
 
-export interface PrayerGuardStats { flicks: number; holds: number; protects: number; repairs: number; resends: number }
+export interface PrayerGuardStats { flicks: number; holds: number; protects: number; repairs: number; resends: number; yielded: boolean }
 
-const INTERACTIONS = new Set(['talkToNpc', 'interactNpc', 'interactPlayer', 'interactLoc', 'pickupItem', 'useItemOnLoc',
-    'useItemOnNpc', 'spellOnNpc', 'spellOnPlayer', 'interactGroundItem']);
-const SCRIPT_PRAYER_QUIET = 8;
+// Script inputs that start no action the guard could cancel. Every other input is an interaction.
+const NEUTRAL = new Set(['say', 'privateMessage', 'wait', 'none', 'scanGroundItems', 'scanNearbyLocs', 'setTab', 'setCombatStyle',
+    'searchGE', 'closeModal', 'closeShop', 'useInventoryItem', 'useEquipmentItem', 'dropItem', 'bankDeposit', 'bankWithdraw',
+    'shopBuy', 'shopSell']);
+// Ticks the player must stand with no animation before an interaction that is not an attack counts as ended.
+const IDLE_TICKS = 6;
 // One tick holds 5 inputs (scripts/pk.ts, prayerFlick): two prayers off and on, and one attack.
 const MAX_FLICKED = 2;
 
@@ -82,10 +88,10 @@ type Pending = { kind: 'none' } | { kind: 'attack'; action: Action } | { kind: '
 export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     const every = o.every ?? 3, calm = o.calmTicks ?? 20;
     if (!Number.isSafeInteger(every) || every < 1 || every > 4) throw new Error('prayer guard: every must be 1..4');
-    const stats: PrayerGuardStats = { flicks: 0, holds: 0, protects: 0, repairs: 0, resends: 0 };
+    const stats: PrayerGuardStats = { flicks: 0, holds: 0, protects: 0, repairs: 0, resends: 0, yielded: false };
     const own = new WeakSet<object>();
     const owned = new Map<number, number>();
-    let stopped = false, flickAt = -Infinity, scriptPrayerAt = -Infinity, threatAt = -Infinity, protectAt = -Infinity;
+    let stopped = false, flickAt = -Infinity, threatAt = -Infinity, protectAt = -Infinity;
     let pending: Pending = { kind: 'none' };
     let expect: number[] | null = null, expectAt = 0, wasActive = false, lastTile = '';
     let pointsFirst: number | undefined, pointsLast: number | undefined, taken = 0, lastEvent = -Infinity;
@@ -100,10 +106,11 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     const note = (action: unknown) => {
         const a = action as Action | null;
         if (stopped || !a || typeof a !== 'object' || own.has(a)) return;
-        if (a.type === 'togglePrayer') { scriptPrayerAt = s.tick(); owned.delete(a.prayerIndex as number); expect = null; return; }
+        if (a.type === 'togglePrayer') { stats.yielded = true; owned.clear(); expect = null; return; }
+        if (NEUTRAL.has(a.type)) return;
         if (a.type === 'walkTo') { pending = { kind: 'none' }; return; }
         if ((a.type === 'interactNpc' || a.type === 'interactPlayer') && attackTarget(a, s.sdk.getState())) { pending = { kind: 'attack', action: { ...a } }; return; }
-        if (INTERACTIONS.has(a.type)) pending = { kind: 'other', still: 0 };
+        pending = { kind: 'other', still: 0 };
     };
 
     const client = s.client as { executeBotAction?: (action: unknown) => unknown } | undefined;
@@ -149,7 +156,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     };
 
     const off = s.onTick(() => {
-        if (stopped) return;
+        if (stopped || stats.yielded) return;
         const st = s.sdk.getState(), p = st?.player, prayers = st?.prayers;
         if (!p || p.isDead || !prayers || !Array.isArray(prayers.activePrayers)) return;
         const now = s.tick();
@@ -157,11 +164,11 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         for (const e of st.combatEvents ?? []) if (e.type === 'damage_taken' && e.tick > lastEvent) { taken += e.damage; lastEvent = e.tick; }
         const active: number[] = prayers.activePrayers.flatMap((on: boolean, i: number) => (on ? [i] : []));
 
-        // An interaction that is not an attack ends when the player has stood idle for 3 ticks.
+        // An interaction that is not an attack ends when the player has stood idle for IDLE_TICKS ticks.
         const tile = `${p.worldX},${p.worldZ},${p.level}`;
         if (pending.kind === 'other') {
             pending.still = tile === lastTile && (p.animId ?? -1) === -1 ? pending.still + 1 : 0;
-            if (pending.still >= 3) pending = { kind: 'none' };
+            if (pending.still >= IDLE_TICKS) pending = { kind: 'none' };
         }
         lastTile = tile;
 
@@ -190,7 +197,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
 
         if (prayers.prayerPoints < 1) return;
         const windows = !!(st.modalOpen || st.dialog?.isOpen || st.interface?.isOpen || st.bank?.isOpen || st.shop?.isOpen);
-        const safe = !windows && pending.kind !== 'other' && now - scriptPrayerAt > SCRIPT_PRAYER_QUIET;
+        const safe = !windows && pending.kind !== 'other';
 
         // A flick must leave every prayer on. One that stayed off two ticks later is turned on again, once.
         if (expect) {
@@ -241,6 +248,21 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         o.log?.(`PRAYER_GUARD ${JSON.stringify({ ...stats, points: [pointsFirst, pointsLast], taken })}`);
         if (client && observer && client.executeBotAction === observer) client.executeBotAction = original;
     };
+    // For a script that needs every prayer off before it starts: stops the guard, turns the guard's own prayers off
+    // and waits up to 4 ticks until the state shows them off.
+    const release = async (): Promise<void> => {
+        const state = () => s.sdk.getState()?.prayers?.activePrayers as boolean[] | undefined;
+        const mine = [...owned.keys()].filter(i => state()?.[i]);
+        if (stopped) return;
+        for (const i of mine) toggle(i);
+        stop();
+        if (!mine.length) return;
+        await new Promise<void>(done => {
+            let left = 4;
+            const end = s.onTick(() => { if (--left <= 0 || !mine.some(i => state()?.[i])) { end(); done(); } });
+            void s.ended?.then(() => { end(); done(); });
+        });
+    };
     void s.ended?.then(stop);
-    return { stop, stats: () => ({ ...stats }), note };
+    return { stop, release, stats: () => ({ ...stats }), note };
 }

@@ -115,7 +115,7 @@ test('an interaction that is not an attack is never cleared', () => {
     w.anim = -1; w.interaction = null;
     const before = w.drains;
     advance(40);
-    expect(w.drains - before).toBeLessThanOrEqual(1);
+    expect(w.drains - before).toBeLessThanOrEqual(2);
 });
 
 test('an attacking NPC turns protection on once; calm turns it off', () => {
@@ -150,18 +150,48 @@ test('a Prayer level below the protection prayer sends nothing', () => {
     expect(w.toggles).toBe(0);
 });
 
-test('a prayer input from the script stops the guard for 8 ticks', () => {
+test('a prayer input from the script ends the guard for the session', () => {
     const { w, s, client, advance } = world();
-    startPrayerGuard(s, { protect: false });
+    const guard = startPrayerGuard(s);
     advance(2);
     client.executeBotAction({ type: 'togglePrayer', prayerIndex: 10 });
     advance(1);
     const after = w.toggles;
-    advance(7);
+    w.npcs = [cow(32768 + 7)];
+    advance(60);
     expect(w.toggles).toBe(after);
-    advance(10);
-    expect(w.toggles).toBeGreaterThan(after);
     expect(w.active[10]).toBe(true);
+    expect(guard.stats().yielded).toBe(true);
+});
+
+test('release turns the guard prayer off and sends nothing after', async () => {
+    const { w, s, advance } = world();
+    const guard = startPrayerGuard(s);
+    w.npcs = [cow(32768 + 7)];
+    advance(5);
+    expect(w.active[PROTECT.melee]).toBe(true);
+    const released = guard.release();
+    advance(3);
+    await released;
+    expect(w.active.some(Boolean)).toBe(false);
+    const after = w.toggles;
+    advance(20);
+    expect(w.toggles).toBe(after);
+});
+
+test('an input that can start a skill batch holds the prayer; eating does not', () => {
+    const { w, s, client, advance } = world({ prayers: [PROTECT.melee] });
+    startPrayerGuard(s, { protect: false });
+    advance(1);
+    client.executeBotAction({ type: 'useInventoryItem', slot: 0, optionIndex: 1 });
+    advance(20);
+    expect(w.drains).toBe(0);
+    w.anim = 1248;
+    client.executeBotAction({ type: 'useItemOnItem', sourceSlot: 0, targetSlot: 1 });
+    advance(1);
+    const before = w.toggles;
+    advance(20);
+    expect(w.toggles).toBe(before);
 });
 
 test('stop puts the client input function back', () => {
