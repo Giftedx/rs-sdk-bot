@@ -1,7 +1,28 @@
 {
  "side": "claude-cloud",
- "at": 1794420286048,
+ "at": 1794420429997,
  "jobs": [
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_ID": "536",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying bought dragon bones",
+   "role": "combat",
+   "template": "army-bury-dragon-99",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
   {
    "account": "TrouserSnake",
    "script": "scripts/aio.ts",
@@ -98,20 +119,28 @@
   },
   {
    "account": "Fingersmith",
-   "script": "scripts/alch-train.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99",
-    "5000"
+    "1500",
+    "trooper"
    ],
-   "env": {},
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-alch-magic-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "Dipstick",
