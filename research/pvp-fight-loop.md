@@ -291,13 +291,26 @@ Hitpoints XP; the Mage Arena fight for the god spell gives Hitpoints XP; the til
 The trained builds of `scripts/pk-kits.ts`. Sources for the list of builds: the Old School RuneScape Wiki pages
 "Account builds" and "One-defence pure" and theoatrix.net "Types of pures in OSRS". Source -> local consumer -> adapt
 -> check: those pages -> `KITS` -> each build keeps its levels and takes the gear that this content has ->
-`scripts/pk-kits.test.ts`, `bun scripts/pk-sim.ts --league`, the bench cases `extra:spar-builds-1` to `-7`.
+`scripts/pk-kits.test.ts`, `bun scripts/pk-sim.ts --league`, the bench cases `extra:spar-builds-1` to `-4`.
 
 The bench cases hold each of the 53 pairs once, 14 pairs in a case, in 8 processes (`SPAR_PROCS=8`) with a cap of 600
 ticks. A case lasts as long as its longest fight, so the pairs stand in the order of the Defence, Hitpoints and food
-of their builds (`BUILD_PAIRS`). Measured: a case takes 33 to 55 s, and the 4 cases at 3 seeds (159 fights) took 464 s
-of run time, 2.9 s a fight. A case of 8 pairs took 34 s, about half of it the engine start and the logins, so more
-pairs in a case cost less for each fight.
+of their builds (`BUILD_PAIRS`). `bun scripts/measure/pk-spar-matrix.ts --case <case>,<case>,... --parallel 2` runs
+two cases at the same time, each on its own engine. Measured: the 4 cases at one seed take 61 to 65 s, and 3 seeds
+(159 fights) took 190 s, 1.2 s a fight. One case alone takes about 19 s: 3.6 s of logins and 9 to 13 s of fights.
+
+Where the time of a case went, on `extra:spar-builds-4` (22 clients), from `SPAR_TIMING`, `SIM_ACK_FILE` and a
+count of the engine's tick phases:
+
+- The clients take about 3 ms of a tick. The engine's own tick was 27 to 34 ms, 11 to 14 ms of it the read of the
+  client messages: 29 prayer clicks a tick (`IfButton`, the prayer guard and the fight loop) at 0.28 ms each.
+- The cost of a click was its packets. Outside `processClientsOut()` the engine sent each script packet (varp, sound,
+  text; about 1000 a tick) as its own WebSocket frame. A lockstep engine sends one message for each client each tick
+  (`patches/rs-sdk.md`, item 10): tick 16 to 19 ms, logins 5.0 s to 3.6 s, the case 34 s to 19 s.
+- `openBot` reads the two NPC tables of the prayer guard (1.2 s, synchronous) before the connection. After the
+  connection the read held the tick of every other client: logins 6.4 s to 4.9 s.
+- One pair in each process (`SPAR_PROCS=11`) gave no gain over 8 processes: 30.2 s against 30.7 s. The logins of 11
+  processes took 6.9 s against 5.0 s.
 
 - **What this content has.** The Fremennik helms (Berserker `viking_helmet_crush`, Archer, Warrior, Farseer: Defence
   45 and The Fremennik Trials), the dragon medium helm, chainbody and platelegs (Defence 60), the dragon square
@@ -347,39 +360,41 @@ and `sim-def.txt` in the worktree that ran it). Mean is the mean win rate agains
 - Gap: the simulator has no freeze and no movement, and it alternates the bow and a 7-tick weapon where a player
   keeps the slow weapon for the kill. Its ranger result is higher than the bench (finding 18).
 
-Bench ranking. Conditions: lockstep practice engine, Wilderness level 34 at (3125, 3790), both sides on the champion
-profile, cap 600 ticks, each pair 3 fights (seeds 1, 2, 3), `extra:spar-builds-1` to `-4`. Evidence:
-`.practice/pk-builds/case<n>-seed<s>.txt` and `rank.txt` in the worktree that ran them. A build of both brackets has
+Bench ranking. Conditions: lockstep practice engine, Wilderness level 34 at (3125, 3790), both sides on the profile
+`snap` (`predictPrayer`, `snapPrayer`; it sets no rotation, so each kit attacks with its own styles), cap 600 ticks,
+each pair 3 fights (seeds 1, 2, 3), `extra:spar-builds-1` to `-4`. Evidence:
+`.practice/pk-builds/seed<s>.txt` and `rank.txt` in the worktree that ran them. A build of both brackets has
 36 fights, the others 21. Net is the net damage for each 100 ticks.
 
 | Kit | Combat | Fights | Wins | Losses | Draws | Net |
 |---|---|---|---|---|---|---|
-| `pure-pray` | 80 | 36 | 28 | 7 | 1 | +74.3 |
-| `dragon` | 96 | 21 | 16 | 5 | 0 | +65.3 |
-| `pure-dds-msb` | 75 | 36 | 24 | 12 | 0 | +23.1 |
-| `zerker` | 92 | 21 | 13 | 7 | 1 | +46.0 |
-| `range-tank` | 91 | 21 | 13 | 7 | 1 | +38.9 |
-| `rune-pure` | 91 | 21 | 12 | 9 | 0 | +31.3 |
-| `pure-dds` | 72 | 21 | 12 | 9 | 0 | +7.9 |
-| `pure-ranger` | 69 | 36 | 18 | 18 | 0 | -30.4 |
-| `pure-tribrid` | 76 | 21 | 9 | 12 | 0 | +23.7 |
-| `pure-hally` | 75 | 21 | 6 | 15 | 0 | -32.5 |
-| `pure-r2h` | 71 | 21 | 5 | 16 | 0 | -91.5 |
-| `mage-tank` | 89 | 21 | 1 | 19 | 1 | -65.2 |
-| `pure-mage` | 69 | 21 | 0 | 21 | 0 | -138.7 |
+| `dragon` | 96 | 21 | 20 | 1 | 0 | +76.7 |
+| `pure-pray` | 80 | 36 | 29 | 7 | 0 | +78.8 |
+| `pure-dds` | 72 | 21 | 14 | 7 | 0 | +4.1 |
+| `rune-pure` | 91 | 21 | 13 | 8 | 0 | +50.3 |
+| `pure-ranger` | 69 | 36 | 20 | 16 | 0 | -17.6 |
+| `pure-dds-msb` | 75 | 36 | 19 | 17 | 0 | +2.1 |
+| `zerker` | 92 | 21 | 11 | 10 | 0 | +40.6 |
+| `range-tank` | 91 | 21 | 11 | 9 | 1 | +29.6 |
+| `pure-tribrid` | 76 | 21 | 8 | 13 | 0 | +7.8 |
+| `pure-hally` | 75 | 21 | 7 | 14 | 0 | -67.2 |
+| `pure-r2h` | 71 | 21 | 4 | 17 | 0 | -79.4 |
+| `mage-tank` | 89 | 21 | 2 | 18 | 1 | -62.8 |
+| `pure-mage` | 69 | 21 | 0 | 21 | 0 | -108.1 |
 
-- **Defence 1: the bow and dagger pure with Prayer 43 wins.** `pure-pray` won 19 of 21 against the other Defence 1
+- **Defence 1: the bow and dagger pure with Prayer 43 wins.** `pure-pray` won 20 of 21 against the other Defence 1
   builds and 9 of 15 against the builds with Defence 40 to 60, 11 to 16 combat levels above it. Without the
-  prayer, `pure-dds-msb` is second: it beat `pure-pray` 2 to 1 and lost 7 of 9 to the rune, zerker and dragon builds.
-- **Defence 40 to 60: the dragon build wins.** `dragon` won 3 of 3 against `rune-pure` and against `zerker`. It lost
-  2 of 3 to `range-tank` and to `pure-pray`.
-- **A build with one style from range loses.** `pure-mage` won 0 of 21 and `mage-tank` 1 of 21. `pure-ranger` won
-  every fight against the slow weapons and the mages, and 0 of 12 against the rune, zerker, dragon and range-tank
+  prayer the same weapons lose: `pure-dds-msb` lost 3 of 3 to `pure-pray` and 7 of 9 to the rune, zerker and dragon
   builds.
-- **The slow weapons lose.** `pure-r2h` and `pure-hally` won 5 and 6 of 21. The loop alternates the bow and the
+- **Defence 40 to 60: the dragon build wins.** `dragon` won 20 of 21, with 3 of 3 against `rune-pure`, `zerker` and
+  `pure-pray`. Its one loss was to `range-tank`.
+- **A build with one style from range loses.** `pure-mage` won 0 of 21 and `mage-tank` 2 of 21. `pure-ranger` won
+  every fight against the slow weapons and the mages, and 1 of 12 against the rune, zerker, dragon and range-tank
+  builds.
+- **The slow weapons lose.** `pure-r2h` and `pure-hally` won 4 and 7 of 21. The loop alternates the bow and the
   7-tick weapon; a loop that keeps the slow weapon for the kill is not measured.
 - The simulator and the bench agree on the first build of each bracket and on the last. They differ on
-  `pure-ranger` (second in the simulator, 18 of 36 on the bench).
+  `pure-ranger` (second in the simulator, 20 of 36 on the bench).
 - Gap: 3 fights for each pair say nothing about one pair. No fight against the maxed tribrid: combat 126 is out of
   range of these builds at Wilderness level 34.
 - Gap: Hitpoints assume trained levels. Quest XP gives no Hitpoints, so a quest route gives a lower combat level.
