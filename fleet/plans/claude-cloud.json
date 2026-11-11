@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794384310606,
+ "at": 1794384327837,
  "jobs": [
   {
    "account": "SporranDip",
@@ -106,28 +106,22 @@
   },
   {
    "account": "PocketPool",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "1500",
-    "trooper"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=125 EXPECTED_OWNED=25 LIMIT_PRICE=200 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit10-559-25to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=375 EXPECTED_OWNED=50 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit10-557-50to425 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "repeat": false,
+   "goal": "buy 125 Body rune, 375 Earth rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "supply",
+   "template": "kit-buy:army-splash-magic-66",
    "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "resources": []
   },
   {
    "account": "Fingersmith",
@@ -147,31 +141,6 @@
    "template": "army-alch-air-magic-99",
    "autopilot": "claude-cloud",
    "resources": []
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
   },
   {
    "account": "TheFullMonty",
