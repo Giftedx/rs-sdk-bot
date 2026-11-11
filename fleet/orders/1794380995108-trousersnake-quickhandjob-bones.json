@@ -1,0 +1,22 @@
+{
+ "id": "1794380995108-trousersnake-quickhandjob-bones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TrouserSnake",
+ "to": "Quickhandjob",
+ "item": "Bones",
+ "count": 22,
+ "start": 1794380995108,
+ "end": 1794383395108,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
