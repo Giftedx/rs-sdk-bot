@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794385956433,
+ "at": 1794385961233,
  "jobs": [
   {
    "account": "Fingersmith",
@@ -172,25 +172,16 @@
   },
   {
    "account": "UnderMyKilt",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "foraging",
-    "flax",
-    "1800",
-    "28"
-   ],
-   "env": {},
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "pick flax at Seers to spin for the Crafting a black dragonhide body asks",
-   "role": "crafting",
-   "template": "army-leather-flax",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "aio:seers-flax"
-   ]
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-094d1680-2fc8-4781-a63f-a7b8629a2062"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-undermykilt-20261111t082841z [task-094d1680-2fc8-4781-a63f-a7b8629a2062]",
+   "role": "crafting"
   }
  ]
 }
