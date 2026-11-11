@@ -77,11 +77,11 @@ export interface PrayerGuardOptions {
 export interface PrayerGuardStats { flicks: number; holds: number; protects: number; repairs: number; resends: number; manual: boolean; yielded: boolean }
 
 // Script inputs that start no action the guard could cancel. Every other input is an interaction.
-const NEUTRAL = new Set(['say', 'privateMessage', 'wait', 'none', 'scanGroundItems', 'scanNearbyLocs', 'setTab', 'setCombatStyle',
+export const NEUTRAL = new Set(['say', 'privateMessage', 'wait', 'none', 'scanGroundItems', 'scanNearbyLocs', 'setTab', 'setCombatStyle',
     'searchGE', 'closeModal', 'closeShop', 'useInventoryItem', 'useEquipmentItem', 'dropItem', 'bankDeposit', 'bankWithdraw',
     'shopBuy', 'shopSell']);
 // Ticks the player must stand with no animation before an interaction that is not an attack counts as ended.
-const IDLE_TICKS = 6;
+export const IDLE_TICKS = 6;
 // Prayers that turn each other off (skill_prayer/configs, prayer_deactivate): Defence, Strength, Attack, protection.
 const EXCLUSIVE = [[0, 3, 9], [1, 4, 10], [2, 5, 11], [12, 13, 14]];
 // The active prayers after one button, from the prayers that were active before it.
@@ -92,6 +92,13 @@ const MAX_FLICKED = 2;
 
 type Action = { type: string; [k: string]: unknown };
 type Pending = { kind: 'none' } | { kind: 'attack'; action: Action } | { kind: 'other'; still: number };
+
+// True while the target of an attack input is in view and alive.
+export const attackTarget = (a: Action, st: any): boolean => {
+    if (a.type === 'interactPlayer') return a.optionIndex === 2 && (st?.nearbyPlayers ?? []).some((p: any) => p.index === a.playerIndex);
+    const n = (st?.nearbyNpcs ?? []).find((n: any) => n.index === a.npcIndex);
+    return !!n && n.hp !== 0 && (n.optionsWithIndex ?? []).some((op: any) => op.opIndex === a.optionIndex && /^Attack$/i.test(op.text));
+};
 
 export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     const every = o.every ?? 3, calm = o.calmTicks ?? 20;
@@ -104,12 +111,6 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     let pending: Pending = { kind: 'none' };
     let expect: number[] | null = null, expectAt = 0, wasActive = false, lastTile = '';
     let pointsFirst: number | undefined, pointsLast: number | undefined, taken = 0, lastEvent = -Infinity;
-
-    const attackTarget = (a: Action, st: any): boolean => {
-        if (a.type === 'interactPlayer') return a.optionIndex === 2 && (st?.nearbyPlayers ?? []).some((p: any) => p.index === a.playerIndex);
-        const n = (st?.nearbyNpcs ?? []).find((n: any) => n.index === a.npcIndex);
-        return !!n && n.hp !== 0 && (n.optionsWithIndex ?? []).some((op: any) => op.opIndex === a.optionIndex && /^Attack$/i.test(op.text));
-    };
 
     // Every input of the script passes here before the client sends it.
     const note = (action: unknown) => {
