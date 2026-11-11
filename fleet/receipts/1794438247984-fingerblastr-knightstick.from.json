@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794438247984-fingerblastr-knightstick",
+ "account": "Fingerblastr",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 83120,
+ "claim": "df4f9cb7-54a0-4b24-983f-193d0a0856ee",
+ "count": 83120,
+ "ok": true,
+ "at": 1794438929234,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 83120,
+  "after": 0
+ },
+ "bank": {
+  "count": 60,
+  "at": 1794438919417
+ },
+ "logout": {
+  "attemptId": "1794438910936-0000002111-0000000001",
+  "at": 1794438929230,
+  "sha256": "19168d79a5506c23c795ef2610f16e96b0b1e255851068ae16bcb915bfb6e53f"
+ },
+ "screen": true
+}
