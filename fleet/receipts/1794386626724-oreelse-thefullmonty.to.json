@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794386626724-oreelse-thefullmonty",
+ "account": "TheFullMonty",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "a65b157d-e33a-4e2f-b44b-cade2eb999a3",
+ "count": 0,
+ "ok": false,
+ "at": 1794386631555,
+ "detail": "trade claimed"
+}

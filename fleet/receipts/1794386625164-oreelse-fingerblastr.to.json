@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794386625164-oreelse-fingerblastr",
+ "account": "Fingerblastr",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "9e6dc285-3e7e-4b54-a74e-118627bf54d6",
+ "count": 1,
+ "ok": true,
+ "at": 1794386659960,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794386658775
+ },
+ "logout": {
+  "attemptId": "1794386628808-0000006716-0000000001",
+  "at": 1794386659953,
+  "sha256": "2b3e98f1dd6663ef2e9cbfe141f6c614637668bb6c4353f1730016a4a0dd7c05"
+ },
+ "screen": true
+}
