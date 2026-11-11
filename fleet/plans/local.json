@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794397238476,
+ "at": 1794397526794,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -136,28 +136,6 @@
    "role": "pk-trainee"
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "catherby"
-   ],
-   "env": {
-    "ITEMS": "rune arrowtips|adamant arrowtips",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy rune and adamant arrowtips at Catherby",
-   "role": "bank",
-   "template": "shop-arrowtips",
-   "autopilot": "local",
-   "resources": [
-    "shop:catherby"
-   ]
-  },
-  {
    "account": "Masterbaiter",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -224,6 +202,28 @@
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby"
+   ],
+   "env": {
+    "ITEMS": "rune arrowtips|adamant arrowtips",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy rune and adamant arrowtips at Catherby",
+   "role": "bank",
+   "template": "shop-arrowtips",
+   "autopilot": "local",
+   "resources": [
+    "shop:catherby"
    ]
   },
   {
