@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794396152235,
+ "at": 1794397238476,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -134,6 +134,28 @@
    "repeat": true,
    "goal": "Strength 30 on chickens so it can hit hard enough to PK",
    "role": "pk-trainee"
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby"
+   ],
+   "env": {
+    "ITEMS": "rune arrowtips|adamant arrowtips",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy rune and adamant arrowtips at Catherby",
+   "role": "bank",
+   "template": "shop-arrowtips",
+   "autopilot": "local",
+   "resources": [
+    "shop:catherby"
+   ]
   },
   {
    "account": "Masterbaiter",
@@ -550,19 +572,6 @@
    "repeat": false,
    "goal": "run-shop-shaftmaker-blood776 [task-3b17c555-4ada-429f-9541-502cac93df38]",
    "role": "pk"
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-6016f8b8-ee85-4eb9-98ff-d3ae4fce59b5"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-mmtha0205-orphan-current [task-6016f8b8-ee85-4eb9-98ff-d3ae4fce59b5]",
-   "role": "bank"
   },
   {
    "account": "Bigchopper",
