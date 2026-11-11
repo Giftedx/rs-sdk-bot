@@ -658,7 +658,7 @@ test('with no fire on the market the alchemy kit buys its other lines, then the 
     const shop = pick(held)!;
     expect(shop.template!.id).toBe('army-staff-zaff');
     expect(jobFor(shop, side)).toMatchObject({ script: 'scripts/shop-buyer.ts', args: ['zaff', '3000'], repeat: true, resources: ['shop:zaff'],
-        env: { ITEMS: 'staff of fire', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', NO_BUY_TICKS: '200' } });
+        env: { ITEMS: 'staff of fire', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', NO_BUY_TICKS: '1100' } });
     expect(pick({ ...held, 'fire rune': 249 })!.template!.id).toBe('army-staff-zaff');
     expect(pick({ ...held, 'staff of fire': 1 })!.template!.id).toBe('army-alch-magic-99');
     expect(pick({ ...held, 'mystic fire staff': 1 })!.template!.id).toBe('army-alch-magic-99');

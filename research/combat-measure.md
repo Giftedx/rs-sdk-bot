@@ -482,6 +482,13 @@ TrouserSnake and UnderMyKilt hold about 15,000 feathers and 1,500-1,700 bones ea
   Claude cloud container that ran them; `packages/planner/test/autopilot.test.ts` (the kit buy leaves the fire line
   to the shop job; the job's needs). **Gap.** Practice only. Zaff's shelf serves one account per 1,000 ticks once its
   2 staffs are sold; the Magic Guild's 2 are not in the planner.
+- **Claim.** On an empty shelf the shop run waits for the staff to come back (`NO_BUY_TICKS=1100`, `STALL_TICKS=0`).
+  **Conditions.** Practice, three accounts at once from Ardougne on a shelf of 2. Two bought on arrival (713 ticks
+  each). The third logged `SHOP_NONE` with a count of 0, stood 255 ticks at the shop and bought the staff that came
+  back: `RESULT ok`, `boughtTotal=1`, 969 ticks. **Evidence.** `.practice/staff/` `w1`-`w3` in the Claude cloud
+  container that ran them. Live claude-cloud, with a 200-tick wait: UnderMyKilt ended ok with `boughtTotal=0` after
+  799 ticks. **Gap.** A wait of the full 1,000 ticks is not practised; the session's idle guard ends a wait at 900
+  ticks unless `STALL_TICKS=0`.
 
 ## 1. Melee, no cannon
 
