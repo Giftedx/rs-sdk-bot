@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794372164003-shaftmaker-knightrider-staffoffire",
  "account": "KnightRider",
  "partner": "Shaftmaker",
@@ -10,8 +10,21 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "f027619d-efb4-4eff-a1b8-d2ec9376ac74",
- "count": 0,
- "ok": false,
- "at": 1794372168919,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794372205616,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794372204848
+ },
+ "logout": {
+  "attemptId": "1794372168921-0000007378-0000000001",
+  "at": 1794372205609,
+  "sha256": "25ebea84af1ee0e4547a109e0bc0ce0f775571728c8a275649f4e4514c4a629d"
+ }
 }
