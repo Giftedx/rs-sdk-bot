@@ -156,6 +156,11 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     // the tick the state last showed the fight. A prayer button clears the fight like each interaction, and the game
     // starts it again only at the NPC's next hit. The guard sends this attack after its prayer inputs.
     let retaliate: { action: Action; at: number } | null = null, walkAt = -Infinity, stillSince = 0;
+    // Outside a multi-combat area the engine refuses an attack on an NPC while another NPC has hit the player in the
+    // last 8 ticks: "I'm already under attack!" (skill_combat/scripts/player/player_combat.rs2:118). The game then
+    // fights the attacker by auto-retaliate. After that message the attack the guard sends again goes to the
+    // attacker, not to the script's refused target, until the script sends its next input or the attacker is gone.
+    let refusedSeen = -1, attackerIndex: number | null = null;
     // Ticks of the last two hits the player dealt, for the tick of the next one.
     let swingAt = -Infinity, swingBefore = -Infinity;
 
@@ -223,8 +228,9 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
     let why = '', tracedLevels = '', tracedMessage = -1, tracedView = '';
     const toggle = (prayerIndex: number) => { o.trace?.(`GUARD t=${s.tick()} prayer=${prayerIndex} ${why}`); send({ type: 'togglePrayer', prayerIndex, reason: 'SDK' }); };
     const fights = (now: number): boolean => pending.kind === 'attack' || (pending.kind === 'none' && !!retaliate && now - retaliate.at <= 1);
+    const gameFight = (now: number): boolean => !!retaliate && now - retaliate.at <= 1 && (pending.kind === 'none' || (pending.kind === 'attack' && attackerIndex !== null));
     const resend = (st: any) => {
-        if (pending.kind === 'none' && retaliate && s.tick() - retaliate.at <= 1) {
+        if (gameFight(s.tick()) && retaliate) {
             const n = (st?.nearbyNpcs ?? []).find((n: any) => n.index === retaliate!.action.npcIndex);
             if (n && n.hp !== 0) { send({ ...retaliate.action }); stats.resends++; }
             return;
@@ -310,6 +316,7 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         const attack = (a.type === 'interactNpc' || a.type === 'interactPlayer') && attackTarget(a, s.sdk.getState());
         beforeInput(a, attack);
         inputs++;
+        attackerIndex = null;
         if (a.type === 'walkTo') { pending = { kind: 'none' }; walkAt = now; retaliate = null; return; }
         // `attack` also holds a mining or woodcutting click: the guard sends it again after its prayer inputs.
         if (attack || skillTarget(a, s.sdk.getState())) { pending = { kind: 'attack', action: { ...a } }; return; }
@@ -393,13 +400,28 @@ export function startPrayerGuard(s: GuardSession, o: PrayerGuardOptions = {}) {
         }
         stillSince = tile === lastTile ? stillSince : now;
         lastTile = tile;
-        // An auto-retaliate fight: the player targets an NPC that targets the player, the script has no action of
-        // its own, and the player has not walked on a script input in the last 3 ticks.
-        if (pending.kind === 'none' && st.autoRetaliateEnabled !== false && p.combat?.targetType === 'npc' && now - walkAt > 3) {
-            const self = (s.client as any)?.selfSlot;
-            const n = (st.nearbyNpcs ?? []).find((n: any) => n.index === p.combat.targetIndex);
+        // The NPC that attacks the player, and the game's refusal of an attack on another NPC.
+        const selfSlot = (s.client as any)?.selfSlot;
+        const attackOf = (n: any): Action | null => {
             const op = n?.optionsWithIndex?.find((op: any) => /^Attack$/i.test(op.text));
-            if (n && op && n.hp !== 0 && Number.isSafeInteger(self) && n.targetIndex === 32768 + self) retaliate = { action: { type: 'interactNpc', npcIndex: n.index, optionIndex: op.opIndex, reason: 'SDK' }, at: now };
+            return n && op && n.hp !== 0 && Number.isSafeInteger(selfSlot) && n.targetIndex === 32768 + selfSlot ? { type: 'interactNpc', npcIndex: n.index, optionIndex: op.opIndex, reason: 'SDK' } : null;
+        };
+        let refused = false;
+        for (const m of st.gameMessages ?? []) if ((m.tick ?? -1) > refusedSeen && /^I'm already under attack/.test(m.text ?? '')) refused = true;
+        for (const m of st.gameMessages ?? []) refusedSeen = Math.max(refusedSeen, m.tick ?? -1);
+        if (pending.kind === 'attack' && pending.action.type === 'interactNpc') {
+            if (refused && attackerIndex === null) {
+                const other = (st.nearbyNpcs ?? []).find((n: any) => n.index !== pending.action.npcIndex && attackOf(n));
+                if (other) attackerIndex = other.index;
+            }
+            const attack = attackerIndex === null ? null : attackOf((st.nearbyNpcs ?? []).find((n: any) => n.index === attackerIndex));
+            if (attack) retaliate = { action: attack, at: now };
+            else { attackerIndex = null; retaliate = null; }
+        } else if (pending.kind === 'none' && st.autoRetaliateEnabled !== false && p.combat?.targetType === 'npc' && now - walkAt > 3) {
+            // An auto-retaliate fight: the player targets an NPC that targets the player, the script has no action
+            // of its own, and the player has not walked on a script input in the last 3 ticks.
+            const attack = attackOf((st.nearbyNpcs ?? []).find((n: any) => n.index === p.combat.targetIndex));
+            if (attack) retaliate = { action: attack, at: now };
         } else if (pending.kind !== 'none') retaliate = null;
 
         // The state shows a prayer one tick after the server turned it on.

@@ -10,7 +10,7 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
     let tick = 0, timer: number | null = active.some(Boolean) ? 5 : null;
     const w = {
         active, drains: 0, toggles: 0, windowsClosed: 0, cleared: 0, window: false, anim: -1,
-        interaction: null as string | null, most: 0, x: 3200, locs: [] as any[], dialog: { isOpen: false } as any, said: [] as any[], pack: [] as { id: number; count: number }[], z: 3200, combat: 50, players: [] as any[], npcs: [] as any[], events: [] as any[], offSeen: 0,
+        interaction: null as string | null, most: 0, aggressor: null as number | null, refused: 0, fought: 0, messages: [] as any[], x: 3200, locs: [] as any[], dialog: { isOpen: false } as any, said: [] as any[], pack: [] as { id: number; count: number }[], z: 3200, combat: 50, players: [] as any[], npcs: [] as any[], events: [] as any[], offSeen: 0,
     };
     const inbox: any[] = [];
     const listeners = new Set<() => void>();
@@ -18,7 +18,7 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
     const state = () => ({
         player: { worldX: w.x, worldZ: w.z, level: 0, animId: w.anim, isDead: false, combatLevel: w.combat, combat: w.interaction?.startsWith('interactNpc:') ? { inCombat: true, targetType: 'npc', targetIndex: Number(w.interaction.split(':')[1]) } : { inCombat: false, targetType: 'none', targetIndex: -1 } },
         prayers: { activePrayers: [...active], prayerPoints: init.points ?? 50, prayerLevel: init.level ?? 50 },
-        nearbyNpcs: w.npcs, nearbyPlayers: w.players, nearbyLocs: w.locs, inventory: w.pack, combatEvents: w.events, modalOpen: w.window,
+        nearbyNpcs: w.npcs, nearbyPlayers: w.players, gameMessages: w.messages, nearbyLocs: w.locs, inventory: w.pack, combatEvents: w.events, modalOpen: w.window,
         dialog: w.dialog, recentDialogs: w.said, interface: { isOpen: false }, bank: { isOpen: false }, shop: { isOpen: false },
     });
     let published = state();
@@ -40,8 +40,14 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
                     // A prayer turns the others of its group off (prayer.rs2:52, prayer_deactivate_conflicting).
                     if (active[a.prayerIndex]) for (const group of [[0, 3, 9], [1, 4, 10], [2, 5, 11], [12, 13, 14]]) if (group.includes(a.prayerIndex)) for (const i of group) if (i !== a.prayerIndex) active[i] = false;
                     if (active[a.prayerIndex]) { if (timer === null) timer = 5; } else if (!active.some(Boolean)) timer = null;
+                } else if (a.type === 'interactNpc' && w.aggressor !== null && a.npcIndex !== w.aggressor) {
+                    // skill_combat/scripts/player/player_combat.rs2:118
+                    w.refused++; w.messages.push({ tick: tick + 1, text: "I'm already under attack!" });
                 } else if (a.type === 'interactNpc' || a.type === 'interactLoc') w.interaction = `${a.type}:${a.npcIndex ?? a.locId}`;
             }
+            // The aggressor hits each 4 ticks, and auto-retaliate then fights it.
+            if (w.aggressor !== null && tick % 4 === 0 && w.interaction === null) w.interaction = `interactNpc:${w.aggressor}`;
+            if (w.interaction === `interactNpc:${w.aggressor}`) w.fought++;
             if (timer !== null && --timer === 0) { w.drains++; timer = 5; }
             tick++;
             published = state();
@@ -824,4 +830,26 @@ test('an NPC whose spell binds: magic protection next to it too', () => {
     w.npcs = [{ ...cow(32768 + 7), id: 54, distance: 1, size: 1 }];
     advance(6);
     expect(on(w)).toEqual([PROTECT.melee]);
+});
+
+test('another NPC attacks during the script fight: the guard sends the attack on the attacker, not on the refused target', () => {
+    const { w, s, client, advance } = world({ level: 45 });
+    const other = { ...cow(32768 + 7), index: 9 };
+    w.npcs = [cow(-1), other];
+    startPrayerGuard(s, { offence: true });
+    advance(2);
+    client.executeBotAction({ type: 'interactNpc', npcIndex: 3, optionIndex: 2 });
+    advance(3);
+    // NPC 9 attacks: the game refuses each attack on NPC 3 from now on.
+    w.aggressor = 9;
+    w.interaction = null;
+    const before = w.fought;
+    advance(100);
+    expect(w.refused).toBeLessThanOrEqual(2);
+    expect(w.fought - before).toBeGreaterThanOrEqual(90);
+    expect(w.drains).toBe(0);
+    // The attacker dies and the script attacks NPC 3 again: the guard follows the script.
+    w.aggressor = null; w.npcs = [cow(32768 + 7)];
+    client.executeBotAction({ type: 'interactNpc', npcIndex: 3, optionIndex: 2 });
+    for (let i = 0; i < 30; i++) { advance(); expect(w.interaction).toBe('interactNpc:3'); }
 });
