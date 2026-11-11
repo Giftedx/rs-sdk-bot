@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794399311812-undermykilt-knightstick-feather",
  "account": "UnderMyKilt",
  "partner": "Knightstick",
@@ -10,8 +10,22 @@
  "item": "Feather",
  "requested": 50,
  "claim": "3cd36d2b-bb00-49cf-bdd9-724ee41b0801",
- "count": 0,
- "ok": false,
- "at": 1794399315552,
- "detail": "trade claimed"
+ "count": 50,
+ "ok": true,
+ "at": 1794399546636,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 50,
+  "after": 0
+ },
+ "bank": {
+  "count": 50,
+  "at": 1794399537893
+ },
+ "logout": {
+  "attemptId": "1794399315556-0000014756-0000000001",
+  "at": 1794399546629,
+  "sha256": "3bf1306a95b3b843409be44cc5802012ab98ac4400541a5313782e78dda8247f"
+ },
+ "screen": true
 }
