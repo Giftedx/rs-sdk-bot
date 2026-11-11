@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794398331237,
+ "at": 1794398477553,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -559,7 +559,7 @@
     "CAP": "6000",
     "COORDINATOR_RUN_ID": "task-ccd6a6a9-b7b8-43d1-9b5d-0a017e6d276e"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-scorpion-bigchopper-quest-sweep-r4 [task-ccd6a6a9-b7b8-43d1-9b5d-0a017e6d276e]",
    "role": "firemaking"
@@ -583,7 +583,7 @@
     "BANK_PACK": "1",
     "COORDINATOR_RUN_ID": "task-da2a1a51-9beb-431d-9792-1283f17b15aa"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-shop-shaftmaker-blood624-restock [task-da2a1a51-9beb-431d-9792-1283f17b15aa]",
    "role": "pk"
