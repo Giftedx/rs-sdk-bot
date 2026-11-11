@@ -611,3 +611,20 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     the snare trip when the bank holds all of `SNARE_TRIP`, else the staff trip (`pickTrip` in
     `scripts/pk-hunt.ts`). `extra:hunt-trip-auto` has the snare stock and passes with `HUNT trip snare` in 29 s.
     Gap: no live run.
+32. **Against an opponent that reads our overhead, its next attack is the style our overhead does not show.** The fight
+    loop does not attack with a style the opponent's overhead covers. An opponent with two styles then has one left.
+    `counterRead` predicts that style for an opponent that has shown two styles, and the overhead changes to it one
+    tick before the attack. The champion with it has 33 kills and 3 deaths in 36 spars against the champion without it
+    (10 to 2, 12 to 0, 11 to 1; `extra:spar-mirror-snare-x12`, seeds 1 to 3, `SPAR_SWAP=1`), where the control has
+    13 and 11 in 24. Against the melee build, the hybrid and the ranger it has 23 kills and 1 death in 24 spars
+    (`extra:spar-rivals-tribrid-snare-x12`, seeds 1 and 2), where the champion without it has 55 and 17 in 72;
+    against the league, 16 and 0. The champion profile and the hunter use it. Gap: every bench opponent reads the
+    overhead; against one that ignores it and picks at random the rule guards half of its attacks.
+33. **Our own attack has the same hole, and the first answer costs more than it gives.** `adaptStyles` attacks with the
+    style the opponent's overhead shows once 4 of our last 6 attacks met the right overhead. With `counterRead` on
+    both sides it has 16 kills and 8 deaths in 24 spars, where the control has 4 and 8 in 12. Against the champion
+    without `counterRead` it has 7 kills and 5 deaths in 12, where `counterRead` alone has 33 and 3 in 36: an
+    overhead that follows the weapon also meets 4 of 6 by chance, and the rule then attacks into it. It is off.
+    Other rules against the champion, 12 spars each: the bow alone 2 to 10; the bow alone from 3 tiles 4 to 8; the
+    special from 30% health 7 to 5; the special as soon as it is ready 5 to 7. Gap: a style choice that a
+    counter-reader cannot predict and that does not attack into a following overhead.

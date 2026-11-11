@@ -204,7 +204,7 @@ export async function hunt(s: Session, o: HuntOptions) {
                 // The freeze goes out when the target runs: cast whenever the target was free, it lost a stand-up spar (2 wins,
                 // 4 losses), and a hunter with it killed no more runners (research/pvp-fight-loop.md).
                 // The overhead changes one tick before the target's next attack: 42 kills to 6 in mirror spars against 24 to 24.
-                kit, spec: defaultSpec(kit), freeze: castableFreeze(magicLevel, state.inventory) !== null ? 'flee' : false, exitOnDanger: true, predictPrayer: true, snapPrayer: true,
+                kit, spec: defaultSpec(kit), freeze: castableFreeze(magicLevel, state.inventory) !== null ? 'flee' : false, exitOnDanger: true, predictPrayer: true, snapPrayer: true, counterRead: true,
                 escapeAt: o.escapeAt, escapeSpell: o.teleSpell, cap: 900, damageSpell: o.damageSpell, stop: over, log,
                 // A stand-up fight with bow and dagger only: a spell takes 5 ticks, the bow 3 and the dagger 4. Magic stays
                 // for the freeze. Random styles: an overhead that predicts cannot follow them.

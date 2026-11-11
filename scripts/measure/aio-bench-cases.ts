@@ -332,6 +332,8 @@ const ROUTE_CASES: BenchCase[] = [
   // The league: our fighter (the tribrid with potions, side A, profile SPAR_A) against eight opponents that each have
   // their own build and their own way to play (LEAGUE). A fighter is ready for a skilled player when it beats them all.
   sparMatrix('extra:spar-league-x8', LEAGUE.map(o => ['tribrid-pots', o.kit] as const), [`SPAR_B_PROFILES=${LEAGUE.map(o => o.profile).join(',')}`]),
+  // The champion against itself in the snare kit: the hardest opponent on the bench. Use SPAR_SWAP=1.
+  sparMatrix('extra:spar-mirror-snare-x12', Array.from({length: 12}, () => ['tribrid-snare', 'tribrid-snare'] as const)),
   sparMatrix('extra:spar-league-snare-x8', LEAGUE.map(o => ['tribrid-snare', o.kit] as const), [`SPAR_B_PROFILES=${LEAGUE.map(o => o.profile).join(',')}`]),
   // The league for a fighter with three more sharks and no freeze runes.
   // The builds that beat the tribrid on food: four spars each against the melee build, the hybrid and the ranger.

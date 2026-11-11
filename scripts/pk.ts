@@ -85,6 +85,12 @@ export type FightOptions = {
     // style only snapLead ticks (default 1) before its next attack is due. The opponent chooses its style from the
     // overhead it saw the tick before, so a change that late arrives with its hit and it cannot go round it.
     snapPrayer?: boolean;
+    // counterRead: with predictPrayer, against an opponent that has shown two styles, predict the style our overhead
+    // does not show now (see the loop). Off by default.
+    counterRead?: boolean;
+    // adaptStyles: when the opponent's overhead meets most of our attacks, attack with the style its overhead shows
+    // (see the loop). Off by default.
+    adaptStyles?: boolean;
     snapLead?: number;
     // styleByArmour: among the styles the opponent does not protect against, attack with the one its worn armour is
     // weakest to (the content's defence bonuses), in place of the fixed order.
@@ -398,6 +404,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     let oppStyle: Style | null = null, oppChangedAt = start, earlyFreezes = 0;
     const rand = o.mixSeed === undefined ? Math.random : seededRandom(o.mixSeed);
     let charged = false, chargeAt = -10, stepAt = -10, flickAt = start, lastSpecStyle: Style | null = null;
+    let lastStyle: Style | null = null;
+    const guardLog: boolean[] = [];
     const splatSeen: { cycles: number[] | null } = { cycles: null };
     let prevTarget: { x: number; z: number } | null = null, prevGap = 0, fleeingUntil = start, heading = { x: 0, z: 0 }, chaseAt = -10, fled = false;
     const hits: { tick: number; damage: number; src: number }[] = [], dealtLog: { tick: number; damage: number }[] = [];
@@ -600,7 +608,12 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         }
         // An opponent that changes weapon attacks in the tick of the change, so its next attack is one attack delay later.
         const oppDue = oppChangedAt + (oppStyle === 'magic' ? 5 : oppStyle === 'ranged' ? 3 : 4);
-        const predicted = o.predictPrayer && !hitter && (!o.snapPrayer || now >= oppDue - (o.snapLead ?? 1)) ? predictor.predict() : null;
+        // counterRead: an opponent that reads our overhead does not attack with the style it covers. One that has shown
+        // two styles then has one left, so its next attack is the style our overhead does not show now.
+        const shownGuard: Style | null = prayers.activePrayers[PRAYER.melee] ? 'melee' : prayers.activePrayers[PRAYER.missiles] ? 'ranged' : prayers.activePrayers[PRAYER.magic] ? 'magic' : null;
+        const left = [...predictor.seen()].filter(st => st !== shownGuard);
+        const countered = o.counterRead && shownGuard && predictor.seen().size === 2 && left.length === 1 ? left[0]! : null;
+        const predicted = o.predictPrayer && !hitter && (!o.snapPrayer || now >= oppDue - (o.snapLead ?? 1)) ? countered ?? predictor.predict() : null;
         const overhead = hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : predicted ? PROTECT_FROM[predicted] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
         // An opponent that only has melee: hold it and stay out of its reach.
         // Only with a freeze that the carried runes can cast: with none, the loop would spend turns on a spell that
@@ -621,7 +634,13 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const rotationTurn = nextStyle(turns, last, st => styleUsable(st) && !guarded.has(st)) ?? nextStyle(turns, last, styleUsable) ?? nextStyle(turns, last, st => hasStyle(o.kit, st));
         // The styles open now: usable and not under the opponent's overhead.
         const open = [...new Set(turns)].filter(st => styleUsable(st) && !guarded.has(st));
-        const chosen = !open.length ? null
+        // adaptStyles: the tick after an attack shows the overhead it met. When 4 of the last 6 attacks met the right
+        // overhead, the opponent predicts the style we move to; the next attack then uses the style its overhead
+        // shows now, which it is about to leave.
+        if (lastStyle && now === lastAttackAt + 1) guardLog.push(protectedStyles(seen?.headicons).has(lastStyle));
+        const caught = !!o.adaptStyles && guardLog.length >= 6 && guardLog.slice(-6).filter(Boolean).length >= 4;
+        const shownStyle = caught ? [...protectedStyles(seen?.headicons)].find(st => turns.includes(st) && styleUsable(st)) : undefined;
+        const chosen = shownStyle ? shownStyle : !open.length ? null
             : o.styleByArmour && seen ? weakestFirst(armourDefence(seen.worn.map(id => names.get(id) ?? ''))).find(st => open.includes(st)) ?? null
             : o.mixStyles ? open[Math.floor(rand() * open.length)]! : null;
         const upcomingTurn = chosen ? { style: chosen, index: Math.max(0, turns.indexOf(chosen)) } : rotationTurn;
@@ -817,6 +836,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             }
         } else void sdk.sendInteractPlayer(target.index, 2);
         result.attacks[turn.style]++;
+        lastStyle = turn.style;
         last = turn.index;
         const walkTicks = turn.style === 'melee' ? ((me.runEnergy ?? 100) >= 100 ? Math.ceil(Math.max(0, cheb(at, target) - 1) / 2) : Math.max(0, cheb(at, target) - 1)) : 0;
         const delay = turn.style === 'ranged' && rapidSet ? 3 : turn.style === 'melee' ? meleeWeaponDelay(o.kit.melee, names) : TURN[turn.style];
