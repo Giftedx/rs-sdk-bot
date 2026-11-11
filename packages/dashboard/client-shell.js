@@ -444,19 +444,43 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // The ball is 26 rows high from row 4. A value above zero shows one row or more.
     const top=frac>0?Math.min(29,4+Math.round(26*(1-frac))):30;g.drawImage(a.empty,ox,0);if(top<30)g.drawImage(a.full,0,top,34,34-top,ox,top,34,34-top);
   }
+  // A disc of whole pixels: each row is as wide as the circle at the row's centre. With no colour it clears the pixels.
+  const disc=(g,cx,cy,r,col)=>{if(col)g.fillStyle=col;for(let y=Math.floor(cy-r);y<=Math.ceil(cy+r);y++){const h=r*r-(y+0.5-cy)*(y+0.5-cy);if(h<0)continue;const w=Math.sqrt(h),x0=Math.ceil(cx-w-0.5),x1=Math.floor(cx+w-0.5);if(x1<x0)continue;if(col)g.fillRect(x0,y,x1-x0+1,1);else g.clearRect(x0,y,x1-x0+1,1);}};
   // The XP button has the ring of the orbs, drawn from pixels.
   {
     const c=document.createElement('canvas'),g=c.getContext('2d');c.width=c.height=27;
-    for(const [r,col] of [[13.4,STONE.edge],[12.4,STONE.light],[11.4,STONE.mid],[9.4,STONE.edge],[8.4,STONE.well]]){g.fillStyle=col;for(let y=0;y<27;y++){const h=r*r-(y-13)*(y-13);if(h>=0){const w=Math.floor(Math.sqrt(h));g.fillRect(13-w,y,2*w+1,1);}}}
+    for(const [r,col] of [[13.4,STONE.edge],[12.4,STONE.light],[11.4,STONE.mid],[9.4,STONE.edge],[8.4,STONE.well]])disc(g,13.5,13.5,r,col);
     hud.querySelector('.game-xp').style.backgroundImage=`url(${c.toDataURL()})`;
   }
-  // The minimap frame is the game's own art: the top-right corner of the 2004 screen frame (back.png, the 249 by 168
-  // pixels to the right of the viewport) with the minimap stone (mapback.png) in its hole at (34, 4). Magenta is the
-  // sprites' clear colour: the map and the compass show through the two holes of the stone.
+  // The minimap frame is the game's own art, cut free of the stone wall: the two carved dragons round the map, from the
+  // top-right corner of the 2004 screen frame (back.png, the 249 by 168 pixels to the right of the viewport) with the
+  // minimap stone (mapback.png) in its hole at (34, 4). Magenta is the sprites' clear colour: the map and the compass
+  // show through the two holes. The cut follows the art's own dark outline: the carving is every pixel that a fill
+  // from the hole edges reaches before it meets the outline (luma under 40), with the outline round it; the wall
+  // outside that goes clear. The compass gets the stone ring of the orbs, because the wall held its socket.
   {
-    const c=hud.querySelector('canvas.minimap-frame'),g=c.getContext('2d'),art=['back.png','mapback.png'].map(n=>{const i=new Image();i.src=asset(n);return i;});
-    const paint=()=>{if(!art.every(i=>i.complete&&i.naturalWidth))return;g.clearRect(0,0,249,168);g.drawImage(art[0],516,0,249,168,0,0,249,168);g.drawImage(art[1],34,4);const d=g.getImageData(0,0,249,168),p=d.data;for(let i=0;i<p.length;i+=4)if(p[i]===255&&!p[i+1]&&p[i+2]===255)p[i+3]=0;g.putImageData(d,0,0);};
-    for(const i of art)i.addEventListener('load',paint);paint();
+    const box=hud.querySelector('.game-minimap'),c=box.querySelector('canvas.minimap-frame'),g=c.getContext('2d'),W=249,H=168,N=W*H,art=['back.png','mapback.png'].map(n=>{const i=new Image();i.src=asset(n);return i;});
+    const paint=()=>{if(!art.every(i=>i.complete&&i.naturalWidth))return;g.clearRect(0,0,W,H);g.drawImage(art[0],516,0,W,H,0,0,W,H);g.drawImage(art[1],34,4);
+      const d=g.getImageData(0,0,W,H),p=d.data,hole=new Uint8Array(N),dark=new Uint8Array(N);
+      for(let i=0;i<N;i++){const r=p[i*4],gr=p[i*4+1],b=p[i*4+2];if(r===255&&!gr&&b===255)hole[i]=1;else if(Math.floor((r*30+gr*59+b*11)/100)<40)dark[i]=1;}
+      // A fill over 4 neighbours from the seeds, through the pixels that pass.
+      const fill=(seeds,pass)=>{const seen=new Uint8Array(N);while(seeds.length){const i=seeds.pop();if(seen[i]||!pass(i))continue;seen[i]=1;const x=i%W;if(x>0)seeds.push(i-1);if(x<W-1)seeds.push(i+1);if(i>=W)seeds.push(i-W);if(i<N-W)seeds.push(i+W);}return seen;};
+      const beside=(i,set)=>{const x=i%W;return (x>0&&set[i-1])||(x<W-1&&set[i+1])||(i>=W&&set[i-W])||(i<N-W&&set[i+W]);};
+      const rim=[];for(let i=0;i<N;i++)if(!hole[i]&&beside(i,hole))rim.push(i);
+      const body=fill(rim,i=>!hole[i]&&!dark[i]),carving=new Uint8Array(N);
+      for(let i=0;i<N;i++){if(hole[i])continue;const x=i%W,y=i/W|0;for(let b=-1;b<=1&&!carving[i];b++)for(let a=-1;a<=1;a++){const xx=x+a,yy=y+b;if(xx>=0&&xx<W&&yy>=0&&yy<H&&body[yy*W+xx]){carving[i]=1;break;}}}
+      const border=[];for(let x=0;x<W;x++)border.push(x,N-W+x);for(let y=0;y<H;y++)border.push(y*W,y*W+W-1);
+      const wall=fill(border,i=>!hole[i]&&!carving[i]);
+      // Under the two heads the stone goes on to the edge of the art: the cut ends it at row 162.
+      for(let i=0;i<N;i++)if(hole[i]||wall[i]||(i>=163*W&&i%W>=85&&i%W<=155))p[i*4+3]=0;
+      g.putImageData(d,0,0);
+      for(const [r,col] of [[20.5,STONE.edge],[19.5,STONE.light],[18.5,STONE.mid],[17,STONE.edge],[16,null]])disc(g,50.5,20.5,r,col);
+      // The map canvas keeps only the pixels of the map hole (the hole that holds the centre of the map).
+      const inMap=fill([84*W+132],i=>hole[i]),m=document.createElement('canvas'),mg=m.getContext('2d');m.width=146;m.height=151;const md=mg.createImageData(146,151);
+      for(let y=0;y<151;y++)for(let x=0;x<146;x++)if(inMap[(y+9)*W+x+59])md.data[(y*146+x)*4+3]=255;
+      mg.putImageData(md,0,0);minimap.hole=m;box.classList.add('ready');minimap();};
+    // The first try waits for the rest of this script, because the cut draws the minimap.
+    for(const i of art)i.addEventListener('load',paint);setTimeout(paint);
   }
   // The minimap: the 2D map art around the observed account at 4 px a tile (the wheel changes that from 2 to 8),
   // every bot a dot, the observed one a white square in the centre. With no account it shows the whole known world.
@@ -473,7 +497,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const c3=typeof mode!=='undefined'&&mode==='3d'&&window.atlasCam3d&&$('#rsw')?.getAttribute('src')?window.atlasCam3d:null,p=c3&&(!bp||window.atlasFreeCamera||window.atlasFollowOther)?{x:c3.x,z:c3.z}:bp,angle=c3?(2047-c3.yaw)*Math.PI/1024:0;
     const D=minimap,PX=p?D.zoom||4:Math.min(W/(m.w*m.scale),H/(m.h*m.scale)),cx=p?p.x:m.x0+m.w*m.scale/2,cz=p?p.z:m.z0+m.h*m.scale/2;miniView={cx,cz,PX,angle};
     const compass=hud.querySelector('.minimap-compass');if(compass)compass.style.transform=angle?`rotate(${angle*180/Math.PI}deg)`:'';
-    // The art covers a square that holds the canvas at every angle; the stone frame hides what is outside its hole.
+    // The art covers a square that holds the canvas at every angle.
     const OX=W>>1,OY=H>>1,R=Math.ceil(Math.hypot(W,H)/2)+1,cos=Math.cos(angle),sin=Math.sin(angle);
     g.clearRect(0,0,W,H);g.fillStyle='#000';g.fillRect(0,0,W,H);g.save();g.translate(OX,OY);if(angle)g.rotate(angle);
     if(typeof MAPI!=='undefined'&&MAPI){const ppt=window.atlasMapPx||1/m.scale,span=2*R/PX*ppt,sx=(cx-m.x0+0.5)*ppt-span/2,sy=(m.z0+m.h*m.scale-cz-0.5)*ppt-span/2;g.imageSmoothingEnabled=!p||!!window.atlasMapPx;g.drawImage(MAPI,sx,sy,span,span,-R,-R,2*R,2*R);}
@@ -486,7 +510,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       g.fillStyle='#000';g.fillRect(x-2,y+1,4,1);g.fillRect(x-1,y+2,2,1);g.fillStyle=col;g.fillRect(x-1,y-2,2,4);g.fillRect(x-2,y-1,4,2);g.fillStyle=shade;g.fillRect(x+1,y-1,1,2);g.fillRect(x-1,y+1,2,1);};
     const fleetNames=new Set(markers.bots.map(o=>o.name.toLowerCase()));for(const [n,qx,qz] of markers.roster){const low=String(n).toLowerCase();if(fleetNames.has(low))continue;if(D.rival.has(low))dot(qx,qz,'#19b3ff','#0f84c4',n,2);else if(D.farm.has(low))dot(qx,qz,'#9a9a9a','#757575',n,2);else dot(qx,qz,'#fff','#d2d2d2',n,2);}
     for(const o of markers.bots){const q=o.live||o.pos;if(!q||(q.z>6400)!==(cz>6400)||o===b)continue;const[cl]=st(o);if(cl==='on')dot(q.x,q.z,'#2bff2b','#1fc21f',o.name,3);else dot(q.x,q.z,'#3d8a33','#2c6625',o.name,3);}
-    if(p){g.fillStyle='#fff';g.fillRect(OX-1,OY-2,3,3);}}
+    if(p){g.fillStyle='#fff';g.fillRect(OX-1,OY-2,3,3);}
+    // Only the pixels of the map hole stay: the frame is a cut-out, and it does not hide the rest of the square.
+    if(D.hole){g.globalCompositeOperation='destination-in';g.drawImage(D.hole,0,0);g.globalCompositeOperation='source-over';}}
   // A click on the minimap in 2D moves the camera to that tile (free camera); in 3D the view itself moves the camera.
   const miniCanvas=hud.querySelector('.game-minimap canvas'),miniAt=e=>{const r=miniCanvas.getBoundingClientRect(),x=(e.clientX-r.left)*miniCanvas.width/r.width,y=(e.clientY-r.top)*miniCanvas.height/r.height,v=miniView,dx=x-(miniCanvas.width>>1),dy=y-(miniCanvas.height>>1),cos=Math.cos(v.angle),sin=Math.sin(v.angle);return {x,y,tx:Math.round(v.cx+(dx*cos+dy*sin)/v.PX),tz:Math.round(v.cz-(dy*cos-dx*sin)/v.PX)};};
   miniCanvas?.addEventListener('click',e=>{if(typeof mode!=='undefined'&&mode==='3d'){toast('In 3D, drag the view to move the camera.');return;}const t=miniAt(e);window.atlasCamera.goto(t.tx,t.tz);});
@@ -497,8 +523,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   miniCanvas?.addEventListener('mousemove',e=>{const t=miniAt(e),tip=hud.querySelector('.game-tip'),names=[...new Set((minimap.hits||[]).filter(h=>Math.abs(h[0]-t.x)<=3&&Math.abs(h[1]-t.y)<=3).map(h=>safeName(h[2])))];
     tip.textContent=(names.length?names.slice(0,4).join(', ')+(names.length>4?' +'+(names.length-4):'')+' · ':'')+t.tx+', '+t.tz;tip.hidden=false;const h=hud.getBoundingClientRect();tip.style.left=Math.max(0,e.clientX-h.left-tip.offsetWidth-10)+'px';tip.style.top=(e.clientY-h.top+12)+'px';});
   miniCanvas?.addEventListener('mouseleave',()=>{hud.querySelector('.game-tip').hidden=true;});
-  // A narrow view has no room for the whole frame: the stone right of the minimap goes off the view, and the orbs move
-  // onto the stone with their plates (client-shell.css, hud-narrow).
+  // A narrow view has no room for the orbs beside the minimap: they go in a row under it, and the XP button goes to
+  // the top right of the ring (client-shell.css, hud-narrow).
   if(typeof ResizeObserver!=='undefined')new ResizeObserver(()=>hud.classList.toggle('hud-narrow',hud.clientWidth<500)).observe(hud);
   // XP drops (OSRS): each skill gain since the last observation floats up under the XP orb with its icon.
   let dropsFor=null,dropsXp={};
