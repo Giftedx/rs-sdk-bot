@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794398479242,
+ "at": 1794399041056,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -32,26 +32,22 @@
    "resources": []
   },
   {
-   "account": "Quickhandjob",
-   "script": "scripts/aio.ts",
+   "account": "Fingerblastr",
+   "script": "scripts/chain.ts",
    "args": [
-    "skiller",
-    "foraging",
-    "flax",
-    "1800",
-    "28"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit16-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
-   "env": {},
+   "env": {
+    "ROUNDS": "1"
+   },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "pick flax at Seers to spin for the Crafting a black dragonhide body asks",
-   "role": "crafting",
-   "template": "army-leather-flax",
+   "repeat": false,
+   "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on bronze arrows",
+   "role": "supply",
+   "template": "kit-buy:army-hunt-black-dragons-bronze",
    "autopilot": "claude-cloud",
-   "resources": [
-    "aio:seers-flax"
-   ]
+   "resources": []
   },
   {
    "account": "TheFullMonty",
@@ -123,24 +119,6 @@
    ]
   },
   {
-   "account": "Fingerblastr",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit16-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on bronze arrows",
-   "role": "supply",
-   "template": "kit-buy:army-hunt-black-dragons-bronze",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
    "account": "Kiltlifter",
    "script": "scripts/chain.ts",
    "args": [
@@ -209,6 +187,23 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-magic-99",
+   "autopilot": "claude-cloud",
+   "resources": []
   }
  ]
 }
