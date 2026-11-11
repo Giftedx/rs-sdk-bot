@@ -1,26 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794385366391,
+ "at": 1794385431206,
  "jobs": [
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=97 EXPECTED_OWNED=53 LIMIT_PRICE=200 CASH_RESERVE=1000 ORDER_KEY=kiltlifter-kit9-559-53to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=291 EXPECTED_OWNED=134 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=kiltlifter-kit9-557-134to425 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 97 Body rune, 291 Earth rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
   {
    "account": "Fingersmith",
    "script": "scripts/chain.ts",
@@ -36,6 +17,25 @@
    "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones",
    "role": "supply",
    "template": "kit-buy:army-hunt-black-dragons",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=97 EXPECTED_OWNED=53 LIMIT_PRICE=200 CASH_RESERVE=1000 ORDER_KEY=kiltlifter-kit10-559-53to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=291 EXPECTED_OWNED=134 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=kiltlifter-kit10-557-134to425 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 97 Body rune, 291 Earth rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "supply",
+   "template": "kit-buy:army-splash-magic-66",
    "autopilot": "claude-cloud",
    "resources": []
   },
@@ -129,7 +129,7 @@
    ]
   },
   {
-   "account": "Knightstick",
+   "account": "PocketPool",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
@@ -154,26 +154,26 @@
    ]
   },
   {
-   "account": "PocketPool",
-   "script": "scripts/chain.ts",
+   "account": "SporranDip",
+   "script": "scripts/alch-train.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=559 QUANTITY=125 EXPECTED_OWNED=25 LIMIT_PRICE=200 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit10-559-25to150 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=375 EXPECTED_OWNED=50 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit10-557-50to425 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "99",
+    "5000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ALCH_ITEM": "airrune"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy 125 Body rune, 375 Earth rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-air-magic-99",
    "autopilot": "claude-cloud",
    "resources": []
   },
   {
-   "account": "SporranDip",
+   "account": "Dipstick",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
@@ -196,6 +196,23 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-magic-99",
+   "autopilot": "claude-cloud",
+   "resources": []
   }
  ]
 }
