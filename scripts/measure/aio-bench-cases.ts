@@ -6,6 +6,8 @@ import {firemakingFixture} from '../../packages/practice/src/firemaking-order-pr
 import {agilityFixturePreset} from '../../packages/practice/src/agility-order-proof';
 import {KITS, kitItems, kitSkills, kitVarps} from '../pk-kits';
 
+// Food that a bot eats has one inventory entry for each piece. An entry with count 5 is one slot of 5, and the server
+// deletes the whole slot on an eat (consume_effects.rs2, inv_delslot).
 export type BenchCase = {
   key: string;
   // Environment for the engine of the case. It takes effect when the case has its own engine (a fresh-engine run).
@@ -62,7 +64,7 @@ export const BENCH_JOB_FILES: Record<string, unknown> = {
 const CHICKEN_FIXTURE: SaveConfig = {
   position: {x: 3092, z: 3247, level: 0},
   skills: {Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30},
-  inventory: [{id: 1277, count: 1}, {id: 315, count: 5}],
+  inventory: [{id: 1277, count: 1}, ...Array.from({length: 5}, () => ({id: 315, count: 1}))],
   bank: [{id: 1351, count: 1}],
 };
 
@@ -103,14 +105,26 @@ export const BUILD_BRACKETS: Readonly<Record<string, readonly string[]>> = {
 // stand in the order of the Defence, Hitpoints and food of their two builds: fights of about the same length share a
 // case.
 export const BUILD_CASE_PAIRS = 14;
-export const BUILD_PAIRS: readonly (readonly [string, string])[] = (() => {
+const buildPairs = (brackets: Readonly<Record<string, readonly string[]>>, known: ReadonlySet<string> = new Set()): readonly (readonly [string, string])[] => {
   const bulk = (kit: string) => { const s = kitSkills(kit); return s.Defence! + s.Hitpoints! + 4 * KITS[kit]!.food; };
   const pairs = new Map<string, [string, string]>();
-  for (const kits of Object.values(BUILD_BRACKETS)) kits.forEach((a, i) => kits.slice(i + 1).forEach(b => pairs.set([a, b].sort().join(':'), [a, b])));
+  for (const kits of Object.values(brackets)) kits.forEach((a, i) => kits.slice(i + 1).forEach(b => { const key = [a, b].sort().join(':'); if (!known.has(key)) pairs.set(key, [a, b]); }));
   return [...pairs.values()].sort((x, y) => bulk(x[0]) + bulk(x[1]) - bulk(y[0]) - bulk(y[1]) || x.join().localeCompare(y.join()))
     // Each build stands on side A in every second pair of the list.
     .map((pair, i) => (i % 2 ? [pair[1], pair[0]] as const : pair));
-})();
+};
+export const BUILD_PAIRS = buildPairs(BUILD_BRACKETS);
+// The second set of builds, each bracket with the best builds of the first set for a reference. A pair of two
+// reference builds is in BUILD_PAIRS already and has no place here. `low` holds the builds under combat 61, and `top`
+// the best two builds with a Defence level against the maxed tribrid of the army (combat 126), with and without
+// boost potions.
+export const BUILD_BRACKETS_2: Readonly<Record<string, readonly string[]>> = {
+  pure: ['pure-scim', 'pure-dlong', 'pure-knives', 'pure-pray31', 'pure-god', 'pure-pray', 'pure-dds-msb', 'pure-ranger'],
+  def: ['addy-pure', 'def50', 'tank-range', 'pure-max', 'dragon', 'zerker', 'rune-pure', 'pure-pray'],
+  low: ['baby-pure', 'low-ranger', 'low-mage', 'low-addy'],
+  top: ['tank-range', 'dragon', 'tribrid-pots', 'tribrid'],
+};
+export const BUILD_PAIRS_2 = buildPairs(BUILD_BRACKETS_2, new Set(BUILD_PAIRS.map(p => [...p].sort().join(':'))));
 // An account in a kit of scripts/pk-kits.ts at the levels of the kit (default maxed), with Lost City and Dragon Slayer
 // done and full special energy.
 export const kitFixture = (kit: string, x: number, z = 3555): SaveConfig => ({
@@ -257,7 +271,7 @@ const ROUTE_CASES: BenchCase[] = [
       equipment: [{id: 1277, count: 1, slot: 3}, {id: 1171, count: 1, slot: 5}],
       bank: [{id: 995, count: 25}, {id: 1351, count: 1}, {id: 590, count: 1}, {id: 303, count: 1}, {id: 1925, count: 1}, {id: 1931, count: 1}, {id: 1265, count: 1}, {id: 1205, count: 1}, {id: 841, count: 1}, {id: 882, count: 25}, {id: 556, count: 25}, {id: 558, count: 15}, {id: 555, count: 6}, {id: 557, count: 4}, {id: 559, count: 2}, {id: 1739, count: 8}, {id: 526, count: 8}, {id: 2132, count: 8}]}},
   {key: 'fighter:giant', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['giant', '1500', 'giant'], pass: ok, output: /kills=(\d+)/,
-    presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: [{id: 379, count: 5}]}},
+    presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: Array.from({length: 5}, () => ({id: 379, count: 1}))}},
   {key: 'fighter:ranged-gather', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['ranged-gather', 'CAP=1500', 'MAX_KILLS=2', 'AMMO=90', 'FOOD=3', 'FOOD_ID=333'], pass: s => ok(s) && s.includes('RANGED_BANK'),
     presetConfig: {position: {x: 3253, z: 3421, level: 0}, skills: {Ranged: 30, Hitpoints: 30}, bank: [{id: 841, count: 1}, {id: 884, count: 90}, {id: 333, count: 5}]}},
   {key: 'pvp:monitor', script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['monitor', '50', '12', 'stop'], pass: ok},
@@ -323,7 +337,7 @@ const ROUTE_CASES: BenchCase[] = [
   // Hill giants with Prayer 60: the prayer guard (packages/core/src/prayer-guard.ts) shows its counts in the
   // PRAYER_GUARD line; `--set PRAYER_GUARD=0` runs the comparison without it.
   {key: 'extra:giant-prayer-guard', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['giant', '1500', 'giant'], pass: ok, output: /kills=(\d+)/,
-    presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: [{id: 379, count: 5}]}},
+    presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: Array.from({length: 5}, () => ({id: 379, count: 1}))}},
   // Hill giants with Hitpoints 20, no armour and no eat input from the script: the eat guard
   // (packages/core/src/eat-guard.ts) must eat lobsters, and the account must live. The first 5 slots hold edible
   // items that are not plain food (cake, cheese, bread, redberry pie, stew): the guard must eat none of them.
@@ -340,6 +354,8 @@ const ROUTE_CASES: BenchCase[] = [
   // their own build and their own way to play (LEAGUE). A fighter is ready for a skilled player when it beats them all.
   sparMatrix('extra:spar-league-x8', LEAGUE.map(o => ['tribrid-pots', o.kit] as const), [`SPAR_B_PROFILES=${LEAGUE.map(o => o.profile).join(',')}`]),
   // The champion against itself in the snare kit: the hardest opponent on the bench. Use SPAR_SWAP=1.
+  // The snare kit against the hybrid kit, sides by two pairs at a time.
+  sparMatrix('extra:spar-duel-snare-hybrid-x12', Array.from({length: 12}, (_, i) => ((i >> 1) % 2 ? ['hybrid', 'tribrid-snare'] : ['tribrid-snare', 'hybrid']) as [string, string])),
   sparMatrix('extra:spar-mirror-snare-x12', Array.from({length: 12}, () => ['tribrid-snare', 'tribrid-snare'] as const)),
   sparMatrix('extra:spar-league-snare-x8', LEAGUE.map(o => ['tribrid-snare', o.kit] as const), [`SPAR_B_PROFILES=${LEAGUE.map(o => o.profile).join(',')}`]),
   // The league for a fighter with three more sharks and no freeze runes.
@@ -347,9 +363,10 @@ const ROUTE_CASES: BenchCase[] = [
   sparMatrix('extra:spar-rivals-x12', Array.from({length: 12}, (_, i) => ['tribrid-pots', ['melee', 'hybrid', 'ranger'][i % 3]!] as const)),
   // One whole hunter trip (scripts/measure/pk-hunt-trip.ts): the hunter starts at Edgeville bank with an empty pack and
   // its kit in the bank; the target stands at the first hunt spot with no food.
-  // `auto` has the snare stock and names no kit: the hunter must pick the snare trip from its bank.
+  // `auto` has the snare stock and names no kit: at the first hunt spot (Wilderness level 3) the hunter must pick the
+  // bow trip from its bank.
   ...(['staff', 'snare', 'auto'] as const).map((kit): BenchCase => ({key: `extra:hunt-trip-${kit}`, engineEnv: SPAR_ENGINE, script: 'scripts/measure/pk-hunt-trip.ts', preset: 'fresh_lumbridge',
-    scriptArgs: ['{bot:b}', '900', kit], pass: kit === 'auto' ? s => ok(s) && /HUNT trip snare/.test(s) : ok, output: /kills=(\d+)/,
+    scriptArgs: ['{bot:b}', '900', kit], pass: kit === 'auto' ? s => ok(s) && /HUNT trip bow/.test(s) : ok, output: /kills=(\d+)/,
     presetConfig: {...sparFixture(3092, 3496), inventory: [], bank: [{id: 861, count: 1}, {id: 557, count: 200}, {id: 555, count: 200}, {id: 561, count: 100}, {id: 2434, count: 4}, {id: 1712, count: 2},
       {id: 2436, count: 2}, {id: 2440, count: 2}, {id: 2444, count: 2}, {id: 385, count: 60}, ...(kit === 'staff' ? [{id: 1401, count: 1}, {id: 556, count: 600}, {id: 565, count: 200}] : [])]},
     companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3540, {food: 0})}]})),
@@ -372,6 +389,9 @@ const ROUTE_CASES: BenchCase[] = [
   // about half of that is the start of the engine and the logins, so the 53 pairs stand in 4 cases. The pairs run in
   // 8 processes, and the cap is 600 ticks: the offline simulator has no fight of two of these builds that lasts so long.
   ...Array.from({length: Math.ceil(BUILD_PAIRS.length / BUILD_CASE_PAIRS)}, (_, n) => sparMatrix(`extra:spar-builds-${n + 1}`, BUILD_PAIRS.slice(n * BUILD_CASE_PAIRS, (n + 1) * BUILD_CASE_PAIRS), ['SPAR_PROCS=8', 'SPAR_CAP=600'], {x: 3125, z: 3790})),
+  // One pair 14 times, each build on side A in 7 of them: 3 fights of a pair in the build cases decide nothing.
+  sparMatrix('extra:spar-head-tank-dragon-x14', Array.from({length: 14}, (_, i) => (i % 2 ? ['dragon', 'tank-range'] : ['tank-range', 'dragon']) as [string, string]), ['SPAR_PROCS=8', 'SPAR_CAP=600'], {x: 3125, z: 3790}),
+  ...Array.from({length: Math.ceil(BUILD_PAIRS_2.length / BUILD_CASE_PAIRS)}, (_, n) => sparMatrix(`extra:spar-builds2-${n + 1}`, BUILD_PAIRS_2.slice(n * BUILD_CASE_PAIRS, (n + 1) * BUILD_CASE_PAIRS), ['SPAR_PROCS=8', 'SPAR_CAP=600'], {x: 3125, z: 3790})),
   // Map cases of the spar. Gap: the same mirror from 12 tiles apart. Trees: 6 tiles apart at Wilderness level 3 with a
   // blocker on tiles 3101-3103 between the two, so neither has line of sight at the start. Escape: Wilderness level 34
   // at a spot with no monster in view (green dragons at (3094, 3800) attack both sides and block their hits); side B

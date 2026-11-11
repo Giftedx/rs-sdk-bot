@@ -21,7 +21,7 @@ test('fleet sides give each side its sync age, accounts, total levels and coins;
   {id:'o2',from:'A',to:'B',item:'Coins',count:9,start:4,end:now+1},{id:'o3',from:'A',to:'B',item:'Coins',count:9,start:3,end:now+1},{id:'o4',from:'A',to:'B',item:'Coins',count:9,start:2,end:now+1}],now,
   [{id:'o2',role:'from',ok:true},{id:'o2',role:'to',ok:true},{id:'o3',role:'from',ok:true},{id:'o4',role:'to',ok:false}]);
  expect(v.sides.map(s=>s.side)).toEqual(['local','cloud']);
- expect(v.sides[0]!.late).toBe(true);expect(v.sides[1]!.late).toBe(false);expect(v.sides[0]!.accounts.map(a=>a.name)).toEqual(['Ann','Bee']);
+ expect(v.sides[0]!.late).toBe(true);expect(v.sides[1]!.late).toBe(false);expect(v.sides[0]!.accounts.map((a:any)=>a.name)).toEqual(['Ann','Bee']);
  expect(v.sides[1]!.accounts[0]).toEqual({name:'Zed',at:now-60_000,total:22,coins:105});expect(v.sides[0]!.accounts[1]!.total).toBeNull();
  expect(v.orders[0]).toEqual({id:'o1',from:'A',to:'B',item:'Air talisman',count:1,start:5,end:now-1,state:'open',late:true});
  expect(v.orders.map(o=>o.id+':'+o.state)).toEqual(['o1:open','o3:half','o4:failed']);

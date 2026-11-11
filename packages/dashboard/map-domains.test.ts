@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 const html=readFileSync(new URL('./index.html',import.meta.url),'utf8'),shell=readFileSync(new URL('./client-shell.js',import.meta.url),'utf8');
 const worldCode=html.slice(html.indexOf('function mapWorld(){'),html.indexOf('function drawMap(){'));
 const bots=[{name:'Live',practice:false,pos:{x:50,z:50}},{name:'Practice',practice:true,pos:{x:52,z:50}}];
-function canvas(){const dots:number[][]=[];const g:any=new Proxy({fillRect:(...args:number[])=>{if(args[2]===3&&args[3]===3)dots.push(args);}}, {get:(o,k)=>k in o?o[k]:()=>{}});return {dots,clientWidth:800,clientHeight:800,width:146,height:146,getContext:()=>g};}
+function canvas(){const dots:number[][]=[];const g:any=new Proxy({fillRect:(...args:number[])=>{if(args[2]===3&&args[3]===3)dots.push(args);}}, {get:(o:any,k)=>k in o?o[k]:()=>{}});return {dots,clientWidth:800,clientHeight:800,width:146,height:146,getContext:()=>g};}
 test('the live world map excludes practice markers and their click targets',()=>{
  const code=html.slice(html.indexOf('function drawMap(){'),html.indexOf("$('#map').onclick")),c=canvas();
  const run=new Function('S','sel','$',`const mode='2d',MAPI=null,window={},PLACES=[],st=()=>['off'],MARK='main';${worldCode}${code};drawMap();`);

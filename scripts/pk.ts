@@ -162,11 +162,15 @@ export const skulled = (headicons: number | undefined) => ((headicons ?? 0) & 1)
 let objNames: Map<number, string> | undefined;
 const getObjNames = () => (objNames ??= new Map(readFileSync(join(resolve(import.meta.dir, '..'), 'vendor/rs-sdk/server/content/pack/obj.pack'), 'utf8')
     .split(/\r?\n/).flatMap(l => { const m = l.match(/^(\d+)=(.+)$/); return m ? [[Number(m[1]), m[2]!] as const] : []; })));
-export function weaponStyle(id: number | undefined, names = getObjNames()): Style {
-    const name = id !== undefined && id >= 0 ? names.get(id) ?? '' : '';
+// The style of a weapon by its name: a bow or a thrown weapon is ranged, a staff magic. The simulator
+// (scripts/pk-sim.ts) uses the same rule.
+export function styleOfName(name: string): Style {
     if (/(^|_)(shortbow|longbow|crossbow|dart|knife|thrownaxe|javelin)(_|$)|bow$/.test(name)) return 'ranged';
     if (/staff|wand/.test(name)) return 'magic';
     return 'melee';
+}
+export function weaponStyle(id: number | undefined, names = getObjNames()): Style {
+    return styleOfName(id !== undefined && id >= 0 ? names.get(id) ?? '' : '');
 }
 const PROTECT_FROM: Record<Style, number> = { melee: 14, ranged: 13, magic: 12 };
 

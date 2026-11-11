@@ -124,6 +124,10 @@ dagger special are the burst of this content.
 
 ### Speed of a measurement
 
+Run a list of batches with `bun scripts/measure/pk-spar-jobs.ts "<case>|<profile a>|<profile b>|<swap>|<seed>|<options a>" ...`:
+it runs each batch in 8 worker processes, takes turns with the matrix and the climb of other sessions, and prints one
+result line for each batch.
+
 Use a batch case for every comparison: `extra:spar-x8` and `extra:spar-escape-x8` run 8 spars at once in one world,
 at the same spot (a player blocks no tile, and a fight loop names its one target). The ladder takes a batch key as
 any other case.
@@ -513,6 +517,91 @@ Gaps:
   bones on each kill, and a build band runs with `GIANT_BURY=0`, which takes none. Evidence:
   `/api/market/items/526` of the demo server and `fleet/snapshots/*.json` on the `fleet-data` branch, one read each.
 
+### Second set of builds
+
+Sources for the list: the Old School RuneScape Wiki pages "Account builds", "One-defence pure", "50 Defence Build"
+and "Free-to-play account builds", and theoatrix.net "Types of pures in OSRS". Those pages name about 60 builds.
+Source -> local consumer -> adapt -> check: those pages -> `KITS` -> a build gets a kit when this content has the
+gear that its level cap exists for -> `scripts/pk-kits.test.ts`, the bench cases `extra:spar-builds2-1` to `-5`.
+
+- **Builds with no kit, and the reason.** Attack 50 (granite maul), Attack 70 (whip) and Attack 75 (godsword): the
+  weapon is not in this content, so the levels add combat for nothing. The obsidian mauler and the free-to-play
+  Strength pure: no weapon with a high strength bonus at Attack 1. Defence 13, 20 and 25 (gloves, Initiate, infinity
+  robes) and Defence 42 (Void): the gear is not in this content. Defence 70 and 75 (Barrows, Piety): the same. A
+  pure with the dragon mace: the mace needs Heroes' Quest, which gives Defence XP (`levelrequire/scripts/tier60.rs2:4`).
+  Defence 50 with a Fremennik helm: The Fremennik Trials give Defence 60. The Defence pure and the skillers do not
+  attack.
+
+| Kit | Levels besides 1 | Combat | Fights with |
+|---|---|---|---|
+| `pure-scim` | Attack 40, Strength 99, Ranged 99 | 71 | magic shortbow, rune scimitar |
+| `pure-dlong` | Attack 60, Strength 99, Ranged 99 | 75 | magic shortbow, dragon longsword |
+| `pure-knives` | Attack 60, Strength 99, Ranged 99 | 75 | rune knives, dragon dagger |
+| `pure-pray31` | `pure-dds-msb` with Prayer 31 | 78 | magic shortbow, dragon dagger, Ultimate Strength |
+| `pure-god` | Magic 99 | 69 | Flames of Zamorak under Charge |
+| `pure-max` | Attack 99, Strength 99, Ranged 99, Prayer 43 | 94 | magic shortbow, dragon dagger |
+| `addy-pure` | the rune pure with Defence 30 | 89 | the tribrid kit in adamant |
+| `def50` | the rune pure with Defence 50 | 94 | the tribrid kit in rune with the granite shield |
+| `tank-range` | Defence 99, Ranged 99, Magic 99, Prayer 43 | 102 | magic shortbow and Fire Wave in black dragonhide |
+| `baby-pure` | Attack 40, Strength 70, Ranged 70 | 52 | magic shortbow, rune scimitar |
+| `low-ranger` | Ranged 70 | 47 | magic shortbow |
+| `low-mage` | Magic 59 | 39 | Fire Blast |
+| `low-addy` | Attack 40, Strength 70, Defence 30, Ranged 70, Magic 70 | 60 | maple shortbow, rune scimitar, Fire Blast in adamant |
+
+Bench ranking of the second set. Conditions: as the first set (profile `snap`, Wilderness level 34, cap 600 ticks,
+seeds 1, 2, 3). Four brackets (`BUILD_BRACKETS_2`): the five new Defence 1 builds with `pure-pray`, `pure-dds-msb`
+and `pure-ranger`; the four new builds of combat 89 to 102 with `dragon`, `zerker`, `rune-pure` and `pure-pray`; the
+four builds under combat 61; and `top`, `tank-range` and `dragon` against the maxed tribrid with and without boost
+potions. A pair of two builds of the first set does not run again. 58 pairs in 5 cases, 174 fights, 289 s of run
+time. Rank the logs with `bun scripts/measure/pk-build-rank.ts <log> ...`. Evidence: `.practice/pk-builds/b2seed<s>.txt`
+and `head.txt` in the worktree that ran them. The rows of the builds of the first set hold only their fights of
+this set.
+
+| Kit | Combat | Fights | Wins | Losses | Draws | Net |
+|---|---|---|---|---|---|---|
+| `low-ranger` | 47 | 9 | 8 | 1 | 0 | +81.2 |
+| `tribrid-pots` | 126 | 9 | 8 | 0 | 1 | +24.0 |
+| `pure-ranger` | 69 | 15 | 12 | 3 | 0 | +26.7 |
+| `tank-range` | 102 | 27 | 20 | 7 | 0 | +73.6 |
+| `pure-pray31` | 78 | 21 | 15 | 6 | 0 | +88.5 |
+| `baby-pure` | 52 | 9 | 6 | 3 | 0 | +29.3 |
+| `pure-dds-msb` | 75 | 15 | 10 | 4 | 1 | -24.4 |
+| `pure-knives` | 75 | 21 | 14 | 6 | 1 | -63.6 |
+| `pure-max` | 94 | 21 | 13 | 8 | 0 | -22.9 |
+| `dragon` | 96 | 18 | 10 | 8 | 0 | +12.0 |
+| `tribrid` | 126 | 9 | 5 | 3 | 1 | +8.4 |
+| `pure-pray` | 80 | 27 | 14 | 12 | 1 | +56.1 |
+| `low-addy` | 60 | 9 | 4 | 5 | 0 | +1.1 |
+| `def50` | 94 | 21 | 8 | 13 | 0 | -1.0 |
+| `rune-pure` | 91 | 12 | 4 | 8 | 0 | -15.6 |
+| `zerker` | 92 | 12 | 4 | 8 | 0 | -17.3 |
+| `pure-scim` | 71 | 21 | 6 | 15 | 0 | +0.2 |
+| `pure-dlong` | 75 | 21 | 5 | 16 | 0 | -38.9 |
+| `addy-pure` | 89 | 21 | 4 | 17 | 0 | -45.3 |
+| `pure-god` | 69 | 21 | 1 | 19 | 1 | -90.8 |
+| `low-mage` | 39 | 9 | 0 | 9 | 0 | -111.6 |
+
+- **Combat 80 to 102: the range tank with Defence 99 wins.** `tank-range` won 3 of 3 against each of `zerker`,
+  `rune-pure`, `def50`, `addy-pure`, `pure-max` and `pure-pray`. It has no melee levels, so it needs Defence, Ranged
+  and Magic only.
+- **`tank-range` beats `dragon`: 38 of 42.** The pair alone, 14 pairs in a case with each build on side A in 7
+  (`extra:spar-head-tank-dragon-x14`, seeds 1, 2, 3): 20 to 1 with `tank-range` on side A and 18 to 3 on side B. In
+  the build cases the same pair gave 3 to 0 in one run and 1 to 2 in the next: 3 fights decide nothing for one pair.
+- **Neither beats the maxed tribrid.** `tribrid-pots` won 3 of 3 against `tank-range` and against `dragon`. The
+  tribrid with no boost potions won 2 of 3 against `tank-range` and 3 of 3 against `dragon`.
+- **Attack 99 at Defence 1 beats the Defence 30 to 45 builds.** `pure-max` won 13 of 21: 3 of 3 against `addy-pure`,
+  `rune-pure` and `zerker`, 1 of 3 against `def50` and `dragon`, and 0 of 3 against `tank-range`.
+- **Defence 30 in adamant loses.** `addy-pure` won 4 of 21. It carries 15 sharks against 21 to 23 of a pure.
+- **Defence 1: no new build is clear of the Prayer 43 pure.** `pure-pray31` won 15 of 21. Rune knives won 14 of 21
+  with a net damage of -63.6: they win on food, not on damage. The rune scimitar (6 of 21) and the dragon longsword
+  (5 of 21) are worse than the dragon dagger beside the bow.
+- **Magic alone loses again.** `pure-god` won 1 of 21 and `low-mage` 0 of 9.
+- **Under combat 61: a bow wins.** `low-ranger` won 8 of 9 and `baby-pure` 6 of 9. A run before this one gave
+  `baby-pure` 8 of 9 and `low-ranger` 7 of 9, so the order of the two is not decided. `low-addy`, with 8 to 13 more
+  combat levels, won 4 of 9.
+- Gap: 3 fights for each pair outside the head-to-head case. The low bracket has 4 builds and 18 fights.
+  `tank-range` wears the Archer helm, so it needs The Fremennik Trials; a quest route is not planned.
+
 ## Server rules the loop follows
 
 - Protect prayers cut a player's max hit by 40%, not 100% (`pvp_melee.rs2:32`, `pvp_ranged.rs2:38`, `pvp_magic.rs2:182`).
@@ -623,7 +712,8 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     its mirror lasts 694 ticks where the bench mirror lasts about 650. It uses the levels of each kit, so it ranks
     the trained builds too (`--league <kit,kit,...>`). Gap: it gives the ranger 87% where the bench gives it 14 of
     24, and the melee build 37% with 27% of fights at the cap where the bench gives it 18 of 24. It has no movement
-    and no freeze. A result from it is a candidate for the bench, not a measurement.
+    and no freeze, and it does not play the champion profile (no prayer flick, no `snapPrayer`, `counterRead` or
+    `adaptStyles`). A result from it is a candidate for the bench, not a measurement.
 19. **An overhead that changes one tick before the opponent's attack wins the mirror.** The `snap` profile (`predictPrayer`
     with `snapPrayer`) holds the overhead for the weapon the opponent shows and changes to the predicted style one
     tick before the opponent's next attack is due. Against the base profile it has 42 kills and 6 deaths in 48 spars
@@ -636,8 +726,8 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
 20. **Random attack styles beat an overhead that predicts.** Both sides hold the `snap` profile; side A also picks each
     style at random among the open ones (`mixStyles`). Side A has 29 kills and 3 deaths in 32 spars (15 to 1, 14 to 2;
     `extra:spar-x16`, seeds 1 and 2). Against an opponent that only follows the weapon, random styles gave no gain
-    (mean net +1.65, t 0.56, 24 spars). The champion profile is `predictPrayer`, `snapPrayer` and `mixStyles`.
-    Gap: the champion against itself is even (7 to 9), so the mirror gives no more gain from the overhead.
+    (mean net +1.65, t 0.56, 24 spars). The champion profile has `mixStyles`; findings 32 and 33 give what an
+    opponent can read from a random choice among the open styles, and the rule that answers it.
 21. **The place of a pair in a batch moves its result.** With the `snap` profile on both sides and 2 pairs in each
     of 8 worker processes, side B won 11 of 16 even pairs and side A won 12 of 16 odd pairs (two batches). A swap of
     the profiles on every second pair put one profile on the weak place of every pair: base against base read as 9
@@ -730,3 +820,16 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     bow alone from 3 tiles 4 to 8; the special from 30% health 7 to 5; the special as soon as it is ready 5 to 7.
     Gap: the one attack in ten that tries the other way may cost a little against an opponent that never predicts
     (22 to 2 against 23 to 1, and one league loss): not settled.
+34. **In a stand-up fight three more sharks beat the freeze runes.** The hybrid kit (bow, dagger, boosts, 21 sharks, no
+    runes) has 33 kills and 13 deaths against the snare kit (the same with the runes of Entangle and 18 sharks), both
+    on the champion profile (`extra:spar-duel-snare-hybrid-x12`, seeds 1 to 5, kits placed by two pairs at a time).
+    Up to Wilderness level 30 a glory works at once and no freeze holds a target, and the hunt spots are at levels 3
+    to 7. The hunter with no kit named takes the bow trip at such spots (`BOW_TRIP` in `scripts/pk-hunt.ts`: bow, two
+    prayer potions, a glory, three more sharks), the snare trip at deeper spots where the bank holds it, else the
+    staff trip. `extra:hunt-trip-auto` passes with `HUNT trip bow` and a kill in 81 ticks. Gap: no live run; no run
+    at a spot deeper than level 30.
+35. **The learnt style choice costs nothing against the builds that do not predict, and the special at 50% does nothing.**
+    The champion with `adaptStyles` has 23 kills and 1 death in 24 spars against the league (seeds 1 to 3) and 33
+    kills and 3 deaths in 36 against the melee build, the hybrid and the ranger (seeds 1 to 3); without it the
+    champion has 16 and 0 in 16 and 23 and 1 in 24. The special from 50% health against the champion: 8 to 4 and 3
+    to 9, 11 kills and 13 deaths in 24 (`extra:spar-mirror-snare-x12`, seeds 1 and 2).
