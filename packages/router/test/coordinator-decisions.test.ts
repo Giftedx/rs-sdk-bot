@@ -1,7 +1,7 @@
 import {test,expect} from 'bun:test';
 import {initialState,addTasks,chooseTask,startTask,finishTask,type CoordTask,type CoordinatorState} from '../src/coordinator';
 import {DEAD_TASK_MS,DISK_FLOOR_GB,IDLE_PLAN_MS,PLAN_GAP_MS,deadRoots,diskFreeGB,finishPlan,plannerDue,planRetryMs,retireDeadTasks,reviewHold} from '../src/coordinator-decisions';
-import {plannerPrompt,queueFacts} from '../src/coordinator-planner';
+import {briefEnded,plannerPrompt,queueFacts} from '../src/coordinator-planner';
 
 const task=(id:string,extra:Partial<CoordTask>={}):CoordTask=>({id,goal:'skills',kind:'qualify',capability:'wine-order',dependsOn:[],priority:5,estimatedMs:1000,why:'Close a useful consumer dependency',...extra});
 const run=(id:string,extra:Partial<CoordTask>={})=>task(id,{kind:'run',account:'Helper1',accept:{skills:{Cooking:99}},...extra});
@@ -132,4 +132,14 @@ test('the planner prompt gives the new-evidence limit, the retirement rule and t
  expect(prompt).toContain('newEvidence is 1 to 500 characters');
  expect(prompt).toContain('retires after 24 hours');
  expect(prompt).toContain('world.capacity.diskFreeGB');
+});
+test('the planner prompt names the script and run of an ended job without its argument and environment lists',()=>{
+ const revision=JSON.stringify(['scripts/buy-owned-ge-item.ts',false,['bigpackage'],[['CAP','1600'],['COORDINATOR_RUN_ID','task-b0490357'],['ORDER_KEY','cannonball1700']]]);
+ expect(briefEnded({Bigpackage:{at:5,reason:'gave-up after 1 runs',revision},Old:{at:6,reason:'died after 1 runs'},Odd:{at:7,reason:'x',revision:'not json'}})).toEqual({
+  Bigpackage:{at:5,reason:'gave-up after 1 runs',script:'scripts/buy-owned-ge-item.ts',runId:'task-b0490357'},
+  Old:{at:6,reason:'died after 1 runs'},Odd:{at:7,reason:'x'}});
+ const world:any={scoreboard:null,coverage:{quests:[],scriptCandidates:[]},statuses:[],jobs:[],capabilities:[],ended:{Bigpackage:{at:5,reason:'gave-up after 1 runs',revision}}};
+ const prompt=plannerPrompt(initialState(),world);
+ expect(prompt).toContain('"script":"scripts/buy-owned-ge-item.ts"');
+ expect(prompt).not.toContain('ORDER_KEY');
 });
