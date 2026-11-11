@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794415914170,
+ "at": 1794416667036,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -37,6 +37,25 @@
    "autopilot": "claude-cloud",
    "resources": [
     "knight:2652,3318"
+   ]
+  },
+  {
+   "account": "Deeppockets",
+   "script": "scripts/splash-train.ts",
+   "args": [
+    "66",
+    "6000"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "combat",
+   "template": "army-splash-magic-66",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "splash:ardougne-cow-fence"
    ]
   },
   {
