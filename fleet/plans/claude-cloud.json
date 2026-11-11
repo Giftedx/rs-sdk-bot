@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794363923335,
+ "at": 1794363991789,
  "jobs": [
   {
    "account": "Fatstack",
@@ -123,31 +123,6 @@
    ]
   },
   {
-   "account": "Dipstick",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
    "account": "KnightRider",
    "script": "scripts/chain.ts",
    "args": [
@@ -221,28 +196,29 @@
   },
   {
    "account": "PocketPool",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "script": "scripts/session-check.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-870acac7-55f4-45bb-9e87-9711b484f077"
    },
    "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "repeat": false,
+   "goal": "claude-cloud-recover-pocketpool-20261111t021910z [task-870acac7-55f4-45bb-9e87-9711b484f077]",
+   "role": "combat"
+  },
+  {
+   "account": "Dipstick",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-d8cbbf35-0d19-4700-8f9c-8b6a6e84accf"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-dipstick-20261111t021910z [task-d8cbbf35-0d19-4700-8f9c-8b6a6e84accf]",
+   "role": "combat"
   }
  ]
 }
