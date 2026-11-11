@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794380809324,
+ "at": 1794381208627,
  "jobs": [
   {
    "account": "Kiltlifter",
@@ -39,6 +39,26 @@
    "goal": "buy 1 Body rune, 3 Earth rune, 2 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
    "role": "supply",
    "template": "kit-buy:army-splash-magic-66",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying the held bones",
+   "role": "combat",
+   "template": "army-bury-prayer-99",
    "autopilot": "claude-cloud",
    "resources": []
   },
