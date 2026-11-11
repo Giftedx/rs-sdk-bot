@@ -1358,3 +1358,30 @@ test('an account with Lost City buys its dragon longswords from Jakut: the diamo
     expect(first(who({ ...kit, 'iron arrow': 40 }), { pilots: both }).template!.id).toBe('army-jakut-swords');
 });
 
+import { GRAIL_BAND, GRAIL_MEALS, GRAIL_PLACE, GRAIL_RUNES } from '../src/autopilot';
+test('an army account takes Merlin\'s Crystal and Holy Grail for its Prayer: the runes bought first, one account at a time', () => {
+    const base = { Thieving: 99, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Magic: 99, Prayer: 78 };
+    const kit = { 'rune scimitar': 1, shark: 40, coin: 300_000, 'law rune': 12, 'air rune': 46, 'water rune': 6, 'fire rune': 1 };
+    const pilots = new Set(['army-quest-holygrail']), done = (...q: string[]) => new Set(q.map(n => n.toLowerCase()));
+    const who = (name: string, items: Record<string, number> = kit, s: Record<string, number> = {}, quests: ReadonlySet<string> = done('Lost City')): Acct => ({ ...acct(name, { ...base, ...s }, items), quests });
+    const runes: Market = Object.fromEntries([['law rune', 563, 'Law rune'], ['air rune', 556, 'Air rune'], ['water rune', 555, 'Water rune'], ['fire rune', 554, 'Fire rune']]
+        .map(([k, id, name]) => [k, { id: id as number, name: name as string, limit: KIT_PRICE_CAPS[k as string]! }]));
+    const run = (accounts: Acct[], extra: Partial<Inputs> = {}) => plan(inputs(accounts, { army: new Set(accounts.map(a => a.name.toLowerCase())), capacity: CAPACITY, pilots, market: runes, ...extra }));
+    // With the kit: the chain of the two quests.
+    const [x] = run([who('Monk')]);
+    expect(x!.template!.id).toBe('army-quest-holygrail');
+    expect(x!.reason).toBe(`army band ${GRAIL_BAND}: Holy Grail`);
+    expect(jobFor(x!, side)).toMatchObject({ script: 'scripts/aio.ts', args: ['quester', 'chain', 'merlin,grail'], repeat: false, resources: [GRAIL_PLACE] });
+    expect(catalogue().find(t => t.id === 'army-quest-holygrail')!.needs).toMatchObject({ items: { 'rune scimitar': 1, ...GRAIL_RUNES }, pieces: { count: GRAIL_MEALS } });
+    // Short of the teleports' law runes: the band's own buy, of what is short.
+    const [buy] = run([who('Monk', { ...kit, 'law rune': 2 })]);
+    expect(buy!.template!.id).toBe(KIT_BUY + 'army-quest-holygrail');
+    expect(buy!.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).map(Number))).toEqual([[563, 10]]);
+    // One account in Camelot's fights at a time.
+    expect(run([who('A'), who('B')]).filter(a => a.template?.id === 'army-quest-holygrail').length).toBe(1);
+    // Not once the quest is done, not under the Magic the Camelot teleport asks, not without the pilot.
+    expect(run([who('Monk', kit, {}, done('Lost City', "Merlin's Crystal", 'Holy Grail'))])[0]!.template?.id).not.toBe('army-quest-holygrail');
+    expect(run([who('Monk', kit, { Magic: 40 })])[0]!.template?.id).not.toBe('army-quest-holygrail');
+    expect(run([who('Monk')], { pilots: new Set() })[0]!.template?.id).not.toBe('army-quest-holygrail');
+});
+

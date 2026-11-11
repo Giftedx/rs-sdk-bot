@@ -133,6 +133,11 @@ export const WEAPON_BAND = 3.5, WEAPON_BUYERS = 2, WEAPON_MARKET = 'ge:weapon';
 // the dramen tree together one finished and two ended "Someone else is fighting that"). LOST_CITY_MEALS is the food
 // the run carries with no prayer potion (scripts/quest-sweep.ts STURDY_MEALS).
 export const QUEST_BAND = 3.6, LOST_CITY = 'quest:lostcity', LOST_CITY_PLACES = 1, LOST_CITY_MEALS = 10;
+// Holy Grail after Merlin's Crystal: 275,000 Prayer experience at the server's rate (quest_grail; research/quest-plan.md
+// 1k), what about 150 bought dragon bones give. One account at a time: Sir Mordred and the Black Knight Titan are
+// single fights. GRAIL_RUNES: the two quests' teleports (Falador five times, Camelot five, Varrock once).
+export const GRAIL_BAND = QUEST_BAND + 0.1, GRAIL_PLACE = 'quest:camelot', GRAIL_PLACES = 1, GRAIL_MEALS = 12;
+export const GRAIL_RUNES: Readonly<Record<string, number>> = { 'law rune': 12, 'air rune': 46, 'water rune': 6, 'fire rune': 1 };
 export const LOST_CITY_FOOD = ['lobster', 'swordfish', 'shark'] as const;
 // The coins a kit buy leaves in the bank (the buy script's CASH_RESERVE). A kit costs far less than FUND_RESERVE, which
 // guards a coin donor, so a buyer keeps only this.
@@ -618,7 +623,7 @@ export const SPLASH_FENCE = 'splash:ardougne-cow-fence', SPLASH_PLACES = 2, SPLA
 export const SPLASH_KIT = { 'body rune': 150, 'earth rune': 425, 'water rune': 300 } as const;
 // The places the AIO routes hold (aioTemplates). Each takes one account until a live pilot measures two.
 export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore: 'aio:varrock-east-mine', essence: 'aio:essence-mine', air: 'aio:air-altar' } as const;
-export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
+export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // Army goal bands (AGENTS.md goals: maxed tribrids), in order: Strength, Attack, Magic, Prayer, Ranged, Defence
 // last. Bands 6-8 are the Khazard troopers (TROOPER_BANDS), 9 is Prayer on the field (PRAYER_FIELD_BAND). Ardougne cows (scripts/gather-combat.ts cow mode, north bank profile, MAX_KILLS=8): live 4/4 runs
@@ -1017,6 +1022,20 @@ export function catalogue(): Template[] {
         quest: { name: 'Lost City', unlocks: [] }, resources: [LOST_CITY], yields: () => [],
         needs: { skills: { Prayer: 43, Hitpoints: 90, Defence: 90 }, items: { coins: 5000 }, pieces: { of: LOST_CITY_FOOD, count: LOST_CITY_MEALS } }, kitFirst: true,
     };
+    // Merlin's Crystal and Holy Grail through the same chain. The quest sweep gathers Merlin's kit itself (insect
+    // repellent, a bucket and the wax at the Catherby hives, bat bones from a giant bat, bread and a tinderbox from
+    // shops) and takes everything worn off for the Entrana ship of Holy Grail (scripts/quest-sweep.ts BARE), keeping
+    // Excalibur and the rune scimitar in the pack: the Titan dies to the scimitar with Excalibur worn at the end. The
+    // planner asks what no shop sells: the scimitar, the teleports' runes (and the Magic 45 Camelot's asks) and the
+    // meals. Merlin's Crystal walks to the chaos altar at Wilderness level 12 with what the account wears. A pilot.
+    const holyGrail: Template = {
+        id: 'army-quest-holygrail', family: 'aio:quester:mode:chain', script: 'scripts/aio.ts', args: ['quester', 'chain', 'merlin,grail'],
+        aio: 'quester:mode:chain', worker: 'scripts/quest-chain.ts', pilot: true, role: 'quest',
+        goal: "complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience", tier: 'goal', band: GRAIL_BAND,
+        quest: { name: 'Holy Grail', unlocks: [] }, resources: [GRAIL_PLACE], yields: () => [],
+        needs: { skills: { Prayer: 43, Magic: 45, Attack: 90, Strength: 90, Hitpoints: 90, Defence: 90 }, items: { coins: 2000, 'rune scimitar': 1, ...GRAIL_RUNES },
+            pieces: { of: LOST_CITY_FOOD, count: GRAIL_MEALS } }, kitFirst: true,
+    };
     const prayerField: Template = {
         id: 'army-trooper-prayer-99', family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'],
         env: { TRAIN_SKILL: 'Hitpoints', GIANT_KILLS: '500', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1' }, role: 'combat', goal: 'train Prayer to 99 burying trooper bones on the field',
@@ -1104,6 +1123,7 @@ export function catalogue(): Template[] {
         arrowsLowe,
         ranged,
         lostCity,
+        holyGrail,
         dustyKey,
         hunt,
         huntBronze,
