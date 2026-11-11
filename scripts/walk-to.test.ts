@@ -81,6 +81,27 @@ test('a failed east-to-Ardougne plan uses the funded corridor and stops when fun
     expect(await walkWithFerryFallback(from,to,async()=>aborted,sail,()=>100)).toBe(aborted);
 });
 
+test('a trip east from elsewhere in Kandarin first walks to the Ardougne north bank, then takes the fare and the ferries', async () => {
+    const to = { x: 3185, z: 3436, level: 0 }, home = '2619,3332';
+    const noRoute: Outcome = { ok: false, reason: 'precondition', detail: 'no route to 3185,3436,0', ticks: 0 };
+    for (const from of [{ x: 2809, z: 3441, level: 0 }, { x: 2727, z: 3493, level: 0 }, { x: 2612, z: 3093, level: 0 }, { x: 2529, z: 3236, level: 0 }]) {
+        const calls: string[] = []; let coins = 0, plans = 0;
+        const walk = async ({x,z}: {x:number;z:number}): Promise<Outcome> => { calls.push(x+','+z); return x+','+z === '3185,3436' && plans++ === 0 ? noRoute : {ok:true,ticks:1}; };
+        const sail = async (boat: ReturnType<typeof loadTravel>[number]): Promise<Outcome> => { calls.push(boat.id); coins -= boat.coins; return {ok:true,ticks:1}; };
+        expect(await walkWithFerryFallback(from,to,walk,sail,()=>coins,async need=>{calls.push('fare '+need);coins=need;return{ok:true,ticks:4};})).toEqual({ok:true,ticks:10});
+        expect(calls).toEqual([home,'fare 60','3185,3436','2679,3275','npc:captain_barnaby:brimhaven@2679,3275','2953,3147','npc:customs_officer:port-sarim@2953,3147','3185,3436']);
+    }
+    // A walk home that fails ends the trip there.
+    const stuck: Outcome = { ok: false, reason: 'precondition', detail: 'no route to 2619,3332,0', ticks: 3 };
+    expect(await walkWithFerryFallback({ x: 2809, z: 3441, level: 0 },to,async()=>stuck,async()=>({ok:true,ticks:1}),()=>60)).toEqual(stuck);
+    // Taverley, east of the mountain, has its own way east, and a trip inside Kandarin goes direct.
+    const direct: string[] = [];
+    const plain = async ({x,z}: {x:number;z:number}): Promise<Outcome> => { direct.push(x+','+z); return {ok:true,ticks:2}; };
+    expect(await walkWithFerryFallback({ x: 2895, z: 3440, level: 0 },to,plain,async()=>({ok:true,ticks:1}),()=>0)).toEqual({ok:true,ticks:2});
+    expect(await walkWithFerryFallback({ x: 2809, z: 3441, level: 0 },{ x: 2619, z: 3332, level: 0 },plain,async()=>({ok:true,ticks:1}),()=>0)).toEqual({ok:true,ticks:2});
+    expect(direct).toEqual(['3185,3436','2619,3332']);
+});
+
 test('a failed Ardougne-to-east plan sails to Brimhaven and from Musa Point, with the fare checked first', async () => {
     const from = { x: 2584, z: 3293, level: 0 }, to = { x: 3185, z: 3436, level: 0 };
     const noRoute: Outcome = { ok: false, reason: 'precondition', detail: 'no route to 3185,3436,0', ticks: 0 };
@@ -120,9 +141,9 @@ test('a failed Ardougne-to-east plan sails to Brimhaven and from Musa Point, wit
     calls.length = 0;coins = 60;
     expect(await walkWithFerryFallback({ x: 3071, z: 3347, level: 0 },bank,west,sail,()=>coins)).toEqual({ok:true,ticks:6});
     expect(calls[1]).toBe('3092,3243');
-    // A start outside Ardougne, or a target outside the east, keeps the plain refusal.
+    // A start outside Kandarin, or a target outside the east, keeps the plain refusal.
     calls.length = 0;coins = 60;
-    expect(await walkWithFerryFallback({ x: 2440, z: 3090, level: 0 },to,walk,sail,()=>coins)).toBe(noRoute);
+    expect(await walkWithFerryFallback({ x: 2400, z: 3090, level: 0 },to,walk,sail,()=>coins)).toBe(noRoute);
     calls.length = 0;
     expect(await walkWithFerryFallback(from,{ x: 2900, z: 3550, level: 0 },walk,sail,()=>coins)).toBe(noRoute);
 });
