@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794418882706-undermykilt-dipstick-bones",
+ "account": "UnderMyKilt",
+ "partner": "Dipstick",
+ "role": "from",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 38,
+ "claim": "23964ee3-c7aa-4d5b-89b7-707dcf3069bc",
+ "count": 0,
+ "ok": false,
+ "at": 1794418886542,
+ "detail": "trade claimed"
+}
