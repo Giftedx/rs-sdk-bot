@@ -9,6 +9,8 @@
 // gives n fights for the game ticks of one: head to head takes two runs (each profile on each side), --against takes
 // one run for each profile, and the seeds are not used. Use a batch case for every comparison: 16 fights take about
 // 2 minutes there and about 10 minutes one fight at a time.
+// --rate (a batch case only) runs the challenger alone as side A against --against (default base), one batch for each
+// seed, and prints its kills and fights: the number to climb for a hunter. 16 fights (--seeds 1,2) take about 70 s.
 // Profiles: scripts/pk-spar.ts PROFILES; --opts adds fight options to the challenger, so one number can be tried with
 // no new profile: base base --opts '{"eatAt":60}'.
 // Each engine needs about 1.5 GB of free memory. Raw rows go to .practice/pk-spar/.
@@ -59,6 +61,8 @@ if (import.meta.main) {
     const value = (flag: string) => { const i = argv.indexOf(flag); return i >= 0 ? argv.splice(i, 2)[1] : undefined; };
     const seeds = (value('--seeds') ?? '1,2,3').split(',').map(Number), opts = value('--opts'), championOpts = value('--champion-opts');
     const key = value('--case') ?? 'pvp:spar', against = value('--against');
+    const rateAt = argv.indexOf('--rate'), rate = rateAt >= 0;
+    if (rate) argv.splice(rateAt, 1);
     const [challenger, champion = 'base'] = argv;
     if (!challenger || seeds.some(n => !Number.isSafeInteger(n))) { console.log('usage: bun scripts/measure/pk-spar-ladder.ts <challenger> [champion] [--seeds 1,2,3] [--case key] [--against profile] [--opts json] [--champion-opts json]'); process.exit(2); }
     const root = resolve(import.meta.dir, '..', '..'), dir = '.practice/pk-spar';
@@ -78,11 +82,11 @@ if (import.meta.main) {
         return fight;
     };
     const batch = /-x\d+$/.test(key);
-    const runBatch = (a: [string, string | undefined], b: [string, string | undefined], tag: string): Batch => {
+    const runBatch = (a: [string, string | undefined], b: [string, string | undefined], tag: string, seed?: number): Batch => {
         const out = `${dir}/${label}-${tag}.json`;
         const set: Record<string, string | undefined> = { SPAR_A: a[0], SPAR_A_OPTS: a[1], SPAR_B: b[0], SPAR_B_OPTS: b[1] };
         const sets = Object.entries(set).flatMap(([k, v]) => (v === undefined ? [] : ['--set', `${k}=${v}`]));
-        const child = Bun.spawnSync(['bun', 'scripts/measure/aio-practice-bench.ts', `^${key}$`, '--parallel', '1', '--no-keep', ...sets],
+        const child = Bun.spawnSync(['bun', 'scripts/measure/aio-practice-bench.ts', `^${key}$`, '--parallel', '1', '--no-keep', ...(seed === undefined ? [] : ['--seed', String(seed)]), ...sets],
             { cwd: root, env: { ...process.env, BENCH_OUT: out }, stdout: 'ignore', stderr: 'inherit', windowsHide: true });
         let row: { ok: boolean; result: string | null } | undefined;
         try { row = JSON.parse(readFileSync(resolve(root, out), 'utf8')).rows[0]; } catch { /* the bench wrote no row */ }
@@ -90,6 +94,13 @@ if (import.meta.main) {
         console.log(`SPAR_BATCH ${JSON.stringify({ case: key, a: a[0], b: b[0], ...got })}`);
         return got;
     };
+    if (rate) {
+        if (!batch) { console.log('--rate needs a batch case (a key that ends in -x<n>)'); process.exit(2); }
+        const runs = seeds.map(seed => runBatch([challenger, opts], [against ?? 'base', undefined], `${challenger}-rate-seed${seed}`, seed));
+        const sum = (f: (b: Batch) => number) => runs.reduce((n, b) => n + (b.ok ? f(b) : 0), 0), failed = runs.filter(b => !b.ok).length;
+        console.log(`SPAR_RATE ${JSON.stringify({ case: key, profile: challenger, opts, against: against ?? 'base', seeds, fights: sum(b => b.fights), kills: sum(b => b.kills), escapes: sum(b => b.escapes), deaths: sum(b => b.deaths), draws: sum(b => b.draws), failed })}`);
+        process.exit(failed ? 1 : 0);
+    }
     if (batch && against) {
         const first = runBatch([challenger, opts], [against, undefined], `${challenger}-against-${against}`);
         const second = runBatch([champion, championOpts], [against, undefined], `${champion}-champion-against-${against}`);

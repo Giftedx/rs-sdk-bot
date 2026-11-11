@@ -28,6 +28,7 @@ Map cases (`--case <key>`), each with the mirror kit:
 - `extra:spar-escape-spell`: the same chase with no glory on the runner; it runs about 110 tiles to level 20 and casts
   Varrock Teleport.
 - `extra:spar-escape-pots`: the glory chase with a super attack, a super strength and a ranging potion on the hunter.
+- Batches of 8: `extra:spar-x8`, `extra:spar-escape-x8`, `extra:spar-escape-pots-x8` and `extra:spar-escape-spell-pots-x8`.
 
 Gap: the fight loop does not choose where to stand, so cover, line of sight as a defence and a second attacker are
 not measured.
@@ -81,14 +82,26 @@ unless a finding says otherwise; a seed repeats its fight. Evidence: `.practice/
    - The freeze misses often: in one trace the first three casts on a runner missed. Rune platelegs, kiteshield and
      full helm take 21, 8 and 6 off the magic attack; the loop takes them off for a freeze on a target that has fled.
 
-   Profile `hunter` (freeze on the flight, special kept for 40% health or a target that has fled), one batch of 8
-   against one batch of 8 for the base hunter: 3 kills and 5 escapes against 0 kills and 8 escapes. Variants that
-   showed no gain at 5 fights each (1 or 2 kills in 5, the same as `hunter`): magic only or magic and ranged once the
-   target has fled, with and without the specials; the freeze cast with the weapon in hand, so that the runner has no
-   Protect from Magic up; a freeze from 62% health (`hunter-low`); the long run with no glory. Each style alone
-   against the base fighter dealt, for each 100 ticks: magic 25.4 and 24.2, melee 15.1 and 14.3, ranged 8.0 and 18.3.
-   Gap: a kill needs one strong special on a held runner, so 5 fights do not separate two variants; none of the
-   variants is measured on a batch.
+   Kill rates from batch runs, 16 fights each (two batches of 8, seeds 1 and 2), runner on base. `hunter`: a freeze on
+   the flight, the special kept for 40% health or a target that has fled. `hunter-low`: the same with a freeze from
+   62% health. Potions: a super attack, a super strength and a ranging potion on the hunter, for 3 of its 18 sharks.
+
+   | Runner | Hunter | Potions | Kills in 16 |
+   |---|---|---|---|
+   | glory, about 30 tiles to level 30 | `hunter` | no | 1 |
+   | glory | `hunter-low` | no | 3 |
+   | glory | `hunter` | yes | 6 |
+   | glory | `hunter-low` | yes | 5 |
+   | glory | `hunter-low`, `specBelow` 0.25 | yes | 4 |
+   | no glory, about 110 tiles to level 20 | `hunter-low` | yes | 9 |
+
+   The base hunter killed 0 of 8 against the glory runner. Boost potions and the length of the run decide the rate;
+   the freeze and special settings do not separate at 16 fights. Variants that showed no gain at 5 fights each: magic
+   only or magic and ranged once the target has fled, with and without the specials; the freeze cast with the weapon
+   in hand, so that the runner has no Protect from Magic up. Each style alone against the base fighter dealt, for
+   each 100 ticks: magic 25.4 and 24.2, melee 15.1 and 14.3, ranged 8.0 and 18.3.
+   Gap: 16 fights for each row; the no-glory row has no run without potions; a bow special against a moving runner
+   logged full energy three turns in a row, so it did not fire, and the cause is not found.
 5. **A start out of sight or far apart does not stop the fight.** One run each at seed 7, base against base, without
    Dragon Slayer: first damage at tick 19 from 2 tiles in the open, 31 from 12 tiles, 11 from 6 tiles with the blocker
    between; kills at 528, 495 and 628 ticks. The server walks an attacker to a tile with line of sight. Gap: one run each.
