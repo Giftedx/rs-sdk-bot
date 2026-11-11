@@ -1,7 +1,25 @@
 {
  "side": "claude-cloud",
- "at": 1794420809358,
+ "at": 1794420874798,
  "jobs": [
+  {
+   "account": "Fingersmith",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=52 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=fingersmith-kit29-536-0to52 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 52 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-dragon-99",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
   {
    "account": "Quickhandjob",
    "script": "scripts/goldfarm.ts",
@@ -20,6 +38,28 @@
    "resources": [
     "knight:2582,3297"
    ]
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "crafting",
+    "bowstrings",
+    "2500",
+    "MAX_MAKE=168",
+    "RAW_RESERVE=0",
+    "MAX_TRIPS=8"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "spin flax at Seers to the Crafting a black dragonhide body asks",
+   "role": "crafting",
+   "template": "army-leather-spin",
+   "autopilot": "claude-cloud",
+   "resources": []
   },
   {
    "account": "TheFullMonty",
@@ -94,24 +134,6 @@
    ]
   },
   {
-   "account": "Fingersmith",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=52 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=fingersmith-kit29-536-0to52 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 52 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-dragon-99",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
    "account": "Dipstick",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -135,19 +157,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-3244daf9-18d4-46a9-bfdd-113b9f5d761e"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-trousersnake-20261111t180923z [task-3244daf9-18d4-46a9-bfdd-113b9f5d761e]",
-   "role": "crafting"
   }
  ]
 }

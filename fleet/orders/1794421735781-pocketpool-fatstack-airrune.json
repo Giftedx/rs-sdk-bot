@@ -1,0 +1,22 @@
+{
+ "id": "1794421735781-pocketpool-fatstack-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "PocketPool",
+ "to": "Fatstack",
+ "item": "Air rune",
+ "count": 42,
+ "start": 1794421735781,
+ "end": 1794424135781,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
