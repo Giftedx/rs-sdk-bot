@@ -24,6 +24,17 @@ export const PROTECT = { magic: 12, missiles: 13, melee: 14 } as const;
 // vendor/rs-sdk/sdk/types.ts PRAYER_LEVELS, indices 12-14.
 const PROTECT_LEVEL: Record<number, number> = { 12: 37, 13: 40, 14: 43 };
 
+export type AttackStyle = 'melee' | 'ranged' | 'magic';
+// The protection prayer for one NPC, from a table of the styles its attack script can use
+// (packages/knowledge/src/npc-attack-styles.ts). An NPC that is not in the table uses melee. An NPC with melee and
+// another style uses melee while it stands next to the player.
+export const protectByStyle = (table: ReadonlyMap<number, readonly AttackStyle[]>) => (npc: any | null): number => {
+    const styles = npc ? table.get(npc.id) : undefined;
+    if (!styles) return PROTECT.melee;
+    if (styles.includes('melee') && npc.distance <= 1 + Math.floor((npc.size ?? 1) / 2)) return PROTECT.melee;
+    return styles.includes('magic') ? PROTECT.magic : styles.includes('ranged') ? PROTECT.missiles : PROTECT.melee;
+};
+
 export interface PrayerGuardOptions {
     // false: never turn a protection prayer on; only keep the script's prayers free.
     // A function: the protection prayer for one attacking NPC (null when only a hit was seen). Default: melee.

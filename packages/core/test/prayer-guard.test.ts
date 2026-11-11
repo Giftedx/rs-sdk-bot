@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { startPrayerGuard, PROTECT } from '../src/prayer-guard';
+import { protectByStyle, startPrayerGuard, PROTECT, type AttackStyle } from '../src/prayer-guard';
 
 // A model of the server rules the guard depends on (skill_prayer/scripts/prayer.rs2 and prayers/*.rs2): a prayer
 // button closes the open window and clears the interaction; the drain timer starts at 5 when the first prayer goes
@@ -35,6 +35,8 @@ function world(init: { prayers?: number[]; level?: number; points?: number } = {
                     if (w.window) { w.window = false; w.windowsClosed++; }
                     if (w.interaction) { w.interaction = null; w.cleared++; }
                     active[a.prayerIndex] = !active[a.prayerIndex];
+                    // One protection prayer turns the other two off (prayer.rs2:52, prayer_deactivate_conflicting).
+                    if (active[a.prayerIndex] && a.prayerIndex >= 12) for (const i of [12, 13, 14]) if (i !== a.prayerIndex) active[i] = false;
                     if (active[a.prayerIndex]) { if (timer === null) timer = 5; } else if (!active.some(Boolean)) timer = null;
                 } else if (a.type === 'interactNpc' || a.type === 'interactLoc') w.interaction = `${a.type}:${a.npcIndex ?? a.locId}`;
             }
@@ -169,4 +171,42 @@ test('stop puts the client input function back', () => {
     expect(client.executeBotAction).not.toBe(original);
     guard.stop();
     expect(client.executeBotAction).toBe(original);
+});
+
+const styles = new Map<number, readonly AttackStyle[]>([[66, ['ranged']], [13, ['magic']], [54, ['melee', 'magic']]]);
+const npc = (id: number, distance: number, size = 1) => ({ ...cow(32768 + 7), id, distance, size });
+
+test('a ranged NPC turns Protect from Missiles on; a magic NPC turns Protect from Magic on', () => {
+    for (const [id, prayer] of [[66, PROTECT.missiles], [13, PROTECT.magic], [81, PROTECT.melee]] as const) {
+        const { w, s, advance } = world();
+        startPrayerGuard(s, { protect: protectByStyle(styles) });
+        w.npcs = [npc(id, 6)];
+        advance(40);
+        expect(w.active.flatMap((on, i) => (on ? [i] : []))).toEqual([prayer]);
+        expect(w.drains).toBe(0);
+    }
+});
+
+test('an NPC with melee and magic: magic from a distance, melee next to the player', () => {
+    const { w, s, advance } = world();
+    const guard = startPrayerGuard(s, { protect: protectByStyle(styles) });
+    w.npcs = [npc(54, 7, 4)];
+    advance(20);
+    expect(w.active[PROTECT.magic]).toBe(true);
+    w.npcs = [npc(54, 3, 4)];
+    advance(20);
+    expect(w.active.flatMap((on, i) => (on ? [i] : []))).toEqual([PROTECT.melee]);
+    expect(w.drains).toBe(0);
+    expect(guard.stats().protects).toBe(2);
+});
+
+test('Prayer 40 protects from a ranged NPC and not from a melee NPC', () => {
+    const { w, s, advance } = world({ level: 40 });
+    startPrayerGuard(s, { protect: protectByStyle(styles) });
+    w.npcs = [npc(81, 1)];
+    advance(10);
+    expect(w.toggles).toBe(0);
+    w.npcs = [npc(66, 6)];
+    advance(10);
+    expect(w.active[PROTECT.missiles]).toBe(true);
 });
