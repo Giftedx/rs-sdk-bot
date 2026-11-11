@@ -547,18 +547,21 @@ export const PRAYER_FIELD_BAND = 9;
 // out of arrows it ends stop=ammo, ok after kills. It takes its fired arrows back after each kill. Practice 3/3
 // RESULT ok with bronze arrows: Ranged 1 to 59-62 in about 1,600 ticks, 41.1-46.7 XP a tick, 0.67-2.02 arrows lost
 // per 1,000 XP (research/combat-measure.md). It shares the battlefield with the melee trooper bands.
-export const RANGED_BAND = 4;
+export const RANGED_BAND = 4, GUILD_BAND = 3.9;
 const BOWS: readonly (readonly [string, number])[] = [['shortbow', 1], ['longbow', 1], ['oak shortbow', 5], ['oak longbow', 5], ['willow shortbow', 20],
     ['willow longbow', 20], ['maple shortbow', 30], ['maple longbow', 30], ['yew shortbow', 40], ['yew longbow', 40], ['magic shortbow', 50], ['magic longbow', 50]];
 const ARROWS: readonly (readonly [string, number])[] = [['bronze arrow', 1], ['iron arrow', 1], ['steel arrow', 5], ['mithril arrow', 20], ['adamant arrow', 30], ['rune arrow', 40]];
 // A staff that stands for the fire runes of a cast.
 export const FIRE_STAFFS = ['staff of fire', 'fire battlestaff', 'mystic fire staff'] as const;
-// Kit items a goal-tier shop job brings (army-staff-zaff, army-arrows-ardy, army-arrows-lowe). A kit line of these that no market sells
+// Kit items a goal-tier shop job brings (army-staff-zaff and the army-arrows jobs). A kit line of these that no market sells
 // does not hold back the market buy of the band's other lines: the shop job follows once those are held.
-export const SHOP_SUPPLIED: ReadonlySet<string> = new Set(['fire rune', ...FIRE_STAFFS, 'bronze arrow', 'iron arrow']);
+export const SHOP_SUPPLIED: ReadonlySet<string> = new Set(['fire rune', ...FIRE_STAFFS, 'bronze arrow', 'iron arrow', 'steel arrow', 'mithril arrow']);
 // ARROW_LOW: the arrows of one kind the Ranged band needs to start. ARROW_STOCK: what a shop run brings the account up to.
 export const ARROW_LOW = 100, ARROW_STOCK = 500, LOWE_STOCK = 1000;
 export const ZAFF_WAIT = 1100;
+// An account short of arrows of every kind: what sends it to an arrow shop. One with ARROW_LOW of any kind is left to
+// the Ranged band, or to a kit line when its bow cannot fire them.
+const NO_ARROWS: Readonly<Record<string, number>> = Object.fromEntries(ARROWS.map(([arrow]) => [arrow, ARROW_LOW]));
 // A bow the account's Ranged level wields, with ARROW_LOW arrows of one kind that bow fires.
 export const RANGED_KIT: readonly Needs[] = BOWS.flatMap(([bow, level]) =>
     ARROWS.filter(([, arrowLevel]) => arrowLevel <= level).map(([arrow]) => ({ skills: { Ranged: level }, items: { [bow]: 1, [arrow]: ARROW_LOW } })));
@@ -719,18 +722,43 @@ export function catalogue(): Template[] {
         env: { ITEMS: 'bronze arrow', STOCK_TARGET: String(ARROW_STOCK), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '5000', COIN_RESERVE: '500', MAX_SPEND: '4000' },
         role: 'supply', goal: 'buy bronze arrows at Aemad in East Ardougne for the Ranged band',
         tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: ['shop:ardy'], yields: () => [],
-        needs: { items: { coins: 5000 }, pieces: { of: BOWS.map(([bow]) => bow), count: 1 }, holdsUnder: { 'bronze arrow': ARROW_LOW, 'iron arrow': ARROW_LOW } },
+        needs: { items: { coins: 5000 }, pieces: { of: BOWS.map(([bow]) => bow), count: 1 }, holdsUnder: NO_ARROWS },
+    };
+    // The same need at Hickton's Archery Emporium in Catherby (archeryshop2: bronze 1,000 and iron 800 in stock, one back
+    // every 10 and 20 ticks). It is a walk from Ardougne with no ferry: practice, 1,785 arrows bought and banked at the
+    // Catherby bank 435 ticks after the start at the north bank. The second account short of arrows goes here.
+    const arrowsCatherby: Template = {
+        id: 'army-arrows-catherby', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['catherby_arrows', '600'],
+        env: { ITEMS: 'iron arrow|bronze arrow', STOCK_TARGET: String(LOWE_STOCK), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '21000', COIN_RESERVE: '500', MAX_SPEND: '20000' },
+        role: 'supply', goal: "buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
+        tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: ['shop:catherby_arrows'], yields: () => [],
+        needs: { items: { coins: 25000 }, pieces: { of: BOWS.map(([bow]) => bow), count: 1 }, holdsUnder: NO_ARROWS },
+    };
+    // The arrow shop of an account at Ranged 40, the level the Ranging Guild door asks: Dargaud's shop there sells
+    // willow shortbows (20 in stock) and every arrow (bronze 1,000, iron, steel and mithril 500 each; one back every 10,
+    // 20, 40 and 60 ticks). A shortbow fires bronze and iron only; a willow shortbow fires up to mithril. Two shop runs
+    // in one job (scripts/chain.ts): the bow, then the arrows, banked at Seers' Village. It comes just before the other
+    // arrow shops (GUILD_BAND), so accounts that can enter leave Aemad's, Hickton's and Lowe's shelves to those that
+    // cannot. The bronze shelf always gives something back, so a visit to an emptied shop still ends with arrows.
+    const guildRun = (items: string, target: number, spend: number) => ['scripts/shop-buyer.ts', 'dargaud', '800', `ITEMS=${items}`, `STOCK_TARGET=${target}`,
+        'STOP_AT_TARGET=1', 'BANK_PACK=1', 'BANK_AT=0', 'NO_BUY_TICKS=25', `FLOAT=${spend + 1000}`, 'COIN_RESERVE=500', `MAX_SPEND=${spend}`].join(' ');
+    const arrowsGuild: Template = {
+        id: 'army-arrows-guild', family: 'shop-buyer', script: 'scripts/chain.ts',
+        args: [guildRun('willow.shortbow', 1, 3000), guildRun('mithril.arrow|steel.arrow|iron.arrow|bronze.arrow', ARROW_STOCK, 50000)],
+        env: { ROUNDS: '1' }, role: 'supply', goal: 'buy a willow shortbow and arrows up to mithril at the Ranging Guild for the Ranged band',
+        tier: 'goal', band: GUILD_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: ['shop:dargaud'], yields: () => [],
+        needs: { skills: { Ranged: 40 }, items: { coins: 60000 }, pieces: { of: BOWS.map(([bow]) => bow), count: 1 }, holdsUnder: NO_ARROWS },
     };
     // The same need at Lowe's Archery Emporium in Varrock (archeryshop: bronze 2,000 and iron 1,500 in stock, one back
     // every 10 and 15 ticks). The trip takes the ferries both ways (practice: about 1,300 ticks out, 900 back) and one
     // run brings up to LOWE_STOCK of each, about ten Ranged runs' worth, where Aemad's shelf holds 500 and then gives
-    // one arrow every 10 ticks. A second account short of arrows goes here while the first holds Aemad's shop.
+    // one arrow every 10 ticks. A third account short of arrows goes here while others hold Aemad's and Hickton's shops.
     const arrowsLowe: Template = {
         id: 'army-arrows-lowe', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['lowe', '2500'],
         env: { ITEMS: 'iron arrow|bronze arrow', STOCK_TARGET: String(LOWE_STOCK), STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '21000', COIN_RESERVE: '500', MAX_SPEND: '20000' },
         role: 'supply', goal: "buy iron and bronze arrows at Lowe's in Varrock for the Ranged band",
         tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: ['shop:lowe'], yields: () => [],
-        needs: { items: { coins: 25000 }, pieces: { of: BOWS.map(([bow]) => bow), count: 1 }, holdsUnder: { 'bronze arrow': ARROW_LOW, 'iron arrow': ARROW_LOW } },
+        needs: { items: { coins: 25000 }, pieces: { of: BOWS.map(([bow]) => bow), count: 1 }, holdsUnder: NO_ARROWS },
     };
     return [
         ...goldfarm,
@@ -741,6 +769,8 @@ export function catalogue(): Template[] {
         staff,
         prayer,
         arrows,
+        arrowsCatherby,
+        arrowsGuild,
         arrowsLowe,
         ranged,
         prayerField,

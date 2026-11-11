@@ -364,6 +364,39 @@ Ranged it adds is not needed at that point.
 - **Evidence.** `.practice/arrows/shop2.ts` and its `l1`-`l3` logs in the Claude cloud container that ran them;
   `packages/planner/test/autopilot.test.ts` (one account at each shop).
 - **Gap.** Practice only. Why the first plan from the Port Sarim dock to Varrock East fails is not found.
+- **Claim.** Hickton's shop in Catherby is the nearest large shelf: a walk from Ardougne with no ferry
+  (`army-arrows-catherby`: `scripts/shop-buyer.ts <bot> catherby_arrows 600`, the same settings as Lowe's).
+- **Conditions.** Practice, the same account from the Ardougne north bank; shelf bronze 1,000 and iron 800. The
+  Ranged template followed each shop run.
+
+  | Run | On the shelf | Bought | Coins | Shop run ticks | Stop | Ranged run after it |
+  |---|---|---|---|---|---|---|
+  | h4 | alone | 1,791 | 14,963 | 526 | stock-wait | ok, 10 kills, Ranged 1 -> 44, iron arrows |
+  | h1 | one of three | 710 | 5,341 | 285 | stock-wait | ok, 11 kills, Ranged 1 -> 44 |
+  | h2 | one of three | 561 | 4,902 | 359 | stock-wait | ok, 15 kills, Ranged 1 -> 49 |
+  | h3 | one of three | 685 | 6,177 | 1,222 | cap (1,200) | ok, 12 kills, Ranged 1 -> 45 |
+
+  h3 stood on the emptied shelf to its cap for one arrow every 10 to 20 ticks, so the job's cap is 600. The walk back
+  to the north bank took 139-302 ticks, inside the Ranged run's food stage.
+- **Claim.** An account at Ranged 40 buys a willow shortbow and arrows up to mithril at the Ranging Guild
+  (`army-arrows-guild`, two shop runs in one `scripts/chain.ts` job) and then trains with them.
+- **Conditions.** Practice, the same account at Ranged 45, three at once on one shelf (bronze 1,000; iron, steel and
+  mithril 500 each). The door refuses under Ranged 40.
+
+  | Run | Bow | Arrows bought | Coins | Arrow run ticks | Ranged run after it |
+  |---|---|---|---|---|---|
+  | v2 | 1 for 202 | 1,143 (mithril 253, steel 251, iron 249, bronze 390) | 42,291 | 639 | ok, 28 kills, Ranged 45 -> 61, mithril arrows |
+  | v3 | 1 for 200 | 1,233 (mithril 252, steel 257, iron 249, bronze 475) | 44,086 | 531 | ok, 24 kills, Ranged 45 -> 61, mithril arrows |
+  | v1 | 1 for 200 | 289 (mithril 10, steel 14, iron 45, bronze 220) | 4,929 | 888, cap | ok, 2 kills, `stop=ammo` on its 10 mithril arrows |
+
+  v1 came last to an emptied shelf. Its Ranged run took the 10 mithril arrows and ended on ammo, so the trainer now
+  takes the best kind it holds 50 of, else its largest stack (`selectGiantArrows`). Each run logged two or three
+  `WALK fail ... walk rejected` lines at the guild door and went on.
+- **Evidence.** `.practice/arrows/shop3.ts` and its `h1`-`h4`, `v1`-`v3` logs in the Claude cloud container that ran
+  them; `packages/planner/test/autopilot.test.ts` (one account at each shop, the guild first from Ranged 40);
+  `scripts/gather-combat-giant.test.ts` (the arrow choice).
+- **Gap.** Practice only. The shelves together give back about 3,700 arrows in 6,000 ticks (Aemad 600, Hickton 900,
+  Lowe 1,000, the guild 1,150): an estimate of about seven archers at 510 lost each.
 
 ## Sharing stock between army accounts
 
