@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794391515655,
+ "at": 1794392124864,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -295,7 +295,7 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
+    "TRAIN_SKILL": "Strength",
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
@@ -304,9 +304,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
+   "goal": "train Strength to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "template": "army-trooper-strength-99",
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
