@@ -763,7 +763,11 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     the profiles on every second pair put one profile on the weak place of every pair: base against base read as 9
     kills to 23. The swap goes by two pairs at a time (`scripts/pk-spar.ts`), and the duel cases put their kits the
     same way; the control then reads 8 to 8 and 7 to 9. Results before this rule that favoured side A stand (the
-    fault worked against side A); a result that favoured side B does not. Gap: the cause of the place effect.
+    fault worked against side A); a result that favoured side B does not. The effect holds for the champion in the
+    snare kit: with no swap, side A won 4 of 16 even pairs and 10 of 17 odd pairs (`extra:spar-mirror-snare-x12`,
+    seeds 11 to 13). The order of the two logins of a pair is not the cause: with side B logged in first
+    (`SPAR_LOGIN=b`, the `START` lines show it) side A won 5 of 16 even pairs and 8 of 17 odd pairs (seeds 21 to 23).
+    Gap: the cause; an even pair is the first pair of its worker process, and that is the lead not yet tested.
 22. **More prayer restore for less food does not win.** The kit with four restore potions and 16 sharks has 5 kills and
     10 deaths in 16 spars against the tribrid kit, both on the `snap` profile (`extra:spar-duel-tribrid-pray4-x8`,
     seeds 1 and 2, kits on the weak place of each pair).
@@ -863,3 +867,20 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     kills and 3 deaths in 36 against the melee build, the hybrid and the ranger (seeds 1 to 3); without it the
     champion has 16 and 0 in 16 and 23 and 1 in 24. The special from 50% health against the champion: 8 to 4 and 3
     to 9, 11 kills and 13 deaths in 24 (`extra:spar-mirror-snare-x12`, seeds 1 and 2).
+36. **The fighter beats the Defence 99 range tank.** The hybrid kit on the champion profile has 24 kills and no death in
+    24 spars against `tank-range` on the same profile, at Wilderness level 34 (`extra:spar-duel-hybrid-tank-range-x12`,
+    seeds 1 and 2, kits placed by two pairs at a time).
+37. **The champion's reading options do not carry over to the low builds, so the roamer keeps its options.** In kit
+    mirrors, the `snap` profile with `counterRead`, `adaptStyles` and `mixStyles` against the `snap` profile, 8 spars
+    each with `SPAR_SWAP=1`: `pure-dds-msb` 2 kills and 6 deaths, `pure-tribrid` 2 kills, 3 deaths and 3 draws,
+    `zerker` 7 kills and 1 death (`extra:spar-kit-<kit>-x8`, seed 1). A pure's fight ends near tick 240, and the
+    learnt style choice has few attacks to learn from. `scripts/pk-roam.ts` keeps `predictPrayer` and `snapPrayer`
+    alone. Gap: one seed for each build.
+38. **A spar batch in 8 worker processes takes about 5.7 GB.** Free memory fell from 8.7 GB to 3.0 GB during a batch of 12
+    pairs: about 1.5 GB for the engine and the bench and 0.55 GB for each worker process. `pk-spar-jobs.ts` sets the
+    number of processes from the free memory so that 4 GB stay free (`procsFor`: 8 from 9.9 GB, 5 at 8.7 GB, none
+    under 6.1 GB, where the batch waits and then does not run).
+39. **Two players on one tile: the engine's reach rule is the entity rule.** A player's melee turn needs
+    `reachedEntity` to its target (`inOperableDistance` in the engine's `Player.ts`, `rsmod.reached` with shape -2).
+    Gap: whether that rule refuses a target on the attacker's own tile is not measured; no fight option steps under
+    a target, and no spar tests line of sight or two against one.

@@ -354,6 +354,9 @@ const ROUTE_CASES: BenchCase[] = [
   // their own build and their own way to play (LEAGUE). A fighter is ready for a skilled player when it beats them all.
   sparMatrix('extra:spar-league-x8', LEAGUE.map(o => ['tribrid-pots', o.kit] as const), [`SPAR_B_PROFILES=${LEAGUE.map(o => o.profile).join(',')}`]),
   // The champion against itself in the snare kit: the hardest opponent on the bench. Use SPAR_SWAP=1.
+  // Our fighter (the hybrid kit, the hunter's bow trip) against the Defence 99 range tank, at Wilderness level 34 so
+  // that combat 126 can attack combat 102. Sides by two pairs at a time.
+  sparMatrix('extra:spar-duel-hybrid-tank-range-x12', Array.from({length: 12}, (_, i) => ((i >> 1) % 2 ? ['tank-range', 'hybrid'] : ['hybrid', 'tank-range']) as [string, string]), [], {x: 3125, z: 3790}),
   // The snare kit against the hybrid kit, sides by two pairs at a time.
   sparMatrix('extra:spar-duel-snare-hybrid-x12', Array.from({length: 12}, (_, i) => ((i >> 1) % 2 ? ['hybrid', 'tribrid-snare'] : ['tribrid-snare', 'hybrid']) as [string, string])),
   sparMatrix('extra:spar-mirror-snare-x12', Array.from({length: 12}, () => ['tribrid-snare', 'tribrid-snare'] as const)),
