@@ -14,7 +14,7 @@ import { defaultSpec, fightPlayer, nextTick, type FightOptions, type FightResult
 import { TRIBRID_KIT } from './pk-hunt';
 
 // `specBelow` moves the health fraction at which the kit's special fires.
-export type Profile = Partial<Omit<FightOptions, 'kit' | 'log' | 'stop'>> & { specBelow?: number };
+export type Profile = Partial<Omit<FightOptions, 'log' | 'stop'>> & { specBelow?: number };
 export const PROFILES: Readonly<Record<string, Profile>> = {
     base: {},
     freeze: { freeze: true },
@@ -32,11 +32,16 @@ export const PROFILES: Readonly<Record<string, Profile>> = {
     'ranged-melee': { rotation: ['ranged', 'melee'] },
     'magic-ranged': { rotation: ['magic', 'ranged'] },
 };
+const GOD_HUNTER: Profile = { kit: { ...TRIBRID_KIT, magic: [2417] }, damageSpell: 1192, charge: true };
 // Options a scenario gives a side under its profile. In `escape` side B is the runner: with its food gone at 60 HP or
 // less it runs south and rubs its glory, and side A is the hunter that must kill it first.
 export const SCENARIOS: Readonly<Record<string, { a?: Profile; b?: Profile }>> = {
     open: {},
     escape: { b: { escapeAt: 60 } },
+    // The hunter casts Flames of Zamorak under Charge, with the Zamorak staff as its magic weapon (the start state
+    // wears the Zamorak cape and has the Mage Arena done).
+    'escape-god': { a: GOD_HUNTER, b: { escapeAt: 60 } },
+    'escape-spell-god': { a: GOD_HUNTER, b: { escapeAt: 60, escapeSpell: 1164 } },
     // The runner has no glory: it runs to Wilderness level 20 and casts Varrock Teleport (scripts/pk.ts SPELLS).
     'escape-spell': { b: { escapeAt: 60, escapeSpell: 1164 } },
 };
@@ -46,7 +51,8 @@ export function sparOptions(name: string, extraJson: string | undefined, kit: Ki
     if (!profile) throw Error(`pk-spar: unknown profile "${name}"; known: ${Object.keys(PROFILES).join(', ')}`);
     const extra = extraJson ? JSON.parse(extraJson) as Profile : {};
     const { specBelow, ...options } = { ...scenario, ...profile, ...extra };
-    const merged: FightOptions = { kit, spec: defaultSpec(kit), cap, ...options };
+    const used = options.kit ?? kit;
+    const merged: FightOptions = { spec: defaultSpec(used), cap, ...options, kit: used };
     if (specBelow !== undefined && merged.spec) merged.spec = { ...merged.spec, below: specBelow };
     return merged;
 }

@@ -79,6 +79,10 @@ export type FightOptions = {
     // Return outcome "danger" (with the reason) as soon as dangerReason fires, so the caller can escape.
     exitOnDanger?: boolean;
     damageSpell?: number;
+    // Cast Charge before the first attack and again when it fades. With a god staff and that god's cape worn, a god
+    // spell then hits up to 30, not 20 (pvp/spells/scripts/flames_of_zamorak.rs2:27; Charge needs Magic 80, 3 fire,
+    // 3 blood and 3 air runes, and the Mage Arena done, skill_magic/scripts/spells/charge.rs2).
+    charge?: boolean;
     maxWild?: number;
     maxDistance?: number;
     stop?: () => boolean;
@@ -297,6 +301,7 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
     let freezeReady = start, frozenUntil = start, freezeCastAt = -10, frozenTile: { x: number; z: number } | null = null, selfFrozenUntil = start;
     let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = false, rapidSet = false, pjedByNpc = false;
     let target: NearbyPlayer | undefined, rubbed = -1, ranAt = -10, prevSelf: { x: number; z: number } | null = null;
+    let charged = false, chargeAt = -10;
     let prevTarget: { x: number; z: number } | null = null, prevGap = 0, fleeingUntil = start, heading = { x: 0, z: 0 }, chaseAt = -10, fled = false;
     const hits: { tick: number; damage: number; src: number }[] = [], dealtLog: { tick: number; damage: number }[] = [];
     // Tank torso worn or carried at fight start (unequipped for a cast/shot and re-equipped on melee turns).
@@ -337,6 +342,8 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
                 frozenUntil = Math.max(frozenUntil, now + 4);
             }
             if (/have been poisoned/i.test(m.text)) poisoned = true;
+            if (/feel charged with magic power/i.test(m.text)) charged = true;
+            if (/magical charge fades away/i.test(m.text)) charged = false;
             if (/already under attack/i.test(m.text)) pjedByNpc = true;
         }
         seenMessage = maxMessage;
@@ -514,6 +521,14 @@ export async function fightPlayer(s: Session, targetName: string, o: FightOption
                 for (const p of wantPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
                 for (const p of offPray) if (prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
             }
+            continue;
+        }
+        // Charge goes out on an attack tick, in place of that attack: a button on a cooldown tick could clear an attack
+        // that the server still has in hand. One try each 6 ticks, until the game confirms it.
+        if (o.charge && !charged && now - chargeAt >= 6) {
+            log('PK cast Charge');
+            void sdk.sendClickComponent(SPELLS.charge);
+            chargeAt = now; nextAttack = now + 2;
             continue;
         }
         // When not cardinally adjacent, client interactPlayer/spellOnPlayer emits MOVE_OPCLICK + OPPLAYER* (2 USER_EVENT packets).

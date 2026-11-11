@@ -28,7 +28,8 @@ Map cases (`--case <key>`), each with the mirror kit:
 - `extra:spar-escape-spell`: the same chase with no glory on the runner; it runs about 110 tiles to level 20 and casts
   Varrock Teleport.
 - `extra:spar-escape-pots`: the glory chase with a super attack, a super strength and a ranging potion on the hunter.
-- Batches of 8: `extra:spar-x8`, `extra:spar-escape-x8`, `extra:spar-escape-pots-x8` and `extra:spar-escape-spell-pots-x8`.
+- Batches of 8: `extra:spar-x8`, `extra:spar-escape-x8`, `extra:spar-escape-pots-x8`, `extra:spar-escape-spell-pots-x8`,
+  and with the god-spell kit on the hunter `extra:spar-escape-god-x8` and `extra:spar-escape-spell-god-x8`.
 
 Gap: the fight loop does not choose where to stand, so cover, line of sight as a defence and a second attacker are
 not measured.
@@ -94,6 +95,13 @@ unless a finding says otherwise; a seed repeats its fight. Evidence: `.practice/
    | glory | `hunter-low` | yes | 5 |
    | glory | `hunter-low`, `specBelow` 0.25 | yes | 4 |
    | no glory, about 110 tiles to level 20 | `hunter-low` | yes | 9 |
+   | glory | `hunter-low`, Flames of Zamorak under Charge | yes | 5 |
+   | no glory | `hunter-low`, Flames of Zamorak under Charge | yes | 10 |
+
+   Flames of Zamorak under Charge hits up to 30 where Fire Wave hits up to 20 (Zamorak staff and cape worn, the Mage
+   Arena done; `pvp/spells/scripts/flames_of_zamorak.rs2:27`). The loop casts Charge (`charge`); every hunter of a
+   batch got "You feel charged with magic power." The rate did not move at 16 fights: 5 against 5-6 for the glory
+   runner, 10 against 9 for the runner with no glory.
 
    The base hunter killed 0 of 8 against the glory runner. Boost potions and the length of the run decide the rate;
    the freeze and special settings do not separate at 16 fights. Variants that showed no gain at 5 fights each: magic
