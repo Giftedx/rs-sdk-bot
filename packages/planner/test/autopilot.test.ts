@@ -346,6 +346,14 @@ test('a server outage is a drain: a socket error at login or a stalled tick stre
     expect(assess(['RESULT fail no chickens', login, stall, 'RESULT fail no chickens'])).toMatchObject({ retire: true, fail: 2, drains: 2 });
     expect(assess(['RESULT fail login: LoginError: Account already logged in', 'RESULT fail login: LoginError: Account already logged in']).retire).toBe(true);
 });
+test('a run that ended on a stop file is a drain: the job was stopped, it did not fail', () => {
+    const inner = 'RESULT fail quest-sweep murder Error: worker finished: stop file', outer = 'RESULT fail stop file quest-chain done=drunkmonk failed=murder';
+    expect(assess([inner, outer])).toMatchObject({ retire: false, ok: 0, fail: 0, drains: 2 });
+    expect(assess(['  | ' + inner, outer, 'RESULT fail stop file'])).toMatchObject({ retire: false, fail: 0, drains: 3 });
+    // Real fails around a stop still count.
+    expect(assess(['RESULT fail no chickens', outer, 'RESULT fail no chickens'])).toMatchObject({ retire: true, fail: 2, drains: 1 });
+});
+
 test('a login refused while a dropped session holds the fleet claim is a drain, not a failure', () => {
     const held = 'RESULT fail Error: fleet account claim held by swarm';
     expect(assess([held, held, held])).toMatchObject({ retire: false, ok: 0, fail: 0, drains: 3 });
