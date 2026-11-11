@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794396551327-fingerblastr-quickhandjob",
+ "account": "Quickhandjob",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 80897,
+ "claim": "1488d5e9-a38c-4980-8e2f-f7a468f256a5",
+ "count": 0,
+ "ok": false,
+ "at": 1794396562370,
+ "detail": "trade claimed"
+}
