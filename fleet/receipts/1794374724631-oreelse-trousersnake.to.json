@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794374724631-oreelse-trousersnake",
+ "account": "TrouserSnake",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "claude-cloud",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "fa7cf91f-9b8f-4819-a1c6-a8e18461a97a",
+ "count": 0,
+ "ok": false,
+ "at": 1794375225223,
+ "detail": "trade claimed"
+}
