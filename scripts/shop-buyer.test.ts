@@ -143,6 +143,7 @@ test('magic guild keeps its fire, nature, air, law and staff lines, endpoints an
     expect(guild.bankSpot).toEqual({ x: 2612, z: 3093 });
     expect(guild.items.map(i => [i.re.source, i.buyPerTick])).toEqual([
         ['^staff of fire$', 1], ['^fire rune$', 100], ['^nature rune$', 100], ['^air rune$', 100], ['^law rune$', 50], ['^blood rune$', 100], ['^death rune$', 100]]);
+    expect(selectItems(guild.items, 'air rune').map(i => i.re.source)).toEqual(['^air rune$']);
     expect(selectItems(guild.items, 'fire rune|nature rune|law rune').map(i => i.re.source)).toEqual(['^fire rune$', '^nature rune$', '^law rune$']);
 });
 
