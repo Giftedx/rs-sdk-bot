@@ -32,6 +32,7 @@ export const QUESTER_MODES: readonly QuesterModeSpec[] = [
  {mode:'items',script:'scripts/quest-items-order.ts',description:'Acquire and bank prerequisite items for upcoming quests'},
  {mode:'cook-job',script:'scripts/quest-cook-job.ts',description:'Self-contained Cook\'s Assistant acquisition + completion'},
  {mode:'seaslug-leave',script:'scripts/seaslug-leave.ts',description:'Return from Fishing Platform after Sea Slug'},
+ {mode:'dusty-key',script:'scripts/dusty-key.ts',description:'Get the dusty key from Velrak (the Jailer, his cell, the dialogue) for the inner gate of Taverley dungeon'},
  {mode:'hero-owned',script:'scripts/generated/quest-hero-owned.ts',orderFile:true,description:'Two-account owned Heroes\' Quest runner'},
  {mode:'legends-owned',script:'scripts/generated/quest-legends-owned.ts',orderFile:true,description:'Owned-account Legends\' Quest runner'},
  {mode:'tbwt-owned',script:'scripts/generated/quest-tbwt-owned.ts',description:'Owned-account Tai Bwo Wannai Trio runner'},

@@ -270,6 +270,46 @@ Ranged it adds is not needed at that point.
   (`doorman.rs2`) and the market ladder leaves to Al Kharid (`ladder_fairy.rs2`).
 - **Gap.** No seller on practice, so a fill is proved live only. Kills per tick with each blade are not measured.
 
+## Black dragonhide from Taverley's black dragons
+
+- **Claim.** Black dragonhide armour has to be made: no market lists it and no shop sells it. **Conditions.** Live
+  claude-cloud market read by item id (every colour of dragonhide shares the names "Dragonhide body", "Dragonhide
+  chaps" and "Dragon vambraces"): black body 2503, chaps 2497 and vambraces 2491 unlisted, last trades about 313,000
+  to 350,000, 250,000 to 300,000 and 120,000 to 145,000; black dragon leather 2509 never traded. Shops stock green
+  only (`edgeville.inv`, `champions_guild.inv`). The hide (1747) drops from every black dragon and from nothing else
+  bar the King Black Dragon (`drop tables/scripts/black_dragon.rs2`); the Al Kharid tanner makes leather of it for 20
+  coins (`scripts/microbot-c-tanner.ts black`); vambraces, chaps and body ask Crafting 79, 82 and 84 and 1, 2 and 3
+  leathers (`skill_crafting/configs/leather/leather.dbrow`, `scripts/microbot-production.ts`). Wearing it asks
+  Ranged 70, and the body Defence 40 (`levelrequire/scripts/tier70.rs2`).
+- **Claim.** A ranged account kills Taverley's black dragons from the corridor south of their cave and takes no
+  melee. **Conditions.** `black_dragon` (npc 54): size 4, level 227, 190 hitpoints, Defence 200, ranged defence 50,
+  respawn 60 ticks (`_unpack/225/all.npc`); two spawn, at 2829,9826 and 2835,9824 (`maps/m44_153.jm2`). A dragon
+  attacks only a player beside it, one attack in four with fire (up to 30, or 50 on a failed roll; 5 behind an
+  anti-dragon shield, 10 under Protect from Magic), and has no attack from a distance (`npc/scripts/dragon.rs2`). By
+  the engine's collision rules a 4x4 mover reaches 29 south-west tiles in the cave and none in the corridor, which is
+  three tiles wide (2834-2836, 9818-9821); from 2835,9820 the nearest dragon footprint is two tiles away
+  (`scripts/black-dragon-camp.test.ts`). The row north of it is beside dragon ground: an account that stepped to
+  2835,9821 fell from 96 to 22 hitpoints in 20 ticks, and one that stood east of the Obelisk ladder at 2843,9824 fell
+  from 99 to 13 in 25.
+- **Evidence (practice, 150 ms ticks, Ranged 99, magic shortbow on rapid, mithril arrows, nothing else worn).**
+  `scripts/black-dragon-camp.ts` with `STAGED=1`, four kills a run: 1,339 and 1,465 ticks (335 and 366 a kill, with
+  the fetch of each pile), 4 hides and 4 dragon bones each, `hpMin` 89 and 77, no food, 271 and 311 arrows (about 70 a
+  kill net of the arrows taken back from the pile). The loss of hitpoints is dragon fire during a fetch, which runs
+  under Protect from Melee. Raw runs: `.practice/blackdragon/camp-run.ts` (`a`-`d`) in the Claude cloud container
+  that ran them.
+- **Claim.** A shot at a dragon more than five tiles away can walk the shooter off its tile. **Conditions.** From
+  2835,9820 the first shot at a dragon on 2828,9824, seven tiles west and in sight by the collision data, walked the
+  account to 2834,9822. The camp shoots only a dragon whose south-west tile is within five tiles and in sight
+  (`canShoot`); the dragon that spawns on 2835,9824 always is. With that rule, 1,339 ticks without a step off the tile.
+- **Claim.** The way in is the dusty key gate, the blue dragon lair, out of the lair's south end and round by the
+  black demons and the poison spiders. **Conditions.** `scripts/microbot-combat-trip.ts` `blackDragonEntry`: the
+  Taverley ladder (1759 at 2884,3397), the gate (2623 at 2924,9803, dusty key 1590), then `BLACK_ENTRY`. The lair has
+  no way straight west: a walk from 2895,9793 to 2850,9809 stopped at 2881,9810. The key cannot be traded;
+  `scripts/dusty-key.ts` gets it (the Jailer, Velrak's cell, the dialogue): practice from the Ardougne north bank,
+  `RESULT ok dustyKey=1`, 950 ticks, `hpMin=99`.
+- **Gap.** No live run. The camp was alone on the server: another player's kill, or a player on the tile, is not
+  run. Kills with arrows other than mithril are not measured (best hits by arrow: iron 12, mithril 14, rune 19).
+
 ## Ranged on the troopers
 
 - **Claim.** On practice at xpRate 25, an army-shaped account trains Ranged 1 -> 63-66 on the Khazard troopers in about
