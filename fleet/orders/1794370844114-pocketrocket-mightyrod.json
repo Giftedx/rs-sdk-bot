@@ -1,0 +1,22 @@
+{
+ "id": "1794370844114-pocketrocket-mightyrod",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Pocketrocket",
+ "to": "Mightyrod",
+ "item": "Coins",
+ "count": 500000,
+ "start": 1794370844114,
+ "end": 1794374444114,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
