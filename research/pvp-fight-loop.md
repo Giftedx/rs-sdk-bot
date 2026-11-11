@@ -548,10 +548,23 @@ How a kit keeps its route:
   with 725 ticks on the third form, and one run of the whole quest lost that form to the 1,000 tick limit. Weapons,
   armour and runes are refused at the arena ladder (`can_enter_thorvald_trial`), and Peer banks every item before
   it. The case `extra:viking-zerker` is marked `known`.
-- Underground Pass at the levels of `pure-iban` before the quest (Attack 11, Hitpoints 10) fails at once: the quest
-  script wields a rune scimitar (Attack 40). Regicide at the levels of `pure-hally` fails: the fights gave 11,100
-  Attack XP, and the 10 meals of the pack ended at Hitpoints 16 of 93. One run each; the cases `extra:upass-pure-iban`
-  and `extra:regicide-pure-hally` are marked `known`.
+- The fights of Underground Pass and Regicide, on the maxed presets (`quester:quest:upass`, 2,483 ticks;
+  `quester:quest:regicide`, 3,273 ticks; one run each): Underground Pass gives 53,400 XP to the style of the fights
+  (534 damage) and 17,690 Hitpoints XP beside its reward; Regicide gives 11,100 XP and 3,677 Hitpoints XP. So a
+  build needs a skill at 99 for that XP.
+- An account that brings 50 or more iron arrows fights both quests with the bow, in the style that trains only
+  Ranged (`RANGED_ARROWS` in `quest-upass.ts` and `quest-regicide.ts`, `styleOnly` in `quest-lib.ts`). Any other
+  account takes the rune scimitar as before. An account under Prayer 43 skips Protect from Melee in Underground
+  Pass.
+- `pure-hally` (Ranged 99, Defence 1, Prayer 1, Hitpoints 93, nothing worn, a shortbow and 600 iron arrows) does
+  not pass either quest. Underground Pass: the XP of the run went to Ranged and Hitpoints only (17,300 Ranged XP to
+  the stage of the demons), and the account died to the demon Holthion after 17 sharks. Regicide: it died to a
+  Tyras guard after 10 sharks. One run each; the cases `extra:upass-pure-hally` and `extra:regicide-pure-hally` are
+  marked `known`.
+- `pure-iban` has no route at combat 27. It has no skill at 99 for the 53,400 XP of the fights, and 17,690
+  Hitpoints XP take Hitpoints 10 to 42. The XP in Magic gives Magic 63 and combat 41; split between Ranged and
+  Magic it gives level 58 in each and combat 39 (estimates from the curve, no run). The case
+  `extra:upass-pure-iban` is marked `known`.
 
 Planner: `BUILD_QUESTS` in `packages/planner/src/autopilot.ts` holds the routes by kit name, `scripts/autopilot.ts`
 `buildQuests` and `buildBefore` give each account of the `builds` object the route of its kit and its levels before
@@ -577,11 +590,12 @@ Gaps:
 
 - `kitRoute` counts quest rewards and the fights of `FIGHT_XP`. Underground Pass, Regicide and the Mage Arena have
   fights with no style rule, and the Mage Arena fight gives Magic XP to `pure-rock`, which has Magic 80.
-- The planner has no band for Underground Pass, Regicide or the Mage Arena, and no script for the Mage Arena (a
-  search of `scripts`, `scripts/generated` and `packages` for Kolodion, the arena and the god capes finds the PK
-  kits and the knowledge tables only),
-  so `pure-iban`, `pure-hally`, `pure-rock` and `pure-god` get those quests from no job. `zerker` gets The Fremennik
-  Trials from no job: the band asks Attack 60.
+- The planner has no band for Underground Pass, Regicide or the Mage Arena. No build passes Underground Pass or
+  Regicide in practice: a Defence 1 account with no protect prayer dies in both. Not measured: the same account with
+  Prayer 43, with a magic shortbow and rune arrows, or from a tile the demons cannot reach. No script exists for the
+  Mage Arena (a search of `scripts`, `scripts/generated` and `packages` for Kolodion, the arena and the god capes
+  finds the PK kits and the knowledge tables only). So `pure-iban`, `pure-hally`, `pure-rock` and `pure-god` get
+  those quests from no job. `zerker` gets The Fremennik Trials from no job: the band asks Attack 60.
 - The band `army-fletch-25` has no run of its two steps together, and no live run. One account holds 41,640 of the
   42,000 arrow shafts.
 - No live run of `army-quest-fremennik`, and no practice run of the chain `drunkmonk,murder,viking` through the quest

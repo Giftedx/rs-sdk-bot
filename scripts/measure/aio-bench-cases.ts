@@ -32,6 +32,8 @@ export type BenchCase = {
 
 const ok = (s: string) => /^RESULT ok\b/m.test(s);
 export const VIKING_BUILDS = ['zerker', 'range-tank', 'tank-range'] as const;
+// The iron arrows a bench case gives a build that fights a quest with the bow.
+export const RANGED_PACK = 600;
 // A quest run on a build account passes when the quest script ends ok with no death and the XP of the run leaves
 // every combat skill at or under the level of the kit (scripts/pk-kits.ts overBuild).
 export const questKeepsBuild = (kit: string, before: Readonly<Record<string, number>>) => (s: string) => {
@@ -521,14 +523,23 @@ const EXTRA_CASES: BenchCase[] = [
     presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Magic: 54, Hitpoints: 40}, bank: [{id: 561, count: 60}, {id: 314, count: 60}, {id: 1387, count: 1}]}},
   {key: 'extra:splash-train', script: 'scripts/splash-train.ts', preset: 'fresh_lumbridge', scriptArgs: ['21', '1500'], pass: ok,
     presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Magic: 19, Hitpoints: 40}, bank: [{id: 559, count: 40}, {id: 557, count: 120}, {id: 555, count: 120}, {id: 558, count: 2}, {id: 556, count: 2}]}},
-  // Underground Pass on the Iban pure at its levels before the quest, and Regicide on the halberd pure with
-  // Underground Pass done (its Attack 61 is in the kit).
+  // Underground Pass and Regicide on the halberd pure, which has Ranged 99: nothing worn (Defence 1 wears no rune),
+  // RANGED_PACK iron arrows in the pack, so the quest scripts fight with the bow in the Ranged-only style. Underground
+  // Pass starts at the levels before the route (Attack 11) and Regicide with Underground Pass done (Attack 61).
+  ...(['upass', 'regicide'] as const).map(quest => {
+    const preset = PRESETS[`quest_${quest}`]!, before = quest === 'upass' ? levelsBeforeRoute('pure-hally') : kitSkills('pure-hally');
+    // More sharks, to 23 places of the pack (the quest items need the rest): the build has Defence 1 and no protect
+    // prayer.
+    const pack = [...(preset.inventory ?? []).filter(i => i.id !== 884), {id: 884, count: RANGED_PACK}];
+    const inventory = [...pack, ...Array.from({length: Math.max(0, 23 - pack.length)}, () => ({id: 385, count: 1}))];
+    return {key: `extra:${quest}-pure-hally`, script: 'scripts/aio-quester.ts', preset: `quest_${quest}`, scriptArgs: [quest], pass: questKeepsBuild('pure-hally', before), timeoutMs: 900_000,
+      known: quest === 'upass' ? 'with Defence 1 and Prayer 1 the build dies to the demon Holthion after 17 sharks; the XP of the run is Ranged and Hitpoints only' : 'with Defence 1 and Prayer 1 the build dies to a Tyras guard after 10 sharks',
+      presetConfig: {...preset, equipment: [], inventory, skills: {...preset.skills, ...before}}};
+  }),
+  // Underground Pass on the Iban pure at its levels before the quest (Attack 11, Hitpoints 10).
   {key: 'extra:upass-pure-iban', script: 'scripts/aio-quester.ts', preset: 'quest_upass', scriptArgs: ['upass'], pass: questKeepsBuild('pure-iban', levelsBeforeRoute('pure-iban')), timeoutMs: 900_000,
-    known: 'the quest script wields a rune scimitar (Attack 40); the build has Attack 11 and Hitpoints 10 before the quest',
+    known: 'the fights of the quest give 53,400 XP and 17,690 Hitpoints XP; the build has no skill at 99 to take them and Hitpoints 10',
     presetConfig: {...PRESETS.quest_upass!, skills: {...PRESETS.quest_upass!.skills, ...levelsBeforeRoute('pure-iban')}}},
-  {key: 'extra:regicide-pure-hally', script: 'scripts/aio-quester.ts', preset: 'quest_regicide', scriptArgs: ['regicide'], pass: questKeepsBuild('pure-hally', kitSkills('pure-hally')), timeoutMs: 900_000,
-    known: 'the fights give Attack XP (11,100 in a run) and the 10 meals of the pack end at Hitpoints 16 of 93 with Defence 1',
-    presetConfig: {...PRESETS.quest_regicide!, skills: {...PRESETS.quest_regicide!.skills, ...kitSkills('pure-hally')}}},
 ];
 
 const KNOWN_QUEST: Readonly<Record<string, string>> = {

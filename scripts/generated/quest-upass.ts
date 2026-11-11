@@ -22,6 +22,8 @@ const SWING = { id: 2276, x: 2460, z: 9699 };             // rope on it: 2462,96
 const LEVER = { id: 3337, x: 2466, z: 9672 };             // portcullis_lever_up (upass_bridge.rs2:81-123)
 const HOLDS = { id: 3365, x: 2395, z: 9559 };             // upass_grilltrap_hand_holds in the spike pit -> 2477,9677
 
+// The iron arrows in the pack that make the bow the weapon of the quest.
+const RANGED_ARROWS = 50;
 const FROM = process.env.UP_FROM ?? 'start';
 const STAGES = ['start', 'bridge', 'grid', 'orbs', 'area2', 'paladins', 'main', 'witch', 'demons', 'lower', 'dove', 'temple'];
 const from = (s: string) => STAGES.indexOf(FROM) <= STAGES.indexOf(s);
@@ -74,7 +76,8 @@ try {
     const PFM = 14;
     const pfm = async (on: boolean) => {
         const p: any = q.st()?.prayers;
-        if (!!p?.activePrayers?.[PFM] === on || (on && (p?.prayerPoints ?? 0) <= 0)) return;
+        // An account under Prayer 43 has no Protect from Melee: it fights those rooms on its food.
+        if (!!p?.activePrayers?.[PFM] === on || (on && ((p?.prayerPoints ?? 0) <= 0 || (q.s.sdk.getSkill('Prayer')?.baseLevel ?? 1) < 43))) return;
         await q.step(`pfm ${on}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }), () => !!(q.st() as any)?.prayers?.activePrayers?.[PFM] === on, 3, 3);
     };
     // Eats until hp >= hpTo (before the temple's bolts and the big fights).
@@ -151,8 +154,11 @@ try {
         await wield('lit arrow', ITEM.lit);
         await q.walk('to shot', [{ x: 2447, z: 9722, tol: 0 }]);
         await q.step('shoot rope', () => q.opLoc(q.locAt(ROPE.x, ROPE.z) ?? ROPE, 1), () => x() <= 2442, 20, 3);
-        await wield('scimitar', ITEM.scimitar);
-        await drop('bow', [ITEM.bow, ITEM.arrow]);
+        // An account that brings RANGED_ARROWS iron arrows fights the whole quest with the bow, in the style that trains
+        // only Ranged: a build with an Attack or Defence level to keep (research/pvp-fight-loop.md, "Quest routes of
+        // the builds"). Any other account takes the scimitar and drops the bow.
+        if (q.cnt(ITEM.arrow) >= RANGED_ARROWS) { await wield('arrows', ITEM.arrow); await q.styleOnly('bow', 'Ranged'); }
+        else { await wield('scimitar', ITEM.scimitar); await drop('bow', [ITEM.bow, ITEM.arrow]); }
         q.milestone(2);
         // 5. The rope on the hanging rock swings the bot east (upass_obstacles.rs2:94-131), then rockslides north-east
         // round to the spike grid.
