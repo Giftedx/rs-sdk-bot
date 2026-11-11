@@ -177,7 +177,12 @@ export const STURDY=90,STURDY_MEALS=10,STURDY_OPTIONAL:Record<string,number[]>={
 // Quests that board the Entrana ship: its monk carries nobody with a weapon or a piece of armour in the pack or worn
 // (monk_of_entrana.rs2 has_entrana_restricted_items; an arrow, a ring, an amulet and boots pass). The bank pass banks
 // everything the account wears and every pack item the quest does not use, and runs even with the pack complete.
-export const BARE=new Set(['zanaris']);
+export const BARE=new Set(['zanaris','grail']);
+// The coins to take from the bank for the shops, fares and paid recipes of a pass: what they cost beyond the coins the
+// account carries over the quest's own need. The quest's coins are not shop money (practice: Merlin's Crystal asks 500
+// coins, the pass bought bread and a tinderbox for 13 of them and ended `withdraw short 995:13`).
+export const shopCoinTake=(shopCoins:number,packCoins:number,plannedCoins:number,questCoins:number)=>
+ Math.max(0,shopCoins-Math.max(0,packCoins+plannedCoins-questCoins));
 // Pack rows a bare quest banks: all but its own pack, its food and runes, its kept items and coins.
 export function bareDeposits(quest:string,pack:readonly Item[],need:ReadonlyMap<number,number>,food:ReadonlyMap<number,number>,tradeable:(id:number)=>boolean|undefined):number[]{
  return [...new Set(pack.map(i=>i.id))].filter(id=>id!==COINS&&!need.has(id)&&!food.has(id)&&!MEALS.includes(id)&&!keepsItem(quest,id,tradeable));
@@ -612,6 +617,28 @@ export type Walked={ok:boolean;reason?:string;detail?:string;ticks?:number};
 export const SWEEP_PLAN_BUDGET_MS=15_000;
 // `signal`: a quest guard's abort (a death, the retreat threshold, a sustain failure, the tick cap) ends the walk between
 // legs and inside each leg's clicks; the result then says `stopped`.
+// Quests whose scripts fight under prayers: Merlin's Crystal turns Protect from Melee on in Keep Le Faye and at the
+// chaos altar, Holy Grail three prayers on the Black Knight Titan (99 points last them about 160 ticks). The value is
+// the points the quest wants at its start. An account that comes with fewer (spent in another job) prays first at the
+// Seers' Village church: altar 409 at 2694,3462, prayed at from the tile east of it, about 70 tiles from King Arthur.
+// Practice with no points: Merlin's Crystal ended `step protect from melee on` in the keep.
+export const SEERS_ALTAR={id:409,x:2694,z:3462,level:0,stand:{x:2695,z:3462,level:0}} as const;
+export const PRAYER_QUESTS:Record<string,number>={merlin:30,grail:60};
+export const prayerShort=(points:number,level:number,wanted:number)=>points<Math.min(level,wanted);
+export async function prayBefore(s:Session,world:World,quest:string):Promise<string|null>{
+ const wanted=PRAYER_QUESTS[quest];
+ if(wanted===undefined)return null;
+ const points=():number=>(s.sdk.getState() as any)?.prayers?.prayerPoints??0,level=s.sdk.getSkill('Prayer')?.baseLevel??1,before=points();
+ if(!prayerShort(before,level,wanted))return null;
+ const walked=await walkFar(s,world,SEERS_ALTAR.stand,150);
+ if(!walked.ok)return `walk to the Seers' Village altar failed: ${walked.reason} ${walked.detail}`;
+ for(let i=0;i<3&&points()<level;i++){
+  await s.direct({type:'interactLoc',x:SEERS_ALTAR.x,z:SEERS_ALTAR.z,locId:SEERS_ALTAR.id,optionIndex:1,reason:'SDK'});
+  await waitUntil(s,()=>points()>=level,{timeoutTicks:12});
+ }
+ console.log(`QUEST_SWEEP_PRAY ${JSON.stringify({quest,before,after:points(),level,wanted})}`);
+ return prayerShort(points(),level,wanted)?`prayer points ${points()} of ${level} after the Seers' Village altar`:null;
+}
 export async function walkFar(s:Session,world:World,to:Tile,legTimeoutTicks=150,opts:{signal?:AbortSignal}={}):Promise<Walked>{
  const from=at(s);
  const r=await walkFarLegs(s,world,to,legTimeoutTicks,opts.signal);
@@ -1260,7 +1287,7 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
   shop.coins+=gather.coins+(heckelDust?HECKEL_DUST.coins:0)+fares(here(),[...shop.buys.map(b=>b.tile),preset.position,...gather.gathers.flatMap(g=>g.how==='npc'&&NPC_SOURCES[g.id]?[NPC_SOURCES[g.id]!.tile]:[])],accountOf(s))
    +(quest==='itgronigen'&&eastOfPass(here(),accountOf(s))?BOAT_FARES:0);
   if(shop.coins){
-   const take=Math.max(0,shop.coins-count(pack(),COINS)-(p.withdraw.find(w=>w.id===COINS)?.count??0));
+   const take=shopCoinTake(shop.coins,count(pack(),COINS),p.withdraw.find(w=>w.id===COINS)?.count??0,need.get(COINS)??0);
    if(count(rows(),COINS)<take){await s.bot.closeBank();return fail(`missing ${COINS}:${take} to buy ${[...shop.buys.map(b=>b.id),...(heckelDust?[1975]:[])].join(',')}`+(shop.buys.some(b=>wornKit.wear.some(i=>i.required&&i.id===b.id))?' (required worn kit unavailable)':''));}
    if(take>0){const c=p.withdraw.find(w=>w.id===COINS);if(c)c.count+=take;else p.withdraw.push({id:COINS,count:take});}
    console.log(`QUEST_SWEEP_SHOP_PLAN ${JSON.stringify({buys:shop.buys,coins:shop.coins})}`);
@@ -1312,6 +1339,8 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  const start=preset.position;
  const exit=await leaveStronghold(s);
  if(!exit.ok)return fail(exit.detail!);
+ const unprayed=await prayBefore(s,world,quest);
+ if(unprayed)return fail(unprayed);
  await reachStart(s,world,start,quest);
  if(wornKit.wear.some(i=>!s.sdk.getEquipment().some(e=>e.id===i.id&&e.count>0)))return fail('worn kit missing before handover');
  console.log(`MILESTONE quest-sweep ${quest} staged at ${JSON.stringify(here())}`);

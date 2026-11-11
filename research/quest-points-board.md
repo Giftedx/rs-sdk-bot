@@ -1249,6 +1249,23 @@ Findings:
   lobsters eaten, 1,191 to 1,363 ticks for the job. Magic 21 cannot cast the Lumbridge teleport, so each run walked
   from Wilderness level 32 to the swamp (about 385 ticks). Evidence: `.practice/lostcity/run.ts` (`a`, `e1`-`e3`) in
   the Claude cloud container that ran them. Gap: no live run; the Wilderness walk met no player.
+- **Merlin's Crystal and Holy Grail from an army account's state.** Claim: the chain `quester chain merlin,grail`
+  completes both quests for an account that stands at the Ardougne north bank in a full rune set, and Holy Grail
+  gives 275,000 Prayer experience. Conditions: Attack, Strength, Defence, Hitpoints and Ranged 99; coins, sharks, a
+  bow and the teleports' runes banked and nothing of the quests' own kits; practice at 150 ms ticks, one account at a
+  time. The sweep gathers Merlin's kit itself (insect repellent 2807,3450, a bucket, the wax at the Catherby hives, bat
+  bones from a giant bat at 2749,3406, bread and a tinderbox from Ardougne shops for 13 coins) and for Holy Grail
+  takes off everything worn at the Seers' Village bank with Excalibur and the rune scimitar kept in the pack
+  (`QUEST_SWEEP_BARE {"worn":[1163,1333,1113,1201,1079],"left":0,"pack":[385,995,1333,35,...]}`). Magic 66, Prayer 78
+  with its points: Merlin's Crystal `RESULT ok qp=6 excalibur=true`, 720 quest ticks and 1,081 for the job; Holy Grail
+  `RESULT ok qp=2 grail=true ... defence=382500 ... prayer=275000`, 1,221 and 1,321; `hpMin=99` in both. Magic 45,
+  Prayer 77 with no points: 693 and 1,249 quest ticks (1,093 and 1,396), the account praying first at the Seers'
+  Village church (`QUEST_SWEEP_PRAY {"quest":"merlin","before":0,"after":77}`, then `"grail","before":37`). Two
+  faults this found in the sweep: the shop money came out of the quest's own 500 coins (`withdraw short 995:13`), and
+  with no points the keep step `protect from melee on` ended Merlin's Crystal. Evidence: `.practice/grail/run.ts`
+  (`a`-`e`) in the Claude cloud container that ran them. Gap: no live run. Merlin's Crystal walks to the chaos altar
+  at Wilderness level 12 in what the account wears and met no player; Holy Grail leaves Excalibur and the scimitar on
+  the Port Sarim dock for the Entrana visit, where another player can take them.
 - **The tree spirit serves one fighter.** Three accounts at the dramen tree at once: one finished (`hpMin=38`, 5
   lobsters) and two ended `RESULT fail tree spirit` with "Someone else is fighting that". The planner sends one army
   account at a time (`LOST_CITY_PLACES`). Evidence: `.practice/lostcity/run.ts` (`d1`-`d3`).
