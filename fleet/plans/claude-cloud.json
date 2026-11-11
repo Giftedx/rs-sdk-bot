@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794363641331,
+ "at": 1794363794838,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -19,31 +19,6 @@
    "template": "kit-buy:army-bury-big-99",
    "autopilot": "claude-cloud",
    "resources": []
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
   },
   {
    "account": "Deeppockets",
@@ -280,6 +255,19 @@
    "resources": [
     "shop:sarim"
    ]
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-8ba0e474-b4c7-431e-8598-592d221a4e63"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-quickhandjob-20261111t021910z [task-8ba0e474-b4c7-431e-8598-592d221a4e63]",
+   "role": "combat"
   }
  ]
 }
