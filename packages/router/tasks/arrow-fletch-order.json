@@ -1,0 +1,44 @@
+{
+  "id": "arrow-fletch-order",
+  "goal": "Fletch an exact finite batch of arrows from owned headless arrows and owned arrowtips on an ordinary account, bank the arrows, reconcile assets and confirm logout.",
+  "entry": "scripts/fletch-arrows.ts",
+  "files": [
+    "scripts/fletch-arrows.ts",
+    "scripts/fletch-arrows.test.ts",
+    "packages/practice/src/fletch-arrows-proof.ts"
+  ],
+  "consumer": "Banked arrows rise by exactly MAX_MAKE; headless arrows and tips fall by the same count; Fletching XP rises; no other asset changes; logout confirmed.",
+  "checks": [
+    {
+      "id": "fletch-arrows-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/fletch-arrows.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "fletch-arrows-practice",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/fletch-arrows-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "fletch-arrows-saved",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/fletch-arrows-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
+  ]
+}

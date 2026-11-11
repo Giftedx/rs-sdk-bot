@@ -273,6 +273,12 @@ export async function runNativeArrows(original:Session,options:SteelOptions & {x
  const sdk=new Proxy(original.sdk,{get(t,k,r){const v=Reflect.get(t,k,r);return typeof v==='function'?function(...a:unknown[]){if(typeof k==='string'&&k.startsWith('send'))guard();return v.apply(r,a);}:v;}}),s={...original,sdk,bot:new BotActions(sdk),direct:async(a:Parameters<Session['direct']>[0])=>{guard();return original.direct(a);}}as Session;
  const result=await runSteel(s,{...options,exact:{xpRate:options.xpRate??25,enterCleanup:()=>{cleanup=true;}},stop:()=>{try{guard();return false;}catch{return true;}}},metal);guard();return{...result,ok:result.ok&&result.targetMet,metal,profile};
 }
+// An exact order that the bank cannot fill names the short input before the JSON result.
+export function nativeArrowDetail(r:Awaited<ReturnType<typeof runNativeArrows>>,o:Pick<SteelOptions,'maximum'|'headlessReserve'|'tipReserve'>){
+ const json=JSON.stringify(r);if(r.ok)return json;
+ if(r.stop==='input-insufficient'&&r.made===0&&r.actions===0)return`native arrows missing owned inputs: MAX_MAKE ${o.maximum} needs ${r.profile.tipName} above ${o.tipReserve} (bank ${r.tipBank}) and Headless arrow above ${o.headlessReserve} (bank ${r.headlessBank}); `+json;
+ return`native arrows incomplete: stop=${r.stop} made=${r.made}/${o.maximum} failure=${r.failure}; `+json;
+}
 
 // rev289 cut_logs.dbrow + stringing/bows.dbrow: each step level25,250 tenths XP.
 export interface OakBowOptions { cap: number; maximum: number; logReserve: number; stringReserve: number; stop?: () => boolean }
@@ -439,7 +445,7 @@ if(MODE==='native-arrows')nativeArrowProfile(TIP_TYPE as ArrowMetal);
 let stopped = false;
 const s = await openBot(botName, (MODE === 'native-arrows' || MODE === 'headless' || MODE === 'iron' || MODE === 'steel' || MODE === 'oak-bows' || MODE === 'shafts') ? { onStop: async () => { stopped = true; } } : {}).catch(e => finish([], false, `login: ${String(e)}`));
 if(MODE==='native-arrows'){
- try{const r=await runNativeArrows(s,{cap:CAP,maximum:Number(process.env.MAX_MAKE??30),headlessReserve:Number(process.env.HEADLESS_RESERVE??200),tipReserve:Number(process.env.TIP_RESERVE??5),outputReserve:Number(process.env.OUTPUT_RESERVE??0),xpRate:Number(process.env.FLETCHING_XP_RATE??25),stop:()=>stopped},TIP_TYPE as ArrowMetal);console.log('NATIVE_ARROW_BANK '+JSON.stringify(r));await finish([s],r.ok,JSON.stringify(r));}catch(e){await finish([s],false,String(e));}
+ try{const o={cap:CAP,maximum:Number(process.env.MAX_MAKE??30),headlessReserve:Number(process.env.HEADLESS_RESERVE??200),tipReserve:Number(process.env.TIP_RESERVE??5),outputReserve:Number(process.env.OUTPUT_RESERVE??0),xpRate:Number(process.env.FLETCHING_XP_RATE??25),stop:()=>stopped};const r=await runNativeArrows(s,o,TIP_TYPE as ArrowMetal);console.log('NATIVE_ARROW_BANK '+JSON.stringify(r));await finish([s],r.ok,nativeArrowDetail(r,o));}catch(e){await finish([s],false,String(e));}
 }
 if (MODE === 'shafts') {
     try {
