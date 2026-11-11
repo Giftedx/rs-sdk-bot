@@ -1,29 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794419289084,
+ "at": 1794419360672,
  "jobs": [
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "foraging",
-    "flax",
-    "1800",
-    "28"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "pick flax at Seers to spin for the Crafting a black dragonhide body asks",
-   "role": "crafting",
-   "template": "army-leather-flax",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "aio:seers-flax"
-   ]
-  },
   {
    "account": "TheFullMonty",
    "script": "scripts/chain.ts",
@@ -138,6 +116,28 @@
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "foraging",
+    "flax",
+    "1800",
+    "28"
+   ],
+   "env": {},
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "pick flax at Seers to spin for the Crafting a black dragonhide body asks",
+   "role": "crafting",
+   "template": "army-leather-flax",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "aio:seers-flax"
    ]
   }
  ]
