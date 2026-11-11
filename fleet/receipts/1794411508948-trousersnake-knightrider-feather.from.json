@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794411508948-trousersnake-knightrider-feather",
  "account": "TrouserSnake",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Feather",
  "requested": 50,
  "claim": "84fe7b7d-b689-4a82-9d59-aa3aeb99598a",
- "count": 0,
- "ok": false,
- "at": 1794411545817,
- "detail": "trade claimed"
+ "count": 50,
+ "ok": true,
+ "at": 1794411771818,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 50,
+  "after": 0
+ },
+ "bank": {
+  "count": 50,
+  "at": 1794411762421
+ },
+ "logout": {
+  "attemptId": "1794411545823-0000010424-0000000001",
+  "at": 1794411771812,
+  "sha256": "bae2cf1f0e7372fc762bf5593b985749da2cce582968b0292df835eeaa1efbaf"
+ },
+ "screen": true
 }
