@@ -9,7 +9,7 @@
 // Prints one `SPAR <json>` line. RESULT ok means that both sides attacked and the fight reached a kill, an escape or
 // the cap.
 import type { Session } from '../packages/core/src/inprocess';
-import { defaultSpec, fightPlayer, type FightOptions, type FightResult, type Kit } from './pk';
+import { defaultSpec, fightPlayer, nextTick, type FightOptions, type FightResult, type Kit } from './pk';
 import { TRIBRID_KIT } from './pk-hunt';
 
 // `specBelow` moves the health fraction at which the kit's special fires.
@@ -17,6 +17,7 @@ export type Profile = Partial<Omit<FightOptions, 'kit' | 'log' | 'stop'>> & { sp
 export const PROFILES: Readonly<Record<string, Profile>> = {
     base: {},
     freeze: { freeze: true },
+    'freeze-flee': { freeze: 'flee' },
     'no-read': { readOverheads: false },
     'no-spec': { spec: undefined },
     'spec-early': { specBelow: 0.8 },
@@ -66,16 +67,23 @@ export const sparValid = (r: SparResult) => [r.a, r.b].every(f => f.attacks.magi
 
 export async function spar(a: Session, b: Session, optionsA: FightOptions, optionsB: FightOptions, log: (line: string) => void = l => console.log(l), halt: () => boolean = () => false): Promise<SparResult> {
     const self = (s: Session) => s.sdk.getState()?.player;
+    // A new practice world refuses player attacks for its first 8 ticks ("I'm already under attack.", pvp_combat.rs2:110).
+    for (let i = 0; i < 10; i++) if (!await nextTick(a)) break;
     const pa = self(a), pb = self(b), start = a.tick(), hp0 = [pa?.hp, pb?.hp];
     const startGap = pa && pb ? Math.max(Math.abs(pa.worldX - pb.worldX), Math.abs(pa.worldZ - pb.worldZ)) : undefined;
     let opening: number | null = null;
+    // SPAR_TRACE=1 prints one line for each tick: where each side stands, its HP and its run energy.
+    const told = [0, 0];
+    const trace = process.env.SPAR_TRACE === '1' ? a.onTick(() => { const x = self(a), y = self(b);
+        [a, b].forEach((s, i) => { for (const m of s.sdk.getState()?.gameMessages ?? []) { const id = m.observationId ?? m.tick; if (id > told[i]! && m.tick >= start) { told[i] = id; log(`MSG ${s.name} ${m.text}`); } } });
+        log(`TRACE ${a.tick() - start} a=${x?.worldX},${x?.worldZ} hp=${x?.hp} run=${x?.runEnergy} b=${y?.worldX},${y?.worldZ} hp=${y?.hp} run=${y?.runEnergy}`); }) : undefined;
     const unwatch = a.onTick(() => { if (opening === null && [a, b].some((s, i) => (self(s)?.hp ?? Infinity) < (hp0[i] ?? 0))) opening = a.tick() - start; });
     // The first side to end stops the other: a fight has one end.
     let over = false;
     const side = (s: Session, target: string, o: FightOptions) => fightPlayer(s, target, { ...o, stop: () => over || halt(), log: l => log(`[${s.name}] ${l}`) })
         .finally(() => { over = true; });
     const [ra, rb] = await Promise.all([side(a, b.name, optionsA), side(b, a.name, optionsB)]);
-    unwatch();
+    unwatch(); trace?.();
     return { ...sparScore(ra, rb), opening, ...(startGap === undefined ? {} : { startGap }) };
 }
 

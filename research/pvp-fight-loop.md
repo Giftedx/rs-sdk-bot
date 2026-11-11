@@ -22,31 +22,52 @@ Map cases (`--case <key>`), each with the mirror kit:
 - `extra:spar-gap`: the two start 12 tiles apart.
 - `extra:spar-trees`: the two start 6 tiles apart at Wilderness level 3, at (3099, 3536) and (3105, 3536), with a
   blocker on tiles 3101-3103 between them, so neither has line of sight.
-- `extra:spar-escape`: Wilderness level 36. Side B, the runner, has 3 sharks and a glory; out of food at 60 HP or less
+- `extra:spar-escape`: Wilderness level 34 at (3125, 3790), with no monster in view. Side B, the runner, has 3 sharks and a glory; out of food at 60 HP or less
   it runs south to level 30 and rubs the glory. Side A, the hunter, must kill it first.
 
 Gap: the fight loop does not choose where to stand, so cover, line of sight as a defence and a second attacker are
 not measured.
 
-Spar findings. Conditions: bench case `pvp:spar`, lockstep practice engine, cap 900 ticks; a seed repeats its fight.
-Evidence: `.practice/pk-spar/*.json` in the worktree that ran them.
+Spar findings. Conditions: lockstep practice engine, cap 900 ticks, both sides with Lost City and Dragon Slayer done
+unless a finding says otherwise; a seed repeats its fight. Evidence: `.practice/pk-spar/*.json` and the traces
+`.practice/pk-spar/trace-*.log` in the worktree that ran them.
 
-1. **A mirror fight is a food race.** base against base, seeds 1, 2, 3: kills at 648, 594 and 557 ticks; side B, side A,
-   side B won. The loser had eaten all 18 sharks in each fight; the winner 18, 17 and 15. Each side used 7-10 specials.
+1. **A mirror fight is a food race.** `pvp:spar`, base against base, seeds 1, 2, 3: kills at 668, 535 and 570 ticks;
+   side A, side A, side B won. The loser had eaten all 18 sharks in each fight; the winner 18, 13 and 16.
    Gap: three fights; equal settings win or lose by the seed, so a small gain needs more seeds to show.
-2. **A freeze whenever the target is free loses a stand-up spar.** freeze against base, seeds 1, 2, 3 on each side: 2
-   wins, 4 losses, mean score -104.2 (scores -175, 126, 163, -268, -244, -227). Gap: six fights.
+2. **A freeze whenever the target is free loses a stand-up spar.** freeze against base, seeds 1, 2, 3 on each side,
+   without Dragon Slayer on either side (the platebody stayed off after the first cast): 2 wins, 4 losses, mean score
+   -104.2 (scores -175, 126, 163, -268, -244, -227). Gap: six fights; not run with Dragon Slayer done.
 3. **The fight loop's `dealt` counter reads low.** One spar: side A `dealt` 102 where side B took 274. The spar
    scores from damage taken. Gap: the cause in the SDK `damage_dealt` events is not found.
-4. **The hunter does not stop a runner, with or without a freeze.** `extra:spar-escape`, seeds 1, 2, 3, runner on
-   base: against a base hunter the runner got away 3 of 3 (glory escape at 246 and 247 ticks; the hunter lost sight of
-   it at 131); against a freeze hunter 3 of 3 (glory escape at 426 and 137; lost at 212). The hunter killed 0 of 6.
-   Gap: three seeds each; why the freeze does not hold the runner is not read from a trace.
-5. **A start out of sight or far apart does not stop the fight.** One run each at seed 7, base against base: first
-   damage at tick 19 from 2 tiles in the open, 31 from 12 tiles, 11 from 6 tiles with the blocker between; kills at
-   528, 495 and 628 ticks. The server walks an attacker to a tile with line of sight. Gap: one run each.
+4. **A hunter that chases, freezes on the flight and keeps its special kills 1 runner in 3; the plain hunter kills
+   none.** `extra:spar-escape`, seeds 1, 2, 3, runner on base. Base hunter: the runner got away 3 of 3. Hunter
+   `freeze-flee` (a freeze only while the target runs): 3 of 3 got away. `freeze-flee` with `specBelow` 0.4: 1 kill
+   (156 ticks), 2 got away. What a trace showed:
+   - A cast leaves the hunter where it stands until its next turn, 5 ticks for a spell, while the runner covers 2
+     tiles a tick and leaves view. The loop now runs after a fleeing target between turns.
+   - The first freeze on a runner can miss; the third landed and held the runner 12 ticks (half time under Protect
+     from Magic), 3 tiles short of level 30. In those 12 ticks the hunter dealt 6 damage: its 4 specials were spent
+     while the runner still had food.
+   - A melee turn against a frozen target spends the freeze on a walk. The loop now attacks from range unless the
+     target is within 2 tiles.
+
+   Gap: three seeds each; the kill needs more damage inside the freeze (special energy kept for it, the fastest
+   ranged turn) and is not tuned.
+5. **A start out of sight or far apart does not stop the fight.** One run each at seed 7, base against base, without
+   Dragon Slayer: first damage at tick 19 from 2 tiles in the open, 31 from 12 tiles, 11 from 6 tiles with the blocker
+   between; kills at 528, 495 and 628 ticks. The server walks an attacker to a tile with line of sight. Gap: one run each.
 6. **A side that escapes must not end its fight when the target leaves its view.** In the first escape spar the runner
-   returned `lost` 219 ticks in, still at Wilderness level 36. The loop keeps going while it escapes.
+   returned `lost` 219 ticks in, still deep in the Wilderness. The loop keeps going while it escapes.
+7. **An account without Dragon Slayer loses its rune platebody at the first cast.** The loop takes the platebody off
+   for a cast and puts it on for a melee turn; the game refused it 35 and 39 times in one spar ("You have not earned
+   the right to wear this yet.", `levelrequire.rs2:132`). A PK account needs Dragon Slayer, or a body with no quest.
+8. **"I'm already under attack." is not proof of a monster.** A new practice world sends it for the first 8 ticks
+   (`pvp_combat.rs2:110`), and both sides then left the fight to attack a monster 15 tiles away. The loop reacts only
+   to a monster within 8 tiles that faces a player, and the spar waits 10 ticks before the fight.
+9. **Monsters at the fight spot block player hits.** At (3094, 3800) green dragons attacked both sides: "Someone else
+   is already fighting your opponent." 14 and 17 times in one spar. The escape case stands at (3125, 3790), where a
+   probe saw no attackable monster.
 
 ## Server rules the loop follows
 

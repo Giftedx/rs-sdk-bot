@@ -56,7 +56,7 @@ test('the map cases change only the start tiles, and the runner of the escape ca
     const tiles = (key: string) => [of(key).presetConfig!.position, of(key).companions![0]!.presetConfig!.position].map(p => [p!.x, p!.z]);
     expect(tiles('extra:spar-gap')).toEqual([[3088, 3555], [3100, 3555]]);
     expect(tiles('extra:spar-trees')).toEqual([[3099, 3536], [3105, 3536]]);
-    expect(tiles('extra:spar-escape')).toEqual([[3094, 3800], [3096, 3800]]);
+    expect(tiles('extra:spar-escape')).toEqual([[3125, 3790], [3127, 3790]]);
     expect(of('extra:spar-gap').presetConfig!.inventory).toEqual(of('pvp:spar').presetConfig!.inventory);
     const runner = of('extra:spar-escape').companions![0]!.presetConfig!.inventory!;
     expect([runner.filter(i => i.id === 385).length, runner.filter(i => i.id === 1712).length]).toEqual([3, 1]);

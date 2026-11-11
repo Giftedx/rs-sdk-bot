@@ -58,14 +58,15 @@ const CHICKEN_FIXTURE: SaveConfig = {
   bank: [{id: 1351, count: 1}],
 };
 
-// One side of the mirror spar: 99 combat stats, Lost City done (dragon weapons wield, levelrequire.rs2:156), special
+// One side of the mirror spar: 99 combat stats, Lost City done (dragon weapons wield, levelrequire.rs2:156), Dragon
+// Slayer done (the rune platebody goes back on after a cast, levelrequire.rs2:132; without it the game refuses), special
 // energy 1000 (varp 300), rune full helm, cape of legends, glory, rune platebody, platelegs, ranger boots, dragon
 // dagger (p), rune kiteshield and 300 rune arrows worn; staff, bow, runes, 2 prayer potions and 18 sharks carried.
 // `food` changes the sharks; `glory` adds a charged glory to the pack for an escape.
 export const sparFixture = (x: number, z = 3555, o: {food?: number; glory?: boolean} = {}): SaveConfig => ({
   position: {x, z, level: 0},
   skills: {Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99, Prayer: 99, Hitpoints: 99},
-  varps: {147: 6, 300: 1000},
+  varps: {147: 6, 176: 10, 300: 1000},
   equipment: [[1163, 0], [1052, 1], [1712, 2], [1231, 3], [1127, 4], [1201, 5], [1079, 7], [2577, 10], [892, 13]].map(([id, slot]) => ({id: id!, count: id === 892 ? 300 : 1, slot: slot!})),
   inventory: [{id: 1401, count: 1}, {id: 861, count: 1}, {id: 556, count: 500}, {id: 565, count: 100}, {id: 557, count: 200}, {id: 555, count: 200}, {id: 561, count: 100},
     {id: 2434, count: 1}, {id: 2434, count: 1}, ...(o.glory ? [{id: 1712, count: 1}] : []), ...Array.from({length: o.food ?? 18}, () => ({id: 385, count: 1}))],
@@ -243,11 +244,12 @@ const ROUTE_CASES: BenchCase[] = [
   // (--set) choose the profile of each side.
   sparCase('pvp:spar', sparFixture(3094), sparFixture(3096)),
   // Map cases of the spar. Gap: the same mirror from 12 tiles apart. Trees: 6 tiles apart at Wilderness level 3 with a
-  // blocker on tiles 3101-3103 between the two, so neither has line of sight at the start. Escape: Wilderness level 36;
-  // side B has 3 sharks and a glory and runs south to level 30 to rub it, and side A must kill it first.
+  // blocker on tiles 3101-3103 between the two, so neither has line of sight at the start. Escape: Wilderness level 34
+  // at a spot with no monster in view (green dragons at (3094, 3800) attack both sides and block their hits); side B
+  // has 3 sharks and a glory and runs south to level 30 to rub it, and side A must kill it first.
   sparCase('extra:spar-gap', sparFixture(3088), sparFixture(3100)),
   sparCase('extra:spar-trees', sparFixture(3099, 3536), sparFixture(3105, 3536)),
-  sparCase('extra:spar-escape', sparFixture(3094, 3800), sparFixture(3096, 3800, {food: 3, glory: true}), ['SPAR_SCENARIO=escape']),
+  sparCase('extra:spar-escape', sparFixture(3125, 3790), sparFixture(3127, 3790, {food: 3, glory: true}), ['SPAR_SCENARIO=escape']),
   {key: 'quester:mode:order', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['order', 'cook', '--save={save}', '--timeout-ms=300000'], pass: s => ok(s) && /QUEST_ORDER_RESULT \{"ok":true/.test(s),
     presetConfig: {position: {x: 3208, z: 3214, level: 0}, inventory: [{id: 1944, count: 1}, {id: 1927, count: 1}, {id: 1933, count: 1}, {id: 1351, count: 1}, {id: 995, count: 37}], bank: [{id: 1351, count: 2}, {id: 995, count: 100}, {id: 1511, count: 8}], equipment: [{id: 1205, count: 1, slot: 3}]}},
   {key: 'quester:mode:items', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['items', 'cook', '--save={save}', 'CAP=600'], pass: s => ok(s) && /QUEST_ITEMS_ORDER_RESULT \{"ok":true/.test(s),
