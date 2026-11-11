@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { assertTradeAdmission, fleetTradeOutcome, performFleetTransfer, pickOrder, validOrder, type Order, type Receipt } from './fleet-trade';
+import { assertTradeAdmission, fleetTradeOutcome, performFleetTransfer, pickOrder, validOrder, watchTradeScreen, type Order, type Receipt } from './fleet-trade';
 import { beginSessionAttempt } from '../packages/core/src/session-lifecycle';
 import type { Session } from '../packages/core/src/inprocess';
 import { terminalTradeReceipt, writeTradeReceipt, type TradeReceipt } from './fleet-trade-settlement';
@@ -162,6 +162,52 @@ test('a dropped trade session frees its claim only when the records prove nothin
     expect(alone({ 'claims/local.json': { side: 'local', at: soon } }, { ...own, state: 'prepared', inventory: undefined })).toBe(0);
     expect(alone({ 'claims/local.json': { side: 'local', at: soon } }, { ...own, count: 3 })).toBe(0);
     expect(alone({ 'claims/local.json': { side: 'local', at: soon } }, { ...own, inventory: { before: 500, after: 497 } })).toBe(0);
+});
+
+test('a worker that saw no trade screen frees its claim after the window, whatever the partner\'s receipt reads', () => {
+    const trade = order({}), over = trade.end;
+    const claim = { account: 'giver', server: 's', side: 'cloud', orderId: 'o1', role: 'from', nonce, phase: 'held', at: 2000 } as const;
+    // Both sessions were cut while they waited: no logout proof, so both receipts read reconcile with nothing counted.
+    const own = { ...claimedReceipt('from'), side: 'cloud', state: 'reconcile', at: 2500, screen: false } as TradeReceipt;
+    const partner = { ...claimedReceipt('to'), side: 'cloud', claim: '87654321-1234-1234-1234-123456789012', state: 'reconcile', at: 2500, screen: false } as TradeReceipt;
+    const files = (o: Record<string, unknown>) => (path: string) => path.startsWith('orders/') ? trade : o[path] ?? null;
+    const freed = (ownReceipt: unknown, partnerReceipt: unknown = partner, now = over) =>
+        droppedTradeClaims([claim], 'cloud', files({ 'receipts/o1.from.json': ownReceipt, ...(partnerReceipt ? { 'receipts/o1.to.json': partnerReceipt } : {}) }), now).length;
+    expect(freed(own)).toBe(1);
+    // The partner's receipt does not matter: still `prepared`, one that saw a screen, or none and no word from its side.
+    expect(freed(own, { ...partner, state: 'prepared', screen: undefined })).toBe(1);
+    expect(freed(own, { ...partner, screen: true })).toBe(1);
+    expect(freed(own, null)).toBe(1);
+    // Inside the window the order may still be tried: the claim stays.
+    expect(freed(own, partner, over - 1)).toBe(0);
+    // A screen seen, or a session whose trade state was never observed: a person decides, as before.
+    expect(freed({ ...own, screen: true })).toBe(0);
+    expect(freed({ ...own, screen: undefined })).toBe(0);
+    // A worker that has not ended, a counted item or a changed stack: never by this rule.
+    expect(freed({ ...own, state: 'prepared' })).toBe(0);
+    expect(freed({ ...own, count: 1 })).toBe(0);
+    expect(freed({ ...own, inventory: { before: 500, after: 499 } })).toBe(0);
+    expect(freed({ ...own, claim: 'a'.repeat(36) })).toBe(0);
+});
+
+test('the trade worker records whether a trade screen was ever open', () => {
+    let state: { trade?: { isOpen: boolean } } | null = null, tick = () => {};
+    const s = { onTick: (cb: () => void) => { tick = cb; return () => {}; }, sdk: { getState: () => state } };
+    const progress: Parameters<typeof watchTradeScreen>[1] = { uncertain: false, count: 0 };
+    watchTradeScreen(s, progress);
+    // No state yet, or a client with no trade state: unknown, and the receipt carries no `screen`.
+    expect(progress.screen).toBeUndefined();
+    state = {}; tick();
+    expect(progress.screen).toBeUndefined();
+    expect('screen' in fleetTradeOutcome(claimedReceipt(), progress, false, { state: 'none' } as any, attemptId, 2500, 'cut')).toBe(false);
+    // Observed closed: false. Open on one tick: true from then on, also after it closes.
+    state = { trade: { isOpen: false } }; tick();
+    expect(progress.screen).toBe(false);
+    expect(fleetTradeOutcome(claimedReceipt(), progress, false, { state: 'none' } as any, attemptId, 2500, 'cut')).toMatchObject({ state: 'reconcile', count: 0, screen: false });
+    state = { trade: { isOpen: true } }; tick();
+    state = { trade: { isOpen: false } }; tick();
+    expect(progress.screen).toBe(true);
+    expect(fleetTradeOutcome(claimedReceipt(), progress, false, { state: 'none' } as any, attemptId, 2500, 'cut').screen).toBe(true);
 });
 
 test('each side picks its own open order once, in or near its window', () => {

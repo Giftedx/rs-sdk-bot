@@ -136,13 +136,13 @@ test("ITEMS='blood rune' selects exactly the magic guild blood line", () => {
         .toEqual([{ name: 'Blood rune', amount: 100 }]);
 });
 
-test('magic guild keeps its fire, nature, law and staff lines, endpoints and NPC', () => {
+test('magic guild keeps its fire, nature, air, law and staff lines, endpoints and NPC', () => {
     const guild = PROFILES.magic_guild!;
     expect(guild.npc.test('Magic Store owner')).toBe(true);
     expect(guild.npcSpot).toEqual({ x: 2595, z: 3087, level: 1 });
     expect(guild.bankSpot).toEqual({ x: 2612, z: 3093 });
     expect(guild.items.map(i => [i.re.source, i.buyPerTick])).toEqual([
-        ['^staff of fire$', 1], ['^fire rune$', 100], ['^nature rune$', 100], ['^law rune$', 50], ['^blood rune$', 100], ['^death rune$', 100]]);
+        ['^staff of fire$', 1], ['^fire rune$', 100], ['^nature rune$', 100], ['^air rune$', 100], ['^law rune$', 50], ['^blood rune$', 100], ['^death rune$', 100]]);
     expect(selectItems(guild.items, 'fire rune|nature rune|law rune').map(i => i.re.source)).toEqual(['^fire rune$', '^nature rune$', '^law rune$']);
 });
 

@@ -171,7 +171,7 @@ export const PROFILES: Record<string, {
         ],
     },
     // The Magic Guild store in Yanille (magic_guild.inv magicguildshop), upstairs behind the Magic 66 door
-    // (magic_guild.rs2): fire runes 3,000, nature runes 1,000 at base 20, law, death and blood runes 1,000, staff of fire 2.
+    // (magic_guild.rs2): fire and air runes 3,000, nature runes 1,000 at base 20, law, death and blood runes 1,000, staff of fire 2.
     // From the east the route planner has no foot path past White Wolf Mountain, so a far trip goes by the Port Sarim
     // and Brimhaven boats (30 coins each) through Port Sarim dock and Ardougne dock.
     magic_guild: {
@@ -182,6 +182,7 @@ export const PROFILES: Record<string, {
             { re: /^staff of fire$/i, buyPerTick: 1 },
             { re: /^fire rune$/i, buyPerTick: 100 },
             { re: /^nature rune$/i, buyPerTick: 100 },
+            { re: /^air rune$/i, buyPerTick: 100 },
             { re: /^law rune$/i, buyPerTick: 50 },
             { re: /^blood rune$/i, buyPerTick: 100 },
             { re: /^death rune$/i, buyPerTick: 100 },
