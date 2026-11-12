@@ -1,22 +1,25 @@
 {
  "side": "claude-cloud",
- "at": 1794487218738,
+ "at": 1794488090206,
  "jobs": [
   {
    "account": "Quickhandjob",
-   "script": "scripts/chain.ts",
+   "script": "scripts/train-prayer.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=15 EXPECTED_OWNED=6 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=quickhandjob-kit13-536-6to21 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "99"
    ],
    "env": {
-    "ROUNDS": "1"
+    "BURY_HELD": "1",
+    "BONE_ID": "536",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy 15 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-dragon-99",
+   "repeat": true,
+   "goal": "train Prayer to 99 burying bought dragon bones",
+   "role": "combat",
+   "template": "army-bury-dragon-99",
    "autopilot": "claude-cloud",
    "resources": []
   },
@@ -109,28 +112,6 @@
    "account": "Fatstack",
    "script": "scripts/shop-buyer.ts",
    "args": [
-    "catherby"
-   ],
-   "env": {
-    "ITEMS": "rune arrowtips|adamant arrowtips",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy rune and adamant arrowtips at Catherby",
-   "role": "bank",
-   "template": "shop-arrowtips",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "shop:catherby"
-   ]
-  },
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
     "betty"
    ],
    "env": {
@@ -147,6 +128,28 @@
    "autopilot": "claude-cloud",
    "resources": [
     "shop:betty"
+   ]
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby"
+   ],
+   "env": {
+    "ITEMS": "rune arrowtips|adamant arrowtips",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy rune and adamant arrowtips at Catherby",
+   "role": "bank",
+   "template": "shop-arrowtips",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:catherby"
    ]
   },
   {
@@ -176,28 +179,20 @@
   },
   {
    "account": "PocketPool",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/aio.ts",
    "args": [
-    "1500",
-    "trooper"
+    "quester",
+    "dusty-key"
    ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "repeat": false,
+   "goal": "get the dusty key from Velrak for Taverley dungeon's inner gate",
+   "role": "quest",
+   "template": "army-dusty-key",
    "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "resources": []
   },
   {
    "account": "Dipstick",
