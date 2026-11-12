@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794454236934,
+ "at": 1794454761536,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -82,22 +82,21 @@
   },
   {
    "account": "BowBeforeMe",
-   "script": "scripts/generated/thieving60.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "TARGET": "55",
-    "CAP": "2500",
-    "CLEAN_FOOD": "1"
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "train Thieving to 55 for a knight spot",
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
    "role": "thieving",
-   "template": "thieving55",
+   "template": "goldfarm@2669,3298",
    "autopilot": "local",
    "resources": [
-    "knight:2671,3313"
+    "knight:2669,3298"
    ]
   },
   {
