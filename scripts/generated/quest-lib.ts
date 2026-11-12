@@ -170,7 +170,8 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         const reply=await s.direct(action);
         if(!reply||typeof reply!=='object'||!('success' in reply)||typeof reply.success!=='boolean')throw Error('quest consume reply unknown');
         return{success:reply.success,message:'message' in reply?String(reply.message):undefined};
-    }},{food:FOOD,eatAt:EAT_AT,reserved:()=>reservedNow(),onConsumed:()=>{stats.eats++;}});
+    // An eat that the game dropped is sent again, twice at most (sustain.ts dropRetries).
+    }},{food:FOOD,eatAt:EAT_AT,reserved:()=>reservedNow(),dropRetries:2,onConsumed:()=>{stats.eats++;}});
     let lastHp = hp();
     const off = s.onTick(() => {
         const p = pos();

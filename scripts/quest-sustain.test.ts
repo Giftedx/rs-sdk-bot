@@ -42,6 +42,9 @@ test('a refused dispatch and a no-effect deadline surface failure rather than us
  const g=game();g.reply(async()=>({success:false,message:'refused'}));const refused=startQuestSustain(g.s,policy);await g.step();expect(refused.failure()).toContain('refused');expect(g.listeners()).toBe(0);
  const stalled=game();const e=startQuestSustain(stalled.s,{...policy,timeoutTicks:3});for(let n=0;n<5;n++)await stalled.step();
  expect(e.failure()).toContain('unobserved');expect(stalled.sent.length).toBe(1);expect(stalled.listeners()).toBe(0);
+ // With dropRetries an eat with no effect is sent again that many times, then the eater fails.
+ const again=game();const r=startQuestSustain(again.s,{...policy,timeoutTicks:3,dropRetries:2});for(let n=0;n<16;n++)await again.step();
+ expect(r.failure()).toContain('unobserved');expect(again.sent.length).toBe(3);
 });
 test('no second eat starts at full HP, after stop or when the latest slot is no longer eligible',async()=>{
  const g=game(snapshot(20));const e=startQuestSustain(g.s,policy);await g.step();expect(g.sent.length).toBe(0);

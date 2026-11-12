@@ -1628,7 +1628,7 @@ test('a Defence 1 build that fights with the bow takes the bow pack for Undergro
  const hally=level({Attack:11,Ranged:99,Defence:1});
  expect(buildPack('upass',hally)).toEqual([{id:861,count:1},{id:892,count:600},{id:2434,count:2}]);
  expect(buildPack('regicide',level({Attack:61,Ranged:99,Defence:1}))).toEqual([{id:861,count:1},{id:892,count:600}]);
- expect(BUILD_MEALS).toEqual({upass:12});
+ expect(BUILD_MEALS).toEqual({upass:12,regicide:8});
  // A quest with no bow pack, an account that wears rune armour, a melee account and one under the bow's level: none.
  expect(buildPack('cook',hally)).toEqual([]);
  expect(buildPack('upass',level({Attack:11,Ranged:99,Defence:40}))).toEqual([]);

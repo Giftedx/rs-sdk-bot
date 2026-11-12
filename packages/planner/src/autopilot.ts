@@ -161,13 +161,22 @@ export const LOST_CITY_FOOD = ['lobster', 'swordfish', 'shark'] as const;
 export const FREMENNIK_BAND = QUEST_BAND + 0.05, FREMENNIK = 'quest:rellekka', FREMENNIK_PLACES = 1, FREMENNIK_MEALS = 4;
 // Underground Pass and Regicide for a build with the dragon halberd (BUILD_QUESTS; ROUTE_BEFORE). One account at a
 // time: the fights of the pass are single fights. UPASS_AGILITY: a bridge of the pass rolls stat_random(agility, 160,
-// 300) on 256 (upass_obstacles.rs2:374), which cannot fail from level 69, and a fall puts the account on the floor of
-// the chasm, which the quest scripts do not leave. UPASS_THIEVING: the two cage doors of the pass ask Thieving 50.
-// QUEST_BOW_ARROWS: the rune arrows of the practice cases. The meals are the sharks of the cases.
+// 300) (upass_obstacles.rs2:374; PlayerOps.ts STAT_RANDOM: the value 256 of 256 from level 68, 255 at 67), so it
+// cannot fail from level 68, and a fall puts the account on the floor of the chasm, which the quest scripts do not
+// leave. UPASS_THIEVING: the two cage doors of the pass ask Thieving 50.
+// QUEST_BOW_ARROWS: the rune arrows of the practice cases. The meals are the sharks of the cases: 12 for the pass, and
+// for Regicide 10 in the pack with 20 in the bank for its second crossing.
 export const UPASS_BAND = QUEST_BAND + 0.06, REGICIDE_BAND = QUEST_BAND + 0.07, UPASS = 'quest:upass', UPASS_PLACES = 1;
-export const UPASS_AGILITY = 69, UPASS_THIEVING = 50, UPASS_MEALS = 12, REGICIDE_MEALS = 10, QUEST_BOW_ARROWS = 600;
+export const UPASS_AGILITY = 68, UPASS_THIEVING = 50, UPASS_MEALS = 12, REGICIDE_MEALS = 30, QUEST_BOW_ARROWS = 600;
 // The runes of Regicide: the Falador and the Ardougne teleport (the quest pack of quest_regicide).
 export const REGICIDE_RUNES: Readonly<Record<string, number>> = { 'law rune': 5, 'air rune': 3, 'water rune': 5 };
+// What the account holds for Regicide beside the bow pack, the items of the practice case
+// extra:sweep-regicide-pure-hally. The quest script takes the coal of the still, the rabbit and a second rope out of
+// the bank at Falador, and the sweep takes the first rope for the pack. No shop sells the limestone and the iron fire
+// arrows of the quest pack: without them the sweep ends "missing 2532:2,3211:1". For the pestle and mortar the sweep
+// goes to the ogre merchant, whose shop does not open. The Grand Exchange lists coal and ropes (a rope from 79,564
+// coins; a shop sells one for 23) and none of the others.
+export const REGICIDE_PACK: Readonly<Record<string, number>> = { coal: 8, 'cooked rabbit': 1, limestone: 1, 'iron fire arrow': 2, 'pestle and mortar': 1, rope: 2 };
 // Fletching 25 for the lyre of The Fremennik Trials: FLETCH_MAKE headless arrows give 25 XP each at the server's
 // rate, 5,250 XP against the 4,863 of level 25. The worker keeps FLETCH_KEEP shafts and feathers in the bank
 // (scripts/fletch-arrows.ts planHeadless), so the band asks both amounts of each.
@@ -207,6 +216,9 @@ export const KIT_PRICE_CAPS: Readonly<Record<string, number>> = {
     // The two prayer potions of Lost City for a Defence 1 build (LOST_CITY_BUILD). No shop sells them and the bank
     // snapshots of the sides hold none. Live read: 38 listed from 250,000, bids at 25,000.
     'prayer potion(4)': 260_000,
+    // The coal of Regicide's still (REGICIDE_PACK). Live read: 17,157 listed from 499, bids at 104, volume-weighted
+    // price 586.
+    coal: 600,
 };
 
 // A bill line still short is worth twice its shop value: it is acquisition work the route needs. A unit nobody needs
@@ -1199,7 +1211,8 @@ export function catalogue(): Template[] {
     // wears and takes the pack of the practice case (scripts/quest-sweep.ts BUILD_PACK): the quest pack, a magic
     // shortbow, QUEST_BOW_ARROWS rune arrows and two prayer potions. The quest script fights with the bow in the
     // style that trains only Ranged. Practice at the levels before the route with Thieving UPASS_THIEVING and Agility
-    // UPASS_AGILITY (bench case extra:upass-pure-hally): MEASURED_UPASS
+    // UPASS_AGILITY (bench case extra:upass-pure-hally): 3 seeds, 2,697 to 2,858 ticks, 4 to 8 sharks eaten, lowest
+    // Hitpoints 33 of 93, no death; the same through the sweep from the bank (extra:sweep-upass-pure-hally): 3 seeds
     // (research/pvp-fight-loop.md, "Quest routes of the builds"). The reward gives Attack 61. A pilot.
     const BOW_KIT = { 'magic shortbow': 1, 'rune arrow': QUEST_BOW_ARROWS };
     const upass: Template = {
@@ -1213,29 +1226,30 @@ export function catalogue(): Template[] {
     // Regicide after it, for the dragon halberd (tier60.rs2:10), through the chain with Murder Mystery: its reward
     // gives the Crafting 10 that the loom of the quest asks. The quest crosses the pass twice more with the same bow
     // pack and casts the Falador and the Ardougne teleport (Magic 51; REGICIDE_RUNES). Practice with Underground Pass
-    // done (bench case extra:regicide-pure-hally): MEASURED_REGICIDE
-    // The quest pack holds items that no shop sells; see the gaps of the research section. A pilot.
+    // done (bench case extra:regicide-pure-hally): 3 seeds, 3,229 to 3,250 ticks, 10 or 11 sharks eaten, lowest
+    // Hitpoints 38 of 93, no death; the same through the sweep (extra:sweep-regicide-pure-hally): 3 seeds.
+    // The band asks the items of REGICIDE_PACK; the sweep buys the rest of the quest pack in shops. A pilot.
     const regicide: Template = {
         id: 'army-quest-regicide', family: 'aio:quester:mode:chain', script: 'scripts/aio.ts', args: ['quester', 'chain', 'murder,regicide'],
         aio: 'quester:mode:chain', worker: 'scripts/quest-chain.ts', pilot: true, buildOnly: true, role: 'quest', gives: ['Magic'],
         goal: 'complete Murder Mystery and Regicide to wield the dragon halberd', tier: 'goal', band: REGICIDE_BAND,
         quest: { name: 'Regicide', unlocks: [] }, resources: [UPASS], yields: () => [],
-        needs: { quests: ['Underground Pass'], skills: { Ranged: 99, Magic: 51, Prayer: 43, Hitpoints: 90, Agility: UPASS_AGILITY }, items: { coins: 2000, ...BOW_KIT, ...REGICIDE_RUNES },
+        needs: { quests: ['Underground Pass'], skills: { Ranged: 99, Magic: 51, Prayer: 43, Hitpoints: 90, Agility: UPASS_AGILITY }, items: { coins: 2000, ...BOW_KIT, ...REGICIDE_RUNES, ...REGICIDE_PACK },
             pieces: { of: LOST_CITY_FOOD, count: REGICIDE_MEALS } }, kitFirst: true,
     };
     // Thieving UPASS_THIEVING and Agility UPASS_AGILITY for those quests, before them. Thieving: the trainer of the
     // band thieving55 (men, warrior women and guards at Ardougne, bread from the baker) with a lower target. Agility:
     // the Gnome Stronghold course through the course worker, which walks there from Ardougne. A lap gives 2,162 XP at
-    // the server's rate, and level 69 is 119,000 XP. Neither gives XP in a combat skill. Pilots.
+    // the server's rate, and level 68 is 115,881 XP: 54 laps. Neither gives XP in a combat skill. Pilots.
     const upassThieve: Template = {
         id: 'army-thieve-50', family: 'thieving60', script: 'scripts/generated/thieving60.ts', env: { TARGET: String(UPASS_THIEVING), CAP: '2500', CLEAN_FOOD: '1' },
         pilot: true, buildOnly: true, route: 'Underground Pass', role: 'thieving', goal: 'train Thieving to the 50 that the cage doors of Underground Pass ask',
         tier: 'goal', band: UPASS_BAND - 0.02, repeats: true, trains: { skill: 'Thieving', to: UPASS_THIEVING, unlocks: [upass.id] }, yields: () => [],
     };
     const upassAgility: Template = {
-        id: 'army-agility-69', family: 'aio:skiller:agility:order', script: 'scripts/aio.ts', args: ['skiller', 'agility', 'order', 'gnome', String(UPASS_AGILITY)],
+        id: 'army-agility-68', family: 'aio:skiller:agility:order', script: 'scripts/aio.ts', args: ['skiller', 'agility', 'order', 'gnome', String(UPASS_AGILITY)],
         aio: 'skiller:agility:order', worker: 'scripts/agility-order.ts', pilot: true, buildOnly: true, route: 'Underground Pass', role: 'agility',
-        goal: 'run the Gnome Stronghold course to the Agility 69 from which no bridge of Underground Pass fails',
+        goal: 'run the Gnome Stronghold course to the Agility 68 from which no bridge of Underground Pass fails',
         tier: 'goal', band: UPASS_BAND - 0.01, repeats: true, trains: { skill: 'Agility', to: UPASS_AGILITY, unlocks: [upass.id, regicide.id] }, yields: () => [],
     };
     const prayerField: Template = {

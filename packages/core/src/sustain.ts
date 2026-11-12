@@ -101,8 +101,11 @@ const sessionEaters=new WeakMap<object,EaterHold>();
 export const registerSessionEater=(sdk:object,hold:EaterHold):void=>{sessionEaters.set(sdk,hold);};
 export const holdSessionEater=(sdk:object):{ateAt:number;release():void}=>sessionEaters.get(sdk)?.()??{ateAt:-Infinity,release(){}};
 
-export function startQuestSustain(s:TickSource&{direct(action:any):Promise<{success:boolean;message?:string}>},options:Omit<FoodPolicy,'reserved'>&{reserved?:Readonly<Record<number,number>>|(()=>Readonly<Record<number,number>>);timeoutTicks?:number;onConsumed?:(effect:{id:number;hpBefore:number;hpAfter:number})=>void}){
- const timeout=options.timeoutTicks??6;
+export function startQuestSustain(s:TickSource&{direct(action:any):Promise<{success:boolean;message?:string}>},options:Omit<FoodPolicy,'reserved'>&{reserved?:Readonly<Record<number,number>>|(()=>Readonly<Record<number,number>>);timeoutTicks?:number;dropRetries?:number;onConsumed?:(effect:{id:number;hpBefore:number;hpAfter:number})=>void}){
+ // `dropRetries`: how many times in a row an eat with no effect at all (the food count and the next item unchanged) is
+ // sent again before the eater fails. The game drops an eat sent while the player is delayed or a window is open
+ // (Underground Pass: a failed trap disarm hits inside its delay). Default 0: the first eat with no effect fails.
+ const timeout=options.timeoutTicks??6,dropRetries=options.dropRetries??0;let dropped=0;
  if(!Number.isSafeInteger(timeout)||timeout<1)throw Error('invalid quest sustain deadline');
  const held=holdSessionEater(s.sdk);
  // An eat of the guard in the last ticks still holds the food delay: the first eat here waits for it.
@@ -123,9 +126,12 @@ export function startQuestSustain(s:TickSource&{direct(action:any):Promise<{succ
    const p=pending,debit=p.before-count(state,p.selected.item.id),next=p.selected.definition.next;
    const transformed=next===undefined||count(state,next)===p.nextBefore+1;
    if(p.accepted&&debit===1&&transformed){
-    pending=undefined;options.onConsumed?.({id:p.selected.item.id,hpBefore:p.selected.hp,hpAfter:state?.skills?.find((v:any)=>v.name==='Hitpoints')?.level??p.selected.hp});return;
+    pending=undefined;dropped=0;options.onConsumed?.({id:p.selected.item.id,hpBefore:p.selected.hp,hpAfter:state?.skills?.find((v:any)=>v.name==='Hitpoints')?.level??p.selected.hp});return;
    }
-   if(s.tick()-p.at>=timeout)fail(next!==undefined&&!transformed?'food transform unobserved':'food debit unobserved');
+   if(s.tick()-p.at>=timeout){
+    if(p.accepted&&debit===0&&(next===undefined||count(state,next)===p.nextBefore)&&dropped<dropRetries){dropped++;pending=undefined;return;}
+    fail(next!==undefined&&!transformed?'food transform unobserved':'food debit unobserved');
+   }
    return;
   }
   if(draining||s.tick()-lastSent<3)return;

@@ -189,12 +189,13 @@ export const QUEST_KEEP:Record<string,number[]>={runemysteries:[1438,290,291],to
 export const STURDY=90,STURDY_MEALS=10,STURDY_OPTIONAL:Record<string,number[]>={zanaris:[2434]};
 // The pack of a build that fights a quest with the bow (scripts/pk-kits.ts; research/pvp-fight-loop.md, "Quest routes
 // of the builds"): a magic shortbow and rune arrows, so the quest script fights in the style that trains only Ranged
-// (quest-upass.ts RANGED_ARROWS), and for Underground Pass two prayer potions in the place of two sharks. An account
+// (quest-upass.ts RANGED_ARROWS), and for Underground Pass two prayer potions in the place of two sharks. Regicide
+// takes 8 sharks, not 10: the quest pack, the bow, the arrows and the coins for the shops fill the other 20 slots. An account
 // takes it when it cannot wear the rune armour of the quest presets (Defence under 40) and its Ranged is 50 or more
 // and over its Attack. These are needs: without the bow the fights would give Attack and Defence XP. The sweep banks
 // what such an account wears, as for a BARE quest: the practice cases ran with nothing worn.
 export const BUILD_PACK:Record<string,Item[]>={upass:[{id:861,count:1},{id:892,count:600},{id:2434,count:2}],regicide:[{id:861,count:1},{id:892,count:600}]};
-export const BUILD_MEALS:Record<string,number>={upass:12};
+export const BUILD_MEALS:Record<string,number>={upass:12,regicide:8};
 export const buildPack=(quest:string,level:(skill:string)=>number):Item[]=>
  level('Defence')<40&&level('Ranged')>=50&&level('Ranged')>level('Attack')?BUILD_PACK[quest]??[]:[];
 // Quests that board the Entrana ship: its monk carries nobody with a weapon or a piece of armour in the pack or worn
