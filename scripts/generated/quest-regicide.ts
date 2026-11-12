@@ -24,7 +24,9 @@ import { componentId } from '../../packages/core/src/logout';
 const ITEM = { summons: 3206, message: 3207, pendant: 3208, sulphur: 3209, limestone: 3211, quicklime: 3213, limeDust: 3214,
     sulphurDust: 3215, barrel: 3216, lid: 3218, fused: 3219, tar: 3220, naphtha: 3221, mixS: 3222, mixQ: 3223, cloth: 3224,
     rabbit: 3228, book: 3230, pestle: 233, pot: 1931, wool: 1759, coal: 453, bow: 841, unlit: 2532, lit: 2533,
-    tinderbox: 590, rope: 954, spade: 952, scimitar: 1333, shark: 385 };
+    tinderbox: 590, rope: 954, spade: 952, scimitar: 1333, shark: 385, arrow: 884 };
+// A stack of RANGED_ARROWS rune or iron arrows in the pack makes the bow the weapon of the quest (quest-upass.ts).
+const RANGED_ARROWS = 50, FIGHT_ARROWS = [892, 884], FIGHT_BOW = 861;
 const LATHAS = { x: 2578, z: 3293 };                        // level 1
 const CASTLE_STAIRS = { id: 1722, x: 2571, z: 3295 };
 const ENTRANCE = { id: 3213, x: 2433, z: 3313 };            // upass_caveentrance2
@@ -199,7 +201,14 @@ try {
         await wield(`lit arrow ${n}`, ITEM.lit);
         await q.walk(`to shot ${n}`, [{ x: 2447, z: 9722, tol: 0 }]);
         await q.step(`shoot rope ${n}`, () => q.opLoc(q.locAt(ROPE.x, ROPE.z) ?? ROPE, 1), () => x() <= 2442, 20, 3);
-        await wield(`scimitar ${n}`, ITEM.scimitar);
+        // An account that brings RANGED_ARROWS arrows keeps a bow for the fights of the quest, in the style that trains
+        // only Ranged (quest-upass.ts has the same rule).
+        const arrows = FIGHT_ARROWS.find(id => q.cnt(id) >= RANGED_ARROWS);
+        if (arrows !== undefined) {
+            if (q.has(FIGHT_BOW)) await wield(`fight bow ${n}`, FIGHT_BOW);
+            await wield(`arrows ${n}`, arrows);
+            await q.styleOnly(`bow ${n}`, 'Ranged');
+        } else await wield(`scimitar ${n}`, ITEM.scimitar);
         q.milestone(`bridge${n}`);
         await q.walk(`to swing ${n}`, [{ x: 2462, z: 9699, tol: 1 }]);
         await q.step(`swing ${n}`, () => q.useOnLoc(ITEM.rope, q.locAt(SWING.x, SWING.z) ?? SWING), () => x() >= 2465, 15, 3);

@@ -341,7 +341,7 @@ count of the engine's tick phases:
 | `pure-dds` | Attack 60, Strength 99 | 72 | 84 | dragon dagger, super attack and strength | 34,044 |
 | `pure-dds-msb` | Attack 60, Strength 99, Ranged 99 | 75 | 93 | magic shortbow, dragon dagger | 181,932 |
 | `pure-r2h` | Attack 40, Strength 99, Ranged 99 | 71 | 93 | magic shortbow, rune two-handed sword | 221,932 |
-| `pure-hally` | Attack 61, Strength 99, Ranged 99 | 75 | 93 | magic shortbow, dragon halberd | 407,932 |
+| `pure-hally` | Attack 61, Strength 99, Ranged 99, Magic 54, Prayer 43 | 80 | 93 | magic shortbow, dragon halberd | 407,712 |
 | `pure-ranger` | Ranged 99 | 69 | 83 | magic shortbow | 238,332 |
 | `pure-mage` | Magic 99 | 69 | 83 | Fire Wave, Entangle | 19,613 |
 | `pure-tribrid` | Attack 60, Strength 99, Ranged 99, Magic 99 | 76 | 99 | Fire Wave, magic shortbow, dragon dagger | 192,232 |
@@ -357,19 +357,19 @@ and `sim-def.txt` in the worktree that ran it). Mean is the mean win rate agains
 
 | Defence 1 bracket | Mean | | Defence 40 to 60 bracket, with two pures and `tribrid-pots` | Mean |
 |---|---|---|---|---|
-| `pure-pray` | 0.964 | | `tribrid-pots` (combat 126, for scale) | 0.986 |
-| `pure-ranger` | 0.784 | | `dragon` | 0.663 |
-| `pure-dds-msb` | 0.717 | | `zerker` | 0.642 |
-| `pure-dds` | 0.620 | | `range-tank` | 0.634 |
-| `pure-hally` | 0.348 | | `rune-pure` | 0.501 |
-| `pure-tribrid` | 0.311 | | `pure-pray` | 0.390 |
-| `pure-r2h` | 0.231 | | `pure-tribrid` | 0.092 |
+| `pure-pray` | 0.960 | | `tribrid-pots` (combat 126, for scale) | 0.986 |
+| `pure-hally` | 0.712 | | `dragon` | 0.663 |
+| `pure-dds-msb` | 0.704 | | `zerker` | 0.642 |
+| `pure-ranger` | 0.651 | | `range-tank` | 0.634 |
+| `pure-dds` | 0.490 | | `rune-pure` | 0.501 |
+| `pure-tribrid` | 0.261 | | `pure-pray` | 0.390 |
+| `pure-r2h` | 0.208 | | `pure-tribrid` | 0.092 |
 | `pure-mage` | 0.002 | | `mage-tank` | 0.089 |
 
 - Candidates from the simulator: Prayer 43 is the largest gain at Defence 1 (`pure-pray` beats `pure-dds-msb` in 75%
-  of fights, 5 combat levels higher). Defence 60 wins over Defence 40: `dragon` beats `rune-pure` in 84%. The two
-  Defence 60 helms are level: `dragon` beats `zerker` in 53%. `range-tank` beats `dragon` in 64% and `zerker` in 65%,
-  and loses to `pure-pray` in 55%.
+  of fights, 5 combat levels higher; `pure-hally`, which has Prayer 43 too, is second). Defence 60 wins over Defence
+  40: `dragon` beats `rune-pure` in 84%. The two Defence 60 helms are level: `dragon` beats `zerker` in 53%.
+  `range-tank` beats `dragon` in 64% and `zerker` in 65%, and loses to `pure-pray` in 55%.
 - Gap: the simulator has no freeze and no movement, and it alternates the bow and a 7-tick weapon where a player
   keeps the slow weapon for the kill. Its ranger result is higher than the bench (finding 18).
 
@@ -381,33 +381,37 @@ damage for each 100 ticks.
 
 | Kit | Combat | Fights | Wins | Losses | Draws | Net |
 |---|---|---|---|---|---|---|
-| `pure-pray` | 80 | 36 | 30 | 6 | 0 | +90.8 |
-| `zerker` | 96 | 21 | 16 | 5 | 0 | +70.0 |
-| `dragon` | 96 | 21 | 16 | 5 | 0 | +64.6 |
-| `pure-dds` | 72 | 21 | 15 | 6 | 0 | -25.0 |
-| `range-tank` | 91 | 21 | 12 | 7 | 2 | +28.3 |
-| `pure-dds-msb` | 75 | 36 | 19 | 17 | 0 | -25.6 |
-| `rune-pure` | 91 | 21 | 11 | 10 | 0 | +26.7 |
-| `pure-ranger` | 69 | 36 | 18 | 18 | 0 | -3.0 |
-| `pure-tribrid` | 76 | 21 | 7 | 13 | 1 | +0.4 |
-| `pure-hally` | 75 | 21 | 7 | 14 | 0 | -53.9 |
-| `pure-r2h` | 71 | 21 | 4 | 16 | 1 | -52.0 |
-| `mage-tank` | 89 | 21 | 1 | 18 | 2 | -52.3 |
-| `pure-mage` | 69 | 21 | 0 | 21 | 0 | -113.3 |
+| `zerker` | 96 | 21 | 18 | 3 | 0 | +68.9 |
+| `range-tank` | 91 | 21 | 16 | 4 | 1 | +52.5 |
+| `pure-hally` | 80 | 21 | 15 | 5 | 1 | +52.2 |
+| `pure-pray` | 80 | 36 | 23 | 12 | 1 | +69.1 |
+| `dragon` | 96 | 21 | 13 | 8 | 0 | +45.5 |
+| `rune-pure` | 91 | 21 | 13 | 8 | 0 | +44.0 |
+| `pure-dds-msb` | 75 | 36 | 19 | 17 | 0 | -26.6 |
+| `pure-ranger` | 69 | 36 | 18 | 18 | 0 | -8.8 |
+| `pure-dds` | 72 | 21 | 10 | 11 | 0 | -8.8 |
+| `pure-tribrid` | 76 | 21 | 6 | 15 | 0 | -31.8 |
+| `pure-r2h` | 71 | 21 | 4 | 17 | 0 | -78.4 |
+| `mage-tank` | 89 | 21 | 2 | 18 | 1 | -59.7 |
+| `pure-mage` | 69 | 21 | 0 | 21 | 0 | -142.1 |
 
-- **Defence 1: the bow and dagger pure with Prayer 43 wins.** `pure-pray` won 20 of 21 against the other Defence 1
-  builds and 10 of 15 against the builds with Defence 40 to 60, 9 to 16 combat levels above it. Without the prayer
-  the same weapons lose: `pure-dds-msb` lost 3 of 3 to `pure-pray` and 8 of 9 to the rune, zerker and dragon builds.
-- **Defence 40 to 60: the two Defence 60 builds win, and the helm does not decide.** `dragon` and `zerker` each won
-  16 of 21. `dragon` won 2 of 3 against `zerker`. `zerker` won 3 of 3 against `rune-pure`, and `dragon` 2 of 3.
-  Each lost fights to `pure-pray` and to `range-tank`.
-- **A build with one style from range loses.** `pure-mage` won 0 of 21 and `mage-tank` 1 of 21. `pure-ranger` won
-  every fight against the slow weapons and the mages, and 0 of 12 against the rune, zerker, dragon and range-tank
-  builds.
-- **The slow weapons lose.** `pure-r2h` and `pure-hally` won 4 and 7 of 21. The loop alternates the bow and the
-  7-tick weapon; a loop that keeps the slow weapon for the kill is not measured.
-- The simulator and the bench agree on the first build of the Defence 1 bracket, on the first two of the Defence
-  bracket and on the last of each. They differ on `pure-ranger` (second in the simulator, 18 of 36 on the bench).
+- **Defence 1: Prayer 43 wins.** The two builds with it lead the bracket: `pure-hally` won 15 of 21 and `pure-pray`
+  17 of 21 against the Defence 1 builds. They drew level with each other (1 to 1 and a draw). `pure-dds-msb`, the
+  bow and dagger with no prayer, won 3 of 3 against `pure-hally` and 2 of 3 against `pure-pray`, and lost 8 of 9 to
+  the rune, zerker and dragon builds.
+- **A pure against Defence 40 to 60.** `pure-pray` won 6 of 15 against those builds, 9 to 16 combat levels above it:
+  3 of 3 against `mage-tank`, 1 of 3 against `rune-pure`, `dragon` and `range-tank`, and 0 of 3 against `zerker`.
+- **Defence 40 to 60: no build is clear.** `zerker` won 18 of 21, `range-tank` 16, `dragon` 13 and `rune-pure` 13.
+  `zerker` won 3 of 3 against `dragon`, which wears the same body and legs; a run of the same cases before this one
+  gave `dragon` 2 of 3 against `zerker` and both builds 16 of 21. So the order inside this bracket is not decided.
+- **A build with one style from range loses.** `pure-mage` won 0 of 21 and `mage-tank` 2 of 21. `pure-ranger` won
+  0 of 18 against the two Prayer 43 pures and the rune, zerker, dragon and range-tank builds, and every fight
+  against the other builds.
+- **The two-handed sword loses.** `pure-r2h` won 4 of 21. The loop alternates the bow and the 7-tick weapon; a loop
+  that keeps the slow weapon for the kill is not measured. The halberd has the same attack time, and its build
+  wins with Prayer 43.
+- The simulator and the bench agree on the Prayer 43 pures at the top of the Defence 1 bracket and on the last
+  build of each bracket. They differ on the order of the Defence 40 to 60 bracket.
 - Control for the side of a pair: the same build on both sides (`extra:spar-kit-dragon-x8` and
   `extra:spar-kit-pure-pray-x8`, profile `snap`, seeds 1, 2, 3, 48 fights). Side A won 26, lost 21 and drew 1
   (`dragon` 11 to 13, `pure-pray` 15 to 8). 26 of 47 is inside the chance range of an even fight, so the table has
@@ -548,10 +552,39 @@ How a kit keeps its route:
   with 725 ticks on the third form, and one run of the whole quest lost that form to the 1,000 tick limit. Weapons,
   armour and runes are refused at the arena ladder (`can_enter_thorvald_trial`), and Peer banks every item before
   it. The case `extra:viking-zerker` is marked `known`.
-- Underground Pass at the levels of `pure-iban` before the quest (Attack 11, Hitpoints 10) fails at once: the quest
-  script wields a rune scimitar (Attack 40). Regicide at the levels of `pure-hally` fails: the fights gave 11,100
-  Attack XP, and the 10 meals of the pack ended at Hitpoints 16 of 93. One run each; the cases `extra:upass-pure-iban`
-  and `extra:regicide-pure-hally` are marked `known`.
+- The fights of Underground Pass and Regicide, on the maxed presets (`quester:quest:upass`, 2,483 ticks;
+  `quester:quest:regicide`, 3,273 ticks; one run each): Underground Pass gives 53,400 XP to the style of the fights
+  (534 damage) and 17,690 Hitpoints XP beside its reward; Regicide gives 11,100 XP and 3,677 Hitpoints XP. So a
+  build needs a skill at 99 for that XP.
+- An account that brings 50 or more rune or iron arrows fights both quests with the bow, the magic shortbow when
+  the pack holds one, in the style that trains only Ranged (`RANGED_ARROWS` in `quest-upass.ts` and
+  `quest-regicide.ts`, `styleOnly` in `quest-lib.ts`). Any other account takes the rune scimitar.
+- `pure-hally` passes both quests. Conditions: practice, lockstep engine, nothing worn, a magic shortbow and 600
+  rune arrows in the pack, every skill outside the build 99; Underground Pass from the levels before the route
+  (Attack 11, Magic 53) with two prayer potions in the place of two sharks, Regicide with Attack 61. Cases
+  `extra:upass-pure-hally` and `extra:regicide-pure-hally`.
+
+  | Quest | Seeds | Ticks | Sharks eaten | XP of the fights and spells | Result |
+  |---|---|---|---|---|---|
+  | Underground Pass | 1, 2, 3 | 2,789, 3,013, 2,761 | 4 to 8 | Ranged 98,200, 105,100, 95,400 | quest complete, no death |
+  | Regicide | 1, 2, 3 | 3,188, 3,229, 3,194 | 10, 10, 10 | Ranged 11,000, Magic 4,250 | quest complete, no death |
+
+  Underground Pass gave 75,000 Attack XP, the reward alone: Attack 61 from 11.
+- What the build needs, each from a failed practice run:
+  - Prayer 43. With Prayer 1 and a shortbow with iron arrows the account died to the demon Holthion after 17 sharks,
+    and in Regicide to a Tyras guard after 10.
+  - Prayer potions in Underground Pass. The prayer guard holds Protect from Melee with a window open, 43 points ran
+    out before the blessed spiders, and the account had no food left there. The script drinks a dose under 12 points.
+  - Magic 51 in Regicide, for the Falador and Ardougne teleports. With a lower level the walk out of Tirannwn ended
+    "quest corridor exhausted bounded retries". The two casts give 4,250 Magic XP (`FIGHT_XP`), so the kit has Magic
+    54.
+  - The cave of Underground Pass is single combat, and a blessed spider (level 39) attacks an account of combat 78
+    or less: before the Attack reward the build has combat 76. The bot kills what attacks it before it attacks
+    Kalrag, and it keeps looking for Kalrag when a spider stops its walk.
+- `pure-iban` has no route at combat 27. It has no skill at 99 for the XP of the fights, and the Hitpoints XP takes
+  Hitpoints 10 to 42. The 53,400 XP in Magic give Magic 63 and combat 41; split between Ranged and Magic they give
+  level 58 in each and combat 39 (estimates from the curve, no run). The case `extra:upass-pure-iban` is marked
+  `known`.
 
 Planner: `BUILD_QUESTS` in `packages/planner/src/autopilot.ts` holds the routes by kit name, `scripts/autopilot.ts`
 `buildQuests` and `buildBefore` give each account of the `builds` object the route of its kit and its levels before
@@ -571,17 +604,22 @@ items from a donor account.
 Evidence: `scripts/pk-kits.test.ts` ("every kit has a quest route, and the planner holds the route of every build")
 fails when a kit wears an item whose quest gives a level over the kit, and when `BUILD_QUESTS` differs from
 `kitRoute`; `packages/planner/test/autopilot.test.ts` and `scripts/autopilot.test.ts` hold the planner rule. Proof
-level: unit, and practice for the Lost City run of `pure-pray` and the Fremennik runs of the two range tanks.
+level: unit, and practice for the Lost City run of `pure-pray`, the Fremennik runs of the two range tanks and the
+Underground Pass and Regicide runs of `pure-hally`.
 
 Gaps:
 
 - `kitRoute` counts quest rewards and the fights of `FIGHT_XP`. Underground Pass, Regicide and the Mage Arena have
   fights with no style rule, and the Mage Arena fight gives Magic XP to `pure-rock`, which has Magic 80.
-- The planner has no band for Underground Pass, Regicide or the Mage Arena, and no script for the Mage Arena (a
-  search of `scripts`, `scripts/generated` and `packages` for Kolodion, the arena and the god capes finds the PK
-  kits and the knowledge tables only),
-  so `pure-iban`, `pure-hally`, `pure-rock` and `pure-god` get those quests from no job. `zerker` gets The Fremennik
-  Trials from no job: the band asks Attack 60.
+- The planner has no band for Underground Pass, Regicide or the Mage Arena. The practice cases of `pure-hally` have
+  every skill outside the build at 99: Underground Pass asks Thieving 50 and its obstacles roll on Agility, Regicide
+  asks Agility 56 and Crafting 10, and a build account has no job for those levels. The quest sweep does not bring
+  the magic shortbow, the rune arrows or the prayer potions. No script exists for the Mage Arena (a search of
+  `scripts`, `scripts/generated` and `packages` for Kolodion, the arena and the god capes finds the PK kits and the
+  knowledge tables only). So `pure-iban`, `pure-hally`, `pure-rock` and `pure-god` get those quests from no job.
+  `zerker` gets The Fremennik Trials from no job: the band asks Attack 60.
+- One more run of `extra:upass-pure-hally` ended at its start, "no npc king lathas", with the account on the ground
+  floor at Hitpoints 99: the preset was not on the account. The cause is not found; the next run of that seed passed.
 - The band `army-fletch-25` has no run of its two steps together, and no live run. One account holds 41,640 of the
   42,000 arrow shafts.
 - No live run of `army-quest-fremennik`, and no practice run of the chain `drunkmonk,murder,viking` through the quest

@@ -160,7 +160,9 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
         skills: trained({ Attack: 60, Strength: 99 }) },
     // The bow for damage and a melee weapon for the kill: the dagger special, a rune two-handed sword (Attack 40,
     // strength bonus 70, one hit each 7 ticks) or a dragon halberd (strength bonus 89, Regicide done). Regicide needs
-    // Underground Pass, which gives Attack 61, so the halberd build has Attack 61.
+    // Underground Pass, which gives Attack 61, so the halberd build has Attack 61. It has Prayer 43 and Magic 54 too: a
+    // Defence 1 account with no protect prayer dies in both quests, and Regicide casts the Falador and Ardougne
+    // teleports (Magic 51). Magic 54 adds no combat level under Attack 61 and Strength 99.
     'pure-dds-msb': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 300] },
         carried: ['dragon_dagger_p', ...BOOSTS], food: 23, switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p'] }, options: { rotation: ['ranged', 'melee'] },
         skills: trained({ Attack: 60, Strength: 99, Ranged: 99 }) },
@@ -168,8 +170,8 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
         carried: ['rune_2h_sword', ...BOOSTS], food: 23, switches: { ranged: ['magic_shortbow'], melee: ['rune_2h_sword'] }, options: { rotation: ['ranged', 'melee'] },
         skills: trained({ Attack: 40, Strength: 99, Ranged: 99 }) },
     'pure-hally': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 300] },
-        carried: ['dragon_halberd', ...BOOSTS], food: 23, switches: { ranged: ['magic_shortbow'], melee: ['dragon_halberd'] }, options: { rotation: ['ranged', 'melee'] },
-        skills: trained({ Attack: 61, Strength: 99, Ranged: 99 }), varps: { 328: 15 } },
+        carried: ['dragon_halberd', ...BOOSTS, ...PRAYER_POTS], food: 21, switches: { ranged: ['magic_shortbow'], melee: ['dragon_halberd'] }, options: { rotation: ['ranged', 'melee'] },
+        skills: trained({ Attack: 61, Strength: 99, Ranged: 99, Magic: 54, Prayer: 43 }), varps: { 328: 15 } },
     // One style from range.
     'pure-ranger': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 500] },
         carried: ['4doserangerspotion'], food: 26, switches: { ranged: ['magic_shortbow'] }, options: { rotation: ['ranged'] }, skills: trained({ Ranged: 99 }) },
@@ -303,7 +305,8 @@ const XP_RATE = 25, MORE_REWARDS: Readonly<Record<string, { skill: string; xp: n
 // style: a route counts it with the rewards. The Fremennik Trials: the bot fights Koschei unarmed with Kick, which
 // trains only Strength, and the Draugen the same way; practice runs of the whole quest gave 23,100 to 29,400 XP (research/pvp-fight-loop.md, "Quest routes of the
 // builds"). Lost City gives its fight XP to Strength too, and every kit with a dragon weapon has Strength 99.
-const FIGHT_XP: Readonly<Record<string, { skill: string; xp: number }[]>> = { quest_viking: [{ skill: 'strength', xp: 35_000 }] };
+// Regicide: the quest script casts the Falador and Ardougne teleports; a practice run gave 4,250 Magic XP.
+const FIGHT_XP: Readonly<Record<string, { skill: string; xp: number }[]>> = { quest_viking: [{ skill: 'strength', xp: 35_000 }], quest_regicide: [{ skill: 'magic', xp: 5_000 }] };
 let rewards: Map<string, { skill: string; xp: number }[]> | undefined;
 const rewardsOf = (folder: string) => {
     rewards ??= (JSON.parse(readFileSync(join(root, 'knowledge/quests.json'), 'utf8')) as { folder: string; xp: { skill: string; xp: number }[] }[])

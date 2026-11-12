@@ -135,7 +135,11 @@ test('every kit has a quest route, and the planner holds the route of every buil
         for (const item of ['rune_platebody', 'dragon_sq_shield', 'dragon_mace', 'dragon_battleaxe']) expect([name, item, held.has(itemId(item))]).toEqual([name, item, false]);
     }
     expect(kitSkills('zerker')).toMatchObject({ Attack: 60, Defence: 60 });
-    expect(kitSkills('pure-hally').Attack).toBe(61);
+    expect(kitSkills('pure-hally')).toMatchObject({ Attack: 61, Magic: 54, Prayer: 43, Defence: 1 });
+    // Magic 54 is free under Attack 61 and Strength 99, and before Regicide the build keeps Magic 51 for its teleports.
+    expect(combatLevel(kitSkills('pure-hally'))).toBe(combatLevel({ ...kitSkills('pure-hally'), Magic: 1 }));
+    expect(levelsBeforeRoute('pure-hally')).toMatchObject({ Attack: 11, Magic: 53, Ranged: 99, Prayer: 43 });
+    expect(levelsBeforeRoute('pure-hally').Magic!).toBeGreaterThanOrEqual(51);
     // The melee levels of a range tank add no combat level: Attack 74 and Strength 73 stay under Ranged 99.
     for (const name of ['range-tank', 'tank-range']) {
         expect(kitSkills(name)).toMatchObject({ Attack: 74, Strength: 73, Defence: name === 'tank-range' ? 99 : 60 });
