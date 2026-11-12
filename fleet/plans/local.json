@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794486277832,
+ "at": 1794486727616,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -36,47 +36,6 @@
    "role": "pk-trainee"
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "sarim"
-   ],
-   "env": {
-    "ITEMS": "feather",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy feathers at Gerrant",
-   "role": "bank",
-   "template": "shop-feathers",
-   "autopilot": "local",
-   "resources": [
-    "shop:sarim"
-   ]
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "local",
-   "resources": [
-    "knight:2669,3298"
-   ]
-  },
-  {
    "account": "Bigchopper",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -100,6 +59,28 @@
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "Bigpackage",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "sarim"
+   ],
+   "env": {
+    "ITEMS": "feather",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy feathers at Gerrant",
+   "role": "bank",
+   "template": "shop-feathers",
+   "autopilot": "local",
+   "resources": [
+    "shop:sarim"
    ]
   },
   {
