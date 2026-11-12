@@ -37,7 +37,8 @@ export type Digest = {
     prayers: { tick: number; name: string; on: 'melee' | 'ranged' | 'magic' | 'off'; near?: string }[];
     deaths: { tick: number; name: string }[];
 };
-type Seen = { name: string; x: number; z: number; combat?: number; worn: string[]; head: number; fe?: number; hp?: number; lastAttack?: number };
+// `region` is the socket of the recorder that sent the last record of the player.
+type Seen = { name: string; x: number; z: number; combat?: number; worn: string[]; head: number; fe?: number; hp?: number; lastAttack?: number; region?: number };
 
 // The fights of `names` in the lines of one or more traces. `objName` gives the name of a worn object id.
 export function digest(lines: Iterable<string>, names: ReadonlySet<string>, objName: (id: number) => string = id => String(id)): Digest {
@@ -48,7 +49,9 @@ export function digest(lines: Iterable<string>, names: ReadonlySet<string>, objN
     for (const raw of lines) {
         if (!raw) continue;
         let m: any; try { m = JSON.parse(raw); } catch { continue; }
-        if (m.t === 'hello') { bySlot.clear(); continue; }
+        // A socket that connects again sends each player of its region in full. The other sockets go on with changes
+        // only, so only the players of that region start again.
+        if (m.t === 'hello') { for (const [slot, e] of bySlot) if (e.region === m.r) bySlot.delete(slot); continue; }
         if (m.t === 'roster') {
             for (const p of m.p ?? []) { const e = bySlot.get(p[0]), name = String(p[1]).toLowerCase();
                 if (!e || e.name !== name) bySlot.set(p[0], { name, x: p[2], z: p[3], combat: p[5], worn: [], head: 0 }); else { e.x = p[2]; e.z = p[3]; e.combat = p[5]; } }
@@ -61,6 +64,7 @@ export function digest(lines: Iterable<string>, names: ReadonlySet<string>, objN
             const a = typeof r.ap === 'string' ? decodeAppearance(r.ap) : null;
             if (r.f || !e) { e = { name: a?.name ?? e?.name ?? `slot${r.i}`, x: r.x ?? e?.x ?? 0, z: r.z ?? e?.z ?? 0, combat: a?.combat ?? e?.combat, worn: e?.worn ?? [], head: e?.head ?? 0 }; bySlot.set(r.i, e); }
             if (r.x !== undefined) { e.x = r.x; e.z = r.z; } else for (const d of r.m ?? []) { e.x += DX[d] ?? 0; e.z += DZ[d] ?? 0; }
+            e.region = m.r;
             if (r.fe !== undefined) e.fe = r.fe;
             if (a) {
                 const head = Uint8Array.from(atob(r.ap), c => c.charCodeAt(0))[1] ?? 0;

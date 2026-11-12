@@ -52,3 +52,18 @@ test('a fight ends when the feed drops the target, when the watched name dies, a
     expect(digest([...start, tick(60, { i: 2, m: [4] })], names).fights[0]!.ended).toBe('stopped');
     expect(digest(['not json', ''], names)).toEqual({ fights: [], intervals: {}, prayers: [], deaths: [] });
 });
+
+test('a socket that connects again resets the players of its own region only', () => {
+    const start = [JSON.stringify({ t: 'roster', k: 10, p: [[1, 'Ligma', 3000, 3600, 0, 125], [2, 'Runner', 3001, 3600, 0, 120]] }),
+        tick(10, { i: 1, f: 1, x: 3000, z: 3600, ap: appearance('ligma', 125, 0, 5698) }, { i: 2, f: 1, x: 3001, z: 3600, ap: appearance('runner', 120, 0, 861) }),
+        tick(12, { i: 1, fe: 32768 + 2, an: [376, 0] })];
+    const names = new Set(['ligma']), second = tick(16, { i: 1, an: [376, 0] });
+    // The fight is in region 0. The hello of another region changes nothing: both attacks count.
+    expect(digest([...start, JSON.stringify({ t: 'hello', r: 1, tick: 14 }), second], names).fights[0]!.order).toBe('LL');
+    // The hello of region 0 drops its players, and that socket sends them in full again.
+    const again = digest([...start, JSON.stringify({ t: 'hello', r: 0, tick: 14 }), second], names);
+    expect(again.fights.map(f => f.order)).toEqual(['L']);
+    const resent = digest([...start, JSON.stringify({ t: 'hello', r: 0, tick: 14 }),
+        tick(15, { i: 1, f: 1, x: 3000, z: 3600, fe: 32768 + 2, ap: appearance('ligma', 125, 0, 5698) }, { i: 2, f: 1, x: 3001, z: 3600, ap: appearance('runner', 120, 0, 861) }), second], names);
+    expect(resent.fights.map(f => f.order)).toEqual(['LL']);
+});
