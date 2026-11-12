@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794445337499,
+ "at": 1794445356510,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -135,31 +135,6 @@
    ]
   },
   {
-   "account": "PocketPool",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
    "account": "Dipstick",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -211,6 +186,19 @@
   },
   {
    "account": "Kiltlifter",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-46859151-3272-4825-8634-7bc79e4f01ae"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-kiltlifter-20261112t005721z [task-46859151-3272-4825-8634-7bc79e4f01ae]",
+   "role": "combat"
+  },
+  {
+   "account": "PocketPool",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
