@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794494975921,
+ "at": 1794495231708,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -21,50 +21,6 @@
    "template": "kit-buy:army-quest-holygrail",
    "autopilot": "claude-cloud",
    "resources": []
-  },
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "betty"
-   ],
-   "env": {
-    "ITEMS": "fire rune|air rune|earth rune",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy elemental runes at Betty",
-   "role": "bank",
-   "template": "shop-runes",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "shop:betty"
-   ]
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts lowe 2500 ITEMS=iron.arrow|bronze.arrow STOCK_TARGET=1200 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=29000 COIN_RESERVE=500 MAX_SPEND=28000",
-    "scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=60 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=3000 COIN_RESERVE=500 MAX_SPEND=2000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy iron and bronze arrows at Lowe's and teleport runes at Aubury's in Varrock for the black dragon hunt",
-   "role": "supply",
-   "template": "army-hunt-supply",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "shop:lowe",
-    "shop:aubury"
-   ]
   },
   {
    "account": "UnderMyKilt",
@@ -102,29 +58,6 @@
    "template": "kit-buy:army-quest-lostcity",
    "autopilot": "claude-cloud",
    "resources": []
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts magic_guild 1500 ITEMS=staff.of.fire STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=13000 COIN_RESERVE=500 MAX_SPEND=12000",
-    "scripts/shop-buyer.ts magic_guild 600 ITEMS=fire.rune STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=10000 COIN_RESERVE=500 MAX_SPEND=9000",
-    "scripts/shop-buyer.ts magic_guild 900 ITEMS=nature.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=46000 COIN_RESERVE=500 MAX_SPEND=45000",
-    "scripts/shop-buyer.ts magic_guild 600 ITEMS=air.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy a staff of fire, fire, nature and air runes at the Magic Guild in Yanille for the alchemy band",
-   "role": "supply",
-   "template": "army-staff-guild",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "shop:magic_guild"
-   ]
   },
   {
    "account": "Fingerblastr",
@@ -187,6 +120,92 @@
    "resources": []
   },
   {
+   "account": "Dipstick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=12 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=dipstick-kit8-563-0to12 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=379 QUANTITY=12 LIMIT_PRICE=500 CASH_RESERVE=1000 ORDER_KEY=dipstick-kit8-379-0to12 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 12 Law rune, 12 Lobster on the Grand Exchange to complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience",
+   "role": "supply",
+   "template": "kit-buy:army-quest-holygrail",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "betty"
+   ],
+   "env": {
+    "ITEMS": "fire rune|air rune|earth rune",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy elemental runes at Betty",
+   "role": "bank",
+   "template": "shop-runes",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:betty"
+   ]
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts lowe 2500 ITEMS=iron.arrow|bronze.arrow STOCK_TARGET=1200 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=29000 COIN_RESERVE=500 MAX_SPEND=28000",
+    "scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=60 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=3000 COIN_RESERVE=500 MAX_SPEND=2000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy iron and bronze arrows at Lowe's and teleport runes at Aubury's in Varrock for the black dragon hunt",
+   "role": "supply",
+   "template": "army-hunt-supply",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:lowe",
+    "shop:aubury"
+   ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts magic_guild 1500 ITEMS=staff.of.fire STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=13000 COIN_RESERVE=500 MAX_SPEND=12000",
+    "scripts/shop-buyer.ts magic_guild 600 ITEMS=fire.rune STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=10000 COIN_RESERVE=500 MAX_SPEND=9000",
+    "scripts/shop-buyer.ts magic_guild 900 ITEMS=nature.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=46000 COIN_RESERVE=500 MAX_SPEND=45000",
+    "scripts/shop-buyer.ts magic_guild 600 ITEMS=air.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy a staff of fire, fire, nature and air runes at the Magic Guild in Yanille for the alchemy band",
+   "role": "supply",
+   "template": "army-staff-guild",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:magic_guild"
+   ]
+  },
+  {
    "account": "PocketPool",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -207,25 +226,6 @@
    "resources": [
     "shop:catherby"
    ]
-  },
-  {
-   "account": "Dipstick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=12 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=dipstick-kit8-563-0to12 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=379 QUANTITY=12 LIMIT_PRICE=500 CASH_RESERVE=1000 ORDER_KEY=dipstick-kit8-379-0to12 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 12 Law rune, 12 Lobster on the Grand Exchange to complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience",
-   "role": "supply",
-   "template": "kit-buy:army-quest-holygrail",
-   "autopilot": "claude-cloud",
-   "resources": []
   },
   {
    "account": "KnightRider",
