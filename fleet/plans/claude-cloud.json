@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794470558201,
+ "at": 1794470904261,
  "jobs": [
   {
    "account": "Fatstack",
@@ -198,28 +198,22 @@
   },
   {
    "account": "Dipstick",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/alch-train.ts",
    "args": [
-    "1500",
-    "trooper"
+    "99",
+    "5000"
    ],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
+    "ALCH_ITEM": "airrune"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
    "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "template": "army-alch-air-magic-99",
    "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "resources": []
   },
   {
    "account": "KnightRider",
