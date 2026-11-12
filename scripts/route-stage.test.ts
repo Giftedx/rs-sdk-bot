@@ -16,7 +16,14 @@ test('free holders give first, then the largest busy stock; the held count is no
 test('without --allow-busy a busy holder gives nothing and the rest is short', () => {
     const plan = planStage([{ item: 'magic logs', count: 107 }], () => 0, () => [{ name: 'OreElse', count: 107, busy: true }], false);
     expect(plan.orders).toEqual([]);
-    expect(plan.short).toEqual([{ item: 'magic logs', count: 107 }]);
+    expect(plan.short).toEqual([{ item: 'magic logs', count: 107, blocked: [] }]);
+});
+
+test('a holder in a job that the autopilot does not own never gives, and the short line names it', () => {
+    const holders = () => [{ name: 'Woodpecker', count: 50, busy: true, blocked: true }, { name: 'OreElse', count: 20, busy: true }];
+    const plan = planStage([{ item: 'logs', count: 30 }], () => 0, holders, true);
+    expect(plan.orders).toEqual([{ from: 'OreElse', item: 'logs', count: 20, busy: true }]);
+    expect(plan.short).toEqual([{ item: 'logs', count: 10, blocked: ['Woodpecker'] }]);
 });
 
 test('item lines and snapshot counts', () => {

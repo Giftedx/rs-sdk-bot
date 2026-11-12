@@ -2,7 +2,9 @@
 // accounts of this side that hold the item (fleet/snapshots/<side>.json) give it by fleet orders that meet at that
 // bank (scripts/coin-courier.ts BANK_MEETS). Accounts with no enabled job give first. An account with an enabled job
 // gives only with --allow-busy: the autopilot then takes it off its job while the order is open (scripts/autopilot.ts
-// inOpenOrder) and plans it again after the trade. The count that the route account holds already is not ordered.
+// inOpenOrder) and plans it again after the trade. An account whose enabled job the autopilot does not own (no
+// `autopilot` mark: a hand or coordinator job) never gives, because the fleet agent refuses it and the autopilot cannot
+// free it. The count that the route account holds already is not ordered.
 // One order moves one item type (scripts/fleet-trade.ts accepts a one-line offer), so each line from each giver is
 // one trade. Snapshots age: a giver whose bank is short fails its trade with "stock short".
 // Usage: bun scripts/route-stage.ts <account> <bank name> "<count> <item>" ["<count> <item>" ...] [--dry] [--allow-busy]
@@ -14,11 +16,12 @@ import { join } from 'node:path';
 import { FLEET_DIR, loadOwners } from '../packages/core/src/fleet';
 import { BANK_MEETS } from './coin-courier';
 import { makeOrder, orderMeet } from './fleet-order';
-import type { Order } from './fleet-trade';
+import { swarmBusy, type Order } from './fleet-trade';
 
 export interface StageLine { item: string; count: number }
-export interface Holder { name: string; count: number; busy: boolean }
-export interface StagePlan { orders: { from: string; item: string; count: number; busy: boolean }[]; held: StageLine[]; short: StageLine[] }
+// busy: an enabled autopilot job, which the autopilot frees for an open order. blocked: an enabled job that it does not own.
+export interface Holder { name: string; count: number; busy: boolean; blocked?: boolean }
+export interface StagePlan { orders: { from: string; item: string; count: number; busy: boolean }[]; held: StageLine[]; short: (StageLine & { blocked: string[] })[] }
 
 const norm = (s: string) => s.trim().toLowerCase();
 // Item count of one snapshot row (bank and pack), by exact item name, case ignored.
@@ -42,7 +45,8 @@ export function planStage(lines: readonly StageLine[], receiverHeld: (item: stri
         const have = Math.min(line.count, receiverHeld(line.item));
         if (have) plan.held.push({ item: line.item, count: have });
         let need = line.count - have;
-        const givers = holders(line.item).filter(h => h.count > 0 && (allowBusy || !h.busy))
+        const all = holders(line.item).filter(h => h.count > 0);
+        const givers = all.filter(h => !h.blocked && (allowBusy || !h.busy))
             .sort((a, b) => Number(a.busy) - Number(b.busy) || b.count - a.count);
         for (const h of givers) {
             if (need <= 0) break;
@@ -50,7 +54,7 @@ export function planStage(lines: readonly StageLine[], receiverHeld: (item: stri
             plan.orders.push({ from: h.name, item: line.item, count, busy: h.busy });
             need -= count;
         }
-        if (need > 0) plan.short.push({ item: line.item, count: need });
+        if (need > 0) plan.short.push({ item: line.item, count: need, blocked: all.filter(h => h.blocked).map(h => h.name) });
     }
     return plan;
 }
@@ -78,13 +82,17 @@ if (import.meta.main) {
     if (!side) throw Error(`${account} is not in fleet/owners.json`);
     const snapshot = readJson(join(FLEET_DIR(), 'snapshots', `${side}.json`))?.accounts ?? [];
     const plan = readJson(join(FLEET_DIR(), 'plans', `${side}.json`))?.jobs ?? [];
-    const busy = new Set(plan.filter((j: any) => j?.enabled).flatMap((j: any) => [j.account, ...(j.accounts ?? [])]).map((n: string) => norm(n)));
+    const busy = swarmBusy(plan), owned = swarmBusy(plan.filter((j: any) => typeof j?.autopilot === 'string'));
     const row = (name: string) => snapshot.find((a: any) => norm(a?.name ?? '') === norm(name));
     const staged = planStage(lines, item => heldCount(row(account), item), item => snapshot
         .filter((a: any) => typeof a?.name === 'string' && norm(a.name) !== norm(account) && norm(a.name) !== 'haggis' && owners.get(norm(a.name))?.side === side)
-        .map((a: any) => ({ name: a.name, count: heldCount(a, item), busy: busy.has(norm(a.name)) })), flag('--allow-busy'));
+        .map((a: any) => {
+            const name = norm(a.name);
+            return { name: a.name, count: heldCount(a, item), busy: busy.has(name), blocked: busy.has(name) && !owned.has(name) };
+        }), flag('--allow-busy'));
     for (const h of staged.held) console.log(`ROUTE_STAGE held ${account} ${h.count} ${h.item}`);
-    for (const s of staged.short) console.log(`ROUTE_STAGE short ${s.count} ${s.item}: no ${flag('--allow-busy') ? '' : 'free '}holder on side ${side}`);
+    for (const s of staged.short) console.log(`ROUTE_STAGE short ${s.count} ${s.item}: no ${flag('--allow-busy') ? '' : 'free '}holder on side ${side}`
+        + (s.blocked.length ? `; held by ${s.blocked.join(', ')} in a job that the autopilot does not own` : ''));
     const now = Date.now(), inMin = Number(process.env.IN ?? 10), minutes = Number(process.env.MINUTES ?? 90);
     for (const o of staged.orders) {
         const base = makeOrder(o.from, account, o.count, o.item, now, inMin, minutes, owners, meet);
