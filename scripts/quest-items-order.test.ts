@@ -155,12 +155,12 @@ test('live filled-hopper recovery keeps the extra grain and operates the owned c
 test('live bin probe requires a new empty message or an observed flour item',async()=>{
  const m=millFixture();m.state.inventory=[{id:1931,count:1}];
  m.state.gameMessages=[{text:'The flour bin is already empty.',tick:10,observationId:1}];
- m.s.bot.interactLoc=async()=>({success:true});
+ m.s.sdk.sendInteractLoc=async()=>({success:true});
  const observe=async(pred:()=>boolean,label:string)=>{if(!pred())throw Error(label);};
  await expect(probeQuestFlourBin(m.s,observe)).rejects.toThrow('flour bin probe');
- m.s.bot.interactLoc=async()=>{m.publish('The flour bin is already empty.',2);m.state.gameMessages=[];return{success:true};};
+ m.s.sdk.sendInteractLoc=async()=>{m.publish('The flour bin is already empty.',2);m.state.gameMessages=[];return{success:true};};
  await probeQuestFlourBin(m.s,observe);expect(m.listeners.size).toBe(0);
- m.s.bot.interactLoc=async()=>{m.state.inventory=[{id:1933,count:1}];return{success:true};};
+ m.s.sdk.sendInteractLoc=async()=>{m.state.inventory=[{id:1933,count:1}];return{success:true};};
  await probeQuestFlourBin(m.s,observe);expect(m.listeners.size).toBe(0);
 });
 test('funded HP10 western entry takes the two bounded fares before its first bank',async()=>{

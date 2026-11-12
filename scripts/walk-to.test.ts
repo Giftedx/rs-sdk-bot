@@ -252,3 +252,16 @@ test('a trip east from a floor above Ardougne goes to the north bank and takes t
     expect(await walkWithFerryFallback(house, { x: 2654, z: 3304, level: 0 }, walk, sail, () => 0, async () => { calls.push('fare'); return { ok: true, ticks: 1 }; })).toEqual({ ok: true, ticks: 3 });
     expect(calls).toEqual(['2654,3304']);
 });
+
+import { fareFault } from './walk-to';
+import { isPrerequisiteFailure } from '../packages/practice/src/supervise';
+test('a bank with too few coins is a missing fare; a bank that holds the fare had a failed withdrawal', () => {
+    const result = (fault: string) => `RESULT fail travel to Ardougne from 3092,3242 failed: precondition ${fault}`;
+    expect(fareFault(60, 59, 0)).toBe('ferry needs 60 coins and the bank holds 0');
+    expect(fareFault(60, 60, 59)).toBe('ferry needs 60 coins and the bank holds 59');
+    expect(isPrerequisiteFailure(result(fareFault(60, 59, 0)))).toBe(true);
+    // The bank holds the coins: the withdrawal or its confirmation failed, and the supervisor may start the run again.
+    expect(fareFault(60, 59, 11000)).toBe('ferry fare: the withdrawal of 59 coins failed, the bank holds 11000');
+    expect(fareFault(60, 60, 60)).toBe('ferry fare: the withdrawal of 60 coins failed, the bank holds 60');
+    expect(isPrerequisiteFailure(result(fareFault(60, 59, 11000)))).toBe(false);
+});

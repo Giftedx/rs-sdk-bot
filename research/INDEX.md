@@ -1,6 +1,6 @@
 # Research: start here
 
-Use the [current plan](../docs/plans/joined-plan.md) for priorities and the [research-first gate](../AGENTS.md#research-first-gate) for source selection and reuse. This index routes readers to relevant sections. `knowledge/*.json` is generated game data, not a notes folder.
+Use the [current plan](../docs/plans/joined-plan.md) for priorities and the [look-before-you-build gate](../AGENTS.md#look-before-you-build) for source selection and reuse. This index routes readers to relevant sections. `knowledge/*.json` is generated game data, not a notes folder.
 
 ## Task lookup
 
