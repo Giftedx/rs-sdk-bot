@@ -249,6 +249,11 @@
    "side": "cloud",
    "server": "rs-sdk-demo.fly.dev",
    "reservation": "task-baf56625-8445-49b5-ba41-e814a75cc35e"
+  },
+  "Balls": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "reservation": "task-5c00a0ff-887f-41e9-bb91-53f2eb2b96ce"
   }
  }
 }
