@@ -53,6 +53,10 @@ export function buildBrief(task: AuthorTask, file: string, failure?: string): st
     ].filter(Boolean).join('\n');
 }
 
+// In a -p run, a shell command outside the allowed list is refused, not asked. Without this note, build
+// sessions ran ls and cd on the owned run directory, which is outside their worktree, and lost a turn each time.
+export const BUILD_TOOL_LIMITS = 'Tool limits in this run: the shell runs only `bun ...` and `bunx tsc ...` commands. Every other shell command (ls, cd, cat, tail, sed, git, a variable or a loop) is refused and costs a turn. Look at files with Read, Glob and Grep, also for the run directory outside your working directory.';
+
 export function claudeArgs(prompt: string): string[] {
     return [
         '-p', prompt,
@@ -62,6 +66,7 @@ export function claudeArgs(prompt: string): string[] {
         // Claude Code on Windows may run commands through its PowerShell tool, so allow both forms.
         '--allowedTools', 'Read', 'Glob', 'Grep', 'Write', 'Edit',
         'Bash(bun:*)', 'Bash(bunx tsc:*)', 'PowerShell(bun:*)', 'PowerShell(bunx tsc:*)',
+        '--append-system-prompt', BUILD_TOOL_LIMITS,
     ];
 }
 
