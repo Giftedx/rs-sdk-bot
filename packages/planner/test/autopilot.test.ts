@@ -109,6 +109,29 @@ test('a thief with few Hitpoints gets a knight spot only when it holds food; a f
     // The worth of the trainer comes from the spot that the level unlocks. The food rule does not take that away.
     expect(job(acct('New'))).toBe('thieving55');
 });
+test('a frail thief with coins and no food buys food with its own coins, then takes a knight spot', async () => {
+    const { FRAIL_FOOD_BUY, FRAIL_FOOD_BUY_ID, KIT_BUY, KIT_CASH_RESERVE, KIT_PRICE_CAPS } = await import('../src/autopilot');
+    const food = { trout: { id: 333, name: 'Trout', limit: KIT_PRICE_CAPS.trout! }, lobster: { id: 379, name: 'Lobster', limit: KIT_PRICE_CAPS.lobster! } };
+    const frail = (items: Record<string, number> = {}) => acct('Frail', { Thieving: 99, Hitpoints: 10 }, items);
+    const pick = (a: Acct, extra: Partial<Inputs> = {}) => plan(inputs([a], { market: food, ...extra })).find(x => x.account === a.name);
+    const cost = FRAIL_FOOD_BUY * KIT_PRICE_CAPS.trout!;
+    // The cheapest food of the job that the market lists, in one order with the price cap.
+    const buy = pick(frail({ coin: cost + KIT_CASH_RESERVE }))!;
+    expect(buy.template!.id).toBe(KIT_BUY + FRAIL_FOOD_BUY_ID);
+    expect(buy.template!.args).toHaveLength(1);
+    expect(buy.template!.args![0]).toContain(`ITEM_ID=333 QUANTITY=${FRAIL_FOOD_BUY} LIMIT_PRICE=${KIT_PRICE_CAPS.trout}`);
+    expect(buy.reason).toContain(`at most ${cost} coins`);
+    // One coin short of the order and the reserve: no buy.
+    expect(pick(frail({ coin: cost + KIT_CASH_RESERVE - 1 }))?.template?.id).not.toBe(KIT_BUY + FRAIL_FOOD_BUY_ID);
+    // No market, a retired buy, or an account that is not frail: no buy.
+    expect(plan(inputs([frail({ coin: 1_000_000 })])).find(x => x.account === 'Frail')?.template?.id).not.toBe(KIT_BUY + FRAIL_FOOD_BUY_ID);
+    expect(pick(frail({ coin: 1_000_000 }), { retired: new Set([pairKey('Frail', KIT_BUY + FRAIL_FOOD_BUY_ID)]) })?.template?.id).not.toBe(KIT_BUY + FRAIL_FOOD_BUY_ID);
+    expect(pick(acct('Hale', { Thieving: 99, Hitpoints: 20 }, { coin: 1_000_000 }))!.template!.id).toMatch(/^goldfarm@/);
+    // With the food in the bank the account takes the knights.
+    expect(pick(frail({ coin: 1_000_000, trout: FRAIL_FOOD_BUY }))!.template!.id).toMatch(/^goldfarm@/);
+    // A thief under the Thieving level of the job buys nothing: food does not fix that.
+    expect(pick(acct('Low', { Thieving: 40, Hitpoints: 10 }, { coin: 1_000_000 }))?.template?.id).not.toBe(KIT_BUY + FRAIL_FOOD_BUY_ID);
+});
 test("the chicken pen in the Champions' Guild yard goes only to an account with 32 quest points", () => {
     const guild = Object.keys(PEN_QUEST_POINTS).map(p => `feathers@${p}`);
     expect(guild).toEqual(['feathers@3197,3353']);

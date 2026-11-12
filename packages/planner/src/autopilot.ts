@@ -476,6 +476,15 @@ export function plan(inp: Inputs): Assignment[] {
         } else if (inp.donors?.length && !inp.unfundable?.has(a.name.toLowerCase()) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs))) {
             const value = jobValue(t, a, inp);
             if (value > 0) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+'), coins: coinShort(a, t.needs) });
+        } else if (t.needs?.frail && frailShort(a, t.needs) > 0 && meets(a, { ...t.needs, frail: undefined })) {
+            // The account lacks only the food of the frail rule. It buys FRAIL_FOOD_BUY units with its own coins: the
+            // cheapest food of the job that the market lists. One buy id serves each spot of the job, so two failed
+            // buys retire the buy and not one spot. The job's worth orders the buy, at the share of a trainer.
+            const pick = t.needs.frail.of.map(norm).filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0];
+            const m = pick ? inp.market![pick]! : undefined, value = TRAIN_SHARE * jobValue(t, a, inp), buyer = { ...t, id: FRAIL_FOOD_BUY_ID };
+            if (m && value > 0 && (a.items.coin ?? 0) >= FRAIL_FOOD_BUY * m.limit + KIT_CASH_RESERVE && !inp.retired?.has(pairKey(a.name, KIT_BUY + FRAIL_FOOD_BUY_ID)))
+                cands.push({ account: a.name, template: kitBuyTemplate(buyer, a.name, [{ item: m.name, id: m.id, held: a.items[pick!] ?? 0, limit: m.limit, quantity: FRAIL_FOOD_BUY }], inp.kitSeq?.get(a.name.toLowerCase()) ?? 0),
+                    value, resources: [], reason: `buys ${FRAIL_FOOD_BUY} ${m.name} for ${t.family}, at most ${FRAIL_FOOD_BUY * m.limit} coins` });
         }
     }
     // The weapon buy (WEAPON): a kit buy made for the account, offered as a goal candidate so it comes before the melee
@@ -715,6 +724,9 @@ export const KNIGHT_SPOTS = ['2652,3318', '2653,3300', '2669,3298', '2671,3313',
 // that worker ends the run at once, so such an account gets no knight spot.
 export const GOLDFARM_FOOD = ['slice of cake', '2/3 cake', 'cake', 'chocolate slice', 'bread', 'trout', 'salmon', 'lobster', 'shark'] as const;
 export const GOLDFARM_FRAIL = { hitpoints: 20, of: GOLDFARM_FOOD, count: 2 } as const;
+// The food buy of a frail thief that has coins and no food (plan): 200 units feed about one 9,000 tick run of an
+// account with 99 Thieving (16 of 256 picks fail for 3 damage, about 0.19 damage a pick; estimate, not measured).
+export const FRAIL_FOOD_BUY = 200, FRAIL_FOOD_BUY_ID = 'goldfarm-food';
 export const CHICKEN_PENS = ['3229,3298', '3017,3288', '3187,3277', '3197,3353'];
 // The pen at 3197,3353 is the yard of the Champions' Guild. Its door lets in an account with 32 quest points
 // (championdoor in knowledge/doors.json), and the route search refuses the pen to any other account.
