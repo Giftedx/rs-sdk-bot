@@ -1,7 +1,29 @@
 import {test,expect} from 'bun:test';
-import {courierFoodReady,incomingCookedFood,receiveFoodAtBank,FOOD_ORDER,FRAIL_FLOOR,FRAIL_HP,FRAIL_RESERVE,foodReserve,guardHit,noKnightReason} from './goldfarm';
+import {courierFoodReady,incomingCookedFood,receiveFoodAtBank,FOOD_ORDER,FRAIL_FLOOR,FRAIL_HP,FRAIL_RESERVE,foodReserve,guardHit,noKnightReason,deadClick,pickKnight} from './goldfarm';
 import {selectFoodToEat,calcEatAt} from './goldfarm-stable';
 import {GOLDFARM_FOOD,GOLDFARM_FRAIL} from '../packages/planner/src/autopilot';
+test('a click with no pick is dead only when it brought the thief no closer',()=>{
+    // Beside the knight, and still no pick.
+    expect(deadClick(1,1)).toBe(true);
+    expect(deadClick(0,0)).toBe(true);
+    // Four tiles away, and the gap did not shrink, or the knight left the view.
+    expect(deadClick(4,4)).toBe(true);
+    expect(deadClick(4,6)).toBe(true);
+    expect(deadClick(4,null)).toBe(true);
+    // The thief closes in: the click works, the pick comes later.
+    expect(deadClick(4,2)).toBe(false);
+    expect(deadClick(2,1)).toBe(false);
+});
+test('a knight that rests is a worse target, not no target',()=>{
+    const k=(index:number,distance:number)=>({index,distance}),rest=new Map([[1,120],[2,130]]),until=(n:{index:number})=>rest.get(n.index)??0;
+    // A knight that does not rest wins, the nearest first.
+    expect(pickKnight([k(1,2),k(3,9),k(4,5)],until,100)).toEqual({knight:k(4,5),rested:false});
+    // A rest that is over does not count.
+    expect(pickKnight([k(1,2),k(2,1)],until,125)).toEqual({knight:k(1,2),rested:false});
+    // Each knight rests: the one whose rest ends first, and the caller is told.
+    expect(pickKnight([k(2,1),k(1,7)],until,100)).toEqual({knight:k(1,7),rested:true});
+    expect(pickKnight([],until,100)).toEqual({knight:undefined,rested:false});
+});
 test('an idle pass names the first thing that keeps every knight from a pick',()=>{
     const k=(inRange:boolean,reachable=true,banned=false,avoided=false)=>({inRange,reachable,banned,avoided});
     expect(noKnightReason([])).toBe('none');
