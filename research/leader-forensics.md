@@ -91,7 +91,7 @@ floor / realistic, from the haggis-cli run above (ESTIMATE). Gap = ours floor - 
 | Hitpoints | 58 | Combat on stunhitpoint after Attack and Strength | LIKELY | 13,864 / 15,104 | -3,194 | Already winnable in the model |
 | Ranged | 178 | Plain ranged combat, no quest, no cannon (HP 82 = 9,198 damage) | LIKELY | 8,015 / 8,284 | +2,420 | Damage rate of 1.8 per tick at the target; cannon is an option they did not use |
 | Prayer | 785 | 555 dragon bones at about 2 ticks each | LIKELY | 9,660 / 10,271 | +8,388 | Model the dragon-bone row alone; 560 bones; zero-wait restock |
-| Magic | 791 | Combat spells to about 80 (HP 75 at 1,157), Mage Arena, then Charge in the last 105 ticks | LIKELY (Charge) / GUESS (combat leg) | 1,433 / 1,859 | +171 | Mage Arena worker; Charge 5 a tick |
+| Magic | 791 | Combat spells to about 80 (HP 75 at 1,157), Mage Arena, then Charge in the last 105 ticks | LIKELY (Charge) / GUESS (combat leg) | 1,433 / 1,859 | +171 | A band for the Mage Arena worker; Charge 5 a tick |
 | Cooking | 49,923 | Login wine timer; 20 ticks fits one 20-tick timer with the wine already banked | GUESS | 217 / 229 | +197 | Find how the wine reaches the bank at about tick 0 |
 | Woodcutting | 325 | Knife reset (4.23 ticks per willow log), no bones | LIKELY | 3,452 / 3,563 | +383 | Knife reset in `woodcutting.ts` |
 | Fletching | 17,830 | Arrows and darts, 5 actions a tick, items at the tutorial exit | LIKELY | 64 / 71 | +8 | Tutorial skip plus a one-burst trade |
@@ -135,7 +135,7 @@ levels are not checked here.
 | 12 | Dwarf Cannon | Crafting 1-42 | 1,027 / 986 | 1,271 | worker (`dwarfcannon.ts`) | Railing rolls are luck |
 | 13 | Cannon at the poison spiders | Ranged 1-50 | 488 / 511 | priced in 24 | worker (`gather-ranged.ts`, `ranged-train` delivered) | Helper carries the cannon |
 | 14 | Monkey Madness | Strength 1-97, HP 42-97, Defence 1-89 | 4,563 / 4,113 | 5,501 | worker (`quest-mm.ts`) | One tick per dialogue page; bursts |
-| 15 | Mage Arena | Magic 77-81 | 547 / 637 | 910 | missing (no worker) | Kolodion fight under Protect from Magic |
+| 15 | Mage Arena | Magic 77-81 | 547 / 637 | 910 | practice: `scripts/generated/quest-magearena.ts`, 985 to 1,053 ticks from the cellar with the 99 casts of Flames of Zamorak | No band in the planner; Charge needs only the staff, so the 99 casts are not on the Magic route |
 | 16 | Ardougne knights; Charge, Superheat, arrows in the stuns | Thieving 57-99, Magic 81-99, Fletching 1-99 | 2,099 / 2,288 | 2,126 | worker (`thieveknights.ts`) | Stun pack; courier beside the knights |
 | 17 | Sea Slug, Fishing Contest | Fishing 1-78 | 859 / 791 | 801 | worker (`quest-seaslug.ts`, `quest-fishingcompo.ts`) | Contest items cannot be traded |
 | 18 | Body altar, essence rota | Runecraft 44-99 | 1,279 / 1,512 | 1,971 | worker for air only (`rcair.ts`) | Body-altar rota |
@@ -241,7 +241,7 @@ Inference:
   (`skill_magic/scripts/spells/charge.rs2:1-27`, no `p_delay`; 4,500 XP a cast). Cairn measured 156-163 casts in
   32-33 ticks. CONFIRMED in code and by Cairn; LIKELY for nickhex.
 
-Ours: 1,433 / 1,859. Gap 171. Need: a Mage Arena worker (Kolodion needs Magic 60,
+Ours: 1,433 / 1,859. Gap 171. Need: a planner band for the Mage Arena worker (`scripts/generated/quest-magearena.ts`; Kolodion needs Magic 60,
 `areas/area_mage_arena/scripts/kolodion.rs2:6`; Charge unlocks at `%magearena >= ^mage_arena_staff_given`,
 `skill_magic/scripts/spells/charge.rs2:4-7`) and a faster combat leg to 80.
 
@@ -371,7 +371,7 @@ stack has a worker for it.
 4. **Firemaking**: log ladder; gap 60; `firemaking-order` delivered. Need dropper helpers.
 5. **Crafting**: gem cutting; gap 75. Need dragonstone supply.
 6. **Smithing**: platebodies; gap 163. Need an anvil worker with a bar helper.
-7. **Magic**: combat spells, Mage Arena, Charge; gap 171. Need a Mage Arena worker.
+7. **Magic**: combat spells, Mage Arena, Charge; gap 171. Need a planner band for the Mage Arena worker.
 8. **Woodcutting**: knife reset; gap 383. Need the knife reset in `woodcutting.ts`.
 9. **Herblore**: Druidic Ritual then potions; gap 457. Need a 281-tick quest and potion supply.
 

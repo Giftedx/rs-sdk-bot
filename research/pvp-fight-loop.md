@@ -289,8 +289,8 @@ A pure has Defence 1 and Hitpoints 10. The kits are `pure-iban`, `pure-rock` and
 | `pure-bolt` | Magic 35 | 19 | Fire Bolt, max hit 12 | 16 |
 
 Bench cases: `extra:spar-pure-iban-vs-skiller-x4`, `extra:spar-pure-bolt-vs-skiller-x4` and
-`extra:spar-pure-rock-vs-skiller-x4`. Gaps: the Hitpoints of real skillers; `pure-iban` has no quest route
-("Quest routes of the builds"); the Mage Arena fight for the god spell gives Hitpoints XP; the tile east of (3055, 3872) is not checked.
+`extra:spar-pure-rock-vs-skiller-x4`. Gaps: the Hitpoints of real skillers; `pure-iban` and `pure-rock` have no quest
+route ("Quest routes of the builds"); the tile east of (3055, 3872) is not checked.
 
 ## Account builds
 
@@ -432,7 +432,7 @@ damage for each 100 ticks.
 
 ### Quest routes of the builds
 
-Claim: every kit of `scripts/pk-kits.ts` has a quest route, but `pure-iban`, which says why it has none. A route is the quests that the items and varps of the
+Claim: every kit of `scripts/pk-kits.ts` has a quest route, but `pure-iban` and `pure-rock`, which say why they have none. A route is the quests that the items and varps of the
 kit need, with the quests that those need. It is valid when the rewards of all those quests together take none of
 Attack, Strength, Defence, Ranged, Magic, Prayer and Hitpoints over the level of the kit.
 
@@ -453,7 +453,8 @@ What the wear rules ask (`levelrequire/scripts/levelrequire.rs2` and `tier*.rs2`
   Village, Underground Pass, Waterfall Quest and 107 quest points (`legends_guard.rs2:50-53`).
 - The Fremennik Trials: the four Fremennik helms (`levelrequire.rs2:124`).
 - Regicide: the dragon halberd (`tier60.rs2:10`). It needs Underground Pass, as Iban's staff does.
-- The Mage Arena: the god staff and cape. It is a minigame with no XP reward.
+- The Mage Arena: the god staff and cape. It is a minigame with no XP reward; its casts give Magic XP ("The Mage
+  Arena" below).
 
 Rewards in the seven combat skills (`knowledge/quests.json`; the line of each `stat_advance`):
 
@@ -480,7 +481,6 @@ The route of each kit with levels of its own (`BUILD_QUESTS`):
 | Lost City, The Fremennik Trials | `zerker` |
 | The Fremennik Trials | `range-tank`, `tank-range` |
 | Regicide (with Underground Pass) | `pure-hally` |
-| Lost City, Mage Arena | `pure-rock` |
 | Mage Arena | `pure-god` |
 
 The kits with no levels of their own are maxed (`tribrid` and its forms, `melee`, `ranger`, `mage`): Dragon Slayer,
@@ -659,12 +659,13 @@ Evidence: `scripts/pk-kits.test.ts` ("every kit has a quest route, and the plann
 fails when a kit wears an item whose quest gives a level over the kit, and when `BUILD_QUESTS` differs from
 `kitRoute`; `packages/planner/test/autopilot.test.ts` and `scripts/autopilot.test.ts` hold the planner rule. Proof
 level: unit, and practice for the Lost City run of `pure-pray`, the Fremennik runs of the two range tanks and the
-Underground Pass and Regicide runs of `pure-hally`, with their sweep cases and the two trainer cases.
+Underground Pass and Regicide runs of `pure-hally`, with their sweep cases and the two trainer cases, and the Mage
+Arena runs of `pure-god`.
 
 Gaps:
 
-- `kitRoute` counts quest rewards and the fights of `FIGHT_XP`. Underground Pass, Regicide and the Mage Arena have
-  fights with no style rule, and the Mage Arena fight gives Magic XP to `pure-rock`, which has Magic 80.
+- `kitRoute` counts quest rewards and the fights of `FIGHT_XP`. Underground Pass and Regicide have fights with no
+  style rule.
 - The path of `pure-hally` is proved in parts on practice and not as one run: no account ran the four bands in
   order, and no run started Underground Pass from an account that the chain took through Plague City and
   Biohazard, or Regicide from an account that the chain took through Murder Mystery. The Regicide cases start with
@@ -676,9 +677,7 @@ Gaps:
   With a way back up, Regicide could start at its own Agility 56.
 - The Agility case covers levels 60 to 68. No run took a build account from Agility 1 to 68 or from Ardougne to
   the course; `skiller:agility:order` has the first levels on a plain account.
-- The planner has no band for the Mage Arena, and no script exists for it (a search of `scripts`,
-  `scripts/generated` and `packages` for Kolodion, the arena and the god capes finds the PK kits and the knowledge
-  tables only). So `pure-rock` and `pure-god` get it from no job.
+- The planner has no band for the Mage Arena, so `pure-god` gets it from no job.
 - One more run of `extra:upass-pure-hally` ended at its start, "no npc king lathas", with the account on the ground
   floor at Hitpoints 99: the preset was not on the account. The cause is not found; the next run of that seed passed.
 - The two steps of `army-fletch-25` ran together one time through `scripts/chain.ts`, from 25 tiles east of the
@@ -702,6 +701,107 @@ Gaps:
   52, `cloud` 2), and the kit tier of the planner orders a missing band item from a donor account. A cow leaves
   bones on each kill, and a build band runs with `GIANT_BURY=0`, which takes none. Evidence:
   `/api/market/items/526` of the demo server and `fleet/snapshots/*.json` on the `fleet-data` branch, one read each.
+- **The Mage Arena.** Facts from the server content (`vendor/rs-sdk/server/content/scripts/areas/area_mage_arena/`,
+  short names below) and from practice runs of `scripts/generated/quest-magearena.ts`.
+  - Entry: Kolodion (`arenamage1`, 2541,4715, in the cellar with the bank) refuses a base Magic under 60
+    (`scripts/kolodion.rs2:6`) and a player who wears or carries armour, a melee or ranged weapon, arrows, logs,
+    clue items or cannon parts (`scripts/mage_arena.rs2:100-138`). The list has no staff, rune, potion, food or
+    knife. He sets `%magearena` (varp 267) to 1 and sends the player to 3105,3934 (`kolodion.rs2:99,133`;
+    `configs/mage_arena.constant:9`), Wilderness level 52.
+  - There is no lever. A ladder joins the cellar (2542,4713) and a hut at 3091,3957, Wilderness level 55
+    (`mage_arena.rs2:1-12`, `maps/m39_73.jm2`, `maps/m48_61.jm2`). Two webs close the hut (3093,3957 and 3095,3957);
+    a knife or a slash weapon cuts one with a chance of 1 in 2 (`general_use/scripts/web.rs2:10-33`). The portal at
+    3105,3953 lets a player in from the north with `%magearena` 6 or more and no armour or weapon
+    (`mage_arena.rs2:82-97`).
+  - Kolodion has five forms (`configs/mage_arena.npc`; `%magearena` 2 to 5 names the next form, 6 the end,
+    `scripts/kolodion_fight.rs2:30,54,78,102,128`):
+
+    | Form | Hitpoints | Defence | Magic | Range of its spell |
+    |---|---|---|---|---|
+    | man (`kolhuman`) | 3 | 20 | 15 | 3 |
+    | ogre (`kologre`) | 65 | 72 | 50 | 5 |
+    | spider (`kolspider`, 3 by 3 tiles) | 78 | 47 | 70 | 5 |
+    | ghost (`kolethereal`) | 78 | 58 | 30 | 5 |
+    | demon (`koldemon`, 3 by 3 tiles) | 107 | 105 | 80 | 5 |
+
+    Each form casts one of the three god spells once in 5 ticks, also from the next tile: no form has a melee attack
+    (`kolodion_fight.rs2:1-11`). The max hit is 20 (`skill_combat/configs/magic/magic_combat_spells.dbrow:478-527`).
+    A hit of Flames of Zamorak lowers Magic by 5 percent, Claws of Guthix Defence by 5 percent and Saradomin Strike
+    Prayer by 1. A form that dies becomes the next form on the same tile; the player who did the most damage must
+    be the player of the fight (`kolodion_fight.rs2:23-46`). A player who comes back with `%magearena` 2 to 5 meets
+    the form of that stage (`kolodion.rs2:15-16,135`). In the arena only spells may attack
+    (`skill_combat/scripts/npc/npc_combat.rs2:133-136`).
+  - Protect from Magic (Prayer 37) makes each spell of an NPC fail: no damage and no stat loss
+    (`skill_combat/scripts/npc/npc_combat_magic.rs2:37-43`).
+  - After the demon the player lands at 2540,4716 (`mage_arena.rs2:146-158`). The pool at 2541,4719 takes a player
+    with `%magearena` 6 or more to the chamber (`mage_arena.rs2:15,47-77`). A prayer at a statue sets 7 and puts
+    the cape of that god on the tile in front for 200 ticks; a player with a god cape gets no answer
+    (`scripts/chamber.rs2:5-22`). The statue of Zamorak is at 2516,4721. The guardian (2508,4696) gives the staff of
+    the god of the cape and sets 8 (`scripts/chamber_guardian.rs2:4-17`). A cape and a staff of two gods do not go
+    on together, and a dropped cape is lost (`scripts/god_gear.rs2:1-33`).
+  - A god spell needs its staff (`magic_combat_spells.dbrow:485,503,521`) and Magic 60. Flames of Zamorak costs 4
+    fire, 2 blood and 1 air rune and gives 35 XP a cast before the rate. Outside the arena it needs `%zamomage`
+    (varp 270) at 99. Each cast at an NPC with the player in the arena adds 1, hit or miss, and the cast at 98 sets
+    99: 99 casts (`skill_combat/scripts/player/spells/scripts/flames_of_zamorak.rs2:9-38`). The arena is four
+    rectangles (`configs/mage_arena.dbrow`). Charge needs `%magearena` 8 and Magic 80, and under it the spell
+    hits up to 30 with the cape and staff of its god on (`skill_magic/scripts/spells/charge.rs2:4-18`,
+    `flames_of_zamorak.rs2:19-25`).
+  - The targets of the casts are the battle mages (Hitpoints 120, Magic 50, three of each god,
+    `maps/m48_61.jm2`). Each casts its god spell, max hit 20, from 5 tiles. A mage attacks a player with
+    `%magearena` 6 or more who comes within 3 tiles; a mage of the god whose cape and staff the player wears does
+    so only after the player attacks it (`scripts/battle_mage.rs2:36-71`, `configs/mage_arena.hunt`). The arena is
+    single combat: a cast at one mage while another attacks is refused and does not count.
+  - The worker `scripts/generated/quest-magearena.ts` ends with the cape and the staff of Zamorak worn and
+    Flames of Zamorak open outside the arena, in the cellar by the bank. It starts beside Kolodion with a staff of
+    fire worn and, in the pack, air, fire and blood runes, a knife, prayer potions and sharks (preset
+    `quest_magearena`: Magic 80, Prayer 43, Hitpoints 50, the other skills 1). It casts Fire Wave at Kolodion
+    (Magic 75, max hit 20, 42.5 XP a cast before the rate; Fire Blast under Magic 75, which needs death runes) with
+    Protect from Magic on, and then Flames of Zamorak at the battle mage that attacks it. The god spells need the
+    god staff, and Iban Blast needs Underground Pass, so Fire Wave is the strongest spell the fight allows. Practice,
+    lockstep engine, one run for each seed (`bun run bench quester:quest:magearena --seed n`):
+
+    | Seed | Ticks | Kolodion: ticks, casts | 99 casts: ticks | Damage taken | Prayer points used | Magic XP | Hitpoints XP |
+    |---|---|---|---|---|---|---|---|
+    | 7 | 1,020 | 299, 59 | 516 | 0 | 4 | 189,975 | 34,695 |
+    | 1 | 985 | 266, 52 | 521 | 0 | 2 | 184,300 | 35,150 |
+    | 2 | 1,053 | 331, 65 | 521 | 0 | 2 | 199,562 | 36,142 |
+    | 3 | 1,024 | 301, 59 | 521 | 0 | 2 | 192,337 | 35,545 |
+
+    Each run ended with the cape, the staff and the spell, no death, no food eaten and no potion drunk: the
+    prayer guard of `packages/core` turns the prayer on only for the tick of each spell. The fight with Kolodion
+    alone gave 61,175 to 74,987 Magic XP and about 11,000 Hitpoints XP. The run gives no XP to another skill.
+  - `pure-god` passes with Prayer 37. Conditions: the same preset at the levels of the kit (Magic 99, Prayer 37,
+    Hitpoints 83), case `extra:magearena-pure-god`, seeds 1, 2 and 3: 982, 1,062 and 1,012 ticks, no damage, 1 or 2
+    prayer points used, Magic XP 185,400, 194,125 and 189,112 (no level over 99), Hitpoints XP 35,892, 31,815 and
+    34,820. `kitRoute` counts 205,000 Magic XP for the arena (`FIGHT_XP`) and asks Prayer 37 of a kit with the
+    arena on its route.
+  - With Prayer 1 the arena is not safe. The worker has a second method for a test (`MA_MODE=leash`). An NPC
+    drops a target that is more than maxrange + attackrange tiles from the tile where the NPC came into the world
+    and walks no more than maxrange tiles from it (`server/engine/src/engine/entity/Npc.ts`
+    `targetWithinMaxRange`); the forms of Kolodion have 10 and 5. The floor of the arena is 25 tiles wide, the
+    west wall has a gap on rows 3933 and 3934, and the bot casts from a tile on that row 17 tiles west of the start
+    tile of the form. Each form comes where the form before it ended, 5 to 10 tiles nearer to the gap, and the walk
+    behind the gap ends at x 3084, so a late form often has no such tile.
+
+    | Kit levels | Seed | Result |
+    |---|---|---|
+    | Magic 99, Prayer 1, Hitpoints 83, 23 sharks | 7 | pass, 1,408 ticks: Kolodion 667 ticks, 61 casts, 14 damage; the 99 casts 547 ticks, 274 damage, 13 sharks eaten |
+    | the same | 1 | died at the spider (start tile x 3100), all 23 sharks eaten by tick 513 |
+    | the same | 2 | no XP for 900 ticks |
+    | the same | 3 | died at the demon (start tile x 3099), all 23 sharks eaten by tick 703 |
+    | `pure-rock`: Magic 80, Prayer 1, Hitpoints 10 | 7 | died to Kolodion |
+
+    The leash does not work at the battle mages: a mage of another god follows the player into the gap, and its
+    reach ends west of x 3084. An account with no prayer stands there and eats: 274 and 349 damage in two runs of
+    the 99 casts at Hitpoints 83.
+  - `pure-rock` does not pass and the kit says so (`noRoute`). It needs Prayer 37, which makes it combat 50, over
+    the 46 of the rune rocks. With the prayer the run takes no damage, so Hitpoints 10 can stay; the run gives about
+    35,000 Hitpoints XP, which takes Hitpoints 10 to about 51 (estimate from the curve, no run), and 205,000 Magic
+    XP, so the account starts the arena at Magic 60 with Fire Blast (estimate, no run). The case
+    `extra:magearena-pure-rock` is marked `known`.
+  - Gaps: practice only, on an empty world; the Wilderness walk to the hut (level 55) is not in the worker, which
+    starts in the cellar; no run with Fire Blast; the leash method fails at 3 seeds of 4; the planner has no band
+    for the arena; no bank step for more food.
 
 ### Bench cases for the planner's jobs
 
@@ -734,7 +834,7 @@ gear that its level cap exists for -> `scripts/pk-kits.test.ts`, the bench cases
 | `pure-dlong` | Attack 60, Strength 99, Ranged 99 | 75 | magic shortbow, dragon longsword |
 | `pure-knives` | Attack 60, Strength 99, Ranged 99 | 75 | rune knives, dragon dagger |
 | `pure-pray31` | `pure-dds-msb` with Prayer 31 | 78 | magic shortbow, dragon dagger, Ultimate Strength |
-| `pure-god` | Magic 99 | 69 | Flames of Zamorak under Charge |
+| `pure-god` | Magic 99, Prayer 37 | 73 | Flames of Zamorak under Charge |
 | `pure-max` | Attack 99, Strength 99, Ranged 99, Prayer 43 | 94 | magic shortbow, dragon dagger |
 | `addy-pure` | the rune pure with Defence 30 | 89 | the tribrid kit in adamant |
 | `def50` | the rune pure with Defence 50 | 94 | the rune pure's kit with the granite shield |
@@ -774,7 +874,7 @@ fights of this set.
 | `pure-dlong` | 75 | 21 | 8 | 13 | 0 | -1.5 |
 | `pure-scim` | 71 | 21 | 5 | 16 | 0 | +7.4 |
 | `addy-pure` | 89 | 21 | 0 | 21 | 0 | -44.8 |
-| `pure-god` | 69 | 21 | 0 | 21 | 0 | -92.3 |
+| `pure-god` with Prayer 1 | 69 | 21 | 0 | 21 | 0 | -92.3 |
 | `low-mage` | 39 | 9 | 0 | 9 | 0 | -128.8 |
 
 - **Combat 80 to 102: no build is clear.** `tank-range` won 16 of 27: 3 of 3 against `def50` and `addy-pure`, 2 of

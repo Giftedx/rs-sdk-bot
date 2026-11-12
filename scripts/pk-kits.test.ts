@@ -123,7 +123,9 @@ test('every kit has a quest route, and the planner holds the route of every buil
     // No reward of a quest that a kit needs gives a level over the kit.
     // A kit with no route says so (`noRoute`): it stays for a bench comparison.
     for (const [name, kit] of Object.entries(KITS)) if (kit.noRoute) expect(kitRoute(name).breaks.length).toBeGreaterThan(0); else expect([name, kitRoute(name).breaks]).toEqual([name, []]);
-    expect(Object.keys(KITS).filter(name => KITS[name]!.noRoute)).toEqual(['pure-iban']);
+    expect(Object.keys(KITS).filter(name => KITS[name]!.noRoute)).toEqual(['pure-iban', 'pure-rock']);
+    expect(kitRoute('pure-rock').breaks).toEqual(['Prayer 1 under the 37 of the Mage Arena']);
+    expect(kitRoute('pure-god')).toEqual({ quests: ['Mage Arena'], breaks: [] });
     expect(kitRoute('pure-iban').breaks).toEqual(['no skill at 99 for the 53,400 fight XP of quest_upass']);
     expect(kitRoute('pure-hally').breaks).toEqual([]);
     // The planner's table is the route of each kit with levels of its own.
