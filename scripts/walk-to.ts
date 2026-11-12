@@ -35,8 +35,8 @@ export async function walkTarget(s: Session, to: Tile, ground: boolean, operatio
 const FARE_BANKS: readonly Tile[] = [{ x: 3185, z: 3436, level: 0 }, { x: 3253, z: 3420, level: 0 }, { x: 3092, z: 3243, level: 0 },
     { x: 3013, z: 3355, level: 0 }, { x: 2946, z: 3368, level: 0 }, { x: 2619, z: 3332, level: 0 }, { x: 2655, z: 3283, level: 0 }];
 const COINS = 995, PACK_SLOTS = 28;
-// A full pack with no coin stack has no slot for the fare (live: 22 flax and 6 slices of cake, "ferry needs 60 coins
-// and the bank holds 11000"). The item to bank for one free slot: one of the kind that fills the most slots, or the
+// A full pack with no coin stack has no slot for the fare (live: 22 flax and 6 slices of cake, with 11,000 coins in
+// the bank). The item to bank for one free slot: one of the kind that fills the most slots, or the
 // whole stack when every kind fills one slot.
 export function fareSpare(pack: readonly { id: number }[]): { id: number; all: boolean } | null {
     if (pack.length < PACK_SLOTS || pack.some(i => i.id === COINS)) return null;
@@ -66,8 +66,13 @@ export async function bankFare(s: Session, need: number, walk: (to: Tile, budget
     const took = missing <= 0 || !!row && row.count >= missing && (await s.bot.withdrawItem(row, missing, { asNote: false })).success
         && await waitUntil(s, () => held() >= need, { timeoutTicks: 20 });
     await s.bot.closeBank();
-    return took ? done(true, '') : done(false, `ferry needs ${need} coins and the bank holds ${row?.count ?? 0}`);
+    return took ? done(true, '') : done(false, fareFault(need, missing, row?.count ?? 0));
 }
+// The result of a fare that the bank did not give. A bank with too few coins is a missing prerequisite: the supervisor
+// ends the session on that text (isPrerequisiteFailure). A bank that holds the coins had a failed withdrawal, which
+// a restart can repair.
+export const fareFault = (need: number, missing: number, banked: number): string =>
+    banked >= missing ? `ferry fare: the withdrawal of ${missing} coins failed, the bank holds ${banked}` : `ferry needs ${need} coins and the bank holds ${banked}`;
 
 // Tutorial Island, where a new live account starts (seen: START 3094 3106 0 on the demo server). The sea is on each
 // side of this box, and no route leaves the island: the skip puts the account in Lumbridge.
