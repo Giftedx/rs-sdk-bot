@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794504580001-oreelse-balls-magiclogs",
  "account": "OreElse",
  "partner": "Balls",
@@ -10,8 +10,22 @@
  "item": "magic logs",
  "requested": 107,
  "claim": "703e2bc6-487d-4b89-a144-ac586b5685f3",
- "count": 0,
- "ok": false,
- "at": 1794504589867,
- "detail": "trade claimed"
+ "count": 107,
+ "ok": true,
+ "at": 1794507039609,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 107,
+  "after": 0
+ },
+ "bank": {
+  "count": 107,
+  "at": 1794504626122
+ },
+ "logout": {
+  "attemptId": "1794504589876-0000011088-0000000001",
+  "at": 1794507039591,
+  "sha256": "2e45edb42d95234d456e32fdca8c7fdfe18334594298fcc41599ad3ee4f36442"
+ },
+ "screen": true
 }

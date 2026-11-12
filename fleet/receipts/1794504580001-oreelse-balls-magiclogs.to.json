@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794504580001-oreelse-balls-magiclogs",
+ "account": "Balls",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "magic logs",
+ "requested": 107,
+ "claim": "ad69db14-8454-406b-9bb2-95f226bac3c8",
+ "count": 107,
+ "ok": true,
+ "at": 1794507039996,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 107
+ },
+ "bank": {
+  "count": 107,
+  "at": 1794507034953
+ },
+ "logout": {
+  "attemptId": "1794507019177-0000019756-0000000001",
+  "at": 1794507039986,
+  "sha256": "989dc0f383cf71ffc75abfa1e487a234f2d17cfded4075aa95fbd9cc0c2a74a4"
+ },
+ "screen": true
+}
