@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794511637490-shaftmaker-balls",
  "account": "Shaftmaker",
  "partner": "Balls",
@@ -10,8 +10,22 @@
  "item": "logs",
  "requested": 1,
  "claim": "c372d1eb-fa2d-4974-b40b-151baf788283",
- "count": 0,
- "ok": false,
- "at": 1794511865806,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794511885477,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794511877266
+ },
+ "logout": {
+  "attemptId": "1794511865814-0000011248-0000000001",
+  "at": 1794511885466,
+  "sha256": "18b2c4dfd70c96d3ca8c7b0777ee3efba6232797ba596acd279be9781af39322"
+ },
+ "screen": true
 }
