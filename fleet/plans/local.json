@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794450923672,
+ "at": 1794452719912,
  "jobs": [
   {
    "account": "Masterbaiter",
@@ -29,27 +29,21 @@
   },
   {
    "account": "NabTheKnob",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "0",
-    "TROOPER_COOK": "1"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "trooper:battlefield"
+    "knight:2582,3297"
    ]
   },
   {
