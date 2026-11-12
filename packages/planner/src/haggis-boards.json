@@ -2372,10 +2372,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 910,
-    "realistic": 942,
+    "floor": 886,
+    "realistic": 910,
     "evidence": "MEASURED",
-    "source": "research/quest-plan.md section 1o: scripts/generated/quest-scorpion.ts, preset quest_scorpion (beside Thormac; every skill 99, rune set, Falador and Camelot Teleport runes, %barcrawl 77 = 2), practice, 3/3 PASS at 937, 910, 942 ticks (floor = best, realistic = worst), Thormac to Thormac; includes the dusty key chain (Jailer, jail key on Velrak's cell door, Velrak, the dusty key on the gate at 2924,9803; 271-295 ticks from the dungeon ladder to the gate) because the corridor north of the secret wall has no other way in"
+    "source": "research/quest-plan.md section 1o: scripts/generated/quest-scorpion.ts, preset quest_scorpion (beside Thormac; every skill 99, rune set, Falador and Camelot Teleport runes, %barcrawl 77 = 2), lockstep bench case quester:quest:scorpion at seeds 7, 8 and 9: 886, 891, 910 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"), Thormac to Thormac; includes the dusty key chain (Jailer, jail key on Velrak's cell door, Velrak, the dusty key on the gate at 2924,9803; 271-295 ticks from the dungeon ladder to the gate) because the corridor north of the secret wall has no other way in"
    },
    "lump": true,
    "xp": {
@@ -2404,10 +2404,10 @@
      "lever": "rival-dialogue-burst",
      "set": {
       "ticks": {
-       "floor": 910,
-       "realistic": 942,
+       "floor": 886,
+       "realistic": 910,
        "evidence": "MEASURED",
-       "source": "research/quest-plan.md section 1o: scripts/generated/quest-scorpion.ts, preset quest_scorpion (beside Thormac; every skill 99, rune set, Falador and Camelot Teleport runes, %barcrawl 77 = 2), practice, 3/3 PASS at 937, 910, 942 ticks (floor = best, realistic = worst), Thormac to Thormac; includes the dusty key chain (Jailer, jail key on Velrak's cell door, Velrak, the dusty key on the gate at 2924,9803; 271-295 ticks from the dungeon ladder to the gate) because the corridor north of the secret wall has no other way in. The rival burst run is not measured by us"
+       "source": "research/quest-plan.md section 1o: scripts/generated/quest-scorpion.ts, preset quest_scorpion (beside Thormac; every skill 99, rune set, Falador and Camelot Teleport runes, %barcrawl 77 = 2), lockstep bench case quester:quest:scorpion at seeds 7, 8 and 9: 886, 891, 910 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"), Thormac to Thormac; includes the dusty key chain (Jailer, jail key on Velrak's cell door, Velrak, the dusty key on the gate at 2924,9803; 271-295 ticks from the dungeon ladder to the gate) because the corridor north of the secret wall has no other way in. The rival burst run is not measured by us"
       }
      }
     }

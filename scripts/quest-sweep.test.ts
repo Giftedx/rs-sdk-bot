@@ -18,13 +18,15 @@ test('Scorpion stages and establishes a missing Barcrawl gate before the outpost
  const base=needs(presetFor('scorpion'),false,'scorpion');
  expect([...scorpionBarcrawlNeeds(base,2)]).toEqual([...base]);
  expect([...scorpionBarcrawlNeeds(base,0)]).toEqual([[995,268],[563,3],[556,11],[555,1],[554,1]]);
- let gate=0,runs=0;
- await establishBarcrawlGate(()=>gate,async()=>{runs++;gate=2;});
- expect({gate,runs}).toEqual({gate:2,runs:1});
- await establishBarcrawlGate(()=>gate,async()=>{runs++;});
- expect(runs).toBe(1);
+ // The gate is the only sign of the Barcrawl state: the server does not send %barcrawl to the client.
+ let gate=0,runs=0,tries=0;
+ const tryGate=async()=>{tries++;return gate===2;};
+ await establishBarcrawlGate(tryGate,async()=>{runs++;gate=2;});
+ expect({gate,runs,tries}).toEqual({gate:2,runs:1,tries:2});
+ await establishBarcrawlGate(tryGate,async()=>{runs++;});
+ expect({runs,tries}).toEqual({runs:1,tries:3});
  gate=0;
- await expect(establishBarcrawlGate(()=>gate,async()=>{})).rejects.toThrow('Barcrawl gate state 2 unobserved');
+ await expect(establishBarcrawlGate(tryGate,async()=>{})).rejects.toThrow('Barcrawl gate shut after the Barcrawl');
 });
 
 test('only a started Black Knight journal selects the Amik return',()=>{

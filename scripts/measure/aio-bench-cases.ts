@@ -567,6 +567,16 @@ const ROUTE_CASES: BenchCase[] = [
   // tutorial: no bank visit before the quest, then the walk to the Draynor bank for the last check.
   {key: 'extra:cook-job-spawn', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['cook-job', 'CAP=1500'], pass: s => ok(s) && /QUEST_COOK_JOB_RESULT \{"ok":true/.test(s),
     presetConfig: {position: {x: 3222, z: 3218, level: 0}, coins: 25, inventory: [1351, 590, 303, 315, 1925, 1931, 2309, 1265, 1205, 1277, 1171, 841].map(id => ({id, count: 1})), varps: {4: -1, 9: -1, 13: -1, 16: -1, 28: -1, 64: -1, 181: -1, 209: -1}}},
+  // Scorpion Catcher on an account with no Barcrawl (%barcrawl 0), with the coins and runes that the sweep stages for
+  // it (scripts/quest-sweep.ts SCORPION_BARCRAWL): the guard talks at the outpost gate, and the Barcrawl runs first.
+  // Seed 9 fails at scorpion C, which stands on a tile that the player cannot reach (research/aio-bench.md).
+  {key: 'extra:scorpion-with-barcrawl', script: 'scripts/aio-quester.ts', preset: 'quest_scorpion', scriptArgs: ['scorpion', 'CAP=4000'], pass: ok, timeoutMs: 900_000,
+    presetConfig: (() => {
+      const p = PRESETS.quest_scorpion!, extra = new Map([[995, 268], [563, 3], [556, 11], [555, 1], [554, 1]]);
+      const inventory = (p.inventory ?? []).map(i => ({...i, count: i.count + (extra.get(i.id) ?? 0)}));
+      for (const [id, count] of extra) if (!inventory.some(i => i.id === id)) inventory.push({id, count});
+      return {...p, varps: {...p.varps, 77: 0}, inventory};
+    })()},
   // From the Taverley dungeon ladder: the Jailer, Velrak's cell, the key, back up (scripts/dusty-key.ts).
   {key: 'quester:mode:dusty-key', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['dusty-key'], pass: s => ok(s) && s.includes('dustyKey=1'), timeoutMs: 900_000,
     presetConfig: {position: {x: 2884, z: 3398, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99}, equipment: [{id: 1331, count: 1, slot: 3}], inventory: Array.from({length: 4}, () => ({id: 385, count: 1}))}},
