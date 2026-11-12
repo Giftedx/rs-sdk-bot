@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794496207295,
+ "at": 1794496382114,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -86,20 +86,18 @@
   },
   {
    "account": "Deeppockets",
-   "script": "scripts/alch-train.ts",
+   "script": "scripts/aio.ts",
    "args": [
-    "99",
-    "5000"
+    "quester",
+    "dusty-key"
    ],
-   "env": {
-    "ALCH_ITEM": "airrune"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
-   "role": "combat",
-   "template": "army-alch-air-magic-99",
+   "repeat": false,
+   "goal": "get the dusty key from Velrak for Taverley dungeon's inner gate",
+   "role": "quest",
+   "template": "army-dusty-key",
    "autopilot": "claude-cloud",
    "resources": []
   },
@@ -124,41 +122,47 @@
   },
   {
    "account": "Fingerblastr",
-   "script": "scripts/alch-train.ts",
-   "args": [
-    "99",
-    "5000"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "ALCH_ITEM": "airrune"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
-   "role": "combat",
-   "template": "army-alch-air-magic-99",
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "knight:2582,3297"
+   ]
   },
   {
    "account": "Kiltlifter",
-   "script": "scripts/alch-train.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99",
-    "5000"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "ALCH_ITEM": "airrune"
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-alch-air-magic-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "Knightstick",
