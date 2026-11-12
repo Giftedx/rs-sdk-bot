@@ -97,9 +97,12 @@ const RIDDLES: Array<[RegExp, number[]]> = [
 ];
 const DRAUGEN = 1279;
 const KOSCHEI = [1290, 1291, 1292, 1293];
-// The longest Koschei fight the bot waits for. An account with Attack 7 and the Kick style (a build before the
+// The longest Koschei trial the bot waits for, with its new starts. An account with Attack 7 and the Kick style (a build before the
 // quest's Attack reward) lands about 9 damage in 100 ticks, and the three forms before the last have 171 Hitpoints.
-const KOSCHEI_TICKS = 4000;
+const KOSCHEI_TICKS = 18000;
+// Koschei gone for KOSCHEI_GONE ticks in a fight that had started: he left. The bot starts the trial again, at most
+// KOSCHEI_TRIES times.
+const KOSCHEI_GONE = 30, KOSCHEI_TRIES = 8;
 const DIRS: Record<string, [number, number]> = {
     'north-west': [-1, 1], 'north-east': [1, 1], 'south-west': [-1, -1], 'south-east': [1, -1],
     north: [0, 1], south: [0, -1], east: [1, 0], west: [-1, 0],
@@ -109,7 +112,7 @@ const FROM = process.env.VK_FROM ?? 'start';
 const STAGES = ['start', 'olaf1', 'chain', 'east2', 'draugen', 'manni', 'olaf', 'peer', 'thorvald', 'end'];
 const from = (s: string) => STAGES.indexOf(FROM) <= STAGES.indexOf(s);
 
-const q = await openQuest({ cap: 9000, eatAt: 40, food: [385] });
+const q = await openQuest({ cap: 24000, eatAt: 40, food: [385] });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+trials/i) > 0) questDone = true; });
@@ -438,7 +441,7 @@ try {
         await op('warrior ladder', LOC.warriorLadder, /climb-down/i, () => z() > 9000, 12);
         const ko = () => (q.st()?.nearbyNpcs ?? []).find((n: any) => KOSCHEI.includes(n.id));
         const t1 = q.T();
-        let lastId = 0, lastHit = -99, blind = false;
+        let lastId = 0, lastHit = -99, blind = false, gone = 0, tries = 0;
         // Peer banked the food, and the fight ends at 0 hp by design: no retreat here.
         q.planLowHp(true);
         while (z() > 9000 && q.T() - t1 < KOSCHEI_TICKS) {
@@ -448,7 +451,22 @@ try {
             // window open, held Protect from Melee until the points ran out (practice: a build with Defence 7 died to
             // the third form). The next attack closes the window.
             const n = ko();
-            if (!n) { await q.waitTicks(1); continue; }
+            if (!n) {
+                // Each form leaves after 1,000 ticks (viking_thorvald.rs2 npc_add and npc_changetype). An account with a
+                // low Attack level can lose a form to that limit. The ladder up ends the trial, and the ladder down
+                // starts it again with the first form (viking_warrior_ladder_up, spawn_viking_enemy).
+                if (lastId !== 0 && ++gone > KOSCHEI_GONE && tries < KOSCHEI_TRIES) {
+                    tries++; gone = 0; lastId = 0;
+                    console.log(`KOSCHEI left at ${q.T()}, try ${tries + 1}`);
+                    const up = () => q.findLoc((l: any) => /ladder/i.test(l.name ?? '') && (l.optionsWithIndex ?? []).some((o: any) => /climb-up/i.test(o.text)));
+                    await q.step('arena ladder up', () => { const l = up(); return l ? q.opLoc(l, q.opIndex(l, /climb-up/i)) : q.waitTicks(1); }, () => z() < 9000, 12, 4);
+                    await q.walk('to warrior ladder again', [{ x: LOC.warriorLadder.x, z: LOC.warriorLadder.z - 1, tol: 1 }]);
+                    await op('warrior ladder again', LOC.warriorLadder, /climb-down/i, () => z() > 9000, 12);
+                }
+                await q.waitTicks(1);
+                continue;
+            }
+            gone = 0;
             // A new form shows the empty health bar of the form before it until the first hit. The prayer guard reads an
             // attack on such a target as an input that is not an attack, and then holds Protect from Melee until the
             // points run out (packages/core/src/prayer-guard.ts attackTarget). So the bot sends the attack again in

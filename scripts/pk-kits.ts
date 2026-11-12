@@ -37,6 +37,8 @@ export type KitSpec = {
     // Dragon Slayer and full special energy.
     skills?: Record<string, number>;
     varps?: Record<number, number>;
+    // Why no account can reach the kit: it stays for a bench comparison, and the planner gives it no quest.
+    noRoute?: string;
 };
 // Defence 1 and Hitpoints 10 with Prayer 1: the base of every pure, 2.75 combat levels (Player.ts getCombatLevel).
 const PURE = { Attack: 1, Strength: 1, Defence: 1, Ranged: 1, Magic: 1, Prayer: 1, Hitpoints: 10 } as const;
@@ -136,11 +138,13 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     // Pures. Each level is the lowest that wields the weapon or casts the spell, and a second style stays under the
     // combat level of the first (research/pvp-fight-loop.md, "Pure builds").
     // Combat 27: Iban Blast (Magic 50 and Attack 50 for the staff, max hit 25; 1 death and 5 fire runes and 2 staff
-    // charges a cast, varp 288) with a magic shortbow (Ranged 50). Underground Pass gives Attack 61.
+    // charges a cast, varp 288) with a magic shortbow (Ranged 50). Underground Pass gives Attack 61. A kit for the
+    // comparison only (`noRoute`).
     'pure-iban': { worn: { weapon: 'ibanstaff', amulet: 'amulet_of_magic', feet: 'leather_boots', ammo: ['rune_arrow', 100] },
         carried: ['magic_shortbow', ['deathrune', 100], ['firerune', 500]], food: 20, foodItem: 'lobster',
         switches: { magic: ['ibanstaff'], ranged: ['magic_shortbow'] }, options: { rotation: ['magic', 'ranged'], damageSpell: SPELLS.ibanBlast },
-        skills: { ...PURE, Attack: 61, Ranged: 50, Magic: 50 }, varps: { 288: 120 } },
+        skills: { ...PURE, Attack: 61, Ranged: 50, Magic: 50 }, varps: { 288: 120 },
+        noRoute: 'the fights of Underground Pass give 53,400 XP and 17,690 Hitpoints XP: the kit has no skill at 99 for them, and Hitpoints 10 end at 42' },
     // Combat 46, the highest that can attack combat 3 at the rune rocks (Wilderness level 46): dragon dagger special
     // (Attack 61, Strength 73) with Flames of Zamorak under Charge (Magic 80, max hit 30) and Entangle (79).
     'pure-rock': { worn: { weapon: 'dragon_dagger_p', cape: 'zamorak_cape', amulet: 'amulet_of_strength', feet: 'leather_boots' },
@@ -274,8 +278,14 @@ export function combatLevel(s: Record<string, number>): number {
 }
 const MAXED = { Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99, Prayer: 99, Hitpoints: 99 };
 export const kitSkills = (name: string): Record<string, number> => ({ ...(kitOf(name).skills ?? MAXED) });
-// Lost City done, Dragon Slayer done and full special energy, then the varps of the build.
-export const kitVarps = (name: string): Record<number, number> => ({ 147: 6, 176: 10, 300: 1000, ...kitOf(name).varps });
+// Full special energy, Lost City and Dragon Slayer done when the route of the kit has them, then the varps of the
+// build. A kit gets no quest that its route does not have.
+export const kitVarps = (name: string): Record<number, number> => {
+    const quests = kitRoute(name).quests, varps: Record<number, number> = { 300: 1000 };
+    if (quests.includes('Lost City')) varps[147] = 6;
+    if (quests.includes('Dragon Slayer')) varps[176] = 10;
+    return { ...varps, ...kitOf(name).varps };
+};
 
 const kitOf = (name: string): KitSpec => { const k = KITS[name]; if (!k) throw Error(`pk-kits: unknown kit "${name}"; known: ${Object.keys(KITS).join(', ')}`); return k; };
 const carried = (k: KitSpec) => k.carried.map(c => (typeof c === 'string' ? { id: itemId(c), count: 1 } : { id: itemId(c[0]), count: c[1] }));
@@ -318,6 +328,10 @@ const rewardsOf = (folder: string) => {
 const routeXp = (quests: readonly string[], skill: string) => [...new Set(quests.flatMap(q => QUEST_CHAIN[q]!))]
     .reduce((n, folder) => n + rewardsOf(folder).filter(x => x.skill === skill.toLowerCase()).reduce((m, x) => m + x.xp * XP_RATE, 0)
         + (FIGHT_XP[folder] ?? []).filter(x => x.skill === skill.toLowerCase()).reduce((m, x) => m + x.xp, 0), 0);
+// The fight XP of a quest that goes to the style of the account, measured on the maxed presets: a kit with the quest
+// on its route needs one of Strength, Ranged and Magic at 99 to take it (research/pvp-fight-loop.md, "Quest routes of
+// the builds").
+const SINK_XP: Readonly<Record<string, number>> = { quest_upass: 53_400, quest_regicide: 11_100 };
 // The quest route of a kit: the quests that its items and varps need, and each combat skill that the rewards of
 // those quests and of the quests they need take over the level of the kit, counted from level 1. A kit with an
 // empty `breaks` has a route.
@@ -329,6 +343,8 @@ export function kitRoute(name: string): { quests: string[]; breaks: string[] } {
         const level = levelForXp(routeXp(quests, skill));
         return level > 1 && level > (levels[skill] ?? 1) ? [`${skill} ${level}`] : [];
     });
+    const sink = [...new Set(quests.flatMap(q => QUEST_CHAIN[q]!))].find(folder => SINK_XP[folder] && !['Strength', 'Ranged', 'Magic'].some(skill => (levels[skill] ?? 1) >= 99));
+    if (sink) breaks.push(`no skill at 99 for the ${SINK_XP[sink]!.toLocaleString('en-US')} fight XP of ${sink}`);
     return { quests, breaks };
 }
 // The levels an account of a kit may have before the quests of its route: in each combat skill the highest level

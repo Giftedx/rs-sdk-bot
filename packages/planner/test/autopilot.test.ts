@@ -1487,6 +1487,13 @@ test('a build with a Fremennik helm takes The Fremennik Trials under its levels 
     expect(run({ builds: new Map([['tank', tank]]), buildQuests: new Map([['tank', route]]), buildBefore: new Map([['tank', before]]) })).toBe('army-quest-fremennik');
     expect(run({})).not.toBe('army-quest-fremennik');
     expect(CAPACITY[FREMENNIK]).toBe(1);
+    // The Berserker helm build goes with Attack 7 and Strength 99; an account with neither set of levels does not.
+    const zerk = { Attack: 60, Strength: 99, Defence: 60, Ranged: 99, Magic: 99, Prayer: 43 }, zBefore = { Attack: 7, Strength: 99, Defence: 7, Ranged: 99, Magic: 99, Prayer: 43, Hitpoints: 99 };
+    const z = (strength: number) => ({ ...acct('Zerk', { Attack: 7, Strength: strength, Defence: 1, Ranged: 99, Magic: 99, Prayer: 43, Hitpoints: 94, Fletching: 25 }, { coin: 100_000, shark: 40, 'adamant scimitar': 1, shortbow: 1, 'bronze arrow': 500 }), quests: new Set(['lost city']) });
+    const zrun = (strength: number) => plan(inputs([z(strength)], { army: new Set(['zerk']), pilots: new Set(['army-quest-fremennik']), capacity: CAPACITY,
+        builds: new Map([['zerk', zerk]]), buildQuests: new Map([['zerk', ['Lost City', 'The Fremennik Trials']]]), buildBefore: new Map([['zerk', zBefore]]) }))[0]!.template?.id;
+    expect(zrun(99)).toBe('army-quest-fremennik');
+    expect(zrun(80)).not.toBe('army-quest-fremennik');
 });
 
 test('a build with The Fremennik Trials on its route makes headless arrows to Fletching 25 before the quest', async () => {
@@ -1513,6 +1520,21 @@ test('a build with The Fremennik Trials on its route makes headless arrows to Fl
         builds: new Map([['tank', tank]]), buildQuests: new Map([['tank', route]]), buildBefore: new Map([['tank', before]]) }))[0]!.template?.id;
     expect(run(1)).toBe('army-fletch-25');
     expect(run(25)).toBe('army-quest-fremennik');
+});
+
+test('a Defence 1 build buys the two prayer potions of Lost City on the Grand Exchange', async () => {
+    const pure = { Attack: 60, Strength: 99, Defence: 1, Ranged: 99, Magic: 1, Prayer: 43 };
+    const who = (items: Record<string, number>) => ({ ...acct('Pure', { Attack: 60, Strength: 99, Ranged: 99, Prayer: 43, Hitpoints: 93 }, { coin: 600_000, shark: 40, 'adamant scimitar': 1, shortbow: 1, 'bronze arrow': 500, ...items }), quests: new Set<string>() });
+    const market: Market = { 'prayer potion(4)': { id: 2434, name: 'Prayer potion(4)', limit: KIT_PRICE_CAPS['prayer potion(4)']! } };
+    const run = (items: Record<string, number>, extra: Partial<Inputs> = {}) => plan(inputs([who(items)], { army: new Set(['pure']), pilots: new Set(['army-quest-lostcity']), capacity: CAPACITY,
+        builds: new Map([['pure', pure]]), buildQuests: new Map([['pure', ['Lost City']]]), buildBefore: new Map([['pure', pure]]), market, ...extra }))[0]!;
+    // No potion held: one order of two, at the cap. With the potions: the quest. With no listing: no quest and no buy.
+    const buy = run({});
+    expect(buy.template!.id).toBe(KIT_BUY + 'army-quest-lostcity');
+    expect(buy.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+) .*LIMIT_PRICE=(\d+)/)!.slice(1).map(Number))).toEqual([[2434, 2, 260_000]]);
+    expect(run({ 'prayer potion(4)': 2 }).template!.id).toBe('army-quest-lostcity');
+    expect(run({}, { market: {} }).template?.id).not.toBe(KIT_BUY + 'army-quest-lostcity');
+    expect(run({}, { market: {} }).template?.id).not.toBe('army-quest-lostcity');
 });
 
 test('an account with a PK build takes a quest band only on the quest route of its kit', async () => {

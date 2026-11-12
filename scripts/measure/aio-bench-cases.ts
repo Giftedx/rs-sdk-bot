@@ -136,8 +136,8 @@ export const BUILD_BRACKETS_2: Readonly<Record<string, readonly string[]>> = {
   top: ['tank-range', 'dragon', 'tribrid-pots', 'tribrid'],
 };
 export const BUILD_PAIRS_2 = buildPairs(BUILD_BRACKETS_2, new Set(BUILD_PAIRS.map(p => [...p].sort().join(':'))));
-// An account in a kit of scripts/pk-kits.ts at the levels of the kit (default maxed), with Lost City and Dragon Slayer
-// done and full special energy.
+// An account in a kit of scripts/pk-kits.ts at the levels of the kit (default maxed), with the quests of the kit's
+// route done (kitVarps) and full special energy.
 export const kitFixture = (kit: string, x: number, z = 3555): SaveConfig => ({
   position: {x, z, level: 0},
   skills: kitSkills(kit),
@@ -569,7 +569,7 @@ const EXTRA_CASES: BenchCase[] = [
     const preset = stage ? `quest_viking_${stage}` : 'quest_viking', before = levelsBeforeRoute(kit);
     return {key: `extra:viking-${kit}${stage ? `-${stage}` : ''}`, script: 'scripts/aio-quester.ts', preset, scriptArgs: ['viking'], pass: questKeepsBuild(kit, before), timeoutMs: 900_000,
       presetConfig: {...PRESETS[preset]!, skills: {...PRESETS[preset]!.skills, ...before}},
-      ...(stage ? {known: `a stage of the quest: run it with --set VK_FROM=${stage}`} : kit === 'zerker' ? {known: 'with Attack 7 the third form of Koschei outlasts its 1,000 ticks'} : {})};
+      ...(stage ? {known: `a stage of the quest: run it with --set VK_FROM=${stage}`} : {})};
   })),
   // Fletching 1 to 25 for The Fremennik Trials, the planner's band army-fletch-25: 210 headless arrows from banked
   // arrow shafts and feathers (25 XP an arrow at the server's rate; level 25 is 4,863 XP), 100 of each kept. The
