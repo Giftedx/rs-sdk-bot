@@ -336,17 +336,18 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // Respawn timers (RuneLite's Mining and Woodcutting plugins), in World: the rocks and trees around the 3D view that
   // are depleted now, with the time to their respawn. client-assets/resources.json (gen-resources.ts) gives each
   // resource tile its name and base respawn ticks; the bridge reports the depleted tiles of the main view's feed. The
-  // server scales a respawn by the players online: base * (4000 - min(players, 2000)) / 4000 ticks of 0.6 s.
+  // server scales a respawn by the players online: base * (4000 - min(players, 2000)) / 4000 ticks. A tick is the
+  // live server's own length (S.world.tickMs: 400 ms on the demo server).
   let resources=null,depletedNow={tick:0,list:[],at:0};
   fetch(asset('resources.json')).then(r=>r.ok?r.json():null).then(j=>{if(j&&Array.isArray(j.tiles)&&Array.isArray(j.depleted))resources={...j,byTile:new Map(j.tiles.map(t=>[t[0]+','+t[1]+','+t[2],t[3]]))};},()=>{});
   function respawnSync(){if(resources&&typeof VIEWER!=='undefined'&&VIEWER.state==='ready')$('#rsw')?.contentWindow?.postMessage({respawnWatch:resources.depleted},location.origin);}
   function respawnRows(now=Date.now()){
     if(!resources)return [];
-    const players=Math.min(2000,(S?.roster||[]).length||S?.worldPlayers||0),scale=(4000-players)/4000;
+    const players=Math.min(2000,(S?.roster||[]).length||S?.worldPlayers||0),scale=(4000-players)/4000,sec=(S?.world?.tickMs||600)/1000;
     return depletedNow.list.map(([x,z,l,,since])=>{
       const id=resources.byTile.get(x+','+z+','+l),k=id!=null?resources.kinds[id]:null;if(!k)return null;
-      const passed=since==null?null:(depletedNow.tick-since)*0.6+(now-depletedNow.at)/1000,total=k.base!=null?k.base*scale*0.6:null;
-      const left=total!=null&&passed!=null?Math.max(0,total-passed):null,range=k.min!=null&&passed!=null?[Math.max(0,k.min*scale*0.6-passed),Math.max(0,k.max*scale*0.6-passed)]:null;
+      const passed=since==null?null:(depletedNow.tick-since)*sec+(now-depletedNow.at)/1000,total=k.base!=null?k.base*scale*sec:null;
+      const left=total!=null&&passed!=null?Math.max(0,total-passed):null,range=k.min!=null&&passed!=null?[Math.max(0,k.min*scale*sec-passed),Math.max(0,k.max*scale*sec-passed)]:null;
       return {name:k.name,x,z,left,range,total};
     }).filter(Boolean).sort((a,b)=>(a.left??a.range?.[0]??1e9)-(b.left??b.range?.[0]??1e9));
   }
