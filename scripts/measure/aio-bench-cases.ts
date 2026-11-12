@@ -581,6 +581,11 @@ const EXTRA_CASES: BenchCase[] = [
   // worker starts at the bank: 25 tiles away it ends "bank did not open", so the band walks there first.
   {key: 'extra:fletch-headless-25', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['fletching', 'arrows', '3000', 'headless', 'MAX_MAKE=210', 'SHAFT_RESERVE=100', 'FEATHER_RESERVE=100', 'BANK_PACK=1'],
     pass: s => ok(s) && / made=210 /.test(s) && / xpGain=5250 /.test(s), presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Fletching: 1}, bank: [{id: 52, count: 310}, {id: 314, count: 310}]}},
+  // The flax route from a start on another floor: level 1 of a house in East Ardougne (2575,3269), where an account
+  // of the planner's flax pilot stood. The worker goes to the field with the shared walker (the stairs at 2568,3268),
+  // then picks and banks at Seers.
+  {key: 'extra:flax-from-ardougne-upstairs', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['foraging', 'flax', '900', '28'],
+    pass: s => ok(s) && / banked=[1-9]\d* /.test(s), output: /banked=(\d+)/, presetConfig: {position: {x: 2575, z: 3269, level: 1}, skills: {Hitpoints: 32}}},
   // The two Magic trainers of the planner's army bands, from the Ardougne north bank. Alchemy: Magic 54 to 56 on
   // feathers with a staff of fire in the bank, so the run casts Low Alchemy and then High Alchemy. The curse trainer:
   // Magic 19 to 21 over the fence of the cow field.
