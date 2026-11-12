@@ -130,6 +130,9 @@ export type FightOptions = {
     // The same step back, but only while the target is frozen and holds a melee weapon: it cannot follow, so each of
     // its turns is lost while ours land from range.
     kiteFrozen?: number;
+    // In place of the step back: stand on the corner tile of a frozen target that holds a melee weapon. Melee reaches
+    // the 4 side tiles only (RectangleBoundary.ts), so it cannot hit us there, and the bow shoots with no walk.
+    diagonalFrozen?: boolean;
     fledSpec?: boolean;
     // Choose a style the opponent's overhead prayer does not cover (default on).
     readOverheads?: boolean;
@@ -151,6 +154,23 @@ export type FightOptions = {
     // At this Wilderness level or under, the way out is a walk south over the edge of the Wilderness: no player can
     // attack a player outside it (pvp_combat.rs2:32-48). It needs no item.
     escapeWalk?: number;
+    // Drink an antipoison in the first tick after the poison shows, though the drink can cost a tick of the next
+    // attack. Without it the loop waits for a tick with 3 ticks to the next attack, and turns back to back give none.
+    cureNow?: boolean;
+    // The wait of a protect prayer change, as weights of 0, 1, 2 ... ticks: [48, 35, 11, 5] waits 1 tick in 35 of 99
+    // changes. The bench gang gets the wait that the world feed shows the dagger gang has (research/pvp-fight-loop.md,
+    // "The gang in a long fight").
+    prayerLag?: number[];
+    // With chase false: run after a target that flees while its health bar is at or under this fraction.
+    chaseBelow?: number;
+    // Cut off a target that flees: the chase runs to the tile `cutOff` tiles ahead of it along its heading, not to its
+    // own tile, and starts at 2 tiles, not 6. A runner that walks south to the edge of the Wilderness then walks into
+    // our reach in place of away from it. Unset: the chase runs to the target's tile.
+    cutOff?: number;
+    // scripts/pk-gang.ts only: an account of the gang in view with its health bar at or under this fraction becomes the
+    // target as soon as the single-way rule lets our attack through (the last player to hit us is that account, or
+    // none has hit us for 8 ticks, pvp_combat.rs2:110). Unset: the target is the account that hit us last.
+    focusRunner?: number;
     // Return outcome "danger" (with the reason) as soon as dangerReason fires, so the caller can escape.
     exitOnDanger?: boolean;
     damageSpell?: number;
@@ -377,6 +397,13 @@ export function seededRandom(seed: number): () => number {
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
 }
+// An index drawn with the given weights: [3, 1] gives 0 in 3 of 4 draws.
+export function pickWeighted(weights: readonly number[], rand: () => number): number {
+    const total = weights.reduce((n, w) => n + Math.max(0, w), 0);
+    let r = rand() * total;
+    for (let i = 0; i < weights.length; i++) { r -= Math.max(0, weights[i]!); if (r < 0) return i; }
+    return 0;
+}
 // The attack range of a shortbow (skill_combat/configs/ranged/bows.obj attackrange).
 const BOW_RANGE = 7;
 // Adjacent, not diagonal: where a melee attack lands.
@@ -427,7 +454,9 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     let oppStyle: Style | null = null, oppChangedAt = start, earlyFreezes = 0;
     const rand = o.mixSeed === undefined ? Math.random : seededRandom(o.mixSeed);
     let charged = false, chargeAt = -10, stepAt = -10, flickAt = start, lastSpecStyle: Style | null = null;
-    let heldOverhead: number | null = null, overheadSince = -1000;
+    let heldOverhead: number | null = null, overheadSince = -1000, chaseLow = false;
+    // prayerLag: the overhead that the loop wants, the tick from which it has it, and the overhead it has now.
+    let lagWant: number | null | undefined, lagAt = start, lagHas: number | null | undefined;
     let lastStyle: Style | null = null, arm: StyleArm = 'avoid', lastArm: StyleArm = 'avoid';
     const arms = new StyleArms();
     const splatSeen: { cycles: number[] | null } = { cycles: null };
@@ -570,7 +599,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         }
         // Deeper than the teleports reach (glory 30, spells 20): run south first.
         if (o.escapeAt !== undefined && o.escapeWalk !== undefined && me.hp <= o.escapeAt && !bestFood(inv) && wildernessLevel(at.z) <= o.escapeWalk) {
-            if (now - ranAt > 2) { if (ranAt < 0) log(`PK walks out of the Wilderness at HP ${me.hp}`); void sdk.sendWalk(at.x, at.z - 8 * wildernessLevel(at.z) - 2); ranAt = now; }
+            if (now - ranAt > 2) { if (ranAt < 0) log(`PK walks out of the Wilderness at HP ${me.hp}`); void sdk.sendWalk(at.x, Math.max(at.z - 20, at.z - 8 * wildernessLevel(at.z) - 2)); ranAt = now; }
             continue;
         }
         // The game rubs a glory only from the pack (amulet_of_glory.rs2 has no worn option), so a worn one comes off first:
@@ -594,7 +623,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const prayers = state.prayers;
         // Drinking a potion triggers p_delay(1) in processClientsIn (consume_effects.rs2:167), blocking client input on
         // now+1 and now+2 (ready on now+3). Drink non-emergency potions only when now+3 <= nextAttack.
-        if (now >= potionReady && (prayers.prayerPoints <= 5 || now + 3 <= nextAttack)) {
+        if (now >= potionReady && (prayers.prayerPoints <= 5 || now + 3 <= nextAttack || (o.cureNow && poisoned && !!slotOf(ITEMS.antipoison)))) {
             let potion = prayers.prayerPoints <= restoreAt ? slotOf([...ITEMS.prayerPotion, ...ITEMS.superRestore]) : undefined;
             if (!potion && poisoned) {
                 potion = slotOf(ITEMS.antipoison);
@@ -620,8 +649,10 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // the next turn. While we stand, run after it: to its tile, or along its heading once it is out of view. A walk
         // would cancel an approach that the server has in hand, so it is sent only while we stand still.
         const ranged = hasStyle(o.kit, 'magic') || hasStyle(o.kit, 'ranged');
-        if (o.chase !== false && ranged && stoodStill && now >= selfFrozenUntil && now - chaseAt >= 2 && now < nextAttack && now < fleeingUntil + 12) {
-            const to = target && cheb(at, target) > 5 ? { x: target.x, z: target.z }
+        if (o.chaseBelow !== undefined && target) chaseLow = lowHealth(observePlayer(s.client, target.index), o.chaseBelow);
+        if ((o.chase !== false || chaseLow) && ranged && stoodStill && now >= selfFrozenUntil && now - chaseAt >= 2 && now < nextAttack && now < fleeingUntil + 12) {
+            const ahead = o.cutOff !== undefined && now < fleeingUntil;
+            const to = target && cheb(at, target) > (ahead ? 1 : 5) ? (ahead ? { x: target.x + heading.x * o.cutOff!, z: target.z + heading.z * o.cutOff! } : { x: target.x, z: target.z })
                 : !target && prevTarget ? { x: prevTarget.x + heading.x * 12, z: prevTarget.z + heading.z * 12 } : null;
             if (to) { void sdk.sendWalk(to.x, to.z); chaseAt = now; }
         }
@@ -648,7 +679,13 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const left = [...predictor.seen()].filter(st => st !== shownGuard);
         const countered = o.counterRead && shownGuard && predictor.seen().size === 2 && left.length === 1 ? left[0]! : null;
         const predicted = o.predictPrayer && !hitter && (!o.snapPrayer || now >= oppDue - (o.snapLead ?? 1)) ? countered ?? predictor.predict() : null;
-        const wantedOverhead = o.overheadPrayer === false ? null : hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : predicted ? PROTECT_FROM[predicted] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
+        let wantedOverhead = o.overheadPrayer === false ? null : hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : predicted ? PROTECT_FROM[predicted] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
+        if (o.prayerLag?.length) {
+            if (lagHas === undefined) lagWant = lagHas = wantedOverhead;
+            else if (wantedOverhead !== lagWant) { lagWant = wantedOverhead; lagAt = now + pickWeighted(o.prayerLag, rand); }
+            if (now >= lagAt) lagHas = lagWant;
+            wantedOverhead = lagHas ?? null;
+        }
         if (wantedOverhead !== heldOverhead && (heldOverhead === null || now - overheadSince >= (o.overheadHold ?? 0))) { heldOverhead = wantedOverhead; overheadSince = now; }
         const overhead = o.overheadHold ? heldOverhead : wantedOverhead;
         // An opponent that only has melee: hold it and stay out of its reach.
@@ -662,7 +699,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // a melee special costs one step.
         const chasing = (now < fleeingUntil || now < frozenUntil) && cheb(at, target) > 2 && ranged;
         // While we kite a frozen target, a melee turn would walk back into its reach.
-        const kiting = !!kiteTiles && now < frozenUntil && weaponStyle(seen?.worn[3]) === 'melee' && ranged;
+        const heldMelee = now < frozenUntil && weaponStyle(seen?.worn[3]) === 'melee' && ranged;
+        const kiting = (!!kiteTiles || !!o.diagonalFrozen) && heldMelee;
         const canReachMelee = !chasing && !kiting && !(now < selfFrozenUntil && !adjacent(at, target)) && (cheb(at, target) <= 6 || (!hasStyle(o.kit, 'magic') && !hasStyle(o.kit, 'ranged')));
         const guarded = o.readOverheads === false ? new Set<Style>() : protectedStyles(seen?.headicons);
         const styleUsable = (st: Style) => hasStyle(o.kit, st) && (st !== 'melee' || canReachMelee);
@@ -724,7 +762,12 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 }
             }
             const keep = o.standOff ?? (kiteTiles && now < frozenUntil && weaponStyle(seen?.worn[3]) === 'melee' ? kiteTiles : 0);
-            if (keep && !walkingToMelee && (upcomingTurn?.style !== 'melee' || !o.standOff) && now > lastAttackAt && now >= selfFrozenUntil && now - stepAt >= 2 && cheb(at, target) < keep) {
+            // diagonalFrozen: the tile at the corner of the frozen target on our side; melee reaches the 4 side tiles only.
+            const corner = { x: target.x + (Math.sign(at.x - target.x) || 1), z: target.z + (Math.sign(at.z - target.z) || 1) };
+            if (o.diagonalFrozen && heldMelee && !walkingToMelee && now > lastAttackAt && now >= selfFrozenUntil && now - stepAt >= 2 && (at.x !== corner.x || at.z !== corner.z)) {
+                void sdk.sendWalk(corner.x, corner.z);
+                stepAt = now;
+            } else if (keep && !walkingToMelee && (upcomingTurn?.style !== 'melee' || !o.standOff) && now > lastAttackAt && now >= selfFrozenUntil && now - stepAt >= 2 && cheb(at, target) < keep) {
                 const dx = Math.sign(at.x - target.x) || 1, dz = Math.sign(at.z - target.z);
                 void sdk.sendWalk(target.x + dx * keep, target.z + dz * keep);
                 stepAt = now;

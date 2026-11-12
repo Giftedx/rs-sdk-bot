@@ -156,7 +156,11 @@ const SPAR_ENGINE = {SIM_NPC_NEAR: '64'};
 // A tile at Wilderness level 1 north of Edgeville, and the bank of an account that fights there: sharks, the four
 // boosts, antipoison and steel arrows for six trips.
 export const GANG_EDGE = {x: 3087, z: 3522};
-const EDGE_BANK = [{id: 385, count: 200}, {id: 2436, count: 8}, {id: 2440, count: 8}, {id: 2444, count: 8}, {id: 2442, count: 8}, {id: 2448, count: 8}, {id: 886, count: 2000}, {id: 563, count: 40}, {id: 556, count: 200}];
+const EDGE_BANK = [{id: 385, count: 200}, {id: 2436, count: 8}, {id: 2440, count: 8}, {id: 2444, count: 8}, {id: 2442, count: 8}, {id: 2448, count: 8}, {id: 886, count: 2000}, {id: 563, count: 40}, {id: 556, count: 200}, {id: 163, count: 8}, {id: 175, count: 8}];
+// The same bank with the freeze runes of the snare kit (earth, water, nature).
+const EDGE_BANK_SNARE = [...EDGE_BANK, {id: 557, count: 500}, {id: 555, count: 500}, {id: 561, count: 400}];
+// The bank of a gang account: sharks only, as the feed shows the gang with no potion.
+const GANG_BANK = [{id: 385, count: 200}];
 // The tile where the dagger gang stands between hunts.
 export const GANKER_POST = {x: 3078, z: 3640};
 // `at` moves the spot: side A at x, side B two tiles east.
@@ -180,11 +184,18 @@ const gangCase = (key: string, kit: string, gangKit: string, groups: number, at:
   const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, groups * (size + 1) - 1).split('');
   const ours = (i: number) => i % (size + 1) === 0;
   // `food` cuts the sharks of our account: the start of a meeting that it must leave.
-  // `bank` is what our account holds in its bank, for the trips between two meetings.
+  // `bank` is what our account holds in its bank, for the trips between two meetings; the gang then banks sharks only.
   const fixture = (): SaveConfig => { const c = {...kitFixture(kit, at.x + 2, at.z), ...(bank ? {bank} : {})}; return food === undefined ? c : {...c, inventory: [...c.inventory!.filter(i => i.id !== 385), ...Array.from({length: food}, () => ({id: 385, count: 1}))]}; };
   return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: fixture(), output: /kills=(\d+)/,
     scriptArgs: ['gang', ...letters.slice(0, size).map(l => `{bot:${l}}`), '900', ...letters.slice(size).map(l => `{bot:${l}}`), `SPAR_GANG=${size}`, `SPAR_KITS=${kit}:${gangKit}`, ...args],
-    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: ours(i + 1) ? fixture() : kitFixture(gangKit, at.x, at.z)}))};
+    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: ours(i + 1) ? fixture() : {...kitFixture(gangKit, at.x, at.z), ...(bank ? {bank: GANG_BANK} : {})}}))};
+};
+// Our accounts of a gang case start at the Edgeville bank, and the trip before the meeting walks them to the gang
+// (SPAR_POST): one walk of 150 tiles, not two.
+const atBank = (c: BenchCase, post: {x: number; z: number}): BenchCase => {
+  const move = (cfg?: SaveConfig) => (cfg?.position && cfg.position.x === post.x + 2 && cfg.position.z === post.z ? {...cfg, position: {x: 3094, z: 3491, level: 0}} : cfg);
+  return {...c, presetConfig: move(c.presetConfig), scriptArgs: [...(c.scriptArgs ?? []), `SPAR_POST=${post.x + 2},${post.z}`],
+    companions: c.companions?.map(m => ({...m, presetConfig: move(m.presetConfig)}))};
 };
 const sparCase = (key: string, a: SaveConfig, b: SaveConfig, args: string[] = []): BenchCase =>
   ({key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...args], pass: ok, presetConfig: a, companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: b}]});
@@ -502,12 +513,33 @@ const ROUTE_CASES: BenchCase[] = [
   ...(['edge-hunter'] as const).map(kit => gangCase(`extra:gang-ganker-max-${kit}-x2`, kit, 'ganker-max', 2, GANG_EDGE,
     ['SPAR_B=ganker', 'SPAR_A=gang-hunter', 'SPAR_A_OPTS={"escapeWalk":4}', 'SPAR_TRIPS=8', 'SPAR_TRIP_FOOD=24', 'SPAR_PRETRIP=1', 'SPAR_CAP=9000'], 3, undefined, EDGE_BANK)),
   // The meeting at the post after a trip to the bank: the boosts drunk there, 25 sharks, one pack and no way back to the bank.
-  ...(['gang-hunter', 'gang-walker'] as const).map(kit => gangCase(`extra:gang-ganker-max-${kit}-prepot-x2`, kit, 'ganker-max', 2, GANKER_POST,
+  ...(['gang-hunter', 'gang-walker', 'live-walker'] as const).map(kit => gangCase(`extra:gang-ganker-max-${kit}-prepot-x2`, kit, 'ganker-max', 2, GANKER_POST,
     ['SPAR_B=ganker', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400'], 3, undefined, EDGE_BANK)),
   // The same meeting on a single-way tile 26 tiles from the bank, for a short walk: the fight is the same, and no
   // option lets our account leave the Wilderness.
-  ...(['gang-hunter', 'gang-walker'] as const).map(kit => gangCase(`extra:gang-ganker-max-${kit}-prepot-near-x2`, kit, 'ganker-max', 2, GANG_EDGE,
+  ...(['gang-hunter', 'gang-walker', 'live-walker'] as const).map(kit => gangCase(`extra:gang-ganker-max-${kit}-prepot-near-x2`, kit, 'ganker-max', 2, GANG_EDGE,
     ['SPAR_B=ganker', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400'], 3, undefined, EDGE_BANK)),
+  // The live kit against the gang as the feed shows it (no potions, 12 sharks).
+  gangCase('extra:gang-ganker-dds-live-walker-iron-prepot-x2', 'live-walker-iron', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400'], 3, undefined, EDGE_BANK),
+  gangCase('extra:gang-ganker-max-live-walker-iron-prepot-x2', 'live-walker-iron', 'ganker-max', 2, GANKER_POST, ['SPAR_B=ganker', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400'], 3, undefined, EDGE_BANK),
+  // The gang as the live fight showed it (profile ganker-live, its pack of 12 sharks): with its food gone an account
+  // runs out of the Wilderness and the others go with it; they bank, the others come back at once, and the one that
+  // ran waits 1,000 ticks more (in the record it was back on the post 1,430 ticks after its first drop to 40 HP). Our
+  // account waits for them on the tile. The live fight of this kit against the gang: 1 kill, no death, 23 sharks
+  // eaten in 1,689 ticks.
+  gangCase('extra:gang-live-check-x2', 'live-walker-iron', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK),
+  // The same with one group: half the accounts, for a PC with little memory free.
+  gangCase('extra:gang-live-check-x1', 'live-walker-iron', 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK),
+  // The fast case of the hill climb: the same fight with short waits (the gang rests 150 ticks, our account waits 60,
+  // a cap of 1,200 ticks). It holds the first walk out of a gang account and the drain of our prayer.
+  atBank(gangCase('extra:gang-live-fast-x1', 'live-walker-iron', 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK), GANKER_POST),
+  atBank(gangCase('extra:gang-live-fast-x2', 'live-walker-iron', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK), GANKER_POST),
+  // The fast case with the poisoned dagger (live-walker-iron-p), and with it a super antipoison (live-walker-iron-psuper).
+  atBank(gangCase('extra:gang-live-fast-p-x2', 'live-walker-iron-p', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK), GANKER_POST),
+  atBank(gangCase('extra:gang-live-fast-psuper-x2', 'live-walker-iron-psuper', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK), GANKER_POST),
+  // The fast case with the freeze runes in the kit (live-walker-iron-snare): run it with SPAR_A_OPTS {"freeze":"flee"}.
+  atBank(gangCase('extra:gang-live-fast-snare-x2', 'live-walker-iron-snare', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK_SNARE), GANKER_POST),
+  gangCase('extra:gang-ganker-dds-live-walker-prepot-x2', 'live-walker', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400'], 3, undefined, EDGE_BANK),
   // The same against the gang that holds its protect prayer.
   gangCase('extra:gang-ganker-max-gang-walker-sticky-near-x2', 'gang-walker', 'ganker-max', 2, GANG_EDGE, ['SPAR_B=ganker-sticky', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400'], 3, undefined, EDGE_BANK),
   // The way out, with the gang on our account. `escape`: 3 sharks and a glory in the pack; out of food at 60 HP or
