@@ -16,6 +16,13 @@ test('a bill line still short, or one it feeds, is worth the premium; coins are 
     expect(unitValue('Feather', [row('feathers', 0), row('headless arrows', 10)], prices)).toBe(4);
     expect(unitValue('Feather', [row('feathers', 0)], prices)).toBe(1);
     expect(unitValue('coins', [], prices)).toBe(1);
+    // A steel bar is on no bill line. It has the premium while the bill is short of cannonballs, and the surplus half
+    // with the cannonball line met, with another line short, or with no bill.
+    const bars = { 'steel bar': 100, cannonball: 5 };
+    expect(unitValue('Steel bar', [row('cannonball', 1700)], bars)).toBe(200);
+    expect(unitValue('Steel bar', [row('cannonball', 0)], bars)).toBe(50);
+    expect(unitValue('Steel bar', [row('cannonball', 0), row('iron bar', 2)], bars)).toBe(50);
+    expect(unitValue('Steel bar', [], bars)).toBe(50);
 });
 
 test('knight coins scale with Thieving and are zero below 55', () => {
@@ -893,14 +900,14 @@ test('an account that cannot pay for the batch buys only the start kit', () => {
 
 // AIO routes (aioTemplates): practice-proved options the plan's `aio` list admits.
 const aioIds = aioTemplates().map(t => t.id);
-const aioPrices = { flax: 5, 'iron ore': 17, 'copper ore': 3, 'tin ore': 3, 'rune essence': 4, 'air rune': 4, 'bow string': 10, 'arrow shaft': 1, 'yew log': 160 };
+const aioPrices = { flax: 5, 'iron ore': 17, 'copper ore': 3, 'tin ore': 3, 'rune essence': 4, 'air rune': 4, 'bow string': 10, 'arrow shaft': 1, 'yew log': 160, 'steel bar': 100 };
 const aioInputs = (accounts: Acct[], pilots: string[], extra: Partial<Inputs> = {}): Inputs =>
     inputs(accounts, { templates: aioTemplates(), bill: [], prices: aioPrices, pilots: new Set(pilots), capacity: CAPACITY, ...extra });
 const sweepKit = { 'law rune': 2, 'air rune': 6, 'fire rune': 1, 'earth rune': 1, trout: 4, 'bronze pickaxe': 1 };
 
 test('every AIO template is in the catalogue as a pilot that runs the dispatcher with its category first', () => {
     const all = new Map(catalogue().map(t => [t.id, t]));
-    expect(aioIds).toEqual(['aio-flax', 'aio-bowstrings', 'aio-yews', 'aio-shafts', 'aio-ore', 'aio-essence', 'aio-air-runes', 'aio-runite-bars', 'aio-adamantite-bars', 'aio-mithril-bars', 'aio-iron-bars', 'aio-cannonballs', 'aio-rune-scimitars', 'aio-blood-chest', 'aio-quest-runemysteries']);
+    expect(aioIds).toEqual(['aio-flax', 'aio-bowstrings', 'aio-yews', 'aio-shafts', 'aio-ore', 'aio-essence', 'aio-air-runes', 'aio-runite-bars', 'aio-adamantite-bars', 'aio-mithril-bars', 'aio-iron-bars', 'aio-steel-bars', 'aio-cannonballs', 'aio-rune-scimitars', 'aio-blood-chest', 'aio-quest-runemysteries']);
     for (const t of aioTemplates()) {
         expect(all.get(t.id)).toBeDefined();
         expect(t.pilot).toBe(true);
@@ -946,6 +953,11 @@ test('the production routes need their level and a whole batch of the input', ()
     expect(run(acct('A', { Woodcutting: 60 }, { 'bronze axe': 1 }), 'aio-yews')).toBe('aio-yews');
     expect(run(acct('A', {}, { 'air talisman': 1, 'rune essence': 27 }), 'aio-air-runes')).toBe('vacant');
     expect(run(acct('A', {}, { 'air talisman': 1, 'rune essence': 28 }), 'aio-air-runes')).toBe('aio-air-runes');
+    // Steel: one pack load is 9 bars, one iron ore and two coal each.
+    expect(run(acct('A', { Smithing: 29 }, { 'iron ore': 9, coal: 18 }), 'aio-steel-bars')).toBe('vacant');
+    expect(run(acct('A', { Smithing: 30 }, { 'iron ore': 8, coal: 18 }), 'aio-steel-bars')).toBe('vacant');
+    expect(run(acct('A', { Smithing: 30 }, { 'iron ore': 9, coal: 17 }), 'aio-steel-bars')).toBe('vacant');
+    expect(run(acct('A', { Smithing: 30 }, { 'iron ore': 9, coal: 18 }), 'aio-steel-bars')).toBe('aio-steel-bars');
 });
 
 test('Rune Mysteries is planned for the essence mine it unlocks, once, and only with the sweep pack', () => {
