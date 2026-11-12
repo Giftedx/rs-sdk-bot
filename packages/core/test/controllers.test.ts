@@ -1,8 +1,8 @@
 import { test, expect } from 'bun:test';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { CONTROLLERS, LAUNCH_ENV, LEASE_STALE_MS, controllerNamed, controllerState, controllerStates, leaseHolder, readLaunch, readLease, releaseLease, renewLease, saveLaunch, takeLease } from '../src/controllers';
+import { CONTROLLERS, GATE_STALE_MS, LAUNCH_ENV, LEASE_STALE_MS, controllerNamed, controllerState, controllerStates, leaseHolder, readLaunch, readLease, releaseLease, renewLease, saveLaunch, takeLease } from '../src/controllers';
 
 const now = 1_800_000_000_000;
 const setTime = (file: string, at: number) => utimesSync(file, at / 1000, at / 1000);
@@ -51,6 +51,54 @@ test('take, renew and release let one process hold the lease and tell a holder t
         releaseLease(file, 12);
     } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('a different live process at the gate stops a take, and the ticket of an ended process does not', () => {
+    const dir = tmp(), file = join(dir, 'x.lock'), ticket = (pid: number) => join(dir, `x.lock.take.${pid}.00000000-0000-4000-8000-000000000000`);
+    try {
+        // A live process is at the gate: no take, and its ticket stays.
+        writeFileSync(ticket(77), '');
+        const before = Date.now();
+        expect(takeLease(file, 10, { now, alive: pid => pid === 77 })).toBe(false);
+        expect(Date.now() - before).toBeGreaterThanOrEqual(7 * 20);    // it tried again after each short wait
+        expect(readdirSync(dir)).toEqual([ticket(77).slice(dir.length + 1)]);
+        // That process ended: its ticket is removed and the take goes on.
+        expect(takeLease(file, 10, { now, alive: () => false })).toBe(true);
+        expect(readdirSync(dir)).toEqual(['x.lock']);
+        // A ticket older than GATE_STALE_MS is of an ended process, also when its id is alive again in a new process.
+        writeFileSync(ticket(78), ''); setTime(ticket(78), Date.now() - GATE_STALE_MS);
+        setTime(file, now - LEASE_STALE_MS);
+        expect(takeLease(file, 11, { now, alive: () => true })).toBe(true);
+        expect(readFileSync(file, 'utf8')).toBe('11');
+        // A ticket that an ended process left with this process's id does not stop this process.
+        writeFileSync(ticket(12), '');
+        setTime(file, now - LEASE_STALE_MS);
+        expect(takeLease(file, 12, { now, alive: () => true })).toBe(true);
+        // No ticket, temporary file or moved file stays.
+        expect(readdirSync(dir)).toEqual(['x.lock']);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('of eight processes that try in the same millisecond, one takes the lease', async () => {
+    const racer = join(import.meta.dir, 'lease-racer.ts');
+    for (const start of ['no lease', 'lease of an ended process', 'lease and gate ticket of an ended process']) {
+        const dir = tmp(), file = join(dir, 'x.lock');
+        try {
+            if (start !== 'no lease') {
+                const ended = Bun.spawn([process.execPath, '-e', ''], { stdout: 'ignore', stderr: 'ignore' });
+                await ended.exited;
+                writeFileSync(file, String(ended.pid));
+                if (start.includes('gate')) writeFileSync(join(dir, `x.lock.take.${ended.pid}.00000000-0000-4000-8000-000000000000`), '');
+            }
+            const at = Date.now() + 2000;
+            const children = Array.from({ length: 8 }, () => Bun.spawn([process.execPath, racer, file, String(at)], { stdout: 'pipe', stderr: 'pipe' }));
+            const said = await Promise.all(children.map(async c => (await new Response(c.stdout).text()).trim() + (await new Response(c.stderr).text()).trim()));
+            expect(said.filter(s => s === 'TOOK').length, `${start}: ${said.join(',')}`).toBe(1);
+            expect(said.filter(s => s === 'REFUSED').length, `${start}: ${said.join(',')}`).toBe(7);
+            expect(readFileSync(file, 'utf8'), start).toBe(String(children[said.indexOf('TOOK')]!.pid));
+            expect(readdirSync(dir), start).toEqual(['x.lock']);
+        } finally { rmSync(dir, { recursive: true, force: true }); }
+    }
+}, 60_000);
 
 test('the launch record gives back the arguments, and a damaged record gives null', () => {
     const dir = tmp(), file = join(dir, 'autopilot', 'launch.json');

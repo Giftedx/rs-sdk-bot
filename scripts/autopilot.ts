@@ -507,11 +507,16 @@ if (import.meta.main) {
         process.on('exit', () => releaseLease(lease)); process.on('SIGINT', () => process.exit(0)); process.on('SIGTERM', () => process.exit(0));
     }
     const startedAt = Date.now();
-    await once(); setInterval(once, PASS_EVERY_MS);
+    // A daemon whose lease names a different daemon starts no pass. It ends, after a pass that is in flight.
+    const lostLease = () => {
+        if (dry || renewLease(lease)) return false;
+        if (!inFlight) { console.log('AUTOPILOT lost its lease to another daemon'); process.exit(0); }
+        return true;
+    };
+    await once(); setInterval(() => { if (!lostLease()) void once(); }, PASS_EVERY_MS);
     const seen = new Set<string>();
     setInterval(() => {
-        // The lease names a different daemon: this one ends, after a pass that is in flight.
-        if (!dry && !renewLease(lease) && !inFlight) { console.log('AUTOPILOT lost its lease to another daemon'); process.exit(0); }
+        if (lostLease()) return;
         // A live update that changed this daemon's code (packages/router/src/live-update.ts): a copy on the current code takes over.
         if (!inFlight && reloadDue(root, 'autopilot', startedAt)) {
             if (!dry) releaseLease(lease);
