@@ -12,7 +12,10 @@
 // out, and a receiver in an open order refuses (the agent's own choice: pickOrder with its lead window). A held trade
 // claim of another order holds the account too: its login fails with "fleet trade claim held" until that claim ends. The orders of one call start 1 ms apart, so both sides of each pair
 // take them in the same sequence.
-// Usage: bun scripts/route-stage.ts <account> <bank name> "<count> <item>" ["<count> <item>" ...] [--dry] [--allow-busy]
+// A hand-held account never gives unless --from names it: an owner stop file, a job with no script (a reservation),
+// or a disabled job that the autopilot does not own (a hand job: the mock-run runner, its helpers, an owner hold).
+// --from a,b gives only from those accounts.
+// Usage: bun scripts/route-stage.ts <account> <bank name> "<count> <item>" ["<count> <item>" ...] [--dry] [--allow-busy] [--from a,b]
 //   or:  bun scripts/route-stage.ts <account> --route <route.json> --step <step id> [--dry] [--allow-busy]
 // A route file step names its batch as "stage": {"bank": "draynor", "items": [{"item": "oak logs", "count": 125}]}.
 // Env: IN (minutes to the first window, default 10), MINUTES (window length, default 90).
@@ -22,6 +25,7 @@ import { FLEET_DIR, loadOwners } from '../packages/core/src/fleet';
 import { BANK_MEETS } from './coin-courier';
 import { makeOrder, orderMeet } from './fleet-order';
 import { pickOrder, swarmBusy, validOrder, type Order } from './fleet-trade';
+import { swarmWroteStop } from './swarm';
 import { readHeldFleetTradeClaims } from '../packages/core/src/fleet-trade-claim';
 
 export interface StageLine { item: string; count: number }
@@ -73,6 +77,15 @@ export function orderInWay(orders: readonly Order[], receipts: readonly any[], n
         ?? pickOrder(orders, receipts, name, now)?.order.id;
 }
 
+// Why an account is held back from giving, or undefined: its stop file (owner text) and its jobs in the plan.
+export function heldBack(name: string, jobs: readonly any[], stopText: string | undefined): string | undefined {
+    if (stopText !== undefined && !swarmWroteStop(stopText)) return 'owner stop file';
+    const mine = jobs.filter(j => [j?.account, ...(j?.accounts ?? [])].some((n: unknown) => typeof n === 'string' && norm(n) === norm(name)));
+    if (mine.some(j => !j.script)) return 'reserved (a job with no script)';
+    if (mine.some(j => !j.enabled && typeof j.autopilot !== 'string')) return 'hand job (disabled, not an autopilot job)';
+    return undefined;
+}
+
 const readJson = (f: string) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return null; } };
 
 if (import.meta.main) {
@@ -88,7 +101,7 @@ if (import.meta.main) {
         bank = step.stage.bank; lines = step.stage.items.map((i: any) => ({ item: String(i.item), count: Number(i.count) }));
     } else {
         bank = argv[1] ?? '';
-        lines = argv.slice(2).filter(a => !a.startsWith('--')).map(parseLine);
+        lines = argv.slice(2).filter((a, i, all) => !a.startsWith('--') && all[i - 1] !== '--from').map(parseLine);
     }
     const meet = orderMeet(bank);
     if (!meet) throw Error(`unknown bank ${bank}: ${BANK_MEETS.map(r => r.bank).join(', ')}`);
@@ -97,6 +110,8 @@ if (import.meta.main) {
     const snapshot = readJson(join(FLEET_DIR(), 'snapshots', `${side}.json`))?.accounts ?? [];
     const plan = readJson(join(FLEET_DIR(), 'plans', `${side}.json`))?.jobs ?? [];
     const busy = swarmBusy(plan), owned = swarmBusy(plan.filter((j: any) => typeof j?.autopilot === 'string'));
+    const fromList = value('--from'), from = fromList ? new Set(fromList.split(',').map(norm)) : undefined;
+    const stopText = (name: string) => { for (const n of [name, name.toLowerCase()]) { try { return readFileSync(join('.practice', `stop-${n}`), 'utf8'); } catch { /* none */ } } return undefined; };
     const row = (name: string) => snapshot.find((a: any) => norm(a?.name ?? '') === norm(name));
     const files = (dir: string) => { try { return readdirSync(join(FLEET_DIR(), dir)).filter(f => f.endsWith('.json')).flatMap(f => { const j = readJson(join(FLEET_DIR(), dir, f)); return j ? [j] : []; }); } catch { return []; } };
     // The order that the fleet agent would run first for an account (its lead window included), as the agent picks it.
@@ -109,7 +124,8 @@ if (import.meta.main) {
     // at the bank until their orders end.
     if (busy.has(norm(account)) && !owned.has(norm(account))) throw Error(`${account} has an enabled job that the autopilot does not own: its fleet agent takes no order`);
     const staged = planStage(lines, item => heldCount(row(account), item), item => snapshot
-        .filter((a: any) => typeof a?.name === 'string' && norm(a.name) !== norm(account) && norm(a.name) !== 'haggis' && owners.get(norm(a.name))?.side === side && !waiting(a.name))
+        .filter((a: any) => typeof a?.name === 'string' && norm(a.name) !== norm(account) && norm(a.name) !== 'haggis' && owners.get(norm(a.name))?.side === side && !waiting(a.name)
+            && (from ? from.has(norm(a.name)) : !heldBack(a.name, plan, stopText(a.name))))
         .map((a: any) => {
             const name = norm(a.name);
             return { name: a.name, count: heldCount(a, item), busy: busy.has(name), blocked: busy.has(name) && !owned.has(name) };
