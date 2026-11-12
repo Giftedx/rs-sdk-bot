@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794457574882,
+ "at": 1794457848361,
  "jobs": [
   {
    "account": "Fatstack",
@@ -98,24 +98,6 @@
    "resources": []
   },
   {
-   "account": "KnightRider",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=6 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=knightrider-kit10-385-0to6 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 6 Shark on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on iron arrows",
-   "role": "supply",
-   "template": "kit-buy:army-hunt-black-dragons",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
    "account": "Quickhandjob",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -183,22 +165,21 @@
   },
   {
    "account": "UnderMyKilt",
-   "script": "scripts/aio.ts",
-   "args": [
-    "quester",
-    "chain",
-    "drunkmonk,murder,zanaris"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
-   "role": "quest",
-   "template": "army-quest-lostcity",
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "claude-cloud",
    "resources": [
-    "quest:lostcity"
+    "knight:2582,3297"
    ]
   },
   {
@@ -228,6 +209,31 @@
   },
   {
    "account": "Dipstick",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "KnightRider",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
