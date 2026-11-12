@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794460754429,
+ "at": 1794461395109,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -34,19 +34,6 @@
    "repeat": true,
    "goal": "Strength 30 on chickens so it can hit hard enough to PK",
    "role": "pk-trainee"
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/walk-to.ts",
-   "args": [
-    "2655",
-    "3283",
-    "0"
-   ],
-   "enabled": true,
-   "repeat": false,
-   "goal": "owner walk: down from level 1 of the house at 2575,3269 to the Ardougne south bank",
-   "role": "helper"
   },
   {
    "account": "Bigchopper",
