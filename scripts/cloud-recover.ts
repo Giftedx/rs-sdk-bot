@@ -134,15 +134,44 @@ export const recoveriesInFlight = (tasks: readonly any[], dead = deadTasks(tasks
 
 // Recovery runs already spent on one exact end: the run failed, or its qualify did. A run that never started behind a
 // failed earlier run of its chain is no attempt. A failure is retried once; a second stops the retries for that end.
-export const MAX_ATTEMPTS = 2;
-export function spentAttempts(tasks: readonly any[], target: Target): number {
+// A run that the controller refused while it waited for memory, a bot slot or the source owner issued no lease and
+// touched no session (packages/core/src/session-recovery-dispatch.ts phase `source-owner` or `admission`;
+// packages/router/src/coordinator-live.ts awaitBotSlot). It spends no attempt. MAX_WAITS keeps those retries finite.
+// Live local: Sausagefest's four recovery runs were all refused on memory, and the end went to "recover by hand".
+export const MAX_ATTEMPTS = 2, MAX_WAITS = 6;
+// The dispatcher's cause names (session-recovery-dispatch.ts setupCauses) of a refusal that only waited.
+const WAIT_CAUSES = new Set(['recovery admission waiting: memory', 'recovery admission waiting: maxBots', 'recovery waits for runtime source owner']);
+// The coordinator's receipt of a run that preflight refused before it wrote the request (coordinator-live.ts preflight).
+const WAIT_ERROR = /^Error: live admission waiting: (?:memory|maxBots)$/;
+// The run ids that the dispatcher refused while it waited, from the lines of `.practice/swarm-repair.json.results.jsonl`.
+// The coordinator receipt keeps only the dispatcher's reason, not its cause. A line that cannot be read is skipped.
+export function waitRefusedRuns(results: string): Set<string> {
+    const runs = new Set<string>();
+    for (const line of results.split('\n')) {
+        try {
+            const row = JSON.parse(line), r = row?.result;
+            if (r?.sessionRecovered !== false || r.reason !== 'recovery setup refused; no lease issued; no retry' || !WAIT_CAUSES.has(r.setup?.cause)) continue;
+            const runId = JSON.parse(row.raw)?.runId;
+            if (typeof runId === 'string') runs.add(runId);
+        } catch { /* not a result line */ }
+    }
+    return runs;
+}
+const waitRefused = (t: any, waits: ReadonlySet<string>) => t.status === 'failed' && (waits.has(t.runId) || WAIT_ERROR.test(t.receipt?.error ?? ''));
+function endRuns(tasks: readonly any[], target: Target) {
     const byId = new Map(tasks.map(t => [t?.spec?.id, t]));
     const qualifyFailed = (id: string) => { const d = byId.get(id); return d?.spec?.kind === 'qualify' && (d.status === 'failed' || d.status === 'superseded'); };
     return tasks.filter(t => {
         const r = t?.spec?.sessionRecovery;
         return r?.account?.toLowerCase() === target.account.toLowerCase() && r.endedAt === target.endedAt
             && (t.status === 'failed' || t.status === 'pending' && (t.spec.dependsOn ?? []).some(qualifyFailed));
-    }).length;
+    });
+}
+export function spentAttempts(tasks: readonly any[], target: Target, waits: ReadonlySet<string> = new Set()): number {
+    return endRuns(tasks, target).filter(t => !waitRefused(t, waits)).length;
+}
+export function waitedAttempts(tasks: readonly any[], target: Target, waits: ReadonlySet<string> = new Set()): number {
+    return endRuns(tasks, target).filter(t => waitRefused(t, waits)).length;
 }
 
 // The folder that receives the coordinator's parked jobs and stop file after a release.
@@ -243,6 +272,8 @@ async function main(root: string, dry: boolean): Promise<number> {
     if (inFlight.length) { log(`recovery in flight for ${inFlight.map((t: any) => t.spec.sessionRecovery.account).join(', ')}; waiting`); return 0; }
     if (recoveryRequestWaiting(join(coord, 'requests'))) { log('a submitted recovery waits for the coordinator to take it; waiting'); return 0; }
     const ended = loadEnded(join(root, '.practice', 'swarm-deaths.json'));
+    let results = ''; try { results = readFileSync(join(root, '.practice', 'swarm-repair.json.results.jsonl'), 'utf8'); } catch { /* no recovery result yet */ }
+    const waits = waitRefusedRuns(results);
     const accounts = [...loadOwners()].filter(([n, o]) => o.side === side && o.server === LIVE_SERVER && !NEVER_RECOVERED.includes(n.toLowerCase())).map(([n]) => n);
     const targets: Target[] = [];
     for (const lower of accounts) {
@@ -256,11 +287,12 @@ async function main(root: string, dry: boolean): Promise<number> {
         try { claim = readFleetAccountClaim(root, { account: name, server: LIVE_SERVER }) as ClaimView; } catch (e) { log(`${name}: refused: claim unreadable: ${String(e).slice(0, 120)}`); continue; }
         const stopFile = join(root, '.practice', `stop-${name}`), stopText = existsSync(stopFile) ? readFileSync(stopFile, 'utf8') : undefined;
         const end = ended.get(name);
-        const e = eligibility({ proof, claim, end, stopText, pidAlive, host: hostname(), retried: !!end && spentAttempts(before, { account: name, endedAt: end.at }) > 0 });
+        const e = eligibility({ proof, claim, end, stopText, pidAlive, host: hostname(), retried: !!end && spentAttempts(before, { account: name, endedAt: end.at }, waits) > 0 });
         if (!e.eligible) { if (e.log) log(`${name}: refused: ${e.reason}`); continue; }
         if (!cloud && !endSettled(end!, Date.now())) continue;
         const target = { account: name, endedAt: e.endedAt };
-        if (spentAttempts(before, target) >= MAX_ATTEMPTS) { log(`${name}: refused: ${MAX_ATTEMPTS} recoveries of end ${e.endedAt} failed; recover by hand`); continue; }
+        if (spentAttempts(before, target, waits) >= MAX_ATTEMPTS) { log(`${name}: refused: ${MAX_ATTEMPTS} recoveries of end ${e.endedAt} failed; recover by hand`); continue; }
+        if (waitedAttempts(before, target, waits) >= MAX_WAITS) { log(`${name}: refused: ${MAX_WAITS} recoveries of end ${e.endedAt} waited on memory, a bot slot or the source owner; recover by hand`); continue; }
         if (recoveryLeaseState(root, name) === 'held') { log(`${name}: refused: a recovery child still holds the account's lease, or the lease is unreadable`); continue; }
         targets.push(target);
     }
