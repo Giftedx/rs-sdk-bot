@@ -53,17 +53,18 @@ test('take, renew and release let one process hold the lease and tell a holder t
 });
 
 test('a different live process at the gate stops a take, and the ticket of an ended process does not', () => {
-    const dir = tmp(), file = join(dir, 'x.lock'), ticket = (pid: number) => join(dir, `x.lock.take.${pid}.00000000-0000-4000-8000-000000000000`);
+    const dir = tmp(), file = join(dir, 'x.lock'), gate = join(dir, 'x.lock.gate'), ticket = (pid: number) => join(gate, `${pid}.00000000-0000-4000-8000-000000000000`);
     try {
         // A live process is at the gate: no take, and its ticket stays.
-        writeFileSync(ticket(77), '');
+        mkdirSync(gate); writeFileSync(ticket(77), '');
         const before = Date.now();
         expect(takeLease(file, 10, { now, alive: pid => pid === 77 })).toBe(false);
         expect(Date.now() - before).toBeGreaterThanOrEqual(7 * 20);    // it tried again after each short wait
-        expect(readdirSync(dir)).toEqual([ticket(77).slice(dir.length + 1)]);
+        expect(readdirSync(dir)).toEqual(['x.lock.gate']);
+        expect(readdirSync(gate)).toEqual(['77.00000000-0000-4000-8000-000000000000']);
         // That process ended: its ticket is removed and the take goes on.
         expect(takeLease(file, 10, { now, alive: () => false })).toBe(true);
-        expect(readdirSync(dir)).toEqual(['x.lock']);
+        expect(readdirSync(gate)).toEqual([]);
         // A ticket older than GATE_STALE_MS is of an ended process, also when its id is alive again in a new process.
         writeFileSync(ticket(78), ''); setTime(ticket(78), Date.now() - GATE_STALE_MS);
         setTime(file, now - LEASE_STALE_MS);
@@ -74,11 +75,42 @@ test('a different live process at the gate stops a take, and the ticket of an en
         setTime(file, now - LEASE_STALE_MS);
         expect(takeLease(file, 12, { now, alive: () => true })).toBe(true);
         // No ticket, temporary file or moved file stays.
-        expect(readdirSync(dir)).toEqual(['x.lock']);
+        expect(readdirSync(dir)).toEqual(['x.lock', 'x.lock.gate']);
+        expect(readdirSync(gate)).toEqual([]);
         // A new checkout has no folder for the lease: the take makes it.
         const fresh = join(dir, 'new', '.practice', 'autopilot.lock');
         expect(takeLease(fresh, 13, { now, alive: () => true })).toBe(true);
-        expect(readdirSync(join(dir, 'new', '.practice'))).toEqual(['autopilot.lock']);
+        expect(readdirSync(join(dir, 'new', '.practice'))).toEqual(['autopilot.lock', 'autopilot.lock.gate']);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('a heartbeat is one step at the gate, and with a busy gate it writes nothing', () => {
+    const dir = tmp(), file = join(dir, 'x.lock'), gate = join(dir, 'x.lock.gate'), busy = { alive: (pid: number) => pid === 77 };
+    try {
+        expect(takeLease(file, 11, { now, alive: () => false })).toBe(true);
+        // The usual case: the time of the lease becomes the time of the heartbeat.
+        expect(renewLease(file, 11, now + 5000)).toBe(true);
+        expect(readLease(file)).toEqual({ pid: 11, at: now + 5000 });
+        // A different process is at the gate and stays there. A lease that is still new stays held, with no write.
+        writeFileSync(join(gate, '77.00000000-0000-4000-8000-000000000000'), '');
+        expect(renewLease(file, 11, now + 6000, busy)).toBe(true);
+        expect(readLease(file)!.at).toBe(now + 5000);
+        // A lease that is old enough to be taken, with a different process at the gate: lost, and no time is set.
+        expect(renewLease(file, 11, now + 5000 + LEASE_STALE_MS, busy)).toBe(false);
+        expect(readLease(file)!.at).toBe(now + 5000);
+        // The different process took the lease: this heartbeat does not set the time of that lease.
+        rmSync(join(gate, '77.00000000-0000-4000-8000-000000000000'));
+        expect(takeLease(file, 22, { now: now + 5000 + LEASE_STALE_MS, alive: () => true })).toBe(true);
+        const taken = readLease(file)!;
+        expect(taken.pid).toBe(22);
+        expect(renewLease(file, 11, now + 9_000_000)).toBe(false);
+        expect(readLease(file)).toEqual(taken);
+        // A release by the process that lost the lease does not remove the lease of the new holder.
+        releaseLease(file, 11);
+        expect(readLease(file)).toEqual(taken);
+        releaseLease(file, 22);
+        expect(existsSync(file)).toBe(false);
+        expect(readdirSync(gate)).toEqual([]);
     } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
@@ -91,7 +123,7 @@ test('of eight processes that try in the same millisecond, one takes the lease',
                 const ended = Bun.spawn([process.execPath, '-e', ''], { stdout: 'ignore', stderr: 'ignore' });
                 await ended.exited;
                 writeFileSync(file, String(ended.pid));
-                if (start.includes('gate')) writeFileSync(join(dir, `x.lock.take.${ended.pid}.00000000-0000-4000-8000-000000000000`), '');
+                if (start.includes('gate')) { mkdirSync(join(dir, 'x.lock.gate')); writeFileSync(join(dir, 'x.lock.gate', `${ended.pid}.00000000-0000-4000-8000-000000000000`), ''); }
             }
             const at = Date.now() + 2000;
             const children = Array.from({ length: 8 }, () => Bun.spawn([process.execPath, racer, file, String(at)], { stdout: 'pipe', stderr: 'pipe' }));
@@ -99,7 +131,8 @@ test('of eight processes that try in the same millisecond, one takes the lease',
             expect(said.filter(s => s === 'TOOK').length, `${start}: ${said.join(',')}`).toBe(1);
             expect(said.filter(s => s === 'REFUSED').length, `${start}: ${said.join(',')}`).toBe(7);
             expect(readFileSync(file, 'utf8'), start).toBe(String(children[said.indexOf('TOOK')]!.pid));
-            expect(readdirSync(dir), start).toEqual(['x.lock']);
+            expect(readdirSync(dir), start).toEqual(['x.lock', 'x.lock.gate']);
+            expect(readdirSync(join(dir, 'x.lock.gate')), start).toEqual([]);
         } finally { rmSync(dir, { recursive: true, force: true }); }
     }
 }, 60_000);

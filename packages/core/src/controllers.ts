@@ -7,16 +7,17 @@
 // the id of an ended process to a new one, so a live id alone proves nothing. A holder that finds another id in its
 // lease has lost it and must exit: two controllers of one kind must never run.
 //
-// One process at a time can take a lease. The lease file is created or replaced only at a gate (atGate below): a
-// process puts down a ticket file with a name of its own, then looks, and goes in only when no different live
-// process has a ticket there. At the gate it reads the lease again, and it replaces only a lease that is not held.
+// One process at a time can change a lease. The take, the heartbeat and the release all happen at a gate (atGate
+// below): a process puts down a ticket file with a name of its own, then looks, and goes in only when no different
+// live process has a ticket there. At the gate it reads the lease again. A take replaces only a lease that is not
+// held, and a heartbeat sets the time only of a lease that still names its process.
 // A process that does not get the lease gets false.
 //
 // A launch record is a file that a daemon writes when it starts: its arguments and the LAUNCH_ENV settings of its
 // environment. The watchdog starts a controller only from its record, with the same plan, side and login permission.
 // A one-shot pass writes no record, so it never becomes a daemon.
 import { existsSync, linkSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, unlinkSync, utimesSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
 // The fleet agent's pass is 10 minutes and its sync can wait for the network. 25 minutes is two passes and a margin.
@@ -71,14 +72,15 @@ export function leaseHolder(file: string, deps: LeaseDeps = {}): number | null {
 // finds no ticket of a different live process. Each one writes before it looks, so two processes cannot both find
 // the gate empty. Two that look at the same instant both step back. A ticket name is never used twice, so the ticket
 // of an ended process can be removed without a risk to a live one.
+// The tickets are in a folder of their own, `<lease>.gate`, so a look reads a few names and not the whole .practice folder.
 function atGate<T>(file: string, pid: number, alive: (pid: number) => boolean, body: () => T): T | null {
-    const dir = dirname(file), prefix = `${basename(file)}.take.`, mine = `${prefix}${pid}.${randomUUID()}`;
+    const dir = `${file}.gate`, mine = `${pid}.${randomUUID()}`;
     mkdirSync(dir, { recursive: true });        // a new checkout has no .practice folder before its first daemon
     writeFileSync(join(dir, mine), '', { flag: 'wx' });
     try {
         for (const name of readdirSync(dir)) {
-            if (!name.startsWith(prefix) || name === mine) continue;
-            const owner = Number(name.slice(prefix.length).split('.')[0]);
+            if (name === mine) continue;
+            const owner = Number(name.split('.')[0]);
             let at: number;
             try { at = statSync(join(dir, name)).mtimeMs; } catch { continue; }      // its owner removed it in this instant
             if (owner !== pid && Number.isSafeInteger(owner) && owner > 0 && Date.now() - at < GATE_STALE_MS && alive(owner)) return null;
@@ -88,41 +90,56 @@ function atGate<T>(file: string, pid: number, alive: (pid: number) => boolean, b
     } finally { try { unlinkSync(join(dir, mine)); } catch { /* removed as old by a different process */ } }
 }
 const pause = (ms: number) => { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); };
-
-// Takes the lease for `pid`. False when a different live process holds it or takes it in this instant.
-// The lease file is created, and a lease that is not held is replaced, only at the gate. Processes that meet at the
-// gate step back and try again after a short random time, GATE_TRIES times at most.
+// Processes that meet at the gate step back and try again after a short random time, GATE_TRIES times at most.
+// Null when a different live process was at the gate each time.
 export const GATE_TRIES = 8;
-export function takeLease(file: string, pid = process.pid, deps: LeaseDeps = {}): boolean {
-    const alive = deps.alive ?? pidAlive, now = deps.now ?? Date.now();
+function throughGate<T>(file: string, pid: number, alive: (pid: number) => boolean, body: () => T): T | null {
     for (let attempt = 0; attempt < GATE_TRIES; attempt++) {
         if (attempt) pause(20 + Math.floor(Math.random() * 180));
-        const took = atGate(file, pid, alive, () => {
-            const lease = seen(file);
-            if (lease) {
-                const holder = pidOf(lease.text);
-                if (holder === pid) return renewLease(file, pid, now);      // this process, or an ended one that had its id
-                if (holder !== null && now - lease.at < (deps.staleMs ?? LEASE_STALE_MS) && alive(holder)) return false;
-                if (!removeExact(file, lease)) return false;                 // its holder changed it in this instant
-            }
-            return createExclusive(file, String(pid));
-        });
-        if (took !== null) return took;
+        const result = atGate(file, pid, alive, body);
+        if (result !== null) return result;
     }
-    return false;
+    return null;
 }
-
-// The heartbeat. False when the lease names a different process or is gone: the caller has lost it and must exit.
-// It sets the file time and never the content, so it cannot take a lease that a different process holds.
-export function renewLease(file: string, pid = process.pid, now = Date.now()): boolean {
+// Sets the file time of a lease that names `pid`. It never writes the content. Call it only at the gate.
+function touch(file: string, pid: number, now: number): boolean {
     if (readLease(file)?.pid !== pid) return false;
     try { utimesSync(file, now / 1000, now / 1000); } catch (e) { if (errno(e) === 'ENOENT') return false; throw e; }
     return true;
 }
 
-export function releaseLease(file: string, pid = process.pid): void {
-    const s = seen(file);
-    if (s && pidOf(s.text) === pid) try { removeExact(file, s); } catch { /* gone */ }
+// Takes the lease for `pid`. False when a different live process holds it or takes it in this instant.
+// The lease file is created, and a lease that is not held is replaced, only at the gate.
+export function takeLease(file: string, pid = process.pid, deps: LeaseDeps = {}): boolean {
+    const alive = deps.alive ?? pidAlive, now = deps.now ?? Date.now();
+    return throughGate(file, pid, alive, () => {
+        const lease = seen(file);
+        if (lease) {
+            const holder = pidOf(lease.text);
+            if (holder === pid) return touch(file, pid, now);           // this process, or an ended one that had its id
+            if (holder !== null && now - lease.at < (deps.staleMs ?? LEASE_STALE_MS) && alive(holder)) return false;
+            if (!removeExact(file, lease)) return false;                 // its holder changed it in this instant
+        }
+        return createExclusive(file, String(pid));
+    }) ?? false;
+}
+
+// The heartbeat. False when the lease names a different process or is gone: the caller has lost it and must exit.
+// The check and the new file time are one step at the gate, so a take cannot come between them. After a true result
+// the lease is new, and no process can take it before LEASE_STALE_MS.
+// When a different process stays at the gate, nothing is written: the lease is still held only if it names this
+// process and is not old enough to be taken.
+export function renewLease(file: string, pid = process.pid, now = Date.now(), deps: LeaseDeps = {}): boolean {
+    const renewed = throughGate(file, pid, deps.alive ?? pidAlive, () => touch(file, pid, now));
+    if (renewed !== null) return renewed;
+    const lease = readLease(file);
+    return lease?.pid === pid && now - lease.at < (deps.staleMs ?? LEASE_STALE_MS);
+}
+
+// Removes the lease of `pid`, at the gate. When a different process stays at the gate, the exact file still goes.
+export function releaseLease(file: string, pid = process.pid, deps: LeaseDeps = {}): void {
+    const remove = () => { const s = seen(file); if (s && pidOf(s.text) === pid) removeExact(file, s); return true; };
+    try { if (throughGate(file, pid, deps.alive ?? pidAlive, remove) === null) remove(); } catch { /* gone */ }
 }
 
 // The settings of a daemon's environment that a restart must keep: the fleet side, the plan and fleet folders, the
