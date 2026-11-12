@@ -9,11 +9,11 @@ test('a death recap names the killer, the hits, the hitpoints, the last actions 
         line({ k: 'meta', v: 1, account: 'alpha', script: 'scripts/pk.ts', startedAt: 1_000_000 }),
         line({ k: 's', t: 10, d: { player: player(10, 10), inventory: [{ name: 'Shark', count: 5 }], equipment: [{ name: 'Rune scimitar', count: 1 }], nearbyPlayers: [{ index: 7, name: 'Goondelf', combatLevel: 80 }] } }),
         line({ k: 'a', t: 11, i: 1, a: { type: 'eatFood' } }),
-        line({ k: 's', t: 11, d: { player: player(11, 4), combatEvents: [{ tick: 11, type: 'damage_taken', damage: 6, sourceType: 'other_player', sourceIndex: 7 }] } }),
-        line({ k: 's', t: 12, d: { player: player(12, 0, true), combatEvents: [{ tick: 11, type: 'damage_taken', damage: 6, sourceType: 'other_player', sourceIndex: 7 }, { tick: 12, type: 'damage_taken', damage: 4, sourceType: 'other_player', sourceIndex: 7 }, { tick: 12, type: 'damage_taken', damage: 1, sourceType: 'npc', sourceIndex: -1 }] } }),
+        line({ k: 's', t: 11, d: { player: player(11, 4), combatEvents: [{ tick: 11, type: 'damage_taken', damage: 6, sourceType: 'other_player', sourceIndex: 7, targetType: 'player' }] } }),
+        line({ k: 's', t: 12, d: { player: player(12, 0, true), combatEvents: [{ tick: 11, type: 'damage_taken', damage: 6, sourceType: 'other_player', sourceIndex: 7, targetType: 'player' }, { tick: 12, type: 'damage_taken', damage: 4, sourceType: 'other_player', sourceIndex: 7, targetType: 'player' }, { tick: 12, type: 'damage_taken', damage: 1, sourceType: 'npc', sourceIndex: -1, targetType: 'player' }, { tick: 12, type: 'damage_taken', damage: 9, sourceType: 'other_player', sourceIndex: 3, targetType: 'npc' }] } }),
         line({ k: 's', t: 20, d: { player: { ...player(20, 10), worldX: 3222, worldZ: 3218 }, inventory: [], equipment: [{ name: 'Rune scimitar', count: 1 }] } }),
     ];
-    const r = recapFromLines(lines, 'f.gz', 'pk')!;
+    const r = recapFromLines(lines, 'f.gz', 'pk', 600)!;
     expect(r.account).toBe('alpha');
     expect(r.tick).toBe(12);
     expect(r.at).toBe(1_000_000 + 2 * 600);
@@ -33,6 +33,7 @@ test('a death recap names the killer, the hits, the hitpoints, the last actions 
 
 test('a record with no death has no recap, and of two deaths the recap is of the last', () => {
     expect(recapFromLines([line({ k: 's', t: 1, d: { player: player(1, 10) } })])).toBeNull();
+    expect(recapFromLines([line({ k: 'meta', startedAt: 5 }), line({ k: 's', t: 1, d: { player: player(1, 10) } }), line({ k: 's', t: 2, d: { player: player(2, 0, true) } })])!.at).toBeNull();
     const two = recapFromLines([
         line({ k: 's', t: 1, d: { player: player(1, 10) } }),
         line({ k: 's', t: 2, d: { player: player(2, 0, true) } }),

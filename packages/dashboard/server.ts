@@ -1331,7 +1331,7 @@ Bun.serve({
             if (!/^[A-Za-z0-9_ -]{1,12}$/.test(name) || name.toLowerCase() === MAIN.toLowerCase()) return Response.json({ error: 'not available' }, { status: 404 });
             const key = name.toLowerCase(), hit = recapCache.get(key);
             if (hit && Date.now() - hit.at < 30_000) return Response.json({ recap: hit.recap });
-            const recap = deathRecap(root, name);
+            const recap = deathRecap(root, name, 8, srv => isLocalServer(srv) ? null : world.tickMs);
             recapCache.set(key, { at: Date.now(), recap });
             return Response.json({ recap });
         }

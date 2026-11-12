@@ -19,7 +19,6 @@ export type DeathRecap = {
     carried: Item[]; kept: Item[] | null; lost: Item[] | null;
 };
 
-const TICK_MS = 600;
 const MAX_FILE_BYTES = 40 * 2 ** 20;
 const items = (state: any): Item[] => {
     const out = new Map<string, number>();
@@ -41,7 +40,9 @@ function sourceName(event: any, state: any): string {
     return event.sourceType === 'npc' ? `npc ${event.sourceIndex}` : `player ${event.sourceIndex}`;
 }
 
-export function recapFromLines(lines: string[], file = '', script = ''): DeathRecap | null {
+// tickMs: the server's tick length, which dates the death from the session start; null (a practice server, whose
+// lockstep ticks have no fixed length) leaves the time unknown.
+export function recapFromLines(lines: string[], file = '', script = '', tickMs: number | null = null): DeathRecap | null {
     const state: Record<string, any> = {};
     const history: { tick: number; hp: number | null }[] = [];
     const actions: { tick: number; type: string }[] = [];
@@ -62,11 +63,12 @@ export function recapFromLines(lines: string[], file = '', script = ''): DeathRe
             found.kept = items(state); found.lost = minus(found.carried, found.kept); found = null;
         }
         if (dead && !wasDead && before) {
-            const p = state.player, events = (Array.isArray(state.combatEvents) ? state.combatEvents : []).filter((e: any) => e?.type === 'damage_taken' && e.tick >= row.t - 30 && e.tick <= row.t);
+            const p = state.player, events = (Array.isArray(state.combatEvents) ? state.combatEvents : []).filter((e: any) => e?.type === 'damage_taken' && e.targetType === 'player' && e.tick >= row.t - 30 && e.tick <= row.t);
+            // A hit of another player on an npc is damage_taken too: only a hit on the player counts (prayer-guard.ts).
             const hits = events.slice(-10).map((e: any) => ({ tick: e.tick, damage: e.damage, source: sourceName(e, state) }));
             found = last = {
                 account: String(meta?.account ?? p?.name ?? ''), script: String(meta?.script ?? script), file, tick: row.t,
-                at: Number.isFinite(meta?.startedAt) && firstTick != null ? meta.startedAt + (row.t - firstTick) * TICK_MS : null,
+                at: Number.isFinite(meta?.startedAt) && firstTick != null && tickMs != null && tickMs > 0 ? meta.startedAt + (row.t - firstTick) * tickMs : null,
                 pos: Number.isFinite(p?.worldX) ? { x: p.worldX, z: p.worldZ, level: p.level ?? 0 } : null,
                 killer: hits.at(-1)?.source ?? null, hits,
                 hp: [...history.slice(-19).map(h => [h.tick, h.hp] as [number, number]), [row.t, p?.hp ?? 0]],
@@ -83,7 +85,7 @@ export function recapFromLines(lines: string[], file = '', script = ''): DeathRe
 }
 
 // The newest death of an account over its newest records, at most `files` of them. Practice and live records alike.
-export function deathRecap(root: string, account: string, files = 8): DeathRecap | null {
+export function deathRecap(root: string, account: string, files = 8, tickMsOf: (server: string) => number | null = () => null): DeathRecap | null {
     const dir = join(root, '.practice', 'ticks'), prefix = account.toLowerCase() + '-', found: { file: string; script: string; started: number }[] = [];
     let scripts: string[] = [];
     try { scripts = readdirSync(dir); } catch { return null; }
@@ -101,7 +103,8 @@ export function deathRecap(root: string, account: string, files = 8): DeathRecap
         try {
             if (statSync(f.file).size > MAX_FILE_BYTES) continue;
             const text = gunzipSync(readFileSync(f.file), { finishFlush: constants.Z_SYNC_FLUSH }).toString('utf8');
-            const r = recapFromLines(text.split('\n'), f.file, f.script);
+            const lines = text.split('\n'), server = (() => { try { return String(JSON.parse(lines[0] ?? '{}').server ?? ''); } catch { return ''; } })();
+            const r = recapFromLines(lines, f.file, f.script, tickMsOf(server));
             // The last death in the newest record that has one.
             if (r) { newest = r; break; }
         } catch { /* a damaged record */ }
