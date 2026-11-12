@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794483210296,
+ "at": 1794483825453,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -283,15 +283,15 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "TARGET_LEVEL": "90",
+    "TARGET_LEVEL": "99",
     "GIANT_BURY": "0"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 90 on the Ardougne cows",
+   "goal": "train Strength to 99 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-strength-90",
+   "template": "army-cow-strength-99",
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
