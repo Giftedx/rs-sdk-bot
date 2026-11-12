@@ -55,6 +55,15 @@ type Tile = { x: number; z: number };
 // KNIGHT_SPOT=x,z gives each farmer its own knights (spawns 2652,3318 2653,3300 2669,3298 2671,3313 2582,3297,
 // npcs.json): three farmers on one spot made 10.5-12.1 coins a tick against the 18.8 model.
 const KNIGHT_SPOT: Tile = (() => { const m = (process.env.KNIGHT_SPOT ?? '').match(/^(\d+),(\d+)$/); return m ? { x: Number(m[1]), z: Number(m[2]) } : { x: 2653, z: 3302 }; })();
+// Players kill the four market knights for combat XP, and a dead knight is away 32 ticks (research/goldfarm.md). The
+// knight at 2582,3297 stands in a crowd of thieves and no player attacks it. KNIGHT_REFUGE=x,z is the spot that a thief
+// moves to, for the rest of its run, when its own spot had no knight in view on REFUGE_NONE of the last REFUGE_WINDOW
+// ticks of knight work. KNIGHT_REFUGE=0 turns the move off.
+const KNIGHT_REFUGE: Tile | null = (() => { const m = (process.env.KNIGHT_REFUGE ?? '2582,3297').match(/^(\d+),(\d+)$/); return m ? { x: Number(m[1]), z: Number(m[2]) } : null; })();
+export const REFUGE_WINDOW = 500, REFUGE_NONE = 0.06;
+// One dead knight with no other knight in view costs 32 of the 500 ticks, so the first death in a window moves the thief.
+export const refugeDue = (v: { ticks: number; none: number; moved: boolean; atRefuge: boolean }) =>
+    !v.moved && !v.atRefuge && v.ticks >= REFUGE_WINDOW && v.none >= REFUGE_NONE * v.ticks;
 const BANK_SPOT: Tile = { x: 2654, z: 3283 };
 const KNIGHT = /^knight of ardougne$/i;
 const RANGE = 16;
@@ -158,6 +167,9 @@ try {
     // The split of idleTicks and of noops by cause, and the knights in view: the RESULT line says where the ticks went.
     const idleWhy = { none: 0, far: 0, unreachable: 0, banned: 0, avoided: 0, option: 0, hp: 0, stall: 0 };
     let noopStun = 0, noopFar = 0, noopNear = 0, knightPasses = 0, knightsSeen = 0;
+    // The spot that the thief works at, the tick of its move to KNIGHT_REFUGE, and the window of that rule.
+    let spot = KNIGHT_SPOT, refugeAt = -1;
+    const refugeWindow = { ticks: 0, none: 0 };
     let shopTrips = 0, shopTicks = 0, bought = 0, shopRetryAt = 0, lastSteal = -1_000_000;
     const stealFile = join(import.meta.dir, '..', '.practice', 'goldfarm', `steal-${process.argv[2]}.json`);
     let lastStealAt = 0;
@@ -188,7 +200,7 @@ try {
             + `foodTicksPct=${(100 * (bankTicks + stallTicks + shopTicks + eatTicks) / Math.max(1, ticks)).toFixed(1)} `
             + `hpMin=${hpMin} died=${died} banked=${banked} packCoins=${coins()} bigFood=${bigFood()} food=${food()} tradesIn=${tradesIn} tradeTicks=${tradeTicks} hp=${hp()} at=${p?.worldX},${p?.worldZ},${p?.level} `
             + `idleNone=${idleWhy.none} idleFar=${idleWhy.far} idleUnreach=${idleWhy.unreachable} idleBanned=${idleWhy.banned} idleAvoid=${idleWhy.avoided} idleOption=${idleWhy.option} idleHp=${idleWhy.hp} idleStall=${idleWhy.stall} `
-            + `noopStun=${noopStun} noopFar=${noopFar} noopNear=${noopNear} knightsInView=${(knightsSeen / Math.max(1, knightPasses)).toFixed(2)}`;
+            + `noopStun=${noopStun} noopFar=${noopFar} noopNear=${noopNear} knightsInView=${(knightsSeen / Math.max(1, knightPasses)).toFixed(2)} spot=${spot.x},${spot.z} refugeAt=${refugeAt}`;
         return finish([s], ok, ok ? detail : `${why} ${detail} last=${lastFail}`);
     };
 
@@ -446,8 +458,12 @@ try {
         const view = (n: any): KnightView => ({ inRange: away(n) <= range, reachable: n.reachable !== false, banned: (banned.get(n.index) ?? 0) > s.tick(), avoided: !!avoid?.has(n.index) });
         const npc = knights.filter(n => { const v = view(n); return v.inRange && v.reachable && !v.banned && !v.avoided; }).sort((a, b) => a.distance - b.distance)[0];
         if (!npc) {
-            if (range === RANGE && p && cheb(KNIGHT_SPOT, p) > RANGE) await walk(KNIGHT_SPOT, 3);
-            else { idleTicks++; idleWhy[noKnightReason(knights.map(view))]++; await waitTicks(s, 1); }
+            if (range === RANGE && p && cheb(spot, p) > RANGE) await walk(spot, 3);
+            else {
+                const why = noKnightReason(knights.map(view));
+                idleTicks++; idleWhy[why]++; if (range === RANGE && why === 'none') refugeWindow.none++;
+                await waitTicks(s, 1);
+            }
             return;
         }
         const op = npc.optionsWithIndex.find((o: any) => /pickpocket/i.test(o.text))?.opIndex;
@@ -486,19 +502,19 @@ try {
         if(foodWake&&/^[A-Za-z0-9_ -]{1,12}$/.test(FOOD_FROM)&&(l>=2||!bankEmpty)){
             let courier:any;try{courier=JSON.parse(readFileSync(join(import.meta.dir,'../.practice/status',`${FOOD_FROM}.json`),'utf8'));}catch{/* no current courier observation */}
             if(courierFoodReady(courier,FOOD_FROM,farmServer,ownedAccounts(farmServer),Date.now(),s.tick(),lastCourierAttempt)){
-                lastCourierAttempt=s.tick();await foodByTrade(20_000);await walk(KNIGHT_SPOT,3);continue;
+                lastCourierAttempt=s.tick();await foodByTrade(20_000);await walk(spot,3);continue;
             }
         }
         if ((bigFood() < 2 && low && !bankEmpty) || coins() >= BANK_AT || notes().length > 0) {
             await refill();
-            await walk(KNIGHT_SPOT, 3);
+            await walk(spot, 3);
             continue;
         }
         // FOOD_ONLY_TRADE: no stall, no shop (both killed farmers live). Out of food, serve one more trade
         // from FOOD_FROM when the last one brought food; else log out with HP to spare. A frail thief does the same
         // with its food under the floor, whatever the setting.
         if (l < FRAIL_FLOOR && bankEmpty && (FOOD_ONLY_TRADE || frail())) {
-            if (FOOD_FROM && lastTradeOk && (await foodByTrade())) { await walk(KNIGHT_SPOT, 3); continue; }
+            if (FOOD_FROM && lastTradeOk && (await foodByTrade())) { await walk(spot, 3); continue; }
             await end(false, FOOD_ONLY_TRADE ? 'no food (FOOD_ONLY_TRADE)' : `no food (frail: ${maxHp()} Hitpoints)`);
         }
         // Bank out of food: the Baker's shop when allowed, else the stall unless 3 trips in a row brought nothing. A
@@ -506,7 +522,7 @@ try {
         if (foodTripDue({ low, bankEmpty, tradeOnly: FOOD_ONLY_TRADE, rested: s.tick() >= stallRestUntil, shopOk: shopOk(), emptyTrips: stallEmptyTrips })) {
             if (shopOk()) await shopTrip();
             if (food() < reserve() && stallEmptyTrips < 3) await stallTrip();
-            await walk(stallFled ? BANK_SPOT : KNIGHT_SPOT, 3);
+            await walk(stallFled ? BANK_SPOT : spot, 3);
             stallFled = false;
             continue;
         }
@@ -515,7 +531,15 @@ try {
             if (hp() <= 6) await end(false, 'no food');
         }
         if (hp() <= DMG) { idleTicks++; idleWhy.hp++; await waitTicks(s, 1); continue; }
+        const k0 = s.tick();
         await steal();
+        refugeWindow.ticks += s.tick() - k0;
+        if (KNIGHT_REFUGE && refugeDue({ ...refugeWindow, moved: refugeAt >= 0, atRefuge: cheb(KNIGHT_REFUGE, { worldX: spot.x, worldZ: spot.z }) <= RANGE })) {
+            console.log(`REFUGE no knight in view on ${refugeWindow.none} of ${refugeWindow.ticks} ticks at ${spot.x},${spot.z}: moving to ${KNIGHT_REFUGE.x},${KNIGHT_REFUGE.z} t=${now()}`);
+            spot = KNIGHT_REFUGE; refugeAt = now();
+            await walk(spot, 3);
+        }
+        if (refugeWindow.ticks >= REFUGE_WINDOW) { refugeWindow.ticks = 0; refugeWindow.none = 0; }
     }
     await end(!died && !ended, died ? 'died' : ended ? `session ended: ${ended}` : 'ticks');
 } catch (e) { await finish([s], false, String(e)); }
