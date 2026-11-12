@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794498952357-mightyrod-wandwaver-airrune",
+ "account": "Wandwaver",
+ "partner": "Mightyrod",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 21,
+ "claim": "16f69442-80a1-46db-9b92-a8d658cc16d0",
+ "count": 0,
+ "ok": false,
+ "at": 1794498959705,
+ "detail": "trade claimed"
+}
