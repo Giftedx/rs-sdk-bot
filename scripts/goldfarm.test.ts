@@ -11,7 +11,6 @@ test('an idle pass names the first thing that keeps every knight from a pick',()
     expect(noKnightReason([k(true,true,true),k(true,false)])).toBe('banned');
     expect(noKnightReason([k(true,true,false,true),k(true,true,true)])).toBe('avoided');
 });
-||||||| 2decae33a
 test('incoming sharks and shark notes count as food, raw and burnt do not',()=>{
     expect(incomingCookedFood([{id:385,count:5}],[{id:385,count:8},{id:386,count:20},{id:383,count:30},{id:387,count:3}])).toBe(23);
 });
