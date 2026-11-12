@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794506888615,
+ "at": 1794507641408,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -61,19 +61,19 @@
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
+    "TRAIN_SKILL": "Strength",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "TARGET_LEVEL": "45",
+    "TARGET_LEVEL": "60",
     "GIANT_BURY": "0"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 45 on the Ardougne cows",
+   "goal": "train Strength to 60 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-defence-45",
+   "template": "army-cow-strength-60",
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
@@ -300,25 +300,23 @@
   },
   {
    "account": "Shaftmaker",
-   "script": "scripts/shop-buyer.ts",
+   "script": "scripts/fletch-arrows.ts",
    "args": [
-    "sarim"
+    "15000",
+    "headless"
    ],
    "env": {
-    "ITEMS": "feather",
     "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
+    "MAX_MAKE": "390"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy feathers at Gerrant",
-   "role": "bank",
-   "template": "shop-feathers",
+   "goal": "headless arrows from owned shafts and feathers",
+   "role": "fletching",
+   "template": "fletch-headless",
    "autopilot": "local",
-   "resources": [
-    "shop:sarim"
-   ]
+   "resources": []
   },
   {
    "account": "Swordinhand",
