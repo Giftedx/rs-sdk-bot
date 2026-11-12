@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794513043593,
+ "at": 1794513107694,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -491,26 +491,6 @@
    ]
   },
   {
-   "account": "Sausagefest",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
-   "env": {
-    "PEN": "3187,3277",
-    "TICKS": "3000",
-    "TARGET": "2000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
-   "role": "helper",
-   "template": "feathers@3187,3277",
-   "autopilot": "local",
-   "resources": [
-    "pen:3187,3277"
-   ]
-  },
-  {
    "account": "OreElse",
    "script": "scripts/buy-owned-ge-item.ts",
    "args": [],
@@ -530,6 +510,26 @@
    "repeat": false,
    "goal": "run-ge-oreelse-cannonballs1700-overall [task-ee4f55ab-5f7a-4d83-9562-d8f6ccc90f0b]",
    "role": "helper"
+  },
+  {
+   "account": "Sausagefest",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3187,3277",
+    "TICKS": "3000",
+    "TARGET": "2000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
+   "autopilot": "local",
+   "resources": [
+    "pen:3187,3277"
+   ]
   }
  ]
 }
