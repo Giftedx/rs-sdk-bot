@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794521144408-mmthv2350-abracadickra",
  "account": "Abracadickra",
  "partner": "mmthv2350",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 4000000,
  "claim": "8348d39a-0b08-47e8-b7fa-d2398a4b3169",
- "count": 0,
- "ok": false,
- "at": 1794521151984,
- "detail": "trade claimed"
+ "count": 4000000,
+ "ok": true,
+ "at": 1794521331899,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 4000001
+ },
+ "bank": {
+  "count": 4000000,
+  "at": 1794521330535
+ },
+ "logout": {
+  "attemptId": "1794521151996-0000028840-0000000001",
+  "at": 1794521331878,
+  "sha256": "a97a67398ead93792339f923f314fddc177d10416c41b757fffa8b86da9879de"
+ },
+ "screen": true
 }
