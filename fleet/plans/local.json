@@ -1,7 +1,25 @@
 {
  "side": "local",
- "at": 1794453325603,
+ "at": 1794454029927,
  "jobs": [
+  {
+   "account": "NabTheKnob",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=333 QUANTITY=30 LIMIT_PRICE=100 CASH_RESERVE=1000 ORDER_KEY=nabtheknob-kit3-333-0to30 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 30 Trout on the Grand Exchange to train Strength to 60 on the Ardougne cows",
+   "role": "supply",
+   "template": "kit-buy:army-cow-strength-60",
+   "autopilot": "local",
+   "resources": []
+  },
   {
    "account": "Masterbaiter",
    "script": "scripts/gather-combat.ts",
@@ -26,24 +44,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "NabTheKnob",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=333 QUANTITY=30 LIMIT_PRICE=100 CASH_RESERVE=1000 ORDER_KEY=nabtheknob-kit3-333-0to30 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 30 Trout on the Grand Exchange to train Strength to 60 on the Ardougne cows",
-   "role": "supply",
-   "template": "kit-buy:army-cow-strength-60",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "PickpockDick",
@@ -471,24 +471,6 @@
    "role": "thieving"
   },
   {
-   "account": "Bigchopper",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/walk-to.ts 2809 3441",
-    "scripts/firemaking-order.ts TARGET_LEVEL=15 LOG=normal MAX_LOGS=13 CAP=4000 TOOL_BUDGET=50",
-    "scripts/firemaking-order.ts TARGET_LEVEL=99 LOG=oak MAX_LOGS=9616 CAP=400000 TOOL_BUDGET=50"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": false,
-   "goal": "Firemaking 15 then 99 and rank XP from 9616 banked oak logs at Catherby",
-   "role": "firemaking",
-   "autopilot": "local"
-  },
-  {
    "account": "Abracadickra",
    "script": "scripts/aio.ts",
    "args": [
@@ -509,6 +491,19 @@
    "resources": [
     "aio:seers-flax"
    ]
+  },
+  {
+   "account": "Bigchopper",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-029d3943-9dce-4ba3-a890-2e3bf7e52f26"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-session-recovery-bigchopper-market-r14 [task-029d3943-9dce-4ba3-a890-2e3bf7e52f26]",
+   "role": "firemaking"
   }
  ]
 }
