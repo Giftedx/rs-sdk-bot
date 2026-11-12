@@ -69,9 +69,24 @@ export async function bankFare(s: Session, need: number, walk: (to: Tile, budget
     return took ? done(true, '') : done(false, `ferry needs ${need} coins and the bank holds ${row?.count ?? 0}`);
 }
 
+// Tutorial Island, where a new live account starts (seen: START 3094 3106 0 on the demo server). The sea is on each
+// side of this box, and no route leaves the island: the skip puts the account in Lumbridge.
+export const onTutorialIsland = (p: { worldX: number; worldZ: number; level?: number } | null | undefined): boolean =>
+    !!p && p.worldX >= 3050 && p.worldX <= 3160 && p.worldZ >= 3050 && p.worldZ <= 3140;
+export async function leaveTutorial(s: Session, skip: () => Promise<{ success: boolean; message?: string }> = () => s.bot.skipTutorial(),
+    ready: () => Promise<unknown> = () => waitUntil(s, st => (st?.nearbyNpcs?.length ?? 0) > 0, { timeoutTicks: 30 })): Promise<Outcome | null> {
+    if (!onTutorialIsland(s.sdk.getState()?.player)) return null;
+    await ready();
+    const r = await skip();
+    console.log(`MILESTONE tutorial ${r.success ? 'ok' : 'fail'}`);
+    return r.success ? null : { ok: false, reason: 'precondition', detail: `tutorial skip failed: ${r.message ?? ''}`, ticks: 0 };
+}
+
 // A planned walk that takes the Ardougne ferries when the planner has no route, with the fare from the bank. `walk`
-// is the caller's planned walk for one leg.
-export function ferryWalk(s: Session, to: Tile, walk: (to: Tile, budgetMs?: number) => Promise<Outcome>): Promise<Outcome> {
+// is the caller's planned walk for one leg. A start on Tutorial Island leaves the island first.
+export async function ferryWalk(s: Session, to: Tile, walk: (to: Tile, budgetMs?: number) => Promise<Outcome>): Promise<Outcome> {
+    const stuck = await leaveTutorial(s);
+    if (stuck) return stuck;
     const p = s.sdk.getState()?.player;
     if (!p) return walk(to);
     return walkWithFerryFallback({ x: p.worldX, z: p.worldZ, level: p.level }, to, walk, boat => {
