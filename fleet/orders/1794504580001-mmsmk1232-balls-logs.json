@@ -1,0 +1,22 @@
+{
+ "id": "1794504580001-mmsmk1232-balls-logs",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmsmk1232",
+ "to": "Balls",
+ "item": "logs",
+ "count": 1,
+ "start": 1794504580001,
+ "end": 1794508180001,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ]
+}

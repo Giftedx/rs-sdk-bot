@@ -1,0 +1,22 @@
+{
+ "id": "1794504580001-oreelse-balls-magiclogs",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "OreElse",
+ "to": "Balls",
+ "item": "magic logs",
+ "count": 107,
+ "start": 1794504580001,
+ "end": 1794508180001,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ]
+}
