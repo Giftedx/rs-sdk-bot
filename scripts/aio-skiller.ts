@@ -127,7 +127,7 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'crafting',method:'bowstrings',script:'scripts/spin-bowstrings.ts',description:'Spin flax into bowstrings at Seers/Lumbridge wheel'},
  {skill:'crafting',method:'jewellery',script:'scripts/microbot-b-jewellery.ts',description:'Craft rings, necklaces, and amulets at furnace'},
  {skill:'crafting',method:'jewellery-trip',script:'scripts/microbot-jewellery-trip.ts',description:'Full bank-to-furnace jewellery crafting trip'},
- {skill:'crafting',method:'legacy-jewelry',script:'scripts/craft-jewelry.ts',description:'Legacy furnace jewelry crafting'},
+ {skill:'crafting',method:'legacy-jewelry',script:'scripts/craft-jewelry.ts',description:'Gem cutting at the Al Kharid bank (action cut). The smelt action does not end (bench case extra:same-jewel-legacy): use jewellery-trip for furnace jewellery'},
  {skill:'crafting',method:'glass',script:'scripts/microbot-glass.ts',description:'Smelt soda ash + sand into molten glass and blow glass items'},
  {skill:'crafting',method:'tanning',script:'scripts/microbot-c-tanner.ts',description:'Tan cowhide and dragonhides at Al Kharid tanner'},
  {skill:'crafting',method:'black-dhide-sets',script:'scripts/black-dhide-sets.ts',description:'Tan banked black dragonhide at Al Kharid and craft body, chaps and vambraces sets at the bank'},

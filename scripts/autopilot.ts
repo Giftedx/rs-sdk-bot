@@ -6,6 +6,9 @@
 // together never put more accounts on a spot than its capacity (CAPACITY in the planner).
 // A job that only lacks coins gets them from a free account of this side: the pass writes a fleet order
 // (fleet/orders), scripts/fleet-agent.ts runs the trade, and a later pass gives the job.
+// An account gets only a job whose place it has a way to from the tile where it stands offline (the planner's reach
+// rule). The ferry fare of that way is a part of the job's coin need, and a coin order for an account in Kandarin
+// meets at the Ardougne north bank.
 // An army account that lacks only kit items for a goal band gets them first: a capped Grand Exchange buy with its own
 // coins, else an item order from a free account of this side, else of another side (fleet/snapshots and fleet/plans).
 // An AIO route proved on practice only (a `pilot` template) is planned only while the plan's `aio` array names its id.
@@ -22,7 +25,8 @@ import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
 import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../packages/core/src/controllers';
 import { matchingJobLines } from '../packages/core/src/job-log';
-import { CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, freshest, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, coinValueFor, type Assignment, type ItemFunding, type Market, type Stock } from '../packages/planner/src/autopilot';
+import { CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, freshest, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, coinValueFor, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock } from '../packages/planner/src/autopilot';
+import { combatLevel, deadly, loadHunters, type Hunter } from '../packages/core/src/danger';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { tradeSettlement, validOrder, windowClosures, type Order, type Receipt, type TradeReceipt } from './fleet-trade-settlement';
 import { readHeldFleetTradeClaims } from '../packages/core/src/fleet-trade-claim';
@@ -91,9 +95,10 @@ function routeBill(items: any[]): BillRow[] {
 
 // The fleet order format of scripts/fleet-order.ts, built here so the planner does not load the bot client that
 // scripts/fleet-trade.ts imports. scripts/fleet-agent.ts checks every order with validOrder before it trades.
-export function coinOrder(from: string, to: string, coins: number, server: string, now: number): Order {
+// `meet`: the tile pair of the meeting place (absent: Varrock West, the default of scripts/fleet-trade.ts).
+export function coinOrder(from: string, to: string, coins: number, server: string, now: number, meet?: Order['meet']): Order {
     const start = now + 15 * 60_000;
-    return { id: `${start}-${from}-${to}`.toLowerCase(), server, from, to, item: 'coins', count: coins, start, end: start + 40 * 60_000 };
+    return { id: `${start}-${from}-${to}`.toLowerCase(), server, from, to, item: 'coins', count: coins, start, end: start + 40 * 60_000, ...(meet ? { meet } : {}) };
 }
 // The tile pair at the Ardougne north bank, the army's home bank: scripts/coin-courier.ts meetingTiles for the bank
 // tile 2619,3332 (scripts/autopilot.test.ts checks the two agree). A kit item order meets there.
@@ -197,7 +202,7 @@ export function tradeStockReady(receipt: TradeReceipt, status: any): boolean {
 // A funded assignment becomes a coin order now and the job on a later pass, once the coins are in the account. Until
 // then the account is vacant, so the fleet agent can log it in for the trade. Every party to an open order, donor or
 // recipient, stays vacant until the order closes: the fleet agent trades only for accounts with no enabled job.
-export function fundOrders(out: readonly Assignment[], open: ReadonlySet<string>, order: (from: string, to: string, coins: number) => Order, itemOrderFor?: (send: ItemFunding) => Order) {
+export function fundOrders(out: readonly Assignment[], open: ReadonlySet<string>, order: (from: string, to: string, coins: number, meet?: Funding['meet']) => Order, itemOrderFor?: (send: ItemFunding) => Order) {
     const orders: Order[] = [], log: string[] = [];
     const assignments = out.map(x => {
         if (x.send && itemOrderFor) {
@@ -209,7 +214,7 @@ export function fundOrders(out: readonly Assignment[], open: ReadonlySet<string>
         }
         if (!x.fund) return open.has(x.account.toLowerCase()) ? { account: x.account, value: 0, resources: [], reason: 'vacant: in an open fleet order' } : x;
         const f = x.fund, busy = [f.from, f.to].some(n => open.has(n.toLowerCase()));
-        if (!busy) orders.push(order(f.from, f.to, f.coins));
+        if (!busy) orders.push(order(f.from, f.to, f.coins, f.meet));
         log.push(`AUTOPILOT fund ${f.to} ${f.coins} coins from ${f.from} for ${f.template}${busy ? ': waits for an open order' : ''}`);
         return { account: x.account, value: 0, resources: [], reason: `vacant: awaits ${f.coins} coins from ${f.from} for ${f.template}` };
     });
@@ -232,6 +237,25 @@ export function handedAccounts(out: readonly { account: string; template?: unkno
 }
 export function stopClearable(status: any, now: number): boolean {
     return !status || !!status.result || !(Number.isFinite(status.at) && now - status.at < OFFLINE_STATUS_MS);
+}
+
+// The planner's reach rule reads where an account stands. That place is known only while the account is offline: a
+// live session (stopClearable) is on its way, so its account goes to the planner with no place and keeps its job.
+export function offlinePlace(a: Acct, status: any, now: number): Acct {
+    if (stopClearable(status, now)) return a;
+    const { pos: _live, ...rest } = a;
+    return rest;
+}
+// Whether the shared walker lets an account walk over White Wolf Mountain, between Taverley and Catherby: no hunter
+// with a spawn on the mountain is deadly to it (packages/core/src/danger.ts, the walker's own rule). An account with
+// 10 Hitpoints has no route over it.
+export const MOUNTAIN = { minX: 2790, maxX: 2880, minZ: 3420, maxZ: 3530 } as const;
+export function mountainWalk(hunters: readonly Hunter[] = loadHunters()): (a: Acct) => boolean {
+    const pass = hunters.filter(h => h.spawns.some(s => s.level === 0 && s.x >= MOUNTAIN.minX && s.x <= MOUNTAIN.maxX && s.z >= MOUNTAIN.minZ && s.z <= MOUNTAIN.maxZ));
+    return a => {
+        const skills = Object.fromEntries(Object.entries(a.skills).map(([k, v]) => [k.toLowerCase(), v]));
+        return !pass.some(h => deadly(h, combatLevel(skills), skills.hitpoints ?? 10));
+    };
 }
 
 export function planningOwnership(ownerJobs: readonly any[], coordinatorJobs: readonly any[], paused: ReadonlySet<string>) {
@@ -367,7 +391,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
         const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
         return freshest(f ? readJson(join(statusDir, f), null) : null, published.find(r => String(r?.name).toLowerCase() === n.toLowerCase()));
     };
-    const accounts = plannableAccounts(swarm.jobs, side, listed.filter(n => owners.get(n.toLowerCase())?.side === side), keep).map(n => accountFrom(n, side, observed(n), id => byId.get(id)));
+    const accounts = plannableAccounts(swarm.jobs, side, listed.filter(n => owners.get(n.toLowerCase())?.side === side), keep).map(n => offlinePlace(accountFrom(n, side, observed(n), id => byId.get(id)), observed(n), Date.now()));
     // Coin donors: this side's accounts with no enabled swarm or coordinator job, no stop file and no open order, as
     // their last status reports them. The fleet agent runs a trade only for such accounts.
     const fleetDir = FLEET_DIR(), now = Date.now();
@@ -404,10 +428,10 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     const sideCoins = listed.filter(n => owners.get(n.toLowerCase())?.side === side).reduce((n, name) => n + (accountFrom(name, side, observed(name), id => byId.get(id)).items.coin ?? 0), 0);
     const coinValue = coinValueFor(sideCoins);
     if (coinValue !== 1) log.push(`AUTOPILOT coins: this side holds ${sideCoins}, so a coin counts as ${coinValue}`);
-    const planned = plan({ side, accounts, owners, coinValue, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market,
+    const planned = plan({ side, accounts, owners, coinValue, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
         kitSeq: new Map(Object.entries(state.kitSeq ?? {}).map(([a, n]) => [a.toLowerCase(), n])), noSend: failedSends(orders, receipts, now) });
     const serverOf = (to: string) => owners.get(to.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev';
-    const funding = fundOrders(planned, open, (from, to, coins) => coinOrder(from, to, coins, serverOf(to), now),
+    const funding = fundOrders(planned, open, (from, to, coins, meet) => coinOrder(from, to, coins, serverOf(to), now, meet === 'ardougne' ? ARMY_MEET : undefined),
         s => itemOrder(s.from, s.to, market[s.item]?.name ?? items.find(i => typeof i.name === 'string' && norm(i.name) === s.item && !/^cert_/.test(i.debugname ?? ''))?.name ?? s.item, s.count, serverOf(s.to), now));
     const out = funding.assignments;
     log.push(...funding.log);

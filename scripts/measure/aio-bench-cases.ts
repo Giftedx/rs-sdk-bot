@@ -543,6 +543,52 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'logistics:walk-to', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '3092', '3243', '0'], pass: ok},
 ];
 
+// Routes that do the same job, each from one start state (research/aio-bench.md, "Routes that do the same job").
+// A route that ends at a unit count shows its speed in its ticks. A route with no unit count ends at a tick cap and
+// shows its amount in `output`. A group needs seeds 1, 2 and 3. Beside the live fleet, run one case for each call:
+// `bun scripts/measure/same-job-bench.ts extra:same-cook-food 1`.
+const SAME_COOK = (bank: {x: number; z: number}): SaveConfig => ({position: {...bank, level: 0}, skills: {Cooking: 70}, bank: [{id: 335, count: 250}]});
+const SAME_JEWEL: SaveConfig = {position: {x: 3269, z: 3167, level: 0}, skills: {Crafting: 50}, bank: [{id: 1592, count: 1}, {id: 2357, count: 26}, {id: 1607, count: 26}]};
+const SAME_FISH: SaveConfig = {position: {x: 2840, z: 3432, level: 0}, skills: {Fishing: 70}, inventory: [{id: 301, count: 1}]};
+const SAME_MINE = (x: number, z: number): SaveConfig => ({position: {x, z, level: 0}, skills: {Mining: 20, Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}, inventory: [{id: 1269, count: 1}]});
+const VARROCK_EAST = {bank: {x: 3253, z: 3420, level: 0}, site: {x: 3286, z: 3368, level: 0}};
+const sameJob = (name: string, args: string[], presetConfig: SaveConfig, output: RegExp, extra: Partial<BenchCase> = {}): BenchCase =>
+  ({key: `extra:same-${name}`, script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: args, pass: ok, presetConfig, output, ...extra});
+const SAME_JOB_CASES: BenchCase[] = [
+  // Cook raw trout from the bank at Cooking 70: 250 raw trout banked, an empty pack, the start at the bank of the
+  // route. `food` (Catherby range) has no unit count and runs to a cap of 450 ticks. `stock` (Draynor fireplace) and
+  // the bank job of the `batch` worker (Catherby range) cook 84, three packs, and end.
+  sameJob('cook-food', ['cooking', 'food', '450', 'trout'], SAME_COOK({x: 2809, z: 3441}), /cookedTotal=(\d+)/),
+  sameJob('cook-stock', ['cooking', 'stock', '1500', 'COOK_ROUTE=near', 'RAW_RESERVE=50', 'MAX_COOK=84'], SAME_COOK({x: 3092, z: 3243}), / banked=(\d+)/, {pass: s => ok(s) && / processed=84 banked=84 /.test(s)}),
+  sameJob('cook-bankjob', ['bank-job', '.practice/aio-bench/jobs/{bot}-same-cook.json'], SAME_COOK({x: 2809, z: 3441}), /"completed":(\d+)/, {pass: s => ok(s) && /"completed":84/.test(s),
+    jobFiles: {'.practice/aio-bench/jobs/{bot}-same-cook.json': {family: 'cooking', recipe: 'cooking_generic_trout', target: 84, batch: 28, cap: 1500, returnTicks: 300, members: true, bank: {x: 2809, z: 3441, level: 0}, site: {x: 2816, z: 3443, level: 0}, heat: 'range'}}}),
+  // 26 sapphire rings from the Al Kharid bank at Crafting 50: a ring mould, 26 gold bars and 26 sapphires banked,
+  // 13 rings a pack. `legacy-jewelry` has no unit count and runs to a cap of 400 ticks; `jewellery-trip` makes 26 and ends.
+  sameJob('jewel-legacy', ['crafting', 'legacy-jewelry', '400', 'smelt', 'sapphire'], SAME_JEWEL, /crafted=(\d+)/, {timeoutMs: 60_000,
+    known: 'the smelt action of scripts/craft-jewelry.ts does not end: the furnace distance test at line 117 is always true, and the loop holds about 1 GB until the time limit'}),
+  sameJob('jewel-trip', ['crafting', 'jewellery-trip', '.practice/aio-bench/jobs/{bot}-same-jewel.json'], SAME_JEWEL, /"made":(\d+)/, {pass: s => ok(s) && /"made":26,"banked":26/.test(s),
+    jobFiles: {'.practice/aio-bench/jobs/{bot}-same-jewel.json': {recipe: 'sapphire_ring', target: 26, batch: 13, cap: 1500, returnTicks: 200, reserve: 0, members: false, stringAmulet: false, bank: {x: 3269, z: 3167, level: 0}, furnace: {x: 3275, z: 3186, level: 0}}}}),
+  // Lobsters at the Catherby cage spots at Fishing 70, from the beach with a lobster pot and an empty pack, no bank
+  // trip. `cage` has no unit count and runs to a cap of 150 ticks; `staged` catches 15 and ends.
+  // The harpoon pair is the same start with a harpoon: tuna and swordfish from the same spots.
+  ...([['cage', 301], ['harpoon', 311]] as const).flatMap(([method, tool]) => {
+    const start = {...SAME_FISH, inventory: [{id: tool, count: 1}]};
+    return [sameJob(`fish-${method}-gather`, ['fishing', method, method, '150'], start, /totalCaught=(\d+)/),
+      sameJob(`fish-${method}-staged`, ['fishing', 'staged', method, '15', '600'], start, /"caught":(\d+)/, {pass: s => ok(s) && /"caught":15/.test(s)})];
+  }),
+  // 26 ores from the Varrock east mine to its bank at Mining 20 with a steel pickaxe, the start at the bank. `ore`
+  // mines copper, tin and iron in turn and banks one pack of 26. `progressive` mines iron and keeps two pack slots
+  // for each ore, so it banks two packs of 13. `at-site` is the mining step of `progressive` alone: 26 iron ores from
+  // a start at the rocks, with no bank trip.
+  sameJob('mine-ore', ['mining', 'ore', '1500', '26', 'MAX_TRIPS=1'], SAME_MINE(VARROCK_EAST.bank.x, VARROCK_EAST.bank.z), / banked=(\d+)/, {pass: s => ok(s) && / banked=26 /.test(s)}),
+  sameJob('mine-progressive', ['mining', 'progressive', '.practice/aio-bench/jobs/{bot}-same-mine.json'], SAME_MINE(VARROCK_EAST.bank.x, VARROCK_EAST.bank.z), /"made":(\d+)/, {pass: s => ok(s) && /"made":26/.test(s),
+    jobFiles: {'.practice/aio-bench/jobs/{bot}-same-mine.json': {maximum: 26, batch: 26, cap: 1500, returnTicks: 200, travelTicks: 200, members: false, mode: 'bank', routes: [{profile: 'iron_rock_table', ...VARROCK_EAST, tool: 1269}]}}}),
+  sameJob('mine-at-site', ['mining', 'at-site', 'iron_rock_table', '26', '1000'], SAME_MINE(VARROCK_EAST.site.x, VARROCK_EAST.site.z), /"made":(\d+)/, {pass: s => ok(s) && /"made":26/.test(s)}),
+  // Knights of Ardougne for 600 ticks at Thieving 99 and Hitpoints 10, with 20 lobsters in the pack (preset
+  // goldfarm_knights) and a bank trip only at 50,000 coins.
+  ...(['knights', 'knights-stable'] as const).map(method => sameJob(method, ['thieving', method, 'TICKS=600', 'BANK_AT=50000'], PRESETS.goldfarm_knights!, /coinsGained=(\d+)/)),
+];
+
 // Cases outside the catalog keys: the direct worker and master-dispatcher twins of one route, and bank-job profiles.
 const EXTRA_CASES: BenchCase[] = [
   {key: 'extra:direct-quest-cook', script: 'scripts/generated/quest-cook.ts', preset: 'quest_cook', scriptArgs: [], pass: s => ok(s) && s.includes('Cook flag=complete')},
@@ -668,6 +714,7 @@ const EXTRA_CASES: BenchCase[] = [
       ...(KITS[kit]!.noRoute ? {known: KITS[kit]!.noRoute, scriptArgs: ['magearena', 'MA_MODE=leash']} : {}),
       presetConfig: {...preset, skills: before, ...(KITS[kit]!.noRoute ? {inventory: sharks} : {})}};
   }),
+  ...SAME_JOB_CASES,
 ];
 
 const KNOWN_QUEST: Readonly<Record<string, string>> = {

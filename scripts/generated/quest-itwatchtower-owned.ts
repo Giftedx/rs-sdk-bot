@@ -82,17 +82,22 @@ export function watchtowerNativeBindings(){
  return{rawRewardMagic:153000,coins:5000,questPoints:4};
 }
 export function watchtowerOwnContext(s:Session){
- const client=s.client as any,owner=client?.executeBotAction,self=client?.selfSlot,p=s.sdk.getState()?.player,life=p?.lifeId,respawns=p?.respawnCount??0;let lost=false;
- return()=>{const now=s.sdk.getState()?.player;if(!p||typeof owner!=='function'||s.client!==client||client.executeBotAction!==owner||client.selfSlot!==self||!now||now.isDead||now.lifeId!==life||(now.respawnCount??0)!==respawns)lost=true;return !lost;};
+ const client=s.client as any,self=client?.selfSlot,p=s.sdk.getState()?.player,life=p?.lifeId,respawns=p?.respawnCount??0;let lost=false,owner=client?.executeBotAction,taken=false;
+ const owns=()=>{const now=s.sdk.getState()?.player;if(!p||typeof owner!=='function'||s.client!==client||client.executeBotAction!==owner||client.selfSlot!==self||!now||now.isDead||now.lifeId!==life||(now.respawnCount??0)!==respawns)lost=true;return !lost;};
+ // The prayer guard replaces the client's executor at login, before this owner reads it, and puts back the one it
+ // replaced when runWatchtower releases it (packages/core/src/prayer-guard.ts, stop). `settled` makes the executor of
+ // that moment the owner's, one time. An executor that `owns` found different stays lost.
+ return Object.assign(owns,{settled:()=>{if(!taken){taken=true;owner=client?.executeBotAction;}}});
 }
 export async function finishWatchtowerOwned(s:Session,owns:()=>boolean,ok:boolean,detail:string,close:(sessions:Session[],ok:boolean,detail:string)=>Promise<unknown>=finish){
  if(!owns()){console.log('WATCHTOWER_SETTLEMENT_DEFERRED original client/life/input owner lost');return false;}
  await close([s],ok,detail);return true;
 }
-export async function runWatchtower(original:Session,{cap=6000,xpRate=25,stop=()=>false}:{cap?:number;xpRate?:number;stop?:()=>boolean}={}){
+export async function runWatchtower(original:Session,{cap=6000,xpRate=25,stop=()=>false,settled=()=>{}}:{cap?:number;xpRate?:number;stop?:()=>boolean;settled?:()=>void}={}){
  if(!Number.isSafeInteger(cap)||cap<=120||cap>12000||!Number.isSafeInteger(xpRate)||xpRate<1||xpRate>1000)throw Error('invalid Watchtower finite budget');
  // The prayer guard stops here: this script needs every prayer off now and owns the prayers from now on.
- await releasePrayerGuard(original);
+ // The release puts back the executor that the guard replaced, so the login owner takes it here (`settled`).
+ await releasePrayerGuard(original);settled();
  const binding=watchtowerNativeBindings();watchtowerEntry(original);
  const client=original.client as any,owner=client.executeBotAction,p=original.sdk.getState()!.player!,life=p.lifeId,respawns=p.respawnCount??0,start=original.tick(),gear=JSON.stringify(original.sdk.getEquipment());let ended=false,cleanup=false;void original.ended.then(()=>{ended=true;});
  let allowed:RegExp[]=[];const guard=()=>{const now=original.sdk.getState()?.player;if(ended||original.client!==client||client.executeBotAction!==owner||typeof owner!=='function'||!now||now.isDead||now.lifeId!==life||(now.respawnCount??0)!==respawns||original.sdk.getStateAge()>5000||original.tick()-start>=cap||(!cleanup&&(productionStopRequested(original.name,stop)||existsSync('.practice/stop-quest-itwatchtower')))||(original.sdk.getSkill('Hitpoints')?.level??0)<30||JSON.stringify(original.sdk.getEquipment())!==gear)throw Error('Watchtower original owner/life/HP/gear/stop/cap');};
@@ -160,4 +165,4 @@ export async function runWatchtower(original:Session,{cap=6000,xpRate=25,stop=()
   if(receipt){guard();if(original.sdk.getState()?.player?.combat.targetType!=='none')throw Error('Watchtower cleanup target unconfirmed');receipt.ticks=original.tick()-start;receipt.cleanupConfirmed=true;}
  }
 }
-if(import.meta.main){watchtowerNativeBindings();let stopped=false;const s=await openBot(process.argv[2]!,{onStop:async()=>{stopped=true;}}),owns=watchtowerOwnContext(s);try{const r=await runWatchtower(s,{cap:Number(process.env.WATCHTOWER_CAP??6000),xpRate:Number(process.env.WATCHTOWER_XP_RATE??25),stop:()=>stopped});console.log('WATCHTOWER_RESULT '+JSON.stringify(r));if(!await finishWatchtowerOwned(s,owns,r.ok,JSON.stringify(r)))process.exitCode=1;}catch(e){if(!await finishWatchtowerOwned(s,owns,false,String(e)))process.exitCode=1;}}
+if(import.meta.main){watchtowerNativeBindings();let stopped=false;const s=await openBot(process.argv[2]!,{onStop:async()=>{stopped=true;}}),owns=watchtowerOwnContext(s);try{const r=await runWatchtower(s,{cap:Number(process.env.WATCHTOWER_CAP??6000),xpRate:Number(process.env.WATCHTOWER_XP_RATE??25),stop:()=>stopped,settled:owns.settled});console.log('WATCHTOWER_RESULT '+JSON.stringify(r));if(!await finishWatchtowerOwned(s,owns,r.ok,JSON.stringify(r)))process.exitCode=1;}catch(e){if(!await finishWatchtowerOwned(s,owns,false,String(e)))process.exitCode=1;}}
