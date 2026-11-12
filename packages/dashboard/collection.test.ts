@@ -118,7 +118,13 @@ test('capacity uses fresh controller occupancy and queues only admission/mission
     expect(stale.fresh).toBe(false);expect(stale.active).toBeNull();expect(stale.queued).toBeNull();expect(stale.headroomGB).toBeNull();
     expect(capacityState({...sw,externalRunning:undefined,pendingReserveGB:undefined},10,2000).active).toBeNull();
     expect(capacityState(null,10,2000).headroomGB).toBeNull();
-    expect(capacityState({...sw,minFreeGB:5.5},8.5,2000).headroomGB).toBe(-0.5);
+    // The floor is the swarm's own: the larger of 4 GiB (FREE_FLOOR_GB) and the plan's minFreeGB. A plan of 4 with
+    // 6.4 GiB free has room for a start, and the page must not show it as blocked.
+    expect(capacityState({...sw,minFreeGB:5.5},8.5,2000)).toMatchObject({floorGB:5.5,headroomGB:2});
+    expect(capacityState({...sw,minFreeGB:4,pendingReserveGB:0},6.5,2000)).toMatchObject({floorGB:4,headroomGB:2.5});
+    expect(capacityState({...sw,minFreeGB:4},4.5,2000)).toMatchObject({floorGB:4,headroomGB:-0.5});
+    expect(capacityState({...sw,minFreeGB:2},10,2000).floorGB).toBe(4);
+    expect(capacityState({...sw,minFreeGB:undefined},10,2000).floorGB).toBe(4);
 });
 
 function stopProofFixture() {
