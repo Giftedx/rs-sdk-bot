@@ -68,6 +68,49 @@ test('finite recipe runner stops at target, banks products and bounds failed act
  expect((await runInventoryProduction(io,r,{maximum:3,cap:20,maxAttempts:3})).ok).toBe(false);
  expect(stored).toBe(3);
 });
+test('a best-effort order ends ok when the inputs run out after one unit or more, and fails with none made or at the cap',async()=>{
+ const r=inventoryRecipes().find(r=>r.name==='brew:unf_torstol_potion')!;let t=0,stock=0,stored=0,fault=false;
+ let items:Record<number,number>={};
+ const io:ProductionIO={tick:()=>t,stopped:()=>false,level:()=>99,read:()=>({items:{...items},xp:0}),
+  prepare:async()=>{if(stock<1)return fault?false:'spent';stock--;items=Object.fromEntries(r.inputs.map(i=>[i.id,i.units]));return true;},
+  use:async()=>{t++;items={[r.product]:1};},wait:async()=>{},
+  deposit:async()=>{stored++;items={};return 1;},close:async()=>{}};
+ stock=2;expect(await runInventoryProduction(io,r,{maximum:5,cap:20,maxAttempts:5,partial:true})).toMatchObject({ok:true,made:2,banked:2,attempts:2,failure:'-'});
+ expect(stored).toBe(2);
+ // An exact order with the same stock fails, as does a best-effort order with no input at all.
+ stock=2;expect(await runInventoryProduction(io,r,{maximum:5,cap:20,maxAttempts:5})).toMatchObject({ok:false,made:2,failure:'Error: production inputs unavailable'});
+ stock=0;expect(await runInventoryProduction(io,r,{maximum:5,cap:20,maxAttempts:5,partial:true})).toMatchObject({ok:false,made:0,failure:'Error: production inputs unavailable'});
+ // The limit still ends the run, and the tick cap still fails it.
+ stock=9;expect(await runInventoryProduction(io,r,{maximum:5,cap:20,maxAttempts:5,partial:true})).toMatchObject({ok:true,made:5,banked:5});
+ stock=9;expect(await runInventoryProduction(io,r,{maximum:5,cap:3,maxAttempts:5,partial:true})).toMatchObject({ok:false,made:3,failure:'Error: production target incomplete'});
+ // A preparation fault after two units is not "inputs spent": the bank can still hold inputs, so the order fails.
+ fault=true;stock=2;expect(await runInventoryProduction(io,r,{maximum:5,cap:20,maxAttempts:5,partial:true})).toMatchObject({ok:false,made:2,failure:'Error: production inputs unavailable'});
+});
+for(const fault of ['none','withdraw','close'] as const)test('SDK adapter, best-effort order: '+(fault==='none'?'an input that the bank no longer holds ends the order ok':'a '+fault+' fault with inputs in the bank fails the order'),async()=>{
+ const r=inventoryRecipes().find(r=>r.name==='pie-shell')!;
+ let pack:{id:number;slot:number;name:string;count:number}[]=[],generation=1,tick=0,bankOpen=false;const callbacks=new Set<()=>void>();
+ // The bank holds inputs for 2 units with no fault, and for 4 units when a fault stops the order after the first unit.
+ const stock=new Map([...r.inputs.map(i=>[i.id,i.units*(fault==='none'?2:4)] as [number,number]),...r.tools.map(id=>[id,1] as [number,number])]);
+ const bankItems=()=>[...stock].filter(([,count])=>count>0).map(([id,count],slot)=>({id,count,slot,name:'item-'+id}));
+ const add=(id:number,n:number)=>{const p=pack.find(i=>i.id===id);if(p)p.count+=n;else pack.push({id,count:n,slot:pack.length,name:'item-'+id});};
+ const effect=()=>{tick++;for(const i of r.inputs)add(i.id,-i.units);add(r.product,r.productUnits??1);};
+ const firstUnit=()=>(stock.get(r.product)??0)<1;
+ const s={name:'fixture',tick:()=>tick,ended:new Promise(()=>{}),onTick:(f:()=>void)=>{callbacks.add(f);return()=>callbacks.delete(f);},
+  sdk:{getInventory:()=>pack.filter(i=>i.count>0),getSkill:()=>({level:99}),getSkillXp:()=>100,getDialog:()=>({isOpen:false}),
+   getState:()=>({player:{lifeId:1},inventory:pack.filter(i=>i.count>0),bank:{isOpen:bankOpen,noteMode:false,items:bankItems()},interface:{isOpen:false}}),
+   sendUseItemOnItem:async()=>{effect();return{success:true};},sendUseItem:async()=>{effect();return{success:true};},sendClickComponent:async()=>{effect();return{success:true};}},
+  bankObservation:()=>({generation,items:bankItems().map(({slot,...i})=>i)}),
+  bot:{openBank:async()=>{bankOpen=true;generation++;return{success:true};},
+   closeBank:async()=>{if(fault==='close'&&!firstUnit()&&pack.some(i=>i.count>0))return;bankOpen=false;},
+   withdrawItem:async(target:{id:number},n:number)=>{if(fault==='withdraw'&&!firstUnit())return{success:false};stock.set(target.id,stock.get(target.id)!-n);add(target.id,n);generation++;return{success:true};},
+   depositItem:async(item:{id:number})=>{const p=pack.find(i=>i.id===item.id)!;stock.set(p.id,(stock.get(p.id)??0)+p.count);p.count=0;generation++;return{success:true};}},
+  direct:async()=>({success:true})};
+ // The clock runs, so a wait for a bank close that never comes ends at its tick limit.
+ const timer=setInterval(()=>{tick++;for(const f of callbacks)f();},1);
+ const result=await runInventoryBank(s as any,r,{maximum:5,cap:200,maxAttempts:5,partial:true}).finally(()=>clearInterval(timer));
+ if(fault==='none'){expect(result).toMatchObject({ok:true,made:2,banked:2,attempts:2,failure:'-'});for(const i of r.inputs)expect(stock.get(i.id)).toBe(0);}
+ else{expect(result).toMatchObject({ok:false,made:1,banked:1});expect(result.failure).toContain('inputs unavailable');for(const i of r.inputs)expect((stock.get(i.id)??0)+(pack.find(p=>p.id===i.id)?.count??0)).toBe(i.units*3);}
+});
 for(const name of ['pie-shell','glass:stafforb','leather:leather_gloves','identify:guam_leaf','darts:bronze_dart','dough:bread:jug_water','prepare:cake','pie-shell-stale-modal','bow-string:shortbow','bow-string:shortbow-mutable-reserve'])test('SDK adapter: '+name,async()=>{
  const r=inventoryRecipes().find(r=>r.name===name.replace('-stale-modal','').replace('-mutable-reserve',''))!,units=r.productUnits??1;
  let pack:{id:number;slot:number;name:string;count:number}[]=[],generation=1,tick=0,xp=100,modal=name.endsWith('-stale-modal'),bankOpen=false;

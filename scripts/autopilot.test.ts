@@ -15,6 +15,13 @@ import { benchCases } from './measure/aio-bench-cases';
 import { MEALS, presetFor } from './quest-sweep';
 import { BANK_FOOD } from './blood-chest';
 import { smeltRecipe } from './smelt-batch';
+import { GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, UNF_POTIONS, makerChains, priceTable } from '../packages/planner/src/autopilot';
+import { supplyBill } from '../packages/planner/src/supply-bill';
+import { inventoryRecipes } from './microbot-production';
+import { jewelleryOrderFromEnv, planJewelleryOrder, validateJewelleryOrder } from './microbot-jewellery-trip';
+import { smithRecipe } from './smith-batch';
+import { parseStep } from '../packages/core/src/chain-step';
+import { PROFILES, maximumUnitCost, selectItems } from './shop-buyer';
 
 const side = 'claude-cloud';
 const inputs = (a: Acct): Inputs => ({ side, accounts: [a], owners: new Map([[a.name.toLowerCase(), { side }]]), bill: [], templates: catalogue(), prices: {} });
@@ -492,6 +499,98 @@ test('the steel bar template has the value of a short line only while the bill i
     }
 });
 
+test('the makers of the unfinished potion, dust, ring and axe lines ask what their worker recipes ask, and get the price of their bill line', () => {
+    const items: { id: number; name: string; debugname?: string; cost?: number }[] = JSON.parse(readFileSync(resolve(import.meta.dir, '../knowledge/items.json'), 'utf8'));
+    const name = (id: number) => norm(items.find(i => i.id === id && !/^cert_/.test(i.debugname ?? ''))!.name);
+    const all = new Map(aioTemplates().map(t => [t.id, t])), recipes = inventoryRecipes();
+    const recipeOf = (id: string) => { const env = resolveAioStep('skiller', all.get(id)!.args!.slice(1)); return { step: env, recipe: recipes.find(r => r.name === env.args[0])! }; };
+    // The bill as scripts/autopilot.ts builds it: one line for each potion, with the item ids idsFor matches.
+    const lines = [...UNF_POTIONS.map(([herb]) => `${herb} potion (unf)`), 'unicorn horn dust', 'dragon scale dust', 'mort myre fungus'];
+    const bill = supplyBill(lines.map(item => ({ item, count: 5 })), items, []), prices = priceTable(items, bill);
+    expect(bill.every(r => r.short === 5 && r.ids.length === 1)).toBe(true);
+    for (const [herb, item, level] of UNF_POTIONS) {
+        const id = `aio-unf-${herb.replace(' ', '-')}`, t = all.get(id)!, line = `${herb} potion (unf)`, { step, recipe } = recipeOf(id);
+        expect(`${id} ${step.script} ${recipe?.name}`).toBe(`${id} scripts/microbot-production.ts brew:unf_${herb.replace(' ', '_')}_potion`);
+        expect(step.env).toEqual({ MAX_MAKE: String(MAKE_BATCH), CAP: '1500', MEMBERS: '1', ORDER_MODE: 'best-effort' });
+        expect(`${id} ${recipe.level}`).toBe(`${id} ${level}`);
+        expect(t.needs).toEqual({ skills: { Herblore: recipe.level }, items: { [item]: 1, 'vial of water': 1 } });
+        expect(recipe.inputs.map(i => name(i.id)).sort()).toEqual(Object.keys(t.needs!.items!).map(norm).sort());
+        // The product is the item of the bill line, and the line has its price.
+        expect(bill.find(r => r.item === line)!.ids).toEqual([recipe.product]);
+        expect(t.yields({ name: 'A', side, skills: {}, items: {} })).toEqual([{ item: line, perTick: 0.1 }]);
+        const price = items.find(i => i.id === recipe.product)!.cost!;
+        expect(`${id} ${price > 0} ${prices[norm(line)]}`).toBe(`${id} true ${price}`);
+        const brewer: Acct = { name: 'A', side, skills: { Herblore: level }, items: { [norm(item)]: 1, 'vial of water': 1 } };
+        expect(plan({ ...inputs(brewer), templates: aioTemplates(), bill, prices, pilots: new Set([id]), coinValue: 0 })[0]!.value).toBeCloseTo(0.1 * price * 2);
+    }
+    expect(prices[norm('mort myre fungus')]).toBe(items.find(i => i.name === 'Mort myre fungi')!.cost!);
+    for (const [id, raw, dust] of [['aio-unicorn-horn-dust', 'unicorn horn', 'unicorn horn dust'], ['aio-dragon-scale-dust', 'blue dragon scale', 'dragon scale dust']] as const) {
+        const { recipe } = recipeOf(id), t = all.get(id)!;
+        expect(`${id} ${recipe?.name}`).toBe(`${id} grind:${raw.replace(/ /g, '_')}`);
+        expect([...recipe.inputs.map(i => name(i.id)), ...recipe.tools.map(name)].sort()).toEqual(Object.keys(t.needs!.items!).map(norm).sort());
+        expect(name(recipe.product)).toBe(norm(dust));
+        expect(recipe.level).toBe(1);
+        expect(t.needs!.skills).toBeUndefined();
+    }
+    // The ring order of each template is one the trip worker accepts, and `needs` holds its whole batch.
+    for (const [gem, level] of GEM_RINGS) {
+        const id = `aio-${gem}-rings`, t = all.get(id)!, step = resolveAioStep('skiller', t.args!.slice(1));
+        expect(`${id} ${step.script} ${step.args.length}`).toBe(`${id} scripts/microbot-jewellery-trip.ts 0`);
+        const order = jewelleryOrderFromEnv(step.env), recipe = validateJewelleryOrder(order);
+        expect(order).toMatchObject({ recipe: `${gem}_ring`, target: RING_BATCH, batch: RING_BATCH, members: false, stringAmulet: false });
+        expect(`${id} ${recipe.level}`).toBe(`${id} ${level}`);
+        expect(t.needs).toEqual({ skills: { Crafting: level }, items: { ...Object.fromEntries(recipe.tools.map(tool => [name(tool), 1])), ...Object.fromEntries(recipe.inputs.map(i => [name(i.id), RING_BATCH])) } });
+        expect(name(recipe.product)).toBe(`${gem} ring`);
+        // One trip: the mould and the batch of bars and gems fit in the pack.
+        expect(1 + recipe.inputs.length * RING_BATCH <= 28).toBe(true);
+        const stock = Object.fromEntries([...recipe.tools.map(tool => [tool, 1]), ...recipe.inputs.map(i => [i.id, RING_BATCH])]);
+        expect(planJewelleryOrder(order, stock, level).stages.map(s => `${s.family} ${s.recipe} ${s.target}`)).toEqual([`jewellery ${gem}_ring ${RING_BATCH}`]);
+    }
+    const axe = all.get('aio-rune-axe')!, smith = smithRecipe(Number(resolveAioStep('skiller', axe.args!.slice(1)).env.PRODUCT_ID));
+    expect(name(smith.product)).toBe('rune axe');
+    expect(axe.needs).toEqual({ skills: { Smithing: smith.level }, items: { hammer: 1, [name(smith.bar)]: smith.bars, coins: 10 }, holdsUnder: { 'rune axe': 1 } });
+    expect(axe.repeats).toBe(false);
+});
+
+test('each step of a two-recipe maker dispatches to the bank-standing worker with a recipe it knows, at the level the template asks', () => {
+    const items: { id: number; name: string; debugname?: string }[] = JSON.parse(readFileSync(resolve(import.meta.dir, '../knowledge/items.json'), 'utf8'));
+    const name = (id: number) => norm(items.find(i => i.id === id && !/^cert_/.test(i.debugname ?? ''))!.name);
+    const cases = new Map(benchCases().map(c => [c.key, c])), recipes = inventoryRecipes();
+    expect(cases.get('skiller:crafting:inventory')?.known).toBeUndefined();
+    for (const t of makerChains()) {
+        const steps = t.args!.map(parseStep).map(s => { expect(s.script).toBe('scripts/aio.ts'); return { env: s.env, step: resolveAioStep(s.args[0]!, s.args.slice(1)) }; });
+        const used = steps.map(({ step, env }) => {
+            expect(`${t.id} ${step.script}`).toBe(`${t.id} ${t.worker}`);
+            expect(env).toMatchObject({ MEMBERS: '1', ORDER_MODE: 'best-effort' });
+            const recipe = recipes.find(r => r.name === step.args[0]);
+            expect(`${t.id} ${step.args[0]} ${!!recipe}`).toBe(`${t.id} ${step.args[0]} true`);
+            return recipe!;
+        });
+        // The second recipe takes the product of the first, and the template asks the level of both and every other input.
+        expect(used[1]!.inputs.some(i => i.id === used[0]!.product)).toBe(true);
+        expect(Object.values(t.needs!.skills!)).toEqual([Math.max(...used.map(r => r.level))]);
+        expect(Object.keys(t.needs!.skills!)).toEqual([...new Set(used.map(r => r.skill))]);
+        const asked = used.flatMap(r => [...r.inputs.map(i => i.id), ...r.tools]).filter(id => id !== used[0]!.product).map(name).sort();
+        expect(Object.keys(t.needs!.items!).map(norm).sort()).toEqual(asked);
+        expect(name(used[1]!.product)).toBe(norm(t.yields({ name: 'A', side, skills: {}, items: {} })[0]!.item));
+    }
+});
+
+test('the rune arrow run names a line of the Ranging Guild profile, and its spend covers a top-up off a full shelf', () => {
+    const t = catalogue().find(t => t.id === 'shop-rune-arrows')!;
+    expect(t.pilot).toBe(true);
+    expect(selectItems(PROFILES[t.args![0]!]!.items, t.env!.ITEMS).map(i => i.re.source)).toEqual(['^rune arrow$']);
+    // ranging.inv: 400 in stock at a base cost of 400; ranging.npc: sell multiplier 1000 and shop_delta 10.
+    const content = resolve(import.meta.dir, '../vendor/rs-sdk/server/content/scripts/minigames/game_ranging/configs');
+    expect(readFileSync(resolve(content, 'ranging.inv'), 'utf8')).toMatch(/^stock13=rune_arrow,400,130\r?$/m);
+    expect(readFileSync(resolve(content, 'ranging.npc'), 'utf8')).toMatch(/param=owned_shop,ranging_guild_bowshop\r?\nparam=shop_sell_multiplier,1000\r?\nparam=shop_buy_multiplier,500\r?\nparam=shop_delta,10\r?\n/);
+    const base = JSON.parse(readFileSync(resolve(import.meta.dir, '../knowledge/items.json'), 'utf8')).find((i: { id: number }) => i.id === 892).cost;
+    expect(base).toBe(400);
+    expect(RUNE_ARROW_SPEND).toBe(RUNE_ARROW_COST + maximumUnitCost({ baseCost: base }, { sellMultiplier: 1000 }));
+    expect(Number(t.env!.MAX_SPEND)).toBe(RUNE_ARROW_SPEND);
+    expect(t.needs!.items!.coins! >= Number(t.env!.FLOAT)).toBe(true);
+});
+
 test('the aio list of the plan admits pilot templates by id; anything else admits none', () => {
     expect([...aioPilots({ aio: ['aio-flax', 7, 'aio-ore'] })]).toEqual(['aio-flax', 'aio-ore']);
     expect(aioPilots({}).size).toBe(0);
@@ -538,7 +637,6 @@ test('the plan gives a build account the quest route of its kit; a kit with no r
 import { mountainWalk, offlinePlace, MOUNTAIN } from './autopilot';
 import { accountFrom, FERRY_FARE, KNIGHT_BANK, PLACES, TOLL, placeOf, wayCost } from '../packages/planner/src/autopilot';
 import { walkWithFerryFallback } from './walk-to';
-import { PROFILES } from './shop-buyer';
 import { loadHunters } from '../packages/core/src/danger';
 import { loadTravel } from '../packages/core/src/travel';
 
@@ -640,10 +738,10 @@ test('the fare of the reach rule is the fare the shared walker asks for', async 
     expect(fare('npc:borderguard2:lumbridge-side-west-of-the-toll-gate@3268,3226')).toBe(TOLL);
 });
 
-test('the place of each shop job is the bank of its shop profile, and the reach rule covers 53 of the 88 templates', () => {
+test('the place of each shop job is the bank of its shop profile, and the reach rule covers 54 of the 112 templates', () => {
     for (const [resource, spot] of Object.entries(PLACES)) if (resource.startsWith('shop:')) expect([resource, spot]).toEqual([resource, PROFILES[resource.slice(5)]!.bankSpot]);
     // The templates the reach rule covers, of the whole catalogue.
-    expect([catalogue().filter(t => placeOf(t)).length, catalogue().length]).toEqual([53, 88]);
+    expect([catalogue().filter(t => placeOf(t)).length, catalogue().length]).toEqual([54, 112]);
     // The knight job's first walk from far away is to the bank that the planner names for each knight spot.
     const goldfarm = readFileSync(resolve(import.meta.dir, 'goldfarm.ts'), 'utf8');
     expect(goldfarm).toContain(`walkTargetPersist(s, { x: ${KNIGHT_BANK.x}, z: ${KNIGHT_BANK.z}, level: 0 })`);

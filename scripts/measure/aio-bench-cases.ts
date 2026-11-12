@@ -675,6 +675,15 @@ const EXTRA_CASES: BenchCase[] = [
   {key: 'extra:direct-quest-cook', script: 'scripts/generated/quest-cook.ts', preset: 'quest_cook', scriptArgs: [], pass: s => ok(s) && s.includes('Cook flag=complete')},
   {key: 'extra:master-quest-cook', script: 'scripts/aio.ts', preset: 'quest_cook', scriptArgs: ['quester', 'sweep', 'cook'], pass: ok},
   {key: 'extra:bank-job-cook-lobster', script: 'scripts/aio-skiller.ts', preset: 'cook_food_catherby', scriptArgs: ['bank-job', COOK_JOB_PATH], pass: s => ok(s) && s.includes('cooking_generic_lobster')},
+  // The two order forms of the planner's maker templates (packages/planner/src/autopilot.ts). A best-effort order of
+  // the bank-standing worker: the bank holds 5 uncut dragonstones for an order of 180, so the run ends ok with 5 cut
+  // and banked. A jewellery trip with no order file: RECIPE and TARGET name the order.
+  {key: 'extra:inventory-best-effort', script: 'scripts/aio-skiller.ts', preset: 'bank_gems', scriptArgs: ['crafting', 'inventory', 'cut-dragonstone', 'MAX_MAKE=180', 'CAP=1100', 'MEMBERS=1', 'ORDER_MODE=best-effort'],
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Crafting: 55}, inventory: [{id: 1755, count: 1}], bank: [{id: 1631, count: 5}]},
+    pass: s => ok(s) && /"made":5,"banked":5\b/.test(s) && s.includes('LOGOUT logged-out')},
+  {key: 'extra:jewellery-trip-env-order', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['crafting', 'jewellery-trip', 'RECIPE=gold_ring', 'TARGET=1', 'BATCH=1', 'CAP=800'],
+    presetConfig: {position: {x: 3269, z: 3167, level: 0}, skills: {Crafting: 10}, bank: [{id: 2357, count: 1}, {id: 1592, count: 1}]},
+    pass: s => ok(s) && s.includes('LOGOUT logged-out')},
   // Jakut's dragon longswords in Zanaris (scripts/shop-buyer.ts profile jukat) from Ardougne with Lost City done: the
   // Dramen staff, the coins and the doorman's diamond from the bank, the Lumbridge swamp shed door, the shelf of 2 and one restock for the
   // third sword, the ladder out, the rune scimitar it wore wielded again and the Al Kharid bank.

@@ -2,7 +2,7 @@ import {test,expect} from 'bun:test';
 import{BotSDK}from'../vendor/rs-sdk/sdk/index';
 import{settle}from'../packages/core/src/bot';
 import{startPrayerGuard}from'../packages/core/src/prayer-guard';
-import {planJewelleryOrder,runJewelleryOrder,validateJewelleryOrder,jewelleryCleanup,type JewelleryOrder,type JewellerySnapshot} from './microbot-jewellery-trip';
+import {planJewelleryOrder,runJewelleryOrder,validateJewelleryOrder,jewelleryCleanup,jewelleryOrderFromEnv,type JewelleryOrder,type JewellerySnapshot} from './microbot-jewellery-trip';
 import{componentId}from'../packages/core/src/logout';
 import {jewelleryRecipes,jewelleryMenu,runJewellery} from './microbot-b-jewellery';
 import {inventoryRecipes} from './microbot-production';
@@ -18,6 +18,18 @@ test('finite jewellery plan cuts only the missing gems and retains each initial 
  const p=planJewelleryOrder(options(),stock(),99);expect(p.stages.map(s=>[s.family,s.recipe,s.target])).toEqual([['inventory','cut-sapphire',2],['jewellery','sapphire_ring',3]]);
  expect(p.delta).toMatchObject({2357:-3,1623:-2,1607:-1,1637:3});expect(p.product).toBe(1637);
  const ready=planJewelleryOrder(options(),{...stock(),1607:5},99);expect(ready.stages).toHaveLength(1);
+});
+
+test('an order from the environment names the recipe and the count and works between the Al Kharid bank and furnace',()=>{
+ const o=jewelleryOrderFromEnv({RECIPE:'sapphire_ring',TARGET:'13',BATCH:'13',CAP:'1500'});
+ expect(o).toEqual({recipe:'sapphire_ring',target:13,batch:13,cap:1500,returnTicks:100,reserve:0,members:false,stringAmulet:false,bank:{x:3269,z:3167,level:0},furnace:{x:3275,z:3186,level:0}});
+ expect(validateJewelleryOrder(o).name).toBe('sapphire_ring');
+ expect(jewelleryOrderFromEnv({RECIPE:'dragonstone_ring',TARGET:'2',MEMBERS:'1',RESERVE:'1',RETURN_TICKS:'120'})).toMatchObject({target:2,batch:13,cap:1500,returnTicks:120,reserve:1,members:true});
+ // No count, no recipe or an unknown recipe is no order.
+ expect(()=>validateJewelleryOrder(jewelleryOrderFromEnv({RECIPE:'sapphire_ring'}))).toThrow('invalid finite jewellery order');
+ expect(()=>validateJewelleryOrder(jewelleryOrderFromEnv({TARGET:'1'}))).toThrow('unknown native jewellery recipe');
+ expect(()=>validateJewelleryOrder(jewelleryOrderFromEnv({RECIPE:'tin_ring',TARGET:'1'}))).toThrow('unknown native jewellery recipe');
+ expect(()=>validateJewelleryOrder(jewelleryOrderFromEnv({RECIPE:'sapphire_ring',TARGET:'1',BATCH:'28'}))).toThrow('invalid finite jewellery order');
 });
 
 test('source-selected silver, gem jewellery and amulet stringing reuse existing native recipes',()=>{

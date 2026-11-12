@@ -1,6 +1,7 @@
 // Adapted donor workflow: Microbot-Hub crafting/jewelry/JewelryScript BANKING/CUTTING.
 // BSD notice: research/microbot-ports-LICENSE.txt. Reuses the native bank and production workers.
 // bun scripts/microbot-jewellery-trip.ts <account> <finite-order.json>
+// With no order file: RECIPE=<name> TARGET=<count> [BATCH CAP RETURN_TICKS RESERVE MEMBERS=1 STRING_AMULET=1].
 import {readFileSync,existsSync} from 'node:fs';
 import {openBot,settle,logoutSession} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
@@ -46,6 +47,13 @@ export function validateJewelleryOrder(o:JewelleryOrder){
  const recipe=jewelleryRecipes().find(r=>r.name===o.recipe);if(!recipe)throw Error('unknown native jewellery recipe');
  if(o.stringAmulet&&(recipe.shape!=='amulet'||!inventoryRecipes().some(r=>r.name.startsWith('string-')&&r.inputs.some(i=>i.id===recipe.product))))throw Error('native amulet stringing unavailable');
  if(recipe.members&&!o.members)throw Error('jewellery member recipe unavailable');return recipe;
+}
+// The order of a run with no order file, from the environment: RECIPE and TARGET name it. It works between the
+// Al Kharid bank and furnace (the tiles of the bench case skiller:crafting:jewellery-trip). BATCH is the pieces of one
+// trip: 13 bars and 13 gems fit beside the mould.
+export function jewelleryOrderFromEnv(env:Record<string,string|undefined>):JewelleryOrder{
+ const n=(key:string,fallback:number)=>env[key]===undefined||env[key]===''?fallback:Number(env[key]);
+ return{recipe:env.RECIPE??'',target:n('TARGET',NaN),batch:n('BATCH',13),cap:n('CAP',1500),returnTicks:n('RETURN_TICKS',100),reserve:n('RESERVE',0),members:env.MEMBERS==='1',stringAmulet:env.STRING_AMULET==='1',bank:{x:3269,z:3167,level:0},furnace:{x:3275,z:3186,level:0}};
 }
 export function planJewelleryOrder(o:JewelleryOrder,stock:Record<number,number>,level:number){
  const recipe=validateJewelleryOrder(o),inventory=inventoryRecipes();
@@ -115,7 +123,8 @@ export async function runJewelleryOrder(raw:Session,o:JewelleryOrder,requested:(
  return{ok,recipe:o.recipe,product,made,banked,preserved,uncertain,receipts,ticks:raw.tick()-start,failure:failure||'-'};
 }
 if(import.meta.main){
- const [actor,path]=process.argv.slice(2);if(!actor||!path)throw Error('account and finite jewellery order JSON required');const order=JSON.parse(readFileSync(path,'utf8')) as JewelleryOrder;validateJewelleryOrder(order);
+ const [actor,path]=process.argv.slice(2);if(!actor||!path&&!process.env.RECIPE)throw Error('account and finite jewellery order JSON, or RECIPE and TARGET, required');
+ const order=path?JSON.parse(readFileSync(path,'utf8')) as JewelleryOrder:jewelleryOrderFromEnv(process.env);validateJewelleryOrder(order);
  let stopped=false;const s=await openBot(actor,{onStop:async()=>{stopped=true;}});
  const cleanup=jewelleryCleanup(s);
  try{const result=await runJewelleryOrder(s,order,()=>stopped);if(!cleanup.owns()){result.ok=false;result.failure='jewellery original session replaced; cleanup refused';}console.log('JEWELLERY_ORDER '+JSON.stringify(result));process.exitCode=await cleanup.finish(result.ok,JSON.stringify(result))?0:1;}catch(error){await cleanup.finish(false,String(error));throw error;}
