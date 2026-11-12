@@ -1,0 +1,50 @@
+import { expect, test } from 'bun:test';
+import { heldCount, orderInWay, parseLine, planStage } from './route-stage';
+
+test('free holders give first, then the largest busy stock; the held count is not ordered', () => {
+    const holders = (item: string) => item === 'magic logs'
+        ? [{ name: 'OreElse', count: 107, busy: true }, { name: 'Bigchopper', count: 20, busy: false }] : [];
+    const plan = planStage([{ item: 'magic logs', count: 110 }], () => 3, holders, true);
+    expect(plan.held).toEqual([{ item: 'magic logs', count: 3 }]);
+    expect(plan.orders).toEqual([
+        { from: 'Bigchopper', item: 'magic logs', count: 20, busy: false },
+        { from: 'OreElse', item: 'magic logs', count: 87, busy: true },
+    ]);
+    expect(plan.short).toEqual([]);
+});
+
+test('without --allow-busy a busy holder gives nothing and the rest is short', () => {
+    const plan = planStage([{ item: 'magic logs', count: 107 }], () => 0, () => [{ name: 'OreElse', count: 107, busy: true }], false);
+    expect(plan.orders).toEqual([]);
+    expect(plan.short).toEqual([{ item: 'magic logs', count: 107, blocked: [] }]);
+});
+
+test('a holder in a job that the autopilot does not own never gives, and the short line names it', () => {
+    const holders = () => [{ name: 'Woodpecker', count: 50, busy: true, blocked: true }, { name: 'OreElse', count: 20, busy: true }];
+    const plan = planStage([{ item: 'logs', count: 30 }], () => 0, holders, true);
+    expect(plan.orders).toEqual([{ from: 'OreElse', item: 'logs', count: 20, busy: true }]);
+    expect(plan.short).toEqual([{ item: 'logs', count: 10, blocked: ['Woodpecker'] }]);
+});
+
+test('item lines and snapshot counts', () => {
+    expect(parseLine('130 oak logs')).toEqual({ count: 130, item: 'oak logs' });
+    expect(() => parseLine('oak logs')).toThrow('<count> <item>');
+    expect(() => parseLine('0 knife')).toThrow();
+    expect(heldCount({ bank: [{ name: 'Oak logs', count: 5 }], inventory: [{ name: 'Oak logs', count: 2 }, { name: 'Logs', count: 9 }] }, 'oak logs')).toBe(7);
+    expect(heldCount(undefined, 'knife')).toBe(0);
+});
+
+test('an account in a trade or with an order its agent would pick is held; a reconcile order days old is not', () => {
+    const order = (id: string, from: string, to: string, start: number, end: number) => ({ id, server: 'rs-sdk-demo.fly.dev', from, to, item: 'logs', count: 1, start, end });
+    const now = 10_000_000;
+    const orders = [order('old', 'Bigchopper', 'UnderMyKilt', 1, 2), order('open', 'OreElse', 'Balls', now - 1000, now + 600_000), order('soon', 'Shaftmaker', 'Balls', now + 60_000, now + 900_000)];
+    expect(orderInWay(orders, [], 'Bigchopper', now)).toBeUndefined();
+    expect(orderInWay(orders, [], 'Balls', now)).toBe('open');
+    // Balls is in the open trade: pickOrder skips the order that has its receipt, so the prepared receipt holds it.
+    const trading = [{ id: 'open', role: 'to', account: 'Balls', state: 'prepared' }];
+    expect(orderInWay(orders, trading, 'Balls', now)).toBe('open');
+    // Inside the agent's 10-minute lead an order that starts later still holds its giver.
+    expect(orderInWay(orders, [], 'Shaftmaker', now)).toBe('soon');
+    const settled = [{ id: 'open', role: 'to', account: 'Balls', state: 'settled' }, { id: 'soon', role: 'to', account: 'Balls', state: 'settled' }];
+    expect(orderInWay(orders, settled, 'Balls', now)).toBeUndefined();
+});
