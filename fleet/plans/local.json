@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794470358261,
+ "at": 1794470367635,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -310,15 +310,15 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "TARGET_LEVEL": "60",
+    "TARGET_LEVEL": "70",
     "GIANT_BURY": "0"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 60 on the Ardougne cows",
+   "goal": "train Strength to 70 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-strength-60",
+   "template": "army-cow-strength-70",
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
@@ -408,23 +408,21 @@
    "script": "scripts/aio.ts",
    "args": [
     "skiller",
-    "woodcutting",
-    "yews",
-    "1800",
-    "27",
-    "MAX_TRIPS=4"
+    "fletching",
+    "shafts",
+    "600",
+    "MAX_MAKE=25",
+    "LOG_RESERVE=0"
    ],
    "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "cut yew logs at Seers and bank them",
-   "role": "woodcutting",
-   "template": "aio-yews",
+   "goal": "cut 25 banked logs into arrow shafts",
+   "role": "fletching",
+   "template": "aio-shafts",
    "autopilot": "local",
-   "resources": [
-    "aio:seers-yews"
-   ]
+   "resources": []
   },
   {
    "account": "Swordinhand",
@@ -492,21 +490,25 @@
   },
   {
    "account": "YewFirst",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
-   },
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "woodcutting",
+    "yews",
+    "1800",
+    "27",
+    "MAX_TRIPS=4"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
+   "goal": "cut yew logs at Seers and bank them",
+   "role": "woodcutting",
+   "template": "aio-yews",
    "autopilot": "local",
    "resources": [
-    "knight:2671,3313"
+    "aio:seers-yews"
    ]
   },
   {
