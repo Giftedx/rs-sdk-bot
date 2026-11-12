@@ -66,6 +66,10 @@ export function classifyDoor(loc: string, category: string | undefined, t: Trigg
     if(/^herodoor_[lr]$/.test(loc)&&/%heroquest\s*>=\s*\^hero_complete/.test(body))return {kind:'quest',need:{varp:'heroquest',minimum:15},trigger:src};
     if(/^legendsguilddoor[lr]$/.test(loc)&&/%legendsquest\s*>=\s*\^legends_returned_to_radimus/.test(body))return {kind:'quest',need:{varp:'legendsquest',minimum:50},trigger:src};
     if(/^legendsguildgate[lr]$/.test(loc)&&/%legendsquest\s*>\s*\^legends_not_started/.test(body)&&/if\s*\(\$entering = false\)/.test(body))return {kind:'quest',need:{varp:'legendsquest',minimum:1,whenAxis:true},trigger:src};
+    // The goblin keep gate under the Observatory refuses only a player north of it, and only while its lock varp is 0
+    // (quest_itgronigen.rs2, _observatory_dungeon_gate). The gate is a wall on the north edge of its tile (shape 0,
+    // angle 1), so the refused player is not on the gate's own tile: whenAxis is false. The way out to the north stays open.
+    if(/^keepgate_closed(?:_left)?$/.test(loc)&&/%itkeepgatelock\s*=\s*0\s*&\s*coordz\(coord\)\s*>\s*coordz\(loc_coord\)/.test(body))return {kind:'quest',need:{varp:'itkeepgatelock',minimum:1,whenAxis:false},trigger:src};
 
     if (useTrig && /last_useitem|inv_total/.test(useTrig.body)) {
         const item = [...useTrig.body.matchAll(/case\s+(\w+)\s*:/g)].map(m => m[1]!).find(c => c !== 'default');
