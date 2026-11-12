@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794504580001-oreelse-balls-magiclogs",
+ "account": "OreElse",
+ "partner": "Balls",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "magic logs",
+ "requested": 107,
+ "claim": "703e2bc6-487d-4b89-a144-ac586b5685f3",
+ "count": 0,
+ "ok": false,
+ "at": 1794504589867,
+ "detail": "trade claimed"
+}
