@@ -1,29 +1,7 @@
 {
  "side": "local",
- "at": 1794447042698,
+ "at": 1794447641220,
  "jobs": [
-  {
-   "account": "Abracadickra",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "foraging",
-    "flax",
-    "1800",
-    "28"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "pick flax at Seers and bank it",
-   "role": "crafting",
-   "template": "aio-flax",
-   "autopilot": "local",
-   "resources": [
-    "aio:seers-flax"
-   ]
-  },
   {
    "account": "Masterbaiter",
    "script": "scripts/gather-combat.ts",
@@ -475,46 +453,44 @@
    "role": "thieving"
   },
   {
-   "account": "NabTheKnob",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
+   "account": "Bigchopper",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/walk-to.ts 2809 3441",
+    "scripts/firemaking-order.ts TARGET_LEVEL=15 LOG=normal MAX_LOGS=13 CAP=4000 TOOL_BUDGET=50",
+    "scripts/firemaking-order.ts TARGET_LEVEL=99 LOG=oak MAX_LOGS=9616 CAP=400000 TOOL_BUDGET=50"
+   ],
    "env": {
-    "ITEM_ID": "385",
-    "QUANTITY": "30",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "1000",
-    "CASH_RESERVE": "100000",
-    "ORDER_KEY": "nabtheknob-sharks30-blood-r1",
-    "FILL_WAIT_TICKS": "80",
-    "ORDER_MS": "600000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-625860c9-a20d-442e-8999-06e3626aeb1c"
+    "ROUNDS": "1"
    },
    "enabled": false,
+   "standing": true,
    "repeat": false,
-   "goal": "run-ge-nabtheknob-sharks30-blood-r1 [task-625860c9-a20d-442e-8999-06e3626aeb1c]",
-   "role": "helper"
+   "goal": "Firemaking 15 then 99 and rank XP from 9616 banked oak logs at Catherby",
+   "role": "firemaking",
+   "autopilot": "local"
   },
   {
-   "account": "Bigchopper",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "563",
-    "QUANTITY": "3",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "1140",
-    "CASH_RESERVE": "120000",
-    "ORDER_KEY": "bigchopper-law3-scorpion-r3",
-    "FILL_WAIT_TICKS": "80",
-    "ORDER_MS": "600000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-3be85128-d7d1-4e81-b9bf-08f9139dc451"
-   },
+   "account": "Abracadickra",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "foraging",
+    "flax",
+    "1800",
+    "28"
+   ],
+   "env": {},
    "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-bigchopper-law3-scorpion-r3 [task-3be85128-d7d1-4e81-b9bf-08f9139dc451]",
-   "role": "firemaking"
+   "standing": true,
+   "repeat": true,
+   "goal": "pick flax at Seers and bank it",
+   "role": "crafting",
+   "template": "aio-flax",
+   "autopilot": "local",
+   "resources": [
+    "aio:seers-flax"
+   ]
   }
  ]
 }
