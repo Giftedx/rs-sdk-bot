@@ -224,6 +224,13 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('woodcutting', 'edgeville', 'fresh_lumbridge', ['STALL_TICKS=0'], {presetConfig: {position: {x: 3094, z: 3491, level: 0}, skills: {Attack: 67, Strength: 25, Defence: 24, Hitpoints: 52, Woodcutting: 15}, inventory: Array.from({length: 8}, () => ({id: 385, count: 1})), bank: [{id: 1351, count: 1}, {id: 1521, count: 5}, {id: 995, count: 216372}]}}),
   // packages/practice/src/firemaking-order-proof.ts
   skiller('firemaking', 'order', 'fresh_lumbridge', ['TARGET_LEVEL=15', 'LOG=normal', 'TOOL_BUDGET=0', 'CASH_RESERVE=0', 'CAP=2000', 'MAX_LOGS=2'], {presetConfig: firemakingFixture('entry')}),
+  // The record route's fires with helpers that drop the logs (scripts/firemaking-line.ts): two helpers at the Draynor
+  // bank drop two batches on the burn line, and the runner logs in when the first batch shows. Firemaking 1 to 62.
+  {key: 'extra:firemaking-line', script: 'scripts/firemaking-line.ts', preset: 'fresh_lumbridge', scriptArgs: ['{bot:b}', '{bot:c}', 'TARGET_LEVEL=62', 'CAP=1500'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, varps: {173: 1}, inventory: [{id: 590, count: 1}]},
+    companions: [
+      {suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3092, z: 3243, level: 0}, varps: {173: 1}, bank: [{id: 1511, count: 2}, {id: 1521, count: 30}]}},
+      {suffix: 'c', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3093, z: 3244, level: 0}, varps: {173: 1}, bank: [{id: 1521, count: 30}]}}]},
   // The mock Haggis run's fires (PROGRESSIVE=stock, CLEAR_PACK=1) at the two tier steps of its stock: logs to oak
   // with the 17-slot starter kit in the pack, and oak to magic at 74 to 76. From the Draynor bank.
   skiller('firemaking', 'order', 'fresh_lumbridge', ['TARGET_LEVEL=20', 'PROGRESSIVE=stock', 'CLEAR_PACK=1', 'TOOL_BUDGET=0', 'CAP=1500'], {key: 'extra:firemaking-stock-low',

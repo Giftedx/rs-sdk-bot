@@ -21,6 +21,7 @@ export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
  'scripts/ci-gate.ts': 'developer tool: runs the CI checks on this PC',
  'scripts/claim-account.ts': 'fleet control: registers a new account name',
  'scripts/cloud-recover.ts': 'fleet control: recovers held live sessions',
+ 'scripts/firemaking-line.ts': 'multi-account worker: one runner and its log-dropping helpers, named on the command line; bench case extra:firemaking-line',
  'scripts/courier-route-evidence.ts': 'evidence check for one recorded courier return; it starts no game work',
  'scripts/fleet-agent.ts': 'fleet control: syncs fleet data and runs this side of each order',
  'scripts/fleet-inspect.ts': 'fleet tool: refreshes the saved state of one account',

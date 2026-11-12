@@ -48,3 +48,10 @@ test('an account in a trade or with an order its agent would pick is held; a rec
     const settled = [{ id: 'open', role: 'to', account: 'Balls', state: 'settled' }, { id: 'soon', role: 'to', account: 'Balls', state: 'settled' }];
     expect(orderInWay(orders, settled, 'Balls', now)).toBeUndefined();
 });
+
+test('a held trade claim of another order holds the account', () => {
+    const claims = [{ account: 'mmsmk1232', orderId: '1794503734080-nabtheknob-mmsmk1232-bones' }];
+    expect(orderInWay([], [], 'mmsmk1232', 1, claims)).toBe('1794503734080-nabtheknob-mmsmk1232-bones');
+    expect(orderInWay([], [], 'MMSMK1232', 1, claims)).toBe('1794503734080-nabtheknob-mmsmk1232-bones');
+    expect(orderInWay([], [], 'Shaftmaker', 1, claims)).toBeUndefined();
+});
