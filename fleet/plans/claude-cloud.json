@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794459589953,
+ "at": 1794459770287,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -208,18 +208,18 @@
    "args": [
     "quester",
     "chain",
-    "drunkmonk,murder,zanaris"
+    "merlin,grail"
    ],
    "env": {},
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
+   "goal": "complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience",
    "role": "quest",
-   "template": "army-quest-lostcity",
+   "template": "army-quest-holygrail",
    "autopilot": "claude-cloud",
    "resources": [
-    "quest:lostcity"
+    "quest:camelot"
    ]
   },
   {
