@@ -1,25 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794500728035,
+ "at": 1794501127407,
  "jobs": [
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit24-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
   {
    "account": "Quickhandjob",
    "script": "scripts/goldfarm.ts",
@@ -95,6 +77,69 @@
    "autopilot": "claude-cloud",
    "resources": [
     "knight:2669,3298"
+   ]
+  },
+  {
+   "account": "Deeppockets",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts lowe 2500 ITEMS=iron.arrow|bronze.arrow STOCK_TARGET=1200 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=29000 COIN_RESERVE=500 MAX_SPEND=28000",
+    "scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=60 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=3000 COIN_RESERVE=500 MAX_SPEND=2000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy iron and bronze arrows at Lowe's and teleport runes at Aubury's in Varrock for the black dragon hunt",
+   "role": "supply",
+   "template": "army-hunt-supply",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:lowe",
+    "shop:aubury"
+   ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "crafting",
+    "bowstrings",
+    "2500",
+    "MAX_MAKE=168",
+    "RAW_RESERVE=0",
+    "MAX_TRIPS=8"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "spin flax at Seers to the Crafting a black dragonhide body asks",
+   "role": "crafting",
+   "template": "army-leather-spin",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2653,3300"
    ]
   },
   {
@@ -215,32 +260,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "Deeppockets",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-2933498f-682d-4c65-a862-faacf913e321"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "claude-cloud-recover-deeppockets-20261112t161936z [task-2933498f-682d-4c65-a862-faacf913e321]",
-   "role": "supply"
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-87508214-3c61-4696-8dfa-f1f0e642d3f7"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "claude-cloud-recover-fatstack-20261112t161936z [task-87508214-3c61-4696-8dfa-f1f0e642d3f7]",
-   "role": "crafting"
   }
  ]
 }
