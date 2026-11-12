@@ -75,12 +75,13 @@ test('a different live process at the gate stops a take, and the ticket of an en
         setTime(file, now - LEASE_STALE_MS);
         expect(takeLease(file, 12, { now, alive: () => true })).toBe(true);
         // No ticket, temporary file or moved file stays.
-        expect(readdirSync(dir)).toEqual(['x.lock', 'x.lock.gate']);
+        // readdirSync gives no fixed order on Linux, so each list is sorted.
+        expect(readdirSync(dir).sort()).toEqual(['x.lock', 'x.lock.gate']);
         expect(readdirSync(gate)).toEqual([]);
         // A new checkout has no folder for the lease: the take makes it.
         const fresh = join(dir, 'new', '.practice', 'autopilot.lock');
         expect(takeLease(fresh, 13, { now, alive: () => true })).toBe(true);
-        expect(readdirSync(join(dir, 'new', '.practice'))).toEqual(['autopilot.lock', 'autopilot.lock.gate']);
+        expect(readdirSync(join(dir, 'new', '.practice')).sort()).toEqual(['autopilot.lock', 'autopilot.lock.gate']);
     } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
@@ -131,7 +132,7 @@ test('of eight processes that try in the same millisecond, one takes the lease',
             expect(said.filter(s => s === 'TOOK').length, `${start}: ${said.join(',')}`).toBe(1);
             expect(said.filter(s => s === 'REFUSED').length, `${start}: ${said.join(',')}`).toBe(7);
             expect(readFileSync(file, 'utf8'), start).toBe(String(children[said.indexOf('TOOK')]!.pid));
-            expect(readdirSync(dir), start).toEqual(['x.lock', 'x.lock.gate']);
+            expect(readdirSync(dir).sort(), start).toEqual(['x.lock', 'x.lock.gate']);
             expect(readdirSync(join(dir, 'x.lock.gate')), start).toEqual([]);
         } finally { rmSync(dir, { recursive: true, force: true }); }
     }
