@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794512857446-balls-weequickie",
  "account": "Balls",
  "partner": "WeeQuickie",
@@ -10,8 +10,22 @@
  "item": "oak logs",
  "requested": 130,
  "claim": "8c8c9c3e-bf8f-49a9-9262-6024ce3799f0",
- "count": 0,
- "ok": false,
- "at": 1794512985604,
- "detail": "trade claimed"
+ "count": 130,
+ "ok": true,
+ "at": 1794513008874,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 130,
+  "after": 0
+ },
+ "bank": {
+  "count": 130,
+  "at": 1794512997347
+ },
+ "logout": {
+  "attemptId": "1794512985614-0000032416-0000000001",
+  "at": 1794513008787,
+  "sha256": "a407a194a3817453b5e89d8670ab0fa69d57c3b9e92791fefbbc179f96229651"
+ },
+ "screen": true
 }
