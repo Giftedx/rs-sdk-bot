@@ -39,7 +39,11 @@ test('the metadata names the fleet agent and the autopilot as never, down, runni
   const handler=createOperatorControl({root:f.root,alive:pid=>pid===42});
   const states=async()=>((await(await handler(new Request('http://127.0.0.1:3100/api/control'),'127.0.0.1')).json()) as any).controllers.map((c:any)=>c.name+' '+c.state);
   expect(await states()).toEqual(['fleet-agent never','autopilot never']);
+  // The traces of a one-shot pass are not a daemon start. A launch record is.
   writeFileSync(join(f.root,'.practice/fleet-agent.log'),'ran');mkdirSync(join(f.root,'.practice/autopilot'));
+  expect(await states()).toEqual(['fleet-agent never','autopilot never']);
+  writeFileSync(join(f.root,'.practice/fleet-agent.launch.json'),JSON.stringify({args:[],env:{DEMO_OK:'1'}}));
+  writeFileSync(join(f.root,'.practice/autopilot/launch.json'),JSON.stringify({args:[join(f.root,'swarm.json')],env:{}}));
   expect(await states()).toEqual(['fleet-agent down','autopilot down']);
   writeFileSync(join(f.root,'.practice/fleet-agent.lock'),'42');writeFileSync(join(f.root,'.practice/stop-autopilot'),'');
   expect(await states()).toEqual(['fleet-agent running','autopilot stopped']);

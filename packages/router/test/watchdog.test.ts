@@ -1,10 +1,17 @@
 import { test, expect } from 'bun:test';
 import { join } from 'node:path';
-import { publisherRepo, stalled, STALL_MS } from '../src/watchdog';
+import { publisherRepo, restartCommand, stalled, STALL_MS } from '../src/watchdog';
 import { launcherScript } from '../src/watchdog-install';
 import { improved, progressOf } from '../src/coverage';
 
-const p = (skillLevels: number, questsLive = 3) => ({ skillLevels, skills99: 7, questsLive, questTotal: 68, itemsHeld: 94, actionsNamed: 2325, done: false, remaining: [] });
+test('a restart uses the recorded plan of the autopilot and starts nothing without that file', () => {
+    const plan = 'C:/fleet/.practice/cloud-handoff/swarm.json', there = (p: string) => p === plan;
+    expect(restartCommand('fleet-agent', { args: [], env: { DEMO_OK: '1' } }, () => false)).toEqual(['scripts/fleet-agent.ts', '--daemon']);
+    expect(restartCommand('autopilot', { args: [plan], env: {} }, there)).toEqual(['scripts/autopilot.ts', plan, '--daemon']);
+    for (const args of [[], ['C:/fleet/gone.json'], ['--dry'], [plan, '--dry'], [plan, plan]]) expect(restartCommand('autopilot', { args, env: {} }, there), args.join(' ')).toMatch(/^its recorded plan is not a file/);
+});
+
+const p =(skillLevels: number, questsLive = 3) => ({ skillLevels, skills99: 7, questsLive, questTotal: 68, itemsHeld: 94, actionsNamed: 2325, done: false, remaining: [] });
 
 test('a stall needs STALL_MS without any progress number rising', () => {
     const h = [{ at: 0, progress: p(100) }, { at: 1000, progress: p(101) }, { at: STALL_MS, progress: p(101) }];

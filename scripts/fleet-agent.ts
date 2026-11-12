@@ -16,7 +16,7 @@ import {capabilityRevision} from '../packages/core/src/worker-release';
 import { clearSwarmStop, swarmWroteStop } from './swarm';
 import { stopClearable } from './autopilot';
 import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
-import { leaseHolder, releaseLease, renewLease, takeLease } from '../packages/core/src/controllers';
+import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../packages/core/src/controllers';
 
 const root = resolve(import.meta.dir, '..'), lock = join(root, '.practice', 'fleet-agent.lock');
 const CYCLE = Number(process.env.CYCLE ?? 10) * 60_000, LEAD = Number(process.env.LEAD ?? 15) * 60_000;
@@ -102,6 +102,9 @@ if (import.meta.main) {
     process.on('exit', release); process.on('SIGINT', () => process.exit(0)); process.on('SIGTERM', () => process.exit(0));
     setInterval(() => { renewLease(lock); }, 60_000).unref();
     const running = new Set<string>(), once = process.argv.includes('--once');
+    // The record of a daemon start: the watchdog starts an agent again only from it, with these settings. A --once
+    // pass writes none.
+    if (!once) saveLaunch(join(root, controllerNamed('fleet-agent').launch), []);
     const sync = () => {
         const p = Bun.spawnSync(['bun', 'scripts/fleet-sync.ts'], { cwd: root, windowsHide: true, env: process.env, stdout: 'pipe', stderr: 'pipe' });
         console.log(`FLEET_AGENT sync ${syncResult(`${p.stdout.toString()}${p.stderr.toString()}`, p.exitCode)} at ${new Date().toISOString()}`);

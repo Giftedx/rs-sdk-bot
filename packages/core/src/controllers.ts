@@ -6,6 +6,10 @@
 // The lease is held while that process is alive and the file is newer than LEASE_STALE_MS. Windows gives the id of
 // an ended process to a new one, so a live id alone proves nothing. A holder that finds another id in its lease has
 // lost it and must exit: two controllers of one kind must never run.
+//
+// A launch record is a file that a daemon writes when it starts: its arguments and the LAUNCH_ENV settings of its
+// environment. The watchdog starts a controller only from its record, with the same plan, side and login permission.
+// A one-shot pass writes no record, so it never becomes a daemon.
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
@@ -48,38 +52,51 @@ export function releaseLease(file: string, pid = process.pid): void {
     try { if (readLease(file)?.pid === pid) rmSync(file); } catch { /* gone */ }
 }
 
-// The arguments that a controller runs with, written by the controller. A restart by the watchdog uses the same ones.
-export function saveLaunch(file: string, args: readonly string[]): void {
+// The settings of a daemon's environment that a restart must keep: the fleet side, the plan and fleet folders, the
+// agent's pass times, and the permission to log in on the live server (packages/core/src/bot.ts). No secret is here,
+// and no other variable is recorded.
+export const LAUNCH_ENV = ['FLEET_SIDE', 'SWARM_PLAN', 'FLEET_DIR', 'CYCLE', 'LEAD', 'DEMO_OK'] as const;
+export type Launch = { args: string[]; env: Record<string, string> };
+const plain = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && !v.includes('\0');
+
+export function saveLaunch(file: string, args: readonly string[], env: Record<string, string | undefined> = process.env): void {
+    const kept: Record<string, string> = {};
+    for (const key of LAUNCH_ENV) if (plain(env[key])) kept[key] = env[key]!;
     mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, JSON.stringify({ args }));
+    writeFileSync(file, JSON.stringify({ args, env: kept }));
 }
-export function readLaunch(file: string): string[] | null {
+// Null when the record is absent or does not have this exact form. A setting outside LAUNCH_ENV makes it invalid.
+export function readLaunch(file: string): Launch | null {
     try {
-        const args = JSON.parse(readFileSync(file, 'utf8'))?.args;
-        return Array.isArray(args) && args.every(a => typeof a === 'string' && a.length > 0 && !a.includes('\0')) ? args : null;
+        const raw = JSON.parse(readFileSync(file, 'utf8'));
+        if (!raw || !Array.isArray(raw.args) || !raw.args.every(plain) || !raw.env || typeof raw.env !== 'object' || Array.isArray(raw.env)) return null;
+        const env = Object.entries(raw.env);
+        if (!env.every(([key, value]) => (LAUNCH_ENV as readonly string[]).includes(key) && plain(value))) return null;
+        return { args: raw.args, env: Object.fromEntries(env) as Record<string, string> };
     } catch { return null; }
 }
 
 export type Controller = {
     name: 'fleet-agent' | 'autopilot'; label: string;
     lease: string;   // the lease file, under the repository root
-    ran: string;     // a path that exists only where this controller ran before; the watchdog starts no other
+    launch: string;  // the launch record, under the repository root
     stop: string;    // the stop file that keeps the watchdog from starting it
-    launch?: string; // the record of its arguments (saveLaunch), for a controller that takes some
 };
 export const CONTROLLERS: readonly Controller[] = [
-    { name: 'fleet-agent', label: 'Fleet agent', lease: '.practice/fleet-agent.lock', ran: '.practice/fleet-agent.log', stop: '.practice/stop-fleet-agent' },
-    { name: 'autopilot', label: 'Autopilot', lease: '.practice/autopilot.lock', ran: '.practice/autopilot', stop: '.practice/stop-autopilot', launch: '.practice/autopilot/launch.json' },
+    { name: 'fleet-agent', label: 'Fleet agent', lease: '.practice/fleet-agent.lock', launch: '.practice/fleet-agent.launch.json', stop: '.practice/stop-fleet-agent' },
+    { name: 'autopilot', label: 'Autopilot', lease: '.practice/autopilot.lock', launch: '.practice/autopilot/launch.json', stop: '.practice/stop-autopilot' },
 ];
+export const controllerNamed = (name: Controller['name']): Controller => CONTROLLERS.find(c => c.name === name)!;
 
-// running: a live process holds the lease. stopped: the owner's stop file is there. never: it did not run on this
-// machine. down: it ran before, no stop file is there, and no live process holds the lease.
+// running: a live process holds the lease. stopped: the owner's stop file is there. never: no daemon of this kind
+// was started on this machine (no valid launch record). down: a record is there, no stop file is there, and no live
+// process holds the lease. seenAt is the time of the last heartbeat, or of the last start.
 export type ControllerState = { name: Controller['name']; label: string; state: 'running' | 'stopped' | 'never' | 'down'; pid: number | null; seenAt: number | null };
 export function controllerState(root: string, c: Controller, deps: LeaseDeps = {}): ControllerState {
-    const lease = join(root, c.lease), pid = leaseHolder(lease, deps);
+    const lease = join(root, c.lease), pid = leaseHolder(lease, deps), started = readLaunch(join(root, c.launch)) !== null;
     let seenAt = readLease(lease)?.at ?? null;
-    if (seenAt === null) try { seenAt = statSync(join(root, c.ran)).mtimeMs; } catch { /* did not run here */ }
-    const state = pid !== null ? 'running' : existsSync(join(root, c.stop)) ? 'stopped' : existsSync(join(root, c.ran)) ? 'down' : 'never';
+    if (seenAt === null && started) try { seenAt = statSync(join(root, c.launch)).mtimeMs; } catch { /* removed in this instant */ }
+    const state = pid !== null ? 'running' : existsSync(join(root, c.stop)) ? 'stopped' : started ? 'down' : 'never';
     return { name: c.name, label: c.label, state, pid, seenAt };
 }
 export const controllerStates = (root: string, deps: LeaseDeps = {}): ControllerState[] => CONTROLLERS.map(c => controllerState(root, c, deps));

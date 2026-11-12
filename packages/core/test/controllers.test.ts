@@ -2,7 +2,7 @@ import { test, expect } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { CONTROLLERS, LEASE_STALE_MS, controllerState, controllerStates, leaseHolder, readLaunch, readLease, releaseLease, renewLease, saveLaunch, takeLease } from '../src/controllers';
+import { CONTROLLERS, LAUNCH_ENV, LEASE_STALE_MS, controllerNamed, controllerState, controllerStates, leaseHolder, readLaunch, readLease, releaseLease, renewLease, saveLaunch, takeLease } from '../src/controllers';
 
 const now = 1_800_000_000_000;
 const setTime = (file: string, at: number) => utimesSync(file, at / 1000, at / 1000);
@@ -56,12 +56,19 @@ test('the launch record gives back the arguments, and a damaged record gives nul
     const dir = tmp(), file = join(dir, 'autopilot', 'launch.json');
     try {
         expect(readLaunch(file)).toBeNull();
-        saveLaunch(file, ['C:/fleet/.practice/cloud-handoff/swarm.json']);
-        expect(readLaunch(file)).toEqual(['C:/fleet/.practice/cloud-handoff/swarm.json']);
-        saveLaunch(file, []);
-        expect(readLaunch(file)).toEqual([]);
-        for (const bad of ['', '{', 'null', '{"args":"swarm.json"}', '{"args":[1]}', '{"args":[""]}', '{"args":["a\\u0000b"]}']) { writeFileSync(file, bad); expect(readLaunch(file)).toBeNull(); }
-        expect(CONTROLLERS.find(c => c.name === 'autopilot')!.launch).toBe('.practice/autopilot/launch.json');
+        // Only the LAUNCH_ENV settings are kept. A secret, an empty value and each other variable stay out of the file.
+        saveLaunch(file, ['C:/fleet/.practice/cloud-handoff/swarm.json'], { FLEET_SIDE: 'cloud', SWARM_PLAN: 'C:/fleet/plan.json', DEMO_OK: '1', CYCLE: '', FLEET_SEED: 'secret', PATH: 'C:/bin', LEAD: undefined });
+        expect(readLaunch(file)).toEqual({ args: ['C:/fleet/.practice/cloud-handoff/swarm.json'], env: { FLEET_SIDE: 'cloud', SWARM_PLAN: 'C:/fleet/plan.json', DEMO_OK: '1' } });
+        expect(readFileSync(file, 'utf8')).not.toContain('secret');
+        expect([...LAUNCH_ENV]).toEqual(['FLEET_SIDE', 'SWARM_PLAN', 'FLEET_DIR', 'CYCLE', 'LEAD', 'DEMO_OK']);
+        saveLaunch(file, [], {});
+        expect(readLaunch(file)).toEqual({ args: [], env: {} });
+        for (const bad of ['', '{', 'null', '[]', '{"args":[]}', '{"args":"swarm.json","env":{}}', '{"args":[1],"env":{}}', '{"args":[""],"env":{}}', '{"args":["a\\u0000b"],"env":{}}',
+            '{"args":[],"env":[]}', '{"args":[],"env":{"PATH":"x"}}', '{"args":[],"env":{"FLEET_SEED":"x"}}', '{"args":[],"env":{"FLEET_SIDE":7}}', '{"args":[],"env":{"FLEET_SIDE":""}}']) {
+            writeFileSync(file, bad); expect(readLaunch(file), bad).toBeNull();
+        }
+        expect(controllerNamed('autopilot').launch).toBe('.practice/autopilot/launch.json');
+        expect(controllerNamed('fleet-agent').launch).toBe('.practice/fleet-agent.launch.json');
     } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
@@ -71,8 +78,17 @@ test('a controller is running, stopped, down or never', () => {
         mkdirSync(join(root, '.practice'));
         expect(controllerStates(root, { now }).map(s => [s.name, s.state, s.pid, s.seenAt])).toEqual([['fleet-agent', 'never', null, null], ['autopilot', 'never', null, null]]);
 
-        // It ran before and nothing holds the lease: down. The time of its last trace is the time it was last seen.
-        writeFileSync(join(root, agent.ran), 'log'); setTime(join(root, agent.ran), now - 9 * 3600_000);
+        // The traces of a one-shot pass are not a daemon start: a log, a state folder, and a lease with no launch record.
+        writeFileSync(join(root, '.practice/fleet-agent.log'), 'log'); mkdirSync(join(root, '.practice/autopilot'));
+        writeFileSync(join(root, pilot.lease), '55'); setTime(join(root, pilot.lease), now - 3 * 3600_000);
+        expect(controllerStates(root, { now, alive: () => false }).map(s => s.state)).toEqual(['never', 'never']);
+        rmSync(join(root, pilot.lease));
+        // A record that does not have the exact form is not a daemon start.
+        writeFileSync(join(root, agent.launch), '{"args":[]}');
+        expect(controllerState(root, agent, { now }).state).toBe('never');
+
+        // A daemon started here and nothing holds the lease: down. With no lease file, the start is the time last seen.
+        saveLaunch(join(root, agent.launch), [], { DEMO_OK: '1' }); setTime(join(root, agent.launch), now - 9 * 3600_000);
         expect(controllerState(root, agent, { now })).toEqual({ name: 'fleet-agent', label: 'Fleet agent', state: 'down', pid: null, seenAt: now - 9 * 3600_000 });
 
         // A lease of an ended process is still down. A live holder with a fresh lease is running.
@@ -85,7 +101,7 @@ test('a controller is running, stopped, down or never', () => {
         expect(controllerState(root, agent, { now, alive: () => false }).state).toBe('stopped');
         expect(controllerState(root, agent, { now, alive: () => true }).state).toBe('running');
 
-        mkdirSync(join(root, pilot.ran));
+        saveLaunch(join(root, pilot.launch), [join(root, 'swarm.json')], {});
         expect(controllerState(root, pilot, { now }).state).toBe('down');
     } finally { rmSync(root, { recursive: true, force: true }); }
 });
