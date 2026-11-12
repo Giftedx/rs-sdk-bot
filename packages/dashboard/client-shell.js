@@ -93,10 +93,13 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // death in the account's tick records, which the PC's dashboard reads on request (/api/death-recap). The death tile
   // shows on the minimap as a red mark.
   // A recap belongs to one reported death (deathAt) and is read again when the account reports a newer death, or when
-  // it still waits for the respawn, found no death or failed, and is older than the server's 30 s cache: a running
-  // record can hold the death only some seconds after the status reports it.
+  // it is older than the server's 30 s cache and still waits for the respawn, found no death, failed, or is of an
+  // earlier death: a running record can hold the death only some seconds after the status reports it, and until then
+  // the newest record with a death is an older one. A recap is of the reported death when its death time is within
+  // 10 minutes before the report (the RESULT line comes when the run ends).
   let recap={name:null,state:'none',data:null,error:'',deathAt:null,at:0};
-  const recapStale=b=>!!b?.death&&!b.practice&&(recap.name!==b.name||recap.deathAt!==b.death.at||(recap.state==='ok'&&recap.data?.kept==null||recap.state==='none'||recap.state==='error')&&Date.now()-recap.at>30_000);
+  const recapOfDeath=()=>Number.isFinite(recap.data?.at)&&Number.isFinite(recap.deathAt)&&recap.data.at<=recap.deathAt+60_000&&recap.deathAt-recap.data.at<=10*60_000;
+  const recapStale=b=>!!b?.death&&!b.practice&&(recap.name!==b.name||recap.deathAt!==b.death.at||(recap.state==='ok'&&(recap.data?.kept==null||!recapOfDeath())||recap.state==='none'||recap.state==='error')&&Date.now()-recap.at>30_000);
   function loadRecap(name){
     const deathAt=S?.bots?.find(x=>x.name===name)?.death?.at??null,at=Date.now();
     if(!window.atlasOperator()){recap={name,state:'off',data:null,error:'',deathAt,at};paintRecap();return;}
