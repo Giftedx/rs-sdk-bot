@@ -592,7 +592,7 @@ const EXTRA_CASES: BenchCase[] = [
     const sharks = (preset.inventory ?? []).filter(i => i.id === 385), rest = (preset.inventory ?? []).filter(i => i.id !== 385);
     const inventory = [...rest, ...(quest === 'upass' ? [...sharks.slice(2), {id: 2434, count: 1}, {id: 2434, count: 1}] : sharks), {id: 861, count: 1}, {id: 892, count: RANGED_PACK}];
     return {key: `extra:${quest}-pure-hally`, script: 'scripts/aio-quester.ts', preset: `quest_${quest}`, scriptArgs: [quest], pass: questKeepsBuild('pure-hally', before), timeoutMs: 900_000,
-      presetConfig: {...preset, equipment: [], inventory, skills: {...preset.skills, ...before}}};
+      presetConfig: {...preset, equipment: [], inventory, skills: {...preset.skills, ...before, ...JSON.parse(process.env.HALLY_SKILLS ?? '{}')}}};
   }),
   // Underground Pass on the Iban pure at its levels before the quest (Attack 11, Hitpoints 10).
   {key: 'extra:upass-pure-iban', script: 'scripts/aio-quester.ts', preset: 'quest_upass', scriptArgs: ['upass'], pass: questKeepsBuild('pure-iban', levelsBeforeRoute('pure-iban')), timeoutMs: 900_000,
