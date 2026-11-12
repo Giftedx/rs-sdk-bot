@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794499278744,
+ "at": 1794500446764,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -353,25 +353,23 @@
   },
   {
    "account": "Shaftmaker",
-   "script": "scripts/shop-buyer.ts",
+   "script": "scripts/fletch-arrows.ts",
    "args": [
-    "sarim"
+    "15000",
+    "headless"
    ],
    "env": {
-    "ITEMS": "feather",
     "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
+    "MAX_MAKE": "390"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy feathers at Gerrant",
-   "role": "bank",
-   "template": "shop-feathers",
+   "goal": "headless arrows from owned shafts and feathers",
+   "role": "fletching",
+   "template": "fletch-headless",
    "autopilot": "local",
-   "resources": [
-    "shop:sarim"
-   ]
+   "resources": []
   },
   {
    "account": "Swordinhand",
@@ -394,21 +392,22 @@
   },
   {
    "account": "Woodenstaff",
-   "script": "scripts/goldfarm.ts",
+   "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
+    "PEN": "3187,3277",
+    "TICKS": "3000",
+    "TARGET": "2000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
    "autopilot": "local",
    "resources": [
-    "knight:2653,3300"
+    "pen:3187,3277"
    ]
   },
   {
@@ -471,22 +470,24 @@
   },
   {
    "account": "Shaftsinker",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "sarim"
+   ],
    "env": {
-    "PEN": "3187,3277",
-    "TICKS": "3000",
-    "TARGET": "2000"
+    "ITEMS": "feather",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
-   "role": "helper",
-   "template": "feathers@3187,3277",
+   "goal": "buy feathers at Gerrant",
+   "role": "bank",
+   "template": "shop-feathers",
    "autopilot": "local",
    "resources": [
-    "pen:3187,3277"
+    "shop:sarim"
    ]
   },
   {
