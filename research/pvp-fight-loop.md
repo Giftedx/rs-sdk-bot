@@ -1063,6 +1063,49 @@ bench gang waits at its tile. Against `ganker-max`, with no death in any run:
 - Gap: 4 meetings a kit. A real gang goes back to its post while its target is out, and it can stand 112 tiles away
   when the target comes back; the bench gang stands at the edge.
 
+### The gang in a long fight
+
+One live meeting of our account (kit `live-walker-iron`, profile `gang-hunter` options) with all three at the post,
+read from the world feed: 1 kill (Sugma), no death of ours, 23 of 24 sharks eaten in 1,689 ticks; the owner stopped
+it at 42 HP. A 104,570 tick record holds it (`.practice/rival-dds/trace-long-1.jsonl`; rows in `live-fight-3.txt`,
+counts from `live-fight.ts`, `lag.ts` and `lowhp.ts` in the same folder of the main checkout).
+
+- **Eats.** Sharks (a gang account went from 72 to 91 HP in one eat). The HP at 30 eats in the fight is 43 to 74, 14
+  of them 69 to 74, none over 74: the eat level is 74. Goondelf ate 11 sharks, Ligma 6, Sugma 13 (Sugma's include the
+  trip below). The pack of `ganker-dds` (12 sharks) fits.
+- **With the food gone.** Goondelf fought on with no shark from 39 HP to 26 HP (24 ticks), then ran south. It was out
+  of the Wilderness 89 ticks after its first drop to 40 HP or less, and back on the post 1,430 ticks after it. Sugma
+  ran with it at 72 HP and was back on the post alone 295 ticks after it left. Ligma had left 50 ticks before, to
+  another target at (3052, 3528).
+- **After a death.** Sugma died on the post and was back on it 1,130 ticks later.
+- **Prayer.** Each change of our weapon got the protect prayer for it 1 tick later in the feed in 51 of 105 changes,
+  2 ticks in 35, 3 in 11, 4 in 6, more in 2.
+- **Specials.** 7 of Goondelf's 63 attacks, 17 of Ligma's 249, 17 of Sugma's 124.
+- **Poison.** 139 of the 455 damage in the splats on our account was poison. Our antipoison was not drunk: the fight
+  loop drinks a potion only in a tick with 3 ticks to the next attack, and bow and dagger turns back to back give
+  none.
+- **Who hits them.** In the whole record only our account took a gang account to 40 HP or less (166 of the 192
+  attacks on them that the feed shows).
+
+The bench copy of this gang: profile `ganker-live` (a shark at 74 HP or less; the prayer wait above, as extra ticks
+0 to 3 with the weights 48, 35, 11, 5 on the bench's own wait; with no food a walk south at 30 HP or less) and
+`scripts/pk-gang.ts` `SPAR_B_TRIPS` (the bank trip and the return), `SPAR_B_FOLLOW=1` (the others go too),
+`SPAR_B_REST` (the wait of the one that ran) and `SPAR_WAIT` (our account waits on the tile). The case is
+`extra:gang-live-check-x2` (`-x1`: one group, for a PC with little memory free).
+
+- **Our prayer runs out.** In the live meeting our protect prayer went off for good at about tick 730 of the
+  meeting; the last 1,040 ticks had none. The flick each 2 ticks does not stop the drain: it flicks only on a
+  cooldown tick before the tick of our attack, and no fight loop flicks while our account waits between two fights.
+- **The bench against the live meeting** (`extra:gang-live-check-x1`, profile `gang-hunter`, seeds 1 and 2): seed 2
+  gave 1 kill, 22 sharks eaten, the food gone and the teleport out at 54 HP in 2,760 ticks, the prayer gone at tick
+  663; seed 1 gave 2 kills and 14 sharks in 1,514 ticks, the prayer gone at tick 891. Live: 1 kill, 23 sharks, the
+  prayer gone at about tick 730. In both seeds one gang account walked out at 26 to 29 HP and came back; it was not
+  killed. Gap: 2 seeds.
+
+The levers for our side: `cureNow` (an antipoison in the first tick after the poison),
+`chaseBelow` (a run after a target that flees with a low health bar), and `specBelow` (keep the special energy for a
+low target).
+
 ### Options against the gang
 
 Each lever of a meeting, with what is measured. A lever with no result is a test to run on `ganker-max`.
@@ -1100,11 +1143,12 @@ Gaps:
   estimate; `ganker-max` is the upper limit.
 - Prayers with no head icon (Protect Item, the Strength, Attack and Defence prayers) are not visible. The bench
   accounts use all of them.
-- The eat level is between 75 and 81 HP from one eat.
-- No record shows a gang account under a melee weapon, at low Hitpoints, or after its death: whether it prays against
-  melee, whether it runs, and how long it takes to return to the post are not known.
-- Practice only: no live meeting. The margin against `ganker-max` is 2 sharks in the worst of 32 meetings; the way out
-  covers a meeting that needs more.
+- The eat level is 74 HP from 30 eats in one live meeting ("The gang in a long fight").
+- One live meeting shows a gang account under a dagger, at low Hitpoints and after its death ("The gang in a long
+  fight"): it prays against melee, it runs with its food gone, and it is back on the post 1,130 to 1,430 ticks
+  later. One meeting is one sample of each.
+- The bench's own prayer wait is not measured against the feed's: the weights of `ganker-live` take the bench wait as
+  1 tick.
 - The post is a single-way tile. A meeting on a multi-way tile, where the three hit at once, is not measured: our
   account must meet the gang on single-way tiles only.
 - `ganker-max` has no antipoison and casts no spell (Magic 37 allows Bind). A gang that cures our poison lives longer.

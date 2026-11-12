@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { gangSummary, gangValid, packOf, pickAttacker, startsAttack, type GangResult } from './pk-gang';
+import { gangSummary, gangValid, packOf, pickAttacker, pickRunner, startsAttack, type GangResult } from './pk-gang';
 import { PROFILES, sparOptions } from './pk-spar';
 import { combatLevel, itemId, kitCost, kitItems, kitOptions, kitRoute, KITS, kitSkills, kitSwitches, kitVarps } from './pk-kits';
 import { benchCases, GANKER_POST } from './measure/aio-bench-cases';
@@ -7,7 +7,7 @@ import { wildernessLevel, type FightResult } from './pk';
 
 const fight = (outcome: FightResult['outcome'], attacks = 10): FightResult =>
     ({ outcome, ticks: 200, dealt: 0, taken: 0, eaten: 0, attacks: { magic: 0, ranged: 0, melee: attacks }, freezes: 0, specs: 0 });
-const result = (end: GangResult['end'], kills: number, fights: FightResult[], gang: FightResult[]): GangResult => ({ end, kills, ticks: 500, taken: 200, eaten: 9, specs: 4, refused: 0, foodLeft: 9, prayerLeft: 40, prayerDoses: 3, trips: 1, fights, gang });
+const result = (end: GangResult['end'], kills: number, fights: FightResult[], gang: FightResult[]): GangResult => ({ end, kills, ticks: 500, taken: 200, eaten: 9, specs: 4, refused: 0, foodLeft: 9, prayerLeft: 40, prayerDoses: 3, trips: 1, gangTrips: 0, prayerOut: -1, fights, gang });
 
 test('our account fights the one of the gang that hit it last, else the nearest that lives', () => {
     const near = [{ name: 'Sugma', index: 5, distance: 3 }, { name: 'Ligma', index: 6, distance: 1 }, { name: 'Goondelf', index: 7, distance: 2 }, { name: 'Passerby', index: 8, distance: 0 }];
@@ -21,6 +21,19 @@ test('our account fights the one of the gang that hit it last, else the nearest 
     // An account that the game just refused is left out, unless every one was refused.
     expect(pickAttacker(near, all, null, new Set(['ligma']))?.name).toBe('Goondelf');
     expect(pickAttacker(near, all, null, new Set(['ligma', 'goondelf', 'sugma']))?.name).toBe('Ligma');
+});
+
+test('focusRunner picks the lowest bar at or under the fraction that the single-way rule lets through', () => {
+    const near = [{ name: 'Sugma', index: 5 }, { name: 'Ligma', index: 6 }, { name: 'Goondelf', index: 7 }, { name: 'Passerby', index: 8 }];
+    const all = new Set(['sugma', 'ligma', 'goondelf']);
+    const bars = new Map<number, number | null>([[5, 0.8], [6, 0.3], [7, 0.2], [8, 0.05]]);
+    const health = (i: number) => bars.get(i) ?? null;
+    expect(pickRunner(near, all, 0.35, health, () => true)?.name).toBe('Goondelf');
+    // The lowest one is locked out (another hit us in the last 8 ticks): the next lowest that is open.
+    expect(pickRunner(near, all, 0.35, health, p => p.index !== 7)?.name).toBe('Ligma');
+    // Over the fraction, no bar shown, or not of the gang: nobody.
+    expect(pickRunner(near, all, 0.1, health, () => true)).toBeNull();
+    expect(pickRunner(near, all, 0.35, () => null, () => true)).toBeNull();
 });
 
 test('a meeting counts when both sides attacked, and the summary counts each end', () => {
