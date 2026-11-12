@@ -8,11 +8,14 @@
 // publisher has a clone in .practice/fleet-command/repo and its lock names no live process. Nothing else starts it
 // after a reboot, and a stopped publisher leaves the hosted page on its last file. .practice/stop-dashboard-publish
 // keeps it stopped. The coordinator stop files do not: they stop game work, not the page.
+// Also before that check, it moves the old rows of practice accounts out of .practice/status
+// (packages/router/src/status-prune.ts), because each controller reads that whole folder.
 import { appendFileSync, existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { spawnDetached } from './coordinator-store';
 import { freshScoreboard, improved, type Progress } from './coverage';
+import { pruneStatus } from './status-prune';
 
 export const STALL_MS = 6 * 3600_000;
 const root = resolve(import.meta.dir, '../../..'), dir = join(root, '.practice', 'coordinator');
@@ -34,6 +37,11 @@ export function publisherRepo(remote: string): string | null {
 if (import.meta.main) {
     const now = Date.now(), log = (line: string) => appendFileSync(join(dir, 'watchdog.log'), `${new Date(now).toISOString()} ${line}\n`);
     const prac = join(root, '.practice'), clone = join(prac, 'fleet-command', 'repo'), pubLock = join(prac, 'dashboard-publish.lock');
+    // A failure here must not stop the restarts below.
+    try {
+        const pruned = pruneStatus(root, { now });
+        if (pruned.moved.length || pruned.failed) log(`status rows: moved ${pruned.moved.length} old practice rows to .practice/status-archive, kept ${pruned.kept}${pruned.failed ? `, ${pruned.failed} not moved` : ''}`);
+    } catch (e) { log(`status rows not pruned: ${String(e).slice(0, 200)}`); }
     if (!existsSync(join(prac, 'stop-dashboard-publish')) && existsSync(join(clone, '.git'))) {
         const pid = existsSync(pubLock) ? Number(readFileSync(pubLock, 'utf8')) : 0;
         if (!pid || !alive(pid)) {
