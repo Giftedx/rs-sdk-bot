@@ -5,6 +5,7 @@
 //
 // usage: bun scripts/pk-roam.ts <account> [MAX_MINUTES=20] [MAX_WILD=30] [EAT_AT=50] [FLEE_AT=30] [SPELL=AUTO]
 //        [RANGED=bow-name-regex] [LOOT=1] [FREEZE=1] [LOOT_MIN=1000] [BANK_AT=30000]
+//        [FRIENDS=name,name] (the accounts never to attack, in place of the owned and listed accounts; FRIENDS= is none)
 // The account starts south of the Wilderness with its gear worn and food in its inventory.
 // Stop files: .practice/stop-<account>, .practice/stop-pk-hunt (shared with scripts/pk-hunt.ts).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -626,7 +627,7 @@ const arg = (args: string[], key: string, d: string) => args.find(a => a.startsW
 
 if (import.meta.main) {
     const [name, ...args] = process.argv.slice(2);
-    if (!name) throw new Error('usage: bun scripts/pk-roam.ts <account> [MAX_MINUTES=20] [MAX_WILD=30] [EAT_AT=50] [FLEE_AT=30] [SPELL=AUTO] [RANGED=regex] [LOOT=1] [FREEZE=1] [LOOT_MIN=1000] [BANK_AT=30000]');
+    if (!name) throw new Error('usage: bun scripts/pk-roam.ts <account> [MAX_MINUTES=20] [MAX_WILD=30] [EAT_AT=50] [FLEE_AT=30] [SPELL=AUTO] [RANGED=regex] [LOOT=1] [FREEZE=1] [LOOT_MIN=1000] [BANK_AT=30000] [FRIENDS=name,name]');
     const stop = () => existsSync('.practice/stop-' + name) || existsSync('.practice/stop-pk-hunt');
     if (stop()) throw new Error('PK stop file present');
     const ranged = arg(args, 'RANGED', '');
@@ -636,6 +637,8 @@ if (import.meta.main) {
         spell: arg(args, 'SPELL', 'AUTO'), ranged: ranged ? new RegExp(ranged, 'i') : undefined,
         loot: arg(args, 'LOOT', '1') === '1', freeze: arg(args, 'FREEZE', '1') === '1',
         lootMin: Number(arg(args, 'LOOT_MIN', '1000')), bankAt: Number(arg(args, 'BANK_AT', '30000')),
+        // A practice run registers its accounts as owned (tradeguard.ts), so its target is a friend unless FRIENDS names the list.
+        ...(args.some(a => a.startsWith('FRIENDS=')) ? { friends: arg(args, 'FRIENDS', '').split(',').filter(Boolean) } : {}),
     };
     const session = await openBot(name);
     const emit = (e: object) => console.log('PK_EVENT ' + JSON.stringify({ t: session.tick(), ...e }));

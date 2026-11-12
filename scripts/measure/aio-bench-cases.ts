@@ -398,6 +398,32 @@ const ROUTE_CASES: BenchCase[] = [
   sparCase('pvp:spar', sparFixture(3094), sparFixture(3096)),
   // The gang (scripts/pk-gang.ts): the snare kit against three dagger gang on their post tile.
   gangCase('pvp:gang', 'tribrid-snare', 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker']),
+  // The routes that need a player to fight, through scripts/measure/pvp-with-targets.ts: the target is a second account
+  // of the run with no food that stands on its tile and hits back by auto-retaliate. Each passes on a kill.
+  // fight: scripts/pk.ts with its own kit (staff, bow, dagger(p) and kiteshield: sparFixture) at Wilderness level 3.
+  {key: 'pvp:fight', engineEnv: SPAR_ENGINE, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge', scriptArgs: ['{bot:b}', 'fight', '{targets}', '600'],
+    pass: s => ok(s) && /"outcome":"kill"/.test(s), presetConfig: sparFixture(3094, 3540), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3096, 3540, {food: 0})}]},
+  // hunt: scripts/pk-hunt.ts from the Edgeville bank with an empty pack and the staff trip in the bank; the target
+  // stands at the first hunt spot.
+  {key: 'pvp:hunt', engineEnv: SPAR_ENGINE, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge', scriptArgs: ['{bot:b}', 'hunt', '900'],
+    pass: s => ok(s) && /kills [1-9]/.test(s), output: /kills (\d+)/,
+    presetConfig: {...sparFixture(3092, 3496), inventory: [], bank: [{id: 1401, count: 1}, {id: 861, count: 1}, {id: 556, count: 600}, {id: 565, count: 200}, {id: 557, count: 200}, {id: 555, count: 200}, {id: 561, count: 100},
+      {id: 2434, count: 4}, {id: 1712, count: 2}, {id: 2436, count: 2}, {id: 2440, count: 2}, {id: 2444, count: 2}, {id: 385, count: 60}]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3540, {food: 0})}]},
+  // roam: scripts/pk-roam.ts reads the world feed roster (WORLD_FEED=true on the engine) and goes to the target at
+  // Wilderness level 8 from just south of the Wilderness (roam takes no target within 40 tiles of its escape,
+  // MIN_ESCAPE_TILES); 18 s of wall time at most.
+  // escort-ore: scripts/lava-maze-escorted-ore.ts, the archer escort and the miner of its practice proof
+  // (packages/practice/src/lava-maze-escorted-ore-proof.ts) at the Edgeville bank, one runite ore, the world feed on.
+  {key: 'pvp:escort-ore', engineEnv: {WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['escort-ore', '{bot:b}', 'CAP=1800', 'MAX_ORE=1', 'EXPECTED_BANK_ORE=0'], pass: ok,
+    known: 'on the lockstep engine the escort walks to its stage at the Lava Maze, but its world-feed roster stops at the frame of tick 250 while the engine ticks on, so the three frames 10 ticks apart that release the miner never come (RESULT fail Three fresh stage frames unconfirmed); the feed send path (worldfeed.ts networkPressure) is not checked',
+    presetConfig: {position: {x: 3094, z: 3492, level: 0}, skills: {Attack: 65, Defence: 10, Strength: 11, Hitpoints: 69, Ranged: 99, Prayer: 65, Magic: 50},
+      inventory: [...Array.from({length: 4}, () => ({id: 385, count: 1})), {id: 590, count: 1}], equipment: [{id: 861, count: 1, slot: 3}, {id: 1131, count: 1, slot: 4}]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3094, z: 3491, level: 0}, skills: {Attack: 47, Hitpoints: 33, Prayer: 43, Mining: 99},
+      inventory: [...Array.from({length: 4}, () => ({id: 385, count: 1})), {id: 590, count: 1}, {id: 1275, count: 1}], equipment: [{id: 544, count: 1, slot: 4}, {id: 542, count: 1, slot: 7}]}}]},
+  {key: 'pvp:roam', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', 'roam', 'MAX_MINUTES=0.3', 'MAX_WILD=10', 'FRIENDS='], pass: s => ok(s) && /PK hunt: [1-9]\d* kills/.test(s), output: /PK hunt: (\d+) kills/,
+    presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3580, {food: 0})}]},
   // The mirror with Dragon Slayer not done: the loop must leave the rune platebody on, because the game does not let
   // such an account put it back.
   // Hill giants with Prayer 60: the prayer guard (packages/core/src/prayer-guard.ts) shows its counts in the
@@ -877,7 +903,6 @@ export const BLOCKED_ROUTES: Readonly<Record<string, string>> = {
   'skiller:cooking:ge-cook': 'needs the Grand Exchange service',
   'skiller:firemaking:ge': 'needs the Grand Exchange service',
   'skiller:mining:lava-maze': 'needs escort accounts in the Wilderness',
-  'pvp:escort-ore': 'the engine must start with WORLD_FEED=true, and the bench gives each engine a fixed environment',
   'market:shop-sell': 'the worker needs its shop open at entry and never opens one; market:shop-trip runs the same sale after it opens the shop',
   'logistics:coin-courier': 'both accounts must be in the owned-account registry before login; a new bench account is not',
   'logistics:coin-fanout': 'both accounts must be in the owned-account registry before login; a new bench account is not',
@@ -892,9 +917,6 @@ export const BLOCKED_ROUTES: Readonly<Record<string, string>> = {
   'quester:mode:legends-owned': 'needs an order file that names the owned account',
   'logistics:loadout-import': 'dispatcher mismatch: an offline converter with no account argument',
   'logistics:relocate-knight': 'the worker admits three named live accounts only',
-  'pvp:roam': 'needs other players in the Wilderness',
-  'pvp:fight': 'needs a second logged-in player as the target',
-  'pvp:hunt': 'needs attackable players in the Wilderness',
   'pvp:pilot': 'a live run by design',
   'logistics:banker': 'a standing service with no finite end',
   'logistics:food-chain': 'a standing controller for named accounts',
