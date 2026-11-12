@@ -836,7 +836,7 @@ export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGH
 // A start on Tutorial Island counts as Lumbridge: the walker skips the tutorial first. A floor above the ground counts
 // as the ground under it. An unknown start (no status, a live session, a cave) has no rule, and neither has a place
 // outside these regions or a template with no place.
-export type Spot = { x: number; z: number };
+export type Spot = { x: number; z: number; level?: number };
 export const FERRY_FARE = 30, TOLL = 10;
 const LUMBRIDGE: Spot = { x: 3222, z: 3218 };
 const onTutorialIsland = (p: Spot) => p.x >= 3050 && p.x <= 3160 && p.z >= 3050 && p.z <= 3140;
