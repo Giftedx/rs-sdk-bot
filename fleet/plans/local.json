@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794520762531,
+ "at": 1794520774293,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -217,25 +217,6 @@
    ]
   },
   {
-   "account": "mmthv2350",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
-   "autopilot": "local",
-   "resources": [
-    "knight:2652,3318"
-   ]
-  },
-  {
    "account": "Moneyshot",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -434,25 +415,6 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
-   "autopilot": "local",
-   "resources": [
-    "knight:2652,3318"
-   ]
-  },
-  {
-   "account": "Magicwanda",
    "script": "scripts/aio.ts",
    "args": [
     "skiller",
@@ -475,23 +437,41 @@
    ]
   },
   {
-   "account": "Shaftsinker",
-   "script": "scripts/gather-feathers.ts",
+   "account": "Magicwanda",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "PEN": "3017,3288",
-    "TICKS": "3000",
-    "TARGET": "2000"
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3017,3288",
-   "role": "helper",
-   "template": "feathers@3017,3288",
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
    "autopilot": "local",
    "resources": [
-    "pen:3017,3288"
+    "knight:2652,3318"
+   ]
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "local",
+   "resources": [
+    "knight:2652,3318"
    ]
   },
   {
