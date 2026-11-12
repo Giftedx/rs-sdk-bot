@@ -398,6 +398,10 @@ const ROUTE_CASES: BenchCase[] = [
   sparCase('pvp:spar', sparFixture(3094), sparFixture(3096)),
   // The gang (scripts/pk-gang.ts): the snare kit against three dagger gang on their post tile.
   gangCase('pvp:gang', 'tribrid-snare', 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker']),
+  // A dagger account that never gives up, one against one, four meetings: the gang meeting with a gang of 1 sends it
+  // back to our account's tile each time it loses sight. The test of kiteMelee (freezes and steps, no hit) over 1,500
+  // ticks; run it with SPAR_A_OPTS {"kiteMelee":8}, and with no options for the champion as it fights.
+  gangCase('extra:kite-chase-x4', 'tribrid-snare', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker', 'SPAR_A=champion', 'SPAR_CAP=1500', 'SPAR_WAIT=60'], 1),
   // The routes that need a player to fight, through scripts/measure/pvp-with-targets.ts: the target is a second account
   // of the run with no food that stands on its tile and hits back by auto-retaliate. Each passes on a kill.
   // fight: scripts/pk.ts with its own kit (staff, bow, dagger(p) and kiteshield: sparFixture) at Wilderness level 3.

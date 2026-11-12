@@ -133,6 +133,12 @@ export type FightOptions = {
     // In place of the step back: stand on the corner tile of a frozen target that holds a melee weapon. Melee reaches
     // the 4 side tiles only (RectangleBoundary.ts), so it cannot hit us there, and the bow shoots with no walk.
     diagonalFrozen?: boolean;
+    // Against a target that holds a melee weapon: freezes and steps only, no hit and no special. A freeze goes out
+    // whenever one can (the target is free and not immune, within 10 tiles); while the target is held the account keeps
+    // this many tiles from it (at most 10: past 10 the hold breaks, pvp_magic.rs2 pvp_frozen); while it is free or
+    // immune (5 ticks after a hold) the account runs straight away from it. The test of a melee attacker kept out of
+    // reach for good: a melee hit needs a side tile (RectangleBoundary.ts), and each cast costs one tick stood still.
+    kiteMelee?: number;
     fledSpec?: boolean;
     // Choose a style the opponent's overhead prayer does not cover (default on).
     readOverheads?: boolean;
@@ -409,6 +415,10 @@ const BOW_RANGE = 7;
 // Adjacent, not diagonal: where a melee attack lands.
 const adjacent = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.abs(a.x - b.x) + Math.abs(a.z - b.z) === 1;
 const cheb = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
+// kiteMelee: the 8 step directions, and the SDK's path search, loaded on the first kite step only (it holds the
+// collision map).
+const KITE_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]] as const;
+let kitePaths: typeof import('../vendor/rs-sdk/sdk/pathfinding') | null = null;
 
 // A style is usable only with a non-empty kit: an empty list casts damage spells with whatever is wielded
 // (a dagger, a bow), which hits for a fraction of the staff's max hit and wastes the turn. kits built by
@@ -693,7 +703,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // does not go out and kite an opponent that is not held.
         const meleeOnly = !!o.adapt && hits.filter(h => h.src === target!.index).length >= 6 && [...predictor.seen()].every(st => st === 'melee')
             && castableFreeze(state.skills.find(k => k.name === 'Magic')?.level ?? 1, inv) !== null;
-        const kiteTiles = o.kiteFrozen ?? (meleeOnly ? 3 : 0), freezeRule: FightOptions['freeze'] = o.freeze || (meleeOnly ? true : false);
+        const kiteTiles = o.kiteFrozen ?? (meleeOnly ? 3 : 0), freezeRule: FightOptions['freeze'] = o.kiteMelee !== undefined ? true : o.freeze || (meleeOnly ? true : false);
         // A chase: the target flees, or stands frozen more than 2 tiles away. A melee turn then spends the freeze on a
         // walk, so an account with a ranged or magic kit attacks from where it stands. Within 2 tiles a melee turn or
         // a melee special costs one step.
@@ -741,6 +751,36 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                     nextAttack = now + 8;
                     continue;
                 }
+            }
+        }
+        // kiteMelee: against a target that holds a melee weapon, freezes and steps only (see the option). The freeze goes
+        // out through the attack turn below; on every other tick the account keeps its distance: up to kiteMelee tiles
+        // (never past the 10-tile hold, pvp_magic.rs2 pvp_frozen) while the target is held, a run straight away from it
+        // while it is free or immune. The run stays 10 tiles inside the Wilderness, so an escape never counts as a dodge.
+        const kiteTarget = o.kiteMelee !== undefined && weaponStyle(seen?.worn[3]) === 'melee';
+        let kiteCast = false;
+        if (kiteTarget) {
+            const gap = cheb(at, target), held = now < frozenUntil;
+            const kiteRunes = inv.some(i => i.id === ITEMS.natureRune || i.id === ITEMS.earthRune || i.id === ITEMS.waterRune);
+            const kiteMagic = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
+            kiteCast = !held && now >= freezeReady && now >= nextAttack && gap <= 10
+                && (kiteRunes ? castableFreeze(kiteMagic, inv) : hasStyle(o.kit, 'magic') ? freezeSpell(kiteMagic) : null) !== null;
+            const want = held ? Math.min(o.kiteMelee!, 10) : 10;
+            if (!kiteCast && gap < want && now >= selfFrozenUntil) {
+                // The step: of the tiles 6 out in the 8 directions, the one with a path whose end is farthest from the
+                // target. A tile behind a wall has no path, and the client sends no click for it.
+                kitePaths ??= await import('../vendor/rs-sdk/sdk/pathfinding');
+                const level = me.level ?? 0;
+                let best: { x: number; z: number } | null = null, bestScore = -Infinity;
+                for (const [ddx, ddz] of KITE_DIRS) {
+                    const to = { x: at.x + ddx * 6, z: Math.max(3530, at.z + ddz * 6) };
+                    const path = kitePaths.findLongPath(level, at.x, at.z, to.x, to.z, 40);
+                    const end = path[path.length - 1];
+                    if (!end) continue;
+                    const score = cheb(end, target) * 2 + (ddx * Math.sign(at.x - target.x) + ddz * Math.sign(at.z - target.z));
+                    if (score > bestScore) { bestScore = score; best = { x: end.x, z: end.z }; }
+                }
+                if (best && cheb(best, target) > gap) { void sdk.sendWalk(best.x, best.z); stepAt = now; }
             }
         }
         // Cooldown ticks: never send OpHeld/InvButton (which call clearPendingAction on the server), but configure
@@ -794,6 +834,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             }
             continue;
         }
+        // kiteMelee: an attack tick with no freeze to cast is a step, not a hit.
+        if (kiteTarget && !kiteCast) continue;
         // Charge goes out on an attack tick, in place of that attack: a button on a cooldown tick could clear an attack
         // that the server still has in hand. One try each 6 ticks, until the game confirms it.
         if (o.charge && !charged && now - chargeAt >= 6) {
@@ -826,7 +868,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // special stays armed with its energy, and each such turn is lost.
         const running = now < fleeingUntil;
         const specWaits = running && (castFreeze || (specStyle === 'ranged' && cheb(at, target) > BOW_RANGE));
-        if (spec && !specWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || lowHealth(seen, spec.below)) && (specStyle !== 'melee' || canReachMelee)
+        if (spec && !kiteTarget && !specWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || lowHealth(seen, spec.below)) && (specStyle !== 'melee' || canReachMelee)
             && (!guarded.has(specStyle) || lowHealth(seen, 0.25))) {
             let budget = 5 - attackPackets - (energy.on ? 0 : 1);
             const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
