@@ -172,12 +172,14 @@ const sparBatch = (key: string, pairs: number, a: SaveConfig, b: SaveConfig, arg
 };
 // One of our accounts against a gang that all attack it (scripts/pk-gang.ts), `groups` meetings at once: the gang
 // stands on one tile, as the dagger gang does at its post, and our account two tiles east.
-const gangCase = (key: string, kit: string, gangKit: string, groups: number, at: {x: number; z: number}, args: string[] = [], size = 3): BenchCase => {
+const gangCase = (key: string, kit: string, gangKit: string, groups: number, at: {x: number; z: number}, args: string[] = [], size = 3, food?: number): BenchCase => {
   const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, groups * (size + 1) - 1).split('');
   const ours = (i: number) => i % (size + 1) === 0;
-  return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: kitFixture(kit, at.x + 2, at.z), output: /kills=(d+)/,
+  // `food` cuts the sharks of our account: the start of a meeting that it must leave.
+  const fixture = (): SaveConfig => { const c = kitFixture(kit, at.x + 2, at.z); return food === undefined ? c : {...c, inventory: [...c.inventory!.filter(i => i.id !== 385), ...Array.from({length: food}, () => ({id: 385, count: 1}))]}; };
+  return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: fixture(), output: /kills=(\d+)/,
     scriptArgs: ['gang', ...letters.slice(0, size).map(l => `{bot:${l}}`), '900', ...letters.slice(size).map(l => `{bot:${l}}`), `SPAR_GANG=${size}`, `SPAR_KITS=${kit}:${gangKit}`, ...args],
-    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: ours(i + 1) ? kitFixture(kit, at.x + 2, at.z) : kitFixture(gangKit, at.x, at.z)}))};
+    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: ours(i + 1) ? fixture() : kitFixture(gangKit, at.x, at.z)}))};
 };
 const sparCase = (key: string, a: SaveConfig, b: SaveConfig, args: string[] = []): BenchCase =>
   ({key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...args], pass: ok, presetConfig: a, companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: b}]});
@@ -462,11 +464,14 @@ const ROUTE_CASES: BenchCase[] = [
   gangCase('extra:gang-ganker-bare-x4', 'tribrid-snare', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker-bare']),
   // The same meeting for the kits with more food, and each kit against the most that the gang can be (`ganker-max`:
   // potions and a full pack of sharks), with a cap that leaves time for the 1,677 HP of that gang.
-  ...(['hybrid', 'gang-hunter'] as const).map(kit => gangCase(`extra:gang-ganker-${kit}-x4`, kit, 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker'])),
-  ...(['tribrid-snare', 'hybrid', 'gang-hunter'] as const).map(kit => gangCase(`extra:gang-ganker-max-${kit}-x4`, kit, 'ganker-max', 4, GANKER_POST, ['SPAR_B=ganker', 'SPAR_CAP=2400'])),
-  // The way out: our account has 3 sharks and a glory in its pack; out of food at 60 HP or less it rubs the glory
-  // with the gang on it. The case passes when all four accounts get away.
+  // The kit gang-hunter fights on its own profile.
+  ...(['hybrid', 'gang-hunter'] as const).map(kit => gangCase(`extra:gang-ganker-${kit}-x4`, kit, 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker', ...(kit === 'gang-hunter' ? ['SPAR_A=gang-hunter'] : [])])),
+  ...(['tribrid-snare', 'hybrid', 'gang-hunter'] as const).map(kit => gangCase(`extra:gang-ganker-max-${kit}-x4`, kit, 'ganker-max', 4, GANKER_POST, ['SPAR_B=ganker', 'SPAR_CAP=2400', ...(kit === 'gang-hunter' ? ['SPAR_A=gang-hunter'] : [])])),
+  // The way out, with the gang on our account. `escape`: 3 sharks and a glory in the pack; out of food at 60 HP or
+  // less it rubs the glory. `escape-worn`: the kit gang-hunter with 3 sharks against the gang at its most; it takes
+  // the glory off its neck and rubs it. A case passes when all four accounts get away.
   {...gangCase('extra:gang-ganker-escape-x4', 'runner', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker', 'SPAR_A_OPTS={"escapeAt":60}']), pass: s => ok(s) && / escaped=4 /.test(s)},
+  {...gangCase('extra:gang-ganker-escape-worn-x4', 'gang-hunter', 'ganker-max', 4, GANKER_POST, ['SPAR_B=ganker', 'SPAR_A=gang-hunter'], 3, 3), pass: s => ok(s) && / escaped=4 /.test(s)},
   // One whole hunter trip (scripts/measure/pk-hunt-trip.ts): the hunter starts at Edgeville bank with an empty pack and
   // its kit in the bank; the target stands at the first hunt spot with no food.
   // `auto` has the snare stock and names no kit: at the first hunt spot (Wilderness level 3) the hunter must pick the

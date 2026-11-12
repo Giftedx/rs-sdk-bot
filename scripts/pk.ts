@@ -78,6 +78,9 @@ export type FightOptions = {
     castArmour?: 'torso' | 'keep' | 'strip';
     // false: no Defence prayer (Steel Skin and the lower ones). It saves prayer points and gives up their defence.
     defencePrayer?: boolean;
+    // false: no Protect Item. An account with no skull keeps its three best items without it, and a melee turn then
+    // has four prayers on, the most that the prayer flick turns off and on again in one tick.
+    protectItem?: boolean;
     // Read the opponent, as a skilled player does. All off by default.
     // predictPrayer: pray against the style the opponent will use next, learnt from the order of its weapons, in place
     // of the weapon it holds now (which is its last attack, one step behind).
@@ -116,6 +119,9 @@ export type FightOptions = {
     // active prayer off and on again in one tick, so the timer never fires and the prayers cost no points. One tick
     // holds 5 inputs: with three prayers on, the third comes back on the next tick. false turns the flick off.
     prayerFlick?: boolean;
+    // Ticks between two flicks (default 4). The drain timer fires 5 ticks after the prayers came on, and a bow on Rapid
+    // gives one cooldown tick each 3 ticks: at 4 each second bow turn has no flick and the timer fires; at 3 it does not.
+    flickEvery?: number;
     // true: eat a carried karambwan on each tick where it costs no attack (see the loop). Default off.
     freeFood?: boolean;
     // Tiles to keep from the target between turns that are not melee: on a cooldown tick the loop steps away to this
@@ -178,9 +184,9 @@ const PROTECT_FROM: Record<Style, number> = { melee: 14, ranged: 13, magic: 12 }
 // Prayers for the current combat state (player_combat_stat.rs2:33-35, 62-67): Protect Item, the best Defence prayer
 // (boosts melee, ranged and 30% of magic defence), the overhead for the opponent's weapon, and on melee/spec turns the
 // best Strength and Attack prayers (+15% max hit and accuracy at 31/34), turned off on non-melee turns to save drain.
-export function combatPrayers(prayerBase: number, overhead: number | null, meleeTurn: boolean, defence = true): { want: number[]; off: number[] } {
+export function combatPrayers(prayerBase: number, overhead: number | null, meleeTurn: boolean, defence = true, item = true): { want: number[]; off: number[] } {
     const want: number[] = [], off: number[] = [];
-    if (prayerBase >= PRAYER_REQ[PRAYER.item]!) want.push(PRAYER.item);
+    if (prayerBase >= PRAYER_REQ[PRAYER.item]!) (item ? want : off).push(PRAYER.item);
     const def = prayerBase >= 28 ? PRAYER.steelSkin : prayerBase >= 10 ? PRAYER.rockSkin : prayerBase >= 1 ? PRAYER.thickSkin : null;
     if (def !== null) (defence ? want : off).push(def);
     if (overhead !== null && prayerBase >= (PRAYER_REQ[overhead] ?? 99)) want.push(overhead);
@@ -407,7 +413,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     let foodReady = Math.max(start, guardFoodReady), karambwanReady = start, potionReady = start;
     let freezeReady = start, frozenUntil = start, freezeCastAt = -10, frozenTile: { x: number; z: number } | null = null, selfFrozenUntil = start;
     let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = false, rapidSet = false, pjedByNpc = false;
-    let target: NearbyPlayer | undefined, rubbed = -1, ranAt = -10, prevSelf: { x: number; z: number } | null = null;
+    let target: NearbyPlayer | undefined, rubbed = -1, gloryOffAt = -10, ranAt = -10, prevSelf: { x: number; z: number } | null = null;
     const predictor = new StylePredictor();
     let oppStyle: Style | null = null, oppChangedAt = start, earlyFreezes = 0;
     const rand = o.mixSeed === undefined ? Math.random : seededRandom(o.mixSeed);
@@ -551,7 +557,10 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             }
         }
         // Deeper than the teleports reach (glory 30, spells 20): run south first.
-        const reach = slotOf(ITEMS.glory) ? 30 : o.escapeSpell !== undefined ? 20 : 0;
+        // The game rubs a glory only from the pack (amulet_of_glory.rs2 has no worn option), so a worn one comes off first:
+        // the amulet that an account wears is then its way out, and its pack needs no second one.
+        const wornGlory = state.equipment.find(e => e.slot === 2 && (ITEMS.glory as readonly number[]).includes(e.id));
+        const reach = slotOf(ITEMS.glory) || wornGlory ? 30 : o.escapeSpell !== undefined ? 20 : 0;
         if (o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(inv) && reach && wildernessLevel(at.z) > reach) {
             if (now - ranAt > 3) { if (ranAt < 0) log(`PK run south at HP ${me.hp}`); void sdk.sendWalk(at.x, at.z - 14); ranAt = now; }
             continue;
@@ -559,6 +568,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         if (o.escapeAt !== undefined && me.hp <= o.escapeAt && !bestFood(inv) && wildernessLevel(at.z) <= 30) {
             const glory = slotOf(ITEMS.glory);
             if (glory && (rubbed < 0 || now - rubbed > 6) && !state.dialog?.isOpen) { log(`PK rub glory at HP ${me.hp}`); use(glory, /^Rub$/i); rubbed = now; }
+            else if (!glory && wornGlory && inv.length < 28 && typeof sdk.sendUseEquipmentItem === 'function') { if (now - gloryOffAt > 2) { log(`PK takes its glory off at HP ${me.hp}`); void sdk.sendUseEquipmentItem(wornGlory.slot, 1); gloryOffAt = now; } }
             else if (!glory && o.escapeSpell !== undefined && wildernessLevel(at.z) <= 20 && (rubbed < 0 || now - rubbed > 6)) {
                 log(`PK teleport spell at HP ${me.hp}`); void sdk.sendClickComponent(o.escapeSpell); rubbed = now;
             }
@@ -683,7 +693,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             let budget = 5;
             const walkingToMelee = now <= lastAttackAt + lastWalkTicks;
             // Not on the tick before our own attack: that tick sets the prayers of the turn.
-            if (o.prayerFlick !== false && now - flickAt >= 4 && now < nextAttack - 1 && !walkingToMelee) {
+            if (o.prayerFlick !== false && now - flickAt >= (o.flickEvery ?? 4) && now < nextAttack - 1 && !walkingToMelee) {
                 const active = prayers.activePrayers.flatMap((on, p) => (on ? [p] : []));
                 if (active.length > 0 && active.length <= 4) {
                     // The overhead first: it is the one that must be back on in this tick.
@@ -709,7 +719,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             if (prayers.prayerPoints > 0 && budget > 0) {
                 // Pre-activate melee prayers on the tick before a melee turn so the attack tick needs 0 prayer packets.
                 const nextIsMelee = now === nextAttack - 1 && (upcomingTurn?.style === 'melee' || (!!o.spec && lowHealth(seen, o.spec.below)));
-                const { want: wantPray, off: offPray } = combatPrayers(prayerBase, overhead, nextIsMelee, o.defencePrayer !== false && !bursting);
+                const { want: wantPray, off: offPray } = combatPrayers(prayerBase, overhead, nextIsMelee, o.defencePrayer !== false && !bursting, o.protectItem !== false);
                 // The tick before a bow special of the burst: armour off, as far as packets and free pack slots allow.
                 if (bursting && now === nextAttack - 1 && typeof sdk.sendUseEquipmentItem === 'function') {
                     const free = 28 - inv.length - 1;
@@ -766,7 +776,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             }
             budget -= toWield.length;
             if (prayers.prayerPoints > 0 && budget > 0) {
-                const { want: wantPray } = combatPrayers(prayerBase, overhead, specStyle === 'melee', o.defencePrayer !== false && !bursting);
+                const { want: wantPray } = combatPrayers(prayerBase, overhead, specStyle === 'melee', o.defencePrayer !== false && !bursting, o.protectItem !== false);
                 for (const p of wantPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
             }
             for (const item of toWield) use(item, /^(Wield|Wear)$/i);
@@ -823,7 +833,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             : [];
         budget -= toRemove.length;
         if (prayers.prayerPoints > 0 && budget > 0) {
-            const { want: wantPray } = combatPrayers(prayerBase, overhead, turn.style === 'melee', o.defencePrayer !== false);
+            const { want: wantPray } = combatPrayers(prayerBase, overhead, turn.style === 'melee', o.defencePrayer !== false, o.protectItem !== false);
             for (const p of wantPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
         }
         for (const item of toWield) use(item, /^(Wield|Wear)$/i);

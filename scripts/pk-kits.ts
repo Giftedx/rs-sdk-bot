@@ -123,14 +123,14 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     hybrid: { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
         carried: ['magic_shortbow', ...PRAYER_POTS, ...BOOSTS], food: 21,
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
-    // The kit for a meeting with the dagger gang (research/pvp-fight-loop.md, "Rivals: the dagger gang"): bow and dagger,
-    // the armour with the most stab defence that needs no quest besides the dagger's (dragon med helm and platelegs,
-    // stab defence 33 and 68 for the 30 and 51 of rune), a super defence, three prayer potions for about 800 ticks of
-    // prayers, and a glory in the pack: the way out at the gang's post (amulet_of_glory.rs2 allows the rub up to
-    // Wilderness level 30).
-    'gang-hunter': { worn: { ...RUNE, hat: 'dragon_med_helm', legs: 'dragon_platelegs', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
-        carried: ['magic_shortbow', ...PRAYER_POTS, '4doseprayerrestore', ...BOOSTS, '4dose2defense', 'amulet_of_glory_4'], food: 18,
-        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The cheapest kit that clears the dagger gang at its most (research/pvp-fight-loop.md, "Rivals: the dagger gang"):
+    // bow and dagger, an adamant platebody with mithril helm, legs and shield, steel arrows, the three boosts, a super
+    // defence and a super antipoison (the gang's daggers are poisoned). It carries no prayer potion: its profile holds
+    // the prayers with a flick each 2 ticks. Its way out is the glory that it wears.
+    'gang-hunter': { worn: { hat: 'mithril_full_helm', torso: 'adamant_platebody', legs: 'mithril_platelegs', shield: 'mithril_kiteshield', amulet: 'amulet_of_glory_4', cape: 'black_cape', feet: 'leather_boots',
+        weapon: 'dragon_dagger_p', ammo: ['steel_arrow', 150] },
+        carried: ['magic_shortbow', ...BOOSTS, '4dose2defense', '4dose2antipoison'], food: 21,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'mithril_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
     // One style each, in the armour of that style.
     melee: { worn: { ...RUNE, amulet: 'amulet_of_strength', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield' },
         carried: [...PRAYER_POTS, '4dose2attack', '4dose2strength'], food: 22, switches: { melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['melee'] } },

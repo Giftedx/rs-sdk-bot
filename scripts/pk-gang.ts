@@ -13,7 +13,7 @@
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
-import { fightPlayer, nextTick, wildernessLevel, type FightOptions, type FightResult } from './pk';
+import { fightPlayer, ITEMS, nextTick, wildernessLevel, type FightOptions, type FightResult } from './pk';
 import { hitByPlayer, TRIBRID_KIT } from './pk-hunt';
 import { kitOptions, kitSwitches } from './pk-kits';
 import { sparOptions } from './pk-spar';
@@ -30,8 +30,9 @@ export function startsAttack(entity: { primaryAnim?: number; primaryAnimCycle?: 
 }
 // `cleared`: every account of the gang is dead. `away`: our account lost sight of every one that lives.
 // `refused` counts the attacks of our account that the game refused ("I'm already under attack."); `foodLeft` and
-// `prayerLeft` are what our account had at the end: the margin of the method.
-export type GangResult = { end: 'cleared' | 'died' | 'escaped' | 'away' | 'cap'; kills: number; ticks: number; taken: number; eaten: number; specs: number; refused: number; foodLeft: number; prayerLeft: number;
+// `prayerLeft` are what our account had at the end, and `prayerDoses` the doses of prayer potion in its pack: the
+// margin of the method.
+export type GangResult = { end: 'cleared' | 'died' | 'escaped' | 'away' | 'cap'; kills: number; ticks: number; taken: number; eaten: number; specs: number; refused: number; foodLeft: number; prayerLeft: number; prayerDoses: number;
     fights: FightResult[]; gang: FightResult[] };
 
 // The account of the gang to fight now: the one that hit us last, else the nearest in view that the game has not
@@ -40,6 +41,8 @@ export function pickAttacker<P extends { name: string; index: number; distance: 
     const gang = nearby.filter(p => alive.has(p.name.toLowerCase())), open = gang.filter(p => !refused.has(p.name.toLowerCase()));
     return gang.find(p => p.index === lastHitBy) ?? [...(open.length ? open : gang)].sort((x, y) => x.distance - y.distance)[0] ?? null;
 }
+// The doses in each prayer potion and super restore (scripts/pk.ts ITEMS: four doses first).
+const PRAYER_DOSES = new Map([...ITEMS.prayerPotion, ...ITEMS.superRestore].map((id, i) => [id as number, 4 - (i % 4)] as const));
 const attacksOf = (f: FightResult) => f.attacks.magic + f.attacks.ranged + f.attacks.melee;
 // A meeting that measured something: our account attacked, one of the gang attacked, and no session ended.
 export const gangValid = (r: GangResult) => r.fights.some(f => attacksOf(f) > 0) && r.gang.some(f => attacksOf(f) > 0)
@@ -130,7 +133,7 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
     const kills = others.length - alive.size;
     const state = a.sdk.getState(), foodLeft = (state?.inventory ?? []).filter(i => i.optionsWithIndex.some(o => /^eat$/i.test(o.text))).reduce((n, i) => n + i.count, 0);
     return { end, kills, ticks: a.tick() - start, taken, eaten: fights.reduce((n, f) => n + f.eaten, 0), specs: fights.reduce((n, f) => n + f.specs, 0), refused: refusals, foodLeft,
-        prayerLeft: state?.prayers.prayerPoints ?? 0, fights, gang: gangResults };
+        prayerLeft: state?.prayers.prayerPoints ?? 0, prayerDoses: (state?.inventory ?? []).reduce((n, i) => n + (PRAYER_DOSES.get(i.id) ?? 0) * i.count, 0), fights, gang: gangResults };
 }
 
 // The counts of several meetings that ran at once.
@@ -176,5 +179,5 @@ if (import.meta.main) {
     const s = gangSummary(results), ok = results.every(gangValid) && halted === undefined;
     await finish(groups.flat(), ok, `gang groups=${s.groups} cleared=${s.cleared} died=${s.died} escaped=${s.escaped} away=${s.away} cap=${s.cap} kills=${s.kills} ticks=${s.ticks} a=${nameA} b=${nameB} `
         + `valid=${results.filter(gangValid).length} killsEach=${s.killsEach.join(',')} taken=${results.map(r => r.taken).join(',')} eaten=${results.map(r => r.eaten).join(',')} `
-        + `food=${results.map(r => r.foodLeft).join(',')} prayer=${results.map(r => r.prayerLeft).join(',')} refused=${results.map(r => r.refused).join(',')}${halted ? ` halted=${halted}` : ''}`);
+        + `food=${results.map(r => r.foodLeft).join(',')} prayer=${results.map(r => r.prayerLeft).join(',')} doses=${results.map(r => r.prayerDoses).join(',')} refused=${results.map(r => r.refused).join(',')}${halted ? ` halted=${halted}` : ''}`);
 }

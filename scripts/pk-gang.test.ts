@@ -1,13 +1,13 @@
 import { expect, test } from 'bun:test';
 import { gangSummary, gangValid, pickAttacker, startsAttack, type GangResult } from './pk-gang';
 import { PROFILES, sparOptions } from './pk-spar';
-import { combatLevel, itemId, kitItems, kitOptions, kitRoute, KITS, kitSkills, kitSwitches, kitVarps } from './pk-kits';
+import { combatLevel, itemId, kitCost, kitItems, kitOptions, kitRoute, KITS, kitSkills, kitSwitches, kitVarps } from './pk-kits';
 import { benchCases, GANKER_POST } from './measure/aio-bench-cases';
 import { wildernessLevel, type FightResult } from './pk';
 
 const fight = (outcome: FightResult['outcome'], attacks = 10): FightResult =>
     ({ outcome, ticks: 200, dealt: 0, taken: 0, eaten: 0, attacks: { magic: 0, ranged: 0, melee: attacks }, freezes: 0, specs: 0 });
-const result = (end: GangResult['end'], kills: number, fights: FightResult[], gang: FightResult[]): GangResult => ({ end, kills, ticks: 500, taken: 200, eaten: 9, specs: 4, refused: 0, foodLeft: 9, prayerLeft: 40, fights, gang });
+const result = (end: GangResult['end'], kills: number, fights: FightResult[], gang: FightResult[]): GangResult => ({ end, kills, ticks: 500, taken: 200, eaten: 9, specs: 4, refused: 0, foodLeft: 9, prayerLeft: 40, prayerDoses: 3, fights, gang });
 
 test('our account fights the one of the gang that hit it last, else the nearest that lives', () => {
     const near = [{ name: 'Sugma', index: 5, distance: 3 }, { name: 'Ligma', index: 6, distance: 1 }, { name: 'Goondelf', index: 7, distance: 2 }, { name: 'Passerby', index: 8, distance: 0 }];
@@ -87,12 +87,16 @@ test('the ganker cases stand at the post: the spars in pairs, the gang on one ti
         expect(max.scriptArgs).toEqual(expect.arrayContaining([`SPAR_KITS=${kit}:ganker-max`, 'SPAR_CAP=2400']));
         expect(max.companions![0]!.presetConfig).toMatchObject(kitItems('ganker-max'));
     }
-    // The hunter kit: the glory is in its pack (the fight loop rubs a glory that it carries), with a super defence,
-    // three prayer potions and the dragon helm and legs; its profile keeps the armour on and has the way out.
+    // The hunter kit: a super defence, a super antipoison, no prayer potion and no second glory (the one it wears is
+    // its way out); its profile keeps the armour on, flicks each 2 ticks with no Protect Item, and has the way out.
     const hunter = kitItems('gang-hunter'), count = (name: string) => hunter.inventory.filter(i => i.id === itemId(name)).length;
-    expect([count('amulet_of_glory_4'), count('4dose2defense'), count('4doseprayerrestore'), count('shark'), hunter.inventory.length]).toEqual([1, 1, 3, 18, 27]);
-    expect(hunter.equipment.filter(e => e.slot === 0 || e.slot === 7).map(e => e.id)).toEqual([itemId('dragon_med_helm'), itemId('dragon_platelegs')]);
-    expect(sparOptions('gang-hunter', undefined, kitSwitches('gang-hunter'), 900, kitOptions('gang-hunter'))).toMatchObject({ ...PROFILES.champion, castArmour: 'keep', escapeAt: 60 });
+    expect([count('amulet_of_glory_4'), count('4dose2defense'), count('4dose2antipoison'), count('4doseprayerrestore'), count('shark'), hunter.inventory.length]).toEqual([0, 1, 1, 0, 21, 27]);
+    expect(hunter.equipment.filter(e => [0, 2, 4, 5, 7].includes(e.slot)).map(e => e.id).sort((x, y) => x - y)).toEqual(['mithril_full_helm', 'amulet_of_glory_4', 'adamant_platebody', 'mithril_kiteshield', 'mithril_platelegs'].map(itemId).sort((x, y) => x - y));
+    expect(kitCost('gang-hunter')).toBeLessThan(75_000);
+    expect(sparOptions('gang-hunter', undefined, kitSwitches('gang-hunter'), 900, kitOptions('gang-hunter'))).toMatchObject({ ...PROFILES.champion, castArmour: 'keep', escapeAt: 60, protectItem: false, flickEvery: 2 });
+    for (const key of ['extra:gang-ganker-gang-hunter-x4', 'extra:gang-ganker-max-gang-hunter-x4', 'extra:gang-ganker-escape-worn-x4']) expect(cases.find(k => k.key === key)!.scriptArgs).toContain('SPAR_A=gang-hunter');
+    // The worn-glory case starts our account with 3 sharks.
+    expect(cases.find(k => k.key === 'extra:gang-ganker-escape-worn-x4')!.presetConfig!.inventory!.filter(i => i.id === itemId('shark')).length).toBe(3);
     const escape = cases.find(k => k.key === 'extra:gang-ganker-escape-x4')!;
     expect(escape.scriptArgs).toContain('SPAR_A_OPTS={"escapeAt":60}');
     expect(escape.pass('RESULT ok gang groups=4 cleared=0 died=0 escaped=4 away=0 cap=0 kills=0')).toBe(true);
