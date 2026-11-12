@@ -1,25 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794460348133,
+ "at": 1794460472147,
  "jobs": [
-  {
-   "account": "UnderMyKilt",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=undermykilt-kit9-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Law rune on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on iron arrows",
-   "role": "supply",
-   "template": "kit-buy:army-hunt-black-dragons",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
   {
    "account": "Quickhandjob",
    "script": "scripts/shop-buyer.ts",
@@ -66,6 +48,25 @@
   },
   {
    "account": "TheFullMonty",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "UnderMyKilt",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
@@ -171,23 +172,21 @@
   },
   {
    "account": "PocketPool",
-   "script": "scripts/aio.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "quester",
-    "chain",
-    "merlin,grail"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=2 EXPECTED_OWNED=44 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit14-556-44to46 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
-   "env": {},
+   "env": {
+    "ROUNDS": "1"
+   },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience",
-   "role": "quest",
-   "template": "army-quest-holygrail",
+   "goal": "buy 2 Air rune on the Grand Exchange to complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience",
+   "role": "supply",
+   "template": "kit-buy:army-quest-holygrail",
    "autopilot": "claude-cloud",
-   "resources": [
-    "quest:camelot"
-   ]
+   "resources": []
   },
   {
    "account": "Dipstick",
