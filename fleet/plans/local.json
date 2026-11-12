@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794498027400,
+ "at": 1794498061463,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -253,28 +253,21 @@
   },
   {
    "account": "NabTheKnob",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "TARGET_LEVEL": "99",
-    "GIANT_BURY": "0"
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 99 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-99",
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
    "autopilot": "local",
    "resources": [
-    "cow:ardougne-north"
+    "knight:2652,3318"
    ]
   },
   {
