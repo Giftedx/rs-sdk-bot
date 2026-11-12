@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794462966796,
+ "at": 1794463045313,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -66,6 +66,25 @@
    ]
   },
   {
+   "account": "UnderMyKilt",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2582,3297"
+   ]
+  },
+  {
    "account": "Deeppockets",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -111,22 +130,21 @@
   },
   {
    "account": "Fingerblastr",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts jukat 9000 BLIND_BUY=1 STOCK_TARGET=2 STOP_AT_TARGET=1 BANK_AT=0 NO_BUY_TICKS=3000 STALL_TICKS=0 COIN_RESERVE=5000 FLOAT=211000"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy dragon longswords from Jakut in the Zanaris market",
-   "role": "supply",
-   "template": "army-jakut-swords",
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
    "autopilot": "claude-cloud",
    "resources": [
-    "shop:jukat"
+    "knight:2652,3318"
    ]
   },
   {
@@ -206,47 +224,16 @@
   },
   {
    "account": "KnightRider",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "UnderMyKilt",
-   "script": "scripts/goldfarm.ts",
+   "script": "scripts/session-check.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-fd9fdd90-f352-4981-ad32-d56dca31b562"
    },
    "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2582,3297"
-   ]
+   "repeat": false,
+   "goal": "claude-cloud-recover-knightrider-20261112t054942z [task-fd9fdd90-f352-4981-ad32-d56dca31b562]",
+   "role": "combat"
   }
  ]
 }
