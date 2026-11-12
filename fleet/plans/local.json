@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794469768655,
+ "at": 1794470358261,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -624,7 +624,7 @@
     "KNIGHT_SPOT": "2653,3300",
     "TICKS": "9000"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true,
    "goal": "goldfarm knights at 2653,3300",
