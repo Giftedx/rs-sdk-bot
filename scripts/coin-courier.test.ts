@@ -1,5 +1,7 @@
 import { beforeAll, test, expect } from 'bun:test';
-import { parseCoins, exactCoinDelta, coinTradeObservation, meetingTiles, prepareCoinSlot } from './coin-courier';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { parseCoins, exactCoinDelta, coinTradeObservation, meetingTiles, prepareCoinSlot, BANK_MEETS } from './coin-courier';
 import type { Session } from '../packages/core/src/inprocess';
 import { loadPathfinding } from '../packages/core/src/pathcache';
 
@@ -90,7 +92,25 @@ test('meeting tiles are adjacent public floor joined to the bank tile, off the b
     expect(joined(a, b)).toMatchObject({ x: b.x, z: b.z });
     // A tile behind the counter has no route to the meeting floor.
     expect(joined({ x: 3186, z: 3437 }, a)).not.toMatchObject({ x: a.x, z: a.z });
+    // Each route bank: an adjacent walkable pair, joined to each of its bank tiles and to each other, off the booth.
+    const travel = JSON.parse(readFileSync(join(import.meta.dir, '..', 'packages', 'planner', 'src', 'haggis-travel.json'), 'utf8')).banks;
+    for (const { x, z } of Object.values<{ x: number; z: number }>(travel)) expect(meetingTiles({ x, z })).not.toBeNull();
+    for (const row of BANK_MEETS) {
+        const [p, q] = row.meet;
+        expect(Math.abs(p.x - q.x) + Math.abs(p.z - q.z)).toBe(1);
+        for (const t of row.meet) {
+            expect(pf.isTileWalkable(0, t.x, t.z)).toBe(true);
+            for (const [bx, bz] of row.tiles) expect(joined({ x: bx, z: bz }, t)).toMatchObject({ x: t.x, z: t.z });
+        }
+        expect(joined(p, q)).toMatchObject({ x: q.x, z: q.z });
+    }
 }, 60000);
+test('a bank name or either bank tile gives the same pair', () => {
+    expect(meetingTiles({ x: 3185, z: 3440 })).toEqual(meetingTiles({ x: 3185, z: 3436 }));
+    expect(meetingTiles({ x: 2618, z: 3332 })).toEqual([{ x: 2618, z: 3333, level: 0 }, { x: 2617, z: 3333, level: 0 }]);
+    expect(meetingTiles({ x: 3092, z: 3243 })).toEqual([{ x: 3093, z: 3243, level: 0 }, { x: 3093, z: 3244, level: 0 }]);
+    expect(new Set(BANK_MEETS.map(r => r.bank)).size).toBe(BANK_MEETS.length);
+});
 test('amount, identity and bounds fail before login', () => {
     for (const amount of ['0', '-1', '1.5', 'NaN', '2147483648']) expect(() => parseCoins(['Giver', 'Taker', amount])).toThrow();
     expect(() => parseCoins(['Giver', 'giver', '1'])).toThrow();

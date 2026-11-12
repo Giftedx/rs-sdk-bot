@@ -44,10 +44,28 @@ export async function prepareCoinSlot(s: Session, check: () => void) {
 // A bank without a known pair keeps its bank tile and still needs the reachability check.
 // Ardougne north bank (2619,3332), the PK army's home: the pair is open floor inside the bank. Practice: two bots walked
 // there from the goldfarm knights and each opened the bank from its tile.
+// The other banks of packages/planner/src/haggis-travel.json: the booth is the one unwalkable neighbour of the bank
+// tile, and the pair is the tile one step back from the booth plus the next tile along the booth row (pathfinder:
+// both walkable and joined to the bank tile). The same rule gives the Ardougne north pair. A route account takes
+// its next batch of supplies at the bank it visits next, so each route bank needs a pair.
+const pair = (a: [number, number], b: [number, number]): [Tile, Tile] => [{ x: a[0], z: a[1], level: 0 }, { x: b[0], z: b[1], level: 0 }];
+const VARROCK_WEST = pair([3183, 3440], [3182, 3440]), ARDOUGNE_NORTH = pair([2618, 3333], [2617, 3333]);
+export const BANK_MEETS: readonly { bank: string; tiles: readonly [number, number][]; meet: [Tile, Tile] }[] = [
+    { bank: 'varrock-west', tiles: [[3185, 3436], [3185, 3440]], meet: VARROCK_WEST },
+    { bank: 'ardougne-north', tiles: [[2619, 3332], [2618, 3332]], meet: ARDOUGNE_NORTH },
+    { bank: 'draynor', tiles: [[3092, 3243]], meet: pair([3093, 3243], [3093, 3244]) },
+    { bank: 'al-kharid', tiles: [[3269, 3167]], meet: pair([3270, 3167], [3270, 3168]) },
+    { bank: 'varrock-east', tiles: [[3254, 3420]], meet: pair([3254, 3421], [3253, 3421]) },
+    { bank: 'falador-east', tiles: [[3013, 3355]], meet: pair([3013, 3356], [3014, 3356]) },
+    { bank: 'falador-west', tiles: [[2947, 3368]], meet: pair([2947, 3369], [2946, 3369]) },
+    { bank: 'edgeville', tiles: [[3094, 3491]], meet: pair([3093, 3491], [3093, 3492]) },
+    { bank: 'ardougne-south', tiles: [[2655, 3283]], meet: pair([2654, 3283], [2654, 3284]) },
+    { bank: 'catherby', tiles: [[2809, 3441]], meet: pair([2809, 3440], [2810, 3440]) },
+    { bank: 'seers', tiles: [[2727, 3493]], meet: pair([2727, 3492], [2728, 3492]) },
+];
 export function meetingTiles(bank: { x: number; z: number }): [Tile, Tile] | null {
-    if (bank.x === 3185 && bank.z === 3436) return [{ x: 3183, z: 3440, level: 0 }, { x: 3182, z: 3440, level: 0 }];
-    if (bank.x === 2619 && bank.z === 3332) return [{ x: 2618, z: 3333, level: 0 }, { x: 2617, z: 3333, level: 0 }];
-    return null;
+    const row = BANK_MEETS.find(r => r.tiles.some(([x, z]) => x === bank.x && z === bank.z));
+    return row ? [{ ...row.meet[0] }, { ...row.meet[1] }] : null;
 }
 
 export function coinTradeObservation(s: Session, partnerName: string) {
