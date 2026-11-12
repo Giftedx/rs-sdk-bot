@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794445867019,
+ "at": 1794455114530,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -132,6 +132,26 @@
    "autopilot": "claude-cloud",
    "resources": [
     "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/aio.ts",
+   "args": [
+    "quester",
+    "chain",
+    "drunkmonk,murder,zanaris"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
+   "role": "quest",
+   "template": "army-quest-lostcity",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "quest:lostcity"
    ]
   },
   {
