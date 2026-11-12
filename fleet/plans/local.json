@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794475266687,
+ "at": 1794475867901,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -34,6 +34,24 @@
    "repeat": true,
    "goal": "Strength 30 on chickens so it can hit hard enough to PK",
    "role": "pk-trainee"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=50 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=wandwaver-kit4-561-0to50 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 50 Nature rune on the Grand Exchange to buy feathers at Gerrant's in Port Sarim for the alchemy band",
+   "role": "supply",
+   "template": "kit-buy:army-feathers-sarim",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "Abracadickra",
@@ -393,24 +411,6 @@
    "resources": [
     "pen:3229,3298"
    ]
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=50 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=wandwaver-kit4-561-0to50 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 50 Nature rune on the Grand Exchange to buy feathers at Gerrant's in Port Sarim for the alchemy band",
-   "role": "supply",
-   "template": "kit-buy:army-feathers-sarim",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "Woodenstaff",
