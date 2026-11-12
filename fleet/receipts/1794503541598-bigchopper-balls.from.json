@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794503541598-bigchopper-balls",
+ "account": "Bigchopper",
+ "partner": "Balls",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "logs",
+ "requested": 1,
+ "claim": "406962d5-2f7a-45b8-b317-59d0b9e349bb",
+ "count": 0,
+ "ok": false,
+ "at": 1794504134017,
+ "detail": "trade claimed"
+}
