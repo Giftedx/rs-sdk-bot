@@ -22,9 +22,7 @@
     "packages/core/test/danger.test.ts",
     "packages/practice/src/quest-sweep-proof.ts",
     "packages/practice/src/stack.ts",
-    "packages/practice/src/proc.ts",
     "packages/practice/test/stack.test.ts",
-    "packages/practice/test/proc.test.ts",
     "scripts/ghost-basement-exit.ts",
     "scripts/ghost-basement-exit.test.ts",
     "packages/practice/test/quest-sweep-endpoints.test.ts",
@@ -34,7 +32,7 @@
     "scripts/generated/quest-barcrawl.ts",
     "scripts/shop-buyer.test.ts"
   ],
-  "consumer": "run-scorpion-bigchopper-quest-sweep-r5 completes Scorpion Catcher on ordinary Bigchopper with args scorpion, CAP 6000 and quest completion acceptance. Practice invokes the real account-parameterized worker CLI from a save without Barcrawl varp 77=2 and checks that the worker stages and completes Barcrawl, passes the outpost gate, completes Scorpion Catcher, adds 1 quest point, reconciles assets, refuses an invalid start and logs out. Preserve existing quest callers and checks. The live result releases run-fight-arena-bigchopper-after-scorpion.",
+  "consumer": "run-scorpion-bigchopper-seer-dialog-r9 completes Scorpion Catcher on ordinary Bigchopper with args scorpion, CAP 6000 and quest completion acceptance. Practice invokes the real account-parameterized worker CLI from a save without Barcrawl varp 77=2 and checks that it stages and completes Barcrawl, passes the outpost gate, completes Scorpion Catcher, adds one quest point, reconciles assets, refuses an invalid start and logs out. Preserve existing quest callers and checks. The live result releases run-fight-arena-bigchopper-after-law-scorpion-r2.",
   "checks": [
     {
       "id": "quest-sweep-regressions",
