@@ -16,7 +16,7 @@ Keep the loop fast:
 
 - While you edit, run one test file (`bun test <file>`) and the bench cases you changed. To type-check the change, run `bun scripts/typecheck-narrow.ts`: it checks the changed files and the files that they import, with a heap limit. Run `bun run typecheck` once before you push.
 - Read the pass count and the fail count of each test run. Do not send test output through a filter that can hide the fail line. Join a commit to its test with `&&`, so a failed test stops the commit.
-- Run one heavy job at a time on a machine: a gate, a bench or a test suite. Two at once give failures that are not real. If a test that the change does not touch fails, run that file alone before you debug it.
+- Run one heavy job at a time on a machine: a gate, a bench or a test suite. Two at once give failures that are not real. `bun run bench` checks this before it starts an engine: it stops with one line beside the gate, the bench or the test-shard run of a different job, on a used engine port, or with too little free memory. Add `--wait <minutes>` to wait for a safe start. If a test that the change does not touch fails, run that file alone before you debug it.
 - Start a slow step as one background command that ends in its result, and work on the next item until it ends. Do not poll. Do not wait in a `sleep` loop.
 - Use Bash for shell work. Use PowerShell only for one Windows cmdlet. The command checker refuses a PowerShell command that has `$()`, a `"$var"` string or a script block.
 - If a command needs a loop, a variable or code in a heredoc, write a script file in `.practice/<task>/` and run the file. The command checker refuses those shapes in a one-line command.
