@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794501324301,
+ "at": 1794501929875,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -102,28 +102,6 @@
    ]
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "crafting",
-    "bowstrings",
-    "2500",
-    "MAX_MAKE=168",
-    "RAW_RESERVE=0",
-    "MAX_TRIPS=8"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "spin flax at Seers to the Crafting a black dragonhide body asks",
-   "role": "crafting",
-   "template": "army-leather-spin",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
    "account": "Fingerblastr",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -215,6 +193,28 @@
    ]
   },
   {
+   "account": "Dipstick",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby"
+   ],
+   "env": {
+    "ITEMS": "rune arrowtips|adamant arrowtips",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy rune and adamant arrowtips at Catherby",
+   "role": "bank",
+   "template": "shop-arrowtips",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:catherby"
+   ]
+  },
+  {
    "account": "KnightRider",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -238,19 +238,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "Dipstick",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-a1ad0ca7-2260-4050-9a13-3b4fc16a6272"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "claude-cloud-recover-dipstick-20261112t163013z [task-a1ad0ca7-2260-4050-9a13-3b4fc16a6272]",
-   "role": "bank"
   }
  ]
 }
