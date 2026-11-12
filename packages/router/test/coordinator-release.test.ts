@@ -6,7 +6,7 @@ import {beginSessionAttempt} from '../../core/src/session-lifecycle';
 import {RECOVERY_SCHEMA} from '../../core/src/session-recovery-permit';
 import {atomicJson} from '../src/coordinator-store';
 import {recoveryRuns} from '../src/coordinator-cli';
-import {installJob,releaseCompletedOwnJobs,releaseFinishedOwnJobs} from '../src/coordinator-live';
+import {installJob,releaseCompletedOwnJobs,releaseFinishedOwnJobs,recoveryWaitsForMemory,RECOVERY_MEMORY_MARGIN_GB} from '../src/coordinator-live';
 import {readCoordinatorJobs,readMergedPlan,writeCoordinatorJobs} from '../../core/src/coordinator-jobs';
 import type {CoordTask} from '../src/coordinator';
 import {parseJob} from '../../../scripts/swarm';
@@ -170,4 +170,20 @@ test('a running run task with a repair or a session recovery is a recovery; no o
  expect(recoveryRuns({tasks:[task('running'),task('running',{repairs:[]}),task('pending',{repairs}),task('failed',{repairs,sessionRecovery}),task('running',{kind:'qualify',repairs})]})).toBe(false);
  expect(recoveryRuns({tasks:[task('running'),task('running',{repairs})]})).toBe(true);
  expect(recoveryRuns({tasks:[task('running',{sessionRecovery})]})).toBe(true);
+});
+
+test('a recovery run waits in the queue while the swarm would refuse it for memory',()=>{
+ const sessionRecovery={account:'CoinCock',endedAt:1},capacity={running:11,externalRunning:0,pendingStartup:1,freeGB:5.62,minFreeGB:4,maxBots:25};
+ // The swarm projects 5.62 - 1 for the pending start - 1 for the recovery = 3.62 GiB, under the floor of 4.
+ expect(recoveryWaitsForMemory({sessionRecovery},capacity)).toBe(true);
+ // 4 + 1 for the recovery + the margin is the least free memory with no pending start.
+ expect(recoveryWaitsForMemory({sessionRecovery},{...capacity,pendingStartup:0,freeGB:5+RECOVERY_MEMORY_MARGIN_GB})).toBe(false);
+ expect(recoveryWaitsForMemory({sessionRecovery},{...capacity,pendingStartup:0,freeGB:4.9+RECOVERY_MEMORY_MARGIN_GB})).toBe(true);
+ expect(recoveryWaitsForMemory({sessionRecovery},{...capacity,freeGB:10.2,pendingStartup:3})).toBe(false);
+ // No other run waits for this rule; an unknown controller state holds nothing.
+ expect(recoveryWaitsForMemory({},capacity)).toBe(false);
+ expect(recoveryWaitsForMemory({sessionRecovery},null)).toBe(false);
+ expect(recoveryWaitsForMemory({sessionRecovery},{...capacity,freeGB:null})).toBe(false);
+ // A full fleet is the slot rule's case, not this one.
+ expect(recoveryWaitsForMemory({sessionRecovery},{...capacity,running:25,freeGB:20})).toBe(false);
 });

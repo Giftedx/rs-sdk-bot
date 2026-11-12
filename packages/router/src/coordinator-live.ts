@@ -18,6 +18,16 @@ import {RECOVERY_SCHEMA,assertNoRecoveryLease,heldRecoveryOwners,recoveredSessio
 import {COORDINATOR_JOBS_FILE,readCoordinatorJobs,writeCoordinatorJobs,mergedPlan,jobAccounts,parkedCoordinatorAccounts,shadowAssignments,type CoordinatorJobs} from '../../core/src/coordinator-jobs';
 import {readLogoutProof} from '../../core/src/session-lifecycle';
 
+// The swarm refuses a session recovery when memory is short (admitRecovery in scripts/swarm.ts). That refusal is
+// final for the run, and each run chained behind it then waits for a new proposal. So a recovery run stays in the
+// queue while the controller's last state shows that refusal. The margin covers the seconds between this read and
+// the admission, in which a bot can start.
+export const RECOVERY_MEMORY_MARGIN_GB=1;
+export function recoveryWaitsForMemory(task:Pick<CoordTask,'sessionRecovery'>,capacity:{running:number|null;externalRunning:number|null;pendingStartup:number|null;freeGB:number|null;minFreeGB:number|null;maxBots:number|null}|null):boolean{
+ if(!task.sessionRecovery||!capacity||capacity.freeGB===null||capacity.minFreeGB===null)return false;
+ return admissionDecision({running:capacity.running??0,external:capacity.externalRunning??0,pending:capacity.pendingStartup??0,starting:1,startingReserve:1,
+  freeGB:Math.max(0,capacity.freeGB-RECOVERY_MEMORY_MARGIN_GB),minFreeGB:capacity.minFreeGB,maxBots:capacity.maxBots??Number.MAX_SAFE_INTEGER}).reason==='memory';
+}
 // A controller that wrote .practice/swarm-state.json under this pid and nonce within this window is the saved
 // controller: no PowerShell command-line probe is needed while its pid is alive.
 export const CONTROLLER_STATE_FRESH_MS=10_000;
