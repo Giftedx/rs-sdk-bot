@@ -540,6 +540,20 @@ test('feed del and count records that hit a pile of the bridge are repaired on t
  socket.message({t:'tick',k:5,ms:600,w:[{e:'od',x:3219,z:3242,l:0,id:995}]});
  expect(drawn()).toEqual({'3219,3242,0':[[995,10]]});
 });
+test('a feed del that hits a pile of the bridge leaves no ghost pile after the private pile goes',async()=>{
+ const {b,socket,page,drawn}=groundBrowser();await b.consume();
+ socket.message({t:'tick',k:1,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1}]});
+ page({botGround:[[3219,3242,0,995,10]]});
+ socket.message({t:'tick',k:2,ms:600});
+ page({botGround:[[3219,3242,0,995,10],[3219,3242,0,995,10]]});
+ socket.message({t:'tick',k:3,ms:600,w:[{e:'oa',x:3219,z:3242,l:0,id:995,n:10}]});
+ page({botGround:[[3219,3242,0,995,10]]});
+ socket.message({t:'tick',k:4,ms:600,w:[{e:'od',x:3219,z:3242,l:0,id:995}]});
+ expect(drawn()).toEqual({'3219,3242,0':[[995,10]]});
+ page({botGround:[]});
+ socket.message({t:'tick',k:5,ms:600});
+ expect(drawn()).toEqual({});
+});
 test('a public pile and a private pile of one type on a tile each show once',async()=>{
  const {b,socket,page,drawn}=groundBrowser();await b.consume();
  socket.message({t:'tick',k:1,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1},{e:'oa',x:3219,z:3242,l:0,id:995,n:20}]});

@@ -203,7 +203,9 @@ export function installViewerBridge(host:any) {
                         }else if((r?.e==='oa'||r?.e==='od'||r?.e==='oc')&&[r.x,r.z,r.l,r.id].every(Number.isSafeInteger)){
                             const g=`${r.x},${r.z},${r.l},${r.id}`,list=piles.get(g)??[];
                             if(r.e==='oa'){if(r.id>=0&&r.n>=1)list.push({f:true,n:r.n});}
-                            else if(r.e==='od')list.shift();
+                            // The feed lost one of its piles. If the viewer deleted one of the bridge's, a feed pile that
+                            // the viewer keeps now stands for the bridge's.
+                            else if(r.e==='od'){const p=list.shift();if(p&&!p.f){const j=list.findIndex(q=>q.f);if(j>=0)list[j]!.f=false;}}
                             else if(r.n>=1){
                                 const i=list.findIndex(p=>p.n===r.n0),p=list[i>=0?i:0];
                                 // The feed changed its own pile. If the viewer changed one of the bridge's piles of the old
