@@ -44,6 +44,7 @@ export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
  'scripts/microbot-action-replay.ts': 'replays a recorded action list; it needs a recording file and a bindings file, and no route supplies them',
  'scripts/microbot-catalog.ts': 'report: lists the Microbot plugins and the port decisions',
  'scripts/monitor.ts': 'fleet control: the watchdog of the machine and the swarm',
+ 'scripts/now.ts': 'developer tool: prints the state of this PC and the fleet on one screen; it changes nothing',
  'scripts/pk-live/walk-edge.ts': 'hand tool: walks one account to Edgeville bank with a long route budget',
  'scripts/pk-sim.ts': 'offline fight simulator; it starts no game work',
  'scripts/preparation-report.ts': 'report: owned gear and supplies against the inputs of the workers',
