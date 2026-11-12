@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794498290041,
+ "at": 1794498311158,
  "jobs": [
   {
    "account": "Fingerblastr",
@@ -41,25 +41,25 @@
   },
   {
    "account": "TrouserSnake",
-   "script": "scripts/shop-buyer.ts",
+   "script": "scripts/aio.ts",
    "args": [
-    "betty"
+    "skiller",
+    "crafting",
+    "bowstrings",
+    "2500",
+    "MAX_MAKE=168",
+    "RAW_RESERVE=0",
+    "MAX_TRIPS=8"
    ],
-   "env": {
-    "ITEMS": "fire rune|air rune|earth rune",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy elemental runes at Betty",
-   "role": "bank",
-   "template": "shop-runes",
+   "goal": "spin flax at Seers to the Crafting a black dragonhide body asks",
+   "role": "crafting",
+   "template": "army-leather-spin",
    "autopilot": "claude-cloud",
-   "resources": [
-    "shop:betty"
-   ]
+   "resources": []
   },
   {
    "account": "TheFullMonty",
@@ -104,41 +104,47 @@
   },
   {
    "account": "Deeppockets",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "betty"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
+    "ITEMS": "fire rune|air rune|earth rune",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
+   "goal": "buy elemental runes at Betty",
+   "role": "bank",
+   "template": "shop-runes",
    "autopilot": "claude-cloud",
    "resources": [
-    "knight:2671,3313"
+    "shop:betty"
    ]
   },
   {
    "account": "Fatstack",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "crafting",
+    "bowstrings",
+    "2500",
+    "MAX_MAKE=168",
+    "RAW_RESERVE=0",
+    "MAX_TRIPS=8"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "goal": "spin flax at Seers to the Crafting a black dragonhide body asks",
+   "role": "crafting",
+   "template": "army-leather-spin",
    "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2582,3297"
-   ]
+   "resources": []
   },
   {
    "account": "Kiltlifter",
@@ -214,20 +220,22 @@
   },
   {
    "account": "Dipstick",
-   "script": "scripts/aio.ts",
-   "args": [
-    "quester",
-    "dusty-key"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "get the dusty key from Velrak for Taverley dungeon's inner gate",
-   "role": "quest",
-   "template": "army-dusty-key",
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "knight:2582,3297"
+   ]
   },
   {
    "account": "KnightRider",
