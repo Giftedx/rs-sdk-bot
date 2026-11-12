@@ -3,7 +3,7 @@ import {join,resolve,dirname,sep} from 'node:path';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {capabilityRevision,cachedLaunchRevision} from './worker-release';
-import {processMatchesRecent,safeKill} from '../../practice/src/proc';
+import {processMatchesRecent,safeKill,commandLine} from '../../practice/src/proc';
 import {readLogoutProof,listAttempts} from './session-lifecycle';
 import {isLocalServer} from './localserver';
 import {missionSignature,successfulEnd} from './session-admission';
@@ -384,6 +384,62 @@ export function recoveredSessionForRun(account:string,server:string,runId:string
   }
  }
  return false;
+}
+
+// A child that logged out but could not confirm preserved state leaves its lease held (finishRecoveryPermit), and
+// assertNoRecoveryLease then refuses every later recovery of the account. The controller removes only that exact lease:
+// its permit has expired, its bound child is gone, and the child's own producer attempt is the account's latest
+// confirmed logout. It writes released.json and keeps the permit, child, used, output, end, assignments and stops.
+// It never writes completed.json, so recoveredSessionForRun still refuses this run.
+export type LeaseReleaseChecks={now?:()=>number;matches?:(pid:number,marker:string)=>boolean;childAlive?:(pid:number,nonce:string)=>boolean};
+const childRunning=(pid:number,nonce:string)=>{
+ try{process.kill(pid,0);}catch(e){if((e as NodeJS.ErrnoException).code==='ESRCH')return false;}
+ // A reused PID without the child's nonce on its command line is not the child. An unreadable command line counts as live.
+ const line=commandLine(pid);return line===null||line.includes(nonce);
+};
+export function releaseExpiredRecoveryLease(account:string,base:string,options:LeaseReleaseChecks={}){
+ if(! /^[A-Za-z0-9_ -]{1,12}$/.test(account))throw Error('invalid recovery lease identity');
+ const now=(options.now??Date.now)(),matches=options.matches??processMatchesRecent,alive=options.childAlive??childRunning;
+ const owner=json(join(base,'.practice/coordinator/swarm-owner.json'));
+ if(owner.pid!==process.pid||typeof owner.nonce!=='string'||!owner.nonce||!matches(owner.pid,owner.nonce))throw Error('recovery lease release needs the controller');
+ const leasePath=join(base,'.practice/coordinator/session-recovery/accounts',account.toLowerCase(),'lease.json');
+ if(!existsSync(leasePath))throw Error('recovery lease absent');
+ const leaseRaw=readFileSync(leasePath),p=JSON.parse(leaseRaw.toString('utf8')),r=p?.request as ControlledRecoveryRequest;
+ validateRecoveryRequest(r);if(!same(r.account,account)||r.kind!=='session-recovery')throw Error('recovery lease crossed');
+ const paths=recoveryPermitPaths(r,base),leaseSha256=sha(leaseRaw);
+ if(!existsSync(paths.permit)||sha(readFileSync(paths.permit))!==leaseSha256||p.schema!=='session-recovery-permit/1')throw Error('recovery lease changed');
+ if(p.nativeFixture)assertNativeFixtureRoot(base,r.server);
+ if(!Number.isFinite(p.issuedAt)||p.expiresAt!==p.issuedAt+150000||now<p.expiresAt)throw Error('recovery permit not expired');
+ assertRecoveryNotStopped(r.account,base);
+ const child=existsSync(paths.child)?json(paths.child):null,used=existsSync(paths.used)?json(paths.used):null;
+ if(!child||!Number.isSafeInteger(child.pid)||child.pid<1||child.nonce!==r.nonce||child.runId!==r.runId
+  ||!used||used.pid!==child.pid||used.nonce!==r.nonce||used.permitSha256!==leaseSha256)throw Error('recovery lease child not bound');
+ if(alive(child.pid,r.nonce))throw Error('recovery lease child still alive');
+ const root=join(base,'.practice/session-lifecycle'),proof=readLogoutProof(r.account,r.server,{root});
+ if(proof.state!=='confirmed')throw Error('recovery lease producer logout not confirmed');
+ const attempt=listAttempts(r.account,r.server,{root}).find(a=>a.attemptId===proof.attemptId),a=attempt?.receipt;
+ const receiptPath=join(paths.output,'receipt.json'),receipt=existsSync(receiptPath)?json(receiptPath):null;
+ if(proof.ownerRun!==r.runId||!a||attempt?.sha256!==proof.receiptSha256||a.owner.pid!==child.pid||a.owner.coordinatorRunId!==r.runId
+  ||a.owner.workerRelease!==r.source||a.owner.script!==RECOVERY_SCRIPT||a.createdAt<p.issuedAt||proof.loggedOutAt<p.issuedAt
+  ||!receipt||receipt.logout!=='logged-out'||!isDeepStrictEqual(receipt.request,r)||receipt.runnerSha256!==p.runnerSha256
+  ||receipt.attemptId!==proof.attemptId||receipt.lifecycleSha256!==proof.receiptSha256||receipt.scope?.gameplay!==false||receipt.scope.production!==0)
+  throw Error('recovery lease producer proof mismatched');
+ const released={schema:'session-recovery-release/1',at:now,account:r.account,nonce:r.nonce,runId:r.runId,leaseSha256,childPid:child.pid,
+  attemptId:proof.attemptId,lifecycleSha256:proof.receiptSha256,receiptSha256:sha(readFileSync(receiptPath)),controller:{pid:owner.pid,nonce:owner.nonce},scope:{repairsFailure:false,qualifiesScript:false,production:0}};
+ writeFileSync(join(dirname(paths.permit),'released.json'),JSON.stringify(released),{flag:'wx'});
+ if(sha(readFileSync(leasePath))!==leaseSha256)throw Error('recovery lease changed before release');
+ unlinkSync(leasePath);return released;
+}
+// The controller's sweep: each unmanaged lease either releases or keeps its fixed refusal reason.
+export function releaseExpiredRecoveryLeases(base:string,managed:readonly string[]=[],options:LeaseReleaseChecks={}){
+ const root=join(base,'.practice/coordinator/session-recovery/accounts'),results:{account:string;released:boolean;reason:string}[]=[];
+ if(!existsSync(root))return results;
+ for(const account of readdirSync(root)){
+  if(managed.some(a=>same(a,account))||!existsSync(join(root,account,'lease.json')))continue;
+  try{releaseExpiredRecoveryLease(account,base,options);results.push({account,released:true,reason:'released'});}
+  catch(error){results.push({account,released:false,reason:error instanceof Error&&/^recovery |^invalid /.test(error.message)?error.message:'unclassified release error'});}
+ }
+ return results;
 }
 
 // A controller restart must still count an inherited child's resource ownership. It may observe that child,
