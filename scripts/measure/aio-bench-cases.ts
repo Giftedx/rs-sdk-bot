@@ -728,6 +728,10 @@ const EXTRA_CASES: BenchCase[] = [
   // Magic 19 to 21 over the fence of the cow field.
   skiller('magic', 'alch-train', 'fresh_lumbridge', ['56', '1500'],
     {presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Magic: 54, Hitpoints: 40}, bank: [{id: 561, count: 60}, {id: 314, count: 60}, {id: 1387, count: 1}]}}),
+  // The record route opening (rune.fast step 1, 135 ticks with the tutorial and a trade): Magic 1 to 8 from the
+  // starter runes at the Lumbridge coop, from the Lumbridge spawn.
+  skiller('magic', 'splash-coop', 'fresh_lumbridge', ['8', '600'],
+    {presetConfig: {inventory: [{id: 556, count: 25}, {id: 558, count: 15}, {id: 555, count: 6}, {id: 557, count: 4}, {id: 559, count: 2}]}}),
   skiller('magic', 'splash', 'fresh_lumbridge', ['21', '1500'],
     {presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Magic: 19, Hitpoints: 40}, bank: [{id: 559, count: 40}, {id: 557, count: 120}, {id: 555, count: 120}, {id: 558, count: 2}, {id: 556, count: 2}]}}),
   // Underground Pass and Regicide on the halberd pure (Ranged 99, Prayer 43, Defence 1): nothing worn, a magic

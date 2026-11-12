@@ -1,6 +1,7 @@
 // bun scripts/firemaking-order.ts <account>
 // TARGET_LEVEL (required), MAX_LOGS=10000, CAP=20000 ticks, LOG=normal|oak|willow|maple|yew|magic.
-// PROGRESSIVE=1 reselects the highest native tier after each BATCH=27 logs, with no stock fallback.
+// PROGRESSIVE=1 reselects the highest native tier after each BATCH=27 logs, with no stock fallback. PROGRESSIVE=stock
+// reselects the highest tier that the level allows and the account holds.
 // Server comes from openBot's account config. Acceptance belongs to packages/practice/src/firemaking-order-proof.ts.
 // Source decision: scripts/measure/fm-line-search.ts --from 3092,3243 --safe -> BURN_ROWS (danger 0, 3 and 9 tiles
 // from the Draynor booths); floor-fm-line.ts push/turn rules -> burn(). Reuse by import: gather-yews.ts session, walk
@@ -26,6 +27,13 @@ export function progressiveFiremakingLog(level:number):LogKind{
  if(!Number.isSafeInteger(level)||level<1||level>99)throw Error('native Firemaking base level unknown');
  return(Object.keys(LOGS)as LogKind[]).filter(k=>LOGS[k].level<=level).at(-1)!;
 }
+// PROGRESSIVE=stock: the highest tier that the level allows and the account holds (pack and bank). A route that
+// skips tiers (logs to 15, oak to 75, magic to 99: the Haggis rehearsal stock) burns oak from 30 to 74, where
+// PROGRESSIVE=1 asks for willow, maple and yew. Undefined when the account holds no log the level can burn.
+export function progressiveStockLog(level:number,owned:(id:number)=>number):LogKind|undefined{
+ if(!Number.isSafeInteger(level)||level<1||level>99)throw Error('native Firemaking base level unknown');
+ return(Object.keys(LOGS)as LogKind[]).filter(k=>LOGS[k].level<=level&&owned(LOGS[k].id)>0).at(-1);
+}
 export const TINDERBOX=590,COINS=995,FIREMAKING='Firemaking';
 export const DRAYNOR_BANK={x:3092,z:3243};
 export const BURN_ROWS=[{z:3248,sx:3098,ex:3072},{z:3250,sx:3105,ex:3077}] as const;
@@ -45,15 +53,15 @@ export const TINDER_SHOP={npc:/^(shopkeeper|shop assistant)$/i,item:/^tinderbox$
  route:[{x:3092,z:3250,tol:1},{x:3089,z:3266,tol:2},{x:3100,z:3270,tol:2},{x:3140,z:3270,tol:2},{x:3180,z:3258,tol:2},{x:3212,z:3246,tol:2}] as PathPoint[]};
 export const PACK_LOGS=27,LIGHT_TICKS=120,TILE_WAIT_TICKS=40;
 
-export interface FiremakingOptions{target:number;maxLogs:number;cap:number;log:LogKind;toolBudget:number;cashReserve:number;progressive?:boolean;batch?:number;burnOnly?:boolean}
+export interface FiremakingOptions{target:number;maxLogs:number;cap:number;log:LogKind;toolBudget:number;cashReserve:number;progressive?:boolean;stock?:boolean;batch?:number;burnOnly?:boolean}
 export function firemakingOptions(env:Record<string,string|undefined>=process.env):FiremakingOptions{
  const int=(key:string,fallback:number|undefined,min:number,max:number)=>{
   const n=Number(env[key]??fallback);if(!Number.isSafeInteger(n)||n<min||n>max)throw Error(`invalid ${key}`);return n;};
  const log=(env.LOG??'normal').toLowerCase();if(!Object.hasOwn(LOGS,log))throw Error('invalid native LOG');
  if(env.BURN_ONLY!==undefined&&!['0','1'].includes(env.BURN_ONLY))throw Error('invalid BURN_ONLY');
- if(env.PROGRESSIVE!==undefined&&!['0','1'].includes(env.PROGRESSIVE))throw Error('invalid PROGRESSIVE');
+ if(env.PROGRESSIVE!==undefined&&!['0','1','stock'].includes(env.PROGRESSIVE))throw Error('invalid PROGRESSIVE');
  return{...env.BURN_ONLY==='1'?{burnOnly:true}:{},target:int('TARGET_LEVEL',env.BURN_ONLY==='1'?99:undefined,2,99),maxLogs:int('MAX_LOGS',10000,1,1000000),cap:int('CAP',20000,1,10000000),
-  log:log as LogKind,toolBudget:int('TOOL_BUDGET',50,0,1000000),cashReserve:int('CASH_RESERVE',0,0,2000000000),...env.PROGRESSIVE==='1'?{progressive:true,batch:int('BATCH',27,1,27)}:{}};
+  log:log as LogKind,toolBudget:int('TOOL_BUDGET',50,0,1000000),cashReserve:int('CASH_RESERVE',0,0,2000000000),...env.PROGRESSIVE==='1'||env.PROGRESSIVE==='stock'?{progressive:true,batch:int('BATCH',27,1,27),...env.PROGRESSIVE==='stock'?{stock:true}:{}}:{}};
 }
 // Player.ts levelExperience: this server uses 2^(level/10), not the 2^(level/7) table.
 export function xpForLevel(level:number){let points=0;for(let l=1;l<level;l++)points+=Math.floor(l+300*2**(l/10));return Math.floor(points/4);}
@@ -260,6 +268,8 @@ export async function runFiremaking(s:Session,o:FiremakingOptions,selectedSite?:
   const pre=firemakingPreflight(o.progressive?{...o,log:progressiveFiremakingLog(startLevel)}:o,{plane:pos().level,baseLevel:startLevel,level:s.sdk.getSkill(FIREMAKING)!.level});
   if(pre)throw new Refusal(pre);
   await openBank();
+  const pick=()=>{const k=o.stock?progressiveStockLog(base(),id=>held(id)+banked(id)):progressiveFiremakingLog(base());if(k)L=LOGS[k];return !!k;};
+  if(o.progressive&&o.stock&&!pick()){r.shortfall=1;throw new Refusal(`short log stock: no log that Firemaking ${base()} burns`);}
   r.ownedLogs=owned();
   if(r.ownedLogs<1){r.shortfall=1;throw new Refusal(`short log stock: need 1 ${L.name}, own 0, shortfall 1`);}
   const tinderOwned=held(TINDERBOX)+banked(TINDERBOX)+worn(TINDERBOX);
@@ -268,7 +278,7 @@ export async function runFiremaking(s:Session,o:FiremakingOptions,selectedSite?:
   else if(tinderOwned===0)await buyTinderbox();
   let row=0;
   for(;;){
-   if(o.progressive){L=LOGS[progressiveFiremakingLog(base())];if(s.sdk.getSkill(FIREMAKING)!.level<L.level)throw new Refusal('selected progressive Firemaking level drained');}
+   if(o.progressive){if(!pick()){r.stop='logs-exhausted';break;}if(s.sdk.getSkill(FIREMAKING)!.level<L.level)throw new Refusal('selected progressive Firemaking level drained');}
    r.stop=stopReason();if(r.stop)break;
    // At the bank: carry up to one pack of logs, bounded by MAX_LOGS.
    const want=packWant(held(L.id),inv().length,Math.min(o.maxLogs-r.logsBurnt,o.progressive?o.batch!:Infinity));

@@ -5,7 +5,7 @@ import * as ticks from '../packages/core/src/ticks';
 import {BotActions} from '../vendor/rs-sdk/sdk/actions';
 import {firemakingOptions,firemakingPreflight,xpForLevel,levelForXp,logShortfall,lineTiles,nextFreeTile,rowStart,packWant,
  tinderboxPlan,tinderboxUnitMax,runFiremaking,freeRouteAccount,routeDebits,entryBudget,BURN_ROWS,DRAYNOR_BANK,TINDERBOX,
- firemakingSite,CATHERBY_SITE,DRAYNOR_SITE,LOGS,progressiveFiremakingLog} from './firemaking-order';
+ firemakingSite,CATHERBY_SITE,DRAYNOR_SITE,LOGS,progressiveFiremakingLog,progressiveStockLog} from './firemaking-order';
 import type {Leg} from '../packages/core/src/world';
 import type {Travel} from '../packages/core/src/travel';
 
@@ -199,4 +199,29 @@ test('the default distant entry walks a zero-fare route inside the CAP remainder
  const slow=await run({legs:free,cost:1921});
  expect(slow.calls).toEqual([]);
  expect(slow.r).toMatchObject({stop:'refused',refused:'route to Draynor bank estimates 1921 ticks, entry budget 1920',bankTrips:0});
+});
+
+test('PROGRESSIVE=stock burns the highest held tier the level allows: logs to 15, oak to 75, then magic', () => {
+    const stock = (have: Record<number, number>) => (id: number) => have[id] ?? 0;
+    const rehearsal = stock({[LOGS.normal.id]: 2, [LOGS.oak.id]: 130, [LOGS.magic.id]: 107});
+    expect(progressiveStockLog(1, rehearsal)).toBe('normal');
+    expect(progressiveStockLog(15, rehearsal)).toBe('oak');
+    expect(progressiveStockLog(30, rehearsal)).toBe('oak');
+    expect(progressiveFiremakingLog(30)).toBe('willow');
+    expect(progressiveStockLog(74, rehearsal)).toBe('oak');
+    expect(progressiveStockLog(75, rehearsal)).toBe('magic');
+    // Magic logs gone below 99: the run falls back to the oak that is left.
+    expect(progressiveStockLog(98, stock({[LOGS.oak.id]: 3}))).toBe('oak');
+    expect(progressiveStockLog(10, stock({[LOGS.oak.id]: 3}))).toBeUndefined();
+    expect(firemakingOptions({TARGET_LEVEL: '99', PROGRESSIVE: 'stock'})).toMatchObject({progressive: true, stock: true, batch: 27});
+    expect(firemakingOptions({TARGET_LEVEL: '99', PROGRESSIVE: '1'}).stock).toBeUndefined();
+    expect(() => firemakingOptions({TARGET_LEVEL: '99', PROGRESSIVE: 'yes'})).toThrow('invalid PROGRESSIVE');
+});
+
+test('the rehearsal stock reaches Firemaking 99 with one spare magic log of XP (25 times rates)', () => {
+    const xp = 2 * 1000 + 130 * 1500 + 107 * 7595;
+    expect(xp).toBeGreaterThanOrEqual(xpForLevel(99));
+    expect(xp - 7595).toBeGreaterThanOrEqual(xpForLevel(99));
+    expect(2 * 1000).toBeGreaterThanOrEqual(xpForLevel(15));
+    expect(2 * 1000 + 125 * 1500).toBeGreaterThanOrEqual(xpForLevel(75));
 });
