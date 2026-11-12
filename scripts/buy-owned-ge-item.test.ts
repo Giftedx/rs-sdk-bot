@@ -273,21 +273,22 @@ else{
  }));
  const {runOwnedItem}=await import('./buy-owned-ge-item');
  type Row={id:number;name:string;count:number;slot:number};
- async function fixture(filled:number,phase?:ItemOrder['phase'],applied=false,options:{fillWait?:number;noCollection?:boolean;noDeposit?:boolean;exactBudget?:boolean;lowHp?:boolean;noFood?:boolean;noHeal?:boolean;prepared?:boolean;partialThenFull?:boolean;expireAfterCollect?:boolean;uncertain?:boolean;throwPlacementBefore?:boolean;throwPlacementAfter?:boolean;throwCollectionBefore?:boolean;throwCollectionAfter?:boolean;shortCash?:boolean;ownedStock?:boolean;topUp?:{owned:number;expected?:number}}={}){
+ async function fixture(filled:number,phase?:ItemOrder['phase'],applied=false,options:{fillWait?:number;noCollection?:boolean;noDeposit?:boolean;exactBudget?:boolean;lowHp?:boolean;noFood?:boolean;noHeal?:boolean;guardEats?:boolean;replayBankState?:boolean;prepared?:boolean;partialThenFull?:boolean;expireAfterCollect?:boolean;uncertain?:boolean;throwPlacementBefore?:boolean;throwPlacementAfter?:boolean;throwCollectionBefore?:boolean;throwCollectionAfter?:boolean;shortCash?:boolean;ownedStock?:boolean;topUp?:{owned:number;expected?:number}}={}){
   const dir=mkdtempSync(join(tmpdir(),'ge-worker-')),path=join(dir,'journal.json');
   const originalNow=Date.now;let now=originalNow();Date.now=()=>now;
   const req:ItemOrder['request']={...bulkRequest,createdAt:Date.now(),reviewAt:Date.now()+10000,deadline:Date.now()+20000};
   if(options.exactBudget){req.limit=3;req.reserve=0;}
   if(options.topUp){req.quantity=1;if(options.topUp.expected!==undefined)req.expectedOwned=options.topUp.expected;}
   const escrow=orderEscrow(req);
-  let generation=1,tick=0,placements=0,collections=0,cancels=0,hp=options.lowHp?3:10;
+  let generation=1,tick=0,placements=0,collections=0,cancels=0,eats=0,hp=options.lowHp?3:10;
+  const commands:{type:string;slot?:number;amount?:number}[]=[];
   const callbacks=new Set<()=>void>(),row=(id:number,count:number):Row=>({id,count,name:id===995?'Coins':'Grapes',slot:0});
-  const state={player:{worldX:3185,worldZ:3436,level:0,lifeId:1,respawnCount:0},inventory:[] as Row[],bank:{isOpen:false,items:[row(995,escrow+req.reserve)]}};
+  const state={revision:2,player:{worldX:3185,worldZ:3436,level:0,lifeId:1,respawnCount:0},inventory:[] as Row[],bank:{isOpen:false,items:[row(995,escrow+req.reserve)]}};
   let offers:GEOffer[]=[];
   if(options.shortCash)state.bank.items[0]!.count--;
   if(options.ownedStock)state.bank.items.push(row(1987,1));
   if(options.topUp)state.bank.items.push(row(1987,options.topUp.owned));
-  if(options.lowHp&&!options.noFood)state.bank.items.push({...row(329,2),name:'Salmon'});
+  if(options.lowHp&&!options.noFood)state.bank.items.push({...row(329,2),name:'Salmon',slot:1});
   const terminal=()=>bulkOffer({price:req.limit,filled,remaining:0,state:filled===300?'completed':'cancelled',items:filled,gross:filled*3,coins:escrow-filled*3});
   if(phase){
    const j:ItemOrder={version:1,request:req,phase,coinsBefore:1600,itemsBefore:0,previousIds:[],at:Date.now(),offerId:9};
@@ -304,22 +305,23 @@ else{
   state.bank.items.push({...row(1351,1),name:'Bronze axe'});
   const sdk={getState:()=>state,getStateAge:()=>0,getInventory:()=>state.inventory,getEquipment:()=>[],getSkill:()=>({level:hp}),
    findBankItem:()=>state.bank.items.find(i=>i.id===995),getGEState:()=>({offers})};
-  const bot={dismissBlockingUI:async()=>{},openBank:async()=>{state.bank.isOpen=true;generation++;return{success:true};},
-   closeBank:async()=>{state.bank.isOpen=false;return{success:true};},openGE:async()=>({success:true}),
-   withdrawItem:async(item:Row,n:number)=>{state.bank.items.find(i=>i.id===item.id)!.count-=n;state.bank.items=state.bank.items.filter(i=>i.count>0);state.inventory.push({...item,count:n,slot:0});generation++;return{success:true};},
-   eatFood:async(item:Row)=>{if(!options.noHeal){state.inventory=state.inventory.filter(i=>i.id!==item.id);hp=10;}return{success:true};},
+  const bot={dismissBlockingUI:async()=>{},openBank:async()=>{state.bank.isOpen=true;state.revision++;generation++;return{success:true};},
+   // guardEats: the session eat guard eats the withdrawn salmon at urgent HP before the worker sees it.
+   closeBank:async()=>{state.bank.isOpen=false;if(options.guardEats&&state.inventory.some(i=>i.id===329)){state.inventory=state.inventory.filter(i=>i.id!==329);hp=10;}return{success:true};},openGE:async()=>({success:true}),
+   withdrawItem:async(item:Row,n:number)=>{commands.push({type:'bankWithdraw',slot:item.slot,amount:n});state.bank.items.find(i=>i.id===item.id)!.count-=n;state.bank.items=state.bank.items.filter(i=>i.count>0);state.inventory.push({...item,count:n,slot:0});state.revision++;generation++;return{success:true};},
+   eatFood:async(item:Row)=>{eats++;if(!options.noHeal){state.inventory=state.inventory.filter(i=>i.id!==item.id);hp=10;}return{success:true};},
    depositItem:async(i:Row)=>{if(options.noDeposit)return{success:true};const n=state.inventory.filter(r=>r.id===i.id).reduce((a,r)=>a+r.count,0),id=i.id===1988?1987:i.id;
     state.inventory=state.inventory.filter(r=>r.id!==i.id);const bank=state.bank.items.find(r=>r.id===id);if(bank)bank.count+=n;else state.bank.items.push(row(id,n));generation++;return{success:true};},
    placeGEOffer:async(r:{quantity:number;price:number})=>{placements++;if(options.throwPlacementBefore&&placements===1)throw Error('placement interrupted before mutation');state.inventory=state.inventory.filter(i=>i.id!==995);const n=options.partialThenFull&&placements>1?r.quantity:Math.min(filled,r.quantity);offers=[bulkOffer({id:9+placements,quantity:r.quantity,price:r.price,filled:n,remaining:r.quantity-n,state:n===r.quantity?'completed':'open',items:n,gross:n*3,coins:n===r.quantity?r.quantity*r.price-n*3:0})];if(options.throwPlacementAfter&&placements===1)throw Error('placement interrupted after mutation');return{success:true};},
    cancelGEOffer:async()=>{cancels++;const o=offers[0]!;offers=[{...o,state:'cancelled',remaining:0,coins:o.quantity*o.price-o.gross}];return{success:true};},
    collectGEOffer:async()=>{collections++;if(options.throwCollectionBefore&&collections===1)throw Error('collection interrupted before mutation');if(options.noCollection)return{success:true};const o=offers[0]!;state.inventory=[...(o.coins?[row(995,o.coins)]:[]),...(o.items?[row(1988,o.items)]:[])];offers=[];if(options.expireAfterCollect)now=req.deadline;if(options.throwCollectionAfter&&collections===1)throw Error('collection interrupted after mutation');return{success:true};}};
   const session={name:req.actor,sdk,bot,tick:()=>tick,ended:new Promise(()=>{}),onTick:(cb:()=>void)=>{callbacks.add(cb);return()=>callbacks.delete(cb);},
-   bankObservation:()=>({generation,items:state.bank.items.map(i=>({...i})),at:Date.now()})};
+   bankObservation:()=>options.replayBankState?null:({generation,items:state.bank.items.map(i=>({...i})),at:Date.now()})};
   const timer=setInterval(()=>{tick++;for(const cb of [...callbacks])cb();},1);
   try{
    const run=()=>runOwnedItem(session as any,req,path,()=>false,false,options.fillWait??0);
    const first=await run(),before=JSON.stringify(state.bank.items),second=await run();
-   return{first,second,placements,collections,cancels,unchanged:before===JSON.stringify(state.bank.items),journal:existsSync(path)?JSON.parse(readFileSync(path,'utf8')):null};
+   return{first,second,placements,collections,cancels,eats,commands,unchanged:before===JSON.stringify(state.bank.items),journal:existsSync(path)?JSON.parse(readFileSync(path,'utf8')):null};
   }finally{Date.now=originalNow;clearInterval(timer);rmSync(dir,{recursive:true,force:true});}
  }
  test('worker: full fill banks the exact stock and a settled rerun does not buy',async()=>{
@@ -329,7 +331,19 @@ else{
  test('worker: low HP at the supported bank uses one owned salmon before funding',async()=>{
   const r=await fixture(300,undefined,false,{lowHp:true});
   expect(r.first).toMatchObject({ok:true,unrelated:true,foodUsed:[{id:329,count:1}],finalItems:300,finalCoins:700});
-  expect(r.second.ok).toBe(true);expect(r.placements).toBe(1);
+  expect(r.second.ok).toBe(true);expect(r.placements).toBe(1);expect(r.eats).toBe(1);
+ });
+ test('worker: recorded low-HP bank state replays the slot 1 food withdrawal',async()=>{
+  const old=process.env.REPLAY_ONLY;process.env.REPLAY_ONLY='1';
+  try{
+   const r=await fixture(300,undefined,false,{lowHp:true,replayBankState:true});
+   expect(r.commands[0]).toEqual({type:'bankWithdraw',slot:1,amount:1});
+  }finally{if(old===undefined)delete process.env.REPLAY_ONLY;else process.env.REPLAY_ONLY=old;}
+ });
+ test('worker: a session eat guard that eats the withdrawn salmon first still proves healing and banks the exact stock',async()=>{
+  const r=await fixture(300,undefined,false,{lowHp:true,guardEats:true});
+  expect(r.first).toMatchObject({ok:true,unrelated:true,banked:true,foodUsed:[{id:329,count:1}],finalItems:300,finalCoins:700});
+  expect(r.eats).toBe(0);expect(r.second.ok).toBe(true);expect(r.placements).toBe(1);
  });
  for(const extra of [{noFood:true},{noHeal:true}])test(`worker: low HP cannot buy without observed healing ${JSON.stringify(extra)}`,async()=>{
   const r=await fixture(300,undefined,false,{lowHp:true,...extra});
