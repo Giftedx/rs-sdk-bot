@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794458415190,
+ "at": 1794459014978,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -63,43 +63,44 @@
   },
   {
    "account": "Bigpackage",
-   "script": "scripts/shop-buyer.ts",
+   "script": "scripts/aio.ts",
    "args": [
-    "betty"
+    "skiller",
+    "foraging",
+    "flax",
+    "1800",
+    "28"
    ],
-   "env": {
-    "ITEMS": "fire rune|air rune|earth rune",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy elemental runes at Betty",
-   "role": "bank",
-   "template": "shop-runes",
+   "goal": "pick flax at Seers and bank it",
+   "role": "crafting",
+   "template": "aio-flax",
    "autopilot": "local",
    "resources": [
-    "shop:betty"
+    "aio:seers-flax"
    ]
   },
   {
    "account": "BowBeforeMe",
-   "script": "scripts/goldfarm.ts",
+   "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
+    "PEN": "3187,3277",
+    "TICKS": "3000",
+    "TARGET": "2000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
    "autopilot": "local",
    "resources": [
-    "knight:2669,3298"
+    "pen:3187,3277"
    ]
   },
   {
@@ -502,24 +503,24 @@
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/aio.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "skiller",
-    "foraging",
-    "flax",
-    "1800",
-    "28"
+    "betty"
    ],
-   "env": {},
+   "env": {
+    "ITEMS": "fire rune|air rune|earth rune",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "pick flax at Seers and bank it",
-   "role": "crafting",
-   "template": "aio-flax",
+   "goal": "buy elemental runes at Betty",
+   "role": "bank",
+   "template": "shop-runes",
    "autopilot": "local",
    "resources": [
-    "aio:seers-flax"
+    "shop:betty"
    ]
   },
   {
