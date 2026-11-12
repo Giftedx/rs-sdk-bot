@@ -178,44 +178,59 @@ export function installViewerBridge(host:any) {
                     return data===event.data?event:new host.MessageEvent('message',{data,origin:event.origin});
                 };
                 // The viewer keeps the objs of the zones in the held area (za): a reset (r) starts every zone again, and an
-                // area change keeps only the zones in both areas. Keys: "x,z,level,id" for the feed's own objs (a count),
-                // "x,z,level,id,n" for the n-th obj of that type on the tile that the bridge added.
+                // area change keeps only the zones in both areas. For each tile and type ("x,z,level,id") the bridge keeps
+                // two lists of counts. `feed` is the feed's own piles in the feed's order: oa adds one at the end, od
+                // deletes the first, oc changes the first of the old count, else the first. `view` is what the viewer draws,
+                // in its order, by the viewer's own rules (rs-world WorldState): the same rules over the feed's records and
+                // the bridge's. The viewer should draw the feed's piles, then the bridge's. When `view` differs from that,
+                // the bridge deletes every pile of that type on the tile and adds them again in that order.
                 let area:{x:number;z:number;w:number;h:number}|null=null,seenVersion=-1;
-                const feedObjs=new Map<string,number>(),shown=new Map<string,number[]>();
+                const feedPiles=new Map<string,number[]>(),viewPiles=new Map<string,number[]>();
                 const inArea=(a:typeof area,x:number,z:number)=>!!a&&x>=a.x&&x<a.x+a.w&&z>=a.z&&z<a.z+a.h;
+                const apply=(map:Map<string,number[]>,g:string,r:any)=>{
+                    const list=map.get(g)??[];
+                    if(r.e==='oa'){if(r.id>=0&&r.n>=1)list.push(r.n);}
+                    else if(r.e==='od')list.shift();
+                    else if(r.n>=1&&list.length){const i=list.indexOf(r.n0);list[i>=0?i:0]=r.n;}
+                    list.length?map.set(g,list):map.delete(g);
+                };
                 const addGround=(event:any)=>{
                     if(typeof event?.data!=='string'||event.data.length>2_000_000||!event.data.includes('"tick"'))return event;
                     // With the same rows and no area or obj change, the result is the same as last tick: nothing to add.
-                    if(seenVersion===groundVersion&&!/"(?:za|oa|od|reset)"/.test(event.data))return event;
+                    if(seenVersion===groundVersion&&!/"(?:za|oa|od|oc|reset)"/.test(event.data))return event;
                     let m:any;try{m=JSON.parse(event.data);}catch{return event;}
                     if(m?.t!=='tick')return event;
                     const w=Array.isArray(m.w)?m.w:[];
-                    if(m.reset){feedObjs.clear();shown.clear();}
+                    if(m.reset){feedPiles.clear();viewPiles.clear();}
                     for(const r of w){
                         if(r?.e==='za'&&[r.x,r.z,r.w,r.h].every(Number.isFinite)){
                             const next={x:r.x,z:r.z,w:r.w,h:r.h};
-                            if(r.r){feedObjs.clear();shown.clear();}
-                            else for(const map of [feedObjs,shown] as Map<string,unknown>[])for(const k of [...map.keys()]){const [x,z]=k.split(',').map(Number) as [number,number];if(!inArea(area,x,z)||!inArea(next,x,z))map.delete(k);}
+                            if(r.r){feedPiles.clear();viewPiles.clear();}
+                            else for(const map of [feedPiles,viewPiles])for(const g of [...map.keys()]){const [x,z]=g.split(',').map(Number) as [number,number];if(!inArea(area,x,z)||!inArea(next,x,z))map.delete(g);}
                             area=next;
-                        }else if(r?.e==='oa'||r?.e==='od'){
-                            const g=`${r.x},${r.z},${r.l},${r.id}`,n=feedObjs.get(g)??0;
-                            if(r.e==='oa')feedObjs.set(g,n+1);
-                            else if(n>1)feedObjs.set(g,n-1);
-                            else if(n===1)feedObjs.delete(g);
-                            // A del with no feed obj of that type left took one that the bridge added.
-                            else for(const k of shown.keys())if(k.startsWith(g+',')){shown.delete(k);break;}
+                        }else if((r?.e==='oa'||r?.e==='od'||r?.e==='oc')&&[r.x,r.z,r.l,r.id].every(Number.isSafeInteger)){
+                            const g=`${r.x},${r.z},${r.l},${r.id}`;apply(feedPiles,g,r);apply(viewPiles,g,r);
                         }
                     }
                     seenVersion=groundVersion;
-                    const want=new Map<string,number[]>(),nth=new Map<string,number>();
+                    const want=new Map<string,number[]>();
                     if(area)for(const row of botGround){
                         if(!inArea(area,row[0]!,row[1]!))continue;
-                        const g=row.slice(0,4).join(','),i=(nth.get(g)??0)+1;nth.set(g,i);
-                        if(i>(feedObjs.get(g)??0))want.set(g+','+i,row);
+                        const g=row.slice(0,4).join(','),list=want.get(g)??[];list.push(row[4]!);want.set(g,list);
                     }
                     const add:any[]=[];
-                    for(const [k,row] of shown){const next=want.get(k);if(!next||next[4]!==row[4]){add.push({e:'od',x:row[0],z:row[1],l:row[2],id:row[3]});shown.delete(k);}}
-                    for(const [k,row] of want)if(!shown.has(k)){add.push({e:'oa',x:row[0],z:row[1],l:row[2],id:row[3],n:row[4]});shown.set(k,row);}
+                    for(const g of new Set([...viewPiles.keys(),...want.keys()])){
+                        const feed=feedPiles.get(g)??[],view=viewPiles.get(g)??[];
+                        // A pile that the feed itself sends is not added again: each feed pile takes away one row of its count.
+                        const ours=[...want.get(g)??[]];
+                        for(const n of feed){const i=ours.indexOf(n);if(i>=0)ours.splice(i,1);}
+                        const next=[...feed,...ours];
+                        if(view.length===next.length&&view.every((n,i)=>n===next[i]))continue;
+                        const [x,z,l,id]=g.split(',').map(Number);
+                        for(let i=0;i<view.length;i++)add.push({e:'od',x,z,l,id});
+                        for(const n of next)add.push({e:'oa',x,z,l,id,n});
+                        next.length?viewPiles.set(g,next):viewPiles.delete(g);
+                    }
                     if(!add.length)return event;
                     m.w=[...w,...add];
                     return new host.MessageEvent('message',{data:JSON.stringify(m),origin:event.origin});
