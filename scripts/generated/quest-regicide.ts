@@ -178,7 +178,9 @@ try {
                 if (at(dx, dz)) return;
                 const l = q.findLoc((o: any) => o.x === lx && o.z === lz && (LOC_IDS[k] ?? []).includes(o.id)) ?? { id: LOC_IDS[k]![0]!, x: lx, z: lz };
                 return q.opLoc(l, 1);
-            }, () => at(dx, dz), 14, 4);
+            // The woodspring trap rolls stat_random(agility, 30, 155) on 256 (quest_regicide.rs2:32): 46 in 100 at
+            // Agility 69 and 60 in 100 at 99, so four tries fail 1 run in 12. A failed try leaves the bot on its tile.
+            }, () => at(dx, dz), 14, k === 'P' ? 12 : 4);
             await q.waitTicks(1);
         }
         q.stats.walkTicks += q.T() - t1;
