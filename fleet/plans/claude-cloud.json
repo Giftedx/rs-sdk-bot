@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794501929875,
+ "at": 1794502528074,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -38,26 +38,6 @@
    "autopilot": "claude-cloud",
    "resources": [
     "knight:2671,3313"
-   ]
-  },
-  {
-   "account": "TheFullMonty",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
-   "env": {
-    "PEN": "3197,3353",
-    "TICKS": "3000",
-    "TARGET": "2000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3197,3353",
-   "role": "helper",
-   "template": "feathers@3197,3353",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "pen:3197,3353"
    ]
   },
   {
