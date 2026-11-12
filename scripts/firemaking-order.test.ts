@@ -216,6 +216,9 @@ test('PROGRESSIVE=stock burns the highest held tier the level allows: logs to 15
     expect(firemakingOptions({TARGET_LEVEL: '99', PROGRESSIVE: 'stock'})).toMatchObject({progressive: true, stock: true, batch: 27});
     expect(firemakingOptions({TARGET_LEVEL: '99', PROGRESSIVE: '1'}).stock).toBeUndefined();
     expect(() => firemakingOptions({TARGET_LEVEL: '99', PROGRESSIVE: 'yes'})).toThrow('invalid PROGRESSIVE');
+    expect(firemakingOptions({TARGET_LEVEL: '99', PROGRESSIVE: 'stock', CLEAR_PACK: '1'}).clearPack).toBe(true);
+    expect(firemakingOptions({TARGET_LEVEL: '99'}).clearPack).toBeUndefined();
+    expect(() => firemakingOptions({TARGET_LEVEL: '99', CLEAR_PACK: 'yes'})).toThrow('invalid CLEAR_PACK');
 });
 
 test('the rehearsal stock reaches Firemaking 99 with one spare magic log of XP (25 times rates)', () => {

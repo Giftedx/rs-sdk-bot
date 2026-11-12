@@ -1,7 +1,7 @@
 // bun scripts/firemaking-order.ts <account>
 // TARGET_LEVEL (required), MAX_LOGS=10000, CAP=20000 ticks, LOG=normal|oak|willow|maple|yew|magic.
 // PROGRESSIVE=1 reselects the highest native tier after each BATCH=27 logs, with no stock fallback. PROGRESSIVE=stock
-// reselects the highest tier that the level allows and the account holds.
+// reselects the highest tier that the level allows and the account holds. CLEAR_PACK=1 banks all but the tinderbox first.
 // Server comes from openBot's account config. Acceptance belongs to packages/practice/src/firemaking-order-proof.ts.
 // Source decision: scripts/measure/fm-line-search.ts --from 3092,3243 --safe -> BURN_ROWS (danger 0, 3 and 9 tiles
 // from the Draynor booths); floor-fm-line.ts push/turn rules -> burn(). Reuse by import: gather-yews.ts session, walk
@@ -53,15 +53,16 @@ export const TINDER_SHOP={npc:/^(shopkeeper|shop assistant)$/i,item:/^tinderbox$
  route:[{x:3092,z:3250,tol:1},{x:3089,z:3266,tol:2},{x:3100,z:3270,tol:2},{x:3140,z:3270,tol:2},{x:3180,z:3258,tol:2},{x:3212,z:3246,tol:2}] as PathPoint[]};
 export const PACK_LOGS=27,LIGHT_TICKS=120,TILE_WAIT_TICKS=40;
 
-export interface FiremakingOptions{target:number;maxLogs:number;cap:number;log:LogKind;toolBudget:number;cashReserve:number;progressive?:boolean;stock?:boolean;batch?:number;burnOnly?:boolean}
+export interface FiremakingOptions{target:number;maxLogs:number;cap:number;log:LogKind;toolBudget:number;cashReserve:number;progressive?:boolean;stock?:boolean;batch?:number;burnOnly?:boolean;clearPack?:boolean}
 export function firemakingOptions(env:Record<string,string|undefined>=process.env):FiremakingOptions{
  const int=(key:string,fallback:number|undefined,min:number,max:number)=>{
   const n=Number(env[key]??fallback);if(!Number.isSafeInteger(n)||n<min||n>max)throw Error(`invalid ${key}`);return n;};
  const log=(env.LOG??'normal').toLowerCase();if(!Object.hasOwn(LOGS,log))throw Error('invalid native LOG');
  if(env.BURN_ONLY!==undefined&&!['0','1'].includes(env.BURN_ONLY))throw Error('invalid BURN_ONLY');
  if(env.PROGRESSIVE!==undefined&&!['0','1','stock'].includes(env.PROGRESSIVE))throw Error('invalid PROGRESSIVE');
+ if(env.CLEAR_PACK!==undefined&&!['0','1'].includes(env.CLEAR_PACK))throw Error('invalid CLEAR_PACK');
  return{...env.BURN_ONLY==='1'?{burnOnly:true}:{},target:int('TARGET_LEVEL',env.BURN_ONLY==='1'?99:undefined,2,99),maxLogs:int('MAX_LOGS',10000,1,1000000),cap:int('CAP',20000,1,10000000),
-  log:log as LogKind,toolBudget:int('TOOL_BUDGET',50,0,1000000),cashReserve:int('CASH_RESERVE',0,0,2000000000),...env.PROGRESSIVE==='1'||env.PROGRESSIVE==='stock'?{progressive:true,batch:int('BATCH',27,1,27),...env.PROGRESSIVE==='stock'?{stock:true}:{}}:{}};
+  log:log as LogKind,toolBudget:int('TOOL_BUDGET',50,0,1000000),cashReserve:int('CASH_RESERVE',0,0,2000000000),...env.PROGRESSIVE==='1'||env.PROGRESSIVE==='stock'?{progressive:true,batch:int('BATCH',27,1,27),...env.PROGRESSIVE==='stock'?{stock:true}:{}}:{},...env.CLEAR_PACK==='1'?{clearPack:true}:{}};
 }
 // Player.ts levelExperience: this server uses 2^(level/10), not the 2^(level/7) table.
 export function xpForLevel(level:number){let points=0;for(let l=1;l<level;l++)points+=Math.floor(l+300*2**(l/10));return Math.floor(points/4);}
@@ -276,6 +277,9 @@ export async function runFiremaking(s:Session,o:FiremakingOptions,selectedSite?:
   if(held(TINDERBOX)+worn(TINDERBOX)>0)r.tinderbox.source='pack';
   else if(banked(TINDERBOX)>0){await withdraw(TINDERBOX,1);r.tinderbox.source='bank';}
   else if(tinderOwned===0)await buyTinderbox();
+  // CLEAR_PACK=1: bank everything but the tinderbox once, so each trip carries a full pack of logs. A fresh account's
+  // starter kit takes 17 slots, which leaves 11 logs a trip.
+  if(o.clearPack){if(!st()?.bank?.isOpen)await openBank();for(const id of new Set(inv().map(i=>i.id)))if(id!==TINDERBOX)await deposit(id);}
   let row=0;
   for(;;){
    if(o.progressive){if(!pick()){r.stop='logs-exhausted';break;}if(s.sdk.getSkill(FIREMAKING)!.level<L.level)throw new Refusal('selected progressive Firemaking level drained');}
