@@ -1,26 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794458943646,
+ "at": 1794459247456,
  "jobs": [
-  {
-   "account": "PocketPool",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=12 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit13-563-0to12 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=12 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=pocketpool-kit13-385-0to12 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 12 Law rune, 12 Shark on the Grand Exchange to complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience",
-   "role": "supply",
-   "template": "kit-buy:army-quest-holygrail",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
   {
    "account": "Fingerblastr",
    "script": "scripts/chain.ts",
@@ -36,6 +17,24 @@
    "goal": "buy 1 Diamond on the Grand Exchange to buy dragon longswords from Jakut in the Zanaris market",
    "role": "supply",
    "template": "kit-buy:army-jakut-swords",
+   "autopilot": "claude-cloud",
+   "resources": []
+  },
+  {
+   "account": "Knightstick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=314 QUANTITY=50 LIMIT_PRICE=20 CASH_RESERVE=1000 ORDER_KEY=knightstick-kit14-314-0to50 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 50 Feather on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "supply",
+   "template": "kit-buy:army-alch-magic-99",
    "autopilot": "claude-cloud",
    "resources": []
   },
@@ -190,22 +189,49 @@
    ]
   },
   {
-   "account": "Knightstick",
-   "script": "scripts/chain.ts",
+   "account": "PocketPool",
+   "script": "scripts/aio.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=314 QUANTITY=50 LIMIT_PRICE=20 CASH_RESERVE=1000 ORDER_KEY=knightstick-kit14-314-0to50 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "quester",
+    "chain",
+    "drunkmonk,murder,zanaris"
    ],
-   "env": {
-    "ROUNDS": "1"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 50 Feather on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
+   "goal": "complete Monk's Friend, Murder Mystery and Lost City to wield dragon weapons",
+   "role": "quest",
+   "template": "army-quest-lostcity",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "quest:lostcity"
+   ]
+  },
+  {
+   "account": "Dipstick",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "KnightRider",
@@ -231,19 +257,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "Dipstick",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-18f7234b-ee7f-45da-baee-7f8797828d22"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "claude-cloud-recover-dipstick-20261112t044236z [task-18f7234b-ee7f-45da-baee-7f8797828d22]",
-   "role": "combat"
   }
  ]
 }
