@@ -937,6 +937,16 @@ What the sources show:
 - **Two or three at once.** On a multi-way tile they hit one target together: a combat 126 player with no armour
   died 18 ticks after the first hit at (3219, 3629), Wilderness level 14, and a combat 96 player at the runite rocks
   in 12 ticks. On a single-way tile one of them fights.
+- **Where the time goes.** In 24,150 ticks each account stands on the post for 62% to 67% of the roster frames and is
+  out in the Wilderness for the rest; under 2% is outside it. 96% of their steps are run steps: a chase does not end
+  on run energy. They left the post 100 times.
+- **How fast they come.** From the first roster frame with a target in range to the first attack: 61, 81, 107 and
+  133 ticks, for targets 112 to 250 tiles from the post. They come to a target, so the target chooses the tile.
+- **The edge.** A combat 126 player at Wilderness level 1 or 2 north of Edgeville, 112 tiles south of the post, drew
+  21 fights of up to 320 ticks and left each one alive; it died in 64 ticks at level 52. The Wilderness north of
+  Edgeville is single-way from x 3008 to 3135 (`multiway.csv` has no zone of map squares 47_55 and 48_55).
+- **Nobody hits back.** The 28 splats on the gang in the record are 1 to 8 damage with no player facing it. What a
+  gang account does under a real attack is not in any record but one eat of Goondelf.
 - **End of a hunt.** In the long record 3 targets died (two of them on multi-way tiles), 14 fights ended when the
   target left view, and the others when the attacks stopped. A combat 109 player in rune armour under Protect from
   Melee stood 380 ticks of attacks and left. No gang account died or ate; the lowest Hitpoints of one was 76.
@@ -1007,6 +1017,38 @@ The cost of the kit against the result on `ganker-max` (meetings cleared; the re
 Rejected against `ganker-max`: rune knives with the shield kept on (2 deaths in 8, runs of 1,400 ticks); no boost
 potions for three more sharks (11 of 12); a rune scimitar (370 HP lost a meeting against about 300); the freeze with
 3 tiles kept (`adapt`, one meeting of 8 not cleared against `ganker-dds`).
+
+### Options against the gang
+
+Each lever of a meeting, with what is measured. A lever with no result is a test to run on `ganker-max`.
+
+- **The tile.** The gang comes to its target, so our account picks the ground.
+  - Single-way or multi-way: single-way only. Measured on the post tile alone.
+  - The edge of the Wilderness north of Edgeville (level 1 to 3, single-way, bank 25 tiles south at (3092, 3496)): one
+    step south ends every attack, and the bank gives food that the gang does not get back. Not measured. It needs no
+    glory and no full pack: the cost of a kit falls to its weapons and armour.
+  - A tile that a melee attacker cannot stand beside (all four side tiles blocked, a clear line for the bow): not
+    searched in the map. One such tile makes the gang harmless.
+  - The lines at level 20 (teleport spells) and 30 (glory): the post is under both.
+- **The time.** One or two of the three are away at times (the Chaos Temple altar, the Monastery, the tile at
+  (2934, 3516)), and the world feed shows where each one is. A meeting with one or two of them is `SPAR_GANG=1` or
+  `2` of `scripts/pk-gang.ts`. Not measured.
+- **Before the meeting.** The four boost potions drunk at the bank leave four pack slots for sharks. The server drops
+  a boost at logout (`PlayerLoading.ts:99`), so a bench start state cannot hold one; the bench needs a helper account
+  that hands the sharks over. Not measured.
+- **Movement.** Their steps are run steps, so no kite wins on run energy. A step under the attacker (finding 39) and
+  a step out of the Wilderness and back between two shots are not measured. The freeze with distance kept (`adapt`)
+  is rejected above.
+- **Which account to fight.** Measured: the one that starts an attack animation.
+- **Armour and weapons.** Measured in the cost table above.
+- **Supplies.** Measured: super defence, super antipoison, the three boosts, no prayer potion, sharks. A pineapple
+  pizza heals 20 a slot in two bites, as a shark does in one (`consume_normal.dbrow`).
+- **Prayer.** Measured: Protect from Melee, the Defence prayer, the melee prayers on melee turns, the flick each 2
+  ticks, no Protect Item. Smite in place of Protect from Melee is not measured: it gives up the 40% cut.
+- **The way out.** Measured: the worn glory and a glory in the pack. Teleport runes take 3 pack slots (Varrock) or 2
+  (Camelot: 5 air and 1 law, not measured).
+- **A second account.** On a single-way tile an account that hits ours each 8 ticks keeps every other attacker off
+  it, and ours then cannot attack either (`pvp_combat.rs2:104-131`). It protects and does not kill. Not measured.
 
 Gaps:
 
