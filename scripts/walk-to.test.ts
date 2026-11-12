@@ -66,6 +66,24 @@ test('an explicit boat retains fare, departure and arrival checks', () => {
     expect(() => stagedBoat({ ...boat, kind: 'teleport' }, from, to, account)).toThrow('boat');
 });
 
+test('a start at Taverley, at the east foot of White Wolf Mountain, takes the ferries to Ardougne', async () => {
+    const from = { x: 2877, z: 3501, level: 0 }, to = { x: 2654, z: 3283, level: 0 };
+    const calls: string[] = [];
+    let coins = 60;
+    const walk = async ({ x, z }: { x: number; z: number }): Promise<Outcome> => {
+        calls.push(x + ',' + z);
+        return calls.length === 1 ? { ok: false, reason: 'precondition', detail: 'no route to 2654,3283,0', ticks: 0 } : { ok: true, ticks: 1 };
+    };
+    const sail = async (boat: ReturnType<typeof loadTravel>[number]): Promise<Outcome> => { calls.push(boat.id); coins -= boat.coins; return { ok: true, ticks: 1 }; };
+    expect(await walkWithFerryFallback(from, to, walk, sail, () => coins)).toMatchObject({ ok: true });
+    // No leg through Lumbridge or Draynor: the start is west of Draynor, so it walks straight to the Port Sarim dock.
+    expect(calls).toEqual(['2654,3283', '3028,3216', 'npc:captain_tobias:karamja-musa-point@3028,3216', '2772,3225', 'npc:customs_officer:ardougne@2772,3225', '2654,3283']);
+    expect(coins).toBe(0);
+    // With no fare the result names the fare. It is not "no route".
+    calls.length = 0; coins = 1;
+    expect(await walkWithFerryFallback(from, to, walk, sail, () => coins)).toMatchObject({ ok: false, reason: 'precondition', detail: 'westbound ferry needs 60 coins in the pack' });
+});
+
 test('a failed east-to-Ardougne plan uses the funded corridor and stops when funds change', async () => {
     const from = { x: 3269, z: 3164, level: 0 }, to = { x: 2615, z: 3332, level: 0 };
     const noRoute: Outcome = { ok: false, reason: 'precondition', detail: 'no route to 2615,3332,0', ticks: 0 };

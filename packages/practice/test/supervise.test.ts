@@ -215,7 +215,9 @@ test('a walker result with no route ends the session as blocked at the first run
     const noRoute = 'RESULT fail travel to chickens 3017,3288 failed: precondition no route to 3018,3289,0';
     expect(isPrerequisiteFailure(noRoute)).toBe(true);
     expect(isPrerequisiteFailure('RESULT ok travel to chickens 3017,3288')).toBe(false);
-    expect(isPrerequisiteFailure('RESULT fail travel to chickens 3017,3288 failed: precondition ferry needs 30 coins in the pack')).toBe(false);
+    // A missing fare is the same kind of result: the coins do not come between two logins.
+    expect(isPrerequisiteFailure('RESULT fail travel to Ardougne from 2877,3501 failed: precondition westbound ferry needs 60 coins in the pack')).toBe(true);
+    expect(isPrerequisiteFailure('RESULT fail travel to chickens 3017,3288 failed: precondition ferry departure state unavailable')).toBe(false);
     let runs = 0;
     const end = await supervise({ run: async () => { runs++; return { exitCode: 1, stdout: ['LEDGER ticks=4', noRoute].join(String.fromCharCode(10)) }; }, stopped: () => false, pause: async () => {}, maxRestarts: 20 });
     expect(end).toEqual({ reason: 'blocked', runs: 1 });
