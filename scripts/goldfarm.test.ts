@@ -2,6 +2,7 @@ import {test,expect} from 'bun:test';
 import {courierFoodReady,incomingCookedFood,receiveFoodAtBank,FOOD_ORDER,FRAIL_FLOOR,FRAIL_HP,FRAIL_RESERVE,foodReserve,guardHit,noKnightReason,deadClick,pickKnight,ownerSeesTile} from './goldfarm';
 import {selectFoodToEat,calcEatAt} from './goldfarm-stable';
 import {GOLDFARM_FOOD,GOLDFARM_FRAIL} from '../packages/planner/src/autopilot';
+import {foodTripDue} from './goldfarm';
 test('a click with no pick is dead only when it brought the thief no closer',()=>{
     // Beside the knight, and still no pick.
     expect(deadClick(1,1)).toBe(true);
@@ -41,6 +42,19 @@ test('a thief with few Hitpoints restocks while it still holds a reserve, and an
     expect(foodReserve(FRAIL_HP)).toBe(FRAIL_FLOOR);
     expect(foodReserve(99)).toBe(FRAIL_FLOOR);
     expect(FRAIL_RESERVE).toBeGreaterThan(FRAIL_FLOOR);
+});
+test('a trade-only thief never goes to the shop or the stall, also while it is under a frail reserve',()=>{
+    const due={low:true,bankEmpty:true,tradeOnly:false,rested:true,shopOk:false,emptyTrips:0};
+    expect(foodTripDue(due)).toBe(true);
+    // A frail thief with 2 to 5 food items is low; the trade-only setting still keeps it away.
+    expect(foodTripDue({...due,tradeOnly:true})).toBe(false);
+    expect(foodTripDue({...due,tradeOnly:true,shopOk:true})).toBe(false);
+    expect(foodTripDue({...due,low:false})).toBe(false);
+    expect(foodTripDue({...due,bankEmpty:false})).toBe(false);
+    // A frail thief rests after a guard hit; three empty trips end the stall, and the shop still counts.
+    expect(foodTripDue({...due,rested:false})).toBe(false);
+    expect(foodTripDue({...due,emptyTrips:3})).toBe(false);
+    expect(foodTripDue({...due,emptyTrips:3,shopOk:true})).toBe(true);
 });
 test('a fall in Hitpoints with no pick of its own is a guard hit',()=>{
     expect(guardHit(10,7,false)).toBe(true);
