@@ -1,9 +1,14 @@
-import { expect, test } from 'bun:test';
+import { beforeAll, expect, test } from 'bun:test';
 import { BLACK_DRAGON, PROTECT_MAGIC, TELEPORT_RUNES, canShoot, footprintDistance, swTile, underground } from './black-dragon-camp';
 import { BLACK_ALTAR, BLACK_ENTRY, BLACK_KIT, BLACK_PRAYER, TELEPORT_TRIES, TELEPORT_WAIT, blackKit, blackPrayerShort, combatKitTotals, inVarrockSquare, validateCombatKit } from './microbot-combat-trip';
+import { loadPathfinding } from '../packages/core/src/pathcache';
 import { initPathfinding } from '../vendor/rs-sdk/sdk/pathfinding';
 import * as rsmod from '../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
 import { CollisionType } from '../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
+
+// initPathfinding() alone takes about 14 s for each process (packages/core/src/pathcache.ts), which is more than the
+// time limit of a test. The snapshot loader makes the same grid first, so the calls in the tests return at once.
+beforeAll(async () => { await loadPathfinding(); }, 120_000);
 
 const key = (x: number, z: number) => `${x},${z}`;
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]] as const;

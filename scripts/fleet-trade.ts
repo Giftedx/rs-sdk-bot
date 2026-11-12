@@ -20,6 +20,7 @@ import { jobAccounts, mergedPlan, readCoordinatorJobs } from '../packages/core/s
 import { liveLogoutRef } from '../packages/core/src/session-admission';
 import { readLogoutProof } from '../packages/core/src/session-lifecycle';
 import { pidAlive } from '../packages/core/src/session-takeover';
+import { laterProcessHolds, processStartTimes } from '../packages/practice/src/proc';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { meetingTiles } from './coin-courier';
 import type { Session } from '../packages/core/src/inprocess';
@@ -59,6 +60,7 @@ export function swarmBusy(jobs: readonly any[]): Set<string> {
 
 export function assertTradeAdmission(order: Order, account: string, server: string, {
     base = root, planFile = tradePlanFile(base), receipts = join(FLEET_DIR(), 'receipts'), now = Date.now(),
+    starts = processStartTimes as (pids: readonly number[]) => ReadonlyMap<number, number> | null,
 } = {}): void {
     const name = account.toLowerCase();
     const role = order.from.toLowerCase() === name ? 'from' : order.to.toLowerCase() === name ? 'to' : null;
@@ -79,7 +81,11 @@ export function assertTradeAdmission(order: Order, account: string, server: stri
     const runsFile = join(practice, 'swarm-runs.json');
     if (existsSync(runsFile)) {
         const runs = JSON.parse(readFileSync(runsFile, 'utf8'));
-        if (!Array.isArray(runs) || runs.some(run => includesAccount(run) && pidAlive(run.pid))) {
+        // A run whose id answers a signal is unsettled, unless the process that holds the id started after the run
+        // record (laterProcessHolds). One read of the process table, and only when such a run names this account.
+        const answering = Array.isArray(runs) ? runs.filter(run => includesAccount(run) && pidAlive(run.pid)) : [];
+        const table = answering.length ? starts(answering.map(run => run.pid)) : null;
+        if (!Array.isArray(runs) || answering.some(run => !laterProcessHolds(run.pid, run.started, table))) {
             throw Error('fleet trade: account has an unsettled swarm worker');
         }
     }

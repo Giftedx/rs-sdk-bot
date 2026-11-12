@@ -1,5 +1,5 @@
 import {expect,test} from 'bun:test';
-import {stallRecipes,stallEffect,stealStall,stallWatched,withStallSightBlocker} from './microbot-c-stalls';
+import {stallRecipes,stallEffect,stealStall,stallWatched,withStallSightBlocker,withStallSightBlockers} from './microbot-c-stalls';
 import {watchProductionLife} from './microbot-c-lifetime';
 import {monitoredPlayer} from './microbot-c-player-monitor';
 test('all thirteen native stall rows resolve location and loot IDs',()=>{
@@ -26,6 +26,18 @@ test('native stall projectile clipping is scoped to its sight query and restores
  let mask=256;const grid={isFlagged:(_x:number,_z:number,_l:number,bits:number)=>(mask&bits)!==0,__set:(_x:number,_z:number,_l:number,bits:number)=>{mask=bits;}};
  expect(withStallSightBlocker(grid,{x:1,z:2,level:0,width:1,length:1},()=>mask)).toBe(256|131072);
  expect(mask).toBe(256);expect(()=>withStallSightBlocker(grid,{x:1,z:2,level:0,width:1,length:1},()=>{throw Error('query');})).toThrow('query');expect(mask).toBe(256);
+});
+test('each stall of the type blocks sight inside one query, and each tile gets its flags back',()=>{
+ const flags=new Map<string,number>([['5,5',256],['9,5',0]]),key=(x:number,z:number)=>`${x},${z}`;
+ const grid={isFlagged:(x:number,z:number,_l:number,bits:number)=>((flags.get(key(x,z))??0)&bits)!==0,__set:(x:number,z:number,_l:number,bits:number)=>{flags.set(key(x,z),bits);}};
+ const stalls=[{x:5,z:5,level:0,width:1,length:1},{x:9,z:5,level:0,width:1,length:1}];
+ // Both stalls hold the projectile blocker while the query runs.
+ expect(withStallSightBlockers(grid,stalls,()=>[flags.get('5,5'),flags.get('9,5')])).toEqual([256|131072,131072]);
+ expect([flags.get('5,5'),flags.get('9,5')]).toEqual([256,0]);
+ expect(()=>withStallSightBlockers(grid,stalls,()=>{throw Error('query');})).toThrow('query');
+ expect([flags.get('5,5'),flags.get('9,5')]).toEqual([256,0]);
+ // No stall in view: the query runs on the grid as it is.
+ expect(withStallSightBlockers(grid,[],()=>flags.get('5,5'))).toBe(256);
 });
 test('finite silk worker retains declared loot and unrelated inventory',async()=>{
  const r=stallRecipes().find(r=>r.name==='stealing_silk_stall')!,items=[{id:r.loot[0]!,count:2},{id:995,count:9}];let xp=1;

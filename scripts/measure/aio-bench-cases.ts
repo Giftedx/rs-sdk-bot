@@ -294,6 +294,10 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('foraging', 'qol', 'fresh_lumbridge', ['prayer', '0', '10', '40'], {presetConfig: {position: {x: 3222, z: 3218, level: 0}, skills: {Prayer: 43}}}),
   skiller('runecraft', 'air', 'rc_air_inside'),
   skiller('thieving', 'knights', 'goldfarm_knights', ['TICKS=1500'], {output: /coinsGained=(\d+)/}),
+  // The stall trip of the same worker: no food in the pack or the bank, and no coins for the Baker's shop. The thief
+  // has 40 Hitpoints, because one under 20 ends the run when it has no food (goldfarm.ts, FRAIL_HP).
+  {...skiller('thieving', 'knights', 'goldfarm_nofood', ['TICKS=600'], {output: /stolen=(\d+)/}), key: 'extra:goldfarm-stall',
+    presetConfig: {position: {x: 2654, z: 3304, level: 0}, skills: {Thieving: 99, Hitpoints: 40}}},
   skiller('foraging', 'flax', 'gather_flax', ['1500'], {output: /banked=(\d+)/}),
   skiller('foraging', 'grapes', 'grapes_cooksguild'),
   {key: 'fighter:chicken', script: 'scripts/aio-fighter.ts', preset: 'bank_draynor', presetConfig: CHICKEN_FIXTURE, scriptArgs: ['chicken', 'TARGET_LEVEL=25', 'CAP=1500'], pass: s => ok(s) && s.includes('chicken-qualification'), timeoutMs: 300_000},
@@ -555,6 +559,14 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, bank: [{id: 1944, count: 1}, {id: 1927, count: 1}, {id: 1933, count: 1}]}},
   {key: 'quester:mode:cook-job', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['cook-job', 'CAP=1500'], pass: s => ok(s) && /QUEST_COOK_JOB_RESULT \{"ok":true/.test(s),
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, bank: [{id: 1944, count: 1}, {id: 1927, count: 1}, {id: 1933, count: 1}], varps: {4: -1, 9: -1, 13: -1, 16: -1, 28: -1, 64: -1, 181: -1, 209: -1}}},
+  // The same job on a new account: the starter kit is in the Draynor bank and the pack is empty, so the job gets
+  // the egg, the milk and the flour itself (the chicken farm, the dairy cow, the wheat field and the mill).
+  {key: 'extra:cook-job-gather', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['cook-job', 'CAP=1500'], pass: s => ok(s) && /QUEST_COOK_JOB_RESULT \{"ok":true/.test(s),
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, bank: [{id: 995, count: 25}, {id: 1351, count: 1}, {id: 590, count: 1}, {id: 303, count: 1}, {id: 1925, count: 1}, {id: 1931, count: 1}, {id: 1265, count: 1}, {id: 1205, count: 1}], varps: {4: -1, 9: -1, 13: -1, 16: -1, 28: -1, 64: -1, 181: -1, 209: -1}}},
+  // The same job from the Lumbridge spawn with the starter kit in the pack, as a new account has it after the
+  // tutorial: no bank visit before the quest, then the walk to the Draynor bank for the last check.
+  {key: 'extra:cook-job-spawn', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['cook-job', 'CAP=1500'], pass: s => ok(s) && /QUEST_COOK_JOB_RESULT \{"ok":true/.test(s),
+    presetConfig: {position: {x: 3222, z: 3218, level: 0}, coins: 25, inventory: [1351, 590, 303, 315, 1925, 1931, 2309, 1265, 1205, 1277, 1171, 841].map(id => ({id, count: 1})), varps: {4: -1, 9: -1, 13: -1, 16: -1, 28: -1, 64: -1, 181: -1, 209: -1}}},
   // From the Taverley dungeon ladder: the Jailer, Velrak's cell, the key, back up (scripts/dusty-key.ts).
   {key: 'quester:mode:dusty-key', script: 'scripts/aio-quester.ts', preset: 'fresh_lumbridge', scriptArgs: ['dusty-key'], pass: s => ok(s) && s.includes('dustyKey=1'), timeoutMs: 900_000,
     presetConfig: {position: {x: 2884, z: 3398, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99}, equipment: [{id: 1331, count: 1, slot: 3}], inventory: Array.from({length: 4}, () => ({id: 385, count: 1}))}},
@@ -617,6 +629,10 @@ const EXTRA_CASES: BenchCase[] = [
     presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 99}, inventory: [{id: 2347, count: 1}], bank: [{id: 2363, count: 2}]}},
   {key: 'extra:smith-rune-kiteshield', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'anvil', '600', 'PRODUCT_ID=1201', 'MAX_MAKE=1', 'BAR_RESERVE=0'], pass: s => ok(s) && /"made":1,"banked":1/.test(s),
     presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 99}, inventory: [{id: 2347, count: 1}], bank: [{id: 2363, count: 3}]}},
+  // Steel bars from the Al Kharid bank at the level of the bar: 28 iron ore and 56 coal banked, 9 bars a pack load
+  // (one ore and two coal a bar), four loads.
+  {key: 'extra:smelt-steel', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'smelt', '900', 'steel', 'MAX_MAKE=28', 'ORE_RESERVE=0'], pass: s => ok(s) && /"made":28,"banked":28/.test(s),
+    presetConfig: {position: {x: 3269, z: 3167, level: 0}, skills: {Smithing: 30}, bank: [{id: 440, count: 28}, {id: 453, count: 56}]}},
   {key: 'extra:bank-job-cut-dragonstone', script: 'scripts/aio-skiller.ts', preset: 'bank_gems', scriptArgs: ['bank-job', CUT_JOB_PATH], pass: s => ok(s) && s.includes('cut-dragonstone')},
   // Lost City on an account of the `pure-pray` build: the levels of the kit, the Woodcutting and Crafting that Monk's
   // Friend and Murder Mystery give before it in the chain, nothing worn and the pack of quest_zanaris. The build
@@ -637,6 +653,20 @@ const EXTRA_CASES: BenchCase[] = [
   // worker starts at the bank: 25 tiles away it ends "bank did not open", so the band walks there first.
   {key: 'extra:fletch-headless-25', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['fletching', 'arrows', '3000', 'headless', 'MAX_MAKE=210', 'SHAFT_RESERVE=100', 'FEATHER_RESERVE=100', 'BANK_PACK=1'],
     pass: s => ok(s) && / made=210 /.test(s) && / xpGain=5250 /.test(s), presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Fletching: 1}, bank: [{id: 52, count: 310}, {id: 314, count: 310}]}},
+  // The flax route from a start on another floor: level 1 of a house in East Ardougne (2575,3269), where an account
+  // of the planner's flax pilot stood. The worker goes to the field with the shared walker (the stairs at 2568,3268),
+  // then picks and banks at Seers.
+  {key: 'extra:flax-from-ardougne-upstairs', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['foraging', 'flax', '900', '28'],
+    pass: s => ok(s) && / banked=[1-9]\d* /.test(s), output: /banked=(\d+)/, presetConfig: {position: {x: 2575, z: 3269, level: 1}, skills: {Hitpoints: 32}}},
+  // The same start for two more workers of the planner. The Thieving trainer goes to the Ardougne market by those
+  // stairs, then pickpockets to its target and banks. The feather job starts with no ferry fare in the pack: it goes
+  // down to the Ardougne north bank, takes the fare, sails by Brimhaven and Musa Point, and kills chickens at the pen
+  // south of Falador.
+  {key: 'extra:thieve-from-ardougne-upstairs', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['thieving', 'bootstrap55', 'TARGET=5', 'CAP=900'],
+    pass: s => ok(s) && / died=false/.test(s) && /^MILESTONE approach /m.test(s), presetConfig: {position: {x: 2575, z: 3269, level: 1}, skills: {Thieving: 1, Hitpoints: 32}}},
+  {key: 'extra:feathers-from-ardougne-upstairs', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['foraging', 'feathers', 'PEN=3017,3288', 'TARGET=5', 'TICKS=900'],
+    pass: s => ok(s) && /^MILESTONE pen /m.test(s), output: /gained=(\d+)/,
+    presetConfig: {position: {x: 2575, z: 3269, level: 1}, skills: {Attack: 30, Strength: 30, Hitpoints: 20}, bank: [{id: 995, count: 200}]}},
   // The two Magic trainers of the planner's army bands, from the Ardougne north bank. Alchemy: Magic 54 to 56 on
   // feathers with a staff of fire in the bank, so the run casts Low Alchemy and then High Alchemy. The curse trainer:
   // Magic 19 to 21 over the fence of the cow field.

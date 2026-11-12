@@ -47,9 +47,18 @@ for (const f of readdirSync(join(root, ladderDir)).filter(f => f.endsWith('.rs2'
     skipped.push(...r.skipped);
     classified.push(...r.classified);
 }
-for(const file of ['scripts/areas/area_falador/scripts/mining_guild.rs2','scripts/areas/monastery/scripts/prayer_guild.rs2','scripts/minigames/game_ranging/scripts/ranging_guild_door.rs2']){
-    const text=read(file),names=file.includes('mining_guild')?['miningguildladder']:file.includes('prayer_guild')?['monasteryladder']:['ranging_guild_door'];
-    const r=parseTransportHandlers(text,file,{triggers});
+// Ladders that a script outside the ladder folder moves, by loc name. The Observatory has no way in or out on foot: its
+// ladder (domeladderdown) goes down to the cavern, and two cavern ladders go up to the observatory (loc_2189) and to the
+// reception (loc_2188). Each of the three moves with no condition. The reception ladder down (obs_dungeonladderdown) is
+// not here: before the quest ends it opens a dialogue first, and a transport leg cannot answer one.
+const namedLadders:Record<string,string[]>={
+    'scripts/areas/area_falador/scripts/mining_guild.rs2':['miningguildladder'],
+    'scripts/areas/monastery/scripts/prayer_guild.rs2':['monasteryladder'],
+    'scripts/minigames/game_ranging/scripts/ranging_guild_door.rs2':['ranging_guild_door'],
+    'scripts/quests/quest_itgronigen/scripts/quest_itgronigen.rs2':['loc_2188','loc_2189','domeladderdown'],
+};
+for(const [file,names] of Object.entries(namedLadders)){
+    const r=parseTransportHandlers(read(file),file,{triggers});
     handlers.push(...r.handlers.filter(h=>names.includes(h.locName)));
 }
 const locBlocks = new Map(blocksOf('.loc').map(b => [b.name, b]));

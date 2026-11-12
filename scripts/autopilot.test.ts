@@ -14,6 +14,7 @@ import { resolveAioStep } from './aio';
 import { benchCases } from './measure/aio-bench-cases';
 import { MEALS, presetFor } from './quest-sweep';
 import { BANK_FOOD } from './blood-chest';
+import { smeltRecipe } from './smelt-batch';
 
 const side = 'claude-cloud';
 const inputs = (a: Acct): Inputs => ({ side, accounts: [a], owners: new Map([[a.name.toLowerCase(), { side }]]), bill: [], templates: catalogue(), prices: {} });
@@ -34,8 +35,9 @@ test('a trainer at its target stays ended for the swarm, and the next pass start
     expect(finishedTrainers([trainer], side, assigned, catalogue(), () => ['RESULT ok thieving=55 xp=16000 ticks=1736 died=false'])).toEqual(['TrouserSnake']);
 
     // That pass reads the status at the target level: the trainer is skipped, a knight spot replaces it, and the new
-    // mission starts although the account's last end is done.
-    const [next] = plan(inputs({ ...fresh, skills: { ...fresh.skills, Thieving: 55 } }));
+    // mission starts although the account's last end is done. The account has 20 Hitpoints here: the frail rule keeps
+    // a thief under that off the knights until it holds food (GOLDFARM_FRAIL, packages/planner/src/autopilot.ts).
+    const [next] = plan(inputs({ ...fresh, skills: { ...fresh.skills, Thieving: 55, Hitpoints: 20 } }));
     expect(next!.template!.id).toMatch(/^goldfarm@/);
     const merged = mergeJobs([trainer], side, [next!]);
     expect(merged.fresh).toEqual(['TrouserSnake']);
@@ -459,6 +461,35 @@ test('a maker of a short bill line has the value of that line for an account tha
         expect(run(m.lacks).template).toBeUndefined();
     }
     expect([...BLOOD_FOOD].map(norm).sort()).toEqual(BANK_FOOD.map(norm).sort());
+});
+
+test('the steel bar template has the value of a short line only while the bill is short of cannonballs', () => {
+    const items: { name?: string; debugname?: string; cost?: number }[] = JSON.parse(readFileSync(resolve(import.meta.dir, '../knowledge/items.json'), 'utf8'));
+    const prices: Record<string, number> = {};
+    for (const i of items) if (typeof i.name === 'string' && !/^cert_/.test(i.debugname ?? '') && !(norm(i.name) in prices)) prices[norm(i.name)] = i.cost ?? 0;
+    const line = (item: string, short: number) => ({ item, need: 1700, owned: 1700 - short, short, ids: [], holders: [] });
+    const id = 'aio-steel-bars', t = aioTemplates().find(t => t.id === id)!;
+    const smith = (level: number, ore: number, coal: number): Acct => ({ name: 'A', side, skills: { Smithing: level }, items: { 'iron ore': ore, coal } });
+    const run = (a: Acct, bill: Inputs['bill']) => plan({ ...inputs(a), templates: aioTemplates(), bill, prices, pilots: new Set([id]), coinValue: 0 })[0]!;
+    // The worker's own table: the level and the two ingredients of the bar, and one pack load of them in `needs`.
+    const recipe = smeltRecipe('steel'), units = (item: number) => recipe.ingredients.find(i => i.id === item)!.units;
+    const load = Math.floor(28 / (units(440) + units(453)));
+    expect(t.needs).toEqual({ skills: { Smithing: recipe.level }, items: { 'iron ore': load * units(440), coal: load * units(453) } });
+    const [made] = t.yields(smith(30, 9, 18));
+    expect(made!.item).toBe('steel bar');
+    const price = prices['steel bar']!;
+    expect(price > 0).toBe(true);
+    // No bill line names the bar. Short of cannonballs: twice the shop value of the bar.
+    expect(run(smith(30, 9, 18), [line('cannonball', 1700)]).template?.id).toBe(id);
+    expect(run(smith(30, 9, 18), [line('cannonball', 1700)]).value).toBeCloseTo(made!.perTick * price * 2);
+    // The cannonball line met, another line short, or no bill: half the shop value, as for an item nobody needs.
+    for (const bill of [[line('cannonball', 0)], [line('cannonball', 0), line('iron bar', 2), line('mithril bar', 280)], []])
+        expect(run(smith(30, 9, 18), bill).value).toBeCloseTo(made!.perTick * price * 0.5);
+    // A level under the bar, or a load short of one ore or one coal: no job.
+    for (const a of [smith(29, 9, 18), smith(30, 8, 18), smith(30, 9, 17)]) {
+        expect(run(a, [line('cannonball', 1700)])).toMatchObject({ value: 0 });
+        expect(run(a, [line('cannonball', 1700)]).template).toBeUndefined();
+    }
 });
 
 test('the aio list of the plan admits pilot templates by id; anything else admits none', () => {

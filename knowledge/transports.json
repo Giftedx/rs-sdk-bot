@@ -8621,6 +8621,62 @@
   }
  },
  {
+  "locName": "loc_2188",
+  "option": "op1",
+  "from": {
+   "x": 2420,
+   "z": 9460,
+   "level": 0
+  },
+  "to": {
+   "x": 2444,
+   "z": 3192,
+   "level": 0
+  },
+  "exact": true,
+  "src": "maps/m37_147.jm2:6883",
+  "toSrc": "scripts/quests/quest_itgronigen/scripts/quest_itgronigen.rs2:18",
+  "handler": "scripts/quests/quest_itgronigen/scripts/quest_itgronigen.rs2:16",
+  "interaction": {
+   "id": 2188,
+   "shape": 10,
+   "angle": 0,
+   "width": 1,
+   "height": 1,
+   "blockAccessFlags": 0,
+   "src": "maps/m37_147.jm2:6883",
+   "configSrc": "scripts/quests/quest_itgronigen/configs/quest_itgronigen.loc:8"
+  }
+ },
+ {
+  "locName": "loc_2189",
+  "option": "op1",
+  "from": {
+   "x": 2423,
+   "z": 9439,
+   "level": 0
+  },
+  "to": {
+   "x": 2440,
+   "z": 3165,
+   "level": 0
+  },
+  "exact": true,
+  "src": "maps/m37_147.jm2:6997",
+  "toSrc": "scripts/quests/quest_itgronigen/scripts/quest_itgronigen.rs2:22",
+  "handler": "scripts/quests/quest_itgronigen/scripts/quest_itgronigen.rs2:20",
+  "interaction": {
+   "id": 2189,
+   "shape": 10,
+   "angle": 0,
+   "width": 1,
+   "height": 1,
+   "blockAccessFlags": 0,
+   "src": "maps/m37_147.jm2:6997",
+   "configSrc": "scripts/quests/quest_itgronigen/configs/quest_itgronigen.loc:15"
+  }
+ },
+ {
   "locName": "ladder_from_cellar_directional",
   "option": "op1",
   "from": {
@@ -10074,6 +10130,34 @@
    "blockAccessFlags": 0,
    "src": "maps/m38_154.jm2:8098",
    "configSrc": "scripts/_unpack/225/all.loc:9806"
+  }
+ },
+ {
+  "locName": "domeladderdown",
+  "option": "op1",
+  "from": {
+   "x": 2440,
+   "z": 3164,
+   "level": 0
+  },
+  "to": {
+   "x": 2423,
+   "z": 9438,
+   "level": 0
+  },
+  "exact": true,
+  "src": "maps/m38_49.jm2:4391",
+  "toSrc": "scripts/quests/quest_itgronigen/scripts/quest_itgronigen.rs2:26",
+  "handler": "scripts/quests/quest_itgronigen/scripts/quest_itgronigen.rs2:24",
+  "interaction": {
+   "id": 2190,
+   "shape": 10,
+   "angle": 1,
+   "width": 1,
+   "height": 1,
+   "blockAccessFlags": 0,
+   "src": "maps/m38_49.jm2:4391",
+   "configSrc": "scripts/quests/quest_itgronigen/configs/quest_itgronigen.loc:22"
   }
  },
  {

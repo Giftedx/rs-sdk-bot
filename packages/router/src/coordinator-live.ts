@@ -3,7 +3,7 @@ import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
-import {admissionDecision,startReserve,activeExternalLive,loadEnded,persistEnded,persistentEnd,loadHolds,openHold,LIVE_SERVER,failedScript,scriptKey,missionSignature} from '../../../scripts/swarm';
+import {admissionDecision,startReserve,activeExternalLive,RECOVERY_SLOT_WAIT_MS,loadEnded,persistEnded,persistentEnd,loadHolds,openHold,LIVE_SERVER,failedScript,scriptKey,missionSignature} from '../../../scripts/swarm';
 import {liveLogoutRef} from './coordinator-session';
 import {BOOTSTRAP_STATUS_AGE_MS} from '../../core/src/session-admission';
 import {evaluateLaunch} from '../../../scripts/haggis-gate';
@@ -18,6 +18,20 @@ import {RECOVERY_SCHEMA,assertNoRecoveryLease,heldRecoveryOwners,recoveredSessio
 import {COORDINATOR_JOBS_FILE,readCoordinatorJobs,writeCoordinatorJobs,mergedPlan,jobAccounts,parkedCoordinatorAccounts,shadowAssignments,type CoordinatorJobs} from '../../core/src/coordinator-jobs';
 import {readLogoutProof} from '../../core/src/session-lifecycle';
 
+// The swarm refuses a session recovery when memory is short (admitRecovery in scripts/swarm.ts). That refusal is
+// final for the run, and each run chained behind it then waits for a new proposal. So a recovery run stays in the
+// queue while the controller's last state shows that refusal. The margin covers what the swarm counts after this
+// read: the dispatched recovery is one more pending start (pendingCount in scripts/swarm.ts), and the processes of
+// the run take memory before the admission (live: free fell from 10.55 to 8.78 GiB in the 11 s of one dispatch).
+export const RECOVERY_MEMORY_MARGIN_GB=3;
+export function recoveryWaitsForMemory(task:Pick<CoordTask,'sessionRecovery'>,capacity:{running:number|null;externalRunning:number|null;pendingStartup:number|null;freeGB:number|null;minFreeGB:number|null;maxBots:number|null}|null):boolean{
+ if(!task.sessionRecovery||!capacity||capacity.freeGB===null||capacity.minFreeGB===null)return false;
+ // The memory numbers decide, not the reason: with every bot slot taken the decision names the slot first, and the
+ // swarm, which keeps a slot for a recovery, still refuses on memory.
+ const d=admissionDecision({running:capacity.running??0,external:capacity.externalRunning??0,pending:capacity.pendingStartup??0,starting:1,startingReserve:1,
+  freeGB:Math.max(0,capacity.freeGB-RECOVERY_MEMORY_MARGIN_GB),minFreeGB:capacity.minFreeGB,maxBots:capacity.maxBots??Number.MAX_SAFE_INTEGER});
+ return d.reason!=='invalid'&&d.projectedFreeGB<d.floorGB;
+}
 // A controller that wrote .practice/swarm-state.json under this pid and nonce within this window is the saved
 // controller: no PowerShell command-line probe is needed while its pid is alive.
 export const CONTROLLER_STATE_FRESH_MS=10_000;
@@ -106,7 +120,9 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
   if(held.size)own.paused=[...held];else delete own.paused;
   writeCoordinatorJobs(base,own);
  },dir);
- const resume=async()=>{const p=paused();if(p.length){await setEnabled(p,true);unlinkSync(pausedFile);}};
+ // The list in the coordinator's file has no other writer. A name there that the pause file does not hold is left
+ // from a pause that did not finish, and nothing else turns that job on again: resume clears those names too.
+ const resume=async()=>{const p=[...paused(),...(readCoordinatorJobs(base).paused??[])];if(p.length){await setEnabled(p,true);if(existsSync(pausedFile))unlinkSync(pausedFile);}};
  // `source` is the launch release (worker-release.ts): the swarm, its launchers and the recovery runner. A coordinator
  // run needs the controller on it, because recovery permits bind to the controller's WORKER_RELEASE; standing jobs need
  // only the swarm's own code current. Workers carry their own capability release (swarm.ts), so no rollout follows it.
@@ -430,15 +446,35 @@ async function acquireRecoverySlot(lease:string,owner:{pid:number;runId:string;n
   await Bun.sleep(Math.min(100,Math.max(1,limit-Date.now())));
  }
 }
-export async function requestAuthenticatedRecovery(task:CoordTask,dependencies:Record<string,any>,source:string,runId:string,base=projectRoot,timeoutMs=180000,launch=source,beforeRequest?:()=>Promise<unknown>){
+// A full fleet is a wait for a recovery, not a refusal. The caller holds the repair lease, and while the lease exists
+// the controller keeps the next free bot slot for the recovery (scripts/swarm.ts recoverySlot), so the wait ends when
+// one bot ends. The controller's own bot count (swarm-state.json, written each tick) is read first: it has a bot
+// that started and wrote no status yet, which the status rows of the preflight do not show, and the controller
+// refuses a request at a full fleet with no retry. A memory refusal, and each other refusal, ends the wait at once.
+async function awaitBotSlot(preflight:()=>Promise<unknown>,account:string,base:string,limit:number){
+ const controllerFull=()=>{
+  try{const s=JSON.parse(readFileSync(join(base,'.practice/swarm-state.json'),'utf8'));return Date.now()-s.at<10000&&s.running+s.externalRunning+1>s.maxBots;}
+  catch{return false;}
+ };
+ while(true){
+  if(['stop-coordinator','stop-swarm','stop-'+account].some(f=>existsSync(join(base,'.practice',f))))throw Error('recovery owner stopped');
+  if(!controllerFull())try{await preflight();return;}catch(error){if(String(error)!=='Error: live admission waiting: maxBots')throw error;}
+  if(Date.now()>=limit)throw Error('live admission waiting: maxBots');
+  await Bun.sleep(Math.min(500,Math.max(1,limit-Date.now())));
+ }
+}
+// `slotWaitMs` bounds the wait for a bot slot. `timeoutMs` bounds the controller's part, from the request to its
+// result. The wait for the lease covers both parts of the request that holds it.
+export async function requestAuthenticatedRecovery(task:CoordTask,dependencies:Record<string,any>,source:string,runId:string,base=projectRoot,timeoutMs=180000,launch=source,beforeRequest?:()=>Promise<unknown>,slotWaitMs=RECOVERY_SLOT_WAIT_MS){
  const authorization=task.sessionRecovery;if(!authorization)throw Error('authenticated recovery task flag missing');
  const request:ControlledRecoveryRequest={schema:RECOVERY_SCHEMA,kind:'session-recovery',...authorization,server:LIVE_SERVER,runId,nonce:randomUUID(),source:launch,
   qualification:recoveryQualification(task,dependencies,source,base)};
  const file=join(base,'.practice/swarm-repair.json'),lease=file+'.lease';
- const raw=JSON.stringify(request),limit=Date.now()+timeoutMs;
- await acquireRecoverySlot(lease,{pid:process.pid,runId,nonce:request.nonce},request.account,base,limit);
+ const raw=JSON.stringify(request);
+ await acquireRecoverySlot(lease,{pid:process.pid,runId,nonce:request.nonce},request.account,base,Date.now()+timeoutMs+(beforeRequest?slotWaitMs:0));
  try{
-  await beforeRequest?.();
+  if(beforeRequest)await awaitBotSlot(beforeRequest,request.account,base,Date.now()+slotWaitMs);
+  const limit=Date.now()+timeoutMs;
   if(existsSync(file+'.processing'))throw Error('another exact recovery owns the repair slot');
   writeFileSync(file,raw,{flag:'wx'});
   while(Date.now()<limit){

@@ -1,9 +1,13 @@
-import {expect,test} from 'bun:test';
+import {beforeAll,expect,test} from 'bun:test';
 import {walkQuestCorridor,walkClockTowerTrough,CLOCK_TROUGH,openKojoDoor,KOJO_DOOR} from './quest-walk';
 import * as pf from '../vendor/rs-sdk/sdk/pathfinding';
 import * as grid from '../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
 import {withDoorPolicy} from '../packages/core/src/door-policy';
 import {blockedDoorsNear} from '../packages/core/src/world';
+import {loadPathfinding} from '../packages/core/src/pathcache';
+// initPathfinding() alone takes about 14 s for each process (packages/core/src/pathcache.ts). The snapshot loader makes
+// the same grid first, so the calls in the tests return at once.
+beforeAll(async()=>{await loadPathfinding();},120_000);
 const points=[{x:10,z:0,tol:0},{x:10,z:10,tol:0},{x:20,z:10,tol:1}];
 const result=(next:number,ok=false)=>({ok,next,ticks:5,still:0,clicks:1,repaths:0,doors:0});
 test('failed corridor resumes its first unfinished point and preserves every remaining bend',async()=>{

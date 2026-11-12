@@ -78,6 +78,28 @@ test('a delayed recovery cannot remove the live replacement acquired by another 
     }
 });
 
+test('a waiting fleet-data writer recovers a lock whose owner id a later process holds', async () => {
+    const parent = resolve(tmpdir()), root = mkdtempSync(join(parent, 'rsbot-fleet-lock-'));
+    try {
+        const dir = lockDir(root);
+        deadIntent(root, 123);
+        // The id answers a signal. A failed read proves nothing, and so does a process that started before the record.
+        expect(recoverConcurrentPlanWrite(dir, () => true, () => null, 100_000)).toBe(false);
+        expect(recoverConcurrentPlanWrite(dir, () => true, () => new Map([[123, 0]]), 200_000)).toBe(false);
+        expect(existsSync(lockFile(root))).toBe(true);
+        // Its process started after the owner wrote the record: a different process. The 25 ms loop reads the result
+        // that is kept, not the process table.
+        let reads = 0;
+        expect(recoverConcurrentPlanWrite(dir, () => true, () => { reads++; return new Map([[123, 60_000]]); }, 300_000)).toBe(true);
+        expect(reads).toBe(1);
+        expect(existsSync(lockFile(root))).toBe(false);
+        expect(readdirSync(dir)).toEqual(['plan-lock-recovery']);
+        await expect(withFleetDataWrite(root, () => 42, 1000)).resolves.toBe(42);
+    } finally {
+        if (/^rsbot-fleet-lock-[^/\\]+$/.test(relative(parent, root))) rmSync(root, {recursive: true, force: true});
+    }
+});
+
 test('a killed recoverer leaves a ticket that another process can take over', () => {
     const parent = resolve(tmpdir()), root = mkdtempSync(join(parent, 'rsbot-fleet-lock-'));
     try {

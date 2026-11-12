@@ -1,10 +1,15 @@
-import { expect, test } from 'bun:test';
+import { beforeAll, expect, test } from 'bun:test';
 import { AIR, BODY, CAST_RANGE, EARTH, MIND, QUIET_STOP, SPLASH_SPELLS, SPLASH_TILE, WATER, castReaches, splashBatchDone, splashPlan, splashSpell } from './splash-train';
 import { xpForLevel } from '../packages/planner/src/curve';
 import { SPLASH_KIT, SPLASH_TO } from '../packages/planner/src/autopilot';
+import { loadPathfinding } from '../packages/core/src/pathcache';
 import { initPathfinding } from '../vendor/rs-sdk/sdk/pathfinding';
 import * as rsmod from '../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
 import { CollisionType } from '../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
+
+// initPathfinding() alone takes about 14 s for each process (packages/core/src/pathcache.ts), which is more than the
+// time limit of a test. The snapshot loader makes the same grid first, so the call in the test returns at once.
+beforeAll(async () => { await loadPathfinding(); }, 120_000);
 
 test('a level casts the best stat spell it has, and Wind Strike under Confuse', () => {
     expect(splashSpell(1).component).toBe('magic:wind_strike');

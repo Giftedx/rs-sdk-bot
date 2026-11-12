@@ -6,13 +6,19 @@ import { openBot, finish, countItems } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';
 import { bankCargo, courierWaiting } from '../packages/core/src/cargo';
+import { approach, awayFrom } from './walk-to';
 
 const FLAX_FIELD = { x: 2744, z: 3445 };
 const SEERS_BANK = { x: 2727, z: 3492 };
+// The field walk and the bank walk stay on the ground floor (the bank is 47 tiles from the field). A start on
+// another floor, or more than this many tiles from the field, goes to the field with the shared walker first.
+const APPROACH_FROM = 80;
 export interface FlaxOptions {
     cap: number;
     bankAt: number;
     stop?: () => boolean;
+    // The walk to the field from a far start or another floor. Default: the shared walker (stairs, doors, ferries).
+    approach?: (stop: () => boolean) => Promise<boolean>;
     walk?: (x: number, z: number, tol: number, stop: () => boolean, remaining: number) => Promise<boolean>;
     cargo?: (s: Session) => Promise<void>;
     waiting?: () => boolean;
@@ -108,9 +114,15 @@ export async function runFlax(s: Session, o: FlaxOptions) {
         return confirmed;
     };
 
-    console.log(`START flax gatherer ${s.name} at=${pos()?.worldX},${pos()?.worldZ}`);
+    const field = { ...FLAX_FIELD, level: 0 }, away = () => awayFrom(pos(), field, APPROACH_FROM);
+    console.log(`START flax gatherer ${s.name} at=${pos()?.worldX},${pos()?.worldZ},${pos()?.level ?? 0}`);
     try {
-    while (!over()) {
+    if (away() && !over()) {
+        const reached = o.approach ? await o.approach(over) : (await approach(s, field, over)).ok;
+        if (!reached && away() && !over()) failure = 'no flax progress: no route to the flax field';
+        console.log(`MILESTONE approach t=${used()} at=${pos()?.worldX},${pos()?.worldZ},${pos()?.level ?? 0}`);
+    }
+    while (!over() && !failure) {
         if (flaxCount() >= BANK_AT || waiting() || (flaxCount() > 0 && freeSpace() === 0)) {
             if (!await bank()) {
                 if (!over()) failure = 'no flax progress: production bank unconfirmed';

@@ -1,9 +1,13 @@
-import {expect,test} from 'bun:test';
+import {beforeAll,expect,test} from 'bun:test';
+import {loadPathfinding} from '../packages/core/src/pathcache';
 import{BotSDK}from'../vendor/rs-sdk/sdk/index';import{BotActions}from'../vendor/rs-sdk/sdk/actions';
 import {smeltRecipe,planSmeltLoad,smeltEffect,runSmeltBatch,validateSmeltOrder,smeltOwnedSession,validateSmeltRoute,deriveNearestSmeltRoute} from './smelt-batch';
 import {runCannonballs} from './microbot-a-cannonballs';
 import {readFileSync} from 'node:fs';
 import {setEquipmentObserved} from '../packages/core/src/container-observation';
+// initPathfinding() alone takes about 14 s for each process (packages/core/src/pathcache.ts). The snapshot loader makes
+// the same grid first, so the call in the test returns at once.
+beforeAll(async()=>{await loadPathfinding();},120_000);
 
 test('pinned recipes and short stock produce feasible reserved loads, including mithril',()=>{
  const steel=smeltRecipe('steel');expect(steel.ingredients).toEqual([{id:440,units:1},{id:453,units:2}]);

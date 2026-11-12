@@ -210,3 +210,21 @@ test('a run the connection ended after real work restarts the streak toward gave
     const s = await supervise({ run: () => { m++; return drained(); }, stopped: () => m >= 6, pause: async () => {}, maxRestarts: 1 });
     expect(s).toEqual({ reason: 'stopped', runs: 6 });
 });
+
+test('a walker result with no route ends the session as blocked at the first run', async () => {
+    const noRoute = 'RESULT fail travel to chickens 3017,3288 failed: precondition no route to 3018,3289,0';
+    expect(isPrerequisiteFailure(noRoute)).toBe(true);
+    expect(isPrerequisiteFailure('RESULT ok travel to chickens 3017,3288')).toBe(false);
+    // A missing fare is the same kind of result: the coins do not come between two logins.
+    expect(isPrerequisiteFailure('RESULT fail travel to Ardougne from 2877,3501 failed: precondition westbound ferry needs 60 coins in the pack')).toBe(true);
+    expect(isPrerequisiteFailure('RESULT fail travel to Ardougne from 3092,3242 failed: precondition ferry needs 60 coins and the bank holds 0')).toBe(true);
+    expect(isPrerequisiteFailure('RESULT fail travel to Ardougne from 3092,3242 failed: precondition ferry needs 60 coins in the pack')).toBe(true);
+    expect(isPrerequisiteFailure('RESULT fail travel to chickens 3017,3288 failed: precondition ferry departure state unavailable')).toBe(false);
+    expect(isPrerequisiteFailure('RESULT fail travel to Ardougne failed: precondition ferry fare: the bank at 3092,3243 did not open')).toBe(false);
+    // A bank that holds the fare had a failed withdrawal: a restart can repair that.
+    expect(isPrerequisiteFailure('RESULT fail travel to Ardougne failed: precondition ferry fare: the withdrawal of 60 coins failed, the bank holds 11000')).toBe(false);
+    let runs = 0;
+    const end = await supervise({ run: async () => { runs++; return { exitCode: 1, stdout: ['LEDGER ticks=4', noRoute].join(String.fromCharCode(10)) }; }, stopped: () => false, pause: async () => {}, maxRestarts: 20 });
+    expect(end).toEqual({ reason: 'blocked', runs: 1 });
+    expect(runs).toBe(1);
+});

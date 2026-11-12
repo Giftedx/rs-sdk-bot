@@ -79,3 +79,15 @@ test('dispatch success without real deposit, unknown bank data or leftover couri
 test('cleanup honors user stop, death, ended session and own deadline without opening bank',async()=>{
     for(const option of [{stopOnReturn:true},{dieOnReturn:true},{endOnReturn:true},{exhaust:true}]){const f=fixture(option);try{const r=await runFlax(f.s,{cap:1,bankAt:28,walk:f.walk,cargo:f.cargo,waiting:()=>false,stop:f.stop});expect(r.ok).toBe(false);expect(r.held).toBe(1);expect(f.stats().openCalls).toBe(0);expect(r.ticks).toBeLessThanOrEqual(241);}finally{f.dispose();}}
 });
+test('a start on another floor goes to the field with the shared walker first, and a failed approach ends with its cause',async()=>{
+    const upstairs=(f:ReturnType<typeof fixture>,until:()=>boolean)=>{const real=f.s.sdk.getState.bind(f.s.sdk);
+        (f.s.sdk as any).getState=()=>{const st=real()!;return until()?st:{...st,player:{...st.player,worldX:2575,worldZ:3269,level:1}};};};
+    const f=fixture();try{let arrived=false,calls=0;upstairs(f,()=>arrived);
+        const r=await runFlax(f.s,{cap:1,bankAt:28,walk:f.walk,cargo:f.cargo,waiting:()=>false,approach:async()=>{calls++;arrived=true;return true;}});
+        expect(calls).toBe(1);expect(r.ok).toBe(true);expect(r.picks).toBe(1);expect(r.held).toBe(0);
+    }finally{f.dispose();}
+    const g=fixture();try{upstairs(g,()=>false);
+        const r=await runFlax(g.s,{cap:50,bankAt:28,walk:g.walk,cargo:g.cargo,waiting:()=>false,approach:async()=>false});
+        expect(r.ok).toBe(false);expect(r.picks).toBe(0);expect(r.failure).toBe('no flax progress: no route to the flax field');
+    }finally{g.dispose();}
+});

@@ -361,9 +361,13 @@
   "x": 2390,
   "z": 9457,
   "level": 0,
+  "angle": 1,
+  "shape": 0,
   "kind": "quest",
   "need": {
-   "varp": "itkeepgatelock"
+   "varp": "itkeepgatelock",
+   "minimum": 1,
+   "whenAxis": false
   },
   "trigger": "scripts/quests/quest_itgronigen/scripts/quest_itgronigen.rs2:104",
   "src": "maps/m37_147.jm2:5506"
@@ -374,9 +378,13 @@
   "x": 2391,
   "z": 9457,
   "level": 0,
+  "angle": 1,
+  "shape": 0,
   "kind": "quest",
   "need": {
-   "varp": "itkeepgatelock"
+   "varp": "itkeepgatelock",
+   "minimum": 1,
+   "whenAxis": false
   },
   "trigger": "scripts/quests/quest_itgronigen/scripts/quest_itgronigen.rs2:104",
   "src": "maps/m37_147.jm2:5557"

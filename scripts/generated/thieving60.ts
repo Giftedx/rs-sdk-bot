@@ -12,6 +12,7 @@ import { openBot, finish, countItems } from '../../packages/core/src/bot';
 import { depositObserved } from '../../packages/core/src/deposit';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../../packages/core/src/walk';
+import { approach } from '../walk-to';
 
 const LUMBRIDGE = { x: 3222, z: 3218 };
 const MARKET = { x: 2654, z: 3304 };
@@ -217,6 +218,13 @@ try {
     const p1 = pos();
     const inArdougne = !!p1 && cheb(MARKET, p1) <= 80;
     if (inArdougne) mark('ardougne');
+    // The walks of steps 3 and 4 stay on the ground floor. A start in Ardougne on another floor (level 1 of a house at
+    // 2575,3269) goes to the market with the shared walker first, by the stairs.
+    if (inArdougne && p1.level !== 0) {
+        const down = await approach(s, { ...MARKET, level: 0 }, () => died || left() <= 0);
+        console.log(`MILESTONE approach ${now() - t0} at=${pos()?.worldX},${pos()?.worldZ},${pos()?.level}`);
+        if (!down.ok) await end(false, `walk to the market from level ${p1.level}: ${down.reason} ${down.detail}`);
+    }
     // ---- Step 1: Lumbridge men until 60 coins (the two boat fares, 30 each).
     const LUMB_MEN: Target = { name: 'man', re: /^man$/i, dmg: 1, spot: LUMBRIDGE, range: 15 };
     for (let i = 0; i < 600 && !inArdougne && coins() < 60 && !died && left() > 0; i++) {
