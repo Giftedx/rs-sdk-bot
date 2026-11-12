@@ -192,6 +192,9 @@ export const KIT_PRICE_CAPS: Readonly<Record<string, number>> = {
     diamond: 150_000,
     // Live claude-cloud read: dragon bones 1,009 listed from 9,000 (mean 9,687); big bones 1,686 from 2,399 (mean 2,526).
     'dragon bone': 10_000, 'big bone': 2_600,
+    // The two prayer potions of Lost City for a Defence 1 build (LOST_CITY_BUILD). No shop sells them and the bank
+    // snapshots of the sides hold none. Live read: 38 listed from 250,000, bids at 25,000.
+    'prayer potion(4)': 260_000,
 };
 
 // A bill line still short is worth twice its shop value: it is acquisition work the route needs. A unit nobody needs
@@ -323,7 +326,7 @@ export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'price
 // that style before each fight (quest-lib.ts strengthStyle). A kit with no entry has no route.
 const LOST: readonly string[] = ['Lost City'], NONE: readonly string[] = [], TRIALS: readonly string[] = ['The Fremennik Trials'];
 export const BUILD_QUESTS: Readonly<Record<string, readonly string[]>> = {
-    'pure-iban': ['Underground Pass'], 'pure-rock': ['Lost City', 'Mage Arena'], 'pure-bolt': NONE, 'pure-dds': LOST, 'pure-dds-msb': LOST, 'pure-r2h': NONE,
+    'pure-rock': ['Lost City', 'Mage Arena'], 'pure-bolt': NONE, 'pure-dds': LOST, 'pure-dds-msb': LOST, 'pure-r2h': NONE,
     'pure-hally': ['Regicide'], 'pure-ranger': NONE, 'pure-mage': NONE, 'pure-tribrid': LOST, 'pure-pray': LOST, 'rune-pure': LOST,
     zerker: ['Lost City', 'The Fremennik Trials'], dragon: LOST, 'range-tank': TRIALS, 'mage-tank': NONE, 'pure-scim': NONE, 'pure-dlong': LOST,
     'pure-knives': LOST, 'pure-pray31': LOST, 'pure-god': ['Mage Arena'], 'pure-max': LOST, 'addy-pure': LOST, def50: LOST, 'tank-range': TRIALS,
@@ -1149,15 +1152,17 @@ export function catalogue(): Template[] {
     // quest script fights the Draugen and Koschei unarmed with the style that trains only Strength, under the prayer
     // guard's Protect from Melee. Practice at the levels of `range-tank` and `tank-range` before the quest (Attack
     // 68, Strength 60 to 62): 3,408 to 3,570 ticks in 8 runs, no death, Attack and Defence 60 from the reward
-    // (research/pvp-fight-loop.md, "Quest routes of the builds"). The band army-fletch-25 brings the Fletching. An
-    // account with Attack 7 loses Koschei's third form
-    // to its 1,000 tick limit, so the band asks Attack 60. A pilot.
+    // (research/pvp-fight-loop.md, "Quest routes of the builds"). The band army-fletch-25 brings the Fletching. The
+    // band asks Attack 60 and Strength 60, or Strength 99: an account with Attack 7 and Strength 99 (`zerker` before the
+    // quest) can lose Koschei's third form to its 1,000 tick limit, and the quest script then starts the trial again
+    // (3 practice runs: 1, 2 and 3 tries, 4,597 to 9,253 ticks). A pilot.
     const fremennik: Template = {
         id: 'army-quest-fremennik', family: 'aio:quester:mode:chain', script: 'scripts/aio.ts', args: ['quester', 'chain', 'drunkmonk,murder,viking'],
         aio: 'quester:mode:chain', worker: 'scripts/quest-chain.ts', pilot: true, buildOnly: true, role: 'quest',
         goal: "complete Monk's Friend, Murder Mystery and The Fremennik Trials to wear a Fremennik helm", tier: 'goal', band: FREMENNIK_BAND,
         quest: { name: 'The Fremennik Trials', unlocks: [] }, resources: [FREMENNIK], yields: () => [],
-        needs: { skills: { Attack: 60, Strength: 60, Prayer: 43, Hitpoints: 90, Fletching: 25 }, items: { coins: 6000 }, pieces: { of: LOST_CITY_FOOD, count: FREMENNIK_MEALS } }, kitFirst: true,
+        needs: { skills: { Prayer: 43, Hitpoints: 90, Fletching: 25 }, items: { coins: 6000 }, pieces: { of: LOST_CITY_FOOD, count: FREMENNIK_MEALS },
+            anyOf: [{ skills: { Attack: 60, Strength: 60 } }, { skills: { Strength: 99 } }] }, kitFirst: true,
     };
     // Fletching 25 for that quest, just before it: a walk to the Ardougne north bank, then headless arrows from banked
     // arrow shafts and feathers with the fletching worker (scripts/fletch-arrows.ts, mode headless), which does not

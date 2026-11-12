@@ -289,8 +289,8 @@ A pure has Defence 1 and Hitpoints 10. The kits are `pure-iban`, `pure-rock` and
 | `pure-bolt` | Magic 35 | 19 | Fire Bolt, max hit 12 | 16 |
 
 Bench cases: `extra:spar-pure-iban-vs-skiller-x4`, `extra:spar-pure-bolt-vs-skiller-x4` and
-`extra:spar-pure-rock-vs-skiller-x4`. Gaps: the Hitpoints of real skillers; Underground Pass at Hitpoints 10 with no
-Hitpoints XP; the Mage Arena fight for the god spell gives Hitpoints XP; the tile east of (3055, 3872) is not checked.
+`extra:spar-pure-rock-vs-skiller-x4`. Gaps: the Hitpoints of real skillers; `pure-iban` has no quest route
+("Quest routes of the builds"); the Mage Arena fight for the god spell gives Hitpoints XP; the tile east of (3055, 3872) is not checked.
 
 ## Account builds
 
@@ -432,7 +432,7 @@ damage for each 100 ticks.
 
 ### Quest routes of the builds
 
-Claim: every kit of `scripts/pk-kits.ts` has a quest route. A route is the quests that the items and varps of the
+Claim: every kit of `scripts/pk-kits.ts` has a quest route, but `pure-iban`, which says why it has none. A route is the quests that the items and varps of the
 kit need, with the quests that those need. It is valid when the rewards of all those quests together take none of
 Attack, Strength, Defence, Ranged, Magic, Prayer and Hitpoints over the level of the kit.
 
@@ -479,7 +479,6 @@ The route of each kit with levels of its own (`BUILD_QUESTS`):
 | Lost City | `pure-dds`, `pure-dds-msb`, `pure-tribrid`, `pure-pray`, `pure-pray31`, `pure-dlong`, `pure-knives`, `pure-max`, `addy-pure`, `rune-pure`, `def50`, `dragon` |
 | Lost City, The Fremennik Trials | `zerker` |
 | The Fremennik Trials | `range-tank`, `tank-range` |
-| Underground Pass | `pure-iban` |
 | Regicide (with Underground Pass) | `pure-hally` |
 | Lost City, Mage Arena | `pure-rock` |
 | Mage Arena | `pure-god` |
@@ -548,10 +547,15 @@ How a kit keeps its route:
     attack, and it then holds the prayer for the rest of the fight (`packages/core/src/prayer-guard.ts`
     `attackTarget`). With the fix the guard flicked 289 to 332 times and the points stayed 43.
   - It waits up to 4,000 ticks for the fight.
-- `zerker` does not pass. With Attack 7 it lands about 9 damage in 100 ticks. Two runs from the Koschei stage passed
-  with 725 ticks on the third form, and one run of the whole quest lost that form to the 1,000 tick limit. Weapons,
-  armour and runes are refused at the arena ladder (`can_enter_thorvald_trial`), and Peer banks every item before
-  it. The case `extra:viking-zerker` is marked `known`.
+- `zerker` passes with new starts of the trial. With Attack 7 it lands about 9 damage in 100 ticks, and each form of
+  Koschei leaves after 1,000 ticks. When Koschei is gone for 30 ticks the bot climbs the arena ladder up and down,
+  which starts the trial again with the first form (`viking_warrior_ladder_up`, `spawn_viking_enemy`), at most 8
+  times. The whole quest at seeds 1, 2 and 3 (`extra:viking-zerker`): 6,267, 4,597 and 9,253 ticks with 2, 1 and 3
+  tries, quest complete, no death, 70,310 Attack and Defence XP (the reward alone), 23,500 to 56,400 Strength XP from
+  the fights. One more run of seed 3, with a limit of 4 tries, lost the third form 4 times. Weapons, armour and
+  runes are refused at the arena ladder (`can_enter_thorvald_trial`), and Peer banks every item before it.
+- The two stages with a fight pass alone for the range tanks: `extra:viking-range-tank-draugen` 1,330 ticks and
+  `extra:viking-tank-range-draugen` 1,424 ticks (`--set VK_FROM=draugen`, one run each).
 - The fights of Underground Pass and Regicide, on the maxed presets (`quester:quest:upass`, 2,483 ticks;
   `quester:quest:regicide`, 3,273 ticks; one run each): Underground Pass gives 53,400 XP to the style of the fights
   (534 damage) and 17,690 Hitpoints XP beside its reward; Regicide gives 11,100 XP and 3,677 Hitpoints XP. So a
@@ -581,10 +585,11 @@ How a kit keeps its route:
   - The cave of Underground Pass is single combat, and a blessed spider (level 39) attacks an account of combat 78
     or less: before the Attack reward the build has combat 76. The bot kills what attacks it before it attacks
     Kalrag, and it keeps looking for Kalrag when a spider stops its walk.
-- `pure-iban` has no route at combat 27. It has no skill at 99 for the XP of the fights, and the Hitpoints XP takes
-  Hitpoints 10 to 42. The 53,400 XP in Magic give Magic 63 and combat 41; split between Ranged and Magic they give
-  level 58 in each and combat 39 (estimates from the curve, no run). The case `extra:upass-pure-iban` is marked
-  `known`.
+- `pure-iban` has no route, and the kit says so (`noRoute`): it stays for the bench comparison with a skiller, and
+  the planner gives it no quest. It has no skill at 99 for the XP of the fights (`SINK_XP`: a kit with Underground
+  Pass or Regicide on its route needs Strength, Ranged or Magic at 99), and the Hitpoints XP takes Hitpoints 10 to
+  42. The 53,400 XP in Magic give Magic 63 and combat 41; split between Ranged and Magic they give level 58 in each
+  and combat 39 (estimates from the curve, no run). The case `extra:upass-pure-iban` is marked `known`.
 
 Planner: `BUILD_QUESTS` in `packages/planner/src/autopilot.ts` holds the routes by kit name, `scripts/autopilot.ts`
 `buildQuests` and `buildBefore` give each account of the `builds` object the route of its kit and its levels before
@@ -592,7 +597,7 @@ the route, and `buildBand` passes a quest band only when its quest is on that ro
 over its level before the route. While a quest of the route is open, a training band stops at the level before the
 route. Every other quest band stays refused (Holy Grail: Prayer 80 and Defence 85). The planner has two quest bands
 for a build: `army-quest-lostcity` and `army-quest-fremennik` (the chain `drunkmonk,murder,viking`; a pilot; for
-build accounts only; it asks Attack 60, Strength 60, Prayer 43, Hitpoints 90 and Fletching 25). The band
+build accounts only; it asks Prayer 43, Hitpoints 90, Fletching 25, and Attack 60 with Strength 60 or Strength 99). The band
 `army-fletch-25` brings that Fletching level to a build with the quest on its route: a walk to the Ardougne north
 bank, then 210 headless arrows from 310 banked arrow shafts and 310 feathers with the fletching worker
 (`scripts/fletch-arrows.ts`, mode `headless`). Practice: 210 arrows in 26 ticks and 5,250 XP, over the 4,863 of
@@ -617,7 +622,6 @@ Gaps:
   the magic shortbow, the rune arrows or the prayer potions. No script exists for the Mage Arena (a search of
   `scripts`, `scripts/generated` and `packages` for Kolodion, the arena and the god capes finds the PK kits and the
   knowledge tables only). So `pure-iban`, `pure-hally`, `pure-rock` and `pure-god` get those quests from no job.
-  `zerker` gets The Fremennik Trials from no job: the band asks Attack 60.
 - One more run of `extra:upass-pure-hally` ended at its start, "no npc king lathas", with the account on the ground
   floor at Hitpoints 99: the preset was not on the account. The cause is not found; the next run of that seed passed.
 - The band `army-fletch-25` has no run of its two steps together, and no live run. One account holds 41,640 of the
@@ -630,7 +634,8 @@ Gaps:
   hand: no run of the chain `drunkmonk,murder,zanaris` through the quest sweep by such an account, so the bank pass
   and Monk's Friend and Murder Mystery at those levels are not proved.
 - The Hitpoints XP of the fights (3,870 to 7,842 a run) can take a build account from Hitpoints 93 to 94.
-- No shop and no kit price holds a prayer potion: an account with none in the bank does not get the band.
+- No shop sells a prayer potion and the bank snapshots of the sides hold none. The kit tier buys the two potions on
+  the Grand Exchange: 38 listed from 250,000 coins, bids at 25,000 (`KIT_PRICE_CAPS` 260,000; one read).
 - Normal bones for the Prayer 43 of a build: 175 bones (19,684 XP at 112.5 a bone); the held-bones band starts at
   100. The Grand Exchange lists 2,549 at 45,125 coins each (bids at 150, last trade at 150), so 175 cost 7.9 million
   coins. `KIT_PRICE_CAPS` holds no price for normal bones for that reason: a buy at a cap near the bids fills
