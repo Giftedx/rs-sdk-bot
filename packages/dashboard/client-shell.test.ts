@@ -771,3 +771,15 @@ test('PvP Tools: risk, the 3 kept items, and only the players the server lets at
  expect(p.threats.map((t:any)=>t.name)).toEqual(['Near']);
  expect(pvpState({name:'Ours1',inWorld:false})).toBeNull();
 });
+test('the death recap card shows the tile, the last hit, hitsplats and what the death took',()=>{
+ const code=shell.slice(shell.indexOf('  let recap={name:null'),shell.indexOf('  // Quest Journal, Fleet view'));
+ const wild=shell.slice(shell.indexOf('  const wildLevel=p=>'),shell.indexOf('  const canAttack='));
+ const {recapHtml}=new Function('E','safeName','age','icon','qty','document','window','put','minimap',`${wild};${code};return {recapHtml};`)(String,(s:any)=>s,()=>'5m',(n:string)=>`[${n}]`,(n:number)=>`(${n})`,{createElement:()=>({})},{atlasOperator:()=>true},()=>{},()=>{});
+ const html=recapHtml({name:'Alpha',state:'ok',data:{at:1,pos:{x:3100,z:3700,level:0},killer:'Goondelf (level 80)',hits:[{tick:11,damage:6,source:'Goondelf (level 80)'},{tick:12,damage:0,source:'Goondelf (level 80)'}],hp:[[10,10],[11,4],[12,0]],actions:[{tick:11,type:'eatFood'}],carried:[{name:'Shark',count:5}],kept:[],lost:[{name:'Shark',count:5}],script:'scripts/pk.ts',tick:12}});
+ expect(html).toContain('Tile 3100, 3700');expect(html).toContain('Wilderness 23');
+ expect(html).toContain('Last hit: <b>Goondelf (level 80)</b>');
+ expect(html).toContain('<span class="hitsplat" title="tick 11 · Goondelf (level 80)">6</span><span class="hitsplat zero"');
+ expect(html).toContain('Lost</div><div class="recap-items"><span class="recap-item" title="Shark × 5">[Shark](5)</span>');
+ expect(html).toContain('pk.ts · tick 12');
+ expect(recapHtml({name:'Alpha',state:'none'})).toContain('No death in the newest tick records');
+});

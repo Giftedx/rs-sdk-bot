@@ -16,6 +16,7 @@ import { accountJobRows, collectionState, operationState, isLoopback, effectiveJ
 import {requestEvidence,gateView} from './evidence';
 import {goalPlan,goalProgress,GOAL_RECEIPTS,type GoalInputs} from './goals';
 import { GEAR_TARGETS } from './goal-details';
+import { deathRecap, type DeathRecap } from './death-recap';
 import { VIEWER_MANIFEST_SHA256, viewerAssetRoute, viewerBridgeSource, viewerEntry } from './viewer';
 import {coordinationView} from './coordination';
 import {fleetSidesView,remoteBots,scoreboardView} from './fleet-view';
@@ -534,6 +535,7 @@ type Lookup = { name: string; at: number; rows: HiscoreRow[]; worn: { slot: stri
 const lookups = new Map<string, Lookup>();
 // Worn items of an online player (appearance.ts readWorn); lookups run one at a time, so this holds one feed slot.
 const OBJS = loadContentTable(join(root, 'vendor', 'rs-sdk', 'server', 'content'), 'obj');
+const recapCache = new Map<string, { at: number; recap: DeathRecap | null }>();
 const wornOf = (name: string, seen: { x: number; z: number } | undefined) => seen && OBJS.size ? readWorn(DEMO.replace(/^http/, 'ws') + '/worldfeed', name, seen, OBJS) : Promise.resolve(null);
 let lookupChain: Promise<unknown> = Promise.resolve();
 function lookupPlayer(name: string): Promise<Lookup | null> {
@@ -1319,7 +1321,17 @@ Bun.serve({
         // never holds the name: the iframe URL carries only this endpoint.
         // Our live accounts, for the viewer's gold nameplates (the main account stays hidden, not highlighted).
         if (url.pathname === '/api/our-names') return Response.json([...liveAccounts(), ...remoteNames()].filter(n => n.toLowerCase() !== MAIN.toLowerCase()), { headers: { 'access-control-allow-origin': 'http://localhost:3000', 'cross-origin-resource-policy': 'cross-origin', 'cache-control': 'no-store' } });
-        if (['/api/reveal', '/api/hidden-names'].includes(url.pathname) && !isLoopback(server.requestIP(req)?.address ?? '')) return new Response('forbidden', { status: 403 });
+        if (['/api/reveal', '/api/hidden-names', '/api/death-recap'].includes(url.pathname) && !isLoopback(server.requestIP(req)?.address ?? '')) return new Response('forbidden', { status: 403 });
+        // Death recap: the newest death in the account's tick records, read when the page asks, kept for 30 s.
+        if (url.pathname === '/api/death-recap') {
+            const name = url.searchParams.get('name') ?? '';
+            if (!/^[A-Za-z0-9_ -]{1,12}$/.test(name) || name.toLowerCase() === MAIN.toLowerCase()) return Response.json({ error: 'not available' }, { status: 404 });
+            const key = name.toLowerCase(), hit = recapCache.get(key);
+            if (hit && Date.now() - hit.at < 30_000) return Response.json({ recap: hit.recap });
+            const recap = deathRecap(root, name);
+            recapCache.set(key, { at: Date.now(), recap });
+            return Response.json({ recap });
+        }
         if (url.pathname === '/api/hidden-names') return Response.json([MAIN], { headers: { 'access-control-allow-origin': 'http://localhost:3000', 'cross-origin-resource-policy': 'cross-origin', 'cache-control': 'no-store' } });
         // The server may listen on every address (DASH_HOST); only this PC may read the main account's name.
 
