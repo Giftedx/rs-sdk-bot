@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794513830213-shaftmaker-wandwaver-airrune",
+ "account": "Wandwaver",
+ "partner": "Shaftmaker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 21,
+ "claim": "4313107b-161f-416d-b475-9bb486bf94dd",
+ "count": 0,
+ "ok": false,
+ "at": 1794513842003,
+ "detail": "trade claimed"
+}
