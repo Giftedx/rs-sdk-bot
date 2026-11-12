@@ -195,6 +195,9 @@ test('only this consumed child may own its new partial session during the cleanu
  const own={pid:process.pid,coordinatorRunId:f.request.runId,workerRelease:source,script:RECOVERY_SCRIPT,role:'recovery',participants:null};
  beginSessionAttempt({account:'Rod',server:f.request.server},{root,owner:own});expect(()=>guard()).not.toThrow();
  beginSessionAttempt({account:'Rod',server:f.request.server},{root,owner:{...own,coordinatorRunId:'other-run'}});expect(()=>guard()).toThrow('still alive');
+ // A process that started after that attempt holds the owner's id: it is not the owner, so nothing is alive.
+ (f.options as {processStarts?:(pids:readonly number[])=>Map<number,number>}).processStarts=()=>new Map([[process.pid,Date.now()+60_000]]);
+ expect(()=>guard()).not.toThrow();
 });
 test('completion indexes only the exact child/producer, releases its lease, and never clears the old failure',()=>{
  for(const fault of ['none','exit','state-loss','source','new-intent','hash']){
