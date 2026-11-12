@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794502432195,
+ "at": 1794503449983,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -48,32 +48,6 @@
    "enabled": false,
    "goal": "Haggis route rehearsal; hand-run legs by .practice/balls-alpha",
    "role": "rehearsal"
-  },
-  {
-   "account": "Bigchopper",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "TARGET_LEVEL": "45",
-    "GIANT_BURY": "0"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
-   "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
   },
   {
    "account": "Bigpackage",
@@ -238,25 +212,6 @@
    ]
   },
   {
-   "account": "OreElse",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
-   "autopilot": "local",
-   "resources": [
-    "knight:2653,3300"
-   ]
-  },
-  {
    "account": "PickpockDick",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -384,19 +339,19 @@
    "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
-    "PEN": "3187,3277",
+    "PEN": "3229,3298",
     "TICKS": "3000",
     "TARGET": "2000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
+   "goal": "feathers at the chicken pen 3229,3298",
    "role": "helper",
-   "template": "feathers@3187,3277",
+   "template": "feathers@3229,3298",
    "autopilot": "local",
    "resources": [
-    "pen:3187,3277"
+    "pen:3229,3298"
    ]
   },
   {
