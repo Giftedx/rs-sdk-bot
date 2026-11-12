@@ -13,6 +13,7 @@
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
+import type { NearbyPlayer } from '../vendor/rs-sdk/sdk/types';
 import { fightPlayer, ITEMS, nextTick, wildernessLevel, type FightOptions, type FightResult } from './pk';
 import { hitByPlayer, TRIBRID_KIT } from './pk-hunt';
 import { kitOptions, kitSwitches } from './pk-kits';
@@ -98,7 +99,7 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
     while (alive.size && a.tick() - start < cap && !halt()) {
         reap();
         if (!alive.size) break;
-        const target = pickAttacker(a.sdk.getState()?.nearbyPlayers ?? [], alive, lastHitBy, refusedBy);
+        const target: NearbyPlayer | null = pickAttacker(a.sdk.getState()?.nearbyPlayers ?? [], alive, lastHitBy, refusedBy);
         if (!target) {
             // None of the living gang in view for 20 ticks: our account got away from it.
             if (++unseen > 20) { end = 'away'; break; }

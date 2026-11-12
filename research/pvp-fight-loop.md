@@ -946,7 +946,60 @@ The bench copies this (`scripts/pk-kits.ts`, `scripts/pk-spar.ts`, `scripts/pk-g
   tile. `extra:gang-ganker-x4`, `extra:gang-ganker-bare-x4` and `pvp:gang`: one of ours against three on one tile; the
   engine's single-way rule decides which of the three fights (`pvp_combat.rs2:104-131`). `extra:gang-ganker-<kit>-x4`
   and `extra:gang-ganker-max-<kit>-x4` run the kits `hybrid` and `gang-hunter`, and each kit against `ganker-max`.
-  `extra:gang-ganker-escape-x4` is the way out with a glory.
+  `extra:gang-ganker-escape-x4` and `extra:gang-ganker-escape-worn-x4` are the way out with a glory.
+
+### One account against the gang
+
+A meeting is one of ours against the three on the post tile (`scripts/pk-gang.ts`), 4 meetings a run. `ganker-max`
+holds 1,677 HP in its three packs. On a single-way tile one gang account fights at a time; the others take over when it
+does not attack for 8 ticks (two eats in a row), so the three eat their packs at the same rate and die close together.
+
+The kit `gang-hunter` on the profile `gang-hunter` clears `ganker-max` in 32 of 32 meetings, with no death and no use
+of its way out (`extra:gang-ganker-max-gang-hunter-x4`, seeds 1 to 8): 96 kills, 849 to 964 ticks a run, 228 to 417 HP
+lost, 2 to 12 of its 21 sharks left, no prayer potion carried. It clears the gang as the feed shows it (`ganker-dds`)
+in 12 of 12 meetings with 12 or more sharks left (`extra:gang-ganker-gang-hunter-x4`, seeds 1 to 3). The kit costs
+71,928 coins at shop value (`kitCost`): dragon dagger (p) 24,000, amulet of glory 17,625, adamant platebody 12,800,
+21 sharks 6,300, mithril helm, legs and shield 6,240, 150 steel arrows 1,800, magic shortbow 1,600, five potions 1,550.
+
+What decided it, each measured against `ganker-max`:
+
+- **A super defence and the armour kept on for a bow shot.** The champion on the snare kit, the hybrid and a hybrid
+  with a glory died in 6 of 12 meetings. With the armour kept on (`castArmour: 'keep'`) and no super defence: 5 deaths
+  in 8. With both: no death in 8. The gang attacks with stab only, and the platebody is the largest part of the stab
+  defence.
+- **The account that fights.** A gang account that takes over shows no hit until it lands one, and the game refuses
+  each attack on the account that fought before ("I'm already under attack."). Our account turns to the gang account
+  that starts an attack animation, and to another one after a refused attack. Runs went from 1,159 and 1,205 ticks
+  to 741 through 859.
+- **A super antipoison.** The gang's daggers are poisoned. In full adamant our account lost 337 HP a meeting with no
+  antipoison (6 of 8 cleared, 2 left by glory) and 257 HP with one (8 of 8).
+- **A prayer flick each 2 ticks, with no Protect Item** (`flickEvery: 2`, `protectItem: false`). The drain timer fires
+  5 ticks after the prayers came on, and a bow on Rapid gives one cooldown tick each 3 ticks. With a flick each 4
+  ticks the account drank 4 or 5 doses of prayer potion a meeting; with a flick each 2 ticks none, with 44 or more
+  prayer points left. The two potion slots hold sharks.
+- **The worn glory is the way out.** The loop takes it off and rubs it (the game rubs a glory only from the pack), so
+  the pack holds no second one: 8 of 8 got away from `ganker-max` with 3 sharks at the start
+  (`extra:gang-ganker-escape-worn-x4`).
+
+The cost of the kit against the result on `ganker-max` (meetings cleared; the rest left by the way out, none died):
+
+| Kit | Coins | Cleared | Least sharks left |
+| --- | --- | --- | --- |
+| Rune armour with dragon med helm and platelegs, rune arrows, 3 prayer potions | 678,060 | 64 of 64 | 2 |
+| Rune armour, rune arrows | 347,260 | 8 of 8 | 4 |
+| Rune platebody, adamant helm, legs and shield | 161,020 | 8 of 8 | 1 |
+| Adamant armour, no antipoison | 108,820 | 6 of 8 | 0 |
+| Adamant armour, antipoison, worn glory, 2 prayer potions | 84,465 | 16 of 16 | 2 |
+| Adamant platebody, mithril helm, legs and shield, mithril arrows, no prayer potion | 75,565 | 32 of 32 | 3 |
+| The same with steel arrows, cape of legends, ranger boots | 72,565 | 32 of 32 | 2 |
+| `gang-hunter`: the same with a plain cape and leather boots | 71,928 | 32 of 32 | 2 |
+| Mithril armour | 67,965 | 30 of 32 | 0 |
+| Teleport runes for the glory (3 pack slots), adamant armour | 69,797 | 7 of 8 | 0 |
+| Adamant scimitar for the dragon dagger | 54,125 | 8 of 12 | 0 |
+
+Rejected against `ganker-max`: rune knives with the shield kept on (2 deaths in 8, runs of 1,400 ticks); no boost
+potions for three more sharks (11 of 12); a rune scimitar (370 HP lost a meeting against about 300); the freeze with
+3 tiles kept (`adapt`, one meeting of 8 not cleared against `ganker-dds`).
 
 Gaps:
 
@@ -957,6 +1010,10 @@ Gaps:
 - The eat level is between 75 and 81 HP from one eat.
 - No record shows a gang account under a melee weapon, at low Hitpoints, or after its death: whether it prays against
   melee, whether it runs, and how long it takes to return to the post are not known.
+- Practice only: no live meeting. The margin against `ganker-max` is 2 sharks in the worst of 32 meetings; the way out
+  covers a meeting that needs more.
+- The post is a single-way tile. A meeting on a multi-way tile, where the three hit at once, is not measured.
+- `ganker-max` has no antipoison and casts no spell (Magic 37 allows Bind). A gang that cures our poison lives longer.
 
 ## Server rules the loop follows
 
