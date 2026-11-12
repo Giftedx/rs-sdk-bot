@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794501642799,
+ "at": 1794502244773,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -256,26 +256,6 @@
    ]
   },
   {
-   "account": "NabTheKnob",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
-   "env": {
-    "PEN": "3017,3288",
-    "TICKS": "3000",
-    "TARGET": "2000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3017,3288",
-   "role": "helper",
-   "template": "feathers@3017,3288",
-   "autopilot": "local",
-   "resources": [
-    "pen:3017,3288"
-   ]
-  },
-  {
    "account": "OreElse",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -353,23 +333,25 @@
   },
   {
    "account": "Shaftmaker",
-   "script": "scripts/fletch-arrows.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "15000",
-    "headless"
+    "sarim"
    ],
    "env": {
+    "ITEMS": "feather",
     "BANK_PACK": "1",
-    "MAX_MAKE": "390"
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "headless arrows from owned shafts and feathers",
-   "role": "fletching",
-   "template": "fletch-headless",
+   "goal": "buy feathers at Gerrant",
+   "role": "bank",
+   "template": "shop-feathers",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "shop:sarim"
+   ]
   },
   {
    "account": "Swordinhand",
@@ -456,22 +438,21 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/gather-feathers.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "PEN": "3229,3298",
-    "TICKS": "3000",
-    "TARGET": "2000"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3229,3298",
-   "role": "helper",
-   "template": "feathers@3229,3298",
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "pen:3229,3298"
+    "knight:2582,3297"
    ]
   },
   {
@@ -495,21 +476,22 @@
   },
   {
    "account": "Shaftsinker",
-   "script": "scripts/goldfarm.ts",
+   "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "PEN": "3017,3288",
+    "TICKS": "3000",
+    "TARGET": "2000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "goal": "feathers at the chicken pen 3017,3288",
+   "role": "helper",
+   "template": "feathers@3017,3288",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "pen:3017,3288"
    ]
   },
   {
