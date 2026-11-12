@@ -1,0 +1,56 @@
+{
+ "id": "1794526231203-abracadickra-weequickie-sapphirering",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Abracadickra",
+ "to": "WeeQuickie",
+ "item": "Sapphire ring",
+ "count": 40,
+ "start": 1794526231203,
+ "end": 1794531631203,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Emerald ring",
+   "count": 13
+  },
+  {
+   "item": "Ruby ring",
+   "count": 16
+  },
+  {
+   "item": "Diamond ring",
+   "count": 5
+  },
+  {
+   "item": "Cosmic rune",
+   "count": 74
+  },
+  {
+   "item": "Water rune",
+   "count": 40
+  },
+  {
+   "item": "Air rune",
+   "count": 16
+  },
+  {
+   "item": "Fire rune",
+   "count": 80
+  },
+  {
+   "item": "Earth rune",
+   "count": 50
+  }
+ ]
+}
