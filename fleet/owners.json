@@ -259,6 +259,11 @@
    "side": "local",
    "server": "rs-sdk-demo.fly.dev",
    "reservation": "task-5b821a35-42f7-48cc-b292-4a49381bf8db"
+  },
+  "WeeQuickie": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "reservation": "task-5087c858-ec43-43be-ac52-98da72cf80f4"
   }
  }
 }
