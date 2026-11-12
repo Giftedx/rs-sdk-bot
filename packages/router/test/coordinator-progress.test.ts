@@ -35,6 +35,8 @@ test('an exact repair and raw evidence reach the author brief, not only a generi
  const work=buildWorkOrder(t,{old:{error:'requires generated fleet practice save'}},'/owned/run');
  const brief=buildBrief({id:'repair',goal:'Generic buy goal\n'+work,preset:''},'scripts/example.ts');
  expect(brief).toContain(t.why);expect(brief).toContain('requires generated fleet practice save');expect(brief).toContain('/owned/run');
+ // input.json carries every finished receipt (MBs): the brief must not send the model to Read it whole.
+ expect(work).not.toContain('Read input.json');expect(work).toContain('Grep it');
 });
 
 test('a long model observation reaches the build without changing manual proposal validation',()=>{
