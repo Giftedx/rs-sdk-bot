@@ -1,30 +1,12 @@
 {
  "side": "claude-cloud",
- "at": 1794497680603,
+ "at": 1794497766804,
  "jobs": [
   {
    "account": "Fingerblastr",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit24-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
-   "account": "Kiltlifter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=kiltlifter-kit22-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
@@ -174,6 +156,31 @@
    "autopilot": "claude-cloud",
    "resources": [
     "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
    ]
   },
   {
