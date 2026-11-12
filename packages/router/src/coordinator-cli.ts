@@ -9,7 +9,7 @@ import {DISK_FLOOR_GB,diskFreeGB,finishPlan,plannerDue,retireDeadTasks,reviewHol
 import {planWork,prepareProposal} from './coordinator-planner';
 import {executeTask,provisionParticipantHold} from './coordinator-worker';
 import {deliveryTask,deliveryFingerprint,SOURCE_STARTUP_GB,NATIVE_STARTUP_GB} from './delivery-cli';
-import {disableOwnJob,ensureSwarm,liveRows} from './coordinator-live';
+import {disableOwnJob,ensureSwarm,liveRows,releaseFinishedOwnJobs} from './coordinator-live';
 import {cachedLaunchRevision} from '../../core/src/worker-release';
 import {readCoordinatorJobs,writeCoordinatorJobs,readMergedPlan,COORDINATOR_JOBS_FILE} from '../../core/src/coordinator-jobs';
 import {assignedWorker} from './model-worker';
@@ -313,9 +313,18 @@ export function settlePlanner(state:CoordinatorState,base=projectRoot,{save=save
  delete state.rejectedPlan;
  acknowledgeSubmission(state,base,publish);
 }
+// A finished job that still holds an account is released at most this often (releaseFinishedOwnJobs). For each job in
+// the coordinator's file the pass reads one receipt, and one logout proof for each account of the job.
+const RELEASE_EVERY_MS=60_000;
+let releasedAt=0;
 async function tick(state:CoordinatorState,config:any){
  recoverPlanWrite();
  openDeliveryPrs();
+ if(Date.now()-releasedAt>=RELEASE_EVERY_MS){
+  releasedAt=Date.now();
+  try{const freed=await releaseFinishedOwnJobs();if(freed.length)event('own-jobs-released',{accounts:freed});}
+  catch(error){event('own-jobs-release-failed',String(error));}
+ }
  // Adopt before reconciliation: even a just-finished failed build keeps its
  // delivery focus while the planner prepares its exact repair.
  const focus=!config.focusCapability&&activeBuildFocus(state);

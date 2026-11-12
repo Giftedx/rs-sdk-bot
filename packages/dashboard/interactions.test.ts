@@ -12,6 +12,20 @@ test('the running-jobs card opens running claims and a stale queue cannot imply 
  expect(html).not.toContain('No planner running');
  expect(run({coordination:{}},{paused:false})).toContain('Unknown');
 });
+test('the controllers tile counts a down fleet agent or autopilot and is marked bad only then',()=>{
+ const code=source.slice(source.indexOf(' function operations(){'),source.indexOf(' function jobs(){'));
+ const button=source.slice(source.indexOf(' const button='),source.indexOf(' const tasks='));
+ const run=new Function('S','meta',`const E=String,age=()=>'9h',page=x=>x,title=()=>'',bots=()=>[],issues=()=>[],badge=(_s,label)=>label;let metaError='',message='';${button}${code};return operations();`);
+ const tile=(meta:any)=>/<button class="op-kpi[^"]*"[^>]*><b>[^<]*<\/b><span>controllers down<\/span><small>[^<]*<\/small><\/button>/.exec(run({coordination:{}},meta))?.[0]??'';
+ const down=tile({paused:false,controllers:[{name:'fleet-agent',label:'Fleet agent',state:'down',seenAt:1},{name:'autopilot',label:'Autopilot',state:'running',seenAt:2}]});
+ expect(down).toContain('class="op-kpi op-kpi-bad"');expect(down).toContain('<b>1</b>');
+ expect(down).toContain('Fleet agent down, seen 9h ago · Autopilot running');
+ const calm=tile({paused:false,controllers:[{name:'fleet-agent',label:'Fleet agent',state:'stopped',seenAt:1},{name:'autopilot',label:'Autopilot',state:'never',seenAt:null}]});
+ expect(calm).toContain('class="op-kpi"');expect(calm).toContain('<b>0</b>');
+ expect(calm).toContain('Fleet agent stopped by owner · Autopilot not used here');
+ // No metadata yet, or metadata from a server that does not send the list: the tile says so and is not bad.
+ for(const meta of [null,{paused:false}]){const t=tile(meta);expect(t).toContain('class="op-kpi"');expect(t).toContain('<b>—</b>');expect(t).toContain('checking');}
+});
 const commandSource=source.slice(source.indexOf(' async function command('),source.indexOf(' function draftFromForm()'));
 function commandHarness(rotates=true){
  const calls:any[]=[];const fetch=async(_url:string,input:any)=>{calls.push(input);return calls.length===1?Response.json({error:'Reload the local dashboard'},{status:403}):Response.json({status:'plan-requested'});};
