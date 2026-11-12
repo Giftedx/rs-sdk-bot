@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1794503734080-nabtheknob-mmsmk1232-bones",
  "account": "mmsmk1232",
  "partner": "NabTheKnob",
@@ -12,6 +12,16 @@
  "claim": "cabb8769-be22-4bc4-9359-e4e95c17d77c",
  "count": 0,
  "ok": false,
- "at": 1794503743542,
- "detail": "trade claimed"
+ "at": 1794503943524,
+ "detail": "Error: transfer requires reconciliation",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794503743553-0000032628-0000000001",
+  "at": 1794503943504,
+  "sha256": "5c7ec4b134a2a2cfc5966bdb7ca1fb825e1894ca470233cab5b2ebc8833b895f"
+ },
+ "screen": true
 }
