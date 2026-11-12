@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794472952935,
+ "at": 1794473419129,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -37,24 +37,21 @@
   },
   {
    "account": "Abracadickra",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "foraging",
-    "flax",
-    "1800",
-    "28"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "pick flax at Seers and bank it",
-   "role": "crafting",
-   "template": "aio-flax",
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
    "autopilot": "local",
    "resources": [
-    "aio:seers-flax"
+    "knight:2652,3318"
    ]
   },
   {
@@ -84,45 +81,25 @@
    ]
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
-   "role": "thieving",
-   "template": "aio-blood-chest",
-   "autopilot": "local",
-   "resources": [
-    "aio:ardougne-blood-chests"
-   ]
-  },
-  {
    "account": "BowBeforeMe",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "betty"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
+    "ITEMS": "fire rune|air rune|earth rune",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
+   "goal": "buy elemental runes at Betty",
+   "role": "bank",
+   "template": "shop-runes",
    "autopilot": "local",
    "resources": [
-    "knight:2652,3318"
+    "shop:betty"
    ]
   },
   {
@@ -337,6 +314,25 @@
    ]
   },
   {
+   "account": "Pocketpython",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
+   ]
+  },
+  {
    "account": "Pocketrocket",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -436,24 +432,24 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/shop-buyer.ts",
+   "script": "scripts/aio.ts",
    "args": [
-    "betty"
+    "skiller",
+    "foraging",
+    "flax",
+    "1800",
+    "28"
    ],
-   "env": {
-    "ITEMS": "fire rune|air rune|earth rune",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy elemental runes at Betty",
-   "role": "bank",
-   "template": "shop-runes",
+   "goal": "pick flax at Seers and bank it",
+   "role": "crafting",
+   "template": "aio-flax",
    "autopilot": "local",
    "resources": [
-    "shop:betty"
+    "aio:seers-flax"
    ]
   },
   {
@@ -524,25 +520,6 @@
    ]
   },
   {
-   "account": "Ballspinner",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
-   "autopilot": "local",
-   "resources": [
-    "knight:2671,3313"
-   ]
-  },
-  {
    "account": "SporranBulge",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -606,17 +583,46 @@
    ]
   },
   {
-   "account": "Pocketpython",
-   "script": "scripts/session-check.ts",
+   "account": "Bigpackage",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
+   ],
+   "env": {},
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "role": "thieving",
+   "template": "aio-blood-chest",
+   "autopilot": "local",
+   "resources": [
+    "aio:ardougne-blood-chests"
+   ]
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "CAP": "600",
-    "COORDINATOR_RUN_ID": "task-d7bba46f-ac0e-4f99-abd8-a9bbf8508788"
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
    },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-session-recovery-pocketpython-drop-rest-0654 [task-d7bba46f-ac0e-4f99-abd8-a9bbf8508788]",
-   "role": "thieving"
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
+   "autopilot": "local",
+   "resources": [
+    "knight:2671,3313"
+   ]
   }
  ]
 }
