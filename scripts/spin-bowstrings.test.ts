@@ -1,5 +1,6 @@
 import {test,expect} from 'bun:test';
 import{settle,watchUnexpectedEnd}from'../packages/core/src/bot';
+import{startPrayerGuard}from'../packages/core/src/prayer-guard';import{startEatGuard}from'../packages/core/src/eat-guard';
 import {spinInputFailure,spinConversion,spinLimits,spinOwnedSession,spinAssets,main} from './spin-bowstrings';
 import {isNoProgressFailure,supervise} from '../packages/practice/src/supervise';
 import {spawnSync} from 'node:child_process';
@@ -104,4 +105,27 @@ test('the session own direct put back at settlement, after cleanup began, keeps 
  // Cleanup does not excuse another client or another close.
  settled.close=async()=>{};expect(owned.owns()).toBe(false);
  const working=fixture(),busy=spinOwnedSession(working);working.direct=async()=>{};expect(busy.owns()).toBe(false);
+});
+
+test('actual main logs out after the prayer guard and the eat guard put the executor back at settlement',async()=>{
+ // packages/core/src/bot.ts: openBot starts both guards before the worker makes its owner. settleOnce stops them in
+ // this order, then the random event gate puts the session's own `direct` back, and the logout step runs with no await.
+ const f=spinEntryFixture(),lines:string[]=[];f.raw.onTick=()=>()=>{};f.raw.sdk.getInventory=()=>[];
+ const login=f.client.executeBotAction,direct=f.raw.direct,prayer=startPrayerGuard(f.raw),eat=startEatGuard(f.raw);expect(f.client.executeBotAction).not.toBe(login);
+ const previous=process.exitCode;try{
+  await main({open:async()=>f.raw,ready:async()=>false,finalize:async(rows,ok,detail,options)=>{void prayer.release();eat.stop();f.raw.direct=(action:unknown)=>direct(action);return settle(rows,ok,detail,{...options,log:line=>lines.push(line)});}});
+  expect(f.stats()).toEqual({inputs:1,closed:1});expect(lines).toContain('LOGOUT logged-out');
+ }finally{process.exitCode=previous??0;}
+});
+
+test('the executor of the logout step keeps the owner; another executor before or after that step does not',()=>{
+ const fixture=()=>{const player={lifeId:1,respawnCount:0,isDead:false},login=()=>{},guard=()=>{},client={selfSlot:1,executeBotAction:guard};
+  const sdk={config:{host:'local'},getState:()=>({player}),getSkill:()=>({level:99}),getStateAge:()=>0};
+  return{raw:{name:'fixture',sdk,client,direct:async()=>{},close:async()=>{},ended:new Promise(()=>{})} as any,client,login};};
+ const a=fixture(),owned=spinOwnedSession(a.raw);owned.cleanup();a.client.executeBotAction=a.login;owned.settled();expect(owned.owns()).toBe(true);
+ a.client.executeBotAction=()=>{};expect(owned.owns()).toBe(false);
+ // Cleanup alone does not excuse another executor: the bank recovery runs in it.
+ const b=fixture(),recovering=spinOwnedSession(b.raw);recovering.cleanup();b.client.executeBotAction=b.login;expect(recovering.owns()).toBe(false);recovering.settled();expect(recovering.owns()).toBe(false);
+ // A worker that still runs has no logout step.
+ const c=fixture(),working=spinOwnedSession(c.raw);c.client.executeBotAction=c.login;working.settled();expect(working.owns()).toBe(false);
 });

@@ -5,6 +5,7 @@ import{legendsJungleTarget}from'./quest-legends-owned';
 import{test,expect}from'bun:test';
 import{readFileSync}from'node:fs';
 import{parseJm2}from'../../packages/knowledge/src/jm2';
+import{startPrayerGuard}from'../../packages/core/src/prayer-guard';
 import{LEGENDS_ITEMS,legendsContext,legendsLoginOwner,finishLegendsOwned,legendsPotionWindows,legendsPackEffect,legendsMapEffect,legendsMapAttempt,legendsTrainingOptions,validateLegendsOrder,runLegends,type LegendsOrder}from'./quest-legends-owned';
 const order:LegendsOrder={account:'legendsunit',server:'localhost:19081',cap:40000,returnTicks:4000,xpRate:25,maximumTrials:12,maximumFood:60,maximumDoses:30,coinBudget:3000,training:['Herblore','Agility','Thieving','Prayer']};
 test('Legends finite order rejects unknown training, exhausted return budget and unbounded trials',()=>{expect(()=>validateLegendsOrder(order)).not.toThrow();for(const patch of[{maximumTrials:21},{maximumDoses:61},{returnTicks:40000},{xpRate:0},{training:['Ranged','Attack','Attack','Attack']}])expect(()=>validateLegendsOrder({...order,...patch} as LegendsOrder)).toThrow();expect(legendsTrainingOptions('Herblore').map(r=>r.source)).toEqual(['Go to Skill Menu 2','Go to Skill Menu 3','Go to Skill Menu 4','^\\* Herblore \\*$']);});
@@ -25,6 +26,20 @@ test('healthy actual restorative primitive can poll across bounded windows witho
 test('restorative window renewal keeps total dose count and never renews an unresolved outcome',async()=>{const a=liveActor();let made=0,fail=false;const windows:any[]=[];const create:any=(_s:any,o:any)=>{expect(o.cap).toBe(1000);expect(o.maximumDoses).toBeLessThanOrEqual(40);made++;const w={doses:0,blocked:false,async poll(){if(fail){w.blocked=true;throw Error('uncertain dose');}w.doses++;}};windows.push(w);return w;};const care=legendsPotionWindows(a.s,60,()=>true,()=>false,create);await care.poll();expect(care.doses).toBe(1);for(let n=0;n<901;n++)a.advance();await care.poll();expect(made).toBe(2);expect(care.doses).toBe(2);fail=true;await expect(care.poll()).rejects.toThrow('uncertain dose');for(let n=0;n<901;n++)a.advance();await expect(care.poll()).rejects.toThrow('unresolved');expect(made).toBe(2);});
 
 test('actual CLI boundary never settles through a replacement from the first quest await',async()=>{for(const mode of['unchanged','executor','client','life','respawn']as const){const a=liveActor(),owns=legendsLoginOwner(a.s);let logouts=0;const timer=setInterval(()=>{a.advance();if(a.s.tick()===1){if(mode==='executor')a.client.executeBotAction=()=>{};if(mode==='client')a.s.client={...a.client};if(mode==='life')a.state.player.lifeId++;if(mode==='respawn')a.state.player.respawnCount++;}},1);try{const result=await runLegends(a.s,order);expect(result.ok).toBe(false);const settled=await finishLegendsOwned(a.s,owns,false,result.failure,async()=>{logouts++;return true;});expect(settled).toBe(mode==='unchanged');expect(logouts).toBe(mode==='unchanged'?1:0);if(mode!=='unchanged')expect(a.inputs()).toBe(0);}finally{clearInterval(timer);}}});
+
+test('the login owner follows the release of the prayer guard in the run, and no other executor change',async()=>{
+ // packages/core/src/bot.ts: openBot starts the prayer guard, which replaces the client's executor, before the entry
+ // makes its owner. runLegends releases the guard, and the release puts the executor back. bot.ts holds no guard for
+ // a test session, so the release of the run does nothing here: the test releases the real guard before the run.
+ for(const mode of['kept','replaced']as const){const a=liveActor(),login=a.client.executeBotAction,guard=startPrayerGuard(a.s),owns=legendsLoginOwner(a.s);let logouts=0,calls=0,early=-1;
+  expect(a.client.executeBotAction).not.toBe(login);await guard.release();expect(a.client.executeBotAction).toBe(login);
+  const timer=setInterval(()=>a.advance(),1);
+  try{const result=await runLegends(a.s,order,()=>false,()=>{calls++;early=a.inputs();owns.settled();});expect(result.failure).toContain('first-owned-action');
+   // Another executor after the release is not the owner's, and a second `settled` does not take it.
+   if(mode==='replaced'){a.client.executeBotAction=()=>{};owns.settled();}
+   const settled=await finishLegendsOwned(a.s,owns,false,result.failure,async()=>{logouts++;return true;});expect({settled,logouts,calls,early}).toEqual({settled:mode==='kept',logouts:mode==='kept'?1:0,calls:1,early:0});}finally{clearInterval(timer);}
+ }
+});
 
 test('mapping consumer continues deferred completion once before exact notes conversion and terminal status',async()=>{
  for(const complete of[false,true]){

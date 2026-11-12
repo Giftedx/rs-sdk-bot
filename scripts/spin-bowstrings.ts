@@ -39,8 +39,8 @@ export function spinConversion(before:{items:Record<number,number>;xp:number},af
  if(!valid)throw Error('spinning conversion asset/XP mismatch');return made;
 }
 export function spinOwnedSession(raw:Session,requested:()=>boolean=()=>false,cleanupWithinDeadline:()=>boolean=()=>true){
- const sdk=raw.sdk,client=raw.client as {selfSlot?:number;executeBotAction?:unknown},direct=raw.direct,close=raw.close,ended=raw.ended,name=raw.name,config=sdk.config,endpoint=JSON.stringify([config?.host,config?.port,config?.gatewayUrl]),slot=client?.selfSlot,executor=client?.executeBotAction,p=sdk.getState()?.player,life=p?.lifeId,respawns=p?.respawnCount??0,hp=sdk.getSkill('Hitpoints')?.level??0;
- let lost=false,cleaning=false,endedNow=false,loggedOut=false;void ended.then(e=>{endedNow=true;loggedOut=e.reason==='logged-out';});
+ const sdk=raw.sdk,client=raw.client as {selfSlot?:number;executeBotAction?:unknown},direct=raw.direct,close=raw.close,ended=raw.ended,name=raw.name,config=sdk.config,endpoint=JSON.stringify([config?.host,config?.port,config?.gatewayUrl]),slot=client?.selfSlot,p=sdk.getState()?.player,life=p?.lifeId,respawns=p?.respawnCount??0,hp=sdk.getSkill('Hitpoints')?.level??0;
+ let lost=false,cleaning=false,endedNow=false,loggedOut=false,executor=client?.executeBotAction;void ended.then(e=>{endedNow=true;loggedOut=e.reason==='logged-out';});
  const owns=()=>{
   const player=sdk.getState()?.player;
   // The random event gate (packages/core/src/randomevents.ts) puts the session's own `direct` back when the run
@@ -53,7 +53,11 @@ export function spinOwnedSession(raw:Session,requested:()=>boolean=()=>false,cle
  const guard=()=>{if(!owns()||!cleanupWithinDeadline()||(cleaning?cleanupUnsafe():stopped()))throw Error('spinning original session input unavailable');};
  const guarded=new Proxy(sdk,{get(t,k,r){const value=Reflect.get(t,k,r);return typeof value==='function'?function(...args:unknown[]){if(String(k).startsWith('send'))guard();return value.apply(r,args);}:value;}});
  const session=Object.create(raw) as Session;Object.defineProperties(session,{sdk:{value:guarded},bot:{value:new BotActions(guarded)},direct:{value:(a:Parameters<Session['direct']>[0])=>{guard();return direct.call(raw,a);}},close:{value:()=>{if(!owns())throw Error('spinning original close unavailable');return close.call(raw);}}});
- return{session,owns,stopped,cleanup:()=>{cleaning=true;}};
+ // The prayer guard and the eat guard replace the client's executor at login, before this owner reads it, and each
+ // puts back the one it replaced when settlement stops it (packages/core/src/prayer-guard.ts and eat-guard.ts, stop).
+ // `settled` makes the executor of the logout step the owner's. It has no effect before cleanup began, and an
+ // executor that `owns` found different stays lost.
+ return{session,owns,stopped,cleanup:()=>{cleaning=true;},settled:()=>{if(cleaning)executor=client?.executeBotAction;}};
 }
 
 export function spinInputFailure(made:number,maximum:number,rawBank:number,reserve:number):string {
@@ -67,7 +71,9 @@ const entryTick=raw.tick(),owner=actionSessionOwner(raw,()=>requested),owned=spi
 let unwatch:(()=>void)|undefined,recovery:(()=>Promise<void>)|undefined,cleaning=false;
 const complete=async(ok:boolean,detail:string)=>{
  if(!owned.owns()){console.log('RESULT fail spinning original session replaced; cleanup refused');process.exitCode=1;return;}
- owned.cleanup();await finishActionSession(owner,ok,detail,io.finalize??finish,async()=>{if(!owned.owns())throw Error('spinning cleanup owner unavailable');const result=await logoutSession(owner.cleanup);if(!owned.owns())throw Error('spinning cleanup owner changed');return result;});
+ // packages/core/src/bot.ts settleOnce stops the guards and calls this logout step with no await, so only the guards
+ // can change the executor between the owner check above and `settled`.
+ owned.cleanup();await finishActionSession(owner,ok,detail,io.finalize??finish,async()=>{owned.settled();if(!owned.owns())throw Error('spinning cleanup owner unavailable');const result=await logoutSession(owner.cleanup);if(!owned.owns())throw Error('spinning cleanup owner changed');return result;});
 };
 try {
     // Wait for initial sync
