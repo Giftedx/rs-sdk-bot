@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { AIR_STOCK, NATURE_STOCK, ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs, type Template } from '../src/autopilot';
+import { AIR_STOCK, NATURE_STOCK, ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, CHICKEN_PENS, PEN_QUEST_POINTS, type Acct, type Inputs, type Template } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -86,6 +86,25 @@ test('an account whose pack meets the feather target gets no feather job', () =>
     const knights = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, 1]));
     expect(ids(plan(inputs([acct('Full', {}, { feather: FEATHER_TARGET })], { taken: knights }))).Full).not.toMatch(/^feathers@/);
     expect(ids(plan(inputs([acct('Room', {}, { feather: FEATHER_TARGET - 1 })], { taken: knights }))).Room).toMatch(/^feathers@/);
+});
+test("the chicken pen in the Champions' Guild yard goes only to an account with 32 quest points", () => {
+    const guild = Object.keys(PEN_QUEST_POINTS).map(p => `feathers@${p}`);
+    expect(guild).toEqual(['feathers@3197,3353']);
+    // Each knight spot and each open pen has an account, so the guild pen is the one feather job left.
+    const taken = Object.fromEntries([...KNIGHT_SPOTS.map(s => `knight:${s}`), ...CHICKEN_PENS.filter(p => !PEN_QUEST_POINTS[p]).map(p => `pen:${p}`)].map(r => [r, 1]));
+    const job = (a: Acct) => ids(plan(inputs([a], { taken })))[a.name];
+    expect(job(acct('Unknown'))).not.toMatch(/^feathers@/);
+    expect(job({ ...acct('Short'), questPoints: 31 })).not.toMatch(/^feathers@/);
+    expect(job({ ...acct('Member'), questPoints: 32 })).toBe(guild[0]);
+    // With the open pens free, an account with too few points still gets a feather job, at an open pen.
+    const open = ids(plan(inputs([{ ...acct('A'), questPoints: 11 }, { ...acct('B'), questPoints: 11 }, { ...acct('C'), questPoints: 11 }, { ...acct('D'), questPoints: 11 }],
+        { taken: Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, 1])) })));
+    expect(Object.values(open).filter(id => /^feathers@/.test(id)).sort()).toEqual(CHICKEN_PENS.filter(p => !PEN_QUEST_POINTS[p]).map(p => `feathers@${p}`).sort());
+    expect(Object.values(open)).not.toContain(guild[0]);
+    // An account that holds the guild pen with too few points moves to an open pen.
+    const held = plan(inputs([{ ...acct('Held'), questPoints: 11 }], { taken: Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, 1])), current: new Map([['held', guild[0]!]]) }));
+    expect(ids(held).Held).toMatch(/^feathers@/);
+    expect(ids(held).Held).not.toBe(guild[0]);
 });
 
 test('a shop blocked only by coins is funded by the richest free donor above its reserve', () => {
@@ -970,6 +989,10 @@ test('an account row carries its combat level and its complete quests', () => {
     const bare = accountFrom('B', side, null, () => undefined);
     expect(bare.combat).toBeUndefined();
     expect(bare.quests).toBeUndefined();
+    // Quest points come from the quest point varp of the status. A row with no such fact has none known.
+    expect(accountFrom('Q', side, { skills: [], guildFacts: { varps: { qp: 13 }, questStages: {}, unlocks: [] } }, () => undefined).questPoints).toBe(13);
+    expect(a.questPoints).toBeUndefined();
+    expect(bare.questPoints).toBeUndefined();
 });
 
 import { PRAYER_FIELD_BAND } from '../src/autopilot';

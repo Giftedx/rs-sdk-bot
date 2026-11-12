@@ -14,8 +14,9 @@ import { missionSignature } from '../../core/src/session-admission';
 import { xpForLevel } from './curve';
 
 // `combat`: the combat level the account's status reports (absent: worked out from `skills`). `quests`: the quests its
-// status reports complete, by norm() name (absent: none known complete).
-export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number>; combat?: number; quests?: ReadonlySet<string> };
+// status reports complete, by norm() name (absent: none known complete). `questPoints`: the quest points its status
+// reports (absent: none known, which counts as 0).
+export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number>; combat?: number; quests?: ReadonlySet<string>; questPoints?: number };
 export type Flow = { item: string; perTick: number };
 // `under`: skills that must stay below a level (a band hands an account on to the next band at that level).
 // `holdsUnder`: holdings that end the job at once. The account must hold fewer, or the run finds its target met and fails.
@@ -25,8 +26,9 @@ export type Flow = { item: string; perTick: number };
 // `holds`: holdings the account gets by its own job (flax it picked): short of them the job waits, and nothing is
 // bought or sent for them.
 // `combat`: the least combat level (a mine inside an aggressive monster's range). `quests`: quests that must be complete.
+// `questPoints`: the least quest points (a place behind a door that counts them).
 export type Needs = {
-    combat?: number; quests?: readonly string[];
+    combat?: number; quests?: readonly string[]; questPoints?: number;
     skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number>; holdsUnder?: Record<string, number>; shortOf?: Record<string, number>; holds?: Record<string, number>; food?: number;
     pieces?: { of: readonly string[]; count: number }; anyOf?: readonly Needs[];
 };
@@ -265,6 +267,7 @@ const isShort = (a: Acct, needs: Template['needs']) => (!needs?.shortOf || Objec
 const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: string; to: number }): boolean =>
     (a.combat ?? combatLevel(a.skills)) >= (needs?.combat ?? 0)
     && (needs?.quests ?? []).every(q => questDone(a, q))
+    && (a.questPoints ?? 0) >= (needs?.questPoints ?? 0)
     && Object.entries(needs?.skills ?? {}).every(([s, l]) => (skillOverride?.skill === s ? Math.max(skillOverride.to, a.skills[s] ?? 1) : a.skills[s] ?? 1) >= l)
     && Object.entries(needs?.items ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n)
     && Object.entries(needs?.under ?? {}).every(([s, l]) => (a.skills[s] ?? 1) < l)
@@ -283,6 +286,7 @@ const withoutCoins = (needs: Template['needs']): Template['needs'] => ({ ...need
 // then the one with the fewest missing units.
 export function kitLacks(a: Acct, needs: Template['needs'], can: (item: string) => boolean = () => true): Lack[] | null {
     if ((a.combat ?? combatLevel(a.skills)) < (needs?.combat ?? 0) || !(needs?.quests ?? []).every(q => questDone(a, q))
+        || (a.questPoints ?? 0) < (needs?.questPoints ?? 0)
         || !Object.entries(needs?.skills ?? {}).every(([s, l]) => (a.skills[s] ?? 1) >= l)
         || !Object.entries(needs?.under ?? {}).every(([s, l]) => (a.skills[s] ?? 1) < l)
         || !Object.entries(needs?.holdsUnder ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) < n) || !isShort(a, needs)) return null;
@@ -698,6 +702,9 @@ export function assess(lines: readonly string[]): { retire: boolean; reason: str
 export const knightCoinsPerTick = (thieving: number) => thieving < 55 ? 0 : 18.8 * (50 + 190 * (Math.min(99, thieving) - 1) / 98) / 240;
 export const KNIGHT_SPOTS = ['2652,3318', '2653,3300', '2669,3298', '2671,3313', '2582,3297'];
 export const CHICKEN_PENS = ['3229,3298', '3017,3288', '3187,3277', '3197,3353'];
+// The pen at 3197,3353 is the yard of the Champions' Guild. Its door lets in an account with 32 quest points
+// (championdoor in knowledge/doors.json), and the route search refuses the pen to any other account.
+export const PEN_QUEST_POINTS: Readonly<Record<string, number>> = { '3197,3353': 32 };
 // scripts/gather-feathers.ts stops when its pack holds TARGET feathers.
 export const FEATHER_TARGET = 2000;
 // Claim: four farmers can share one knight spot. A pickpocket does not hold the knight. Practice: 4 bots at one spot
@@ -1406,7 +1413,7 @@ export function catalogue(): Template[] {
             goal: 'train Thieving to 55 for a knight spot', trains: { skill: 'Thieving', to: 55, unlocks: goldfarm.map(g => g.id) }, yields: () => [] },
         ...CHICKEN_PENS.map((pen): Template => ({
             id: `feathers@${pen}`, family: 'gather-feathers', script: 'scripts/gather-feathers.ts', env: { PEN: pen, TICKS: '3000', TARGET: String(FEATHER_TARGET) }, role: 'helper',
-            goal: `feathers at the chicken pen ${pen}`, resources: [`pen:${pen}`], needs: { holdsUnder: { feather: FEATHER_TARGET } },
+            goal: `feathers at the chicken pen ${pen}`, resources: [`pen:${pen}`], needs: { holdsUnder: { feather: FEATHER_TARGET }, ...(PEN_QUEST_POINTS[pen] ? { questPoints: PEN_QUEST_POINTS[pen] } : {}) },
             // chicken.rs2: 15 feathers 1/4, 5 feathers 1/4 -> 5 a kill; about one kill and pickup per 16 ticks.
             yields: () => [{ item: 'feather', perTick: 0.3 }],
         })),
@@ -1472,7 +1479,8 @@ export function accountFrom(name: string, side: string, status: any, itemName: (
     }
     const quests = Array.isArray(status?.quests)
         ? new Set<string>(status.quests.flatMap((q: any) => typeof q === 'string' ? [norm(q)] : typeof q?.name === 'string' && q.state === 'complete' ? [norm(q.name)] : [])) : undefined;
-    return { name, side, skills, items, ...(Number.isFinite(status?.combat) ? { combat: status.combat } : {}), ...(quests ? { quests } : {}) };
+    const questPoints = status?.guildFacts?.varps?.qp;
+    return { name, side, skills, items, ...(Number.isFinite(status?.combat) ? { combat: status.combat } : {}), ...(quests ? { quests } : {}), ...(Number.isFinite(questPoints) ? { questPoints } : {}) };
 }
 
 // This side's new swarm job list: every job without this side's marker stays as it is; a planner job whose account
