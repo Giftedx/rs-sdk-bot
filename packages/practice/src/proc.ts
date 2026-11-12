@@ -51,6 +51,16 @@ export function processStartTimes(pids: readonly number[]): Map<number, number> 
     return out;
 }
 
+// The system gives the id of an ended process to a later process. A record that a process wrote at `savedAt`, about
+// itself or about a child that it started, names a process that started before `savedAt`. So a process that holds the
+// id and started after `savedAt` is a different process. The slack covers a clock step between the two times.
+// `starts` is one processStartTimes read: null, an id that it does not list, or a record with no time proves nothing.
+export const PID_START_SLACK_MS = 5000;
+export function laterProcessHolds(pid: number, savedAt: number, starts: ReadonlyMap<number, number> | null): boolean {
+    const start = starts?.get(pid);
+    return start !== undefined && Number.isFinite(savedAt) && start > savedAt + PID_START_SLACK_MS;
+}
+
 export async function killTree(pid: number): Promise<void> {
     if (process.platform === 'win32') {
         Bun.spawnSync(['taskkill', '/PID', String(pid), '/T', '/F'], { stdout: 'ignore', stderr: 'ignore' ,windowsHide:true});

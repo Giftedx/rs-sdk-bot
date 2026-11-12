@@ -30,7 +30,7 @@ import {assertNoRecoveryLease,heldRecoveryOwners,releaseExpiredRecoveryLeases} f
 import {createRecoveryDispatch} from '../packages/core/src/session-recovery-dispatch';
 import { createHash } from 'node:crypto';
 import { jobLogStart } from '../packages/core/src/job-log';
-import { processStartTimes } from '../packages/practice/src/proc';
+import { laterProcessHolds, PID_START_SLACK_MS, processStartTimes } from '../packages/practice/src/proc';
 import { readLogoutProof, listAttempts, verifyLegacyLogout, type LegacyLogoutClaim, type LegacyLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 import { mergedPlan, readCoordinatorJobs, emptyCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
@@ -46,13 +46,12 @@ export type SavedRun = Run & { key: string };
 export type ParsedJob = { key: string; accounts: string[]; host: boolean; job: Job };
 
 // The system gives the process id of an ended supervisor to a later process, so a process that answers the id is the
-// run's supervisor only when it started before the run record. The supervisor starts before `started` is taken; the
-// slack covers a clock step between the two. `starts` is one read of the process table (processStartTimes): null, or
-// an id it does not list, proves nothing and leaves the signal check to decide.
-export const PID_START_SLACK_MS = 5000;
+// run's supervisor only when it started before the run record (laterProcessHolds). The supervisor starts before
+// `started` is taken. `starts` is one read of the process table (processStartTimes): null, or an id it does not list,
+// proves nothing and leaves the signal check to decide.
+export { PID_START_SLACK_MS };
 export function adoptedRunAlive(run: { pid: number; started: number }, alive: (pid: number) => boolean, starts: ReadonlyMap<number, number> | null): boolean {
-    const processStart = starts?.get(run.pid);
-    return alive(run.pid) && !(processStart !== undefined && processStart > run.started + PID_START_SLACK_MS);
+    return alive(run.pid) && !laterProcessHolds(run.pid, run.started, starts);
 }
 
 const ACCOUNT = /^[A-Za-z0-9_ -]{1,12}$/;
@@ -362,9 +361,13 @@ export function lifecycleAccounts(dir: string): string[] {
 }
 // A session whose owner died with no end line (a killed worker, or a swarm that died with its children) leaves a
 // held attempt, so no repair can name it until the owner is gone and its end is recorded.
+// The owner wrote the receipt, so a process that holds the owner id and started after `createdAt` is a later process
+// and the owner is gone (laterProcessHolds). `starts` is called one time at most, with the owner ids that answer a
+// signal and whose end this scan can record.
 export function orphanedSessionEnds(accounts: readonly string[], ended: ReadonlyMap<string, EndRecord>, busy: readonly string[],
-    proof: (a: string) => LogoutProof, producer: (a: string, attemptId: string) => { pid: number; createdAt: number; updatedAt: number } | undefined, alive: (pid: number) => boolean): [string, string][] {
-    const out: [string, string][] = [], seen = new Set<string>();
+    proof: (a: string) => LogoutProof, producer: (a: string, attemptId: string) => { pid: number; createdAt: number; updatedAt: number } | undefined, alive: (pid: number) => boolean,
+    starts: (pids: readonly number[]) => ReadonlyMap<number, number> | null = () => null): [string, string][] {
+    const found: { end: [string, string]; pid: number; createdAt: number; answers: boolean }[] = [], seen = new Set<string>();
     for (const a of accounts) {
         const key = a.toLowerCase();
         if (PROTECTED_ACCOUNTS.includes(key)) continue;
@@ -373,15 +376,16 @@ export function orphanedSessionEnds(accounts: readonly string[], ended: Readonly
         let p: LogoutProof; try { p = proof(a); } catch { continue; }
         if (p.state !== 'held') continue;
         const receipt = producer(a, p.attemptId);
-        if (!receipt || !Number.isSafeInteger(receipt.pid) || receipt.pid < 1 || !Number.isFinite(receipt.createdAt) || !Number.isFinite(receipt.updatedAt) || alive(receipt.pid)) continue;
+        if (!receipt || !Number.isSafeInteger(receipt.pid) || receipt.pid < 1 || !Number.isFinite(receipt.createdAt) || !Number.isFinite(receipt.updatedAt)) continue;
         const prior = [...ended].find(([name]) => name.toLowerCase() === key);
         // An older orphan end yields to a later update. A successful end yields to an attempt that started after it: that
         // end cannot describe the attempt and holds nothing. Every other end stays, because a repair reads its reason.
         const orphan = prior?.[1].reason.startsWith('exit orphaned: attempt ');
         if (prior && !(orphan ? receipt.updatedAt > prior[1].at : successfulEnd(prior[1].reason) && receipt.createdAt > prior[1].at)) continue;
-        out.push([prior?.[0] ?? a, `exit orphaned: attempt ${p.attemptId} owner ${receipt.pid} gone`]);
+        found.push({ end: [prior?.[0] ?? a, `exit orphaned: attempt ${p.attemptId} owner ${receipt.pid} gone`], pid: receipt.pid, createdAt: receipt.createdAt, answers: alive(receipt.pid) });
     }
-    return out;
+    const answering = found.filter(f => f.answers).map(f => f.pid), table = answering.length ? starts(answering) : null;
+    return found.filter(f => !f.answers || laterProcessHolds(f.pid, f.createdAt, table)).map(f => f.end);
 }
 // Retained caller-receipt format is diagnostic only. There is no producer-bound work-result
 // contract yet, so a fishing/recovery logout cannot qualify an old combat script.
@@ -729,7 +733,7 @@ if (import.meta.main) {
                 return receipt ? { pid: receipt.owner.pid, createdAt: receipt.createdAt, updatedAt: receipt.updatedAt } : undefined;
             };
             const accounts = planned.flatMap(p => p.accounts).concat(lifecycleAccounts(join(prac, 'session-lifecycle/live', LIVE_SERVER)));
-            for (const [a, reason] of orphanedSessionEnds(accounts, ended, busy, a => readLogoutProof(a, LIVE_SERVER), producer, alive)) {
+            for (const [a, reason] of orphanedSessionEnds(accounts, ended, busy, a => readLogoutProof(a, LIVE_SERVER), producer, alive, processStartTimes)) {
                 ended.set(a, { at: Date.now(), reason });
                 console.log(`SWARM end ${a} ${reason}`);
             }
