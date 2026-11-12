@@ -7,8 +7,9 @@ import {loadOwners} from '../packages/core/src/fleet';
 import {reserveFleetOwner, withFleetDataWrite} from './fleet-owner-claim';
 import {recoverConcurrentPlanWrite} from '../packages/core/src/plan-lock';
 
+// A git call has 20 s: beside the 11 other processes of the local gate one call passed the 5 s it had (ETIMEDOUT).
 function git(cwd: string, ...args: string[]) {
-    return execFileSync('git', args, {cwd, timeout: 5000, windowsHide: true, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe']}).trim();
+    return execFileSync('git', args, {cwd, timeout: 20_000, windowsHide: true, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe']}).trim();
 }
 
 const lockDir = (root: string) => join(root, '.practice', 'fleet-data-write');
@@ -124,4 +125,4 @@ test('competing fleet sides reserve one name and retry only their own durable cl
     } finally {
         if (/^rsbot-owner-claim-[^/\\]+$/.test(relative(parent, scratch))) rmSync(scratch, {recursive: true, force: true});
     }
-}, 20_000);
+}, 60_000);
