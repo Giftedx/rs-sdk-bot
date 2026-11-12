@@ -1,6 +1,11 @@
-import { test, expect } from 'bun:test';
+import { beforeAll, test, expect } from 'bun:test';
 import { parseCoins, exactCoinDelta, coinTradeObservation, meetingTiles, prepareCoinSlot } from './coin-courier';
 import type { Session } from '../packages/core/src/inprocess';
+import { loadPathfinding } from '../packages/core/src/pathcache';
+
+// initPathfinding() alone takes about 14 s for each process (packages/core/src/pathcache.ts). The snapshot loader makes
+// the same grid first, so the call in the test returns at once.
+beforeAll(async () => { await loadPathfinding(); }, 120_000);
 
 test('full donor banks an unrelated item before exact 45000-coin withdrawal', async () => {
     let pack = [{ id: 1446, name: 'Body talisman', count: 1, slot: 0 },
