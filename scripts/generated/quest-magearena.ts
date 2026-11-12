@@ -21,16 +21,17 @@
 // - Prayer 37 or more: Protect from Magic (prayer index 12). A spell of an NPC fails when the prayer is on
 //   (skill_combat/scripts/npc/npc_combat_magic.rs2:37), so Kolodion and the battle mages do no damage. The bot stands
 //   and casts once in 5 ticks.
-// - Under Prayer 37: the leash. An NPC drops a target that is more than maxrange + attackrange tiles from the tile
-//   where the NPC came into the world, and does not walk more than maxrange tiles from it (engine Npc.ts
-//   targetWithinMaxRange). Kolodion and the battle mages have maxrange 10 and attackrange 5. The bot casts from a
+// - With no prayer (MA_MODE=leash): the leash. An NPC drops a target that is more than maxrange + attackrange tiles
+//   from the tile where the NPC came into the world, and does not walk more than maxrange tiles from it (engine
+//   Npc.ts targetWithinMaxRange). Kolodion and the battle mages have maxrange 10 and attackrange 5. The bot casts from a
 //   tile 17 from that start tile (spell range 10), and when the NPC is too far it steps in, casts and runs back.
 //   The tile is on the row of the gap in the west wall (see the constants). This works for Kolodion only. At the
 //   battle mages such an account stands, takes the hits and eats.
 // The spell at Kolodion: Fire Wave (Magic 75, max hit 20), else Fire Blast (Magic 59, max hit 16). The god spells
 // need the god staff, and Iban Blast needs Underground Pass.
-// MA_MODE=pray or MA_MODE=leash sets the method. The script finds its stage from what Kolodion says and what the
-// account holds.
+// The leash is not safe: on a Magic 99, Hitpoints 83 account with 23 sharks it passed at 1 seed of 4 in practice, and
+// a Hitpoints 10 account died. So the script ends at once for an account under Prayer 37, and MA_MODE=leash runs the
+// leash for a test. The script finds its stage from what Kolodion says and what the account holds.
 import { openQuest } from './quest-lib';
 import { componentId } from '../../packages/core/src/logout';
 
@@ -41,7 +42,7 @@ const LADDER_UP = { id: 2872, x: 2542, z: 4713 }, LADDER_DOWN = { id: 2871, x: 3
 const WEBS = [{ x: 3093, z: 3957 }, { x: 3095, z: 3957 }];
 const PORTAL = { id: 2880, x: 3105, z: 3953 };
 const ITEM = { cape: 2414, staff: 2417, knife: 946, prayerPot: [2434, 139, 141, 143], food: 385 };
-const NPC = { kolodion: 905, guardian: 904, forms: [907, 908, 909, 910, 911], zamorakMage: 912, mages: [912, 913, 914] };
+const NPC = { kolodion: 905, guardian: 904, forms: [907, 908, 909, 910, 911], mages: [912, 913, 914] };
 const PFMAGIC = 12;                                         // protect_from_magic (sdk PRAYER_INDICES)
 // The leash method. The floor of the arena is 25 tiles wide (x 3093 to 3117, z 3921 to 3945), too small for a tile 17
 // from an NPC in its middle. The west wall has a gap on rows 3933 and 3934 (x 3088 to 3092), and a ring between the
@@ -60,7 +61,8 @@ try {
     const prayOn = (): boolean => !!prayers()?.activePrayers?.[PFMAGIC];
     const points = (): number => prayers()?.prayerPoints ?? 0;
     const base = (skill: string): number => q.st()?.skills?.find((k: any) => k.name === skill)?.baseLevel ?? 1;
-    const MODE = process.env.MA_MODE ?? (base('Prayer') >= 37 ? 'pray' : 'leash');
+    const MODE = process.env.MA_MODE ?? 'pray';
+    if (MODE === 'pray' && base('Prayer') < 37) await q.fail(`Prayer ${base('Prayer')} under the 37 of Protect from Magic (MA_MODE=leash runs the method with no prayer)`);
     const SPELL = base('Magic') >= 75 ? 'magic:fire_wave' : 'magic:fire_blast';
     const FLAMES = componentId('magic:flames_of_zamorak');
     let potions = 0, casts = 0, lures = 0;
@@ -158,7 +160,9 @@ try {
             if (n.index !== index) { index = n.index; leash = home(n); console.log(`NOTE ${label} npc ${n.id} start ${leash.start.x},${leash.start.z} safe ${leash.safe.x},${leash.safe.z} at ${q.T()}`); }
             const d = gap(n), ds = q.cheb(leash!.start.x, leash!.start.z), atSafe = ds >= LEASH - 1;
             // The first form has 3 Hitpoints and waits 5 ticks before its first spell: one cast ends it.
-            if (n.id === NPC.forms[0]) { if (ready) await cast(); }
+            // A form that came west of x 3101 has no tile 17 west of it (the ring ends at x 3084), and the gap is a
+            // dead end with the form at its mouth. The bot stands and casts at such a form, takes its hits and eats.
+            if (n.id === NPC.forms[0] || leash!.start.x - LEASH < RING_END) { if (ready) await cast(); }
             else if (ready && d <= 10 && (atSafe || d >= 7)) await cast();
             else if (ready && d > 10) {
                 // Too far for the spell: a step toward the NPC, to 9 tiles from it. The next tick casts.
@@ -173,9 +177,9 @@ try {
         if (!done()) await q.fail(`${label}: not done`);
     };
     // The tile to cast at a form of Kolodion from: on the row of the gap, 17 tiles west of the tile where the form
-    // came. The row is open from the floor through the gap to x 3084, so a form that comes west of x 3101 has a
-    // tile that is nearer than 17.
-    const kolodionHome = (n: any) => ({ start: { x: n.x, z: n.z }, safe: { x: Math.max(n.x - LEASH, RING_END), z: ROW } });
+    // came. The row is open from the floor through the gap to x 3084. Each form comes where the form before it
+    // ended, 5 to 10 tiles nearer to the gap, so the last forms often have no such tile.
+    const kolodionHome = (n: any) => ({ start: { x: n.x, z: n.z }, safe: { x: n.x - LEASH, z: ROW } });
 
     // 1. Kolodion. At %magearena 0 to 5 he sends the player into the arena; at 6 or more he does not.
     let fought = false;

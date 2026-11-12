@@ -146,11 +146,13 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
         skills: { ...PURE, Attack: 61, Ranged: 50, Magic: 50 }, varps: { 288: 120 },
         noRoute: 'the fights of Underground Pass give 53,400 XP and 17,690 Hitpoints XP: the kit has no skill at 99 for them, and Hitpoints 10 end at 42' },
     // Combat 46, the highest that can attack combat 3 at the rune rocks (Wilderness level 46): dragon dagger special
-    // (Attack 61, Strength 73) with Flames of Zamorak under Charge (Magic 80, max hit 30) and Entangle (79).
+    // (Attack 61, Strength 73) with Flames of Zamorak under Charge (Magic 80, max hit 30) and Entangle (79). A kit for
+    // the comparison only (`noRoute`): with the Prayer 37 that the Mage Arena needs it is combat 50.
     'pure-rock': { worn: { weapon: 'dragon_dagger_p', cape: 'zamorak_cape', amulet: 'amulet_of_strength', feet: 'leather_boots' },
         carried: ['zamorak_staff', ['firerune', 400], ['airrune', 500], ['bloodrune', 100], ...FREEZE, '4dose2strength'], food: 16, foodItem: 'lobster',
         switches: { magic: ['zamorak_staff'], melee: ['dragon_dagger_p'] }, options: { rotation: ['magic', 'melee'], damageSpell: SPELLS.flamesOfZamorak, charge: true },
-        skills: { ...PURE, Attack: 61, Strength: 73, Magic: 80 }, varps: { 267: 8, 270: 99 } },
+        skills: { ...PURE, Attack: 61, Strength: 73, Magic: 80 }, varps: { 267: 8, 270: 99 },
+        noRoute: 'the Mage Arena needs Prayer 37: with Prayer 1 and Hitpoints 10 a practice run died to Kolodion, whose spells hit up to 20' },
     // Combat 19: Fire Bolt (Magic 35, max hit 12) and nothing else.
     'pure-bolt': { worn: { weapon: 'staff_of_fire', amulet: 'amulet_of_magic', feet: 'leather_boots' },
         carried: [['airrune', 500], ['chaosrune', 200]], food: 20, foodItem: 'lobster',
@@ -230,11 +232,13 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     'pure-pray31': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 300] },
         carried: ['dragon_dagger_p', ...BOOSTS, '4doseprayerrestore'], food: 22, switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p'] }, options: { rotation: ['ranged', 'melee'] },
         skills: trained({ Attack: 60, Strength: 99, Ranged: 99, Prayer: 31 }) },
-    // The magic pure with a god spell: Flames of Zamorak under Charge (max hit 30) with the Mage Arena done.
+    // The magic pure with a god spell: Flames of Zamorak under Charge (max hit 30) with the Mage Arena done. Prayer 37
+    // for Protect from Magic: with Prayer 1 the arena passed at 1 seed of 4 (research/pvp-fight-loop.md, "Quest
+    // routes of the builds").
     'pure-god': { worn: { weapon: 'zamorak_staff', cape: 'zamorak_cape', amulet: 'amulet_of_magic', feet: 'leather_boots' },
         carried: [['firerune', 600], ['airrune', 500], ['bloodrune', 300], ...FREEZE], food: 21,
         switches: { magic: ['zamorak_staff'] }, options: { rotation: ['magic'], damageSpell: SPELLS.flamesOfZamorak, charge: true },
-        skills: trained({ Magic: 99 }), varps: { 267: 8, 270: 99 } },
+        skills: trained({ Magic: 99, Prayer: 37 }), varps: { 267: 8, 270: 99 } },
     // Defence 1 with Attack 99: the bow and dagger pure with Prayer 43 at the combat level of the Defence 45 builds.
     'pure-max': { worn: { ...PURE_RANGE, weapon: 'magic_shortbow', ammo: ['rune_arrow', 300] },
         carried: ['dragon_dagger_p', ...BOOSTS, ...PRAYER_POTS], food: 21, switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p'] }, options: { rotation: ['ranged', 'melee'] },
@@ -300,11 +304,11 @@ const ITEM_QUEST: Readonly<Record<string, string>> = {
 const VARP_QUEST: Readonly<Record<number, string>> = { 139: "Legends' Quest", 267: 'Mage Arena', 288: 'Underground Pass', 328: 'Regicide', 347: 'The Fremennik Trials' };
 // Each quest with the quests that it needs, as content folders (vendor/rs-sdk/server/content/scripts/quests). Lost
 // City stands with the two quests of the planner's chain, which give its Woodcutting and Crafting. The Mage Arena is
-// a minigame with no XP reward. Sources: quest_hero.rs2:2-4, legends_guard.rs2:50-53.
+// a minigame with no XP reward: its folder is under areas. Sources: quest_hero.rs2:2-4, legends_guard.rs2:50-53.
 const LOST_CITY = ['quest_drunkmonk', 'quest_murder', 'quest_zanaris'], UPASS = ['quest_elena', 'quest_biohazard', 'quest_upass'];
 const HEROES = [...LOST_CITY, 'quest_dragon', 'quest_arthur', 'quest_blackarmgang', 'quest_hero'];
 export const QUEST_CHAIN: Readonly<Record<string, readonly string[]>> = {
-    'Lost City': LOST_CITY, 'Dragon Slayer': ['quest_dragon'], 'The Fremennik Trials': ['quest_viking'], 'Mage Arena': [], 'Underground Pass': UPASS,
+    'Lost City': LOST_CITY, 'Dragon Slayer': ['quest_dragon'], 'The Fremennik Trials': ['quest_viking'], 'Mage Arena': ['area_mage_arena'], 'Underground Pass': UPASS,
     Regicide: [...UPASS, 'quest_regicide'], "Heroes' Quest": HEROES,
     "Legends' Quest": [...HEROES, 'quest_crest', 'quest_junglepotion', 'quest_zombiequeen', ...UPASS, 'quest_waterfall', 'quest_legends'],
 };
@@ -316,7 +320,12 @@ const XP_RATE = 25, MORE_REWARDS: Readonly<Record<string, { skill: string; xp: n
 // trains only Strength, and the Draugen the same way; practice runs of the whole quest gave 23,100 to 29,400 XP (research/pvp-fight-loop.md, "Quest routes of the
 // builds"). Lost City gives its fight XP to Strength too, and every kit with a dragon weapon has Strength 99.
 // Regicide: the quest script casts the Falador and Ardougne teleports; a practice run gave 4,250 Magic XP.
-const FIGHT_XP: Readonly<Record<string, { skill: string; xp: number }[]>> = { quest_viking: [{ skill: 'strength', xp: 35_000 }], quest_regicide: [{ skill: 'magic', xp: 5_000 }] };
+// The Mage Arena: the casts at Kolodion and the 99 casts of Flames of Zamorak; practice runs gave 184,300 to 200,062
+// Magic XP.
+const FIGHT_XP: Readonly<Record<string, { skill: string; xp: number }[]>> = { quest_viking: [{ skill: 'strength', xp: 35_000 }], quest_regicide: [{ skill: 'magic', xp: 5_000 }], area_mage_arena: [{ skill: 'magic', xp: 205_000 }] };
+// The Prayer level of Protect from Magic, which the Mage Arena needs: each spell of Kolodion and of the battle mages
+// hits up to 20, and an account with no such prayer did not pass in practice.
+const ARENA_PRAYER = 37;
 let rewards: Map<string, { skill: string; xp: number }[]> | undefined;
 const rewardsOf = (folder: string) => {
     rewards ??= (JSON.parse(readFileSync(join(root, 'knowledge/quests.json'), 'utf8')) as { folder: string; xp: { skill: string; xp: number }[] }[])
@@ -344,6 +353,7 @@ export function kitRoute(name: string): { quests: string[]; breaks: string[] } {
         return level > 1 && level > (levels[skill] ?? 1) ? [`${skill} ${level}`] : [];
     });
     const sink = [...new Set(quests.flatMap(q => QUEST_CHAIN[q]!))].find(folder => SINK_XP[folder] && !['Strength', 'Ranged', 'Magic'].some(skill => (levels[skill] ?? 1) >= 99));
+    if (quests.includes('Mage Arena') && (levels.Prayer ?? 1) < ARENA_PRAYER) breaks.push(`Prayer ${levels.Prayer ?? 1} under the ${ARENA_PRAYER} of the Mage Arena`);
     if (sink) breaks.push(`no skill at 99 for the ${SINK_XP[sink]!.toLocaleString('en-US')} fight XP of ${sink}`);
     return { quests, breaks };
 }
