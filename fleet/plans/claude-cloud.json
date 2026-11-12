@@ -1,26 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794458701852,
+ "at": 1794458724340,
  "jobs": [
-  {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=10 EXPECTED_OWNED=2 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=fatstack-kit12-563-2to12 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=12 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=fatstack-kit12-385-0to12 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 10 Law rune, 12 Shark on the Grand Exchange to complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience",
-   "role": "supply",
-   "template": "kit-buy:army-quest-holygrail",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
   {
    "account": "PocketPool",
    "script": "scripts/chain.ts",
@@ -162,6 +143,25 @@
    "autopilot": "claude-cloud",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2582,3297"
    ]
   },
   {
