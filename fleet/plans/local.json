@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794521372373,
+ "at": 1794521911410,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -64,25 +64,6 @@
    "enabled": false,
    "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
    "role": "rehearsal"
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
-   "autopilot": "local",
-   "resources": [
-    "knight:2653,3300"
-   ]
   },
   {
    "account": "Bigchopper",
@@ -571,6 +552,13 @@
    "resources": [
     "knight:2653,3300"
    ]
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/aio-skiller.ts",
+   "enabled": false,
+   "goal": "Ring crafter of the mock Haggis run (block 2); legs by .practice/rings",
+   "role": "crafter"
   },
   {
    "account": "Sausagefest",
