@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { listConfigFiles, parseConfigs } from './config';
 import { parsePack } from './pack';
 import { contentRoot } from './paths';
+import { cachedRows } from './table-cache';
 
 // The attack styles of each NPC that does not only use melee, read from the attack scripts of the pinned content.
 //
@@ -12,18 +13,28 @@ import { contentRoot } from './paths';
 // npc_combat_magic.rs2. The reader follows the script's own procedures and labels, three calls deep.
 //
 // The result names the styles a script can use, not the one it uses on a given tick. `magic` includes dragon breath.
+//
+// The order is melee, ranged, magic, with one exception: `magic` is first when a spell of the NPC binds the player or
+// lowers a stat and Protect from Magic stops it (npc/scripts/chaos_druid.rs2, chaos_druid_spell). A reader of the
+// table protects from magic at each distance then: the bound player cannot walk and the drained player hits less.
 export type AttackStyle = 'melee' | 'ranged' | 'magic';
 
 const MAGIC = /npc_cast_spell|npc_spell_cast|playerhit_n_magic|npc_magic_attack_roll|npc_combat_spell/;
 const RANGED = /npc_rangeattack|playerhit_n_ranged|npc_ranged_attack_roll|npc_ranged_maxhit/;
 const MELEE = /npc_meleeattack|playerhit_n_melee|npc_default_attack|npc_melee_/;
+// A spell that binds or drains, in a procedure that checks Protect from Magic.
+const BINDS = /npc_stat_change_effect|freeze_player/, MAGIC_PRAYER = /check_protect_prayer\(\^magic_style\)/;
 // Shared combat procedures: their names give the style, so the reader does not follow them.
 const SHARED = /^(npc_cast|npc_spell|npc_range|npc_melee|npc_default|playerhit|npc_magic|npc_ranged|npc_combat|npc_projectile)/;
 
 let cached: ReadonlyMap<number, readonly AttackStyle[]> | undefined;
 
+// The table, from the kept file when the content version has one (table-cache.ts).
 export function npcAttackStyles(): ReadonlyMap<number, readonly AttackStyle[]> {
-    if (cached) return cached;
+    return cached ??= new Map(cachedRows('npc-attack-styles', 2, () => [...buildNpcAttackStyles()]));
+}
+
+export function buildNpcAttackStyles(): Map<number, AttackStyle[]> {
     const root = contentRoot();
     const attacks = new Map<string, string[]>();
     const procedures = new Map<string, string>();
@@ -35,8 +46,9 @@ export function npcAttackStyles(): ReadonlyMap<number, readonly AttackStyle[]> {
             else if (trigger === 'ai_opplayer2' || trigger === 'ai_applayer2') attacks.set(subject, [...(attacks.get(subject) ?? []), body]);
         }
     }
-    const styles = (body: string, depth: number, seen: Set<string>, out: Set<AttackStyle>) => {
+    const styles = (body: string, depth: number, seen: Set<string>, out: Set<AttackStyle | 'binds'>) => {
         if (MAGIC.test(body)) out.add('magic');
+        if (BINDS.test(body) && MAGIC_PRAYER.test(body)) out.add('binds');
         if (RANGED.test(body)) out.add('ranged');
         if (MELEE.test(body)) out.add('melee');
         if (depth >= 3) return;
@@ -61,15 +73,15 @@ export function npcAttackStyles(): ReadonlyMap<number, readonly AttackStyle[]> {
     for (const named of [false, true]) {
         for (const [subject, bodies] of attacks) {
             if (subject === '_' || subject.startsWith('_') === named) continue;
-            const found = new Set<AttackStyle>();
+            const found = new Set<AttackStyle | 'binds'>();
             for (const body of bodies) styles(body, 0, new Set(), found);
             const npcs = named ? [ids.get(subject)].filter((id): id is number => id !== undefined) : categories.get(subject.slice(1)) ?? [];
             for (const id of npcs) {
-                if (found.has('ranged') || found.has('magic')) out.set(id, order.filter(s => found.has(s)));
+                const list = order.filter(s => found.has(s));
+                if (found.has('ranged') || found.has('magic')) out.set(id, found.has('binds') && found.has('magic') ? ['magic', ...list.filter(s => s !== 'magic')] : list);
                 else out.delete(id);
             }
         }
     }
-    cached = out;
     return out;
 }

@@ -1,7 +1,7 @@
 // BradleyCombat actions adapted from pinned Microbot-Hub. BSD notice: research/microbot-ports-LICENSE.txt.
 // One finite explicitly owned paired consumer. Native rules decide whether each player action is legal.
 import{readFileSync,readdirSync}from'node:fs';
-import{openBot,settle}from'../packages/core/src/bot';
+import{openBot,settle,releasePrayerGuard}from'../packages/core/src/bot';
 import {resolve} from 'node:path';
 import type{Session}from'../packages/core/src/inprocess';
 import{waitUntil,waitTicks}from'../packages/core/src/ticks';
@@ -53,6 +53,8 @@ export function pvpOpenPairTiles(c:any,points:readonly{x:number;z:number;level:n
 export async function runPvp(a:Session,b:Session,plan:PvpPlan,stop:()=>boolean=()=>false){
  validatePvpPlan(plan);
  if(a===b||a.name.toLowerCase()===b.name.toLowerCase()||!a.lifecycle||!b.lifecycle||a.lifecycle.domain!==b.lifecycle.domain||!['practice','live'].includes(a.lifecycle.domain)||a.lifecycle.server!==b.lifecycle.server||a.lifecycle.account.toLowerCase()!==a.name.toLowerCase()||b.lifecycle.account.toLowerCase()!==b.name.toLowerCase())throw Error('PvP requires two owned same-server same-domain sessions');
+ // The prayer guard stops here: this script needs every prayer off now and owns the prayers and the clients' input function from now on.
+ await releasePrayerGuard(a);await releasePrayerGuard(b);
  const sessions=[a,b],clients=sessions.map(s=>s.client as any),owners=clients.map(c=>c.executeBotAction),initial=sessions.map(s=>structuredClone(s.sdk.getState()?.player)),gears=sessions.map(s=>s.sdk.getEquipment().map(i=>({...i}))),styles=sessions.map(s=>structuredClone(s.sdk.getState()?.combatStyle)),prayers=sessions.map(s=>[...(s.sdk.getState()?.prayers.activePrayers??[])]),stocks=sessions.map(totals),xp=sessions.map(s=>(s.sdk.getState()?.skills??[]).map(k=>({name:k.name,xp:k.experience}))),start=a.tick(),ends=[false,false],spent:Record<number,number>={},partnerSpent:Record<number,number>={},receipts:any[]=[],privateCharges={source:"pvp/spells/scripts/ibans_blast.rs2:23",observedBalance:false,maximumDebit:plan.steps.filter(s=>s.kind==='magic'&&s.spell==='iban_blast').length*2,inferredDebit:0};
  sessions.forEach((s,i)=>{void s.ended.then(()=>{ends[i]=true;});});const hp=(i:number)=>sessions[i]!.sdk.getSkill('Hitpoints')?.level??0;
  const alive=(i:number)=>{const p=sessions[i]!.sdk.getState()?.player,q=initial[i];return !ends[i]&&!!p&&!!q&&!p.isDead&&p.lifeId===q.lifeId&&(p.respawnCount??0)===(q.respawnCount??0)&&p.level===q.level&&hp(i)>0;};

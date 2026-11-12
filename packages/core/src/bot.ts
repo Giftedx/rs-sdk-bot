@@ -111,6 +111,8 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     let lastLife = born;
     s.lifecycle?.record('ready', `${p.worldX} ${p.worldZ} ${p.level}`);
     log(`START ${p.worldX} ${p.worldZ} ${p.level}`);
+    // On the lockstep practice engine: the time from the start of the worker process to its login, for the bench.
+    if (process.env.SIM_LOCKSTEP === '1') log(`BOOT ${Math.round(performance.now())} ms from process start to login`);
     const record = createTickRecorder({ account: name, server, script: opts.record?.script ?? process.argv[1] ?? 'unknown',
         argv: opts.record?.argv ?? process.argv.slice(2), startedAt: Date.now() });
     if (record && s.record) { s.record(record); records.set(s, record); }
@@ -120,8 +122,9 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // Random events (dryad, genie, lost axe...): handled on every tick unless RANDOM_EVENTS=0 (packages/core/src/randomevents.ts).
     if (process.env.RANDOM_EVENTS !== '0') randomEvents.set(s, watchRandomEvents(s));
     // Free prayers and protection from NPCs and Wilderness players (packages/core/src/prayer-guard.ts); PRAYER_GUARD=0
-    // turns the guard off.
-    if (guardTables) prayerGuards.set(s, startPrayerGuard(s, { log: line => log(`${line} bot=${name}`), ...guardTables,
+    // turns the guard off, PRAYER_OFFENCE=0 turns its Strength and Attack prayers off.
+    if (guardTables) prayerGuards.set(s, startPrayerGuard(s, { log: line => log(`${line} bot=${name}`), ...(process.env.PRAYER_GUARD_TRACE === '1' ? { trace: log } : {}), ...guardTables,
+        offence: process.env.PRAYER_OFFENCE !== '0', melee: st => wornWeaponStyle((st?.equipment ?? []).find((i: any) => i.slot === 3)?.id) === 'melee',
         players: { ignore: new Set(loadOwners().keys()), style: q => { const seen = readOpponents(s.client).find(v => v.index === q.index); return seen ? wornWeaponStyle(seen.worn.rhand) : null; } } }));
     // Eats plain food in a fight when Hitpoints are low and damage arrives (packages/core/src/eat-guard.ts);
     // EAT_GUARD=0 turns the guard off. A script with `quest` or `microbot` in its file name gets no guard
@@ -252,7 +255,8 @@ async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail
     const log = opts.log ?? ((l: string) => console.log(l));
     for (const s of sessions) {
         const l = ledgers.get(s); if (l) log(`${formatLedger(l.stop())} bot=${s.name}`);
-        prayerGuards.get(s)?.stop(); prayerGuards.delete(s);
+        // The guard's own prayers go off before the logout: a prayer that stays on drains until the session ends.
+        void prayerGuards.get(s)?.release(); prayerGuards.delete(s);
         eatGuards.get(s)?.stop(); eatGuards.delete(s);
         const e = randomEvents.get(s); if (e) { e.stop(); log(`EVENTS ${JSON.stringify(e.counts())} bot=${s.name}`); }
     }

@@ -1,7 +1,7 @@
 // Native Watch Tower from public not-started state. Native quest_itwatchtower handlers own the sequence;
 // Microbot Watchtower helper supplies route intent only (its modern crystal-pillar steps do not exist here).
 import {openQuest} from './quest-lib';
-import {openBot,finish} from '../../packages/core/src/bot';
+import {openBot,finish,releasePrayerGuard} from '../../packages/core/src/bot';
 import type {Session} from '../../packages/core/src/inprocess';
 import {questFlags,questDefinitions} from '../../packages/core/src/quest-status';
 import {BotActions} from '../../vendor/rs-sdk/sdk/actions';
@@ -91,6 +91,8 @@ export async function finishWatchtowerOwned(s:Session,owns:()=>boolean,ok:boolea
 }
 export async function runWatchtower(original:Session,{cap=6000,xpRate=25,stop=()=>false}:{cap?:number;xpRate?:number;stop?:()=>boolean}={}){
  if(!Number.isSafeInteger(cap)||cap<=120||cap>12000||!Number.isSafeInteger(xpRate)||xpRate<1||xpRate>1000)throw Error('invalid Watchtower finite budget');
+ // The prayer guard stops here: this script needs every prayer off now and owns the prayers from now on.
+ await releasePrayerGuard(original);
  const binding=watchtowerNativeBindings();watchtowerEntry(original);
  const client=original.client as any,owner=client.executeBotAction,p=original.sdk.getState()!.player!,life=p.lifeId,respawns=p.respawnCount??0,start=original.tick(),gear=JSON.stringify(original.sdk.getEquipment());let ended=false,cleanup=false;void original.ended.then(()=>{ended=true;});
  let allowed:RegExp[]=[];const guard=()=>{const now=original.sdk.getState()?.player;if(ended||original.client!==client||client.executeBotAction!==owner||typeof owner!=='function'||!now||now.isDead||now.lifeId!==life||(now.respawnCount??0)!==respawns||original.sdk.getStateAge()>5000||original.tick()-start>=cap||(!cleanup&&(productionStopRequested(original.name,stop)||existsSync('.practice/stop-quest-itwatchtower')))||(original.sdk.getSkill('Hitpoints')?.level??0)<30||JSON.stringify(original.sdk.getEquipment())!==gear)throw Error('Watchtower original owner/life/HP/gear/stop/cap');};

@@ -1,5 +1,5 @@
 import {existsSync} from 'node:fs';
-import {openBot,finish} from '../packages/core/src/bot';
+import {openBot,finish,releasePrayerGuard} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {sessionWalker,walkPath} from '../packages/core/src/walk';
@@ -118,6 +118,8 @@ export async function runChompyTrip(s:Session,o:ChompyTripJob,requestStop:()=>bo
  const retaliate=state()?.autoRetaliateEnabled;if(typeof retaliate!=='boolean')throw Error('Chompy initial auto-retaliate unknown');
  const style=state()?.combatStyle;if(!style?.known||style.weaponName!=='Unarmed'||!Number.isSafeInteger(style.currentStyle)||style.currentStyle<0||style.currentStyle>2||!style.styles.some(v=>v.index===style.currentStyle))throw Error('Chompy initial native unarmed style unknown');const initialStyle=style.currentStyle;
  const initialGear=s.sdk.getEquipment().map(i=>({id:i.id,slot:i.slot,count:i.count})).sort((a,b)=>a.slot-b.slot);if(initialGear.some(i=>[3,5,13].includes(i.slot)))throw Error('stage free weapon, shield and ammo slots for bank-owned ogre kit');
+ // The prayer guard stops here: this script needs every prayer off now and owns the prayers from now on.
+ await releasePrayerGuard(s);
  const prayer0=state()?.prayers;if(!prayer0||typeof prayer0.activePrayers[14]!=='boolean'||prayer0.activePrayers.some((v,i)=>v&&i!==14)||prayer0.prayerLevel<43)throw Error('Chompy requires observed Prayer43 and no other active prayers');const prayerInitial=prayer0.activePrayers[14],pointsBefore=prayer0.prayerPoints,prayerReserve=chompyPrayerReserve(o.returnTicks,initialGear);if(pointsBefore<prayerReserve+12)throw Error('Chompy owned prayer return budget short');
  const firstLife=first.lifeId,firstRespawns=first.respawnCount??0;let ended=false;void s.ended.then(()=>{ended=true;});const life=()=>{const player=state()?.player;return !ended&&!!player&&player.lifeId===firstLife&&(player.respawnCount??0)<=firstRespawns&&!player.isDead&&(s.sdk.getSkill('Hitpoints')?.level??0)>0;};
  const protection=chompyProtection(s,life);let protectionStarted=false;const prayerSafe=()=>!protection.uncertain&&!state()?.prayers.activePrayers.some((v,i)=>v&&i!==14)&&(!protectionStarted||state()?.prayers.activePrayers[14]===true)&&((state()?.prayers.prayerPoints??0)>prayerReserve||!!state()?.player&&Math.max(Math.abs(state()!.player!.worldX-CHOMPY_TRIP.bank.x),Math.abs(state()!.player!.worldZ-CHOMPY_TRIP.bank.z))<=3);

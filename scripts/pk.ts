@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
 import { componentId } from '../packages/core/src/logout';
+import { weaponNameStyle } from '../packages/core/src/opponent';
 import { questFlags } from '../packages/core/src/quest-status';
 import { holdSessionEater } from '../packages/core/src/sustain';
 import { tickWaits } from '../packages/core/src/tick-stream';
@@ -163,11 +164,9 @@ let objNames: Map<number, string> | undefined;
 const getObjNames = () => (objNames ??= new Map(readFileSync(join(resolve(import.meta.dir, '..'), 'vendor/rs-sdk/server/content/pack/obj.pack'), 'utf8')
     .split(/\r?\n/).flatMap(l => { const m = l.match(/^(\d+)=(.+)$/); return m ? [[Number(m[1]), m[2]!] as const] : []; })));
 // The style of a weapon by its name: a bow or a thrown weapon is ranged, a staff magic. The simulator
-// (scripts/pk-sim.ts) uses the same rule.
+// (scripts/pk-sim.ts) and the prayer guard use the same rule (packages/core/src/opponent.ts).
 export function styleOfName(name: string): Style {
-    if (/(^|_)(shortbow|longbow|crossbow|dart|knife|thrownaxe|javelin)(_|$)|bow$/.test(name)) return 'ranged';
-    if (/staff|wand/.test(name)) return 'magic';
-    return 'melee';
+    return weaponNameStyle(name);
 }
 export function weaponStyle(id: number | undefined, names = getObjNames()): Style {
     return styleOfName(id !== undefined && id >= 0 ? names.get(id) ?? '' : '');

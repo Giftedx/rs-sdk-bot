@@ -16,12 +16,14 @@ export type CombatStyle = 'melee' | 'ranged' | 'magic';
 
 // The style a worn weapon attacks with, from its object name (content pack/obj.pack). No weapon is melee (fists).
 let objNames: Map<number, string> | undefined;
-export function wornWeaponStyle(id: number | undefined): CombatStyle {
-    objNames ??= parsePack(readFileSync(join(contentRoot(), 'pack/obj.pack'), 'utf8'));
-    const name = id !== undefined && id >= 0 ? objNames.get(id) ?? '' : '';
+export function weaponNameStyle(name: string): CombatStyle {
     if (/(^|_)(shortbow|longbow|crossbow|dart|knife|thrownaxe|javelin)(_|$)|bow$/.test(name)) return 'ranged';
     if (/staff|wand/.test(name)) return 'magic';
     return 'melee';
+}
+export function wornWeaponStyle(id: number | undefined): CombatStyle {
+    objNames ??= parsePack(readFileSync(join(contentRoot(), 'pack/obj.pack'), 'utf8'));
+    return weaponNameStyle(id !== undefined && id >= 0 ? objNames.get(id) ?? '' : '');
 }
 
 const HEADICON_SKULL = 0;

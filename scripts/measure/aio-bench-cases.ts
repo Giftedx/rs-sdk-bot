@@ -347,6 +347,66 @@ const ROUTE_CASES: BenchCase[] = [
   // PRAYER_GUARD line; `--set PRAYER_GUARD=0` runs the comparison without it.
   {key: 'extra:giant-prayer-guard', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['giant', '1500', 'giant'], pass: ok, output: /kills=(\d+)/,
     presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: Array.from({length: 5}, () => ({id: 379, count: 1}))}},
+  // The same fight with a 500 tick cap: the short run for a change to the guard.
+  {key: 'extra:guard-giant-short', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['giant', '500', 'giant'], pass: ok, output: /kills=(\d+)/,
+    presetConfig: {position: {x: 2545, z: 3144, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}, {id: 1113, count: 1, slot: 4}, {id: 1079, count: 1, slot: 7}], inventory: Array.from({length: 5}, () => ({id: 379, count: 1}))}},
+  // Chaos druids cast and hit in melee: the guard changes the protection prayer with the distance.
+  {key: 'extra:guard-druid', script: 'scripts/aio-fighter.ts', preset: 'gather_combat_druid', scriptArgs: ['druid', '600', 'druid'], pass: ok, output: /kills=(\d+)/,
+    presetConfig: {...PRESETS.gather_combat_druid!, skills: {...PRESETS.gather_combat_druid!.skills, Prayer: 60}}},
+  // Iron at the Al Kharid mine at combat level 13, on the open tile west of two iron rocks (maps/m51_51.jm2): the
+  // scorpions (level 14, hunt range 2) attack while the pick swings. A scorpion cannot reach the tile between the
+  // three iron rocks at 3295,3310, so that tile tests no attack. With `--set PRAYER_GUARD=0` the worker dies here.
+  {key: 'extra:guard-mine', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['mining', 'at-site', 'iron_rock_table', '25', '600'], pass: ok,
+    presetConfig: {position: {x: 3302, z: 3310, level: 0}, skills: {Mining: 41, Hitpoints: 30, Prayer: 45}, inventory: [{id: 1275, count: 1}]}},
+  // Thrower trolls on the Death Plateau path (level 67, hunt range 8, no too-strong rule) throw rocks at each player
+  // in range. The worker stands still: the guard must turn Protect from Missiles on before the first rock.
+  {key: 'extra:guard-thrower', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['300'], pass: ok,
+    presetConfig: {position: {x: 2860, z: 3595, level: 0}, skills: {Hitpoints: 60, Defence: 60, Prayer: 60}}},
+  // The script turns three prayers on and stands: the guard keeps them free with its two-tick flick.
+  {key: 'extra:guard-three', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['300', 'PRAYERS=9,10,11'], pass: ok,
+    presetConfig: {position: {x: 3222, z: 3218, level: 0}, skills: {Hitpoints: 60, Prayer: 60}}},
+  // Fly fishing at Lumbridge with Protect from Melee on: the guard flicks and sends the click on the spot again.
+  // With `--set PRAYER_GUARD=0` the prayer is held and the run shows the same catch at the normal point cost.
+  // With `--set GUARD_STAND_FISH=riverBait:4` the run uses the rod and bait.
+  {key: 'extra:guard-fish', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['500', 'PRAYERS=14', 'FISH=fly:8'], pass: ok,
+    presetConfig: {position: {x: 3239, z: 3251, level: 0}, skills: {Fishing: 50, Hitpoints: 60, Prayer: 60}, inventory: [{id: 309, count: 1}, {id: 314, count: 60}, {id: 307, count: 1}, {id: 313, count: 60}]}},
+  // Two accounts at Wilderness level 11, 7 combat levels apart. The second one attacks with a rune scimitar: the
+  // guard of the first must turn Protect Item and Protect from Melee on.
+  {key: 'extra:guard-rival', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['200', 'RIVAL={bot:b}'], pass: ok,
+    presetConfig: {position: {x: 3200, z: 3600, level: 0}, skills: {Attack: 40, Strength: 40, Defence: 40, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3201, z: 3600, level: 0}, skills: {Attack: 40, Strength: 40, Defence: 40, Hitpoints: 60}, equipment: [{id: 1333, count: 1, slot: 3}]}}]},
+  // The same two accounts 3 tiles apart: the second one shoots with a shortbow, so the guard must turn Protect
+  // from Missiles on.
+  {key: 'extra:guard-rival-bow', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['200', 'RIVAL={bot:b}'], pass: ok,
+    presetConfig: {position: {x: 3200, z: 3600, level: 0}, skills: {Attack: 40, Strength: 40, Defence: 40, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3203, z: 3600, level: 0}, skills: {Ranged: 50, Defence: 40, Hitpoints: 60}, equipment: [{id: 841, count: 1, slot: 3}, {id: 882, count: 500, slot: 13}]}}]},
+  // The second account wears a staff of air and casts Wind Strike from 3 tiles: the guard must turn Protect from
+  // Magic on.
+  {key: 'extra:guard-rival-staff', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['200', 'RIVAL={bot:b}', 'RIVAL_SPELL=magic:wind_strike'], pass: ok,
+    presetConfig: {position: {x: 3200, z: 3600, level: 0}, skills: {Attack: 40, Strength: 40, Defence: 40, Hitpoints: 60, Prayer: 60}, equipment: [{id: 1333, count: 1, slot: 3}]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3203, z: 3600, level: 0}, skills: {Magic: 50, Defence: 40, Hitpoints: 60}, equipment: [{id: 1381, count: 1, slot: 3}], inventory: [{id: 558, count: 500}]}}]},
+  // Lobster cages on the Karamja dock (maps/m45_49.jm2) with Protect from Melee on: the fishing cycle on a spot with
+  // two options. With `--set GUARD_STAND_FISH=harpoon:4` the run uses the harpoon.
+  {key: 'extra:guard-fish-cage', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['500', 'PRAYERS=14', 'FISH=cage:6'], pass: ok,
+    presetConfig: {position: {x: 2924, z: 3178, level: 0}, skills: {Fishing: 60, Hitpoints: 60, Prayer: 60}, inventory: [{id: 301, count: 1}, {id: 311, count: 1}]}},
+  // The dark wizards south of Varrock (maps/m50_52.jm2) at combat level 13: the young ones (level 7, hunt range 3)
+  // and the bearded ones (level 20, hunt range 5) cast strike spells. The worker stands on an open tile of their circle: a hunt needs a line of sight
+  // (hunt `ranged`, check_vis=lineofsight), and the centre tiles have none. With `--set PRAYER_GUARD=0` the worker dies.
+  {key: 'extra:guard-wizard', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['300'], pass: ok,
+    presetConfig: {position: {x: 3226, z: 3372, level: 0}, skills: {Hitpoints: 30, Prayer: 45}}},
+  // Oaks west of Lumbridge castle (maps/m50_50.jm2) with Protect from Melee on: the guard flicks and sends the
+  // click on the tree again. With `--set PRAYER_GUARD=0` the prayer is held at the normal point cost.
+  {key: 'extra:guard-chop', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['500', 'PRAYERS=14', 'CHOP=oak:8'], pass: ok,
+    presetConfig: {position: {x: 3205, z: 3243, level: 0}, skills: {Woodcutting: 50, Hitpoints: 60, Prayer: 60}, inventory: [{id: 1359, count: 1}]}},
+  // Draynor (maps/m48_50.jm2) at combat level 13: two young dark wizards (level 7, hunt range 3) stand at the
+  // willows. Willows with a bronze axe under their spells. With `--set GUARD_STAND_RETALIATE=off` the run shows the
+  // same work with auto-retaliate off.
+  {key: 'extra:guard-chop-wizard', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['500', 'CHOP=willow:12'], pass: ok,
+    presetConfig: {position: {x: 3086, z: 3238, level: 0}, skills: {Woodcutting: 30, Hitpoints: 30, Prayer: 45}, inventory: [{id: 1351, count: 1}]}},
+  // Net fishing on the Al Kharid shore (maps/m51_49.jm2) at combat level 13, where a scorpion (level 14, hunt range 2)
+  // wanders to the fishing spots.
+  {key: 'extra:guard-fish-scorpion', script: 'scripts/measure/guard-stand.ts', preset: 'fresh_lumbridge', scriptArgs: ['500', 'FISH=net:12'], pass: ok,
+    presetConfig: {position: {x: 3278, z: 3143, level: 0}, skills: {Fishing: 50, Hitpoints: 30, Prayer: 45}, inventory: [{id: 303, count: 1}]}},
   // Hill giants with Hitpoints 20, no armour and no eat input from the script: the eat guard
   // (packages/core/src/eat-guard.ts) must eat lobsters, and the account must live. The first 5 slots hold edible
   // items that are not plain food (cake, cheese, bread, redberry pie, stew): the guard must eat none of them.
