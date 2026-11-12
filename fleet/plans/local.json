@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794476485652,
+ "at": 1794477122326,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -312,6 +312,26 @@
    "autopilot": "local",
    "resources": [
     "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=379 QUANTITY=200 LIMIT_PRICE=500 CASH_RESERVE=1000 ORDER_KEY=pickpockdick-kit0-379-0to200 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 200 Lobster on the Grand Exchange to goldfarm knights at 2671,3313",
+   "role": "supply",
+   "template": "kit-buy:goldfarm-food",
+   "autopilot": "local",
+   "resources": [
+    "knight:2671,3313"
    ]
   },
   {
