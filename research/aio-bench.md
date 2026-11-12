@@ -86,7 +86,7 @@ Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). 
 
 ## Planner quest rows
 
-**Claim:** 19 single-quest rows of the planner (`packages/planner/src/haggis-boards.json`) hold the lockstep ticks of their bench case: the floor is the best of seeds 7, 8 and 9, and the realistic value is the worst. With these rows the modelled Overall finish is 38,086 ticks at floor rates and 40,842 at realistic rates (`bun packages/planner/src/haggis-cli.ts`, scenario a). **Conditions:** lockstep, a new engine for each case, three engines at a time; each case starts from the preset that its row names. **Evidence:** `bun run bench '^quester:quest:(<the cases below>)$' --parallel 3 --seed <7, 8 or 9>`; rows in `.practice/aio-bench/planner-rows-s7.json`, `planner-rows-s8.json` and `planner-rows-s9.json`:
+**Claim:** 20 single-quest rows of the planner (`packages/planner/src/haggis-boards.json`) hold the lockstep ticks of their bench case: the floor is the best of seeds 7, 8 and 9, and the realistic value is the worst. With these rows the modelled Overall finish is 38,086 ticks at floor rates and 40,842 at realistic rates (`bun packages/planner/src/haggis-cli.ts`, scenario a). **Conditions:** lockstep, a new engine for each case, three engines at a time; each case starts from the preset that its row names. **Evidence:** `bun run bench '^quester:quest:(<the cases below>)$' --parallel 3 --seed <7, 8 or 9>`; rows in `.practice/aio-bench/planner-rows-s7.json`, `planner-rows-s8.json` and `planner-rows-s9.json`:
 
 | Row | Case | Seed 7 | Seed 8 | Seed 9 |
 |---|---|---|---|---|
@@ -109,8 +109,9 @@ Command and rules: [script contract](../docs/script-contract.md#the-aio-bench). 
 | `rival-fight-arena` | `arena` | 502 | 526 | 500 |
 | `rival-mm` | `mm` | 4,347 | 4,539 | 4,588 |
 | `rival-seaslug` | `seaslug` | 348 | 344 | 346 |
+| `scorpion` | `scorpion` | 886 | 891 | 910 |
 
-**Gap:** `scorpion` fails at each of the three seeds with `RESULT fail talk guard start` at the Barbarian Outpost guard (tick 298), so the `scorpion` row keeps its runs on the 150 ms engine. The `arrav` case runs one account, and the `quest-arrav` row is the pair run, so that row is not changed. `dig` spreads from 1,374 to 1,968 ticks and `zanaris` from 624 to 810. A wall-clock engine at 400 ms a tick read 1.7% above lockstep on two quests (Lockstep engine, above); the rows do not add that.
+**Gap:** `extra:scorpion-with-barcrawl` (no Barcrawl: the guard talks at the outpost gate, and the Barcrawl runs first) passes at seeds 7 and 8 in 2,304 and 2,278 ticks. At seed 9 scorpion C stands at 3059,3486 upstairs in the Monastery for more than 200 ticks, the SDK marks it unreachable, and the cage gets "I can't reach that!" (`RESULT fail step catch c`). The `arrav` case runs one account, and the `quest-arrav` row is the pair run, so that row is not changed. `dig` spreads from 1,374 to 1,968 ticks and `zanaris` from 624 to 810. A wall-clock engine at 400 ms a tick read 1.7% above lockstep on two quests (Lockstep engine, above); the rows do not add that.
 
 ## The Flamtaer temple repair
 
