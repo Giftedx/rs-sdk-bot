@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test';
 import { join } from 'node:path';
-import { publisherRepo, restartCommand, stalled, STALL_MS } from '../src/watchdog';
+import { publisherRepo, recoveryLog, restartCommand, stalled, STALL_MS } from '../src/watchdog';
 import { launcherScript } from '../src/watchdog-install';
 import { improved, progressOf } from '../src/coverage';
 
@@ -39,4 +39,13 @@ test('the publisher repository comes from the clone origin URL', () => {
     expect(publisherRepo('git@github.com:Giftedx/rs-fleet-command')).toBe('Giftedx/rs-fleet-command');
     expect(publisherRepo('https://example.com/a/b.git')).toBeNull();
     expect(publisherRepo('')).toBeNull();
+});
+
+test('the watchdog log takes the recovery lines of a call, and the exit of a call that failed or did not end', () => {
+    const out = 'noise\nCLOUD_RECOVER submitting local-recovery-qualified-x, local-recover-bigpackage-x (Bigpackage endedAt 5)\r\nSubmitted to shared queue\n';
+    expect(recoveryLog(out, '', 0)).toEqual(['session recovery: submitting local-recovery-qualified-x, local-recover-bigpackage-x (Bigpackage endedAt 5)']);
+    // A pass with nothing to recover adds no line.
+    expect(recoveryLog('', '', 0)).toEqual([]);
+    expect(recoveryLog('CLOUD_RECOVER refused: coordinator is not running\n', '', 1)).toEqual(['session recovery: refused: coordinator is not running', 'session recovery call exit 1: ']);
+    expect(recoveryLog('', 'error: boom', null)).toEqual(['session recovery call did not end in time: error: boom']);
 });
