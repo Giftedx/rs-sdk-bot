@@ -1,25 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794497066164,
+ "at": 1794497197749,
  "jobs": [
-  {
-   "account": "Deeppockets",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=deeppockets-kit14-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
   {
    "account": "Fingerblastr",
    "script": "scripts/chain.ts",
@@ -156,6 +138,25 @@
    "autopilot": "claude-cloud",
    "resources": [
     "knight:2669,3298"
+   ]
+  },
+  {
+   "account": "Deeppockets",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2671,3313"
    ]
   },
   {
