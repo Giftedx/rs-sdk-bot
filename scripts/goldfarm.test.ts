@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {courierFoodReady,incomingCookedFood,receiveFoodAtBank,FOOD_ORDER,FRAIL_FLOOR,FRAIL_HP,FRAIL_RESERVE,foodReserve,guardHit,noKnightReason,ownerSeesTile} from './goldfarm';
+import {courierFoodReady,incomingCookedFood,receiveFoodAtBank,FOOD_ORDER,FRAIL_FLOOR,FRAIL_HP,FRAIL_RESERVE,foodReserve,guardHit,noKnightReason,ownerSeesTile,refugeDue,REFUGE_NONE,REFUGE_WINDOW} from './goldfarm';
 import {selectFoodToEat,calcEatAt} from './goldfarm-stable';
 import {GOLDFARM_FOOD,GOLDFARM_FRAIL} from '../packages/planner/src/autopilot';
 import {foodTripDue} from './goldfarm';
@@ -162,4 +162,15 @@ test('the Baker stops a steal only from a tile within 5 tiles that he sees; a gu
     const asked: number[][] = [];
     ownerSeesTile(recipe, { x: 12, z: 11 }, 0, [baker], (x, z, toX, toZ, level) => { asked.push([x, z, toX, toZ, level]); return true; });
     expect(asked).toEqual([[10, 10, 12, 11, 0]]);
+});
+test('a thief moves to the refuge spot once, after a full window in which its own spot showed no knight too often',()=>{
+    const full={ticks:REFUGE_WINDOW,none:Math.ceil(REFUGE_NONE*REFUGE_WINDOW),moved:false,atRefuge:false};
+    expect(refugeDue(full)).toBe(true);
+    // One knight death with no other knight in view is 32 ticks: that is enough.
+    expect(refugeDue({...full,none:32})).toBe(true);
+    expect(refugeDue({...full,none:Math.ceil(REFUGE_NONE*REFUGE_WINDOW)-1})).toBe(false);
+    // A window that is not full yet gives no move, also when each of its ticks had no knight.
+    expect(refugeDue({...full,ticks:REFUGE_WINDOW-1,none:REFUGE_WINDOW-1})).toBe(false);
+    expect(refugeDue({...full,moved:true})).toBe(false);
+    expect(refugeDue({...full,atRefuge:true})).toBe(false);
 });

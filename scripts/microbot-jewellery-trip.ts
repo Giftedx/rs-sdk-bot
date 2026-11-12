@@ -22,15 +22,21 @@ type JewelleryClient={executeBotAction?:unknown;membersAccount?:number;selfSlot?
 export type JewelleryDeps={audit?:()=>Promise<JewellerySnapshot>;job?:(s:Session,j:BankJob,stop:()=>boolean)=>Promise<JobReceipt>};
 export function jewelleryCleanup(raw:Session,finalize:typeof settle=settle,logout:(session:Session)=>Promise<string>=logoutSession){
  const owner=actionSessionOwner(raw);
- const sdk=raw.sdk,client=raw.client as JewelleryClient|undefined,direct=raw.direct,close=raw.close,ended=raw.ended,lifecycle=raw.lifecycle,name=raw.name,executor=client?.executeBotAction,slot=client?.selfSlot,config=sdk.config,origin=JSON.stringify([config?.gatewayUrl,config?.host,config?.port]),player=sdk.getState()?.player,life=player?.lifeId,respawns=player?.respawnCount??0;
- let lost=false,loggedOut=false;void ended.then(e=>{loggedOut=e.reason==='logged-out';});
- const owns=()=>{const p=sdk.getState()?.player;if(raw.sdk!==sdk||raw.client!==client||raw.direct!==direct||raw.close!==close||raw.ended!==ended||raw.lifecycle!==lifecycle||raw.name!==name||client?.executeBotAction!==executor||sdk.config!==config||JSON.stringify([config?.gatewayUrl,config?.host,config?.port])!==origin||client?.selfSlot!==slot||(!loggedOut||p!=null)&&(p?.lifeId!==life||(p?.respawnCount??0)!==respawns))lost=true;return !lost&&typeof executor==='function'&&Number.isSafeInteger(slot)&&Number.isSafeInteger(life);};
+ const sdk=raw.sdk,client=raw.client as JewelleryClient|undefined,direct=raw.direct,close=raw.close,ended=raw.ended,lifecycle=raw.lifecycle,name=raw.name,slot=client?.selfSlot,config=sdk.config,origin=JSON.stringify([config?.gatewayUrl,config?.host,config?.port]),player=sdk.getState()?.player,life=player?.lifeId,respawns=player?.respawnCount??0;
+ let lost=false,loggedOut=false,executor=client?.executeBotAction,ownDirect=direct;void ended.then(e=>{loggedOut=e.reason==='logged-out';});
+ const owns=()=>{const p=sdk.getState()?.player;if(raw.sdk!==sdk||raw.client!==client||raw.direct!==ownDirect||raw.close!==close||raw.ended!==ended||raw.lifecycle!==lifecycle||raw.name!==name||client?.executeBotAction!==executor||sdk.config!==config||JSON.stringify([config?.gatewayUrl,config?.host,config?.port])!==origin||client?.selfSlot!==slot||(!loggedOut||p!=null)&&(p?.lifeId!==life||(p?.respawnCount??0)!==respawns))lost=true;return !lost&&typeof executor==='function'&&Number.isSafeInteger(slot)&&Number.isSafeInteger(life);};
  const guard=()=>{if(!owns())throw Error('jewellery cleanup original session replaced');};
+ // The prayer guard and the eat guard replace the client's executor at login, and the random event gate replaces the
+ // session's `direct`, before this owner reads them. Each puts back the one it replaced when settlement stops it
+ // (packages/core/src/prayer-guard.ts and eat-guard.ts, stop; packages/core/src/randomevents.ts, stop).
+ // packages/core/src/bot.ts settleOnce stops them and calls the logout step with no await, so `settled` makes the
+ // executor and the `direct` of that step the owner's. One that `owns` found different stays lost.
+ const settled=()=>{executor=client?.executeBotAction;ownDirect=raw.direct;};
  const guarded=new Proxy(sdk,{get(t,k,r){const value=Reflect.get(t,k,r);return typeof value==='function'?function(...args:unknown[]){if(String(k).startsWith('send'))guard();return value.apply(r,args);}:value;}});
  const session=Object.create(raw) as Session;Object.defineProperties(session,{sdk:{value:guarded},client:{value:client},bot:{value:new BotActions(guarded)},direct:{value:(a:Parameters<Session['direct']>[0])=>{guard();return direct.call(raw,a);}},close:{value:()=>{guard();return close.call(raw);}},ended:{value:ended},lifecycle:{value:lifecycle},name:{value:name}});
  return{owns,finish:async(ok:boolean,detail:string)=>{if(!owns())return false;
   if(!owner.own()){const end=await Promise.race([ended,Promise.resolve({reason:''})]);return end.reason==='logged-out'&&owns()&&owner.identity()&&owner.sameLife()?finalize([raw],ok,detail):false;}
-  return(await finishActionSession(owner,ok,detail,async(sessions,valid,message,options)=>owns()?finalize(sessions,valid,message,options):false,async()=>{guard();const outcome=await logout(session);guard();return outcome;}))===true;
+  return(await finishActionSession(owner,ok,detail,async(sessions,valid,message,options)=>owns()?finalize(sessions,valid,message,options):false,async()=>{settled();guard();const outcome=await logout(session);guard();return outcome;}))===true;
  }};
 }
 const equal=(a:Record<number,number>,b:Record<number,number>)=>[...new Set([...Object.keys(a),...Object.keys(b)].map(Number))].every(id=>(a[id]??0)===(b[id]??0));

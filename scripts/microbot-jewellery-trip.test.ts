@@ -1,6 +1,7 @@
 import {test,expect} from 'bun:test';
 import{BotSDK}from'../vendor/rs-sdk/sdk/index';
 import{settle}from'../packages/core/src/bot';
+import{startPrayerGuard}from'../packages/core/src/prayer-guard';
 import {planJewelleryOrder,runJewelleryOrder,validateJewelleryOrder,jewelleryCleanup,jewelleryOrderFromEnv,type JewelleryOrder,type JewellerySnapshot} from './microbot-jewellery-trip';
 import{componentId}from'../packages/core/src/logout';
 import {jewelleryRecipes,jewelleryMenu,runJewellery} from './microbot-b-jewellery';
@@ -150,4 +151,18 @@ test('ordinary stop during real SDK reconnect blocks the final native Make wire 
 
 test('cleanup cannot finalize a close-function replacement made during confirmed logout',async()=>{
  const f=fixture();let final=0;const previous=process.exitCode;try{const cleanup=jewelleryCleanup(f.s,async(rows,_ok,_detail,options)=>{await options?.logout?.(rows[0]!);final++;return true;},async()=>{f.s.close=async()=>{};return'logged-out';});expect(await cleanup.finish(true,'handoff')).toBe(false);expect(final).toBe(0);}finally{process.exitCode=previous??0;}
+});
+
+// packages/core/src/bot.ts: openBot starts the prayer guard and the random event gate before the worker makes its
+// cleanup owner. settleOnce stops the guard, which puts back the executor it replaced, then the gate, which puts back
+// the session's own `direct`, and calls the logout step with no await.
+for(const change of ['executor','direct','both'] as const)test(`cleanup logs out after settlement puts back what login replaced: ${change}`,async()=>{
+ const f=fixture();let end!:(v:{reason:string})=>void,inputs=0,closed=0;f.s.onTick=()=>()=>{};f.s.ended=new Promise(r=>{end=r;});f.s.close=async()=>{closed++;};
+ const own=async()=>{inputs++;end({reason:'logged-out'});return{success:true};};f.s.direct=()=>own();const prayer=change==='direct'?undefined:startPrayerGuard(f.s);
+ const cleanup=jewelleryCleanup(f.s,async(sessions,ok,detail,options)=>{void prayer?.release();if(change!=='executor')f.s.direct=own;return settle(sessions,ok,detail,{...options,log:()=>{}});});
+ const previous=process.exitCode;try{expect(await cleanup.finish(true,'done')).toBe(true);expect({inputs,closed}).toEqual({inputs:1,closed:1});}finally{process.exitCode=previous??0;}
+});
+
+test('cleanup cannot finalize an executor or a direct that changes during the logout',async()=>{
+ for(const change of ['executor','direct'] as const){const f=fixture();let final=0;const previous=process.exitCode;try{const cleanup=jewelleryCleanup(f.s,async(rows,_ok,_detail,options)=>{await options?.logout?.(rows[0]!);final++;return true;},async()=>{if(change==='executor')f.client.executeBotAction=()=>{};else f.s.direct=async()=>({success:true});return'logged-out';});expect(await cleanup.finish(true,'handoff')).toBe(false);expect(final).toBe(0);}finally{process.exitCode=previous??0;}}
 });
