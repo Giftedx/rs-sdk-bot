@@ -13,8 +13,8 @@
 // Any other local edit to a changed file stops the update, and the RESULT line names the file.
 //
 // The SDK patch (patches/rs-sdk-working.patch) is applied to vendor/rs-sdk, and git does not move those files. When an
-// update changes the patch, this script restores the tracked files of vendor/rs-sdk after the move and applies the new
-// patch. It does that only when vendor/rs-sdk held exactly the old patch, or no patch, and no local file is where the
+// update changes the patch, this script takes the old patch off vendor/rs-sdk after the move and applies the new
+// patch. It touches only the files of the old patch. It does that only when vendor/rs-sdk held exactly the old patch, or no patch, and no local file is where the
 // new patch creates one. Other edits and such a file stay, and the RESULT line says so. A patch change that alters a
 // file of the worker release (runtimeTrees in worker-release.ts) waits while a live coordinator run goes, as a change
 // to any other release file does.
@@ -120,18 +120,20 @@ export function patchCollisions(root: string, oldPatch: string, newPatch: string
     const had = new Set(patchNewFiles(oldPatch));
     return patchNewFiles(newPatch).filter(file => !had.has(file) && existsSync(join(root, SDK, file)));
 }
-// Puts the patch file of this checkout on vendor/rs-sdk: restores the tracked files, removes each file that the old
-// patch created (a restore leaves those, and an apply stops on them), and applies the patch.
-// Call it only when vendorExact gave `applied` for `oldPatch`, or `clean`: the restore discards every other edit.
+// Puts the patch file of this checkout on vendor/rs-sdk: takes `oldPatch` off and applies the patch.
+// It touches only the files of `oldPatch`: it restores each file that the old patch changed, and removes each file
+// that the old patch created. No other file changes, so a local file that is staged in vendor/rs-sdk stays.
+// Call it only when vendorExact gave `applied` for `oldPatch`, or `clean`: the restore discards an edit in those files.
 // It removes no file that only the new patch creates. Such a file makes the apply fail, and the file stays.
 export function resetVendor(root: string, oldPatch: string): { ok: boolean; detail: string } {
     const vendor = join(root, SDK), patch = join(root, SDK_PATCH), git = gitIn(vendor);
+    const created = new Set(patchNewFiles(oldPatch)), changed = [...patchSections(oldPatch).keys()].filter(file => !created.has(file));
     // From the pinned commit, not from the index: a patch that is staged in vendor/rs-sdk would come back from the
     // index. The index itself does not change.
-    const restore = git('restore', '--source=HEAD', '--worktree', '--', '.');
+    const restore = changed.length ? git('restore', '--source=HEAD', '--worktree', '--', ...changed) : { ok: true, out: '' };
     if (!restore.ok) return { ok: false, detail: `restore of ${SDK}: ${restore.out.slice(0, 160)}` };
     const newPatch = existsSync(patch) ? readFileSync(patch, 'utf8') : '';
-    for (const file of patchNewFiles(oldPatch)) rmSync(join(vendor, file), { force: true });
+    for (const file of created) rmSync(join(vendor, file), { force: true });
     if (!newPatch) return { ok: true, detail: '' };
     const apply = git('apply', patch);
     return apply.ok ? { ok: true, detail: '' } : { ok: false, detail: `apply of ${SDK_PATCH}: ${apply.out.slice(0, 160)}` };

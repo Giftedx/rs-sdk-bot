@@ -193,7 +193,11 @@ test('the SDK folder gets a new patch only when it held exactly the old patch or
 
         // The old patch is staged in the folder's index, as after `git add`. The restore takes the pinned commit, so the
         // staged patch does not come back, and the index stays as it was.
-        run('add', '--', 'a.txt', 'made.txt');
+        // A local file that is staged there, and that no patch names, is not a file of the old patch. The reset
+        // touches only the files of the old patch, so that file and a later edit of it stay.
+        writeFileSync(join(vendor, 'mine.txt'), 'staged\n');
+        run('add', '--', 'a.txt', 'made.txt', 'mine.txt');
+        writeFileSync(join(vendor, 'mine.txt'), 'staged, then edited\n');
         const staged = run('ls-files', '--stage');
         expect(staged).not.toBe(index);
         expect(vendorExact(root)).toBe('applied');
@@ -219,6 +223,9 @@ test('the SDK folder gets a new patch only when it held exactly the old patch or
         expect(resetVendor(root, second)).toEqual({ ok: true, detail: '' });
         expect(file('a.txt')).toBe(lines('one')); expect(file('sdk/x.ts')).toBe('x\n'); expect(existsSync(join(vendor, 'other.txt'))).toBe(false);
         expect(vendorExact(root)).toBe('clean');
+        // Through each reset above, the staged local file and the file that the SDK does not track kept their content.
+        expect(file('mine.txt')).toBe('staged, then edited\n'); expect(file('market.sqlite')).toBe('data');
+        expect(file('keep.txt')).toBe('keep\n');
     });
 }, 60_000);
 
