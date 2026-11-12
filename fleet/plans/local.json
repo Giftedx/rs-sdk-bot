@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794506245444,
+ "at": 1794506888615,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -519,6 +519,26 @@
    "autopilot": "local",
    "resources": [
     "knight:2653,3300"
+   ]
+  },
+  {
+   "account": "Sausagefest",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3187,3277",
+    "TICKS": "3000",
+    "TARGET": "2000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
+   "autopilot": "local",
+   "resources": [
+    "pen:3187,3277"
    ]
   }
  ]
