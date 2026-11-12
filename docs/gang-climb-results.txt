@@ -1,0 +1,8 @@
+base seed=1 case=extra:gang-live-fast-x2 opts=null idlePrayerOff=0 elapsedMs=102772 ledgerTicks=[1151,1147,1147,1147,1143,1143,1143,1143] walkedOut=3 walkedEscaped=3 walkedKilled=0
+  RESULT ok gang groups=2 cleared=0 died=0 escaped=0 away=2 cap=0 kills=0 ticks=1038 a=gang-hunter b=ganker-live valid=2 killsEach=0,0 taken=82,357 eaten=2,14 food=21,7 prayer=0,0 doses=0,0 trips=1,1 gangTrips=2,2 prayerOut=530,786 refused=4,5
+base seed=2 case=extra:gang-live-fast-x2 opts=null idlePrayerOff=0 elapsedMs=102023 ledgerTicks=[1092,1088,1088,1088,1083,1083,1084,1084] walkedOut=3 walkedEscaped=3 walkedKilled=0
+  RESULT ok gang groups=2 cleared=0 died=0 escaped=0 away=2 cap=0 kills=0 ticks=978 a=gang-hunter b=ganker-live valid=2 killsEach=0,0 taken=109,145 eaten=3,3 food=20,19 prayer=0,0 doses=0,0 trips=1,1 gangTrips=2,2 prayerOut=425,838 refused=6,5
+base seed=3 case=extra:gang-live-fast-x2 opts=null idlePrayerOff=0 elapsedMs=101953 ledgerTicks=[1176,1172,1172,1172,1168,1169,1169,1169] walkedOut=3 walkedEscaped=2 walkedKilled=1
+  RESULT ok gang groups=2 cleared=0 died=0 escaped=0 away=2 cap=0 kills=2 ticks=1064 a=gang-hunter b=ganker-live valid=2 killsEach=2,0 taken=212,94 eaten=8,2 food=15,21 prayer=0,0 doses=0,0 trips=1,1 gangTrips=3,3 prayerOut=409,362 refused=21,0
+base seed=4 case=extra:gang-live-fast-x2 opts=null idlePrayerOff=0 elapsedMs=93338 ledgerTicks=[894,890,890,890,885,885,885,886] walkedOut=2 walkedEscaped=2 walkedKilled=0
+  RESULT ok gang groups=2 cleared=0 died=0 escaped=0 away=2 cap=0 kills=0 ticks=781 a=gang-hunter b=ganker-live valid=2 killsEach=0,0 taken=188,131 eaten=5,4 food=16,19 prayer=0,30 doses=0,0 trips=1,1 gangTrips=3,2 prayerOut=450,-1 refused=11,5
