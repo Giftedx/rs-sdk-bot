@@ -116,7 +116,9 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
   if(held.size)own.paused=[...held];else delete own.paused;
   writeCoordinatorJobs(base,own);
  },dir);
- const resume=async()=>{const p=paused();if(p.length){await setEnabled(p,true);unlinkSync(pausedFile);}};
+ // The list in the coordinator's file has no other writer. A name there that the pause file does not hold is left
+ // from a pause that did not finish, and nothing else turns that job on again: resume clears those names too.
+ const resume=async()=>{const p=[...paused(),...(readCoordinatorJobs(base).paused??[])];if(p.length){await setEnabled(p,true);if(existsSync(pausedFile))unlinkSync(pausedFile);}};
  // `source` is the launch release (worker-release.ts): the swarm, its launchers and the recovery runner. A coordinator
  // run needs the controller on it, because recovery permits bind to the controller's WORKER_RELEASE; standing jobs need
  // only the swarm's own code current. Workers carry their own capability release (swarm.ts), so no rollout follows it.
