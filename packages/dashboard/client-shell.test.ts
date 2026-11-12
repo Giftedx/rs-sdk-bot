@@ -793,3 +793,9 @@ test('the death recap is read again for a newer death, and while it waits for th
  t.set({name:'Alpha',state:'ok',data:{kept:null},deathAt:100,at:Date.now()});expect(t.recapStale(b)).toBe(false);
  expect(t.recapStale({name:'Alpha'})).toBe(false);expect(t.recapStale({...b,practice:true})).toBe(false);
 });
+test('the XP Tracker account list sorts by XP an hour, or by idle ticks',()=>{
+ const line=shell.split('\n').find(l=>l.includes("live.sort(xpSort==='waste'"))!.trim();
+ const run=(xpSort:string)=>{const live=[{name:'A',xpPerHour:10,timeline:'xxxx'},{name:'B',xpPerHour:30,timeline:'iiii'},{name:'C',timeline:'xxii'}];const idle=(x:any)=>window.efficiency(x.timeline);new Function('live','xpSort','idle',line)(live,xpSort,idle);return live.map(x=>x.name).join('');};
+ const window:any={efficiency:(t:string)=>t.split('').filter(c=>c==='i').length};
+ expect(run('rate')).toBe('BAC');expect(run('waste')).toBe('BCA');
+});
