@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794504580001-mmsmk1232-balls-logs",
+ "account": "Balls",
+ "partner": "mmsmk1232",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "logs",
+ "requested": 1,
+ "claim": "c1b7aa10-4325-4677-a056-0db4ea7e9242",
+ "count": 0,
+ "ok": false,
+ "at": 1794504596255,
+ "detail": "trade claimed"
+}
