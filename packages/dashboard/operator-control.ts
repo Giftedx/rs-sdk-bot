@@ -5,6 +5,7 @@ import {randomUUID} from 'node:crypto';
 import {GOALS,addTasks,type CoordTask} from '../router/src/coordinator';
 import {atomicJson,spawnDetached} from '../router/src/coordinator-store';
 import {NAMES} from '../core/src/names';
+import {controllerStates} from '../core/src/controllers';
 import {validateDelivery} from '../router/src/delivery';
 import {appendOwnerRequest,applyCommand,validateCommand,REQUEST_MAX} from './publish-commands';
 
@@ -23,7 +24,9 @@ export function createOperatorControl(options:{root:string;readOnly?:boolean;non
   const inbox=join(directory,'requests');
   let coordinatorRunning=false;
   try{const owner=read(join(directory,'owner.json'));coordinatorRunning=Number.isSafeInteger(owner.pid)&&owner.pid>0&&alive(owner.pid);}catch{}
-  return{nonce,readOnly:!!options.readOnly,coordinatorRunning,goals:GOALS,roles:Object.keys(NAMES).filter(n=>n!=='main'),paused:existsSync(join(root,'.practice/stop-coordinator')),fleetPaused:existsSync(join(root,'.practice/stop-swarm')),capabilities:catalog(),
+  // The fleet agent and the autopilot (packages/core/src/controllers.ts): `down` means that nothing runs it and no owner stop explains that.
+  const controllers=controllerStates(root,{alive}).map(c=>({name:c.name,label:c.label,state:c.state,seenAt:c.seenAt}));
+  return{nonce,readOnly:!!options.readOnly,coordinatorRunning,controllers,goals:GOALS,roles:Object.keys(NAMES).filter(n=>n!=='main'),paused:existsSync(join(root,'.practice/stop-coordinator')),fleetPaused:existsSync(join(root,'.practice/stop-swarm')),capabilities:catalog(),
    accountHolds:held().map(name=>{let text='';try{text=readFileSync(join(root,'.practice','stop-'+name),'utf8');}catch{}return{name,owner:text.startsWith('dashboard-stop:')?'dashboard':'other'};}),
    requests:existsSync(audit)?readdirSync(audit).filter(n=>/^[a-f0-9-]+\.json$/.test(n)).map(n=>{
     try{const r=read(join(audit,n)),file=join(inbox,r.id+'.request.json');return{id:r.id,action:r.action,at:r.at,taskId:r.taskId??null,status:r.action==='queue'?(existsSync(file+'.accepted')?'accepted':existsSync(file+'.rejected')?'rejected':'submitted'):r.status};}catch{return null;}
