@@ -3,8 +3,8 @@
 // bank (scripts/coin-courier.ts BANK_MEETS). Accounts with no enabled job give first. An account with an enabled job
 // gives only with --allow-busy: the autopilot then takes it off its job while the order is open (scripts/autopilot.ts
 // inOpenOrder) and plans it again after the trade. An account whose enabled job the autopilot does not own (no
-// `autopilot` mark: a hand or coordinator job) never gives, because the fleet agent refuses it and the autopilot cannot
-// free it. The count that the route account holds already is not ordered.
+// `autopilot` mark: a hand or coordinator job) never gives and never receives, because the fleet agent refuses it and the
+// autopilot cannot free it. The count that the route account holds already is not ordered.
 // One order moves one item type (scripts/fleet-trade.ts accepts a one-line offer), so each line from each giver is
 // one trade. Snapshots age: a giver whose bank is short fails its trade with "stock short".
 // Each side's fleet agent runs the first open order that names its account (scripts/fleet-trade.ts pickOrder, by
@@ -105,6 +105,9 @@ if (import.meta.main) {
     const now0 = Date.now(), waiting = (name: string) => orderInWay(orders, receipts, name, now0, claims);
     const mine = waiting(account);
     if (mine) throw Error(`${account} has open fleet order ${mine}: its agent takes that order first`);
+    // The fleet agent skips an account with an enabled job, and the autopilot frees only its own jobs: givers would wait
+    // at the bank until their orders end.
+    if (busy.has(norm(account)) && !owned.has(norm(account))) throw Error(`${account} has an enabled job that the autopilot does not own: its fleet agent takes no order`);
     const staged = planStage(lines, item => heldCount(row(account), item), item => snapshot
         .filter((a: any) => typeof a?.name === 'string' && norm(a.name) !== norm(account) && norm(a.name) !== 'haggis' && owners.get(norm(a.name))?.side === side && !waiting(a.name))
         .map((a: any) => {
