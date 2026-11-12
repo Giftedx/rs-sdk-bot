@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794484220262,
+ "at": 1794487218738,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -129,21 +129,24 @@
   },
   {
    "account": "Fingerblastr",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "betty"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
+    "ITEMS": "fire rune|air rune|earth rune",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "goal": "buy elemental runes at Betty",
+   "role": "bank",
+   "template": "shop-runes",
    "autopilot": "claude-cloud",
    "resources": [
-    "knight:2669,3298"
+    "shop:betty"
    ]
   },
   {
