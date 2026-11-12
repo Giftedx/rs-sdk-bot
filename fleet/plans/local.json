@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794468516956,
+ "at": 1794469131403,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -36,22 +36,22 @@
    "role": "pk-trainee"
   },
   {
-   "account": "CoinCock",
+   "account": "Pocketrocket",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2652,3318",
+    "KNIGHT_SPOT": "2653,3300",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
+   "goal": "goldfarm knights at 2653,3300",
    "role": "thieving",
-   "template": "goldfarm@2652,3318",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
    "resources": [
-    "knight:2652,3318"
+    "knight:2653,3300"
    ]
   },
   {
@@ -72,32 +72,6 @@
    "autopilot": "local",
    "resources": [
     "pen:3187,3277"
-   ]
-  },
-  {
-   "account": "Bigchopper",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "TARGET_LEVEL": "45",
-    "GIANT_BURY": "0"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
-   "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
    ]
   },
   {
@@ -291,6 +265,25 @@
    ]
   },
   {
+   "account": "Moneyshot",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "local",
+   "resources": [
+    "knight:2652,3318"
+   ]
+  },
+  {
    "account": "NabTheKnob",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -356,25 +349,6 @@
   },
   {
    "account": "Pocketpython",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
-   "autopilot": "local",
-   "resources": [
-    "knight:2653,3300"
-   ]
-  },
-  {
-   "account": "Pocketrocket",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
@@ -517,22 +491,22 @@
    ]
   },
   {
-   "account": "Shaftsinker",
+   "account": "CoinCock",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
+    "KNIGHT_SPOT": "2652,3318",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
+   "goal": "goldfarm knights at 2652,3318",
    "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "template": "goldfarm@2652,3318",
    "autopilot": "local",
    "resources": [
-    "knight:2669,3298"
+    "knight:2652,3318"
    ]
   },
   {
@@ -578,17 +552,49 @@
    ]
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/session-check.ts",
+   "account": "Bigchopper",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "TARGET_LEVEL": "45",
+    "GIANT_BURY": "0"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
+   "autopilot": "local",
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "CAP": "600",
-    "COORDINATOR_RUN_ID": "task-c651a1f0-c80d-4056-9fab-fc5858e59223"
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
    },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-session-recovery-moneyshot-drop-rest-0651 [task-c651a1f0-c80d-4056-9fab-fc5858e59223]",
-   "role": "thieving"
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "local",
+   "resources": [
+    "knight:2669,3298"
+   ]
   }
  ]
 }
