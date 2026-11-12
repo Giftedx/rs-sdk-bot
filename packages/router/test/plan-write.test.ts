@@ -14,9 +14,33 @@ test('independent processes retain every account plan update instead of racing a
 },15000);
 test('dispatcher recovers only a dead known owner and retains its lease evidence',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'fleet-plan-recovery-')),file=join(dir,'plan-write-lock.json'),owner={pid:123,nonce:'old',at:1};writeFileSync(file,JSON.stringify(owner));
- expect(recoverPlanWrite(dir,()=>true)).toBe(false);expect(recoverPlanWrite(dir,()=>false)).toBe(true);
+ expect(recoverPlanWrite(dir,()=>true,()=>null)).toBe(false);expect(recoverPlanWrite(dir,()=>false)).toBe(true);
  const saved=readdirSync(join(dir,'plan-lock-recovery'));expect(JSON.parse(readFileSync(join(dir,'plan-lock-recovery',saved[0]!), 'utf8'))).toEqual(owner);
  await expect(withPlanWrite(()=>42,dir)).resolves.toBe(42);
+});
+test('dispatcher recovers a lock whose owner id a later process holds',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'fleet-plan-reuse-')),file=join(dir,'plan-write-lock.json'),at=1_000_000;writeFileSync(file,JSON.stringify({pid:123,nonce:'old',at}));
+ // The id answers a signal, but its process started after the owner wrote the record: a different process.
+ expect(recoverPlanWrite(dir,()=>true,()=>new Map([[123,at+60_000]]),at+120_000)).toBe(true);
+ expect(existsSync(file)).toBe(false);expect(readdirSync(join(dir,'plan-lock-recovery'))).toHaveLength(1);
+});
+test('the start time of a lock owner is read for an old lock only, one time in a minute, and a failed read proves nothing',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'fleet-plan-reads-')),file=join(dir,'plan-write-lock.json'),at=1_000_000;writeFileSync(file,JSON.stringify({pid:123,nonce:'old',at}));
+ let reads=0;const read=(start:number|null)=>(pids:readonly number[])=>{reads++;expect(pids).toEqual([123]);return start===null?null:new Map([[123,start]]);};
+ // A young lock is a write in progress.
+ expect(recoverPlanWrite(dir,()=>true,read(at+60_000),at+1000)).toBe(false);expect(reads).toBe(0);
+ expect(recoverPlanWrite(dir,()=>true,read(null),at+10_000)).toBe(false);expect(reads).toBe(1);
+ // The same owner record in the same minute: no second read.
+ expect(recoverPlanWrite(dir,()=>true,read(at+60_000),at+20_000)).toBe(false);expect(reads).toBe(1);
+ // The owner started before it wrote the record, and stays the owner.
+ expect(recoverPlanWrite(dir,()=>true,read(at-40),at+80_000)).toBe(false);expect(reads).toBe(2);
+ // A table without the id proves nothing.
+ expect(recoverPlanWrite(dir,()=>true,()=>{reads++;return new Map([[456,at+60_000]]);},at+150_000)).toBe(false);expect(reads).toBe(3);
+ expect(existsSync(file)).toBe(true);
+ expect(recoverPlanWrite(dir,()=>true,read(at+60_000),at+220_000)).toBe(true);expect(reads).toBe(4);
+ // A record with no time cannot prove a different process.
+ writeFileSync(file,JSON.stringify({pid:123,nonce:'old'}));
+ expect(recoverPlanWrite(dir,()=>true,read(at+60_000),at+500_000)).toBe(false);expect(reads).toBe(4);
 });
 test('a failed plan mutation releases its own lease without hiding the failure',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'fleet-plan-failure-'));await expect(withPlanWrite(()=>{throw Error('preserved failure');},dir)).rejects.toThrow('preserved failure');expect(existsSync(join(dir,'plan-write-lock.json'))).toBe(false);
