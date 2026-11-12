@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794510542981,
+ "at": 1794510641447,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -61,7 +61,7 @@
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
+    "TRAIN_SKILL": "Defence",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
@@ -71,9 +71,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 60 on the Ardougne cows",
+   "goal": "train Defence to 60 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-strength-60",
+   "template": "army-cow-defence-60",
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
@@ -81,6 +81,28 @@
   },
   {
    "account": "Bigpackage",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "foraging",
+    "flax",
+    "1800",
+    "28"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "pick flax at Seers and bank it",
+   "role": "crafting",
+   "template": "aio-flax",
+   "autopilot": "local",
+   "resources": [
+    "aio:seers-flax"
+   ]
+  },
+  {
+   "account": "BowBeforeMe",
    "script": "scripts/shop-buyer.ts",
    "args": [
     "betty"
@@ -99,25 +121,6 @@
    "autopilot": "local",
    "resources": [
     "shop:betty"
-   ]
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
-   "autopilot": "local",
-   "resources": [
-    "knight:2671,3313"
    ]
   },
   {
@@ -485,24 +488,24 @@
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/aio.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "skiller",
-    "foraging",
-    "flax",
-    "1800",
-    "28"
+    "catherby"
    ],
-   "env": {},
+   "env": {
+    "ITEMS": "rune arrowtips|adamant arrowtips",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "pick flax at Seers and bank it",
-   "role": "crafting",
-   "template": "aio-flax",
+   "goal": "buy rune and adamant arrowtips at Catherby",
+   "role": "bank",
+   "template": "shop-arrowtips",
    "autopilot": "local",
    "resources": [
-    "aio:seers-flax"
+    "shop:catherby"
    ]
   },
   {
