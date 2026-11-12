@@ -479,12 +479,14 @@ export function plan(inp: Inputs): Assignment[] {
         } else if (t.needs?.frail && frailShort(a, t.needs) > 0 && meets(a, { ...t.needs, frail: undefined })) {
             // The account lacks only the food of the frail rule. It buys FRAIL_FOOD_BUY units with its own coins: the
             // cheapest food of the job that the market lists. One buy id serves each spot of the job, so two failed
-            // buys retire the buy and not one spot. The job's worth orders the buy, at the share of a trainer.
+            // buys retire the buy and not one spot. The job's worth orders the buy, at the share of a trainer. The buy
+            // holds the spot of the job that it is for: with each spot full there is no buy, and the spot stays free
+            // for the buyer until the food is in its bank.
             const pick = t.needs.frail.of.map(norm).filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0];
             const m = pick ? inp.market![pick]! : undefined, value = TRAIN_SHARE * jobValue(t, a, inp), buyer = { ...t, id: FRAIL_FOOD_BUY_ID };
             if (m && value > 0 && (a.items.coin ?? 0) >= FRAIL_FOOD_BUY * m.limit + KIT_CASH_RESERVE && !inp.retired?.has(pairKey(a.name, KIT_BUY + FRAIL_FOOD_BUY_ID)))
                 cands.push({ account: a.name, template: kitBuyTemplate(buyer, a.name, [{ item: m.name, id: m.id, held: a.items[pick!] ?? 0, limit: m.limit, quantity: FRAIL_FOOD_BUY }], inp.kitSeq?.get(a.name.toLowerCase()) ?? 0),
-                    value, resources: [], reason: `buys ${FRAIL_FOOD_BUY} ${m.name} for ${t.family}, at most ${FRAIL_FOOD_BUY * m.limit} coins` });
+                    value, resources: t.resources ?? [], reason: `buys ${FRAIL_FOOD_BUY} ${m.name} for ${t.family}, at most ${FRAIL_FOOD_BUY * m.limit} coins` });
         }
     }
     // The weapon buy (WEAPON): a kit buy made for the account, offered as a goal candidate so it comes before the melee

@@ -121,6 +121,14 @@ test('a frail thief with coins and no food buys food with its own coins, then ta
     expect(buy.template!.args).toHaveLength(1);
     expect(buy.template!.args![0]).toContain(`ITEM_ID=333 QUANTITY=${FRAIL_FOOD_BUY} LIMIT_PRICE=${KIT_PRICE_CAPS.trout}`);
     expect(buy.reason).toContain(`at most ${cost} coins`);
+    // The buy holds one knight spot, the one that the food is for. With each spot full there is no buy: the account
+    // would pay for food and then have no spot to use it on.
+    expect(buy.resources).toHaveLength(1);
+    expect(buy.resources![0]).toMatch(/^knight:/);
+    const full = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, 99]));
+    expect(pick(frail({ coin: 1_000_000 }), { taken: full })?.template?.id).not.toBe(KIT_BUY + FRAIL_FOOD_BUY_ID);
+    const oneFree = { ...full, [`knight:${KNIGHT_SPOTS[0]}`]: 0 };
+    expect(pick(frail({ coin: 1_000_000 }), { taken: oneFree })!.resources).toEqual([`knight:${KNIGHT_SPOTS[0]}`]);
     // One coin short of the order and the reserve: no buy.
     expect(pick(frail({ coin: cost + KIT_CASH_RESERVE - 1 }))?.template?.id).not.toBe(KIT_BUY + FRAIL_FOOD_BUY_ID);
     // No market, a retired buy, or an account that is not frail: no buy.
