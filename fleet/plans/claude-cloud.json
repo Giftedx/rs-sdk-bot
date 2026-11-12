@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794461262722,
+ "at": 1794461517480,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -130,20 +130,23 @@
   },
   {
    "account": "Fingerblastr",
-   "script": "scripts/aio.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "quester",
-    "dusty-key"
+    "scripts/shop-buyer.ts jukat 9000 BLIND_BUY=1 STOCK_TARGET=2 STOP_AT_TARGET=1 BANK_AT=0 NO_BUY_TICKS=3000 STALL_TICKS=0 COIN_RESERVE=5000 FLOAT=211000"
    ],
-   "env": {},
+   "env": {
+    "ROUNDS": "1"
+   },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "get the dusty key from Velrak for Taverley dungeon's inner gate",
-   "role": "quest",
-   "template": "army-dusty-key",
+   "goal": "buy dragon longswords from Jakut in the Zanaris market",
+   "role": "supply",
+   "template": "army-jakut-swords",
    "autopilot": "claude-cloud",
-   "resources": []
+   "resources": [
+    "shop:jukat"
+   ]
   },
   {
    "account": "Kiltlifter",
