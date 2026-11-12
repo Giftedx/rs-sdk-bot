@@ -221,6 +221,8 @@ test('a walker result with no route ends the session as blocked at the first run
     expect(isPrerequisiteFailure('RESULT fail travel to Ardougne from 3092,3242 failed: precondition ferry needs 60 coins in the pack')).toBe(true);
     expect(isPrerequisiteFailure('RESULT fail travel to chickens 3017,3288 failed: precondition ferry departure state unavailable')).toBe(false);
     expect(isPrerequisiteFailure('RESULT fail travel to Ardougne failed: precondition ferry fare: the bank at 3092,3243 did not open')).toBe(false);
+    // A bank that holds the fare had a failed withdrawal: a restart can repair that.
+    expect(isPrerequisiteFailure('RESULT fail travel to Ardougne failed: precondition ferry fare: the withdrawal of 60 coins failed, the bank holds 11000')).toBe(false);
     let runs = 0;
     const end = await supervise({ run: async () => { runs++; return { exitCode: 1, stdout: ['LEDGER ticks=4', noRoute].join(String.fromCharCode(10)) }; }, stopped: () => false, pause: async () => {}, maxRestarts: 20 });
     expect(end).toEqual({ reason: 'blocked', runs: 1 });
