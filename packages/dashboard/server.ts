@@ -17,6 +17,7 @@ import {requestEvidence,gateView} from './evidence';
 import {goalPlan,goalProgress,GOAL_RECEIPTS,type GoalInputs} from './goals';
 import { GEAR_TARGETS } from './goal-details';
 import { deathRecap, type DeathRecap } from './death-recap';
+import { flowView, trackFlow } from './flow';
 import { VIEWER_MANIFEST_SHA256, viewerAssetRoute, viewerBridgeSource, viewerEntry } from './viewer';
 import {coordinationView} from './coordination';
 import {fleetSidesView,remoteBots,scoreboardView} from './fleet-view';
@@ -154,6 +155,7 @@ function liveAccounts(): string[] {
 // A status file is parsed again only when its mtime changes; track() runs once per new version. The scan names
 // the files to stat, so a build does not stat the thousands of old practice files.
 const statusScan = folderScan(statusDir), statusCache = new Map<string, { mtime: number; doc: Status }>();
+const flows = new Map<string, any>(); // loot and supplies per account and session (flow.ts)
 function readStatuses(): Map<string, Status> {
     const { check, gone } = statusScan();
     for (const f of gone) statusCache.delete(join(statusDir, f));
@@ -201,6 +203,7 @@ const lastPhase = new Map<string, string>();
 const phaseSince = new Map<string, { at: number; exact: boolean }>();
 for (const e of [...events].reverse()) phaseSince.set(e.name + NL + e.text, { at: e.at, exact: true });
 function track(s: Status) {
+    trackFlow(flows, s);
     const session = JSON.stringify([s.server, s.started ?? null]);
     if (sampleSessions.get(s.name) !== session) {
         samples.delete(s.name);
@@ -1072,7 +1075,7 @@ function buildState() {
         const reservedEntry = mine.some(j => !j.script || j.state === 'reserved');
         const res = String(s.result ?? '');
         return {
-            ...s, ground: name === MAIN ? [] : s.ground ?? [], name, fresh, inWorld, processActive, currentGoal, production, operation: operationState({ ...s, inWorld, processActive, planJob:job, reserved: name === MAIN }, now), live: inWorld ? live : null, ranksAt:ranks.get(name)?.at??null, ranks: rankRows.map(x => ({ ...x, ...rankDelta(name, x.board) })),
+            ...s, ground: name === MAIN ? [] : s.ground ?? [], flow: name === MAIN ? null : flowView(flows, name), name, fresh, inWorld, processActive, currentGoal, production, operation: operationState({ ...s, inWorld, processActive, planJob:job, reserved: name === MAIN }, now), live: inWorld ? live : null, ranksAt:ranks.get(name)?.at??null, ranks: rankRows.map(x => ({ ...x, ...rankDelta(name, x.board) })),
             role: guess ? guess.toLowerCase() + '*' : s.role, roleInferred: !!guess, seenInFeed: firstSeen.has(name.toLowerCase()),
             practice: isLocalServer(s.server), lastSeen: Math.max(s.at || 0, live?.seen ?? 0) || null,
             goalSkill: skill, goalLevel: target, goalNow: sk?.level ?? null, goalXp: sk?.xp ?? null, xpPerTick: r,
