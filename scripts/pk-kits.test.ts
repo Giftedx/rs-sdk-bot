@@ -91,6 +91,10 @@ test('each pure has its combat level, stays at Defence 1 and Hitpoints 10, and m
     }
     expect(kitVarps('pure-iban')).toMatchObject({ 288: 120, 300: 1000 });
     expect(kitVarps('tribrid')).toEqual({ 147: 6, 176: 10, 300: 1000 });
+    // A kit has the quests of its route and no other: the Prayer pure has Lost City and not Dragon Slayer.
+    expect(kitVarps('pure-pray')).toEqual({ 147: 6, 300: 1000 });
+    expect(kitVarps('baby-pure')).toEqual({ 300: 1000 });
+    expect(kitVarps('tank-range')).toEqual({ 300: 1000, 347: 10 });
 });
 
 test('a trained build has the Hitpoints of its combat XP, and each bracket fits in Wilderness level 34', () => {
@@ -117,9 +121,13 @@ test('a trained build has the Hitpoints of its combat XP, and each bracket fits 
 test('every kit has a quest route, and the planner holds the route of every build', async () => {
     const { BUILD_QUESTS } = await import('../packages/planner/src/autopilot');
     // No reward of a quest that a kit needs gives a level over the kit.
-    for (const name of Object.keys(KITS)) expect([name, kitRoute(name).breaks]).toEqual([name, []]);
+    // A kit with no route says so (`noRoute`): it stays for a bench comparison.
+    for (const [name, kit] of Object.entries(KITS)) if (kit.noRoute) expect(kitRoute(name).breaks.length).toBeGreaterThan(0); else expect([name, kitRoute(name).breaks]).toEqual([name, []]);
+    expect(Object.keys(KITS).filter(name => KITS[name]!.noRoute)).toEqual(['pure-iban']);
+    expect(kitRoute('pure-iban').breaks).toEqual(['no skill at 99 for the 53,400 fight XP of quest_upass']);
+    expect(kitRoute('pure-hally').breaks).toEqual([]);
     // The planner's table is the route of each kit with levels of its own.
-    const builds = Object.fromEntries(Object.entries(KITS).filter(([, kit]) => kit.skills).map(([name]) => [name, kitRoute(name).quests]));
+    const builds = Object.fromEntries(Object.entries(KITS).filter(([, kit]) => kit.skills && !kit.noRoute).map(([name]) => [name, kitRoute(name).quests]));
     expect(Object.fromEntries(Object.entries(BUILD_QUESTS).map(([kit, quests]) => [kit, [...quests].sort()]))).toEqual(builds);
     for (const quest of Object.values(BUILD_QUESTS).flat()) expect(QUEST_CHAIN[quest]).toBeDefined();
     expect(kitRoute('tribrid').quests).toEqual(['Dragon Slayer', 'Lost City']);
