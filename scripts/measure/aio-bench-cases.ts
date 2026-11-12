@@ -681,6 +681,13 @@ const SAME_JOB_CASES: BenchCase[] = [
     known: 'the smelt action of scripts/craft-jewelry.ts does not end: the furnace distance test at line 117 is always true, and the loop holds about 1 GB until the time limit'}),
   sameJob('jewel-trip', ['crafting', 'jewellery-trip', '.practice/aio-bench/jobs/{bot}-same-jewel.json'], SAME_JEWEL, /"made":(\d+)/, {pass: s => ok(s) && /"made":26,"banked":26/.test(s),
     jobFiles: {'.practice/aio-bench/jobs/{bot}-same-jewel.json': {recipe: 'sapphire_ring', target: 26, batch: 13, cap: 1500, returnTicks: 200, reserve: 0, members: false, stringAmulet: false, bank: {x: 3269, z: 3167, level: 0}, furnace: {x: 3275, z: 3186, level: 0}}}}),
+  // The enchant steps of the mock Haggis run's block 2 (Magic 9 to 59 at the Draynor bank): each gem's rings, cosmic
+  // runes and element runes banked, at the Magic level where its step starts, 26 rings a pack.
+  ...([['sapphire', 1637, 40, 9, 555, 1], ['emerald', 1639, 13, 27, 556, 3], ['ruby', 1641, 16, 49, 554, 5], ['diamond', 1643, 5, 57, 557, 10]] as const).map(([gem, ring, n, magic, rune, per]) =>
+    sameJob(`enchant-${gem}`, ['bank-job', `.practice/aio-bench/jobs/{bot}-same-enchant-${gem}.json`],
+      {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: magic}, bank: [{id: ring, count: n}, {id: 564, count: n}, {id: rune, count: n * per}]},
+      /"completed":(\d+)/, {pass: s => ok(s) && new RegExp(`"completed":${n},`).test(s),
+        jobFiles: {[`.practice/aio-bench/jobs/{bot}-same-enchant-${gem}.json`]: {family: 'magic', recipe: `enchant:${gem}_ring`, target: n, batch: Math.min(n, 26), cap: 1500, returnTicks: 300, members: true, bank: {x: 3092, z: 3243, level: 0}, site: {x: 3092, z: 3243, level: 0}}}})),
   // Lobsters at the Catherby cage spots at Fishing 70, from the beach with a lobster pot and an empty pack, no bank
   // trip. `cage` has no unit count and runs to a cap of 150 ticks; `staged` catches 15 and ends.
   // The harpoon pair is the same start with a harpoon: tuna and swordfish from the same spots.
