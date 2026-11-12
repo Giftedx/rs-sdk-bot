@@ -154,6 +154,22 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     'live-walker-iron': { worn: { torso: 'adamant_platebody', legs: 'adamant_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger', ammo: ['iron_arrow', 300] },
         carried: ['magic_shortbow', '4dose2attack', '4dose2strength', '3dose2defense', '3doseantipoison', ['lawrune', 2], ['airrune', 10]], food: 20,
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
+    // live-walker-iron with the runes of 10 Entangles (5 earth, 5 water, 4 nature a cast) for 3 sharks: the freeze holds
+    // a gang account that walks out of the Wilderness (FightOptions freeze 'flee'; the cast keeps the weapon in hand).
+    'live-walker-iron-snare': { worn: { torso: 'adamant_platebody', legs: 'adamant_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger', ammo: ['iron_arrow', 300] },
+        carried: ['magic_shortbow', '4dose2attack', '4dose2strength', '3dose2defense', '3doseantipoison', ['lawrune', 2], ['airrune', 10], ['earthrune', 50], ['waterrune', 50], ['naturerune', 40]], food: 17,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
+    // live-walker-iron with the poisoned dagger: a hit that deals damage poisons at 1 in 4 (pvp_melee.rs2:50, the
+    // special at pvp_dragon_dagger.rs2:35), severity 20: 4 damage each 30 ticks, 50 in all (poison.rs2). The gang
+    // carries no antipoison, so the poison goes on through its walk out of the Wilderness.
+    'live-walker-iron-p': { worn: { torso: 'adamant_platebody', legs: 'adamant_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger_p', ammo: ['iron_arrow', 300] },
+        carried: ['magic_shortbow', '4dose2attack', '4dose2strength', '3dose2defense', '3doseantipoison', ['lawrune', 2], ['airrune', 10]], food: 20,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p'] }, options: { rotation: ['ranged', 'melee'] } },
+    // The same with a super antipoison in place of the antipoison: 600 ticks with no poison a dose, not 150
+    // (anti_poison.rs2 sets %poison to -20, not -5), so one drink covers most of a meeting with the gang's dagger(p).
+    'live-walker-iron-psuper': { worn: { torso: 'adamant_platebody', legs: 'adamant_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger_p', ammo: ['iron_arrow', 300] },
+        carried: ['magic_shortbow', '4dose2attack', '4dose2strength', '3dose2defense', '3dose2antipoison', ['lawrune', 2], ['airrune', 10]], food: 20,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p'] }, options: { rotation: ['ranged', 'melee'] } },
     // One style each, in the armour of that style.
     melee: { worn: { ...RUNE, amulet: 'amulet_of_strength', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield' },
         carried: [...PRAYER_POTS, '4dose2attack', '4dose2strength'], food: 22, switches: { melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['melee'] } },

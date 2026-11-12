@@ -130,6 +130,9 @@ export type FightOptions = {
     // The same step back, but only while the target is frozen and holds a melee weapon: it cannot follow, so each of
     // its turns is lost while ours land from range.
     kiteFrozen?: number;
+    // In place of the step back: stand on the corner tile of a frozen target that holds a melee weapon. Melee reaches
+    // the 4 side tiles only (RectangleBoundary.ts), so it cannot hit us there, and the bow shoots with no walk.
+    diagonalFrozen?: boolean;
     fledSpec?: boolean;
     // Choose a style the opponent's overhead prayer does not cover (default on).
     readOverheads?: boolean;
@@ -160,6 +163,14 @@ export type FightOptions = {
     prayerLag?: number[];
     // With chase false: run after a target that flees while its health bar is at or under this fraction.
     chaseBelow?: number;
+    // Cut off a target that flees: the chase runs to the tile `cutOff` tiles ahead of it along its heading, not to its
+    // own tile, and starts at 2 tiles, not 6. A runner that walks south to the edge of the Wilderness then walks into
+    // our reach in place of away from it. Unset: the chase runs to the target's tile.
+    cutOff?: number;
+    // scripts/pk-gang.ts only: an account of the gang in view with its health bar at or under this fraction becomes the
+    // target as soon as the single-way rule lets our attack through (the last player to hit us is that account, or
+    // none has hit us for 8 ticks, pvp_combat.rs2:110). Unset: the target is the account that hit us last.
+    focusRunner?: number;
     // Return outcome "danger" (with the reason) as soon as dangerReason fires, so the caller can escape.
     exitOnDanger?: boolean;
     damageSpell?: number;
@@ -640,7 +651,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const ranged = hasStyle(o.kit, 'magic') || hasStyle(o.kit, 'ranged');
         if (o.chaseBelow !== undefined && target) chaseLow = lowHealth(observePlayer(s.client, target.index), o.chaseBelow);
         if ((o.chase !== false || chaseLow) && ranged && stoodStill && now >= selfFrozenUntil && now - chaseAt >= 2 && now < nextAttack && now < fleeingUntil + 12) {
-            const to = target && cheb(at, target) > 5 ? { x: target.x, z: target.z }
+            const ahead = o.cutOff !== undefined && now < fleeingUntil;
+            const to = target && cheb(at, target) > (ahead ? 1 : 5) ? (ahead ? { x: target.x + heading.x * o.cutOff!, z: target.z + heading.z * o.cutOff! } : { x: target.x, z: target.z })
                 : !target && prevTarget ? { x: prevTarget.x + heading.x * 12, z: prevTarget.z + heading.z * 12 } : null;
             if (to) { void sdk.sendWalk(to.x, to.z); chaseAt = now; }
         }
@@ -687,7 +699,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // a melee special costs one step.
         const chasing = (now < fleeingUntil || now < frozenUntil) && cheb(at, target) > 2 && ranged;
         // While we kite a frozen target, a melee turn would walk back into its reach.
-        const kiting = !!kiteTiles && now < frozenUntil && weaponStyle(seen?.worn[3]) === 'melee' && ranged;
+        const heldMelee = now < frozenUntil && weaponStyle(seen?.worn[3]) === 'melee' && ranged;
+        const kiting = (!!kiteTiles || !!o.diagonalFrozen) && heldMelee;
         const canReachMelee = !chasing && !kiting && !(now < selfFrozenUntil && !adjacent(at, target)) && (cheb(at, target) <= 6 || (!hasStyle(o.kit, 'magic') && !hasStyle(o.kit, 'ranged')));
         const guarded = o.readOverheads === false ? new Set<Style>() : protectedStyles(seen?.headicons);
         const styleUsable = (st: Style) => hasStyle(o.kit, st) && (st !== 'melee' || canReachMelee);
@@ -749,7 +762,12 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 }
             }
             const keep = o.standOff ?? (kiteTiles && now < frozenUntil && weaponStyle(seen?.worn[3]) === 'melee' ? kiteTiles : 0);
-            if (keep && !walkingToMelee && (upcomingTurn?.style !== 'melee' || !o.standOff) && now > lastAttackAt && now >= selfFrozenUntil && now - stepAt >= 2 && cheb(at, target) < keep) {
+            // diagonalFrozen: the tile at the corner of the frozen target on our side; melee reaches the 4 side tiles only.
+            const corner = { x: target.x + (Math.sign(at.x - target.x) || 1), z: target.z + (Math.sign(at.z - target.z) || 1) };
+            if (o.diagonalFrozen && heldMelee && !walkingToMelee && now > lastAttackAt && now >= selfFrozenUntil && now - stepAt >= 2 && (at.x !== corner.x || at.z !== corner.z)) {
+                void sdk.sendWalk(corner.x, corner.z);
+                stepAt = now;
+            } else if (keep && !walkingToMelee && (upcomingTurn?.style !== 'melee' || !o.standOff) && now > lastAttackAt && now >= selfFrozenUntil && now - stepAt >= 2 && cheb(at, target) < keep) {
                 const dx = Math.sign(at.x - target.x) || 1, dz = Math.sign(at.z - target.z);
                 void sdk.sendWalk(target.x + dx * keep, target.z + dz * keep);
                 stepAt = now;

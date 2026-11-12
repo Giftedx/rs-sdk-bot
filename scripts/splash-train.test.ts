@@ -1,9 +1,9 @@
 import { beforeAll, expect, test } from 'bun:test';
-import { AIR, BODY, CAST_RANGE, EARTH, MIND, QUIET_STOP, SPLASH_SPELLS, SPLASH_TILE, WATER, castReaches, splashBatchDone, splashPlan, splashSpell } from './splash-train';
+import { AIR, BODY, CAST_RANGE, EARTH, MIND, QUIET_STOP, SPLASH_SITES, SPLASH_SPELLS, SPLASH_TILE, WATER, castReaches, packSpell, splashBatchDone, splashPlan, splashSite, splashSpell } from './splash-train';
 import { xpForLevel } from '../packages/planner/src/curve';
 import { SPLASH_KIT, SPLASH_TO } from '../packages/planner/src/autopilot';
 import { loadPathfinding } from '../packages/core/src/pathcache';
-import { initPathfinding } from '../vendor/rs-sdk/sdk/pathfinding';
+import { initPathfinding, isTileWalkable } from '../vendor/rs-sdk/sdk/pathfinding';
 import * as rsmod from '../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
 import { CollisionType } from '../vendor/rs-sdk/server/vendor/rsmod-pathfinder';
 
@@ -80,3 +80,29 @@ test('a run that gained a level and then ran out of runes, ticks or cows is a fi
     for (const stop of ['lost hitpoints at the fence (98 of 99)', 'stopped', 'session ended', '']) expect(splashBatchDone(stop, 5)).toBe(false);
 });
 
+
+test('the coop site casts from the starter pack: the best spell the pack pays for, then Wind Strike', () => {
+    const starter = [{ id: AIR, count: 25 }, { id: MIND, count: 15 }, { id: WATER, count: 6 }, { id: EARTH, count: 4 }, { id: BODY, count: 2 }];
+    expect(packSpell(1, starter).component).toBe('magic:wind_strike');
+    expect(packSpell(3, starter).component).toBe('magic:confuse');
+    expect(packSpell(3, starter.filter(i => i.id !== BODY)).component).toBe('magic:wind_strike');
+    expect(packSpell(3, []).component).toBe('magic:confuse');
+    expect(splashSite().bank).toBe(true);
+    expect(splashSite('coop')).toMatchObject({ bank: false, size: 1, hpFloor: 5 });
+    expect(splashSite('coop').target({ id: 41, name: 'Chicken' })).toBe(true);
+    expect(splashSite('coop').target({ id: 81, name: 'Cow' })).toBe(false);
+    expect(() => splashSite('varrock')).toThrow('SPLASH_SITE');
+});
+
+test('the coop tile is open floor that sees most of the coop within reach', () => {
+    initPathfinding();
+    const { tile } = SPLASH_SITES.coop!;
+    expect(isTileWalkable(0, tile.x, tile.z)).toBe(true);
+    let seen = 0, open = 0;
+    for (let x = 3223; x <= 3236; x++) for (let z = 3293; z <= 3303; z++) {
+        if (!isTileWalkable(0, x, z)) continue;
+        open++; if (castReaches(tile, { x, z }, CAST_RANGE, 1)) seen++;
+    }
+    expect(seen).toBeGreaterThanOrEqual(100);
+    expect(seen).toBeLessThanOrEqual(open);
+});
