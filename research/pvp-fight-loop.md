@@ -624,8 +624,10 @@ Gaps:
   knowledge tables only). So `pure-iban`, `pure-hally`, `pure-rock` and `pure-god` get those quests from no job.
 - One more run of `extra:upass-pure-hally` ended at its start, "no npc king lathas", with the account on the ground
   floor at Hitpoints 99: the preset was not on the account. The cause is not found; the next run of that seed passed.
-- The band `army-fletch-25` has no run of its two steps together, and no live run. One account holds 41,640 of the
-  42,000 arrow shafts.
+- The two steps of `army-fletch-25` ran together one time through `scripts/chain.ts`, from 25 tiles east of the
+  bank: the walk took 52 ticks and the worker made 210 arrows in 26 ticks ("RESULT ok chain rounds=1 ok=2
+  failed=0"). The bench holds no case for it: its start check reads the START line of one worker, and a chain has
+  none. No live run. One account holds 41,640 of the 42,000 arrow shafts.
 - No live run of `army-quest-fremennik`, and no practice run of the chain `drunkmonk,murder,viking` through the quest
   sweep from an army account's state: the cases start at Brundt with the pack in hand.
 - The quest points that a quest asks (Dragon Slayer 32, Heroes' Quest 55, Legends' Quest 107) are not in the route:
