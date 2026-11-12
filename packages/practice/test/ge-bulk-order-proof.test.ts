@@ -47,6 +47,22 @@ test('elapsed verification delay alone does not invalidate same-source saved GE 
  }finally{clock.mockRestore();rmSync(dir,{recursive:true,force:true});}
 },20_000); // Three saved-state verifications: about 7 s on the loaded Windows PC, past bun's 5 s default
 
+// --verify runs four saved checks against one source pin. A shared memo hashes the closure once, so the 30 s consumer check ends.
+test('saved verifications that share one memo reuse the worker closure hash and still pass',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'ge-saved-memo-')),memo=new Map<string,unknown>();
+ const p=geProofEndpoints({engine:28888,gateway:27780,management:28898,tcp:28899},'ge-saved-memo');
+ try{
+  for(const label of ['before','after','repeat'] as const){const s=input[label];writeFileSync(join(dir,label+'.sav'),saveBytes(s.position,s.inventories));}
+  for(const label of ['sell','buy','again'] as const){writeFileSync(join(dir,label+'.log'),input[label].log);writeFileSync(join(dir,label+'.err'),'');}
+  writeFileSync(join(dir,'journal.json'),JSON.stringify({...journal,request:{...request,server:p.server}}));
+  writeFileSync(join(dir,'native.json'),JSON.stringify({at:1793520000000,source:geProofRuntime(memo),server:p.server,endpoints:{ports:p.ports,instance:p.instance},buyer:request.actor,orderKey:request.goal,sellCode:0,buyCode:0,againCode:0}));
+  const hashed=memo.size;expect(hashed).toBeGreaterThan(0);
+  expect(verifyCase(dir,false,memo).ok).toBe(true);
+  expect(verifyCase(dir,false,memo).checks.source).toBe(true);
+  expect(memo.size).toBe(hashed);
+ }finally{rmSync(dir,{recursive:true,force:true});}
+},20_000);
+
 test('owned GE endpoints propagate through starts, account config and child guards; non-practice endpoints refuse',async()=>{
  const p=geProofEndpoints({engine:28888,gateway:27780,management:28898,tcp:28899},'ge-test');
  const configured=geProofAccountEnv('SERVER=localhost:8888\nGATEWAY_URL=ws://localhost:7780\nPASSWORD=fixture\n',p);
