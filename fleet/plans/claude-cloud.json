@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794500717528,
+ "at": 1794500728035,
  "jobs": [
   {
    "account": "Fingerblastr",
@@ -60,24 +60,22 @@
   },
   {
    "account": "TheFullMonty",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "catherby"
-   ],
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
    "env": {
-    "ITEMS": "rune arrowtips|adamant arrowtips",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
+    "PEN": "3197,3353",
+    "TICKS": "3000",
+    "TARGET": "2000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy rune and adamant arrowtips at Catherby",
-   "role": "bank",
-   "template": "shop-arrowtips",
+   "goal": "feathers at the chicken pen 3197,3353",
+   "role": "helper",
+   "template": "feathers@3197,3353",
    "autopilot": "claude-cloud",
    "resources": [
-    "shop:catherby"
+    "pen:3197,3353"
    ]
   },
   {
@@ -151,25 +149,6 @@
   },
   {
    "account": "PocketPool",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2582,3297"
-   ]
-  },
-  {
-   "account": "Dipstick",
    "script": "scripts/shop-buyer.ts",
    "args": [
     "betty"
@@ -188,6 +167,28 @@
    "autopilot": "claude-cloud",
    "resources": [
     "shop:betty"
+   ]
+  },
+  {
+   "account": "Dipstick",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby"
+   ],
+   "env": {
+    "ITEMS": "rune arrowtips|adamant arrowtips",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy rune and adamant arrowtips at Catherby",
+   "role": "bank",
+   "template": "shop-arrowtips",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "shop:catherby"
    ]
   },
   {
