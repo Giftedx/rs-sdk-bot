@@ -25,6 +25,7 @@ export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
  'scripts/fleet-agent.ts': 'fleet control: syncs fleet data and runs this side of each order',
  'scripts/fleet-inspect.ts': 'fleet tool: refreshes the saved state of one account',
  'scripts/fleet-order.ts': 'fleet control: places a transfer order between two sides',
+ 'scripts/route-stage.ts': 'fleet control: places the fleet orders of one route step at the bank the route account visits next',
  'scripts/fleet-owner-claim.ts': 'fleet control: reserves an account name for a side',
  'scripts/fleet-sync.ts': 'fleet control: shares orders, receipts and snapshots between the sides',
  'scripts/fleet.ts': 'fleet control: job templates and account credentials',

@@ -4,18 +4,19 @@
 // that side's fleet agent skips such an account until the job is off, and for a coin donor whose published snapshot
 // holds fewer coins than the order: an order that no agent can run lapses at the end of its window unnoticed.
 // Usage: bun scripts/fleet-order.ts <from> <to> <count> <item name...>   Env: IN (default 15), MINUTES (default 40)
-// MEET=<bank x>,<bank z> meets at that bank's tile pair (scripts/coin-courier.ts meetingTiles) instead of Varrock West:
-// MEET=2619,3332 is the Ardougne north bank, where the PK army's accounts already stand.
+// MEET=<bank x>,<bank z> or MEET=<bank name> meets at that bank's tile pair (scripts/coin-courier.ts BANK_MEETS) instead
+// of Varrock West: MEET=2619,3332 is the Ardougne north bank, where the PK army's accounts already stand; MEET=draynor.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { FLEET_DIR, loadOwners } from '../packages/core/src/fleet';
 import { validOrder, type Order } from './fleet-trade';
-import { meetingTiles } from './coin-courier';
+import { BANK_MEETS, meetingTiles } from './coin-courier';
 
 export function orderMeet(text: string | undefined): Order['meet'] {
     if (text === undefined || text === '') return undefined;
-    const m = text.match(/^(\d+),(\d+)$/), pair = m ? meetingTiles({ x: Number(m[1]), z: Number(m[2]) }) : null;
-    if (!pair) throw Error(`MEET must be a bank tile with a known meeting pair (3185,3436 or 2619,3332), not ${text}`);
+    const m = text.match(/^(\d+),(\d+)$/), named = BANK_MEETS.find(r => r.bank === text.toLowerCase());
+    const pair = m ? meetingTiles({ x: Number(m[1]), z: Number(m[2]) }) : named ? meetingTiles({ x: named.tiles[0]![0], z: named.tiles[0]![1] }) : null;
+    if (!pair) throw Error(`MEET must be a bank tile with a known meeting pair (3185,3436 or 2619,3332) or a bank name (${BANK_MEETS.map(r => r.bank).join(', ')}), not ${text}`);
     return pair;
 }
 
