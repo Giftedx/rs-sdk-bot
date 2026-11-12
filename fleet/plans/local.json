@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794473419129,
+ "at": 1794473967995,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -81,25 +81,48 @@
    ]
   },
   {
-   "account": "BowBeforeMe",
-   "script": "scripts/shop-buyer.ts",
+   "account": "Bigpackage",
+   "script": "scripts/aio.ts",
    "args": [
-    "betty"
+    "skiller",
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
    ],
-   "env": {
-    "ITEMS": "fire rune|air rune|earth rune",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy elemental runes at Betty",
-   "role": "bank",
-   "template": "shop-runes",
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "role": "thieving",
+   "template": "aio-blood-chest",
    "autopilot": "local",
    "resources": [
-    "shop:betty"
+    "aio:ardougne-blood-chests"
+   ]
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "foraging",
+    "flax",
+    "1800",
+    "28"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "pick flax at Seers and bank it",
+   "role": "crafting",
+   "template": "aio-flax",
+   "autopilot": "local",
+   "resources": [
+    "aio:seers-flax"
    ]
   },
   {
@@ -251,29 +274,23 @@
   },
   {
    "account": "NabTheKnob",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/train-prayer.ts",
    "args": [
-    "3000",
-    "cow"
+    "43"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "TARGET_LEVEL": "80",
-    "GIANT_BURY": "0"
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 80 on the Ardougne cows",
+   "goal": "train Prayer to 99 burying the held bones",
    "role": "combat",
-   "template": "army-cow-strength-80",
+   "template": "army-bury-prayer-99",
    "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
+   "resources": []
   },
   {
    "account": "OreElse",
@@ -353,24 +370,22 @@
   },
   {
    "account": "Shaftmaker",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "fletching",
-    "shafts",
-    "600",
-    "MAX_MAKE=25",
-    "LOG_RESERVE=0"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "cut 25 banked logs into arrow shafts",
-   "role": "fletching",
-   "template": "aio-shafts",
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "knight:2671,3313"
+   ]
   },
   {
    "account": "Swordinhand",
@@ -390,6 +405,31 @@
    "autopilot": "local",
    "resources": [
     "pen:3229,3298"
+   ]
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Defence to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-defence-99",
+   "autopilot": "local",
+   "resources": [
+    "trooper:battlefield"
    ]
   },
   {
@@ -432,69 +472,62 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/aio.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "skiller",
-    "foraging",
-    "flax",
-    "1800",
-    "28"
+    "betty"
    ],
-   "env": {},
+   "env": {
+    "ITEMS": "fire rune|air rune|earth rune",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "pick flax at Seers and bank it",
-   "role": "crafting",
-   "template": "aio-flax",
+   "goal": "buy elemental runes at Betty",
+   "role": "bank",
+   "template": "shop-runes",
    "autopilot": "local",
    "resources": [
-    "aio:seers-flax"
+    "shop:betty"
    ]
   },
   {
    "account": "Magicwanda",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "runecraft",
-    "bank-craft",
-    "99",
-    "CAP=4000"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "craft banked rune essence into air runes",
-   "role": "magic",
-   "template": "aio-air-runes",
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
    "resources": [
-    "aio:air-altar"
+    "knight:2653,3300"
    ]
   },
   {
    "account": "Shaftsinker",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "mining",
-    "ore",
-    "1800",
-    "25",
-    "MAX_TRIPS=3"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "mine ore at Varrock East and bank three loads",
-   "role": "mining",
-   "template": "aio-ore",
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
    "autopilot": "local",
    "resources": [
-    "aio:varrock-east-mine"
+    "knight:2669,3298"
    ]
   },
   {
@@ -539,31 +572,6 @@
    ]
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-defence-99",
-   "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
    "account": "mmtha0205",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -580,29 +588,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2669,3298"
-   ]
-  },
-  {
-   "account": "Bigpackage",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
-   "role": "thieving",
-   "template": "aio-blood-chest",
-   "autopilot": "local",
-   "resources": [
-    "aio:ardougne-blood-chests"
    ]
   },
   {
