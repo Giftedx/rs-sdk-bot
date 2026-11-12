@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794511841428,
+ "at": 1794512440456,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -57,26 +57,25 @@
    "account": "Bigchopper",
    "script": "scripts/gather-combat.ts",
    "args": [
-    "3000",
-    "cow"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "TARGET_LEVEL": "60",
-    "GIANT_BURY": "0"
+    "TRAIN_SKILL": "Attack",
+    "TARGET_LEVEL": "68",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "0",
+    "TROOPER_COOK": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 60 on the Ardougne cows",
+   "goal": "train Attack to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-cow-defence-60",
+   "template": "army-trooper-attack-99",
    "autopilot": "local",
    "resources": [
-    "cow:ardougne-north"
+    "trooper:battlefield"
    ]
   },
   {
@@ -320,48 +319,22 @@
    ]
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
    "account": "Woodenstaff",
-   "script": "scripts/gather-feathers.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "PEN": "3229,3298",
-    "TICKS": "3000",
-    "TARGET": "2000"
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3229,3298",
-   "role": "helper",
-   "template": "feathers@3229,3298",
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
    "autopilot": "local",
    "resources": [
-    "pen:3229,3298"
+    "knight:2669,3298"
    ]
   },
   {
