@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { heldBack, heldCount, orderInWay, parseLine, planStage } from './route-stage';
+import { groupOrders, heldBack, heldCount, orderInWay, parseLine, planStage } from './route-stage';
 
 test('free holders give first, then the largest busy stock; the held count is not ordered', () => {
     const holders = (item: string) => item === 'magic logs'
@@ -70,4 +70,18 @@ test('an owner stop file, a reservation or a hand job holds an account back from
     expect(heldBack('Bigchopper', jobs, 'session: owner pause for a dagger gang pilot\n')).toBe('owner stop file');
     expect(heldBack('Bigchopper', jobs, 'swarm')).toBeUndefined();
     expect(heldBack('Bigchopper', jobs, undefined)).toBeUndefined();
+});
+
+test('each giver gets one order with all its lines, split at one trade window', () => {
+    const groups = groupOrders([
+        { from: 'Abracadickra', item: 'Sapphire ring', count: 40, busy: false },
+        { from: 'Balls', item: 'Fire rune', count: 80, busy: true },
+        { from: 'abracadickra', item: 'Cosmic rune', count: 74, busy: false },
+    ]);
+    expect(groups).toEqual([
+        { from: 'Abracadickra', lines: [{ item: 'Sapphire ring', count: 40 }, { item: 'Cosmic rune', count: 74 }], busy: false },
+        { from: 'Balls', lines: [{ item: 'Fire rune', count: 80 }], busy: true },
+    ]);
+    const many = groupOrders(Array.from({ length: 30 }, (_, i) => ({ from: 'Balls', item: `Item ${i}`, count: 1, busy: false })));
+    expect(many.map(g => g.lines.length)).toEqual([28, 2]);
 });

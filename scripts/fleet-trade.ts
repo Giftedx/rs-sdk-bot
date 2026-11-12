@@ -1,5 +1,5 @@
 // One side of a cross-machine transfer. An order (fleet/orders/<id>.json, synced through git by scripts/fleet-sync.ts)
-// names a donor and a receiver, an item, a count and a time window. Each side runs this for its own account, on its
+// names a donor and a receiver, an item, a count and a time window (`extra` adds more lines, all in the same trade). Each side runs this for its own account, on its
 // own machine: both walk to the meeting tiles (Varrock West, the ones scripts/coin-courier.ts proved live), the donor
 // takes the stack out of its bank (noted when it is not a stack) and serves one trade to the receiver only, the
 // receiver trades for exactly that offer and banks it. Each side writes its own receipt to fleet/receipts.
@@ -25,8 +25,8 @@ import { isLocalServer } from '../packages/core/src/localserver';
 import { meetingTiles } from './coin-courier';
 import type { Session } from '../packages/core/src/inprocess';
 import type { TradeResult } from '../vendor/rs-sdk/sdk/types';
-import { validOrder, writeTradeReceipt, type Order, type Receipt, type TradeReceipt, type TradeRole } from './fleet-trade-settlement';
-export { validOrder, type Order, type Receipt } from './fleet-trade-settlement';
+import { orderLines, validOrder, writeTradeReceipt, type Order, type Receipt, type TradeLine, type TradeReceipt, type TradeRole } from './fleet-trade-settlement';
+export { orderLines, validOrder, type Order, type Receipt } from './fleet-trade-settlement';
 
 // The open order this account takes part in: in its window (or starting within `lead` ms) and with no receipt from it.
 export function pickOrder(orders: readonly Order[], receipts: readonly Receipt[], account: string, now: number, lead = 10 * 60_000): { order: Order; role: 'from' | 'to' } | null {
@@ -97,7 +97,8 @@ export function assertTradeAdmission(order: Order, account: string, server: stri
     }
 }
 
-type Progress = Pick<TradeReceipt, 'count' | 'inventory' | 'bank' | 'screen'> & { uncertain: boolean };
+// The top-level fields are the order's first line; `lines` are its extra lines, in order.
+type Progress = Pick<TradeReceipt, 'count' | 'inventory' | 'bank' | 'screen'> & { uncertain: boolean; lines?: Pick<TradeLine, 'count' | 'inventory' | 'bank'>[] };
 // Records in `progress.screen` whether a trade screen is ever open in this session (TradeReceipt.screen). Call it
 // once, as soon as the session is open.
 export function watchTradeScreen(s: { onTick(cb: () => void): () => void; sdk: { getState(): { trade?: { isOpen: boolean } } | null } }, progress: Progress) {
@@ -123,21 +124,29 @@ export function partnerFailed(dir: string, order: Order, role: TradeRole): boole
 export async function performFleetTransfer(s: Session, order: Order, role: TradeRole, progress: Progress, {
     now = Date.now, wait = waitUntil, deposit = depositObserved, gone = () => false,
 }: { now?: () => number; wait?: typeof waitUntil; deposit?: typeof depositObserved; gone?: () => boolean } = {}) {
-    const item = exactItem(order.item), held = () => countItems(s, item), left = () => order.end - now();
+    const left = () => order.end - now();
     const partner = role === 'from' ? order.to : order.from, peer = exactItem(partner);
-    const pack = () => s.sdk.getInventory().filter(i => item.test(i.name));
+    const lines = orderLines(order).map(line => {
+        const re = exactItem(line.item), before = countItems(s, re);
+        return { re, count: line.count, before, diff: () => role === 'from' ? before - countItems(s, re) : countItems(s, re) - before };
+    });
+    const lineOf = (name: string) => lines.findIndex(l => l.re.test(name));
+    const pack = () => s.sdk.getInventory().filter(i => lineOf(i.name) >= 0);
     const beforeById = new Map<number, number>();
     for (const row of pack()) beforeById.set(row.id, (beforeById.get(row.id) ?? 0) + row.count);
-    const before = held(), diff = () => role === 'from' ? before - held() : held() - before;
+    const moved = () => lines.every(l => l.diff() === l.count), still = () => lines.every(l => l.diff() === 0);
+    // The offer holds every line, at its exact count, and nothing else.
+    const exactOffer = (offer: readonly { name: string; count: number }[]) => offer.every(o => lineOf(o.name) >= 0)
+        && lines.every(l => offer.filter(o => l.re.test(o.name)).reduce((n, o) => n + o.count, 0) === l.count);
     let result: TradeResult | undefined;
     if (left() <= 0) throw Error('order window ended before trade');
     if (role === 'from') {
         progress.uncertain = true;
         const served = await s.bot.serveTrades({
-            from: peer, give: [{ item, amount: order.count }], accept: offer => offer.length === 0,
+            from: peer, give: lines.map(l => ({ item: l.re, amount: l.count })), accept: offer => offer.length === 0,
             maxTrades: 1, timeout: left(), onTrade: trade => { result = trade; }, until: () => result !== undefined || gone(),
         });
-        if (!result && (served.reason === 'timeout' || served.reason === 'until') && !served.trades.length && diff() === 0) progress.uncertain = false;
+        if (!result && (served.reason === 'timeout' || served.reason === 'until') && !served.trades.length && still()) progress.uncertain = false;
         if (!result && gone() && !progress.uncertain) throw Error('partner failed: no trade');
     } else {
         let ended = false;
@@ -146,42 +155,48 @@ export async function performFleetTransfer(s: Session, order: Order, role: Trade
             if (gone()) throw Error('partner failed: no trade');
             progress.uncertain = true;
             result = await s.bot.trade(peer, {
-                accept: offer => offer.length === 1 && item.test(offer[0]!.name) && offer[0]!.count === order.count,
+                accept: offer => offer.length > 0 && exactOffer(offer),
                 requestTimeout: Math.min(30_000, left()), timeout: Math.min(60_000, left()),
             });
-            if (!requestRefusal(result) || diff() !== 0) break;
+            if (!requestRefusal(result) || !still()) break;
             progress.uncertain = false;
             const tile = (order.meet ?? meetingTiles({ x: 3185, z: 3436 })!)[1];
             if (!ended && left() > 0) await s.bot.walkTo(tile.x + (round % 2 === 0 ? 1 : 0), tile.z, 0);
         }
     }
-    if (result?.success) await wait(s, () => diff() === order.count, { timeoutTicks: 10 });
-    const after = held(), count = diff();
-    progress.inventory = { before, after };
-    progress.count = Math.max(0, count);
+    if (result?.success) await wait(s, moved, { timeoutTicks: 10 });
+    const counts = lines.map(l => l.diff());
+    lines.forEach((l, i) => {
+        const line = { inventory: { before: l.before, after: l.before + (role === 'from' ? -counts[i]! : counts[i]!) }, count: Math.max(0, counts[i]!) };
+        if (i === 0) Object.assign(progress, line);
+        else (progress.lines ??= [])[i - 1] = { ...progress.lines?.[i - 1], ...line };
+    });
     const transferred = role === 'from' ? result?.gave : result?.received;
     const opposite = role === 'from' ? result?.received : result?.gave;
     if (!result?.success || !result.partner || !peer.test(result.partner) || result.possiblyDropped?.length
-        || count !== order.count || opposite?.length || !transferred?.length || !transferred.every(i => item.test(i.name))
-        || transferred.reduce((n, i) => n + i.count, 0) !== order.count) {
+        || lines.some((l, i) => counts[i] !== l.count) || opposite?.length || !transferred?.length || !exactOffer(transferred)) {
         throw Error(progress.uncertain ? 'transfer requires reconciliation' : 'no matching trade completed');
     }
     if (role === 'from') return;
     if (!(await s.bot.openBank()).success || !await wait(s, () => !!s.bankObservation?.(), { timeoutTicks: 20 }))
         throw Error('receiver bank observation unavailable');
-    let credited = 0, bankAt = 0;
+    const credited = lines.map(() => 0), bankAt = lines.map(() => 0);
     for (const id of new Set(transferred.map(i => i.id))) {
-        const rows = pack().filter(i => i.id === id), stack = rows[0];
+        const rows = s.sdk.getInventory().filter(i => i.id === id), stack = rows[0];
         const incoming = transferred.filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
-        const amount = rows.reduce((n, i) => n + i.count, 0);
+        const amount = rows.reduce((n, i) => n + i.count, 0), line = lineOf(transferred.find(i => i.id === id)!.name);
         if (!stack || amount - (beforeById.get(id) ?? 0) !== incoming) throw Error('receiver item delta differs from trade');
         if (await deposit(s, stack) !== amount) throw Error('receiver bank credit was not confirmed');
         const observation = s.bankObservation?.();
         if (!observation) throw Error('receiver bank credit observation unavailable');
-        bankAt = Math.max(bankAt, observation.at);
-        credited += incoming;
+        bankAt[line] = Math.max(bankAt[line]!, observation.at);
+        credited[line]! += incoming;
     }
-    progress.bank = { count: credited, at: bankAt };
+    lines.forEach((_, i) => {
+        const bank = { count: credited[i]!, at: bankAt[i]! };
+        if (i === 0) progress.bank = bank;
+        else progress.lines![i - 1]!.bank = bank;
+    });
     await s.bot.closeBank();
 }
 
@@ -190,11 +205,17 @@ export function fleetTradeOutcome(prepared: TradeReceipt, progress: Progress, ok
     const proof = logout.state === 'confirmed' && logout.attemptId === attemptId && logout.loggedOutAt >= prepared.at
         && logout.account.toLowerCase() === prepared.account.toLowerCase() && logout.server.toLowerCase() === prepared.server.toLowerCase()
         ? { attemptId: logout.attemptId, at: logout.loggedOutAt, sha256: logout.receiptSha256 } : undefined;
-    const exactBank = prepared.role === 'from' || progress.bank?.count === prepared.requested;
-    const state = proof && ok && progress.count === prepared.requested && exactBank ? 'settled'
-        : proof && !progress.uncertain && progress.count === 0 ? 'failed' : 'reconcile';
+    const lines = prepared.lines?.map((line, i) => {
+        const p = progress.lines?.[i];
+        return { item: line.item, requested: line.requested, count: p?.count ?? 0,
+            ...(p?.inventory ? { inventory: p.inventory } : {}), ...(p?.bank ? { bank: p.bank } : {}) };
+    });
+    const all = [{ requested: prepared.requested, count: progress.count, bank: progress.bank }, ...(lines ?? [])];
+    const exactBank = prepared.role === 'from' || all.every(l => l.bank?.count === l.requested);
+    const state = proof && ok && all.every(l => l.count === l.requested) && exactBank ? 'settled'
+        : proof && !progress.uncertain && all.every(l => l.count === 0) ? 'failed' : 'reconcile';
     return { ...prepared, state, ok: state === 'settled', count: progress.count, inventory: progress.inventory, bank: progress.bank, logout: proof, at, detail,
-        ...(progress.screen === undefined ? {} : { screen: progress.screen }) };
+        ...(progress.screen === undefined ? {} : { screen: progress.screen }), ...(lines ? { lines } : {}) };
 }
 
 if (import.meta.main) {
@@ -219,7 +240,8 @@ if (import.meta.main) {
         writeTradeReceipt(receipts, receipt);
         console.log('FLEET_RECEIPT ' + JSON.stringify(receipt));
         if (settled && !receipt.ok) throw Error('trade requires reconciliation');
-        return `fleet-trade ${order.id} ${receipt.state} ${receipt.count}/${order.count}: ${detail}`;
+        const extra = receipt.lines?.length ? ` +${receipt.lines.length} lines` : '';
+        return `fleet-trade ${order.id} ${receipt.state} ${receipt.count}/${order.count}${extra}: ${detail}`;
     });
     while (Date.now() < order.start) await Bun.sleep(Math.min(5000, order.start - Date.now()));
     const s = await openBot(account, {
@@ -228,7 +250,8 @@ if (import.meta.main) {
             check: server => assertTradeAdmission(order, account, server, { receipts }),
             prepare: claim => {
                 prepared = { version: 2, state: 'prepared', id: order.id, account, partner, role, side: claim.side, server: order.server,
-                    item: order.item, requested: order.count, claim: claim.nonce, count: 0, ok: false, at: Date.now(), detail: 'trade claimed' };
+                    item: order.item, requested: order.count, claim: claim.nonce, count: 0, ok: false, at: Date.now(), detail: 'trade claimed',
+                    ...(order.extra ? { lines: order.extra.map(l => ({ item: l.item, requested: l.count, count: 0 })) } : {}) };
                 writeTradeReceipt(receipts, prepared);
             },
         },
@@ -244,27 +267,33 @@ if (import.meta.main) {
         const there = await walkTarget(s, tile, false) as Outcome;
         if (!there.ok) throw Error(`route to ${tile.x}, ${tile.z}: ${there.reason} ${there.detail}`);
         await s.bot.walkTo(tile.x, tile.z, 0);
-        const item = exactItem(order.item), held = () => countItems(s, item);
-        if (role === 'from' && held() < order.count) {
+        // The giver takes out of its bank what each line needs beyond what it holds, one bank visit for all lines.
+        const short = role === 'from' ? orderLines(order).map((line, i) => ({ line, i, item: exactItem(line.item) })).filter(l => countItems(s, l.item) < l.line.count) : [];
+        if (short.length) {
             if (!(await s.bot.openBank()).success || !await waitUntil(s, () => !!s.bankObservation?.(), { timeoutTicks: 20 })) throw Error('bank did not open');
-            const bankBefore = s.bankObservation?.(), row = bankBefore?.items.find(i => item.test(i.name));
-            const amount = order.count - held(), bankCount = row?.count ?? 0;
-            if (!bankBefore || !row || bankCount < amount) throw Error(`stock short: ${bankCount} banked + ${held()} held < ${order.count}`);
-            const target = s.sdk.getState()?.bank.items.find(i => i.id === row.id);
-            if (!target) throw Error('sender bank item is unavailable');
-            const stack = s.sdk.getInventory().find(i => item.test(i.name));
-            const asNote = amount > 1 && !/^coins$/i.test(order.item) && !(stack && stack.count > 1);
-            progress.uncertain = true;
-            await s.bot.withdrawItem(target, amount, { asNote });
-            const confirmed = () => {
-                const after = s.bankObservation?.();
-                const remaining = after?.items.filter(i => i.id === row.id).reduce((n, i) => n + i.count, 0);
-                return after && after.generation > bankBefore.generation && remaining === bankCount - amount && held() === order.count ? after : null;
-            };
-            if (!await waitUntil(s, () => !!confirmed(), { timeoutTicks: 10 })) throw Error('sender withdrawal debit or pack credit not confirmed');
-            const bankAfter = confirmed();
-            if (!bankAfter) throw Error('sender withdrawal observation changed');
-            progress.bank = { count: amount, at: bankAfter.at };
+            for (const { line, i, item } of short) {
+                const held = () => countItems(s, item);
+                const bankBefore = s.bankObservation?.(), row = bankBefore?.items.find(r => item.test(r.name));
+                const amount = line.count - held(), bankCount = row?.count ?? 0;
+                if (!bankBefore || !row || bankCount < amount) throw Error(`stock short: ${line.item} ${bankCount} banked + ${held()} held < ${line.count}`);
+                const target = s.sdk.getState()?.bank.items.find(r => r.id === row.id);
+                if (!target) throw Error(`sender bank item is unavailable: ${line.item}`);
+                const stack = s.sdk.getInventory().find(r => item.test(r.name));
+                const asNote = amount > 1 && !/^coins$/i.test(line.item) && !(stack && stack.count > 1);
+                progress.uncertain = true;
+                await s.bot.withdrawItem(target, amount, { asNote });
+                const confirmed = () => {
+                    const after = s.bankObservation?.();
+                    const remaining = after?.items.filter(r => r.id === row.id).reduce((n, r) => n + r.count, 0);
+                    return after && after.generation > bankBefore.generation && remaining === bankCount - amount && held() === line.count ? after : null;
+                };
+                if (!await waitUntil(s, () => !!confirmed(), { timeoutTicks: 10 })) throw Error(`sender withdrawal debit or pack credit not confirmed: ${line.item}`);
+                const bankAfter = confirmed();
+                if (!bankAfter) throw Error('sender withdrawal observation changed');
+                const bank = { count: amount, at: bankAfter.at };
+                if (i === 0) progress.bank = bank;
+                else (progress.lines ??= [])[i - 1] = { count: 0, bank };
+            }
             await s.bot.closeBank();
             progress.uncertain = false;
         }

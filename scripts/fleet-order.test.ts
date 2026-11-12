@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { makeOrder, orderMeet, orderWarnings } from './fleet-order';
+import { makeOrder, orderMeet, orderWarnings, parseWith } from './fleet-order';
 import { validOrder } from './fleet-trade-settlement';
 
 const server = 'rs-sdk-demo.fly.dev';
@@ -34,4 +34,19 @@ test('MEET puts the trade at a known bank pair: the Ardougne north bank for the 
     expect(validOrder(home)).toBe(true);
     expect(validOrder({ ...home, meet: [{ x: 1, z: 2 }] })).toBe(false);
     expect(makeOrder('TheFullMonty', 'UnderMyKilt', 1, 'Staff of fire', 1_000_000, 0, 60, owners).meet).toBeUndefined();
+});
+
+test('--with adds lines that move in the same trade, and a coin line on any line is checked against the snapshot', () => {
+    const { rest, extra } = parseWith(['Pocketpython', 'TheFullMonty', '40', 'Sapphire', 'ring', '--with', '74 Cosmic rune', '--with', ' 2000000 Coins ']);
+    expect(rest).toEqual(['Pocketpython', 'TheFullMonty', '40', 'Sapphire', 'ring']);
+    expect(extra).toEqual([{ item: 'Cosmic rune', count: 74 }, { item: 'Coins', count: 2_000_000 }]);
+    expect(() => parseWith(['a', '--with', 'Cosmic rune'])).toThrow('--with takes');
+    expect(() => parseWith(['a', '--with'])).toThrow('--with takes');
+    const order = makeOrder('Pocketpython', 'TheFullMonty', 40, 'Sapphire ring', 1_000_000, 0, 60, owners, undefined, extra);
+    expect(validOrder(order)).toBe(true);
+    expect(order.extra).toEqual(extra);
+    expect(makeOrder('Pocketpython', 'TheFullMonty', 40, 'Sapphire ring', 1_000_000, 0, 60, owners, undefined, []).extra).toBeUndefined();
+    expect(() => makeOrder('Pocketpython', 'TheFullMonty', 40, 'Sapphire ring', 1_000_000, 0, 60, owners, undefined, [{ item: 'sapphire ring', count: 1 }])).toThrow('invalid order');
+    const snapshots = { local: { accounts: [{ name: 'Pocketpython', bank: coins(1_000_000), inventory: [] }] } };
+    expect(orderWarnings(order, {}, snapshots, owners)).toEqual(['Pocketpython held 1000000 coins at its last snapshot, fewer than the 2000000 ordered']);
 });

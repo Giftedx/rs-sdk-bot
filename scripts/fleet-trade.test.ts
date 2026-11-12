@@ -376,3 +376,92 @@ test('a side leaves the meet when its partner\'s receipt says failed, with nothi
     expect(taking.uncertain).toBe(false);
 });
 
+
+const ringOrder = (o: Partial<Order> = {}) => order({ item: 'Sapphire ring', count: 40, extra: [{ item: 'Cosmic rune', count: 74 }, { item: 'Water rune', count: 40 }], ...o });
+const ringReceipt = (role: 'from' | 'to'): TradeReceipt => ({
+    ...claimedReceipt(role), item: 'Sapphire ring', requested: 40,
+    lines: [{ item: 'Cosmic rune', requested: 74, count: 0 }, { item: 'Water rune', requested: 40, count: 0 }],
+});
+
+test('a multi-item order needs distinct lines with positive counts, at most one trade window of them', () => {
+    expect(validOrder(ringOrder())).toBe(true);
+    expect(validOrder(ringOrder({ extra: [] }))).toBe(false);
+    expect(validOrder(ringOrder({ extra: [{ item: 'sapphire RING', count: 1 }] }))).toBe(false);
+    expect(validOrder(ringOrder({ extra: [{ item: 'Cosmic rune', count: 0 }] }))).toBe(false);
+    expect(validOrder(ringOrder({ extra: [{ item: ' ', count: 1 }] }))).toBe(false);
+    expect(validOrder(ringOrder({ extra: Array.from({ length: 28 }, (_, i) => ({ item: `Item ${i}`, count: 1 })) }))).toBe(false);
+});
+
+test('a multi-item receiver accepts only the exact offer of every line, then banks and credits each line', async () => {
+    const ring = { id: 1637, name: 'Sapphire ring', count: 40, slot: 0 }, cosmic = { id: 564, name: 'Cosmic rune', count: 74, slot: 1 };
+    const water = { id: 555, name: 'Water rune', count: 40, slot: 2 };
+    for (const mode of ['ok', 'one line short'] as const) {
+        let pack: typeof ring[] = [{ ...water, count: 2 }], accept: ((offer: { name: string; count: number }[]) => boolean) | undefined;
+        const got = mode === 'ok' ? [ring, cosmic, water] : [ring, cosmic, { ...water, count: 39 }];
+        const fake = {
+            sdk: { getState: () => ({ inventory: pack }), getInventory: () => pack },
+            bot: {
+                trade: async (_peer: RegExp, opts: { accept: typeof accept }) => {
+                    accept = opts.accept;
+                    pack = [{ ...ring }, { ...cosmic }, { ...water, count: 2 + got[2]!.count }];
+                    return { success: true, partner: 'Giver', received: got, gave: [] };
+                },
+                openBank: async () => ({ success: true }), closeBank: async () => ({ success: true }),
+            },
+            ended: new Promise(() => {}), bankObservation: () => ({ at: 2300 }),
+        } as unknown as Session;
+        const progress: Parameters<typeof performFleetTransfer>[3] = { uncertain: false, count: 0 };
+        const deposits: number[] = [];
+        const run = performFleetTransfer(fake, ringOrder(), 'to', progress, {
+            now: () => 2200, wait: async (_s, predicate) => predicate(null),
+            deposit: async (_s, stack) => { deposits.push(stack.id); const n = pack.filter(i => i.id === stack.id).reduce((a, i) => a + i.count, 0); pack = pack.filter(i => i.id !== stack.id); return n; },
+        });
+        if (mode === 'ok') await run;
+        else await expect(run).rejects.toThrow('requires reconciliation');
+        expect(accept!([{ name: 'Sapphire ring', count: 40 }, { name: 'Cosmic rune', count: 74 }, { name: 'Water rune', count: 40 }])).toBe(true);
+        expect(accept!([{ name: 'Water rune', count: 40 }, { name: 'Sapphire ring', count: 40 }, { name: 'Cosmic rune', count: 74 }])).toBe(true);
+        expect(accept!([{ name: 'Sapphire ring', count: 40 }, { name: 'Cosmic rune', count: 74 }])).toBe(false);
+        expect(accept!([{ name: 'Sapphire ring', count: 40 }, { name: 'Cosmic rune', count: 73 }, { name: 'Water rune', count: 40 }])).toBe(false);
+        expect(accept!([{ name: 'Sapphire ring', count: 40 }, { name: 'Cosmic rune', count: 74 }, { name: 'Water rune', count: 40 }, { name: 'Coins', count: 1 }])).toBe(false);
+        const final = fleetTradeOutcome(ringReceipt('to'), progress, mode === 'ok', logout, attemptId, 2500, mode);
+        expect(final.state).toBe(mode === 'ok' ? 'settled' : 'reconcile');
+        expect(terminalTradeReceipt(ringOrder(), 'to', final, 2500)).toBe(mode === 'ok');
+        if (mode === 'ok') {
+            expect(deposits).toEqual([1637, 564, 555]);
+            expect(final.lines).toEqual([
+                { item: 'Cosmic rune', requested: 74, count: 74, inventory: { before: 0, after: 74 }, bank: { count: 74, at: 2300 } },
+                { item: 'Water rune', requested: 40, count: 40, inventory: { before: 2, after: 42 }, bank: { count: 40, at: 2300 } },
+            ]);
+            expect(terminalTradeReceipt(ringOrder(), 'to', { ...final, lines: final.lines!.slice(0, 1) }, 2500)).toBe(false);
+            expect(terminalTradeReceipt(ringOrder(), 'to', { ...final, lines: undefined }, 2500)).toBe(false);
+            expect(terminalTradeReceipt(order({ item: 'Sapphire ring', count: 40 }), 'to', final, 2500)).toBe(false);
+            expect(terminalTradeReceipt(ringOrder(), 'to', { ...final, lines: [final.lines![0]!, { ...final.lines![1]!, bank: { count: 39, at: 2300 } }] }, 2500)).toBe(false);
+        }
+    }
+});
+
+test('a multi-item giver offers every line in one trade, and a failed line count is not settled', async () => {
+    const ring = { id: 1637, name: 'Sapphire ring', count: 40, slot: 0 }, cosmic = { id: 564, name: 'Cosmic rune', count: 74, slot: 1 };
+    const water = { id: 555, name: 'Water rune', count: 40, slot: 2 };
+    let pack = [ring, cosmic, water], give: { item: RegExp; amount: number }[] = [];
+    const fake = {
+        sdk: { getState: () => ({ inventory: pack }), getInventory: () => pack },
+        bot: { serveTrades: async (opts: Parameters<Session['bot']['serveTrades']>[0]) => {
+            give = opts!.give as typeof give;
+            pack = [];
+            const result = { success: true, partner: 'Taker', message: '', gave: [ring, cosmic, water], received: [] };
+            opts!.onTrade!(result);
+            return { trades: [result] };
+        } },
+    } as unknown as Session;
+    const progress: Parameters<typeof performFleetTransfer>[3] = { uncertain: false, count: 0, lines: [{ count: 0, bank: { count: 74, at: 2100 } }] };
+    await performFleetTransfer(fake, ringOrder(), 'from', progress, { now: () => 2200, wait: async (_s, predicate) => predicate(null) });
+    expect(give.map(g => [g.item.source, g.amount])).toEqual([['^Sapphire ring$', 40], ['^Cosmic rune$', 74], ['^Water rune$', 40]]);
+    const giverLogout = { ...logout, account: 'Giver' };
+    const final = fleetTradeOutcome(ringReceipt('from'), progress, true, giverLogout, attemptId, 2500, 'observed');
+    expect(final.state).toBe('settled');
+    expect(final.lines![0]).toEqual({ item: 'Cosmic rune', requested: 74, count: 74, inventory: { before: 74, after: 0 }, bank: { count: 74, at: 2100 } });
+    expect(terminalTradeReceipt(ringOrder(), 'from', final, 2500)).toBe(true);
+    const short = { ...progress, lines: [progress.lines![0]!, { ...progress.lines![1]!, count: 0 }] };
+    expect(fleetTradeOutcome(ringReceipt('from'), short, true, giverLogout, attemptId, 2500, 'short').state).toBe('reconcile');
+});
