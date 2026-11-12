@@ -79,8 +79,8 @@ test('an open bank redraws newer observations and closes when its account change
 });
 
 function questPanel(bot:any,filter='all'){
- const code=shell.slice(shell.indexOf("    if(selectedTab==='quests'){"),shell.indexOf("    if(selectedTab==='friends')"));
- return new Function('b','questFilter','E','age',`const selectedTab='quests',questQuery='',questDetail='';let html='';${code};return html;`)(bot,filter,String,String);
+ const code=shell.slice(shell.indexOf("    if(selectedTab==='quests'&&questScope==='fleet')"),shell.indexOf("    if(selectedTab==='friends')"));
+ return new Function('b','questFilter','E','age',`const selectedTab='quests',questQuery='',questDetail='',questScope='account',fleetQuests=()=>'',questScopeBar=()=>'';let html='';${code};return html;`)(bot,filter,String,String);
 }
 
 test('the account picker retains a missing chosen account instead of displaying Free camera',()=>{
@@ -742,4 +742,17 @@ test('a line with key=value pairs keeps the words between them, and a marked nam
  const {pretty,mention}=new Function('S','safeName','E',`${code};return {pretty,mention};`)({bots:[{name:'Woodenstaff'}]},(n:string)=>n,E);
  expect(pretty('t=1200 mined iron ore total=57 done')).toBe('<span title="t=1200 mined iron ore total=57 done">tick 1,200 mined iron ore · total 57 done</span>');
  expect(mention(pretty('Woodenstaff hp=10 str=20'))).toBe('<span title="Woodenstaff hp=10 str=20"><span class="chat-hl">Woodenstaff</span> hp 10 · str 20</span>');
+});
+test('the Quest Journal fleet view counts each quest over our accounts and colours it',()=>{
+ const src=readFileSync(new URL('./client-shell.js',import.meta.url),'utf8');
+ const code=src.slice(src.indexOf("  let questScope='account';"),src.indexOf('  function gamePanel(){'));
+ const bots=[{name:'Alpha',quests:[{name:'Cook\'s Assistant',state:'complete'},{name:'Imp Catcher',state:'started'}]},{name:'Bravo',quests:[{name:'Cook\'s Assistant',state:'complete'},{name:'Imp Catcher',state:'not started'}]},{name:'Prac',practice:true,quests:[{name:'Imp Catcher',state:'complete'}]}];
+ const run=(detail:string|null,filter='all')=>new Function('S','E','safeName',`let questDetail=${JSON.stringify(detail)},questFilter=${JSON.stringify(filter)},questQuery='';${code};return fleetQuests();`)({bots},(s:any)=>String(s),(s:any)=>s);
+ const list=run(null);
+ expect(list).toContain('1 of 2 done by an account · 1 by all 2');
+ expect(list).toMatch(/color:#00ff00" data-quest="Cook's Assistant"[^>]*><span>Cook's Assistant<\/span><span>2\/2/);
+ expect(list).toMatch(/color:#ffff00" data-quest="Imp Catcher"[^>]*><span>Imp Catcher<\/span><span>0\/2/);
+ const detail=run('Imp Catcher');
+ expect(detail).toContain('<span style="color:#ffff00" title="started">Alpha</span><span style="color:#ff0000" title="not started">Bravo</span>');
+ expect(run(null,'completed')).not.toContain('Imp Catcher');
 });
