@@ -1724,3 +1724,18 @@ test('the halberd build trains Thieving and Agility, then takes Underground Pass
     const market: Market = { 'magic shortbow': { id: 861, name: 'Magic shortbow', limit: KIT_PRICE_CAPS['magic shortbow']! }, 'rune arrow': { id: 892, name: 'Rune arrow', limit: KIT_PRICE_CAPS['rune arrow']! } };
     expect(first({ Thieving: 50, Agility: 68 }, { ...kit, coin: 2_000_000, 'magic shortbow': 0, 'rune arrow': 100 }, [], { market })).toBe(KIT_BUY + 'army-quest-upass');
 });
+
+import { SHOP_STOCK } from '../src/autopilot';
+test('a shop job needs an account that is short of an item the shop run buys', () => {
+    const shops = ['shop-feathers', 'shop-runes', 'shop-arrowtips'];
+    const wanted = [row('feathers', 800), row('fire rune', 2000), row('air rune', 2000), row('earth rune', 2000), row('rune arrowtips', 2000), row('adamant arrowtips', 2000)];
+    const job = (items: Record<string, number>, id: string) =>
+        ids(plan(inputs([acct('Rich', {}, { coin: 50_000, ...items })], { bill: wanted, templates: catalogue().filter(t => t.id === id) }))).Rich;
+    const pick = (items: Record<string, number>) => shops.filter(id => job(items, id) === id);
+    const full = { feather: SHOP_STOCK, 'fire rune': SHOP_STOCK, 'air rune': SHOP_STOCK, 'earth rune': SHOP_STOCK, 'rune arrowtip': SHOP_STOCK, 'adamant arrowtip': SHOP_STOCK };
+    expect(pick({})).toEqual(shops);
+    expect(pick(full)).toEqual([]);
+    // One rune under the stock keeps the rune run. The feather run and the arrowtip run stay shut.
+    expect(pick({ ...full, 'earth rune': SHOP_STOCK - 1 })).toEqual(['shop-runes']);
+    expect(pick({ ...full, feather: 760 })).toEqual([]);
+});

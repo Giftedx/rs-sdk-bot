@@ -24,7 +24,7 @@ export const NAMES = {
     herblore: ['Stirmypot', 'Grindmyherb', 'Vialvirile'],
     bank: ['Moneyshot', 'SporranBulge', 'Fatstack', 'Deeppockets', 'Coinpurse'],
     runite: ['Runeboner', 'Hotrocks', 'Moltenrod'],
-    helper: ['Bigpackage', 'Ballbag', 'Packhorse', 'Heavyload', 'DropMyLoad', 'FullLoad', 'WellHung', 'InTheSack', 'PackageDeal', 'BackdoorMan', 'RearEntry', 'TackleBox', 'UnloadMe'],
+    helper: ['Bigpackage', 'Ballbag', 'Packhorse', 'Heavyload', 'DropMyLoad', 'FullLoad', 'WellHung', 'InTheSack', 'PackageDeal', 'BackdoorMan', 'RearEntry', 'TackleBox', 'UnloadMe', 'Balls'],
 } as const satisfies Record<string, readonly string[]>;
 
 export type Role = keyof typeof NAMES;
