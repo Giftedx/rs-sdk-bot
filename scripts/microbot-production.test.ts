@@ -68,6 +68,22 @@ test('finite recipe runner stops at target, banks products and bounds failed act
  expect((await runInventoryProduction(io,r,{maximum:3,cap:20,maxAttempts:3})).ok).toBe(false);
  expect(stored).toBe(3);
 });
+test('a best-effort order ends ok when the inputs run out after one unit or more, and fails with none made or at the cap',async()=>{
+ const r=inventoryRecipes().find(r=>r.name==='brew:unf_torstol_potion')!;let t=0,stock=0,stored=0;
+ let items:Record<number,number>={};
+ const io:ProductionIO={tick:()=>t,stopped:()=>false,level:()=>99,read:()=>({items:{...items},xp:0}),
+  prepare:async()=>{if(stock<1)return false;stock--;items=Object.fromEntries(r.inputs.map(i=>[i.id,i.units]));return true;},
+  use:async()=>{t++;items={[r.product]:1};},wait:async()=>{},
+  deposit:async()=>{stored++;items={};return 1;},close:async()=>{}};
+ stock=2;expect(await runInventoryProduction(io,r,{maximum:5,cap:20,maxAttempts:5,partial:true})).toMatchObject({ok:true,made:2,banked:2,attempts:2,failure:'-'});
+ expect(stored).toBe(2);
+ // An exact order with the same stock fails, as does a best-effort order with no input at all.
+ stock=2;expect(await runInventoryProduction(io,r,{maximum:5,cap:20,maxAttempts:5})).toMatchObject({ok:false,made:2,failure:'Error: production inputs unavailable'});
+ stock=0;expect(await runInventoryProduction(io,r,{maximum:5,cap:20,maxAttempts:5,partial:true})).toMatchObject({ok:false,made:0,failure:'Error: production inputs unavailable'});
+ // The limit still ends the run, and the tick cap still fails it.
+ stock=9;expect(await runInventoryProduction(io,r,{maximum:5,cap:20,maxAttempts:5,partial:true})).toMatchObject({ok:true,made:5,banked:5});
+ stock=9;expect(await runInventoryProduction(io,r,{maximum:5,cap:3,maxAttempts:5,partial:true})).toMatchObject({ok:false,made:3,failure:'Error: production target incomplete'});
+});
 for(const name of ['pie-shell','glass:stafforb','leather:leather_gloves','identify:guam_leaf','darts:bronze_dart','dough:bread:jug_water','prepare:cake','pie-shell-stale-modal','bow-string:shortbow','bow-string:shortbow-mutable-reserve'])test('SDK adapter: '+name,async()=>{
  const r=inventoryRecipes().find(r=>r.name===name.replace('-stale-modal','').replace('-mutable-reserve',''))!,units=r.productUnits??1;
  let pack:{id:number;slot:number;name:string;count:number}[]=[],generation=1,tick=0,xp=100,modal=name.endsWith('-stale-modal'),bankOpen=false;
