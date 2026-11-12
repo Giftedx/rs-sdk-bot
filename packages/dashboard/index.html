@@ -427,6 +427,56 @@ function pagedRows(items,heading,sub='',prefix='',hint=''){
  const box=$('#inspector');put(box,`<h3>${E(heading)}</h3>${sub?`<p class="subline">${E(sub)}</p>`:''}${prefix}<div class="data-list" id="rows"></div>${hint?`<p class="hint">${E(hint)}</p>`:''}`);
  const size=Math.max(1,Math.floor($('#rows').clientHeight/(innerWidth>=1800?30:innerWidth<700?25:26)));detailPages=Math.max(1,Math.ceil(items.length/size));detailPage=Math.min(detailPage,detailPages-1);put('#rows',items.slice(detailPage*size,(detailPage+1)*size).join('')||'<p class="dm">No observation available</p>');
 }
+// Supply ledger (RuneLite's bank, for the whole fleet): every item in our accounts' banks, packs and worn gear, on every
+// fleet side. Tabs as bank tags: All, Best in slot (the Equipment-board set), Food, Worn. A click on an item lists each
+// holder. A bank is known only from the account's last bank visit: its age shows, red past one hour.
+let stockTab='all',stockQuery='',stockPick=null;
+const stockName=n=>String(n||'').replace(/\s*\(noted\)\s*$/i,'').trim();
+function stockItems(bots){
+ const items=new Map();
+ for(const b of bots){if(b.practice)continue;
+  for(const [place,list] of [['bank',b.bank],['pack',b.inventory],['worn',b.equipment]]){
+   if(!Array.isArray(list))continue;
+   for(const i of list){
+    if(!i||!(i.count>0)||!i.name)continue;
+    const name=stockName(i.name),key=name.toLowerCase(),it=items.get(key)??{key,name,ids:new Set(),total:0,holders:new Map()};
+    if(Number.isInteger(i.baseId??i.id))it.ids.add(i.baseId??i.id);
+    it.total+=i.count;
+    const h=it.holders.get(b.name)??{name:b.name,side:b.side||'local',bank:0,pack:0,worn:0,bankAt:b.bankAt??null,at:b.at??null};h[place]+=i.count;it.holders.set(b.name,h);items.set(key,it);
+   }
+  }
+ }
+ return [...items.values()].map(it=>({...it,holders:[...it.holders.values()].sort((x,y)=>(y.bank+y.pack+y.worn)-(x.bank+x.pack+x.worn))}));
+}
+const stockPrice=it=>{const v=S.itemValues||{};return v[it.name]??v[it.name.toLowerCase()]??null;};
+const stockQty=n=>{const[c,t]=qty(n);return`<span class="qty${c==='w'?' qty-k':c==='gr'?' qty-m':''}">${t}</span>`;};
+function stockView(){
+ const box=$('#inspector'),focus=document.activeElement?.id==='stock-q'?[document.activeElement.selectionStart,document.activeElement.selectionEnd]:null;
+ const all=stockItems(S.bots),stats=window.atlasItemStats?.()||{},q=stockQuery.trim().toLowerCase(),value=it=>{const p=stockPrice(it);return p==null?0:p*it.total;};
+ const match=it=>!q||it.name.toLowerCase().includes(q);
+ const tabs=[['all','All'],['bis','Best in slot'],['food','Food'],['worn','Worn']];
+ const shown=stockTab==='food'?all.filter(it=>/\bheals\b/i.test(stats[it.name]||'')):stockTab==='worn'?all.filter(it=>it.holders.some(h=>h.worn>0)):all;
+ const list=shown.filter(match).sort((a,b)=>value(b)-value(a)||b.total-a.total||a.name.localeCompare(b.name));
+ const accounts=new Set(all.flatMap(it=>it.holders.map(h=>h.name))).size,total=list.reduce((n,it)=>n+value(it),0);
+ const cellOf=it=>`<button class="bank-cell${stockPick===it.key?' on':''}" data-stock-item="${E(it.key)}" title="${E(it.name)} × ${nf(it.total)}${stockPrice(it)!=null?' · '+compact(value(it))+' gp':''} · ${it.holders.length} account${it.holders.length===1?'':'s'}">${icon(it.name,32)}${it.total>1?stockQty(it.total):''}</button>`;
+ let grid,detail='';
+ if(stockTab==='bis'){
+  const targets=(S.gearTargets||[]).filter(t=>!q||String(t.name||t.slot).toLowerCase().includes(q));
+  const holdersOf=t=>all.filter(it=>t.ids.some(id=>it.ids.has(id))).flatMap(it=>it.holders.map(h=>({...h,item:it.name})));
+  grid=targets.map(t=>{const hs=holdersOf(t),name=t.name||t.slot;return`<button class="bank-cell${hs.length?'':' missing'}" data-stock-slot="${E(t.slot)}" title="${E(t.slot+' · '+name+(hs.length?' · held by '+hs.map(h=>safeName(h.name)).join(', '):' · not held · need '+t.need+' · '+t.source))}">${icon(name,32)}${hs.length?`<span class="qty">${hs.length}</span>`:''}</button>`;}).join('');
+  detail=targets.map(t=>{const hs=holdersOf(t);return`<div class="bank-row${hs.length?'':' warn'}"><span>${E(t.slot)}</span><span>${E(t.name||'—')}</span><span>${hs.length?hs.map(h=>E(safeName(h.name))+(h.worn?' (worn)':'')).join(', '):'missing · '+E(t.need)}</span></div>`;}).join('');
+  if(!(S.gearTargets||[]).length)detail='<p class="dm">The server sends no Equipment-board set.</p>';
+ }else{
+  const cap=320;grid=list.slice(0,cap).map(cellOf).join('')+(list.length>cap?`<p class="dm bank-more">${nf(list.length-cap)} more item types: type to find one.</p>`:'');
+  const pick=all.find(it=>it.key===stockPick);
+  if(pick)detail=`<div class="bank-row bank-row-head"><span>${E(pick.name)}</span><span>${nf(pick.total)}</span><span>${stockPrice(pick)!=null?compact(value(pick))+' gp':'no price'}</span></div>`+pick.holders.map(h=>{const old=h.bank&&(!h.bankAt||S.now-h.bankAt>3_600_000);return`<div class="bank-row"><span>${E(safeName(h.name))}${h.side!=='local'?' <i class="dm">'+E(h.side)+'</i>':''}</span><span>${[h.bank?'bank '+nf(h.bank):'',h.pack?'pack '+nf(h.pack):'',h.worn?'worn '+nf(h.worn):''].filter(Boolean).join(' · ')}</span><span class="${old?'warn':'dm'}">${h.bank?'bank seen '+(h.bankAt?age(h.bankAt)+' ago':'never'):'seen '+age(h.at)+' ago'}</span></div>`;}).join('');
+ }
+ const stale=[...new Set(all.flatMap(it=>it.holders).filter(h=>h.bank&&(!h.bankAt||S.now-h.bankAt>3_600_000)).map(h=>h.name))].length;
+ put(box,`<h3>Supply ledger</h3><p class="subline">${nf(list.length)} item types · ${accounts} accounts · banks, packs and worn gear</p><div class="bank-ledger"><div class="bank-tabs">${tabs.map(([id,label])=>`<button data-stock-tab="${id}" class="${stockTab===id?'on':''}">${label}</button>`).join('')}</div><input id="stock-q" class="bank-search" placeholder="Find an item…" aria-label="Find an item in every account" autocomplete="off" value="${E(stockQuery)}"><div class="bank-grid">${grid||'<p class="dm">No item matches.</p>'}</div>${detail?'<div class="bank-detail">'+detail+'</div>':''}<p class="bank-foot">${stockTab==='bis'?'Equipment-board set: a scoring set, not best combat gear.':'Value: <b>'+compact(total)+' gp</b>'}${stale?` · <span class="warn">${stale} bank${stale===1?'':'s'} not seen for 1 h</span>`:''}</p></div>`);
+ if(focus){const input=$('#stock-q');input.focus({preventScroll:true});input.setSelectionRange(focus[0],focus[1]);}
+}
+document.addEventListener('input',e=>{if(e.target.id==='stock-q'){stockQuery=e.target.value;stockView();}});
+document.addEventListener('click',e=>{const t=e.target.closest('[data-stock-tab]');if(t){stockTab=t.dataset.stockTab;stockPick=null;stockView();return;}const it=e.target.closest('[data-stock-item]');if(it){stockPick=stockPick===it.dataset.stockItem?null:it.dataset.stockItem;stockView();}});
 function accountView(){const b=S.bots.find(b=>b.name===sel);if(!b){pagedRows([],'Account');return}
  const counters=Object.entries(b.bounded?.counters||{}),outcome=offWhy(b),items=[row('Operation',stateName(b.operation),stateClass(b.operation)),row('Controller',(b.planJob||b.job)?.state||'unknown'),row('Next',nextAction(b),'',(b.planJob||b.job)?.note||''),row('Pack slots',Array.isArray(b.inventory)?b.inventory.length+'/28':'unknown'),row('Equipment slots',Array.isArray(b.equipment)?b.equipment.length:'unknown'),row('Bank observed',age(b.bankAt),observedAt(b.bankAt)?'':'warn'),row('Last batch',b.bounded?.visible?boundedLabel(b):'not reported'),...counters.map(([k,v])=>row(k,compact(v))),row('Last phase',operationPhase(b),'',b.phase||''),row('Rank snapshot',age(b.ranksAt)),...(b.ranks||[]).map(r=>row(r.board,`#${nf(r.rank)} · ${r.level??'—'}`)),row('Last outcome',b.outcome||'none recorded')];
  const stats=`<div class="stats">${metric('HP',b.hp?`${b.hp.now}/${b.hp.max}`:'?')}${metric('XP / tick',observedAt(b.at,20000)?compact(b.xpPerTick):'—')}${metric('Status age',age(b.at))}</div>`;
@@ -449,7 +499,7 @@ function inspect(){
 
  else if(view==='account')accountView();else if(view==='goals')goalsView();else if(view==='board')boardView();
  else if(view==='bank'){const b=S.bots.find(b=>b.name===sel),items=b?.bank,at=b?.bankAt,totals=new Map();for(const item of items||[]){if(!item)continue;const key=item.baseId??item.id??item.name,prev=totals.get(key)||{name:item.name||'Item '+key,count:0};prev.count+=item.count??1;totals.set(key,prev)}pagedRows(totals.size?[...totals.values()].map(i=>row(i.name,nf(i.count))):Array.isArray(items)?[row('Observed items','0')]:[],`Bank · ${safeName(b?.name)}`,Array.isArray(items)?`${items.length} slots · observed ${age(at)} ago`:'No observation available','','Snapshot only. Select another account in Fleet.');}
- else if(view==='stock'){const c=S.collection||{};pagedRows((c.items||[]).map(i=>row(i.name,compact(i.count),i.identified?'':'warn')),`${c.distinct??'?'} observed item types`,`${(c.banks||[]).filter(b=>b.state==='stale').length} stale banks · packs and cargo excluded`,'','Historical stock observations; no coverage denominator.');}
+ else if(view==='stock')stockView();
  else if(view==='activity'||view==='practice'){const practice=view==='practice',rr=(S.results||[]).filter(r=>!!r.practice===practice);pagedRows(rr.map(r=>row(`${age(r.at)} · ${safeName(r.name)}`,resultKind(r),resultKind(r)==='ok'?'good':'warn',r.text)),practice?'Practice evidence':'Live activity',`${rr.length} retained results · raw outcomes`,practice?`<p class="next-proof">${S.bots.filter(b=>b.practice&&b.operation==='observed').length} practice accounts observed. Practice proof does not prove live contention.</p>`:'','Select Raw evidence for the chosen account’s full record.');}
  else if(view==='machine'){const s=machine(),c=S.capacity,gb=v=>Number.isFinite(v)?v.toFixed(1)+' GiB':'?';pagedRows([row('Bots running',c?`${c.active??'?'} / ${c.cap??'?'}`:'?',c&&!c.fresh?'warn':''),row('RAM headroom',gb(c?.headroomGB),!Number.isFinite(c?.headroomGB)?'warn':c.headroomGB<0?'bad':'good','Free RAM minus the floor and the startup reserve. Below zero the swarm starts no new bot.'),row('Free RAM',gb(s.freeGB)+(Number.isFinite(s.totalGB)?' of '+gb(s.totalGB):'')),row('RAM floor',gb(c?.floorGB)),row('Startup reserve',S.swarm?.pendingReserveGB==null?'?':S.swarm.pendingReserveGB+' GiB'),row('Queued starts',c?.queued??'?'),row('CPU',Number.isFinite(s.cpu)?s.cpu.toFixed(0)+'%':'?'),row('Controller age',age(S.swarm?.at),observedAt(S.swarm?.at,30000)?'':'warn'),...procGroups(s.procs).map(p=>row(p.n>1?`${p.script} ×${p.n}`:p.script,`${p.mb.toLocaleString()} MB`+(Number.isFinite(s.totalGB)&&s.totalGB>0?` · ${(p.mb/1024/s.totalGB*100).toFixed(1)}%`:'')+(p.n===1?` · ${p.pids[0]}`:''),'',p.n>1?'Process ids '+p.pids.join(', '):p.script))],'Host resources','Read-only observation; no process controls');}
  else if(view==='raw'){const b=S.bots.find(b=>b.name===sel);const text=safeName(JSON.stringify({account:b?.name,at:b?.at,goal:offlineGoal(b||{}),result:b?.lastRes||b?.result,phase:b?.phase,controller:b?.planJob,cleanup:b?.nativeProof},null,2));put(box,`<h3>Raw · ${E(safeName(b?.name))}</h3><pre class="evidence-page"></pre>`);const pre=box.querySelector('pre'),cols=Math.max(10,Math.floor(pre.clientWidth/7.3)),lines=text.split('\n').flatMap(line=>line.length?Array.from({length:Math.ceil(line.length/cols)},(_,i)=>line.slice(i*cols,(i+1)*cols)):['']),size=Math.max(1,Math.floor(pre.clientHeight/18)-1);detailPages=Math.max(1,Math.ceil(lines.length/size));detailPage=Math.min(detailPage,detailPages-1);pre.textContent=lines.slice(detailPage*size,(detailPage+1)*size).join('\n');}
