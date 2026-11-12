@@ -20,6 +20,7 @@ import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { clearSwarmStop, swarmWroteStop } from './swarm';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
+import { leaseHolder, releaseLease, renewLease, takeLease } from '../packages/core/src/controllers';
 import { matchingJobLines } from '../packages/core/src/job-log';
 import { CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, freshest, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, coinValueFor, type Assignment, type ItemFunding, type Market, type Stock } from '../packages/planner/src/autopilot';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
@@ -494,12 +495,23 @@ if (import.meta.main) {
         })();
     };
     if (!args.includes('--daemon')) process.exit(await once() === 'failed' ? 1 : 0);
+    // One planning daemon for each machine. Its lease (packages/core/src/controllers.ts) is written again on each
+    // trainer poll, and the watchdog starts a daemon when no live process holds it. A dry daemon writes no plan and
+    // takes no lease.
+    const lease = join(prac, 'autopilot.lock');
+    if (!dry) {
+        if (!takeLease(lease)) { console.log(`AUTOPILOT already running pid ${leaseHolder(lease)}`); process.exit(0); }
+        process.on('exit', () => releaseLease(lease)); process.on('SIGINT', () => process.exit(0)); process.on('SIGTERM', () => process.exit(0));
+    }
     const startedAt = Date.now();
     await once(); setInterval(once, PASS_EVERY_MS);
     const seen = new Set<string>();
     setInterval(() => {
+        // The lease names a different daemon: this one ends, after a pass that is in flight.
+        if (!dry && !renewLease(lease) && !inFlight) { console.log('AUTOPILOT lost its lease to another daemon'); process.exit(0); }
         // A live update that changed this daemon's code (packages/router/src/live-update.ts): a copy on the current code takes over.
         if (!inFlight && reloadDue(root, 'autopilot', startedAt)) {
+            if (!dry) releaseLease(lease);
             const pid = respawnDaemon(root, [join(root, 'scripts', 'autopilot.ts'), ...args], join(prac, 'autopilot', `daemon-${Date.now()}.out.log`));
             console.log(`AUTOPILOT reload after a live update: successor pid ${pid}`);
             process.exit(0);

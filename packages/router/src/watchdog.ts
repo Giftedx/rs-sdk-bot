@@ -2,7 +2,9 @@
 // the Windows task "rs-sdk-coordinator-watchdog" (packages/router/src/watchdog-install.ts). Each run, in about a second:
 // 1. Honours owner stops: with .practice/stop-coordinator or .practice/stop-swarm it does nothing.
 // 2. Restarts the coordinator hidden and detached when its owner process is gone.
-// 3. Records the scoreboard progress numbers, and writes .practice/coordinator/stall.json when none rose for
+// 3. Restarts the fleet agent and the autopilot when no live process holds the lease of one that ran on this machine
+//    (packages/core/src/controllers.ts). .practice/stop-fleet-agent and .practice/stop-autopilot keep each one stopped.
+// 4. Records the scoreboard progress numbers, and writes .practice/coordinator/stall.json when none rose for
 //    STALL_MS; the planner reads it and must change lane or method. A gain removes the note.
 // Before the owner-stop check, it restarts the hosted dashboard's publisher (packages/dashboard/publish.ts) when the
 // publisher has a clone in .practice/fleet-command/repo and its lock names no live process. Nothing else starts it
@@ -10,12 +12,13 @@
 // keeps it stopped. The coordinator stop files do not: they stop game work, not the page.
 // Also before that check, it moves the old rows of practice accounts out of .practice/status
 // (packages/router/src/status-prune.ts), because each controller reads that whole folder.
-import { appendFileSync, existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { spawnDetached } from './coordinator-store';
 import { freshScoreboard, improved, type Progress } from './coverage';
 import { pruneStatus } from './status-prune';
+import { CONTROLLERS, controllerState } from '../../core/src/controllers';
 
 export const STALL_MS = 6 * 3600_000;
 const root = resolve(import.meta.dir, '../../..'), dir = join(root, '.practice', 'coordinator');
@@ -61,6 +64,21 @@ if (import.meta.main) {
         const token = 'watchdog-' + randomUUID(), stamp = now;
         const pid = spawnDetached([process.execPath, 'packages/router/src/coordinator-cli.ts', '--run', token], root, join(dir, `daemon-${stamp}.out.log`), join(dir, `daemon-${stamp}.err.log`));
         log(`coordinator restarted pid=${pid} token=${token} (previous pid=${owner?.pid ?? 'none'})`);
+    }
+    // The fleet agent and the autopilot: each one that ran on this machine, has no owner stop file, and whose lease
+    // no live process holds (packages/core/src/controllers.ts).
+    for (const c of CONTROLLERS) {
+        if (controllerState(root, c, { now }).state !== 'down') continue;
+        if (c.name === 'fleet-agent') {
+            // --daemon detaches the agent, appends to .practice/fleet-agent.log and returns at once. A trade logs in on
+            // the live server, and that needs DEMO_OK=1 (packages/core/src/bot.ts).
+            const r = Bun.spawnSync([process.execPath, 'scripts/fleet-agent.ts', '--daemon'], { cwd: root, env: { ...process.env, DEMO_OK: '1' }, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+            log(`fleet agent restarted: ${(r.stdout.toString() + r.stderr.toString()).trim().slice(0, 200)}`);
+        } else {
+            mkdirSync(join(prac, 'autopilot'), { recursive: true });
+            const pid = spawnDetached([process.execPath, 'scripts/autopilot.ts', '--daemon'], root, join(prac, 'autopilot', `daemon-${now}.out.log`), join(prac, 'autopilot', `daemon-${now}.err.log`));
+            log(`autopilot restarted pid=${pid}`);
+        }
     }
     // The planner reads the Overall route's supply bill against current banks (packages/planner/src/supply-bill.ts).
     const bill = Bun.spawnSync([process.execPath, 'packages/planner/src/supply-bill.ts'], { cwd: root, stdout: 'ignore', stderr: 'pipe', windowsHide: true });
