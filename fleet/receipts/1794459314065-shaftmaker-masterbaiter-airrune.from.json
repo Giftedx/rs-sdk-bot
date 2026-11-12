@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794459314065-shaftmaker-masterbaiter-airrune",
  "account": "Shaftmaker",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "Air rune",
  "requested": 10,
  "claim": "6506110b-e27b-4a13-b68d-336f06dc3235",
- "count": 0,
- "ok": false,
- "at": 1794459322330,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1794459537364,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1794459518705
+ },
+ "logout": {
+  "attemptId": "1794459322338-0000024496-0000000001",
+  "at": 1794459537329,
+  "sha256": "2ca607186a5e39d44af814838da3c347e58cd03f207a6c551d348050aa49af00"
+ },
+ "screen": true
 }
