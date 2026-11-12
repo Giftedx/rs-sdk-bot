@@ -820,3 +820,9 @@ test('respawn timers: the time left is the base scaled by the players online, le
  expect(rows[1]).toMatchObject({name:'Oak tree',left:null,range:null});
  expect(rows.length).toBe(2);
 });
+test('the XP Tracker account list sorts by XP an hour, or by idle ticks',()=>{
+ const line=shell.split('\n').find(l=>l.includes("live.sort(xpSort==='waste'"))!.trim();
+ const run=(xpSort:string)=>{const live=[{name:'A',xpPerHour:10,timeline:'xxxx'},{name:'B',xpPerHour:30,timeline:'iiii'},{name:'C',timeline:'xxii'}];const idle=(x:any)=>window.efficiency(x.timeline);new Function('live','xpSort','idle',line)(live,xpSort,idle);return live.map(x=>x.name).join('');};
+ const window:any={efficiency:(t:string)=>t.split('').filter(c=>c==='i').length};
+ expect(run('rate')).toBe('BAC');expect(run('waste')).toBe('BCA');
+});
