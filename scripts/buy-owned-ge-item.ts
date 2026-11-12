@@ -6,7 +6,7 @@ import {waitUntil} from '../packages/core/src/ticks';import {depositObserved} fr
 import type {GEOffer,GEActionResult} from '../vendor/rs-sdk/sdk/ge-types';
 import {marketProgress,type MarketProgress} from '../packages/planner/src/market-progress';
 import {LUMBRIDGE_TO_DRAYNOR,DRAYNOR_BANK} from './courier-route';
-import {ferryWalk,walkTargetPersist} from './walk-to';
+import {ferryWalk,walkTargetPersist} from './walk-to';import {ROUTE_BUDGET_MS} from '../packages/core/src/world';
 import {equipmentObserved} from '../packages/core/src/container-observation';
 import {productionMode} from './earth-production';
 // quantity is absent in journals written before bulk orders; those orders are quantity 1.
@@ -191,6 +191,11 @@ export async function leaveBattlefield(s:Session,stop:()=>boolean,walk:(to:{x:nu
   return true;
  }finally{if(off)await retaliate(true);}
 }
+// The leg that ends at the market bank plans with the full route budget. ferryWalk gives each leg after a ferry 15 s,
+// and the search from the Port Sarim dock to Varrock West can take longer (live: NabTheKnob off both eastbound ferries
+// at 3029,3217, "WALK_NO_ROUTE ms 15817 budgetMs 15000", then "no route to 3185,3436,0").
+export const marketLeg=<T>(walk:(tile:{x:number;z:number;level:number},planBudgetMs?:number)=>Promise<T>)=>
+ (tile:{x:number;z:number;level:number},planBudgetMs?:number)=>walk(tile,tile.level===0&&tile.x===BANK.x&&tile.z===BANK.z?ROUTE_BUDGET_MS:planBudgetMs);
 export async function prepareMarketEntry(s:Session,stop:()=>boolean,travel:(signal:AbortSignal)=>Promise<{ok:boolean;ticks:number;detail?:string}>=async signal=>{
  const at=s.sdk.getState()?.player;
  if(at&&northEntryTile({x:at.worldX,z:at.worldZ,level:at.level})){marketEntryTrace(s,'north-approach',{waypoints:NORTH_APPROACH});return northApproach(s,signal);}
@@ -205,7 +210,7 @@ export async function prepareMarketEntry(s:Session,stop:()=>boolean,travel:(sign
  const account=accountOf(s);marketEntryTrace(s,'go-to-start');
  // The planner has no route from Ardougne to Varrock (live: every army kit buy failed "no route to 3185,3436,0").
  // ferryWalk (scripts/walk-to.ts) then takes the two ferries, with the 60-coin fare from the nearest bank.
- return ferryWalk(s,{...BANK,level:0},(tile,planBudgetMs)=>goTo(s,observedWorld,tile,account,{signal,maxRetriesPerLeg:1,legTimeoutTicks:1200,planBudgetMs}));
+ return ferryWalk(s,{...BANK,level:0},marketLeg((tile,planBudgetMs)=>goTo(s,observedWorld,tile,account,{signal,maxRetriesPerLeg:1,legTimeoutTicks:1200,planBudgetMs})));
 }){
  const hp=()=>s.sdk.getSkill('Hitpoints')?.level??0,initial=s.sdk.getState()?.player,p0=initial?{...initial}:undefined,hp0=hp();
  const health=marketHealthFailure(p0,hp0);if(health||p0?.isDead)throw Error(health??'market entry: living actor required');

@@ -88,6 +88,14 @@ export function verifyShopSupply(directory:string,memo:ReleaseMemo=new Map()){
  const report={ok:Object.values(checks).every(Boolean),checks,at:now,nativeAt:meta.at,ageMs,directory:resolve(directory),source:meta.source,scope:'Native 150ms/25x existing shop-buyer CLI: exact 1136-earth acquisition, retained1482fire, repeat and funds refusal; no live or rank claim.'};
  writeFileSync(join(directory,'verified.json'),JSON.stringify(report,null,2));return report;
 }
+// One low free-memory sample between two child runs stopped a proof that had 16 GiB free at the next check.
+// Only a floor breach that lasts the whole bounded wait stops the proof.
+export const HEADROOM_WAIT_MS=60000;
+export async function waitFreeMemory(floorGb:number,read:()=>number=()=>freemem()/2**30,pause:(ms:number)=>Promise<unknown>=ms=>Bun.sleep(ms),waitMs=HEADROOM_WAIT_MS){
+ let free=read();
+ for(let waited=0;free<floorGb&&waited<waitMs;waited+=250){await pause(250);free=read();}
+ return free;
+}
 export async function runShopSupplyNative(directory:string){
  mkdirSync(directory,{recursive:true});if(existsSync(join(directory,'before.sav')))throw Error('preserve existing native snapshots');
  if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error('native shop startup headroom unavailable');
@@ -96,7 +104,9 @@ export async function runShopSupplyNative(directory:string){
  writeFileSync(fd,JSON.stringify({pid:process.pid,task:'shop-supply-order',directory,at:Date.now()}));
  let stack:Awaited<ReturnType<typeof startGeProofStack>>|undefined;
  const command=async(name:string,label:string,shop=true,quantity=1136,profile='aubury',extra:Record<string,string>={}):Promise<Run>=>{
-  if(!actors.has(name)||freemem()/2**30<FREE_FLOOR_GB)throw Error('owned actor/native memory boundary');
+  if(!actors.has(name))throw Error('owned practice actor required');
+  const free=await waitFreeMemory(FREE_FLOOR_GB);
+  if(free<FREE_FLOOR_GB)throw Error(`native memory boundary: ${free.toFixed(2)}GiB free below ${FREE_FLOOR_GB}GiB floor after ${HEADROOM_WAIT_MS}ms`);
   const started=Date.now(),out=join(directory,label+'.log'),err=join(directory,label+'.err');
   const child=Bun.spawn(['bun','scripts/buy-owned-ge-item.ts',name],{cwd:root,windowsHide:true,stdout:Bun.file(out),stderr:Bun.file(err),env:{...process.env,...endpoint.env,DEMO_OK:'',RANDOM_EVENTS:'0',ORDER_KEY:'native-earth-shop',ITEM_ID:'557',QUANTITY:String(quantity),EXPECTED_OWNED:'3',LIMIT_PRICE:'40',CASH_RESERVE:'30000',ORDER_MS:'900000',FILL_WAIT_TICKS:'0',CAP:profile.startsWith('owned-')?'20000':profile.endsWith('-refill')?'16000':profile==='betty'?'3000':'1600',SHOP_PROFILE:shop?profile:'',...extra}});
   let hpMin=Infinity,ready=false,timedOut=false,termination:Promise<void>|undefined;
