@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1794444548994,
+ "at": 1794444609412,
  "jobs": [
   {
    "account": "Quickhandjob",
@@ -211,16 +211,24 @@
   },
   {
    "account": "KnightRider",
-   "script": "scripts/session-check.ts",
-   "args": [],
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
    "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-18518ec6-0645-4d5d-8208-33d3e14d9d1b"
+    "BURY_HELD": "1",
+    "BONE_ID": "536",
+    "BONE_RESERVE": "6",
+    "CAP": "4000"
    },
    "enabled": true,
-   "repeat": false,
-   "goal": "claude-cloud-recover-knightrider-20261112t004414z [task-18518ec6-0645-4d5d-8208-33d3e14d9d1b]",
-   "role": "combat"
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying bought dragon bones",
+   "role": "combat",
+   "template": "army-bury-dragon-99",
+   "autopilot": "claude-cloud",
+   "resources": []
   }
  ]
 }
