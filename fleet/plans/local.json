@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794474273356,
+ "at": 1794474567161,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -34,25 +34,6 @@
    "repeat": true,
    "goal": "Strength 30 on chickens so it can hit hard enough to PK",
    "role": "pk-trainee"
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
-   "autopilot": "local",
-   "resources": [
-    "knight:2652,3318"
-   ]
   },
   {
    "account": "Bigchopper",
@@ -598,22 +579,16 @@
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/goldfarm.ts",
+   "script": "scripts/session-check.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
+    "CAP": "600",
+    "COORDINATOR_RUN_ID": "task-74cf7b69-7e94-44f4-b476-98d90ce58caf"
    },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
-   "autopilot": "local",
-   "resources": [
-    "knight:2671,3313"
-   ]
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-session-recovery-ballspinner-stranded-0859 [task-74cf7b69-7e94-44f4-b476-98d90ce58caf]",
+   "role": "thieving"
   }
  ]
 }
