@@ -341,7 +341,7 @@ test('an earlier retained fleet-unresolved diagnostic still parses',()=>{
   .toEqual({phase:'permit-consumption',reason:'fleet-unresolved'});
 });
 test('the controller releases only an exact expired held lease with a dead bound child and its matching confirmed logout',()=>{
- for(const fault of ['none','live-child','changed-lease','not-expired','mismatched-proof','newer-attempt','unbound','stopped','controller']){
+ for(const fault of ['none','interrupted','crossed-marker','torn-marker','live-child','changed-lease','not-expired','mismatched-proof','newer-attempt','unbound','stopped','controller']){
   const f=fixture();issueRecoveryPermit(f.request,f.base,f.options);bindRecoveryChild(f.request,process.pid,f.base,f.options);consumeRecoveryPermit(f.request,f.base,f.options);
   const root=join(f.base,'.practice/session-lifecycle'),owner={pid:process.pid,coordinatorRunId:f.request.runId,workerRelease:source,script:RECOVERY_SCRIPT,role:'recovery',participants:null};
   const attempt=beginSessionAttempt({account:'Rod',server:f.request.server},{root,owner,now:()=>now+5});attempt.record('ended','logged-out');
@@ -362,8 +362,24 @@ test('the controller releases only an exact expired held lease with a dead bound
   const kept=Object.fromEntries([paths.permit,paths.child,paths.used,join(paths.output,'receipt.json'),join(f.base,'.practice/swarm-deaths.json'),join(f.base,'swarm.json')]
    .filter(p=>existsSync(p)).map(p=>[p,readFileSync(p,'utf8')]));
   const reasons:Record<string,string>={'live-child':'child still alive','changed-lease':'lease changed','not-expired':'not expired','mismatched-proof':'producer proof mismatched',
-   'newer-attempt':'producer proof mismatched',unbound:'child not bound',stopped:'owner stopped',controller:'needs the controller'};
-  if(fault==='none'){
+   'newer-attempt':'producer proof mismatched',unbound:'child not bound',stopped:'owner stopped',controller:'needs the controller',
+   'crossed-marker':'release marker mismatched','torn-marker':'release marker mismatched'};
+  // A release that stopped after the marker and before the removal: the marker of a full release, and the lease back in place.
+  const marker=join(dir,'released.json'),interrupted=['interrupted','crossed-marker','torn-marker'].includes(fault);
+  let first:any=null;
+  if(interrupted){
+   const lease=readFileSync(paths.lease,'utf8');first=releaseExpiredRecoveryLease('Rod',f.base,checks);writeFileSync(paths.lease,lease);
+   if(fault==='crossed-marker')writeFileSync(marker,JSON.stringify({...first,attemptId:'other'}));
+   if(fault==='torn-marker')writeFileSync(marker,'{"schema":');
+  }
+  const markerRaw=existsSync(marker)?readFileSync(marker,'utf8'):null;
+  if(fault==='interrupted'){
+   // A restarted controller has a new nonce and a later clock. It removes the lease and returns the first marker.
+   f.put('.practice/coordinator/swarm-owner.json',{pid:process.pid,nonce:'restarted',source});
+   expect(releaseExpiredRecoveryLease('Rod',f.base,{...checks,now:()=>now+200000})).toEqual(first);
+   expect(existsSync(paths.lease)).toBe(false);expect(()=>assertNoRecoveryLease('Rod',f.base)).not.toThrow();
+   expect(readFileSync(marker,'utf8')).toBe(markerRaw!);expect(existsSync(paths.completed)).toBe(false);
+  }else if(fault==='none'){
    const released=releaseExpiredRecoveryLease('Rod',f.base,checks);
    expect(released).toMatchObject({account:'Rod',nonce:'one',childPid:process.pid,attemptId:attempt.attemptId,lifecycleSha256:proof.receiptSha256});
    expect(existsSync(paths.lease)).toBe(false);expect(()=>assertNoRecoveryLease('Rod',f.base)).not.toThrow();
@@ -372,7 +388,7 @@ test('the controller releases only an exact expired held lease with a dead bound
    expect(()=>releaseExpiredRecoveryLease('Rod',f.base,checks)).toThrow('lease absent');
   }else{
    expect(()=>releaseExpiredRecoveryLease('Rod',f.base,checks),fault).toThrow(reasons[fault]);
-   expect(existsSync(paths.lease),fault).toBe(true);expect(existsSync(join(dir,'released.json')),fault).toBe(false);
+   expect(existsSync(paths.lease),fault).toBe(true);expect(existsSync(marker)?readFileSync(marker,'utf8'):null,fault).toBe(markerRaw);
    expect(releaseExpiredRecoveryLeases(f.base,[],checks),fault).toEqual([{account:'rod',released:false,reason:expect.stringContaining(reasons[fault]!)}]);
    expect(releaseExpiredRecoveryLeases(f.base,['Rod'],checks)).toEqual([]);
   }

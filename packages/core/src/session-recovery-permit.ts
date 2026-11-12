@@ -390,7 +390,8 @@ export function recoveredSessionForRun(account:string,server:string,runId:string
 // assertNoRecoveryLease then refuses every later recovery of the account. The controller removes only that exact lease:
 // its permit has expired, its bound child is gone, and the child's own producer attempt is the account's latest
 // confirmed logout. It writes released.json and keeps the permit, child, used, output, end, assignments and stops.
-// It never writes completed.json, so recoveredSessionForRun still refuses this run.
+// It never writes completed.json, so recoveredSessionForRun still refuses this run. A later call completes a release
+// that stopped after it wrote released.json.
 export type LeaseReleaseChecks={now?:()=>number;matches?:(pid:number,marker:string)=>boolean;childAlive?:(pid:number,nonce:string)=>boolean};
 const childRunning=(pid:number,nonce:string)=>{
  try{process.kill(pid,0);}catch(e){if((e as NodeJS.ErrnoException).code==='ESRCH')return false;}
@@ -426,9 +427,18 @@ export function releaseExpiredRecoveryLease(account:string,base:string,options:L
   throw Error('recovery lease producer proof mismatched');
  const released={schema:'session-recovery-release/1',at:now,account:r.account,nonce:r.nonce,runId:r.runId,leaseSha256,childPid:child.pid,
   attemptId:proof.attemptId,lifecycleSha256:proof.receiptSha256,receiptSha256:sha(readFileSync(receiptPath)),controller:{pid:owner.pid,nonce:owner.nonce},scope:{repairsFailure:false,qualifiesScript:false,production:0}};
- writeFileSync(join(dirname(paths.permit),'released.json'),JSON.stringify(released),{flag:'wx'});
+ // A release that stopped between the marker and the removal leaves released.json beside the lease. That marker must
+ // name this exact lease, child and producer proof; only its time and its controller can differ. Then the removal
+ // runs again and the first marker stays. A marker that does not parse or does not match keeps the lease.
+ const markerPath=join(dirname(paths.permit),'released.json');let marker=released;
+ if(existsSync(markerPath)){
+  let prior:any;try{prior=json(markerPath);}catch{prior=null;}
+  if(!prior||!Number.isFinite(prior.at)||prior.at<p.expiresAt||!Number.isSafeInteger(prior.controller?.pid)||typeof prior.controller.nonce!=='string'
+   ||!isDeepStrictEqual({...prior,at:released.at,controller:released.controller},released))throw Error('recovery lease release marker mismatched');
+  marker=prior;
+ }else writeFileSync(markerPath,JSON.stringify(released),{flag:'wx'});
  if(sha(readFileSync(leasePath))!==leaseSha256)throw Error('recovery lease changed before release');
- unlinkSync(leasePath);return released;
+ unlinkSync(leasePath);return marker;
 }
 // The controller's sweep: each unmanaged lease either releases or keeps its fixed refusal reason.
 export function releaseExpiredRecoveryLeases(base:string,managed:readonly string[]=[],options:LeaseReleaseChecks={}){
