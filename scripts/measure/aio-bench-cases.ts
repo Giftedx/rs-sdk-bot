@@ -224,6 +224,14 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('woodcutting', 'edgeville', 'fresh_lumbridge', ['STALL_TICKS=0'], {presetConfig: {position: {x: 3094, z: 3491, level: 0}, skills: {Attack: 67, Strength: 25, Defence: 24, Hitpoints: 52, Woodcutting: 15}, inventory: Array.from({length: 8}, () => ({id: 385, count: 1})), bank: [{id: 1351, count: 1}, {id: 1521, count: 5}, {id: 995, count: 216372}]}}),
   // packages/practice/src/firemaking-order-proof.ts
   skiller('firemaking', 'order', 'fresh_lumbridge', ['TARGET_LEVEL=15', 'LOG=normal', 'TOOL_BUDGET=0', 'CASH_RESERVE=0', 'CAP=2000', 'MAX_LOGS=2'], {presetConfig: firemakingFixture('entry')}),
+  // The mock Haggis run's fires (PROGRESSIVE=stock, CLEAR_PACK=1) at the two tier steps of its stock: logs to oak
+  // with the 17-slot starter kit in the pack, and oak to magic at 74 to 76. From the Draynor bank.
+  skiller('firemaking', 'order', 'fresh_lumbridge', ['TARGET_LEVEL=20', 'PROGRESSIVE=stock', 'CLEAR_PACK=1', 'TOOL_BUDGET=0', 'CAP=1500'], {key: 'extra:firemaking-stock-low',
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, inventory: [590, 1351, 303, 1265, 1205, 1277, 1171, 841, 315, 2309].map(id => ({id, count: 1}))
+      .concat([{id: 882, count: 25}, {id: 556, count: 25}, {id: 558, count: 15}, {id: 555, count: 6}, {id: 557, count: 4}, {id: 559, count: 2}, {id: 995, count: 25}]),
+      bank: [{id: 1511, count: 2}, {id: 1521, count: 3}]}}),
+  skiller('firemaking', 'order', 'fresh_lumbridge', ['TARGET_LEVEL=76', 'PROGRESSIVE=stock', 'CLEAR_PACK=1', 'TOOL_BUDGET=0', 'CAP=1500'], {key: 'extra:firemaking-stock-high',
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Firemaking: 74}, inventory: [{id: 590, count: 1}], bank: [{id: 1521, count: 10}, {id: 1513, count: 3}]}}),
   // packages/practice/src/glass-supply-proof.ts `owned`
   skiller('crafting', 'glass', 'fresh_lumbridge', ['SUPPLY_MODE=1', 'MEMBERS=1', 'MAX_MAKE=1', 'MAX_SPEND=0', 'CASH_RESERVE=1000', 'CAP=4000'], {timeoutMs: 900_000, presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Crafting: 51, Hitpoints: 39}, varps: {160: 2}, inventory: [{id: 995, count: 17}, {id: 590, count: 1}, {id: 1775, count: 1}], equipment: [{id: 1205, count: 1, slot: 3}], bank: [{id: 995, count: 2000}, {id: 314, count: 23}, {id: 1775, count: 2}]}}),
   skiller('crafting', 'inventory', 'bank_gems', ['cut-dragonstone', 'MAX_MAKE=180', 'CAP=1100', 'MEMBERS=1']),
