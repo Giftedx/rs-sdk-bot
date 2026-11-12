@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794487932705,
+ "at": 1794488198947,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -63,24 +63,21 @@
   },
   {
    "account": "Bigpackage",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "sarim"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "ITEMS": "feather",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy feathers at Gerrant",
-   "role": "bank",
-   "template": "shop-feathers",
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
    "autopilot": "local",
    "resources": [
-    "shop:sarim"
+    "knight:2669,3298"
    ]
   },
   {
@@ -453,21 +450,24 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "sarim"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
+    "ITEMS": "feather",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "goal": "buy feathers at Gerrant",
+   "role": "bank",
+   "template": "shop-feathers",
    "autopilot": "local",
    "resources": [
-    "knight:2669,3298"
+    "shop:sarim"
    ]
   },
   {
