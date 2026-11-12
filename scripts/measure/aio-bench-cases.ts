@@ -157,6 +157,8 @@ const SPAR_ENGINE = {SIM_NPC_NEAR: '64'};
 // boosts, antipoison and steel arrows for six trips.
 export const GANG_EDGE = {x: 3087, z: 3522};
 const EDGE_BANK = [{id: 385, count: 200}, {id: 2436, count: 8}, {id: 2440, count: 8}, {id: 2444, count: 8}, {id: 2442, count: 8}, {id: 2448, count: 8}, {id: 886, count: 2000}, {id: 563, count: 40}, {id: 556, count: 200}, {id: 163, count: 8}, {id: 175, count: 8}];
+// The bank of a gang account: sharks only, as the feed shows the gang with no potion.
+const GANG_BANK = [{id: 385, count: 200}];
 // The tile where the dagger gang stands between hunts.
 export const GANKER_POST = {x: 3078, z: 3640};
 // `at` moves the spot: side A at x, side B two tiles east.
@@ -180,11 +182,11 @@ const gangCase = (key: string, kit: string, gangKit: string, groups: number, at:
   const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, groups * (size + 1) - 1).split('');
   const ours = (i: number) => i % (size + 1) === 0;
   // `food` cuts the sharks of our account: the start of a meeting that it must leave.
-  // `bank` is what our account holds in its bank, for the trips between two meetings.
+  // `bank` is what our account holds in its bank, for the trips between two meetings; the gang then banks sharks only.
   const fixture = (): SaveConfig => { const c = {...kitFixture(kit, at.x + 2, at.z), ...(bank ? {bank} : {})}; return food === undefined ? c : {...c, inventory: [...c.inventory!.filter(i => i.id !== 385), ...Array.from({length: food}, () => ({id: 385, count: 1}))]}; };
   return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: fixture(), output: /kills=(\d+)/,
     scriptArgs: ['gang', ...letters.slice(0, size).map(l => `{bot:${l}}`), '900', ...letters.slice(size).map(l => `{bot:${l}}`), `SPAR_GANG=${size}`, `SPAR_KITS=${kit}:${gangKit}`, ...args],
-    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: ours(i + 1) ? fixture() : {...kitFixture(gangKit, at.x, at.z), ...(bank ? {bank} : {})}}))};
+    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: ours(i + 1) ? fixture() : {...kitFixture(gangKit, at.x, at.z), ...(bank ? {bank: GANG_BANK} : {})}}))};
 };
 const sparCase = (key: string, a: SaveConfig, b: SaveConfig, args: string[] = []): BenchCase =>
   ({key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', scriptArgs: ['spar', '{bot:b}', '900', ...args], pass: ok, presetConfig: a, companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: b}]});
@@ -501,7 +503,9 @@ const ROUTE_CASES: BenchCase[] = [
   // ran waits 1,000 ticks more (in the record it was back on the post 1,430 ticks after its first drop to 40 HP). Our
   // account waits for them on the tile. The live fight of this kit against the gang: 1 kill, no death, 23 sharks
   // eaten in 1,689 ticks.
-  gangCase('extra:gang-live-check-x2', 'live-walker-iron', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400'], 3, undefined, EDGE_BANK),
+  gangCase('extra:gang-live-check-x2', 'live-walker-iron', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK),
+  // The same with one group: half the accounts, for a PC with little memory free.
+  gangCase('extra:gang-live-check-x1', 'live-walker-iron', 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK),
   gangCase('extra:gang-ganker-dds-live-walker-prepot-x2', 'live-walker', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400'], 3, undefined, EDGE_BANK),
   // The same against the gang that holds its protect prayer.
   gangCase('extra:gang-ganker-max-gang-walker-sticky-near-x2', 'gang-walker', 'ganker-max', 2, GANG_EDGE, ['SPAR_B=ganker-sticky', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400'], 3, undefined, EDGE_BANK),
