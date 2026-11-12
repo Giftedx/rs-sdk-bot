@@ -102,6 +102,11 @@ test('a dead swarm producer remains held, and pre-network recovery refusal resto
         const prior = readFleetAccountClaim(a, input);
         expect(prior).toMatchObject({ kind: 'swarm', phase: 'held' });
         expect(() => acquireFleetSwarmClaim(a, input)).toThrow('held');
+        // An owner that still runs keeps the claim from a recovery. The question carries the claim's time, which tells
+        // the owner from a later process with the same id.
+        const asked: number[][] = [];
+        expect(() => acquireFleetSwarmClaim(a, input, { recover: true, ownerAlive: (pid, at) => { asked.push([pid, at]); return true; } })).toThrow('held');
+        expect(asked).toEqual([[prior!.pid!, prior!.at]]);
         expect(() => acquireFleetSwarmClaim(b, input, { recover: true })).toThrow('held');
         const interrupted = Bun.spawn([process.execPath, '-e',
             `import { acquireFleetSwarmClaim } from ${claimModule}; acquireFleetSwarmClaim(process.cwd(), ${JSON.stringify(input)}, {recover: true})`],

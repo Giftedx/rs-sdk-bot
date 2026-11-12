@@ -769,7 +769,20 @@ test('a run another job of the account started is foreign to a job that is off o
     expect(foreignRun(planned, planned[0]!, { revision: 'changed-mission' })).toBe(false);
 });
 
-import { SWARM_STOP, clearSwarmStop, swarmWroteStop, standingRetryable, writeSwarmStop } from './swarm';
+import { SWARM_STOP, clearSwarmStop, swarmWroteStop, standingRetryable, standingRetryDue, writeSwarmStop } from './swarm';
+test('a standing retry needs proof that the account is offline; a confirmed logout is enough with no status file', () => {
+    const live = 'rs-sdk-demo.fly.dev', now = 10_000_000, old = now - 16 * 60_000;
+    // No status file: the confirmed logout decides alone.
+    expect(standingRetryDue(undefined, true, now)).toBe(true);
+    expect(standingRetryDue(undefined, false, now)).toBe(false);
+    // A status of another server never starts a live retry.
+    expect(standingRetryDue({ server: 'localhost', result: 'fail x', at: old }, true, now)).toBe(false);
+    // A live status: a confirmed logout, or a finished result that is 15 minutes old.
+    expect(standingRetryDue({ server: live, result: '', at: old }, true, now)).toBe(true);
+    expect(standingRetryDue({ server: live, result: 'fail x', at: old }, false, now)).toBe(true);
+    expect(standingRetryDue({ server: live, result: 'fail x', at: now - 60_000 }, false, now)).toBe(false);
+    expect(standingRetryDue({ server: live, result: '', at: old }, false, now)).toBe(false);
+});
 test('the controller knows its own stop files, and a standing job retries the ends a plan removal or a lost process leaves', () => {
     for (const t of Object.values(SWARM_STOP)) expect(swarmWroteStop(t)).toBe(true);
     // A lost lease logs the runs out with the worker's own refusal text; the next controller's planner clears it.
