@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794503562427-bigchopper-balls",
+ "account": "Balls",
+ "partner": "Bigchopper",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "knife",
+ "requested": 1,
+ "claim": "0c8611f8-7c8b-4bc8-a98d-f617195f64c9",
+ "count": 1,
+ "ok": true,
+ "at": 1794504302357,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794504301611
+ },
+ "logout": {
+  "attemptId": "1794504282401-0000010620-0000000001",
+  "at": 1794504302292,
+  "sha256": "bb1fb02e3531d1fb499640bff8991f9c8a89de02fe0ed318e1d311b68d2f8ab6"
+ },
+ "screen": true
+}
