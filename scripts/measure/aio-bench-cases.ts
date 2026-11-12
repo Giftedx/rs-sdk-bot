@@ -523,17 +523,15 @@ const EXTRA_CASES: BenchCase[] = [
     presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Magic: 54, Hitpoints: 40}, bank: [{id: 561, count: 60}, {id: 314, count: 60}, {id: 1387, count: 1}]}},
   {key: 'extra:splash-train', script: 'scripts/splash-train.ts', preset: 'fresh_lumbridge', scriptArgs: ['21', '1500'], pass: ok,
     presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Magic: 19, Hitpoints: 40}, bank: [{id: 559, count: 40}, {id: 557, count: 120}, {id: 555, count: 120}, {id: 558, count: 2}, {id: 556, count: 2}]}},
-  // Underground Pass and Regicide on the halberd pure, which has Ranged 99: nothing worn (Defence 1 wears no rune),
-  // RANGED_PACK iron arrows in the pack, so the quest scripts fight with the bow in the Ranged-only style. Underground
-  // Pass starts at the levels before the route (Attack 11) and Regicide with Underground Pass done (Attack 61).
+  // Underground Pass and Regicide on the halberd pure (Ranged 99, Prayer 43, Defence 1): nothing worn, a magic
+  // shortbow and RANGED_PACK rune arrows in the pack, so the quest scripts fight with the bow in the Ranged-only
+  // style. Underground Pass starts at the levels before the route (Attack 11, Magic 52) with two prayer potions in
+  // the place of two sharks; Regicide starts with Underground Pass done (Attack 61).
   ...(['upass', 'regicide'] as const).map(quest => {
-    const preset = PRESETS[`quest_${quest}`]!, before = quest === 'upass' ? levelsBeforeRoute('pure-hally') : kitSkills('pure-hally');
-    // More sharks, to 23 places of the pack (the quest items need the rest): the build has Defence 1 and no protect
-    // prayer.
-    const pack = [...(preset.inventory ?? []).filter(i => i.id !== 884), {id: 884, count: RANGED_PACK}];
-    const inventory = [...pack, ...Array.from({length: Math.max(0, 23 - pack.length)}, () => ({id: 385, count: 1}))];
+    const preset = PRESETS[`quest_${quest}`]!, before = {...levelsBeforeRoute('pure-hally'), ...(quest === 'regicide' ? {Attack: kitSkills('pure-hally').Attack!} : {})};
+    const sharks = (preset.inventory ?? []).filter(i => i.id === 385), rest = (preset.inventory ?? []).filter(i => i.id !== 385);
+    const inventory = [...rest, ...(quest === 'upass' ? [...sharks.slice(2), {id: 2434, count: 1}, {id: 2434, count: 1}] : sharks), {id: 861, count: 1}, {id: 892, count: RANGED_PACK}];
     return {key: `extra:${quest}-pure-hally`, script: 'scripts/aio-quester.ts', preset: `quest_${quest}`, scriptArgs: [quest], pass: questKeepsBuild('pure-hally', before), timeoutMs: 900_000,
-      known: quest === 'upass' ? 'with Defence 1 and Prayer 1 the build dies to the demon Holthion after 17 sharks; the XP of the run is Ranged and Hitpoints only' : 'with Defence 1 and Prayer 1 the build dies to a Tyras guard after 10 sharks',
       presetConfig: {...preset, equipment: [], inventory, skills: {...preset.skills, ...before}}};
   }),
   // Underground Pass on the Iban pure at its levels before the quest (Attack 11, Hitpoints 10).

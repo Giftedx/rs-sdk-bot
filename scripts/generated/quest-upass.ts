@@ -22,8 +22,9 @@ const SWING = { id: 2276, x: 2460, z: 9699 };             // rope on it: 2462,96
 const LEVER = { id: 3337, x: 2466, z: 9672 };             // portcullis_lever_up (upass_bridge.rs2:81-123)
 const HOLDS = { id: 3365, x: 2395, z: 9559 };             // upass_grilltrap_hand_holds in the spike pit -> 2477,9677
 
-// The iron arrows in the pack that make the bow the weapon of the quest.
-const RANGED_ARROWS = 50;
+// A stack of RANGED_ARROWS rune or iron arrows in the pack makes the bow the weapon of the quest: the first stack of
+// FIGHT_ARROWS that large, shot from the magic shortbow when the pack holds one, else from the shortbow of the rope.
+const RANGED_ARROWS = 50, FIGHT_ARROWS = [892, 884], FIGHT_BOW = 861;
 const FROM = process.env.UP_FROM ?? 'start';
 const STAGES = ['start', 'bridge', 'grid', 'orbs', 'area2', 'paladins', 'main', 'witch', 'demons', 'lower', 'dove', 'temple'];
 const from = (s: string) => STAGES.indexOf(FROM) <= STAGES.indexOf(s);
@@ -89,25 +90,61 @@ try {
             await q.waitTicks(3);
         }
     };
+    // A dose of a prayer potion from the pack when the points are under SIP_AT: an account with Prayer 43 has 43 points,
+    // and the prayer guard holds Protect from Melee with a window open, so the points of one fight run out (practice:
+    // a build with Defence 1 reached the blessed spiders with 0 points and no food).
+    const SIP_AT = 12, PRAYER_POTIONS = [143, 141, 139, 2434];
+    const sip = async () => {
+        const points = () => (q.st() as any)?.prayers?.prayerPoints ?? 0, pot = PRAYER_POTIONS.find(id => q.has(id));
+        if (pot === undefined || points() >= SIP_AT || (q.s.sdk.getSkill('Prayer')?.baseLevel ?? 1) < 43) return;
+        const p0 = points();
+        await q.step('prayer potion', () => use(pot, 1), () => points() > p0, 3, 2);
+    };
     // Attacks the nearest NPC matching re until it dies; then picks up `drop` (if given) from the floor.
-    const kill = async (label: string, re: RegExp, drop?: number, home?: { x: number; z: number }) => {
-        for (let i = 0; i < 6; i++) {
+    // `dead` is the proof of a kill that leaves no drop. Without it a target that leaves the list of nearby NPCs counts
+    // as dead, and a target shot from range walks out of that list alive (practice: 2 of 3 runs of a build account
+    // with a bow ended "no blood on doll" 70 ticks after the ashes, with Kalrag alive).
+    const kill = async (label: string, re: RegExp, drop?: number, home?: { x: number; z: number }, dead?: () => boolean) => {
+        // A target that is not in view yet does not use up a try: a spider that attacks on the way stops the walk to
+        // `home`.
+        for (let i = 0, unseen = 0; i < (dead ? 18 : 6) && !dead?.(); i++) {
             await q.guard(label);
             let n = q.npc(re);
             if (!n && home) { await q.walk(`${label} approach`, [{ x: home.x, z: home.z, tol: 4 }]); n = q.npc(re); }
-            if (!n) { await q.waitTicks(2); continue; }
+            if (!n) { await q.waitTicks(2); if (++unseen <= 40) i--; continue; }
             // Auto retaliate is off (quest-lib) and a meal stops the attack, so the attack is sent again every 6 ticks
             // (trial f4: Holthion took 260 ticks with one click).
             const alive = () => (q.st()?.nearbyNpcs ?? []).some((m: any) => m.index === n.index);
+            let cleared = 0;
             for (let k = 0; k < 20 && alive(); k++) {
                 await q.guard(label);
+                await sip();
+                // The cave is single combat. A blessed spider (level 39) attacks an account of combat 78 or less, and
+                // the target then cannot be attacked. Several spiders can have the bot for their target, and only the
+                // one in the fight can be hit: the bot tries each for one attack and stays on the one that gives XP.
+                const self = (q.s as any).client?.selfSlot, me = Number.isSafeInteger(self) ? 32768 + self : undefined;
+                const others: any[] = (q.st()?.nearbyNpcs ?? []).filter((m: any) => me !== undefined && m.targetIndex === me && m.index !== n.index && m.hp !== 0 && (m.optionsWithIndex ?? []).some((o: any) => /^attack$/i.test(o.text)));
+                if (others.length && ++cleared <= 40) {
+                    const fightXp = () => ['Attack', 'Strength', 'Defence', 'Ranged', 'Magic'].reduce((sum, k) => sum + q.xp(k), 0);
+                    const here = (m: any) => (q.st()?.nearbyNpcs ?? []).some((o: any) => o.index === m.index);
+                    for (const other of others) {
+                        const x0 = fightXp();
+                        await q.s.bot.attack(other);
+                        await q.waitUntil(() => fightXp() > x0 || !here(other), 6);
+                        if (fightXp() === x0 && here(other)) continue;
+                        for (let j = 0; j < 20 && here(other); j++) { await q.guard(label); await sip(); await q.s.bot.attack(other); await q.waitUntil(() => !here(other), 6); }
+                        break;
+                    }
+                    k--;
+                    continue;
+                }
                 await q.s.bot.attack(n as any);
                 await q.waitUntil(() => !alive(), 6);
             }
             // An NPC can drop off the list for a tick while it lives (proof run: Holthion left at 34 of 87 damage, no amulet
             // on the floor), so a kill with a drop ends on the drop and the bot attacks again otherwise.
             await q.waitTicks(2);
-            if (drop !== undefined ? q.has(drop) || (q.st()?.groundItems ?? []).some((o: any) => o.id === drop) : !(q.st()?.nearbyNpcs ?? []).some((m: any) => m.index === n.index)) break;
+            if (dead ? dead() : drop !== undefined ? q.has(drop) || (q.st()?.groundItems ?? []).some((o: any) => o.id === drop) : !(q.st()?.nearbyNpcs ?? []).some((m: any) => m.index === n.index)) break;
         }
         await q.waitTicks(2);
         if (drop !== undefined) await pickup(label, drop);
@@ -154,11 +191,15 @@ try {
         await wield('lit arrow', ITEM.lit);
         await q.walk('to shot', [{ x: 2447, z: 9722, tol: 0 }]);
         await q.step('shoot rope', () => q.opLoc(q.locAt(ROPE.x, ROPE.z) ?? ROPE, 1), () => x() <= 2442, 20, 3);
-        // An account that brings RANGED_ARROWS iron arrows fights the whole quest with the bow, in the style that trains
-        // only Ranged: a build with an Attack or Defence level to keep (research/pvp-fight-loop.md, "Quest routes of
-        // the builds"). Any other account takes the scimitar and drops the bow.
-        if (q.cnt(ITEM.arrow) >= RANGED_ARROWS) { await wield('arrows', ITEM.arrow); await q.styleOnly('bow', 'Ranged'); }
-        else { await wield('scimitar', ITEM.scimitar); await drop('bow', [ITEM.bow, ITEM.arrow]); }
+        // An account that brings RANGED_ARROWS arrows fights the whole quest with the bow, in the style that trains only
+        // Ranged: a build with an Attack or Defence level to keep (research/pvp-fight-loop.md, "Quest routes of the
+        // builds"). Any other account takes the scimitar and drops the bow.
+        const arrows = FIGHT_ARROWS.find(id => q.cnt(id) >= RANGED_ARROWS);
+        if (arrows !== undefined) {
+            if (q.has(FIGHT_BOW)) await wield('fight bow', FIGHT_BOW);
+            await wield('arrows', arrows);
+            await q.styleOnly('bow', 'Ranged');
+        } else { await wield('scimitar', ITEM.scimitar); await drop('bow', [ITEM.bow, ITEM.arrow]); }
         q.milestone(2);
         // 5. The rope on the hanging rock swings the bot east (upass_obstacles.rs2:94-131), then rockslides north-east
         // round to the spike grid.
@@ -417,7 +458,7 @@ try {
         const b0 = 0;
         await topUp(80);
         await pfm(true);
-        await kill('kalrag', /^kalrag$/i, undefined, { x: 2356, z: 9908 });
+        await kill('kalrag', /^kalrag$/i, undefined, { x: 2356, z: 9908 }, () => q.msgCount(/smear the doll of iban/i) > b0);
         await pfm(false);
         await q.waitUntil(() => q.msgCount(/smear the doll of iban/i) > b0, 8);
         if (q.msgCount(/smear the doll of iban/i) <= b0) await q.fail('no blood on doll');
