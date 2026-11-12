@@ -282,6 +282,8 @@ export async function runFiremaking(s:Session,o:FiremakingOptions,selectedSite?:
   if(o.clearPack){if(!st()?.bank?.isOpen)await openBank();for(const id of new Set(inv().map(i=>i.id)))if(id!==TINDERBOX)await deposit(id);}
   let row=0;
   for(;;){
+   // A run whose last log met the target, MAX_LOGS or CAP is done: check that before an empty stock ends it as exhausted.
+   {const done=stopReason();if(done&&done!=='logs-exhausted'){r.stop=done;break;}}
    if(o.progressive){if(!pick()){r.stop='logs-exhausted';break;}if(s.sdk.getSkill(FIREMAKING)!.level<L.level)throw new Refusal('selected progressive Firemaking level drained');}
    r.stop=stopReason();if(r.stop)break;
    // At the bank: carry up to one pack of logs, bounded by MAX_LOGS.
