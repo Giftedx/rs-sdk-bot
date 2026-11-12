@@ -1,25 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794459305282,
+ "at": 1794459589953,
  "jobs": [
-  {
-   "account": "Fingerblastr",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1601 QUANTITY=1 LIMIT_PRICE=150000 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit21-1601-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Diamond on the Grand Exchange to buy dragon longswords from Jakut in the Zanaris market",
-   "role": "supply",
-   "template": "kit-buy:army-jakut-swords",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
   {
    "account": "Quickhandjob",
    "script": "scripts/shop-buyer.ts",
@@ -143,6 +125,31 @@
    "autopilot": "claude-cloud",
    "resources": [
     "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "trooper:battlefield"
    ]
   },
   {
