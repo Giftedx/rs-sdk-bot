@@ -877,19 +877,28 @@ export const RANGED_KIT: readonly Needs[] = BOWS.flatMap(([bow, level]) =>
 // - flax (scripts/gather-flax.ts): none. The worker goes to the field with the shared walker from another floor or a
 //   far start (bench case extra:flax-from-ardougne-upstairs). Live trial: one account from the Seers bank, four runs
 //   that ended ok, 1,320 flax banked in 7,317 ticks (0.18 a tick), lowest Hitpoints 46. The bench preset is a bare
-//   account in the field: 364 flax in 1,524 ticks. Gap: one account in the field; two at once are not run.
+//   account in the field: 364 flax in 1,524 ticks. Gap: one account in the field; two at once are not run. Gap: an
+//   account with 10 Hitpoints got no route to the field (`no flax progress: no route`, 357 ticks); the template
+//   asks no Hitpoints.
 // - bow strings (scripts/spin-bowstrings.ts): Crafting 10 (`flax requires Crafting 10`); it ends ok only with
-//   MAX_MAKE made, so it needs that much flax banked at Seers. Bench: Crafting 13, 56 made in 457 ticks.
+//   MAX_MAKE made, so it needs that much flax banked at Seers. Bench: Crafting 13, 56 made in 457 ticks. Live
+//   trial: two accounts made 56 and then sent no logout (`ACTION_SETTLEMENT_DEFERRED`, `RESULT fail no result`,
+//   then `fleet account claim held by swarm`); the worker's own session owner refused the logout step.
 // - yew logs (scripts/gather-yews.ts): Woodcutting 60 for a yew, and an axe. Bench: Woodcutting 99 with a rune axe,
 //   37 logs in 1,023 ticks; the rate here is half of that. BANK_AT is the worker's default 27, not the bench's 200.
+//   Gap: no live run.
 // - arrow shafts (scripts/fletch-arrows.ts, MODE=shafts): a knife and MAX_MAKE logs. Bench: a bare account at the
-//   Draynor bank, one log in 15 ticks. Gap: a start away from a bank is not run.
+//   Draynor bank, one log in 15 ticks. Gap: a start away from a bank is not run. Live trial: one account away from
+//   a bank ended at tick 0 with `shafts bank unavailable`; the template does not take the account to a bank.
 // - ore (scripts/gather-ore.ts mixedOreCombatProblem): combat 13 (rats at the Varrock East mine hunt below it) and a
 //   pickaxe. Live trial: 75 ores banked in 1,169 ticks at combat 13 (scripts/fleet.ts, OreElse). Bench: Mining 50.
+//   Live trial through the AIO route: two accounts ended `no ore progress: bounded safety retreat failed`, and one
+//   of them then timed out at logout. Gap: the cause of the retreat is not read.
 // - rune essence (scripts/gather-essence.ts): Rune Mysteries complete (Aubury refuses the teleport without it) and a
 //   pickaxe. Bench: a bare account with the quest done, 6 essence in 189 ticks.
 // - air runes (scripts/rune-bank-craft.ts): an air talisman and banked essence. Bench: Runecraft 1, 30 essence
-//   crafted in 324 ticks.
+//   crafted in 324 ticks. Live trial: an account with Runecraft 99 ended `RESULT ok runecraft=99 trips=0 consumed=0
+//   crafted=0`: the argument 99 is a target level, so the worker makes nothing at 99 and reports ok.
 // - Rune Mysteries (scripts/quest-sweep.ts with scripts/generated/quest-runemysteries.ts): the sweep takes the
 //   preset's pack from the bank and ends `missing id:count` without it: 2 law, 6 air, 1 fire and 1 earth rune and 4
 //   meals. The quest has no fight and no level check, and walks where a teleport fails. Gap: the bench runs the sweep
@@ -942,8 +951,9 @@ export const RANGED_KIT: readonly Needs[] = BOWS.flatMap(([bow, level]) =>
 //   of its Hitpoints the account leaves, eats banked food of BLOOD_FOOD (the worker's BANK_FOOD) and ends `stop=hp`
 //   with none, so `needs` asks BLOOD_MEALS pieces (an estimate: the worker's note gives 12 of 47 Hitpoints a trip).
 //   Bench: Thieving 99 and Hitpoints 56 by the tower, 2 loots in 165 ticks. The rate is an estimate from the respawn
-//   time: 4 runes and 1,000 coins in 400 ticks. Gap: no run of more than 2 loots is measured, and another player at
-//   the chests takes loots from the run.
+//   time: 4 runes and 1,000 coins in 400 ticks. Live trial: one account from the Draynor bank, three runs that
+//   ended ok, 6 loots each, 36 blood runes and 9,000 coins banked in 3,739 ticks (0.0096 runes a tick), lowest
+//   Hitpoints 23. Gap: another player at the chests takes loots from the run.
 // - unfinished potions (scripts/microbot-production.ts, recipe `brew:unf_<herb>_potion`): a members world (MEMBERS=1;
 //   `production recipe requires confirmed members world`), the Herblore level of the potion (brew_potion.struct
 //   `brew_potion_level`; `production level missing`), and the clean herb and a vial of water in the bank. The worker
