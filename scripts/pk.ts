@@ -142,6 +142,9 @@ export type FightOptions = {
     // to Wilderness level 30; there is no Teleblock in the content), or with no glory cast `escapeSpell` (level 20).
     escapeAt?: number;
     escapeSpell?: number;
+    // false: no run after a target that flees or is out of view. An account that waits for its opponents to come to
+    // it stays on its tile.
+    chase?: boolean;
     // At this Wilderness level or under, the way out is a walk south over the edge of the Wilderness: no player can
     // attack a player outside it (pvp_combat.rs2:32-48). It needs no item.
     escapeWalk?: number;
@@ -611,7 +614,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // the next turn. While we stand, run after it: to its tile, or along its heading once it is out of view. A walk
         // would cancel an approach that the server has in hand, so it is sent only while we stand still.
         const ranged = hasStyle(o.kit, 'magic') || hasStyle(o.kit, 'ranged');
-        if (ranged && stoodStill && now >= selfFrozenUntil && now - chaseAt >= 2 && now < nextAttack && now < fleeingUntil + 12) {
+        if (o.chase !== false && ranged && stoodStill && now >= selfFrozenUntil && now - chaseAt >= 2 && now < nextAttack && now < fleeingUntil + 12) {
             const to = target && cheb(at, target) > 5 ? { x: target.x, z: target.z }
                 : !target && prevTarget ? { x: prevTarget.x + heading.x * 12, z: prevTarget.z + heading.z * 12 } : null;
             if (to) { void sdk.sendWalk(to.x, to.z); chaseAt = now; }
