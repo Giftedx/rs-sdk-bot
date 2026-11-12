@@ -72,7 +72,7 @@ const root = resolve(import.meta.dir, '..', '..');
 // Time budget (scripts/measure/bench-budget.ts): a run is at most --budget <minutes> (default 10). The run estimates
 // its wall time from the last time of each case, refuses a selection over the budget before its first engine (exit
 // code 3, with the heaviest cases), and starts no case after the deadline. --over-budget runs it anyway. --seeds gives
-// each seed an equal share. --profile runs one engine and prints AIO_BENCH_PROFILE for each case: engine start,
+// each seed an equal share. --profile runs one engine with no kept results and prints AIO_BENCH_PROFILE for each case: engine start,
 // startup and game wait of the engine, ticks the client held, ticks capped at SIM_BUSY_MS, and client time.
 const SET_KEYS: string[] = [];
 if (import.meta.main) {
@@ -98,7 +98,8 @@ if (import.meta.main) {
     env.BENCH_BUDGET_MIN = budget;
   }
   if (has('--over-budget')) env.BENCH_OVER_BUDGET = '1';
-  if (has('--profile')) { env.BENCH_PROFILE = '1'; env.BENCH_PARALLEL = '1'; }
+  // A kept result runs nothing, so a profile reads no kept result.
+  if (has('--profile')) { env.BENCH_PROFILE = '1'; env.BENCH_PARALLEL = '1'; env.BENCH_CACHE = '0'; }
   // --watch runs the selection, then runs it again each time a file under scripts/ or packages/ changes.
   if (has('--watch')) {
     const run = () => Bun.spawnSync(['bun', import.meta.path, ...process.argv.slice(2).filter(a => a !== '--watch')], { cwd: root, env, stdout: 'inherit', stderr: 'inherit', windowsHide: true });
