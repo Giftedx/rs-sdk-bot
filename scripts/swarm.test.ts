@@ -43,7 +43,7 @@ test('no demand cannot hide a retained failure, stop marker or release hold',()=
  // A release pause starts again; the swarm checks the release pin itself before a non-standing start.
  expect(startable(['Courier'],true,new Map([['Courier',{reason:'release-paused'}]]),()=>Infinity).start).toEqual(['Courier']);
 });
-import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, rmSync, statSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { hasPayout } from '../packages/core/src/bank-demand';
@@ -340,6 +340,63 @@ test('admission reserves pending heaps and a new account before enforcing the fr
     expect(admissionDecision({...base,freeGB:FREE_FLOOR_GB+0.9,minFreeGB:0}).reason).toBe('memory');
     expect(admissionDecision({...base,starting:3,freeGB:10.5}).reason).toBe('memory');
     expect(admissionDecision({...base,freeGB:NaN}).allowed).toBe(false);
+});
+
+test('an open recovery gets the bot slot that frees at a full fleet, before a waiting planner job', async () => {
+    const { recoverySlot, recoverySlotReserve, recoveryLeaseHeld, admitRecovery, RECOVERY_SLOT_HOLD_MS, RECOVERY_LEASE_MAX_MS } = await import('./swarm');
+    const cap = { external: 0, pending: 0, freeGB: 64, minFreeGB: 0, maxBots: 25 };
+    let slot = { until: 0 } as ReturnType<typeof recoverySlot>, now = 1_000_000;
+    // The admission of one account of a job, as the controller's tick calls it.
+    const job = (account: string, running: number, freeGB = cap.freeGB) => admissionDecision({ ...cap, freeGB, running,
+        starting: 1 + recoverySlotReserve(slot, { recovering: false, accounts: [account], now }), startingReserve: 1 });
+    const recovery = (running: number, freeGB = cap.freeGB) => admitRecovery({ account: 'Rod', active: [], ...cap, freeGB, running }, () => {});
+    // The fleet is full and a planner job waits.
+    expect(job('Planner', 25).reason).toBe('maxBots');
+    // A recovery request opens: the coordinator holds the repair lease. No slot is free, so each side waits.
+    slot = recoverySlot(slot, { leaseHeld: true, started: [], now });
+    expect(() => recovery(25)).toThrow('recovery admission waiting: maxBots');
+    // One bot ends. The planner job does not get the slot; the recovery does.
+    now += 2000; slot = recoverySlot(slot, { leaseHeld: true, started: [], now });
+    expect(job('Planner', 24).reason).toBe('maxBots');
+    expect(() => recovery(24)).not.toThrow();
+    // The cleanup child counts in the running bots: it uses the slot, and nothing more is held.
+    now += 2000; slot = recoverySlot(slot, { leaseHeld: true, recovering: 'Rod', started: [], now });
+    expect(recoverySlotReserve(slot, { recovering: true, accounts: ['Planner'], now })).toBe(0);
+    // The child ends and the coordinator releases the lease. The job of the recovered account is not installed yet.
+    now += 2000; slot = recoverySlot(slot, { leaseHeld: false, started: [], now });
+    expect(job('Planner', 24).reason).toBe('maxBots');
+    expect(job('rod', 24).allowed).toBe(true);
+    // Its job starts: the hold ends and the fleet is full again.
+    now += 2000; slot = recoverySlot(slot, { leaseHeld: false, started: ['Rod'], now });
+    expect(slot.until).toBe(0);
+    expect(job('Planner', 25).reason).toBe('maxBots');
+    expect(job('Planner', 24).allowed).toBe(true);
+
+    // A recovery whose job never starts keeps the slot for RECOVERY_SLOT_HOLD_MS after its last sign, no longer.
+    slot = recoverySlot({ until: 0 }, { leaseHeld: false, recovering: 'Rod', started: [], now });
+    slot = recoverySlot(slot, { leaseHeld: false, started: [], now: now + 2000 });
+    expect(recoverySlotReserve(slot, { recovering: false, accounts: ['Planner'], now: now + RECOVERY_SLOT_HOLD_MS - 1 })).toBe(1);
+    expect(recoverySlotReserve(slot, { recovering: false, accounts: ['Planner'], now: now + RECOVERY_SLOT_HOLD_MS })).toBe(0);
+    expect(recoverySlot(slot, { leaseHeld: false, started: [], now: now + RECOVERY_SLOT_HOLD_MS })).toEqual({ until: 0 });
+    // The next recovery opens its lease while the job of the one before starts: the hold stays, for the new request.
+    slot = recoverySlot({ until: now + 1, account: 'Rod' }, { leaseHeld: true, started: ['Rod'], now });
+    expect(slot).toEqual({ until: now + RECOVERY_SLOT_HOLD_MS });
+    expect(job('Planner', 24).reason).toBe('maxBots');
+
+    // The held slot changes the bot count only. A memory refusal stays a memory refusal, for the job and the recovery.
+    slot = recoverySlot({ until: 0 }, { leaseHeld: true, started: [], now });
+    const held = job('Planner', 10, FREE_FLOOR_GB + 1), free = admissionDecision({ ...cap, freeGB: FREE_FLOOR_GB + 1, running: 10, starting: 1, startingReserve: 1 });
+    expect(held.allowed).toBe(true); expect(held.projectedFreeGB).toBe(free.projectedFreeGB);
+    expect(job('Planner', 10, FREE_FLOOR_GB + 0.9).reason).toBe('memory');
+    expect(() => recovery(24, FREE_FLOOR_GB + 0.9)).toThrow('recovery admission waiting: memory');
+
+    // The lease counts while its file is younger than RECOVERY_LEASE_MAX_MS: a lease that a dead process left holds no slot.
+    const dir = mkdtempSync(join(tmpdir(), 'recovery-lease-')), lease = join(dir, 'swarm-repair.json.lease');
+    expect(recoveryLeaseHeld(lease, Date.now())).toBe(false);
+    writeFileSync(lease, '{}');
+    const written = statSync(lease).mtimeMs;
+    expect(recoveryLeaseHeld(lease, written + RECOVERY_LEASE_MAX_MS - 1)).toBe(true);
+    expect(recoveryLeaseHeld(lease, written + RECOVERY_LEASE_MAX_MS)).toBe(false);
 });
 
 test('own successful completed run bypasses fresh-status wait only for its old session epoch', () => {
