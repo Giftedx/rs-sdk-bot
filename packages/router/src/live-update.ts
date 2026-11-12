@@ -126,7 +126,9 @@ export function patchCollisions(root: string, oldPatch: string, newPatch: string
 // It removes no file that only the new patch creates. Such a file makes the apply fail, and the file stays.
 export function resetVendor(root: string, oldPatch: string): { ok: boolean; detail: string } {
     const vendor = join(root, SDK), patch = join(root, SDK_PATCH), git = gitIn(vendor);
-    const restore = git('checkout', '--', '.');
+    // From the pinned commit, not from the index: a patch that is staged in vendor/rs-sdk would come back from the
+    // index. The index itself does not change.
+    const restore = git('restore', '--source=HEAD', '--worktree', '--', '.');
     if (!restore.ok) return { ok: false, detail: `restore of ${SDK}: ${restore.out.slice(0, 160)}` };
     const newPatch = existsSync(patch) ? readFileSync(patch, 'utf8') : '';
     for (const file of patchNewFiles(oldPatch)) rmSync(join(vendor, file), { force: true });

@@ -53,9 +53,10 @@ if(import.meta.main){
         else if(!flags.has('--reset-vendor')){step('SDK patch','MISMATCH: vendor/rs-sdk has edits that are not the patch of this commit. Run again with --reset-vendor to restore its tracked files and apply this patch.');failed=true;}
         else if(dry)step('SDK patch','would restore the tracked files of vendor/rs-sdk and apply the patch');
         else{
-            const restored=ok(vendor,['git','checkout','--','.']);
+            // From the pinned commit, not from the index: a patch that is staged there would come back from the index.
+            const restored=ok(vendor,['git','restore','--source=HEAD','--worktree','--','.']);
             for(const file of patchNewFiles(readFileSync(patch,'utf8')))rmSync(join(vendor,file),{force:true});
-            if(restored)act('SDK patch',vendor,['git','apply',patch]);else{step('SDK patch','FAILED: git checkout -- . in vendor/rs-sdk');failed=true;}
+            if(restored)act('SDK patch',vendor,['git','apply',patch]);else{step('SDK patch','FAILED: git restore --source=HEAD --worktree -- . in vendor/rs-sdk');failed=true;}
         }
     }else if(dry)step('SDK patch','would check after the submodule step');
 

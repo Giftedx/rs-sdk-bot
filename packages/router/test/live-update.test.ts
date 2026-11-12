@@ -191,10 +191,18 @@ test('the SDK folder gets a new patch only when it held exactly the old patch or
         rmSync(join(vendor, 'other.txt')); writeFileSync(patch, first); run('apply', patch);
         expect(vendorExact(root)).toBe('applied');
 
+        // The old patch is staged in the folder's index, as after `git add`. The restore takes the pinned commit, so the
+        // staged patch does not come back, and the index stays as it was.
+        run('add', '--', 'a.txt', 'made.txt');
+        const staged = run('ls-files', '--stage');
+        expect(staged).not.toBe(index);
+        expect(vendorExact(root)).toBe('applied');
+
         // The update moved the patch file: the folder gets the new patch, and the file that only the old patch made goes.
         writeFileSync(patch, second);
         expect(vendorExact(root)).toBe('other');
         expect(resetVendor(root, first)).toEqual({ ok: true, detail: '' });
+        expect(run('ls-files', '--stage')).toBe(staged);
         expect(file('a.txt')).toBe(lines('patched two')); expect(file('other.txt')).toBe('other\n'); expect(file('sdk/x.ts')).toBe('y\n');
         expect(existsSync(join(vendor, 'made.txt'))).toBe(false);
         expect(file('market.sqlite')).toBe('data');
