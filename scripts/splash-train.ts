@@ -1,5 +1,6 @@
 // Magic for the PK army with no fire rune, nature rune or feather: a curse cast over the fence of the Ardougne cow field.
 // bun scripts/splash-train.ts <account> <TARGET_LEVEL> [CAP ticks=6000]
+// Env: SPLASH_SITE=ardougne (default: the cows, with the bank) or coop (Lumbridge chickens, from the pack, no bank).
 //
 // Server facts (vendor/rs-sdk/server/content/scripts):
 // - A stat-lowering spell on a monster takes its runes and gives its experience on every cast, hit or miss
@@ -42,6 +43,20 @@ export const SPLASH_SPELLS = [
 export const SPLASH_RUNES = [BODY, WATER, EARTH, MIND, AIR] as const;
 // The tile south of the field's fence, the cows (a cow is 2 tiles wide), and a spell's reach.
 export const SPLASH_TILE = { x: 2664, z: 3339 }, COWS = [81, 397] as const, COW_SIZE = 2, CAST_RANGE = 9;
+// SPLASH_SITE=coop is the record route's opening (rune.fast, "Wind Strike at the coop"): a fresh account casts Wind
+// Strike from its starter pack at the Lumbridge chickens, with no bank. The tile south of the coop
+// (pathfinder and line of sight: 115 of the 139 walkable coop tiles in reach) is open to the chickens, and a struck
+// chicken hits back, so the run stops only at the hitpoint floor, not at the first hit.
+export interface SplashSite { tile: { x: number; z: number }; target: (n: { id: number; name: string }) => boolean; size: number; bank: boolean; hpFloor?: number }
+export const SPLASH_SITES: Readonly<Record<string, SplashSite>> = {
+    ardougne: { tile: SPLASH_TILE, target: n => (COWS as readonly number[]).includes(n.id), size: COW_SIZE, bank: true },
+    coop: { tile: { x: 3229, z: 3292 }, target: n => /^chicken$/i.test(n.name), size: 1, bank: false, hpFloor: 5 },
+};
+export function splashSite(name = 'ardougne'): SplashSite {
+    const site = SPLASH_SITES[name];
+    if (!site) throw Error(`SPLASH_SITE must be ${Object.keys(SPLASH_SITES).join(' or ')}, not ${name}`);
+    return site;
+}
 // Ticks a cow is left alone after a cast on it or a refusal, and after a cast that did nothing. A monster regrows one
 // level of a lowered stat every 100 ticks (engine NpcType.regenrate), so a hit cow takes a cast again 0 to 100 ticks
 // later, and the ten cows give the field about one cast in ten ticks, shared by its casters.
@@ -52,6 +67,9 @@ const count = (items: readonly Item[], id: number) => items.filter(i => i.id ===
 
 // The spell a level casts.
 export const splashSpell = (level: number) => SPLASH_SPELLS.find(s => level >= s.level) ?? SPLASH_SPELLS[SPLASH_SPELLS.length - 1]!;
+// The best spell of the level that the pack has the runes for; the level's best spell when the pack pays for none.
+export const packSpell = (level: number, pack: readonly Item[]) => SPLASH_SPELLS.find(s => level >= s.level
+    && Object.entries(s.runes).every(([id, each]) => count(pack, Number(id)) >= each)) ?? splashSpell(level);
 // Casts from this experience to the target level, spell by spell as the levels unlock them, and the runes they cost.
 export function splashPlan(xp: number, target: number): { casts: number; runes: Record<number, number> } {
     const runes: Record<number, number> = Object.fromEntries(SPLASH_RUNES.map(id => [id, 0])), goal = xpForLevel(target);
@@ -66,9 +84,9 @@ export function splashPlan(xp: number, target: number): { casts: number; runes: 
     return { casts, runes };
 }
 // Whether a cast from `from` reaches a cow whose south-west tile is `sw`: in range and in sight of its whole footprint.
-export function castReaches(from: { x: number; z: number }, sw: { x: number; z: number }, range: number = CAST_RANGE): boolean {
+export function castReaches(from: { x: number; z: number }, sw: { x: number; z: number }, range: number = CAST_RANGE, size: number = COW_SIZE): boolean {
     initPathfinding();
-    return Math.max(Math.abs(sw.x - from.x), Math.abs(sw.z - from.z)) <= range && rsmod.hasLineOfSight(0, from.x, from.z, sw.x, sw.z, 1, 1, COW_SIZE, COW_SIZE, 0);
+    return Math.max(Math.abs(sw.x - from.x), Math.abs(sw.z - from.z)) <= range && rsmod.hasLineOfSight(0, from.x, from.z, sw.x, sw.z, 1, 1, size, size, 0);
 }
 
 // The stop of a run that made no cast for QUIET_TICKS: every cow in reach rests, is fought by another player or is dead.
@@ -76,7 +94,8 @@ export const QUIET_TICKS = 300, QUIET_STOP = `no cast in ${QUIET_TICKS} ticks`;
 // A stop that ends a batch and not the band, when the run gained a level before it.
 export const splashBatchDone = (stop: string, gained: number) => gained > 0 && (stop === 'supplies' || stop === 'cap' || stop === QUIET_STOP);
 
-export async function runSplash(s: Session, o: { target: number; cap: number; stop?: () => boolean }) {
+export async function runSplash(s: Session, o: { target: number; cap: number; stop?: () => boolean; site?: SplashSite }) {
+    const site = o.site ?? SPLASH_SITES.ardougne!, TILE = site.tile;
     const st = () => s.sdk.getState(), inv = () => s.sdk.getInventory();
     const level = () => s.sdk.getSkill('Magic')?.baseLevel ?? 0, xp = () => s.sdk.getSkillXp('Magic') ?? 0, hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
     if (!await waitUntil(s, () => !!st()?.player && s.sdk.getSkillXp('Magic') !== null, { timeoutTicks: 15 })) throw Error('splash: position unknown');
@@ -89,6 +108,7 @@ export async function runSplash(s: Session, o: { target: number; cap: number; st
     if (level() >= o.target) return result();
     const walker = await sessionWalker(s);
     const toBank = async () => {
+        if (!site.bank) return;
         if (atNorthBank(st()?.player)) return;
         const there = await walkTargetPersist(s, { ...COW_NORTH_BANK, level: 0 });
         if (!there.ok || !atNorthBank(st()?.player)) throw Error(`splash: walk to the Ardougne north bank failed: ${there.reason ?? ''} ${there.detail ?? ''}`);
@@ -109,24 +129,46 @@ export async function runSplash(s: Session, o: { target: number; cap: number; st
         }
     };
     const runeIds = new Set<number>(SPLASH_RUNES);
-    const spellNow = () => splashSpell(level());
+    // A site with no bank casts the best spell that the pack pays for: the starter pack has runes for 2 Confuse casts
+    // and 15 Wind Strikes.
+    const spellNow = () => site.bank ? splashSpell(level()) : packSpell(level(), inv());
     const affordable = () => Object.entries(spellNow().runes).every(([id, each]) => count(inv(), Number(id)) >= each);
     const runesHeld = () => SPLASH_RUNES.reduce((n, id) => n + count(inv(), id), 0);
-    const onTile = () => { const p = st()?.player; return !!p && p.worldX === SPLASH_TILE.x && p.worldZ === SPLASH_TILE.z; };
+    const onTile = () => { const p = st()?.player; return !!p && p.worldX === TILE.x && p.worldZ === TILE.z; };
+    const reach = (n: { tileX?: number; tileZ?: number; x: number; z: number }) => castReaches(TILE, { x: n.tileX ?? n.x, z: n.tileZ ?? n.z }, CAST_RANGE, site.size);
     const refusals = () => Math.max(-1, ...(st()?.gameMessages ?? []).filter(m => /already been (weakened|lowered)/i.test(m.text)).map(m => m.tick));
-    // Stage: bank the pack, take the runes the casts need.
-    await toBank();
-    await openBank();
-    await depositAll(runeIds);
+    // Stage: bank the pack, take the runes the casts need. A site with no bank casts from the pack as it is.
     const plan = splashPlan(xp(), o.target);
-    for (const id of runeIds) {
-        const want = Math.min(Math.max(0, plan.runes[id]! - count(inv(), id)), count(observe()?.items ?? [], id)), before = count(inv(), id);
-        if (want < 1) continue;
-        const row = (st()?.bank?.items ?? []).find(i => i.id === id);
-        if (!row || !(await s.bot.withdrawItem(row, want, { asNote: false })).success || !await waitUntil(s, () => count(inv(), id) >= before + want, { timeoutTicks: 10 })) throw Error(`splash: withdraw ${want}x${id} failed`);
+    if (site.bank) {
+        await toBank();
+        await openBank();
+        await depositAll(runeIds);
+        for (const id of runeIds) {
+            const want = Math.min(Math.max(0, plan.runes[id]! - count(inv(), id)), count(observe()?.items ?? [], id)), before = count(inv(), id);
+            if (want < 1) continue;
+            const row = (st()?.bank?.items ?? []).find(i => i.id === id);
+            if (!row || !(await s.bot.withdrawItem(row, want, { asNote: false })).success || !await waitUntil(s, () => count(inv(), id) >= before + want, { timeoutTicks: 10 })) throw Error(`splash: withdraw ${want}x${id} failed`);
+        }
+        await closeBank();
     }
-    await closeBank();
+    // A first job after the account claim starts on Tutorial Island (claim-account.ts logs out at once): skip it as
+    // scripts/arrive-draynor.ts does. Live (Balls): the skip put the account at Lumbridge 3222,3222 by tick 14, with
+    // the starter kit in the pack.
+    const island = () => { const p = st()?.player; return !!p && p.worldX < 3160 && p.worldZ < 3130; };
+    if (!site.bank && island()) {
+        await waitUntil(s, () => (st()?.nearbyNpcs?.length ?? 0) > 0, { timeoutTicks: 30 });
+        const r = await s.bot.skipTutorial();
+        if (!r.success || !await waitUntil(s, () => !island(), { timeoutTicks: 30 })) throw Error(`splash: tutorial skip failed: ${r.message ?? 'still on the island'}`);
+        await waitTicks(s, 3);
+        await s.direct({ type: 'closeModal', reason: 'SDK' });
+    }
     if (!affordable()) { stop = 'supplies'; return result(); }
+    // A site with no bank starts away from its tile (the Lumbridge spawn for the coop): the route planner walks there.
+    const p0 = st()?.player;
+    if (!site.bank && p0 && Math.max(Math.abs(p0.worldX - TILE.x), Math.abs(p0.worldZ - TILE.z)) > 10) {
+        const there = await walkTargetPersist(s, { ...TILE, level: 0 });
+        if (!there.ok) throw Error(`splash: walk to ${TILE.x},${TILE.z} failed: ${there.reason ?? ''} ${there.detail ?? ''}`);
+    }
     try {
         const rest = new Map<number, number>();
         let quiet = s.tick();
@@ -135,19 +177,19 @@ export async function runSplash(s: Session, o: { target: number; cap: number; st
             if (o.stop?.()) { stop = 'stopped'; break; }
             if (s.tick() - start >= o.cap) { stop = 'cap'; break; }
             hpMin = Math.min(hpMin, hp());
-            if (hp() < hp0) { stop = `lost hitpoints at the fence (${hp()} of ${hp0})`; break; }
+            if (site.hpFloor === undefined ? hp() < hp0 : hp() <= site.hpFloor) { stop = `lost hitpoints at the fence (${hp()} of ${hp0})`; break; }
             if (!affordable()) { stop = 'supplies'; break; }
             if (s.tick() - quiet > QUIET_TICKS) {
                 // What the field looked like: cows seen, cows a cast reaches, players near, and the last thing the server said.
-                const cows = (st()?.nearbyNpcs ?? []).filter(n => (COWS as readonly number[]).includes(n.id) && n.hp !== 0);
+                const cows = (st()?.nearbyNpcs ?? []).filter(n => site.target(n) && n.hp !== 0);
                 const said = (st()?.gameMessages ?? []).slice(-1)[0]?.text ?? '';
-                quietNote = `cows=${cows.length} reach=${cows.filter(n => castReaches(SPLASH_TILE, { x: n.tileX ?? n.x, z: n.tileZ ?? n.z })).length} players=${(st()?.nearbyPlayers ?? []).length} said=${JSON.stringify(said.slice(0, 60))}`;
+                quietNote = `cows=${cows.length} reach=${cows.filter(reach).length} players=${(st()?.nearbyPlayers ?? []).length} said=${JSON.stringify(said.slice(0, 60))}`;
                 stop = QUIET_STOP; break;
             }
             // A cast the server cannot make from here walks the account along the fence: back to the tile first.
-            if (!onTile() && (!(await walkPath(walker, [{ ...SPLASH_TILE, tol: 0 }], { maxTicks: 200, stop: () => ended })).ok || !onTile())) throw Error(`splash: fence tile ${SPLASH_TILE.x},${SPLASH_TILE.z} not reached`);
-            const cow = (st()?.nearbyNpcs ?? []).filter(n => (COWS as readonly number[]).includes(n.id) && n.hp !== 0 && (rest.get(n.index) ?? 0) <= s.tick()
-                && castReaches(SPLASH_TILE, { x: n.tileX ?? n.x, z: n.tileZ ?? n.z })).sort((a, b) => a.distance - b.distance)[0];
+            if (!onTile() && (!(await walkPath(walker, [{ ...TILE, tol: 0 }], { maxTicks: 200, stop: () => ended })).ok || !onTile())) throw Error(`splash: fence tile ${TILE.x},${TILE.z} not reached`);
+            const cow = (st()?.nearbyNpcs ?? []).filter(n => site.target(n) && n.hp !== 0 && (rest.get(n.index) ?? 0) <= s.tick() && reach(n))
+                .sort((a, b) => a.distance - b.distance)[0];
             if (!cow) { waited++; await waitTicks(s, 1); continue; }
             const before = xp(), runes = runesHeld(), said = refusals();
             await s.direct({ type: 'spellOnNpc', npcIndex: cow.index, spellComponent: componentId(spellNow().component), reason: 'SDK' });
@@ -158,7 +200,7 @@ export async function runSplash(s: Session, o: { target: number; cap: number; st
         }
     } finally {
         // Back to the bank with what is left, so the next job starts from a clean pack.
-        if (!ended) try { await toBank(); await openBank(); await depositAll(new Set()); await closeBank(); }
+        if (!ended && site.bank) try { await toBank(); await openBank(); await depositAll(new Set()); await closeBank(); }
         catch (e) { stop = stop ? `${stop}; cleanup ${String(e)}` : `cleanup ${String(e)}`; }
     }
     return result();
@@ -171,7 +213,7 @@ if (import.meta.main) {
         if (!account || !Number.isSafeInteger(Number(target)) || Number(target) < 2 || Number(target) > 99) throw Error('usage: splash-train.ts <account> <TARGET_LEVEL> [CAP ticks]');
         s = await openBot(account, { onStop: async () => { stopped = true; } });
         const stop = () => stopped || existsSync(`.practice/stop-${account}`) || existsSync('.practice/stop-all');
-        const r = await runSplash(s, { target: Number(target), cap: Number(cap ?? 6000), stop });
+        const r = await runSplash(s, { target: Number(target), cap: Number(cap ?? 6000), stop, site: splashSite(process.env.SPLASH_SITE || undefined) });
         console.log('SPLASH_RESULT ' + JSON.stringify(r));
         await finish([s], r.ok, `mode=splash level=${r.level} gained=${r.gained} xp=${r.xp} casts=${r.casts} refused=${r.refused} missed=${r.missed} waited=${r.waited} hpMin=${r.hpMin} ticks=${r.ticks}${r.stop ? ` stop=${r.stop}` : ''}${r.quiet ? ` ${r.quiet}` : ''}`);
     } catch (e) { await finish(s ? [s] : [], false, String(e)); }

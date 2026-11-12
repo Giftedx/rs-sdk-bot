@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { buildBrief, claudeArgs, parseClaudeJson, authorLoop, type AuthorDeps } from '../src/author';
+import { buildBrief, claudeArgs, parseClaudeJson, authorLoop, BUILD_TOOL_LIMITS, type AuthorDeps } from '../src/author';
 import type {DeliveryTask} from '../src/delivery';
 
 const task = { id: 'copper5', goal: 'Mine copper ore until 5 are in the pack.', preset: 'measure_mine', spot: 'SE Varrock mine (3285, 3365), vendor/rs-sdk/learnings/mining.md' };
@@ -23,6 +23,13 @@ test('the CLI is run headless with only read, write and bun tools allowed', () =
     expect(a).toContain('--output-format');
     expect(a.join(' ')).toContain('Bash(bun:*)');
     expect(a.join(' ')).not.toContain('dangerously');
+});
+
+test('the build session is told which shell commands its run allows', () => {
+    const a = claudeArgs('do it');
+    expect(a[a.indexOf('--append-system-prompt') + 1]).toBe(BUILD_TOOL_LIMITS);
+    expect(BUILD_TOOL_LIMITS).toContain('`bun ...` and `bunx tsc ...`');
+    expect(a.slice(0, 2)).toEqual(['-p', 'do it']);
 });
 
 test('parseClaudeJson reads the result text and cost, and reports errors', () => {
