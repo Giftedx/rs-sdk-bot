@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794457724072,
+ "at": 1794457810221,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -34,6 +34,25 @@
    "repeat": true,
    "goal": "Strength 30 on chickens so it can hit hard enough to PK",
    "role": "pk-trainee"
+  },
+  {
+   "account": "Masterbaiter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=20 EXPECTED_OWNED=15 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=masterbaiter-kit2-558-15to35 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=10 EXPECTED_OWNED=25 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=masterbaiter-kit2-556-25to35 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 20 Mind rune, 10 Air rune on the Grand Exchange to train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
+   "role": "supply",
+   "template": "kit-buy:army-strike-magic-21",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "Abracadickra",
@@ -85,21 +104,24 @@
   },
   {
    "account": "Bigpackage",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "sarim"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
+    "ITEMS": "feather",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
+   "goal": "buy feathers at Gerrant",
+   "role": "bank",
+   "template": "shop-feathers",
    "autopilot": "local",
    "resources": [
-    "knight:2652,3318"
+    "shop:sarim"
    ]
   },
   {
@@ -140,25 +162,6 @@
    "resources": [
     "pen:3017,3288"
    ]
-  },
-  {
-   "account": "Masterbaiter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=20 EXPECTED_OWNED=15 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=masterbaiter-kit2-558-15to35 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=556 QUANTITY=10 EXPECTED_OWNED=25 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=masterbaiter-kit2-556-25to35 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 20 Mind rune, 10 Air rune on the Grand Exchange to train Magic to 21 with Wind Strike from the safe tile at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-strike-magic-21",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "Mightyrod",
@@ -537,21 +540,24 @@
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "betty"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "ITEMS": "fire rune|air rune|earth rune",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "goal": "buy elemental runes at Betty",
+   "role": "bank",
+   "template": "shop-runes",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "shop:betty"
    ]
   },
   {
