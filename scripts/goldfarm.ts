@@ -89,6 +89,16 @@ export const foodReserve = (maxHp: number) => maxHp < FRAIL_HP ? FRAIL_RESERVE :
 export const guardHit = (before: number, after: number, picked: boolean) => after < before && !picked;
 // Ticks a frail thief stays away from the stall after a guard hit it.
 const STALL_REST = 200;
+// Why no knight can be picked in a pass, for the idle counters of the RESULT line: none in view, none in range, none
+// that the client can reach, each one resting after dropped clicks, or each one held by a random event.
+export type KnightView = { inRange: boolean; reachable: boolean; banned: boolean; avoided: boolean };
+export type NoKnight = 'none' | 'far' | 'unreachable' | 'banned' | 'avoided';
+export function noKnightReason(knights: readonly KnightView[]): NoKnight {
+    if (!knights.length) return 'none';
+    const near = knights.filter(k => k.inRange); if (!near.length) return 'far';
+    const open = near.filter(k => k.reachable); if (!open.length) return 'unreachable';
+    return open.some(k => !k.banned) ? 'avoided' : 'banned';
+}
 // Click cadence in ticks. A click inside the pick's action delay is queued again by the server (p_opnpc(3),
 // pickpocket.rs2:134-137), so a 1-tick cadence costs nothing and re-paths to a knight that stepped away a tick sooner.
 const PICK_TICKS = Number(process.env.PICK_TICKS ?? 2);
@@ -134,6 +144,9 @@ try {
     let bankFails = 0, emptyTrips = 0, stallTrips = 0, stallTicks = 0, stolen = 0, refused = 0, stallEmptyTrips = 0, stallPickTicks = 0;
     const banned = new Map<number, number>();
     let noopRun = 0, noopTarget = -1, bans = 0, stunUntil = 0;
+    // The split of idleTicks and of noops by cause, and the knights in view: the RESULT line says where the ticks went.
+    const idleWhy = { none: 0, far: 0, unreachable: 0, banned: 0, avoided: 0, option: 0, hp: 0, stall: 0 };
+    let noopStun = 0, noopFar = 0, noopNear = 0, knightPasses = 0, knightsSeen = 0;
     let shopTrips = 0, shopTicks = 0, bought = 0, shopRetryAt = 0, lastSteal = -1_000_000;
     const stealFile = join(import.meta.dir, '..', '.practice', 'goldfarm', `steal-${process.argv[2]}.json`);
     let lastStealAt = 0;
@@ -162,7 +175,9 @@ try {
         const detail = `ticks=${ticks} picks=${picks} fails=${fails} noops=${noops} bans=${bans} coinsGained=${gained} coinsPerTick=${(gained / Math.max(1, ticks)).toFixed(2)} `
             + `eaten=${eaten} bankTrips=${bankTrips} bankTicks=${bankTicks} walkTicks=${walkTicks} idleTicks=${idleTicks} eatTicks=${eatTicks} stallTrips=${stallTrips} stallTicks=${stallTicks} stallPickTicks=${stallPickTicks} stolen=${stolen} refused=${refused} shopTrips=${shopTrips} shopTicks=${shopTicks} bought=${bought} `
             + `foodTicksPct=${(100 * (bankTicks + stallTicks + shopTicks + eatTicks) / Math.max(1, ticks)).toFixed(1)} `
-            + `hpMin=${hpMin} died=${died} banked=${banked} packCoins=${coins()} bigFood=${bigFood()} food=${food()} tradesIn=${tradesIn} tradeTicks=${tradeTicks} hp=${hp()} at=${p?.worldX},${p?.worldZ},${p?.level}`;
+            + `hpMin=${hpMin} died=${died} banked=${banked} packCoins=${coins()} bigFood=${bigFood()} food=${food()} tradesIn=${tradesIn} tradeTicks=${tradeTicks} hp=${hp()} at=${p?.worldX},${p?.worldZ},${p?.level} `
+            + `idleNone=${idleWhy.none} idleFar=${idleWhy.far} idleUnreach=${idleWhy.unreachable} idleBanned=${idleWhy.banned} idleAvoid=${idleWhy.avoided} idleOption=${idleWhy.option} idleHp=${idleWhy.hp} idleStall=${idleWhy.stall} `
+            + `noopStun=${noopStun} noopFar=${noopFar} noopNear=${noopNear} knightsInView=${(knightsSeen / Math.max(1, knightPasses)).toFixed(2)}`;
         return finish([s], ok, ok ? detail : `${why} ${detail} last=${lastFail}`);
     };
 
@@ -311,7 +326,7 @@ try {
                     // (live 09:05, after the shop and the stall both gave 0). The main loop's floor is 6 too.
                     // A frail thief does not pick with its food under the floor: a failed pick then has no bite to answer it.
                     if (k && hp() > 2 * DMG && !(frail() && food() < FRAIL_FLOOR)) { const k0 = s.tick(); picked = true; await steal(6); stallPickTicks += s.tick() - k0; }
-                    else { idleTicks++; await waitTicks(s, 1); }
+                    else { idleTicks++; idleWhy.stall++; await waitTicks(s, 1); }
                     continue;
                 }
                 opts.sort((a, b) => a.score - b.score);
@@ -394,29 +409,32 @@ try {
     const steal = async (range = RANGE) => {
         const p = pos();
         const avoid = randomEventsOf(s)?.avoid().npcs;
-        const npc = (st()?.nearbyNpcs ?? [])
-            // An unreachable target gets no packet at all (vendor/rs-sdk/CLAUDE.md "Everything succeeds and nothing
-            // happens"): seen as 93-tick runs of noops at (2650,3300). Skip it, and rest a knight 15 ticks
-            // after 3 noops in a row on it.
-            .filter((n: any) => KNIGHT.test(n.name) && n.reachable !== false && (banned.get(n.index) ?? 0) <= s.tick()
-                && !avoid?.has(n.index) && (!p || Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ)) <= range))
-            .sort((a: any, b: any) => a.distance - b.distance)[0] as any;
+        const away = (n: any) => p ? Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ)) : 0;
+        const knights = ((st()?.nearbyNpcs ?? []) as any[]).filter(n => KNIGHT.test(n.name));
+        knightPasses++; knightsSeen += knights.length;
+        // An unreachable target gets no packet at all (vendor/rs-sdk/CLAUDE.md "Everything succeeds and nothing
+        // happens"): seen as 93-tick runs of noops at (2650,3300). Skip it, and rest a knight 15 ticks
+        // after 3 noops in a row on it.
+        const view = (n: any): KnightView => ({ inRange: away(n) <= range, reachable: n.reachable !== false, banned: (banned.get(n.index) ?? 0) > s.tick(), avoided: !!avoid?.has(n.index) });
+        const npc = knights.filter(n => { const v = view(n); return v.inRange && v.reachable && !v.banned && !v.avoided; }).sort((a, b) => a.distance - b.distance)[0];
         if (!npc) {
             if (range === RANGE && p && cheb(KNIGHT_SPOT, p) > RANGE) await walk(KNIGHT_SPOT, 3);
-            else { idleTicks++; await waitTicks(s, 1); }
+            else { idleTicks++; idleWhy[noKnightReason(knights.map(view))]++; await waitTicks(s, 1); }
             return;
         }
         const op = npc.optionsWithIndex.find((o: any) => /pickpocket/i.test(o.text))?.opIndex;
-        if (op === undefined) { idleTicks++; await waitTicks(s, 1); return; }
-        const hp0 = hp(), c0 = coins();
+        if (op === undefined) { idleTicks++; idleWhy.option++; await waitTicks(s, 1); return; }
+        const hp0 = hp(), c0 = coins(), gap = away(npc);
         await s.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: op, reason: 'SDK' } as any);
         await waitTicks(s, PICK_TICKS);
         // picks = attempts the server ran (coins or a hit); a click it dropped (inside a stun, or still walking) is a noop.
         if (hp() < hp0) { picks++; fails++; noopRun = 0; stunUntil = s.tick() + 8; await onStun(); }
         else if (coins() > c0) { picks++; noopRun = 0; }
-        else if (s.tick() <= stunUntil) noops++;
+        else if (s.tick() <= stunUntil) { noops++; noopStun++; }
         else {
             noops++;
+            // The knight was more than one tile away at the click, so the thief was still on its way.
+            if (gap > 1) noopFar++; else noopNear++;
             noopRun = noopTarget === npc.index ? noopRun + 1 : 1;
             noopTarget = npc.index;
             if (noopRun >= 3) { banned.set(npc.index, s.tick() + 15); noopRun = 0; bans++; }
@@ -468,7 +486,7 @@ try {
             if (!warned) { console.log(`WARN no food in the pack, the bank or the stall; picking on while HP > 6`); warned = true; }
             if (hp() <= 6) await end(false, 'no food');
         }
-        if (hp() <= DMG) { idleTicks++; await waitTicks(s, 1); continue; }
+        if (hp() <= DMG) { idleTicks++; idleWhy.hp++; await waitTicks(s, 1); continue; }
         await steal();
     }
     await end(!died && !ended, died ? 'died' : ended ? `session ended: ${ended}` : 'ticks');
