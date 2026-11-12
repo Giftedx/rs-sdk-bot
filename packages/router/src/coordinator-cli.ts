@@ -317,12 +317,14 @@ export function settlePlanner(state:CoordinatorState,base=projectRoot,{save=save
 // the coordinator's file the pass reads one receipt, and one logout proof for each account of the job.
 const RELEASE_EVERY_MS=60_000;
 let releasedAt=0;
+// A run task with a repair is a recovery: it parks owner jobs and needs them until its install.
+export const recoveryRuns=(state:Pick<CoordinatorState,'tasks'>)=>state.tasks.some(r=>r.status==='running'&&r.spec.kind==='run'&&(!!r.spec.repairs?.length||!!r.spec.sessionRecovery));
 async function tick(state:CoordinatorState,config:any){
  recoverPlanWrite();
  openDeliveryPrs();
  if(Date.now()-releasedAt>=RELEASE_EVERY_MS){
   releasedAt=Date.now();
-  try{const freed=await releaseFinishedOwnJobs();if(freed.length)event('own-jobs-released',{accounts:freed});}
+  try{const freed=await releaseFinishedOwnJobs(projectRoot,!recoveryRuns(state));if(freed.length)event('own-jobs-released',{accounts:freed});}
   catch(error){event('own-jobs-release-failed',String(error));}
  }
  // Adopt before reconciliation: even a just-finished failed build keeps its
