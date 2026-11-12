@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794526231203-abracadickra-weequickie-sapphirering",
  "account": "Abracadickra",
  "partner": "WeeQuickie",
@@ -10,50 +10,128 @@
  "item": "Sapphire ring",
  "requested": 40,
  "claim": "a2c408e2-da6b-4591-90ab-0bf20bb0f494",
- "count": 0,
- "ok": false,
- "at": 1794526329915,
- "detail": "trade claimed",
+ "count": 40,
+ "ok": true,
+ "at": 1794526479007,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Emerald ring",
    "requested": 13,
-   "count": 0
+   "count": 13,
+   "inventory": {
+    "before": 13,
+    "after": 0
+   },
+   "bank": {
+    "count": 13,
+    "at": 1794526448878
+   }
   },
   {
    "item": "Ruby ring",
    "requested": 16,
-   "count": 0
+   "count": 16,
+   "inventory": {
+    "before": 16,
+    "after": 0
+   },
+   "bank": {
+    "count": 16,
+    "at": 1794526449991
+   }
   },
   {
    "item": "Diamond ring",
    "requested": 5,
-   "count": 0
+   "count": 5,
+   "inventory": {
+    "before": 5,
+    "after": 0
+   },
+   "bank": {
+    "count": 5,
+    "at": 1794526450666
+   }
   },
   {
    "item": "Cosmic rune",
    "requested": 74,
-   "count": 0
+   "count": 74,
+   "inventory": {
+    "before": 74,
+    "after": 0
+   },
+   "bank": {
+    "count": 74,
+    "at": 1794526451561
+   }
   },
   {
    "item": "Water rune",
    "requested": 40,
-   "count": 0
+   "count": 40,
+   "inventory": {
+    "before": 40,
+    "after": 0
+   },
+   "bank": {
+    "count": 40,
+    "at": 1794526452830
+   }
   },
   {
    "item": "Air rune",
    "requested": 16,
-   "count": 0
+   "count": 16,
+   "inventory": {
+    "before": 16,
+    "after": 0
+   },
+   "bank": {
+    "count": 16,
+    "at": 1794526453885
+   }
   },
   {
    "item": "Fire rune",
    "requested": 80,
-   "count": 0
+   "count": 80,
+   "inventory": {
+    "before": 80,
+    "after": 0
+   },
+   "bank": {
+    "count": 80,
+    "at": 1794526454837
+   }
   },
   {
    "item": "Earth rune",
    "requested": 50,
-   "count": 0
+   "count": 50,
+   "inventory": {
+    "before": 50,
+    "after": 0
+   },
+   "bank": {
+    "count": 50,
+    "at": 1794526456236
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 40,
+  "after": 0
+ },
+ "bank": {
+  "count": 40,
+  "at": 1794526447689
+ },
+ "logout": {
+  "attemptId": "1794526329923-0000029388-0000000001",
+  "at": 1794526478996,
+  "sha256": "58a233f882201f83b5e46f0e7bfa1996cc237f6933f47dcb17ddfa2109498df0"
+ },
+ "screen": true
 }
