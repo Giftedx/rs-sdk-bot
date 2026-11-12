@@ -5,6 +5,7 @@ import {isDeepStrictEqual} from 'node:util';
 import {capabilityRevision,cachedLaunchRevision} from './worker-release';
 import {processMatchesRecent,safeKill,commandLine} from '../../practice/src/proc';
 import {readLogoutProof,listAttempts} from './session-lifecycle';
+import {savedProcessAlive,type ProcessStarts} from './session-takeover';
 import {isLocalServer} from './localserver';
 import {missionSignature,successfulEnd} from './session-admission';
 import {readMergedPlan} from './coordinator-jobs';
@@ -20,7 +21,7 @@ export const RECOVERY_SCRIPT='packages/core/src/session-recovery.ts';
 export type RecoveryRequest={schema:typeof RECOVERY_SCHEMA;account:string;server:string;runId:string;nonce:string;endedAt:number;source:string};
 type EvidenceRef={path:string;sha256:string};
 export type ControlledRecoveryRequest=RecoveryRequest&{kind:'session-recovery';qualification:{delivery:EvidenceRef;proof:EvidenceRef}};
-export type RecoveryPermitChecks={now?:()=>number;matches?:(pid:number,marker:string)=>boolean;source?:()=>string;capability?:(capability:unknown)=>string|undefined;nativeFixture?:boolean};
+export type RecoveryPermitChecks={now?:()=>number;matches?:(pid:number,marker:string)=>boolean;source?:()=>string;capability?:(capability:unknown)=>string|undefined;nativeFixture?:boolean;processStarts?:ProcessStarts;pidAlive?:(pid:number)=>boolean};
 type Checks=RecoveryPermitChecks;
 type ProducerRef={attemptId:string;sha256:string|null};
 type Permit={schema:'session-recovery-permit/1';request:ControlledRecoveryRequest;controller:{pid:number;nonce:string;source:string};issuedAt:number;expiresAt:number;runnerSha256:string;nativeFixture:boolean;completedEnd?:unknown;missionRevision?:string;producerHistory?:ProducerRef[]};
@@ -155,8 +156,9 @@ function authority(r:ControlledRecoveryRequest,base:string,options:Checks,issuin
   const attempt=listAttempts(r.account,r.server,{root:lifecycleRoot}).find(a=>a.attemptId===latest.attemptId)?.receipt;
   if(!Number.isSafeInteger(attempt?.owner.pid)||attempt!.owner.pid<1)throw Error('recovery orphan owner unknown');
   const own=ownedChild&&attempt!.owner.pid===process.pid&&attempt!.owner.coordinatorRunId===r.runId&&attempt!.owner.workerRelease===r.source&&attempt!.owner.script===RECOVERY_SCRIPT;
-  if(!own)try{process.kill(attempt!.owner.pid,0);throw Error('recovery previous session owner still alive');}
-  catch(error){if((error as NodeJS.ErrnoException).code!=='ESRCH')throw error;}
+  // A live id proves an owner only when its process started before the attempt (savedProcessAlive): the system
+  // gives the id of an ended worker to a later process, and that process is not the owner.
+  if(!own&&savedProcessAlive(attempt!.owner.pid,attempt!.createdAt,options.processStarts,options.pidAlive))throw Error('recovery previous session owner still alive');
  }
  const runnerSha256=sha(readFileSync(join(base,RECOVERY_SCRIPT)));
  if(!options.nativeFixture){
