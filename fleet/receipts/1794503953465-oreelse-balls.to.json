@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1794503953465-oreelse-balls",
+ "account": "Balls",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "magic logs",
+ "requested": 107,
+ "claim": "e2f349ba-96c1-4a99-9880-b8e4e92e6cbd",
+ "count": 0,
+ "ok": false,
+ "at": 1794504368505,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1794504356264-0000022692-0000000001",
+  "at": 1794504368493,
+  "sha256": "f10b434fb39309c83793c4ad4112f1cc66d2c160958a9702f1bf4cd8000c72ef"
+ },
+ "screen": false
+}
