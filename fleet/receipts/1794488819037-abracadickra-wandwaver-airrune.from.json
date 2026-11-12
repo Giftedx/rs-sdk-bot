@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1794488819037-abracadickra-wandwaver-airrune",
+ "account": "Abracadickra",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 21,
+ "claim": "435eec21-3b8d-4964-ae32-a5b7ffc62dcb",
+ "count": 0,
+ "ok": false,
+ "at": 1794488844041,
+ "detail": "Error: route to 2618, 3333: precondition ferry needs 60 coins and the bank holds 0",
+ "logout": {
+  "attemptId": "1794488834298-0000006492-0000000001",
+  "at": 1794488844028,
+  "sha256": "5b840cebcad7692a4601565409f5767d870b049eb6a767a8e47e38fab795fc3e"
+ },
+ "screen": false
+}

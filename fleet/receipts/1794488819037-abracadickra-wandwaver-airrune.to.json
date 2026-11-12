@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1794488819037-abracadickra-wandwaver-airrune",
+ "account": "Wandwaver",
+ "partner": "Abracadickra",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 21,
+ "claim": "6b294e9a-d219-4522-a943-d6c859faf8ba",
+ "count": 0,
+ "ok": false,
+ "at": 1794488844815,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1794488827457-0000033156-0000000001",
+  "at": 1794488844804,
+  "sha256": "0eac8205cc7c59a433d19931d1e217fb7500724acdfc16e31791cbc71f057f1c"
+ },
+ "screen": false
+}
