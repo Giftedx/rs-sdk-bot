@@ -1,0 +1,22 @@
+{
+ "id": "1794511637490-shaftmaker-balls",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Shaftmaker",
+ "to": "Balls",
+ "item": "logs",
+ "count": 1,
+ "start": 1794511637490,
+ "end": 1794514037490,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ]
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794509140458-mmsmk1232-balls-logs",
  "account": "Balls",
  "partner": "mmsmk1232",
@@ -12,6 +12,12 @@
  "claim": "e35feeb1-50d3-4e76-87c8-f6fd0aad0c2f",
  "count": 0,
  "ok": false,
- "at": 1794509509612,
- "detail": "trade claimed"
+ "at": 1794511575132,
+ "detail": "stop file",
+ "logout": {
+  "attemptId": "1794509509620-0000024832-0000000001",
+  "at": 1794511575118,
+  "sha256": "e60ed16d204a290aab82d8fe0d2a36df71406cf60f492a68e0a690f85a5a1d56"
+ },
+ "screen": false
 }
