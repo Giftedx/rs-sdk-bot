@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794448429780,
+ "at": 1794449118124,
  "jobs": [
   {
    "account": "Masterbaiter",
@@ -31,25 +31,26 @@
    "account": "NabTheKnob",
    "script": "scripts/gather-combat.ts",
    "args": [
-    "1500",
-    "trooper"
+    "3000",
+    "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "0",
-    "TROOPER_COOK": "1"
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "TARGET_LEVEL": "45",
+    "GIANT_BURY": "0"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
+   "goal": "train Strength to 45 on the Ardougne cows",
    "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "template": "army-cow-strength-45",
    "autopilot": "local",
    "resources": [
-    "trooper:battlefield"
+    "cow:ardougne-north"
    ]
   },
   {
