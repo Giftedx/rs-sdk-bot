@@ -32,6 +32,25 @@ export function processMatchesRecent(pid: number, marker: string, now = Date.now
     return line?.includes(marker) ?? false;
 }
 
+// The start time (Unix ms) of each listed PID that runs, from one read of the process table. A process that started
+// after a PID was saved is not the saved process. A PID that does not run has no entry. null: the read failed or the
+// platform has no reader, so the result proves nothing. One PowerShell start: call it at a slow interval only.
+export function processStartTimes(pids: readonly number[]): Map<number, number> | null {
+    const ids = [...new Set(pids.filter(p => Number.isSafeInteger(p) && p > 0))], out = new Map<number, number>();
+    if (!ids.length) return out;
+    if (process.platform !== 'win32') return null;
+    // The last line proves that the query ran to its end: a failed query stops the script before it.
+    const script = `$ErrorActionPreference='Stop'; Get-CimInstance Win32_Process -Filter "${ids.map(p => `ProcessId=${p}`).join(' OR ')}" | ForEach-Object { if ($_.CreationDate) { '{0}|{1}' -f $_.ProcessId, ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds() } }; 'read'`;
+    const r = Bun.spawnSync(['powershell', '-NoProfile', '-Command', script], { stdout: 'pipe', stderr: 'ignore', windowsHide: true });
+    const lines = r.stdout.toString().trim().split(/\r?\n/);
+    if (r.exitCode !== 0 || lines.pop() !== 'read') return null;
+    for (const line of lines) {
+        const [pid, at] = line.split('|').map(Number);
+        if (Number.isSafeInteger(pid) && Number.isFinite(at)) out.set(pid!, at!);
+    }
+    return out;
+}
+
 export async function killTree(pid: number): Promise<void> {
     if (process.platform === 'win32') {
         Bun.spawnSync(['taskkill', '/PID', String(pid), '/T', '/F'], { stdout: 'ignore', stderr: 'ignore' ,windowsHide:true});
