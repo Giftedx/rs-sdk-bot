@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794513830213-shaftmaker-wandwaver-airrune",
  "account": "Shaftmaker",
  "partner": "Wandwaver",
@@ -10,8 +10,22 @@
  "item": "Air rune",
  "requested": 21,
  "claim": "b07c7dbc-8709-4f0e-adbf-c29c14fd77ea",
- "count": 0,
- "ok": false,
- "at": 1794513837165,
- "detail": "trade claimed"
+ "count": 21,
+ "ok": true,
+ "at": 1794514041592,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 21,
+  "after": 0
+ },
+ "bank": {
+  "count": 21,
+  "at": 1794514023184
+ },
+ "logout": {
+  "attemptId": "1794513837175-0000035268-0000000001",
+  "at": 1794514041579,
+  "sha256": "6f4a0cd39aee9dd8a1f154ab264e9f39cd9256c1cb6630c9c0a4a51b8b504b30"
+ },
+ "screen": true
 }
