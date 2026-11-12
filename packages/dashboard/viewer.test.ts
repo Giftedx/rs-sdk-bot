@@ -456,3 +456,50 @@ test('a name in the viewer URL is not relayed as a follow while the wall is open
  d.host.location.href=d.host.location.href.replace('follow=Worker','follow=Third');relay();
  expect(follows()).toEqual(['Third']);
 });
+
+function groundBrowser(){
+ const b=browser(),hostListeners:Function[]=[];
+ b.host.addEventListener=(t:string,fn:Function)=>{if(t==='message')hostListeners.push(fn);};
+ class Socket {
+  listeners:Function[]=[];handler:any=null;constructor(..._args:any[]){}
+  addEventListener(t:string,fn:Function){if(t==='message')this.listeners.push(fn);}
+  get onmessage(){return this.handler;}set onmessage(fn:any){this.handler=fn;}
+  message(m:any){const e={data:JSON.stringify(m),origin:'wss://x'};for(const f of this.listeners)f(e);this.handler?.(e);}}
+ b.host.WebSocket=Socket;b.host.MessageEvent??=class{data:any;origin:any;constructor(_t:string,i:any){this.data=i.data;this.origin=i.origin;}};
+ installViewerBridge(b.host);
+ const socket:any=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed'),seen:any[]=[];socket.onmessage=(e:any)=>seen.push(JSON.parse(e.data));
+ const page=(data:any,origin=b.host.location.origin,source=b.host.parent)=>{for(const f of hostListeners)f({data,origin,source,stopImmediatePropagation(){}});};
+ const zone=()=>seen.at(-1).w??[];
+ return {b,socket,seen,page,zone};
+}
+test('ground items from the page reach the viewer as oa records inside the held area, and leave as od records',async()=>{
+ const {b,socket,page,zone}=groundBrowser();await b.consume();
+ page({botGround:[[3218,3242,0,526,1],[3218,3242,0,526,1],[3219,3242,0,995,40],[3500,3500,0,995,1]]});
+ socket.message({t:'tick',k:1,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1}]});
+ // The pile outside the held area is not sent: the viewer would drop it.
+ expect(zone()).toEqual([{e:'za',x:3200,z:3200,w:96,h:96,r:1},{e:'oa',x:3218,z:3242,l:0,id:526,n:1},{e:'oa',x:3218,z:3242,l:0,id:526,n:1},{e:'oa',x:3219,z:3242,l:0,id:995,n:40}]);
+ // With nothing new, a tick reaches the viewer as the feed sent it.
+ socket.message({t:'tick',k:2,ms:600});expect(zone()).toEqual([]);
+ // One bone picked up, and the coins stack grows: od for the bone, od and oa for the coins.
+ page({botGround:[[3218,3242,0,526,1],[3219,3242,0,995,45]]});
+ socket.message({t:'tick',k:3,ms:600});
+ expect(zone()).toEqual([{e:'od',x:3218,z:3242,l:0,id:526},{e:'od',x:3219,z:3242,l:0,id:995},{e:'oa',x:3219,z:3242,l:0,id:995,n:45}]);
+});
+test('an obj that the feed itself sends is not added again, and a reset adds the page rows again',async()=>{
+ const {b,socket,page,zone}=groundBrowser();await b.consume();
+ socket.message({t:'tick',k:1,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1},{e:'oa',x:3218,z:3242,l:0,id:526,n:1}]});
+ page({botGround:[[3218,3242,0,526,1],[3218,3242,0,526,1]]});
+ socket.message({t:'tick',k:2,ms:600});
+ expect(zone()).toEqual([{e:'oa',x:3218,z:3242,l:0,id:526,n:1}]);
+ socket.message({t:'tick',k:3,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1}]});
+ expect(zone()).toEqual([{e:'za',x:3200,z:3200,w:96,h:96,r:1},{e:'oa',x:3218,z:3242,l:0,id:526,n:1},{e:'oa',x:3218,z:3242,l:0,id:526,n:1}]);
+});
+test('ground rows from another sender or with a bad row change nothing',async()=>{
+ const {b,socket,page,zone}=groundBrowser();await b.consume();
+ socket.message({t:'tick',k:1,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1}]});
+ page({botGround:[[3218,3242,0,526,1]]},'https://evil.example');
+ page({botGround:[[3218,3242,0,526,1],[3218,3242,9,526,1]]});
+ page({botGround:Array.from({length:1001},()=>[3218,3242,0,526,1])});
+ socket.message({t:'tick',k:2,ms:600});
+ expect(zone()).toEqual([]);
+});
