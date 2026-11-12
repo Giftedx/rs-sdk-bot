@@ -9,8 +9,33 @@
         "typescript": "5.8.3",
       },
     },
+    "packages/core": {
+      "name": "@rsbot/core",
+    },
+    "packages/knowledge": {
+      "name": "@rsbot/knowledge",
+    },
+    "packages/planner": {
+      "name": "@rsbot/planner",
+    },
+    "packages/practice": {
+      "name": "@rsbot/practice",
+    },
+    "packages/router": {
+      "name": "@rsbot/router",
+    },
   },
   "packages": {
+    "@rsbot/core": ["@rsbot/core@workspace:packages/core"],
+
+    "@rsbot/knowledge": ["@rsbot/knowledge@workspace:packages/knowledge"],
+
+    "@rsbot/planner": ["@rsbot/planner@workspace:packages/planner"],
+
+    "@rsbot/practice": ["@rsbot/practice@workspace:packages/practice"],
+
+    "@rsbot/router": ["@rsbot/router@workspace:packages/router"],
+
     "@types/bun": ["@types/bun@1.3.6", "", { "dependencies": { "bun-types": "1.3.6" } }, "sha512-uWCv6FO/8LcpREhenN1d1b6fcspAB+cefwD7uti8C8VffIv0Um08TKMn98FynpTiU38+y2dUO55T11NgDt8VAA=="],
 
     "@types/node": ["@types/node@26.6.5", "", { "dependencies": { "undici-types": "~8.9.0" } }, "sha512-uMzsv9stDdofIZBx4UGh4Z9ZgXnGC9seRDscilBcTHAeOFk67MZg/k9bWVfO+bk4qZmG+l52hRnLwUiH2LnJTg=="],
