@@ -32,7 +32,6 @@
 import { openQuest } from './quest-lib';
 import { componentId } from '../../packages/core/src/logout';
 
-const KOLODION = { x: 2541, z: 4715 };
 const POOL_CELLAR = { id: 2878, x: 2541, z: 4719 }, POOL_CHAMBER = { id: 2879, x: 2508, z: 4686 };
 const STATUE = { id: 2874, x: 2516, z: 4721 };
 const GUARDIAN = { x: 2508, z: 4696 };
@@ -40,7 +39,7 @@ const LADDER_UP = { id: 2872, x: 2542, z: 4713 }, LADDER_DOWN = { id: 2871, x: 3
 const WEBS = [{ x: 3093, z: 3957 }, { x: 3095, z: 3957 }];
 const PORTAL = { id: 2880, x: 3105, z: 3953 };
 const ITEM = { cape: 2414, staff: 2417, knife: 946, prayerPot: [2434, 139, 141, 143], food: 385 };
-const NPC = { guardian: 904, forms: [907, 908, 909, 910, 911], zamorakMage: 912, mages: [912, 913, 914] };
+const NPC = { kolodion: 905, guardian: 904, forms: [907, 908, 909, 910, 911], zamorakMage: 912, mages: [912, 913, 914] };
 const PFMAGIC = 12;                                         // protect_from_magic (sdk PRAYER_INDICES)
 // The battle mage of Zamorak in the east of the arena (maps/m48_61.jm2) and the tile the leash method casts from: the
 // north strip of the arena, 18 tiles from that spawn and 13 or more from the spawn of every other mage.
@@ -82,6 +81,8 @@ try {
     const inZone = (x: number, z: number): boolean => ZONE.some(([x0, z0, x1, z1]) => x >= x0 && x <= x1 && z >= z0 && z <= z1);
     const inArena = (): boolean => { const p = q.pos(); return !!p && inZone(p.worldX, p.worldZ); };
     const inCellar = (): boolean => (q.pos()?.worldZ ?? 0) > 4600;
+    // The cellar holds the bank room (east) and the chamber of the statues (west).
+    const inBank = (): boolean => inCellar() && (q.pos()?.worldX ?? 0) > 2525;
     const run = (x: number, z: number) => q.s.direct({ type: 'walkTo', x, z, running: true, reason: 'SDK' });
     // Tiles between the player and the nearest tile of an NPC (the spider and the demon cover 3 by 3 tiles).
     const gap = (n: any): number => {
@@ -119,11 +120,13 @@ try {
     const fight = async (label: string, pick: () => any, spell: number, done: () => boolean, maxTicks: number,
         home?: (n: any) => { start: { x: number; z: number }; safe: { x: number; z: number } }): Promise<void> => {
         const t0 = q.T(), c0 = casts, mxp0 = q.xp('Magic'), runes0 = lastMsg(/do not have enough/i), hp0 = q.hp();
-        let lastCast = -99, index = -1, leash: ReturnType<NonNullable<typeof home>> | undefined, damage = 0, hpLast = q.hp();
+        let lastCast = -99, index = -1, landed = 0, xpLast = mxp0, leash: ReturnType<NonNullable<typeof home>> | undefined, damage = 0, hpLast = q.hp();
         for (let t = 0; t < maxTicks && !done(); t++) {
             await q.guard(label);
             if (q.hp() < hpLast) damage += hpLast - q.hp();
             hpLast = q.hp();
+            if (q.xp('Magic') > xpLast) landed++;
+            xpLast = q.xp('Magic');
             if (q.dialogOpen()) { const d: any = q.s.sdk.getDialog(); if (!d.isWaiting) void q.s.sdk.sendClickDialog(0); }
             await keepPrayer();
             if (lastMsg(/do not have enough/i) > runes0) await q.fail(`${label}: out of runes`);
@@ -149,7 +152,7 @@ try {
             } else if (!q.near(leash!.safe.x, leash!.safe.z, 0) && (!ready || d < 7)) await run(leash!.safe.x, leash!.safe.z);
             await q.waitTicks(1);
         }
-        console.log(`NOTE ${label} ${q.T() - t0} ticks casts=${casts - c0} magicXp=${q.xp('Magic') - mxp0} damage=${damage} hp=${hp0}->${q.hp()} prayer=${points()} potions=${potions} lures=${lures}`);
+        console.log(`NOTE ${label} ${q.T() - t0} ticks casts=${casts - c0} landed=${landed} refused=${q.msgCount(/already under attack/i)} magicXp=${q.xp('Magic') - mxp0} damage=${damage} hp=${hp0}->${q.hp()} prayer=${points()} potions=${potions} lures=${lures}`);
         if (!done()) await q.fail(`${label}: not done`);
     };
     // The tile to cast at a form of Kolodion from: 17 tiles east or west of the tile where the form came, in the main
@@ -165,7 +168,10 @@ try {
     let fought = false;
     if (!held(ITEM.cape) && !held(ITEM.staff)) {
         await setPray(true);
-        await q.talk('kolodion', /^kolodion$/i, [/can i fight here/i, /yes indeedy/i, /ok, let's fight/i], () => inArena() || q.sawText(/step into the magic pool/i), KOLODION, 120);
+        // Kolodion shuts the pages 4 ticks before the player lands in the arena, so the talk ends only on the landing.
+        const told = () => inArena() || (q.sawText(/step into the magic pool|carrying weapons or armour/i) && !q.dialogOpen());
+        await q.step('kolodion', () => q.talkTo(npcs([NPC.kolodion])[0]), () => q.dialogOpen() || told(), 25, 3);
+        await q.converse([/can i fight here/i, /yes indeedy/i, /ok, let's fight/i], told, 120);
         if (q.sawText(/carrying weapons or armour/i)) await q.fail('Kolodion refuses the pack');
         if (inArena()) {
             q.milestone('arena');
@@ -181,7 +187,7 @@ try {
     // 2. The pool, the statue of Zamorak, the guardian, the pool.
     if (!held(ITEM.staff)) {
         if (!held(ITEM.cape)) {
-            if (inCellar() && q.cheb(STATUE.x, STATUE.z) > 40) await locThen('pool to chamber', POOL_CELLAR, () => q.near(2509, 4689, 4));
+            if (inBank()) await locThen('pool to chamber', POOL_CELLAR, () => q.near(2509, 4689, 4));
             const ground = () => (q.st()?.groundItems ?? []).find((g: any) => g.id === ITEM.cape);
             await locThen('statue', STATUE, () => !!ground() || q.has(ITEM.cape), 20);
             await q.converse([], () => !q.dialogOpen(), 10);
@@ -194,7 +200,7 @@ try {
     }
     if (q.has(ITEM.cape)) await wear(ITEM.cape);
     if (q.has(ITEM.staff)) await wear(ITEM.staff);
-    if (q.cheb(POOL_CHAMBER.x, POOL_CHAMBER.z) < 40) await locThen('pool to cellar', POOL_CHAMBER, () => q.near(2542, 4718, 4));
+    if (inCellar() && !inBank()) await locThen('pool to cellar', POOL_CHAMBER, () => q.near(2542, 4718, 4));
 
     // 3. Up the ladder, through the webs and the portal, 99 casts of Flames of Zamorak, and back.
     const web = (w: { x: number; z: number }): any => q.findLoc(l => l.x === w.x && l.z === w.z && (l.optionsWithIndex ?? []).some((o: any) => /slash/i.test(o.text)));
@@ -218,7 +224,15 @@ try {
     const unlocked = (): boolean => q.msgCount(/can now cast Flames of Zamorak outside/i) > 0 || q.sawText(/may now use this spell outside/i);
     if (MODE === 'pray') {
         await q.dash('into the arena', 3105, 3946, 1, 30);
-        await fight('casts', () => npcs(NPC.mages)[0], FLAMES, unlocked, 900);
+        // The arena is single combat: a cast at one mage while another attacks the player is refused ("I'm already
+        // under attack!") and does not count. So the target is the mage that attacks the player, else the mage of
+        // the cast before, else the nearest.
+        let mage = -1;
+        await fight('casts', () => {
+            const all = npcs(NPC.mages), n = all.find((m: any) => m.targetIndex >= 32768 && m.distance <= 10) ?? all.find((m: any) => m.index === mage) ?? all[0];
+            mage = n?.index ?? -1;
+            return n;
+        }, FLAMES, unlocked, 1200);
     } else {
         // Along the east edge, clear of the mages of the middle, to the north strip.
         for (const [x, z] of [[3117, 3951], [3124, 3944], [3124, 3921], [EAST_SAFE.x, EAST_SAFE.z]] as const) await q.dash(`to ${x},${z}`, x, z, 1, 40);
