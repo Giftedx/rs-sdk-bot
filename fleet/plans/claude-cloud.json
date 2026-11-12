@@ -1,26 +1,7 @@
 {
  "side": "claude-cloud",
- "at": 1794477590743,
+ "at": 1794480013179,
  "jobs": [
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2669,3298"
-   ]
-  },
   {
    "account": "TrouserSnake",
    "script": "scripts/goldfarm.ts",
@@ -60,25 +41,6 @@
    "resources": [
     "shop:lowe",
     "shop:aubury"
-   ]
-  },
-  {
-   "account": "UnderMyKilt",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "claude-cloud",
-   "resources": [
-    "knight:2582,3297"
    ]
   },
   {
@@ -246,6 +208,32 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-6ccc9cd5-fdce-4fea-80a6-6e2dd5656784"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "claude-cloud-recover-quickhandjob-20261112t103419z [task-6ccc9cd5-fdce-4fea-80a6-6e2dd5656784]",
+   "role": "thieving"
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-6a8a2250-9e11-4246-9027-e0ee82cdd05d"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "claude-cloud-recover-undermykilt-20261112t103419z [task-6a8a2250-9e11-4246-9027-e0ee82cdd05d]",
+   "role": "thieving"
   }
  ]
 }
