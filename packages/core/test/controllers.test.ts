@@ -2,7 +2,7 @@ import { test, expect } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { CONTROLLERS, LEASE_STALE_MS, controllerState, controllerStates, leaseHolder, readLease, releaseLease, renewLease, takeLease } from '../src/controllers';
+import { CONTROLLERS, LEASE_STALE_MS, controllerState, controllerStates, leaseHolder, readLaunch, readLease, releaseLease, renewLease, saveLaunch, takeLease } from '../src/controllers';
 
 const now = 1_800_000_000_000;
 const setTime = (file: string, at: number) => utimesSync(file, at / 1000, at / 1000);
@@ -49,6 +49,19 @@ test('take, renew and release let one process hold the lease and tell a holder t
         expect(existsSync(file)).toBe(false);
         expect(renewLease(file, 12)).toBe(false);
         releaseLease(file, 12);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('the launch record gives back the arguments, and a damaged record gives null', () => {
+    const dir = tmp(), file = join(dir, 'autopilot', 'launch.json');
+    try {
+        expect(readLaunch(file)).toBeNull();
+        saveLaunch(file, ['C:/fleet/.practice/cloud-handoff/swarm.json']);
+        expect(readLaunch(file)).toEqual(['C:/fleet/.practice/cloud-handoff/swarm.json']);
+        saveLaunch(file, []);
+        expect(readLaunch(file)).toEqual([]);
+        for (const bad of ['', '{', 'null', '{"args":"swarm.json"}', '{"args":[1]}', '{"args":[""]}', '{"args":["a\\u0000b"]}']) { writeFileSync(file, bad); expect(readLaunch(file)).toBeNull(); }
+        expect(CONTROLLERS.find(c => c.name === 'autopilot')!.launch).toBe('.practice/autopilot/launch.json');
     } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 

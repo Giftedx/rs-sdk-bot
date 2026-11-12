@@ -18,7 +18,7 @@ import { randomUUID } from 'node:crypto';
 import { spawnDetached } from './coordinator-store';
 import { freshScoreboard, improved, type Progress } from './coverage';
 import { pruneStatus } from './status-prune';
-import { CONTROLLERS, controllerState } from '../../core/src/controllers';
+import { CONTROLLERS, controllerState, readLaunch } from '../../core/src/controllers';
 
 export const STALL_MS = 6 * 3600_000;
 const root = resolve(import.meta.dir, '../../..'), dir = join(root, '.practice', 'coordinator');
@@ -75,9 +75,13 @@ if (import.meta.main) {
             const r = Bun.spawnSync([process.execPath, 'scripts/fleet-agent.ts', '--daemon'], { cwd: root, env: { ...process.env, DEMO_OK: '1' }, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
             log(`fleet agent restarted: ${(r.stdout.toString() + r.stderr.toString()).trim().slice(0, 200)}`);
         } else {
+            // The daemon records its plan file (scripts/autopilot.ts). With no record it writes its default, swarm.json:
+            // that is the plan of the swarm that the coordinator starts (coordinator-live.ts ensureSwarm).
+            const plan = c.launch ? readLaunch(join(root, c.launch))?.[0] : undefined;
+            if (plan !== undefined && (plan.startsWith('--') || !existsSync(plan))) { log(`autopilot not restarted: its recorded plan is not a file: ${plan.slice(0, 160)}`); continue; }
             mkdirSync(join(prac, 'autopilot'), { recursive: true });
-            const pid = spawnDetached([process.execPath, 'scripts/autopilot.ts', '--daemon'], root, join(prac, 'autopilot', `daemon-${now}.out.log`), join(prac, 'autopilot', `daemon-${now}.err.log`));
-            log(`autopilot restarted pid=${pid}`);
+            const pid = spawnDetached([process.execPath, 'scripts/autopilot.ts', ...(plan ? [plan] : []), '--daemon'], root, join(prac, 'autopilot', `daemon-${now}.out.log`), join(prac, 'autopilot', `daemon-${now}.err.log`));
+            log(`autopilot restarted pid=${pid} plan=${plan ?? 'swarm.json'}`);
         }
     }
     // The planner reads the Overall route's supply bill against current banks (packages/planner/src/supply-bill.ts).

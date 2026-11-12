@@ -6,8 +6,8 @@
 // The lease is held while that process is alive and the file is newer than LEASE_STALE_MS. Windows gives the id of
 // an ended process to a new one, so a live id alone proves nothing. A holder that finds another id in its lease has
 // lost it and must exit: two controllers of one kind must never run.
-import { existsSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 
 // The fleet agent's pass is 10 minutes and its sync can wait for the network. 25 minutes is two passes and a margin.
 export const LEASE_STALE_MS = 25 * 60_000;
@@ -48,15 +48,28 @@ export function releaseLease(file: string, pid = process.pid): void {
     try { if (readLease(file)?.pid === pid) rmSync(file); } catch { /* gone */ }
 }
 
+// The arguments that a controller runs with, written by the controller. A restart by the watchdog uses the same ones.
+export function saveLaunch(file: string, args: readonly string[]): void {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, JSON.stringify({ args }));
+}
+export function readLaunch(file: string): string[] | null {
+    try {
+        const args = JSON.parse(readFileSync(file, 'utf8'))?.args;
+        return Array.isArray(args) && args.every(a => typeof a === 'string' && a.length > 0 && !a.includes('\0')) ? args : null;
+    } catch { return null; }
+}
+
 export type Controller = {
     name: 'fleet-agent' | 'autopilot'; label: string;
     lease: string;   // the lease file, under the repository root
     ran: string;     // a path that exists only where this controller ran before; the watchdog starts no other
     stop: string;    // the stop file that keeps the watchdog from starting it
+    launch?: string; // the record of its arguments (saveLaunch), for a controller that takes some
 };
 export const CONTROLLERS: readonly Controller[] = [
     { name: 'fleet-agent', label: 'Fleet agent', lease: '.practice/fleet-agent.lock', ran: '.practice/fleet-agent.log', stop: '.practice/stop-fleet-agent' },
-    { name: 'autopilot', label: 'Autopilot', lease: '.practice/autopilot.lock', ran: '.practice/autopilot', stop: '.practice/stop-autopilot' },
+    { name: 'autopilot', label: 'Autopilot', lease: '.practice/autopilot.lock', ran: '.practice/autopilot', stop: '.practice/stop-autopilot', launch: '.practice/autopilot/launch.json' },
 ];
 
 // running: a live process holds the lease. stopped: the owner's stop file is there. never: it did not run on this

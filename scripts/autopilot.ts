@@ -20,7 +20,7 @@ import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { clearSwarmStop, swarmWroteStop } from './swarm';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
-import { leaseHolder, releaseLease, renewLease, takeLease } from '../packages/core/src/controllers';
+import { leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../packages/core/src/controllers';
 import { matchingJobLines } from '../packages/core/src/job-log';
 import { CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, freshest, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, coinValueFor, type Assignment, type ItemFunding, type Market, type Stock } from '../packages/planner/src/autopilot';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
@@ -501,6 +501,8 @@ if (import.meta.main) {
     const lease = join(prac, 'autopilot.lock');
     if (!dry) {
         if (!takeLease(lease)) { console.log(`AUTOPILOT already running pid ${leaseHolder(lease)}`); process.exit(0); }
+        // The plan file of this daemon. A restart by the watchdog must write the same plan.
+        saveLaunch(join(prac, 'autopilot', 'launch.json'), [planFile]);
         process.on('exit', () => releaseLease(lease)); process.on('SIGINT', () => process.exit(0)); process.on('SIGTERM', () => process.exit(0));
     }
     const startedAt = Date.now();

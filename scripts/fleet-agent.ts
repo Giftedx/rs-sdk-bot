@@ -120,6 +120,9 @@ if (import.meta.main) {
         const update = Bun.spawnSync(['bun', 'packages/router/src/live-update.ts'], { cwd: root, windowsHide: true, env: process.env, stdout: 'pipe', stderr: 'pipe' });
         const updateLine = lastResult(update.stdout.toString());
         if (!/ live-update (?:none|off|paused)/.test(updateLine)) console.log(`FLEET_AGENT ${updateLine} at ${new Date().toISOString()}`);
+        // The update and the sync are child processes that can wait on the network for longer than the lease time.
+        // After each one, this agent goes on only while it still holds the lease. The top of the loop handles a loss.
+        if (!renewLease(lock)) continue;
         // The update changed this agent's code: a copy on the current code takes over once no trade runs.
         if (!once && !running.size && reloadDue(root, 'fleet-agent', startedAt)) {
             release();
@@ -128,6 +131,7 @@ if (import.meta.main) {
             process.exit(0);
         }
         sync();
+        if (!renewLease(lock)) continue;
         const dir = FLEET_DIR(), now = Date.now();
         const orders = readJson(join(dir, 'orders')).filter(validOrder), receipts = readJson(join(dir, 'receipts'));
         // The owner's jobs plus the coordinator's (.practice/coordinator/jobs.json), as the swarm merges them.
