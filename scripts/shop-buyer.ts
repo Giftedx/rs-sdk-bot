@@ -125,6 +125,17 @@ export const PROFILES: Record<string, {
             { re: /pestle and mortar/i, buyPerTick: 1 },
         ],
     },
+    // Dommik's Crafting Store, Al Kharid (dommik.rs2, craftingshop2: chisel 2, ring_mould 4; npc 545 spawn 3322,3194,
+    // the tile black-dhide-sets.ts walks to). The ring chain of the mock Haggis run needs a ring mould and a chisel.
+    dommik: {
+        npc: /^dommik$/i,
+        npcSpot: { x: 3320, z: 3194 },
+        bankSpot: { x: 3269, z: 3167 }, // Al Kharid bank
+        items: [
+            { re: /^ring mould$/i, buyPerTick: 1, shelf: 4 },
+            { re: /^chisel$/i, buyPerTick: 1, shelf: 2 },
+        ],
+    },
     general_sarim: {
         npc: /^shopkeeper$/i,
         npcSpot: { x: 3014, z: 3205 },

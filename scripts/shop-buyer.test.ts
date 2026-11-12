@@ -279,3 +279,11 @@ test('a blind run never passes the item cap, the stock target or the reserve, wi
         expect(paid).toMatchObject({ held: 1, coins: 10000 });
     }
 });
+
+test('the dommik profile buys a ring mould and a chisel at the Al Kharid crafting store', () => {
+    const p = PROFILES.dommik!;
+    expect(p.npc.test('Dommik')).toBe(true);
+    expect(p.items.map(i => [i.re.test('Ring mould'), i.re.test('Chisel')])).toEqual([[true, false], [false, true]]);
+    expect(p.items.map(i => i.shelf)).toEqual([4, 2]);
+    expect(p.bankSpot).toEqual({ x: 3269, z: 3167 });
+});
