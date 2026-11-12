@@ -1134,7 +1134,7 @@ function buildState() {
         // The game's examine text of each held item (obj configs), for the page's Examine option.
         itemExamine: (() => { const out: Record<string, string> = {}; for (const b of bots as any[]) for (const l of [b.inventory, b.bank, b.equipment]) for (const i of l ?? []) { const d = Number.isInteger(i?.id) ? OBJS.get(i.id)?.desc : undefined; if (d && i.name) out[i.name] = d; } return out; })(),
         itemValues: (() => { const out: Record<string, number> = {}; for (const b of bots as any[]) for (const l of [b.inventory, b.bank, b.equipment]) for (const i of l ?? []) { const p = i?.name ? prices.get(String(i.name).toLowerCase()) : undefined; if (p != null) out[i.name] = p; } return out; })(),
-        // The Equipment-board set for the Supply ledger's Best in slot tab: each slot's accepted item ids and the first one's name.
+        // The Equipment-board set for the Supply ledger's Best in slot tab (S.economy.gearTargets): each slot's accepted item ids and the first one's name.
         gearTargets: GEAR_TARGETS.map(t => ({ slot: t.slot, ids: [t.id, ...('equivalentIds' in t ? t.equivalentIds ?? [] : [])], name: OBJS.get(t.id)?.name ?? null, need: t.need, source: t.source })),
     };
     const icons: Record<string, number | null> = {};

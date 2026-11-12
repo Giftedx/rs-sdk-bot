@@ -758,7 +758,7 @@ test('the Quest Journal fleet view counts each quest over our accounts and colou
 });
 test('PvP Tools: risk, the 3 kept items, and only the players the server lets attack',()=>{
  const code=shell.slice(shell.indexOf('  const wildLevel=p=>'),shell.indexOf('  function infoboxes(){'));
- const S={itemValues:{'Rune scimitar':15000,'Shark':800,'Amulet of power':3000},bots:[{name:'Ours1'},{name:'Mate'}],
+ const S={economy:{itemValues:{'Rune scimitar':15000,'Shark':800,'Amulet of power':3000}},bots:[{name:'Ours1'},{name:'Mate'}],
   roster:[['Near',3100,3700,0,72],['Far',3100,3740,0,72],['Strong',3101,3701,0,95],['Mate',3100,3701,0,70],['Outside',3100,3500,0,70],['Upstairs',3100,3700,1,70]]};
  const {pvpState}=new Function('S',`${code};return {pvpState};`)(S);
  // Wilderness level at z 3700 is 23: combat 70 can fight 47-93.

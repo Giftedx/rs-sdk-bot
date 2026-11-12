@@ -93,7 +93,6 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // death in the account's tick records, which the PC's dashboard reads on request (/api/death-recap). The death tile
   // shows on the minimap as a red mark.
   let recap={name:null,state:'none',data:null,error:''};
-  const recapEl=document.createElement('div');recapEl.className='death-recap';recapEl.hidden=true;
   function loadRecap(name){
     if(!window.atlasOperator()){recap={name,state:'off',data:null,error:''};paintRecap();return;}
     recap={name,state:'loading',data:null,error:''};paintRecap();
@@ -115,7 +114,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       `<div class="recap-label">Carried</div>${grid(d.carried)}`+(d.lost?`<div class="recap-label">Lost</div>${grid(d.lost)}<div class="recap-label">Kept</div>${grid(d.kept)}`:'<span class="xp-muted">Not respawned in the record yet: what the death took is not known.</span>')+
       `<p class="xp-muted recap-foot">${E(String(d.script).split(/[\\/]/).pop())} · tick ${d.tick}. The last death in the newest record that has one; it can be a practice run.</p>`;
   }
-  function paintRecap(){recapEl.hidden=!recap.name;if(recap.name)put(recapEl,'<div class="xp-box">'+recapHtml(recap)+'</div>');}
+  // The Activity plugin (operations.js) draws the card at its top; a new state of the recap draws the plugin again.
+  window.atlasRecapHtml=()=>recap.name?'<div class="death-recap"><div class="xp-box">'+recapHtml(recap)+'</div></div>':'';
+  function paintRecap(){if(selectedPlugin==='activity'&&window.atlasPlugins?.activity)window.atlasPlugins.activity.render(body);}
   // Quest Journal, Fleet view (RuneLite's Quest List colours over every account): each quest with how many of our
   // accounts finished it, green when all did, yellow when some did or started it, red when none did. A click lists
   // each account in its colour.
@@ -385,7 +386,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const canAttack=(a,b)=>{const w=Math.min(wildLevel(a.pos),wildLevel(b.pos));return w>=1&&Number.isFinite(a.combat)&&Number.isFinite(b.combat)&&Math.abs(a.combat-b.combat)<=w;};
   function pvpState(b){
     if(!b?.inWorld||!b.pos)return null;
-    const price=n=>S.itemValues?.[n]??(n==='Coins'?1:0),carried=[...(b.equipment||[]),...(b.inventory||[])].filter(i=>i&&i.count>0&&i.name);
+    const price=n=>S.economy?.itemValues?.[n]??(n==='Coins'?1:0),carried=[...(b.equipment||[]),...(b.inventory||[])].filter(i=>i&&i.count>0&&i.name);
     const risk=carried.reduce((n,i)=>n+price(i.name)*i.count,0);
     const kept=carried.flatMap(i=>Array.from({length:Math.min(i.count,3)},()=>({name:i.name,value:price(i.name)}))).sort((x,y)=>y.value-x.value).slice(0,3);
     const keptValue=kept.reduce((n,i)=>n+i.value,0),fleet=new Set(S.bots.map(x=>x.name.toLowerCase()));
@@ -474,7 +475,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // A spectator's click on a board opens that board's top 10 (Hiscores, Rivals); a board with no top 10 has no more to show.
     if(!window.atlasOperator()){if(PUBLIC_HIDDEN.includes(id))id='fleet';else if(id==='board'){const key=typeof chosenBoard==='string'&&typeof boardKey==='function'?boardKey(chosenBoard):'',top=(S?.rivals||[]).find(x=>boardKey(x.board)===key);if(!top)return;rivalBoard=top.board;hiscoresMode='rivals';id='boards';}}
     const priorPlugin=selectedPlugin;window.atlasBeforePluginChange?.(priorPlugin,id);selectedPlugin=id;app.classList.remove('client-collapsed');app.classList.add('mobile-plugin');for(const el of [fleet,inspect,boards,allocation,journal])parked.append(el);body.replaceChildren();body._h=null;if(priorPlugin!==id)enter(body);$('#client-plugin-name').textContent=window.atlasPlugins?.[id]?.label||window.atlasPluginNames?.[id]||plugins.find(p=>p[0]===id)?.[1]||({raw:'Raw evidence'}[id]||'Settings');
-    body.dataset.plugin=id;plugin.dataset.plugin=id;if(window.atlasPlugins?.[id]){window.atlasPlugins[id].render(body);}else if(['xp','boards','info'].includes(id))renderSnapshotPlugin(id);else if(id==='ge')body.innerHTML=gePanel();else if(id==='prs')body.innerHTML=prsPanel();else if(id==='fleet')body.append(fleet);else if(id==='world')body.innerHTML=worldPanel();else if(id==='activity'){const da=account();if(da?.death&&!da.practice&&recap.name!==da.name)loadRecap(da.name);body.append(recapEl,journal);journal.style.setProperty('display','block','important');journal.style.position='static';journal.style.width='100%';journal.style.height='auto';}else{body.append(inspect);choose(id==='settings'?'machine':id);if(id==='goals'&&window.atlasOperator()){const form=document.createElement('form');form.className='goal-request';form.innerHTML='<input name="text" maxlength="500" placeholder="Tell the agents what you want next..." aria-label="New owner request"><button>Send</button><small>Goes to research/owner-requests.md as the next numbered row.</small>';body.prepend(form);}}
+    // Activity opens with the death recap of the watched account when it died.
+    if(id==='activity'){const da=account();if(da?.death&&!da.practice&&recap.name!==da.name)loadRecap(da.name);}
+    body.dataset.plugin=id;plugin.dataset.plugin=id;if(window.atlasPlugins?.[id]){window.atlasPlugins[id].render(body);}else if(['xp','boards','info'].includes(id))renderSnapshotPlugin(id);else if(id==='ge')body.innerHTML=gePanel();else if(id==='prs')body.innerHTML=prsPanel();else if(id==='fleet')body.append(fleet);else if(id==='world')body.innerHTML=worldPanel();else if(id==='activity'){body.append(journal);journal.style.setProperty('display','block','important');journal.style.position='static';journal.style.width='100%';journal.style.height='auto';}else{body.append(inspect);choose(id==='settings'?'machine':id);if(id==='goals'&&window.atlasOperator()){const form=document.createElement('form');form.className='goal-request';form.innerHTML='<input name="text" maxlength="500" placeholder="Tell the agents what you want next..." aria-label="New owner request"><button>Send</button><small>Goes to research/owner-requests.md as the next numbered row.</small>';body.prepend(form);}}
     rail.querySelectorAll('[data-client-plugin]').forEach(b=>{b.classList.toggle('on',b.dataset.clientPlugin===id);b.setAttribute('aria-pressed',String(b.dataset.clientPlugin===id));});syncSidebar();if(S&&id==='fleet')roster();window.atlasAfterPluginChange?.(priorPlugin,id);
   }
   function openBank(){
