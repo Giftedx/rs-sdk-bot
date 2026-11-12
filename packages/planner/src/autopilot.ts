@@ -1021,7 +1021,7 @@ export const CANNON_BARS = 27, BLOOD_LOOTS = 6, BLOOD_MEALS = 5;
 export const BLOOD_FOOD = ['shark', 'swordfish', 'lobster', 'tuna', 'salmon', 'trout', 'cake'] as const;
 // The most units one run at the bank makes (scripts/microbot-production.ts MAX_MAKE), and the rings of one furnace
 // trip: 13 gold bars and 13 gems fit beside the mould.
-export const MAKE_BATCH = 100, RING_BATCH = 13;
+export const MAKE_BATCH = 100, RING_BATCH = 13, STEW_BATCH = 3;
 // The unfinished potions of the route bill: the herb of the bill line (`<herb> potion (unf)`), the item the bank
 // holds, and the Herblore level (brew_potion.struct; scripts/autopilot.test.ts checks each against the worker's recipe).
 export const UNF_POTIONS: readonly (readonly [herb: string, item: string, level: number])[] = [
@@ -1112,8 +1112,10 @@ export function aioTemplates(): Template[] {
 //   cuts a shortbow from normal logs with the same worker. The rate is an estimate: one bow for two logins, taken as
 //   100 ticks. Gap: no practice run strings a bow in this chain.
 // - uncooked stew: Cooking 25 (stew.rs2), and a potato, a bowl of water and a cooked meat in the bank for each stew:
-//   the potato goes in first, then the meat. The rate is half that of one recipe, as a stew takes two. Gap: no
-//   practice run makes a stew, and no job brings the three inputs.
+//   the potato goes in first, then the meat. One run makes STEW_BATCH stews (the route bill asks for 3), and `needs`
+//   asks for STEW_BATCH of each input: the first step then makes no incomplete stew that the second step has no meat
+//   for. The rate is half that of one recipe, as a stew takes two. Gaps: no practice run makes a stew, no job brings
+//   the three inputs, and no template finishes an incomplete stew that a failed second step leaves in the bank.
 export function makerChains(): Template[] {
     const step = (recipe: string, max: number, cap = 1500) => `scripts/aio.ts skiller crafting inventory ${recipe} MAX_MAKE=${max} CAP=${cap} MEMBERS=1 ORDER_MODE=best-effort`;
     const chain = (id: string, steps: string[], rest: Pick<Template, 'role' | 'goal' | 'needs' | 'yields' | 'repeats'>): Template =>
@@ -1123,9 +1125,9 @@ export function makerChains(): Template[] {
             role: 'fletching', goal: 'cut a banked yew log into a shortbow and string it', repeats: false,
             needs: { skills: { Fletching: 65 }, items: { knife: 1, 'yew logs': 1, 'bow string': 1 }, holdsUnder: { 'yew shortbow': 1 } },
             yields: () => [{ item: 'yew shortbow', perTick: 0.01 }] }),
-        chain('make-uncooked-stew', [step('prepare:potato-stew', MAKE_BATCH), step('prepare:uncooked-stew', MAKE_BATCH)], {
+        chain('make-uncooked-stew', [step('prepare:potato-stew', STEW_BATCH), step('prepare:uncooked-stew', STEW_BATCH)], {
             role: 'cooking', goal: 'make uncooked stews from banked potatoes, bowls of water and cooked meat',
-            needs: { skills: { Cooking: 25 }, items: { potato: 1, 'bowl of water': 1, 'cooked meat': 1 } },
+            needs: { skills: { Cooking: 25 }, items: { potato: STEW_BATCH, 'bowl of water': STEW_BATCH, 'cooked meat': STEW_BATCH } },
             yields: () => [{ item: 'uncooked stew', perTick: 0.05 }] }),
     ];
 }

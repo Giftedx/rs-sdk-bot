@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { AIR_STOCK, NATURE_STOCK, ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, CHICKEN_PENS, PEN_QUEST_POINTS, type Acct, type Inputs, type Template } from '../src/autopilot';
-import { GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, UNF_POTIONS, makerChains, priceTable } from '../src/autopilot';
+import { GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, STEW_BATCH, UNF_POTIONS, makerChains, priceTable } from '../src/autopilot';
 
 const side = 'claude-cloud';
 // A fixture that can pick the knights (Thieving 55) has 20 Hitpoints, so the frail rule of the goldfarm job
@@ -1050,11 +1050,16 @@ test('the two-recipe makers are pilots that run the bank-standing worker twice i
     expect(jobFor(run(fletcher(65, {}), 'make-yew-shortbow'), side)).toMatchObject({ script: 'scripts/chain.ts', repeat: false, args: [
         'scripts/aio.ts skiller crafting inventory cut-bow:unstrung_yew_shortbow MAX_MAKE=1 CAP=600 MEMBERS=1 ORDER_MODE=best-effort',
         'scripts/aio.ts skiller crafting inventory bow-string:yew_shortbow MAX_MAKE=1 CAP=600 MEMBERS=1 ORDER_MODE=best-effort'] });
-    const cook = (level: number, items: Record<string, number>) => acct('A', { Cooking: level }, { potato: 1, 'bowl of water': 1, 'cooked meat': 1, ...items });
+    const cook = (level: number, items: Record<string, number>) => acct('A', { Cooking: level }, { potato: STEW_BATCH, 'bowl of water': STEW_BATCH, 'cooked meat': STEW_BATCH, ...items });
     expect(run(cook(25, {}), 'make-uncooked-stew').template?.args).toEqual([
-        `scripts/aio.ts skiller crafting inventory prepare:potato-stew MAX_MAKE=${MAKE_BATCH} CAP=1500 MEMBERS=1 ORDER_MODE=best-effort`,
-        `scripts/aio.ts skiller crafting inventory prepare:uncooked-stew MAX_MAKE=${MAKE_BATCH} CAP=1500 MEMBERS=1 ORDER_MODE=best-effort`]);
+        `scripts/aio.ts skiller crafting inventory prepare:potato-stew MAX_MAKE=${STEW_BATCH} CAP=1500 MEMBERS=1 ORDER_MODE=best-effort`,
+        `scripts/aio.ts skiller crafting inventory prepare:uncooked-stew MAX_MAKE=${STEW_BATCH} CAP=1500 MEMBERS=1 ORDER_MODE=best-effort`]);
     for (const a of [cook(24, {}), cook(25, { potato: 0 }), cook(25, { 'bowl of water': 0 }), cook(25, { 'cooked meat': 0 })]) expect(run(a, 'make-uncooked-stew').template).toBeUndefined();
+    // One run makes STEW_BATCH stews and needs STEW_BATCH of each input. 100 potatoes and 100 bowls of water with one
+    // cooked meat give no job: the first step would leave incomplete stews that the second step has no meat for.
+    expect(run(cook(25, { potato: 100, 'bowl of water': 100, 'cooked meat': 1 }), 'make-uncooked-stew').template).toBeUndefined();
+    expect(run(cook(25, { potato: 100, 'bowl of water': 100, 'cooked meat': STEW_BATCH - 1 }), 'make-uncooked-stew').template).toBeUndefined();
+    expect(run(cook(25, { potato: 100, 'bowl of water': 100 }), 'make-uncooked-stew').template?.id).toBe('make-uncooked-stew');
 });
 
 test('an account under a top-up of rune arrows buys them at the Ranging Guild shop, as a pilot, while the bill is short', () => {
