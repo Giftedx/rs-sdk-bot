@@ -3,7 +3,7 @@ import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
-import {admissionDecision,startReserve,activeExternalLive,loadEnded,persistEnded,persistentEnd,loadHolds,openHold,LIVE_SERVER,failedScript,scriptKey,missionSignature} from '../../../scripts/swarm';
+import {admissionDecision,startReserve,activeExternalLive,RECOVERY_SLOT_WAIT_MS,loadEnded,persistEnded,persistentEnd,loadHolds,openHold,LIVE_SERVER,failedScript,scriptKey,missionSignature} from '../../../scripts/swarm';
 import {liveLogoutRef} from './coordinator-session';
 import {BOOTSTRAP_STATUS_AGE_MS} from '../../core/src/session-admission';
 import {evaluateLaunch} from '../../../scripts/haggis-gate';
@@ -430,15 +430,35 @@ async function acquireRecoverySlot(lease:string,owner:{pid:number;runId:string;n
   await Bun.sleep(Math.min(100,Math.max(1,limit-Date.now())));
  }
 }
-export async function requestAuthenticatedRecovery(task:CoordTask,dependencies:Record<string,any>,source:string,runId:string,base=projectRoot,timeoutMs=180000,launch=source,beforeRequest?:()=>Promise<unknown>){
+// A full fleet is a wait for a recovery, not a refusal. The caller holds the repair lease, and while the lease exists
+// the controller keeps the next free bot slot for the recovery (scripts/swarm.ts recoverySlot), so the wait ends when
+// one bot ends. The controller's own bot count (swarm-state.json, written each tick) is read first: it has a bot
+// that started and wrote no status yet, which the status rows of the preflight do not show, and the controller
+// refuses a request at a full fleet with no retry. A memory refusal, and each other refusal, ends the wait at once.
+async function awaitBotSlot(preflight:()=>Promise<unknown>,account:string,base:string,limit:number){
+ const controllerFull=()=>{
+  try{const s=JSON.parse(readFileSync(join(base,'.practice/swarm-state.json'),'utf8'));return Date.now()-s.at<10000&&s.running+s.externalRunning+1>s.maxBots;}
+  catch{return false;}
+ };
+ while(true){
+  if(['stop-coordinator','stop-swarm','stop-'+account].some(f=>existsSync(join(base,'.practice',f))))throw Error('recovery owner stopped');
+  if(!controllerFull())try{await preflight();return;}catch(error){if(String(error)!=='Error: live admission waiting: maxBots')throw error;}
+  if(Date.now()>=limit)throw Error('live admission waiting: maxBots');
+  await Bun.sleep(Math.min(500,Math.max(1,limit-Date.now())));
+ }
+}
+// `slotWaitMs` bounds the wait for a bot slot. `timeoutMs` bounds the controller's part, from the request to its
+// result. The wait for the lease covers both parts of the request that holds it.
+export async function requestAuthenticatedRecovery(task:CoordTask,dependencies:Record<string,any>,source:string,runId:string,base=projectRoot,timeoutMs=180000,launch=source,beforeRequest?:()=>Promise<unknown>,slotWaitMs=RECOVERY_SLOT_WAIT_MS){
  const authorization=task.sessionRecovery;if(!authorization)throw Error('authenticated recovery task flag missing');
  const request:ControlledRecoveryRequest={schema:RECOVERY_SCHEMA,kind:'session-recovery',...authorization,server:LIVE_SERVER,runId,nonce:randomUUID(),source:launch,
   qualification:recoveryQualification(task,dependencies,source,base)};
  const file=join(base,'.practice/swarm-repair.json'),lease=file+'.lease';
- const raw=JSON.stringify(request),limit=Date.now()+timeoutMs;
- await acquireRecoverySlot(lease,{pid:process.pid,runId,nonce:request.nonce},request.account,base,limit);
+ const raw=JSON.stringify(request);
+ await acquireRecoverySlot(lease,{pid:process.pid,runId,nonce:request.nonce},request.account,base,Date.now()+timeoutMs+(beforeRequest?slotWaitMs:0));
  try{
-  await beforeRequest?.();
+  if(beforeRequest)await awaitBotSlot(beforeRequest,request.account,base,Date.now()+slotWaitMs);
+  const limit=Date.now()+timeoutMs;
   if(existsSync(file+'.processing'))throw Error('another exact recovery owns the repair slot');
   writeFileSync(file,raw,{flag:'wx'});
   while(Date.now()<limit){

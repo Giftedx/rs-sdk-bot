@@ -134,6 +134,34 @@ export function admitRecovery(v:{account:string;active:readonly string[];running
  release();
 }
 
+// An open recovery keeps one bot slot. Jobs get a free slot in plan order, the owner's jobs first, and a recovery is
+// in no job until its cleanup is done, so without the hold a waiting job takes each slot that frees. The recovery is
+// open while the coordinator holds the repair lease (.practice/swarm-repair.json.lease: from before its admission
+// check to the report of the session cleanup, and for the end repair) and while the cleanup child runs. The hold
+// stays RECOVERY_SLOT_HOLD_MS after the last of those, which covers the install of the recovered account's job, and
+// it ends when that job starts. The cleanup child counts in the running bots, so it uses the slot while it runs. The
+// job of the recovered account takes the slot. Each other job counts one more starting bot against maxBots; the
+// memory reserve does not change. RECOVERY_SLOT_WAIT_MS is the longest time the coordinator waits for the slot. A
+// controller rollout holds the same lease, so a new controller holds one slot for its first RECOVERY_SLOT_HOLD_MS.
+export const RECOVERY_SLOT_HOLD_MS = 30_000;
+export const RECOVERY_SLOT_WAIT_MS = 600_000;
+// A lease file older than the longest recovery request is one that a dead process left: it holds no slot.
+export const RECOVERY_LEASE_MAX_MS = RECOVERY_SLOT_WAIT_MS + 300_000;
+export type RecoverySlot = { until: number; account?: string };
+export function recoveryLeaseHeld(file: string, now: number): boolean {
+    try { return now - statSync(file).mtimeMs < RECOVERY_LEASE_MAX_MS; } catch { return false; }
+}
+export function recoverySlot(slot: RecoverySlot, v: { leaseHeld: boolean; recovering?: string; started: readonly string[]; now: number }): RecoverySlot {
+    const prior = v.recovering ?? slot.account;
+    const jobStarted = prior !== undefined && !v.recovering && v.started.some(a => a.toLowerCase() === prior.toLowerCase());
+    if (v.leaseHeld || v.recovering) return { until: v.now + RECOVERY_SLOT_HOLD_MS, ...(prior !== undefined && !jobStarted ? { account: prior } : {}) };
+    return slot.until > v.now && !jobStarted ? slot : { until: 0 };
+}
+export function recoverySlotReserve(slot: RecoverySlot, v: { recovering: boolean; accounts: readonly string[]; now: number }): number {
+    if (v.recovering || slot.until <= v.now) return 0;
+    return slot.account !== undefined && v.accounts.some(a => a.toLowerCase() === slot.account!.toLowerCase()) ? 0 : 1;
+}
+
 // An entry with an account and no script is a reservation (the main account waits for its own run): the swarm never
 // starts it and reports it as "reserved", not as a bad job.
 export function isReservation(job: Job): boolean {
@@ -559,6 +587,7 @@ if (import.meta.main) {
     const runs = new Map<string, Run>();
     const recoveryDispatch=createRecoveryDispatch({base:root,server:LIVE_SERVER});
     let inheritedRecoveries: ReturnType<typeof heldRecoveryOwners> = [];
+    let heldSlot: RecoverySlot = { until: 0 };
     let orphanScanAt = 0;
     const leaseRefusals = new Map<string, string>();
     const previousEnabled = new Map<string, boolean>();
@@ -785,6 +814,8 @@ if (import.meta.main) {
             }
         } catch (e) { endStateOk = false; console.log(`SWARM repair unavailable; new starts paused: ${String(e)}`); }
         const externalCount = () => activeExternalLive(statuses, [...runs.values()].flatMap(r => r.accounts).concat(recoveryDispatch.active?[recoveryDispatch.active.account]:[],inheritedRecoveries.map(r=>r.account)), Date.now()).length;
+        heldSlot = recoverySlot(heldSlot, { leaseHeld: recoveryLeaseHeld(`${repairFile}.lease`, Date.now()), recovering: recoveryDispatch.active?.account,
+            started: [...runs.values()].flatMap(r => r.accounts), now: Date.now() });
         const state: Record<string, unknown>[] = [];
         let owners: Map<string, Owner>;
         try { owners = loadOwners(); } catch (e) { console.log(`SWARM owners unreadable; new starts paused: ${String(e)}`); return; }
@@ -855,7 +886,8 @@ if (import.meta.main) {
                     :job.whenCargoFrom&&!courierDeliveryWaiting(job.whenCargoFrom,job.demandNear,plan.jobs)&&!ownedPayoutWaiting(statuses,job.demandNear)?'waiting offline: no nearby owned cargo or payout':null));
                 Object.assign(st, blocked);
                 if (go.length > 0) {
-                    const admission = admissionDecision({ running: botsRunning(), external: externalCount(), starting: go.length, startingReserve: startReserve(p, go.length),
+                    const held = recoverySlotReserve(heldSlot, { recovering: !!recoveryDispatch.active, accounts: p.accounts, now: Date.now() });
+                    const admission = admissionDecision({ running: botsRunning(), external: externalCount(), starting: go.length + held, startingReserve: startReserve(p, go.length),
                         pending: pendingCount(), freeGB: freemem() / 2 ** 30, minFreeGB: plan.minFreeGB, maxBots: plan.maxBots });
                     if (!admission.allowed) for (const a of go) st[a] = admission.reason === 'maxBots' ? 'waiting: maxBots'
                         : `waiting: projected ${admission.projectedFreeGB.toFixed(1)} GB free after ${admission.reserveGB} GB startup reserve < ${admission.floorGB} GB floor`;
@@ -876,7 +908,7 @@ if (import.meta.main) {
         }
         const pendingStartup = pendingCount();
         writeFileSync(join(prac, 'swarm-state.json'), JSON.stringify({ at: Date.now(), controllerPid:process.pid,coordinatorOwner,release:process.env.WORKER_RELEASE,freeGB: freemem() / 2 ** 30,
-            running: botsRunning(), recovery:recoveryDispatch.active??null,inheritedRecoveries, externalRunning: externalCount(), pendingStartup, pendingReserveGB: pendingStartup * START_BUDGET_GB,
+            running: botsRunning(), recovery:recoveryDispatch.active??null,recoverySlot:heldSlot.until>Date.now()?heldSlot:null,inheritedRecoveries, externalRunning: externalCount(), pendingStartup, pendingReserveGB: pendingStartup * START_BUDGET_GB,
             minFreeGB: Math.max(FREE_FLOOR_GB, plan.minFreeGB), maxBots: plan.maxBots, jobs: state }));
         if (stopAll && runs.size === 0&&!recoveryDispatch.active&&!inheritedRecoveries.length) { console.log('SWARM stopped (stop-swarm)'); process.exit(0); }
     };
