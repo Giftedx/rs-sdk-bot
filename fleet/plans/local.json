@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794469743343,
+ "at": 1794469768655,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -88,44 +88,41 @@
    "script": "scripts/aio.ts",
    "args": [
     "skiller",
-    "crafting",
-    "bowstrings",
-    "1250",
-    "MAX_MAKE=56",
-    "RAW_RESERVE=0",
-    "MAX_TRIPS=4"
+    "thieving",
+    "blood-chest",
+    "4000",
+    "MAX_LOOTS=6",
+    "CAP=4000"
    ],
    "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "spin 56 banked flax into bow strings at Seers",
-   "role": "crafting",
-   "template": "aio-bowstrings",
+   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
+   "role": "thieving",
+   "template": "aio-blood-chest",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "aio:ardougne-blood-chests"
+   ]
   },
   {
    "account": "BowBeforeMe",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "woodcutting",
-    "yews",
-    "1800",
-    "27",
-    "MAX_TRIPS=4"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "cut yew logs at Seers and bank them",
-   "role": "woodcutting",
-   "template": "aio-yews",
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
    "autopilot": "local",
    "resources": [
-    "aio:seers-yews"
+    "knight:2652,3318"
    ]
   },
   {
@@ -411,21 +408,23 @@
    "script": "scripts/aio.ts",
    "args": [
     "skiller",
-    "fletching",
-    "shafts",
-    "600",
-    "MAX_MAKE=25",
-    "LOG_RESERVE=0"
+    "woodcutting",
+    "yews",
+    "1800",
+    "27",
+    "MAX_TRIPS=4"
    ],
    "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "cut 25 banked logs into arrow shafts",
-   "role": "fletching",
-   "template": "aio-shafts",
+   "goal": "cut yew logs at Seers and bank them",
+   "role": "woodcutting",
+   "template": "aio-yews",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "aio:seers-yews"
+   ]
   },
   {
    "account": "Swordinhand",
@@ -600,23 +599,22 @@
    "script": "scripts/aio.ts",
    "args": [
     "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
+    "crafting",
+    "bowstrings",
+    "1250",
+    "MAX_MAKE=56",
+    "RAW_RESERVE=0",
+    "MAX_TRIPS=4"
    ],
    "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
-   "role": "thieving",
-   "template": "aio-blood-chest",
+   "goal": "spin 56 banked flax into bow strings at Seers",
+   "role": "crafting",
+   "template": "aio-bowstrings",
    "autopilot": "local",
-   "resources": [
-    "aio:ardougne-blood-chests"
-   ]
+   "resources": []
   },
   {
    "account": "SporranBulge",
