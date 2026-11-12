@@ -55,7 +55,7 @@ type Tile = { x: number; z: number };
 // KNIGHT_SPOT=x,z gives each farmer its own knights (spawns 2652,3318 2653,3300 2669,3298 2671,3313 2582,3297,
 // npcs.json): three farmers on one spot made 10.5-12.1 coins a tick against the 18.8 model.
 const KNIGHT_SPOT: Tile = (() => { const m = (process.env.KNIGHT_SPOT ?? '').match(/^(\d+),(\d+)$/); return m ? { x: Number(m[1]), z: Number(m[2]) } : { x: 2653, z: 3302 }; })();
-// Players kill the four market knights for combat XP, and a dead knight is away 32 ticks (research/goldfarm.md). The
+// Players kill the four market knights with swords, and a dead knight is away 32 ticks (research/goldfarm.md). The
 // knight at 2582,3297 stands in a crowd of thieves and no player attacks it. KNIGHT_REFUGE=x,z is the spot that a thief
 // moves to, for the rest of its run, when its own spot had no knight in view on REFUGE_NONE of the last REFUGE_WINDOW
 // ticks of knight work. KNIGHT_REFUGE=0 turns the move off.
