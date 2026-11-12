@@ -135,9 +135,10 @@ const MUSA_POINT_FERRY = 'npc:customs_officer:port-sarim@2953,3147';
 const AL_KHARID_TOLL = 'npc:borderguard2:lumbridge-side-west-of-the-toll-gate@3268,3226';
 const LUMBRIDGE: Tile = { x: 3222, z: 3218, level: 0 }, DRAYNOR: Tile = { x: 3092, z: 3243, level: 0 };
 const FERRY_LEG_PLAN_MS = 15_000;
-// Falador, Port Sarim, Draynor, Lumbridge and Varrock (z up to 3510), and East Ardougne with its north bank and cow
-// field.
-const inEast = (t: Tile) => t.level === 0 && t.x >= 2930 && t.x <= 3280 && t.z >= 3150 && t.z <= 3510;
+// Taverley, Falador, Port Sarim, Draynor, Lumbridge and Varrock (z up to 3510), and East Ardougne with its north bank
+// and cow field. The west edge is the east foot of White Wolf Mountain, where Kandarin (inKandarin) ends, so each
+// start between Ardougne and Varrock is in one of the two regions and the ferry rule below applies to it.
+const inEast = (t: Tile) => t.level === 0 && t.x >= 2870 && t.x <= 3280 && t.z >= 3150 && t.z <= 3510;
 const inArdougne = (t: Tile) => t.level === 0 && t.x >= 2550 && t.x <= 2700 && t.z >= 3240 && t.z <= 3400;
 // The rest of Kandarin west of White Wolf Mountain: Catherby, Seers' Village, the Ranging Guild, Yanille and the Gnome
 // battlefield. A trip east from there starts with a walk to the Ardougne north bank: the fare bank and the first dock
