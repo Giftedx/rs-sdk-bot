@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794496241803,
+ "at": 1794498004295,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -63,22 +63,21 @@
   },
   {
    "account": "Bigpackage",
-   "script": "scripts/gather-feathers.ts",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "PEN": "3187,3277",
-    "TICKS": "3000",
-    "TARGET": "2000"
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
-   "role": "helper",
-   "template": "feathers@3187,3277",
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
    "autopilot": "local",
    "resources": [
-    "pen:3187,3277"
+    "knight:2669,3298"
    ]
   },
   {
@@ -146,26 +145,10 @@
   },
   {
    "account": "Mightyrod",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "thieving",
-    "blood-chest",
-    "4000",
-    "MAX_LOOTS=6",
-    "CAP=4000"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "loot the Ardougne blood rune chests 6 times and bank the runes",
-   "role": "thieving",
-   "template": "aio-blood-chest",
-   "autopilot": "local",
-   "resources": [
-    "aio:ardougne-blood-chests"
-   ]
+   "script": "",
+   "enabled": false,
+   "goal": "owner hold: live dagger gang pilot (session rival-dds); restore with .practice/rival-dds/hold.ts restore",
+   "role": "pvp"
   },
   {
    "account": "MineYourBiz",
@@ -516,21 +499,22 @@
   },
   {
    "account": "Shaftsinker",
-   "script": "scripts/goldfarm.ts",
+   "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
+    "PEN": "3187,3277",
+    "TICKS": "3000",
+    "TARGET": "2000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
    "autopilot": "local",
    "resources": [
-    "knight:2669,3298"
+    "pen:3187,3277"
    ]
   },
   {
