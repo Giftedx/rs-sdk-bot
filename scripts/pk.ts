@@ -160,6 +160,14 @@ export type FightOptions = {
     prayerLag?: number[];
     // With chase false: run after a target that flees while its health bar is at or under this fraction.
     chaseBelow?: number;
+    // Cut off a target that flees: the chase runs to the tile `cutOff` tiles ahead of it along its heading, not to its
+    // own tile, and starts at 2 tiles, not 6. A runner that walks south to the edge of the Wilderness then walks into
+    // our reach in place of away from it. Unset: the chase runs to the target's tile.
+    cutOff?: number;
+    // scripts/pk-gang.ts only: an account of the gang in view with its health bar at or under this fraction becomes the
+    // target as soon as the single-way rule lets our attack through (the last player to hit us is that account, or
+    // none has hit us for 8 ticks, pvp_combat.rs2:110). Unset: the target is the account that hit us last.
+    focusRunner?: number;
     // Return outcome "danger" (with the reason) as soon as dangerReason fires, so the caller can escape.
     exitOnDanger?: boolean;
     damageSpell?: number;
@@ -640,7 +648,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const ranged = hasStyle(o.kit, 'magic') || hasStyle(o.kit, 'ranged');
         if (o.chaseBelow !== undefined && target) chaseLow = lowHealth(observePlayer(s.client, target.index), o.chaseBelow);
         if ((o.chase !== false || chaseLow) && ranged && stoodStill && now >= selfFrozenUntil && now - chaseAt >= 2 && now < nextAttack && now < fleeingUntil + 12) {
-            const to = target && cheb(at, target) > 5 ? { x: target.x, z: target.z }
+            const ahead = o.cutOff !== undefined && now < fleeingUntil;
+            const to = target && cheb(at, target) > (ahead ? 1 : 5) ? (ahead ? { x: target.x + heading.x * o.cutOff!, z: target.z + heading.z * o.cutOff! } : { x: target.x, z: target.z })
                 : !target && prevTarget ? { x: prevTarget.x + heading.x * 12, z: prevTarget.z + heading.z * 12 } : null;
             if (to) { void sdk.sendWalk(to.x, to.z); chaseAt = now; }
         }

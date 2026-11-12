@@ -157,6 +157,8 @@ const SPAR_ENGINE = {SIM_NPC_NEAR: '64'};
 // boosts, antipoison and steel arrows for six trips.
 export const GANG_EDGE = {x: 3087, z: 3522};
 const EDGE_BANK = [{id: 385, count: 200}, {id: 2436, count: 8}, {id: 2440, count: 8}, {id: 2444, count: 8}, {id: 2442, count: 8}, {id: 2448, count: 8}, {id: 886, count: 2000}, {id: 563, count: 40}, {id: 556, count: 200}, {id: 163, count: 8}, {id: 175, count: 8}];
+// The same bank with the freeze runes of the snare kit (earth, water, nature).
+const EDGE_BANK_SNARE = [...EDGE_BANK, {id: 557, count: 500}, {id: 555, count: 500}, {id: 561, count: 400}];
 // The bank of a gang account: sharks only, as the feed shows the gang with no potion.
 const GANG_BANK = [{id: 385, count: 200}];
 // The tile where the dagger gang stands between hunts.
@@ -517,6 +519,8 @@ const ROUTE_CASES: BenchCase[] = [
   // a cap of 1,200 ticks). It holds the first walk out of a gang account and the drain of our prayer.
   atBank(gangCase('extra:gang-live-fast-x1', 'live-walker-iron', 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK), GANKER_POST),
   atBank(gangCase('extra:gang-live-fast-x2', 'live-walker-iron', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK), GANKER_POST),
+  // The fast case with the freeze runes in the kit (live-walker-iron-snare): run it with SPAR_A_OPTS {"freeze":"flee"}.
+  atBank(gangCase('extra:gang-live-fast-snare-x2', 'live-walker-iron-snare', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK_SNARE), GANKER_POST),
   gangCase('extra:gang-ganker-dds-live-walker-prepot-x2', 'live-walker', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400'], 3, undefined, EDGE_BANK),
   // The same against the gang that holds its protect prayer.
   gangCase('extra:gang-ganker-max-gang-walker-sticky-near-x2', 'gang-walker', 'ganker-max', 2, GANG_EDGE, ['SPAR_B=ganker-sticky', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400'], 3, undefined, EDGE_BANK),

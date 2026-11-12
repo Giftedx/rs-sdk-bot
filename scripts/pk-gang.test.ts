@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { gangSummary, gangValid, packOf, pickAttacker, startsAttack, type GangResult } from './pk-gang';
+import { gangSummary, gangValid, packOf, pickAttacker, pickRunner, startsAttack, type GangResult } from './pk-gang';
 import { PROFILES, sparOptions } from './pk-spar';
 import { combatLevel, itemId, kitCost, kitItems, kitOptions, kitRoute, KITS, kitSkills, kitSwitches, kitVarps } from './pk-kits';
 import { benchCases, GANKER_POST } from './measure/aio-bench-cases';
@@ -21,6 +21,19 @@ test('our account fights the one of the gang that hit it last, else the nearest 
     // An account that the game just refused is left out, unless every one was refused.
     expect(pickAttacker(near, all, null, new Set(['ligma']))?.name).toBe('Goondelf');
     expect(pickAttacker(near, all, null, new Set(['ligma', 'goondelf', 'sugma']))?.name).toBe('Ligma');
+});
+
+test('focusRunner picks the lowest bar at or under the fraction that the single-way rule lets through', () => {
+    const near = [{ name: 'Sugma', index: 5 }, { name: 'Ligma', index: 6 }, { name: 'Goondelf', index: 7 }, { name: 'Passerby', index: 8 }];
+    const all = new Set(['sugma', 'ligma', 'goondelf']);
+    const bars = new Map<number, number | null>([[5, 0.8], [6, 0.3], [7, 0.2], [8, 0.05]]);
+    const health = (i: number) => bars.get(i) ?? null;
+    expect(pickRunner(near, all, 0.35, health, () => true)?.name).toBe('Goondelf');
+    // The lowest one is locked out (another hit us in the last 8 ticks): the next lowest that is open.
+    expect(pickRunner(near, all, 0.35, health, p => p.index !== 7)?.name).toBe('Ligma');
+    // Over the fraction, no bar shown, or not of the gang: nobody.
+    expect(pickRunner(near, all, 0.1, health, () => true)).toBeNull();
+    expect(pickRunner(near, all, 0.35, () => null, () => true)).toBeNull();
 });
 
 test('a meeting counts when both sides attacked, and the summary counts each end', () => {

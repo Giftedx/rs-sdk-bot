@@ -14,7 +14,7 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
 import type { NearbyPlayer } from '../vendor/rs-sdk/sdk/types';
-import { fightPlayer, ITEMS, nextTick, wildernessLevel, type FightOptions, type FightResult, type Kit } from './pk';
+import { fightPlayer, ITEMS, nextTick, observePlayer, wildernessLevel, type FightOptions, type FightResult, type Kit } from './pk';
 import { BOOST_POTIONS, EDGEVILLE_BANK, hitByPlayer, restock, TRIBRID_KIT } from './pk-hunt';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { kitOptions, kitSwitches } from './pk-kits';
@@ -44,6 +44,17 @@ export type GangResult = { end: 'cleared' | 'died' | 'escaped' | 'away' | 'cap';
 export function pickAttacker<P extends { name: string; index: number; distance: number }>(nearby: readonly P[], alive: ReadonlySet<string>, lastHitBy: number | null, refused: ReadonlySet<string> = new Set()): P | null {
     const gang = nearby.filter(p => alive.has(p.name.toLowerCase())), open = gang.filter(p => !refused.has(p.name.toLowerCase()));
     return gang.find(p => p.index === lastHitBy) ?? [...(open.length ? open : gang)].sort((x, y) => x.distance - y.distance)[0] ?? null;
+}
+// focusRunner: the account of the gang in view with the lowest health bar at or under `fraction` that our attack can
+// reach now (`open`: the single-way rule lets it through), else null. `health` reads the bar (0..1) of a player index.
+export function pickRunner<P extends { name: string; index: number }>(nearby: readonly P[], alive: ReadonlySet<string>, fraction: number, health: (index: number) => number | null, open: (p: P) => boolean): P | null {
+    let best: P | null = null, low = Infinity;
+    for (const p of nearby) {
+        const h = health(p.index);
+        if (!alive.has(p.name.toLowerCase()) || h === null || h > fraction || !open(p)) continue;
+        if (h < low) { low = h; best = p; }
+    }
+    return best;
 }
 // The doses in each prayer potion and super restore (scripts/pk.ts ITEMS: four doses first).
 const PRAYER_DOSES = new Map([...ITEMS.prayerPotion, ...ITEMS.superRestore].map((id, i) => [id as number, 4 - (i % 4)] as const));
@@ -179,12 +190,19 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
         return total;
     });
     const fights: FightResult[] = [];
+    // focusRunner: the health bar of each account in view, and the single-way rule: our attack on an account goes
+    // through when it hit us last, or when no one has hit us for 8 ticks.
+    const focus = optionsA.focusRunner;
+    const health = (index: number) => { const seen = observePlayer(a.client, index); return seen && seen.totalHealth > 0 ? seen.health / seen.totalHealth : null; };
+    const runner = () => focus === undefined ? null : pickRunner(a.sdk.getState()?.nearbyPlayers ?? [], alive, focus, health, p => p.index === lastHitBy || a.tick() - lastHitAt > 8);
+    // A fight turns to a runner whose bar is lower by 5 points or more than the target's.
+    const lowerRunner = (current: NearbyPlayer) => { const r = runner(); return !!r && r.index !== current.index && (health(r.index) ?? 1) < (health(current.index) ?? 1) - 0.05; };
     let end: GangResult['end'] = 'cap', unseen = 0, returns = 0, trip = 1;
     for (;;) {
     while (alive.size && a.tick() - start < cap && !halt()) {
         reap();
         if (!alive.size) break;
-        const target: NearbyPlayer | null = pickAttacker(a.sdk.getState()?.nearbyPlayers ?? [], alive, lastHitBy, refusedBy);
+        const target: NearbyPlayer | null = runner() ?? pickAttacker(a.sdk.getState()?.nearbyPlayers ?? [], alive, lastHitBy, refusedBy);
         if (!target) {
             // An attack click on an account that died can walk ours toward its respawn point. Away from its tile with
             // none of the gang in view, it walks back before the ticks count.
@@ -208,7 +226,9 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
         // A refused attack on this one says the same before the other has hit.
         const began = a.tick();
         const other = () => refusedAt > began || (lastHitBy !== null && lastHitBy !== target.index && a.tick() - lastHitAt <= 8
-            && (a.sdk.getState()?.nearbyPlayers ?? []).some(p => p.index === lastHitBy && alive.has(p.name.toLowerCase())));
+            && (a.sdk.getState()?.nearbyPlayers ?? []).some(p => p.index === lastHitBy && alive.has(p.name.toLowerCase())))
+            || lowerRunner(target);
+        if (focus !== undefined && (health(target.index) ?? 1) <= focus) log(`[${a.name}] GANG focus ${target.name} at ${Math.round((health(target.index) ?? 0) * 100)}%`);
         const r = await fightPlayer(a, target.name, { ...optionsA, cap: Math.max(1, cap - (a.tick() - start)), stop: () => halt() || other(), log: l => log(`[${a.name}] ${l}`) });
         fights.push(r);
         // An attack click on an account that died can walk ours toward its respawn point: after a kill, back to the
