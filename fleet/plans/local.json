@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794470967512,
+ "at": 1794471182757,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -172,25 +172,21 @@
   },
   {
    "account": "Mightyrod",
-   "script": "scripts/aio.ts",
-   "args": [
-    "skiller",
-    "mining",
-    "ore",
-    "1800",
-    "25",
-    "MAX_TRIPS=3"
-   ],
-   "env": {},
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "mine ore at Varrock East and bank three loads",
-   "role": "mining",
-   "template": "aio-ore",
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
    "autopilot": "local",
    "resources": [
-    "aio:varrock-east-mine"
+    "knight:2652,3318"
    ]
   },
   {
@@ -323,21 +319,25 @@
   },
   {
    "account": "OreElse",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "mining",
+    "ore",
+    "1800",
+    "25",
+    "MAX_TRIPS=3"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "goal": "mine ore at Varrock East and bank three loads",
+   "role": "mining",
+   "template": "aio-ore",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "aio:varrock-east-mine"
    ]
   },
   {
