@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794469131403,
+ "at": 1794469743343,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -36,46 +36,7 @@
    "role": "pk-trainee"
   },
   {
-   "account": "Pocketrocket",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
-   "autopilot": "local",
-   "resources": [
-    "knight:2653,3300"
-   ]
-  },
-  {
    "account": "Abracadickra",
-   "script": "scripts/gather-feathers.ts",
-   "args": [],
-   "env": {
-    "PEN": "3187,3277",
-    "TICKS": "3000",
-    "TARGET": "2000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3187,3277",
-   "role": "helper",
-   "template": "feathers@3187,3277",
-   "autopilot": "local",
-   "resources": [
-    "pen:3187,3277"
-   ]
-  },
-  {
-   "account": "Bigpackage",
    "script": "scripts/aio.ts",
    "args": [
     "skiller",
@@ -97,25 +58,74 @@
    ]
   },
   {
-   "account": "BowBeforeMe",
-   "script": "scripts/shop-buyer.ts",
+   "account": "Bigchopper",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "sarim"
+    "3000",
+    "cow"
    ],
    "env": {
-    "ITEMS": "feather",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "TARGET_LEVEL": "45",
+    "GIANT_BURY": "0"
    },
+   "enabled": false,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
+   "autopilot": "local",
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "Bigpackage",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "crafting",
+    "bowstrings",
+    "1250",
+    "MAX_MAKE=56",
+    "RAW_RESERVE=0",
+    "MAX_TRIPS=4"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy feathers at Gerrant",
-   "role": "bank",
-   "template": "shop-feathers",
+   "goal": "spin 56 banked flax into bow strings at Seers",
+   "role": "crafting",
+   "template": "aio-bowstrings",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "woodcutting",
+    "yews",
+    "1800",
+    "27",
+    "MAX_TRIPS=4"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "cut yew logs at Seers and bank them",
+   "role": "woodcutting",
+   "template": "aio-yews",
    "autopilot": "local",
    "resources": [
-    "shop:sarim"
+    "aio:seers-yews"
    ]
   },
   {
@@ -165,21 +175,25 @@
   },
   {
    "account": "Mightyrod",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
-   },
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "mining",
+    "ore",
+    "1800",
+    "25",
+    "MAX_TRIPS=3"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
+   "goal": "mine ore at Varrock East and bank three loads",
+   "role": "mining",
+   "template": "aio-ore",
    "autopilot": "local",
    "resources": [
-    "knight:2671,3313"
+    "aio:varrock-east-mine"
    ]
   },
   {
@@ -247,41 +261,45 @@
   },
   {
    "account": "mmthv2350",
-   "script": "scripts/goldfarm.ts",
+   "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
+    "PEN": "3187,3277",
+    "TICKS": "3000",
+    "TARGET": "2000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
    "autopilot": "local",
    "resources": [
-    "knight:2671,3313"
+    "pen:3187,3277"
    ]
   },
   {
    "account": "Moneyshot",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "crafting",
+    "bowstrings",
+    "1250",
+    "MAX_MAKE=56",
+    "RAW_RESERVE=0",
+    "MAX_TRIPS=4"
+   ],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
+   "goal": "spin 56 banked flax into bow strings at Seers",
+   "role": "crafting",
+   "template": "aio-bowstrings",
    "autopilot": "local",
-   "resources": [
-    "knight:2652,3318"
-   ]
+   "resources": []
   },
   {
    "account": "NabTheKnob",
@@ -365,6 +383,49 @@
    "resources": [
     "knight:2653,3300"
    ]
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "crafting",
+    "bowstrings",
+    "1250",
+    "MAX_MAKE=56",
+    "RAW_RESERVE=0",
+    "MAX_TRIPS=4"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "spin 56 banked flax into bow strings at Seers",
+   "role": "crafting",
+   "template": "aio-bowstrings",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "fletching",
+    "shafts",
+    "600",
+    "MAX_MAKE=25",
+    "LOG_RESERVE=0"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "cut 25 banked logs into arrow shafts",
+   "role": "fletching",
+   "template": "aio-shafts",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "Swordinhand",
@@ -473,40 +534,65 @@
   },
   {
    "account": "Magicwanda",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "runecraft",
+    "bank-craft",
+    "99",
+    "CAP=4000"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "craft banked rune essence into air runes",
+   "role": "magic",
+   "template": "aio-air-runes",
+   "autopilot": "local",
+   "resources": [
+    "aio:air-altar"
+   ]
+  },
+  {
+   "account": "Shaftsinker",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2653,3300",
+    "KNIGHT_SPOT": "2669,3298",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
+   "goal": "goldfarm knights at 2669,3298",
    "role": "thieving",
-   "template": "goldfarm@2653,3300",
+   "template": "goldfarm@2669,3298",
    "autopilot": "local",
    "resources": [
-    "knight:2653,3300"
+    "knight:2669,3298"
    ]
   },
   {
    "account": "CoinCock",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "sarim"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
+    "ITEMS": "feather",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
+   "goal": "buy feathers at Gerrant",
+   "role": "bank",
+   "template": "shop-feathers",
    "autopilot": "local",
    "resources": [
-    "knight:2652,3318"
+    "shop:sarim"
    ]
   },
   {
@@ -549,51 +635,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2653,3300"
-   ]
-  },
-  {
-   "account": "Bigchopper",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "TARGET_LEVEL": "45",
-    "GIANT_BURY": "0"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
-   "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "local",
-   "resources": [
-    "knight:2669,3298"
    ]
   }
  ]
