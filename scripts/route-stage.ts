@@ -5,8 +5,8 @@
 // inOpenOrder) and plans it again after the trade. An account whose enabled job the autopilot does not own (no
 // `autopilot` mark: a hand or coordinator job) never gives and never receives, because the fleet agent refuses it and the
 // autopilot cannot free it. The count that the route account holds already is not ordered.
-// One order moves one item type (scripts/fleet-trade.ts accepts a one-line offer), so each line from each giver is
-// one trade. Snapshots age: a giver whose bank is short fails its trade with "stock short".
+// Each giver gets one order with all its lines (Order.extra): one trade and one login for the route account per giver.
+// Snapshots age: a giver whose bank is short fails its trade with "stock short".
 // Each side's fleet agent runs the first open order that names its account (scripts/fleet-trade.ts pickOrder, by
 // start). An account in another open order would wait there while its partner waits here, so such a giver is left
 // out, and a receiver in an open order refuses (the agent's own choice: pickOrder with its lead window). A held trade
@@ -25,6 +25,7 @@ import { FLEET_DIR, loadOwners } from '../packages/core/src/fleet';
 import { BANK_MEETS } from './coin-courier';
 import { makeOrder, orderMeet } from './fleet-order';
 import { pickOrder, swarmBusy, validOrder, type Order } from './fleet-trade';
+import { MAX_ORDER_LINES } from './fleet-trade-settlement';
 import { swarmWroteStop } from './swarm';
 import { readHeldFleetTradeClaims } from '../packages/core/src/fleet-trade-claim';
 
@@ -67,6 +68,17 @@ export function planStage(lines: readonly StageLine[], receiverHeld: (item: stri
         if (need > 0) plan.short.push({ item: line.item, count: need, blocked: all.filter(h => h.blocked).map(h => h.name) });
     }
     return plan;
+}
+
+// One fleet order for each giver: all its lines move in one trade (Order.extra), up to one trade window of lines.
+export function groupOrders(orders: StagePlan['orders']): { from: string; lines: StageLine[]; busy: boolean }[] {
+    const out: { from: string; lines: StageLine[]; busy: boolean }[] = [];
+    for (const o of orders) {
+        const group = out.find(g => norm(g.from) === norm(o.from) && g.lines.length < MAX_ORDER_LINES);
+        if (group) { group.lines.push({ item: o.item, count: o.count }); group.busy ||= o.busy; }
+        else out.push({ from: o.from, lines: [{ item: o.item, count: o.count }], busy: o.busy });
+    }
+    return out;
 }
 
 // The order that holds an account now: one it is trading (a prepared receipt in an open window, which pickOrder
@@ -134,14 +146,17 @@ if (import.meta.main) {
     for (const s of staged.short) console.log(`ROUTE_STAGE short ${s.count} ${s.item}: no ${flag('--allow-busy') ? '' : 'free '}holder on side ${side}`
         + (s.blocked.length ? `; held by ${s.blocked.join(', ')} in a job that the autopilot does not own` : ''));
     const now = Date.now(), inMin = Number(process.env.IN ?? 10), minutes = Number(process.env.MINUTES ?? 90);
-    for (const [i, o] of staged.orders.entries()) {
-        const base = makeOrder(o.from, account, o.count, o.item, now + i, inMin, minutes, owners, meet);
-        const order: Order = { ...base, id: `${base.id}-${o.item.replace(/[^A-Za-z0-9]+/g, '')}`.toLowerCase().slice(0, 64) };
+    const grouped = groupOrders(staged.orders);
+    for (const [i, o] of grouped.entries()) {
+        const [first, ...extra] = o.lines;
+        const base = makeOrder(o.from, account, first!.count, first!.item, now + i, inMin, minutes, owners, meet, extra);
+        const order: Order = { ...base, id: `${base.id}-${first!.item.replace(/[^A-Za-z0-9]+/g, '')}`.toLowerCase().slice(0, 64) };
         if (!flag('--dry')) {
             mkdirSync(join(FLEET_DIR(), 'orders'), { recursive: true });
             writeFileSync(join(FLEET_DIR(), 'orders', `${order.id}.json`), JSON.stringify(order, null, 1) + '\n');
         }
-        console.log(`ROUTE_STAGE ${flag('--dry') ? 'would order' : 'order'} ${order.id} ${o.from} -> ${account} ${o.count} ${o.item} at ${bank}${o.busy ? ' (busy: the autopilot frees it)' : ''}`);
+        const what = o.lines.map(l => `${l.count} ${l.item}`).join(', ');
+        console.log(`ROUTE_STAGE ${flag('--dry') ? 'would order' : 'order'} ${order.id} ${o.from} -> ${account} ${what} at ${bank}${o.busy ? ' (busy: the autopilot frees it)' : ''}`);
     }
-    console.log(`RESULT ${staged.short.length ? 'fail' : 'ok'} route-stage orders=${staged.orders.length} short=${staged.short.length}`);
+    console.log(`RESULT ${staged.short.length ? 'fail' : 'ok'} route-stage orders=${grouped.length} lines=${staged.orders.length} short=${staged.short.length}`);
 }
