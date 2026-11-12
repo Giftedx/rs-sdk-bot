@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794480768814,
+ "at": 1794483210296,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -123,22 +123,22 @@
   },
   {
    "account": "Hocuspokeus",
-   "script": "scripts/gather-feathers.ts",
+   "script": "scripts/generated/thieving60.ts",
    "args": [],
    "env": {
-    "PEN": "3017,3288",
-    "TICKS": "3000",
-    "TARGET": "2000"
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "feathers at the chicken pen 3017,3288",
-   "role": "helper",
-   "template": "feathers@3017,3288",
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
    "autopilot": "local",
    "resources": [
-    "pen:3017,3288"
+    "knight:2582,3297"
    ]
   },
   {
@@ -299,21 +299,22 @@
   },
   {
    "account": "OreElse",
-   "script": "scripts/goldfarm.ts",
+   "script": "scripts/gather-feathers.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "PEN": "3017,3288",
+    "TICKS": "3000",
+    "TARGET": "2000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "goal": "feathers at the chicken pen 3017,3288",
+   "role": "helper",
+   "template": "feathers@3017,3288",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "pen:3017,3288"
    ]
   },
   {
