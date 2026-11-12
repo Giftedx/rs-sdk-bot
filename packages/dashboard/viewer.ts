@@ -142,14 +142,40 @@ export function installViewerBridge(host:any) {
     // the tick's zone records (w) as oa and od records, after the feed's own. An obj that the feed itself sends counts
     // first, so one pile shows once.
     let botGround:number[][]=[],groundVersion=0;
+    // Respawn timers (RuneLite's Mining and Woodcutting plugins). The page sends the loc ids of depleted rocks and
+    // stumps ({respawnWatch:[id,...]}, client-assets/resources.json). On the main view's feed, a loc change (la) to one of
+    // them marks its tile depleted at that tick; a change to another loc, or a del (ld: back to the map's own loc), ends
+    // it. A depleted loc in the snapshot of a newly held zone has no start tick (null). The page gets the list on each
+    // change: {atlasDepleted:{tick, list:[[x, z, level, id, since]]}}. Only tiles inside the held area stay.
+    let respawnWatch=new Set<number>(),mainFeed:any=null,depletedArea:{x:number;z:number;w:number;h:number}|null=null;
+    const depleted=new Map<string,[number,number,number,number,number|null]>();
+    const trackDepleted=(m:any)=>{
+        if(!respawnWatch.size||!Array.isArray(m.w)&&!m.reset)return;
+        let changed=false;
+        if(m.reset&&depleted.size){depleted.clear();changed=true;}
+        for(const r of Array.isArray(m.w)?m.w:[]){
+            if(r?.e==='za'&&[r.x,r.z,r.w,r.h].every(Number.isFinite)){
+                const fresh=!!r.r,old=depletedArea;depletedArea={x:r.x,z:r.z,w:r.w,h:r.h};
+                for(const [k,v] of [...depleted])if(fresh||!(v[0]>=r.x&&v[0]<r.x+r.w&&v[1]>=r.z&&v[1]<r.z+r.h)||!old){depleted.delete(k);changed=true;}
+                continue;
+            }
+            if((r?.e!=='la'&&r?.e!=='ld')||![r.x,r.z,r.l].every(Number.isSafeInteger))continue;
+            const key=r.x+','+r.z+','+r.l;
+            if(r.e==='la'&&respawnWatch.has(r.id)){if(!depleted.has(key)){depleted.set(key,[r.x,r.z,r.l,r.id,m.reset||Array.isArray(m.w)&&m.w[0]?.e==='za'?null:m.k]);changed=true;}}
+            else if(depleted.delete(key))changed=true;
+        }
+        if(changed&&privacyReady&&renderReady&&!failed&&host.parent!==host)host.parent.postMessage({atlasDepleted:{tick:m.k,list:[...depleted.values()]}},host.location.origin);
+    };
     const groundRow=(r:any)=>Array.isArray(r)&&r.length===5&&r.every(Number.isSafeInteger)&&r[0]>=0&&r[0]<16384&&r[1]>=0&&r[1]<16384&&r[2]>=0&&r[2]<4&&r[3]>=0&&r[3]<65536&&r[4]>=1&&r[4]<2**31;
     const Socket=host.WebSocket;
     if(Socket)host.WebSocket=class extends Socket {
         constructor(address:any,protocols?:any){
             super(address,protocols);
             try{if(new host.URL(String(address),host.location.href).pathname==='/worldfeed'){
+                // The first feed socket is the main view's: its area is the one the respawn timers follow.
+                if(!mainFeed){mainFeed=this;depleted.clear();depletedArea=null;}
                 this.addEventListener('open',()=>{feedConnected=true;emit();});
-                this.addEventListener('close',()=>{feedConnected=false;emit();});
+                this.addEventListener('close',()=>{feedConnected=false;emit();if(mainFeed===this)mainFeed=null;});
                 this.addEventListener('error',()=>{feedConnected=false;emit();});
                 // The viewer reads the feed through onmessage: it gets each message with hash-listed names renamed.
                 let accessor:any=null;for(let p=Socket.prototype;p&&!accessor;p=Object.getPrototypeOf(p))accessor=Object.getOwnPropertyDescriptor(p,'onmessage');
@@ -253,6 +279,7 @@ export function installViewerBridge(host:any) {
                         const sendRoster=()=>host.parent.postMessage({atlasRoster:{players:message.p.filter((p:any)=>Array.isArray(p)&&typeof p[1]==='string'&&[p[2],p[3],p[4],p[5]].every(Number.isFinite)).map((p:any)=>[hiddenHashes.has(fnv(p[1].toLowerCase()))?'⟦MAIN⟧':mask(p[1]),p[2],p[3],p[4],p[5]])}},host.location.origin);
                         if(host.parent!==host&&!failed){if(privacyReady&&renderReady)sendRoster();else{heldRoster=sendRoster;heldRosterAt=Date.now();}}
                     }
+                    if(message.t==='tick'&&mainFeed===this)trackDepleted(message);
                     if(message.t==='tick'){
                         if(message.reset){faces.clear();npcs.clear();playerHp.clear();}
                         for(const r of Array.isArray(message.p)?message.p:[]){if(typeof r?.i!=='number')continue;if(r.f){faces.delete(r.i);playerHp.delete(r.i);}if(typeof r.fe==='number')r.fe<0?faces.delete(r.i):faces.set(r.i,r.fe);const h=hp(r.hp);if(h)playerHp.set(r.i,h);}
@@ -315,6 +342,7 @@ export function installViewerBridge(host:any) {
         }
         if(event.origin!==host.location.origin||event.source!==host.parent||!event.data||typeof event.data!=='object')return;
         if('botGround' in event.data){const rows=event.data.botGround;if(Array.isArray(rows)&&rows.length<=1000&&rows.every(groundRow)){botGround=rows.map((r:number[])=>r.slice());groundVersion++;}}
+        if('respawnWatch' in event.data){const ids=event.data.respawnWatch;if(Array.isArray(ids)&&ids.length<=64&&ids.every((n:any)=>Number.isSafeInteger(n)&&n>=0&&n<65536)){const next=new Set<number>(ids);if(next.size!==respawnWatch.size||[...next].some(n=>!respawnWatch.has(n))){respawnWatch=next;depleted.clear();}}}
         if(event.data.atlasCompass===true)host.document?.querySelector('.minimap-container .compass')?.click();
         if(event.data.atlasOpenWorldMap===true)host.document?.querySelector('.minimap-container .worldmap-icon')?.click();
         // The viewer writes its URL only when its camera rests. The name in the URL at a page follow is the old one.
