@@ -8,7 +8,7 @@ Goals (owner): the main account Haggis rank 1 on the Overall board under the cur
 
 1. Check branch, dirty files, process ownership and fresh state. Preserve others' edits. One owner per account, server and generated output.
 2. Pick the task that moves a scoreboard most per hour (`bun packages/router/src/coverage.ts`, the plan's scoreboards). Name its useful game outcome and consumer. Every build needs a finite live consumer.
-3. Read the exact code path before changing it. After two similar failures, change the method or get a new observation.
+3. Do the [look-before-you-build gate](#look-before-you-build). Then read the exact code path before changing it. After two similar failures, change the method or get a new observation.
 4. Run the cheapest check that reaches the change, with a timeout. Do not run game suites for docs. For a change to a worker or a shared helper, run its bench cases (`bun run bench <pattern>`), and `bun run bench --smoke` before a pull request ([the AIO bench](docs/script-contract.md#the-aio-bench)).
 5. Report source, proof level (unit, practice, live), useful output, cost, blocker and next action. Tests, practice and live prove different things. Tools, notes and tests are not game progress.
 
@@ -40,9 +40,20 @@ Several agents work at once: sessions on this PC (Claude Code, Codex) and cloud 
 - Three repositories are public: `Giftedx/rs-world` (the viewer fork), `Giftedx/rs-sdk` (the fork for pull requests to MaxBittker/rs-sdk) and `Giftedx/rs-fleet-dashboard` (the dashboard page). A push to one of them is public: push no account name, no fleet data and no private session link. This repository and `Giftedx/rs-fleet-command` stay private.
 - Each machine runs bots only for its own fleet side (Accounts, below). Cross-side resources move through fleet orders, never by logging in another side's account.
 
-## Research-first gate
+## Look before you build
 
-For a new approach, check local code and [project use map](research/project-use-map.md) first. Search upstream only for an unresolved boundary or a repeated failure. Record **source -> local consumer -> reuse/adapt/reject -> check** in the topic file. Check license and attribution before copying code.
+Most of the game has a script, a bench case and a measured route, and many do not have the name that you expect. Before you write or change a script, a bench case, a route or a tool, run each of these and read the output:
+
+1. `bun scripts/script-index.ts <word ...>`: one line for each of the scripts and commands. Then `rg -l -i <game word> scripts packages`, with the names of the NPC, the item, the place and the skill.
+2. `bun scripts/aio.ts --list`: the catalog of routes. `scripts/aio-quester.ts` maps each quest to its script. Each quest has one, and the ports of the rs-stun-toolkit quests are among them.
+3. `bun run bench --coverage` and `scripts/measure/aio-bench-cases.ts`: the bench case of each route. `bun run bench <pattern>` prints its ticks, the stored baseline and the rival's ticks.
+4. `bun packages/planner/src/cairn-cli.ts`: the record route (rune.fast), with our ticks, our script and the gap for each step. `bun packages/planner/src/haggis-cli.ts --order --supplies --evidence --levers`: our route, its supplies and its levers.
+5. `scripts/measure/`: the measurement of each planner row (`floor-*.ts`) and the hill climb tools (`pk-spar-climb.ts`; the bench flags `--set`, `--seeds` and `--watch`).
+6. The `Task lookup` table of [research/INDEX.md](research/INDEX.md) and the [project use map](research/project-use-map.md): what each topic file holds, and what we took from other projects.
+
+Start from the fastest method that these show: for a route step, the method of the record route. Do not make a slower method faster when the record route does not use it. In the first report of a task, name the script, the bench case and the tool that you start from. Write that none exists only with the list of the searches that you ran.
+
+For a new approach, read the same sources first. Search upstream only for an unresolved boundary or a repeated failure. Record **source -> local consumer -> reuse/adapt/reject -> check** in the topic file. Check license and attribution before copying code.
 
 ## Accounts
 
