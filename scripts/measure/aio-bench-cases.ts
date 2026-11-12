@@ -598,6 +598,14 @@ const EXTRA_CASES: BenchCase[] = [
   {key: 'extra:upass-pure-iban', script: 'scripts/aio-quester.ts', preset: 'quest_upass', scriptArgs: ['upass'], pass: questKeepsBuild('pure-iban', levelsBeforeRoute('pure-iban')), timeoutMs: 900_000,
     known: 'the fights of the quest give 53,400 XP and 17,690 Hitpoints XP; the build has no skill at 99 to take them and Hitpoints 10',
     presetConfig: {...PRESETS.quest_upass!, skills: {...PRESETS.quest_upass!.skills, ...levelsBeforeRoute('pure-iban')}}},
+  // The Mage Arena on the two builds with Flames of Zamorak, at their levels before the arena (Prayer 1, so the
+  // leash method of scripts/generated/quest-magearena.ts): the runes and the knife of quest_magearena, a staff of
+  // fire worn and 20 sharks in the place of the prayer potions.
+  ...(['pure-god', 'pure-rock'] as const).map((kit): BenchCase => {
+    const preset = PRESETS.quest_magearena!, before = levelsBeforeRoute(kit);
+    return {key: `extra:magearena-${kit}`, script: 'scripts/aio-quester.ts', preset: 'quest_magearena', scriptArgs: ['magearena'], pass: questKeepsBuild(kit, before), timeoutMs: 900_000,
+      presetConfig: {...preset, skills: before, inventory: [...(preset.inventory ?? []).filter(i => i.id !== 2434 && i.id !== 385), ...Array.from({length: 20}, () => ({id: 385, count: 1}))]}};
+  }),
 ];
 
 const KNOWN_QUEST: Readonly<Record<string, string>> = {

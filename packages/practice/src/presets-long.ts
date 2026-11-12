@@ -196,6 +196,20 @@ function misc(position: { x: number; z: number; level?: number }, varps: Record<
 const MISC_WED = (40 << 25);                              // %misc_affection 40: Astrid agreed to marry
 const MISC_FULL = MISC_WED | (96 << 18);                  // and the approval at 75 % (96 of 127)
 
+// The Mage Arena (scripts/generated/quest-magearena.ts): Magic 80 for Fire Wave, Prayer 43 for Protect from Magic,
+// Hitpoints 50, the other skills 1. A staff of fire worn: Kolodion refuses armour and weapons, and a staff is neither
+// (mage_arena.rs2:100-138). Runes for 80 casts of Fire Wave (5 air and 1 blood a cast, the staff gives the fire) and
+// 110 of Flames of Zamorak (4 fire, 2 blood, 1 air): 540 air (556), 440 fire (554), 300 blood (565). A knife (946) for
+// the webs of the hut (web.rs2:10-16), 4 prayer potions (2434) and 6 sharks (385).
+export const MAGEARENA_RUNES: Array<[number, number]> = [[556, 540], [554, 440], [565, 300]];
+const MA_SKILLS = { Magic: 80, Prayer: 43, Hitpoints: 50 };
+function magearena(varps: Record<number, number> = {}, worn = wear([[1387, 3]]), more: number[] = []): SaveConfig {
+    return {
+        position: { x: 2540, z: 4714, level: 0 }, skills: MA_SKILLS, equipment: worn, varps,
+        inventory: items([...MAGEARENA_RUNES, 946, ...more, 2434, 2434, 2434, 2434, 385, 385, 385, 385, 385, 385]),
+    };
+}
+
 export const LONG_PRESETS: Record<string, SaveConfig> = {
     // North of the throne room door, level 1 of the Miscellania castle (King Vargas spawn 2501,3859,1,
     // maps/m39_60.jm2), where the stairs from the ground floor arrive.
@@ -320,4 +334,11 @@ export const LONG_PRESETS: Record<string, SaveConfig> = {
     // Debug: at the shadow chest, same state.
     quest_upass_chest: upass({ x: 2136, z: 4577, level: 1 }, { 161: 7, 162: GRID + 16 + 512 }, [1492]),
     quest_upass_lower: upass({ x: 2135, z: 4556, level: 1 }, { 161: 7, 162: GRID + 16 + 512 }, [1492]),
+
+    // Beside Kolodion in the cellar of the Mage Arena (spawn 2541,4715, maps/m39_73.jm2).
+    quest_magearena: magearena(),
+    // Debug: Kolodion beaten (%magearena 6), before the pool and the statue.
+    quest_magearena_chamber: magearena({ 267: 6 }),
+    // Debug: the cape and the staff of Zamorak worn (%magearena 8), before the casts in the arena.
+    quest_magearena_casts: magearena({ 267: 8 }, wear([[2417, 3], [2414, 1]]), [1387]),
 };
