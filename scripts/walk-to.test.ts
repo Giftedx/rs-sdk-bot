@@ -1,7 +1,25 @@
 import { expect, test } from 'bun:test';
-import { parseTarget, walkTarget, walkTargetPersist, stagedBoat, walkWithFerryFallback, fareSpare, awayFrom } from './walk-to';
+import { parseTarget, walkTarget, walkTargetPersist, stagedBoat, walkWithFerryFallback, fareSpare, awayFrom, onTutorialIsland, leaveTutorial } from './walk-to';
 import { loadTravel } from '../packages/core/src/travel';
 import type { Outcome } from '../packages/core/src/act';
+
+test('a walk that starts on Tutorial Island skips the tutorial first; no other start does', async () => {
+    const at = (worldX: number, worldZ: number) => ({ worldX, worldZ, level: 0 });
+    // The first tile of a new live account, and the far ends of the island.
+    for (const p of [at(3094, 3106), at(3056, 3060), at(3155, 3136)]) expect(onTutorialIsland(p)).toBe(true);
+    // Lumbridge, the Wizards' Tower, Yanille and Tai Bwo Wannai are not the island.
+    for (const p of [at(3222, 3218), at(3109, 3162), at(2606, 3093), at(2790, 3066), null, undefined]) expect(onTutorialIsland(p)).toBe(false);
+    const session = (p: ReturnType<typeof at>) => ({ sdk: { getState: () => ({ player: p }) } }) as never;
+    const calls: string[] = [];
+    const skip = (success: boolean) => async () => { calls.push('skip'); return { success, message: 'guide absent' }; };
+    const ready = async () => { calls.push('ready'); };
+    expect(await leaveTutorial(session(at(3094, 3106)), skip(true), ready)).toBeNull();
+    expect(calls).toEqual(['ready', 'skip']);
+    expect(await leaveTutorial(session(at(3094, 3106)), skip(false), ready)).toEqual({ ok: false, reason: 'precondition', detail: 'tutorial skip failed: guide absent', ticks: 0 });
+    calls.length = 0;
+    expect(await leaveTutorial(session(at(3222, 3218)), skip(true), ready)).toBeNull();
+    expect(calls).toEqual([]);
+});
 
 test('the target is account, x, z and an optional level', () => {
     expect(parseTarget(['Pocketpython', '3165', '3487'])).toEqual({ account: 'Pocketpython', to: { x: 3165, z: 3487, level: 0 } });
