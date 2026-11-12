@@ -1,30 +1,12 @@
 {
  "side": "claude-cloud",
- "at": 1794497766804,
+ "at": 1794498290041,
  "jobs": [
   {
    "account": "Fingerblastr",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=fingerblastr-kit24-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
-   "autopilot": "claude-cloud",
-   "resources": []
-  },
-  {
-   "account": "Dipstick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=dipstick-kit10-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
@@ -229,6 +211,23 @@
     "shop:lowe",
     "shop:aubury"
    ]
+  },
+  {
+   "account": "Dipstick",
+   "script": "scripts/aio.ts",
+   "args": [
+    "quester",
+    "dusty-key"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "get the dusty key from Velrak for Taverley dungeon's inner gate",
+   "role": "quest",
+   "template": "army-dusty-key",
+   "autopilot": "claude-cloud",
+   "resources": []
   },
   {
    "account": "KnightRider",
