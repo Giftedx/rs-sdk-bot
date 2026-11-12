@@ -2,60 +2,71 @@
 
 Hill climb of our side's fight options against the live-like dagger gang on the practice bench.
 
-- Case: `extra:gang-live-fast-x2` (two meetings in one engine, each our account against three gang accounts at (3078, 3640)). Our profile `gang-hunter`, kit `live-walker-iron`; gang profile `ganker-live`, kit `ganker-dds`.
-- Command per run: `FLEET_SIDE=local BENCH_OUT=... timeout 600 bun scripts/measure/aio-practice-bench.ts '^extra:gang-live-fast-x2$' --parallel 1 --no-keep --seed <1..4> --set SPAR_A=gang-hunter [--set SPAR_A_OPTS=<json>] [--set SPAR_IDLE_PRAYER_OFF=1]`, one bench at a time, on a cloud container with 15 GB RAM and 4 cores. Proof level: practice bench only.
-- `FLEET_SIDE=local`: the container sets `FLEET_SIDE=claude-cloud`. The bench's generated `aiob*` accounts are not in `fleet/owners.json`, so they count as `local`, and `openBot` refuses them (`error: fleet: aiobfxuo701 belongs to the local side; this controller is claude-cloud`). The runner (`.practice/climb/run-set.ts`) deletes the `aiob*` saves and bot folders before each run, so each run logs in to its own preset saves.
-- Columns: kills, deaths and sharks come from the `RESULT` line (`kills`, `died`, the sum of `eaten`). Ticks per run is the `RESULT` `ticks`. The three walk-out columns count distinct gang accounts in the case log: a `PK walks out of the Wilderness` line, followed by a `PK escaped` line or a `PK kill` of that account. Seconds per run is `elapsedMs` from the BENCH_OUT row. Sets are ranked by kills per meeting, then deaths, then sharks per meeting, then ticks.
+- Cases: `extra:gang-live-fast-x2` (two meetings in one engine, each our account against three gang accounts at (3078, 3640)) and its kit variants on `claude/gang-live2`: `-snare-x2` (kit `live-walker-iron-snare`: 17 sharks and the runes of 10 Entangles), `-p-x2` (kit `live-walker-iron-p`: the poisoned dragon dagger) and `-psuper-x2` (kit `live-walker-iron-psuper`: the poisoned dagger and a super antipoison). Our profile `gang-hunter`, kit `live-walker-iron` unless the case names another; gang profile `ganker-live`, kit `ganker-dds`.
+- Each set runs seeds 1 to 4 (8 meetings) with `--set SPAR_A=gang-hunter` and its options as `SPAR_A_OPTS`. Practice bench only, on a cloud container with 15 GB RAM and 4 cores, with `FLEET_SIDE=local`: the container sets `FLEET_SIDE=claude-cloud`, and the bench's generated `aiob*` accounts count as `local`, so `openBot` refuses them otherwise.
+- **Engine waits.** Sets marked `wall clock` ran before the lockstep fixes of `claude/bench-seed-jobs`: an SDK wait timed out in wall time, so a gang bank call that never came true ended its trip early (`food withdrawal short`, `no walk back`), and the ticks that cost depended on the speed of the machine. Sets marked `ticks` (labels `r5-`) ran with the fixes: SDK waits time out in game ticks, and the 4 seeds of a set ran at once (`--seeds 1,2,3,4 --seed-jobs 4`). Compare sets within one kind only: `cure-eat60` gives 3 kills in 8 meetings under wall-clock waits and 2 (`r5-base`) under tick waits.
+- Columns: kills, deaths and sharks come from the `RESULT` line (`kills`, `died`, the sum of `eaten`). Ticks per run is the `RESULT` `ticks`. The three walk-out columns count distinct gang accounts in the case log: a `PK walks out of the Wilderness` line, followed by a `PK escaped` line or a `PK kill` of that account. Seconds per run is `elapsedMs` from the bench row. Sets are ranked by the kind of engine waits, then kills per meeting, then deaths, then sharks per meeting, then ticks.
 
-## Results (seeds 1 to 4 for each set, 8 meetings per set)
+## Results
 
-| label | options | idle prayer off | runs (ok) | meetings | kills | kills/meeting | deaths | walked out | walked out, escaped | walked out, killed | sharks eaten mean / meeting | sharks / kill | ticks mean / run | ticks / kill | s per run (max) |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| cure-eat60 | `{"cureNow":true,"eatAt":60}` | no | 4 (4) | 8 | 3 | 0.38 | 0 | 10 | 7 | 3 | 4.4 | 11.7 | 947 | 1263 | 104 (122) |
-| cure | `{"cureNow":true}` | no | 4 (4) | 8 | 3 | 0.38 | 0 | 11 | 9 | 3 | 6.8 | 18.0 | 1056 | 1408 | 85 (93) |
-| cure-chase50 | `{"cureNow":true,"chaseBelow":0.5}` | no | 4 (4) | 8 | 3 | 0.38 | 0 | 13 | 10 | 3 | 6.9 | 18.3 | 1149 | 1532 | 112 (142) |
-| all4 | `{"cureNow":true,"chaseBelow":0.35,"specBelow":0.45}` | yes | 4 (4) | 8 | 2 | 0.25 | 0 | 9 | 7 | 2 | 3.9 | 15.5 | 1045 | 2091 | 100 (102) |
-| base | `{}` | no | 4 (4) | 8 | 2 | 0.25 | 0 | 11 | 10 | 1 | 5.1 | 20.5 | 965 | 1931 | 100 (103) |
-| cure-eat30 | `{"cureNow":true,"eatAt":30}` | no | 4 (4) | 8 | 2 | 0.25 | 0 | 13 | 11 | 2 | 6.1 | 24.5 | 1092 | 2184 | 104 (112) |
-| idle | `{}` | yes | 4 (4) | 8 | 2 | 0.25 | 0 | 12 | 11 | 1 | 6.4 | 25.5 | 1099 | 2197 | 104 (137) |
-| spec45 | `{"specBelow":0.45}` | no | 4 (4) | 8 | 1 | 0.13 | 0 | 9 | 8 | 1 | 3.4 | 27.0 | 865 | 3459 | 101 (111) |
-| cure-spec60 | `{"cureNow":true,"specBelow":0.6}` | no | 4 (4) | 8 | 1 | 0.13 | 0 | 10 | 9 | 1 | 4.5 | 36.0 | 985 | 3938 | 98 (134) |
-| chase35 | `{"chaseBelow":0.35}` | no | 4 (4) | 8 | 1 | 0.13 | 0 | 10 | 9 | 1 | 4.6 | 37.0 | 813 | 3252 | 97 (102) |
-| cure-eat50 | `{"cureNow":true,"eatAt":50}` | no | 4 (4) | 8 | 0 | 0.00 | 0 | 10 | 10 | 0 | 4.0 | - | 932 | - | 107 (135) |
-| cure-spec30 | `{"cureNow":true,"specBelow":0.3}` | no | 4 (4) | 8 | 0 | 0.00 | 0 | 12 | 12 | 0 | 5.9 | - | 1205 | - | 100 (132) |
+| label | case | engine waits | options | idle prayer off | runs (ok) | meetings | kills | kills/meeting | deaths | walked out | walked out, escaped | walked out, killed | sharks eaten mean / meeting | sharks / kill | ticks mean / run | ticks / kill | s per run (max) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| r5-snare-focus | snare-x2 | ticks | `{"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4}` | no | 4 (4) | 8 | 6 | 0.75 | 0 | 11 | 5 | 6 | 8.1 | 10.8 | 824 | 549 | 41 (47) |
+| r5-p-super | psuper-x2 | ticks | `{"cureNow":true,"eatAt":60}` | no | 4 (4) | 8 | 5 | 0.63 | 0 | 13 | 9 | 4 | 5.9 | 9.4 | 962 | 769 | 45 (47) |
+| r5-p-dds | p-x2 | ticks | `{"cureNow":true,"eatAt":60}` | no | 4 (4) | 8 | 5 | 0.63 | 0 | 15 | 13 | 3 | 9.3 | 14.8 | 948 | 758 | 46 (52) |
+| r5-p-super-focus | psuper-x2 | ticks | `{"cureNow":true,"eatAt":60,"focusRunner":0.4,"chaseBelow":0.4}` | no | 4 (4) | 8 | 4 | 0.50 | 0 | 11 | 8 | 4 | 5.1 | 10.3 | 918 | 918 | 41 (47) |
+| r5-snare-focus-cut | snare-x2 | ticks | `{"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"cutOff":3}` | no | 4 (4) | 8 | 4 | 0.50 | 0 | 9 | 5 | 4 | 6.1 | 12.3 | 871 | 871 | 41 (48) |
+| r5-base | x2 | ticks | `{"cureNow":true,"eatAt":60}` | no | 4 (4) | 8 | 2 | 0.25 | 0 | 14 | 12 | 2 | 7.6 | 30.5 | 947 | 1894 | 44 (52) |
+| r5-focus | x2 | ticks | `{"cureNow":true,"eatAt":60,"focusRunner":0.4,"chaseBelow":0.4}` | no | 4 (4) | 8 | 2 | 0.25 | 0 | 14 | 11 | 2 | 11.4 | 45.5 | 1191 | 2383 | 53 (57) |
+| m-snare-focus-cut | snare-x2 | wall clock | `{"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"cutOff":3}` | no | 4 (4) | 8 | 6 | 0.75 | 0 | 8 | 2 | 6 | 3.8 | 5.0 | 723 | 482 | 86 (101) |
+| m-snare-focus | snare-x2 | wall clock | `{"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4}` | no | 4 (4) | 8 | 4 | 0.50 | 0 | 10 | 6 | 3 | 5.5 | 11.0 | 1031 | 1031 | 114 (134) |
+| cure-eat60 | x2 | wall clock | `{"cureNow":true,"eatAt":60}` | no | 4 (4) | 8 | 3 | 0.38 | 0 | 10 | 7 | 3 | 4.4 | 11.7 | 947 | 1263 | 104 (122) |
+| cure | x2 | wall clock | `{"cureNow":true}` | no | 4 (4) | 8 | 3 | 0.38 | 0 | 11 | 9 | 3 | 6.8 | 18.0 | 1056 | 1408 | 85 (93) |
+| cure-chase50 | x2 | wall clock | `{"cureNow":true,"chaseBelow":0.5}` | no | 4 (4) | 8 | 3 | 0.38 | 0 | 13 | 10 | 3 | 6.9 | 18.3 | 1149 | 1532 | 112 (142) |
+| all4 | x2 | wall clock | `{"cureNow":true,"chaseBelow":0.35,"specBelow":0.45}` | yes | 4 (4) | 8 | 2 | 0.25 | 0 | 9 | 7 | 2 | 3.9 | 15.5 | 1045 | 2091 | 100 (102) |
+| m-focus-cut | x2 | wall clock | `{"cureNow":true,"eatAt":60,"focusRunner":0.4,"chaseBelow":0.4,"cutOff":3}` | no | 4 (4) | 8 | 2 | 0.25 | 0 | 9 | 7 | 2 | 4.3 | 17.0 | 835 | 1671 | 90 (97) |
+| base | x2 | wall clock | `{}` | no | 4 (4) | 8 | 2 | 0.25 | 0 | 11 | 10 | 1 | 5.1 | 20.5 | 965 | 1931 | 100 (103) |
+| cure-eat30 | x2 | wall clock | `{"cureNow":true,"eatAt":30}` | no | 4 (4) | 8 | 2 | 0.25 | 0 | 13 | 11 | 2 | 6.1 | 24.5 | 1092 | 2184 | 104 (112) |
+| idle | x2 | wall clock | `{}` | yes | 4 (4) | 8 | 2 | 0.25 | 0 | 12 | 11 | 1 | 6.4 | 25.5 | 1099 | 2197 | 104 (137) |
+| spec45 | x2 | wall clock | `{"specBelow":0.45}` | no | 4 (4) | 8 | 1 | 0.13 | 0 | 9 | 8 | 1 | 3.4 | 27.0 | 865 | 3459 | 101 (111) |
+| m-snare-diag | snare-x2 | wall clock | `{"cureNow":true,"eatAt":60,"freeze":"flee","diagonalFrozen":true}` | no | 4 (4) | 8 | 1 | 0.13 | 0 | 8 | 6 | 1 | 3.9 | 31.0 | 756 | 3022 | 93 (107) |
+| m-focus | x2 | wall clock | `{"cureNow":true,"eatAt":60,"focusRunner":0.4,"chaseBelow":0.4}` | no | 4 (3) | 8 | 1 | 0.13 | 0 | 9 | 8 | 1 | 4.1 | 33.0 | 795 | 3178 | 84 (125) |
+| e60-bowburst40 | x2 | wall clock | `{"cureNow":true,"eatAt":60,"bowBurst":0.4}` | no | 4 (4) | 8 | 1 | 0.13 | 0 | 10 | 9 | 1 | 4.4 | 35.0 | 891 | 3564 | 93 (105) |
+| cure-spec60 | x2 | wall clock | `{"cureNow":true,"specBelow":0.6}` | no | 4 (4) | 8 | 1 | 0.13 | 0 | 10 | 9 | 1 | 4.5 | 36.0 | 985 | 3938 | 98 (134) |
+| chase35 | x2 | wall clock | `{"chaseBelow":0.35}` | no | 4 (4) | 8 | 1 | 0.13 | 0 | 10 | 9 | 1 | 4.6 | 37.0 | 813 | 3252 | 97 (102) |
+| e60-chase | x2 | wall clock | `{"cureNow":true,"eatAt":60,"chase":true}` | no | 4 (4) | 8 | 1 | 0.13 | 0 | 11 | 10 | 1 | 4.8 | 38.0 | 981 | 3924 | 108 (113) |
+| m-snare | snare-x2 | wall clock | `{"cureNow":true,"eatAt":60,"freeze":"flee"}` | no | 4 (4) | 8 | 1 | 0.13 | 0 | 10 | 9 | 1 | 5.5 | 44.0 | 1021 | 4085 | 110 (135) |
+| e60-savespec | x2 | wall clock | `{"cureNow":true,"eatAt":60,"specBelow":0.3,"fledSpec":true,"bowBurst":0.4}` | no | 4 (4) | 8 | 1 | 0.13 | 0 | 14 | 13 | 1 | 11.6 | 93.0 | 1303 | 5211 | 113 (147) |
+| e60-standoff3 | x2 | wall clock | `{"cureNow":true,"eatAt":60,"standOff":3}` | no | 4 (4) | 8 | 1 | 0.13 | 0 | 10 | 9 | 1 | 14.1 | 113.0 | 1043 | 4172 | 110 (143) |
+| cure-eat50 | x2 | wall clock | `{"cureNow":true,"eatAt":50}` | no | 4 (4) | 8 | 0 | 0.00 | 0 | 10 | 10 | 0 | 4.0 | - | 932 | - | 107 (135) |
+| cure-spec30 | x2 | wall clock | `{"cureNow":true,"specBelow":0.3}` | no | 4 (4) | 8 | 0 | 0.00 | 0 | 12 | 12 | 0 | 5.9 | - | 1205 | - | 100 (132) |
+| e60-fledbow | x2 | wall clock | `{"cureNow":true,"eatAt":60,"fledRotation":["ranged"]}` | no | 4 (4) | 8 | 0 | 0.00 | 0 | 12 | 12 | 0 | 6.6 | - | 1034 | - | 100 (128) |
+| e60-fledbow-chase | x2 | wall clock | `{"cureNow":true,"eatAt":60,"fledRotation":["ranged"],"chase":true}` | no | 4 (4) | 8 | 0 | 0.00 | 0 | 12 | 12 | 0 | 6.9 | - | 1194 | - | 99 (130) |
 
 ## Best set
 
-`cure-eat60`, options for `SPAR_A_OPTS` with `SPAR_A=gang-hunter`:
+`r5-snare-focus`: case `extra:gang-live-fast-snare-x2` (kit `live-walker-iron-snare`), `SPAR_A=gang-hunter`, `SPAR_A_OPTS`:
 
 ```json
-{"cureNow":true,"eatAt":60}
+{"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4}
 ```
 
-It ties `cure` and `cure-chase50` on 3 kills in 8 meetings with 0 deaths, and wins the tie on sharks: 4.4 per meeting against 6.8, and 11.7 per kill against 18.0.
+6 kills in 8 meetings, 0 deaths, 8.1 sharks a meeting and 10.8 a kill. 5 of the 11 gang accounts that walked out got away, against 12 of 14 for `r5-base`.
 
 ## What the numbers say
 
-- **Deaths: 0 in all 96 meetings** (48 runs, all `RESULT ok`). Every set is safe against this gang.
-- **Kills stay low: 20 in 96 meetings (0.21 per meeting).** The best set gets 3 in 8. The spread between sets is 0 to 3 kills per 8 meetings, and it does not follow the options in order: eatAt 30, 50 and 60 give 2, 0 and 3. With 8 meetings per set, a gap of 1 to 2 kills is within seed noise. The ranking is a lead to test, not a measured gain.
-- **The gang gets away when it walks out: 130 walk-outs, 113 of them escaped, 18 killed.** Of the 20 kills, 18 were on an account that had started to walk out. No `chaseBelow`, `specBelow` or `eatAt` value changes this much: `chase35` lets 9 of 10 walk-outs escape, and `cure-chase50` lets 10 of 13 escape.
-- The cause is in the engine, not in the options. In a single-way area, an account that took a hit from another player in the last 8 ticks cannot attack anyone else ("I'm already under attack.", `vendor/rs-sdk/server/content/scripts/skill_combat/scripts/pvp/pvp_combat.rs2:103-133`). While a second gang account keeps hitting ours, the runner cannot be attacked. `scripts/pk.ts:649` also ends the fight as `lost` once the target reaches Wilderness level 0, and `scripts/pk.ts:642` sends a chase walk only while our account stands still and the target is more than 5 tiles away. The fix needs fight-loop work on `claude/gang-live2`: spend the special, bow or freeze on the runner inside the 8-tick window, keep special energy for it, freeze the other gang accounts, or meet deeper in the Wilderness. These are untested leads.
-- `SPAR_IDLE_PRAYER_OFF=1` alone does not help: `idle` gives 2 kills, as `base` does. Seed 1 gives the same `RESULT` with and without it.
+- **Deaths: 0 in all 248 meetings.** 123 of 124 runs end `RESULT ok`. `m-focus` seed 1 ends `RESULT fail` at 0 ticks with Prayer 1: its accounts logged in without their preset (the same failure as a run with an `aiob*` save left from an earlier run), so `m-focus` has 3 valid runs in its 4.
+- **Under tick waits (56 meetings), freezing the runner and poisoning it both beat the base.** `r5-base` gets 2 kills in 8 meetings. The snare kit with `freeze: "flee"` and `focusRunner` gets 6; the poisoned dagger gets 5, with or without the super antipoison. `focusRunner` alone gets 2: our account turns to the runner, but with no freeze it cannot hold it. `cutOff: 3` on top of the snare set gets 4. With 8 meetings a set, a gap of 1 or 2 kills is within seed noise; 2 against 6 is the one gap that a second batch of seeds should confirm first.
+- **Under wall-clock waits (192 meetings), no option of the existing fight loop moved kills much:** 0 to 3 a set. The cause of most escapes there is target choice: when a low gang account walked out, our account kept fighting the healthy account that had hit it last, which left with it (`SPAR_B_FOLLOW=1`), and took the runner only when it was nearly out of view (`PK lost ... after 11 ticks`). `focusRunner` (`scripts/pk-gang.ts`) fixes that choice.
+- **The single-way rule** (`vendor/rs-sdk/server/content/scripts/skill_combat/scripts/pvp/pvp_combat.rs2:103-133`): an account hit by another player in the last 8 ticks cannot attack anyone else. `focusRunner` takes the runner only when that rule lets the attack through.
+- **Poison** (`poison.rs2`, `pvp_melee.rs2:50`): a damaging hit of a dagger(p) poisons at 1 in 4 with severity 20, 4 damage each 30 ticks and 50 in all; the gang carries no antipoison, so the poison runs through its walk out. A super antipoison gives 600 ticks with no poison a dose, a plain one 150 (`anti_poison.rs2`).
 
 ## Timing
 
-- The mean run takes 101 s of bench time (engine start about 1.3 s, account setup about 1 s; the rest is the script). Each batch of 4 seeds took 6 to 7 minutes of wall time.
-- Six runs took over 120 s. Each had a long meeting, and the time grows with the ticks the engine runs (about 9.5 to 12.5 ticks a second):
-
-| set | seed | elapsed s | RESULT ticks | ledger ticks max | meeting at the cap |
-|---|---|---|---|---|---|
-| idle | 2 | 137 | 1375 | 1488 | yes |
-| cure-eat50 | 4 | 135 | 1148 | 1261 | no |
-| cure-eat60 | 4 | 122 | 1229 | 1342 | no |
-| cure-spec30 | 4 | 132 | 1528 | 1641 | yes |
-| cure-spec60 | 3 | 134 | 1290 | 1403 | no |
-| cure-chase50 | 1 | 142 | 1453 | 1567 | yes |
+- Wall-clock waits: 96 runs, 101 s a run on average, 147 s at most; one set of 4 seeds in series took 6 to 7 minutes.
+- Tick waits with 4 seeds at once: 28 runs, 45 s a run on average, 57 s at most; one set of 4 seeds took 50 to 61 s.
+- The runs over 120 s (all wall-clock waits) each had a long meeting or a meeting at the tick cap; `bun scripts/measure/bench-speed.ts` on `extra:gang-live-fast-x1` showed that most of their time was ticks held for 2 s each while no session of the bot process counted as waiting.
 
 ## Raw lines
 
-`docs/gang-climb-results.txt` has one entry per run: set, seed, options, `elapsedMs`, `ledgerTicks`, the walk-out counts, and the `RESULT` line.
+`docs/gang-climb-results.txt` has one entry per run: set, seed, case, options, `elapsedMs`, `ledgerTicks`, the walk-out counts, and the `RESULT` line.
