@@ -917,11 +917,12 @@ What the sources show:
   (level 46). Players of combat 26 to 64 passed within 20 tiles of the post and no account moved. They also run to
   (2934, 3516), where a combat 113 player stands 5 tiles outside the Wilderness, and return with no attack: 4 such
   trips in the record.
-- **Attack.** The lunge of the dagger each 4 ticks (15 of 15 intervals), on a target that runs too. On a single-way
+- **Attack.** The lunge of the dagger each 4 ticks (630 of 667 intervals in the long record), on a target that runs too. On a single-way
   tile the first account to hit holds the target; a second one follows it and tries again each few ticks.
-- **Special.** Goondelf used 4 specials in its first 8 attacks on a miner: attack, special, attack, special, attack,
-  special, special, attack. Sugma used none in 15 attacks on a target under Protect from Melee; the record starts
-  inside that fight, so its special energy is not known.
+- **Special.** 113 of 725 attacks in a record of 23,000 ticks (`trace-long-1.jsonl`, 48 fights) are specials. The
+  first special is the second attack in 24 of 40 fights that have one, and the first attack in 7. A fight often opens
+  with attack and special in turns (attack, special, attack, special, attack, special, special, attack) until the
+  energy is gone. They use the special on a target under Protect from Melee too.
 - **Food.** Goondelf ate once, at 74 HP, for 20 HP (a shark), and its next attack came 3 ticks late. It did not eat at
   82 HP.
 - **Protect prayers.** Sugma turned Protect from Missiles on one tick after a hit from a player that held a magic
@@ -929,10 +930,16 @@ What the sources show:
   off 13 to 17 ticks later. In a hunt of a target that did not hit back, no protect prayer came on.
 - **Prayer points.** Ligma prayed at the Chaos Temple altar (2948, 3820) after a hunt, and Goondelf came into the
   Wilderness from the Monastery (3045, 3489) at full Hitpoints.
-- **Damage.** On a target under Protect from Melee: 15 attacks, 7 hits, highest 10. On a target with no such prayer:
-  one hit of 13. With no Strength boost the dagger hits up to 18, and up to 10 under the prayer (`pvp_melee.rs2:31-33`).
-- **End of a hunt.** Each hunt in the record ended when the target left view or got away. No kill and no death is in
-  the record.
+- **Damage.** In the long record: 227 splats on targets under Protect from Melee, highest 12; 45 on targets with no
+  such prayer, highest 22 (a special). With no Strength boost the dagger hits up to 18, and up to 10 under the prayer
+  (`pvp_melee.rs2:31-33`); with Ultimate Strength up to 21 and 12, and a special 15% more. So they use a Strength
+  prayer. With a super strength too a hit goes up to 25 and 15 under the prayer, and no such splat is in the record.
+- **Two or three at once.** On a multi-way tile they hit one target together: a combat 126 player with no armour
+  died 18 ticks after the first hit at (3219, 3629), Wilderness level 14, and a combat 96 player at the runite rocks
+  in 12 ticks. On a single-way tile one of them fights.
+- **End of a hunt.** In the long record 3 targets died (two of them on multi-way tiles), 14 fights ended when the
+  target left view, and the others when the attacks stopped. A combat 109 player in rune armour under Protect from
+  Melee stood 380 ticks of attacks and left. No gang account died or ate; the lowest Hitpoints of one was 76.
 
 The bench copies this (`scripts/pk-kits.ts`, `scripts/pk-spar.ts`, `scripts/pk-gang.ts`):
 
@@ -1012,7 +1019,8 @@ Gaps:
   melee, whether it runs, and how long it takes to return to the post are not known.
 - Practice only: no live meeting. The margin against `ganker-max` is 2 sharks in the worst of 32 meetings; the way out
   covers a meeting that needs more.
-- The post is a single-way tile. A meeting on a multi-way tile, where the three hit at once, is not measured.
+- The post is a single-way tile. A meeting on a multi-way tile, where the three hit at once, is not measured: our
+  account must meet the gang on single-way tiles only.
 - `ganker-max` has no antipoison and casts no spell (Magic 37 allows Bind). A gang that cures our poison lives longer.
 
 ## Server rules the loop follows
