@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794489355054,
+ "at": 1794489636504,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -34,25 +34,6 @@
    "repeat": true,
    "goal": "Strength 30 on chickens so it can hit hard enough to PK",
    "role": "pk-trainee"
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2671,3313",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2671,3313",
-   "role": "thieving",
-   "template": "goldfarm@2671,3313",
-   "autopilot": "local",
-   "resources": [
-    "knight:2671,3313"
-   ]
   },
   {
    "account": "Bigchopper",
