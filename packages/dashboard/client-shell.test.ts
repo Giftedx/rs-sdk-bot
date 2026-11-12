@@ -783,3 +783,13 @@ test('the death recap card shows the tile, the last hit, hitsplats and what the 
  expect(html).toContain('pk.ts · tick 12');
  expect(recapHtml({name:'Alpha',state:'none'})).toContain('No death in the newest tick records');
 });
+test('the death recap is read again for a newer death, and while it waits for the respawn after 30 s',()=>{
+ const code=shell.slice(shell.indexOf('  // A recap belongs to one reported death'),shell.indexOf('  function recapHtml(r){'));
+ const t=new Function('window','S','paintRecap','minimap','fetch',`${code};return {recapStale,set:(r)=>{recap=r;}};`)({atlasOperator:()=>true},{bots:[]},()=>{},()=>{},()=>new Promise(()=>{}));
+ const b={name:'Alpha',death:{at:100}};
+ t.set({name:'Alpha',state:'ok',data:{kept:[]},deathAt:100,at:Date.now()});expect(t.recapStale(b)).toBe(false);
+ expect(t.recapStale({...b,death:{at:200}})).toBe(true);
+ t.set({name:'Alpha',state:'ok',data:{kept:null},deathAt:100,at:Date.now()-31_000});expect(t.recapStale(b)).toBe(true);
+ t.set({name:'Alpha',state:'ok',data:{kept:null},deathAt:100,at:Date.now()});expect(t.recapStale(b)).toBe(false);
+ expect(t.recapStale({name:'Alpha'})).toBe(false);expect(t.recapStale({...b,practice:true})).toBe(false);
+});

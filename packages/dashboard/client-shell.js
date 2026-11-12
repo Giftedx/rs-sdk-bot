@@ -96,11 +96,15 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // Death recap (RuneLite's Death Indicator, with the hits before it), at the top of the Activity plugin: the newest
   // death in the account's tick records, which the PC's dashboard reads on request (/api/death-recap). The death tile
   // shows on the minimap as a red mark.
-  let recap={name:null,state:'none',data:null,error:''};
+  // A recap belongs to one reported death (deathAt) and is read again when the account reports a newer death, or when
+  // it still waits for the respawn and is older than the server's 30 s cache.
+  let recap={name:null,state:'none',data:null,error:'',deathAt:null,at:0};
+  const recapStale=b=>!!b?.death&&!b.practice&&(recap.name!==b.name||recap.deathAt!==b.death.at||recap.state==='ok'&&recap.data?.kept==null&&Date.now()-recap.at>30_000);
   function loadRecap(name){
-    if(!window.atlasOperator()){recap={name,state:'off',data:null,error:''};paintRecap();return;}
-    recap={name,state:'loading',data:null,error:''};paintRecap();
-    fetch('/api/death-recap?name='+encodeURIComponent(name)).then(r=>r.ok?r.json():Promise.reject(Error('HTTP '+r.status))).then(j=>{if(recap.name!==name)return;recap={name,state:j.recap?'ok':'none',data:j.recap||null,error:''};paintRecap();minimap();},e=>{if(recap.name!==name)return;recap={name,state:'error',data:null,error:String(e?.message||e)};paintRecap();});
+    const deathAt=S?.bots?.find(x=>x.name===name)?.death?.at??null,at=Date.now();
+    if(!window.atlasOperator()){recap={name,state:'off',data:null,error:'',deathAt,at};paintRecap();return;}
+    recap={name,state:'loading',data:null,error:'',deathAt,at};paintRecap();
+    fetch('/api/death-recap?name='+encodeURIComponent(name)).then(r=>r.ok?r.json():Promise.reject(Error('HTTP '+r.status))).then(j=>{if(recap.name!==name||recap.at!==at)return;recap={name,state:j.recap?'ok':'none',data:j.recap||null,error:'',deathAt,at};paintRecap();minimap();},e=>{if(recap.name!==name||recap.at!==at)return;recap={name,state:'error',data:null,error:String(e?.message||e),deathAt,at};paintRecap();});
   }
   function recapHtml(r){
     const head=`<div class="xp-head"><span>Death · ${E(safeName(r.name||''))}</span>${r.data?.at?'<span class="xp-muted">'+age(r.data.at)+' ago</span>':''}</div>`;
@@ -119,7 +123,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       `<p class="xp-muted recap-foot">${E(String(d.script).split(/[\\/]/).pop())} · tick ${d.tick}. The last death in the newest record that has one; it can be a practice run.</p>`;
   }
   // The Activity plugin (operations.js) draws the card at its top; a new state of the recap draws the plugin again.
-  window.atlasRecapHtml=()=>recap.name?'<div class="death-recap"><div class="xp-box">'+recapHtml(recap)+'</div></div>':'';
+  // Each draw of Activity checks the watched account: a newer death or a respawn reads the recap again.
+  window.atlasRecapHtml=()=>{const b=typeof account==='function'?account():null;if(recap.state!=='loading'&&recapStale(b))loadRecap(b.name);return recap.name?'<div class="death-recap"><div class="xp-box">'+recapHtml(recap)+'</div></div>':'';};
   function paintRecap(){if(selectedPlugin==='activity'&&window.atlasPlugins?.activity)window.atlasPlugins.activity.render(body);}
   // Quest Journal, Fleet view (RuneLite's Quest List colours over every account): each quest with how many of our
   // accounts finished it, green when all did, yellow when some did or started it, red when none did. A click lists
@@ -482,7 +487,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(!window.atlasOperator()){if(PUBLIC_HIDDEN.includes(id))id='fleet';else if(id==='board'){const key=typeof chosenBoard==='string'&&typeof boardKey==='function'?boardKey(chosenBoard):'',top=(S?.rivals||[]).find(x=>boardKey(x.board)===key);if(!top)return;rivalBoard=top.board;hiscoresMode='rivals';id='boards';}}
     const priorPlugin=selectedPlugin;window.atlasBeforePluginChange?.(priorPlugin,id);selectedPlugin=id;app.classList.remove('client-collapsed');app.classList.add('mobile-plugin');for(const el of [fleet,inspect,boards,allocation,journal])parked.append(el);body.replaceChildren();body._h=null;if(priorPlugin!==id)enter(body);$('#client-plugin-name').textContent=window.atlasPlugins?.[id]?.label||window.atlasPluginNames?.[id]||plugins.find(p=>p[0]===id)?.[1]||({raw:'Raw evidence'}[id]||'Settings');
     // Activity opens with the death recap of the watched account when it died.
-    if(id==='activity'){const da=account();if(da?.death&&!da.practice&&recap.name!==da.name)loadRecap(da.name);}
+    if(id==='activity'){const da=account();if(recap.state!=='loading'&&recapStale(da))loadRecap(da.name);}
     body.dataset.plugin=id;plugin.dataset.plugin=id;if(window.atlasPlugins?.[id]){window.atlasPlugins[id].render(body);}else if(['xp','boards','info'].includes(id))renderSnapshotPlugin(id);else if(id==='ge')body.innerHTML=gePanel();else if(id==='prs')body.innerHTML=prsPanel();else if(id==='fleet')body.append(fleet);else if(id==='world')body.innerHTML=worldPanel();else if(id==='activity'){body.append(journal);journal.style.setProperty('display','block','important');journal.style.position='static';journal.style.width='100%';journal.style.height='auto';}else{body.append(inspect);choose(id==='settings'?'machine':id);if(id==='goals'&&window.atlasOperator()){const form=document.createElement('form');form.className='goal-request';form.innerHTML='<input name="text" maxlength="500" placeholder="Tell the agents what you want next..." aria-label="New owner request"><button>Send</button><small>Goes to research/owner-requests.md as the next numbered row.</small>';body.prepend(form);}}
     rail.querySelectorAll('[data-client-plugin]').forEach(b=>{b.classList.toggle('on',b.dataset.clientPlugin===id);b.setAttribute('aria-pressed',String(b.dataset.clientPlugin===id));});syncSidebar();if(S&&id==='fleet')roster();window.atlasAfterPluginChange?.(priorPlugin,id);
   }
