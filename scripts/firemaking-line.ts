@@ -114,6 +114,8 @@ if (import.meta.main) {
         if (!owner) throw Error('no helper holds a whole batch: move the logs so that each batch of 28 is in one bank');
         console.log('FM_LINE_PLAN ' + JSON.stringify({ stock, logs: plan.length, batches: work.length, endLevel: levelForXp(runnerXp + plan.reduce((n, id) => n + LOG_XP[id]!, 0)) }));
         const tileOf: (Tile | undefined)[] = [], droppedAt: number[] = [];
+        // One clock for every drop age: each session's tick() starts at 0 when it connects, and the runner connects last.
+        const clock = () => helpers[0]!.tick();
         let cursor = 0, lit = 0, down = -1;
         const lightTicks: number[] = [];
         // A helper's next free tile: the cursor moves on past a tile that holds a fire or a log now.
@@ -141,7 +143,7 @@ if (import.meta.main) {
                     if (slot === undefined) return fail(`helper ${h.name}: no log ${id} in the pack`);
                     await h.direct({ type: 'dropItem', slot, reason: 'SDK' });
                     if (!await waitUntil(h, () => count(h, id) < n0, { timeoutTicks: 6 })) return fail(`helper ${h.name}: drop at ${t.x},${t.z} unobserved`);
-                    tileOf[batch.from + j] = t; droppedAt[batch.from + j] = h.tick();
+                    tileOf[batch.from + j] = t; droppedAt[batch.from + j] = clock();
                 }
                 down = Math.max(down, b);
             }
@@ -152,7 +154,7 @@ if (import.meta.main) {
         const loops = helpers.map((h, k) => helperRun(h, k).catch(e => fail(`helper ${h.name}: ${String(e)}`)));
         // The runner logs in when the first log has aged to its reveal, less a few ticks of login.
         const first = helpers[0]!;
-        while (!stop && (droppedAt[0] === undefined || first.tick() - droppedAt[0] < REVEAL_TICKS - 5)) await waitTicks(first, 1);
+        while (!stop && (droppedAt[0] === undefined || clock() - droppedAt[0] < REVEAL_TICKS - 5)) await waitTicks(first, 1);
         if (stop) throw Error(failure);
         runner = await openBot(runnerName, { onStop: async (_s, why) => fail(`runner: ${why}`) });
         const r = runner, start = r.tick(), xp = () => r.sdk.getSkillXp('Firemaking') ?? 0, level = () => r.sdk.getSkill('Firemaking')?.baseLevel ?? 0;
@@ -165,10 +167,16 @@ if (import.meta.main) {
             if (r.tick() - start >= cap) { fail('cap'); break; }
             if (stopFile(runnerName)) { fail('stop file'); break; }
             const id = plan[i]!, w0 = r.tick();
-            while (!stop && (!tileOf[i] || !groundAt(r, tileOf[i]!, id))) {
-                if (tileOf[i] && r.tick() - droppedAt[i]! > DROP_LIFE_TICKS + 20) break;
+            const halt = () => r.tick() - start >= cap ? 'cap' : stopFile(runnerName) ? 'stop file' : '';
+            while (!stop && !halt() && (!tileOf[i] || !groundAt(r, tileOf[i]!, id))) {
+                const t = tileOf[i];
+                if (t && clock() - droppedAt[i]! > DROP_LIFE_TICKS + 20) break;
+                // A ground item shows only near the player: at a row change the next log is up to 33 tiles away, so
+                // the runner walks beside it first (bench: logs 27-51 at 3105-3087,3250 were never seen from 3072,3248).
+                if (t) { const p = at(r); if (Math.max(Math.abs(p.x - t.x), Math.abs(p.z - t.z)) > 8) await walkPath(await sessionWalker(r), [{ ...t, tol: 2 }], { maxTicks: 40, stop: () => stop }); }
                 await waitTicks(r, 1);
             }
+            if (halt()) { fail(halt()); break; }
             waited += r.tick() - w0;
             const t = tileOf[i];
             if (!t || !groundAt(r, t, id)) { lit = i + 1; lost++; console.log(`FM_LINE_WARN log ${i} (${id}) at ${t ? `${t.x},${t.z}` : 'no tile'} not seen`); continue; }
