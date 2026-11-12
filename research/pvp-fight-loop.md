@@ -1039,6 +1039,13 @@ results are against `ganker-max` with the profile `gang-hunter`.
   883 and 13; bow and dagger in strict turns 859 and 13; the special from the first health bar 847 and 13; a shark at
   40 HP 884 and 13, at 60 HP 852 and 14; strict turns with the early special 829 and 13; those two with the shark at
   40 HP 807 and 12. The profile has the last set. Gap: 6 meetings a set, and a later batch of 16 gave 863 ticks.
+- **Strict turns hold against a gang that keeps its prayer.** The profile `ganker-sticky` keeps a protect prayer for
+  20 ticks (in the feed a gang account kept one for 13 to 33 ticks; its rule against two styles is in no record).
+  Against it, 6 meetings each (`extra:gang-ganker-max-gang-walker-sticky-near-x2`, seeds 1 to 3): strict turns 857
+  ticks and 13 sharks, the champion's learnt style choice 942 and 14, the learnt choice with no random pick 898 and
+  15. Against `ganker` the learnt choice has 863 ticks and 15 sharks where strict turns have 811 and 13 (4 meetings).
+- **Karambwans give no gain.** 19 cooked karambwans for the sharks with `freeFood`: 838 ticks and 16 eaten in 4
+  meetings, 4 left at the least.
 - **A dead target pulls the attacker.** An attack click that is in hand when the target dies walks our account
   toward the target's respawn point in Lumbridge, out of the Wilderness. The fight loop ends the click with a walk to
   its own tile when the kill message comes, and the meeting sends an account with no gang in view back to its tile.

@@ -138,3 +138,9 @@ test('the walk-in kit has no glory: an amulet of power, the runes of Camelot Tel
         if (tile) expect(c.presetConfig!.position).toEqual({ x: tile.x + 2, z: tile.z, level: 0 });
     }
 });
+
+test('the gang that holds its protect prayer is the gang with one more option, and has a case of its own', () => {
+    expect(PROFILES['ganker-sticky']).toEqual({ ...PROFILES.ganker!, overheadHold: 20 });
+    const c = benchCases().find(k => k.key === 'extra:gang-ganker-max-gang-walker-sticky-near-x2')!;
+    expect(c.scriptArgs).toEqual(expect.arrayContaining(['SPAR_B=ganker-sticky', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1']));
+});

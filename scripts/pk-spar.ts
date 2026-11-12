@@ -69,6 +69,9 @@ export const PROFILES: Readonly<Record<string, Profile>> = {
     'gang-hunter': { ...CHAMPION, adaptStyles: false, mixStyles: false, specBelow: 1, eatAt: 40, castArmour: 'keep', escapeAt: 60, escapeSpell: 1174, protectItem: false, flickEvery: 2, chase: false },
     ganker: { rotation: ['melee'], specBelow: 1, eatAt: 79, prayerFlick: false, readOverheads: false },
     'ganker-bare': { rotation: ['melee'], specBelow: 1, eatAt: 79, prayerFlick: false, readOverheads: false, overheadPrayer: false },
+    // The gang with a protect prayer that stays 20 ticks: in the feed a gang account kept one for 13 to 33 ticks, and no
+    // record shows its rule against an attacker with two styles. A method must hold against both rules.
+    'ganker-sticky': { rotation: ['melee'], specBelow: 1, eatAt: 79, prayerFlick: false, readOverheads: false, overheadHold: 20 },
 };
 const GOD_HUNTER: Profile = { kit: { ...TRIBRID_KIT, magic: [2417] }, damageSpell: 1192, charge: true };
 // Options a scenario gives a side under its profile. In `escape` side B is the runner: with its food gone at 60 HP or

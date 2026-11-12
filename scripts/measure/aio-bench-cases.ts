@@ -489,6 +489,8 @@ const ROUTE_CASES: BenchCase[] = [
   // option lets our account leave the Wilderness.
   ...(['gang-hunter', 'gang-walker'] as const).map(kit => gangCase(`extra:gang-ganker-max-${kit}-prepot-near-x2`, kit, 'ganker-max', 2, GANG_EDGE,
     ['SPAR_B=ganker', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400'], 3, undefined, EDGE_BANK)),
+  // The same against the gang that holds its protect prayer.
+  gangCase('extra:gang-ganker-max-gang-walker-sticky-near-x2', 'gang-walker', 'ganker-max', 2, GANG_EDGE, ['SPAR_B=ganker-sticky', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400'], 3, undefined, EDGE_BANK),
   // The way out, with the gang on our account. `escape`: 3 sharks and a glory in the pack; out of food at 60 HP or
   // less it rubs the glory. `escape-worn`: the kit gang-hunter with 3 sharks against the gang at its most; it takes
   // the glory off its neck and rubs it. A case passes when all four accounts get away.
