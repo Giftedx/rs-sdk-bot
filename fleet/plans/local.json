@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794486727616,
+ "at": 1794486891435,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -476,28 +476,6 @@
    ]
   },
   {
-   "account": "Billionaire",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "betty"
-   ],
-   "env": {
-    "ITEMS": "fire rune|air rune|earth rune",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy elemental runes at Betty",
-   "role": "bank",
-   "template": "shop-runes",
-   "autopilot": "local",
-   "resources": [
-    "shop:betty"
-   ]
-  },
-  {
    "account": "Magicwanda",
    "script": "scripts/gather-feathers.ts",
    "args": [],
@@ -594,6 +572,28 @@
    "autopilot": "local",
    "resources": [
     "knight:2653,3300"
+   ]
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "betty"
+   ],
+   "env": {
+    "ITEMS": "fire rune|air rune|earth rune",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy elemental runes at Betty",
+   "role": "bank",
+   "template": "shop-runes",
+   "autopilot": "local",
+   "resources": [
+    "shop:betty"
    ]
   }
  ]
