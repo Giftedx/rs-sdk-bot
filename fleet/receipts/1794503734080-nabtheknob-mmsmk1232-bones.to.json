@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794503734080-nabtheknob-mmsmk1232-bones",
+ "account": "mmsmk1232",
+ "partner": "NabTheKnob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 86,
+ "claim": "cabb8769-be22-4bc4-9359-e4e95c17d77c",
+ "count": 0,
+ "ok": false,
+ "at": 1794503743542,
+ "detail": "trade claimed"
+}
