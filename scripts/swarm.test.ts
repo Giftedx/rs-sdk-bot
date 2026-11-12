@@ -737,3 +737,20 @@ test('controller stop and resume preserve a stop file the owner wrote', () => {
         if (/^rsbot-stop-owner-[^\\/]+$/.test(relative(parent, base))) rmSync(base, { recursive: true });
     }
 });
+
+import { adoptedRunAlive, PID_START_SLACK_MS } from './swarm';
+test('an adopted run whose pid a later process holds is ended', () => {
+    const run = { pid: 2856, started: 1_000_000 }, answers = () => true, gone = () => false;
+    // The id answers a signal, but its process started after the run record: a different process.
+    expect(adoptedRunAlive(run, answers, new Map([[2856, run.started + PID_START_SLACK_MS + 1]]))).toBe(false);
+    // The supervisor starts before the record is written, and stays the run's process.
+    expect(adoptedRunAlive(run, answers, new Map([[2856, run.started - 40]]))).toBe(true);
+    expect(adoptedRunAlive(run, answers, new Map([[2856, run.started + PID_START_SLACK_MS]]))).toBe(true);
+    // A failed read, or a table without the id, proves nothing: the signal check decides alone.
+    expect(adoptedRunAlive(run, answers, null)).toBe(true);
+    expect(adoptedRunAlive(run, answers, new Map([[10568, run.started + 60_000]]))).toBe(true);
+    expect(adoptedRunAlive(run, gone, null)).toBe(false);
+    expect(adoptedRunAlive(run, gone, new Map([[2856, run.started - 40]]))).toBe(false);
+    // A record without a start time cannot prove a different process.
+    expect(adoptedRunAlive({ pid: 2856 } as { pid: number; started: number }, answers, new Map([[2856, 5_000_000]]))).toBe(true);
+});
