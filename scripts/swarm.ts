@@ -1,7 +1,7 @@
 // Swarm controller: one place that decides which live account runs what. Reads swarm.json (the owner's jobs) and
 // .practice/coordinator/jobs.json (the coordinator's jobs) every 2 s as one plan (edits apply live), starts each
 // enabled job under packages/practice/src/supervise.ts, and writes .practice/swarm-state.json for the dashboard. Admission counts managed and fresh external live accounts against maxBots. Each new account
-// reserves 1 GiB for 30 s; projected free RAM must retain max(8 GiB, minFreeGB). It never starts an account whose status file changed in the
+// reserves 1 GiB for 30 s; projected free RAM must retain max(FREE_FLOOR_GB, minFreeGB), and FREE_FLOOR_GB is 4 GiB. It never starts an account whose status file changed in the
 // last 30 s and that it did not start itself: a second login kicks the first session.
 // Successful jobs restart with "repeat": true or a changed work revision. Death, no-progress and exhausted retries stay blocked.
 // A local swarm-repair.json request {account, endedAt, server, proof} clears only that reviewed failure, after a fresh
