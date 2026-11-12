@@ -49,13 +49,17 @@ function tally(rows:{key:string;name:string}[],quiet:string[]=[]):string{
 }
 // The controllers that the main checkout runs.
 export const CONTROLLERS=['swarm.ts','coordinator-cli.ts','autopilot.ts','fleet-agent.ts'] as const;
+// The name that `scriptsOf` gives a test run: `bun test`, with or without file names (`bun test ./scripts ./packages`).
+export const BUN_TEST='bun test';
 // The jobs that must not run two at a time on one PC (AGENTS.md, "Keep the loop fast").
-export const HEAVY=['ci-gate.ts','test-shards.ts','aio-practice-bench.ts','typecheck-narrow.ts','tsc'] as const;
+export const HEAVY=['ci-gate.ts','test-shards.ts','aio-practice-bench.ts','typecheck-narrow.ts','tsc',BUN_TEST] as const;
 
-// The script files that a command line names. The TypeScript compiler has no file suffix in its bin path.
+// The script files that a command line names, and two programs that name no script file: the TypeScript compiler
+// (its bin path has no suffix) and the test runner.
 export function scriptsOf(commandLine:string):string[]{
     const out=(commandLine.match(/[\w.-]+\.(?:ts|js)\b/g)??[]).map(s=>s==='tsc.js'?'tsc':s);
     if(/typescript[\\/]bin[\\/]tsc\b/.test(commandLine)&&!out.includes('tsc'))out.push('tsc');
+    if(/(?:^|[\\/\s"])bun(?:\.exe)?"?\s+test(?:\s|$)/.test(commandLine))out.push(BUN_TEST);
     return out;
 }
 
@@ -78,7 +82,7 @@ export function nowLines(state:DashState|null,local:Local,now:number):string[]{
     });
     const procs=local.procs;
     add('heavy',()=>procs===null?'heavy   not known: the process scan failed. Do not start a heavy job on this line.'
-        :'heavy   '+[...HEAVY.map(h=>`${h} ${procs.filter(p=>p.scripts.includes(h)).length}`),`test files ${procs.filter(p=>p.scripts.some(s=>s.endsWith('.test.ts'))).length}`].join(', '));
+        :'heavy   '+HEAVY.map(h=>`${h} ${procs.filter(p=>p.scripts.includes(h)).length}`).join(', '));
     add('stop',()=>'stop    '+(local.stops.length?local.stops.map(s=>`${s.file}: "${s.text}"`).join('; '):'no stop-coordinator, no stop-swarm')+(state?.coordination?.paused?'; the coordinator is paused':''));
     add('control',()=>procs===null?'control not known: the process scan failed'
         :'control '+CONTROLLERS.map(name=>{const p=procs.find(x=>x.scripts.includes(name));return p?`${name} up ${age(p.up)}`:`${name} DOWN`;}).join(', '));
@@ -124,18 +128,37 @@ export function nowLines(state:DashState|null,local:Local,now:number):string[]{
 // A scan of the bun and node processes at this moment. The dashboard also holds a process list, but it scans only
 // while a page is open, and /api/state answers from the last scan, of any age: that list can not prove that no
 // heavy job runs.
+// Returns null when the scan did not run or did not see the processes: the caller must not read that as "none".
 function scanProcs(now:number):Proc[]|null{
-    const ps="Get-CimInstance Win32_Process -Filter \"Name='bun.exe' OR Name='node.exe'\" | ForEach-Object { '{0}|{1}|{2}' -f $_.ProcessId, $_.CreationDate.ToString('o'), $_.CommandLine }";
-    const r=Bun.spawnSync(['powershell','-NoProfile','-Command',ps],{stdout:'pipe',stderr:'ignore',windowsHide:true,timeout:20_000});
-    if(r.exitCode!==0)return null;
-    const out:Proc[]=[];
-    for(const line of r.stdout.toString().split(/\r?\n/)){
-        const [pid,created,...cmd]=line.trim().split('|');
-        if(!pid||!created||Number(pid)===process.pid)continue;
-        out.push({scripts:scriptsOf(cmd.join('|')),up:now-Date.parse(created)});
+    const windows=process.platform==='win32';
+    // Windows: pid|start time|command line. Other systems: pid, seconds of run time, command line (`ps`).
+    const cmd=windows
+        ?['powershell','-NoProfile','-Command',"Get-CimInstance Win32_Process -Filter \"Name='bun.exe' OR Name='node.exe'\" | ForEach-Object { '{0}|{1}|{2}' -f $_.ProcessId, $_.CreationDate.ToString('o'), $_.CommandLine }"]
+        :['ps','-eo','pid=,etimes=,args='];
+    let text:string;
+    try{
+        // A program that is not installed makes spawnSync throw.
+        const r=Bun.spawnSync(cmd,{stdout:'pipe',stderr:'ignore',windowsHide:true,timeout:20_000});
+        if(r.exitCode!==0)return null;
+        text=r.stdout.toString();
+    }catch{return null;}
+    const rows=procRows(text,windows,now);
+    // This process is a bun process. A list without it means that the scan did not see the processes.
+    return rows.some(r=>r.pid===process.pid)?rows.filter(r=>r.pid!==process.pid).map(({scripts,up})=>({scripts,up})):null;
+}
+// The bun and node processes of one scan output, in the format of `scanProcs` for that system.
+export function procRows(text:string,windows:boolean,now:number):(Proc&{pid:number})[]{
+    const out:(Proc&{pid:number})[]=[];
+    for(const line of text.split(/\r?\n/)){
+        if(windows){
+            const [pid,created,...cmd]=line.trim().split('|');
+            if(pid&&created)out.push({pid:Number(pid),scripts:scriptsOf(cmd.join('|')),up:now-Date.parse(created)});
+        }else{
+            const m=/^\s*(\d+)\s+(\d+)\s+(\S+)(.*)$/.exec(line);
+            if(m&&/(?:^|\/)(?:bun|node)$/.test(m[3]!))out.push({pid:Number(m[1]),scripts:scriptsOf(m[3]!+m[4]!),up:Number(m[2])*1000});
+        }
     }
-    // This process is a bun process. An empty list means that the scan did not see the processes.
-    return out.length||r.stdout.toString().includes(`${process.pid}|`)?out:null;
+    return out;
 }
 
 function readCheckout(path:string):Checkout{

@@ -1,12 +1,12 @@
 import {expect,test} from 'bun:test';
-import {age,nowLines,scriptsOf,type Checkout,type DashState,type Local} from './now';
+import {age,nowLines,procRows,scriptsOf,type Checkout,type DashState,type Local} from './now';
 import {coordinationView} from '../packages/dashboard/coordination';
 import {scoreboardView} from '../packages/dashboard/fleet-view';
 
 const NOW=1_000_000_000_000,MIN=60_000;
 const checkout=(over:Partial<Checkout>={}):Checkout=>({path:'x',branch:'master',head:'abc1234',dirty:0,behind:0,ahead:0,fetchedAt:NOW-2*MIN,patch:'applied',...over});
 const procs=()=>[{scripts:['swarm.ts'],up:72*MIN},{scripts:['coordinator-cli.ts'],up:83*MIN},{scripts:['fleet-agent.ts'],up:73*MIN},
-    {scripts:['aio-practice-bench.ts'],up:MIN},{scripts:['swarm.test.ts'],up:MIN},{scripts:['tsc'],up:MIN},{scripts:[],up:MIN}];
+    {scripts:['aio-practice-bench.ts'],up:MIN},{scripts:['swarm.test.ts','bun test'],up:MIN},{scripts:['bun test'],up:MIN},{scripts:['tsc'],up:MIN},{scripts:[],up:MIN}];
 const local=(over:Partial<Local>={}):Local=>({uptimeSec:7200,procs:procs(),stops:[],here:checkout(),main:null,...over});
 const state=():DashState=>({now:NOW,
     capacity:{freeGB:6.6,floorGB:4,pendingReserveGB:2,headroomGB:0.6},
@@ -28,16 +28,27 @@ test('age picks the unit by size',()=>{
 
 test('scriptsOf names the script files of a command line, and the compiler in both of its forms',()=>{
     expect(scriptsOf('C:\\Users\\x\\.bun\\bin\\bun.exe scripts/measure/aio-practice-bench.ts ^quester --seed 1')).toEqual(['aio-practice-bench.ts']);
-    expect(scriptsOf('bun test scripts/swarm.test.ts packages/core/src/a.test.ts')).toEqual(['swarm.test.ts','a.test.ts']);
+    expect(scriptsOf('bun test scripts/swarm.test.ts packages/core/src/a.test.ts')).toEqual(['swarm.test.ts','a.test.ts','bun test']);
+    // A test run that names folders, or nothing, is still a test run.
+    expect(scriptsOf('C:\\Users\\x\\.bun\\bin\\bun.exe test ./scripts ./packages')).toEqual(['bun test']);
+    expect(scriptsOf('"C:\\Users\\x\\.bun\\bin\\bun.exe" test')).toEqual(['bun test']);
+    expect(scriptsOf('bun scripts/aio.ts test')).toEqual(['aio.ts']);
     expect(scriptsOf('node --max-old-space-size=2048 F:\\repo\\node_modules\\typescript\\lib\\tsc.js -p x')).toEqual(['tsc']);
     expect(scriptsOf('"C:\\Program Files\\nodejs\\node.exe" F:\\repo\\node_modules\\typescript\\bin\\tsc --noEmit')).toEqual(['tsc']);
     expect(scriptsOf('bun.exe')).toEqual([]);
 });
 
+test('procRows reads the scan output of Windows and of ps',()=>{
+    const win=procRows('101|2001-09-09T01:45:40.0000000+00:00|C:\\b\\bun.exe scripts/swarm.ts\r\n102|2001-09-09T01:46:10.0000000+00:00|"C:\\b\\bun.exe" test ./scripts\r\n\r\n',true,NOW);
+    expect(win).toEqual([{pid:101,scripts:['swarm.ts'],up:60_000},{pid:102,scripts:['bun test'],up:30_000}]);
+    const ps=procRows('    7    90 /usr/local/bin/bun scripts/ci-gate.ts --post\n    8    12 node /repo/node_modules/typescript/bin/tsc --noEmit\n    9  5000 /usr/bin/bash -c bun test\n',false,NOW);
+    expect(ps).toEqual([{pid:7,scripts:['ci-gate.ts'],up:90_000},{pid:8,scripts:['tsc'],up:12_000}]);
+});
+
 test('every fact of the state gets a line',()=>{
     const text=nowLines(state(),local({stops:[{file:'stop-coordinator',text:'owner pause'}]}),NOW).join('\n');
     expect(text).toContain('free 6.6 GiB = floor 4.0 + pending starts 2.0 + headroom 0.6; cpu 58%; up 2.0 h');
-    expect(text).toContain('heavy   ci-gate.ts 0, test-shards.ts 0, aio-practice-bench.ts 1, typecheck-narrow.ts 0, tsc 1, test files 1');
+    expect(text).toContain('heavy   ci-gate.ts 0, test-shards.ts 0, aio-practice-bench.ts 1, typecheck-narrow.ts 0, tsc 1, bun test 2');
     expect(text).toContain('stop    stop-coordinator: "owner pause"; the coordinator is paused');
     expect(text).toContain('control swarm.ts up 72 min, coordinator-cli.ts up 83 min, autopilot.ts DOWN, fleet-agent.ts up 73 min');
     expect(text).toContain('swarm   25 of 25 bots, 2 pending starts, 33 jobs; state 2 s old');
@@ -87,7 +98,7 @@ test('with no dashboard the local facts still print, and a worktree also shows t
     const lines=nowLines(null,local({here:checkout({branch:'claude/t',behind:null,ahead:null,fetchedAt:null,patch:'no vendor/rs-sdk'}),main:checkout({behind:7,dirty:2})}),NOW);
     expect(lines).toEqual([
         'host    up 2.0 h',
-        'heavy   ci-gate.ts 0, test-shards.ts 0, aio-practice-bench.ts 1, typecheck-narrow.ts 0, tsc 1, test files 1',
+        'heavy   ci-gate.ts 0, test-shards.ts 0, aio-practice-bench.ts 1, typecheck-narrow.ts 0, tsc 1, bun test 2',
         'stop    no stop-coordinator, no stop-swarm',
         'control swarm.ts up 72 min, coordinator-cli.ts up 83 min, autopilot.ts DOWN, fleet-agent.ts up 73 min',
         'dashboard: no answer, so the fleet lines are missing. The other lines come from this PC.',
