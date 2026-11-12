@@ -6,10 +6,10 @@ import {addTasks,chooseTask,startTask,finishTask,refreshQualifications,qualifica
 import {buildFailureEvidence} from './build-fault';
 import {projectRoot,coordinationDir,loadState,saveState,runDirectory,atomicJson,atomicText,event,spawnDetached,recoverPlanWrite,withPlanWrite,capabilitySource,publishCapabilityChanges} from './coordinator-store';
 import {DISK_FLOOR_GB,diskFreeGB,finishPlan,plannerDue,retireDeadTasks,reviewHold} from './coordinator-decisions';
-import {planWork,prepareProposal} from './coordinator-planner';
+import {planWork,prepareProposal,readPlannerControllerCapacity} from './coordinator-planner';
 import {executeTask,provisionParticipantHold} from './coordinator-worker';
 import {deliveryTask,deliveryFingerprint,SOURCE_STARTUP_GB,NATIVE_STARTUP_GB} from './delivery-cli';
-import {disableOwnJob,ensureSwarm,liveRows,releaseFinishedOwnJobs} from './coordinator-live';
+import {disableOwnJob,ensureSwarm,liveRows,releaseFinishedOwnJobs,recoveryWaitsForMemory} from './coordinator-live';
 import {cachedLaunchRevision} from '../../core/src/worker-release';
 import {readCoordinatorJobs,writeCoordinatorJobs,readMergedPlan,COORDINATOR_JOBS_FILE} from '../../core/src/coordinator-jobs';
 import {assignedWorker} from './model-worker';
@@ -387,10 +387,14 @@ async function tick(state:CoordinatorState,config:any){
  // Running tasks finish. A full disk stops the whole loop, so new work stops first.
  const diskGB=diskFreeGB(projectRoot),diskLow=diskGB!==null&&diskGB<DISK_FLOOR_GB;
  if(diskLow!==lowDisk){lowDisk=diskLow;event(diskLow?'disk-low':'disk-recovered',{freeGB:diskGB,floorGB:DISK_FLOOR_GB});}
+ // A recovery that the swarm would refuse for memory waits in the queue (recoveryWaitsForMemory).
+ const capacity=readPlannerControllerCapacity(),memoryHeld=state.tasks.filter(r=>r.status==='pending'&&recoveryWaitsForMemory(r.spec,capacity)).map(r=>r.spec.id);
+ {const seen=memoryHeld.length?'held':'';if((sourceErrors.get('recovery-memory')??'')!==seen){event(seen?'recovery-memory-wait':'recovery-memory-ready',{tasks:memoryHeld.length,freeGB:capacity?.freeGB??null,pendingStartup:capacity?.pendingStartup??null});sourceErrors.set('recovery-memory',seen);}}
+ const liveRunHeld=(task:CoordTask)=>runHeld(task)||recoveryWaitsForMemory(task,capacity);
  for(let dispatch=0;!diskLow&&dispatch<developmentLimit+liveLimit;dispatch++){
   const freeGB=freemem()/2**30,request=join(coordinationDir,'publish-request.json');
   let publishing:string|undefined;try{publishing=existsSync(request)?json(request).capability:undefined;}catch{/* a request being written */}
-  const task=chooseTask(state,Date.now(),{sourceReady:freeGB>=SOURCE_STARTUP_GB,nativeReady:nativeDispatchReady(state,freeGB),developmentLimit,liveLimit:liveBlocked?0:liveLimit,preferLive:config.preferLive===true,focusCapability:config.focusCapability,isolatedBuilds:true,publishPending:existsSync(request),publishing,ownedFiles,runHeld,
+  const task=chooseTask(state,Date.now(),{sourceReady:freeGB>=SOURCE_STARTUP_GB,nativeReady:nativeDispatchReady(state,freeGB),developmentLimit,liveLimit:liveBlocked?0:liveLimit,preferLive:config.preferLive===true,focusCapability:config.focusCapability,isolatedBuilds:true,publishPending:existsSync(request),publishing,ownedFiles,runHeld:liveRunHeld,
    provisionRunHeld:(run,records)=>provisionParticipantHold(run,records,()=>deliveryTask(run.capability!).entry)!==null});
   if(!task)break;
   // The single dispatcher prepares the controller before parallel live children

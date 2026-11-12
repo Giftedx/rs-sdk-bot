@@ -159,6 +159,17 @@ test('guarded logout must confirm before original-session bookkeeping; timeout o
 });
 
 
+test('settlement keeps the owner when a guard puts back the executor it replaced at login',async()=>{
+ const previous=process.exitCode;try{
+  // packages/core/src/bot.ts: the guard replaces the executor before the worker makes its owner, and settleOnce stops
+  // the guard before the logout step.
+  const f=pickupSession(),client=f.s.client as {executeBotAction:(a:unknown)=>unknown},original=client.executeBotAction,observer=function(this:unknown,a:unknown){return original.call(this,a);};
+  client.executeBotAction=observer;const o=actionSessionOwner(f.s);let final=0,logouts=0;
+  await finishActionSession(o,true,'finish',async(sessions,_ok,_detail,opts)=>{client.executeBotAction=original;await opts!.logout!(sessions[0]!);final++;},async view=>{logouts++;expect(view).toBe(o.cleanup);return'logged-out';});
+  expect([logouts,final]).toEqual([1,1]);expect(o.own()).toBe(true);
+ }finally{process.exitCode=previous??0;}
+});
+
 test('allowDamage is explicit opt-in; default graph damage guard remains and every opted-in send requires positive original HP',async()=>{
  const f=pickupSession(),raw:any=f.s;raw.sdk.getSkill=()=>({level:f.state.skills[0].level});let inputs=0;raw.sdk.sendCloseModal=async()=>{inputs++;return{success:true};};const normal=actionSessionOwner(f.s),escape=actionSessionOwner(f.s,()=>false,()=>false,{allowDamage:true});f.state.skills[0].level=9;expect(normal.stopped()).toBe(true);expect(()=>normal.session.sdk.sendCloseModal()).toThrow();expect(escape.stopped()).toBe(false);await escape.session.sdk.sendCloseModal();expect(inputs).toBe(1);f.state.skills[0].level=0;expect(escape.own()).toBe(false);expect(()=>escape.session.sdk.sendCloseModal()).toThrow();expect(()=>escape.cleanup.direct({type:'logout'})).toThrow();expect(inputs).toBe(1);
 });

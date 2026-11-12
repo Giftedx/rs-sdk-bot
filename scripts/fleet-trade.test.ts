@@ -229,7 +229,7 @@ test('trade admission rereads pauses, assignments and producer ownership after t
         const live = 'rs-sdk-demo.fly.dev', trade = order({ server: live });
         mkdirSync(coordinator, { recursive: true });
         writeFileSync(planFile, '{"jobs":[]}');
-        const admit = (now = 2000, server = live) => assertTradeAdmission(trade, 'Giver', server, { base, planFile, receipts, now });
+        const admit = (now = 2000, server = live) => assertTradeAdmission(trade, 'Giver', server, { base, planFile, receipts, now, starts: () => null });
         expect(() => admit(999)).toThrow('order window');
         expect(() => admit()).not.toThrow();
         const stop = join(practice, 'stop-giver');
@@ -267,6 +267,30 @@ test('trade admission rereads pauses, assignments and producer ownership after t
         expect(admit).toThrow('order receipt');
         writeFileSync(planFile, '{}');
         expect(admit).toThrow('invalid swarm plan');
+    } finally {
+        rmSync(base, { recursive: true, force: true });
+    }
+});
+
+test('trade admission passes a swarm run whose pid a later process holds', () => {
+    const base = mkdtempSync(join(tmpdir(), 'fleet-trade-pid-'));
+    try {
+        const practice = join(base, '.practice'), planFile = join(practice, 'cloud.json'), receipts = join(base, 'receipts');
+        const live = 'rs-sdk-demo.fly.dev', trade = order({ server: live }), started = 1_000_000;
+        mkdirSync(join(practice, 'coordinator'), { recursive: true });
+        writeFileSync(planFile, '{"jobs":[]}');
+        // This test process answers a signal for the id of each run.
+        writeFileSync(join(practice, 'swarm-runs.json'), JSON.stringify([{ accounts: ['Other'], pid: process.pid, started: 5 }, { accounts: ['Giver'], pid: process.pid, started }]));
+        const reads: number[][] = [];
+        const admit = (table: Map<number, number> | null) => assertTradeAdmission(trade, 'Giver', live, { base, planFile, receipts, now: 2000, starts: pids => { reads.push([...pids]); return table; } });
+        // The process started before the run record: the run's supervisor. A failed read proves nothing.
+        expect(() => admit(new Map([[process.pid, started - 40]]))).toThrow('unsettled swarm worker');
+        expect(() => admit(null)).toThrow('unsettled swarm worker');
+        expect(() => admit(new Map())).toThrow('unsettled swarm worker');
+        // The process started after the run record: a different process holds the id.
+        expect(() => admit(new Map([[process.pid, started + 60_000]]))).not.toThrow();
+        // One read for each check, with the id of this account's run only.
+        expect(reads).toEqual([[process.pid], [process.pid], [process.pid], [process.pid]]);
     } finally {
         rmSync(base, { recursive: true, force: true });
     }
