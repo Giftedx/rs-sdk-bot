@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794452719912,
+ "at": 1794453325603,
  "jobs": [
   {
    "account": "Masterbaiter",
@@ -29,22 +29,21 @@
   },
   {
    "account": "NabTheKnob",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=333 QUANTITY=30 LIMIT_PRICE=100 CASH_RESERVE=1000 ORDER_KEY=nabtheknob-kit3-333-0to30 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "repeat": false,
+   "goal": "buy 30 Trout on the Grand Exchange to train Strength to 60 on the Ardougne cows",
+   "role": "supply",
+   "template": "kit-buy:army-cow-strength-60",
    "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
-   ]
+   "resources": []
   },
   {
    "account": "PickpockDick",
