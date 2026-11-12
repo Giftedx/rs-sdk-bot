@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794498952357-mightyrod-wandwaver-airrune",
  "account": "Wandwaver",
  "partner": "Mightyrod",
@@ -12,6 +12,16 @@
  "claim": "16f69442-80a1-46db-9b92-a8d658cc16d0",
  "count": 0,
  "ok": false,
- "at": 1794498959705,
- "detail": "trade claimed"
+ "at": 1794501357285,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1794498959714-0000003480-0000000001",
+  "at": 1794501357268,
+  "sha256": "dadd5eb6e58954f7528dc362721d4dc8bb7ecd50c187089c45b1891ee4d254b1"
+ },
+ "screen": false
 }
