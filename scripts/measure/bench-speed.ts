@@ -33,7 +33,7 @@ export function parseStat(text: string): { ticks: number; waitMs: number } {
 if (import.meta.main) {
     const t0 = performance.now();
     const p = Bun.spawnSync(['bun', 'scripts/measure/aio-practice-bench.ts', ...process.argv.slice(2), '--parallel', '1', '--no-keep'],
-        { cwd: root, env: { ...process.env, SIM_ACK_FILE: ackFile, BENCH_OUT: out }, stdout: 'pipe', stderr: 'pipe' });
+        { cwd: root, env: { ...process.env, SIM_ACK_FILE: ackFile, BENCH_OUT: out }, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
     const wallMs = performance.now() - t0;
     const text = p.stdout.toString();
     const row = text.split('\n').filter(l => l.startsWith('AIO_BENCH_RESULT ')).map(l => JSON.parse(l.slice(17)))[0] ?? {};
