@@ -1585,3 +1585,61 @@ test('a Defence 1 build account takes Lost City with the levels, potions and foo
     expect(buy.id).toBe(KIT_BUY + 'army-quest-lostcity');
     expect(buy.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).map(Number))).toEqual([[379, 6]]);
 });
+
+test('the halberd build trains Thieving and Agility, then takes Underground Pass and Regicide', async () => {
+    const { buildBand, catalogue: all, BUILD_QUESTS, ROUTE_BEFORE, UPASS, UPASS_AGILITY, UPASS_THIEVING, UPASS_MEALS, REGICIDE_MEALS, QUEST_BOW_ARROWS, REGICIDE_RUNES, REGICIDE_PACK, KIT_BUY, KIT_PRICE_CAPS } = await import('../src/autopilot');
+    // The levels of the `pure-hally` kit and its levels before the route (scripts/pk-kits.ts): the reward of
+    // Underground Pass takes Attack from 11 to 61.
+    const hally = { Attack: 61, Strength: 99, Defence: 1, Ranged: 99, Magic: 54, Prayer: 43 }, before = { Attack: 11, Strength: 99, Defence: 1, Ranged: 99, Magic: 53, Prayer: 43, Hitpoints: 93 };
+    const route = BUILD_QUESTS['pure-hally']!, templates = all(), byId = (id: string) => templates.find(t => t.id === id)!;
+    const thieve = byId('army-thieve-50'), agility = byId('army-agility-68'), upass = byId('army-quest-upass'), regicide = byId('army-quest-regicide');
+    expect(route).toEqual(['Regicide']);
+    expect(ROUTE_BEFORE.Regicide).toEqual(['Underground Pass']);
+    expect([UPASS_THIEVING, UPASS_AGILITY, CAPACITY[UPASS]]).toEqual([50, 68, 1]);
+    expect(thieve).toMatchObject({ buildOnly: true, pilot: true, route: 'Underground Pass', script: 'scripts/generated/thieving60.ts', env: { TARGET: '50' }, trains: { skill: 'Thieving', to: 50 } });
+    expect(agility).toMatchObject({ buildOnly: true, pilot: true, route: 'Underground Pass', args: ['skiller', 'agility', 'order', 'gnome', '68'], trains: { skill: 'Agility', to: 68 } });
+    expect(upass).toMatchObject({ buildOnly: true, pilot: true, gives: ['Attack'], args: ['quester', 'chain', 'elena,biohazard,upass'], quest: { name: 'Underground Pass' } });
+    expect(regicide).toMatchObject({ buildOnly: true, pilot: true, gives: ['Magic'], args: ['quester', 'chain', 'murder,regicide'], quest: { name: 'Regicide' } });
+    expect(upass.needs).toEqual({ skills: { Ranged: 99, Prayer: 43, Hitpoints: 90, Thieving: 50, Agility: 68 }, items: { coins: 5000, 'magic shortbow': 1, 'rune arrow': QUEST_BOW_ARROWS, 'prayer potion(4)': 2 },
+        pieces: { of: ['lobster', 'swordfish', 'shark'], count: UPASS_MEALS } });
+    expect(regicide.needs).toEqual({ quests: ['Underground Pass'], skills: { Ranged: 99, Magic: 51, Prayer: 43, Hitpoints: 90, Agility: 68 }, items: { coins: 2000, 'magic shortbow': 1, 'rune arrow': QUEST_BOW_ARROWS, ...REGICIDE_RUNES, ...REGICIDE_PACK },
+        pieces: { of: ['lobster', 'swordfish', 'shark'], count: REGICIDE_MEALS } });
+    expect(REGICIDE_PACK).toEqual({ coal: 8, 'cooked rabbit': 1, limestone: 1, 'iron fire arrow': 2, 'pestle and mortar': 1, rope: 2 });
+    expect([UPASS_MEALS, REGICIDE_MEALS]).toEqual([12, 30]);
+    expect([thieve.band!, agility.band!, upass.band!, regicide.band!]).toEqual([...[thieve.band!, agility.band!, upass.band!, regicide.band!]].sort((a, b) => a - b));
+    // Every item of the two kits that a buy may order has a price cap.
+    for (const item of ['magic shortbow', 'rune arrow', 'prayer potion(4)', 'shark', 'coal', ...Object.keys(REGICIDE_RUNES)]) expect(KIT_PRICE_CAPS[item]).toBeGreaterThan(0);
+    const fresh = { ...acct('Hally', before), quests: new Set<string>() }, passed = { ...acct('Hally', { ...before, Attack: 61 }), quests: new Set(['underground pas']) };
+    // Only a build with Regicide on its route: not a plain army account, not a build with another route.
+    for (const band of [thieve, agility, upass, regicide]) {
+        expect(buildBand(band, fresh)).toBeNull();
+        expect(buildBand(band, fresh, hally, ['Lost City'], before)).toBeNull();
+        expect(buildBand(band, fresh, hally, route, before)).toBe(band);
+    }
+    // After Underground Pass the two trainers and the quest band of the pass are gone for the planner (the quest band
+    // by its target), and Regicide stays although Attack is over its level before the route. Magic over it refuses.
+    expect(buildBand(thieve, passed, hally, route, before)).toBeNull();
+    expect(buildBand(agility, passed, hally, route, before)).toBeNull();
+    expect(buildBand(regicide, passed, hally, route, before)).toBe(regicide);
+    expect(buildBand(regicide, { ...passed, skills: { ...passed.skills, Magic: 54 } }, hally, route, before)).toBeNull();
+    // Attack over the level before the route refuses Underground Pass: its reward would end over the build.
+    expect(buildBand(upass, { ...fresh, skills: { ...fresh.skills, Attack: 12 } }, hally, route, before)).toBeNull();
+    // In a plan, step by step.
+    const kit = { coin: 100_000, shark: 40, 'magic shortbow': 1, 'rune arrow': 600, 'prayer potion(4)': 2, 'law rune': 5, 'air rune': 3, 'water rune': 5, ...REGICIDE_PACK };
+    const pilots = new Set(['army-thieve-50', 'army-agility-68', 'army-quest-upass', 'army-quest-regicide']);
+    const first = (skills: Record<string, number>, items: Record<string, number> = kit, quests: string[] = [], extra: Partial<Inputs> = {}) => plan(inputs([{ ...acct('Hally', { ...before, ...skills }, items), quests: new Set(quests) }],
+        { army: new Set(['hally']), builds: new Map([['hally', hally]]), buildQuests: new Map([['hally', route]]), buildBefore: new Map([['hally', before]]), pilots, capacity: CAPACITY, ...extra }))[0]!.template?.id;
+    expect(first({})).toBe('army-thieve-50');
+    expect(first({ Thieving: 50 })).toBe('army-agility-68');
+    expect(first({ Thieving: 50, Agility: 67 })).toBe('army-agility-68');
+    expect(first({ Thieving: 50, Agility: 68 })).toBe('army-quest-upass');
+    expect(first({ Thieving: 50, Agility: 68, Attack: 61 }, kit, ['underground pas'])).toBe('army-quest-regicide');
+    // Without the limestone, which no shop and no market sells, the account does not take Regicide.
+    expect(first({ Thieving: 50, Agility: 68, Attack: 61 }, { ...kit, limestone: 0 }, ['underground pas'])).not.toBe('army-quest-regicide');
+    // Regicide waits for Underground Pass, and neither is given outside the plan's pilots.
+    expect(first({ Thieving: 50, Agility: 68 }, { ...kit, 'prayer potion(4)': 0 })).not.toBe('army-quest-regicide');
+    expect(first({ Thieving: 50, Agility: 68 }, kit, [], { pilots: new Set() }) ?? '').not.toContain('army-');
+    // Short of the bow and the arrows: the band buys them.
+    const market: Market = { 'magic shortbow': { id: 861, name: 'Magic shortbow', limit: KIT_PRICE_CAPS['magic shortbow']! }, 'rune arrow': { id: 892, name: 'Rune arrow', limit: KIT_PRICE_CAPS['rune arrow']! } };
+    expect(first({ Thieving: 50, Agility: 68 }, { ...kit, coin: 2_000_000, 'magic shortbow': 0, 'rune arrow': 100 }, [], { market })).toBe(KIT_BUY + 'army-quest-upass');
+});

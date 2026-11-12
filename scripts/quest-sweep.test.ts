@@ -1620,3 +1620,19 @@ test('an account short of prayer points prays at the Seers altar before the Came
  expect(BARE_QUESTS.has('grail')).toBe(true);
 });
 
+
+import {BUILD_PACK,BUILD_MEALS,buildPack} from './quest-sweep';
+test('a Defence 1 build that fights with the bow takes the bow pack for Underground Pass and Regicide',()=>{
+ const level=(skills:Record<string,number>)=>(skill:string)=>skills[skill]??1;
+ // The halberd pure before its route: Attack 11, Ranged 99, Defence 1.
+ const hally=level({Attack:11,Ranged:99,Defence:1});
+ expect(buildPack('upass',hally)).toEqual([{id:861,count:1},{id:892,count:600},{id:2434,count:2}]);
+ expect(buildPack('regicide',level({Attack:61,Ranged:99,Defence:1}))).toEqual([{id:861,count:1},{id:892,count:600}]);
+ expect(BUILD_MEALS).toEqual({upass:12,regicide:8});
+ // A quest with no bow pack, an account that wears rune armour, a melee account and one under the bow's level: none.
+ expect(buildPack('cook',hally)).toEqual([]);
+ expect(buildPack('upass',level({Attack:11,Ranged:99,Defence:40}))).toEqual([]);
+ expect(buildPack('upass',level({Attack:99,Ranged:99,Defence:1}))).toEqual([]);
+ expect(buildPack('upass',level({Attack:1,Ranged:49,Defence:1}))).toEqual([]);
+ expect(Object.keys(BUILD_PACK).sort()).toEqual(['regicide','upass']);
+});

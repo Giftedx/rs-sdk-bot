@@ -564,16 +564,54 @@ How a kit keeps its route:
   the pack holds one, in the style that trains only Ranged (`RANGED_ARROWS` in `quest-upass.ts` and
   `quest-regicide.ts`, `styleOnly` in `quest-lib.ts`). Any other account takes the rune scimitar.
 - `pure-hally` passes both quests. Conditions: practice, lockstep engine, nothing worn, a magic shortbow and 600
-  rune arrows in the pack, every skill outside the build 99; Underground Pass from the levels before the route
-  (Attack 11, Magic 53) with two prayer potions in the place of two sharks, Regicide with Attack 61. Cases
-  `extra:upass-pure-hally` and `extra:regicide-pure-hally`.
+  rune arrows in the pack; Thieving 50, Agility 68 and every other skill outside the build at level 1 (Regicide:
+  Crafting 10); Underground Pass from the levels before the route (Attack 11, Magic 53) with two prayer potions in
+  the place of two sharks, Regicide with Attack 61. Cases `extra:upass-pure-hally` and `extra:regicide-pure-hally`.
 
-  | Quest | Seeds | Ticks | Sharks eaten | XP of the fights and spells | Result |
-  |---|---|---|---|---|---|
-  | Underground Pass | 1, 2, 3 | 2,789, 3,013, 2,761 | 4 to 8 | Ranged 98,200, 105,100, 95,400 | quest complete, no death |
-  | Regicide | 1, 2, 3 | 3,188, 3,229, 3,194 | 10, 10, 10 | Ranged 11,000, Magic 4,250 | quest complete, no death |
+  | Quest | Seeds | Ticks | Sharks eaten | Lowest Hitpoints of 93 | XP of the fights and spells | Result |
+  |---|---|---|---|---|---|---|
+  | Underground Pass | 1, 2, 3 | 2,697, 2,858, 2,811 | 4, 8, 4 | 35, 33, 35 | Ranged 95,200, 85,700, 91,900 | quest complete, no death |
+  | Regicide | 1, 2, 3 | 3,242, 3,229, 3,250 | 11, 10, 10 | 38, 40, 43 | Ranged 11,000, 11,000, 11,100; Magic 4,250 | quest complete, no death |
 
   Underground Pass gave 75,000 Attack XP, the reward alone: Attack 61 from 11.
+- The least Agility is 68. A collapsed bridge of the pass rolls `stat_random(agility, 160, 300)`
+  (`upass_obstacles.rs2:374`). The engine passes the roll when `floor(160 * (99 - level) / 98) + floor(300 * (level
+  - 1) / 98) + 1` is over a number from 0 to 255 (`PlayerOps.ts` `STAT_RANDOM`): the value is 256 from level 68 and
+  255 at level 67. A failed roll puts the account on the floor of the chasm (2335,9821 or 2333,9866), and the quest
+  scripts do not leave it: the next step ends the run. The script of Underground Pass crosses such a bridge 11 times, and
+  the script of Regicide 6 times in its two trips through the pass. Underground Pass at seeds 1, 2 and 3: Agility 56 passed 1 of 3 (the runs ended
+  "step bridge west 2 back" and "step bridge cat 2"), Agility 62 passed 2 of 3 ("step bridge cat 2"), Agility 69
+  passed 3 of 3, Agility 68 passed 3 of 3. Regicide at Agility 56, one run: "step bridge temple 1.1". The rope swing
+  (`stat_random(agility, 100, 410)`, `:113`) cannot fail from level 51. The other Agility rolls of the two quests,
+  and the Thieving rolls of the traps (90 in 100 at Thieving 50), cost Hitpoints and a new try.
+- Two changes to the scripts, each from a failed practice run at these levels:
+  - The woodspring trap of Tirannwn rolls `stat_random(agility, 30, 155)` (`quest_regicide.rs2:32`): 45 in 100 at
+    Agility 68 and 61 in 100 at 99. `quest-regicide.ts` tries it 12 times; with 4 tries a run ended "step to
+    catapult P:2235,3181".
+  - A failed disarm of the orb trap hits inside its delay, the game drops an eat sent in that delay, and the eater
+    of the quest ended the run with "food debit unobserved". The eater of the quest scripts sends such an eat again,
+    twice at most (`dropRetries` in `packages/core/src/sustain.ts`, set in `quest-lib.ts`).
+- The quest sweep brings the pack of the build (`scripts/quest-sweep.ts` `BUILD_PACK`, `buildPack`). An account with
+  Defence under 40, Ranged 50 or more and Ranged over Attack takes a magic shortbow and 600 rune arrows for
+  Underground Pass and for Regicide, and for Underground Pass two prayer potions and 12 sharks; for Regicide 8
+  sharks, which leaves the slot of the coins for the shops. The sweep banks what such an account wears. Conditions:
+  practice, lockstep engine, the account at the Ardougne north bank with the kit worn (bow and 300 arrows worn).
+
+  | Case | In the bank | Seeds | Ticks with the bank and shop pass | Sharks eaten | Result |
+  |---|---|---|---|---|---|
+  | `extra:sweep-upass-pure-hally` | the quest pack, 600 rune arrows, 2 prayer potions, 12 sharks | 1, 2, 3 | 2,711, 2,887, 2,913 | 7, 8, 4 | quest complete, no death, Attack 61 |
+  | `extra:sweep-regicide-pure-hally` | 600 rune arrows, the runes, 30 sharks, 8 coal, a cooked rabbit, a limestone, 2 iron fire arrows, a pestle and mortar, 2 ropes, 5,000 coins; the King's message in the pack | 1, 2, 3 | 3,772, 3,847, 3,775 | 9, 10, 10 | quest complete, no death |
+
+  The Regicide sweep buys a rope, a shortbow, a tinderbox, a pot and 4 balls of wool in shops and takes a spade
+  from its spawn. Runs with less in the bank ended: "missing 2532:2,3211:1" (no shop sells the iron fire arrows and
+  the limestone), "Ogre merchant shop did not open" (the seller that the sweep picks for the pestle and mortar),
+  "bank items coal=8" (the quest script takes a second rope out of the bank at Falador), and with 10 sharks "input
+  capacity short: free 25, required 26".
+- The two trainers of the route, at the levels of the build before it: `extra:thieve-50-pure-hally` (Thieving 1 to
+  50 at the Ardougne market with `scripts/generated/thieving60.ts`, seeds 1, 2, 3: 485, 757 and 695 ticks, lowest
+  Hitpoints 63, 43 and 49 of 93, no death) and `extra:agility-68-pure-hally` (Agility 60 to 68 on the Gnome
+  Stronghold course with `scripts/agility-order.ts`: 1,353 ticks and 49,688 XP at each seed, 23 laps of 2,162 XP).
+  Level 68 from level 1 is 115,881 XP, 54 laps: about 3,200 ticks at that pace (an estimate, no run).
 - What the build needs, each from a failed practice run:
   - Prayer 43. With Prayer 1 and a shortbow with iron arrows the account died to the demon Holthion after 17 sharks,
     and in Regicide to a Tyras guard after 10.
@@ -597,7 +635,18 @@ the route, and `buildBand` passes a quest band only when its quest is on that ro
 over its level before the route. While a quest of the route is open, a training band stops at the level before the
 route. Every other quest band stays refused (Holy Grail: Prayer 80 and Defence 85). The planner has two quest bands
 for a build: `army-quest-lostcity` and `army-quest-fremennik` (the chain `drunkmonk,murder,viking`; a pilot; for
-build accounts only; it asks Prayer 43, Hitpoints 90, Fletching 25, and Attack 60 with Strength 60 or Strength 99). The band
+build accounts only; it asks Prayer 43, Hitpoints 90, Fletching 25, and Attack 60 with Strength 60 or Strength 99). A build
+with Regicide on its route has four more bands, all pilots for build accounts only (`ROUTE_BEFORE` puts Underground
+Pass on that route): `army-thieve-50` and `army-agility-68` train to the two levels; `army-quest-upass` runs the
+chain `elena,biohazard,upass` and asks Ranged 99, Prayer 43, Hitpoints 90, Thieving 50, Agility 68, 5,000 coins, a
+magic shortbow, 600 rune arrows, 2 prayer potions and 12 meals; `army-quest-regicide` runs the chain
+`murder,regicide` (Murder Mystery gives the Crafting of the loom) after Underground Pass and asks Magic 51, the same
+bow pack, the runes of two teleports, 30 meals and `REGICIDE_PACK` (8 coal, a cooked rabbit, a limestone, 2 iron
+fire arrows, a pestle and mortar, 2 ropes). A quest band names the skills that its chain gives XP in (`gives`), and
+only those are held to the level before the route: Regicide is not refused for the Attack 61 that Underground Pass
+gave. `KIT_PRICE_CAPS` has every item of the two kits that the Grand Exchange lists for a use: the bow, the rune
+arrows, the prayer potions, the meals, the runes and coal (17,157 listed from 499). The bank snapshots of the sides
+hold 3 magic shortbows, 814 rune arrows and no prayer potion. The band
 `army-fletch-25` brings that Fletching level to a build with the quest on its route: a walk to the Ardougne north
 bank, then 210 headless arrows from 310 banked arrow shafts and 310 feathers with the fletching worker
 (`scripts/fletch-arrows.ts`, mode `headless`). Practice: 210 arrows in 26 ticks and 5,250 XP, over the 4,863 of
@@ -610,18 +659,26 @@ Evidence: `scripts/pk-kits.test.ts` ("every kit has a quest route, and the plann
 fails when a kit wears an item whose quest gives a level over the kit, and when `BUILD_QUESTS` differs from
 `kitRoute`; `packages/planner/test/autopilot.test.ts` and `scripts/autopilot.test.ts` hold the planner rule. Proof
 level: unit, and practice for the Lost City run of `pure-pray`, the Fremennik runs of the two range tanks and the
-Underground Pass and Regicide runs of `pure-hally`.
+Underground Pass and Regicide runs of `pure-hally`, with their sweep cases and the two trainer cases.
 
 Gaps:
 
 - `kitRoute` counts quest rewards and the fights of `FIGHT_XP`. Underground Pass, Regicide and the Mage Arena have
   fights with no style rule, and the Mage Arena fight gives Magic XP to `pure-rock`, which has Magic 80.
-- The planner has no band for Underground Pass, Regicide or the Mage Arena. The practice cases of `pure-hally` have
-  every skill outside the build at 99: Underground Pass asks Thieving 50 and its obstacles roll on Agility, Regicide
-  asks Agility 56 and Crafting 10, and a build account has no job for those levels. The quest sweep does not bring
-  the magic shortbow, the rune arrows or the prayer potions. No script exists for the Mage Arena (a search of
-  `scripts`, `scripts/generated` and `packages` for Kolodion, the arena and the god capes finds the PK kits and the
-  knowledge tables only). So `pure-iban`, `pure-hally`, `pure-rock` and `pure-god` get those quests from no job.
+- The path of `pure-hally` is proved in parts on practice and not as one run: no account ran the four bands in
+  order, and no run started Underground Pass from an account that the chain took through Plague City and
+  Biohazard, or Regicide from an account that the chain took through Murder Mystery. The Regicide cases start with
+  the King's message in the pack; on a live account a messenger brings it.
+- No job brings four items of `REGICIDE_PACK`: the limestone, the 2 iron fire arrows, the cooked rabbit and the
+  pestle and mortar. The Grand Exchange lists none of them, so `army-quest-regicide` waits until the account holds
+  them. The sweep picks the ogre merchant for the pestle and mortar, and that shop does not open.
+- The quest scripts do not leave the floor of the chasm after a fall from a bridge, so the route asks Agility 68.
+  With a way back up, Regicide could start at its own Agility 56.
+- The Agility case covers levels 60 to 68. No run took a build account from Agility 1 to 68 or from Ardougne to
+  the course; `skiller:agility:order` has the first levels on a plain account.
+- The planner has no band for the Mage Arena, and no script exists for it (a search of `scripts`,
+  `scripts/generated` and `packages` for Kolodion, the arena and the god capes finds the PK kits and the knowledge
+  tables only). So `pure-rock` and `pure-god` get it from no job.
 - One more run of `extra:upass-pure-hally` ended at its start, "no npc king lathas", with the account on the ground
   floor at Hitpoints 99: the preset was not on the account. The cause is not found; the next run of that seed passed.
 - The two steps of `army-fletch-25` ran together one time through `scripts/chain.ts`, from 25 tiles east of the
@@ -650,9 +707,9 @@ Gaps:
 
 Claim: every worker script that a template of the planner's catalogue starts has a bench case or an AIO route with
 one. Conditions: the 77 templates of `catalogue()`; 17 name an AIO route with a case, and the 60 others start 11
-worker scripts. Two of those scripts had no case: `scripts/alch-train.ts` (3 bands) and `scripts/splash-train.ts`
-(1 band). Evidence: the cases `extra:alch-train` (Magic 54 to 56, Low Alchemy then High Alchemy, 64 ticks) and
-`extra:splash-train` (Magic 19 to 21, 80 ticks) pass, one run each; `bun run bench --smoke` passes 15 of 15. Gap:
+worker scripts. `scripts/alch-train.ts` (3 bands) and `scripts/splash-train.ts` (1 band) are the AIO routes
+`skiller:magic:alch-train` and `skiller:magic:splash`. Evidence: their cases (Magic 54 to 56, Low Alchemy then High
+Alchemy, 63 ticks; Magic 19 to 21, 79 ticks) pass through the dispatcher, one run each at seed 1. Gap:
 a case for a worker is not a case for each band of that worker, and the `chain` bands run only their first step's
 worker in a case of their own.
 

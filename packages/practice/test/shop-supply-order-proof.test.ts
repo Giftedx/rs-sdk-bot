@@ -11,9 +11,19 @@ import {runEarthProduction} from '../../../scripts/earth-production';
 import {setEquipmentObserved} from '../../core/src/container-observation';
 import {createSaveData} from '../../../vendor/rs-sdk/sdk/test/utils/save-generator';
 import {parsePracticeSave} from '../../../scripts/measure/fleet-player-save';
-import{bettySupplyChecks,shopSupplyChecks,shopRepeatChecks,shopRefusalChecks,shopSupplyFixture,verifyShopSupply}from'../src/shop-supply-order-proof';
+import{bettySupplyChecks,shopSupplyChecks,shopRepeatChecks,shopRefusalChecks,shopSupplyFixture,verifyShopSupply,waitFreeMemory,HEADROOM_WAIT_MS}from'../src/shop-supply-order-proof';
 const save=(earth=3,coins=352288)=>({position:{x:3252,z:3420,level:0},skills:{3:{level:35,xp:10000}},inventories:{93:[],94:[],95:[{id:557,count:earth},{id:554,count:1482},{id:995,count:coins},{id:1277,count:1}]}} as any);
 const run=(bought=1136,spent=6816,target=1)=>({code:0,timedOut:false,hpMin:35,log:`LOGOUT logged-out\nRESULT ok ticks=500 boughtTotal=${bought} spentTotal=${spent} stop=stock-target targetMet=${target}\n`});
+
+test('a transient free-memory dip waits for headroom; a sustained breach still stops',async()=>{
+ const samples=[3.2,3.9,16.5],pauses:number[]=[];
+ expect(await waitFreeMemory(4,()=>samples.shift()!,async ms=>{pauses.push(ms);})).toBe(16.5);
+ expect(pauses).toEqual([250,250]);
+ let reads=0;
+ expect(await waitFreeMemory(4,()=>{reads++;return 3.5;},async()=>{})).toBe(3.5);
+ expect(reads).toBe(HEADROOM_WAIT_MS/250+1);
+ reads=0;expect(await waitFreeMemory(4,()=>{reads++;return 9;},async()=>{throw Error('no wait expected');})).toBe(9);expect(reads).toBe(1);
+});
 
 test('shop route fixture has the live consumer combat entry and unchanged health acceptance',()=>{
  const fixture=shopSupplyFixture(352288),saved=parsePracticeSave(createSaveData(fixture));

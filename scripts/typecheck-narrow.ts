@@ -1,10 +1,12 @@
 // Type-checks the named files and the files that they import, not the whole project.
 // Usage: bun scripts/typecheck-narrow.ts [--heap MB] [file ...]
 //   No file: the .ts files that differ from the merge base with origin/master, and the untracked .ts files.
-//   --heap  the node heap limit in MB (default 2560). Keep 4 GiB of memory free: packages/core/src/memory.ts.
+//   --heap  the node heap limit in MB (default 2560). The limit is less when the memory above the floor is less
+//           (scripts/heavy-admission.ts), and 768 MB at least.
 // The whole-project check stays `bun run typecheck`. Run it one time before a push.
 import {existsSync,mkdirSync,writeFileSync} from 'node:fs';
 import {dirname,join,resolve} from 'node:path';
+import {floorGB,freeGB,heapThatFits,sizedNote} from './heavy-admission';
 
 const slash=(p:string)=>p.replace(/\\/g,'/');
 
@@ -40,8 +42,13 @@ if(import.meta.main){
     const dir=join(root,'.practice','typecheck-narrow'),config=join(dir,'tsconfig.json');
     mkdirSync(dir,{recursive:true});
     writeFileSync(config,JSON.stringify(narrowConfig(root,files,join(modules,'@types')),null,1));
+    // The heap is a limit, not a use: a small check takes far less. The limit is the memory above the floor when that
+    // is less than the heap that was asked for (scripts/heavy-admission.ts). A check that needs more than the limit
+    // fails with a heap error.
+    const free=freeGB(),floor=floorGB(root),limit=heapThatFits(heap,free,floor);
+    if(limit<heap)console.log(sizedNote('typecheck-narrow',`a ${limit} MB heap`,`${heap} MB`,free,floor));
     const start=Date.now();
-    const run=Bun.spawnSync(['node',`--max-old-space-size=${heap}`,join(modules,'typescript','lib','tsc.js'),'-p',config,'--pretty','false'],{stdout:'inherit',stderr:'inherit',windowsHide:true});
+    const run=Bun.spawnSync(['node',`--max-old-space-size=${limit}`,join(modules,'typescript','lib','tsc.js'),'-p',config,'--pretty','false'],{stdout:'inherit',stderr:'inherit',windowsHide:true});
     console.log(`typecheck-narrow: ${files.length} files named, exit ${run.exitCode}, ${Math.round((Date.now()-start)/1000)} s`);
     process.exit(run.exitCode??1);
 }

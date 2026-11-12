@@ -42,6 +42,11 @@ export const questKeepsBuild = (kit: string, before: Readonly<Record<string, num
   const gains = Object.fromEntries((line.match(/ xp=(\S*)/)?.[1] ?? '').split(',').filter(Boolean).map(p => { const [k, v] = p.split('='); return [k!, Number(v)]; }));
   return overBuild(kit, before, gains) === null;
 };
+// The skills of the halberd pure before a quest of its route, with every skill outside the build at level 1 but the
+// ones the quest and the planner's bands ask (packages/planner/src/autopilot.ts UPASS_THIEVING, UPASS_AGILITY).
+const hallyQuestSkills = (quest: 'upass' | 'regicide'): Record<string, number> => ({
+  ...Object.fromEntries(Object.keys(PRESETS.quest_upass!.skills ?? {}).map(k => [k, 1])), ...levelsBeforeRoute('pure-hally'),
+  Thieving: 50, Agility: 68, ...(quest === 'regicide' ? {Attack: kitSkills('pure-hally').Attack!, Crafting: 10} : {})});
 // The RESULT line of a quest script lists the XP of the run as `xp=skill=n,...` (scripts/generated/quest-lib.ts gains).
 export const lostCityKeepsBuild = (s: string) => {
   const line = s.match(/^RESULT ok\b.*$/m)?.[0];
@@ -579,21 +584,46 @@ const EXTRA_CASES: BenchCase[] = [
   // The two Magic trainers of the planner's army bands, from the Ardougne north bank. Alchemy: Magic 54 to 56 on
   // feathers with a staff of fire in the bank, so the run casts Low Alchemy and then High Alchemy. The curse trainer:
   // Magic 19 to 21 over the fence of the cow field.
-  {key: 'extra:alch-train', script: 'scripts/alch-train.ts', preset: 'fresh_lumbridge', scriptArgs: ['56', '1500'], pass: ok,
-    presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Magic: 54, Hitpoints: 40}, bank: [{id: 561, count: 60}, {id: 314, count: 60}, {id: 1387, count: 1}]}},
-  {key: 'extra:splash-train', script: 'scripts/splash-train.ts', preset: 'fresh_lumbridge', scriptArgs: ['21', '1500'], pass: ok,
-    presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Magic: 19, Hitpoints: 40}, bank: [{id: 559, count: 40}, {id: 557, count: 120}, {id: 555, count: 120}, {id: 558, count: 2}, {id: 556, count: 2}]}},
+  skiller('magic', 'alch-train', 'fresh_lumbridge', ['56', '1500'],
+    {presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Magic: 54, Hitpoints: 40}, bank: [{id: 561, count: 60}, {id: 314, count: 60}, {id: 1387, count: 1}]}}),
+  skiller('magic', 'splash', 'fresh_lumbridge', ['21', '1500'],
+    {presetConfig: {position: {x: 2615, z: 3332, level: 0}, skills: {Magic: 19, Hitpoints: 40}, bank: [{id: 559, count: 40}, {id: 557, count: 120}, {id: 555, count: 120}, {id: 558, count: 2}, {id: 556, count: 2}]}}),
   // Underground Pass and Regicide on the halberd pure (Ranged 99, Prayer 43, Defence 1): nothing worn, a magic
   // shortbow and RANGED_PACK rune arrows in the pack, so the quest scripts fight with the bow in the Ranged-only
-  // style. Underground Pass starts at the levels before the route (Attack 11, Magic 52) with two prayer potions in
-  // the place of two sharks; Regicide starts with Underground Pass done (Attack 61).
+  // style. Underground Pass starts at the levels before the route (Attack 11, Magic 53) with two prayer potions in
+  // the place of two sharks; Regicide starts with Underground Pass done (Attack 61). Every other skill is at level
+  // 1 but Thieving 50 and Agility 68 (the planner's bands army-thieve-50 and army-agility-68) and, for Regicide, the
+  // Crafting 10 of its loom. Under Agility 68 a bridge of the pass can fail, and the scripts do not leave the floor
+  // of the chasm: Underground Pass passed 1 of 3 seeds at Agility 56 and 2 of 3 at 62.
   ...(['upass', 'regicide'] as const).map(quest => {
     const preset = PRESETS[`quest_${quest}`]!, before = {...levelsBeforeRoute('pure-hally'), ...(quest === 'regicide' ? {Attack: kitSkills('pure-hally').Attack!} : {})};
     const sharks = (preset.inventory ?? []).filter(i => i.id === 385), rest = (preset.inventory ?? []).filter(i => i.id !== 385);
     const inventory = [...rest, ...(quest === 'upass' ? [...sharks.slice(2), {id: 2434, count: 1}, {id: 2434, count: 1}] : sharks), {id: 861, count: 1}, {id: 892, count: RANGED_PACK}];
     return {key: `extra:${quest}-pure-hally`, script: 'scripts/aio-quester.ts', preset: `quest_${quest}`, scriptArgs: [quest], pass: questKeepsBuild('pure-hally', before), timeoutMs: 900_000,
-      presetConfig: {...preset, equipment: [], inventory, skills: {...preset.skills, ...before}}};
+      presetConfig: {...preset, equipment: [], inventory, skills: hallyQuestSkills(quest)}};
   }),
+  // The same Underground Pass through the quest sweep: the account stands at the Ardougne north bank and wears the
+  // kit, with the quest pack, the rune arrows, two prayer potions and 12 sharks in the bank. The sweep banks what is
+  // worn and takes the pack of the build (scripts/quest-sweep.ts BUILD_PACK), then the quest script runs.
+  {key: 'extra:sweep-upass-pure-hally', script: 'scripts/aio-quester.ts', preset: 'quest_upass', scriptArgs: ['sweep', 'upass'], pass: questKeepsBuild('pure-hally', levelsBeforeRoute('pure-hally')), timeoutMs: 900_000,
+    presetConfig: {...PRESETS.quest_upass!, position: {x: 2615, z: 3332, level: 0}, equipment: kitItems('pure-hally').equipment, inventory: [], skills: hallyQuestSkills('upass'),
+      bank: [...(PRESETS.quest_upass!.inventory ?? []).filter(i => i.id !== 385), {id: 385, count: 12}, {id: 892, count: RANGED_PACK}, {id: 2434, count: 2}]}},
+  // Regicide through the quest sweep, with what the planner's band asks in the bank (the bow pack, the runes, 30
+  // sharks, 8 coal, a cooked rabbit, a limestone, 2 iron fire arrows, a pestle and mortar and 2 ropes) and the King's
+  // message in the pack. The sweep buys the rest of the quest pack in shops. Without the limestone and the fire
+  // arrows it ends "missing 2532:2,3211:1": no shop sells them. Without the pestle it ends "Ogre merchant shop did
+  // not open". Without the second rope the quest script ends "bank items" at Falador.
+  {key: 'extra:sweep-regicide-pure-hally', script: 'scripts/aio-quester.ts', preset: 'quest_regicide', scriptArgs: ['sweep', 'regicide'], pass: questKeepsBuild('pure-hally', {...levelsBeforeRoute('pure-hally'), Attack: kitSkills('pure-hally').Attack!}), timeoutMs: 900_000,
+    presetConfig: {...PRESETS.quest_regicide!, position: {x: 2615, z: 3332, level: 0}, equipment: kitItems('pure-hally').equipment, inventory: [{id: 3206, count: 1}], skills: hallyQuestSkills('regicide'),
+      bank: [{id: 995, count: 5000}, {id: 385, count: 30}, {id: 892, count: RANGED_PACK}, {id: 563, count: 5}, {id: 556, count: 3}, {id: 555, count: 5}, {id: 453, count: 8}, {id: 3228, count: 1}, {id: 3211, count: 1}, {id: 2532, count: 2}, {id: 233, count: 1}, {id: 954, count: 2}]}},
+  // The two trainers before those quests, the planner's bands army-thieve-50 and army-agility-68, at the levels of the
+  // build before its route. Thieving 1 to 50 from the Ardougne market. Agility 60 to 68 on the Gnome Stronghold
+  // course from its start: the course worker has no other method up to its target, and the case
+  // skiller:agility:order has the first levels.
+  {key: 'extra:thieve-50-pure-hally', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['thieving', 'bootstrap55', 'TARGET=50', 'CAP=2500', 'CLEAN_FOOD=1'], pass: s => ok(s) && / died=false/.test(s), timeoutMs: 900_000,
+    presetConfig: {position: {x: 2654, z: 3304, level: 0}, skills: {...levelsBeforeRoute('pure-hally'), Thieving: 1}}},
+  {key: 'extra:agility-68-pure-hally', script: 'scripts/aio-skiller.ts', preset: 'agility_gnome_1', scriptArgs: ['agility', 'order', 'gnome', '68', 'AGI_POTION=0', 'AGI_MAX_TICKS=6000', 'AGI_PROGRESS_TICKS=150', 'AGI_ENTRY_TICKS=400'], pass: ok, timeoutMs: 900_000,
+    presetConfig: {...agilityFixturePreset(PRESETS.agility_gnome_1!), skills: {...levelsBeforeRoute('pure-hally'), Agility: 60}}},
   // Underground Pass on the Iban pure at its levels before the quest (Attack 11, Hitpoints 10).
   {key: 'extra:upass-pure-iban', script: 'scripts/aio-quester.ts', preset: 'quest_upass', scriptArgs: ['upass'], pass: questKeepsBuild('pure-iban', levelsBeforeRoute('pure-iban')), timeoutMs: 900_000,
     known: 'the fights of the quest give 53,400 XP and 17,690 Hitpoints XP; the build has no skill at 99 to take them and Hitpoints 10',

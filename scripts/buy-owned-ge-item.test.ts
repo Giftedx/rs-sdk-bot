@@ -4,10 +4,10 @@ import {mock,spyOn} from 'bun:test';
 import {mkdtempSync,readFileSync,writeFileSync,rmSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {prepareMarketEntry,marketEntryFailure,northEntryTile,northApproachTile,NORTH_ENTRY,NORTH_APPROACH,rescueMarketEntry,expectedRescueStop,type RescueControl} from './buy-owned-ge-item';
+import {prepareMarketEntry,marketEntryFailure,northEntryTile,northApproachTile,NORTH_APPROACH,rescueMarketEntry,expectedRescueStop,type RescueControl} from './buy-owned-ge-item';
 import type {Session} from '../packages/core/src/inprocess';
-import {expandPath} from '../packages/core/src/walk';
 import {setEquipmentObserved} from '../packages/core/src/container-observation';
+import {marketLeg} from './buy-owned-ge-item';import {walkWithFerryFallback} from './walk-to';import {ROUTE_BUDGET_MS} from '../packages/core/src/world';
 
 async function rescueFixture(mode='ok'){
  const dir=mkdtempSync(join(tmpdir(),'ge-rescue-')),path=join(dir,'order.json');
@@ -59,14 +59,9 @@ for(const mode of ['throw','timeout','owner-stop','second-death','low-respawn','
 test('north Varrock entry 3165,3487,0 takes the bounded pinned approach; the market rectangle stays unchanged',async()=>{
  expect(marketEntryFailure({worldX:3165,worldZ:3487,level:0},11)).toContain('unsupported market entry');
  expect(northEntryTile({x:3165,z:3487,level:0})).toBe(true);expect(northEntryTile({x:2654,z:3283,level:0})).toBe(false);
- const pf:any=await import('../vendor/rs-sdk/sdk/pathfinding');pf.initPathfinding();
- let from={...NORTH_ENTRY};const tiles=[from];
- for(const point of NORTH_APPROACH){
-  const corners=pf.findLongPath(0,from.x,from.z,point.x,point.z,500);expect(corners.at(-1)).toMatchObject({x:point.x,z:point.z});
-  tiles.push(...expandPath(from,corners));from=tiles.at(-1)!;
- }
- expect(tiles.length).toBeLessThanOrEqual(260);expect(tiles.every(t=>northApproachTile({...t,level:0}))).toBe(true);
- expect(marketTileSafe({...tiles.at(-1)!,level:0})).toBe(true);expect(northApproachTile({x:3233,z:3503,level:0})).toBe(false);
+ expect(NORTH_APPROACH).toEqual([{x:3198,z:3508},{x:3241,z:3507},{x:3244,z:3503},{x:3185,z:3436,tol:1}]);
+ expect(NORTH_APPROACH.slice(0,-1).every(t=>northApproachTile({...t,level:0}))).toBe(true);
+ expect(marketTileSafe({...NORTH_APPROACH.at(-1)!,level:0})).toBe(true);expect(northApproachTile({x:3233,z:3503,level:0})).toBe(false);
  const player={worldX:3165,worldZ:3487,level:0,lifeId:1,respawnCount:0};let calls=0;
  const s={sdk:{getState:()=>({player}),getStateAge:()=>0,getSkill:()=>({level:11})},tick:()=>0,
   ended:new Promise(()=>{}),onTick:()=>()=>{}} as unknown as Session;
@@ -118,6 +113,22 @@ test('market travel: refusal, false arrival and tick exhaustion retain the stuck
   })).rejects.toThrow('position=2654,3283,0');
   expect(aborted).toBe(['timeout','stop','damage','death'].includes(mode));
   expect(callbacks.size).toBe(0);
+ }
+});
+
+test('market travel: the leg to the market bank from the Port Sarim dock plans with the full route budget',async()=>{
+ // NabTheKnob live: Ardougne north bank 2617,3333, both eastbound ferries, then the 15 s leg from 3029,3217 ran out.
+ for(const start of [{x:2617,z:3333,level:0},{x:3029,z:3217,level:0}]){
+  const legs:{x:number;z:number;budget?:number}[]=[];let sailed=0,direct=true;
+  const result=await walkWithFerryFallback(start,{x:3185,z:3436,level:0},marketLeg(async(tile,budget)=>{
+   legs.push({x:tile.x,z:tile.z,budget});
+   if(direct&&start.x===2617){direct=false;return{ok:false,reason:'precondition',detail:'no route to 3185,3436,0',ticks:0};}
+   return{ok:true,ticks:1};
+  }),async()=>{sailed++;return{ok:true,ticks:1};},()=>17250);
+  expect(result.ok).toBe(true);
+  expect(legs.at(-1)).toEqual({x:3185,z:3436,budget:ROUTE_BUDGET_MS});
+  expect(sailed).toBe(start.x===2617?2:0);
+  if(start.x===2617)expect(legs.slice(1,-1).map(l=>l.budget)).toEqual([15000,15000]);
  }
 });
 

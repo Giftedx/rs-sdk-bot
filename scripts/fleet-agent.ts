@@ -5,7 +5,7 @@
 // enabled swarm job is skipped: the swarm and the agent must never both log one account in. One instance per
 // machine (.practice/fleet-agent.lock holds its process id).
 // Usage: bun scripts/fleet-agent.ts [--daemon] [--once]   Env: CYCLE (default 10), LEAD (default 15), FLEET_SIDE
-import { closeSync, existsSync, openSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, openSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 import { FLEET_DIR, mySide, sideOf, loadOwners } from '../packages/core/src/fleet';
@@ -16,6 +16,7 @@ import {capabilityRevision} from '../packages/core/src/worker-release';
 import { clearSwarmStop, swarmWroteStop } from './swarm';
 import { stopClearable } from './autopilot';
 import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
+import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../packages/core/src/controllers';
 
 const root = resolve(import.meta.dir, '..'), lock = join(root, '.practice', 'fleet-agent.lock');
 const CYCLE = Number(process.env.CYCLE ?? 10) * 60_000, LEAD = Number(process.env.LEAD ?? 15) * 60_000;
@@ -91,21 +92,40 @@ if (import.meta.main) {
         console.log(`FLEET_AGENT started pid ${child.pid} (log .practice/fleet-agent.log)`);
         process.exit(0);
     }
-    if (existsSync(lock)) { const pid = Number(readFileSync(lock, 'utf8')); if (pid !== process.pid && agentAlive(pid)) { console.log(`FLEET_AGENT already running pid ${pid}`); process.exit(0); } }
-    writeFileSync(lock, String(process.pid));
-    const release = () => { try { if (readFileSync(lock, 'utf8') === String(process.pid)) rmSync(lock); } catch { /* gone */ } };
+    // The lock is a lease (packages/core/src/controllers.ts): its holder writes it again on each pass and each minute
+    // of a wait. The watchdog starts an agent when no live process holds it.
+    // Where /proc names the process (Linux), agentAlive proves that the holder is a fleet agent, so an old lease
+    // file of a live agent is still held. Windows has no such proof, and there the file time decides.
+    const held = { alive: (pid: number) => agentAlive(pid), ...(procCmdline(process.pid) === undefined ? {} : { staleMs: Infinity }) };
+    if (!takeLease(lock, process.pid, held)) { console.log(`FLEET_AGENT already running pid ${leaseHolder(lock, held)}`); process.exit(0); }
+    const release = () => releaseLease(lock);
     process.on('exit', release); process.on('SIGINT', () => process.exit(0)); process.on('SIGTERM', () => process.exit(0));
+    setInterval(() => { renewLease(lock); }, 60_000).unref();
     const running = new Set<string>(), once = process.argv.includes('--once');
+    // The record of a daemon start: the watchdog starts an agent again only from it, with these settings. A --once
+    // pass writes none.
+    if (!once) saveLaunch(join(root, controllerNamed('fleet-agent').launch), []);
     const sync = () => {
         const p = Bun.spawnSync(['bun', 'scripts/fleet-sync.ts'], { cwd: root, windowsHide: true, env: process.env, stdout: 'pipe', stderr: 'pipe' });
         console.log(`FLEET_AGENT sync ${syncResult(`${p.stdout.toString()}${p.stderr.toString()}`, p.exitCode)} at ${new Date().toISOString()}`);
     };
     const startedAt = Date.now();
     for (;;) {
+        // A sync that waited longer than the lease time lets a second agent take the lease. This agent then starts
+        // no more work, and ends when its last trade ends.
+        if (!renewLease(lock)) {
+            console.log(`FLEET_AGENT lost its lease to another agent${running.size ? ': it ends when its trade ends' : ''} at ${new Date().toISOString()}`);
+            if (!running.size) process.exit(0);
+            await Bun.sleep(60_000);
+            continue;
+        }
         // Bring this checkout to current master first (packages/router/src/live-update.ts), so the sync and the trades run merged fixes.
         const update = Bun.spawnSync(['bun', 'packages/router/src/live-update.ts'], { cwd: root, windowsHide: true, env: process.env, stdout: 'pipe', stderr: 'pipe' });
         const updateLine = lastResult(update.stdout.toString());
         if (!/ live-update (?:none|off|paused)/.test(updateLine)) console.log(`FLEET_AGENT ${updateLine} at ${new Date().toISOString()}`);
+        // The update and the sync are child processes that can wait on the network for longer than the lease time.
+        // After each one, this agent goes on only while it still holds the lease. The top of the loop handles a loss.
+        if (!renewLease(lock)) continue;
         // The update changed this agent's code: a copy on the current code takes over once no trade runs.
         if (!once && !running.size && reloadDue(root, 'fleet-agent', startedAt)) {
             release();
@@ -114,6 +134,7 @@ if (import.meta.main) {
             process.exit(0);
         }
         sync();
+        if (!renewLease(lock)) continue;
         const dir = FLEET_DIR(), now = Date.now();
         const orders = readJson(join(dir, 'orders')).filter(validOrder), receipts = readJson(join(dir, 'receipts'));
         // The owner's jobs plus the coordinator's (.practice/coordinator/jobs.json), as the swarm merges them.

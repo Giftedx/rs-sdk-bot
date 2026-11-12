@@ -18,7 +18,7 @@ import {openBot,finish,serverFromEnv} from '../../core/src/bot';
 import {waitUntil} from '../../core/src/ticks';
 import {orderPaths,orderQuantity,orderEscrow,orderAccounting,bankTotals,type ItemOrder} from '../../../scripts/buy-owned-ge-item';
 import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
-import {runShopSupplyNative,verifyShopSupply} from './shop-supply-order-proof';
+import {runShopSupplyNative,verifyShopSupply,waitFreeMemory} from './shop-supply-order-proof';
 
 // Native bulk GE order: an owned seller lists noted grapes, then the actual worker buys the exact
 // quantity, banks it and reruns the same order key. The consumer stage reads the saved bank.
@@ -239,7 +239,7 @@ async function run(directory:string){
  writeFileSync(fd,JSON.stringify({pid:process.pid,task:'ge-bulk-order',directory,at:Date.now()}));
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;
  const command=async(args:string[],env:Record<string,string>,label:string,timeoutMs=150000):Promise<Run>=>{
-  if(freemem()/2**30<FREE_FLOOR_GB)throw Error('practice free memory below floor');
+  if(await waitFreeMemory(FREE_FLOOR_GB)<FREE_FLOOR_GB)throw Error('practice free memory below floor');
   const actor=args[0]==='scripts/buy-owned-ge-item.ts'?args[1]:args[2];
   if(!actor||!actors.has(actor))throw Error('owned practice actor required');
   assertGeProofAccount(readFileSync(join(rsSdkRoot(),'bots',actor,'bot.env'),'utf8'),owned.env);

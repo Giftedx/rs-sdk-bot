@@ -18,6 +18,16 @@ export function patchNewFiles(patch:string):string[]{
 }
 // What to do with the SDK patch. `reverseOk`: the patch comes off cleanly, so it is on. `forwardOk`: it goes on cleanly.
 export function patchState(reverseOk:boolean,forwardOk:boolean):PatchState{return reverseOk?'applied':forwardOk?'clean':'other';}
+// Restores, from the pinned commit, each file of the SDK that the commit holds and that differs here. It reads the
+// commit, not the index: a patch that is staged there would come back from the index. A file that the commit does not
+// hold is not touched, so a local file that is staged in the SDK keeps its content.
+export function restorePinned(vendor:string,run:(cwd:string,cmd:string[])=>{exitCode:number|null;stdout:{toString():string}}):boolean{
+    const differs=run(vendor,['git','diff','--name-only','-z','--diff-filter=MDT','HEAD']);
+    if(differs.exitCode!==0)return false;
+    const files=differs.stdout.toString().split('\0').filter(Boolean);
+    for(let at=0;at<files.length;at+=100)if(run(vendor,['git','restore','--source=HEAD','--worktree','--',...files.slice(at,at+100)]).exitCode!==0)return false;
+    return true;
+}
 
 if(import.meta.main){
     const root=join(import.meta.dir,'..'),flags=new Set(process.argv.slice(2)),dry=flags.has('--check');
@@ -53,9 +63,9 @@ if(import.meta.main){
         else if(!flags.has('--reset-vendor')){step('SDK patch','MISMATCH: vendor/rs-sdk has edits that are not the patch of this commit. Run again with --reset-vendor to restore its tracked files and apply this patch.');failed=true;}
         else if(dry)step('SDK patch','would restore the tracked files of vendor/rs-sdk and apply the patch');
         else{
-            const restored=ok(vendor,['git','checkout','--','.']);
+            const restored=restorePinned(vendor,run);
             for(const file of patchNewFiles(readFileSync(patch,'utf8')))rmSync(join(vendor,file),{force:true});
-            if(restored)act('SDK patch',vendor,['git','apply',patch]);else{step('SDK patch','FAILED: git checkout -- . in vendor/rs-sdk');failed=true;}
+            if(restored)act('SDK patch',vendor,['git','apply',patch]);else{step('SDK patch','FAILED: the restore of the changed files of vendor/rs-sdk from its pinned commit');failed=true;}
         }
     }else if(dry)step('SDK patch','would check after the submodule step');
 

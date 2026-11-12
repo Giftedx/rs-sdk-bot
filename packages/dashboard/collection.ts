@@ -1,3 +1,5 @@
+import { FREE_FLOOR_GB } from '../core/src/memory';
+
 // Snapshot evidence only. Pack contents and courier manifests never inflate bank totals.
 // Advisory evidence from a completed trip. This does not declare a route optimal
 // or stop an account merely because an expensive route may have valuable loot.
@@ -120,7 +122,9 @@ export function capacityState(sw: any, freeGB: number, now: number) {
     const at = number(sw?.at), fresh = at !== null && now >= at && now-at < 30_000;
     const running = number(sw?.running), external = number(sw?.externalRunning), cap = number(sw?.maxBots);
     const pendingReserveGB = fresh ? number(sw?.pendingReserveGB) : null;
-    const floorGB = sw ? Math.max(8, number(sw.minFreeGB) ?? 8) : null;
+    // The floor of the swarm's own admission (scripts/swarm.ts admissionDecision): the larger of FREE_FLOOR_GB and the
+    // plan's minFreeGB. The swarm writes that number as minFreeGB in its state file.
+    const floorGB = sw ? Math.max(FREE_FLOOR_GB, number(sw.minFreeGB) ?? FREE_FLOOR_GB) : null;
     const free = number(freeGB);
     const queued = fresh && Array.isArray(sw?.jobs) ? new Set(accountJobRows(sw.jobs).filter((j: any) => j.enabled && typeof j.account === 'string'
         && /^(?:waiting: (?:maxBots$|projected |current mission still running$)|stopping; resume queued$|running; updated mission queued$)/.test(String(j.state)))
