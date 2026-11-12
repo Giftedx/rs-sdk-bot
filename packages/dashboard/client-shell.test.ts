@@ -788,6 +788,10 @@ test('the death recap is read again for a newer death, and while it waits for th
  const t=new Function('window','S','paintRecap','minimap','fetch',`${code};return {recapStale,set:(r)=>{recap=r;}};`)({atlasOperator:()=>true},{bots:[]},()=>{},()=>{},()=>new Promise(()=>{}));
  const b={name:'Alpha',death:{at:100}};
  t.set({name:'Alpha',state:'ok',data:{kept:[]},deathAt:100,at:Date.now()});expect(t.recapStale(b)).toBe(false);
+ const D=1_000_000_000,b2={name:'Alpha',death:{at:D}};
+ t.set({name:'Alpha',state:'ok',data:{kept:[],at:D-60_000},deathAt:D,at:Date.now()-31_000});expect(t.recapStale(b2)).toBe(false);
+ t.set({name:'Alpha',state:'ok',data:{kept:[],at:D-20*60_000},deathAt:D,at:Date.now()-31_000});expect(t.recapStale(b2)).toBe(true);
+ t.set({name:'Alpha',state:'ok',data:{kept:[],at:D-20*60_000},deathAt:D,at:Date.now()});expect(t.recapStale(b2)).toBe(false);
  expect(t.recapStale({...b,death:{at:200}})).toBe(true);
  t.set({name:'Alpha',state:'ok',data:{kept:null},deathAt:100,at:Date.now()-31_000});expect(t.recapStale(b)).toBe(true);
  t.set({name:'Alpha',state:'ok',data:{kept:null},deathAt:100,at:Date.now()});expect(t.recapStale(b)).toBe(false);
