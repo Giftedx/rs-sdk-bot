@@ -1848,3 +1848,18 @@ test('an item order asks only a party of this side that can reach the Ardougne n
     expect(run([at(needy, DRAYNOR)]).send).toBeUndefined();
     expect(run([at({ ...needy, items: { ...needy.items, coin: 60 } }, DRAYNOR)]).send?.from).toBe('Near');
 });
+
+import { SHOP_STOCK } from '../src/autopilot';
+test('a shop job needs an account that is short of an item the shop run buys', () => {
+    const shops = ['shop-feathers', 'shop-runes', 'shop-arrowtips'];
+    const wanted = [row('feathers', 800), row('fire rune', 2000), row('air rune', 2000), row('earth rune', 2000), row('rune arrowtips', 2000), row('adamant arrowtips', 2000)];
+    const job = (items: Record<string, number>, id: string) =>
+        ids(plan(inputs([acct('Rich', {}, { coin: 50_000, ...items })], { bill: wanted, templates: catalogue().filter(t => t.id === id) }))).Rich;
+    const pick = (items: Record<string, number>) => shops.filter(id => job(items, id) === id);
+    const full = { feather: SHOP_STOCK, 'fire rune': SHOP_STOCK, 'air rune': SHOP_STOCK, 'earth rune': SHOP_STOCK, 'rune arrowtip': SHOP_STOCK, 'adamant arrowtip': SHOP_STOCK };
+    expect(pick({})).toEqual(shops);
+    expect(pick(full)).toEqual([]);
+    // One rune under the stock keeps the rune run. The feather run and the arrowtip run stay shut.
+    expect(pick({ ...full, 'earth rune': SHOP_STOCK - 1 })).toEqual(['shop-runes']);
+    expect(pick({ ...full, feather: 760 })).toEqual([]);
+});
