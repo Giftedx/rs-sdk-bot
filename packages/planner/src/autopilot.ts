@@ -735,6 +735,9 @@ export const CHICKEN_PENS = ['3229,3298', '3017,3288', '3187,3277', '3197,3353']
 export const PEN_QUEST_POINTS: Readonly<Record<string, number>> = { '3197,3353': 32 };
 // scripts/gather-feathers.ts stops when its pack holds TARGET feathers.
 export const FEATHER_TARGET = 2000;
+// scripts/shop-buyer.ts buys each item up to STOCK_TARGET (default 500), pack and bank. A run for an account that
+// holds that many of every item buys nothing.
+export const SHOP_STOCK = 500;
 // Claim: four farmers can share one knight spot. A pickpocket does not hold the knight. Practice: 4 bots at one spot
 // each earned 13.3-15.1 coins per tick (mean 14.7) against the 18.8 model, every run RESULT ok and logged out
 // (goldfarm.ts at its default spot 2653,3302, 3 runs of 600 ticks and one of 9,000; research/bot-host.md section 3).
@@ -1468,13 +1471,13 @@ export function catalogue(): Template[] {
             goal: 'Catherby lobsters, caught and cooked', needs: { skills: { Fishing: 40, Cooking: 40 }, items: { 'lobster pot': 1 } }, resources: ['catherby:lobster'],
             yields: a => [{ item: 'lobster', perTick: 0.04 + 0.001 * Math.min(59, (a.skills.Fishing ?? 1) - 40) }] },
         { id: 'shop-runes', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['betty'], env: { ITEMS: 'fire rune|air rune|earth rune', BANK_PACK: '1', NO_BUY_TICKS: '25' }, role: 'bank',
-            goal: 'buy elemental runes at Betty', needs: { items: { coins: 3000 } }, resources: ['shop:betty'],
+            goal: 'buy elemental runes at Betty', needs: { items: { coins: 3000 }, shortOf: { 'fire rune': SHOP_STOCK, 'air rune': SHOP_STOCK, 'earth rune': SHOP_STOCK } }, resources: ['shop:betty'],
             yields: () => [{ item: 'fire rune', perTick: 0.7 }, { item: 'air rune', perTick: 0.7 }, { item: 'earth rune', perTick: 0.7 }], spends: () => [{ item: 'coins', perTick: 2.1 * 5 }] },
         { id: 'shop-feathers', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['sarim'], env: { ITEMS: 'feather', BANK_PACK: '1', NO_BUY_TICKS: '25' }, role: 'bank',
-            goal: 'buy feathers at Gerrant', needs: { items: { coins: 2000 } }, resources: ['shop:sarim'],
+            goal: 'buy feathers at Gerrant', needs: { items: { coins: 2000 }, shortOf: { feather: SHOP_STOCK } }, resources: ['shop:sarim'],
             yields: () => [{ item: 'feather', perTick: 3 }], spends: () => [{ item: 'coins', perTick: 3 * 3 }] },
         { id: 'shop-arrowtips', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['catherby'], env: { ITEMS: 'rune arrowtips|adamant arrowtips', BANK_PACK: '1', NO_BUY_TICKS: '25' }, role: 'bank',
-            goal: 'buy rune and adamant arrowtips at Catherby', needs: { items: { coins: 20000 } }, resources: ['shop:catherby'],
+            goal: 'buy rune and adamant arrowtips at Catherby', needs: { items: { coins: 20000 }, shortOf: { 'rune arrowtips': SHOP_STOCK, 'adamant arrowtips': SHOP_STOCK } }, resources: ['shop:catherby'],
             yields: () => [{ item: 'rune arrowtips', perTick: 0.05 }, { item: 'adamant arrowtips', perTick: 0.05 }], spends: () => [{ item: 'coins', perTick: 0.05 * 260 + 0.05 * 104 }] },
         { id: 'fletch-headless', family: 'fletch', script: 'scripts/fletch-arrows.ts', args: ['15000', 'headless'], env: { BANK_PACK: '1', MAX_MAKE: '390' }, role: 'fletching',
             goal: 'headless arrows from owned shafts and feathers', needs: { items: { 'arrow shaft': 215, feather: 215 } },
