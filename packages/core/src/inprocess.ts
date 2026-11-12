@@ -145,6 +145,19 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     const ackStat = { ticks: 0, held: 0, heldMs: 0, capped: 0, pumpMs: 0, stateMs: 0, scriptMs: 0 };
     const sendNow = client.flush?.bind(client);
     let flushHeld = false, ackGeneration = 0, stateWaiters = 0, stateWaitersLow = Infinity;
+    // An executor action whose result is a promise waits for the server (a count dialog: ActionExecutor
+    // waitForCountDialogAndSubmit). Its bytes go out only with the tick's acknowledgement, so holding the tick for it
+    // held the dialog back until SIM_BUSY_MS: each bank deposit or withdraw of a count other than 1, 5, 10 or all cost
+    // 2 s of wall time and no tick (bench --profile, skiller:magic:splash and skiller:firemaking:order). Once the
+    // dialog is open, the tick waits for the submit as before, so the tick count does not change.
+    let actionPending = false;
+    // SIM_ACK_FILE only: the SDK calls in flight, named on each held tick, to find a wait that the ack does not see.
+    const inFlight = new Map<string, number>();
+    // SDK waits in progress (waitForObservation and the waits that subscribe by themselves). The listener count above
+    // its lowest value missed them: when a script's first wait was open at the first check, the lowest value was that
+    // wait, and each later single wait held its tick to SIM_BUSY_MS. Bench --profile, extra:firemaking-stock-low: 18
+    // held ticks, each with sdk=waitForObservation,waitForCondition and state=1/1.
+    let sdkWaits = 0;
     const holdFlush = () => { if (!flushHeld && sendNow) { flushHeld = true; client.flush = () => {}; } };
     const releaseFlush = () => { if (flushHeld) { flushHeld = false; delete (client as { flush?: unknown }).flush; sendNow?.(); } };
     const acknowledgeTick = () => {
@@ -153,12 +166,15 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
         const check = () => {
             if (stopped || generation !== ackGeneration) return;
             stateWaitersLow = Math.min(stateWaitersLow, stateWaiters);
-            const waiting = tickWaits.active > 0 || waitLeft > 0 || stateWaiters > stateWaitersLow;
-            const busy = (running && waitLeft === 0) || !waiting;
+            // A pending action waits for the server until its count dialog is open; then the executor submits within
+            // its 50 ms poll and the tick waits for that, as before, so the submit stays in the same tick.
+            const serverWait = actionPending && !(client as { isChatBackInputOpen?(): boolean }).isChatBackInputOpen?.();
+            const waiting = tickWaits.active > 0 || waitLeft > 0 || serverWait || sdkWaits > 0 || stateWaiters > stateWaitersLow;
+            const busy = (running && waitLeft === 0 && !serverWait) || !waiting;
             if (busy && performance.now() - since < busyMs) { if (turns++ < 20) setImmediate(check); else setTimeout(check, 1); return; }
             const held = performance.now() - since;
             ackStat.ticks++; if (busy) ackStat.capped++; if (held > 2) { ackStat.held++; ackStat.heldMs += held; }
-            if (ackFile && held > 2) appendFileSync(ackFile, `ACK tick=${tick} waits=${tickWaits.active} state=${stateWaiters}/${stateWaitersLow} running=${running} held=${held.toFixed(0)}ms${busy ? ' CAPPED' : ''}\n`);
+            if (ackFile && held > 2) appendFileSync(ackFile, `ACK tick=${tick} waits=${tickWaits.active} state=${stateWaiters}/${stateWaitersLow} running=${running} pending=${actionPending} serverWait=${serverWait} sdk=${[...inFlight].map(([k, n]) => `${k}${n > 1 ? `x${n}` : ''}`).join(',') || '-'} held=${held.toFixed(0)}ms${busy ? ' CAPPED' : ''}\n`);
             client.writeOpcode?.(ClientProt.NO_TIMEOUT);
             sendNow?.();
         };
@@ -219,7 +235,11 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
                 waitDone = null;
                 result = { success: true, message: 'waited' };
             } else {
-                result = await execute(next.action);
+                const pending = execute(next.action);
+                if (pending && typeof (pending as { then?: unknown }).then === 'function') {
+                    actionPending = true;
+                    try { result = await pending; } finally { actionPending = false; }
+                } else result = pending;
             }
         } catch (e) {
             result = { success: false, reason: 'error', message: String(e) };
@@ -247,6 +267,31 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             };
             const max = client.getMaxMessageLength?.();
             if (max) deliver({ type: 'sdk_info', maxMessageLength: max });
+            if (lockstep) for (const name of ['waitForObservation', 'waitForStateUpdate', 'waitForChat', 'waitForTradeRequest', 'waitForReady'] as const) {
+                const sdk = s as unknown as Record<string, unknown>, wait = sdk[name];
+                if (typeof wait !== 'function') continue;
+                sdk[name] = function (this: unknown, ...args: unknown[]) {
+                    sdkWaits++;
+                    let out: unknown;
+                    try { out = (wait as (...a: unknown[]) => unknown).apply(this, args); } catch (e) { sdkWaits--; throw e; }
+                    return Promise.resolve(out).finally(() => { sdkWaits--; });
+                };
+            }
+            if (lockstep && ackFile) {
+                const sdk = s as unknown as Record<string, unknown>;
+                for (let proto = Object.getPrototypeOf(sdk); proto && proto !== Object.prototype; proto = Object.getPrototypeOf(proto)) {
+                    for (const name of Object.getOwnPropertyNames(proto)) {
+                        const fn = proto[name];
+                        if (name === 'constructor' || typeof fn !== 'function' || Object.prototype.hasOwnProperty.call(sdk, name)) continue;
+                        sdk[name] = function (this: unknown, ...args: unknown[]) {
+                            const out = (fn as (...a: unknown[]) => unknown).apply(this, args);
+                            if (!out || typeof (out as { then?: unknown }).then !== 'function') return out;
+                            inFlight.set(name, (inFlight.get(name) ?? 0) + 1);
+                            return Promise.resolve(out).finally(() => { const n = (inFlight.get(name) ?? 1) - 1; if (n) inFlight.set(name, n); else inFlight.delete(name); });
+                        };
+                    }
+                }
+            }
             if (lockstep && typeof s.onStateUpdate === 'function') {
                 const subscribe = s.onStateUpdate.bind(s);
                 s.onStateUpdate = (listener: unknown) => { stateWaiters++; const off = subscribe(listener); let live = true; return () => { if (live) { live = false; stateWaiters--; } return off(); }; };
