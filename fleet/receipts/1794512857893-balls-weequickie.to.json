@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794512857893-balls-weequickie",
+ "account": "WeeQuickie",
+ "partner": "Balls",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "magic logs",
+ "requested": 107,
+ "claim": "03782515-4ded-47a3-9db3-80e92e4824d7",
+ "count": 107,
+ "ok": true,
+ "at": 1794513087188,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 107
+ },
+ "bank": {
+  "count": 107,
+  "at": 1794513086067
+ },
+ "logout": {
+  "attemptId": "1794513067588-0000036260-0000000001",
+  "at": 1794513087174,
+  "sha256": "a8ef9296cadddc116888c72dd2352d0d8321b3e5a77131dcd0d07cf8e61d92f9"
+ },
+ "screen": true
+}
