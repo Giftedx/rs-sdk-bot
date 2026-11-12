@@ -11,7 +11,9 @@
         "tutorial",
         "trade-start"
       ],
-      "scripts": []
+      "scripts": [
+        "scripts/magic-order.ts"
+      ]
     },
     {
       "id": "fires",
@@ -89,7 +91,9 @@
       "plan": 591,
       "took": 595,
       "ours": [],
-      "scripts": []
+      "scripts": [
+        "scripts/generated/quest-elena.ts"
+      ]
     },
     {
       "id": "iron",
@@ -193,7 +197,9 @@
       "ours": [
         "mage-arena"
       ],
-      "scripts": []
+      "scripts": [
+        "scripts/generated/quest-magearena.ts"
+      ]
     },
     {
       "id": "knights",
@@ -248,7 +254,7 @@
         "fish"
       ],
       "scripts": [
-        "scripts/gather-fish.ts"
+        "scripts/fishcook.ts"
       ]
     },
     {
@@ -265,7 +271,9 @@
       ],
       "scripts": [
         "scripts/generated/quest-cook.ts",
-        "scripts/generated/quest-druid.ts"
+        "scripts/generated/quest-druid.ts",
+        "scripts/generated/quest-gobdip.ts",
+        "scripts/generated/quest-rj.ts"
       ],
       "capability": "quest-order"
     },
@@ -282,7 +290,9 @@
         "superheat",
         "magic-top"
       ],
-      "scripts": [],
+      "scripts": [
+        "scripts/smelt-bars.ts"
+      ],
       "note": "our anvil route, or Family Crest and superheat"
     },
     {
