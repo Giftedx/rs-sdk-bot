@@ -269,6 +269,9 @@ export const killMessage = (text: string, name: string) => KILL_MESSAGES.some(t 
 
 // Attack delays in ticks: dragon dagger/scimitar/claws 4, longsword/mace 5, magic shortbow 4 (3 on rapid, 4 on spec per pvp_special_attack.rs2:35), spells 5.
 const TURN: Record<Style, number> = { magic: 5, ranged: 4, melee: 4 };
+// A thrown weapon attacks each 3 ticks, each 2 on Rapid (knives.obj, darts.obj attackrate 3); a shortbow each 4, each 3 on Rapid.
+export const rangedWeaponDelay = (ids: readonly number[] | undefined, rapid: boolean, names = getObjNames()) =>
+    ((ids ?? []).some(id => /_(knife|dart)(_p)?$/.test(names.get(id) ?? '')) ? 3 : TURN.ranged) - (rapid ? 1 : 0);
 const meleeWeaponDelay = (ids: readonly number[] | undefined, names = getObjNames()) =>
     (ids ?? []).some(id => /(longsword|mace|battleaxe|warhammer|2h_sword|halberd)/.test(names.get(id) ?? '')) ? 5 : 4;
 
@@ -847,7 +850,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         lastArm = shownStyle !== undefined && turn.style === shownStyle ? 'into' : 'avoid';
         last = turn.index;
         const walkTicks = turn.style === 'melee' ? ((me.runEnergy ?? 100) >= 100 ? Math.ceil(Math.max(0, cheb(at, target) - 1) / 2) : Math.max(0, cheb(at, target) - 1)) : 0;
-        const delay = turn.style === 'ranged' && rapidSet ? 3 : turn.style === 'melee' ? meleeWeaponDelay(o.kit.melee, names) : TURN[turn.style];
+        const delay = turn.style === 'ranged' ? rangedWeaponDelay(o.kit.ranged, rapidSet, names) : turn.style === 'melee' ? meleeWeaponDelay(o.kit.melee, names) : TURN[turn.style];
         lastAttackAt = now; lastWalkTicks = walkTicks;
         nextAttack = now + walkTicks + delay;
         hasAttacked = true;

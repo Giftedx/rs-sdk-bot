@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { gangSummary, gangValid, pickAttacker, type GangResult } from './pk-gang';
+import { gangSummary, gangValid, pickAttacker, startsAttack, type GangResult } from './pk-gang';
 import { PROFILES, sparOptions } from './pk-spar';
 import { combatLevel, itemId, kitItems, kitOptions, kitRoute, KITS, kitSkills, kitSwitches, kitVarps } from './pk-kits';
 import { benchCases, GANKER_POST } from './measure/aio-bench-cases';
@@ -7,7 +7,7 @@ import { wildernessLevel, type FightResult } from './pk';
 
 const fight = (outcome: FightResult['outcome'], attacks = 10): FightResult =>
     ({ outcome, ticks: 200, dealt: 0, taken: 0, eaten: 0, attacks: { magic: 0, ranged: 0, melee: attacks }, freezes: 0, specs: 0 });
-const result = (end: GangResult['end'], kills: number, fights: FightResult[], gang: FightResult[]): GangResult => ({ end, kills, ticks: 500, taken: 200, eaten: 9, specs: 4, fights, gang });
+const result = (end: GangResult['end'], kills: number, fights: FightResult[], gang: FightResult[]): GangResult => ({ end, kills, ticks: 500, taken: 200, eaten: 9, specs: 4, refused: 0, foodLeft: 9, prayerLeft: 40, fights, gang });
 
 test('our account fights the one of the gang that hit it last, else the nearest that lives', () => {
     const near = [{ name: 'Sugma', index: 5, distance: 3 }, { name: 'Ligma', index: 6, distance: 1 }, { name: 'Goondelf', index: 7, distance: 2 }, { name: 'Passerby', index: 8, distance: 0 }];
@@ -18,6 +18,9 @@ test('our account fights the one of the gang that hit it last, else the nearest 
     expect(pickAttacker(near, all, 8)?.name).toBe('Ligma');
     expect(pickAttacker(near, new Set(['goondelf', 'ligma']), 5)?.name).toBe('Ligma');
     expect(pickAttacker(near, new Set(), 5)).toBeNull();
+    // An account that the game just refused is left out, unless every one was refused.
+    expect(pickAttacker(near, all, null, new Set(['ligma']))?.name).toBe('Goondelf');
+    expect(pickAttacker(near, all, null, new Set(['ligma', 'goondelf', 'sugma']))?.name).toBe('Ligma');
 });
 
 test('a meeting counts when both sides attacked, and the summary counts each end', () => {
@@ -84,10 +87,23 @@ test('the ganker cases stand at the post: the spars in pairs, the gang on one ti
         expect(max.scriptArgs).toEqual(expect.arrayContaining([`SPAR_KITS=${kit}:ganker-max`, 'SPAR_CAP=2400']));
         expect(max.companions![0]!.presetConfig).toMatchObject(kitItems('ganker-max'));
     }
-    // The glory of the hunter kit is in its pack: the fight loop rubs a glory that it carries.
-    expect(kitItems('gang-hunter').inventory.some(i => i.id === itemId('amulet_of_glory_4'))).toBe(true);
+    // The hunter kit: the glory is in its pack (the fight loop rubs a glory that it carries), with a super defence,
+    // three prayer potions and the dragon helm and legs; its profile keeps the armour on and has the way out.
+    const hunter = kitItems('gang-hunter'), count = (name: string) => hunter.inventory.filter(i => i.id === itemId(name)).length;
+    expect([count('amulet_of_glory_4'), count('4dose2defense'), count('4doseprayerrestore'), count('shark'), hunter.inventory.length]).toEqual([1, 1, 3, 18, 27]);
+    expect(hunter.equipment.filter(e => e.slot === 0 || e.slot === 7).map(e => e.id)).toEqual([itemId('dragon_med_helm'), itemId('dragon_platelegs')]);
+    expect(sparOptions('gang-hunter', undefined, kitSwitches('gang-hunter'), 900, kitOptions('gang-hunter'))).toMatchObject({ ...PROFILES.champion, castArmour: 'keep', escapeAt: 60 });
     const escape = cases.find(k => k.key === 'extra:gang-ganker-escape-x4')!;
     expect(escape.scriptArgs).toContain('SPAR_A_OPTS={"escapeAt":60}');
     expect(escape.pass('RESULT ok gang groups=4 cleared=0 died=0 escaped=4 away=0 cap=0 kills=0')).toBe(true);
     expect(escape.pass('RESULT ok gang groups=4 cleared=1 died=0 escaped=3 away=0 cap=0 kills=3')).toBe(false);
+});
+
+test('an attack of the gang shows as a dagger animation in its first frame', () => {
+    // human_ddagger_lunge 376, human_ddagger_hack 377 and puncture 1062 in the content pack; 378 is the block, 829 an eat.
+    for (const anim of [376, 377, 1062]) expect(startsAttack({ primaryAnim: anim, primaryAnimCycle: 0, primaryAnimFrame: 0 })).toBe(true);
+    for (const anim of [378, 829, -1]) expect(startsAttack({ primaryAnim: anim, primaryAnimCycle: 0, primaryAnimFrame: 0 })).toBe(false);
+    // A later frame of the same animation is no new attack.
+    expect(startsAttack({ primaryAnim: 376, primaryAnimCycle: 7, primaryAnimFrame: 3 })).toBe(false);
+    expect(startsAttack(null)).toBe(false);
 });

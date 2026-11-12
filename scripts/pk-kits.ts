@@ -123,10 +123,13 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     hybrid: { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
         carried: ['magic_shortbow', ...PRAYER_POTS, ...BOOSTS], food: 21,
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
-    // The hybrid for a meeting with the dagger gang: one shark less for a glory in the pack, the way out at the gang's
-    // post (amulet_of_glory.rs2 allows the rub up to Wilderness level 30).
-    'gang-hunter': { worn: { ...RUNE, weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
-        carried: ['magic_shortbow', ...PRAYER_POTS, ...BOOSTS, 'amulet_of_glory_4'], food: 20,
+    // The kit for a meeting with the dagger gang (research/pvp-fight-loop.md, "Rivals: the dagger gang"): bow and dagger,
+    // the armour with the most stab defence that needs no quest besides the dagger's (dragon med helm and platelegs,
+    // stab defence 33 and 68 for the 30 and 51 of rune), a super defence, three prayer potions for about 800 ticks of
+    // prayers, and a glory in the pack: the way out at the gang's post (amulet_of_glory.rs2 allows the rub up to
+    // Wilderness level 30).
+    'gang-hunter': { worn: { ...RUNE, hat: 'dragon_med_helm', legs: 'dragon_platelegs', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
+        carried: ['magic_shortbow', ...PRAYER_POTS, '4doseprayerrestore', ...BOOSTS, '4dose2defense', 'amulet_of_glory_4'], food: 18,
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
     // One style each, in the armour of that style.
     melee: { worn: { ...RUNE, amulet: 'amulet_of_strength', weapon: 'dragon_dagger_p', shield: 'rune_kiteshield' },

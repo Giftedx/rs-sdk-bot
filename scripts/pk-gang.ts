@@ -10,20 +10,35 @@
 // SPAR_KITS=<kit of our account>:<kit of the gang> names the kits (scripts/pk-kits.ts).
 // Prints one `GANG <json>` line for each group. RESULT ok means that in each group our account and one of the gang
 // attacked and the meeting ended: the gang dead, our account dead or away, or the cap.
+import { readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
-import { fightPlayer, nextTick, type FightOptions, type FightResult } from './pk';
+import { fightPlayer, nextTick, wildernessLevel, type FightOptions, type FightResult } from './pk';
 import { hitByPlayer, TRIBRID_KIT } from './pk-hunt';
 import { kitOptions, kitSwitches } from './pk-kits';
 import { sparOptions } from './pk-spar';
 
+// The attack animations of a dragon dagger (content pack/seq.pack): the lunge, the hack and the special.
+const DAGGER_ATTACKS = ['human_ddagger_lunge', 'human_ddagger_hack', 'puncture'];
+let attackSeqs: Set<number> | undefined;
+const attackAnims = () => (attackSeqs ??= new Set(readFileSync(join(resolve(import.meta.dir, '..'), 'vendor/rs-sdk/server/content/pack/seq.pack'), 'utf8').split(/\r?\n/)
+    .flatMap(l => { const m = l.match(/^(\d+)=(.+)$/); return m && DAGGER_ATTACKS.includes(m[2]!) ? [Number(m[1])] : []; })));
+// True in the tick in which the client shows a player start an attack animation. The server plays it only for an
+// attack that it let through, so on a single-way tile it names the one account that fights us.
+export function startsAttack(entity: { primaryAnim?: number; primaryAnimCycle?: number; primaryAnimFrame?: number } | null | undefined, anims: ReadonlySet<number> = attackAnims()): boolean {
+    return !!entity && anims.has(entity.primaryAnim ?? -1) && (entity.primaryAnimCycle ?? 0) === 0 && (entity.primaryAnimFrame ?? 0) === 0;
+}
 // `cleared`: every account of the gang is dead. `away`: our account lost sight of every one that lives.
-export type GangResult = { end: 'cleared' | 'died' | 'escaped' | 'away' | 'cap'; kills: number; ticks: number; taken: number; eaten: number; specs: number; fights: FightResult[]; gang: FightResult[] };
+// `refused` counts the attacks of our account that the game refused ("I'm already under attack."); `foodLeft` and
+// `prayerLeft` are what our account had at the end: the margin of the method.
+export type GangResult = { end: 'cleared' | 'died' | 'escaped' | 'away' | 'cap'; kills: number; ticks: number; taken: number; eaten: number; specs: number; refused: number; foodLeft: number; prayerLeft: number;
+    fights: FightResult[]; gang: FightResult[] };
 
-// The account of the gang to fight now: the one that hit us last, else the nearest in view. On a single-way tile the
-// game refuses an attack on any other while that one fights us.
-export function pickAttacker<P extends { name: string; index: number; distance: number }>(nearby: readonly P[], alive: ReadonlySet<string>, lastHitBy: number | null): P | null {
-    const gang = nearby.filter(p => alive.has(p.name.toLowerCase()));
-    return gang.find(p => p.index === lastHitBy) ?? [...gang].sort((x, y) => x.distance - y.distance)[0] ?? null;
+// The account of the gang to fight now: the one that hit us last, else the nearest in view that the game has not
+// just refused. On a single-way tile the game refuses an attack on any other while one of them fights us.
+export function pickAttacker<P extends { name: string; index: number; distance: number }>(nearby: readonly P[], alive: ReadonlySet<string>, lastHitBy: number | null, refused: ReadonlySet<string> = new Set()): P | null {
+    const gang = nearby.filter(p => alive.has(p.name.toLowerCase())), open = gang.filter(p => !refused.has(p.name.toLowerCase()));
+    return gang.find(p => p.index === lastHitBy) ?? [...(open.length ? open : gang)].sort((x, y) => x.distance - y.distance)[0] ?? null;
 }
 const attacksOf = (f: FightResult) => f.attacks.magic + f.attacks.ranged + f.attacks.melee;
 // A meeting that measured something: our account attacked, one of the gang attacked, and no session ended.
@@ -35,13 +50,25 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
     for (let i = 0; i < 10; i++) if (!await nextTick(a)) break;
     const start = a.tick(), cap = optionsA.cap ?? 900, self = () => a.sdk.getState()?.player;
     const alive = new Set(others.map(o => o.name.toLowerCase()));
-    let over = false, taken = 0, lastHp = self()?.hp ?? 0, lastHitBy: number | null = null, lastHitAt = -100, seenEvent = 0;
-    // The damage our account took is the sum of its HP drops (as in the spar), and the last player to hit it is the
-    // one that fights it.
+    // A death gives the account a new life id, but the client counts a death only when it sees 0 Hitpoints, and the
+    // server can give the Hitpoints back in the tick of the death. A dead account stands in Lumbridge, so an account
+    // outside the Wilderness is dead too: no account of a meeting leaves it on foot.
+    const life = (s: Session) => s.sdk.getState()?.player?.lifeId, lives = new Map(others.map(o => [o, life(o)] as const));
+    const outside = (s: Session) => { const p = s.sdk.getState()?.player; return !!p && wildernessLevel(p.worldZ) === 0; };
+    const reap = () => { for (const [g, first] of lives) if (outside(g) || (first !== undefined && life(g) !== undefined && life(g) !== first)) alive.delete(g.name.toLowerCase()); };
+    let over = false, taken = 0, lastHp = self()?.hp ?? 0, lastHitBy: number | null = null, lastHitAt = -100, seenEvent = 0, seenMessage = 0, refusals = 0, refusedAt = -100, seenAnim = false;
+    const refusedBy = new Set<string>();
+    // The damage our account took is the sum of its HP drops (as in the spar). The account of the gang that fights it
+    // is the last one that started an attack animation; where the client shows none, the source of the last splat.
     const unwatch = a.onTick(() => {
         const hp = self()?.hp;
         if (hp !== undefined) { if (hp < lastHp) taken += lastHp - hp; lastHp = hp; }
-        for (const e of a.sdk.getState()?.combatEvents ?? []) { const id = e.observationId ?? e.tick; if (id > seenEvent) { seenEvent = id; if (hitByPlayer(e)) { lastHitBy = e.sourceIndex; lastHitAt = a.tick(); } } }
+        const players = (a.client as { players?: ({ primaryAnim?: number; primaryAnimCycle?: number; primaryAnimFrame?: number } | null)[] } | undefined)?.players;
+        for (const p of a.sdk.getState()?.nearbyPlayers ?? []) if (alive.has(p.name.toLowerCase()) && p.distance <= 2 && startsAttack(players?.[p.index])) { lastHitBy = p.index; lastHitAt = a.tick(); seenAnim = true; }
+        // The source of a splat is the player that our account faces (StateCollector): a guess, used only where no animation shows.
+        for (const e of a.sdk.getState()?.combatEvents ?? []) { const id = e.observationId ?? e.tick; if (id > seenEvent) { seenEvent = id; if (hitByPlayer(e) && !seenAnim) { lastHitBy = e.sourceIndex; lastHitAt = a.tick(); } } }
+        for (const msg of a.sdk.getState()?.gameMessages ?? []) { const id = msg.observationId ?? msg.tick; if (id <= seenMessage) continue; seenMessage = id;
+            if (msg.tick >= start && /already under attack/i.test(msg.text)) { refusals++; refusedAt = a.tick(); } }
     });
     // Each account of the gang attacks our account until one of the two is dead. One that lost sight of it while both
     // live goes on as soon as it sees it again.
@@ -52,7 +79,12 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
         while (!over && !halt()) {
             const r = await fightPlayer(g, a.name, { ...optionsB, cap: Math.max(1, cap - (g.tick() - start)), stop: () => over || halt(), log: l => log(`[${g.name}] ${l}`) });
             sum(total, r);
+            reap();
+            if (!alive.has(g.name.toLowerCase())) { total.outcome = 'died'; break; }
             if (r.outcome !== 'lost' || g.tick() - start >= cap) break;
+            // The gang runs to a target that the world feed shows: an account that lost sight of ours goes back to it.
+            const at = self();
+            if (at) void g.sdk.sendWalk(at.worldX, at.worldZ);
             if (!await nextTick(g)) { total.outcome = 'session ended'; break; }
         }
         if (total.outcome === 'died') alive.delete(g.name.toLowerCase());
@@ -61,7 +93,9 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
     const fights: FightResult[] = [];
     let end: GangResult['end'] = 'cap', unseen = 0;
     while (alive.size && a.tick() - start < cap && !halt()) {
-        const target = pickAttacker(a.sdk.getState()?.nearbyPlayers ?? [], alive, lastHitBy);
+        reap();
+        if (!alive.size) break;
+        const target = pickAttacker(a.sdk.getState()?.nearbyPlayers ?? [], alive, lastHitBy, refusedBy);
         if (!target) {
             // None of the living gang in view for 20 ticks: our account got away from it.
             if (++unseen > 20) { end = 'away'; break; }
@@ -71,23 +105,32 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
         unseen = 0;
         // Another of the gang hit us in the last 8 ticks: the game now refuses our attacks on this one
         // (pvp_combat.rs2:104-112), so the fight turns to the one that hit.
-        const other = () => lastHitBy !== null && lastHitBy !== target.index && a.tick() - lastHitAt <= 8
-            && (a.sdk.getState()?.nearbyPlayers ?? []).some(p => p.index === lastHitBy && alive.has(p.name.toLowerCase()));
+        // A refused attack on this one says the same before the other has hit.
+        const began = a.tick();
+        const other = () => refusedAt > began || (lastHitBy !== null && lastHitBy !== target.index && a.tick() - lastHitAt <= 8
+            && (a.sdk.getState()?.nearbyPlayers ?? []).some(p => p.index === lastHitBy && alive.has(p.name.toLowerCase())));
         const r = await fightPlayer(a, target.name, { ...optionsA, cap: Math.max(1, cap - (a.tick() - start)), stop: () => halt() || other(), log: l => log(`[${a.name}] ${l}`) });
         fights.push(r);
+        // The next choice leaves out each account that the game refused, until one attack goes through.
+        if (refusedAt > began) { refusedBy.add(target.name.toLowerCase()); if (lastHitBy === target.index) lastHitBy = null; if (refusedBy.size >= alive.size) refusedBy.clear(); } else refusedBy.clear();
         if (r.outcome === 'kill') { alive.delete(target.name.toLowerCase()); lastHitBy = null; continue; }
         if (r.outcome === 'timeout' && other() && a.tick() - start < cap) continue;
         if (r.outcome === 'died') { end = 'died'; break; }
         if (r.outcome === 'escaped') { end = 'escaped'; break; }
         if (r.outcome !== 'lost') break;
     }
+    reap();
     if (!alive.size) end = 'cleared';
+    // Our account outside the Wilderness with no glory rubbed is dead, whatever its fight loop saw.
+    else if (end !== 'escaped' && outside(a)) end = 'died';
     over = true;
     const gangResults = await Promise.all(sides);
     unwatch();
     // A kill is a dead account of the gang: the kill message can come after the fight turned to another of them.
     const kills = others.length - alive.size;
-    return { end, kills, ticks: a.tick() - start, taken, eaten: fights.reduce((n, f) => n + f.eaten, 0), specs: fights.reduce((n, f) => n + f.specs, 0), fights, gang: gangResults };
+    const state = a.sdk.getState(), foodLeft = (state?.inventory ?? []).filter(i => i.optionsWithIndex.some(o => /^eat$/i.test(o.text))).reduce((n, i) => n + i.count, 0);
+    return { end, kills, ticks: a.tick() - start, taken, eaten: fights.reduce((n, f) => n + f.eaten, 0), specs: fights.reduce((n, f) => n + f.specs, 0), refused: refusals, foodLeft,
+        prayerLeft: state?.prayers.prayerPoints ?? 0, fights, gang: gangResults };
 }
 
 // The counts of several meetings that ran at once.
@@ -132,5 +175,6 @@ if (import.meta.main) {
     for (const r of results) console.log(`GANG ${JSON.stringify({ profiles: { a: nameA, b: nameB }, kits: { a: kitA, b: kitB }, ...r })}`);
     const s = gangSummary(results), ok = results.every(gangValid) && halted === undefined;
     await finish(groups.flat(), ok, `gang groups=${s.groups} cleared=${s.cleared} died=${s.died} escaped=${s.escaped} away=${s.away} cap=${s.cap} kills=${s.kills} ticks=${s.ticks} a=${nameA} b=${nameB} `
-        + `valid=${results.filter(gangValid).length} killsEach=${s.killsEach.join(',')} taken=${results.map(r => r.taken).join(',')} eaten=${results.map(r => r.eaten).join(',')}${halted ? ` halted=${halted}` : ''}`);
+        + `valid=${results.filter(gangValid).length} killsEach=${s.killsEach.join(',')} taken=${results.map(r => r.taken).join(',')} eaten=${results.map(r => r.eaten).join(',')} `
+        + `food=${results.map(r => r.foodLeft).join(',')} prayer=${results.map(r => r.prayerLeft).join(',')} refused=${results.map(r => r.refused).join(',')}${halted ? ` halted=${halted}` : ''}`);
 }
