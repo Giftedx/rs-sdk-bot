@@ -1,7 +1,40 @@
 {
  "side": "local",
- "at": 1794454029927,
+ "at": 1794454087000,
  "jobs": [
+  {
+   "account": "FishAndChips",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts harry 600 MAX_ITEMS=1 MAX_SPEND=500 NO_BUY_TICKS=25 BANK_PACK=1",
+    "scripts/gather-fish.ts cage 3000",
+    "scripts/cook-food.ts 1500 lobster"
+   ],
+   "env": {
+    "ROUNDS": "0",
+    "RUN": "2"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
+   "role": "supply"
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/train-chickens.ts TRAIN_BANK=draynor TRAIN_SKILL=Strength TARGET_LEVEL=30 CAP=3000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "Strength 30 on chickens so it can hit hard enough to PK",
+   "role": "pk-trainee"
+  },
   {
    "account": "NabTheKnob",
    "script": "scripts/chain.ts",
@@ -19,6 +52,91 @@
    "template": "kit-buy:army-cow-strength-60",
    "autopilot": "local",
    "resources": []
+  },
+  {
+   "account": "Bigchopper",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "TARGET_LEVEL": "45",
+    "GIANT_BURY": "0"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
+   "autopilot": "local",
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "Bigpackage",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "local",
+   "resources": [
+    "knight:2652,3318"
+   ]
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
+   "env": {
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
+   "autopilot": "local",
+   "resources": [
+    "knight:2671,3313"
+   ]
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3017,3288",
+    "TICKS": "3000",
+    "TARGET": "2000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3017,3288",
+   "role": "helper",
+   "template": "feathers@3017,3288",
+   "autopilot": "local",
+   "resources": [
+    "pen:3017,3288"
+   ]
   },
   {
    "account": "Masterbaiter",
@@ -46,6 +164,127 @@
    ]
   },
   {
+   "account": "Mightyrod",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
+   "autopilot": "local",
+   "resources": [
+    "knight:2671,3313"
+   ]
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3187,3277",
+    "TICKS": "3000",
+    "TARGET": "2000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
+   "autopilot": "local",
+   "resources": [
+    "pen:3187,3277"
+   ]
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "local",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "local",
+   "resources": [
+    "knight:2669,3298"
+   ]
+  },
+  {
+   "account": "mmthv2350",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
+   "autopilot": "local",
+   "resources": [
+    "knight:2671,3313"
+   ]
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
+   ]
+  },
+  {
    "account": "PickpockDick",
    "script": "scripts/gather-feathers.ts",
    "args": [],
@@ -63,6 +302,64 @@
    "autopilot": "local",
    "resources": [
     "pen:3197,3353"
+   ]
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "local",
+   "resources": [
+    "knight:2652,3318"
+   ]
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
+   ]
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
+   "env": {
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
+   "autopilot": "local",
+   "resources": [
+    "knight:2669,3298"
    ]
   },
   {
@@ -111,40 +408,156 @@
    ]
   },
   {
-   "account": "Hocuspokeus",
-   "script": "scripts/quest-cook-job.ts",
-   "args": [
-    "hetty"
-   ],
-   "env": {
-    "CAP": "6000",
-    "COORDINATOR_RUN_ID": "task-ed6935b8-b246-4f22-b3c5-de6fad74778c"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-quest-items-hetty-first-live [task-ed6935b8-b246-4f22-b3c5-de6fad74778c]",
-   "role": "helper"
-  },
-  {
-   "account": "Bigpackage",
-   "script": "scripts/buy-owned-ge-item.ts",
+   "account": "Woodenstaff",
+   "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "ORDER_KEY": "haggis-route-bigpackage-cannonball1700",
-    "ITEM_ID": "2",
-    "QUANTITY": "1700",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "30",
-    "CASH_RESERVE": "160000",
-    "ORDER_MS": "900000",
-    "FILL_WAIT_TICKS": "50",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-b0490357-5b25-46dd-b8e5-d741b58a80dd"
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
    },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-bigpackage-main-cannonball1700 [task-b0490357-5b25-46dd-b8e5-d741b58a80dd]",
-   "role": "supply"
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "local",
+   "resources": [
+    "knight:2669,3298"
+   ]
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
+   "autopilot": "local",
+   "resources": [
+    "knight:2671,3313"
+   ]
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "Magicwanda",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
+   ]
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "local",
+   "resources": [
+    "knight:2669,3298"
+   ]
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "local",
+   "resources": [
+    "knight:2652,3318"
+   ]
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
+   ]
   },
   {
    "account": "Moneyshot",
@@ -164,311 +577,6 @@
    "resources": [
     "knight:2652,3318"
    ]
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ORDER_KEY": "mightyrod-blood261-600",
-    "ITEM_ID": "565",
-    "QUANTITY": "261",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "600",
-    "CASH_RESERVE": "250000",
-    "ORDER_MS": "360000",
-    "FILL_WAIT_TICKS": "200",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-ce1de9c0-7a37-4669-9cda-edc677734ba4"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-coincock-mightyrod-blood261-600-resume [task-ce1de9c0-7a37-4669-9cda-edc677734ba4]",
-   "role": "supply"
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "385",
-    "QUANTITY": "30",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "810",
-    "CASH_RESERVE": "70000",
-    "ORDER_KEY": "woodpecker-sharks30-blood-food",
-    "FILL_WAIT_TICKS": "40",
-    "ORDER_MS": "360000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-ba7ddac9-17e0-497c-a16c-321de8f810d5"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-woodpecker-sharks30-blood-food [task-ba7ddac9-17e0-497c-a16c-321de8f810d5]",
-   "role": "helper"
-  },
-  {
-   "account": "Ballspinner",
-   "script": "scripts/handoff-inputs.ts",
-   "args": [
-    "80:Lobster",
-    "--notes",
-    "--bank-x=2619",
-    "--bank-z=3332",
-    "--approach-ms=1800000",
-    "--request-ms=60000",
-    "--timeout-ms=600000",
-    "--grace-ms=45000"
-   ],
-   "env": {
-    "HANDOFF_ORDER": "ballspinner-blood-lobster80-notes-mineyourbiz",
-    "CAP": "4000",
-    "COORDINATOR_RUN_ID": "task-6460642a-ad15-4d4e-b423-d645eaba6c98"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-handoff-mineyourbiz-ballspinner-lobster80-notes [task-6460642a-ad15-4d4e-b423-d645eaba6c98]",
-   "role": "supply"
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "453",
-    "QUANTITY": "4",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "300",
-    "CASH_RESERVE": "200000",
-    "ORDER_KEY": "oreelse-elemental-coal4-r2",
-    "FILL_WAIT_TICKS": "200",
-    "ORDER_MS": "900000",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-84509b3b-2b75-4501-a6c4-7fff64e6b1b2"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-oreelse-coal4-elemental-r2 [task-84509b3b-2b75-4501-a6c4-7fff64e6b1b2]",
-   "role": "pk"
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "600",
-    "COORDINATOR_RUN_ID": "task-dc6e6976-0856-4956-a80d-6aff1adb9a60"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-pocketpython-coin [task-dc6e6976-0856-4956-a80d-6aff1adb9a60]",
-   "role": "supply"
-  },
-  {
-   "account": "Shaftmaker",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "magic_guild",
-    "12000"
-   ],
-   "env": {
-    "CAP": "12000",
-    "ITEMS": "blood rune",
-    "STOP_AT_TARGET": "1",
-    "STOCK_TARGET": "624",
-    "MAX_ITEMS": "624",
-    "MAX_SPEND": "130000",
-    "COIN_RESERVE": "2000",
-    "NO_BUY_TICKS": "250",
-    "BANK_PACK": "1",
-    "COORDINATOR_RUN_ID": "task-da2a1a51-9beb-431d-9792-1283f17b15aa"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-shop-shaftmaker-blood624-restock [task-da2a1a51-9beb-431d-9792-1283f17b15aa]",
-   "role": "pk"
-  },
-  {
-   "account": "FishAndChips",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "600",
-    "COORDINATOR_RUN_ID": "task-9ba9b5d0-e504-4754-8d3d-1f610b5e61c7"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-fishandchips-orphan-r17 [task-9ba9b5d0-e504-4754-8d3d-1f610b5e61c7]",
-   "role": "supply"
-  },
-  {
-   "account": "Magicwanda",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "600",
-    "COORDINATOR_RUN_ID": "task-3cc807e5-e8a9-4ec6-ba3b-1bddb98a04d8"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-magicwanda-orphan-r17 [task-3cc807e5-e8a9-4ec6-ba3b-1bddb98a04d8]",
-   "role": "helper"
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "600",
-    "COORDINATOR_RUN_ID": "task-14ab771b-af5d-4e31-9611-952e6a9544c4"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-mmsmk1232-magic-r17 [task-14ab771b-af5d-4e31-9611-952e6a9544c4]",
-   "role": "supply"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "600",
-    "COORDINATOR_RUN_ID": "task-82a209f7-38db-43ab-9430-01d6d3545d80"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-bowbeforeme-orphan-r18 [task-82a209f7-38db-43ab-9430-01d6d3545d80]",
-   "role": "fletching"
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "600",
-    "COORDINATOR_RUN_ID": "task-206f8188-4a07-4c12-9e69-051dd3f58fe3"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-mmtha0205-orphan-r18 [task-206f8188-4a07-4c12-9e69-051dd3f58fe3]",
-   "role": "bank"
-  },
-  {
-   "account": "Billionaire",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "600",
-    "COORDINATOR_RUN_ID": "task-8bc442f3-7873-431c-8127-3508b3b124a0"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-billionaire-orphan-r18 [task-8bc442f3-7873-431c-8127-3508b3b124a0]",
-   "role": "bank"
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "600",
-    "COORDINATOR_RUN_ID": "task-de5cf282-08d3-4124-bac0-7014dc8d6e7f"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-mineyourbiz-orphan-r18 [task-de5cf282-08d3-4124-bac0-7014dc8d6e7f]",
-   "role": "helper"
-  },
-  {
-   "account": "mmthv2350",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "600",
-    "COORDINATOR_RUN_ID": "task-2517c84c-de0e-4b1b-ba5c-11eb9a55d24e"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-mmthv2350-orphan-r18 [task-2517c84c-de0e-4b1b-ba5c-11eb9a55d24e]",
-   "role": "bank"
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "600",
-    "COORDINATOR_RUN_ID": "task-399ef690-bc25-4ccb-8c5a-664a69d3f43d"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-pocketrocket-orphan-r18 [task-399ef690-bc25-4ccb-8c5a-664a69d3f43d]",
-   "role": "thieving"
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "600",
-    "COORDINATOR_RUN_ID": "task-a4e956ac-67d0-4e8e-a918-f1e7ef3e9cbd"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-woodenstaff-orphan-r18 [task-a4e956ac-67d0-4e8e-a918-f1e7ef3e9cbd]",
-   "role": "thieving"
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "600",
-    "COORDINATOR_RUN_ID": "task-4329d1b2-3bc5-4bc5-acd7-a4fe83529add"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-yewfirst-orphan-r18 [task-4329d1b2-3bc5-4bc5-acd7-a4fe83529add]",
-   "role": "thieving"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "600",
-    "COORDINATOR_RUN_ID": "task-3ea847cb-7069-4d9a-83f9-5b7f60efbf8e"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-shaftsinker-orphan-r18 [task-3ea847cb-7069-4d9a-83f9-5b7f60efbf8e]",
-   "role": "thieving"
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "600",
-    "COORDINATOR_RUN_ID": "task-71d187e0-6649-468c-9c7c-f24c0247ffcf"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-sporranbulge-orphan-r18 [task-71d187e0-6649-468c-9c7c-f24c0247ffcf]",
-   "role": "thieving"
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-5d62d9d4-2949-4f48-952d-debf6005cdb9"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-mightyrod-expired-lease-r21 [task-5d62d9d4-2949-4f48-952d-debf6005cdb9]",
-   "role": "thieving"
   },
   {
    "account": "Abracadickra",
@@ -491,19 +599,6 @@
    "resources": [
     "aio:seers-flax"
    ]
-  },
-  {
-   "account": "Bigchopper",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-029d3943-9dce-4ba3-a890-2e3bf7e52f26"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-session-recovery-bigchopper-market-r14 [task-029d3943-9dce-4ba3-a890-2e3bf7e52f26]",
-   "role": "firemaking"
   }
  ]
 }
