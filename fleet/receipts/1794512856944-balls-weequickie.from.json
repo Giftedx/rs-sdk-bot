@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794512856944-balls-weequickie",
+ "account": "Balls",
+ "partner": "WeeQuickie",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "logs",
+ "requested": 2,
+ "claim": "b4da3262-3d2c-42ef-aa38-291ae31a5167",
+ "count": 0,
+ "ok": false,
+ "at": 1794512863918,
+ "detail": "trade claimed"
+}
