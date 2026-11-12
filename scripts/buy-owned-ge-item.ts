@@ -343,6 +343,9 @@ export async function runOwnedItem(s:Session,request:ItemRequest,journalPath:str
  await leaveBattlefield(s,()=>stop()||Date.now()>=request.deadline);
  await prepareMarketEntry(s,()=>stop()||Date.now()>=request.deadline);
  const state=()=>s.sdk.getState(),held=(id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0),hp=()=>s.sdk.getSkill('Hitpoints')?.level??0,start=s.tick(),hp0=hp(),p0=state()?.player;
+ // Replay receives recorded SDK states, not the raw interface packets that feed bankObservation.
+ // Live work still requires the packet-backed observation. The replay fallback keeps the recorded revision as its generation.
+ const bankObservation=()=>{const observed=s.bankObservation?.();if(observed||process.env.REPLAY_ONLY!=='1')return observed;const q=state();return q?.bank.isOpen&&Array.isArray(q.bank.items)?{generation:q.revision??s.tick(),at:Date.now(),items:q.bank.items.map(i=>({id:i.id,name:i.name,count:i.count}))}:null;};
  const entryFailure=marketEntryFailure(p0,hp0);if(entryFailure)throw Error(entryFailure);
  if(!p0)throw Error('market position unknown');
  let hpGuard=hp0;const foodUsed:{id:number;count:number}[]=[],preparationFood=new Set<number>();
@@ -354,9 +357,9 @@ export async function runOwnedItem(s:Session,request:ItemRequest,journalPath:str
  const count=(a:readonly {id:number;name:string;count:number}[],match:(i:{id:number;name:string})=>boolean)=>a.filter(match).reduce((n,i)=>n+i.count,0);
  const coinsTotal=()=>held(995)+count(bankItems,i=>i.id===995)+count(s.sdk.getEquipment(),i=>i.id===995),itemTotal=()=>count(s.sdk.getInventory(),isItem)+count(bankItems,isItem)+count(s.sdk.getEquipment(),isItem);
  const assets=()=>{const m=new Map<number,number>();for(const i of [...s.sdk.getInventory(),...bankItems,...s.sdk.getEquipment()]){const id=isItem(i)?request.item:i.id;m.set(id,(m.get(id)??0)+i.count);}return m;};
- const capture=()=>{if(!state()?.bank.isOpen||!s.bankObservation?.())throw Error('fresh bank observation required');bankItems=s.bankObservation()!.items.map(i=>({id:i.id,name:i.name,count:i.count}));};
+ const capture=()=>{const bank=bankObservation();if(!state()?.bank.isOpen||!bank)throw Error('fresh bank observation required');bankItems=bank.items.map(i=>({id:i.id,name:i.name,count:i.count}));};
  const walk=async(to:{x:number;z:number},cleanup=false)=>{const end=()=>terminal()||(!cleanup&&over())||s.tick()-start>=680;if(end())throw Error('market route stopped');const p=state()?.player;if(p&&Math.max(Math.abs(p.worldX-to.x),Math.abs(p.worldZ-to.z))<=1)return;const deps=await sessionWalker(s),plan=deps.plan;deps.plan=(level,from,goal)=>{const corners=plan(level,from,goal);if(!corners.length||[from,...expandPath(from,corners)].some(p=>!marketTileSafe({...p,level})))throw Error('market full path outside known bank rectangle');return corners;};if(!(await walkPath(deps,[{...to,tol:1}],{maxTicks:120,stop:end})).ok)throw Error('market bank/GE route failed');};
- const openBank=async()=>{await s.bot.dismissBlockingUI();const gen=s.bankObservation?.()?.generation??0;if(!state()?.bank.isOpen&&(!(await s.bot.openBank()).success||!await waitUntil(s,()=>!!state()?.bank.isOpen&&(s.bankObservation?.()?.generation??0)>gen||terminal(),{timeoutTicks:15})||terminal()))throw Error('market bank open unproved');capture();};
+ const openBank=async()=>{await s.bot.dismissBlockingUI();const gen=bankObservation()?.generation??0;if(!state()?.bank.isOpen&&(!(await s.bot.openBank()).success||!await waitUntil(s,()=>!!state()?.bank.isOpen&&(bankObservation()?.generation??0)>gen||terminal(),{timeoutTicks:15})||terminal()))throw Error('market bank open unproved');capture();};
  // Each held form (coins, item, banknote) is one deposit with a paired bank receipt.
  const bankPack=async()=>{for(const id of new Set([995,...preparationFood,...s.sdk.getInventory().filter(isItem).map(i=>i.id)])){const item=s.sdk.getInventory().find(i=>i.id===id);if(item){const amount=held(id);if(await depositObserved(s,item)!==amount)throw Error('market bank credit mismatch');capture();}}};
  const view=():OrderView=>{
@@ -376,13 +379,15 @@ export async function runOwnedItem(s:Session,request:ItemRequest,journalPath:str
    if(over())throw Error('market health preparation stopped');
    const food=bankItems.find(i=>[329,333,379].includes(i.id)&&i.id!==request.item&&i.count>0);
    if(!food)throw Error(`market health preparation: currentHP=${hp()}; acquire 1 owned salmon(329),trout(333) or lobster(379) at this bank`);
-   preparationFood.add(food.id);const n=held(food.id),bankBefore=count(bankItems,i=>i.id===food.id),gen=s.bankObservation?.()?.generation??0;
+   preparationFood.add(food.id);const n=held(food.id),bankBefore=count(bankItems,i=>i.id===food.id),gen=bankObservation()?.generation??0,beforeHp=hp();
    const live=state()?.bank.items.find(i=>i.id===food.id);if(!live)throw Error('market health preparation food missing from open bank');
+   // The session eat guard can eat the withdrawn food at an urgent HP before this worker does. The bank debit with the HP gain proves that eat.
+   const eaten=()=>held(food.id)===n&&hp()>beforeHp;
    await s.bot.withdrawItem(live,1,{asNote:false});
-   if(!await waitUntil(s,()=>terminal()||held(food.id)===n+1&&(s.bankObservation?.()?.generation??0)>gen&&count(s.bankObservation?.()?.items??[],i=>i.id===food.id)===bankBefore-1,{timeoutTicks:10})||terminal())throw Error('market health preparation withdrawal unobserved');
+   if(!await waitUntil(s,()=>{const bank=bankObservation();return terminal()||(held(food.id)===n+1||eaten())&&(bank?.generation??0)>gen&&count(bank?.items??[],i=>i.id===food.id)===bankBefore-1;},{timeoutTicks:10})||terminal())throw Error('market health preparation withdrawal unobserved');
    capture();await s.bot.closeBank();if(over())throw Error('market health preparation stopped');
-   const target=s.sdk.getInventory().find(i=>i.id===food.id),beforeHp=hp();if(!target)throw Error('market health preparation food missing');
-   try{await s.bot.eatFood(target);}catch{/* Observe a possibly applied action. */}
+   const target=s.sdk.getInventory().find(i=>i.id===food.id);if(!target&&!eaten())throw Error('market health preparation food missing');
+   if(target&&held(food.id)===n+1)try{await s.bot.eatFood(target);}catch{/* Observe a possibly applied action. */}
    const healed=await waitUntil(s,()=>terminal()||held(food.id)===n&&hp()>6&&hp()>beforeHp,{timeoutTicks:10});
    if(held(food.id)===n)foodUsed.push({id:food.id,count:1});
    if(!healed||terminal()||hp()<=6||hp()<=beforeHp)throw Error('market health preparation pack debit/HP gain unobserved');
@@ -404,8 +409,8 @@ export async function runOwnedItem(s:Session,request:ItemRequest,journalPath:str
     if(cancel)throw Error('no submitted order to cancel');if(!journal)ownedBaseline(request,itemTotal());
     if(Date.now()>=request.deadline||over()||coinsTotal()<roundEscrow+request.reserve||s.sdk.getInventory().length>26)throw Error('order expired,owned reserve missing or two collection slots unavailable');
     if(journal&&journal.phase==='placing'&&(coinsTotal()!==roundBaseline(journal).coins||itemTotal()!==roundBaseline(journal).items))throw Error('prepared order asset baseline changed');
-    const coins=s.sdk.findBankItem(/^coins$/i),beforeBank=count(bankItems,i=>i.id===995),gen=s.bankObservation?.()?.generation??0;
-    if(!coins||!(await s.bot.withdrawItem(coins,roundEscrow,{asNote:false})).success||!await waitUntil(s,()=>held(995)===roundEscrow&&(s.bankObservation?.()?.generation??0)>gen&&count(s.bankObservation?.()?.items??[],i=>i.id===995)===beforeBank-roundEscrow,{timeoutTicks:10}))throw Error('owned order funding unobserved');
+    const coins=s.sdk.findBankItem(/^coins$/i),beforeBank=count(bankItems,i=>i.id===995),gen=bankObservation()?.generation??0;
+    if(!coins||!(await s.bot.withdrawItem(coins,roundEscrow,{asNote:false})).success||!await waitUntil(s,()=>{const bank=bankObservation();return held(995)===roundEscrow&&(bank?.generation??0)>gen&&count(bank?.items??[],i=>i.id===995)===beforeBank-roundEscrow;},{timeoutTicks:10}))throw Error('owned order funding unobserved');
     capture();if(count(bankItems,i=>i.id===995)!==beforeBank-roundEscrow)throw Error('owned order bank debit mismatch');
    }
    await s.bot.closeBank();if(over())throw Error('market budget/stop before GE');
