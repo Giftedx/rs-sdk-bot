@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794503540803-bigchopper-balls",
  "account": "Bigchopper",
  "partner": "Balls",
@@ -10,8 +10,22 @@
  "item": "oak logs",
  "requested": 130,
  "claim": "f52af5ad-168c-4a12-892a-086435cd4db2",
- "count": 0,
- "ok": false,
- "at": 1794503555527,
- "detail": "trade claimed"
+ "count": 130,
+ "ok": true,
+ "at": 1794504087236,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 130,
+  "after": 0
+ },
+ "bank": {
+  "count": 130,
+  "at": 1794503619723
+ },
+ "logout": {
+  "attemptId": "1794503555537-0000026420-0000000001",
+  "at": 1794504087221,
+  "sha256": "09bdd192c7d14e65a1530cd475a71236736b84ac751e03f7a54231c280ff2e27"
+ },
+ "screen": true
 }

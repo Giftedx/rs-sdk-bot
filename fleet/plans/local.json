@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794503449983,
+ "at": 1794504090980,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -44,7 +44,11 @@
   },
   {
    "account": "Balls",
-   "script": "",
+   "script": "scripts/firemaking-order.ts",
+   "env": {
+    "TARGET_LEVEL": "99",
+    "PROGRESSIVE": "1"
+   },
    "enabled": false,
    "goal": "Haggis route rehearsal; hand-run legs by .practice/balls-alpha",
    "role": "rehearsal"
